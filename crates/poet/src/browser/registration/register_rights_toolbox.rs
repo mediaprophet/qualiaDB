@@ -84,6 +84,29 @@ pub(super) fn register_rights_toolbox(reg: &mut Registry) {
                 },
                 tools,
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "rights:cooperative".into(),
+                    label: "Cooperative Delegation".into(),
+                    icon: "evaluate".into(),
+                    description: "Fail-closed ABAC over supported-agency delegations."
+                        .into(),
+                },
+                vec![Box::new(SimpleTool::new(
+                    ToolMetadata {
+                        id: "rights:delegation_permits".into(),
+                        label: "Check delegation".into(),
+                        icon: "evaluate".into(),
+                        kind: ToolKind::Query,
+                        capability_scope: Some("CooperativeDelegation.permits".into()),
+                        ontology_prefix: "rights".into(),
+                        description:
+                            "Run CooperativeDelegation.permits (not Agency.evaluate)."
+                                .into(),
+                    },
+                    ActionType::Query,
+                ))],
+            ),
         ],
     ));
 }

@@ -21,6 +21,15 @@ pub(super) fn try_fill(document: &Document, container: &SeedContainer, body: &El
             .unwrap();
             true
         }
+        "chemical_explorer" => {
+            body.append_child(
+                &crate::browser::health_views::chemical_explorer::build_chemical_explorer_view(
+                    document,
+                ),
+            )
+            .unwrap();
+            true
+        }
         "conditions" => {
             body.append_child(
                 &crate::browser::health_views::conditions::build_conditions_view(document),

@@ -24,8 +24,13 @@ pub fn supports(capability: &str) -> bool {
             | "ComputationalGeometry.distance_2d"
             | "ComputationalGeometry.surface_area"
             | "ComputerVision.canny_edges"
+            | "ComputerVision.cosine_similarity"
+            | "ComputerVision.dhash"
+            | "ComputerVision.equalize_hist"
             | "ComputerVision.gaussian_blur"
+            | "ComputerVision.hamming_distance"
             | "ComputerVision.histogram"
+            | "ComputerVision.rgb_to_gray"
             | "ComputerVision.sobel_magnitude"
             | "DeonticLogic.evaluate"
             | "EpistemicLogic.evaluate"
@@ -73,7 +78,12 @@ pub fn build(
         "ComputerVision.gaussian_blur"
         | "ComputerVision.histogram"
         | "ComputerVision.canny_edges"
-        | "ComputerVision.sobel_magnitude" => grayscale_args(selected),
+        | "ComputerVision.sobel_magnitude"
+        | "ComputerVision.equalize_hist"
+        | "ComputerVision.dhash" => grayscale_args(selected),
+        "ComputerVision.rgb_to_gray" => rgb_args(selected),
+        "ComputerVision.hamming_distance" => hamming_args(selected),
+        "ComputerVision.cosine_similarity" => cosine_args(selected),
         "ComputationalGeometry.convex_hull_2"
         | "ComputationalGeometry.triangulate_polygon"
         | "ComputationalGeometry.distance_2d"
@@ -153,6 +163,74 @@ fn grayscale_args(selected: Option<&Element>) -> Result<Value, String> {
         ));
     }
     Ok(json!({ "data": data, "width": width, "height": height, "stride": width }))
+}
+
+fn rgb_args(selected: Option<&Element>) -> Result<Value, String> {
+    let selected = selected.ok_or_else(|| "Select a picture with RGB pixel data first.".to_string())?;
+    let raw = selected
+        .get_attribute("data-rgb-u8")
+        .ok_or_else(|| "The selected picture has no decoded RGB pixels yet (data-rgb-u8).".to_string())?;
+    let width = integer_attr(selected, "data-pixel-width")
+        .ok_or_else(|| "The selected picture has no pixel width.".to_string())?;
+    let height = integer_attr(selected, "data-pixel-height")
+        .ok_or_else(|| "The selected picture has no pixel height.".to_string())?;
+    let pixels = width
+        .checked_mul(height)
+        .ok_or_else(|| "The selected picture dimensions are too large.".to_string())?;
+    let expected = pixels
+        .checked_mul(3)
+        .ok_or_else(|| "The selected picture dimensions are too large.".to_string())?;
+    if pixels > MAX_LIVE_PIXELS || raw.len() > (MAX_LIVE_PIXELS as usize * 12) {
+        return Err("Live picture tools are limited to 512 × 512 RGB pixels.".to_string());
+    }
+    let data = parse_u8_csv(&raw)?;
+    if data.len() as u64 != expected {
+        return Err(format!(
+            "The selected picture has {} RGB bytes, but its dimensions require {expected}.",
+            data.len()
+        ));
+    }
+    Ok(json!({ "data": data, "width": width, "height": height, "stride": width * 3 }))
+}
+
+fn hamming_args(selected: Option<&Element>) -> Result<Value, String> {
+    let selected =
+        selected.ok_or_else(|| "Select a surface with two perceptual hashes first.".to_string())?;
+    let a = selected
+        .get_attribute("data-hash-a")
+        .or_else(|| selected.get_attribute("data-dhash"))
+        .and_then(|v| parse_u64_token(&v))
+        .ok_or_else(|| "Set data-hash-a (u64) on the selected surface.".to_string())?;
+    let b = selected
+        .get_attribute("data-hash-b")
+        .or_else(|| selected.get_attribute("data-ahash"))
+        .and_then(|v| parse_u64_token(&v))
+        .ok_or_else(|| "Set data-hash-b (u64) on the selected surface.".to_string())?;
+    Ok(json!({ "a": a, "b": b }))
+}
+
+fn cosine_args(selected: Option<&Element>) -> Result<Value, String> {
+    let selected =
+        selected.ok_or_else(|| "Select a surface with two embedding vectors first.".to_string())?;
+    let a = selected
+        .get_attribute("data-embedding-a")
+        .ok_or_else(|| "Set data-embedding-a (CSV floats) on the selected surface.".to_string())?;
+    let b = selected
+        .get_attribute("data-embedding-b")
+        .ok_or_else(|| "Set data-embedding-b (CSV floats) on the selected surface.".to_string())?;
+    let a = parse_f64_csv(&a)?;
+    let b = parse_f64_csv(&b)?;
+    if a.is_empty() || b.is_empty() {
+        return Err("Embedding vectors must contain at least one finite float.".to_string());
+    }
+    if a.len() != b.len() {
+        return Err(format!(
+            "Embedding lengths differ ({} vs {}).",
+            a.len(),
+            b.len()
+        ));
+    }
+    Ok(json!({ "a": a, "b": b }))
 }
 
 fn geometry_points_2d(selected: Option<&Element>) -> Result<Value, String> {
@@ -301,6 +379,37 @@ fn parse_u8_csv(raw: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
+fn parse_f64_csv(raw: &str) -> Result<Vec<f64>, String> {
+    let values: Vec<f64> = raw
+        .split(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ';'))
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            part.parse::<f64>()
+                .map_err(|_| "Embedding values must be comma-separated floats.".to_string())
+                .and_then(|n| {
+                    if n.is_finite() {
+                        Ok(n)
+                    } else {
+                        Err("Embedding values must be finite floats.".to_string())
+                    }
+                })
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(values)
+}
+
+fn parse_u64_token(raw: &str) -> Option<u64> {
+    let trimmed = raw.trim();
+    if let Some(hex) = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+    {
+        return u64::from_str_radix(hex, 16).ok();
+    }
+    trimmed.parse::<u64>().ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,7 +443,24 @@ mod tests {
         assert!(supports("Inference.verify_turn"));
         assert!(supports("Inference.detect_ungrounded"));
         assert!(supports("ComputerVision.histogram"));
+        assert!(supports("ComputerVision.equalize_hist"));
+        assert!(supports("ComputerVision.rgb_to_gray"));
+        assert!(supports("ComputerVision.dhash"));
+        assert!(supports("ComputerVision.hamming_distance"));
+        assert!(supports("ComputerVision.cosine_similarity"));
         assert!(supports("SymbolicAlgebra.eval"));
         assert!(!supports("Future.unimplemented"));
+    }
+
+    #[test]
+    fn parse_u64_token_accepts_hex() {
+        assert_eq!(parse_u64_token("0x10"), Some(16));
+        assert_eq!(parse_u64_token("42"), Some(42));
+    }
+
+    #[test]
+    fn parse_f64_csv_rejects_non_finite() {
+        assert_eq!(parse_f64_csv("1.0, 2.5").unwrap(), [1.0, 2.5]);
+        assert!(parse_f64_csv("1.0, nan").is_err());
     }
 }

@@ -885,6 +885,11 @@ pub(super) fn build_command_list() -> Vec<CommandEntry> {
             shortcut: "",
         },
         CommandEntry {
+            icon: "\u{1F9EA}",
+            label: "Compound Evidence Explorer",
+            shortcut: "",
+        },
+        CommandEntry {
             icon: "\u{1F3E5}",
             label: "Conditions",
             shortcut: "",

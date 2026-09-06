@@ -25,6 +25,11 @@ evidence.
 | 11 | Bounded import jobs (`AST-02`) | Complete | TempDir RAII, budgets, cancel, promote-on-success; asset_import tests | None |
 | 12 | Source catalogue (`AST-07`) | Complete | 11 descriptors; fail-closed statuses; 8 catalogue tests | None |
 | 13 | Live logic ribbon binds (`PFT-05`) | Complete | Paraconsistent / LTL / Symbolic dual-path tools | Owner continue |
+| 14 | Vibe/Poet surface exposure (`EXP-A0`–`B1a`) | **Complete** | Econ Live; coop Gini; finance CAPM; chat-graph Desktop-only | Gate B / residuals |
+| 15 | ChEBI asset vertical (`AST-03`–`AST-06`) | **Complete** | parse 13; map 10; query 12; Poet explorer 10 + integrity 11 | Closed under residual swarm |
+| 16 | Residual swarm (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`) | **Complete** | Parent verify: consent_persist 5; health_views 58; consent_contract 12; chemical 20; app_manifest 14; integrity 11 | Closed |
+| 17 | Gate B swarm (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`) | **Complete** | Incorporation doc; app_manifest **21**; app_registry **11**; WD-01 IA map | Constraint corrected — vibescript-first |
+| 18 | Constraint correction + vibescript-first impl | **Complete** | CV Live 5; Econ Live +5; CooperativeDelegation Host; ChatGraph Host×3 | Next: backlog Q1/Q2 waves |
 
 ## Latest execution evidence
 
@@ -33,7 +38,7 @@ evidence.
 - Project-owner D5 instruction: close Review Gate A so Poet implementation can proceed.
 - Decision record: `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`.
 - Tip: `9909c1b4` on `0.0.36-dev` (PR #75 + env).
-- Residuals accepted: Poet grant persist without `ConsentLedger`; live-daemon browser UAT incomplete.
+- Residuals accepted at close: Poet grant persist without `ConsentLedger` (cleared 2026-09-06 via `HLT-CL`); live-daemon browser UAT still optional.
 - Unparked: `health:framingham` / `health:cha2ds2` / `health:score2` in Tool Chest tracker.
 - Next: `PFT-03` or `AST-01`.
 
@@ -65,6 +70,98 @@ evidence.
 - `PFT-05`: `epistemic:paraconsistent_route`, `code:ltl_evaluate`, `code:symbolic_eval`.
 - Parent verify: core **19** + poet filter **10** passed.
 - Next: `AST-03` (ChEBI release parser) or further PFT.
+
+### `EXP-PLAN` - 2026-09-06 (Vibe / Poet surface exposure)
+
+- Tooling: `scripts/vibe_surface_gap_review.py` — multi-seam matrix (Vibe / MCP /
+  WASM engine / desktop commands / Poet Live scopes) + optional `--rustdoc`.
+- Report: `docs/work-in-progress/VIBE_SURFACE_GAP_REVIEW.md` regenerated
+  (ALL_BOUND=892 = catalog; `Econ.*` ~106 already bound).
+- Plan: `docs/plans/vibe-poet-surface-exposure-plan-2026-09-06.md` — waves A–D;
+  first packet `EXP-A0` then curated `Econ.*` Tool Chest Live tools; chat-graph
+  seam needs owner decision (desktop-only recommended).
+- Verdict: economics gap is **Poet consumption**, not missing Host family;
+  chat-graph remains client-core/desktop unless `ChatGraph.*` is approved.
+- Next: owner selects `EXP-A0` / `AST-03` / Gate B path.
+
+### `EXP-A0` / `EXP-A1` - 2026-09-06 (Econ consumption + Live tools)
+
+- A0 inventory: `docs/work-in-progress/EXP_A0_ECON_CONSUMPTION_INVENTORY.md`
+  (pre-A1: 106 `Econ.*`, **0** Poet citations).
+- A1: toolbox `econ` / chain `econ:live` — Live dual-path tools citing
+  `Econ.capm_expected_return`, `Econ.gini`, `Econ.mixed_nash_2x2`,
+  `Econ.black_scholes`, `Econ.solow_steady_state` (no Host widen).
+- Modules: `registration/register_econ_toolbox.rs`, `econ_chain_actions.rs`;
+  wired in `tool_actions` / `tool_copy`.
+- Verify: `cargo test -p poet --lib econ` **8**; every_registered_nonplacement
+  **1**; product_integrity **10**.
+- Next: `EXP-A2` cooperative-economics Live invoke, or `AST-03`.
+
+### `EXP-A2` / `EXP-A3` - 2026-09-06 (coop Live + finance Econ)
+
+- Split `cooperative_economics/` (model / view / live_welfare); no `pub use`
+  thin-view growth (integrity ceiling held at 112).
+- Live welfare panel: user-supplied incomes → dual-path `Econ.gini`
+  (offline local sketch; daemon live). True-cost labeled local-only.
+- Finance/wallet specialist: `Econ.capm_expected_return` + keep
+  `FinancialModeling.gbm_var` for composed GBM/VaR.
+- Verify: cooperative_economics **5**; specialist_families **2**;
+  product_integrity **10**.
+- Next: `AST-03` (asset vertical) or EXP-B0 chat-graph decision.
+
+### `EXP-B0` / `EXP-B1a` - 2026-09-06 (chat-graph seam)
+
+- Decision: `docs/work-in-progress/EXP_B0_CHAT_GRAPH_SEAM_DECISION.md` —
+  Desktop/client-core only; no `ChatGraph.*` under freeze.
+- `social:graph` ribbon → honest unavailable (points at `get_chat_graph`);
+  no longer misuses `GraphDatabase.stats`.
+- Verify: instrument_panel **6**; product_integrity **10**.
+
+### `AST-03`–`AST-06` - 2026-09-06 (ChEBI vertical)
+
+- `AST-03` `q42/chebi_parse/` compounds.tsv local parser — **13** tests.
+- `AST-04` `q42/chebi_map/` caller-buffered Quin map — **10** tests.
+- `AST-05` `q42/chebi_query/` describe/resolve/parents/evidence/export — **12**.
+- `AST-06` Poet Health chemical explorer (NoAsset honesty; research-evidence
+  banner; import path copy) — chemical **10**; product_integrity **11**.
+- Cleared by residual swarm: `AST-06b` fixture-backed local TSV bind; `HLT-CL`
+  ConsentLedger session persist.
+
+### Residual swarm - 2026-09-06 (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`)
+
+- Plan: `docs/work-in-progress/POET_RESIDUAL_SWARM_2026-09-06.md`.
+- `HLT-CL`: `consent_persist` seam — issue/revoke before COP upsert; fail-closed;
+  no private keys in UI. Parent: consent_persist **5**; health_views **58**;
+  consent_contract **12**; product_integrity **11**.
+- `AST-06b`: chemical explorer live bind via local fixture TSV (no Host ID);
+  chemical **20**; integrity **11**.
+- `APP-01`: ADR `docs/manuals/adr/0013-portable-application-manifest-reconciliation.md`.
+- `APP-02`: `q42/app_manifest/` v1 — **14** tests.
+- Next: `APP-03`+ projections; WD-01…WD-08; Review Gate B.
+
+### Gate B swarm - 2026-09-06 (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`)
+
+- Plan: `docs/work-in-progress/POET_GATE_B_SWARM_2026-09-06.md`.
+- `EXP-C1`: sibling-crate incorporation inventory — cooperative-core / vision /
+  client-core classified; **no Host widen**; Poet `cooperative_economics` ≠
+  cooperative-core duplicate. Prefer remaining `ComputerVision.*` + `Econ.*` Live.
+- `APP-03`: `project_manifest` shared IDs across four projections — parent **21**.
+- `WD-01`: control-plane IA map (Apps/Node/Identity/Assets/Connections/Recovery).
+- `WD-02`: bounded `app_registry` — parent **11**; POET fixture; quarantine.
+- Next: `APP-04` / `WD-03` / shell IA apply / Review Gate B.
+
+### Vibescript-first swarm - 2026-09-06
+
+- Constraint correction: Host widen in scope; methodology = Host then Poet.
+- Exhaustive backlog tool: `scripts/vibe_incorporation_backlog.py`.
+- `VIBE-CV`: remaining 5 `ComputerVision.*` → Poet `image:vision` Live.
+- `VIBE-ECON`: +5 Live (`cournot` / `bertrand` / `historical_var` / `atkinson` /
+  `gordon_growth`).
+- `VIBE-COOP`: Host `CooperativeDelegation.permits` + `CooperativeWork.board_project`
+  (not `Agency.*`); Poet rights Live.
+- `VIBE-CHAT`: Host `ChatGraph.validate_fragment` / `link_reply` / `session_summary`;
+  Poet `social:graph` dual-path.
+- Next: backlog Q1/Q2 waves; biosense follow-on.
 
 ### `RBL-01` - 2026-09-05
 
@@ -349,7 +446,7 @@ The earlier programme remains the dependency backbone after Gate A:
 | Davinci / POET chrome | Compare Stage 0-1 acceptance against completed `UX-01` to `UX-04`; record only real deltas | Current UX implementation and Tool Chest inventory |
 | Monet / visual grammar | Publish the motion contract, then verify existing reduced-motion and container states before new motion | Davinci delta audit |
 | Marvin / ontology | Publish Container/Manifold/Link joins with precise SHACL-first wording | Existing vocabularies and live Invoke IDs |
-| Neo / seams | Audit remaining `capability_scope` values; add no bind before next chain is selected | `ALL_BOUND`, project-owner selection |
+| Neo / seams | Surface exposure plan landed (`EXP-*`); start with `EXP-A0` Econ consumption inventory — no bind before owner selects | `docs/plans/vibe-poet-surface-exposure-plan-2026-09-06.md`, `ALL_BOUND` |
 | Vibe / language | Stage 0–1 landed 2026-09-05; remaining stages stay parked on Marvin/Neo/Capt. gates | Frozen host facade and Neo findings |
 
 ## Evidence vocabulary

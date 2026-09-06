@@ -48,6 +48,9 @@ is a separate gate.
 | DoS | Pre-crypto quotas, per-source budgets, admission puzzles only where proportionate, rate limits, 42 MiB ceiling. |
 | Downgrade | Explicit namespace/carrier/gateway selection; no DNS/IP fallback after native failure. |
 | Cross-protocol replay | Distinct domain separators for every signed record and transcript. |
+| Contract reinterpretation | Bind exact CBOR-LD bytes to pinned contexts, ontology, shapes, rules, and compression mappings; reject unknown operative terms and semantic downgrade. |
+| Duplicate/unauthorized debit | Accepted quote and scoped spend grant, aggregate reservations, durable idempotency, and reconciliation before ambiguous payment retry. |
+| Inflated resource/settlement claims | Meter scope and measurement/estimate/unknown states; verify accepted evidence and rail finality separately from signatures or local status strings. |
 
 ## 4. Relationship policy
 
@@ -105,6 +108,12 @@ Outcomes:
 
 Ambiguity never means permission. A remote peer cannot self-assert humanitarian priority. Emergency
 overrides cannot bypass non-derogable protections.
+
+Ontology-defined agreements follow the [CBOR-LD contract profile](./ontological-contracts.md).
+Validated obligations compile into bounded policy handles; ontology equivalence, SHACL conformance,
+and signatures cannot independently create authority. An economic duty is satisfied only by the
+accepted work, subsidy, payment, or other evidence named in that agreement. It never bypasses
+privacy, consent, block, or revocation. Read authority and spend authority are distinct.
 
 ## 8. Conflict handling
 
@@ -178,3 +187,23 @@ Implementations must not claim “ARP/DNS eliminated” when only using QDNF-ove
 “DID verified” after checking only an embedded key; “zero trust” merely because signatures exist;
 “anonymous” when stable traffic metadata remains; “credential verified, therefore true”; “deleted
 everywhere” without proof; or “decentralized” when a vendor relay/directory is mandatory.
+
+## 15. Economic privacy and accountability
+
+Apply the [commons economics profile](./commons-and-resource-economics.md) to governed usage and
+settlement. Public route advertisements omit payer identifiers, balances, invoices, and personal
+work logs. Contracts and receipts use contextual party references with scoped disclosure and
+purpose-limited retention. Public funding reports prefer authorized aggregates over participant
+transaction histories. No universal reputation or wealth score determines resource eligibility.
+
+A payer can cap aggregate energy, time, money, and unsettled exposure and revoke future spending.
+Cancellation and revocation stop new work without pretending to undo completed delivery or a final
+external transfer. Retain outstanding instruction/idempotency evidence until the agreed reconciliation
+and dispute window closes; stop new work if bounded storage cannot preserve it. Corrections and
+refunds reference original records and require their own authority.
+
+A valid receipt signature proves who asserted its contents, not measurement accuracy, contribution
+quality, or payment finality. Offline transferable balances require explicit double-spend assumptions;
+CRDT convergence alone is insufficient. Community access may be funded, donated, reciprocal, or paid,
+with transparent capacity and exhaustion rules. Payment-provider failure cannot silently widen
+authority or disable unrelated native services.

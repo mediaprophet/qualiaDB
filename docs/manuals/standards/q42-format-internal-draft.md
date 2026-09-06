@@ -1,7 +1,7 @@
 # q42 Format Internal Draft
 
 **Status:** Internal draft (implementation converged on v3 unified volume, 2026-06-11; indexes, publication gates, and five-field ECC recorded 2026-08-15)  
-**Date:** 2026-06-09 (revised 2026-08-15 — v3 indexes + publication)  
+**Date:** 2026-06-09 (revised 2026-09-06 — networking modality and byte-layout clarification)
 **Purpose:** Freeze the current implementation reality of the `q42` container
 family before any external standardization work begins.
 
@@ -24,6 +24,7 @@ indexes, ECC, and publication rules that the writer already enforces.
 11. Proposed Canonical Rules
 12. Open Questions
 13. Remaining Cleanup Mandate
+14. Networking Modality Proposal
 
 ## 1. Block Architecture Mandate
 
@@ -202,6 +203,16 @@ Important clarification:
 - The current implementation is not a "42+6 byte split".
 - It is a full 48-byte structure with a dedicated 64-bit `parity` field.
 
+There are **40 bytes / 320 bits in the five non-parity fields** and **8 bytes / 64 bits of parity**.
+Metadata, datatype tags and role-specific control bits consume part of those non-parity fields;
+they are not all free application payload. The approximate “42 semantic + 6 computational bytes”
+wording in older FrameLayout commentary is not a physical byte map.
+
+A 60-bit dictionary/inline object payload is a local field interpretation, not the capacity of a
+Quin or a Q42 file. Full identifiers, cryptographic evidence and ontological contracts use lexicon
+or artifact references and multiple Quins as needed. The proposed
+[networking modality](./q42-network-modality-draft.md) uses that existing model.
+
 ### QualiaSuperBlock
 
 The canonical physical storage page is `QualiaSuperBlock`.
@@ -269,6 +280,11 @@ Producers **MUST** set
 five-field fold matches. A four-field fold (metadata omitted) is a **verify
 Fail** on current volumes. This is stricter than earlier draft prose that
 omitted `metadata`.
+
+Source verification on 2026-09-06 found that `foundation/frame_layout.rs` still exposes four-field
+`parity`, `sealed` and `parity_valid` helpers. They disagree with the canonical NQuin operation for
+nonzero metadata and must not become the networking persistence verifier. The networking modality
+tracks their caller/fixture audit in QDNF-P15; no stored-record conversion occurs in this doc revision.
 
 ### `QualiaSuperBlock`
 
@@ -613,3 +629,23 @@ doc sweeps.
 9. [ ] Finalize minimal `.qualia` manifest schema for v3 (sidecar terms
    omitted).
 10. [x] Stay on v3 (R10). Lex LZ4 inside the same file; no v4 fork.
+11. [ ] Reconcile four-field FrameLayout parity helpers with five-field persistence semantics;
+    classify legacy/internal fixtures rather than silently accepting two checksum definitions.
+12. [ ] Freeze the networking semantic profile and its exact-evidence storage guarantees with P15.
+
+## 14. Networking Modality Proposal
+
+[Q42 Networking Modality](./q42-network-modality-draft.md) defines the proposed network record
+classes, ontology/CBOR-LD bundle, exact proof references and bounded compiled admission views for
+[Qualia Peer Runtime](./qualia-decentralized-network-fabric/peer-runtime.md). It reuses the canonical
+48-byte Quin and current container owners; no new inline datatype, metadata role, opcode, reserved
+header field or physical version is assigned by this proposal.
+
+Post-quantum signatures and SHA-384 commitments use typed full evidence outside individual Quin
+fields. The v3 header's 32-byte SHA-256 root is unchanged; a separately verified PQ evidence manifest
+must bind exact content without claiming the old root is a PQ signature. Any required new opaque
+artifact encoding is versioned within its owning core profile and tested for exact byte recovery.
+
+A literal 42-byte payload plus six parity bytes would be a separate record-format proposal with
+different field allocation and integrity behavior. It needs version/ABI and reader/writer migration
+decisions; adding the networking modality does not make that change implicitly.

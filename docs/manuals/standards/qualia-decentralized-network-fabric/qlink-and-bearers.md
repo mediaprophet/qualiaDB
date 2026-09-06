@@ -45,6 +45,13 @@ the payload.
 - no automatic DNS/IP fallback; and
 - documented privacy, ordering, duplication, corruption-detection, and energy properties.
 
+### 2.2 Resource observations
+
+Where available, bearer metadata supplies scoped airtime, byte/retry counts, and energy observations
+or estimates under [Commons and Resource Economics](./commons-and-resource-economics.md). Missing
+telemetry is explicit and does not prevent ordinary peering. Observations use bounded counters and
+caller-owned records; contract valuation and payment settlement never run inside `send`/`receive`.
+
 ## 3. Raw Ethernet profile
 
 `raw-ethernet-v1` carries QFrame directly in Ethernet payloads.
@@ -230,6 +237,13 @@ already marked are dropped before payload dispatch. A valid next key phase has i
 control sequence and route-object sequence are separate namespaces.
 
 ## 12. MTU and fragmentation
+
+The [QPR post-quantum profile](./post-quantum-security.md#6-wire-size-fragmentation-and-denial-of-service)
+requires a separately frozen, cookie/relationship-gated handshake chunk mechanism before QLink
+authentication. That mechanism admits only bounded handshake flights; it is not general message
+fragmentation and confers no identity/application authority. Until implemented and tested, a bearer
+whose MTU cannot carry the selected handshake reports unsupported PQ operation, without downgrade.
+The rules below continue to apply to ordinary authenticated QLink messages.
 
 QLink negotiates the minimum of both reported MTUs minus bearer/QFrame overhead. The base minimum
 QDNF frame payload for general nodes is 512 bytes; constrained profiles may define a lower value.

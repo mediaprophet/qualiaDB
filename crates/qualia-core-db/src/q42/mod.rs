@@ -1,9 +1,19 @@
 //! `q42` category (reorg).
 
+/// Portable application manifest v1 (APP-02).
+pub mod app_manifest;
+/// Installed-app registry and read-only inspection (WD-02).
+pub mod app_registry;
 /// Governed Q42 dataset asset envelope + licence policy (AST-01).
 pub mod asset_envelope;
 /// Bounded cold-construction asset import jobs (AST-02).
 pub mod asset_import;
+/// ChEBI compounds.tsv local parser (AST-03).
+pub mod chebi_parse;
+/// ChEBI record → Quin mapping (AST-04).
+pub mod chebi_map;
+/// ChEBI in-memory chemical knowledge queries (AST-05).
+pub mod chebi_query;
 /// Upstream source / connector catalogue without data bundling (AST-07).
 pub mod source_catalogue;
 pub mod design_encode;

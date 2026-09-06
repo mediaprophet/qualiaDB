@@ -351,6 +351,11 @@ pub const MANIFOLD_PROJECT: &str = "Manifold.project";
 pub const DOC_INGEST: &str = "Document.ingest";
 pub const SHEET_STATS: &str = "Sheet.stats";
 pub const SHEET_SUM: &str = "Sheet.sum_range";
+// ── ChatGraph (caller-supplied payloads; Lane D / VIBE-CHAT) ───────────────
+pub const CHAT_GRAPH_VALIDATE_FRAGMENT: &str = "ChatGraph.validate_fragment";
+pub const CHAT_GRAPH_LINK_REPLY: &str = "ChatGraph.link_reply";
+pub const CHAT_GRAPH_SESSION_SUMMARY: &str = "ChatGraph.session_summary";
+
 pub const SOCIAL_LWW: &str = "Social.lww";
 pub const NET_PEER: &str = "Net.peer_hash";
 pub const NET_SONIC: &str = "Net.sonic_pack";
@@ -782,6 +787,10 @@ pub const AGENT_EVALUATE: &str = "Agent.evaluate";
 pub const CORPUS_LOAD: &str = "Corpus.load";
 pub const CORPUS_PARSE: &str = "Corpus.parse";
 pub const AGENCY_EVALUATE: &str = "Agency.evaluate";
+
+// ── Cooperative ABAC + work board (qualia-cooperative-core; not Agency.*) ──
+pub const COOPERATIVE_DELEGATION_PERMITS: &str = "CooperativeDelegation.permits";
+pub const COOPERATIVE_WORK_BOARD_PROJECT: &str = "CooperativeWork.board_project";
 
 // ── N5: Neural / LLM inference — load, unload, transformer, classifier, reranker ─
 pub const INFERENCE_LOAD_MODEL: &str = "Inference.load_model";
@@ -1355,6 +1364,9 @@ pub const ALL_BOUND: &[&str] = &[
     DOC_INGEST,
     SHEET_STATS,
     SHEET_SUM,
+    CHAT_GRAPH_VALIDATE_FRAGMENT,
+    CHAT_GRAPH_LINK_REPLY,
+    CHAT_GRAPH_SESSION_SUMMARY,
     SOCIAL_LWW,
     NET_PEER,
     NET_SONIC,
@@ -1699,6 +1711,8 @@ pub const ALL_BOUND: &[&str] = &[
     CORPUS_LOAD,
     CORPUS_PARSE,
     AGENCY_EVALUATE,
+    COOPERATIVE_DELEGATION_PERMITS,
+    COOPERATIVE_WORK_BOARD_PROJECT,
     INFERENCE_LOAD_MODEL,
     INFERENCE_UNLOAD_MODEL,
     INFERENCE_RUN_TRANSFORMER,
@@ -2283,6 +2297,9 @@ pub fn seam_for(id: &str) -> &'static str {
         MANIFOLD_DISTANCE | MANIFOLD_AXES | MANIFOLD_PROJECT => "manifold",
         DOC_INGEST => "docs",
         SHEET_STATS | SHEET_SUM => "sheet",
+        CHAT_GRAPH_VALIDATE_FRAGMENT
+        | CHAT_GRAPH_LINK_REPLY
+        | CHAT_GRAPH_SESSION_SUMMARY => "chat_graph",
         SOCIAL_LWW => "social",
         NET_PEER
         | NET_SONIC
@@ -2711,6 +2728,7 @@ pub fn seam_for(id: &str) -> &'static str {
         AGENT_PLAN | AGENT_EXECUTE | AGENT_EVALUATE => "agent",
         CORPUS_LOAD | CORPUS_PARSE => "agent",
         AGENCY_EVALUATE => "governance",
+        COOPERATIVE_DELEGATION_PERMITS | COOPERATIVE_WORK_BOARD_PROJECT => "cooperative",
         HID_POLL
         | HID_WAIT
         | HID_CLEAR

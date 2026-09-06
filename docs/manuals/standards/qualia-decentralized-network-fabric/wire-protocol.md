@@ -4,9 +4,11 @@
 
 ## 1. Encoding
 
-Control objects use deterministic CBOR compatible with RFC 8949 and schemas expressed in CDDL. Q42
-lexicon compaction may provide a CBOR-LD view, but signed integer field keys have stable meanings and
-never require a remote context fetch.
+Transport/control envelopes use deterministic CBOR compatible with RFC 8949 and schemas expressed
+in CDDL. Their integer field keys have stable meanings. Ontology-defined contract payloads use the
+required [CBOR-LD contract profile](./ontological-contracts.md), with a signed binding to their
+context, ontology, compression-table, SHACL, and N3 rule bundle. Transport field numbers do not
+substitute for ontology terms. Neither path requires a remote context fetch during validation.
 
 Rules:
 
@@ -41,6 +43,12 @@ QFrame is carried directly by Q0 bearer adapters. Its fixed base header uses net
 Total base header: 80 bytes. Extensions follow the base header and are covered by `header_tag` after
 adjacency. The complete frame must fit the bearer MTU. QLink fragmentation is allowed only for
 authenticated peers, at most 16 fragments and 64 KiB reassembly, with timeout and per-peer quotas.
+
+The proposed PQ replacement adds a separate admission-stage handshake chunk profile for larger key
+shares/proofs; see [Post-Quantum Security](./post-quantum-security.md). It is cookie/relationship-gated,
+not unrestricted pre-authentication QLink fragmentation. Its wire assignments and exact vectors are
+unfrozen. Classical envelope/signature and digest fields below do not implicitly accommodate the
+PQ dual-proof and SHA-384 record schemas; they require a new explicitly negotiated version.
 
 ## 3. Frame types
 
@@ -91,6 +99,12 @@ Algorithm 1 is Ed25519 with a 64-byte signature. Signature input is:
 ```text
 "QDNF-ENVELOPE-V1" || deterministic_cbor(envelope_without_key_8)
 ```
+
+This envelope authenticates protocol messages. Durable records use the distinct COSE_Sign1 format
+in [Cryptographic Profile §9](./cryptographic-profile.md#9-stored-signatures-and-cose); one verifier
+must not reinterpret the other's signature. A protocol message may carry an independently signed
+record. For contracts that record binds the exact CBOR-LD bytes and semantic-bundle digest, without
+expansion or recompaction before signature verification.
 
 Transport/link authentication does not make signatures optional for publishable route, delegation,
 alias, capability, or semantic operation records.
@@ -180,6 +194,11 @@ target, context, action, purpose, expiry, nonce, revocation, sensitivity, and de
 
 `CapabilityDecision` is `allow`, `deny`, `needs_human`, or `challenge`, with stable reasons and an
 optional signed receipt. Raw private credentials are not logged by default.
+
+Economic obligation evidence is carried by the negotiated CBOR-LD contract profile, referencing
+accepted terms, resource/spend reservations, and contribution/settlement receipts. Unknown required
+semantics cannot be ignored to produce `allow`. These records use QSession service streams; no new
+QFrame type or NQuin opcode is allocated for payments.
 
 ## 10. QSession data
 

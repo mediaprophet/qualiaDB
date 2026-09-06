@@ -2,7 +2,7 @@
 
 **Short name:** QDNF
 **Status:** Design specification 0.1
-**Date:** 2026-09-05
+**Date:** 2026-09-06
 **Scope:** A clean-slate decentralized network plus an isolated legacy-Internet gateway
 
 ## 1. Purpose
@@ -24,6 +24,25 @@ It replaces those dependencies with:
 Ordinary Internet access remains available through a deliberately separate **Legacy Internet
 Gateway (LIG)**. A QDNF node can therefore use the old web without making old Internet mechanisms
 part of QDNF identity, naming, routing, or trust.
+
+The fabric also supports permissive commons through ontology-defined CBOR-LD agreements. Energy
+and time form independent baseline resource accounts; agreed contributions, prices, and optional
+micropayments determine how obligations are met. Gifts, reciprocal work, community-funded access,
+and paid services share this model without requiring a network-wide currency or payment provider.
+
+QualiaDB's core and `.q42` files supply the shared storage, indexes, semantic records, and policy
+execution beneath the network. QDNF adds protocol lifecycles and bounded working state on that
+substrate. The design includes a comparison with Cloudflare's cache-layout work and specific reuse
+requirements in [Core Storage and Cache](./core-storage-and-cache.md).
+
+The proposed **Qualia Peer Runtime (QPR)** makes this fabric a new independent replacement for libp2p.
+It gives applications governed service handles, bounded event-driven execution, semantic graph
+subscriptions, resumable Q42/CRDT synchronization, and optional encrypted custody. Start with
+[the peer runtime design](./peer-runtime.md) for the architecture, libp2p comparison, and tradeoffs.
+QPR is the software library over QDNF, with no new database or mandatory payment system.
+Its target default includes hybrid post-quantum key establishment and post-quantum authentication
+using QualiaDB's crypto libraries. An optional libp2p migration adapter is outside the replacement
+runtime and is never required for its operation or acceptance.
 
 ```text
 Native QDNF                                      Legacy compatibility
@@ -104,6 +123,16 @@ semantic aliases, and separate legacy-Web support. It makes the following correc
   visibly crosses the LIG boundary.
 - QDNF-over-UDP, WireGuard, libp2p, and WebRTC are transition carriers. They preserve QDNF naming
   and authorization semantics but are not “underlay-independent” conformance.
+- Contracts use CBOR-LD with pinned context, ontology, compression-table, SHACL, and N3 rule bundles.
+  Signatures bind both exact contract bytes and their interpretation; local compilation produces
+  bounded QPolicy handles without ontology resolution in forwarding loops.
+- Persistent network evidence, contracts, and receipts reuse the QualiaDB core and Q42 lifecycle.
+  Exact signed objects remain available beside compact Quin projections; live session state has
+  bounded arenas. Logical cache separation does not require independent database engines.
+- Energy in joules and time in seconds remain scoped observations, including estimates and unknowns.
+  Physical cost, social value, agreed price, and settlement are distinct; payment cannot widen consent.
+- Economic services use accepted quotes, aggregate resource/spend caps, and replay-safe receipts.
+  Native connectivity and community-funded operation remain independent of external payment rails.
 
 ## 6. Document set
 
@@ -134,6 +163,27 @@ semantic aliases, and separate legacy-Web support. It makes the following correc
 13. [Source and Current-Stack Review](./source-and-current-stack-review.md) — detailed assessment of
     the two supplied papers and QualiaDB implementation, including adopted, corrected, and rejected
     claims plus requirements traceability.
+14. [Commons and Resource Economics](./commons-and-resource-economics.md) — energy/time accounting,
+    funding and contribution modes, micropayments, threshold licensing, and worked examples.
+15. [Ontologically Defined Contracts over CBOR-LD](./ontological-contracts.md) — semantic bundles,
+    signature binding, unit semantics, SHACL/N3 validation, and bounded policy execution.
+16. [Core Storage and Cache](./core-storage-and-cache.md) — required QualiaDB/Q42 reuse, Cloudflare
+    comparison, source bytes and Quin indexes, scoped caches, durability, and memory accounting.
+17. [Qualia Peer Runtime](./peer-runtime.md) — proposed libp2p alternative, architecture, identity,
+    dial planning, host/library boundaries, compatibility, and implementation tradeoffs.
+18. [QPR Runtime Model and API](./peer-runtime-api.md) — caller-owned leases, events/effects, aggregate
+    42 MiB budgets, fairness, cancellation, generation changes, and durable operation boundaries.
+19. [Semantic Peer Services](./semantic-peer-services.md) — governed subscriptions, authenticated
+    anti-entropy, causal deletion, Q42 content, encrypted custody, and bounded compute/RPC.
+20. [Post-Quantum Security and Crypto Reuse](./post-quantum-security.md) — existing ML-KEM/ML-DSA/
+    SLH-DSA integration, hybrid handshakes, dual proofs, typed digests, downgrade prevention and bounds.
+21. [Q42 Networking Modality](../q42-network-modality-draft.md) — network record/ontology profile,
+    exact evidence and compiled admission views; 60-bit handles and the physical 48-byte ABI.
+
+For the socioeconomic design, start with documents 14 and 15, then the implementation evidence in
+document 13. [Review notes](./review-notes.md) record this revision's findings and validation scope.
+For the peer-library design, read documents 17–21, then the QPR programme in document 6. All runtime
+APIs, new service profiles, and performance targets are proposals until their acceptance gates pass.
 
 ## 7. Non-goals
 

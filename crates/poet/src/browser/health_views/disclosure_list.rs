@@ -3,6 +3,10 @@
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, MouseEvent};
 
+use super::consent_persist::{
+    grant_material_from_disclosure, parse_grant_id_hex, persist_revoke,
+    revocation_material_from_grant, with_session_ledger, GrantMaterial,
+};
 use super::disclosure_model::{format_recipient_display, CATEGORY_OPTIONS};
 use super::model::{records_from_payload, HealthRecord};
 use super::share_projection::{
@@ -224,15 +228,109 @@ pub fn render_disclosures_list(root: &Element, document: &Document, shares: &[Sh
     }
 }
 
+fn grant_material_from_share(share: &HealthRecord) -> Result<GrantMaterial, String> {
+    let principal = share
+        .field_text("principal_did")
+        .unwrap_or_else(|| "did:q42:local:poet-principal".into());
+    let recipient = share
+        .field_text("share_to")
+        .ok_or_else(|| "Share missing recipient DID.".to_string())?;
+    let purpose = share
+        .field_text("purpose")
+        .unwrap_or_else(|| "General care".into());
+    let scope = share
+        .field_text("scope")
+        .ok_or_else(|| "Share missing consent scope.".to_string())?;
+    let categories: Vec<String> = scope
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let created_at = share.created_at.max(0) as u64;
+    let expires_at = share
+        .field_text("expires_at")
+        .and_then(|raw| {
+            chrono::DateTime::parse_from_rfc3339(&raw)
+                .ok()
+                .map(|dt| dt.timestamp() as u64)
+                .or_else(|| raw.parse::<u64>().ok())
+        })
+        .unwrap_or(created_at.saturating_add(1));
+    let nonce = share
+        .field_text("nonce")
+        .and_then(|n| n.parse::<u64>().ok())
+        .unwrap_or(created_at);
+    let mut grant = grant_material_from_disclosure(
+        &principal,
+        &recipient,
+        &purpose,
+        &categories,
+        created_at,
+        expires_at,
+        nonce,
+    )
+    .map_err(|e| e.user_message())?;
+    if let Some(stored_id) = share
+        .field_text("grant_id")
+        .and_then(|hex| parse_grant_id_hex(&hex))
+        .or_else(|| parse_grant_id_hex(&share.id))
+    {
+        grant.grant_id = stored_id;
+    }
+    Ok(grant)
+}
+
 /// Executes 1-click revocation by appending an immutable revocation receipt to the ledger.
 pub fn execute_revocation(root: &Element, document: &Document, share: &HealthRecord) {
     if !is_daemon_connected() {
         return;
     }
-    let (family, title, fields) = build_consent_revocation_payload(
+
+    let reason = "Revoked by patient via disclosure workspace";
+    let now_ts = (js_sys::Date::now() / 1000.0) as u64;
+    let grant = match grant_material_from_share(share) {
+        Ok(g) => g,
+        Err(msg) => {
+            if let Some(st) = root
+                .query_selector("[data-disclosure-status]")
+                .ok()
+                .flatten()
+            {
+                st.set_text_content(Some(&msg));
+                st.set_attribute("data-state", "error").ok();
+            }
+            return;
+        }
+    };
+    let receipt = revocation_material_from_grant(&grant, reason, now_ts);
+    if let Err(err) = with_session_ledger(|ledger| persist_revoke(ledger, &grant, &receipt)) {
+        if let Some(st) = root
+            .query_selector("[data-disclosure-status]")
+            .ok()
+            .flatten()
+        {
+            st.set_text_content(Some(&err.user_message()));
+            st.set_attribute("data-state", "error").ok();
+        }
+        return;
+    }
+
+    let (family, title, mut fields) = build_consent_revocation_payload(
         share,
-        "Revoked by patient via disclosure workspace",
+        reason,
         "restricted",
+    );
+    fields.insert(
+        "grant_id".into(),
+        serde_json::Value::String(super::consent_persist::grant_id_hex(&grant.grant_id)),
+    );
+    fields.insert(
+        "receipt_id".into(),
+        serde_json::Value::String(super::consent_persist::grant_id_hex(&receipt.receipt_id)),
+    );
+    fields.insert(
+        "ledger_binding".into(),
+        serde_json::Value::String(super::consent_persist::LEDGER_BINDING_SESSION.into()),
     );
 
     if let Some(st) = root
@@ -240,7 +338,7 @@ pub fn execute_revocation(root: &Element, document: &Document, share: &HealthRec
         .ok()
         .flatten()
     {
-        st.set_text_content(Some("Revoking permission and committing signed receipt…"));
+        st.set_text_content(Some("ConsentLedger revoke recorded; committing COP receipt…"));
         st.set_attribute("data-state", "working").ok();
     }
 
@@ -262,7 +360,7 @@ pub fn execute_revocation(root: &Element, document: &Document, share: &HealthRec
                     .flatten()
                 {
                     st.set_text_content(Some(
-                        "Consent revoked immediately. Defeater receipt committed to ledger.",
+                        "ConsentLedger revoke committed. Defeater receipt on COP ledger.",
                     ));
                     st.set_attribute("data-state", "success").ok();
                 }

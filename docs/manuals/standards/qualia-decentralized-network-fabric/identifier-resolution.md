@@ -198,6 +198,14 @@ Separate caches are mandatory:
 A verified higher sequence or withdrawal invalidates older route state immediately. Clock uncertainty
 is returned as evidence rather than handled by widening validity silently.
 
+These are separate logical stores/scopes over the [QualiaDB core and Q42 substrate](./core-storage-and-cache.md),
+not a requirement to create separate database implementations. Q42 indexes yield candidate records;
+full digests, source signatures, current expiry/withdrawal, and disclosure policy still gate use.
+Cache keys include requester scope, operation/sensitivity, method/profile, and policy generation.
+Source-specific negative results also identify their source. A hit never extends authority, and
+rebuilding an index never resurrects a withdrawn route. Store exact signed bytes beside their
+compact Quin projections and preserve immutable generation handles through compaction/restart.
+
 ## 10. Withdrawal, rotation, and recovery
 
 A signed Route Withdrawal Record identifies the target, withdrawn RAR/dni digests, new sequence,

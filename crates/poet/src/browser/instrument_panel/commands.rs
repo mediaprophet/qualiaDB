@@ -99,7 +99,6 @@ pub(super) fn instrument_requires_daemon(tool_id: &str) -> bool {
             | "social:connect"
             | "social:chat"
             | "social:agent"
-            | "social:graph"
             | "graph:expand"
             | "graph:collapse"
             | "graph:layout"

@@ -5,10 +5,14 @@ Accepted (2026-06-21, 0.0.33)
 
 ## Context
 [ADR 0001](0001-the-48-byte-qualia-quin-alignment.md) fixes the `QualiaQuin`/`NQuin` at
-exactly 48 bytes (`6 × u64`: subject, predicate, object, context, metadata, parity). Of
-those, roughly **42 bytes are semantics** (the field hashes / packed literals) and roughly
-**6 bytes are computational support** — an opcode, datatype tags, per-modality flags, a
-clock, and ECC parity — which is what makes a Frame both *data* and *executable code*.
+exactly 48 bytes (`6 × u64`: subject, predicate, object, context, metadata, parity).
+**Byte-layout clarification (2026-09-06):** five non-parity fields occupy 40 bytes; the
+dedicated parity field occupies eight. Opcode, datatype tags, flags and clocks share the
+non-parity fields under role-specific layouts. The former approximate “42 semantic + 6
+computational bytes” description was not a physical partition and must not guide encoders.
+See the [canonical format](../standards/q42-format-internal-draft.md) and proposed
+[networking modality](../standards/q42-network-modality-draft.md). A Frame can represent
+data or compiled operations without treating control fields as extra storage capacity.
 
 Those computational bits were being allocated **ad-hoc across many modules**, and two
 conventions had silently collided:
@@ -25,7 +29,8 @@ several subsystems (a tensor-bake clock, per-modality flags, an ODRL sensitivity
 quin-type nibble, and a routing lane) with **overlapping bit positions**.
 
 ## Decision
-Introduce `crates/qualia-core-db/src/frame_layout.rs` as the **single canonical registry**
+Introduce `crates/qualia-core-db/src/foundation/frame_layout.rs` (re-exported as `frame_layout`)
+as the **single canonical registry**
 for the NQuin's computational bytes. Every modality reads/writes those bits through it, and
 collision invariants are enforced by unit tests.
 
@@ -63,7 +68,8 @@ collision invariants are enforced by unit tests.
   the allocated tag.
 
 ## References
-- `crates/qualia-core-db/src/frame_layout.rs` (the ABI + enforcement tests)
+- `crates/qualia-core-db/src/foundation/frame_layout.rs` (the ABI + enforcement tests;
+  four-field parity helpers still require reconciliation with five-field NQuin persistence)
 - `crates/qualia-core-db/src/resolver.rs` (inline-tag spec table + `xsd:float` decode)
 - Project memory `project-frame-layout-abi`; `ALGEBRA_MANIFOLD_PLAN.md`
 - Supersedes the "known conflict, do not fix unilaterally" note in AGENTS.md §4-D.

@@ -1,6 +1,6 @@
 # QDNF Cryptographic Profile
 
-**Status:** Normative design 0.1
+**Status:** Classical compatibility design 0.1; see the QPR replacement profile below
 **Profile identifier:** `qdnf-crypto-1`
 
 ## 1. Scope
@@ -11,6 +11,12 @@ QRoute, QResolve, QPolicy, and QSession.
 
 It does not define a universal trust root. Trust in a public key comes from the relevant DID method,
 realm constitution, relationship agreement, content digest, or locally configured authority.
+
+The new QPR implementation targets [post-quantum security](./post-quantum-security.md) by default.
+That profile defines hybrid X25519/ML-KEM-768, dual ML-DSA-65/Ed25519 authority proofs, SHA-384
+commitments, staged handshake keys and bounded PQ bootstrap. Sections below specify the original
+classical suite only; its X25519 key schedule, Ed25519-only proofs and classical HPKE envelopes do
+not satisfy a PQ claim. New suite/record/transcript versions are mandatory, with no silent fallback.
 
 ## 2. Design principles
 

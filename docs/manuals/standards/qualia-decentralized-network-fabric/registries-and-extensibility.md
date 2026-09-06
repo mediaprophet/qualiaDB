@@ -224,7 +224,7 @@ separately so a UDP-only build cannot claim native independence.
 | Code | URI | Status |
 |---:|---|---|
 | 0 | none | only permitted for bounded pre-authentication beacons |
-| 1 | `qdnf:suite:x25519-ed25519-hkdf-sha256-chacha20poly1305` | mandatory version 1 suite |
+| 1 | `qdnf:suite:x25519-ed25519-hkdf-sha256-chacha20poly1305` | original version 1 classical suite; does not satisfy the QPR PQ target |
 | 2–31 | future core/standards suites | unassigned |
 | 32–127 | standards-track suites | unassigned |
 | 128–191 | experimental suites | negotiated |
@@ -233,6 +233,14 @@ separately so a UDP-only build cannot claim native independence.
 
 Algorithms inside suite 1 follow the Cryptographic Profile. A signature algorithm identifier is not
 interchangeable with a complete key-agreement/AEAD suite identifier.
+
+The proposed replacement profile reserves the descriptive URI
+`qdnf:suite:mlkem768-x25519-mldsa65-ed25519-sha384-chacha20poly1305` for review, with no numeric
+assignment yet. Its working profile name is `qpr-pq-1`. P14 must freeze its QLink/QSession handshake,
+paired authority/record proofs, SHA-384 digest schemas and constrained-bearer bootstrap before code
+allocation/interoperability. New profile versions must not reinterpret suite 1 fields. See
+[Post-Quantum Security](./post-quantum-security.md). The replacement's default policy requires this
+profile's guarantees; compatibility-only classical operation cannot claim QPR PQ conformance.
 
 ## 13. Signature, key, and digest algorithms
 
@@ -249,6 +257,12 @@ interchangeable with a complete key-agreement/AEAD suite identifier.
 
 Values are scoped by registry; the number `1` alone has no meaning without its field. New algorithms
 require transcript, encoding, downgrade, key-validation, and test-vector definitions.
+
+For `qpr-pq-1`, add explicitly versioned algorithm references for ML-KEM-768, ML-DSA-65, SHA-384,
+HKDF/HMAC-SHA-384 and the required dual-proof policy. QDNF local numeric values remain unassigned.
+COSE algorithm values come from their own standards registry, including RFC 9964 ML-DSA-65 `-49`;
+never copy that signed value into a QDNF unsigned algorithm field. The optional SLH-DSA root and
+hybrid custody profiles require separate identifiers and vectors, not an inferred parameter switch.
 
 ## 14. Route metric registry
 
@@ -270,6 +284,13 @@ Metrics are unsigned fixed-point or integer values. Floating point is prohibited
 Unknown metrics are retained in signed advertisements but cannot improve route preference. Route
 policy must define deterministic precedence and tie-breaking rather than combining incomparable
 metrics into an undocumented score.
+
+Metric 5 remains a coarse class, not a joule meter. Its profile binds the underlying quantity/work
+basis, interval, evidence state, and normalization; unknown values are absent with an explicit
+unknown state in the negotiated profile. Metric 6 requires asset/issuer, scale, and billing basis
+before comparison. Neither metric authorizes a debit. Exact contract quantities and rates use the
+separate [commons resource accounting model](./commons-and-resource-economics.md#3-energy-and-time-units).
+No existing numeric meaning is reassigned by that model.
 
 ## 15. QSession frame registry
 
@@ -319,6 +340,51 @@ QSession's encrypted inner frames use a separate variable-integer namespace:
 The dispatch ID is `q_hash(canonical_service_uri)`. Both parties bind the complete URI and version
 into the QSession transcript before opening a channel. No service is identified solely by a port.
 
+### 16.1 Optional contract and economics profiles
+
+| Canonical identifier | Kind | Behavior |
+|---|---|---|
+| `qdnf:feature:ontological-contracts` | feature, major 1 | Required for ontology-defined contract channels; pinned CBOR-LD semantic bundle and exact-byte signature binding |
+| `qdnf:feature:commons-economics` | feature, major 1 | Requires ontological contracts; funding, resource/spend reservations, contribution and settlement lifecycle |
+| `qdnf:service:economics` | optional service | Reliable QSession streams carrying governed CBOR-LD economic records |
+
+These draft profiles require the schema/ontology/table freeze and vectors in QDNF-P9 before
+interoperability claims. They add no QFrame code, NQuin opcode, or required payment rail. A contract
+feature is critical for its affected channel, without becoming mandatory for unrelated services.
+The profile parameters bind content digests for contexts, ontologies, SHACL shapes, N3 rules,
+compression mappings, and the evaluator/codec versions. Unsupported semantics cannot fall back to
+plain CBOR or a different context. See [Ontological Contracts](./ontological-contracts.md).
+
+### 16.2 Optional peer-runtime service profiles
+
+| Canonical identifier | Kind | Behavior |
+|---|---|---|
+| `qdnf:feature:semantic-subscriptions` | feature, major 1 | Authorized event feeds or snapshot-plus-delta graph views, explicit gaps/resume and bounded dissemination; graph contracts require ontological-contracts |
+| `qdnf:feature:resumable-sync` | feature, major 1 | QSync operation identity, scoped checkpoint/proof exchange, bounded continuation, causal deletion and durable admission |
+| `qdnf:feature:encrypted-custody` | feature, major 1 | Expiring recipient-key envelope profile, bounded durable storage and distinct custody/retrieval/application receipts |
+| `qdnf:feature:reliable-carrier` | feature, major 1 | Explicit QSession mapping onto a reliable ordered carrier, with outer loss/congestion control and reliable services only in the initial profile |
+| `qdnf:service:pubsub` | optional service | Reliable subscription/control exchange and bounded event delivery under the selected subscription profile |
+| `qdnf:service:custody` | optional service | Reliable deposit/retrieval/control streams for authorized encrypted envelopes |
+
+These are proposed identifiers for the [QPR service design](./semantic-peer-services.md), not
+claims of implemented protocols. They allocate no numeric QFrame values or NQuin opcodes. QPR itself
+is a library name, not a wire feature. Existing `sync`, `content`, and `qdp` service URIs are reused.
+Each feature is critical only where its semantics are requested and MUST fail closed if unsupported.
+CBOR-LD contracts and economic obligations additionally require their corresponding features.
+
+The P11/P12 work packages freeze exact message schemas, profile parameters, deterministic encoding,
+signature coverage, proof/tree vectors, receipt states and carrier behavior before publication.
+An event-feed-only implementation cannot claim graph-projection recovery. A custody implementation
+cannot claim forward secrecy without an independently tested key-evolution profile.
+
+### 16.3 Q42 networking semantic profile
+
+`urn:qualia:q42:profile:network:1` is the working storage/semantic profile identifier from
+[Q42 Networking Modality](../q42-network-modality-draft.md). Its proposed vocabulary namespace is
+`urn:qualia:q42:network:`. P15 freezes its ontology/shapes/CBOR-LD mapping, evidence references and
+compiler roles. It allocates no QFrame type, NQuin opcode, inline datatype, metadata nibble or physical
+container version. Generic graph storage is not authority to execute an unsupported network profile.
+
 ## 17. Capability operation registry
 
 Core operation URIs include:
@@ -339,6 +405,19 @@ Core operation URIs include:
 
 Capabilities name the full operation URI. Implementations may use q_hash only after collision-safe
 negotiation. Unknown operations are denied, never mapped to a nearby permission.
+
+The optional economics profile adds `qdnf:op:quote`, `qdnf:op:accept-terms`, `qdnf:op:spend`,
+`qdnf:op:attest-contribution`, and `qdnf:op:reconcile`. These draft operation URIs are scoped to the
+negotiated profile. None is implied by read, connect, relay, or administer permission. A spend grant
+also binds payer, payee, asset, amount, purpose, expiry, and aggregate exposure limits.
+
+The optional peer service profiles add `qdnf:op:publish-event`, `qdnf:op:subscribe`, `qdnf:op:derive-projection`,
+`qdnf:op:store-custody`, and `qdnf:op:retrieve-custody`. Subscribe also requires permission to inspect
+the requested source/projection; ciphertext custody does not imply plaintext read permission.
+Deriving and signing a filtered view requires explicit projector authority, separate from read or
+subscribe permission; a projector's signature cannot be represented as the source author's signature.
+Existing read/append/mutate/sync and relay operations retain their distinct scope. These are draft
+full URIs with no new numeric opcode allocation.
 
 ## 18. Outcomes and error registry
 
@@ -392,6 +471,10 @@ network object is projected into NQuin form:
 
 Projection does not replace the signed source object. Unknown or locally defined sensitivity
 classes can only narrow forwarding, never broaden it.
+
+A commons lane does not imply public plaintext, and a bilateral lane does not require a monetary
+payment. Gift, work, subsidy, and payment evidence can discharge agreed duties. Lane/obligation bits
+are compiled results; they do not independently prove funding, consent, or settlement finality.
 
 ## 20. DID methods, resource methods, and aliases
 
@@ -515,6 +598,9 @@ Registry conformance includes:
 - transition-only build reported as non-native;
 - deprecated suite rejected according to local policy; and
 - stable deterministic conformance output across runs.
+
+Contract/economics profiles additionally test missing or mismatched semantic-bundle dependencies,
+full-term collisions, incompatible units/assets, unknown duties, and refusal of plain-CBOR downgrade.
 
 ## 28. Initial registry publication
 

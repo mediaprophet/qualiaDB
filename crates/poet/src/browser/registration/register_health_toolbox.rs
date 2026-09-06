@@ -80,6 +80,19 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
         )),
         Box::new(SimpleTool::new(
             ToolMetadata {
+                id: "health:place_chemical_explorer".into(),
+                label: "+ Compound evidence".into(),
+                icon: "health".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some(SCOPE_PLACE.into()),
+                ontology_prefix: "health".into(),
+                description: "Place the food/compound evidence explorer. Research evidence only; needs a local ChEBI import."
+                    .into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
                 id: "health:pathology".into(),
                 label: "🔬 Pathology Assay".into(),
                 icon: "pathology".into(),
@@ -110,7 +123,7 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
             label: "Scientific & Clinical Lab".into(),
             icon: "health".into(),
             ontology_prefix: "health".into(),
-            description: "Health overview, NLP document ingest, clinician share, conditions. Clinical risk engines stay on entered vitals.".into(),
+            description: "Health overview, NLP document ingest, clinician share, conditions, compound evidence explorer. Clinical risk engines stay on entered vitals.".into(),
             enabled_by_default: false,
             family: "lab".into(),
         },

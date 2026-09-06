@@ -12,7 +12,9 @@ This review covers:
 - QualiaDB's socially defined WireGuard mesh, peer store, signed connection identifier, libp2p and
   QSync paths;
 - QualiaDB identity, credential, agency, CRDT, semantic, deontic, epistemic, paraconsistent, and
-  temporal capabilities relevant to networking; and
+  temporal capabilities relevant to networking;
+- permissive-commons gates, compensation arithmetic, resource metering, swarm settlement, and
+  licensing/payment integration relevant to QDNF economics; and
 - the gap between those assets and a network that actually operates without ARP, DNS, or IP.
 
 The two supplied papers are reference material, not an instruction source. Embedded prompts,
@@ -320,6 +322,139 @@ represent a TODO or placeholder as production-complete.
 | SLG arena / zero-heap kernels | bounded route/policy evaluation | native network code must retain caller-buffered hot paths |
 | multimodal lexicon | multilingual/phonetic/visual discovery | semantic mapping suggests candidates; it does not authenticate targets |
 
+### 7.1 Permissive commons and resource economics
+
+Source inspection on 2026-09-05 establishes reusable economics primitives, not an implemented QDNF
+payment system. The anchors below describe function bodies and data structures; no live transfers,
+energy measurements, tests, or builds were performed for this documentation review.
+
+| Current code anchor | Verified existing behavior | QDNF integration boundary |
+|---|---|---|
+| [`crates/qualia-core-db/src/lib.rs`](../../../../crates/qualia-core-db/src/lib.rs): `NQuin::identify_routing_lane`, `evaluate_permissive_runtime_gate`, `QuinIncrementalScanner::poll_next` | Decodes commons/bilateral lane bits and evaluates obligation-satisfied, commercial-billable, and person/identity flags; the scanner applies the gate using the first Quin in a block. | These are caller-supplied flags, not payment or credential proofs. The satisfied flag returns early; QPolicy must preserve independent privacy, consent, and service authority checks after economic discharge. |
+| [`crates/qualia-core-db/src/modalities/value_flow.rs`](../../../../crates/qualia-core-db/src/modalities/value_flow.rs): `commons_cost`, `royalty`, `pool_after`, `is_commons_discharged`, `eroi_viable`, `check_usury` | Computes capped recovery cost, category-scaled royalties, pool arithmetic, discharge (`pool >= cost && cost > 0`), an energy-return ratio, and a budget-overage check. | Inputs are supplied amounts and policy parameters. Arithmetic does not audit costs, authenticate a payer/category, persist a shared pool, or establish global licence discharge. Energy ratios require comparable energy units. |
+| [`crates/qualia-core-db/src/foundation/telemetry.rs`](../../../../crates/qualia-core-db/src/foundation/telemetry.rs), [`crates/qualia-core-db/src/services/rpc.rs`](../../../../crates/qualia-core-db/src/services/rpc.rs): `ComputeCostReceipt::generate`; [`crates/qualia-core-db/src/inference/runtime/receipt/execution.rs`](../../../../crates/qualia-core-db/src/inference/runtime/receipt/execution.rs): `ExecutionReceipt` | Global operation counters feed a cost receipt with explicitly mock price weights. Execution receipts carry backend/plan identity, counters, and a coverage mask distinguishing unknown from measured zero. | Global counters do not provide isolated per-session billing. Neither receipt proves joules consumed, agreed tariffs, payment finality, or signed QDNF usage attribution. |
+| [`crates/qualia-core-db/src/services/swarm/job.rs`](../../../../crates/qualia-core-db/src/services/swarm/job.rs), [`dispatch.rs`](../../../../crates/qualia-core-db/src/services/swarm/dispatch.rs), [`settlement.rs`](../../../../crates/qualia-core-db/src/services/swarm/settlement.rs): `JobMode`, `run_job`, `Escrow` | Personal/collaborative jobs have no payment; paid jobs can pass execution and result verification into a held escrow's payment/refund instruction. Pricing and energy-viability helpers also exist. | Holds/refunds are bookkeeping, not custody/transfers. `run_job` does not call the energy helper or bind the supplied escrow's job, parties, and price to the job specification. This is a local composition point, not a complete paid network swarm. |
+| [`crates/qualia-core-db/src/services/ilp_dispatcher.rs`](../../../../crates/qualia-core-db/src/services/ilp_dispatcher.rs): `HttpIlpTransport::send`, `IlpDispatcher::dispatch`, `generate_energy_of_logic_invoice` | The native adapter starts a background HTTP POST to `/v1/lightning/settle`, ignores its result, and returns `Ok(())`; the dispatcher maps that to `Sent`. Invoice generation converts FLOPs through fixed ratios, including an explicitly mock currency conversion. | `Sent` is not confirmed settlement. The reviewed module does not substantiate its header's full STREAM, durable offline retry, Nym privacy, or on-chain completion claims. HTTP payment pointers retain IP/DNS dependencies. |
+| [`crates/qualia-core-db/src/specialized_libs/financial_modeling/settlement.rs`](../../../../crates/qualia-core-db/src/specialized_libs/financial_modeling/settlement.rs): `SettlementEngine`; [`crates/qualia-client-core/src/wallet/ledger.rs`](../../../../crates/qualia-client-core/src/wallet/ledger.rs): `append_entry` | Financial settlement provides method/clearing/validation configuration structures; the wallet ledger appends dispatch and transaction records to NDJSON. | These structures and stored status strings do not independently verify transfer finality or provide QDNF reconciliation. |
+| [`crates/qualia-core-db/src/governance/coordination.rs`](../../../../crates/qualia-core-db/src/governance/coordination.rs): `ResourceContract`; [`crates/vibe/src/budget.rs`](../../../../crates/vibe/src/budget.rs): `Budget`; [`crates/qualia-core-db/src/inference/lab/campaign.rs`](../../../../crates/qualia-core-db/src/inference/lab/campaign.rs): campaign search loop | Caller-charged cycle/token breakers, instruction/workspace budgets, and an elapsed-time campaign limit exist. | Cycles, tokens, and instructions are not elapsed seconds or joules; the campaign checks time between trials. These are not shared QSession energy/time reservations or strict per-operation deadlines. |
+| [`crates/qualia-core-db/src/inference/thermal_telemetry.rs`](../../../../crates/qualia-core-db/src/inference/thermal_telemetry.rs): `sample_gpu_thermal`, `NvmlThermalGovernor::sample`; [`crates/qualia-core-db/src/domains/financial/economics/node_pricing.rs`](../../../../crates/qualia-core-db/src/domains/financial/economics/node_pricing.rs): `get_current_system_context` | Optional NVML code reads GPU temperature and instantaneous board power; node pricing uses fixed mock battery/temperature/congestion inputs. | Board watts are not whole-system or per-job joules. NVML power-read errors become zero in this sample structure, so billing needs explicit missing/invalid measurement handling and time integration. |
+| [`crates/qualia-core-db/src/services/rpc.rs`](../../../../crates/qualia-core-db/src/services/rpc.rs): `negotiate_provider_terms`; [`crates/poet/src/browser/agreement_views/license_builder.rs`](../../../../crates/poet/src/browser/agreement_views/license_builder.rs); [`crates/poet/src/browser/cooperative_economics.rs`](../../../../crates/poet/src/browser/cooperative_economics.rs): `OntologicalPricingEngine::evaluate_peer` | Provider negotiation checks an offered offset against a supplied connectivity cost and produces a split plan. Authoring/UI code exposes licence compositions, reference pricing, free quotas, reciprocal barter, and metered rates. | A threshold comparison and policy/UI examples do not implement authenticated threshold licensing, quota enforcement, or paid transit. Their fixed rates, quotas, and tax split are not universal QDNF policy. |
+
+**Proposed QDNF economics:** use energy in joules and elapsed time in seconds (with explicit integer
+subunits) as separate baseline resource dimensions. Preserve bytes, storage duration, compute work,
+and human labour/attention as distinct observations; neither FLOPs nor a token price measures energy.
+Record meter scope, interval, attribution, measurement/estimate/unknown status, and uncertainty before
+applying an agreed tariff. There is no universal joule-to-time or resource-to-money exchange rate.
+
+Permissive commons should support free, donated, reciprocal, subsidized, and paid participation under
+explicit community and contributor terms. Recovery of a work's agreed cost and capped return may
+discharge its compensation obligation; ongoing hosting, transit, and compute still consume resources.
+Economic discharge must not disclose protected data or grant service authority. Human access,
+accessibility, contribution recognition, and ecological constraints need stated policy, not a wealth
+ranking or a mandatory payment account at network bootstrap.
+
+End-to-end support remains proposed: bind an authorized offer and resource reservation to the full
+target, parties, service, tariff/version, caps, and expiry; meter attributable usage; verify delivery;
+settle through an explicitly selected rail; then reconcile durable, deduplicated receipts with the
+compensation pool. Define cancellation, disputes, refunds, partitions, and over-recovery handling.
+Offline claims and queued instructions remain unsettled until independently confirmed. External
+IP-based payment rails must remain optional transition dependencies for native QDNF operation.
+
+### 7.2 CBOR-LD for ontologically defined contracts
+
+**Current primitives:** [`q42_lex.rs`](../../../../crates/qualia-core-db/src/q42_lex.rs)
+provides `Q42LexMmap` reverse lookup; [`q42/q42_lexicon.rs`](../../../../crates/qualia-core-db/src/q42/q42_lexicon.rs)
+loads volume terms into bidirectional maps and expands registered prefixes. The latter's
+`Q42CborLdParser::parse` only copies input into a default `SemanticPayload`, and
+`Q42Context::from_volume` returns a default context. Separately,
+[`p2p/protocol.rs::qcborld`](../../../../crates/qualia-core-db/src/p2p/protocol.rs) implements a
+Q42-specific, lexicon-keyed sync codec with a version marker and fallback `q_hash` keys. Its decoder
+substitutes a fixed context rather than validating the received context; the surrounding codec
+falls back to plain CBOR and allocates the announced frame length without a local size ceiling.
+These paths do not yet implement the proposed contract profile. The completion/performance claims in
+[`CBOR_LD_SDO_Update_Summary.md`](../CBOR_LD_SDO_Update_Summary.md) are historical documentation,
+not evidence of general CBOR-LD interoperability or bounded semantic contract validation.
+
+The ingestion paths also need an explicit compatibility boundary:
+[`query/cbor_compiler.rs`](../../../../crates/qualia-core-db/src/query/cbor_compiler.rs) assumes
+four integer fields after a root byte and substitutes zero for unsupported value types;
+[`sparql_library/parsers/cbor_parser.rs`](../../../../crates/qualia-core-db/src/sparql_library/parsers/cbor_parser.rs)
+has RDF/RDF-Star ingestion, but its ordinary object path discards `@context`/`@type`, hashes scalar
+values, and substitutes zero for unsupported structures. Neither is a lossless general contract
+decoder. The 60-bit ingestion handles and 64-bit rule/codec hashes require pinned term mappings and
+full source terms; they cannot serve as content digests or establish datatype/IRI equivalence.
+
+Reusable policy targets include
+[`AgreementDID::compile_to_super_quins`](../../../../crates/qualia-core-db/src/governance/webizen/agreement.rs)
+for agreement structure, the typed
+[`SHACL compiler`](../../../../crates/qualia-core-db/src/modalities/logic/shacl/shacl_compiler.rs),
+[`N3 parser`](../../../../crates/qualia-core-db/src/modalities/logic/n3_parser.rs),
+[`N3 compiler`](../../../../crates/qualia-core-db/src/modalities/logic/n3_compiler.rs), and
+[`deontic norm bridge`](../../../../crates/qualia-core-db/src/modalities/logic/deontic.rs).
+Their supported semantics must be profiled: fixed N3 formulas retain at most eight triples, the norm
+bridge projects the first premise triple, and the separate
+[`query SHACL validator`](../../../../crates/qualia-core-db/src/query/shacl_compiler.rs) skips string
+length checks on hashes. Contract compilation must reject unsupported or overflowing semantics
+rather than silently truncate, skip constraints, or infer authorization from a ratified-state field.
+
+**Target:** require a CBOR-LD contract payload with a pinned, content-digested bundle covering contexts,
+ontologies, SHACL shapes, N3 rules, and term mappings. Authenticate deterministic payload bytes and
+the bundle binding under an explicit signature profile, then perform semantic validation against that
+exact bundle before bounded compilation into canonical NQuin and QPolicy. Preserve the signed source
+and compilation provenance; reject missing/mismatched dependencies and silent plain-CBOR downgrade.
+The [HCAI agreement draft](../hcai-agreement-negotiation-protocol.md) contributes nonce, expiry,
+revocation, and independent authorization requirements, but its §§5.1/6.3 specify JSON-LD and a
+SHA-256 hash of canonical RDF, while §15 marks negotiation/binding as proposed. That signing model is
+not interchangeable with a deterministic CBOR-LD byte signature: any bridge needs a named, versioned
+profile with explicit verification rules. A valid signature alone does not validate contract meaning
+or grant service access.
+
+### 7.3 QualiaDB core, Q42 files, and network cache reuse
+
+[Core Storage and Cache](./core-storage-and-cache.md) makes core reuse a normative QDNF requirement
+and records the user-supplied Cloudflare cache article as comparative engineering prior art.
+The inspected [Q42Volume](../../../../crates/qualia-core-db/src/q42/q42_volume.rs) maps and validates
+native volumes and exposes lexicon, BIDX, and caller-buffered block access. The
+[range/cursor/index modules](../../../../crates/qualia-core-db/src/q42/volume/mod.rs) provide the
+bounded query surface; [Q42LexMmap](../../../../crates/qualia-core-db/src/q42_lex.rs) provides compact
+term lookup. QDNF should build scoped adapters on these facilities, preserving exact signed records
+beside their semantic projections, rather than adding a second general-purpose database.
+
+The boundary needs work: [WriteAheadLog](../../../../crates/qualia-core-db/src/wal.rs) synchronizes
+native individual mutations but recovers into vectors; [root publication](../../../../crates/qualia-core-db/src/q42/volume/publish.rs)
+uses a temporary file and rename without establishing the complete multi-object payment commit
+protocol. [MmapStore](../../../../crates/qualia-core-db/src/storage/mmap.rs) initializes the active
+count to zero on open, and the [cached graph index](../../../../crates/qualia-core-db/src/query/graph_index.rs)
+still builds from a copied snapshot. These are reusable primitives with specific limitations, not
+proof of durable bounded QResolve or settlement support. Exact opaque-record storage, scoped cache
+keys, expiry/revocation invalidation, immutable generation handles, and crash recovery require the
+integration tests in the storage profile. No performance or energy improvement was measured here.
+
+### 7.4 Independent peer runtime, crypto and network modality
+
+The proposed [Qualia Peer Runtime](./peer-runtime.md) replaces the libp2p runtime in Qualia
+applications; any foreign carrier is an optional migration package. Its distinct mechanisms are
+compiled semantic admission plans, shared Q42 evidence/execution views, authorized differential
+sync, resource/contact scheduling and reusable verified cryptographic evidence.
+
+[Semantic Peer Services §7](./semantic-peer-services.md#7-existing-primitives-and-missing-guarantees)
+records source-backed reuse and limitations in graph revision broadcasts, live topics, signed-op
+transport, JSONL inbox/outbox, structural diff, workspaces, scheduling and thermal inputs. Durable
+graph deltas, atomic dedup/application, full-envelope verification and aggregate leases are required
+work, not established by existing class names or local arithmetic.
+
+[Post-Quantum Security](./post-quantum-security.md#3-existing-libraries-and-repair-boundaries)
+records real `fips203` ML-KEM, `fips204` ML-DSA and `fips205` SLH-DSA calls. Network adapters still
+need secret ownership/zeroization, bounded error paths, exact contexts and protocol integration.
+The target uses hybrid establishment plus dual authority proofs; classical-only roots or envelopes
+cannot become quantum-resistant merely because a session uses a KEM.
+
+The [Q42 networking modality](../q42-network-modality-draft.md) makes network kinds extensible graph
+relations and derives bounded execution views. The physical ABI is six u64 fields: 40 non-parity
+bytes plus eight parity bytes. A 60-bit object handle is one field interpretation. The older “42+6”
+wording is not the byte layout. The inspected `NQuin` persistence checksum includes metadata, while
+FrameLayout's older four-field helpers omit it; P15 tracks reconciliation before integration.
+
 ## 8. Critical security gaps before implementation claims
 
 ### 8.1 Delegation verification
@@ -344,6 +479,14 @@ Existing documentation around sync/mesh capabilities sometimes describes intende
 working behavior. QDNF conformance is evidence-based: native mode requires below-IP tests with IP and
 DNS disabled; transition mode is reported separately.
 
+### 8.5 Economic evidence and payment finality
+
+The §7.1 primitives do not establish a verified path from resource consumption to settled payment and
+commons discharge. Before that claim, demonstrate authenticated offers and meter attribution,
+independent access checks, escrow/job binding, verified rail acknowledgements, durable replay-safe
+reconciliation, and correct behavior under failed transfers and partitions. A local `Sent` status,
+an obligation-satisfied bit, or a displayed royalty balance is insufficient evidence.
+
 ## 9. Requirements derived from the review
 
 | ID | Requirement | Specification owner |
@@ -366,6 +509,16 @@ DNS disabled; transition mode is reported separately.
 | R-16 | enforce deterministic bounded parsing and 42 MB execution ceilings | Wire; Implementation |
 | R-17 | verify delegation signatures before any network authorization | Implementation; Security |
 | R-18 | test native operation with Internet, IP configuration, DHCP, and DNS absent | Conformance; Operations |
+| R-19 | specify energy/time units, meter provenance and uncertainty, attributable usage, and enforceable resource/spend caps; see §7.1 | Commons and Resource Economics; QSession; Conformance |
+| R-20 | separate commons compensation discharge from continuing resource costs and privacy/service authority; preserve free, reciprocal, subsidized, and paid participation; see §7.1 | Commons and Resource Economics; QPolicy |
+| R-21 | bind offers, jobs, reservations, delivery evidence, confirmed settlement, and deduplicated pool reconciliation; define refunds, disputes, and partition behavior; see §§7.1, 8.5 | Commons and Resource Economics; QSession; Security |
+| R-22 | keep payment rails optional and report IP/DNS dependencies, unconfirmed instructions, mock tariffs, and metering gaps explicitly; see §§7.1, 8.5 | Commons and Resource Economics; Architecture; Conformance |
+| R-23 | require CBOR-LD ontological contracts bound to a pinned, content-digested context/ontology/SHACL/N3/term-mapping bundle; verify deterministic bytes and semantic validity before bounded NQuin/QPolicy compilation; reject silent plain-CBOR downgrade, unsupported semantics, and truncation; see §7.2 | Ontological Contracts; Wire; QPolicy; Conformance |
+| R-24 | reuse QualiaDB core and Q42 storage/index/persistence for network records, bundles, and accounting; preserve exact signed bytes, scoped cache keys, expiry/withdrawal, bounded generations, and crash recovery; see §7.3 | Core Storage and Cache; Architecture; QResolve; Conformance |
+| R-25 | implement an independent libp2p replacement with bounded leases/events, compiled admission, aggregate reservations and optional isolated migration adapters | QPR Runtime; API; P10/P12/P13 |
+| R-26 | define authorized recoverable subscriptions, authenticated conflict handling, durable applied cursors, disclosure-safe projection provenance, atomic operation effects and causal deletion | Semantic Peer Services; P11/P12 |
+| R-27 | reuse existing PQ primitives for hybrid establishment, dual authority proofs and typed full commitments; freeze downgrade-safe transcripts and bounded bootstrap before PQ claims | Post-Quantum Security; P14 |
+| R-28 | add a Q42 networking semantic profile without silently changing 48-byte layout, datatype tags, metadata roles or parity; distinguish exact evidence, projections and execution views | Q42 Networking Modality; P15 |
 
 ## 10. Rejected shortcuts
 
@@ -383,6 +536,8 @@ QDNF explicitly rejects these shortcuts:
 - letting DNS TXT or Web PKI silently establish native DID ownership;
 - granting service, transit, or administration because a social contact exists;
 - lowering signature thresholds during partitions;
+- treating a payment instruction, queued receipt, or unchecked HTTP dispatch as final settlement;
+- equating FLOPs with measured energy or commons discharge with unrestricted service authority;
 - treating WireGuard-over-UDP as independent of IP; and
 - documenting planned behavior as implemented conformance.
 
@@ -423,3 +578,7 @@ The missing work is foundational networking: native bearer adapters, QLink, QRou
 persistent-target-to-DNI resolution, QSession, policy integration, and the isolated LIG. The QDNF
 specification suite defines those pieces and keeps current working components available throughout a
 staged migration.
+
+For economics, §7.1 identifies existing arithmetic, gates, counters, authoring surfaces, and payment
+integration points. QDNF still needs the authenticated resource-accounting, settlement, and commons
+reconciliation lifecycle described by R-19–R-22 before claiming end-to-end economic support.

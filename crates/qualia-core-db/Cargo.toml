@@ -91,6 +91,7 @@ vm_tracing = []
 
 [dependencies]
 vibe = { path = "../vibe" }
+qualia-cooperative-core = { path = "../qualia-cooperative-core" }
 qualia-inference-kernel = { path = "../qualia-inference-kernel" }
 minicbor = { version = "2.2.2", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }

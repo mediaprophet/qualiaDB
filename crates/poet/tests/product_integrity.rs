@@ -136,6 +136,28 @@ fn health_calculators_are_wired_on_the_container_route() {
     assert!(source.contains("calculators::build_health_calculators_view"));
 }
 
+#[test]
+fn chemical_explorer_uses_pub_fn_workspace_not_thin_delegation() {
+    let mod_source =
+        fs::read_to_string(manifest_dir().join("src/browser/health_views/chemical_explorer/mod.rs"))
+            .expect("chemical explorer mod");
+    assert!(mod_source.contains("pub fn build_chemical_explorer_view"));
+    assert!(!mod_source
+        .lines()
+        .any(|line| line.trim_start().starts_with("pub use ") && line.contains("build_")));
+
+    let dir = manifest_dir().join("src/browser/containers");
+    let mut source = String::new();
+    for entry in fs::read_dir(&dir).expect("container router directory") {
+        let path = entry.expect("container router entry").path();
+        if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            source.push_str(&fs::read_to_string(&path).expect("container router source"));
+        }
+    }
+    assert!(source.contains("\"chemical_explorer\""));
+    assert!(source.contains("chemical_explorer::build_chemical_explorer_view"));
+}
+
 fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }

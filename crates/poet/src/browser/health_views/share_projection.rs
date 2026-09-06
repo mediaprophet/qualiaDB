@@ -132,6 +132,9 @@ pub fn build_consent_revocation_payload(
         "sensitivity".into(),
         serde_json::Value::String(sensitivity.to_string()),
     );
+    if let Some(grant_id) = share.field_text("grant_id") {
+        fields.insert("grant_id".into(), serde_json::Value::String(grant_id));
+    }
     ("health_safeguard".into(), receipt_title, fields)
 }
 

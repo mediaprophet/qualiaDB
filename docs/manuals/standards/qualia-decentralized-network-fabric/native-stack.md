@@ -36,6 +36,12 @@ The functional replacements are explicit:
 
 ## 2. Planes and invariant
 
+[Qualia Peer Runtime](./peer-runtime.md) is the proposed independent implementation and application
+library for these layers. It replaces the libp2p peer runtime in Qualia applications using shared
+Q42 evidence, bounded admission plans, semantic services and aggregate resource scheduling. The
+target default [PQ profile](./post-quantum-security.md) reuses existing crypto primitives with new
+reviewed handshake/proof integration. Optional migration packages do not become runtime dependencies.
+
 ```text
 Persistent target ──QResolve──> verified DNI candidates
                                       │
@@ -53,7 +59,20 @@ The following facts are independent:
 - a route may be disclosed in that relationship; and
 - a particular read/write/action is authorized.
 
+Resource use, an accepted economic obligation, and confirmed settlement are also independent facts.
+The [commons economics profile](./commons-and-resource-economics.md) preserves that separation.
+
 No layer may collapse those facts into one “trusted peer” boolean.
+
+### 2.1 QualiaDB core substrate
+
+The layers share [QualiaDB core storage and Q42 indexes](./core-storage-and-cache.md). Persistent
+signed records, CBOR-LD contract bundles, policy facts, and economic receipts use that storage
+lifecycle. Compact NQuin projections locate exact signed objects without replacing their evidence.
+QRoute forwarding generations and QSession packet state use caller-owned arenas derived from
+verified records; they do not require general graph queries or disk writes for every packet.
+Private relationship state and LIG caches retain separate authority and visibility scopes even when
+they reuse the same engine. QDNF libraries implement adapters and protocol state, not a second database.
 
 ## 3. Q0 bearer adapters
 
@@ -231,6 +250,13 @@ block -> route disclosure -> adjacency -> DID/session proof -> capability/consen
 - M-of-N governance uses the bounded suspended transaction mechanism.
 - Until delegated-access signatures are truly verified, those grants are rejected at QDNF boundaries.
 
+Governed services bind [ontology-defined CBOR-LD contracts](./ontological-contracts.md) to the exact
+operation. Cold validation resolves pinned semantic bundles and compiles bounded policy handles.
+Where an agreement has an economic duty, QPolicy additionally verifies accepted funding/contribution
+terms and reserves resource/spend allowances before billable delivery. Small offer/acceptance
+exchanges have separate quotas. No payment or obligation-discharge flag can override the preceding
+identity, consent, sensitivity, block, or revocation checks.
+
 ## 8. QSession
 
 QSession provides the native equivalents of datagrams, reliable streams, and multiplexing without
@@ -253,6 +279,10 @@ QSync carries signed operations and content blocks after QPolicy authorization. 
 may be fetched in parallel from a DNI swarm when each block verifies against the strong artifact
 digest. Mutable replicas require controller replica authorization and signed operation validation;
 matching a target identifier is insufficient.
+
+For governed swarms, content delivery, creation-cost recovery, and ongoing provider resource use
+have separate receipt scopes. Duplicate blocks or path retries do not automatically create another
+debit. Funding may come from a sponsor, reciprocity, or an accepted payment agreement.
 
 Offline queues contain signed, expiring operations in bounded encrypted storage. Delivery never
 implies application. The recipient repeats replay, signature, capability, sensitivity, and deontic

@@ -9,8 +9,10 @@ mod asset_bind;
 mod asset_store;
 mod audio;
 mod biosignal;
+mod chat_graph;
 mod chemistry;
 mod clinical;
+mod cooperative;
 mod cosmic_bind;
 pub mod coverage;
 mod crypto;
@@ -517,6 +519,9 @@ pub fn dispatch(
         ids::DOC_INGEST => docs::ingest(args, span),
         ids::SHEET_STATS => sheet::stats(args, span),
         ids::SHEET_SUM => sheet::sum_range(args, span),
+        ids::CHAT_GRAPH_VALIDATE_FRAGMENT => chat_graph::validate_fragment(args, span),
+        ids::CHAT_GRAPH_LINK_REPLY => chat_graph::link_reply(args, span),
+        ids::CHAT_GRAPH_SESSION_SUMMARY => chat_graph::session_summary(args, span),
         ids::SOCIAL_LWW => social::lww_merge(args, span),
         ids::NET_PEER => net::peer_hash(args, span),
         ids::NET_SONIC => net::sonic_pack(args, span),
@@ -802,6 +807,8 @@ pub fn dispatch(
         ids::AGENT_VERIFY => governance::agent_verify(args, span),
         ids::IDENTITY_CURRENT_USER => governance::current_user(args, span),
         ids::AGENCY_EVALUATE => governance::agency_evaluate(args, span),
+        ids::COOPERATIVE_DELEGATION_PERMITS => cooperative::permits(args, span),
+        ids::COOPERATIVE_WORK_BOARD_PROJECT => cooperative::board_project(args, span),
         ids::AUDIO_SPECTRUM => audio::spectrum(args, span),
         ids::AUDIO_OSCILLATOR => audio::dsp::oscillator(args, span),
         ids::AUDIO_ENVELOPE => audio::dsp::envelope(args, span),

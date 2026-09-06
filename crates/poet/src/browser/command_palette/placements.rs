@@ -75,6 +75,7 @@ pub(super) fn container_for(label: &str) -> Option<(&'static str, &str)> {
 
         "Health Overview" => ("health_overview", label),
         "Clinical Calculators" => ("health_calculators", label),
+        "Compound Evidence Explorer" => ("chemical_explorer", label),
         "Conditions" => ("conditions", label),
         "Clinical Reports" => ("clinical_reports", label),
         "Lab Results" => ("lab_results", label),

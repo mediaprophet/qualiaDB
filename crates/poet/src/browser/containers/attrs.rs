@@ -29,6 +29,7 @@ pub(super) fn container_type_filter_attrs(container_type: &str) -> (&'static str
         | "health"
         | "health_overview"
         | "health_calculators"
+        | "chemical_explorer"
         | "conditions"
         | "clinical_reports"
         | "lab_results"
@@ -268,6 +269,7 @@ pub(super) fn container_type_tag(container_type: &str) -> (&'static str, &'stati
         "retrospective" => ("tag-governance", "RETRO"),
         "health_overview" => ("tag-health", "HOVR"),
         "health_calculators" => ("tag-health", "CALC"),
+        "chemical_explorer" => ("tag-health", "CHEM"),
         "conditions" => ("tag-health", "COND"),
         "clinical_reports" => ("tag-health", "CLIN"),
         "lab_results" => ("tag-health", "LAB"),

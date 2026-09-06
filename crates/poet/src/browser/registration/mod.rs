@@ -21,6 +21,7 @@ mod register_communication_toolbox;
 mod register_compact_toolbox;
 mod register_epistemic_toolbox;
 mod register_erp_toolbox;
+mod register_econ_toolbox;
 mod register_health_toolbox;
 mod register_image_toolbox;
 mod register_mail_toolbox;
@@ -38,6 +39,7 @@ use register_communication_toolbox::register_communication_toolbox;
 use register_compact_toolbox::register_compact_toolbox;
 use register_epistemic_toolbox::register_epistemic_toolbox;
 use register_erp_toolbox::register_erp_toolbox;
+use register_econ_toolbox::register_econ_toolbox;
 use register_health_toolbox::register_health_toolbox;
 use register_image_toolbox::register_image_toolbox;
 use register_mail_toolbox::register_mail_toolbox;
@@ -73,6 +75,7 @@ pub fn build_registry() -> Registry {
     register_audio_toolbox(&mut reg);
     register_communication_toolbox(&mut reg);
     register_erp_toolbox(&mut reg);
+    register_econ_toolbox(&mut reg);
     register_mail_toolbox(&mut reg);
     register_scientific_toolbox(&mut reg);
     register_rights_toolbox(&mut reg);
@@ -161,6 +164,72 @@ mod tests {
             .collect();
         assert!(tools.contains(&("n3:evaluate", Some("N3Logic.evaluate"))));
         assert!(tools.contains(&("shacl:validate", Some("SHACL.validate"))));
+    }
+
+    #[test]
+    fn econ_live_chain_binds_curated_econ_caps() {
+        let registry = super::build_registry();
+        let econ = registry.toolbox("econ").expect("econ toolbox");
+        let chain = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "econ:live")
+            .expect("econ:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("econ:capm", Some("Econ.capm_expected_return"))));
+        assert!(tools.contains(&("econ:gini", Some("Econ.gini"))));
+        assert!(tools.contains(&("econ:mixed_nash", Some("Econ.mixed_nash_2x2"))));
+        assert!(tools.contains(&("econ:black_scholes", Some("Econ.black_scholes"))));
+        assert!(tools.contains(&("econ:solow", Some("Econ.solow_steady_state"))));
+        assert!(tools.contains(&("econ:cournot", Some("Econ.cournot_duopoly"))));
+        assert!(tools.contains(&("econ:bertrand", Some("Econ.bertrand_duopoly"))));
+        assert!(tools.contains(&("econ:historical_var", Some("Econ.historical_var"))));
+        assert!(tools.contains(&("econ:atkinson", Some("Econ.atkinson"))));
+        assert!(tools.contains(&("econ:gordon_growth", Some("Econ.gordon_growth"))));
+    }
+
+    #[test]
+    fn image_vision_chain_binds_remaining_computer_vision_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "image:vision")
+            .expect("image:vision toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "image:equalize_hist",
+            Some("ComputerVision.equalize_hist")
+        )));
+        assert!(tools.contains(&("image:rgb_to_gray", Some("ComputerVision.rgb_to_gray"))));
+        assert!(tools.contains(&("image:dhash", Some("ComputerVision.dhash"))));
+        assert!(tools.contains(&(
+            "image:hamming_distance",
+            Some("ComputerVision.hamming_distance")
+        )));
+        assert!(tools.contains(&(
+            "image:cosine_similarity",
+            Some("ComputerVision.cosine_similarity")
+        )));
     }
 
     #[test]

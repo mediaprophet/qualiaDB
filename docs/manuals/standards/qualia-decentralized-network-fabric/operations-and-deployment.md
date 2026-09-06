@@ -297,6 +297,11 @@ If wall-clock confidence is insufficient:
 - key rotation can use signed monotonic succession; and
 - administrators receive a bounded clock-confidence alert.
 
+Resource accounting uses monotonic durations with clock/boot identity; Lamport sequence is never
+billable time. Quotes name their wall-clock confidence requirement. A clock correction or restart
+must not add work duration, renew a spend grant, or repeat a payment. See the
+[energy/time accounting rules](./commons-and-resource-economics.md#3-energy-and-time-units).
+
 ## 15. Routing operations
 
 Routers maintain bounded adjacency, LSA, RPA, forwarding, and replay tables. Operators configure
@@ -544,6 +549,11 @@ Security-sensitive administrative and policy actions may create signed receipts.
 actor capability, target digest, action, outcome, policy digest, and time evidence. It does not copy
 all evaluated private evidence. Receipt disclosure follows its own capability policy.
 
+Economic receipts retain energy/time evidence states, accepted contract and semantic-bundle digests,
+funding allocation, and contribution/settlement status. Keep `reserved`, `pending`, `unknown`,
+`settled`, `disputed`, and `refunded` distinct in operator views. Never interpret a dispatch `Sent`
+status or successful HTTP submission as final settlement without adapter-specific verification.
+
 ## 29. Health checks
 
 Health is layered so a carrier outage is not confused with identity or policy failure:
@@ -656,6 +666,11 @@ Each deployment documents limits for:
 Hot-path buffers are caller-owned/fixed and allocation-free under the QualiaDB Tier 1 contract.
 Cold construction may use bounded workspace arenas and must fail before exceeding configured or 42
 MB execution-pass ceilings.
+
+For governed services also budget energy, elapsed/device time, battery reserve, economic negotiation,
+semantic-bundle expansion, accounting storage, monetary spend, and unsettled exposure. Document
+meter/model scope and unknown telemetry. Concurrent sessions share atomic reservations; reaching
+a limit pauses new billable work while preserving a small closure/reconciliation allowance.
 
 ## 35. Administrative access
 
@@ -848,6 +863,20 @@ A deployment is ready only when operators can answer yes to all applicable quest
 - Can the network operate when every LIG is disabled?
 - Have restore, key compromise, route attack, and gateway compromise exercises succeeded?
 - Does the conformance manifest state real capabilities rather than planned ones?
+
+### 45.1 Contract and commons service readiness
+
+For services using the optional profiles, operators also demonstrate:
+
+- the accepted CBOR-LD context/ontology/table/shapes/rules bundle is locally available by digest;
+- quotes expose resource, monetary, fee, and unsettled-exposure caps and the party funding them;
+- a donated/community-funded interaction works without any external payment adapter;
+- exhausted subsidy or battery allowance pauses new work according to published capacity rules;
+- receipt, dispute, cancellation, and pending-payment recovery survives a restart;
+- Q42 compaction preserves signed source records, pinned contracts, and outstanding instructions;
+- cache keys separate private requester scopes and the LIG, with expiry checked after cache hits;
+- energy readings/estimates/unknowns and elapsed/device/human time remain distinguishable; and
+- an adapter outage or ambiguous submission reconciles the original instruction without a second debit.
 
 ## 46. Operational non-goals
 

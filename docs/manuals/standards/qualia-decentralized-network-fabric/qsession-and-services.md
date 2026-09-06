@@ -4,6 +4,11 @@
 
 ## 1. Purpose
 
+The original suite-specific handshake details below describe `qdnf-crypto-1`. The new QPR default
+uses [the PQ replacement profile](./post-quantum-security.md): distinct hybrid share/authentication/
+Finished stages, paired proofs and SHA-384 transcript versions. These require explicit negotiation
+and cannot reinterpret classical session bytes or fall back after a failed PQ handshake.
+
 QSession provides end-to-end encrypted datagrams, reliable streams, multiplexing, flow control,
 loss recovery, congestion control, rekey, and path migration over QRoute. It replaces mandatory
 native dependence on UDP, TCP, and TLS while binding transport to persistent DID/resource authority
@@ -253,7 +258,17 @@ SERVICE_OPEN binds a short channel ID to:
 The receiver verifies the full IRI before dispatch, so `q_hash` collision cannot select the wrong
 service. A service cannot inherit another channel's capability.
 
+A governed channel additionally binds its [CBOR-LD contract profile](./ontological-contracts.md),
+accepted agreement/quote digest, semantic-bundle digest, and compiled policy decision. Where
+economic duties apply, it names verified funding and reservation handles. Bounded negotiation may
+precede agreement acceptance; opening a channel never authorizes a payment. Budget exhaustion
+pauses new billable work while separately reserved closure/reconciliation traffic can finish.
+
 ## 18. Core services
+
+The proposed [Qualia Peer Runtime](./peer-runtime.md) exposes these services through verified
+handles, caller-owned buffers, bounded events/effects, and aggregate reservations. It composes
+QSession; it does not create another session protocol or treat a transport connection as permission.
 
 ### 18.1 QResolve
 
@@ -302,6 +317,45 @@ A manifest stream provides artifact digest, block layout, provider grants, and a
 may arrive unordered from multiple providers and are admitted only after digest proof. Mutable data
 never uses content equality as permission to merge.
 
+### 18.8 Commons economics
+
+`qdnf:service:economics` is an optional reliable-stream service for ontology-defined agreements,
+offers, acceptances, usage/contribution records, and settlement reconciliation. It follows
+[Commons and Resource Economics](./commons-and-resource-economics.md) and requires the negotiated
+CBOR-LD contract feature. Read/connect authority does not imply spend authority.
+
+Receipts bind operation and segment IDs across reconnects, rekey, and path migration. Transport ACK
+means packet receipt, not accepted work, licence discharge, or payment finality. Persist settlement
+intent before adapter submission and reconcile ambiguous outcomes before retry. Cancellation stops
+new work and releases unused reservations under the accepted terms. Economic state changes and
+payment instructions MUST NOT use zero-round-trip data.
+
+External payment adapters disclose their Internet/LIG dependencies. Failure of one adapter cannot
+disable unrelated authorized native services or silently select another payment rail.
+
+### 18.9 Additional peer service profiles
+
+The [Semantic Peer Services](./semantic-peer-services.md) proposal adds optional graph subscriptions
+and encrypted custody services, and a resumable-sync extension to QSync. Each defines explicit
+retention, gap/recovery, authority and receipt semantics. Subscription notification is not proof of
+complete state; custody acceptance is not destination application. Draft feature/service identifiers
+appear in the registry and require independent vectors before interoperable use.
+
+The optional `qdnf:feature:reliable-carrier` maps a QSession to an existing reliable carrier stream.
+It MUST be negotiated before application traffic, bind the bearer profile into the session
+transcript, and define ordering, packet boundaries and close/failure behavior. The outer transport
+owns loss recovery and congestion control; QSession retains cryptographic packet numbers/replay
+checks, service flow bounds and end-to-end identity. QSession packet ACK/loss timers for this mapping
+are disabled; service acknowledgements/receipts retain their meanings. Initially only reliable
+services are eligible. Reliability must extend between the actual QSession endpoints; a reliable
+hop terminating at an intermediary is insufficient. Initially bind this mode to one logical ordered
+carrier and prohibit multipath or migration across recovery modes. Carrier failure or a switch to
+a native lossy path requires a new authenticated QSession with its selected recovery profile;
+application resume uses stable operation IDs and durable checkpoints. An in-session recovery-mode
+transition is unsupported until separately specified and tested.
+This is a draft exception to native packet recovery, not an implicit behavior
+change when a carrier happens to use TCP. See the [runtime migration design](./peer-runtime.md#9-migration-and-engineering-tradeoffs).
+
 ## 19. Group sessions
 
 Base QSession is pairwise. Group messaging uses pairwise delivery or a separately versioned group-key
@@ -344,3 +398,7 @@ finishes. Hard block/non-derogable violation can close immediately.
 - block/revocation during active stream;
 - content swarm digest failure and malicious provider; and
 - zero-allocation packet hot paths plus bounded buffers under adversarial input.
+
+Services advertising economic support additionally run the profile's cap, duplicate-charge,
+cancellation, crash/reconciliation, and offline-settlement scenarios. Contract channels verify
+context/ontology/table binding and reject semantic downgrade before access or spend.

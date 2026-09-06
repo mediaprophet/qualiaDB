@@ -113,8 +113,8 @@ pub(super) fn tools_for_type(container_type: &str) -> Vec<RibbonTool> {
                 description: "Audio.transport stop",
             },
         ],
-        "health_overview" | "health_calculators" | "health_documents" | "disclosure_log"
-        | "conditions" => {
+        "health_overview" | "health_calculators" | "chemical_explorer" | "health_documents"
+        | "disclosure_log" | "conditions" => {
             vec![RibbonTool {
                 id: "health:nlp_ingest",
                 icon: "NLP",
@@ -249,7 +249,7 @@ pub(super) fn tools_for_type(container_type: &str) -> Vec<RibbonTool> {
                 id: "social:graph",
                 icon: "\u{1F578}",
                 label: "Graph",
-                description: "View chat graph",
+                description: "Chat graph — Desktop only (not in WASM Poet)",
             },
         ],
         "graph" => vec![

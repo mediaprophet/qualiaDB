@@ -21,6 +21,7 @@ Comprehensive index of functionality for `adr`. This document serves as the grou
 - 📄 `0009-shex-scoped-alongside-shacl.md`
 - 📄 `0010-speculative-decode-default-on.md` — W6a prompt-lookup speculative decode ships default-ON (env/runtime mode switch); accepts benign near-tie divergence.
 - 📄 `0012-construct-is-the-distributable-composition.md` — Construct is the packaged composition; QApp is not a runtime type.
+- 📄 `0013-portable-application-manifest-reconciliation.md` — APP-01: portable app contract vs POET Manifest/ManifoldSeed/ConstructPackage/HCF/HMC/qApp; POET is one projection. Forward IA (WD-01): `docs/work-in-progress/WD_01_CONTROL_PLANE_IA_2026-09-06.md`.
 - 📄 `004-sentinel-to-webizen-rebrand.md`
 - 📄 `005-dns-frontdoor-and-hcai-agreements.md`
 - 📄 `006-zero-allocation-solid-bridge.md`

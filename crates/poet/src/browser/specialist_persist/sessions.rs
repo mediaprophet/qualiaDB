@@ -7,7 +7,7 @@ pub fn build_finance_view(document: &Document) -> Element {
     ledger(
         document,
         "finance_account",
-        "Finance accounts you record. FinancialModeling.* needs entered numbers; none are invented.",
+        "Finance accounts you record. CAPM uses Econ.capm_expected_return on entered rf/beta/premium; GBM/VaR stays on FinancialModeling.gbm_var. No numbers are invented.",
         &[
             CopField {
                 key: "currency",
@@ -17,12 +17,35 @@ pub fn build_finance_view(document: &Document) -> Element {
                 key: "balance",
                 placeholder: "Balance (as reported)",
             },
+            CopField {
+                key: "rf",
+                placeholder: "Risk-free rate (e.g. 0.02)",
+            },
+            CopField {
+                key: "beta",
+                placeholder: "Beta (e.g. 1.0)",
+            },
+            CopField {
+                key: "market_premium",
+                placeholder: "Market premium (e.g. 0.05)",
+            },
         ],
-        &[(
-            "FinancialModeling.gbm_var",
-            "FinancialModeling.gbm_var",
-            gbm_var_args(),
-        )],
+        &[
+            (
+                "CAPM expected return",
+                "Econ.capm_expected_return",
+                serde_json::json!({
+                    "rf": 0.02,
+                    "beta": 1.0,
+                    "market_premium": 0.05
+                }),
+            ),
+            (
+                "GBM / VaR",
+                "FinancialModeling.gbm_var",
+                gbm_var_args(),
+            ),
+        ],
     )
 }
 
@@ -30,7 +53,7 @@ pub fn build_wallet_view(document: &Document) -> Element {
     ledger(
         document,
         "wallet_entry",
-        "Wallet entries persist here. ILP/Lightning settlement is unbound until a rail session is registered.",
+        "Wallet entries persist here. ILP/Lightning settlement is unbound until a rail session is registered. CAPM uses entered rates via Econ.capm_expected_return.",
         &[
             CopField {
                 key: "rail",
@@ -40,12 +63,35 @@ pub fn build_wallet_view(document: &Document) -> Element {
                 key: "amount",
                 placeholder: "Amount",
             },
+            CopField {
+                key: "rf",
+                placeholder: "Risk-free rate",
+            },
+            CopField {
+                key: "beta",
+                placeholder: "Beta",
+            },
+            CopField {
+                key: "market_premium",
+                placeholder: "Market premium",
+            },
         ],
-        &[(
-            "FinancialModeling.gbm_var",
-            "FinancialModeling.gbm_var",
-            gbm_var_args(),
-        )],
+        &[
+            (
+                "CAPM expected return",
+                "Econ.capm_expected_return",
+                serde_json::json!({
+                    "rf": 0.02,
+                    "beta": 1.0,
+                    "market_premium": 0.05
+                }),
+            ),
+            (
+                "GBM / VaR",
+                "FinancialModeling.gbm_var",
+                gbm_var_args(),
+            ),
+        ],
     )
 }
 

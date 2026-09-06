@@ -122,6 +122,9 @@ pub fn generate_plain_language_summary(
 }
 
 /// Construct the field payload for an append-only consent disclosure grant (`health_share`).
+///
+/// When `ledger` is provided, COP fields carry the ConsentLedger grant id / nonce /
+/// binding honesty label so revoke can reconstitute verifying-side material.
 pub fn build_consent_grant_payload(
     recipient_did: &str,
     recipient_label: &str,
@@ -130,6 +133,31 @@ pub fn build_consent_grant_payload(
     duration_seconds: i64,
     sensitivity: &str,
     now_timestamp: i64,
+) -> (String, String, serde_json::Map<String, serde_json::Value>) {
+    build_consent_grant_payload_with_ledger(
+        recipient_did,
+        recipient_label,
+        purpose,
+        categories,
+        duration_seconds,
+        sensitivity,
+        now_timestamp,
+        None,
+        None,
+    )
+}
+
+/// Same as [`build_consent_grant_payload`] with optional ledger binding fields.
+pub fn build_consent_grant_payload_with_ledger(
+    recipient_did: &str,
+    recipient_label: &str,
+    purpose: &str,
+    categories: &[String],
+    duration_seconds: i64,
+    sensitivity: &str,
+    now_timestamp: i64,
+    principal_did: Option<&str>,
+    ledger: Option<&super::consent_persist::GrantMaterial>,
 ) -> (String, String, serde_json::Map<String, serde_json::Value>) {
     let expires_at_ts = now_timestamp + duration_seconds;
     let expires_dt = chrono::DateTime::from_timestamp(expires_at_ts, 0)
@@ -167,6 +195,30 @@ pub fn build_consent_grant_payload(
         "sensitivity".into(),
         serde_json::Value::String(sensitivity.to_string()),
     );
+    if let Some(principal) = principal_did {
+        fields.insert(
+            "principal_did".into(),
+            serde_json::Value::String(principal.trim().to_string()),
+        );
+    }
+    if let Some(grant) = ledger {
+        fields.insert(
+            "grant_id".into(),
+            serde_json::Value::String(super::consent_persist::grant_id_hex(&grant.grant_id)),
+        );
+        fields.insert(
+            "nonce".into(),
+            serde_json::Value::String(grant.nonce.to_string()),
+        );
+        fields.insert(
+            "scope_bits".into(),
+            serde_json::Value::String(grant.scope_bits.to_string()),
+        );
+        fields.insert(
+            "ledger_binding".into(),
+            serde_json::Value::String(super::consent_persist::LEDGER_BINDING_SESSION.into()),
+        );
+    }
 
     ("health_share".into(), title, fields)
 }

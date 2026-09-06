@@ -150,12 +150,14 @@ pub fn place_container_via_menu(document: &Document, container_type: &str, label
 pub(super) fn place_container_on_canvas(document: &Document, container_type: &str, label: &str) {
     use crate::tool_chest::core::registry::SeedContainer;
 
-    let width = if container_type == "health_calculators" {
+    let width = if container_type == "health_calculators" || container_type == "chemical_explorer"
+    {
         720.0
     } else {
         400.0
     };
-    let height = if container_type == "health_calculators" {
+    let height = if container_type == "health_calculators" || container_type == "chemical_explorer"
+    {
         520.0
     } else {
         300.0

@@ -60,6 +60,11 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "ai:verify_turn"
             | "epistemic:evaluate"
             | "image:histogram"
+            | "image:equalize_hist"
+            | "image:rgb_to_gray"
+            | "image:dhash"
+            | "image:hamming_distance"
+            | "image:cosine_similarity"
             | "health:framingham"
             | "health:cha2ds2"
             | "health:score2"
@@ -68,6 +73,17 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "epistemic:paraconsistent_route"
             | "code:ltl_evaluate"
             | "code:symbolic_eval"
+            | "econ:capm"
+            | "econ:gini"
+            | "econ:mixed_nash"
+            | "econ:black_scholes"
+            | "econ:solow"
+            | "econ:cournot"
+            | "econ:bertrand"
+            | "econ:historical_var"
+            | "econ:atkinson"
+            | "econ:gordon_growth"
+            | "rights:delegation_permits"
     )
 }
 
@@ -655,7 +671,16 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "ai:detect_ungrounded" => super::chain_actions::run_detect_ungrounded(document, label),
         "ai:verify_turn" => super::chain_actions::run_verify_turn(document, label),
         "epistemic:evaluate" => super::chain_actions::run_epistemic_evaluate(document, label),
-        "image:histogram" => super::chain_actions::run_image_histogram(document, label),
+        "image:histogram" => super::image_chain_actions::run_image_histogram(document, label),
+        "image:equalize_hist" => super::image_chain_actions::run_equalize_hist(document, label),
+        "image:rgb_to_gray" => super::image_chain_actions::run_rgb_to_gray(document, label),
+        "image:dhash" => super::image_chain_actions::run_dhash(document, label),
+        "image:hamming_distance" => {
+            super::image_chain_actions::run_hamming_distance(document, label)
+        }
+        "image:cosine_similarity" => {
+            super::image_chain_actions::run_cosine_similarity(document, label)
+        }
         "comm:pulse_presence" => super::chain_actions::run_pulse_presence(document, label),
         "rights:deontic_obligate" => super::chain_actions::run_deontic_obligate(document, label),
         "epistemic:paraconsistent_route" => {
@@ -663,6 +688,19 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "code:ltl_evaluate" => super::logic_chain_actions::run_ltl_evaluate(document, label),
         "code:symbolic_eval" => super::logic_chain_actions::run_symbolic_eval(document, label),
+        "econ:capm" => super::econ_chain_actions::run_capm(document, label),
+        "econ:gini" => super::econ_chain_actions::run_gini(document, label),
+        "econ:mixed_nash" => super::econ_chain_actions::run_mixed_nash(document, label),
+        "econ:black_scholes" => super::econ_chain_actions::run_black_scholes(document, label),
+        "econ:solow" => super::econ_chain_actions::run_solow(document, label),
+        "econ:cournot" => super::econ_chain_actions::run_cournot(document, label),
+        "econ:bertrand" => super::econ_chain_actions::run_bertrand(document, label),
+        "econ:historical_var" => super::econ_chain_actions::run_historical_var(document, label),
+        "econ:atkinson" => super::econ_chain_actions::run_atkinson(document, label),
+        "econ:gordon_growth" => super::econ_chain_actions::run_gordon_growth(document, label),
+        "rights:delegation_permits" => {
+            super::cooperative_chain_actions::run_delegation_permits(document, label)
+        }
         _ => {
             if let Some(spec) = super::spec_tools::lookup(tool_id) {
                 super::spec_tools::run(document, spec, label);

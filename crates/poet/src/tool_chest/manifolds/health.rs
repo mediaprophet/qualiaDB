@@ -74,6 +74,17 @@ pub fn health_manifold_seed() -> ManifoldSeed {
                 ..Default::default()
             },
             SeedContainer {
+                container_type: "chemical_explorer".into(),
+                title: "Compound evidence".into(),
+                x: 780.0,
+                y: 710.0,
+                width: 560.0,
+                height: 360.0,
+                z: 1.0,
+                honesty: "present".into(),
+                ..Default::default()
+            },
+            SeedContainer {
                 container_type: "nested_manifold".into(),
                 title: "Anatomy manifold".into(),
                 x: 780.0,
@@ -134,6 +145,8 @@ mod tests {
         assert!(types.contains(&"health_documents"));
         assert!(types.contains(&"disclosure_log"));
         assert!(types.contains(&"conditions"));
+        assert!(types.contains(&"health_calculators"));
+        assert!(types.contains(&"chemical_explorer"));
         assert!(types.contains(&"nested_manifold"));
         assert!(seed
             .containers

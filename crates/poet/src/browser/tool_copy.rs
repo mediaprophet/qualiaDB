@@ -427,6 +427,11 @@ fn named(id: &str) -> Option<Presentation> {
             "Put the Framingham, CHA₂DS₂-VASc, and SCORE2 forms. Fields start empty.",
             Proficiency::Intermediate,
         ),
+        "health:place_chemical_explorer" => (
+            "Compound evidence",
+            "Put the food/compound explorer. Research evidence only; import ChEBI compounds.tsv locally — no remote fetch.",
+            Proficiency::Intermediate,
+        ),
         "health:anatomy_10d" => (
             "Body map",
             "Put a detailed body map.",
@@ -517,10 +522,85 @@ fn named(id: &str) -> Option<Presentation> {
             "Evaluate the formula on the selected surface.",
             Proficiency::Intermediate,
         ),
+        "econ:capm" => (
+            "Expected return",
+            "Estimate return from risk-free rate, beta, and market premium on this surface.",
+            Proficiency::Intermediate,
+        ),
+        "econ:gini" => (
+            "Income inequality",
+            "Measure inequality of the income numbers on this table or page.",
+            Proficiency::Intermediate,
+        ),
+        "econ:mixed_nash" => (
+            "Game balance",
+            "Find a mixed-strategy balance from two 2-by-2 payoff tables.",
+            Proficiency::Expert,
+        ),
+        "econ:black_scholes" => (
+            "Option price",
+            "Price a call or put from spot, strike, time, rate, and volatility.",
+            Proficiency::Expert,
+        ),
+        "econ:solow" => (
+            "Steady growth",
+            "Compute steady-state capital and output from savings and depreciation.",
+            Proficiency::Expert,
+        ),
+        "econ:cournot" => (
+            "Quantity race",
+            "Find Cournot quantities and price from demand and two firm costs.",
+            Proficiency::Expert,
+        ),
+        "econ:bertrand" => (
+            "Price race",
+            "Find Bertrand equilibrium price from two marginal costs.",
+            Proficiency::Expert,
+        ),
+        "econ:historical_var" => (
+            "Tail loss",
+            "Estimate historical value-at-risk from return numbers on this surface.",
+            Proficiency::Expert,
+        ),
+        "econ:atkinson" => (
+            "Welfare gap",
+            "Measure Atkinson inequality from positive incomes and aversion epsilon.",
+            Proficiency::Expert,
+        ),
+        "econ:gordon_growth" => (
+            "Dividend price",
+            "Price a stock from next dividend, required return, and perpetual growth.",
+            Proficiency::Intermediate,
+        ),
         "image:histogram" => (
             "Tones",
             "Show how light and dark this picture is.",
             Proficiency::Novice,
+        ),
+        "image:equalize_hist" => (
+            "Equalize tones",
+            "Spread greyscale tones more evenly on this picture.",
+            Proficiency::Intermediate,
+        ),
+        "image:rgb_to_gray" => (
+            "Greyscale from colour",
+            "Convert RGB pixels on this surface to greyscale.",
+            Proficiency::Novice,
+        ),
+        "image:dhash" => (
+            "Difference hash",
+            "Compute a perceptual difference hash from greyscale pixels.",
+            Proficiency::Intermediate,
+        ),
+        "image:hamming_distance" => (
+            "Hash distance",
+            "Count differing bits between two perceptual hashes on this surface.",
+            Proficiency::Intermediate,
+        ),
+        "image:cosine_similarity" => (
+            "Embedding similarity",
+            "Cosine similarity of two embedding vectors on this surface.",
+            Proficiency::Expert,
         ),
         "ai:co_author" => (
             "Write together",

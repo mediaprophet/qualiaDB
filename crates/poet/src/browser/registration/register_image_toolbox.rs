@@ -42,6 +42,73 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let vision_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:equalize_hist".into(),
+                label: "Equalize tones".into(),
+                icon: "heatmap".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("ComputerVision.equalize_hist".into()),
+                ontology_prefix: "hm".into(),
+                description: "Spread greyscale tones more evenly on the selected picture."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:rgb_to_gray".into(),
+                label: "Greyscale from colour".into(),
+                icon: "media".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("ComputerVision.rgb_to_gray".into()),
+                ontology_prefix: "hm".into(),
+                description: "Convert RGB pixels on this surface to greyscale.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:dhash".into(),
+                label: "Difference hash".into(),
+                icon: "marker".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("ComputerVision.dhash".into()),
+                ontology_prefix: "hm".into(),
+                description: "Compute a perceptual difference hash from greyscale pixels."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:hamming_distance".into(),
+                label: "Hash distance".into(),
+                icon: "tools".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("ComputerVision.hamming_distance".into()),
+                ontology_prefix: "hm".into(),
+                description: "Count differing bits between two perceptual hashes on this surface."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:cosine_similarity".into(),
+                label: "Embedding similarity".into(),
+                icon: "tools".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("ComputerVision.cosine_similarity".into()),
+                ontology_prefix: "hm".into(),
+                description: "Cosine similarity of two embedding vectors on this surface."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "image".into(),
@@ -133,6 +200,17 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                     description: "Place media viewports, markers, and heatmaps.".into(),
                 },
                 shape_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:vision".into(),
+                    label: "Live computer vision".into(),
+                    icon: "media".into(),
+                    description:
+                        "Curated ComputerVision.* binds — equalize, greyscale, hashes, similarity."
+                            .into(),
+                },
+                vision_live,
             ),
         ],
     ));

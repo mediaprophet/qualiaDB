@@ -5,8 +5,10 @@
 //! Conditions are possessions of a Principal, not owl:Thing.
 
 pub mod calculators;
+pub mod chemical_explorer;
 pub mod clinical_models;
 pub mod conditions_workspace;
+pub mod consent_persist;
 pub mod disclosure_list;
 pub mod disclosure_model;
 pub mod disclosure_workspace;

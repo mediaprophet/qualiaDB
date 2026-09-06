@@ -11,10 +11,13 @@
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, Event, HtmlInputElement, HtmlSelectElement, MouseEvent};
 
+use super::consent_persist::{
+    grant_id_hex, grant_material_from_disclosure, persist_issue, with_session_ledger,
+};
 use super::disclosure_list::refresh_disclosures;
 use super::disclosure_model::{
-    build_consent_grant_payload, format_recipient_display, CATEGORY_OPTIONS, EXPIRY_OPTIONS,
-    KNOWN_CONTACTS,
+    build_consent_grant_payload_with_ledger, format_recipient_display, CATEGORY_OPTIONS,
+    EXPIRY_OPTIONS, KNOWN_CONTACTS,
 };
 pub use super::disclosure_model::{generate_plain_language_summary, KnownContact};
 use crate::browser::native_daemon::{
@@ -531,7 +534,39 @@ fn submit_grant(root: &Element, document: &Document) {
         .unwrap_or(604_800);
 
     let now_ts = (js_sys::Date::now() / 1000.0) as i64;
-    let (family, title, fields) = build_consent_grant_payload(
+    let expires_at = (now_ts + duration_secs) as u64;
+    let nonce = (js_sys::Date::now() as u64) ^ (now_ts as u64);
+    // Verifying-side principal fingerprint only — no private key in Poet UI.
+    const PRINCIPAL_DID: &str = "did:q42:local:poet-principal";
+    let grant = match grant_material_from_disclosure(
+        PRINCIPAL_DID,
+        &recipient_did,
+        &purpose,
+        &selected_cats,
+        now_ts as u64,
+        expires_at,
+        nonce,
+    ) {
+        Ok(g) => g,
+        Err(err) => {
+            if let Some(st) = status_el {
+                st.set_text_content(Some(&err.user_message()));
+                st.set_attribute("data-state", "error").ok();
+            }
+            return;
+        }
+    };
+
+    if let Err(err) = with_session_ledger(|ledger| persist_issue(ledger, &grant, now_ts as u64)) {
+        if let Some(st) = status_el {
+            st.set_text_content(Some(&err.user_message()));
+            st.set_attribute("data-state", "error").ok();
+        }
+        return;
+    }
+
+    let grant_id = grant_id_hex(&grant.grant_id);
+    let (family, title, fields) = build_consent_grant_payload_with_ledger(
         &recipient_did,
         &recipient_label,
         &purpose,
@@ -539,10 +574,12 @@ fn submit_grant(root: &Element, document: &Document) {
         duration_secs,
         "restricted",
         now_ts,
+        Some(PRINCIPAL_DID),
+        Some(&grant),
     );
 
     if let Some(st) = &status_el {
-        st.set_text_content(Some("Signing and committing consent grant…"));
+        st.set_text_content(Some("ConsentLedger issue recorded; committing COP grant…"));
         st.set_attribute("data-state", "working").ok();
     }
 
@@ -552,7 +589,7 @@ fn submit_grant(root: &Element, document: &Document) {
         match daemon_records_upsert(NativeRecordUpsertRequest {
             family,
             title,
-            id: None,
+            id: Some(grant_id),
             fields,
         })
         .await
@@ -564,7 +601,7 @@ fn submit_grant(root: &Element, document: &Document) {
                     .flatten()
                 {
                     st.set_text_content(Some(
-                        "Consent granted and committed. Time-bounded access is active.",
+                        "ConsentLedger issue committed. Time-bounded access is active.",
                     ));
                     st.set_attribute("data-state", "success").ok();
                 }

@@ -195,7 +195,51 @@ pub(super) fn dispatch_instrument_action(document: &Document, tool_id: &str, lab
             "Pulse.publish_agent_message",
             serde_json::json!({ "channel": "poet/social" }),
         ),
-        "social:graph" | "graph:expand" | "graph:collapse" | "graph:layout" => super::commands::invoke_session(
+        "social:graph" => {
+            let demo = serde_json::json!({
+                "fragments": [
+                    {
+                        "fragment_id": "aaaaaaaaaaaaaaaa",
+                        "message_lamport": 1,
+                        "anchor_start": 0,
+                        "anchor_end": 12,
+                        "anchor_text": "hello social"
+                    },
+                    {
+                        "fragment_id": "bbbbbbbbbbbbbbbb",
+                        "message_lamport": 2,
+                        "anchor_start": 0,
+                        "anchor_end": 5,
+                        "anchor_text": "reply"
+                    }
+                ],
+                "edges": [{
+                    "child_fragment_id": "bbbbbbbbbbbbbbbb",
+                    "parent_fragment_id": "aaaaaaaaaaaaaaaa",
+                    "reply_message_lamport": 2
+                }]
+            });
+            if !crate::browser::native_daemon::is_daemon_connected() {
+                let report = crate::browser::tool_dual_path::local_sketch(
+                    "ChatGraph.session_summary",
+                    "2 fragments / 1 edge (caller-supplied demo; Host ChatGraph.* — not desktop jsonl)",
+                );
+                crate::browser::interactions::show_tool_status(
+                    document,
+                    label,
+                    &report.message,
+                    report.status_kind,
+                );
+            } else {
+                super::commands::invoke_session(
+                    document,
+                    label,
+                    "ChatGraph.session_summary",
+                    demo,
+                );
+            }
+        }
+        "graph:expand" | "graph:collapse" | "graph:layout" => super::commands::invoke_session(
             document,
             label,
             "GraphDatabase.stats",

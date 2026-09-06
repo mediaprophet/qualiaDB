@@ -119,6 +119,25 @@ The initial metric is a tuple evaluated locally:
 
 No peer can buy or self-assert universal priority through a single scalar reputation/price.
 
+### 6.1 Resource and tariff scope
+
+Energy classes derive from scoped joule observations or explicit estimates; latency remains a
+duration and is distinct from airtime or device service time. Every metric profile defines the
+work basis (for example per delivered KiB), observation interval, evidence state, normalization,
+and path aggregation. Unknown energy is not zero-cost. Realm-normalized values cannot be compared
+across realms without an agreed mapping; incompatible metrics cannot improve a path's preference.
+
+Monetary hints identify the asset/issuer and billing basis. They are not quotes, spend permissions,
+or evidence of settled payment. Discovery need not expose a private tariff or payer. Detailed
+terms are negotiated through [CBOR-LD contracts](./ontological-contracts.md) under the
+[commons economics profile](./commons-and-resource-economics.md).
+
+Paid transit uses a preauthorized, bounded allowance installed by cold QPolicy processing. Route
+migration or provider substitution must fit the accepted funding and aggregate spend/resource
+limits, otherwise billable work pauses for a new agreement. Forwarding uses verified handles and
+counters; it never calls a wallet or price oracle per packet. Payment cannot defeat congestion,
+privacy, or control/revocation traffic protections.
+
 ## 7. Link-State Advertisement
 
 An LSA contains:
@@ -367,3 +386,5 @@ Constrained profiles lower these values and may operate as leaves.
 8. DHT poisoning cannot bypass RAR/controller verification.
 9. Resource limits hold under LSA flood and many bogus paths.
 10. Equivalent verified inputs produce byte-identical forwarding generations.
+11. Unknown or incompatible energy/tariff metrics never become fictitious zero-cost routes.
+12. Migration cannot create unaccepted transit charges or reset aggregate resource/spend allowances.

@@ -57,6 +57,18 @@ This is the sequential handoff record for
 | 2026-09-06 | `PFT-04` | Composer | Complete (implementation + tests) | epistemic/AI/image live dual-path; Live dispatch honesty; register/spec/live_args | tool_actions+live_args+chain 13; registration 3; product integrity 10 | Not re-run | Swarm WIP uncommitted; Gate B open | `AST-01` or more live binds |
 | 2026-09-06 | `AST-01` | Composer | Complete (implementation + tests) | `q42/asset_envelope/` licence+envelope+codec | asset_envelope 11 | N/A — schema packet | Import jobs / ChEBI parser not started | `AST-02` |
 | 2026-09-06 | `AST-02`/`AST-07`/`PFT-05` | Composer swarm | Complete (integrated) | asset_import; source_catalogue; logic_chain_actions + ribbon | core 19; poet tool_actions/live_args/registration | N/A | AST-03 ChEBI parser next | `AST-03` |
+| 2026-09-06 | `EXP-PLAN` | Composer | Document landed | `vibe_surface_gap_review.py` multi-seam; `VIBE_SURFACE_GAP_REVIEW.md`; `docs/plans/vibe-poet-surface-exposure-plan-2026-09-06.md` | Script regen ALL_BOUND=892; Econ.~106 | N/A — plan | Consumption gap (Poet Live); chat-graph seam decision | `EXP-A0` or `AST-03` |
+| 2026-09-06 | `EXP-A0`/`EXP-A1` | Composer | Complete (impl + tests) | A0 inventory; `econ` toolbox + `econ_chain_actions` dual-path (5 `Econ.*`) | poet lib econ 8; dispatch policy 1; product_integrity 10 | Not re-run | A2 cooperative UI; 101 Econ still uncited | `EXP-A2` or `AST-03` |
+| 2026-09-06 | `EXP-A2`/`EXP-A3` | Composer | Complete (impl + tests) | `cooperative_economics/` split + Live Gini; finance/wallet CAPM on `Econ.capm_expected_return` | coop 5; specialist 2; product_integrity 10 | Not re-run | AST-03; chat-graph B0 | `AST-03` or EXP-B0 |
+| 2026-09-06 | `EXP-B0`/`B1a` | Composer | Complete | Chat-graph Desktop-only decision + `social:graph` honesty | instrument_panel 6; integrity 10 | N/A | B1b only if freeze exception | `AST-03` |
+| 2026-09-06 | `AST-03` | Composer+[chebi parser](a84d4d07-08aa-49cb-8bc9-772557e6bed2) | Complete | `q42/chebi_parse/` compounds.tsv | chebi_parse 13 | N/A | Quin map | `AST-04` |
+| 2026-09-06 | `AST-04` | Composer+[chebi map](8bda5def-49a9-4ae4-8124-baa92e979cc4) | Complete | `q42/chebi_map/` caller-buffered Quins | chebi_map 10 | N/A | Query caps | `AST-05` |
+| 2026-09-06 | `AST-05` | Composer+[chebi query](3eb0865c-1d96-4bfc-a255-395110158a8f) | Complete | `q42/chebi_query/` resolve/parents/evidence/export | chebi_query 12 | N/A | Poet explorer | `AST-06` |
+| 2026-09-06 | `AST-06` | Composer+[chem explorer](08949d92-a697-44e9-b296-399f6b0f2218) | Complete | Health chemical explorer NoAsset honesty | chemical 10; integrity 11 | Not re-run | Live asset bind when present | ConsentLedger / Gate B |
+| 2026-09-06 | `AST-06` | Composer | Complete (impl + tests; browser UAT open) | `health_views/chemical_explorer/`; health toolbox place; body route; manifold seed; integrity gate | poet `--lib chemical` 10; product_integrity 11 | Not re-run | Live chebi_query bind when asset present; no Host widen | Next AST/PFT per owner |
+| 2026-09-06 | Residual swarm | Composer+[ConsentLedger](5f51297a-c960-42eb-b74b-a19f2679f26b)+lanes B–D | Complete (integrated) | HLT-CL consent_persist; AST-06b live bind; APP-01 ADR; APP-02 app_manifest | consent_persist 5; health_views 58; consent_contract 12; chemical 20; app_manifest 14; integrity 11 | Not re-run | APP-03+; WD-01…; live Health UAT optional; disclosure_workspace split optional | `APP-03` / WD / Gate B |
+| 2026-09-06 | Gate B swarm | Composer+[crate inventory](ab8cc5d5-4375-4b5e-89f2-cdf8d2aabc04)+[projections](090ae21a-5c80-4438-a9e0-17ecfc02babe)+[IA docs](6ce9046c-5072-4b38-a614-ce25e0a44e2c)+[app registry](717bb637-754b-41c1-a685-d9e2f24609a0) | Complete (integrated) | EXP-C1 incorporation; APP-03 project.rs; WD-01 IA; WD-02 app_registry | app_manifest 21; app_registry 11; gap ALL_BOUND 892/1481 | N/A | APP-04; WD-03; Poet CV/Econ consume; Review Gate B | `APP-04` / `WD-03` / PFT-CV |
+| 2026-09-06 | Vibescript-first | Composer+[CV Live](1714d506-c581-480e-8a0f-c52c0d9eb8ec)+[Econ Live](cb074e15-e2d2-452d-91d5-775c05be0fab)+[Cooperative Host](d55c3ae3-31b3-4f86-ae5b-461ef1f8afbc)+[ChatGraph Host](18faddeb-26e3-475e-8b07-73384c03ce28) | Complete (integrated) | Constraint fix; CV+Econ Poet Live; CooperativeDelegation+ChatGraph Host | catalog 1; chat_graph 8; cooperative 7; poet econ/integrity spot | N/A | Backlog Q1/Q2; biosense | Q1 Host / Q2 Poet |
 
 ## Required closeout detail
 
@@ -425,9 +437,44 @@ Known gaps: `AST-03` ChEBI parser; URL attestation optional for some catalogue r
 Unrelated failures preserved: Yes.
 Recommended next packet: `AST-03`.
 
+Packet: `AST-06`
+Baseline git status: Parallel WIP (chebi_*, econ, QNF docs) preserved; no commit.
+User job delivered: Calm Health food/compound evidence explorer — search → entity → relationships → evidence/licence drawer; NoAsset/EmptySearch/SelectedEntity honesty; research-evidence-only copy; local compounds.tsv import guidance; no remote fetch control.
+Files changed: `crates/poet/src/browser/health_views/chemical_explorer/{mod,model,workspace}.rs`; `health_views/mod.rs`; `containers/body_health.rs`; `containers/attrs.rs`; `registration/register_health_toolbox.rs`; `tool_copy.rs`; `interactions/placement.rs`; `command_palette/{commands,placements}.rs`; `instrument_panel/catalog.rs`; `tool_chest/manifolds/health.rs`; `styles/11-health-base.css`; `tests/product_integrity.rs`; this ledger.
+Tests and exact results: `cargo test -p poet --lib chemical` → **10 passed**; `cargo test -p poet --test product_integrity` → **11 passed** (delegation ceiling still ≤112).
+Browser/native UAT: Not run this session.
+Delegation count before/after: unchanged (pub fn wrapper, not `pub use … build_*_view`).
+Known gaps: WASM starts NoAsset (no Host capability to detect installed ChEBI); native `chebi_query` bind when asset present remains a follow-up; browser keyboard UAT open.
+Unrelated failures preserved: Yes.
+Recommended next packet: owner choice — live chebi_query seam once asset path is ready, or next open AST/PFT.
 
+Packet: Residual swarm (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`)
+Baseline git status: `0.0.36-dev`; large prior WIP preserved; not committed.
+User job delivered: Four-lane residual clear — ConsentLedger session persist before COP upsert; fixture-backed ChEBI explorer bind; portable-app ADR; app_manifest v1.
+Files changed: `health_views/consent_persist.rs` + disclosure grant/revoke wiring; chemical_explorer bind; ADR 0013; `q42/app_manifest/`; register/swarm/ledger.
+Tests and exact results (parent): consent_persist **5**; health_views **58**; consent_contract **12**; chemical **20**; app_manifest **14**; product_integrity **11**.
+Browser/native UAT: Not re-run.
+Delegation count before/after: unchanged.
+Known gaps: APP-03+ projections; WD-01…WD-08; optional live Health UAT; optional `disclosure_workspace` split (~636 lines).
+Unrelated failures preserved: Yes.
+Recommended next packet: `APP-03` or WD programme toward Review Gate B.
 
+Packet: Gate B swarm (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Crate→seam incorporation inventory (client-core / cooperative-core / vision); APP-03 projection adapters; WD-01 control-plane IA map; WD-02 bounded installed-app registry.
+Files changed: gap script + `CRATE_SURFACE_INCORPORATION_2026-09-06.md`; `app_manifest/project.rs`; `WD_01_CONTROL_PLANE_IA_2026-09-06.md`; `q42/app_registry/`; register/swarm/ledger.
+Tests and exact results (parent): app_registry **11**; app_manifest **21**; gap ALL_BOUND **892**/892 modules **1481**.
+Browser/native UAT: N/A (docs + cold registry).
+Known gaps: APP-04 Health proof; WD-03 lifecycle; shell IA apply from WD-01; Poet remaining ComputerVision/Econ Live consume.
+Unrelated failures preserved: Yes.
+Recommended next packet: `APP-04` / `WD-03` / Poet CV+Econ consume toward Review Gate B.
 
-
-
-
+Packet: Vibescript-first swarm (`VIBE-CV` / `VIBE-ECON` / `VIBE-COOP` / `VIBE-CHAT`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Constraint correction (Host widen in scope); exhaustive backlog methodology; Poet Live for remaining CV + more Econ; new Host families CooperativeDelegation/CooperativeWork and ChatGraph; Poet dual-path cites.
+Files changed: image/econ/cooperative/chat_graph invoke + Poet registration/chain; wellfare-core cycle break; backlog script + methodology docs.
+Tests and exact results (parent): catalog **1**; chat_graph **8**; cooperative **7**; poet econ **16**; product_integrity **11**.
+Browser/native UAT: Not re-run.
+Known gaps: backlog Q1 still large; biosense; APP-04/WD-03; more Q2 Poet consume.
+Unrelated failures preserved: Yes.
+Recommended next packet: Q1/Q2 waves from `vibe_incorporation_backlog.py`.
