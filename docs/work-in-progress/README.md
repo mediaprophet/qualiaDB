@@ -6,6 +6,7 @@ plans, trackers, or historical ledgers until the project owner promotes them.
 
 ## Current documents
 
+- [`alice-f6-classifier-symbolic-binding-pressure-test.md`](./alice-f6-classifier-symbolic-binding-pressure-test.md) — Alice F6: classifier/symbolic pressure-test — who ≠ claim ≠ spatiotemporal ≠ instruments (plus `keyRole`, DNI ≠ RAR ≠ QSession); docs map only
 - [`g-lexicon-0-slice1.md`](./g-lexicon-0-slice1.md) — G-LEXICON-0 slice 1: `GraphDatabase.lexicon_manifest` (Neo); held/not-yet diagnose; no in-binary WordNet
 - [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) — G-LEXICON-0 Poet bay chrome: held-gate + living/artifact/machine chips on `lexicon_manifest` (davinci/monet)
 - [`uat-lexicon-catalog-click-path-davinci.md`](./uat-lexicon-catalog-click-path-davinci.md) — davinci UAT: Zone D Catalog click-path (Neo wired `build_ide_view` + console tabs)
