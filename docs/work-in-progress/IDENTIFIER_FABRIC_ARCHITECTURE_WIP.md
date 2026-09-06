@@ -409,3 +409,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §26: PseudonymAliasShape · RoleCapacityGrantShape · PurposeBind/AntiCoercion · DelegationChainShape (cites `9c5d542`). |
 | 2026-09-06 | Capt consultation brief: `IDENTIFIER_FABRIC_CONSULTATION_BRIEF.md` (summary + consultation path). |
 | 2026-09-06 | Capt: attachments crosswalk + consultation brief §2b (diagram prior art · SAME AS consult Qs). |
+| 2026-09-06 | Capt consultation brief §2c: lane skim locks + checklist COMPLETE (SAME AS ≠ who-merge). |

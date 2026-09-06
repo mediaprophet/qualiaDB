@@ -79,6 +79,26 @@
 
 **Crypto cut (Noddy):** drawings already separate instruments/grants/accountability from NaturalAgent — keep **SAME AS** from becoming a who-merge.
 
+
+## 2c. Lane skim locks (diagram intake — 2026-09-06)
+
+After Attachments crosswalk on tip `99f657b`, lane owners confirmed:
+
+| Owner | Lock |
+|-------|------|
+| **Marvin (F2)** | SAME AS = optional claim/locator edge + epistemic modality — **never** who-merge entailment in shapes; persona ficta = Organization/legal personality ≠ NaturalAgent; MegaFactory responsibility/social license = AccountabilityArtifact + temporal claims ≠ RoleCapacityGrant |
+| **Vibe (F5)** | Diagnose: has role ≠ may target anyone; SAME AS never who-merge in `suggested_form`; human ≠ persona ficta; pseudonyms/temporal graph = aliases + relation lifecycle |
+| **Alice (F6)** | SAME AS as who-operator in classifiers → **hard fail**; require plane tags (who · claim · handle · instrument) before soft-fusion; RoleCapacityGrant success ≠ embed/target arbitrary persons (no-proxy-launder in feature space) |
+
+**Checklist §8:** Noddy F1 · Marvin F2 · Vibe F5 · Alice F6 — **COMPLETE** on GitHub (no local leftovers). Neo fold lane current through `99f657b`.
+
+### Added consult asks (language / inference)
+
+1. Ban SAME AS as who-operator in diagnose, or allow only with epistemic modality + held/not-yet until provenance?
+2. Jury pack: require plane enumeration in every evidence `suggested_form` template?
+3. Require plane tags on every evidence feature bag before any soft-fusion? (Alice: yes as default)
+4. SAME AS who-operator in classifiers → hard fail? (Alice + Marvin: yes)
+
 ## 3. Locked spine cuts (Capt F3 — Timothy room)
 
 | § | Cut | Gate fail |
@@ -201,11 +221,11 @@ For each comment, please structure as:
 
 | Participant | Confirm on GitHub | Still local? Action |
 |-------------|-------------------|---------------------|
-| **Noddy** | F1 through §26 + `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` | Push any leftover via Neo |
-| **Marvin** | F2 through §26 in `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | Same |
-| **Vibe** | F5 through §13 in `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | Same |
-| **Alice** | F6 + PRs #77/#79/#80 | Same |
-| **Neo** | All folds on `0.0.36-dev`; tip index current | Fold this brief |
+| **Noddy** | F1 through §26 + Attachments crosswalk | **COMPLETE** |
+| **Marvin** | F2 through §26 + SAME AS / persona ficta skim | **COMPLETE** |
+| **Vibe** | F5 through §13 + diagram diagnose skim | **COMPLETE** |
+| **Alice** | F6 + PRs #77/#79/#80 + inference skim | **COMPLETE** |
+| **Neo** | All folds on `0.0.36-dev` through `99f657b` + this amend | Fold this brief update |
 | **Capt** | Spine §3b–§3n + this brief | This file |
 | **Timothy** | Room decisions (source of locks) | Consultation answers on open questions |
 
