@@ -193,6 +193,25 @@ Some permission structures require **both**:
 
 Aligns with §3i symbolic-first context and §3d guardianship/capacity as time-varying relations.
 
+## 3k. Environment-conditioned capacity (Timothy — 2026-09-06)
+
+Sensor / GIS / network-environment identifiers **condition** how capacity and proofs apply. They are instruments + spatiotemporal handles — **not** NaturalAgent who.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Works only in environment E | Situational grant / policy with environment predicates (GIS · realm · network cell · sensor id) |
+| Different environment | Flag, degrade, or deny — do not silently reuse grant |
+| Geocaching | Place-bound **secret instrument** discoverable when location/handle predicates match |
+| ATM + phone bank | Co-presence: app + ATM Bluetooth/machine id + location → higher-assurance banking capacity |
+
+**Instrument / handle kinds (additive):** sensor identifiers (BLE · NFC · radio) · GIS / geofence bindings · place-bound secrets · optional environment attestations (“device X observed sensor Y at locus Z” = claim/evidence, not who).
+
+**Hardness:** prefer multi-instrument co-attestation (phone key · ATM BLE · location · time window). BLE/MAC alone is weak / spoofable.
+
+**Gate fail:** ATM BLE = bank customer who; geocache find = person identity; GIS alone = forever who.
+
+Aligns with §3i symbolic context, §3g locators, §3h secrets, F1/F2 §23 (`6e0de10`).
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -311,6 +330,9 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §21: symbolic-first permissions · specialised bots on grants+agreements · crypto proves only. |
 | 2026-09-06 | Marvin F2 §21: SymbolicPermissionContextShape (cites F1 `e626613`). |
 | 2026-09-06 | Capt: org structure + mutable group authentication (elections); structural roles ≠ who; group auth time-bounded. |
+| 2026-09-06 | Capt: environment-conditioned capacity (GIS/sensor/network predicates); geocache place-secrets; ATM BLE co-presence; ≠ who. |
+| 2026-09-06 | Noddy F1 §23: environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
+| 2026-09-06 | Marvin F2 §23: EnvironmentPredicateShape · PlaceBoundSecretShape · SensorIdShape. |
 | 2026-09-06 | Noddy F1 §22: org structure + mutable group auth (elections = rebind ≠ who). |
 | 2026-09-06 | Marvin F2 §22: OrgStructuralRoleShape · GroupAuthMembershipShape (cites spine §3j `78d3878`). |
 | 2026-09-06 | Marvin F2 §22 amend: post-election rebind/keyRole notes · OrgRoleRelation ≅ OrgStructuralRoleShape. |
