@@ -176,27 +176,31 @@ Each kind is an **instrument**: it anchors a relation. Columns: **QDNF role affi
 | Crypto | Explicit algorithm (SHA-256 profile today; PQ profile elsewhere) |
 | Notes | Not a person. Compact Quin/`q_hash` indexes are not strong digests. |
 
-### 5.9 DNI / RAR / session proofs
+### 5.9 DNI · RAR · QSession proof (purpose-separated)
 
-| Field | Value |
-|-------|--------|
-| Kind | DNI entries, Route Advertisement Records, QSession controller/session proofs |
-| Affinity | DNI + session crypto |
-| Plane | Spatiotemporal / route + session instrument |
-| Crypto | Per `cryptographic-profile` (purpose-separated keys; classical suite vs PQ target) |
-| Notes | Answers **how now**, not **who forever**. Transport key ≠ DID controller. |
+| Kind | Shape (F2) | `idf:keyRole` (typical) | Must not entail |
+|------|------------|-------------------------|-----------------|
+| DNI entry | `idf:DniShape` | topology / how-now material | Session auth; who forever |
+| Route Advertisement Record | `idf:RarShape` | `route-update` | QSession authentication |
+| QSession / session proof | `idf:QSessionProofShape` | `session-authentication` | Route-update or DID controller unless separately authorized |
 
-### 5.10 Capability / relationship / discovery secrets
+**Deprecated:** lumped `idf:DniRarSessionShape` — gate fail for new designs (F2 amend / F6 hard-negative).
 
-| Field | Value |
-|-------|--------|
-| Kind | Capability presentations, pairwise discovery PSKs, group discovery |
-| Affinity | QPolicy / relationship plane |
-| Plane | Instrument (authorization context) |
-| Crypto | Bound to transcripts; purpose-separated from long-term identity claims |
-| Notes | Possession ≠ natural-agent identity. Anonymous/pseudonymous modes still prove capability, not “who as a whole.” |
+Also keep **QLink ephemeral DH** (`transport` / link epoch) distinct from **QSession traffic AEAD** (`transport-aead`) in feature space — see §12 answers to Alice.
 
----
+### 5.10 Capability / discovery (discriminated)
+
+| Kind | Shape (F2) | Notes |
+|------|------------|-------|
+| Capability presentation | `idf:CapabilityPresentationShape` | Transcript-bound; ≠ controller-signing |
+| Pairwise discovery PSK | `idf:DiscoveryPskShape` | Never public; ≠ session auth |
+| Group discovery | `idf:GroupDiscoveryShape` | Group epoch; ≠ who |
+
+### 5.11 First-pass closed `idf:keyRole` enum (inference namespace)
+
+For Alice F6 typed namespaces, treat the following as **closed** for v1; unknown roles = **held / not-yet**, never map to “other-id” / who:
+
+`controller-signing` · `route-update` · `session-authentication` · `transport-aead` · `qlink-ephemeral-dh` · `capability-presentation` · `discovery-psk` · `group-discovery`
 
 ## 6. Provisional join keys
 
@@ -223,7 +227,9 @@ Until Capt./architecture spine settles join policy: **do not** hard-wire network
 | Verifiable claim / opinion | Assertion | Claim | **Fail** |
 | Biometric family | Instrument class | Instrument ↔ natural agent relation | **Fail** |
 | Biometric instance | Mutable sample | Instrument ↔ natural agent relation | **Fail** |
-| DNI / RAR | DNI | Spatiotemporal | **Fail** |
+| DNI entry | DNI | Spatiotemporal | **Fail** |
+| RAR | DNI / route | Spatiotemporal + instrument | **Fail** |
+| QSession proof | Session | Session instrument | **Fail** |
 | Content digest | Content ID | Instrument | **Fail** |
 | Alias | Alias | Presentation / claim-adjacent | **Fail** |
 
