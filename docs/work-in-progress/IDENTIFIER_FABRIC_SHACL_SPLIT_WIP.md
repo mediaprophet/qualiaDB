@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §23 `6e0de10` · F1 §24 `ceb59d9` · spine §3l · architecture spine
+**Against tip:** F2 §24 `b86f263` · F1 §25 `acd3da3` · spine §3m · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -1071,6 +1071,55 @@ idf:RuleBreachClaimShape a sh:NodeShape ;
 - Alice: culpability/arc features in claim–policy/relation namespaces only.
 
 ---
+
+## 25. Amend — high-cardinality relations & Quin axiom substrate (F1 §25)
+
+**Cite:** Noddy F1 §25 tip `acd3da3` · spine §3m · §24 temporal assessment · §16–§18 · ADR 0001 Quin · human-centric cut.
+
+### 25.1 Cut
+
+**Relations are high-cardinality and non-defining.** NaturalAgent (or brand, org, AI-agent) is **not** constituted by the set of others they interact with. Views hang on **relation/context** nodes; Quin/NQuin holds typed edges for interdependent axioms — **storage/graph form**, not identity.
+
+| Pattern | Shape expression |
+|---------|------------------|
+| Thousands of interactions | Many relation edges + assessment claims — cardinality expected |
+| Others don’t define one another | No counterpart-set embedding into NaturalAgent who |
+| Subj/obj views over time | RelationshipAssessmentClaim (§24) |
+| Growth and dissolution | `RelationLifecycle` slots — begin · revise · end; dissolution ≠ erase provenance |
+| Interdependent axioms | OntologyGovernedPolicy + modalities over multi-plane graph |
+| Quin structure | Native substrate for those edges — not who |
+
+**Gate fail:** identity = social graph; brand follows = who; dissolving friendship rewrites person type; lifetime counterparts packed into one who-embedding.
+
+### 25.2 `idf:RelationLifecycleShape` (optional slots on relation axioms)
+
+| Property | Note |
+|----------|------|
+| `idf:relates` | Parties / context (agents · brands · orgs · AI-agents) |
+| `idf:begunAt` / `idf:revisedAt` / `idf:endedAt` | Growth and dissolution in time |
+| `idf:assessment` | 0..* RelationshipAssessmentClaim |
+| `idf:nonDefining` | Constant true for fabric docs — counterparts do not constitute who |
+| Provenance | Ended relations retain historical claims |
+
+```turtle
+idf:RelationLifecycleShape a sh:NodeShape ;
+  sh:property [ sh:path idf:relates ; sh:minCount 2 ] ;
+  sh:property [ sh:path idf:begunAt ; sh:minCount 0 ] ;
+  sh:property [ sh:path idf:endedAt ; sh:minCount 0 ] ;
+  sh:property [ sh:path idf:assessment ; sh:node idf:RelationshipAssessmentClaimShape ; sh:minCount 0 ] .
+  # MUST NOT entail NaturalAgent constitution by counterpart set.
+```
+
+### 25.3 Quin note (docs)
+
+Quins/NQuins store typed relation/claim/instrument edges for human-centric interdependent axioms. Private keys never as Quin/log features (§20). Dense graph = resolution, not identity collapse.
+
+### 25.4 Diagnose / Alice
+
+- Vibe: dense relation graph ≠ identity collapse.
+- Alice: counterpart-set / social-graph features ≠ NaturalAgent embedding.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -1094,6 +1143,8 @@ idf:RuleBreachClaimShape a sh:NodeShape ;
 | 2026-09-06 | F1 §23: `EnvironmentPredicateShape` · `PlaceBoundSecretShape` · `SensorIdShape` · GIS binding · EnvironmentAttestation; env≠who. |
 
 | 2026-09-06 | F1 §24: `RelationshipAssessmentClaimShape` · `KnowabilityAssertionShape` · `NormativeRuleShape` · `RuleBreachClaimShape`; relationship≠who; tip `ceb59d9`. |
+
+| 2026-09-06 | F1 §25: `RelationLifecycleShape` · non-defining high-cardinality relations · Quin = axiom substrate ≠ who; tip `acd3da3`. |
 
 ---
 

@@ -380,3 +380,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §24: RelationshipAssessmentClaimShape · KnowabilityAssertionShape · NormativeRuleShape · RuleBreachClaimShape (cites F1 `ceb59d9`). |
 | 2026-09-06 | Capt: high-cardinality non-defining relations · Quin/NQuin as axiom substrate (≠ who); growth/dissolution time-bounded. |
 | 2026-09-06 | Noddy F1 §25: high-cardinality relations · Quin axiom substrate · non-defining counterparts. |
+| 2026-09-06 | Marvin F2 §25: RelationLifecycleShape · non-defining high-cardinality · Quin ≠ who (cites `acd3da3`). |
