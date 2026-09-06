@@ -166,6 +166,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: FOAF-modernized entity/agent types; AI agent ≠ NaturalAgent ≠ machine; WebID/SAN/hardware as instruments; W3C list search provenance. |
 | 2026-09-06 | Capt: WordNet as lexical substrate (Q42 subset + links); WN ≠ fabric plane; OMW later; jury-explainable evidence naming. |
 | 2026-09-06 | Marvin F2 §14: AiAgentShape · MachineDeviceShape · WebID/SAN/hardware instruments · lexicalConcept≠plane (cites F1 `8724174`). |
+| 2026-09-06 | Vibe F5 amend: AI-agent ≠ person ≠ machine diagnose voice; jury-safe instruments (cites F1 §14). |
 
 ---
 

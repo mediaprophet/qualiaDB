@@ -2,7 +2,7 @@
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
 **Owner:** Vibe (language · DevRel · diagnose) · **Taxonomy:** Noddy · **Shapes:** Marvin · **Fold/push:** Neo · **Ops:** Capt.  
-**Against:** tip `565097f`+ (F1+F2) · spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
+**Against:** tip `8724174`+ (F1 §14) · F2 §14 `9ad8fc8` · spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
 **Cite:** `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` · `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` · nomenclature arrive·hold·leave · living-safe copy  
 **Constraint:** docs only until Cursor vibe delivery; no Host invent; no `ALL_BOUND` invent; collapse who→instrument/claim/handle = **gate fail**.
 
@@ -106,5 +106,40 @@ EBNF invent · ALL_BOUND invent · SemVer bump · Solid IdP · parallel identity
 | **Alice** | F6 can cite §2–§3 as separate feature-space labels |
 | **Capt.** | Blockers if copy still says CS identity |
 | **Vibe** | Amend only if Timothy enumerates new collapse modes |
+
+
+---
+
+## 9. Amend — agent-type cut + jury-safe instruments (F1 §14 / tip `8724174`)
+
+### 9.1 Plane voice — agent-type cut (add to §2)
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| NaturalAgent | person · people · living · being · kin | thing · AI · machine · “identity” bag |
+| AI-agent | AI-agent · software agent · assistant | person · human · machine (device) |
+| Machine/device | machine · device · node | person · who · AI-agent |
+| Organization/service | organisation · service | person |
+
+### 9.2 Collapse detectors (add to §3)
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| AI-agent spoken as person/human | Rename to AI-agent plane; operator remains NaturalAgent relation |
+| Machine ID / hardware / SAN / WebID-TLS/RSA as who | Name as **instrument**; not the entity |
+| FOAF Person-as-Thing / WN-person as who | Living SHACL NaturalAgent; lexical concept ≠ plane |
+| Jury/audit “identity token” narrative | Enumerate who · claim · handle · instrument in plain language; hardness = signatures + time window + scoped machines/networks/agents |
+
+### 9.3 Poet checklist (add to §5)
+
+7. AI-agent chrome ≠ person chrome ≠ machine chrome (three sayables).
+8. WebID/SAN/hardware labeled **tools/instruments**, never “the identity.”
+9. Court/evidence surfaces: jury-safe plane enumeration (F1 §14.4).
+
+### 9.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-F | AI-agent collapsed to person | diagnose rejects; suggested_form splits AI-agent vs NaturalAgent vs machine |
 
 *End F5 — Vibe Identifier Fabric diagnose map.*
