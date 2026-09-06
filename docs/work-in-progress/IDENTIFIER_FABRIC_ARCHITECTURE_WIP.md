@@ -72,7 +72,7 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 | # | Owner | Deliverable | State |
 |---|-------|-------------|-------|
 | F1 | **Noddy** | Crypto instrument taxonomy WIP (map kinds → QDNF role table; family vs instance) | **LANDED** → `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` |
-| F2 | **Marvin** | SHACL-first split: natural agent · claim · spatiotemporal handle · instruments; uplift core-db/QDNF primitives | **LANDED** → `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` |
+| F2 | **Marvin** | SHACL-first split — `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **LANDED** tip `565097f` |
 | F3 | **Capt** | This architecture WIP — keep current as Timothy enumerates | **ACTIVE** |
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
 | F5 | **Vibe** | Diagnose / `suggested_fix` copy never collapses who→claim/role/handle | hold until F1–F2 |
@@ -107,6 +107,8 @@ Blocking gates → report **Capt**.
 |------|------|
 | 2026-09-06 | Capt opened WIP from Identifier Fabric room locks; substrate = QDNF + qualia-core-db; F1 Noddy next. |
 | 2026-09-06 | Noddy F1 draft ready: `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` — Capt accepts for Marvin F2; Neo fold+push. |
+| 2026-09-06 | Marvin F2 SHACL split draft ready: `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` — Capt accepts; Neo fold+push; unlock Vibe/Alice review after tip. |
+| 2026-09-06 | Neo folded F2 → tip `565097f`; spine F2 LANDED; F5/F6 docs-map unblocked. |
 
 ---
 
@@ -125,4 +127,4 @@ Blocking gates → report **Capt**.
 |-----|-------|-------|
 | `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Capt | living spine |
 | `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | Noddy | F1 draft ready |
-| (pending) Marvin SHACL split | Marvin | waits F1 fold |
+| `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | Marvin | F2 **LANDED** |
