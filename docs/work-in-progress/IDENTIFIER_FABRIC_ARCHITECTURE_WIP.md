@@ -107,6 +107,19 @@ FOAF-modernized **top-level entity and agent-type predicates** sit above instrum
 
 Enhance crypto only where purpose-separated `keyRole`s or co-attestation still have gaps — not as a parallel “identity” stack.
 
+
+## 3e. Contextual sense (Timothy — 2026-09-06)
+
+**Sense is contextual** — locale, era, community, and namespace. The “identity” of a word (or of flora/fauna as referents) is not one timeless label any more than a person is one DID.
+
+| Example | Implication |
+|---------|-------------|
+| AU “thongs” ≈ flip-flops / footwear | Locale sense binding — not underwear by default |
+| Older news “gay time” ≈ happy | Era sense binding — not sexuality by default |
+| Flora / fauna | Living-typed entities — **not** NaturalAgent personhood; **not** Thing-wash |
+
+Lexical concepts need **sense + context bindings** (WN/OMW · language · time · namespace · provenance) as instruments/aliases. **Crypto does not fix homographs** — context + provenance does. Never a mega-meaning who-token for words.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -205,3 +218,5 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: identity-as-resolution (enumerable unmerged bindings); deontic/epistemic/N3 = claim–policy–modality; guardianship = relation axiom not merge; crypto backs instruments. |
 | 2026-09-06 | Noddy F1 §16: guardianship/capacity · claim–policy–modality · collaborative commons (not shared who). |
 | 2026-09-06 | Marvin F2 §16: GuardianshipRelationShape · capacity gradients · CommonsMembershipShape (cites F1 `4337c9a`). |
+| 2026-09-06 | Capt: contextual sense (locale/era/community); WN sense+context bindings; flora/fauna living-typed not personhood; crypto≠homograph fix. |
+| 2026-09-06 | Vibe F5 §10: contextual sense + flora/fauna diagnose voice (cites spine §3e). |

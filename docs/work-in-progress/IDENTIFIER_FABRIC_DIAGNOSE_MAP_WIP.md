@@ -2,7 +2,7 @@
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
 **Owner:** Vibe (language · DevRel · diagnose) · **Taxonomy:** Noddy · **Shapes:** Marvin · **Fold/push:** Neo · **Ops:** Capt.  
-**Against:** tip `8724174`+ (F1 §14) · F2 §14 `9ad8fc8` · spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
+**Against:** HEAD `b832708`+ · spine §3e contextual sense · F1 §14 · F2 §14 `9ad8fc8` · spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
 **Cite:** `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` · `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` · nomenclature arrive·hold·leave · living-safe copy  
 **Constraint:** docs only until Cursor vibe delivery; no Host invent; no `ALL_BOUND` invent; collapse who→instrument/claim/handle = **gate fail**.
 
@@ -141,5 +141,49 @@ EBNF invent · ALL_BOUND invent · SemVer bump · Solid IdP · parallel identity
 | ID | Case | Accept |
 |----|------|--------|
 | F5-F | AI-agent collapsed to person | diagnose rejects; suggested_form splits AI-agent vs NaturalAgent vs machine |
+
+
+---
+
+## 10. Amend — contextual sense + flora/fauna (Capt spine §3e)
+
+**Cite:** Capt lock · spine §3c/§3e · F1 lexicalConcept · F2 lexical≠plane · Timothy room (thongs/gay homographs).
+
+### 10.1 Sense is contextual
+
+Lexical “identity” is **not** one timeless label. Diagnose/`suggested_form` MUST bind:
+
+| Binding | Role |
+|---------|------|
+| WN/OMW concept | Lexical substrate — vocabulary only |
+| Language / locale | e.g. AU “thongs” ≈ footwear, not underwear by default |
+| Era / community / namespace | Older “gay” ≠ sexuality sense without provenance |
+| Time + provenance | Which sense was meant *then* |
+
+**Gate fail:** mega-meaning who-token for a word; crypto as homograph disambiguator (context + provenance does that).
+
+### 10.2 Flora / fauna
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Living flora/fauna | living · plant · animal · organism (typed) | person · human · Thing-washed commodity who |
+| NaturalAgent | person · people · living · kin | flora · fauna · animal-as-citizen who-bag |
+
+Living-typed entities ≠ NaturalAgent personhood ≠ `owl:Thing` wash.
+
+### 10.3 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| One WN sense as timeless meaning | Require locale/era/namespace/provenance bindings |
+| Homograph collapsed across locales | Split senses; cite context |
+| Flora/fauna spoken as person/who | Living-typed entity; not NaturalAgent |
+| “Crypto proves the word’s identity” | Refuse — instruments prove keys/statements, not lexical sense |
+
+### 10.4 Poet checklist
+
+10. Lexicon chips/labels show sense+context when ambiguity matters.
+11. Flora/fauna chrome ≠ person chrome.
+12. Never claim crypto resolves thongs/gay-class homographs.
 
 *End F5 — Vibe Identifier Fabric diagnose map.*
