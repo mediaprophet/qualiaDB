@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §14 `9ad8fc8` · F1 §15 `e4c6320` · architecture spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`
+**Against tip:** F2 §15 `a226e5d` · F1 §16 draft (guardianship/capacity/commons) · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -242,6 +242,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 8. Co-attestation bundle lives on claim plane; ≥2 members + time-bound + keyRole diversity (not all identical); never collapses to stronger single who (F1 §1b).
 9. AI-agent ≠ NaturalAgent ≠ Machine; WebID/SAN/hardware are instruments; WN lexicalConcept ≠ fabric plane (F1 §14).
 10. Device-user ≠ OS account-holder ≠ telecom subscriber ≠ machine (F1 §15); `usedBy` / `accountOn` / `accountHolder` independent.
+11. Guardianship/capacity/commons are relation axioms — never guardian≡ward, capacity-as-who, or commons mega-who (F1 §16); modalities on claim–policy only.
 
 ---
 
@@ -481,6 +482,88 @@ idf:TelecomSubscriberShape a sh:NodeShape ;
 ```
 
 ---
+
+## 16. Amend — guardianship, capacity, commons relations (F1 §16)
+
+**Cite:** Noddy F1 §16 tip `4337c9a` · Capt lock · core-ontologies agency/fiduciary · QDNF commons/contracts · co-attestation §5.5.
+
+**Uplift first:** prefer existing agency / fiduciary / guardianship vocab in `core-ontologies` + QDNF `commons-and-resource-economics` / `ontological-contracts` — do not parallel-invent trust roots.
+
+### 16.1 Modalities stay off who
+
+| Substrate | Shape home | Forbidden |
+|-----------|------------|-----------|
+| N3 / deontic / epistemic / bifurcation | Claim–policy–modality shapes (extend ClaimOpinion / contract bundles) | Attaching as NaturalAgent “identity” |
+| Crypto packages | Instrument + `CoAttestationBundleShape` | New identity stack |
+
+### 16.2 `idf:GuardianshipRelationShape`
+
+First-class **relation** among agents — never a who-merge.
+
+| Property | Note |
+|----------|------|
+| `idf:guardian` | → NaturalAgent \| AiAgent \| Organization — distinct node |
+| `idf:ward` | → NaturalAgent (typical) \| AiAgent — **MUST NOT** same node as guardian; no `owl:sameAs` |
+| `idf:scope` | medical · financial · digital-instruments · … |
+| `idf:timeInterval` | Required validity window (stale grant does not count) |
+| `idf:grantEvidence` | 0..* claim or instrument proving the relation |
+| Framing | Living parties SHACL-first; relation structure OWL-ok |
+
+**Gate fail:** guardian≡ward; treating guardianship edge as identity of either party.
+
+### 16.3 Capacity / personhood attributes (gradients)
+
+| Shape / property | Note |
+|------------------|------|
+| `idf:capacityAttribute` on NaturalAgent | Graduated, **time-varying** attributes — not a who flip |
+| Developmental pattern | Child is NaturalAgent from the start; capacities *granted slowly* — not “becomes person later” via ID |
+| Elder / disability | Capacity may narrow or be shared via guardianship — still NaturalAgent |
+| Organization / legal personality | `OrganizationShape` — not NaturalAgent |
+| Artifacts / machines | OWL-ok — never living who |
+
+**Gate fail:** capacity score as who; corporate veil as natural person.
+
+### 16.4 Commons / collaborative project relations
+
+| Shape | Note |
+|-------|------|
+| `idf:CommonsMembershipShape` | member · contributor · steward · licensee — time-bounded, scoped |
+| `idf:ProjectRoleShape` | Role on collaborative informatics among 2+ agents/entities |
+| Shared instruments | Keys, VCs, volumes, contract bundles — remain instruments |
+| Shared claim–policy | Ontology-defined contracts / deontic grants / N3 — claim plane |
+| Optional hardness | Parties’ instruments in `CoAttestationBundleShape` — no mega-who |
+
+**Gate fail:** collapsing commons membership into one shared who / project-identity bag.
+
+### 16.5 TTL sketches (illustrative)
+
+```turtle
+idf:GuardianshipRelationShape a sh:NodeShape ;
+  sh:property [ sh:path idf:guardian ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path idf:ward ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path idf:scope ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:timeInterval ; sh:minCount 1 ] ;
+  sh:sparql [
+    sh:message "guardian MUST NOT be ward" ;
+    sh:select """
+      SELECT $this WHERE {
+        $this idf:guardian ?g ; idf:ward ?w .
+        FILTER (sameTerm(?g, ?w))
+      }
+    """ ;
+  ] .
+
+idf:CommonsMembershipShape a sh:NodeShape ;
+  sh:property [ sh:path idf:member ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:role ; sh:in (idf:member idf:contributor idf:steward idf:licensee) ] ;
+  sh:property [ sh:path idf:timeInterval ; sh:minCount 0 ] .
+```
+
+### 16.6 Diagnose / jury voice (for Vibe)
+
+Guardianship = **relation**; modalities ≠ person voice; capacity = attributes over time; commons = scoped membership — enumerable resolution, never opaque who.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -491,6 +574,7 @@ idf:TelecomSubscriberShape a sh:NodeShape ;
 | 2026-09-06 | Noddy §5.5 tighten: `attestationMember` sh:minCount **2**; `keyRole` diversity SHOULD (not all identical); tip base `77a13e3`. |
 | 2026-09-06 | F1 §14: FOAF-modern type shapes (`AiAgent` · `MachineDevice` · Org/Service); WebID-TLS/RSA · SAN · hardware instruments; WN/OMW `lexicalConcept` ≠ plane; jury explainability. Base F1 `8724174`. |
 | 2026-09-06 | F1 §15: `OsAccountShape` · `TelecomSubscriberShape`; independent `usedBy` / `accountOn` / `accountHolder`; tip `e4c6320`. |
+| 2026-09-06 | F1 §16: `GuardianshipRelationShape` · capacity gradients · `CommonsMembershipShape` / project roles; core-ontologies uplift; modalities ≠ who. |
 
 ---
 

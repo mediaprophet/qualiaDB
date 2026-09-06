@@ -204,3 +204,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §15: OsAccountShape · TelecomSubscriberShape; independent usedBy/accountOn/accountHolder (cites F1 `e4c6320`). |
 | 2026-09-06 | Capt: identity-as-resolution (enumerable unmerged bindings); deontic/epistemic/N3 = claim–policy–modality; guardianship = relation axiom not merge; crypto backs instruments. |
 | 2026-09-06 | Noddy F1 §16: guardianship/capacity · claim–policy–modality · collaborative commons (not shared who). |
+| 2026-09-06 | Marvin F2 §16: GuardianshipRelationShape · capacity gradients · CommonsMembershipShape (cites F1 `4337c9a`). |
