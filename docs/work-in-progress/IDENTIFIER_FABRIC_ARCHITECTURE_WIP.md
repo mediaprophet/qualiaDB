@@ -212,6 +212,24 @@ Sensor / GIS / network-environment identifiers **condition** how capacity and pr
 
 Aligns with §3i symbolic context, §3g locators, §3h secrets, F1/F2 §23 (`6e0de10`).
 
+## 3l. Temporal relationship assessment & epistemic rule-breach (Timothy — 2026-09-06)
+
+Relationship quality and norm compliance **evolve in time**. They are claim–policy + epistemic/deontic assertions over *relations and contexts* — **not** NaturalAgent who-tokens, and not a static “good/bad person” embedding.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Met in good faith; later adverse / reasonably knowable over time | Time-indexed **relationship-assessment claims** + evidence; prior good-faith claim stays provenance (no who-rewrite) |
+| Inference over that arc | Typed edges on **relation / context** graphs (parties · epochs · evidence) — never bake into NaturalAgent |
+| Broke cultural/community rule, didn’t understand | Epistemic: low / ¬K(rule) · deontic breach still recorded · sense-context binds *which* rule |
+| Broke rule knowing it | Epistemic: K(rule) · same deontic breach, different culpability attributes on the **claim** |
+| Depends on the rule | Rule identity + community sense-context — semantics pick the normative instrument; crypto only hardens attestations |
+
+**Additive kinds:** RelationshipAssessmentClaim · Knowability/awareness assertion · NormativeRuleInstrument · RuleBreachClaim (deontic + epistemic qualifier).
+
+**Gate fail:** “bad actor” as NaturalAgent type; knew-vs-unknowing as permanent who-bit; cultural rule = universal who-attribute; inference that rewrites person embeddings from relationship outcomes.
+
+Aligns with §3d modalities/guardianship, §3e sense-context, §3f policy, §3i symbolic permissions; Noddy F1 §24 path ready.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -330,6 +348,8 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §21: symbolic-first permissions · specialised bots on grants+agreements · crypto proves only. |
 | 2026-09-06 | Marvin F2 §21: SymbolicPermissionContextShape (cites F1 `e626613`). |
 | 2026-09-06 | Capt: org structure + mutable group authentication (elections); structural roles ≠ who; group auth time-bounded. |
+| 2026-09-06 | Capt: temporal relationship assessment · epistemic vs deontic rule-breach (knew ≠ didn’t understand); relationship changed ≠ who rewrite. |
+| 2026-09-06 | Noddy F1 §24: RelationshipAssessmentClaim · KnowabilityAssertion · NormativeRule · RuleBreachClaim (time + epistemic). |
 | 2026-09-06 | Capt: environment-conditioned capacity (GIS/sensor/network predicates); geocache place-secrets; ATM BLE co-presence; ≠ who. |
 | 2026-09-06 | Noddy F1 §23: environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
 | 2026-09-06 | Marvin F2 §23: EnvironmentPredicateShape · PlaceBoundSecretShape · SensorIdShape. |
@@ -338,3 +358,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §22 amend: post-election rebind/keyRole notes · OrgRoleRelation ≅ OrgStructuralRoleShape. |
 | 2026-09-06 | Noddy F1 §23: environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
 | 2026-09-06 | Marvin F2 §23: EnvironmentPredicateShape · PlaceBoundSecretShape · SensorIdShape. |
+| 2026-09-06 | Capt: temporal relationship assessment · epistemic rule-breach (knew vs didn’t understand); relationship-changed ≠ identity-changed. |

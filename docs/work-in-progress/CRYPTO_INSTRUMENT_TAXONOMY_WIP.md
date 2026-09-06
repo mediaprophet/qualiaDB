@@ -667,6 +667,49 @@ Once planes are thick enough: easier than Active Directory / Keychain — chrome
 
 ---
 
+## 24. Amend — temporal relationship assessment & epistemic rule-breach (2026-09-06)
+
+**Cite:** Timothy room (good-faith meet → later adverse / knowable-over-time · cultural rules · knew vs didn’t understand) · F1 §16 modalities · §17 sense-context · §18 ontology-governed policy · §21 symbolic-first permissions · Alice F6 inference namespaces.
+
+### 24.1 Cut
+
+**Relationship quality and norm compliance evolve in time.** They are claim–policy + epistemic/deontic assertions over *relations and contexts* — **not** NaturalAgent who-tokens, and not a static embedding of “good/bad person.”
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Met in good faith; later found adverse / knowable over time | Time-indexed **relationship-assessment claims** + evidence instruments; prior good-faith claim remains provenance, not deleted “who rewrite” |
+| Inference over that arc | Typed inference edges on **relation / context** graphs (parties · epochs · evidence) — never bake into NaturalAgent embedding |
+| Broke cultural/community rule, didn’t understand | Epistemic: `¬K(rule)` or low awareness · deontic breach still recorded · sense-context (locale · community · era) binds *which* rule |
+| Broke rule knowing it | Epistemic: `K(rule)` · same deontic breach, different modality / culpability attributes on the **claim**, not a who-merge |
+| Depends on the rule | Rule identity + scope + community sense-context — semantics pick the normative instrument; crypto only proves attestations |
+
+### 24.2 Instrument / claim kinds (additive)
+
+| Kind | Notes |
+|------|--------|
+| RelationshipAssessmentClaim | Time-bounded claim on a relation (parties · epoch · stance · evidence refs) — claim plane |
+| Knowability / awareness assertion | Epistemic modality on a claim (“reasonably knowable by t”, “agent knew rule R”) — not identity |
+| NormativeRuleInstrument | Community/cultural rule as cited instrument (lexical + sense-context); breach = claim against parties under that rule |
+| RuleBreachClaim | Deontic violation assertion + epistemic qualifier (knew / didn’t understand / disputed) |
+
+### 24.3 Crypto & inference notes
+
+- Hardness stays **co-attestation of evidence instruments** over windows (§1b) — signatures on assessments and rule citations, not a stronger “trust who.”
+- Gate fail: “bad actor” as NaturalAgent type; collapsing knew-vs-unknowing into a permanent who-bit; cultural rule = universal who-attribute; inference that rewrites person embeddings from relationship outcomes.
+- Alice: relationship-arc and culpability features stay in **claim/policy/relation** namespaces only.
+
+### 24.4 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §24 |
+| **Marvin** | RelationshipAssessmentClaim · KnowabilityAssertion · NormativeRule · RuleBreachClaim shapes (time + epistemic slots) |
+| **Alice** | Temporal relation / culpability features = claim–policy namespaces only |
+| **Capt.** | Spine intake (temporal epistemic relation assessment) |
+| **Vibe** | Diagnose voice: “relationship changed over time” ≠ “identity changed” |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -757,3 +800,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §21:** symbolic-first permission context; specialised bots via grants+agreements; crypto proves only. |
 | 2026-09-06 | **Amend §22:** org structure + mutable group authentication (elections = rebind, not who). |
 | 2026-09-06 | **Amend §23:** environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
+| 2026-09-06 | **Amend §24:** temporal relationship assessment · epistemic rule-breach (knew vs didn’t understand); ≠ who rewrite. |
