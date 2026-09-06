@@ -292,3 +292,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §20: OnlineAccountShape · WalletShape · PasswordVerifierShape · PrivateKeyMaterialShape (cites F1 §20). |
 | 2026-09-06 | Capt: symbolic-first permission context (semantics+logic+probability); specialised agents via grants/agreements; UI after planes; no who-embedding of wallet/role. |
 | 2026-09-06 | Alice F6 §9 (PR #79): secrets/wallets/accounts as instrument features only (cites `ac1d12c` §3h/§20). |
+| 2026-09-06 | Noddy F1 §21: symbolic-first permissions · specialised bots on grants+agreements · crypto proves only. |

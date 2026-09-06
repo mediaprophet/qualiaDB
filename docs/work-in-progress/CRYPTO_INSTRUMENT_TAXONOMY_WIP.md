@@ -548,6 +548,40 @@ No entailment from password-success or token-possession to NaturalAgent who (§1
 
 ---
 
+## 21. Amend — symbolic-first context for agent permissions (2026-09-06)
+
+**Cite:** Capt lock · Timothy symbolic AI context · Alice F6 instrument-only · F1 §16–§18 · §17 situational grants · §20 secrets/wallets.
+
+### 21.1 Decision stack
+
+| Layer | Does |
+|-------|------|
+| Symbolic AI (semantics + deontic/epistemic/N3; probability where uncertainty belongs) | Enumerates *which* context and *what* may be done |
+| Attributes · capacity grants · agreement instruments | ABAC-like inputs |
+| Crypto instruments (incl. ZKP) | Prove possession / predicates / hardness — **not** who |
+| Multi-plane graph | Keeps who · claim · handle · instrument unmerged |
+
+**Gate fail:** NaturalAgent embedding that absorbed role, wallet, account, grant-success, or ZKP-success.
+
+### 21.2 Specialised / personal / group agents
+
+Child-minder · medical support · home-security · personal/group agents: **AI-agent** (or service) types with **situational grants + signed agreement instruments** (Webizen/QualiaDB agreement surfaces later). Never a who-token for the bot or a merge with the ward/patient/homeowner.
+
+### 21.3 UI bar (docs intent only)
+
+Once planes are thick enough: easier than Active Directory / Keychain — chrome speaks instruments, grants, and context, not CS identity bags. No Host invent now.
+
+### 21.4 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §21 |
+| **Marvin** | Policy/context shapes stay claim–policy–modality |
+| **Alice** | F6: symbolic context namespaces; instrument-only for secrets/grants/ZKP |
+| **Capt.** | Spine lock — changelog on tip |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -635,3 +669,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §18:** ontology-governed crypto-bound policy naming; ZKP as proof instruments (selective disclosure ≠ who); HTTP/Solid offramp not trust root. |
 | 2026-09-06 | **Amend §19:** relation-scoped locators as instruments (pairwise email sketch); ≠ static who. |
 | 2026-09-06 | **Amend §20:** secrets · wallets · tokens · online accounts · passwords as instruments (≠ who). |
+| 2026-09-06 | **Amend §21:** symbolic-first permission context; specialised bots via grants+agreements; crypto proves only. |
