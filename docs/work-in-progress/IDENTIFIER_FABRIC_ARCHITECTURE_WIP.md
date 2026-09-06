@@ -72,7 +72,7 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 | # | Owner | Deliverable | State |
 |---|-------|-------------|-------|
 | F1 | **Noddy** | Crypto instrument taxonomy WIP (map kinds → QDNF role table; family vs instance) | **LANDED** → `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` |
-| F2 | **Marvin** | SHACL-first split — `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **LANDED** tip `565097f` |
+| F2 | **Marvin** | SHACL-first split — `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **LANDED** + crypto-skim amend |
 | F3 | **Capt** | This architecture WIP — keep current as Timothy enumerates | **ACTIVE** |
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
 | F5 | **Vibe** | Diagnose / `suggested_form` — `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **LANDED** tip `796a7d4` |
@@ -111,6 +111,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Neo folded F2 → tip `565097f`; spine F2 LANDED; F5/F6 docs-map unblocked. |
 | 2026-09-06 | Neo folded F5 diagnose map → `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md`; spine F5 LANDED. |
 | 2026-09-06 | Vibe F5 diagnose map LANDED tip `796a7d4`; Alice F6 cites F1+F2+F5. |
+| 2026-09-06 | F2 amend (Noddy crypto skim): split DniRarSession → Dni/Rar/QSessionProof shapes; verificationRelationship + keyRole; tip after fold. |
 
 ---
 
