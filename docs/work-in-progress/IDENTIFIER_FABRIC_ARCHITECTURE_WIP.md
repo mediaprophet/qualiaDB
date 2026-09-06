@@ -109,6 +109,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 draft ready: `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` — Capt accepts for Marvin F2; Neo fold+push. |
 | 2026-09-06 | Marvin F2 SHACL split draft ready: `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` — Capt accepts; Neo fold+push; unlock Vibe/Alice review after tip. |
 | 2026-09-06 | Neo folded F2 → tip `565097f`; spine F2 LANDED; F5/F6 docs-map unblocked. |
+| 2026-09-06 | Neo folded F5 diagnose map → `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md`; spine F5 LANDED. |
 
 ---
 
@@ -128,3 +129,4 @@ Blocking gates → report **Capt**.
 | `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Capt | living spine |
 | `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | Noddy | F1 draft ready |
 | `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | Marvin | F2 **LANDED** |
+| `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | Vibe | F5 **LANDED** |
