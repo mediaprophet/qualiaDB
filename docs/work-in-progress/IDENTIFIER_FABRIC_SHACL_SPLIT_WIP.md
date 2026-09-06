@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §24 `b86f263` · F1 §25 `acd3da3` · spine §3m · architecture spine
+**Against tip:** F2 §25 `9c66f46` · F1 §26 `9c5d542` · spine §3n · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -1120,6 +1120,86 @@ Quins/NQuins store typed relation/claim/instrument edges for human-centric inter
 - Alice: counterpart-set / social-graph features ≠ NaturalAgent embedding.
 
 ---
+
+## 26. Amend — pseudonyms, role≠accountability, anti-coercion purpose binds (F1 §26)
+
+**Cite:** Noddy F1 §26 tip `9c5d542` · spine §3n · §15–§17 · §19 locators · §21–§22 roles · F5 §13 · Alice F6 · sanctuary/Webizen (docs intent).
+
+### 26.1 Cut
+
+Uplifted identifiers ≠ enumerated who. Pseudonyms and societal roles ride instruments / grants / claim–policy — they do **not** rewrite NaturalAgent. Role access ≠ accountability logs. Badge does not license stalking an ex; proxy cannot launder forbidden purpose.
+
+| Pattern | Shape expression |
+|---------|------------------|
+| Pseudonym (privacy/legal) | PseudonymAlias — locator/instrument alias, not a second NaturalAgent |
+| Societal role → access | RoleCapacityGrant — purpose · scope · time · environment |
+| Accountability | AccountabilityArtifact / logs — distinct from grant success |
+| Anti-coercion | PurposeBind / AntiCoercionConstraint — forbidden targets, COI, no-stalk, no-proxy-launder |
+| Proxy | DelegationChain — inherits purpose+target; break on mismatch |
+
+**Gate fail:** badge/role = forever who; pseudonym = second person; grant-success = accountability done; proxy washes forbidden purpose; LEO office ⇒ ex-surveillance rights.
+
+### 26.2 Shapes
+
+#### `idf:PseudonymAliasShape`
+| Property | Note |
+|----------|------|
+| `idf:instrumentKind` | PseudonymAlias (align RelationScopedLocator / Alias) |
+| `idf:aliasOf` | Optional link to NaturalAgent or other agent — **relation**, not who-fork |
+| `idf:purpose` / privacy-legal flag | Why the alias exists |
+| Forbidden | Entail second NaturalAgent type |
+
+#### `idf:RoleCapacityGrantShape`
+| Property | Note |
+|----------|------|
+| Extends | SituationalCapacityGrant / OrgStructuralRole patterns |
+| `idf:role` | Societal/office role |
+| `idf:purpose` · `idf:scope` · `idf:timeInterval` · env predicates | Required purpose bind |
+| Distinct from | AccountabilityArtifact |
+
+#### `idf:PurposeBindShape` / `idf:AntiCoercionConstraintShape`
+| Property | Note |
+|----------|------|
+| `idf:allowedPurpose` / `idf:forbiddenTarget` | Policy instruments |
+| `idf:conflictOfInterest` | e.g. ex-partner, self-deal |
+| `idf:noProxyLaunder` | true — delegates inherit binds |
+| Surface | Sanctuary / Webizen Desktop policy UX (docs intent; no Host invent) |
+
+#### `idf:DelegationChainShape`
+| Property | Note |
+|----------|------|
+| `idf:delegator` → `idf:delegate` | Chain of agency |
+| `idf:inheritedPurpose` / `idf:inheritedTarget` | Must match upstream PurposeBind |
+| Break | Purpose mismatch ⇒ deny (not who-rewrite) |
+
+#### `idf:AccountabilityArtifactShape`
+| Property | Note |
+|----------|------|
+| Plane | Claim–evidence / logs |
+| Answers | What was done — not what role permits |
+
+```turtle
+idf:PseudonymAliasShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:PseudonymAlias ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:aliasOf ; sh:minCount 0 ; sh:maxCount 1 ] .
+  # MUST NOT entail second NaturalAgent who.
+
+idf:RoleCapacityGrantShape a sh:NodeShape ;
+  sh:property [ sh:path idf:purpose ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:timeInterval ; sh:minCount 1 ] .
+
+idf:DelegationChainShape a sh:NodeShape ;
+  sh:property [ sh:path idf:inheritedPurpose ; sh:minCount 1 ] .
+  # Break chain on purpose mismatch — no proxy-launder.
+```
+
+### 26.3 Diagnose / Alice
+
+- Vibe: “has role” ≠ “may target anyone”; pseudonym ≠ second who.
+- Alice: role/purpose/pseudonym = instrument/policy namespaces only.
+- Sanctuary/Webizen: anti-coercion UX later — F2 names kinds only.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -1145,6 +1225,8 @@ Quins/NQuins store typed relation/claim/instrument edges for human-centric inter
 | 2026-09-06 | F1 §24: `RelationshipAssessmentClaimShape` · `KnowabilityAssertionShape` · `NormativeRuleShape` · `RuleBreachClaimShape`; relationship≠who; tip `ceb59d9`. |
 
 | 2026-09-06 | F1 §25: `RelationLifecycleShape` · non-defining high-cardinality relations · Quin = axiom substrate ≠ who; tip `acd3da3`. |
+
+| 2026-09-06 | F1 §26: `PseudonymAliasShape` · `RoleCapacityGrantShape` · `PurposeBind`/`AntiCoercionConstraint` · `DelegationChainShape` · AccountabilityArtifact; role≠accountability; tip `9c5d542`. |
 
 ---
 
