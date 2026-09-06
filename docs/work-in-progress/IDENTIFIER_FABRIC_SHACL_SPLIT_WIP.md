@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §15 `a226e5d` · F1 §16 draft (guardianship/capacity/commons) · architecture spine
+**Against tip:** F2 §16 `b832708` · F1 §17 draft · F5 sense-context `da74019` · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -243,6 +243,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 9. AI-agent ≠ NaturalAgent ≠ Machine; WebID/SAN/hardware are instruments; WN lexicalConcept ≠ fabric plane (F1 §14).
 10. Device-user ≠ OS account-holder ≠ telecom subscriber ≠ machine (F1 §15); `usedBy` / `accountOn` / `accountHolder` independent.
 11. Guardianship/capacity/commons are relation axioms — never guardian≡ward, capacity-as-who, or commons mega-who (F1 §16); modalities on claim–policy only.
+12. Sense-context bindings (locale·era·community·provenance); flora/fauna living non-person; situational grants ≠ logs ≠ who (F1 §17).
 
 ---
 
@@ -564,6 +565,83 @@ idf:CommonsMembershipShape a sh:NodeShape ;
 Guardianship = **relation**; modalities ≠ person voice; capacity = attributes over time; commons = scoped membership — enumerable resolution, never opaque who.
 
 ---
+
+## 17. Amend — sense-context, flora/fauna, situational grants vs logs (F1 §17)
+
+**Cite:** Noddy F1 §17 tip `bec69a7` · Capt sense-contextual lock · Timothy thongs/gay · emergency medical capacity · F5 `da74019` · F2 §14 lexicalConcept · §16 capacity/guardianship · QDNF Alias Assertions.
+
+### 17.1 `idf:SenseContextBindingShape` (lexical — not mega-meaning who)
+
+| Property | Note |
+|----------|------|
+| `idf:lexicalConcept` | WN/OMW sense IRI — stable concept id; **≠ fabric plane** |
+| `idf:locale` | e.g. `en-AU` — *thongs* = footwear |
+| `idf:era` / time window | Historical *gay* = happy ≠ sexuality |
+| `idf:community` / namespace | QDNF alias namespaces: personal · relationship · community · institution · legacy |
+| `idf:provenance` | Who asserted this binding; evidence instrument/claim |
+| Surface form | Optional sayable / orthography |
+
+**Gate fail:** one timeless dictionary identity; sense without locale/era when homograph risk; WN gloss as NaturalAgent or plane. Crypto does **not** disambiguate homographs.
+
+### 17.2 `idf:FloraShape` / `idf:FaunaShape` (living non-person)
+
+| Constraint | Note |
+|------------|------|
+| Framing | SHACL-first living (B-OWL-NATURAL) — micro·meso·macro as needed |
+| Forbidden | NaturalAgent personhood; `owl:Thing` commodity wash |
+| Optional | `idf:lexicalConcept` + SenseContextBinding for common names |
+
+### 17.3 `idf:SituationalCapacityGrantShape`
+
+Purpose-scoped · condition-scoped · time-bounded · qualification-backed — still the same NaturalAgent (or acting agent-type).
+
+| Property | Note |
+|----------|------|
+| `idf:grantee` | NaturalAgent \| AiAgent — **not** a new who |
+| `idf:purpose` | e.g. emergency clinical data access |
+| `idf:condition` | e.g. co-location / proximity constraint |
+| `idf:timeInterval` | Required — stale grant does not count |
+| `idf:qualificationInstrument` | VC / license / credential instrument |
+| Distinct from | Standing `GuardianshipRelationShape` (§16); `OsAccountShape` (§15); session login |
+| Evidence | Qualification + condition observations — co-attestation eligible when multi-party |
+
+**Gate fail:** freezing informal emergency trust into one identity privilege bit; grant ≡ who.
+
+Makes historically informal practice **enumerable** without who-merge.
+
+### 17.4 Logs / accountability — distinct track
+
+| Track | Shape home | Answers |
+|-------|------------|---------|
+| Situational grant | Capacity / claim–policy relation (§17.3) | What *may* be done, by whom, under what conditions, when |
+| Logs / accountability | Provenance · claim–evidence (`idf:AccountabilityLogShape` sketch) | What *was* done, observed, attested |
+
+Grants authorize; logs account. Neither is who. Jury-safe: name grant scope and log evidence separately.
+
+```turtle
+idf:SenseContextBindingShape a sh:NodeShape ;
+  sh:property [ sh:path idf:lexicalConcept ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:locale ; sh:minCount 0 ] ;
+  sh:property [ sh:path idf:era ; sh:minCount 0 ] ;
+  sh:property [ sh:path idf:provenance ; sh:minCount 0 ] .
+
+idf:SituationalCapacityGrantShape a sh:NodeShape ;
+  sh:property [ sh:path idf:grantee ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path idf:purpose ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:condition ; sh:minCount 0 ] ;
+  sh:property [ sh:path idf:timeInterval ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:qualificationInstrument ; sh:node idf:InstrumentShape ; sh:minCount 0 ] .
+
+idf:FloraShape a sh:NodeShape ;
+  sh:property [ sh:path idf:framing ; sh:hasValue idf:living-SHACL ; sh:minCount 1 ] .
+  # NOT NaturalAgentShape; NOT owl:Thing commodity.
+```
+
+### 17.5 Diagnose alignment (Vibe F5)
+
+`suggested_fix` optional fields: `locale` · `era` · `community` · `provenance` beside `plane`/`framing`. Collapse detectors: AU thongs; period gay; flora/fauna as person; WN gloss as who.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -575,6 +653,7 @@ Guardianship = **relation**; modalities ≠ person voice; capacity = attributes 
 | 2026-09-06 | F1 §14: FOAF-modern type shapes (`AiAgent` · `MachineDevice` · Org/Service); WebID-TLS/RSA · SAN · hardware instruments; WN/OMW `lexicalConcept` ≠ plane; jury explainability. Base F1 `8724174`. |
 | 2026-09-06 | F1 §15: `OsAccountShape` · `TelecomSubscriberShape`; independent `usedBy` / `accountOn` / `accountHolder`; tip `e4c6320`. |
 | 2026-09-06 | F1 §16: `GuardianshipRelationShape` · capacity gradients · `CommonsMembershipShape` / project roles; core-ontologies uplift; modalities ≠ who. |
+| 2026-09-06 | F1 §17: `SenseContextBindingShape` · `FloraShape`/`FaunaShape` · `SituationalCapacityGrantShape` · grants≠logs; cite F5 `da74019`. |
 
 ---
 

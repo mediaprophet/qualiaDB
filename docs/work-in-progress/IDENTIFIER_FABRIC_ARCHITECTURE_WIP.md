@@ -221,3 +221,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: contextual sense (locale/era/community); WN sense+context bindings; flora/fauna living-typed not personhood; crypto≠homograph fix. |
 | 2026-09-06 | Vibe F5 §10: contextual sense + flora/fauna diagnose voice (cites spine §3e). |
 | 2026-09-06 | Noddy F1 §17: sense-context · flora/fauna · situational grants vs logs (crypto≠homograph). |
+| 2026-09-06 | Marvin F2 §17: SenseContextBindingShape · Flora/Fauna · SituationalCapacityGrantShape (cites F1 `bec69a7`). |
