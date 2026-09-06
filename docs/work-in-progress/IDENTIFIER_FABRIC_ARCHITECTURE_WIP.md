@@ -75,7 +75,7 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 | F2 | **Marvin** | SHACL-first split — `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **LANDED** tip `565097f` |
 | F3 | **Capt** | This architecture WIP — keep current as Timothy enumerates | **ACTIVE** |
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
-| F5 | **Vibe** | Diagnose / `suggested_fix` copy never collapses who→claim/role/handle | hold until F1–F2 |
+| F5 | **Vibe** | Diagnose / `suggested_form` — `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **LANDED** tip `796a7d4` |
 | F6 | **Alice** | Inference/symbolic pressure-test: feature spaces don’t merge who/claim/handle | **UNBLOCKED** (F1–F2 landed) — docs map only |
 | F7 | **Neo** | Park expected refactor list (network + poet surfaces) citing fabric | after vibe delivery |
 
@@ -110,6 +110,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 SHACL split draft ready: `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` — Capt accepts; Neo fold+push; unlock Vibe/Alice review after tip. |
 | 2026-09-06 | Neo folded F2 → tip `565097f`; spine F2 LANDED; F5/F6 docs-map unblocked. |
 | 2026-09-06 | Neo folded F5 diagnose map → `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md`; spine F5 LANDED. |
+| 2026-09-06 | Vibe F5 diagnose map LANDED tip `796a7d4`; Alice F6 cites F1+F2+F5. |
 
 ---
 
