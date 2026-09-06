@@ -268,6 +268,27 @@ Identifiers are **semantically uplifted and fortified**; NaturalAgent identity s
 
 Aligns with §3g locators, §3i–§3j roles/grants, §3m Quin; Noddy F1 §26 path ready; Alice F6 PR #80 already notes aliases + sanctuary pointer.
 
+## 3o. Good-faith reliance, false claims, RCA & blast radius (Timothy — 2026-09-06)
+
+Good-faith reliance on a false or misleading claim (AI-agent · person · org representative) is a **claim–evidence–accountability** problem over time and network relations — **not** a who-rewrite. When falsity surfaces, preserve provenance and enumerate root cause + blast radius (social · economic · safety · security).
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Asserted “done / true / implemented” (false) | AssertionClaim — speaker type explicit (NaturalAgent · AI-agent · OrgRep) |
+| Counterparty acts in good faith | **RelianceRecord** (party · claim · time · duty · consequent acts) |
+| Assumption continues across network | Time-indexed **AssumptionChain** (claim → derived beliefs → grants/contracts/builds) |
+| Discovery of falsity | Mark superseded/retracted — **do not erase** prior claim; open RootCauseBundle + BlastRadiusMap |
+| Root-cause analysis | Speaker · instrument · epistemic state (knew / should-have-known / mistaken) · process gaps — accountability artifacts |
+| Blast radius | Impacted agents/entities · relations · grants · domains · time window — **repercussion claims**, not identity collapse |
+
+**Additive kinds:** AssertionClaim · RelianceRecord · AssumptionChain · Retraction/Supersession · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding.
+
+**Gate fail:** misleading AI ⇒ human fraudster who; org-rep lie ⇒ rewrite NaturalAgent; blast radius ⇒ merge impacted parties into one identity; delete false claim to “fix” history.
+
+**Meme cut:** “bot said mushroom safe → man dies → bot says sorry” is an AssertionClaim + RelianceRecord + lethal BlastRadiusMap — apology does not rewrite who, and provenance must survive.
+
+Aligns with §3l temporal assessment, §3m relation lifecycle, §3n role≠accountability; Noddy F1 §27 path ready.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -410,3 +431,6 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt consultation brief: `IDENTIFIER_FABRIC_CONSULTATION_BRIEF.md` (summary + consultation path). |
 | 2026-09-06 | Capt: attachments crosswalk + consultation brief §2b (diagram prior art · SAME AS consult Qs). |
 | 2026-09-06 | Capt consultation brief §2c: lane skim locks + checklist COMPLETE (SAME AS ≠ who-merge). |
+| 2026-09-06 | Capt: good-faith reliance · false claims · RCA + blast radius (social/economic/safety/security); assumption invalidated ≠ who rewrite. |
+| 2026-09-06 | Noddy F1 §27: AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding. |
+| 2026-09-06 | Capt: good-faith reliance · AssumptionChain · RootCauseBundle · BlastRadiusMap — assumption invalidated ≠ who rewrite. |

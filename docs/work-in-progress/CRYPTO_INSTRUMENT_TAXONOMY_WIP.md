@@ -793,6 +793,54 @@ Anti-coercion frameworks (conflict checks, purpose binds, proxy limits, sanctuar
 
 ---
 
+## 27. Amend — good-faith reliance, false claims, RCA & blast radius (2026-09-06)
+
+**Cite:** Timothy room (AI-agent ↔ person · person as org representative · good-faith reliance on misleading claims e.g. “implemented” when not · continued assumption · network/incentive effects · later discovery → root-cause analysis + blast-radius / social·economic·safety·security repercussions) · F1 §14 AI-agent type · §21 agent permissions · §24 temporal/epistemic assessment · §25 relation lifecycle · §26 role≠accountability · Alice F6 claim–policy namespaces.
+
+### 27.1 Cut
+
+**Good-faith reliance on a false or misleading claim is a claim–evidence–accountability problem**, not a who-rewrite. Speakers may be NaturalAgents, AI-agents, or persons acting as org representatives — the **claim** and its **reliance chain** are first-class; discovering falsity triggers RCA and blast-radius enumeration over the multi-plane graph.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| AI-agent or org-rep asserts “done / true / implemented” | Claim/opinion (+ optional VC/attestation) — speaker type explicit; **≠** NaturalAgent identity of any human principal |
+| Counterparty acts in good faith on that claim | **RelianceRecord**: who relied · on which claim · at time t · under which duty (legal/good-faith) · what acts followed |
+| Assumption continues over time / network | Time-indexed **AssumptionChain** edges (claim → derived beliefs → downstream grants/contracts/builds) |
+| Discovery: prior assumption false | Do **not** erase provenance; mark claim superseded/retracted; open **RootCauseBundle** + **BlastRadiusMap** |
+| Root-cause analysis | Typed evidence: speaker · instrument used · epistemic state (knew / should-have-known / mistaken) · process gaps — accountability artifacts (§17.4 / §26) |
+| Blast radius | Enumerate impacted agents/entities · relations · grants · economic/safety/security edges within time windows — **repercussion claims**, not identity collapse |
+| Incentives / network effects | Claim–policy + relation graph attributes — still not who-embeddings |
+
+### 27.2 Instrument / claim kinds (additive)
+
+| Kind | Notes |
+|------|--------|
+| AssertionClaim | Spoken/written claim with speaker (NaturalAgent · AI-agent · OrgRep) + time + optional crypto attestation |
+| RelianceRecord | Good-faith (or other duty) reliance: reliant party · claim ref · epoch · consequent acts |
+| AssumptionChain | Derived belief edges from claim → downstream decisions/instruments |
+| Retraction / Supersession | Claim-plane update; preserves prior claim as provenance |
+| RootCauseBundle | Co-attested evidence set explaining falsity / process failure (§1b multi-instrument) |
+| BlastRadiusMap | Scoped repercussion graph: parties · relations · grants · domains (social · economic · safety · security) · time window |
+| OrgRepresentativeBinding | Person acts *for* Organization under RoleCapacityGrant — speaker role ≠ personal who (§22 / §26) |
+
+### 27.3 Crypto notes
+
+- Hardness for “it was said / relied / retracted”: signatures and co-attestation over **claims and reliance records**, not a stronger who.
+- AI-agent keys prove agent instrument utterances; human principal remains separate (§14 / §21).
+- Gate fail: “misleading AI” ⇒ human is fraudster who; org-rep lie ⇒ rewrite NaturalAgent type; blast radius ⇒ merge all impacted parties into one identity; deleting false claim to “fix” history (cf. temporal-dynamics caution — provenance stays).
+
+### 27.4 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §27 |
+| **Marvin** | AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding shapes |
+| **Alice** | Reliance/blast features = claim–policy/accountability namespaces only; no false-claim→who embedding |
+| **Capt.** | Spine intake (good-faith reliance · RCA · blast radius) |
+| **Vibe** | Diagnose: “assumption invalidated” ≠ “identity changed”; suggest RCA/blast templates |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -886,3 +934,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §24:** temporal relationship assessment · epistemic rule-breach (knew vs didn’t understand); ≠ who rewrite. |
 | 2026-09-06 | **Amend §25:** high-cardinality non-defining relations · Quin/NQuin axiom substrate (≠ who). |
 | 2026-09-06 | **Amend §26:** pseudonyms as aliases · role≠accountability · purpose binds / no-proxy-launder. |
+| 2026-09-06 | **Amend §27:** good-faith reliance · AssumptionChain · RootCauseBundle · BlastRadiusMap (≠ who rewrite). |
