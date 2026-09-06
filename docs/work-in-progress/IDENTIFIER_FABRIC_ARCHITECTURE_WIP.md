@@ -71,8 +71,8 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 
 | # | Owner | Deliverable | State |
 |---|-------|-------------|-------|
-| F1 | **Noddy** | Crypto instrument taxonomy WIP (map kinds → QDNF role table; family vs instance) | **NEXT** |
-| F2 | **Marvin** | SHACL-first split: natural agent · claim · spatiotemporal handle · instruments; uplift core-db/QDNF primitives | waits F1 |
+| F1 | **Noddy** | Crypto instrument taxonomy WIP (map kinds → QDNF role table; family vs instance) | **LANDED** → `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` |
+| F2 | **Marvin** | SHACL-first split: natural agent · claim · spatiotemporal handle · instruments; uplift core-db/QDNF primitives | **UNBLOCKED** (F1 landed) |
 | F3 | **Capt** | This architecture WIP — keep current as Timothy enumerates | **ACTIVE** |
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
 | F5 | **Vibe** | Diagnose / `suggested_fix` copy never collapses who→claim/role/handle | hold until F1–F2 |
@@ -106,3 +106,12 @@ Blocking gates → report **Capt**.
 | When | Note |
 |------|------|
 | 2026-09-06 | Capt opened WIP from Identifier Fabric room locks; substrate = QDNF + qualia-core-db; F1 Noddy next. |
+
+---
+
+## Related WIP (folded)
+
+| Doc | Owner | Role |
+|-----|-------|------|
+| `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | Noddy | F1 — crypto instrument taxonomy (kinds → QDNF roles; biometric family/instance) |
+| `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Capt | Spine — living architecture intake |
