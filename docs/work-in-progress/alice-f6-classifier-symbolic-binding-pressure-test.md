@@ -2,9 +2,9 @@
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
 **Owner:** Alice (inference / ML / symbolic AI) · **Fold/push:** Neo · **Ops:** Capt.  
-**Against fabric HEAD:** `1d55f56092295f72fcbe61a5583c781b4e270602` (spine **§3g** relation-specific addressing; F5 §11 ZKP/grant/policy diagnose; descendant of F6 park `55d811b` / F2 `42dc709` / F5 `796a7d4`)  
-**F2 content SHA (history):** `565097fdfd1049eff780e41eda6da02ee624eb62` · **F5 diagnose SHA:** `796a7d4b08d3c5b610fda3b1ab2f97042d6dada5` · **F5 §11 fold:** `1d55f560`  
-**F2 §19:** `idf:RelationScopedLocatorShape` is the **room-named later shape** — **not on this tip** (F2 currently ends at §18 `OntologyGovernedPolicyShape` / `ZkpProofShape`). Alice cites the name as the typed instrument namespace; Marvin lands the shape. No SHACL invent here.  
+**Against fabric HEAD:** `4a44b0d` (F1/F2 §19 · F5 §12 relation-scoped locators) · merge base `1d55f560` (§3g) · this amend merge `eabccc9`  
+**F2 content SHA (history):** `565097f` · **F5 diagnose SHA:** `796a7d4` · **F5 §11:** `1d55f560` · **F5 §12 / F2 §19:** `4a44b0d`  
+**F2 §19:** `idf:RelationScopedLocatorShape` **LANDED** tip `4a44b0d` — typed instrument namespace for spine §3g locators.  
 **Constraint:** docs / illustration only. **No Host invent. No `ALL_BOUND` invent. No vibe-host surface widen.** Neo folds.
 
 **Pressure-test question:** Can classifiers and symbolic bindings keep these four strata distinct **without collapsing into a single feature-space bag**?
@@ -48,7 +48,7 @@ Paths as they exist at tip `1d55f560`. Short note = what each says about the fou
 |------|-------------------------------|
 | `docs/work-in-progress/IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Spine. CS “identity” = auth subject + identifier + attributes + claims in **one bag** is the problem. Four pillars: natural agent · claim/opinion · spatiotemporal/route handle · instrument kinds. `did:q42` / observer DID = provisional topology, not who. **§1b:** long-arc lineage; DIDs/VCs are instruments, not who. **§3g** (this tip `1d55f560`): relation-specific addressing — locators name a *relationship* (pairwise, group, chat, transaction, DNS TXT), not a permanent who-token; email sketch `jane@bob.tld` ↔ `bob@jane.tld`; agents-of-entities in relation metadata ≠ mailbox who. Cut: locators are **instruments/handles**, not NaturalAgent. |
 | `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | **F1 / Noddy.** Planes table: who ≠ claim ≠ handle ≠ instrument. Instruments bind *relations*; they do not replace the agent. QDNF role table stays authoritative for *what question an identifier answers*. Biometric **family** vs **instance**. Collapse of any kind into “who” = gate fail. VC = origin+integrity, not truth. QRC has **no crypto by itself**. |
-| `docs/work-in-progress/IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **F2 / Marvin** (content `565097f` + crypto-skim amend `42dc709`; tip through §18). Four plane shapes: `idf:NaturalAgentShape` (living-SHACL, never Thing-wash) · `idf:ClaimOpinionShape` · `idf:SpatiotemporalHandleShape` · `idf:InstrumentShape`. Cross-plane preds (`relatedByInstrument`, `about`, `assertedBy`, `places`) are **relations, not merges**. Amend: split DNI/RAR/QSessionProof; `idf:keyRole` + `idf:verificationRelationship`; §18 policy/ZKP shapes. **§19 `idf:RelationScopedLocatorShape`:** room-named later typed instrument namespace for §3g locators — **not on this tip**. Do not invent the shape here. Existing nearest kind: `idf:NetworkAddressShape` (not DID; not who; LIG only for legacy IP/DNS) — pairwise/relation locators are **not** that legacy bag. |
+| `docs/work-in-progress/IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **F2 / Marvin** (content `565097f` + crypto-skim amend `42dc709`; tip through §18). Four plane shapes: `idf:NaturalAgentShape` (living-SHACL, never Thing-wash) · `idf:ClaimOpinionShape` · `idf:SpatiotemporalHandleShape` · `idf:InstrumentShape`. Cross-plane preds (`relatedByInstrument`, `about`, `assertedBy`, `places`) are **relations, not merges**. Amend: split DNI/RAR/QSessionProof; `idf:keyRole` + `idf:verificationRelationship`; §18 policy/ZKP shapes. **§19 `idf:RelationScopedLocatorShape`:** **LANDED** tip `4a44b0d` — typed instrument namespace for §3g locators. Existing nearest kind: `idf:NetworkAddressShape` (not DID; not who; LIG only for legacy IP/DNS) — pairwise/relation locators are **not** that legacy bag. |
 | `docs/work-in-progress/IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **F5 / Vibe** (`796a7d4` + §11 fold on this tip). **§2 plane voice** = locked feature-space *labels* for later classifiers (never “identity” as auth bag; never DID-as-who). **§3 collapse detectors** = refuse-merge list: DID/observer/`did:q42` as who; VC verified ⇒ claim true ⇒ who; **DNI / address as persistent who** (speak how-now handle; not person); biometric instance as timeless who; machine ID = principal; alias as route authority. **§11:** ZKP/grant/policy ≠ who; HTTP/Solid = offramp, not identity. Locator copy aligns with instrument + how-now speak — never “your identity” / forever mailbox. |
 
 ### 1.2 QDNF / standards substrate (do not re-invent)
@@ -115,7 +115,7 @@ F1+F2+F5 give typed names a later binder can cite. Nothing in the current Host/r
 | Track | Verdict | Why |
 |-------|---------|-----|
 | (a) Neural | **fail** if a locator string (email-like, WebID, phone, DNS TXT, chat/transaction id) is embedded as a static forever who-address, or if directed pair `jane@bob.tld` ⊕ `bob@jane.tld` is concatenated into one NaturalAgent vector | Spine §3g cut: the string names a *relation*, not a person. Concat is CS bag + QDNF §6 correlation. Agents-of-entities in metadata are not who features. |
-| (b) Symbolic | **pass** only if binders use a **typed instrument namespace** (`instrument.locator.relation.*` / later `idf:RelationScopedLocatorShape`); **fail** if they reuse `idf:NaturalAgentShape`, a shared `Identity`/`Agent` URI, or legacy `idf:NetworkAddressShape` as the who slot | F2 §19 not on this tip — do not invent SHACL. Until Marvin lands the shape, hold / not-yet (F5 gates). Align F5 §2 instrument speak + §3 “address as persistent who.” |
+| (b) Symbolic | **pass** only if binders use a **typed instrument namespace** (`instrument.locator.relation.*` / `idf:RelationScopedLocatorShape`); **fail** if they reuse `idf:NaturalAgentShape`, a shared `Identity`/`Agent` URI, or legacy `idf:NetworkAddressShape` as the who slot | F2 §19 LANDED `4a44b0d`. Align F5 §2 / §12 instrument speak + §3 “address as persistent who.” |
 
 ---
 
@@ -184,7 +184,7 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 3. Should deprecated `idf:DniRarSessionShape` be a **shape fail** (closed `sh:not`) so symbolic pre-check rejects the lump, not just a docs deprecation?
 4. How should mixed `idf:places` (living *what* vs artifact CRS) appear in typed slots so a Position binder cannot silently promote coords → who?
 5. When (if ever) observer DID / QRC may graduate from provisional topology — until then Alice will refuse them as who-features.
-6. Confirm F2 §19 `idf:RelationScopedLocatorShape` (room name) as the sole first-class shape for spine §3g locators, distinct from legacy `idf:NetworkAddressShape` (LIG IP/DNS). Until it lands, Alice **holds** locator→who binds (F5 held / not-yet) and will not invent the shape.
+6. F2 §19 `idf:RelationScopedLocatorShape` **LANDED** `4a44b0d` as the first-class shape for spine §3g locators, distinct from legacy `idf:NetworkAddressShape` (LIG IP/DNS). Locator→who binds remain **fail**.
 
 ---
 
@@ -194,7 +194,7 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 - Do **not** treat this PR as Host, vibe-host, or ALL_BOUND work.
 - Spine F6 row stays **LANDED**; this is a docs amend against tip `1d55f560` (§3g). Implementation remains blocked on vibe delivery + Capt unlock.
 - Cite in later F7 refactor list: typed feature namespaces; refuse DNI=RAR=QSession and keyRole wash; refuse QRC-as-who; refuse locator-as-who / directed-pair concat; ZKP/grant ≠ who.
-- Marvin: land `idf:RelationScopedLocatorShape` as F2 §19 when ready; Alice already binds the name as the typed instrument namespace.
+- Marvin: `idf:RelationScopedLocatorShape` F2 §19 landed `4a44b0d`; Alice binds that typed instrument namespace.
 
 ---
 
@@ -283,3 +283,4 @@ Optional future fixture id (docs only — no invent now): **F6-L** locator-as-wh
 ---
 
 *End of WIP — Alice F6 classifier / symbolic-binding pressure-test. No Host invent.*
+| 2026-09-06 | Neo fold: PR #78 → `eabccc9`; cite refresh — F2 §19 / F5 §12 on `4a44b0d`. |

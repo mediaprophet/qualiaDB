@@ -259,3 +259,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §19: relation-scoped locators as instruments (pairwise email sketch). |
 | 2026-09-06 | Marvin F2 §19: RelationScopedLocatorShape (cites spine §3g `1d55f56`). |
 | 2026-09-06 | Vibe F5 §12: relation-scoped locator diagnose voice (cites §3g / F2 §19). |
+| 2026-09-06 | Alice F6 §8 (PR #78 → `eabccc9`): relation-scoped locators as instrument features only. |
