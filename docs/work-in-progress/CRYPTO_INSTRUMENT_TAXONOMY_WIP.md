@@ -485,6 +485,69 @@ Unlike static personal addresses (classic Solid WebID / phone-number-as-who), th
 
 ---
 
+## 20. Amend — secrets, wallets, tokens, online accounts (2026-09-06)
+
+**Cite:** Capt spine §3h (drafting) · F1 §15 OS/telecom accounts · §19 relation-scoped locators · §14 WebID/SAN · crypto profile keyRoles · vault notes in QDNF cryptographic-profile.
+
+### 20.1 Cut
+
+**Secrets · wallets · tokens · online accounts · passwords · per-account emails** are **instruments** (and account relations), not NaturalAgent who. Align with:
+
+| Existing | Pattern |
+|----------|---------|
+| §15 | OS/telecom account ≠ device user ≠ machine |
+| §19 / §3g | Per-account / relation-scoped email locators ≠ static who |
+| §14 | WebID/SAN/hardware = instruments |
+| Crypto profile | Private keys never in Quins/logs; purpose-separated keyRoles |
+
+### 20.2 Instrument kinds
+
+| Kind | Notes | Collapse to who? |
+|------|-------|------------------|
+| Password / passphrase | Low-entropy authenticator aid — **not** key material unless PAKE-specified; vault-scoped | **Fail** |
+| Bearer / API / session token | Time-bound capability instrument; possession ≠ who | **Fail** |
+| Refresh / OAuth token | Account-scoped instrument on an online-account relation | **Fail** |
+| Wallet (software/hardware) | Container of keys/instruments — artifact; may *relate* to NaturalAgent or AI-agent | **Fail** |
+| Private key / seed | Controller or purpose-separated keyRole material — vault only; never who | **Fail** |
+| Online account | Platform account instrument (like OsAccount but remote service) — `accountHolder` ≠ device-user ≠ who-forever | **Fail** |
+| Per-account email | Often a **relation-scoped locator** (§19) bound to that online account — not the person’s only identity | **Fail** |
+
+### 20.3 Relations (independent)
+
+| Relation | Meaning |
+|----------|---------|
+| `idf:accountOn` / `idf:accountAt` | Account instrument → service/machine |
+| `idf:accountHolder` | Account → agent of record (optional) |
+| `idf:usedBy` | Who is using a device/session *now* (≠ holder) |
+| `idf:walletControls` | Wallet → keys/instruments it holds |
+| `idf:relatedByInstrument` | NaturalAgent/AI-agent → any of the above |
+
+No entailment from password-success or token-possession to NaturalAgent who (§17 grant / §18 ZKP same discipline).
+
+### 20.4 Vault & evidence hygiene
+
+- Secrets and private keys: Qualia key vault / hardware-backed — never Quins, logs, DHT, crash dumps (crypto profile).
+- Jury/audit: name “this password verifier,” “this wallet,” “this platform account,” “this per-account mailbox” separately — never one opaque identity.
+- Hardness: wallets/keys may participate in co-attestation as **members with distinct keyRoles** — not a mega-who.
+
+### 20.5 Gate fails
+
+- Password/token/wallet = person
+- One email forever = who (prefer relation-scoped §19)
+- Online account success ⇒ NaturalAgent identity
+- Seed phrase spoken as identity in diagnose/chrome
+
+### 20.6 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §20 when Capt §3h lands (or together) |
+| **Marvin** | Shapes for OnlineAccount · Wallet · Token · PasswordVerifier · align §15/§19 |
+| **Vibe** | Diagnose: secret/wallet/token/account = instruments |
+| **Alice** | Never embed secrets/tokens into who feature space |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -571,3 +634,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §17:** sense-context bindings; flora/fauna living non-person; situational capacity grants vs logs/accountability; crypto≠homograph fix. |
 | 2026-09-06 | **Amend §18:** ontology-governed crypto-bound policy naming; ZKP as proof instruments (selective disclosure ≠ who); HTTP/Solid offramp not trust root. |
 | 2026-09-06 | **Amend §19:** relation-scoped locators as instruments (pairwise email sketch); ≠ static who. |
+| 2026-09-06 | **Amend §20:** secrets · wallets · tokens · online accounts · passwords as instruments (≠ who). |

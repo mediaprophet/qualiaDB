@@ -149,6 +149,20 @@ Unlike traditional Solid WebIDs or phone numbers that often behave as **static**
 
 **Cut:** relation-scoped locators are **instruments/handles** (affinity with alias / contextual IRI / DNI-like mobility), not NaturalAgent identity. Solid/HTTP remain offramps; they must not re-impose a single static who-address as the trust root.
 
+
+## 3h. Secrets, wallets, accounts, passwords (Timothy — 2026-09-06)
+
+**In scope** as fabric instruments / relations — **not** who-tokens:
+
+| Kind | Notes |
+|------|--------|
+| Secrets / passwords | Credential instruments; store/prove without becoming identity |
+| Wallets / tokens | Crypto/payment instruments; keyRoles stay purpose-separated |
+| Online accounts | Account instruments on platforms (like OS/telecom accounts) — account-holder ≠ who merge |
+| Per-account emails | Relation-scoped locators — e.g. `grok@mydomain.tld` for one service bond, not a static forever who-address |
+
+Same §3g cut: generated addresses and account handles are **scoped instruments**. When the picture is sufficient, open **F7** for implications on the socially defined QDNF network stack (docs-only until Cursor vibe lands; no `ALL_BOUND` invent).
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -175,7 +189,7 @@ Unlike traditional Solid WebIDs or phone numbers that often behave as **static**
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
 | F5 | **Vibe** | Diagnose / `suggested_form` — `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **LANDED** tip `796a7d4` |
 | F6 | **Alice** | Inference/symbolic pressure-test — `alice-f6-classifier-symbolic-binding-pressure-test.md` | **LANDED** (PR #77) |
-| F7 | **Neo** | Park expected refactor list (network + poet surfaces) citing fabric | after vibe delivery |
+| F7 | **Neo** (+ Capt) | QDNF / socially defined network-stack implications citing fabric (secrets·wallets·accounts·relation locators) | **OPEN** after vibe delivery / when Capt opens |
 
 Blocking gates → report **Capt**.
 
@@ -259,4 +273,6 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §19: relation-scoped locators as instruments (pairwise email sketch). |
 | 2026-09-06 | Marvin F2 §19: RelationScopedLocatorShape (cites spine §3g `1d55f56`). |
 | 2026-09-06 | Vibe F5 §12: relation-scoped locator diagnose voice (cites §3g / F2 §19). |
-| 2026-09-06 | Alice F6 §8 (PR #78 → `eabccc9`): relation-scoped locators as instrument features only. |
+| 2026-09-06 | Capt: secrets/wallets/tokens/online accounts/passwords + per-account emails as instruments; F7 network-stack implications queued. |
+| 2026-09-06 | Noddy F1 §20: secrets · wallets · tokens · online accounts · passwords as instruments (≠ who). |
+| 2026-09-06 | Marvin F2 §20: OnlineAccountShape · WalletShape · PasswordVerifierShape · PrivateKeyMaterialShape (cites F1 §20). |

@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §18 `4994e15` · spine §3g `1d55f56` · architecture spine
+**Against tip:** F2 §18/§19 WIP · F1 §20 draft (secrets/wallets/accounts) · spine §3g/§3h · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -246,6 +246,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 12. Sense-context bindings (locale·era·community·provenance); flora/fauna living non-person; situational grants ≠ logs ≠ who (F1 §17).
 13. Ontology-governed policy on claim–policy–modality; ZKP as proof instrument — never who (F1 §18).
 14. Relation-scoped locators (pairwise/email/group/txn) are instruments — not static who-addresses (spine §3g).
+15. Secrets/wallets/tokens/online accounts are instruments — never who (F1 §20); align §15/§19.
 
 ---
 
@@ -764,6 +765,66 @@ Two instruments, one relation; neither string *is* Jane or Bob.
 - F6: keep locator features in `instrument.locator.*` — never who embedding.
 
 ---
+
+## 20. Amend — secrets, wallets, tokens, online accounts (F1 §20)
+
+**Cite:** Noddy F1 §20 draft · spine §3h · F2 §15 OsAccount · §19 RelationScopedLocator · §14 WebID/SAN · crypto profile vault/keyRoles.
+
+### 20.1 Cut
+
+Secrets · wallets · tokens · online accounts · passwords · per-account emails are **instruments** (and account relations), **not** NaturalAgent who.
+
+### 20.2 Instrument shapes
+
+| Kind | Shape id | Notes |
+|------|----------|-------|
+| Password / passphrase | `idf:PasswordVerifierShape` | Low-entropy authenticator aid — not key material unless PAKE-specified; vault-scoped |
+| Bearer / API / session token | `idf:BearerTokenShape` | Time-bound capability instrument; possession ≠ who |
+| Refresh / OAuth token | `idf:OAuthTokenShape` | Account-scoped on online-account relation |
+| Wallet (software/hardware) | `idf:WalletShape` | Artifact container of keys/instruments; may *relate* to agent |
+| Private key / seed | `idf:PrivateKeyMaterialShape` | Purpose-separated keyRole; vault only — never Quins/logs/who |
+| Online account | `idf:OnlineAccountShape` | Remote platform account (sibling to OsAccount); holder ≠ device-user ≠ who-forever |
+| Per-account email | Prefer `idf:RelationScopedLocatorShape` (§19) bound to that account | Not the person’s only identity |
+
+### 20.3 `idf:OnlineAccountShape` / `idf:WalletShape` (detail)
+
+| Property | OnlineAccount | Wallet |
+|----------|---------------|--------|
+| `idf:accountAt` / service | → service/org (required) | — |
+| `idf:accountHolder` | 0..1 agent of record | optional controller agent |
+| `idf:walletControls` | — | → keys/instruments held |
+| `idf:relatedByInstrument` | from NaturalAgent/AI-agent | from NaturalAgent/AI-agent |
+| Independent of | `usedBy` (device user now) | NaturalAgent who |
+
+**No entailment:** password-success · token-possession · wallet-unlock · online-account login ⇒ NaturalAgent who (same discipline as §17 grant / §18 ZKP).
+
+### 20.4 Vault & jury hygiene
+
+- Secrets/private keys: Qualia key vault / hardware-backed — never Quins, logs, DHT, crash dumps.
+- Jury: name “this password verifier,” “this wallet,” “this platform account,” “this per-account mailbox” separately.
+- Hardness: wallet/keys may be co-attestation **members with distinct keyRoles** — not mega-who.
+
+```turtle
+idf:OnlineAccountShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:OnlineAccount ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:accountAt ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:accountHolder ; sh:minCount 0 ; sh:maxCount 1 ] .
+
+idf:WalletShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:Wallet ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:walletControls ; sh:node idf:InstrumentShape ; sh:minCount 0 ] .
+
+idf:PasswordVerifierShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:PasswordVerifier ; sh:minCount 1 ] .
+  # MUST NOT entail NaturalAgent who.
+```
+
+### 20.5 Gate fails / diagnose
+
+- Password/token/wallet = person; one email forever = who; online-account success ⇒ who; seed phrase as identity in chrome.
+- Vibe: secret/wallet/token/account = instruments. Alice: never embed secrets/tokens into who feature space.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -778,6 +839,7 @@ Two instruments, one relation; neither string *is* Jane or Bob.
 | 2026-09-06 | F1 §17: `SenseContextBindingShape` · `FloraShape`/`FaunaShape` · `SituationalCapacityGrantShape` · grants≠logs; cite F5 `da74019`. |
 | 2026-09-06 | F1 §18: `OntologyGovernedPolicyShape` · `ZkpProofShape`; policy≠who; ZKP uplift not reinvent. |
 | 2026-09-06 | Spine §3g: `RelationScopedLocatorShape` (jane@bob.tld ↔ bob@jane.tld sketch); locators ≠ static who; tip base `1d55f56`. |
+| 2026-09-06 | F1 §20: `OnlineAccountShape` · `WalletShape` · `BearerTokenShape`/`OAuthTokenShape` · `PasswordVerifierShape` · `PrivateKeyMaterialShape`; secrets≠who. |
 
 ---
 
