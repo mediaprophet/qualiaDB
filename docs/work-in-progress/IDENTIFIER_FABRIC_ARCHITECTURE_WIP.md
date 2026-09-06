@@ -23,6 +23,13 @@ CS/cyber “identity” often collapses **auth subject + identifier + attributes
 
 ---
 
+
+## 1b. Long-arc lineage (Timothy — 2026-09-06)
+
+QualiaDB / this fabric is **not** a greenfield identity product. Foundations date to ~2000 and evolved through W3C and related work (credentials, DIDs, RWW/Solid, and kin) as **interop and offramp** material. The Identifier Fabric room synthesizes those considerations into requirements for later implementation/refactor — after Cursor’s vibe delivery — without collapsing instruments into CS “identity.”
+
+W3C DIDs/VCs (and related) appear in Noddy F1 as **instruments in that lineage**, not as “who.”
+
 ## 2. Normative substrate (do not re-invent)
 
 Extend these — layered, not one-shot — rather than parallel invent:
@@ -112,6 +119,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Neo folded F5 diagnose map → `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md`; spine F5 LANDED. |
 | 2026-09-06 | Vibe F5 diagnose map LANDED tip `796a7d4`; Alice F6 cites F1+F2+F5. |
 | 2026-09-06 | F2 amend (Noddy crypto skim): split DniRarSession → Dni/Rar/QSessionProof shapes; verificationRelationship + keyRole; tip after fold. |
+| 2026-09-06 | Capt: long-arc lineage §1b (W3C/Solid offramp ~2000→now); session = synthesize requirements, not greenfield invent. |
 
 ---
 
