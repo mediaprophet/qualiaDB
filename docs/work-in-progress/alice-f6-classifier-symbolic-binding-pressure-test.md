@@ -2,10 +2,11 @@
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
 **Owner:** Alice (inference / ML / symbolic AI) · **Fold/push:** Neo · **Ops:** Capt.  
-**Against fabric HEAD:** `4a44b0d` (F1/F2 §19 · F5 §12 relation-scoped locators) · merge base `1d55f560` (§3g) · this amend merge `eabccc9`  
-**F2 content SHA (history):** `565097f` · **F5 diagnose SHA:** `796a7d4` · **F5 §11:** `1d55f560` · **F5 §12 / F2 §19:** `4a44b0d`  
+**Against fabric HEAD:** `ac1d12c` (spine **§3h** · F1/F2 **§20** secrets/wallets/tokens/online accounts/passwords) · prior locator fold `eabccc9` / `4a44b0d` (§3g / F2 §19 / F5 §12) · merge base `1d55f560` (§3g)  
+**F2 content SHA (history):** `565097f` · **F5 diagnose SHA:** `796a7d4` · **F5 §11:** `1d55f560` · **F5 §12 / F2 §19:** `4a44b0d` · **§3h / F1+F2 §20:** `ac1d12c`  
 **F2 §19:** `idf:RelationScopedLocatorShape` **LANDED** tip `4a44b0d` — typed instrument namespace for spine §3g locators.  
-**Constraint:** docs / illustration only. **No Host invent. No `ALL_BOUND` invent. No vibe-host surface widen.** Neo folds.
+**F2 §20:** `idf:OnlineAccountShape` · `idf:WalletShape` · `idf:BearerTokenShape` / `idf:OAuthTokenShape` · `idf:PasswordVerifierShape` · `idf:PrivateKeyMaterialShape` **LANDED** tip `ac1d12c` — secrets/wallets/tokens/accounts are instruments, not who.  
+**Constraint:** docs / illustration only. **No Host invent. No `ALL_BOUND` invent. No vibe-host surface widen. No F7 network-stack invent.** Neo folds.
 
 **Pressure-test question:** Can classifiers and symbolic bindings keep these four strata distinct **without collapsing into a single feature-space bag**?
 
@@ -22,10 +23,11 @@
 - **DNI ≠ RAR ≠ QSession** — `idf:DniShape` ≠ `idf:RarShape` ≠ `idf:QSessionProofShape` (deprecated lump: `idf:DniRarSessionShape`)
 - **ZKP / grant / policy ≠ who** — F5 §11 / F2 §18: proof instrument and situational grant stay off the NaturalAgent plane
 - **Relation-scoped locators ≠ who** — spine §3g: pairwise / group / chat / transaction / DNS-code strings are **instruments**, not a static forever who-address (see §8)
+- **Secrets / wallets / tokens / online accounts / passwords ≠ who** — spine §3h + F1/F2 §20: instrument/relation kinds; never NaturalAgent / who embeddings. Per-account emails (e.g. `grok@mydomain.tld`) are the same locator cut as §3g / §8 (see §9)
 
 `did:q42` / observer DID remain **provisional topology/coord join keys**, not “who.”
 
-**Gate fail:** any neural concat, softmax, shared URI class, or SHACL target that merges the four strata (or merges keyRole / DNI·RAR·QSession / locator-as-who / ZKP-or-grant-as-who) into one CS-style “identity” / feature bag.
+**Gate fail:** any neural concat, softmax, shared URI class, or SHACL target that merges the four strata (or merges keyRole / DNI·RAR·QSession / locator-as-who / ZKP-or-grant-as-who / secret·wallet·token·account-as-who) into one CS-style “identity” / feature bag.
 
 ---
 
@@ -34,22 +36,23 @@
 - F6 is a **docs map** for later inference constraints. It does not invent Host methods, dotted `qualia.*`, opcodes, or ALL_BOUND rows.
 - Spine §1b (`55d811b`): this fabric is **not** a greenfield identity product. W3C DIDs/VCs/Solid appear in Noddy F1 as **interop/offramp instruments in a ~2000→now lineage**, not as “who.” Classifiers must not treat “W3C identity stack” as a single embedding class.
 - Spine §3g (`1d55f560`): relation-scoped locators are instruments/handles, not NaturalAgent. Solid/phone static-address pattern is rejected as the default.
+- Spine §3h (`ac1d12c`): secrets · wallets · tokens · online accounts · passwords · per-account emails are instruments/relations, not who-tokens. **F7** (QDNF network-stack implications) is a forward pointer only.
 - Completeness bar here = honest pressure-test + named failure modes + later constraints. Implementation waits on Capt / Cursor vibe / Neo fold.
 
 ---
 
 ## 1. Sources read
 
-Paths as they exist at tip `1d55f560`. Short note = what each says about the four strata (and intra-instrument dims).
+Paths as they exist at tip `ac1d12c`. Short note = what each says about the four strata (and intra-instrument dims).
 
 ### 1.1 Identifier Fabric WIP (primary)
 
 | Path | What it says about the strata |
 |------|-------------------------------|
-| `docs/work-in-progress/IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Spine. CS “identity” = auth subject + identifier + attributes + claims in **one bag** is the problem. Four pillars: natural agent · claim/opinion · spatiotemporal/route handle · instrument kinds. `did:q42` / observer DID = provisional topology, not who. **§1b:** long-arc lineage; DIDs/VCs are instruments, not who. **§3g** (this tip `1d55f560`): relation-specific addressing — locators name a *relationship* (pairwise, group, chat, transaction, DNS TXT), not a permanent who-token; email sketch `jane@bob.tld` ↔ `bob@jane.tld`; agents-of-entities in relation metadata ≠ mailbox who. Cut: locators are **instruments/handles**, not NaturalAgent. |
-| `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | **F1 / Noddy.** Planes table: who ≠ claim ≠ handle ≠ instrument. Instruments bind *relations*; they do not replace the agent. QDNF role table stays authoritative for *what question an identifier answers*. Biometric **family** vs **instance**. Collapse of any kind into “who” = gate fail. VC = origin+integrity, not truth. QRC has **no crypto by itself**. |
-| `docs/work-in-progress/IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **F2 / Marvin** (content `565097f` + crypto-skim amend `42dc709`; tip through §18). Four plane shapes: `idf:NaturalAgentShape` (living-SHACL, never Thing-wash) · `idf:ClaimOpinionShape` · `idf:SpatiotemporalHandleShape` · `idf:InstrumentShape`. Cross-plane preds (`relatedByInstrument`, `about`, `assertedBy`, `places`) are **relations, not merges**. Amend: split DNI/RAR/QSessionProof; `idf:keyRole` + `idf:verificationRelationship`; §18 policy/ZKP shapes. **§19 `idf:RelationScopedLocatorShape`:** **LANDED** tip `4a44b0d` — typed instrument namespace for §3g locators. Existing nearest kind: `idf:NetworkAddressShape` (not DID; not who; LIG only for legacy IP/DNS) — pairwise/relation locators are **not** that legacy bag. |
-| `docs/work-in-progress/IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **F5 / Vibe** (`796a7d4` + §11 fold on this tip). **§2 plane voice** = locked feature-space *labels* for later classifiers (never “identity” as auth bag; never DID-as-who). **§3 collapse detectors** = refuse-merge list: DID/observer/`did:q42` as who; VC verified ⇒ claim true ⇒ who; **DNI / address as persistent who** (speak how-now handle; not person); biometric instance as timeless who; machine ID = principal; alias as route authority. **§11:** ZKP/grant/policy ≠ who; HTTP/Solid = offramp, not identity. Locator copy aligns with instrument + how-now speak — never “your identity” / forever mailbox. |
+| `docs/work-in-progress/IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Spine. CS “identity” = auth subject + identifier + attributes + claims in **one bag** is the problem. Four pillars: natural agent · claim/opinion · spatiotemporal/route handle · instrument kinds. `did:q42` / observer DID = provisional topology, not who. **§1b:** long-arc lineage; DIDs/VCs are instruments, not who. **§3g** (`1d55f560`): relation-specific addressing — locators name a *relationship* (pairwise, group, chat, transaction, DNS TXT), not a permanent who-token; email sketch `jane@bob.tld` ↔ `bob@jane.tld`; agents-of-entities in relation metadata ≠ mailbox who. Cut: locators are **instruments/handles**, not NaturalAgent. **§3h** (this tip `ac1d12c`): secrets · wallets · tokens · online accounts · passwords are instruments/relations, not who-tokens; per-account emails (e.g. `grok@mydomain.tld`) reuse the §3g locator cut. **F7** queued as QDNF network-stack pointer only. |
+| `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | **F1 / Noddy.** Planes table: who ≠ claim ≠ handle ≠ instrument. Instruments bind *relations*; they do not replace the agent. QDNF role table stays authoritative for *what question an identifier answers*. Biometric **family** vs **instance**. Collapse of any kind into “who” = gate fail. VC = origin+integrity, not truth. QRC has **no crypto by itself**. **§20** (this tip): password/token/wallet/online-account/per-account-email kinds — collapse to who = **fail**; Alice handoff: never embed secrets/tokens into who feature space. |
+| `docs/work-in-progress/IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **F2 / Marvin** (content `565097f` + crypto-skim amend `42dc709`; tip through **§20**). Four plane shapes: `idf:NaturalAgentShape` (living-SHACL, never Thing-wash) · `idf:ClaimOpinionShape` · `idf:SpatiotemporalHandleShape` · `idf:InstrumentShape`. Cross-plane preds (`relatedByInstrument`, `about`, `assertedBy`, `places`) are **relations, not merges**. Amend: split DNI/RAR/QSessionProof; `idf:keyRole` + `idf:verificationRelationship`; §18 policy/ZKP shapes. **§19 `idf:RelationScopedLocatorShape`:** **LANDED** tip `4a44b0d` — typed instrument namespace for §3g locators. Existing nearest kind: `idf:NetworkAddressShape` (not DID; not who; LIG only for legacy IP/DNS) — pairwise/relation locators are **not** that legacy bag. **§20** (this tip `ac1d12c`): OnlineAccount / Wallet / BearerToken / OAuthToken / PasswordVerifier / PrivateKeyMaterial shapes; no entailment from login/possession to who. |
+| `docs/work-in-progress/IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **F5 / Vibe** (`796a7d4` + §11/§12). **§2 plane voice** = locked feature-space *labels* for later classifiers (never “identity” as auth bag; never DID-as-who). **§3 collapse detectors** = refuse-merge list: DID/observer/`did:q42` as who; VC verified ⇒ claim true ⇒ who; **DNI / address as persistent who** (speak how-now handle; not person); biometric instance as timeless who; machine ID = principal; alias as route authority. **§11:** ZKP/grant/policy ≠ who; HTTP/Solid = offramp, not identity. **§12:** locators ≠ who. No F5 secrets/wallets voice yet — Alice cites existing instrument speak; does **not** invent F5 §13. |
 
 ### 1.2 QDNF / standards substrate (do not re-invent)
 
@@ -117,6 +120,13 @@ F1+F2+F5 give typed names a later binder can cite. Nothing in the current Host/r
 | (a) Neural | **fail** if a locator string (email-like, WebID, phone, DNS TXT, chat/transaction id) is embedded as a static forever who-address, or if directed pair `jane@bob.tld` ⊕ `bob@jane.tld` is concatenated into one NaturalAgent vector | Spine §3g cut: the string names a *relation*, not a person. Concat is CS bag + QDNF §6 correlation. Agents-of-entities in metadata are not who features. |
 | (b) Symbolic | **pass** only if binders use a **typed instrument namespace** (`instrument.locator.relation.*` / `idf:RelationScopedLocatorShape`); **fail** if they reuse `idf:NaturalAgentShape`, a shared `Identity`/`Agent` URI, or legacy `idf:NetworkAddressShape` as the who slot | F2 §19 LANDED `4a44b0d`. Align F5 §2 / §12 instrument speak + §3 “address as persistent who.” |
 
+### 2.7 Secrets / wallets / tokens / online accounts / passwords — instruments, not who (spine §3h)
+
+| Track | Verdict | Why |
+|-------|---------|-----|
+| (a) Neural | **fail** if password, wallet, token, online-account, seed, or per-account-email features are concatenated into a person / NaturalAgent vector, or if login/possession success is used as a who label | Spine §3h + F1/F2 §20: these are instrument/relation kinds. Concat is the CS bag. Possession ≠ who (same as ZKP/grant). Per-account `grok@mydomain.tld` is a §3g locator, not static identity. |
+| (b) Symbolic | **pass** only if binders use typed `instrument.*` + F2 §20 shapes (`OnlineAccount` · `Wallet` · `BearerToken`/`OAuthToken` · `PasswordVerifier` · `PrivateKeyMaterial`) and §19 locators for per-account mailboxes; **fail** if they reuse `idf:NaturalAgentShape` or a shared `Identity`/`Agent` URI | Vault hygiene: secrets/keys never Quin/log/who features. `accountHolder` ≠ `usedBy` ≠ who-forever. |
+
 ---
 
 ## 3. Concrete failure modes (one-bag collapse)
@@ -143,6 +153,8 @@ Use F5 §3 as the copy-side detectors. Below is the **feature-space** form of th
 | **Locator-as-who** | Static forever-address (Solid WebID / phone pattern) or relation locator (`jane@bob.tld`, group/chat/tx/DNS code) used as NaturalAgent key or concat-embedded into who | Spine §3g: locators are instruments/handles, not who. F5 §3: address ≠ persistent who. Typed instrument namespace only (later F2 `RelationScopedLocatorShape`) |
 | **Directed-pair who-concat** | `jane@bob.tld` ⊕ `bob@jane.tld` (or group roster of locators) fused into one person embedding | Two directed **relation** instruments. Concat invents a who that neither string names |
 | **Agent-metadata-as-who** | Agents-of-entities listed on a locator / mailbox / chat relation treated as NaturalAgent who features | Spine §3g: those agents appear in **relation metadata/semantics**, not as the mailbox who |
+| **Secret/wallet/token/account-as-who** | Password, wallet, bearer/OAuth token, online-account, or seed features concatenated into a person vector, or login/possession used as who | Spine §3h / F1+F2 §20: instrument/relation kinds. Possession ≠ who. Typed `instrument.*` only |
+| **Per-account-email-as-who** | `grok@mydomain.tld` (or any service-bond mailbox) embedded as static forever identity | Same cut as §3g / §8: relation-scoped locator, not NaturalAgent |
 
 ---
 
@@ -164,7 +176,8 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 8. **Living-safe labels.** Training and eval vocab follow F5 §2 / Marvin class list: never thing/object/entity for persons.
 9. **No W3C-stack who-class.** DID method, VC type, Solid webid are instrument/lineage features (§1b), not a natural-agent class.
 10. **Correlation brake.** Cross-context nearest-neighbour over who-space requires the same consent/necessity bar as QDNF §6 — not a silent embedding join.
-11. **Relation-scoped locators.** Feature only as typed `instrument.*` (later `idf:RelationScopedLocatorShape`). Never `who.*`. Never concat directed pair / group roster into a NaturalAgent vector. Agents-of-entities stay metadata of the *relation*, not who features. See §8.
+11. **Relation-scoped locators.** Feature only as typed `instrument.*` (`idf:RelationScopedLocatorShape`). Never `who.*`. Never concat directed pair / group roster into a NaturalAgent vector. Agents-of-entities stay metadata of the *relation*, not who features. See §8.
+12. **Secrets / wallets / tokens / online accounts / passwords.** Feature only as typed `instrument.*` (F2 §20 shapes). Never `who.*`. Never concat password/wallet/token/account features into a person vector. Per-account emails stay locator instruments (§8 / §9). No login/possession → who entailment. **F7 QDNF** is a forward pointer only — do not invent network-stack features here.
 
 ---
 
@@ -185,16 +198,17 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 4. How should mixed `idf:places` (living *what* vs artifact CRS) appear in typed slots so a Position binder cannot silently promote coords → who?
 5. When (if ever) observer DID / QRC may graduate from provisional topology — until then Alice will refuse them as who-features.
 6. F2 §19 `idf:RelationScopedLocatorShape` **LANDED** `4a44b0d` as the first-class shape for spine §3g locators, distinct from legacy `idf:NetworkAddressShape` (LIG IP/DNS). Locator→who binds remain **fail**.
+7. F2 §20 instrument shapes **LANDED** `ac1d12c` (`OnlineAccount` · `Wallet` · `BearerToken`/`OAuthToken` · `PasswordVerifier` · `PrivateKeyMaterial`). Confirm per-account email stays on §19 locator (not a second who-shaped mailbox). Secret/wallet/token/account→who binds remain **fail**.
 
 ---
 
 ## 6. Fold notes (Neo)
 
-- **This file only** (amend of already-landed F6). Do not invent F2 §19 SHACL or an F5 §12 in this PR — cite the room name + existing F5 speak.
+- **This file only** (amend of already-landed F6). Do not invent Host, SHACL, F5 §13, or F7 QDNF network-stack docs in this PR — cite spine §3h + F1/F2 §20 + existing F5 instrument speak.
 - Do **not** treat this PR as Host, vibe-host, or ALL_BOUND work.
-- Spine F6 row stays **LANDED**; this is a docs amend against tip `1d55f560` (§3g). Implementation remains blocked on vibe delivery + Capt unlock.
-- Cite in later F7 refactor list: typed feature namespaces; refuse DNI=RAR=QSession and keyRole wash; refuse QRC-as-who; refuse locator-as-who / directed-pair concat; ZKP/grant ≠ who.
-- Marvin: `idf:RelationScopedLocatorShape` F2 §19 landed `4a44b0d`; Alice binds that typed instrument namespace.
+- Spine F6 row stays **LANDED**; this is a docs amend against tip `ac1d12c` (§3h / F1+F2 §20). Implementation remains blocked on vibe delivery + Capt unlock.
+- Cite in later F7 refactor list: typed feature namespaces; refuse DNI=RAR=QSession and keyRole wash; refuse QRC-as-who; refuse locator-as-who / directed-pair concat; ZKP/grant ≠ who; **refuse secret/wallet/token/account-as-who**. F7 = pointer only until Capt opens.
+- Marvin: F2 §19 locators + F2 §20 secret/wallet/token/account shapes landed `ac1d12c`; Alice binds typed `instrument.*` only.
 
 ---
 
@@ -204,6 +218,8 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 |------|------|
 | 2026-09-06 | Alice F6 pressure-test parked against fabric HEAD `55d811b` (includes §1b long-arc + F2 crypto-skim `42dc709`). Cites F1 taxonomy, F2 SHACL split, F5 diagnose map §2–§3. Verdict: docs planes pass; default neural bag fail/risk; symbolic pass if specialized shapes + keyRole held. |
 | 2026-09-06 | **Amend:** relation-scoped locators as inference constraints (§8) against tip `1d55f560` (spine §3g). Locators = instruments, not who. Email sketch is two directed relation instruments. Agents-of-entities ≠ NaturalAgent. Collapse: static forever-address or locator-as-identity → fail; typed instrument namespace only. Cites spine §3g, F5 diagnose speak (§2–§3 / §11); F2 `RelationScopedLocatorShape` named, **not on this tip** (F2 ends §18). Prior locks held: who ≠ claim ≠ spatiotemporal ≠ instruments; ZKP/grant ≠ who; `keyRole`; DNI ≠ RAR ≠ QSession. No Host invent. |
+| 2026-09-06 | Neo fold: PR #78 → `eabccc9`; cite refresh — F2 §19 / F5 §12 on `4a44b0d`. |
+| 2026-09-06 | **Amend:** secrets / wallets / tokens / online accounts / passwords as inference instruments (§9) against tip `ac1d12c` (spine §3h · F1/F2 §20). Instrument/relation kinds — never NaturalAgent / who embeddings. Per-account emails (e.g. `grok@mydomain.tld`) = §3g / §8 locators. Collapse: password/wallet/token/account concat into a person vector → fail; typed `instrument.*` only. F7 QDNF = forward pointer only. Prior locks held: who ≠ claim ≠ spatiotemporal ≠ instruments; locators §8; ZKP/grant ≠ who; `keyRole`; DNI ≠ RAR ≠ QSession. No Host invent. |
 
 ---
 
@@ -282,5 +298,74 @@ Optional future fixture id (docs only — no invent now): **F6-L** locator-as-wh
 
 ---
 
+## 9. Amend — secrets / wallets / tokens / online accounts / passwords as inference instruments (spine §3h)
+
+**Cite:** Capt spine [`IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`](./IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md) **§3h** at tip `ac1d12c6f727a05aed0e1481e18082de4b55232b` · Noddy F1 **§20** (`CRYPTO_INSTRUMENT_TAXONOMY_WIP.md`) · Marvin F2 **§20** (`idf:OnlineAccountShape` · `idf:WalletShape` · `idf:BearerTokenShape` / `idf:OAuthTokenShape` · `idf:PasswordVerifierShape` · `idf:PrivateKeyMaterialShape`; per-account email prefers `idf:RelationScopedLocatorShape`) · F6 §8 / spine §3g locators · F5 instrument speak + §3 address detector / §11 ZKP·grant · F1 §15 OS/telecom accounts.
+
+**Prior locks remain:** who ≠ claim ≠ spatiotemporal ≠ instruments · locators ≠ who (§8) · ZKP / grant / policy ≠ who · `idf:keyRole` purpose-split · DNI ≠ RAR ≠ QSession.
+
+**F7** (QDNF / socially defined network-stack implications) is a **forward pointer only**. This amend does not invent network-stack docs, Host methods, or ALL_BOUND rows.
+
+No Host invent. No SHACL invent. No `qualia.*` / ALL_BOUND. This is a **docs map** for later inference constraints.
+
+### 9.1 These are instrument / relation kinds — never who
+
+Secrets, passwords, wallets, tokens, and online accounts are **instruments** (and account *relations*). They bind capability, possession, or a service bond. They are never `idf:NaturalAgentShape` / `who.*` embeddings.
+
+| Kind | What it is | Not |
+|------|------------|-----|
+| Password / passphrase | Low-entropy authenticator aid (vault-scoped; not key material unless PAKE-specified) | Person vector / who-class |
+| Bearer / API / session token | Time-bound capability instrument; possession ≠ who | NaturalAgent identity |
+| Refresh / OAuth token | Account-scoped instrument on an online-account relation | Who-forever |
+| Wallet (software/hardware) | Artifact container of keys/instruments; may *relate* to an agent | The agent |
+| Private key / seed | Purpose-separated `keyRole` material — vault only | Who; never Quin/log features |
+| Online account | Platform account instrument (sibling to OsAccount) — `accountHolder` ≠ `usedBy` ≠ who-forever | Living principal |
+| Per-account email | Relation-scoped locator (same cut as §3g / §8) bound to that account | Static identity / forever mailbox |
+
+**No entailment** from password-success · token-possession · wallet-unlock · online-account login to NaturalAgent who (same discipline as F5 §11 / F2 §18 ZKP and situational grant).
+
+**Diagnose speak (align F5 §2 instrument):** password verifier · wallet · token · platform account · per-account mailbox · scoped service bond.  
+**Never say:** your identity · the person · seed-as-who · forever account-email · login success = who.
+
+### 9.2 Per-account relation emails — same cut as §3g / §8
+
+Spine §3h: `grok@mydomain.tld` (and the like) is a **relation-scoped locator** for one service bond, not a static forever who-address.
+
+Same inference cut as F6 §8:
+
+| String | Instrument | Forbidden |
+|--------|------------|-----------|
+| `grok@mydomain.tld` | Locator for that online-account / service relation | `who.*` / NaturalAgent key |
+| Directed pair or roster of per-account mailboxes | Separate `instrument.locator.relation.*` features | Concat into one person vector |
+
+Later binders MUST keep these in `instrument.locator.relation.*` / `idf:RelationScopedLocatorShape` (F2 §19 **LANDED**). Do not reuse `idf:NaturalAgentShape`, a shared `Identity`/`Agent` URI, or legacy `idf:NetworkAddressShape`.
+
+### 9.3 Collapse detector (hard negative)
+
+| Input pattern | Verdict | suggested_form |
+|---------------|---------|----------------|
+| Password / wallet / token / account features concatenated into a person / NaturalAgent vector | **fail** | Typed `instrument.*` only; relate via `idf:relatedByInstrument` |
+| Password-success or token-possession used as who label | **fail** | Envelope/capability instrument; no who entailment |
+| Online-account login ⇒ NaturalAgent identity | **fail** | `idf:OnlineAccountShape`; `accountHolder` optional; `usedBy` independent |
+| Wallet or seed phrase as person embedding / chrome identity | **fail** | Name the wallet / keyRole member; vault-scoped; never who |
+| One email forever = who (including per-account `grok@mydomain.tld`) | **fail** | Relation-scoped locator (§8); not static identity |
+| Typed `instrument.*` (`instrument.account.*` · `instrument.wallet.*` · `instrument.token.*` · `instrument.secret.verifier.*` · locator namespace) | **pass** when F2 §20 shapes are bound; **hold / not-yet** if a binder guesses who | F5 gates: held / not yet — never guess a who |
+
+**Typed `instrument.*` only.** Secrets must not enter who feature space (F1 §20 Alice handoff). Private keys / seeds never become Quin, log, or embedding features (vault hygiene).
+
+Optional future fixture id (docs only — no invent now): **F6-S** secret/wallet/token/account-as-who / feature-concat — reject; suggest separated instruments.
+
+### 9.4 What this does not relax
+
+- Four strata stay unmerged: **who ≠ claim ≠ spatiotemporal ≠ instruments**.
+- Locators stay instruments, not who (§8 / spine §3g).
+- ZKP success / situational grant / signed policy ≠ who (F5 §11, F2 §18).
+- `idf:keyRole` stays purpose-separated; session-authentication ≠ route-update ≠ controller-signing. Wallet keys that co-attest stay **members with distinct keyRoles**, not a mega-who.
+- DNI ≠ RAR ≠ QSession; deprecated `idf:DniRarSessionShape` remains a hard-negative.
+- `did:q42` / observer DID remain provisional topology, not who.
+- **F7 QDNF** = forward pointer only — no network-stack invent from this amend.
+- No Host / vibe-host / ALL_BOUND / dotted `qualia.*` from this amend.
+
+---
+
 *End of WIP — Alice F6 classifier / symbolic-binding pressure-test. No Host invent.*
-| 2026-09-06 | Neo fold: PR #78 → `eabccc9`; cite refresh — F2 §19 / F5 §12 on `4a44b0d`. |
