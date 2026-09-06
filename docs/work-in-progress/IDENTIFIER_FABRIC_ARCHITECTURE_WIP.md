@@ -136,6 +136,19 @@ Working name: **ontology-governed, crypto-bound policy over a multi-plane graph*
 
 Attributes authorize; signed ontologies interpret; instruments prove; **who stays unmerged**.
 
+
+## 3g. Relation-specific addressing (Timothy — 2026-09-06)
+
+Unlike traditional Solid WebIDs or phone numbers that often behave as **static** personal addresses, this fabric prefers **relation-specific** locator strings: the address names a *relationship* (or context), not a permanent who-token.
+
+| Pattern | Role |
+|---------|------|
+| Pairwise / contextual locator | Two people, group, group-chat, transaction id, DNS TXT code, … |
+| Email redesign sketch | User controls domain (or equivalent); each counterpart gets a scoped receive address — e.g. Jane→Bob `jane@bob.tld`, Bob→Jane `bob@jane.tld` |
+| Agents of entities | Appear in metadata/semantics of the relation — not as the mailbox who |
+
+**Cut:** relation-scoped locators are **instruments/handles** (affinity with alias / contextual IRI / DNI-like mobility), not NaturalAgent identity. Solid/HTTP remain offramps; they must not re-impose a single static who-address as the trust root.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -241,3 +254,5 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: ontology-governed crypto-bound multi-plane policy (ABAC-like); signed ontology docs ≠ HTTP trust root; LIG offramp. |
 | 2026-09-06 | Noddy F1 §18: ontology-governed crypto-bound policy · ZKP proof instruments (≠ who). |
 | 2026-09-06 | Marvin F2 §18: OntologyGovernedPolicyShape · ZkpProofShape (cites F1 `13c3844`). |
+| 2026-09-06 | Vibe F5 §11: ZKP/grant/policy diagnose voice (cites `4994e15` §18). |
+| 2026-09-06 | Capt: relation-specific addressing (pairwise email sketch jane@bob.tld ↔ bob@jane.tld); locators ≠ static who; Solid/phone static pattern rejected as default. |

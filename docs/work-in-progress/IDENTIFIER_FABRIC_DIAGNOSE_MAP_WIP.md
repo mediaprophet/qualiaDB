@@ -186,4 +186,42 @@ Living-typed entities ≠ NaturalAgent personhood ≠ `owl:Thing` wash.
 11. Flora/fauna chrome ≠ person chrome.
 12. Never claim crypto resolves thongs/gay-class homographs.
 
+---
+
+## 11. Amend — ZKP / grant / policy diagnose voice (F1 §18 / tip `4994e15`)
+
+**Cite:** Capt spine §3f · F1 §18 · F2 §18 (`OntologyGovernedPolicyShape` · `ZkpProofShape`) · room (Noddy/Vibe) · situational grants §10/F1 §17.
+
+### 11.1 Plane voice (add to §2)
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Situational capacity grant | purpose · condition · time · qualification — scoped grant | who · person identity · new NaturalAgent |
+| Accountability / logs | provenance · claim–evidence | grant · who · “the identity” |
+| Signed ontology / policy docs | interpret instruments (HTTP-independent) | trust root · who-bag · Solid/HTTP as identity |
+| HTTP / Solid | offramp (LIG) only | policy trust root |
+| ZKP | **proof instrument** — shows a predicate without dumping attributes | anonymous who · person identity · parallel identity system |
+
+### 11.2 Collapse detectors (add to §3)
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| ZKP success ⇒ person / “anonymous who” | Split proof instrument vs NaturalAgent; name circuit/context, not who |
+| Grant success ⇒ person identity | Keep situational capacity grant as relation axiom; operator remains NaturalAgent |
+| Policy/ontology success ⇒ who | Keep on claim–policy–modality; cite signed interpretation binding |
+| Logs treated as grant or who | Provenance / claim–evidence plane only |
+| HTTP endpoint as ZKP/policy trust root | Refuse — Solid/HTTP offramp; signed ontology interprets |
+
+### 11.3 Poet checklist (add to §5)
+
+13. Grant chrome ≠ who chrome; logs ≠ grant.
+14. ZKP labeled **proof instrument**, never “anonymous identity.”
+15. Policy/signed ontology chrome: interpret, not who; HTTP not trust root.
+
+### 11.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-G | ZKP or grant success collapsed to person who | diagnose rejects; suggested_form splits proof/grant vs NaturalAgent |
+
 *End F5 — Vibe Identifier Fabric diagnose map.*
