@@ -258,4 +258,42 @@ Living-typed entities ≠ NaturalAgent personhood ≠ `owl:Thing` wash.
 |----|------|--------|
 | F5-H | Locator / static address collapsed to who | diagnose rejects; splits instrument vs NaturalAgent |
 
+---
+
+## 13. Amend — env-capacity · relationship≠identity · dense-graph≠who (F1/F2 §23–§25 · spine §3k–§3m)
+
+**Cite:** tip `9c66f46` · F1/F2 §23–§25 · spine §3k–§3m · room (geocache · ATM BLE · temporal assessment · Quin).
+
+### 13.1 Plane voice
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Env-conditioned capacity / GIS · sensor · BLE co-presence | context instruments + handles | who · person · banker-from-ATM-BLE |
+| Geocache / place-bound secret | place-bound secret instrument | person identity from find |
+| Relationship assessment arc | views grow/dissolve on claim–relation lifecycle | identity-changed · who-rewrite |
+| Knew vs didn’t-understand breach | epistemic + deontic on claim–policy | permanent who-bit / bad-actor type |
+| Dense social/brand graph | many relations (expected) | who · “they define each other” |
+| Quin / NQuin | axiom storage / graph form | identity |
+
+### 13.2 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| Env-grant / co-presence success ⇒ who | Split instruments+handles vs NaturalAgent |
+| Relationship arc ⇒ identity-changed | Keep RelationshipAssessmentClaim / RelationLifecycle; NaturalAgent stays |
+| Social-graph / counterpart-set embedding as who | Refuse — non-defining high-cardinality relations |
+| Quin as who-token | Name as storage substrate for typed edges |
+
+### 13.3 Poet checklist
+
+18. Env chrome = context instruments/handles, not identity.
+19. “Relationship changed” never paints as “who changed.”
+20. Dense graph chrome ≠ identity collapse; Quin ≠ identity label.
+
+### 13.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-I | Env success or relation arc or social graph collapsed to who | diagnose rejects; splits planes |
+
 *End F5 — Vibe Identifier Fabric diagnose map.*
