@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §18/§19 WIP · F1 §20 draft (secrets/wallets/accounts) · spine §3g/§3h · architecture spine
+**Against tip:** F2 §20 `ac1d12c` · F1 §21 draft · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -247,6 +247,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 13. Ontology-governed policy on claim–policy–modality; ZKP as proof instrument — never who (F1 §18).
 14. Relation-scoped locators (pairwise/email/group/txn) are instruments — not static who-addresses (spine §3g).
 15. Secrets/wallets/tokens/online accounts are instruments — never who (F1 §20); align §15/§19.
+16. Symbolic permission context on claim–policy–modality; specialised AI-agents use grants/agreements — never who-merge (F1 §21).
 
 ---
 
@@ -825,6 +826,59 @@ idf:PasswordVerifierShape a sh:NodeShape ;
 - Vibe: secret/wallet/token/account = instruments. Alice: never embed secrets/tokens into who feature space.
 
 ---
+
+## 21. Amend — symbolic-first context for agent permissions (F1 §21)
+
+**Cite:** Noddy F1 §21 tip `e626613` · Capt/Timothy symbolic AI context · Alice F6 · F2 §16–§18 · §17 situational grants · §20 secrets/wallets · OntologyGovernedPolicyShape.
+
+### 21.1 Decision stack (shapes)
+
+| Layer | Shape home | Does |
+|-------|------------|------|
+| Symbolic context | Claim–policy–modality (+ optional `idf:SymbolicPermissionContextShape`) | Enumerates *which* context and *what* may be done (semantics · deontic/epistemic/N3; probability only where uncertainty belongs) |
+| Attributes · capacity grants · agreements | SituationalCapacityGrant · Guardianship · Commons · agreement instruments | ABAC-like inputs |
+| Crypto / ZKP | ZkpProofShape · wallets/keys · co-attestation | Prove possession / predicates / hardness — **not** who |
+| Multi-plane graph | NaturalAgent · claim · handle · instrument | Keep unmerged |
+
+**Gate fail:** NaturalAgent embedding that absorbed role, wallet, account, grant-success, or ZKP-success.
+
+### 21.2 `idf:SymbolicPermissionContextShape`
+
+| Property | Note |
+|----------|------|
+| Plane | Claim–policy–modality — **not** NaturalAgent |
+| `idf:contextFrame` | Situation / domain (home · clinical · child-care · …) |
+| `idf:mayDo` / permissions | Enumerated allowable actions under this context |
+| `idf:inputs` | 0..* attributes, grants, agreement instruments, proof instruments |
+| `idf:policyBundle` | Optional link to OntologyGovernedPolicyShape |
+| Probability | Only as explicit uncertainty modality — never as who score |
+
+### 21.3 Specialised agents (AI-agent + grants)
+
+Child-minder · medical support · home-security · personal/group agents:
+
+- Type: `AiAgentShape` (or service/org) — **not** NaturalAgent who, **not** merge with ward/patient/homeowner
+- Authorization: SituationalCapacityGrant + signed agreement instruments (+ optional ZKP predicates)
+- Relation axioms stay independent (operatedBy · customerOf · guardianship · usedBy)
+
+### 21.4 UI bar (docs intent only)
+
+When planes are thick enough: chrome speaks **instruments · grants · context**, not CS identity bags — easier than AD/Keychain. No Host invent now.
+
+```turtle
+idf:SymbolicPermissionContextShape a sh:NodeShape ;
+  sh:property [ sh:path idf:plane ; sh:hasValue idf:ClaimOpinion ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:contextFrame ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:inputs ; sh:minCount 0 ] .
+  # MUST NOT entail NaturalAgent who from grant/ZKP success.
+```
+
+### 21.5 Alice / Vibe
+
+- F6: symbolic context namespaces; instrument-only for secrets/grants/ZKP.
+- Diagnose: “permission in context,” never “agent identity cleared.”
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -840,6 +894,8 @@ idf:PasswordVerifierShape a sh:NodeShape ;
 | 2026-09-06 | F1 §18: `OntologyGovernedPolicyShape` · `ZkpProofShape`; policy≠who; ZKP uplift not reinvent. |
 | 2026-09-06 | Spine §3g: `RelationScopedLocatorShape` (jane@bob.tld ↔ bob@jane.tld sketch); locators ≠ static who; tip base `1d55f56`. |
 | 2026-09-06 | F1 §20: `OnlineAccountShape` · `WalletShape` · `BearerTokenShape`/`OAuthTokenShape` · `PasswordVerifierShape` · `PrivateKeyMaterialShape`; secrets≠who. |
+
+| 2026-09-06 | F1 §21: `SymbolicPermissionContextShape`; specialised AI-agents + grants/agreements; symbolic-first permissions; instruments/ZKP proof-only. |
 
 ---
 
