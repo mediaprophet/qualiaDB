@@ -30,6 +30,13 @@ QualiaDB / this fabric is **not** a greenfield identity product. Foundations dat
 
 W3C DIDs/VCs (and related) appear in Noddy F1 as **instruments in that lineage**, not as “who.”
 
+
+### Hardness (Timothy / Noddy — 2026-09-06)
+
+Cryptographic hardness for human-centric systems is **not** one signature or one identifier. Prefer a *formula* of verified signatures and related instruments, **time-bounded** and scoped to particular machines / networks / entities / agents. Single-instrument “auth” is the easy hack surface; the fabric raises the bar by **multi-instrument co-attestation** without collapsing into a stronger single “who.”
+
+Provenance note: long-arc design records include W3C list traffic searchable via `timothy.holborn@gmail.com` on lists.w3.org (illustrative, not a trust root by itself).
+
 ## 2. Normative substrate (do not re-invent)
 
 Extend these — layered, not one-shot — rather than parallel invent:
@@ -83,7 +90,7 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 | F3 | **Capt** | This architecture WIP — keep current as Timothy enumerates | **ACTIVE** |
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
 | F5 | **Vibe** | Diagnose / `suggested_form` — `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **LANDED** tip `796a7d4` |
-| F6 | **Alice** | Inference/symbolic pressure-test: feature spaces don’t merge who/claim/handle | **UNBLOCKED** (F1–F2 landed) — docs map only |
+| F6 | **Alice** | Inference/symbolic pressure-test — `alice-f6-classifier-symbolic-binding-pressure-test.md` | **LANDED** (PR #77) |
 | F7 | **Neo** | Park expected refactor list (network + poet surfaces) citing fabric | after vibe delivery |
 
 Blocking gates → report **Capt**.
@@ -120,6 +127,8 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Vibe F5 diagnose map LANDED tip `796a7d4`; Alice F6 cites F1+F2+F5. |
 | 2026-09-06 | F2 amend (Noddy crypto skim): split DniRarSession → Dni/Rar/QSessionProof shapes; verificationRelationship + keyRole; tip after fold. |
 | 2026-09-06 | Capt: long-arc lineage §1b (W3C/Solid offramp ~2000→now); session = synthesize requirements, not greenfield invent. |
+| 2026-09-06 | Alice F6 LANDED PR #77 — classifier/symbolic pressure-test; docs planes pass, default one-bag inference fail until typed namespaces. |
+| 2026-09-06 | Capt: hardness = multi-instrument time-bounded co-attestation (not stronger single who); W3C list provenance note (timothy.holborn@gmail.com). |
 
 ---
 
