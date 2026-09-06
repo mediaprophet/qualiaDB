@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §21 `32ef410` · spine §3j `78d3878` · architecture spine
+**Against tip:** F2 §22 `2cd150c` · F1 §23 tip (this fold) · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -937,6 +937,66 @@ idf:GroupAuthMembershipShape a sh:NodeShape ;
 - Diagnose: “this role occupancy,” “this group-auth set (epoch),” never “board identity.”
 
 ---
+
+## 23. Amend — environment-scoped sensors & place-bound secrets (F1 §23)
+
+**Cite:** Noddy F1 §23 draft · Timothy GIS/sensor/geocache/ATM BLE · §17 situational grants · spatiotemporal handles · §20 secrets · §5.5 co-attestation · G-COORD Position.
+
+### 23.1 Cut
+
+Sensor / GIS / network-environment identifiers condition *how* capacity and proofs apply — instruments + spatiotemporal handles, **not** NaturalAgent who.
+
+| Pattern | Shape expression |
+|---------|------------------|
+| Works only in environment E | SituationalCapacityGrant / SymbolicPermissionContext + `EnvironmentPredicate` |
+| Different environment | Flag, degrade, or deny — do not silently reuse grant |
+| Geocaching | `PlaceBoundSecretShape` discoverable when location/handle predicates match |
+| ATM + phone bank | Co-presence: app + ATM BLE/machine id + location → higher-assurance capacity via co-attestation |
+
+### 23.2 Shapes
+
+| Kind | Shape id | Notes |
+|------|----------|-------|
+| Sensor identifier | `idf:SensorIdShape` | BLE/NFC/radio/… — observation ≠ who |
+| GIS / geofence binding | `idf:GisEnvironmentBindingShape` | Spatiotemporal handle (+ optional Position mixed typing) |
+| Place-bound secret | `idf:PlaceBoundSecretShape` | Secret instrument + discovery predicates (location · time · co-attestation) |
+| Environment attestation | `idf:EnvironmentAttestationShape` | Claim/evidence: “device X observed sensor Y at locus Z” — not who |
+| Environment predicate | `idf:EnvironmentPredicateShape` | Constraint pack attached to grants/policy (GIS · realm · network cell · sensor id) |
+
+### 23.3 Detail
+
+#### `idf:SensorIdShape`
+- Artifact instrument; may relate to MachineDevice
+- Spoofable alone (BLE/MAC) — weak unless in multi-instrument formula
+
+#### `idf:PlaceBoundSecretShape`
+- Extends secret instrument (§20) with required discovery predicates
+- Unlock ≠ NaturalAgent who
+
+#### `idf:EnvironmentPredicateShape`
+- Inputs to SituationalCapacityGrant / OntologyGovernedPolicy / SymbolicPermissionContext
+- Change of environment → re-evaluate; stale env grant MUST NOT silently pass
+
+```turtle
+idf:SensorIdShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:SensorId ; sh:minCount 1 ] .
+
+idf:PlaceBoundSecretShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:PlaceBoundSecret ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:discoveryPredicate ; sh:minCount 1 ] .
+
+idf:EnvironmentPredicateShape a sh:NodeShape ;
+  sh:property [ sh:path idf:envConstraint ; sh:minCount 1 ] .
+  # Attach to grants/policy — MUST NOT entail NaturalAgent who.
+```
+
+### 23.4 Crypto / gate fails
+
+- Prefer multi-instrument co-attestation (phone key · ATM BLE · location · time) for banking/geocache hardness.
+- Gate fail: ATM BLE = customer who; geocache find = person identity; GIS alone = forever who.
+- Alice: sensor/GIS features = handle/instrument namespaces only.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -956,6 +1016,8 @@ idf:GroupAuthMembershipShape a sh:NodeShape ;
 | 2026-09-06 | F1 §21: `SymbolicPermissionContextShape`; specialised AI-agents + grants/agreements; symbolic-first permissions; instruments/ZKP proof-only. |
 
 | 2026-09-06 | Spine §3j: `OrgStructuralRoleShape` · `GroupAuthMembershipShape` (election turnover = rebind, not who-rewrite); tip `78d3878`. |
+
+| 2026-09-06 | F1 §23: `EnvironmentPredicateShape` · `PlaceBoundSecretShape` · `SensorIdShape` · GIS binding · EnvironmentAttestation; env≠who. |
 
 ---
 

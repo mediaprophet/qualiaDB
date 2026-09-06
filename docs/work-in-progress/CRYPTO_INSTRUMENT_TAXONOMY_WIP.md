@@ -626,6 +626,47 @@ Once planes are thick enough: easier than Active Directory / Keychain — chrome
 
 ---
 
+## 23. Amend — environment-scoped sensors & place-bound secrets (2026-09-06)
+
+**Cite:** Timothy GIS/sensor/geocache/ATM BLE · F1 §17 situational grants · spatiotemporal handles · §20 secrets · co-attestation §1b · G-COORD Position.
+
+### 23.1 Cut
+
+**Sensor / GIS / network-environment identifiers** condition *how* capacity and proofs apply. They are instruments + spatiotemporal handles — **not** NaturalAgent who.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Works only in environment E | Situational grant / policy with environment predicates (GIS · realm · network cell · sensor id) |
+| Different environment | Flag, degrade, or deny — do not silently reuse grant |
+| Geocaching | Place-bound **secret instrument** discoverable when location/handle predicates match |
+| ATM + phone bank | Co-presence: app + ATM Bluetooth/machine id + location → higher-assurance banking capacity |
+
+### 23.2 Instrument / handle kinds (additive)
+
+| Kind | Notes |
+|------|--------|
+| Sensor identifier (BLE, NFC, radio, …) | Machine/environment instrument — possession/observation ≠ who |
+| GIS / coordinate / geofence binding | Spatiotemporal handle (+ optional Position mixed typing) |
+| Place-bound secret | Secret instrument with discovery predicate (location · time · co-attestation) |
+| Environment attestation | Optional signed observation that “device X observed sensor Y at locus Z” — claim/evidence, not who |
+
+### 23.3 Crypto notes
+
+- Banking/geocache hardness: prefer **multi-instrument co-attestation** (phone key · ATM BLE · location proof · time window) — not a single BLE id as identity.
+- BLE/MAC can be spoofed; treat as weak instrument unless bound into richer formula (§1b).
+- Gate fail: ATM BLE = bank customer who; geocache find = person identity; GIS alone = forever who.
+
+### 23.4 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §23 |
+| **Marvin** | EnvironmentPredicate · PlaceBoundSecret · SensorId instrument shapes |
+| **Alice** | Sensor/GIS features = handle/instrument namespaces only |
+| **Capt.** | Spine when locked |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -715,3 +756,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §20:** secrets · wallets · tokens · online accounts · passwords as instruments (≠ who). |
 | 2026-09-06 | **Amend §21:** symbolic-first permission context; specialised bots via grants+agreements; crypto proves only. |
 | 2026-09-06 | **Amend §22:** org structure + mutable group authentication (elections = rebind, not who). |
+| 2026-09-06 | **Amend §23:** environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
