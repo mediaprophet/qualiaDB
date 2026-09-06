@@ -256,3 +256,6 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §18: OntologyGovernedPolicyShape · ZkpProofShape (cites F1 `13c3844`). |
 | 2026-09-06 | Vibe F5 §11: ZKP/grant/policy diagnose voice (cites `4994e15` §18). |
 | 2026-09-06 | Capt: relation-specific addressing (pairwise email sketch jane@bob.tld ↔ bob@jane.tld); locators ≠ static who; Solid/phone static pattern rejected as default. |
+| 2026-09-06 | Noddy F1 §19: relation-scoped locators as instruments (pairwise email sketch). |
+| 2026-09-06 | Marvin F2 §19: RelationScopedLocatorShape (cites spine §3g `1d55f56`). |
+| 2026-09-06 | Vibe F5 §12: relation-scoped locator diagnose voice (cites §3g / F2 §19). |

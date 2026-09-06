@@ -447,6 +447,44 @@ ZKPs (already in QualiaDB crypto surface — uplift, don’t reinvent) are **pro
 
 ---
 
+## 19. Amend — relation-scoped locators (2026-09-06)
+
+**Cite:** Capt spine §3g · Marvin F2 `RelationScopedLocatorShape` · QDNF alias / DNI mobility · F1 §5.3 DID pairwise · WebID as instrument (§14).
+
+### 19.1 Cut
+
+Unlike static personal addresses (classic Solid WebID / phone-number-as-who), this fabric prefers **relation-specific locator strings**: the address names a *relationship or context*, not a permanent who-token.
+
+| Pattern | Example (illustrative) |
+|---------|------------------------|
+| Pairwise | `jane@bob.tld` ↔ `bob@jane.tld` |
+| Group / chat / transaction | locator scoped to that relation id |
+| Contextual code | DNS TXT / invitation / epoch-bound hint |
+
+**Affinity:** alias · contextual IRI · DNI-like mobility (how-now / context), **not** NaturalAgent identity.
+
+### 19.2 Instrument kind
+
+| Field | Value |
+|-------|--------|
+| Kind | Relation-scoped locator |
+| Plane | Instrument / handle (presentation + routing hint) |
+| Crypto | May bind proofs, invitations, or session discovery — still not who |
+| Notes | Solid/HTTP offramps must not re-impose a single static who-address as trust root |
+
+**Gate fail:** treating a locator as NaturalAgent who; one lifelong email/WebID as the person; collapsing pairwise locators into a global correlation handle without consent.
+
+### 19.3 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §19; F2 §19 already drafting |
+| **Marvin** | `RelationScopedLocatorShape` — align cite to this tip when folded |
+| **Vibe** | Diagnose: relation address ≠ who |
+| **Alice** | Locators stay instrument/handle features — never who embedding |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -532,3 +570,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §16:** guardianship/capacity gradients; claim–policy–modality uplift; collaborative commons as multi-party instruments/relations (not shared who). |
 | 2026-09-06 | **Amend §17:** sense-context bindings; flora/fauna living non-person; situational capacity grants vs logs/accountability; crypto≠homograph fix. |
 | 2026-09-06 | **Amend §18:** ontology-governed crypto-bound policy naming; ZKP as proof instruments (selective disclosure ≠ who); HTTP/Solid offramp not trust root. |
+| 2026-09-06 | **Amend §19:** relation-scoped locators as instruments (pairwise email sketch); ≠ static who. |

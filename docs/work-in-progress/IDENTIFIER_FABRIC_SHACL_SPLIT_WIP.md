@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §17 `5743e2c` · F1 §18 draft (ZKP/policy) · architecture spine
+**Against tip:** F2 §18 `4994e15` · spine §3g `1d55f56` · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -245,6 +245,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 11. Guardianship/capacity/commons are relation axioms — never guardian≡ward, capacity-as-who, or commons mega-who (F1 §16); modalities on claim–policy only.
 12. Sense-context bindings (locale·era·community·provenance); flora/fauna living non-person; situational grants ≠ logs ≠ who (F1 §17).
 13. Ontology-governed policy on claim–policy–modality; ZKP as proof instrument — never who (F1 §18).
+14. Relation-scoped locators (pairwise/email/group/txn) are instruments — not static who-addresses (spine §3g).
 
 ---
 
@@ -706,6 +707,63 @@ idf:OntologyGovernedPolicyShape a sh:NodeShape ;
 - Diagnose: “proof of predicate in context,” not “proved identity.”
 
 ---
+
+## 19. Amend — relation-scoped locators (spine §3g)
+
+**Cite:** Capt spine §3g tip `1d55f56` · Timothy email sketch · QDNF Alias / contextual IRI / DNI mobility · F2 NetworkAddress / Alias · Solid/HTTP offramp only.
+
+### 19.1 Cut
+
+Traditional Solid WebIDs / phone numbers often behave as **static** personal addresses. This fabric prefers **relation-specific** locator strings: the address names a *relationship* (or context), not a permanent who-token.
+
+| Pattern | Shape role |
+|---------|------------|
+| Pairwise / contextual locator | Two people, group, group-chat, transaction id, DNS TXT code, … |
+| Email redesign sketch | User-controlled domain (or equivalent); directed scoped receive addresses — `jane@bob.tld` ↔ `bob@jane.tld` |
+| Agents of entities | Metadata/semantics on the relation — not the mailbox who |
+
+**Gate fail:** static Solid/phone-style “one address forever” as NaturalAgent who; HTTP/Solid re-imposed as trust root.
+
+### 19.2 `idf:RelationScopedLocatorShape`
+
+| Property | Note |
+|----------|------|
+| `idf:instrumentKind` | `RelationScopedLocator` (affinity: alias / contextual IRI / DNI-like mobility) |
+| Framing | Artifact instrument / handle — **not** who |
+| `idf:locatorString` | The relation-scoped address string |
+| `idf:relationKind` | pairwise · group · group-chat · transaction · dns-code · email-scoped · … |
+| `idf:partyA` / `idf:partyB` | 0..* agent or entity nodes in the relation (directed edges ok) |
+| `idf:direction` | Optional — e.g. Jane→Bob vs Bob→Jane as **two** locator instruments |
+| `idf:controlledDomain` | Optional — user-controlled domain (or equivalent) hosting the receive side |
+| `idf:agentMetadata` | 0..* AI-agent / delegate refs in semantics — not mailbox who |
+| Distinct from | Static WebID-as-who; phone MSISDN as who (§15 telecom subscriber still instrument); DNI how-now |
+
+```turtle
+idf:RelationScopedLocatorShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:RelationScopedLocator ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:locatorString ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:relationKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:partyA ; sh:minCount 0 ] ;
+  sh:property [ sh:path idf:partyB ; sh:minCount 0 ] .
+  # MUST NOT entail NaturalAgent who. Directed pairwise email = two locator nodes.
+```
+
+### 19.3 Email sketch (enumerable, not who)
+
+| Locator | Relates |
+|---------|---------|
+| `jane@bob.tld` | Jane’s send/receive context **toward** Bob’s domain |
+| `bob@jane.tld` | Bob’s send/receive context **toward** Jane’s domain |
+
+Two instruments, one relation; neither string *is* Jane or Bob.
+
+### 19.4 Diagnose / Alice notes
+
+- Speak: “relation locator,” never “your identity address.”
+- Collapse: locator success ⇒ who → suggested_form splits locator vs NaturalAgent.
+- F6: keep locator features in `instrument.locator.*` — never who embedding.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -719,6 +777,7 @@ idf:OntologyGovernedPolicyShape a sh:NodeShape ;
 | 2026-09-06 | F1 §16: `GuardianshipRelationShape` · capacity gradients · `CommonsMembershipShape` / project roles; core-ontologies uplift; modalities ≠ who. |
 | 2026-09-06 | F1 §17: `SenseContextBindingShape` · `FloraShape`/`FaunaShape` · `SituationalCapacityGrantShape` · grants≠logs; cite F5 `da74019`. |
 | 2026-09-06 | F1 §18: `OntologyGovernedPolicyShape` · `ZkpProofShape`; policy≠who; ZKP uplift not reinvent. |
+| 2026-09-06 | Spine §3g: `RelationScopedLocatorShape` (jane@bob.tld ↔ bob@jane.tld sketch); locators ≠ static who; tip base `1d55f56`. |
 
 ---
 

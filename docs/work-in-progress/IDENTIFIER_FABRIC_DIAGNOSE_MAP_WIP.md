@@ -224,4 +224,38 @@ Living-typed entities ≠ NaturalAgent personhood ≠ `owl:Thing` wash.
 |----|------|--------|
 | F5-G | ZKP or grant success collapsed to person who | diagnose rejects; suggested_form splits proof/grant vs NaturalAgent |
 
+---
+
+## 12. Amend — relation-scoped locators (spine §3g / F2 §19)
+
+**Cite:** Capt spine §3g tip `1d55f56` · F2 `RelationScopedLocatorShape` · F1 §19 · room email sketch.
+
+### 12.1 Plane voice
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Relation-scoped locator | relation instrument · address for this bond | who · identity address · static forever-address |
+| Pairwise email sketch | Jane→Bob receive relation (`jane@bob.tld`); Bob→Jane is a **second** instrument | `jane@bob.tld` = Jane-as-person |
+| Group / chat / txn / DNS-code | scoped string for that relation | Solid/phone static who |
+| Agents of entities | metadata/semantics on the relation | the NaturalAgent who / mailbox who |
+
+### 12.2 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| Locator spoken as identity / who | Split relation-scoped instrument vs NaturalAgent |
+| Static forever-address (Solid/phone pattern) as who | Prefer relation-scoped locators; HTTP/Solid offramp only |
+| One locator correlating all counterparts into mega-who | Keep directed pairwise instruments unmerged |
+
+### 12.3 Poet checklist
+
+16. Locator chrome = “relation address,” never “your identity.”
+17. Pairwise email = two instruments; neither string *is* the person.
+
+### 12.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-H | Locator / static address collapsed to who | diagnose rejects; splits instrument vs NaturalAgent |
+
 *End F5 — Vibe Identifier Fabric diagnose map.*
