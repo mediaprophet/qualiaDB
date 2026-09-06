@@ -147,6 +147,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 amend: §1b hardness + closed keyRole enum + Alice F6 §5.1 answers; Neo fold. |
 | 2026-09-06 | Marvin F2 amend: `idf:CoAttestationBundleShape` (claim-plane hardness; cites F1 §1b `bb714b2`). |
 | 2026-09-06 | F2 §5.5 tighten: CoAttestationBundle `attestationMember` minCount 2 + keyRole diversity SHOULD. |
+| 2026-09-06 | Noddy F1 §14: FOAF-modern entity/agent types + AI-agent plane + WebID/SAN/hardware; jury explainability. |
 | 2026-09-06 | Capt: hardness = multi-instrument time-bounded co-attestation (not stronger single who); W3C list provenance note (timothy.holborn@gmail.com). |
 | 2026-09-06 | Capt tick: F1 hardness/`bb714b2` + F2 CoAttestationBundle/`77a13e3` accepted; HEAD fabric docs current; F7 still after Cursor vibe. |
 | 2026-09-06 | Capt: FOAF-modernized entity/agent types; AI agent ≠ NaturalAgent ≠ machine; WebID/SAN/hardware as instruments; W3C list search provenance. |

@@ -1,7 +1,7 @@
 # WIP — Crypto instrument taxonomy (Identifier Fabric)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip (amend base):** fabric HEAD `4fa5109` · F2 crypto-skim `42dc709` · F6 PR #77  
+**Against tip (amend base):** HEAD `766a1f6`+ · F1 hardness `bb714b2` · FOAF/AI-agent/WebID amend (§14)  
 **Owner:** Noddy (crypto / identifiers) · **Shapes:** Marvin · **Fold/push:** Neo · **Ops:** Capt.  
 **Spine:** [`IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`](./IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md) (§1b long-arc + hardness)  
 **Related:** F2 `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` · F5 diagnose map · F6 `alice-f6-classifier-symbolic-binding-pressure-test.md`  
@@ -277,6 +277,63 @@ Cite `cryptographic-profile.md` / `post-quantum-security.md`:
 
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
+## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
+
+**Cite:** Capt spine lock · Timothy room · Marvin WN recommendations · F1 §1b hardness.
+
+### 14.1 Layering (not identity)
+
+| Layer | What it is | Must not become |
+|-------|------------|-----------------|
+| **Entity / agent type predicates** | FOAF-modernized top-level types (NaturalAgent · AI-agent · Machine/Device · Organization · …) | A single CS “identity” bag |
+| **Attributes & properties** | Descriptive slots hanging off a type | Who-replacement |
+| **Relation axioms** | customer · operator · owns · operates · … | Auth-subject merge |
+| **Instrument kinds** | Hardware IDs, network IDs, SAN / WebID-TLS / WebID-RSA, VCs, DIDs, … | The entity itself |
+| **Lexical concepts (WordNet / OMW)** | Vocabulary / multilingual surfaces | Fabric plane or NaturalAgent |
+
+WordNet (and OMW locale packs) may enrich labels and multilingual aliases; **lexical concept ≠ fabric plane**. Optional `idf:lexicalConcept` links from types/instruments — never WN-person as who.
+
+### 14.2 Agent-type cut (hard)
+
+| Type | Framing | Identifiers | Notes |
+|------|---------|-------------|-------|
+| **NaturalAgent** | Living human — SHACL-first | Pairwise/contextual instruments relate; no required single DID | Not FOAF Person-as-Thing |
+| **AI-agent** | Distinct agent-type — **not** NaturalAgent, **not** machine | Own identifier array + relations (customer, operator, …) | Agent key ≠ human principal still applies to operators |
+| **Machine / device** | Artifact | **Bundle** of hardware identifiers **plus** network identifiers | Multi-instrument co-attestation candidate (§1b) |
+| **Organization / service** | Artifact or mixed | Own DID/VC/instrument set | Do not equate with NaturalAgent |
+
+### 14.3 Additional instrument kinds
+
+| Kind | Notes | Collapse to who? |
+|------|-------|------------------|
+| Hardware identifier | Device/TPM/serial/attestation handles | **Fail** |
+| Network identifier | Addresses, DNI path material, adjacency locators | **Fail** |
+| Certificate SAN / WebID-TLS / WebID-RSA | Crypto instrument bindings (legacy + Solid-era patterns) — **instruments**, not who | **Fail** |
+| Signed RDF / VC | Already §5.5–5.6 | **Fail** |
+
+A **machine** is modeled as related instruments (hardware ∪ network), optionally hardness-bundled — never one machine-id = person.
+
+### 14.4 Court / jury explainability (digital evidence)
+
+Digital evidence capabilities fail socially if a jury cannot follow them. Fabric docs and later evidence surfaces **SHOULD**:
+
+1. Enumerate **who · claim · handle · instrument** in plain language (F5 diagnose voice).
+2. Present hardness as “these signatures, this time window, these machines/networks/agents” — not a opaque who-token.
+3. Keep WebID/SAN/hardware/VC as **named tools**, not “the identity.”
+
+**Gate fail:** courtroom or audit narrative that re-bags instruments into one unverifiable “identity.”
+
+### 14.5 Handoff for this amend
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §14 into `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` |
+| **Marvin** | Entity/agent type shapes + AI-agent plane; WN lexical ≠ plane; WebID/SAN as instruments |
+| **Capt.** | Spine already locking FOAF-modern types — changelog when tip lands |
+| **Vibe** | Diagnose copy: AI-agent ≠ person ≠ machine; jury-safe naming |
+
+---
+
 ## 12. Answers to Alice F6 §5.1 (Noddy)
 
 1. **`idf:keyRole` enum:** **Closed** for the first inference namespace — use the set in §5.11. Unknown roles → **held / not-yet**, never “other-id” or who.
@@ -294,6 +351,7 @@ Cite `cryptographic-profile.md` / `post-quantum-security.md`:
 | 2026-09-06 | F1 initial taxonomy landed (Neo fold). |
 | 2026-09-06 | F2 crypto skim: DNI/RAR/QSession purpose-separation. |
 | 2026-09-06 | **Amend:** §1b hardness (multi-instrument time-bounded co-attestation); cross-link spine §1b + F6; closed `keyRole` enum; QLink DH vs QSession AEAD; answers to Alice F6 §5.1. |
+| 2026-09-06 | **Amend §14:** FOAF-modern entity/agent types; AI-agent ≠ NaturalAgent ≠ machine; WebID/SAN/hardware multi-id; WN lexical≠plane; jury explainability. |
 
 ---
 
