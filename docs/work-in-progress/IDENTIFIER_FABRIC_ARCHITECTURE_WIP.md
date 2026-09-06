@@ -436,3 +436,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: good-faith reliance · AssumptionChain · RootCauseBundle · BlastRadiusMap — assumption invalidated ≠ who rewrite. |
 | 2026-09-06 | Marvin F2 §27: AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding (cites `e50296e`). |
 | 2026-09-06 | Vibe F5 §14: reliance/RCA/blast diagnose voice (cites F1/F2 §27 · spine §3o). |
+| 2026-09-06 | Alice F6 §15 (PR #81): reliance/RCA/blast = claim–policy only; retract≠who (cites F5 `3c2a1f9`). |
