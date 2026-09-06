@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §16 `b832708` · F1 §17 draft · F5 sense-context `da74019` · architecture spine
+**Against tip:** F2 §17 `5743e2c` · F1 §18 draft (ZKP/policy) · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -244,6 +244,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 10. Device-user ≠ OS account-holder ≠ telecom subscriber ≠ machine (F1 §15); `usedBy` / `accountOn` / `accountHolder` independent.
 11. Guardianship/capacity/commons are relation axioms — never guardian≡ward, capacity-as-who, or commons mega-who (F1 §16); modalities on claim–policy only.
 12. Sense-context bindings (locale·era·community·provenance); flora/fauna living non-person; situational grants ≠ logs ≠ who (F1 §17).
+13. Ontology-governed policy on claim–policy–modality; ZKP as proof instrument — never who (F1 §18).
 
 ---
 
@@ -642,6 +643,69 @@ idf:FloraShape a sh:NodeShape ;
 `suggested_fix` optional fields: `locale` · `era` · `community` · `provenance` beside `plane`/`framing`. Collapse detectors: AU thongs; period gay; flora/fauna as person; WN gloss as who.
 
 ---
+
+## 18. Amend — ontology-governed policy + ZKP instruments (F1 §18)
+
+**Cite:** Noddy F1 §18 tip `13c3844` · Capt ABAC/ZKP lock · QDNF ontological-contracts / QPolicy · §1b/§5.5 co-attestation · §16 modalities · §17 situational grants · core-db crypto/ZKP uplift.
+
+### 18.1 Runtime framing (not identity product)
+
+Authorization runs over an **unmerged multi-plane graph** (types · relations · instruments · claims · handles) with:
+
+- Attribute / capacity-grant inputs (ABAC-like)
+- Deontic / epistemic / N3 / bifurcation on **claim–policy–modality** shapes
+- Cryptographically signed ontology documents (contracts · SHACL/N3 bundles) that **interpret** policy — signature binds interpretation
+- Instruments for possession / integrity / co-attestation / ZKP
+- HTTP / Solid as offramp (LIG) — **not** trust root
+
+Who stays unmerged. Name: ontology-governed, crypto-bound policy.
+
+### 18.2 `idf:OntologyGovernedPolicyShape` (claim–policy–modality)
+
+| Property | Note |
+|----------|------|
+| Plane | Claim–policy–modality — **not** NaturalAgent |
+| `idf:policyBundle` | Pinned ontology / SHACL / N3 / contract digest (cite ontological-contracts) |
+| `idf:interpretationBinding` | Signature covers exact interpretation bytes/bundle — no silent re-interpret |
+| Inputs | Attributes · capacity grants · instrument proofs — referenced, not who-merged |
+| Forbidden | Policy success ⇒ NaturalAgent who; HTTP endpoint as trust root |
+
+### 18.3 `idf:ZkpProofShape` (instrument / proof kind)
+
+Uplift existing QualiaDB ZKP packages — do not reinvent algorithms here.
+
+| Property | Note |
+|----------|------|
+| `idf:instrumentKind` | `ZkpProof` |
+| Framing | Artifact proof instrument |
+| `idf:circuitOrStatement` | Defined circuit/context — what is proven |
+| `idf:provesPredicate` | Predicate satisfaction / selective disclosure / membership / capacity check |
+| `idf:relatesTo` | Grant, commons membership, co-attestation member, etc. — **relation** |
+| Use with | SituationalCapacityGrant (§17); CommonsMembership (§16); CoAttestationBundle members (§5.5) |
+
+**Gate fail:** ZKP as NaturalAgent identity; cross-context proof correlation into one who; valid ZKP ⇒ personhood / moral claim truth / global anonymity.
+
+**Security claim boundary:** proves a statement in a defined circuit/context only.
+
+```turtle
+idf:ZkpProofShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:ZkpProof ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:circuitOrStatement ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:relatesTo ; sh:minCount 0 ] .
+  # MUST NOT entail NaturalAgent who.
+
+idf:OntologyGovernedPolicyShape a sh:NodeShape ;
+  sh:property [ sh:path idf:plane ; sh:hasValue idf:ClaimOpinion ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:policyBundle ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:interpretationBinding ; sh:minCount 0 ] .
+```
+
+### 18.4 Alice / Vibe notes
+
+- ZKP outputs → typed `instrument` / `proof` namespaces — never who embedding (Alice F6).
+- Diagnose: “proof of predicate in context,” not “proved identity.”
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -654,6 +718,7 @@ idf:FloraShape a sh:NodeShape ;
 | 2026-09-06 | F1 §15: `OsAccountShape` · `TelecomSubscriberShape`; independent `usedBy` / `accountOn` / `accountHolder`; tip `e4c6320`. |
 | 2026-09-06 | F1 §16: `GuardianshipRelationShape` · capacity gradients · `CommonsMembershipShape` / project roles; core-ontologies uplift; modalities ≠ who. |
 | 2026-09-06 | F1 §17: `SenseContextBindingShape` · `FloraShape`/`FaunaShape` · `SituationalCapacityGrantShape` · grants≠logs; cite F5 `da74019`. |
+| 2026-09-06 | F1 §18: `OntologyGovernedPolicyShape` · `ZkpProofShape`; policy≠who; ZKP uplift not reinvent. |
 
 ---
 

@@ -240,3 +240,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §17: SenseContextBindingShape · Flora/Fauna · SituationalCapacityGrantShape (cites F1 `bec69a7`). |
 | 2026-09-06 | Capt: ontology-governed crypto-bound multi-plane policy (ABAC-like); signed ontology docs ≠ HTTP trust root; LIG offramp. |
 | 2026-09-06 | Noddy F1 §18: ontology-governed crypto-bound policy · ZKP proof instruments (≠ who). |
+| 2026-09-06 | Marvin F2 §18: OntologyGovernedPolicyShape · ZkpProofShape (cites F1 `13c3844`). |
