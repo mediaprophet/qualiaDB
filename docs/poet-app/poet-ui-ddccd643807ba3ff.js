@@ -1568,7 +1568,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('poet-ui-855f595afec09d18_bg.wasm', import.meta.url);
+        module_or_path = new URL('poet-ui-ddccd643807ba3ff_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 
