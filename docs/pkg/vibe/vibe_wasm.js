@@ -215,6 +215,8 @@ export function eval_cell_src(src) {
 
 /**
  * Evaluate a full program on LocalHost (workshop dialect).
+ *
+ * Runs preamble items, then `main` when present — same as `vibe eval FILE main`.
  * @param {string} src
  * @returns {any}
  */
