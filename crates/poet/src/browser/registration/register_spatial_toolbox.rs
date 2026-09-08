@@ -592,7 +592,7 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
             ToolChain::new(
                 ToolChainMetadata {
                     id: "dmx:live".into(),
-                    label: "Live DMX lighting",
+                    label: "Live DMX lighting".into(),
                     icon: "3d".into(),
                     description: "Curated Dmx.* universe, fixture, cue, and stack binds.".into(),
                 },

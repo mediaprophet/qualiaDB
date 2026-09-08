@@ -69,7 +69,10 @@ fn sign_i64(sign: Sign) -> i64 {
 }
 
 /// `ComputationalGeometry.insphere` — exact in-sphere predicate of e vs tetra abcd.
-/// Args: `{ a,b,c,d,e: [f64; 3] }`. Out: `{ sign: i64 }` (−1 outside / 0 on / +1 inside).
+/// Args: `{ a,b,c,d,e: [f64; 3] }`. Out: `{ sign: i64 }`.
+///
+/// For a positively oriented tet, −1 = inside, 0 = on, +1 = outside
+/// (library convention in `insphere.rs`).
 pub fn insphere_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = parse_point3_arg(args_v, "a", span, "insphere")?;
     let b = parse_point3_arg(args_v, "b", span, "insphere")?;
@@ -228,7 +231,8 @@ mod tests {
         m.insert("d".into(), args::f64_list_value([0.0, 0.0, 1.0]));
         m.insert("e".into(), args::f64_list_value([0.1, 0.1, 0.1]));
         let out = insphere_host(&Value::Record(m), span()).unwrap();
-        assert_eq!(args::rec_i64(&out, "sign").unwrap(), 1);
+        // Positively oriented tet: inside → Negative (−1). See insphere.rs.
+        assert_eq!(args::rec_i64(&out, "sign").unwrap(), -1);
     }
 
     #[test]

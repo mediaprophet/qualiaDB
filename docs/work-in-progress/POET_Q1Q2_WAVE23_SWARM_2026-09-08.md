@@ -1,7 +1,7 @@
 # Q1/Q2 incorporation wave 23 swarm — 2026-09-08
 
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
-**Status:** **In progress**  
+**Status:** **Complete (integrated)**  
 **Prior:** wave 22 Complete — Audio 13 + Scene 11 + Image 15 Live; Host CG +8  
 **Derived inventory after w22:** `ALL_BOUND=1070` · `PoetLive≈688` · Q2 ≈ 382
 
