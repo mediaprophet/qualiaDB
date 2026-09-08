@@ -57,11 +57,16 @@ const liveReleaseSurfaces = [
   'docs/api-explorer/index.html',
   'docs/api.html',
   'docs/benchmark.html',
+  'docs/index.html',
   'docs/js/mobile-wasm-lab.js',
   'docs/js/qualia-wasm-runtime.js',
   'docs/online-llm-demo.html',
   'docs/playground/anatomy.js',
+  'docs/progress-0.0.37.html',
+  'docs/qdnf.html',
+  'docs/release-matrix.html',
   'docs/tests/index.html',
+  'docs/wasm-engine.html',
 ];
 for (const relativePath of liveReleaseSurfaces) {
   const text = read(relativePath);

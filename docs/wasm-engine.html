@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-037">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB 0.0.37 — WASM engine profiles</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-cyan-400 to-violet-500 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">Q</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-cyan-400 text-xl">DB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> GitHub Pages · three WASM products · 0.0.37</div>
+    <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] mb-4">Three packages.<br>Two budgets. One engine.</h1>
+    <p class="text-lg text-white/70 max-w-3xl mb-3">
+      The portal is the full WASM-safe engine — logic plus science plus WebGPU viewport.
+      The playground adds the browser LLM. Ontology MCP stays a bounded reasoning kernel and does not swallow science to keep Pages green.
+    </p>
+    <p class="text-sm text-white/45 mb-12">
+      Gates live in <code class="q-mono">pages.yml</code> and <code class="q-mono">release-wasm.yml</code>.
+      Numbers below are measured from the files this page just fetched. Portal and playground
+      <strong>fail</strong> the retired 2.6 MiB / 800 KiB cap — that is expected once science is in the blob.
+    </p>
+
+    <section id="profiles" class="grid lg:grid-cols-3 gap-5 mb-14"></section>
+
+    <section class="q-card p-8 mb-10">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-2">Live portal probe</p>
+          <h2 class="text-2xl font-semibold">What this site’s portal actually exports</h2>
+        </div>
+        <div id="portal-status" class="q-mono text-sm text-white/45">initialising…</div>
+      </div>
+      <p class="text-sm text-white/60 mb-5">Loads <code class="q-mono">pkg/qualia/qualia.js</code>. Science names appear if the full engine is the artifact Pages deployed. LLM names belong on <code class="q-mono">wasm-full</code>, not here.</p>
+      <div class="grid sm:grid-cols-3 gap-4 mb-6">
+        <div class="rounded-2xl border border-white/10 p-4">
+          <div class="text-xs text-white/40 mb-1">Engine version</div>
+          <div id="eng-ver" class="q-mono text-xl text-cyan-300">—</div>
+        </div>
+        <div class="rounded-2xl border border-white/10 p-4">
+          <div class="text-xs text-white/40 mb-1">Science-shaped exports</div>
+          <div id="eng-sci" class="q-mono text-xl text-emerald-300">—</div>
+        </div>
+        <div class="rounded-2xl border border-white/10 p-4">
+          <div class="text-xs text-white/40 mb-1">Portal constructor</div>
+          <div id="eng-portal" class="q-mono text-xl text-violet-300">—</div>
+        </div>
+      </div>
+      <pre id="eng-exports" class="q-mono text-xs text-white/55 whitespace-pre-wrap bg-black/30 rounded-2xl p-4 border border-white/5 min-h-[5rem]">waiting…</pre>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-5">
+      <div class="q-card p-7">
+        <h2 class="text-xl font-semibold mb-3">In the browser packages</h2>
+        <ul class="text-sm text-white/75 space-y-2">
+          <li>JSON / CBOR ingest, N3 / SHACL, modal logic</li>
+          <li>WASM-safe CAS, DFT, ODE, bio, chem</li>
+          <li>WebGPU viewport + AcousticPlane (portal / full)</li>
+          <li>Browser LLM only in <code class="q-mono">wasm-full</code></li>
+        </ul>
+      </div>
+      <div class="q-card p-7">
+        <h2 class="text-xl font-semibold mb-3">Native-only — never in these blobs</h2>
+        <ul class="text-sm text-white/75 space-y-2">
+          <li>Graph daemon on <code class="q-mono">:4242</code></li>
+          <li>Filesystem volumes, NVMe / ZNS / CSD</li>
+          <li>BLE mesh, eBPF / WFP / XPC filters</li>
+          <li>QDNF / Qualia Peer Runtime (native fabric)</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
+    Sanity cap 16 MiB / 4 MiB is not a slim viewport budget.
+  </footer>
+
+  <script type="module">
+    import { ARTIFACTS, GATES, formatBytes, pctOf, measureWasm, docsRootFromPage } from './js/wasm-profile-meter.js';
+    import { initQualiaWasm, getEngineVersion } from './js/qualia-wasm-runtime.js';
+
+    const root = docsRootFromPage();
+    const grid = document.getElementById('profiles');
+
+    for (const art of ARTIFACTS) {
+      const gate = GATES[art.gate];
+      const card = document.createElement('article');
+      card.className = 'q-card p-6';
+      card.innerHTML = `
+        <p class="q-kicker mb-2">${art.product}</p>
+        <h2 class="text-2xl font-semibold mb-2">${art.name}</h2>
+        <p class="text-sm text-white/55 mb-5">${art.includes}</p>
+        <div class="q-bar mb-2" data-bar><span></span></div>
+        <div class="q-mono text-sm mb-1" data-raw>measuring…</div>
+        <div class="q-mono text-xs text-white/40 mb-4" data-gz></div>
+        <p class="text-xs text-white/40">Excluded: ${art.excludes}</p>
+        <p class="text-[11px] text-white/30 mt-3">gate ${gate.label}</p>`;
+      grid.appendChild(card);
+      try {
+        const m = await measureWasm(root + art.path);
+        const ok = m.raw <= gate.raw && (m.gzip == null || m.gzip <= gate.gzip);
+        card.querySelector('[data-raw]').textContent = `${formatBytes(m.raw)} raw · ${pctOf(m.raw, gate.raw).toFixed(0)}% of cap`;
+        card.querySelector('[data-gz]').textContent = m.gzip != null
+          ? `${formatBytes(m.gzip)} gzip · ${pctOf(m.gzip, gate.gzip).toFixed(0)}% of cap`
+          : 'gzip: browser has no CompressionStream';
+        const bar = card.querySelector('[data-bar]');
+        bar.classList.add(ok ? 'ok' : 'warn');
+        requestAnimationFrame(() => { bar.firstElementChild.style.width = `${Math.max(5, pctOf(m.raw, gate.raw))}%`; });
+      } catch (err) {
+        card.querySelector('[data-raw]').textContent = 'artifact not present (CI builds it on Pages)';
+        card.querySelector('[data-gz]').textContent = String(err.message || err);
+      }
+    }
+
+    const status = document.getElementById('portal-status');
+    const sciKeys = /clinical|organic|chemistry|thermo|ode|dft|bio|algebra|geometric|solver|science/i;
+    try {
+      const mod = await initQualiaWasm();
+      if (mod?.__initError) throw mod.__initError;
+      const ver = getEngineVersion(mod) || 'unknown';
+      document.getElementById('eng-ver').textContent = ver;
+      const names = Object.keys(mod).filter((k) => typeof mod[k] === 'function' || typeof mod[k] === 'object');
+      const sci = names.filter((n) => sciKeys.test(n));
+      document.getElementById('eng-sci').textContent = String(sci.length);
+      document.getElementById('eng-portal').textContent = names.includes('QualiaPortal') ? 'QualiaPortal' : 'absent';
+      document.getElementById('eng-exports').textContent = (sci.length ? sci : names.slice(0, 24)).join('\n');
+      status.textContent = 'portal ready';
+      status.classList.add('text-emerald-400');
+    } catch (err) {
+      status.textContent = 'portal init failed on this host';
+      document.getElementById('eng-exports').textContent = String(err && err.message ? err.message : err);
+    }
+  </script>
+</body>
+</html>

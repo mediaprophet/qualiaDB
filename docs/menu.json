@@ -20,10 +20,36 @@
       "group": "Core"
     },
     {
-      "label": "0.0.33 Progress",
-      "href": "progress-0.0.33.html",
+      "label": "0.0.37 Progress",
+      "href": "progress-0.0.37.html",
       "icon": "fa-heart-pulse",
       "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "WASM Engine",
+      "href": "wasm-engine.html",
+      "icon": "fa-microchip",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "QDNF",
+      "href": "qdnf.html",
+      "icon": "fa-circle-nodes",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Release Matrix",
+      "href": "release-matrix.html",
+      "icon": "fa-table-cells",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.33 Archive",
+      "href": "progress-0.0.33.html",
+      "icon": "fa-clock-rotate-left",
       "group": "Core"
     },
     {

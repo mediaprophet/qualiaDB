@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Workspace crates, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.37`.
 - Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version track `0.0.37`.
 - Portal and `wasm-logic` packages include WASM-safe science (CAS, DFT, ODE, bio, chem). Slim fail-closed math stubs are not the product. Native-only remains native: daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF. Ontology MCP stays the exclusive lite kernel.
+- GitHub Pages operator surface now showcases 0.0.37: honest progress, live WASM size gates (16 MiB / 4 MiB sanity cap; ontology 640 / 200 KiB), QDNF map, and the measured Linux 15/15 release matrix.
 
 ## [Unreleased] — POET product-integrity remediation — 2026-08-29
 

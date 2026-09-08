@@ -86,12 +86,12 @@
 
     <div class="max-w-screen-2xl mx-auto px-8 py-10">
         <div class="mb-8">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-sm mb-4">
-                <i class="fas fa-shield-alt"></i>
-                <span>libpcap Network Webizen • Decentralized Threat Intelligence</span>
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 text-sm mb-4">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>Mock packet table · not libpcap · not live capture</span>
             </div>
             <h1 class="font-display text-4xl font-semibold mb-2">Network Webizen</h1>
-            <p class="text-slate-400">Dynamic N3Logic rule generation from network telemetry. Threat patterns are compiled to bytecode and evaluated against the live Quin graph.</p>
+            <p class="text-slate-400 max-w-3xl">This screen plays a canned packet table so the N3 rule compiler UI can be exercised in the browser. GitHub Pages cannot see your NIC. Native naming and routing live in the <a href="qdnf.html" class="text-cyan-400 hover:underline">Qualia Decentralized Network Fabric</a> — QPR is in progress and is not this mock.</p>
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -104,7 +104,7 @@
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-base font-semibold flex items-center gap-2">
                             <i class="fas fa-wave-square text-cyan-400"></i>
-                            Live Packet Stream
+                            Live Packet Stream <span class="text-xs font-normal text-amber-300/80 ml-2">operator mock</span>
                         </h2>
                         <div class="flex items-center gap-3">
                             <button onclick="scanPackets()"

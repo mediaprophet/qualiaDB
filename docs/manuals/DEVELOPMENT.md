@@ -370,7 +370,7 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 
 ## Releases & Versioning
 
-- **Current branch:** `0.0.33`
+- **Current branch:** `0.0.37`
 - **Release config:** `release.toml` (cargo-release)
 - **Release notes:** [CHANGELOG.md](../../CHANGELOG.md)
 - **CI:** `.github/workflows/release.yml` — builds on tag push (Windows, macOS, Linux)

@@ -1,0 +1,169 @@
+/* 0.0.37 GitHub Pages showcase — CSS custom properties only. */
+[data-theme="release-037"] {
+  --q-bg: #05070c;
+  --q-bg-elev: rgba(12, 18, 28, 0.72);
+  --q-ink: #e8eef7;
+  --q-muted: rgba(232, 238, 247, 0.62);
+  --q-faint: rgba(232, 238, 247, 0.38);
+  --q-line: rgba(148, 180, 220, 0.16);
+  --q-violet: #a78bfa;
+  --q-cyan: #22d3ee;
+  --q-emerald: #34d399;
+  --q-amber: #fbbf24;
+  --q-rose: #fb7185;
+  --q-glow: radial-gradient(1200px 600px at 12% -10%, rgba(88, 70, 180, 0.28), transparent 55%),
+            radial-gradient(900px 500px at 88% 0%, rgba(14, 165, 233, 0.18), transparent 50%),
+            radial-gradient(800px 400px at 50% 100%, rgba(16, 185, 129, 0.08), transparent 45%);
+  --q-font: "Inter", system-ui, sans-serif;
+  --q-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  color: var(--q-ink);
+  background: var(--q-bg);
+  font-family: var(--q-font);
+}
+
+[data-theme="release-037"] .q-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--q-glow),
+    linear-gradient(rgba(148, 180, 220, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 180, 220, 0.04) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 20%, #000 40%, transparent 78%);
+}
+
+[data-theme="release-037"] .q-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme="release-037"] .q-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--q-line);
+  background: rgba(167, 139, 250, 0.1);
+  color: var(--q-violet);
+}
+
+[data-theme="release-037"] .q-card {
+  background: var(--q-bg-elev);
+  border: 1px solid var(--q-line);
+  border-radius: 1.5rem;
+  backdrop-filter: blur(28px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="release-037"] .q-card:hover {
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+[data-theme="release-037"] .hero-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+[data-theme="release-037"] .q-kicker {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--q-cyan);
+}
+
+[data-theme="release-037"] .q-bar {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+[data-theme="release-037"] .q-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--q-cyan), var(--q-violet));
+  width: 0;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="release-037"] .q-bar.ok > span {
+  background: linear-gradient(90deg, var(--q-emerald), var(--q-cyan));
+}
+
+[data-theme="release-037"] .q-bar.warn > span {
+  background: linear-gradient(90deg, var(--q-amber), var(--q-rose));
+}
+
+[data-theme="release-037"] .q-mono {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+[data-theme="release-037"] h1,
+[data-theme="release-037"] h2,
+[data-theme="release-037"] .font-display {
+  font-family: var(--q-display);
+}
+
+[data-theme="release-037"] a.q-link {
+  color: var(--q-cyan);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.35);
+}
+
+[data-theme="release-037"] a.q-link:hover {
+  color: #fff;
+}
+
+[data-theme="release-037"] .q-cell {
+  position: relative;
+  min-height: 5.4rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 1.05rem;
+  border: 1px solid var(--q-line);
+  background: rgba(8, 14, 22, 0.65);
+  overflow: hidden;
+}
+
+[data-theme="release-037"] .q-cell::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% -40% auto;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.22), transparent 70%);
+  pointer-events: none;
+}
+
+[data-theme="release-037"] .q-cell.fail::before {
+  background: radial-gradient(circle, rgba(251, 113, 133, 0.28), transparent 70%);
+}
+
+[data-theme="release-037"] .q-cell.warn-cell::before {
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.22), transparent 70%);
+}
+
+[data-theme="release-037"] .q-pulse {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--q-emerald);
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55);
+  animation: q-pulse 2.2s ease-out infinite;
+}
+
+[data-theme="release-037"] .q-pulse.fail {
+  background: var(--q-rose);
+  box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.45);
+}
+
+@keyframes q-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}

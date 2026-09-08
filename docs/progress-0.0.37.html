@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-037">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen 0.0.37 — Honest Progress</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .hero-num { font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+    .pillar { min-height: 16rem; }
+    .constellation { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-shield-halved"></i> Local-first · human-centric · branch <code class="q-mono">0.0.37</code></div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
+      The engine in the browser<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-violet-300 to-emerald-300">is no longer a slim viewport.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-4">
+      0.0.37 ships the full WASM-safe Qualia engine to GitHub Pages: logic, CAS, DFT, ODE, bio, and chem in the portal package.
+      Ontology MCP stays the tight kernel. Native-only facilities stay native. This page is the operator record — not a marketing overlay.
+    </p>
+    <p class="text-sm text-white/45 mb-12">
+      Prior honesty:
+      <a class="q-link" href="progress-0.0.33.html">0.0.33</a> ·
+      <a class="q-link" href="progress-0.0.30.html">0.0.30</a> ·
+      <a class="q-link" href="progress-0.0.28.html">0.0.28</a>
+    </p>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
+      <a href="wasm-engine.html" class="q-card pillar p-7 block no-underline text-inherit">
+        <p class="q-kicker mb-3">01 · Browser</p>
+        <h2 class="text-2xl font-semibold mb-3">Full WASM-safe engine</h2>
+        <p class="text-sm text-white/65 mb-6">Portal includes WASM-safe science. Playground <code class="q-mono">wasm-full</code> still owns the browser LLM. Ontology MCP remains 640 / 200 KiB.</p>
+        <p class="text-cyan-300 text-sm">Measure the three packages →</p>
+      </a>
+      <a href="qdnf.html" class="q-card pillar p-7 block no-underline text-inherit">
+        <p class="q-kicker mb-3">02 · Fabric</p>
+        <h2 class="text-2xl font-semibold mb-3">Native QDNF / QPR</h2>
+        <p class="text-sm text-white/65 mb-6">Qualia Peer Runtime is the in-progress libp2p replacement: QLink, DNI, QRoute, QSession — not a browser packet theatre.</p>
+        <p class="text-cyan-300 text-sm">See the fabric map →</p>
+      </a>
+      <a href="poet-app/index.html" class="q-card pillar p-7 block no-underline text-inherit">
+        <p class="q-kicker mb-3">03 · Habitat</p>
+        <h2 class="text-2xl font-semibold mb-3">Poet + Vibe waves</h2>
+        <p class="text-sm text-white/65 mb-6">Health calculators, Tool Chest honesty, G-LEXICON-0, Identifier Fabric F6 amends, live catalog. The habitat is the product; the engine is the substrate.</p>
+        <p class="text-cyan-300 text-sm">Open the live habitat →</p>
+      </a>
+    </section>
+
+    <section class="q-card p-8 mb-12 relative overflow-hidden">
+      <canvas id="constellation" class="constellation" aria-hidden="true"></canvas>
+      <div class="relative">
+        <p class="q-kicker mb-2">What is real in 0.0.37</p>
+        <h2 class="text-3xl font-semibold mb-6">Implemented, not stubbed</h2>
+        <div class="grid sm:grid-cols-2 gap-x-10 gap-y-5 text-sm text-white/80">
+          <div>
+            <strong class="text-emerald-400">Portal science.</strong>
+            CAS, DFT, ODE, bioinformatics, and organic chemistry compile into <code class="q-mono">--features portal</code> and <code class="q-mono">wasm-logic</code>. Slim fail-closed math stubs are not the product.
+          </div>
+          <div>
+            <strong class="text-emerald-400">Clinical VM.</strong>
+            Framingham / CHA₂DS₂-VASc / SCORE2 read complete facts from arena Quins. Missing inputs fail closed. The engine does not invent patient values.
+          </div>
+          <div>
+            <strong class="text-emerald-400">Shared WebGPU.</strong>
+            Browser packages reuse one device. Graph accel GPU kernels compile with <code class="q-mono">gpu-runtime</code>; CPU floor remains when the adapter is absent.
+          </div>
+          <div>
+            <strong class="text-emerald-400">SPARQL on WASM.</strong>
+            External sort uses a bounded in-memory k-way merge. Query sampling is a public, caller-visible stride — not a silent cull.
+          </div>
+          <div>
+            <strong class="text-emerald-400">Law packages.</strong>
+            WASM verifies Ed25519 on the same <code class="q-mono">signature_message()</code> path as native.
+          </div>
+          <div>
+            <strong class="text-emerald-400">Pages size gates.</strong>
+            Portal and playground: 16 MiB / 4 MiB sanity cap. Ontology MCP: 640 KiB / 200 KiB product budget. Measured 0.0.37 artifacts pass the new gates and fail the old 2.6 MiB / 800 KiB cap.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-5 mb-12">
+      <div class="q-card p-7">
+        <p class="q-kicker mb-2">Pages budget · measured</p>
+        <h2 class="text-xl font-semibold mb-4">Three products, two budgets</h2>
+        <div id="size-board" class="space-y-5 text-sm"></div>
+        <p class="mt-5 text-xs text-white/40">Live <code class="q-mono">fetch</code> of the artifacts this site actually serves. Gzip uses the browser CompressionStream. <a class="q-link" href="wasm-engine.html">Full profile page</a>.</p>
+      </div>
+      <div class="q-card p-7 border-amber-500/25">
+        <p class="q-kicker mb-2" style="color:var(--q-amber)">Honest gaps</p>
+        <h2 class="text-xl font-semibold mb-4">Not claimed</h2>
+        <ul class="space-y-3 text-sm text-white/75">
+          <li>Signed Windows NSIS and macOS Metal installers are GitHub runner jobs with signing secrets — not produced on the Linux agent that cut this branch.</li>
+          <li>QDNF / QPR is native and in progress. It does not replace DNS/IP inside the browser demos, and it is not the mock packet table on Network Webizen.</li>
+          <li>Ontology MCP does not grow science or LLM to “save” Pages. That kernel stays the size-bounded MCP product.</li>
+          <li>Daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, and eBPF remain native-only.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Try it on this site</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a class="q-card p-5 block no-underline text-inherit" href="release-matrix.html"><div class="font-semibold mb-1">Release matrix</div><p class="text-xs text-white/55">Linux 15/15 · honest Windows/macOS</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="science-playground.html"><div class="font-semibold mb-1">Sciences playground</div><p class="text-xs text-white/55">ODE, GA, bio, chem, clinical — <code class="q-mono">wasm-full</code></p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="spatial.html"><div class="font-semibold mb-1">Spatial portal</div><p class="text-xs text-white/55">WebGPU viewport + acoustic on the full portal package</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="modalities-showcase.html"><div class="font-semibold mb-1">Modalities</div><p class="text-xs text-white/55">Deontic, epistemic, LTL, paraconsistent, ASP</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="qdnf.html"><div class="font-semibold mb-1">QDNF fabric</div><p class="text-xs text-white/55">Native map — not the mock packet table</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="manuals/wasm-capability-profiles.md"><div class="font-semibold mb-1">Capability profiles</div><p class="text-xs text-white/55">Normative include / exclude table</p></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
+    QualiaDB · Webizen · 0.0.37 operator record
+  </footer>
+
+  <script type="module">
+    import { ARTIFACTS, GATES, formatBytes, pctOf, measureWasm, docsRootFromPage } from './js/wasm-profile-meter.js';
+
+    const board = document.getElementById('size-board');
+    const root = docsRootFromPage();
+
+    for (const art of ARTIFACTS) {
+      const gate = GATES[art.gate];
+      const el = document.createElement('div');
+      el.innerHTML = `
+        <div class="flex justify-between mb-1">
+          <span class="font-medium">${art.name}</span>
+          <span class="q-mono text-white/45" data-stat>—</span>
+        </div>
+        <div class="q-bar" data-bar><span></span></div>
+        <div class="mt-1 text-[11px] text-white/35">gate ${gate.label} · ${art.product}</div>`;
+      board.appendChild(el);
+      try {
+        const m = await measureWasm(root + art.path);
+        const pct = pctOf(m.raw, gate.raw);
+        el.querySelector('[data-stat]').textContent = `${formatBytes(m.raw)} raw` + (m.gzip != null ? ` · ${formatBytes(m.gzip)} gzip` : '');
+        const bar = el.querySelector('[data-bar]');
+        bar.classList.add(m.raw <= gate.raw && (m.gzip == null || m.gzip <= gate.gzip) ? 'ok' : 'warn');
+        requestAnimationFrame(() => { bar.firstElementChild.style.width = `${Math.max(4, pct)}%`; });
+      } catch (err) {
+        el.querySelector('[data-stat]').textContent = 'not served on this host yet';
+      }
+    }
+
+    const cvs = document.getElementById('constellation');
+    const ctx = cvs.getContext('2d');
+    const nodes = Array.from({ length: 36 }, () => ({
+      x: Math.random(), y: Math.random(), vx: (Math.random() - 0.5) * 0.00025, vy: (Math.random() - 0.5) * 0.00025
+    }));
+    function resize() {
+      cvs.width = cvs.clientWidth * devicePixelRatio;
+      cvs.height = cvs.clientHeight * devicePixelRatio;
+    }
+    function tick() {
+      const w = cvs.width, h = cvs.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(34,211,238,0.7)';
+      ctx.strokeStyle = 'rgba(167,139,250,0.18)';
+      ctx.lineWidth = devicePixelRatio;
+      nodes.forEach((n) => {
+        n.x = (n.x + n.vx + 1) % 1;
+        n.y = (n.y + n.vy + 1) % 1;
+      });
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
+          const d = Math.hypot(dx, dy);
+          if (d < 0.22) {
+            ctx.globalAlpha = (0.22 - d) / 0.22;
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x * w, nodes[i].y * h);
+            ctx.lineTo(nodes[j].x * w, nodes[j].y * h);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+      nodes.forEach((n) => {
+        ctx.beginPath();
+        ctx.arc(n.x * w, n.y * h, 2.2 * devicePixelRatio, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      requestAnimationFrame(tick);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    tick();
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # QualiaDB WebAssembly API & Integration Guide
 
-**Version:** 0.0.33 | **Branch:** `0.0.33`
+**Version:** 0.0.37 | **Branch:** `0.0.37`
 **Primary artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm` (`--features portal`)  
 **Playground artifact:** `docs/playground/qualia_core_db.js` (`--features wasm-full`)  
 **Portal manual:** [`qualia-wasm-portal.md`](qualia-wasm-portal.md)
