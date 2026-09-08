@@ -5092,6 +5092,231 @@ fn named(id: &str) -> Option<Presentation> {
             "Declare a scope via Capability.declare.",
             Proficiency::Novice,
         ),
+        "health:med_live_tanimoto" => (
+            "Tanimoto",
+            "Fingerprint Tanimoto via Medical.tanimoto.",
+            Proficiency::Novice,
+        ),
+        "health:med_live_fingerprint" => (
+            "Structural fingerprint",
+            "Morgan-style bits via Medical.structural_fingerprint.",
+            Proficiency::Intermediate,
+        ),
+        "health:med_live_intensity" => (
+            "Intensity grid",
+            "Histogram via Medical.analyze_intensity_grid.",
+            Proficiency::Novice,
+        ),
+        "health:med_live_differential" => (
+            "Differential analysis",
+            "Bayes update via MedicalComputing.analyze_differential.",
+            Proficiency::Expert,
+        ),
+        "health:med_live_screen" => (
+            "Screen compounds",
+            "Screen via MedicalComputing.screen_compounds.",
+            Proficiency::Expert,
+        ),
+        "spatial:manifold_live_axes" => (
+            "Manifold axes",
+            "Axis taxonomy via Manifold.axes.",
+            Proficiency::Novice,
+        ),
+        "spatial:manifold_live_distance" => (
+            "Manifold distance",
+            "10-D distance via Manifold.distance.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:manifold_live_project" => (
+            "Manifold project",
+            "Desk projection via Manifold.project.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:crypto_live_sha256" => (
+            "SHA-256",
+            "SHA-256 of a string via QuantumAndCryptographic.sha256.",
+            Proficiency::Novice,
+        ),
+        "scientific:crypto_live_sha512" => (
+            "SHA-512",
+            "SHA-512 via QuantumAndCryptographic.sha512.",
+            Proficiency::Novice,
+        ),
+        "scientific:crypto_live_blake3" => (
+            "BLAKE3",
+            "BLAKE3 via QuantumAndCryptographic.blake3.",
+            Proficiency::Novice,
+        ),
+        "scientific:gemm_live" => (
+            "GEMM (CPU)",
+            "CPU GEMM via LinearAlgebra.gemm (no Host-widen).",
+            Proficiency::Intermediate,
+        ),
+        "scientific:privacy_live_gaussian" => (
+            "Gaussian sigma",
+            "(ε, δ)-DP sigma via Privacy.gaussian_sigma.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:sentinel_live_gate" => (
+            "Sentinel gate",
+            "Privilege gate via Sentinel.gate.",
+            Proficiency::Novice,
+        ),
+        "ai:disc_live_catalog" => (
+            "Capability catalog",
+            "TTL catalog via CapabilityDiscovery.catalog.",
+            Proficiency::Novice,
+        ),
+        "ai:disc_live_coverage" => (
+            "Capability coverage",
+            "Coverage matrix via CapabilityDiscovery.coverage.",
+            Proficiency::Novice,
+        ),
+        "ai:dag_live_execute" => (
+            "DAG execute",
+            "Execute a DAG via agent.dag.execute.",
+            Proficiency::Expert,
+        ),
+        "ai:dag_live_validate" => (
+            "DAG validate",
+            "Validate a DAG via agent.dag.validate.",
+            Proficiency::Intermediate,
+        ),
+        "ai:dag_live_status" => (
+            "DAG status",
+            "Executor status via agent.dag.status.",
+            Proficiency::Novice,
+        ),
+        "econ:fm_live_black_scholes" => (
+            "Black–Scholes",
+            "ATM call via FinancialModeling.black_scholes.",
+            Proficiency::Intermediate,
+        ),
+        "econ:fm_live_portfolio_risk" => (
+            "Portfolio risk",
+            "Risk from prices via FinancialModeling.portfolio_risk.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_bio_align" => (
+            "Bioinformatics align",
+            "SW align via Bioinformatics.align.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_dmp" => (
+            "Discrete maximum principle",
+            "DMP check via Calculus.discrete_maximum_principle_holds.",
+            Proficiency::Expert,
+        ),
+        "scientific:longtail_poisson" => (
+            "Poisson Dirichlet",
+            "Poisson solve via Calculus.solve_poisson_dirichlet.",
+            Proficiency::Expert,
+        ),
+        "scientific:longtail_t_norm" => (
+            "Gödel t-norm",
+            "Gödel t-norm via CausalFuzzyAndControl.t_norm.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_parse_bse" => (
+            "Parse BSE JSON",
+            "Basis set via Chemistry.parse_bse_json.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_conduction" => (
+            "1-D conduction",
+            "Conduction via EngineeringAnalysis.analyze_conduction.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_fem" => (
+            "FEM static",
+            "Truss FEM via EngineeringAnalysis.fem_static.",
+            Proficiency::Expert,
+        ),
+        "scientific:longtail_simpson" => (
+            "Simpson integral",
+            "Simpson via NumericalCalculus.simpson.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_ontology" => (
+            "Ontology align",
+            "Align via OntologyAlignment.align.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_units" => (
+            "Convert units",
+            "Unit convert via PhysicalUnits.convert.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_projectile" => (
+            "Projectile",
+            "Ballistics via PhysicsAndODE.projectile.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_poly_coeffs" => (
+            "Polynomial coeffs",
+            "Coeffs via PolynomialAlgebra.coeffs.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_bessel" => (
+            "Bessel J",
+            "J_n via SpecialFunctionsAndTransforms.bessel_j.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_ltl_finally" => (
+            "LTL finally",
+            "F(φ) via TemporalAndDescriptionLogic.ltl.finally.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_ltl_globally" => (
+            "LTL globally",
+            "G(φ) via TemporalAndDescriptionLogic.ltl.globally.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_hash_iri" => (
+            "Hash IRI",
+            "60-bit FNV via hash.iri.",
+            Proficiency::Novice,
+        ),
+        "econ:wealth_live_aggregate" => (
+            "Aggregate wealth",
+            "Availability via Econ.aggregate_wealth.",
+            Proficiency::Novice,
+        ),
+        "econ:wealth_live_cumulative" => (
+            "Cumulative wealth",
+            "Wealth path via Econ.cumulative_wealth.",
+            Proficiency::Novice,
+        ),
+        "econ:wealth_live_narrative" => (
+            "Econ narrative divergence",
+            "Availability via Econ.narrative_divergence.",
+            Proficiency::Novice,
+        ),
+        "comm:net_live_peer_hash" => (
+            "Peer hash",
+            "DID hash via Net.peer_hash.",
+            Proficiency::Novice,
+        ),
+        "comm:net_live_sonic_pack" => (
+            "Sonic pack",
+            "Packed sonic token via Net.sonic_pack.",
+            Proficiency::Novice,
+        ),
+        "rights:id_live_agency" => (
+            "Agency evaluate",
+            "Ed25519 agency via Agency.evaluate.",
+            Proficiency::Expert,
+        ),
+        "rights:id_live_parse_did" => (
+            "Parse did:q42",
+            "Parse via ContractsIdentityAndConsensus.parse_did_q42.",
+            Proficiency::Novice,
+        ),
+        "rights:id_live_board_project" => (
+            "Board project",
+            "Kanban via CooperativeWork.board_project.",
+            Proficiency::Intermediate,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

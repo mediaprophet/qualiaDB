@@ -2520,6 +2520,24 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
                 },
                 super::register_wave37_live::graph_reason_tools(),
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:crypto_priv".into(),
+                    label: "Live crypto, GEMM, privacy, sentinel".into(),
+                    icon: "lab".into(),
+                    description: "Host-bound hash / LinearAlgebra.gemm / Privacy / Sentinel leftovers.".into(),
+                },
+                super::register_wave38_live::crypto_priv_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:longtail".into(),
+                    label: "Live scientific long-tail".into(),
+                    icon: "lab".into(),
+                    description: "Remaining curated Host singles (bio, calculus, units, LTL, hash.iri).".into(),
+                },
+                super::register_wave39_live::longtail_tools(),
+            ),
         ],
     ));
 }

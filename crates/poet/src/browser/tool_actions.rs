@@ -1028,6 +1028,51 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "ai:cap_live_test_gating"
         | "ai:cap_live_audit"
         | "ai:cap_live_declare"
+        | "health:med_live_tanimoto"
+        | "health:med_live_fingerprint"
+        | "health:med_live_intensity"
+        | "health:med_live_differential"
+        | "health:med_live_screen"
+        | "spatial:manifold_live_axes"
+        | "spatial:manifold_live_distance"
+        | "spatial:manifold_live_project"
+        | "scientific:crypto_live_sha256"
+        | "scientific:crypto_live_sha512"
+        | "scientific:crypto_live_blake3"
+        | "scientific:gemm_live"
+        | "scientific:privacy_live_gaussian"
+        | "scientific:sentinel_live_gate"
+        | "ai:disc_live_catalog"
+        | "ai:disc_live_coverage"
+        | "ai:dag_live_execute"
+        | "ai:dag_live_validate"
+        | "ai:dag_live_status"
+        | "econ:fm_live_black_scholes"
+        | "econ:fm_live_portfolio_risk"
+        | "scientific:longtail_bio_align"
+        | "scientific:longtail_dmp"
+        | "scientific:longtail_poisson"
+        | "scientific:longtail_t_norm"
+        | "scientific:longtail_parse_bse"
+        | "scientific:longtail_conduction"
+        | "scientific:longtail_fem"
+        | "scientific:longtail_simpson"
+        | "scientific:longtail_ontology"
+        | "scientific:longtail_units"
+        | "scientific:longtail_projectile"
+        | "scientific:longtail_poly_coeffs"
+        | "scientific:longtail_bessel"
+        | "scientific:longtail_ltl_finally"
+        | "scientific:longtail_ltl_globally"
+        | "scientific:longtail_hash_iri"
+        | "econ:wealth_live_aggregate"
+        | "econ:wealth_live_cumulative"
+        | "econ:wealth_live_narrative"
+        | "comm:net_live_peer_hash"
+        | "comm:net_live_sonic_pack"
+        | "rights:id_live_agency"
+        | "rights:id_live_parse_did"
+        | "rights:id_live_board_project"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3898,6 +3943,99 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "ai:cap_live_audit" => super::wave37_chain_actions::run_cap_audit(document, label),
         "ai:cap_live_declare" => super::wave37_chain_actions::run_cap_declare(document, label),
+        "health:med_live_tanimoto" => super::wave38_chain_actions::run_tanimoto(document, label),
+        "health:med_live_fingerprint" => {
+            super::wave38_chain_actions::run_structural_fingerprint(document, label)
+        }
+        "health:med_live_intensity" => {
+            super::wave38_chain_actions::run_analyze_intensity_grid(document, label)
+        }
+        "health:med_live_differential" => {
+            super::wave38_chain_actions::run_analyze_differential(document, label)
+        }
+        "health:med_live_screen" => {
+            super::wave38_chain_actions::run_screen_compounds(document, label)
+        }
+        "spatial:manifold_live_axes" => {
+            super::wave38_chain_actions::run_manifold_axes(document, label)
+        }
+        "spatial:manifold_live_distance" => {
+            super::wave38_chain_actions::run_manifold_distance(document, label)
+        }
+        "spatial:manifold_live_project" => {
+            super::wave38_chain_actions::run_manifold_project(document, label)
+        }
+        "scientific:crypto_live_sha256" => super::wave38_chain_actions::run_sha256(document, label),
+        "scientific:crypto_live_sha512" => super::wave38_chain_actions::run_sha512(document, label),
+        "scientific:crypto_live_blake3" => super::wave38_chain_actions::run_blake3(document, label),
+        "scientific:gemm_live" => super::wave38_chain_actions::run_gemm(document, label),
+        "scientific:privacy_live_gaussian" => {
+            super::wave38_chain_actions::run_gaussian_sigma(document, label)
+        }
+        "scientific:sentinel_live_gate" => {
+            super::wave38_chain_actions::run_sentinel_gate(document, label)
+        }
+        "ai:disc_live_catalog" => super::wave38_chain_actions::run_cap_catalog(document, label),
+        "ai:disc_live_coverage" => super::wave38_chain_actions::run_cap_coverage(document, label),
+        "ai:dag_live_execute" => super::wave38_chain_actions::run_dag_execute(document, label),
+        "ai:dag_live_validate" => super::wave38_chain_actions::run_dag_validate(document, label),
+        "ai:dag_live_status" => super::wave38_chain_actions::run_dag_status(document, label),
+        "econ:fm_live_black_scholes" => {
+            super::wave38_chain_actions::run_fm_black_scholes(document, label)
+        }
+        "econ:fm_live_portfolio_risk" => {
+            super::wave38_chain_actions::run_fm_portfolio_risk(document, label)
+        }
+        "scientific:longtail_bio_align" => {
+            super::wave39_chain_actions::run_bio_align(document, label)
+        }
+        "scientific:longtail_dmp" => super::wave39_chain_actions::run_dmp_holds(document, label),
+        "scientific:longtail_poisson" => super::wave39_chain_actions::run_poisson(document, label),
+        "scientific:longtail_t_norm" => super::wave39_chain_actions::run_t_norm(document, label),
+        "scientific:longtail_parse_bse" => {
+            super::wave39_chain_actions::run_parse_bse(document, label)
+        }
+        "scientific:longtail_conduction" => {
+            super::wave39_chain_actions::run_analyze_conduction(document, label)
+        }
+        "scientific:longtail_fem" => super::wave39_chain_actions::run_fem_static(document, label),
+        "scientific:longtail_simpson" => super::wave39_chain_actions::run_simpson(document, label),
+        "scientific:longtail_ontology" => {
+            super::wave39_chain_actions::run_ontology_align(document, label)
+        }
+        "scientific:longtail_units" => {
+            super::wave39_chain_actions::run_units_convert(document, label)
+        }
+        "scientific:longtail_projectile" => {
+            super::wave39_chain_actions::run_projectile(document, label)
+        }
+        "scientific:longtail_poly_coeffs" => {
+            super::wave39_chain_actions::run_poly_coeffs(document, label)
+        }
+        "scientific:longtail_bessel" => super::wave39_chain_actions::run_bessel_j(document, label),
+        "scientific:longtail_ltl_finally" => {
+            super::wave39_chain_actions::run_ltl_finally(document, label)
+        }
+        "scientific:longtail_ltl_globally" => {
+            super::wave39_chain_actions::run_ltl_globally(document, label)
+        }
+        "scientific:longtail_hash_iri" => super::wave39_chain_actions::run_hash_iri(document, label),
+        "econ:wealth_live_aggregate" => {
+            super::wave39_chain_actions::run_econ_aggregate_wealth(document, label)
+        }
+        "econ:wealth_live_cumulative" => {
+            super::wave39_chain_actions::run_econ_cumulative_wealth(document, label)
+        }
+        "econ:wealth_live_narrative" => {
+            super::wave39_chain_actions::run_econ_narrative_divergence(document, label)
+        }
+        "comm:net_live_peer_hash" => super::wave39_chain_actions::run_peer_hash(document, label),
+        "comm:net_live_sonic_pack" => super::wave39_chain_actions::run_sonic_pack(document, label),
+        "rights:id_live_agency" => super::wave39_chain_actions::run_agency_evaluate(document, label),
+        "rights:id_live_parse_did" => super::wave39_chain_actions::run_parse_did(document, label),
+        "rights:id_live_board_project" => {
+            super::wave39_chain_actions::run_board_project(document, label)
+        }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
         "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),

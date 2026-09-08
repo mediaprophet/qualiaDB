@@ -155,6 +155,8 @@ mod gpu_live_chain_actions;
 mod gpu_live2_chain_actions;
 mod wave36_chain_actions;
 mod wave37_chain_actions;
+mod wave38_chain_actions;
+mod wave39_chain_actions;
 mod ode_chain_actions;
 mod agent_chain_actions;
 mod cooperative_chain_actions;

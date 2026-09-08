@@ -67,6 +67,8 @@ evidence.
 | 53 | Q1/Q2 wave 35 | **Complete** | Remaining Render GPU/EMF +17 (GPU leftover Q2 exhausted); Host none | Closed — wave 35 |
 | 54 | Q1/Q2 wave 36 | **Complete** | Social/Forensic +6 · Finance +3 · Corpus/ChatGraph/Interactive/SecondScreen +7; Host none | Closed — wave 36 |
 | 55 | Q1/Q2 wave 37 | **Complete** | GraphMatch/GraphReasoning/Optimization +9 · sampler/Capability +10; Host none | Closed — wave 37 |
+| 56 | Q1/Q2 wave 38 | **Complete** | Medical/MedicalComputing +5 · Manifold +3 · crypto/GEMM/Privacy/Sentinel +6 · discovery/DAG +5 · FinancialModeling +2; Host none | Closed — wave 38 |
+| 57 | Q1/Q2 wave 39 | **Complete** | Remaining curated Host singles +24 (helper-aware Q2 exhausted); Host none | Closed — wave 39 |
 
 ## Latest execution evidence
 

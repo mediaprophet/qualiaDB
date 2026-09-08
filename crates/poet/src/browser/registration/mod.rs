@@ -31,6 +31,8 @@ mod register_wave33_live;
 mod register_gpu_live;
 mod register_wave36_live;
 mod register_wave37_live;
+mod register_wave38_live;
+mod register_wave39_live;
 mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
@@ -4588,6 +4590,96 @@ mod tests {
         assert!(sampler.tools().iter().any(|t| {
             t.metadata().id == "ai:sampler_live_configure"
                 && t.metadata().capability_scope.as_deref() == Some("sampler.configure")
+        }));
+    }
+
+    #[test]
+    fn wave38_binds_med_manifold_crypto_dag_fm_caps() {
+        let registry = super::build_registry();
+        let health = registry.toolbox("health").expect("health toolbox");
+        let med = health
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "health:med_live")
+            .expect("health:med_live toolchain");
+        assert_eq!(med.tools().len(), 5);
+        assert!(med.tools().iter().any(|t| {
+            t.metadata().id == "health:med_live_tanimoto"
+                && t.metadata().capability_scope.as_deref() == Some("Medical.tanimoto")
+        }));
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let manifold = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:manifold_live")
+            .expect("spatial:manifold_live toolchain");
+        assert_eq!(manifold.tools().len(), 3);
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let crypto = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:crypto_priv")
+            .expect("scientific:crypto_priv toolchain");
+        assert_eq!(crypto.tools().len(), 6);
+        assert!(crypto.tools().iter().any(|t| {
+            t.metadata().id == "scientific:gemm_live"
+                && t.metadata().capability_scope.as_deref() == Some("LinearAlgebra.gemm")
+        }));
+        let ai = registry.toolbox("ai").expect("ai toolbox");
+        let disc = ai
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "ai:disc_dag")
+            .expect("ai:disc_dag toolchain");
+        assert_eq!(disc.tools().len(), 5);
+        let econ = registry.toolbox("econ").expect("econ toolbox");
+        let fm = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "econ:fm_live")
+            .expect("econ:fm_live toolchain");
+        assert_eq!(fm.tools().len(), 2);
+    }
+
+    #[test]
+    fn wave39_binds_remaining_curated_q2_singles() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let longtail = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:longtail")
+            .expect("scientific:longtail toolchain");
+        assert_eq!(longtail.tools().len(), 16);
+        assert!(longtail.tools().iter().any(|t| {
+            t.metadata().id == "scientific:longtail_ltl_finally"
+                && t.metadata().capability_scope.as_deref()
+                    == Some("TemporalAndDescriptionLogic.ltl.finally")
+        }));
+        let econ = registry.toolbox("econ").expect("econ toolbox");
+        let wealth = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "econ:wealth_live")
+            .expect("econ:wealth_live toolchain");
+        assert_eq!(wealth.tools().len(), 3);
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let net = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:net_live")
+            .expect("comm:net_live toolchain");
+        assert_eq!(net.tools().len(), 2);
+        let rights = registry.toolbox("rights").expect("rights toolbox");
+        let id_live = rights
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "rights:id_live")
+            .expect("rights:id_live toolchain");
+        assert_eq!(id_live.tools().len(), 3);
+        assert!(id_live.tools().iter().any(|t| {
+            t.metadata().id == "rights:id_live_agency"
+                && t.metadata().capability_scope.as_deref() == Some("Agency.evaluate")
         }));
     }
 }

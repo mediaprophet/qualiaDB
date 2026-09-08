@@ -708,6 +708,15 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
             ),
             ToolChain::new(
                 ToolChainMetadata {
+                    id: "spatial:manifold_live".into(),
+                    label: "Live Manifold".into(),
+                    icon: "3d".into(),
+                    description: "Host-bound Manifold.axes / distance / project leftovers.".into(),
+                },
+                super::register_wave38_live::manifold_live_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
                     id: "spatial:tools".into(),
                     label: "GIS Maps & Tracking".into(),
                     icon: "tools".into(),

@@ -295,6 +295,15 @@ pub(super) fn register_communication_toolbox(reg: &mut Registry) {
                 },
                 super::register_wave36_live::graph_live_tools(),
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "comm:net_live".into(),
+                    label: "Live Net remainder".into(),
+                    icon: "comm".into(),
+                    description: "Host-bound Net.peer_hash / sonic_pack leftovers.".into(),
+                },
+                super::register_wave39_live::net_live_tools(),
+            ),
         ],
     ));
 }

@@ -19,6 +19,9 @@
 | 34 | **Complete (integrated)** | Already-bound Render.gpu_* honest Live ×17 |
 | 35 | **Complete (integrated)** | Remaining Render GPU/EMF ×17 — **GPU leftover Q2 exhausted** |
 | 36 | **Complete (integrated)** | Social/Forensic×6 · Finance×3 · Corpus/ChatGraph/Interactive/SecondScreen×7 |
+| 37 | **Complete (integrated)** | GraphMatch/GraphReasoning/Optimization×9 · sampler/Capability×10 |
+| 38 | **Complete (integrated)** | Medical/MedicalComputing×5 · Manifold×3 · crypto/GEMM/Privacy/Sentinel×6 · discovery/DAG×5 · FinancialModeling×2 |
+| 39 | **Complete (integrated)** | Remaining curated Host singles×24 — **curated Q2 exhausted** |
 
 ### Wave 27 (this session)
 
@@ -29,21 +32,19 @@
 
 ## Remaining waves (estimate)
 
-| Bucket | Count (post-w27) | Notes |
+| Bucket | Count (post-w39) | Notes |
 |--------|------------------|-------|
-| **Q2 Host-bound not Live** | **≈184** (post-w31) | CG remainder ~24, Animation leftovers, long-tail |
-| Large families | Research 53, Render CPU first then GPU already-bound Live, CG leftovers 49 | ~8 more Live waves |
+| **Q2 Host-bound not Live** | **0** (pending parent leftover inventory) | Curated Host `Family.method` Live dual-path exhausted |
 | **Q1 Host-missing** | **~12k** | Not in scope |
 
 **Not in that estimate:** exhaustively Host-binding all of Q1 CoreDb.
 
 ## How to continue
 
-1. Wave 28–29: Research remainder (~53) on `research:live`.
-2. Wave 30: Render CPU (css/svg/animation/scene/emf) as `render:live_*`.
-3. Wave 31+: CG Host leftovers Live, Image/Animation/Constructibility/CV/Clinical/Ode/HbbTV long-tail.
-4. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
-5. **Never `Proficiency::Advanced`.** Dual-path. Exact Host scopes. Skip GPU Host-widen. Skip `LinearAlgebra.gemm` Host. Avoid `centrepoint`.
+1. Confirm leftover inventory is 0 (ALL_BOUND const-map vs poet `Family.method` strings, allowing extra dots).
+2. Do **not** exhaustively Host-bind remaining Q1 CoreDb.
+3. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
+4. **Never `Proficiency::Advanced`.** Dual-path. Exact Host scopes. Skip GPU Host-widen. Skip `LinearAlgebra.gemm` Host-widen. Avoid `centrepoint`.
 
 ## Register / ledger
 

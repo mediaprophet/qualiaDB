@@ -184,6 +184,15 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
                 },
                 tools,
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "health:med_live".into(),
+                    label: "Live medical remainder".into(),
+                    icon: "health".into(),
+                    description: "Host-bound Medical.* and MedicalComputing leftovers.".into(),
+                },
+                super::register_wave38_live::med_live_tools(),
+            ),
         ],
     ));
 }

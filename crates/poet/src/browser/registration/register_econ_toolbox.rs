@@ -1382,6 +1382,24 @@ pub(super) fn register_econ_toolbox(reg: &mut Registry) {
                 },
                 super::register_wave36_live::finance_tools(),
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "econ:fm_live".into(),
+                    label: "Live financial modeling".into(),
+                    icon: "finance".into(),
+                    description: "Host-bound FinancialModeling.black_scholes / portfolio_risk leftovers.".into(),
+                },
+                super::register_wave38_live::fm_live_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "econ:wealth_live".into(),
+                    label: "Live wealth remainder".into(),
+                    icon: "finance".into(),
+                    description: "Host-bound Econ.aggregate_wealth / cumulative_wealth / narrative_divergence leftovers.".into(),
+                },
+                super::register_wave39_live::wealth_live_tools(),
+            ),
         ],
     ));
 }

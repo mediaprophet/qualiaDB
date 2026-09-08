@@ -107,6 +107,15 @@ pub(super) fn register_rights_toolbox(reg: &mut Registry) {
                     ActionType::Query,
                 ))],
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "rights:id_live".into(),
+                    label: "Live agency & cooperative board".into(),
+                    icon: "evaluate".into(),
+                    description: "Host-bound Agency.evaluate, parse_did_q42, CooperativeWork.board_project leftovers.".into(),
+                },
+                super::register_wave39_live::id_live_tools(),
+            ),
         ],
     ));
 }

@@ -1514,6 +1514,15 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
                 },
                 super::register_wave37_live::sampler_cap_tools(),
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:disc_dag".into(),
+                    label: "Live discovery & DAG".into(),
+                    icon: "ai".into(),
+                    description: "Host-bound CapabilityDiscovery.* and agent.dag leftovers.".into(),
+                },
+                super::register_wave38_live::disc_dag_tools(),
+            ),
         ],
     ));
 }
