@@ -47,7 +47,7 @@ pub(super) fn crypto_priv_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::
         live_tool("scientific:crypto_live_sha256", "SHA-256", "QuantumAndCryptographic.sha256", "SHA-256 of a string via QuantumAndCryptographic.sha256.", "lab", "sci"),
         live_tool("scientific:crypto_live_sha512", "SHA-512", "QuantumAndCryptographic.sha512", "SHA-512 via QuantumAndCryptographic.sha512.", "lab", "sci"),
         live_tool("scientific:crypto_live_blake3", "BLAKE3", "QuantumAndCryptographic.blake3", "BLAKE3 via QuantumAndCryptographic.blake3.", "lab", "sci"),
-        live_tool("scientific:gemm_live", "GEMM (CPU)", "LinearAlgebra.gemm", "CPU GEMM via LinearAlgebra.gemm (no Host-widen).", "lab", "sci"),
+        live_tool("scientific:gemm_live", "GEMM", "LinearAlgebra.gemm", "BLAS GEMM via LinearAlgebra.gemm (solver CPU floor, GPU when present).", "lab", "sci"),
         live_tool("scientific:privacy_live_gaussian", "Gaussian sigma", "Privacy.gaussian_sigma", "(ε, δ)-DP sigma via Privacy.gaussian_sigma.", "lab", "sci"),
         live_tool("scientific:sentinel_live_gate", "Sentinel gate", "Sentinel.gate", "Privilege gate via Sentinel.gate.", "lab", "sci"),
     ]

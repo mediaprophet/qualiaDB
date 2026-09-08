@@ -1341,6 +1341,31 @@ fn named(id: &str) -> Option<Presentation> {
             "Closed-form eigenvalues of a symmetric 3×3 matrix.",
             Proficiency::Intermediate,
         ),
+        "scientific:la_dot" => (
+            "Dot product",
+            "Inner product via LinearAlgebra.dot.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_norm" => (
+            "L2 norm",
+            "Euclidean length via LinearAlgebra.norm.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_trace" => (
+            "Trace",
+            "Diagonal sum via LinearAlgebra.trace.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_identity" => (
+            "Identity",
+            "n×n identity via LinearAlgebra.identity.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_inverse" => (
+            "Inverse",
+            "Dense inverse via LinearAlgebra.inverse (fails if singular).",
+            Proficiency::Intermediate,
+        ),
         "scientific:chem_boys" => (
             "Boys function",
             "Evaluate Boys F_n(t) from data-n/data-t or two surface numbers.",
@@ -5148,8 +5173,8 @@ fn named(id: &str) -> Option<Presentation> {
             Proficiency::Novice,
         ),
         "scientific:gemm_live" => (
-            "GEMM (CPU)",
-            "CPU GEMM via LinearAlgebra.gemm (no Host-widen).",
+            "GEMM",
+            "BLAS GEMM via LinearAlgebra.gemm (solver CPU floor, GPU when present).",
             Proficiency::Intermediate,
         ),
         "scientific:privacy_live_gaussian" => (

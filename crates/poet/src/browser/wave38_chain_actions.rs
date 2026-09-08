@@ -152,13 +152,7 @@ pub(super) fn run_blake3(document: &Document, label: &str) {
 }
 
 pub(super) fn run_gemm(document: &Document, label: &str) {
-    invoke_dual(
-        document,
-        label,
-        "LinearAlgebra.gemm",
-        "LinearAlgebra.gemm CPU sketch 1x1".to_string(),
-        json!({ "a": { "rows": 1, "cols": 1, "data": [2.0] }, "b": { "rows": 1, "cols": 1, "data": [3.0] }, "alpha": 1.0, "beta": 0.0 }),
-    );
+    super::linalg_app_chain_actions::run_gemm(document, label);
 }
 
 pub(super) fn run_gaussian_sigma(document: &Document, label: &str) {

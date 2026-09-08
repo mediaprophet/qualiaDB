@@ -397,6 +397,66 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
             },
             ActionType::Invoke,
         )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_dot".into(),
+                label: "Dot product".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.dot".into()),
+                ontology_prefix: "sci".into(),
+                description: "Inner product of two equal-length vectors.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_norm".into(),
+                label: "L2 norm".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.norm".into()),
+                ontology_prefix: "sci".into(),
+                description: "Euclidean length of a vector.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_trace".into(),
+                label: "Trace".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.trace".into()),
+                ontology_prefix: "sci".into(),
+                description: "Sum of diagonal entries of a square matrix.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_identity".into(),
+                label: "Identity".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.identity".into()),
+                ontology_prefix: "sci".into(),
+                description: "n×n identity (n from data-n, max 256).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_inverse".into(),
+                label: "Inverse".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.inverse".into()),
+                ontology_prefix: "sci".into(),
+                description: "Dense inverse via LU; fails closed if singular.".into(),
+            },
+            ActionType::Invoke,
+        )),
     ];
 
     let physics_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![

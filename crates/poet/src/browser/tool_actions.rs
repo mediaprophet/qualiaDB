@@ -511,6 +511,11 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "scientific:la_polynomial_roots"
             | "scientific:la_solve_linear_system"
             | "scientific:la_symmetric_eigen_3x3"
+            | "scientific:la_dot"
+            | "scientific:la_norm"
+            | "scientific:la_trace"
+            | "scientific:la_identity"
+            | "scientific:la_inverse"
             | "scientific:chem_boys"
             | "scientific:chem_overlap_s"
             | "scientific:chem_kinetic_s"
@@ -2668,6 +2673,11 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "scientific:la_symmetric_eigen_3x3" => {
             super::linalg_chain_actions::run_symmetric_eigen_3x3(document, label)
         }
+        "scientific:la_dot" => super::linalg_app_chain_actions::run_dot(document, label),
+        "scientific:la_norm" => super::linalg_app_chain_actions::run_norm(document, label),
+        "scientific:la_trace" => super::linalg_app_chain_actions::run_trace(document, label),
+        "scientific:la_identity" => super::linalg_app_chain_actions::run_identity(document, label),
+        "scientific:la_inverse" => super::linalg_app_chain_actions::run_inverse(document, label),
         "scientific:chem_boys" => {
             super::chem_chain_actions::run_boys_function(document, label)
         }
@@ -3968,7 +3978,7 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "scientific:crypto_live_sha256" => super::wave38_chain_actions::run_sha256(document, label),
         "scientific:crypto_live_sha512" => super::wave38_chain_actions::run_sha512(document, label),
         "scientific:crypto_live_blake3" => super::wave38_chain_actions::run_blake3(document, label),
-        "scientific:gemm_live" => super::wave38_chain_actions::run_gemm(document, label),
+        "scientific:gemm_live" => super::linalg_app_chain_actions::run_gemm(document, label),
         "scientific:privacy_live_gaussian" => {
             super::wave38_chain_actions::run_gaussian_sigma(document, label)
         }

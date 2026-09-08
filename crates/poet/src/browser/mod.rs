@@ -111,6 +111,7 @@ mod inference_remainder_chain_actions;
 mod stats_chain_actions;
 mod poly_chain_actions;
 mod linalg_chain_actions;
+mod linalg_app_chain_actions;
 mod chem_chain_actions;
 mod sf_chain_actions;
 mod calc_chain_actions;

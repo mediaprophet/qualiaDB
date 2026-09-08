@@ -2119,6 +2119,46 @@ mod tests {
             "scientific:la_symmetric_eigen_3x3",
             Some("LinearAlgebra.symmetric_eigen_3x3")
         )));
+        assert!(tools.contains(&("scientific:la_dot", Some("LinearAlgebra.dot"))));
+        assert!(tools.contains(&("scientific:la_norm", Some("LinearAlgebra.norm"))));
+        assert!(tools.contains(&("scientific:la_trace", Some("LinearAlgebra.trace"))));
+        assert!(tools.contains(&(
+            "scientific:la_identity",
+            Some("LinearAlgebra.identity")
+        )));
+        assert!(tools.contains(&("scientific:la_inverse", Some("LinearAlgebra.inverse"))));
+    }
+
+    #[test]
+    fn wave40_binds_linear_algebra_app_primitives() {
+        let registry = super::build_registry();
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:linalg")
+            .expect("scientific:linalg toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("scientific:la_dot", Some("LinearAlgebra.dot"))));
+        assert!(tools.contains(&("scientific:la_inverse", Some("LinearAlgebra.inverse"))));
+        let crypto = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:crypto_priv")
+            .expect("scientific:crypto_priv toolchain");
+        assert!(crypto.tools().iter().any(|t| {
+            t.metadata().id == "scientific:gemm_live"
+                && t.metadata().capability_scope.as_deref() == Some("LinearAlgebra.gemm")
+        }));
     }
 
     #[test]
