@@ -315,12 +315,19 @@ fn main() {
         PathBuf::from("docs/vibe/dev-docs.json")
     };
 
-    // Find vibe source directory
+    // Find vibe source directory. Engine lives at crates/vibe (legacy sibling
+    // checkout was crates/vibe-script).
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-    let vibe_src = PathBuf::from(&manifest_dir)
-        .join("..")
-        .join("vibe-script")
-        .join("src");
+    let crates_dir = PathBuf::from(&manifest_dir).join("..");
+    let vibe_src = {
+        let current = crates_dir.join("vibe").join("src");
+        let legacy = crates_dir.join("vibe-script").join("src");
+        if current.exists() {
+            current
+        } else {
+            legacy
+        }
+    };
 
     if !vibe_src.exists() {
         eprintln!("vibe source not found at {:?}", vibe_src);
@@ -328,7 +335,12 @@ fn main() {
     }
 
     eprintln!("Scanning {:?} ...", vibe_src);
-    let modules = scan_directory(&vibe_src, "");
+    let mut modules = scan_directory(&vibe_src, "");
+
+    let wasm_lib = PathBuf::from(&manifest_dir).join("src").join("lib.rs");
+    if wasm_lib.exists() {
+        modules.push(process_file(&wasm_lib, "wasm"));
+    }
 
     // Sort modules by name
     let mut module_map: BTreeMap<String, ApiModule> = BTreeMap::new();

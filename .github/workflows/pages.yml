@@ -104,6 +104,25 @@ jobs:
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features wasm-llm
 
+      - name: Build VibeScript WASM and regenerate API index
+        run: |
+          wasm-pack build crates/vibe-wasm \
+            --target web \
+            --release \
+            --out-dir ../../docs/pkg/vibe
+          rm -f docs/pkg/vibe/.gitignore docs/pkg/vibe/README.md docs/pkg/vibe/LICENSE
+          cargo run -q -p vibe-wasm --bin gen-dev-docs -- docs/vibe/dev-docs.json
+          ls -la docs/pkg/vibe/vibe_wasm.js docs/pkg/vibe/vibe_wasm_bg.wasm docs/vibe/dev-docs.json
+          node docs/tests/wasm-size-check.mjs docs/pkg/vibe/vibe_wasm_bg.wasm 2097152 786432
+          python3 - <<'PY'
+          import json, pathlib, sys
+          data = json.loads(pathlib.Path("docs/vibe/dev-docs.json").read_text())
+          if not isinstance(data, list) or len(data) < 80:
+              sys.exit(f"dev-docs.json too small: {type(data)} len={getattr(data, '__len__', lambda: '?')()}")
+          items = sum(len(m.get("items", [])) for m in data)
+          print(f"vibe API index: {len(data)} modules, {items} public items")
+          PY
+
       - name: Build ontology MCP WASM
         run: |
           wasm-pack build crates/webizen-lite-wasm \

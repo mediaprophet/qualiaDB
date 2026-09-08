@@ -176,6 +176,7 @@ title: VibeScript Playground
     <div class="pg-output-wrap">
       <div class="pg-tabs">
         <div class="pg-tab active" data-tab="result">Result</div>
+        <div class="pg-tab" data-tab="diagnose">Diagnose</div>
         <div class="pg-tab" data-tab="bytecode">Bytecode</div>
         <div class="pg-tab" data-tab="ast">AST / Check</div>
         <div class="pg-tab" data-tab="grammar">Grammar</div>
@@ -188,6 +189,7 @@ title: VibeScript Playground
     <div class="pg-footer">
       <button class="pg-btn pg-btn-primary" id="pg-run">▶ Run (Ctrl+Enter)</button>
       <button class="pg-btn" id="pg-check">✓ Check</button>
+      <button class="pg-btn" id="pg-diagnose">🩺 Diagnose</button>
       <button class="pg-btn" id="pg-bytecode">⚙ Compile</button>
       <button class="pg-btn" id="pg-encode">↓ Encode</button>
       <select id="pg-examples" class="pg-select">
@@ -211,6 +213,8 @@ title: VibeScript Playground
         <option value="tween">Tween ease</option>
         <option value="bind">Two-way bind</option>
         <option value="triple">RDF Triple</option>
+        <option value="cosmic">Cosmic geodesy</option>
+        <option value="diagnose">Diagnose E300</option>
       </select>
       <span id="pg-stats" class="pg-status"></span>
     </div>
@@ -220,6 +224,7 @@ title: VibeScript Playground
 <script type="module">
   import init, {
     language_version,
+    host_version,
     eval_cell_src,
     check_cell_src,
     parse_cell_src,
@@ -233,6 +238,7 @@ title: VibeScript Playground
     ebnf_grammar,
     gbnf_grammar,
     ast_schema_json,
+    diagnose_src,
   } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
 
   let wasmReady = false;
@@ -260,6 +266,8 @@ title: VibeScript Playground
     tween: { mode: 'program', code: 'fn main() {\n  let t = 200ms;\n  return 0.0 ~ 10.0 over 400ms ease linear;\n}' },
     bind: { mode: 'program', code: 'let volume = 1.5;\nlet slider = { value: 0.2 };\nbind slider.value <-> volume using Clamp[0, 1] resolve latest;\n\nfn main() {\n  return 1;\n}' },
     triple: { mode: 'cell', code: '= <<( <ex:s1> ex:emitsAlert ex:Overheat )>>' },
+    cosmic: { mode: 'program', code: 'using Cosmic;\n\neffect fn main() -> Record {\n  return Cosmic.geodetic_to_ecef({\n    lat_deg: -37.8,\n    lon_deg: 144.9,\n    alt_m: 0.0\n  });\n}' },
+    diagnose: { mode: 'program', code: 'effect fn main() {\n  return HID.poll();\n}\n' },
   };
 
   // Tab switching
@@ -294,8 +302,9 @@ title: VibeScript Playground
 
   // Run button
   document.getElementById('pg-run').addEventListener('click', rerun);
-  document.getElementById('pg-check').addEventListener('click', () => { currentTab = 'ast'; rerun(); });
-  document.getElementById('pg-bytecode').addEventListener('click', () => { currentTab = 'bytecode'; rerun(); });
+  document.getElementById('pg-check').addEventListener('click', () => { currentTab = 'ast'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'ast')); rerun(); });
+  document.getElementById('pg-diagnose').addEventListener('click', () => { currentTab = 'diagnose'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'diagnose')); rerun(); });
+  document.getElementById('pg-bytecode').addEventListener('click', () => { currentTab = 'bytecode'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'bytecode')); rerun(); });
   document.getElementById('pg-encode').addEventListener('click', encodeDecode);
 
   function getMode() { return modeSelect.value; }
@@ -331,6 +340,9 @@ title: VibeScript Playground
         const result = check_program_src(src);
         output.innerHTML = formatCheck(result);
       }
+    } else if (currentTab === 'diagnose') {
+      const result = diagnose_src(src);
+      output.innerHTML = formatDiagnose(result);
     } else if (currentTab === 'grammar') {
       output.innerHTML = `<div class="pg-disasm">${escapeHtml(ebnf_grammar())}</div>`;
     }
@@ -398,6 +410,14 @@ title: VibeScript Playground
     }
   }
 
+  function formatDiagnose(result) {
+    const json = JSON.stringify(result, null, 2);
+    const valid = result && result.valid === true;
+    const cls = valid ? 'pg-result' : 'pg-error';
+    const label = valid ? '✓ Diagnose valid' : '✗ Diagnose';
+    return `<div class="${cls}">${label}</div><pre class="pg-disasm">${syntaxHighlight(json)}</pre>`;
+  }
+
   function syntaxHighlight(json) {
     json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*)/g, (match) => {
@@ -425,7 +445,8 @@ title: VibeScript Playground
     try {
       await init();
       wasmReady = true;
-      document.getElementById('pg-version').textContent = `vibe-${language_version()}`;
+      document.getElementById('pg-version').textContent =
+        `${language_version()} · ${host_version()}`;
 
       // Load Monaco
       require.config({
@@ -445,7 +466,7 @@ title: VibeScript Playground
               [/"[^"]*"/, 'string'],
               [/'[^'*'/, 'string'],
               [/\b(true|false|null)\b/, 'keyword'],
-              [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction)\b/, 'keyword'],
+              [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction|using|locale|cell|present|pure)\b/, 'keyword'],
               [/\b(i64|u64|f64|string|bool|Result|Option|List|Iri)\b/, 'type'],
               [/[+\-*/%]/, 'operator'],
               [/[<>=!]=/, 'operator'],
@@ -459,7 +480,7 @@ title: VibeScript Playground
         monaco.languages.setMonarchTokensProvider('vibe-module', {
           tokenizer: {
             root: [
-              [/(module|prefix|requires|capability|import|on)\b/, 'keyword'],
+              [/(module|prefix|requires|capability|import|on|using|locale|cell|present)\b/, 'keyword'],
               [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction|pure|budget|steps)\b/, 'keyword'],
               [/\b(i64|u64|f64|string|bool|Result|Option|List|Iri|Receipt)\b/, 'type'],
               [/\d+\.\d+/, 'number.float'],

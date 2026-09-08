@@ -322,6 +322,22 @@ fn main() -> f64 {
       mode: "program",
       fn: "main",
     },
+    {
+      icon: "🌍",
+      title: "Cosmic geodesy (WGS84)",
+      badge: "program",
+      code: `using Cosmic;
+
+effect fn main() -> Record {
+  return Cosmic.geodetic_to_ecef({
+    lat_deg: -37.8,
+    lon_deg: 144.9,
+    alt_m: 0.0
+  });
+}`,
+      mode: "program",
+      fn: "main",
+    },
   ];
 
   async function run() {

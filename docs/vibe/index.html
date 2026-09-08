@@ -310,13 +310,14 @@ title: VibeScript
   <!-- Hero Section -->
   <div class="vibe-hero">
     <div class="vibe-pill">
-      <i class="fa-solid fa-bolt"></i> VibeScript 0.1 · Dialect Frozen · Zero-Heap Hot Paths
+      <i class="fa-solid fa-bolt"></i> VibeScript 0.1 · Closed grammar · Growing Host catalog
     </div>
     <h1>The Human & Machine<br>Semantic Scripting Language</h1>
     <p class="tagline">
-      A capability-bounded, typed, deterministic scripting engine built for reactive UI cells,
-      provable agent orchestration, and signed RDF/SPARQL graph transactions.
-      Complements JavaScript where ordinary web UI is useful, while making semantic data, authority, and eligible deterministic execution explicit.
+      A capability-bounded, typed, deterministic scripting engine for reactive UI cells,
+      signed agent modules, and Host-family apps (<code>using Cosmic;</code>, <code>using LinearAlgebra;</code>).
+      The grammar is closed; the Host catalog grows. Complements JavaScript for ordinary DOM work
+      while making semantic data, authority, and eligible deterministic execution explicit.
     </p>
     <div class="cta-row">
       <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-primary">
@@ -344,27 +345,27 @@ title: VibeScript
   <div class="vibe-stats-bar">
     <div class="vibe-stat-box">
       <div class="num">0.1</div>
-      <div class="label">Frozen Dialect</div>
+      <div class="label">Closed Grammar</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">0 Heap</div>
-      <div class="label">Hot-Path Eval</div>
+      <div class="num">1,107</div>
+      <div class="label">Host Invoke IDs</div>
+    </div>
+    <div class="vibe-stat-box">
+      <div class="num">105</div>
+      <div class="label">Capability Families</div>
     </div>
     <div class="vibe-stat-box">
       <div class="num">42 MB</div>
       <div class="label">Sentinel Ceiling</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">3</div>
-      <div class="label">Execution Routes</div>
+      <div class="num">41</div>
+      <div class="label">Bytecode Opcodes</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">Q42</div>
-      <div class="label">Portable Graph Volume</div>
-    </div>
-    <div class="vibe-stat-box">
-      <div class="num">Explicit</div>
-      <div class="label">Capability Boundary</div>
+      <div class="num">Four ops</div>
+      <div class="label">Parse · Check · Diagnose · Invoke</div>
     </div>
   </div>
 
@@ -379,7 +380,12 @@ title: VibeScript
       <strong>VibeScript</strong> (or <strong>Vibe</strong>) is the native scripting layer of QualiaDB and the Poet creative environment.
       It is an interpreted, typed, capability-bounded language engineered with zero heap allocations in hot paths,
       first-class RDF 1.2 and SPARQL semantics, verifiable deontic norms, and deterministic execution for eligible programs.
-      JavaScript remains useful for conventional DOM integration and its broad web ecosystem; Vibe supplies the semantic and authority-bearing layer beneath a UI.
+      The <strong>0.1 grammar is closed</strong>. The <strong>Host catalog grows</strong>:
+      more than a thousand live <code>Family.method</code> invoke ids
+      (<code>Cosmic.*</code>, <code>LinearAlgebra.*</code>, <code>GraphDatabase.*</code>, …)
+      bind through <code>using Family;</code> and <code>capability.invoke</code>.
+      Agents repair from <code>vibe::diagnose(src)</code> JSON. JavaScript remains useful for conventional DOM work;
+      Vibe supplies the semantic and authority-bearing layer beneath a UI.
     </p>
 
     <!-- Three Main Roles -->
@@ -547,7 +553,17 @@ title: VibeScript
       <div class="vibe-feature-item">
         <div class="icon">⚡</div>
         <h3>Stack Bytecode VM</h3>
-        <p>VBC1 stack-based bytecode compiler and VM with 35 opcodes for instant zero-copy serialization and deterministic sandboxed execution.</p>
+        <p>VBC1 stack-based bytecode compiler and VM with 41 opcodes for instant zero-copy serialization and deterministic sandboxed execution.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">🩺</div>
+        <h3>Diagnose JSON</h3>
+        <p>Agent loop is <code>vibe::diagnose(src)</code> → <code>error_code</code>, byte <code>span</code>, <code>suggested_fix</code>. Codes <code>E001</code>–<code>E800</code>. Invalid source is never executed.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">🌍</div>
+        <h3>Cosmic &amp; LinearAlgebra Hosts</h3>
+        <p>Live catalog ids such as <code>Cosmic.geodetic_to_ecef</code> and <code>LinearAlgebra.matmul</code> sit on the same four-op host ABI (<code>vibe-host-0.1</code>). Browser LocalHost runs Cosmic kernels in-process; daemon-backed families fail closed with <code>E300</code>.</p>
       </div>
     </div>
   </div>
@@ -555,7 +571,7 @@ title: VibeScript
   <!-- Section: Live Code Demos -->
   <div class="vibe-section">
     <h2>Canonical VibeScript Demos</h2>
-    <p>Explore real VibeScript programs demonstrating reactive graphics, two-way bindings, and clinical knowledge graphs:</p>
+    <p>Explore real VibeScript programs demonstrating reactive graphics, two-way bindings, clinical vocab, and Cosmic geodesy:</p>
 
     <!-- Demo 1: Presentation & 3D Animation -->
     <h3>1. 3D Manifold Animation &amp; Presentation Sheaf</h3>
@@ -602,6 +618,19 @@ title: VibeScript
 
 <span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">Iri</span> {
     <span class="kw">return</span> <span class="fn">get_diagnosis</span>();
+}</pre>
+    </div>
+
+    <h3>4. Cosmic geodesy (North Spring WGS84)</h3>
+    <div class="vibe-code-box">
+<pre><span class="kw">using</span> <span class="ty">Cosmic</span>;
+
+<span class="kw">effect fn</span> <span class="fn">main</span>() -&gt; <span class="ty">Record</span> {
+    <span class="kw">return</span> <span class="ty">Cosmic</span>.<span class="fn">geodetic_to_ecef</span>({
+        lat_deg: -37.8,
+        lon_deg: 144.9,
+        alt_m: 0.0
+    });
 }</pre>
     </div>
   </div>

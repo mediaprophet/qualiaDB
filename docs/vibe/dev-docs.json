@@ -40,7 +40,7 @@
         "kind": "fn",
         "doc": "Elementwise `out[i] = a[i] + b[i]`. AVX-512 when present; else scalar.",
         "file": "accel.rs",
-        "line": 41,
+        "line": 42,
         "signature": "pub fn add_f64_slices(a: &[f64], b: &[f64], out: &mut [f64]) {"
       }
     ]
@@ -58,11 +58,19 @@
         "signature": "pub mod curves;"
       },
       {
-        "name": "pga",
+        "name": "families",
         "kind": "module",
         "doc": "",
         "file": "mod.rs",
         "line": 8,
+        "signature": "pub mod families;"
+      },
+      {
+        "name": "pga",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 9,
         "signature": "pub mod pga;"
       },
       {
@@ -70,7 +78,7 @@
         "kind": "module",
         "doc": "",
         "file": "mod.rs",
-        "line": 9,
+        "line": 10,
         "signature": "pub mod presets;"
       },
       {
@@ -78,7 +86,7 @@
         "kind": "module",
         "doc": "",
         "file": "mod.rs",
-        "line": 10,
+        "line": 11,
         "signature": "pub mod spring;"
       },
       {
@@ -86,7 +94,7 @@
         "kind": "module",
         "doc": "",
         "file": "mod.rs",
-        "line": 11,
+        "line": 12,
         "signature": "pub mod squad;"
       },
       {
@@ -94,7 +102,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 13,
+        "line": 14,
         "signature": "pub use curves::{CubicBezier, EasingCurve};"
       },
       {
@@ -102,23 +110,23 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 14,
+        "line": 15,
         "signature": "pub use pga::{Motor, MotorBivector};"
       },
       {
-        "name": "PresetInfo}",
+        "name": "{",
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 15,
-        "signature": "pub use presets::{evaluate_preset, list_all_presets, AnimationFamily, AnimationSample, PresetInfo};"
+        "line": 16,
+        "signature": "pub use presets::{"
       },
       {
         "name": "SpringState3D}",
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 16,
+        "line": 19,
         "signature": "pub use spring::{SpringConfig, SpringState1D, SpringState3D};"
       },
       {
@@ -126,7 +134,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 17,
+        "line": 20,
         "signature": "pub use squad::Quat;"
       }
     ]
@@ -226,6 +234,240 @@
     ]
   },
   {
+    "name": "animation::families",
+    "doc": "10-Family Modular Animation Evaluator Router.",
+    "items": [
+      {
+        "name": "acoustic",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 3,
+        "signature": "pub mod acoustic;"
+      },
+      {
+        "name": "dynamics",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 4,
+        "signature": "pub mod dynamics;"
+      },
+      {
+        "name": "generative",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 5,
+        "signature": "pub mod generative;"
+      },
+      {
+        "name": "haptics",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 6,
+        "signature": "pub mod haptics;"
+      },
+      {
+        "name": "hud",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 7,
+        "signature": "pub mod hud;"
+      },
+      {
+        "name": "mesh",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 8,
+        "signature": "pub mod mesh;"
+      },
+      {
+        "name": "optics",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 9,
+        "signature": "pub mod optics;"
+      },
+      {
+        "name": "spatial",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 10,
+        "signature": "pub mod spatial;"
+      },
+      {
+        "name": "thermo",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 11,
+        "signature": "pub mod thermo;"
+      },
+      {
+        "name": "timeline",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 12,
+        "signature": "pub mod timeline;"
+      },
+      {
+        "name": "dispatch",
+        "kind": "fn",
+        "doc": "Route evaluation to the appropriate family submodule.",
+        "file": "mod.rs",
+        "line": 17,
+        "signature": "pub fn dispatch(family: AnimationFamily, preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::acoustic",
+    "doc": "Acoustic Spectral Animation Family (ADSR envelopes, Binaural sweeps, Formants).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "acoustic.rs",
+        "line": 6,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::dynamics",
+    "doc": "Physical Dynamics Animation Family (Springs, Bounces, Gravity Wells, Impulses).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "dynamics.rs",
+        "line": 7,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::generative",
+    "doc": "Generative Stochastic Fields Animation Family (Simplex flows, Vortices, Brownian walks).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "generative.rs",
+        "line": 6,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::haptics",
+    "doc": "Outbound Sensory Haptics Animation Family (Vibro clicks, Heartbeats, Kinesthetic resistance).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "haptics.rs",
+        "line": 6,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::hud",
+    "doc": "HUD & UI Glassmorphism Animation Family (Glass reveals, Chromatic pulses, Focus halos).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "hud.rs",
+        "line": 7,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::mesh",
+    "doc": "Mesh & Topology Animation Family (Laplacian morphing, Origami unfold, Stalk focus).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "mesh.rs",
+        "line": 7,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::optics",
+    "doc": "Optics & Waves Animation Family (Doppler shifts, Fresnel glows, Chromatic dispersion).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "optics.rs",
+        "line": 6,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::spatial",
+    "doc": "Spatial Kinematics Animation Family (ScLERP, Orbits, Geodesic Warps).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "spatial.rs",
+        "line": 8,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::thermo",
+    "doc": "Thermodynamic Phase Animation Family (Heat diffusion, Nucleation, Blackbody glow).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "thermo.rs",
+        "line": 6,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::families::timeline",
+    "doc": "Multi-Track Timelines Animation Family (Polymetric phase, Spline keyframes, Cascades).",
+    "items": [
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "timeline.rs",
+        "line": 7,
+        "signature": "pub fn eval(preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
     "name": "animation::pga",
     "doc": "3D Projective Geometric Algebra (PGA 𝒢_{3,0,1}) / Dual Quaternion Motor Algebra.\n\nRepresents rigid 3D spatial transformations (rotation + translation) as motors M = R + εD.\nEnables constant-speed Screw Linear Interpolation (ScLERP) along Riemannian geodesics\nin SE(3) without singularity, gimbal lock, or heap allocation.",
     "items": [
@@ -262,11 +504,19 @@
         "signature": "pub fn from_rotation_translation(rot: [f64; 4], trans: [f64; 3]) -> Self {"
       },
       {
-        "name": "to_rotation_translation",
+        "name": "from_translation",
         "kind": "fn",
-        "doc": "Extract the rotation quaternion [w, x, y, z] and translation vector [x, y, z].",
+        "doc": "Construct a pure translation motor.",
         "file": "pga.rs",
         "line": 73,
+        "signature": "pub fn from_translation(tx: f64, ty: f64, tz: f64) -> Self {"
+      },
+      {
+        "name": "to_rotation_translation",
+        "kind": "fn",
+        "doc": "",
+        "file": "pga.rs",
+        "line": 76,
         "signature": "pub fn to_rotation_translation(&self) -> ([f64; 4], [f64; 3]) {"
       },
       {
@@ -274,7 +524,7 @@
         "kind": "fn",
         "doc": "Geometric product (motor multiplication: M_a * M_b).",
         "file": "pga.rs",
-        "line": 91,
+        "line": 94,
         "signature": "pub fn mul(&self, other: &Self) -> Self {"
       },
       {
@@ -282,7 +532,7 @@
         "kind": "fn",
         "doc": "Conjugate of motor (R*, D*).",
         "file": "pga.rs",
-        "line": 150,
+        "line": 153,
         "signature": "pub fn conjugate(&self) -> Self {"
       },
       {
@@ -290,7 +540,7 @@
         "kind": "fn",
         "doc": "Normalize motor so that |R| = 1 and R · D = 0.",
         "file": "pga.rs",
-        "line": 164,
+        "line": 167,
         "signature": "pub fn normalize(&self) -> Self {"
       },
       {
@@ -298,7 +548,7 @@
         "kind": "fn",
         "doc": "Logarithmic map: log(M) ∈ se(3).",
         "file": "pga.rs",
-        "line": 197,
+        "line": 200,
         "signature": "pub fn log(&self) -> MotorBivector {"
       },
       {
@@ -306,7 +556,7 @@
         "kind": "fn",
         "doc": "Screw Linear Interpolation (ScLERP): Geodesic shortest-path SE(3) interpolation.\nReturns M(t) = M0 * (M0^(-1) * M1)^t.",
         "file": "pga.rs",
-        "line": 256,
+        "line": 259,
         "signature": "pub fn sclerp(m0: &Self, m1: &Self, t: f64) -> Self {"
       },
       {
@@ -314,7 +564,7 @@
         "kind": "fn",
         "doc": "Transform a 3D point using the motor: p' = M * p * M^~.",
         "file": "pga.rs",
-        "line": 297,
+        "line": 300,
         "signature": "pub fn transform_point(&self, p: [f64; 3]) -> [f64; 3] {"
       },
       {
@@ -322,7 +572,7 @@
         "kind": "fn",
         "doc": "Exponential map: exp(B) ∈ SE(3).",
         "file": "pga.rs",
-        "line": 318,
+        "line": 321,
         "signature": "pub fn exp(&self) -> Motor {"
       }
     ]
@@ -336,7 +586,7 @@
         "kind": "enum",
         "doc": "",
         "file": "presets.rs",
-        "line": 21,
+        "line": 20,
         "signature": "pub enum AnimationFamily"
       },
       {
@@ -344,7 +594,7 @@
         "kind": "fn",
         "doc": "",
         "file": "presets.rs",
-        "line": 35,
+        "line": 34,
         "signature": "pub fn from_name(name: &str) -> Option<Self> {"
       },
       {
@@ -352,7 +602,7 @@
         "kind": "fn",
         "doc": "",
         "file": "presets.rs",
-        "line": 51,
+        "line": 50,
         "signature": "pub fn name(&self) -> &'static str {"
       },
       {
@@ -360,7 +610,7 @@
         "kind": "struct",
         "doc": "",
         "file": "presets.rs",
-        "line": 69,
+        "line": 68,
         "signature": "pub struct AnimationSample"
       },
       {
@@ -368,7 +618,7 @@
         "kind": "struct",
         "doc": "",
         "file": "presets.rs",
-        "line": 91,
+        "line": 90,
         "signature": "pub struct PresetInfo"
       },
       {
@@ -376,7 +626,7 @@
         "kind": "fn",
         "doc": "Return a static list of all available presets across all 10 families.",
         "file": "presets.rs",
-        "line": 98,
+        "line": 97,
         "signature": "pub fn list_all_presets() -> &'static [PresetInfo] {"
       },
       {
@@ -384,7 +634,7 @@
         "kind": "fn",
         "doc": "Evaluate a preset by family name and preset name at time `t` (seconds).",
         "file": "presets.rs",
-        "line": 152,
+        "line": 303,
         "signature": "pub fn evaluate_preset(family: AnimationFamily, preset: &str, t: f64) -> AnimationSample {"
       }
     ]
@@ -1136,35 +1386,19 @@
     "doc": "0.1 host bindings.\n\n`Host` is the seam Poet (and other environments) implement.\n[`LocalHost`] is the in-process host used by the Vibe REPL, WASM playground,\nand tests: real catalog kernels, in-memory graph/pulse/time.",
     "items": [
       {
-        "name": "call_math",
+        "name": "dispatch",
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
         "line": 14,
-        "signature": "pub use math::call_math;"
-      },
-      {
-        "name": "call_quin",
-        "kind": "use",
-        "doc": "",
-        "file": "mod.rs",
-        "line": 15,
-        "signature": "pub use quin::call_quin;"
-      },
-      {
-        "name": "call_rdf",
-        "kind": "use",
-        "doc": "",
-        "file": "mod.rs",
-        "line": 16,
-        "signature": "pub use rdf::call_rdf;"
+        "signature": "pub use dispatch::dispatch;"
       },
       {
         "name": "HostEnvironment}",
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 17,
+        "line": 15,
         "signature": "pub use host::{AccelerationTier, Host, HostEnvironment};"
       },
       {
@@ -1172,16 +1406,32 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 18,
+        "line": 16,
         "signature": "pub use local::LocalHost;"
       },
       {
-        "name": "dispatch",
+        "name": "call_math",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 17,
+        "signature": "pub use math::call_math;"
+      },
+      {
+        "name": "call_quin",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 18,
+        "signature": "pub use quin::call_quin;"
+      },
+      {
+        "name": "call_rdf",
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
         "line": 19,
-        "signature": "pub use dispatch::dispatch;"
+        "signature": "pub use rdf::call_rdf;"
       }
     ]
   },
@@ -1453,7 +1703,7 @@
         "kind": "fn",
         "doc": "Compile a full `Program` AST into a `Chunk`.",
         "file": "compiler.rs",
-        "line": 952,
+        "line": 950,
         "signature": "pub fn compile(program: &Program) -> Result<Chunk, CompileError> {"
       },
       {
@@ -1461,7 +1711,7 @@
         "kind": "fn",
         "doc": "Compile a single expression (for cell bodies) into a `Chunk`.\nThe chunk's preamble evaluates the expression and returns it.",
         "file": "compiler.rs",
-        "line": 960,
+        "line": 958,
         "signature": "pub fn compile_expr(expr: &Expr) -> Result<Chunk, CompileError> {"
       }
     ]
@@ -1869,7 +2119,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 12,
+        "line": 14,
         "signature": "pub use ids::{ALL_INVOKE_IDS, INVOKE_ID_COUNT};"
       },
       {
@@ -1877,7 +2127,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 13,
+        "line": 15,
         "signature": "pub use local::{invoke_local, payload_from_args, sample_to_value};"
       },
       {
@@ -1885,7 +2135,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 14,
+        "line": 16,
         "signature": "pub use suggest::did_you_mean;"
       },
       {
@@ -1893,7 +2143,7 @@
         "kind": "fn",
         "doc": "Resolve a dotted path to a canonical invoke id.\n\n`Animation.evaluate_preset` is already canonical.\n`Animation.orbit_spin` is a preset alias of `Animation.evaluate_preset`.",
         "file": "mod.rs",
-        "line": 24,
+        "line": 26,
         "signature": "pub fn canonical_id(path: &str) -> Option<&'static str> {"
       },
       {
@@ -1901,15 +2151,15 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 34,
+        "line": 36,
         "signature": "pub fn is_known(path: &str) -> bool {"
       },
       {
         "name": "family_of",
         "kind": "fn",
-        "doc": "`Family` grant: `using Animation;` covers every `Animation.*` catalog id\nand every animation preset alias.",
+        "doc": "",
         "file": "mod.rs",
-        "line": 40,
+        "line": 46,
         "signature": "pub fn family_of(path: &str) -> Option<&str> {"
       },
       {
@@ -1917,7 +2167,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 45,
+        "line": 51,
         "signature": "pub fn granted_covers(granted: &[&str], path: &str) -> bool {"
       },
       {
@@ -1925,7 +2175,7 @@
         "kind": "fn",
         "doc": "Known catalog family + dotted method, e.g. `HID.poll`.\nUser enums such as `Shape.Circle` are **not** catalog paths.",
         "file": "mod.rs",
-        "line": 70,
+        "line": 76,
         "signature": "pub fn looks_like_catalog_path(path: &str) -> bool {"
       },
       {
@@ -1933,7 +2183,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 81,
+        "line": 87,
         "signature": "pub fn animation_preset(path: &str) -> Option<(&'static str, &'static str)> {"
       },
       {
@@ -1941,7 +2191,7 @@
         "kind": "fn",
         "doc": "When `Animation.orbit_spin(t)` lowers to `Animation.evaluate_preset`,\nfill `family`/`preset` on the payload so every Host sees the alias.\nNamed fields already present win.",
         "file": "mod.rs",
-        "line": 94,
+        "line": 100,
         "signature": "pub fn apply_preset_alias(path: &str, payload: &mut Value) {"
       },
       {
@@ -1949,7 +2199,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 107,
+        "line": 113,
         "signature": "pub fn parse_family_from_preset(family: &str) -> Option<AnimationFamily> {"
       },
       {
@@ -1957,7 +2207,7 @@
         "kind": "fn",
         "doc": "Expand `using Animation;` into the family grant id.",
         "file": "mod.rs",
-        "line": 116,
+        "line": 122,
         "signature": "pub fn family_grant(family: &str) -> String {"
       },
       {
@@ -1965,7 +2215,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 120,
+        "line": 126,
         "signature": "pub fn methods_for_family(family: &str) -> Vec<&'static str> {"
       },
       {
@@ -1973,7 +2223,7 @@
         "kind": "fn",
         "doc": "Unique catalog family names, in catalog order.",
         "file": "mod.rs",
-        "line": 130,
+        "line": 136,
         "signature": "pub fn families() -> Vec<&'static str> {"
       },
       {
@@ -1981,8 +2231,36 @@
         "kind": "fn",
         "doc": "One-line hover text for a catalog path or identifier.",
         "file": "mod.rs",
-        "line": 143,
+        "line": 149,
         "signature": "pub fn describe(path: &str) -> String {"
+      }
+    ]
+  },
+  {
+    "name": "catalog::cosmic",
+    "doc": "In-process Cosmic.* kernels (G-COORD remap). Same math as poet_host cosmic_bind.\nNo new Host methods. Unknown Cosmic ids fail closed.",
+    "items": [
+      {
+        "name": "invoke",
+        "kind": "fn",
+        "doc": "",
+        "file": "cosmic.rs",
+        "line": 11,
+        "signature": "pub fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {"
+      }
+    ]
+  },
+  {
+    "name": "catalog::cosmic_ext",
+    "doc": "Remaining catalogued Cosmic.* kernels (G-COORD LocalHost slice).\nUTF-8 names; no ASCII-only folding. No new Host methods.",
+    "items": [
+      {
+        "name": "invoke",
+        "kind": "fn",
+        "doc": "",
+        "file": "cosmic_ext.rs",
+        "line": 11,
+        "signature": "pub fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {"
       }
     ]
   },
@@ -2003,7 +2281,7 @@
         "kind": "const",
         "doc": "",
         "file": "ids.rs",
-        "line": 864,
+        "line": 1114,
         "signature": "pub const INVOKE_ID_COUNT: usize = ALL_INVOKE_IDS.len()"
       }
     ]
@@ -2025,7 +2303,7 @@
         "kind": "fn",
         "doc": "",
         "file": "local.rs",
-        "line": 92,
+        "line": 101,
         "signature": "pub fn sample_to_value(s: AnimationSample) -> Value {"
       },
       {
@@ -2033,7 +2311,7 @@
         "kind": "fn",
         "doc": "",
         "file": "local.rs",
-        "line": 108,
+        "line": 117,
         "signature": "pub fn payload_from_args(pos: &[Value], named: &[(String, Value)]) -> Value {"
       }
     ]
@@ -2073,20 +2351,20 @@
         "signature": "pub enum DecodeError"
       },
       {
-        "name": "encode",
-        "kind": "use",
-        "doc": "",
-        "file": "mod.rs",
-        "line": 32,
-        "signature": "pub use encode::encode;"
-      },
-      {
         "name": "decode",
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 33,
+        "line": 32,
         "signature": "pub use decode::decode;"
+      },
+      {
+        "name": "encode",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 33,
+        "signature": "pub use encode::encode;"
       }
     ]
   },
@@ -2172,7 +2450,7 @@
         "kind": "fn",
         "doc": "",
         "file": "check.rs",
-        "line": 261,
+        "line": 274,
         "signature": "pub fn check_cell(expr: &Expr) -> Result<CheckResult, Diagnostic> {"
       }
     ]
@@ -4494,6 +4772,70 @@
         "file": "transforms.rs",
         "line": 167,
         "signature": "pub fn geodetic_to_value(g: Geodetic) -> crate::value::Value {"
+      },
+      {
+        "name": "FourVector",
+        "kind": "struct",
+        "doc": "",
+        "file": "transforms.rs",
+        "line": 179,
+        "signature": "pub struct FourVector"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "",
+        "file": "transforms.rs",
+        "line": 187,
+        "signature": "pub fn new(ct: f64, x: f64, y: f64, z: f64) -> Self {"
+      },
+      {
+        "name": "spacetime_interval_sq",
+        "kind": "fn",
+        "doc": "Minkowski spacetime interval s^2 = -(c*t)^2 + x^2 + y^2 + z^2.",
+        "file": "transforms.rs",
+        "line": 192,
+        "signature": "pub fn spacetime_interval_sq(&self) -> f64 {"
+      },
+      {
+        "name": "LorentzBoost",
+        "kind": "struct",
+        "doc": "",
+        "file": "transforms.rs",
+        "line": 199,
+        "signature": "pub struct LorentzBoost"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "",
+        "file": "transforms.rs",
+        "line": 206,
+        "signature": "pub fn new(beta_x: f64, beta_y: f64, beta_z: f64) -> Result<Self, &'static str> {"
+      },
+      {
+        "name": "gamma",
+        "kind": "fn",
+        "doc": "Lorentz gamma factor: gamma = 1 / sqrt(1 - beta^2).",
+        "file": "transforms.rs",
+        "line": 219,
+        "signature": "pub fn gamma(&self) -> f64 {"
+      },
+      {
+        "name": "matrix",
+        "kind": "fn",
+        "doc": "Exact 4x4 matrix representation Lambda^mu_nu in SO+(1,3).",
+        "file": "transforms.rs",
+        "line": 226,
+        "signature": "pub fn matrix(&self) -> [[f64; 4]; 4] {"
+      },
+      {
+        "name": "transform",
+        "kind": "fn",
+        "doc": "Transform a 4-vector under this Lorentz boost.",
+        "file": "transforms.rs",
+        "line": 267,
+        "signature": "pub fn transform(&self, v: FourVector) -> FourVector {"
       }
     ]
   },
@@ -5231,7 +5573,7 @@
         "kind": "fn",
         "doc": "Decompile a pattern.",
         "file": "decompiler.rs",
-        "line": 717,
+        "line": 723,
         "signature": "pub fn decompile_pattern(out: &mut String, pat: &Pattern) {"
       },
       {
@@ -5239,7 +5581,7 @@
         "kind": "fn",
         "doc": "Decompile a type expression.",
         "file": "decompiler.rs",
-        "line": 823,
+        "line": 829,
         "signature": "pub fn decompile_type_expr(ty: &TypeExpr) -> String {"
       },
       {
@@ -5247,7 +5589,7 @@
         "kind": "fn",
         "doc": "Decompile a raw Bytecode Chunk into symbolic disassembly.",
         "file": "decompiler.rs",
-        "line": 841,
+        "line": 847,
         "signature": "pub fn decompile_chunk(chunk: &Chunk) -> String {"
       }
     ]
@@ -5609,7 +5951,7 @@
         "kind": "fn",
         "doc": "Helper to detect if a diagnostic represents a contradiction or semantic conflict\n(e.g. conflicting types, conflicting graph assertions, forbidden effect in pure cell).",
         "file": "diagnose.rs",
-        "line": 36,
+        "line": 52,
         "signature": "pub fn is_contradiction(diag: &Diagnostic) -> bool {"
       },
       {
@@ -5617,7 +5959,7 @@
         "kind": "fn",
         "doc": "Parse and type/effect-check. Cells start with `=`. Does not evaluate.\nWhen a contradiction/conflict is detected, attaches evidential annotations (μ = 1.0, λ = 0.0).",
         "file": "diagnose.rs",
-        "line": 50,
+        "line": 66,
         "signature": "pub fn diagnose(src: &str) -> DiagnoseReport {"
       }
     ]
@@ -5733,7 +6075,7 @@
         "kind": "fn",
         "doc": "Agent-facing JSON (no serde). Always includes `valid: false`.",
         "file": "error.rs",
-        "line": 101,
+        "line": 123,
         "signature": "pub fn to_json(&self) -> String {"
       }
     ]
@@ -5844,7 +6186,7 @@
         "kind": "fn",
         "doc": "",
         "file": "program.rs",
-        "line": 172,
+        "line": 171,
         "signature": "pub fn call_function("
       },
       {
@@ -5852,7 +6194,7 @@
         "kind": "fn",
         "doc": "Dispatch a hook by event path (e.g. `[\"pulse\", \"message\"]` or `[\"tick\"]`).\n\nFinds the first `on <path>(â€¦)` hook in the program whose path matches,\nbinds the supplied argument values to its parameters, and evaluates its\nbody. Returns `Ok(Value::Null)` if no matching hook exists (the host\nmay choose to ignore unhandled events silently).",
         "file": "program.rs",
-        "line": 218,
+        "line": 217,
         "signature": "pub fn call_hook("
       }
     ]
@@ -5864,7 +6206,7 @@
   },
   {
     "name": "frame_morphism",
-    "doc": "Frame morphisms — Galilean now, Lorentz later (W5).\n\nA frame morphism transforms a pose from one reference frame to\nanother. The simplest case is a Galilean transformation: a rigid\ntranslation + rotation between frames moving at constant velocity\nrelative to each other. Lorentz transformations (special relativity)\nare deferred — they require the full 4D spacetime metric and\ntime dilation.\n\n## Why this matters\n\nWithout frame morphisms, a pose in \"camera space\" and a pose in\n\"world space\" are just two Vec<f64> values with no relationship.\nThe engine can't compose them, invert them, or chain them. Frame\nmorphisms make the relationship explicit and computable.\n\n## Galilean transformation\n\nA Galilean transformation between frame A and frame B is:\n- A translation (offset of B's origin in A's coordinates)\n- A rotation (orientation of B's axes relative to A's)\n- A velocity (for moving frames — B moves at constant velocity\n  relative to A)\n\nPosition transforms as: p_B = R^(-1) * (p_A - offset - v * t)\nTime is absolute: t_B = t_A (no time dilation)\n\nLorentz transformation (future) would add:\n- Time dilation: t_B = γ * (t_A - v·x_A / c²)\n- Length contraction: x_B = γ * (x_A - v * t_A)\n- Where γ = 1 / sqrt(1 - v²/c²)\n\nReference: `docs/vibescript-full-impl-PLAN.md` §8.15 W5,\nexcellence-first §4.",
+    "doc": "Frame morphisms — Galilean now, Lorentz later (W5).\n\nA frame morphism transforms a pose from one reference frame to\nanother. The simplest case is a Galilean transformation: a rigid\ntranslation + rotation between frames moving at constant velocity\nrelative to each other. Lorentz transformations (special relativity)\nare deferred — they require the full 4D spacetime metric and\ntime dilation.\n\n## Why this matters\n\nWithout frame morphisms, a pose in \"camera space\" and a pose in\n\"world space\" are just two Vec\\<f64\\> values with no relationship.\nThe engine can't compose them, invert them, or chain them. Frame\nmorphisms make the relationship explicit and computable.\n\n## Galilean transformation\n\nA Galilean transformation between frame A and frame B is:\n- A translation (offset of B's origin in A's coordinates)\n- A rotation (orientation of B's axes relative to A's)\n- A velocity (for moving frames — B moves at constant velocity\n  relative to A)\n\nPosition transforms as: p_B = R^(-1) * (p_A - offset - v * t)\nTime is absolute: t_B = t_A (no time dilation)\n\nLorentz transformation (future) would add:\n- Time dilation: t_B = γ * (t_A - v·x_A / c²)\n- Length contraction: x_B = γ * (x_A - v * t_A)\n- Where γ = 1 / sqrt(1 - v²/c²)\n\nReference: `docs/vibescript-full-impl-PLAN.md` §8.15 W5,\nexcellence-first §4.",
     "items": [
       {
         "name": "GalileanMorphism",
@@ -6567,7 +6909,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lex.rs",
-        "line": 690,
+        "line": 696,
         "signature": "pub fn is_keyword(text: &str) -> bool {"
       },
       {
@@ -6575,8 +6917,190 @@
         "kind": "fn",
         "doc": "",
         "file": "lex.rs",
-        "line": 713,
+        "line": 719,
         "signature": "pub fn tokenize(src: &str) -> Result<Vec<Token>, Diagnostic> {"
+      }
+    ]
+  },
+  {
+    "name": "lexicon_pin",
+    "doc": "Lexicon pack pin + diagnose hooks (G-LEXICON-0).\n\n`lexicon:` is **not** an EBNF production. The pin is package metadata:\na comment/header `// lexicon: \"packId@SemVer\"` and/or\n`const lexicon = \"packId@SemVer\";`.\n\n[`diagnose`](crate::diagnose) stays parse+check only (no disk, no invoke).\nMissing / unknown pack at the `GraphDatabase.lexicon_manifest` seam is\ndocumented here as DiagnoseReport JSON: **held / not yet** (`E300`) +\n`suggested_fix` that names “open lexicon pack”. Alias rows ride in\n`suggested_fix` as JSON `{from, to, framing}`. Living framing is never\nrewritten as artifact on upgrade.\n\nNo Host widen. No dotted `qualia.*`. No in-binary WordNet.",
+    "items": [
+      {
+        "name": "HELD_OPEN_PACK",
+        "kind": "const",
+        "doc": "Soft why-text for missing / unknown pack. Never \"broken\".",
+        "file": "lexicon_pin.rs",
+        "line": 21,
+        "signature": "pub const HELD_OPEN_PACK: &str = \"held / not yet — open lexicon pack\""
+      },
+      {
+        "name": "EXAMPLE_PIN",
+        "kind": "const",
+        "doc": "Example pin matching `docs/manuals/standards/lexicon-pack-manifest-example.json`.",
+        "file": "lexicon_pin.rs",
+        "line": 24,
+        "signature": "pub const EXAMPLE_PIN: &str = \"en-core@0.1.0\""
+      },
+      {
+        "name": "LEXICON_MANIFEST_ID",
+        "kind": "const",
+        "doc": "Live bind id (already in `ALL_BOUND`). Catalog-honest; not a new Host method.",
+        "file": "lexicon_pin.rs",
+        "line": 27,
+        "signature": "pub const LEXICON_MANIFEST_ID: &str = \"GraphDatabase.lexicon_manifest\""
+      },
+      {
+        "name": "LexiconPin",
+        "kind": "struct",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 31,
+        "signature": "pub struct LexiconPin"
+      },
+      {
+        "name": "parse",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 37,
+        "signature": "pub fn parse(raw: &str) -> Option<Self> {"
+      },
+      {
+        "name": "as_pin_str",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 54,
+        "signature": "pub fn as_pin_str(&self) -> String {"
+      },
+      {
+        "name": "LexiconFraming",
+        "kind": "enum",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 74,
+        "signature": "pub enum LexiconFraming"
+      },
+      {
+        "name": "as_str",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 81,
+        "signature": "pub fn as_str(self) -> &'static str {"
+      },
+      {
+        "name": "parse",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 89,
+        "signature": "pub fn parse(raw: &str) -> Option<Self> {"
+      },
+      {
+        "name": "AliasRow",
+        "kind": "struct",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 101,
+        "signature": "pub struct AliasRow"
+      },
+      {
+        "name": "to_json",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 108,
+        "signature": "pub fn to_json(&self) -> String {"
+      },
+      {
+        "name": "parse_lexicon_pin_from_source",
+        "kind": "fn",
+        "doc": "Scan comment/header `lexicon: \"packId@SemVer\"` and `const lexicon = \"…\"`.",
+        "file": "lexicon_pin.rs",
+        "line": 119,
+        "signature": "pub fn parse_lexicon_pin_from_source(src: &str) -> Option<LexiconPin> {"
+      },
+      {
+        "name": "missing_pack_report",
+        "kind": "fn",
+        "doc": "Expected DiagnoseReport when `lexicon_manifest` is missing / unknown.\n\n`diagnose()` does not invoke the host. Neo maps the live E300 onto this shape.",
+        "file": "lexicon_pin.rs",
+        "line": 152,
+        "signature": "pub fn missing_pack_report(span: Span, message: impl Into<String>) -> DiagnoseReport {"
+      },
+      {
+        "name": "diagnose_lexicon_pin",
+        "kind": "fn",
+        "doc": "Pin-aware diagnose hook for Neo (no disk).\n\n`pack_available = false` → held / not yet + open-pack `suggested_fix`.\n`pack_available = true` → valid module; caller records the pin separately.",
+        "file": "lexicon_pin.rs",
+        "line": 167,
+        "signature": "pub fn diagnose_lexicon_pin(src: &str, pack_available: bool) -> DiagnoseReport {"
+      },
+      {
+        "name": "alias_rows_suggested_fix",
+        "kind": "fn",
+        "doc": "Encode alias rows as `suggested_fix` JSON array.",
+        "file": "lexicon_pin.rs",
+        "line": 189,
+        "signature": "pub fn alias_rows_suggested_fix(rows: &[AliasRow]) -> String {"
+      },
+      {
+        "name": "parse_alias_rows_json",
+        "kind": "fn",
+        "doc": "Round-trip alias rows out of a `suggested_fix` JSON array (or mixed text).",
+        "file": "lexicon_pin.rs",
+        "line": 202,
+        "signature": "pub fn parse_alias_rows_json(src: &str) -> Vec<AliasRow> {"
+      },
+      {
+        "name": "alias_migrate_report",
+        "kind": "fn",
+        "doc": "Held report whose `suggested_fix` is alias-row JSON (migrate / upgrade).",
+        "file": "lexicon_pin.rs",
+        "line": 226,
+        "signature": "pub fn alias_migrate_report(span: Span, rows: &[AliasRow]) -> DiagnoseReport {"
+      },
+      {
+        "name": "apply_upgrade_framing",
+        "kind": "fn",
+        "doc": "Upgrade remap: living-SHACL never becomes artifact-OWL.",
+        "file": "lexicon_pin.rs",
+        "line": 243,
+        "signature": "pub fn apply_upgrade_framing("
+      },
+      {
+        "name": "apply_upgrade_map",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 254,
+        "signature": "pub fn apply_upgrade_map(rows: &[AliasRow], requested: &[LexiconFraming]) -> Vec<AliasRow> {"
+      },
+      {
+        "name": "living_rewritten_as_artifact",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 267,
+        "signature": "pub fn living_rewritten_as_artifact(before: &[AliasRow], after: &[AliasRow]) -> bool {"
+      },
+      {
+        "name": "PackManifest",
+        "kind": "struct",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 312,
+        "signature": "pub struct PackManifest"
+      },
+      {
+        "name": "parse_pack_manifest_json",
+        "kind": "fn",
+        "doc": "",
+        "file": "lexicon_pin.rs",
+        "line": 320,
+        "signature": "pub fn parse_pack_manifest_json(raw: &str) -> Option<PackManifest> {"
       }
     ]
   },
@@ -7471,7 +7995,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 490,
+        "line": 479,
         "signature": "pub fn parse_program(src: &str) -> Result<Program, Diagnostic> {"
       },
       {
@@ -7479,7 +8003,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 494,
+        "line": 483,
         "signature": "pub fn parse_cell(src: &str) -> Result<Expr, Diagnostic> {"
       }
     ]
@@ -8329,7 +8853,7 @@
         "kind": "enum",
         "doc": "",
         "file": "projectional.rs",
-        "line": 955,
+        "line": 961,
         "signature": "pub enum Edit"
       },
       {
@@ -8337,7 +8861,7 @@
         "kind": "fn",
         "doc": "Apply a structural edit to a program, returning a new program.\n\nThis does not modify the original — projectional authoring treats\nthe AST as immutable structure; edits produce new structure.",
         "file": "projectional.rs",
-        "line": 995,
+        "line": 1001,
         "signature": "pub fn apply_edit(prog: &Program, edit: &Edit) -> Program {"
       },
       {
@@ -8345,7 +8869,7 @@
         "kind": "fn",
         "doc": "Apply a sequence of edits, producing the final program.",
         "file": "projectional.rs",
-        "line": 1079,
+        "line": 1085,
         "signature": "pub fn apply_edits(prog: &Program, edits: &[Edit]) -> Program {"
       },
       {
@@ -8353,7 +8877,7 @@
         "kind": "fn",
         "doc": "Project a program with trivia preservation.\n\nGiven a CST (program with trivia), the projector interleaves\ncomments and whitespace from the original source into the\nprojected text. This is a best-effort process — structural edits\nmay invalidate original trivia positions.",
         "file": "projectional.rs",
-        "line": 1107,
+        "line": 1113,
         "signature": "pub fn project_with_trivia("
       },
       {
@@ -8361,7 +8885,7 @@
         "kind": "fn",
         "doc": "Helper: build a simple field declaration.",
         "file": "projectional.rs",
-        "line": 1189,
+        "line": 1195,
         "signature": "pub fn make_field("
       },
       {
@@ -8369,7 +8893,7 @@
         "kind": "fn",
         "doc": "Helper: build a simple material declaration.",
         "file": "projectional.rs",
-        "line": 1211,
+        "line": 1217,
         "signature": "pub fn make_material(name: &str, properties: Vec<(&str, Expr)>) -> Item {"
       },
       {
@@ -8377,7 +8901,7 @@
         "kind": "fn",
         "doc": "Helper: build a simple law declaration.",
         "file": "projectional.rs",
-        "line": 1227,
+        "line": 1233,
         "signature": "pub fn make_law(name: &str, condition: Expr, consequence: Expr) -> Item {"
       },
       {
@@ -8385,7 +8909,7 @@
         "kind": "fn",
         "doc": "Helper: build an integer literal expression.",
         "file": "projectional.rs",
-        "line": 1237,
+        "line": 1243,
         "signature": "pub fn make_int(n: i64) -> Expr {"
       },
       {
@@ -8393,7 +8917,7 @@
         "kind": "fn",
         "doc": "Helper: build a float literal expression.",
         "file": "projectional.rs",
-        "line": 1245,
+        "line": 1251,
         "signature": "pub fn make_float(f: f64) -> Expr {"
       },
       {
@@ -8401,7 +8925,7 @@
         "kind": "fn",
         "doc": "Helper: build a string literal expression.",
         "file": "projectional.rs",
-        "line": 1253,
+        "line": 1259,
         "signature": "pub fn make_string(s: &str) -> Expr {"
       },
       {
@@ -8409,7 +8933,7 @@
         "kind": "fn",
         "doc": "Helper: build an identifier expression.",
         "file": "projectional.rs",
-        "line": 1261,
+        "line": 1267,
         "signature": "pub fn make_ident(s: &str) -> Expr {"
       },
       {
@@ -8417,7 +8941,7 @@
         "kind": "fn",
         "doc": "Helper: build a binary expression.",
         "file": "projectional.rs",
-        "line": 1269,
+        "line": 1275,
         "signature": "pub fn make_binary(op: BinOp, left: Expr, right: Expr) -> Expr {"
       },
       {
@@ -8425,7 +8949,7 @@
         "kind": "fn",
         "doc": "Helper: build a call expression.",
         "file": "projectional.rs",
-        "line": 1281,
+        "line": 1287,
         "signature": "pub fn make_call(callee: &str, args: Vec<Expr>) -> Expr {"
       },
       {
@@ -8433,7 +8957,7 @@
         "kind": "fn",
         "doc": "Helper: build a member access expression.",
         "file": "projectional.rs",
-        "line": 1292,
+        "line": 1298,
         "signature": "pub fn make_member(recv: &str, name: &str) -> Expr {"
       }
     ]
@@ -8677,7 +9201,7 @@
         "kind": "struct",
         "doc": "",
         "file": "reactive_cell.rs",
-        "line": 44,
+        "line": 46,
         "signature": "pub struct ReactiveCell"
       },
       {
@@ -8685,7 +9209,7 @@
         "kind": "struct",
         "doc": "",
         "file": "reactive_cell.rs",
-        "line": 65,
+        "line": 67,
         "signature": "pub struct ReactiveCellGraph"
       },
       {
@@ -8693,7 +9217,7 @@
         "kind": "fn",
         "doc": "Construct a new empty reactive cell graph.",
         "file": "reactive_cell.rs",
-        "line": 80,
+        "line": 82,
         "signature": "pub fn new() -> Self {"
       },
       {
@@ -8701,7 +9225,7 @@
         "kind": "fn",
         "doc": "Build a reactive cell graph from an AST Program.",
         "file": "reactive_cell.rs",
-        "line": 91,
+        "line": 93,
         "signature": "pub fn from_program(program: &Program) -> Result<Self, ReactiveCellError> {"
       },
       {
@@ -8709,7 +9233,7 @@
         "kind": "fn",
         "doc": "Add a cell declaration to the graph.",
         "file": "reactive_cell.rs",
-        "line": 103,
+        "line": 105,
         "signature": "pub fn add_cell(&mut self, decl: CellDecl) -> usize {"
       },
       {
@@ -8717,7 +9241,7 @@
         "kind": "fn",
         "doc": "True if cell `idx` is marked dirty. Works past 64 cells.",
         "file": "reactive_cell.rs",
-        "line": 152,
+        "line": 154,
         "signature": "pub fn is_dirty_bit(&self, idx: usize) -> bool {"
       },
       {
@@ -8725,7 +9249,7 @@
         "kind": "fn",
         "doc": "First 64 dirty bits (debug / HUD). Prefer [`Self::is_dirty_bit`].",
         "file": "reactive_cell.rs",
-        "line": 161,
+        "line": 163,
         "signature": "pub fn dirty_mask(&self) -> u64 {"
       },
       {
@@ -8733,7 +9257,7 @@
         "kind": "fn",
         "doc": "Compile dependencies, wire dependents, check cycles, and compute topological order.",
         "file": "reactive_cell.rs",
-        "line": 166,
+        "line": 168,
         "signature": "pub fn compile(&mut self) -> Result<(), ReactiveCellError> {"
       },
       {
@@ -8741,7 +9265,7 @@
         "kind": "fn",
         "doc": "Mark a single cell and all its transitive downstream dependents as dirty.",
         "file": "reactive_cell.rs",
-        "line": 220,
+        "line": 222,
         "signature": "pub fn mark_dirty(&mut self, name: &str) {"
       },
       {
@@ -8749,7 +9273,7 @@
         "kind": "fn",
         "doc": "Mark all cells in the graph as dirty.",
         "file": "reactive_cell.rs",
-        "line": 235,
+        "line": 237,
         "signature": "pub fn mark_all_dirty(&mut self) {"
       },
       {
@@ -8757,7 +9281,7 @@
         "kind": "fn",
         "doc": "Set an external input signal / variable and mark downstream cells dirty.",
         "file": "reactive_cell.rs",
-        "line": 251,
+        "line": 253,
         "signature": "pub fn set_input(&mut self, name: &str, value: Value, env: &mut Env) {"
       },
       {
@@ -8765,7 +9289,7 @@
         "kind": "fn",
         "doc": "Advance time and evaluate dirty cells on a **local** in-process host.\n\nPrefer [`Self::step_with`] when a live `Host` (Poet, tests with\nquery rows, GPU) must dispatch capability.invoke.",
         "file": "reactive_cell.rs",
-        "line": 269,
+        "line": 271,
         "signature": "pub fn step("
       },
       {
@@ -8773,7 +9297,7 @@
         "kind": "const",
         "doc": "Homogeneous ready-cluster size for P16.2. Scalar path still\nevaluates one cell at a time; the batch is the set of dirty cells\nwhose dependencies are already clean, capped at 512.",
         "file": "reactive_cell.rs",
-        "line": 282,
+        "line": 284,
         "signature": "pub const CELL_BATCH_512: usize = 512"
       },
       {
@@ -8781,7 +9305,7 @@
         "kind": "fn",
         "doc": "One ready cluster of up to 512 dirty cells, then stop.\nCallers loop until the dirty set is empty.",
         "file": "reactive_cell.rs",
-        "line": 286,
+        "line": 288,
         "signature": "pub fn evaluate_cell_batch_512<H: Host>("
       },
       {
@@ -8789,7 +9313,7 @@
         "kind": "fn",
         "doc": "Advance time and evaluate dirty cells through the caller's engine/host.",
         "file": "reactive_cell.rs",
-        "line": 361,
+        "line": 362,
         "signature": "pub fn step_with<H: Host>("
       },
       {
@@ -8797,7 +9321,7 @@
         "kind": "fn",
         "doc": "Retrieve the current cached value of a cell by name.",
         "file": "reactive_cell.rs",
-        "line": 423,
+        "line": 424,
         "signature": "pub fn get_value(&self, name: &str) -> Option<&Value> {"
       }
     ]
@@ -9059,27 +9583,43 @@
         "signature": "pub const LANGUAGE_VERSION: &str = \"vibe-0.1\""
       },
       {
-        "name": "catalog",
-        "kind": "module",
-        "doc": "",
+        "name": "HOST_VERSION",
+        "kind": "const",
+        "doc": "Frozen host ABI stamp (`Host::host_version`).",
         "file": "lib.rs",
-        "line": 15,
-        "signature": "pub mod catalog;"
+        "line": 12,
+        "signature": "pub const HOST_VERSION: &str = \"vibe-host-0.1\""
       },
       {
         "name": "bytecode",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 17,
+        "line": 19,
         "signature": "pub mod bytecode;"
+      },
+      {
+        "name": "capability_schema",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 20,
+        "signature": "pub mod capability_schema;"
+      },
+      {
+        "name": "catalog",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 21,
+        "signature": "pub mod catalog;"
       },
       {
         "name": "animation",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 34,
+        "line": 38,
         "signature": "pub mod animation;"
       },
       {
@@ -9087,7 +9627,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 35,
+        "line": 39,
         "signature": "pub mod ast_merge;"
       },
       {
@@ -9095,7 +9635,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 36,
+        "line": 40,
         "signature": "pub mod cosmic;"
       },
       {
@@ -9103,7 +9643,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 37,
+        "line": 41,
         "signature": "pub mod crypto;"
       },
       {
@@ -9111,7 +9651,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 38,
+        "line": 42,
         "signature": "pub mod dag;"
       },
       {
@@ -9119,7 +9659,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 39,
+        "line": 43,
         "signature": "pub mod decompiler;"
       },
       {
@@ -9127,7 +9667,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 40,
+        "line": 44,
         "signature": "pub mod deontic_interrupt;"
       },
       {
@@ -9135,7 +9675,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 41,
+        "line": 45,
         "signature": "pub mod frame_morphism;"
       },
       {
@@ -9143,7 +9683,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 42,
+        "line": 46,
         "signature": "pub mod hid;"
       },
       {
@@ -9151,7 +9691,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 43,
+        "line": 47,
         "signature": "pub mod law_package;"
       },
       {
@@ -9159,7 +9699,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 44,
+        "line": 48,
         "signature": "pub mod locale;"
       },
       {
@@ -9167,7 +9707,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 45,
+        "line": 49,
         "signature": "pub mod module_system;"
       },
       {
@@ -9175,7 +9715,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 46,
+        "line": 50,
         "signature": "pub mod observer;"
       },
       {
@@ -9183,7 +9723,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 47,
+        "line": 51,
         "signature": "pub mod physics;"
       },
       {
@@ -9191,7 +9731,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 48,
+        "line": 52,
         "signature": "pub mod presentation;"
       },
       {
@@ -9199,7 +9739,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 49,
+        "line": 53,
         "signature": "pub mod pretty;"
       },
       {
@@ -9207,7 +9747,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 50,
+        "line": 54,
         "signature": "pub mod projectional;"
       },
       {
@@ -9215,7 +9755,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 51,
+        "line": 55,
         "signature": "pub mod quantity;"
       },
       {
@@ -9223,7 +9763,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 52,
+        "line": 56,
         "signature": "pub mod reactive_cell;"
       },
       {
@@ -9231,7 +9771,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 53,
+        "line": 57,
         "signature": "pub mod reflection;"
       },
       {
@@ -9239,7 +9779,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 54,
+        "line": 58,
         "signature": "pub mod replay_clock;"
       },
       {
@@ -9247,7 +9787,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 55,
+        "line": 59,
         "signature": "pub mod sheaf;"
       },
       {
@@ -9255,7 +9795,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 56,
+        "line": 60,
         "signature": "pub mod tick_policy;"
       },
       {
@@ -9263,7 +9803,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 57,
+        "line": 61,
         "signature": "pub mod translate;"
       },
       {
@@ -9271,7 +9811,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 58,
+        "line": 62,
         "signature": "pub mod trivia;"
       },
       {
@@ -9279,7 +9819,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 59,
+        "line": 63,
         "signature": "pub mod vocab;"
       },
       {
@@ -9287,7 +9827,15 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 61,
+        "line": 65,
+        "signature": "pub use accel::{"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 68,
         "signature": "pub use ast::{"
       },
       {
@@ -9295,23 +9843,15 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 67,
+        "line": 75,
         "signature": "pub use ast_query::{"
-      },
-      {
-        "name": "{",
-        "kind": "use",
-        "doc": "",
-        "file": "lib.rs",
-        "line": 71,
-        "signature": "pub use accel::{"
       },
       {
         "name": "LocalHost}",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 74,
+        "line": 79,
         "signature": "pub use bind::{AccelerationTier, Host, HostEnvironment, LocalHost};"
       },
       {
@@ -9319,23 +9859,15 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 75,
+        "line": 80,
         "signature": "pub use budget::{Budget, SENTINEL_BYTES};"
-      },
-      {
-        "name": "llm_missing}",
-        "kind": "use",
-        "doc": "",
-        "file": "lib.rs",
-        "line": 76,
-        "signature": "pub use degrade::{gpu_missing, llm_missing};"
       },
       {
         "name": "TAG_VIBE_AST}",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 77,
+        "line": 81,
         "signature": "pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};"
       },
       {
@@ -9343,7 +9875,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 78,
+        "line": 82,
         "signature": "pub use check::{"
       },
       {
@@ -9351,15 +9883,23 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 82,
+        "line": 86,
         "signature": "pub use dag::{"
+      },
+      {
+        "name": "llm_missing}",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 91,
+        "signature": "pub use degrade::{gpu_missing, llm_missing};"
       },
       {
         "name": "{",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 87,
+        "line": 92,
         "signature": "pub use deontic_interrupt::{"
       },
       {
@@ -9367,7 +9907,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 91,
+        "line": 96,
         "signature": "pub use diagnose::{diagnose, DiagnoseReport};"
       },
       {
@@ -9375,7 +9915,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 92,
+        "line": 97,
         "signature": "pub use error::{DiagCode, Diagnostic};"
       },
       {
@@ -9383,7 +9923,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 93,
+        "line": 98,
         "signature": "pub use eval::{populate_import_aliases, Engine, Env};"
       },
       {
@@ -9391,15 +9931,23 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 94,
+        "line": 99,
         "signature": "pub use grammar::{DIAGNOSTIC_SCHEMA_JSON, EBNF, GBNF, SOURCE_SCHEMA_JSON};"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 100,
+        "signature": "pub use lexicon_pin::{"
       },
       {
         "name": "parse_program}",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 95,
+        "line": 106,
         "signature": "pub use parse::{parse_cell, parse_program};"
       },
       {
@@ -9407,7 +9955,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 96,
+        "line": 107,
         "signature": "pub use projectional::{"
       },
       {
@@ -9415,7 +9963,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 100,
+        "line": 111,
         "signature": "pub use reactive_cell::{ReactiveCell, ReactiveCellError, ReactiveCellGraph};"
       },
       {
@@ -9423,7 +9971,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 101,
+        "line": 112,
         "signature": "pub use reflection::{"
       },
       {
@@ -9431,7 +9979,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 104,
+        "line": 115,
         "signature": "pub use span::Span;"
       },
       {
@@ -9439,7 +9987,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 105,
+        "line": 116,
         "signature": "pub use unicode_ident::{"
       },
       {
@@ -9447,7 +9995,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 109,
+        "line": 120,
         "signature": "pub use value::{"
       },
       {
@@ -9455,7 +10003,7 @@
         "kind": "fn",
         "doc": "Parse, check, and evaluate a Pure cell (`= expr`).",
         "file": "lib.rs",
-        "line": 116,
+        "line": 127,
         "signature": "pub fn eval_cell<H: Host>(src: &str, host: &mut H, env: &mut Env) -> Result<Value, Diagnostic> {"
       },
       {
@@ -9463,7 +10011,7 @@
         "kind": "fn",
         "doc": "Parse and check a module. Does not run hooks.",
         "file": "lib.rs",
-        "line": 124,
+        "line": 135,
         "signature": "pub fn load_program(src: &str) -> Result<Program, Diagnostic> {"
       },
       {
@@ -9471,7 +10019,7 @@
         "kind": "fn",
         "doc": "Evaluate a named function from a checked program.\nImport aliases from the program are populated into `env` before evaluation.",
         "file": "lib.rs",
-        "line": 132,
+        "line": 143,
         "signature": "pub fn eval_function<H: Host>("
       },
       {
@@ -9479,7 +10027,7 @@
         "kind": "fn",
         "doc": "Dispatch a hook event on a checked program.\n\n`path` is the event path (e.g. `[\"pulse\", \"message\"]` for `on pulse:message(…)`\nor `[\"tick\"]` for `on tick(…)`). `args` are bound to the hook's parameters\nin declaration order. Returns `Ok(Value::Null)` if no matching hook exists.",
         "file": "lib.rs",
-        "line": 149,
+        "line": 160,
         "signature": "pub fn dispatch_hook<H: Host>("
       }
     ]
@@ -9607,6 +10155,70 @@
         "file": "sheaf.rs",
         "line": 249,
         "signature": "pub fn to_receipt(&self) -> Value {"
+      },
+      {
+        "name": "LocalSection",
+        "kind": "struct",
+        "doc": "",
+        "file": "sheaf.rs",
+        "line": 266,
+        "signature": "pub struct LocalSection"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "",
+        "file": "sheaf.rs",
+        "line": 272,
+        "signature": "pub fn new(open_set_id: u64, values: BTreeMap<String, Value>) -> Self {"
+      },
+      {
+        "name": "restrict",
+        "kind": "fn",
+        "doc": "Restrict the local section to an intersection / common key set.",
+        "file": "sheaf.rs",
+        "line": 280,
+        "signature": "pub fn restrict(&self, keys: &[&str]) -> BTreeMap<String, Value> {"
+      },
+      {
+        "name": "CechCover",
+        "kind": "struct",
+        "doc": "",
+        "file": "sheaf.rs",
+        "line": 293,
+        "signature": "pub struct CechCover"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "",
+        "file": "sheaf.rs",
+        "line": 298,
+        "signature": "pub fn new() -> Self {"
+      },
+      {
+        "name": "add_section",
+        "kind": "fn",
+        "doc": "",
+        "file": "sheaf.rs",
+        "line": 302,
+        "signature": "pub fn add_section(&mut self, s: LocalSection) {"
+      },
+      {
+        "name": "verify_gluing",
+        "kind": "fn",
+        "doc": "Verify 0-cocycle Čech gluing condition: for all pairs (i, j),\nsections s_i and s_j must agree on all shared keys (overlap U_i ∩ U_j).",
+        "file": "sheaf.rs",
+        "line": 308,
+        "signature": "pub fn verify_gluing(&self) -> Result<(), String> {"
+      },
+      {
+        "name": "glue_global_section",
+        "kind": "fn",
+        "doc": "Glue all local sections into a single global section if gluing passes.",
+        "file": "sheaf.rs",
+        "line": 329,
+        "signature": "pub fn glue_global_section(&self) -> Result<BTreeMap<String, Value>, String> {"
       }
     ]
   },
@@ -10883,7 +11495,7 @@
         "kind": "fn",
         "doc": "P17.5 lock check. Does not fetch latest.",
         "file": "parse.rs",
-        "line": 66,
+        "line": 69,
         "signature": "pub fn lock_matches(&self, expected_hex: &str) -> bool {"
       },
       {
@@ -10891,7 +11503,7 @@
         "kind": "fn",
         "doc": "",
         "file": "parse.rs",
-        "line": 71,
+        "line": 74,
         "signature": "pub fn parse_chunk(bytes: &[u8]) -> Result<VocabChunk, VocabError> {"
       },
       {
@@ -10899,7 +11511,7 @@
         "kind": "fn",
         "doc": "Deterministic 32-byte identity (four FNV-1a 64 streams). Not SHA-256.",
         "file": "parse.rs",
-        "line": 194,
+        "line": 199,
         "signature": "pub fn content_hash(bytes: &[u8]) -> [u8; 32] {"
       }
     ]
@@ -10931,6 +11543,196 @@
         "file": "shake.rs",
         "line": 64,
         "signature": "pub fn unknown_prefixed(program: &Program, chunks: &[VocabChunk]) -> Vec<(String, String, Span)> {"
+      }
+    ]
+  },
+  {
+    "name": "wasm",
+    "doc": "WASM bindings for VibeScript 0.1.\n\nExposes parse, check, evaluate, and bytecode operations to JavaScript\nvia `wasm-bindgen`.  The wrapper serialises results as plain JS objects\n(through `serde-wasm-bindgen`) so the playground can consume them\nwithout a custom ABI.",
+    "items": [
+      {
+        "name": "language_version",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 105,
+        "signature": "pub fn language_version() -> String {"
+      },
+      {
+        "name": "host_version",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 111,
+        "signature": "pub fn host_version() -> String {"
+      },
+      {
+        "name": "capability_invoke",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 118,
+        "signature": "pub fn capability_invoke(id: &str, _args_json: &str) -> JsValue {"
+      },
+      {
+        "name": "parse_cell_src",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 133,
+        "signature": "pub fn parse_cell_src(src: &str) -> JsValue {"
+      },
+      {
+        "name": "check_cell_src",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 157,
+        "signature": "pub fn check_cell_src(src: &str) -> JsValue {"
+      },
+      {
+        "name": "eval_cell_src",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 183,
+        "signature": "pub fn eval_cell_src(src: &str) -> JsValue {"
+      },
+      {
+        "name": "parse_program_src",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 204,
+        "signature": "pub fn parse_program_src(src: &str) -> JsValue {"
+      },
+      {
+        "name": "check_program_src",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 235,
+        "signature": "pub fn check_program_src(src: &str) -> JsValue {"
+      },
+      {
+        "name": "eval_cell_json",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 261,
+        "signature": "pub fn eval_cell_json(src: &str) -> JsValue {"
+      },
+      {
+        "name": "diagnose_src",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 267,
+        "signature": "pub fn diagnose_src(src: &str) -> JsValue {"
+      },
+      {
+        "name": "eval_program_src",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 275,
+        "signature": "pub fn eval_program_src(src: &str) -> JsValue {"
+      },
+      {
+        "name": "compile_cell_bytecode",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 307,
+        "signature": "pub fn compile_cell_bytecode(src: &str) -> JsValue {"
+      },
+      {
+        "name": "run_cell_bytecode",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 361,
+        "signature": "pub fn run_cell_bytecode(src: &str) -> JsValue {"
+      },
+      {
+        "name": "run_program_bytecode",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 402,
+        "signature": "pub fn run_program_bytecode(src: &str, fn_name: &str, args: Vec<JsValue>) -> JsValue {"
+      },
+      {
+        "name": "encode_cell_bytecode",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 492,
+        "signature": "pub fn encode_cell_bytecode(src: &str) -> JsValue {"
+      },
+      {
+        "name": "decode_and_run",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 515,
+        "signature": "pub fn decode_and_run(bytes: &[u8]) -> JsValue {"
+      },
+      {
+        "name": "ebnf_grammar",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 546,
+        "signature": "pub fn ebnf_grammar() -> String {"
+      },
+      {
+        "name": "gbnf_grammar",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 552,
+        "signature": "pub fn gbnf_grammar() -> String {"
+      },
+      {
+        "name": "ast_schema_json",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 558,
+        "signature": "pub fn ast_schema_json() -> String {"
+      },
+      {
+        "name": "diagnostic_schema_json",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 564,
+        "signature": "pub fn diagnostic_schema_json() -> String {"
+      },
+      {
+        "name": "project_source",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 698,
+        "signature": "pub fn project_source(src: &str) -> JsValue {"
+      },
+      {
+        "name": "apply_structural_edit",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 736,
+        "signature": "pub fn apply_structural_edit(src: &str, edit_json: &str) -> JsValue {"
+      },
+      {
+        "name": "apply_structural_edits",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 768,
+        "signature": "pub fn apply_structural_edits(src: &str, edits_json: &str) -> JsValue {"
       }
     ]
   }
