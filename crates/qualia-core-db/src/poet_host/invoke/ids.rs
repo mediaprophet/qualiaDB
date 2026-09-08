@@ -753,6 +753,15 @@ pub const GEOM_KL_BREGMAN_FORM: &str = "ComputationalGeometry.kl_bregman_form";
 pub const GEOM_TRIANGLE_SIGNED_AREA: &str = "ComputationalGeometry.triangle_signed_area";
 pub const GEOM_DIST_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_point_to_segment";
 pub const GEOM_DIST_SQ_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_sq_point_to_segment";
+// ── Wave-22 Host binds (predicates / Tukey / width / site queries) ──
+pub const GEOM_INCIRCLE: &str = "ComputationalGeometry.incircle";
+pub const GEOM_TUKEY_DEPTH: &str = "ComputationalGeometry.tukey_depth";
+pub const GEOM_DIRECTIONAL_WIDTH: &str = "ComputationalGeometry.directional_width";
+pub const GEOM_WIDTH: &str = "ComputationalGeometry.width";
+pub const GEOM_FARTHEST_SITE_BRUTE: &str = "ComputationalGeometry.farthest_site_brute";
+pub const GEOM_K_NEAREST_SITES: &str = "ComputationalGeometry.k_nearest_sites";
+pub const GEOM_IS_HULL_SITE: &str = "ComputationalGeometry.is_hull_site";
+pub const GEOM_DIAMETER_AND_WIDTH: &str = "ComputationalGeometry.diameter_and_width";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1810,6 +1819,14 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_TRIANGLE_SIGNED_AREA,
     GEOM_DIST_POINT_TO_SEGMENT,
     GEOM_DIST_SQ_POINT_TO_SEGMENT,
+    GEOM_INCIRCLE,
+    GEOM_TUKEY_DEPTH,
+    GEOM_DIRECTIONAL_WIDTH,
+    GEOM_WIDTH,
+    GEOM_FARTHEST_SITE_BRUTE,
+    GEOM_K_NEAREST_SITES,
+    GEOM_IS_HULL_SITE,
+    GEOM_DIAMETER_AND_WIDTH,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2616,7 +2633,15 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_KL_BREGMAN_FORM
         | GEOM_TRIANGLE_SIGNED_AREA
         | GEOM_DIST_POINT_TO_SEGMENT
-        | GEOM_DIST_SQ_POINT_TO_SEGMENT => "geometry",
+        | GEOM_DIST_SQ_POINT_TO_SEGMENT
+        | GEOM_INCIRCLE
+        | GEOM_TUKEY_DEPTH
+        | GEOM_DIRECTIONAL_WIDTH
+        | GEOM_WIDTH
+        | GEOM_FARTHEST_SITE_BRUTE
+        | GEOM_K_NEAREST_SITES
+        | GEOM_IS_HULL_SITE
+        | GEOM_DIAMETER_AND_WIDTH => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE

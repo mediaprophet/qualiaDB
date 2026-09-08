@@ -956,6 +956,61 @@ fn named(id: &str) -> Option<Presentation> {
             "Set the viewport wipe colour from four numbers.",
             Proficiency::Novice,
         ),
+        "spatial:scene_create" => (
+            "Create scene",
+            "Create a named scene graph (Host Scene.create).",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_add_node" => (
+            "Add scene node",
+            "Add a numbered node at x, y, z via Scene.add_node.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_set_transform" => (
+            "Set scene transform",
+            "Set a node’s position, rotation, and scale via Scene.set_transform.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_set_mesh" => (
+            "Set scene mesh",
+            "Assign a mesh IRI to a node via Scene.set_mesh.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_add_camera" => (
+            "Add scene camera",
+            "Add a camera with position and field of view via Scene.add_camera.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_render" => (
+            "Render scene",
+            "Request a render of a named scene via Scene.render.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_set_viewport" => (
+            "Set viewport",
+            "Set viewport width, height, and format via Scene.set_viewport.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_capture_frame" => (
+            "Capture frame",
+            "Request a frame capture via Scene.capture_frame.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_add_light" => (
+            "Add scene light",
+            "Add a point, directional, spot, or ambient light via Scene.add_light.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_link_semantic" => (
+            "Link semantic",
+            "Link a scene node to a semantic IRI via Scene.link_semantic.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:scene_duplicate_node" => (
+            "Duplicate node",
+            "Duplicate a scene node with a new id via Scene.duplicate_node.",
+            Proficiency::Novice,
+        ),
         "audio:place_audio_session" => (
             "Sound session",
             "Put a sound session on the work surface.",
@@ -1020,6 +1075,71 @@ fn named(id: &str) -> Option<Presentation> {
             "Transpose note",
             "Transpose a MIDI note by semitones (clamped 0–127).",
             Proficiency::Novice,
+        ),
+        "audio:fx_oscillator" => (
+            "Oscillator",
+            "Render a sine/square/saw/triangle buffer via Audio.oscillator.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_envelope" => (
+            "Envelope",
+            "Render an ADSR envelope buffer via Audio.envelope.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_filter" => (
+            "Biquad filter",
+            "Apply a lowpass/highpass/bandpass/notch filter via Audio.filter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_lfo" => (
+            "LFO",
+            "Render a low-frequency oscillator buffer via Audio.lfo.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_delay" => (
+            "Delay",
+            "Apply a delay with feedback and mix via Audio.delay.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_reverb" => (
+            "Reverb",
+            "Apply a room reverb via Audio.reverb.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_compressor" => (
+            "Compressor",
+            "Apply dynamic-range compression via Audio.compressor.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_eq" => (
+            "Three-band EQ",
+            "Apply low/mid/high gains via Audio.eq.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_transport" => (
+            "Transport",
+            "Play, stop, pause, record, or query status via Audio.transport.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_waveform_meter" => (
+            "Waveform meter",
+            "Measure peak/RMS and a display envelope via Audio.waveform_meter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_phase_meter" => (
+            "Phase meter",
+            "Measure stereo phase correlation via Audio.phase_meter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_loudness_meter" => (
+            "Loudness meter",
+            "Measure LUFS loudness via Audio.loudness_meter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_spectrum" => (
+            "Spectrum",
+            "Read a rasterised spectrum via Audio.spectrum.",
+            Proficiency::Intermediate,
         ),
         "comm:place_social" => (
             "People graph",
@@ -3271,6 +3391,81 @@ fn named(id: &str) -> Option<Presentation> {
             "Embedding similarity",
             "Cosine similarity of two embedding vectors on this surface.",
             Proficiency::Expert,
+        ),
+        "image:edit_new" => (
+            "New image",
+            "Create an image document via Image.new.",
+            Proficiency::Novice,
+        ),
+        "image:edit_add_layer" => (
+            "Add layer",
+            "Add a named layer via Image.add_layer.",
+            Proficiency::Novice,
+        ),
+        "image:edit_remove_layer" => (
+            "Remove layer",
+            "Remove a layer by index via Image.remove_layer.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_pixel" => (
+            "Set pixel",
+            "Set a pixel RGBA via Image.set_pixel.",
+            Proficiency::Novice,
+        ),
+        "image:edit_fill" => (
+            "Fill image",
+            "Fill the document with RGB via Image.fill.",
+            Proficiency::Novice,
+        ),
+        "image:edit_brush" => (
+            "Brush stroke",
+            "Apply a brush stroke via Image.brush.",
+            Proficiency::Novice,
+        ),
+        "image:edit_apply_filter" => (
+            "Apply filter",
+            "Apply a named filter via Image.apply_filter.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_opacity" => (
+            "Set opacity",
+            "Set layer opacity via Image.set_opacity.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_blend_mode" => (
+            "Blend mode",
+            "Set blend mode via Image.set_blend_mode.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_visible" => (
+            "Set visible",
+            "Show or hide a layer via Image.set_visible.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_mask" => (
+            "Set mask",
+            "Set a rectangular mask via Image.set_mask.",
+            Proficiency::Novice,
+        ),
+        "image:edit_clear_mask" => (
+            "Clear mask",
+            "Clear the current mask via Image.clear_mask.",
+            Proficiency::Novice,
+        ),
+        "image:edit_composite" => (
+            "Composite",
+            "Composite layers via Image.composite.",
+            Proficiency::Novice,
+        ),
+        "image:edit_add_selection" => (
+            "Add selection",
+            "Add a named selection via Image.add_selection.",
+            Proficiency::Novice,
+        ),
+        "image:edit_clear_selections" => (
+            "Clear selections",
+            "Clear all selections via Image.clear_selections.",
+            Proficiency::Novice,
         ),
         "ai:co_author" => (
             "Write together",

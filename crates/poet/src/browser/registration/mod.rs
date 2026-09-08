@@ -3330,8 +3330,145 @@ mod tests {
             "spatial:scene_set_clear_colour",
             Some("Scene.set_clear_colour")
         )));
-        // Pre-existing spatial:scene tools plus wave-21 Host binds.
-        assert!(tools.len() >= 8);
+        // Wave-21 plus wave-22 graph/build Host binds.
+        assert!(tools.len() >= 19);
+    }
+
+    #[test]
+    fn spatial_scene_binds_wave22_scene_graph_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:scene")
+            .expect("spatial:scene toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("spatial:scene_create", Some("Scene.create"))));
+        assert!(tools.contains(&("spatial:scene_add_node", Some("Scene.add_node"))));
+        assert!(tools.contains(&(
+            "spatial:scene_set_transform",
+            Some("Scene.set_transform")
+        )));
+        assert!(tools.contains(&("spatial:scene_set_mesh", Some("Scene.set_mesh"))));
+        assert!(tools.contains(&("spatial:scene_add_camera", Some("Scene.add_camera"))));
+        assert!(tools.contains(&("spatial:scene_render", Some("Scene.render"))));
+        assert!(tools.contains(&(
+            "spatial:scene_set_viewport",
+            Some("Scene.set_viewport")
+        )));
+        assert!(tools.contains(&(
+            "spatial:scene_capture_frame",
+            Some("Scene.capture_frame")
+        )));
+        assert!(tools.contains(&("spatial:scene_add_light", Some("Scene.add_light"))));
+        assert!(tools.contains(&(
+            "spatial:scene_link_semantic",
+            Some("Scene.link_semantic")
+        )));
+        assert!(tools.contains(&(
+            "spatial:scene_duplicate_node",
+            Some("Scene.duplicate_node")
+        )));
+    }
+
+    #[test]
+    fn audio_fx_binds_wave22_audio_caps() {
+        let registry = super::build_registry();
+        let audio = registry.toolbox("audio").expect("audio toolbox");
+        let chain = audio
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "audio:fx")
+            .expect("audio:fx toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("audio:fx_oscillator", Some("Audio.oscillator"))));
+        assert!(tools.contains(&("audio:fx_envelope", Some("Audio.envelope"))));
+        assert!(tools.contains(&("audio:fx_filter", Some("Audio.filter"))));
+        assert!(tools.contains(&("audio:fx_lfo", Some("Audio.lfo"))));
+        assert!(tools.contains(&("audio:fx_delay", Some("Audio.delay"))));
+        assert!(tools.contains(&("audio:fx_reverb", Some("Audio.reverb"))));
+        assert!(tools.contains(&("audio:fx_compressor", Some("Audio.compressor"))));
+        assert!(tools.contains(&("audio:fx_eq", Some("Audio.eq"))));
+        assert!(tools.contains(&("audio:fx_transport", Some("Audio.transport"))));
+        assert!(tools.contains(&(
+            "audio:fx_waveform_meter",
+            Some("Audio.waveform_meter")
+        )));
+        assert!(tools.contains(&("audio:fx_phase_meter", Some("Audio.phase_meter"))));
+        assert!(tools.contains(&(
+            "audio:fx_loudness_meter",
+            Some("Audio.loudness_meter")
+        )));
+        assert!(tools.contains(&("audio:fx_spectrum", Some("Audio.spectrum"))));
+        assert_eq!(tools.len(), 13);
+    }
+
+    #[test]
+    fn image_edit_binds_wave22_image_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "image:edit")
+            .expect("image:edit toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("image:edit_new", Some("Image.new"))));
+        assert!(tools.contains(&("image:edit_add_layer", Some("Image.add_layer"))));
+        assert!(tools.contains(&("image:edit_remove_layer", Some("Image.remove_layer"))));
+        assert!(tools.contains(&("image:edit_set_pixel", Some("Image.set_pixel"))));
+        assert!(tools.contains(&("image:edit_fill", Some("Image.fill"))));
+        assert!(tools.contains(&("image:edit_brush", Some("Image.brush"))));
+        assert!(tools.contains(&(
+            "image:edit_apply_filter",
+            Some("Image.apply_filter")
+        )));
+        assert!(tools.contains(&("image:edit_set_opacity", Some("Image.set_opacity"))));
+        assert!(tools.contains(&(
+            "image:edit_set_blend_mode",
+            Some("Image.set_blend_mode")
+        )));
+        assert!(tools.contains(&("image:edit_set_visible", Some("Image.set_visible"))));
+        assert!(tools.contains(&("image:edit_set_mask", Some("Image.set_mask"))));
+        assert!(tools.contains(&("image:edit_clear_mask", Some("Image.clear_mask"))));
+        assert!(tools.contains(&("image:edit_composite", Some("Image.composite"))));
+        assert!(tools.contains(&(
+            "image:edit_add_selection",
+            Some("Image.add_selection")
+        )));
+        assert!(tools.contains(&(
+            "image:edit_clear_selections",
+            Some("Image.clear_selections")
+        )));
+        assert_eq!(tools.len(), 15);
     }
 
     #[test]

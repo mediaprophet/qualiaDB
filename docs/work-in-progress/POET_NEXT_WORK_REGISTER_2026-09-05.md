@@ -51,6 +51,7 @@ evidence.
 | 37 | Q1/Q2 wave 19 | **Complete** | Calc +10 · Cosmic +12 · IT +8 Live; Host Inference/CG/Audio +8 | Closed |
 | 38 | Q1/Q2 wave 20 | **Complete** | Inf +8 · Cosmic +11 · Orch/ThreeD +16 Live; Host Audio/Scene/CG +8 | Closed |
 | 39 | Q1/Q2 wave 21 | **Complete** | Audio +9 · Scene +8 · NLP +9 Live; Host CG/Stats +6 | Closed — wave 21 |
+| 40 | Q1/Q2 wave 22 | **Complete** | Audio FX +13 · Scene graph +11 · Image edit +15 Live; Host CG predicates +8 | Closed — wave 22 |
 
 ## Latest execution evidence
 

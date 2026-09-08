@@ -1,16 +1,15 @@
 # Q1/Q2 incorporation handover — stop after wave 20 (+ partial wave 21)
 
 **Date:** 2026-09-08  
-**Branch:** `0.0.36-dev`  
-**Workspace:** `C:\github\qualiaDB`  
-**Do not commit unless owner asks** — this stop *does* include an owner-requested commit/push.
+**Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
+**Workspace:** QualiaDB cloud agent
 
 ## Status
 
 | Wave | Status | Notes |
 |------|--------|-------|
-| 1–20 | **Complete (integrated)** | Last full close: wave 20 |
-| 21 | **Partial / parked** | Audio + Scene Live landed; NLP + Host not done; agents interrupted |
+| 1–21 | **Complete (integrated)** | Last full close: wave 21 on `0.0.37` |
+| 22 | **Complete (integrated)** | Audio FX×13 · Scene graph×11 · Image×15 Live; Host CG×8 |
 
 ### Wave 20 (last complete)
 

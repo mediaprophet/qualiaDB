@@ -270,6 +270,21 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "image:dhash"
             | "image:hamming_distance"
             | "image:cosine_similarity"
+            | "image:edit_new"
+            | "image:edit_add_layer"
+            | "image:edit_remove_layer"
+            | "image:edit_set_pixel"
+            | "image:edit_fill"
+            | "image:edit_brush"
+            | "image:edit_apply_filter"
+            | "image:edit_set_opacity"
+            | "image:edit_set_blend_mode"
+            | "image:edit_set_visible"
+            | "image:edit_set_mask"
+            | "image:edit_clear_mask"
+            | "image:edit_composite"
+            | "image:edit_add_selection"
+            | "image:edit_clear_selections"
             | "health:framingham"
             | "health:cha2ds2"
             | "health:score2"
@@ -659,6 +674,17 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "spatial:scene_ik_ccd"
         | "spatial:scene_set_render_budget"
         | "spatial:scene_set_clear_colour"
+        | "spatial:scene_create"
+        | "spatial:scene_add_node"
+        | "spatial:scene_set_transform"
+        | "spatial:scene_set_mesh"
+        | "spatial:scene_add_camera"
+        | "spatial:scene_render"
+        | "spatial:scene_set_viewport"
+        | "spatial:scene_capture_frame"
+        | "spatial:scene_add_light"
+        | "spatial:scene_link_semantic"
+        | "spatial:scene_duplicate_node"
         | "audio:dsp_ep_temp"
         | "audio:dsp_ep_fm"
         | "audio:dsp_sigma_freq"
@@ -668,6 +694,19 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "audio:dsp_midi_note"
         | "audio:dsp_quantize"
         | "audio:dsp_transpose"
+        | "audio:fx_oscillator"
+        | "audio:fx_envelope"
+        | "audio:fx_filter"
+        | "audio:fx_lfo"
+        | "audio:fx_delay"
+        | "audio:fx_reverb"
+        | "audio:fx_compressor"
+        | "audio:fx_eq"
+        | "audio:fx_transport"
+        | "audio:fx_waveform_meter"
+        | "audio:fx_phase_meter"
+        | "audio:fx_loudness_meter"
+        | "audio:fx_spectrum"
         | "ai:nlp_tokenize"
         | "ai:nlp_split_sentences"
         | "ai:nlp_coref_resolve"
@@ -1737,6 +1776,33 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "image:cosine_similarity" => {
             super::image_chain_actions::run_cosine_similarity(document, label)
         }
+        "image:edit_new" => super::image_edit_chain_actions::run_new(document, label),
+        "image:edit_add_layer" => super::image_edit_chain_actions::run_add_layer(document, label),
+        "image:edit_remove_layer" => {
+            super::image_edit_chain_actions::run_remove_layer(document, label)
+        }
+        "image:edit_set_pixel" => super::image_edit_chain_actions::run_set_pixel(document, label),
+        "image:edit_fill" => super::image_edit_chain_actions::run_fill(document, label),
+        "image:edit_brush" => super::image_edit_chain_actions::run_brush(document, label),
+        "image:edit_apply_filter" => {
+            super::image_edit_chain_actions::run_apply_filter(document, label)
+        }
+        "image:edit_set_opacity" => {
+            super::image_edit_chain_actions::run_set_opacity(document, label)
+        }
+        "image:edit_set_blend_mode" => {
+            super::image_edit_chain_actions::run_set_blend_mode(document, label)
+        }
+        "image:edit_set_visible" => super::image_edit_chain_actions::run_set_visible(document, label),
+        "image:edit_set_mask" => super::image_edit_chain_actions::run_set_mask(document, label),
+        "image:edit_clear_mask" => super::image_edit_chain_actions::run_clear_mask(document, label),
+        "image:edit_composite" => super::image_edit_chain_actions::run_composite(document, label),
+        "image:edit_add_selection" => {
+            super::image_edit_chain_actions::run_add_selection(document, label)
+        }
+        "image:edit_clear_selections" => {
+            super::image_edit_chain_actions::run_clear_selections(document, label)
+        }
         "comm:pulse_presence" => super::chain_actions::run_pulse_presence(document, label),
         "rights:deontic_obligate" => super::chain_actions::run_deontic_obligate(document, label),
         "epistemic:paraconsistent_route" => {
@@ -2645,6 +2711,29 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "spatial:scene_set_clear_colour" => {
             super::scene_chain_actions::run_set_clear_colour(document, label)
         }
+        "spatial:scene_create" => super::scene_graph_chain_actions::run_create(document, label),
+        "spatial:scene_add_node" => super::scene_graph_chain_actions::run_add_node(document, label),
+        "spatial:scene_set_transform" => {
+            super::scene_graph_chain_actions::run_set_transform(document, label)
+        }
+        "spatial:scene_set_mesh" => super::scene_graph_chain_actions::run_set_mesh(document, label),
+        "spatial:scene_add_camera" => {
+            super::scene_graph_chain_actions::run_add_camera(document, label)
+        }
+        "spatial:scene_render" => super::scene_graph_chain_actions::run_render(document, label),
+        "spatial:scene_set_viewport" => {
+            super::scene_graph_chain_actions::run_set_viewport(document, label)
+        }
+        "spatial:scene_capture_frame" => {
+            super::scene_graph_chain_actions::run_capture_frame(document, label)
+        }
+        "spatial:scene_add_light" => super::scene_graph_chain_actions::run_add_light(document, label),
+        "spatial:scene_link_semantic" => {
+            super::scene_graph_chain_actions::run_link_semantic(document, label)
+        }
+        "spatial:scene_duplicate_node" => {
+            super::scene_graph_chain_actions::run_duplicate_node(document, label)
+        }
         "audio:dsp_ep_temp" => {
             super::audio_chain_actions::run_epistemic_temperature_from_q(document, label)
         }
@@ -2664,6 +2753,23 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "audio:dsp_midi_note" => super::audio_chain_actions::run_midi_note(document, label),
         "audio:dsp_quantize" => super::audio_chain_actions::run_quantize(document, label),
         "audio:dsp_transpose" => super::audio_chain_actions::run_transpose(document, label),
+        "audio:fx_oscillator" => super::audio_fx_chain_actions::run_fx_oscillator(document, label),
+        "audio:fx_envelope" => super::audio_fx_chain_actions::run_fx_envelope(document, label),
+        "audio:fx_filter" => super::audio_fx_chain_actions::run_fx_filter(document, label),
+        "audio:fx_lfo" => super::audio_fx_chain_actions::run_fx_lfo(document, label),
+        "audio:fx_delay" => super::audio_fx_chain_actions::run_fx_delay(document, label),
+        "audio:fx_reverb" => super::audio_fx_chain_actions::run_fx_reverb(document, label),
+        "audio:fx_compressor" => super::audio_fx_chain_actions::run_fx_compressor(document, label),
+        "audio:fx_eq" => super::audio_fx_chain_actions::run_fx_eq(document, label),
+        "audio:fx_transport" => super::audio_fx_chain_actions::run_fx_transport(document, label),
+        "audio:fx_waveform_meter" => {
+            super::audio_fx_chain_actions::run_fx_waveform_meter(document, label)
+        }
+        "audio:fx_phase_meter" => super::audio_fx_chain_actions::run_fx_phase_meter(document, label),
+        "audio:fx_loudness_meter" => {
+            super::audio_fx_chain_actions::run_fx_loudness_meter(document, label)
+        }
+        "audio:fx_spectrum" => super::audio_fx_chain_actions::run_fx_spectrum(document, label),
         "ai:nlp_tokenize" => super::nlp_chain_actions::run_tokenize(document, label),
         "ai:nlp_split_sentences" => {
             super::nlp_chain_actions::run_split_sentences(document, label)

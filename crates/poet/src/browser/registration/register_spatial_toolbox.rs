@@ -277,6 +277,142 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
             },
             ActionType::Invoke,
         )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_create".into(),
+                label: "Create scene".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.create".into()),
+                ontology_prefix: "hm".into(),
+                description: "Create a named scene graph via Scene.create.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_add_node".into(),
+                label: "Add node".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.add_node".into()),
+                ontology_prefix: "hm".into(),
+                description: "Add a numbered node at x, y, z via Scene.add_node.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_set_transform".into(),
+                label: "Set transform".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.set_transform".into()),
+                ontology_prefix: "hm".into(),
+                description: "Set a node's position, rotation, and scale via Scene.set_transform."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_set_mesh".into(),
+                label: "Set mesh".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.set_mesh".into()),
+                ontology_prefix: "hm".into(),
+                description: "Assign a mesh IRI to a node via Scene.set_mesh.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_add_camera".into(),
+                label: "Add camera".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.add_camera".into()),
+                ontology_prefix: "hm".into(),
+                description: "Add a camera with position and fov via Scene.add_camera.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_render".into(),
+                label: "Render scene".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.render".into()),
+                ontology_prefix: "hm".into(),
+                description: "Request a scene render via Scene.render.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_set_viewport".into(),
+                label: "Set viewport".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.set_viewport".into()),
+                ontology_prefix: "hm".into(),
+                description: "Set viewport width, height, and format via Scene.set_viewport."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_capture_frame".into(),
+                label: "Capture frame".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.capture_frame".into()),
+                ontology_prefix: "hm".into(),
+                description: "Request a viewport frame capture via Scene.capture_frame.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_add_light".into(),
+                label: "Add light".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.add_light".into()),
+                ontology_prefix: "hm".into(),
+                description: "Add a point, directional, spot, or ambient light via Scene.add_light."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_link_semantic".into(),
+                label: "Link semantic".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.link_semantic".into()),
+                ontology_prefix: "hm".into(),
+                description: "Link a scene node to a semantic IRI via Scene.link_semantic.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_duplicate_node".into(),
+                label: "Duplicate node".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.duplicate_node".into()),
+                ontology_prefix: "hm".into(),
+                description: "Duplicate a scene node under a new id via Scene.duplicate_node."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
     ];
 
     reg.register_toolbox(Toolbox::new(
@@ -341,7 +477,7 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
                     label: "Live Scene".into(),
                     icon: "3d".into(),
                     description:
-                        "Curated Scene.* camera, damp, IK, budget, and clear-colour numeric binds."
+                        "Curated Scene.* camera, damp, IK, budget, clear-colour, and graph/build ops."
                             .into(),
                 },
                 scene_tools,

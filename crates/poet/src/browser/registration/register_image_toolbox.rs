@@ -2,6 +2,27 @@
 
 use super::*;
 
+fn image_edit_tool(
+    id: &'static str,
+    label: &'static str,
+    icon: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: icon.into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "hm".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 pub(super) fn register_image_toolbox(reg: &mut Registry) {
     let shape_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
@@ -109,6 +130,114 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let edit_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        image_edit_tool(
+            "image:edit_new",
+            "New document",
+            "media",
+            "Image.new",
+            "Create a new image document (default 1920×1080) on this surface.",
+        ),
+        image_edit_tool(
+            "image:edit_add_layer",
+            "Add layer",
+            "media",
+            "Image.add_layer",
+            "Add a named layer to the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_remove_layer",
+            "Remove layer",
+            "media",
+            "Image.remove_layer",
+            "Remove a layer by index from the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_pixel",
+            "Set pixel",
+            "marker",
+            "Image.set_pixel",
+            "Set one pixel colour on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_fill",
+            "Fill",
+            "heatmap",
+            "Image.fill",
+            "Fill the selected image document with an RGB colour.",
+        ),
+        image_edit_tool(
+            "image:edit_brush",
+            "Brush",
+            "marker",
+            "Image.brush",
+            "Stroke a brush path on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_apply_filter",
+            "Apply filter",
+            "heatmap",
+            "Image.apply_filter",
+            "Apply a filter (default blur) to the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_opacity",
+            "Set opacity",
+            "heatmap",
+            "Image.set_opacity",
+            "Set layer opacity on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_blend_mode",
+            "Blend mode",
+            "heatmap",
+            "Image.set_blend_mode",
+            "Set layer blend mode (default normal) on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_visible",
+            "Set visible",
+            "media",
+            "Image.set_visible",
+            "Show or hide a layer on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_mask",
+            "Set mask",
+            "tools",
+            "Image.set_mask",
+            "Set a rectangular mask on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_clear_mask",
+            "Clear mask",
+            "tools",
+            "Image.clear_mask",
+            "Clear the mask on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_composite",
+            "Composite",
+            "media",
+            "Image.composite",
+            "Composite layers of the selected image document to RGBA8.",
+        ),
+        image_edit_tool(
+            "image:edit_add_selection",
+            "Add selection",
+            "marker",
+            "Image.add_selection",
+            "Add a named selection to the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_clear_selections",
+            "Clear selections",
+            "marker",
+            "Image.clear_selections",
+            "Clear all selections on the selected image document.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "image".into(),
@@ -211,6 +340,17 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                             .into(),
                 },
                 vision_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:edit".into(),
+                    label: "Live image edit".into(),
+                    icon: "media".into(),
+                    description:
+                        "Curated Image.* binds — document, layers, pixels, filter, mask, composite."
+                            .into(),
+                },
+                edit_live,
             ),
         ],
     ));

@@ -15,6 +15,8 @@ mod wave19_host;
 mod wave20_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave21_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave22_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -39,6 +41,13 @@ pub use wave21_host::{
     kl_bregman_form_host as kl_bregman_form,
     kl_divergence_host as kl_divergence,
     triangle_signed_area_host as triangle_signed_area,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave22_host::{
+    diameter_and_width_host as diameter_and_width,
+    directional_width_host as directional_width, farthest_site_brute_host as farthest_site_brute,
+    incircle_host as incircle, is_hull_site_host as is_hull_site,
+    k_nearest_sites_host as k_nearest_sites, tukey_depth_host as tukey_depth, width_host as width,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -117,5 +126,13 @@ geom_stub!(
     fisher_distance,
     kl_bregman_form,
     kl_divergence,
-    triangle_signed_area
+    triangle_signed_area,
+    incircle,
+    tukey_depth,
+    directional_width,
+    width,
+    farthest_site_brute,
+    k_nearest_sites,
+    is_hull_site,
+    diameter_and_width
 );
