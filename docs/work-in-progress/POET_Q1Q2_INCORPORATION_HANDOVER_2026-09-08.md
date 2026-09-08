@@ -18,6 +18,7 @@
 | 33 | **Complete (integrated)** | Animation leftovers×4 · numeric Ode×4 · HbbTV×4 |
 | 34 | **Complete (integrated)** | Already-bound Render.gpu_* honest Live ×17 |
 | 35 | **Complete (integrated)** | Remaining Render GPU/EMF ×17 — **GPU leftover Q2 exhausted** |
+| 36 | **Complete (integrated)** | Social/Forensic×6 · Finance×3 · Corpus/ChatGraph/Interactive/SecondScreen×7 |
 
 ### Wave 27 (this session)
 
