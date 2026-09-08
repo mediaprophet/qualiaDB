@@ -21,6 +21,8 @@ mod poly_algebra;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod gemm_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod la_app;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave14_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave15_host;
@@ -92,6 +94,10 @@ pub use poly_algebra::{
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use gemm_host::gemm_host as la_gemm;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use la_app::{
+    la_dot, la_identity, la_inverse, la_norm, la_trace,
+};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use wave14_host::{
     bdf1_step_host as calc_bdf1_step, bdf2_step_host as calc_bdf2_step,
@@ -362,6 +368,30 @@ pub fn la_symmetric_eigen_3x3(
     _args: &vibe::Value,
     span: vibe::Span,
 ) -> Result<vibe::Value, vibe::Diagnostic> {
+    missing(span, "LinearAlgebra")
+}
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn la_gemm(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+    missing(span, "LinearAlgebra")
+}
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn la_dot(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+    missing(span, "LinearAlgebra")
+}
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn la_norm(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+    missing(span, "LinearAlgebra")
+}
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn la_trace(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+    missing(span, "LinearAlgebra")
+}
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn la_identity(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+    missing(span, "LinearAlgebra")
+}
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn la_inverse(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]

@@ -166,6 +166,165 @@ pub(super) fn register_audio_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let fx_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_oscillator".into(),
+                label: "Oscillator".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.oscillator".into()),
+                ontology_prefix: "audio".into(),
+                description: "Render a waveform buffer (sine/square/sawtooth/triangle).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_envelope".into(),
+                label: "Envelope (ADSR)".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.envelope".into()),
+                ontology_prefix: "audio".into(),
+                description: "Render an ADSR envelope buffer.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_filter".into(),
+                label: "Biquad filter".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.filter".into()),
+                ontology_prefix: "audio".into(),
+                description: "Apply a biquad (lowpass/highpass/bandpass/notch).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_lfo".into(),
+                label: "LFO".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.lfo".into()),
+                ontology_prefix: "audio".into(),
+                description: "Render an LFO modulation buffer.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_delay".into(),
+                label: "Delay".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.delay".into()),
+                ontology_prefix: "audio".into(),
+                description: "Apply a delay effect (delay_samples, feedback, mix).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_reverb".into(),
+                label: "Reverb".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.reverb".into()),
+                ontology_prefix: "audio".into(),
+                description: "Apply a reverb (room_size, damping, mix).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_compressor".into(),
+                label: "Compressor".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.compressor".into()),
+                ontology_prefix: "audio".into(),
+                description: "Apply dynamic-range compression.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_eq".into(),
+                label: "3-band EQ".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.eq".into()),
+                ontology_prefix: "audio".into(),
+                description: "Apply a 3-band EQ (low/mid/high gain).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_transport".into(),
+                label: "Transport".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.transport".into()),
+                ontology_prefix: "audio".into(),
+                description: "Transport state (play/stop/pause/record/status).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_waveform_meter".into(),
+                label: "Waveform meter".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.waveform_meter".into()),
+                ontology_prefix: "audio".into(),
+                description: "Peak/RMS and bucketed waveform display.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_phase_meter".into(),
+                label: "Phase meter".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.phase_meter".into()),
+                ontology_prefix: "audio".into(),
+                description: "Stereo phase correlation (left/right; one list splits).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_loudness_meter".into(),
+                label: "Loudness (LUFS)".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.loudness_meter".into()),
+                ontology_prefix: "audio".into(),
+                description: "Measure LUFS loudness of an input buffer.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:fx_spectrum".into(),
+                label: "Spectrum".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.spectrum".into()),
+                ontology_prefix: "audio".into(),
+                description: "Spectral flux and energy from a time-frequency raster.".into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "audio".into(),
@@ -197,6 +356,17 @@ pub(super) fn register_audio_toolbox(reg: &mut Registry) {
                             .into(),
                 },
                 dsp_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "audio:fx".into(),
+                    label: "Live audio FX".into(),
+                    icon: "audio".into(),
+                    description:
+                        "Oscillator, ADSR, biquad, LFO, delay/reverb/comp/EQ, transport, meters."
+                            .into(),
+                },
+                fx_tools,
             ),
         ],
     ));

@@ -110,6 +110,17 @@ pub(super) fn register_epistemic_toolbox(reg: &mut Registry) {
                     )),
                 ],
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "research:live".into(),
+                    label: "Live research".into(),
+                    icon: "evaluate".into(),
+                    description:
+                        "Curated Research.* enquiry, corpus, investigation, and assessment binds."
+                            .into(),
+                },
+                super::register_research_live::research_live_tools(),
+            ),
         ],
     ));
 }

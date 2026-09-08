@@ -176,7 +176,12 @@ fn probe_caps() -> ComputeCaps {
 #[cfg(feature = "cuda")]
 fn probe_cuda() -> bool {
     use super::execute::CudaComputeContext;
-    CudaComputeContext::new(PROBE_CAPACITY_BYTES).is_ok()
+    // cudarc's dynamic loader panics when libcuda is absent. Map that to false so
+    // Host/REPL gemm never aborts the process (documented fail-closed).
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        CudaComputeContext::new(PROBE_CAPACITY_BYTES).is_ok()
+    }))
+    .unwrap_or(false)
 }
 
 #[cfg(not(feature = "cuda"))]

@@ -46,6 +46,12 @@ pub fn supports(capability: &str) -> bool {
             | "SHACL.validate"
             | "SymbolicAlgebra.eval"
             | "TemporalAndDescriptionLogic.ltl.evaluate"
+            | "LinearAlgebra.gemm"
+            | "LinearAlgebra.dot"
+            | "LinearAlgebra.norm"
+            | "LinearAlgebra.trace"
+            | "LinearAlgebra.identity"
+            | "LinearAlgebra.inverse"
     )
 }
 
@@ -102,6 +108,12 @@ pub fn build(
         "CausalFuzzyAndControl.caused" => causal_args(selected),
         "SHACL.validate" => shacl_args(selected),
         "N3Logic.evaluate" => n3_args(selected),
+        "LinearAlgebra.gemm" => la_gemm_args(selected),
+        "LinearAlgebra.dot" => la_dot_args(selected),
+        "LinearAlgebra.norm" => la_norm_args(selected),
+        "LinearAlgebra.trace" => la_trace_args(selected),
+        "LinearAlgebra.identity" => la_identity_args(selected),
+        "LinearAlgebra.inverse" => la_inverse_args(selected),
         _ => unreachable!("supports and build capability tables drifted"),
     }
 }
@@ -410,6 +422,101 @@ fn parse_u64_token(raw: &str) -> Option<u64> {
     trimmed.parse::<u64>().ok()
 }
 
+fn selected_numbers(selected: Option<&Element>) -> Vec<f64> {
+    selected
+        .and_then(|el| el.text_content())
+        .map(|text| {
+            text.split(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ';' | '|'))
+                .filter_map(|token| token.trim().parse::<f64>().ok())
+                .filter(|n| n.is_finite())
+                .take(4096)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn perfect_square(n: usize) -> Option<usize> {
+    if n == 0 {
+        return None;
+    }
+    let s = (n as f64).sqrt() as usize;
+    (s * s == n).then_some(s)
+}
+
+fn mat_record(rows: usize, cols: usize, data: &[f64]) -> Value {
+    json!({ "rows": rows as u64, "cols": cols as u64, "data": data })
+}
+
+fn la_gemm_args(selected: Option<&Element>) -> Result<Value, String> {
+    let nums = selected_numbers(selected);
+    let (a, b) = if nums.len() >= 8 && nums.len() % 2 == 0 {
+        let half = nums.len() / 2;
+        if let Some(n) = perfect_square(half) {
+            (
+                (n, n, nums[..half].to_vec()),
+                (n, n, nums[half..].to_vec()),
+            )
+        } else {
+            ((2, 2, vec![1.0, 2.0, 3.0, 4.0]), (2, 2, vec![1.0, 0.0, 0.0, 1.0]))
+        }
+    } else {
+        ((2, 2, vec![1.0, 2.0, 3.0, 4.0]), (2, 2, vec![1.0, 0.0, 0.0, 1.0]))
+    };
+    Ok(json!({
+        "a": mat_record(a.0, a.1, &a.2),
+        "b": mat_record(b.0, b.1, &b.2),
+        "alpha": 1.0,
+        "beta": 0.0
+    }))
+}
+
+fn la_dot_args(selected: Option<&Element>) -> Result<Value, String> {
+    let nums = selected_numbers(selected);
+    let (a, b) = if nums.len() >= 2 && nums.len() % 2 == 0 {
+        let half = nums.len() / 2;
+        (nums[..half].to_vec(), nums[half..].to_vec())
+    } else {
+        (vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0])
+    };
+    Ok(json!({ "a": a, "b": b }))
+}
+
+fn la_norm_args(selected: Option<&Element>) -> Result<Value, String> {
+    let mut nums = selected_numbers(selected);
+    if nums.is_empty() {
+        nums = vec![3.0, 4.0];
+    }
+    Ok(json!({ "a": nums }))
+}
+
+fn la_trace_args(selected: Option<&Element>) -> Result<Value, String> {
+    let nums = selected_numbers(selected);
+    let (n, data) = if let Some(n) = perfect_square(nums.len()) {
+        (n, nums)
+    } else {
+        (2, vec![2.0, 1.0, 1.0, 2.0])
+    };
+    Ok(json!({ "a": mat_record(n, n, &data) }))
+}
+
+fn la_identity_args(selected: Option<&Element>) -> Result<Value, String> {
+    let n = selected
+        .and_then(|el| integer_attr(el, "data-n"))
+        .filter(|n| *n >= 1 && *n <= 256)
+        .unwrap_or(3);
+    Ok(json!({ "n": n }))
+}
+
+fn la_inverse_args(selected: Option<&Element>) -> Result<Value, String> {
+    let nums = selected_numbers(selected);
+    let (n, data) = if let Some(n) = perfect_square(nums.len()).filter(|n| *n <= 64) {
+        (n, nums)
+    } else {
+        (2, vec![1.0, 2.0, 3.0, 4.0])
+    };
+    Ok(json!({ "a": mat_record(n, n, &data) }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -449,6 +556,9 @@ mod tests {
         assert!(supports("ComputerVision.hamming_distance"));
         assert!(supports("ComputerVision.cosine_similarity"));
         assert!(supports("SymbolicAlgebra.eval"));
+        assert!(supports("LinearAlgebra.gemm"));
+        assert!(supports("LinearAlgebra.dot"));
+        assert!(supports("LinearAlgebra.inverse"));
         assert!(!supports("Future.unimplemented"));
     }
 

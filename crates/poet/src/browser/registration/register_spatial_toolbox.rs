@@ -2,6 +2,26 @@
 
 use super::*;
 
+fn dmx_live_tool(
+    id: &'static str,
+    label: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: "3d".into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "hm".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
@@ -277,6 +297,307 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
             },
             ActionType::Invoke,
         )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_create".into(),
+                label: "Create scene".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.create".into()),
+                ontology_prefix: "hm".into(),
+                description: "Create a named scene graph via Scene.create.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_add_node".into(),
+                label: "Add node".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.add_node".into()),
+                ontology_prefix: "hm".into(),
+                description: "Add a numbered node at x, y, z via Scene.add_node.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_set_transform".into(),
+                label: "Set transform".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.set_transform".into()),
+                ontology_prefix: "hm".into(),
+                description: "Set a node's position, rotation, and scale via Scene.set_transform."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_set_mesh".into(),
+                label: "Set mesh".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.set_mesh".into()),
+                ontology_prefix: "hm".into(),
+                description: "Assign a mesh IRI to a node via Scene.set_mesh.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_add_camera".into(),
+                label: "Add camera".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.add_camera".into()),
+                ontology_prefix: "hm".into(),
+                description: "Add a camera with position and fov via Scene.add_camera.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_render".into(),
+                label: "Render scene".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.render".into()),
+                ontology_prefix: "hm".into(),
+                description: "Request a scene render via Scene.render.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_set_viewport".into(),
+                label: "Set viewport".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.set_viewport".into()),
+                ontology_prefix: "hm".into(),
+                description: "Set viewport width, height, and format via Scene.set_viewport."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_capture_frame".into(),
+                label: "Capture frame".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.capture_frame".into()),
+                ontology_prefix: "hm".into(),
+                description: "Request a viewport frame capture via Scene.capture_frame.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_add_light".into(),
+                label: "Add light".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.add_light".into()),
+                ontology_prefix: "hm".into(),
+                description: "Add a point, directional, spot, or ambient light via Scene.add_light."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_link_semantic".into(),
+                label: "Link semantic".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.link_semantic".into()),
+                ontology_prefix: "hm".into(),
+                description: "Link a scene node to a semantic IRI via Scene.link_semantic.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:scene_duplicate_node".into(),
+                label: "Duplicate node".into(),
+                icon: "3d".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Scene.duplicate_node".into()),
+                ontology_prefix: "hm".into(),
+                description: "Duplicate a scene node under a new id via Scene.duplicate_node."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
+
+    let dmx_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        dmx_live_tool(
+            "dmx:live_new_universe",
+            "New universe",
+            "Dmx.new_universe",
+            "Create a 512-channel DMX universe via Dmx.new_universe.",
+        ),
+        dmx_live_tool(
+            "dmx:live_set_channel",
+            "Set channel",
+            "Dmx.set_channel",
+            "Set a universe channel value via Dmx.set_channel.",
+        ),
+        dmx_live_tool(
+            "dmx:live_add_fixture",
+            "Add fixture",
+            "Dmx.add_fixture",
+            "Add a fixture to the selected lighting surface via Dmx.add_fixture.",
+        ),
+        dmx_live_tool(
+            "dmx:live_fixture_set_colour",
+            "Fixture colour",
+            "Dmx.fixture_set_colour",
+            "Set fixture RGB via Dmx.fixture_set_colour.",
+        ),
+        dmx_live_tool(
+            "dmx:live_fixture_set_intensity",
+            "Fixture intensity",
+            "Dmx.fixture_set_intensity",
+            "Set fixture intensity via Dmx.fixture_set_intensity.",
+        ),
+        dmx_live_tool(
+            "dmx:live_fixture_set_pan_tilt",
+            "Fixture pan/tilt",
+            "Dmx.fixture_set_pan_tilt",
+            "Set fixture pan and tilt via Dmx.fixture_set_pan_tilt.",
+        ),
+        dmx_live_tool(
+            "dmx:live_new_cue",
+            "New cue",
+            "Dmx.new_cue",
+            "Create a lighting cue via Dmx.new_cue.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_set_channel",
+            "Cue channel",
+            "Dmx.cue_set_channel",
+            "Set a cue channel value via Dmx.cue_set_channel.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_set_fade",
+            "Cue fade",
+            "Dmx.cue_set_fade",
+            "Set cue fade in/out via Dmx.cue_set_fade.",
+        ),
+        dmx_live_tool(
+            "dmx:live_new_cue_stack",
+            "New cue stack",
+            "Dmx.new_cue_stack",
+            "Create a cue stack via Dmx.new_cue_stack.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_add",
+            "Stack add cue",
+            "Dmx.cue_stack_add",
+            "Add a cue to a stack via Dmx.cue_stack_add.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_go",
+            "Stack go",
+            "Dmx.cue_stack_go",
+            "Advance the cue stack via Dmx.cue_stack_go.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_go_back",
+            "Stack go back",
+            "Dmx.cue_stack_go_back",
+            "Step the cue stack back via Dmx.cue_stack_go_back.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_reset",
+            "Stack reset",
+            "Dmx.cue_stack_reset",
+            "Reset the cue stack via Dmx.cue_stack_reset.",
+        ),
+    ];
+
+    let world_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        dmx_live_tool(
+            "spatial:world_new",
+            "New world",
+            "World.new",
+            "Create a world via World.new.",
+        ),
+        dmx_live_tool(
+            "spatial:world_add_object",
+            "Add object",
+            "World.add_object",
+            "Add a world object via World.add_object.",
+        ),
+        dmx_live_tool(
+            "spatial:world_add_portal",
+            "Add portal",
+            "World.add_portal",
+            "Add a portal via World.add_portal.",
+        ),
+        dmx_live_tool(
+            "spatial:world_add_avatar",
+            "Add avatar",
+            "World.add_avatar",
+            "Add an avatar via World.add_avatar.",
+        ),
+        dmx_live_tool(
+            "spatial:world_set_gravity",
+            "Set gravity",
+            "World.set_gravity",
+            "Set world gravity via World.set_gravity.",
+        ),
+        dmx_live_tool(
+            "spatial:world_object_apply_force",
+            "Apply force",
+            "World.object_apply_force",
+            "Apply object force via World.object_apply_force.",
+        ),
+        dmx_live_tool(
+            "spatial:world_object_step_physics",
+            "Step physics",
+            "World.object_step_physics",
+            "Step world physics via World.object_step_physics.",
+        ),
+    ];
+
+    let portal_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        dmx_live_tool(
+            "spatial:portal_set_target",
+            "Portal target",
+            "Portal.set_target",
+            "Set a portal target world via Portal.set_target.",
+        ),
+        dmx_live_tool(
+            "spatial:portal_activate",
+            "Activate portal",
+            "Portal.activate",
+            "Activate a portal via Portal.activate.",
+        ),
+        dmx_live_tool(
+            "spatial:portal_deactivate",
+            "Deactivate portal",
+            "Portal.deactivate",
+            "Deactivate a portal via Portal.deactivate.",
+        ),
+        dmx_live_tool(
+            "spatial:avatar_move",
+            "Move avatar",
+            "Avatar.move",
+            "Move an avatar via Avatar.move.",
+        ),
+        dmx_live_tool(
+            "spatial:avatar_set_appearance",
+            "Avatar appearance",
+            "Avatar.set_appearance",
+            "Set avatar appearance via Avatar.set_appearance.",
+        ),
     ];
 
     reg.register_toolbox(Toolbox::new(
@@ -341,10 +662,58 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
                     label: "Live Scene".into(),
                     icon: "3d".into(),
                     description:
-                        "Curated Scene.* camera, damp, IK, budget, and clear-colour numeric binds."
+                        "Curated Scene.* camera, damp, IK, budget, clear-colour, and graph/build ops."
                             .into(),
                 },
                 scene_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "dmx:live".into(),
+                    label: "Live DMX lighting".into(),
+                    icon: "3d".into(),
+                    description: "Curated Dmx.* universe, fixture, cue, and stack binds.".into(),
+                },
+                dmx_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:world".into(),
+                    label: "Live World".into(),
+                    icon: "3d".into(),
+                    description: "Curated World.* create, object, portal, avatar, gravity, and physics binds."
+                        .into(),
+                },
+                world_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:portal".into(),
+                    label: "Live Portal & Avatar".into(),
+                    icon: "3d".into(),
+                    description: "Curated Portal.* target/activate and Avatar.* move/appearance binds."
+                        .into(),
+                },
+                portal_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:anim_live".into(),
+                    label: "Live Animation remainder".into(),
+                    icon: "3d".into(),
+                    description: "Host-bound Animation.* leftovers (spring, ScLERP, SQUAD, presets)."
+                        .into(),
+                },
+                super::register_wave33_live::anim_live_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:manifold_live".into(),
+                    label: "Live Manifold".into(),
+                    icon: "3d".into(),
+                    description: "Host-bound Manifold.axes / distance / project leftovers.".into(),
+                },
+                super::register_wave38_live::manifold_live_tools(),
             ),
             ToolChain::new(
                 ToolChainMetadata {

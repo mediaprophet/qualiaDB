@@ -205,9 +205,11 @@ pub use bentley_ottmann::{
     bentley_ottmann_intersections, brute_force_intersections, brute_force_red_blue_intersections,
     red_blue_intersections, SweepSegment,
 };
+pub use arrangements::{dual_point_to_line, dual_round_trip, Line2};
 pub use boolean_2::{
-    boolean_difference_area, boolean_intersection_area, boolean_union_area, point_in_polygon,
-    polygon_area, polygon_signed_area, verify_area_conservation, BooleanError, BooleanOp,
+    boolean_difference_area, boolean_intersection_area, boolean_union_area, point_in_or_on_polygon,
+    point_in_polygon, polygon_area, polygon_signed_area, verify_area_conservation, BooleanError,
+    BooleanOp,
 };
 pub use boolean_3::{
     boolean_3, boolean_3_exact, boolean_3_with_kernel, required_triangles_3, required_vertices_3,

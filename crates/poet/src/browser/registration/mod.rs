@@ -21,14 +21,23 @@ mod register_code_toolbox;
 mod register_communication_toolbox;
 mod register_compact_toolbox;
 mod register_epistemic_toolbox;
+mod register_research_live;
 mod register_erp_toolbox;
 mod register_econ_toolbox;
 mod register_health_toolbox;
 mod register_image_toolbox;
+mod register_render_live;
+mod register_wave33_live;
+mod register_gpu_live;
+mod register_wave36_live;
+mod register_wave37_live;
+mod register_wave38_live;
+mod register_wave39_live;
 mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
 mod register_scientific_toolbox;
+mod register_cg_live;
 mod register_sdn_toolbox;
 mod register_sheet_toolbox;
 mod register_spatial_toolbox;
@@ -2110,6 +2119,46 @@ mod tests {
             "scientific:la_symmetric_eigen_3x3",
             Some("LinearAlgebra.symmetric_eigen_3x3")
         )));
+        assert!(tools.contains(&("scientific:la_dot", Some("LinearAlgebra.dot"))));
+        assert!(tools.contains(&("scientific:la_norm", Some("LinearAlgebra.norm"))));
+        assert!(tools.contains(&("scientific:la_trace", Some("LinearAlgebra.trace"))));
+        assert!(tools.contains(&(
+            "scientific:la_identity",
+            Some("LinearAlgebra.identity")
+        )));
+        assert!(tools.contains(&("scientific:la_inverse", Some("LinearAlgebra.inverse"))));
+    }
+
+    #[test]
+    fn wave40_binds_linear_algebra_app_primitives() {
+        let registry = super::build_registry();
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:linalg")
+            .expect("scientific:linalg toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("scientific:la_dot", Some("LinearAlgebra.dot"))));
+        assert!(tools.contains(&("scientific:la_inverse", Some("LinearAlgebra.inverse"))));
+        let crypto = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:crypto_priv")
+            .expect("scientific:crypto_priv toolchain");
+        assert!(crypto.tools().iter().any(|t| {
+            t.metadata().id == "scientific:gemm_live"
+                && t.metadata().capability_scope.as_deref() == Some("LinearAlgebra.gemm")
+        }));
     }
 
     #[test]
@@ -3151,7 +3200,7 @@ mod tests {
     }
 
     #[test]
-    fn ai_inf_binds_wave20_inference_caps() {
+    fn ai_inf_binds_wave27_inference_caps() {
         let registry = super::build_registry();
         let ai = registry.toolbox("ai").expect("ai toolbox");
         let chain = ai
@@ -3183,7 +3232,18 @@ mod tests {
             "ai:inf_vector_search",
             Some("Inference.vector_search")
         )));
-        assert_eq!(tools.len(), 8);
+        assert!(tools.contains(&("ai:inf_load_model", Some("Inference.load_model"))));
+        assert!(tools.contains(&("ai:inf_unload_model", Some("Inference.unload_model"))));
+        assert!(tools.contains(&(
+            "ai:inf_run_transformer",
+            Some("Inference.run_transformer")
+        )));
+        assert!(tools.contains(&("ai:inf_run_reranker", Some("Inference.run_reranker"))));
+        assert!(tools.contains(&(
+            "ai:inf_constrained_decode",
+            Some("Inference.constrained_decode")
+        )));
+        assert_eq!(tools.len(), 13);
     }
 
     #[test]
@@ -3330,8 +3390,145 @@ mod tests {
             "spatial:scene_set_clear_colour",
             Some("Scene.set_clear_colour")
         )));
-        // Pre-existing spatial:scene tools plus wave-21 Host binds.
-        assert!(tools.len() >= 8);
+        // Wave-21 plus wave-22 graph/build Host binds.
+        assert!(tools.len() >= 19);
+    }
+
+    #[test]
+    fn spatial_scene_binds_wave22_scene_graph_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:scene")
+            .expect("spatial:scene toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("spatial:scene_create", Some("Scene.create"))));
+        assert!(tools.contains(&("spatial:scene_add_node", Some("Scene.add_node"))));
+        assert!(tools.contains(&(
+            "spatial:scene_set_transform",
+            Some("Scene.set_transform")
+        )));
+        assert!(tools.contains(&("spatial:scene_set_mesh", Some("Scene.set_mesh"))));
+        assert!(tools.contains(&("spatial:scene_add_camera", Some("Scene.add_camera"))));
+        assert!(tools.contains(&("spatial:scene_render", Some("Scene.render"))));
+        assert!(tools.contains(&(
+            "spatial:scene_set_viewport",
+            Some("Scene.set_viewport")
+        )));
+        assert!(tools.contains(&(
+            "spatial:scene_capture_frame",
+            Some("Scene.capture_frame")
+        )));
+        assert!(tools.contains(&("spatial:scene_add_light", Some("Scene.add_light"))));
+        assert!(tools.contains(&(
+            "spatial:scene_link_semantic",
+            Some("Scene.link_semantic")
+        )));
+        assert!(tools.contains(&(
+            "spatial:scene_duplicate_node",
+            Some("Scene.duplicate_node")
+        )));
+    }
+
+    #[test]
+    fn audio_fx_binds_wave22_audio_caps() {
+        let registry = super::build_registry();
+        let audio = registry.toolbox("audio").expect("audio toolbox");
+        let chain = audio
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "audio:fx")
+            .expect("audio:fx toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("audio:fx_oscillator", Some("Audio.oscillator"))));
+        assert!(tools.contains(&("audio:fx_envelope", Some("Audio.envelope"))));
+        assert!(tools.contains(&("audio:fx_filter", Some("Audio.filter"))));
+        assert!(tools.contains(&("audio:fx_lfo", Some("Audio.lfo"))));
+        assert!(tools.contains(&("audio:fx_delay", Some("Audio.delay"))));
+        assert!(tools.contains(&("audio:fx_reverb", Some("Audio.reverb"))));
+        assert!(tools.contains(&("audio:fx_compressor", Some("Audio.compressor"))));
+        assert!(tools.contains(&("audio:fx_eq", Some("Audio.eq"))));
+        assert!(tools.contains(&("audio:fx_transport", Some("Audio.transport"))));
+        assert!(tools.contains(&(
+            "audio:fx_waveform_meter",
+            Some("Audio.waveform_meter")
+        )));
+        assert!(tools.contains(&("audio:fx_phase_meter", Some("Audio.phase_meter"))));
+        assert!(tools.contains(&(
+            "audio:fx_loudness_meter",
+            Some("Audio.loudness_meter")
+        )));
+        assert!(tools.contains(&("audio:fx_spectrum", Some("Audio.spectrum"))));
+        assert_eq!(tools.len(), 13);
+    }
+
+    #[test]
+    fn image_edit_binds_wave22_image_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "image:edit")
+            .expect("image:edit toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("image:edit_new", Some("Image.new"))));
+        assert!(tools.contains(&("image:edit_add_layer", Some("Image.add_layer"))));
+        assert!(tools.contains(&("image:edit_remove_layer", Some("Image.remove_layer"))));
+        assert!(tools.contains(&("image:edit_set_pixel", Some("Image.set_pixel"))));
+        assert!(tools.contains(&("image:edit_fill", Some("Image.fill"))));
+        assert!(tools.contains(&("image:edit_brush", Some("Image.brush"))));
+        assert!(tools.contains(&(
+            "image:edit_apply_filter",
+            Some("Image.apply_filter")
+        )));
+        assert!(tools.contains(&("image:edit_set_opacity", Some("Image.set_opacity"))));
+        assert!(tools.contains(&(
+            "image:edit_set_blend_mode",
+            Some("Image.set_blend_mode")
+        )));
+        assert!(tools.contains(&("image:edit_set_visible", Some("Image.set_visible"))));
+        assert!(tools.contains(&("image:edit_set_mask", Some("Image.set_mask"))));
+        assert!(tools.contains(&("image:edit_clear_mask", Some("Image.clear_mask"))));
+        assert!(tools.contains(&("image:edit_composite", Some("Image.composite"))));
+        assert!(tools.contains(&(
+            "image:edit_add_selection",
+            Some("Image.add_selection")
+        )));
+        assert!(tools.contains(&(
+            "image:edit_clear_selections",
+            Some("Image.clear_selections")
+        )));
+        assert_eq!(tools.len(), 15);
     }
 
     #[test]
@@ -3363,5 +3560,1166 @@ mod tests {
         assert!(tools.contains(&("ai:nlp_relation_extract", Some("NLP.relation_extract"))));
         assert!(tools.contains(&("ai:nlp_substrate_extract", Some("NLP.substrate_extract"))));
         assert_eq!(tools.len(), 9);
+    }
+
+    #[test]
+    fn dmx_live_binds_wave23_dmx_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "dmx:live")
+            .expect("dmx:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("dmx:live_new_universe", Some("Dmx.new_universe"))));
+        assert!(tools.contains(&("dmx:live_set_channel", Some("Dmx.set_channel"))));
+        assert!(tools.contains(&("dmx:live_add_fixture", Some("Dmx.add_fixture"))));
+        assert!(tools.contains(&(
+            "dmx:live_fixture_set_colour",
+            Some("Dmx.fixture_set_colour")
+        )));
+        assert!(tools.contains(&(
+            "dmx:live_fixture_set_intensity",
+            Some("Dmx.fixture_set_intensity")
+        )));
+        assert!(tools.contains(&(
+            "dmx:live_fixture_set_pan_tilt",
+            Some("Dmx.fixture_set_pan_tilt")
+        )));
+        assert!(tools.contains(&("dmx:live_new_cue", Some("Dmx.new_cue"))));
+        assert!(tools.contains(&("dmx:live_cue_set_channel", Some("Dmx.cue_set_channel"))));
+        assert!(tools.contains(&("dmx:live_cue_set_fade", Some("Dmx.cue_set_fade"))));
+        assert!(tools.contains(&("dmx:live_new_cue_stack", Some("Dmx.new_cue_stack"))));
+        assert!(tools.contains(&("dmx:live_cue_stack_add", Some("Dmx.cue_stack_add"))));
+        assert!(tools.contains(&("dmx:live_cue_stack_go", Some("Dmx.cue_stack_go"))));
+        assert!(tools.contains(&(
+            "dmx:live_cue_stack_go_back",
+            Some("Dmx.cue_stack_go_back")
+        )));
+        assert!(tools.contains(&("dmx:live_cue_stack_reset", Some("Dmx.cue_stack_reset"))));
+        assert_eq!(tools.len(), 14);
+    }
+
+    #[test]
+    fn video_live_binds_wave23_video_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "video:live")
+            .expect("video:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("video:live_new_project", Some("Video.new_project"))));
+        assert!(tools.contains(&("video:live_add_track", Some("Video.add_track"))));
+        assert!(tools.contains(&("video:live_add_clip", Some("Video.add_clip"))));
+        assert!(tools.contains(&("video:live_trim_clip", Some("Video.trim_clip"))));
+        assert!(tools.contains(&("video:live_set_speed", Some("Video.set_speed"))));
+        assert!(tools.contains(&("video:live_colour_grade", Some("Video.colour_grade"))));
+        assert!(tools.contains(&(
+            "video:live_add_transition",
+            Some("Video.add_transition")
+        )));
+        assert!(tools.contains(&(
+            "video:live_set_render_format",
+            Some("Video.set_render_format")
+        )));
+        assert!(tools.contains(&(
+            "video:live_set_render_bitrate",
+            Some("Video.set_render_bitrate")
+        )));
+        assert!(tools.contains(&("video:live_remove_clip", Some("Video.remove_clip"))));
+        assert_eq!(tools.len(), 10);
+    }
+
+    #[test]
+    fn hid_live_binds_wave23_hid_caps() {
+        let registry = super::build_registry();
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let chain = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "hid:live")
+            .expect("hid:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("hid:live_poll", Some("HID.poll"))));
+        assert!(tools.contains(&("hid:live_wait", Some("HID.wait"))));
+        assert!(tools.contains(&("hid:live_clear", Some("HID.clear"))));
+        assert!(tools.contains(&("hid:live_pointer_capture", Some("HID.pointer_capture"))));
+        assert!(tools.contains(&("hid:live_pointer_release", Some("HID.pointer_release"))));
+        assert!(tools.contains(&("hid:live_set_cursor", Some("HID.set_cursor"))));
+        assert!(tools.contains(&("hid:live_gamepad_poll", Some("HID.gamepad_poll"))));
+        assert!(tools.contains(&("hid:live_gamepad_vibrate", Some("HID.gamepad_vibrate"))));
+        assert!(tools.contains(&("hid:live_midi_send", Some("HID.midi_send"))));
+        assert!(tools.contains(&("hid:live_midi_poll", Some("HID.midi_poll"))));
+        assert!(tools.contains(&("hid:live_haptic_pulse", Some("HID.haptic_pulse"))));
+        assert!(tools.contains(&("hid:live_haptic_pattern", Some("HID.haptic_pattern"))));
+        assert!(tools.contains(&(
+            "hid:live_spatial_head_pose",
+            Some("HID.spatial_head_pose")
+        )));
+        assert!(tools.contains(&(
+            "hid:live_spatial_hand_skeleton",
+            Some("HID.spatial_hand_skeleton")
+        )));
+        assert!(tools.contains(&("hid:live_spatial_gaze_ray", Some("HID.spatial_gaze_ray"))));
+        assert!(tools.contains(&("hid:live_biosignal_poll", Some("HID.biosignal_poll"))));
+        assert_eq!(tools.len(), 16);
+    }
+
+    #[test]
+    fn vc_binds_wave24_vector_calculus_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:vc")
+            .expect("scientific:vc toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("scientific:vc_gradient", Some("VectorCalculus.gradient"))));
+        assert!(tools.contains(&(
+            "scientific:vc_divergence",
+            Some("VectorCalculus.divergence")
+        )));
+        assert!(tools.contains(&("scientific:vc_curl", Some("VectorCalculus.curl"))));
+        assert!(tools.contains(&("scientific:vc_laplacian", Some("VectorCalculus.laplacian"))));
+        assert!(tools.contains(&(
+            "scientific:vc_line_integral_scalar",
+            Some("VectorCalculus.line_integral_scalar")
+        )));
+        assert!(tools.contains(&(
+            "scientific:vc_line_integral_work",
+            Some("VectorCalculus.line_integral_work")
+        )));
+        assert!(tools.contains(&(
+            "scientific:vc_surface_flux",
+            Some("VectorCalculus.surface_flux")
+        )));
+        assert_eq!(tools.len(), 7);
+    }
+
+    #[test]
+    fn interp_binds_wave24_interpolation_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:interp")
+            .expect("scientific:interp toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:interp_linear",
+            Some("Interpolation.linear_interp")
+        )));
+        assert!(tools.contains(&(
+            "scientific:interp_lagrange",
+            Some("Interpolation.lagrange_eval")
+        )));
+        assert!(tools.contains(&(
+            "scientific:interp_newton_coef",
+            Some("Interpolation.newton_coefficients")
+        )));
+        assert!(tools.contains(&(
+            "scientific:interp_newton_eval",
+            Some("Interpolation.newton_eval")
+        )));
+        assert!(tools.contains(&("scientific:interp_poly_fit", Some("Interpolation.poly_fit"))));
+        assert!(tools.contains(&(
+            "scientific:interp_poly_eval",
+            Some("Interpolation.poly_eval")
+        )));
+        assert_eq!(tools.len(), 6);
+    }
+
+    #[test]
+    fn spectral_binds_wave24_spectral_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:spectral")
+            .expect("scientific:spectral toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:spectral_emf_to_spd",
+            Some("Spectral.emf_to_spd")
+        )));
+        assert!(tools.contains(&(
+            "scientific:spectral_spd_to_xyz",
+            Some("Spectral.spd_to_xyz")
+        )));
+        assert!(tools.contains(&(
+            "scientific:spectral_emf_to_rgb",
+            Some("Spectral.emf_to_rgb")
+        )));
+        assert!(tools.contains(&("scientific:spectral_blend", Some("Spectral.blend"))));
+        assert!(tools.contains(&(
+            "scientific:spectral_gamut_map",
+            Some("Spectral.gamut_map")
+        )));
+        assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn world_binds_wave24_world_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:world")
+            .expect("spatial:world toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("spatial:world_new", Some("World.new"))));
+        assert!(tools.contains(&("spatial:world_add_object", Some("World.add_object"))));
+        assert!(tools.contains(&("spatial:world_add_portal", Some("World.add_portal"))));
+        assert!(tools.contains(&("spatial:world_add_avatar", Some("World.add_avatar"))));
+        assert!(tools.contains(&("spatial:world_set_gravity", Some("World.set_gravity"))));
+        assert!(tools.contains(&(
+            "spatial:world_object_apply_force",
+            Some("World.object_apply_force")
+        )));
+        assert!(tools.contains(&(
+            "spatial:world_object_step_physics",
+            Some("World.object_step_physics")
+        )));
+        assert_eq!(tools.len(), 7);
+    }
+
+    #[test]
+    fn asset_binds_wave25_asset_caps() {
+        let registry = super::build_registry();
+        let office = registry.toolbox("office").expect("office toolbox");
+        let chain = office
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "office:asset")
+            .expect("office:asset toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("office:asset_create", Some("Asset.create"))));
+        assert!(tools.contains(&("office:asset_add_temporal", Some("Asset.add_temporal"))));
+        assert!(tools.contains(&("office:asset_add_topic", Some("Asset.add_topic"))));
+        assert!(tools.contains(&("office:asset_set_spatial", Some("Asset.set_spatial"))));
+        assert!(tools.contains(&("office:asset_compile", Some("Asset.compile"))));
+        assert!(tools.contains(&("office:asset_temporal_span", Some("Asset.temporal_span"))));
+        assert!(tools.contains(&("office:asset_query_aspects", Some("Asset.query_aspects"))));
+        assert!(tools.contains(&("office:asset_persist", Some("Asset.persist"))));
+        assert!(tools.contains(&("office:asset_resolve", Some("Asset.resolve"))));
+        assert!(tools.contains(&(
+            "office:asset_resolve_by_spatial",
+            Some("Asset.resolve_by_spatial")
+        )));
+        assert!(tools.contains(&("office:asset_resolve_by_topic", Some("Asset.resolve_by_topic"))));
+        assert!(tools.contains(&(
+            "office:asset_resolve_by_temporal",
+            Some("Asset.resolve_by_temporal")
+        )));
+        assert!(tools.contains(&("office:asset_list", Some("Asset.list"))));
+        assert!(tools.contains(&("office:asset_count", Some("Asset.count"))));
+        assert_eq!(tools.len(), 21);
+    }
+
+    #[test]
+    fn asset_binds_wave26_persist_caps() {
+        let registry = super::build_registry();
+        let office = registry.toolbox("office").expect("office toolbox");
+        let chain = office
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "office:asset")
+            .expect("office:asset toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "office:asset_persist_create",
+            Some("Asset.persist_create")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_add_temporal",
+            Some("Asset.persist_add_temporal")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_add_topic",
+            Some("Asset.persist_add_topic")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_set_spatial",
+            Some("Asset.persist_set_spatial")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_compile",
+            Some("Asset.persist_compile")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_temporal_span",
+            Some("Asset.persist_temporal_span")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_query_aspects",
+            Some("Asset.persist_query_aspects")
+        )));
+        assert_eq!(tools.len(), 21);
+    }
+
+    #[test]
+    fn ode_binds_wave25_symbolic_ode_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:ode")
+            .expect("scientific:ode toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:ode_lin1",
+            Some("SymbolicODE.solve_linear_first_order")
+        )));
+        assert!(tools.contains(&(
+            "scientific:ode_lin2",
+            Some("SymbolicODE.solve_linear_second_order")
+        )));
+        assert!(tools.contains(&(
+            "scientific:ode_classify_pde",
+            Some("SymbolicODE.classify_second_order_pde")
+        )));
+        assert!(tools.contains(&("scientific:ode_separable", Some("SymbolicODE.solve_separable"))));
+        assert!(tools.contains(&(
+            "scientific:ode_pde1",
+            Some("SymbolicODE.solve_first_order_linear_pde")
+        )));
+        assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn agent_binds_wave25_agent_caps() {
+        let registry = super::build_registry();
+        let ai = registry.toolbox("ai").expect("ai toolbox");
+        let chain = ai
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "ai:agent_live")
+            .expect("ai:agent_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("ai:agent_trace", Some("Agent.trace"))));
+        assert!(tools.contains(&("ai:agent_verify", Some("Agent.verify"))));
+        assert!(tools.contains(&("ai:agent_plan", Some("Agent.plan"))));
+        assert!(tools.contains(&("ai:agent_execute", Some("Agent.execute"))));
+        assert!(tools.contains(&("ai:agent_evaluate", Some("Agent.evaluate"))));
+        assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn pulse_live_binds_wave26_pulse_caps() {
+        let registry = super::build_registry();
+        let comm = registry
+            .toolbox("communication")
+            .expect("communication toolbox");
+        let chain = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:pulse_live")
+            .expect("comm:pulse_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("comm:pulse_live_publish", Some("Pulse.publish"))));
+        assert!(tools.contains(&(
+            "comm:pulse_live_graph_mutation",
+            Some("Pulse.publish_graph_mutation")
+        )));
+        assert!(tools.contains(&(
+            "comm:pulse_live_notification",
+            Some("Pulse.publish_notification")
+        )));
+        assert!(tools.contains(&(
+            "comm:pulse_live_telemetry",
+            Some("Pulse.publish_telemetry")
+        )));
+        assert!(tools.contains(&(
+            "comm:pulse_live_agent_message",
+            Some("Pulse.publish_agent_message")
+        )));
+        assert!(tools.contains(&("comm:pulse_live_sync", Some("Pulse.publish_sync"))));
+        assert!(tools.contains(&("comm:pulse_live_open_channel", Some("Pulse.open_channel"))));
+        assert!(tools.contains(&("comm:pulse_live_close_channel", Some("Pulse.close_channel"))));
+        assert!(tools.contains(&(
+            "comm:pulse_live_set_transport",
+            Some("Pulse.set_transport")
+        )));
+        assert_eq!(tools.len(), 9);
+    }
+
+    #[test]
+    fn portal_binds_wave26_portal_avatar_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:portal")
+            .expect("spatial:portal toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("spatial:portal_set_target", Some("Portal.set_target"))));
+        assert!(tools.contains(&("spatial:portal_activate", Some("Portal.activate"))));
+        assert!(tools.contains(&(
+            "spatial:portal_deactivate",
+            Some("Portal.deactivate")
+        )));
+        assert!(tools.contains(&("spatial:avatar_move", Some("Avatar.move"))));
+        assert!(tools.contains(&(
+            "spatial:avatar_set_appearance",
+            Some("Avatar.set_appearance")
+        )));
+        assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn research_live_binds_wave27_research_caps() {
+        let registry = super::build_registry();
+        let epi = registry.toolbox("epistemic").expect("epistemic toolbox");
+        let chain = epi
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "research:live")
+            .expect("research:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("research:live_new", Some("Research.new"))));
+        assert!(tools.contains(&(
+            "research:live_set_purpose",
+            Some("Research.set_purpose")
+        )));
+        assert!(tools.contains(&(
+            "research:live_define_scope",
+            Some("Research.define_scope")
+        )));
+        assert!(tools.contains(&(
+            "research:live_add_constraint",
+            Some("Research.add_constraint")
+        )));
+        assert!(tools.contains(&(
+            "research:live_add_question",
+            Some("Research.add_question")
+        )));
+        assert!(tools.contains(&(
+            "research:live_link_questions",
+            Some("Research.link_questions")
+        )));
+        assert!(tools.contains(&(
+            "research:live_add_corpus_item",
+            Some("Research.add_corpus_item")
+        )));
+        assert!(tools.contains(&(
+            "research:live_import_literature",
+            Some("Research.import_literature")
+        )));
+        assert!(tools.contains(&(
+            "research:live_import_dataset",
+            Some("Research.import_dataset")
+        )));
+        assert!(tools.contains(&(
+            "research:live_set_corpus_confidence",
+            Some("Research.set_corpus_confidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_extract_from_corpus",
+            Some("Research.extract_from_corpus")
+        )));
+        assert!(tools.contains(&(
+            "research:live_infer_dark_link",
+            Some("Research.infer_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_detect_provenance_gaps",
+            Some("Research.detect_provenance_gaps")
+        )));
+        assert!(tools.contains(&(
+            "research:live_detect_concealment",
+            Some("Research.detect_concealment")
+        )));
+        assert!(tools.contains(&(
+            "research:live_confirm_dark_link",
+            Some("Research.confirm_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_refute_dark_link",
+            Some("Research.refute_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_make_inference",
+            Some("Research.make_inference")
+        )));
+        assert!(tools.contains(&(
+            "research:live_chain_inference",
+            Some("Research.chain_inference")
+        )));
+        assert!(tools.contains(&(
+            "research:live_set_inference_confidence",
+            Some("Research.set_inference_confidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_validate_inference",
+            Some("Research.validate_inference")
+        )));
+        assert_eq!(tools.len(), 73);
+    }
+
+    #[test]
+    fn research_live_binds_wave28_investigation_caps() {
+        let registry = super::build_registry();
+        let epi = registry.toolbox("epistemic").expect("epistemic toolbox");
+        let chain = epi
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "research:live")
+            .expect("research:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "research:live_new_investigation",
+            Some("Research.new_investigation")
+        )));
+        assert!(tools.contains(&(
+            "research:live_collect_evidence",
+            Some("Research.collect_evidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_set_reliability",
+            Some("Research.set_reliability")
+        )));
+        assert!(tools.contains(&(
+            "research:live_propose_hypothesis",
+            Some("Research.propose_hypothesis")
+        )));
+        assert!(tools.contains(&(
+            "research:live_evaluate_evidence",
+            Some("Research.evaluate_evidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_create_timeline",
+            Some("Research.create_timeline")
+        )));
+        assert!(tools.contains(&("research:live_add_link", Some("Research.add_link"))));
+        assert!(tools.contains(&("research:live_find_path", Some("Research.find_path"))));
+        assert!(tools.contains(&(
+            "research:live_create_hypothesis_graph",
+            Some("Research.create_hypothesis_graph")
+        )));
+        assert!(tools.contains(&(
+            "research:live_contribute_evaluation",
+            Some("Research.contribute_evaluation")
+        )));
+        assert!(tools.contains(&(
+            "research:live_bridge_dark_link",
+            Some("Research.bridge_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_reframe_hypothesis",
+            Some("Research.reframe_hypothesis")
+        )));
+        assert!(tools.contains(&(
+            "research:live_merge_hypotheses",
+            Some("Research.merge_hypotheses")
+        )));
+        assert!(tools.contains(&("research:live_flag_gap", Some("Research.flag_gap"))));
+        assert!(tools.contains(&("research:live_close_gap", Some("Research.close_gap"))));
+        assert!(tools.contains(&(
+            "research:live_create_revision",
+            Some("Research.create_revision")
+        )));
+        assert!(tools.contains(&(
+            "research:live_diff_revisions",
+            Some("Research.diff_revisions")
+        )));
+        assert!(tools.contains(&(
+            "research:live_subscribe_updates",
+            Some("Research.subscribe_updates")
+        )));
+        assert!(tools.contains(&(
+            "research:live_create_assessment",
+            Some("Research.create_assessment")
+        )));
+        assert_eq!(tools.len(), 73);
+    }
+
+    #[test]
+    fn research_live_binds_wave29_remainder_caps() {
+        let registry = super::build_registry();
+        let epi = registry.toolbox("epistemic").expect("epistemic toolbox");
+        let chain = epi
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "research:live")
+            .expect("research:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "research:live_set_reality_category",
+            Some("Research.set_reality_category")
+        )));
+        assert!(tools.contains(&(
+            "research:live_classify_reality",
+            Some("Research.classify_reality")
+        )));
+        assert!(tools.contains(&(
+            "research:live_assess_sentiment",
+            Some("Research.assess_sentiment")
+        )));
+        assert!(tools.contains(&(
+            "research:live_register_perspective",
+            Some("Research.register_perspective")
+        )));
+        assert!(tools.contains(&(
+            "research:live_analyse_inequality",
+            Some("Research.analyse_inequality")
+        )));
+        assert!(tools.contains(&(
+            "research:live_detect_ug_patterns",
+            Some("Research.detect_ug_patterns")
+        )));
+        assert_eq!(tools.len(), 73);
+    }
+
+    #[test]
+    fn render_live_binds_wave30_render_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "render:live")
+            .expect("render:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("render:live_scene", Some("Render.scene"))));
+        assert!(tools.contains(&(
+            "render:live_css_animation",
+            Some("Render.css_animation")
+        )));
+        assert!(tools.contains(&("render:live_css_color", Some("Render.css_color"))));
+        assert!(tools.contains(&(
+            "render:live_css_transform",
+            Some("Render.css_transform")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_eval_curve",
+            Some("Render.animation_eval_curve")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_spring_step",
+            Some("Render.animation_spring_step")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_sclerp",
+            Some("Render.animation_sclerp")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_eval_preset",
+            Some("Render.animation_eval_preset")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_squad_step",
+            Some("Render.animation_squad_step")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_list_presets",
+            Some("Render.animation_list_presets")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_compute_pass",
+            Some("Render.animation_compute_pass")
+        )));
+        assert!(tools.contains(&("render:live_svg_path", Some("Render.svg_path"))));
+        assert!(tools.contains(&("render:live_svg_circle", Some("Render.svg_circle"))));
+        assert!(tools.contains(&("render:live_svg_rect", Some("Render.svg_rect"))));
+        assert!(tools.contains(&("render:live_svg_line", Some("Render.svg_line"))));
+        assert!(tools.contains(&("render:live_svg_bezier", Some("Render.svg_bezier"))));
+        assert!(tools.contains(&("render:live_svg_field", Some("Render.svg_field"))));
+        assert_eq!(tools.len(), 17);
+    }
+
+    #[test]
+    fn cg_live_binds_wave31_cg_caps() {
+        let registry = super::build_registry();
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:cg_live")
+            .expect("scientific:cg_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:cg_live_average_spacing_3d",
+            Some("ComputationalGeometry.average_spacing_3d")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_incircle",
+            Some("ComputationalGeometry.incircle")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_insphere",
+            Some("ComputationalGeometry.insphere")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_nearest_segment_site",
+            Some("ComputationalGeometry.nearest_segment_site")
+        )));
+        assert!(tools.len() >= 25);
+    }
+
+    #[test]
+    fn cg_live_binds_wave32_cg_remainder_caps() {
+        let registry = super::build_registry();
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:cg_live")
+            .expect("scientific:cg_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:cg_live_width_coreset",
+            Some("ComputationalGeometry.width_coreset")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_cross_ratio_1d",
+            Some("ComputationalGeometry.cross_ratio_1d")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_separating_plane_aabb",
+            Some("ComputationalGeometry.separating_plane_aabb")
+        )));
+        assert_eq!(tools.len(), 49);
+    }
+
+    #[test]
+    fn wave33_binds_anim_ode_hbbtv_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let anim = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:anim_live")
+            .expect("spatial:anim_live toolchain");
+        let anim_tools: Vec<_> = anim
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools_contains(
+            &anim_tools,
+            "animation:live_spring_step",
+            "Animation.spring_step"
+        ));
+        assert_eq!(anim_tools.len(), 4);
+
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let ode = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:num_ode")
+            .expect("scientific:num_ode toolchain");
+        assert_eq!(ode.tools().len(), 4);
+        assert!(ode.tools().iter().any(|t| {
+            t.metadata().id == "scientific:num_ode_rk4"
+                && t.metadata().capability_scope.as_deref() == Some("Ode.rk4_integrate")
+        }));
+
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let hbbtv = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:hbbtv")
+            .expect("comm:hbbtv toolchain");
+        assert_eq!(hbbtv.tools().len(), 4);
+        assert!(hbbtv.tools().iter().any(|t| {
+            t.metadata().id == "comm:hbbtv_new_app"
+                && t.metadata().capability_scope.as_deref() == Some("HbbTV.new_app")
+        }));
+    }
+
+    fn tools_contains(tools: &[(&str, Option<&str>)], id: &str, scope: &str) -> bool {
+        tools.contains(&(id, Some(scope)))
+    }
+
+    #[test]
+    fn gpu_live_binds_wave34_gpu_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "render:gpu_live")
+            .expect("render:gpu_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("render:gpu_live_init", Some("Render.gpu_init"))));
+        assert!(tools.contains(&(
+            "render:gpu_live_backend_info",
+            Some("Render.gpu_backend_info")
+        )));
+        assert!(tools.len() >= 17);
+    }
+
+    #[test]
+    fn gpu_live_binds_wave35_gpu_emf_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "render:gpu_live")
+            .expect("render:gpu_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "render:gpu_live_upload_mesh_colored",
+            Some("Render.gpu_upload_mesh_colored")
+        )));
+        assert!(tools.contains(&(
+            "render:gpu_live_emf_field_info",
+            Some("Render.emf_field_info")
+        )));
+        assert_eq!(tools.len(), 34);
+    }
+
+    #[test]
+    fn wave36_binds_social_finance_graph_caps() {
+        let registry = super::build_registry();
+        let econ = registry.toolbox("econ").expect("econ toolbox");
+        let social = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "social:live")
+            .expect("social:live toolchain");
+        assert_eq!(social.tools().len(), 6);
+        assert!(social.tools().iter().any(|t| {
+            t.metadata().id == "social:live_gini"
+                && t.metadata().capability_scope.as_deref() == Some("Social.gini")
+        }));
+        let finance = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "finance:live")
+            .expect("finance:live toolchain");
+        assert_eq!(finance.tools().len(), 3);
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let graph = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:graph_live")
+            .expect("comm:graph_live toolchain");
+        assert_eq!(graph.tools().len(), 7);
+        assert!(graph.tools().iter().any(|t| {
+            t.metadata().id == "comm:graph_live_validate_fragment"
+                && t.metadata().capability_scope.as_deref() == Some("ChatGraph.validate_fragment")
+        }));
+    }
+
+    #[test]
+    fn wave37_binds_graph_opt_sampler_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let graph = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:graph_reason")
+            .expect("scientific:graph_reason toolchain");
+        assert_eq!(graph.tools().len(), 9);
+        assert!(graph.tools().iter().any(|t| {
+            t.metadata().id == "scientific:graph_live_fuzzy_jaccard"
+                && t.metadata().capability_scope.as_deref() == Some("GraphMatch.fuzzy_jaccard")
+        }));
+        let ai = registry.toolbox("ai").expect("ai toolbox");
+        let sampler = ai
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "ai:sampler_live")
+            .expect("ai:sampler_live toolchain");
+        assert_eq!(sampler.tools().len(), 10);
+        assert!(sampler.tools().iter().any(|t| {
+            t.metadata().id == "ai:sampler_live_configure"
+                && t.metadata().capability_scope.as_deref() == Some("sampler.configure")
+        }));
+    }
+
+    #[test]
+    fn wave38_binds_med_manifold_crypto_dag_fm_caps() {
+        let registry = super::build_registry();
+        let health = registry.toolbox("health").expect("health toolbox");
+        let med = health
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "health:med_live")
+            .expect("health:med_live toolchain");
+        assert_eq!(med.tools().len(), 5);
+        assert!(med.tools().iter().any(|t| {
+            t.metadata().id == "health:med_live_tanimoto"
+                && t.metadata().capability_scope.as_deref() == Some("Medical.tanimoto")
+        }));
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let manifold = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:manifold_live")
+            .expect("spatial:manifold_live toolchain");
+        assert_eq!(manifold.tools().len(), 3);
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let crypto = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:crypto_priv")
+            .expect("scientific:crypto_priv toolchain");
+        assert_eq!(crypto.tools().len(), 6);
+        assert!(crypto.tools().iter().any(|t| {
+            t.metadata().id == "scientific:gemm_live"
+                && t.metadata().capability_scope.as_deref() == Some("LinearAlgebra.gemm")
+        }));
+        let ai = registry.toolbox("ai").expect("ai toolbox");
+        let disc = ai
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "ai:disc_dag")
+            .expect("ai:disc_dag toolchain");
+        assert_eq!(disc.tools().len(), 5);
+        let econ = registry.toolbox("econ").expect("econ toolbox");
+        let fm = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "econ:fm_live")
+            .expect("econ:fm_live toolchain");
+        assert_eq!(fm.tools().len(), 2);
+    }
+
+    #[test]
+    fn wave39_binds_remaining_curated_q2_singles() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let longtail = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:longtail")
+            .expect("scientific:longtail toolchain");
+        assert_eq!(longtail.tools().len(), 16);
+        assert!(longtail.tools().iter().any(|t| {
+            t.metadata().id == "scientific:longtail_ltl_finally"
+                && t.metadata().capability_scope.as_deref()
+                    == Some("TemporalAndDescriptionLogic.ltl.finally")
+        }));
+        let econ = registry.toolbox("econ").expect("econ toolbox");
+        let wealth = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "econ:wealth_live")
+            .expect("econ:wealth_live toolchain");
+        assert_eq!(wealth.tools().len(), 3);
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let net = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:net_live")
+            .expect("comm:net_live toolchain");
+        assert_eq!(net.tools().len(), 2);
+        let rights = registry.toolbox("rights").expect("rights toolbox");
+        let id_live = rights
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "rights:id_live")
+            .expect("rights:id_live toolchain");
+        assert_eq!(id_live.tools().len(), 3);
+        assert!(id_live.tools().iter().any(|t| {
+            t.metadata().id == "rights:id_live_agency"
+                && t.metadata().capability_scope.as_deref() == Some("Agency.evaluate")
+        }));
     }
 }

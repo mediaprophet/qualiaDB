@@ -956,6 +956,61 @@ fn named(id: &str) -> Option<Presentation> {
             "Set the viewport wipe colour from four numbers.",
             Proficiency::Novice,
         ),
+        "spatial:scene_create" => (
+            "Create scene",
+            "Create a named scene graph (Host Scene.create).",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_add_node" => (
+            "Add scene node",
+            "Add a numbered node at x, y, z via Scene.add_node.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_set_transform" => (
+            "Set scene transform",
+            "Set a node’s position, rotation, and scale via Scene.set_transform.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_set_mesh" => (
+            "Set scene mesh",
+            "Assign a mesh IRI to a node via Scene.set_mesh.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_add_camera" => (
+            "Add scene camera",
+            "Add a camera with position and field of view via Scene.add_camera.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_render" => (
+            "Render scene",
+            "Request a render of a named scene via Scene.render.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_set_viewport" => (
+            "Set viewport",
+            "Set viewport width, height, and format via Scene.set_viewport.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_capture_frame" => (
+            "Capture frame",
+            "Request a frame capture via Scene.capture_frame.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_add_light" => (
+            "Add scene light",
+            "Add a point, directional, spot, or ambient light via Scene.add_light.",
+            Proficiency::Novice,
+        ),
+        "spatial:scene_link_semantic" => (
+            "Link semantic",
+            "Link a scene node to a semantic IRI via Scene.link_semantic.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:scene_duplicate_node" => (
+            "Duplicate node",
+            "Duplicate a scene node with a new id via Scene.duplicate_node.",
+            Proficiency::Novice,
+        ),
         "audio:place_audio_session" => (
             "Sound session",
             "Put a sound session on the work surface.",
@@ -1020,6 +1075,71 @@ fn named(id: &str) -> Option<Presentation> {
             "Transpose note",
             "Transpose a MIDI note by semitones (clamped 0–127).",
             Proficiency::Novice,
+        ),
+        "audio:fx_oscillator" => (
+            "Oscillator",
+            "Render a sine/square/saw/triangle buffer via Audio.oscillator.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_envelope" => (
+            "Envelope",
+            "Render an ADSR envelope buffer via Audio.envelope.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_filter" => (
+            "Biquad filter",
+            "Apply a lowpass/highpass/bandpass/notch filter via Audio.filter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_lfo" => (
+            "LFO",
+            "Render a low-frequency oscillator buffer via Audio.lfo.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_delay" => (
+            "Delay",
+            "Apply a delay with feedback and mix via Audio.delay.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_reverb" => (
+            "Reverb",
+            "Apply a room reverb via Audio.reverb.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_compressor" => (
+            "Compressor",
+            "Apply dynamic-range compression via Audio.compressor.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_eq" => (
+            "Three-band EQ",
+            "Apply low/mid/high gains via Audio.eq.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_transport" => (
+            "Transport",
+            "Play, stop, pause, record, or query status via Audio.transport.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_waveform_meter" => (
+            "Waveform meter",
+            "Measure peak/RMS and a display envelope via Audio.waveform_meter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_phase_meter" => (
+            "Phase meter",
+            "Measure stereo phase correlation via Audio.phase_meter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_loudness_meter" => (
+            "Loudness meter",
+            "Measure LUFS loudness via Audio.loudness_meter.",
+            Proficiency::Novice,
+        ),
+        "audio:fx_spectrum" => (
+            "Spectrum",
+            "Read a rasterised spectrum via Audio.spectrum.",
+            Proficiency::Intermediate,
         ),
         "comm:place_social" => (
             "People graph",
@@ -1219,6 +1339,31 @@ fn named(id: &str) -> Option<Presentation> {
         "scientific:la_symmetric_eigen_3x3" => (
             "3×3 symmetric eigen",
             "Closed-form eigenvalues of a symmetric 3×3 matrix.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:la_dot" => (
+            "Dot product",
+            "Inner product via LinearAlgebra.dot.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_norm" => (
+            "L2 norm",
+            "Euclidean length via LinearAlgebra.norm.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_trace" => (
+            "Trace",
+            "Diagonal sum via LinearAlgebra.trace.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_identity" => (
+            "Identity",
+            "n×n identity via LinearAlgebra.identity.",
+            Proficiency::Novice,
+        ),
+        "scientific:la_inverse" => (
+            "Inverse",
+            "Dense inverse via LinearAlgebra.inverse (fails if singular).",
             Proficiency::Intermediate,
         ),
         "scientific:chem_boys" => (
@@ -1630,6 +1775,251 @@ fn named(id: &str) -> Option<Presentation> {
             "Nearest site",
             "Nearest Voronoi site by brute-force distance (sites + query).",
             Proficiency::Novice,
+        ),
+        "scientific:cg_live_average_spacing_3d" => (
+            "Average spacing 3D",
+            "Mean kNN spacing via ComputationalGeometry.average_spacing_3d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_local_density_3d" => (
+            "Local density 3D",
+            "Per-point kNN density via ComputationalGeometry.local_density_3d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_mean_knn_distance_3d" => (
+            "Mean kNN distance 3D",
+            "Per-point mean kNN distance via ComputationalGeometry.mean_knn_distance_3d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_fisher_distance" => (
+            "Fisher distance",
+            "Fisher–Rao geodesic via ComputationalGeometry.fisher_distance.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_kl_divergence" => (
+            "KL divergence",
+            "KL(p‖q) via ComputationalGeometry.kl_divergence.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_kl_bregman_form" => (
+            "KL Bregman form",
+            "Bregman KL via ComputationalGeometry.kl_bregman_form.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_triangle_signed_area" => (
+            "Triangle signed area",
+            "Signed 2D triangle area via ComputationalGeometry.triangle_signed_area.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_dist_point_to_segment" => (
+            "Dist point–segment",
+            "Point-to-segment distance via ComputationalGeometry.dist_point_to_segment.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_dist_sq_point_to_segment" => (
+            "Dist² point–segment",
+            "Squared point-to-segment distance via ComputationalGeometry.dist_sq_point_to_segment.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_incircle" => (
+            "Incircle",
+            "Exact in-circle predicate via ComputationalGeometry.incircle.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_tukey_depth" => (
+            "Tukey depth",
+            "Tukey depth via ComputationalGeometry.tukey_depth.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_directional_width" => (
+            "Directional width",
+            "Projected width via ComputationalGeometry.directional_width.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_width" => (
+            "Width",
+            "Sampled minimum width via ComputationalGeometry.width.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_farthest_site_brute" => (
+            "Farthest site",
+            "Farthest site index via ComputationalGeometry.farthest_site_brute.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_k_nearest_sites" => (
+            "k nearest sites",
+            "k nearest site indices via ComputationalGeometry.k_nearest_sites.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_is_hull_site" => (
+            "Is hull site",
+            "Hull membership via ComputationalGeometry.is_hull_site.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_diameter_and_width" => (
+            "Diameter and width",
+            "Rotating-caliper diameter and width via ComputationalGeometry.diameter_and_width.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_insphere" => (
+            "Insphere",
+            "Exact in-sphere predicate via ComputationalGeometry.insphere.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_ham_sandwich_cut" => (
+            "Ham-sandwich cut",
+            "Bisecting line via ComputationalGeometry.ham_sandwich_cut.",
+            Proficiency::Expert,
+        ),
+        "scientific:cg_live_smallest_enclosing_disk" => (
+            "Smallest enclosing disk",
+            "Welzl disk via ComputationalGeometry.smallest_enclosing_disk.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_polygon_signed_area" => (
+            "Polygon signed area",
+            "Signed polygon area via ComputationalGeometry.polygon_signed_area.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_polygon_area" => (
+            "Polygon area",
+            "Absolute polygon area via ComputationalGeometry.polygon_area.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_point_in_polygon" => (
+            "Point in polygon",
+            "Interior test via ComputationalGeometry.point_in_polygon.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_minkowski_sum_convex" => (
+            "Minkowski sum",
+            "Convex Minkowski sum via ComputationalGeometry.minkowski_sum_convex.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_nearest_segment_site" => (
+            "Nearest segment site",
+            "Nearest segment-site via ComputationalGeometry.nearest_segment_site.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_width_coreset" => (
+            "Width coreset",
+            "Dudley width coreset via ComputationalGeometry.width_coreset.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_dual_point_to_line" => (
+            "Dual point to line",
+            "Point–line duality via ComputationalGeometry.dual_point_to_line.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_dual_round_trip" => (
+            "Dual round trip",
+            "Dual round-trip via ComputationalGeometry.dual_round_trip.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_is_convex_polygon" => (
+            "Is convex polygon",
+            "Convexity test via ComputationalGeometry.is_convex_polygon.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_point_in_or_on_polygon" => (
+            "Point in or on polygon",
+            "Interior-or-boundary test via ComputationalGeometry.point_in_or_on_polygon.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_boolean_union_area" => (
+            "Boolean union area",
+            "Union area via ComputationalGeometry.boolean_union_area.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_boolean_intersection_area" => (
+            "Boolean intersection area",
+            "Intersection area via ComputationalGeometry.boolean_intersection_area.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_boolean_difference_area" => (
+            "Boolean difference area",
+            "Difference area via ComputationalGeometry.boolean_difference_area.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_cross_ratio_1d" => (
+            "Cross ratio 1D",
+            "1D cross-ratio via ComputationalGeometry.cross_ratio_1d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_hyperplane_eval" => (
+            "Hyperplane eval",
+            "Hyperplane evaluation via ComputationalGeometry.hyperplane_eval.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_householder_reflect" => (
+            "Householder reflect",
+            "Householder reflection via ComputationalGeometry.householder_reflect.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_quaternion_normalize" => (
+            "Quaternion normalize",
+            "Unit quaternion via ComputationalGeometry.quaternion_normalize.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_so3_exp" => (
+            "SO(3) exp",
+            "Axis-angle exponential via ComputationalGeometry.so3_exp.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_so3_log" => (
+            "SO(3) log",
+            "Quaternion logarithm via ComputationalGeometry.so3_log.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_projective_from_point" => (
+            "Projective from point",
+            "Homogeneous lift via ComputationalGeometry.projective_from_point.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_point_from_projective" => (
+            "Point from projective",
+            "Euclidean drop via ComputationalGeometry.point_from_projective.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_frame_to_world" => (
+            "Frame to world",
+            "Local→world via ComputationalGeometry.frame_to_world.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_world_to_frame" => (
+            "World to frame",
+            "World→local via ComputationalGeometry.world_to_frame.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_barycentric_tetra" => (
+            "Barycentric tetra",
+            "Tetra barycentrics via ComputationalGeometry.barycentric_tetra.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_quaternion_slerp" => (
+            "Quaternion slerp",
+            "Quaternion slerp via ComputationalGeometry.quaternion_slerp.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_quaternion_to_matrix" => (
+            "Quaternion to matrix",
+            "SO(3) matrix via ComputationalGeometry.quaternion_to_matrix.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_solve_diagonal_quadratic" => (
+            "Solve diagonal quadratic",
+            "Diagonal quadratic via ComputationalGeometry.solve_diagonal_quadratic.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_schur_complement_2x2" => (
+            "Schur complement 2×2",
+            "2×2 Schur complement via ComputationalGeometry.schur_complement_2x2.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_separating_plane_aabb" => (
+            "Separating plane AABB",
+            "AABB SAT plane via ComputationalGeometry.separating_plane_aabb.",
+            Proficiency::Intermediate,
         ),
         "scientific:ga_dot" => (
             "Dot product",
@@ -2101,6 +2491,31 @@ fn named(id: &str) -> Option<Presentation> {
             "Vector search",
             "Search corpus lines for nearest neighbours (data-query / data-k).",
             Proficiency::Intermediate,
+        ),
+        "ai:inf_load_model" => (
+            "Load model",
+            "Mount a resident GGUF from path (Host Inference.load_model; native).",
+            Proficiency::Expert,
+        ),
+        "ai:inf_unload_model" => (
+            "Unload model",
+            "Drop the resident model mmap via Inference.unload_model.",
+            Proficiency::Intermediate,
+        ),
+        "ai:inf_run_transformer" => (
+            "Run transformer",
+            "Forward-pass token ids through a resident model (needs load_model).",
+            Proficiency::Expert,
+        ),
+        "ai:inf_run_reranker" => (
+            "Rerank candidates",
+            "Rank candidate lines by relevance to a query (data-query).",
+            Proficiency::Intermediate,
+        ),
+        "ai:inf_constrained_decode" => (
+            "Constrained decode",
+            "Mask logits to an allowed vocab via Inference.constrained_decode.",
+            Proficiency::Expert,
         ),
         "ai:orch_session_create" => (
             "Session create",
@@ -3270,6 +3685,1711 @@ fn named(id: &str) -> Option<Presentation> {
         "image:cosine_similarity" => (
             "Embedding similarity",
             "Cosine similarity of two embedding vectors on this surface.",
+            Proficiency::Expert,
+        ),
+        "image:edit_new" => (
+            "New image",
+            "Create an image document via Image.new.",
+            Proficiency::Novice,
+        ),
+        "image:edit_add_layer" => (
+            "Add layer",
+            "Add a named layer via Image.add_layer.",
+            Proficiency::Novice,
+        ),
+        "image:edit_remove_layer" => (
+            "Remove layer",
+            "Remove a layer by index via Image.remove_layer.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_pixel" => (
+            "Set pixel",
+            "Set a pixel RGBA via Image.set_pixel.",
+            Proficiency::Novice,
+        ),
+        "image:edit_fill" => (
+            "Fill image",
+            "Fill the document with RGB via Image.fill.",
+            Proficiency::Novice,
+        ),
+        "image:edit_brush" => (
+            "Brush stroke",
+            "Apply a brush stroke via Image.brush.",
+            Proficiency::Novice,
+        ),
+        "image:edit_apply_filter" => (
+            "Apply filter",
+            "Apply a named filter via Image.apply_filter.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_opacity" => (
+            "Set opacity",
+            "Set layer opacity via Image.set_opacity.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_blend_mode" => (
+            "Blend mode",
+            "Set blend mode via Image.set_blend_mode.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_visible" => (
+            "Set visible",
+            "Show or hide a layer via Image.set_visible.",
+            Proficiency::Novice,
+        ),
+        "image:edit_set_mask" => (
+            "Set mask",
+            "Set a rectangular mask via Image.set_mask.",
+            Proficiency::Novice,
+        ),
+        "image:edit_clear_mask" => (
+            "Clear mask",
+            "Clear the current mask via Image.clear_mask.",
+            Proficiency::Novice,
+        ),
+        "image:edit_composite" => (
+            "Composite",
+            "Composite layers via Image.composite.",
+            Proficiency::Novice,
+        ),
+        "image:edit_add_selection" => (
+            "Add selection",
+            "Add a named selection via Image.add_selection.",
+            Proficiency::Novice,
+        ),
+        "image:edit_clear_selections" => (
+            "Clear selections",
+            "Clear all selections via Image.clear_selections.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_new_universe" => (
+            "New universe",
+            "Create a 512-channel DMX universe via Dmx.new_universe.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_set_channel" => (
+            "Set channel",
+            "Set a DMX channel via Dmx.set_channel.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_add_fixture" => (
+            "Add fixture",
+            "Add a lighting fixture via Dmx.add_fixture.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_fixture_set_colour" => (
+            "Fixture colour",
+            "Set fixture RGB via Dmx.fixture_set_colour.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_fixture_set_intensity" => (
+            "Fixture intensity",
+            "Set fixture intensity via Dmx.fixture_set_intensity.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_fixture_set_pan_tilt" => (
+            "Fixture pan/tilt",
+            "Set fixture pan and tilt via Dmx.fixture_set_pan_tilt.",
+            Proficiency::Intermediate,
+        ),
+        "dmx:live_new_cue" => (
+            "New cue",
+            "Create a lighting cue via Dmx.new_cue.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_set_channel" => (
+            "Cue channel",
+            "Set a cue channel via Dmx.cue_set_channel.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_set_fade" => (
+            "Cue fade",
+            "Set cue fade times via Dmx.cue_set_fade.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_new_cue_stack" => (
+            "New cue stack",
+            "Create a cue stack via Dmx.new_cue_stack.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_add" => (
+            "Stack add cue",
+            "Add a cue to a stack via Dmx.cue_stack_add.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_go" => (
+            "Stack go",
+            "Advance the cue stack via Dmx.cue_stack_go.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_go_back" => (
+            "Stack go back",
+            "Step the cue stack back via Dmx.cue_stack_go_back.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_reset" => (
+            "Stack reset",
+            "Reset the cue stack via Dmx.cue_stack_reset.",
+            Proficiency::Novice,
+        ),
+        "video:live_new_project" => (
+            "New project",
+            "Create a video project via Video.new_project.",
+            Proficiency::Novice,
+        ),
+        "video:live_add_track" => (
+            "Add track",
+            "Add a named track via Video.add_track.",
+            Proficiency::Novice,
+        ),
+        "video:live_add_clip" => (
+            "Add clip",
+            "Add a source clip via Video.add_clip.",
+            Proficiency::Novice,
+        ),
+        "video:live_trim_clip" => (
+            "Trim clip",
+            "Trim clip in/out via Video.trim_clip.",
+            Proficiency::Novice,
+        ),
+        "video:live_set_speed" => (
+            "Set speed",
+            "Set playback speed via Video.set_speed.",
+            Proficiency::Novice,
+        ),
+        "video:live_colour_grade" => (
+            "Colour grade",
+            "Grade brightness, contrast, and saturation via Video.colour_grade.",
+            Proficiency::Intermediate,
+        ),
+        "video:live_add_transition" => (
+            "Add transition",
+            "Add a transition via Video.add_transition.",
+            Proficiency::Novice,
+        ),
+        "video:live_set_render_format" => (
+            "Render format",
+            "Set the render format via Video.set_render_format.",
+            Proficiency::Novice,
+        ),
+        "video:live_set_render_bitrate" => (
+            "Render bitrate",
+            "Set the render bitrate via Video.set_render_bitrate.",
+            Proficiency::Novice,
+        ),
+        "video:live_remove_clip" => (
+            "Remove clip",
+            "Remove a clip via Video.remove_clip.",
+            Proficiency::Novice,
+        ),
+        "hid:live_poll" => (
+            "Poll HID",
+            "Poll the next HID event via HID.poll.",
+            Proficiency::Novice,
+        ),
+        "hid:live_wait" => (
+            "Wait HID",
+            "Wait for a HID event via HID.wait.",
+            Proficiency::Novice,
+        ),
+        "hid:live_clear" => (
+            "Clear HID",
+            "Clear queued HID events via HID.clear.",
+            Proficiency::Novice,
+        ),
+        "hid:live_pointer_capture" => (
+            "Pointer capture",
+            "Capture pointer focus via HID.pointer_capture.",
+            Proficiency::Novice,
+        ),
+        "hid:live_pointer_release" => (
+            "Pointer release",
+            "Release pointer capture via HID.pointer_release.",
+            Proficiency::Novice,
+        ),
+        "hid:live_set_cursor" => (
+            "Set cursor",
+            "Set cursor style via HID.set_cursor.",
+            Proficiency::Novice,
+        ),
+        "hid:live_gamepad_poll" => (
+            "Gamepad poll",
+            "Poll gamepad state via HID.gamepad_poll.",
+            Proficiency::Novice,
+        ),
+        "hid:live_gamepad_vibrate" => (
+            "Gamepad rumble",
+            "Dispatch gamepad rumble via HID.gamepad_vibrate.",
+            Proficiency::Novice,
+        ),
+        "hid:live_midi_send" => (
+            "MIDI send",
+            "Send a MIDI packet via HID.midi_send.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_midi_poll" => (
+            "MIDI poll",
+            "Poll incoming MIDI via HID.midi_poll.",
+            Proficiency::Novice,
+        ),
+        "hid:live_haptic_pulse" => (
+            "Haptic pulse",
+            "Trigger a haptic pulse via HID.haptic_pulse.",
+            Proficiency::Novice,
+        ),
+        "hid:live_haptic_pattern" => (
+            "Haptic pattern",
+            "Play a haptic pattern via HID.haptic_pattern.",
+            Proficiency::Novice,
+        ),
+        "hid:live_spatial_head_pose" => (
+            "Head pose",
+            "Read spatial head pose via HID.spatial_head_pose.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_spatial_hand_skeleton" => (
+            "Hand skeleton",
+            "Read hand skeleton via HID.spatial_hand_skeleton.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_spatial_gaze_ray" => (
+            "Gaze ray",
+            "Read gaze ray via HID.spatial_gaze_ray.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_biosignal_poll" => (
+            "Biosignal poll",
+            "Poll privacy-filtered biosignal via HID.biosignal_poll.",
+            Proficiency::Expert,
+        ),
+        "scientific:vc_gradient" => (
+            "Gradient",
+            "Symbolic gradient via VectorCalculus.gradient.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_divergence" => (
+            "Divergence",
+            "Vector-field divergence via VectorCalculus.divergence.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_curl" => (
+            "Curl",
+            "3-component curl via VectorCalculus.curl.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_laplacian" => (
+            "Laplacian",
+            "Scalar Laplacian via VectorCalculus.laplacian.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_line_integral_scalar" => (
+            "Scalar line integral",
+            "Scalar line integral via VectorCalculus.line_integral_scalar.",
+            Proficiency::Expert,
+        ),
+        "scientific:vc_line_integral_work" => (
+            "Work line integral",
+            "Work line integral via VectorCalculus.line_integral_work.",
+            Proficiency::Expert,
+        ),
+        "scientific:vc_surface_flux" => (
+            "Surface flux",
+            "Surface flux via VectorCalculus.surface_flux.",
+            Proficiency::Expert,
+        ),
+        "scientific:interp_linear" => (
+            "Linear interpolate",
+            "Piecewise linear sample via Interpolation.linear_interp.",
+            Proficiency::Novice,
+        ),
+        "scientific:interp_lagrange" => (
+            "Lagrange evaluate",
+            "Lagrange polynomial via Interpolation.lagrange_eval.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_newton_coef" => (
+            "Newton coefficients",
+            "Divided differences via Interpolation.newton_coefficients.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_newton_eval" => (
+            "Newton evaluate",
+            "Newton form via Interpolation.newton_eval.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_poly_fit" => (
+            "Polynomial fit",
+            "Least-squares polynomial via Interpolation.poly_fit.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_poly_eval" => (
+            "Polynomial evaluate",
+            "Polynomial evaluation via Interpolation.poly_eval.",
+            Proficiency::Novice,
+        ),
+        "scientific:spectral_emf_to_spd" => (
+            "EMF to SPD",
+            "Emission SPD via Spectral.emf_to_spd.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_spd_to_xyz" => (
+            "SPD to XYZ",
+            "CIE XYZ via Spectral.spd_to_xyz.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_emf_to_rgb" => (
+            "EMF to RGB",
+            "Display RGB via Spectral.emf_to_rgb.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_blend" => (
+            "Blend spectra",
+            "Blend two EMFs via Spectral.blend.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_gamut_map" => (
+            "Gamut map",
+            "Map XYZ via Spectral.gamut_map.",
+            Proficiency::Expert,
+        ),
+        "spatial:world_new" => (
+            "New world",
+            "Create a world via World.new.",
+            Proficiency::Novice,
+        ),
+        "spatial:world_add_object" => (
+            "Add object",
+            "Add a world object via World.add_object.",
+            Proficiency::Novice,
+        ),
+        "spatial:world_add_portal" => (
+            "Add portal",
+            "Add a portal via World.add_portal.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:world_add_avatar" => (
+            "Add avatar",
+            "Add an avatar via World.add_avatar.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:world_set_gravity" => (
+            "Set gravity",
+            "Set world gravity via World.set_gravity.",
+            Proficiency::Novice,
+        ),
+        "spatial:world_object_apply_force" => (
+            "Apply force",
+            "Apply object force via World.object_apply_force.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:world_object_step_physics" => (
+            "Step physics",
+            "Step world physics via World.object_step_physics.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_create" => (
+            "Create asset",
+            "Create an aspect-graph record via Asset.create.",
+            Proficiency::Novice,
+        ),
+        "office:asset_add_temporal" => (
+            "Add temporal aspect",
+            "Add a temporal aspect via Asset.add_temporal.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_add_topic" => (
+            "Add topic",
+            "Associate a topic via Asset.add_topic.",
+            Proficiency::Novice,
+        ),
+        "office:asset_set_spatial" => (
+            "Set spatial anchor",
+            "Set a spatial anchor via Asset.set_spatial.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_compile" => (
+            "Compile asset",
+            "Compile an asset to quins via Asset.compile.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_temporal_span" => (
+            "Temporal span",
+            "Measure aspect span via Asset.temporal_span.",
+            Proficiency::Novice,
+        ),
+        "office:asset_query_aspects" => (
+            "Query aspects",
+            "Query temporal aspects via Asset.query_aspects.",
+            Proficiency::Novice,
+        ),
+        "office:asset_persist" => (
+            "Persist asset",
+            "Persist an asset via Asset.persist.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_resolve" => (
+            "Resolve asset",
+            "Resolve an asset by id via Asset.resolve.",
+            Proficiency::Novice,
+        ),
+        "office:asset_resolve_by_spatial" => (
+            "Resolve by spatial",
+            "Resolve assets by anchor via Asset.resolve_by_spatial.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_resolve_by_topic" => (
+            "Resolve by topic",
+            "Resolve assets by topic via Asset.resolve_by_topic.",
+            Proficiency::Novice,
+        ),
+        "office:asset_resolve_by_temporal" => (
+            "Resolve by temporal",
+            "Resolve assets by aspect kind via Asset.resolve_by_temporal.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_list" => (
+            "List assets",
+            "List persisted asset ids via Asset.list.",
+            Proficiency::Novice,
+        ),
+        "office:asset_count" => (
+            "Count assets",
+            "Count persisted assets via Asset.count.",
+            Proficiency::Novice,
+        ),
+        "office:asset_persist_create" => (
+            "Persist create",
+            "Create and persist an asset via Asset.persist_create.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_add_temporal" => (
+            "Persist add temporal",
+            "Add a temporal aspect via Asset.persist_add_temporal.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_add_topic" => (
+            "Persist add topic",
+            "Add a topic via Asset.persist_add_topic.",
+            Proficiency::Novice,
+        ),
+        "office:asset_persist_set_spatial" => (
+            "Persist set spatial",
+            "Set a spatial anchor via Asset.persist_set_spatial.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_compile" => (
+            "Persist compile",
+            "Compile a persisted asset via Asset.persist_compile.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_temporal_span" => (
+            "Persist temporal span",
+            "Measure persisted aspect span via Asset.persist_temporal_span.",
+            Proficiency::Novice,
+        ),
+        "office:asset_persist_query_aspects" => (
+            "Persist query aspects",
+            "Query persisted aspects via Asset.persist_query_aspects.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_publish" => (
+            "Publish pulse",
+            "Publish a generic pulse via Pulse.publish.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_graph_mutation" => (
+            "Publish graph mutation",
+            "Publish a graph-mutation pulse via Pulse.publish_graph_mutation.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_notification" => (
+            "Publish notification",
+            "Publish a notification pulse via Pulse.publish_notification.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_telemetry" => (
+            "Publish telemetry",
+            "Publish a telemetry pulse via Pulse.publish_telemetry.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_agent_message" => (
+            "Publish agent message",
+            "Publish an agent-message pulse via Pulse.publish_agent_message.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_sync" => (
+            "Publish sync",
+            "Publish a sync pulse via Pulse.publish_sync.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_open_channel" => (
+            "Open channel",
+            "Open a pulse channel via Pulse.open_channel.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_close_channel" => (
+            "Close channel",
+            "Close a pulse channel via Pulse.close_channel.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_set_transport" => (
+            "Set transport",
+            "Set pulse transport via Pulse.set_transport.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:portal_set_target" => (
+            "Portal target",
+            "Set a portal target via Portal.set_target.",
+            Proficiency::Novice,
+        ),
+        "spatial:portal_activate" => (
+            "Activate portal",
+            "Activate a portal via Portal.activate.",
+            Proficiency::Novice,
+        ),
+        "spatial:portal_deactivate" => (
+            "Deactivate portal",
+            "Deactivate a portal via Portal.deactivate.",
+            Proficiency::Novice,
+        ),
+        "spatial:avatar_move" => (
+            "Move avatar",
+            "Move an avatar via Avatar.move.",
+            Proficiency::Novice,
+        ),
+        "spatial:avatar_set_appearance" => (
+            "Avatar appearance",
+            "Set avatar appearance via Avatar.set_appearance.",
+            Proficiency::Novice,
+        ),
+        "research:live_new" => (
+            "New enquiry",
+            "Start a research enquiry via Research.new.",
+            Proficiency::Novice,
+        ),
+        "research:live_set_purpose" => (
+            "Set purpose",
+            "Set enquiry purpose via Research.set_purpose.",
+            Proficiency::Novice,
+        ),
+        "research:live_define_scope" => (
+            "Define scope",
+            "Define enquiry scope lines via Research.define_scope.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_constraint" => (
+            "Add constraint",
+            "Add a research constraint via Research.add_constraint.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_question" => (
+            "Add question",
+            "Add a research question via Research.add_question.",
+            Proficiency::Novice,
+        ),
+        "research:live_link_questions" => (
+            "Link questions",
+            "Link two questions via Research.link_questions.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_corpus_item" => (
+            "Add corpus item",
+            "Add a corpus item via Research.add_corpus_item.",
+            Proficiency::Novice,
+        ),
+        "research:live_import_literature" => (
+            "Import literature",
+            "Import literature via Research.import_literature.",
+            Proficiency::Novice,
+        ),
+        "research:live_import_dataset" => (
+            "Import dataset",
+            "Import a dataset via Research.import_dataset.",
+            Proficiency::Novice,
+        ),
+        "research:live_set_corpus_confidence" => (
+            "Corpus confidence",
+            "Set corpus confidence via Research.set_corpus_confidence.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_extract_from_corpus" => (
+            "Extract from corpus",
+            "Extract facts for a keyword via Research.extract_from_corpus.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_infer_dark_link" => (
+            "Infer dark link",
+            "Infer a dark link via Research.infer_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_provenance_gaps" => (
+            "Provenance gaps",
+            "Detect provenance gaps via Research.detect_provenance_gaps.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_concealment" => (
+            "Detect concealment",
+            "Detect concealment patterns via Research.detect_concealment.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_confirm_dark_link" => (
+            "Confirm dark link",
+            "Confirm a dark link via Research.confirm_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_refute_dark_link" => (
+            "Refute dark link",
+            "Refute a dark link via Research.refute_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_make_inference" => (
+            "Make inference",
+            "Record a premise→conclusion via Research.make_inference.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_chain_inference" => (
+            "Chain inference",
+            "Chain an inference via Research.chain_inference.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_inference_confidence" => (
+            "Inference confidence",
+            "Set inference confidence via Research.set_inference_confidence.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_validate_inference" => (
+            "Validate inference",
+            "Validate an inference via Research.validate_inference.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_new_investigation" => (
+            "New investigation",
+            "Create an investigation via Research.new_investigation.",
+            Proficiency::Novice,
+        ),
+        "research:live_collect_evidence" => (
+            "Collect evidence",
+            "Collect evidence via Research.collect_evidence.",
+            Proficiency::Novice,
+        ),
+        "research:live_set_reliability" => (
+            "Set reliability",
+            "Set evidence reliability via Research.set_reliability.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_propose_hypothesis" => (
+            "Propose hypothesis",
+            "Propose a hypothesis via Research.propose_hypothesis.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_evaluate_evidence" => (
+            "Evaluate evidence",
+            "Evaluate evidence against a hypothesis.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_create_timeline" => (
+            "Create timeline",
+            "Add a timeline event via Research.create_timeline.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_link" => (
+            "Add link",
+            "Add an investigation link via Research.add_link.",
+            Proficiency::Novice,
+        ),
+        "research:live_find_path" => (
+            "Find path",
+            "Find a path via Research.find_path.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_create_hypothesis_graph" => (
+            "Hypothesis graph",
+            "Create a hypothesis graph via Research.create_hypothesis_graph.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_contribute_evaluation" => (
+            "Contribute evaluation",
+            "Contribute an evaluation via Research.contribute_evaluation.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_bridge_dark_link" => (
+            "Bridge dark link",
+            "Bridge a dark link via Research.bridge_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_reframe_hypothesis" => (
+            "Reframe hypothesis",
+            "Reframe a hypothesis via Research.reframe_hypothesis.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_merge_hypotheses" => (
+            "Merge hypotheses",
+            "Merge two hypotheses via Research.merge_hypotheses.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_flag_gap" => (
+            "Flag gap",
+            "Flag a gap via Research.flag_gap.",
+            Proficiency::Novice,
+        ),
+        "research:live_close_gap" => (
+            "Close gap",
+            "Close a gap via Research.close_gap.",
+            Proficiency::Novice,
+        ),
+        "research:live_create_revision" => (
+            "Create revision",
+            "Create a revision via Research.create_revision.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_diff_revisions" => (
+            "Diff revisions",
+            "Diff two revisions via Research.diff_revisions.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_subscribe_updates" => (
+            "Subscribe updates",
+            "Subscribe to updates via Research.subscribe_updates.",
+            Proficiency::Novice,
+        ),
+        "research:live_create_assessment" => (
+            "Create assessment",
+            "Create an epistemic assessment via Research.create_assessment.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_epistemic_mode" => (
+            "Set epistemic mode",
+            "Set epistemic mode via Research.set_epistemic_mode.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_reality_category" => (
+            "Set reality category",
+            "Set reality category via Research.set_reality_category.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_classify_reality" => (
+            "Classify reality",
+            "Classify reality via Research.classify_reality.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_blended" => (
+            "Detect blended",
+            "Detect blended content via Research.detect_blended.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_deceptive_fiction" => (
+            "Detect deceptive fiction",
+            "Detect deceptive fiction via Research.detect_deceptive_fiction.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_trace_fiction" => (
+            "Trace fiction",
+            "Trace fiction to reality via Research.trace_fiction.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_assess_sentiment" => (
+            "Assess sentiment",
+            "Assess sentiment via Research.assess_sentiment.",
+            Proficiency::Novice,
+        ),
+        "research:live_detect_sentiment_manipulation" => (
+            "Sentiment manipulation",
+            "Detect sentiment manipulation via Research.detect_sentiment_manipulation.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_performed_sentiment" => (
+            "Performed sentiment",
+            "Detect performed sentiment via Research.detect_performed_sentiment.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_map_sentiment_network" => (
+            "Sentiment network",
+            "Map a sentiment network via Research.map_sentiment_network.",
+            Proficiency::Expert,
+        ),
+        "research:live_analyse_sentiment_trends" => (
+            "Sentiment trends",
+            "Analyse sentiment trends via Research.analyse_sentiment_trends.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_register_perspective" => (
+            "Register perspective",
+            "Register a perspective via Research.register_perspective.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_bias" => (
+            "Add bias",
+            "Add a bias via Research.add_bias.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_compare_perspectives" => (
+            "Compare perspectives",
+            "Compare two perspectives via Research.compare_perspectives.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_perspective_conflict" => (
+            "Perspective conflict",
+            "Detect perspective conflict via Research.detect_perspective_conflict.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_reconcile_perspectives" => (
+            "Reconcile perspectives",
+            "Reconcile perspectives via Research.reconcile_perspectives.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_assess_intentionality" => (
+            "Assess intentionality",
+            "Assess intentionality via Research.assess_intentionality.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_classify_mistake" => (
+            "Classify mistake",
+            "Classify a mistake via Research.classify_mistake.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_define_social_dynamics" => (
+            "Social dynamics",
+            "Define social dynamics via Research.define_social_dynamics.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_define_economic_dynamics" => (
+            "Economic dynamics",
+            "Define economic dynamics via Research.define_economic_dynamics.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_define_spatiotemporal_dynamics" => (
+            "Spatiotemporal dynamics",
+            "Define spatiotemporal dynamics via Research.define_spatiotemporal_dynamics.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_analyse_social_network" => (
+            "Social network",
+            "Analyse a social network via Research.analyse_social_network.",
+            Proficiency::Expert,
+        ),
+        "research:live_analyse_inequality" => (
+            "Analyse inequality",
+            "Analyse inequality via Research.analyse_inequality.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_analyse_diffusion" => (
+            "Analyse diffusion",
+            "Analyse diffusion via Research.analyse_diffusion.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_assess_grounding" => (
+            "Assess grounding",
+            "Assess grounding via Research.assess_grounding.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_verify_grounding" => (
+            "Verify grounding",
+            "Verify grounding via Research.verify_grounding.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_ungrounded_behaviour" => (
+            "Ungrounded behaviour",
+            "Detect ungrounded behaviour via Research.detect_ungrounded_behaviour.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_create_ug_instance" => (
+            "UG instance",
+            "Create an ungrounded-behaviour instance via Research.create_ug_instance.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_cause" => (
+            "UG cause",
+            "Set UG cause via Research.set_ug_cause.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_consequence" => (
+            "UG consequence",
+            "Set UG consequence via Research.set_ug_consequence.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_detection" => (
+            "UG detection",
+            "Set UG detection via Research.set_ug_detection.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_mitigation" => (
+            "UG mitigation",
+            "Set UG mitigation via Research.set_ug_mitigation.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_calibration" => (
+            "UG calibration",
+            "Set UG calibration via Research.set_ug_calibration.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_ug_patterns" => (
+            "UG patterns",
+            "Detect UG patterns via Research.detect_ug_patterns.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_scene" => (
+            "Scene",
+            "Build a renderer contract via Render.scene.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_css_animation" => (
+            "CSS animation",
+            "Generate @keyframes CSS via Render.css_animation.",
+            Proficiency::Novice,
+        ),
+        "render:live_css_color" => (
+            "CSS color",
+            "Map EMF α/μ/σ to CSS rgb via Render.css_color.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_css_transform" => (
+            "CSS transform",
+            "Build a CSS transform string via Render.css_transform.",
+            Proficiency::Novice,
+        ),
+        "render:live_animation_eval_curve" => (
+            "Eval curve",
+            "Evaluate an easing curve via Render.animation_eval_curve.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_animation_spring_step" => (
+            "Spring step",
+            "Step a spring via Render.animation_spring_step.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_animation_sclerp" => (
+            "ScLERP",
+            "Screw-linear interpolate motors via Render.animation_sclerp.",
+            Proficiency::Expert,
+        ),
+        "render:live_animation_eval_preset" => (
+            "Eval preset",
+            "Evaluate an animation preset via Render.animation_eval_preset.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_animation_squad_step" => (
+            "SQUAD step",
+            "Squad-interpolate quaternions via Render.animation_squad_step.",
+            Proficiency::Expert,
+        ),
+        "render:live_animation_list_presets" => (
+            "List presets",
+            "List animation presets via Render.animation_list_presets.",
+            Proficiency::Novice,
+        ),
+        "render:live_animation_compute_pass" => (
+            "Compute pass",
+            "Generate a GPU animation compute pass via Render.animation_compute_pass.",
+            Proficiency::Expert,
+        ),
+        "render:live_svg_path" => (
+            "SVG path",
+            "Generate an SVG path via Render.svg_path.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_circle" => (
+            "SVG circle",
+            "Generate an SVG circle via Render.svg_circle.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_rect" => (
+            "SVG rect",
+            "Generate an SVG rect via Render.svg_rect.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_line" => (
+            "SVG line",
+            "Generate an SVG line via Render.svg_line.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_bezier" => (
+            "SVG bezier",
+            "Sample a Bezier into an SVG path via Render.svg_bezier.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_svg_field" => (
+            "SVG field",
+            "Visualise a 2D field via Render.svg_field.",
+            Proficiency::Intermediate,
+        ),
+        "animation:live_spring_step" => (
+            "Spring step",
+            "Step a spring via Animation.spring_step.",
+            Proficiency::Intermediate,
+        ),
+        "animation:live_sclerp_step" => (
+            "ScLERP step",
+            "Screw-linear interpolate motors via Animation.sclerp_step.",
+            Proficiency::Intermediate,
+        ),
+        "animation:live_squad_step" => (
+            "SQUAD step",
+            "Squad-interpolate quaternions via Animation.squad_step.",
+            Proficiency::Intermediate,
+        ),
+        "animation:live_list_presets" => (
+            "List presets",
+            "List animation presets via Animation.list_presets.",
+            Proficiency::Novice,
+        ),
+        "scientific:num_ode_rk4" => (
+            "RK4 integrate",
+            "Multi-step RK4 via Ode.rk4_integrate.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:num_ode_dopri5" => (
+            "DOPRI5",
+            "Adaptive Dormand–Prince via Ode.dopri5.",
+            Proficiency::Expert,
+        ),
+        "scientific:num_ode_bdf" => (
+            "BDF",
+            "Stiff BDF integrator via Ode.bdf.",
+            Proficiency::Expert,
+        ),
+        "scientific:num_ode_symplectic_step" => (
+            "Symplectic step",
+            "Verlet/Ruth/Yoshida step via Ode.symplectic_step.",
+            Proficiency::Intermediate,
+        ),
+        "comm:hbbtv_new_app" => (
+            "New HbbTV app",
+            "Create an HbbTV app via HbbTV.new_app.",
+            Proficiency::Novice,
+        ),
+        "comm:hbbtv_add_page" => (
+            "Add page",
+            "Add a page via HbbTV.add_page.",
+            Proficiency::Novice,
+        ),
+        "comm:hbbtv_navigate" => (
+            "Navigate",
+            "Navigate via HbbTV.navigate.",
+            Proficiency::Novice,
+        ),
+        "comm:hbbtv_set_state" => (
+            "Set state",
+            "Set app state via HbbTV.set_state.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_init" => (
+            "GPU init",
+            "Create an offscreen PortalGpu via Render.gpu_init.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_init_surface" => (
+            "GPU init surface",
+            "Swapchain PortalGpu via Render.gpu_init_surface.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_render_frame" => (
+            "Render frame",
+            "Render one frame via Render.gpu_render_frame.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_read_pixels" => (
+            "Read pixels",
+            "Read RGBA8 via Render.gpu_read_pixels.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_upload_mesh" => (
+            "Upload mesh",
+            "Upload a triangle mesh via Render.gpu_upload_mesh.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_upload_tensor" => (
+            "Upload tensor",
+            "Upload tensor bytes via Render.gpu_upload_tensor.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_pick" => (
+            "Pick",
+            "Queue a pick via Render.gpu_pick.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_poll_pick" => (
+            "Poll pick",
+            "Poll pick via Render.gpu_poll_pick.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_resize" => (
+            "Resize",
+            "Resize viewport via Render.gpu_resize.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_set_ambient" => (
+            "Set ambient",
+            "Toggle ambient field via Render.gpu_set_ambient.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_destroy" => (
+            "Destroy",
+            "Destroy PortalGpu via Render.gpu_destroy.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_compute_dispatch" => (
+            "Compute dispatch",
+            "Dispatch WGSL compute via Render.gpu_compute_dispatch.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_compute_readback" => (
+            "Compute readback",
+            "Read compute results via Render.gpu_compute_readback.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_validate_shader" => (
+            "Validate shader",
+            "Validate WGSL via Render.gpu_validate_shader.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_compile_shader" => (
+            "Compile shader",
+            "Compile WGSL via Render.gpu_compile_shader.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_compile_to_glsl" => (
+            "Compile to GLSL",
+            "Cross-compile WGSL via Render.gpu_compile_to_glsl.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_backend_info" => (
+            "Backend info",
+            "Probe GPU backend via Render.gpu_backend_info.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_upload_mesh_colored" => (
+            "Upload mesh colored",
+            "Upload a colored triangle mesh via Render.gpu_upload_mesh_colored.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_set_standpoint" => (
+            "Set standpoint",
+            "Set observer standpoint via Render.gpu_set_standpoint.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_observer_standpoint" => (
+            "Observer standpoint",
+            "Read standpoint via Render.gpu_observer_standpoint.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_camera_state" => (
+            "Camera state",
+            "Read yaw/pitch/zoom via Render.gpu_camera_state.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_surface_size" => (
+            "Surface size",
+            "Read extent via Render.gpu_surface_size.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_has_mesh" => (
+            "Has mesh",
+            "Query mesh via Render.gpu_has_mesh.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_has_tensor" => (
+            "Has tensor",
+            "Query tensor via Render.gpu_has_tensor.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_tensor_node_count" => (
+            "Tensor node count",
+            "Count tensor nodes via Render.gpu_tensor_node_count.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_particle_count" => (
+            "Particle count",
+            "Count particles via Render.gpu_particle_count.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_sync_bloom" => (
+            "Sync bloom",
+            "Reconcile bloom targets via Render.gpu_sync_bloom.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_set_artefact_joint" => (
+            "Set artefact joint",
+            "Set kinematic joint via Render.gpu_set_artefact_joint.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_set_artefact_world" => (
+            "Set artefact world",
+            "Set world AABB via Render.gpu_set_artefact_world.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_artefact_refused" => (
+            "Artefact refused",
+            "Query refused pose via Render.gpu_artefact_refused.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_required_rgba8_bytes" => (
+            "Required RGBA8 bytes",
+            "Readback size via Render.gpu_required_rgba8_bytes.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_emf_upload_field" => (
+            "EMF upload field",
+            "Upload EMF grid via Render.emf_upload_field.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_emf_render_slice" => (
+            "EMF render slice",
+            "Render EMF slice via Render.emf_render_slice.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_emf_field_info" => (
+            "EMF field info",
+            "Query EMF field via Render.emf_field_info.",
+            Proficiency::Novice,
+        ),
+        "social:live_gini" => (
+            "Social Gini",
+            "Inequality via Social.gini.",
+            Proficiency::Novice,
+        ),
+        "social:live_lorenz" => (
+            "Social Lorenz",
+            "Lorenz curve via Social.lorenz.",
+            Proficiency::Novice,
+        ),
+        "social:live_degree_centrality" => (
+            "Degree centrality",
+            "Degree centrality via Social.degree_centrality.",
+            Proficiency::Intermediate,
+        ),
+        "social:live_lww" => (
+            "LWW merge",
+            "Last-writer-wins merge via Social.lww.",
+            Proficiency::Intermediate,
+        ),
+        "forensic:live_malfeasance_delta" => (
+            "Malfeasance delta",
+            "Capital vs utility via Forensic.malfeasance_delta.",
+            Proficiency::Intermediate,
+        ),
+        "forensic:live_narrative_divergence" => (
+            "Narrative divergence",
+            "Factual vs fantasy via Forensic.narrative_divergence.",
+            Proficiency::Expert,
+        ),
+        "finance:live_convert_currency" => (
+            "Convert currency",
+            "Convert via Finance.convert_currency.",
+            Proficiency::Novice,
+        ),
+        "finance:live_multisig_check" => (
+            "Multisig check",
+            "k-of-N check via Finance.multisig_check.",
+            Proficiency::Novice,
+        ),
+        "finance:live_ledger_balance" => (
+            "Ledger balance",
+            "Account balances via Finance.ledger_balance.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_corpus_load" => (
+            "Corpus load",
+            "Load a corpus path via Corpus.load.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_corpus_parse" => (
+            "Corpus parse",
+            "Parse corpus text via Corpus.parse.",
+            Proficiency::Novice,
+        ),
+        "comm:graph_live_validate_fragment" => (
+            "Validate fragment",
+            "Validate a chat fragment via ChatGraph.validate_fragment.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_link_reply" => (
+            "Link reply",
+            "Link a reply via ChatGraph.link_reply.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_add_social_post" => (
+            "Add social post",
+            "Add a post via Interactive.add_social_post.",
+            Proficiency::Novice,
+        ),
+        "comm:graph_live_add_trigger" => (
+            "Add trigger",
+            "Add a timed trigger via Interactive.add_trigger.",
+            Proficiency::Novice,
+        ),
+        "comm:graph_live_second_screen_sync" => (
+            "Second screen sync",
+            "Companion sync via SecondScreen.sync.",
+            Proficiency::Novice,
+        ),
+        "scientific:graph_live_fuzzy_jaccard" => (
+            "Fuzzy Jaccard",
+            "Fuzzy Jaccard via GraphMatch.fuzzy_jaccard.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:graph_live_fuzzy_dice" => (
+            "Fuzzy Dice",
+            "Fuzzy Dice via GraphMatch.fuzzy_dice.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:graph_live_approximate_match" => (
+            "Approximate match",
+            "Hill-climb correspondence via GraphMatch.approximate_match.",
+            Proficiency::Expert,
+        ),
+        "scientific:graph_live_shortest_path" => (
+            "Shortest path",
+            "Dijkstra via GraphReasoning.shortest_path.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:graph_live_spreading_activation" => (
+            "Spreading activation",
+            "Spreading activation via GraphReasoning.spreading_activation.",
+            Proficiency::Expert,
+        ),
+        "scientific:graph_live_top_k" => (
+            "Top-k activations",
+            "Top-k indices via GraphReasoning.top_k.",
+            Proficiency::Novice,
+        ),
+        "scientific:opt_live_hill_climb" => (
+            "Hill climb",
+            "1-D hill climb via Optimization.hill_climb.",
+            Proficiency::Novice,
+        ),
+        "scientific:opt_live_simulated_annealing" => (
+            "Simulated annealing",
+            "Bounded SA via Optimization.simulated_annealing.",
+            Proficiency::Expert,
+        ),
+        "scientific:opt_live_artificial_bee_colony" => (
+            "Artificial bee colony",
+            "ABC via Optimization.artificial_bee_colony.",
+            Proficiency::Expert,
+        ),
+        "ai:sampler_live_configure" => (
+            "Sampler configure",
+            "Install sampler config via sampler.configure.",
+            Proficiency::Intermediate,
+        ),
+        "ai:sampler_live_constrain_enable" => (
+            "Constrain enable",
+            "Enable GBNF via sampler.constrain_enable.",
+            Proficiency::Expert,
+        ),
+        "ai:sampler_live_constrain_disable" => (
+            "Constrain disable",
+            "Disable GBNF via sampler.constrain_disable.",
+            Proficiency::Novice,
+        ),
+        "ai:sampler_live_constrain_reset" => (
+            "Constrain reset",
+            "Reset GBNF via sampler.constrain_reset.",
+            Proficiency::Novice,
+        ),
+        "ai:sampler_live_sample" => (
+            "Sampler sample",
+            "CPU sample via sampler.sample.",
+            Proficiency::Intermediate,
+        ),
+        "ai:cap_live_grant" => (
+            "Capability grant",
+            "Authorization grant via Capability.grant.",
+            Proficiency::Intermediate,
+        ),
+        "ai:cap_live_revoke" => (
+            "Capability revoke",
+            "Revoke priority via Capability.revoke.",
+            Proficiency::Intermediate,
+        ),
+        "ai:cap_live_test_gating" => (
+            "Test gating",
+            "Sentinel gating via Capability.test_gating.",
+            Proficiency::Novice,
+        ),
+        "ai:cap_live_audit" => (
+            "Capability audit",
+            "Audit traces via Capability.audit.",
+            Proficiency::Novice,
+        ),
+        "ai:cap_live_declare" => (
+            "Capability declare",
+            "Declare a scope via Capability.declare.",
+            Proficiency::Novice,
+        ),
+        "health:med_live_tanimoto" => (
+            "Tanimoto",
+            "Fingerprint Tanimoto via Medical.tanimoto.",
+            Proficiency::Novice,
+        ),
+        "health:med_live_fingerprint" => (
+            "Structural fingerprint",
+            "Morgan-style bits via Medical.structural_fingerprint.",
+            Proficiency::Intermediate,
+        ),
+        "health:med_live_intensity" => (
+            "Intensity grid",
+            "Histogram via Medical.analyze_intensity_grid.",
+            Proficiency::Novice,
+        ),
+        "health:med_live_differential" => (
+            "Differential analysis",
+            "Bayes update via MedicalComputing.analyze_differential.",
+            Proficiency::Expert,
+        ),
+        "health:med_live_screen" => (
+            "Screen compounds",
+            "Screen via MedicalComputing.screen_compounds.",
+            Proficiency::Expert,
+        ),
+        "spatial:manifold_live_axes" => (
+            "Manifold axes",
+            "Axis taxonomy via Manifold.axes.",
+            Proficiency::Novice,
+        ),
+        "spatial:manifold_live_distance" => (
+            "Manifold distance",
+            "10-D distance via Manifold.distance.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:manifold_live_project" => (
+            "Manifold project",
+            "Desk projection via Manifold.project.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:crypto_live_sha256" => (
+            "SHA-256",
+            "SHA-256 of a string via QuantumAndCryptographic.sha256.",
+            Proficiency::Novice,
+        ),
+        "scientific:crypto_live_sha512" => (
+            "SHA-512",
+            "SHA-512 via QuantumAndCryptographic.sha512.",
+            Proficiency::Novice,
+        ),
+        "scientific:crypto_live_blake3" => (
+            "BLAKE3",
+            "BLAKE3 via QuantumAndCryptographic.blake3.",
+            Proficiency::Novice,
+        ),
+        "scientific:gemm_live" => (
+            "GEMM",
+            "BLAS GEMM via LinearAlgebra.gemm (solver CPU floor, GPU when present).",
+            Proficiency::Intermediate,
+        ),
+        "scientific:privacy_live_gaussian" => (
+            "Gaussian sigma",
+            "(ε, δ)-DP sigma via Privacy.gaussian_sigma.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:sentinel_live_gate" => (
+            "Sentinel gate",
+            "Privilege gate via Sentinel.gate.",
+            Proficiency::Novice,
+        ),
+        "ai:disc_live_catalog" => (
+            "Capability catalog",
+            "TTL catalog via CapabilityDiscovery.catalog.",
+            Proficiency::Novice,
+        ),
+        "ai:disc_live_coverage" => (
+            "Capability coverage",
+            "Coverage matrix via CapabilityDiscovery.coverage.",
+            Proficiency::Novice,
+        ),
+        "ai:dag_live_execute" => (
+            "DAG execute",
+            "Execute a DAG via agent.dag.execute.",
+            Proficiency::Expert,
+        ),
+        "ai:dag_live_validate" => (
+            "DAG validate",
+            "Validate a DAG via agent.dag.validate.",
+            Proficiency::Intermediate,
+        ),
+        "ai:dag_live_status" => (
+            "DAG status",
+            "Executor status via agent.dag.status.",
+            Proficiency::Novice,
+        ),
+        "econ:fm_live_black_scholes" => (
+            "Black–Scholes",
+            "ATM call via FinancialModeling.black_scholes.",
+            Proficiency::Intermediate,
+        ),
+        "econ:fm_live_portfolio_risk" => (
+            "Portfolio risk",
+            "Risk from prices via FinancialModeling.portfolio_risk.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_bio_align" => (
+            "Bioinformatics align",
+            "SW align via Bioinformatics.align.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_dmp" => (
+            "Discrete maximum principle",
+            "DMP check via Calculus.discrete_maximum_principle_holds.",
+            Proficiency::Expert,
+        ),
+        "scientific:longtail_poisson" => (
+            "Poisson Dirichlet",
+            "Poisson solve via Calculus.solve_poisson_dirichlet.",
+            Proficiency::Expert,
+        ),
+        "scientific:longtail_t_norm" => (
+            "Gödel t-norm",
+            "Gödel t-norm via CausalFuzzyAndControl.t_norm.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_parse_bse" => (
+            "Parse BSE JSON",
+            "Basis set via Chemistry.parse_bse_json.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_conduction" => (
+            "1-D conduction",
+            "Conduction via EngineeringAnalysis.analyze_conduction.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_fem" => (
+            "FEM static",
+            "Truss FEM via EngineeringAnalysis.fem_static.",
+            Proficiency::Expert,
+        ),
+        "scientific:longtail_simpson" => (
+            "Simpson integral",
+            "Simpson via NumericalCalculus.simpson.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_ontology" => (
+            "Ontology align",
+            "Align via OntologyAlignment.align.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_units" => (
+            "Convert units",
+            "Unit convert via PhysicalUnits.convert.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_projectile" => (
+            "Projectile",
+            "Ballistics via PhysicsAndODE.projectile.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_poly_coeffs" => (
+            "Polynomial coeffs",
+            "Coeffs via PolynomialAlgebra.coeffs.",
+            Proficiency::Novice,
+        ),
+        "scientific:longtail_bessel" => (
+            "Bessel J",
+            "J_n via SpecialFunctionsAndTransforms.bessel_j.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_ltl_finally" => (
+            "LTL finally",
+            "F(φ) via TemporalAndDescriptionLogic.ltl.finally.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_ltl_globally" => (
+            "LTL globally",
+            "G(φ) via TemporalAndDescriptionLogic.ltl.globally.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:longtail_hash_iri" => (
+            "Hash IRI",
+            "60-bit FNV via hash.iri.",
+            Proficiency::Novice,
+        ),
+        "econ:wealth_live_aggregate" => (
+            "Aggregate wealth",
+            "Availability via Econ.aggregate_wealth.",
+            Proficiency::Novice,
+        ),
+        "econ:wealth_live_cumulative" => (
+            "Cumulative wealth",
+            "Wealth path via Econ.cumulative_wealth.",
+            Proficiency::Novice,
+        ),
+        "econ:wealth_live_narrative" => (
+            "Econ narrative divergence",
+            "Availability via Econ.narrative_divergence.",
+            Proficiency::Novice,
+        ),
+        "comm:net_live_peer_hash" => (
+            "Peer hash",
+            "DID hash via Net.peer_hash.",
+            Proficiency::Novice,
+        ),
+        "comm:net_live_sonic_pack" => (
+            "Sonic pack",
+            "Packed sonic token via Net.sonic_pack.",
+            Proficiency::Novice,
+        ),
+        "rights:id_live_agency" => (
+            "Agency evaluate",
+            "Ed25519 agency via Agency.evaluate.",
+            Proficiency::Expert,
+        ),
+        "rights:id_live_parse_did" => (
+            "Parse did:q42",
+            "Parse via ContractsIdentityAndConsensus.parse_did_q42.",
+            Proficiency::Novice,
+        ),
+        "rights:id_live_board_project" => (
+            "Board project",
+            "Kanban via CooperativeWork.board_project.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:ode_lin1" => (
+            "Linear first-order ODE",
+            "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:ode_lin2" => (
+            "Linear second-order ODE",
+            "Solve a·y'' + b·y' + c·y = 0 via SymbolicODE.solve_linear_second_order.",
+            Proficiency::Expert,
+        ),
+        "scientific:ode_classify_pde" => (
+            "Classify PDE",
+            "Classify a second-order PDE via SymbolicODE.classify_second_order_pde.",
+            Proficiency::Expert,
+        ),
+        "scientific:ode_separable" => (
+            "Separable ODE",
+            "Solve a separable ODE via SymbolicODE.solve_separable.",
+            Proficiency::Expert,
+        ),
+        "scientific:ode_pde1" => (
+            "Linear first-order PDE",
+            "Solve a·uₓ + b·u_y = 0 via SymbolicODE.solve_first_order_linear_pde.",
+            Proficiency::Expert,
+        ),
+        "ai:agent_trace" => (
+            "Agent trace",
+            "Inspect instrument trace via Agent.trace.",
+            Proficiency::Intermediate,
+        ),
+        "ai:agent_verify" => (
+            "Agent verify",
+            "Verify agent priority via Agent.verify.",
+            Proficiency::Intermediate,
+        ),
+        "ai:agent_plan" => (
+            "Agent plan",
+            "Plan a task via Agent.plan.",
+            Proficiency::Intermediate,
+        ),
+        "ai:agent_execute" => (
+            "Agent execute",
+            "Prepare planned execution via Agent.execute.",
+            Proficiency::Expert,
+        ),
+        "ai:agent_evaluate" => (
+            "Agent evaluate",
+            "Score outputs against expected via Agent.evaluate.",
             Proficiency::Expert,
         ),
         "ai:co_author" => (

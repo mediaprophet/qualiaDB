@@ -1,65 +1,55 @@
-# Q1/Q2 incorporation handover — stop after wave 20 (+ partial wave 21)
+# Q1/Q2 incorporation handover — waves 22–27
 
 **Date:** 2026-09-08  
-**Branch:** `0.0.36-dev`  
-**Workspace:** `C:\github\qualiaDB`  
-**Do not commit unless owner asks** — this stop *does* include an owner-requested commit/push.
+**Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
+**Workspace:** QualiaDB cloud agent
 
 ## Status
 
+Curated Q2 is **complete**: every Host-bound `Family.method` in `ALL_BOUND` now has a Poet Tool Chest Live dual-path tool (helper-aware leftover **0**). Exhaustive Host-binding of remaining Q1 CoreDb is **not** in scope.
+
 | Wave | Status | Notes |
 |------|--------|-------|
-| 1–20 | **Complete (integrated)** | Last full close: wave 20 |
-| 21 | **Partial / parked** | Audio + Scene Live landed; NLP + Host not done; agents interrupted |
+| 1–26 | **Complete (integrated)** | Through Asset persist, Pulse live, Portal/Avatar, Host CG through affine/quat/quadratic |
+| 27 | **Complete (integrated)** | Inference remainder×5 · Research live first×20 |
+| 28 | **Complete (integrated)** | Research investigation/hypothesis/assessment×20 |
+| 29 | **Complete (integrated)** | Research remainder×33 — **Research Q2 exhausted** |
+| 30 | **Complete (integrated)** | Render CPU scene/CSS/animation/SVG×17 |
+| 31 | **Complete (integrated)** | CG leftovers waves 19–23 ×25 |
+| 32 | **Complete (integrated)** | CG leftovers waves 24–26 ×24 — **CG leftover Q2 exhausted** |
+| 33 | **Complete (integrated)** | Animation leftovers×4 · numeric Ode×4 · HbbTV×4 |
+| 34 | **Complete (integrated)** | Already-bound Render.gpu_* honest Live ×17 |
+| 35 | **Complete (integrated)** | Remaining Render GPU/EMF ×17 — **GPU leftover Q2 exhausted** |
+| 36 | **Complete (integrated)** | Social/Forensic×6 · Finance×3 · Corpus/ChatGraph/Interactive/SecondScreen×7 |
+| 37 | **Complete (integrated)** | GraphMatch/GraphReasoning/Optimization×9 · sampler/Capability×10 |
+| 38 | **Complete (integrated)** | Medical/MedicalComputing×5 · Manifold×3 · crypto/GEMM/Privacy/Sentinel×6 · discovery/DAG×5 · FinancialModeling×2 |
+| 39 | **Complete (integrated)** | Remaining curated Host singles×24 — **curated Q2 exhausted** |
 
-### Wave 20 (last complete)
+### Wave 27 (this session)
 
-- Live: Inf×8 · Cosmic×11 · Orch/ThreeD×16
-- Host×8: Audio/Scene/CG
-- Verify: Live asserts 9 · dispatch policy ok · Host `wave20_*` 9 · integrity 11
-- Backlog after wave 20: **`ALL_BOUND=1056` · `PoetLive=623` · `Q2=433` · `Q1≈12074`**
-
-### Wave 21 (partial — resume here on cloud)
-
-| Lane | Status | Delivered |
-|------|--------|-----------|
-| A Audio | **partial in tree** | `audio_chain_actions.rs` + ~9 `audio:dsp_*` Live; `mod audio_chain_actions` wired; dispatch policy IDs added |
-| B Scene | **partial in tree** | `scene_chain_actions.rs` + assert `spatial_scene_binds_wave21_scene_caps` (len `>= 8`) |
-| C NLP | **not started** | Host NLP.* (~9 Q2) still unbound Live |
-| D Host | **not started** | Prefer Image / Dmx / HID / Research math |
-
-Swarm brief: `docs/work-in-progress/POET_Q1Q2_WAVE21_SWARM_2026-09-08.md`
+- Live: Inference remainder×5 (`ai:inf_load_model` … `constrained_decode`) · Research enquiry/corpus/dark-link/inference first×20 (`research:live_*` on chain `research:live`)
+- Host: none (Live-first to close Q2)
+- Verify: poet `wave27` 4 · policy ok · integrity 11 · catalog ok
+- Backlog: **`ALL_BOUND=1102` · `PoetLive≈823` · `Q2≈279`**
 
 ## Remaining waves (estimate)
 
-Throughput recent waves: **~25–35 Poet Live + ~8 Host / wave**.
-
-| Bucket | Count (post-w20) | Est. Live waves @ ~30/wave |
-|--------|------------------|----------------------------|
-| **Q2 Host-bound not Live** | **433** | **~14–15** if pure numeric continues |
-| Large families | Research 73, Render 51, Audio ~22, Asset 21, Scene ~19, HID 16, Image 15, Dmx 14, Video 10, NLP 9, … | Research/Render alone ≈ 4+ waves |
-| **Q1 Host-missing** | **~12k** (mostly CoreDb / shellish) | Curated Host lane stays **4–8 pure specialized_libs per wave**; not “exhaust Q1” |
-
-**Practical estimate to finish curated Q2 (numeric / media / spatial / AI families above):** **~15–20 more waves** (including finishing wave 21 + Host lanes that feed new Q2).
+| Bucket | Count (post-w39) | Notes |
+|--------|------------------|-------|
+| **Q2 Host-bound not Live** | **0** | Curated Host `Family.method` Live dual-path exhausted |
+| **Q1 Host-missing** | **~12k** | Not in scope |
 
 **Not in that estimate:** exhaustively Host-binding all of Q1 CoreDb.
 
-## How to continue (cloud)
+## How to continue
 
-1. Finish wave 21: NLP Live (≥8 or all remaining) + Host×4–8; parent-verify `wave21` + policy + integrity + Host `wave21_*`.
-2. Refresh backlog (`scripts/vibe_incorporation_backlog.py`; rename locked `.md`/`.json` on Windows Errno 22).
-3. Wave 22+: prefer remaining Audio/Scene rem → NLP rem → Image/Dmx/HID → Asset → Research/Render (curated slices).
-4. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
-5. **Never `Proficiency::Advanced`**. Dual-path. Exact Host scopes. Append-only shared files.
-6. Subagents often stall at 0 tool calls — interrupt+resume or parent-finish the lane.
-7. Avoid `LinearAlgebra.gemm` CUDA/`caps()` Host path.
+1. Curated Q2 leftover inventory is **0** (ALL_BOUND const-map vs poet `Family.method` strings, allowing extra dots).
+2. Do **not** exhaustively Host-bind remaining Q1 CoreDb.
+3. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
+4. **Never `Proficiency::Advanced`.** Dual-path. Exact Host scopes. Skip GPU Host-widen. Skip `LinearAlgebra.gemm` Host-widen. Avoid `centrepoint`.
 
 ## Register / ledger
 
 - Register: `docs/work-in-progress/POET_NEXT_WORK_REGISTER_2026-09-05.md`
 - Ledger: `docs/POET_IMPLEMENTATION_SESSION_LEDGER.md`
 - Swarm docs: `docs/work-in-progress/POET_Q1Q2_WAVE*_SWARM_*.md`
-
-## Build dirs
-
-Repo-local `target/` and `target-*` are gitignored. Delete before commit if present (disk bloat / lockup). Cargo may also use a sandbox cache outside the repo — that is not committed.

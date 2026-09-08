@@ -2,6 +2,47 @@
 
 use super::*;
 
+fn video_live_tool(
+    id: &'static str,
+    label: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: "media".into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "hm".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
+fn image_edit_tool(
+    id: &'static str,
+    label: &'static str,
+    icon: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: icon.into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "hm".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 pub(super) fn register_image_toolbox(reg: &mut Registry) {
     let shape_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
@@ -109,6 +150,177 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let edit_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        image_edit_tool(
+            "image:edit_new",
+            "New document",
+            "media",
+            "Image.new",
+            "Create a new image document (default 1920×1080) on this surface.",
+        ),
+        image_edit_tool(
+            "image:edit_add_layer",
+            "Add layer",
+            "media",
+            "Image.add_layer",
+            "Add a named layer to the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_remove_layer",
+            "Remove layer",
+            "media",
+            "Image.remove_layer",
+            "Remove a layer by index from the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_pixel",
+            "Set pixel",
+            "marker",
+            "Image.set_pixel",
+            "Set one pixel colour on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_fill",
+            "Fill",
+            "heatmap",
+            "Image.fill",
+            "Fill the selected image document with an RGB colour.",
+        ),
+        image_edit_tool(
+            "image:edit_brush",
+            "Brush",
+            "marker",
+            "Image.brush",
+            "Stroke a brush path on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_apply_filter",
+            "Apply filter",
+            "heatmap",
+            "Image.apply_filter",
+            "Apply a filter (default blur) to the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_opacity",
+            "Set opacity",
+            "heatmap",
+            "Image.set_opacity",
+            "Set layer opacity on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_blend_mode",
+            "Blend mode",
+            "heatmap",
+            "Image.set_blend_mode",
+            "Set layer blend mode (default normal) on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_visible",
+            "Set visible",
+            "media",
+            "Image.set_visible",
+            "Show or hide a layer on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_set_mask",
+            "Set mask",
+            "tools",
+            "Image.set_mask",
+            "Set a rectangular mask on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_clear_mask",
+            "Clear mask",
+            "tools",
+            "Image.clear_mask",
+            "Clear the mask on the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_composite",
+            "Composite",
+            "media",
+            "Image.composite",
+            "Composite layers of the selected image document to RGBA8.",
+        ),
+        image_edit_tool(
+            "image:edit_add_selection",
+            "Add selection",
+            "marker",
+            "Image.add_selection",
+            "Add a named selection to the selected image document.",
+        ),
+        image_edit_tool(
+            "image:edit_clear_selections",
+            "Clear selections",
+            "marker",
+            "Image.clear_selections",
+            "Clear all selections on the selected image document.",
+        ),
+    ];
+
+    let video_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        video_live_tool(
+            "video:live_new_project",
+            "New project",
+            "Video.new_project",
+            "Create a video project via Video.new_project.",
+        ),
+        video_live_tool(
+            "video:live_add_track",
+            "Add track",
+            "Video.add_track",
+            "Add a named track via Video.add_track.",
+        ),
+        video_live_tool(
+            "video:live_add_clip",
+            "Add clip",
+            "Video.add_clip",
+            "Add a source clip via Video.add_clip.",
+        ),
+        video_live_tool(
+            "video:live_trim_clip",
+            "Trim clip",
+            "Video.trim_clip",
+            "Trim in/out points via Video.trim_clip.",
+        ),
+        video_live_tool(
+            "video:live_set_speed",
+            "Set speed",
+            "Video.set_speed",
+            "Set playback speed via Video.set_speed.",
+        ),
+        video_live_tool(
+            "video:live_colour_grade",
+            "Colour grade",
+            "Video.colour_grade",
+            "Set brightness, contrast, and saturation via Video.colour_grade.",
+        ),
+        video_live_tool(
+            "video:live_add_transition",
+            "Add transition",
+            "Video.add_transition",
+            "Add a transition via Video.add_transition.",
+        ),
+        video_live_tool(
+            "video:live_set_render_format",
+            "Render format",
+            "Video.set_render_format",
+            "Set the render format via Video.set_render_format.",
+        ),
+        video_live_tool(
+            "video:live_set_render_bitrate",
+            "Render bitrate",
+            "Video.set_render_bitrate",
+            "Set the render bitrate via Video.set_render_bitrate.",
+        ),
+        video_live_tool(
+            "video:live_remove_clip",
+            "Remove clip",
+            "Video.remove_clip",
+            "Remove a clip via Video.remove_clip.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "image".into(),
@@ -211,6 +423,48 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                             .into(),
                 },
                 vision_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:edit".into(),
+                    label: "Live image edit".into(),
+                    icon: "media".into(),
+                    description:
+                        "Curated Image.* binds — document, layers, pixels, filter, mask, composite."
+                            .into(),
+                },
+                edit_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "video:live".into(),
+                    label: "Live video edit".into(),
+                    icon: "media".into(),
+                    description:
+                        "Curated Video.* project, track, clip, grade, transition, and render binds."
+                            .into(),
+                },
+                video_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "render:live".into(),
+                    label: "Live render".into(),
+                    icon: "media".into(),
+                    description:
+                        "Curated Render.* scene, CSS, animation, and SVG binds.".into(),
+                },
+                super::register_render_live::render_live_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "render:gpu_live".into(),
+                    label: "Live GPU render".into(),
+                    icon: "media".into(),
+                    description: "Already-bound Render.gpu_* PortalGpu / shader binds (needs GPU)."
+                        .into(),
+                },
+                super::register_gpu_live::gpu_live_tools(),
             ),
         ],
     ));

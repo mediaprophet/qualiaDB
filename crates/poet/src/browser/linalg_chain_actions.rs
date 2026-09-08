@@ -1,18 +1,19 @@
 //! Dual-path Tool Chest actions for curated `LinearAlgebra.*` ALL_BOUND ids.
 //!
-//! No Host widen — scopes must already exist in `poet_host/invoke/ids.rs`.
+//! Live over Host scopes. New app primitives (`dot`/`norm`/`trace`/`identity`/`inverse`)
+//! live in `linalg_app_chain_actions.rs` so this file does not grow further.
 
 use serde_json::json;
 use web_sys::{Document, Element};
 
-fn selected_container(document: &Document) -> Option<Element> {
+pub(super) fn selected_container(document: &Document) -> Option<Element> {
     document
         .query_selector(".canvas-container-node.selected")
         .ok()
         .flatten()
 }
 
-fn selected_source(document: &Document) -> Option<String> {
+pub(super) fn selected_source(document: &Document) -> Option<String> {
     let container = selected_container(document)?;
     let text = container
         .query_selector(".vibe-editor, .vibe-editor-textarea, .doc-editor, .sheet-grid")
@@ -24,7 +25,7 @@ fn selected_source(document: &Document) -> Option<String> {
     (!bounded.trim().is_empty()).then_some(bounded)
 }
 
-fn parse_numbers(source: &str) -> Vec<f64> {
+pub(super) fn parse_numbers(source: &str) -> Vec<f64> {
     source
         .split(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ';' | '|' | '\n' | '\r'))
         .filter_map(|token| token.trim().parse::<f64>().ok())
@@ -33,12 +34,12 @@ fn parse_numbers(source: &str) -> Vec<f64> {
         .collect()
 }
 
-fn numeric_attr(el: Option<&Element>, name: &str) -> Option<f64> {
+pub(super) fn numeric_attr(el: Option<&Element>, name: &str) -> Option<f64> {
     el.and_then(|e| e.get_attribute(name))
         .and_then(|v| v.parse::<f64>().ok())
 }
 
-fn usize_attr(el: Option<&Element>, name: &str) -> Option<usize> {
+pub(super) fn usize_attr(el: Option<&Element>, name: &str) -> Option<usize> {
     numeric_attr(el, name).and_then(|v| {
         if v.is_finite() && v >= 1.0 && v == v.floor() {
             Some(v as usize)
@@ -48,7 +49,7 @@ fn usize_attr(el: Option<&Element>, name: &str) -> Option<usize> {
     })
 }
 
-fn mat_json(rows: usize, cols: usize, data: &[f64]) -> serde_json::Value {
+pub(super) fn mat_json(rows: usize, cols: usize, data: &[f64]) -> serde_json::Value {
     json!({ "rows": rows as u64, "cols": cols as u64, "data": data })
 }
 
@@ -61,7 +62,7 @@ fn is_perfect_square(n: usize) -> Option<usize> {
 }
 
 /// Prefer `data-rows`/`data-cols`; else infer a square layout from length.
-fn resolve_matrix(
+pub(super) fn resolve_matrix(
     nums: &[f64],
     container: Option<&Element>,
 ) -> Option<(usize, usize, Vec<f64>)> {
@@ -80,7 +81,7 @@ fn resolve_matrix(
     None
 }
 
-fn default_square2() -> (usize, usize, Vec<f64>) {
+pub(super) fn default_square2() -> (usize, usize, Vec<f64>) {
     (2, 2, vec![2.0, 1.0, 1.0, 2.0])
 }
 
@@ -309,7 +310,7 @@ fn local_qr_factor(rows: usize, cols: usize, a: &[f64]) -> Option<(Vec<f64>, Vec
     (r.iter().all(|x| x.is_finite()) && tau.iter().all(|x| x.is_finite())).then_some((r, tau))
 }
 
-fn invoke_dual(
+pub(super) fn invoke_dual(
     document: &Document,
     label: &str,
     cap_id: &'static str,

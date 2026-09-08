@@ -51,6 +51,24 @@ evidence.
 | 37 | Q1/Q2 wave 19 | **Complete** | Calc +10 · Cosmic +12 · IT +8 Live; Host Inference/CG/Audio +8 | Closed |
 | 38 | Q1/Q2 wave 20 | **Complete** | Inf +8 · Cosmic +11 · Orch/ThreeD +16 Live; Host Audio/Scene/CG +8 | Closed |
 | 39 | Q1/Q2 wave 21 | **Complete** | Audio +9 · Scene +8 · NLP +9 Live; Host CG/Stats +6 | Closed — wave 21 |
+| 40 | Q1/Q2 wave 22 | **Complete** | Audio FX +13 · Scene graph +11 · Image edit +15 Live; Host CG predicates +8 | Closed — wave 22 |
+| 41 | Q1/Q2 wave 23 | **Complete** | Dmx +14 · Video +10 · HID +16 Live; Host CG insphere/disk/polygon/Minkowski +8 | Closed — wave 23 |
+| 42 | Q1/Q2 wave 24 | **Complete** | VectorCalculus +7 · Interpolation +6 · Spectral +5 · World +7 Live; Host CG coreset/duality/boolean +8 | Closed — wave 24 |
+| 43 | Q1/Q2 wave 25 | **Complete** | Asset +14 · SymbolicODE +5 · Agent +5 Live; Host math-geometry projective/quat/hyperplane +8 | Closed — wave 25 |
+| 44 | Q1/Q2 wave 26 | **Complete** | Asset persist_* +7 · Pulse live +9 · Portal/Avatar +5 Live; Host math-geometry affine/quat/quadratic +8 | Closed — wave 26 |
+| 45 | Q1/Q2 wave 27 | **Complete** | Inference remainder +5 · Research live first +20; Host none | Closed — wave 27 |
+| 46 | Q1/Q2 wave 28 | **Complete** | Research investigation/hypothesis/assessment +20; Host none | Closed — wave 28 |
+| 47 | Q1/Q2 wave 29 | **Complete** | Research remainder +33 (Research Q2 exhausted); Host none | Closed — wave 29 |
+| 48 | Q1/Q2 wave 30 | **Complete** | Render CPU scene/CSS/animation/SVG +17; Host none | Closed — wave 30 |
+| 49 | Q1/Q2 wave 31 | **Complete** | CG Host leftovers waves 19–23 +25; Host none | Closed — wave 31 |
+| 50 | Q1/Q2 wave 32 | **Complete** | CG Host leftovers waves 24–26 +24 (CG leftover Q2 exhausted); Host none | Closed — wave 32 |
+| 51 | Q1/Q2 wave 33 | **Complete** | Animation leftovers +4 · numeric Ode +4 · HbbTV +4; Host none | Closed — wave 33 |
+| 52 | Q1/Q2 wave 34 | **Complete** | Render GPU already-bound honest Live +17; Host none | Closed — wave 34 |
+| 53 | Q1/Q2 wave 35 | **Complete** | Remaining Render GPU/EMF +17 (GPU leftover Q2 exhausted); Host none | Closed — wave 35 |
+| 54 | Q1/Q2 wave 36 | **Complete** | Social/Forensic +6 · Finance +3 · Corpus/ChatGraph/Interactive/SecondScreen +7; Host none | Closed — wave 36 |
+| 55 | Q1/Q2 wave 37 | **Complete** | GraphMatch/GraphReasoning/Optimization +9 · sampler/Capability +10; Host none | Closed — wave 37 |
+| 56 | Q1/Q2 wave 38 | **Complete** | Medical/MedicalComputing +5 · Manifold +3 · crypto/GEMM/Privacy/Sentinel +6 · discovery/DAG +5 · FinancialModeling +2; Host none | Closed — wave 38 |
+| 57 | Q1/Q2 wave 39 | **Complete** | Remaining curated Host singles +24 (helper-aware Q2 exhausted); Host none | Closed — wave 39 |
 
 ## Latest execution evidence
 

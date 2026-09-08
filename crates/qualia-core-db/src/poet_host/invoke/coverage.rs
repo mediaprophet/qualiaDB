@@ -504,6 +504,70 @@ pub const SCHEMAS: &[MachineSchema] = &[
         arg_shape: r#"{"type":"record","properties":{"name":{"type":"string"}}}"#,
         return_shape: r#"{"type":"record"}"#,
     },
+    MachineSchema {
+        id: ids::LA_GEMM,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"a":{"type":"record"},"b":{"type":"record"}}}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::LA_DOT,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"a":{"type":"list"},"b":{"type":"list"}}}"#,
+        return_shape: r#"{"type":"record","properties":{"value":{"type":"number"}}}"#,
+    },
+    MachineSchema {
+        id: ids::LA_NORM,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"a":{"type":"list"}}}"#,
+        return_shape: r#"{"type":"record","properties":{"value":{"type":"number"}}}"#,
+    },
+    MachineSchema {
+        id: ids::LA_TRACE,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"a":{"type":"record"}}}"#,
+        return_shape: r#"{"type":"record","properties":{"value":{"type":"number"}}}"#,
+    },
+    MachineSchema {
+        id: ids::LA_IDENTITY,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"n":{"type":"integer"}}}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::LA_INVERSE,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"a":{"type":"record"}}}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::ECON_AGGREGATE_WEALTH,
+        family: "econ",
+        honesty: "stub",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
+    },
+    MachineSchema {
+        id: ids::ECON_NARRATIVE_DIVERGENCE,
+        family: "econ",
+        honesty: "stub",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
+    },
 ];
 
 pub fn schema_for(id: &str) -> Option<&'static MachineSchema> {
@@ -554,6 +618,10 @@ mod tests {
         let s = schema_for(ids::DAG_EXECUTE).expect("DAG_EXECUTE must have a schema");
         assert_eq!(s.family, "agent");
         assert_eq!(s.effect_class, "Cold");
+        let gemm = schema_for(ids::LA_GEMM).expect("LA_GEMM must have a schema");
+        assert_eq!(gemm.honesty, "certified");
+        let wealth = schema_for(ids::ECON_AGGREGATE_WEALTH).expect("wealth stub schema");
+        assert_eq!(wealth.honesty, "stub");
     }
 
     #[test]

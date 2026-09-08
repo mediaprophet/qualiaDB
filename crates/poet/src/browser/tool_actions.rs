@@ -182,6 +182,11 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "ai:inf_embed"
             | "ai:inf_run_classifier"
             | "ai:inf_vector_search"
+            | "ai:inf_load_model"
+            | "ai:inf_unload_model"
+            | "ai:inf_run_transformer"
+            | "ai:inf_run_reranker"
+            | "ai:inf_constrained_decode"
             | "ai:ml_mse"
             | "ai:ml_rmse"
             | "ai:ml_mae"
@@ -270,6 +275,21 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "image:dhash"
             | "image:hamming_distance"
             | "image:cosine_similarity"
+            | "image:edit_new"
+            | "image:edit_add_layer"
+            | "image:edit_remove_layer"
+            | "image:edit_set_pixel"
+            | "image:edit_fill"
+            | "image:edit_brush"
+            | "image:edit_apply_filter"
+            | "image:edit_set_opacity"
+            | "image:edit_set_blend_mode"
+            | "image:edit_set_visible"
+            | "image:edit_set_mask"
+            | "image:edit_clear_mask"
+            | "image:edit_composite"
+            | "image:edit_add_selection"
+            | "image:edit_clear_selections"
             | "health:framingham"
             | "health:cha2ds2"
             | "health:score2"
@@ -491,6 +511,11 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "scientific:la_polynomial_roots"
             | "scientific:la_solve_linear_system"
             | "scientific:la_symmetric_eigen_3x3"
+            | "scientific:la_dot"
+            | "scientific:la_norm"
+            | "scientific:la_trace"
+            | "scientific:la_identity"
+            | "scientific:la_inverse"
             | "scientific:chem_boys"
             | "scientific:chem_overlap_s"
             | "scientific:chem_kinetic_s"
@@ -584,6 +609,55 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "scientific:cg_segment_intersect_2"
             | "scientific:cg_bezier_eval"
             | "scientific:cg_nearest_site"
+            | "scientific:cg_live_average_spacing_3d"
+            | "scientific:cg_live_local_density_3d"
+            | "scientific:cg_live_mean_knn_distance_3d"
+            | "scientific:cg_live_fisher_distance"
+            | "scientific:cg_live_kl_divergence"
+            | "scientific:cg_live_kl_bregman_form"
+            | "scientific:cg_live_triangle_signed_area"
+            | "scientific:cg_live_dist_point_to_segment"
+            | "scientific:cg_live_dist_sq_point_to_segment"
+            | "scientific:cg_live_incircle"
+            | "scientific:cg_live_tukey_depth"
+            | "scientific:cg_live_directional_width"
+            | "scientific:cg_live_width"
+            | "scientific:cg_live_farthest_site_brute"
+            | "scientific:cg_live_k_nearest_sites"
+            | "scientific:cg_live_is_hull_site"
+            | "scientific:cg_live_diameter_and_width"
+            | "scientific:cg_live_insphere"
+            | "scientific:cg_live_ham_sandwich_cut"
+            | "scientific:cg_live_smallest_enclosing_disk"
+            | "scientific:cg_live_polygon_signed_area"
+            | "scientific:cg_live_polygon_area"
+            | "scientific:cg_live_point_in_polygon"
+            | "scientific:cg_live_minkowski_sum_convex"
+            | "scientific:cg_live_nearest_segment_site"
+            | "scientific:cg_live_width_coreset"
+            | "scientific:cg_live_dual_point_to_line"
+            | "scientific:cg_live_dual_round_trip"
+            | "scientific:cg_live_is_convex_polygon"
+            | "scientific:cg_live_point_in_or_on_polygon"
+            | "scientific:cg_live_boolean_union_area"
+            | "scientific:cg_live_boolean_intersection_area"
+            | "scientific:cg_live_boolean_difference_area"
+            | "scientific:cg_live_cross_ratio_1d"
+            | "scientific:cg_live_hyperplane_eval"
+            | "scientific:cg_live_householder_reflect"
+            | "scientific:cg_live_quaternion_normalize"
+            | "scientific:cg_live_so3_exp"
+            | "scientific:cg_live_so3_log"
+            | "scientific:cg_live_projective_from_point"
+            | "scientific:cg_live_point_from_projective"
+            | "scientific:cg_live_frame_to_world"
+            | "scientific:cg_live_world_to_frame"
+            | "scientific:cg_live_barycentric_tetra"
+            | "scientific:cg_live_quaternion_slerp"
+            | "scientific:cg_live_quaternion_to_matrix"
+            | "scientific:cg_live_solve_diagonal_quadratic"
+            | "scientific:cg_live_schur_complement_2x2"
+            | "scientific:cg_live_separating_plane_aabb"
             | "scientific:eng_natural_freq"
             | "scientific:eng_harmonic_sdof"
             | "scientific:eng_euler"
@@ -659,6 +733,17 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "spatial:scene_ik_ccd"
         | "spatial:scene_set_render_budget"
         | "spatial:scene_set_clear_colour"
+        | "spatial:scene_create"
+        | "spatial:scene_add_node"
+        | "spatial:scene_set_transform"
+        | "spatial:scene_set_mesh"
+        | "spatial:scene_add_camera"
+        | "spatial:scene_render"
+        | "spatial:scene_set_viewport"
+        | "spatial:scene_capture_frame"
+        | "spatial:scene_add_light"
+        | "spatial:scene_link_semantic"
+        | "spatial:scene_duplicate_node"
         | "audio:dsp_ep_temp"
         | "audio:dsp_ep_fm"
         | "audio:dsp_sigma_freq"
@@ -668,6 +753,345 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "audio:dsp_midi_note"
         | "audio:dsp_quantize"
         | "audio:dsp_transpose"
+        | "audio:fx_oscillator"
+        | "audio:fx_envelope"
+        | "audio:fx_filter"
+        | "audio:fx_lfo"
+        | "audio:fx_delay"
+        | "audio:fx_reverb"
+        | "audio:fx_compressor"
+        | "audio:fx_eq"
+        | "audio:fx_transport"
+        | "audio:fx_waveform_meter"
+        | "audio:fx_phase_meter"
+        | "audio:fx_loudness_meter"
+        | "audio:fx_spectrum"
+        | "dmx:live_new_universe"
+        | "dmx:live_set_channel"
+        | "dmx:live_add_fixture"
+        | "dmx:live_fixture_set_colour"
+        | "dmx:live_fixture_set_intensity"
+        | "dmx:live_fixture_set_pan_tilt"
+        | "dmx:live_new_cue"
+        | "dmx:live_cue_set_channel"
+        | "dmx:live_cue_set_fade"
+        | "dmx:live_new_cue_stack"
+        | "dmx:live_cue_stack_add"
+        | "dmx:live_cue_stack_go"
+        | "dmx:live_cue_stack_go_back"
+        | "dmx:live_cue_stack_reset"
+        | "video:live_new_project"
+        | "video:live_add_track"
+        | "video:live_add_clip"
+        | "video:live_trim_clip"
+        | "video:live_set_speed"
+        | "video:live_colour_grade"
+        | "video:live_add_transition"
+        | "video:live_set_render_format"
+        | "video:live_set_render_bitrate"
+        | "video:live_remove_clip"
+        | "hid:live_poll"
+        | "hid:live_wait"
+        | "hid:live_clear"
+        | "hid:live_pointer_capture"
+        | "hid:live_pointer_release"
+        | "hid:live_set_cursor"
+        | "hid:live_gamepad_poll"
+        | "hid:live_gamepad_vibrate"
+        | "hid:live_midi_send"
+        | "hid:live_midi_poll"
+        | "hid:live_haptic_pulse"
+        | "hid:live_haptic_pattern"
+        | "hid:live_spatial_head_pose"
+        | "hid:live_spatial_hand_skeleton"
+        | "hid:live_spatial_gaze_ray"
+        | "hid:live_biosignal_poll"
+        | "scientific:vc_gradient"
+        | "scientific:vc_divergence"
+        | "scientific:vc_curl"
+        | "scientific:vc_laplacian"
+        | "scientific:vc_line_integral_scalar"
+        | "scientific:vc_line_integral_work"
+        | "scientific:vc_surface_flux"
+        | "scientific:interp_linear"
+        | "scientific:interp_lagrange"
+        | "scientific:interp_newton_coef"
+        | "scientific:interp_newton_eval"
+        | "scientific:interp_poly_fit"
+        | "scientific:interp_poly_eval"
+        | "scientific:spectral_emf_to_spd"
+        | "scientific:spectral_spd_to_xyz"
+        | "scientific:spectral_emf_to_rgb"
+        | "scientific:spectral_blend"
+        | "scientific:spectral_gamut_map"
+        | "spatial:world_new"
+        | "spatial:world_add_object"
+        | "spatial:world_add_portal"
+        | "spatial:world_add_avatar"
+        | "spatial:world_set_gravity"
+        | "spatial:world_object_apply_force"
+        | "spatial:world_object_step_physics"
+        | "office:asset_create"
+        | "office:asset_add_temporal"
+        | "office:asset_add_topic"
+        | "office:asset_set_spatial"
+        | "office:asset_compile"
+        | "office:asset_temporal_span"
+        | "office:asset_query_aspects"
+        | "office:asset_persist"
+        | "office:asset_resolve"
+        | "office:asset_resolve_by_spatial"
+        | "office:asset_resolve_by_topic"
+        | "office:asset_resolve_by_temporal"
+        | "office:asset_list"
+        | "office:asset_count"
+        | "office:asset_persist_create"
+        | "office:asset_persist_add_temporal"
+        | "office:asset_persist_add_topic"
+        | "office:asset_persist_set_spatial"
+        | "office:asset_persist_compile"
+        | "office:asset_persist_temporal_span"
+        | "office:asset_persist_query_aspects"
+        | "comm:pulse_live_publish"
+        | "comm:pulse_live_graph_mutation"
+        | "comm:pulse_live_notification"
+        | "comm:pulse_live_telemetry"
+        | "comm:pulse_live_agent_message"
+        | "comm:pulse_live_sync"
+        | "comm:pulse_live_open_channel"
+        | "comm:pulse_live_close_channel"
+        | "comm:pulse_live_set_transport"
+        | "spatial:portal_set_target"
+        | "research:live_new"
+        | "research:live_set_purpose"
+        | "research:live_define_scope"
+        | "research:live_add_constraint"
+        | "research:live_add_question"
+        | "research:live_link_questions"
+        | "research:live_add_corpus_item"
+        | "research:live_import_literature"
+        | "research:live_import_dataset"
+        | "research:live_set_corpus_confidence"
+        | "research:live_extract_from_corpus"
+        | "research:live_infer_dark_link"
+        | "research:live_detect_provenance_gaps"
+        | "research:live_detect_concealment"
+        | "research:live_confirm_dark_link"
+        | "research:live_refute_dark_link"
+        | "research:live_make_inference"
+        | "research:live_chain_inference"
+        | "research:live_set_inference_confidence"
+        | "research:live_validate_inference"
+        | "research:live_new_investigation"
+        | "research:live_collect_evidence"
+        | "research:live_set_reliability"
+        | "research:live_propose_hypothesis"
+        | "research:live_evaluate_evidence"
+        | "research:live_create_timeline"
+        | "research:live_add_link"
+        | "research:live_find_path"
+        | "research:live_create_hypothesis_graph"
+        | "research:live_contribute_evaluation"
+        | "research:live_bridge_dark_link"
+        | "research:live_reframe_hypothesis"
+        | "research:live_merge_hypotheses"
+        | "research:live_flag_gap"
+        | "research:live_close_gap"
+        | "research:live_create_revision"
+        | "research:live_diff_revisions"
+        | "research:live_subscribe_updates"
+        | "research:live_create_assessment"
+        | "research:live_set_epistemic_mode"
+        | "research:live_set_reality_category"
+        | "research:live_classify_reality"
+        | "research:live_detect_blended"
+        | "research:live_detect_deceptive_fiction"
+        | "research:live_trace_fiction"
+        | "research:live_assess_sentiment"
+        | "research:live_detect_sentiment_manipulation"
+        | "research:live_detect_performed_sentiment"
+        | "research:live_map_sentiment_network"
+        | "research:live_analyse_sentiment_trends"
+        | "research:live_register_perspective"
+        | "research:live_add_bias"
+        | "research:live_compare_perspectives"
+        | "research:live_detect_perspective_conflict"
+        | "research:live_reconcile_perspectives"
+        | "research:live_assess_intentionality"
+        | "research:live_classify_mistake"
+        | "research:live_define_social_dynamics"
+        | "research:live_define_economic_dynamics"
+        | "research:live_define_spatiotemporal_dynamics"
+        | "research:live_analyse_social_network"
+        | "research:live_analyse_inequality"
+        | "research:live_analyse_diffusion"
+        | "research:live_assess_grounding"
+        | "research:live_verify_grounding"
+        | "research:live_detect_ungrounded_behaviour"
+        | "research:live_create_ug_instance"
+        | "research:live_set_ug_cause"
+        | "research:live_set_ug_consequence"
+        | "research:live_set_ug_detection"
+        | "research:live_set_ug_mitigation"
+        | "research:live_set_ug_calibration"
+        | "research:live_detect_ug_patterns"
+        | "render:live_scene"
+        | "render:live_css_animation"
+        | "render:live_css_color"
+        | "render:live_css_transform"
+        | "render:live_animation_eval_curve"
+        | "render:live_animation_spring_step"
+        | "render:live_animation_sclerp"
+        | "render:live_animation_eval_preset"
+        | "render:live_animation_squad_step"
+        | "render:live_animation_list_presets"
+        | "render:live_animation_compute_pass"
+        | "render:live_svg_path"
+        | "render:live_svg_circle"
+        | "render:live_svg_rect"
+        | "render:live_svg_line"
+        | "render:live_svg_bezier"
+        | "render:live_svg_field"
+        | "animation:live_spring_step"
+        | "animation:live_sclerp_step"
+        | "animation:live_squad_step"
+        | "animation:live_list_presets"
+        | "scientific:num_ode_rk4"
+        | "scientific:num_ode_dopri5"
+        | "scientific:num_ode_bdf"
+        | "scientific:num_ode_symplectic_step"
+        | "comm:hbbtv_new_app"
+        | "comm:hbbtv_add_page"
+        | "comm:hbbtv_navigate"
+        | "comm:hbbtv_set_state"
+        | "render:gpu_live_init"
+        | "render:gpu_live_init_surface"
+        | "render:gpu_live_render_frame"
+        | "render:gpu_live_read_pixels"
+        | "render:gpu_live_upload_mesh"
+        | "render:gpu_live_upload_tensor"
+        | "render:gpu_live_pick"
+        | "render:gpu_live_poll_pick"
+        | "render:gpu_live_resize"
+        | "render:gpu_live_set_ambient"
+        | "render:gpu_live_destroy"
+        | "render:gpu_live_compute_dispatch"
+        | "render:gpu_live_compute_readback"
+        | "render:gpu_live_validate_shader"
+        | "render:gpu_live_compile_shader"
+        | "render:gpu_live_compile_to_glsl"
+        | "render:gpu_live_backend_info"
+        | "render:gpu_live_upload_mesh_colored"
+        | "render:gpu_live_set_standpoint"
+        | "render:gpu_live_observer_standpoint"
+        | "render:gpu_live_camera_state"
+        | "render:gpu_live_surface_size"
+        | "render:gpu_live_has_mesh"
+        | "render:gpu_live_has_tensor"
+        | "render:gpu_live_tensor_node_count"
+        | "render:gpu_live_particle_count"
+        | "render:gpu_live_sync_bloom"
+        | "render:gpu_live_set_artefact_joint"
+        | "render:gpu_live_set_artefact_world"
+        | "render:gpu_live_artefact_refused"
+        | "render:gpu_live_required_rgba8_bytes"
+        | "render:gpu_live_emf_upload_field"
+        | "render:gpu_live_emf_render_slice"
+        | "render:gpu_live_emf_field_info"
+        | "social:live_gini"
+        | "social:live_lorenz"
+        | "social:live_degree_centrality"
+        | "social:live_lww"
+        | "forensic:live_malfeasance_delta"
+        | "forensic:live_narrative_divergence"
+        | "finance:live_convert_currency"
+        | "finance:live_multisig_check"
+        | "finance:live_ledger_balance"
+        | "comm:graph_live_corpus_load"
+        | "comm:graph_live_corpus_parse"
+        | "comm:graph_live_validate_fragment"
+        | "comm:graph_live_link_reply"
+        | "comm:graph_live_add_social_post"
+        | "comm:graph_live_add_trigger"
+        | "comm:graph_live_second_screen_sync"
+        | "scientific:graph_live_fuzzy_jaccard"
+        | "scientific:graph_live_fuzzy_dice"
+        | "scientific:graph_live_approximate_match"
+        | "scientific:graph_live_shortest_path"
+        | "scientific:graph_live_spreading_activation"
+        | "scientific:graph_live_top_k"
+        | "scientific:opt_live_hill_climb"
+        | "scientific:opt_live_simulated_annealing"
+        | "scientific:opt_live_artificial_bee_colony"
+        | "ai:sampler_live_configure"
+        | "ai:sampler_live_constrain_enable"
+        | "ai:sampler_live_constrain_disable"
+        | "ai:sampler_live_constrain_reset"
+        | "ai:sampler_live_sample"
+        | "ai:cap_live_grant"
+        | "ai:cap_live_revoke"
+        | "ai:cap_live_test_gating"
+        | "ai:cap_live_audit"
+        | "ai:cap_live_declare"
+        | "health:med_live_tanimoto"
+        | "health:med_live_fingerprint"
+        | "health:med_live_intensity"
+        | "health:med_live_differential"
+        | "health:med_live_screen"
+        | "spatial:manifold_live_axes"
+        | "spatial:manifold_live_distance"
+        | "spatial:manifold_live_project"
+        | "scientific:crypto_live_sha256"
+        | "scientific:crypto_live_sha512"
+        | "scientific:crypto_live_blake3"
+        | "scientific:gemm_live"
+        | "scientific:privacy_live_gaussian"
+        | "scientific:sentinel_live_gate"
+        | "ai:disc_live_catalog"
+        | "ai:disc_live_coverage"
+        | "ai:dag_live_execute"
+        | "ai:dag_live_validate"
+        | "ai:dag_live_status"
+        | "econ:fm_live_black_scholes"
+        | "econ:fm_live_portfolio_risk"
+        | "scientific:longtail_bio_align"
+        | "scientific:longtail_dmp"
+        | "scientific:longtail_poisson"
+        | "scientific:longtail_t_norm"
+        | "scientific:longtail_parse_bse"
+        | "scientific:longtail_conduction"
+        | "scientific:longtail_fem"
+        | "scientific:longtail_simpson"
+        | "scientific:longtail_ontology"
+        | "scientific:longtail_units"
+        | "scientific:longtail_projectile"
+        | "scientific:longtail_poly_coeffs"
+        | "scientific:longtail_bessel"
+        | "scientific:longtail_ltl_finally"
+        | "scientific:longtail_ltl_globally"
+        | "scientific:longtail_hash_iri"
+        | "econ:wealth_live_aggregate"
+        | "econ:wealth_live_cumulative"
+        | "econ:wealth_live_narrative"
+        | "comm:net_live_peer_hash"
+        | "comm:net_live_sonic_pack"
+        | "rights:id_live_agency"
+        | "rights:id_live_parse_did"
+        | "rights:id_live_board_project"
+        | "spatial:portal_activate"
+        | "spatial:portal_deactivate"
+        | "spatial:avatar_move"
+        | "spatial:avatar_set_appearance"
+        | "scientific:ode_lin1"
+        | "scientific:ode_lin2"
+        | "scientific:ode_classify_pde"
+        | "scientific:ode_separable"
+        | "scientific:ode_pde1"
+        | "ai:agent_trace"
+        | "ai:agent_verify"
+        | "ai:agent_plan"
+        | "ai:agent_execute"
+        | "ai:agent_evaluate"
         | "ai:nlp_tokenize"
         | "ai:nlp_split_sentences"
         | "ai:nlp_coref_resolve"
@@ -1567,6 +1991,21 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "ai:inf_vector_search" => {
             super::inference_chain_actions::run_vector_search(document, label)
         }
+        "ai:inf_load_model" => {
+            super::inference_remainder_chain_actions::run_load_model(document, label)
+        }
+        "ai:inf_unload_model" => {
+            super::inference_remainder_chain_actions::run_unload_model(document, label)
+        }
+        "ai:inf_run_transformer" => {
+            super::inference_remainder_chain_actions::run_run_transformer(document, label)
+        }
+        "ai:inf_run_reranker" => {
+            super::inference_remainder_chain_actions::run_run_reranker(document, label)
+        }
+        "ai:inf_constrained_decode" => {
+            super::inference_remainder_chain_actions::run_constrained_decode(document, label)
+        }
         "ai:ml_mse" => super::ml_chain_actions::run_mse(document, label),
         "ai:ml_rmse" => super::ml_chain_actions::run_rmse(document, label),
         "ai:ml_mae" => super::ml_chain_actions::run_mae(document, label),
@@ -1736,6 +2175,33 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "image:cosine_similarity" => {
             super::image_chain_actions::run_cosine_similarity(document, label)
+        }
+        "image:edit_new" => super::image_edit_chain_actions::run_new(document, label),
+        "image:edit_add_layer" => super::image_edit_chain_actions::run_add_layer(document, label),
+        "image:edit_remove_layer" => {
+            super::image_edit_chain_actions::run_remove_layer(document, label)
+        }
+        "image:edit_set_pixel" => super::image_edit_chain_actions::run_set_pixel(document, label),
+        "image:edit_fill" => super::image_edit_chain_actions::run_fill(document, label),
+        "image:edit_brush" => super::image_edit_chain_actions::run_brush(document, label),
+        "image:edit_apply_filter" => {
+            super::image_edit_chain_actions::run_apply_filter(document, label)
+        }
+        "image:edit_set_opacity" => {
+            super::image_edit_chain_actions::run_set_opacity(document, label)
+        }
+        "image:edit_set_blend_mode" => {
+            super::image_edit_chain_actions::run_set_blend_mode(document, label)
+        }
+        "image:edit_set_visible" => super::image_edit_chain_actions::run_set_visible(document, label),
+        "image:edit_set_mask" => super::image_edit_chain_actions::run_set_mask(document, label),
+        "image:edit_clear_mask" => super::image_edit_chain_actions::run_clear_mask(document, label),
+        "image:edit_composite" => super::image_edit_chain_actions::run_composite(document, label),
+        "image:edit_add_selection" => {
+            super::image_edit_chain_actions::run_add_selection(document, label)
+        }
+        "image:edit_clear_selections" => {
+            super::image_edit_chain_actions::run_clear_selections(document, label)
         }
         "comm:pulse_presence" => super::chain_actions::run_pulse_presence(document, label),
         "rights:deontic_obligate" => super::chain_actions::run_deontic_obligate(document, label),
@@ -2207,6 +2673,11 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "scientific:la_symmetric_eigen_3x3" => {
             super::linalg_chain_actions::run_symmetric_eigen_3x3(document, label)
         }
+        "scientific:la_dot" => super::linalg_app_chain_actions::run_dot(document, label),
+        "scientific:la_norm" => super::linalg_app_chain_actions::run_norm(document, label),
+        "scientific:la_trace" => super::linalg_app_chain_actions::run_trace(document, label),
+        "scientific:la_identity" => super::linalg_app_chain_actions::run_identity(document, label),
+        "scientific:la_inverse" => super::linalg_app_chain_actions::run_inverse(document, label),
         "scientific:chem_boys" => {
             super::chem_chain_actions::run_boys_function(document, label)
         }
@@ -2442,6 +2913,151 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "scientific:cg_nearest_site" => {
             super::cg_chain_actions::run_nearest_site(document, label)
         }
+        "scientific:cg_live_average_spacing_3d" => {
+            super::cg_live_chain_actions::run_average_spacing_3d(document, label)
+        }
+        "scientific:cg_live_local_density_3d" => {
+            super::cg_live_chain_actions::run_local_density_3d(document, label)
+        }
+        "scientific:cg_live_mean_knn_distance_3d" => {
+            super::cg_live_chain_actions::run_mean_knn_distance_3d(document, label)
+        }
+        "scientific:cg_live_fisher_distance" => {
+            super::cg_live_chain_actions::run_fisher_distance(document, label)
+        }
+        "scientific:cg_live_kl_divergence" => {
+            super::cg_live_chain_actions::run_kl_divergence(document, label)
+        }
+        "scientific:cg_live_kl_bregman_form" => {
+            super::cg_live_chain_actions::run_kl_bregman_form(document, label)
+        }
+        "scientific:cg_live_triangle_signed_area" => {
+            super::cg_live_chain_actions::run_triangle_signed_area(document, label)
+        }
+        "scientific:cg_live_dist_point_to_segment" => {
+            super::cg_live_chain_actions::run_dist_point_to_segment(document, label)
+        }
+        "scientific:cg_live_dist_sq_point_to_segment" => {
+            super::cg_live_chain_actions::run_dist_sq_point_to_segment(document, label)
+        }
+        "scientific:cg_live_incircle" => {
+            super::cg_live_chain_actions::run_incircle(document, label)
+        }
+        "scientific:cg_live_tukey_depth" => {
+            super::cg_live_chain_actions::run_tukey_depth(document, label)
+        }
+        "scientific:cg_live_directional_width" => {
+            super::cg_live_chain_actions::run_directional_width(document, label)
+        }
+        "scientific:cg_live_width" => super::cg_live_chain_actions::run_width(document, label),
+        "scientific:cg_live_farthest_site_brute" => {
+            super::cg_live_chain_actions::run_farthest_site_brute(document, label)
+        }
+        "scientific:cg_live_k_nearest_sites" => {
+            super::cg_live_chain_actions::run_k_nearest_sites(document, label)
+        }
+        "scientific:cg_live_is_hull_site" => {
+            super::cg_live_chain_actions::run_is_hull_site(document, label)
+        }
+        "scientific:cg_live_diameter_and_width" => {
+            super::cg_live_chain_actions::run_diameter_and_width(document, label)
+        }
+        "scientific:cg_live_insphere" => {
+            super::cg_live2_chain_actions::run_insphere(document, label)
+        }
+        "scientific:cg_live_ham_sandwich_cut" => {
+            super::cg_live2_chain_actions::run_ham_sandwich_cut(document, label)
+        }
+        "scientific:cg_live_smallest_enclosing_disk" => {
+            super::cg_live2_chain_actions::run_smallest_enclosing_disk(document, label)
+        }
+        "scientific:cg_live_polygon_signed_area" => {
+            super::cg_live2_chain_actions::run_polygon_signed_area(document, label)
+        }
+        "scientific:cg_live_polygon_area" => {
+            super::cg_live2_chain_actions::run_polygon_area(document, label)
+        }
+        "scientific:cg_live_point_in_polygon" => {
+            super::cg_live2_chain_actions::run_point_in_polygon(document, label)
+        }
+        "scientific:cg_live_minkowski_sum_convex" => {
+            super::cg_live2_chain_actions::run_minkowski_sum_convex(document, label)
+        }
+        "scientific:cg_live_nearest_segment_site" => {
+            super::cg_live2_chain_actions::run_nearest_segment_site(document, label)
+        }
+        "scientific:cg_live_width_coreset" => {
+            super::cg_live3_chain_actions::run_width_coreset(document, label)
+        }
+        "scientific:cg_live_dual_point_to_line" => {
+            super::cg_live3_chain_actions::run_dual_point_to_line(document, label)
+        }
+        "scientific:cg_live_dual_round_trip" => {
+            super::cg_live3_chain_actions::run_dual_round_trip(document, label)
+        }
+        "scientific:cg_live_is_convex_polygon" => {
+            super::cg_live3_chain_actions::run_is_convex_polygon(document, label)
+        }
+        "scientific:cg_live_point_in_or_on_polygon" => {
+            super::cg_live3_chain_actions::run_point_in_or_on_polygon(document, label)
+        }
+        "scientific:cg_live_boolean_union_area" => {
+            super::cg_live3_chain_actions::run_boolean_union_area(document, label)
+        }
+        "scientific:cg_live_boolean_intersection_area" => {
+            super::cg_live3_chain_actions::run_boolean_intersection_area(document, label)
+        }
+        "scientific:cg_live_boolean_difference_area" => {
+            super::cg_live3_chain_actions::run_boolean_difference_area(document, label)
+        }
+        "scientific:cg_live_cross_ratio_1d" => {
+            super::cg_live4_chain_actions::run_cross_ratio_1d(document, label)
+        }
+        "scientific:cg_live_hyperplane_eval" => {
+            super::cg_live4_chain_actions::run_hyperplane_eval(document, label)
+        }
+        "scientific:cg_live_householder_reflect" => {
+            super::cg_live4_chain_actions::run_householder_reflect(document, label)
+        }
+        "scientific:cg_live_quaternion_normalize" => {
+            super::cg_live4_chain_actions::run_quaternion_normalize(document, label)
+        }
+        "scientific:cg_live_so3_exp" => {
+            super::cg_live4_chain_actions::run_so3_exp(document, label)
+        }
+        "scientific:cg_live_so3_log" => {
+            super::cg_live4_chain_actions::run_so3_log(document, label)
+        }
+        "scientific:cg_live_projective_from_point" => {
+            super::cg_live4_chain_actions::run_projective_from_point(document, label)
+        }
+        "scientific:cg_live_point_from_projective" => {
+            super::cg_live4_chain_actions::run_point_from_projective(document, label)
+        }
+        "scientific:cg_live_frame_to_world" => {
+            super::cg_live4_chain_actions::run_frame_to_world(document, label)
+        }
+        "scientific:cg_live_world_to_frame" => {
+            super::cg_live4_chain_actions::run_world_to_frame(document, label)
+        }
+        "scientific:cg_live_barycentric_tetra" => {
+            super::cg_live4_chain_actions::run_barycentric_tetra(document, label)
+        }
+        "scientific:cg_live_quaternion_slerp" => {
+            super::cg_live4_chain_actions::run_quaternion_slerp(document, label)
+        }
+        "scientific:cg_live_quaternion_to_matrix" => {
+            super::cg_live4_chain_actions::run_quaternion_to_matrix(document, label)
+        }
+        "scientific:cg_live_solve_diagonal_quadratic" => {
+            super::cg_live4_chain_actions::run_solve_diagonal_quadratic(document, label)
+        }
+        "scientific:cg_live_schur_complement_2x2" => {
+            super::cg_live4_chain_actions::run_schur_complement_2x2(document, label)
+        }
+        "scientific:cg_live_separating_plane_aabb" => {
+            super::cg_live4_chain_actions::run_separating_plane_aabb(document, label)
+        }
         "scientific:eng_natural_freq" => {
             super::eng_chain_actions::run_natural_frequency_sdof(document, label)
         }
@@ -2645,6 +3261,29 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "spatial:scene_set_clear_colour" => {
             super::scene_chain_actions::run_set_clear_colour(document, label)
         }
+        "spatial:scene_create" => super::scene_graph_chain_actions::run_create(document, label),
+        "spatial:scene_add_node" => super::scene_graph_chain_actions::run_add_node(document, label),
+        "spatial:scene_set_transform" => {
+            super::scene_graph_chain_actions::run_set_transform(document, label)
+        }
+        "spatial:scene_set_mesh" => super::scene_graph_chain_actions::run_set_mesh(document, label),
+        "spatial:scene_add_camera" => {
+            super::scene_graph_chain_actions::run_add_camera(document, label)
+        }
+        "spatial:scene_render" => super::scene_graph_chain_actions::run_render(document, label),
+        "spatial:scene_set_viewport" => {
+            super::scene_graph_chain_actions::run_set_viewport(document, label)
+        }
+        "spatial:scene_capture_frame" => {
+            super::scene_graph_chain_actions::run_capture_frame(document, label)
+        }
+        "spatial:scene_add_light" => super::scene_graph_chain_actions::run_add_light(document, label),
+        "spatial:scene_link_semantic" => {
+            super::scene_graph_chain_actions::run_link_semantic(document, label)
+        }
+        "spatial:scene_duplicate_node" => {
+            super::scene_graph_chain_actions::run_duplicate_node(document, label)
+        }
         "audio:dsp_ep_temp" => {
             super::audio_chain_actions::run_epistemic_temperature_from_q(document, label)
         }
@@ -2664,6 +3303,759 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "audio:dsp_midi_note" => super::audio_chain_actions::run_midi_note(document, label),
         "audio:dsp_quantize" => super::audio_chain_actions::run_quantize(document, label),
         "audio:dsp_transpose" => super::audio_chain_actions::run_transpose(document, label),
+        "audio:fx_oscillator" => super::audio_fx_chain_actions::run_fx_oscillator(document, label),
+        "audio:fx_envelope" => super::audio_fx_chain_actions::run_fx_envelope(document, label),
+        "audio:fx_filter" => super::audio_fx_chain_actions::run_fx_filter(document, label),
+        "audio:fx_lfo" => super::audio_fx_chain_actions::run_fx_lfo(document, label),
+        "audio:fx_delay" => super::audio_fx_chain_actions::run_fx_delay(document, label),
+        "audio:fx_reverb" => super::audio_fx_chain_actions::run_fx_reverb(document, label),
+        "audio:fx_compressor" => super::audio_fx_chain_actions::run_fx_compressor(document, label),
+        "audio:fx_eq" => super::audio_fx_chain_actions::run_fx_eq(document, label),
+        "audio:fx_transport" => super::audio_fx_chain_actions::run_fx_transport(document, label),
+        "audio:fx_waveform_meter" => {
+            super::audio_fx_chain_actions::run_fx_waveform_meter(document, label)
+        }
+        "audio:fx_phase_meter" => super::audio_fx_chain_actions::run_fx_phase_meter(document, label),
+        "audio:fx_loudness_meter" => {
+            super::audio_fx_chain_actions::run_fx_loudness_meter(document, label)
+        }
+        "audio:fx_spectrum" => super::audio_fx_chain_actions::run_fx_spectrum(document, label),
+        "dmx:live_new_universe" => super::dmx_chain_actions::run_new_universe(document, label),
+        "dmx:live_set_channel" => super::dmx_chain_actions::run_set_channel(document, label),
+        "dmx:live_add_fixture" => super::dmx_chain_actions::run_add_fixture(document, label),
+        "dmx:live_fixture_set_colour" => {
+            super::dmx_chain_actions::run_fixture_set_colour(document, label)
+        }
+        "dmx:live_fixture_set_intensity" => {
+            super::dmx_chain_actions::run_fixture_set_intensity(document, label)
+        }
+        "dmx:live_fixture_set_pan_tilt" => {
+            super::dmx_chain_actions::run_fixture_set_pan_tilt(document, label)
+        }
+        "dmx:live_new_cue" => super::dmx_chain_actions::run_new_cue(document, label),
+        "dmx:live_cue_set_channel" => super::dmx_chain_actions::run_cue_set_channel(document, label),
+        "dmx:live_cue_set_fade" => super::dmx_chain_actions::run_cue_set_fade(document, label),
+        "dmx:live_new_cue_stack" => super::dmx_chain_actions::run_new_cue_stack(document, label),
+        "dmx:live_cue_stack_add" => super::dmx_chain_actions::run_cue_stack_add(document, label),
+        "dmx:live_cue_stack_go" => super::dmx_chain_actions::run_cue_stack_go(document, label),
+        "dmx:live_cue_stack_go_back" => super::dmx_chain_actions::run_cue_stack_go_back(document, label),
+        "dmx:live_cue_stack_reset" => super::dmx_chain_actions::run_cue_stack_reset(document, label),
+        "video:live_new_project" => {
+            super::video_live_chain_actions::run_new_project(document, label)
+        }
+        "video:live_add_track" => super::video_live_chain_actions::run_add_track(document, label),
+        "video:live_add_clip" => super::video_live_chain_actions::run_add_clip(document, label),
+        "video:live_trim_clip" => super::video_live_chain_actions::run_trim_clip(document, label),
+        "video:live_set_speed" => super::video_live_chain_actions::run_set_speed(document, label),
+        "video:live_colour_grade" => {
+            super::video_live_chain_actions::run_colour_grade(document, label)
+        }
+        "video:live_add_transition" => {
+            super::video_live_chain_actions::run_add_transition(document, label)
+        }
+        "video:live_set_render_format" => {
+            super::video_live_chain_actions::run_set_render_format(document, label)
+        }
+        "video:live_set_render_bitrate" => {
+            super::video_live_chain_actions::run_set_render_bitrate(document, label)
+        }
+        "video:live_remove_clip" => super::video_live_chain_actions::run_remove_clip(document, label),
+        "hid:live_poll" => super::hid_chain_actions::run_poll(document, label),
+        "hid:live_wait" => super::hid_chain_actions::run_wait(document, label),
+        "hid:live_clear" => super::hid_chain_actions::run_clear(document, label),
+        "hid:live_pointer_capture" => super::hid_chain_actions::run_pointer_capture(document, label),
+        "hid:live_pointer_release" => super::hid_chain_actions::run_pointer_release(document, label),
+        "hid:live_set_cursor" => super::hid_chain_actions::run_set_cursor(document, label),
+        "hid:live_gamepad_poll" => super::hid_chain_actions::run_gamepad_poll(document, label),
+        "hid:live_gamepad_vibrate" => super::hid_chain_actions::run_gamepad_vibrate(document, label),
+        "hid:live_midi_send" => super::hid_chain_actions::run_midi_send(document, label),
+        "hid:live_midi_poll" => super::hid_chain_actions::run_midi_poll(document, label),
+        "hid:live_haptic_pulse" => super::hid_chain_actions::run_haptic_pulse(document, label),
+        "hid:live_haptic_pattern" => super::hid_chain_actions::run_haptic_pattern(document, label),
+        "hid:live_spatial_head_pose" => {
+            super::hid_chain_actions::run_spatial_head_pose(document, label)
+        }
+        "hid:live_spatial_hand_skeleton" => {
+            super::hid_chain_actions::run_spatial_hand_skeleton(document, label)
+        }
+        "hid:live_spatial_gaze_ray" => {
+            super::hid_chain_actions::run_spatial_gaze_ray(document, label)
+        }
+        "hid:live_biosignal_poll" => super::hid_chain_actions::run_biosignal_poll(document, label),
+        "scientific:vc_gradient" => super::vc_chain_actions::run_gradient(document, label),
+        "scientific:vc_divergence" => super::vc_chain_actions::run_divergence(document, label),
+        "scientific:vc_curl" => super::vc_chain_actions::run_curl(document, label),
+        "scientific:vc_laplacian" => super::vc_chain_actions::run_laplacian(document, label),
+        "scientific:vc_line_integral_scalar" => {
+            super::vc_chain_actions::run_line_integral_scalar(document, label)
+        }
+        "scientific:vc_line_integral_work" => {
+            super::vc_chain_actions::run_line_integral_work(document, label)
+        }
+        "scientific:vc_surface_flux" => super::vc_chain_actions::run_surface_flux(document, label),
+        "scientific:interp_linear" => super::interp_chain_actions::run_linear(document, label),
+        "scientific:interp_lagrange" => super::interp_chain_actions::run_lagrange(document, label),
+        "scientific:interp_newton_coef" => {
+            super::interp_chain_actions::run_newton_coef(document, label)
+        }
+        "scientific:interp_newton_eval" => {
+            super::interp_chain_actions::run_newton_eval(document, label)
+        }
+        "scientific:interp_poly_fit" => super::interp_chain_actions::run_poly_fit(document, label),
+        "scientific:interp_poly_eval" => super::interp_chain_actions::run_poly_eval(document, label),
+        "scientific:spectral_emf_to_spd" => {
+            super::spectral_chain_actions::run_emf_to_spd(document, label)
+        }
+        "scientific:spectral_spd_to_xyz" => {
+            super::spectral_chain_actions::run_spd_to_xyz(document, label)
+        }
+        "scientific:spectral_emf_to_rgb" => {
+            super::spectral_chain_actions::run_emf_to_rgb(document, label)
+        }
+        "scientific:spectral_blend" => super::spectral_chain_actions::run_blend(document, label),
+        "scientific:spectral_gamut_map" => {
+            super::spectral_chain_actions::run_gamut_map(document, label)
+        }
+        "spatial:world_new" => super::world_chain_actions::run_new(document, label),
+        "spatial:world_add_object" => super::world_chain_actions::run_add_object(document, label),
+        "spatial:world_add_portal" => super::world_chain_actions::run_add_portal(document, label),
+        "spatial:world_add_avatar" => super::world_chain_actions::run_add_avatar(document, label),
+        "spatial:world_set_gravity" => super::world_chain_actions::run_set_gravity(document, label),
+        "spatial:world_object_apply_force" => {
+            super::world_chain_actions::run_object_apply_force(document, label)
+        }
+        "spatial:world_object_step_physics" => {
+            super::world_chain_actions::run_object_step_physics(document, label)
+        }
+        "office:asset_create" => super::asset_chain_actions::run_create(document, label),
+        "office:asset_add_temporal" => super::asset_chain_actions::run_add_temporal(document, label),
+        "office:asset_add_topic" => super::asset_chain_actions::run_add_topic(document, label),
+        "office:asset_set_spatial" => super::asset_chain_actions::run_set_spatial(document, label),
+        "office:asset_compile" => super::asset_chain_actions::run_compile(document, label),
+        "office:asset_temporal_span" => super::asset_chain_actions::run_temporal_span(document, label),
+        "office:asset_query_aspects" => super::asset_chain_actions::run_query_aspects(document, label),
+        "office:asset_persist" => super::asset_chain_actions::run_persist(document, label),
+        "office:asset_resolve" => super::asset_chain_actions::run_resolve(document, label),
+        "office:asset_resolve_by_spatial" => {
+            super::asset_chain_actions::run_resolve_by_spatial(document, label)
+        }
+        "office:asset_resolve_by_topic" => {
+            super::asset_chain_actions::run_resolve_by_topic(document, label)
+        }
+        "office:asset_resolve_by_temporal" => {
+            super::asset_chain_actions::run_resolve_by_temporal(document, label)
+        }
+        "office:asset_list" => super::asset_chain_actions::run_list(document, label),
+        "office:asset_count" => super::asset_chain_actions::run_count(document, label),
+        "office:asset_persist_create" => {
+            super::asset_chain_actions::run_persist_create(document, label)
+        }
+        "office:asset_persist_add_temporal" => {
+            super::asset_chain_actions::run_persist_add_temporal(document, label)
+        }
+        "office:asset_persist_add_topic" => {
+            super::asset_chain_actions::run_persist_add_topic(document, label)
+        }
+        "office:asset_persist_set_spatial" => {
+            super::asset_chain_actions::run_persist_set_spatial(document, label)
+        }
+        "office:asset_persist_compile" => {
+            super::asset_chain_actions::run_persist_compile(document, label)
+        }
+        "office:asset_persist_temporal_span" => {
+            super::asset_chain_actions::run_persist_temporal_span(document, label)
+        }
+        "office:asset_persist_query_aspects" => {
+            super::asset_chain_actions::run_persist_query_aspects(document, label)
+        }
+        "comm:pulse_live_publish" => super::pulse_live_chain_actions::run_publish(document, label),
+        "comm:pulse_live_graph_mutation" => {
+            super::pulse_live_chain_actions::run_publish_graph_mutation(document, label)
+        }
+        "comm:pulse_live_notification" => {
+            super::pulse_live_chain_actions::run_publish_notification(document, label)
+        }
+        "comm:pulse_live_telemetry" => {
+            super::pulse_live_chain_actions::run_publish_telemetry(document, label)
+        }
+        "comm:pulse_live_agent_message" => {
+            super::pulse_live_chain_actions::run_publish_agent_message(document, label)
+        }
+        "comm:pulse_live_sync" => super::pulse_live_chain_actions::run_publish_sync(document, label),
+        "comm:pulse_live_open_channel" => {
+            super::pulse_live_chain_actions::run_open_channel(document, label)
+        }
+        "comm:pulse_live_close_channel" => {
+            super::pulse_live_chain_actions::run_close_channel(document, label)
+        }
+        "comm:pulse_live_set_transport" => {
+            super::pulse_live_chain_actions::run_set_transport(document, label)
+        }
+        "spatial:portal_set_target" => super::portal_chain_actions::run_set_target(document, label),
+        "spatial:portal_activate" => super::portal_chain_actions::run_activate(document, label),
+        "spatial:portal_deactivate" => {
+            super::portal_chain_actions::run_deactivate(document, label)
+        }
+        "spatial:avatar_move" => super::portal_chain_actions::run_move(document, label),
+        "spatial:avatar_set_appearance" => {
+            super::portal_chain_actions::run_set_appearance(document, label)
+        }
+        "research:live_new" => super::research_live_chain_actions::run_new(document, label),
+        "research:live_set_purpose" => {
+            super::research_live_chain_actions::run_set_purpose(document, label)
+        }
+        "research:live_define_scope" => {
+            super::research_live_chain_actions::run_define_scope(document, label)
+        }
+        "research:live_add_constraint" => {
+            super::research_live_chain_actions::run_add_constraint(document, label)
+        }
+        "research:live_add_question" => {
+            super::research_live_chain_actions::run_add_question(document, label)
+        }
+        "research:live_link_questions" => {
+            super::research_live_chain_actions::run_link_questions(document, label)
+        }
+        "research:live_add_corpus_item" => {
+            super::research_live_chain_actions::run_add_corpus_item(document, label)
+        }
+        "research:live_import_literature" => {
+            super::research_live_chain_actions::run_import_literature(document, label)
+        }
+        "research:live_import_dataset" => {
+            super::research_live_chain_actions::run_import_dataset(document, label)
+        }
+        "research:live_set_corpus_confidence" => {
+            super::research_live_chain_actions::run_set_corpus_confidence(document, label)
+        }
+        "research:live_extract_from_corpus" => {
+            super::research_live_chain_actions::run_extract_from_corpus(document, label)
+        }
+        "research:live_infer_dark_link" => {
+            super::research_live_chain_actions::run_infer_dark_link(document, label)
+        }
+        "research:live_detect_provenance_gaps" => {
+            super::research_live_chain_actions::run_detect_provenance_gaps(document, label)
+        }
+        "research:live_detect_concealment" => {
+            super::research_live_chain_actions::run_detect_concealment(document, label)
+        }
+        "research:live_confirm_dark_link" => {
+            super::research_live_chain_actions::run_confirm_dark_link(document, label)
+        }
+        "research:live_refute_dark_link" => {
+            super::research_live_chain_actions::run_refute_dark_link(document, label)
+        }
+        "research:live_make_inference" => {
+            super::research_live_chain_actions::run_make_inference(document, label)
+        }
+        "research:live_chain_inference" => {
+            super::research_live_chain_actions::run_chain_inference(document, label)
+        }
+        "research:live_set_inference_confidence" => {
+            super::research_live_chain_actions::run_set_inference_confidence(document, label)
+        }
+        "research:live_validate_inference" => {
+            super::research_live_chain_actions::run_validate_inference(document, label)
+        }
+        "research:live_new_investigation" => {
+            super::research_live2_chain_actions::run_new_investigation(document, label)
+        }
+        "research:live_collect_evidence" => {
+            super::research_live2_chain_actions::run_collect_evidence(document, label)
+        }
+        "research:live_set_reliability" => {
+            super::research_live2_chain_actions::run_set_reliability(document, label)
+        }
+        "research:live_propose_hypothesis" => {
+            super::research_live2_chain_actions::run_propose_hypothesis(document, label)
+        }
+        "research:live_evaluate_evidence" => {
+            super::research_live2_chain_actions::run_evaluate_evidence(document, label)
+        }
+        "research:live_create_timeline" => {
+            super::research_live2_chain_actions::run_create_timeline(document, label)
+        }
+        "research:live_add_link" => super::research_live2_chain_actions::run_add_link(document, label),
+        "research:live_find_path" => {
+            super::research_live2_chain_actions::run_find_path(document, label)
+        }
+        "research:live_create_hypothesis_graph" => {
+            super::research_live2_chain_actions::run_create_hypothesis_graph(document, label)
+        }
+        "research:live_contribute_evaluation" => {
+            super::research_live2_chain_actions::run_contribute_evaluation(document, label)
+        }
+        "research:live_bridge_dark_link" => {
+            super::research_live2_chain_actions::run_bridge_dark_link(document, label)
+        }
+        "research:live_reframe_hypothesis" => {
+            super::research_live2_chain_actions::run_reframe_hypothesis(document, label)
+        }
+        "research:live_merge_hypotheses" => {
+            super::research_live2_chain_actions::run_merge_hypotheses(document, label)
+        }
+        "research:live_flag_gap" => {
+            super::research_live2_chain_actions::run_flag_gap(document, label)
+        }
+        "research:live_close_gap" => {
+            super::research_live2_chain_actions::run_close_gap(document, label)
+        }
+        "research:live_create_revision" => {
+            super::research_live2_chain_actions::run_create_revision(document, label)
+        }
+        "research:live_diff_revisions" => {
+            super::research_live2_chain_actions::run_diff_revisions(document, label)
+        }
+        "research:live_subscribe_updates" => {
+            super::research_live2_chain_actions::run_subscribe_updates(document, label)
+        }
+        "research:live_create_assessment" => {
+            super::research_live2_chain_actions::run_create_assessment(document, label)
+        }
+        "research:live_set_epistemic_mode" => {
+            super::research_live2_chain_actions::run_set_epistemic_mode(document, label)
+        }
+        "research:live_set_reality_category" => {
+            super::research_live3_chain_actions::run_set_reality_category(document, label)
+        }
+        "research:live_classify_reality" => {
+            super::research_live3_chain_actions::run_classify_reality(document, label)
+        }
+        "research:live_detect_blended" => {
+            super::research_live3_chain_actions::run_detect_blended(document, label)
+        }
+        "research:live_detect_deceptive_fiction" => {
+            super::research_live3_chain_actions::run_detect_deceptive_fiction(document, label)
+        }
+        "research:live_trace_fiction" => {
+            super::research_live3_chain_actions::run_trace_fiction(document, label)
+        }
+        "research:live_assess_sentiment" => {
+            super::research_live3_chain_actions::run_assess_sentiment(document, label)
+        }
+        "research:live_detect_sentiment_manipulation" => {
+            super::research_live3_chain_actions::run_detect_sentiment_manipulation(document, label)
+        }
+        "research:live_detect_performed_sentiment" => {
+            super::research_live3_chain_actions::run_detect_performed_sentiment(document, label)
+        }
+        "research:live_map_sentiment_network" => {
+            super::research_live3_chain_actions::run_map_sentiment_network(document, label)
+        }
+        "research:live_analyse_sentiment_trends" => {
+            super::research_live3_chain_actions::run_analyse_sentiment_trends(document, label)
+        }
+        "research:live_register_perspective" => {
+            super::research_live3_chain_actions::run_register_perspective(document, label)
+        }
+        "research:live_add_bias" => {
+            super::research_live3_chain_actions::run_add_bias(document, label)
+        }
+        "research:live_compare_perspectives" => {
+            super::research_live3_chain_actions::run_compare_perspectives(document, label)
+        }
+        "research:live_detect_perspective_conflict" => {
+            super::research_live3_chain_actions::run_detect_perspective_conflict(document, label)
+        }
+        "research:live_reconcile_perspectives" => {
+            super::research_live3_chain_actions::run_reconcile_perspectives(document, label)
+        }
+        "research:live_assess_intentionality" => {
+            super::research_live3_chain_actions::run_assess_intentionality(document, label)
+        }
+        "research:live_classify_mistake" => {
+            super::research_live3_chain_actions::run_classify_mistake(document, label)
+        }
+        "research:live_define_social_dynamics" => {
+            super::research_live4_chain_actions::run_define_social_dynamics(document, label)
+        }
+        "research:live_define_economic_dynamics" => {
+            super::research_live4_chain_actions::run_define_economic_dynamics(document, label)
+        }
+        "research:live_define_spatiotemporal_dynamics" => {
+            super::research_live4_chain_actions::run_define_spatiotemporal_dynamics(document, label)
+        }
+        "research:live_analyse_social_network" => {
+            super::research_live4_chain_actions::run_analyse_social_network(document, label)
+        }
+        "research:live_analyse_inequality" => {
+            super::research_live4_chain_actions::run_analyse_inequality(document, label)
+        }
+        "research:live_analyse_diffusion" => {
+            super::research_live4_chain_actions::run_analyse_diffusion(document, label)
+        }
+        "research:live_assess_grounding" => {
+            super::research_live4_chain_actions::run_assess_grounding(document, label)
+        }
+        "research:live_verify_grounding" => {
+            super::research_live4_chain_actions::run_verify_grounding(document, label)
+        }
+        "research:live_detect_ungrounded_behaviour" => {
+            super::research_live4_chain_actions::run_detect_ungrounded_behaviour(document, label)
+        }
+        "research:live_create_ug_instance" => {
+            super::research_live4_chain_actions::run_create_ug_instance(document, label)
+        }
+        "research:live_set_ug_cause" => {
+            super::research_live4_chain_actions::run_set_ug_cause(document, label)
+        }
+        "research:live_set_ug_consequence" => {
+            super::research_live4_chain_actions::run_set_ug_consequence(document, label)
+        }
+        "research:live_set_ug_detection" => {
+            super::research_live4_chain_actions::run_set_ug_detection(document, label)
+        }
+        "research:live_set_ug_mitigation" => {
+            super::research_live4_chain_actions::run_set_ug_mitigation(document, label)
+        }
+        "research:live_set_ug_calibration" => {
+            super::research_live4_chain_actions::run_set_ug_calibration(document, label)
+        }
+        "research:live_detect_ug_patterns" => {
+            super::research_live4_chain_actions::run_detect_ug_patterns(document, label)
+        }
+        "render:live_scene" => super::render_live_chain_actions::run_scene(document, label),
+        "render:live_css_animation" => {
+            super::render_live_chain_actions::run_css_animation(document, label)
+        }
+        "render:live_css_color" => super::render_live_chain_actions::run_css_color(document, label),
+        "render:live_css_transform" => {
+            super::render_live_chain_actions::run_css_transform(document, label)
+        }
+        "render:live_animation_eval_curve" => {
+            super::render_live_chain_actions::run_animation_eval_curve(document, label)
+        }
+        "render:live_animation_spring_step" => {
+            super::render_live_chain_actions::run_animation_spring_step(document, label)
+        }
+        "render:live_animation_sclerp" => {
+            super::render_live_chain_actions::run_animation_sclerp(document, label)
+        }
+        "render:live_animation_eval_preset" => {
+            super::render_live_chain_actions::run_animation_eval_preset(document, label)
+        }
+        "render:live_animation_squad_step" => {
+            super::render_live_chain_actions::run_animation_squad_step(document, label)
+        }
+        "render:live_animation_list_presets" => {
+            super::render_live_chain_actions::run_animation_list_presets(document, label)
+        }
+        "render:live_animation_compute_pass" => {
+            super::render_live_chain_actions::run_animation_compute_pass(document, label)
+        }
+        "render:live_svg_path" => super::render_live_chain_actions::run_svg_path(document, label),
+        "render:live_svg_circle" => super::render_live_chain_actions::run_svg_circle(document, label),
+        "render:live_svg_rect" => super::render_live_chain_actions::run_svg_rect(document, label),
+        "render:live_svg_line" => super::render_live_chain_actions::run_svg_line(document, label),
+        "render:live_svg_bezier" => super::render_live_chain_actions::run_svg_bezier(document, label),
+        "render:live_svg_field" => super::render_live_chain_actions::run_svg_field(document, label),
+        "animation:live_spring_step" => {
+            super::anim_live_chain_actions::run_spring_step(document, label)
+        }
+        "animation:live_sclerp_step" => {
+            super::anim_live_chain_actions::run_sclerp_step(document, label)
+        }
+        "animation:live_squad_step" => {
+            super::anim_live_chain_actions::run_squad_step(document, label)
+        }
+        "animation:live_list_presets" => {
+            super::anim_live_chain_actions::run_list_presets(document, label)
+        }
+        "scientific:num_ode_rk4" => super::ode_num_chain_actions::run_rk4(document, label),
+        "scientific:num_ode_dopri5" => super::ode_num_chain_actions::run_dopri5(document, label),
+        "scientific:num_ode_bdf" => super::ode_num_chain_actions::run_bdf(document, label),
+        "scientific:num_ode_symplectic_step" => {
+            super::ode_num_chain_actions::run_symplectic_step(document, label)
+        }
+        "comm:hbbtv_new_app" => super::hbbtv_chain_actions::run_new_app(document, label),
+        "comm:hbbtv_add_page" => super::hbbtv_chain_actions::run_add_page(document, label),
+        "comm:hbbtv_navigate" => super::hbbtv_chain_actions::run_navigate(document, label),
+        "comm:hbbtv_set_state" => super::hbbtv_chain_actions::run_set_state(document, label),
+        "render:gpu_live_init" => super::gpu_live_chain_actions::run_gpu_init(document, label),
+        "render:gpu_live_init_surface" => {
+            super::gpu_live_chain_actions::run_gpu_init_surface(document, label)
+        }
+        "render:gpu_live_render_frame" => {
+            super::gpu_live_chain_actions::run_gpu_render_frame(document, label)
+        }
+        "render:gpu_live_read_pixels" => {
+            super::gpu_live_chain_actions::run_gpu_read_pixels(document, label)
+        }
+        "render:gpu_live_upload_mesh" => {
+            super::gpu_live_chain_actions::run_gpu_upload_mesh(document, label)
+        }
+        "render:gpu_live_upload_tensor" => {
+            super::gpu_live_chain_actions::run_gpu_upload_tensor(document, label)
+        }
+        "render:gpu_live_pick" => super::gpu_live_chain_actions::run_gpu_pick(document, label),
+        "render:gpu_live_poll_pick" => {
+            super::gpu_live_chain_actions::run_gpu_poll_pick(document, label)
+        }
+        "render:gpu_live_resize" => super::gpu_live_chain_actions::run_gpu_resize(document, label),
+        "render:gpu_live_set_ambient" => {
+            super::gpu_live_chain_actions::run_gpu_set_ambient(document, label)
+        }
+        "render:gpu_live_destroy" => super::gpu_live_chain_actions::run_gpu_destroy(document, label),
+        "render:gpu_live_compute_dispatch" => {
+            super::gpu_live_chain_actions::run_gpu_compute_dispatch(document, label)
+        }
+        "render:gpu_live_compute_readback" => {
+            super::gpu_live_chain_actions::run_gpu_compute_readback(document, label)
+        }
+        "render:gpu_live_validate_shader" => {
+            super::gpu_live_chain_actions::run_gpu_validate_shader(document, label)
+        }
+        "render:gpu_live_compile_shader" => {
+            super::gpu_live_chain_actions::run_gpu_compile_shader(document, label)
+        }
+        "render:gpu_live_compile_to_glsl" => {
+            super::gpu_live_chain_actions::run_gpu_compile_to_glsl(document, label)
+        }
+        "render:gpu_live_backend_info" => {
+            super::gpu_live_chain_actions::run_gpu_backend_info(document, label)
+        }
+        "render:gpu_live_upload_mesh_colored" => {
+            super::gpu_live2_chain_actions::run_gpu_upload_mesh_colored(document, label)
+        }
+        "render:gpu_live_set_standpoint" => {
+            super::gpu_live2_chain_actions::run_gpu_set_standpoint(document, label)
+        }
+        "render:gpu_live_observer_standpoint" => {
+            super::gpu_live2_chain_actions::run_gpu_observer_standpoint(document, label)
+        }
+        "render:gpu_live_camera_state" => {
+            super::gpu_live2_chain_actions::run_gpu_camera_state(document, label)
+        }
+        "render:gpu_live_surface_size" => {
+            super::gpu_live2_chain_actions::run_gpu_surface_size(document, label)
+        }
+        "render:gpu_live_has_mesh" => {
+            super::gpu_live2_chain_actions::run_gpu_has_mesh(document, label)
+        }
+        "render:gpu_live_has_tensor" => {
+            super::gpu_live2_chain_actions::run_gpu_has_tensor(document, label)
+        }
+        "render:gpu_live_tensor_node_count" => {
+            super::gpu_live2_chain_actions::run_gpu_tensor_node_count(document, label)
+        }
+        "render:gpu_live_particle_count" => {
+            super::gpu_live2_chain_actions::run_gpu_particle_count(document, label)
+        }
+        "render:gpu_live_sync_bloom" => {
+            super::gpu_live2_chain_actions::run_gpu_sync_bloom(document, label)
+        }
+        "render:gpu_live_set_artefact_joint" => {
+            super::gpu_live2_chain_actions::run_gpu_set_artefact_joint(document, label)
+        }
+        "render:gpu_live_set_artefact_world" => {
+            super::gpu_live2_chain_actions::run_gpu_set_artefact_world(document, label)
+        }
+        "render:gpu_live_artefact_refused" => {
+            super::gpu_live2_chain_actions::run_gpu_artefact_refused(document, label)
+        }
+        "render:gpu_live_required_rgba8_bytes" => {
+            super::gpu_live2_chain_actions::run_gpu_required_rgba8_bytes(document, label)
+        }
+        "render:gpu_live_emf_upload_field" => {
+            super::gpu_live2_chain_actions::run_emf_upload_field(document, label)
+        }
+        "render:gpu_live_emf_render_slice" => {
+            super::gpu_live2_chain_actions::run_emf_render_slice(document, label)
+        }
+        "render:gpu_live_emf_field_info" => {
+            super::gpu_live2_chain_actions::run_emf_field_info(document, label)
+        }
+        "social:live_gini" => super::wave36_chain_actions::run_social_gini(document, label),
+        "social:live_lorenz" => super::wave36_chain_actions::run_social_lorenz(document, label),
+        "social:live_degree_centrality" => {
+            super::wave36_chain_actions::run_social_degree_centrality(document, label)
+        }
+        "social:live_lww" => super::wave36_chain_actions::run_social_lww(document, label),
+        "forensic:live_malfeasance_delta" => {
+            super::wave36_chain_actions::run_forensic_malfeasance_delta(document, label)
+        }
+        "forensic:live_narrative_divergence" => {
+            super::wave36_chain_actions::run_forensic_narrative_divergence(document, label)
+        }
+        "finance:live_convert_currency" => {
+            super::wave36_chain_actions::run_finance_convert_currency(document, label)
+        }
+        "finance:live_multisig_check" => {
+            super::wave36_chain_actions::run_finance_multisig_check(document, label)
+        }
+        "finance:live_ledger_balance" => {
+            super::wave36_chain_actions::run_finance_ledger_balance(document, label)
+        }
+        "comm:graph_live_corpus_load" => {
+            super::wave36_chain_actions::run_corpus_load(document, label)
+        }
+        "comm:graph_live_corpus_parse" => {
+            super::wave36_chain_actions::run_corpus_parse(document, label)
+        }
+        "comm:graph_live_validate_fragment" => {
+            super::wave36_chain_actions::run_chat_validate_fragment(document, label)
+        }
+        "comm:graph_live_link_reply" => {
+            super::wave36_chain_actions::run_chat_link_reply(document, label)
+        }
+        "comm:graph_live_add_social_post" => {
+            super::wave36_chain_actions::run_interactive_add_social_post(document, label)
+        }
+        "comm:graph_live_add_trigger" => {
+            super::wave36_chain_actions::run_interactive_add_trigger(document, label)
+        }
+        "comm:graph_live_second_screen_sync" => {
+            super::wave36_chain_actions::run_second_screen_sync(document, label)
+        }
+        "scientific:graph_live_fuzzy_jaccard" => {
+            super::wave37_chain_actions::run_fuzzy_jaccard(document, label)
+        }
+        "scientific:graph_live_fuzzy_dice" => {
+            super::wave37_chain_actions::run_fuzzy_dice(document, label)
+        }
+        "scientific:graph_live_approximate_match" => {
+            super::wave37_chain_actions::run_approximate_match(document, label)
+        }
+        "scientific:graph_live_shortest_path" => {
+            super::wave37_chain_actions::run_shortest_path(document, label)
+        }
+        "scientific:graph_live_spreading_activation" => {
+            super::wave37_chain_actions::run_spreading_activation(document, label)
+        }
+        "scientific:graph_live_top_k" => super::wave37_chain_actions::run_top_k(document, label),
+        "scientific:opt_live_hill_climb" => {
+            super::wave37_chain_actions::run_hill_climb(document, label)
+        }
+        "scientific:opt_live_simulated_annealing" => {
+            super::wave37_chain_actions::run_simulated_annealing(document, label)
+        }
+        "scientific:opt_live_artificial_bee_colony" => {
+            super::wave37_chain_actions::run_artificial_bee_colony(document, label)
+        }
+        "ai:sampler_live_configure" => {
+            super::wave37_chain_actions::run_sampler_configure(document, label)
+        }
+        "ai:sampler_live_constrain_enable" => {
+            super::wave37_chain_actions::run_sampler_constrain_enable(document, label)
+        }
+        "ai:sampler_live_constrain_disable" => {
+            super::wave37_chain_actions::run_sampler_constrain_disable(document, label)
+        }
+        "ai:sampler_live_constrain_reset" => {
+            super::wave37_chain_actions::run_sampler_constrain_reset(document, label)
+        }
+        "ai:sampler_live_sample" => super::wave37_chain_actions::run_sampler_sample(document, label),
+        "ai:cap_live_grant" => super::wave37_chain_actions::run_cap_grant(document, label),
+        "ai:cap_live_revoke" => super::wave37_chain_actions::run_cap_revoke(document, label),
+        "ai:cap_live_test_gating" => {
+            super::wave37_chain_actions::run_cap_test_gating(document, label)
+        }
+        "ai:cap_live_audit" => super::wave37_chain_actions::run_cap_audit(document, label),
+        "ai:cap_live_declare" => super::wave37_chain_actions::run_cap_declare(document, label),
+        "health:med_live_tanimoto" => super::wave38_chain_actions::run_tanimoto(document, label),
+        "health:med_live_fingerprint" => {
+            super::wave38_chain_actions::run_structural_fingerprint(document, label)
+        }
+        "health:med_live_intensity" => {
+            super::wave38_chain_actions::run_analyze_intensity_grid(document, label)
+        }
+        "health:med_live_differential" => {
+            super::wave38_chain_actions::run_analyze_differential(document, label)
+        }
+        "health:med_live_screen" => {
+            super::wave38_chain_actions::run_screen_compounds(document, label)
+        }
+        "spatial:manifold_live_axes" => {
+            super::wave38_chain_actions::run_manifold_axes(document, label)
+        }
+        "spatial:manifold_live_distance" => {
+            super::wave38_chain_actions::run_manifold_distance(document, label)
+        }
+        "spatial:manifold_live_project" => {
+            super::wave38_chain_actions::run_manifold_project(document, label)
+        }
+        "scientific:crypto_live_sha256" => super::wave38_chain_actions::run_sha256(document, label),
+        "scientific:crypto_live_sha512" => super::wave38_chain_actions::run_sha512(document, label),
+        "scientific:crypto_live_blake3" => super::wave38_chain_actions::run_blake3(document, label),
+        "scientific:gemm_live" => super::linalg_app_chain_actions::run_gemm(document, label),
+        "scientific:privacy_live_gaussian" => {
+            super::wave38_chain_actions::run_gaussian_sigma(document, label)
+        }
+        "scientific:sentinel_live_gate" => {
+            super::wave38_chain_actions::run_sentinel_gate(document, label)
+        }
+        "ai:disc_live_catalog" => super::wave38_chain_actions::run_cap_catalog(document, label),
+        "ai:disc_live_coverage" => super::wave38_chain_actions::run_cap_coverage(document, label),
+        "ai:dag_live_execute" => super::wave38_chain_actions::run_dag_execute(document, label),
+        "ai:dag_live_validate" => super::wave38_chain_actions::run_dag_validate(document, label),
+        "ai:dag_live_status" => super::wave38_chain_actions::run_dag_status(document, label),
+        "econ:fm_live_black_scholes" => {
+            super::wave38_chain_actions::run_fm_black_scholes(document, label)
+        }
+        "econ:fm_live_portfolio_risk" => {
+            super::wave38_chain_actions::run_fm_portfolio_risk(document, label)
+        }
+        "scientific:longtail_bio_align" => {
+            super::wave39_chain_actions::run_bio_align(document, label)
+        }
+        "scientific:longtail_dmp" => super::wave39_chain_actions::run_dmp_holds(document, label),
+        "scientific:longtail_poisson" => super::wave39_chain_actions::run_poisson(document, label),
+        "scientific:longtail_t_norm" => super::wave39_chain_actions::run_t_norm(document, label),
+        "scientific:longtail_parse_bse" => {
+            super::wave39_chain_actions::run_parse_bse(document, label)
+        }
+        "scientific:longtail_conduction" => {
+            super::wave39_chain_actions::run_analyze_conduction(document, label)
+        }
+        "scientific:longtail_fem" => super::wave39_chain_actions::run_fem_static(document, label),
+        "scientific:longtail_simpson" => super::wave39_chain_actions::run_simpson(document, label),
+        "scientific:longtail_ontology" => {
+            super::wave39_chain_actions::run_ontology_align(document, label)
+        }
+        "scientific:longtail_units" => {
+            super::wave39_chain_actions::run_units_convert(document, label)
+        }
+        "scientific:longtail_projectile" => {
+            super::wave39_chain_actions::run_projectile(document, label)
+        }
+        "scientific:longtail_poly_coeffs" => {
+            super::wave39_chain_actions::run_poly_coeffs(document, label)
+        }
+        "scientific:longtail_bessel" => super::wave39_chain_actions::run_bessel_j(document, label),
+        "scientific:longtail_ltl_finally" => {
+            super::wave39_chain_actions::run_ltl_finally(document, label)
+        }
+        "scientific:longtail_ltl_globally" => {
+            super::wave39_chain_actions::run_ltl_globally(document, label)
+        }
+        "scientific:longtail_hash_iri" => super::wave39_chain_actions::run_hash_iri(document, label),
+        "econ:wealth_live_aggregate" => {
+            super::wave39_chain_actions::run_econ_aggregate_wealth(document, label)
+        }
+        "econ:wealth_live_cumulative" => {
+            super::wave39_chain_actions::run_econ_cumulative_wealth(document, label)
+        }
+        "econ:wealth_live_narrative" => {
+            super::wave39_chain_actions::run_econ_narrative_divergence(document, label)
+        }
+        "comm:net_live_peer_hash" => super::wave39_chain_actions::run_peer_hash(document, label),
+        "comm:net_live_sonic_pack" => super::wave39_chain_actions::run_sonic_pack(document, label),
+        "rights:id_live_agency" => super::wave39_chain_actions::run_agency_evaluate(document, label),
+        "rights:id_live_parse_did" => super::wave39_chain_actions::run_parse_did(document, label),
+        "rights:id_live_board_project" => {
+            super::wave39_chain_actions::run_board_project(document, label)
+        }
+        "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
+        "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
+        "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),
+        "scientific:ode_separable" => super::ode_chain_actions::run_separable(document, label),
+        "scientific:ode_pde1" => super::ode_chain_actions::run_pde1(document, label),
+        "ai:agent_trace" => super::agent_chain_actions::run_trace(document, label),
+        "ai:agent_verify" => super::agent_chain_actions::run_verify(document, label),
+        "ai:agent_plan" => super::agent_chain_actions::run_plan(document, label),
+        "ai:agent_execute" => super::agent_chain_actions::run_execute(document, label),
+        "ai:agent_evaluate" => super::agent_chain_actions::run_evaluate(document, label),
         "ai:nlp_tokenize" => super::nlp_chain_actions::run_tokenize(document, label),
         "ai:nlp_split_sentences" => {
             super::nlp_chain_actions::run_split_sentences(document, label)
