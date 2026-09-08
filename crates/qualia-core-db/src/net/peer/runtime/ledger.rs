@@ -143,6 +143,14 @@ impl ReservationLedger {
     pub fn used(&self) -> AdmissionScopes {
         self.used
     }
+
+    pub fn transient_used(&self) -> ResourceBudget {
+        self.transient_used
+    }
+
+    pub fn host_remaining_bytes(&self) -> u64 {
+        self.host_cap.bytes.saturating_sub(self.used.host.bytes)
+    }
 }
 
 #[cfg(test)]

@@ -39,8 +39,14 @@ pub struct KernelEffect {
     pub lease: LeaseHandle,
 }
 
+#[derive(Clone, Copy)]
+struct EffectSlot {
+    effect: KernelEffect,
+    cancelled: bool,
+}
+
 pub struct EffectQueue {
-    slots: [Option<KernelEffect>; 16],
+    slots: [Option<EffectSlot>; 16],
     len: usize,
 }
 
@@ -56,9 +62,31 @@ impl EffectQueue {
         if self.len >= self.slots.len() {
             return Err(QdnfError::Capacity);
         }
-        self.slots[self.len] = Some(effect);
+        self.slots[self.len] = Some(EffectSlot {
+            effect,
+            cancelled: false,
+        });
         self.len += 1;
         Ok(())
+    }
+
+    /// Mark in-flight effects for `operation`. Later `complete` consumes the
+    /// slot (releases storage) but returns `Cancelled` so the op cannot revive.
+    pub fn cancel_in_flight(&mut self, operation: OperationId) -> Result<(), QdnfError> {
+        let mut found = false;
+        for i in 0..self.len {
+            if let Some(slot) = &mut self.slots[i] {
+                if slot.effect.operation == operation {
+                    slot.cancelled = true;
+                    found = true;
+                }
+            }
+        }
+        if found {
+            Ok(())
+        } else {
+            Err(QdnfError::WouldBlock)
+        }
     }
 
     /// Consuming completion: the effect leaves the queue.
@@ -66,18 +94,63 @@ impl EffectQueue {
         if self.len == 0 {
             return Err(QdnfError::WouldBlock);
         }
-        let effect = self.slots[0].take().ok_or(QdnfError::Malformed)?;
+        let slot = self.slots[0].take().ok_or(QdnfError::Malformed)?;
         for i in 0..self.len - 1 {
             self.slots[i] = self.slots[i + 1];
         }
         self.len -= 1;
         self.slots[self.len] = None;
-        Ok(effect)
+        if slot.cancelled {
+            Err(QdnfError::Cancelled)
+        } else {
+            Ok(slot.effect)
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
     }
 }
 
 impl Default for EffectQueue {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn effect(n: u8) -> KernelEffect {
+        let mut id = [0u8; 16];
+        id[0] = n;
+        KernelEffect {
+            kind: EffectKind::SendFrame,
+            operation: OperationId(id),
+            lease: LeaseHandle::INVALID,
+        }
+    }
+
+    #[test]
+    fn complete_consumes_slot() {
+        let mut q = EffectQueue::new();
+        q.push(effect(1)).unwrap();
+        q.push(effect(2)).unwrap();
+        assert_eq!(q.complete().unwrap().operation.0[0], 1);
+        assert_eq!(q.len(), 1);
+        assert_eq!(q.complete().unwrap().operation.0[0], 2);
+        assert_eq!(q.complete(), Err(QdnfError::WouldBlock));
+    }
+
+    #[test]
+    fn cancel_in_flight_rejects_late_complete() {
+        let mut q = EffectQueue::new();
+        let e = effect(7);
+        q.push(e).unwrap();
+        q.cancel_in_flight(e.operation).unwrap();
+        assert_eq!(q.complete(), Err(QdnfError::Cancelled));
+        assert_eq!(q.len(), 0);
+        assert_eq!(q.complete(), Err(QdnfError::WouldBlock));
     }
 }

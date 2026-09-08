@@ -34,6 +34,19 @@ impl SoftwareBackend {
     }
 
     pub fn hardware_sign() -> Result<(), CryptoError> {
-        Err(CryptoError::PlatformUnsupported)
+        super::hardware::HardwareBackend::sign()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hardware_sign_is_platform_unsupported() {
+        assert_eq!(
+            SoftwareBackend::hardware_sign(),
+            Err(CryptoError::PlatformUnsupported)
+        );
     }
 }

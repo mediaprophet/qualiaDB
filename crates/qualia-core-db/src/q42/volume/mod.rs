@@ -15,6 +15,7 @@ mod index;
 mod inspect;
 mod magnet;
 mod manifest;
+mod network_quanta;
 mod opfs_source;
 mod postings;
 mod publication;
@@ -43,6 +44,8 @@ pub use manifest::{
     Q42VolumeSegment, Q42VolumeSet, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage,
     MAX_VOLUME_MANIFEST_BYTES,
 };
+#[allow(unused_imports)] // integrator re-exports through q42_volume.rs
+pub use network_quanta::{admit_logical_size, Completeness, NetworkCursor, ScanBudget};
 pub use opfs_source::{
     verify_car_bytes_as_q42_source, verify_local_car_as_q42_source, OpfsCallbackRangeSource,
     OpfsSliceRangeSource, VerifiedCarRangeSource,

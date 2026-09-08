@@ -161,3 +161,19 @@
 - Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf net::peer crypto::network` → **59 passed**. `cargo +stable test -p qualia-peer` → **2 passed**. Example `native_ipc_peers` printed `native ipc exchanged 11 bytes (libp2p not used)`. These are in-process `local-ipc-v1` results, not Ethernet/IP-absent hardware, not end-to-end application migration, not a full Native Independent cargo-tree closure (core-db default still includes `libp2p-compat` and GPU features).
 - Human input needed: none this step. Raw Ethernet remains `PlatformUnsupported` without CAP_NET_RAW.
 - Next: remaining NET/RT/SVC packages; isolate `qualia-peer` from default libp2p/GPU closure (RT-03.07).
+
+## 2026-09-08 — Wave 1 swarm claim
+
+- Integrator claims Wave 1 (FND-02, QA-01, CORE-02) plus provisional continuation of CRY-01 and RT-01. Status: **in_progress**. Packages stay open.
+- Disjoint writes: FND-02 `net/qdnf/authority.rs` + `contracts/` + new `fabric/`; QA-01 `net/qdnf/harness/` only; CORE-02 new `q42/volume/network_quanta.rs` + `volume/mod.rs`; CRY-01 `crypto/network/` only; RT-01 `net/peer/runtime/`.
+- Shared files forbidden to workers: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
+- Human input needed: none this step.
+- Next: integrate child patches, run `cargo +stable` tests, record measurements.
+
+## 2026-09-08 — Wave 1 swarm integrated — partial, packages remain open
+
+- Five disjoint implementers: FND-02 (fabric join/revocation/bootstrap), QA-01 (`FaultPipe`, partition, allocation counter), CORE-02 (`ScanBudget`/`NetworkCursor`), CRY-01 (ephemeral entropy lease, hardware fail-closed, rotation), RT-01 (DRR scheduler, cancel, generation exhaustion).
+- Integrator: re-exported network quanta from `q42_volume`; removed unused import. Design suite and programme checkboxes were not rewritten.
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf net::peer crypto::network q42::q42_volume::volume::network_quanta` → **148 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion.
+- Human input needed: none this step.
+- Next: Wave 2 (CORE-01, CORE-03, remaining CRY-01) with the same disjoint-file swarm.

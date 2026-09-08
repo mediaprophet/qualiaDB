@@ -44,7 +44,7 @@ pub use volume::{
     Q42VolumeSet, Q42VolumeSetMagnets, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage,
     StreamingQ42VolumeWriter, VerifiedCarBlock, VerifiedCarRangeSource, VerifyCheck, VerifyLevel,
     DEFAULT_SEGMENT_MAX_BYTES, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
-    RESIDENT_QUERY_MAX_BYTES,
+    RESIDENT_QUERY_MAX_BYTES, ScanBudget, NetworkCursor, Completeness, admit_logical_size,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{
