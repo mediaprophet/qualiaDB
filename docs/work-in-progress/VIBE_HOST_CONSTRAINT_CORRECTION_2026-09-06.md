@@ -32,3 +32,15 @@ surface the owner asked for.
 
 Paired catalogs must stay in sync: `crates/vibe/src/catalog/ids.rs` (`ALL_INVOKE_IDS`)
 and `crates/qualia-core-db/src/poet_host/invoke/ids.rs` (`ALL_BOUND`) + dispatch.
+
+## 2026-09-08 — Host-widen for apps / REPL (owner)
+
+Timothy: **VibeScript is a REPL language intended to support apps.** The grammar stays
+closed; the Host catalog **grows**. Do **not** treat `vibe-host-0.1` as a freeze of
+`ALL_BOUND`. Linear algebra is first-class: bind missing app primitives and route
+`LinearAlgebra.gemm` through the engine solver (CPU floor, GPU when `caps()` says so).
+Production polish (live invoke with the JSON Poet sends, honesty labels, machine
+schemas, dual-path scan of late-wave Live files) is in-scope — not inventory-only.
+
+Still not in scope: binding every Q1 CoreDb `pub fn`. Host-widen where it improves the
+app/REPL surface, starting with `LinearAlgebra.*`.

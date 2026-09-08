@@ -108,7 +108,8 @@ This is the sequential handoff record for
 | 2026-09-08 | Q1/Q2 wave 36 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Social/Forensic×6 · Finance×3 · Corpus/ChatGraph/Interactive/SecondScreen×7; Host none | poet wave36 1; policy ok; integrity 11; helper-aware Q2≈65 | Not re-run | GraphMatch/Optimization/sampler/Capability | Wave 37 |
 | 2026-09-08 | Q1/Q2 wave 37 | Cursor Grok 4.6 | Complete (integrated) | Poet Live GraphMatch/GraphReasoning/Optimization×9 · sampler/Capability×10; Host none | poet wave37 1; policy ok; integrity 11; helper-aware Q2≈45 | Not re-run | Medical/Manifold/crypto/DAG/FinancialModeling | Wave 38 |
 | 2026-09-08 | Q1/Q2 wave 38 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Medical/MedicalComputing×5 · Manifold×3 · crypto/GEMM/Privacy/Sentinel×6 · discovery/DAG×5 · FinancialModeling×2; Host none | poet wave38 1; policy ok; integrity 11; helper-aware Q2≈24 | Not re-run | Remaining curated singles | Wave 39 |
-| 2026-09-08 | Q1/Q2 wave 39 | Cursor Grok 4.6 | Complete (integrated) | Poet Live remaining curated Host singles×24; Host none | poet wave39 1; policy ok; integrity 11; helper-aware Q2=0 | Not re-run | Curated Q2 exhausted; do not Host-bind remaining Q1 CoreDb | — |
+| 2026-09-08 | Q1/Q2 wave 39 | Cursor Grok 4.6 | Complete (integrated) | Poet Live remaining curated Host singles×24; Host none | poet wave39 1; policy ok; integrity 11; helper-aware Q2=0 | Not re-run | Curated Q2 exhausted; do not Host-bind remaining Q1 CoreDb | Wave 40 Host-widen |
+| 2026-09-08 | Q1/Q2 wave 40 | Cursor Grok 4.6 | In progress | Vibe catalog-grows · LinearAlgebra.gemm→solver · Host dot/norm/trace/identity/inverse · Poet Live + schemas | pending | Not yet | Host-widen LinearAlgebra for apps/REPL | — |
 
 ## Required closeout detail
 
