@@ -57,6 +57,8 @@ mod tests {
         assert!(CSS.contains(".tool-proficiency-switcher"));
         assert!(CSS.contains("position: fixed; z-index: 6000;"));
         assert!(CSS.contains(".top-pod-drop-tray"));
+        assert!(CSS.contains(".osm-embed-frame"));
+        assert!(CSS.contains(".osm-open-map"));
         assert!(!CSS.contains(".twin-chip"));
         assert!(!CSS.contains("Twin chips"));
         assert!(!CSS.contains("plane-chip"));

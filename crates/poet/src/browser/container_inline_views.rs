@@ -482,7 +482,7 @@ fn wire_vibescript_action(button: &Element, editor: &Element, output: &Element, 
     closure.forget();
 }
 
-/// GIS map view — G-COORD realm chrome (Earth / Cosmos / Fiction) on live remaps.
+/// GIS map view — G-COORD realm chrome with OpenStreetMap as the default Earth basemap.
 pub fn build_gis_map_view(document: &Document) -> Element {
     super::g_coord::build_map_view(document)
 }
