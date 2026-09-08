@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Qualia · Webizen · Poet — 0.0.37 artefacts</title>
+  <title>Qualia · Webizen · Poet — 0.0.37</title>
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -28,112 +28,157 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-layer-group"></i> 0.0.37 product artefacts · measured Linux x86_64 · rustc 1.98.1 · branch <code class="q-mono">0.0.37</code></div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-layer-group"></i> 0.0.37 · Qualia · Webizen · Poet</div>
     <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] mb-4">
-      Qualia, Webizen, Poet.<br>
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">What 0.0.37 ships.</span>
+      Three products. One local-first stack.<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">What 0.0.37 is for.</span>
     </h1>
     <p class="text-lg text-white/70 max-w-3xl mb-3">
-      Three products on one engine: <strong>Qualia</strong> is the local-first semantic graph and in-process LLM;
-      <strong>Webizen</strong> is the habitat, ontology MCP, and desktop/studio shell;
+      <strong>Qualia</strong> is the semantic graph and in-process LLM.
+      <strong>Webizen</strong> is the habitat a person lives in — desktop, ontology, anatomy, rights.
       <strong>Poet</strong> is the creative environment that hosts VibeScript.
-      This page is the artefact map — what each product does, and which binaries and WASM profiles belong to it.
+      They share one 48-byte CRDT engine. This page is the product map: what each does, and how to run it.
     </p>
     <p class="text-sm text-white/45 mb-12">
-      Logs: <a class="q-link" href="releases/0.0.37-build-logs/SUMMARY.md">SUMMARY.md</a> ·
-      <a class="q-link" href="releases/0.0.37-build-logs/WASM-SIZE-GATES.md">WASM gates</a> ·
-      <a class="q-link" href="releases/0.0.37-build-logs/CROSS-PLATFORM.md">cross-platform</a> ·
-      <a class="q-link" href="https://github.com/mediaprophet/qualiaDB/releases">GitHub Releases</a>
+      Binaries and installers ship from GitHub Actions on tag <a class="q-link" href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.37"><code class="q-mono">v0.0.37</code></a> ·
+      <a class="q-link" href="https://github.com/mediaprophet/qualiaDB/releases">all releases</a>
     </p>
 
     <section class="grid lg:grid-cols-3 gap-5 mb-14">
       <article class="q-card p-7">
         <p class="q-kicker mb-2">Qualia</p>
         <h2 class="text-2xl font-semibold mb-3">Graph engine + local LLM</h2>
-        <p class="text-sm text-white/65 mb-4">Zero-copy 48-byte CRDT graph, SPARQL-style query, GGUF→P64, wgpu inference. The daemon on <code class="q-mono">:4242</code> is the graph — not an LLM HTTP server.</p>
+        <p class="text-sm text-white/65 mb-4">Zero-copy 48-byte CRDT graph, SPARQL-style query, GGUF→P64, wgpu inference on the machine. The daemon on <code class="q-mono">:4242</code> is the graph — not an LLM HTTP server. Token generation stays in-process; classified context never egresses.</p>
         <ul class="text-sm text-white/70 space-y-2">
-          <li><span class="q-mono text-cyan-300">qualia-cli</span> — ingest, query, shader, P64 convert</li>
-          <li><span class="q-mono text-cyan-300">portal WASM</span> — viewport, logic, WASM-safe science</li>
-          <li><span class="q-mono text-cyan-300">playground WASM</span> — portal + browser LLM demo</li>
-          <li><a class="q-link" href="online-llm-demo.html">Online LLM demo</a> · <a class="q-link" href="wasm-engine.html">WASM engine</a></li>
+          <li>Ingest, query, shader, and P64 convert from <span class="q-mono text-cyan-300">qualia-cli</span></li>
+          <li>Browser portal: viewport, logic, WASM-safe science</li>
+          <li>Playground: portal plus on-device LLM demo (path, TTFT, tok/s)</li>
+          <li><a class="q-link" href="online-llm-demo.html">On-device LLM</a> · <a class="q-link" href="wasm-engine.html">WASM engine</a> · <a class="q-link" href="api.html">API</a></li>
         </ul>
       </article>
       <article class="q-card p-7">
         <p class="q-kicker mb-2">Webizen</p>
         <h2 class="text-2xl font-semibold mb-3">Habitat for living with meaning</h2>
-        <p class="text-sm text-white/65 mb-4">Desktop shell, local daemon, ontology MCP, Wellfair anatomy, rights VM. Natural persons are not identity assets; instruments are not peers.</p>
+        <p class="text-sm text-white/65 mb-4">Desktop shell, local daemon, ontology MCP, Wellfair anatomy, rights VM. Memory · Relations · Care · Practice · World · Instruments. Natural persons are not identity assets; instruments are not peers.</p>
         <ul class="text-sm text-white/70 space-y-2">
-          <li><span class="q-mono text-violet-300">webizen-desktop</span> — Tauri habitat (Linux artefact; signed Windows/macOS from <code class="q-mono">release-desktop.yml</code>)</li>
-          <li><span class="q-mono text-violet-300">webizen-studio</span> — authoring / Wellfair panels</li>
-          <li><span class="q-mono text-violet-300">ontology MCP</span> — 640 KiB / 200 KiB gzip lite kernel</li>
-          <li><a class="q-link" href="playground/anatomy.html">3D anatomy</a> · <a class="q-link" href="qdnf.html">QDNF</a></li>
+          <li><span class="q-mono text-violet-300">webizen-desktop</span> — Tauri habitat (signed Windows NSIS, macOS, Linux)</li>
+          <li><span class="q-mono text-violet-300">webizen-studio</span> — authoring and Wellfair panels</li>
+          <li>Ontology MCP — N3, Quin query, SHACL, modal kernels in a 640 KiB kernel</li>
+          <li><a class="q-link" href="playground/anatomy.html">3D anatomy</a> · <a class="q-link" href="qdnf.html">QDNF fabric</a> · <a class="q-link" href="ontology.html">ontologies</a></li>
         </ul>
       </article>
       <article class="q-card p-7">
         <p class="q-kicker mb-2">Poet</p>
         <h2 class="text-2xl font-semibold mb-3">Creative host for VibeScript</h2>
-        <p class="text-sm text-white/65 mb-4">Closed 0.1 grammar, growing Host catalog (1,107 invoke ids, 105 families). Cells, signed modules, Cosmic geodesy, diagnose JSON.</p>
+        <p class="text-sm text-white/65 mb-4">Closed 0.1 grammar, growing Host catalog (1,107 invoke ids, 105 families). Cells, signed modules, Cosmic geodesy, diagnose JSON. Four ops: parse, check, diagnose, <code class="q-mono">capability.invoke</code>.</p>
         <ul class="text-sm text-white/70 space-y-2">
-          <li><span class="q-mono text-emerald-300">poet-cli</span> — tool-chest / manifolds</li>
-          <li><span class="q-mono text-emerald-300">vibe</span> — language engine + bytecode VM</li>
+          <li><span class="q-mono text-emerald-300">poet-cli</span> — tool-chest and manifolds</li>
+          <li><span class="q-mono text-emerald-300">vibe</span> — language engine and bytecode VM</li>
           <li><span class="q-mono text-emerald-300">vibe-wasm</span> — in-browser parse / check / diagnose / invoke</li>
-          <li><a class="q-link" href="vibe/">Vibe hub</a> · <a class="q-link" href="vibe/playground.html">playground</a></li>
+          <li><a class="q-link" href="vibe/">Vibe hub</a> · <a class="q-link" href="vibe/playground.html">playground</a> · <a class="q-link" href="vibe/showcase.html">showcase</a></li>
         </ul>
       </article>
     </section>
 
-    <section class="grid sm:grid-cols-3 gap-4 mb-12">
+    <section class="grid sm:grid-cols-3 gap-4 mb-14">
       <div class="q-card p-6">
-        <div class="text-xs text-white/40 mb-1">Linux product matrix</div>
-        <div class="hero-num text-4xl font-semibold text-emerald-300">15 / 15</div>
-        <div class="text-sm text-white/55 mt-1">CLI · WASM profiles · desktop · studio · poet · vibe</div>
+        <div class="text-xs text-white/40 mb-1">Engine datum</div>
+        <div class="hero-num text-4xl font-semibold text-emerald-300">48 B</div>
+        <div class="text-sm text-white/55 mt-1">CRDT Quin — every semantic fact, one record</div>
       </div>
       <div class="q-card p-6">
-        <div class="text-xs text-white/40 mb-1">Portal / playground cap</div>
-        <div class="hero-num text-4xl font-semibold text-cyan-300">16 / 4</div>
-        <div class="text-sm text-white/55 mt-1">MiB raw · MiB gzip · science + LLM stay inside it</div>
+        <div class="text-xs text-white/40 mb-1">Poet Host catalog</div>
+        <div class="hero-num text-4xl font-semibold text-cyan-300">1,107</div>
+        <div class="text-sm text-white/55 mt-1">invoke ids · 105 families · Cosmic, Animation, Deontic</div>
       </div>
       <div class="q-card p-6">
-        <div class="text-xs text-white/40 mb-1">Ontology MCP budget</div>
-        <div class="hero-num text-4xl font-semibold text-violet-300">640 / 200</div>
-        <div class="text-sm text-white/55 mt-1">KiB raw · KiB gzip · Webizen lite kernel</div>
+        <div class="text-xs text-white/40 mb-1">Webizen ontology kernel</div>
+        <div class="hero-num text-4xl font-semibold text-violet-300">640 KiB</div>
+        <div class="text-sm text-white/55 mt-1">MCP in the browser · 200 KiB gzip</div>
       </div>
     </section>
 
     <section class="mb-14">
-      <p class="q-kicker mb-2">Linux artefacts</p>
-      <h2 class="text-2xl font-semibold mb-4">Each cell is a product output, not a checklist of labour</h2>
-      <p class="text-sm text-white/55 mb-6 max-w-3xl">These are the 0.0.37 Linux targets that compose Qualia, Webizen, and Poet. Diagnostics on this matrix: 0 errors, 0 warnings. Signed Windows NSIS and macOS Metal installers are separate GitHub Actions jobs with signing secrets.</p>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" id="linux-grid"></div>
+      <p class="q-kicker mb-2">Get 0.0.37</p>
+      <h2 class="text-2xl font-semibold mb-3">Published from GitHub Actions</h2>
+      <p class="text-sm text-white/55 mb-6 max-w-3xl">
+        Tag <code class="q-mono">v0.0.37</code> runs the product workflows. CLI, signed desktop, and WASM artefacts land on
+        <a class="q-link" href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.37">GitHub Releases</a>.
+        This site is the Pages deploy of the same tag.
+      </p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <article class="q-card p-6">
+          <h3 class="text-lg font-semibold mb-2">Qualia CLI</h3>
+          <p class="text-sm text-white/60 mb-3">Query and convert on Linux, Windows, and macOS.</p>
+          <p class="text-xs text-white/45 q-mono mb-2">release-cli.yml</p>
+          <ul class="text-sm text-white/70 space-y-1">
+            <li><span class="q-mono text-cyan-300">qualia-cli-linux-x86_64</span></li>
+            <li><span class="q-mono text-cyan-300">qualia-cli-windows-x86_64.exe</span></li>
+            <li><span class="q-mono text-cyan-300">qualia-cli-macos-aarch64</span></li>
+          </ul>
+        </article>
+        <article class="q-card p-6">
+          <h3 class="text-lg font-semibold mb-2">Webizen desktop</h3>
+          <p class="text-sm text-white/60 mb-3">Signed habitat installers for the machine you sit at.</p>
+          <p class="text-xs text-white/45 q-mono mb-2">release-desktop.yml</p>
+          <ul class="text-sm text-white/70 space-y-1">
+            <li>Windows — NSIS, updater signature</li>
+            <li>macOS — Metal desktop</li>
+            <li>Linux — Tauri habitat</li>
+          </ul>
+        </article>
+        <article class="q-card p-6">
+          <h3 class="text-lg font-semibold mb-2">Browser engines</h3>
+          <p class="text-sm text-white/60 mb-3">Portal, playground, ontology MCP, and Vibe — no install.</p>
+          <p class="text-xs text-white/45 q-mono mb-2">release-wasm.yml · Pages</p>
+          <ul class="text-sm text-white/70 space-y-1">
+            <li><a class="q-link" href="wasm-engine.html">Qualia portal + playground</a></li>
+            <li><a class="q-link" href="vibe/playground.html">Poet / Vibe playground</a></li>
+            <li>Webizen lite ontology MCP</li>
+          </ul>
+        </article>
+        <article class="q-card p-6">
+          <h3 class="text-lg font-semibold mb-2">Models &amp; anatomy</h3>
+          <p class="text-sm text-white/60 mb-3">Weight containers and the Wellfair body, next to the engine.</p>
+          <p class="text-xs text-white/45 q-mono mb-2">release-p64-models.yml · Pages packs</p>
+          <ul class="text-sm text-white/70 space-y-1">
+            <li>P64 GGUF containers for local inference</li>
+            <li><a class="q-link" href="playground/anatomy.html">HRA / CCF anatomy</a></li>
+          </ul>
+        </article>
+      </div>
     </section>
 
     <section class="grid lg:grid-cols-2 gap-5 mb-14">
       <article class="q-card p-7">
-        <p class="q-kicker mb-2">WASM sizes · measured</p>
-        <h2 class="text-2xl font-semibold mb-4">Product budgets, not a single slim gate</h2>
-        <p class="text-sm text-white/65 mb-6">Portal and playground carry science (and playground carries the browser LLM). They fail a 2.6 MiB / 800 KiB ontology-sized gate on purpose. They pass the 16 MiB / 4 MiB Pages sanity cap. Ontology MCP stays on its own Webizen budget.</p>
+        <p class="q-kicker mb-2">What the browser downloads</p>
+        <h2 class="text-2xl font-semibold mb-4">Two budgets, two jobs</h2>
+        <p class="text-sm text-white/65 mb-6">The ontology kernel stays small so MCP can load on a phone. Portal and playground carry science (and playground carries the on-device LLM), so they use the engine cap — 16 MiB raw / 4 MiB gzip.</p>
         <div class="space-y-5 text-sm" id="gate-board"></div>
       </article>
       <article class="q-card p-7">
-        <p class="q-kicker mb-2">Windows · macOS</p>
-        <h2 class="text-2xl font-semibold mb-4">What is available on each platform</h2>
-        <div class="space-y-3" id="cross-grid"></div>
-        <p class="text-xs text-white/45 mt-5">
-          Signed installers ship from <code class="q-mono">release-desktop.yml</code> on GitHub-hosted runners with <code class="q-mono">TAURI_SIGNING_PRIVATE_KEY</code>.
-          A Linux type-check of the Windows GNU target is not a signed NSIS package.
+        <p class="q-kicker mb-2">Where it runs</p>
+        <h2 class="text-2xl font-semibold mb-4">Same products, native or WASM</h2>
+        <ul class="text-sm text-white/70 space-y-3">
+          <li><span class="text-emerald-300 font-medium">This site</span> — Qualia portal, Webizen anatomy, Poet/Vibe, on-device LLM. No extra runtime.</li>
+          <li><span class="text-cyan-300 font-medium">CLI</span> — ingest, SPARQL-style query, P64, shaders on Linux, Windows, and macOS from the release tag.</li>
+          <li><span class="text-violet-300 font-medium">Desktop</span> — Webizen habitat with the local daemon, signed by the Desktop Release workflow.</li>
+        </ul>
+        <p class="text-xs text-white/45 mt-6">
+          Workflows: <code class="q-mono">release-cli.yml</code>, <code class="q-mono">release-desktop.yml</code>, <code class="q-mono">release-wasm.yml</code>, <code class="q-mono">pages.yml</code>.
         </p>
       </article>
     </section>
 
     <section class="q-card p-8">
-      <h2 class="text-2xl font-semibold mb-3">Use the products</h2>
+      <h2 class="text-2xl font-semibold mb-3">Open a product</h2>
       <div class="flex flex-wrap gap-3">
         <a class="px-4 py-2 rounded-2xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-sm" href="index.html">Qualia / Webizen hub</a>
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="vibe/">Poet / Vibe</a>
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="online-llm-demo.html">On-device LLM</a>
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="wasm-engine.html">WASM engine</a>
-        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="progress-0.0.37.html">0.0.37 progress</a>
-        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/wasm-capability-profiles.md">Capability profiles</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="playground/anatomy.html">Anatomy</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.37">v0.0.37 release</a>
       </div>
     </section>
   </main>
@@ -144,31 +189,6 @@
 
   <script type="module">
     import { ARTIFACTS, GATES, formatBytes, pctOf } from './js/wasm-profile-meter.js';
-
-    const linux = [
-      ['01', 'Qualia CLI', 'qualia-cli'],
-      ['02', 'Qualia portal check', 'WASM portal'],
-      ['03', 'Webizen lite check', 'ontology MCP'],
-      ['04', 'Qualia logic profile', 'wasm-logic'],
-      ['05', 'Qualia science profile', 'wasm-scientific'],
-      ['06', 'Qualia LLM profile', 'wasm-llm'],
-      ['07', 'Qualia portal pack', 'wasm-pack portal'],
-      ['08', 'Webizen lite pack', 'wasm-pack lite'],
-      ['09', 'Qualia playground pack', 'wasm-pack playground'],
-      ['10', 'Qualia P64 converter', 'GGUF → P64'],
-      ['11', 'Webizen anatomy pack', 'HRA / CCF body'],
-      ['12', 'Webizen desktop Linux', 'habitat'],
-      ['13', 'Webizen studio', 'authoring'],
-      ['14', 'Poet CLI', 'tool-chest'],
-      ['15', 'Poet / Vibe engine', 'vibe-0.1'],
-    ];
-    const grid = document.getElementById('linux-grid');
-    for (const [id, name, note] of linux) {
-      const el = document.createElement('div');
-      el.className = 'q-cell';
-      el.innerHTML = `<div class="flex items-center justify-between mb-2"><span class="q-mono text-[11px] text-white/40">${id}</span><span class="q-pulse"></span></div><div class="text-sm font-medium leading-snug">${name}</div><div class="text-[11px] text-emerald-300/80 mt-2 q-mono">${note}</div>`;
-      grid.appendChild(el);
-    }
 
     const measured = {
       lite: { raw: 540847, gzip: 165726 },
@@ -187,22 +207,8 @@
           <span class="q-mono text-white/45">${formatBytes(m.raw)} · ${formatBytes(m.gzip)} gz</span>
         </div>
         <div class="q-bar ${ok ? 'ok' : 'warn'}"><span style="width:${Math.max(6, pctOf(m.raw, gate.raw))}%"></span></div>
-        <div class="mt-1 text-[11px] text-white/35">cap ${gate.label}${art.id === 'portal' || art.id === 'playground' ? ' · ontology-sized 2.6 MiB / 800 KiB is the wrong budget for this artefact' : ''}</div>`;
+        <div class="mt-1 text-[11px] text-white/35">${art.includes} · cap ${gate.label}</div>`;
       board.appendChild(el);
-    }
-
-    const cross = [
-      { id: '17', name: 'Qualia CLI · Windows GNU', ok: true, note: 'type-checks; PE from MinGW is not the MSVC/NSIS installer' },
-      { id: '18', name: 'Qualia CLI · Windows GNU release', ok: true, note: 'MinGW PE artefact' },
-      { id: '19', name: 'Webizen desktop · Windows GNU', ok: true, note: 'check only — signed NSIS is release-desktop.yml' },
-      { id: '20', name: 'Qualia CLI · macOS aarch64', ok: false, note: 'needs an Apple SDK / GitHub macOS runner' },
-    ];
-    const cx = document.getElementById('cross-grid');
-    for (const row of cross) {
-      const el = document.createElement('div');
-      el.className = `q-cell ${row.ok ? 'warn-cell' : 'fail'}`;
-      el.innerHTML = `<div class="flex items-center justify-between mb-2"><span class="q-mono text-[11px] text-white/40">${row.id}</span><span class="q-pulse ${row.ok ? '' : 'fail'}"></span></div><div class="text-sm font-medium">${row.name}</div><div class="text-[11px] mt-2 ${row.ok ? 'text-amber-200/80' : 'text-rose-300'}">${row.note}</div>`;
-      cx.appendChild(el);
     }
   </script>
 </body>
