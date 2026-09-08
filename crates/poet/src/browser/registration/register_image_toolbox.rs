@@ -456,6 +456,16 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                 },
                 super::register_render_live::render_live_tools(),
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "render:gpu_live".into(),
+                    label: "Live GPU render".into(),
+                    icon: "media".into(),
+                    description: "Already-bound Render.gpu_* PortalGpu / shader binds (needs GPU)."
+                        .into(),
+                },
+                super::register_gpu_live::gpu_live_tools(),
+            ),
         ],
     ));
 }

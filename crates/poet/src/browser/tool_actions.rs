@@ -959,6 +959,23 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "comm:hbbtv_add_page"
         | "comm:hbbtv_navigate"
         | "comm:hbbtv_set_state"
+        | "render:gpu_live_init"
+        | "render:gpu_live_init_surface"
+        | "render:gpu_live_render_frame"
+        | "render:gpu_live_read_pixels"
+        | "render:gpu_live_upload_mesh"
+        | "render:gpu_live_upload_tensor"
+        | "render:gpu_live_pick"
+        | "render:gpu_live_poll_pick"
+        | "render:gpu_live_resize"
+        | "render:gpu_live_set_ambient"
+        | "render:gpu_live_destroy"
+        | "render:gpu_live_compute_dispatch"
+        | "render:gpu_live_compute_readback"
+        | "render:gpu_live_validate_shader"
+        | "render:gpu_live_compile_shader"
+        | "render:gpu_live_compile_to_glsl"
+        | "render:gpu_live_backend_info"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3648,6 +3665,49 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "comm:hbbtv_add_page" => super::hbbtv_chain_actions::run_add_page(document, label),
         "comm:hbbtv_navigate" => super::hbbtv_chain_actions::run_navigate(document, label),
         "comm:hbbtv_set_state" => super::hbbtv_chain_actions::run_set_state(document, label),
+        "render:gpu_live_init" => super::gpu_live_chain_actions::run_gpu_init(document, label),
+        "render:gpu_live_init_surface" => {
+            super::gpu_live_chain_actions::run_gpu_init_surface(document, label)
+        }
+        "render:gpu_live_render_frame" => {
+            super::gpu_live_chain_actions::run_gpu_render_frame(document, label)
+        }
+        "render:gpu_live_read_pixels" => {
+            super::gpu_live_chain_actions::run_gpu_read_pixels(document, label)
+        }
+        "render:gpu_live_upload_mesh" => {
+            super::gpu_live_chain_actions::run_gpu_upload_mesh(document, label)
+        }
+        "render:gpu_live_upload_tensor" => {
+            super::gpu_live_chain_actions::run_gpu_upload_tensor(document, label)
+        }
+        "render:gpu_live_pick" => super::gpu_live_chain_actions::run_gpu_pick(document, label),
+        "render:gpu_live_poll_pick" => {
+            super::gpu_live_chain_actions::run_gpu_poll_pick(document, label)
+        }
+        "render:gpu_live_resize" => super::gpu_live_chain_actions::run_gpu_resize(document, label),
+        "render:gpu_live_set_ambient" => {
+            super::gpu_live_chain_actions::run_gpu_set_ambient(document, label)
+        }
+        "render:gpu_live_destroy" => super::gpu_live_chain_actions::run_gpu_destroy(document, label),
+        "render:gpu_live_compute_dispatch" => {
+            super::gpu_live_chain_actions::run_gpu_compute_dispatch(document, label)
+        }
+        "render:gpu_live_compute_readback" => {
+            super::gpu_live_chain_actions::run_gpu_compute_readback(document, label)
+        }
+        "render:gpu_live_validate_shader" => {
+            super::gpu_live_chain_actions::run_gpu_validate_shader(document, label)
+        }
+        "render:gpu_live_compile_shader" => {
+            super::gpu_live_chain_actions::run_gpu_compile_shader(document, label)
+        }
+        "render:gpu_live_compile_to_glsl" => {
+            super::gpu_live_chain_actions::run_gpu_compile_to_glsl(document, label)
+        }
+        "render:gpu_live_backend_info" => {
+            super::gpu_live_chain_actions::run_gpu_backend_info(document, label)
+        }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
         "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),

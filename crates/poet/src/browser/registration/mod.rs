@@ -28,6 +28,7 @@ mod register_health_toolbox;
 mod register_image_toolbox;
 mod register_render_live;
 mod register_wave33_live;
+mod register_gpu_live;
 mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
@@ -4469,5 +4470,32 @@ mod tests {
 
     fn tools_contains(tools: &[(&str, Option<&str>)], id: &str, scope: &str) -> bool {
         tools.contains(&(id, Some(scope)))
+    }
+
+    #[test]
+    fn gpu_live_binds_wave34_gpu_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "render:gpu_live")
+            .expect("render:gpu_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("render:gpu_live_init", Some("Render.gpu_init"))));
+        assert!(tools.contains(&(
+            "render:gpu_live_backend_info",
+            Some("Render.gpu_backend_info")
+        )));
+        assert_eq!(tools.len(), 17);
     }
 }

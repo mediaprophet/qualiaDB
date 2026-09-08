@@ -4747,6 +4747,91 @@ fn named(id: &str) -> Option<Presentation> {
             "Set app state via HbbTV.set_state.",
             Proficiency::Novice,
         ),
+        "render:gpu_live_init" => (
+            "GPU init",
+            "Create an offscreen PortalGpu via Render.gpu_init.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_init_surface" => (
+            "GPU init surface",
+            "Swapchain PortalGpu via Render.gpu_init_surface.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_render_frame" => (
+            "Render frame",
+            "Render one frame via Render.gpu_render_frame.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_read_pixels" => (
+            "Read pixels",
+            "Read RGBA8 via Render.gpu_read_pixels.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_upload_mesh" => (
+            "Upload mesh",
+            "Upload a triangle mesh via Render.gpu_upload_mesh.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_upload_tensor" => (
+            "Upload tensor",
+            "Upload tensor bytes via Render.gpu_upload_tensor.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_pick" => (
+            "Pick",
+            "Queue a pick via Render.gpu_pick.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_poll_pick" => (
+            "Poll pick",
+            "Poll pick via Render.gpu_poll_pick.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_resize" => (
+            "Resize",
+            "Resize viewport via Render.gpu_resize.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_set_ambient" => (
+            "Set ambient",
+            "Toggle ambient field via Render.gpu_set_ambient.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_destroy" => (
+            "Destroy",
+            "Destroy PortalGpu via Render.gpu_destroy.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_compute_dispatch" => (
+            "Compute dispatch",
+            "Dispatch WGSL compute via Render.gpu_compute_dispatch.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_compute_readback" => (
+            "Compute readback",
+            "Read compute results via Render.gpu_compute_readback.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_validate_shader" => (
+            "Validate shader",
+            "Validate WGSL via Render.gpu_validate_shader.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_compile_shader" => (
+            "Compile shader",
+            "Compile WGSL via Render.gpu_compile_shader.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_compile_to_glsl" => (
+            "Compile to GLSL",
+            "Cross-compile WGSL via Render.gpu_compile_to_glsl.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_backend_info" => (
+            "Backend info",
+            "Probe GPU backend via Render.gpu_backend_info.",
+            Proficiency::Novice,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",
