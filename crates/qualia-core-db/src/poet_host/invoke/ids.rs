@@ -673,6 +673,11 @@ pub const CHEM_N_CARTESIAN: &str = "Chemistry.n_cartesian";
 pub const CHEM_N_SPHERICAL: &str = "Chemistry.n_spherical";
 pub const CHEM_FROM_LETTER: &str = "Chemistry.from_letter";
 pub const LA_GEMM: &str = "LinearAlgebra.gemm";
+pub const LA_DOT: &str = "LinearAlgebra.dot";
+pub const LA_NORM: &str = "LinearAlgebra.norm";
+pub const LA_TRACE: &str = "LinearAlgebra.trace";
+pub const LA_IDENTITY: &str = "LinearAlgebra.identity";
+pub const LA_INVERSE: &str = "LinearAlgebra.inverse";
 pub const POLY_COEFFS: &str = "PolynomialAlgebra.coeffs";
 
 // ── Wave-14 Host binds (calculus / graph helpers) ────────────────────────
@@ -1789,6 +1794,11 @@ pub const ALL_BOUND: &[&str] = &[
     CHEM_N_SPHERICAL,
     CHEM_FROM_LETTER,
     LA_GEMM,
+    LA_DOT,
+    LA_NORM,
+    LA_TRACE,
+    LA_IDENTITY,
+    LA_INVERSE,
     POLY_COEFFS,
     CALC_HERMITE_DENSE_OUTPUT,
     CALC_BDF1_STEP,
@@ -2546,6 +2556,11 @@ pub fn seam_for(id: &str) -> &'static str {
         | CAS_FROM_QUINS
         | LA_SYMMETRIC_EIGEN_3X3
         | LA_GEMM
+        | LA_DOT
+        | LA_NORM
+        | LA_TRACE
+        | LA_IDENTITY
+        | LA_INVERSE
         | CALC_HERMITE_DENSE_OUTPUT
         | CALC_BDF1_STEP
         | CALC_BDF2_STEP
@@ -3421,6 +3436,7 @@ mod tests {
         assert_eq!(seam_for(PHYS_PROJECTILE), "science");
         assert_eq!(seam_for(VISION_AHASH), "vision");
         assert_eq!(seam_for(ML_OLS), "ml");
+        assert_eq!(seam_for(LA_DOT), "math");
         assert_eq!(seam_for("DoesNotExist.nope"), "unbound");
     }
 

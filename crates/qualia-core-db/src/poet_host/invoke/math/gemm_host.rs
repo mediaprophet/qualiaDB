@@ -1,22 +1,12 @@
-//! Wave-13 Host bind: BLAS-style `gemm` on a **pure CPU** path.
+//! Host bind: BLAS-style `LinearAlgebra.gemm` through the engine solver.
 //!
-//! Host-missing `LinearAlgebra.gemm`. Intentionally does **not** call
-//! `solvers::linear_algebra::gemm::gemm` — that entry probes forge/`caps()` and can
-//! panic loading CUDA on machines without the driver. This module keeps a local
-//! triple-loop (same indexing as the solver CPU floor) and rejects oversized work
-//! so the Host never offloads.
+//! Routes to `solvers::linear_algebra::gemm::gemm` — CPU floor always, GPU when
+//! `caps()` reports an accelerator and the work is large enough. Host does not
+//! fork a second triple-loop or reject by size.
 
 use super::super::args;
+use crate::solvers::linear_algebra::gemm::{gemm, Transpose};
 use vibe::{Diagnostic, Span, Value};
-
-/// Matches `wgsl_forge::dispatch::GEMM_GPU_THRESHOLD` — Host stays strictly below.
-const HOST_GEMM_CPU_CAP: usize = 1 << 15;
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Transpose {
-    No,
-    Yes,
-}
 
 struct Mat {
     rows: usize,
@@ -55,53 +45,7 @@ fn mat_record(rows: usize, cols: usize, data: Vec<f64>) -> Value {
     ])
 }
 
-/// Pure CPU `C := alpha·op(A)·op(B) + beta·C` (row-major). Same index convention as
-/// the solver CPU floor — Host never touches forge/`caps()`.
-fn gemm_cpu(
-    transa: Transpose,
-    transb: Transpose,
-    m: usize,
-    n: usize,
-    k: usize,
-    alpha: f64,
-    a: &[f64],
-    b: &[f64],
-    beta: f64,
-    c: &mut [f64],
-) -> Result<(), ()> {
-    if a.len() != m * k || b.len() != k * n || c.len() != m * n {
-        return Err(());
-    }
-    let a_at = |i: usize, l: usize| -> f64 {
-        match transa {
-            Transpose::No => a[i * k + l],
-            Transpose::Yes => a[l * m + i],
-        }
-    };
-    let b_at = |l: usize, j: usize| -> f64 {
-        match transb {
-            Transpose::No => b[l * n + j],
-            Transpose::Yes => b[j * k + l],
-        }
-    };
-    for i in 0..m {
-        for j in 0..n {
-            let mut s = 0.0;
-            for l in 0..k {
-                s += a_at(i, l) * b_at(l, j);
-            }
-            let idx = i * n + j;
-            c[idx] = if beta == 0.0 {
-                alpha * s
-            } else {
-                alpha * s + beta * c[idx]
-            };
-        }
-    }
-    Ok(())
-}
-
-/// `LinearAlgebra.gemm` — `C := alpha·op(A)·op(B) + beta·C` (row-major, CPU-only).
+/// `LinearAlgebra.gemm` — `C := alpha·op(A)·op(B) + beta·C` (row-major).
 ///
 /// Args: `{ a, b, c?, alpha?, beta?, transa?, transb? }` where matrices are
 /// `{ rows, cols, data }`. When `c` is omitted and `beta==0`, a zero buffer is used.
@@ -124,18 +68,12 @@ pub fn gemm_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         Transpose::Yes => (b.cols, b.rows),
     };
     if k_a != k_b {
-        return Err(args::bad(span, "gemm: inner dimensions of op(A) and op(B) disagree"));
-    }
-    let k = k_a;
-    let work = m.saturating_mul(n).saturating_mul(k);
-    if work >= HOST_GEMM_CPU_CAP {
         return Err(args::bad(
             span,
-            format!(
-                "LinearAlgebra.gemm Host is CPU-only (m·n·k={work} ≥ {HOST_GEMM_CPU_CAP}); refuse GPU offload"
-            ),
+            "gemm: inner dimensions of op(A) and op(B) disagree",
         ));
     }
+    let k = k_a;
 
     let mut c = if let Ok(existing) = matrix(args_v, "c", span) {
         if existing.rows != m || existing.cols != n {
@@ -148,8 +86,10 @@ pub fn gemm_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         return Err(args::bad(span, "gemm: c required when beta != 0"));
     };
 
-    gemm_cpu(transa, transb, m, n, k, alpha, &a.data, &b.data, beta, &mut c)
-        .map_err(|_| args::bad(span, "gemm: dimension error"))?;
+    gemm(
+        transa, transb, m, n, k, alpha, &a.data, &b.data, beta, &mut c,
+    )
+    .map_err(|e| args::bad(span, format!("gemm: {e:?}")))?;
 
     Ok(args::record([("c", mat_record(m, n, c))]))
 }
@@ -157,25 +97,59 @@ pub fn gemm_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::poet_host::PoetSnapshot;
     use std::collections::BTreeMap;
 
     fn span() -> Span {
         Span { start: 0, end: 0 }
     }
 
-    fn mat(rows: u64, cols: u64, data: Vec<f64>) -> Value {
-        let mut m = BTreeMap::new();
-        m.insert("rows".into(), Value::U64(rows));
-        m.insert("cols".into(), Value::U64(cols));
-        m.insert("data".into(), args::f64_list_value(data));
-        Value::Record(m)
+    fn json_to_vibe(v: &serde_json::Value) -> Value {
+        match v {
+            serde_json::Value::Null => Value::Null,
+            serde_json::Value::Bool(b) => Value::Bool(*b),
+            serde_json::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    Value::I64(i)
+                } else if let Some(u) = n.as_u64() {
+                    Value::U64(u)
+                } else {
+                    Value::F64(n.as_f64().unwrap_or(0.0))
+                }
+            }
+            serde_json::Value::String(s) => Value::String(s.clone()),
+            serde_json::Value::Array(items) => {
+                Value::List(items.iter().map(json_to_vibe).collect())
+            }
+            serde_json::Value::Object(map) => {
+                let mut rec = BTreeMap::new();
+                for (k, val) in map {
+                    rec.insert(k.clone(), json_to_vibe(val));
+                }
+                Value::Record(rec)
+            }
+        }
+    }
+
+    fn identity_data(n: usize) -> Vec<f64> {
+        let mut d = vec![0.0; n * n];
+        for i in 0..n {
+            d[i * n + i] = 1.0;
+        }
+        d
     }
 
     #[test]
     fn wave13_gemm_2x2_identity() {
         let mut args = BTreeMap::new();
-        args.insert("a".into(), mat(2, 2, vec![1.0, 2.0, 3.0, 4.0]));
-        args.insert("b".into(), mat(2, 2, vec![1.0, 0.0, 0.0, 1.0]));
+        args.insert(
+            "a".into(),
+            json_to_vibe(&serde_json::json!({"rows": 2, "cols": 2, "data": [1.0, 2.0, 3.0, 4.0]})),
+        );
+        args.insert(
+            "b".into(),
+            json_to_vibe(&serde_json::json!({"rows": 2, "cols": 2, "data": [1.0, 0.0, 0.0, 1.0]})),
+        );
         args.insert("alpha".into(), Value::F64(1.0));
         args.insert("beta".into(), Value::F64(0.0));
         let out = gemm_host(&Value::Record(args), span()).unwrap();
@@ -185,15 +159,48 @@ mod tests {
     }
 
     #[test]
-    fn wave13_gemm_rejects_gpu_sized_work() {
-        // Claim huge dims without allocating huge buffers — parse fails length check.
-        // Instead: use dims whose product hits the Host cap with modest buffers.
+    fn wave40_gemm_32x32_identity_succeeds() {
         let side = 32usize;
-        let data = vec![0.0_f64; side * side];
+        let data = identity_data(side);
         let mut args = BTreeMap::new();
-        args.insert("a".into(), mat(side as u64, side as u64, data.clone()));
-        args.insert("b".into(), mat(side as u64, side as u64, data));
-        // 32³ = 32768 == HOST_GEMM_CPU_CAP → reject
-        assert!(gemm_host(&Value::Record(args), span()).is_err());
+        args.insert(
+            "a".into(),
+            json_to_vibe(&serde_json::json!({
+                "rows": side as u64,
+                "cols": side as u64,
+                "data": data,
+            })),
+        );
+        let data_b = identity_data(side);
+        args.insert(
+            "b".into(),
+            json_to_vibe(&serde_json::json!({
+                "rows": side as u64,
+                "cols": side as u64,
+                "data": data_b,
+            })),
+        );
+        let out = gemm_host(&Value::Record(args), span()).unwrap();
+        let c = args::rec(&out, "c").unwrap();
+        let got = args::rec_f64_list(c, "data").unwrap();
+        assert_eq!(got, identity_data(side));
+    }
+
+    #[test]
+    fn wave40_gemm_poet_json_1x1() {
+        // Same JSON shape `scientific:gemm_live` / Tool Chest send.
+        let json = serde_json::json!({
+            "a": { "rows": 1, "cols": 1, "data": [2.0] },
+            "b": { "rows": 1, "cols": 1, "data": [3.0] },
+            "alpha": 1.0,
+            "beta": 0.0
+        });
+        let mut snap = PoetSnapshot::default();
+        let out = snap
+            .invoke_id("LinearAlgebra.gemm", json_to_vibe(&json))
+            .unwrap();
+        let c = args::rec(&out, "c").unwrap();
+        let data = args::rec_f64_list(c, "data").unwrap();
+        assert!((data[0] - 6.0).abs() < 1e-12);
     }
 }

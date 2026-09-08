@@ -1005,11 +1005,8 @@ pub fn econ_ols(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 // ── Agent-based ──────────────────────────────────────────────────────────────
 
 pub fn econ_aggregate_wealth(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    // Agent-based aggregate wealth — simplified exposure.
-    Ok(args::record([(
-        "status",
-        Value::String("agent_based_available".into()),
-    )]))
+    // Honesty: availability stub — agent-based aggregate is not computed here.
+    Ok(args::record([("status", Value::String("agent_based_available".into()))]))
 }
 
 // ── Input-output ─────────────────────────────────────────────────────────────
@@ -1894,7 +1891,7 @@ pub fn econ_value_iteration(args: &Value, span: Span) -> Result<Value, Diagnosti
 // ── Forensic: narrative divergence, harm trace ────────────────────────────────
 
 pub fn econ_narrative_divergence(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    // Narrative divergence requires NquinVector structs — expose as metadata.
+    // Honesty: availability stub — NquinVector traces are not decoded here.
     Ok(args::record([(
         "status",
         Value::String("narrative_divergence_available".into()),
