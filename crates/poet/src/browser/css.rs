@@ -55,6 +55,8 @@ mod tests {
         assert!(CSS.contains("--chip-living"));
         assert!(CSS.contains(".tool-tip"));
         assert!(CSS.contains(".tool-proficiency-switcher"));
+        assert!(CSS.contains("position: fixed; z-index: 6000;"));
+        assert!(CSS.contains(".top-pod-drop-tray"));
         assert!(!CSS.contains(".twin-chip"));
         assert!(!CSS.contains("Twin chips"));
         assert!(!CSS.contains("plane-chip"));

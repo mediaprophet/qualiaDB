@@ -304,24 +304,39 @@ pub fn wire_pods(document: &Document) {
         closure.forget();
     }
 
-    // Close drop tray when clicking outside
+    // Close drop tray when clicking outside the pod buttons or the overlay.
     let closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
-        let me: web_sys::MouseEvent = e.dyn_into().unwrap();
-        let target: Element = me.target().unwrap().dyn_into().unwrap();
-        if !target.class_list().contains("top-pod-btn")
-            && !target.closest(".top-pod-drop-tray").unwrap().is_some()
-        {
+        let Some(target) = e.target() else {
+            return;
+        };
+        let Ok(el) = target.dyn_into::<Element>() else {
+            return;
+        };
+        let in_pod = el.closest(".top-pod-btn").ok().flatten().is_some();
+        let in_tray = el.closest(".top-pod-drop-tray").ok().flatten().is_some();
+        if !in_pod && !in_tray {
             let doc = web_sys::window().unwrap().document().unwrap();
-            if let Some(tray) = doc.get_element_by_id("top-pod-drop-tray") {
-                let t_el: HtmlElement = tray.dyn_into().unwrap();
-                t_el.style().set_property("display", "none").unwrap();
-            }
+            hide_pod_drop_tray(&doc);
         }
     }) as Box<dyn FnMut(web_sys::Event)>);
     document
         .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
+
+    if let Some(window) = web_sys::window() {
+        let resize = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+            let doc = web_sys::window().unwrap().document().unwrap();
+            if let Some(tray) = doc.get_element_by_id("top-pod-drop-tray") {
+                let t_el: HtmlElement = tray.dyn_into().unwrap();
+                if t_el.style().get_property_value("display").unwrap_or_default() != "none" {
+                    position_pod_drop_tray(&doc);
+                }
+            }
+        }) as Box<dyn FnMut(web_sys::Event)>);
+        let _ = window.add_event_listener_with_callback("resize", resize.as_ref().unchecked_ref());
+        resize.forget();
+    }
 
     // Wire tech sidebar toggle
     if let Some(tech_btn) = document.get_element_by_id("btn-toggle-tech-sidebar") {
@@ -363,6 +378,7 @@ pub fn wire_pods(document: &Document) {
                     if let Some(btn) = doc.get_element_by_id("control-bar-collapse-btn") {
                         btn.set_text_content(Some("\u{25B8}")); // ▸
                     }
+                    hide_pod_drop_tray(&doc);
                 }
             }
         }) as Box<dyn FnMut(web_sys::Event)>);

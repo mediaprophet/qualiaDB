@@ -137,6 +137,82 @@ pub(super) fn show_a11y_notification(document: &Document) {
     super::super::accessibility::open_dialog(document);
 }
 
+/// Geometry for the Strata / Lens / Time tray when it is a viewport overlay.
+///
+/// Kept pure so the overlay can sit above the workspace splitters instead of
+/// being clipped inside the control bar's `backdrop-filter` grouping.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct TrayOverlayBox {
+    pub top: f64,
+    pub left: f64,
+    pub width: f64,
+    pub max_height: f64,
+}
+
+pub(crate) fn tray_overlay_box(
+    bar_left: f64,
+    bar_bottom: f64,
+    bar_width: f64,
+    viewport_height: f64,
+) -> TrayOverlayBox {
+    const GAP: f64 = 2.0;
+    const FLOOR: f64 = 12.0;
+    TrayOverlayBox {
+        top: bar_bottom + GAP,
+        left: bar_left,
+        width: bar_width.max(240.0),
+        max_height: (viewport_height - bar_bottom - GAP - FLOOR).max(96.0),
+    }
+}
+
+pub(super) fn hide_pod_drop_tray(document: &Document) {
+    if let Some(tray) = document.get_element_by_id("top-pod-drop-tray") {
+        let t_el: HtmlElement = tray.dyn_into().unwrap();
+        let _ = t_el.style().set_property("display", "none");
+        let _ = t_el.remove_attribute("data-active-pod");
+    }
+}
+
+fn viewport_height() -> f64 {
+    web_sys::window()
+        .and_then(|w| w.inner_height().ok())
+        .and_then(|v| v.as_f64())
+        .unwrap_or(800.0)
+}
+
+fn mount_pod_drop_tray_overlay(document: &Document, tray: &Element) {
+    if let Some(body) = document.body() {
+        let _ = body.append_child(tray);
+    }
+    position_pod_drop_tray(document);
+}
+
+pub(super) fn position_pod_drop_tray(document: &Document) {
+    let Some(tray) = document.get_element_by_id("top-pod-drop-tray") else {
+        return;
+    };
+    let Ok(t_el) = tray.clone().dyn_into::<HtmlElement>() else {
+        return;
+    };
+    let Some(bar) = document
+        .query_selector(".canvas-control-bar")
+        .ok()
+        .flatten()
+    else {
+        return;
+    };
+    let rect = bar.get_bounding_client_rect();
+    let box_ = tray_overlay_box(rect.left(), rect.bottom(), rect.width(), viewport_height());
+    let style = t_el.style();
+    let _ = style.set_property("position", "fixed");
+    let _ = style.set_property("top", &format!("{}px", box_.top));
+    let _ = style.set_property("left", &format!("{}px", box_.left));
+    let _ = style.set_property("width", &format!("{}px", box_.width));
+    let _ = style.set_property("right", "auto");
+    let _ = style.set_property("max-height", &format!("{}px", box_.max_height));
+    let _ = style.set_property("z-index", "6000");
+}
+
 pub(super) fn toggle_pod_tray(document: &Document, pod_id: &str) {
     let tray = match document.get_element_by_id("top-pod-drop-tray") {
         Some(t) => t,
@@ -149,8 +225,7 @@ pub(super) fn toggle_pod_tray(document: &Document, pod_id: &str) {
         .unwrap_or_default();
 
     if display != "none" && tray.get_attribute("data-active-pod").as_deref() == Some(pod_id) {
-        // Same pod — close
-        t_el.style().set_property("display", "none").unwrap();
+        hide_pod_drop_tray(document);
         return;
     }
 
@@ -164,5 +239,27 @@ pub(super) fn toggle_pod_tray(document: &Document, pod_id: &str) {
         _ => {}
     }
 
+    mount_pod_drop_tray_overlay(document, &tray);
     t_el.style().set_property("display", "flex").unwrap();
+}
+
+#[cfg(test)]
+mod overlay_tests {
+    use super::tray_overlay_box;
+
+    #[test]
+    fn tray_sits_just_below_the_control_bar() {
+        let box_ = tray_overlay_box(0.0, 74.0, 1280.0, 800.0);
+        assert_eq!(box_.top, 76.0);
+        assert_eq!(box_.left, 0.0);
+        assert_eq!(box_.width, 1280.0);
+        assert_eq!(box_.max_height, 800.0 - 74.0 - 2.0 - 12.0);
+    }
+
+    #[test]
+    fn tray_keeps_a_usable_height_on_short_viewports() {
+        let box_ = tray_overlay_box(12.0, 790.0, 100.0, 800.0);
+        assert_eq!(box_.width, 240.0);
+        assert_eq!(box_.max_height, 96.0);
+    }
 }
