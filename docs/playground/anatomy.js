@@ -6,11 +6,11 @@
 // an ambient-field channel (off by default) and a per-body-system channel row.
 // Mobile: full-viewport canvas + bottom-sheet controls, pinch zoom, orbit drag.
 
-import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js?v=0.0.37-anatomy-boot1";
+import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js?v=0.0.37-anatomy-boot2";
 import {
   getBrowserCapabilityReceipt,
   recordBackendDeviceOutcome,
-} from "../js/browser-capability.js?v=0.0.37-anatomy-boot1";
+} from "../js/browser-capability.js?v=0.0.37-anatomy-boot2";
 
 const container = document.getElementById("canvas-container");
 const statusEl = document.getElementById("status");
@@ -29,7 +29,7 @@ let bodyBytes = null;
 let capabilityReceipt = null;
 let anatomyRenderer = "unsupported";
 let renderGeneration = 0;
-window.__anatomyBooted = false;
+window.__anatomyBooted = true;
 // Pack manifest — [{ key, label, system, systems }] per part — built from the pack itself.
 let packParts = [];
 const disabledParts = new Set();

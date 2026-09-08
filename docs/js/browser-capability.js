@@ -15,6 +15,19 @@ export const WEBGPU_ADAPTER_ATTEMPTS = Object.freeze([
   Object.freeze({ id: 'default', options: Object.freeze({}) }),
 ]);
 
+/** Per-attempt cap. Chrome can leave requestAdapter pending indefinitely when every adapter is blocklisted. */
+export const WEBGPU_ADAPTER_TIMEOUT_MS = 2000;
+/** Whole WebGPU probe budget so Anatomy can fall through to WebGL2 before a page watchdog fires. */
+export const WEBGPU_PROBE_BUDGET_MS = 4000;
+
+function withTimeout(promise, ms, label) {
+  let timer = 0;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label)), Math.max(1, ms));
+  });
+  return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timer));
+}
+
 const SIMD_PROBE = new Uint8Array([
   0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
   0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7b,
@@ -94,8 +107,10 @@ function probeWebGl2(documentObject) {
   }
 }
 
-async function probeWebGpu(navigatorObject, attempts) {
+async function probeWebGpu(navigatorObject, attempts, timing = {}) {
   const gpu = navigatorObject?.gpu;
+  const adapterTimeoutMs = Number(timing.adapterTimeoutMs) || WEBGPU_ADAPTER_TIMEOUT_MS;
+  const probeBudgetMs = Number(timing.probeBudgetMs) || WEBGPU_PROBE_BUDGET_MS;
   const result = {
     apiPresent: Boolean(gpu),
     state: gpu ? 'adapter_unavailable' : 'api_absent',
@@ -109,10 +124,25 @@ async function probeWebGpu(navigatorObject, attempts) {
   };
   if (!gpu?.requestAdapter) return result;
 
+  const deadline = Date.now() + probeBudgetMs;
   for (const attempt of attempts) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      result.attempts.push({
+        id: attempt.id,
+        options: { ...attempt.options },
+        state: 'adapter_request_failed',
+        error: 'probe_budget_exhausted',
+      });
+      continue;
+    }
     const record = { id: attempt.id, options: { ...attempt.options }, state: 'adapter_unavailable', error: null };
     try {
-      const adapter = await gpu.requestAdapter({ ...attempt.options });
+      const adapter = await withTimeout(
+        gpu.requestAdapter({ ...attempt.options }),
+        Math.min(adapterTimeoutMs, remaining),
+        'adapter_timeout',
+      );
       if (!adapter) {
         result.attempts.push(record);
         continue;
@@ -167,7 +197,10 @@ export async function probeBrowserCapabilities(options = {}) {
     observedAt: new Date(options.now ?? Date.now()).toISOString(),
     secureContext: options.secureContext ?? globalObject.isSecureContext === true,
     crossOriginIsolated,
-    webgpu: await probeWebGpu(navigatorObject, options.adapterAttempts || WEBGPU_ADAPTER_ATTEMPTS),
+    webgpu: await probeWebGpu(navigatorObject, options.adapterAttempts || WEBGPU_ADAPTER_ATTEMPTS, {
+      adapterTimeoutMs: options.adapterTimeoutMs,
+      probeBudgetMs: options.probeBudgetMs,
+    }),
     webgl2: probeWebGl2(documentObject),
     wasm: {
       available: wasmAvailable,

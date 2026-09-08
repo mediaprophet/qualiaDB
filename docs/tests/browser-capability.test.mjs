@@ -70,4 +70,21 @@ recordBackendDeviceOutcome(gpuReceipt, 'anatomy', { backend: 'webgpu', state: 'a
 assert.equal(gpuReceipt.webgpu.device.acquired, true);
 assert.equal(gpuReceipt.anatomyBackend.backend, 'webgpu');
 
+const hangStarted = Date.now();
+const hung = await probeBrowserCapabilities({
+  navigatorObject: {
+    hardwareConcurrency: 4,
+    gpu: { requestAdapter: () => new Promise(() => {}) },
+  },
+  documentObject: fakeDocument(fakeGl),
+  adapterTimeoutMs: 40,
+  probeBudgetMs: 80,
+  now: 0,
+});
+const hangMs = Date.now() - hangStarted;
+assert.ok(hangMs < 1500, `hanging requestAdapter must not block Anatomy (${hangMs}ms)`);
+assert.equal(hung.webgpu.adapterAvailable, false);
+assert.equal(hung.selection.anatomy, 'webgl2');
+assert.ok(hung.webgpu.attempts.some((row) => row.error === 'adapter_timeout'));
+
 console.log('Browser capability contract tests passed.');
