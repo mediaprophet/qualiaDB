@@ -1,4 +1,4 @@
-# Q1/Q2 incorporation handover — waves 22–26 complete
+# Q1/Q2 incorporation handover — waves 22–27
 
 **Date:** 2026-09-08  
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
@@ -8,44 +8,35 @@
 
 | Wave | Status | Notes |
 |------|--------|-------|
-| 1–25 | **Complete (integrated)** | Through Asset in-memory + SymbolicODE + Agent Live and Host CG through projective/quat |
-| 26 | **Complete (integrated)** | Asset persist_*×7 · Pulse remainder×9 · Portal/Avatar×5 Live; Host math-geometry×8 |
+| 1–26 | **Complete (integrated)** | Through Asset persist, Pulse live, Portal/Avatar, Host CG through affine/quat/quadratic |
+| 27 | **Complete (pending verify)** | Inference remainder×5 · Research live first×20 |
 
-### Wave 26 (this session)
+### Wave 27 (this session)
 
-- Live: Asset persist remainder×7 (`office:asset_persist_*`) · Pulse×9 (`comm:pulse_live_*` on chain `comm:pulse_live`) · Portal/Avatar×5 (`spatial:portal_*` / `spatial:avatar_*` on chain `spatial:portal`)
-- Host×8: `frame_to_world`, `world_to_frame`, `barycentric_tetra`, `quaternion_slerp`, `quaternion_to_matrix`, `solve_diagonal_quadratic`, `schur_complement_2x2`, `separating_plane_aabb`
-- Verify: poet `wave26` 5 · policy ok · integrity 11 · host `wave26_*` 8 · catalog ok
-- Backlog after wave 26: **`ALL_BOUND=1102` · `PoetLive≈798` · `Q2≈304`**
+- Live: Inference remainder×5 (`ai:inf_load_model` … `constrained_decode`) · Research enquiry/corpus/dark-link/inference first×20 (`research:live_*` on chain `research:live`)
+- Host: none (Live-first to close Q2)
+- Expected: `ALL_BOUND=1102` · `PoetLive≈823` · `Q2≈279`
 
 ## Remaining waves (estimate)
 
-Throughput recent waves: **~21–40 Poet Live + ~8 Host / wave**.
-
-| Bucket | Count (post-w26) | Est. Live waves @ ~30/wave |
-|--------|------------------|----------------------------|
-| **Q2 Host-bound not Live** | **≈304** | **~10** |
-| Large families | Research 73, Render 51 (CPU CSS/SVG/animation first; skip GPU Host-widen) | Research/Render ≈ 4 waves |
-| **Q1 Host-missing** | **~12k** (mostly CoreDb / shellish) | Curated Host lane stays **4–8 pure specialized_libs per wave**; not exhaust Q1 |
-
-**Practical estimate to finish curated Q2:** **~10 more waves**.
+| Bucket | Count (post-w27) | Notes |
+|--------|------------------|-------|
+| **Q2 Host-bound not Live** | **≈279** | Research remainder ~53, Render ~51, CG leftovers ~49, Image/Animation/long-tail |
+| Large families | Research 53, Render CPU first then GPU already-bound Live, CG leftovers 49 | ~8 more Live waves |
+| **Q1 Host-missing** | **~12k** | Not in scope |
 
 **Not in that estimate:** exhaustively Host-binding all of Q1 CoreDb.
 
-## How to continue (cloud)
+## How to continue
 
-1. Wave 27: Inference remainder (`load_model` / `unload_model` / `run_transformer` / `run_reranker` / `constrained_decode`) + Research live slice (`research:live_*` — spec already occupies hyphenated `research:*`) + Host×8 CPU math.
-2. Then Render CPU (CSS/SVG/animation, not GPU), long-tail scientific remainders.
-3. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
-4. **Never `Proficiency::Advanced`**. Dual-path. Exact Host scopes. Append-only shared files.
-5. Avoid `LinearAlgebra.gemm` CUDA/`caps()` Host path. Avoid `centrepoint` O(n⁴). Spec chain id collisions: use `*:live` suffix (see `ai:agent_live`, `video:live_*`, `comm:pulse_live`).
+1. Wave 28–29: Research remainder (~53) on `research:live`.
+2. Wave 30: Render CPU (css/svg/animation/scene/emf) as `render:live_*`.
+3. Wave 31+: CG Host leftovers Live, Image/Animation/Constructibility/CV/Clinical/Ode/HbbTV long-tail.
+4. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
+5. **Never `Proficiency::Advanced`.** Dual-path. Exact Host scopes. Skip GPU Host-widen. Skip `LinearAlgebra.gemm` Host. Avoid `centrepoint`.
 
 ## Register / ledger
 
 - Register: `docs/work-in-progress/POET_NEXT_WORK_REGISTER_2026-09-05.md`
 - Ledger: `docs/POET_IMPLEMENTATION_SESSION_LEDGER.md`
 - Swarm docs: `docs/work-in-progress/POET_Q1Q2_WAVE*_SWARM_*.md`
-
-## Build dirs
-
-Repo-local `target/` and `target-*` are gitignored. Delete before commit if present (disk bloat / lockup). Cargo may also use a sandbox cache outside the repo — that is not committed.

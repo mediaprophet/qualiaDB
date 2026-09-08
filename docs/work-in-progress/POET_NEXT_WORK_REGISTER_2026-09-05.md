@@ -56,6 +56,7 @@ evidence.
 | 42 | Q1/Q2 wave 24 | **Complete** | VectorCalculus +7 · Interpolation +6 · Spectral +5 · World +7 Live; Host CG coreset/duality/boolean +8 | Closed — wave 24 |
 | 43 | Q1/Q2 wave 25 | **Complete** | Asset +14 · SymbolicODE +5 · Agent +5 Live; Host math-geometry projective/quat/hyperplane +8 | Closed — wave 25 |
 | 44 | Q1/Q2 wave 26 | **Complete** | Asset persist_* +7 · Pulse live +9 · Portal/Avatar +5 Live; Host math-geometry affine/quat/quadratic +8 | Closed — wave 26 |
+| 45 | Q1/Q2 wave 27 | **Complete** | Inference remainder +5 · Research live first +20; Host none | Closed — wave 27 |
 
 ## Latest execution evidence
 

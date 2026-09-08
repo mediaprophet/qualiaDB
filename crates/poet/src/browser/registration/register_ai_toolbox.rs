@@ -1150,6 +1150,69 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
             },
             ActionType::Invoke,
         )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_load_model".into(),
+                label: "Load model".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.load_model".into()),
+                ontology_prefix: "ai".into(),
+                description: "Mount a resident GGUF (data-model-path / data-model-id / data-mlock)."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_unload_model".into(),
+                label: "Unload model".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.unload_model".into()),
+                ontology_prefix: "ai".into(),
+                description: "Drop the resident model mmap via Inference.unload_model.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_run_transformer".into(),
+                label: "Run transformer".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.run_transformer".into()),
+                ontology_prefix: "ai".into(),
+                description: "Forward-pass token ids (needs resident model; data-max-layers)."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_run_reranker".into(),
+                label: "Rerank candidates".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.run_reranker".into()),
+                ontology_prefix: "ai".into(),
+                description: "Rerank candidate lines by query relevance (data-query).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_constrained_decode".into(),
+                label: "Constrained decode".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.constrained_decode".into()),
+                ontology_prefix: "ai".into(),
+                description: "Mask logits to an allowed vocab via Inference.constrained_decode."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
     ];
 
     let orch_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
@@ -1385,7 +1448,7 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
                     label: "Live inference".into(),
                     icon: "ai".into(),
                     description:
-                        "Curated Inference.* activations, embed, classifier, and vector search."
+                        "Curated Inference.* activations, embed, classifier, search, and model load."
                             .into(),
                 },
                 inf_tools,

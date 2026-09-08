@@ -3183,7 +3183,18 @@ mod tests {
             "ai:inf_vector_search",
             Some("Inference.vector_search")
         )));
-        assert_eq!(tools.len(), 8);
+        assert!(tools.contains(&("ai:inf_load_model", Some("Inference.load_model"))));
+        assert!(tools.contains(&("ai:inf_unload_model", Some("Inference.unload_model"))));
+        assert!(tools.contains(&(
+            "ai:inf_run_transformer",
+            Some("Inference.run_transformer")
+        )));
+        assert!(tools.contains(&("ai:inf_run_reranker", Some("Inference.run_reranker"))));
+        assert!(tools.contains(&(
+            "ai:inf_constrained_decode",
+            Some("Inference.constrained_decode")
+        )));
+        assert_eq!(tools.len(), 13);
     }
 
     #[test]
@@ -4030,5 +4041,104 @@ mod tests {
             Some("Avatar.set_appearance")
         )));
         assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn research_live_binds_wave27_research_caps() {
+        let registry = super::build_registry();
+        let epi = registry.toolbox("epistemic").expect("epistemic toolbox");
+        let chain = epi
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "research:live")
+            .expect("research:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("research:live_new", Some("Research.new"))));
+        assert!(tools.contains(&(
+            "research:live_set_purpose",
+            Some("Research.set_purpose")
+        )));
+        assert!(tools.contains(&(
+            "research:live_define_scope",
+            Some("Research.define_scope")
+        )));
+        assert!(tools.contains(&(
+            "research:live_add_constraint",
+            Some("Research.add_constraint")
+        )));
+        assert!(tools.contains(&(
+            "research:live_add_question",
+            Some("Research.add_question")
+        )));
+        assert!(tools.contains(&(
+            "research:live_link_questions",
+            Some("Research.link_questions")
+        )));
+        assert!(tools.contains(&(
+            "research:live_add_corpus_item",
+            Some("Research.add_corpus_item")
+        )));
+        assert!(tools.contains(&(
+            "research:live_import_literature",
+            Some("Research.import_literature")
+        )));
+        assert!(tools.contains(&(
+            "research:live_import_dataset",
+            Some("Research.import_dataset")
+        )));
+        assert!(tools.contains(&(
+            "research:live_set_corpus_confidence",
+            Some("Research.set_corpus_confidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_extract_from_corpus",
+            Some("Research.extract_from_corpus")
+        )));
+        assert!(tools.contains(&(
+            "research:live_infer_dark_link",
+            Some("Research.infer_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_detect_provenance_gaps",
+            Some("Research.detect_provenance_gaps")
+        )));
+        assert!(tools.contains(&(
+            "research:live_detect_concealment",
+            Some("Research.detect_concealment")
+        )));
+        assert!(tools.contains(&(
+            "research:live_confirm_dark_link",
+            Some("Research.confirm_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_refute_dark_link",
+            Some("Research.refute_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_make_inference",
+            Some("Research.make_inference")
+        )));
+        assert!(tools.contains(&(
+            "research:live_chain_inference",
+            Some("Research.chain_inference")
+        )));
+        assert!(tools.contains(&(
+            "research:live_set_inference_confidence",
+            Some("Research.set_inference_confidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_validate_inference",
+            Some("Research.validate_inference")
+        )));
+        assert_eq!(tools.len(), 20);
     }
 }

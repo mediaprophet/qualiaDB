@@ -182,6 +182,11 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "ai:inf_embed"
             | "ai:inf_run_classifier"
             | "ai:inf_vector_search"
+            | "ai:inf_load_model"
+            | "ai:inf_unload_model"
+            | "ai:inf_run_transformer"
+            | "ai:inf_run_reranker"
+            | "ai:inf_constrained_decode"
             | "ai:ml_mse"
             | "ai:ml_rmse"
             | "ai:ml_mae"
@@ -803,6 +808,26 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "comm:pulse_live_close_channel"
         | "comm:pulse_live_set_transport"
         | "spatial:portal_set_target"
+        | "research:live_new"
+        | "research:live_set_purpose"
+        | "research:live_define_scope"
+        | "research:live_add_constraint"
+        | "research:live_add_question"
+        | "research:live_link_questions"
+        | "research:live_add_corpus_item"
+        | "research:live_import_literature"
+        | "research:live_import_dataset"
+        | "research:live_set_corpus_confidence"
+        | "research:live_extract_from_corpus"
+        | "research:live_infer_dark_link"
+        | "research:live_detect_provenance_gaps"
+        | "research:live_detect_concealment"
+        | "research:live_confirm_dark_link"
+        | "research:live_refute_dark_link"
+        | "research:live_make_inference"
+        | "research:live_chain_inference"
+        | "research:live_set_inference_confidence"
+        | "research:live_validate_inference"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -1715,6 +1740,21 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "ai:inf_vector_search" => {
             super::inference_chain_actions::run_vector_search(document, label)
+        }
+        "ai:inf_load_model" => {
+            super::inference_remainder_chain_actions::run_load_model(document, label)
+        }
+        "ai:inf_unload_model" => {
+            super::inference_remainder_chain_actions::run_unload_model(document, label)
+        }
+        "ai:inf_run_transformer" => {
+            super::inference_remainder_chain_actions::run_run_transformer(document, label)
+        }
+        "ai:inf_run_reranker" => {
+            super::inference_remainder_chain_actions::run_run_reranker(document, label)
+        }
+        "ai:inf_constrained_decode" => {
+            super::inference_remainder_chain_actions::run_constrained_decode(document, label)
         }
         "ai:ml_mse" => super::ml_chain_actions::run_mse(document, label),
         "ai:ml_rmse" => super::ml_chain_actions::run_rmse(document, label),
@@ -3059,6 +3099,64 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "spatial:avatar_move" => super::portal_chain_actions::run_move(document, label),
         "spatial:avatar_set_appearance" => {
             super::portal_chain_actions::run_set_appearance(document, label)
+        }
+        "research:live_new" => super::research_live_chain_actions::run_new(document, label),
+        "research:live_set_purpose" => {
+            super::research_live_chain_actions::run_set_purpose(document, label)
+        }
+        "research:live_define_scope" => {
+            super::research_live_chain_actions::run_define_scope(document, label)
+        }
+        "research:live_add_constraint" => {
+            super::research_live_chain_actions::run_add_constraint(document, label)
+        }
+        "research:live_add_question" => {
+            super::research_live_chain_actions::run_add_question(document, label)
+        }
+        "research:live_link_questions" => {
+            super::research_live_chain_actions::run_link_questions(document, label)
+        }
+        "research:live_add_corpus_item" => {
+            super::research_live_chain_actions::run_add_corpus_item(document, label)
+        }
+        "research:live_import_literature" => {
+            super::research_live_chain_actions::run_import_literature(document, label)
+        }
+        "research:live_import_dataset" => {
+            super::research_live_chain_actions::run_import_dataset(document, label)
+        }
+        "research:live_set_corpus_confidence" => {
+            super::research_live_chain_actions::run_set_corpus_confidence(document, label)
+        }
+        "research:live_extract_from_corpus" => {
+            super::research_live_chain_actions::run_extract_from_corpus(document, label)
+        }
+        "research:live_infer_dark_link" => {
+            super::research_live_chain_actions::run_infer_dark_link(document, label)
+        }
+        "research:live_detect_provenance_gaps" => {
+            super::research_live_chain_actions::run_detect_provenance_gaps(document, label)
+        }
+        "research:live_detect_concealment" => {
+            super::research_live_chain_actions::run_detect_concealment(document, label)
+        }
+        "research:live_confirm_dark_link" => {
+            super::research_live_chain_actions::run_confirm_dark_link(document, label)
+        }
+        "research:live_refute_dark_link" => {
+            super::research_live_chain_actions::run_refute_dark_link(document, label)
+        }
+        "research:live_make_inference" => {
+            super::research_live_chain_actions::run_make_inference(document, label)
+        }
+        "research:live_chain_inference" => {
+            super::research_live_chain_actions::run_chain_inference(document, label)
+        }
+        "research:live_set_inference_confidence" => {
+            super::research_live_chain_actions::run_set_inference_confidence(document, label)
+        }
+        "research:live_validate_inference" => {
+            super::research_live_chain_actions::run_validate_inference(document, label)
         }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),

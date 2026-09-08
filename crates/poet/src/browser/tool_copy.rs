@@ -2222,6 +2222,31 @@ fn named(id: &str) -> Option<Presentation> {
             "Search corpus lines for nearest neighbours (data-query / data-k).",
             Proficiency::Intermediate,
         ),
+        "ai:inf_load_model" => (
+            "Load model",
+            "Mount a resident GGUF from path (Host Inference.load_model; native).",
+            Proficiency::Expert,
+        ),
+        "ai:inf_unload_model" => (
+            "Unload model",
+            "Drop the resident model mmap via Inference.unload_model.",
+            Proficiency::Intermediate,
+        ),
+        "ai:inf_run_transformer" => (
+            "Run transformer",
+            "Forward-pass token ids through a resident model (needs load_model).",
+            Proficiency::Expert,
+        ),
+        "ai:inf_run_reranker" => (
+            "Rerank candidates",
+            "Rank candidate lines by relevance to a query (data-query).",
+            Proficiency::Intermediate,
+        ),
+        "ai:inf_constrained_decode" => (
+            "Constrained decode",
+            "Mask logits to an allowed vocab via Inference.constrained_decode.",
+            Proficiency::Expert,
+        ),
         "ai:orch_session_create" => (
             "Session create",
             "Create an orchestration session from surface tokens.",
@@ -3966,6 +3991,106 @@ fn named(id: &str) -> Option<Presentation> {
             "Avatar appearance",
             "Set avatar appearance via Avatar.set_appearance.",
             Proficiency::Novice,
+        ),
+        "research:live_new" => (
+            "New enquiry",
+            "Start a research enquiry via Research.new.",
+            Proficiency::Novice,
+        ),
+        "research:live_set_purpose" => (
+            "Set purpose",
+            "Set enquiry purpose via Research.set_purpose.",
+            Proficiency::Novice,
+        ),
+        "research:live_define_scope" => (
+            "Define scope",
+            "Define enquiry scope lines via Research.define_scope.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_constraint" => (
+            "Add constraint",
+            "Add a research constraint via Research.add_constraint.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_question" => (
+            "Add question",
+            "Add a research question via Research.add_question.",
+            Proficiency::Novice,
+        ),
+        "research:live_link_questions" => (
+            "Link questions",
+            "Link two questions via Research.link_questions.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_corpus_item" => (
+            "Add corpus item",
+            "Add a corpus item via Research.add_corpus_item.",
+            Proficiency::Novice,
+        ),
+        "research:live_import_literature" => (
+            "Import literature",
+            "Import literature via Research.import_literature.",
+            Proficiency::Novice,
+        ),
+        "research:live_import_dataset" => (
+            "Import dataset",
+            "Import a dataset via Research.import_dataset.",
+            Proficiency::Novice,
+        ),
+        "research:live_set_corpus_confidence" => (
+            "Corpus confidence",
+            "Set corpus confidence via Research.set_corpus_confidence.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_extract_from_corpus" => (
+            "Extract from corpus",
+            "Extract facts for a keyword via Research.extract_from_corpus.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_infer_dark_link" => (
+            "Infer dark link",
+            "Infer a dark link via Research.infer_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_provenance_gaps" => (
+            "Provenance gaps",
+            "Detect provenance gaps via Research.detect_provenance_gaps.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_concealment" => (
+            "Detect concealment",
+            "Detect concealment patterns via Research.detect_concealment.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_confirm_dark_link" => (
+            "Confirm dark link",
+            "Confirm a dark link via Research.confirm_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_refute_dark_link" => (
+            "Refute dark link",
+            "Refute a dark link via Research.refute_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_make_inference" => (
+            "Make inference",
+            "Record a premise→conclusion via Research.make_inference.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_chain_inference" => (
+            "Chain inference",
+            "Chain an inference via Research.chain_inference.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_inference_confidence" => (
+            "Inference confidence",
+            "Set inference confidence via Research.set_inference_confidence.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_validate_inference" => (
+            "Validate inference",
+            "Validate an inference via Research.validate_inference.",
+            Proficiency::Intermediate,
         ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
