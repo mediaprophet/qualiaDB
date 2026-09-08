@@ -1,10 +1,12 @@
 //! The dispatch entry the STEM substrate calls: `accelerated_gemm_f32` runs `C = A·B`
-//! on the GPU when the **measured** capability matrix says it wins and the job is big
-//! enough to be worth the dispatch, and on a `rayon` CPU path otherwise. The CPU path
-//! is always present and never hard-fails (§7).
+//! on the GPU when `gpu-runtime` is on, the **measured** capability matrix says it
+//! wins, and the job is big enough to be worth the dispatch; otherwise a `rayon` CPU
+//! path. The CPU path is always present and never hard-fails (§7).
 //!
-//! The machine benchmark ([`crate::device_benchmark`]) runs **once** here, lazily, to
-//! build the shared [`ComputePolicy`]; every subsequent call is the O(1) `select`.
+//! With `gpu-runtime`, the machine benchmark ([`crate::device_benchmark`]) runs
+//! **once** here, lazily, to build the shared [`ComputePolicy`]; every subsequent
+//! call is the O(1) `select`. Without that feature there is no GPU probe and no
+//! matrix — the path is always CPU (`RanOn::Cpu`).
 //!
 //! f64 vs f32: this accelerated path is **f32** (the GPU/WGSL reality and what the
 //! throughput-bound callers want). The exact-f64 scientific GEMM
@@ -13,13 +15,17 @@
 
 use std::sync::OnceLock;
 
+#[cfg(feature = "gpu-runtime")]
 use super::gpu_gemm;
+#[cfg(feature = "gpu-runtime")]
 use super::kernel_class::KernelClass;
 use super::policy::ComputePolicy;
+#[cfg(feature = "gpu-runtime")]
 use crate::platform::hetero_dispatch::{HostCapabilities, PowerThermalBudget};
 
 /// Below this FLOP count a GEMM stays on the CPU regardless of the matrix — GPU upload
 /// + dispatch + readback overhead dominates a small job. (`m·k·n` multiply-adds.)
+#[cfg(feature = "gpu-runtime")]
 const GPU_MIN_FLOPS: u64 = 1 << 20; // ~100³
 
 /// Which backend actually ran a dispatch (for observability and the correctness gate).
@@ -32,23 +38,31 @@ pub enum RanOn {
 static POLICY: OnceLock<ComputePolicy> = OnceLock::new();
 
 /// The shared compute policy, built once by probing this machine (the benchmark). The
-/// heavy probe runs on first call; thereafter `select` is O(1).
+/// heavy probe runs on first call; thereafter `select` is O(1). Without `gpu-runtime`
+/// there is no GPU probe — the policy is CPU-only.
 pub fn shared_policy() -> &'static ComputePolicy {
     POLICY.get_or_init(|| {
-        let registry = super::default_registry();
-        let panel = super::backend::KernelPanel::default();
-        let budget = PowerThermalBudget {
-            vram_budget_bytes: 4u64 << 30,
-            power_budget_mw: 45_000,
-            thermal_headroom_c: 20.0,
-        };
-        let host = HostCapabilities {
-            gpu_available: gpu_gemm::shared().is_some(),
-            vram_available: 2u64 << 30,
-            npu_available: false,
-            cpu_threads: num_cpus::get() as u32,
-        };
-        ComputePolicy::probe(&registry, &panel, budget, host)
+        #[cfg(feature = "gpu-runtime")]
+        {
+            let registry = super::default_registry();
+            let panel = super::backend::KernelPanel::default();
+            let budget = PowerThermalBudget {
+                vram_budget_bytes: 4u64 << 30,
+                power_budget_mw: 45_000,
+                thermal_headroom_c: 20.0,
+            };
+            let host = HostCapabilities {
+                gpu_available: gpu_gemm::shared().is_some(),
+                vram_available: 2u64 << 30,
+                npu_available: false,
+                cpu_threads: num_cpus::get() as u32,
+            };
+            ComputePolicy::probe(&registry, &panel, budget, host)
+        }
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            ComputePolicy::cpu_only()
+        }
     })
 }
 
@@ -68,9 +82,11 @@ fn cpu_gemm_f32(_m: usize, k: usize, n: usize, a: &[f32], b: &[f32], c: &mut [f3
 }
 
 /// Accelerated `C = A·B` (f32). `a` is `m×k`, `b` is `k×n`, `c` is `m×n` (overwritten).
-/// Routes to the GPU when the measured matrix favours it for `DenseLinear`, the job
-/// clears [`GPU_MIN_FLOPS`], and it fits in GPU buffers; otherwise the CPU path. Returns
-/// which backend ran. On any GPU shortfall it falls back to CPU — never a hard fail.
+/// With `gpu-runtime`, routes to the GPU when the measured matrix favours it for
+/// `DenseLinear`, the job clears [`GPU_MIN_FLOPS`], and it fits in GPU buffers;
+/// otherwise the CPU path. Without `gpu-runtime` this is always the rayon CPU path
+/// and never reports [`RanOn::Gpu`]. On any GPU shortfall it falls back to CPU —
+/// never a hard fail.
 pub fn accelerated_gemm_f32(
     m: usize,
     k: usize,
@@ -83,15 +99,18 @@ pub fn accelerated_gemm_f32(
     debug_assert_eq!(b.len(), k * n);
     debug_assert_eq!(c.len(), m * n);
 
-    let flops = (m as u64) * (k as u64) * (n as u64);
-    if flops >= GPU_MIN_FLOPS {
-        if let Some(ctx) = gpu_gemm::shared() {
-            if ctx.fits(m, k, n) {
-                let plan = shared_policy().select(KernelClass::DenseLinear, (m * n * 4) as u64);
-                if !plan.is_cpu() {
-                    if let Some(result) = ctx.gemm(m, k, n, a, b) {
-                        c.copy_from_slice(&result);
-                        return RanOn::Gpu;
+    #[cfg(feature = "gpu-runtime")]
+    {
+        let flops = (m as u64) * (k as u64) * (n as u64);
+        if flops >= GPU_MIN_FLOPS {
+            if let Some(ctx) = gpu_gemm::shared() {
+                if ctx.fits(m, k, n) {
+                    let plan = shared_policy().select(KernelClass::DenseLinear, (m * n * 4) as u64);
+                    if !plan.is_cpu() {
+                        if let Some(result) = ctx.gemm(m, k, n, a, b) {
+                            c.copy_from_slice(&result);
+                            return RanOn::Gpu;
+                        }
                     }
                 }
             }
@@ -140,6 +159,8 @@ mod tests {
         let mut c = vec![0.0f32; m * n];
         let ran = accelerated_gemm_f32(m, k, n, &a, &b, &mut c);
         eprintln!("[accelerated_gemm_f32] 128³ ran on {ran:?}");
+        #[cfg(not(feature = "gpu-runtime"))]
+        assert_eq!(ran, RanOn::Cpu, "without gpu-runtime the path is always CPU");
         let reference = ref_gemm(m, k, n, &a, &b);
         let max_err = c
             .iter()

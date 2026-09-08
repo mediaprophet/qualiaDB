@@ -895,6 +895,13 @@ pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
         .as_ref()
 }
 
+/// Fail-closed probe when native `gpu-runtime` is off (qdnf-only / wasm32).
+/// Returns `None` so CPU floors stay live. Never panics. Does not name wgpu.
+#[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
+pub fn try_shared_gpu() -> Option<&'static ()> {
+    None
+}
+
 /// Process-wide wgpu device + queue (lazy init). **Panics** if no GPU is available —
 /// use only where a device is genuinely mandatory. Prefer [`try_shared_gpu`] on any
 /// path that can fall back to CPU.
@@ -915,6 +922,16 @@ mod shared_gpu_robustness_tests {
         let first = try_shared_gpu().is_some();
         let second = try_shared_gpu().is_some();
         assert_eq!(first, second, "try_shared_gpu must be cached + consistent");
+    }
+}
+
+#[cfg(all(test, not(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))))]
+mod try_shared_gpu_fail_closed_tests {
+    use super::*;
+
+    #[test]
+    fn try_shared_gpu_is_none_without_gpu_runtime() {
+        assert!(try_shared_gpu().is_none());
     }
 }
 

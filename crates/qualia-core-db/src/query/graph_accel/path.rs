@@ -60,17 +60,29 @@ pub fn npu_available() -> bool {
 }
 
 /// Prefer GPU when a shared device exists and policy allows it.
-#[cfg(not(target_arch = "wasm32"))]
+///
+/// Without native `gpu-runtime` (and on wasm32) this is the CPU floor: the
+/// fail-closed [`crate::gpu_context::try_shared_gpu`] stub returns `None`.
+/// Never panics.
 pub fn gpu_available() -> bool {
     crate::gpu_context::try_shared_gpu().is_some()
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn gpu_available() -> bool {
-    false
 }
 
 /// Below this many records, PCIe + dispatch lose to the CPU radix floor.
 pub const GPU_SORT_MIN: usize = 65_536;
 pub const GPU_SIEVE_MIN: usize = 4_096;
 pub const GPU_JOIN_MIN: usize = 16_384;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn gpu_available_never_panics() {
+        let _ = super::gpu_available();
+    }
+
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
+    #[test]
+    fn gpu_available_is_cpu_floor_without_gpu_runtime() {
+        assert!(!super::gpu_available());
+    }
+}

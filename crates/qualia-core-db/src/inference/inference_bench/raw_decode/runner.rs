@@ -1,20 +1,26 @@
 use std::path::Path;
+#[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
 use std::time::Instant;
 
+#[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
 use crate::inference::runtime::receipt::{
     COUNTER_COMPUTE_DISPATCHES, COUNTER_DECODE_STEPS, COUNTER_DEVICE_FENCES,
     COUNTER_DEVICE_TO_HOST_BYTES, COUNTER_FALLBACKS, COUNTER_GRAPH_LAUNCHES,
     COUNTER_HOST_TO_DEVICE_BYTES,
 };
+#[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
 use crate::inference::runtime::{
     capture_source_provenance, sha256_file, sha256_token_ids, BackendKind, BenchmarkManifest,
     ExecutionReceipt, MANIFEST_SCHEMA_VERSION, RAW_GREEDY_DECODE_POLICY,
 };
 
 use super::config::{RawDecodeConfig, RawDecodeResult};
+#[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
 use super::model::RawModel;
+#[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
 use super::stats::{median_f64, percentile_nearest_rank};
 
+#[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
 fn selected_wgpu_backend() -> BackendKind {
     #[cfg(feature = "gpu-runtime")]
     {
@@ -65,6 +71,22 @@ pub fn run_raw_decode_blocking(config: &RawDecodeConfig) -> Result<RawDecodeResu
 }
 
 fn run_on_worker(config: RawDecodeConfig) -> Result<RawDecodeResult, String> {
+    #[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
+    {
+        run_on_worker_engine(config)
+    }
+    #[cfg(all(not(feature = "gpu-runtime"), not(feature = "cuda")))]
+    {
+        let _ = config;
+        Err(
+            "raw resident decode requires the `gpu-runtime` feature; refusing to stub success"
+                .into(),
+        )
+    }
+}
+
+#[cfg(any(feature = "gpu-runtime", feature = "cuda"))]
+fn run_on_worker_engine(config: RawDecodeConfig) -> Result<RawDecodeResult, String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -166,18 +188,29 @@ fn run_on_worker(config: RawDecodeConfig) -> Result<RawDecodeResult, String> {
                     );
                 }
             } else {
-                model.load_embedding(token_id)?;
-                model
-                    .engine
-                    .dispatch_token_forward_resident(
-                        &model.index,
-                        &model.emb[..model.index.emb_dim()],
-                        position,
-                    )
-                    .ok_or_else(|| {
-                        "resident raw decode became ineligible; no fallback is allowed".to_string()
-                    })?
-                    .best_token_id
+                #[cfg(feature = "gpu-runtime")]
+                {
+                    model.load_embedding(token_id)?;
+                    model
+                        .engine
+                        .dispatch_token_forward_resident(
+                            &model.index,
+                            &model.emb[..model.index.emb_dim()],
+                            position,
+                        )
+                        .ok_or_else(|| {
+                            "resident raw decode became ineligible; no fallback is allowed"
+                                .to_string()
+                        })?
+                        .best_token_id
+                }
+                #[cfg(not(feature = "gpu-runtime"))]
+                {
+                    return Err(
+                        "raw resident decode requires the `gpu-runtime` feature; refusing to stub success"
+                            .into(),
+                    );
+                }
             };
             run_step_ms[step] = step_start.elapsed().as_secs_f64() * 1000.0;
             token_id = output_token;
@@ -224,22 +257,32 @@ fn run_on_worker(config: RawDecodeConfig) -> Result<RawDecodeResult, String> {
             );
         }
     } else {
-        (
-            model
-                .engine
-                .resident_dispatches_per_token()
-                .ok_or_else(|| "resident plan did not expose a dispatch count".to_string())?
-                as u64,
-            0,
-            model
-                .engine
-                .resident_readback_bytes_per_token()
-                .ok_or_else(|| "resident plan did not expose readback bytes".to_string())?
-                as u64,
-            None,
-            "",
-            crate::gguf_bridge::MAX_CONTEXT_WINDOW,
-        )
+        #[cfg(feature = "gpu-runtime")]
+        {
+            (
+                model
+                    .engine
+                    .resident_dispatches_per_token()
+                    .ok_or_else(|| "resident plan did not expose a dispatch count".to_string())?
+                    as u64,
+                0,
+                model
+                    .engine
+                    .resident_readback_bytes_per_token()
+                    .ok_or_else(|| "resident plan did not expose readback bytes".to_string())?
+                    as u64,
+                None,
+                "",
+                crate::gguf_bridge::MAX_CONTEXT_WINDOW,
+            )
+        }
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            return Err(
+                "raw resident decode telemetry requires the `gpu-runtime` feature; refusing to stub success"
+                    .into(),
+            );
+        }
     };
     let executed_steps = config.decode_steps as u64 * config.measured_runs as u64;
 

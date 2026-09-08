@@ -5,29 +5,40 @@
 //! meaningful from a script (not device/queue internals) has an invoke id.
 
 use super::super::args;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use super::gpu::slot_with;
 use vibe::{Diagnostic, Span, Value};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::render::physics::{Aabb, Joint};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::render::telemetry::{
     ObserverStandpoint, DEONTIC_LANE_COMMONS, FABRIC_VIEWPORT_LOCAL, STANDPOINT_SPECTATOR,
 };
 
-#[cfg(target_arch = "wasm32")]
-fn native_only(span: Span, name: &str) -> Result<Value, Diagnostic> {
-    Err(args::bad(span, format!("{name} requires native build")))
+/// Native-without-GPU and WASM both fail closed — never pretend a GPU ran.
+#[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
+fn gpu_unavailable(span: Span, name: &str) -> Result<Value, Diagnostic> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        Err(args::bad(span, format!("{name} requires native build")))
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        Err(args::bad(
+            span,
+            format!("{name} requires gpu-runtime (native GPU invoke is fail-closed without it)"),
+        ))
+    }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn handle_of(args: &Value, span: Span, name: &str) -> Result<u64, Diagnostic> {
     args::rec_u64(args, "handle")
         .ok_or_else(|| args::bad(span, format!("{name} needs {{ handle: u64 }}")))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn vec3(args: &Value, key: &str) -> Option<[f32; 3]> {
     let xs = args::rec_f64_list(args, key)?;
     if xs.len() != 3 {
@@ -36,7 +47,7 @@ fn vec3(args: &Value, key: &str) -> Option<[f32; 3]> {
     Some([xs[0] as f32, xs[1] as f32, xs[2] as f32])
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn class_from(s: &str) -> u32 {
     match s {
         "ephemeral" => 1,
@@ -46,7 +57,7 @@ fn class_from(s: &str) -> u32 {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn class_name(c: u32) -> &'static str {
     match c {
         1 => "ephemeral",
@@ -58,7 +69,7 @@ fn class_name(c: u32) -> &'static str {
 
 /// `Render.gpu_upload_mesh_colored` — triangle mesh with per-vertex RGBA.
 pub fn gpu_upload_mesh_colored(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_upload_mesh_colored")?;
@@ -95,15 +106,15 @@ pub fn gpu_upload_mesh_colored(_args: &Value, span: Span) -> Result<Value, Diagn
             Value::U64(tri_count as u64),
         )]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_upload_mesh_colored")
+        gpu_unavailable(span, "gpu_upload_mesh_colored")
     }
 }
 
 /// `Render.gpu_set_standpoint` — human-centric observer standpoint.
 pub fn gpu_set_standpoint(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_set_standpoint")?;
@@ -125,15 +136,15 @@ pub fn gpu_set_standpoint(_args: &Value, span: Span) -> Result<Value, Diagnostic
             .ok_or_else(|| args::bad(span, "gpu_set_standpoint: invalid handle"))?;
         Ok(args::record([("set", Value::Bool(true))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_set_standpoint")
+        gpu_unavailable(span, "gpu_set_standpoint")
     }
 }
 
 /// `Render.gpu_observer_standpoint` — read the current observer standpoint.
 pub fn gpu_observer_standpoint(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_observer_standpoint")?;
@@ -154,15 +165,15 @@ pub fn gpu_observer_standpoint(_args: &Value, span: Span) -> Result<Value, Diagn
             ("fabric_gate", Value::U64(o.fabric_gate as u64)),
         ]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_observer_standpoint")
+        gpu_unavailable(span, "gpu_observer_standpoint")
     }
 }
 
 /// `Render.gpu_camera_state` — read yaw/pitch/zoom.
 pub fn gpu_camera_state(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_camera_state")?;
@@ -174,15 +185,15 @@ pub fn gpu_camera_state(_args: &Value, span: Span) -> Result<Value, Diagnostic> 
             ("zoom", Value::F64(cam.zoom as f64)),
         ]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_camera_state")
+        gpu_unavailable(span, "gpu_camera_state")
     }
 }
 
 /// `Render.gpu_surface_size` — configured color/depth extent.
 pub fn gpu_surface_size(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_surface_size")?;
@@ -193,15 +204,15 @@ pub fn gpu_surface_size(_args: &Value, span: Span) -> Result<Value, Diagnostic> 
             ("height", Value::U64(h as u64)),
         ]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_surface_size")
+        gpu_unavailable(span, "gpu_surface_size")
     }
 }
 
 /// `Render.gpu_has_mesh`
 pub fn gpu_has_mesh(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_has_mesh")?;
@@ -209,15 +220,15 @@ pub fn gpu_has_mesh(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
             .ok_or_else(|| args::bad(span, "gpu_has_mesh: invalid handle"))?;
         Ok(args::record([("has_mesh", Value::Bool(has))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_has_mesh")
+        gpu_unavailable(span, "gpu_has_mesh")
     }
 }
 
 /// `Render.gpu_has_tensor`
 pub fn gpu_has_tensor(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_has_tensor")?;
@@ -225,15 +236,15 @@ pub fn gpu_has_tensor(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
             .ok_or_else(|| args::bad(span, "gpu_has_tensor: invalid handle"))?;
         Ok(args::record([("has_tensor", Value::Bool(has))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_has_tensor")
+        gpu_unavailable(span, "gpu_has_tensor")
     }
 }
 
 /// `Render.gpu_tensor_node_count`
 pub fn gpu_tensor_node_count(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_tensor_node_count")?;
@@ -241,15 +252,15 @@ pub fn gpu_tensor_node_count(_args: &Value, span: Span) -> Result<Value, Diagnos
             .ok_or_else(|| args::bad(span, "gpu_tensor_node_count: invalid handle"))?;
         Ok(args::record([("node_count", Value::U64(n as u64))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_tensor_node_count")
+        gpu_unavailable(span, "gpu_tensor_node_count")
     }
 }
 
 /// `Render.gpu_particle_count`
 pub fn gpu_particle_count(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_particle_count")?;
@@ -257,15 +268,15 @@ pub fn gpu_particle_count(_args: &Value, span: Span) -> Result<Value, Diagnostic
             .ok_or_else(|| args::bad(span, "gpu_particle_count: invalid handle"))?;
         Ok(args::record([("particle_count", Value::U64(n as u64))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_particle_count")
+        gpu_unavailable(span, "gpu_particle_count")
     }
 }
 
 /// `Render.gpu_sync_bloom` — reconcile HDR bloom targets with VRAM mode.
 pub fn gpu_sync_bloom(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_sync_bloom")?;
@@ -273,15 +284,15 @@ pub fn gpu_sync_bloom(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
             .ok_or_else(|| args::bad(span, "gpu_sync_bloom: invalid handle"))?;
         Ok(args::record([("synced", Value::Bool(true))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_sync_bloom")
+        gpu_unavailable(span, "gpu_sync_bloom")
     }
 }
 
 /// `Render.gpu_set_artefact_joint` — kinematic joint (revolute/prismatic) or clear.
 pub fn gpu_set_artefact_joint(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_set_artefact_joint")?;
@@ -301,15 +312,15 @@ pub fn gpu_set_artefact_joint(_args: &Value, span: Span) -> Result<Value, Diagno
             .ok_or_else(|| args::bad(span, "gpu_set_artefact_joint: invalid handle"))?;
         Ok(args::record([("set", Value::Bool(true))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_set_artefact_joint")
+        gpu_unavailable(span, "gpu_set_artefact_joint")
     }
 }
 
 /// `Render.gpu_set_artefact_world` — world AABB constraint, or clear.
 pub fn gpu_set_artefact_world(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_set_artefact_world")?;
@@ -325,15 +336,15 @@ pub fn gpu_set_artefact_world(_args: &Value, span: Span) -> Result<Value, Diagno
             .ok_or_else(|| args::bad(span, "gpu_set_artefact_world: invalid handle"))?;
         Ok(args::record([("set", Value::Bool(true))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_set_artefact_world")
+        gpu_unavailable(span, "gpu_set_artefact_world")
     }
 }
 
 /// `Render.gpu_artefact_refused` — last frame's joint pose was refused.
 pub fn gpu_artefact_refused(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_artefact_refused")?;
@@ -341,15 +352,15 @@ pub fn gpu_artefact_refused(_args: &Value, span: Span) -> Result<Value, Diagnost
             .ok_or_else(|| args::bad(span, "gpu_artefact_refused: invalid handle"))?;
         Ok(args::record([("refused", Value::Bool(refused))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_artefact_refused")
+        gpu_unavailable(span, "gpu_artefact_refused")
     }
 }
 
 /// `Render.gpu_required_rgba8_bytes` — readback buffer size for current surface.
 pub fn gpu_required_rgba8_bytes(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let args = _args;
         let handle = handle_of(args, span, "gpu_required_rgba8_bytes")?;
@@ -357,14 +368,13 @@ pub fn gpu_required_rgba8_bytes(_args: &Value, span: Span) -> Result<Value, Diag
             .ok_or_else(|| args::bad(span, "gpu_required_rgba8_bytes: invalid handle"))?;
         Ok(args::record([("bytes", Value::U64(n as u64))]))
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
-        native_only(span, "gpu_required_rgba8_bytes")
+        gpu_unavailable(span, "gpu_required_rgba8_bytes")
     }
 }
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod tests {
     use super::*;
     use crate::gpu_context;

@@ -2,7 +2,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod compute_bridge;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod device_benchmark;
 pub mod git_bridge;
 #[cfg(not(target_arch = "wasm32"))]

@@ -1386,8 +1386,8 @@ pub fn execute_vm_frame(
                     step_size
                 );
 
-                // Create GPU integrator and attempt async execution
-                #[cfg(not(target_arch = "wasm32"))]
+                // GPU integrator is `gpu-runtime` only. CPU Simpson's remains on every path.
+                #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                 {
                     use crate::modalities::calculus::gpu::{GpuIntegrator, PlatformGpuIntegrator};
                     use std::path::Path;
@@ -1491,10 +1491,10 @@ pub fn execute_vm_frame(
                     }
                 }
 
-                #[cfg(target_arch = "wasm32")]
+                #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
                 {
                     vm_log!(
-                        "[Webizen] NativeCalcGpu: GPU not available on WASM, using CPU fallback"
+                        "[Webizen] NativeCalcGpu: GPU runtime unavailable, using CPU fallback"
                     );
                     let grid_data: Vec<u8> = vec![0u8; 1001 * 8];
                     let grid =

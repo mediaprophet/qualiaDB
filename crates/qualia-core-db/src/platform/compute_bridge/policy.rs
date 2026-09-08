@@ -7,56 +7,100 @@
 //! matrix and returns a `Copy` plan) — the heavy probe ran once at boot. CPU is
 //! always a valid plan and never hard-fails (plan §7).
 //!
-//! This *wraps* the existing vendor-neutral `hetero_dispatch` helpers (precision,
-//! tiling, zero-copy) rather than duplicating them, and adds the part they cannot do
-//! alone: the measured per-class backend/circuit choice from the matrix.
+//! With `gpu-runtime` this *wraps* the existing vendor-neutral `hetero_dispatch`
+//! helpers (precision, tiling, zero-copy) rather than duplicating them, and adds
+//! the part they cannot do alone: the measured per-class backend/circuit choice
+//! from the matrix. Without that feature there is no GPU probe and no matrix —
+//! `select` always returns a CPU plan.
 
+#[cfg(feature = "gpu-runtime")]
 use crate::device_benchmark::CircuitKind;
+#[cfg(feature = "gpu-runtime")]
 use crate::platform::hetero_dispatch::{
     select_precision, HeterogeneousDispatcher, HostCapabilities, PowerThermalBudget, Precision,
     ZeroCopyStrategy,
 };
 
-use super::backend::{BackendId, KernelPanel};
+use super::backend::BackendId;
+#[cfg(feature = "gpu-runtime")]
+use super::backend::KernelPanel;
 use super::kernel_class::KernelClass;
+#[cfg(feature = "gpu-runtime")]
 use super::matrix::{probe_class_matrix, ClassMatrix};
 
 /// The resolved execution plan for one kernel dispatch. `Copy`, zero-heap — it
 /// names the backend/circuit and the precision/tiling/transfer policy, all of which
 /// are small scalars. The human-readable circuit label stays in the matrix.
+///
+/// GPU-only fields (`circuit_kind`, `precision`, `zero_copy`) exist only with
+/// `gpu-runtime`. Without it the plan is a CPU backend with a single in-pool tile.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Plan {
     /// Which acceleration method to run on (`"cpu"`, `"wgpu"`, …).
     pub backend: BackendId,
     /// The circuit class chosen (discrete GPU / iGPU / CPU / NPU).
+    #[cfg(feature = "gpu-runtime")]
     pub circuit_kind: CircuitKind,
     /// Numeric precision to use (from the host's VRAM/power/thermal envelope).
+    #[cfg(feature = "gpu-runtime")]
     pub precision: Precision,
     /// Number of sequential tiles a GPU job is split into so each fits in VRAM
     /// (graceful degradation, never an OOM hard-fail). 1 on CPU or when it fits.
     pub tiles: u32,
     /// How data reaches the device (mmap-direct on unified memory, else staging).
+    #[cfg(feature = "gpu-runtime")]
     pub zero_copy: ZeroCopyStrategy,
 }
 
 impl Plan {
     /// Is this plan running on the CPU fallback?
     pub fn is_cpu(self) -> bool {
-        self.backend == BackendId::CPU || self.circuit_kind == CircuitKind::Cpu
+        #[cfg(feature = "gpu-runtime")]
+        {
+            self.backend == BackendId::CPU || self.circuit_kind == CircuitKind::Cpu
+        }
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            self.backend == BackendId::CPU
+        }
+    }
+
+    fn cpu() -> Self {
+        Self {
+            backend: BackendId::CPU,
+            #[cfg(feature = "gpu-runtime")]
+            circuit_kind: CircuitKind::Cpu,
+            #[cfg(feature = "gpu-runtime")]
+            precision: Precision::F32,
+            tiles: 1,
+            #[cfg(feature = "gpu-runtime")]
+            zero_copy: ZeroCopyStrategy::MmapDirect,
+        }
     }
 }
 
 /// The shared compute policy: a measured per-class matrix plus the host's
 /// precision/VRAM envelope. Built once at startup; `select` is the hot, O(1) call.
+/// Without `gpu-runtime` there is no matrix — every select is the CPU plan.
 pub struct ComputePolicy {
+    #[cfg(feature = "gpu-runtime")]
     matrix: ClassMatrix,
+    #[cfg(feature = "gpu-runtime")]
     budget: PowerThermalBudget,
+    #[cfg(feature = "gpu-runtime")]
     host: HostCapabilities,
 }
 
 impl ComputePolicy {
+    /// CPU-only policy used when `gpu-runtime` is off (no probe, no matrix).
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub fn cpu_only() -> Self {
+        Self {}
+    }
+
     /// Build from an already-measured per-class matrix (e.g. one loaded from the
     /// passport, or a synthetic one in tests — no GPU required).
+    #[cfg(feature = "gpu-runtime")]
     pub fn from_class_matrix(
         matrix: ClassMatrix,
         budget: PowerThermalBudget,
@@ -71,6 +115,7 @@ impl ComputePolicy {
 
     /// Probe the registry once (heavy) and build the policy. Call at startup; cache
     /// the matrix in the passport to avoid re-probing every boot.
+    #[cfg(feature = "gpu-runtime")]
     pub fn probe(
         registry: &super::backend::BackendRegistry,
         panel: &KernelPanel,
@@ -81,68 +126,71 @@ impl ComputePolicy {
     }
 
     /// The measured per-class matrix (for inspection / passport caching).
+    #[cfg(feature = "gpu-runtime")]
     pub fn matrix(&self) -> &ClassMatrix {
         &self.matrix
     }
 
     /// Select the execution plan for a `class` kernel touching `problem_bytes` of
     /// data. O(1), zero-heap, never fails: returns a CPU plan when no accelerator
-    /// wins, when no GPU was probed, or when the measured GPU win is within noise of
-    /// CPU for a class that is not typically GPU-amenable (the §13 tie-break — a
-    /// measured GPU win on an amenable class is always honoured).
+    /// wins, when no GPU was probed, when `gpu-runtime` is off, or when the measured
+    /// GPU win is within noise of CPU for a class that is not typically GPU-amenable
+    /// (the §13 tie-break — a measured GPU win on an amenable class is always
+    /// honoured).
     pub fn select(&self, class: KernelClass, problem_bytes: u64) -> Plan {
-        // Precision from the host's VRAM/power/thermal envelope (reuse hetero_dispatch).
-        // Treat the problem as f32 elements for the param-count proxy.
-        let param_count = (problem_bytes / 4).max(1);
-        let precision = select_precision(param_count, &self.budget);
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            let _ = (class, problem_bytes);
+            return Plan::cpu();
+        }
+        #[cfg(feature = "gpu-runtime")]
+        {
+            // Precision from the host's VRAM/power/thermal envelope (reuse hetero_dispatch).
+            // Treat the problem as f32 elements for the param-count proxy.
+            let param_count = (problem_bytes / 4).max(1);
+            let precision = select_precision(param_count, &self.budget);
 
-        let best = self.matrix.best_for(class);
-        let cpu_ms = self
-            .matrix
-            .rows(class)
-            .iter()
-            .find(|r| r.kind == CircuitKind::Cpu)
-            .map(|r| r.ms_per_gemv);
+            let best = self.matrix.best_for(class);
+            let cpu_ms = self
+                .matrix
+                .rows(class)
+                .iter()
+                .find(|r| r.kind == CircuitKind::Cpu)
+                .map(|r| r.ms_per_gemv);
 
-        let choose_gpu = match best {
-            None => false,                                  // class not probed at all → CPU
-            Some(b) if b.kind == CircuitKind::Cpu => false, // CPU already won
-            Some(b) => {
-                // A GPU/other circuit measured fastest. Honour it unless the class is
-                // not GPU-amenable AND the win over CPU is within ~5% (measurement
-                // noise) — then prefer the simpler CPU path.
-                if class.is_typically_gpu_amenable() {
-                    true
-                } else if let Some(cms) = cpu_ms {
-                    b.ms_per_gemv < cms * 0.95
-                } else {
-                    true
+            let choose_gpu = match best {
+                None => false,                                  // class not probed at all → CPU
+                Some(b) if b.kind == CircuitKind::Cpu => false, // CPU already won
+                Some(b) => {
+                    // A GPU/other circuit measured fastest. Honour it unless the class is
+                    // not GPU-amenable AND the win over CPU is within ~5% (measurement
+                    // noise) — then prefer the simpler CPU path.
+                    if class.is_typically_gpu_amenable() {
+                        true
+                    } else if let Some(cms) = cpu_ms {
+                        b.ms_per_gemv < cms * 0.95
+                    } else {
+                        true
+                    }
                 }
-            }
-        };
-
-        if let (true, Some(b)) = (choose_gpu, best) {
-            let dispatcher = HeterogeneousDispatcher::new(self.host);
-            let tiles = dispatcher.gpu_tiles(problem_bytes);
-            let zero_copy = match b.kind {
-                CircuitKind::DiscreteGpu => ZeroCopyStrategy::StagingUpload,
-                _ => ZeroCopyStrategy::MmapDirect, // integrated/unified or NPU
             };
-            Plan {
-                backend: BackendId(backend_id_for(&b.backend)),
-                circuit_kind: b.kind,
-                precision,
-                tiles,
-                zero_copy,
-            }
-        } else {
-            // CPU fallback — always valid, single pass, in-pool.
-            Plan {
-                backend: BackendId::CPU,
-                circuit_kind: CircuitKind::Cpu,
-                precision: Precision::F32, // CPU reference runs in f32
-                tiles: 1,
-                zero_copy: ZeroCopyStrategy::MmapDirect,
+
+            if let (true, Some(b)) = (choose_gpu, best) {
+                let dispatcher = HeterogeneousDispatcher::new(self.host);
+                let tiles = dispatcher.gpu_tiles(problem_bytes);
+                let zero_copy = match b.kind {
+                    CircuitKind::DiscreteGpu => ZeroCopyStrategy::StagingUpload,
+                    _ => ZeroCopyStrategy::MmapDirect, // integrated/unified or NPU
+                };
+                Plan {
+                    backend: BackendId(backend_id_for(&b.backend)),
+                    circuit_kind: b.kind,
+                    precision,
+                    tiles,
+                    zero_copy,
+                }
+            } else {
+                Plan::cpu()
             }
         }
     }
@@ -151,6 +199,7 @@ impl ComputePolicy {
 /// Map a `CircuitBench.backend` string (`"Vulkan"`, `"Dx12"`, `"native"`, …) to a
 /// stable `BackendId`. wgpu circuits all carry the `"wgpu"` id (the adapter API is
 /// in `circuit_kind`/the matrix label); native is CPU.
+#[cfg(feature = "gpu-runtime")]
 fn backend_id_for(backend: &str) -> &'static str {
     match backend {
         "native" => "cpu",
@@ -158,7 +207,7 @@ fn backend_id_for(backend: &str) -> &'static str {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "gpu-runtime"))]
 mod tests {
     use super::*;
     use crate::device_benchmark::CircuitBench;
@@ -264,5 +313,21 @@ mod tests {
         let plan = policy.select(KernelClass::DenseLinear, 5 * GIB);
         assert!(!plan.is_cpu());
         assert_eq!(plan.tiles, 3);
+    }
+}
+
+#[cfg(all(test, not(feature = "gpu-runtime")))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cpu_only_policy_always_selects_cpu() {
+        let policy = ComputePolicy::cpu_only();
+        for class in KernelClass::ALL {
+            let plan = policy.select(class, 1 << 30);
+            assert!(plan.is_cpu());
+            assert_eq!(plan.backend, BackendId::CPU);
+            assert_eq!(plan.tiles, 1);
+        }
     }
 }

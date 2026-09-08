@@ -25,7 +25,7 @@ use vibe::{Diagnostic, Span, Value};
 /// The `webgl2_fallback` field indicates whether WebGL2 is available as a
 /// fallback even when WebGPU is the selected backend.
 pub fn gpu_backend_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let ctx = crate::gpu_context::try_shared_gpu();
         let Some(ctx) = ctx else {
@@ -61,6 +61,19 @@ pub fn gpu_backend_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
             (
                 "max_storage_buffer_binding_size",
                 Value::U64(caps.limits.max_storage_buffer_binding_size),
+            ),
+        ]))
+    }
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+    {
+        let _ = (_args, _span);
+        Ok(args::record([
+            ("backend", Value::String("none".into())),
+            ("available", Value::Bool(false)),
+            ("webgl2_fallback", Value::Bool(false)),
+            (
+                "device_name",
+                Value::String("gpu-runtime not compiled".into()),
             ),
         ]))
     }

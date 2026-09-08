@@ -1385,6 +1385,56 @@ impl QTensorEngine {
         })
     }
 
+    /// CPU-only engine: mmap + hyperparams + dequant/GEMM. No wgpu, no device.
+    #[cfg(not(feature = "gpu-runtime"))]
+    fn cpu_runtime() -> Self {
+        Self {
+            is_initialized: true,
+            #[cfg(target_os = "windows")]
+            dml: None,
+            gguf_mmap: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tokenizer: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tensor_index: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_token_embd: None,
+            #[cfg(target_arch = "wasm32")]
+            p64_resident: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            p64_index: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            tensor_index_cache: None,
+            tensor_data_offset: 0,
+            hyperparams: crate::gguf_sharder::GgufHyperparams::default(),
+            max_tensor_bytes: 0,
+            #[cfg(target_arch = "wasm32")]
+            mc8_weights_resident: false,
+            #[cfg(target_arch = "wasm32")]
+            mc8_weight_role_stride: [0u64; 7],
+            gemm_max_out_dim: MAX_STACK_GEMM_OUT as u32,
+            gemm_max_input_floats: 0,
+            kv_layout: None,
+            kv_cache_cpu: None,
+            mc8_logits_row_bytes: 0,
+            #[cfg(target_arch = "wasm32")]
+            mc8_norm_stride: 0,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+            cuda_decode_plan: super::cuda_decode_plan::CudaDecodePlanState::Unbuilt,
+        }
+    }
+
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub async fn try_new() -> Result<Self, String> {
+        log::info!("LLM_LOAD|engine-init|0.10|Initializing CPU-only GGUF runtime (gpu-runtime off)");
+        Ok(Self::cpu_runtime())
+    }
+
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub fn new() -> Self {
+        Self::cpu_runtime()
+    }
+
     #[cfg(feature = "gpu-runtime")]
     pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
         let layout = match KvCacheLayout::from_hyperparams(h) {
@@ -1483,6 +1533,25 @@ impl QTensorEngine {
                 "f32"
             },
             layout.max_context,
+        );
+    }
+
+    /// CPU-only KV arena: layout + host mirror. No wgpu buffers.
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
+        let layout = match KvCacheLayout::from_hyperparams(h) {
+            Some(l) => l,
+            None => return,
+        };
+        let total = layout.total_f32_elems;
+        let max_context = layout.max_context;
+        let cpu = vec![0f32; total].into_boxed_slice();
+        self.kv_layout = Some(layout);
+        self.kv_cache_cpu = Some(cpu);
+        log::info!(
+            "LLM_LOAD|kv-cache|0.86|Reserved {:.1} MiB CPU KV cache (context {})",
+            (total * std::mem::size_of::<f32>()) as f64 / (1024.0 * 1024.0),
+            max_context,
         );
     }
 
@@ -1890,3 +1959,7 @@ impl QTensorEngine {
         self.max_tensor_bytes = max_weight_bytes;
     }
 }
+
+/// Compile-time proof that CPU constructors exist when wgpu is not linked.
+#[cfg(not(feature = "gpu-runtime"))]
+const _: fn() -> super::QTensorEngine = super::QTensorEngine::new;

@@ -428,7 +428,7 @@ impl LocalLlmAgent {
                 let mut sampler_logits: Vec<f32> = Vec::new();
                 // Decode-profiler (gated): one-shot empty submit→wait baseline on the SAME device, so
                 // the bench can separate per-token fence latency from real kernel compute time.
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                 if std::env::var("QUALIA_LLM_PROFILE_DECODE").is_ok() {
                     let n = 64u32;
                     crate::llm_bench::record_empty_rt(
@@ -514,7 +514,7 @@ impl LocalLlmAgent {
                     // Prefer quant-graph fact draft when mode=quant-graph; else n-gram prompt-lookup.
                     // FastVerify: skip mid-decode fact draft (post-turn heal only) for Ollama-like speed.
                     // Verify drafts in ONE batched forward. Bit-identical to greedy when accepted.
-                    #[cfg(not(target_arch = "wasm32"))]
+                    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                     if (crate::llm_bench::spec_decode_enabled()
                         || (crate::inference_modes::quant_graph_grounding_enabled()
                             && crate::inference_modes::sentinel_mid_decode_enabled()))
@@ -671,7 +671,7 @@ impl LocalLlmAgent {
                             //   • greedy → GPU top-1 inside the encoder
                             //   • sampler → same layer stack, read back post-norm hidden, then
                             //     full logits + CPU sample (chat no longer pays ~107 fences/token)
-                            #[cfg(not(target_arch = "wasm32"))]
+                            #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                             let (resident_hit, resident_hidden_ok) = if sieve_mask.is_none()
                                 && TEST_TRANSFORMER_LAYER_CAP == 0
                             {
@@ -717,7 +717,7 @@ impl LocalLlmAgent {
                             } else {
                                 (None, false)
                             };
-                            #[cfg(target_arch = "wasm32")]
+                            #[cfg(any(target_arch = "wasm32", not(feature = "gpu-runtime")))]
                             let (resident_hit, resident_hidden_ok): (
                                 Option<crate::gguf_bridge::StreamingArgmaxResult>,
                                 bool,
@@ -862,11 +862,18 @@ impl LocalLlmAgent {
                             } else if resident_hit.is_some() {
                                 resident_hit
                             } else if gpu_topk_enabled && sieve_mask.is_none() {
-                                engine.dispatch_output_top1_chunked(
-                                    idx,
-                                    &emb_buf[..emb_dim],
-                                    emb_dim,
-                                )
+                                #[cfg(feature = "gpu-runtime")]
+                                {
+                                    engine.dispatch_output_top1_chunked(
+                                        idx,
+                                        &emb_buf[..emb_dim],
+                                        emb_dim,
+                                    )
+                                }
+                                #[cfg(not(feature = "gpu-runtime"))]
+                                {
+                                    None
+                                }
                             } else {
                                 None
                             };
@@ -988,6 +995,7 @@ impl LocalLlmAgent {
                             top_v,
                             tok.decode(&[top_i as u32])
                         );
+                        #[cfg(feature = "gpu-runtime")]
                         if let Some(idx) = tensor_idx.as_ref() {
                             if let Some(top5) = engine.dispatch_output_topk_chunked(
                                 idx,

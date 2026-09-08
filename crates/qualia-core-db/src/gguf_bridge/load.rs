@@ -54,13 +54,14 @@ impl QTensorEngine {
 
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
-        let staging = index
-            .max_layer_tensor_bytes
-            .max(4096)
-            .min(MAX_WGPU_WEIGHT_STAGING);
         #[cfg(feature = "gpu-runtime")]
-        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
-        #[cfg(feature = "gpu-runtime")]
+        {
+            let staging = index
+                .max_layer_tensor_bytes
+                .max(4096)
+                .min(MAX_WGPU_WEIGHT_STAGING);
+            self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        }
         self.ensure_kv_cache(&index.hyperparams);
         self.gguf_mmap = Some(Arc::new(mmap));
         self.p64_index = None;
@@ -207,15 +208,15 @@ impl QTensorEngine {
         }
         self.hyperparams = hp;
         self.tensor_data_offset = 0; // P64 blob offsets are absolute
-        let staging = index
-            .max_layer_tensor_bytes
-            .max(4096)
-            .min(MAX_WGPU_WEIGHT_STAGING);
         #[cfg(feature = "gpu-runtime")]
-        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
-        #[cfg(feature = "gpu-runtime")]
+        {
+            let staging = index
+                .max_layer_tensor_bytes
+                .max(4096)
+                .min(MAX_WGPU_WEIGHT_STAGING);
+            self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        }
         self.ensure_kv_cache(&hp);
-        #[cfg(feature = "gpu-runtime")]
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
             return Err("P64: KV cache allocation failed".to_string());
         }
@@ -295,13 +296,14 @@ impl QTensorEngine {
         }
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
-        let staging = index
-            .max_layer_tensor_bytes
-            .max(4096)
-            .min(MAX_WGPU_WEIGHT_STAGING);
         #[cfg(feature = "gpu-runtime")]
-        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
-        #[cfg(feature = "gpu-runtime")]
+        {
+            let staging = index
+                .max_layer_tensor_bytes
+                .max(4096)
+                .min(MAX_WGPU_WEIGHT_STAGING);
+            self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        }
         self.ensure_kv_cache(&index.hyperparams);
         self.gguf_mmap = Some(mmap);
         self.p64_index = None;

@@ -113,7 +113,7 @@ pub fn decode_with_metrics(
 /// `(max_abs_err, mean_abs_err, max_ulp, gpu_gemm_passes_profiled)`. A non-zero pass count proves the
 /// GPU path actually executed — the engine readback falls back to CPU when no tokio handle is present,
 /// so the `rt.enter()` below installs one to force the real GPU path.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn gemm_parity_probe_blocking(
     n_in: usize,
     n_out: usize,
@@ -187,11 +187,23 @@ pub fn gemm_parity_probe_blocking(
     ))
 }
 
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+pub fn gemm_parity_probe_blocking(
+    n_in: usize,
+    n_out: usize,
+    seed: u64,
+) -> Result<(f32, f64, u64, u64), String> {
+    let _ = (n_in, n_out, seed);
+    Err(
+        "GEMM parity probe requires the `gpu-runtime` feature; refusing to stub GPU success".into(),
+    )
+}
+
 /// W3/F16 — GPU↔CPU parity for the new **F16** GEMM path (`unpack2x16float` in the shader vs the CPU
 /// `dequant_f16` reference). Synthesizes a random F16 weight matrix (`n_out` rows × `n_in`; no block
 /// constraint) + input from `seed`, runs both on identical bytes, returns
 /// `(max_abs_err, mean_abs_err, max_ulp, gpu_gemm_passes)`. Same witness rule as the Q8 probe.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn gemm_parity_probe_f16_blocking(
     n_in: usize,
     n_out: usize,
@@ -262,6 +274,19 @@ pub fn gemm_parity_probe_f16_blocking(
         crate::llm_kernel_parity::max_ulp_diff(&gpu_out, &cpu_out),
         calls,
     ))
+}
+
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+pub fn gemm_parity_probe_f16_blocking(
+    n_in: usize,
+    n_out: usize,
+    seed: u64,
+) -> Result<(f32, f64, u64, u64), String> {
+    let _ = (n_in, n_out, seed);
+    Err(
+        "F16 GEMM parity probe requires the `gpu-runtime` feature; refusing to stub GPU success"
+            .into(),
+    )
 }
 
 /// W1 — teacher-forced perplexity of `model_path` over the eval corpus, run through Qualia's **native**
@@ -409,7 +434,7 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
 /// Because it samples the actual decode-path vectors (not the CPU reference), it cross-checks the hook
 /// capture: if both agree, the measured KV geometry is trustworthy. Stops early once every layer's cap
 /// is hit. Needs a GPU.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn capture_kv_gpu_readback(
     model_path: &str,
     max_tok: usize,
@@ -561,6 +586,18 @@ pub fn capture_kv_gpu_readback(
     .map_err(|_| "kv capture thread panicked".to_string())?
 }
 
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+pub fn capture_kv_gpu_readback(
+    model_path: &str,
+    max_tok: usize,
+    max_per_layer: usize,
+) -> Result<crate::kv_capture::KvCapture, String> {
+    let _ = (model_path, max_tok, max_per_layer);
+    Err(
+        "GPU KV readback requires the `gpu-runtime` feature; refusing to stub GPU success".into(),
+    )
+}
+
 /// AWQ α-sweep on the ternary FFN (AWQ steps 1–3 end to end): capture activation salience from the Q8
 /// reference at `gguf_path`, then for each α compile an AWQ-scaled ternary `.q42`
 /// (`compile_gguf_to_q42_ternary_ffn_awq`), evaluate its perplexity + unique-word coherence, and return
@@ -659,7 +696,7 @@ pub fn decode_sampled_blocking(
 /// Returns `(reference, verify)`; they must be equal — the batched forward writes byte-identical KV
 /// and both sides take a full-logit CPU argmax (no top-k tie-break gap). Runs on a dedicated thread
 /// with a current-thread runtime (mirrors the decode/perplexity paths so GPU readback works).
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn spec_verify_probe_blocking(
     model_path: &str,
     prompt: &str,
@@ -823,4 +860,17 @@ pub fn spec_verify_probe_blocking(
     })
     .join()
     .map_err(|_| "spec-verify probe thread panicked".to_string())?
+}
+
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+pub fn spec_verify_probe_blocking(
+    model_path: &str,
+    prompt: &str,
+    b: usize,
+) -> Result<(Vec<u32>, Vec<u32>, Vec<u32>), String> {
+    let _ = (model_path, prompt, b);
+    Err(
+        "speculative-verify probe requires the `gpu-runtime` feature; refusing to stub GPU success"
+            .into(),
+    )
 }

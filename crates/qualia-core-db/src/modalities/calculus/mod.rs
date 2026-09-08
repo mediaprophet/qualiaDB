@@ -80,7 +80,7 @@ pub use host::{DmaBuffer, IoError, DEFAULT_BUFFER_SIZE, PAGE_SIZE};
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator, WebGpuIntegrator};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use hetero_dispatch::{
     plan_fusion, select_precision, ComputeBackend, HeterogeneousDispatcher, HostCapabilities,
     PowerThermalBudget, Precision, TensorOp, TensorOpKind, ZeroCopyStrategy,

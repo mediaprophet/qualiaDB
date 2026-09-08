@@ -703,6 +703,7 @@ pub fn dispatch(
         ids::RENDER_ANIMATION_LIST_PRESETS | ids::ANIMATION_LIST_PRESETS => {
             render::animation_list_presets(args, span)
         }
+        #[cfg(feature = "gpu-runtime")]
         ids::RENDER_ANIMATION_COMPUTE_PASS => render::animation_compute_pass(args, span),
         ids::RENDER_SVG_PATH => render::svg_path(args, span),
         ids::RENDER_SVG_CIRCLE => render::svg_circle(args, span),
@@ -715,20 +716,35 @@ pub fn dispatch(
         ids::SPECTRAL_EMF_TO_RGB => render::spectral::emf_to_rgb_fn(args, span),
         ids::SPECTRAL_BLEND => render::spectral::blend_fn(args, span),
         ids::SPECTRAL_GAMUT_MAP => render::spectral::gamut_map_fn(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_ADAPTER_INFO => render::gpu_adapter_info(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_INIT => render::gpu_init(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_INIT_SURFACE => render::gpu_init_surface(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_RENDER_FRAME => render::gpu_render_frame(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_READ_PIXELS => render::gpu_read_pixels(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_UPLOAD_MESH => render::gpu_upload_mesh(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_UPLOAD_TENSOR => render::gpu_upload_tensor(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_SET_CAMERA => render::gpu_set_camera(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_PICK => render::gpu_pick(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_POLL_PICK => render::gpu_poll_pick(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_RESIZE => render::gpu_resize(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_SET_AMBIENT => render::gpu_set_ambient(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_DESTROY => render::gpu_destroy(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_COMPUTE_DISPATCH => render::gpu_compute_dispatch(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::GPU_COMPUTE_READBACK => render::gpu_compute_readback(args, span),
         ids::GPU_VALIDATE_SHADER => render::gpu_validate_shader(args, span),
         ids::GPU_COMPILE_SHADER => render::gpu_compile_shader(args, span),
@@ -748,8 +764,11 @@ pub fn dispatch(
         ids::GPU_SET_ARTEFACT_WORLD => render::gpu_set_artefact_world(args, span),
         ids::GPU_ARTEFACT_REFUSED => render::gpu_artefact_refused(args, span),
         ids::GPU_REQUIRED_RGBA8_BYTES => render::gpu_required_rgba8_bytes(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::EMF_UPLOAD_FIELD => render::emf_upload_field(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::EMF_RENDER_SLICE => render::emf_render_slice(args, span),
+        #[cfg(feature = "gpu-runtime")]
         ids::EMF_FIELD_INFO => render::emf_field_info(args, span),
         ids::SAMPLER_CONFIGURE => sampler_bind::configure(args, span),
         ids::SAMPLER_CONSTRAIN_ENABLE => sampler_bind::constrain_enable(args, span),

@@ -355,3 +355,9 @@
 - Integrator owns lib.rs and Cargo.toml (including later dropping gpu-runtime from qualia-peer).
 - Status: claimed. Packages remain open.
 
+## 2026-09-08 — Wave 13 swarm claim — remaining gpu-runtime fallout
+
+- After Wave 12, `cargo +stable check -p qualia-core-db --no-default-features --features qdnf` is **63 errors / ~34 files** (down from 1528). Default-feature lib check is green. Wave 11 combined native filter: **422 passed**. `qualia-peer` **2 passed**.
+- Disjoint remaining write sets: poet_host invoke GPU dispatch; inference decode/probes/timeline; compute_bridge execute/policy; webizen vm GPU integrator; graph_accel gpu_available; gpu_state/backend. Integrator owns lib.rs (device_benchmark/npu_ffi already gated).
+- Status: claimed. Packages remain open. Not Ethernet, not Native Independent closure.
+

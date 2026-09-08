@@ -112,7 +112,7 @@ pub use platform::jni_bridge;
 pub use platform::kml_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub use platform::local_scheduler;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use platform::npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub use platform::platform_scheduler;
