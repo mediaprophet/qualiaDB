@@ -771,6 +771,15 @@ pub const GEOM_POLYGON_AREA: &str = "ComputationalGeometry.polygon_area";
 pub const GEOM_POINT_IN_POLYGON: &str = "ComputationalGeometry.point_in_polygon";
 pub const GEOM_MINKOWSKI_SUM_CONVEX: &str = "ComputationalGeometry.minkowski_sum_convex";
 pub const GEOM_NEAREST_SEGMENT_SITE: &str = "ComputationalGeometry.nearest_segment_site";
+// ── Wave-24 Host binds (coreset / duality / convexity / boolean area) ──
+pub const GEOM_WIDTH_CORESET: &str = "ComputationalGeometry.width_coreset";
+pub const GEOM_DUAL_POINT_TO_LINE: &str = "ComputationalGeometry.dual_point_to_line";
+pub const GEOM_DUAL_ROUND_TRIP: &str = "ComputationalGeometry.dual_round_trip";
+pub const GEOM_IS_CONVEX_POLYGON: &str = "ComputationalGeometry.is_convex_polygon";
+pub const GEOM_POINT_IN_OR_ON_POLYGON: &str = "ComputationalGeometry.point_in_or_on_polygon";
+pub const GEOM_BOOLEAN_UNION_AREA: &str = "ComputationalGeometry.boolean_union_area";
+pub const GEOM_BOOLEAN_INTERSECTION_AREA: &str = "ComputationalGeometry.boolean_intersection_area";
+pub const GEOM_BOOLEAN_DIFFERENCE_AREA: &str = "ComputationalGeometry.boolean_difference_area";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1844,6 +1853,14 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_POINT_IN_POLYGON,
     GEOM_MINKOWSKI_SUM_CONVEX,
     GEOM_NEAREST_SEGMENT_SITE,
+    GEOM_WIDTH_CORESET,
+    GEOM_DUAL_POINT_TO_LINE,
+    GEOM_DUAL_ROUND_TRIP,
+    GEOM_IS_CONVEX_POLYGON,
+    GEOM_POINT_IN_OR_ON_POLYGON,
+    GEOM_BOOLEAN_UNION_AREA,
+    GEOM_BOOLEAN_INTERSECTION_AREA,
+    GEOM_BOOLEAN_DIFFERENCE_AREA,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2666,7 +2683,15 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_POLYGON_AREA
         | GEOM_POINT_IN_POLYGON
         | GEOM_MINKOWSKI_SUM_CONVEX
-        | GEOM_NEAREST_SEGMENT_SITE => "geometry",
+        | GEOM_NEAREST_SEGMENT_SITE
+        | GEOM_WIDTH_CORESET
+        | GEOM_DUAL_POINT_TO_LINE
+        | GEOM_DUAL_ROUND_TRIP
+        | GEOM_IS_CONVEX_POLYGON
+        | GEOM_POINT_IN_OR_ON_POLYGON
+        | GEOM_BOOLEAN_UNION_AREA
+        | GEOM_BOOLEAN_INTERSECTION_AREA
+        | GEOM_BOOLEAN_DIFFERENCE_AREA => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE

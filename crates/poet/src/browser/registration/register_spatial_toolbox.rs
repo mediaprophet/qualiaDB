@@ -522,6 +522,51 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
         ),
     ];
 
+    let world_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        dmx_live_tool(
+            "spatial:world_new",
+            "New world",
+            "World.new",
+            "Create a world via World.new.",
+        ),
+        dmx_live_tool(
+            "spatial:world_add_object",
+            "Add object",
+            "World.add_object",
+            "Add a world object via World.add_object.",
+        ),
+        dmx_live_tool(
+            "spatial:world_add_portal",
+            "Add portal",
+            "World.add_portal",
+            "Add a portal via World.add_portal.",
+        ),
+        dmx_live_tool(
+            "spatial:world_add_avatar",
+            "Add avatar",
+            "World.add_avatar",
+            "Add an avatar via World.add_avatar.",
+        ),
+        dmx_live_tool(
+            "spatial:world_set_gravity",
+            "Set gravity",
+            "World.set_gravity",
+            "Set world gravity via World.set_gravity.",
+        ),
+        dmx_live_tool(
+            "spatial:world_object_apply_force",
+            "Apply force",
+            "World.object_apply_force",
+            "Apply object force via World.object_apply_force.",
+        ),
+        dmx_live_tool(
+            "spatial:world_object_step_physics",
+            "Step physics",
+            "World.object_step_physics",
+            "Step world physics via World.object_step_physics.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "spatial".into(),
@@ -597,6 +642,16 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
                     description: "Curated Dmx.* universe, fixture, cue, and stack binds.".into(),
                 },
                 dmx_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:world".into(),
+                    label: "Live World".into(),
+                    icon: "3d".into(),
+                    description: "Curated World.* create, object, portal, avatar, gravity, and physics binds."
+                        .into(),
+                },
+                world_live,
             ),
             ToolChain::new(
                 ToolChainMetadata {

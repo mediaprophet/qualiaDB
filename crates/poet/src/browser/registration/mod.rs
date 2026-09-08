@@ -3634,4 +3634,162 @@ mod tests {
         assert!(tools.contains(&("hid:live_biosignal_poll", Some("HID.biosignal_poll"))));
         assert_eq!(tools.len(), 16);
     }
+
+    #[test]
+    fn vc_binds_wave24_vector_calculus_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:vc")
+            .expect("scientific:vc toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("scientific:vc_gradient", Some("VectorCalculus.gradient"))));
+        assert!(tools.contains(&(
+            "scientific:vc_divergence",
+            Some("VectorCalculus.divergence")
+        )));
+        assert!(tools.contains(&("scientific:vc_curl", Some("VectorCalculus.curl"))));
+        assert!(tools.contains(&("scientific:vc_laplacian", Some("VectorCalculus.laplacian"))));
+        assert!(tools.contains(&(
+            "scientific:vc_line_integral_scalar",
+            Some("VectorCalculus.line_integral_scalar")
+        )));
+        assert!(tools.contains(&(
+            "scientific:vc_line_integral_work",
+            Some("VectorCalculus.line_integral_work")
+        )));
+        assert!(tools.contains(&(
+            "scientific:vc_surface_flux",
+            Some("VectorCalculus.surface_flux")
+        )));
+        assert_eq!(tools.len(), 7);
+    }
+
+    #[test]
+    fn interp_binds_wave24_interpolation_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:interp")
+            .expect("scientific:interp toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:interp_linear",
+            Some("Interpolation.linear_interp")
+        )));
+        assert!(tools.contains(&(
+            "scientific:interp_lagrange",
+            Some("Interpolation.lagrange_eval")
+        )));
+        assert!(tools.contains(&(
+            "scientific:interp_newton_coef",
+            Some("Interpolation.newton_coefficients")
+        )));
+        assert!(tools.contains(&(
+            "scientific:interp_newton_eval",
+            Some("Interpolation.newton_eval")
+        )));
+        assert!(tools.contains(&("scientific:interp_poly_fit", Some("Interpolation.poly_fit"))));
+        assert!(tools.contains(&(
+            "scientific:interp_poly_eval",
+            Some("Interpolation.poly_eval")
+        )));
+        assert_eq!(tools.len(), 6);
+    }
+
+    #[test]
+    fn spectral_binds_wave24_spectral_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:spectral")
+            .expect("scientific:spectral toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:spectral_emf_to_spd",
+            Some("Spectral.emf_to_spd")
+        )));
+        assert!(tools.contains(&(
+            "scientific:spectral_spd_to_xyz",
+            Some("Spectral.spd_to_xyz")
+        )));
+        assert!(tools.contains(&(
+            "scientific:spectral_emf_to_rgb",
+            Some("Spectral.emf_to_rgb")
+        )));
+        assert!(tools.contains(&("scientific:spectral_blend", Some("Spectral.blend"))));
+        assert!(tools.contains(&(
+            "scientific:spectral_gamut_map",
+            Some("Spectral.gamut_map")
+        )));
+        assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn world_binds_wave24_world_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:world")
+            .expect("spatial:world toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("spatial:world_new", Some("World.new"))));
+        assert!(tools.contains(&("spatial:world_add_object", Some("World.add_object"))));
+        assert!(tools.contains(&("spatial:world_add_portal", Some("World.add_portal"))));
+        assert!(tools.contains(&("spatial:world_add_avatar", Some("World.add_avatar"))));
+        assert!(tools.contains(&("spatial:world_set_gravity", Some("World.set_gravity"))));
+        assert!(tools.contains(&(
+            "spatial:world_object_apply_force",
+            Some("World.object_apply_force")
+        )));
+        assert!(tools.contains(&(
+            "spatial:world_object_step_physics",
+            Some("World.object_step_physics")
+        )));
+        assert_eq!(tools.len(), 7);
+    }
 }

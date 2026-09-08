@@ -2,6 +2,26 @@
 
 use super::*;
 
+fn sci_live_tool(
+    id: &'static str,
+    label: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: "lab".into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "sci".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
     let lab_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
@@ -1904,6 +1924,123 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let vc_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:vc_gradient",
+            "Gradient",
+            "VectorCalculus.gradient",
+            "Symbolic gradient of a scalar field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_divergence",
+            "Divergence",
+            "VectorCalculus.divergence",
+            "Divergence of a vector field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_curl",
+            "Curl",
+            "VectorCalculus.curl",
+            "Curl of a 3-component vector field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_laplacian",
+            "Laplacian",
+            "VectorCalculus.laplacian",
+            "Scalar Laplacian.",
+        ),
+        sci_live_tool(
+            "scientific:vc_line_integral_scalar",
+            "Scalar line integral",
+            "VectorCalculus.line_integral_scalar",
+            "Scalar line integral along a parametric curve.",
+        ),
+        sci_live_tool(
+            "scientific:vc_line_integral_work",
+            "Work line integral",
+            "VectorCalculus.line_integral_work",
+            "Work line integral of a vector field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_surface_flux",
+            "Surface flux",
+            "VectorCalculus.surface_flux",
+            "Flux through a parametric surface.",
+        ),
+    ];
+
+    let interp_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:interp_linear",
+            "Linear interpolate",
+            "Interpolation.linear_interp",
+            "Piecewise linear interpolation.",
+        ),
+        sci_live_tool(
+            "scientific:interp_lagrange",
+            "Lagrange evaluate",
+            "Interpolation.lagrange_eval",
+            "Lagrange polynomial evaluation.",
+        ),
+        sci_live_tool(
+            "scientific:interp_newton_coef",
+            "Newton coefficients",
+            "Interpolation.newton_coefficients",
+            "Newton divided-difference coefficients.",
+        ),
+        sci_live_tool(
+            "scientific:interp_newton_eval",
+            "Newton evaluate",
+            "Interpolation.newton_eval",
+            "Evaluate a Newton interpolant.",
+        ),
+        sci_live_tool(
+            "scientific:interp_poly_fit",
+            "Polynomial fit",
+            "Interpolation.poly_fit",
+            "Least-squares polynomial fit.",
+        ),
+        sci_live_tool(
+            "scientific:interp_poly_eval",
+            "Polynomial evaluate",
+            "Interpolation.poly_eval",
+            "Evaluate a polynomial from coefficients.",
+        ),
+    ];
+
+    let spectral_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:spectral_emf_to_spd",
+            "EMF to SPD",
+            "Spectral.emf_to_spd",
+            "Emission spectrum from EMF parameters.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_spd_to_xyz",
+            "SPD to XYZ",
+            "Spectral.spd_to_xyz",
+            "CIE XYZ from a 41-sample SPD.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_emf_to_rgb",
+            "EMF to RGB",
+            "Spectral.emf_to_rgb",
+            "Display RGB from EMF parameters.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_blend",
+            "Blend spectra",
+            "Spectral.blend",
+            "Blend two EMF spectra.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_gamut_map",
+            "Gamut map",
+            "Spectral.gamut_map",
+            "Map XYZ into the display gamut.",
+        ),
+    ];
+
     let chem_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
             ToolMetadata {
@@ -2283,6 +2420,35 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
                         .into(),
                 },
                 ga_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:vc".into(),
+                    label: "Live vector calculus".into(),
+                    icon: "lab".into(),
+                    description: "Curated VectorCalculus.* gradient, divergence, curl, Laplacian, and integrals."
+                        .into(),
+                },
+                vc_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:interp".into(),
+                    label: "Live interpolation".into(),
+                    icon: "lab".into(),
+                    description: "Curated Interpolation.* linear, Lagrange, Newton, and polynomial binds."
+                        .into(),
+                },
+                interp_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:spectral".into(),
+                    label: "Live spectral colour".into(),
+                    icon: "lab".into(),
+                    description: "Curated Spectral.* EMF, SPD, RGB, blend, and gamut binds.".into(),
+                },
+                spectral_tools,
             ),
         ],
     ));

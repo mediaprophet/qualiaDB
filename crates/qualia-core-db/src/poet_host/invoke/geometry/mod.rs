@@ -19,6 +19,8 @@ mod wave21_host;
 mod wave22_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave23_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave24_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -59,6 +61,14 @@ pub use wave23_host::{
     point_in_polygon_host as point_in_polygon, polygon_area_host as polygon_area,
     polygon_signed_area_host as polygon_signed_area,
     smallest_enclosing_disk_host as smallest_enclosing_disk,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave24_host::{
+    boolean_difference_area_host as boolean_difference_area,
+    boolean_intersection_area_host as boolean_intersection_area,
+    boolean_union_area_host as boolean_union_area, dual_point_to_line_host as dual_point_to_line,
+    dual_round_trip_host as dual_round_trip, is_convex_polygon_host as is_convex_polygon,
+    point_in_or_on_polygon_host as point_in_or_on_polygon, width_coreset_host as width_coreset,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -153,5 +163,13 @@ geom_stub!(
     polygon_area,
     point_in_polygon,
     minkowski_sum_convex,
-    nearest_segment_site
+    nearest_segment_site,
+    width_coreset,
+    dual_point_to_line,
+    dual_round_trip,
+    is_convex_polygon,
+    point_in_or_on_polygon,
+    boolean_union_area,
+    boolean_intersection_area,
+    boolean_difference_area
 );

@@ -39,3 +39,14 @@ cargo test -p poet --test product_integrity
 cargo test -p qualia-core-db --lib wave23
 cargo test -p qualia-core-db --lib vibe_catalog_contains_every_bound_invoke_id
 ```
+
+## Verification (parent)
+
+- `cargo test -p poet --lib wave23`: **6 passed**
+- `cargo test -p poet --lib every_registered_nonplacement_tool_has_an_explicit_policy`: **1 passed**
+- `cargo test -p poet --test product_integrity`: **11 passed**
+- `cargo test -p qualia-core-db --lib wave23`: **8 passed**
+- `cargo test -p qualia-core-db --lib vibe_catalog_contains_every_bound_invoke_id`: **1 passed**
+- Derived counts: `ALL_BOUND=1078` · `PoetLive≈728` · `Q2≈350` (Dmx/Video/HID Q2 exhausted; +8 Host CG now Q2)
+
+Next: Wave 24 — VectorCalculus / Interpolation / Spectral / World Live + Host math.

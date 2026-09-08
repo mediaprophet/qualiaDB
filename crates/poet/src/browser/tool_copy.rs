@@ -3667,6 +3667,131 @@ fn named(id: &str) -> Option<Presentation> {
             "Poll privacy-filtered biosignal via HID.biosignal_poll.",
             Proficiency::Expert,
         ),
+        "scientific:vc_gradient" => (
+            "Gradient",
+            "Symbolic gradient via VectorCalculus.gradient.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_divergence" => (
+            "Divergence",
+            "Vector-field divergence via VectorCalculus.divergence.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_curl" => (
+            "Curl",
+            "3-component curl via VectorCalculus.curl.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_laplacian" => (
+            "Laplacian",
+            "Scalar Laplacian via VectorCalculus.laplacian.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:vc_line_integral_scalar" => (
+            "Scalar line integral",
+            "Scalar line integral via VectorCalculus.line_integral_scalar.",
+            Proficiency::Expert,
+        ),
+        "scientific:vc_line_integral_work" => (
+            "Work line integral",
+            "Work line integral via VectorCalculus.line_integral_work.",
+            Proficiency::Expert,
+        ),
+        "scientific:vc_surface_flux" => (
+            "Surface flux",
+            "Surface flux via VectorCalculus.surface_flux.",
+            Proficiency::Expert,
+        ),
+        "scientific:interp_linear" => (
+            "Linear interpolate",
+            "Piecewise linear sample via Interpolation.linear_interp.",
+            Proficiency::Novice,
+        ),
+        "scientific:interp_lagrange" => (
+            "Lagrange evaluate",
+            "Lagrange polynomial via Interpolation.lagrange_eval.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_newton_coef" => (
+            "Newton coefficients",
+            "Divided differences via Interpolation.newton_coefficients.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_newton_eval" => (
+            "Newton evaluate",
+            "Newton form via Interpolation.newton_eval.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_poly_fit" => (
+            "Polynomial fit",
+            "Least-squares polynomial via Interpolation.poly_fit.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:interp_poly_eval" => (
+            "Polynomial evaluate",
+            "Polynomial evaluation via Interpolation.poly_eval.",
+            Proficiency::Novice,
+        ),
+        "scientific:spectral_emf_to_spd" => (
+            "EMF to SPD",
+            "Emission SPD via Spectral.emf_to_spd.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_spd_to_xyz" => (
+            "SPD to XYZ",
+            "CIE XYZ via Spectral.spd_to_xyz.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_emf_to_rgb" => (
+            "EMF to RGB",
+            "Display RGB via Spectral.emf_to_rgb.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_blend" => (
+            "Blend spectra",
+            "Blend two EMFs via Spectral.blend.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:spectral_gamut_map" => (
+            "Gamut map",
+            "Map XYZ via Spectral.gamut_map.",
+            Proficiency::Expert,
+        ),
+        "spatial:world_new" => (
+            "New world",
+            "Create a world via World.new.",
+            Proficiency::Novice,
+        ),
+        "spatial:world_add_object" => (
+            "Add object",
+            "Add a world object via World.add_object.",
+            Proficiency::Novice,
+        ),
+        "spatial:world_add_portal" => (
+            "Add portal",
+            "Add a portal via World.add_portal.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:world_add_avatar" => (
+            "Add avatar",
+            "Add an avatar via World.add_avatar.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:world_set_gravity" => (
+            "Set gravity",
+            "Set world gravity via World.set_gravity.",
+            Proficiency::Novice,
+        ),
+        "spatial:world_object_apply_force" => (
+            "Apply force",
+            "Apply object force via World.object_apply_force.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:world_object_step_physics" => (
+            "Step physics",
+            "Step world physics via World.object_step_physics.",
+            Proficiency::Intermediate,
+        ),
         "ai:co_author" => (
             "Write together",
             "Ask the local model to help write. Needs a selected page and a loaded model.",

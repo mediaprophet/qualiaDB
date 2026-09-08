@@ -747,6 +747,31 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "hid:live_spatial_hand_skeleton"
         | "hid:live_spatial_gaze_ray"
         | "hid:live_biosignal_poll"
+        | "scientific:vc_gradient"
+        | "scientific:vc_divergence"
+        | "scientific:vc_curl"
+        | "scientific:vc_laplacian"
+        | "scientific:vc_line_integral_scalar"
+        | "scientific:vc_line_integral_work"
+        | "scientific:vc_surface_flux"
+        | "scientific:interp_linear"
+        | "scientific:interp_lagrange"
+        | "scientific:interp_newton_coef"
+        | "scientific:interp_newton_eval"
+        | "scientific:interp_poly_fit"
+        | "scientific:interp_poly_eval"
+        | "scientific:spectral_emf_to_spd"
+        | "scientific:spectral_spd_to_xyz"
+        | "scientific:spectral_emf_to_rgb"
+        | "scientific:spectral_blend"
+        | "scientific:spectral_gamut_map"
+        | "spatial:world_new"
+        | "spatial:world_add_object"
+        | "spatial:world_add_portal"
+        | "spatial:world_add_avatar"
+        | "spatial:world_set_gravity"
+        | "spatial:world_object_apply_force"
+        | "spatial:world_object_step_physics"
         | "ai:nlp_tokenize"
         | "ai:nlp_split_sentences"
         | "ai:nlp_coref_resolve"
@@ -2872,6 +2897,51 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
             super::hid_chain_actions::run_spatial_gaze_ray(document, label)
         }
         "hid:live_biosignal_poll" => super::hid_chain_actions::run_biosignal_poll(document, label),
+        "scientific:vc_gradient" => super::vc_chain_actions::run_gradient(document, label),
+        "scientific:vc_divergence" => super::vc_chain_actions::run_divergence(document, label),
+        "scientific:vc_curl" => super::vc_chain_actions::run_curl(document, label),
+        "scientific:vc_laplacian" => super::vc_chain_actions::run_laplacian(document, label),
+        "scientific:vc_line_integral_scalar" => {
+            super::vc_chain_actions::run_line_integral_scalar(document, label)
+        }
+        "scientific:vc_line_integral_work" => {
+            super::vc_chain_actions::run_line_integral_work(document, label)
+        }
+        "scientific:vc_surface_flux" => super::vc_chain_actions::run_surface_flux(document, label),
+        "scientific:interp_linear" => super::interp_chain_actions::run_linear(document, label),
+        "scientific:interp_lagrange" => super::interp_chain_actions::run_lagrange(document, label),
+        "scientific:interp_newton_coef" => {
+            super::interp_chain_actions::run_newton_coef(document, label)
+        }
+        "scientific:interp_newton_eval" => {
+            super::interp_chain_actions::run_newton_eval(document, label)
+        }
+        "scientific:interp_poly_fit" => super::interp_chain_actions::run_poly_fit(document, label),
+        "scientific:interp_poly_eval" => super::interp_chain_actions::run_poly_eval(document, label),
+        "scientific:spectral_emf_to_spd" => {
+            super::spectral_chain_actions::run_emf_to_spd(document, label)
+        }
+        "scientific:spectral_spd_to_xyz" => {
+            super::spectral_chain_actions::run_spd_to_xyz(document, label)
+        }
+        "scientific:spectral_emf_to_rgb" => {
+            super::spectral_chain_actions::run_emf_to_rgb(document, label)
+        }
+        "scientific:spectral_blend" => super::spectral_chain_actions::run_blend(document, label),
+        "scientific:spectral_gamut_map" => {
+            super::spectral_chain_actions::run_gamut_map(document, label)
+        }
+        "spatial:world_new" => super::world_chain_actions::run_new(document, label),
+        "spatial:world_add_object" => super::world_chain_actions::run_add_object(document, label),
+        "spatial:world_add_portal" => super::world_chain_actions::run_add_portal(document, label),
+        "spatial:world_add_avatar" => super::world_chain_actions::run_add_avatar(document, label),
+        "spatial:world_set_gravity" => super::world_chain_actions::run_set_gravity(document, label),
+        "spatial:world_object_apply_force" => {
+            super::world_chain_actions::run_object_apply_force(document, label)
+        }
+        "spatial:world_object_step_physics" => {
+            super::world_chain_actions::run_object_step_physics(document, label)
+        }
         "ai:nlp_tokenize" => super::nlp_chain_actions::run_tokenize(document, label),
         "ai:nlp_split_sentences" => {
             super::nlp_chain_actions::run_split_sentences(document, label)
