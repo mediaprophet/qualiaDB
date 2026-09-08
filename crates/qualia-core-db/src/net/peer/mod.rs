@@ -2,6 +2,7 @@
 
 pub mod cells;
 pub mod host;
+pub mod replication;
 pub mod runtime;
 
 pub use host::{native_ipc_stream_exchange, ControllerIdentity, NativePeer, ServiceId};

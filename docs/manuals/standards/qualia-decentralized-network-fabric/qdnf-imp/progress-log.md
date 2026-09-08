@@ -220,4 +220,21 @@
 - Human input needed: none this step.
 - Next: Wave 5 candidates remain NET-03 forwarding/session races, CRY-02.12 independent vectors, SVC QSync, RT-03.07 libp2p/GPU-free `qualia-peer` closure. Packages stay open.
 
+## 2026-09-08 — Wave 5 swarm claim
+
+- Integrator claims Wave 5 provisional: NET-03 generation overlap + A-B-C forward, CRY-02.12 transcript/KDF vectors, SVC-01 operation identity. Integrator owns RT-03.07 `qualia-peer` feature closure (Cargo.toml). Packages stay **open**.
+- Disjoint writes: NET-03 `net/qdnf/route/overlap.rs` + `net/qdnf/route/flood.rs` (do not rewrite `spf.rs`/`forwarding.rs`); CRY-02 `crypto/network/vectors.rs`; SVC-01 `net/peer/replication/` only.
+- Shared files forbidden to workers: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`, `wal.rs`, `arena.rs`.
+- Human input needed: none this step.
+- Next: integrate child patches, run `cargo +stable` tests, record measurements.
+
+## 2026-09-08 — Wave 5 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers plus integrator: NET-03 (`GenerationPair` old/new overlap, `FloodTable` LSA admit/conflict/suppression, A-B-C lookup dest 2 → hop 1), CRY-02.12 (`vectors.rs` frozen transcript/HKDF/Finished hex vs independent sha2/hkdf oracle; live ML-KEM encapsulate still open), SVC-01 (`OpTable` SHA-384 operation ids, identical retry, sequence wrap Range). Integrator: `qualia-peer` now depends on core-db **without** `libp2p-compat`. `cargo +stable tree -p qualia-peer -i libp2p` → package not in graph. GPU/LLM remain (`gpu-runtime`); `--no-default-features --features qdnf` still fails (wgpu unguarded, 1528 errors).
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf::route crypto::network::vectors net::peer::replication net::qdnf net::peer crypto::network wal_intent governance::webizen::arena_admit q42::q42_volume::volume::network_quanta` → **255 passed**, 0 failed. `qualia-peer` → **2 passed**.
+- Human input needed: none this step.
+- Next: Wave 6 candidates: NET-05 session dial races, remaining SVC checkpoints, GPU/wgpu feature-gating for full RT-03.07, raw Ethernet. Packages stay open.
+
+
+
 

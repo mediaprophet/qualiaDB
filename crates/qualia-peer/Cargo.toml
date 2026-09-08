@@ -7,7 +7,9 @@ description = "Qualia Peer Runtime facade over the native QDNF stack (no libp2p)
 license-file = "../../LICENSE"
 
 [dependencies]
-qualia-core-db = { path = "../qualia-core-db" }
+# RT-03.07 partial: omit `libp2p-compat`. GPU/LLM remain until wgpu is gated;
+# `--no-default-features --features qdnf` on core-db does not compile yet.
+qualia-core-db = { path = "../qualia-core-db", default-features = false, features = ["qdnf", "profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"] }
 
 [[example]]
 name = "native_ipc_peers"

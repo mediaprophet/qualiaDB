@@ -15,6 +15,7 @@ pub mod rotation;
 pub mod secret_lease;
 pub mod transcript;
 pub mod types;
+pub mod vectors;
 pub mod x25519;
 
 pub use entropy::{fill_os, EphemeralKeyLease};
