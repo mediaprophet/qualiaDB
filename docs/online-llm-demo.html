@@ -146,15 +146,15 @@
                 <div class="font-semibold text-cyan-200 mb-1.5">Decode path</div>
                 <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                     <dt class="text-zinc-500">Path</dt>
-                    <dd id="meter-path" class="font-mono text-zinc-200">probing…</dd>
+                    <dd data-meter="path" class="font-mono text-zinc-200">probing…</dd>
                     <dt class="text-zinc-500">Device</dt>
-                    <dd id="meter-device" class="font-mono text-zinc-200">—</dd>
+                    <dd data-meter="device" class="font-mono text-zinc-200">—</dd>
                     <dt class="text-zinc-500">NPU</dt>
-                    <dd id="meter-npu" class="font-mono text-zinc-200">not exposed in this browser</dd>
+                    <dd data-meter="npu" class="font-mono text-zinc-200">not exposed in this browser</dd>
                     <dt class="text-zinc-500">TTFT</dt>
-                    <dd id="meter-ttft" class="font-mono text-zinc-200">—</dd>
+                    <dd data-meter="ttft" class="font-mono text-zinc-200">—</dd>
                     <dt class="text-zinc-500">tok/s</dt>
-                    <dd id="meter-tps" class="font-mono text-zinc-200">—</dd>
+                    <dd data-meter="tps" class="font-mono text-zinc-200">—</dd>
                 </dl>
             </div>
             <div id="mobile-model-hint" class="hidden mb-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2.5 text-xs leading-relaxed text-cyan-100"></div>
@@ -271,7 +271,22 @@
                 </div>
             </div>
 
-            <div id="chat-inference-meter" class="hidden text-[11px] text-zinc-400 px-1 mb-1 font-mono"></div>
+            <div id="chat-inference-meter" class="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-xs text-zinc-300">
+                <div class="font-semibold text-cyan-200 mb-1.5">Decode path</div>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                    <dt class="text-zinc-500">Path</dt>
+                    <dd data-meter="path" class="font-mono text-zinc-200">probing…</dd>
+                    <dt class="text-zinc-500">Device</dt>
+                    <dd data-meter="device" class="font-mono text-zinc-200">—</dd>
+                    <dt class="text-zinc-500">NPU</dt>
+                    <dd data-meter="npu" class="font-mono text-zinc-200">not exposed in this browser</dd>
+                    <dt class="text-zinc-500">TTFT</dt>
+                    <dd data-meter="ttft" class="font-mono text-zinc-200">—</dd>
+                    <dt class="text-zinc-500">tok/s</dt>
+                    <dd data-meter="tps" class="font-mono text-zinc-200">—</dd>
+                </dl>
+                <p class="mt-2 text-[11px] leading-relaxed text-zinc-500">GPU = WebGPU adapter. CPU = WASM on this device. Browsers do not report an NPU over WebGPU; WebNN (<code class="text-zinc-400">navigator.ml</code>) is noted when present, but the UA still picks NPU vs GPU vs CPU without saying which. On phones, Path is usually CPU-WASM unless Chrome exposes a GPU adapter.</p>
+            </div>
 
             <!-- Streaming Output (active generation) -->
             <div id="stream-wrap" class="hidden glass rounded-2xl p-4">
@@ -491,50 +506,53 @@ function npuExposureLabel() {
     return 'not exposed in this browser';
 }
 
+function effectiveLlmBackend() {
+    if (selectedInferenceBackend === 'webgpu' || selectedInferenceBackend === 'cpu-wasm' || selectedInferenceBackend === 'unsupported') {
+        return selectedInferenceBackend;
+    }
+    const sel = (capabilityReceiptCache || window.__qualiaCapabilityReceipt)?.selection?.llm;
+    return sel || selectedInferenceBackend;
+}
+
 function decodePathLabel() {
-    if (selectedInferenceBackend === 'webgpu') return 'GPU (WebGPU)';
-    if (selectedInferenceBackend === 'cpu-wasm') return 'CPU (WASM)';
-    if (selectedInferenceBackend === 'unsupported') return 'unsupported';
-    return selectedInferenceBackend && selectedInferenceBackend !== 'none' ? selectedInferenceBackend : 'probing…';
+    const backend = effectiveLlmBackend();
+    if (backend === 'webgpu') return 'GPU (WebGPU)';
+    if (backend === 'cpu-wasm') return 'CPU (WASM)';
+    if (backend === 'unsupported') return 'unsupported';
+    return backend && backend !== 'none' ? backend : 'probing…';
 }
 
 function decodeDeviceLabel(capabilities) {
     const cap = capabilities || capabilityReceiptCache || window.__qualiaCapabilityReceipt;
-    if (selectedInferenceBackend === 'webgpu') {
+    const backend = effectiveLlmBackend();
+    if (backend === 'webgpu') {
         const info = cap?.webgpu?.info;
         const bits = [info?.vendor, info?.architecture, info?.device, info?.description].filter(Boolean);
         return bits.join(' · ') || 'WebGPU adapter (vendor not reported)';
     }
-    if (selectedInferenceBackend === 'cpu-wasm') {
+    if (backend === 'cpu-wasm') {
         const threads = Number(navigator.hardwareConcurrency || 0);
         const simd = cap?.wasm?.simd ? 'SIMD128' : 'scalar';
-        return threads > 0 ? `${threads} threads · ${simd}` : simd;
+        const mem = Number(navigator.deviceMemory || 0);
+        const memBit = mem > 0 ? ` · ~${mem} GB` : '';
+        return (threads > 0 ? `${threads} threads · ${simd}` : simd) + memBit;
     }
     return '—';
 }
 
+function setMeterText(name, text) {
+    document.querySelectorAll(`[data-meter="${name}"]`).forEach((el) => {
+        el.textContent = text;
+    });
+}
+
 function renderInferenceMeter(metrics) {
     const m = metrics || lastGenerationMetrics || {};
-    const pathEl = document.getElementById('meter-path');
-    const deviceEl = document.getElementById('meter-device');
-    const npuEl = document.getElementById('meter-npu');
-    const ttftEl = document.getElementById('meter-ttft');
-    const tpsEl = document.getElementById('meter-tps');
-    if (pathEl) pathEl.textContent = decodePathLabel();
-    if (deviceEl) deviceEl.textContent = decodeDeviceLabel();
-    if (npuEl) npuEl.textContent = npuExposureLabel();
-    if (ttftEl) {
-        ttftEl.textContent = m.ttftMs == null ? '—' : `${m.ttftMs} ms`;
-    }
-    if (tpsEl) {
-        tpsEl.textContent = m.tokensPerSec == null ? '—' : `${Number(m.tokensPerSec).toFixed(1)} tok/s`;
-    }
-    const chatMeter = document.getElementById('chat-inference-meter');
-    if (chatMeter && m.ttftMs != null) {
-        chatMeter.classList.remove('hidden');
-        const toks = m.generatedTokens != null ? `${m.generatedTokens} tok` : '';
-        chatMeter.textContent = `${decodePathLabel()} · TTFT ${m.ttftMs} ms · ${m.tokensPerSec != null ? Number(m.tokensPerSec).toFixed(1) : '—'} tok/s${toks ? ' · ' + toks : ''}`;
-    }
+    setMeterText('path', decodePathLabel());
+    setMeterText('device', decodeDeviceLabel());
+    setMeterText('npu', npuExposureLabel());
+    setMeterText('ttft', m.ttftMs == null ? '—' : `${m.ttftMs} ms`);
+    setMeterText('tps', m.tokensPerSec == null ? '—' : `${Number(m.tokensPerSec).toFixed(1)} tok/s`);
 }
 
 const isMobileDevice = () =>
@@ -1365,7 +1383,13 @@ async function generate(system, user, opts = {}) {
         }
         streamEl.textContent = cleaned || '▍';
         const secs = (performance.now() - t0) / 1000;
-        statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${(tokens / Math.max(secs, 0.001)).toFixed(1)} tok/s`;
+        const tps = tokens / Math.max(secs, 0.001);
+        statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${tps.toFixed(1)} tok/s`;
+        renderInferenceMeter({
+            ttftMs: Math.round(firstTokenMs),
+            tokensPerSec: tps,
+            generatedTokens: tokens,
+        });
     };
 
     // The measured path returns an exact token count, allowing the UI to reject
@@ -1625,6 +1649,11 @@ async function checkWebgpuSupport() {
     const capabilities = await browserCapabilityReceiptPromise;
     capabilityReceiptCache = capabilities;
     window.__qualiaCapabilityReceipt = capabilities;
+    if (selectedInferenceBackend === 'none') {
+        selectedInferenceBackend = BACKEND_OVERRIDE === 'cpu' || BACKEND_OVERRIDE === 'cpu-wasm'
+            ? 'cpu-wasm'
+            : (capabilities.selection.llm || 'none');
+    }
     renderInferenceMeter();
     if (capabilities.selection.llm === 'webgpu') {
         // A real adapter was acquired by the shared capability probe.
