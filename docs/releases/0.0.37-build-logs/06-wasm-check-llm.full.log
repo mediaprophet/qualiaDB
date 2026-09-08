@@ -1,0 +1,311 @@
+===== START 06-wasm-check-llm  2026-09-08T11:37:35Z =====
+CMD: cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-llm
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/vibe-wasm/Cargo.toml
+workspace: /workspace/Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/poet/Cargo.toml
+workspace: /workspace/Cargo.toml
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+error[E0432]: unresolved import `crate::specialized_libs::polynomial_algebra`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/poly_algebra.rs:7:30
+   |
+ 7 | use crate::specialized_libs::polynomial_algebra::Polynomial;
+   |                              ^^^^^^^^^^^^^^^^^^ could not find `polynomial_algebra` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:48:9
+   |
+47 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+48 | pub mod polynomial_algebra;
+   |         ^^^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::symbolic_ode`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_ext.rs:9:30
+   |
+ 9 | use crate::specialized_libs::symbolic_ode::{
+   |                              ^^^^^^^^^^^^ could not find `symbolic_ode` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:63:9
+   |
+62 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+63 | pub mod symbolic_ode;
+   |         ^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::symbolic_assumptions`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave5.rs:9:30
+   |
+ 9 | use crate::specialized_libs::symbolic_assumptions::{Assumptions, Sign};
+   |                              ^^^^^^^^^^^^^^^^^^^^ could not find `symbolic_assumptions` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:57:9
+   |
+56 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+57 | pub mod symbolic_assumptions;
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::symbolic_ode`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave5.rs:10:30
+   |
+10 | use crate::specialized_libs::symbolic_ode::{
+   |                              ^^^^^^^^^^^^ could not find `symbolic_ode` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:63:9
+   |
+62 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+63 | pub mod symbolic_ode;
+   |         ^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::symbolic_solve`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave5.rs:14:30
+   |
+14 | use crate::specialized_libs::symbolic_solve::{
+   |                              ^^^^^^^^^^^^^^ could not find `symbolic_solve` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:67:9
+   |
+66 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+67 | pub mod symbolic_solve;
+   |         ^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::constructibility`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave6.rs:9:5
+   |
+ 9 | use crate::specialized_libs::constructibility as constr;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^----------------^^^^^^^^^^
+   |                              |
+   |                              no `constructibility` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:20:9
+   |
+19 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+20 | pub mod constructibility;
+   |         ^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::multivar_calculus`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave6.rs:10:5
+   |
+10 | use crate::specialized_libs::multivar_calculus as mvc;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^-----------------^^^^^^^
+   |                              |
+   |                              no `multivar_calculus` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:44:9
+   |
+43 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+44 | pub mod multivar_calculus;
+   |         ^^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::constructibility`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave7.rs:10:5
+   |
+10 | use crate::specialized_libs::constructibility as constr;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^----------------^^^^^^^^^^
+   |                              |
+   |                              no `constructibility` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:20:9
+   |
+19 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+20 | pub mod constructibility;
+   |         ^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::specialized_libs::constructibility`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave7.rs:11:30
+   |
+11 | use crate::specialized_libs::constructibility::ConstructibilityVerdict;
+   |                              ^^^^^^^^^^^^^^^^ could not find `constructibility` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:20:9
+   |
+19 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+20 | pub mod constructibility;
+   |         ^^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_trig` in `specialized_libs`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/symbolic.rs:57:38
+   |
+57 |     let s = crate::specialized_libs::symbolic_trig::simplify_trig(&e);
+   |                                      ^^^^^^^^^^^^^ could not find `symbolic_trig` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:69:9
+   |
+68 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+69 | pub mod symbolic_trig;
+   |         ^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_integration` in `specialized_libs`
+   --> crates/qualia-core-db/src/poet_host/invoke/math/symbolic.rs:210:41
+    |
+210 | ...:specialized_libs::symbolic_integration::integrate(&e, var)
+    |                       ^^^^^^^^^^^^^^^^^^^^ could not find `symbolic_integration` in `specialized_libs`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/specialized_libs/mod.rs:59:9
+    |
+ 58 | #[cfg(not(target_arch = "wasm32"))]
+    |          ------------------------ the item is gated here
+ 59 | pub mod symbolic_integration;
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_series` in `specialized_libs`
+   --> crates/qualia-core-db/src/poet_host/invoke/math/symbolic.rs:231:43
+    |
+231 | ...e::specialized_libs::symbolic_series::taylor_coefficients(&e, var, a...
+    |                         ^^^^^^^^^^^^^^^ could not find `symbolic_series` in `specialized_libs`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/specialized_libs/mod.rs:65:9
+    |
+ 64 | #[cfg(not(target_arch = "wasm32"))]
+    |          ------------------------ the item is gated here
+ 65 | pub mod symbolic_series;
+    |         ^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_series` in `specialized_libs`
+   --> crates/qualia-core-db/src/poet_host/invoke/math/symbolic.rs:243:42
+    |
+243 | ...e::specialized_libs::symbolic_series::taylor_eval(&coeffs, a, x);
+    |                         ^^^^^^^^^^^^^^^ could not find `symbolic_series` in `specialized_libs`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/specialized_libs/mod.rs:65:9
+    |
+ 64 | #[cfg(not(target_arch = "wasm32"))]
+    |          ------------------------ the item is gated here
+ 65 | pub mod symbolic_series;
+    |         ^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_limits` in `specialized_libs`
+   --> crates/qualia-core-db/src/poet_host/invoke/math/symbolic.rs:255:42
+    |
+255 | ...e::specialized_libs::symbolic_limits::limit(&e, var, a)
+    |                         ^^^^^^^^^^^^^^^ could not find `symbolic_limits` in `specialized_libs`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/specialized_libs/mod.rs:61:9
+    |
+ 60 | #[cfg(not(target_arch = "wasm32"))]
+    |          ------------------------ the item is gated here
+ 61 | pub mod symbolic_limits;
+    |         ^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_integration` in `specialized_libs`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_ext.rs:50:42
+   |
+50 | ...:specialized_libs::symbolic_integration::integrate_definite(&e, var, ...
+   |                       ^^^^^^^^^^^^^^^^^^^^ could not find `symbolic_integration` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:59:9
+   |
+58 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+59 | pub mod symbolic_integration;
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_limits` in `specialized_libs`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_ext.rs:63:42
+   |
+63 | ...e::specialized_libs::symbolic_limits::limit_at_infinity(&e, var)
+   |                         ^^^^^^^^^^^^^^^ could not find `symbolic_limits` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:61:9
+   |
+60 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+61 | pub mod symbolic_limits;
+   |         ^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_solve` in `specialized_libs`
+  --> crates/qualia-core-db/src/poet_host/invoke/math/cas_ext.rs:74:42
+   |
+74 | ...e::specialized_libs::symbolic_solve::real_roots(&coeffs, tol)
+   |                         ^^^^^^^^^^^^^^ could not find `symbolic_solve` in `specialized_libs`
+   |
+note: found an item that was configured out
+  --> crates/qualia-core-db/src/specialized_libs/mod.rs:67:9
+   |
+66 | #[cfg(not(target_arch = "wasm32"))]
+   |          ------------------------ the item is gated here
+67 | pub mod symbolic_solve;
+   |         ^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `symbolic_assumptions` in `specialized_libs`
+   --> crates/qualia-core-db/src/poet_host/invoke/math/cas_wave5.rs:133:38
+    |
+133 | ...:specialized_libs::symbolic_assumptions::simplify_with_assumptions(&...
+    |                       ^^^^^^^^^^^^^^^^^^^^ could not find `symbolic_assumptions` in `specialized_libs`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/specialized_libs/mod.rs:57:9
+    |
+ 56 | #[cfg(not(target_arch = "wasm32"))]
+    |          ------------------------ the item is gated here
+ 57 | pub mod symbolic_assumptions;
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `decrement_hop`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:5:25
+  |
+5 | use super::forwarding::{decrement_hop, ForwardingGeneration};
+  |                         ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `LinkMetric` and `compute_spf`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:6:18
+  |
+6 | use super::spf::{compute_spf, LinkMetric, SpfTable};
+  |                  ^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `super::super::args`
+  --> crates/qualia-core-db/src/poet_host/invoke/graph/volume.rs:10:5
+   |
+10 | use super::super::args;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::super::args`
+ --> crates/qualia-core-db/src/poet_host/invoke/graph/lexicon.rs:7:5
+  |
+7 | use super::super::args;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `VisionComputeDevice`
+  --> crates/qualia-core-db/src/specialized_libs/computer_vision/gpu/forge_bicubic.rs:15:68
+   |
+15 | ...on::{types::VisionError, VisionComputeDevice};
+   |                             ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `VisionComputeDevice`
+  --> crates/qualia-core-db/src/specialized_libs/computer_vision/gpu/forge_resize.rs:15:68
+   |
+15 | ...on::{types::VisionError, VisionComputeDevice};
+   |                             ^^^^^^^^^^^^^^^^^^^
+
+Some errors have detailed explanations: E0432, E0433.
+For more information about an error, try `rustc --explain E0432`.
+warning: `qualia-core-db` (lib) generated 6 warnings
+error: could not compile `qualia-core-db` (lib) due to 18 previous errors; 6 warnings emitted
+===== END 06-wasm-check-llm  rc=101  elapsed=17s  2026-09-08T11:37:52Z =====
+errors=13 warnings=6 unique_diagnostic_lines=19

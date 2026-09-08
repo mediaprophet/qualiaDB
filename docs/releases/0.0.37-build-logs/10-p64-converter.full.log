@@ -1,0 +1,467 @@
+===== START 10-p64-converter  2026-09-08T11:41:02Z =====
+CMD: cargo build --release -p qualia-core-db --example build_p64_release
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/vibe-wasm/Cargo.toml
+workspace: /workspace/Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/poet/Cargo.toml
+workspace: /workspace/Cargo.toml
+   Compiling generic-array v0.14.7
+   Compiling memchr v2.8.3
+   Compiling stable_deref_trait v1.2.1
+   Compiling hybrid-array v0.4.13
+   Compiling yoke v0.8.3
+   Compiling zerovec v0.11.6
+   Compiling futures-util v0.3.33
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling tinystr v0.8.3
+   Compiling sha2 v0.10.9
+   Compiling icu_locale_core v2.2.0
+   Compiling potential_utf v0.1.5
+   Compiling zerotrie v0.2.4
+   Compiling icu_collections v2.2.0
+   Compiling icu_provider v2.2.0
+   Compiling crypto-common v0.2.2
+   Compiling icu_normalizer v2.2.0
+   Compiling icu_properties v2.2.0
+   Compiling futures-executor v0.3.33
+   Compiling futures v0.3.33
+   Compiling hmac v0.12.1
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling block-buffer v0.12.1
+   Compiling ctutils v0.4.2
+   Compiling url v2.5.8
+   Compiling curve25519-dalek v4.1.3
+   Compiling hkdf v0.12.4
+   Compiling signature v2.2.0
+   Compiling ed25519 v2.2.3
+   Compiling ed25519-dalek v2.2.0
+   Compiling bs58 v0.5.1
+   Compiling libp2p-identity v0.2.14
+   Compiling multistream-select v0.13.0
+   Compiling multiaddr v0.18.2
+   Compiling rw-stream-sink v0.4.0
+   Compiling oxrdf v0.3.3
+   Compiling digest v0.11.3
+   Compiling block-padding v0.3.3
+   Compiling libp2p-core v0.43.2
+   Compiling inout v0.1.4
+   Compiling inout v0.2.2
+   Compiling rustc-hash v1.1.0
+   Compiling ark-serialize v0.6.0
+   Compiling serde_json v1.0.151
+   Compiling cipher v0.4.4
+   Compiling ark-ff v0.6.0
+   Compiling naga-types v30.0.0
+   Compiling cipher v0.5.2
+   Compiling sha1 v0.10.7
+   Compiling quick-xml v0.37.5
+   Compiling aho-corasick v1.1.4
+   Compiling libp2p-swarm v0.47.1
+   Compiling ark-poly v0.6.0
+   Compiling regex-automata v0.4.16
+   Compiling netlink-sys v0.8.8
+   Compiling rustls v0.23.42
+   Compiling wgpu-types v30.0.0
+   Compiling naga v30.0.0
+   Compiling netlink-proto v0.12.0
+   Compiling regex v1.13.1
+   Compiling rustls-webpki v0.103.13
+   Compiling spargebra v0.4.6
+   Compiling universal-hash v0.6.1
+   Compiling oxjsonld v0.2.5
+   Compiling wgpu-naga-bridge v30.0.0
+   Compiling hickory-proto v0.25.2
+   Compiling rtnetlink v0.20.0
+   Compiling sparopt v0.3.6
+   Compiling sparesults v0.3.3
+   Compiling oxrdfxml v0.2.3
+   Compiling oxttl v0.2.3
+   Compiling asynchronous-codec v0.7.0
+   Compiling md-5 v0.10.6
+   Compiling mime_guess v2.0.5
+   Compiling spareval v0.2.6
+   Compiling wgpu-hal v30.0.0
+   Compiling curve25519-dalek v5.0.0
+   Compiling oxrdfio v0.2.5
+   Compiling if-watch v3.2.2
+   Compiling hyper-util v0.1.20
+   Compiling tower v0.5.3
+   Compiling ark-ec v0.6.0
+   Compiling ark-relations v0.6.0
+   Compiling sha3 v0.10.9
+   Compiling chacha20 v0.10.1
+   Compiling aes v0.8.4
+   Compiling cbc v0.1.2
+   Compiling unicode-normalization v0.1.25
+   Compiling sha2 v0.11.0
+   Compiling futures-bounded v0.2.4
+   Compiling x25519-dalek v2.0.1
+   Compiling blake2 v0.10.6
+   Compiling universal-hash v0.5.1
+   Compiling csv-core v0.1.13
+   Compiling object v0.37.3
+   Compiling unicode-bidi v0.3.18
+   Compiling time v0.3.54
+   Compiling idna v0.4.0
+   Compiling oxigraph v0.5.9
+   Compiling poly1305 v0.8.0
+   Compiling csv v1.4.0
+   Compiling secret-service v5.1.0
+   Compiling ark-snark v0.6.0
+   Compiling wgpu-core-deps-windows-linux-android v30.0.0
+   Compiling hickory-resolver v0.25.2
+   Compiling polyval v0.7.3
+   Compiling yamux v0.13.10
+   Compiling yamux v0.12.1
+   Compiling quick-protobuf-codec v0.3.1
+   Compiling tokio-rustls v0.26.4
+   Compiling tungstenite v0.29.0
+   Compiling chacha20 v0.9.1
+   Compiling aead v0.6.1
+   Compiling aead v0.5.2
+   Compiling alloca v0.4.0
+   Compiling signature v3.0.0
+   Compiling gimli v0.32.3
+   Compiling plotters-backend v0.3.7
+   Compiling plotters-svg v0.3.7
+   Compiling clap_builder v4.6.2
+   Compiling addr2line v0.25.1
+   Compiling fhe-math v0.1.1
+   Compiling ed25519 v3.0.0
+   Compiling ark-crypto-primitives v0.6.0
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling zbus-secret-service-keyring-store v1.0.0
+   Compiling chacha20poly1305 v0.10.1
+   Compiling tokio-tungstenite v0.29.0
+   Compiling hyper-rustls v0.27.9
+   Compiling libp2p-kad v0.48.0
+   Compiling libp2p-yamux v0.47.0
+   Compiling ghash v0.6.0
+   Compiling libp2p-dns v0.44.0
+   Compiling libp2p-noise v0.46.1
+   Compiling trust-dns-proto v0.23.2
+   Compiling wgpu-core v30.0.0
+   Compiling js-sys v0.3.102
+   Compiling yasna v0.6.0
+   Compiling rustls-platform-verifier v0.7.0
+   Compiling libp2p-request-response v0.29.0
+   Compiling rand v0.10.2
+   Compiling tower-http v0.6.11
+   Compiling libp2p-mdns v0.48.0
+   Compiling libp2p-tcp v0.44.1
+   Compiling aes v0.9.1
+   Compiling poly1305 v0.9.1
+   Compiling libp2p-connection-limits v0.6.0
+   Compiling libp2p-allow-block-list v0.6.0
+   Compiling ctr v0.10.1
+   Compiling hmac v0.13.0
+   Compiling itertools v0.13.0
+   Compiling quick-xml v0.36.2
+   Compiling wait-timeout v0.2.1
+   Compiling rustc-demangle v0.1.28
+   Compiling quick-error v1.2.3
+   Compiling same-file v1.0.6
+   Compiling bit-vec v0.8.0
+   Compiling cast v0.3.0
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+   Compiling axum v0.8.9
+   Compiling tower-http v0.7.0
+   Compiling criterion-plot v0.8.2
+   Compiling sha3 v0.12.0
+   Compiling bit-set v0.8.0
+   Compiling walkdir v2.5.0
+   Compiling rusty-fork v0.3.1
+   Compiling backtrace v0.3.76
+   Compiling trust-dns-resolver v0.23.2
+   Compiling reqwest v0.13.4
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling rio_xml v0.8.6
+   Compiling aes-gcm v0.11.0
+   Compiling hkdf v0.13.0
+   Compiling rcgen v0.14.8
+   Compiling libp2p v0.56.0
+   Compiling chacha20poly1305 v0.11.0
+   Compiling rand_distr v0.6.0
+   Compiling fhe v0.1.1
+   Compiling boringtun v0.7.1
+   Compiling serde-wasm-bindgen v0.6.5
+   Compiling wgpu v30.0.0
+   Compiling keyring v4.1.5
+   Compiling ark-groth16 v0.6.0
+   Compiling ed25519-dalek v3.0.0
+   Compiling clap v4.6.4
+   Compiling plotters v0.3.7
+   Compiling x25519-dalek v3.0.0
+   Compiling fips203 v0.4.3
+   Compiling fips205 v0.4.1
+   Compiling fips204 v0.4.6
+   Compiling ark-bls12-381 v0.6.0
+   Compiling mp4 v0.14.0
+   Compiling tinytemplate v1.2.1
+   Compiling sha1 v0.11.0
+   Compiling quick-xml v0.41.0
+   Compiling sysinfo v0.39.6
+   Compiling rand_xorshift v0.4.0
+   Compiling page_size v0.6.0
+   Compiling serial_test_derive v3.5.0
+   Compiling oorandom v11.1.5
+   Compiling anes v0.1.6
+   Compiling mintex v0.1.4
+   Compiling unarray v0.1.4
+   Compiling thousands v0.2.0
+   Compiling dhat v0.3.3
+   Compiling proptest v1.11.0
+   Compiling criterion v0.8.2
+   Compiling serial_test v3.5.0
+   Compiling num-bigint v0.5.1
+warning: unused import: `core_affinity::CoreId`
+   --> crates/qualia-core-db/src/platform/platform_scheduler.rs:143:13
+    |
+143 |         use core_affinity::CoreId;
+    |             ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `decrement_hop`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:5:25
+  |
+5 | use super::forwarding::{decrement_hop, ForwardingGeneration};
+  |                         ^^^^^^^^^^^^^
+
+warning: unused imports: `LinkMetric` and `compute_spf`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:6:18
+  |
+6 | use super::spf::{compute_spf, LinkMetric, SpfTable};
+  |                  ^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `std::os::unix::io::AsRawFd`
+  --> crates/qualia-core-db/src/csd_storage.rs:10:5
+   |
+10 | use std::os::unix::io::AsRawFd;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `class`
+   --> crates/qualia-core-db/src/platform/platform_scheduler.rs:201:17
+    |
+201 | fn bind_windows(class: QosClass) -> Result<(), SchedulerError> {
+    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_class`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `device_path`
+   --> crates/qualia-core-db/src/storage_driver.rs:586:19
+    |
+586 |     fn probe_nvme(device_path: &str) -> bool {
+    |                   ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_device_path`
+
+warning: field `engine_handle` is never read
+   --> crates/qualia-core-db/src/net/ebpf_filter.rs:245:5
+    |
+241 | pub struct WfpFilter {
+    |            --------- field in this struct
+...
+245 |     engine_handle: isize,
+    |     ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `NOT_ADVICE` is never used
+ --> crates/qualia-core-db/src/clinical_playground.rs:5:7
+  |
+5 | const NOT_ADVICE: &str =
+  |       ^^^^^^^^^^
+
+warning: function `evaluate` is never used
+ --> crates/qualia-core-db/src/clinical_playground.rs:8:8
+  |
+8 | pub fn evaluate(calculator: &str, params: &Value) -> Result<Value, String> {
+  |        ^^^^^^^^
+
+warning: function `need_bool` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:17:4
+   |
+17 | fn need_bool(v: &Value, key: &str) -> Result<bool, String> {
+   |    ^^^^^^^^^
+
+warning: function `need_bool_alias` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:23:4
+   |
+23 | fn need_bool_alias(v: &Value, key: &str, alias: &str) -> Result<bool, St...
+   |    ^^^^^^^^^^^^^^^
+
+warning: function `need_f64` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:35:4
+   |
+35 | fn need_f64(v: &Value, key: &str) -> Result<f64, String> {
+   |    ^^^^^^^^
+
+warning: function `need_u8` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:46:4
+   |
+46 | fn need_u8(v: &Value, key: &str) -> Result<u8, String> {
+   |    ^^^^^^^
+
+warning: function `need_age` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:54:4
+   |
+54 | fn need_age(
+   |    ^^^^^^^^
+
+warning: function `need_positive` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:69:4
+   |
+69 | fn need_positive(v: &Value, key: &str, max_inclusive: f64) -> Result<f64...
+   |    ^^^^^^^^^^^^^
+
+warning: function `provenance` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:77:4
+   |
+77 | fn provenance(algorithm: &str, version: &str) -> Value {
+   |    ^^^^^^^^^^
+
+warning: function `merge` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:86:4
+   |
+86 | fn merge(mut body: Value, meta: Value) -> Value {
+   |    ^^^^^
+
+warning: function `mmol_or_mgdl` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:95:4
+   |
+95 | fn mmol_or_mgdl(v: &Value, mmol_key: &str, mgdl_key: &str, max_mmol: f64...
+   |    ^^^^^^^^^^^^
+
+warning: function `framingham` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:107:4
+    |
+107 | fn framingham(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^^^^^
+
+warning: function `cha2ds2` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:172:4
+    |
+172 | fn cha2ds2(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^^
+
+warning: function `score2` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:223:4
+    |
+223 | fn score2(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^
+
+warning: function `need_str` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:297:4
+    |
+297 | fn need_str<'a>(v: &'a Value, key: &str) -> Result<&'a str, String> {
+    |    ^^^^^^^^
+
+warning: function `wasm_denied` is never used
+  --> crates/qualia-core-db/src/poet_host/invoke/graph/lexicon.rs:20:4
+   |
+20 | fn wasm_denied(span: Span) -> Diagnostic {
+   |    ^^^^^^^^^^^
+
+warning: field `device_path` is never read
+   --> crates/qualia-core-db/src/storage_driver.rs:559:5
+    |
+556 | pub struct WinNvmeDriver {
+    |            ------------- field in this struct
+...
+559 |     device_path: String,
+    |     ^^^^^^^^^^^
+
+warning: associated constant `IOCTL_STORAGE_QUERY_PROPERTY` is never used
+   --> crates/qualia-core-db/src/storage_driver.rs:565:11
+    |
+562 | impl WinNvmeDriver {
+    | ------------------ associated constant in this implementation
+...
+565 |     const IOCTL_STORAGE_QUERY_PROPERTY: u32 = 0x002D_1400;
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `HKDF_SALT` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:21:7
+   |
+21 | const HKDF_SALT: &[u8] = b"qpr-pq-1";
+   |       ^^^^^^^^^
+
+warning: constant `HYBRID_INFO_I2R` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:22:7
+   |
+22 | const HYBRID_INFO_I2R: &[u8] = b"qpr-pq-1/qlink/i2r";
+   |       ^^^^^^^^^^^^^^^
+
+warning: constant `FINISHED_ROLE` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:23:7
+   |
+23 | const FINISHED_ROLE: &[u8] = b"qsession";
+   |       ^^^^^^^^^^^^^
+
+warning: constant `TEST_ITEMS` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:25:7
+   |
+25 | const TEST_ITEMS: [(&[u8], &[u8]); 2] = [(b"suite", b"qpr-pq-1"), (b"rol...
+   |       ^^^^^^^^^^
+
+warning: constant `FROZEN_TRANSCRIPT_SHA384` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:28:7
+   |
+28 | const FROZEN_TRANSCRIPT_SHA384: &str =
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FROZEN_HYBRID_I2R` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:32:7
+   |
+32 | const FROZEN_HYBRID_I2R: &str = "e4c3fcd4ce69a212c883d7114078ce410751cf1...
+   |       ^^^^^^^^^^^^^^^^^
+
+warning: constant `FROZEN_FINISHED_MAC` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:35:7
+   |
+35 | const FROZEN_FINISHED_MAC: &str =
+   |       ^^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_hkdf_sha384` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:54:4
+   |
+54 | fn oracle_hkdf_sha384(salt: Option<&[u8]>, ikm: &[u8], info: &[u8], okm:...
+   |    ^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_hybrid_shared_secret` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:60:4
+   |
+60 | fn oracle_hybrid_shared_secret(
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_finished_mac` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:72:4
+   |
+72 | fn oracle_finished_mac(transcript_digest: &StrongDigest, role: &[u8]) ->...
+   |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `decode_hex` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:89:4
+   |
+89 | fn decode_hex<const N: usize>(hex: &str) -> [u8; N] {
+   |    ^^^^^^^^^^
+
+warning: function `from_hex_nibble` is never used
+   --> crates/qualia-core-db/src/crypto/network/vectors.rs:101:4
+    |
+101 | fn from_hex_nibble(b: u8) -> u8 {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `production_transcript` is never used
+   --> crates/qualia-core-db/src/crypto/network/vectors.rs:110:4
+    |
+110 | fn production_transcript() -> super::transcript::Transcript {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `qualia-core-db` (lib) generated 38 warnings (run `cargo fix --lib -p qualia-core-db` to apply 6 suggestions)
+    Finished `release` profile [optimized] target(s) in 3m 52s
+===== END 10-p64-converter  rc=0  elapsed=233s  2026-09-08T11:44:55Z =====
+errors=0 warnings=40 unique_diagnostic_lines=40

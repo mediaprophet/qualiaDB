@@ -1,0 +1,1667 @@
+===== START 01-cli-linux  2026-09-08T11:29:36Z =====
+CMD: cargo build --release -p qualia-cli
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/vibe-wasm/Cargo.toml
+workspace: /workspace/Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/poet/Cargo.toml
+workspace: /workspace/Cargo.toml
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded adler2 v2.0.1
+  Downloaded asynchronous-codec v0.7.0
+  Downloaded async-signal v0.2.14
+  Downloaded async-task v4.7.1
+  Downloaded block-padding v0.3.3
+  Downloaded crunchy v0.2.4
+  Downloaded bit-set v0.10.0
+  Downloaded cff-parser v0.2.0
+  Downloaded atoi v3.1.0
+  Downloaded blake2 v0.10.6
+  Downloaded aws-lc-rs v1.17.3
+  Downloaded chacha20 v0.9.1
+  Downloaded pulp v0.21.5
+  Downloaded cmake v0.1.58
+  Downloaded atomic-waker v1.1.2
+  Downloaded crypto-common v0.2.2
+  Downloaded clap_derive v4.6.4
+  Downloaded base64 v0.21.7
+  Downloaded crossbeam-epoch v0.9.20
+  Downloaded http-body v1.1.0
+  Downloaded const-str v0.4.3
+  Downloaded hashlink v0.10.0
+  Downloaded async-trait v0.1.91
+  Downloaded bit-vec v0.9.1
+  Downloaded bitcoin_hashes v0.14.101
+  Downloaded block-buffer v0.12.1
+  Downloaded ciborium v0.2.2
+  Downloaded group v0.13.0
+  Downloaded autocfg v1.5.1
+  Downloaded cfg-if v1.0.4
+  Downloaded ciborium-ll v0.2.2
+  Downloaded axum-core v0.5.6
+  Downloaded base256emoji v1.0.2
+  Downloaded hmac v0.13.0
+  Downloaded half v2.7.1
+  Downloaded html5ever v0.39.0
+  Downloaded bip32 v0.5.3
+  Downloaded bufstream v0.1.4
+  Downloaded crossbeam-channel v0.5.16
+  Downloaded linked-hash-map v0.5.6
+  Downloaded base16ct v1.0.0
+  Downloaded http v1.4.2
+  Downloaded cipher v0.5.2
+  Downloaded cpufeatures v0.2.17
+  Downloaded ctr v0.10.1
+  Downloaded attohttpc v0.30.1
+  Downloaded blocking v1.6.2
+  Downloaded async-recursion v1.1.1
+  Downloaded boringtun v0.7.1
+  Downloaded bumpalo v3.20.3
+  Downloaded cfg_aliases v0.2.2
+  Downloaded icu_normalizer_data v2.2.0
+  Downloaded aead v0.6.1
+  Downloaded hashbrown v0.14.5
+  Downloaded hashbrown v0.15.5
+  Downloaded base-x v0.2.11
+  Downloaded clap_lex v1.1.0
+  Downloaded colorchoice v1.0.5
+  Downloaded libp2p-tls v0.6.2
+  Downloaded libp2p-noise v0.46.1
+  Downloaded libp2p-quic v0.13.1
+  Downloaded cssparser-macros v0.7.0
+  Downloaded cpufeatures v0.3.0
+  Downloaded ciborium-io v0.2.2
+  Downloaded primeorder v0.14.0
+  Downloaded async-executor v1.14.0
+  Downloaded async-process v2.5.0
+  Downloaded bitflags v1.3.2
+  Downloaded cmov v0.5.4
+  Downloaded libloading v0.8.9
+  Downloaded libp2p-upnp v0.5.0
+  Downloaded chacha20 v0.10.1
+  Downloaded itoa v1.0.18
+  Downloaded keccak v0.1.6
+  Downloaded base64ct v1.8.3
+  Downloaded bs58 v0.5.1
+  Downloaded ctr v0.9.2
+  Downloaded hashbrown v0.16.1
+  Downloaded hashbrown v0.17.1
+  Downloaded hkdf v0.13.0
+  Downloaded itertools v0.14.0
+  Downloaded json-event-parser v0.2.3
+  Downloaded bytemuck_derive v1.11.0
+  Downloaded constant_time_eq v0.4.2
+  Downloaded chunked_transfer v1.5.0
+  Downloaded cpubits v0.1.1
+  Downloaded crypto-common v0.1.7
+  Downloaded proc-macro-crate v3.5.0
+  Downloaded rand_pcg v0.10.2
+  Downloaded color_quant v1.1.0
+  Downloaded core_affinity v0.8.3
+  Downloaded base45 v3.2.0
+  Downloaded byteorder-lite v0.1.0
+  Downloaded is_terminal_polyfill v1.70.2
+  Downloaded libp2p-swarm-derive v0.35.1
+  Downloaded quick-error v2.0.1
+  Downloaded crossbeam-utils v0.8.22
+  Downloaded bitflags v2.13.1
+  Downloaded const-oid v0.9.6
+  Downloaded const-oid v0.10.2
+  Downloaded critical-section v1.2.0
+  Downloaded group v0.14.0
+  Downloaded ipnet v2.12.0
+  Downloaded libp2p-yamux v0.47.0
+  Downloaded headers-core v0.3.0
+  Downloaded idna_adapter v1.2.2
+  Downloaded libp2p-allow-block-list v0.6.0
+  Downloaded http-range-header v0.4.2
+  Downloaded inout v0.1.4
+  Downloaded rustc-hash v1.1.0
+  Downloaded async-io v2.6.0
+  Downloaded base16ct v0.2.0
+  Downloaded httpdate v1.0.3
+  Downloaded ip_network_table v0.2.0
+  Downloaded concurrent-queue v2.5.0
+  Downloaded crossbeam-deque v0.8.7
+  Downloaded if-watch v3.2.2
+  Downloaded rustc-hash v2.1.3
+  Downloaded tower-layer v0.3.3
+  Downloaded wayland-sys v0.31.11
+  Downloaded cbc v0.1.2
+  Downloaded ctutils v0.4.2
+  Downloaded ppv-lite86 v0.2.21
+  Downloaded ark-ff-asm v0.6.0
+  Downloaded universal-hash v0.6.1
+  Downloaded base64 v0.13.1
+  Downloaded hex-conservative v0.2.2
+  Downloaded http-body-util v0.1.4
+  Downloaded jobserver v0.1.35
+  Downloaded scoped-tls v1.0.1
+  Downloaded spin v0.5.2
+  Downloaded try-lock v0.2.5
+  Downloaded equator-macro v0.4.2
+  Downloaded h2 v0.4.15
+  Downloaded libp2p-metrics v0.17.0
+  Downloaded libp2p-connection-limits v0.6.0
+  Downloaded async-channel v2.5.0
+  Downloaded xmltree v0.10.3
+  Downloaded bech32 v0.12.0
+  Downloaded defmt-parser v1.0.0
+  Downloaded icu_properties v2.2.0
+  Downloaded icu_provider v2.2.0
+  Downloaded inout v0.2.2
+  Downloaded keccak v0.2.0
+  Downloaded libp2p-identity v0.2.14
+  Downloaded libp2p-tcp v0.44.1
+  Downloaded rangemap v1.7.1
+  Downloaded sparopt v0.3.6
+  Downloaded crc32fast v1.5.0
+  Downloaded csv-core v0.1.13
+  Downloaded libp2p-dns v0.44.0
+  Downloaded anstyle v1.0.14
+  Downloaded argon2 v0.5.3
+  Downloaded ark-ff-macros v0.6.0
+  Downloaded serde-wasm-bindgen v0.6.5
+  Downloaded serde_urlencoded v0.7.1
+  Downloaded thiserror v2.0.19
+  Downloaded thiserror-impl v1.0.69
+  Downloaded async-lock v3.4.2
+  Downloaded bytemuck v1.25.2
+  Downloaded cc v1.3.0
+  Downloaded email-encoding v0.4.1
+  Downloaded hyper-rustls v0.27.9
+  Downloaded libloading v0.9.0
+  Downloaded lock_api v0.4.14
+  Downloaded rio_turtle v0.8.6
+  Downloaded rtrb v0.3.4
+  Downloaded ark-groth16 v0.6.0
+  Downloaded serdect v0.4.3
+  Downloaded shlex v2.0.1
+  Downloaded ip_network_table-deps-treebitmap v0.5.0
+  Downloaded litemap v0.8.2
+  Downloaded clap v4.6.4
+  Downloaded yamux v0.12.1
+  Downloaded zbus_names v4.3.4
+  Downloaded defmt-macros v1.1.1
+  Downloaded ecdsa v0.17.0
+  Downloaded keyring-core v1.0.0
+  Downloaded libp2p-request-response v0.29.0
+  Downloaded termcolor v1.4.1
+  Downloaded chacha20poly1305 v0.10.1
+  Downloaded ark-relations v0.6.0
+  Downloaded smallvec v1.15.2
+  Downloaded spargebra v0.4.6
+  Downloaded stringprep v0.1.5
+  Downloaded tendril v0.5.1
+  Downloaded tfhe-ntt v0.6.1
+  Downloaded chacha20poly1305 v0.11.0
+  Downloaded cssparser v0.37.0
+  Downloaded fnv v1.0.7
+  Downloaded iana-time-zone v0.1.65
+  Downloaded keyring v4.1.5
+  Downloaded khronos-egl v6.0.0
+  Downloaded litrs v1.0.0
+  Downloaded thiserror v1.0.69
+  Downloaded bytes v1.12.1
+  Downloaded codespan-reporting v0.13.1
+  Downloaded crypto-bigint v0.5.5
+  Downloaded httparse v1.10.1
+  Downloaded hybrid-array v0.4.13
+  Downloaded ip_network v0.4.1
+  Downloaded libp2p-mdns v0.48.0
+  Downloaded num-rational v0.4.2
+  Downloaded ark-poly v0.6.0
+  Downloaded ark-serialize v0.6.0
+  Downloaded secret-service v5.1.0
+  Downloaded serde_yaml v0.9.34+deprecated
+  Downloaded ryu-js v1.0.3
+  Downloaded libp2p v0.56.0
+  Downloaded zbus_macros v5.18.0
+  Downloaded rand v0.9.5
+  Downloaded ed25519 v2.2.3
+  Downloaded fdeflate v0.3.7
+  Downloaded fhe v0.1.1
+  Downloaded headers v0.4.1
+  Downloaded igd-next v0.16.2
+  Downloaded image-webp v0.2.4
+  Downloaded oid-registry v0.7.1
+  Downloaded merlin v3.0.0
+  Downloaded unsafe-libyaml v0.2.11
+  Downloaded uuid v1.24.0
+  Downloaded futures-sink v0.3.33
+  Downloaded futures-task v0.3.33
+  Downloaded phf_shared v0.13.1
+  Downloaded wgpu-core-deps-windows-linux-android v30.0.0
+  Downloaded equator v0.4.2
+  Downloaded rand v0.10.2
+  Downloaded libp2p-core v0.43.2
+  Downloaded hickory-resolver v0.25.2
+  Downloaded bip39 v2.2.2
+  Downloaded mime v0.3.17
+  Downloaded multibase v0.9.3
+  Downloaded rfc6979 v0.6.0
+  Downloaded der-parser v9.0.0
+  Downloaded icu_locale_core v2.2.0
+  Downloaded icu_normalizer v2.2.0
+  Downloaded rustc_version v0.4.1
+  Downloaded num_cpus v1.17.0
+  Downloaded phf_generator v0.13.1
+  Downloaded gif v0.14.2
+  Downloaded rio_api v0.8.6
+  Downloaded rio_xml v0.8.6
+  Downloaded serde_bytes v0.11.19
+  Downloaded unicode-bidi v0.3.18
+  Downloaded imap v2.4.1
+  Downloaded k256 v0.13.4
+  Downloaded env_logger v0.11.11
+  Downloaded multihash v0.19.5
+  Downloaded oxrdfio v0.2.5
+  Downloaded async-broadcast v0.7.2
+  Downloaded zune-core v0.5.1
+  Downloaded futures-macro v0.3.33
+  Downloaded prometheus-client-derive-encode v0.4.2
+  Downloaded rfc6979 v0.4.0
+  Downloaded futures-bounded v0.2.4
+  Downloaded phf_codegen v0.13.1
+  Downloaded profiling v1.0.18
+  Downloaded ripemd v0.1.3
+  Downloaded asn1-rs-impl v0.2.0
+  Downloaded zbus-secret-service-keyring-store v1.0.0
+  Downloaded naga-types v30.0.0
+  Downloaded phf_macros v0.13.1
+  Downloaded pin-project-internal v1.1.13
+  Downloaded asn1-rs-derive v0.6.0
+  Downloaded signature v3.0.0
+  Downloaded siphasher v1.0.3
+  Downloaded wasm-bindgen-macro v0.2.125
+  Downloaded signature v2.2.0
+  Downloaded icu_collections v2.2.0
+  Downloaded new_debug_unreachable v1.0.6
+  Downloaded sha2 v0.11.0
+  Downloaded wasm-bindgen-shared v0.2.125
+  Downloaded enum-ordinalize v4.4.1
+  Downloaded fhe-math v0.1.1
+  Downloaded num-iter v0.1.46
+  Downloaded parking v2.2.1
+  Downloaded k256 v0.14.0
+  Downloaded libp2p-swarm v0.47.1
+  Downloaded ripemd v0.2.0
+  Downloaded rusticata-macros v4.1.0
+  Downloaded tungstenite v0.29.0
+  Downloaded warp v0.4.3
+  Downloaded form_urlencoded v1.2.2
+  Downloaded futures-core v0.3.33
+  Downloaded futures-io v0.3.33
+  Downloaded futures-rustls v0.26.0
+  Downloaded num-conv v0.2.2
+  Downloaded regex v1.13.1
+  Downloaded curve25519-dalek-derive v0.1.1
+  Downloaded netlink-proto v0.12.0
+  Downloaded clap_builder v4.6.2
+  Downloaded der v0.7.10
+  Downloaded renderdoc-sys v1.1.0
+  Downloaded simd-adler32 v0.3.10
+  Downloaded zstd v0.13.3
+  Downloaded endi v1.1.1
+  Downloaded netlink-sys v0.8.8
+  Downloaded oxiri v0.2.11
+  Downloaded phf v0.13.1
+  Downloaded resolv-conf v0.7.6
+  Downloaded fs_extra v1.3.0
+  Downloaded oxilangtag v0.1.6
+  Downloaded servo_arc v0.4.3
+  Downloaded zmij v1.0.23
+  Downloaded potential_utf v0.1.5
+  Downloaded prost-derive v0.14.4
+  Downloaded pulp-wasm-simd-flag v0.1.1
+  Downloaded web-time v1.1.0
+  Downloaded email_address v0.2.9
+  Downloaded xml-rs v0.8.28
+  Downloaded dashmap v6.2.1
+  Downloaded asn1-rs-derive v0.5.1
+  Downloaded enum-as-inner v0.6.1
+  Downloaded slab v0.4.12
+  Downloaded sparesults v0.3.3
+  Downloaded elliptic-curve v0.14.1
+  Downloaded indexmap v2.14.0
+  Downloaded sha2 v0.10.9
+  Downloaded num-complex v0.4.6
+  Downloaded reborrow v0.5.5
+  Downloaded aligned-vec v0.6.4
+  Downloaded reqwest v0.13.4
+  Downloaded io-uring v0.7.13
+  Downloaded arrayref v0.3.9
+  Downloaded js-sys v0.3.102
+  Downloaded oxjsonld v0.2.5
+  Downloaded rand_chacha v0.9.0
+  Downloaded urlencoding v2.1.3
+  Downloaded ego-tree v0.11.0
+  Downloaded futures v0.3.33
+  Downloaded futures-executor v0.3.33
+  Downloaded pin-project v1.1.13
+  Downloaded native-tls v0.2.18
+  Downloaded pkcs8 v0.10.2
+  Downloaded stable_deref_trait v1.2.1
+  Downloaded web_atoms v0.2.5
+  Downloaded yoke-derive v0.8.2
+  Downloaded quick-xml v0.37.5
+  Downloaded axum v0.8.9
+  Downloaded elliptic-curve v0.13.8
+  Downloaded env_filter v2.0.0
+  Downloaded hyper-util v0.1.20
+  Downloaded parking_lot v0.12.5
+  Downloaded wgpu-naga-bridge v30.0.0
+  Downloaded md-5 v0.10.6
+  Downloaded foreign-types v0.3.2
+  Downloaded weezl v0.1.12
+  Downloaded libp2p-kad v0.48.0
+  Downloaded rtnetlink v0.20.0
+  Downloaded signal-hook-registry v1.4.8
+  Downloaded socket2 v0.6.5
+  Downloaded flate2 v1.1.9
+  Downloaded spki v0.8.0
+  Downloaded sponge-cursor v0.1.0
+  Downloaded tokio-macros v2.7.1
+  Downloaded serde_repr v0.1.21
+  Downloaded tracing-core v0.1.36
+  Downloaded ff v0.13.1
+  Downloaded futures-lite v2.6.1
+  Downloaded jiff-core v0.1.0
+  Downloaded oxrdf v0.3.3
+  Downloaded peg-macros v0.8.6
+  Downloaded piper v0.2.5
+  Downloaded prost v0.14.4
+  Downloaded aes v0.9.1
+  Downloaded spareval v0.2.6
+  Downloaded ff v0.14.0
+  Downloaded polling v3.11.0
+  Downloaded precomputed-hash v0.1.1
+  Downloaded ahash v0.8.12
+  Downloaded sct v0.7.1
+  Downloaded semver v1.0.28
+  Downloaded socket2 v0.5.10
+  Downloaded twox-hash v2.1.3
+  Downloaded yoke v0.8.3
+  Downloaded educe v0.6.0
+  Downloaded either v1.16.0
+  Downloaded fhe-traits v0.1.1
+  Downloaded futures-channel v0.3.33
+  Downloaded match-lookup v0.1.2
+  Downloaded zstd-safe v7.2.4
+  Downloaded enumflags2_derive v0.7.12
+  Downloaded num-integer v0.1.46
+  Downloaded tokio-rustls v0.24.1
+  Downloaded mio v1.2.2
+  Downloaded postscript v0.14.1
+  Downloaded adobe-cmap-parser v0.4.1
+  Downloaded yamux v0.13.10
+  Downloaded sec1 v0.7.3
+  Downloaded libm v0.2.16
+  Downloaded oxttl v0.2.3
+  Downloaded serde_core v1.0.229
+  Downloaded serde_json v1.0.151
+  Downloaded wnaf v0.14.0
+  Downloaded zerovec-derive v0.11.3
+  Downloaded der v0.8.1
+  Downloaded futures-timer v3.0.4
+  Downloaded idna v1.1.0
+  Downloaded lettre v0.11.22
+  Downloaded matrixmultiply v0.3.11
+  Downloaded memmap2 v0.9.11
+  Downloaded proc-macro2 v1.0.107
+  Downloaded quick-xml v0.36.2
+  Downloaded sha1 v0.10.7
+  Downloaded tokio-tungstenite v0.30.0
+  Downloaded rawpointer v0.2.1
+  Downloaded rayon-core v1.13.0
+  Downloaded rw-stream-sink v0.4.0
+  Downloaded selectors v0.38.0
+  Downloaded sync_wrapper v1.0.2
+  Downloaded tokio-tungstenite v0.29.0
+  Downloaded uint v0.10.0
+  Downloaded unicode-xid v0.2.6
+  Downloaded writeable v0.6.3
+  Downloaded log v0.4.33
+  Downloaded quinn-udp v0.5.15
+  Downloaded futures-intrusive v0.5.0
+  Downloaded pom v1.1.0
+  Downloaded prometheus-client v0.23.1
+  Downloaded document-features v0.2.12
+  Downloaded ecdsa v0.16.9
+  Downloaded enumflags2 v0.7.12
+  Downloaded find-msvc-tools v0.1.9
+  Downloaded getopts v0.2.24
+  Downloaded hkdf v0.12.4
+  Downloaded oid-registry v0.8.1
+  Downloaded raw-window-handle v0.6.2
+  Downloaded asn1-rs v0.6.2
+  Downloaded doc-comment v0.3.4
+  Downloaded event-listener-strategy v0.5.4
+  Downloaded time-macros v0.2.32
+  Downloaded unicode-properties v0.1.4
+  Downloaded dlib v0.5.3
+  Downloaded enum-ordinalize-derive v4.4.1
+  Downloaded ghash v0.5.1
+  Downloaded lru-cache v0.1.2
+  Downloaded presser v0.3.1
+  Downloaded rustls-platform-verifier v0.7.0
+  Downloaded foldhash v0.2.0
+  Downloaded nohash-hasher v0.2.0
+  Downloaded pin-project-lite v0.2.17
+  Downloaded defmt v1.1.1
+  Downloaded hyper v1.11.0
+  Downloaded utf8_iter v1.0.4
+  Downloaded glow v0.17.0
+  Downloaded ordered-stream v0.2.0
+  Downloaded synstructure v0.13.2
+  Downloaded tower-http v0.7.0
+  Downloaded zeroize v1.9.0
+  Downloaded zvariant_derive v5.13.1
+  Downloaded icu_properties_data v2.2.0
+  Downloaded multiaddr v0.18.2
+  Downloaded blake3 v1.8.5
+  Downloaded rand v0.8.7
+  Downloaded tokio-stream v0.1.19
+  Downloaded curve25519-dalek v5.0.0
+  Downloaded ghash v0.6.0
+  Downloaded pbkdf2 v0.13.0
+  Downloaded yasna v0.6.0
+  Downloaded matchit v0.8.4
+  Downloaded yasna v0.5.2
+  Downloaded parking_lot_core v0.9.12
+  Downloaded zerofrom-derive v0.1.7
+  Downloaded hickory-proto v0.25.2
+  Downloaded markup5ever v0.39.0
+  Downloaded memchr v2.8.3
+  Downloaded poly1305 v0.9.1
+  Downloaded ark-std v0.6.0
+  Downloaded arrayvec v0.5.2
+  Downloaded string_cache_codegen v0.6.1
+  Downloaded derive_more v2.1.1
+  Downloaded nom v8.0.0
+  Downloaded rand_core v0.10.1
+  Downloaded serde_path_to_error v0.1.20
+  Downloaded sha1 v0.11.0
+  Downloaded static_assertions v1.1.0
+  Downloaded zeroize_derive v1.5.0
+  Downloaded fastbloom v0.17.0
+  Downloaded foreign-types-shared v0.1.1
+  Downloaded netlink-packet-core v0.8.1
+  Downloaded ordered-float v5.3.0
+  Downloaded rayon v1.12.0
+  Downloaded serde_derive v1.0.229
+  Downloaded spirv v0.4.0+sdk-1.4.341.0
+  Downloaded url v2.5.8
+  Downloaded arrayvec v0.7.8
+  Downloaded ascii v1.1.0
+  Downloaded rand_core v0.9.5
+  Downloaded ttf-parser v0.25.1
+  Downloaded wasm-bindgen-macro-support v0.2.125
+  Downloaded string_cache v0.9.0
+  Downloaded ark-serialize-derive v0.6.0
+  Downloaded tagptr v0.2.0
+  Downloaded zerofrom v0.1.8
+  Downloaded fhe-util v0.1.1
+  Downloaded git2 v0.21.0
+  Downloaded idna v0.4.0
+  Downloaded rand_distr v0.6.0
+  Downloaded rcgen v0.13.2
+  Downloaded rustls-pki-types v1.15.0
+  Downloaded fastrand v2.5.0
+  Downloaded aho-corasick v1.1.4
+  Downloaded rustls-pemfile v1.0.4
+  Downloaded rustls-pemfile v2.2.0
+  Downloaded rustls-webpki v0.103.13
+  Downloaded rustversion v1.0.23
+  Downloaded spki v0.7.3
+  Downloaded zune-jpeg v0.5.15
+  Downloaded errno v0.3.14
+  Downloaded nom v7.1.3
+  Downloaded anstream v1.0.0
+  Downloaded ark-crypto-primitives-macros v0.5.0
+  Downloaded zvariant v5.13.1
+  Downloaded equivalent v1.0.2
+  Downloaded polyval v0.6.2
+  Downloaded quinn v0.11.11
+  Downloaded want v0.3.1
+  Downloaded pkcs8 v0.11.0
+  Downloaded asn1-rs v0.7.2
+  Downloaded scraper v0.27.0
+  Downloaded sec1 v0.8.1
+  Downloaded pollster v1.0.1
+  Downloaded webpki-roots v1.0.9
+  Downloaded image v0.25.10
+  Downloaded allocator-api2 v0.2.21
+  Downloaded lopdf v0.42.0
+  Downloaded minicbor v2.2.3
+  Downloaded polyval v0.7.3
+  Downloaded ryu v1.0.23
+  Downloaded wasm-bindgen v0.2.125
+  Downloaded zerocopy-derive v0.8.55
+  Downloaded png v0.17.16
+  Downloaded unicase v2.9.0
+  Downloaded gpu-allocator v0.28.0
+  Downloaded nom v5.1.3
+  Downloaded rustls-native-certs v0.8.4
+  Downloaded toml_edit v0.25.13+spec-1.1.0
+  Downloaded tungstenite v0.30.0
+  Downloaded fast_qr v0.13.1
+  Downloaded trust-dns-resolver v0.23.2
+  Downloaded type1-encoding-parser v0.1.1
+  Downloaded ark-ec v0.6.0
+  Downloaded mime_guess v2.0.5
+  Downloaded digest v0.11.3
+  Downloaded displaydoc v0.2.6
+  Downloaded dtoa-short v0.3.5
+  Downloaded primefield v0.14.0
+  Downloaded quick-protobuf-codec v0.3.1
+  Downloaded data-encoding-macro-internal v0.1.18
+  Downloaded oxrdfxml v0.2.3
+  Downloaded percent-encoding v2.3.2
+  Downloaded mp4 v0.14.0
+  Downloaded serde v1.0.229
+  Downloaded lru-slab v0.1.2
+  Downloaded multistream-select v0.13.0
+  Downloaded time-core v0.1.9
+  Downloaded zerotrie v0.2.4
+  Downloaded oxsdatatypes v0.2.2
+  Downloaded pdf-extract v0.12.0
+  Downloaded poly1305 v0.8.0
+  Downloaded thiserror-impl v2.0.19
+  Downloaded openssl-macros v0.1.1
+  Downloaded peg-runtime v0.8.6
+  Downloaded pem v3.0.6
+  Downloaded quoted_printable v0.5.2
+  Downloaded deranged v0.5.8
+  Downloaded aead v0.5.2
+  Downloaded ed25519 v3.0.0
+  Downloaded once_cell v1.21.4
+  Downloaded event-listener v5.4.1
+  Downloaded lz4_flex v0.13.1
+  Downloaded tempfile v3.27.0
+  Downloaded quote v1.0.47
+  Downloaded foldhash v0.1.5
+  Downloaded ark-ff v0.6.0
+  Downloaded tinystr v0.8.3
+  Downloaded toml_parser v1.1.2+spec-1.1.0
+  Downloaded tower-service v0.3.3
+  Downloaded chrono v0.4.45
+  Downloaded data-encoding v2.11.0
+  Downloaded nix v0.31.3
+  Downloaded openssl-probe v0.2.1
+  Downloaded ark-snark v0.6.0
+  Downloaded data-encoding-macro v0.1.20
+  Downloaded getrandom v0.2.17
+  Downloaded num v0.4.3
+  Downloaded paste v1.0.15
+  Downloaded pkg-config v0.3.33
+  Downloaded unsigned-varint v0.7.2
+  Downloaded x509-parser v0.18.1
+  Downloaded fixedbitset v0.5.7
+  Downloaded getrandom v0.3.4
+  Downloaded rcgen v0.14.8
+  Downloaded secp256k1 v0.27.0
+  Downloaded toml_datetime v1.1.1+spec-1.1.0
+  Downloaded universal-hash v0.5.1
+  Downloaded unsigned-varint v0.8.0
+  Downloaded x509-parser v0.16.0
+  Downloaded x509-parser v0.17.0
+  Downloaded zerovec v0.11.6
+  Downloaded zvariant_utils v3.5.0
+  Downloaded curve25519-dalek v4.1.3
+  Downloaded dtoa v1.0.11
+  Downloaded dunce v1.0.5
+  Downloaded ed25519-dalek v3.0.0
+  Downloaded ethnum v1.5.3
+  Downloaded opaque-debug v0.3.1
+  Downloaded password-hash v0.5.0
+  Downloaded peg v0.8.6
+  Downloaded tiny_http v0.12.0
+  Downloaded x25519-dalek v3.0.0
+  Downloaded png v0.18.1
+  Downloaded anstyle-query v1.1.5
+  Downloaded untrusted v0.7.1
+  Downloaded ecb v0.1.2
+  Downloaded tower v0.5.3
+  Downloaded tower-http v0.6.11
+  Downloaded typenum v1.20.1
+  Downloaded unicode-normalization v0.1.25
+  Downloaded crypto-bigint v0.7.5
+  Downloaded euclid v0.20.14
+  Downloaded miniz_oxide v0.8.9
+  Downloaded openssl-sys v0.9.117
+  Downloaded quick-protobuf v0.8.1
+  Downloaded aes-gcm v0.10.3
+  Downloaded anstyle-parse v1.0.0
+  Downloaded unicode-ident v1.0.24
+  Downloaded nix v0.30.1
+  Downloaded aes-gcm v0.11.0
+  Downloaded tokio-rustls v0.26.4
+  Downloaded getrandom v0.4.3
+  Downloaded raw-cpuid v11.6.0
+  Downloaded anyhow v1.0.104
+  Downloaded rustls-webpki v0.101.7
+  Downloaded syn v1.0.109
+  Downloaded tinyvec v1.12.0
+  Downloaded tracing-attributes v0.1.31
+  Downloaded zbus v5.18.0
+  Downloaded derivative v2.2.0
+  Downloaded num-bigint v0.4.8
+  Downloaded oxigraph v0.5.9
+  Downloaded ark-crypto-primitives v0.6.0
+  Downloaded sha3 v0.12.0
+  Downloaded trust-dns-proto v0.23.2
+  Downloaded webpki-roots v0.25.4
+  Downloaded x25519-dalek v2.0.1
+  Downloaded der-parser v10.0.0
+  Downloaded tokio-util v0.7.19
+  Downloaded derive_more-impl v2.1.1
+  Downloaded ed25519-dalek v2.2.0
+  Downloaded lexical-core v0.7.6
+  Downloaded minimal-lexical v0.2.1
+  Downloaded netlink-packet-route v0.28.0
+  Downloaded pulp v0.22.3
+  Downloaded ark-bls12-381 v0.6.0
+  Downloaded rustix v1.1.4
+  Downloaded wgpu-types v30.0.0
+  Downloaded futures-util v0.3.33
+  Downloaded num-bigint-dig v0.9.1
+  Downloaded quinn-proto v0.11.16
+  Downloaded wgpu v30.0.0
+  Downloaded zerocopy v0.8.55
+  Downloaded portable-atomic v1.14.0
+  Downloaded winnow v1.0.4
+  Downloaded quick-xml v0.41.0
+  Downloaded ash v0.38.0+1.3.281
+  Downloaded syn v2.0.119
+  Downloaded sysinfo v0.39.6
+  Downloaded vcpkg v0.2.15
+  Downloaded moka v0.12.15
+  Downloaded moxcms v0.8.1
+  Downloaded ndarray v0.17.2
+  Downloaded syn v3.0.3
+  Downloaded wgpu-core v30.0.0
+  Downloaded snow v0.9.6
+  Downloaded time v0.3.54
+  Downloaded regex-syntax v0.8.11
+  Downloaded rustls v0.21.12
+  Downloaded unicode-width v0.2.2
+  Downloaded jiff v0.2.34
+  Downloaded wgpu-hal v30.0.0
+  Downloaded cudarc v0.19.8
+  Downloaded openssl v0.10.81
+  Downloaded rustls v0.23.42
+  Downloaded jpeg-decoder v0.3.2
+  Downloaded tracing v0.1.44
+  Downloaded libc v0.2.189
+  Downloaded libz-sys v1.1.29
+  Downloaded fips203 v0.4.3
+  Downloaded csv v1.4.0
+  Downloaded zstd-sys v2.0.16+zstd.1.5.7
+  Downloaded regex-automata v0.4.16
+  Downloaded pxfm v0.1.30
+  Downloaded sha3 v0.10.9
+  Downloaded petgraph v0.8.3
+  Downloaded tokio v1.53.1
+  Downloaded naga v30.0.0
+  Downloaded encoding_rs v0.8.35
+  Downloaded ring v0.17.14
+  Downloaded libgit2-sys v0.18.5+1.9.4
+  Downloaded fips204 v0.4.6
+  Downloaded secp256k1-sys v0.8.2
+  Downloaded linux-raw-sys v0.12.1
+  Downloaded ring v0.16.20
+  Downloaded fips205 v0.4.1
+  Downloaded aws-lc-sys v0.43.0
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling cfg-if v1.0.4
+   Compiling libc v0.2.189
+   Compiling subtle v2.6.1
+   Compiling typenum v1.20.1
+   Compiling version_check v0.9.5
+   Compiling generic-array v0.14.7
+   Compiling memchr v2.8.3
+   Compiling syn v2.0.119
+   Compiling syn v3.0.3
+   Compiling log v0.4.33
+   Compiling getrandom v0.2.17
+   Compiling autocfg v1.5.1
+   Compiling rand_core v0.6.4
+   Compiling pin-project-lite v0.2.17
+   Compiling const-oid v0.9.6
+   Compiling portable-atomic v1.14.0
+   Compiling critical-section v1.2.0
+   Compiling smallvec v1.15.2
+   Compiling zerocopy v0.8.55
+   Compiling once_cell v1.21.4
+   Compiling futures-core v0.3.33
+   Compiling libm v0.2.16
+   Compiling num-traits v0.2.19
+   Compiling find-msvc-tools v0.1.9
+   Compiling shlex v2.0.1
+   Compiling jobserver v0.1.35
+   Compiling cc v1.3.0
+   Compiling scopeguard v1.2.0
+   Compiling parking_lot_core v0.9.12
+   Compiling lock_api v0.4.14
+   Compiling cpufeatures v0.2.17
+   Compiling zeroize_derive v1.5.0
+   Compiling zerocopy-derive v0.8.55
+   Compiling zeroize v1.9.0
+   Compiling rand_core v0.10.1
+   Compiling bytes v1.12.1
+   Compiling futures-io v0.3.33
+   Compiling slab v0.4.12
+   Compiling getrandom v0.4.3
+   Compiling thiserror v2.0.19
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling thiserror-impl v2.0.19
+   Compiling digest v0.10.7
+   Compiling futures-sink v0.3.33
+   Compiling parking_lot v0.12.5
+   Compiling serde_core v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling futures-channel v0.3.33
+   Compiling futures-macro v0.3.33
+   Compiling futures-task v0.3.33
+   Compiling futures-util v0.3.33
+   Compiling bitflags v2.13.1
+   Compiling hybrid-array v0.4.13
+   Compiling pkg-config v0.3.33
+   Compiling serde v1.0.229
+   Compiling sha2 v0.10.9
+   Compiling synstructure v0.13.2
+   Compiling ppv-lite86 v0.2.21
+   Compiling errno v0.3.14
+   Compiling signal-hook-registry v1.4.8
+   Compiling crypto-common v0.2.2
+   Compiling tracing-attributes v0.1.31
+   Compiling tracing-core v0.1.36
+   Compiling stable_deref_trait v1.2.1
+   Compiling socket2 v0.6.5
+   Compiling tracing v0.1.44
+   Compiling zerofrom-derive v0.1.7
+   Compiling tokio-macros v2.7.1
+   Compiling displaydoc v0.2.6
+   Compiling mio v1.2.2
+   Compiling yoke-derive v0.8.2
+   Compiling block-buffer v0.12.1
+   Compiling tokio v1.53.1
+   Compiling zerofrom v0.1.8
+   Compiling getrandom v0.3.4
+   Compiling itoa v1.0.18
+   Compiling cmov v0.5.4
+   Compiling zerovec-derive v0.11.3
+   Compiling ctutils v0.4.2
+   Compiling yoke v0.8.3
+   Compiling crossbeam-utils v0.8.22
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.2.0
+   Compiling equivalent v1.0.2
+   Compiling rand_core v0.9.5
+   Compiling zerovec v0.11.6
+   Compiling rand_chacha v0.3.1
+   Compiling semver v1.0.28
+   Compiling rustc_version v0.4.1
+   Compiling rand v0.8.7
+   Compiling rand_chacha v0.9.0
+   Compiling cfg_aliases v0.2.2
+   Compiling percent-encoding v2.3.2
+   Compiling rand v0.9.5
+   Compiling tinystr v0.8.3
+   Compiling hashbrown v0.17.1
+   Compiling litemap v0.8.2
+   Compiling writeable v0.6.3
+   Compiling static_assertions v1.1.0
+   Compiling potential_utf v0.1.5
+   Compiling icu_locale_core v2.2.0
+   Compiling zerotrie v0.2.4
+   Compiling ring v0.17.14
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.2.0
+   Compiling icu_properties_data v2.2.0
+   Compiling const-oid v0.10.2
+   Compiling icu_provider v2.2.0
+   Compiling icu_collections v2.2.0
+   Compiling data-encoding v2.11.0
+   Compiling form_urlencoded v1.2.2
+   Compiling hmac v0.12.1
+   Compiling num-integer v0.1.46
+   Compiling icu_properties v2.2.0
+   Compiling icu_normalizer v2.2.0
+   Compiling indexmap v2.14.0
+   Compiling idna_adapter v1.2.2
+   Compiling untrusted v0.9.0
+   Compiling cpufeatures v0.3.0
+   Compiling idna v1.1.0
+   Compiling digest v0.11.3
+   Compiling curve25519-dalek-derive v0.1.1
+   Compiling either v1.16.0
+   Compiling url v2.5.8
+   Compiling futures-executor v0.3.33
+   Compiling bytemuck_derive v1.11.0
+   Compiling fnv v1.0.7
+   Compiling foldhash v0.1.5
+   Compiling byteorder v1.5.0
+   Compiling anyhow v1.0.104
+   Compiling hex v0.4.3
+   Compiling bytemuck v1.25.2
+   Compiling futures v0.3.33
+   Compiling num-bigint v0.4.8
+   Compiling curve25519-dalek v4.1.3
+   Compiling signature v2.2.0
+   Compiling itertools v0.14.0
+   Compiling http v1.4.2
+   Compiling pin-project-internal v1.1.13
+   Compiling pin-project v1.1.13
+   Compiling prost-derive v0.14.4
+   Compiling hkdf v0.12.4
+   Compiling prost v0.14.4
+   Compiling unsigned-varint v0.8.0
+   Compiling thiserror v1.0.69
+   Compiling heck v0.5.0
+   Compiling ed25519 v2.2.3
+   Compiling data-encoding-macro-internal v0.1.18
+   Compiling hashbrown v0.15.5
+   Compiling bs58 v0.5.1
+   Compiling match-lookup v0.1.2
+   Compiling thiserror-impl v1.0.69
+   Compiling cmake v0.1.58
+   Compiling fs_extra v1.3.0
+   Compiling parking v2.2.1
+   Compiling dunce v1.0.5
+   Compiling const-str v0.4.3
+   Compiling data-encoding-macro v0.1.20
+   Compiling aws-lc-sys v0.43.0
+   Compiling ed25519-dalek v2.2.0
+   Compiling base256emoji v1.0.2
+   Compiling multihash v0.19.5
+   Compiling concurrent-queue v2.5.0
+   Compiling base45 v3.2.0
+   Compiling oxilangtag v0.1.6
+   Compiling arrayref v0.3.9
+   Compiling tinyvec_macros v0.1.1
+   Compiling winnow v1.0.4
+   Compiling ipnet v2.12.0
+   Compiling oxiri v0.2.11
+   Compiling base-x v0.2.11
+   Compiling multibase v0.9.3
+   Compiling tinyvec v1.12.0
+   Compiling libp2p-identity v0.2.14
+   Compiling quick-protobuf v0.8.1
+   Compiling inout v0.2.2
+   Compiling block-padding v0.3.3
+   Compiling rustls-pki-types v1.15.0
+   Compiling atomic-waker v1.1.2
+   Compiling web-time v1.1.0
+   Compiling unsigned-varint v0.7.2
+   Compiling fastrand v2.5.0
+   Compiling futures-timer v3.0.4
+   Compiling paste v1.0.15
+   Compiling multistream-select v0.13.0
+   Compiling inout v0.1.4
+   Compiling multiaddr v0.18.2
+   Compiling toml_parser v1.1.2+spec-1.1.0
+   Compiling rw-stream-sink v0.4.0
+   Compiling oxsdatatypes v0.2.2
+   Compiling async-trait v0.1.91
+   Compiling httparse v1.10.1
+   Compiling siphasher v1.0.3
+   Compiling toml_datetime v1.1.1+spec-1.1.0
+   Compiling aws-lc-rs v1.17.3
+   Compiling toml_edit v0.25.13+spec-1.1.0
+   Compiling phf_shared v0.13.1
+   Compiling oxrdf v0.3.3
+   Compiling libp2p-core v0.43.2
+   Compiling cipher v0.4.4
+   Compiling cipher v0.5.2
+   Compiling enumflags2_derive v0.7.12
+   Compiling rustix v1.1.4
+   Compiling ryu v1.0.23
+   Compiling cpubits v0.1.1
+   Compiling base64 v0.22.1
+   Compiling phf_generator v0.13.1
+   Compiling proc-macro-crate v3.5.0
+   Compiling zvariant_utils v3.5.0
+   Compiling event-listener v5.4.1
+   Compiling http-body v1.1.0
+   Compiling num-complex v0.4.6
+   Compiling uuid v1.24.0
+   Compiling enum-ordinalize-derive v4.4.1
+   Compiling crossbeam-epoch v0.9.20
+   Compiling wasm-bindgen-shared v0.2.125
+   Compiling httpdate v1.0.3
+   Compiling arrayvec v0.7.8
+   Compiling linux-raw-sys v0.12.1
+   Compiling vcpkg v0.2.15
+   Compiling enum-ordinalize v4.4.1
+   Compiling event-listener-strategy v0.5.4
+   Compiling zvariant_derive v5.13.1
+   Compiling futures-lite v2.6.1
+   Compiling tokio-util v0.7.19
+   Compiling ark-std v0.6.0
+   Compiling sha1 v0.10.7
+   Compiling ark-serialize-derive v0.6.0
+   Compiling aho-corasick v1.1.4
+   Compiling ahash v0.8.12
+   Compiling libloading v0.8.9
+   Compiling regex-syntax v0.8.11
+   Compiling tower-service v0.3.3
+   Compiling zmij v1.0.23
+   Compiling unicode-width v0.2.2
+   Compiling rustls v0.23.42
+   Compiling regex-automata v0.4.16
+   Compiling ark-serialize v0.6.0
+   Compiling ark-ff-macros v0.6.0
+   Compiling educe v0.6.0
+   Compiling num-iter v0.1.46
+   Compiling half v2.7.1
+   Compiling ark-ff-asm v0.6.0
+   Compiling async-io v2.6.0
+   Compiling mime v0.3.17
+   Compiling time-core v0.1.9
+   Compiling peg-runtime v0.8.6
+   Compiling serde_json v1.0.151
+   Compiling rustc-hash v1.1.0
+   Compiling simd-adler32 v0.3.10
+   Compiling num-conv v0.2.2
+   Compiling crc32fast v1.5.0
+   Compiling time-macros v0.2.32
+   Compiling naga-types v30.0.0
+   Compiling peg-macros v0.8.6
+   Compiling ark-ff v0.6.0
+   Compiling regex v1.13.1
+   Compiling polling v3.11.0
+   Compiling enumflags2 v0.7.12
+   Compiling chacha20 v0.10.1
+   Compiling netlink-packet-core v0.8.1
+   Compiling unicode-normalization v0.1.25
+   Compiling hashlink v0.10.0
+   Compiling enum-as-inner v0.6.1
+   Compiling libp2p-swarm-derive v0.35.1
+   Compiling nix v0.30.1
+   Compiling naga v30.0.0
+   Compiling quick-xml v0.37.5
+   Compiling keccak v0.1.6
+   Compiling termcolor v1.4.1
+   Compiling async-task v4.7.1
+   Compiling deranged v0.5.8
+   Compiling fixedbitset v0.5.7
+   Compiling try-lock v0.2.5
+   Compiling endi v1.1.1
+   Compiling powerfmt v0.2.0
+   Compiling adler2 v2.0.1
+   Compiling rustversion v1.0.23
+   Compiling bit-vec v0.9.1
+   Compiling ash v0.38.0+1.3.281
+   Compiling json-event-parser v0.2.3
+   Compiling bit-set v0.10.0
+   Compiling time v0.3.54
+   Compiling miniz_oxide v0.8.9
+   Compiling zvariant v5.13.1
+   Compiling want v0.3.1
+   Compiling petgraph v0.8.3
+   Compiling peg v0.8.6
+   Compiling codespan-reporting v0.13.1
+   Compiling libp2p-swarm v0.47.1
+   Compiling ark-poly v0.6.0
+   Compiling h2 v0.4.15
+   Compiling async-channel v2.5.0
+   Compiling netlink-sys v0.8.8
+   Compiling wayland-sys v0.31.11
+   Compiling spirv v0.4.0+sdk-1.4.341.0
+   Compiling md-5 v0.10.6
+   Compiling raw-window-handle v0.6.2
+   Compiling khronos-egl v6.0.0
+   Compiling tower-layer v0.3.3
+   Compiling rustc-hash v2.1.3
+   Compiling unicode-bidi v0.3.18
+   Compiling openssl-probe v0.2.1
+   Compiling unicase v2.9.0
+   Compiling mime_guess v2.0.5
+   Compiling wgpu-types v30.0.0
+   Compiling hyper v1.11.0
+   Compiling netlink-proto v0.12.0
+   Compiling flate2 v1.1.9
+   Compiling async-signal v0.2.14
+   Compiling spargebra v0.4.6
+   Compiling zbus_names v4.3.4
+   Compiling netlink-packet-route v0.28.0
+   Compiling rand v0.10.2
+   Compiling dlib v0.5.3
+   Compiling async-lock v3.4.2
+   Compiling http-body-util v0.1.4
+   Compiling phf_codegen v0.13.1
+   Compiling cbc v0.1.2
+   Compiling aes v0.8.4
+   Compiling piper v0.2.5
+   Compiling num-rational v0.4.2
+   Compiling hmac v0.13.0
+   Compiling wgpu-hal v30.0.0
+   Compiling hashbrown v0.16.1
+   Compiling universal-hash v0.6.1
+   Compiling zstd-sys v2.0.16+zstd.1.5.7
+   Compiling equator-macro v0.4.2
+   Compiling sync_wrapper v1.0.2
+   Compiling matrixmultiply v0.3.11
+   Compiling socket2 v0.5.10
+   Compiling pulp v0.21.5
+   Compiling reborrow v0.5.5
+   Compiling bumpalo v3.20.3
+   Compiling crossbeam-deque v0.8.7
+   Compiling ryu-js v1.0.3
+   Compiling num-bigint-dig v0.9.1
+   Compiling rustls v0.21.12
+   Compiling syn v1.0.109
+   Compiling crunchy v0.2.4
+   Compiling presser v0.3.1
+   Compiling bitflags v1.3.2
+   Compiling gpu-allocator v0.28.0
+   Compiling oxjsonld v0.2.5
+   Compiling wasm-bindgen-macro-support v0.2.125
+   Compiling hickory-proto v0.25.2
+   Compiling equator v0.4.2
+   Compiling blocking v1.6.2
+   Compiling rtnetlink v0.20.0
+   Compiling rustls-webpki v0.103.13
+   Compiling async-process v2.5.0
+   Compiling wgpu-naga-bridge v30.0.0
+   Compiling wasm-bindgen v0.2.125
+   Compiling sparopt v0.3.6
+   Compiling zbus_macros v5.18.0
+   Compiling hyper-util v0.1.20
+   Compiling sparesults v0.3.3
+   Compiling async-executor v1.14.0
+   Compiling oxrdfxml v0.2.3
+   Compiling async-broadcast v0.7.2
+   Compiling oxttl v0.2.3
+   Compiling rustls-webpki v0.101.7
+   Compiling sct v0.7.1
+   Compiling signature v3.0.0
+   Compiling sha2 v0.11.0
+   Compiling snow v0.9.6
+   Compiling curve25519-dalek v5.0.0
+   Compiling crossbeam-channel v0.5.16
+   Compiling asynchronous-codec v0.7.0
+   Compiling blake2 v0.10.6
+   Compiling ring v0.16.20
+   Compiling ordered-float v5.3.0
+   Compiling async-recursion v1.1.1
+   Compiling serde_repr v0.1.21
+   Compiling ordered-stream v0.2.0
+   Compiling pulp v0.22.3
+   Compiling rio_api v0.8.6
+   Compiling rayon-core v1.13.0
+   Compiling iana-time-zone v0.1.65
+   Compiling hashbrown v0.14.5
+   Compiling glow v0.17.0
+   Compiling renderdoc-sys v1.1.0
+   Compiling resolv-conf v0.7.6
+   Compiling tagptr v0.2.0
+   Compiling profiling v1.0.18
+   Compiling rawpointer v0.2.1
+   Compiling nohash-hasher v0.2.0
+   Compiling moka v0.12.15
+   Compiling dashmap v6.2.1
+   Compiling chrono v0.4.45
+   Compiling zbus v5.18.0
+   Compiling oxrdfio v0.2.5
+   Compiling spareval v0.2.6
+   Compiling tokio-rustls v0.26.4
+   Compiling if-watch v3.2.2
+   Compiling aligned-vec v0.6.4
+   Compiling wasm-bindgen-macro v0.2.125
+   Compiling tower v0.5.3
+   Compiling num v0.4.3
+   Compiling rustls-native-certs v0.8.4
+   Compiling ark-ec v0.6.0
+   Compiling ark-relations v0.6.0
+   Compiling sha3 v0.10.9
+   Compiling fdeflate v0.3.7
+   Compiling openssl-sys v0.9.117
+   Compiling phf_macros v0.13.1
+   Compiling futures-bounded v0.2.4
+   Compiling x25519-dalek v2.0.1
+   Compiling der v0.8.1
+   Compiling wgpu-core v30.0.0
+   Compiling nix v0.31.3
+   Compiling raw-cpuid v11.6.0
+   Compiling universal-hash v0.5.1
+   Compiling ff v0.14.0
+   Compiling csv-core v0.1.13
+   Compiling encoding_rs v0.8.35
+   Compiling new_debug_unreachable v1.0.6
+   Compiling litrs v1.0.0
+   Compiling doc-comment v0.3.4
+   Compiling pulp-wasm-simd-flag v0.1.1
+   Compiling base64 v0.21.7
+   Compiling opaque-debug v0.3.1
+   Compiling zstd-safe v7.2.4
+   Compiling untrusted v0.7.1
+   Compiling spin v0.5.2
+   Compiling rustls-pemfile v1.0.4
+   Compiling poly1305 v0.8.0
+   Compiling document-features v0.2.12
+   Compiling csv v1.4.0
+   Compiling phf v0.13.1
+   Compiling ark-snark v0.6.0
+   Compiling derivative v2.2.0
+   Compiling secret-service v5.1.0
+   Compiling uint v0.10.0
+   Compiling fhe-util v0.1.1
+   Compiling tfhe-ntt v0.6.1
+   Compiling oxigraph v0.5.9
+   Compiling tokio-rustls v0.24.1
+   Compiling wgpu-core-deps-windows-linux-android v30.0.0
+   Compiling hickory-resolver v0.25.2
+   Compiling ndarray v0.17.2
+   Compiling yamux v0.12.1
+   Compiling yamux v0.13.10
+   Compiling quick-protobuf-codec v0.3.1
+   Compiling polyval v0.7.3
+   Compiling idna v0.4.0
+   Compiling merlin v3.0.0
+   Compiling tungstenite v0.29.0
+   Compiling string_cache_codegen v0.6.1
+   Compiling crypto-bigint v0.7.5
+   Compiling serde_urlencoded v0.7.1
+   Compiling chacha20 v0.9.1
+   Compiling aead v0.6.1
+   Compiling sha1 v0.11.0
+   Compiling fhe-traits v0.1.1
+   Compiling wgpu v30.0.0
+   Compiling aead v0.5.2
+   Compiling blake3 v1.8.5
+   Compiling ark-crypto-primitives-macros v0.5.0
+   Compiling keyring-core v1.0.0
+   Compiling rio_xml v0.8.6
+   Compiling ethnum v1.5.3
+   Compiling precomputed-hash v0.1.1
+   Compiling linked-hash-map v0.5.6
+   Compiling ip_network v0.4.1
+   Compiling ciborium-io v0.2.2
+   Compiling base64ct v1.8.3
+   Compiling minimal-lexical v0.2.1
+   Compiling ip_network_table-deps-treebitmap v0.5.0
+   Compiling io-uring v0.7.13
+   Compiling rio_turtle v0.8.6
+   Compiling cudarc v0.19.8
+   Compiling ip_network_table v0.2.0
+   Compiling nom v7.1.3
+   Compiling password-hash v0.5.0
+   Compiling ciborium-ll v0.2.2
+   Compiling fhe-math v0.1.1
+   Compiling lru-cache v0.1.2
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling zbus-secret-service-keyring-store v1.0.0
+   Compiling ark-crypto-primitives v0.6.0
+   Compiling chacha20poly1305 v0.10.1
+   Compiling web_atoms v0.2.5
+   Compiling tokio-tungstenite v0.29.0
+   Compiling trust-dns-proto v0.23.2
+   Compiling ghash v0.6.0
+   Compiling libp2p-kad v0.48.0
+   Compiling libp2p-yamux v0.47.0
+   Compiling libp2p-dns v0.44.0
+   Compiling libp2p-noise v0.46.1
+   Compiling rayon v1.12.0
+   Compiling js-sys v0.3.102
+   Compiling spki v0.8.0
+   Compiling group v0.14.0
+   Compiling libp2p-request-response v0.29.0
+   Compiling rustls-platform-verifier v0.7.0
+   Compiling tower-http v0.6.11
+   Compiling libp2p-mdns v0.48.0
+   Compiling libp2p-tcp v0.44.1
+   Compiling hyper-rustls v0.27.9
+   Compiling ed25519 v3.0.0
+   Compiling axum-core v0.5.6
+   Compiling poly1305 v0.9.1
+   Compiling libp2p-connection-limits v0.6.0
+   Compiling libp2p-allow-block-list v0.6.0
+   Compiling yasna v0.6.0
+   Compiling pem v3.0.6
+   Compiling aes v0.9.1
+   Compiling ctr v0.10.1
+   Compiling serde_path_to_error v0.1.20
+   Compiling der v0.7.10
+   Compiling ff v0.13.1
+   Compiling num_cpus v1.17.0
+   Compiling quick-xml v0.36.2
+   Compiling keccak v0.2.0
+   Compiling libloading v0.9.0
+   Compiling sponge-cursor v0.1.0
+   Compiling unsafe-libyaml v0.2.11
+   Compiling twox-hash v2.1.3
+   Compiling base16ct v0.2.0
+   Compiling constant_time_eq v0.4.2
+   Compiling matchit v0.8.4
+   Compiling webpki-roots v0.25.4
+   Compiling unicode-xid v0.2.6
+   Compiling weezl v0.1.12
+   Compiling base16ct v1.0.0
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+   Compiling http-range-header v0.4.2
+   Compiling lexical-core v0.7.6
+   Compiling tower-http v0.7.0
+   Compiling sec1 v0.8.1
+   Compiling vibe v0.0.37 (/workspace/crates/vibe)
+   Compiling trust-dns-resolver v0.23.2
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling axum v0.8.9
+   Compiling sec1 v0.7.3
+   Compiling lz4_flex v0.13.1
+   Compiling serde_yaml v0.9.34+deprecated
+   Compiling sha3 v0.12.0
+   Compiling core_affinity v0.8.3
+   Compiling group v0.13.0
+   Compiling aes-gcm v0.11.0
+   Compiling rcgen v0.14.8
+   Compiling libp2p v0.56.0
+   Compiling chacha20poly1305 v0.11.0
+   Compiling ed25519-dalek v3.0.0
+   Compiling reqwest v0.13.4
+   Compiling serde-wasm-bindgen v0.6.5
+   Compiling pkcs8 v0.11.0
+   Compiling fhe v0.1.1
+   Compiling boringtun v0.7.1
+   Compiling jpeg-decoder v0.3.2
+   Compiling zstd v0.13.3
+   Compiling ark-groth16 v0.6.0
+   Compiling rusticata-macros v4.1.0
+   Compiling keyring v4.1.5
+   Compiling argon2 v0.5.3
+   Compiling ciborium v0.2.2
+   Compiling string_cache v0.9.0
+   Compiling x25519-dalek v3.0.0
+   Compiling png v0.17.16
+   Compiling ark-bls12-381 v0.6.0
+   Compiling fips203 v0.4.3
+   Compiling fips204 v0.4.6
+   Compiling fips205 v0.4.1
+   Compiling pbkdf2 v0.13.0
+   Compiling hkdf v0.13.0
+   Compiling mp4 v0.14.0
+   Compiling rand_distr v0.6.0
+   Compiling tokio-stream v0.1.19
+   Compiling tempfile v3.27.0
+   Compiling libz-sys v1.1.29
+   Compiling asn1-rs-derive v0.5.1
+   Compiling serde_bytes v0.11.19
+   Compiling crypto-bigint v0.5.5
+   Compiling atoi v3.1.0
+   Compiling asn1-rs-impl v0.2.0
+   Compiling futures-intrusive v0.5.0
+   Compiling memmap2 v0.9.11
+   Compiling sysinfo v0.39.6
+   Compiling quick-xml v0.41.0
+   Compiling nom v5.1.3
+   Compiling minicbor v2.2.3
+   Compiling rtrb v0.3.4
+   Compiling fast_qr v0.13.1
+   Compiling foreign-types-shared v0.1.1
+   Compiling openssl v0.10.81
+   Compiling qualia-inference-kernel v0.0.37 (/workspace/crates/qualia-inference-kernel)
+   Compiling dtoa v1.0.11
+   Compiling urlencoding v2.1.3
+   Compiling pollster v1.0.1
+   Compiling qualia-audio v0.0.37 (/workspace/crates/qualia-audio)
+   Compiling arrayvec v0.5.2
+   Compiling utf8parse v0.2.2
+   Compiling anstyle-parse v1.0.0
+   Compiling dtoa-short v0.3.5
+   Compiling foreign-types v0.3.2
+   Compiling elliptic-curve v0.13.8
+   Compiling asn1-rs v0.6.2
+   Compiling elliptic-curve v0.14.1
+   Compiling tendril v0.5.1
+   Compiling selectors v0.38.0
+   Compiling headers-core v0.3.0
+   Compiling rfc6979 v0.4.0
+   Compiling openssl-macros v0.1.1
+   Compiling derive_more-impl v2.1.1
+   Compiling cssparser-macros v0.7.0
+   Compiling nom v8.0.0
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling oid-registry v0.7.1
+   Compiling zune-core v0.5.1
+   Compiling quick-error v2.0.1
+   Compiling unicode-properties v0.1.4
+   Compiling color_quant v1.1.0
+   Compiling colorchoice v1.0.5
+   Compiling pom v1.1.0
+   Compiling anstyle v1.0.14
+   Compiling pxfm v0.1.30
+   Compiling byteorder-lite v0.1.0
+   Compiling native-tls v0.2.18
+   Compiling anstyle-query v1.1.5
+   Compiling anstream v1.0.0
+   Compiling image-webp v0.2.4
+   Compiling gif v0.14.2
+   Compiling moxcms v0.8.1
+   Compiling stringprep v0.1.5
+   Compiling zune-jpeg v0.5.15
+warning: unused import: `core_affinity::CoreId`
+   --> crates/qualia-core-db/src/platform/platform_scheduler.rs:143:13
+    |
+143 |         use core_affinity::CoreId;
+    |             ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `decrement_hop`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:5:25
+  |
+5 | use super::forwarding::{decrement_hop, ForwardingGeneration};
+  |                         ^^^^^^^^^^^^^
+
+warning: unused imports: `LinkMetric` and `compute_spf`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:6:18
+  |
+6 | use super::spf::{compute_spf, LinkMetric, SpfTable};
+  |                  ^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `std::os::unix::io::AsRawFd`
+  --> crates/qualia-core-db/src/csd_storage.rs:10:5
+   |
+10 | use std::os::unix::io::AsRawFd;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling derive_more v2.1.1
+   Compiling cssparser v0.37.0
+   Compiling ecdsa v0.16.9
+   Compiling headers v0.4.1
+   Compiling markup5ever v0.39.0
+   Compiling wnaf v0.14.0
+   Compiling primefield v0.14.0
+   Compiling rfc6979 v0.6.0
+   Compiling png v0.18.1
+   Compiling hex-conservative v0.2.2
+   Compiling ecb v0.1.2
+   Compiling webizen-render v0.0.37 (/workspace/crates/webizen-render)
+   Compiling servo_arc v0.4.3
+   Compiling libgit2-sys v0.18.5+1.9.4
+   Compiling scoped-tls v1.0.1
+   Compiling ttf-parser v0.25.1
+   Compiling rangemap v1.7.1
+   Compiling lazy_static v1.5.0
+   Compiling warp v0.4.3
+   Compiling lopdf v0.42.0
+   Compiling bitcoin_hashes v0.14.101
+   Compiling image v0.25.10
+warning: unused variable: `class`
+   --> crates/qualia-core-db/src/platform/platform_scheduler.rs:201:17
+    |
+201 | fn bind_windows(class: QosClass) -> Result<(), SchedulerError> {
+    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_class`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `device_path`
+   --> crates/qualia-core-db/src/storage_driver.rs:586:19
+    |
+586 |     fn probe_nvme(device_path: &str) -> bool {
+    |                   ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_device_path`
+
+   Compiling imap-proto v0.10.2 (/workspace/vendor/imap-proto)
+warning: field `engine_handle` is never read
+   --> crates/qualia-core-db/src/net/ebpf_filter.rs:245:5
+    |
+241 | pub struct WfpFilter {
+    |            --------- field in this struct
+...
+245 |     engine_handle: isize,
+    |     ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `NOT_ADVICE` is never used
+ --> crates/qualia-core-db/src/clinical_playground.rs:5:7
+  |
+5 | const NOT_ADVICE: &str =
+  |       ^^^^^^^^^^
+
+warning: function `evaluate` is never used
+ --> crates/qualia-core-db/src/clinical_playground.rs:8:8
+  |
+8 | pub fn evaluate(calculator: &str, params: &Value) -> Result<Value, String> {
+  |        ^^^^^^^^
+
+warning: function `need_bool` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:17:4
+   |
+17 | fn need_bool(v: &Value, key: &str) -> Result<bool, String> {
+   |    ^^^^^^^^^
+
+warning: function `need_bool_alias` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:23:4
+   |
+23 | fn need_bool_alias(v: &Value, key: &str, alias: &str) -> Result<bool, St...
+   |    ^^^^^^^^^^^^^^^
+
+warning: function `need_f64` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:35:4
+   |
+35 | fn need_f64(v: &Value, key: &str) -> Result<f64, String> {
+   |    ^^^^^^^^
+
+warning: function `need_u8` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:46:4
+   |
+46 | fn need_u8(v: &Value, key: &str) -> Result<u8, String> {
+   |    ^^^^^^^
+
+warning: function `need_age` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:54:4
+   |
+54 | fn need_age(
+   |    ^^^^^^^^
+
+warning: function `need_positive` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:69:4
+   |
+69 | fn need_positive(v: &Value, key: &str, max_inclusive: f64) -> Result<f64...
+   |    ^^^^^^^^^^^^^
+
+warning: function `provenance` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:77:4
+   |
+77 | fn provenance(algorithm: &str, version: &str) -> Value {
+   |    ^^^^^^^^^^
+
+warning: function `merge` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:86:4
+   |
+86 | fn merge(mut body: Value, meta: Value) -> Value {
+   |    ^^^^^
+
+warning: function `mmol_or_mgdl` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:95:4
+   |
+95 | fn mmol_or_mgdl(v: &Value, mmol_key: &str, mgdl_key: &str, max_mmol: f64...
+   |    ^^^^^^^^^^^^
+
+warning: function `framingham` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:107:4
+    |
+107 | fn framingham(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^^^^^
+
+warning: function `cha2ds2` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:172:4
+    |
+172 | fn cha2ds2(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^^
+
+warning: function `score2` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:223:4
+    |
+223 | fn score2(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^
+
+warning: function `need_str` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:297:4
+    |
+297 | fn need_str<'a>(v: &'a Value, key: &str) -> Result<&'a str, String> {
+    |    ^^^^^^^^
+
+warning: function `wasm_denied` is never used
+  --> crates/qualia-core-db/src/poet_host/invoke/graph/lexicon.rs:20:4
+   |
+20 | fn wasm_denied(span: Span) -> Diagnostic {
+   |    ^^^^^^^^^^^
+
+warning: field `device_path` is never read
+   --> crates/qualia-core-db/src/storage_driver.rs:559:5
+    |
+556 | pub struct WinNvmeDriver {
+    |            ------------- field in this struct
+...
+559 |     device_path: String,
+    |     ^^^^^^^^^^^
+
+warning: associated constant `IOCTL_STORAGE_QUERY_PROPERTY` is never used
+   --> crates/qualia-core-db/src/storage_driver.rs:565:11
+    |
+562 | impl WinNvmeDriver {
+    | ------------------ associated constant in this implementation
+...
+565 |     const IOCTL_STORAGE_QUERY_PROPERTY: u32 = 0x002D_1400;
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `HKDF_SALT` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:21:7
+   |
+21 | const HKDF_SALT: &[u8] = b"qpr-pq-1";
+   |       ^^^^^^^^^
+
+warning: constant `HYBRID_INFO_I2R` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:22:7
+   |
+22 | const HYBRID_INFO_I2R: &[u8] = b"qpr-pq-1/qlink/i2r";
+   |       ^^^^^^^^^^^^^^^
+
+warning: constant `FINISHED_ROLE` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:23:7
+   |
+23 | const FINISHED_ROLE: &[u8] = b"qsession";
+   |       ^^^^^^^^^^^^^
+
+warning: constant `TEST_ITEMS` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:25:7
+   |
+25 | const TEST_ITEMS: [(&[u8], &[u8]); 2] = [(b"suite", b"qpr-pq-1"), (b"rol...
+   |       ^^^^^^^^^^
+
+warning: constant `FROZEN_TRANSCRIPT_SHA384` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:28:7
+   |
+28 | const FROZEN_TRANSCRIPT_SHA384: &str =
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FROZEN_HYBRID_I2R` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:32:7
+   |
+32 | const FROZEN_HYBRID_I2R: &str = "e4c3fcd4ce69a212c883d7114078ce410751cf1...
+   |       ^^^^^^^^^^^^^^^^^
+
+warning: constant `FROZEN_FINISHED_MAC` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:35:7
+   |
+35 | const FROZEN_FINISHED_MAC: &str =
+   |       ^^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_hkdf_sha384` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:54:4
+   |
+54 | fn oracle_hkdf_sha384(salt: Option<&[u8]>, ikm: &[u8], info: &[u8], okm:...
+   |    ^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_hybrid_shared_secret` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:60:4
+   |
+60 | fn oracle_hybrid_shared_secret(
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_finished_mac` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:72:4
+   |
+72 | fn oracle_finished_mac(transcript_digest: &StrongDigest, role: &[u8]) ->...
+   |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `decode_hex` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:89:4
+   |
+89 | fn decode_hex<const N: usize>(hex: &str) -> [u8; N] {
+   |    ^^^^^^^^^^
+
+warning: function `from_hex_nibble` is never used
+   --> crates/qualia-core-db/src/crypto/network/vectors.rs:101:4
+    |
+101 | fn from_hex_nibble(b: u8) -> u8 {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `production_transcript` is never used
+   --> crates/qualia-core-db/src/crypto/network/vectors.rs:110:4
+    |
+110 | fn production_transcript() -> super::transcript::Transcript {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling ecdsa v0.17.0
+   Compiling primeorder v0.14.0
+   Compiling html5ever v0.39.0
+   Compiling k256 v0.13.4
+   Compiling type1-encoding-parser v0.1.1
+   Compiling adobe-cmap-parser v0.4.1
+   Compiling der-parser v9.0.0
+   Compiling getopts v0.2.24
+   Compiling email-encoding v0.4.1
+   Compiling webpki-roots v1.0.9
+   Compiling pbkdf2 v0.12.2
+   Compiling ripemd v0.1.3
+   Compiling euclid v0.20.14
+   Compiling base64 v0.13.1
+   Compiling chunked_transfer v1.5.0
+   Compiling quoted_printable v0.5.2
+   Compiling cff-parser v0.2.0
+   Compiling ego-tree v0.11.0
+   Compiling jiff-core v0.1.0
+   Compiling clap_lex v1.1.0
+   Compiling postscript v0.14.1
+   Compiling email_address v0.2.9
+   Compiling strsim v0.11.1
+   Compiling ascii v1.1.0
+   Compiling bufstream v0.1.4
+   Compiling imap v2.4.1
+   Compiling tiny_http v0.12.0
+   Compiling clap_builder v4.6.2
+   Compiling lettre v0.11.22
+   Compiling pdf-extract v0.12.0
+   Compiling jiff v0.2.34
+   Compiling scraper v0.27.0
+   Compiling bip32 v0.5.3
+   Compiling x509-parser v0.16.0
+   Compiling k256 v0.14.0
+   Compiling bip39 v2.2.2
+   Compiling tungstenite v0.30.0
+   Compiling env_filter v2.0.0
+   Compiling rustls-pemfile v2.2.0
+   Compiling clap_derive v4.6.4
+   Compiling ripemd v0.2.0
+   Compiling qualia-cli v0.0.37 (/workspace/crates/qualia-cli)
+   Compiling bech32 v0.12.0
+   Compiling clap v4.6.4
+   Compiling tokio-tungstenite v0.30.0
+   Compiling env_logger v0.11.11
+   Compiling git2 v0.21.0
+warning: `qualia-core-db` (lib) generated 38 warnings (run `cargo fix --lib -p qualia-core-db` to apply 6 suggestions)
+   Compiling qualia-vision v0.0.37 (/workspace/crates/qualia-vision)
+   Compiling qualia-solid-bridge v0.0.37 (/workspace/crates/qualia-solid-bridge)
+   Compiling qualia-client-core v0.0.37 (/workspace/crates/qualia-client-core)
+    Finished `release` profile [optimized] target(s) in 6m 32s
+===== END 01-cli-linux  rc=0  elapsed=392s  2026-09-08T11:36:08Z =====
+errors=0 warnings=40 unique_diagnostic_lines=40

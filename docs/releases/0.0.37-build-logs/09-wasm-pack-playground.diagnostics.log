@@ -1,0 +1,22 @@
+errors=14 warnings=6 unique_diagnostic_lines=20
+
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+error[E0432]: unresolved import `crate::specialized_libs::polynomial_algebra`
+error[E0432]: unresolved import `crate::specialized_libs::symbolic_ode`
+error[E0432]: unresolved import `crate::specialized_libs::symbolic_assumptions`
+error[E0432]: unresolved import `crate::specialized_libs::symbolic_solve`
+error[E0432]: unresolved import `crate::specialized_libs::constructibility`
+error[E0432]: unresolved import `crate::specialized_libs::multivar_calculus`
+error[E0433]: cannot find `symbolic_trig` in `specialized_libs`
+error[E0433]: cannot find `symbolic_integration` in `specialized_libs`
+error[E0433]: cannot find `symbolic_series` in `specialized_libs`
+error[E0433]: cannot find `symbolic_limits` in `specialized_libs`
+error[E0433]: cannot find `symbolic_solve` in `specialized_libs`
+error[E0433]: cannot find `symbolic_assumptions` in `specialized_libs`
+warning: unused import: `decrement_hop`
+warning: unused imports: `LinkMetric` and `compute_spf`
+warning: unused import: `super::super::args`
+warning: unused import: `VisionComputeDevice`
+warning: `qualia-core-db` (lib) generated 6 warnings
+error: could not compile `qualia-core-db` (lib) due to 18 previous errors; 6 warnings emitted
+Error: Compiling your crate to WebAssembly failed

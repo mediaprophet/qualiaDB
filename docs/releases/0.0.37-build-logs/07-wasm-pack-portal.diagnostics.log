@@ -1,0 +1,31 @@
+errors=22 warnings=6 unique_diagnostic_lines=29
+
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+error[E0425]: cannot find function `dft_complex` in module `math`
+error[E0425]: cannot find function `calc_hermite_dense_output` in module `math`
+error[E0425]: cannot find function `calc_bdf1_step` in module `math`
+error[E0425]: cannot find function `calc_bdf2_step` in module `math`
+error[E0425]: cannot find function `calc_invariant_drift` in module `math`
+error[E0425]: cannot find function `calc_permutation_parity` in module `math`
+error[E0425]: cannot find function `calc_pack_f32_pair` in module `math`
+error[E0425]: cannot find function `calc_unpack_f32_pair` in module `math`
+error[E0425]: cannot find function `graph_top_k` in module `math`
+error[E0425]: cannot find function `calc_verlet_step` in module `math`
+error[E0425]: cannot find function `calc_ruth3_step` in module `math`
+error[E0425]: cannot find function `calc_yoshida4_step` in module `math`
+error[E0425]: cannot find function `calc_integrate_bdf` in module `math`
+error[E0425]: cannot find function `calc_integrate_with_sensitivity` in module `math`
+error[E0425]: cannot find function `calc_canonical_poisson_bracket` in module `math`
+error[E0425]: cannot find function `calc_stormer_verlet_step` in module `math`
+error[E0425]: cannot find function `calc_adaptive_gauss_kronrod_15` in module `math`
+error[E0425]: cannot find function `calc_jvp` in module `math`
+error[E0425]: cannot find function `calc_vjp` in module `math`
+error[E0425]: cannot find function `poly_coeffs` in module `math`
+warning: unused import: `decrement_hop`
+warning: unused imports: `LinkMetric` and `compute_spf`
+warning: unused import: `super::super::args`
+warning: unused import: `VisionComputeDevice`
+For more information about this error, try `rustc --explain E0425`.
+warning: `qualia-core-db` (lib) generated 6 warnings
+error: could not compile `qualia-core-db` (lib) due to 20 previous errors; 6 warnings emitted
+Error: Compiling your crate to WebAssembly failed

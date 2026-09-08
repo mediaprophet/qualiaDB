@@ -1,0 +1,5 @@
+errors=1 warnings=2 unique_diagnostic_lines=3
+
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+error: failed to run custom build command for `gdk-sys v0.18.2`
+warning: build failed, waiting for other jobs to finish...

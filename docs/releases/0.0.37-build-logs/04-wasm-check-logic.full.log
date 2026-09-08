@@ -1,0 +1,366 @@
+===== START 04-wasm-check-logic  2026-09-08T11:37:04Z =====
+CMD: cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-logic
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/vibe-wasm/Cargo.toml
+workspace: /workspace/Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/poet/Cargo.toml
+workspace: /workspace/Cargo.toml
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+error[E0425]: cannot find function `dft_complex` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:195:41
+    |
+195 |         ids::XFORM_DFT_COMPLEX => math::dft_complex(args, span),
+    |                                         ^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:182:27
+    |
+181 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+182 | pub use transforms::{dft, dft_complex};
+    |                           ^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_hermite_dense_output` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:222:49
+    |
+222 | ...T => math::calc_hermite_dense_output(args, span),
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:104:34
+    |
+101 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+...
+104 |     hermite_dense_output_host as calc_hermite_dense_output,
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_bdf1_step` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:223:38
+    |
+223 |         ids::CALC_BDF1_STEP => math::calc_bdf1_step(args, span),
+    |                                      ^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:103:23
+    |
+101 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+102 | pub use wave14_host::{
+103 |     bdf1_step_host as calc_bdf1_step, bdf2_step_host as calc_bdf2_step,
+    |                       ^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_bdf2_step` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:224:38
+    |
+224 |         ids::CALC_BDF2_STEP => math::calc_bdf2_step(args, span),
+    |                                      ^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:103:57
+    |
+101 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+102 | pub use wave14_host::{
+103 |     bdf1_step_host as calc_bdf1_step, bdf2_step_host as calc_bdf2_step,
+    |                                                         ^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_invariant_drift` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:225:44
+    |
+225 | ...RIFT => math::calc_invariant_drift(args, span),
+    |                  ^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:105:29
+    |
+101 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+105 | ...variant_drift_host as calc_invariant_drift, pack_f32_pair_host as ca...
+    |                          ^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_permutation_parity` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:226:47
+    |
+226 | ...TY => math::calc_permutation_parity(args, span),
+    |                ^^^^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:106:32
+    |
+101 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+106 | ...rmutation_parity_host as calc_permutation_parity, top_k_host as grap...
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_pack_f32_pair` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:227:42
+    |
+227 |         ids::CALC_PACK_F32_PAIR => math::calc_pack_f32_pair(args, span),
+    |                                          ^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:105:73
+    |
+101 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+105 | ...variant_drift_host as calc_invariant_drift, pack_f32_pair_host as calc_pack_f32_pair,
+    |                                                                      ^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_unpack_f32_pair` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:228:44
+    |
+228 | ...PAIR => math::calc_unpack_f32_pair(args, span),
+    |                  ^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:107:29
+    |
+101 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+...
+107 |     unpack_f32_pair_host as calc_unpack_f32_pair,
+    |                             ^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `graph_top_k` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:229:35
+    |
+229 |         ids::GRAPH_TOP_K => math::graph_top_k(args, span),
+    |                                   ^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:106:71
+    |
+101 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+106 | ...rmutation_parity_host as calc_permutation_parity, top_k_host as graph_top_k,
+    |                                                                    ^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_verlet_step` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:230:40
+    |
+230 |         ids::CALC_VERLET_STEP => math::calc_verlet_step(args, span),
+    |                                        ^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:113:61
+    |
+109 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+113 | ...th3_step_host as calc_ruth3_step, verlet_step_host as calc_verlet_step,
+    |                                                          ^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_ruth3_step` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:231:39
+    |
+231 |         ids::CALC_RUTH3_STEP => math::calc_ruth3_step(args, span),
+    |                                       ^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:113:24
+    |
+109 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+113 | ...th3_step_host as calc_ruth3_step, verlet_step_host as calc_verlet_step,
+    |                     ^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_yoshida4_step` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:232:42
+    |
+232 |         ids::CALC_YOSHIDA4_STEP => math::calc_yoshida4_step(args, span),
+    |                                          ^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:114:27
+    |
+109 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+...
+114 |     yoshida4_step_host as calc_yoshida4_step,
+    |                           ^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_integrate_bdf` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:233:42
+    |
+233 |           ids::CALC_INTEGRATE_BDF => math::calc_integrate_bdf(args, span),
+    |                                            ^^^^^^^^^^^^^^^^^^
+    |
+   ::: crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:748:1
+    |
+748 | / pub fn cas_integrate(
+749 | |     _args: &vibe::Value,
+750 | |     span: vibe::Span,
+751 | | ) -> Result<vibe::Value, vibe::Diagnostic> {
+752 | |     missing(span, "SymbolicAlgebra")
+753 | | }
+    | |_- similarly named function `cas_integrate` defined here
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:111:27
+    |
+109 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+110 | pub use wave15_host::{
+111 |     integrate_bdf_host as calc_integrate_bdf,
+    |                           ^^^^^^^^^^^^^^^^^^
+help: a function with a similar name exists
+    |
+233 -         ids::CALC_INTEGRATE_BDF => math::calc_integrate_bdf(args, span),
+233 +         ids::CALC_INTEGRATE_BDF => math::cas_integrate(args, span),
+    |
+
+error[E0425]: cannot find function `calc_integrate_with_sensitivity` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:234:55
+    |
+234 | ...> math::calc_integrate_with_sensitivity(args, span),
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:112:40
+    |
+109 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+...
+112 |     integrate_with_sensitivity_host as calc_integrate_with_sensitivity,
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_canonical_poisson_bracket` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:235:54
+    |
+235 | ...=> math::calc_canonical_poisson_bracket(args, span),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:119:39
+    |
+116 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+...
+119 |     canonical_poisson_bracket_host as calc_canonical_poisson_bracket,
+    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_stormer_verlet_step` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:236:48
+    |
+236 | ...EP => math::calc_stormer_verlet_step(args, span),
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:120:55
+    |
+116 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+120 | ...p_host as calc_jvp, stormer_verlet_step_host as calc_stormer_verlet_step,
+    |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_adaptive_gauss_kronrod_15` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:237:54
+    |
+237 | ...=> math::calc_adaptive_gauss_kronrod_15(args, span),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:118:39
+    |
+116 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+117 | pub use wave18_host::{
+118 |     adaptive_gauss_kronrod_15_host as calc_adaptive_gauss_kronrod_15,
+    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find function `calc_jvp` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:238:32
+    |
+238 |         ids::CALC_JVP => math::calc_jvp(args, span),
+    |                                ^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:120:17
+    |
+116 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+...
+120 | ...p_host as calc_jvp, stormer_verlet_step_host as calc_stormer_verlet_...
+    |              ^^^^^^^^
+
+error[E0425]: cannot find function `calc_vjp` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:239:32
+    |
+239 |         ids::CALC_VJP => math::calc_vjp(args, span),
+    |                                ^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:121:17
+    |
+116 | #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |          ---------------------------------------------------------- the item is gated here
+...
+121 |     vjp_host as calc_vjp,
+    |                 ^^^^^^^^
+
+error[E0425]: cannot find function `poly_coeffs` in module `math`
+   --> crates/qualia-core-db/src/poet_host/invoke/mod.rs:255:35
+    |
+255 |         ids::POLY_COEFFS => math::poly_coeffs(args, span),
+    |                                   ^^^^^^^^^^^ not found in `math`
+    |
+note: found an item that was configured out
+   --> crates/qualia-core-db/src/poet_host/invoke/math/mod.rs:90:32
+    |
+ 88 | ...any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    |       ---------------------------------------------------------- the item is gated here
+ 89 | ...e poly_algebra::{
+ 90 | ...d as poly_add, coeffs as poly_coeffs, constant as poly_constant, deg...
+    |                             ^^^^^^^^^^^
+
+warning: unused import: `decrement_hop`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:5:25
+  |
+5 | use super::forwarding::{decrement_hop, ForwardingGeneration};
+  |                         ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `LinkMetric` and `compute_spf`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:6:18
+  |
+6 | use super::spf::{compute_spf, LinkMetric, SpfTable};
+  |                  ^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `super::super::args`
+  --> crates/qualia-core-db/src/poet_host/invoke/graph/volume.rs:10:5
+   |
+10 | use super::super::args;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::super::args`
+ --> crates/qualia-core-db/src/poet_host/invoke/graph/lexicon.rs:7:5
+  |
+7 | use super::super::args;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `VisionComputeDevice`
+  --> crates/qualia-core-db/src/specialized_libs/computer_vision/gpu/forge_bicubic.rs:15:68
+   |
+15 | ...on::{types::VisionError, VisionComputeDevice};
+   |                             ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `VisionComputeDevice`
+  --> crates/qualia-core-db/src/specialized_libs/computer_vision/gpu/forge_resize.rs:15:68
+   |
+15 | ...on::{types::VisionError, VisionComputeDevice};
+   |                             ^^^^^^^^^^^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0425`.
+warning: `qualia-core-db` (lib) generated 6 warnings
+error: could not compile `qualia-core-db` (lib) due to 20 previous errors; 6 warnings emitted
+===== END 04-wasm-check-logic  rc=101  elapsed=14s  2026-09-08T11:37:18Z =====
+errors=21 warnings=6 unique_diagnostic_lines=28

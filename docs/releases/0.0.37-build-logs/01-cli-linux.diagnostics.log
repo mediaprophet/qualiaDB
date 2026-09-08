@@ -1,0 +1,42 @@
+errors=0 warnings=40 unique_diagnostic_lines=40
+
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+warning: unused import: `core_affinity::CoreId`
+warning: unused import: `decrement_hop`
+warning: unused imports: `LinkMetric` and `compute_spf`
+warning: unused import: `std::os::unix::io::AsRawFd`
+warning: unused variable: `class`
+warning: unused variable: `device_path`
+warning: field `engine_handle` is never read
+warning: constant `NOT_ADVICE` is never used
+warning: function `evaluate` is never used
+warning: function `need_bool` is never used
+warning: function `need_bool_alias` is never used
+warning: function `need_f64` is never used
+warning: function `need_u8` is never used
+warning: function `need_age` is never used
+warning: function `need_positive` is never used
+warning: function `provenance` is never used
+warning: function `merge` is never used
+warning: function `mmol_or_mgdl` is never used
+warning: function `framingham` is never used
+warning: function `cha2ds2` is never used
+warning: function `score2` is never used
+warning: function `need_str` is never used
+warning: function `wasm_denied` is never used
+warning: field `device_path` is never read
+warning: associated constant `IOCTL_STORAGE_QUERY_PROPERTY` is never used
+warning: constant `HKDF_SALT` is never used
+warning: constant `HYBRID_INFO_I2R` is never used
+warning: constant `FINISHED_ROLE` is never used
+warning: constant `TEST_ITEMS` is never used
+warning: constant `FROZEN_TRANSCRIPT_SHA384` is never used
+warning: constant `FROZEN_HYBRID_I2R` is never used
+warning: constant `FROZEN_FINISHED_MAC` is never used
+warning: function `oracle_hkdf_sha384` is never used
+warning: function `oracle_hybrid_shared_secret` is never used
+warning: function `oracle_finished_mac` is never used
+warning: function `decode_hex` is never used
+warning: function `from_hex_nibble` is never used
+warning: function `production_transcript` is never used
+warning: `qualia-core-db` (lib) generated 38 warnings (run `cargo fix --lib -p qualia-core-db` to apply 6 suggestions)

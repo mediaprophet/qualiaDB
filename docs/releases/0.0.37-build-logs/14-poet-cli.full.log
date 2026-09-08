@@ -1,0 +1,16 @@
+===== START 14-poet-cli  2026-09-08T11:54:15Z =====
+CMD: cargo build --release -p poet-cli
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/vibe-wasm/Cargo.toml
+workspace: /workspace/Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/poet/Cargo.toml
+workspace: /workspace/Cargo.toml
+   Compiling syn v2.0.119
+   Compiling bytemuck_derive v1.11.0
+   Compiling bytemuck v1.25.2
+   Compiling vibe v0.0.37 (/workspace/crates/vibe)
+   Compiling poet-cli v0.0.37 (/workspace/crates/poet-cli)
+    Finished `release` profile [optimized] target(s) in 9.80s
+===== END 14-poet-cli  rc=0  elapsed=10s  2026-09-08T11:54:25Z =====
+errors=0 warnings=1 unique_diagnostic_lines=1

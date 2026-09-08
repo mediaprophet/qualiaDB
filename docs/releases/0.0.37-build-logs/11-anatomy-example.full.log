@@ -1,0 +1,266 @@
+===== START 11-anatomy-example  2026-09-08T11:44:55Z =====
+CMD: cargo build --release -p qualia-client-core --example build_anatomy_pack
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/vibe-wasm/Cargo.toml
+workspace: /workspace/Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /workspace/crates/poet/Cargo.toml
+workspace: /workspace/Cargo.toml
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling reqwest v0.13.4
+   Compiling object v0.37.3
+   Compiling backtrace v0.3.76
+   Compiling dhat v0.3.3
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+warning: unused import: `core_affinity::CoreId`
+   --> crates/qualia-core-db/src/platform/platform_scheduler.rs:143:13
+    |
+143 |         use core_affinity::CoreId;
+    |             ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `decrement_hop`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:5:25
+  |
+5 | use super::forwarding::{decrement_hop, ForwardingGeneration};
+  |                         ^^^^^^^^^^^^^
+
+warning: unused imports: `LinkMetric` and `compute_spf`
+ --> crates/qualia-core-db/src/net/qdnf/route/overlap.rs:6:18
+  |
+6 | use super::spf::{compute_spf, LinkMetric, SpfTable};
+  |                  ^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `std::os::unix::io::AsRawFd`
+  --> crates/qualia-core-db/src/csd_storage.rs:10:5
+   |
+10 | use std::os::unix::io::AsRawFd;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `class`
+   --> crates/qualia-core-db/src/platform/platform_scheduler.rs:201:17
+    |
+201 | fn bind_windows(class: QosClass) -> Result<(), SchedulerError> {
+    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_class`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `device_path`
+   --> crates/qualia-core-db/src/storage_driver.rs:586:19
+    |
+586 |     fn probe_nvme(device_path: &str) -> bool {
+    |                   ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_device_path`
+
+warning: field `engine_handle` is never read
+   --> crates/qualia-core-db/src/net/ebpf_filter.rs:245:5
+    |
+241 | pub struct WfpFilter {
+    |            --------- field in this struct
+...
+245 |     engine_handle: isize,
+    |     ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `NOT_ADVICE` is never used
+ --> crates/qualia-core-db/src/clinical_playground.rs:5:7
+  |
+5 | const NOT_ADVICE: &str =
+  |       ^^^^^^^^^^
+
+warning: function `evaluate` is never used
+ --> crates/qualia-core-db/src/clinical_playground.rs:8:8
+  |
+8 | pub fn evaluate(calculator: &str, params: &Value) -> Result<Value, String> {
+  |        ^^^^^^^^
+
+warning: function `need_bool` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:17:4
+   |
+17 | fn need_bool(v: &Value, key: &str) -> Result<bool, String> {
+   |    ^^^^^^^^^
+
+warning: function `need_bool_alias` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:23:4
+   |
+23 | fn need_bool_alias(v: &Value, key: &str, alias: &str) -> Result<bool, St...
+   |    ^^^^^^^^^^^^^^^
+
+warning: function `need_f64` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:35:4
+   |
+35 | fn need_f64(v: &Value, key: &str) -> Result<f64, String> {
+   |    ^^^^^^^^
+
+warning: function `need_u8` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:46:4
+   |
+46 | fn need_u8(v: &Value, key: &str) -> Result<u8, String> {
+   |    ^^^^^^^
+
+warning: function `need_age` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:54:4
+   |
+54 | fn need_age(
+   |    ^^^^^^^^
+
+warning: function `need_positive` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:69:4
+   |
+69 | fn need_positive(v: &Value, key: &str, max_inclusive: f64) -> Result<f64...
+   |    ^^^^^^^^^^^^^
+
+warning: function `provenance` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:77:4
+   |
+77 | fn provenance(algorithm: &str, version: &str) -> Value {
+   |    ^^^^^^^^^^
+
+warning: function `merge` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:86:4
+   |
+86 | fn merge(mut body: Value, meta: Value) -> Value {
+   |    ^^^^^
+
+warning: function `mmol_or_mgdl` is never used
+  --> crates/qualia-core-db/src/clinical_playground.rs:95:4
+   |
+95 | fn mmol_or_mgdl(v: &Value, mmol_key: &str, mgdl_key: &str, max_mmol: f64...
+   |    ^^^^^^^^^^^^
+
+warning: function `framingham` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:107:4
+    |
+107 | fn framingham(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^^^^^
+
+warning: function `cha2ds2` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:172:4
+    |
+172 | fn cha2ds2(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^^
+
+warning: function `score2` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:223:4
+    |
+223 | fn score2(v: &Value) -> Result<Value, String> {
+    |    ^^^^^^
+
+warning: function `need_str` is never used
+   --> crates/qualia-core-db/src/clinical_playground.rs:297:4
+    |
+297 | fn need_str<'a>(v: &'a Value, key: &str) -> Result<&'a str, String> {
+    |    ^^^^^^^^
+
+warning: function `wasm_denied` is never used
+  --> crates/qualia-core-db/src/poet_host/invoke/graph/lexicon.rs:20:4
+   |
+20 | fn wasm_denied(span: Span) -> Diagnostic {
+   |    ^^^^^^^^^^^
+
+warning: field `device_path` is never read
+   --> crates/qualia-core-db/src/storage_driver.rs:559:5
+    |
+556 | pub struct WinNvmeDriver {
+    |            ------------- field in this struct
+...
+559 |     device_path: String,
+    |     ^^^^^^^^^^^
+
+warning: associated constant `IOCTL_STORAGE_QUERY_PROPERTY` is never used
+   --> crates/qualia-core-db/src/storage_driver.rs:565:11
+    |
+562 | impl WinNvmeDriver {
+    | ------------------ associated constant in this implementation
+...
+565 |     const IOCTL_STORAGE_QUERY_PROPERTY: u32 = 0x002D_1400;
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `HKDF_SALT` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:21:7
+   |
+21 | const HKDF_SALT: &[u8] = b"qpr-pq-1";
+   |       ^^^^^^^^^
+
+warning: constant `HYBRID_INFO_I2R` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:22:7
+   |
+22 | const HYBRID_INFO_I2R: &[u8] = b"qpr-pq-1/qlink/i2r";
+   |       ^^^^^^^^^^^^^^^
+
+warning: constant `FINISHED_ROLE` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:23:7
+   |
+23 | const FINISHED_ROLE: &[u8] = b"qsession";
+   |       ^^^^^^^^^^^^^
+
+warning: constant `TEST_ITEMS` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:25:7
+   |
+25 | const TEST_ITEMS: [(&[u8], &[u8]); 2] = [(b"suite", b"qpr-pq-1"), (b"rol...
+   |       ^^^^^^^^^^
+
+warning: constant `FROZEN_TRANSCRIPT_SHA384` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:28:7
+   |
+28 | const FROZEN_TRANSCRIPT_SHA384: &str =
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FROZEN_HYBRID_I2R` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:32:7
+   |
+32 | const FROZEN_HYBRID_I2R: &str = "e4c3fcd4ce69a212c883d7114078ce410751cf1...
+   |       ^^^^^^^^^^^^^^^^^
+
+warning: constant `FROZEN_FINISHED_MAC` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:35:7
+   |
+35 | const FROZEN_FINISHED_MAC: &str =
+   |       ^^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_hkdf_sha384` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:54:4
+   |
+54 | fn oracle_hkdf_sha384(salt: Option<&[u8]>, ikm: &[u8], info: &[u8], okm:...
+   |    ^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_hybrid_shared_secret` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:60:4
+   |
+60 | fn oracle_hybrid_shared_secret(
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `oracle_finished_mac` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:72:4
+   |
+72 | fn oracle_finished_mac(transcript_digest: &StrongDigest, role: &[u8]) ->...
+   |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `decode_hex` is never used
+  --> crates/qualia-core-db/src/crypto/network/vectors.rs:89:4
+   |
+89 | fn decode_hex<const N: usize>(hex: &str) -> [u8; N] {
+   |    ^^^^^^^^^^
+
+warning: function `from_hex_nibble` is never used
+   --> crates/qualia-core-db/src/crypto/network/vectors.rs:101:4
+    |
+101 | fn from_hex_nibble(b: u8) -> u8 {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `production_transcript` is never used
+   --> crates/qualia-core-db/src/crypto/network/vectors.rs:110:4
+    |
+110 | fn production_transcript() -> super::transcript::Transcript {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `qualia-core-db` (lib) generated 38 warnings (run `cargo fix --lib -p qualia-core-db` to apply 6 suggestions)
+   Compiling webizen-render v0.0.37 (/workspace/crates/webizen-render)
+   Compiling qualia-solid-bridge v0.0.37 (/workspace/crates/qualia-solid-bridge)
+   Compiling qualia-vision v0.0.37 (/workspace/crates/qualia-vision)
+   Compiling qualia-client-core v0.0.37 (/workspace/crates/qualia-client-core)
+    Finished `release` profile [optimized] target(s) in 3m 13s
+===== END 11-anatomy-example  rc=0  elapsed=193s  2026-09-08T11:48:08Z =====
+errors=0 warnings=40 unique_diagnostic_lines=40

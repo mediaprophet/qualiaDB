@@ -1,0 +1,3 @@
+errors=0 warnings=1 unique_diagnostic_lines=1
+
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
