@@ -93,6 +93,7 @@ This is the sequential handoff record for
 | 2026-09-08 | Q1/Q2 wave 21 (closeout) | Antigravity | Complete (integrated) | Poet Live NLP×9 (`register_ai_nlp.rs`, `nlp_chain_actions.rs`); Host CG/Stats×6 (`wave21_host.rs`); catalog/dispatch | poet wave21 5; policy ok; integrity 11; host wave21 6; ALL_BOUND=1062 | Not re-run | Curated Q2 remaining ≈ 413 | Wave 22 |
 | 2026-09-08 | Q1/Q2 wave 22 | Cursor Grok 4.6 + swarm | Complete (integrated) | Poet Live Audio FX×13 · Scene graph×11 · Image edit×15; Host CG predicates/width/sites×8 | poet wave22 6; policy ok; integrity 11; host wave22 8; catalog ok; ALL_BOUND=1070 PoetLive≈688 Q2≈382 | Not re-run | Audio/Scene/Image Q2 exhausted; Dmx/HID/Video next | Wave 23 |
 | 2026-09-08 | Q1/Q2 wave 23 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Dmx×14 · Video×10 · HID×16; Host CG insphere/ham-sandwich/disk/polygon/Minkowski/segment-site×8 | poet wave23 6; policy ok; integrity 11; host wave23 8; catalog ok; ALL_BOUND=1078 PoetLive≈728 Q2≈350 | Not re-run | Dmx/Video/HID Q2 exhausted; VectorCalculus/Interpolation/Asset next | Wave 24 |
+| 2026-09-08 | Q1/Q2 wave 24 | Cursor Grok 4.6 | Complete (integrated) | Poet Live VC×7 · Interpolation×6 · Spectral×5 · World×7; Host CG coreset/duality/convexity/boolean-area×8 | poet wave24 8; policy ok; integrity 11; host wave24 8; catalog ok; ALL_BOUND=1086 PoetLive≈753 Q2≈333 | Not re-run | VC/Interp/Spectral/World Q2 exhausted; Asset/SymbolicODE/Agent next | Wave 25 |
 
 ## Required closeout detail
 

@@ -1,7 +1,7 @@
 # Q1/Q2 incorporation wave 24 swarm — 2026-09-08
 
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
-**Status:** **Wiring complete — verification pending**  
+**Status:** **Complete (integrated)**  
 **Prior:** wave 23 Complete — Dmx 14 + Video 10 + HID 16 Live; Host CG +8  
 **Derived inventory after w23:** `ALL_BOUND=1078` · `PoetLive≈728` · Q2 ≈ 350
 
@@ -37,3 +37,14 @@ cargo test -p qualia-core-db --lib vibe_catalog_contains_every_bound_invoke_id
 ```
 
 Expected after this wave: `ALL_BOUND=1086` · `PoetLive≈753` · `Q2≈333`.
+
+## Verification (parent)
+
+- `cargo test -p poet --lib wave24`: **8 passed**
+- `cargo test -p poet --lib every_registered_nonplacement_tool_has_an_explicit_policy`: **1 passed**
+- `cargo test -p poet --test product_integrity`: **11 passed**
+- `cargo test -p qualia-core-db --lib wave24`: **8 passed**
+- `cargo test -p qualia-core-db --lib vibe_catalog_contains_every_bound_invoke_id`: **1 passed**
+- Derived counts: `ALL_BOUND=1086` · `PoetLive≈753` · `Q2≈333` (VectorCalculus/Interpolation/Spectral/World Q2 exhausted; +8 Host CG now Q2)
+
+Next: Wave 25 — Asset (14) + SymbolicODE (5) + Agent (5) Live + Host math-geometry.
