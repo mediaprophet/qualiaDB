@@ -1350,6 +1350,17 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
             ),
             ToolChain::new(
                 ToolChainMetadata {
+                    id: "ai:nlp".into(),
+                    label: "Live natural language".into(),
+                    icon: "ai".into(),
+                    description:
+                        "Curated NLP.* tokenization, coreference, frames, and GraphRAG binds."
+                            .into(),
+                },
+                register_ai_nlp::nlp_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
                     id: "ai:tools".into(),
                     label: "Co-Pilot Capabilities".into(),
                     icon: "tools".into(),

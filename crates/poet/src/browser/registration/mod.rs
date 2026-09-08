@@ -15,6 +15,7 @@ pub(super) use crate::tool_chest::core::toolbox::{Toolbox, ToolboxMetadata};
 pub(super) use crate::tool_chest::manifolds;
 
 mod register_ai_toolbox;
+mod register_ai_nlp;
 mod register_audio_toolbox;
 mod register_code_toolbox;
 mod register_communication_toolbox;
@@ -3331,5 +3332,36 @@ mod tests {
         )));
         // Pre-existing spatial:scene tools plus wave-21 Host binds.
         assert!(tools.len() >= 8);
+    }
+
+    #[test]
+    fn ai_nlp_binds_wave21_nlp_caps() {
+        let registry = super::build_registry();
+        let ai = registry.toolbox("ai").expect("ai toolbox");
+        let chain = ai
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "ai:nlp")
+            .expect("ai:nlp toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("ai:nlp_tokenize", Some("NLP.tokenize"))));
+        assert!(tools.contains(&("ai:nlp_split_sentences", Some("NLP.split_sentences"))));
+        assert!(tools.contains(&("ai:nlp_coref_resolve", Some("NLP.coref_resolve"))));
+        assert!(tools.contains(&("ai:nlp_frame_extract", Some("NLP.frame_extract"))));
+        assert!(tools.contains(&("ai:nlp_fst_lookup", Some("NLP.fst_lookup"))));
+        assert!(tools.contains(&("ai:nlp_gazetteer_build", Some("NLP.gazetteer_build"))));
+        assert!(tools.contains(&("ai:nlp_graphrag_query", Some("NLP.graphrag_query"))));
+        assert!(tools.contains(&("ai:nlp_relation_extract", Some("NLP.relation_extract"))));
+        assert!(tools.contains(&("ai:nlp_substrate_extract", Some("NLP.substrate_extract"))));
+        assert_eq!(tools.len(), 9);
     }
 }

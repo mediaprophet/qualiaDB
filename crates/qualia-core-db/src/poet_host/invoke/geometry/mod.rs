@@ -13,6 +13,8 @@ mod hull;
 mod wave19_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave20_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave21_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -29,6 +31,15 @@ pub use wave19_host::{
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use wave20_host::mean_knn_distance_3d_host as mean_knn_distance_3d;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave21_host::{
+    dist_point_to_segment_host as dist_point_to_segment,
+    dist_sq_point_to_segment_host as dist_sq_point_to_segment,
+    fisher_distance_host as fisher_distance,
+    kl_bregman_form_host as kl_bregman_form,
+    kl_divergence_host as kl_divergence,
+    triangle_signed_area_host as triangle_signed_area,
+};
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn hull2(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
@@ -100,5 +111,11 @@ geom_stub!(
     orient_3d,
     average_spacing_3d,
     local_density_3d,
-    mean_knn_distance_3d
+    mean_knn_distance_3d,
+    dist_point_to_segment,
+    dist_sq_point_to_segment,
+    fisher_distance,
+    kl_bregman_form,
+    kl_divergence,
+    triangle_signed_area
 );

@@ -668,6 +668,15 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "audio:dsp_midi_note"
         | "audio:dsp_quantize"
         | "audio:dsp_transpose"
+        | "ai:nlp_tokenize"
+        | "ai:nlp_split_sentences"
+        | "ai:nlp_coref_resolve"
+        | "ai:nlp_frame_extract"
+        | "ai:nlp_fst_lookup"
+        | "ai:nlp_gazetteer_build"
+        | "ai:nlp_graphrag_query"
+        | "ai:nlp_relation_extract"
+        | "ai:nlp_substrate_extract"
     )
 }
 
@@ -2655,6 +2664,29 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "audio:dsp_midi_note" => super::audio_chain_actions::run_midi_note(document, label),
         "audio:dsp_quantize" => super::audio_chain_actions::run_quantize(document, label),
         "audio:dsp_transpose" => super::audio_chain_actions::run_transpose(document, label),
+        "ai:nlp_tokenize" => super::nlp_chain_actions::run_tokenize(document, label),
+        "ai:nlp_split_sentences" => {
+            super::nlp_chain_actions::run_split_sentences(document, label)
+        }
+        "ai:nlp_coref_resolve" => {
+            super::nlp_chain_actions::run_coref_resolve(document, label)
+        }
+        "ai:nlp_frame_extract" => {
+            super::nlp_chain_actions::run_frame_extract(document, label)
+        }
+        "ai:nlp_fst_lookup" => super::nlp_chain_actions::run_fst_lookup(document, label),
+        "ai:nlp_gazetteer_build" => {
+            super::nlp_chain_actions::run_gazetteer_build(document, label)
+        }
+        "ai:nlp_graphrag_query" => {
+            super::nlp_chain_actions::run_graphrag_query(document, label)
+        }
+        "ai:nlp_relation_extract" => {
+            super::nlp_chain_actions::run_relation_extract(document, label)
+        }
+        "ai:nlp_substrate_extract" => {
+            super::nlp_chain_actions::run_substrate_extract(document, label)
+        }
         _ => {
             if let Some(spec) = super::spec_tools::lookup(tool_id) {
                 super::spec_tools::run(document, spec, label);

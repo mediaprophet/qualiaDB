@@ -746,6 +746,13 @@ pub const AUDIO_BIN_TO_FREQ_LOG: &str = "Audio.bin_to_freq_log";
 pub const SCENE_LERP_CAMERA: &str = "Scene.lerp_camera";
 pub const SCENE_CAMERA_FRAME_NODE: &str = "Scene.camera_frame_node";
 pub const GEOM_MEAN_KNN_DISTANCE_3D: &str = "ComputationalGeometry.mean_knn_distance_3d";
+// ── Wave-21 Host binds (Statistical manifold & distance numerics) ──
+pub const GEOM_FISHER_DISTANCE: &str = "ComputationalGeometry.fisher_distance";
+pub const GEOM_KL_DIVERGENCE: &str = "ComputationalGeometry.kl_divergence";
+pub const GEOM_KL_BREGMAN_FORM: &str = "ComputationalGeometry.kl_bregman_form";
+pub const GEOM_TRIANGLE_SIGNED_AREA: &str = "ComputationalGeometry.triangle_signed_area";
+pub const GEOM_DIST_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_point_to_segment";
+pub const GEOM_DIST_SQ_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_sq_point_to_segment";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1797,6 +1804,12 @@ pub const ALL_BOUND: &[&str] = &[
     SCENE_LERP_CAMERA,
     SCENE_CAMERA_FRAME_NODE,
     GEOM_MEAN_KNN_DISTANCE_3D,
+    GEOM_FISHER_DISTANCE,
+    GEOM_KL_DIVERGENCE,
+    GEOM_KL_BREGMAN_FORM,
+    GEOM_TRIANGLE_SIGNED_AREA,
+    GEOM_DIST_POINT_TO_SEGMENT,
+    GEOM_DIST_SQ_POINT_TO_SEGMENT,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2597,7 +2610,13 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_ORIENT_3D
         | GEOM_AVERAGE_SPACING_3D
         | GEOM_LOCAL_DENSITY_3D
-        | GEOM_MEAN_KNN_DISTANCE_3D => "geometry",
+        | GEOM_MEAN_KNN_DISTANCE_3D
+        | GEOM_FISHER_DISTANCE
+        | GEOM_KL_DIVERGENCE
+        | GEOM_KL_BREGMAN_FORM
+        | GEOM_TRIANGLE_SIGNED_AREA
+        | GEOM_DIST_POINT_TO_SEGMENT
+        | GEOM_DIST_SQ_POINT_TO_SEGMENT => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE

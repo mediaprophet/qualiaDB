@@ -50,7 +50,7 @@ evidence.
 | 36 | Q1/Q2 wave 18 | **Complete** | NT +10 · Chem +10 · Fuzzy +12 Live; Host Calc/Cosmic/NLP +10 | Closed |
 | 37 | Q1/Q2 wave 19 | **Complete** | Calc +10 · Cosmic +12 · IT +8 Live; Host Inference/CG/Audio +8 | Closed |
 | 38 | Q1/Q2 wave 20 | **Complete** | Inf +8 · Cosmic +11 · Orch/ThreeD +16 Live; Host Audio/Scene/CG +8 | Closed |
-| 39 | Q1/Q2 wave 21 | **Partial / parked** | Audio+Scene Live in tree; NLP+Host not done — see `POET_Q1Q2_INCORPORATION_HANDOVER_2026-09-08.md` | Resume on cloud |
+| 39 | Q1/Q2 wave 21 | **Complete** | Audio +9 · Scene +8 · NLP +9 Live; Host CG/Stats +6 | Closed — wave 21 |
 
 ## Latest execution evidence
 

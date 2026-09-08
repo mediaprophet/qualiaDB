@@ -123,6 +123,7 @@ mod orch_chain_actions;
 mod threed_chain_actions;
 mod scene_chain_actions;
 mod audio_chain_actions;
+mod nlp_chain_actions;
 mod image_chain_actions;
 mod cooperative_chain_actions;
 mod tool_proficiency;
