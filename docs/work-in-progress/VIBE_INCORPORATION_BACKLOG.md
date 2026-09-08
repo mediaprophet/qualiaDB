@@ -1,6 +1,6 @@
 # Vibe incorporation backlog (exhaustive)
 
-**Generated:** 2026-09-06 04:37 UTC  
+**Generated:** 2026-09-08 00:21 UTC  
 **Methodology:** `docs/work-in-progress/VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md`  
 **Tool:** `scripts/vibe_incorporation_backlog.py`
 
@@ -12,14 +12,14 @@ Exact method-name join only counts as Host-bound. Fuzzy hints are not coverage.
 | Metric | Count |
 |---|---:|
 | Crates scanned | 25 |
-| `ALL_BOUND` | 897 |
-| `ALL_INVOKE_IDS` | 897 |
-| Distinct Host method suffixes | 861 |
-| Public fns scanned | 19362 |
-| Public fns with exact Host method twin | 2892 |
-| **Q1 Host-missing** (listed / total) | 400 / 12315 |
-| **Q2 Poet-consume** (Host id not in Poet Live) | 841 |
-| Poet Live ids | 56 |
+| `ALL_BOUND` | 1056 |
+| `ALL_INVOKE_IDS` | 1056 |
+| Distinct Host method suffixes | 1011 |
+| Public fns scanned | 19606 |
+| Public fns with exact Host method twin | 3264 |
+| **Q1 Host-missing** (listed / total) | 400 / 12074 |
+| **Q2 Poet-consume** (Host id not in Poet Live) | 433 |
+| Poet Live ids | 623 |
 | Poet Live stale (not in ALL_BOUND) | 0 |
 | Catalog drift (bound-only / invoke-only) | 0 / 0 |
 
@@ -33,42 +33,25 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 
 | Family | Uncited Host ids |
 |---|---:|
-| `Econ` | 96 |
-| `Statistics` | 91 |
-| `MachineLearning` | 81 |
 | `Research` | 73 |
 | `Render` | 51 |
+| `Audio` | 22 |
 | `Asset` | 21 |
-| `Cosmic` | 20 |
-| `ComputationalGeometry` | 19 |
-| `NumberTheory` | 18 |
-| `Physics` | 18 |
-| `Scene` | 17 |
-| `Audio` | 16 |
+| `Scene` | 19 |
 | `HID` | 16 |
 | `Image` | 15 |
 | `Dmx` | 14 |
-| `LinearAlgebra` | 14 |
-| `SpecialFunctions` | 12 |
 | `Video` | 10 |
-| `EngineeringAnalysis` | 8 |
-| `GeometricAlgebra` | 8 |
-| `Inference` | 8 |
-| `Orchestration` | 8 |
-| `ThreeD` | 8 |
-| `Calculus` | 7 |
-| `Chemistry` | 7 |
-| `FuzzyQuery` | 7 |
-| `IntegralTransforms` | 7 |
-| `NLP` | 7 |
+| `NLP` | 9 |
 | `Pulse` | 7 |
 | `VectorCalculus` | 7 |
 | `World` | 7 |
 | `Interpolation` | 6 |
 | `Agent` | 5 |
 | `Capability` | 5 |
+| `Inference` | 5 |
 | `Spectral` | 5 |
-| `SymbolicAlgebra` | 5 |
+| `SymbolicODE` | 5 |
 | `sampler` | 5 |
 | `Animation` | 4 |
 | `ClinicalRisk` | 4 |
@@ -78,10 +61,13 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 | `Social` | 4 |
 | `CapabilityDiscovery` | 3 |
 | `ChatGraph` | 3 |
+| `ComputationalGeometry` | 3 |
 | `ComputerVision` | 3 |
+| `Econ` | 3 |
 | `Finance` | 3 |
 | `FinancialModeling` | 3 |
 | `GraphMatch` | 3 |
+| `GraphReasoning` | 3 |
 | `Manifold` | 3 |
 | `Medical` | 3 |
 | `Optimization` | 3 |
@@ -91,10 +77,11 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 | `agent` | 3 |
 | `Avatar` | 2 |
 | `Bioinformatics` | 2 |
+| `Calculus` | 2 |
 | `Corpus` | 2 |
+| `EngineeringAnalysis` | 2 |
 | `Forensic` | 2 |
 | `GraphDatabase` | 2 |
-| `GraphReasoning` | 2 |
 | `Interactive` | 2 |
 | `MedicalComputing` | 2 |
 | `Net` | 2 |
@@ -105,6 +92,7 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 | `Agency` | 1 |
 | `CalculusWorkbench` | 1 |
 | `CausalFuzzyAndControl` | 1 |
+| `Chemistry` | 1 |
 | `ContractsIdentityAndConsensus` | 1 |
 | `CooperativeWork` | 1 |
 | `FormalLogic` | 1 |
@@ -112,12 +100,14 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 | `InfraExtLogic` | 1 |
 | `InfraLogic` | 1 |
 | `LegalLogic` | 1 |
+| `LinearAlgebra` | 1 |
 | `MedicalImaging` | 1 |
 | `NumericalCalculus` | 1 |
 | `OntologyAlignment` | 1 |
 | `PhysicalUnits` | 1 |
 | `PhysicsAndODE` | 1 |
 | `PhysicsWorkbench` | 1 |
+| `PolynomialAlgebra` | 1 |
 | `Privacy` | 1 |
 | `SHACL` | 1 |
 | `SecondScreen` | 1 |
@@ -161,18 +151,24 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 - `Asset.resolve_by_topic`
 - `Asset.set_spatial`
 - `Asset.temporal_span`
+- `Audio.bin_to_freq_linear`
+- `Audio.bin_to_freq_log`
 - `Audio.compressor`
 - `Audio.delay`
 - `Audio.envelope`
+- `Audio.epistemic_fm_index`
+- `Audio.epistemic_temperature_from_q`
 - `Audio.eq`
 - `Audio.filter`
 - `Audio.lfo`
 - `Audio.loudness_meter`
 - `Audio.midi_note`
 - `Audio.oscillator`
+- `Audio.parametric_sample`
 - `Audio.phase_meter`
 - `Audio.quantize`
 - `Audio.reverb`
+- `Audio.sigma_dominant_frequency`
 - `Audio.spectrum`
 - `Audio.transport`
 - `Audio.transpose`
@@ -181,12 +177,7 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 - `Avatar.set_appearance`
 - `Bioinformatics.align`
 - `Bioinformatics.compute`
-- `Calculus.adaptive_derivative`
-- `Calculus.adaptive_simpson`
 - `Calculus.discrete_maximum_principle_holds`
-- `Calculus.newton_solve`
-- `Calculus.numerical_hessian`
-- `Calculus.numerical_jacobian`
 - `Calculus.solve_poisson_dirichlet`
 - `CalculusWorkbench.compute`
 - `Capability.audit`
@@ -201,15 +192,14 @@ These are **vibescript-ready**: Poet dual-path next (no new Host id).
 - `ChatGraph.link_reply`
 - `ChatGraph.session_summary`
 - `ChatGraph.validate_fragment`
-- `Chemistry.atomic_number`
-- `Chemistry.element_symbol`
-- `Chemistry.lda_correlation_vwn`
-- `Chemistry.lda_exchange`
 - `Chemistry.parse_bse_json`
-- `Chemistry.standard_atomic_weight`
-- `Chemistry.sto3g_h2`
 - `ClinicalRisk.comorbidity`
-- … +761 more (see JSON)
+- `ClinicalRisk.contraindication`
+- `ClinicalRisk.drug_interaction`
+- `ClinicalRisk.fhir_observation`
+- `ComputationalGeometry.average_spacing_3d`
+- `ComputationalGeometry.local_density_3d`
+- … +353 more (see JSON)
 
 ## Q1 — Host-missing public functions (priority order)
 
@@ -368,10 +358,6 @@ Proposed `Family.method` is a **suggestion** for vibescript bind packets.
 | 100 | `qualia-core-db` | `audio::dsp::oscillator` | `set_gain` | `CoreDb.set_gain` | `crates/qualia-core-db/src/audio/dsp/oscillator.rs` |
 | 100 | `qualia-core-db` | `audio::dsp::oscillator` | `tick` | `CoreDb.tick` | `crates/qualia-core-db/src/audio/dsp/oscillator.rs` |
 | 100 | `qualia-core-db` | `audio::dsp_kernel` | `configure_voice_from_tensor` | `CoreDb.configure_voice_from_tensor` | `crates/qualia-core-db/src/audio/dsp_kernel.rs` |
-| 100 | `qualia-core-db` | `audio::dsp_kernel` | `epistemic_fm_index` | `CoreDb.epistemic_fm_index` | `crates/qualia-core-db/src/audio/dsp_kernel.rs` |
-| 100 | `qualia-core-db` | `audio::dsp_kernel` | `epistemic_temperature_from_q` | `CoreDb.epistemic_temperature_from_q` | `crates/qualia-core-db/src/audio/dsp_kernel.rs` |
-| 100 | `qualia-core-db` | `audio::dsp_kernel` | `parametric_sample` | `CoreDb.parametric_sample` | `crates/qualia-core-db/src/audio/dsp_kernel.rs` |
-| 100 | `qualia-core-db` | `audio::dsp_kernel` | `sigma_dominant_frequency` | `CoreDb.sigma_dominant_frequency` | `crates/qualia-core-db/src/audio/dsp_kernel.rs` |
 | 100 | `qualia-core-db` | `audio::hrtf` | `binaural_analytic` | `CoreDb.binaural_analytic` | `crates/qualia-core-db/src/audio/hrtf.rs` |
 | 100 | `qualia-core-db` | `audio::hrtf` | `binaural_from_position` | `CoreDb.binaural_from_position` | `crates/qualia-core-db/src/audio/hrtf.rs` |
 | 100 | `qualia-core-db` | `audio::hrtf` | `binaural_kemar_lite` | `CoreDb.binaural_kemar_lite` | `crates/qualia-core-db/src/audio/hrtf.rs` |
@@ -389,8 +375,6 @@ Proposed `Family.method` is a **suggestion** for vibescript bind packets.
 | 100 | `qualia-core-db` | `audio::stft_bake` | `bake_stft_sidecar_from_preview` | `CoreDb.bake_stft_sidecar_from_preview` | `crates/qualia-core-db/src/audio/stft_bake.rs` |
 | 100 | `qualia-core-db` | `audio::stft_bake` | `bake_tensor_stft_sidecar` | `CoreDb.bake_tensor_stft_sidecar` | `crates/qualia-core-db/src/audio/stft_bake.rs` |
 | 100 | `qualia-core-db` | `audio::stft_bake` | `synthesize_stft_frame` | `CoreDb.synthesize_stft_frame` | `crates/qualia-core-db/src/audio/stft_bake.rs` |
-| 100 | `qualia-core-db` | `audio::tf_surface` | `bin_to_freq_linear` | `CoreDb.bin_to_freq_linear` | `crates/qualia-core-db/src/audio/tf_surface.rs` |
-| 100 | `qualia-core-db` | `audio::tf_surface` | `bin_to_freq_log` | `CoreDb.bin_to_freq_log` | `crates/qualia-core-db/src/audio/tf_surface.rs` |
 | 100 | `qualia-core-db` | `audio::tf_surface` | `frame_energy` | `CoreDb.frame_energy` | `crates/qualia-core-db/src/audio/tf_surface.rs` |
 | 100 | `qualia-core-db` | `audio::tf_surface` | `frame_to_time` | `CoreDb.frame_to_time` | `crates/qualia-core-db/src/audio/tf_surface.rs` |
 | 100 | `qualia-core-db` | `audio::tf_surface` | `freq_gradient` | `CoreDb.freq_gradient` | `crates/qualia-core-db/src/audio/tf_surface.rs` |
@@ -617,6 +601,12 @@ Proposed `Family.method` is a **suggestion** for vibescript bind packets.
 | 100 | `qualia-core-db` | `crypto::zk_proofs` | `verify_semantic_proof` | `CoreDb.verify_semantic_proof` | `crates/qualia-core-db/src/crypto/zk_proofs.rs` |
 | 100 | `qualia-core-db` | `csd_storage` | `add_matrix_multiply` | `CoreDb.add_matrix_multiply` | `crates/qualia-core-db/src/csd_storage.rs` |
 | 100 | `qualia-core-db` | `csd_storage` | `build` | `CoreDb.build` | `crates/qualia-core-db/src/csd_storage.rs` |
+| 100 | `qualia-core-db` | `csd_storage` | `convolution` | `CoreDb.convolution` | `crates/qualia-core-db/src/csd_storage.rs` |
+| 100 | `qualia-core-db` | `csd_storage` | `convolution_into` | `CoreDb.convolution_into` | `crates/qualia-core-db/src/csd_storage.rs` |
+| 100 | `qualia-core-db` | `csd_storage` | `discover_devices` | `CoreDb.discover_devices` | `crates/qualia-core-db/src/csd_storage.rs` |
+| 100 | `qualia-core-db` | `csd_storage` | `discover_devices_into` | `CoreDb.discover_devices_into` | `crates/qualia-core-db/src/csd_storage.rs` |
+| 100 | `qualia-core-db` | `csd_storage` | `drain_completions` | `CoreDb.drain_completions` | `crates/qualia-core-db/src/csd_storage.rs` |
+| 100 | `qualia-core-db` | `csd_storage` | `execute_operation` | `CoreDb.execute_operation` | `crates/qualia-core-db/src/csd_storage.rs` |
 
 ## How to use
 

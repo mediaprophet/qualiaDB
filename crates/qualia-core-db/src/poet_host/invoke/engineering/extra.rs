@@ -252,6 +252,35 @@ pub fn fem_static(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// `EngineeringAnalysis.natural_frequency_sdof` — ω = √(k/m) rad/s.
+/// Args: `{ stiffness, mass }`. Out: `{ omega }`.
+pub fn natural_frequency_sdof(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let stiffness = args::rec_f64(args, "stiffness")
+        .ok_or_else(|| args::bad(span, "natural_frequency_sdof needs stiffness"))?;
+    let mass = args::rec_f64(args, "mass")
+        .ok_or_else(|| args::bad(span, "natural_frequency_sdof needs mass"))?;
+    let vib = eng::VibrationAnalysis::new();
+    match vib.natural_frequency_sdof(stiffness, mass) {
+        Ok(omega) => Ok(args::record([("omega", Value::F64(omega))])),
+        Err(e) => Err(args::bad(span, format!("natural_frequency_sdof: {e:?}"))),
+    }
+}
+
+#[cfg(test)]
+mod wave15_eng_tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn wave15_natural_frequency_unit() {
+        let mut m = BTreeMap::new();
+        m.insert("stiffness".into(), Value::F64(4.0));
+        m.insert("mass".into(), Value::F64(1.0));
+        let out = natural_frequency_sdof(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        assert!((args::rec_f64(&out, "omega").unwrap() - 2.0).abs() < 1e-12);
+    }
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 fn parse_bc(args: &Value, key: &str, span: Span) -> Result<eng::BoundaryCondition, Diagnostic> {

@@ -2,6 +2,13 @@
 //!
 //! Future crate: `qualia-inference`.
 
+mod wave19_host;
+
+pub use wave19_host::{
+    gelu_host as gelu, relu_host as relu, rms_norm_host as rms_norm, sigmoid_host as sigmoid,
+    softmax_host as softmax,
+};
+
 use super::args;
 use crate::inference::{post_turn_verify, quant_graph_grounding};
 use vibe::{DiagCode, Diagnostic, Span, Value};

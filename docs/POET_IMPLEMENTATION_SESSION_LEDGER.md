@@ -69,6 +69,27 @@ This is the sequential handoff record for
 | 2026-09-06 | Residual swarm | Composer+[ConsentLedger](5f51297a-c960-42eb-b74b-a19f2679f26b)+lanes B–D | Complete (integrated) | HLT-CL consent_persist; AST-06b live bind; APP-01 ADR; APP-02 app_manifest | consent_persist 5; health_views 58; consent_contract 12; chemical 20; app_manifest 14; integrity 11 | Not re-run | APP-03+; WD-01…; live Health UAT optional; disclosure_workspace split optional | `APP-03` / WD / Gate B |
 | 2026-09-06 | Gate B swarm | Composer+[crate inventory](ab8cc5d5-4375-4b5e-89f2-cdf8d2aabc04)+[projections](090ae21a-5c80-4438-a9e0-17ecfc02babe)+[IA docs](6ce9046c-5072-4b38-a614-ce25e0a44e2c)+[app registry](717bb637-754b-41c1-a685-d9e2f24609a0) | Complete (integrated) | EXP-C1 incorporation; APP-03 project.rs; WD-01 IA; WD-02 app_registry | app_manifest 21; app_registry 11; gap ALL_BOUND 892/1481 | N/A | APP-04; WD-03; Poet CV/Econ consume; Review Gate B | `APP-04` / `WD-03` / PFT-CV |
 | 2026-09-06 | Vibescript-first | Composer+[CV Live](1714d506-c581-480e-8a0f-c52c0d9eb8ec)+[Econ Live](cb074e15-e2d2-452d-91d5-775c05be0fab)+[Cooperative Host](d55c3ae3-31b3-4f86-ae5b-461ef1f8afbc)+[ChatGraph Host](18faddeb-26e3-475e-8b07-73384c03ce28) | Complete (integrated) | Constraint fix; CV+Econ Poet Live; CooperativeDelegation+ChatGraph Host | catalog 1; chat_graph 8; cooperative 7; poet econ/integrity spot | N/A | Backlog Q1/Q2; biosense | Q1 Host / Q2 Poet |
+| 2026-09-06 | Q1/Q2 wave | Composer+[Q2 Econ](bd29ffc0-a7f5-4b10-a12b-8defd09069d0)+[Q2 Stats](8db951db-559b-41d3-aaec-a89200a75c20)+[Q2 ML](e5d1a7dd-6565-4c64-8717-5590fc255693)+[Q1 Host](1df82c13-d31a-40c9-9e78-f73a01cf9943) | Complete (integrated) | Poet Live Econ×8 Stats×11 ML×11; Host LinearAlgebra QR/vector×7 | econ 25; stats 12; integrity 11; catalog 1; qr_vector 6 | Not re-run | Backlog refresh; more Q1/Q2; APP-04/WD-03 | Next curated Q1/Q2 wave |
+| 2026-09-06 | Q1/Q2 wave 2 | Composer+[Wave2 Econ](e9200a4b-1ba5-4816-99e6-69b231cbf96a)+[Wave2 Stats](606c3ee3-994e-4697-84cf-09c4fcc93ccf)+[Wave2 ML](1e8f04cb-0735-4102-820e-82c8bca4ed82)+[Wave2 Host](13472316-d299-4bd0-b767-ef8a3d0bb661) | Complete (integrated) | Poet Live Econ×8 Stats×9 ML×8; Host LinAlg/Symbolic/Poly×8 | econ 34; stats 21; ai_ml 2; integrity 11; catalog 1; poly 5 | Not re-run | More Q1/Q2; APP-04/WD-03 | Next curated wave or APP/WD |
+| 2026-09-06 | Q1/Q2 wave 3 | Composer+[Wave3 Econ](bd9c2bf5-3aa3-4242-a4e8-2361710b3794)+[Wave3 Stats](0c03d76c-3fda-4f7a-9cb8-6dbe95541556)+[Wave3 ML](02fcce77-d943-4561-834b-ac508b5b400b)+[Wave3 Host](81c9b721-f0a9-4474-b78a-c5ff1ebcef93) | Complete (integrated) | Poet Live Econ×10 Stats×8 ML×8; Host matvec/Poly/Symbolic×8 | econ 45; stats 29; ai_ml 3; integrity 11; catalog 1; math filters 22 | Not re-run | More Q1/Q2 | Wave 4 |
+| 2026-09-06 | Q1/Q2 wave 4 | Composer+[Wave4 Econ](6470d73f-0ddf-4108-808e-a14b4d7f6232)+[Wave4 Stats](3fcb598f-94ba-4259-b3dc-c0f77ba0099e)+[Wave4 ML](2218b4ab-76e2-43aa-9efd-a99f24389c17)+[Wave4 Host](1417140d-742d-4d0c-a9be-88571ff1e1bd) | Complete (integrated) | Poet Live Econ×10 Stats×8 ML×8; Host CAS/ODE/Poly×8 | econ 56; stats 36; ai_ml 4; integrity 11; catalog 1; cas_ext+poly | Not re-run | More Q1/Q2 | Wave 5 |
+| 2026-09-06 | Q1/Q2 wave 5 | Composer+[Wave5 Econ](18a3b471-f13d-4193-923f-fa6986db3b18)+[Wave5 Stats](fc64f571-2e66-47e7-b3e4-211fd639e282)+[Wave5 ML](3dad90d7-43e8-432e-b21a-eddeabb8bc00)+[Wave5 Host](8d272865-398e-4178-a75e-b41a8aba0fb3) | Complete (integrated) | Poet Live Econ×11 Stats×8 ML×8; Host CAS/ODE/LinAlg×8 | econ 67; stats 43; ai_ml 5; integrity 11; catalog+cas_wave5 | Not re-run | More Q1/Q2 | Wave 6 |
+| 2026-09-06 | Q1/Q2 wave 6 | Composer+[Wave6 Econ](3d6dae10-a6d7-422b-aed1-781530d27937)+[Wave6 Stats](44911a3e-0787-4c45-9dfc-acaaab76f2fa)+[Wave6 ML](60bc86c4-f84f-4569-ad5f-6d6209f0d7cf)+[Wave6 Host](5be4257d-3a85-4b93-a8e8-2c32206287ae) | Complete (integrated) | Poet Live Econ×10 Stats×8 ML×10; Host CAS multivar + Constructibility×8 | econ 78; stats 51; ai_ml 6; integrity 11; wave6_+catalog | Not re-run | More Q1/Q2 | Wave 7 |
+| 2026-09-06 | Q1/Q2 wave 7 | Composer+[Wave7 Econ](9b007514-8f72-4876-bd6c-3d9452876eb5)+[Wave7 Stats](995f1871-18f8-40e9-8815-b656d5c3ef28)+[Wave7 ML](f6620b41-21c3-4456-89a4-11f2b368ef00)+[Wave7 Host](a17b358f-af78-433d-a6fc-dcd721d7d602) | Complete (integrated) | Poet Live Econ×10 Stats×8 ML×10; Host Constructibility + quadratic CAS×8 | econ 89; stats 59; ai_ml 7; integrity 11; wave7_+catalog | Not re-run | More Q1/Q2 | Wave 8 |
+| 2026-09-06 | Q1/Q2 wave 8 | Composer+[Wave8 Econ](4be70a66-1f49-4414-a710-08223bd19461)+[Wave8 Stats](2cfecc12-2a1d-48b6-971e-4e33254e747c)+[Wave8 ML](b995162e-ecff-41a2-9ae2-89d878186d88)+[Wave8 Host](dd7496a7-ee2c-4b39-9431-4f0e24790147) | Complete (integrated) | Poet Live Econ×10 Stats×8 ML×8; Host CAS expr constructors×8 | econ 100; stats 67; ai_ml 8; integrity 11; wave8_+catalog | Not re-run | More Q1/Q2 | Wave 9 |
+| 2026-09-06 | Q1/Q2 wave 9 | Composer+[Wave9 Econ](07bf7eb6-6e1f-4be2-8e71-c8cf51e368a7)+[Wave9 Stats](5356909a-972c-431c-aed7-2ea1d8c12aef)+[Wave9 ML](f26a65bc-8457-4965-8470-f820f9205764)+[Wave9 Host](07a37c56-f8dd-4a3f-97a0-fe6a7c573c1b) | Complete (integrated) | Poet Live Econ×10 Stats×9 ML×10; Host CAS/poly constructors×8 | econ 111; stats 76; ai_ml 9; integrity 11; wave9_+catalog | Not re-run | More Q1/Q2; ML Q2 exhausted | Wave 10 (CAS Live pivot) |
+| 2026-09-06 | Q1/Q2 wave 10 | Composer+[Wave10 Econ](9a6b0a08-084c-4ba6-ba75-66b0a783c5a1)+[Wave10 Stats](16a81121-1e70-4d4a-a2b2-e28d6a58e414)+[Wave10 CAS](f90b9a0d-a4cd-4352-8b20-db6f3081e729)+[Wave10 Host](dd9a4011-e426-4f07-9d4f-e5fbf1663be2) | Complete (integrated) | Poet Live Econ×6 (exhausted) Stats×10 CAS×8; Host poly/CAS/stats×8 | econ 116; stats 86; integrity 11; wave10_+catalog | Not re-run | Econ Q2 exhausted; Stats ~8 left | Wave 11 (LinAlg Live pivot) |
+| 2026-09-06 | Q1/Q2 wave 11 | Composer+[Wave11 LinAlg](f3cc8dc2-fb78-46ed-bfa7-103e422b8ee6)+[Wave11 Stats](c64a1bfa-e8f7-4408-9555-824e3c40a5a8)+[Wave11 CAS](192168e6-cdf4-4f19-be2d-ffd3544bad06)+[Wave11 Host](1a0c36d5-2d83-46d1-91f5-131f9ef1f559) | Complete (integrated) | Poet Live LinAlg×10 Stats×8 CAS×8; Host stats manifold×6 | stats 94; integrity 11; wave11_+catalog | Not re-run | Stats Live prior Q2 exhausted; LinAlg/CAS remain | Wave 12 (Poly Live pivot) |
+| 2026-09-06 | Q1/Q2 wave 12 | Composer+[Wave12 LinAlg](acce05db-664f-4647-b4dd-694b06599c15)+[Wave12 Poly](ccae3476-e696-403c-85a8-26d60bb55a7f)+[Wave12 CAS](88fccbcd-7b2f-4642-a843-258fc5afdf17)+[Wave12 Host](cca04876-2a22-42be-bf9b-2807a80bfb52) | Complete (integrated) | Poet Live LinAlg×8 Poly×12 CAS×8; Host chem/LinAlg/CAS×8 | integrity 11; wave12_+catalog; backlog write locked | Not re-run | Poly≈3 / LinAlg≈8 left; Chemistry Host new | Wave 13 |
+| 2026-09-07 | Q1/Q2 wave 13 | Composer+[Wave13 LinAlg](978c5afd-cf3c-4a56-ad20-ea0d9f811cbe)+[Wave13 Sheet](e956ba44-2ba7-46ad-9ab5-fde11570338d)+[Wave13 CAS](98141281-1419-4b35-9145-f53062ce7153)+parent Host | Complete (integrated) | Poet Live LinAlg×9 Sheet×9 CAS×8; Host chem/gemm/coeffs×8 | integrity 11; wave13_×3; Host wave13_×6; backlog refreshed | Not re-run | LinAlg/Poly Live Q2 exhausted; Chem/CAS/Physics remain | Wave 14 |
+| 2026-09-07 | Q1/Q2 wave 14 | Composer+[Wave14 CAS](e51b87fb-da6d-4760-b31a-8d7c750c310b)+[Wave14 Physics](7e09d36d-aecf-4e7b-a061-84720773e996)+parent Chem/Host | Complete (integrated) | Poet Live Chem×11 CAS×9 Physics×10; Host Calculus/graph×8 | integrity 11; wave14 Live×3; Host wave14_×6 | Not re-run | SymbolicAlgebra Q2 exhausted; Physics Q2≈8 left | Wave 15 |
+| 2026-09-07 | Q1/Q2 wave 15 | Composer+[Wave15 Physics](05beff00-ccfc-40e1-8377-bad3d4f3caa4)+[Wave15 Constr](021976af-45c1-4605-a014-31962bec3f41)+[Wave15 SF](751b2f9d-0a8c-437b-b318-79d94d6fcd12)+[Wave15 Host](bc995aa1-95de-4aaf-a151-35d80bf1f049) | Complete (integrated) | Poet Live Physics×8 Constr×9 SF×12; Host Calculus/NT/Eng×8 | integrity 11; wave15 Live×3; Host wave15_×8; backlog ALL_BOUND=1014 PoetLive=464 Q2=550 | Not re-run | Physics/Constr/SF Live Q2 exhausted; NT/Calc/CG remain | Wave 16 |
+| 2026-09-07 | Q1/Q2 wave 16 | Composer+[Wave16 NT](ec0d1425-b32d-4540-abc1-e671a2583e67)+[Wave16 Calc](b6f90a5d-1eab-4493-942a-b64e03602980)+[Wave16 CG](f0012929-e56e-481e-a84c-ba6f31507634)+[Wave16 Host](7547cf5d-8120-4ac3-bd26-da84ddff600b) | Complete (integrated) | Poet Live NT×10 Calc×12 CG×10; Host Eng/GA/Fuzzy/Chem×8 | integrity 11; wave16 Live×3; Host wave16_×8; backlog ALL_BOUND=1022 PoetLive=496 Q2=526 | Not re-run | Eng/GA Host→Live next; NT/CG partial | Wave 17 |
+| 2026-09-07 | Q1/Q2 wave 17 | Composer+[Wave17 Eng](c1ac1836-3da5-4e3f-a0cf-e3a1b6a810bf)+[Wave17 GA](40b9bfe3-8bde-48ba-8e8e-5509df53459b)+[Wave17 CG2](bbcea9c2-0249-44d6-8932-78113c67dfbe)+[Wave17 Host](cdba44a4-f2d7-4f72-a0a1-0f98ad264f64) | Complete (integrated) | Poet Live Eng×10 GA×11 CG×9; Host Chem/Fuzzy/IT×8 | integrity 11; wave17 Live×3; Host wave17_×7; backlog ALL_BOUND=1030 PoetLive=526 Q2=504 | Not re-run | GA/CG Live Q2 exhausted; NT/Chem/Fuzzy remain | Wave 18 |
+| 2026-09-08 | Q1/Q2 wave 18 | Composer+[Wave18 NT2](e7d9edb2-c085-41b2-b233-96241a205933)+[Wave18 Chem](53e70cfb-0063-42eb-9c71-55f83507f8e7)+[Wave18 Fuzzy](58905918-2c15-4b50-ba33-c9156a293e4a)+[Wave18 Host](5385bd96-1068-42f7-bba2-7ecc3d9aa3e3) | Complete (integrated) | Poet Live NT×10 Chem×10 Fuzzy×12; Host Calc/Cosmic/NLP×10 | integrity 11; wave18 Live×4; Host wave18_×10; backlog ALL_BOUND=1040 PoetLive=558 Q2=482 | Not re-run | NT/Fuzzy Live Q2 exhausted; Calc/Cosmic/IT next | Wave 19 |
+| 2026-09-08 | Q1/Q2 wave 19 | Composer+[Wave19 Calc2](1ebdfd3a-6ec6-44c8-9e23-335e1c19389f)+[Wave19 Cosmic](66110837-e0b3-419c-a199-5fb4a56a338b)+[Wave19 IT](93f3f999-0ee3-4160-bed8-fb6794880006)+[Wave19 Host](26e7d8f7-f1ef-45b1-8371-6e608f00a789) | Complete (integrated) | Poet Live Calc×10 Cosmic×12 IT×8; Host Inference/CG/Audio×8 | integrity 11; wave19 Live×5; policy ok; Host wave19_×9; backlog ALL_BOUND=1048 PoetLive=588 Q2=460 | Not re-run | IT Live Q2 exhausted; Inference/Cosmic rem next | Wave 20 |
+| 2026-09-08 | Q1/Q2 wave 20 | Composer+[Wave20 Inf](697c2633-a149-4165-843e-2333f8b5985a)+[Wave20 Cosmic2](d33125de-f891-4d0b-b754-8ebce224c5d7)+[Wave20 Orch](ade3dd5f-6b23-44cf-8397-c371ecf749bd)+[Wave20 Host](c68a3635-8381-4f4b-8c75-5acdb31c47d5) | Complete (integrated) | Poet Live Inf×8 Cosmic×11 Orch/ThreeD×16; Host Audio/Scene/CG×8 | integrity 11; wave20 Live×9; policy ok; Host wave20_×9; backlog ALL_BOUND=1056 PoetLive=623 Q2=433 | Not re-run | Cosmic Live Q2 exhausted; Audio/Scene/NLP next | Wave 21 |
+| 2026-09-08 | Q1/Q2 wave 21 | interrupted agents + parent park | Partial / parked | Audio+Scene Live partial in tree; NLP+Host not started | audio mod/dispatch + scene assert fixes; handover written | Not re-run | Finish NLP+Host; ~15–20 waves remain for curated Q2 | Cloud resume — see `POET_Q1Q2_INCORPORATION_HANDOVER_2026-09-08.md` |
 
 ## Required closeout detail
 
@@ -478,3 +499,143 @@ Browser/native UAT: Not re-run.
 Known gaps: backlog Q1 still large; biosense; APP-04/WD-03; more Q2 Poet consume.
 Unrelated failures preserved: Yes.
 Recommended next packet: Q1/Q2 waves from `vibe_incorporation_backlog.py`.
+
+Packet: Q1/Q2 incorporation wave (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live consume for Econ (+8), Statistics (+11), MachineLearning (+11); Host-widen LinearAlgebra QR/Cholesky-solve/BLAS-1 (+7) with paired vibe catalog.
+Files changed: `econ_chain_actions` / `stats_chain_actions` / `ml_chain_actions`; sheet/econ/ai toolbox registration; `poet_host/invoke/math/qr_vector.rs` + ids; swarm/register/ledger.
+Tests and exact results (parent): poet econ **25**; stats **12**; sheet extended assert **1**; ai_ml_chain **1**; product_integrity **11**; vibe catalog **1**; qr_vector **6**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large (curated waves only); APP-04; WD-03; biosense.
+Unrelated failures preserved: Yes.
+Recommended next packet: next curated Q1/Q2 wave or `APP-04` / `WD-03`.
+
+Packet: Q1/Q2 incorporation wave 2 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+8), Statistics (+9), MachineLearning (+8); Host-widen LinearAlgebra vector assign/scale + SymbolicAlgebra.simplify_trig + PolynomialAlgebra (div_rem/derivative/monic/resultant).
+Files changed: econ/stats/ml chain + toolboxes; `math/qr_vector`, `math/symbolic`, `math/poly_algebra`; paired catalogs; wave2 swarm/register/ledger.
+Tests and exact results (parent): econ **34**; stats **21**; ai_ml **2**; product_integrity **11**; vibe catalog **1**; poly_algebra **5**; add_assign_hadamard_assign_scale **1**; simplify_trig **2**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large; APP-04; WD-03; Host wealth stubs (`aggregate_wealth` / `cumulative_wealth` buffer bug) not Live-worthy.
+Unrelated failures preserved: Yes.
+Recommended next packet: next curated Q1/Q2 wave or `APP-04` / `WD-03`.
+
+Packet: Q1/Q2 incorporation wave 3 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen LinearAlgebra.matvec (CPU floor), PolynomialAlgebra add/sub/mul, SymbolicAlgebra integrate/taylor/limit.
+Files changed: econ/stats/ml chain + toolboxes; math qr_vector/poly_algebra/symbolic; paired catalogs; wave3 swarm/register/ledger.
+Tests and exact results (parent): econ **45**; stats **29**; ai_ml **3**; product_integrity **11**; vibe catalog **1**; qr_vector **9** · poly **6** · symbolic **7**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 4 curated Q1/Q2.
+
+Packet: Q1/Q2 incorporation wave 4 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen SymbolicAlgebra definite/∞-limit/roots, SymbolicODE×3, PolynomialAlgebra degree/leading.
+Files changed: econ/stats/ml chain + toolboxes; `math/cas_ext.rs`; poly_algebra; paired catalogs; wave4 swarm/register/ledger.
+Tests and exact results (parent): econ **56**; stats **36**; ai_ml **4**; product_integrity **11**; vibe catalog **1**; cas_ext **8**; poly_algebra **8**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 5 curated Q1/Q2.
+
+Packet: Q1/Q2 incorporation wave 5 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+11), Statistics (+8), MachineLearning (+8); Host-widen SymbolicODE separable/PDE, SymbolicAlgebra roots/assumptions/hash, LinearAlgebra.solve_linear_system, PolynomialAlgebra.is_zero.
+Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave5.rs`; poly_algebra; paired catalogs; wave5 swarm/register/ledger.
+Tests and exact results (parent): econ **67**; stats **43**; ai_ml **5**; product_integrity **11**; vibe catalog **1**; cas_wave5 **10**; wave5_poly_is_zero **1**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 6 curated Q1/Q2.
+
+Packet: Q1/Q2 incorporation wave 6 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+10); Host-widen SymbolicAlgebra partial/jacobian/hessian/gradient_at/hessian_at + Constructibility×3.
+Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave6.rs`; paired catalogs; wave6 swarm/register/ledger.
+Tests and exact results (parent): econ **78**; stats **51**; ai_ml **6**; product_integrity **11**; vibe catalog **1**; wave6_* **8**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 7 curated Q1/Q2.
+
+Packet: Q1/Q2 incorporation wave 7 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+10); Host-widen Constructibility helpers + SymbolicAlgebra quadratic solve/factor.
+Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave7.rs`; paired catalogs; wave7 swarm/register/ledger.
+Tests and exact results (parent): econ **89**; stats **59**; ai_ml **7**; product_integrity **11**; vibe catalog **1**; wave7_* **7**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 8 curated Q1/Q2.
+
+Packet: Q1/Q2 incorporation wave 8 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen SymbolicAlgebra pow/neg/sqrt/exp/ln/sin/cos/tan.
+Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave8.rs`; paired catalogs; wave8 swarm/register/ledger.
+Tests and exact results (parent): econ **100**; stats **67**; ai_ml **8**; product_integrity **11**; vibe catalog **1**; wave8_* **5**.
+Browser/native UAT: Not re-run.
+Known gaps: Q1/Q2 backlog still large; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 9 curated Q1/Q2.
+
+Packet: Q1/Q2 incorporation wave 9 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+10), Statistics (+9), MachineLearning (+10, remaining `al_*`); Host-widen SymbolicAlgebra c/var/add/sub/mul/div + PolynomialAlgebra gcd/scale.
+Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave9.rs`; poly_algebra; paired catalogs; wave9 swarm/register/ledger.
+Tests and exact results (parent): econ **111**; stats **76**; ai_ml **9**; product_integrity **11**; vibe catalog **1**; wave9_* **6**.
+Browser/native UAT: Not re-run.
+Known gaps: MachineLearning Q2 exhausted; Econ Q2 ≈9 left; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 10 (Econ/Stats Live + SymbolicAlgebra Live pivot + Host).
+
+Packet: Q1/Q2 incorporation wave 10 (`Q2-ECON` / `Q2-STATS` / `Q2-CAS` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Econ (+6, remaining eligible exhausted), Statistics (+10), SymbolicAlgebra CAS (+8); Host-widen poly eval/zero/constant, CAS parse, Statistics manifold helpers×4.
+Files changed: econ/stats/logic chain + toolboxes; `math/cas_wave10.rs`; poly_algebra; stats manifold; paired catalogs; wave10 swarm/register/ledger.
+Tests and exact results (parent): econ **116**; stats **86**; product_integrity **11**; vibe catalog **1**; wave10_* **9**.
+Browser/native UAT: Not re-run.
+Known gaps: Econ Q2 exhausted (3 skip-only); Stats Q2 ≈8 left; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 11 (LinearAlgebra Live pivot + Stats/CAS + Host).
+
+Packet: Q1/Q2 incorporation wave 11 (`Q2-LINALG` / `Q2-STATS` / `Q2-CAS` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live LinearAlgebra (+10), Statistics (+8 remaining), SymbolicAlgebra constructors (+8); Host-widen statistical_manifold remainder×6.
+Files changed: `linalg_chain_actions.rs`; scientific/sheet/code toolboxes; stats manifold; paired catalogs; wave11 swarm/register/ledger.
+Tests and exact results (parent): stats **94**; product_integrity **11**; vibe catalog **1**; wave11_* **6**; Live asserts **3**.
+Browser/native UAT: Not re-run.
+Known gaps: prior Stats Live Q2 exhausted (Host added 6 new); LinAlg Q2 ≈16; CAS Q2 ≈23; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 12 (LinAlg + PolynomialAlgebra Live pivot + CAS + Host).
+
+Packet: Q1/Q2 incorporation wave 12 (`Q2-LINALG` / `Q2-POLY` / `Q2-CAS` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live LinearAlgebra decompositions (+8), PolynomialAlgebra (+12), SymbolicAlgebra trig/log/parse (+8); Host-widen Chemistry integrals×5, LinAlg symmetric_eigen_3x3, SymbolicAlgebra to/from_quins.
+Files changed: linalg/poly/logic chains + toolboxes; `chemistry/integrals_host.rs`; `math/cas_wave12.rs`; `qr_vector.rs`; paired catalogs; wave12 swarm/register/ledger.
+Tests and exact results (parent): Live asserts **3**; product_integrity **11**; vibe catalog **1**; wave12_* **6**.
+Browser/native UAT: Not re-run.
+Known gaps: backlog `.md` write locked (Errno 22); derived ALL_BOUND=1004 PoetLive≈379 Q2≈611; Poly≈3 / LinAlg≈8 Q2 left; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 13 (finish LinAlg + Stats/poly remainder + CAS + Host).
+
+Packet: Q1/Q2 incorporation wave 13 (`Q2-LINALG` / `Q2-SHEET` / `Q2-CAS` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live remaining LinearAlgebra (+9), Sheet poly monic/div_rem/resultant + stats manifold (+9), SymbolicAlgebra series/roots/jacobian (+8); Host-widen Chemistry ERI/angular×6, LinearAlgebra.gemm (pure CPU Host — no forge/`caps()`), PolynomialAlgebra.coeffs.
+Files changed: linalg/poly/stats/logic chains + toolboxes; `chemistry/wave13_host.rs`; `math/gemm_host.rs`; poly coeffs; paired catalogs; wave13 swarm/register/ledger; parent finished Host after stalled Lane D.
+Tests and exact results (parent): Live asserts **3**; product_integrity **11**; Host wave13_* **6**; backlog `ALL_BOUND=998` `PoetLive=405` `Q2=593`.
+Browser/native UAT: Not re-run.
+Known gaps: LinAlg/Poly Live Q2 exhausted; Chemistry Q2≈18; SymbolicAlgebra Q2≈9; Physics Q2≈18; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 14 (Chemistry Live + CAS remainder + Physics Live + Host).
+
+Packet: Q1/Q2 incorporation wave 14 (`Q2-CHEM` / `Q2-CAS` / `Q2-PHYSICS` / `Q1-HOST`)
+Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+User job delivered: Poet Live Chemistry integrals/angular (+11), remaining SymbolicAlgebra (+9, Q2 exhausted), Physics (+10); Host-widen Calculus hermite/BDF/invariant/parity/f32-pack + GraphReasoning.top_k (+8). Parent finished Chem+Host after lane stalls; CAS/Physics agents delivered Live.
+Files changed: `chem_chain_actions.rs`, `physics_chain_actions.rs`, logic/CAS register, scientific chem+physics chains; `math/wave14_host.rs`; paired catalogs; wave14 swarm/register/ledger.
+Tests and exact results (parent): Live asserts **3**; product_integrity **11**; Host wave14_* **6**.
+Browser/native UAT: Not re-run.
+Known gaps: Physics Q2 ≈8 left; Constructibility/SpecialFunctions/Research Q2 large; APP-04; WD-03.
+Unrelated failures preserved: Yes.
+Recommended next packet: wave 15 (Physics Live remainder + Constructibility/SF Live + Host).

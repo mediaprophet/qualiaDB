@@ -5,9 +5,30 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 mod extra;
+#[cfg(not(target_arch = "wasm32"))]
+mod integrals_host;
+#[cfg(not(target_arch = "wasm32"))]
+mod wave13_host;
+#[cfg(not(target_arch = "wasm32"))]
+mod wave16_host;
+#[cfg(not(target_arch = "wasm32"))]
+mod wave17_host;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use extra::parse_bse_json;
+#[cfg(not(target_arch = "wasm32"))]
+pub use integrals_host::{boys_function, dipole_s, kinetic_s, nuclear_s, overlap_s};
+#[cfg(not(target_arch = "wasm32"))]
+pub use wave13_host::{
+    evaluate_eri, from_letter, letter, n_cartesian, n_spherical, total_angular_momentum,
+};
+#[cfg(not(target_arch = "wasm32"))]
+pub use wave16_host::gaussian_elimination_host as gaussian_elimination;
+#[cfg(not(target_arch = "wasm32"))]
+pub use wave17_host::{
+    jacobi_diagonalization_host as jacobi_diagonalization,
+    orthogonalization_matrix_host as orthogonalization_matrix, transpose_host as transpose,
+};
 
 #[cfg(target_arch = "wasm32")]
 mod portable;
@@ -126,3 +147,46 @@ pub fn parse_bse_json(
 ) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "Chemistry"))
 }
+
+#[cfg(target_arch = "wasm32")]
+macro_rules! chem_need_sci {
+    ($name:ident) => {
+        pub fn $name(
+            _args: &vibe::Value,
+            span: vibe::Span,
+        ) -> Result<vibe::Value, vibe::Diagnostic> {
+            Err(super::args::need_scientific(span, "Chemistry"))
+        }
+    };
+}
+
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(boys_function);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(overlap_s);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(kinetic_s);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(nuclear_s);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(dipole_s);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(evaluate_eri);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(total_angular_momentum);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(letter);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(n_cartesian);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(n_spherical);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(from_letter);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(gaussian_elimination);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(jacobi_diagonalization);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(transpose);
+#[cfg(target_arch = "wasm32")]
+chem_need_sci!(orthogonalization_matrix);

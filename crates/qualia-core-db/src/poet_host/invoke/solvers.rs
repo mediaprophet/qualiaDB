@@ -91,6 +91,70 @@ pub fn mod_inverse(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// `NumberTheory.extended_gcd` — Bézout coefficients. Args: `{ a, b }` (signed).
+/// Out: `{ g, x, y }` with `a·x + b·y = g`.
+pub fn extended_gcd(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = args::rec_i64(args, "a").ok_or_else(|| args::bad(span, "extended_gcd needs a"))?;
+    let b = args::rec_i64(args, "b").ok_or_else(|| args::bad(span, "extended_gcd needs b"))?;
+    let (g, x, y) = solvers::number_theory::modular::extended_gcd(a, b);
+    Ok(args::record([
+        ("g", Value::I64(g)),
+        ("x", Value::I64(x)),
+        ("y", Value::I64(y)),
+    ]))
+}
+
+/// `NumberTheory.crt` — Chinese Remainder for coprime moduli.
+/// Args: `{ r1, m1, r2, m2 }`. Out: `{ x, modulus }` or Null if not coprime.
+pub fn crt(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let r1 = args::rec_u64(args, "r1").ok_or_else(|| args::bad(span, "crt needs r1"))?;
+    let m1 = args::rec_u64(args, "m1").ok_or_else(|| args::bad(span, "crt needs m1"))?;
+    let r2 = args::rec_u64(args, "r2").ok_or_else(|| args::bad(span, "crt needs r2"))?;
+    let m2 = args::rec_u64(args, "m2").ok_or_else(|| args::bad(span, "crt needs m2"))?;
+    match solvers::number_theory::modular::crt(r1, m1, r2, m2) {
+        Some((x, m)) => Ok(args::record([
+            ("x", Value::U64(x)),
+            ("modulus", Value::U64(m)),
+        ])),
+        None => Ok(Value::Null),
+    }
+}
+
+#[cfg(test)]
+mod wave15_nt_tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    fn span() -> Span {
+        Span { start: 0, end: 0 }
+    }
+
+    #[test]
+    fn wave15_extended_gcd_bezout() {
+        let mut m = BTreeMap::new();
+        m.insert("a".into(), Value::I64(240));
+        m.insert("b".into(), Value::I64(46));
+        let out = extended_gcd(&Value::Record(m), span()).unwrap();
+        let g = args::rec_i64(&out, "g").unwrap();
+        let x = args::rec_i64(&out, "x").unwrap();
+        let y = args::rec_i64(&out, "y").unwrap();
+        assert_eq!(g, 2);
+        assert_eq!(240 * x + 46 * y, g);
+    }
+
+    #[test]
+    fn wave15_crt_coprime() {
+        let mut m = BTreeMap::new();
+        m.insert("r1".into(), Value::U64(2));
+        m.insert("m1".into(), Value::U64(3));
+        m.insert("r2".into(), Value::U64(3));
+        m.insert("m2".into(), Value::U64(5));
+        let out = crt(&Value::Record(m), span()).unwrap();
+        assert_eq!(args::rec_u64(&out, "x"), Some(8));
+        assert_eq!(args::rec_u64(&out, "modulus"), Some(15));
+    }
+}
+
 /// `NumberTheory.factorial` — n! (returns f64 to accommodate large values).
 pub fn factorial(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let n = args::rec_u64(args, "n").ok_or_else(|| args::bad(span, "factorial needs n"))?;
@@ -409,6 +473,188 @@ pub fn fuzzy_much_less_than(args: &Value, span: Span) -> Result<Value, Diagnosti
     Ok(Value::F64(
         solvers::fuzzy_query::membership::much_less_than(x, reference, spread),
     ))
+}
+
+/// `FuzzyQuery.threshold` — α-cut over degree list via `FuzzyResultSet::threshold`.
+/// Args: `{ degrees: [f64], alpha: f64 }`. Out: `{ degrees: [f64] }`.
+pub fn fuzzy_threshold(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    use crate::solvers::fuzzy_query::{FuzzyResultSet, FuzzySolution};
+    use crate::sparql_ast::BindingRow;
+    let degrees = args::rec_f64_list(args, "degrees")
+        .ok_or_else(|| args::bad(span, "FuzzyQuery.threshold needs degrees: [f64]"))?;
+    let alpha = args::rec_f64(args, "alpha")
+        .ok_or_else(|| args::bad(span, "FuzzyQuery.threshold needs alpha"))?;
+    let mut set = FuzzyResultSet::new();
+    for d in degrees {
+        set.push(FuzzySolution::new(BindingRow::new(), d));
+    }
+    let kept = set.threshold(alpha);
+    Ok(args::record([(
+        "degrees",
+        Value::List(
+            kept.solutions
+                .iter()
+                .map(|s| Value::F64(s.degree))
+                .collect(),
+        ),
+    )]))
+}
+
+fn parse_degree_norm(args: &Value) -> crate::solvers::fuzzy_query::DegreeNorm {
+    use crate::solvers::fuzzy_query::DegreeNorm;
+    match args::rec_str(args, "norm").unwrap_or("godel") {
+        "product" => DegreeNorm::Product,
+        "lukasiewicz" => DegreeNorm::Lukasiewicz,
+        _ => DegreeNorm::Godel,
+    }
+}
+
+fn degrees_to_set(degrees: &[f64]) -> crate::solvers::fuzzy_query::FuzzyResultSet {
+    use crate::solvers::fuzzy_query::{FuzzyResultSet, FuzzySolution};
+    use crate::sparql_ast::BindingRow;
+    let mut set = FuzzyResultSet::new();
+    for &d in degrees {
+        set.push(FuzzySolution::new(BindingRow::new(), d));
+    }
+    set
+}
+
+/// `FuzzyQuery.top_k` — keep the k highest degrees.
+/// Args: `{ degrees: [f64], k: u64 }`. Out: `{ degrees: [f64] }`.
+pub fn fuzzy_top_k(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let degrees = args::rec_f64_list(args, "degrees")
+        .ok_or_else(|| args::bad(span, "FuzzyQuery.top_k needs degrees: [f64]"))?;
+    let k = args::rec_u64(args, "k").ok_or_else(|| args::bad(span, "FuzzyQuery.top_k needs k"))?
+        as usize;
+    let kept = degrees_to_set(&degrees).top_k(k);
+    Ok(args::record([(
+        "degrees",
+        Value::List(
+            kept.solutions
+                .iter()
+                .map(|s| Value::F64(s.degree))
+                .collect(),
+        ),
+    )]))
+}
+
+/// `FuzzyQuery.negate` — complement degrees under a DegreeNorm.
+/// Args: `{ degrees: [f64], norm?: "godel"|"product"|"lukasiewicz" }`. Out: `{ degrees }`.
+pub fn fuzzy_negate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let degrees = args::rec_f64_list(args, "degrees")
+        .ok_or_else(|| args::bad(span, "FuzzyQuery.negate needs degrees: [f64]"))?;
+    let norm = parse_degree_norm(args);
+    let out = degrees_to_set(&degrees).negate(norm);
+    Ok(args::record([(
+        "degrees",
+        Value::List(
+            out.solutions
+                .iter()
+                .map(|s| Value::F64(s.degree))
+                .collect(),
+        ),
+    )]))
+}
+
+/// `FuzzyQuery.and` — t-norm of two degrees. Args: `{ a, b, norm? }`. Out: `f64`.
+pub fn fuzzy_and(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = args::rec_f64(args, "a").ok_or_else(|| args::bad(span, "FuzzyQuery.and needs a"))?;
+    let b = args::rec_f64(args, "b").ok_or_else(|| args::bad(span, "FuzzyQuery.and needs b"))?;
+    Ok(Value::F64(parse_degree_norm(args).and(a, b)))
+}
+
+/// `FuzzyQuery.or` — t-conorm of two degrees. Args: `{ a, b, norm? }`. Out: `f64`.
+pub fn fuzzy_or(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = args::rec_f64(args, "a").ok_or_else(|| args::bad(span, "FuzzyQuery.or needs a"))?;
+    let b = args::rec_f64(args, "b").ok_or_else(|| args::bad(span, "FuzzyQuery.or needs b"))?;
+    Ok(Value::F64(parse_degree_norm(args).or(a, b)))
+}
+
+#[cfg(test)]
+mod wave16_fuzzy_tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn wave16_fuzzy_threshold_alpha_cut() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "degrees".into(),
+            Value::List(vec![
+                Value::F64(0.1),
+                Value::F64(0.5),
+                Value::F64(0.9),
+            ]),
+        );
+        m.insert("alpha".into(), Value::F64(0.5));
+        let out = fuzzy_threshold(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let d = args::rec_f64_list(&out, "degrees").unwrap();
+        assert_eq!(d.len(), 2);
+        assert!((d[0] - 0.5).abs() < 1e-12);
+        assert!((d[1] - 0.9).abs() < 1e-12);
+    }
+}
+
+#[cfg(test)]
+mod wave17_fuzzy_tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn wave17_fuzzy_top_k_highest() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "degrees".into(),
+            Value::List(vec![
+                Value::F64(0.2),
+                Value::F64(0.9),
+                Value::F64(0.5),
+            ]),
+        );
+        m.insert("k".into(), Value::U64(1));
+        let out = fuzzy_top_k(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let d = args::rec_f64_list(&out, "degrees").unwrap();
+        assert_eq!(d.len(), 1);
+        assert!((d[0] - 0.9).abs() < 1e-12);
+    }
+
+    #[test]
+    fn wave17_fuzzy_negate_godel() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "degrees".into(),
+            Value::List(vec![Value::F64(0.3)]),
+        );
+        let out = fuzzy_negate(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let d = args::rec_f64_list(&out, "degrees").unwrap();
+        // DegreeNorm routes through f32 modality ops.
+        assert!((d[0] - 0.7).abs() < 1e-6);
+    }
+
+    #[test]
+    fn wave17_fuzzy_and_or_godel() {
+        let mut aand = BTreeMap::new();
+        aand.insert("a".into(), Value::F64(0.3));
+        aand.insert("b".into(), Value::F64(0.7));
+        let and_v = fuzzy_and(&Value::Record(aand), Span { start: 0, end: 0 }).unwrap();
+        assert!((match and_v {
+            Value::F64(x) => x,
+            _ => panic!(),
+        } - 0.3)
+            .abs()
+            < 1e-6);
+
+        let mut aor = BTreeMap::new();
+        aor.insert("a".into(), Value::F64(0.3));
+        aor.insert("b".into(), Value::F64(0.7));
+        let or_v = fuzzy_or(&Value::Record(aor), Span { start: 0, end: 0 }).unwrap();
+        assert!((match or_v {
+            Value::F64(x) => x,
+            _ => panic!(),
+        } - 0.7)
+            .abs()
+            < 1e-6);
+    }
 }
 
 // ── Linear algebra (decompositions not already in math module) ─────

@@ -55,9 +55,214 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "sheet:stats_std_dev"
             | "sheet:stats_min"
             | "sheet:stats_max"
+            | "sheet:stats_sum"
+            | "sheet:stats_skewness"
+            | "sheet:stats_kurtosis"
+            | "sheet:stats_quantile"
+            | "sheet:stats_iqr"
+            | "sheet:stats_mode"
+            | "sheet:stats_trimmed_mean"
+            | "sheet:stats_mad"
+            | "sheet:stats_pearson"
+            | "sheet:stats_covariance"
+            | "sheet:stats_z_score_outliers"
+            | "sheet:stats_argmax"
+            | "sheet:stats_binomial_pmf"
+            | "sheet:stats_binomial_cdf"
+            | "sheet:stats_beta_pdf"
+            | "sheet:stats_chi_squared_pdf"
+            | "sheet:stats_chi_squared_cdf"
+            | "sheet:stats_chi_squared_quantile"
+            | "sheet:stats_autocorrelation"
+            | "sheet:stats_bootstrap_means"
+            | "sheet:stats_normal_pdf"
+            | "sheet:stats_normal_cdf"
+            | "sheet:stats_normal_quantile"
+            | "sheet:stats_standard_normal_cdf"
+            | "sheet:stats_poisson_pmf"
+            | "sheet:stats_poisson_cdf"
+            | "sheet:stats_exponential_pdf"
+            | "sheet:stats_exponential_cdf"
+            | "sheet:stats_spearman"
+            | "sheet:stats_kendall"
+            | "sheet:stats_winsorized_mean"
+            | "sheet:stats_erf"
+            | "sheet:stats_erfc"
+            | "sheet:stats_uniform_pdf"
+            | "sheet:stats_laplace_pdf"
+            | "sheet:stats_standard_pdf"
+            | "sheet:stats_uniform_cdf"
+            | "sheet:stats_laplace_cdf"
+            | "sheet:stats_lognormal_pdf"
+            | "sheet:stats_lognormal_cdf"
+            | "sheet:stats_standard_quantile"
+            | "sheet:stats_ln_gamma"
+            | "sheet:stats_gamma_fn"
+            | "sheet:stats_weibull_pdf"
+            | "sheet:stats_gamma_pdf"
+            | "sheet:stats_two_sided_p"
+            | "sheet:stats_chi_squared_upper_p"
+            | "sheet:stats_students_t_pdf"
+            | "sheet:stats_fisher_f_pdf"
+            | "sheet:stats_gammp"
+            | "sheet:stats_gammq"
+            | "sheet:stats_betai"
+            | "sheet:stats_students_t_cdf"
+            | "sheet:stats_students_t_two_sided_p"
+            | "sheet:stats_students_t_upper_p"
+            | "sheet:stats_students_t_quantile"
+            | "sheet:stats_fisher_f_cdf"
+            | "sheet:stats_fisher_f_upper_p"
+            | "sheet:stats_fisher_f_quantile"
+            | "sheet:stats_tukey_fences"
+            | "sheet:stats_empirical_cdf"
+            | "sheet:stats_entropy"
+            | "sheet:stats_kl_divergence"
+            | "sheet:stats_cross_entropy"
+            | "sheet:stats_entropy_from_counts"
+            | "sheet:stats_moving_average"
+            | "sheet:stats_modified_z_score_outliers"
+            | "sheet:stats_iqr_outliers"
+            | "sheet:stats_exponential_smoothing"
+            | "sheet:stats_adf_proxy"
+            | "sheet:stats_histogram"
+            | "sheet:stats_ks_1sample"
+            | "sheet:stats_grubbs_test"
+            | "sheet:stats_one_sample_t"
+            | "sheet:stats_two_sample_t"
+            | "sheet:stats_paired_t"
+            | "sheet:stats_linear_regression"
+            | "sheet:stats_chi_square_gof"
+            | "sheet:stats_chi_square_independence"
+            | "sheet:stats_correlation_p_value"
+            | "sheet:stats_friedman"
+            | "sheet:stats_ljung_box"
+            | "sheet:stats_mann_whitney_u"
+            | "sheet:stats_mcnemar"
+            | "sheet:stats_mutual_information"
+            | "sheet:stats_one_way_anova"
+            | "sheet:stats_mahalanobis_sq"
+            | "sheet:stats_mvn_log_pdf"
+            | "sheet:stats_mvn_pdf"
+            | "sheet:stats_mvn_sample"
+            | "sheet:stats_mvn_mle"
+            | "sheet:stats_validate_probability"
+            | "sheet:stats_simplex_project"
+            | "sheet:stats_fisher_distance"
+            | "sheet:stats_neg_entropy"
+            | "sheet:stats_simplex_project_idempotent"
+            | "sheet:stats_fisher_inner_product"
+            | "sheet:stats_neg_entropy_grad"
+            | "sheet:stats_kl_bregman_form"
+            | "sheet:stats_bregman_pythagorean_test"
+            | "sheet:stats_probability_hash"
+            | "sheet:poly_eval"
+            | "sheet:poly_add"
+            | "sheet:poly_sub"
+            | "sheet:poly_mul"
+            | "sheet:poly_gcd"
+            | "sheet:poly_degree"
+            | "sheet:poly_leading"
+            | "sheet:poly_is_zero"
+            | "sheet:poly_scale"
+            | "sheet:poly_zero"
+            | "sheet:poly_constant"
+            | "sheet:poly_derivative"
+            | "sheet:poly_monic"
+            | "sheet:poly_div_rem"
+            | "sheet:poly_resultant"
             | "ai:grounding"
             | "ai:detect_ungrounded"
             | "ai:verify_turn"
+            | "ai:inf_relu"
+            | "ai:inf_sigmoid"
+            | "ai:inf_gelu"
+            | "ai:inf_softmax"
+            | "ai:inf_rms_norm"
+            | "ai:inf_embed"
+            | "ai:inf_run_classifier"
+            | "ai:inf_vector_search"
+            | "ai:ml_mse"
+            | "ai:ml_rmse"
+            | "ai:ml_mae"
+            | "ai:ml_r2"
+            | "ai:ml_accuracy"
+            | "ai:ml_ols"
+            | "ai:ml_train_test_split"
+            | "ai:ml_kmeans"
+            | "ai:ml_log_loss"
+            | "ai:ml_bonferroni"
+            | "ai:ml_confusion_binary"
+            | "ai:ml_holm"
+            | "ai:ml_benjamini_hochberg"
+            | "ai:ml_ab_test"
+            | "ai:ml_bootstrap_estimate"
+            | "ai:ml_bootstrap_ci"
+            | "ai:ml_permutation_test"
+            | "ai:ml_n_rejected"
+            | "ai:ml_power_two_sample"
+            | "ai:ml_roc_auc"
+            | "ai:ml_k_fold"
+            | "ai:ml_bootstrap_indices"
+            | "ai:ml_pca"
+            | "ai:ml_required_sample_size"
+            | "ai:ml_polynomial_regression"
+            | "ai:ml_required_n_two_prop"
+            | "ai:ml_loocv"
+            | "ai:ml_transe_score"
+            | "ai:ml_distmult_score"
+            | "ai:ml_complex_score"
+            | "ai:ml_rotate_score"
+            | "ai:ml_ridge_fit"
+            | "ai:ml_lasso_fit"
+            | "ai:ml_pls_fit"
+            | "ai:ml_standard_scaler"
+            | "ai:ml_kmeans_fit"
+            | "ai:ml_gmm_fit"
+            | "ai:ml_logistic_fit"
+            | "ai:ml_poisson_fit"
+            | "ai:ml_naive_bayes_fit"
+            | "ai:ml_knn_fit"
+            | "ai:ml_lda_fit"
+            | "ai:ml_pcr_fit"
+            | "ai:ml_qda_fit"
+            | "ai:ml_multinomial_logistic_fit"
+            | "ai:ml_hierarchical_fit"
+            | "ai:ml_hierarchical_labels"
+            | "ai:ml_bayesian_linear_fit"
+            | "ai:ml_decision_tree_regressor"
+            | "ai:ml_decision_tree_classifier"
+            | "ai:ml_gp_fit"
+            | "ai:ml_svm_fit"
+            | "ai:ml_kaplan_meier_fit"
+            | "ai:ml_cox_fit"
+            | "ai:ml_hmm_baum_welch"
+            | "ai:ml_variational_gaussian_fit"
+            | "ai:ml_mcmc_metropolis"
+            | "ai:ml_svm_multiclass_fit"
+            | "ai:ml_som_train"
+            | "ai:ml_random_forest_regressor"
+            | "ai:ml_random_forest_classifier"
+            | "ai:ml_gradient_boosting_regressor"
+            | "ai:ml_bart_fit"
+            | "ai:ml_kg_mean_rank"
+            | "ai:ml_kg_mrr"
+            | "ai:ml_kg_hits_at_k"
+            | "ai:ml_kalman_new"
+            | "ai:ml_factor_graph_marginals"
+            | "ai:ml_al_row_score"
+            | "ai:ml_al_score"
+            | "ai:ml_al_cosine"
+            | "ai:ml_al_rank_informative"
+            | "ai:ml_al_most_informative"
+            | "ai:ml_al_representativeness"
+            | "ai:ml_al_information_density"
+            | "ai:ml_al_rank_by_density"
+            | "ai:ml_al_vote_entropy"
+            | "ai:ml_al_consensus"
+            | "ai:ml_al_consensus_entropy"
+            | "ai:ml_al_kl_disagreement"
+            | "ai:ml_al_rank_by_disagreement"
             | "epistemic:evaluate"
             | "image:histogram"
             | "image:equalize_hist"
@@ -73,6 +278,88 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "epistemic:paraconsistent_route"
             | "code:ltl_evaluate"
             | "code:symbolic_eval"
+            | "code:symbolic_differentiate"
+            | "code:symbolic_simplify"
+            | "code:symbolic_expand"
+            | "code:symbolic_factor"
+            | "code:symbolic_integrate"
+            | "code:symbolic_simplify_trig"
+            | "code:symbolic_partial"
+            | "code:symbolic_limit"
+            | "code:symbolic_add"
+            | "code:symbolic_sub"
+            | "code:symbolic_mul"
+            | "code:symbolic_div"
+            | "code:symbolic_pow"
+            | "code:symbolic_neg"
+            | "code:symbolic_sqrt"
+            | "code:symbolic_exp"
+            | "code:symbolic_ln"
+            | "code:symbolic_sin"
+            | "code:symbolic_cos"
+            | "code:symbolic_tan"
+            | "code:symbolic_parse"
+            | "code:symbolic_c"
+            | "code:symbolic_var"
+            | "code:symbolic_hessian"
+            | "code:symbolic_integrate_definite"
+            | "code:symbolic_limit_at_infinity"
+            | "code:symbolic_real_roots"
+            | "code:symbolic_roots"
+            | "code:symbolic_taylor_coefficients"
+            | "code:symbolic_taylor_eval"
+            | "code:symbolic_jacobian"
+            | "code:symbolic_gradient_at"
+            | "code:symbolic_hessian_at"
+            | "code:symbolic_solve_quadratic"
+            | "code:symbolic_solve_quadratic_symbolic"
+            | "code:symbolic_factor_quadratic"
+            | "code:symbolic_solve_polynomial_expr"
+            | "code:symbolic_simplify_with_assumptions"
+            | "code:symbolic_expr_citation_hash"
+            | "code:symbolic_to_quins"
+            | "code:symbolic_from_quins"
+            | "code:constr_regular_polygon"
+            | "code:constr_fermat_prime"
+            | "code:constr_min_poly_degree"
+            | "code:constr_power_of_two"
+            | "code:constr_central_angle"
+            | "code:constr_doubling_cube"
+            | "code:constr_trisect_angle"
+            | "code:constr_square_circle"
+            | "code:constr_number"
+            | "code:nt_gcd"
+            | "code:nt_lcm"
+            | "code:nt_is_prime"
+            | "code:nt_factorial"
+            | "code:nt_binomial"
+            | "code:nt_euler_totient"
+            | "code:nt_mod_pow"
+            | "code:nt_next_prime"
+            | "code:nt_mod_inverse"
+            | "code:nt_divisor_count"
+            | "code:nt_prime_factors"
+            | "code:nt_divisors"
+            | "code:nt_mobius"
+            | "code:nt_divisor_sum"
+            | "code:nt_partitions"
+            | "code:nt_catalan"
+            | "code:nt_stirling_second"
+            | "code:nt_stirling_first"
+            | "code:nt_extended_gcd"
+            | "code:nt_crt"
+            | "code:fuzzy_triangular"
+            | "code:fuzzy_trapezoidal"
+            | "code:fuzzy_approximately"
+            | "code:fuzzy_ramp_up"
+            | "code:fuzzy_ramp_down"
+            | "code:fuzzy_much_greater_than"
+            | "code:fuzzy_much_less_than"
+            | "code:fuzzy_threshold"
+            | "code:fuzzy_top_k"
+            | "code:fuzzy_negate"
+            | "code:fuzzy_and"
+            | "code:fuzzy_or"
             | "econ:capm"
             | "econ:gini"
             | "econ:mixed_nash"
@@ -83,7 +370,304 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "econ:historical_var"
             | "econ:atkinson"
             | "econ:gordon_growth"
+            | "econ:binomial_option"
+            | "econ:forward_rate"
+            | "econ:gbm_simulate"
+            | "econ:headcount_poverty"
+            | "econ:hyperbolic_discount"
+            | "econ:fiscal_multiplier"
+            | "econ:drawdown"
+            | "econ:covariance_matrix"
+            | "econ:capm_beta"
+            | "econ:autocorrelation"
+            | "econ:cross_correlation"
+            | "econ:bertrand_with_demand"
+            | "econ:check_budget_balance"
+            | "econ:ccapm_equity_premium"
+            | "econ:mean_return"
+            | "econ:poverty_gap"
+            | "econ:sample_variance"
+            | "econ:utilitarian_welfare"
+            | "econ:rawlsian_welfare"
+            | "econ:nash_welfare"
+            | "econ:stackelberg"
+            | "econ:put_call_parity"
+            | "econ:parametric_var"
+            | "econ:laffer_curve"
+            | "econ:historical_cvar"
+            | "econ:endowment_effect"
+            | "econ:prospect_value"
+            | "econ:probability_weight"
+            | "econ:ccapm_sdf"
+            | "econ:gravity_flow"
+            | "econ:transfer_payment"
+            | "econ:efficiency_units"
+            | "econ:social_cost_of_carbon"
+            | "econ:pollution_damage"
+            | "econ:marginal_damage"
+            | "econ:ramsey_steady_state"
+            | "econ:simple_returns"
+            | "econ:log_returns"
+            | "econ:rolling_mean"
+            | "econ:rolling_variance"
+            | "econ:labor_supply"
+            | "econ:optimal_abatement"
+            | "econ:optimal_pollution"
+            | "econ:olg_steady_state"
+            | "econ:ramsey_euler_residual"
+            | "econ:present_biased_utility"
+            | "econ:reference_dependent_utility"
+            | "econ:npv"
+            | "econ:multi_period_ddm"
+            | "econ:portfolio_max_drawdown"
+            | "econ:interpolate_zero_rate"
+            | "econ:discount_factor"
+            | "econ:par_yield"
+            | "econ:progressive_tax"
+            | "econ:abatement_net_benefit"
+            | "econ:household_production_ces"
+            | "econ:malfeasance_delta"
+            | "econ:portfolio_variance"
+            | "econ:portfolio_returns"
+            | "econ:distributional_npv"
+            | "econ:stress_scenario"
+            | "econ:repeated_game_payoff"
+            | "econ:total_transport_cost"
+            | "econ:transition_probability"
+            | "econ:expected_holding_time"
+            | "econ:check_ir"
+            | "econ:vcg_payment"
+            | "econ:validate_transition_matrix"
+            | "econ:stationary_distribution"
+            | "econ:mean_first_passage"
+            | "econ:degree_centrality"
+            | "econ:eigenvector_centrality"
+            | "econ:new_keynesian_solve"
+            | "econ:nearest_facility"
+            | "econ:pure_nash_equilibria"
+            | "econ:morans_i"
+            | "econ:strategy_proofness"
+            | "econ:lorenz_curve"
+            | "econ:ols"
+            | "econ:wls"
+            | "econ:lucas_asset_price"
+            | "econ:bellman_update"
+            | "econ:block_bootstrap"
+            | "econ:simulate_chain"
+            | "econ:value_iteration"
+            | "econ:iv_2sls"
+            | "econ:logistic_mle"
+            | "econ:interbank_clearing"
+            | "econ:leontief_inverse"
+            | "econ:output_multipliers"
+            | "econ:agent_based_aggregate_wealth"
+            | "econ:validate_scalar_constraint"
+            | "econ:aggregate_paper_fills"
             | "rights:delegation_permits"
+            | "scientific:la_matmul"
+            | "scientific:la_matvec"
+            | "scientific:la_transpose"
+            | "scientific:la_determinant"
+            | "scientific:la_solve"
+            | "scientific:la_scale"
+            | "scientific:la_add_into"
+            | "scientific:la_axpy"
+            | "scientific:la_hadamard_into"
+            | "scientific:la_qr_factor"
+            | "scientific:la_cholesky_factor"
+            | "scientific:la_cholesky_solve"
+            | "scientific:la_lu_decompose"
+            | "scientific:la_lu_solve"
+            | "scientific:la_qr_form_q"
+            | "scientific:la_qr_solve_ls"
+            | "scientific:la_svd"
+            | "scientific:la_eigenvalues"
+            | "scientific:la_add_assign"
+            | "scientific:la_hadamard_assign"
+            | "scientific:la_cholesky_det"
+            | "scientific:la_charpoly"
+            | "scientific:la_eigenvalues_general"
+            | "scientific:la_eigen_symmetric"
+            | "scientific:la_polynomial_roots"
+            | "scientific:la_solve_linear_system"
+            | "scientific:la_symmetric_eigen_3x3"
+            | "scientific:chem_boys"
+            | "scientific:chem_overlap_s"
+            | "scientific:chem_kinetic_s"
+            | "scientific:chem_nuclear_s"
+            | "scientific:chem_dipole_s"
+            | "scientific:chem_evaluate_eri"
+            | "scientific:chem_total_angular_momentum"
+            | "scientific:chem_letter"
+            | "scientific:chem_n_cartesian"
+            | "scientific:chem_n_spherical"
+            | "scientific:chem_from_letter"
+            | "scientific:chem_gaussian_elim"
+            | "scientific:chem_jacobi"
+            | "scientific:chem_transpose"
+            | "scientific:chem_orthogonalize"
+            | "scientific:chem_element_symbol"
+            | "scientific:chem_atomic_number"
+            | "scientific:chem_atomic_weight"
+            | "scientific:chem_lda_exchange"
+            | "scientific:chem_lda_vwn"
+            | "scientific:chem_sto3g_h2"
+            | "scientific:sf_airy_ai"
+            | "scientific:sf_airy_bi"
+            | "scientific:sf_zeta"
+            | "scientific:sf_legendre"
+            | "scientific:sf_chebyshev_t"
+            | "scientific:sf_chebyshev_u"
+            | "scientific:sf_hermite"
+            | "scientific:sf_laguerre"
+            | "scientific:sf_bessel_j"
+            | "scientific:sf_bessel_i"
+            | "scientific:sf_bessel_y"
+            | "scientific:sf_bessel_k"
+            | "scientific:xform_dft"
+            | "scientific:xform_dft_complex"
+            | "scientific:xform_idft"
+            | "scientific:xform_z_transform_finite"
+            | "scientific:xform_unit_step_z"
+            | "scientific:xform_geometric_z"
+            | "scientific:xform_laplace_numeric"
+            | "scientific:xform_laplace_symbolic"
+            | "scientific:calc_hermite_dense"
+            | "scientific:calc_bdf1"
+            | "scientific:calc_bdf2"
+            | "scientific:calc_verlet"
+            | "scientific:calc_ruth3"
+            | "scientific:calc_yoshida4"
+            | "scientific:calc_integrate_bdf"
+            | "scientific:calc_integrate_sens"
+            | "scientific:calc_invariant_drift"
+            | "scientific:calc_perm_parity"
+            | "scientific:calc_pack_f32"
+            | "scientific:calc_unpack_f32"
+            | "scientific:calc_poisson_bracket"
+            | "scientific:calc_stormer_verlet"
+            | "scientific:calc_gauss_kronrod"
+            | "scientific:calc_jvp"
+            | "scientific:calc_vjp"
+            | "scientific:calc_adaptive_simpson"
+            | "scientific:calc_adaptive_deriv"
+            | "scientific:calc_newton_solve"
+            | "scientific:calc_num_jacobian"
+            | "scientific:calc_num_hessian"
+            | "scientific:ga_dot"
+            | "scientific:ga_cross"
+            | "scientific:ga_normalize"
+            | "scientific:ga_angle"
+            | "scientific:ga_geometric_product"
+            | "scientific:ga_outer_product"
+            | "scientific:ga_rotor"
+            | "scientific:ga_apply_rotor"
+            | "scientific:ga_translator"
+            | "scientific:ga_apply_translator"
+            | "scientific:ga_is_simd"
+            | "scientific:cg_distance_2d"
+            | "scientific:cg_distance_3d"
+            | "scientific:cg_point_segment_2d"
+            | "scientific:cg_orientation_2"
+            | "scientific:cg_orient_3d"
+            | "scientific:cg_morton_encode_2d"
+            | "scientific:cg_morton_decode_2d"
+            | "scientific:cg_morton_encode_3d"
+            | "scientific:cg_hilbert_encode_2d"
+            | "scientific:cg_circumcenter"
+            | "scientific:cg_point_segment_3d"
+            | "scientific:cg_point_triangle_3d"
+            | "scientific:cg_convex_hull_2"
+            | "scientific:cg_triangulate"
+            | "scientific:cg_surface_area"
+            | "scientific:cg_signed_volume"
+            | "scientific:cg_segment_intersect_2"
+            | "scientific:cg_bezier_eval"
+            | "scientific:cg_nearest_site"
+            | "scientific:eng_natural_freq"
+            | "scientific:eng_harmonic_sdof"
+            | "scientific:eng_euler"
+            | "scientific:eng_reliability"
+            | "scientific:eng_kinematics"
+            | "scientific:eng_cauchy"
+            | "scientific:eng_drag"
+            | "scientific:eng_reynolds"
+            | "scientific:eng_fatigue"
+            | "scientific:eng_miner"
+            | "scientific:phys_doppler"
+            | "scientific:phys_emf_attenuation"
+            | "scientific:phys_harmonic"
+            | "scientific:phys_pendulum"
+            | "scientific:phys_logistic"
+            | "scientific:phys_cfd_step"
+            | "scientific:phys_heat_1d"
+            | "scientific:phys_wave_1d"
+            | "scientific:phys_advection_1d"
+            | "scientific:phys_quantum_1d"
+            | "scientific:phys_n_body"
+            | "scientific:phys_molecular_dynamics"
+            | "scientific:phys_emf_interference"
+            | "scientific:phys_emf_field_grid"
+            | "scientific:phys_emf_sample_depth"
+            | "scientific:phys_field_sample"
+            | "scientific:phys_material_query"
+            | "scientific:phys_evaluate_interaction"
+        | "scientific:cosmic_geodetic_distance"
+        | "scientific:cosmic_surface_gravity"
+        | "scientific:cosmic_flrw_distance"
+        | "scientific:cosmic_flrw_redshift"
+        | "scientific:cosmic_flrw_hubble"
+        | "scientific:cosmic_warp_velocity"
+        | "scientific:cosmic_warp_factor_c"
+        | "scientific:cosmic_typical_length"
+        | "scientific:cosmic_observe_redshift"
+        | "scientific:cosmic_compton"
+        | "scientific:cosmic_de_broglie"
+        | "scientific:cosmic_atm_pressure"
+        | "scientific:cosmic_geodetic_to_ecef"
+        | "scientific:cosmic_ecef_to_geodetic"
+        | "scientific:cosmic_ecef_to_enu"
+        | "scientific:cosmic_enu_to_ecef"
+        | "scientific:cosmic_body_profile"
+        | "scientific:cosmic_stardate"
+        | "scientific:cosmic_cochrane"
+        | "scientific:cosmic_atm_temperature"
+        | "scientific:cosmic_magnetosphere"
+        | "scientific:cosmic_scale_factor"
+        | "scientific:cosmic_usri_parse"
+        | "ai:orch_session_create"
+        | "ai:orch_session_plan"
+        | "ai:orch_session_execute"
+        | "ai:orch_session_status"
+        | "ai:orch_roster_register"
+        | "ai:orch_roster_list"
+        | "ai:orch_roster_capabilities"
+        | "ai:orch_assign_agents"
+        | "spatial:threed_add_object"
+        | "spatial:threed_set_transform"
+        | "spatial:threed_set_material"
+        | "spatial:threed_add_camera"
+        | "spatial:threed_add_light"
+        | "spatial:threed_add_rig"
+        | "spatial:threed_add_animation"
+        | "spatial:threed_set_mesh"
+        | "spatial:scene_lerp_camera"
+        | "spatial:scene_camera_frame_node"
+        | "spatial:scene_smooth_damp"
+        | "spatial:scene_smooth_damp_vec3"
+        | "spatial:scene_ik_look_at"
+        | "spatial:scene_ik_ccd"
+        | "spatial:scene_set_render_budget"
+        | "spatial:scene_set_clear_colour"
+        | "audio:dsp_ep_temp"
+        | "audio:dsp_ep_fm"
+        | "audio:dsp_sigma_freq"
+        | "audio:dsp_parametric_sample"
+        | "audio:dsp_bin_freq_linear"
+        | "audio:dsp_bin_freq_log"
+        | "audio:dsp_midi_note"
+        | "audio:dsp_quantize"
+        | "audio:dsp_transpose"
     )
 }
 
@@ -664,12 +1248,475 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "sheet:stats_std_dev" => super::chain_actions::run_sheet_std_dev(document, label),
         "sheet:stats_min" => super::chain_actions::run_sheet_min(document, label),
         "sheet:stats_max" => super::chain_actions::run_sheet_max(document, label),
+        "sheet:stats_sum" => super::stats_chain_actions::run_sheet_sum(document, label),
+        "sheet:stats_skewness" => super::stats_chain_actions::run_sheet_skewness(document, label),
+        "sheet:stats_kurtosis" => super::stats_chain_actions::run_sheet_kurtosis(document, label),
+        "sheet:stats_quantile" => super::stats_chain_actions::run_sheet_quantile(document, label),
+        "sheet:stats_iqr" => super::stats_chain_actions::run_sheet_iqr(document, label),
+        "sheet:stats_mode" => super::stats_chain_actions::run_sheet_mode(document, label),
+        "sheet:stats_trimmed_mean" => {
+            super::stats_chain_actions::run_sheet_trimmed_mean(document, label)
+        }
+        "sheet:stats_mad" => super::stats_chain_actions::run_sheet_mad(document, label),
+        "sheet:stats_pearson" => super::stats_chain_actions::run_sheet_pearson(document, label),
+        "sheet:stats_covariance" => {
+            super::stats_chain_actions::run_sheet_covariance(document, label)
+        }
+        "sheet:stats_z_score_outliers" => {
+            super::stats_chain_actions::run_sheet_z_score_outliers(document, label)
+        }
+        "sheet:stats_argmax" => super::stats_chain_actions::run_sheet_argmax(document, label),
+        "sheet:stats_binomial_pmf" => {
+            super::stats_chain_actions::run_sheet_binomial_pmf(document, label)
+        }
+        "sheet:stats_binomial_cdf" => {
+            super::stats_chain_actions::run_sheet_binomial_cdf(document, label)
+        }
+        "sheet:stats_beta_pdf" => super::stats_chain_actions::run_sheet_beta_pdf(document, label),
+        "sheet:stats_chi_squared_pdf" => {
+            super::stats_chain_actions::run_sheet_chi_squared_pdf(document, label)
+        }
+        "sheet:stats_chi_squared_cdf" => {
+            super::stats_chain_actions::run_sheet_chi_squared_cdf(document, label)
+        }
+        "sheet:stats_chi_squared_quantile" => {
+            super::stats_chain_actions::run_sheet_chi_squared_quantile(document, label)
+        }
+        "sheet:stats_autocorrelation" => {
+            super::stats_chain_actions::run_sheet_autocorrelation(document, label)
+        }
+        "sheet:stats_bootstrap_means" => {
+            super::stats_chain_actions::run_sheet_bootstrap_means(document, label)
+        }
+        "sheet:stats_normal_pdf" => {
+            super::stats_chain_actions::run_sheet_normal_pdf(document, label)
+        }
+        "sheet:stats_normal_cdf" => {
+            super::stats_chain_actions::run_sheet_normal_cdf(document, label)
+        }
+        "sheet:stats_normal_quantile" => {
+            super::stats_chain_actions::run_sheet_normal_quantile(document, label)
+        }
+        "sheet:stats_standard_normal_cdf" => {
+            super::stats_chain_actions::run_sheet_standard_normal_cdf(document, label)
+        }
+        "sheet:stats_poisson_pmf" => {
+            super::stats_chain_actions::run_sheet_poisson_pmf(document, label)
+        }
+        "sheet:stats_poisson_cdf" => {
+            super::stats_chain_actions::run_sheet_poisson_cdf(document, label)
+        }
+        "sheet:stats_exponential_pdf" => {
+            super::stats_chain_actions::run_sheet_exponential_pdf(document, label)
+        }
+        "sheet:stats_exponential_cdf" => {
+            super::stats_chain_actions::run_sheet_exponential_cdf(document, label)
+        }
+        "sheet:stats_spearman" => {
+            super::stats_chain_actions::run_sheet_spearman(document, label)
+        }
+        "sheet:stats_kendall" => super::stats_chain_actions::run_sheet_kendall(document, label),
+        "sheet:stats_winsorized_mean" => {
+            super::stats_chain_actions::run_sheet_winsorized_mean(document, label)
+        }
+        "sheet:stats_erf" => super::stats_chain_actions::run_sheet_erf(document, label),
+        "sheet:stats_erfc" => super::stats_chain_actions::run_sheet_erfc(document, label),
+        "sheet:stats_uniform_pdf" => {
+            super::stats_chain_actions::run_sheet_uniform_pdf(document, label)
+        }
+        "sheet:stats_laplace_pdf" => {
+            super::stats_chain_actions::run_sheet_laplace_pdf(document, label)
+        }
+        "sheet:stats_standard_pdf" => {
+            super::stats_chain_actions::run_sheet_standard_pdf(document, label)
+        }
+        "sheet:stats_uniform_cdf" => {
+            super::stats_chain_actions::run_sheet_uniform_cdf(document, label)
+        }
+        "sheet:stats_laplace_cdf" => {
+            super::stats_chain_actions::run_sheet_laplace_cdf(document, label)
+        }
+        "sheet:stats_lognormal_pdf" => {
+            super::stats_chain_actions::run_sheet_lognormal_pdf(document, label)
+        }
+        "sheet:stats_lognormal_cdf" => {
+            super::stats_chain_actions::run_sheet_lognormal_cdf(document, label)
+        }
+        "sheet:stats_standard_quantile" => {
+            super::stats_chain_actions::run_sheet_standard_quantile(document, label)
+        }
+        "sheet:stats_ln_gamma" => {
+            super::stats_chain_actions::run_sheet_ln_gamma(document, label)
+        }
+        "sheet:stats_gamma_fn" => {
+            super::stats_chain_actions::run_sheet_gamma_fn(document, label)
+        }
+        "sheet:stats_weibull_pdf" => {
+            super::stats_chain_actions::run_sheet_weibull_pdf(document, label)
+        }
+        "sheet:stats_gamma_pdf" => {
+            super::stats_chain_actions::run_sheet_gamma_pdf(document, label)
+        }
+        "sheet:stats_two_sided_p" => {
+            super::stats_chain_actions::run_sheet_two_sided_p(document, label)
+        }
+        "sheet:stats_chi_squared_upper_p" => {
+            super::stats_chain_actions::run_sheet_chi_squared_upper_p(document, label)
+        }
+        "sheet:stats_students_t_pdf" => {
+            super::stats_chain_actions::run_sheet_students_t_pdf(document, label)
+        }
+        "sheet:stats_fisher_f_pdf" => {
+            super::stats_chain_actions::run_sheet_fisher_f_pdf(document, label)
+        }
+        "sheet:stats_gammp" => super::stats_chain_actions::run_sheet_gammp(document, label),
+        "sheet:stats_gammq" => super::stats_chain_actions::run_sheet_gammq(document, label),
+        "sheet:stats_betai" => super::stats_chain_actions::run_sheet_betai(document, label),
+        "sheet:stats_students_t_cdf" => {
+            super::stats_chain_actions::run_sheet_students_t_cdf(document, label)
+        }
+        "sheet:stats_students_t_two_sided_p" => {
+            super::stats_chain_actions::run_sheet_students_t_two_sided_p(document, label)
+        }
+        "sheet:stats_students_t_upper_p" => {
+            super::stats_chain_actions::run_sheet_students_t_upper_p(document, label)
+        }
+        "sheet:stats_students_t_quantile" => {
+            super::stats_chain_actions::run_sheet_students_t_quantile(document, label)
+        }
+        "sheet:stats_fisher_f_cdf" => {
+            super::stats_chain_actions::run_sheet_fisher_f_cdf(document, label)
+        }
+        "sheet:stats_fisher_f_upper_p" => {
+            super::stats_chain_actions::run_sheet_fisher_f_upper_p(document, label)
+        }
+        "sheet:stats_fisher_f_quantile" => {
+            super::stats_chain_actions::run_sheet_fisher_f_quantile(document, label)
+        }
+        "sheet:stats_tukey_fences" => {
+            super::stats_chain_actions::run_sheet_tukey_fences(document, label)
+        }
+        "sheet:stats_empirical_cdf" => {
+            super::stats_chain_actions::run_sheet_empirical_cdf(document, label)
+        }
+        "sheet:stats_entropy" => super::stats_chain_actions::run_sheet_entropy(document, label),
+        "sheet:stats_kl_divergence" => {
+            super::stats_chain_actions::run_sheet_kl_divergence(document, label)
+        }
+        "sheet:stats_cross_entropy" => {
+            super::stats_chain_actions::run_sheet_cross_entropy(document, label)
+        }
+        "sheet:stats_entropy_from_counts" => {
+            super::stats_chain_actions::run_sheet_entropy_from_counts(document, label)
+        }
+        "sheet:stats_moving_average" => {
+            super::stats_chain_actions::run_sheet_moving_average(document, label)
+        }
+        "sheet:stats_modified_z_score_outliers" => {
+            super::stats_chain_actions::run_sheet_modified_z_score_outliers(document, label)
+        }
+        "sheet:stats_iqr_outliers" => {
+            super::stats_chain_actions::run_sheet_iqr_outliers(document, label)
+        }
+        "sheet:stats_exponential_smoothing" => {
+            super::stats_chain_actions::run_sheet_exponential_smoothing(document, label)
+        }
+        "sheet:stats_adf_proxy" => {
+            super::stats_chain_actions::run_sheet_adf_proxy(document, label)
+        }
+        "sheet:stats_histogram" => {
+            super::stats_chain_actions::run_sheet_histogram(document, label)
+        }
+        "sheet:stats_ks_1sample" => {
+            super::stats_chain_actions::run_sheet_ks_1sample(document, label)
+        }
+        "sheet:stats_grubbs_test" => {
+            super::stats_chain_actions::run_sheet_grubbs_test(document, label)
+        }
+        "sheet:stats_one_sample_t" => {
+            super::stats_chain_actions::run_sheet_one_sample_t(document, label)
+        }
+        "sheet:stats_two_sample_t" => {
+            super::stats_chain_actions::run_sheet_two_sample_t(document, label)
+        }
+        "sheet:stats_paired_t" => {
+            super::stats_chain_actions::run_sheet_paired_t(document, label)
+        }
+        "sheet:stats_linear_regression" => {
+            super::stats_chain_actions::run_sheet_linear_regression(document, label)
+        }
+        "sheet:stats_chi_square_gof" => {
+            super::stats_chain_actions::run_sheet_chi_square_gof(document, label)
+        }
+        "sheet:stats_chi_square_independence" => {
+            super::stats_chain_actions::run_sheet_chi_square_independence(document, label)
+        }
+        "sheet:stats_correlation_p_value" => {
+            super::stats_chain_actions::run_sheet_correlation_p_value(document, label)
+        }
+        "sheet:stats_friedman" => {
+            super::stats_chain_actions::run_sheet_friedman(document, label)
+        }
+        "sheet:stats_ljung_box" => {
+            super::stats_chain_actions::run_sheet_ljung_box(document, label)
+        }
+        "sheet:stats_mann_whitney_u" => {
+            super::stats_chain_actions::run_sheet_mann_whitney_u(document, label)
+        }
+        "sheet:stats_mcnemar" => {
+            super::stats_chain_actions::run_sheet_mcnemar(document, label)
+        }
+        "sheet:stats_mutual_information" => {
+            super::stats_chain_actions::run_sheet_mutual_information(document, label)
+        }
+        "sheet:stats_one_way_anova" => {
+            super::stats_chain_actions::run_sheet_one_way_anova(document, label)
+        }
+        "sheet:stats_mahalanobis_sq" => {
+            super::stats_chain_actions::run_sheet_mahalanobis_sq(document, label)
+        }
+        "sheet:stats_mvn_log_pdf" => {
+            super::stats_chain_actions::run_sheet_mvn_log_pdf(document, label)
+        }
+        "sheet:stats_mvn_pdf" => {
+            super::stats_chain_actions::run_sheet_mvn_pdf(document, label)
+        }
+        "sheet:stats_mvn_sample" => {
+            super::stats_chain_actions::run_sheet_mvn_sample(document, label)
+        }
+        "sheet:stats_mvn_mle" => {
+            super::stats_chain_actions::run_sheet_mvn_mle(document, label)
+        }
+        "sheet:stats_validate_probability" => {
+            super::stats_chain_actions::run_sheet_validate_probability(document, label)
+        }
+        "sheet:stats_simplex_project" => {
+            super::stats_chain_actions::run_sheet_simplex_project(document, label)
+        }
+        "sheet:stats_fisher_distance" => {
+            super::stats_chain_actions::run_sheet_fisher_distance(document, label)
+        }
+        "sheet:stats_neg_entropy" => {
+            super::stats_chain_actions::run_sheet_neg_entropy(document, label)
+        }
+        "sheet:stats_simplex_project_idempotent" => {
+            super::stats_chain_actions::run_sheet_simplex_project_idempotent(document, label)
+        }
+        "sheet:stats_fisher_inner_product" => {
+            super::stats_chain_actions::run_sheet_fisher_inner_product(document, label)
+        }
+        "sheet:stats_neg_entropy_grad" => {
+            super::stats_chain_actions::run_sheet_neg_entropy_grad(document, label)
+        }
+        "sheet:stats_kl_bregman_form" => {
+            super::stats_chain_actions::run_sheet_kl_bregman_form(document, label)
+        }
+        "sheet:stats_bregman_pythagorean_test" => {
+            super::stats_chain_actions::run_sheet_bregman_pythagorean_test(document, label)
+        }
+        "sheet:stats_probability_hash" => {
+            super::stats_chain_actions::run_sheet_probability_hash(document, label)
+        }
+        "sheet:poly_eval" => super::poly_chain_actions::run_poly_eval(document, label),
+        "sheet:poly_add" => super::poly_chain_actions::run_poly_add(document, label),
+        "sheet:poly_sub" => super::poly_chain_actions::run_poly_sub(document, label),
+        "sheet:poly_mul" => super::poly_chain_actions::run_poly_mul(document, label),
+        "sheet:poly_gcd" => super::poly_chain_actions::run_poly_gcd(document, label),
+        "sheet:poly_degree" => super::poly_chain_actions::run_poly_degree(document, label),
+        "sheet:poly_leading" => super::poly_chain_actions::run_poly_leading(document, label),
+        "sheet:poly_is_zero" => super::poly_chain_actions::run_poly_is_zero(document, label),
+        "sheet:poly_scale" => super::poly_chain_actions::run_poly_scale(document, label),
+        "sheet:poly_zero" => super::poly_chain_actions::run_poly_zero(document, label),
+        "sheet:poly_constant" => {
+            super::poly_chain_actions::run_poly_constant(document, label)
+        }
+        "sheet:poly_derivative" => {
+            super::poly_chain_actions::run_poly_derivative(document, label)
+        }
+        "sheet:poly_monic" => super::poly_chain_actions::run_poly_monic(document, label),
+        "sheet:poly_div_rem" => {
+            super::poly_chain_actions::run_poly_div_rem(document, label)
+        }
+        "sheet:poly_resultant" => {
+            super::poly_chain_actions::run_poly_resultant(document, label)
+        }
         "sheet:import" => super::chain_actions::run_sheet_import(document, label),
         "code:vibe_diagnose" => super::chain_actions::run_vibe_diagnose(document, label),
         "code:quin_statement" => super::chain_actions::run_quin_statement(document, label),
         "ai:grounding" => super::chain_actions::run_grounding(document, label),
         "ai:detect_ungrounded" => super::chain_actions::run_detect_ungrounded(document, label),
         "ai:verify_turn" => super::chain_actions::run_verify_turn(document, label),
+        "ai:inf_relu" => super::inference_chain_actions::run_relu(document, label),
+        "ai:inf_sigmoid" => super::inference_chain_actions::run_sigmoid(document, label),
+        "ai:inf_gelu" => super::inference_chain_actions::run_gelu(document, label),
+        "ai:inf_softmax" => super::inference_chain_actions::run_softmax(document, label),
+        "ai:inf_rms_norm" => super::inference_chain_actions::run_rms_norm(document, label),
+        "ai:inf_embed" => super::inference_chain_actions::run_embed(document, label),
+        "ai:inf_run_classifier" => {
+            super::inference_chain_actions::run_run_classifier(document, label)
+        }
+        "ai:inf_vector_search" => {
+            super::inference_chain_actions::run_vector_search(document, label)
+        }
+        "ai:ml_mse" => super::ml_chain_actions::run_mse(document, label),
+        "ai:ml_rmse" => super::ml_chain_actions::run_rmse(document, label),
+        "ai:ml_mae" => super::ml_chain_actions::run_mae(document, label),
+        "ai:ml_r2" => super::ml_chain_actions::run_r2_score(document, label),
+        "ai:ml_accuracy" => super::ml_chain_actions::run_accuracy(document, label),
+        "ai:ml_ols" => super::ml_chain_actions::run_ols(document, label),
+        "ai:ml_train_test_split" => {
+            super::ml_chain_actions::run_train_test_split(document, label)
+        }
+        "ai:ml_kmeans" => super::ml_chain_actions::run_kmeans(document, label),
+        "ai:ml_log_loss" => super::ml_chain_actions::run_log_loss(document, label),
+        "ai:ml_bonferroni" => super::ml_chain_actions::run_bonferroni(document, label),
+        "ai:ml_confusion_binary" => {
+            super::ml_chain_actions::run_confusion_binary(document, label)
+        }
+        "ai:ml_holm" => super::ml_chain_actions::run_holm(document, label),
+        "ai:ml_benjamini_hochberg" => {
+            super::ml_chain_actions::run_benjamini_hochberg(document, label)
+        }
+        "ai:ml_ab_test" => super::ml_chain_actions::run_ab_test(document, label),
+        "ai:ml_bootstrap_estimate" => {
+            super::ml_chain_actions::run_bootstrap_estimate(document, label)
+        }
+        "ai:ml_bootstrap_ci" => super::ml_chain_actions::run_bootstrap_ci(document, label),
+        "ai:ml_permutation_test" => {
+            super::ml_chain_actions::run_permutation_test(document, label)
+        }
+        "ai:ml_n_rejected" => super::ml_chain_actions::run_n_rejected(document, label),
+        "ai:ml_power_two_sample" => {
+            super::ml_chain_actions::run_power_two_sample(document, label)
+        }
+        "ai:ml_roc_auc" => super::ml_chain_actions::run_roc_auc(document, label),
+        "ai:ml_k_fold" => super::ml_chain_actions::run_k_fold(document, label),
+        "ai:ml_bootstrap_indices" => {
+            super::ml_chain_actions::run_bootstrap_indices(document, label)
+        }
+        "ai:ml_pca" => super::ml_chain_actions::run_pca(document, label),
+        "ai:ml_required_sample_size" => {
+            super::ml_chain_actions::run_required_sample_size(document, label)
+        }
+        "ai:ml_polynomial_regression" => {
+            super::ml_chain_actions::run_polynomial_regression(document, label)
+        }
+        "ai:ml_required_n_two_prop" => {
+            super::ml_chain_actions::run_required_sample_size_two_proportion(document, label)
+        }
+        "ai:ml_loocv" => super::ml_chain_actions::run_loocv(document, label),
+        "ai:ml_transe_score" => super::ml_chain_actions::run_transe_score(document, label),
+        "ai:ml_distmult_score" => {
+            super::ml_chain_actions::run_distmult_score(document, label)
+        }
+        "ai:ml_complex_score" => {
+            super::ml_chain_actions::run_complex_score(document, label)
+        }
+        "ai:ml_rotate_score" => super::ml_chain_actions::run_rotate_score(document, label),
+        "ai:ml_ridge_fit" => super::ml_chain_actions::run_ridge_fit(document, label),
+        "ai:ml_lasso_fit" => super::ml_chain_actions::run_lasso_fit(document, label),
+        "ai:ml_pls_fit" => super::ml_chain_actions::run_pls_fit(document, label),
+        "ai:ml_standard_scaler" => {
+            super::ml_chain_actions::run_standard_scaler_fit_transform(document, label)
+        }
+        "ai:ml_kmeans_fit" => super::ml_chain_actions::run_kmeans_fit(document, label),
+        "ai:ml_gmm_fit" => super::ml_chain_actions::run_gmm_fit(document, label),
+        "ai:ml_logistic_fit" => super::ml_chain_actions::run_logistic_fit(document, label),
+        "ai:ml_poisson_fit" => super::ml_chain_actions::run_poisson_fit(document, label),
+        "ai:ml_naive_bayes_fit" => {
+            super::ml_chain_actions::run_naive_bayes_fit(document, label)
+        }
+        "ai:ml_knn_fit" => super::ml_chain_actions::run_knn_fit(document, label),
+        "ai:ml_lda_fit" => super::ml_chain_actions::run_lda_fit(document, label),
+        "ai:ml_pcr_fit" => super::ml_chain_actions::run_pcr_fit(document, label),
+        "ai:ml_qda_fit" => super::ml_chain_actions::run_qda_fit(document, label),
+        "ai:ml_multinomial_logistic_fit" => {
+            super::ml_chain_actions::run_multinomial_logistic_fit(document, label)
+        }
+        "ai:ml_hierarchical_fit" => {
+            super::ml_chain_actions::run_hierarchical_fit(document, label)
+        }
+        "ai:ml_hierarchical_labels" => {
+            super::ml_chain_actions::run_hierarchical_labels(document, label)
+        }
+        "ai:ml_bayesian_linear_fit" => {
+            super::ml_chain_actions::run_bayesian_linear_fit(document, label)
+        }
+        "ai:ml_decision_tree_regressor" => {
+            super::ml_chain_actions::run_decision_tree_fit_regressor(document, label)
+        }
+        "ai:ml_decision_tree_classifier" => {
+            super::ml_chain_actions::run_decision_tree_fit_classifier(document, label)
+        }
+        "ai:ml_gp_fit" => super::ml_chain_actions::run_gp_fit(document, label),
+        "ai:ml_svm_fit" => super::ml_chain_actions::run_svm_fit(document, label),
+        "ai:ml_kaplan_meier_fit" => {
+            super::ml_chain_actions::run_kaplan_meier_fit(document, label)
+        }
+        "ai:ml_cox_fit" => super::ml_chain_actions::run_cox_fit(document, label),
+        "ai:ml_hmm_baum_welch" => super::ml_chain_actions::run_hmm_baum_welch(document, label),
+        "ai:ml_variational_gaussian_fit" => {
+            super::ml_chain_actions::run_variational_gaussian_fit(document, label)
+        }
+        "ai:ml_mcmc_metropolis" => {
+            super::ml_chain_actions::run_mcmc_metropolis(document, label)
+        }
+        "ai:ml_svm_multiclass_fit" => {
+            super::ml_chain_actions::run_svm_multiclass_fit(document, label)
+        }
+        "ai:ml_som_train" => super::ml_chain_actions::run_som_train(document, label),
+        "ai:ml_random_forest_regressor" => {
+            super::ml_chain_actions::run_random_forest_fit_regressor(document, label)
+        }
+        "ai:ml_random_forest_classifier" => {
+            super::ml_chain_actions::run_random_forest_fit_classifier(document, label)
+        }
+        "ai:ml_gradient_boosting_regressor" => {
+            super::ml_chain_actions::run_gradient_boosting_fit_regressor(document, label)
+        }
+        "ai:ml_bart_fit" => super::ml_chain_actions::run_bart_fit(document, label),
+        "ai:ml_kg_mean_rank" => super::ml_chain_actions::run_kg_mean_rank(document, label),
+        "ai:ml_kg_mrr" => {
+            super::ml_chain_actions::run_kg_mean_reciprocal_rank(document, label)
+        }
+        "ai:ml_kg_hits_at_k" => super::ml_chain_actions::run_kg_hits_at_k(document, label),
+        "ai:ml_kalman_new" => super::ml_chain_actions::run_kalman_new(document, label),
+        "ai:ml_factor_graph_marginals" => {
+            super::ml_chain_actions::run_factor_graph_marginals(document, label)
+        }
+        "ai:ml_al_row_score" => super::ml_chain_actions::run_al_row_score(document, label),
+        "ai:ml_al_score" => super::ml_chain_actions::run_al_score(document, label),
+        "ai:ml_al_cosine" => {
+            super::ml_chain_actions::run_al_cosine_similarity(document, label)
+        }
+        "ai:ml_al_rank_informative" => {
+            super::ml_chain_actions::run_al_rank_informative(document, label)
+        }
+        "ai:ml_al_most_informative" => {
+            super::ml_chain_actions::run_al_most_informative(document, label)
+        }
+        "ai:ml_al_representativeness" => {
+            super::ml_chain_actions::run_al_representativeness(document, label)
+        }
+        "ai:ml_al_information_density" => {
+            super::ml_chain_actions::run_al_information_density(document, label)
+        }
+        "ai:ml_al_rank_by_density" => {
+            super::ml_chain_actions::run_al_rank_by_density(document, label)
+        }
+        "ai:ml_al_vote_entropy" => {
+            super::ml_chain_actions::run_al_vote_entropy(document, label)
+        }
+        "ai:ml_al_consensus" => super::ml_chain_actions::run_al_consensus(document, label),
+        "ai:ml_al_consensus_entropy" => {
+            super::ml_chain_actions::run_al_consensus_entropy(document, label)
+        }
+        "ai:ml_al_kl_disagreement" => {
+            super::ml_chain_actions::run_al_average_kl_disagreement(document, label)
+        }
+        "ai:ml_al_rank_by_disagreement" => {
+            super::ml_chain_actions::run_al_rank_by_disagreement(document, label)
+        }
         "epistemic:evaluate" => super::chain_actions::run_epistemic_evaluate(document, label),
         "image:histogram" => super::image_chain_actions::run_image_histogram(document, label),
         "image:equalize_hist" => super::image_chain_actions::run_equalize_hist(document, label),
@@ -688,6 +1735,166 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "code:ltl_evaluate" => super::logic_chain_actions::run_ltl_evaluate(document, label),
         "code:symbolic_eval" => super::logic_chain_actions::run_symbolic_eval(document, label),
+        "code:symbolic_differentiate" => {
+            super::logic_chain_actions::run_symbolic_differentiate(document, label)
+        }
+        "code:symbolic_simplify" => {
+            super::logic_chain_actions::run_symbolic_simplify(document, label)
+        }
+        "code:symbolic_expand" => super::logic_chain_actions::run_symbolic_expand(document, label),
+        "code:symbolic_factor" => super::logic_chain_actions::run_symbolic_factor(document, label),
+        "code:symbolic_integrate" => {
+            super::logic_chain_actions::run_symbolic_integrate(document, label)
+        }
+        "code:symbolic_simplify_trig" => {
+            super::logic_chain_actions::run_symbolic_simplify_trig(document, label)
+        }
+        "code:symbolic_partial" => {
+            super::logic_chain_actions::run_symbolic_partial(document, label)
+        }
+        "code:symbolic_limit" => super::logic_chain_actions::run_symbolic_limit(document, label),
+        "code:symbolic_add" => super::logic_chain_actions::run_symbolic_add(document, label),
+        "code:symbolic_sub" => super::logic_chain_actions::run_symbolic_sub(document, label),
+        "code:symbolic_mul" => super::logic_chain_actions::run_symbolic_mul(document, label),
+        "code:symbolic_div" => super::logic_chain_actions::run_symbolic_div(document, label),
+        "code:symbolic_pow" => super::logic_chain_actions::run_symbolic_pow(document, label),
+        "code:symbolic_neg" => super::logic_chain_actions::run_symbolic_neg(document, label),
+        "code:symbolic_sqrt" => super::logic_chain_actions::run_symbolic_sqrt(document, label),
+        "code:symbolic_exp" => super::logic_chain_actions::run_symbolic_exp(document, label),
+        "code:symbolic_ln" => super::logic_chain_actions::run_symbolic_ln(document, label),
+        "code:symbolic_sin" => super::logic_chain_actions::run_symbolic_sin(document, label),
+        "code:symbolic_cos" => super::logic_chain_actions::run_symbolic_cos(document, label),
+        "code:symbolic_tan" => super::logic_chain_actions::run_symbolic_tan(document, label),
+        "code:symbolic_parse" => super::logic_chain_actions::run_symbolic_parse(document, label),
+        "code:symbolic_c" => super::logic_chain_actions::run_symbolic_c(document, label),
+        "code:symbolic_var" => super::logic_chain_actions::run_symbolic_var(document, label),
+        "code:symbolic_hessian" => {
+            super::logic_chain_actions::run_symbolic_hessian(document, label)
+        }
+        "code:symbolic_integrate_definite" => {
+            super::logic_chain_actions::run_symbolic_integrate_definite(document, label)
+        }
+        "code:symbolic_limit_at_infinity" => {
+            super::logic_chain_actions::run_symbolic_limit_at_infinity(document, label)
+        }
+        "code:symbolic_real_roots" => {
+            super::logic_chain_actions::run_symbolic_real_roots(document, label)
+        }
+        "code:symbolic_roots" => super::logic_chain_actions::run_symbolic_roots(document, label),
+        "code:symbolic_taylor_coefficients" => {
+            super::logic_chain_actions::run_symbolic_taylor_coefficients(document, label)
+        }
+        "code:symbolic_taylor_eval" => {
+            super::logic_chain_actions::run_symbolic_taylor_eval(document, label)
+        }
+        "code:symbolic_jacobian" => {
+            super::logic_chain_actions::run_symbolic_jacobian(document, label)
+        }
+        "code:symbolic_gradient_at" => {
+            super::logic_chain_actions::run_symbolic_gradient_at(document, label)
+        }
+        "code:symbolic_hessian_at" => {
+            super::logic_chain_actions::run_symbolic_hessian_at(document, label)
+        }
+        "code:symbolic_solve_quadratic" => {
+            super::logic_chain_actions::run_symbolic_solve_quadratic(document, label)
+        }
+        "code:symbolic_solve_quadratic_symbolic" => {
+            super::logic_chain_actions::run_symbolic_solve_quadratic_symbolic(document, label)
+        }
+        "code:symbolic_factor_quadratic" => {
+            super::logic_chain_actions::run_symbolic_factor_quadratic(document, label)
+        }
+        "code:symbolic_solve_polynomial_expr" => {
+            super::logic_chain_actions::run_symbolic_solve_polynomial_expr(document, label)
+        }
+        "code:symbolic_simplify_with_assumptions" => {
+            super::logic_chain_actions::run_symbolic_simplify_with_assumptions(document, label)
+        }
+        "code:symbolic_expr_citation_hash" => {
+            super::logic_chain_actions::run_symbolic_expr_citation_hash(document, label)
+        }
+        "code:symbolic_to_quins" => {
+            super::logic_chain_actions::run_symbolic_to_quins(document, label)
+        }
+        "code:symbolic_from_quins" => {
+            super::logic_chain_actions::run_symbolic_from_quins(document, label)
+        }
+        "code:constr_regular_polygon" => {
+            super::constr_chain_actions::run_constr_regular_polygon(document, label)
+        }
+        "code:constr_fermat_prime" => {
+            super::constr_chain_actions::run_constr_fermat_prime(document, label)
+        }
+        "code:constr_min_poly_degree" => {
+            super::constr_chain_actions::run_constr_min_poly_degree(document, label)
+        }
+        "code:constr_power_of_two" => {
+            super::constr_chain_actions::run_constr_power_of_two(document, label)
+        }
+        "code:constr_central_angle" => {
+            super::constr_chain_actions::run_constr_central_angle(document, label)
+        }
+        "code:constr_doubling_cube" => {
+            super::constr_chain_actions::run_constr_doubling_cube(document, label)
+        }
+        "code:constr_trisect_angle" => {
+            super::constr_chain_actions::run_constr_trisect_angle(document, label)
+        }
+        "code:constr_square_circle" => {
+            super::constr_chain_actions::run_constr_square_circle(document, label)
+        }
+        "code:constr_number" => super::constr_chain_actions::run_constr_number(document, label),
+        "code:nt_gcd" => super::nt_chain_actions::run_nt_gcd(document, label),
+        "code:nt_lcm" => super::nt_chain_actions::run_nt_lcm(document, label),
+        "code:nt_is_prime" => super::nt_chain_actions::run_nt_is_prime(document, label),
+        "code:nt_factorial" => super::nt_chain_actions::run_nt_factorial(document, label),
+        "code:nt_binomial" => super::nt_chain_actions::run_nt_binomial(document, label),
+        "code:nt_euler_totient" => super::nt_chain_actions::run_nt_euler_totient(document, label),
+        "code:nt_mod_pow" => super::nt_chain_actions::run_nt_mod_pow(document, label),
+        "code:nt_next_prime" => super::nt_chain_actions::run_nt_next_prime(document, label),
+        "code:nt_mod_inverse" => super::nt_chain_actions::run_nt_mod_inverse(document, label),
+        "code:nt_divisor_count" => super::nt_chain_actions::run_nt_divisor_count(document, label),
+        "code:nt_prime_factors" => {
+            super::nt_chain_actions::run_nt_prime_factors(document, label)
+        }
+        "code:nt_divisors" => super::nt_chain_actions::run_nt_divisors(document, label),
+        "code:nt_mobius" => super::nt_chain_actions::run_nt_mobius(document, label),
+        "code:nt_divisor_sum" => super::nt_chain_actions::run_nt_divisor_sum(document, label),
+        "code:nt_partitions" => super::nt_chain_actions::run_nt_partitions(document, label),
+        "code:nt_catalan" => super::nt_chain_actions::run_nt_catalan(document, label),
+        "code:nt_stirling_second" => {
+            super::nt_chain_actions::run_nt_stirling_second(document, label)
+        }
+        "code:nt_stirling_first" => {
+            super::nt_chain_actions::run_nt_stirling_first(document, label)
+        }
+        "code:nt_extended_gcd" => {
+            super::nt_chain_actions::run_nt_extended_gcd(document, label)
+        }
+        "code:nt_crt" => super::nt_chain_actions::run_nt_crt(document, label),
+        "code:fuzzy_triangular" => {
+            super::fuzzy_chain_actions::run_fuzzy_triangular(document, label)
+        }
+        "code:fuzzy_trapezoidal" => {
+            super::fuzzy_chain_actions::run_fuzzy_trapezoidal(document, label)
+        }
+        "code:fuzzy_approximately" => {
+            super::fuzzy_chain_actions::run_fuzzy_approximately(document, label)
+        }
+        "code:fuzzy_ramp_up" => super::fuzzy_chain_actions::run_fuzzy_ramp_up(document, label),
+        "code:fuzzy_ramp_down" => super::fuzzy_chain_actions::run_fuzzy_ramp_down(document, label),
+        "code:fuzzy_much_greater_than" => {
+            super::fuzzy_chain_actions::run_fuzzy_much_greater_than(document, label)
+        }
+        "code:fuzzy_much_less_than" => {
+            super::fuzzy_chain_actions::run_fuzzy_much_less_than(document, label)
+        }
+        "code:fuzzy_threshold" => super::fuzzy_chain_actions::run_fuzzy_threshold(document, label),
+        "code:fuzzy_top_k" => super::fuzzy_chain_actions::run_fuzzy_top_k(document, label),
+        "code:fuzzy_negate" => super::fuzzy_chain_actions::run_fuzzy_negate(document, label),
+        "code:fuzzy_and" => super::fuzzy_chain_actions::run_fuzzy_and(document, label),
+        "code:fuzzy_or" => super::fuzzy_chain_actions::run_fuzzy_or(document, label),
         "econ:capm" => super::econ_chain_actions::run_capm(document, label),
         "econ:gini" => super::econ_chain_actions::run_gini(document, label),
         "econ:mixed_nash" => super::econ_chain_actions::run_mixed_nash(document, label),
@@ -698,9 +1905,756 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "econ:historical_var" => super::econ_chain_actions::run_historical_var(document, label),
         "econ:atkinson" => super::econ_chain_actions::run_atkinson(document, label),
         "econ:gordon_growth" => super::econ_chain_actions::run_gordon_growth(document, label),
+        "econ:binomial_option" => {
+            super::econ_chain_actions::run_binomial_option(document, label)
+        }
+        "econ:forward_rate" => super::econ_chain_actions::run_forward_rate(document, label),
+        "econ:gbm_simulate" => super::econ_chain_actions::run_gbm_simulate(document, label),
+        "econ:headcount_poverty" => {
+            super::econ_chain_actions::run_headcount_poverty(document, label)
+        }
+        "econ:hyperbolic_discount" => {
+            super::econ_chain_actions::run_hyperbolic_discount(document, label)
+        }
+        "econ:fiscal_multiplier" => {
+            super::econ_chain_actions::run_fiscal_multiplier(document, label)
+        }
+        "econ:drawdown" => super::econ_chain_actions::run_drawdown(document, label),
+        "econ:covariance_matrix" => {
+            super::econ_chain_actions::run_covariance_matrix(document, label)
+        }
+        "econ:capm_beta" => super::econ_chain_actions::run_capm_beta(document, label),
+        "econ:autocorrelation" => super::econ_chain_actions::run_autocorrelation(document, label),
+        "econ:cross_correlation" => {
+            super::econ_chain_actions::run_cross_correlation(document, label)
+        }
+        "econ:bertrand_with_demand" => {
+            super::econ_chain_actions::run_bertrand_with_demand(document, label)
+        }
+        "econ:check_budget_balance" => {
+            super::econ_chain_actions::run_check_budget_balance(document, label)
+        }
+        "econ:ccapm_equity_premium" => {
+            super::econ_chain_actions::run_ccapm_equity_premium(document, label)
+        }
+        "econ:mean_return" => super::econ_chain_actions::run_mean_return(document, label),
+        "econ:poverty_gap" => super::econ_chain_actions::run_poverty_gap(document, label),
+        "econ:sample_variance" => {
+            super::econ_chain_actions::run_sample_variance(document, label)
+        }
+        "econ:utilitarian_welfare" => {
+            super::econ_chain_actions::run_utilitarian_welfare(document, label)
+        }
+        "econ:rawlsian_welfare" => {
+            super::econ_chain_actions::run_rawlsian_welfare(document, label)
+        }
+        "econ:nash_welfare" => super::econ_chain_actions::run_nash_welfare(document, label),
+        "econ:stackelberg" => super::econ_chain_actions::run_stackelberg(document, label),
+        "econ:put_call_parity" => {
+            super::econ_chain_actions::run_put_call_parity(document, label)
+        }
+        "econ:parametric_var" => {
+            super::econ_chain_actions::run_parametric_var(document, label)
+        }
+        "econ:laffer_curve" => super::econ_chain_actions::run_laffer_curve(document, label),
+        "econ:historical_cvar" => {
+            super::econ_chain_actions::run_historical_cvar(document, label)
+        }
+        "econ:endowment_effect" => {
+            super::econ_chain_actions::run_endowment_effect(document, label)
+        }
+        "econ:prospect_value" => super::econ_chain_actions::run_prospect_value(document, label),
+        "econ:probability_weight" => {
+            super::econ_chain_actions::run_probability_weight(document, label)
+        }
+        "econ:ccapm_sdf" => super::econ_chain_actions::run_ccapm_sdf(document, label),
+        "econ:gravity_flow" => super::econ_chain_actions::run_gravity_flow(document, label),
+        "econ:transfer_payment" => {
+            super::econ_chain_actions::run_transfer_payment(document, label)
+        }
+        "econ:efficiency_units" => {
+            super::econ_chain_actions::run_efficiency_units(document, label)
+        }
+        "econ:social_cost_of_carbon" => {
+            super::econ_chain_actions::run_social_cost_of_carbon(document, label)
+        }
+        "econ:pollution_damage" => {
+            super::econ_chain_actions::run_pollution_damage(document, label)
+        }
+        "econ:marginal_damage" => {
+            super::econ_chain_actions::run_marginal_damage(document, label)
+        }
+        "econ:ramsey_steady_state" => {
+            super::econ_chain_actions::run_ramsey_steady_state(document, label)
+        }
+        "econ:simple_returns" => super::econ_chain_actions::run_simple_returns(document, label),
+        "econ:log_returns" => super::econ_chain_actions::run_log_returns(document, label),
+        "econ:rolling_mean" => super::econ_chain_actions::run_rolling_mean(document, label),
+        "econ:rolling_variance" => {
+            super::econ_chain_actions::run_rolling_variance(document, label)
+        }
+        "econ:labor_supply" => super::econ_chain_actions::run_labor_supply(document, label),
+        "econ:optimal_abatement" => {
+            super::econ_chain_actions::run_optimal_abatement(document, label)
+        }
+        "econ:optimal_pollution" => {
+            super::econ_chain_actions::run_optimal_pollution(document, label)
+        }
+        "econ:olg_steady_state" => {
+            super::econ_chain_actions::run_olg_steady_state(document, label)
+        }
+        "econ:ramsey_euler_residual" => {
+            super::econ_chain_actions::run_ramsey_euler_residual(document, label)
+        }
+        "econ:present_biased_utility" => {
+            super::econ_chain_actions::run_present_biased_utility(document, label)
+        }
+        "econ:reference_dependent_utility" => {
+            super::econ_chain_actions::run_reference_dependent_utility(document, label)
+        }
+        "econ:npv" => super::econ_chain_actions::run_npv(document, label),
+        "econ:multi_period_ddm" => {
+            super::econ_chain_actions::run_multi_period_ddm(document, label)
+        }
+        "econ:portfolio_max_drawdown" => {
+            super::econ_chain_actions::run_portfolio_max_drawdown(document, label)
+        }
+        "econ:interpolate_zero_rate" => {
+            super::econ_chain_actions::run_interpolate_zero_rate(document, label)
+        }
+        "econ:discount_factor" => {
+            super::econ_chain_actions::run_discount_factor(document, label)
+        }
+        "econ:par_yield" => super::econ_chain_actions::run_par_yield(document, label),
+        "econ:progressive_tax" => {
+            super::econ_chain_actions::run_progressive_tax(document, label)
+        }
+        "econ:abatement_net_benefit" => {
+            super::econ_chain_actions::run_abatement_net_benefit(document, label)
+        }
+        "econ:household_production_ces" => {
+            super::econ_chain_actions::run_household_production_ces(document, label)
+        }
+        "econ:malfeasance_delta" => {
+            super::econ_chain_actions::run_malfeasance_delta(document, label)
+        }
+        "econ:portfolio_variance" => {
+            super::econ_chain_actions::run_portfolio_variance(document, label)
+        }
+        "econ:portfolio_returns" => {
+            super::econ_chain_actions::run_portfolio_returns(document, label)
+        }
+        "econ:distributional_npv" => {
+            super::econ_chain_actions::run_distributional_npv(document, label)
+        }
+        "econ:stress_scenario" => {
+            super::econ_chain_actions::run_stress_scenario(document, label)
+        }
+        "econ:repeated_game_payoff" => {
+            super::econ_chain_actions::run_repeated_game_payoff(document, label)
+        }
+        "econ:total_transport_cost" => {
+            super::econ_chain_actions::run_total_transport_cost(document, label)
+        }
+        "econ:transition_probability" => {
+            super::econ_chain_actions::run_transition_probability(document, label)
+        }
+        "econ:expected_holding_time" => {
+            super::econ_chain_actions::run_expected_holding_time(document, label)
+        }
+        "econ:check_ir" => super::econ_chain_actions::run_check_ir(document, label),
+        "econ:vcg_payment" => super::econ_chain_actions::run_vcg_payment(document, label),
+        "econ:validate_transition_matrix" => {
+            super::econ_chain_actions::run_validate_transition_matrix(document, label)
+        }
+        "econ:stationary_distribution" => {
+            super::econ_chain_actions::run_stationary_distribution(document, label)
+        }
+        "econ:mean_first_passage" => {
+            super::econ_chain_actions::run_mean_first_passage(document, label)
+        }
+        "econ:degree_centrality" => {
+            super::econ_chain_actions::run_degree_centrality(document, label)
+        }
+        "econ:eigenvector_centrality" => {
+            super::econ_chain_actions::run_eigenvector_centrality(document, label)
+        }
+        "econ:new_keynesian_solve" => {
+            super::econ_chain_actions::run_new_keynesian_solve(document, label)
+        }
+        "econ:nearest_facility" => {
+            super::econ_chain_actions::run_nearest_facility(document, label)
+        }
+        "econ:pure_nash_equilibria" => {
+            super::econ_chain_actions::run_pure_nash_equilibria(document, label)
+        }
+        "econ:morans_i" => super::econ_chain_actions::run_morans_i(document, label),
+        "econ:strategy_proofness" => {
+            super::econ_chain_actions::run_strategy_proofness(document, label)
+        }
+        "econ:lorenz_curve" => super::econ_chain_actions::run_lorenz_curve(document, label),
+        "econ:ols" => super::econ_chain_actions::run_ols(document, label),
+        "econ:wls" => super::econ_chain_actions::run_wls(document, label),
+        "econ:lucas_asset_price" => {
+            super::econ_chain_actions::run_lucas_asset_price(document, label)
+        }
+        "econ:bellman_update" => super::econ_chain_actions::run_bellman_update(document, label),
+        "econ:block_bootstrap" => super::econ_chain_actions::run_block_bootstrap(document, label),
+        "econ:simulate_chain" => super::econ_chain_actions::run_simulate_chain(document, label),
+        "econ:value_iteration" => super::econ_chain_actions::run_value_iteration(document, label),
+        "econ:iv_2sls" => super::econ_chain_actions::run_iv_2sls(document, label),
+        "econ:logistic_mle" => super::econ_chain_actions::run_logistic_mle(document, label),
+        "econ:interbank_clearing" => {
+            super::econ_chain_actions::run_interbank_clearing(document, label)
+        }
+        "econ:leontief_inverse" => {
+            super::econ_chain_actions::run_leontief_inverse(document, label)
+        }
+        "econ:output_multipliers" => {
+            super::econ_chain_actions::run_output_multipliers(document, label)
+        }
+        "econ:agent_based_aggregate_wealth" => {
+            super::econ_chain_actions::run_agent_based_aggregate_wealth(document, label)
+        }
+        "econ:validate_scalar_constraint" => {
+            super::econ_chain_actions::run_validate_scalar_constraint(document, label)
+        }
+        "econ:aggregate_paper_fills" => {
+            super::econ_chain_actions::run_aggregate_paper_fills(document, label)
+        }
         "rights:delegation_permits" => {
             super::cooperative_chain_actions::run_delegation_permits(document, label)
         }
+        "scientific:la_matmul" => {
+            super::linalg_chain_actions::run_matmul(document, label)
+        }
+        "scientific:la_matvec" => {
+            super::linalg_chain_actions::run_matvec(document, label)
+        }
+        "scientific:la_transpose" => {
+            super::linalg_chain_actions::run_transpose(document, label)
+        }
+        "scientific:la_determinant" => {
+            super::linalg_chain_actions::run_determinant(document, label)
+        }
+        "scientific:la_solve" => super::linalg_chain_actions::run_solve(document, label),
+        "scientific:la_scale" => super::linalg_chain_actions::run_scale(document, label),
+        "scientific:la_add_into" => {
+            super::linalg_chain_actions::run_add_into(document, label)
+        }
+        "scientific:la_axpy" => super::linalg_chain_actions::run_axpy(document, label),
+        "scientific:la_hadamard_into" => {
+            super::linalg_chain_actions::run_hadamard_into(document, label)
+        }
+        "scientific:la_qr_factor" => {
+            super::linalg_chain_actions::run_qr_factor(document, label)
+        }
+        "scientific:la_cholesky_factor" => {
+            super::linalg_chain_actions::run_cholesky_factor(document, label)
+        }
+        "scientific:la_cholesky_solve" => {
+            super::linalg_chain_actions::run_cholesky_solve(document, label)
+        }
+        "scientific:la_lu_decompose" => {
+            super::linalg_chain_actions::run_lu_decompose(document, label)
+        }
+        "scientific:la_lu_solve" => {
+            super::linalg_chain_actions::run_lu_solve(document, label)
+        }
+        "scientific:la_qr_form_q" => {
+            super::linalg_chain_actions::run_qr_form_q(document, label)
+        }
+        "scientific:la_qr_solve_ls" => {
+            super::linalg_chain_actions::run_qr_solve_least_squares(document, label)
+        }
+        "scientific:la_svd" => super::linalg_chain_actions::run_svd(document, label),
+        "scientific:la_eigenvalues" => {
+            super::linalg_chain_actions::run_eigenvalues(document, label)
+        }
+        "scientific:la_add_assign" => {
+            super::linalg_chain_actions::run_add_assign(document, label)
+        }
+        "scientific:la_hadamard_assign" => {
+            super::linalg_chain_actions::run_hadamard_assign(document, label)
+        }
+        "scientific:la_cholesky_det" => {
+            super::linalg_chain_actions::run_cholesky_determinant(document, label)
+        }
+        "scientific:la_charpoly" => {
+            super::linalg_chain_actions::run_characteristic_polynomial(document, label)
+        }
+        "scientific:la_eigenvalues_general" => {
+            super::linalg_chain_actions::run_eigenvalues_general(document, label)
+        }
+        "scientific:la_eigen_symmetric" => {
+            super::linalg_chain_actions::run_eigen_symmetric(document, label)
+        }
+        "scientific:la_polynomial_roots" => {
+            super::linalg_chain_actions::run_polynomial_roots(document, label)
+        }
+        "scientific:la_solve_linear_system" => {
+            super::linalg_chain_actions::run_solve_linear_system(document, label)
+        }
+        "scientific:la_symmetric_eigen_3x3" => {
+            super::linalg_chain_actions::run_symmetric_eigen_3x3(document, label)
+        }
+        "scientific:chem_boys" => {
+            super::chem_chain_actions::run_boys_function(document, label)
+        }
+        "scientific:chem_overlap_s" => {
+            super::chem_chain_actions::run_overlap_s(document, label)
+        }
+        "scientific:chem_kinetic_s" => {
+            super::chem_chain_actions::run_kinetic_s(document, label)
+        }
+        "scientific:chem_nuclear_s" => {
+            super::chem_chain_actions::run_nuclear_s(document, label)
+        }
+        "scientific:chem_dipole_s" => {
+            super::chem_chain_actions::run_dipole_s(document, label)
+        }
+        "scientific:chem_evaluate_eri" => {
+            super::chem_chain_actions::run_evaluate_eri(document, label)
+        }
+        "scientific:chem_total_angular_momentum" => {
+            super::chem_chain_actions::run_total_angular_momentum(document, label)
+        }
+        "scientific:chem_letter" => super::chem_chain_actions::run_letter(document, label),
+        "scientific:chem_n_cartesian" => {
+            super::chem_chain_actions::run_n_cartesian(document, label)
+        }
+        "scientific:chem_n_spherical" => {
+            super::chem_chain_actions::run_n_spherical(document, label)
+        }
+        "scientific:chem_from_letter" => {
+            super::chem_chain_actions::run_from_letter(document, label)
+        }
+        "scientific:chem_gaussian_elim" => {
+            super::chem_chain_actions::run_gaussian_elimination(document, label)
+        }
+        "scientific:chem_jacobi" => {
+            super::chem_chain_actions::run_jacobi_diagonalization(document, label)
+        }
+        "scientific:chem_transpose" => {
+            super::chem_chain_actions::run_transpose(document, label)
+        }
+        "scientific:chem_orthogonalize" => {
+            super::chem_chain_actions::run_orthogonalization_matrix(document, label)
+        }
+        "scientific:chem_element_symbol" => {
+            super::chem_chain_actions::run_element_symbol(document, label)
+        }
+        "scientific:chem_atomic_number" => {
+            super::chem_chain_actions::run_atomic_number(document, label)
+        }
+        "scientific:chem_atomic_weight" => {
+            super::chem_chain_actions::run_standard_atomic_weight(document, label)
+        }
+        "scientific:chem_lda_exchange" => {
+            super::chem_chain_actions::run_lda_exchange(document, label)
+        }
+        "scientific:chem_lda_vwn" => {
+            super::chem_chain_actions::run_lda_correlation_vwn(document, label)
+        }
+        "scientific:chem_sto3g_h2" => {
+            super::chem_chain_actions::run_sto3g_h2(document, label)
+        }
+        "scientific:sf_airy_ai" => super::sf_chain_actions::run_airy_ai(document, label),
+        "scientific:sf_airy_bi" => super::sf_chain_actions::run_airy_bi(document, label),
+        "scientific:sf_zeta" => super::sf_chain_actions::run_zeta(document, label),
+        "scientific:sf_legendre" => super::sf_chain_actions::run_legendre(document, label),
+        "scientific:sf_chebyshev_t" => {
+            super::sf_chain_actions::run_chebyshev_t(document, label)
+        }
+        "scientific:sf_chebyshev_u" => {
+            super::sf_chain_actions::run_chebyshev_u(document, label)
+        }
+        "scientific:sf_hermite" => super::sf_chain_actions::run_hermite(document, label),
+        "scientific:sf_laguerre" => super::sf_chain_actions::run_laguerre(document, label),
+        "scientific:sf_bessel_j" => super::sf_chain_actions::run_bessel_j(document, label),
+        "scientific:sf_bessel_i" => super::sf_chain_actions::run_bessel_i(document, label),
+        "scientific:sf_bessel_y" => super::sf_chain_actions::run_bessel_y(document, label),
+        "scientific:sf_bessel_k" => super::sf_chain_actions::run_bessel_k(document, label),
+        "scientific:xform_dft" => super::transforms_chain_actions::run_dft(document, label),
+        "scientific:xform_dft_complex" => {
+            super::transforms_chain_actions::run_dft_complex(document, label)
+        }
+        "scientific:xform_idft" => super::transforms_chain_actions::run_idft(document, label),
+        "scientific:xform_z_transform_finite" => {
+            super::transforms_chain_actions::run_z_transform_finite(document, label)
+        }
+        "scientific:xform_unit_step_z" => {
+            super::transforms_chain_actions::run_unit_step_z(document, label)
+        }
+        "scientific:xform_geometric_z" => {
+            super::transforms_chain_actions::run_geometric_z(document, label)
+        }
+        "scientific:xform_laplace_numeric" => {
+            super::transforms_chain_actions::run_laplace_numeric(document, label)
+        }
+        "scientific:xform_laplace_symbolic" => {
+            super::transforms_chain_actions::run_laplace_symbolic(document, label)
+        }
+        "scientific:calc_hermite_dense" => {
+            super::calc_chain_actions::run_hermite_dense_output(document, label)
+        }
+        "scientific:calc_bdf1" => super::calc_chain_actions::run_bdf1_step(document, label),
+        "scientific:calc_bdf2" => super::calc_chain_actions::run_bdf2_step(document, label),
+        "scientific:calc_verlet" => super::calc_chain_actions::run_verlet_step(document, label),
+        "scientific:calc_ruth3" => super::calc_chain_actions::run_ruth3_step(document, label),
+        "scientific:calc_yoshida4" => {
+            super::calc_chain_actions::run_yoshida4_step(document, label)
+        }
+        "scientific:calc_integrate_bdf" => {
+            super::calc_chain_actions::run_integrate_bdf(document, label)
+        }
+        "scientific:calc_integrate_sens" => {
+            super::calc_chain_actions::run_integrate_with_sensitivity(document, label)
+        }
+        "scientific:calc_invariant_drift" => {
+            super::calc_chain_actions::run_invariant_drift(document, label)
+        }
+        "scientific:calc_perm_parity" => {
+            super::calc_chain_actions::run_permutation_parity(document, label)
+        }
+        "scientific:calc_pack_f32" => {
+            super::calc_chain_actions::run_pack_f32_pair(document, label)
+        }
+        "scientific:calc_unpack_f32" => {
+            super::calc_chain_actions::run_unpack_f32_pair(document, label)
+        }
+        "scientific:calc_poisson_bracket" => {
+            super::calc_chain_actions::run_canonical_poisson_bracket(document, label)
+        }
+        "scientific:calc_stormer_verlet" => {
+            super::calc_chain_actions::run_stormer_verlet_step(document, label)
+        }
+        "scientific:calc_gauss_kronrod" => {
+            super::calc_chain_actions::run_adaptive_gauss_kronrod_15(document, label)
+        }
+        "scientific:calc_jvp" => super::calc_chain_actions::run_jvp(document, label),
+        "scientific:calc_vjp" => super::calc_chain_actions::run_vjp(document, label),
+        "scientific:calc_adaptive_simpson" => {
+            super::calc_chain_actions::run_adaptive_simpson(document, label)
+        }
+        "scientific:calc_adaptive_deriv" => {
+            super::calc_chain_actions::run_adaptive_derivative(document, label)
+        }
+        "scientific:calc_newton_solve" => {
+            super::calc_chain_actions::run_newton_solve(document, label)
+        }
+        "scientific:calc_num_jacobian" => {
+            super::calc_chain_actions::run_numerical_jacobian(document, label)
+        }
+        "scientific:calc_num_hessian" => {
+            super::calc_chain_actions::run_numerical_hessian(document, label)
+        }
+        "scientific:ga_dot" => super::ga_chain_actions::run_dot(document, label),
+        "scientific:ga_cross" => super::ga_chain_actions::run_cross_product(document, label),
+        "scientific:ga_normalize" => {
+            super::ga_chain_actions::run_normalize_vector(document, label)
+        }
+        "scientific:ga_angle" => {
+            super::ga_chain_actions::run_angle_between_vectors(document, label)
+        }
+        "scientific:ga_geometric_product" => {
+            super::ga_chain_actions::run_geometric_product(document, label)
+        }
+        "scientific:ga_outer_product" => {
+            super::ga_chain_actions::run_outer_product(document, label)
+        }
+        "scientific:ga_rotor" => {
+            super::ga_chain_actions::run_rotor_from_angle_axis(document, label)
+        }
+        "scientific:ga_apply_rotor" => {
+            super::ga_chain_actions::run_apply_rotor(document, label)
+        }
+        "scientific:ga_translator" => {
+            super::ga_chain_actions::run_translator_from_displacement(document, label)
+        }
+        "scientific:ga_apply_translator" => {
+            super::ga_chain_actions::run_apply_translator(document, label)
+        }
+        "scientific:ga_is_simd" => {
+            super::ga_chain_actions::run_is_simd_available(document, label)
+        }
+        "scientific:cg_distance_2d" => {
+            super::cg_chain_actions::run_distance_2d(document, label)
+        }
+        "scientific:cg_distance_3d" => {
+            super::cg_chain_actions::run_distance_3d(document, label)
+        }
+        "scientific:cg_point_segment_2d" => {
+            super::cg_chain_actions::run_point_segment_2d(document, label)
+        }
+        "scientific:cg_orientation_2" => {
+            super::cg_chain_actions::run_orientation_2(document, label)
+        }
+        "scientific:cg_orient_3d" => super::cg_chain_actions::run_orient_3d(document, label),
+        "scientific:cg_morton_encode_2d" => {
+            super::cg_chain_actions::run_morton_encode_2d(document, label)
+        }
+        "scientific:cg_morton_decode_2d" => {
+            super::cg_chain_actions::run_morton_decode_2d(document, label)
+        }
+        "scientific:cg_morton_encode_3d" => {
+            super::cg_chain_actions::run_morton_encode_3d(document, label)
+        }
+        "scientific:cg_hilbert_encode_2d" => {
+            super::cg_chain_actions::run_hilbert_encode_2d(document, label)
+        }
+        "scientific:cg_circumcenter" => {
+            super::cg_chain_actions::run_circumcenter(document, label)
+        }
+        "scientific:cg_point_segment_3d" => {
+            super::cg_chain_actions::run_point_segment_3d(document, label)
+        }
+        "scientific:cg_point_triangle_3d" => {
+            super::cg_chain_actions::run_point_triangle_3d(document, label)
+        }
+        "scientific:cg_convex_hull_2" => {
+            super::cg_chain_actions::run_convex_hull_2(document, label)
+        }
+        "scientific:cg_triangulate" => {
+            super::cg_chain_actions::run_triangulate_polygon(document, label)
+        }
+        "scientific:cg_surface_area" => {
+            super::cg_chain_actions::run_surface_area(document, label)
+        }
+        "scientific:cg_signed_volume" => {
+            super::cg_chain_actions::run_signed_volume(document, label)
+        }
+        "scientific:cg_segment_intersect_2" => {
+            super::cg_chain_actions::run_line_segment_intersection_2(document, label)
+        }
+        "scientific:cg_bezier_eval" => {
+            super::cg_chain_actions::run_bezier_eval(document, label)
+        }
+        "scientific:cg_nearest_site" => {
+            super::cg_chain_actions::run_nearest_site(document, label)
+        }
+        "scientific:eng_natural_freq" => {
+            super::eng_chain_actions::run_natural_frequency_sdof(document, label)
+        }
+        "scientific:eng_harmonic_sdof" => {
+            super::eng_chain_actions::run_analyze_harmonic_sdof(document, label)
+        }
+        "scientific:eng_euler" => super::eng_chain_actions::run_analyze_euler(document, label),
+        "scientific:eng_reliability" => {
+            super::eng_chain_actions::run_compute_reliability_index(document, label)
+        }
+        "scientific:eng_kinematics" => {
+            super::eng_chain_actions::run_kinematics(document, label)
+        }
+        "scientific:eng_cauchy" => super::eng_chain_actions::run_cauchy_stress(document, label),
+        "scientific:eng_drag" => super::eng_chain_actions::run_drag_force(document, label),
+        "scientific:eng_reynolds" => {
+            super::eng_chain_actions::run_reynolds_number(document, label)
+        }
+        "scientific:eng_fatigue" => {
+            super::eng_chain_actions::run_fatigue_cycles(document, label)
+        }
+        "scientific:eng_miner" => super::eng_chain_actions::run_miner_damage(document, label),
+        "scientific:phys_doppler" => {
+            super::physics_chain_actions::run_doppler_shift(document, label)
+        }
+        "scientific:phys_emf_attenuation" => {
+            super::physics_chain_actions::run_emf_attenuation(document, label)
+        }
+        "scientific:phys_harmonic" => {
+            super::physics_chain_actions::run_harmonic_oscillator(document, label)
+        }
+        "scientific:phys_pendulum" => {
+            super::physics_chain_actions::run_pendulum(document, label)
+        }
+        "scientific:phys_logistic" => {
+            super::physics_chain_actions::run_logistic_growth(document, label)
+        }
+        "scientific:phys_cfd_step" => {
+            super::physics_chain_actions::run_cfd_step(document, label)
+        }
+        "scientific:phys_heat_1d" => {
+            super::physics_chain_actions::run_heat_diffusion_1d(document, label)
+        }
+        "scientific:phys_wave_1d" => {
+            super::physics_chain_actions::run_wave_1d(document, label)
+        }
+        "scientific:phys_advection_1d" => {
+            super::physics_chain_actions::run_advection_diffusion_1d(document, label)
+        }
+        "scientific:phys_quantum_1d" => {
+            super::physics_chain_actions::run_quantum_states_1d(document, label)
+        }
+        "scientific:phys_n_body" => {
+            super::physics_chain_actions::run_n_body(document, label)
+        }
+        "scientific:phys_molecular_dynamics" => {
+            super::physics_chain_actions::run_molecular_dynamics(document, label)
+        }
+        "scientific:phys_emf_interference" => {
+            super::physics_chain_actions::run_emf_interference(document, label)
+        }
+        "scientific:phys_emf_field_grid" => {
+            super::physics_chain_actions::run_emf_field_grid_3d(document, label)
+        }
+        "scientific:phys_emf_sample_depth" => {
+            super::physics_chain_actions::run_emf_sample_at_depth(document, label)
+        }
+        "scientific:phys_field_sample" => {
+            super::physics_chain_actions::run_field_sample(document, label)
+        }
+        "scientific:phys_material_query" => {
+            super::physics_chain_actions::run_material_query(document, label)
+        }
+        "scientific:phys_evaluate_interaction" => {
+            super::physics_chain_actions::run_evaluate_interaction(document, label)
+        }
+        "scientific:cosmic_geodetic_distance" => {
+            super::cosmic_chain_actions::run_geodetic_distance(document, label)
+        }
+        "scientific:cosmic_surface_gravity" => {
+            super::cosmic_chain_actions::run_surface_gravity(document, label)
+        }
+        "scientific:cosmic_flrw_distance" => {
+            super::cosmic_chain_actions::run_flrw_distance(document, label)
+        }
+        "scientific:cosmic_flrw_redshift" => {
+            super::cosmic_chain_actions::run_flrw_redshift(document, label)
+        }
+        "scientific:cosmic_flrw_hubble" => {
+            super::cosmic_chain_actions::run_flrw_hubble_velocity(document, label)
+        }
+        "scientific:cosmic_warp_velocity" => {
+            super::cosmic_chain_actions::run_warp_velocity(document, label)
+        }
+        "scientific:cosmic_warp_factor_c" => {
+            super::cosmic_chain_actions::run_warp_factor_c(document, label)
+        }
+        "scientific:cosmic_typical_length" => {
+            super::cosmic_chain_actions::run_typical_length(document, label)
+        }
+        "scientific:cosmic_observe_redshift" => {
+            super::cosmic_chain_actions::run_observe_redshift(document, label)
+        }
+        "scientific:cosmic_compton" => {
+            super::cosmic_chain_actions::run_compton_wavelength(document, label)
+        }
+        "scientific:cosmic_de_broglie" => {
+            super::cosmic_chain_actions::run_de_broglie_wavelength(document, label)
+        }
+        "scientific:cosmic_atm_pressure" => {
+            super::cosmic_chain_actions::run_atmosphere_pressure(document, label)
+        }
+        "scientific:cosmic_geodetic_to_ecef" => {
+            super::cosmic_chain_actions::run_geodetic_to_ecef(document, label)
+        }
+        "scientific:cosmic_ecef_to_geodetic" => {
+            super::cosmic_chain_actions::run_ecef_to_geodetic(document, label)
+        }
+        "scientific:cosmic_ecef_to_enu" => {
+            super::cosmic_chain_actions::run_ecef_to_enu(document, label)
+        }
+        "scientific:cosmic_enu_to_ecef" => {
+            super::cosmic_chain_actions::run_enu_to_ecef(document, label)
+        }
+        "scientific:cosmic_body_profile" => {
+            super::cosmic_chain_actions::run_body_profile(document, label)
+        }
+        "scientific:cosmic_stardate" => {
+            super::cosmic_chain_actions::run_stardate_to_gregorian(document, label)
+        }
+        "scientific:cosmic_cochrane" => {
+            super::cosmic_chain_actions::run_cochrane_units(document, label)
+        }
+        "scientific:cosmic_atm_temperature" => {
+            super::cosmic_chain_actions::run_atmosphere_temperature(document, label)
+        }
+        "scientific:cosmic_magnetosphere" => {
+            super::cosmic_chain_actions::run_magnetosphere_field(document, label)
+        }
+        "scientific:cosmic_scale_factor" => {
+            super::cosmic_chain_actions::run_scale_factor(document, label)
+        }
+        "scientific:cosmic_usri_parse" => {
+            super::cosmic_chain_actions::run_usri_parse(document, label)
+        }
+        "ai:orch_session_create" => {
+            super::orch_chain_actions::run_session_create(document, label)
+        }
+        "ai:orch_session_plan" => super::orch_chain_actions::run_session_plan(document, label),
+        "ai:orch_session_execute" => {
+            super::orch_chain_actions::run_session_execute(document, label)
+        }
+        "ai:orch_session_status" => {
+            super::orch_chain_actions::run_session_status(document, label)
+        }
+        "ai:orch_roster_register" => {
+            super::orch_chain_actions::run_roster_register(document, label)
+        }
+        "ai:orch_roster_list" => super::orch_chain_actions::run_roster_list(document, label),
+        "ai:orch_roster_capabilities" => {
+            super::orch_chain_actions::run_roster_capabilities(document, label)
+        }
+        "ai:orch_assign_agents" => super::orch_chain_actions::run_assign_agents(document, label),
+        "spatial:threed_add_object" => {
+            super::threed_chain_actions::run_add_object(document, label)
+        }
+        "spatial:threed_set_transform" => {
+            super::threed_chain_actions::run_set_transform(document, label)
+        }
+        "spatial:threed_set_material" => {
+            super::threed_chain_actions::run_set_material(document, label)
+        }
+        "spatial:threed_add_camera" => {
+            super::threed_chain_actions::run_add_camera(document, label)
+        }
+        "spatial:threed_add_light" => super::threed_chain_actions::run_add_light(document, label),
+        "spatial:threed_add_rig" => super::threed_chain_actions::run_add_rig(document, label),
+        "spatial:threed_add_animation" => {
+            super::threed_chain_actions::run_add_animation(document, label)
+        }
+        "spatial:threed_set_mesh" => super::threed_chain_actions::run_set_mesh(document, label),
+        "spatial:scene_lerp_camera" => {
+            super::scene_chain_actions::run_lerp_camera(document, label)
+        }
+        "spatial:scene_camera_frame_node" => {
+            super::scene_chain_actions::run_camera_frame_node(document, label)
+        }
+        "spatial:scene_smooth_damp" => {
+            super::scene_chain_actions::run_smooth_damp(document, label)
+        }
+        "spatial:scene_smooth_damp_vec3" => {
+            super::scene_chain_actions::run_smooth_damp_vec3(document, label)
+        }
+        "spatial:scene_ik_look_at" => {
+            super::scene_chain_actions::run_ik_look_at(document, label)
+        }
+        "spatial:scene_ik_ccd" => super::scene_chain_actions::run_ik_ccd(document, label),
+        "spatial:scene_set_render_budget" => {
+            super::scene_chain_actions::run_set_render_budget(document, label)
+        }
+        "spatial:scene_set_clear_colour" => {
+            super::scene_chain_actions::run_set_clear_colour(document, label)
+        }
+        "audio:dsp_ep_temp" => {
+            super::audio_chain_actions::run_epistemic_temperature_from_q(document, label)
+        }
+        "audio:dsp_ep_fm" => super::audio_chain_actions::run_epistemic_fm_index(document, label),
+        "audio:dsp_sigma_freq" => {
+            super::audio_chain_actions::run_sigma_dominant_frequency(document, label)
+        }
+        "audio:dsp_parametric_sample" => {
+            super::audio_chain_actions::run_parametric_sample(document, label)
+        }
+        "audio:dsp_bin_freq_linear" => {
+            super::audio_chain_actions::run_bin_to_freq_linear(document, label)
+        }
+        "audio:dsp_bin_freq_log" => {
+            super::audio_chain_actions::run_bin_to_freq_log(document, label)
+        }
+        "audio:dsp_midi_note" => super::audio_chain_actions::run_midi_note(document, label),
+        "audio:dsp_quantize" => super::audio_chain_actions::run_quantize(document, label),
+        "audio:dsp_transpose" => super::audio_chain_actions::run_transpose(document, label),
         _ => {
             if let Some(spec) = super::spec_tools::lookup(tool_id) {
                 super::spec_tools::run(document, spec, label);

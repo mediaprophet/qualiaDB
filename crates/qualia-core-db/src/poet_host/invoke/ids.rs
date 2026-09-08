@@ -510,6 +510,17 @@ pub const LA_CHOLESKY_FACTOR: &str = "LinearAlgebra.cholesky_factor";
 pub const LA_CHOLESKY_DET: &str = "LinearAlgebra.cholesky_determinant";
 pub const LA_CHARPOLY: &str = "LinearAlgebra.characteristic_polynomial";
 pub const LA_EIGENVALUES_GENERAL: &str = "LinearAlgebra.eigenvalues_general";
+pub const LA_QR_FACTOR: &str = "LinearAlgebra.qr_factor";
+pub const LA_QR_FORM_Q: &str = "LinearAlgebra.qr_form_q";
+pub const LA_QR_SOLVE_LS: &str = "LinearAlgebra.qr_solve_least_squares";
+pub const LA_ADD_INTO: &str = "LinearAlgebra.add_into";
+pub const LA_CHOLESKY_SOLVE: &str = "LinearAlgebra.cholesky_solve";
+pub const LA_AXPY: &str = "LinearAlgebra.axpy";
+pub const LA_HADAMARD_INTO: &str = "LinearAlgebra.hadamard_into";
+pub const LA_ADD_ASSIGN: &str = "LinearAlgebra.add_assign";
+pub const LA_HADAMARD_ASSIGN: &str = "LinearAlgebra.hadamard_assign";
+pub const LA_SCALE: &str = "LinearAlgebra.scale";
+pub const LA_MATVEC: &str = "LinearAlgebra.matvec";
 pub const ONTOLOGY_ALIGN: &str = "OntologyAlignment.align";
 pub const GRAPH_FUZZY_JACCARD: &str = "GraphMatch.fuzzy_jaccard";
 pub const GRAPH_FUZZY_DICE: &str = "GraphMatch.fuzzy_dice";
@@ -554,6 +565,187 @@ pub const CAS_SIMPLIFY: &str = "SymbolicAlgebra.simplify";
 pub const CAS_EXPAND: &str = "SymbolicAlgebra.expand";
 pub const CAS_FACTOR: &str = "SymbolicAlgebra.factor";
 pub const CAS_SOLVE_QUADRATIC: &str = "SymbolicAlgebra.solve_quadratic";
+pub const CAS_SIMPLIFY_TRIG: &str = "SymbolicAlgebra.simplify_trig";
+pub const CAS_INTEGRATE: &str = "SymbolicAlgebra.integrate";
+pub const CAS_TAYLOR_COEFFICIENTS: &str = "SymbolicAlgebra.taylor_coefficients";
+pub const CAS_TAYLOR_EVAL: &str = "SymbolicAlgebra.taylor_eval";
+pub const CAS_LIMIT: &str = "SymbolicAlgebra.limit";
+pub const CAS_INTEGRATE_DEFINITE: &str = "SymbolicAlgebra.integrate_definite";
+pub const CAS_LIMIT_AT_INFINITY: &str = "SymbolicAlgebra.limit_at_infinity";
+pub const CAS_REAL_ROOTS: &str = "SymbolicAlgebra.real_roots";
+pub const ODE_SOLVE_LINEAR_FIRST_ORDER: &str = "SymbolicODE.solve_linear_first_order";
+pub const ODE_SOLVE_LINEAR_SECOND_ORDER: &str = "SymbolicODE.solve_linear_second_order";
+pub const ODE_CLASSIFY_SECOND_ORDER_PDE: &str = "SymbolicODE.classify_second_order_pde";
+pub const POLY_DIV_REM: &str = "PolynomialAlgebra.div_rem";
+pub const POLY_DERIVATIVE: &str = "PolynomialAlgebra.derivative";
+pub const POLY_MONIC: &str = "PolynomialAlgebra.monic";
+pub const POLY_RESULTANT: &str = "PolynomialAlgebra.resultant";
+pub const POLY_ADD: &str = "PolynomialAlgebra.add";
+pub const POLY_SUB: &str = "PolynomialAlgebra.sub";
+pub const POLY_MUL: &str = "PolynomialAlgebra.mul";
+pub const POLY_DEGREE: &str = "PolynomialAlgebra.degree";
+pub const POLY_LEADING: &str = "PolynomialAlgebra.leading";
+
+// ── Wave-5 Host binds (CAS / ODE / LinAlg remaining) ──────────────────────
+pub const ODE_SOLVE_SEPARABLE: &str = "SymbolicODE.solve_separable";
+pub const ODE_SOLVE_FIRST_ORDER_LINEAR_PDE: &str = "SymbolicODE.solve_first_order_linear_pde";
+pub const CAS_SOLVE_POLYNOMIAL_EXPR: &str = "SymbolicAlgebra.solve_polynomial_expr";
+pub const CAS_SIMPLIFY_WITH_ASSUMPTIONS: &str = "SymbolicAlgebra.simplify_with_assumptions";
+pub const CAS_ROOTS: &str = "SymbolicAlgebra.roots";
+pub const LA_SOLVE_LINEAR_SYSTEM: &str = "LinearAlgebra.solve_linear_system";
+pub const CAS_EXPR_CITATION_HASH: &str = "SymbolicAlgebra.expr_citation_hash";
+pub const POLY_IS_ZERO: &str = "PolynomialAlgebra.is_zero";
+
+// ── Wave-6 Host binds (multivar CAS + constructibility) ───────────────────
+pub const CAS_PARTIAL: &str = "SymbolicAlgebra.partial";
+pub const CAS_JACOBIAN: &str = "SymbolicAlgebra.jacobian";
+pub const CAS_HESSIAN: &str = "SymbolicAlgebra.hessian";
+pub const CAS_GRADIENT_AT: &str = "SymbolicAlgebra.gradient_at";
+pub const CAS_HESSIAN_AT: &str = "SymbolicAlgebra.hessian_at";
+pub const CONSTR_IS_REGULAR_POLYGON: &str = "Constructibility.is_regular_polygon_constructible";
+pub const CONSTR_IS_FERMAT_PRIME: &str = "Constructibility.is_fermat_prime";
+pub const CONSTR_FROM_MIN_POLY_DEGREE: &str = "Constructibility.constructible_from_min_poly_degree";
+
+// ── Wave-7 Host binds (remaining constructibility + CAS) ──────────────────
+pub const CONSTR_IS_POWER_OF_TWO: &str = "Constructibility.is_power_of_two";
+pub const CONSTR_IS_CENTRAL_ANGLE: &str = "Constructibility.is_central_angle_constructible";
+pub const CONSTR_DOUBLING_THE_CUBE: &str = "Constructibility.doubling_the_cube_constructible";
+pub const CONSTR_TRISECTING_GENERAL_ANGLE: &str =
+    "Constructibility.trisecting_general_angle_constructible";
+pub const CONSTR_SQUARING_THE_CIRCLE: &str = "Constructibility.squaring_the_circle_constructible";
+pub const CONSTR_IS_CONSTRUCTIBLE_NUMBER: &str = "Constructibility.is_constructible_number";
+pub const CAS_SOLVE_QUADRATIC_SYMBOLIC: &str = "SymbolicAlgebra.solve_quadratic_symbolic";
+pub const CAS_FACTOR_QUADRATIC: &str = "SymbolicAlgebra.factor_quadratic";
+
+// ── Wave-8 Host binds (remaining CAS expression constructors) ─────────────
+pub const CAS_POW: &str = "SymbolicAlgebra.pow";
+pub const CAS_NEG: &str = "SymbolicAlgebra.neg";
+pub const CAS_SQRT: &str = "SymbolicAlgebra.sqrt";
+pub const CAS_EXP: &str = "SymbolicAlgebra.exp";
+pub const CAS_LN: &str = "SymbolicAlgebra.ln";
+pub const CAS_SIN: &str = "SymbolicAlgebra.sin";
+pub const CAS_COS: &str = "SymbolicAlgebra.cos";
+pub const CAS_TAN: &str = "SymbolicAlgebra.tan";
+
+// ── Wave-9 Host binds (remaining CAS constructors + poly helpers) ─────────
+pub const CAS_C: &str = "SymbolicAlgebra.c";
+pub const CAS_VAR: &str = "SymbolicAlgebra.var";
+pub const CAS_ADD: &str = "SymbolicAlgebra.add";
+pub const CAS_SUB: &str = "SymbolicAlgebra.sub";
+pub const CAS_MUL: &str = "SymbolicAlgebra.mul";
+pub const CAS_DIV: &str = "SymbolicAlgebra.div";
+pub const POLY_GCD: &str = "PolynomialAlgebra.gcd";
+pub const POLY_SCALE: &str = "PolynomialAlgebra.scale";
+
+// ── Wave-10 Host binds (remaining poly/CAS + statistical manifold) ────────
+pub const POLY_EVAL: &str = "PolynomialAlgebra.eval";
+pub const POLY_ZERO: &str = "PolynomialAlgebra.zero";
+pub const POLY_CONSTANT: &str = "PolynomialAlgebra.constant";
+pub const CAS_PARSE: &str = "SymbolicAlgebra.parse";
+pub const STAT_VALIDATE_PROBABILITY: &str = "Statistics.validate_probability";
+pub const STAT_SIMPLEX_PROJECT: &str = "Statistics.simplex_project";
+pub const STAT_FISHER_DISTANCE: &str = "Statistics.fisher_distance";
+pub const STAT_NEG_ENTROPY: &str = "Statistics.neg_entropy";
+
+// ── Wave-11 Host binds (remaining statistical manifold free fns) ──────────
+pub const STAT_SIMPLEX_PROJECT_IDEMPOTENT: &str = "Statistics.simplex_project_idempotent";
+pub const STAT_FISHER_INNER_PRODUCT: &str = "Statistics.fisher_inner_product";
+pub const STAT_NEG_ENTROPY_GRAD: &str = "Statistics.neg_entropy_grad";
+pub const STAT_KL_BREGMAN_FORM: &str = "Statistics.kl_bregman_form";
+pub const STAT_BREGMAN_PYTHAGOREAN_TEST: &str = "Statistics.bregman_pythagorean_test";
+pub const STAT_PROBABILITY_HASH: &str = "Statistics.probability_hash";
+
+// ── Wave-12 Host binds (chem integrals + CAS quin I/O + 3×3 eigen) ────────
+pub const CHEM_BOYS_FUNCTION: &str = "Chemistry.boys_function";
+pub const CHEM_OVERLAP_S: &str = "Chemistry.overlap_s";
+pub const CHEM_KINETIC_S: &str = "Chemistry.kinetic_s";
+pub const CHEM_NUCLEAR_S: &str = "Chemistry.nuclear_s";
+pub const CHEM_DIPOLE_S: &str = "Chemistry.dipole_s";
+pub const LA_SYMMETRIC_EIGEN_3X3: &str = "LinearAlgebra.symmetric_eigen_3x3";
+pub const CAS_TO_QUINS: &str = "SymbolicAlgebra.to_quins";
+pub const CAS_FROM_QUINS: &str = "SymbolicAlgebra.from_quins";
+
+// ── Wave-13 Host binds (chem ERI/angular + gemm CPU + poly coeffs) ────────
+pub const CHEM_EVALUATE_ERI: &str = "Chemistry.evaluate_eri";
+pub const CHEM_TOTAL_ANGULAR_MOMENTUM: &str = "Chemistry.total_angular_momentum";
+pub const CHEM_LETTER: &str = "Chemistry.letter";
+pub const CHEM_N_CARTESIAN: &str = "Chemistry.n_cartesian";
+pub const CHEM_N_SPHERICAL: &str = "Chemistry.n_spherical";
+pub const CHEM_FROM_LETTER: &str = "Chemistry.from_letter";
+pub const LA_GEMM: &str = "LinearAlgebra.gemm";
+pub const POLY_COEFFS: &str = "PolynomialAlgebra.coeffs";
+
+// ── Wave-14 Host binds (calculus / graph helpers) ────────────────────────
+pub const CALC_HERMITE_DENSE_OUTPUT: &str = "Calculus.hermite_dense_output";
+pub const CALC_BDF1_STEP: &str = "Calculus.bdf1_step";
+pub const CALC_BDF2_STEP: &str = "Calculus.bdf2_step";
+pub const CALC_INVARIANT_DRIFT: &str = "Calculus.invariant_drift";
+pub const CALC_PERMUTATION_PARITY: &str = "Calculus.permutation_parity";
+pub const CALC_PACK_F32_PAIR: &str = "Calculus.pack_f32_pair";
+pub const CALC_UNPACK_F32_PAIR: &str = "Calculus.unpack_f32_pair";
+pub const GRAPH_TOP_K: &str = "GraphReasoning.top_k";
+
+// ── Wave-15 Host binds (calculus / NT / engineering) ──────────────────
+pub const CALC_VERLET_STEP: &str = "Calculus.verlet_step";
+pub const CALC_RUTH3_STEP: &str = "Calculus.ruth3_step";
+pub const CALC_YOSHIDA4_STEP: &str = "Calculus.yoshida4_step";
+pub const CALC_INTEGRATE_BDF: &str = "Calculus.integrate_bdf";
+pub const CALC_INTEGRATE_WITH_SENSITIVITY: &str = "Calculus.integrate_with_sensitivity";
+pub const NT_EXTENDED_GCD: &str = "NumberTheory.extended_gcd";
+pub const NT_CRT: &str = "NumberTheory.crt";
+pub const ENG_NATURAL_FREQUENCY_SDOF: &str = "EngineeringAnalysis.natural_frequency_sdof";
+
+// ── Wave-16 Host binds (eng / GA / chem / fuzzy) ─────────────────────
+pub const ENG_ANALYZE_HARMONIC_SDOF: &str = "EngineeringAnalysis.analyze_harmonic_sdof";
+pub const ENG_ANALYZE_EULER: &str = "EngineeringAnalysis.analyze_euler";
+pub const ENG_COMPUTE_RELIABILITY_INDEX: &str = "EngineeringAnalysis.compute_reliability_index";
+pub const GA_CROSS_PRODUCT: &str = "GeometricAlgebra.cross_product";
+pub const GA_NORMALIZE_VECTOR: &str = "GeometricAlgebra.normalize_vector";
+pub const GA_ANGLE_BETWEEN_VECTORS: &str = "GeometricAlgebra.angle_between_vectors";
+pub const FQ_THRESHOLD: &str = "FuzzyQuery.threshold";
+pub const CHEM_GAUSSIAN_ELIMINATION: &str = "Chemistry.gaussian_elimination";
+
+// ── Wave-17 Host binds (chem / fuzzy / transforms) ───────────────────
+pub const CHEM_JACOBI_DIAGONALIZATION: &str = "Chemistry.jacobi_diagonalization";
+pub const CHEM_TRANSPOSE: &str = "Chemistry.transpose";
+pub const CHEM_ORTHOGONALIZATION_MATRIX: &str = "Chemistry.orthogonalization_matrix";
+pub const FQ_TOP_K: &str = "FuzzyQuery.top_k";
+pub const FQ_NEGATE: &str = "FuzzyQuery.negate";
+pub const FQ_AND: &str = "FuzzyQuery.and";
+pub const FQ_OR: &str = "FuzzyQuery.or";
+pub const XFORM_DFT_COMPLEX: &str = "IntegralTransforms.dft_complex";
+
+// ── Wave-18 Host binds (calculus rem / cosmic numeric / NLP) ───────────
+pub const CALC_CANONICAL_POISSON_BRACKET: &str = "Calculus.canonical_poisson_bracket";
+pub const CALC_STORMER_VERLET_STEP: &str = "Calculus.stormer_verlet_step";
+pub const CALC_ADAPTIVE_GAUSS_KRONROD_15: &str = "Calculus.adaptive_gauss_kronrod_15";
+pub const CALC_JVP: &str = "Calculus.jvp";
+pub const CALC_VJP: &str = "Calculus.vjp";
+pub const COSMIC_WARP_FACTOR_C: &str = "Cosmic.warp_factor_c";
+pub const COSMIC_TYPICAL_LENGTH: &str = "Cosmic.typical_length";
+pub const COSMIC_OBSERVE_REDSHIFT: &str = "Cosmic.observe_redshift";
+pub const NLP_TOKENIZE: &str = "NLP.tokenize";
+pub const NLP_SPLIT_SENTENCES: &str = "NLP.split_sentences";
+
+// ── Wave-19 Host binds (Inference / ThreeD point-set / Audio numeric) ──
+pub const INFERENCE_RELU: &str = "Inference.relu";
+pub const INFERENCE_SIGMOID: &str = "Inference.sigmoid";
+pub const INFERENCE_GELU: &str = "Inference.gelu";
+pub const INFERENCE_SOFTMAX: &str = "Inference.softmax";
+pub const INFERENCE_RMS_NORM: &str = "Inference.rms_norm";
+pub const GEOM_AVERAGE_SPACING_3D: &str = "ComputationalGeometry.average_spacing_3d";
+pub const GEOM_LOCAL_DENSITY_3D: &str = "ComputationalGeometry.local_density_3d";
+pub const AUDIO_EPISTEMIC_TEMPERATURE_FROM_Q: &str = "Audio.epistemic_temperature_from_q";
+
+// ── Wave-20 Host binds (Audio / Scene / point-set numeric) ──
+pub const AUDIO_EPISTEMIC_FM_INDEX: &str = "Audio.epistemic_fm_index";
+pub const AUDIO_SIGMA_DOMINANT_FREQUENCY: &str = "Audio.sigma_dominant_frequency";
+pub const AUDIO_PARAMETRIC_SAMPLE: &str = "Audio.parametric_sample";
+pub const AUDIO_BIN_TO_FREQ_LINEAR: &str = "Audio.bin_to_freq_linear";
+pub const AUDIO_BIN_TO_FREQ_LOG: &str = "Audio.bin_to_freq_log";
+pub const SCENE_LERP_CAMERA: &str = "Scene.lerp_camera";
+pub const SCENE_CAMERA_FRAME_NODE: &str = "Scene.camera_frame_node";
+pub const GEOM_MEAN_KNN_DISTANCE_3D: &str = "ComputationalGeometry.mean_knn_distance_3d";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1420,6 +1612,17 @@ pub const ALL_BOUND: &[&str] = &[
     LA_CHOLESKY_DET,
     LA_CHARPOLY,
     LA_EIGENVALUES_GENERAL,
+    LA_QR_FACTOR,
+    LA_QR_FORM_Q,
+    LA_QR_SOLVE_LS,
+    LA_ADD_INTO,
+    LA_CHOLESKY_SOLVE,
+    LA_AXPY,
+    LA_HADAMARD_INTO,
+    LA_ADD_ASSIGN,
+    LA_HADAMARD_ASSIGN,
+    LA_SCALE,
+    LA_MATVEC,
     ONTOLOGY_ALIGN,
     GRAPH_FUZZY_JACCARD,
     GRAPH_FUZZY_DICE,
@@ -1446,6 +1649,154 @@ pub const ALL_BOUND: &[&str] = &[
     CAS_EXPAND,
     CAS_FACTOR,
     CAS_SOLVE_QUADRATIC,
+    CAS_SIMPLIFY_TRIG,
+    CAS_INTEGRATE,
+    CAS_TAYLOR_COEFFICIENTS,
+    CAS_TAYLOR_EVAL,
+    CAS_LIMIT,
+    CAS_INTEGRATE_DEFINITE,
+    CAS_LIMIT_AT_INFINITY,
+    CAS_REAL_ROOTS,
+    ODE_SOLVE_LINEAR_FIRST_ORDER,
+    ODE_SOLVE_LINEAR_SECOND_ORDER,
+    ODE_CLASSIFY_SECOND_ORDER_PDE,
+    POLY_DIV_REM,
+    POLY_DERIVATIVE,
+    POLY_MONIC,
+    POLY_RESULTANT,
+    POLY_ADD,
+    POLY_SUB,
+    POLY_MUL,
+    POLY_DEGREE,
+    POLY_LEADING,
+    POLY_IS_ZERO,
+    ODE_SOLVE_SEPARABLE,
+    ODE_SOLVE_FIRST_ORDER_LINEAR_PDE,
+    CAS_SOLVE_POLYNOMIAL_EXPR,
+    CAS_SIMPLIFY_WITH_ASSUMPTIONS,
+    CAS_ROOTS,
+    LA_SOLVE_LINEAR_SYSTEM,
+    CAS_EXPR_CITATION_HASH,
+    CAS_PARTIAL,
+    CAS_JACOBIAN,
+    CAS_HESSIAN,
+    CAS_GRADIENT_AT,
+    CAS_HESSIAN_AT,
+    CONSTR_IS_REGULAR_POLYGON,
+    CONSTR_IS_FERMAT_PRIME,
+    CONSTR_FROM_MIN_POLY_DEGREE,
+    CONSTR_IS_POWER_OF_TWO,
+    CONSTR_IS_CENTRAL_ANGLE,
+    CONSTR_DOUBLING_THE_CUBE,
+    CONSTR_TRISECTING_GENERAL_ANGLE,
+    CONSTR_SQUARING_THE_CIRCLE,
+    CONSTR_IS_CONSTRUCTIBLE_NUMBER,
+    CAS_SOLVE_QUADRATIC_SYMBOLIC,
+    CAS_FACTOR_QUADRATIC,
+    CAS_POW,
+    CAS_NEG,
+    CAS_SQRT,
+    CAS_EXP,
+    CAS_LN,
+    CAS_SIN,
+    CAS_COS,
+    CAS_TAN,
+    CAS_C,
+    CAS_VAR,
+    CAS_ADD,
+    CAS_SUB,
+    CAS_MUL,
+    CAS_DIV,
+    POLY_GCD,
+    POLY_SCALE,
+    POLY_EVAL,
+    POLY_ZERO,
+    POLY_CONSTANT,
+    CAS_PARSE,
+    STAT_VALIDATE_PROBABILITY,
+    STAT_SIMPLEX_PROJECT,
+    STAT_FISHER_DISTANCE,
+    STAT_NEG_ENTROPY,
+    STAT_SIMPLEX_PROJECT_IDEMPOTENT,
+    STAT_FISHER_INNER_PRODUCT,
+    STAT_NEG_ENTROPY_GRAD,
+    STAT_KL_BREGMAN_FORM,
+    STAT_BREGMAN_PYTHAGOREAN_TEST,
+    STAT_PROBABILITY_HASH,
+    CHEM_BOYS_FUNCTION,
+    CHEM_OVERLAP_S,
+    CHEM_KINETIC_S,
+    CHEM_NUCLEAR_S,
+    CHEM_DIPOLE_S,
+    LA_SYMMETRIC_EIGEN_3X3,
+    CAS_TO_QUINS,
+    CAS_FROM_QUINS,
+    CHEM_EVALUATE_ERI,
+    CHEM_TOTAL_ANGULAR_MOMENTUM,
+    CHEM_LETTER,
+    CHEM_N_CARTESIAN,
+    CHEM_N_SPHERICAL,
+    CHEM_FROM_LETTER,
+    LA_GEMM,
+    POLY_COEFFS,
+    CALC_HERMITE_DENSE_OUTPUT,
+    CALC_BDF1_STEP,
+    CALC_BDF2_STEP,
+    CALC_INVARIANT_DRIFT,
+    CALC_PERMUTATION_PARITY,
+    CALC_PACK_F32_PAIR,
+    CALC_UNPACK_F32_PAIR,
+    GRAPH_TOP_K,
+    CALC_VERLET_STEP,
+    CALC_RUTH3_STEP,
+    CALC_YOSHIDA4_STEP,
+    CALC_INTEGRATE_BDF,
+    CALC_INTEGRATE_WITH_SENSITIVITY,
+    NT_EXTENDED_GCD,
+    NT_CRT,
+    ENG_NATURAL_FREQUENCY_SDOF,
+    ENG_ANALYZE_HARMONIC_SDOF,
+    ENG_ANALYZE_EULER,
+    ENG_COMPUTE_RELIABILITY_INDEX,
+    GA_CROSS_PRODUCT,
+    GA_NORMALIZE_VECTOR,
+    GA_ANGLE_BETWEEN_VECTORS,
+    FQ_THRESHOLD,
+    CHEM_GAUSSIAN_ELIMINATION,
+    CHEM_JACOBI_DIAGONALIZATION,
+    CHEM_TRANSPOSE,
+    CHEM_ORTHOGONALIZATION_MATRIX,
+    FQ_TOP_K,
+    FQ_NEGATE,
+    FQ_AND,
+    FQ_OR,
+    XFORM_DFT_COMPLEX,
+    CALC_CANONICAL_POISSON_BRACKET,
+    CALC_STORMER_VERLET_STEP,
+    CALC_ADAPTIVE_GAUSS_KRONROD_15,
+    CALC_JVP,
+    CALC_VJP,
+    COSMIC_WARP_FACTOR_C,
+    COSMIC_TYPICAL_LENGTH,
+    COSMIC_OBSERVE_REDSHIFT,
+    NLP_TOKENIZE,
+    NLP_SPLIT_SENTENCES,
+    INFERENCE_RELU,
+    INFERENCE_SIGMOID,
+    INFERENCE_GELU,
+    INFERENCE_SOFTMAX,
+    INFERENCE_RMS_NORM,
+    GEOM_AVERAGE_SPACING_3D,
+    GEOM_LOCAL_DENSITY_3D,
+    AUDIO_EPISTEMIC_TEMPERATURE_FROM_Q,
+    AUDIO_EPISTEMIC_FM_INDEX,
+    AUDIO_SIGMA_DOMINANT_FREQUENCY,
+    AUDIO_PARAMETRIC_SAMPLE,
+    AUDIO_BIN_TO_FREQ_LINEAR,
+    AUDIO_BIN_TO_FREQ_LOG,
+    SCENE_LERP_CAMERA,
+    SCENE_CAMERA_FRAME_NODE,
+    GEOM_MEAN_KNN_DISTANCE_3D,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -1930,7 +2281,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | N3_EVALUATE
         | GRAPH_AUTHORING
         | GRAPH_SHORTEST_PATH
-        | GRAPH_SPREADING_ACTIVATION => "graph",
+        | GRAPH_SPREADING_ACTIVATION
+        | GRAPH_TOP_K => "graph",
         DEONTIC_EVAL
         | EPISTEMIC_EVAL
         | PARACONSISTENT_ROUTE
@@ -1958,6 +2310,9 @@ pub fn seam_for(id: &str) -> &'static str {
         | CALCULUS_WORKBENCH
         | OPT_HILL
         | GA_DOT
+        | GA_CROSS_PRODUCT
+        | GA_NORMALIZE_VECTOR
+        | GA_ANGLE_BETWEEN_VECTORS
         | SPEC_BESSEL
         | LA_TRANSPOSE
         | LA_DET
@@ -1972,6 +2327,17 @@ pub fn seam_for(id: &str) -> &'static str {
         | LA_CHOLESKY_DET
         | LA_CHARPOLY
         | LA_EIGENVALUES_GENERAL
+        | LA_QR_FACTOR
+        | LA_QR_FORM_Q
+        | LA_QR_SOLVE_LS
+        | LA_ADD_INTO
+        | LA_CHOLESKY_SOLVE
+        | LA_AXPY
+        | LA_HADAMARD_INTO
+        | LA_ADD_ASSIGN
+        | LA_HADAMARD_ASSIGN
+        | LA_SCALE
+        | LA_MATVEC
         | ONTOLOGY_ALIGN
         | GRAPH_FUZZY_JACCARD
         | GRAPH_FUZZY_DICE
@@ -2014,7 +2380,94 @@ pub fn seam_for(id: &str) -> &'static str {
         | CAS_EXPAND
         | CAS_FACTOR
         | CAS_SOLVE_QUADRATIC
+        | CAS_SIMPLIFY_TRIG
+        | CAS_INTEGRATE
+        | CAS_TAYLOR_COEFFICIENTS
+        | CAS_TAYLOR_EVAL
+        | CAS_LIMIT
+        | CAS_INTEGRATE_DEFINITE
+        | CAS_LIMIT_AT_INFINITY
+        | CAS_REAL_ROOTS
+        | ODE_SOLVE_LINEAR_FIRST_ORDER
+        | ODE_SOLVE_LINEAR_SECOND_ORDER
+        | ODE_CLASSIFY_SECOND_ORDER_PDE
+        | POLY_DIV_REM
+        | POLY_DERIVATIVE
+        | POLY_MONIC
+        | POLY_RESULTANT
+        | POLY_ADD
+        | POLY_SUB
+        | POLY_MUL
+        | POLY_DEGREE
+        | POLY_LEADING
+        | POLY_IS_ZERO
+        | ODE_SOLVE_SEPARABLE
+        | ODE_SOLVE_FIRST_ORDER_LINEAR_PDE
+        | CAS_SOLVE_POLYNOMIAL_EXPR
+        | CAS_SIMPLIFY_WITH_ASSUMPTIONS
+        | CAS_ROOTS
+        | LA_SOLVE_LINEAR_SYSTEM
+        | CAS_EXPR_CITATION_HASH
+        | CAS_PARTIAL
+        | CAS_JACOBIAN
+        | CAS_HESSIAN
+        | CAS_GRADIENT_AT
+        | CAS_HESSIAN_AT
+        | CONSTR_IS_REGULAR_POLYGON
+        | CONSTR_IS_FERMAT_PRIME
+        | CONSTR_FROM_MIN_POLY_DEGREE
+        | CONSTR_IS_POWER_OF_TWO
+        | CONSTR_IS_CENTRAL_ANGLE
+        | CONSTR_DOUBLING_THE_CUBE
+        | CONSTR_TRISECTING_GENERAL_ANGLE
+        | CONSTR_SQUARING_THE_CIRCLE
+        | CONSTR_IS_CONSTRUCTIBLE_NUMBER
+        | CAS_SOLVE_QUADRATIC_SYMBOLIC
+        | CAS_FACTOR_QUADRATIC
+        | CAS_POW
+        | CAS_NEG
+        | CAS_SQRT
+        | CAS_EXP
+        | CAS_LN
+        | CAS_SIN
+        | CAS_COS
+        | CAS_TAN
+        | CAS_C
+        | CAS_VAR
+        | CAS_ADD
+        | CAS_SUB
+        | CAS_MUL
+        | CAS_DIV
+        | POLY_GCD
+        | POLY_SCALE
+        | POLY_EVAL
+        | POLY_ZERO
+        | POLY_CONSTANT
+        | POLY_COEFFS
+        | CAS_PARSE
+        | CAS_TO_QUINS
+        | CAS_FROM_QUINS
+        | LA_SYMMETRIC_EIGEN_3X3
+        | LA_GEMM
+        | CALC_HERMITE_DENSE_OUTPUT
+        | CALC_BDF1_STEP
+        | CALC_BDF2_STEP
+        | CALC_INVARIANT_DRIFT
+        | CALC_PERMUTATION_PARITY
+        | CALC_PACK_F32_PAIR
+        | CALC_UNPACK_F32_PAIR
+        | CALC_VERLET_STEP
+        | CALC_RUTH3_STEP
+        | CALC_YOSHIDA4_STEP
+        | CALC_INTEGRATE_BDF
+        | CALC_INTEGRATE_WITH_SENSITIVITY
+        | CALC_CANONICAL_POISSON_BRACKET
+        | CALC_STORMER_VERLET_STEP
+        | CALC_ADAPTIVE_GAUSS_KRONROD_15
+        | CALC_JVP
+        | CALC_VJP
         | XFORM_DFT
+        | XFORM_DFT_COMPLEX
         | UNITS_CONVERT => "math",
         STAT_MEAN
         | STAT_PEARSON
@@ -2112,7 +2565,17 @@ pub fn seam_for(id: &str) -> &'static str {
         | STAT_MVN_LOG_PDF
         | STAT_MVN_PDF
         | STAT_MVN_SAMPLE
-        | STAT_MVN_MLE => "stats",
+        | STAT_MVN_MLE
+        | STAT_VALIDATE_PROBABILITY
+        | STAT_SIMPLEX_PROJECT
+        | STAT_FISHER_DISTANCE
+        | STAT_NEG_ENTROPY
+        | STAT_SIMPLEX_PROJECT_IDEMPOTENT
+        | STAT_FISHER_INNER_PRODUCT
+        | STAT_NEG_ENTROPY_GRAD
+        | STAT_KL_BREGMAN_FORM
+        | STAT_BREGMAN_PYTHAGOREAN_TEST
+        | STAT_PROBABILITY_HASH => "stats",
         GEOM_HULL2
         | GEOM_DISTANCE_2D
         | GEOM_DISTANCE_3D
@@ -2131,7 +2594,10 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_LINE_SEGMENT_INTERSECTION_2
         | GEOM_BEZIER_EVAL
         | GEOM_NEAREST_SITE
-        | GEOM_ORIENT_3D => "geometry",
+        | GEOM_ORIENT_3D
+        | GEOM_AVERAGE_SPACING_3D
+        | GEOM_LOCAL_DENSITY_3D
+        | GEOM_MEAN_KNN_DISTANCE_3D => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE
@@ -2226,7 +2692,8 @@ pub fn seam_for(id: &str) -> &'static str {
         // Number theory
         NT_NEXT_PRIME | NT_PRIME_FACTORS | NT_DIVISORS | NT_EULER_TOTIENT | NT_MOBIUS
         | NT_DIVISOR_COUNT | NT_DIVISOR_SUM | NT_MOD_POW | NT_MOD_INVERSE | NT_FACTORIAL
-        | NT_BINOMIAL | NT_PARTITIONS | NT_CATALAN | NT_STIRLING_SECOND | NT_STIRLING_FIRST => {
+        | NT_BINOMIAL | NT_PARTITIONS | NT_CATALAN | NT_STIRLING_SECOND | NT_STIRLING_FIRST
+        | NT_EXTENDED_GCD | NT_CRT => {
             "number_theory"
         }
         // Special functions
@@ -2239,7 +2706,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | INTERP_POLY_FIT | INTERP_POLY_EVAL => "interpolation",
         // Fuzzy query
         FQ_TRIANGULAR | FQ_TRAPEZOIDAL | FQ_APPROXIMATELY | FQ_RAMP_UP | FQ_RAMP_DOWN
-        | FQ_MUCH_GREATER_THAN | FQ_MUCH_LESS_THAN => "fuzzy_query",
+        | FQ_MUCH_GREATER_THAN | FQ_MUCH_LESS_THAN | FQ_THRESHOLD | FQ_TOP_K | FQ_NEGATE
+        | FQ_AND | FQ_OR => "fuzzy_query",
         PHYS_PROJECTILE | PHYS_WORKBENCH | BIO_ALIGN | BIO_WORKBENCH | CHEM_SMILES
         | CHEM_WORKBENCH => "science",
         CHEM_ELEMENT_SYMBOL
@@ -2248,7 +2716,22 @@ pub fn seam_for(id: &str) -> &'static str {
         | CHEM_LDA_EXCHANGE
         | CHEM_LDA_CORRELATION_VWN
         | CHEM_PARSE_BSE_JSON
-        | CHEM_STO3G => "chemistry",
+        | CHEM_STO3G
+        | CHEM_BOYS_FUNCTION
+        | CHEM_OVERLAP_S
+        | CHEM_KINETIC_S
+        | CHEM_NUCLEAR_S
+        | CHEM_DIPOLE_S
+        | CHEM_EVALUATE_ERI
+        | CHEM_TOTAL_ANGULAR_MOMENTUM
+        | CHEM_LETTER
+        | CHEM_N_CARTESIAN
+        | CHEM_N_SPHERICAL
+        | CHEM_FROM_LETTER
+        | CHEM_GAUSSIAN_ELIMINATION
+        | CHEM_JACOBI_DIAGONALIZATION
+        | CHEM_TRANSPOSE
+        | CHEM_ORTHOGONALIZATION_MATRIX => "chemistry",
         MED_TANIMOTO
         | MED_STRUCTURAL_FINGERPRINT
         | MED_ANALYZE_INTENSITY_GRID
@@ -2260,7 +2743,11 @@ pub fn seam_for(id: &str) -> &'static str {
         | ENG_FATIGUE_CYCLES
         | ENG_MINER_DAMAGE
         | ENG_ANALYZE_CONDUCTION
-        | ENG_FEM_STATIC => "engineering",
+        | ENG_FEM_STATIC
+        | ENG_NATURAL_FREQUENCY_SDOF
+        | ENG_ANALYZE_HARMONIC_SDOF
+        | ENG_ANALYZE_EULER
+        | ENG_COMPUTE_RELIABILITY_INDEX => "engineering",
         PHYS_WAVE_1D
         | PHYS_HEAT_DIFFUSION_1D
         | PHYS_ADVECTION_DIFFUSION_1D
@@ -2419,8 +2906,11 @@ pub fn seam_for(id: &str) -> &'static str {
         | COSMIC_SCALE_FACTOR
         | COSMIC_COMPTON_WAVELENGTH
         | COSMIC_DE_BROGLIE
-        | COSMIC_USRI_PARSE => "cosmic",
-        NLP_GAZETTEER_RUN | NLP_GAZETTEER_BUILD => "nlp",
+        | COSMIC_USRI_PARSE
+        | COSMIC_WARP_FACTOR_C
+        | COSMIC_TYPICAL_LENGTH
+        | COSMIC_OBSERVE_REDSHIFT => "cosmic",
+        NLP_GAZETTEER_RUN | NLP_GAZETTEER_BUILD | NLP_TOKENIZE | NLP_SPLIT_SENTENCES => "nlp",
         NLP_FST_LOOKUP
         | NLP_COREF_RESOLVE
         | NLP_FRAME_EXTRACT
@@ -2437,7 +2927,12 @@ pub fn seam_for(id: &str) -> &'static str {
         | INFERENCE_RUN_CLASSIFIER
         | INFERENCE_RUN_RERANKER
         | INFERENCE_VECTOR_SEARCH
-        | INFERENCE_CONSTRAINED_DECODE => "inference",
+        | INFERENCE_CONSTRAINED_DECODE
+        | INFERENCE_RELU
+        | INFERENCE_SIGMOID
+        | INFERENCE_GELU
+        | INFERENCE_SOFTMAX
+        | INFERENCE_RMS_NORM => "inference",
         FINANCE_CONVERT_CURRENCY
         | FINANCE_MULTISIG_CHECK
         | FINANCE_LEDGER_BALANCE
@@ -2561,7 +3056,13 @@ pub fn seam_for(id: &str) -> &'static str {
         AUDIO_OSCILLATOR | AUDIO_ENVELOPE | AUDIO_FILTER | AUDIO_LFO | AUDIO_DELAY
         | AUDIO_REVERB | AUDIO_COMPRESSOR | AUDIO_EQ | AUDIO_MIDI_NOTE | AUDIO_QUANTIZE
         | AUDIO_TRANSPOSE | AUDIO_TRANSPORT | AUDIO_WAVEFORM_METER | AUDIO_PHASE_METER
-        | AUDIO_LOUDNESS_METER => "audio",
+        | AUDIO_LOUDNESS_METER
+        | AUDIO_EPISTEMIC_TEMPERATURE_FROM_Q
+        | AUDIO_EPISTEMIC_FM_INDEX
+        | AUDIO_SIGMA_DOMINANT_FREQUENCY
+        | AUDIO_PARAMETRIC_SAMPLE
+        | AUDIO_BIN_TO_FREQ_LINEAR
+        | AUDIO_BIN_TO_FREQ_LOG => "audio",
         SCENE_ADD_LIGHT
         | SCENE_LINK_SEMANTIC
         | SCENE_DUPLICATE_NODE
@@ -2569,7 +3070,9 @@ pub fn seam_for(id: &str) -> &'static str {
         | SCENE_IK_LOOK_AT
         | SCENE_IK_CCD
         | SCENE_SMOOTH_DAMP
-        | SCENE_SMOOTH_DAMP_VEC3 => "render",
+        | SCENE_SMOOTH_DAMP_VEC3
+        | SCENE_LERP_CAMERA
+        | SCENE_CAMERA_FRAME_NODE => "render",
         SCENE_CREATE
         | SCENE_ADD_NODE
         | SCENE_SET_TRANSFORM

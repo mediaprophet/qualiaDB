@@ -3,48 +3,201 @@
 use super::*;
 
 pub(super) fn register_audio_toolbox(reg: &mut Registry) {
-    register_compact_toolbox(
-        reg,
-        "audio",
-        "Audio, Triad Synth & Speech",
-        "audio",
-        "p64",
-        "audio",
-        "Triad formant synthesis, PCM capture, and neural audio latents.",
-        "Triad Synthesis & Audio",
-        &[
-            CompactTool {
-                id: "place_audio_session",
-                label: "+ Audio session",
-                icon: "audio",
+    let session_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:place_audio_session".into(),
+                label: "+ Audio session".into(),
+                icon: "audio".into(),
                 kind: ToolKind::PlaceContainer,
-                action: ActionType::Query,
-                description: "Place an Audio session (transport + oscillator). Not a nested DAW.",
+                capability_scope: Some(SCOPE_PLACE.into()),
+                ontology_prefix: "audio".into(),
+                description: "Place an Audio session (transport + oscillator). Not a nested DAW."
+                    .into(),
             },
-            CompactTool {
-                id: "place_media",
-                label: "+ Triad Formant Synthesizer",
-                icon: "media",
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:place_media".into(),
+                label: "+ Triad Formant Synthesizer".into(),
+                icon: "media".into(),
                 kind: ToolKind::PlaceContainer,
-                action: ActionType::Query,
-                description: "Place the live media/audio synthesis surface.",
+                capability_scope: Some(SCOPE_PLACE.into()),
+                ontology_prefix: "audio".into(),
+                description: "Place the live media/audio synthesis surface.".into(),
             },
-            CompactTool {
-                id: "mic_capture",
-                label: "Mic Capture (PCM Stream)",
-                icon: "audio",
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:mic_capture".into(),
+                label: "Mic Capture (PCM Stream)".into(),
+                icon: "audio".into(),
                 kind: ToolKind::RunAction,
-                action: ActionType::Invoke,
-                description: "Capture a bounded PCM stream.",
+                capability_scope: None,
+                ontology_prefix: "audio".into(),
+                description: "Capture a bounded PCM stream.".into(),
             },
-            CompactTool {
-                id: "neural_latents",
-                label: "Neural Audio Latents (P64)",
-                icon: "audio",
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:neural_latents".into(),
+                label: "Neural Audio Latents (P64)".into(),
+                icon: "audio".into(),
                 kind: ToolKind::RunAction,
-                action: ActionType::Invoke,
-                description: "Inspect P64 audio latent state.",
+                capability_scope: None,
+                ontology_prefix: "audio".into(),
+                description: "Inspect P64 audio latent state.".into(),
             },
+            ActionType::Invoke,
+        )),
+    ];
+
+    let dsp_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_ep_temp".into(),
+                label: "Epistemic τ".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.epistemic_temperature_from_q".into()),
+                ontology_prefix: "audio".into(),
+                description: "τ = clamp(q², 0, 4) via Audio.epistemic_temperature_from_q.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_ep_fm".into(),
+                label: "Epistemic FM".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.epistemic_fm_index".into()),
+                ontology_prefix: "audio".into(),
+                description: "FM index from epistemic q and carrier μ.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_sigma_freq".into(),
+                label: "σ dominant Hz".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.sigma_dominant_frequency".into()),
+                ontology_prefix: "audio".into(),
+                description: "Map 64 preview bins to a dominant frequency (Hz).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_parametric_sample".into(),
+                label: "Parametric sample".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.parametric_sample".into()),
+                ontology_prefix: "audio".into(),
+                description: "Advance one sample from a parametric voice state.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_bin_freq_linear".into(),
+                label: "Bin → Hz linear".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.bin_to_freq_linear".into()),
+                ontology_prefix: "audio".into(),
+                description: "STFT bin index to frequency (Hz).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_bin_freq_log".into(),
+                label: "Bin → Hz log".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.bin_to_freq_log".into()),
+                ontology_prefix: "audio".into(),
+                description: "CQT-style log bin to frequency (Hz).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_midi_note".into(),
+                label: "MIDI → Hz".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.midi_note".into()),
+                ontology_prefix: "audio".into(),
+                description: "Convert MIDI note number to frequency (to_freq).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_quantize".into(),
+                label: "Quantize beat".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.quantize".into()),
+                ontology_prefix: "audio".into(),
+                description: "Quantize a beat position onto a grid.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "audio:dsp_transpose".into(),
+                label: "Transpose MIDI".into(),
+                icon: "audio".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Audio.transpose".into()),
+                ontology_prefix: "audio".into(),
+                description: "Transpose a MIDI note by semitones (0–127 clamp).".into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
+
+    reg.register_toolbox(Toolbox::new(
+        ToolboxMetadata {
+            id: "audio".into(),
+            label: "Audio, Triad Synth & Speech".into(),
+            icon: "audio".into(),
+            ontology_prefix: "audio".into(),
+            description: "Triad formant synthesis, PCM capture, and neural audio latents.".into(),
+            enabled_by_default: true,
+            family: "audio".into(),
+        },
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "audio:tools".into(),
+                    label: "Triad Synthesis & Audio".into(),
+                    icon: "audio".into(),
+                    description: "Triad formant synthesis, PCM capture, and neural audio latents."
+                        .into(),
+                },
+                session_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "audio:dsp".into(),
+                    label: "Live audio DSP".into(),
+                    icon: "audio".into(),
+                    description:
+                        "Curated Audio.* DSP scalars — epistemic τ/FM, bin→Hz, MIDI, grid."
+                            .into(),
+                },
+                dsp_tools,
+            ),
         ],
-    );
+    ));
 }

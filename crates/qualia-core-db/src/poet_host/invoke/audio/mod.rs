@@ -1,6 +1,16 @@
 //! Audio invoke seam — spectrum analysis from the time-frequency surface engine.
 
 pub mod dsp;
+mod wave19_host;
+mod wave20_host;
+
+pub use wave19_host::epistemic_temperature_from_q_host as epistemic_temperature_from_q;
+pub use wave20_host::{
+    bin_to_freq_linear_host as bin_to_freq_linear, bin_to_freq_log_host as bin_to_freq_log,
+    epistemic_fm_index_host as epistemic_fm_index,
+    parametric_sample_host as parametric_sample,
+    sigma_dominant_frequency_host as sigma_dominant_frequency,
+};
 
 use super::args;
 use crate::audio::tf_surface::TfSurface;

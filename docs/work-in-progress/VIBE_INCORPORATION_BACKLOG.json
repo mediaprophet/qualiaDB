@@ -1,11 +1,11 @@
 {
-  "generated_utc": "2026-09-06 04:37 UTC",
-  "all_bound_count": 897,
-  "all_invoke_count": 897,
+  "generated_utc": "2026-09-08 00:21 UTC",
+  "all_bound_count": 1056,
+  "all_invoke_count": 1056,
   "catalog_drift_only_bound": [],
   "catalog_drift_only_invoke": [],
-  "pub_fn_count": 19362,
-  "host_bound_fn_count": 2892,
+  "pub_fn_count": 19606,
+  "host_bound_fn_count": 3264,
   "q1_host_missing": [
     {
       "crate": "qualia-core-db",
@@ -14,7 +14,9 @@
       "path": "crates/qualia-core-db/src/lib.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.calculate_parity",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -40,7 +42,9 @@
       "path": "crates/qualia-core-db/src/lib.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.extract_clean_metadata_value",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -51,7 +55,10 @@
       "path": "crates/qualia-core-db/src/lib.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.extract_lamport_clock",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -106,7 +113,10 @@
       "path": "crates/qualia-core-db/src/lib.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.get_subject_literal_id",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "sub",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -128,7 +138,10 @@
       "path": "crates/qualia-core-db/src/lib.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.is_subject_nested",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "sub",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -164,7 +177,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.new_conduct_violation",
       "fuzzy_method_hints": [
-        "new"
+        "new",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -190,7 +204,9 @@
       "path": "crates/qualia-core-db/src/lib.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.recalculate_parity",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -201,7 +217,10 @@
       "path": "crates/qualia-core-db/src/lib.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.set_lamport_clock",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -246,7 +265,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_ecc_parity",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -282,7 +302,9 @@
       "path": "crates/qualia-core-db/src/agent_runtime/corpus.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.cases_with_tag",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -316,7 +338,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.load_corpus_from_file",
       "fuzzy_method_hints": [
-        "load"
+        "load",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -329,7 +353,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.parse_corpus",
       "fuzzy_method_hints": [
-        "parse"
+        "parse",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -342,7 +368,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.compute_metrics",
       "fuzzy_method_hints": [
-        "compute"
+        "compute",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -355,7 +382,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.eval_case",
       "fuzzy_method_hints": [
-        "eval"
+        "eval",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -369,7 +397,8 @@
       "proposed_host_id": "CoreDb.evaluate_corpus",
       "fuzzy_method_hints": [
         "evaluate",
-        "eval"
+        "eval",
+        "or"
       ],
       "priority": 100,
       "shellish": false
@@ -381,7 +410,10 @@
       "path": "crates/qualia-core-db/src/agent_runtime/evaluator.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.score_case",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -392,7 +424,9 @@
       "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.active_agents",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -403,7 +437,10 @@
       "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.add_capability",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "add",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -414,7 +451,9 @@
       "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.all_capabilities",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -437,7 +476,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.create_blackboard",
       "fuzzy_method_hints": [
-        "create"
+        "create",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -450,7 +490,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.create_phase_leaser",
       "fuzzy_method_hints": [
-        "create"
+        "create",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -463,7 +504,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.create_session",
       "fuzzy_method_hints": [
-        "create"
+        "create",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -476,7 +518,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.execute_session",
       "fuzzy_method_hints": [
-        "execute"
+        "execute",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -488,7 +531,10 @@
       "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.find_agent_for_capability",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -510,7 +556,9 @@
       "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.has_capability",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -571,6 +619,7 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.classify",
       "fuzzy_method_hints": [
+        "c",
         "classify_mistake",
         "classify_reality"
       ],
@@ -598,7 +647,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.plan_to_record_map",
       "fuzzy_method_hints": [
-        "plan"
+        "plan",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -610,7 +661,9 @@
       "path": "crates/qualia-core-db/src/archive.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decompress_frame",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -635,7 +688,9 @@
       "path": "crates/qualia-core-db/src/archive.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.physical_offset",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -657,7 +712,9 @@
       "path": "crates/qualia-core-db/src/archive.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.read_dictionary",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -680,7 +737,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.acoustic_effective_mode",
       "fuzzy_method_hints": [
-        "mode"
+        "mode",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -693,7 +751,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.acoustic_enabled_for_mode",
       "fuzzy_method_hints": [
-        "mode"
+        "mode",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -705,7 +765,10 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.acoustic_params_from_tensor",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -716,7 +779,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.apply_binaural_to_uniform",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -727,7 +792,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.drain_sonic_tokens",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -738,7 +805,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.from_tensor",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -771,7 +840,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.pop_sonic_token",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -782,7 +853,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.push_sonic_token",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -793,7 +866,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sonic_token_ring",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -804,7 +879,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sonify_tensor_node",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -815,7 +892,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.to_phenomenal_uniform",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -826,7 +905,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.to_uniform",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -859,7 +940,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.init_acoustic_sab",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -881,7 +964,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.read_uniform_from_sab",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -892,7 +977,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.write_uniform_to_sab",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -903,7 +990,9 @@
       "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.write_uniform_to_sab_with_mirror",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -914,7 +1003,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.bake_audio_sidecar_into",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -926,7 +1017,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.compile_spectral_sheet_quin",
       "fuzzy_method_hints": [
-        "compile"
+        "compile",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -938,7 +1030,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.enrich_preview_from_sidecar",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -949,7 +1043,10 @@
       "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.format_sidecar_relpath",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -960,7 +1057,10 @@
       "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.link_tensor_audio_sidecar",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -971,7 +1071,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sidecar_content_hash",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -982,7 +1084,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.write_sidecar_file",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -994,7 +1098,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.bake_spectral_v2_from_samples",
       "fuzzy_method_hints": [
-        "sample"
+        "sample",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1006,7 +1111,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.copy_sidecar_frame_to_preview_bins",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1017,7 +1124,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.from_tensor_preview",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1051,7 +1160,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.parse_sidecar_header",
       "fuzzy_method_hints": [
-        "parse"
+        "parse",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1064,7 +1174,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.parse_v2_subheader",
       "fuzzy_method_hints": [
-        "parse"
+        "parse",
+        "sub"
       ],
       "priority": 100,
       "shellish": false
@@ -1089,7 +1200,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.preview_bins_from_tensor",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1100,7 +1213,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sidecar_frame_view",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1111,7 +1226,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sidecar_mel_frame_view",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1122,7 +1239,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sidecar_mfcc_frame_view",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1133,7 +1252,9 @@
       "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.v2_sidecar_size",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1144,7 +1265,9 @@
       "path": "crates/qualia-core-db/src/audio/cqt_bake.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.bake_cqt_sidecar_from_preview",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1156,7 +1279,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.bake_cqt_sidecar_from_samples",
       "fuzzy_method_hints": [
-        "sample"
+        "sample",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1168,7 +1292,10 @@
       "path": "crates/qualia-core-db/src/audio/cqt_bake.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.forward_cqt",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1179,7 +1306,9 @@
       "path": "crates/qualia-core-db/src/audio/cqt_bake.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.preview_to_cqt_frame",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1235,7 +1364,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.set_band_gains",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "and"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1260,7 +1391,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1271,7 +1404,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1282,7 +1417,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1293,7 +1430,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1352,7 +1491,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/envelope.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1378,7 +1519,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.recalculate",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1404,7 +1547,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.set_cutoff",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1426,7 +1571,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1464,7 +1611,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.set_frequency",
       "fuzzy_method_hints": [
-        "eq"
+        "eq",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1476,7 +1624,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/lfo.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1517,7 +1667,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/meters.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1528,7 +1680,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/meters.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.waveform_display",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1540,7 +1694,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.clear_loop",
       "fuzzy_method_hints": [
-        "clear"
+        "clear",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1659,7 +1814,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.position_seconds",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1670,7 +1827,10 @@
       "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.record",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1725,7 +1885,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1752,7 +1914,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.set_frequency",
       "fuzzy_method_hints": [
-        "eq"
+        "eq",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1775,7 +1938,9 @@
       "path": "crates/qualia-core-db/src/audio/dsp/oscillator.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.tick",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1787,56 +1952,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.configure_voice_from_tensor",
       "fuzzy_method_hints": [
-        "configure"
-      ],
-      "priority": 100,
-      "shellish": false
-    },
-    {
-      "crate": "qualia-core-db",
-      "module": "audio::dsp_kernel",
-      "fn": "epistemic_fm_index",
-      "path": "crates/qualia-core-db/src/audio/dsp_kernel.rs",
-      "visibility": "pub",
-      "proposed_host_id": "CoreDb.epistemic_fm_index",
-      "fuzzy_method_hints": [],
-      "priority": 100,
-      "shellish": false
-    },
-    {
-      "crate": "qualia-core-db",
-      "module": "audio::dsp_kernel",
-      "fn": "epistemic_temperature_from_q",
-      "path": "crates/qualia-core-db/src/audio/dsp_kernel.rs",
-      "visibility": "pub",
-      "proposed_host_id": "CoreDb.epistemic_temperature_from_q",
-      "fuzzy_method_hints": [],
-      "priority": 100,
-      "shellish": false
-    },
-    {
-      "crate": "qualia-core-db",
-      "module": "audio::dsp_kernel",
-      "fn": "parametric_sample",
-      "path": "crates/qualia-core-db/src/audio/dsp_kernel.rs",
-      "visibility": "pub",
-      "proposed_host_id": "CoreDb.parametric_sample",
-      "fuzzy_method_hints": [
-        "sample"
-      ],
-      "priority": 100,
-      "shellish": false
-    },
-    {
-      "crate": "qualia-core-db",
-      "module": "audio::dsp_kernel",
-      "fn": "sigma_dominant_frequency",
-      "path": "crates/qualia-core-db/src/audio/dsp_kernel.rs",
-      "visibility": "pub",
-      "proposed_host_id": "CoreDb.sigma_dominant_frequency",
-      "fuzzy_method_hints": [
-        "min",
-        "eq"
+        "configure",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1848,7 +1966,9 @@
       "path": "crates/qualia-core-db/src/audio/hrtf.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.binaural_analytic",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1894,7 +2014,9 @@
       "path": "crates/qualia-core-db/src/audio/hrtf.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.convolve_fir",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -1972,7 +2094,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.bake_stft_sidecar_from_samples",
       "fuzzy_method_hints": [
-        "sample"
+        "sample",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -1984,7 +2107,9 @@
       "path": "crates/qualia-core-db/src/audio/stft.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.forward_stft",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2006,7 +2131,9 @@
       "path": "crates/qualia-core-db/src/audio/stft_bake.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.bake_stft_sidecar_from_preview",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2017,7 +2144,10 @@
       "path": "crates/qualia-core-db/src/audio/stft_bake.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.bake_tensor_stft_sidecar",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2029,32 +2159,6 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.synthesize_stft_frame",
       "fuzzy_method_hints": [],
-      "priority": 100,
-      "shellish": false
-    },
-    {
-      "crate": "qualia-core-db",
-      "module": "audio::tf_surface",
-      "fn": "bin_to_freq_linear",
-      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
-      "visibility": "pub",
-      "proposed_host_id": "CoreDb.bin_to_freq_linear",
-      "fuzzy_method_hints": [
-        "eq"
-      ],
-      "priority": 100,
-      "shellish": false
-    },
-    {
-      "crate": "qualia-core-db",
-      "module": "audio::tf_surface",
-      "fn": "bin_to_freq_log",
-      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
-      "visibility": "pub",
-      "proposed_host_id": "CoreDb.bin_to_freq_log",
-      "fuzzy_method_hints": [
-        "eq"
-      ],
       "priority": 100,
       "shellish": false
     },
@@ -2147,7 +2251,9 @@
       "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.spectral_flux",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2215,7 +2321,9 @@
       "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.copy_patch",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2226,7 +2334,9 @@
       "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.crossfade",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2292,7 +2402,9 @@
       "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.pitch_shift",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2304,7 +2416,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.spectral_gate",
       "fuzzy_method_hints": [
-        "gate"
+        "gate",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2316,7 +2429,9 @@
       "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.time_stretch",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2435,7 +2550,9 @@
       "path": "crates/qualia-core-db/src/bundle/writer.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.add_file",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "add"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2482,7 +2599,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.cha2ds2_vasc_score",
       "fuzzy_method_hints": [
-        "cha2ds2_vasc"
+        "cha2ds2_vasc",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2495,7 +2614,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.check_contraindications",
       "fuzzy_method_hints": [
-        "contraindication"
+        "contraindication",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2508,7 +2628,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.check_drug_interactions",
       "fuzzy_method_hints": [
-        "drug_interaction"
+        "drug_interaction",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2520,7 +2641,9 @@
       "path": "crates/qualia-core-db/src/clinical_engine.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.ckd_epi_egfr",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2531,7 +2654,9 @@
       "path": "crates/qualia-core-db/src/clinical_engine.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.cockcroft_gault_crcl",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2544,7 +2669,8 @@
       "proposed_host_id": "CoreDb.evaluate_gene_expression",
       "fuzzy_method_hints": [
         "evaluate",
-        "eval"
+        "eval",
+        "exp"
       ],
       "priority": 100,
       "shellish": false
@@ -2582,7 +2708,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.one_compartment_pk_model",
       "fuzzy_method_hints": [
-        "mode"
+        "mode",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2595,7 +2722,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.score2_risk",
       "fuzzy_method_hints": [
-        "score2"
+        "score2",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2607,7 +2736,10 @@
       "path": "crates/qualia-core-db/src/clinical_engine.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sofa_score",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2632,7 +2764,9 @@
       "path": "crates/qualia-core-db/src/container_10d/conformance.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.assert_layout_invariants",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "var"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2643,7 +2777,9 @@
       "path": "crates/qualia-core-db/src/container_10d/crc32c.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.crc32c",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2654,7 +2790,9 @@
       "path": "crates/qualia-core-db/src/container_10d/crc32c.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.crc32c_update",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2665,7 +2803,9 @@
       "path": "crates/qualia-core-db/src/container_10d/field_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decode_field_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2676,7 +2816,9 @@
       "path": "crates/qualia-core-db/src/container_10d/field_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_field_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2687,7 +2829,9 @@
       "path": "crates/qualia-core-db/src/container_10d/field_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.field_section_size",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2699,9 +2843,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode",
       "fuzzy_method_hints": [
+        "c",
         "morton_encode_2d",
-        "morton_encode_3d",
-        "hilbert_encode_2d"
+        "morton_encode_3d"
       ],
       "priority": 100,
       "shellish": false
@@ -2713,7 +2857,9 @@
       "path": "crates/qualia-core-db/src/container_10d/header.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_to_vec64",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2736,7 +2882,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.compute_whole_file_crc32c",
       "fuzzy_method_hints": [
-        "compute"
+        "compute",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2748,7 +2895,9 @@
       "path": "crates/qualia-core-db/src/container_10d/integrity.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.seal_whole_file_crc32c",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2760,7 +2909,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_whole_file_crc32c",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2772,7 +2922,9 @@
       "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decode_mesh_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2783,7 +2935,9 @@
       "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_mesh_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2794,7 +2948,9 @@
       "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encoded_len",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2805,7 +2961,9 @@
       "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.fits_u16_indices",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2867,7 +3025,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_descriptor_against_reality",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "or",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -2973,7 +3133,9 @@
       "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.write_node_section_aos",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2984,7 +3146,9 @@
       "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.write_node_section_soa",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -2995,7 +3159,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decode_provenance_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3006,7 +3172,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_provenance_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3017,7 +3185,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encoded_len",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3028,7 +3198,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.licence",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3039,7 +3211,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.semantic_metadata",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3050,7 +3224,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.source_bytes",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3061,7 +3237,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.source_digest",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3072,7 +3250,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.source_digest",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3083,7 +3263,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.source_media_type",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3094,7 +3276,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.timestamp_epoch_s",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3106,7 +3290,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.validate_provenance",
       "fuzzy_method_hints": [
-        "validate"
+        "validate",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3151,7 +3336,9 @@
       "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.with_vc",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3162,7 +3349,9 @@
       "path": "crates/qualia-core-db/src/container_10d/section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_container",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3174,7 +3363,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.parse_section_table",
       "fuzzy_method_hints": [
-        "parse"
+        "parse",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3208,7 +3398,9 @@
       "path": "crates/qualia-core-db/src/container_10d/spatial_index_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decode_spatial_index_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3219,7 +3411,9 @@
       "path": "crates/qualia-core-db/src/container_10d/spatial_index_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_spatial_index_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3230,7 +3424,9 @@
       "path": "crates/qualia-core-db/src/container_10d/spatial_index_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encoded_len",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3241,7 +3437,9 @@
       "path": "crates/qualia-core-db/src/container_10d/topology_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decode_topology_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3252,7 +3450,9 @@
       "path": "crates/qualia-core-db/src/container_10d/topology_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_topology_section",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3263,7 +3463,9 @@
       "path": "crates/qualia-core-db/src/container_10d/topology_section.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encoded_len",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3274,7 +3476,9 @@
       "path": "crates/qualia-core-db/src/crypto/deontic_circuit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.generate_deontic_crs",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3286,7 +3490,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_access",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3298,7 +3503,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.check_compliance",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3309,7 +3516,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.check_quantum_readiness",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3320,7 +3529,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.check_quantum_readiness",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3333,7 +3544,8 @@
       "proposed_host_id": "CoreDb.clear_audit_log",
       "fuzzy_method_hints": [
         "audit",
-        "clear"
+        "clear",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3345,7 +3557,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.context_manager",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3357,7 +3571,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.create_context",
       "fuzzy_method_hints": [
-        "create"
+        "create",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3369,7 +3584,11 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.export_secret_key",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "exp",
+        "or",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3380,7 +3599,11 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.fiduciary_standards",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "and",
+        "tan",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3402,7 +3625,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.from_public_key",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3413,7 +3638,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.from_secret_key",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3494,7 +3721,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.get_context",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3538,7 +3767,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.issue_vc_mldsa",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3586,7 +3817,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.public_key",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3597,7 +3830,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.public_key",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3608,7 +3843,11 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.quantum_resistance_threshold",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "threshold",
+        "tan",
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3632,7 +3871,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.rotation_policy",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3677,9 +3918,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sign",
       "fuzzy_method_hints": [
+        "add_assign",
         "assign_agents",
-        "signed_volume",
-        "biosignal_poll"
+        "signed_volume"
       ],
       "priority": 100,
       "shellish": false
@@ -3692,9 +3933,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sign",
       "fuzzy_method_hints": [
+        "add_assign",
         "assign_agents",
-        "signed_volume",
-        "biosignal_poll"
+        "signed_volume"
       ],
       "priority": 100,
       "shellish": false
@@ -3707,9 +3948,9 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sign",
       "fuzzy_method_hints": [
+        "add_assign",
         "assign_agents",
-        "signed_volume",
-        "biosignal_poll"
+        "signed_volume"
       ],
       "priority": 100,
       "shellish": false
@@ -3721,7 +3962,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sign_with_managed_context",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3732,7 +3975,9 @@
       "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.sign_with_secret",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3744,7 +3989,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_vc_mldsa",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3757,7 +4003,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_with_public",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3802,7 +4049,9 @@
       "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decapsulate",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3813,7 +4062,9 @@
       "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encapsulate",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3868,7 +4119,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.chain_hash",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3879,7 +4132,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.from_secret",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3923,7 +4178,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.secret_bytes",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3956,7 +4213,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_audit_dag.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.canonical_bytes",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -3979,7 +4238,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.recomputed_id",
       "fuzzy_method_hints": [
-        "compute"
+        "compute",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -3992,7 +4252,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_chain",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -4004,7 +4265,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decrypt_sanctuary_chunk",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4015,7 +4278,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decrypt_sanctuary_chunk_in_place",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4026,7 +4291,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.derive_chacha_nonce",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4037,7 +4304,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.derive_chunk_nonce",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4048,7 +4317,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.derive_lane_cipher_key",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4059,7 +4330,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.derive_sanctuary_key_material",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4070,7 +4343,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.derive_sanctuary_key_material_argon2",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4081,7 +4356,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.derive_xchacha_nonce",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4092,7 +4369,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encrypt_sanctuary_chunk",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4103,7 +4382,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encrypt_sanctuary_chunk_in_place",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4147,7 +4428,9 @@
       "path": "crates/qualia-core-db/src/crypto/sanctuary_keychain.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.store_pepper",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4158,7 +4441,9 @@
       "path": "crates/qualia-core-db/src/crypto/verifiable_credential.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.decode_credential",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4169,7 +4454,9 @@
       "path": "crates/qualia-core-db/src/crypto/verifiable_credential.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.encode_credential",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4241,7 +4528,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.prove_threshold",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "threshold"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4277,6 +4566,7 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_threshold",
       "fuzzy_method_hints": [
+        "threshold",
         "verify"
       ],
       "priority": 100,
@@ -4289,7 +4579,10 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.add_variable",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "add",
+        "var"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4300,19 +4593,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.add_variable",
-      "fuzzy_method_hints": [],
-      "priority": 100,
-      "shellish": false
-    },
-    {
-      "crate": "qualia-core-db",
-      "module": "crypto::zk_proofs",
-      "fn": "create_circuit",
-      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
-      "visibility": "pub",
-      "proposed_host_id": "CoreDb.create_circuit",
       "fuzzy_method_hints": [
-        "create"
+        "add",
+        "var"
       ],
       "priority": 100,
       "shellish": false
@@ -4325,7 +4608,22 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.create_circuit",
       "fuzzy_method_hints": [
-        "create"
+        "create",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "create_circuit",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.create_circuit",
+      "fuzzy_method_hints": [
+        "create",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -4403,7 +4701,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.generate_semantic_proof",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4438,7 +4738,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.get_circuit",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4449,7 +4751,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.get_circuit_info",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4475,7 +4779,8 @@
       "proposed_host_id": "CoreDb.get_performance_stats",
       "fuzzy_method_hints": [
         "stats",
-        "erf"
+        "erf",
+        "or"
       ],
       "priority": 100,
       "shellish": false
@@ -4523,7 +4828,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.list_circuits",
       "fuzzy_method_hints": [
-        "list"
+        "list",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -4536,7 +4842,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.list_circuits",
       "fuzzy_method_hints": [
-        "list"
+        "list",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -4548,7 +4855,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.prove_matrix_multiply",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "mul"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4559,7 +4868,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.prove_matrix_multiply",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "mul"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4581,7 +4892,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.store_proving_key",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "or"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4593,7 +4906,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.store_verifying_key",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "or"
       ],
       "priority": 100,
       "shellish": false
@@ -4605,7 +4919,9 @@
       "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.update_proof_metrics",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "c"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4656,7 +4972,8 @@
       "visibility": "pub",
       "proposed_host_id": "CoreDb.verify_semantic_proof",
       "fuzzy_method_hints": [
-        "verify"
+        "verify",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -4668,7 +4985,10 @@
       "path": "crates/qualia-core-db/src/csd_storage.rs",
       "visibility": "pub",
       "proposed_host_id": "CoreDb.add_matrix_multiply",
-      "fuzzy_method_hints": [],
+      "fuzzy_method_hints": [
+        "add",
+        "mul"
+      ],
       "priority": 100,
       "shellish": false
     },
@@ -4681,6 +5001,85 @@
       "proposed_host_id": "CoreDb.build",
       "fuzzy_method_hints": [
         "gazetteer_build"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "convolution",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.convolution",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "convolution_into",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.convolution_into",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "discover_devices",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.discover_devices",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "discover_devices_into",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.discover_devices_into",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "drain_completions",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.drain_completions",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "execute_operation",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.execute_operation",
+      "fuzzy_method_hints": [
+        "execute",
+        "c"
       ],
       "priority": 100,
       "shellish": false
@@ -4719,18 +5118,24 @@
     "Asset.resolve_by_topic",
     "Asset.set_spatial",
     "Asset.temporal_span",
+    "Audio.bin_to_freq_linear",
+    "Audio.bin_to_freq_log",
     "Audio.compressor",
     "Audio.delay",
     "Audio.envelope",
+    "Audio.epistemic_fm_index",
+    "Audio.epistemic_temperature_from_q",
     "Audio.eq",
     "Audio.filter",
     "Audio.lfo",
     "Audio.loudness_meter",
     "Audio.midi_note",
     "Audio.oscillator",
+    "Audio.parametric_sample",
     "Audio.phase_meter",
     "Audio.quantize",
     "Audio.reverb",
+    "Audio.sigma_dominant_frequency",
     "Audio.spectrum",
     "Audio.transport",
     "Audio.transpose",
@@ -4739,12 +5144,7 @@
     "Avatar.set_appearance",
     "Bioinformatics.align",
     "Bioinformatics.compute",
-    "Calculus.adaptive_derivative",
-    "Calculus.adaptive_simpson",
     "Calculus.discrete_maximum_principle_holds",
-    "Calculus.newton_solve",
-    "Calculus.numerical_hessian",
-    "Calculus.numerical_jacobian",
     "Calculus.solve_poisson_dirichlet",
     "CalculusWorkbench.compute",
     "Capability.audit",
@@ -4759,36 +5159,14 @@
     "ChatGraph.link_reply",
     "ChatGraph.session_summary",
     "ChatGraph.validate_fragment",
-    "Chemistry.atomic_number",
-    "Chemistry.element_symbol",
-    "Chemistry.lda_correlation_vwn",
-    "Chemistry.lda_exchange",
     "Chemistry.parse_bse_json",
-    "Chemistry.standard_atomic_weight",
-    "Chemistry.sto3g_h2",
     "ClinicalRisk.comorbidity",
     "ClinicalRisk.contraindication",
     "ClinicalRisk.drug_interaction",
     "ClinicalRisk.fhir_observation",
-    "ComputationalGeometry.bezier_eval",
-    "ComputationalGeometry.circumcenter",
-    "ComputationalGeometry.convex_hull_2",
-    "ComputationalGeometry.distance_2d",
-    "ComputationalGeometry.distance_3d",
-    "ComputationalGeometry.hilbert_encode_2d",
-    "ComputationalGeometry.line_segment_intersection_2",
-    "ComputationalGeometry.morton_decode_2d",
-    "ComputationalGeometry.morton_encode_2d",
-    "ComputationalGeometry.morton_encode_3d",
-    "ComputationalGeometry.nearest_site_brute_force",
-    "ComputationalGeometry.orient_3d",
-    "ComputationalGeometry.orientation_2",
-    "ComputationalGeometry.point_segment_distance_2d",
-    "ComputationalGeometry.point_segment_distance_3d",
-    "ComputationalGeometry.point_triangle_distance_3d",
-    "ComputationalGeometry.signed_volume",
-    "ComputationalGeometry.surface_area",
-    "ComputationalGeometry.triangulate_polygon",
+    "ComputationalGeometry.average_spacing_3d",
+    "ComputationalGeometry.local_density_3d",
+    "ComputationalGeometry.mean_knn_distance_3d",
     "ComputerVision.ahash",
     "ComputerVision.canny_edges",
     "ComputerVision.sobel_magnitude",
@@ -4796,26 +5174,6 @@
     "CooperativeWork.board_project",
     "Corpus.load",
     "Corpus.parse",
-    "Cosmic.atmosphere_pressure",
-    "Cosmic.atmosphere_temperature",
-    "Cosmic.body_profile",
-    "Cosmic.cochrane_units",
-    "Cosmic.compton_wavelength",
-    "Cosmic.de_broglie_wavelength",
-    "Cosmic.ecef_to_enu",
-    "Cosmic.ecef_to_geodetic",
-    "Cosmic.enu_to_ecef",
-    "Cosmic.flrw_distance",
-    "Cosmic.flrw_hubble_velocity",
-    "Cosmic.flrw_redshift",
-    "Cosmic.geodetic_distance",
-    "Cosmic.geodetic_to_ecef",
-    "Cosmic.magnetosphere_field",
-    "Cosmic.scale_factor",
-    "Cosmic.stardate_to_gregorian",
-    "Cosmic.surface_gravity",
-    "Cosmic.usri_parse",
-    "Cosmic.warp_velocity",
     "Dmx.add_fixture",
     "Dmx.cue_set_channel",
     "Dmx.cue_set_fade",
@@ -4830,110 +5188,11 @@
     "Dmx.new_cue_stack",
     "Dmx.new_universe",
     "Dmx.set_channel",
-    "Econ.abatement_net_benefit",
-    "Econ.agent_based_aggregate_wealth",
-    "Econ.aggregate_paper_fills",
     "Econ.aggregate_wealth",
-    "Econ.autocorrelation",
-    "Econ.bellman_update",
-    "Econ.bertrand_with_demand",
-    "Econ.binomial_option",
-    "Econ.block_bootstrap",
-    "Econ.capm_beta",
-    "Econ.ccapm_equity_premium",
-    "Econ.ccapm_sdf",
-    "Econ.check_budget_balance",
-    "Econ.check_ir",
-    "Econ.covariance_matrix",
-    "Econ.cross_correlation",
     "Econ.cumulative_wealth",
-    "Econ.degree_centrality",
-    "Econ.discount_factor",
-    "Econ.distributional_npv",
-    "Econ.drawdown",
-    "Econ.efficiency_units",
-    "Econ.eigenvector_centrality",
-    "Econ.endowment_effect",
-    "Econ.expected_holding_time",
-    "Econ.fiscal_multiplier",
-    "Econ.forward_rate",
-    "Econ.gbm_simulate",
-    "Econ.gravity_flow",
-    "Econ.headcount_poverty",
-    "Econ.historical_cvar",
-    "Econ.household_production_ces",
-    "Econ.hyperbolic_discount",
-    "Econ.interbank_clearing",
-    "Econ.interpolate_zero_rate",
-    "Econ.iv_2sls",
-    "Econ.labor_supply",
-    "Econ.laffer_curve",
-    "Econ.leontief_inverse",
-    "Econ.log_returns",
-    "Econ.logistic_mle",
-    "Econ.lorenz_curve",
-    "Econ.lucas_asset_price",
-    "Econ.malfeasance_delta",
-    "Econ.marginal_damage",
-    "Econ.mean_first_passage",
-    "Econ.mean_return",
-    "Econ.morans_i",
-    "Econ.multi_period_ddm",
     "Econ.narrative_divergence",
-    "Econ.nash_welfare",
-    "Econ.nearest_facility",
-    "Econ.new_keynesian_solve",
-    "Econ.npv",
-    "Econ.olg_steady_state",
-    "Econ.ols",
-    "Econ.optimal_abatement",
-    "Econ.optimal_pollution",
-    "Econ.output_multipliers",
-    "Econ.par_yield",
-    "Econ.parametric_var",
-    "Econ.pollution_damage",
-    "Econ.portfolio_max_drawdown",
-    "Econ.portfolio_returns",
-    "Econ.portfolio_variance",
-    "Econ.poverty_gap",
-    "Econ.present_biased_utility",
-    "Econ.probability_weight",
-    "Econ.progressive_tax",
-    "Econ.prospect_value",
-    "Econ.pure_nash_equilibria",
-    "Econ.put_call_parity",
-    "Econ.ramsey_euler_residual",
-    "Econ.ramsey_steady_state",
-    "Econ.rawlsian_welfare",
-    "Econ.reference_dependent_utility",
-    "Econ.repeated_game_payoff",
-    "Econ.rolling_mean",
-    "Econ.rolling_variance",
-    "Econ.sample_variance",
-    "Econ.simple_returns",
-    "Econ.simulate_chain",
-    "Econ.social_cost_of_carbon",
-    "Econ.stackelberg_duopoly",
-    "Econ.stationary_distribution",
-    "Econ.strategy_proofness",
-    "Econ.stress_scenario",
-    "Econ.total_transport_cost",
-    "Econ.transfer_payment",
-    "Econ.transition_probability",
-    "Econ.utilitarian_welfare",
-    "Econ.validate_scalar_constraint",
-    "Econ.validate_transition_matrix",
-    "Econ.value_iteration",
-    "Econ.vcg_payment",
-    "Econ.wls",
     "EngineeringAnalysis.analyze_conduction",
-    "EngineeringAnalysis.cauchy_stress",
-    "EngineeringAnalysis.drag_force",
-    "EngineeringAnalysis.fatigue_cycles",
     "EngineeringAnalysis.fem_static",
-    "EngineeringAnalysis.kinematics",
-    "EngineeringAnalysis.miner_damage",
-    "EngineeringAnalysis.reynolds_number",
     "Finance.convert_currency",
     "Finance.ledger_balance",
     "Finance.multisig_check",
@@ -4943,21 +5202,6 @@
     "Forensic.malfeasance_delta",
     "Forensic.narrative_divergence",
     "FormalLogic.compute",
-    "FuzzyQuery.approximately",
-    "FuzzyQuery.much_greater_than",
-    "FuzzyQuery.much_less_than",
-    "FuzzyQuery.ramp_down",
-    "FuzzyQuery.ramp_up",
-    "FuzzyQuery.trapezoidal",
-    "FuzzyQuery.triangular",
-    "GeometricAlgebra.apply_rotor",
-    "GeometricAlgebra.apply_translator",
-    "GeometricAlgebra.dot",
-    "GeometricAlgebra.geometric_product",
-    "GeometricAlgebra.is_simd_available",
-    "GeometricAlgebra.outer_product",
-    "GeometricAlgebra.rotor_from_angle_axis",
-    "GeometricAlgebra.translator_from_displacement",
     "GovernanceLogic.compute",
     "GraphDatabase.lexicon_manifest",
     "GraphDatabase.stats",
@@ -4966,6 +5210,7 @@
     "GraphMatch.fuzzy_jaccard",
     "GraphReasoning.shortest_path",
     "GraphReasoning.spreading_activation",
+    "GraphReasoning.top_k",
     "HID.biosignal_poll",
     "HID.clear",
     "HID.gamepad_poll",
@@ -5002,22 +5247,12 @@
     "Image.set_pixel",
     "Image.set_visible",
     "Inference.constrained_decode",
-    "Inference.embed",
     "Inference.load_model",
-    "Inference.run_classifier",
     "Inference.run_reranker",
     "Inference.run_transformer",
     "Inference.unload_model",
-    "Inference.vector_search",
     "InfraExtLogic.compute",
     "InfraLogic.compute",
-    "IntegralTransforms.dft",
-    "IntegralTransforms.geometric_z",
-    "IntegralTransforms.idft",
-    "IntegralTransforms.laplace_numeric",
-    "IntegralTransforms.laplace_symbolic",
-    "IntegralTransforms.unit_step_z",
-    "IntegralTransforms.z_transform_finite",
     "Interactive.add_social_post",
     "Interactive.add_trigger",
     "Interpolation.lagrange_eval",
@@ -5027,101 +5262,7 @@
     "Interpolation.poly_eval",
     "Interpolation.poly_fit",
     "LegalLogic.compute",
-    "LinearAlgebra.characteristic_polynomial",
-    "LinearAlgebra.cholesky_determinant",
-    "LinearAlgebra.cholesky_factor",
-    "LinearAlgebra.determinant",
-    "LinearAlgebra.eigen_symmetric",
-    "LinearAlgebra.eigenvalues",
-    "LinearAlgebra.eigenvalues_general",
-    "LinearAlgebra.lu_decompose",
-    "LinearAlgebra.lu_solve",
-    "LinearAlgebra.matmul",
-    "LinearAlgebra.polynomial_roots",
-    "LinearAlgebra.solve",
-    "LinearAlgebra.svd",
-    "LinearAlgebra.transpose",
-    "MachineLearning.ab_test",
-    "MachineLearning.accuracy",
-    "MachineLearning.al_average_kl_disagreement",
-    "MachineLearning.al_consensus",
-    "MachineLearning.al_consensus_entropy",
-    "MachineLearning.al_cosine_similarity",
-    "MachineLearning.al_information_density",
-    "MachineLearning.al_most_informative",
-    "MachineLearning.al_rank_by_density",
-    "MachineLearning.al_rank_by_disagreement",
-    "MachineLearning.al_rank_informative",
-    "MachineLearning.al_representativeness",
-    "MachineLearning.al_row_score",
-    "MachineLearning.al_score",
-    "MachineLearning.al_vote_entropy",
-    "MachineLearning.bart_fit",
-    "MachineLearning.bayesian_linear_fit",
-    "MachineLearning.benjamini_hochberg",
-    "MachineLearning.bonferroni",
-    "MachineLearning.bootstrap_ci",
-    "MachineLearning.bootstrap_estimate",
-    "MachineLearning.bootstrap_indices",
-    "MachineLearning.complex_score",
-    "MachineLearning.confusion_binary",
-    "MachineLearning.cox_fit",
-    "MachineLearning.decision_tree_fit_classifier",
-    "MachineLearning.decision_tree_fit_regressor",
-    "MachineLearning.distmult_score",
-    "MachineLearning.factor_graph_marginals",
-    "MachineLearning.gmm_fit",
-    "MachineLearning.gp_fit",
-    "MachineLearning.gradient_boosting_fit_regressor",
-    "MachineLearning.hierarchical_fit",
-    "MachineLearning.hierarchical_labels",
-    "MachineLearning.hmm_baum_welch",
-    "MachineLearning.holm",
-    "MachineLearning.k_fold",
-    "MachineLearning.kalman_new",
-    "MachineLearning.kaplan_meier_fit",
-    "MachineLearning.kg_hits_at_k",
-    "MachineLearning.kg_mean_rank",
-    "MachineLearning.kg_mean_reciprocal_rank",
-    "MachineLearning.kmeans",
-    "MachineLearning.kmeans_fit",
-    "MachineLearning.knn_fit",
-    "MachineLearning.lasso_fit",
-    "MachineLearning.lda_fit",
-    "MachineLearning.log_loss",
-    "MachineLearning.logistic_fit",
-    "MachineLearning.loocv",
-    "MachineLearning.mae",
-    "MachineLearning.mcmc_metropolis",
-    "MachineLearning.mse",
-    "MachineLearning.multinomial_logistic_fit",
-    "MachineLearning.n_rejected",
-    "MachineLearning.naive_bayes_fit",
-    "MachineLearning.ols",
-    "MachineLearning.pca",
-    "MachineLearning.pcr_fit",
-    "MachineLearning.permutation_test",
-    "MachineLearning.pls_fit",
-    "MachineLearning.poisson_fit",
-    "MachineLearning.polynomial_regression",
-    "MachineLearning.power_two_sample",
-    "MachineLearning.qda_fit",
-    "MachineLearning.r2_score",
-    "MachineLearning.random_forest_fit_classifier",
-    "MachineLearning.random_forest_fit_regressor",
-    "MachineLearning.required_sample_size",
-    "MachineLearning.required_sample_size_two_proportion",
-    "MachineLearning.ridge_fit",
-    "MachineLearning.rmse",
-    "MachineLearning.roc_auc",
-    "MachineLearning.rotate_score",
-    "MachineLearning.som_train",
-    "MachineLearning.standard_scaler_fit_transform",
-    "MachineLearning.svm_fit",
-    "MachineLearning.svm_multiclass_fit",
-    "MachineLearning.train_test_split",
-    "MachineLearning.transe_score",
-    "MachineLearning.variational_gaussian_fit",
+    "LinearAlgebra.gemm",
     "Manifold.axes",
     "Manifold.distance",
     "Manifold.project",
@@ -5137,27 +5278,11 @@
     "NLP.gazetteer_build",
     "NLP.graphrag_query",
     "NLP.relation_extract",
+    "NLP.split_sentences",
     "NLP.substrate_extract",
+    "NLP.tokenize",
     "Net.peer_hash",
     "Net.sonic_pack",
-    "NumberTheory.binomial",
-    "NumberTheory.catalan",
-    "NumberTheory.divisor_count",
-    "NumberTheory.divisor_sum",
-    "NumberTheory.divisors",
-    "NumberTheory.euler_totient",
-    "NumberTheory.factorial",
-    "NumberTheory.gcd",
-    "NumberTheory.is_prime",
-    "NumberTheory.lcm",
-    "NumberTheory.mobius",
-    "NumberTheory.mod_inverse",
-    "NumberTheory.mod_pow",
-    "NumberTheory.next_prime",
-    "NumberTheory.partitions",
-    "NumberTheory.prime_factors",
-    "NumberTheory.stirling_first",
-    "NumberTheory.stirling_second",
     "NumericalCalculus.simpson",
     "Ode.bdf",
     "Ode.dopri5",
@@ -5167,41 +5292,16 @@
     "Optimization.artificial_bee_colony",
     "Optimization.hill_climb",
     "Optimization.simulated_annealing",
-    "Orchestration.assign_agents",
-    "Orchestration.roster_capabilities",
-    "Orchestration.roster_list",
-    "Orchestration.roster_register",
-    "Orchestration.session_create",
-    "Orchestration.session_execute",
-    "Orchestration.session_plan",
-    "Orchestration.session_status",
     "OrganicChemistry.compute",
     "OrganicChemistry.validate_smiles",
     "PhysicalUnits.convert",
-    "Physics.advection_diffusion_1d",
-    "Physics.cfd_step",
-    "Physics.doppler_shift",
-    "Physics.emf_attenuation",
-    "Physics.emf_field_grid_3d",
-    "Physics.emf_interference",
-    "Physics.emf_sample_at_depth",
-    "Physics.evaluate_interaction",
-    "Physics.field_sample",
-    "Physics.harmonic_oscillator",
-    "Physics.heat_diffusion_1d",
-    "Physics.logistic_growth",
-    "Physics.material_query",
-    "Physics.molecular_dynamics",
-    "Physics.n_body",
-    "Physics.pendulum",
-    "Physics.quantum_states_1d",
-    "Physics.wave_1d",
     "PhysicsAndODE.projectile",
     "PhysicsWorkbench.compute",
     "Poet.manifold_create",
     "Poet.nested_link",
     "Poet.participant_invite",
     "Poet.subject_declare",
+    "PolynomialAlgebra.coeffs",
     "Portal.activate",
     "Portal.deactivate",
     "Portal.set_target",
@@ -5344,11 +5444,13 @@
     "Scene.add_camera",
     "Scene.add_light",
     "Scene.add_node",
+    "Scene.camera_frame_node",
     "Scene.capture_frame",
     "Scene.create",
     "Scene.duplicate_node",
     "Scene.ik_ccd",
     "Scene.ik_look_at",
+    "Scene.lerp_camera",
     "Scene.link_semantic",
     "Scene.render",
     "Scene.set_clear_colour",
@@ -5367,132 +5469,21 @@
     "Social.lorenz",
     "Social.lww",
     "SpatialLogic.compute",
-    "SpecialFunctions.airy_ai",
-    "SpecialFunctions.airy_bi",
-    "SpecialFunctions.bessel_i",
-    "SpecialFunctions.bessel_j",
-    "SpecialFunctions.bessel_k",
-    "SpecialFunctions.bessel_y",
-    "SpecialFunctions.chebyshev_t",
-    "SpecialFunctions.chebyshev_u",
-    "SpecialFunctions.hermite",
-    "SpecialFunctions.laguerre",
-    "SpecialFunctions.legendre",
-    "SpecialFunctions.zeta",
     "SpecialFunctionsAndTransforms.bessel_j",
     "Spectral.blend",
     "Spectral.emf_to_rgb",
     "Spectral.emf_to_spd",
     "Spectral.gamut_map",
     "Spectral.spd_to_xyz",
-    "Statistics.adf_proxy",
-    "Statistics.argmax",
-    "Statistics.autocorrelation",
-    "Statistics.beta_pdf",
-    "Statistics.betai",
-    "Statistics.binomial_cdf",
-    "Statistics.binomial_pmf",
-    "Statistics.bootstrap_means",
-    "Statistics.chi_square_gof",
-    "Statistics.chi_square_independence",
-    "Statistics.chi_squared_cdf",
-    "Statistics.chi_squared_pdf",
-    "Statistics.chi_squared_quantile",
-    "Statistics.chi_squared_upper_p",
-    "Statistics.correlation_p_value",
-    "Statistics.covariance",
-    "Statistics.cross_entropy",
-    "Statistics.empirical_cdf",
-    "Statistics.entropy",
-    "Statistics.entropy_from_counts",
-    "Statistics.erf",
-    "Statistics.erfc",
-    "Statistics.exponential_cdf",
-    "Statistics.exponential_pdf",
-    "Statistics.exponential_smoothing",
-    "Statistics.fisher_f_cdf",
-    "Statistics.fisher_f_pdf",
-    "Statistics.fisher_f_quantile",
-    "Statistics.fisher_f_upper_p",
-    "Statistics.friedman",
-    "Statistics.gamma_fn",
-    "Statistics.gamma_pdf",
-    "Statistics.gammp",
-    "Statistics.gammq",
-    "Statistics.grubbs_test",
-    "Statistics.histogram",
-    "Statistics.iqr",
-    "Statistics.iqr_outliers",
-    "Statistics.kendall",
-    "Statistics.kl_divergence",
-    "Statistics.ks_1sample",
-    "Statistics.kurtosis",
-    "Statistics.laplace_cdf",
-    "Statistics.laplace_pdf",
-    "Statistics.linear_regression",
-    "Statistics.ljung_box",
-    "Statistics.ln_gamma",
-    "Statistics.lognormal_cdf",
-    "Statistics.lognormal_pdf",
-    "Statistics.mahalanobis_sq",
-    "Statistics.mann_whitney_u",
-    "Statistics.mcnemar",
-    "Statistics.median_abs_deviation",
-    "Statistics.mode",
-    "Statistics.modified_z_score_outliers",
-    "Statistics.moving_average",
-    "Statistics.mutual_information",
-    "Statistics.mvn_log_pdf",
-    "Statistics.mvn_mle",
-    "Statistics.mvn_pdf",
-    "Statistics.mvn_sample",
-    "Statistics.normal_cdf",
-    "Statistics.normal_pdf",
-    "Statistics.normal_quantile",
-    "Statistics.one_sample_t",
-    "Statistics.one_way_anova",
-    "Statistics.paired_t",
-    "Statistics.pearson",
-    "Statistics.poisson_cdf",
-    "Statistics.poisson_pmf",
-    "Statistics.quantile",
-    "Statistics.skewness",
-    "Statistics.spearman",
-    "Statistics.standard_normal_cdf",
-    "Statistics.standard_pdf",
-    "Statistics.standard_quantile",
-    "Statistics.students_t_cdf",
-    "Statistics.students_t_pdf",
-    "Statistics.students_t_quantile",
-    "Statistics.students_t_two_sided_p",
-    "Statistics.students_t_upper_p",
-    "Statistics.sum",
-    "Statistics.trimmed_mean",
-    "Statistics.tukey_fences",
-    "Statistics.two_sample_t",
-    "Statistics.two_sided_p",
-    "Statistics.uniform_cdf",
-    "Statistics.uniform_pdf",
-    "Statistics.weibull_pdf",
-    "Statistics.winsorized_mean",
-    "Statistics.z_score_outliers",
-    "SymbolicAlgebra.differentiate",
-    "SymbolicAlgebra.expand",
-    "SymbolicAlgebra.factor",
-    "SymbolicAlgebra.simplify",
-    "SymbolicAlgebra.solve_quadratic",
     "SymbolicAndDefeasibleLogic.asp",
+    "SymbolicODE.classify_second_order_pde",
+    "SymbolicODE.solve_first_order_linear_pde",
+    "SymbolicODE.solve_linear_first_order",
+    "SymbolicODE.solve_linear_second_order",
+    "SymbolicODE.solve_separable",
     "TemporalAndDescriptionLogic.ltl.finally",
     "TemporalAndDescriptionLogic.ltl.globally",
     "TemporalAndDescriptionLogic.subsumption",
-    "ThreeD.add_animation",
-    "ThreeD.add_camera",
-    "ThreeD.add_light",
-    "ThreeD.add_object",
-    "ThreeD.add_rig",
-    "ThreeD.set_material",
-    "ThreeD.set_mesh",
-    "ThreeD.set_transform",
     "VectorCalculus.curl",
     "VectorCalculus.divergence",
     "VectorCalculus.gradient",
@@ -5530,280 +5521,6 @@
     "sampler.sample"
   ],
   "q2_by_family": {
-    "Econ": [
-      "Econ.abatement_net_benefit",
-      "Econ.agent_based_aggregate_wealth",
-      "Econ.aggregate_paper_fills",
-      "Econ.aggregate_wealth",
-      "Econ.autocorrelation",
-      "Econ.bellman_update",
-      "Econ.bertrand_with_demand",
-      "Econ.binomial_option",
-      "Econ.block_bootstrap",
-      "Econ.capm_beta",
-      "Econ.ccapm_equity_premium",
-      "Econ.ccapm_sdf",
-      "Econ.check_budget_balance",
-      "Econ.check_ir",
-      "Econ.covariance_matrix",
-      "Econ.cross_correlation",
-      "Econ.cumulative_wealth",
-      "Econ.degree_centrality",
-      "Econ.discount_factor",
-      "Econ.distributional_npv",
-      "Econ.drawdown",
-      "Econ.efficiency_units",
-      "Econ.eigenvector_centrality",
-      "Econ.endowment_effect",
-      "Econ.expected_holding_time",
-      "Econ.fiscal_multiplier",
-      "Econ.forward_rate",
-      "Econ.gbm_simulate",
-      "Econ.gravity_flow",
-      "Econ.headcount_poverty",
-      "Econ.historical_cvar",
-      "Econ.household_production_ces",
-      "Econ.hyperbolic_discount",
-      "Econ.interbank_clearing",
-      "Econ.interpolate_zero_rate",
-      "Econ.iv_2sls",
-      "Econ.labor_supply",
-      "Econ.laffer_curve",
-      "Econ.leontief_inverse",
-      "Econ.log_returns",
-      "Econ.logistic_mle",
-      "Econ.lorenz_curve",
-      "Econ.lucas_asset_price",
-      "Econ.malfeasance_delta",
-      "Econ.marginal_damage",
-      "Econ.mean_first_passage",
-      "Econ.mean_return",
-      "Econ.morans_i",
-      "Econ.multi_period_ddm",
-      "Econ.narrative_divergence",
-      "Econ.nash_welfare",
-      "Econ.nearest_facility",
-      "Econ.new_keynesian_solve",
-      "Econ.npv",
-      "Econ.olg_steady_state",
-      "Econ.ols",
-      "Econ.optimal_abatement",
-      "Econ.optimal_pollution",
-      "Econ.output_multipliers",
-      "Econ.par_yield",
-      "Econ.parametric_var",
-      "Econ.pollution_damage",
-      "Econ.portfolio_max_drawdown",
-      "Econ.portfolio_returns",
-      "Econ.portfolio_variance",
-      "Econ.poverty_gap",
-      "Econ.present_biased_utility",
-      "Econ.probability_weight",
-      "Econ.progressive_tax",
-      "Econ.prospect_value",
-      "Econ.pure_nash_equilibria",
-      "Econ.put_call_parity",
-      "Econ.ramsey_euler_residual",
-      "Econ.ramsey_steady_state",
-      "Econ.rawlsian_welfare",
-      "Econ.reference_dependent_utility",
-      "Econ.repeated_game_payoff",
-      "Econ.rolling_mean",
-      "Econ.rolling_variance",
-      "Econ.sample_variance",
-      "Econ.simple_returns",
-      "Econ.simulate_chain",
-      "Econ.social_cost_of_carbon",
-      "Econ.stackelberg_duopoly",
-      "Econ.stationary_distribution",
-      "Econ.strategy_proofness",
-      "Econ.stress_scenario",
-      "Econ.total_transport_cost",
-      "Econ.transfer_payment",
-      "Econ.transition_probability",
-      "Econ.utilitarian_welfare",
-      "Econ.validate_scalar_constraint",
-      "Econ.validate_transition_matrix",
-      "Econ.value_iteration",
-      "Econ.vcg_payment",
-      "Econ.wls"
-    ],
-    "Statistics": [
-      "Statistics.adf_proxy",
-      "Statistics.argmax",
-      "Statistics.autocorrelation",
-      "Statistics.beta_pdf",
-      "Statistics.betai",
-      "Statistics.binomial_cdf",
-      "Statistics.binomial_pmf",
-      "Statistics.bootstrap_means",
-      "Statistics.chi_square_gof",
-      "Statistics.chi_square_independence",
-      "Statistics.chi_squared_cdf",
-      "Statistics.chi_squared_pdf",
-      "Statistics.chi_squared_quantile",
-      "Statistics.chi_squared_upper_p",
-      "Statistics.correlation_p_value",
-      "Statistics.covariance",
-      "Statistics.cross_entropy",
-      "Statistics.empirical_cdf",
-      "Statistics.entropy",
-      "Statistics.entropy_from_counts",
-      "Statistics.erf",
-      "Statistics.erfc",
-      "Statistics.exponential_cdf",
-      "Statistics.exponential_pdf",
-      "Statistics.exponential_smoothing",
-      "Statistics.fisher_f_cdf",
-      "Statistics.fisher_f_pdf",
-      "Statistics.fisher_f_quantile",
-      "Statistics.fisher_f_upper_p",
-      "Statistics.friedman",
-      "Statistics.gamma_fn",
-      "Statistics.gamma_pdf",
-      "Statistics.gammp",
-      "Statistics.gammq",
-      "Statistics.grubbs_test",
-      "Statistics.histogram",
-      "Statistics.iqr",
-      "Statistics.iqr_outliers",
-      "Statistics.kendall",
-      "Statistics.kl_divergence",
-      "Statistics.ks_1sample",
-      "Statistics.kurtosis",
-      "Statistics.laplace_cdf",
-      "Statistics.laplace_pdf",
-      "Statistics.linear_regression",
-      "Statistics.ljung_box",
-      "Statistics.ln_gamma",
-      "Statistics.lognormal_cdf",
-      "Statistics.lognormal_pdf",
-      "Statistics.mahalanobis_sq",
-      "Statistics.mann_whitney_u",
-      "Statistics.mcnemar",
-      "Statistics.median_abs_deviation",
-      "Statistics.mode",
-      "Statistics.modified_z_score_outliers",
-      "Statistics.moving_average",
-      "Statistics.mutual_information",
-      "Statistics.mvn_log_pdf",
-      "Statistics.mvn_mle",
-      "Statistics.mvn_pdf",
-      "Statistics.mvn_sample",
-      "Statistics.normal_cdf",
-      "Statistics.normal_pdf",
-      "Statistics.normal_quantile",
-      "Statistics.one_sample_t",
-      "Statistics.one_way_anova",
-      "Statistics.paired_t",
-      "Statistics.pearson",
-      "Statistics.poisson_cdf",
-      "Statistics.poisson_pmf",
-      "Statistics.quantile",
-      "Statistics.skewness",
-      "Statistics.spearman",
-      "Statistics.standard_normal_cdf",
-      "Statistics.standard_pdf",
-      "Statistics.standard_quantile",
-      "Statistics.students_t_cdf",
-      "Statistics.students_t_pdf",
-      "Statistics.students_t_quantile",
-      "Statistics.students_t_two_sided_p",
-      "Statistics.students_t_upper_p",
-      "Statistics.sum",
-      "Statistics.trimmed_mean",
-      "Statistics.tukey_fences",
-      "Statistics.two_sample_t",
-      "Statistics.two_sided_p",
-      "Statistics.uniform_cdf",
-      "Statistics.uniform_pdf",
-      "Statistics.weibull_pdf",
-      "Statistics.winsorized_mean",
-      "Statistics.z_score_outliers"
-    ],
-    "MachineLearning": [
-      "MachineLearning.ab_test",
-      "MachineLearning.accuracy",
-      "MachineLearning.al_average_kl_disagreement",
-      "MachineLearning.al_consensus",
-      "MachineLearning.al_consensus_entropy",
-      "MachineLearning.al_cosine_similarity",
-      "MachineLearning.al_information_density",
-      "MachineLearning.al_most_informative",
-      "MachineLearning.al_rank_by_density",
-      "MachineLearning.al_rank_by_disagreement",
-      "MachineLearning.al_rank_informative",
-      "MachineLearning.al_representativeness",
-      "MachineLearning.al_row_score",
-      "MachineLearning.al_score",
-      "MachineLearning.al_vote_entropy",
-      "MachineLearning.bart_fit",
-      "MachineLearning.bayesian_linear_fit",
-      "MachineLearning.benjamini_hochberg",
-      "MachineLearning.bonferroni",
-      "MachineLearning.bootstrap_ci",
-      "MachineLearning.bootstrap_estimate",
-      "MachineLearning.bootstrap_indices",
-      "MachineLearning.complex_score",
-      "MachineLearning.confusion_binary",
-      "MachineLearning.cox_fit",
-      "MachineLearning.decision_tree_fit_classifier",
-      "MachineLearning.decision_tree_fit_regressor",
-      "MachineLearning.distmult_score",
-      "MachineLearning.factor_graph_marginals",
-      "MachineLearning.gmm_fit",
-      "MachineLearning.gp_fit",
-      "MachineLearning.gradient_boosting_fit_regressor",
-      "MachineLearning.hierarchical_fit",
-      "MachineLearning.hierarchical_labels",
-      "MachineLearning.hmm_baum_welch",
-      "MachineLearning.holm",
-      "MachineLearning.k_fold",
-      "MachineLearning.kalman_new",
-      "MachineLearning.kaplan_meier_fit",
-      "MachineLearning.kg_hits_at_k",
-      "MachineLearning.kg_mean_rank",
-      "MachineLearning.kg_mean_reciprocal_rank",
-      "MachineLearning.kmeans",
-      "MachineLearning.kmeans_fit",
-      "MachineLearning.knn_fit",
-      "MachineLearning.lasso_fit",
-      "MachineLearning.lda_fit",
-      "MachineLearning.log_loss",
-      "MachineLearning.logistic_fit",
-      "MachineLearning.loocv",
-      "MachineLearning.mae",
-      "MachineLearning.mcmc_metropolis",
-      "MachineLearning.mse",
-      "MachineLearning.multinomial_logistic_fit",
-      "MachineLearning.n_rejected",
-      "MachineLearning.naive_bayes_fit",
-      "MachineLearning.ols",
-      "MachineLearning.pca",
-      "MachineLearning.pcr_fit",
-      "MachineLearning.permutation_test",
-      "MachineLearning.pls_fit",
-      "MachineLearning.poisson_fit",
-      "MachineLearning.polynomial_regression",
-      "MachineLearning.power_two_sample",
-      "MachineLearning.qda_fit",
-      "MachineLearning.r2_score",
-      "MachineLearning.random_forest_fit_classifier",
-      "MachineLearning.random_forest_fit_regressor",
-      "MachineLearning.required_sample_size",
-      "MachineLearning.required_sample_size_two_proportion",
-      "MachineLearning.ridge_fit",
-      "MachineLearning.rmse",
-      "MachineLearning.roc_auc",
-      "MachineLearning.rotate_score",
-      "MachineLearning.som_train",
-      "MachineLearning.standard_scaler_fit_transform",
-      "MachineLearning.svm_fit",
-      "MachineLearning.svm_multiclass_fit",
-      "MachineLearning.train_test_split",
-      "MachineLearning.transe_score",
-      "MachineLearning.variational_gaussian_fit"
-    ],
     "Research": [
       "Research.add_bias",
       "Research.add_constraint",
@@ -5932,6 +5649,30 @@
       "Render.svg_path",
       "Render.svg_rect"
     ],
+    "Audio": [
+      "Audio.bin_to_freq_linear",
+      "Audio.bin_to_freq_log",
+      "Audio.compressor",
+      "Audio.delay",
+      "Audio.envelope",
+      "Audio.epistemic_fm_index",
+      "Audio.epistemic_temperature_from_q",
+      "Audio.eq",
+      "Audio.filter",
+      "Audio.lfo",
+      "Audio.loudness_meter",
+      "Audio.midi_note",
+      "Audio.oscillator",
+      "Audio.parametric_sample",
+      "Audio.phase_meter",
+      "Audio.quantize",
+      "Audio.reverb",
+      "Audio.sigma_dominant_frequency",
+      "Audio.spectrum",
+      "Audio.transport",
+      "Audio.transpose",
+      "Audio.waveform_meter"
+    ],
     "Asset": [
       "Asset.add_temporal",
       "Asset.add_topic",
@@ -5955,98 +5696,17 @@
       "Asset.set_spatial",
       "Asset.temporal_span"
     ],
-    "Cosmic": [
-      "Cosmic.atmosphere_pressure",
-      "Cosmic.atmosphere_temperature",
-      "Cosmic.body_profile",
-      "Cosmic.cochrane_units",
-      "Cosmic.compton_wavelength",
-      "Cosmic.de_broglie_wavelength",
-      "Cosmic.ecef_to_enu",
-      "Cosmic.ecef_to_geodetic",
-      "Cosmic.enu_to_ecef",
-      "Cosmic.flrw_distance",
-      "Cosmic.flrw_hubble_velocity",
-      "Cosmic.flrw_redshift",
-      "Cosmic.geodetic_distance",
-      "Cosmic.geodetic_to_ecef",
-      "Cosmic.magnetosphere_field",
-      "Cosmic.scale_factor",
-      "Cosmic.stardate_to_gregorian",
-      "Cosmic.surface_gravity",
-      "Cosmic.usri_parse",
-      "Cosmic.warp_velocity"
-    ],
-    "ComputationalGeometry": [
-      "ComputationalGeometry.bezier_eval",
-      "ComputationalGeometry.circumcenter",
-      "ComputationalGeometry.convex_hull_2",
-      "ComputationalGeometry.distance_2d",
-      "ComputationalGeometry.distance_3d",
-      "ComputationalGeometry.hilbert_encode_2d",
-      "ComputationalGeometry.line_segment_intersection_2",
-      "ComputationalGeometry.morton_decode_2d",
-      "ComputationalGeometry.morton_encode_2d",
-      "ComputationalGeometry.morton_encode_3d",
-      "ComputationalGeometry.nearest_site_brute_force",
-      "ComputationalGeometry.orient_3d",
-      "ComputationalGeometry.orientation_2",
-      "ComputationalGeometry.point_segment_distance_2d",
-      "ComputationalGeometry.point_segment_distance_3d",
-      "ComputationalGeometry.point_triangle_distance_3d",
-      "ComputationalGeometry.signed_volume",
-      "ComputationalGeometry.surface_area",
-      "ComputationalGeometry.triangulate_polygon"
-    ],
-    "NumberTheory": [
-      "NumberTheory.binomial",
-      "NumberTheory.catalan",
-      "NumberTheory.divisor_count",
-      "NumberTheory.divisor_sum",
-      "NumberTheory.divisors",
-      "NumberTheory.euler_totient",
-      "NumberTheory.factorial",
-      "NumberTheory.gcd",
-      "NumberTheory.is_prime",
-      "NumberTheory.lcm",
-      "NumberTheory.mobius",
-      "NumberTheory.mod_inverse",
-      "NumberTheory.mod_pow",
-      "NumberTheory.next_prime",
-      "NumberTheory.partitions",
-      "NumberTheory.prime_factors",
-      "NumberTheory.stirling_first",
-      "NumberTheory.stirling_second"
-    ],
-    "Physics": [
-      "Physics.advection_diffusion_1d",
-      "Physics.cfd_step",
-      "Physics.doppler_shift",
-      "Physics.emf_attenuation",
-      "Physics.emf_field_grid_3d",
-      "Physics.emf_interference",
-      "Physics.emf_sample_at_depth",
-      "Physics.evaluate_interaction",
-      "Physics.field_sample",
-      "Physics.harmonic_oscillator",
-      "Physics.heat_diffusion_1d",
-      "Physics.logistic_growth",
-      "Physics.material_query",
-      "Physics.molecular_dynamics",
-      "Physics.n_body",
-      "Physics.pendulum",
-      "Physics.quantum_states_1d",
-      "Physics.wave_1d"
-    ],
     "Scene": [
       "Scene.add_camera",
       "Scene.add_light",
       "Scene.add_node",
+      "Scene.camera_frame_node",
       "Scene.capture_frame",
       "Scene.create",
       "Scene.duplicate_node",
       "Scene.ik_ccd",
       "Scene.ik_look_at",
+      "Scene.lerp_camera",
       "Scene.link_semantic",
       "Scene.render",
       "Scene.set_clear_colour",
@@ -6056,24 +5716,6 @@
       "Scene.set_viewport",
       "Scene.smooth_damp",
       "Scene.smooth_damp_vec3"
-    ],
-    "Audio": [
-      "Audio.compressor",
-      "Audio.delay",
-      "Audio.envelope",
-      "Audio.eq",
-      "Audio.filter",
-      "Audio.lfo",
-      "Audio.loudness_meter",
-      "Audio.midi_note",
-      "Audio.oscillator",
-      "Audio.phase_meter",
-      "Audio.quantize",
-      "Audio.reverb",
-      "Audio.spectrum",
-      "Audio.transport",
-      "Audio.transpose",
-      "Audio.waveform_meter"
     ],
     "HID": [
       "HID.biosignal_poll",
@@ -6126,36 +5768,6 @@
       "Dmx.new_universe",
       "Dmx.set_channel"
     ],
-    "LinearAlgebra": [
-      "LinearAlgebra.characteristic_polynomial",
-      "LinearAlgebra.cholesky_determinant",
-      "LinearAlgebra.cholesky_factor",
-      "LinearAlgebra.determinant",
-      "LinearAlgebra.eigen_symmetric",
-      "LinearAlgebra.eigenvalues",
-      "LinearAlgebra.eigenvalues_general",
-      "LinearAlgebra.lu_decompose",
-      "LinearAlgebra.lu_solve",
-      "LinearAlgebra.matmul",
-      "LinearAlgebra.polynomial_roots",
-      "LinearAlgebra.solve",
-      "LinearAlgebra.svd",
-      "LinearAlgebra.transpose"
-    ],
-    "SpecialFunctions": [
-      "SpecialFunctions.airy_ai",
-      "SpecialFunctions.airy_bi",
-      "SpecialFunctions.bessel_i",
-      "SpecialFunctions.bessel_j",
-      "SpecialFunctions.bessel_k",
-      "SpecialFunctions.bessel_y",
-      "SpecialFunctions.chebyshev_t",
-      "SpecialFunctions.chebyshev_u",
-      "SpecialFunctions.hermite",
-      "SpecialFunctions.laguerre",
-      "SpecialFunctions.legendre",
-      "SpecialFunctions.zeta"
-    ],
     "Video": [
       "Video.add_clip",
       "Video.add_track",
@@ -6168,92 +5780,6 @@
       "Video.set_speed",
       "Video.trim_clip"
     ],
-    "EngineeringAnalysis": [
-      "EngineeringAnalysis.analyze_conduction",
-      "EngineeringAnalysis.cauchy_stress",
-      "EngineeringAnalysis.drag_force",
-      "EngineeringAnalysis.fatigue_cycles",
-      "EngineeringAnalysis.fem_static",
-      "EngineeringAnalysis.kinematics",
-      "EngineeringAnalysis.miner_damage",
-      "EngineeringAnalysis.reynolds_number"
-    ],
-    "GeometricAlgebra": [
-      "GeometricAlgebra.apply_rotor",
-      "GeometricAlgebra.apply_translator",
-      "GeometricAlgebra.dot",
-      "GeometricAlgebra.geometric_product",
-      "GeometricAlgebra.is_simd_available",
-      "GeometricAlgebra.outer_product",
-      "GeometricAlgebra.rotor_from_angle_axis",
-      "GeometricAlgebra.translator_from_displacement"
-    ],
-    "Inference": [
-      "Inference.constrained_decode",
-      "Inference.embed",
-      "Inference.load_model",
-      "Inference.run_classifier",
-      "Inference.run_reranker",
-      "Inference.run_transformer",
-      "Inference.unload_model",
-      "Inference.vector_search"
-    ],
-    "Orchestration": [
-      "Orchestration.assign_agents",
-      "Orchestration.roster_capabilities",
-      "Orchestration.roster_list",
-      "Orchestration.roster_register",
-      "Orchestration.session_create",
-      "Orchestration.session_execute",
-      "Orchestration.session_plan",
-      "Orchestration.session_status"
-    ],
-    "ThreeD": [
-      "ThreeD.add_animation",
-      "ThreeD.add_camera",
-      "ThreeD.add_light",
-      "ThreeD.add_object",
-      "ThreeD.add_rig",
-      "ThreeD.set_material",
-      "ThreeD.set_mesh",
-      "ThreeD.set_transform"
-    ],
-    "Calculus": [
-      "Calculus.adaptive_derivative",
-      "Calculus.adaptive_simpson",
-      "Calculus.discrete_maximum_principle_holds",
-      "Calculus.newton_solve",
-      "Calculus.numerical_hessian",
-      "Calculus.numerical_jacobian",
-      "Calculus.solve_poisson_dirichlet"
-    ],
-    "Chemistry": [
-      "Chemistry.atomic_number",
-      "Chemistry.element_symbol",
-      "Chemistry.lda_correlation_vwn",
-      "Chemistry.lda_exchange",
-      "Chemistry.parse_bse_json",
-      "Chemistry.standard_atomic_weight",
-      "Chemistry.sto3g_h2"
-    ],
-    "FuzzyQuery": [
-      "FuzzyQuery.approximately",
-      "FuzzyQuery.much_greater_than",
-      "FuzzyQuery.much_less_than",
-      "FuzzyQuery.ramp_down",
-      "FuzzyQuery.ramp_up",
-      "FuzzyQuery.trapezoidal",
-      "FuzzyQuery.triangular"
-    ],
-    "IntegralTransforms": [
-      "IntegralTransforms.dft",
-      "IntegralTransforms.geometric_z",
-      "IntegralTransforms.idft",
-      "IntegralTransforms.laplace_numeric",
-      "IntegralTransforms.laplace_symbolic",
-      "IntegralTransforms.unit_step_z",
-      "IntegralTransforms.z_transform_finite"
-    ],
     "NLP": [
       "NLP.coref_resolve",
       "NLP.frame_extract",
@@ -6261,7 +5787,9 @@
       "NLP.gazetteer_build",
       "NLP.graphrag_query",
       "NLP.relation_extract",
-      "NLP.substrate_extract"
+      "NLP.split_sentences",
+      "NLP.substrate_extract",
+      "NLP.tokenize"
     ],
     "Pulse": [
       "Pulse.close_channel",
@@ -6312,6 +5840,13 @@
       "Capability.revoke",
       "Capability.test_gating"
     ],
+    "Inference": [
+      "Inference.constrained_decode",
+      "Inference.load_model",
+      "Inference.run_reranker",
+      "Inference.run_transformer",
+      "Inference.unload_model"
+    ],
     "Spectral": [
       "Spectral.blend",
       "Spectral.emf_to_rgb",
@@ -6319,12 +5854,12 @@
       "Spectral.gamut_map",
       "Spectral.spd_to_xyz"
     ],
-    "SymbolicAlgebra": [
-      "SymbolicAlgebra.differentiate",
-      "SymbolicAlgebra.expand",
-      "SymbolicAlgebra.factor",
-      "SymbolicAlgebra.simplify",
-      "SymbolicAlgebra.solve_quadratic"
+    "SymbolicODE": [
+      "SymbolicODE.classify_second_order_pde",
+      "SymbolicODE.solve_first_order_linear_pde",
+      "SymbolicODE.solve_linear_first_order",
+      "SymbolicODE.solve_linear_second_order",
+      "SymbolicODE.solve_separable"
     ],
     "sampler": [
       "sampler.configure",
@@ -6379,10 +5914,20 @@
       "ChatGraph.session_summary",
       "ChatGraph.validate_fragment"
     ],
+    "ComputationalGeometry": [
+      "ComputationalGeometry.average_spacing_3d",
+      "ComputationalGeometry.local_density_3d",
+      "ComputationalGeometry.mean_knn_distance_3d"
+    ],
     "ComputerVision": [
       "ComputerVision.ahash",
       "ComputerVision.canny_edges",
       "ComputerVision.sobel_magnitude"
+    ],
+    "Econ": [
+      "Econ.aggregate_wealth",
+      "Econ.cumulative_wealth",
+      "Econ.narrative_divergence"
     ],
     "Finance": [
       "Finance.convert_currency",
@@ -6398,6 +5943,11 @@
       "GraphMatch.approximate_match",
       "GraphMatch.fuzzy_dice",
       "GraphMatch.fuzzy_jaccard"
+    ],
+    "GraphReasoning": [
+      "GraphReasoning.shortest_path",
+      "GraphReasoning.spreading_activation",
+      "GraphReasoning.top_k"
     ],
     "Manifold": [
       "Manifold.axes",
@@ -6442,9 +5992,17 @@
       "Bioinformatics.align",
       "Bioinformatics.compute"
     ],
+    "Calculus": [
+      "Calculus.discrete_maximum_principle_holds",
+      "Calculus.solve_poisson_dirichlet"
+    ],
     "Corpus": [
       "Corpus.load",
       "Corpus.parse"
+    ],
+    "EngineeringAnalysis": [
+      "EngineeringAnalysis.analyze_conduction",
+      "EngineeringAnalysis.fem_static"
     ],
     "Forensic": [
       "Forensic.malfeasance_delta",
@@ -6453,10 +6011,6 @@
     "GraphDatabase": [
       "GraphDatabase.lexicon_manifest",
       "GraphDatabase.stats"
-    ],
-    "GraphReasoning": [
-      "GraphReasoning.shortest_path",
-      "GraphReasoning.spreading_activation"
     ],
     "Interactive": [
       "Interactive.add_social_post",
@@ -6494,6 +6048,9 @@
     "CausalFuzzyAndControl": [
       "CausalFuzzyAndControl.t_norm"
     ],
+    "Chemistry": [
+      "Chemistry.parse_bse_json"
+    ],
     "ContractsIdentityAndConsensus": [
       "ContractsIdentityAndConsensus.parse_did_q42"
     ],
@@ -6515,6 +6072,9 @@
     "LegalLogic": [
       "LegalLogic.compute"
     ],
+    "LinearAlgebra": [
+      "LinearAlgebra.gemm"
+    ],
     "MedicalImaging": [
       "MedicalImaging.hu_window"
     ],
@@ -6532,6 +6092,9 @@
     ],
     "PhysicsWorkbench": [
       "PhysicsWorkbench.compute"
+    ],
+    "PolynomialAlgebra": [
+      "PolynomialAlgebra.coeffs"
     ],
     "Privacy": [
       "Privacy.gaussian_sigma"
@@ -6558,7 +6121,7 @@
       "hash.iri"
     ]
   },
-  "poet_live_count": 56,
+  "poet_live_count": 623,
   "poet_stale": [],
   "crates_scanned": [
     "poet",
@@ -6587,7 +6150,7 @@
     "webizen-web",
     "wellfare-core"
   ],
-  "method_index_size": 861,
-  "q1_host_missing_total": 12315,
+  "method_index_size": 1011,
+  "q1_host_missing_total": 12074,
   "methodology": "docs/work-in-progress/VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md"
 }

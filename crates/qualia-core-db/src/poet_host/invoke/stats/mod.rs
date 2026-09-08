@@ -22,6 +22,8 @@ mod hypothesis;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod more;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod manifold;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod regression;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -47,6 +49,12 @@ pub use extra::*;
 pub use hypothesis::{chi_square_gof, one_sample_t, one_way_anova, paired_t, two_sample_t};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use more::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use manifold::{
+    bregman_pythagorean_test, fisher_distance, fisher_inner_product, kl_bregman_form,
+    neg_entropy, neg_entropy_grad, probability_hash, simplex_project,
+    simplex_project_idempotent, validate_probability,
+};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use regression::linear_regression;
 
@@ -184,5 +192,15 @@ stats_stub!(
     mvn_log_pdf,
     mvn_pdf,
     mvn_sample,
-    mvn_mle
+    mvn_mle,
+    validate_probability,
+    simplex_project,
+    fisher_distance,
+    neg_entropy,
+    simplex_project_idempotent,
+    fisher_inner_product,
+    neg_entropy_grad,
+    kl_bregman_form,
+    bregman_pythagorean_test,
+    probability_hash
 );

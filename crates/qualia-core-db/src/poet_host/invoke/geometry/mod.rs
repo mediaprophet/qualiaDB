@@ -9,6 +9,10 @@ mod distance;
 mod extra;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod hull;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave19_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave20_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -19,6 +23,12 @@ pub use distance::{
 pub use extra::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use hull::hull2;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave19_host::{
+    average_spacing_3d_host as average_spacing_3d, local_density_3d_host as local_density_3d,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave20_host::mean_knn_distance_3d_host as mean_knn_distance_3d;
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn hull2(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
@@ -87,5 +97,8 @@ geom_stub!(
     line_segment_intersection_2,
     bezier_eval,
     nearest_site_brute_force,
-    orient_3d
+    orient_3d,
+    average_spacing_3d,
+    local_density_3d,
+    mean_knn_distance_3d
 );

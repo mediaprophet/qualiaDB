@@ -48,6 +48,16 @@ pub fn simplify(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(args::record([("simplified", Value::String(s.to_string()))]))
 }
 
+/// `SymbolicAlgebra.simplify_trig` — trig identity rewrites layered on `simplify`.
+/// Args: `{ expr }`. Out: `{ simplified }`.
+pub fn simplify_trig(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.simplify_trig needs expr: string"))?;
+    let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let s = crate::specialized_libs::symbolic_trig::simplify_trig(&e);
+    Ok(args::record([("simplified", Value::String(s.to_string()))]))
+}
+
 /// Expand a parsed expression (distribute products over sums, expand small powers).
 pub fn expand(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let expr = args::rec_str(args_v, "expr")
@@ -190,6 +200,63 @@ pub fn laplacian(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// `SymbolicAlgebra.integrate` — indefinite ∫ expr dx (constant omitted). Fail-closed
+/// when outside the exact table. Args: `{ expr, var? }`. Out: `{ antiderivative }`.
+pub fn integrate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.integrate needs expr: string"))?;
+    let var = args::rec_str(args_v, "var").unwrap_or("x");
+    let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let anti = crate::specialized_libs::symbolic_integration::integrate(&e, var)
+        .map_err(|err| args::bad(span, format!("integrate: {err:?}")))?;
+    Ok(args::record([(
+        "antiderivative",
+        Value::String(anti.to_string()),
+    )]))
+}
+
+/// `SymbolicAlgebra.taylor_coefficients` — `[c₀…c_order]` of `f` about `x=a`.
+/// Args: `{ expr, a, order, var? }`. Out: `{ coeffs }` or error if singular at `a`.
+pub fn taylor_coefficients(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr = args::rec_str(args_v, "expr").ok_or_else(|| {
+        args::bad(span, "SymbolicAlgebra.taylor_coefficients needs expr: string")
+    })?;
+    let a = args::rec_f64(args_v, "a")
+        .ok_or_else(|| args::bad(span, "taylor_coefficients needs a: number"))?;
+    let order = args::rec_u64(args_v, "order")
+        .ok_or_else(|| args::bad(span, "taylor_coefficients needs order: u64"))?
+        as usize;
+    let var = args::rec_str(args_v, "var").unwrap_or("x");
+    let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let coeffs = crate::specialized_libs::symbolic_series::taylor_coefficients(&e, var, a, order)
+        .ok_or_else(|| args::bad(span, "taylor_coefficients: singular or non-finite at a"))?;
+    Ok(args::record([("coeffs", args::f64_list_value(coeffs))]))
+}
+
+/// `SymbolicAlgebra.taylor_eval` — evaluate truncated Taylor `Σ cₖ(x−a)ᵏ`.
+/// Args: `{ coeffs, a, x }`. Out: `{ value }`.
+pub fn taylor_eval(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let coeffs = args::rec_f64_list(args_v, "coeffs")
+        .ok_or_else(|| args::bad(span, "taylor_eval needs coeffs"))?;
+    let a = args::rec_f64(args_v, "a").ok_or_else(|| args::bad(span, "taylor_eval needs a"))?;
+    let x = args::rec_f64(args_v, "x").ok_or_else(|| args::bad(span, "taylor_eval needs x"))?;
+    let value = crate::specialized_libs::symbolic_series::taylor_eval(&coeffs, a, x);
+    Ok(args::record([("value", Value::F64(value))]))
+}
+
+/// `SymbolicAlgebra.limit` — `lim_{x→a} f(x)` with l'Hôpital for 0/0. Args:
+/// `{ expr, a, var? }`. Out: `{ value }` or error if indeterminate.
+pub fn limit(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.limit needs expr: string"))?;
+    let a = args::rec_f64(args_v, "a").ok_or_else(|| args::bad(span, "limit needs a: number"))?;
+    let var = args::rec_str(args_v, "var").unwrap_or("x");
+    let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let value = crate::specialized_libs::symbolic_limits::limit(&e, var, a)
+        .ok_or_else(|| args::bad(span, "limit: indeterminate or divergent"))?;
+    Ok(args::record([("value", Value::F64(value))]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,5 +283,83 @@ mod tests {
             _ => panic!("expected record"),
         };
         assert_eq!(rec.get("simplified"), Some(&Value::String("x".into())));
+    }
+
+    #[test]
+    fn simplify_trig_pythagorean() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "expr".into(),
+            Value::String("sin(x)^2 + cos(x)^2".into()),
+        );
+        let v = simplify_trig(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let rec = match v {
+            Value::Record(r) => r,
+            _ => panic!("expected record"),
+        };
+        assert_eq!(rec.get("simplified"), Some(&Value::String("1".into())));
+    }
+
+    #[test]
+    fn simplify_trig_quotient_to_tan() {
+        let mut m = BTreeMap::new();
+        m.insert("expr".into(), Value::String("sin(x) / cos(x)".into()));
+        let v = simplify_trig(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let rec = match v {
+            Value::Record(r) => r,
+            _ => panic!("expected record"),
+        };
+        assert_eq!(rec.get("simplified"), Some(&Value::String("tan(x)".into())));
+    }
+
+    #[test]
+    fn integrate_power_rule() {
+        let mut m = BTreeMap::new();
+        m.insert("expr".into(), Value::String("x".into()));
+        let v = integrate(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let rec = match v {
+            Value::Record(r) => r,
+            _ => panic!("expected record"),
+        };
+        // ∫x dx = x²/2 — Display may be "(x^2)/2" or similar
+        let s = match rec.get("antiderivative") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("missing antiderivative"),
+        };
+        assert!(s.contains('x'), "got {s}");
+    }
+
+    #[test]
+    fn taylor_poly_and_eval() {
+        let mut m = BTreeMap::new();
+        m.insert("expr".into(), Value::String("x^3 - 2*x + 1".into()));
+        m.insert("a".into(), Value::F64(0.0));
+        m.insert("order".into(), Value::U64(3));
+        let out = taylor_coefficients(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let coeffs = args::rec(&out, "coeffs").and_then(args::f64s).unwrap();
+        assert!((coeffs[0] - 1.0).abs() < 1e-9);
+        assert!((coeffs[1] + 2.0).abs() < 1e-9);
+        assert!(coeffs[2].abs() < 1e-9);
+        assert!((coeffs[3] - 1.0).abs() < 1e-9);
+
+        let mut ev = BTreeMap::new();
+        ev.insert("coeffs".into(), args::f64_list_value(coeffs));
+        ev.insert("a".into(), Value::F64(0.0));
+        ev.insert("x".into(), Value::F64(2.0));
+        let val = taylor_eval(&Value::Record(ev), Span { start: 0, end: 0 }).unwrap();
+        // 1 - 2*2 + 8 = 5
+        assert!((args::rec_f64(&val, "value").unwrap() - 5.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn limit_lhopital_zero_over_zero() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "expr".into(),
+            Value::String("(x^2 - 1) / (x - 1)".into()),
+        );
+        m.insert("a".into(), Value::F64(1.0));
+        let out = limit(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        assert!((args::rec_f64(&out, "value").unwrap() - 2.0).abs() < 1e-7);
     }
 }

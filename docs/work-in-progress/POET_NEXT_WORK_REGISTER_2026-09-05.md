@@ -29,7 +29,28 @@ evidence.
 | 15 | ChEBI asset vertical (`AST-03`–`AST-06`) | **Complete** | parse 13; map 10; query 12; Poet explorer 10 + integrity 11 | Closed under residual swarm |
 | 16 | Residual swarm (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`) | **Complete** | Parent verify: consent_persist 5; health_views 58; consent_contract 12; chemical 20; app_manifest 14; integrity 11 | Closed |
 | 17 | Gate B swarm (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`) | **Complete** | Incorporation doc; app_manifest **21**; app_registry **11**; WD-01 IA map | Constraint corrected — vibescript-first |
-| 18 | Constraint correction + vibescript-first impl | **Complete** | CV Live 5; Econ Live +5; CooperativeDelegation Host; ChatGraph Host×3 | Next: backlog Q1/Q2 waves |
+| 18 | Constraint correction + vibescript-first impl | **Complete** | CV Live 5; Econ Live +5; CooperativeDelegation Host; ChatGraph Host×3 | Closed |
+| 19 | Q1/Q2 incorporation waves | **Complete** | Econ +8 · Stats +11 · ML +11 Live; Host +7 LinearAlgebra QR/vector | Closed — wave 1 |
+| 20 | Q1/Q2 wave 2 | **Complete** | Econ +8 · Stats +9 · ML +8 Live; Host +8 LinAlg/Symbolic/Poly | Closed |
+| 21 | Q1/Q2 wave 3 | **Complete** | Econ +10 · Stats +8 · ML +8 Live; Host +8 matvec/Poly/Symbolic | Closed |
+| 22 | Q1/Q2 wave 4 | **Complete** | Econ +10 · Stats +8 · ML +8 Live; Host +8 CAS/ODE/Poly | Closed |
+| 23 | Q1/Q2 wave 5 | **Complete** | Econ +11 · Stats +8 · ML +8 Live; Host +8 CAS/ODE/LinAlg | Closed |
+| 24 | Q1/Q2 wave 6 | **Complete** | Econ +10 · Stats +8 · ML +10 Live; Host +8 CAS/Constructibility | Closed |
+| 25 | Q1/Q2 wave 7 | **Complete** | Econ +10 · Stats +8 · ML +10 Live; Host +8 Constructibility/quadratic | Closed |
+| 26 | Q1/Q2 wave 8 | **Complete** | Econ +10 · Stats +8 · ML +8 Live; Host +8 CAS expr constructors | Closed |
+| 27 | Q1/Q2 wave 9 | **Complete** | Econ +10 · Stats +9 · ML +10 Live; Host +8 CAS/poly constructors | Closed |
+| 28 | Q1/Q2 wave 10 | **Complete** | Econ +6 (exhausted) · Stats +10 · CAS +8 Live; Host +8 poly/CAS/stats | Closed |
+| 29 | Q1/Q2 wave 11 | **Complete** | LinAlg +10 · Stats +8 · CAS +8 Live; Host +6 stats manifold | Closed |
+| 30 | Q1/Q2 wave 12 | **Complete** | LinAlg +8 · Poly +12 · CAS +8 Live; Host +8 chem/LinAlg/CAS | Closed |
+| 31 | Q1/Q2 wave 13 | **Complete** | LinAlg +9 · Sheet poly+manifold +9 · CAS +8 Live; Host chem/gemm/coeffs +8 | Closed |
+| 32 | Q1/Q2 wave 14 | **Complete** | Chem +11 · CAS +9 · Physics +10 Live; Host Calculus/graph +8 | Closed |
+| 33 | Q1/Q2 wave 15 | **Complete** | Physics +8 · Constr +9 · SF +12 Live; Host Calculus/NT/Eng +8 | Closed |
+| 34 | Q1/Q2 wave 16 | **Complete** | NT +10 · Calc +12 · CG +10 Live; Host Eng/GA/Fuzzy/Chem +8 | Closed |
+| 35 | Q1/Q2 wave 17 | **Complete** | Eng +10 · GA +11 · CG +9 Live; Host Chem/Fuzzy/IT +8 | Closed |
+| 36 | Q1/Q2 wave 18 | **Complete** | NT +10 · Chem +10 · Fuzzy +12 Live; Host Calc/Cosmic/NLP +10 | Closed |
+| 37 | Q1/Q2 wave 19 | **Complete** | Calc +10 · Cosmic +12 · IT +8 Live; Host Inference/CG/Audio +8 | Closed |
+| 38 | Q1/Q2 wave 20 | **Complete** | Inf +8 · Cosmic +11 · Orch/ThreeD +16 Live; Host Audio/Scene/CG +8 | Closed |
+| 39 | Q1/Q2 wave 21 | **Partial / parked** | Audio+Scene Live in tree; NLP+Host not done — see `POET_Q1Q2_INCORPORATION_HANDOVER_2026-09-08.md` | Resume on cloud |
 
 ## Latest execution evidence
 

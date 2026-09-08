@@ -214,6 +214,18 @@ pub fn cochrane_units(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(Value::F64(cosmic::warp::cochrane_units(w, scale)))
 }
 
+/// `Cosmic.warp_factor_c` — { warp: f64, scale?: string } → dimensionless v/c.
+pub fn warp_factor_c(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let w = args::rec_f64(args_v, "warp")
+        .ok_or_else(|| args::bad(span, "warp_factor_c needs { warp: f64, scale?: string }"))?;
+    let scale_str = args::rec_str(args_v, "scale").unwrap_or("tng");
+    let scale = match scale_str {
+        "tos" => cosmic::warp::WarpScale::Tos,
+        _ => cosmic::warp::WarpScale::Tng,
+    };
+    Ok(Value::F64(cosmic::warp::warp_factor_c(w, scale)))
+}
+
 // ── Atmospheric models ─────────────────────────────────────────────────────
 
 /// `Cosmic.atmosphere_pressure` — { body: string, altitude_m: f64 } → pressure Pa
@@ -288,6 +300,36 @@ pub fn scale_factor(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(Value::F64(cosmic::microverse::scale_factor_between(
         from, to,
     )))
+}
+
+/// `Cosmic.typical_length` — { level: string } → typical length metres.
+pub fn typical_length(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let level_str = args::rec_str(args_v, "level")
+        .ok_or_else(|| args::bad(span, "typical_length needs { level: string }"))?;
+    let level = parse_hierarchy_level(level_str, span)?;
+    Ok(Value::F64(cosmic::microverse::typical_length(level)))
+}
+
+/// `Cosmic.observe_redshift` — { z: f64 } → FLRW observation record.
+pub fn observe_redshift(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let z = args::rec_f64(args_v, "z")
+        .ok_or_else(|| args::bad(span, "observe_redshift needs { z: f64 }"))?;
+    let obs = cosmic::flrw::observe_redshift(z);
+    Ok(args::record([
+        ("z", Value::F64(obs.z)),
+        (
+            "comoving_distance_mpc",
+            Value::F64(obs.comoving_distance_mpc),
+        ),
+        (
+            "physical_distance_mpc",
+            Value::F64(obs.physical_distance_mpc),
+        ),
+        (
+            "recession_velocity_km_s",
+            Value::F64(obs.recession_velocity_km_s),
+        ),
+    ]))
 }
 
 /// `Cosmic.compton_wavelength` — { particle: string } → wavelength in meters
@@ -447,6 +489,35 @@ mod tests {
         let v = warp_velocity(&input, S).unwrap();
         let c = 299_792_458.0;
         assert!((v.as_f64().unwrap() - c).abs() < 1.0, "warp 1 = c");
+    }
+
+    #[test]
+    fn wave18_warp_factor_c_tos_warp2() {
+        let input = rec(&[
+            ("warp", Value::F64(2.0)),
+            ("scale", Value::String("tos".into())),
+        ]);
+        let f = warp_factor_c(&input, S).unwrap();
+        assert!((f.as_f64().unwrap() - 8.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn wave18_typical_length_l2() {
+        let input = rec(&[("level", Value::String("L2".into()))]);
+        let len = typical_length(&input, S).unwrap().as_f64().unwrap();
+        // Bohr radius ~5.3e-11
+        assert!(len > 5.0e-11 && len < 6.0e-11, "got {len}");
+    }
+
+    #[test]
+    fn wave18_observe_redshift_zero() {
+        let input = rec(&[("z", Value::F64(0.0))]);
+        let out = observe_redshift(&input, S).unwrap();
+        assert!(args::rec_f64(&out, "comoving_distance_mpc").unwrap().abs() < 1e-9);
+        assert!(args::rec_f64(&out, "recession_velocity_km_s")
+            .unwrap()
+            .abs()
+            < 1e-6);
     }
 
     #[test]
