@@ -85,6 +85,14 @@ assert.match(apiExplorer, /menu-loader\.js/,
 assert.match(read('.github/workflows/pages.yml'), new RegExp(`- "${releaseVersion}"`));
 assert.match(read('.github/workflows/release-p64-models.yml'), new RegExp(`- ${releaseVersion}`));
 
+const releaseMatrix = read('docs/release-matrix.html');
+assert.match(releaseMatrix, /Qualia, Webizen, Poet/);
+assert.match(releaseMatrix, /What 0\.0\.37 ships/);
+assert.match(releaseMatrix, /vibe-wasm/);
+assert.doesNotMatch(releaseMatrix, /What this Linux host actually did/);
+assert.doesNotMatch(releaseMatrix, /Zero invented installers/);
+assert.doesNotMatch(releaseMatrix, /Fifteen greens/);
+
 const comparative = JSON.parse(read('docs/comparative_benchmark_results.json'));
 assert.equal(
   comparative.execution_environment?.engine_version,
