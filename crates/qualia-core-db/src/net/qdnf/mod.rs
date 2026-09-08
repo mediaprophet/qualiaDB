@@ -11,6 +11,7 @@ pub mod crypto;
 pub mod economics;
 pub mod errors;
 pub mod fabric;
+pub mod fixtures;
 pub mod frame;
 pub mod harness;
 pub mod link;

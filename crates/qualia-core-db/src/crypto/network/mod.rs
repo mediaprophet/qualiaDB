@@ -10,6 +10,7 @@ pub mod kdf;
 pub mod kem;
 pub mod key_provider;
 pub mod mldsa;
+pub mod pq_handshake;
 pub mod rotation;
 pub mod secret_lease;
 pub mod transcript;

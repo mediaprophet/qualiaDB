@@ -198,3 +198,18 @@
 - Shared files forbidden to workers: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`, `wal.rs`, `arena.rs`.
 - Human input needed: none this step.
 - Next: integrate child patches, run `cargo +stable` tests, record measurements.
+
+## 2026-09-08 — Wave 3 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers: FND-03 (empty DiscoveryBeacon golden `QDNF`/v1/80-byte prefix, unknown-profile fail-closed, NetworkCursor bind), CRY-02 (`pq_handshake` successive FSM, 0-RTT denied, draft initiator-share encoding, ML-KEM-then-X25519 concat), RT-02 (`CellTable` 4 slots, NetworkSmall cannot take 42 MiB, reuse RT-01 ledger/leases).
+- Measured: `cargo +stable test -p qualia-core-db --lib -- governance::webizen::arena_admit wal_intent net::qdnf::bearer net::qdnf::fixtures crypto::network::pq_handshake net::peer::cells net::qdnf net::peer crypto::network q42::q42_volume::volume::network_quanta` → **204 passed**, 0 failed. Not Ethernet, not Native Independent closure, not package completion. CRY-02.12 independent KEM vectors remain open.
+- Human input needed: none this step.
+- Next: Wave 4 (NET-02 discovery cookies, ECO-01 payment-vs-budget, remaining QSR/session bounds) with disjoint writes.
+
+## 2026-09-08 — Wave 4 swarm claim
+
+- Integrator claims Wave 4 provisional: NET-02 cookies/amplification, ECO-01 payment cannot enlarge consent, NET-04 QSR query bound. Packages stay **open**.
+- Disjoint writes: NET-02 `net/qdnf/link/cookies.rs` + link/mod.rs one line; ECO-01 `net/qdnf/economics/consent.rs`; NET-04 `net/qdnf/resolve/query.rs` (do not rewrite qsr.rs).
+- Shared files forbidden: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
+- Human input needed: none this step.
+

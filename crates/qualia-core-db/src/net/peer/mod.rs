@@ -1,5 +1,6 @@
 //! Qualia Peer Runtime kernel libraries.
 
+pub mod cells;
 pub mod host;
 pub mod runtime;
 
