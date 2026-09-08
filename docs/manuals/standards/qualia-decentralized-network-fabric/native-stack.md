@@ -42,6 +42,11 @@ Q42 evidence, bounded admission plans, semantic services and aggregate resource 
 target default [PQ profile](./post-quantum-security.md) reuses existing crypto primitives with new
 reviewed handshake/proof integration. Optional migration packages do not become runtime dependencies.
 
+[Semantic network roles](./semantic-network-roles.md) describe networking as an agent purpose with
+built-in resource/economic commitments. Roles may span [ordinary cells up to 512 MiB](./network-cell.md)
+under a host budget, while semantic evaluation passes remain bounded at 42 MiB. Concrete APIs,
+container layouts and numeric profiles remain candidates driven by those semantic requirements.
+
 ```text
 Persistent target ──QResolve──> verified DNI candidates
                                       │
@@ -63,12 +68,18 @@ Resource use, an accepted economic obligation, and confirmed settlement are also
 The [commons economics profile](./commons-and-resource-economics.md) preserves that separation.
 
 No layer may collapse those facts into one “trusted peer” boolean.
+The [Identifier Fabric](./identifier-fabric-integration.md) additionally separates entities, claims,
+handles and instruments. A verified route/key/grant is not a NaturalAgent, and permission to act
+does not establish legal responsibility. Historical accountability uses separately authorized
+[evidence preservation](./electronic-evidence-and-retention.md).
 
 ### 2.1 QualiaDB core substrate
 
 The layers share [QualiaDB core storage and Q42 indexes](./core-storage-and-cache.md). Persistent
 signed records, CBOR-LD contract bundles, policy facts, and economic receipts use that storage
 lifecycle. Compact NQuin projections locate exact signed objects without replacing their evidence.
+The [QNF candidate](../qnf-network-container-draft.md) explores exact evidence and compiled views
+alongside Q42, with one recoverable core publication boundary and acyclic artifact commitments.
 QRoute forwarding generations and QSession packet state use caller-owned arenas derived from
 verified records; they do not require general graph queries or disk writes for every packet.
 Private relationship state and LIG caches retain separate authority and visibility scopes even when
@@ -228,10 +239,10 @@ DID URL, content digest, or canonical resource IRI to signed DNI route sets. It 
 2. encrypted relationship records;
 3. local realm indexes;
 4. authorized community directories/introducers;
-5. a DHT carried over QRoute; and
+5. QSR carried over QRoute; and
 6. an explicit Legacy Internet Gateway request.
 
-The DHT cannot bootstrap a disconnected node by itself. Bootstrap comes from local discovery,
+QSR cannot bootstrap a disconnected node by itself. Bootstrap comes from local discovery,
 manual invitation, previously known relationship peers, or a configured community bearer entry.
 
 ## 7. QPolicy

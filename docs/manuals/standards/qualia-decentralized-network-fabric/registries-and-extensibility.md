@@ -385,6 +385,15 @@ cannot claim forward secrecy without an independently tested key-evolution profi
 compiler roles. It allocates no QFrame type, NQuin opcode, inline datatype, metadata nibble or physical
 container version. Generic graph storage is not authority to execute an unsupported network profile.
 
+### 16.4 Semantic design before new allocations
+
+Network-provider roles, compute profiles, preservation/hold/custody relationships and Identifier
+Fabric planes are proposed semantic concepts, not additional numeric wire assignments. Their
+accepted ontology/CBOR-LD bundles will identify exact meanings and required reasoning fragments.
+QNF layout and Network Cell sizes are candidate storage/local execution profiles, not QFrame types.
+P16–P21 establish evidence and interpretation before any corresponding interoperability freeze.
+This design-stage qualification also applies to the provisional publication language in §28.
+
 ## 17. Capability operation registry
 
 Core operation URIs include:

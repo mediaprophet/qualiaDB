@@ -1,4 +1,4 @@
-# QDNF on the QualiaDB Core and Q42 Storage
+# QDNF on the QualiaDB Core, Q42 and Network Artifacts
 
 **Status:** Normative design 0.1; integration requirements, not a completed network cache
 **Date:** 2026-09-06
@@ -7,15 +7,16 @@
 
 QDNF MUST use the QualiaDB core as its semantic storage, indexing, and policy substrate. Network
 libraries implement protocol state and scoped adapters onto that core. Persistent route evidence,
-ontological contracts, semantic bundles, contribution records, and settlement history use `.q42`
-volumes and the existing core's storage lifecycle, extended where the required guarantees are missing.
+ontological contracts, semantic bundles, contribution records, and settlement history use the core
+storage lifecycle. Q42 supplies semantic projections/indexes; [QNF](../qnf-network-container-draft.md)
+is a candidate exact-object/view container. Extend existing owners where guarantees are missing.
 QDNF does not introduce an independent general-purpose database, ontology store, or payment ledger.
 
 Persistent source records, derived semantic indexes, and live protocol state have different lifetimes:
 
 | State | Owning representation | Lifetime and access |
 |---|---|---|
-| Signed RARs, withdrawals, delegations, constitutions | Exact signed source bytes plus NQuin projections in Q42-managed storage | Retain according to authority/evidence policy; expiry still gates use |
+| Signed RARs, withdrawals, delegations, constitutions | Exact source objects in core-managed artifacts, including candidate QNF, plus Q42 projections | Retain according to authority/evidence policy; expiry still gates use |
 | CBOR-LD agreements, contexts, ontologies, shapes, rules, compression tables | Content-digested semantic bundles and records referenced by `.q42` manifests/indexes | Pin the versions accepted by each contract; acquire and validate on cold paths |
 | Contributions, spend reservations/intents, receipts and adjustments | Core durable mutation/checkpoint path plus exact signed record objects | Survive restart; preserve outstanding replay and settlement evidence |
 | Active route/resolution selections and compiled policy | Bounded, immutable derived generations of typed handles | Rebuild from verified core records; invalidate on expiry, withdrawal, or policy change |
@@ -70,9 +71,9 @@ Never persist native pointers. Reusing an offset after compaction must not make 
 to a different record. Preserve full identifiers beside compact indexes at security boundaries.
 
 Exact CBOR-LD/COSE bytes require a byte-preserving artifact representation. Reuse a suitable existing
-core artifact facility only after proving exact round-trip behavior. If unified Q42 lacks the needed
-opaque-record representation, add a versioned payload/manifest profile in the owning Q42 library,
-with compatibility and bounds tests. Do not discard the signed source by keeping only hashed Quins,
+core artifact facility only after proving exact round-trip behavior. Evaluate QNF against extending
+Q42; the semantic evidence contract stays independent of that choice. Keep compatibility, bounded
+access and recoverable core publication. Do not discard the source by keeping only hashed Quins,
 or reinterpret an unrelated tensor/KV page type as a contract container.
 
 Native mmap, constrained range reads, and browser storage can implement the same bounded record
@@ -116,6 +117,9 @@ independent expiry enforcement; it cannot leave partially updated live authority
 Cache entries may be evicted; committed agreements and unresolved payment intents are not disposable
 cache entries. Expiry, withdrawal, evidence retention, and garbage collection have separate policies.
 Storage pressure pauses new admitted work before losing evidence needed to reconcile prior spending.
+The [evidence lifecycle](./electronic-evidence-and-retention.md) defines temporary log classes,
+balanced selection, preservation holds and source/proof/interpretation dependencies. Hold acquisition
+and reclamation need a shared ordering boundary across replicas and backups.
 
 Reuse and strengthen the core WAL/segment lifecycle to make signed bytes, their projections, the
 reservation, and the settlement instruction recoverable together. Define the commit point, writer
@@ -131,7 +135,8 @@ and indexes use scoped access/encryption; a commons flag never overrides sensiti
 Budget records, indexes, lexicons, decoding buffers, live generations, replay state, and queues
 together. Large disk volumes do not need to be fully resident. Mapped file size, resident working
 set, heap/arena use, and peak construction memory are different measurements; mmap alone does not
-prove the 42 MiB execution-pass ceiling. Every hot path remains allocation-free, including rejection
+prove an execution limit. [Network Cells](./network-cell.md) separately bound ordinary cells at up to
+512 MiB, Sentinel passes at 42 MiB, and aggregate host use. Every hot path remains allocation-free, including rejection
 paths; existing allocating error construction needs repair before those helpers are placed there.
 
 ## 7. Evidence and economics
@@ -156,3 +161,5 @@ the [economics profile](./commons-and-resource-economics.md). Lower allocation o
 can motivate energy measurements but is not itself a joule saving or an automatic extra charge.
 Sharing a cached artifact recognizes creation and stewardship through its agreed contribution rules
 while accounting for the resources actually spent serving it.
+Record [typed compute](./compute-resource-accounting.md) separately, including cold verification,
+index construction and evidence maintenance. Resource accounts do not establish culpability.

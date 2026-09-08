@@ -3,7 +3,7 @@
 **Status:** Proposed service profiles 0.1; schema and wire-vector freeze required before interoperability
 
 These services make [Qualia Peer Runtime](./peer-runtime.md) useful beyond secure byte streams.
-They reuse QSession, QPolicy, QSync, existing QualiaDB modalities, and Q42 storage. All capacities
+They reuse QSession, QPolicy, QSync, existing modalities and core artifacts/Q42 projections. All capacities
 below are draft maximums that remain subordinate to the runtime's aggregate memory/work limits.
 
 The [PQ replacement profile](./post-quantum-security.md) additionally requires dual authority proofs
@@ -25,7 +25,7 @@ digest, selected version, and critical features to `SERVICE_OPEN`.
 | Execution profile | Bounded validator/evaluator version, supported filters/merge semantics, maximum record/expansion/work limits |
 | Delivery profile | Stream/datagram mode, ordering, expiry, replay/retention scope, gap behavior, and receipt meanings |
 | Governance profile | Audience, purpose, context, sensitivity, consent, policy generation and revocation requirements |
-| Resource profile | Byte/time/energy scope, provider limits, accepted funding/quote reference where needed |
+| Resource profile | Bytes/time/energy/typed compute, role-wide limits, accepted funding/quote reference where needed |
 
 An opaque byte service may use bounded structural schemas without an ontology. A channel claiming
 ontology-defined contracts MUST negotiate [the pinned CBOR-LD contract profile](./ontological-contracts.md).
@@ -34,10 +34,16 @@ terms into bounded decision/validation handles. Unknown duties or unsupported ev
 become allow decisions. Description Logic or a model-generated interpretation does not automatically
 make a contract executable.
 
-Keep exact signed CBOR-LD bytes with their semantic-bundle digest in Q42. Quin projections accelerate
+Keep exact signed CBOR-LD bytes and bundle digests in core artifacts, including candidate QNF. Quins accelerate
 selection and policy checks without becoming substitute signature material. Message schemas specify
 which fields are required, critical, and signed. On-wire schema IDs and all expansion/decoder limits
 must be fixed by the profile; the current permissive codec fallbacks do not meet this requirement.
+
+[Provider roles](./semantic-network-roles.md) describe who may offer the service and under which
+commitments, independently of its eventual encoding. Raw Q42/QNF transfers require authorization
+for all included bytes and metadata. A QNF file-generation commitment is not the QSync root of an
+authorized projection. [Evidence custody](./electronic-evidence-and-retention.md) additionally requires
+preservation/disclosure grants; a generic relay or custody grant cannot silently become either.
 
 ## 2. Semantic subscriptions
 

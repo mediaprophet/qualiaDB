@@ -15,7 +15,8 @@ It supplies the semantic substrate for the independent
 instead of creating a separate networking database.
 
 The first profile preserves the 48-byte `NQuin`, its six fields, existing tag ownership and unified
-Q42 storage. Network identifier kinds belong in graph relations; they do not consume new object
+Q42 semantic storage. Candidate [QNF artifacts](./qnf-network-container-draft.md) can carry exact
+evidence under the same core lifecycle. Network identifier kinds belong in graph relations; they do not consume new object
 datatype tags. New evaluator operations, if needed after reuse of current modalities, require a
 separate opcode/role review in the canonical FrameLayout registry. No numeric value is allocated
 by this draft, and no packet is executed merely because it decodes into a Quin.
@@ -56,13 +57,13 @@ budget; the persisted semantic datum remains canonical `NQuin`.
 
 | Representation | Stored as | Authority and lifetime |
 |---|---|---|
-| Exact network evidence | Original signed bytes and typed full digests in core-managed Q42 artifact/record storage | Signature, issuer, scope, epoch, expiry and withdrawal checked; immutable evidence may remain after authority expires |
+| Exact network evidence | Original signed bytes and typed full digests in core-managed artifacts, including candidate QNF | Signature, issuer, scope, epoch, expiry and withdrawal checked; retention is independent of current authority |
 | Semantic projection | Canonical Quins plus exact lexicon references, profile and source-evidence links | Derived interpretation with pinned schema/ontology; not a substitute for the source signature |
 | Compiled network view | Bounded local tables, immutable generations and leased evidence handles | Valid only under the compiled authority/policy/schema generation and deadline; rebuildable, never a portable authorization credential |
 
-The first two use existing Q42 volume/index/generation owners. If the core cannot preserve arbitrary
-signed bytes exactly in its current artifact facilities, implement a versioned payload profile there
-before claiming this feature. Do not put opaque proofs into model `.p64` or KV-weight pages, or imply
+The first two use core artifact/volume/index/generation owners. Compare a specialized QNF container
+with extending existing exact-object storage before freezing representation. Do not put opaque
+proofs into model `.p64` or KV-weight pages, or imply
 that graph projections alone provide lossless signed-byte storage.
 
 Hot session keys, nonce state and in-flight packet buffers stay in protected ephemeral arenas.
@@ -84,7 +85,7 @@ quantity semantics and CBOR-LD compression mappings before interoperability.
 | `AgreementBinding` | Exact CBOR-LD contract and pinned semantic-bundle digests, ratification and duties | Negotiated/ratified, then current policy and budget state |
 | `SubscriptionCheckpoint` | Authorized view, filter/projector contract, applied frontier and retention epoch | Atomic with durable projection progress; invalidated by visibility changes |
 | `SyncCheckpoint` | Authorized operation set, full digest/proof profile and causal frontier | Signed evidence; not proof of omitted global state or automatic merge authority |
-| `ResourceMeasurement` | Quantity, unit, device/human/airtime scope, interval, attribution and uncertainty | Measured/estimated/unknown joules and seconds; immutable observations with corrections |
+| `ResourceMeasurement` | Quantity, unit/counting profile, device/human/airtime scope, interval, attribution and uncertainty | Measured/estimated/unknown joules, seconds and typed compute; observations with corrections |
 | `DeliveryReceipt` | Exact operation/artifact, signer, accepted stage and optional obligation reference | Stored/retrieved/applied/settled remain distinct facts |
 | `AuthorityWithdrawal` | Issuer, withdrawn authority, ordered epoch/sequence and effective scope | Invalidates derived handles before further affected delivery/commit |
 | `AdmissionPlan` | Local derivation from verified target/service/policy/evidence and resource state | Nonportable compiled view; never obtained by trusting a remote serialized handle |
@@ -92,6 +93,12 @@ quantity semantics and CBOR-LD compression mappings before interoperability.
 Every class declares whether it is source evidence, derived assertion or local observation. A valid
 signature proves its origin under an accepted key, not its truth. Conflicts, uncertain timing and
 unsupported semantics remain explicit non-allow states where authority is needed.
+
+Extend this illustrative class set with [role/offer/commitment concepts](./qualia-decentralized-network-fabric/semantic-network-roles.md),
+[retention/hold/custody concepts](./qualia-decentralized-network-fabric/electronic-evidence-and-retention.md)
+and [Identifier Fabric planes](./qualia-decentralized-network-fabric/identifier-fabric-integration.md).
+These remain semantic relationships, not new opcodes or a merged person identifier. Access grants
+and accountability artifacts have separate purposes and authority.
 
 Illustrative graph structure, before profile freeze:
 

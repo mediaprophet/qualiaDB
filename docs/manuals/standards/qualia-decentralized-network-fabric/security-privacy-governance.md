@@ -16,7 +16,7 @@ security, safety after controller-key compromise, or deletion from every prior r
 Untrusted until independently verified:
 
 - bearer locators and unauthenticated discovery beacons;
-- DHT nodes, route gossip, relays, gateways, and introducers;
+- QSR index providers, route gossip, relays, gateways, and introducers;
 - aliases, search rankings, and remote diagnostics;
 - route cost, latency, emergency, importance, and location claims;
 - public keys embedded in self-signed messages; and
@@ -35,7 +35,7 @@ is a separate gate.
 | Fake adjacency | Ephemeral DH plus proof; possession of rendezvous secret where private; short expiry and rekey. |
 | Route poisoning | Verify LSA/path/RAR signer authority, sequence, expiry, path constraints, and strong digest. |
 | Route loop/black hole | Repeated-realm rejection, hop limit, multipath, expiry, local observations, and bounded failover. |
-| Sybil/eclipse | Relationship bootstrap, diverse paths/providers, realm admission policy, no DHT reputation root. |
+| Sybil/eclipse | Relationship bootstrap, diverse paths/providers, realm admission policy, no directory-derived trust root. |
 | Replay | Single-use nonces, per-context windows, sequence/epoch, expiry, withdrawal, and operation IDs. |
 | Key substitution | DID-method verification relationship plus transcript binding of QLink/QRoute/QSession keys. |
 | Controller compromise | Short TTL, withdrawal, key rotation, recovery transition, and M-of-N for high-risk changes. |
@@ -45,7 +45,7 @@ is a separate gate.
 | Malicious subnet gateway | SDR scope, child authorization, no capability widening, path loop checks. |
 | Malicious swarm replica | Controller replica grant, content digest, signed-op verification, paraconsistent isolation. |
 | Homograph/deceptive alias | Language/script/source display, confusable warning, canonical target confirmation, disambiguation. |
-| DoS | Pre-crypto quotas, per-source budgets, admission puzzles only where proportionate, rate limits, 42 MiB ceiling. |
+| DoS | Pre-crypto quotas, rate limits, bounded Sentinel passes, cell/host budgets and reserved control progress. |
 | Downgrade | Explicit namespace/carrier/gateway selection; no DNS/IP fallback after native failure. |
 | Cross-protocol replay | Distinct domain separators for every signed record and transcript. |
 | Contract reinterpretation | Bind exact CBOR-LD bytes to pinned contexts, ontology, shapes, rules, and compression mappings; reject unknown operative terms and semantic downgrade. |
@@ -54,13 +54,23 @@ is a separate gate.
 
 ## 4. Relationship policy
 
+The [socially defined protection profile](./socially-defined-protection.md) specifies required
+child/PEP and other vulnerable-person behaviors: private discovery and non-enumeration, separately
+consented contact/introductions, scoped guardianship, confidential help/reporting, and recovery
+from abusive delegates. Paying peers, group membership and guardian keys cannot bypass these gates.
+
 A relationship is a scoped fact/agreement, not a universal trust score. `friend`, `guardian`,
 `clinician`, `coworker`, and `community member` have different contexts and allowed actions.
+
+[Known-peer clinical exchange](./socially-defined-protection.md#61-known-peer-confidential-clinical-exchange)
+is an explicit private-bilateral workflow: a patient and known clinician bind authenticated
+instruments and standing care permissions without public patient discovery. Selected medical
+disclosure, care-team expansion and recording remain separate authorized operations.
 
 - Peering may disclose a private route.
 - Peering alone never permits graph read/write, inference delegation, or third-party introduction.
 - Relationships are directional unless a bilateral agreement explicitly binds both sides.
-- Trust and authority do not transit through friends, gateways, relays, or DHT neighbors.
+- Trust and authority do not transit through friends, gateways, relays, or QSR providers.
 - Delegation states grantor, delegate, resource/context, action, purpose, expiry, and proof.
 - `foundation/crdt.rs::verify_delegation` must perform real signature verification before QDNF use;
   its current placeholder behavior is an automatic deny at this boundary.
@@ -86,11 +96,17 @@ events.
 - An identifier is not an identity.
 - Natural persons may hold many pairwise/contextual DIDs and recovery anchors.
 - Automated cross-context correlation is prohibited without specific consent and necessity.
-- Loss of a key/device does not conceptually erase a person; identity recovery uses an explicit quorum
-  transition without publishing recovery material.
+- Loss of a key/device does not erase a person; recovery restores authorized instrument/control
+  relationships through an accepted transition, not reconstruction of a person from an anchor count.
 - Guardianship and fiduciary roles are scoped duties, not ownership.
 - Interfaces use “identifier,” “relationship persona,” “device,” or “resource,” not “the person's
   identity” merely because a DID is present.
+
+The [Identifier Fabric integration](./identifier-fabric-integration.md) preserves entity, claim,
+handle and instrument planes through policy, inference and diagnostics. A role capacity grant
+does not establish accountability or permission to target arbitrary persons. Purpose constraints
+survive delegation/proxying; multiple valid signatures require accepted, independent authority
+relationships before they can satisfy a co-attestation rule. Similarity and confidence cannot grant.
 
 ## 7. QPolicy and deontic evaluation
 
@@ -135,7 +151,7 @@ LWW remains acceptable only for explicitly designated low-risk, same-author muta
 | `private-pairwise` | shared rotating tag | pairwise DID | encrypted direct |
 | `closed-group` | group epoch tag | group-context DID | encrypted to group |
 | `community` | realm directory | contextual resource DID | community-visible RAR |
-| `public-service` | public service beacon/DHT | service DID | short-lived public RAR |
+| `public-service` | public service beacon/QSR | service DID | short-lived public RAR |
 | `content-public` | provider discovery | content ID | public replica providers |
 
 Person-controlled routes default to `private-pairwise`. Public publication is explicit and explains
@@ -171,10 +187,17 @@ or recovery material unless a specific lawful/user-governed purpose requires the
 sensitivity-labelled and purpose-bounded; accountability does not justify indefinite personal-data
 retention.
 
+[Electronic Evidence and Retention](./electronic-evidence-and-retention.md) defines the separate
+diagnostic, audit and preservation lifecycles. Preserve selected exact sources, supporting and
+contradictory context, historical authority, interpretation and custody under explicit holds.
+Selection/expiry must be auditable and race-safe; compact digests cannot recover deleted sources.
+The design supports examination and legal proceedings without claiming signature validity proves
+human identity, intent, responsibility, admissibility or a prosecution outcome.
+
 ## 13. Key lifecycle
 
 - Signing, route, QLink, QSession, key-agreement, envelope, and recovery keys are purpose-separated.
-- Private keys never enter Q42 volumes, invitations, RARs, DHT, or logs.
+- Protocol private keys never enter Q42/QNF evidence artifacts, invitations, RARs, QSR indexes, or logs.
 - Link, route, and relay tokens rotate by epoch.
 - High-risk controller changes should require M-of-N or equivalent recovery governance.
 - Intermediate key material is zeroized where supported.

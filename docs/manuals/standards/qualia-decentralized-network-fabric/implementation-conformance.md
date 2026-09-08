@@ -2,6 +2,18 @@
 
 **Status:** Implementation plan and conformance specification 0.1
 
+The [detailed implementation programme](./qdnf-imp/README.md) expands P0–P21 below into 30 packages
+and 490 child checks. Its [dependency roadmap](./qdnf-imp/dependency-roadmap.md),
+[library construction rules](./qdnf-imp/library-layout.md) and
+[swarm protocol](./qdnf-imp/swarm-protocol.md) govern implementation dispatch and file ownership.
+All implementation packages begin pending; the plan is not evidence of completed runtime behavior.
+
+The [finite-compensation](./finite-project-compensation.md) and
+[social-protection](./socially-defined-protection.md) profiles are required named outcomes, not
+optional implications of generic micropayments or guardianship. SEM/ECO/NET/EVD/OPS/QA child checks
+cover humanitarian exemptions, represented corporate usage, final-payment races, end of creation
+surcharges, private child/PEP discovery, abusive-delegate recovery and protected evidence disclosure.
+
 ## 1. Implementation stance
 
 QualiaDB has working encrypted P2P, relationship, semantic, and policy components. It does not yet
@@ -37,9 +49,11 @@ have a native below-IP QLink/QRoute stack. QDNF therefore has three categories:
 ## 3. New libraries
 
 These libraries implement network protocols over the existing QualiaDB core. They MUST reuse
-[Q42 storage, indexing, and core persistence](./core-storage-and-cache.md) for durable records,
+[core artifact storage, Q42 indexing and persistence](./core-storage-and-cache.md) for durable records,
 semantic bundles, and accounting facts. They do not create a parallel database, ontology store,
 or ledger. Add needed storage guarantees in focused modules under the existing Q42/core owners.
+The purpose-specific QNF container is a candidate under those owners, not a new database. Exact
+library boundaries below are implementation sketches; semantic role/evidence requirements lead freeze.
 
 ```text
 crates/qualia-core-db/src/net/qdnf/
@@ -99,7 +113,7 @@ keep external payment I/O and ontology construction outside packet/evaluator loo
 The proposed [Qualia Peer Runtime](./peer-runtime.md) adds a `net/peer/` runtime/service library
 and a `qualia-peer` facade over these components. Its [API contract](./peer-runtime-api.md) and
 [semantic service profiles](./semantic-peer-services.md) define the software alternative to libp2p.
-Section 12 extends the programme with P10–P15 without making optional economics a prerequisite for
+Section 12 extends the programme with P10–P21 without making monetary settlement a prerequisite for
 native connectivity. Feature isolation of the existing core is required for a minimal facade build.
 
 ## 4. Work packages
@@ -148,13 +162,13 @@ are rejected or isolated; link failure converges deterministically.
 
 - Implement canonical DNI/RAR/withdrawal/SDR/Alias types and deterministic CBOR vectors.
 - Verify DID-method signer purpose and content identifiers.
-- Implement ordered caches, local realm resolver, encrypted relationship exchange, QRoute DHT, and
+- Implement ordered caches, local realm resolver, encrypted relationship exchange, QSR rendezvous, and
   paraconsistent conflict handling.
 - Back those logical caches with Q42/core records and bounded derived generations. Test requester
   scope isolation, negative-result source scope, expiry/withdrawal during lookup, stale handles,
   and restart/compaction without authority resurrection.
 
-Exit: DID/resource resolves after realm move; expiry/withdrawal works; DHT poisoning and embedded-key
+Exit: DID/resource resolves after realm move; expiry/withdrawal works; QSR index poisoning and embedded-key
 substitution fail; alias ambiguity requires selection.
 
 ### QDNF-P5 — QSession and QPolicy
@@ -187,7 +201,9 @@ QDNF controller evidence remain separate; untrusted web content cannot execute i
 
 ### QDNF-P8 — Transition carriers and browser
 
-- Wrap QFrames in current WireGuard/libp2p paths without altering native semantics.
+- Implement selected UDP/WireGuard/browser carriers without altering native semantics. A libp2p
+  carrier is an optional, separately packaged migration adapter; P8 does not require it and it
+  cannot satisfy replacement acceptance.
 - Define end-to-end encrypted relay mailbox and WebRTC bearer.
 - Label carrier dependencies accurately in UI/telemetry.
 
@@ -303,7 +319,7 @@ Monetary adapters are optional; claim monetary settlement only for adapters with
 | Swarm/subnet | failover, malicious replica, child auth, scope widening, moving realm |
 | Alias | multilingual equivalence, mixed script, same label/different target, accessible selection |
 | LIG | cache separation, DNS leak prevention, redirect/TLS evidence, explicit boundary, gateway removal |
-| Resources | zero-heap Tier-1 paths, parallel allocation tests, 42 MiB ceiling, pre-crypto rate limiting |
+| Resources | zero-heap Tier-1 paths, parallel allocation tests, 42 MiB Sentinel passes, ordinary cells at most 512 MiB, host reservations, pre-crypto rate limiting |
 | Core/Q42 reuse | bounded range reads, exact signed-byte round-trip, scoped cache keys, stale handles, no expired authority after rebuild, multi-object recovery, generation reclamation |
 | Ontological contracts | CBOR-LD vectors, context/ontology/table substitution, unknown duties, SHACL/N3 budgets, exact-byte signatures, offline semantic preservation |
 | Commons economics | quantity/rate scope, unknown telemetry, aggregate caps, subsidy/work acceptance, duplicate delivery/debit, crash reconciliation, disputes, offline double spend, threshold release |
@@ -361,7 +377,7 @@ scenarios. Document-only semantic identifiers and proposed conformance tests are
 
 ## 11. First usable native slice
 
-The first coherent release is deliberately local and requires no DHT or gateway:
+The first coherent release is deliberately local and requires no distributed QSR lookup or gateway:
 
 - QFrame over `local-ipc-v1` and `raw-ethernet-v1` development bearer;
 - private/manual QLink discovery and two-peer adjacency;
@@ -373,7 +389,7 @@ The first coherent release is deliberately local and requires no DHT or gateway:
   substitution, expiry, and block.
 
 That slice proves the central requirement: Qualia nodes can discover, route, resolve, authenticate,
-authorize, and communicate without ARP, DNS, DHCP, IP, or a cloud service. The DHT, inter-realm path
+authorize, and communicate without ARP, DNS, DHCP, IP, or a cloud service. Distributed QSR, inter-realm path
 vector, swarms, mobile subnets, transition carriers, and Legacy Internet Gateway then extend it
 without changing the native trust model.
 
@@ -402,8 +418,8 @@ an in-process deterministic host while those wire implementations are built.
 
 **Acceptance:** two applications discover/authenticate and exchange a reliable service plus expiring
 datagrams through the facade with IP disabled; denied operations never reach the application.
-Hot allocation/error tests, 42 MiB admission, flow-credit conservation, cancel/late-completion,
-fairness and generation-reclamation tests pass. Constructor and host memory outside the pass are
+Hot allocation/error tests, declared cell/host admission, 42 MiB Sentinel passes, flow-credit
+conservation, cancel/late-completion, fairness and generation-reclamation tests pass. Memory outside a pass is
 reported separately. Constrained/WASM capability support is measured by builds, not inferred.
 
 ### QDNF-P11 — Semantic subscriptions and recoverable QSync
@@ -517,7 +533,7 @@ for admission plans, authorized projections and PQ proof/digest profiles. This p
 
 - Freeze the [networking modality](../q42-network-modality-draft.md) vocabulary and bounded
   CBOR-LD/SHACL profiles, source/derived/observation roles, units and cryptographic evidence binding.
-- Implement exact source storage and Quin projections under existing Q42 owners, then compile
+- Implement exact core artifact storage and Q42 projections, evaluating QNF through P16, then compile
   generation-bound admission views for the runtime. Keep identifiers as graph kinds and use only
   existing canonical inline datatypes; allocate no network opcode/type/lane bits without a role audit.
 - Reconcile the four-field FrameLayout parity helpers with five-field NQuin persistence through a
@@ -534,6 +550,102 @@ parity vectors agree across supported producers/readers. Unsupported profile rol
 The current Q42 header root is not overwritten with a larger PQ digest; independent full evidence
 verification succeeds on tampering/substitution and fails on a short-hash-only authorization attempt.
 
+### QDNF-P16 — QNF container and core publication
+
+**Depends on:** P19–P21 semantic requirements; P0/P4 core boundaries and P14 for a PQ artifact claim.
+
+Evaluate [QNF](../qnf-network-container-draft.md) against extending existing core artifacts. Preserve
+exact signed bytes, typed commitments, range access, source/projection/view separation and an acyclic
+publication graph. The 256/128/64-byte layouts are candidates, not allocated standards. Select layout
+only after representative route, contract, proof, evidence and custody workloads justify it.
+
+**Acceptance:** if QNF is selected, implement a focused core container library and independent
+reader/writer vectors. Test layout overflow, unknown profiles, repeated-binding consistency,
+signature-cycle avoidance, full/partial verification distinctions, immutable file leases and crash
+recovery across sealed QNF/Q42 artifacts and their external commit manifest. Measure index scanning,
+working memory, latency, disk cost and energy; include the alternative without a new format.
+
+### QDNF-P17 — Network cell and aggregate memory
+
+**Depends on:** P10 ownership/admission and P19 role boundaries; coordinate with existing scheduler owners.
+
+Implement the [Network Cell](./network-cell.md) execution profile: ordinary cells at most 512 MiB,
+smaller constrained envelopes, multiple cells under an atomic parent reservation, and 42 MiB
+Sentinel passes with all referenced pages/overhead included. Declare exceptional LLM/similar
+profiles separately. The existing memory-boundary field does not demonstrate enforcement.
+
+The [Webizen code review](./core-memory-and-parallel-networking.md) requires explicit arena ownership:
+the VM borrows an arena, RuleEngine owns one, and inspected worker cells do not. Replace assumptions
+about FIFO preservation, context-free cache hits, caller allocation and rule-vector growth with
+tested scope/eviction, caller-owned capacity and bounded activation. Large persisted ontologies use
+core range/continuation mechanisms; they need not fit in one arena or cell.
+
+**Acceptance:** run networking independently of policy/application work; prove flow-owner handoff,
+credit and lease conservation, shared-memory accounting, bounded IPC, crash/late completion,
+fresh online keys and durable recovery. Exercise multi-cell exhaustion and real OS controls.
+Report logical, resident, committed and kernel memory separately for each backend. Cell creation
+must not multiply role allowances or expose private records across purpose boundaries.
+
+### QDNF-P18 — Typed compute accounting
+
+**Depends on:** P9 quantity/budget concepts and P19 role semantics; no payment rail is required.
+
+Select [compute profiles](./compute-resource-accounting.md) for forwarding, cryptography, policy
+and requested application work. Pin counting meanings and distinguish capacity, work, accepted
+output and credits. Retain independent joules/seconds/work observations with unknown states.
+
+**Acceptance:** incompatible units/schedules reject comparison, integer/rate overflow fails, shared
+reservations survive retries and cell migration, and actual versus avoided/cached work is explicit.
+Verify unavailable/multiplexed counters and enforceable fuel separately from estimated energy.
+Contract interpretation and output acceptance remain independent of signed telemetry and payment.
+
+### QDNF-P19 — Semantic network-provider roles
+
+**Depends on:** P15 graph/ontology substrate; coordinate with P9 agreements, P17 cells and P21 planes.
+Develop these semantics before freezing P16 artifacts or new wire messages.
+
+Define [roles, offers, commitments and outcomes](./semantic-network-roles.md), including dedicated
+router agents with built-in resource/economic support. Work through community routing, paid transit,
+intermittent custody and multi-cell provision. Specify purpose, beneficiaries, funding, capacity,
+delivery boundary, exposure, withdrawal and failure outcomes; keep bootstrap independently bounded.
+
+**Acceptance:** enabling/disabling a role cannot widen consent, multiply credit or silently abandon
+accepted duties. Route replacement reserves authorized provider exposure without assuming atomic
+multi-hop settlement. Unsupported semantics fail explicitly. Compare semantic selection, delta
+delivery and placement against equivalent authorized workloads before claiming an improvement.
+
+### QDNF-P20 — Electronic evidence lifecycle
+
+**Depends on:** P0/P4 durable core boundaries, P19 stewardship roles and P21 attribution distinctions.
+
+Implement [retention classes, selection and preservation](./electronic-evidence-and-retention.md)
+with separate diagnostic windows, audit records, selected original evidence and preservation holds.
+Bind source bytes, interpretation, historical authority, clocks, custody and coverage/gaps. Selection
+must preserve relevant contradictory/exculpatory context and state its limits; a hash is not recovery.
+
+**Acceptance:** test hold-versus-expiry/compaction races, atomic evidence promotion, durable dependency
+closure, scoped deduplication, lossless restoration, replica/backup holds, failed storage and exports.
+An independent verifier can examine an offline bundle without the live network; redactions remain
+derived copies. Long-term crypto/format migration preserves prior validation evidence. Retention
+periods and disclosure authority are jurisdiction/purpose profiles, not invented universal defaults
+or guarantees of admissibility, culpability or prosecution outcome.
+
+### QDNF-P21 — Identifier Fabric integration
+
+**Depends on:** consultation concepts and P0/P15 boundaries; coordinate with the existing fabric
+owners. This design task does not implement a competing identifier runtime or expand Host APIs.
+
+Apply [the consultation integration](./identifier-fabric-integration.md) to QResolve, QPolicy,
+QSession, role economics and evidence. Preserve entity/claim/handle/instrument planes; symbolic,
+purpose/time-scoped authority; instrument-specific key roles; co-attestation and relation locators.
+Do not choose a universal NaturalAgent join key or turn recovery into reconstruction of a person.
+
+**Acceptance:** valid keys, wallets, roles, aliases, BLE observations, similarity and co-attestation
+counts cannot merge people or independently grant access. Reject cross-purpose proxying and stale
+grants after role/officeholder changes. Retain historical attribution, contested claims, reliance
+and corrections without rewriting identity or establishing guilt. Exercise classifier/diagnostic
+plane separation and multi-instrument substitution/replay/recovery cases under bounded evaluation.
+
 ### 12.1 Runtime conformance reporting
 
 Report a **QPR Core Runtime** claim only after P10 and the selected underlying QDNF class pass.
@@ -546,6 +658,7 @@ not imply the others. Native-independent conformance still requires a demonstrat
 
 Open freeze decisions include exact service CDDL/CBOR-LD tables, checkpoint/tree/continuation bytes,
 offline recipient-key evolution, reliable-carrier packet mapping, standalone NAT probe messages,
-PQ transcript/chunk/proof/digest encoding, the networking modality/parity integration, and
+PQ transcript/chunk/proof/digest encoding, networking modality/parity integration, candidate QNF,
+multi-cell enforcement, typed compute, provider-role semantics, evidence retention and fabric bindings, and
 platform-specific dependency extraction. The architecture chooses their boundaries and tests;
 it does not pretend those unimplemented protocols are deployment-ready.

@@ -646,6 +646,10 @@ fields. The v3 header's 32-byte SHA-256 root is unchanged; a separately verified
 must bind exact content without claiming the old root is a PQ signature. Any required new opaque
 artifact encoding is versioned within its owning core profile and tested for exact byte recovery.
 
+[QNF](./qnf-network-container-draft.md) explores a purpose-specific sibling container for network
+evidence and views under core publication. Its illustrative layout does not revise Q42 v3 or the
+Quin ABI. Semantic requirements lead format selection; exact vectors remain future freeze work.
+
 A literal 42-byte payload plus six parity bytes would be a separate record-format proposal with
 different field allocation and integrity behavior. It needs version/ABI and reader/writer migration
 decisions; adding the networking modality does not make that change implicitly.

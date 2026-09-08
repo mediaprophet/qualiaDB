@@ -1,6 +1,6 @@
 # QNF Network Container
 
-**Status:** Proposed format 0.1; no reader/writer or interoperable byte vectors implemented
+**Status:** Candidate format 0.1; illustrative layout, no reader/writer or frozen byte vectors
 
 **Date:** 2026-09-06
 
@@ -8,11 +8,16 @@
 
 ## 1. Decision and purpose
 
-Define a dedicated, immutable network artifact container for
+Investigate a dedicated, immutable network artifact container for
 [Qualia Peer Runtime](./qualia-decentralized-network-fabric/peer-runtime.md). QNF stores exact signed
 evidence, indexed objects and optional compiled network views in independently addressable sections.
 It follows the bounded, contiguous, relative-offset principles of P64 and 10D, with a layout chosen
 for network objects and large post-quantum proofs.
+
+The architectural requirement is to preserve exact evidence, its interpretation and bounded
+access under the existing core lifecycle. Semantic roles and their evidence needs lead the design;
+the numerical layout below is a reviewable experiment, not a finalized encoding or registry
+assignment. Select it only after comparison with extending existing core artifact facilities.
 
 Q42 remains the semantic graph representation and the home of the
 [networking modality](./q42-network-modality-draft.md). QNF is a sibling format managed by the existing
@@ -31,7 +36,7 @@ installs its policy or compiled views automatically.
 |---|---|---|
 | All network objects as NQuin payloads | Efficient semantic indexing, awkward for kilobyte proofs and exact variable-length source objects | Preserve projections; do not fragment every signature into invented semantic fields |
 | Extend only the generic Q42 container | Shared storage machinery; couples network object/index evolution to the semantic volume | Keep support for existing Q42 sources and use core adapters |
-| Purpose-specific QNF | Exact object bytes, simple object/chunk tables, optional compiled views, independent versioning | Adopt as the target network artifact format; validate the additional code/cost |
+| Purpose-specific QNF | Exact object bytes, simple object/chunk tables, optional compiled views, independent versioning | Preferred candidate to evaluate against existing core artifacts before format freeze |
 | Independent networking database | Would duplicate transactions, authority and recovery | Use existing core ownership instead |
 
 The [P64 layout](../../../crates/qualia-core-db/src/q42/p64_weight/layout.rs) currently declares its
@@ -43,6 +48,10 @@ Their checksums and alignment names are not cryptographic authentication or port
 
 QNF must earn its complexity through bounded-reader and representative end-to-end measurements.
 Smaller descriptors or fewer copies alone do not prove lower latency, energy, or resident memory.
+Neither large ontologies nor network graph size alone justify a new format. The core already offers
+bounded access to much larger persisted datasets; see the
+[Webizen/core review](./qualia-decentralized-network-fabric/core-memory-and-parallel-networking.md).
+Evaluate only a demonstrated specialization benefit while retaining the common semantic engine.
 
 ## 3. Representation and publication roles
 
@@ -151,6 +160,8 @@ containing that commitment, scope and profile. Verify both using the
 [PQ proof policy](./qualia-decentralized-network-fabric/post-quantum-security.md); an included key is
 not automatically an authorized publisher. Encode/decode vectors must prove sizing and the absence
 of a header/signature self-reference. No ignored AUTH tail or alternative unsigned header is allowed.
+Scope and profile bindings repeated in the header, BIND and AUTH must agree exactly under the
+selected representation; independently valid but inconsistent bindings reject the artifact.
 
 The generation commitment authenticates the directory's content commitments and layout. It is not
 the SHA-384 of every byte in the file: AUTH bytes are outside that hash. A core artifact reference
@@ -162,6 +173,11 @@ chunks/object. They establish validity of those ranges only. Full-file verificat
 checks every section digest, whole DATA coverage and any expected exact-file digest. A valid chunk
 or manifest signature does not establish all source signatures, semantic truth, or completeness of
 an authorized dataset. Keep these validation states distinct in the API.
+
+The initial range-read design can require up to 5 MiB of table scanning before serving one object.
+Streaming bounds resident memory, not total validation work. Reuse table verification only while
+the exact immutable file identity and verification profile remain pinned. Compare independently
+authenticated index pages as an alternative before freezing layout; they need their own proof rules.
 
 ## 5. Bounds and corruption behavior
 
@@ -188,10 +204,16 @@ future profile, but never replaces the SHA-384 and signature checks here.
 
 ## 6. Views, invalidation and core commits
 
-BIND names the full source evidence/projection generation, semantic/policy/crypto profiles and,
+BIND names source-object commitments and any already sealed input projection, semantic/policy/crypto profiles and,
 when VIEW is present, compiler version, view schema, sensitivity and target execution ABI. VIEW
 contains relative references or validated table indices, never process pointers or live lease IDs.
 No raw machine code or remote serialized capability becomes executable by being in VIEW.
+
+Keep dependencies acyclic: source-object commitments lead to projections/views, then an external
+core commit manifest joins the sealed QNF and Q42 artifacts. Do not make a new QNF hash depend on a
+new Q42 artifact hash that depends on that same QNF hash. Projections can name independent source
+object digests; the commit manifest resolves their storage locations. Shared logical transaction
+identifiers do not substitute for these content commitments.
 
 The receiving core verifies source evidence and current authority, validates or rebuilds the view,
 and issues fresh local generation-checked handles to the networking cell. Remote claimed policy
@@ -209,6 +231,11 @@ Retention is reference- and policy-based. An immutable generation may remain as 
 after its routes, capabilities or plans expire. Compaction changes offsets and exact-file identity;
 it cannot make an old handle current, revive authority, or discard unresolved replay/payment records.
 Scope-sensitive deduplication must not reveal that another private context holds the same object.
+
+[Evidence retention](./qualia-decentralized-network-fabric/electronic-evidence-and-retention.md)
+adds policy/hold references to core reclamation. QNF is one possible evidence component; a forensic
+collection may span multiple artifacts or use an existing large-object store. Its evidence manifest
+binds originals, derivations and custody independently of QNF file-generation and QSync roots.
 
 ## 7. Implementation and validation
 

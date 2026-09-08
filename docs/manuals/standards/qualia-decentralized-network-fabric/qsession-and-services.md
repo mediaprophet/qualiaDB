@@ -14,6 +14,14 @@ loss recovery, congestion control, rekey, and path migration over QRoute. It rep
 native dependence on UDP, TCP, and TLS while binding transport to persistent DID/resource authority
 and QPolicy.
 
+Session proof establishes authorized instrument use within the
+[Identifier Fabric](./identifier-fabric-integration.md). It does not merge the endpoint, agent,
+operator, payer and NaturalAgent. Bind role/purpose and temporal grants separately, revalidate
+affected authority on migration/recovery, and preserve distinct delivery/accountability outcomes.
+[Evidence retention](./electronic-evidence-and-retention.md) never requires retaining traffic secrets
+or recording all packet payloads. [Provider roles](./semantic-network-roles.md) supply bounded
+service commitments and economic allowances across their execution cells.
+
 QSession borrows well-tested transport concepts, including monotonically increasing packet numbers,
 ACK ranges, loss timers, and per-path congestion state. The initial recovery profile is informed by
 [RFC 9002](https://www.rfc-editor.org/rfc/rfc9002.html) but is a QDNF protocol, not QUIC.

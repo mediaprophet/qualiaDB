@@ -17,18 +17,29 @@ A DID can identify a thing, service, organization, dataset, relationship persona
 resource. A natural person is not reducible to a DID and should normally use multiple
 pairwise/contextual identifiers.
 
+The [Identifier Fabric integration](./identifier-fabric-integration.md) formalizes the additional
+entity/claim/handle/instrument separation from the consultation work. QResolve resolves an instrument
+or resource reference in a relationship context; it does not compute a person's identity. Possession,
+controller authority, relation continuity, capacity to act and accountability remain distinct.
+No shared key, alias, wallet, route, similarity result or `sameAs` inference merges NaturalAgents.
+
+Relation-specific locators bind purpose, participants/audience, authority and validity. Rotate or
+withdraw a locator without rewriting the referenced entities or historical evidence. Current key
+authorization and historical attribution use their respective time/profile contexts; retained
+expired route evidence cannot grant a current connection or reveal private relationship links.
+
 ## 2. Security invariants
 
 1. Full canonical identifiers are retained at security boundaries.
 2. `q_hash` and low-60-bit values MAY index Qualia tables but MUST NOT decide cryptographic equality,
    key authorization, content integrity, or route ownership.
-3. Strong digests use an explicit algorithm. The initial profile uses SHA-256 to align with current
-   Qualia primitives.
+3. Strong digests use an explicit algorithm. Initial classical records use SHA-256; the
+   [QPR target PQ profile](./post-quantum-security.md) uses separately versioned SHA-384 commitments.
 4. A route publisher key MUST be authorized by the target DID document for
    `capabilityInvocation` or a registered QDNF route-update verification relationship.
 5. A session `authentication` key cannot update routes unless it is separately authorized.
 6. A VC proves issuer-controlled origin and integrity, not the objective truth of its claims.
-7. DHT, directory, relay, gateway, and introducer provenance never replaces controller proof.
+7. QSR directory, legacy DHT, relay, gateway, and introducer provenance never replaces controller proof.
 
 ## 3. Q42 Resource Coordinates
 
@@ -133,17 +144,17 @@ The beacon contains a truncated tag, protocol version, ephemeral link ID, and sh
 peer performs QLink challenge-response before receiving the encrypted RAR. Public services may opt
 into service-class beacons.
 
-### 6.3 QRoute DHT
+### 6.3 Qualia Scoped Rendezvous
 
-After a node has QRoute connectivity, it may use the decentralized record key:
+After QRoute connectivity, [QSR](./qualia-scoped-rendezvous.md) locates exact records or semantic
+provider postings using an authorized scope/epoch, authenticated prefix cover and bounded core
+query plan. Its versioned SHA-384/HMAC-SHA-384 keys supersede the earlier global DHT key sketch.
+Exact lookup remains available without classification or ontology-wide reasoning.
 
-```text
-SHA-256("qdnf:rar:v1" || canonical_target)
-```
-
-The DHT value is a signed RAR or bounded provider pointer. DHT nodes enforce structural quotas but
-are not trust authorities. High-value resolution compares diverse providers or independent sources.
-Absence means only that a particular lookup found nothing.
+The scope invitation contains independently usable bootstrap DNIs and epoch authority; resolving
+the directory cannot require that same directory first. Directory providers never replace source
+controller proofs. Results distinguish verified candidates, incomplete coverage, unavailable/stale
+state and absence only in a named closed snapshot under the declared index-completeness model.
 
 ### 6.4 Introducers and directories
 
@@ -161,7 +172,7 @@ Procedure:
 1. Reject malformed/overlong targets and check block/revocation state.
 2. Expand an alias into at most 16 candidates; require selection when ambiguity remains.
 3. Query, in order: active sessions, encrypted relationship cache, local realm, authorized
-   introducers/directories, QRoute DHT, and explicit LIG.
+   introducers/directories, QSR rendezvous, and explicit LIG.
 4. Verify each record independently of its source.
 5. Deduplicate by full RAR digest and `dni_id`.
 6. Quarantine equivocation and unknown critical extensions.
@@ -215,7 +226,7 @@ effective time, reason code, signer, and proof.
 - Controller-key rotation follows the target DID method and need not change the persistent target.
 - Recovery quorum output authorizes a controller transition only through an explicit method or
   governance operation.
-- Private recovery shares never enter route records, DHT, aliases, or audit logs.
+- Private recovery shares never enter route records, QSR indexes, aliases, or audit logs.
 
 ## 11. Swarms and subnet delegation
 

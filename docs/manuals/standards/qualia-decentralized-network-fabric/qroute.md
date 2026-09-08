@@ -95,7 +95,7 @@ node-key possession and resource quotas; it does not imply application trust.
 | member router | forwards within realm and participates in signed LSAs |
 | realm gateway | exchanges inter-realm paths under export policy |
 | border translator | terminates QRoute at a Legacy Internet Gateway; never transparent |
-| directory/DHT node | stores bounded signed resolution records over QRoute |
+| QSR directory/index node | stores bounded signed resolution records over QRoute |
 | constrained proxy | represents sleeping/low-power reachability without owning child capability |
 
 Roles are explicit in membership credentials. A leaf cannot become a gateway by setting a flag in an
@@ -327,19 +327,24 @@ reachability. On reconnection:
 Wall-clock uncertainty and disconnected sequence histories are surfaced. Security state such as
 revocation is fail-closed according to sensitivity policy.
 
-## 17. QRoute DHT
+## 17. Qualia Scoped Rendezvous
 
-The resolution DHT is an application of QRoute, not its foundation.
+[QSR](./qualia-scoped-rendezvous.md) replaces the earlier Kademlia-based lookup proposal.
+It is an index/rendezvous service over QRoute, not the packet-forwarding foundation.
 
-- DHT node ID is the full SHA-256 digest of an authorized DHT service key.
-- Separate overlays may exist per public network, realm, community, or relationship group.
-- Kademlia distance determines storage/routing only, never trust.
-- Stored values are signed RARs, Alias Assertions, provider pointers, or digests with strict TTL/size.
-- The store caps records per target/publisher and rejects structurally invalid/expired data before
-  signature work.
-- Resolvers query diverse routes/providers for high-value operations.
-- Private overlays encrypt keys/values to the group context.
-- Provider disappearance is availability information, not revocation or nonexistence.
+- Scope-authorized epoch roots commit to semantic/exact lookup lanes and their prefix coverage.
+- Core-managed indexes identify eligible candidate records through bounded queries and cursors.
+- Providers serve signed RARs, aliases and source pointers under explicit indexing grants.
+- Directory integrity, posting completeness, controller authority and current access are verified
+  separately. No cover entry or semantic match creates trust.
+- Private scope tokens and encrypted transport have explicit equality/access-pattern limitations.
+- Publication, withdrawal, hot-key replication and cell handover use recoverable core artifacts.
+- Incomplete search, stale epochs and absence in a named snapshot have distinct outcomes.
+- Kademlia remains a measured comparison baseline and optional legacy implementation; target
+  native lookup has no automatic Kademlia or libp2p fallback.
+
+See the [comparison and worked traces](./qsr-evaluation.md) for the proposed advantage, scope
+authority tradeoff, failure cases and required evidence. Performance superiority is not established.
 
 ## 18. Swarm routing
 
@@ -369,10 +374,15 @@ Default general-node bounds:
 - three next hops per destination;
 - 16-hop realm paths;
 - two active LSA boot epochs per origin during restart transition;
-- 42 MiB maximum for any construction pass; and
+- 42 MiB per Sentinel construction/evaluation pass; and
 - fail-closed admission before allocation beyond configured arena.
 
 Constrained profiles lower these values and may operate as leaves.
+These are initial table-profile limits. The [Network Cell design](./network-cell.md) supports
+multiple ordinary cells up to 512 MiB each within host reservations. Larger local tables need a
+declared tested profile; more cells do not raise message/path bounds or duplicate role allowances.
+[Semantic provider selection](./semantic-network-roles.md) compares eligible offers without relaxing
+route loop prevention, reachability proof or purpose/consent constraints.
 
 ## 21. Conformance scenarios
 
@@ -383,7 +393,7 @@ Constrained profiles lower these values and may operate as leaves.
 5. Two disconnected realms reconnect and converge without erasing quarantined conflict.
 6. A vehicle child realm moves gateway paths while internal services remain addressable.
 7. No default route sends native lookup strings to a LIG/DNS service.
-8. DHT poisoning cannot bypass RAR/controller verification.
+8. QSR index poisoning cannot bypass RAR/controller verification.
 9. Resource limits hold under LSA flood and many bogus paths.
 10. Equivalent verified inputs produce byte-identical forwarding generations.
 11. Unknown or incompatible energy/tariff metrics never become fictitious zero-cost routes.

@@ -349,7 +349,7 @@ by caching them. Operators monitor:
 - query amplification and rate limits;
 - privacy class of requested identifiers;
 - negative-cache lifetime;
-- DHT bucket health where used; and
+- QSR cover, snapshot and provider health; and
 - consistency between advertised route profiles and routing availability.
 
 A native miss returns `not_found` or `temporarily_unreachable`. It never triggers DNS. A user or
@@ -653,7 +653,7 @@ Each deployment documents limits for:
 - interfaces and bearer queues;
 - neighbors per interface;
 - LSAs/RPAs and computed routes;
-- DHT buckets/providers;
+- QSR partitions/replicas;
 - simultaneous handshakes;
 - sessions, streams, and retransmission bytes;
 - fragment/reassembly slots;
@@ -852,7 +852,7 @@ A↔B transition stops, and radio reconciliation continues. No native name is se
 A deployment is ready only when operators can answer yes to all applicable questions:
 
 - Can the native portion start from power-off without Internet, DHCP, or DNS?
-- Are identities verified independently from bearer locators?
+- Are instrument/controller proofs verified separately from locators and claims about people?
 - Are network and realm constitutions available and human-reviewable?
 - Are administrative, routing, relay, recovery, and gateway roles separately authorized?
 - Are native and transition paths visibly distinguishable?
@@ -877,6 +877,28 @@ For services using the optional profiles, operators also demonstrate:
 - cache keys separate private requester scopes and the LIG, with expiry checked after cache hits;
 - energy readings/estimates/unknowns and elapsed/device/human time remain distinguishable; and
 - an adapter outage or ambiguous submission reconciles the original instruction without a second debit.
+
+### 45.2 Provider roles, cells and evidence
+
+An agent can enable a [network-provider role](./semantic-network-roles.md) with permitted service
+coverage, beneficiaries, availability, resource caps and gift/pool/reciprocal/paid terms. Enabling
+the role installs its economic lifecycle; it does not require a payment rail or establish liability.
+Advertisements become usable only after authority, capacity and funding checks. Disable/depletion
+withdraws new offers and reconciles existing bounded commitments under their accepted terms.
+
+Capable hosts may provision several [Network Cells](./network-cell.md), ordinarily at most 512 MiB
+each, within a host reservation. Keep single flow ownership, shared role budgets and durable operation
+identity across handoff/restart. Report actual OS enforcement separately from configured limits;
+42 MiB Sentinel passes and declared exceptional LLM/similar workloads retain separate boundaries.
+
+Apply [the evidence lifecycle](./electronic-evidence-and-retention.md) to log windows, selection,
+preservation holds, custody, replicas and exports. Exercise storage exhaustion, hold-versus-expiry
+races, isolated restore and key/format migration. Keep selection gaps and contradictory material
+visible to authorized examination. A retention grant does not itself authorize disclosure.
+
+Use [Identifier Fabric distinctions](./identifier-fabric-integration.md) in operational language:
+which instrument proved what, under which role/purpose and time, with which uncertainty. Avoid
+diagnostics that label a NaturalAgent from a wallet, route, similarity score or allegation.
 
 ## 46. Operational non-goals
 

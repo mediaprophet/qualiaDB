@@ -1,0 +1,629 @@
+{
+  "schema_version": 1,
+  "created": "2026-09-07",
+  "scope": "Complete QDNF/QPR implementation programme; planning artifact, no implementation tasks complete",
+  "policy": {
+    "status_values": [
+      "pending",
+      "claimed",
+      "in_progress",
+      "review",
+      "blocked",
+      "complete"
+    ],
+    "numeric_profiles": "Candidates until the relevant reviewed freeze; never silent permission to raise limits",
+    "checkbox_format": "TASK-ID.NN",
+    "claim_authority": "swarm integrator",
+    "completion": "All child checks complete, dependency evidence accepted, independent review and evidence paths recorded"
+  },
+  "tasks": [
+    {
+      "id": "FND-01",
+      "title": "Source baseline and scope",
+      "owner_role": "integration",
+      "checklist": "workstreams/00-foundation.md",
+      "depends_on": [],
+      "source_packages": [
+        "P0",
+        "P13"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "FND-02",
+      "title": "Semantic and authority contracts",
+      "owner_role": "semantics",
+      "checklist": "workstreams/00-foundation.md",
+      "depends_on": [
+        "FND-01"
+      ],
+      "source_packages": [
+        "P9",
+        "P15",
+        "P19",
+        "P20",
+        "P21"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "FND-03",
+      "title": "Versioned interface and profile baseline",
+      "owner_role": "integration",
+      "checklist": "workstreams/00-foundation.md",
+      "depends_on": [
+        "FND-02",
+        "CRY-01"
+      ],
+      "source_packages": [
+        "P0",
+        "P14",
+        "P15"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "CORE-01",
+      "title": "Caller-owned Webizen and scoped cache",
+      "owner_role": "core",
+      "checklist": "workstreams/01-core-storage-webizen.md",
+      "depends_on": [
+        "FND-01",
+        "FND-02"
+      ],
+      "source_packages": [
+        "P0",
+        "P15",
+        "P17"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "CORE-02",
+      "title": "Bounded large-graph reads and work",
+      "owner_role": "core",
+      "checklist": "workstreams/01-core-storage-webizen.md",
+      "depends_on": [
+        "FND-01"
+      ],
+      "source_packages": [
+        "P4",
+        "P11",
+        "P17"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "CORE-03",
+      "title": "Atomic artifacts, effects and recovery",
+      "owner_role": "storage",
+      "checklist": "workstreams/01-core-storage-webizen.md",
+      "depends_on": [
+        "FND-02",
+        "CORE-02"
+      ],
+      "source_packages": [
+        "P4",
+        "P9",
+        "P11",
+        "P16",
+        "P20"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "CORE-04",
+      "title": "QNF decision and selected representation",
+      "owner_role": "storage",
+      "checklist": "workstreams/01-core-storage-webizen.md",
+      "depends_on": [
+        "CORE-03",
+        "FND-03"
+      ],
+      "source_packages": [
+        "P16"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "CRY-01",
+      "title": "Existing primitive and key-provider integration",
+      "owner_role": "crypto",
+      "checklist": "workstreams/02-crypto.md",
+      "depends_on": [
+        "FND-01",
+        "FND-02"
+      ],
+      "source_packages": [
+        "P0",
+        "P14"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "CRY-02",
+      "title": "PQ handshake and proof profiles",
+      "owner_role": "crypto",
+      "checklist": "workstreams/02-crypto.md",
+      "depends_on": [
+        "CRY-01",
+        "FND-03"
+      ],
+      "source_packages": [
+        "P2",
+        "P5",
+        "P14"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "NET-01",
+      "title": "Frames and native bearers",
+      "owner_role": "network",
+      "checklist": "workstreams/03-native-network.md",
+      "depends_on": [
+        "FND-03",
+        "RT-01"
+      ],
+      "source_packages": [
+        "P0",
+        "P1"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "NET-02",
+      "title": "QLink adjacency and discovery",
+      "owner_role": "network",
+      "checklist": "workstreams/03-native-network.md",
+      "depends_on": [
+        "NET-01",
+        "CRY-02"
+      ],
+      "source_packages": [
+        "P2"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "NET-03",
+      "title": "QRoute realms and mobility",
+      "owner_role": "network",
+      "checklist": "workstreams/03-native-network.md",
+      "depends_on": [
+        "NET-02",
+        "FND-02"
+      ],
+      "source_packages": [
+        "P3",
+        "P6"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "NET-04",
+      "title": "DNI, resolution, aliases and QSR",
+      "owner_role": "resolution",
+      "checklist": "workstreams/03-native-network.md",
+      "depends_on": [
+        "NET-03",
+        "CRY-02",
+        "CORE-03",
+        "SEM-01"
+      ],
+      "source_packages": [
+        "P4",
+        "P6",
+        "P21"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "NET-05",
+      "title": "QSession and policy delivery boundary",
+      "owner_role": "network",
+      "checklist": "workstreams/03-native-network.md",
+      "depends_on": [
+        "NET-03",
+        "CRY-02",
+        "SEM-01"
+      ],
+      "source_packages": [
+        "P5"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "RT-01",
+      "title": "Lease kernel and admission ledger",
+      "owner_role": "runtime",
+      "checklist": "workstreams/04-peer-runtime-cells.md",
+      "depends_on": [
+        "FND-03",
+        "CORE-01"
+      ],
+      "source_packages": [
+        "P10",
+        "P17"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "RT-02",
+      "title": "Supervised cells and parallel execution",
+      "owner_role": "runtime",
+      "checklist": "workstreams/04-peer-runtime-cells.md",
+      "depends_on": [
+        "RT-01",
+        "CORE-02",
+        "CORE-03"
+      ],
+      "source_packages": [
+        "P10",
+        "P17"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "RT-03",
+      "title": "Public facade and service integration",
+      "owner_role": "runtime",
+      "checklist": "workstreams/04-peer-runtime-cells.md",
+      "depends_on": [
+        "RT-01",
+        "NET-04",
+        "NET-05"
+      ],
+      "source_packages": [
+        "P10",
+        "P13"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "SEM-01",
+      "title": "Identifier Fabric and contract compiler",
+      "owner_role": "semantics",
+      "checklist": "workstreams/05-semantic-services.md",
+      "depends_on": [
+        "FND-02",
+        "CORE-01",
+        "CORE-03",
+        "CRY-01"
+      ],
+      "source_packages": [
+        "P9",
+        "P15",
+        "P21"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "SVC-01",
+      "title": "Recoverable QSync and swarms",
+      "owner_role": "services",
+      "checklist": "workstreams/05-semantic-services.md",
+      "depends_on": [
+        "RT-03",
+        "CORE-03",
+        "SEM-01"
+      ],
+      "source_packages": [
+        "P6",
+        "P11"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "SVC-02",
+      "title": "Authorized subscriptions and projections",
+      "owner_role": "services",
+      "checklist": "workstreams/05-semantic-services.md",
+      "depends_on": [
+        "SVC-01"
+      ],
+      "source_packages": [
+        "P11"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "SVC-03",
+      "title": "Custody and bounded compute services",
+      "owner_role": "services",
+      "checklist": "workstreams/05-semantic-services.md",
+      "depends_on": [
+        "SVC-01",
+        "SEM-01",
+        "RT-02"
+      ],
+      "source_packages": [
+        "P12",
+        "P18"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "ECO-01",
+      "title": "Typed resource accounts and budgets",
+      "owner_role": "economics",
+      "checklist": "workstreams/06-roles-economics-evidence.md",
+      "depends_on": [
+        "SEM-01",
+        "RT-01",
+        "CORE-03"
+      ],
+      "source_packages": [
+        "P9",
+        "P18"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "ECO-02",
+      "title": "Provider roles, funding and settlement",
+      "owner_role": "economics",
+      "checklist": "workstreams/06-roles-economics-evidence.md",
+      "depends_on": [
+        "ECO-01",
+        "RT-03"
+      ],
+      "source_packages": [
+        "P9",
+        "P19"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "EVD-01",
+      "title": "Retention, holds and promotion",
+      "owner_role": "evidence",
+      "checklist": "workstreams/06-roles-economics-evidence.md",
+      "depends_on": [
+        "CORE-03",
+        "SEM-01"
+      ],
+      "source_packages": [
+        "P20"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "EVD-02",
+      "title": "Evidence custody, export and renewal",
+      "owner_role": "evidence",
+      "checklist": "workstreams/06-roles-economics-evidence.md",
+      "depends_on": [
+        "EVD-01",
+        "ECO-02",
+        "CRY-02"
+      ],
+      "source_packages": [
+        "P20",
+        "P21"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "OPS-01",
+      "title": "Transition, browser and LIG profiles",
+      "owner_role": "platform",
+      "checklist": "workstreams/07-release.md",
+      "depends_on": [
+        "RT-03"
+      ],
+      "source_packages": [
+        "P7",
+        "P8",
+        "P12"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "OPS-02",
+      "title": "Application migration and operator workflows",
+      "owner_role": "integration",
+      "checklist": "workstreams/07-release.md",
+      "depends_on": [
+        "OPS-01",
+        "SVC-02",
+        "ECO-02",
+        "RT-02"
+      ],
+      "source_packages": [
+        "P13",
+        "P19"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "QA-01",
+      "title": "Independent test and measurement harness",
+      "owner_role": "verification",
+      "checklist": "workstreams/00-foundation.md",
+      "depends_on": [
+        "FND-01"
+      ],
+      "source_packages": [
+        "P0",
+        "P13"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "QA-02",
+      "title": "Adversarial, platform and scale qualification",
+      "owner_role": "verification",
+      "checklist": "workstreams/07-release.md",
+      "depends_on": [
+        "QA-01",
+        "CORE-04",
+        "RT-02",
+        "SVC-02",
+        "SVC-03",
+        "ECO-02",
+        "EVD-02",
+        "OPS-01"
+      ],
+      "source_packages": [
+        "P0",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5",
+        "P6",
+        "P7",
+        "P8",
+        "P9",
+        "P10",
+        "P11",
+        "P12",
+        "P13",
+        "P14",
+        "P15",
+        "P16",
+        "P17",
+        "P18",
+        "P19",
+        "P20",
+        "P21"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    },
+    {
+      "id": "REL-01",
+      "title": "Release evidence and replacement completion",
+      "owner_role": "integration",
+      "checklist": "workstreams/07-release.md",
+      "depends_on": [
+        "QA-02",
+        "OPS-02"
+      ],
+      "source_packages": [
+        "P13"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claim": null,
+      "evidence": [],
+      "reviewer": null
+    }
+  ]
+}

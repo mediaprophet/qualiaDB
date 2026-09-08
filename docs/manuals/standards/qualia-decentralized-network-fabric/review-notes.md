@@ -125,3 +125,118 @@
 - Evidence: source/standards review only; no speed, memory saving or energy saving measured.
 - Human input needed: none for this design revision; the user's direction authorizes the design choices.
 - Next: write the format/cell/compute specifications, reconcile prior requirements and validate them.
+
+## 2026-09-07 — Semantic roles, evidence, Identifier Fabric and Webizen — design complete
+
+- Incorporated the user's clarified ordinary 512 MiB multi-cell model, explicit exceptional workload
+  category, dedicated router/provider purposes and built-in economic accounts. Semantics lead the
+  design; byte layouts, quantity profiles and runtime sketches remain candidate realizations.
+- Added typed compute, semantic network roles, electronic evidence retention, Identifier Fabric
+  integration and a source-backed Webizen/core memory review. Extended work packages through P21
+  and traced requirements R-29–R-34; reconciled prior Q42-only and whole-network 42 MiB assumptions.
+- Reviewed the Identifier Fabric brief and linked written material from remote-ref commit
+  6601dc811468d266f4ac952243ce65fb10372606 without changing branches or importing its WIP files.
+  The integration records exact sections read. Diagram image fetches failed; only the crosswalk was
+  reviewed. The consultation is not represented as visually or implementation-complete.
+- Webizen is the Sentinel. Code establishes a 42 MiB slot buffer with hash-selected replacement
+  and separate recent-slot ring. VM callers/RuleEngine own arenas; inspected worker cells do not
+  establish one arena each or enforce their 512 MiB declarations. Vec construction/rule growth,
+  cache scope, parity and bounded result completeness remain explicit integration requirements.
+- Large persisted graph/network datasets use the same core range/cursor substrate; memory limits
+  describe working state, not total ontology size. Enterprise scaling uses admitted cells, stable
+  flow ownership and bounded partition/reduction/continuation, without claiming linear performance.
+- QNF remains a candidate. Fixed a possible cross-artifact hash cycle and repeated-binding ambiguity;
+  acknowledged full index-scan cost for partial reads. New formats must demonstrate benefit over
+  existing core storage rather than follow merely from dataset or proof size.
+- Evidence design includes balanced selection, protected dependencies, hold/GC ordering, lossless
+  originals, custody, clock/authority uncertainty, crypto renewal and offline examination. No hash
+  replaces deleted data or proves guilt; access grants and attribution remain separate claims.
+- The earlier write was rejected by automatic approval review at an account usage limit; no alternate
+  execution bypass was used. Work resumed after the user's continuation. Focused documentation
+  contributions were read and integrated; a later reviewer pass hit its usage limit, so final
+  consistency review remains the parent agent's work, not a claimed completed independent review.
+- No runtime code, memory constant, ABI, dependency, commit, push, deployment or external message
+  was changed by this documentation task. Unrelated concurrent workspace changes are preserved.
+- Next: finish document/link/arithmetic validation and record its actual outcome below.
+
+## 2026-09-07 — Requested ring-buffer and enterprise code audit — done
+
+- Followed the user's clarification that Webizen is the Sentinel. Inspected VM borrowing, arena
+  construction/writes, RuleEngine ownership, local and daemon WorkerCells, shard spawning and Q42
+  range/manifest/reader/sorter paths. A focused independent caller/large-volume audit completed;
+  parent inspection confirmed the principal findings in code.
+- The 42 MiB buffer is per arena instance, not proven per cell. Hash-slot overwrite differs from
+  FIFO retention; context-free table keys cannot authorize private network operations. Both worker
+  abstractions declare 512 MiB without establishing enforced aggregate accounting or arena ownership.
+- Existing paged/cross-segment reads and joins are real. Added explicit work quanta for sparse scans,
+  manifest metadata budgets, rejection of whole-graph fallback based on a small root-file size,
+  and the current external sorter's 48,000,000-byte slot buffer to the integration review.
+- Defined enterprise scaling through admitted ordinary cells and bounded core partitions; no network
+  format change is required by ontology size. All runtime repairs remain tracked implementation
+  requirements; this authorized review/design task changed documentation only.
+- Initial validation found one stale economics-source link after a concurrent library refactor;
+  inspected its new model owner and corrected the reference without changing concurrent code.
+
+## 2026-09-07 — Integrated documentation validation — passed
+
+- Checked 32 Markdown documents: 28 fabric-directory documents, the Q42 format and networking
+  modality, QNF candidate and existing FrameLayout ADR. All 327 local links and 20 linked heading
+  anchors resolve. Fence/table structure and the JSON authoring example passed the checks used.
+- Verified the seven pinned consultation source files exist in the reviewed Git commit. No external
+  image availability or complete SHACL/ontology conformance is implied by these link checks.
+- Checked arena/cell byte counts, 192 MiB and 2 GiB host examples, QNF descriptor/header sums,
+  evidence storage, compute examples, existing Quin/PQ arithmetic and scoped `git diff --check`.
+- Source inspection and the independent large-volume/caller audit support the recorded findings.
+  No Rust tests, allocation/RSS measurement, large-graph benchmark, crypto proof or legal-compliance
+  evaluation was run for these documentation-only edits.
+- Requested design and code review are complete. Runtime repairs and format/schema freeze remain
+  explicitly specified future implementation work; no user approval or deployment action is pending.
+
+## 2026-09-07 — Comprehensive swarm implementation programme — complete
+
+- Added [qdnf-imp](./qdnf-imp/README.md): eight workstreams, 30 dependency-ordered packages and
+  418 individually numbered to-do items, with a JSON register, single-purpose library rules,
+  ownership/claim protocol, review and evidence gates, milestones and reusable handoff templates.
+- Core/Webizen, native replacement, PQ integration, semantics, provider economics, multi-cell
+  scaling and electronic evidence remain coordinated through explicit domain interfaces and
+  source-audit repair tasks. QNF adoption remains a measured format decision.
+- Final structural validation passed 72 dependency edges, all child IDs, 164 local links and
+  P0–P21 domain-owner coverage. Roadmap/register dependencies and whitespace checks passed.
+- The account usage limit interrupted the final validator write after 19 files were saved.
+  Following the user's follow-up, confirmed those files and completed the same write and checks;
+  all 20 plan files are now saved. Detailed outcomes are in the programme progress log.
+- Focused agent contributions completed; their later independent integration reviews hit the usage
+  limit and did not complete. Parent consistency review and executable structural checks completed.
+- This delivers the implementation plan, not its runtime execution. All implementation work remains
+  pending; no new runtime, deployment, commit or push is claimed.
+
+## 2026-09-07 — Purpose-designed replacement for Kademlia — designed
+
+- Added [Qualia Scoped Rendezvous](./qualia-scoped-rendezvous.md) and
+  [evaluation/worked traces](./qsr-evaluation.md). The target lookup uses scoped semantic/exact
+  lanes, authenticated radix coverage, core posting indexes and admitted query execution.
+- Defined bootstrap, publication/withdrawal, snapshot completeness levels, bounded traversal,
+  private tokens, epoch conflicts, hot-key replication and fenced multi-cell handover.
+- Independent review identified and informed corrections for index omission claims, circular
+  bootstrap/commitments, checkpoint visibility and acknowledged-write loss during migration.
+- Integrated QSR into target routing/resolution and added NET-04.15–30. The programme now has
+  434 checks; historical libp2p/Kademlia evidence remains distinct from the replacement design.
+- Comparison requirements preserve Kademlia's asynchronous queries, caching and equivalent semantic
+  indexes, and charge QSR's bootstrap/maintenance/proof costs. Better performance remains a
+  workload-specific hypothesis; no implementation, benchmark or universal superiority is claimed.
+
+## 2026-09-07 — Humanitarian compensation and protection requirements — updated
+
+- Added [finite project compensation](./finite-project-compensation.md) and
+  [socially defined protection](./socially-defined-protection.md) as explicit application profiles.
+  Existing generic threshold release and relationship controls covered only part of the user goals.
+- Compensation now specifies free personal/humanitarian eligibility, incorporated-principal
+  contribution duties under applicable instruments, a positive allocated recovery component above
+  event costs/fees, finite shared caps, final-payment races, contributor allocation and terminal release.
+- Protection covers private child/PEP discovery, separate contact consent, nontransitive roles,
+  abusive-guardian help/recovery, private evidence, and unavailable-freshness handling for offline delivery.
+- Added 46 pending checks; the plan now contains 480 across the same 30 packages. Independent review
+  informed corrections for authorized waivers, zero targets and safeguards controlled by an alleged abuser.
+- The account usage limit interrupted the final correction write. After continuation, confirmed saved
+  work and completed the same write. Runtime implementation remains pending; no production protection,
+  settlement or legal sufficiency is claimed by this documentation update.

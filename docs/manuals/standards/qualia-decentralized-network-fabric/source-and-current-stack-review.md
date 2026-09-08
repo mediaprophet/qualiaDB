@@ -338,7 +338,7 @@ energy measurements, tests, or builds were performed for this documentation revi
 | [`crates/qualia-core-db/src/specialized_libs/financial_modeling/settlement.rs`](../../../../crates/qualia-core-db/src/specialized_libs/financial_modeling/settlement.rs): `SettlementEngine`; [`crates/qualia-client-core/src/wallet/ledger.rs`](../../../../crates/qualia-client-core/src/wallet/ledger.rs): `append_entry` | Financial settlement provides method/clearing/validation configuration structures; the wallet ledger appends dispatch and transaction records to NDJSON. | These structures and stored status strings do not independently verify transfer finality or provide QDNF reconciliation. |
 | [`crates/qualia-core-db/src/governance/coordination.rs`](../../../../crates/qualia-core-db/src/governance/coordination.rs): `ResourceContract`; [`crates/vibe/src/budget.rs`](../../../../crates/vibe/src/budget.rs): `Budget`; [`crates/qualia-core-db/src/inference/lab/campaign.rs`](../../../../crates/qualia-core-db/src/inference/lab/campaign.rs): campaign search loop | Caller-charged cycle/token breakers, instruction/workspace budgets, and an elapsed-time campaign limit exist. | Cycles, tokens, and instructions are not elapsed seconds or joules; the campaign checks time between trials. These are not shared QSession energy/time reservations or strict per-operation deadlines. |
 | [`crates/qualia-core-db/src/inference/thermal_telemetry.rs`](../../../../crates/qualia-core-db/src/inference/thermal_telemetry.rs): `sample_gpu_thermal`, `NvmlThermalGovernor::sample`; [`crates/qualia-core-db/src/domains/financial/economics/node_pricing.rs`](../../../../crates/qualia-core-db/src/domains/financial/economics/node_pricing.rs): `get_current_system_context` | Optional NVML code reads GPU temperature and instantaneous board power; node pricing uses fixed mock battery/temperature/congestion inputs. | Board watts are not whole-system or per-job joules. NVML power-read errors become zero in this sample structure, so billing needs explicit missing/invalid measurement handling and time integration. |
-| [`crates/qualia-core-db/src/services/rpc.rs`](../../../../crates/qualia-core-db/src/services/rpc.rs): `negotiate_provider_terms`; [`crates/poet/src/browser/agreement_views/license_builder.rs`](../../../../crates/poet/src/browser/agreement_views/license_builder.rs); [`crates/poet/src/browser/cooperative_economics.rs`](../../../../crates/poet/src/browser/cooperative_economics.rs): `OntologicalPricingEngine::evaluate_peer` | Provider negotiation checks an offered offset against a supplied connectivity cost and produces a split plan. Authoring/UI code exposes licence compositions, reference pricing, free quotas, reciprocal barter, and metered rates. | A threshold comparison and policy/UI examples do not implement authenticated threshold licensing, quota enforcement, or paid transit. Their fixed rates, quotas, and tax split are not universal QDNF policy. |
+| [`crates/qualia-core-db/src/services/rpc.rs`](../../../../crates/qualia-core-db/src/services/rpc.rs): `negotiate_provider_terms`; [`license_builder.rs`](../../../../crates/poet/src/browser/agreement_views/license_builder.rs); [`cooperative_economics/model.rs`](../../../../crates/poet/src/browser/cooperative_economics/model.rs): `OntologicalPricingEngine::evaluate_peer` | Provider negotiation compares an offered offset with supplied connectivity cost and produces a split plan. Authoring/UI models expose licence compositions, reference pricing, free quotas, barter and metered rates. | These models do not implement authenticated threshold licensing, quota enforcement or paid transit. Fixed rates, quotas, asserted peer classes and tax splits are not universal QDNF policy. The source moved into a library during concurrent work. |
 
 **Proposed QDNF economics:** use energy in joules and elapsed time in seconds (with explicit integer
 subunits) as separate baseline resource dimensions. Preserve bytes, storage duration, compute work,
@@ -455,6 +455,41 @@ bytes plus eight parity bytes. A 60-bit object handle is one field interpretatio
 wording is not the byte layout. The inspected `NQuin` persistence checksum includes metadata, while
 FrameLayout's older four-field helpers omit it; P15 tracks reconciliation before integration.
 
+### 7.5 Cells, evidence and Identifier Fabric consultation
+
+The [Webizen/core source review](./core-memory-and-parallel-networking.md) distinguishes the actual
+42 MiB SLG slot allocation, hash-selected eviction/recent-write ring, caller/RuleEngine arena ownership
+and separate 512 MiB worker-cell declarations. Neither worker implementation inspected establishes
+one Webizen arena per cell or enforced allocation ceilings. Current construction/rule vectors and
+context-free cache lookups need reconciliation before zero-heap scoped network use. Existing Q42
+range/cursor interfaces support bounded windows over larger persisted datasets; this does not prove
+complete evaluation of every large ontology or linear multicell performance.
+
+[P64](../../../../crates/qualia-core-db/src/q42/p64_weight/layout.rs) and
+[10D](../../../../crates/qualia-core-db/src/container_10d/section.rs) are purpose-specific container
+precedents. [QNF](../qnf-network-container-draft.md) remains a candidate layout under the same core,
+not a requirement caused by graph size. The design joins sealed artifacts through an external core
+manifest to avoid cyclic content hashes and keeps partial/full verification states distinct.
+
+[Network roles](./semantic-network-roles.md) define an agent's provider purpose, offers, commitments,
+funding and outcomes. [Compute accounting](./compute-resource-accounting.md) adds typed work to
+physical joules/seconds; no universal scalar or automatic debt follows. Ordinary cells scale under
+aggregate host/role budgets, and Webizen may run locally leased or in dedicated policy cells.
+
+The user-supplied Identifier Fabric consultation was read from local remote-ref commit
+`6601dc811468d266f4ac952243ce65fb10372606`; its WIP files are absent from this checkout. The
+[integration review](./identifier-fabric-integration.md) links the pinned brief, spine, taxonomy,
+shapes, diagnose, classifier and diagram crosswalk, records sections read and preserves open join-key
+and schema issues. Primary diagram fetches failed; crosswalk review is not a visual review.
+Entity/claim/handle/instrument separation, temporal co-attestation, purpose constraints and
+access-versus-accountability distinctions are incorporated without a competing identity implementation.
+
+[Electronic evidence retention](./electronic-evidence-and-retention.md) separates temporary windows
+from selected originals, dependency closure, custody and holds. It records source limitations in
+the Sanctuary audit DAG, WAL and publication helpers; independent checkpoints, bounded durable
+promotion and hold-aware GC remain integration work. Balanced selection, retained counterevidence,
+historical interpretation and explicit gaps support examination, not a promised legal outcome.
+
 ## 8. Critical security gaps before implementation claims
 
 ### 8.1 Delegation verification
@@ -506,7 +541,7 @@ an obligation-satisfied bit, or a displayed royalty balance is insufficient evid
 | R-13 | provide explicit legacy access with separate caches/trust/provenance | LIG |
 | R-14 | never invoke DNS on a native miss | Identifier Resolution; Operations |
 | R-15 | label WireGuard/libp2p/UDP/WebRTC as transition dependencies | Architecture; Conformance |
-| R-16 | enforce deterministic bounded parsing and 42 MB execution ceilings | Wire; Implementation |
+| R-16 | enforce bounded parsing and 42 MiB Webizen pass requirements; distinguish table size, cell limits and aggregate host memory | Wire; Core Memory Review; Implementation |
 | R-17 | verify delegation signatures before any network authorization | Implementation; Security |
 | R-18 | test native operation with Internet, IP configuration, DHCP, and DNS absent | Conformance; Operations |
 | R-19 | specify energy/time units, meter provenance and uncertainty, attributable usage, and enforceable resource/spend caps; see §7.1 | Commons and Resource Economics; QSession; Conformance |
@@ -519,6 +554,12 @@ an obligation-satisfied bit, or a displayed royalty balance is insufficient evid
 | R-26 | define authorized recoverable subscriptions, authenticated conflict handling, durable applied cursors, disclosure-safe projection provenance, atomic operation effects and causal deletion | Semantic Peer Services; P11/P12 |
 | R-27 | reuse existing PQ primitives for hybrid establishment, dual authority proofs and typed full commitments; freeze downgrade-safe transcripts and bounded bootstrap before PQ claims | Post-Quantum Security; P14 |
 | R-28 | add a Q42 networking semantic profile without silently changing 48-byte layout, datatype tags, metadata roles or parity; distinguish exact evidence, projections and execution views | Q42 Networking Modality; P15 |
+| R-29 | evaluate QNF against core artifacts; preserve exact sources, acyclic publication, bounded ranges and distinct verification states | QNF; P16 |
+| R-30 | reuse Webizen/core with explicit arena ownership; scale ordinary cells at most 512 MiB under host budgets and declared exceptions | Core Memory Review; Network Cell; P17 |
+| R-31 | define typed compute profiles independently of joules, seconds, useful outputs and economic credits | Compute Accounting; P18 |
+| R-32 | make router/network provision an enabled semantic role with resource/economic commitments and safe multicell ownership | Semantic Network Roles; P19 |
+| R-33 | separate diagnostic expiry from balanced evidence selection, dependency holds, custody and long-term validation; expose gaps and preservation limits | Electronic Evidence; P20 |
+| R-34 | integrate consultation planes, relation locators, temporal authority, purpose-preserving delegation and separately evidenced accountability | Identifier Fabric Integration; P21 |
 
 ## 10. Rejected shortcuts
 

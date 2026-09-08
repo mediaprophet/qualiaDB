@@ -76,7 +76,7 @@ passphrase derivation remains a storage-vault concern.
 | Recovery share | Long-lived but periodically refreshed | Never | Human-governed recovery policy |
 
 Private key bytes must be stored in the Qualia key vault or hardware-backed provider where
-available. They never appear in Quins, logs, invitations, DHT records, route advertisements, crash
+available. They never appear in Quins, logs, invitations, QSR index records, route advertisements, crash
 reports, or telemetry.
 
 ## 5. Canonical transcript encoding

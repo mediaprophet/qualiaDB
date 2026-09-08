@@ -2,26 +2,43 @@
 
 **Status:** Proposed execution/deployment profile; not an implemented process sandbox
 
-**Date:** 2026-09-06
+**Date:** 2026-09-07
 
 ## 1. Decision
 
-Run networking in a dedicated **Network Cell** with its own supervisor, event loop, admission
-ledger, memory pool and lifecycle. It runs QLink/QRoute/QSession and admitted services even when
+Run networking in one or more **Network Cells**, each with supervised event loops, admission
+ledger, memory pool and lifecycle. They run QLink/QRoute/QSession and admitted services even when
 inference or application work is busy. It consumes verified
 [QNF evidence/views](../qnf-network-container-draft.md) and invokes the existing semantic core through
 bounded interfaces. A cell is an ownership/execution boundary, not necessarily a physical CPU core.
+
+**Webizen is the Sentinel**, implemented by the core governance VM. The
+[source review](./core-memory-and-parallel-networking.md) distinguishes its 42 MiB tabling arena,
+caller/engine ownership and 512 MiB cell declarations. The current code does not yet establish one
+arena per cell or enforce all declared limits. Webizen may execute locally under a cell-owned arena
+lease or in a separately assigned policy cell; both use the same core and semantic contract.
 
 For desktop/server deployments, prefer a separate process where the host can enforce isolation and
 resource limits. An embedded single-process profile remains useful for constrained/WASM hosts and
 tests, with honest reporting of its weaker fault/isolation boundary. Neither profile gives the
 network cell automatic filesystem, administrative, payment or arbitrary qapp execution authority.
 
-The user explicitly authorized reviewing the networking memory constraints. This design retains
-the 42 MiB Sentinel evaluation-pass contract while replacing the earlier assumption that the whole
-network service must share that same ceiling. A separately budgeted network cell may have a smaller
-or larger configured ceiling; the host reserves it explicitly. No allocator exemption or unbounded
-per-peer memory follows from creating another cell.
+Use the established multi-cell model: each ordinary cell has a ceiling of **512 MiB**, with smaller
+configured envelopes where useful. The current worker constant is `512 * 1024 * 1024`, or
+536,870,912 bytes; this document uses MiB to remove the ambiguity in older “512MB” wording.
+Several independently budgeted cells can implement an agent's networking role. This retains the
+separate 42 MiB Sentinel evaluation-pass contract and replaces the earlier assumption that the
+whole network service must share that pass ceiling. The host reserves aggregate capacity first.
+
+The precedent is [ADR 0004](../../adr/0004-fractal-scaling-and-ai-compute.md), specifically its
+multi-cell decision. Its older unlimited-parallelism, energy and mandatory-settlement claims are
+not capacity evidence or requirements here. Existing exceptional LLM/similar workloads may exceed
+the ordinary ceiling under a declared host profile, following the user's clarified architecture.
+That exception is not automatically inherited by networking, nor proof of an existing sandbox.
+
+Cell sizes and process placement are candidate realizations. The semantic requirements are explicit
+ownership, resource limits, purpose-scoped authority and recoverable service commitments, as defined
+in [Semantic Network Roles](./semantic-network-roles.md).
 
 ## 2. Responsibilities and boundaries
 
@@ -29,7 +46,7 @@ per-peer memory follows from creating another cell.
 flowchart LR
     Host[Host supervisor and aggregate resource governor] --> Net[Network Cell]
     Host --> Core[Core artifact and transaction service]
-    Host --> Sentinel[Sentinel evaluation cell]
+    Host --> Sentinel[Webizen evaluation - separate cell or local lease]
     Host --> App[Application or inference cells]
     Net -->|Bounded evidence reads and durable intents| Core
     Net -->|Bounded policy request| Sentinel
@@ -42,7 +59,7 @@ flowchart LR
 |---|---|
 | Host supervisor/governor | Cell creation, authority grants, aggregate memory/work/energy/spend reservations, process supervision and revocation |
 | Network Cell | Shared bearer I/O, protocol timers, transient ingress limits, crypto jobs, flow credit, service scheduling and lease completion |
-| Sentinel/core evaluators | Supported semantic validation and policy compilation within admitted pass limits |
+| Webizen Sentinel and core evaluators | Semantic validation and policy compilation, locally leased or separately assigned, within admitted pass limits |
 | Core artifact/transaction service | QNF/Q42 reads/publication, durable replay/effect/receipt state and crash recovery |
 | Applications/inference cells | Their own admitted execution and UI; no bypass around network service authorization |
 
@@ -57,7 +74,7 @@ expiry and block rules are never relaxed to keep a connection alive.
 | Quantity | Meaning | Rule |
 |---|---|---|
 | Sentinel pass working set | All live data/scratch/stacks/referenced working pages needed by one admitted semantic pass | At most 42 × 1024 × 1024 bytes; include overhead, not only Quin slots |
-| Network cell accounted working set | Tables, queues, crypto scratch, live/pinned evidence, send/receive commitments and shared ranges used by networking | Explicit cell ceiling selected by the host |
+| Network cell accounted working set | Tables, queues, crypto scratch, live/pinned evidence, send/receive commitments and shared ranges used by networking | Configured ceiling at or below 512 MiB for an ordinary cell |
 | Host aggregate | Unique owned/shared pages, all cells/workers, artifact cache, IPC and reserved platform overhead | Parent-governor cap; no multiplying capacity by creating child cells |
 | Platform accounting | OS-reported commit/resident/kernel or cgroup charge, according to backend | Independently observed/enforced where available; do not equate it with logical arena bytes |
 
@@ -75,8 +92,11 @@ work. Merely starting a second full arena does not solve accounting.
 | Personal | 32 MiB | Local/private services with bounded cache and limited concurrent transfers |
 | General | 64 MiB | Separate send/receive pools, larger verified-view cache and bounded PQ workers |
 | Relay | 256 MiB | Explicitly provisioned queues/custody windows; persistent bytes still have a separate disk quota |
+| Ordinary-cell maximum | 512 MiB | Dedicated provider capacity; scale further through separately reserved cells |
 
 These are initial configurable test points, not universal defaults or guarantees of peer count.
+512 MiB is a ceiling, not a minimum allocation. A capable router can use several ordinary cells;
+it does not gain an unlimited single cell or assume all host RAM is available for service buffers.
 The current 42 MiB single-runtime partition remains an optional embedded configuration. Increasing
 resident networking capacity does not increase one Sentinel pass, alter protocol message limits,
 allow one unbounded verification task, or bypass higher-level privacy/financial limits.
@@ -87,6 +107,11 @@ headroom. Their sum is 192 MiB, not 42 MiB per service. Actual admission must al
 pass/cell's referenced working-set ceiling. Referencing shared artifact pages may therefore reduce
 the remaining private scratch available to that pass, even though the host physically counts the
 shared pages once. The allowances must be fitted to measured platform overhead before a hard claim.
+
+For a larger illustrative provider, a 2 GiB host allowance might reserve two 512 MiB network cells,
+128 MiB for policy work, 256 MiB for artifacts/IPC, 256 MiB for platform services and 384 MiB headroom.
+Each semantic pass still fits 42 MiB, and simultaneous passes fit the policy allocation. Actual
+capacity and overhead determine admission; this sum is not a benchmark or universal deployment preset.
 
 ### 3.2 Reservations and ownership
 
@@ -114,6 +139,11 @@ Use shared readiness-driven I/O and bounded queues. Do not dedicate a process/th
 peer or packet. The default is one admission owner per cell, with leased bounded parallel workers.
 The host charges their simultaneous memory and compute to the same parent budget. Affinity and
 parallelism are optional scheduling choices, not evidence of isolation or constant-time execution.
+
+An enabled router role may shard bearer/session ownership and policy/crypto preparation across
+cells. A flow has one mutation owner; handoff drains or transfers leases at an explicit boundary.
+Role-wide budgets, settlement/replay identities and preservation holds survive cell replacement.
+No child mints a fresh economic allowance by restarting or accepting an alias of the same commitment.
 
 Existing [worker cells](../../../../crates/qualia-core-db/src/platform/local_scheduler.rs) have
 mailboxes/affinity and a `memory_boundary` field, but their work path still simulates execution and
@@ -166,9 +196,9 @@ The network cell needs a CPU/work quota as well as memory limits so floods canno
 Sentinel. Energy/thermal pressure reduces admitted optional work while preserving bounded control
 progress. No cell raises its own limits or quietly claims another cell's unused allowance.
 
-## 7. Admission decision for larger memory
+## 7. Scaling and exceptional execution
 
-Choose a larger cell only when an identified workload needs it: higher aggregate receive credit,
+Choose a larger ordinary cell, up to 512 MiB, only when an identified workload needs it: receive credit,
 PQ evidence caching, sustained relay windows, concurrent immutable generations or custody service.
 First measure metadata/queue overhead, backpressure and range-read behavior; more memory is not a
 substitute for fixing amplification or unbounded retention. Specify the additional host memory,
@@ -179,11 +209,24 @@ not a change to `SlgArena` constants or existing ABI rules. P17 must encode and 
 Any later request to increase the Sentinel evaluator ceiling itself needs its own architecture and
 ABI/target review; it is not implied by this network-cell decision.
 
+Beyond one ordinary cell, assign additional cells under an aggregate reservation and explicit
+ownership plan. Exceptional LLM or similar cells may have no ordinary per-cell ceiling, but their
+host profile still declares resource exposure, scheduling priority and isolation. “Unbounded
+exception” does not make a finite host unlimited or permit it to consume network control reserves.
+The exception's classification and scope are durable configuration evidence, separate from a
+router's capacity grant. No exception is needed merely to enable a dedicated networking role.
+
 ## 8. Acceptance
 
 P17 in [Implementation and Conformance](./implementation-conformance.md#qdnf-p17--network-cell-and-aggregate-memory)
 must demonstrate independently running networking and policy/application work; parent-budget
 conservation across cells; bounded queues/crypto under flood; shared lease cancellation/reclamation;
 revocation during IPC/commit; fresh keys on restart; no duplicate durable effects; and actual platform
-enforcement/overhead. Report 8/32/64/256 MiB configurations separately from 42 MiB Sentinel passes.
+enforcement/overhead. Report 8/32/64/256/512 MiB configurations and multi-cell operation separately
+from 42 MiB Sentinel passes and exceptional workloads.
 No existing affinity, mailbox or arena constant substitutes for those tests.
+
+The [core/parallelism review](./core-memory-and-parallel-networking.md) adds hash-slot eviction,
+context-bound cache validity, caller-owned arena/rule storage, large-graph continuation and enterprise
+flow partitioning to P15/P17. Dataset size is independent of resident working memory; network facts
+reuse the same core graph/range machinery. QNF selection is not required for that scaling strategy.

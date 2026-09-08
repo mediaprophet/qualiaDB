@@ -8,7 +8,7 @@
 
 Every network operation uses physical resources over time. A resource may be free to its recipient
 while its creation, hosting, transmission, maintenance, or care is funded by somebody else. QDNF
-therefore treats **energy and time as baseline accounting dimensions**, including for donated and
+therefore treats **energy, time and typed compute as baseline accounting dimensions**, including for donated and
 community-funded services. Their measurement does not itself create a debt or determine social value.
 
 Permissive commons are resources stewarded under explicit permissions and obligations. They may be
@@ -24,7 +24,7 @@ This profile separates four questions:
 | Obligation account | What accepted contribution remains due or has been satisfied? | That a transfer has settled |
 | Settlement receipt | What monetary or nonmonetary contribution was accepted, and under whose authority? | Access rights beyond the agreement or truth of a meter reading |
 
-Energy and time remain independently inspectable. An economic profile MUST NOT silently reduce
+Energy, time and typed compute remain independently inspectable. An economic profile MUST NOT silently reduce
 them to one universal currency, trust score, or claim about human worth. Qualitative outcomes,
 accessibility, cultural obligations, stewardship, and ecological effects can remain separate criteria.
 
@@ -129,7 +129,7 @@ agreement-specific, and disputed evidence remains available to the authorized re
 ### 3.3 Budgets and admission
 
 Resource limits and payment limits are separate. A participant may set an energy limit, elapsed-time
-deadline, device-time/airtime allowance, monetary ceiling, and maximum unsettled exposure together.
+deadline, device-time/airtime allowance, typed compute allowance, monetary ceiling, and maximum unsettled exposure together.
 Accepting a price never increases a physical budget or battery reserve.
 
 Before each bounded work quantum, reserve its conservative resource and payment allowance, including
@@ -139,6 +139,19 @@ Pause new work before the remaining allowance is insufficient; closure and recon
 separately reserved small budget. A hard energy guarantee requires a defensible upper bound and
 enforcement capability. If unavailable, reject that guarantee or offer an explicitly accepted
 estimate-based limit. Unknown telemetry cannot satisfy a verified-energy requirement.
+
+### 3.4 Compute and network-provider roles
+
+[Compute accounting](./compute-resource-accounting.md) binds work to a counting profile, separating
+capacity, consumed work, accepted output and credit. Computer-performed work under this profile
+declares measured/estimated/unknown compute; incompatible counters cannot be summed or priced as
+equivalent without accepted conversion terms. Joules and seconds remain the physical reference units.
+
+[Network-provider roles](./semantic-network-roles.md) include these accounts from activation, whether
+funded by gifts, a pool, reciprocity or payment. Agent-wide caps span all cells and route changes.
+A routing role provides service capacity; neither it nor a wallet establishes a NaturalAgent's
+identity or legal responsibility. Evidence stewardship has separate authorized retention, storage
+funding and continuity commitments; unpaid invoices do not silently release preservation holds.
 
 ## 4. Commons agreements and socioeconomic choices
 
@@ -194,6 +207,13 @@ payment is always required. Sensitivity and publication gates still apply. Once 
 delivered, local gates cannot guarantee control of every recipient's copies or later use.
 
 ## 5. Valuation and threshold licensing
+
+The [finite project-compensation profile](./finite-project-compensation.md) makes the humanitarian
+ICT goal explicit: eligible personal/humanitarian use is free, incorporated-principal usage pays a
+separately designated recovery component under applicable terms, and that component ends when the
+agreed creation/compensation target is fulfilled. All providers share one remaining-cap ledger.
+For this profile, finite capped recovery and terminal fulfilment govern the general options below;
+uncapped compounding, repeated recovery and automatic reopening are prohibited.
 
 Physical consumption, production cost, use value, compensation, and price are related by agreed
 policy rather than physical identity. Higher energy use or longer task duration does not imply

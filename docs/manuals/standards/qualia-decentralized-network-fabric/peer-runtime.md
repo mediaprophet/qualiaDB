@@ -28,7 +28,7 @@ implementing that adapter does not satisfy the replacement objective.
 
 The architectural advantage to pursue is **one verified semantic model from discovery through
 delivery and accounting**. A service advertisement, permission decision, replication checkpoint,
-and contribution receipt can reference the same pinned contract and Q42 evidence. Compact Quin
+and contribution receipt can reference the same pinned contract and exact core evidence. Compact Quin
 indexes and bounded execution make this usable on constrained peers. They do not establish a
 performance advantage until measured.
 
@@ -42,7 +42,7 @@ classical QDNF suite remains a distinct compatibility profile, with no automatic
 | Mechanism | Concrete departure in this design | Evidence to produce |
 |---|---|---|
 | Semantic admission plan | Compile a pinned service/ontology/contract and current authority into one generation-bound plan used by discovery, delivery, replication and accounting | Same request obeys the same scope across reconnect, replicas and carrier changes |
-| Q42 evidence and execution views | Exact signed objects and compact Quin projections share core persistence; active networking uses leased immutable views | Byte-exact recovery, bounded working set, immediate invalidation of stale authority |
+| Core evidence and execution views | Exact signed objects and Q42 projections share persistence, with QNF a candidate representation; networking uses leased immutable views | Byte-exact recovery, bounded working set, immediate invalidation of stale authority |
 | Governed differential synchronization | Transmit authorized changes and proofs of scoped checkpoints, with explicit gaps, dependencies and deletion frontiers | Recover a disconnected projection without leaking hidden graph state or replaying effects |
 | Resource and contact scheduling | Jointly reserve memory, bytes, time, estimated/measured energy and optional agreed spend; batch permitted work across contact windows | Conserved reservations and measured useful work/energy under churn and thermal pressure |
 | Cryptographic evidence reuse | Cache verified dual-signature evidence by full digest and current authority generation, keeping large PQ proofs outside packet forwarding | Fewer repeated verifications without accepting revoked, substituted or differently scoped evidence |
@@ -61,11 +61,11 @@ implementation. [Libp2p specification index](https://github.com/libp2p/specs)
 | Concern | Libp2p baseline | QPR design choice |
 |---|---|---|
 | Application abstraction | Peers, connections, streams, and negotiated protocols | Governed resource/service handles, with raw streams and datagrams beneath typed services |
-| Identity and location | Peer IDs derived from public keys; transport addresses identify dial routes | Persistent DID/resource identity, contextual personas, verified controller authority, expiring DNI/RAR reachability, and local observed paths |
+| Identifiers and location | Peer IDs derived from public keys; transport addresses identify dial routes | Persistent DID/resource identifiers, contextual relations, verified controller authority and expiring DNI/RAR reachability; entity/claim/handle/instrument planes stay separate |
 | Transports | Pluggable transports including QUIC, WebRTC, and WebTransport | QDNF-native raw bearers plus explicitly selected transition carriers; the same authorization boundary on each |
 | Resource control | Go libp2p provides hierarchical scopes for transient work, peers, services, connections, and streams | Caller-owned arenas, bounded steps, aggregate reservations, and scoped energy/time observations tied to accepted agreements |
 | Dissemination | Gossipsub includes peer scoring, mesh maintenance, and validation mechanisms | Authorized graph subscriptions and typed events, with bounded dissemination and QSync recovery of missed state |
-| Durable application state | Application-selected storage and synchronization | Existing QualiaDB/Q42 exact objects, semantic projections, policy generations, and durable operation receipts |
+| Durable application state | Application-selected storage and synchronization | Core exact artifacts, Q42 projections, policy generations, and durable operation receipts |
 
 The identity row follows the [Peer ID specification](https://github.com/libp2p/specs/blob/master/peer-ids/peer-ids.md).
 Transport coverage follows the specification index. Resource scope comparisons refer specifically
@@ -94,7 +94,7 @@ flowchart TB
     Session --> Route
     Route --> Native[Raw Ethernet, IPC, constrained bearers]
     Route --> Transition[Explicit UDP, WireGuard, libp2p, browser carriers]
-    Services --> Core[QualiaDB core and Q42 generations]
+    Services --> Core[QualiaDB core with Q42 and candidate QNF generations]
     Policy --> Core
     Resolve --> Core
     Services --> Accounting[Energy, time, contributions, optional settlement]
@@ -194,8 +194,8 @@ optional, independently specified profile; a realm group key is not an applicati
 
 ## 7. Commons and resource-aware operation
 
-Every work scope can carry joules and seconds with explicit measurement scope and confidence:
-measured, estimated, or unknown. Memory, bytes, CPU counters, and storage limits remain additional
+Every work scope can carry joules, seconds and [typed compute](./compute-resource-accounting.md)
+with explicit scope and evidence: measured, estimated, or unknown. Memory, bytes and storage remain additional
 dimensions. CPU cycles are not silently treated as joules; elapsed time, CPU time, airtime, and
 human contribution time are distinct quantities.
 
@@ -213,9 +213,15 @@ aggregated above the packet path, and cannot buy broader consent. Optimizing ene
 claim that those dimensions determine human worth or a universal exchange rate.
 
 For example, a community sensor publishes to an authorized environmental graph; a sleeping phone
-later obtains the missed signed operations from a custodian. Q42 stores verified source objects
-and compact indexes. A community fund can cover relay/storage work, accounted separately in joules,
+later obtains the missed signed operations from a custodian. Core artifacts retain exact sources
+and Q42 supplies semantic indexes. A community fund can cover relay/storage work, accounted in joules,
 device seconds, and accepted monetary units. The sensor need not own a wallet or join a blockchain.
+
+An agent can enable a [router/provider role](./semantic-network-roles.md) with these economic duties
+built in. Multiple [Network Cells](./network-cell.md) may implement that purpose, ordinarily at most
+512 MiB each, within a host reservation. The 42 MiB limit governs individual Sentinel passes.
+Role authority, identifier instruments and [accountability evidence](./electronic-evidence-and-retention.md)
+remain separate. Retain useful outcomes and contradiction/uncertainty, not a global person score.
 
 ## 8. Implementation boundaries
 
@@ -225,7 +231,7 @@ device seconds, and accepted monetary units. The sensor need not own a wallet or
 | `qualia-core-db/src/net/peer/` | Runtime kernel, leases, scheduler, service registry, dial planner, graph subscriptions, custody orchestration | QDNF plus verified core primitives |
 | `qualia-peer` crate | Small public facade, native/UDP hosts, examples and conformance entry points | Feature-limited core; core MUST NOT depend back on the facade |
 | Optional migration package | Foreign libp2p carrier and explicit application protocol gateways | Public peer interfaces plus foreign stack; not a dependency of the replacement runtime |
-| Existing Q42/storage owners | Exact artifact storage, generation publication, bounded durable commits/recovery | Core storage infrastructure, extended where evidence is missing |
+| Existing core storage owners; candidate `container_qnf/` | Exact artifacts, Q42 projections, generation publication, durable commits/recovery | Core infrastructure, extended where evidence is missing; no independent database |
 | Client/qapp libraries | User consent, presentation, application schemas and merge behavior | Public peer facade; no bypass into raw transport authority |
 
 Within `net/peer/`, separate `runtime/`, `resources/`, `dial/`, `services/`, `subscriptions/`,

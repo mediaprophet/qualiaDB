@@ -3,6 +3,12 @@
 **Status:** Normative design 0.1; proposed contract profile
 **Date:** 2026-09-05
 
+Required application profiles include [finite compensation and humanitarian access](./finite-project-compensation.md)
+and [socially defined protection](./socially-defined-protection.md). Bind operation-specific personal/
+incorporated/humanitarian classifications, exception precedence, finite target/fulfilment, and
+distinct protective contact/recovery/disclosure grants to pinned semantics. Payment and ontology
+membership cannot independently create rights, consent, debt or authority over a person.
+
 ## 1. Role
 
 QDNF contracts are ontology-defined linked-data graphs carried as **CBOR-LD**. Their terms identify
@@ -181,9 +187,16 @@ ontology, rate, or rule updates cannot silently reprice or reinterpret active co
 have a predecessor and new acceptance under the stated authority; historical terms remain verifiable.
 
 Contract bundles, signed acceptance, and linked receipts use the
-[QualiaDB/Q42 storage lifecycle](./core-storage-and-cache.md). Preserve exact signed bytes alongside
+[QualiaDB core artifact lifecycle](./core-storage-and-cache.md), including candidate QNF. Preserve exact signed bytes alongside
 indexed NQuin projections and pin the immutable storage generation for each verified handle. The
 contract service adapts the existing core; it does not introduce another ontology database.
+
+Interpretation bundles also bind [compute counting profiles](./compute-resource-accounting.md),
+[provider roles](./semantic-network-roles.md) and supported
+[Identifier Fabric distinctions](./identifier-fabric-integration.md) where applicable. A role,
+wallet or capacity grant remains an instrument/relation, not a merged person identifier. Retained
+contracts and evidence pin historical meanings; amendments and claims of reliance/correction are
+new linked records under the [evidence lifecycle](./electronic-evidence-and-retention.md).
 
 ## 6. Negotiation and failure behavior
 

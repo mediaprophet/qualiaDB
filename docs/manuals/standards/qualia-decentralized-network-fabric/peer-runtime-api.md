@@ -152,11 +152,13 @@ validation of every range. ABI extraction and target builds are release gates, n
 
 ## 5. Aggregate resource accounting
 
-The Sentinel ceiling is **42 × 1024 × 1024 bytes per execution pass**, not 42 MiB for each protocol
-component. One admitted pass accounts for its live kernel state, referenced working pages, retained
-input/output, verification/decode scratch, and concurrent worker subleases. A single host-wide
-ledger also bounds simultaneous passes, I/O queues, caches, persistent storage, and kernel socket
-buffers where controllable. Host memory outside a pass must be reported, never hidden as zero.
+The [Network Cell model](./network-cell.md) separates **42 MiB per Sentinel evaluation pass**,
+a configured ceiling **up to 512 MiB per ordinary cell**, and aggregate host capacity. Networking
+can span several cells. Each pass/cell includes referenced pages, retained input/output, scratch
+and simultaneous worker subleases within its own boundary. Host accounting additionally covers
+caches, storage and controllable kernel buffers. Shared pages have one physical host charge and
+count toward each borrower's working set. Declared exceptional LLM/similar profiles do not enlarge
+networking cells or Sentinel passes implicitly. Memory outside a pass/cell is never hidden as zero.
 
 Reservations belong to a bounded graph of scopes: host, runtime, transient work, context/service,
 peer/session, and operation/agreement. Charge one physical allocation once at each distinct
@@ -164,7 +166,8 @@ applicable aggregate scope; two paths to the same ancestor cannot double-count i
 reserves all affected counters or changes none. A single-owner admission loop is the initial design;
 parallel workers receive carved-out leases and do not race independent global counters.
 
-This illustrative 42 MiB configuration is an acceptance-test budget, not a measured capacity claim:
+This illustrative 42 MiB embedded networking configuration is one test point, not a universal
+network ceiling or measured capacity claim. Larger/multiple-cell profiles follow the cell design:
 
 | Partition | MiB | Includes |
 |---|---:|---|
@@ -190,7 +193,7 @@ or undelivered application events remain charged. Pools may lend unused pages ac
 when essential reserves and all outstanding commitments remain satisfiable. Data pressure cannot
 evict replay protection, unresolved settlement intent, or tombstones to create apparent capacity.
 
-## 6. Scheduling and energy/time
+## 6. Scheduling, energy, time and compute
 
 Use bounded deficit round-robin across admitted context/service scopes, then peers/operations,
 with deterministic tie-breaking. Separate capped queues cover essential control, interactive
@@ -205,6 +208,8 @@ remain necessary. Reputation records describe observed protocol behavior, with s
 They are not global human scores and cannot override consent or privilege wealthy participants.
 
 Every admitted operation has a deadline, step quota, byte budget, and configured resource dimensions.
+Step/fuel/hardware counters use [typed compute profiles](./compute-resource-accounting.md).
+Role-wide resource and financial reservations span cells; moving a flow does not mint new credit.
 Meter energy as an integral of power over a declared monotonic interval with attribution method and
 uncertainty. Scheduler estimates may use calibrated bytes/work counters, but preserve their status
 as estimates. GPU/CPU temperatures and unavailable sensors have separate availability states.
@@ -216,11 +221,14 @@ agreed duties without an outcome/receipt. Monetary and contribution exposure is 
 all concurrent operations, including unreported work and unresolved adapter submissions, following
 [Commons and Resource Economics](./commons-and-resource-economics.md).
 
-## 7. Q42 publication and policy changes
+## 7. Core artifact publication and policy changes
 
 Durable source objects and projections use [Core Storage and Cache](./core-storage-and-cache.md).
 The runtime never reconstructs a valid signature from a Quin-only representation or stores exact
 protocol bytes in an unrelated model-weight format. Index-only records point to their exact source.
+QNF is a candidate exact-evidence/view artifact alongside Q42 projections. Seal sources and dependent
+projections in acyclic order; a core manifest joins artifacts and operation state. Evidence holds
+constrain reclamation independently of route expiry and cache eviction.
 
 Build replacement route/policy/subscription generations outside the hot pass. Verify them, charge
 their simultaneous old/new memory, and publish at a bounded scheduling boundary. Already queued

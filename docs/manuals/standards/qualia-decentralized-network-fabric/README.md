@@ -2,7 +2,7 @@
 
 **Short name:** QDNF
 **Status:** Design specification 0.1
-**Date:** 2026-09-06
+**Date:** 2026-09-07
 **Scope:** A clean-slate decentralized network plus an isolated legacy-Internet gateway
 
 ## 1. Purpose
@@ -26,12 +26,13 @@ Gateway (LIG)**. A QDNF node can therefore use the old web without making old In
 part of QDNF identity, naming, routing, or trust.
 
 The fabric also supports permissive commons through ontology-defined CBOR-LD agreements. Energy
-and time form independent baseline resource accounts; agreed contributions, prices, and optional
+and time, together with typed compute work, form independent resource accounts; contributions, prices, and optional
 micropayments determine how obligations are met. Gifts, reciprocal work, community-funded access,
 and paid services share this model without requiring a network-wide currency or payment provider.
 
-QualiaDB's core and `.q42` files supply the shared storage, indexes, semantic records, and policy
-execution beneath the network. QDNF adds protocol lifecycles and bounded working state on that
+QualiaDB's core and `.q42` files supply shared indexes, semantic records and policy execution.
+The proposed [QNF container](../qnf-network-container-draft.md) explores exact network evidence and
+compiled views under that same core lifecycle. QDNF adds protocol lifecycles and bounded state on that
 substrate. The design includes a comparison with Cloudflare's cache-layout work and specific reuse
 requirements in [Core Storage and Cache](./core-storage-and-cache.md).
 
@@ -40,9 +41,26 @@ It gives applications governed service handles, bounded event-driven execution, 
 subscriptions, resumable Q42/CRDT synchronization, and optional encrypted custody. Start with
 [the peer runtime design](./peer-runtime.md) for the architecture, libp2p comparison, and tradeoffs.
 QPR is the software library over QDNF, with no new database or mandatory payment system.
+Its target lookup algorithm is [Qualia Scoped Rendezvous](./qualia-scoped-rendezvous.md):
+scope-bound semantic indexes and authenticated partition coverage over QRoute. This replaces the
+earlier proposed Kademlia overlay; comparative gains remain subject to measured evaluation.
+The [agent-swarm implementation programme](./qdnf-imp/README.md) expands this design into 30
+dependency-ordered task packages and 490 detailed checks, with single-purpose library boundaries,
+file ownership, review gates, handoff templates and a machine-readable task register.
 Its target default includes hybrid post-quantum key establishment and post-quantum authentication
 using QualiaDB's crypto libraries. An optional libp2p migration adapter is outside the replacement
 runtime and is never required for its operation or acceptance.
+
+Agents can enable [network-provider roles](./semantic-network-roles.md), including dedicated routing,
+with resource accounts, contribution/funding terms and bounded commitments built into the role.
+Capable hosts may run multiple [Network Cells](./network-cell.md), each ordinarily at most 512 MiB;
+42 MiB remains the separate Sentinel pass limit. Smaller profiles and declared exceptional workloads
+retain host budgets. Roles and their semantics lead the design; concrete layouts remain candidates.
+
+[Identifier Fabric integration](./identifier-fabric-integration.md) keeps entities, claims, handles
+and instruments distinguishable through resolution, authorization and accountability. The
+[evidence lifecycle](./electronic-evidence-and-retention.md) separates temporary telemetry from selected
+preserved originals, interpretation context and custody records needed for later examination.
 
 ```text
 Native QDNF                                      Legacy compatibility
@@ -66,6 +84,11 @@ Ethernet / Wi-Fi data / BLE / radio / serial bearer
 working repository code. “Target” describes the new specification. Nothing in this document should
 be represented as implemented merely because a related component exists.
 
+This is a design-stage suite. Normative language states intended invariants within proposed profiles;
+it does not freeze illustrative byte layouts, API sketches, vocabularies or numerical capacities.
+Semantic use cases and evidence determine those choices before interoperability freeze. Later role,
+cell, evidence and identifier-fabric decisions govern older sketches where they differ.
+
 ## 3. Source treatment
 
 The supplied papers `Redesigning ARP with Decentralized DIDs.md` and `Designing a Contextual
@@ -76,7 +99,7 @@ The design retains their strongest ideas: cryptographically signed adjacency, pe
 dynamic DNI resolution, mobile DNI subnets, replicated swarms, local-first discovery, multilingual
 semantic aliases, and separate legacy-Web support. It makes the following corrections:
 
-1. A DHT transports untrusted signed records; it is not a trust root and is not guaranteed to have
+1. A QSR index serves untrusted signed records; it is not a trust root and is not guaranteed to have
    logarithmic behavior under churn or attack.
 2. A self-signed record proves consistency with its embedded key, not that the key is authorized by
    a DID method.
@@ -117,7 +140,7 @@ semantic aliases, and separate legacy-Web support. It makes the following correc
 - `q_hash` and 60-bit Quin values are indexes, never cryptographic equality or authorization proofs.
 - Social relationships limit route disclosure and adjacency opportunity; they do not imply
   transitive trust or operation permission.
-- DHT and route gossip begin only after QLink/QRoute connectivity exists. Neither is a bootstrap
+- QSR and route gossip begin only after QLink/QRoute connectivity exists. Neither is a bootstrap
   trust root.
 - QDNF native traffic never silently falls back to DNS/IP. Legacy navigation is explicit and
   visibly crosses the LIG boundary.
@@ -126,10 +149,12 @@ semantic aliases, and separate legacy-Web support. It makes the following correc
 - Contracts use CBOR-LD with pinned context, ontology, compression-table, SHACL, and N3 rule bundles.
   Signatures bind both exact contract bytes and their interpretation; local compilation produces
   bounded QPolicy handles without ontology resolution in forwarding loops.
-- Persistent network evidence, contracts, and receipts reuse the QualiaDB core and Q42 lifecycle.
+- Persistent network evidence, contracts, and receipts reuse the core artifact lifecycle, with
+  Q42 projections and candidate QNF exact objects.
   Exact signed objects remain available beside compact Quin projections; live session state has
   bounded arenas. Logical cache separation does not require independent database engines.
 - Energy in joules and time in seconds remain scoped observations, including estimates and unknowns.
+  Compute is typed work under a pinned counting profile, with independent output acceptance.
   Physical cost, social value, agreed price, and settlement are distinct; payment cannot widen consent.
 - Economic services use accepted quotes, aggregate resource/spend caps, and replay-safe receipts.
   Native connectivity and community-funded operation remain independent of external payment rails.
@@ -139,7 +164,7 @@ semantic aliases, and separate legacy-Web support. It makes the following correc
 1. [Native Stack Architecture](./native-stack.md) — layers, QLink, QRoute, QSession, bootstrap,
    swarms, and mobile subnets.
 2. [Identifier and Resolution](./identifier-resolution.md) — DID/resource/DNI roles, signed route
-   advertisements, QResolve, aliases, caches, and DHT use.
+   advertisements, QResolve, aliases, caches, and QSR lookup.
 3. [Wire Protocol](./wire-protocol.md) — QFrame headers, messages, state machines, canonical CBOR,
    transport behavior, and resource bounds.
 4. [Legacy Internet Gateway](./legacy-internet-gateway.md) — strict coexistence with DNS/IP/TLS/HTTP
@@ -153,7 +178,7 @@ semantic aliases, and separate legacy-Web support. It makes the following correc
 8. [QLink and Bearers](./qlink-and-bearers.md) — raw Ethernet, IPC, constrained bearers, discovery,
    adjacency, MTU, fragmentation, link groups, and transition carriers.
 9. [QRoute](./qroute.md) — realm constitutions, admission, link-state routing, inter-realm path
-   vectors, forwarding, DHT operation, mobility, subnets, swarms, and partitions.
+   vectors, forwarding, QSR lookup, mobility, subnets, swarms, and partitions.
 10. [QSession and Services](./qsession-and-services.md) — end-to-end authentication, packet spaces,
     reliable streams, congestion control, migration, service dispatch, QSync, and application profiles.
 11. [Registries and Extensibility](./registries-and-extensibility.md) — numeric registries, feature
@@ -172,17 +197,39 @@ semantic aliases, and separate legacy-Web support. It makes the following correc
 17. [Qualia Peer Runtime](./peer-runtime.md) — proposed libp2p alternative, architecture, identity,
     dial planning, host/library boundaries, compatibility, and implementation tradeoffs.
 18. [QPR Runtime Model and API](./peer-runtime-api.md) — caller-owned leases, events/effects, aggregate
-    42 MiB budgets, fairness, cancellation, generation changes, and durable operation boundaries.
+    cell/host budgets, bounded Sentinel passes, fairness, cancellation and durable operation boundaries.
 19. [Semantic Peer Services](./semantic-peer-services.md) — governed subscriptions, authenticated
     anti-entropy, causal deletion, Q42 content, encrypted custody, and bounded compute/RPC.
 20. [Post-Quantum Security and Crypto Reuse](./post-quantum-security.md) — existing ML-KEM/ML-DSA/
     SLH-DSA integration, hybrid handshakes, dual proofs, typed digests, downgrade prevention and bounds.
 21. [Q42 Networking Modality](../q42-network-modality-draft.md) — network record/ontology profile,
     exact evidence and compiled admission views; 60-bit handles and the physical 48-byte ABI.
+22. [QNF Network Container](../qnf-network-container-draft.md) — candidate artifact format,
+    exact objects, bounded reads, acyclic commitments and core publication.
+23. [Network Cell and Memory Governance](./network-cell.md) — multiple cells up to 512 MiB,
+    host reservations, 42 MiB semantic passes, isolation and declared exceptions.
+24. [Compute, Energy and Time](./compute-resource-accounting.md) — typed work and counting profiles,
+    capacity/output distinctions and independent physical/economic budgets.
+25. [Semantic Network Roles](./semantic-network-roles.md) — enabling router/provider purposes,
+    built-in economic support and semantic opportunities for network improvement.
+26. [Electronic Evidence and Retention](./electronic-evidence-and-retention.md) — temporary logs,
+    selective preservation, holds, custody, storage optimization and verification limits.
+27. [Identifier Fabric Integration](./identifier-fabric-integration.md) — consultation mapping,
+    entity/claim/handle/instrument separation, co-attestation, authority and accountability.
+28. [Webizen, Core Memory and Parallel Networking](./core-memory-and-parallel-networking.md) —
+    actual arena/ring/cell code, allocation gaps, large graphs and enterprise parallel execution.
+29. [Qualia Scoped Rendezvous](./qualia-scoped-rendezvous.md) — purpose-designed semantic/exact
+    lookup replacing the proposed Kademlia overlay, with authenticated coverage and bounded cells.
+30. [QSR Evaluation and Worked Traces](./qsr-evaluation.md) — prior art, fair comparisons,
+    failure cases and evidence required before claiming superiority.
+31. [Finite Project Compensation](./finite-project-compensation.md) — humanitarian personal access,
+    incorporated-principal contributions, finite pay-down, contributor allocation and terminal fulfilment.
+32. [Socially Defined Protection](./socially-defined-protection.md) — child/PEP privacy, consented
+    contact, scoped guardianship, confidential help/reporting and safe recovery.
 
 For the socioeconomic design, start with documents 14 and 15, then the implementation evidence in
 document 13. [Review notes](./review-notes.md) record this revision's findings and validation scope.
-For the peer-library design, read documents 17–21, then the QPR programme in document 6. All runtime
+For the peer-library design, start with documents 25 and 27, then 17–24 and the programme in document 6. All runtime
 APIs, new service profiles, and performance targets are proposals until their acceptance gates pass.
 
 ## 7. Non-goals
