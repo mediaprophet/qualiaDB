@@ -12,7 +12,8 @@
 | 27 | **Complete (integrated)** | Inference remainder×5 · Research live first×20 |
 | 28 | **Complete (integrated)** | Research investigation/hypothesis/assessment×20 |
 | 29 | **Complete (integrated)** | Research remainder×33 — **Research Q2 exhausted** |
-| 30 | **Complete (pending verify)** | Render CPU scene/CSS/animation/SVG×17 |
+| 30 | **Complete (integrated)** | Render CPU scene/CSS/animation/SVG×17 |
+| 31 | **Complete (pending verify)** | CG leftovers waves 19–23 ×25 |
 
 ### Wave 27 (this session)
 
@@ -25,7 +26,7 @@
 
 | Bucket | Count (post-w27) | Notes |
 |--------|------------------|-------|
-| **Q2 Host-bound not Live** | **≈279** | Research remainder ~53, Render ~51, CG leftovers ~49, Image/Animation/long-tail |
+| **Q2 Host-bound not Live** | **≈184** (post-w31) | CG remainder ~24, Animation leftovers, long-tail |
 | Large families | Research 53, Render CPU first then GPU already-bound Live, CG leftovers 49 | ~8 more Live waves |
 | **Q1 Host-missing** | **~12k** | Not in scope |
 
