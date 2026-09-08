@@ -976,6 +976,23 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "render:gpu_live_compile_shader"
         | "render:gpu_live_compile_to_glsl"
         | "render:gpu_live_backend_info"
+        | "render:gpu_live_upload_mesh_colored"
+        | "render:gpu_live_set_standpoint"
+        | "render:gpu_live_observer_standpoint"
+        | "render:gpu_live_camera_state"
+        | "render:gpu_live_surface_size"
+        | "render:gpu_live_has_mesh"
+        | "render:gpu_live_has_tensor"
+        | "render:gpu_live_tensor_node_count"
+        | "render:gpu_live_particle_count"
+        | "render:gpu_live_sync_bloom"
+        | "render:gpu_live_set_artefact_joint"
+        | "render:gpu_live_set_artefact_world"
+        | "render:gpu_live_artefact_refused"
+        | "render:gpu_live_required_rgba8_bytes"
+        | "render:gpu_live_emf_upload_field"
+        | "render:gpu_live_emf_render_slice"
+        | "render:gpu_live_emf_field_info"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3707,6 +3724,57 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "render:gpu_live_backend_info" => {
             super::gpu_live_chain_actions::run_gpu_backend_info(document, label)
+        }
+        "render:gpu_live_upload_mesh_colored" => {
+            super::gpu_live2_chain_actions::run_gpu_upload_mesh_colored(document, label)
+        }
+        "render:gpu_live_set_standpoint" => {
+            super::gpu_live2_chain_actions::run_gpu_set_standpoint(document, label)
+        }
+        "render:gpu_live_observer_standpoint" => {
+            super::gpu_live2_chain_actions::run_gpu_observer_standpoint(document, label)
+        }
+        "render:gpu_live_camera_state" => {
+            super::gpu_live2_chain_actions::run_gpu_camera_state(document, label)
+        }
+        "render:gpu_live_surface_size" => {
+            super::gpu_live2_chain_actions::run_gpu_surface_size(document, label)
+        }
+        "render:gpu_live_has_mesh" => {
+            super::gpu_live2_chain_actions::run_gpu_has_mesh(document, label)
+        }
+        "render:gpu_live_has_tensor" => {
+            super::gpu_live2_chain_actions::run_gpu_has_tensor(document, label)
+        }
+        "render:gpu_live_tensor_node_count" => {
+            super::gpu_live2_chain_actions::run_gpu_tensor_node_count(document, label)
+        }
+        "render:gpu_live_particle_count" => {
+            super::gpu_live2_chain_actions::run_gpu_particle_count(document, label)
+        }
+        "render:gpu_live_sync_bloom" => {
+            super::gpu_live2_chain_actions::run_gpu_sync_bloom(document, label)
+        }
+        "render:gpu_live_set_artefact_joint" => {
+            super::gpu_live2_chain_actions::run_gpu_set_artefact_joint(document, label)
+        }
+        "render:gpu_live_set_artefact_world" => {
+            super::gpu_live2_chain_actions::run_gpu_set_artefact_world(document, label)
+        }
+        "render:gpu_live_artefact_refused" => {
+            super::gpu_live2_chain_actions::run_gpu_artefact_refused(document, label)
+        }
+        "render:gpu_live_required_rgba8_bytes" => {
+            super::gpu_live2_chain_actions::run_gpu_required_rgba8_bytes(document, label)
+        }
+        "render:gpu_live_emf_upload_field" => {
+            super::gpu_live2_chain_actions::run_emf_upload_field(document, label)
+        }
+        "render:gpu_live_emf_render_slice" => {
+            super::gpu_live2_chain_actions::run_emf_render_slice(document, label)
+        }
+        "render:gpu_live_emf_field_info" => {
+            super::gpu_live2_chain_actions::run_emf_field_info(document, label)
         }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),

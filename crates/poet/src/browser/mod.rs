@@ -152,6 +152,7 @@ mod anim_live_chain_actions;
 mod ode_num_chain_actions;
 mod hbbtv_chain_actions;
 mod gpu_live_chain_actions;
+mod gpu_live2_chain_actions;
 mod ode_chain_actions;
 mod agent_chain_actions;
 mod cooperative_chain_actions;

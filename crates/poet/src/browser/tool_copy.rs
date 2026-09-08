@@ -4832,6 +4832,91 @@ fn named(id: &str) -> Option<Presentation> {
             "Probe GPU backend via Render.gpu_backend_info.",
             Proficiency::Novice,
         ),
+        "render:gpu_live_upload_mesh_colored" => (
+            "Upload mesh colored",
+            "Upload a colored triangle mesh via Render.gpu_upload_mesh_colored.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_set_standpoint" => (
+            "Set standpoint",
+            "Set observer standpoint via Render.gpu_set_standpoint.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_observer_standpoint" => (
+            "Observer standpoint",
+            "Read standpoint via Render.gpu_observer_standpoint.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_camera_state" => (
+            "Camera state",
+            "Read yaw/pitch/zoom via Render.gpu_camera_state.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_surface_size" => (
+            "Surface size",
+            "Read extent via Render.gpu_surface_size.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_has_mesh" => (
+            "Has mesh",
+            "Query mesh via Render.gpu_has_mesh.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_has_tensor" => (
+            "Has tensor",
+            "Query tensor via Render.gpu_has_tensor.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_tensor_node_count" => (
+            "Tensor node count",
+            "Count tensor nodes via Render.gpu_tensor_node_count.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_particle_count" => (
+            "Particle count",
+            "Count particles via Render.gpu_particle_count.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_sync_bloom" => (
+            "Sync bloom",
+            "Reconcile bloom targets via Render.gpu_sync_bloom.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_set_artefact_joint" => (
+            "Set artefact joint",
+            "Set kinematic joint via Render.gpu_set_artefact_joint.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_set_artefact_world" => (
+            "Set artefact world",
+            "Set world AABB via Render.gpu_set_artefact_world.",
+            Proficiency::Intermediate,
+        ),
+        "render:gpu_live_artefact_refused" => (
+            "Artefact refused",
+            "Query refused pose via Render.gpu_artefact_refused.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_required_rgba8_bytes" => (
+            "Required RGBA8 bytes",
+            "Readback size via Render.gpu_required_rgba8_bytes.",
+            Proficiency::Novice,
+        ),
+        "render:gpu_live_emf_upload_field" => (
+            "EMF upload field",
+            "Upload EMF grid via Render.emf_upload_field.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_emf_render_slice" => (
+            "EMF render slice",
+            "Render EMF slice via Render.emf_render_slice.",
+            Proficiency::Expert,
+        ),
+        "render:gpu_live_emf_field_info" => (
+            "EMF field info",
+            "Query EMF field via Render.emf_field_info.",
+            Proficiency::Novice,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

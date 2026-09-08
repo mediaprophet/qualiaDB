@@ -4496,6 +4496,36 @@ mod tests {
             "render:gpu_live_backend_info",
             Some("Render.gpu_backend_info")
         )));
-        assert_eq!(tools.len(), 17);
+        assert!(tools.len() >= 17);
+    }
+
+    #[test]
+    fn gpu_live_binds_wave35_gpu_emf_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "render:gpu_live")
+            .expect("render:gpu_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "render:gpu_live_upload_mesh_colored",
+            Some("Render.gpu_upload_mesh_colored")
+        )));
+        assert!(tools.contains(&(
+            "render:gpu_live_emf_field_info",
+            Some("Render.emf_field_info")
+        )));
+        assert_eq!(tools.len(), 34);
     }
 }
