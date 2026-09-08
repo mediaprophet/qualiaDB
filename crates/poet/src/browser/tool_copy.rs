@@ -3792,6 +3792,126 @@ fn named(id: &str) -> Option<Presentation> {
             "Step world physics via World.object_step_physics.",
             Proficiency::Intermediate,
         ),
+        "office:asset_create" => (
+            "Create asset",
+            "Create an aspect-graph record via Asset.create.",
+            Proficiency::Novice,
+        ),
+        "office:asset_add_temporal" => (
+            "Add temporal aspect",
+            "Add a temporal aspect via Asset.add_temporal.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_add_topic" => (
+            "Add topic",
+            "Associate a topic via Asset.add_topic.",
+            Proficiency::Novice,
+        ),
+        "office:asset_set_spatial" => (
+            "Set spatial anchor",
+            "Set a spatial anchor via Asset.set_spatial.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_compile" => (
+            "Compile asset",
+            "Compile an asset to quins via Asset.compile.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_temporal_span" => (
+            "Temporal span",
+            "Measure aspect span via Asset.temporal_span.",
+            Proficiency::Novice,
+        ),
+        "office:asset_query_aspects" => (
+            "Query aspects",
+            "Query temporal aspects via Asset.query_aspects.",
+            Proficiency::Novice,
+        ),
+        "office:asset_persist" => (
+            "Persist asset",
+            "Persist an asset via Asset.persist.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_resolve" => (
+            "Resolve asset",
+            "Resolve an asset by id via Asset.resolve.",
+            Proficiency::Novice,
+        ),
+        "office:asset_resolve_by_spatial" => (
+            "Resolve by spatial",
+            "Resolve assets by anchor via Asset.resolve_by_spatial.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_resolve_by_topic" => (
+            "Resolve by topic",
+            "Resolve assets by topic via Asset.resolve_by_topic.",
+            Proficiency::Novice,
+        ),
+        "office:asset_resolve_by_temporal" => (
+            "Resolve by temporal",
+            "Resolve assets by aspect kind via Asset.resolve_by_temporal.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_list" => (
+            "List assets",
+            "List persisted asset ids via Asset.list.",
+            Proficiency::Novice,
+        ),
+        "office:asset_count" => (
+            "Count assets",
+            "Count persisted assets via Asset.count.",
+            Proficiency::Novice,
+        ),
+        "scientific:ode_lin1" => (
+            "Linear first-order ODE",
+            "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:ode_lin2" => (
+            "Linear second-order ODE",
+            "Solve a·y'' + b·y' + c·y = 0 via SymbolicODE.solve_linear_second_order.",
+            Proficiency::Expert,
+        ),
+        "scientific:ode_classify_pde" => (
+            "Classify PDE",
+            "Classify a second-order PDE via SymbolicODE.classify_second_order_pde.",
+            Proficiency::Expert,
+        ),
+        "scientific:ode_separable" => (
+            "Separable ODE",
+            "Solve a separable ODE via SymbolicODE.solve_separable.",
+            Proficiency::Expert,
+        ),
+        "scientific:ode_pde1" => (
+            "Linear first-order PDE",
+            "Solve a·uₓ + b·u_y = 0 via SymbolicODE.solve_first_order_linear_pde.",
+            Proficiency::Expert,
+        ),
+        "ai:agent_trace" => (
+            "Agent trace",
+            "Inspect instrument trace via Agent.trace.",
+            Proficiency::Intermediate,
+        ),
+        "ai:agent_verify" => (
+            "Agent verify",
+            "Verify agent priority via Agent.verify.",
+            Proficiency::Intermediate,
+        ),
+        "ai:agent_plan" => (
+            "Agent plan",
+            "Plan a task via Agent.plan.",
+            Proficiency::Intermediate,
+        ),
+        "ai:agent_execute" => (
+            "Agent execute",
+            "Prepare planned execution via Agent.execute.",
+            Proficiency::Expert,
+        ),
+        "ai:agent_evaluate" => (
+            "Agent evaluate",
+            "Score outputs against expected via Agent.evaluate.",
+            Proficiency::Expert,
+        ),
         "ai:co_author" => (
             "Write together",
             "Ask the local model to help write. Needs a selected page and a loaded model.",

@@ -21,6 +21,8 @@ mod wave22_host;
 mod wave23_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave24_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave25_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -69,6 +71,14 @@ pub use wave24_host::{
     boolean_union_area_host as boolean_union_area, dual_point_to_line_host as dual_point_to_line,
     dual_round_trip_host as dual_round_trip, is_convex_polygon_host as is_convex_polygon,
     point_in_or_on_polygon_host as point_in_or_on_polygon, width_coreset_host as width_coreset,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave25_host::{
+    cross_ratio_1d_host as cross_ratio_1d, householder_reflect_host as householder_reflect,
+    hyperplane_eval_host as hyperplane_eval, point_from_projective_host as point_from_projective,
+    projective_from_point_host as projective_from_point,
+    quaternion_normalize_host as quaternion_normalize, so3_exp_host as so3_exp,
+    so3_log_host as so3_log,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -171,5 +181,13 @@ geom_stub!(
     point_in_or_on_polygon,
     boolean_union_area,
     boolean_intersection_area,
-    boolean_difference_area
+    boolean_difference_area,
+    cross_ratio_1d,
+    hyperplane_eval,
+    householder_reflect,
+    quaternion_normalize,
+    so3_exp,
+    so3_log,
+    projective_from_point,
+    point_from_projective
 );

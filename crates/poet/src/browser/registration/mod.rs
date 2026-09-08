@@ -3792,4 +3792,112 @@ mod tests {
         )));
         assert_eq!(tools.len(), 7);
     }
+
+    #[test]
+    fn asset_binds_wave25_asset_caps() {
+        let registry = super::build_registry();
+        let office = registry.toolbox("office").expect("office toolbox");
+        let chain = office
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "office:asset")
+            .expect("office:asset toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("office:asset_create", Some("Asset.create"))));
+        assert!(tools.contains(&("office:asset_add_temporal", Some("Asset.add_temporal"))));
+        assert!(tools.contains(&("office:asset_add_topic", Some("Asset.add_topic"))));
+        assert!(tools.contains(&("office:asset_set_spatial", Some("Asset.set_spatial"))));
+        assert!(tools.contains(&("office:asset_compile", Some("Asset.compile"))));
+        assert!(tools.contains(&("office:asset_temporal_span", Some("Asset.temporal_span"))));
+        assert!(tools.contains(&("office:asset_query_aspects", Some("Asset.query_aspects"))));
+        assert!(tools.contains(&("office:asset_persist", Some("Asset.persist"))));
+        assert!(tools.contains(&("office:asset_resolve", Some("Asset.resolve"))));
+        assert!(tools.contains(&(
+            "office:asset_resolve_by_spatial",
+            Some("Asset.resolve_by_spatial")
+        )));
+        assert!(tools.contains(&("office:asset_resolve_by_topic", Some("Asset.resolve_by_topic"))));
+        assert!(tools.contains(&(
+            "office:asset_resolve_by_temporal",
+            Some("Asset.resolve_by_temporal")
+        )));
+        assert!(tools.contains(&("office:asset_list", Some("Asset.list"))));
+        assert!(tools.contains(&("office:asset_count", Some("Asset.count"))));
+        assert_eq!(tools.len(), 14);
+    }
+
+    #[test]
+    fn ode_binds_wave25_symbolic_ode_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:ode")
+            .expect("scientific:ode toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:ode_lin1",
+            Some("SymbolicODE.solve_linear_first_order")
+        )));
+        assert!(tools.contains(&(
+            "scientific:ode_lin2",
+            Some("SymbolicODE.solve_linear_second_order")
+        )));
+        assert!(tools.contains(&(
+            "scientific:ode_classify_pde",
+            Some("SymbolicODE.classify_second_order_pde")
+        )));
+        assert!(tools.contains(&("scientific:ode_separable", Some("SymbolicODE.solve_separable"))));
+        assert!(tools.contains(&(
+            "scientific:ode_pde1",
+            Some("SymbolicODE.solve_first_order_linear_pde")
+        )));
+        assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn agent_binds_wave25_agent_caps() {
+        let registry = super::build_registry();
+        let ai = registry.toolbox("ai").expect("ai toolbox");
+        let chain = ai
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "ai:agent")
+            .expect("ai:agent toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("ai:agent_trace", Some("Agent.trace"))));
+        assert!(tools.contains(&("ai:agent_verify", Some("Agent.verify"))));
+        assert!(tools.contains(&("ai:agent_plan", Some("Agent.plan"))));
+        assert!(tools.contains(&("ai:agent_execute", Some("Agent.execute"))));
+        assert!(tools.contains(&("ai:agent_evaluate", Some("Agent.evaluate"))));
+        assert_eq!(tools.len(), 5);
+    }
 }

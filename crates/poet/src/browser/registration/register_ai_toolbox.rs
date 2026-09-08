@@ -1252,6 +1252,69 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let agent_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_trace".into(),
+                label: "Agent trace".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.trace".into()),
+                ontology_prefix: "ai".into(),
+                description: "Inspect instrument trace via Agent.trace.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_verify".into(),
+                label: "Agent verify".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.verify".into()),
+                ontology_prefix: "ai".into(),
+                description: "Verify agent priority via Agent.verify.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_plan".into(),
+                label: "Agent plan".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.plan".into()),
+                ontology_prefix: "ai".into(),
+                description: "Plan a task via Agent.plan.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_execute".into(),
+                label: "Agent execute".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.execute".into()),
+                ontology_prefix: "ai".into(),
+                description: "Prepare planned execution via Agent.execute.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_evaluate".into(),
+                label: "Agent evaluate".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.evaluate".into()),
+                ontology_prefix: "ai".into(),
+                description: "Score outputs via Agent.evaluate.".into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "ai".into(),
@@ -1368,6 +1431,16 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
                         .into(),
                 },
                 tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:agent".into(),
+                    label: "Live Agent runtime".into(),
+                    icon: "ai".into(),
+                    description: "Curated Agent.* trace, verify, plan, execute, and evaluate binds."
+                        .into(),
+                },
+                agent_tools,
             ),
         ],
     ));

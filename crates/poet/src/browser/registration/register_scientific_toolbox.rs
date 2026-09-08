@@ -2041,6 +2041,39 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
         ),
     ];
 
+    let ode_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:ode_lin1",
+            "Linear first-order ODE",
+            "SymbolicODE.solve_linear_first_order",
+            "Closed form for y' + a·y = b.",
+        ),
+        sci_live_tool(
+            "scientific:ode_lin2",
+            "Linear second-order ODE",
+            "SymbolicODE.solve_linear_second_order",
+            "Closed form for a·y'' + b·y' + c·y = 0.",
+        ),
+        sci_live_tool(
+            "scientific:ode_classify_pde",
+            "Classify PDE",
+            "SymbolicODE.classify_second_order_pde",
+            "Elliptic / parabolic / hyperbolic by B²−4AC.",
+        ),
+        sci_live_tool(
+            "scientific:ode_separable",
+            "Separable ODE",
+            "SymbolicODE.solve_separable",
+            "Implicit solution for y' = g(x)·h(y).",
+        ),
+        sci_live_tool(
+            "scientific:ode_pde1",
+            "Linear first-order PDE",
+            "SymbolicODE.solve_first_order_linear_pde",
+            "Characteristics for a·uₓ + b·u_y = 0.",
+        ),
+    ];
+
     let chem_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
             ToolMetadata {
@@ -2449,6 +2482,15 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
                     description: "Curated Spectral.* EMF, SPD, RGB, blend, and gamut binds.".into(),
                 },
                 spectral_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:ode".into(),
+                    label: "Live symbolic ODE".into(),
+                    icon: "lab".into(),
+                    description: "Curated SymbolicODE.* linear ODE, separable, and PDE binds.".into(),
+                },
+                ode_tools,
             ),
         ],
     ));

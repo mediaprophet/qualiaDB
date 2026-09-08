@@ -780,6 +780,15 @@ pub const GEOM_POINT_IN_OR_ON_POLYGON: &str = "ComputationalGeometry.point_in_or
 pub const GEOM_BOOLEAN_UNION_AREA: &str = "ComputationalGeometry.boolean_union_area";
 pub const GEOM_BOOLEAN_INTERSECTION_AREA: &str = "ComputationalGeometry.boolean_intersection_area";
 pub const GEOM_BOOLEAN_DIFFERENCE_AREA: &str = "ComputationalGeometry.boolean_difference_area";
+// ── Wave-25 Host binds (projective / quaternion / hyperplane) ──
+pub const GEOM_CROSS_RATIO_1D: &str = "ComputationalGeometry.cross_ratio_1d";
+pub const GEOM_HYPERPLANE_EVAL: &str = "ComputationalGeometry.hyperplane_eval";
+pub const GEOM_HOUSEHOLDER_REFLECT: &str = "ComputationalGeometry.householder_reflect";
+pub const GEOM_QUATERNION_NORMALIZE: &str = "ComputationalGeometry.quaternion_normalize";
+pub const GEOM_SO3_EXP: &str = "ComputationalGeometry.so3_exp";
+pub const GEOM_SO3_LOG: &str = "ComputationalGeometry.so3_log";
+pub const GEOM_PROJECTIVE_FROM_POINT: &str = "ComputationalGeometry.projective_from_point";
+pub const GEOM_POINT_FROM_PROJECTIVE: &str = "ComputationalGeometry.point_from_projective";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1861,6 +1870,14 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_BOOLEAN_UNION_AREA,
     GEOM_BOOLEAN_INTERSECTION_AREA,
     GEOM_BOOLEAN_DIFFERENCE_AREA,
+    GEOM_CROSS_RATIO_1D,
+    GEOM_HYPERPLANE_EVAL,
+    GEOM_HOUSEHOLDER_REFLECT,
+    GEOM_QUATERNION_NORMALIZE,
+    GEOM_SO3_EXP,
+    GEOM_SO3_LOG,
+    GEOM_PROJECTIVE_FROM_POINT,
+    GEOM_POINT_FROM_PROJECTIVE,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2691,7 +2708,15 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_POINT_IN_OR_ON_POLYGON
         | GEOM_BOOLEAN_UNION_AREA
         | GEOM_BOOLEAN_INTERSECTION_AREA
-        | GEOM_BOOLEAN_DIFFERENCE_AREA => "geometry",
+        | GEOM_BOOLEAN_DIFFERENCE_AREA
+        | GEOM_CROSS_RATIO_1D
+        | GEOM_HYPERPLANE_EVAL
+        | GEOM_HOUSEHOLDER_REFLECT
+        | GEOM_QUATERNION_NORMALIZE
+        | GEOM_SO3_EXP
+        | GEOM_SO3_LOG
+        | GEOM_PROJECTIVE_FROM_POINT
+        | GEOM_POINT_FROM_PROJECTIVE => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE

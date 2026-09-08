@@ -772,6 +772,30 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "spatial:world_set_gravity"
         | "spatial:world_object_apply_force"
         | "spatial:world_object_step_physics"
+        | "office:asset_create"
+        | "office:asset_add_temporal"
+        | "office:asset_add_topic"
+        | "office:asset_set_spatial"
+        | "office:asset_compile"
+        | "office:asset_temporal_span"
+        | "office:asset_query_aspects"
+        | "office:asset_persist"
+        | "office:asset_resolve"
+        | "office:asset_resolve_by_spatial"
+        | "office:asset_resolve_by_topic"
+        | "office:asset_resolve_by_temporal"
+        | "office:asset_list"
+        | "office:asset_count"
+        | "scientific:ode_lin1"
+        | "scientific:ode_lin2"
+        | "scientific:ode_classify_pde"
+        | "scientific:ode_separable"
+        | "scientific:ode_pde1"
+        | "ai:agent_trace"
+        | "ai:agent_verify"
+        | "ai:agent_plan"
+        | "ai:agent_execute"
+        | "ai:agent_evaluate"
         | "ai:nlp_tokenize"
         | "ai:nlp_split_sentences"
         | "ai:nlp_coref_resolve"
@@ -2942,6 +2966,36 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "spatial:world_object_step_physics" => {
             super::world_chain_actions::run_object_step_physics(document, label)
         }
+        "office:asset_create" => super::asset_chain_actions::run_create(document, label),
+        "office:asset_add_temporal" => super::asset_chain_actions::run_add_temporal(document, label),
+        "office:asset_add_topic" => super::asset_chain_actions::run_add_topic(document, label),
+        "office:asset_set_spatial" => super::asset_chain_actions::run_set_spatial(document, label),
+        "office:asset_compile" => super::asset_chain_actions::run_compile(document, label),
+        "office:asset_temporal_span" => super::asset_chain_actions::run_temporal_span(document, label),
+        "office:asset_query_aspects" => super::asset_chain_actions::run_query_aspects(document, label),
+        "office:asset_persist" => super::asset_chain_actions::run_persist(document, label),
+        "office:asset_resolve" => super::asset_chain_actions::run_resolve(document, label),
+        "office:asset_resolve_by_spatial" => {
+            super::asset_chain_actions::run_resolve_by_spatial(document, label)
+        }
+        "office:asset_resolve_by_topic" => {
+            super::asset_chain_actions::run_resolve_by_topic(document, label)
+        }
+        "office:asset_resolve_by_temporal" => {
+            super::asset_chain_actions::run_resolve_by_temporal(document, label)
+        }
+        "office:asset_list" => super::asset_chain_actions::run_list(document, label),
+        "office:asset_count" => super::asset_chain_actions::run_count(document, label),
+        "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
+        "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
+        "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),
+        "scientific:ode_separable" => super::ode_chain_actions::run_separable(document, label),
+        "scientific:ode_pde1" => super::ode_chain_actions::run_pde1(document, label),
+        "ai:agent_trace" => super::agent_chain_actions::run_trace(document, label),
+        "ai:agent_verify" => super::agent_chain_actions::run_verify(document, label),
+        "ai:agent_plan" => super::agent_chain_actions::run_plan(document, label),
+        "ai:agent_execute" => super::agent_chain_actions::run_execute(document, label),
+        "ai:agent_evaluate" => super::agent_chain_actions::run_evaluate(document, label),
         "ai:nlp_tokenize" => super::nlp_chain_actions::run_tokenize(document, label),
         "ai:nlp_split_sentences" => {
             super::nlp_chain_actions::run_split_sentences(document, label)
