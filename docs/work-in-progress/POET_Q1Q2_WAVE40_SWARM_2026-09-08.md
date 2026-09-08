@@ -1,7 +1,7 @@
 # Q1/Q2 incorporation wave 40 — Linear Algebra Host-widen — 2026-09-08
 
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
-**Status:** In progress  
+**Status:** Complete (verified)  
 **Prior:** wave 39 Complete — curated helper-aware Q2 leftover = 0  
 **Authority:** owner Host-widen (Vibe is an app/REPL language; catalog grows)
 
@@ -21,7 +21,9 @@ this is **not** “bind all remaining CoreDb `pub fn`s.”
 | D Poet Live | `scientific:la_dot` … `la_inverse`; surface-aware `gemm_live` | `linalg_app_chain_actions.rs` |
 | E Polish | machine schemas, dual-path scan, Poet-JSON Host tests, Econ stub honesty | coverage / tool_dual_path |
 
-## Parent verify
+**Results (2026-09-08):** gemm_host **3** · la_app **6** · catalog **1** · poet `wave40` **1** · policy **1** · dual-path **1** · integrity **11**.
+
+`LinearAlgebra.gemm` now calls the engine solver. CUDA `caps()` probe is fail-closed (`catch_unwind`) so missing `libcuda` does not abort Host/REPL.
 
 ```
 cargo test -p qualia-core-db --lib gemm_host

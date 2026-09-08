@@ -151,10 +151,6 @@ pub(super) fn run_blake3(document: &Document, label: &str) {
     );
 }
 
-pub(super) fn run_gemm(document: &Document, label: &str) {
-    super::linalg_app_chain_actions::run_gemm(document, label);
-}
-
 pub(super) fn run_gaussian_sigma(document: &Document, label: &str) {
     invoke_dual(
         document,
