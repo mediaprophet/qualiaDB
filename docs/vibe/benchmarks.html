@@ -116,7 +116,7 @@ title: VibeScript Benchmarks
     {
       name: "Fibonacci(15) iterative",
       vibeSrc: `fn fib_iter(n: i64) budget(steps: 100000) -> i64 {
-  let a = 0; let b = 1; let i = 0;
+  let mut a = 0; let mut b = 1; let mut i = 0;
   while i < n { let t = a + b; a = b; b = t; i = i + 1; }
   return a;
 }
@@ -131,7 +131,7 @@ fn main() -> i64 { return fib_iter(15); }`,
     {
       name: "Sum 1..100 (while loop)",
       vibeSrc: `fn sum_to(n: i64) budget(steps: 10000) -> i64 {
-  let s = 0; let i = 0;
+  let mut s = 0; let mut i = 0;
   while i < n { s = s + i; i = i + 1; }
   return s;
 }
@@ -146,7 +146,7 @@ fn main() -> i64 { return sum_to(100); }`,
     {
       name: "List sum (for loop)",
       vibeSrc: `fn sum_list() budget(steps: 10000) -> i64 {
-  let s = 0;
+  let mut s = 0;
   for x in [10, 20, 30, 40, 50] { s = s + x; }
   return s;
 }
