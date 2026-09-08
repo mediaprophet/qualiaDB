@@ -13,6 +13,7 @@ pub mod mldsa;
 pub mod pq_handshake;
 pub mod rotation;
 pub mod secret_lease;
+pub mod share_encoding;
 pub mod transcript;
 pub mod types;
 pub mod vectors;

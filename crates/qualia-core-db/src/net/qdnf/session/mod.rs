@@ -3,6 +3,8 @@
 pub mod credit;
 pub mod datagrams;
 pub mod handshake;
+pub mod loss;
+pub mod packet;
 pub mod paths;
 pub mod policy;
 pub mod streams;
