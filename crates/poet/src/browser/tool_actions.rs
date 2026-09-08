@@ -1009,6 +1009,25 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "comm:graph_live_add_social_post"
         | "comm:graph_live_add_trigger"
         | "comm:graph_live_second_screen_sync"
+        | "scientific:graph_live_fuzzy_jaccard"
+        | "scientific:graph_live_fuzzy_dice"
+        | "scientific:graph_live_approximate_match"
+        | "scientific:graph_live_shortest_path"
+        | "scientific:graph_live_spreading_activation"
+        | "scientific:graph_live_top_k"
+        | "scientific:opt_live_hill_climb"
+        | "scientific:opt_live_simulated_annealing"
+        | "scientific:opt_live_artificial_bee_colony"
+        | "ai:sampler_live_configure"
+        | "ai:sampler_live_constrain_enable"
+        | "ai:sampler_live_constrain_disable"
+        | "ai:sampler_live_constrain_reset"
+        | "ai:sampler_live_sample"
+        | "ai:cap_live_grant"
+        | "ai:cap_live_revoke"
+        | "ai:cap_live_test_gating"
+        | "ai:cap_live_audit"
+        | "ai:cap_live_declare"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3834,6 +3853,51 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "comm:graph_live_second_screen_sync" => {
             super::wave36_chain_actions::run_second_screen_sync(document, label)
         }
+        "scientific:graph_live_fuzzy_jaccard" => {
+            super::wave37_chain_actions::run_fuzzy_jaccard(document, label)
+        }
+        "scientific:graph_live_fuzzy_dice" => {
+            super::wave37_chain_actions::run_fuzzy_dice(document, label)
+        }
+        "scientific:graph_live_approximate_match" => {
+            super::wave37_chain_actions::run_approximate_match(document, label)
+        }
+        "scientific:graph_live_shortest_path" => {
+            super::wave37_chain_actions::run_shortest_path(document, label)
+        }
+        "scientific:graph_live_spreading_activation" => {
+            super::wave37_chain_actions::run_spreading_activation(document, label)
+        }
+        "scientific:graph_live_top_k" => super::wave37_chain_actions::run_top_k(document, label),
+        "scientific:opt_live_hill_climb" => {
+            super::wave37_chain_actions::run_hill_climb(document, label)
+        }
+        "scientific:opt_live_simulated_annealing" => {
+            super::wave37_chain_actions::run_simulated_annealing(document, label)
+        }
+        "scientific:opt_live_artificial_bee_colony" => {
+            super::wave37_chain_actions::run_artificial_bee_colony(document, label)
+        }
+        "ai:sampler_live_configure" => {
+            super::wave37_chain_actions::run_sampler_configure(document, label)
+        }
+        "ai:sampler_live_constrain_enable" => {
+            super::wave37_chain_actions::run_sampler_constrain_enable(document, label)
+        }
+        "ai:sampler_live_constrain_disable" => {
+            super::wave37_chain_actions::run_sampler_constrain_disable(document, label)
+        }
+        "ai:sampler_live_constrain_reset" => {
+            super::wave37_chain_actions::run_sampler_constrain_reset(document, label)
+        }
+        "ai:sampler_live_sample" => super::wave37_chain_actions::run_sampler_sample(document, label),
+        "ai:cap_live_grant" => super::wave37_chain_actions::run_cap_grant(document, label),
+        "ai:cap_live_revoke" => super::wave37_chain_actions::run_cap_revoke(document, label),
+        "ai:cap_live_test_gating" => {
+            super::wave37_chain_actions::run_cap_test_gating(document, label)
+        }
+        "ai:cap_live_audit" => super::wave37_chain_actions::run_cap_audit(document, label),
+        "ai:cap_live_declare" => super::wave37_chain_actions::run_cap_declare(document, label),
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
         "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),

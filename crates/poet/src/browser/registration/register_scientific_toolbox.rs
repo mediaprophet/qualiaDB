@@ -2511,6 +2511,15 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
                 },
                 super::register_wave33_live::ode_num_tools(),
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:graph_reason".into(),
+                    label: "Live graph match & optimization".into(),
+                    icon: "lab".into(),
+                    description: "Host-bound GraphMatch.*, GraphReasoning.*, Optimization leftovers.".into(),
+                },
+                super::register_wave37_live::graph_reason_tools(),
+            ),
         ],
     ));
 }

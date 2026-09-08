@@ -66,6 +66,7 @@ evidence.
 | 52 | Q1/Q2 wave 34 | **Complete** | Render GPU already-bound honest Live +17; Host none | Closed — wave 34 |
 | 53 | Q1/Q2 wave 35 | **Complete** | Remaining Render GPU/EMF +17 (GPU leftover Q2 exhausted); Host none | Closed — wave 35 |
 | 54 | Q1/Q2 wave 36 | **Complete** | Social/Forensic +6 · Finance +3 · Corpus/ChatGraph/Interactive/SecondScreen +7; Host none | Closed — wave 36 |
+| 55 | Q1/Q2 wave 37 | **Complete** | GraphMatch/GraphReasoning/Optimization +9 · sampler/Capability +10; Host none | Closed — wave 37 |
 
 ## Latest execution evidence
 

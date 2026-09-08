@@ -4997,6 +4997,101 @@ fn named(id: &str) -> Option<Presentation> {
             "Companion sync via SecondScreen.sync.",
             Proficiency::Novice,
         ),
+        "scientific:graph_live_fuzzy_jaccard" => (
+            "Fuzzy Jaccard",
+            "Fuzzy Jaccard via GraphMatch.fuzzy_jaccard.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:graph_live_fuzzy_dice" => (
+            "Fuzzy Dice",
+            "Fuzzy Dice via GraphMatch.fuzzy_dice.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:graph_live_approximate_match" => (
+            "Approximate match",
+            "Hill-climb correspondence via GraphMatch.approximate_match.",
+            Proficiency::Expert,
+        ),
+        "scientific:graph_live_shortest_path" => (
+            "Shortest path",
+            "Dijkstra via GraphReasoning.shortest_path.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:graph_live_spreading_activation" => (
+            "Spreading activation",
+            "Spreading activation via GraphReasoning.spreading_activation.",
+            Proficiency::Expert,
+        ),
+        "scientific:graph_live_top_k" => (
+            "Top-k activations",
+            "Top-k indices via GraphReasoning.top_k.",
+            Proficiency::Novice,
+        ),
+        "scientific:opt_live_hill_climb" => (
+            "Hill climb",
+            "1-D hill climb via Optimization.hill_climb.",
+            Proficiency::Novice,
+        ),
+        "scientific:opt_live_simulated_annealing" => (
+            "Simulated annealing",
+            "Bounded SA via Optimization.simulated_annealing.",
+            Proficiency::Expert,
+        ),
+        "scientific:opt_live_artificial_bee_colony" => (
+            "Artificial bee colony",
+            "ABC via Optimization.artificial_bee_colony.",
+            Proficiency::Expert,
+        ),
+        "ai:sampler_live_configure" => (
+            "Sampler configure",
+            "Install sampler config via sampler.configure.",
+            Proficiency::Intermediate,
+        ),
+        "ai:sampler_live_constrain_enable" => (
+            "Constrain enable",
+            "Enable GBNF via sampler.constrain_enable.",
+            Proficiency::Expert,
+        ),
+        "ai:sampler_live_constrain_disable" => (
+            "Constrain disable",
+            "Disable GBNF via sampler.constrain_disable.",
+            Proficiency::Novice,
+        ),
+        "ai:sampler_live_constrain_reset" => (
+            "Constrain reset",
+            "Reset GBNF via sampler.constrain_reset.",
+            Proficiency::Novice,
+        ),
+        "ai:sampler_live_sample" => (
+            "Sampler sample",
+            "CPU sample via sampler.sample.",
+            Proficiency::Intermediate,
+        ),
+        "ai:cap_live_grant" => (
+            "Capability grant",
+            "Authorization grant via Capability.grant.",
+            Proficiency::Intermediate,
+        ),
+        "ai:cap_live_revoke" => (
+            "Capability revoke",
+            "Revoke priority via Capability.revoke.",
+            Proficiency::Intermediate,
+        ),
+        "ai:cap_live_test_gating" => (
+            "Test gating",
+            "Sentinel gating via Capability.test_gating.",
+            Proficiency::Novice,
+        ),
+        "ai:cap_live_audit" => (
+            "Capability audit",
+            "Audit traces via Capability.audit.",
+            Proficiency::Novice,
+        ),
+        "ai:cap_live_declare" => (
+            "Capability declare",
+            "Declare a scope via Capability.declare.",
+            Proficiency::Novice,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

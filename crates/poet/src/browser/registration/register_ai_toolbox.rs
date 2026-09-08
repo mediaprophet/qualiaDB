@@ -1505,6 +1505,15 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
                 },
                 agent_tools,
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:sampler_live".into(),
+                    label: "Live sampler & capability".into(),
+                    icon: "ai".into(),
+                    description: "Host-bound sampler.* and Capability.* leftovers.".into(),
+                },
+                super::register_wave37_live::sampler_cap_tools(),
+            ),
         ],
     ));
 }

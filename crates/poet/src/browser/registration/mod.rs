@@ -30,6 +30,7 @@ mod register_render_live;
 mod register_wave33_live;
 mod register_gpu_live;
 mod register_wave36_live;
+mod register_wave37_live;
 mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
@@ -4560,6 +4561,33 @@ mod tests {
         assert!(graph.tools().iter().any(|t| {
             t.metadata().id == "comm:graph_live_validate_fragment"
                 && t.metadata().capability_scope.as_deref() == Some("ChatGraph.validate_fragment")
+        }));
+    }
+
+    #[test]
+    fn wave37_binds_graph_opt_sampler_caps() {
+        let registry = super::build_registry();
+        let sci = registry.toolbox("scientific").expect("scientific toolbox");
+        let graph = sci
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:graph_reason")
+            .expect("scientific:graph_reason toolchain");
+        assert_eq!(graph.tools().len(), 9);
+        assert!(graph.tools().iter().any(|t| {
+            t.metadata().id == "scientific:graph_live_fuzzy_jaccard"
+                && t.metadata().capability_scope.as_deref() == Some("GraphMatch.fuzzy_jaccard")
+        }));
+        let ai = registry.toolbox("ai").expect("ai toolbox");
+        let sampler = ai
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "ai:sampler_live")
+            .expect("ai:sampler_live toolchain");
+        assert_eq!(sampler.tools().len(), 10);
+        assert!(sampler.tools().iter().any(|t| {
+            t.metadata().id == "ai:sampler_live_configure"
+                && t.metadata().capability_scope.as_deref() == Some("sampler.configure")
         }));
     }
 }
