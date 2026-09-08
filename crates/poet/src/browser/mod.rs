@@ -43,6 +43,7 @@ pub mod dom_bindings;
 pub mod domain_presence;
 pub mod g_coord;
 pub mod git_forge;
+pub mod open_maps;
 pub mod governance_views;
 pub mod governance_workflow;
 pub mod health_views;

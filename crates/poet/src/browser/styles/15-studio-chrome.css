@@ -495,7 +495,8 @@ button[disabled]:hover,
 [data-coord-bind="gated"] .gis-map-svg {
   outline: 1px dashed color-mix(in srgb, var(--media-map) 40%, transparent);
 }
-[data-coord-bind="remap"] .gis-map-svg {
+[data-coord-bind="remap"] .gis-map-svg,
+[data-coord-bind="remap"] .osm-embed-frame {
   outline: 1px solid color-mix(in srgb, var(--media-map) 45%, transparent);
 }
 .g-coord-position,

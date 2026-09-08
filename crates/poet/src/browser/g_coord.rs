@@ -8,6 +8,10 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlInputElement};
 
+use crate::browser::open_maps::{
+    normalize_osm_layer, osm_embed_url, osm_site_url, OSM_COPYRIGHT_URL, OSM_DEFAULT_HALF_SPAN_DEG,
+    OSM_DEFAULT_LAYER,
+};
 use crate::vibe_host::{capability_invoke, Span, Value};
 
 const NORTH_SPRING_LAT: f64 = -37.8;
@@ -172,6 +176,7 @@ pub fn build_map_view(document: &Document) -> Element {
     stage.set_class_name("g-coord-stage preview-stage");
     stage.set_id("g-coord-stage");
     stage.set_attribute("data-aspect", "stage").ok();
+    mount_open_map_stage(document, &wrapper, &stage);
     wrapper.append_child(&stage).unwrap();
 
     let time_row = document.create_element("div").unwrap();
@@ -194,6 +199,7 @@ pub fn build_map_view(document: &Document) -> Element {
 
     paint_realm(&wrapper, Realm::Earth);
     wire_realms(&wrapper);
+    wire_osm_layers(&wrapper);
     wire_timeline(&wrapper, &time);
 
     wrapper
@@ -335,17 +341,32 @@ fn paint_realm(root: &Element, realm: Realm) {
         let sparql_note = if super::native_daemon::is_daemon_connected() {
             "GraphDatabase.sparql is live on the daemon when queried."
         } else {
-            "held / not yet — open native daemon for GraphDatabase.sparql (empty local kernel, not a fake map tile)."
+            "held / not yet — open native daemon for GraphDatabase.sparql."
+        };
+        let map_note = match realm {
+            Realm::Earth => {
+                let layer = root
+                    .get_attribute("data-osm-layer")
+                    .unwrap_or_else(|| OSM_DEFAULT_LAYER.to_string());
+                format!(
+                    "OpenStreetMap {} · public open-map basemap (not daemon GIS; not a placeholder tile).",
+                    normalize_osm_layer(&layer)
+                )
+            }
+            Realm::Cosmos | Realm::Fictional => {
+                "Authored realm chrome (not an open-map tile)."
+                    .to_string()
+            }
         };
         h.set_text_content(Some(&format!(
-            "Remap {} · {}. QDNF (no DNS/IP network) is not this surface.",
+            "{map_note} Remap {} · {}. QDNF (no DNS/IP network) is not this surface.",
             realm.invoke_id(),
             sparql_note
         )));
     }
 
     if let Some(stage) = root.query_selector("#g-coord-stage").ok().flatten() {
-        stage.set_inner_html(&stage_markup(realm));
+        apply_stage_realm(&stage, realm);
     }
 
     if let Some(result) = root.query_selector("#g-coord-result").ok().flatten() {
@@ -406,16 +427,117 @@ fn maybe_sparql(result: &Element) {
     });
 }
 
-fn stage_markup(realm: Realm) -> String {
-    match realm {
-        Realm::Earth => concat!(
-            r#"<svg class="gis-map-svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">"#,
-            r#"<path d="M 50 50 Q 120 80 180 120 T 350 250" fill="none" stroke="rgba(56, 189, 248, 0.5)" stroke-width="3"/>"#,
-            r#"<circle cx="180" cy="120" r="6" fill="var(--accent-emerald)"/>"#,
-            r#"<text x="190" y="115" fill="var(--accent-emerald)" font-size="9" font-family="sans-serif">North Spring / 北泉</text>"#,
-            "</svg>",
+fn current_osm_layer(root: &Element) -> &'static str {
+    root.get_attribute("data-osm-layer")
+        .map(|s| normalize_osm_layer(&s))
+        .unwrap_or(OSM_DEFAULT_LAYER)
+}
+
+fn set_osm_iframe_src(root: &Element, frame: &Element) {
+    let layer = current_osm_layer(root);
+    let src = osm_embed_url(
+        NORTH_SPRING_LAT,
+        NORTH_SPRING_LON,
+        layer,
+        OSM_DEFAULT_HALF_SPAN_DEG,
+    );
+    frame.set_attribute("src", &src).ok();
+    frame
+        .set_attribute(
+            "title",
+            &format!("OpenStreetMap {layer} · North Spring / 北泉"),
         )
-        .into(),
+        .ok();
+}
+
+fn mount_open_map_stage(document: &Document, root: &Element, stage: &Element) {
+    root.set_attribute("data-osm-layer", OSM_DEFAULT_LAYER).ok();
+    root.set_attribute("data-basemap", "openstreetmap").ok();
+
+    let osm = document.create_element("div").unwrap();
+    osm.set_class_name("osm-open-map");
+    osm.set_attribute("data-basemap", "openstreetmap").ok();
+
+    let layers = document.create_element("div").unwrap();
+    layers.set_class_name("gis-layer-bar");
+    layers
+        .set_attribute("aria-label", "Open map layers")
+        .ok();
+    layers.set_attribute("role", "tablist").ok();
+    for (id, label) in [
+        ("mapnik", "OSM"),
+        ("cyclemap", "Cycle"),
+        ("transportmap", "Transit"),
+        ("hot", "HOT"),
+    ] {
+        let btn = document.create_element("button").unwrap();
+        btn.set_class_name("gis-layer-btn");
+        btn.set_attribute("type", "button").ok();
+        btn.set_attribute("data-osm-layer", id).ok();
+        btn.set_attribute("role", "tab").ok();
+        btn.set_text_content(Some(label));
+        if id == OSM_DEFAULT_LAYER {
+            btn.class_list().add_1("active").ok();
+            btn.set_attribute("aria-pressed", "true").ok();
+        } else {
+            btn.set_attribute("aria-pressed", "false").ok();
+        }
+        layers.append_child(&btn).unwrap();
+    }
+    osm.append_child(&layers).unwrap();
+
+    let frame = document.create_element("iframe").unwrap();
+    frame.set_class_name("osm-embed-frame");
+    frame.set_attribute("loading", "lazy").ok();
+    frame.set_attribute("referrerpolicy", "no-referrer-when-downgrade").ok();
+    frame.set_attribute("allow", "fullscreen").ok();
+    set_osm_iframe_src(root, &frame);
+    osm.append_child(&frame).unwrap();
+
+    let attrib = document.create_element("p").unwrap();
+    attrib.set_class_name("osm-attribution");
+    attrib.set_inner_html(&format!(
+        "<a href=\"{OSM_COPYRIGHT_URL}\" target=\"_blank\" rel=\"noopener noreferrer\">© OpenStreetMap contributors</a> · \
+         <a href=\"{}\" target=\"_blank\" rel=\"noopener noreferrer\">View larger map</a>",
+        osm_site_url(NORTH_SPRING_LAT, NORTH_SPRING_LON, 13)
+    ));
+    osm.append_child(&attrib).unwrap();
+    stage.append_child(&osm).unwrap();
+
+    let authored = document.create_element("div").unwrap();
+    authored.set_class_name("gis-authored-stage");
+    authored.set_attribute("hidden", "").ok();
+    stage.append_child(&authored).unwrap();
+}
+
+fn apply_stage_realm(stage: &Element, realm: Realm) {
+    let osm = stage.query_selector(".osm-open-map").ok().flatten();
+    let authored = stage.query_selector(".gis-authored-stage").ok().flatten();
+    match realm {
+        Realm::Earth => {
+            if let Some(osm) = osm {
+                osm.remove_attribute("hidden").ok();
+            }
+            if let Some(authored) = authored {
+                authored.set_attribute("hidden", "").ok();
+                authored.set_inner_html("");
+            }
+        }
+        Realm::Cosmos | Realm::Fictional => {
+            if let Some(osm) = osm {
+                osm.set_attribute("hidden", "").ok();
+            }
+            if let Some(authored) = authored {
+                authored.remove_attribute("hidden").ok();
+                authored.set_inner_html(&authored_realm_svg(realm));
+            }
+        }
+    }
+}
+
+fn authored_realm_svg(realm: Realm) -> String {
+    match realm {
+        Realm::Earth => String::new(),
         Realm::Cosmos => concat!(
             r#"<svg class="gis-map-svg" viewBox="0 0 400 300">"#,
             r#"<circle cx="200" cy="150" r="28" fill="rgba(168,85,247,0.35)" stroke="var(--media-3d)" stroke-width="1.5"/>"#,
@@ -437,6 +559,39 @@ fn stage_markup(realm: Realm) -> String {
     }
 }
 
+fn wire_osm_layers(root: &Element) {
+    let buttons = root.query_selector_all(".gis-layer-btn").unwrap();
+    for i in 0..buttons.length() {
+        let btn = buttons.get(i).unwrap().dyn_into::<Element>().unwrap();
+        let root = root.clone();
+        let btn_listen = btn.clone();
+        let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+            let layer = btn
+                .get_attribute("data-osm-layer")
+                .map(|s| normalize_osm_layer(&s).to_string())
+                .unwrap_or_else(|| OSM_DEFAULT_LAYER.to_string());
+            root.set_attribute("data-osm-layer", &layer).ok();
+            let all = root.query_selector_all(".gis-layer-btn").unwrap();
+            for j in 0..all.length() {
+                let other = all.get(j).unwrap().dyn_into::<Element>().unwrap();
+                let on = other.get_attribute("data-osm-layer").as_deref() == Some(layer.as_str());
+                other
+                    .set_attribute("aria-pressed", if on { "true" } else { "false" })
+                    .ok();
+                let _ = other.class_list().toggle_with_force("active", on);
+            }
+            if let Some(frame) = root.query_selector(".osm-embed-frame").ok().flatten() {
+                set_osm_iframe_src(&root, &frame);
+            }
+            paint_realm(&root, Realm::Earth);
+        }) as Box<dyn FnMut(web_sys::Event)>);
+        btn_listen
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -450,6 +605,23 @@ mod tests {
         assert!(Realm::from_str("speculative") == Some(Realm::Fictional));
         assert_eq!(Realm::from_str("地球"), Some(Realm::Earth));
         assert_eq!(Realm::from_str("宇宙"), Some(Realm::Cosmos));
+    }
+
+    #[test]
+    fn earth_open_map_defaults_to_osm_mapnik() {
+        use crate::browser::open_maps::{osm_embed_url, OSM_DEFAULT_LAYER, OSM_EMBED_ORIGIN};
+        let url = osm_embed_url(
+            NORTH_SPRING_LAT,
+            NORTH_SPRING_LON,
+            OSM_DEFAULT_LAYER,
+            crate::browser::open_maps::OSM_DEFAULT_HALF_SPAN_DEG,
+        );
+        assert!(url.starts_with(OSM_EMBED_ORIGIN));
+        assert!(url.contains("layer=mapnik"));
+        assert!(url.contains("marker=-37.8,144.9"));
+        assert!(!authored_realm_svg(Realm::Earth).contains("North Spring"));
+        assert!(authored_realm_svg(Realm::Cosmos).contains("OCS"));
+        assert!(authored_realm_svg(Realm::Fictional).contains("Qo'noS"));
     }
 
     #[test]
