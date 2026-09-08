@@ -2,7 +2,10 @@ name: Deploy Qualia-DB Playground to GitHub Pages
 
 # Deploys Jekyll site under /docs to GitHub Pages (baseurl: /qualiaDB).
 # Triggers: main, active release branch 0.0.37, version tags, or manual run.
-# Environment github-pages must also allow the branch (deployment branch policies).
+# Build/test runs on those refs without the github-pages environment so a missing
+# deployment-branch policy cannot skip node/wasm/jekyll verification.
+# Deploy still needs environment github-pages. Current allowed refs (repo settings):
+# main, 0.0.24–0.0.34, tags v*. Add 0.0.37 there or deploy stays rejected.
 on:
   push:
     branches:
@@ -29,10 +32,7 @@ env:
   QUALIA_GITHUB_REPO: mediaprophet/qualiaDB
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -331,6 +331,13 @@ jobs:
         with:
           path: './_site'
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
