@@ -295,6 +295,12 @@
 - Shared files forbidden: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
 - Human input needed: none this step.
 
+## 2026-09-08 — Wave 9 swarm integrating
+
+- Integrator wires `session/bind`, `replication/merge`, `crypto/network/chunks`. Packages stay **open**.
+- Human input needed: none this step.
+
+
 
 
 

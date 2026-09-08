@@ -1,6 +1,7 @@
 //! Network-facing crypto adapters over existing Qualia primitives.
 
 pub mod aead;
+pub mod chunks;
 pub mod digest;
 pub mod ed25519;
 pub mod entropy;
