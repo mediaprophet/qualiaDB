@@ -22,9 +22,9 @@ pub use inference_bench as llm_bench; // transitional alias
 pub use inference_bench_wasm as llm_bench; // transitional alias
 pub mod inference_eval;
 pub use inference_eval as llm_eval; // transitional alias
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub mod inference_gpu_profiler;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub use inference_gpu_profiler as llm_gpu_profiler; // transitional alias
 pub mod inference_kernel_parity;
 pub use inference_kernel_parity as llm_kernel_parity; // transitional alias
@@ -49,7 +49,7 @@ pub mod semantic_culler;
 pub mod spatial_sieve;
 pub mod tensor_roles;
 pub mod ternary;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "gpu-runtime")]
 pub mod ternary_gpu;
 /// Stage-by-stage library probe tests for the inference optim toolkit.
 #[cfg(test)]
@@ -144,7 +144,7 @@ pub mod metal_lane;
 // carries the same native-only gate as `runtime`.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod paged_kv;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "gpu-runtime")]
 pub mod topk_gpu;
 // OMP sparse KV-cache decomposition builds on `crate::solvers` (dense linear
 // algebra), which is itself native-or-`wasm-scientific`; mirror that gate.

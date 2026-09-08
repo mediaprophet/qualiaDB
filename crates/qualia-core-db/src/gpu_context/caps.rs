@@ -3,6 +3,9 @@
 //! This module is intentionally diagnostic/policy-facing rather than hot-path code:
 //! it records what the selected adapter actually exposes so benchmark rows, logs,
 //! and future feature negotiation can agree on the same facts.
+//!
+//! Compiles only with `gpu-runtime` (the feature that pulls in the wgpu crate).
+#![cfg(feature = "gpu-runtime")]
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg(not(target_arch = "wasm32"))]

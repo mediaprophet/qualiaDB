@@ -343,3 +343,15 @@
 - Integrator wires `session::{recovery,freshness}`, `replication::{transfer,resume,receipts}`, `crypto/network/malformed`. Combined tests not yet run this revision. Packages remain open.
 - Human input needed: none this step.
 
+## 2026-09-08 — Wave 12 swarm claim — RT-03.07 wgpu cfg (in progress)
+
+- Disjoint exclusive write sets (do not edit Cargo.toml, lib.rs, design suite, AGENTS.md, p2p/, qdnf-imp checkboxes). Gate wgpu behind existing `feature = "gpu-runtime"` (tighten `not(wasm32)` that always pulls wgpu). Default-feature builds must stay green.
+  A. `gguf_bridge/` GPU files listed in the worker prompt
+  B. `platform/` GPU/NPU/compute_bridge GPU files
+  C. `inference/` GPU + wgsl/cuda call sites
+  D. `gpu_context.rs` + `gpu_context/`
+  E. leaf GPU: graph_accel, lora/webgpu, tensor/volume_gpu, modalities/diffusion, net/host_topology
+  F. `poet_host/invoke/render/` GPU files + calculus GPU fallout
+- Integrator owns lib.rs and Cargo.toml (including later dropping gpu-runtime from qualia-peer).
+- Status: claimed. Packages remain open.
+

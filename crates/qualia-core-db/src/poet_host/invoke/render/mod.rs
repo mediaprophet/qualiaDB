@@ -7,8 +7,11 @@
 mod animation;
 mod backend;
 mod css;
+#[cfg(feature = "gpu-runtime")]
 mod emf_visualizer;
+#[cfg(feature = "gpu-runtime")]
 mod gpu;
+#[cfg(feature = "gpu-runtime")]
 mod gpu_compute;
 mod gpu_state;
 mod scene;
@@ -24,12 +27,15 @@ pub use animation::{
 };
 pub use backend::gpu_backend_info;
 pub use css::{css_animation, css_color, css_transform};
+#[cfg(feature = "gpu-runtime")]
 pub use emf_visualizer::{emf_field_info, emf_render_slice, emf_upload_field};
+#[cfg(feature = "gpu-runtime")]
 pub use gpu::{
     gpu_adapter_info, gpu_destroy, gpu_init, gpu_init_surface, gpu_pick, gpu_poll_pick,
     gpu_read_pixels, gpu_render_frame, gpu_resize, gpu_set_ambient, gpu_set_camera,
     gpu_upload_mesh, gpu_upload_tensor,
 };
+#[cfg(feature = "gpu-runtime")]
 pub use gpu_compute::{animation_compute_pass, gpu_compute_dispatch, gpu_compute_readback};
 pub use gpu_state::{
     gpu_artefact_refused, gpu_camera_state, gpu_has_mesh, gpu_has_tensor, gpu_observer_standpoint,

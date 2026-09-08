@@ -129,6 +129,7 @@ pub fn apply_mode_toggles(mode: InferenceMode) {
                 // Explicit: do not force CUDA TC for dense forge calls.
             }
             InferenceMode::CudaTc => {
+                #[cfg(feature = "wgsl-forge")]
                 crate::wgsl_forge::dispatch::ensure_cuda_runtime_path();
                 // Default: resident mega-pass ON (measured ~6.5–7 tok/s on 3B).
                 // QUALIA_LLM_CUDA_DECODE=1 opts into the layer-by-layer CUDA SoA path

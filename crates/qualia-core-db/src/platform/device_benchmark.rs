@@ -12,8 +12,8 @@
 //! This is part (a) of H1 (probe + matrix); the human-key *signing* of the passport (part (b)) is
 //! blocked on the identity remediation (`identity-governance-remediation.md`) and lives elsewhere.
 //!
-//! Native only.
-#![cfg(not(target_arch = "wasm32"))]
+//! Native GPU-runtime only (wgpu adapters + a `rayon` CPU GEMV row).
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};

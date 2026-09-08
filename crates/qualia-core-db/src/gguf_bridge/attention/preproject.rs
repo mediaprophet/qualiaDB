@@ -6,6 +6,8 @@
 //! GEMV pipeline, then reuses the attention shader only for RoPE and KV-cache
 //! writes. K and V share one command submission and do not read back to the CPU.
 
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+
 use crate::gguf_bridge::*;
 
 const PARAM_SLOT: wgpu::BufferAddress = 256;

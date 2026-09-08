@@ -12,7 +12,7 @@
 //!
 //! Mirrors [`super::try_shared_gpu`]'s discipline: no `unwrap()` outside tests, and it NEVER panics
 //! on a missing or failed device — every failure path returns `None`. Native only.
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 use std::collections::hash_map::Entry;
 use std::sync::OnceLock;
@@ -239,7 +239,7 @@ pub fn try_auxiliary_gpu() -> Option<&'static SharedGpuContext> {
         .or_else(try_shared_gpu)
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod tests {
     use super::*;
 

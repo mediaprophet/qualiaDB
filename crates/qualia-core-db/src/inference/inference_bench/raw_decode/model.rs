@@ -71,21 +71,32 @@ impl RawModel {
             .enumerate()
         {
             if cuda_prepared {
-                let token = self
-                    .engine
-                    .try_cuda_mega_pass_decode_token(
-                        &self.index,
-                        token_id,
-                        &mut self.emb[..emb_dim],
-                        emb_dim,
-                        position as u32,
-                    )
-                    .ok_or_else(|| {
-                        "prepared CUDA decode became ineligible during prompt ingestion".to_string()
-                    })?;
-                if token == u32::MAX {
+                #[cfg(feature = "cuda")]
+                {
+                    let token = self
+                        .engine
+                        .try_cuda_mega_pass_decode_token(
+                            &self.index,
+                            token_id,
+                            &mut self.emb[..emb_dim],
+                            emb_dim,
+                            position as u32,
+                        )
+                        .ok_or_else(|| {
+                            "prepared CUDA decode became ineligible during prompt ingestion"
+                                .to_string()
+                        })?;
+                    if token == u32::MAX {
+                        return Err(
+                            "prepared CUDA prompt pass did not own the output projection".into(),
+                        );
+                    }
+                }
+                #[cfg(not(feature = "cuda"))]
+                {
                     return Err(
-                        "prepared CUDA prompt pass did not own the output projection".into(),
+                        "prepared CUDA decode requires the `cuda` feature; refusing to stub success"
+                            .into(),
                     );
                 }
             } else {

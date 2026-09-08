@@ -28,31 +28,31 @@
 use super::super::args;
 use vibe::{Diagnostic, Span, Value};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use std::collections::BTreeMap;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use std::sync::Mutex;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::gpu_context;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::render::gpu::PortalGpu;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::render::telemetry::SystemTelemetry;
 /// Slot-map handle for a PortalGpu instance.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub type GpuHandle = u64;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 struct GpuSlot {
     portal: PortalGpu,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 static GPU_SLOTS: Mutex<Vec<Option<GpuSlot>>> = Mutex::new(Vec::new());
 
 /// Clear poisoned mutex and recover.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn lock_slots() -> std::sync::MutexGuard<'static, Vec<Option<GpuSlot>>> {
     match GPU_SLOTS.lock() {
         Ok(g) => g,
@@ -61,7 +61,7 @@ fn lock_slots() -> std::sync::MutexGuard<'static, Vec<Option<GpuSlot>>> {
 }
 
 /// Find a slot index, allocating a new one if needed.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn slot_insert(portal: PortalGpu) -> GpuHandle {
     let mut slots = lock_slots();
     for (i, entry) in slots.iter_mut().enumerate() {
@@ -75,7 +75,7 @@ fn slot_insert(portal: PortalGpu) -> GpuHandle {
     i as GpuHandle
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub(super) fn slot_with<R>(handle: GpuHandle, f: impl FnOnce(&mut PortalGpu) -> R) -> Option<R> {
     let mut slots = lock_slots();
     let idx = handle as usize;
@@ -85,7 +85,7 @@ pub(super) fn slot_with<R>(handle: GpuHandle, f: impl FnOnce(&mut PortalGpu) -> 
     slots[idx].as_mut().map(|s| f(&mut s.portal))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn slot_remove(handle: GpuHandle) -> bool {
     let mut slots = lock_slots();
     let idx = handle as usize;
@@ -99,7 +99,7 @@ fn slot_remove(handle: GpuHandle) -> bool {
 
 /// `Render.gpu_adapter_info` — query the shared GPU adapter.
 pub fn gpu_adapter_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let ctx = gpu_context::try_shared_gpu();
         let Some(ctx) = ctx else {
@@ -164,7 +164,7 @@ pub fn gpu_adapter_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
 /// canvas element, which is handled by the portal facade, not the offscreen
 /// invoke model).
 pub fn gpu_init(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let width = args::rec_u64(args, "width").unwrap_or(800) as u32;
         let height = args::rec_u64(args, "height").unwrap_or(600) as u32;
@@ -240,7 +240,7 @@ pub fn gpu_init_surface(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_render_frame` — render one frame.
 pub fn gpu_render_frame(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_render_frame needs { handle: u64 }"))?;
@@ -262,7 +262,7 @@ pub fn gpu_render_frame(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_read_pixels` — read RGBA8 pixels from the offscreen target.
 pub fn gpu_read_pixels(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_read_pixels needs { handle: u64 }"))?;
@@ -304,7 +304,7 @@ pub fn gpu_read_pixels(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_upload_mesh` — upload triangle mesh data.
 pub fn gpu_upload_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_upload_mesh needs { handle: u64 }"))?;
@@ -350,7 +350,7 @@ pub fn gpu_upload_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_upload_tensor` — upload a tensor node buffer (raw bytes).
 pub fn gpu_upload_tensor(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_upload_tensor needs { handle: u64 }"))?;
@@ -377,7 +377,7 @@ pub fn gpu_upload_tensor(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 
 /// `Render.gpu_set_camera` — set camera orbit angles.
 pub fn gpu_set_camera(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_set_camera needs { handle: u64 }"))?;
@@ -401,7 +401,7 @@ pub fn gpu_set_camera(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_pick` — queue a pick query at screen coordinates.
 pub fn gpu_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_pick needs { handle: u64 }"))?;
@@ -424,7 +424,7 @@ pub fn gpu_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_poll_pick` — poll for a completed pick result.
 pub fn gpu_poll_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_poll_pick needs { handle: u64 }"))?;
@@ -449,7 +449,7 @@ pub fn gpu_poll_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_resize` — resize the viewport.
 pub fn gpu_resize(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_resize needs { handle: u64 }"))?;
@@ -472,7 +472,7 @@ pub fn gpu_resize(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_set_ambient` — enable/disable the ambient particle field.
 pub fn gpu_set_ambient(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_set_ambient needs { handle: u64 }"))?;
@@ -494,7 +494,7 @@ pub fn gpu_set_ambient(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.gpu_destroy` — destroy a PortalGpu instance and free its slot.
 pub fn gpu_destroy(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_destroy needs { handle: u64 }"))?;
@@ -515,7 +515,7 @@ pub fn gpu_destroy(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 // ── Tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod tests {
     use super::*;
 

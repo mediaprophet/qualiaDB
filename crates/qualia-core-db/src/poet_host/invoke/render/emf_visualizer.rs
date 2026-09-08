@@ -16,11 +16,11 @@
 use super::super::args;
 use vibe::{Diagnostic, Span, Value};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::render::gpu::EmfFieldCell;
 
 /// Parse a VibeScript record into an `EmfFieldCell`.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn parse_cell(rec: &Value, span: Span, i: usize) -> Result<EmfFieldCell, Diagnostic> {
     let amplitude = args::rec_f64(rec, "amplitude").unwrap_or(0.0) as f32;
     let phase = args::rec_f64(rec, "phase").unwrap_or(0.0) as f32;
@@ -55,7 +55,7 @@ fn parse_cell(rec: &Value, span: Span, i: usize) -> Result<EmfFieldCell, Diagnos
 
 /// `Render.emf_upload_field` — upload an EMF field grid to the GPU.
 pub fn emf_upload_field(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "emf_upload_field needs { handle: u64 }"))?;
@@ -114,7 +114,7 @@ pub fn emf_upload_field(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// This is a combined render + readback: it renders the slice and returns the
 /// RGBA8 pixel data as a byte list, so VibeScript can display or save it.
 pub fn emf_render_slice(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "emf_render_slice needs { handle: u64 }"))?;
@@ -176,7 +176,7 @@ pub fn emf_render_slice(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Render.emf_field_info` — return metadata about the uploaded EMF field.
 pub fn emf_field_info(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "emf_field_info needs { handle: u64 }"))?;

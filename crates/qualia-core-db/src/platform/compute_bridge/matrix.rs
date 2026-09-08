@@ -20,7 +20,9 @@ use std::time::Instant;
 use super::backend::{BackendId, KernelPanel, ProbeableBackend};
 use super::kernel_class::KernelClass;
 use super::reference;
-use crate::device_benchmark::{benchmark_devices, CircuitBench, CircuitKind};
+#[cfg(feature = "gpu-runtime")]
+use crate::device_benchmark::benchmark_devices;
+use crate::device_benchmark::{CircuitBench, CircuitKind};
 
 /// Measured per-class capability: for each class, the backend rows ranked
 /// fastest-first. `best_for` is the O(1)-ish lookup the STEM call sites use.
@@ -157,8 +159,10 @@ impl ProbeableBackend for CpuBackend {
 
 /// Portable wgpu backend. Measures `DenseLinear` via the existing GEMV probe; other
 /// classes have no portable GPU microkernel yet (returns no rows — honest).
+#[cfg(feature = "gpu-runtime")]
 pub struct WgpuBackend;
 
+#[cfg(feature = "gpu-runtime")]
 impl ProbeableBackend for WgpuBackend {
     fn id(&self) -> BackendId {
         BackendId::WGPU

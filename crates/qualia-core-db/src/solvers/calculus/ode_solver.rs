@@ -20,7 +20,7 @@
 //! let solution = solver.solve(0.0, 10.0, 1.0);
 //! ```
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::platform::gpu::{GpuError, PlatformGpuIntegrator};
 use crate::NQuin;
 
@@ -588,7 +588,7 @@ impl<S: OdeSystem> Rk4Solver<S> {
     /// Performs RK4 step using GPU acceleration
     ///
     /// Offloads the k1-k4 computations to the GPU via PlatformGpuIntegrator
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn step_gpu(
         &mut self,
         _integrator: &mut PlatformGpuIntegrator,
@@ -647,7 +647,7 @@ impl<S: OdeSystem> Rk4Solver<S> {
     /// Performs RK4 step on Quin using GPU acceleration
     ///
     /// Dispatcher-integrated version with GPU support
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn step_quin_gpu(
         &mut self,
         integrator: &mut PlatformGpuIntegrator,

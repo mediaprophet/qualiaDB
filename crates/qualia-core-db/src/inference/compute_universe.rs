@@ -491,13 +491,23 @@ pub fn run_tensor_search_producer_cycle(max_distance: f32, vocab_len: u32) -> us
     // So this GPU path and the CPU fallback below (which also uses `full_distance`) agree
     // for ALL `v`, not only `v == 0`. `volume_gpu::cpu_tensor_search_into` is the shared,
     // GPU-independent reference for the same metric.
-    let hit_count =
-        crate::tensor::volume_gpu::try_gpu_tensor_search_into(&query, max_distance, &mut hits)
-            .unwrap_or_else(|| {
-                substrate
-                    .tensor_search_into(&query, max_distance, &mut hits)
-                    .unwrap_or(0)
-            });
+    let hit_count = {
+        #[cfg(feature = "gpu-runtime")]
+        {
+            crate::tensor::volume_gpu::try_gpu_tensor_search_into(&query, max_distance, &mut hits)
+                .unwrap_or_else(|| {
+                    substrate
+                        .tensor_search_into(&query, max_distance, &mut hits)
+                        .unwrap_or(0)
+                })
+        }
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            substrate
+                .tensor_search_into(&query, max_distance, &mut hits)
+                .unwrap_or(0)
+        }
+    };
 
     let mask = build_attention_route_mask(&query, max_distance, &hits, hit_count);
     publish_attention_route_mask(mask);
@@ -706,7 +716,7 @@ pub fn extrapolate_topology_draft_mapped(
     }
     let mut hits = [0usize; MAX_KNN_HITS];
     let hit_count = {
-        #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+        #[cfg(feature = "gpu-runtime")]
         {
             crate::tensor::volume_gpu::try_gpu_tensor_search_into(query, 4.0, &mut hits)
                 .unwrap_or_else(|| {
@@ -715,7 +725,7 @@ pub fn extrapolate_topology_draft_mapped(
                         .unwrap_or(0)
                 })
         }
-        #[cfg(all(target_arch = "wasm32", not(feature = "wasm-llm")))]
+        #[cfg(not(feature = "gpu-runtime"))]
         {
             substrate
                 .tensor_search_into(query, 4.0, &mut hits)

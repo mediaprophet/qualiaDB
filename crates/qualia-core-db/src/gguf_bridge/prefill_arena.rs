@@ -36,7 +36,7 @@
 //! (unsupported quant, coop-GEMV off, active route, layer cap, oversize dims)
 //! falls back to the legacy `dispatch_prefill_chunk` path unchanged.
 
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 use super::*;
 

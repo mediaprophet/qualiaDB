@@ -154,9 +154,9 @@ pub use inference::inference_bench as llm_bench;
 pub use inference::inference_bench_wasm as llm_bench;
 pub use inference::inference_eval;
 pub use inference::inference_eval as llm_eval;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub use inference::inference_gpu_profiler;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub use inference::inference_gpu_profiler as llm_gpu_profiler;
 pub use inference::inference_kernel_parity;
 pub use inference::inference_kernel_parity as llm_kernel_parity;
@@ -219,14 +219,14 @@ pub use inference::semantic_culler;
 pub use inference::spatial_sieve;
 pub use inference::tensor_roles;
 pub use inference::ternary;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use inference::ternary_gpu;
 pub use inference::topk;
 // W7: GPU thermal/power telemetry + auto-cap governor (native-only). Exposes the UI-reachable mode
 // switch (`set_gpu_auto_cap` / `gpu_auto_cap_enabled`) and `sample_gpu_thermal()` telemetry.
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::thermal_telemetry;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use inference::topk_gpu;
 pub mod lora;
 // --- q42/ category (reorg) ---

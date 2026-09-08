@@ -16,6 +16,7 @@ pub mod resident_substrate;
 pub mod spacetime;
 pub mod spectral;
 pub mod topology;
+#[cfg(feature = "gpu-runtime")]
 pub mod volume_gpu;
 
 use bytemuck::{Pod, Zeroable};

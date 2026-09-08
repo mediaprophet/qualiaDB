@@ -10,6 +10,7 @@
 //!
 //! Correctness is gated against the CPU reference before this path may be a default
 //! (§13); see the test and [`super::execute`].
+#![cfg(feature = "gpu-runtime")]
 
 use std::sync::mpsc;
 use std::sync::OnceLock;

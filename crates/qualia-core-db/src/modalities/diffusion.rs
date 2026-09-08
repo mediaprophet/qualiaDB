@@ -7,12 +7,12 @@ pub fn trigger_diffusion(graph_id: &str) -> bool {
     !graph_id.is_empty()
 }
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+#[cfg(feature = "gpu-runtime")]
 use std::borrow::Cow;
-#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+#[cfg(feature = "gpu-runtime")]
 use std::sync::mpsc;
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+#[cfg(feature = "gpu-runtime")]
 pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     if graph.is_empty() {
         return Ok(());
@@ -127,7 +127,7 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     }
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm")))]
+#[cfg(not(feature = "gpu-runtime"))]
 pub async fn execute_diffusion_pass(_graph: &mut [NQuin]) -> Result<(), String> {
     Ok(())
 }
@@ -249,9 +249,17 @@ mod tests {
         let res = pollster::block_on(async { execute_diffusion_pass(&mut graph).await });
         assert!(res.is_ok());
 
-        // Low u32 (2) -> 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
-        assert_eq!(graph[0].subject, 4294967299);
-        // Odd subject 3 -> Low u32 (3) remains 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
-        assert_eq!(graph[1].subject, 4294967299);
+        #[cfg(feature = "gpu-runtime")]
+        {
+            // Low u32 (2) -> 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
+            assert_eq!(graph[0].subject, 4294967299);
+            // Odd subject 3 -> Low u32 (3) remains 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
+            assert_eq!(graph[1].subject, 4294967299);
+        }
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            assert_eq!(graph[0].subject, 2);
+            assert_eq!(graph[1].subject, 3);
+        }
     }
 }

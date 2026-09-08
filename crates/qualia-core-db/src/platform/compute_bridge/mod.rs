@@ -23,6 +23,7 @@
 
 pub mod backend;
 pub mod execute;
+#[cfg(feature = "gpu-runtime")]
 pub mod gpu_gemm;
 pub mod kernel_class;
 pub mod matrix;
@@ -31,9 +32,12 @@ pub mod reference;
 
 pub use backend::{BackendId, BackendRegistry, DispatchError, KernelPanel, ProbeableBackend};
 pub use execute::{accelerated_gemm_f32, shared_policy, RanOn};
+#[cfg(feature = "gpu-runtime")]
 pub use gpu_gemm::WgpuGemm;
 pub use kernel_class::KernelClass;
-pub use matrix::{probe_class_matrix, ClassMatrix, CpuBackend, WgpuBackend};
+pub use matrix::{probe_class_matrix, ClassMatrix, CpuBackend};
+#[cfg(feature = "gpu-runtime")]
+pub use matrix::WgpuBackend;
 pub use policy::{ComputePolicy, Plan};
 
 /// The default backend registry: the always-present native CPU path plus the
@@ -43,6 +47,7 @@ pub use policy::{ComputePolicy, Plan};
 pub fn default_registry() -> BackendRegistry {
     let mut reg = BackendRegistry::new();
     reg.register(Box::new(CpuBackend));
+    #[cfg(feature = "gpu-runtime")]
     reg.register(Box::new(WgpuBackend));
     // #[cfg(feature = "cuda")] reg.register(Box::new(CudaBackend));   // plan P7
     // #[cfg(feature = "npu-directml")] reg.register(Box::new(...));   // plan P6
@@ -58,6 +63,7 @@ mod tests {
         let reg = default_registry();
         let ids: Vec<_> = reg.iter().map(|b| b.id()).collect();
         assert!(ids.contains(&BackendId::CPU));
+        #[cfg(feature = "gpu-runtime")]
         assert!(ids.contains(&BackendId::WGPU));
         // CPU is always available even when headless.
         assert!(reg

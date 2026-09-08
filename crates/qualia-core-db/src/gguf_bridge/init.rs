@@ -4,6 +4,7 @@ use super::*;
 
 impl QTensorEngine {
     /// Resolve the MC8 elementwise GPU pipeline for a given opcode.
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn elem_gpu_pipeline(&self, op: u32) -> Option<&wgpu::ComputePipeline> {
         use super::gpu_params::{ELEM_OP_ADD_RESIDUAL, ELEM_OP_RMS_NORM};
         match op {
@@ -12,6 +13,7 @@ impl QTensorEngine {
             _ => None,
         }
     }
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn gpu_device(&self) -> &wgpu::Device {
         #[cfg(target_arch = "wasm32")]
         {
@@ -24,6 +26,7 @@ impl QTensorEngine {
     }
 
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn gpu_queue(&self) -> &wgpu::Queue {
         #[cfg(target_arch = "wasm32")]
         {
@@ -37,16 +40,19 @@ impl QTensorEngine {
 
     /// Shared process-wide wgpu device (LLM + render coexistence).
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub fn device(&self) -> &wgpu::Device {
         self.gpu_device()
     }
 
     /// Shared process-wide wgpu queue.
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub fn queue(&self) -> &wgpu::Queue {
         self.gpu_queue()
     }
 
+    #[cfg(feature = "gpu-runtime")]
     pub async fn try_new() -> Result<Self, String> {
         #[cfg(not(target_arch = "wasm32"))]
         log::info!(
@@ -1366,7 +1372,7 @@ impl QTensorEngine {
         Ok(engine)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn new() -> Self {
         let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
             let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap()));
@@ -1379,6 +1385,7 @@ impl QTensorEngine {
         })
     }
 
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
         let layout = match KvCacheLayout::from_hyperparams(h) {
             Some(l) => l,
@@ -1490,18 +1497,19 @@ impl QTensorEngine {
                 unsafe { core::ptr::write_volatile(v, 0.0) };
             }
         }
+        #[cfg(feature = "gpu-runtime")]
         if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
             self.gpu_queue()
                 .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
         }
         // W5b Phase 4b: the zero above wiped the atoms tail — re-seed it (dict mode only).
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         self.upload_dict_atoms();
     }
 
     /// W5b Phase 4b: write the installed dictionary atoms into the tail of each layer's arena slice
     /// (after that layer's code region). No-op unless dict mode is active and atoms are installed.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn upload_dict_atoms(&self) {
         let Some(layout) = self.kv_layout.as_ref() else {
             return;
@@ -1548,6 +1556,7 @@ impl QTensorEngine {
         if let Some(cpu) = self.kv_cache_cpu.as_mut() {
             cpu[..n].copy_from_slice(&data[..n]);
         }
+        #[cfg(feature = "gpu-runtime")]
         if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
             self.gpu_queue()
                 .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
@@ -1558,7 +1567,7 @@ impl QTensorEngine {
     /// not the decode hot path). The returned flat buffer is interpretable via `KvCacheLayout::
     /// k_index`/`v_index` **only when the layout is f32** (int8 KV disabled at load); with an int8
     /// layout the bytes are packed i8 lanes + scales and this returns `None`.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn read_kv_cache_gpu(&self) -> Option<Vec<f32>> {
         let gpu = self.kv_cache_gpu.as_ref()?;
         let layout = self.kv_layout.as_ref()?;
@@ -1607,7 +1616,7 @@ impl QTensorEngine {
     /// (capped at `max_per_layer` per layer per stream). The **GPU-readback** capture route for the
     /// sparse-KV-dictionary go/no-go — reads the real decode-path K/V straight from VRAM, no CPU
     /// reference forward. Returns `None` on an int8 layout or if readback fails.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn capture_kv_f32(
         &self,
         n_tokens: u32,
@@ -1659,6 +1668,7 @@ impl QTensorEngine {
         Some(crate::kv_capture::KvCapture { head_dim, k, v })
     }
 
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
         // existing argmax path is unaffected whether or not this succeeds).

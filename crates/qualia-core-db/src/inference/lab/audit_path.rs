@@ -51,7 +51,16 @@ pub fn audit_hot_path() -> HotPathAudit {
         );
     }
 
-    let cuda_caps = crate::wgsl_forge::dispatch::caps().cuda;
+    let cuda_caps = {
+        #[cfg(feature = "wgsl-forge")]
+        {
+            crate::wgsl_forge::dispatch::caps().cuda
+        }
+        #[cfg(not(feature = "wgsl-forge"))]
+        {
+            false
+        }
+    };
     if prefer_tensor_core_gemm() && !cuda_caps {
         notes.push("mode prefers CUDA GEMM but cuda caps=false".into());
     }
@@ -62,7 +71,16 @@ pub fn audit_hot_path() -> HotPathAudit {
         );
     }
 
-    let timestamps_supported = crate::gpu_context::shared_gpu().timestamps_supported;
+    let timestamps_supported = {
+        #[cfg(feature = "gpu-runtime")]
+        {
+            crate::gpu_context::shared_gpu().timestamps_supported
+        }
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            false
+        }
+    };
     let gpu_profile_env = std::env::var("QUALIA_LLM_GPU_PROFILE")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);

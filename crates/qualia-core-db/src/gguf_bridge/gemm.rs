@@ -77,7 +77,7 @@ impl QTensorEngine {
     /// Promote a 2-D quant weight (Q4_K / SoA / Q6_K / Q8_0) to a resident **f16** buffer
     /// for the fast coop GEMV path. Returns `(buffer, ggml_type=F16, byte_len, row_elems)`.
     /// `None` when disabled, unsupported type, or OOM/dequant failure — caller keeps quant.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn promote_matrix_to_f16_resident(
         &self,
         info: &GgufTensorInfo,
@@ -125,6 +125,7 @@ impl QTensorEngine {
         Some((buf, GGML_TYPE_F16, nbytes as u32, n0 as u32))
     }
 
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn write_weight_words(&self, raw: &[u8], max_bytes: usize) {
         let weight_buf = self.gemm_weight_buf.as_ref().expect("gemm weight buf");
         let upload = if raw.len() <= max_bytes {
@@ -141,7 +142,7 @@ impl QTensorEngine {
     /// of the resident buffer handle (wgpu buffers are Arc-backed) to bind in place of the shared
     /// per-token `gemm_weight_buf` — eliminating the per-token weight re-upload. Buffer size is
     /// 256-aligned ≥ `raw.len()`; the shader only reads `weight_byte_len`.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
         let mut map = self.gemm_resident_weights.lock().ok()?;
         if let Some(b) = map.get(&key) {
@@ -160,7 +161,7 @@ impl QTensorEngine {
     }
 
     /// Quantized GEMM from a pre-sliced weight byte range (chunk-local row indices).
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn dispatch_gemm_raw_into(
         &self,
         info: &GgufTensorInfo,
@@ -432,6 +433,23 @@ impl QTensorEngine {
         stack_gemm_quant(raw, info, input, out, n_in, n_out)
     }
 
+    /// CPU GEMM when wgpu is not compiled in (qdnf / no gpu-runtime).
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+    pub(crate) fn dispatch_gemm_raw_into(
+        &self,
+        info: &GgufTensorInfo,
+        raw: &[u8],
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        if n_in > input.len() || n_out > out.len() {
+            return false;
+        }
+        stack_gemm_quant(raw, info, input, out, n_in, n_out)
+    }
+
     /// Browser compatibility path for synchronous callers. WebGPU mapping must
     /// be awaited, so the public browser inference route uses the async GEMM
     /// dispatcher and this fallback executes the deterministic CPU kernel.
@@ -466,7 +484,7 @@ impl QTensorEngine {
             return false;
         }
         // GPU resident path (toggle on): keyed by the P64 blob offset (== info.byte_offset).
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         if crate::llm_bench::ternary_ffn_enabled() {
             if let Some(res) = self.ternary_ffn.as_ref() {
                 if res.gemv(

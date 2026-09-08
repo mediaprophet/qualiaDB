@@ -160,7 +160,7 @@ pub fn resolve_inference_path_plan() -> InferencePathPlan {
     };
 
     // ── 2. Compute lane: CUDA only when toolkit present + not slower policy ─
-    let cuda_caps = crate::wgsl_forge::dispatch::caps().cuda;
+    let cuda_caps = cuda_toolkit_present();
     let mode_pin = std::env::var("QUALIA_INFERENCE_MODE").ok();
     let compute_lane = if let Some(ref m) = mode_pin {
         if matches!(
@@ -250,6 +250,18 @@ pub fn resolve_inference_path_plan() -> InferencePathPlan {
     }
 }
 
+/// Forge CUDA capability probe. Absent `wgsl-forge`, CPU/portable selection still compiles.
+fn cuda_toolkit_present() -> bool {
+    #[cfg(feature = "wgsl-forge")]
+    {
+        crate::wgsl_forge::dispatch::caps().cuda
+    }
+    #[cfg(not(feature = "wgsl-forge"))]
+    {
+        false
+    }
+}
+
 /// Heuristic: enable CUDA lane when not explicitly disabled and runtime path exists.
 fn prefer_cuda_lane_heuristic() -> bool {
     // Default OFF for CUDA as primary decode — measured A2000 still favored portable resident.
@@ -313,6 +325,7 @@ pub fn apply_inference_path_plan(plan: &InferencePathPlan, force: bool) -> bool 
             if std::env::var("QUALIA_INFERENCE_MODE").is_err() {
                 set_inference_mode(InferenceMode::CudaTc);
             }
+            #[cfg(feature = "wgsl-forge")]
             crate::wgsl_forge::dispatch::ensure_cuda_runtime_path();
         }
     }

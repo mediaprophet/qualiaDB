@@ -7,8 +7,26 @@
 //! Override: `QUALIA_GRAPH_ACCEL=cpu|gpu|auto` (default auto).
 
 mod cpu;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod gpu;
+/// CPU-floor stubs so sort/sieve keep compiling when wgpu graph kernels are off.
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+mod gpu {
+    use super::cpu::QuinField;
+    use crate::NQuin;
+
+    pub fn radix_sort_u64_indices_gpu(_keys: &[u64]) -> Option<Vec<u32>> {
+        None
+    }
+
+    pub fn sieve_eq_indices_gpu(
+        _quins: &[NQuin],
+        _field: QuinField,
+        _needle: u64,
+    ) -> Option<Vec<u32>> {
+        None
+    }
+}
 mod join;
 mod path;
 // Q42 volume files use the native mmap-backed reader. Browser builds work on

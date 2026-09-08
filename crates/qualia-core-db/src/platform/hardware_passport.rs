@@ -172,6 +172,7 @@ pub fn decode_proxy_coherence_ok(text: &str) -> bool {
 /// Safe from CLI (which already owns a Tokio multi-thread runtime): nested
 /// `block_on` panics, so we hop to a fresh OS thread for the measurement.
 pub fn measure_decode_proxy(model: &Path, n_tokens: u32) -> Option<DecodeProxyResult> {
+    #[cfg(feature = "wgsl-forge")]
     crate::wgsl_forge::dispatch::ensure_cuda_runtime_path();
     let n = n_tokens.max(8).min(128);
     let path = model.to_path_buf();

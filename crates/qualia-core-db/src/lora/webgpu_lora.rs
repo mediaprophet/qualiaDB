@@ -13,6 +13,8 @@
 //! | 3       | storage r       | `lora_b` array<f32> (n_out × rank)|
 //! | 4       | uniform         | `LoraGpuParams`                   |
 
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+
 use super::adapter_manager::{LoRAAdapter, LoRAError};
 
 // ─── GPU parameter block ─────────────────────────────────────────────────────

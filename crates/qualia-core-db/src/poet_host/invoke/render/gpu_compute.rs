@@ -19,15 +19,15 @@
 //! `readback_bytes` at the readback binding).
 
 use super::super::args;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use super::gpu::slot_with;
 use vibe::{Diagnostic, Span, Value};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use crate::render::gpu::{ComputeBinding, ComputeBufferKind};
 
 /// Parse a binding kind string into a `ComputeBufferKind`.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn parse_kind(s: &str) -> Result<ComputeBufferKind, String> {
     match s {
         "uniform" => Ok(ComputeBufferKind::Uniform),
@@ -43,7 +43,7 @@ fn parse_kind(s: &str) -> Result<ComputeBufferKind, String> {
 
 /// `Render.gpu_compute_dispatch` — submit a WGSL compute dispatch.
 pub fn gpu_compute_dispatch(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_compute_dispatch needs { handle: u64 }"))?;
@@ -122,7 +122,7 @@ pub fn gpu_compute_dispatch(args: &Value, span: Span) -> Result<Value, Diagnosti
 
 /// `Render.gpu_compute_readback` — poll the outstanding compute readback.
 pub fn gpu_compute_readback(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let handle = args::rec_u64(args, "handle")
             .ok_or_else(|| args::bad(span, "gpu_compute_readback needs { handle: u64 }"))?;
@@ -156,7 +156,7 @@ pub fn gpu_compute_readback(args: &Value, span: Span) -> Result<Value, Diagnosti
 /// `Render.animation_compute_pass` — Dispatches a high-throughput WGSL parallel batch animation pass on WebGPU.
 /// Evaluates thousands of animating entities (springs, orbits, waves, field morphs) in parallel on the GPU.
 pub fn animation_compute_pass(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         let _handle = args::rec_u64(args, "handle").unwrap_or(0);
         let count = args::rec_u64(args, "entity_count").unwrap_or(64) as u32;
@@ -206,7 +206,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod tests {
     use super::*;
     use crate::gpu_context;

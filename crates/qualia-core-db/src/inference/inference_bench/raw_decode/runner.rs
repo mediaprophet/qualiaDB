@@ -16,16 +16,23 @@ use super::model::RawModel;
 use super::stats::{median_f64, percentile_nearest_rank};
 
 fn selected_wgpu_backend() -> BackendKind {
-    match crate::gpu_context::shared_gpu()
-        .adapter_caps
-        .backend_label()
-        .to_ascii_lowercase()
-        .as_str()
+    #[cfg(feature = "gpu-runtime")]
     {
-        "dx12" => BackendKind::WgpuDx12,
-        "vulkan" => BackendKind::WgpuVulkan,
-        "metal" => BackendKind::WgpuMetal,
-        _ => BackendKind::Unknown,
+        match crate::gpu_context::shared_gpu()
+            .adapter_caps
+            .backend_label()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "dx12" => BackendKind::WgpuDx12,
+            "vulkan" => BackendKind::WgpuVulkan,
+            "metal" => BackendKind::WgpuMetal,
+            _ => BackendKind::Unknown,
+        }
+    }
+    #[cfg(not(feature = "gpu-runtime"))]
+    {
+        BackendKind::Unknown
     }
 }
 
@@ -87,7 +94,16 @@ fn run_on_worker(config: RawDecodeConfig) -> Result<RawDecodeResult, String> {
         return Err("raw decode prompt produced zero tokens".into());
     }
 
-    let cuda_prepared = crate::inference_modes::prefer_tensor_core_gemm();
+    let cuda_prepared = {
+        #[cfg(feature = "cuda")]
+        {
+            crate::inference_modes::prefer_tensor_core_gemm()
+        }
+        #[cfg(not(feature = "cuda"))]
+        {
+            false
+        }
+    };
     let executed_backend = if cuda_prepared {
         BackendKind::Cuda
     } else {
@@ -119,24 +135,36 @@ fn run_on_worker(config: RawDecodeConfig) -> Result<RawDecodeResult, String> {
         for step in 0..config.decode_steps as usize {
             let step_start = Instant::now();
             let output_token = if cuda_prepared {
-                let emb_dim = model.index.emb_dim();
-                let token = model
-                    .engine
-                    .try_cuda_mega_pass_decode_token(
-                        &model.index,
-                        token_id,
-                        &mut model.emb[..emb_dim],
-                        emb_dim,
-                        position,
-                    )
-                    .ok_or_else(|| {
-                        "prepared CUDA raw decode became ineligible; no fallback is allowed"
-                            .to_string()
-                    })?;
-                if token == u32::MAX {
-                    return Err("prepared CUDA raw decode did not own the output projection".into());
+                #[cfg(feature = "cuda")]
+                {
+                    let emb_dim = model.index.emb_dim();
+                    let token = model
+                        .engine
+                        .try_cuda_mega_pass_decode_token(
+                            &model.index,
+                            token_id,
+                            &mut model.emb[..emb_dim],
+                            emb_dim,
+                            position,
+                        )
+                        .ok_or_else(|| {
+                            "prepared CUDA raw decode became ineligible; no fallback is allowed"
+                                .to_string()
+                        })?;
+                    if token == u32::MAX {
+                        return Err(
+                            "prepared CUDA raw decode did not own the output projection".into(),
+                        );
+                    }
+                    token
                 }
-                token
+                #[cfg(not(feature = "cuda"))]
+                {
+                    return Err(
+                        "prepared CUDA raw decode requires the `cuda` feature; refusing to stub success"
+                            .into(),
+                    );
+                }
             } else {
                 model.load_embedding(token_id)?;
                 model
@@ -173,18 +201,28 @@ fn run_on_worker(config: RawDecodeConfig) -> Result<RawDecodeResult, String> {
         tuning_profile,
         context_window,
     ) = if cuda_prepared {
-        let telemetry = model
-            .engine
-            .cuda_prepared_telemetry()
-            .ok_or_else(|| "prepared CUDA plan did not expose telemetry".to_string())?;
-        (
-            telemetry.device_dispatches_per_token,
-            telemetry.host_to_device_bytes_per_token,
-            telemetry.readback_bytes_per_token,
-            telemetry.graph_key,
-            telemetry.tuning_profile,
-            telemetry.context_window,
-        )
+        #[cfg(feature = "cuda")]
+        {
+            let telemetry = model
+                .engine
+                .cuda_prepared_telemetry()
+                .ok_or_else(|| "prepared CUDA plan did not expose telemetry".to_string())?;
+            (
+                telemetry.device_dispatches_per_token,
+                telemetry.host_to_device_bytes_per_token,
+                telemetry.readback_bytes_per_token,
+                telemetry.graph_key,
+                telemetry.tuning_profile,
+                telemetry.context_window,
+            )
+        }
+        #[cfg(not(feature = "cuda"))]
+        {
+            return Err(
+                "prepared CUDA plan telemetry requires the `cuda` feature; refusing to stub success"
+                    .into(),
+            );
+        }
     } else {
         (
             model

@@ -2,7 +2,7 @@
 
 use bytemuck::{Pod, Zeroable};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use super::resident_substrate::{global_resident_substrate, MAX_KNN_HITS, MAX_RESIDENT_NODES};
 use super::Tensor10D;
 
@@ -17,7 +17,7 @@ struct VolumeGpuParams {
     max_hits: u32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub struct TensorVolumeGpu {
     pipeline: wgpu::ComputePipeline,
     query_buf: wgpu::Buffer,
@@ -30,7 +30,7 @@ pub struct TensorVolumeGpu {
     max_nodes: u32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 impl TensorVolumeGpu {
     pub fn try_new(device: &wgpu::Device) -> Option<Self> {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -246,11 +246,11 @@ impl TensorVolumeGpu {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 static VOLUME_GPU: std::sync::OnceLock<Option<TensorVolumeGpu>> = std::sync::OnceLock::new();
 
 /// Try GPU tensor search; returns None when GPU path unavailable (caller uses SIMD).
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn try_gpu_tensor_search_into(
     query: &Tensor10D,
     max_distance: f32,
@@ -274,7 +274,7 @@ pub fn try_gpu_tensor_search_into(
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
 pub fn try_gpu_tensor_search_into(
     _query: &Tensor10D,
     _max_distance: f32,

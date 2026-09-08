@@ -1,7 +1,7 @@
 //! wgpu dispatch on the process-wide shared device. Any failure returns `None`
 //! so the caller uses the CPU floor. Does not create a second adapter.
 
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 use std::sync::OnceLock;
 

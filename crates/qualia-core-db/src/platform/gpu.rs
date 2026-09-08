@@ -14,6 +14,7 @@
 //!   (NVIDIA GDS's true NVMe→VRAM DMA was deliberately declined — vendor-lock off
 //!   the affordability critical path; see `hetero_dispatch.rs`.)
 //! - **State Tracking**: GPU results packed into Quin metadata field.
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 use crate::NQuin;
 use std::io::Seek;

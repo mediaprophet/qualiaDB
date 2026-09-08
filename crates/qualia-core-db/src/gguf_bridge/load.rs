@@ -58,7 +58,9 @@ impl QTensorEngine {
             .max_layer_tensor_bytes
             .max(4096)
             .min(MAX_WGPU_WEIGHT_STAGING);
+        #[cfg(feature = "gpu-runtime")]
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        #[cfg(feature = "gpu-runtime")]
         self.ensure_kv_cache(&index.hyperparams);
         self.gguf_mmap = Some(Arc::new(mmap));
         self.p64_index = None;
@@ -134,7 +136,7 @@ impl QTensorEngine {
     /// Build the resident 2-bit ternary-FFN dispatcher from a P64 container's base-3 FFN
     /// blobs (rebaked to 2-bit + uploaded once). Returns false if there are no ternary FFN tensors
     /// or the GPU build fails — the FFN then runs the CPU oracle (`dispatch_ternary_ffn` fallback).
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn build_ternary_ffn_resident(
         &mut self,
         q: &crate::p64_weight::P64TensorIndex,
@@ -209,8 +211,11 @@ impl QTensorEngine {
             .max_layer_tensor_bytes
             .max(4096)
             .min(MAX_WGPU_WEIGHT_STAGING);
+        #[cfg(feature = "gpu-runtime")]
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        #[cfg(feature = "gpu-runtime")]
         self.ensure_kv_cache(&hp);
+        #[cfg(feature = "gpu-runtime")]
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
             return Err("P64: KV cache allocation failed".to_string());
         }
@@ -218,9 +223,11 @@ impl QTensorEngine {
         // Cache index so decode never re-validates hundreds of MB of tensor CRCs.
         self.p64_index = Some(q.clone());
         self.tensor_index_cache = Some(index.clone());
+        #[cfg(feature = "gpu-runtime")]
         if !self.mc8_upload_resident_logits(&index) {
             log::info!("LLM_LOAD|p64-logits|0.70|skipped — per-token upload fallback");
         }
+        #[cfg(feature = "gpu-runtime")]
         if !self.build_ternary_ffn_resident(&q) {
             log::info!(
                 "LLM_LOAD|ternary-ffn|0.71|no resident set (no ternary FFN or build failed) — CPU oracle path"
@@ -260,7 +267,7 @@ impl QTensorEngine {
 
     /// A1b: number of resident ternary FFN tensors (0 unless a ternary P64 was adopted). Lets a
     /// test confirm the GPU resident path is actually populated (not a silent CPU-only fallback).
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn ternary_ffn_resident_len(&self) -> usize {
         self.ternary_ffn.as_ref().map_or(0, |r| r.len())
     }
@@ -292,7 +299,9 @@ impl QTensorEngine {
             .max_layer_tensor_bytes
             .max(4096)
             .min(MAX_WGPU_WEIGHT_STAGING);
+        #[cfg(feature = "gpu-runtime")]
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        #[cfg(feature = "gpu-runtime")]
         self.ensure_kv_cache(&index.hyperparams);
         self.gguf_mmap = Some(mmap);
         self.p64_index = None;
@@ -301,6 +310,7 @@ impl QTensorEngine {
         // top-k decode binds per-chunk 256-aligned sub-ranges instead of re-uploading the whole
         // ~47 MB matrix every token (the documented decode throughput killer). Fail-soft: a false
         // return leaves `mc8_logits_resident_buf=None` and the decode keeps its per-token upload.
+        #[cfg(feature = "gpu-runtime")]
         if !self.mc8_upload_resident_logits(&index) {
             log::info!("LLM_LOAD|resident-logits|0.70|skipped — per-token upload fallback");
         }
@@ -331,7 +341,7 @@ impl QTensorEngine {
     /// per-chunk 256-aligned sub-ranges instead of re-uploading the whole ~47 MB matrix every
     /// token (the decode throughput killer). Idempotent. Returns false (→ per-token upload
     /// fallback) if the projection is missing or its bytes don't divide evenly into rows.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn mc8_upload_resident_logits(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -388,7 +398,7 @@ impl QTensorEngine {
     /// so the bench can count submit→wait round-trips per token and separate synchronization stall
     /// from real kernel time. Behaviourally identical to a bare blocking poll.
     #[inline]
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn poll_wait(&self) {
         let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -398,7 +408,7 @@ impl QTensorEngine {
     /// compute dispatched). Isolates the fixed CPU↔GPU fence latency: if a token's forward time ≈
     /// (its round-trip count × this per-round-trip cost), the bottleneck is synchronization, not
     /// math; if forward ≫ that, the kernels themselves are slow. Does NOT touch `GPU_WAIT_COUNT`.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn bench_empty_submit_roundtrip(&self, n: u32) -> u64 {
         let t = std::time::Instant::now();
         for _ in 0..n {
@@ -412,7 +422,7 @@ impl QTensorEngine {
         }
         t.elapsed().as_nanos() as u64
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     pub fn adopt_resident_mmap(&mut self, mmap: Arc<[u8]>) -> Result<GgufLoadReport, String> {
         let file_size = mmap.len();
         if file_size == 0 {

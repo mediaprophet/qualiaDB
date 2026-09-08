@@ -43,10 +43,10 @@ pub use crate::solvers::calculus::grid::*;
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::platform::host;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use crate::platform::gpu;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use crate::platform::hetero_dispatch;
 
 // Numerical solvers relocated to `crate::solvers::calculus`; re-exported here so the
@@ -77,7 +77,7 @@ pub use tensor_integrity::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use host::{DmaBuffer, IoError, DEFAULT_BUFFER_SIZE, PAGE_SIZE};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator, WebGpuIntegrator};
 
 #[cfg(not(target_arch = "wasm32"))]
