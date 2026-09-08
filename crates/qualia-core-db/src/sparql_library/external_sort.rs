@@ -3,9 +3,7 @@ use crate::q42_volume::StreamingQ42VolumeWriter;
 use crate::NQuin;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::QUINS_PER_BLOCK;
-#[cfg(not(target_arch = "wasm32"))]
 use std::cmp::Ordering;
-#[cfg(not(target_arch = "wasm32"))]
 use std::collections::BinaryHeap;
 #[cfg(target_arch = "wasm32")]
 use std::collections::HashMap;
@@ -41,6 +39,8 @@ pub struct ExternalSorter {
     lex: LexiconSpill,
     #[cfg(target_arch = "wasm32")]
     lex: HashMap<u64, String>,
+    #[cfg(target_arch = "wasm32")]
+    memory_runs: Vec<Vec<NQuin>>,
     lex_collisions: u64,
 }
 
@@ -56,6 +56,8 @@ impl ExternalSorter {
             lex: LexiconSpill::new(temp_dir.clone()),
             #[cfg(target_arch = "wasm32")]
             lex: HashMap::new(),
+            #[cfg(target_arch = "wasm32")]
+            memory_runs: Vec::new(),
             temp_dir,
             total_quins: 0,
             lex_collisions: 0,
@@ -142,7 +144,14 @@ impl ExternalSorter {
     }
 
     pub fn quin_run_count(&self) -> usize {
-        self.chunk_files.len()
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.chunk_files.len()
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.memory_runs.len()
+        }
     }
 
     pub fn quin_total(&self) -> u64 {
@@ -212,25 +221,32 @@ impl ExternalSorter {
         let sort_ms = sort_started.elapsed().as_millis();
         self.note(format!(
             "quin chunk {} sorted n={} path={} {}ms",
-            self.chunk_files.len(),
+            self.quin_run_count(),
             sort.n,
             sort.path,
             sort_ms
         ));
 
-        // 2. Flush to disk as a temporary file
-        let chunk_path = self
-            .temp_dir
-            .join(format!("chunk_{}.tmp", self.chunk_files.len()));
-        let mut file = std::io::BufWriter::new(File::create(&chunk_path)?);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            // 2. Flush to disk as a temporary file
+            let chunk_path = self
+                .temp_dir
+                .join(format!("chunk_{}.tmp", self.chunk_files.len()));
+            let mut file = std::io::BufWriter::new(File::create(&chunk_path)?);
 
-        for q in &self.buffer {
-            file.write_all(bytemuck::bytes_of(q))?;
+            for q in &self.buffer {
+                file.write_all(bytemuck::bytes_of(q))?;
+            }
+            file.flush()?;
+
+            self.chunk_files.push(chunk_path);
+            self.buffer.clear();
         }
-        file.flush()?;
-
-        self.chunk_files.push(chunk_path);
-        self.buffer.clear();
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.memory_runs.push(std::mem::take(&mut self.buffer));
+        }
         Ok(())
     }
 
@@ -352,13 +368,108 @@ impl ExternalSorter {
         Ok(block_seq)
     }
 
-    /// Mock for WASM
+    /// In-memory k-way merge of sorted Quin runs. Browser WASM has no spill
+    /// files; fan-in stays bounded by [`MAX_MERGE_FAN_IN`].
     #[cfg(target_arch = "wasm32")]
-    pub fn merge(self, _final_q42: &Path) -> std::io::Result<u64> {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "Not supported on WASM",
-        ))
+    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
+        self.flush_chunk()?;
+        let mut runs = std::mem::take(&mut self.memory_runs);
+        let mut pass = 0usize;
+        while runs.len() > MAX_MERGE_FAN_IN {
+            self.note(format!(
+                "Quin run compact pass {pass}: {} runs (fan-in {MAX_MERGE_FAN_IN}).",
+                runs.len()
+            ));
+            let mut next =
+                Vec::with_capacity((runs.len() + MAX_MERGE_FAN_IN - 1) / MAX_MERGE_FAN_IN);
+            for group in runs.chunks(MAX_MERGE_FAN_IN) {
+                next.push(Self::merge_memory_runs(group));
+            }
+            runs = next;
+            pass += 1;
+        }
+        let merged = Self::merge_memory_runs(&runs);
+        let count = merged.len() as u64;
+        let fallback = self.temp_dir.join("merged.q42");
+        let mut path = final_q42;
+        let mut file = match File::create(path) {
+            Ok(file) => file,
+            Err(_) => {
+                path = fallback.as_path();
+                match File::create(path) {
+                    Ok(file) => file,
+                    Err(err)
+                        if matches!(
+                            err.kind(),
+                            std::io::ErrorKind::Unsupported
+                                | std::io::ErrorKind::NotFound
+                                | std::io::ErrorKind::PermissionDenied
+                        ) =>
+                    {
+                        return Ok(count);
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+        };
+        {
+            let mut writer = std::io::BufWriter::new(&mut file);
+            for quin in &merged {
+                writer.write_all(bytemuck::bytes_of(quin))?;
+            }
+            writer.flush()?;
+        }
+        Ok(count)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn merge_memory_runs(inputs: &[Vec<NQuin>]) -> Vec<NQuin> {
+        #[derive(Eq)]
+        struct Item {
+            quin: NQuin,
+            reader: usize,
+        }
+        impl Ord for Item {
+            fn cmp(&self, other: &Self) -> Ordering {
+                other.quin.object.cmp(&self.quin.object)
+            }
+        }
+        impl PartialOrd for Item {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl PartialEq for Item {
+            fn eq(&self, other: &Self) -> bool {
+                self.quin.object == other.quin.object
+            }
+        }
+        if inputs.is_empty() {
+            return Vec::new();
+        }
+        if inputs.len() == 1 {
+            return inputs[0].clone();
+        }
+        let mut cursors = vec![0usize; inputs.len()];
+        let mut heap = BinaryHeap::new();
+        for (reader, run) in inputs.iter().enumerate() {
+            if let Some(&quin) = run.first() {
+                heap.push(Item { quin, reader });
+                cursors[reader] = 1;
+            }
+        }
+        let total: usize = inputs.iter().map(Vec::len).sum();
+        let mut out = Vec::with_capacity(total);
+        while let Some(item) = heap.pop() {
+            out.push(item.quin);
+            let reader = item.reader;
+            if cursors[reader] < inputs[reader].len() {
+                let quin = inputs[reader][cursors[reader]];
+                cursors[reader] += 1;
+                heap.push(Item { quin, reader });
+            }
+        }
+        out
     }
 
     #[cfg(not(target_arch = "wasm32"))]

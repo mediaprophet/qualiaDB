@@ -787,9 +787,19 @@ pub fn execute_vm_frame(
                 );
             }
             // ── Biomedical ────────────────────────────────────────────────
-            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeClinicalRisk(model_id) => {
-                match super::clinical_native::evaluate(model_id) {
+                let mut scratch = [NQuin::default(); 256];
+                let n = arena.collect_active_quins(&mut scratch);
+                let outcome = if n == 0 || frame.subject_reg == 0 {
+                    super::clinical_native::evaluate(model_id)
+                } else {
+                    super::clinical_native::evaluate_patient(
+                        model_id,
+                        frame.subject_reg,
+                        &scratch[..n],
+                    )
+                };
+                match outcome {
                     super::clinical_native::NativeClinicalRiskOutcome::HeldIncomplete => {
                         vm_log!(
                             "[Webizen] NativeClinicalRisk: held — incomplete clinical inputs; missing is not a patient value (model {})",
@@ -799,16 +809,21 @@ pub fn execute_vm_frame(
                     super::clinical_native::NativeClinicalRiskOutcome::UnknownModel => {
                         vm_log!("[Webizen] NativeClinicalRisk: unknown model {}", model_id);
                     }
+                    super::clinical_native::NativeClinicalRiskOutcome::Calculated { value } => {
+                        vm_log!(
+                            "[Webizen] NativeClinicalRisk: model {} value={:.6} (not advice)",
+                            model_id,
+                            value
+                        );
+                        frame.object_reg = crate::frame_layout::pack_float_object(value as f32);
+                    }
                 }
             }
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeClinicalRisk(_) => {}
 
             SlgOpcode::NativeLongitudinalTrend(window_days) => {
                 vm_log!("[Webizen] NativeLongitudinalTrend: window={}d — awaiting time-series Quin stream", window_days);
             }
 
-            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeDrugInteraction => {
                 let meds = vec![frame.subject_reg, frame.object_reg];
                 let found = crate::clinical_engine::check_drug_interactions(&meds);
@@ -823,10 +838,7 @@ pub fn execute_vm_frame(
                     }
                 }
             }
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeDrugInteraction => {}
 
-            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeContraindication => {
                 let conds = vec![frame.object_reg];
                 let found =
@@ -839,10 +851,7 @@ pub fn execute_vm_frame(
                     return None;
                 }
             }
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeContraindication => {}
 
-            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeFhirObservation(loinc_hash) => {
                 let obs = crate::clinical_engine::FhirObservation {
                     loinc_code: format!("{:016x}", loinc_hash),
@@ -861,8 +870,6 @@ pub fn execute_vm_frame(
                     return None;
                 }
             }
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeFhirObservation(_) => {}
             // ── Organic chemistry ─────────────────────────────────────────
             SlgOpcode::NativeSmilesValidation => {
                 // In production the SMILES string is retrieved from the lexicon by object_reg hash.

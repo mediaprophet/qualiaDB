@@ -8,12 +8,12 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 use super::config::effective_inference_timeout_ms;
-#[allow(unused_imports)]
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use super::config::{DECODE_TOKEN_BUDGET, TEST_TRANSFORMER_LAYER_CAP, TEST_VOCAB_CHUNK_CAP};
 use super::control::DecodeControl;
 #[cfg(not(target_arch = "wasm32"))]
 use super::decode_helpers::get_prefix_cache;
-#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use super::decode_helpers::{
     apply_model_helper_stops, build_sieve, drain_tensor_context_inject, embedding_fallback_logits,
     try_accept_topology_draft, TopologyDraftStep,
@@ -1160,7 +1160,7 @@ impl LocalLlmAgent {
             return (text, prov, tokens, semantic_quin);
         }
 
-        #[cfg(all(target_arch = "wasm32", any(feature = "portal", feature = "wasm-llm")))]
+        #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
         {
             use crate::gguf_bridge::QTensor;
             use crate::gguf_sharder::GgufTokenizer;
@@ -1472,6 +1472,10 @@ impl LocalLlmAgent {
                                         sieve_failed = true;
                                         (0usize, f32::NEG_INFINITY)
                                     }
+                                } else if let Some(tok) =
+                                    engine.browser_top1_readback_bytes(vlen as usize)
+                                {
+                                    (tok as usize, 0.0)
                                 } else {
                                     emb_buf[..emb_dim].iter().enumerate().fold(
                                         (0usize, f32::NEG_INFINITY),
@@ -1514,6 +1518,10 @@ impl LocalLlmAgent {
                                         sieve_failed = true;
                                         (0usize, f32::NEG_INFINITY)
                                     }
+                                } else if let Some(tok) =
+                                    engine.browser_top1_readback_bytes(vlen as usize)
+                                {
+                                    (tok as usize, 0.0)
                                 } else {
                                     emb_buf[..emb_dim].iter().enumerate().fold(
                                         (0usize, f32::NEG_INFINITY),
@@ -1654,10 +1662,7 @@ impl LocalLlmAgent {
             return (text, prov, tokens, semantic_quin);
         }
 
-        #[cfg(all(
-            target_arch = "wasm32",
-            not(any(feature = "portal", feature = "wasm-llm"))
-        ))]
+        #[cfg(all(target_arch = "wasm32", not(feature = "gpu-runtime")))]
         {
             if crate::extension_bus::wasm_bus::is_connected() {
                 if let Some(cb) = on_token {

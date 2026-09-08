@@ -18,7 +18,7 @@ use std::sync::OnceLock;
 // qdnf-only does not, and must not `use wgpu` here.
 #[cfg(feature = "gpu-runtime")]
 mod caps;
-#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+#[cfg(all(feature = "gpu-runtime", feature = "wgsl-forge"))]
 pub(crate) use caps::experimental_features_allowed;
 #[cfg(feature = "gpu-runtime")]
 pub(crate) use caps::requested_native_llm_features;
@@ -27,6 +27,8 @@ pub use caps::{
     qualia_backend_override, recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps,
     GpuLimitCaps,
 };
+#[cfg(all(feature = "gpu-runtime", target_arch = "wasm32"))]
+pub use caps::{recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
 
 /// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
 /// (e.g. the integrated GPU), not just the single process-wide primary (STELLAR H3 foundation).
@@ -653,7 +655,7 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 
 // ── Shared wgpu device (native: one device per process) ───────────────────────
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub struct SharedGpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
@@ -672,7 +674,7 @@ pub struct SharedGpuContext {
     pub timestamp_period_ns: f32,
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 impl SharedGpuContext {
     /// Logical queue lane for universe-tagged dispatch (B2.3).
     /// Single physical `wgpu::Queue` today; lane tags preserve driver scheduling intent.
@@ -690,6 +692,14 @@ impl SharedGpuContext {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 static SHARED_GPU: OnceLock<Option<SharedGpuContext>> = OnceLock::new();
+
+// WebGPU Device is !Send/!Sync (Rc internals). The browser is single-threaded,
+// so the shared context lives in a thread-local leaked slot rather than a Sync OnceLock.
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+std::thread_local! {
+    static WASM_SHARED_GPU: std::cell::Cell<Option<&'static SharedGpuContext>> =
+        const { std::cell::Cell::new(None) };
+}
 
 /// Choose the DX12 shader compiler. DX12's legacy FXC compiler cannot compile our flash-attention
 /// shader (`fused_attention.wgsl`, X4026) — DXC (the modern compiler) can. Resolution order:
@@ -782,7 +792,7 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
 /// adapter then delegates here) and the per-circuit [`device_registry`]. Requests only
 /// adapter-advertised features, raises buffer-size limits to the adapter maximum, and negotiates
 /// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub(crate) async fn init_shared_gpu_for_adapter(
     instance: wgpu::Instance,
     adapter: wgpu::Adapter,
@@ -895,11 +905,57 @@ pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
         .as_ref()
 }
 
-/// Fail-closed probe when native `gpu-runtime` is off (qdnf-only / wasm32).
+/// Fail-closed probe when `gpu-runtime` is off (qdnf-only / ontology lite).
 /// Returns `None` so CPU floors stay live. Never panics. Does not name wgpu.
-#[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
+#[cfg(not(feature = "gpu-runtime"))]
 pub fn try_shared_gpu() -> Option<&'static ()> {
     None
+}
+
+/// Install the process-wide WebGPU device (browser). Idempotent.
+/// Graph accel, the volumetric renderer, and LLM decode all reuse this device.
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub async fn ensure_shared_gpu() -> Result<(), String> {
+    if WASM_SHARED_GPU.with(|c| c.get().is_some()) {
+        return Ok(());
+    }
+    let ctx = init_shared_gpu_wasm().await?;
+    let leaked: &'static SharedGpuContext = Box::leak(Box::new(ctx));
+    WASM_SHARED_GPU.with(|c| c.set(Some(leaked)));
+    Ok(())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+    desc.backends = wgpu::Backends::BROWSER_WEBGPU;
+    let instance = wgpu::Instance::new(desc);
+    let adapter = match instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            ..Default::default()
+        })
+        .await
+    {
+        Ok(a) => a,
+        Err(high_err) => instance
+            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .await
+            .map_err(|e| {
+                format!("Failed to find WebGPU adapter (high-performance: {high_err}; default: {e})")
+            })?,
+    };
+    init_shared_gpu_for_adapter(instance, adapter).await
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
+    WASM_SHARED_GPU.with(|c| c.get())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub fn shared_gpu() -> &'static SharedGpuContext {
+    try_shared_gpu().expect("shared wgpu init failed — call ensure_shared_gpu() first")
 }
 
 /// Process-wide wgpu device + queue (lazy init). **Panics** if no GPU is available —

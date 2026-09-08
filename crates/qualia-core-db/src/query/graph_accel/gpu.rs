@@ -1,7 +1,7 @@
 //! wgpu dispatch on the process-wide shared device. Any failure returns `None`
 //! so the caller uses the CPU floor. Does not create a second adapter.
 
-#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#![cfg(feature = "gpu-runtime")]
 
 use std::sync::OnceLock;
 
@@ -38,32 +38,31 @@ struct Kernels {
 }
 
 fn kernels() -> Option<&'static Kernels> {
-    static CELL: OnceLock<Option<Kernels>> = OnceLock::new();
-    CELL.get_or_init(|| {
-        let gpu = try_shared_gpu()?;
-        let device = &gpu.device;
-        let hist = pipeline(
+    static CELL: OnceLock<Kernels> = OnceLock::new();
+    if let Some(existing) = CELL.get() {
+        return Some(existing);
+    }
+    let gpu = try_shared_gpu()?;
+    let device = &gpu.device;
+    let built = Kernels {
+        hist: pipeline(
             device,
             include_str!("../../shaders/graph_radix_hist.wgsl"),
             "graph-radix-hist",
-        );
-        let scatter = pipeline(
+        ),
+        scatter: pipeline(
             device,
             include_str!("../../shaders/graph_radix_scatter.wgsl"),
             "graph-radix-scatter",
-        );
-        let sieve = pipeline(
+        ),
+        sieve: pipeline(
             device,
             include_str!("../../shaders/graph_sieve_field.wgsl"),
             "graph-sieve-field",
-        );
-        Some(Kernels {
-            hist,
-            scatter,
-            sieve,
-        })
-    })
-    .as_ref()
+        ),
+    };
+    let _ = CELL.set(built);
+    CELL.get()
 }
 
 fn pipeline(device: &wgpu::Device, src: &str, label: &'static str) -> wgpu::ComputePipeline {
@@ -87,8 +86,31 @@ fn map_read(device: &wgpu::Device, staging: &wgpu::Buffer, size: u64) -> Option<
     slice.map_async(wgpu::MapMode::Read, move |r| {
         let _ = tx.send(r);
     });
-    let _ = device.poll(wgpu::PollType::wait_indefinitely());
-    rx.recv().ok()?.ok()?;
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
+        rx.recv().ok()?.ok()?;
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        // Wait panics on WebGPU. Poll until mapAsync completes or give the CPU floor.
+        let mut mapped = false;
+        for _ in 0..10_000 {
+            let _ = device.poll(wgpu::PollType::Poll);
+            match rx.try_recv() {
+                Ok(Ok(())) => {
+                    mapped = true;
+                    break;
+                }
+                Ok(Err(_)) => return None,
+                Err(std::sync::mpsc::TryRecvError::Empty) => continue,
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => return None,
+            }
+        }
+        if !mapped {
+            return None;
+        }
+    }
     let data = slice.get_mapped_range().ok()?.to_vec();
     staging.unmap();
     Some(data)

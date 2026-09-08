@@ -61,9 +61,10 @@ pub fn npu_available() -> bool {
 
 /// Prefer GPU when a shared device exists and policy allows it.
 ///
-/// Without native `gpu-runtime` (and on wasm32) this is the CPU floor: the
-/// fail-closed [`crate::gpu_context::try_shared_gpu`] stub returns `None`.
-/// Never panics.
+/// Without `gpu-runtime` this is the CPU floor: [`crate::gpu_context::try_shared_gpu`]
+/// returns `None`. On wasm32 the shared WebGPU device is installed by
+/// [`crate::gpu_context::ensure_shared_gpu`]; until that completes this is also
+/// the CPU floor. Never panics.
 pub fn gpu_available() -> bool {
     crate::gpu_context::try_shared_gpu().is_some()
 }

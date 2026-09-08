@@ -78,27 +78,12 @@ impl QTensorEngine {
 
         #[cfg(target_arch = "wasm32")]
         let (wasm_device, wasm_queue) = {
-            let instance = wgpu::Instance::default();
-            // Prefer the high-performance adapter on phones (Pixel / Android
-            // Chrome often expose a low-power fallback that stalls compute).
-            let adapter = match instance
-                .request_adapter(&wgpu::RequestAdapterOptions {
-                    power_preference: wgpu::PowerPreference::HighPerformance,
-                    ..Default::default()
-                })
-                .await
-            {
-                Ok(a) => a,
-                Err(high_err) => instance
-                    .request_adapter(&wgpu::RequestAdapterOptions::default())
-                    .await
-                    .map_err(|e| {
-                        format!(
-                            "Failed to find wgpu adapter (high-performance: {high_err}; default: {e})"
-                        )
-                    })?,
-            };
-            let info = adapter.get_info();
+            crate::gguf_bridge::wasm_yield::phase("Acquiring shared WebGPU device…").await;
+            crate::gpu_context::ensure_shared_gpu().await?;
+            let shared = crate::gpu_context::try_shared_gpu().ok_or_else(|| {
+                "shared WebGPU device missing after ensure_shared_gpu".to_string()
+            })?;
+            let info = shared.adapter.get_info();
             log::info!(
                 "LLM_LOAD|webgpu-adapter|0.20|name={} backend={:?} device={:?} vendor={:?}",
                 info.name,
@@ -106,50 +91,7 @@ impl QTensorEngine {
                 info.device,
                 info.vendor
             );
-            // Browser WebGPU exposes a smaller feature set than native backends.
-            // Intersecting with the adapter keeps device creation portable while
-            // still enabling f16/subgroup/timing acceleration where available.
-            let required_features =
-                crate::gpu_context::requested_native_llm_features(adapter.features());
-            let experimental_features =
-                if required_features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX) {
-                    // Safety: the feature is both explicitly opted into and advertised
-                    // by the browser adapter before this token is enabled.
-                    unsafe { wgpu::ExperimentalFeatures::enabled() }
-                } else {
-                    wgpu::ExperimentalFeatures::disabled()
-                };
-            // Raise buffer caps to the adapter's advertised maximum (same pattern as
-            // native shared_gpu). Default wgpu caps are too small for real weight
-            // tensors and can make requestDevice succeed then fail at buffer create.
-            let adapter_limits = adapter.limits();
-            let required_limits = wgpu::Limits {
-                max_buffer_size: adapter_limits.max_buffer_size,
-                max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
-                ..wgpu::Limits::default()
-            };
-
-            crate::gguf_bridge::wasm_yield::phase(&format!(
-                "Adapter '{}' — creating WebGPU device…",
-                info.name
-            ))
-            .await;
-            adapter
-                .request_device(&wgpu::DeviceDescriptor {
-                    label: Some("qualia-wasm-llm"),
-                    required_features,
-                    required_limits,
-                    experimental_features,
-                    ..Default::default()
-                })
-                .await
-                .map_err(|e| {
-                    format!(
-                        "WebGPU requestDevice failed on adapter '{}': {e}. \
-                         On phones use SmolLM2-360M only, close other tabs, and ensure Chrome WebGPU is enabled.",
-                        info.name
-                    )
-                })?
+            (shared.device.clone(), shared.queue.clone())
         };
         #[cfg(target_arch = "wasm32")]
         let device = &wasm_device;

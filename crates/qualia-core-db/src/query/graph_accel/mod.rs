@@ -7,10 +7,10 @@
 //! Override: `QUALIA_GRAPH_ACCEL=cpu|gpu|auto` (default auto).
 
 mod cpu;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 mod gpu;
 /// CPU-floor stubs so sort/sieve keep compiling when wgpu graph kernels are off.
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+#[cfg(not(feature = "gpu-runtime"))]
 mod gpu {
     use super::cpu::QuinField;
     use crate::NQuin;
@@ -38,7 +38,9 @@ mod sort;
 
 pub use cpu::QuinField;
 pub use join::{hash_join_u64, hash_join_u64_cpu, JoinOutcome};
-pub use path::{npu_available, AccelPath, AccelPolicy, GPU_JOIN_MIN, GPU_SIEVE_MIN, GPU_SORT_MIN};
+pub use path::{
+    gpu_available, npu_available, AccelPath, AccelPolicy, GPU_JOIN_MIN, GPU_SIEVE_MIN, GPU_SORT_MIN,
+};
 #[cfg(not(target_arch = "wasm32"))]
 pub use segment::sieve_volume_file;
 pub use sieve::{sieve_eq, sieve_eq_indices, SieveOutcome};

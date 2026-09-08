@@ -158,3 +158,48 @@ pub fn list_capabilities_wasm() -> Result<JsValue, JsValue> {
     serde_wasm_bindgen::to_value(crate::wasm_capabilities::compiled_capabilities())
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
+
+/// Create the process-wide WebGPU device used by graph accel, offscreen
+/// rendering, and LLM decode. Idempotent.
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+#[wasm_bindgen]
+pub async fn init_shared_webgpu() -> Result<(), JsValue> {
+    crate::gpu_context::ensure_shared_gpu()
+        .await
+        .map_err(|e| JsValue::from_str(&e))
+}
+
+/// Poll WebGPU engine init stage text (same surface as the LLM package).
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "gpu-runtime",
+    not(feature = "wasm-llm")
+))]
+#[wasm_bindgen]
+pub fn get_webgpu_init_status() -> String {
+    crate::gguf_bridge::wasm_yield::init_status()
+}
+
+/// Construct the volumetric renderer on the shared WebGPU device (no canvas).
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+#[wasm_bindgen]
+pub async fn init_offscreen_renderer(
+    width: u32,
+    height: u32,
+    particle_cap: usize,
+) -> Result<(), JsValue> {
+    crate::render::gpu::PortalGpu::new_offscreen_async(width, height, particle_cap)
+        .await
+        .map(|_| ())
+        .map_err(|e| JsValue::from_str(&e))
+}
+
+/// Verify a signed law package (JSON) against an Ed25519 public key.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn verify_law_package_wasm(json: &str, public_key: &[u8]) -> bool {
+    match crate::governance::law_packages::LawPackage::from_json(json) {
+        Ok(pkg) => pkg.verify_signature(public_key),
+        Err(_) => false,
+    }
+}

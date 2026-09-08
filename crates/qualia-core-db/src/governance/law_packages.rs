@@ -84,14 +84,18 @@ impl LawPackage {
     ///
     /// Returns `true` if the signature is valid for this package's
     /// content hash, `false` otherwise (including if no signature is
-    /// set).
-    #[cfg(not(target_arch = "wasm32"))]
+    /// set). Same dalek verifier on native and wasm32 — Ed25519 is
+    /// WASM-safe; a fail-closed stub would make signed law packages
+    /// unverifiable in the browser.
     pub fn verify_signature(&self, public_key: &[u8]) -> bool {
         use ed25519_dalek::{Signature, Verifier, VerifyingKey};
         if self.signature.is_empty() || public_key.len() != 32 {
             return false;
         }
-        let pk_bytes: &[u8; 32] = public_key.try_into().unwrap();
+        let pk_bytes: &[u8; 32] = match public_key.try_into() {
+            Ok(bytes) => bytes,
+            Err(_) => return false,
+        };
         let pk = match VerifyingKey::from_bytes(pk_bytes) {
             Ok(pk) => pk,
             Err(_) => return false,
@@ -101,12 +105,6 @@ impl LawPackage {
             Err(_) => return false,
         };
         pk.verify(self.signature_message(), &sig).is_ok()
-    }
-
-    /// Verify the signature (WASM stub — no ed25519 on WASM).
-    #[cfg(target_arch = "wasm32")]
-    pub fn verify_signature(&self, _public_key: &[u8]) -> bool {
-        false
     }
 
     /// Serialize to JSON.

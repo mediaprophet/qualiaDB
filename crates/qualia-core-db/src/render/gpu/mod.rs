@@ -199,6 +199,31 @@ impl PortalGpu {
         ))
     }
 
+    /// Async offscreen WebGPU renderer on the process-wide shared device.
+    /// Logic/scientific/LLM WASM packages construct this without a canvas.
+    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+    pub async fn new_offscreen_async(
+        width: u32,
+        height: u32,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        crate::gpu_context::ensure_shared_gpu().await?;
+        let shared = crate::gpu_context::try_shared_gpu().ok_or_else(|| {
+            "shared WebGPU device missing after ensure_shared_gpu".to_string()
+        })?;
+        Self::from_device(
+            Arc::new(shared.device.clone()),
+            Arc::new(shared.queue.clone()),
+            width.max(1),
+            height.max(1),
+            wgpu::TextureFormat::Rgba8Unorm,
+            None,
+            None,
+            particle_cap,
+        )
+        .await
+    }
+
     /// Build a native **surface** renderer that draws directly to a window's GPU swapchain.
     ///
     /// This is the native desktop path — no PNG round-trip, no webview `<img>`. The surface

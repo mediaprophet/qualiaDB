@@ -1486,9 +1486,9 @@ pub mod wal_intent;
 // (GEMM, activations/softmax/normalization, attention, RoPE, FFN), each proven equal to the
 // kernels here. `inference_runtime` is the honest name; `gguf_bridge` is retained (the directory
 // rename is deferred — it is a shared performance lane — but the honest name is available).
-#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub mod gguf_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use gguf_bridge as inference_runtime;
 /// Phase 4: AOT GGUF → P64 LLM-weight container compiler.
 /// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.

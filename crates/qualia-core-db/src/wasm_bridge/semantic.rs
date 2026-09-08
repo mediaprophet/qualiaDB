@@ -113,6 +113,27 @@ pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) 
     }
 }
 
+/// Bounded stride sample of packed 48-byte Quins. Browser graphs cannot mmap
+/// `.q42` files; this is the WASM-safe equivalent of `mmap_sample_quins`.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn sample_packed_quins_wasm(db_bytes: &[u8], max_quins: usize) -> Result<Vec<u8>, JsValue> {
+    if db_bytes.len() % 48 != 0 {
+        return Err(JsValue::from_str(
+            "db_bytes length must be a multiple of 48",
+        ));
+    }
+    let quins = unsafe {
+        std::slice::from_raw_parts(db_bytes.as_ptr() as *const crate::NQuin, db_bytes.len() / 48)
+    };
+    let sampled = crate::query_engine::sample_quins(quins, max_quins);
+    let mut out = Vec::with_capacity(sampled.len() * 48);
+    for quin in sampled {
+        out.extend_from_slice(bytemuck::bytes_of(&quin));
+    }
+    Ok(out)
+}
+
 /// Compiles a query string (SPARQL WHERE-clause or N-Triples pattern) to a JSON
 /// description of the Webizen VM bytecode program.  Useful for playground inspection
 /// and benchmarking the compilation pipeline without supplying a database.

@@ -3,7 +3,7 @@
 use crate::NQuin;
 
 use super::cpu::{sieve_eq_cpu, sieve_eq_indices_cpu, QuinField};
-use super::path::{AccelPath, AccelPolicy, GPU_SIEVE_MIN};
+use super::path::{gpu_available, AccelPath, AccelPolicy, GPU_SIEVE_MIN};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SieveOutcome {
@@ -20,8 +20,7 @@ pub fn sieve_eq(quins: &[NQuin], field: QuinField, needle: u64, out: &mut [NQuin
         };
     }
     let policy = AccelPolicy::from_env();
-    if policy != AccelPolicy::CpuOnly && quins.len() >= GPU_SIEVE_MIN {
-        #[cfg(not(target_arch = "wasm32"))]
+    if policy != AccelPolicy::CpuOnly && quins.len() >= GPU_SIEVE_MIN && gpu_available() {
         if let Some(idx) = super::gpu::sieve_eq_indices_gpu(quins, field, needle) {
             let mut n = 0;
             for i in idx {
@@ -61,8 +60,7 @@ pub fn sieve_eq_indices(
         };
     }
     let policy = AccelPolicy::from_env();
-    if policy != AccelPolicy::CpuOnly && quins.len() >= GPU_SIEVE_MIN {
-        #[cfg(not(target_arch = "wasm32"))]
+    if policy != AccelPolicy::CpuOnly && quins.len() >= GPU_SIEVE_MIN && gpu_available() {
         if let Some(idx) = super::gpu::sieve_eq_indices_gpu(quins, field, needle) {
             let n = idx.len().min(out.len());
             out[..n].copy_from_slice(&idx[..n]);

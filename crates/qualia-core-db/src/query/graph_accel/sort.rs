@@ -3,7 +3,7 @@
 use crate::NQuin;
 
 use super::cpu::{radix_sort_by_key, radix_sort_u64_indices, sort_quins_by_object_cpu};
-use super::path::{AccelPath, AccelPolicy, GPU_SORT_MIN};
+use super::path::{gpu_available, AccelPath, AccelPolicy, GPU_SORT_MIN};
 
 /// Result of a sort: which path ran. Items are mutated in place.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,7 +22,7 @@ pub fn sort_quins_by_object(quins: &mut [NQuin]) -> SortOutcome {
         };
     }
     let policy = AccelPolicy::from_env();
-    if policy != AccelPolicy::CpuOnly && n >= GPU_SORT_MIN {
+    if policy != AccelPolicy::CpuOnly && n >= GPU_SORT_MIN && gpu_available() {
         if try_gpu_sort_quins(quins) {
             return SortOutcome {
                 path: AccelPath::Gpu,
@@ -48,8 +48,7 @@ pub fn sort_u64_indices(keys: &[u64], indices: &mut [u32]) -> SortOutcome {
         };
     }
     let policy = AccelPolicy::from_env();
-    if policy != AccelPolicy::CpuOnly && n >= GPU_SORT_MIN {
-        #[cfg(not(target_arch = "wasm32"))]
+    if policy != AccelPolicy::CpuOnly && n >= GPU_SORT_MIN && gpu_available() {
         if let Some(gpu_idx) = super::gpu::radix_sort_u64_indices_gpu(keys) {
             if gpu_idx.len() == n && permutation_covers(&gpu_idx, n) {
                 indices.copy_from_slice(&gpu_idx);
@@ -71,22 +70,18 @@ pub fn sort_u64_indices(keys: &[u64], indices: &mut [u32]) -> SortOutcome {
 }
 
 fn try_gpu_sort_quins(quins: &mut [NQuin]) -> bool {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let keys: Vec<u64> = quins.iter().map(|q| q.object).collect();
-        if let Some(idx) = super::gpu::radix_sort_u64_indices_gpu(&keys) {
-            if idx.len() != quins.len() || !permutation_covers(&idx, quins.len()) {
-                return false;
-            }
-            let mut out = Vec::with_capacity(quins.len());
-            for &i in &idx {
-                out.push(quins[i as usize]);
-            }
-            quins.copy_from_slice(&out);
-            return true;
+    let keys: Vec<u64> = quins.iter().map(|q| q.object).collect();
+    if let Some(idx) = super::gpu::radix_sort_u64_indices_gpu(&keys) {
+        if idx.len() != quins.len() || !permutation_covers(&idx, quins.len()) {
+            return false;
         }
+        let mut out = Vec::with_capacity(quins.len());
+        for &i in &idx {
+            out.push(quins[i as usize]);
+        }
+        quins.copy_from_slice(&out);
+        return true;
     }
-    let _ = quins;
     false
 }
 
