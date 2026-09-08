@@ -103,6 +103,7 @@ This is the sequential handoff record for
 | 2026-09-08 | Q1/Q2 wave 31 | Cursor Grok 4.6 | Complete (integrated) | Poet Live CG leftovers waves 19–23 ×25; Host none | poet wave31 2; policy ok; integrity 11 | Not re-run | CG remainder waves 24–26 | Wave 32 |
 | 2026-09-08 | Q1/Q2 wave 32 | Cursor Grok 4.6 | Complete (integrated) | Poet Live CG leftovers waves 24–26 ×24 (CG leftover Q2 exhausted); Host none | poet wave32 1; policy ok; integrity 11; ALL_BOUND=1102 PoetLive≈942 helper-aware Q2≈127 | Not re-run | Animation / Ode / HbbTV / Render GPU / long-tail | Wave 33 |
 | 2026-09-08 | Q1/Q2 wave 33 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Animation leftovers×4 · numeric Ode×4 · HbbTV×4; Host none | poet wave33 1; policy ok; integrity 11; helper-aware Q2≈115 | Not re-run | Render GPU honest Live / Social-Finance long-tail | Wave 34 |
+| 2026-09-08 | Q1/Q2 wave 34 | Cursor Grok 4.6 | Complete (integrated) | Poet Live already-bound Render.gpu_* ×17; Host none | poet wave34 1; policy ok; integrity 11; helper-aware Q2≈98 | Not re-run | Remaining GPU/EMF then Social-Finance long-tail | Wave 35 |
 
 ## Required closeout detail
 

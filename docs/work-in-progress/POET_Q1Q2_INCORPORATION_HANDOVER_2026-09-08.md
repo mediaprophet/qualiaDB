@@ -16,6 +16,7 @@
 | 31 | **Complete (integrated)** | CG leftovers waves 19–23 ×25 |
 | 32 | **Complete (integrated)** | CG leftovers waves 24–26 ×24 — **CG leftover Q2 exhausted** |
 | 33 | **Complete (integrated)** | Animation leftovers×4 · numeric Ode×4 · HbbTV×4 |
+| 34 | **Complete (integrated)** | Already-bound Render.gpu_* honest Live ×17 |
 
 ### Wave 27 (this session)
 
