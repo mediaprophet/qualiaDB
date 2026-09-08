@@ -177,3 +177,24 @@
 - Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf net::peer crypto::network q42::q42_volume::volume::network_quanta` → **148 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion.
 - Human input needed: none this step.
 - Next: Wave 2 (CORE-01, CORE-03, remaining CRY-01) with the same disjoint-file swarm.
+
+## 2026-09-08 — Wave 2 swarm claim
+
+- Integrator claims Wave 2 provisional: CORE-01 arena admission, CORE-03 WAL intent markers, NET-01 bearer lifecycle. Packages stay **open**.
+- Disjoint writes: CORE-01 `governance/webizen/arena_admit.rs` + webizen/mod.rs one line; CORE-03 new `wal_intent.rs` beside `wal.rs` (do not grow wal.rs); NET-01 `net/qdnf/bearer/` only.
+- Human input needed: none this step.
+
+## 2026-09-08 — Wave 2 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers: CORE-01 (`ArenaAdmit` lease/scope wrapper; does not allocate 42 MiB or replace `SlgArena` Vec backing), CORE-03 (`wal_intent::IntentTable` 32-slot SHA-384 markers; `wal.rs` unchanged), NET-01 (`BearerLifecycle` + `LeasedIpc` tx/rx leases). Integrator restored the `Bearer` trait import required for `RawEthernet::shutdown`.
+- Measured: `cargo +stable test -p qualia-core-db --lib -- governance::webizen::arena_admit wal_intent net::qdnf::bearer net::qdnf net::peer crypto::network q42::q42_volume::volume::network_quanta` → **182 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion. `IpcEndpoint::recv` still dequeues before checking output length (documented).
+- Human input needed: none this step.
+- Next: Wave 3 (FND-03 golden fixtures, CRY-02 handshake FSM/vectors, RT-02 cell admission) with disjoint writes.
+
+## 2026-09-08 — Wave 3 swarm claim
+
+- Integrator claims Wave 3 provisional: FND-03 fixtures, CRY-02 handshake transitions, RT-02 cell admission. Packages stay **open**.
+- Disjoint writes: FND-03 `net/qdnf/fixtures/` only; CRY-02 `crypto/network/pq_handshake.rs` (+ `crypto/network/mod.rs` one line); RT-02 `net/peer/cells/` only (`net/peer/mod.rs` one line).
+- Shared files forbidden to workers: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`, `wal.rs`, `arena.rs`.
+- Human input needed: none this step.
+- Next: integrate child patches, run `cargo +stable` tests, record measurements.

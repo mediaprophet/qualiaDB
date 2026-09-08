@@ -1475,6 +1475,7 @@ pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sync;
 pub mod wal;
+pub mod wal_intent;
 
 // The model-inference runtime: reads GGUF weight files and runs the tensor program on the GPU.
 // It is a *runtime*, not an "engine" — the mathematics it executes lives in `crate::solvers`
