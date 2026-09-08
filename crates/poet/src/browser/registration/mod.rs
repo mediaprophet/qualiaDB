@@ -26,6 +26,7 @@ mod register_erp_toolbox;
 mod register_econ_toolbox;
 mod register_health_toolbox;
 mod register_image_toolbox;
+mod register_render_live;
 mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
@@ -4273,5 +4274,71 @@ mod tests {
             Some("Research.detect_ug_patterns")
         )));
         assert_eq!(tools.len(), 73);
+    }
+
+    #[test]
+    fn render_live_binds_wave30_render_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "render:live")
+            .expect("render:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("render:live_scene", Some("Render.scene"))));
+        assert!(tools.contains(&(
+            "render:live_css_animation",
+            Some("Render.css_animation")
+        )));
+        assert!(tools.contains(&("render:live_css_color", Some("Render.css_color"))));
+        assert!(tools.contains(&(
+            "render:live_css_transform",
+            Some("Render.css_transform")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_eval_curve",
+            Some("Render.animation_eval_curve")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_spring_step",
+            Some("Render.animation_spring_step")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_sclerp",
+            Some("Render.animation_sclerp")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_eval_preset",
+            Some("Render.animation_eval_preset")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_squad_step",
+            Some("Render.animation_squad_step")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_list_presets",
+            Some("Render.animation_list_presets")
+        )));
+        assert!(tools.contains(&(
+            "render:live_animation_compute_pass",
+            Some("Render.animation_compute_pass")
+        )));
+        assert!(tools.contains(&("render:live_svg_path", Some("Render.svg_path"))));
+        assert!(tools.contains(&("render:live_svg_circle", Some("Render.svg_circle"))));
+        assert!(tools.contains(&("render:live_svg_rect", Some("Render.svg_rect"))));
+        assert!(tools.contains(&("render:live_svg_line", Some("Render.svg_line"))));
+        assert!(tools.contains(&("render:live_svg_bezier", Some("Render.svg_bezier"))));
+        assert!(tools.contains(&("render:live_svg_field", Some("Render.svg_field"))));
+        assert_eq!(tools.len(), 17);
     }
 }

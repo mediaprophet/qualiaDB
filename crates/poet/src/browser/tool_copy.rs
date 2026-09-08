@@ -4357,6 +4357,91 @@ fn named(id: &str) -> Option<Presentation> {
             "Detect UG patterns via Research.detect_ug_patterns.",
             Proficiency::Intermediate,
         ),
+        "render:live_scene" => (
+            "Scene",
+            "Build a renderer contract via Render.scene.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_css_animation" => (
+            "CSS animation",
+            "Generate @keyframes CSS via Render.css_animation.",
+            Proficiency::Novice,
+        ),
+        "render:live_css_color" => (
+            "CSS color",
+            "Map EMF α/μ/σ to CSS rgb via Render.css_color.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_css_transform" => (
+            "CSS transform",
+            "Build a CSS transform string via Render.css_transform.",
+            Proficiency::Novice,
+        ),
+        "render:live_animation_eval_curve" => (
+            "Eval curve",
+            "Evaluate an easing curve via Render.animation_eval_curve.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_animation_spring_step" => (
+            "Spring step",
+            "Step a spring via Render.animation_spring_step.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_animation_sclerp" => (
+            "ScLERP",
+            "Screw-linear interpolate motors via Render.animation_sclerp.",
+            Proficiency::Expert,
+        ),
+        "render:live_animation_eval_preset" => (
+            "Eval preset",
+            "Evaluate an animation preset via Render.animation_eval_preset.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_animation_squad_step" => (
+            "SQUAD step",
+            "Squad-interpolate quaternions via Render.animation_squad_step.",
+            Proficiency::Expert,
+        ),
+        "render:live_animation_list_presets" => (
+            "List presets",
+            "List animation presets via Render.animation_list_presets.",
+            Proficiency::Novice,
+        ),
+        "render:live_animation_compute_pass" => (
+            "Compute pass",
+            "Generate a GPU animation compute pass via Render.animation_compute_pass.",
+            Proficiency::Expert,
+        ),
+        "render:live_svg_path" => (
+            "SVG path",
+            "Generate an SVG path via Render.svg_path.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_circle" => (
+            "SVG circle",
+            "Generate an SVG circle via Render.svg_circle.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_rect" => (
+            "SVG rect",
+            "Generate an SVG rect via Render.svg_rect.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_line" => (
+            "SVG line",
+            "Generate an SVG line via Render.svg_line.",
+            Proficiency::Novice,
+        ),
+        "render:live_svg_bezier" => (
+            "SVG bezier",
+            "Sample a Bezier into an SVG path via Render.svg_bezier.",
+            Proficiency::Intermediate,
+        ),
+        "render:live_svg_field" => (
+            "SVG field",
+            "Visualise a 2D field via Render.svg_field.",
+            Proficiency::Intermediate,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

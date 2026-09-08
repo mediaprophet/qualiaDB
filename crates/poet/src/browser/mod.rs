@@ -142,7 +142,7 @@ mod portal_chain_actions;
 mod research_live_chain_actions;
 mod research_live2_chain_actions;
 mod research_live3_chain_actions;
-mod research_live4_chain_actions;
+mod render_live_chain_actions;
 mod ode_chain_actions;
 mod agent_chain_actions;
 mod cooperative_chain_actions;

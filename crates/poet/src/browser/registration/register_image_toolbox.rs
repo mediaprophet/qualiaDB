@@ -446,6 +446,16 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                 },
                 video_live,
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "render:live".into(),
+                    label: "Live render".into(),
+                    icon: "media".into(),
+                    description:
+                        "Curated Render.* scene, CSS, animation, and SVG binds.".into(),
+                },
+                super::register_render_live::render_live_tools(),
+            ),
         ],
     ));
 }

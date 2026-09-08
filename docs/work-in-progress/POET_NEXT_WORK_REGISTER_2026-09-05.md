@@ -59,6 +59,7 @@ evidence.
 | 45 | Q1/Q2 wave 27 | **Complete** | Inference remainder +5 · Research live first +20; Host none | Closed — wave 27 |
 | 46 | Q1/Q2 wave 28 | **Complete** | Research investigation/hypothesis/assessment +20; Host none | Closed — wave 28 |
 | 47 | Q1/Q2 wave 29 | **Complete** | Research remainder +33 (Research Q2 exhausted); Host none | Closed — wave 29 |
+| 48 | Q1/Q2 wave 30 | **Complete** | Render CPU scene/CSS/animation/SVG +17; Host none | Closed — wave 30 |
 
 ## Latest execution evidence
 

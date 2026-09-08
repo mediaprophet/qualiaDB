@@ -12,6 +12,7 @@
 | 27 | **Complete (integrated)** | Inference remainder×5 · Research live first×20 |
 | 28 | **Complete (integrated)** | Research investigation/hypothesis/assessment×20 |
 | 29 | **Complete (integrated)** | Research remainder×33 — **Research Q2 exhausted** |
+| 30 | **Complete (pending verify)** | Render CPU scene/CSS/animation/SVG×17 |
 
 ### Wave 27 (this session)
 

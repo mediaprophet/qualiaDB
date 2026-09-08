@@ -881,6 +881,23 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "research:live_set_ug_mitigation"
         | "research:live_set_ug_calibration"
         | "research:live_detect_ug_patterns"
+        | "render:live_scene"
+        | "render:live_css_animation"
+        | "render:live_css_color"
+        | "render:live_css_transform"
+        | "render:live_animation_eval_curve"
+        | "render:live_animation_spring_step"
+        | "render:live_animation_sclerp"
+        | "render:live_animation_eval_preset"
+        | "render:live_animation_squad_step"
+        | "render:live_animation_list_presets"
+        | "render:live_animation_compute_pass"
+        | "render:live_svg_path"
+        | "render:live_svg_circle"
+        | "render:live_svg_rect"
+        | "render:live_svg_line"
+        | "render:live_svg_bezier"
+        | "render:live_svg_field"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3368,6 +3385,41 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "research:live_detect_ug_patterns" => {
             super::research_live4_chain_actions::run_detect_ug_patterns(document, label)
         }
+        "render:live_scene" => super::render_live_chain_actions::run_scene(document, label),
+        "render:live_css_animation" => {
+            super::render_live_chain_actions::run_css_animation(document, label)
+        }
+        "render:live_css_color" => super::render_live_chain_actions::run_css_color(document, label),
+        "render:live_css_transform" => {
+            super::render_live_chain_actions::run_css_transform(document, label)
+        }
+        "render:live_animation_eval_curve" => {
+            super::render_live_chain_actions::run_animation_eval_curve(document, label)
+        }
+        "render:live_animation_spring_step" => {
+            super::render_live_chain_actions::run_animation_spring_step(document, label)
+        }
+        "render:live_animation_sclerp" => {
+            super::render_live_chain_actions::run_animation_sclerp(document, label)
+        }
+        "render:live_animation_eval_preset" => {
+            super::render_live_chain_actions::run_animation_eval_preset(document, label)
+        }
+        "render:live_animation_squad_step" => {
+            super::render_live_chain_actions::run_animation_squad_step(document, label)
+        }
+        "render:live_animation_list_presets" => {
+            super::render_live_chain_actions::run_animation_list_presets(document, label)
+        }
+        "render:live_animation_compute_pass" => {
+            super::render_live_chain_actions::run_animation_compute_pass(document, label)
+        }
+        "render:live_svg_path" => super::render_live_chain_actions::run_svg_path(document, label),
+        "render:live_svg_circle" => super::render_live_chain_actions::run_svg_circle(document, label),
+        "render:live_svg_rect" => super::render_live_chain_actions::run_svg_rect(document, label),
+        "render:live_svg_line" => super::render_live_chain_actions::run_svg_line(document, label),
+        "render:live_svg_bezier" => super::render_live_chain_actions::run_svg_bezier(document, label),
+        "render:live_svg_field" => super::render_live_chain_actions::run_svg_field(document, label),
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
         "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),
