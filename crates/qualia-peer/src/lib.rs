@@ -1,9 +1,9 @@
 //! Qualia Peer Runtime facade.
 //!
 //! This crate is the application replacement for libp2p. It does not import
-//! `libp2p` and does not enable core-db `libp2p-compat` (RT-03.07 partial).
-//! GPU/LLM still ride along via `gpu-runtime` until wgpu call sites are gated;
-//! `qualia-core-db --no-default-features --features qdnf` does not yet compile.
+//! `libp2p`. It enables core-db `qdnf` only (no `libp2p-compat`, `gpu-runtime`,
+//! `wgsl-forge`, `privacy-he`, `zk-culling`, or `profile_target_1024`).
+//! Default `qualia-core-db` still has those features. Packages remain open.
 
 pub use qualia_core_db::net::peer::host::{
     native_ipc_stream_exchange, ControllerIdentity, NativePeer, ServiceId,

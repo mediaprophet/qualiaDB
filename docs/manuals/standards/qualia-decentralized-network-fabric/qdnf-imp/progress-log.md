@@ -361,3 +361,25 @@
 - Disjoint remaining write sets: poet_host invoke GPU dispatch; inference decode/probes/timeline; compute_bridge execute/policy; webizen vm GPU integrator; graph_accel gpu_available; gpu_state/backend. Integrator owns lib.rs (device_benchmark/npu_ffi already gated).
 - Status: claimed. Packages remain open. Not Ethernet, not Native Independent closure.
 
+## 2026-09-08 — Wave 11 swarm integrated — partial, packages remain open
+
+- Six disjoint implementers: NET-05.16 recovery (reconnect does not duplicate durable; transport ACK is not accepted work), SVC-01.13 transfer (shared receive/store/verify charge; retries charge parent), SVC-01.14 resume (verified blocks of a pinned manifest), CRY-02.13 malformed fail-closed classifier, NET-05.18 policy freshness recheck, SVC-01.04 identity/effect/receipt.
+- Measured: `cargo +stable test -p qualia-core-db --lib --offline --` combined native filter → **422 passed**, 0 failed. `qualia-peer` → **2 passed**. `native_ipc_peers` → `native ipc exchanged 11 bytes (libp2p not used)`.
+- Human input needed: none this step.
+- Next: Wave 12/13 wgpu gating. Packages stay open.
+
+## 2026-09-08 — Wave 12–13 swarm integrated — wgpu cfg, peer GPU dropped, packages remain open
+
+- Six + five disjoint implementers gated wgpu behind `feature = "gpu-runtime"`. CPU dequant, CPU GEMM floor, CPU ODE, CPU graph accel remain. `QTensorEngine::new` exists without GPU. `try_shared_gpu()` is None without the feature.
+- Measured:
+  - `cargo +stable check -p qualia-core-db --lib` (default, GPU on) → **Finished**, 0 errors.
+  - `cargo +stable check -p qualia-core-db --no-default-features --features qdnf --lib` → **Finished**, 0 errors (was 1528).
+  - `qualia-peer` features: `qdnf` + `profile_target_1024` + `zk-culling` only (no `gpu-runtime`, `wgsl-forge`, `privacy-he`, `libp2p-compat`).
+  - `cargo +stable tree -p qualia-peer -i libp2p` → package not in graph.
+  - `cargo +stable tree -p qualia-peer -i wgpu` → package not in graph.
+  - `cargo +stable test -p qualia-peer --offline --lib` → **2 passed**.
+  - Combined native filter → **422 passed**.
+- Not Ethernet (raw bearer still PlatformUnsupported without CAP_NET_RAW). Not full Native Independent (peer still pulls `profile_target_1024` and `zk-culling`; default core-db still has `libp2p-compat`). Not package completion. COSE_Sign1 still unfrozen. `IpcEndpoint::recv` short-buffer drop remains.
+- Human input needed: Ethernet capture + CAP_NET_RAW for NET-01.14; reviewed COSE_Sign1 freeze; whether daemons may drop default `libp2p-compat`.
+- Next: remaining QSync crash-injection / >RAM datasets, session multi-hop loss harness, IpcEndpoint recv, default-feature isolation. Packages stay open.
+
