@@ -281,6 +281,21 @@
 - Integrator wires `session/rekey`, `replication/proof`, `crypto/network/minima`. Packages stay **open**.
 - Human input needed: none this step.
 
+## 2026-09-08 — Wave 8 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers: NET-05.12 (`RekeyTable` current+2 old, rekey/replayed Allow do not renew grants, Draining → Closed), SVC-01.08 (`MembershipProof` digest+counts, membership ≠ range coverage, forged count Malformed), CRY-02.08 (`MinimaCache` 8 slots, classical/stripped/unknown fail closed, no automatic classical retry).
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf::session::rekey net::peer::replication::proof crypto::network::minima net::qdnf net::peer crypto::network wal_intent governance::webizen::arena_admit q42::q42_volume::volume::network_quanta` → **321 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion.
+- Human input needed: none this step.
+- Next: Wave 9 (NET-05.01 session bind, SVC-01.10 merge, CRY-02.09 admission chunks). Packages stay open.
+
+## 2026-09-08 — Wave 9 swarm claim
+
+- Integrator claims Wave 9 provisional: NET-05.01 session context bind, SVC-01.10 merge/conflict, CRY-02.09 admission chunks. Packages stay **open**.
+- Disjoint writes: NET-05 `net/qdnf/session/bind.rs`; SVC `net/peer/replication/merge.rs`; CRY-02 `crypto/network/chunks.rs`. Do not edit the parent `mod.rs` files — integrator wires.
+- Shared files forbidden: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
+- Human input needed: none this step.
+
+
 
 
 
