@@ -300,6 +300,21 @@
 - Integrator wires `session/bind`, `replication/merge`, `crypto/network/chunks`. Packages stay **open**.
 - Human input needed: none this step.
 
+## 2026-09-08 — Wave 9 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers: NET-05.01 (`bind_complete` refuses zero identifiers and non-PQ profile; connection id is not a grant), SVC-01.10 (`MergeSet` 4 alts; LWW/wall-clock are not authority; `len>1` is Conflict), CRY-02.09/10 (`ChunkTable` 16 KiB/16 chunks/32 flights/2 per locator; duplicate Replay does not extend deadline).
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf::session::bind net::peer::replication::merge crypto::network::chunks net::qdnf net::peer crypto::network wal_intent governance::webizen::arena_admit q42::q42_volume::volume::network_quanta` → **347 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion.
+- Human input needed: none this step.
+- Next: Wave 10 (CRY-02.05 dual proofs, SVC-01.12 manifests, NET-05.06 IRI/receipt stages). Packages stay open.
+
+## 2026-09-08 — Wave 10 swarm claim
+
+- Integrator claims Wave 10 provisional: CRY-02.05 dual proofs, SVC-01.12 content manifests, NET-05.06 datagram IRI/receipt. Packages stay **open**.
+- Disjoint writes: CRY-02 `crypto/network/dual_sign.rs`; SVC `net/peer/replication/manifest.rs`; NET-05 `net/qdnf/session/iri.rs`. Do not edit parent `mod.rs` files.
+- Shared files forbidden: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
+- Human input needed: none this step.
+
+
 
 
 
