@@ -848,6 +848,39 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "research:live_subscribe_updates"
         | "research:live_create_assessment"
         | "research:live_set_epistemic_mode"
+        | "research:live_set_reality_category"
+        | "research:live_classify_reality"
+        | "research:live_detect_blended"
+        | "research:live_detect_deceptive_fiction"
+        | "research:live_trace_fiction"
+        | "research:live_assess_sentiment"
+        | "research:live_detect_sentiment_manipulation"
+        | "research:live_detect_performed_sentiment"
+        | "research:live_map_sentiment_network"
+        | "research:live_analyse_sentiment_trends"
+        | "research:live_register_perspective"
+        | "research:live_add_bias"
+        | "research:live_compare_perspectives"
+        | "research:live_detect_perspective_conflict"
+        | "research:live_reconcile_perspectives"
+        | "research:live_assess_intentionality"
+        | "research:live_classify_mistake"
+        | "research:live_define_social_dynamics"
+        | "research:live_define_economic_dynamics"
+        | "research:live_define_spatiotemporal_dynamics"
+        | "research:live_analyse_social_network"
+        | "research:live_analyse_inequality"
+        | "research:live_analyse_diffusion"
+        | "research:live_assess_grounding"
+        | "research:live_verify_grounding"
+        | "research:live_detect_ungrounded_behaviour"
+        | "research:live_create_ug_instance"
+        | "research:live_set_ug_cause"
+        | "research:live_set_ug_consequence"
+        | "research:live_set_ug_detection"
+        | "research:live_set_ug_mitigation"
+        | "research:live_set_ug_calibration"
+        | "research:live_detect_ug_patterns"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3235,6 +3268,105 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "research:live_set_epistemic_mode" => {
             super::research_live2_chain_actions::run_set_epistemic_mode(document, label)
+        }
+        "research:live_set_reality_category" => {
+            super::research_live3_chain_actions::run_set_reality_category(document, label)
+        }
+        "research:live_classify_reality" => {
+            super::research_live3_chain_actions::run_classify_reality(document, label)
+        }
+        "research:live_detect_blended" => {
+            super::research_live3_chain_actions::run_detect_blended(document, label)
+        }
+        "research:live_detect_deceptive_fiction" => {
+            super::research_live3_chain_actions::run_detect_deceptive_fiction(document, label)
+        }
+        "research:live_trace_fiction" => {
+            super::research_live3_chain_actions::run_trace_fiction(document, label)
+        }
+        "research:live_assess_sentiment" => {
+            super::research_live3_chain_actions::run_assess_sentiment(document, label)
+        }
+        "research:live_detect_sentiment_manipulation" => {
+            super::research_live3_chain_actions::run_detect_sentiment_manipulation(document, label)
+        }
+        "research:live_detect_performed_sentiment" => {
+            super::research_live3_chain_actions::run_detect_performed_sentiment(document, label)
+        }
+        "research:live_map_sentiment_network" => {
+            super::research_live3_chain_actions::run_map_sentiment_network(document, label)
+        }
+        "research:live_analyse_sentiment_trends" => {
+            super::research_live3_chain_actions::run_analyse_sentiment_trends(document, label)
+        }
+        "research:live_register_perspective" => {
+            super::research_live3_chain_actions::run_register_perspective(document, label)
+        }
+        "research:live_add_bias" => {
+            super::research_live3_chain_actions::run_add_bias(document, label)
+        }
+        "research:live_compare_perspectives" => {
+            super::research_live3_chain_actions::run_compare_perspectives(document, label)
+        }
+        "research:live_detect_perspective_conflict" => {
+            super::research_live3_chain_actions::run_detect_perspective_conflict(document, label)
+        }
+        "research:live_reconcile_perspectives" => {
+            super::research_live3_chain_actions::run_reconcile_perspectives(document, label)
+        }
+        "research:live_assess_intentionality" => {
+            super::research_live3_chain_actions::run_assess_intentionality(document, label)
+        }
+        "research:live_classify_mistake" => {
+            super::research_live3_chain_actions::run_classify_mistake(document, label)
+        }
+        "research:live_define_social_dynamics" => {
+            super::research_live4_chain_actions::run_define_social_dynamics(document, label)
+        }
+        "research:live_define_economic_dynamics" => {
+            super::research_live4_chain_actions::run_define_economic_dynamics(document, label)
+        }
+        "research:live_define_spatiotemporal_dynamics" => {
+            super::research_live4_chain_actions::run_define_spatiotemporal_dynamics(document, label)
+        }
+        "research:live_analyse_social_network" => {
+            super::research_live4_chain_actions::run_analyse_social_network(document, label)
+        }
+        "research:live_analyse_inequality" => {
+            super::research_live4_chain_actions::run_analyse_inequality(document, label)
+        }
+        "research:live_analyse_diffusion" => {
+            super::research_live4_chain_actions::run_analyse_diffusion(document, label)
+        }
+        "research:live_assess_grounding" => {
+            super::research_live4_chain_actions::run_assess_grounding(document, label)
+        }
+        "research:live_verify_grounding" => {
+            super::research_live4_chain_actions::run_verify_grounding(document, label)
+        }
+        "research:live_detect_ungrounded_behaviour" => {
+            super::research_live4_chain_actions::run_detect_ungrounded_behaviour(document, label)
+        }
+        "research:live_create_ug_instance" => {
+            super::research_live4_chain_actions::run_create_ug_instance(document, label)
+        }
+        "research:live_set_ug_cause" => {
+            super::research_live4_chain_actions::run_set_ug_cause(document, label)
+        }
+        "research:live_set_ug_consequence" => {
+            super::research_live4_chain_actions::run_set_ug_consequence(document, label)
+        }
+        "research:live_set_ug_detection" => {
+            super::research_live4_chain_actions::run_set_ug_detection(document, label)
+        }
+        "research:live_set_ug_mitigation" => {
+            super::research_live4_chain_actions::run_set_ug_mitigation(document, label)
+        }
+        "research:live_set_ug_calibration" => {
+            super::research_live4_chain_actions::run_set_ug_calibration(document, label)
+        }
+        "research:live_detect_ug_patterns" => {
+            super::research_live4_chain_actions::run_detect_ug_patterns(document, label)
         }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),

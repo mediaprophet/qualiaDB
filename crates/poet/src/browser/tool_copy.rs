@@ -4192,6 +4192,171 @@ fn named(id: &str) -> Option<Presentation> {
             "Set epistemic mode via Research.set_epistemic_mode.",
             Proficiency::Intermediate,
         ),
+        "research:live_set_reality_category" => (
+            "Set reality category",
+            "Set reality category via Research.set_reality_category.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_classify_reality" => (
+            "Classify reality",
+            "Classify reality via Research.classify_reality.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_blended" => (
+            "Detect blended",
+            "Detect blended content via Research.detect_blended.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_deceptive_fiction" => (
+            "Detect deceptive fiction",
+            "Detect deceptive fiction via Research.detect_deceptive_fiction.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_trace_fiction" => (
+            "Trace fiction",
+            "Trace fiction to reality via Research.trace_fiction.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_assess_sentiment" => (
+            "Assess sentiment",
+            "Assess sentiment via Research.assess_sentiment.",
+            Proficiency::Novice,
+        ),
+        "research:live_detect_sentiment_manipulation" => (
+            "Sentiment manipulation",
+            "Detect sentiment manipulation via Research.detect_sentiment_manipulation.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_performed_sentiment" => (
+            "Performed sentiment",
+            "Detect performed sentiment via Research.detect_performed_sentiment.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_map_sentiment_network" => (
+            "Sentiment network",
+            "Map a sentiment network via Research.map_sentiment_network.",
+            Proficiency::Expert,
+        ),
+        "research:live_analyse_sentiment_trends" => (
+            "Sentiment trends",
+            "Analyse sentiment trends via Research.analyse_sentiment_trends.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_register_perspective" => (
+            "Register perspective",
+            "Register a perspective via Research.register_perspective.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_bias" => (
+            "Add bias",
+            "Add a bias via Research.add_bias.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_compare_perspectives" => (
+            "Compare perspectives",
+            "Compare two perspectives via Research.compare_perspectives.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_perspective_conflict" => (
+            "Perspective conflict",
+            "Detect perspective conflict via Research.detect_perspective_conflict.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_reconcile_perspectives" => (
+            "Reconcile perspectives",
+            "Reconcile perspectives via Research.reconcile_perspectives.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_assess_intentionality" => (
+            "Assess intentionality",
+            "Assess intentionality via Research.assess_intentionality.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_classify_mistake" => (
+            "Classify mistake",
+            "Classify a mistake via Research.classify_mistake.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_define_social_dynamics" => (
+            "Social dynamics",
+            "Define social dynamics via Research.define_social_dynamics.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_define_economic_dynamics" => (
+            "Economic dynamics",
+            "Define economic dynamics via Research.define_economic_dynamics.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_define_spatiotemporal_dynamics" => (
+            "Spatiotemporal dynamics",
+            "Define spatiotemporal dynamics via Research.define_spatiotemporal_dynamics.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_analyse_social_network" => (
+            "Social network",
+            "Analyse a social network via Research.analyse_social_network.",
+            Proficiency::Expert,
+        ),
+        "research:live_analyse_inequality" => (
+            "Analyse inequality",
+            "Analyse inequality via Research.analyse_inequality.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_analyse_diffusion" => (
+            "Analyse diffusion",
+            "Analyse diffusion via Research.analyse_diffusion.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_assess_grounding" => (
+            "Assess grounding",
+            "Assess grounding via Research.assess_grounding.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_verify_grounding" => (
+            "Verify grounding",
+            "Verify grounding via Research.verify_grounding.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_ungrounded_behaviour" => (
+            "Ungrounded behaviour",
+            "Detect ungrounded behaviour via Research.detect_ungrounded_behaviour.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_create_ug_instance" => (
+            "UG instance",
+            "Create an ungrounded-behaviour instance via Research.create_ug_instance.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_cause" => (
+            "UG cause",
+            "Set UG cause via Research.set_ug_cause.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_consequence" => (
+            "UG consequence",
+            "Set UG consequence via Research.set_ug_consequence.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_detection" => (
+            "UG detection",
+            "Set UG detection via Research.set_ug_detection.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_mitigation" => (
+            "UG mitigation",
+            "Set UG mitigation via Research.set_ug_mitigation.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_ug_calibration" => (
+            "UG calibration",
+            "Set UG calibration via Research.set_ug_calibration.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_detect_ug_patterns" => (
+            "UG patterns",
+            "Detect UG patterns via Research.detect_ug_patterns.",
+            Proficiency::Intermediate,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

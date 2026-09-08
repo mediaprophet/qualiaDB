@@ -10,6 +10,8 @@
 |------|--------|-------|
 | 1–26 | **Complete (integrated)** | Through Asset persist, Pulse live, Portal/Avatar, Host CG through affine/quat/quadratic |
 | 27 | **Complete (integrated)** | Inference remainder×5 · Research live first×20 |
+| 28 | **Complete (integrated)** | Research investigation/hypothesis/assessment×20 |
+| 29 | **Complete (pending verify)** | Research remainder×33 — **Research Q2 exhausted** |
 
 ### Wave 27 (this session)
 

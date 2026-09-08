@@ -4140,7 +4140,7 @@ mod tests {
             "research:live_validate_inference",
             Some("Research.validate_inference")
         )));
-        assert_eq!(tools.len(), 40);
+        assert_eq!(tools.len(), 73);
     }
 
     #[test]
@@ -4226,10 +4226,52 @@ mod tests {
             "research:live_create_assessment",
             Some("Research.create_assessment")
         )));
+        assert_eq!(tools.len(), 73);
+    }
+
+    #[test]
+    fn research_live_binds_wave29_remainder_caps() {
+        let registry = super::build_registry();
+        let epi = registry.toolbox("epistemic").expect("epistemic toolbox");
+        let chain = epi
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "research:live")
+            .expect("research:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
         assert!(tools.contains(&(
-            "research:live_set_epistemic_mode",
-            Some("Research.set_epistemic_mode")
+            "research:live_set_reality_category",
+            Some("Research.set_reality_category")
         )));
-        assert_eq!(tools.len(), 40);
+        assert!(tools.contains(&(
+            "research:live_classify_reality",
+            Some("Research.classify_reality")
+        )));
+        assert!(tools.contains(&(
+            "research:live_assess_sentiment",
+            Some("Research.assess_sentiment")
+        )));
+        assert!(tools.contains(&(
+            "research:live_register_perspective",
+            Some("Research.register_perspective")
+        )));
+        assert!(tools.contains(&(
+            "research:live_analyse_inequality",
+            Some("Research.analyse_inequality")
+        )));
+        assert!(tools.contains(&(
+            "research:live_detect_ug_patterns",
+            Some("Research.detect_ug_patterns")
+        )));
+        assert_eq!(tools.len(), 73);
     }
 }
