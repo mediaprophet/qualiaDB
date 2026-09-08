@@ -1434,7 +1434,7 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
             ),
             ToolChain::new(
                 ToolChainMetadata {
-                    id: "ai:agent".into(),
+                    id: "ai:agent_live".into(),
                     label: "Live Agent runtime".into(),
                     icon: "ai".into(),
                     description: "Curated Agent.* trace, verify, plan, execute, and evaluate binds."

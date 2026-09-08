@@ -3881,8 +3881,8 @@ mod tests {
         let chain = ai
             .chains()
             .iter()
-            .find(|chain| chain.metadata().id == "ai:agent")
-            .expect("ai:agent toolchain");
+            .find(|chain| chain.metadata().id == "ai:agent_live")
+            .expect("ai:agent_live toolchain");
         let tools: Vec<_> = chain
             .tools()
             .iter()
