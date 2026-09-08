@@ -1,5 +1,5 @@
 # QualiaDB — Multi-Agent Collaboration Ecosystem
-_Branch: `0.0.17-dev` | Last updated: 2026-06-17_
+_Branch: `0.0.37` | Last updated: 2026-09-08_
 
 This document is the coordination layer for concurrent or sequential AI-agent sessions
 working on the QualiaDB engine. Read it before writing a single line of code.

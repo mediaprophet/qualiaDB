@@ -50,7 +50,7 @@ mod tests {
             }],
             required_capabilities: vec![RequiredCapability {
                 id: "qualia.graph.query".into(),
-                min_version: "0.0.36".into(),
+                min_version: "0.0.37".into(),
             }],
             required_assets: vec![],
             state_schema: StateSchema {
@@ -64,7 +64,7 @@ mod tests {
             }],
             presentation_hints: vec![],
             compatibility: Compatibility {
-                min_engine_version: "0.0.36".into(),
+                min_engine_version: "0.0.37".into(),
                 max_engine_version: String::new(),
                 required_features: vec![],
             },
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn incompatible_when_min_engine_too_new() {
-        let mut reg = AppRegistry::with_engine_version("0.0.36");
+        let mut reg = AppRegistry::with_engine_version("0.0.37");
         let mut m = sample_manifest("did:q42:app:future");
         m.compatibility.min_engine_version = "0.0.99".into();
         let rec = reg.register_manifest(&m).unwrap();

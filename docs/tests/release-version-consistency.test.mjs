@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.35';
+const releaseVersion = '0.0.37';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -11,7 +11,7 @@ const workspaceMembers = [...rootManifest.matchAll(/^\s*"([^"]+)",?\s*$/gm)]
   .map((match) => match[1])
   .filter((member) => member.startsWith('crates/'));
 
-assert.equal(workspaceMembers.length, 25, 'expected all 25 workspace crates');
+assert.equal(workspaceMembers.length, 26, 'expected all 26 workspace crates');
 
 const workspacePackageNames = [];
 for (const member of workspaceMembers) {

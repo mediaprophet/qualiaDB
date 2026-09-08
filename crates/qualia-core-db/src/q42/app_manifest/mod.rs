@@ -76,7 +76,7 @@ mod tests {
             ],
             required_capabilities: vec![RequiredCapability {
                 id: "qualia.graph.query".into(),
-                min_version: "0.0.36".into(),
+                min_version: "0.0.37".into(),
             }],
             required_assets: vec![RequiredAsset {
                 asset_id: "did:q42:asset:chebi:261".into(),
@@ -103,7 +103,7 @@ mod tests {
                 value: "health-calm".into(),
             }],
             compatibility: Compatibility {
-                min_engine_version: "0.0.36".into(),
+                min_engine_version: "0.0.37".into(),
                 max_engine_version: String::new(),
                 required_features: vec!["q42-assets".into()],
             },

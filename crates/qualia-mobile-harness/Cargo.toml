@@ -1,6 +1,6 @@
 [package]
 name = "qualia-mobile-harness"
-version = "0.0.35"
+version = "0.0.37"
 edition = "2021"
 
 [dependencies]

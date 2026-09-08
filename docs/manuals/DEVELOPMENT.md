@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.33` | Last updated: 2026-08-15_
+_Branch: `0.0.37` | Last updated: 2026-09-08_
 
 ---
 
@@ -123,8 +123,8 @@ GitHub Actions (`.github/workflows/release.yml`) builds on tag push:
 - Flutter desktop bundles — `.dmg` (macOS), AppImage + `.deb` (Linux), `.exe` + `.msi` (Windows)
 
 ```bash
-git tag v0.0.33
-git push origin v0.0.33
+git tag v0.0.37
+git push origin v0.0.37
 ```
 
 ### Cross-compiling the CLI locally (Windows → Linux)
@@ -378,8 +378,8 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 To cut a release:
 
 ```bash
-git tag v0.0.33
-git push origin v0.0.33
+git tag v0.0.37
+git push origin v0.0.37
 ```
 
 ADRs (Architectural Decision Records): [`docs/manuals/adr/`](adr/)

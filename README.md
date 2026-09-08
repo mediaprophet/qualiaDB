@@ -126,7 +126,7 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.33 (active branch)** — active development, pre-release. Unified Q42 v3 is the
+**0.0.37 (active branch)** — active development, pre-release. Unified Q42 v3 is the
 only new-write graph container.
 
 Recent verification of the implemented surfaces includes:
