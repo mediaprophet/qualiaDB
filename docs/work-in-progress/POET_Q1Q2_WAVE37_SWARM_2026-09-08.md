@@ -1,7 +1,7 @@
 # Q1/Q2 incorporation wave 37 swarm — 2026-09-08
 
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
-**Status:** **Complete (pending parent verify)**  
+**Status:** **Complete (verified)**  
 **Prior:** wave 36 Complete — Social/Finance/ChatGraph leftovers  
 **Derived inventory after w36:** helper-aware Q2 ≈ 65
 
@@ -21,8 +21,10 @@ cargo test -p poet --lib every_registered_nonplacement_tool_has_an_explicit_poli
 cargo test -p poet --test product_integrity
 ```
 
-Expected after this wave: helper-aware Q2 ≈ 46.
+**Results (2026-09-08):** poet `wave37` **1** · policy **1** · integrity **11**.
+
+After this wave: helper-aware Q2 ≈ 45.
 
 ## Next
 
-Medical/Manifold/crypto, then remaining singles (`LinearAlgebra.gemm` Live only — no Host-widen).
+Wave 38 Medical/Manifold/crypto/DAG/FinancialModeling, then Wave 39 remaining singles (`LinearAlgebra.gemm` Live only — no Host-widen).

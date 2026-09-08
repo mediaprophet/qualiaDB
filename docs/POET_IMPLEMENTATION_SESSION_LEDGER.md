@@ -106,6 +106,7 @@ This is the sequential handoff record for
 | 2026-09-08 | Q1/Q2 wave 34 | Cursor Grok 4.6 | Complete (integrated) | Poet Live already-bound Render.gpu_* ×17; Host none | poet wave34 1; policy ok; integrity 11; helper-aware Q2≈98 | Not re-run | Remaining GPU/EMF then Social-Finance long-tail | Wave 35 |
 | 2026-09-08 | Q1/Q2 wave 35 | Cursor Grok 4.6 | Complete (integrated) | Poet Live remaining Render GPU/EMF ×17 (GPU leftover Q2 exhausted); Host none | poet wave35 1; policy ok; integrity 11; helper-aware Q2≈81 | Not re-run | Social/Finance/ChatGraph long-tail | Wave 36 |
 | 2026-09-08 | Q1/Q2 wave 36 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Social/Forensic×6 · Finance×3 · Corpus/ChatGraph/Interactive/SecondScreen×7; Host none | poet wave36 1; policy ok; integrity 11; helper-aware Q2≈65 | Not re-run | GraphMatch/Optimization/sampler/Capability | Wave 37 |
+| 2026-09-08 | Q1/Q2 wave 37 | Cursor Grok 4.6 | Complete (integrated) | Poet Live GraphMatch/GraphReasoning/Optimization×9 · sampler/Capability×10; Host none | poet wave37 1; policy ok; integrity 11; helper-aware Q2≈45 | Not re-run | Medical/Manifold/crypto/DAG/FinancialModeling | Wave 38 |
 
 ## Required closeout detail
 
