@@ -13,7 +13,9 @@
 | 28 | **Complete (integrated)** | Research investigation/hypothesis/assessment×20 |
 | 29 | **Complete (integrated)** | Research remainder×33 — **Research Q2 exhausted** |
 | 30 | **Complete (integrated)** | Render CPU scene/CSS/animation/SVG×17 |
+| 31 | **Complete (integrated)** | CG leftovers waves 19–23 ×25 |
 | 32 | **Complete (integrated)** | CG leftovers waves 24–26 ×24 — **CG leftover Q2 exhausted** |
+| 33 | **Complete (integrated)** | Animation leftovers×4 · numeric Ode×4 · HbbTV×4 |
 
 ### Wave 27 (this session)
 

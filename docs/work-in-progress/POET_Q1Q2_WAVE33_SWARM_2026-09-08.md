@@ -1,7 +1,7 @@
 # Q1/Q2 incorporation wave 33 swarm — 2026-09-08
 
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
-**Status:** **Complete (pending parent verify)**  
+**Status:** **Complete (verified)**  
 **Prior:** wave 32 Complete — CG leftover Q2 exhausted  
 **Derived inventory after w32:** helper-aware Q2 ≈ 127 (Render GPU ~34 + long-tail)
 
@@ -24,7 +24,9 @@ cargo test -p poet --lib every_registered_nonplacement_tool_has_an_explicit_poli
 cargo test -p poet --test product_integrity
 ```
 
-Expected after this wave: helper-aware Q2 ≈ 115.
+**Results (2026-09-08):** poet `wave33` **1** · policy **1** · integrity **11**.
+
+After this wave: helper-aware Q2 ≈ 115.
 
 ## Next
 
