@@ -146,7 +146,7 @@
       {
         "name": "EasingCurve",
         "kind": "enum",
-        "doc": "",
+        "doc": "Standard animation curve types.",
         "file": "curves.rs",
         "line": 10,
         "signature": "pub enum EasingCurve"
@@ -162,7 +162,7 @@
       {
         "name": "eval",
         "kind": "fn",
-        "doc": "",
+        "doc": "Evaluate the curve at normalized progress `t` in [0.0, 1.0].",
         "file": "curves.rs",
         "line": 85,
         "signature": "pub fn eval(&self, t: f64) -> f64 {"
@@ -170,7 +170,7 @@
       {
         "name": "CubicBezier",
         "kind": "struct",
-        "doc": "",
+        "doc": "Parametric Cubic Bézier curve defined by control points `(x1, y1)` and `(x2, y2)`.",
         "file": "curves.rs",
         "line": 251,
         "signature": "pub struct CubicBezier"
@@ -226,7 +226,7 @@
       {
         "name": "eval",
         "kind": "fn",
-        "doc": "",
+        "doc": "Evaluate the cubic Bézier curve at `x` in [0.0, 1.0].",
         "file": "curves.rs",
         "line": 347,
         "signature": "pub fn eval(&self, x: f64) -> f64 {"
@@ -474,7 +474,7 @@
       {
         "name": "Motor",
         "kind": "struct",
-        "doc": "",
+        "doc": "A 3D PGA Motor (even multivector / unit dual quaternion).\nReal part R = (r_w, r_x, r_y, r_z), Dual part D = (d_w, d_x, d_y, d_z).",
         "file": "pga.rs",
         "line": 11,
         "signature": "pub struct Motor"
@@ -482,7 +482,7 @@
       {
         "name": "MotorBivector",
         "kind": "struct",
-        "doc": "",
+        "doc": "Lie algebra se(3) screw bivector (rotation axis/angle + translation along screw axis).",
         "file": "pga.rs",
         "line": 24,
         "signature": "pub struct MotorBivector"
@@ -584,7 +584,7 @@
       {
         "name": "AnimationFamily",
         "kind": "enum",
-        "doc": "",
+        "doc": "The 10 Animation Families.",
         "file": "presets.rs",
         "line": 20,
         "signature": "pub enum AnimationFamily"
@@ -608,7 +608,7 @@
       {
         "name": "AnimationSample",
         "kind": "struct",
-        "doc": "",
+        "doc": "A standard animation evaluation output record.",
         "file": "presets.rs",
         "line": 68,
         "signature": "pub struct AnimationSample"
@@ -616,7 +616,7 @@
       {
         "name": "PresetInfo",
         "kind": "struct",
-        "doc": "",
+        "doc": "Metadata describing an animation preset.",
         "file": "presets.rs",
         "line": 90,
         "signature": "pub struct PresetInfo"
@@ -646,7 +646,7 @@
       {
         "name": "SpringConfig",
         "kind": "struct",
-        "doc": "",
+        "doc": "Spring configuration parameters.",
         "file": "spring.rs",
         "line": 10,
         "signature": "pub struct SpringConfig"
@@ -702,7 +702,7 @@
       {
         "name": "natural_frequency",
         "kind": "fn",
-        "doc": "",
+        "doc": "Natural undamped angular frequency: ω_n = sqrt(k / m).",
         "file": "spring.rs",
         "line": 62,
         "signature": "pub fn natural_frequency(&self) -> f64 {"
@@ -710,7 +710,7 @@
       {
         "name": "damping_ratio",
         "kind": "fn",
-        "doc": "",
+        "doc": "Damping ratio: ζ = c / (2 * sqrt(m * k)).",
         "file": "spring.rs",
         "line": 68,
         "signature": "pub fn damping_ratio(&self) -> f64 {"
@@ -718,7 +718,7 @@
       {
         "name": "SpringState1D",
         "kind": "struct",
-        "doc": "",
+        "doc": "State of a 1D spring simulation.",
         "file": "spring.rs",
         "line": 81,
         "signature": "pub struct SpringState1D"
@@ -750,7 +750,7 @@
       {
         "name": "SpringState3D",
         "kind": "struct",
-        "doc": "",
+        "doc": "3D Spring state (x, y, z) evaluated independently across components.",
         "file": "spring.rs",
         "line": 168,
         "signature": "pub struct SpringState3D"
@@ -788,7 +788,7 @@
       {
         "name": "Quat",
         "kind": "struct",
-        "doc": "",
+        "doc": "A 4D Unit Quaternion representing 3D spatial orientation [w, x, y, z].",
         "file": "squad.rs",
         "line": 8,
         "signature": "pub struct Quat"
@@ -946,7 +946,7 @@
       {
         "name": "BindDecl",
         "kind": "struct",
-        "doc": "",
+        "doc": "Two-way binding: `bind left <-> right using Clamp[0, 1] resolve latest;`",
         "file": "ast.rs",
         "line": 67,
         "signature": "pub struct BindDecl"
@@ -962,7 +962,7 @@
       {
         "name": "PresentDecl",
         "kind": "struct",
-        "doc": "",
+        "doc": "`present lamp { color: glow, pose: spin }` — a presentation sheaf surface.",
         "file": "ast.rs",
         "line": 84,
         "signature": "pub struct PresentDecl"
@@ -970,7 +970,7 @@
       {
         "name": "CellDecl",
         "kind": "struct",
-        "doc": "",
+        "doc": "A reactive cell declaration (e.g. `cell score := math.clamp(raw, 0, 100);`).",
         "file": "ast.rs",
         "line": 92,
         "signature": "pub struct CellDecl"
@@ -1002,7 +1002,7 @@
       {
         "name": "EnumDecl",
         "kind": "struct",
-        "doc": "",
+        "doc": "A user-defined enum declaration (T9).\n\n```vibe\nenum Shape {\n  Circle(f64),\n  Square(f64),\n  Rect(f64, f64),\n  Point,\n}\n```",
         "file": "ast.rs",
         "line": 142,
         "signature": "pub struct EnumDecl"
@@ -1010,7 +1010,7 @@
       {
         "name": "EnumVariant",
         "kind": "struct",
-        "doc": "",
+        "doc": "A variant of a user-defined enum (T9).",
         "file": "ast.rs",
         "line": 150,
         "signature": "pub struct EnumVariant"
@@ -1018,7 +1018,7 @@
       {
         "name": "FieldDecl",
         "kind": "struct",
-        "doc": "",
+        "doc": "A field declaration (T28).\n\n```vibe\nfield pressure_ambient: Pressure\n  unit: <qudt:KiloPascal>\n  support: region\n  representation: grid;\n```",
         "file": "ast.rs",
         "line": 166,
         "signature": "pub struct FieldDecl"
@@ -1026,7 +1026,7 @@
       {
         "name": "FieldSupport",
         "kind": "enum",
-        "doc": "",
+        "doc": "Field support describes spatial distribution (T28).",
         "file": "ast.rs",
         "line": 184,
         "signature": "pub enum FieldSupport"
@@ -1034,7 +1034,7 @@
       {
         "name": "FieldRepresentation",
         "kind": "enum",
-        "doc": "",
+        "doc": "Field representation describes storage/computation (T28).",
         "file": "ast.rs",
         "line": 203,
         "signature": "pub enum FieldRepresentation"
@@ -1042,7 +1042,7 @@
       {
         "name": "MaterialDecl",
         "kind": "struct",
-        "doc": "",
+        "doc": "A material declaration (T29).\n\n```vibe\nmaterial sucrose_cube: Material\n  yield: 50.0 <qudt:KiloPascal>\n  density: 1580.0 <qudt:KiloGramPerCubicMetre>;\n```",
         "file": "ast.rs",
         "line": 230,
         "signature": "pub struct MaterialDecl"
@@ -1050,7 +1050,7 @@
       {
         "name": "LawDecl",
         "kind": "struct",
-        "doc": "",
+        "doc": "A law declaration (T30).\n\n```vibe\nlaw crush\n  when sample(pressure_ambient, pose(self)) > self.material.yield\n  => transform.yield(self);\n```",
         "file": "ast.rs",
         "line": 247,
         "signature": "pub struct LawDecl"
@@ -1138,7 +1138,7 @@
       {
         "name": "ModalKind",
         "kind": "enum",
-        "doc": "",
+        "doc": "The first-class logic modalities supported in VibeScript.",
         "file": "ast.rs",
         "line": 472,
         "signature": "pub enum ModalKind"
@@ -1178,7 +1178,7 @@
       {
         "name": "ColorLit",
         "kind": "struct",
-        "doc": "",
+        "doc": "Packed sRGB + alpha from a `#rgb` / `#rrggbb` / `#rrggbbaa` literal.",
         "file": "ast.rs",
         "line": 530,
         "signature": "pub struct ColorLit"
@@ -1224,7 +1224,7 @@
       {
         "name": "MergeResult",
         "kind": "struct",
-        "doc": "",
+        "doc": "Result of a 3-way AST merge operation.",
         "file": "ast_merge.rs",
         "line": 12,
         "signature": "pub struct MergeResult"
@@ -1232,7 +1232,7 @@
       {
         "name": "MergeConflict",
         "kind": "struct",
-        "doc": "",
+        "doc": "A conflict where two branches modified the same AST node incompatibly.",
         "file": "ast_merge.rs",
         "line": 21,
         "signature": "pub struct MergeConflict"
@@ -1254,7 +1254,7 @@
       {
         "name": "PolicyViolation",
         "kind": "struct",
-        "doc": "",
+        "doc": "A policy violation found by the AST query engine.",
         "file": "ast_query.rs",
         "line": 34,
         "signature": "pub struct PolicyViolation"
@@ -1286,7 +1286,7 @@
       {
         "name": "QueryPattern",
         "kind": "enum",
-        "doc": "",
+        "doc": "An S-expression query pattern that matches against AST nodes.",
         "file": "ast_query.rs",
         "line": 65,
         "signature": "pub enum QueryPattern"
@@ -1302,7 +1302,7 @@
       {
         "name": "Policy",
         "kind": "struct",
-        "doc": "",
+        "doc": "A named policy with a query pattern and a violation message.",
         "file": "ast_query.rs",
         "line": 254,
         "signature": "pub struct Policy"
@@ -1456,7 +1456,7 @@
       {
         "name": "HostEnvironment",
         "kind": "enum",
-        "doc": "",
+        "doc": "Where the host is running (P16.1).",
         "file": "host.rs",
         "line": 9,
         "signature": "pub enum HostEnvironment"
@@ -1464,7 +1464,7 @@
       {
         "name": "AccelerationTier",
         "kind": "enum",
-        "doc": "",
+        "doc": "Acceleration the host will actually use this pass (P16.1).\nDefault is scalar. SIMD/GPU must be measured, not advertised.",
         "file": "host.rs",
         "line": 17,
         "signature": "pub enum AccelerationTier"
@@ -1476,6 +1476,374 @@
         "file": "host.rs",
         "line": 24,
         "signature": "pub trait Host"
+      },
+      {
+        "name": "Host::graph_query",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 25,
+        "signature": "fn graph_query(&mut self, args: &[Value], take: u64, span: Span) -> Result<Value, Diagnostic>;"
+      },
+      {
+        "name": "Host::graph_stage",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 27,
+        "signature": "fn graph_stage(&mut self, term: &Value, span: Span) -> Result<Value, Diagnostic>;"
+      },
+      {
+        "name": "Host::graph_commit",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 29,
+        "signature": "fn graph_commit(&mut self, span: Span) -> Result<Value, Diagnostic>;"
+      },
+      {
+        "name": "Host::graph_begin",
+        "kind": "fn",
+        "doc": "Open a transaction. Default is a no-op.",
+        "file": "host.rs",
+        "line": 32,
+        "signature": "fn graph_begin(&mut self, _span: Span) -> Result<(), Diagnostic>"
+      },
+      {
+        "name": "Host::graph_abort",
+        "kind": "fn",
+        "doc": "Drop uncommitted staged work. Default is a no-op.",
+        "file": "host.rs",
+        "line": 37,
+        "signature": "fn graph_abort(&mut self, _span: Span) -> Result<(), Diagnostic>"
+      },
+      {
+        "name": "Host::aura_validate",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 41,
+        "signature": "fn aura_validate("
+      },
+      {
+        "name": "Host::pulse_publish",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 48,
+        "signature": "fn pulse_publish("
+      },
+      {
+        "name": "Host::time_unix",
+        "kind": "fn",
+        "doc": "Wall clock as seconds since Unix epoch. External (core Â§11): forbidden\nin Pure cells. Default fails closed with E702 (WASM / hosts without a clock);\nnative hosts override with `SystemTime::now`. Replay uses the receipt clock,\nnot this binding.\n\n**DEPRECATED (X6, 2026-08-20):** Use `time_now` instead. Integer seconds\ncannot support sub-frame animation, physics dt, or deterministic WASM\nreplay. Kept as a projection helper for display/logging only.",
+        "file": "host.rs",
+        "line": 63,
+        "signature": "fn time_unix(&mut self, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::time_now",
+        "kind": "fn",
+        "doc": "The primary time primitive (X6): returns `Value::Instant` with\nnanosecond resolution, explicit `TimeScale`, and optional seal.\nDefault fails closed with E702. Native hosts override with\n`SystemTime::now` â†’ `Instant::unix(secs, nanos)`.",
+        "file": "host.rs",
+        "line": 75,
+        "signature": "fn time_now(&mut self, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::time_unix_nanos",
+        "kind": "fn",
+        "doc": "Structured Unix time: `{ secs: I64, nanos: U64 }` (T19).\nDefault calls `time_unix` and wraps it into a Record.",
+        "file": "host.rs",
+        "line": 85,
+        "signature": "fn time_unix_nanos(&mut self, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::time_monotonic_nanos",
+        "kind": "fn",
+        "doc": "Monotonic nanos for frame timing and physics dt (T20).\nDefault returns 0 (WASM has no monotonic clock until W12 replay Instant).",
+        "file": "host.rs",
+        "line": 96,
+        "signature": "fn time_monotonic_nanos(&mut self, _span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::quin_seal",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 100,
+        "signature": "fn quin_seal("
+      },
+      {
+        "name": "Host::hash_iri",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 114,
+        "signature": "fn hash_iri(&self, iri: &str) -> u64"
+      },
+      {
+        "name": "Host::graph_snapshot",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 123,
+        "signature": "fn graph_snapshot(&mut self, _span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::capability_resolve",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 127,
+        "signature": "fn capability_resolve(&mut self, id: &str, _span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::capability_invoke",
+        "kind": "fn",
+        "doc": "Reach an engine capability by id. Default fails closed.\n\n`LocalHost()` answers from in-process catalog kernels (animation, HID).\nPoet and other hosts override this to reach the engine.",
+        "file": "host.rs",
+        "line": 139,
+        "signature": "fn capability_invoke("
+      },
+      {
+        "name": "Host::host_version",
+        "kind": "fn",
+        "doc": "Host ABI version. Returns \"vibe-host-0.1\" for the current\ntrait surface. Hosts that add methods beyond 0.1 should\nreturn \"vibe-host-0.2\" or higher.",
+        "file": "host.rs",
+        "line": 156,
+        "signature": "fn host_version(&self) -> &str"
+      },
+      {
+        "name": "Host::environment",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 160,
+        "signature": "fn environment(&self) -> HostEnvironment"
+      },
+      {
+        "name": "Host::acceleration_tier",
+        "kind": "fn",
+        "doc": "",
+        "file": "host.rs",
+        "line": 171,
+        "signature": "fn acceleration_tier(&self) -> AccelerationTier"
+      },
+      {
+        "name": "Host::available_acceleration",
+        "kind": "fn",
+        "doc": "What the machine could run. Default equals this pass (`acceleration_tier`).",
+        "file": "host.rs",
+        "line": 176,
+        "signature": "fn available_acceleration(&self) -> AccelerationTier"
+      },
+      {
+        "name": "Host::time_proper_time",
+        "kind": "fn",
+        "doc": "Proper time along a worldline, in seconds. Default: not available\n(E702). Hosts with a manifold metric implementation override this.",
+        "file": "host.rs",
+        "line": 182,
+        "signature": "fn time_proper_time(&mut self, _worldline_id: u64, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::receipt_clock",
+        "kind": "fn",
+        "doc": "Deterministic replay clock for WASM. Returns None when no\nreplay clock is configured. When Some, the returned\n{ secs, nanos } is used instead of wall-clock time.",
+        "file": "host.rs",
+        "line": 193,
+        "signature": "fn receipt_clock(&mut self, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::field_sample",
+        "kind": "fn",
+        "doc": "Sample a field at a pose. Returns a Quantity. Default: E702.",
+        "file": "host.rs",
+        "line": 202,
+        "signature": "fn field_sample("
+      },
+      {
+        "name": "Host::law_apply",
+        "kind": "fn",
+        "doc": "Apply a law to arguments. Returns a Receipt. Default: E702.",
+        "file": "host.rs",
+        "line": 216,
+        "signature": "fn law_apply("
+      },
+      {
+        "name": "Host::supports_isolation",
+        "kind": "fn",
+        "doc": "Whether this host supports isolation snapshots for dry-run\nevaluation. Default: false. Hosts that can create an isolated\nsnapshot (e.g. PoetSnapshot::fork) override this to return true.",
+        "file": "host.rs",
+        "line": 232,
+        "signature": "fn supports_isolation(&self) -> bool"
+      },
+      {
+        "name": "Host::conservation_check",
+        "kind": "fn",
+        "doc": "Check whether a transformation preserves a conserved quantity (T34).\n\nGiven the before and after states (as Mixtures or Records with\nmass/energy/charge fields), verify that the specified conserved\nquantity is preserved within tolerance. Default: E702 (no\nconservation checker available).",
+        "file": "host.rs",
+        "line": 242,
+        "signature": "fn conservation_check("
+      },
+      {
+        "name": "Host::causal_relation",
+        "kind": "fn",
+        "doc": "Determine the causal relation between two events (T35).\n\nGiven two events (each an Instant + Pose, or a Record with `time`\nand `position` fields), determine whether they are timelike,\nlightlike, or spacelike separated. Default: E702 (no spacetime\nmetric available).",
+        "file": "host.rs",
+        "line": 263,
+        "signature": "fn causal_relation("
+      },
+      {
+        "name": "Host::dag_execute",
+        "kind": "fn",
+        "doc": "Execute a DAG pipeline (T24). The pipeline definition is passed\nas a Record value (from JSON or VibeScript construction). The\nhost executes the DAG nodes in topological order, invoking\ncapabilities for each node. Default: E702 (no DAG executor\navailable on this host).",
+        "file": "host.rs",
+        "line": 281,
+        "signature": "fn dag_execute("
+      },
+      {
+        "name": "Host::dag_validate",
+        "kind": "fn",
+        "doc": "Validate a DAG pipeline definition (T24). Returns Ok(Null) if\nvalid, Err with diagnostic if invalid (cycle, missing budget,\nmissing capability). Default: E702.",
+        "file": "host.rs",
+        "line": 297,
+        "signature": "fn dag_validate(&mut self, _pipeline: &Value, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::deontic_check",
+        "kind": "fn",
+        "doc": "Check a deontic prohibition (T25). Given a capability ID and\nthe current phase, verify that the capability is allowed. If\nforbidden, returns a sealed DeonticInterrupt receipt. Default:\nE702 (no deontic checker available).",
+        "file": "host.rs",
+        "line": 309,
+        "signature": "fn deontic_check("
+      },
+      {
+        "name": "Host::hid_poll",
+        "kind": "fn",
+        "doc": "Poll for the next inbound HID event (T42). Returns the next\nevent from the host's HID loop, or Null if no event is\navailable (non-blocking). Default: E702 (no HID loop on this\nhost).",
+        "file": "host.rs",
+        "line": 326,
+        "signature": "fn hid_poll(&mut self, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::hid_wait",
+        "kind": "fn",
+        "doc": "Wait for the next inbound HID event with a timeout (T42).\nReturns the next event, or Null if the timeout expired.\nDefault: E702.",
+        "file": "host.rs",
+        "line": 337,
+        "signature": "fn hid_wait(&mut self, _timeout_ns: u64, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::cue_post",
+        "kind": "fn",
+        "doc": "Post an outbound cue (T45) â€” haptic, audio, visual, or\naccessibility. The cue ID identifies the output channel and\nthe payload carries the cue data. Default: E702.",
+        "file": "host.rs",
+        "line": 348,
+        "signature": "fn cue_post("
+      },
+      {
+        "name": "Host::crypto_hash",
+        "kind": "fn",
+        "doc": "Compute a cryptographic hash (T-crypto). The algorithm is one of\n\"SHA-256\", \"SHA-512\", \"BLAKE3\". The data is a String (UTF-8) or\nhex-encoded String. Returns a Record `{ algorithm, hex, bytes }`.\nDefault: E702 (no crypto provider on this host).",
+        "file": "host.rs",
+        "line": 367,
+        "signature": "fn crypto_hash("
+      },
+      {
+        "name": "Host::crypto_hkdf",
+        "kind": "fn",
+        "doc": "Derive a key using HKDF-SHA256 (T-crypto). Returns the derived\nkey as a hex-encoded String. Default: E702.",
+        "file": "host.rs",
+        "line": 382,
+        "signature": "fn crypto_hkdf("
+      },
+      {
+        "name": "Host::crypto_aead_encrypt",
+        "kind": "fn",
+        "doc": "AEAD encrypt (T-crypto). Returns a Record\n`{ algorithm, ciphertext_hex, tag_hex, nonce_hex }`.\nDefault: E702.",
+        "file": "host.rs",
+        "line": 399,
+        "signature": "fn crypto_aead_encrypt("
+      },
+      {
+        "name": "Host::crypto_aead_decrypt",
+        "kind": "fn",
+        "doc": "AEAD decrypt (T-crypto). Returns the plaintext as a String, or\nan error if decryption fails. Default: E702.",
+        "file": "host.rs",
+        "line": 417,
+        "signature": "fn crypto_aead_decrypt("
+      },
+      {
+        "name": "Host::crypto_sign",
+        "kind": "fn",
+        "doc": "Sign data with a key (T-crypto). The key_id identifies the key\nin the host's key vault. Returns a Record\n`{ key_id, signature_hex, algorithm }`. Default: E702.",
+        "file": "host.rs",
+        "line": 437,
+        "signature": "fn crypto_sign(&mut self, _key_id: &str, _data: &str, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::crypto_verify",
+        "kind": "fn",
+        "doc": "Verify a signature (T-crypto). Returns Bool. Default: E702.",
+        "file": "host.rs",
+        "line": 446,
+        "signature": "fn crypto_verify("
+      },
+      {
+        "name": "Host::crypto_generate_key",
+        "kind": "fn",
+        "doc": "Generate a new key (T-crypto). The algorithm is one of \"Ed25519\",\n\"ML-DSA-65\". Returns the key_id String. Default: E702.",
+        "file": "host.rs",
+        "line": 462,
+        "signature": "fn crypto_generate_key(&mut self, _algorithm: &str, span: Span) -> Result<Value, Diagnostic>"
+      },
+      {
+        "name": "Host::zk_prove_threshold",
+        "kind": "fn",
+        "doc": "Prove, in zero knowledge, that a private `value` satisfies\n`value >= threshold`. Returns a Record\n`{ proof_hex, vk_hex, proof_id, circuit_id }`.\nDefault: E702 (no ZK proof system on this host).",
+        "file": "host.rs",
+        "line": 476,
+        "signature": "fn zk_prove_threshold("
+      },
+      {
+        "name": "Host::zk_verify_threshold",
+        "kind": "fn",
+        "doc": "Verify a ZK threshold proof against a public `threshold`.\nReturns Bool. Default: E702.",
+        "file": "host.rs",
+        "line": 491,
+        "signature": "fn zk_verify_threshold("
+      },
+      {
+        "name": "Host::zk_prove_range",
+        "kind": "fn",
+        "doc": "Prove, in zero knowledge, that a private `value` satisfies\n`lo <= value <= hi`. Returns a Record\n`{ proof_hex, vk_hex, proof_id, circuit_id }`.\nDefault: E702.",
+        "file": "host.rs",
+        "line": 509,
+        "signature": "fn zk_prove_range("
+      },
+      {
+        "name": "Host::zk_verify_range",
+        "kind": "fn",
+        "doc": "Verify a ZK range proof against public bounds `lo` and `hi`.\nReturns Bool. Default: E702.",
+        "file": "host.rs",
+        "line": 525,
+        "signature": "fn zk_verify_range("
+      },
+      {
+        "name": "Host::zk_prove_matmul",
+        "kind": "fn",
+        "doc": "Prove a matrix multiplication: given public A, B, and claimed\nC = AÂ·B, prove the multiplication is correct without revealing\nthe witness. Returns a Record `{ valid, result }`.\nDefault: E702.",
+        "file": "host.rs",
+        "line": 544,
+        "signature": "fn zk_prove_matmul("
+      },
+      {
+        "name": "Host::zk_list_circuits",
+        "kind": "fn",
+        "doc": "List all registered ZK circuits. Returns a List of circuit IDs.\nDefault: E702.",
+        "file": "host.rs",
+        "line": 562,
+        "signature": "fn zk_list_circuits(&mut self, span: Span) -> Result<Value, Diagnostic>"
       }
     ]
   },
@@ -1663,7 +2031,7 @@
       {
         "name": "ChunkDecodeError",
         "kind": "enum",
-        "doc": "",
+        "doc": "Codec error.",
         "file": "codec.rs",
         "line": 42,
         "signature": "pub enum ChunkDecodeError"
@@ -1693,7 +2061,7 @@
       {
         "name": "CompileError",
         "kind": "enum",
-        "doc": "",
+        "doc": "Compiler error.",
         "file": "compiler.rs",
         "line": 23,
         "signature": "pub enum CompileError"
@@ -1771,7 +2139,7 @@
       {
         "name": "Op",
         "kind": "enum",
-        "doc": "",
+        "doc": "A single bytecode opcode.",
         "file": "op.rs",
         "line": 88,
         "signature": "pub enum Op"
@@ -1795,7 +2163,7 @@
       {
         "name": "Const",
         "kind": "enum",
-        "doc": "",
+        "doc": "A constant value in the constant pool.",
         "file": "op.rs",
         "line": 268,
         "signature": "pub enum Const"
@@ -1803,7 +2171,7 @@
       {
         "name": "FuncMeta",
         "kind": "struct",
-        "doc": "",
+        "doc": "Metadata for a compiled user-defined function.",
         "file": "op.rs",
         "line": 275,
         "signature": "pub struct FuncMeta"
@@ -1811,7 +2179,7 @@
       {
         "name": "Chunk",
         "kind": "struct",
-        "doc": "",
+        "doc": "A compiled bytecode chunk — the unit of compilation and execution.",
         "file": "op.rs",
         "line": 290,
         "signature": "pub struct Chunk"
@@ -1929,7 +2297,7 @@
       {
         "name": "VmError",
         "kind": "enum",
-        "doc": "",
+        "doc": "VM execution error.",
         "file": "vm.rs",
         "line": 17,
         "signature": "pub enum VmError"
@@ -1975,7 +2343,7 @@
       {
         "name": "EffectClass",
         "kind": "enum",
-        "doc": "",
+        "doc": "The effect class of a host call (T51).",
         "file": "capability_schema.rs",
         "line": 23,
         "signature": "pub enum EffectClass"
@@ -1991,7 +2359,7 @@
       {
         "name": "HonestyLabel",
         "kind": "enum",
-        "doc": "",
+        "doc": "The honesty label for a host call (T51).",
         "file": "capability_schema.rs",
         "line": 47,
         "signature": "pub enum HonestyLabel"
@@ -2007,7 +2375,7 @@
       {
         "name": "SchemaArg",
         "kind": "struct",
-        "doc": "",
+        "doc": "A single argument in a host call schema (T51).",
         "file": "capability_schema.rs",
         "line": 71,
         "signature": "pub struct SchemaArg"
@@ -2039,7 +2407,7 @@
       {
         "name": "SchemaEntry",
         "kind": "struct",
-        "doc": "",
+        "doc": "A host call schema entry (T51).",
         "file": "capability_schema.rs",
         "line": 114,
         "signature": "pub struct SchemaEntry"
@@ -2612,7 +2980,7 @@
       {
         "name": "ArFrameLevel",
         "kind": "enum",
-        "doc": "",
+        "doc": "AR frame hierarchy level (OCS §5.1).",
         "file": "ar.rs",
         "line": 11,
         "signature": "pub enum ArFrameLevel"
@@ -2628,7 +2996,7 @@
       {
         "name": "SpatialAnchor",
         "kind": "struct",
-        "doc": "",
+        "doc": "A persistent spatial anchor — world lock (OCS §5.2).",
         "file": "ar.rs",
         "line": 35,
         "signature": "pub struct SpatialAnchor"
@@ -2700,7 +3068,7 @@
       {
         "name": "HeadPose",
         "kind": "struct",
-        "doc": "",
+        "doc": "Head pose — 6-DOF tracking transform (OCS §5.1, L_6.2).",
         "file": "ar.rs",
         "line": 142,
         "signature": "pub struct HeadPose"
@@ -2724,7 +3092,7 @@
       {
         "name": "VioWorldRoot",
         "kind": "struct",
-        "doc": "",
+        "doc": "VIO/SLAM metric world root (OCS §5.1, L_6.1).",
         "file": "ar.rs",
         "line": 176,
         "signature": "pub struct VioWorldRoot"
@@ -2770,7 +3138,7 @@
       {
         "name": "AtmosphericLayer",
         "kind": "enum",
-        "doc": "",
+        "doc": "Atmospheric layer classification (OCS §2.5).",
         "file": "atmosphere.rs",
         "line": 10,
         "signature": "pub enum AtmosphericLayer"
@@ -2794,7 +3162,7 @@
       {
         "name": "AtmosphericProfile",
         "kind": "struct",
-        "doc": "",
+        "doc": "An atmospheric profile for a celestial body (OCS §2.5).",
         "file": "atmosphere.rs",
         "line": 43,
         "signature": "pub struct AtmosphericProfile"
@@ -2858,7 +3226,7 @@
       {
         "name": "MagnetosphereType",
         "kind": "enum",
-        "doc": "",
+        "doc": "Magnetosphere classification (OCS §2.4).",
         "file": "atmosphere.rs",
         "line": 166,
         "signature": "pub enum MagnetosphereType"
@@ -2874,7 +3242,7 @@
       {
         "name": "MagnetosphereProfile",
         "kind": "struct",
-        "doc": "",
+        "doc": "A magnetospheric profile for a celestial body (OCS §2.4).",
         "file": "atmosphere.rs",
         "line": 190,
         "signature": "pub struct MagnetosphereProfile"
@@ -2928,7 +3296,7 @@
       {
         "name": "HierarchyLevel",
         "kind": "enum",
-        "doc": "",
+        "doc": "Hierarchy level index (OCS §3.1, §4, §5).\n\nL_-2 through L_12, covering 61 orders of magnitude from\nPlanck scale to cosmological horizons.",
         "file": "cb_usri.rs",
         "line": 34,
         "signature": "pub enum HierarchyLevel"
@@ -2960,7 +3328,7 @@
       {
         "name": "CompactBinaryUsri",
         "kind": "struct",
-        "doc": "",
+        "doc": "Compact Binary USRI — 16-byte fixed-size (OCS §13.2).",
         "file": "cb_usri.rs",
         "line": 117,
         "signature": "pub struct CompactBinaryUsri"
@@ -3054,7 +3422,7 @@
       {
         "name": "CelestialBodyClass",
         "kind": "enum",
-        "doc": "",
+        "doc": "Celestial body classification (OCS §2.1).",
         "file": "celestial.rs",
         "line": 10,
         "signature": "pub enum CelestialBodyClass"
@@ -3094,7 +3462,7 @@
       {
         "name": "ReferenceSurface",
         "kind": "enum",
-        "doc": "",
+        "doc": "Reference ellipsoid type (OCS §2.2).",
         "file": "celestial.rs",
         "line": 79,
         "signature": "pub enum ReferenceSurface"
@@ -3102,7 +3470,7 @@
       {
         "name": "GravitationalField",
         "kind": "struct",
-        "doc": "",
+        "doc": "Gravitational field model (OCS §2.3).",
         "file": "celestial.rs",
         "line": 92,
         "signature": "pub struct GravitationalField"
@@ -3142,7 +3510,7 @@
       {
         "name": "CelestialBodyProfile",
         "kind": "struct",
-        "doc": "",
+        "doc": "A celestial body profile (OCS §2).",
         "file": "celestial.rs",
         "line": 162,
         "signature": "pub struct CelestialBodyProfile"
@@ -3252,7 +3620,7 @@
       {
         "name": "CoLocatedLayer",
         "kind": "struct",
-        "doc": "",
+        "doc": "A co-located reality layer (OCS §9).",
         "file": "colocated.rs",
         "line": 14,
         "signature": "pub struct CoLocatedLayer"
@@ -3292,7 +3660,7 @@
       {
         "name": "CoLocatedStack",
         "kind": "struct",
-        "doc": "",
+        "doc": "A stack of co-located reality layers at the same physical position (OCS §9).",
         "file": "colocated.rs",
         "line": 73,
         "signature": "pub struct CoLocatedStack"
@@ -3362,7 +3730,7 @@
       {
         "name": "Curvature",
         "kind": "enum",
-        "doc": "",
+        "doc": "Curvature parameter k: -1 (open), 0 (flat), +1 (closed).",
         "file": "flrw.rs",
         "line": 26,
         "signature": "pub enum Curvature"
@@ -3378,7 +3746,7 @@
       {
         "name": "FlrwMetric",
         "kind": "struct",
-        "doc": "",
+        "doc": "FLRW metric parameters (OCS §1.2).",
         "file": "flrw.rs",
         "line": 44,
         "signature": "pub struct FlrwMetric"
@@ -3450,7 +3818,7 @@
       {
         "name": "RedshiftObservation",
         "kind": "struct",
-        "doc": "",
+        "doc": "A cosmological redshift observation (OCS §1.2).",
         "file": "flrw.rs",
         "line": 117,
         "signature": "pub struct RedshiftObservation"
@@ -3466,7 +3834,7 @@
       {
         "name": "FloatingOrigin",
         "kind": "struct",
-        "doc": "",
+        "doc": "Floating-origin precision for intergalactic coordinates (OCS §14, OCS-T01).\n\nAt cosmological distances, absolute coordinates lose precision.\nThe floating-origin scheme stores offsets relative to a local origin,\nkeeping coordinate values small enough for f64 precision.",
         "file": "flrw.rs",
         "line": 149,
         "signature": "pub struct FloatingOrigin"
@@ -3512,7 +3880,7 @@
       {
         "name": "GroundingStatus",
         "kind": "enum",
-        "doc": "",
+        "doc": "Epistemic grounding classification (OCS §10.1).",
         "file": "grounding.rs",
         "line": 10,
         "signature": "pub enum GroundingStatus"
@@ -3544,7 +3912,7 @@
       {
         "name": "NarrativeEntity",
         "kind": "struct",
-        "doc": "",
+        "doc": "A narrative entity with grounding classification (OCS §10).",
         "file": "grounding.rs",
         "line": 61,
         "signature": "pub struct NarrativeEntity"
@@ -3702,7 +4070,7 @@
       {
         "name": "ScalingLens",
         "kind": "struct",
-        "doc": "",
+        "doc": "A scaling lens — maps between hierarchy levels (OCS §12.4).\n\nThe OCS spans 61 orders of magnitude. The scaling lens provides\nconversion factors between adjacent levels, enabling a \"zoom\"\noperation that preserves physical relationships.",
         "file": "microverse.rs",
         "line": 51,
         "signature": "pub struct ScalingLens"
@@ -3750,7 +4118,7 @@
       {
         "name": "ParticleClass",
         "kind": "enum",
-        "doc": "",
+        "doc": "A subatomic particle classification for microverse realms (OCS §12.4).",
         "file": "microverse.rs",
         "line": 113,
         "signature": "pub enum ParticleClass"
@@ -3766,7 +4134,7 @@
       {
         "name": "ParticleProfile",
         "kind": "struct",
-        "doc": "",
+        "doc": "A particle profile for microverse simulations (OCS §12.4).",
         "file": "microverse.rs",
         "line": 143,
         "signature": "pub struct ParticleProfile"
@@ -3854,7 +4222,7 @@
       {
         "name": "MicroverseRealm",
         "kind": "struct",
-        "doc": "",
+        "doc": "A microverse realm — a subatomic-scale reality (OCS §12.4).",
         "file": "microverse.rs",
         "line": 280,
         "signature": "pub struct MicroverseRealm"
@@ -3892,7 +4260,7 @@
       {
         "name": "NestedRealm",
         "kind": "struct",
-        "doc": "",
+        "doc": "A nested realm level (OCS §7).\n\nRealities can be nested: a holodeck simulation inside a starship,\na dream level inside a character, etc. Each level has its own\ncoordinate system, clock, and paraconsistent isolation context.",
         "file": "nested.rs",
         "line": 24,
         "signature": "pub struct NestedRealm"
@@ -3940,7 +4308,7 @@
       {
         "name": "NestingStack",
         "kind": "struct",
-        "doc": "",
+        "doc": "A stack of nested realms (OCS §7).",
         "file": "nested.rs",
         "line": 81,
         "signature": "pub struct NestingStack"
@@ -4010,7 +4378,7 @@
       {
         "name": "AffectiveStatus",
         "kind": "struct",
-        "doc": "",
+        "doc": "Affective status vector (OCS §8.2).",
         "file": "observer.rs",
         "line": 10,
         "signature": "pub struct AffectiveStatus"
@@ -4042,7 +4410,7 @@
       {
         "name": "DoxasticBelief",
         "kind": "struct",
-        "doc": "",
+        "doc": "A doxastic belief with evidential weight (OCS §8.2).",
         "file": "observer.rs",
         "line": 80,
         "signature": "pub struct DoxasticBelief"
@@ -4050,7 +4418,7 @@
       {
         "name": "CognitiveLens",
         "kind": "struct",
-        "doc": "",
+        "doc": "Cognitive lens — perceptual/sensory transfer function (OCS §8.2).",
         "file": "observer.rs",
         "line": 90,
         "signature": "pub struct CognitiveLens"
@@ -4058,7 +4426,7 @@
       {
         "name": "ObserverFiber",
         "kind": "struct",
-        "doc": "",
+        "doc": "Observer fiber — the inward inversion modeling how an observer\nperceives, filters, and constructs their experienced reality (OCS §8.2).",
         "file": "observer.rs",
         "line": 111,
         "signature": "pub struct ObserverFiber"
@@ -4208,7 +4576,7 @@
       {
         "name": "CosmicNQuin",
         "kind": "struct",
-        "doc": "",
+        "doc": "A 48-byte cosmic NQuin built from OCS components.\n\nThis is a `repr(C)` flat struct matching the `NQuin` ABI in\n`qualia-core-db`. It can be transmuted to `NQuin` via `bytemuck`\nwhen crossing the crate boundary.",
         "file": "opcode.rs",
         "line": 98,
         "signature": "pub struct CosmicNQuin"
@@ -4382,7 +4750,7 @@
       {
         "name": "TimelineBranch",
         "kind": "struct",
-        "doc": "",
+        "doc": "A timeline branch in a universe (OCS §6.1).",
         "file": "parallel.rs",
         "line": 20,
         "signature": "pub struct TimelineBranch"
@@ -4430,7 +4798,7 @@
       {
         "name": "TimelineDag",
         "kind": "struct",
-        "doc": "",
+        "doc": "A timeline DAG — directed acyclic graph of timeline branches (OCS §6).",
         "file": "parallel.rs",
         "line": 104,
         "signature": "pub struct TimelineDag"
@@ -4492,7 +4860,7 @@
       {
         "name": "StardateEra",
         "kind": "enum",
-        "doc": "",
+        "doc": "Stardate era (OCS §12.1).",
         "file": "stardate.rs",
         "line": 9,
         "signature": "pub enum StardateEra"
@@ -4500,7 +4868,7 @@
       {
         "name": "Stardate",
         "kind": "struct",
-        "doc": "",
+        "doc": "A parsed stardate with its era.",
         "file": "stardate.rs",
         "line": 20,
         "signature": "pub struct Stardate"
@@ -4546,7 +4914,7 @@
       {
         "name": "LawNature",
         "kind": "enum",
-        "doc": "",
+        "doc": "Law nature — the epistemic classification of a law (OCS §11.1).",
         "file": "theory.rs",
         "line": 12,
         "signature": "pub enum LawNature"
@@ -4570,7 +4938,7 @@
       {
         "name": "AssuranceLevel",
         "kind": "enum",
-        "doc": "",
+        "doc": "Progressive assurance hierarchy (OCS §11.2).",
         "file": "theory.rs",
         "line": 46,
         "signature": "pub enum AssuranceLevel"
@@ -4594,7 +4962,7 @@
       {
         "name": "TheoryLineage",
         "kind": "enum",
-        "doc": "",
+        "doc": "Theory lineage relationship (OCS §11.1).",
         "file": "theory.rs",
         "line": 84,
         "signature": "pub enum TheoryLineage"
@@ -4610,7 +4978,7 @@
       {
         "name": "ApplicabilityEnvelope",
         "kind": "struct",
-        "doc": "",
+        "doc": "Applicability envelope — the domain where a theory applies (OCS §11.1).",
         "file": "theory.rs",
         "line": 104,
         "signature": "pub struct ApplicabilityEnvelope"
@@ -4618,7 +4986,7 @@
       {
         "name": "TheoryPackage",
         "kind": "struct",
-        "doc": "",
+        "doc": "A theory package — a signed, classified law with provenance (OCS §11.1).",
         "file": "theory.rs",
         "line": 117,
         "signature": "pub struct TheoryPackage"
@@ -4696,7 +5064,7 @@
       {
         "name": "Geodetic",
         "kind": "struct",
-        "doc": "",
+        "doc": "Geodetic coordinates: latitude, longitude, altitude (OCS §4.1).",
         "file": "transforms.rs",
         "line": 13,
         "signature": "pub struct Geodetic"
@@ -4704,7 +5072,7 @@
       {
         "name": "Ecef",
         "kind": "struct",
-        "doc": "",
+        "doc": "ECEF Cartesian coordinates: X, Y, Z (OCS §4.1).",
         "file": "transforms.rs",
         "line": 24,
         "signature": "pub struct Ecef"
@@ -4712,7 +5080,7 @@
       {
         "name": "Enu",
         "kind": "struct",
-        "doc": "",
+        "doc": "ENU local tangent plane: East, North, Up (OCS §4.1).",
         "file": "transforms.rs",
         "line": 32,
         "signature": "pub struct Enu"
@@ -4776,7 +5144,7 @@
       {
         "name": "FourVector",
         "kind": "struct",
-        "doc": "",
+        "doc": "A relativistic 4-vector in Minkowski spacetime: (c*t, x, y, z).",
         "file": "transforms.rs",
         "line": 179,
         "signature": "pub struct FourVector"
@@ -4800,7 +5168,7 @@
       {
         "name": "LorentzBoost",
         "kind": "struct",
-        "doc": "",
+        "doc": "Relativistic Lorentz Boost SO+(1,3) parameterised by dimensionless velocity vector beta = v / c.",
         "file": "transforms.rs",
         "line": 199,
         "signature": "pub struct LorentzBoost"
@@ -4846,7 +5214,7 @@
       {
         "name": "RealmClass",
         "kind": "enum",
-        "doc": "",
+        "doc": "Realm class — the top-level ontology of a USRI (OCS §13.1).",
         "file": "usri.rs",
         "line": 15,
         "signature": "pub enum RealmClass"
@@ -4878,7 +5246,7 @@
       {
         "name": "Usri",
         "kind": "struct",
-        "doc": "",
+        "doc": "A parsed USRI (OCS §13.1).",
         "file": "usri.rs",
         "line": 79,
         "signature": "pub struct Usri"
@@ -4921,7 +5289,7 @@
       {
         "name": "WarpScale",
         "kind": "enum",
-        "doc": "",
+        "doc": "Warp scale variant (OCS §12.2).",
         "file": "warp.rs",
         "line": 13,
         "signature": "pub enum WarpScale"
@@ -5117,7 +5485,7 @@
       {
         "name": "NodeEffect",
         "kind": "enum",
-        "doc": "",
+        "doc": "Effect class for a DAG node (mirrors `ast::EffectClass`).",
         "file": "dag.rs",
         "line": 39,
         "signature": "pub enum NodeEffect"
@@ -5125,7 +5493,7 @@
       {
         "name": "DagNode",
         "kind": "struct",
-        "doc": "",
+        "doc": "A single agent step in the DAG.",
         "file": "dag.rs",
         "line": 49,
         "signature": "pub struct DagNode"
@@ -5181,7 +5549,7 @@
       {
         "name": "DagEdge",
         "kind": "struct",
-        "doc": "",
+        "doc": "A dependency edge: `from` must complete before `to` starts.",
         "file": "dag.rs",
         "line": 112,
         "signature": "pub struct DagEdge"
@@ -5197,7 +5565,7 @@
       {
         "name": "DagError",
         "kind": "enum",
-        "doc": "",
+        "doc": "Errors that can occur during DAG construction or execution.",
         "file": "dag.rs",
         "line": 128,
         "signature": "pub enum DagError"
@@ -5205,7 +5573,7 @@
       {
         "name": "NodeStatus",
         "kind": "enum",
-        "doc": "",
+        "doc": "Execution status of a DAG node.",
         "file": "dag.rs",
         "line": 147,
         "signature": "pub enum NodeStatus"
@@ -5349,7 +5717,7 @@
       {
         "name": "RouterStrategy",
         "kind": "enum",
-        "doc": "",
+        "doc": "Routing strategy for the control unit.",
         "file": "dag.rs",
         "line": 378,
         "signature": "pub enum RouterStrategy"
@@ -5445,7 +5813,7 @@
       {
         "name": "JudgeClaim",
         "kind": "struct",
-        "doc": "",
+        "doc": "A claim submitted to the judge frame for verification.",
         "file": "dag.rs",
         "line": 518,
         "signature": "pub struct JudgeClaim"
@@ -5523,7 +5891,7 @@
       {
         "name": "DecompileOptions",
         "kind": "struct",
-        "doc": "",
+        "doc": "Formatting options for the decompiler.",
         "file": "decompiler.rs",
         "line": 13,
         "signature": "pub struct DecompileOptions"
@@ -5639,7 +6007,7 @@
       {
         "name": "Phase",
         "kind": "struct",
-        "doc": "",
+        "doc": "An execution phase with an associated capability allow-list.",
         "file": "deontic_interrupt.rs",
         "line": 37,
         "signature": "pub struct Phase"
@@ -5695,7 +6063,7 @@
       {
         "name": "InterruptType",
         "kind": "enum",
-        "doc": "",
+        "doc": "The type of deontic interrupt.",
         "file": "deontic_interrupt.rs",
         "line": 88,
         "signature": "pub enum InterruptType"
@@ -5703,7 +6071,7 @@
       {
         "name": "DeonticInterrupt",
         "kind": "struct",
-        "doc": "",
+        "doc": "A deontic interrupt event.",
         "file": "deontic_interrupt.rs",
         "line": 101,
         "signature": "pub struct DeonticInterrupt"
@@ -5727,7 +6095,7 @@
       {
         "name": "LeaseError",
         "kind": "enum",
-        "doc": "",
+        "doc": "Errors from the phase leaser.",
         "file": "deontic_interrupt.rs",
         "line": 147,
         "signature": "pub enum LeaseError"
@@ -5933,7 +6301,7 @@
       {
         "name": "DiagnoseReport",
         "kind": "struct",
-        "doc": "",
+        "doc": "Result of [`diagnose`].",
         "file": "diagnose.rs",
         "line": 9,
         "signature": "pub struct DiagnoseReport"
@@ -6211,7 +6579,7 @@
       {
         "name": "GalileanMorphism",
         "kind": "struct",
-        "doc": "",
+        "doc": "A Galilean frame morphism — translation + rotation + velocity (W5).",
         "file": "frame_morphism.rs",
         "line": 41,
         "signature": "pub struct GalileanMorphism"
@@ -6283,7 +6651,7 @@
       {
         "name": "LorentzMorphism",
         "kind": "struct",
-        "doc": "",
+        "doc": "A Lorentz frame morphism — special relativistic transformation (W5 future).\n\nDeferred: requires the full 4D spacetime metric and time dilation.\nThe struct exists to document the interface, but the implementation\nis not yet available.",
         "file": "frame_morphism.rs",
         "line": 230,
         "signature": "pub struct LorentzMorphism"
@@ -6351,7 +6719,7 @@
       {
         "name": "EventKind",
         "kind": "enum",
-        "doc": "",
+        "doc": "The kind of inbound event.",
         "file": "hid.rs",
         "line": 35,
         "signature": "pub enum EventKind"
@@ -6375,7 +6743,7 @@
       {
         "name": "EventPayload",
         "kind": "enum",
-        "doc": "",
+        "doc": "The payload of an inbound event — either inline data or a fat\nbuffer reference.",
         "file": "hid.rs",
         "line": 120,
         "signature": "pub enum EventPayload"
@@ -6431,7 +6799,7 @@
       {
         "name": "InboundEvent",
         "kind": "struct",
-        "doc": "",
+        "doc": "An inbound event record — the structured ABI for HID/sensor data.\n\nEvery inbound event has:\n- A timestamp (nanoseconds, monotonic or Unix).\n- A source ID (which device/sensor produced this event).\n- An event kind (pointer, keyboard, touch, etc.).\n- A payload (inline data or fat buffer reference).\n- An optional capability lease ID (for biosignals and other\n  capability-leased sources).",
         "file": "hid.rs",
         "line": 181,
         "signature": "pub struct InboundEvent"
@@ -6599,7 +6967,7 @@
       {
         "name": "CueKind",
         "kind": "enum",
-        "doc": "",
+        "doc": "Outbound cue kinds for assistive output (T43/T45).",
         "file": "hid.rs",
         "line": 530,
         "signature": "pub enum CueKind"
@@ -6623,7 +6991,7 @@
       {
         "name": "OutboundCue",
         "kind": "struct",
-        "doc": "",
+        "doc": "An outbound cue — haptic, audio, visual, or accessibility output.",
         "file": "hid.rs",
         "line": 564,
         "signature": "pub struct OutboundCue"
@@ -6685,7 +7053,7 @@
       {
         "name": "LawKind",
         "kind": "enum",
-        "doc": "",
+        "doc": "Whether a law is physically valid or a fictional/game rule (T72).",
         "file": "law_package.rs",
         "line": 32,
         "signature": "pub enum LawKind"
@@ -6709,7 +7077,7 @@
       {
         "name": "LawPackage",
         "kind": "struct",
-        "doc": "",
+        "doc": "A signed law package — a law declaration with provenance and\ncryptographic signature (T72, W10).",
         "file": "law_package.rs",
         "line": 63,
         "signature": "pub struct LawPackage"
@@ -6765,7 +7133,7 @@
       {
         "name": "LawStore",
         "kind": "struct",
-        "doc": "",
+        "doc": "A registry of law packages — a law store (T72, W10).",
         "file": "law_package.rs",
         "line": 181,
         "signature": "pub struct LawStore"
@@ -6953,7 +7321,7 @@
       {
         "name": "LexiconPin",
         "kind": "struct",
-        "doc": "",
+        "doc": "Recorded `lexicon: \"packId@SemVer\"` pin.",
         "file": "lexicon_pin.rs",
         "line": 31,
         "signature": "pub struct LexiconPin"
@@ -6977,7 +7345,7 @@
       {
         "name": "LexiconFraming",
         "kind": "enum",
-        "doc": "",
+        "doc": "Pack framing — living senses must not be Thing-washed as artifact.",
         "file": "lexicon_pin.rs",
         "line": 74,
         "signature": "pub enum LexiconFraming"
@@ -7001,7 +7369,7 @@
       {
         "name": "AliasRow",
         "kind": "struct",
-        "doc": "",
+        "doc": "Alias row for migrate / `suggested_fix` (shape doc).",
         "file": "lexicon_pin.rs",
         "line": 101,
         "signature": "pub struct AliasRow"
@@ -7089,7 +7457,7 @@
       {
         "name": "PackManifest",
         "kind": "struct",
-        "doc": "",
+        "doc": "Minimal pack-manifest field read (fixture / example JSON; no serde).",
         "file": "lexicon_pin.rs",
         "line": 312,
         "signature": "pub struct PackManifest"
@@ -7111,7 +7479,7 @@
       {
         "name": "Locale",
         "kind": "struct",
-        "doc": "",
+        "doc": "A language locale identifier (e.g. \"en\", \"zh\").",
         "file": "locale.rs",
         "line": 28,
         "signature": "pub struct Locale(&'static str);"
@@ -7191,7 +7559,7 @@
       {
         "name": "LocaleTable",
         "kind": "struct",
-        "doc": "",
+        "doc": "A keyword locale table — maps locale-specific keywords to canonical\nEnglish forms.",
         "file": "locale.rs",
         "line": 63,
         "signature": "pub struct LocaleTable"
@@ -7303,7 +7671,7 @@
       {
         "name": "LocaleRegistry",
         "kind": "struct",
-        "doc": "",
+        "doc": "A registry of locale tables.",
         "file": "locale.rs",
         "line": 528,
         "signature": "pub struct LocaleRegistry"
@@ -7381,7 +7749,7 @@
       {
         "name": "ModuleId",
         "kind": "struct",
-        "doc": "",
+        "doc": "A module identifier — an IRI that uniquely identifies a module (T63).",
         "file": "module_system.rs",
         "line": 29,
         "signature": "pub struct ModuleId(pub String);"
@@ -7405,7 +7773,7 @@
       {
         "name": "ModuleExport",
         "kind": "struct",
-        "doc": "",
+        "doc": "A module export — a function or capability the module provides (T63).",
         "file": "module_system.rs",
         "line": 49,
         "signature": "pub struct ModuleExport"
@@ -7413,7 +7781,7 @@
       {
         "name": "ExportKind",
         "kind": "enum",
-        "doc": "",
+        "doc": "The kind of module export (T63).",
         "file": "module_system.rs",
         "line": 60,
         "signature": "pub enum ExportKind"
@@ -7429,7 +7797,7 @@
       {
         "name": "ModuleEntry",
         "kind": "struct",
-        "doc": "",
+        "doc": "A module entry — metadata for a module in the catalog (T63).",
         "file": "module_system.rs",
         "line": 81,
         "signature": "pub struct ModuleEntry"
@@ -7501,7 +7869,7 @@
       {
         "name": "ModuleCatalog",
         "kind": "struct",
-        "doc": "",
+        "doc": "A module catalog — the module graph (T63).\n\nTracks all known modules and their dependency edges. Supports\ncycle detection and topological ordering for loading.",
         "file": "module_system.rs",
         "line": 160,
         "signature": "pub struct ModuleCatalog"
@@ -7635,7 +8003,7 @@
       {
         "name": "MeasurementContext",
         "kind": "struct",
-        "doc": "",
+        "doc": "A measurement context — the observer's stalk (W7).\n\nCaptures who observed, with what instrument, at what instant, and\nthe frame of reference. The measurement value itself is separate;\nthis is the epistemic context.",
         "file": "observer.rs",
         "line": 54,
         "signature": "pub struct MeasurementContext"
@@ -7691,7 +8059,7 @@
       {
         "name": "IdentifierModality",
         "kind": "enum",
-        "doc": "",
+        "doc": "The modality of an identifier view (W9).",
         "file": "observer.rs",
         "line": 171,
         "signature": "pub enum IdentifierModality"
@@ -7715,7 +8083,7 @@
       {
         "name": "IdentifierView",
         "kind": "struct",
-        "doc": "",
+        "doc": "An identifier view — one modality's presentation of an identity (W9).",
         "file": "observer.rs",
         "line": 205,
         "signature": "pub struct IdentifierView"
@@ -7747,7 +8115,7 @@
       {
         "name": "LevelOfDetail",
         "kind": "enum",
-        "doc": "",
+        "doc": "A level of detail (LOD) for multi-scale sheaves (W14).\n\nThe LOD is a physical scale, not a rendering parameter. Different\nscales reveal different structure.",
         "file": "observer.rs",
         "line": 253,
         "signature": "pub enum LevelOfDetail"
@@ -7779,7 +8147,7 @@
       {
         "name": "MultiScaleSheaf",
         "kind": "struct",
-        "doc": "",
+        "doc": "A multi-scale sheaf filter — a sheaf viewed at a specific LOD (W14).",
         "file": "observer.rs",
         "line": 296,
         "signature": "pub struct MultiScaleSheaf"
@@ -7811,7 +8179,7 @@
       {
         "name": "CivicInstant",
         "kind": "struct",
-        "doc": "",
+        "doc": "A civic instant — time asserted by a civic authority (W15).\n\nThe authority is the metrology institute or time source that\nasserts the instant. This makes the provenance of time claims\nexplicit — \"NIST says it's 12:00\" is different from \"my local\nclock says it's 12:00\".",
         "file": "observer.rs",
         "line": 345,
         "signature": "pub struct CivicInstant"
@@ -7843,7 +8211,7 @@
       {
         "name": "AgentCharacteristic",
         "kind": "struct",
-        "doc": "",
+        "doc": "A characteristic of an agent, logged from behaviour (T59).",
         "file": "observer.rs",
         "line": 388,
         "signature": "pub struct AgentCharacteristic"
@@ -7875,7 +8243,7 @@
       {
         "name": "AgentCharacteristicsKb",
         "kind": "struct",
-        "doc": "",
+        "doc": "An agent characteristics KB — a log of agent characteristics\nobserved from behaviour (T59).",
         "file": "observer.rs",
         "line": 431,
         "signature": "pub struct AgentCharacteristicsKb"
@@ -8121,7 +8489,7 @@
       {
         "name": "FieldQuantity",
         "kind": "enum",
-        "doc": "",
+        "doc": "Physical quantity kind of an ambient field.",
         "file": "fields.rs",
         "line": 12,
         "signature": "pub enum FieldQuantity"
@@ -8137,7 +8505,7 @@
       {
         "name": "FieldUnit",
         "kind": "enum",
-        "doc": "",
+        "doc": "Standardized unit of measurement for field samples.",
         "file": "fields.rs",
         "line": 38,
         "signature": "pub enum FieldUnit"
@@ -8153,7 +8521,7 @@
       {
         "name": "AnalyticFieldProfile",
         "kind": "enum",
-        "doc": "",
+        "doc": "Analytic field model parameterization.",
         "file": "fields.rs",
         "line": 70,
         "signature": "pub enum AnalyticFieldProfile"
@@ -8161,7 +8529,7 @@
       {
         "name": "FieldDeclaration",
         "kind": "struct",
-        "doc": "",
+        "doc": "Ambient Field Declaration.",
         "file": "fields.rs",
         "line": 91,
         "signature": "pub struct FieldDeclaration"
@@ -8193,7 +8561,7 @@
       {
         "name": "sample_at",
         "kind": "fn",
-        "doc": "",
+        "doc": "Sample the field value at a 3D position [x, y, z].",
         "file": "fields.rs",
         "line": 148,
         "signature": "pub fn sample_at(&self, position: &[f64]) -> f64 {"
@@ -8207,7 +8575,7 @@
       {
         "name": "ContinuantState",
         "kind": "struct",
-        "doc": "",
+        "doc": "State of an embodied continuant in the physical simulation.",
         "file": "laws.rs",
         "line": 14,
         "signature": "pub struct ContinuantState"
@@ -8215,7 +8583,7 @@
       {
         "name": "InteractionEvent",
         "kind": "enum",
-        "doc": "",
+        "doc": "Physical interaction event resulting from law evaluation.",
         "file": "laws.rs",
         "line": 26,
         "signature": "pub enum InteractionEvent"
@@ -8245,7 +8613,7 @@
       {
         "name": "MechanicalFacet",
         "kind": "struct",
-        "doc": "",
+        "doc": "Mechanical response facet.",
         "file": "materials.rs",
         "line": 10,
         "signature": "pub struct MechanicalFacet"
@@ -8253,7 +8621,7 @@
       {
         "name": "OpticalFacet",
         "kind": "struct",
-        "doc": "",
+        "doc": "Optical response facet.",
         "file": "materials.rs",
         "line": 23,
         "signature": "pub struct OpticalFacet"
@@ -8261,7 +8629,7 @@
       {
         "name": "AcousticFacet",
         "kind": "struct",
-        "doc": "",
+        "doc": "Acoustic response facet.",
         "file": "materials.rs",
         "line": 34,
         "signature": "pub struct AcousticFacet"
@@ -8269,7 +8637,7 @@
       {
         "name": "ChemicalFacet",
         "kind": "struct",
-        "doc": "",
+        "doc": "Chemical and dissolution response facet.",
         "file": "materials.rs",
         "line": 43,
         "signature": "pub struct ChemicalFacet"
@@ -8277,7 +8645,7 @@
       {
         "name": "ThermalFacet",
         "kind": "struct",
-        "doc": "",
+        "doc": "Thermal response facet.",
         "file": "materials.rs",
         "line": 56,
         "signature": "pub struct ThermalFacet"
@@ -8285,7 +8653,7 @@
       {
         "name": "MaterialSignature",
         "kind": "struct",
-        "doc": "",
+        "doc": "A complete, multi-faceted Material Signature attached to a Continuant.",
         "file": "materials.rs",
         "line": 69,
         "signature": "pub struct MaterialSignature"
@@ -8323,7 +8691,7 @@
       {
         "name": "GalileanMorphism",
         "kind": "struct",
-        "doc": "",
+        "doc": "A Galilean frame morphism — the low-velocity limit.\n\nt' = t\nx' = x - v*t\n\nNo time dilation, no length contraction. Valid for v << c.",
         "file": "morphism.rs",
         "line": 12,
         "signature": "pub struct GalileanMorphism"
@@ -8355,7 +8723,7 @@
       {
         "name": "LorentzMorphism",
         "kind": "struct",
-        "doc": "",
+        "doc": "A Lorentz frame morphism — the relativistic transform.\n\nAlong the x-axis with velocity v:\nt' = gamma * (t - v*x/c²)\nx' = gamma * (x - v*t)\n\nwhere gamma = 1/sqrt(1 - v²/c²).\n\nTime dilation and length contraction are explicit. Valid for all\nv < c.",
         "file": "morphism.rs",
         "line": 57,
         "signature": "pub struct LorentzMorphism"
@@ -8425,7 +8793,7 @@
       {
         "name": "Waypoint",
         "kind": "struct",
-        "doc": "",
+        "doc": "A waypoint on a worldline — an instant plus the pose at that instant.",
         "file": "trajectory.rs",
         "line": 7,
         "signature": "pub struct Waypoint"
@@ -8449,7 +8817,7 @@
       {
         "name": "WorldLineTrajectory",
         "kind": "struct",
-        "doc": "",
+        "doc": "A worldline trajectory — the time-like self of a continuant (W2).",
         "file": "trajectory.rs",
         "line": 33,
         "signature": "pub struct WorldLineTrajectory"
@@ -8511,7 +8879,7 @@
       {
         "name": "PresentationModality",
         "kind": "enum",
-        "doc": "",
+        "doc": "A presentation modality — the output channel.",
         "file": "presentation.rs",
         "line": 38,
         "signature": "pub enum PresentationModality"
@@ -8535,7 +8903,7 @@
       {
         "name": "PresentationKind",
         "kind": "enum",
-        "doc": "",
+        "doc": "The kind of presentation within a modality.",
         "file": "presentation.rs",
         "line": 72,
         "signature": "pub enum PresentationKind"
@@ -8551,7 +8919,7 @@
       {
         "name": "Presentation",
         "kind": "struct",
-        "doc": "",
+        "doc": "A single presentation of a value in one modality.",
         "file": "presentation.rs",
         "line": 105,
         "signature": "pub struct Presentation"
@@ -8615,7 +8983,7 @@
       {
         "name": "PresentationSheaf",
         "kind": "struct",
-        "doc": "",
+        "doc": "A presentation sheaf — a value plus its presentations across\nmodalities.\n\nThe sheaf condition is that all presentations agree on the\nunderlying value. This is checked by `PresentationSheaf::check()`,\nwhich verifies that every presentation maps back to the same\nsource value.",
         "file": "presentation.rs",
         "line": 206,
         "signature": "pub struct PresentationSheaf"
@@ -8677,7 +9045,7 @@
       {
         "name": "PrettyOptions",
         "kind": "struct",
-        "doc": "",
+        "doc": "Pretty-print options.",
         "file": "pretty.rs",
         "line": 31,
         "signature": "pub struct PrettyOptions"
@@ -8685,7 +9053,7 @@
       {
         "name": "PrettyField",
         "kind": "struct",
-        "doc": "",
+        "doc": "A pretty-printable field declaration.",
         "file": "pretty.rs",
         "line": 52,
         "signature": "pub struct PrettyField"
@@ -8717,7 +9085,7 @@
       {
         "name": "PrettyMaterial",
         "kind": "struct",
-        "doc": "",
+        "doc": "A pretty-printable material declaration.",
         "file": "pretty.rs",
         "line": 88,
         "signature": "pub struct PrettyMaterial"
@@ -8749,7 +9117,7 @@
       {
         "name": "PrettyLaw",
         "kind": "struct",
-        "doc": "",
+        "doc": "A pretty-printable law declaration.",
         "file": "pretty.rs",
         "line": 124,
         "signature": "pub struct PrettyLaw"
@@ -8773,7 +9141,7 @@
       {
         "name": "PrettyDocument",
         "kind": "struct",
-        "doc": "",
+        "doc": "A document of pretty-printable declarations.",
         "file": "pretty.rs",
         "line": 149,
         "signature": "pub struct PrettyDocument"
@@ -8827,7 +9195,7 @@
       {
         "name": "ProjectOptions",
         "kind": "struct",
-        "doc": "",
+        "doc": "Options controlling how the projector formats source text.",
         "file": "projectional.rs",
         "line": 32,
         "signature": "pub struct ProjectOptions"
@@ -8851,7 +9219,7 @@
       {
         "name": "Edit",
         "kind": "enum",
-        "doc": "",
+        "doc": "A structural edit operation on a `Program`.\n\nEdits are typed — they operate on the AST structure, not on text.\nThis is the core of projectional authoring: the structure is\nauthoritative, text is derived.",
         "file": "projectional.rs",
         "line": 961,
         "signature": "pub enum Edit"
@@ -8969,7 +9337,7 @@
       {
         "name": "Dimension",
         "kind": "struct",
-        "doc": "",
+        "doc": "SI Base Dimensions: Length (m), Mass (kg), Time (s), Current (A),\nTemperature (K), Amount of substance (mol), Luminous intensity (cd).",
         "file": "quantity.rs",
         "line": 10,
         "signature": "pub struct Dimension"
@@ -9113,7 +9481,7 @@
       {
         "name": "Unit",
         "kind": "struct",
-        "doc": "",
+        "doc": "A physical unit with a dimension, scaling factor to SI base units, and optional affine offset.",
         "file": "quantity.rs",
         "line": 175,
         "signature": "pub struct Unit"
@@ -9153,7 +9521,7 @@
       {
         "name": "UnitId",
         "kind": "struct",
-        "doc": "",
+        "doc": "Canonical unit identifier used at check time (T73 / UnitId).",
         "file": "quantity.rs",
         "line": 269,
         "signature": "pub struct UnitId"
@@ -9191,7 +9559,7 @@
       {
         "name": "ReactiveCellError",
         "kind": "enum",
-        "doc": "",
+        "doc": "An error that can occur in the reactive cell graph engine.",
         "file": "reactive_cell.rs",
         "line": 11,
         "signature": "pub enum ReactiveCellError"
@@ -9199,7 +9567,7 @@
       {
         "name": "ReactiveCell",
         "kind": "struct",
-        "doc": "",
+        "doc": "A compiled reactive cell node.",
         "file": "reactive_cell.rs",
         "line": 46,
         "signature": "pub struct ReactiveCell"
@@ -9207,7 +9575,7 @@
       {
         "name": "ReactiveCellGraph",
         "kind": "struct",
-        "doc": "",
+        "doc": "Compiled reactive cell dependency graph.",
         "file": "reactive_cell.rs",
         "line": 67,
         "signature": "pub struct ReactiveCellGraph"
@@ -9333,7 +9701,7 @@
       {
         "name": "ReflectionConfig",
         "kind": "struct",
-        "doc": "",
+        "doc": "Configuration for the reflection loop.",
         "file": "reflection.rs",
         "line": 31,
         "signature": "pub struct ReflectionConfig"
@@ -9341,7 +9709,7 @@
       {
         "name": "StageResult",
         "kind": "struct",
-        "doc": "",
+        "doc": "The outcome of a single reflection stage.",
         "file": "reflection.rs",
         "line": 63,
         "signature": "pub struct StageResult"
@@ -9349,7 +9717,7 @@
       {
         "name": "ReflectionResult",
         "kind": "struct",
-        "doc": "",
+        "doc": "The overall result of the reflection loop.",
         "file": "reflection.rs",
         "line": 115,
         "signature": "pub struct ReflectionResult"
@@ -9427,7 +9795,7 @@
       {
         "name": "ReplayTimeline",
         "kind": "struct",
-        "doc": "",
+        "doc": "A recorded timeline of Instants with optional payloads (W12).",
         "file": "replay_clock.rs",
         "line": 33,
         "signature": "pub struct ReplayTimeline"
@@ -9491,7 +9859,7 @@
       {
         "name": "ReplayClock",
         "kind": "struct",
-        "doc": "",
+        "doc": "A deterministic replay clock — the only WASM clock (W12).\n\nYields Instants from a recorded timeline. Each call to `tick()`\nadvances to the next recorded Instant. When the timeline is\nexhausted, the clock returns the last Instant (or fails closed\nif the timeline was empty).",
         "file": "replay_clock.rs",
         "line": 108,
         "signature": "pub struct ReplayClock"
@@ -9499,7 +9867,7 @@
       {
         "name": "ExhaustedPolicy",
         "kind": "enum",
-        "doc": "",
+        "doc": "What to do when the replay timeline is exhausted (W12).",
         "file": "replay_clock.rs",
         "line": 119,
         "signature": "pub enum ExhaustedPolicy"
@@ -10039,7 +10407,7 @@
       {
         "name": "Stalk",
         "kind": "struct",
-        "doc": "",
+        "doc": "A stalk — an isolated agent context (T47).\n\nThe stalk is a pointer to an isolated `PoetSnapshot`, not a copied\ntranscript. It carries:\n- A snapshot ID (opaque handle to the host's snapshot store).\n- A capability lease ID (what capabilities this stalk is allowed).\n- A pulse topic prefix (what events this stalk subscribes to).\n\nThe stalk is the agent's \"local patch\" — the region of the graph\nit can see and act on. Outside the stalk, the agent is blind.",
         "file": "sheaf.rs",
         "line": 35,
         "signature": "pub struct Stalk"
@@ -10071,7 +10439,7 @@
       {
         "name": "SheafCondition",
         "kind": "struct",
-        "doc": "",
+        "doc": "A sheaf condition — a Pure predicate checked at commit (T48).\n\nThe sheaf condition verifies that staged deltas are consistent\nbefore they are committed. If the condition fails, the result is\na diagnostic (not an exception unwind). The host decides whether\nto retry, quarantine, or reject.",
         "file": "sheaf.rs",
         "line": 117,
         "signature": "pub struct SheafCondition"
@@ -10095,7 +10463,7 @@
       {
         "name": "SheafResult",
         "kind": "enum",
-        "doc": "",
+        "doc": "Result of checking a sheaf condition at commit.",
         "file": "sheaf.rs",
         "line": 151,
         "signature": "pub enum SheafResult"
@@ -10103,7 +10471,7 @@
       {
         "name": "Simplex",
         "kind": "struct",
-        "doc": "",
+        "doc": "A simplex — a named record of jointly-required cells/graph shapes (T49).\n\nA simplex declares that a set of cells (or graph shapes) must all\nbe present together. If any member is missing, the load or commit\nis rejected. This is the \"jointly-required\" constraint: you can't\nhave a face without its edges, or an edge without its vertices.",
         "file": "sheaf.rs",
         "line": 170,
         "signature": "pub struct Simplex"
@@ -10135,7 +10503,7 @@
       {
         "name": "TopologicalTear",
         "kind": "struct",
-        "doc": "",
+        "doc": "A topological tear — a diagnostic + evidential (μ, λ) on a sealed receipt (T50).\n\nWhen a stalk's context is torn (quarantined), the tear is recorded\nas a sealed receipt with:\n- The diagnostic (what went wrong).\n- The evidential μ (provenance weight) and λ (wavelength/penalty).\n- The stalk ID that was torn.\n\nQuarantine context is a host routing decision — the tear receipt\nis the evidence the host uses to decide what to do.",
         "file": "sheaf.rs",
         "line": 224,
         "signature": "pub struct TopologicalTear"
@@ -10159,7 +10527,7 @@
       {
         "name": "LocalSection",
         "kind": "struct",
-        "doc": "",
+        "doc": "A local section of a sheaf over open set / simplex U_i.",
         "file": "sheaf.rs",
         "line": 266,
         "signature": "pub struct LocalSection"
@@ -10183,7 +10551,7 @@
       {
         "name": "CechCover",
         "kind": "struct",
-        "doc": "",
+        "doc": "An open cover consisting of local sections.",
         "file": "sheaf.rs",
         "line": 293,
         "signature": "pub struct CechCover"
@@ -10275,7 +10643,7 @@
       {
         "name": "TickPolicy",
         "kind": "enum",
-        "doc": "",
+        "doc": "The tick policy — what happens when ticks arrive under load (T68).",
         "file": "tick_policy.rs",
         "line": 35,
         "signature": "pub enum TickPolicy"
@@ -10299,7 +10667,7 @@
       {
         "name": "TickEvent",
         "kind": "struct",
-        "doc": "",
+        "doc": "A tick event — a timestamped signal from the host's tick loop.",
         "file": "tick_policy.rs",
         "line": 69,
         "signature": "pub struct TickEvent"
@@ -10307,7 +10675,7 @@
       {
         "name": "TickDecision",
         "kind": "struct",
-        "doc": "",
+        "doc": "The result of applying a tick policy to a queue of pending ticks.",
         "file": "tick_policy.rs",
         "line": 80,
         "signature": "pub struct TickDecision"
@@ -10331,7 +10699,7 @@
       {
         "name": "TickQueue",
         "kind": "struct",
-        "doc": "",
+        "doc": "A tick queue with a policy. Bounded — never grows unboundedly.",
         "file": "tick_policy.rs",
         "line": 115,
         "signature": "pub struct TickQueue"
@@ -10409,7 +10777,7 @@
       {
         "name": "KeywordTranslator",
         "kind": "struct",
-        "doc": "",
+        "doc": "A keyword translator — maps canonical English keywords to a target\nlocale's keywords.",
         "file": "translate.rs",
         "line": 31,
         "signature": "pub struct KeywordTranslator"
@@ -10457,7 +10825,7 @@
       {
         "name": "Tier2Label",
         "kind": "struct",
-        "doc": "",
+        "doc": "A tier-2 identifier label — an `rdfs:label` for an IRI in a specific\nlocale (T39).",
         "file": "translate.rs",
         "line": 153,
         "signature": "pub struct Tier2Label"
@@ -10481,7 +10849,7 @@
       {
         "name": "Tier2Registry",
         "kind": "struct",
-        "doc": "",
+        "doc": "A registry of tier-2 identifier labels (T39).",
         "file": "translate.rs",
         "line": 182,
         "signature": "pub struct Tier2Registry"
@@ -10551,7 +10919,7 @@
       {
         "name": "TriviaKind",
         "kind": "enum",
-        "doc": "",
+        "doc": "The kind of trivia.",
         "file": "trivia.rs",
         "line": 23,
         "signature": "pub enum TriviaKind"
@@ -10559,7 +10927,7 @@
       {
         "name": "Trivia",
         "kind": "struct",
-        "doc": "",
+        "doc": "A single trivia element — a comment or whitespace gap.",
         "file": "trivia.rs",
         "line": 34,
         "signature": "pub struct Trivia"
@@ -10607,7 +10975,7 @@
       {
         "name": "TriviaSink",
         "kind": "struct",
-        "doc": "",
+        "doc": "A sink that collects trivia as the lexer advances.\nUse [`TriviaSink::new`] to create a collecting sink, or\n[`TriviaSink::disabled`] to create a discarding sink.",
         "file": "trivia.rs",
         "line": 89,
         "signature": "pub struct TriviaSink"
@@ -10719,7 +11087,7 @@
       {
         "name": "CstNode",
         "kind": "struct",
-        "doc": "",
+        "doc": "A CST node — an AST node with its leading and trailing trivia.\n\nThis is a generic wrapper that preserves the trivia around a node\nso that the source can be reconstructed.",
         "file": "trivia.rs",
         "line": 186,
         "signature": "pub struct CstNode<T>"
@@ -10795,7 +11163,7 @@
       {
         "name": "IdentifierPolicyError",
         "kind": "enum",
-        "doc": "",
+        "doc": "The result of validating a Unicode identifier.",
         "file": "unicode_ident.rs",
         "line": 103,
         "signature": "pub enum IdentifierPolicyError"
@@ -10865,7 +11233,7 @@
       {
         "name": "TimeScale",
         "kind": "enum",
-        "doc": "",
+        "doc": "Time scale for an [`Value::Instant`].",
         "file": "value.rs",
         "line": 7,
         "signature": "pub enum TimeScale"
@@ -10873,7 +11241,7 @@
       {
         "name": "Instant",
         "kind": "struct",
-        "doc": "",
+        "doc": "A point in time with a known scale, exact secs+nanos, and an optional\ncryptographic seal (T1).\n\nReplaces `time.unix() -> i64` as the primitive. The seal is a\nsignature over `(scale, secs, nanos, frame)` proving the instant was\nasserted by a specific authority.",
         "file": "value.rs",
         "line": 27,
         "signature": "pub struct Instant"
@@ -10881,7 +11249,7 @@
       {
         "name": "Duration",
         "kind": "struct",
-        "doc": "",
+        "doc": "An exact duration: secs + nanos. No float subtraction (T2).",
         "file": "value.rs",
         "line": 39,
         "signature": "pub struct Duration"
@@ -10889,7 +11257,7 @@
       {
         "name": "Quantity",
         "kind": "struct",
-        "doc": "",
+        "doc": "A physical quantity: a value with a required unit IRI (T3).\n\nMixing `kPa` and `Pa` without conversion is a type error. Dimensionless\nquantities have an explicit empty unit IRI.",
         "file": "value.rs",
         "line": 49,
         "signature": "pub struct Quantity"
@@ -10897,7 +11265,7 @@
       {
         "name": "Frame",
         "kind": "struct",
-        "doc": "",
+        "doc": "A reference frame: origin + basis vectors (T4).\n\nLocal by default. A morphism, not a naked mat4.",
         "file": "value.rs",
         "line": 59,
         "signature": "pub struct Frame"
@@ -10905,7 +11273,7 @@
       {
         "name": "Pose",
         "kind": "struct",
-        "doc": "",
+        "doc": "A pose: position + orientation within a frame (T4).",
         "file": "value.rs",
         "line": 70,
         "signature": "pub struct Pose"
@@ -10913,7 +11281,7 @@
       {
         "name": "Transform",
         "kind": "struct",
-        "doc": "",
+        "doc": "A transform: translation + rotation + scale (T4).",
         "file": "value.rs",
         "line": 80,
         "signature": "pub struct Transform"
@@ -10921,7 +11289,7 @@
       {
         "name": "FieldRef",
         "kind": "struct",
-        "doc": "",
+        "doc": "An opaque handle to a sampled field (T5). Scripts do not see the grid.",
         "file": "value.rs",
         "line": 89,
         "signature": "pub struct FieldRef"
@@ -10929,7 +11297,7 @@
       {
         "name": "MaterialRef",
         "kind": "struct",
-        "doc": "",
+        "doc": "An opaque handle to a material signature (T5).",
         "file": "value.rs",
         "line": 98,
         "signature": "pub struct MaterialRef"
@@ -10937,7 +11305,7 @@
       {
         "name": "TensorRef",
         "kind": "struct",
-        "doc": "",
+        "doc": "An opaque handle to a 10D tensor on the host (T52).\nScripts never see the raw tensor data — they see this handle\nand can pass it to host capabilities that accept TensorRef.",
         "file": "value.rs",
         "line": 109,
         "signature": "pub struct TensorRef"
@@ -10945,7 +11313,7 @@
       {
         "name": "GeometryRef",
         "kind": "struct",
-        "doc": "",
+        "doc": "An opaque handle to a geometry asset on the host (T52).\nScripts never see the raw geometry — they see this handle.",
         "file": "value.rs",
         "line": 119,
         "signature": "pub struct GeometryRef"
@@ -10953,7 +11321,7 @@
       {
         "name": "AssetRef",
         "kind": "struct",
-        "doc": "",
+        "doc": "An opaque handle to a digital asset on the host (T52).\nScripts never see the raw asset bytes — they see this handle.",
         "file": "value.rs",
         "line": 129,
         "signature": "pub struct AssetRef"
@@ -10961,7 +11329,7 @@
       {
         "name": "SpeciesRef",
         "kind": "struct",
-        "doc": "",
+        "doc": "An opaque handle to a chemical species (T33).\n\nA species is a distinct chemical entity (e.g. H₂O, NaCl, sucrose).\nThe handle carries an IRI and a content hash for provenance. Scripts\ndo not see the full species definition — they reference it by handle\nand the host resolves it via `field.sample()` or `law.apply()`.",
         "file": "value.rs",
         "line": 143,
         "signature": "pub struct SpeciesRef"
@@ -10969,7 +11337,7 @@
       {
         "name": "Mixture",
         "kind": "struct",
-        "doc": "",
+        "doc": "A mixture of chemical species with composition data (T33).\n\nSolubility-as-boolean cannot express oil/water. A mixture carries mole\nfractions (or mass fractions) for each species, plus phase information\nand miscibility data.",
         "file": "value.rs",
         "line": 156,
         "signature": "pub struct Mixture"
@@ -10977,7 +11345,7 @@
       {
         "name": "MixturePhase",
         "kind": "enum",
-        "doc": "",
+        "doc": "Phase of a mixture (T33).",
         "file": "value.rs",
         "line": 176,
         "signature": "pub enum MixturePhase"
@@ -10985,7 +11353,7 @@
       {
         "name": "Miscibility",
         "kind": "enum",
-        "doc": "",
+        "doc": "Miscibility between mixtures (T33).",
         "file": "value.rs",
         "line": 186,
         "signature": "pub enum Miscibility"
@@ -10993,7 +11361,7 @@
       {
         "name": "ConservationResult",
         "kind": "struct",
-        "doc": "",
+        "doc": "A conservation law check result (T34).\n\nWhen a law transforms a mixture (or any state with conserved quantities),\nthe host's `conservation_check` method returns this value to indicate\nwhether the transformation preserves the conserved quantity.",
         "file": "value.rs",
         "line": 201,
         "signature": "pub struct ConservationResult"
@@ -11001,7 +11369,7 @@
       {
         "name": "ConservationQuantity",
         "kind": "enum",
-        "doc": "",
+        "doc": "The conserved quantity being checked (T34).",
         "file": "value.rs",
         "line": 217,
         "signature": "pub enum ConservationQuantity"
@@ -11009,7 +11377,7 @@
       {
         "name": "CausalRelation",
         "kind": "enum",
-        "doc": "",
+        "doc": "A causal relation between two events in spacetime (T35).\n\nGiven two events (Instant + Pose), their separation determines whether\none can causally influence the other. The light cone divides spacetime\ninto:\n- **Timelike**: inside the cone — subluminal signal can connect them\n- **Lightlike (null)**: on the cone — only light can connect them\n- **Spacelike**: outside the cone — no causal connection possible",
         "file": "value.rs",
         "line": 241,
         "signature": "pub enum CausalRelation"
@@ -11033,7 +11401,7 @@
       {
         "name": "DisclosureBoundary",
         "kind": "struct",
-        "doc": "",
+        "doc": "Four-bit disclosure boundary (T56). Each bit is independent.\n\n`.gitignore` is publication only. This struct tracks all four\ndimensions of disclosure control:\n- **Publication**: visible in public outputs (reports, UI).\n- **Replication**: may be copied to other nodes/stores.\n- **Agency**: may be acted upon by agents (inference, hooks).\n- **Exfiltration**: may leave the principal's trust boundary.",
         "file": "value.rs",
         "line": 271,
         "signature": "pub struct DisclosureBoundary"
@@ -11073,7 +11441,7 @@
       {
         "name": "WorldLine",
         "kind": "struct",
-        "doc": "",
+        "doc": "A worldline: a continuant through Instant × Pose (T6).\n\nKills UUID-as-identity. A worldline is the identity of a thing that\npersists through time, anchored to its spatiotemporal trajectory.",
         "file": "value.rs",
         "line": 323,
         "signature": "pub struct WorldLine"
@@ -11081,7 +11449,7 @@
       {
         "name": "EnumValue",
         "kind": "struct",
-        "doc": "",
+        "doc": "A user-defined enum value (T9). Carries the enum name, variant name,\nand optional payload values. Unit variants have an empty payload.",
         "file": "value.rs",
         "line": 335,
         "signature": "pub struct EnumValue"
@@ -11105,7 +11473,7 @@
       {
         "name": "QuinRef",
         "kind": "struct",
-        "doc": "",
+        "doc": "An opaque 48-byte handle to a Super-Quin / NQuin (T7).\n\nScripts do not see the raw `subject`/`predicate`/`object`/`context`/\n`metadata`/`parity` fields. The handle is a content-addressed reference\nthat the host resolves. This replaces `Value::Quin { s, p, o, c }` as\nthe preferred representation — `Quin` remains for backward compatibility\nbut new code should use `QuinRef`.\n\nThe 6 × `u64` fields are the full NQuin payload (subject, predicate,\nobject, context, metadata, parity) but they are opaque to scripts —\nthe `as_quin_ref()` accessor returns the handle, not the fields.\nHost code can access the raw fields via `raw_fields()`.",
         "file": "value.rs",
         "line": 372,
         "signature": "pub struct QuinRef"
@@ -11553,7 +11921,7 @@
       {
         "name": "language_version",
         "kind": "fn",
-        "doc": "",
+        "doc": "Get the VibeScript language version string.",
         "file": "lib.rs",
         "line": 105,
         "signature": "pub fn language_version() -> String {"
@@ -11561,7 +11929,7 @@
       {
         "name": "host_version",
         "kind": "fn",
-        "doc": "",
+        "doc": "Frozen host ABI stamp (`vibe-host-0.1`).",
         "file": "lib.rs",
         "line": 111,
         "signature": "pub fn host_version() -> String {"
@@ -11569,7 +11937,7 @@
       {
         "name": "capability_invoke",
         "kind": "fn",
-        "doc": "",
+        "doc": "Capability invoke pin — default fail-closed E300 (parity with Host::capability_invoke).\nArgs are accepted as a JSON string for the JS boundary.",
         "file": "lib.rs",
         "line": 118,
         "signature": "pub fn capability_invoke(id: &str, _args_json: &str) -> JsValue {"
@@ -11577,7 +11945,7 @@
       {
         "name": "parse_cell_src",
         "kind": "fn",
-        "doc": "",
+        "doc": "Parse a cell expression (`= expr`).\nReturns `{ ok: true, ast: ... }` or `{ ok: false, error: ... }`.",
         "file": "lib.rs",
         "line": 133,
         "signature": "pub fn parse_cell_src(src: &str) -> JsValue {"
@@ -11585,7 +11953,7 @@
       {
         "name": "check_cell_src",
         "kind": "fn",
-        "doc": "",
+        "doc": "Check a cell expression.",
         "file": "lib.rs",
         "line": 157,
         "signature": "pub fn check_cell_src(src: &str) -> JsValue {"
@@ -11593,7 +11961,7 @@
       {
         "name": "eval_cell_src",
         "kind": "fn",
-        "doc": "",
+        "doc": "Evaluate a cell expression (`= expr`) with the in-process local host.",
         "file": "lib.rs",
         "line": 183,
         "signature": "pub fn eval_cell_src(src: &str) -> JsValue {"
@@ -11601,7 +11969,7 @@
       {
         "name": "parse_program_src",
         "kind": "fn",
-        "doc": "",
+        "doc": "Parse a full VibeScript program (module).",
         "file": "lib.rs",
         "line": 204,
         "signature": "pub fn parse_program_src(src: &str) -> JsValue {"
@@ -11609,7 +11977,7 @@
       {
         "name": "check_program_src",
         "kind": "fn",
-        "doc": "",
+        "doc": "Check a full program.",
         "file": "lib.rs",
         "line": 235,
         "signature": "pub fn check_program_src(src: &str) -> JsValue {"
@@ -11617,7 +11985,7 @@
       {
         "name": "eval_cell_json",
         "kind": "fn",
-        "doc": "",
+        "doc": "Evaluate a cell and return the result as a JSON-compatible JS value.\nPlayground Run uses `eval_program_src` (module + optional `main`), not this.",
         "file": "lib.rs",
         "line": 261,
         "signature": "pub fn eval_cell_json(src: &str) -> JsValue {"
@@ -11625,7 +11993,7 @@
       {
         "name": "diagnose_src",
         "kind": "fn",
-        "doc": "",
+        "doc": "Parse + check a module; collect up to eight diagnostics.",
         "file": "lib.rs",
         "line": 267,
         "signature": "pub fn diagnose_src(src: &str) -> JsValue {"
@@ -11633,105 +12001,105 @@
       {
         "name": "eval_program_src",
         "kind": "fn",
-        "doc": "",
+        "doc": "Evaluate a full program on LocalHost (workshop dialect).\n\nRuns preamble items, then `main` when present — same as `vibe eval FILE main`.",
         "file": "lib.rs",
-        "line": 275,
+        "line": 277,
         "signature": "pub fn eval_program_src(src: &str) -> JsValue {"
       },
       {
         "name": "compile_cell_bytecode",
         "kind": "fn",
-        "doc": "",
+        "doc": "Compile a cell expression to bytecode and return chunk metadata.",
         "file": "lib.rs",
-        "line": 307,
+        "line": 322,
         "signature": "pub fn compile_cell_bytecode(src: &str) -> JsValue {"
       },
       {
         "name": "run_cell_bytecode",
         "kind": "fn",
-        "doc": "",
+        "doc": "Compile a cell to bytecode, run it on the VM, and return the result.",
         "file": "lib.rs",
-        "line": 361,
+        "line": 376,
         "signature": "pub fn run_cell_bytecode(src: &str) -> JsValue {"
       },
       {
         "name": "run_program_bytecode",
         "kind": "fn",
-        "doc": "",
+        "doc": "Compile a program to bytecode, encode it to binary, decode it, and run\na named function.  Demonstrates the full bytecode round-trip.",
         "file": "lib.rs",
-        "line": 402,
+        "line": 417,
         "signature": "pub fn run_program_bytecode(src: &str, fn_name: &str, args: Vec<JsValue>) -> JsValue {"
       },
       {
         "name": "encode_cell_bytecode",
         "kind": "fn",
-        "doc": "",
+        "doc": "Encode a cell's bytecode to a binary Uint8Array.",
         "file": "lib.rs",
-        "line": 492,
+        "line": 507,
         "signature": "pub fn encode_cell_bytecode(src: &str) -> JsValue {"
       },
       {
         "name": "decode_and_run",
         "kind": "fn",
-        "doc": "",
+        "doc": "Decode a binary bytecode chunk and run it.",
         "file": "lib.rs",
-        "line": 515,
+        "line": 530,
         "signature": "pub fn decode_and_run(bytes: &[u8]) -> JsValue {"
       },
       {
         "name": "ebnf_grammar",
         "kind": "fn",
-        "doc": "",
+        "doc": "Get the EBNF grammar string.",
         "file": "lib.rs",
-        "line": 546,
+        "line": 561,
         "signature": "pub fn ebnf_grammar() -> String {"
       },
       {
         "name": "gbnf_grammar",
         "kind": "fn",
-        "doc": "",
+        "doc": "Get the GBNF grammar (for LLM constrained decoding).",
         "file": "lib.rs",
-        "line": 552,
+        "line": 567,
         "signature": "pub fn gbnf_grammar() -> String {"
       },
       {
         "name": "ast_schema_json",
         "kind": "fn",
-        "doc": "",
+        "doc": "Get the JSON schema for the AST.",
         "file": "lib.rs",
-        "line": 558,
+        "line": 573,
         "signature": "pub fn ast_schema_json() -> String {"
       },
       {
         "name": "diagnostic_schema_json",
         "kind": "fn",
-        "doc": "",
+        "doc": "Get the JSON schema for diagnostics.",
         "file": "lib.rs",
-        "line": 564,
+        "line": 579,
         "signature": "pub fn diagnostic_schema_json() -> String {"
       },
       {
         "name": "project_source",
         "kind": "fn",
-        "doc": "",
+        "doc": "Project a VibeScript program source to canonical form.\nParses the source, then re-projects it from the AST.\nThis is the core of projectional authoring: structure → text.",
         "file": "lib.rs",
-        "line": 698,
+        "line": 713,
         "signature": "pub fn project_source(src: &str) -> JsValue {"
       },
       {
         "name": "apply_structural_edit",
         "kind": "fn",
-        "doc": "",
+        "doc": "Apply a structural edit to a VibeScript program and project the result.\n\nThe edit is specified as a JSON object with an `op` field and\noperation-specific fields. This enables LLMs and browsers to\nedit program structure without text patching.\n\nSupported ops:\n- `add_field`: { op, name, ty, unit?, support?, representation? }\n- `add_material`: { op, name, properties: [{name, value}] }\n- `add_law`: { op, name, condition, consequence }\n- `remove_item`: { op, index }\n- `rename_item`: { op, index, new_name }\n- `set_field_unit`: { op, index, unit? }\n- `set_field_support`: { op, index, support }\n- `set_field_representation`: { op, index, representation }\n- `add_material_property`: { op, index, name, value }\n- `remove_material_property`: { op, index, name }\n- `add_prefix`: { op, prefix, iri }\n- `remove_prefix`: { op, prefix }",
         "file": "lib.rs",
-        "line": 736,
+        "line": 751,
         "signature": "pub fn apply_structural_edit(src: &str, edit_json: &str) -> JsValue {"
       },
       {
         "name": "apply_structural_edits",
         "kind": "fn",
-        "doc": "",
+        "doc": "Apply multiple structural edits in sequence.\n`edits_json` is a JSON array of edit objects.",
         "file": "lib.rs",
-        "line": 768,
+        "line": 783,
         "signature": "pub fn apply_structural_edits(src: &str, edits_json: &str) -> JsValue {"
       }
     ]

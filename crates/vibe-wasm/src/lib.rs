@@ -256,7 +256,7 @@ pub fn check_program_src(src: &str) -> JsValue {
 }
 
 /// Evaluate a cell and return the result as a JSON-compatible JS value.
-/// This is the main entry point for the playground.
+/// Playground Run uses `eval_program_src` (module + optional `main`), not this.
 #[wasm_bindgen]
 pub fn eval_cell_json(src: &str) -> JsValue {
     eval_cell_src(src)
