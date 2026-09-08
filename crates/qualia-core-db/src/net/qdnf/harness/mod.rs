@@ -4,6 +4,7 @@ pub mod allocation;
 pub mod clock;
 pub mod entropy;
 pub mod faults;
+pub mod multihop;
 pub mod oracle;
 pub mod partition;
 

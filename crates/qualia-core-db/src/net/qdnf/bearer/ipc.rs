@@ -154,13 +154,13 @@ impl Bearer for IpcEndpoint {
             return Err(QdnfError::WouldBlock);
         }
         let frame = queue[0];
+        if out.len() < frame.len {
+            return Err(QdnfError::Capacity);
+        }
         for i in 0..*len - 1 {
             queue[i] = queue[i + 1];
         }
         *len -= 1;
-        if out.len() < frame.len {
-            return Err(QdnfError::Capacity);
-        }
         out[..frame.len].copy_from_slice(&frame.bytes[..frame.len]);
         Ok((
             frame.len,
@@ -208,5 +208,24 @@ mod tests {
         assert_eq!(meta.observed_source.as_slice(), &[0x01]);
         assert_eq!(a.profile(), BearerProfile::LocalIpcV1);
         assert!(a.profile().native_independent());
+    }
+
+    #[test]
+    fn short_recv_buffer_does_not_drop_frame() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (mut a, mut b) = ipc_pair(scope, 1280).unwrap();
+        let mut header = FrameHeader::new(FrameType::DiscoveryBeacon, NextProtocol::QLink);
+        header.payload_len = 2;
+        let mut wire = [0u8; 128];
+        let n = encode_frame(&header, &[0xAA, 0xBB], &mut wire).unwrap();
+        a.send(&b.locator(), &wire[..n]).unwrap();
+        let mut tiny = [0u8; 4];
+        assert_eq!(b.recv(&mut tiny), Err(QdnfError::Capacity));
+        let mut out = [0u8; 128];
+        let (got, meta) = b.recv(&mut out).unwrap();
+        assert_eq!(got, n);
+        assert_eq!(&out[..n], &wire[..n]);
+        assert_eq!(meta.observed_source.as_slice(), &[0x01]);
+        assert_eq!(b.recv(&mut out), Err(QdnfError::WouldBlock));
     }
 }

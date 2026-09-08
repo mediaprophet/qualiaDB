@@ -5,19 +5,22 @@
 //! after redaction. This library does not claim exactly-once external work,
 //! content swarms, or RAM-sized datasets.
 //!
-//! Remaining SVC-01 packages (admission, content transfer)
-//! stay open. Checkpoints are partial (SVC-01.07). Tombstones are partial
-//! (SVC-01.11). Membership proofs are partial (SVC-01.08). Merge is partial
-//! (SVC-01.10). Manifests are partial (SVC-01.12). Transfer is partial
-//! (SVC-01.13). Resume is partial (SVC-01.14). Receipts are partial (SVC-01.04).
+//! Remaining SVC-01 packages stay open. Checkpoints are partial (SVC-01.07).
+//! Tombstones are partial (SVC-01.11). Membership proofs are partial (SVC-01.08).
+//! Merge is partial (SVC-01.10). Manifests are partial (SVC-01.12). Transfer is
+//! partial (SVC-01.13). Resume is partial (SVC-01.14). Receipts are partial
+//! (SVC-01.04). Crash injection is in-memory (SVC-01.15). Scan is bounded-page
+//! (SVC-01.16) and does not materialize RAM-sized datasets.
 
 pub mod checkpoint;
+pub mod crash;
 pub mod manifest;
 pub mod merge;
 pub mod operation;
 pub mod proof;
 pub mod receipts;
 pub mod resume;
+pub mod scan;
 pub mod tombstone;
 pub mod transfer;
 

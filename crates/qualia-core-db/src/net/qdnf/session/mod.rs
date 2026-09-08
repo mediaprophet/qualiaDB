@@ -1,8 +1,11 @@
 //! QSession handshake, streams, datagrams and policy admission.
 
 pub mod bind;
+pub mod clinical;
+pub mod contact;
 pub mod credit;
 pub mod datagrams;
+pub mod fetch;
 pub mod freshness;
 pub mod handshake;
 pub mod iri;

@@ -374,12 +374,29 @@
 - Measured:
   - `cargo +stable check -p qualia-core-db --lib` (default, GPU on) → **Finished**, 0 errors.
   - `cargo +stable check -p qualia-core-db --no-default-features --features qdnf --lib` → **Finished**, 0 errors (was 1528).
-  - `qualia-peer` features: `qdnf` + `profile_target_1024` + `zk-culling` only (no `gpu-runtime`, `wgsl-forge`, `privacy-he`, `libp2p-compat`).
+  - `qualia-peer` features: `qdnf` only (no `gpu-runtime`, `wgsl-forge`, `privacy-he`, `zk-culling`, `profile_target_1024`, `libp2p-compat`).
   - `cargo +stable tree -p qualia-peer -i libp2p` → package not in graph.
   - `cargo +stable tree -p qualia-peer -i wgpu` → package not in graph.
   - `cargo +stable test -p qualia-peer --offline --lib` → **2 passed**.
   - Combined native filter → **422 passed**.
-- Not Ethernet (raw bearer still PlatformUnsupported without CAP_NET_RAW). Not full Native Independent (peer still pulls `profile_target_1024` and `zk-culling`; default core-db still has `libp2p-compat`). Not package completion. COSE_Sign1 still unfrozen. `IpcEndpoint::recv` short-buffer drop remains.
+- Not Ethernet (raw bearer still PlatformUnsupported without CAP_NET_RAW). Not full Native Independent (default core-db still has `libp2p-compat` and GPU defaults). Not package completion. COSE_Sign1 still unfrozen. `IpcEndpoint::recv` short-buffer drop remains.
 - Human input needed: Ethernet capture + CAP_NET_RAW for NET-01.14; reviewed COSE_Sign1 freeze; whether daemons may drop default `libp2p-compat`.
 - Next: remaining QSync crash-injection / >RAM datasets, session multi-hop loss harness, IpcEndpoint recv, default-feature isolation. Packages stay open.
+
+## 2026-09-08 — Wave 14 swarm claim — production polish (in progress)
+
+- Integrator exclusive writes: `crates/qualia-core-db/src/net/qdnf/bearer/ipc.rs`, `crates/qualia-core-db/src/net/qdnf/bearer/leased_ipc.rs` — `IpcEndpoint::recv` must check `out.len()` **before** dequeue so a short buffer is `Capacity` and the frame stays queued.
+- Disjoint worker writes (one new file each; do not rewrite design suite; do not tick qdnf-imp checkboxes; do not edit parent `mod.rs`, Cargo.toml, `registries.rs`, AGENTS.md, `p2p/`):
+  1. `crates/qualia-core-db/src/net/qdnf/harness/multihop.rs` — NET-05.15 native multi-hop authorized streams/datagrams under loss/reorder/stalled/revocation/handoff.
+  2. `crates/qualia-core-db/src/net/peer/replication/crash.rs` — SVC-01.15 crash injection at identity/effect/receipt; no duplicate effect.
+  3. `crates/qualia-core-db/src/net/peer/replication/scan.rs` — SVC-01.16 logical dataset larger than RAM with bounded pages; fail closed; do not allocate RAM-sized buffers.
+  4. `crates/qualia-core-db/src/net/qdnf/session/contact.rs` — NET-05.17/20 contact states, paying cannot bypass, mandate revocation, reserved help/revocation.
+  5. `crates/qualia-core-db/src/net/qdnf/session/clinical.rs` — NET-05.21–24 private pairing, standing permissions, ciphertext-only intermediaries, mailbox states.
+  6. `crates/qualia-core-db/src/net/qdnf/session/fetch.rs` — NET-05.19 unconsented attachment/embed/LIG must not disclose locators; group admission ≠ private-message consent.
+- Integrator owns parent `mod.rs` wiring after workers land. Packages remain open. Not Ethernet. Not Native Independent closure. COSE_Sign1 still unfrozen.
+
+## 2026-09-08 — Wave 14 swarm integrating
+
+- Integrator wires `harness::multihop`, `replication::{crash,scan}`, `session::{clinical,contact,fetch}` and the `IpcEndpoint::recv` short-buffer fix. Combined tests not yet run this revision. Packages remain open.
+- Human input needed: none this step.
 

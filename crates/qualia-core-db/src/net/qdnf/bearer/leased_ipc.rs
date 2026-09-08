@@ -4,10 +4,9 @@
 //! for the duration of the copy into or out of the IPC queue. The queue
 //! then owns the frame bytes, so the lease is released before return.
 //!
-//! Honest `IpcEndpoint::recv` behavior: the inner adapter dequeues before
-//! checking `out.len()`. A short output still returns `Capacity` and the
-//! frame is already consumed. This wrapper releases the recv lease in that
-//! case; it does not restore the dequeued frame.
+//! `IpcEndpoint::recv` checks `out.len()` before dequeue. A short output
+//! returns `Capacity` and leaves the frame queued. This wrapper still
+//! releases the recv lease on that `Capacity` so the table cannot leak.
 
 use crate::net::peer::runtime::{BufferLease, LeaseTable};
 use crate::net::qdnf::errors::QdnfError;
@@ -171,6 +170,11 @@ mod tests {
         );
         assert_eq!(leases.occupied_count(), 0);
         let mut out = [0u8; 128];
+        let (got, meta) = b.recv_leased(&mut leases, &mut out).unwrap();
+        assert_eq!(got, n);
+        assert_eq!(&out[..n], &wire[..n]);
+        assert_eq!(meta.observed_source.as_slice(), &[0x01]);
+        assert_eq!(leases.occupied_count(), 0);
         assert_eq!(
             b.recv_leased(&mut leases, &mut out),
             Err(QdnfError::WouldBlock)
