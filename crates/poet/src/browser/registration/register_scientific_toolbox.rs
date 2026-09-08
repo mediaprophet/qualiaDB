@@ -2436,6 +2436,16 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
             ),
             ToolChain::new(
                 ToolChainMetadata {
+                    id: "scientific:cg_live".into(),
+                    label: "Live CG remainder".into(),
+                    icon: "lab".into(),
+                    description: "Host-bound ComputationalGeometry leftovers (point-set, predicates, polygons)."
+                        .into(),
+                },
+                super::register_cg_live::cg_live_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
                     id: "scientific:eng".into(),
                     label: "Live engineering analysis".into(),
                     icon: "lab".into(),

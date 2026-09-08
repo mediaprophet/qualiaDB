@@ -604,6 +604,31 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "scientific:cg_segment_intersect_2"
             | "scientific:cg_bezier_eval"
             | "scientific:cg_nearest_site"
+            | "scientific:cg_live_average_spacing_3d"
+            | "scientific:cg_live_local_density_3d"
+            | "scientific:cg_live_mean_knn_distance_3d"
+            | "scientific:cg_live_fisher_distance"
+            | "scientific:cg_live_kl_divergence"
+            | "scientific:cg_live_kl_bregman_form"
+            | "scientific:cg_live_triangle_signed_area"
+            | "scientific:cg_live_dist_point_to_segment"
+            | "scientific:cg_live_dist_sq_point_to_segment"
+            | "scientific:cg_live_incircle"
+            | "scientific:cg_live_tukey_depth"
+            | "scientific:cg_live_directional_width"
+            | "scientific:cg_live_width"
+            | "scientific:cg_live_farthest_site_brute"
+            | "scientific:cg_live_k_nearest_sites"
+            | "scientific:cg_live_is_hull_site"
+            | "scientific:cg_live_diameter_and_width"
+            | "scientific:cg_live_insphere"
+            | "scientific:cg_live_ham_sandwich_cut"
+            | "scientific:cg_live_smallest_enclosing_disk"
+            | "scientific:cg_live_polygon_signed_area"
+            | "scientific:cg_live_polygon_area"
+            | "scientific:cg_live_point_in_polygon"
+            | "scientific:cg_live_minkowski_sum_convex"
+            | "scientific:cg_live_nearest_segment_site"
             | "scientific:eng_natural_freq"
             | "scientific:eng_harmonic_sdof"
             | "scientific:eng_euler"
@@ -2727,6 +2752,79 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "scientific:cg_nearest_site" => {
             super::cg_chain_actions::run_nearest_site(document, label)
+        }
+        "scientific:cg_live_average_spacing_3d" => {
+            super::cg_live_chain_actions::run_average_spacing_3d(document, label)
+        }
+        "scientific:cg_live_local_density_3d" => {
+            super::cg_live_chain_actions::run_local_density_3d(document, label)
+        }
+        "scientific:cg_live_mean_knn_distance_3d" => {
+            super::cg_live_chain_actions::run_mean_knn_distance_3d(document, label)
+        }
+        "scientific:cg_live_fisher_distance" => {
+            super::cg_live_chain_actions::run_fisher_distance(document, label)
+        }
+        "scientific:cg_live_kl_divergence" => {
+            super::cg_live_chain_actions::run_kl_divergence(document, label)
+        }
+        "scientific:cg_live_kl_bregman_form" => {
+            super::cg_live_chain_actions::run_kl_bregman_form(document, label)
+        }
+        "scientific:cg_live_triangle_signed_area" => {
+            super::cg_live_chain_actions::run_triangle_signed_area(document, label)
+        }
+        "scientific:cg_live_dist_point_to_segment" => {
+            super::cg_live_chain_actions::run_dist_point_to_segment(document, label)
+        }
+        "scientific:cg_live_dist_sq_point_to_segment" => {
+            super::cg_live_chain_actions::run_dist_sq_point_to_segment(document, label)
+        }
+        "scientific:cg_live_incircle" => {
+            super::cg_live_chain_actions::run_incircle(document, label)
+        }
+        "scientific:cg_live_tukey_depth" => {
+            super::cg_live_chain_actions::run_tukey_depth(document, label)
+        }
+        "scientific:cg_live_directional_width" => {
+            super::cg_live_chain_actions::run_directional_width(document, label)
+        }
+        "scientific:cg_live_width" => super::cg_live_chain_actions::run_width(document, label),
+        "scientific:cg_live_farthest_site_brute" => {
+            super::cg_live_chain_actions::run_farthest_site_brute(document, label)
+        }
+        "scientific:cg_live_k_nearest_sites" => {
+            super::cg_live_chain_actions::run_k_nearest_sites(document, label)
+        }
+        "scientific:cg_live_is_hull_site" => {
+            super::cg_live_chain_actions::run_is_hull_site(document, label)
+        }
+        "scientific:cg_live_diameter_and_width" => {
+            super::cg_live_chain_actions::run_diameter_and_width(document, label)
+        }
+        "scientific:cg_live_insphere" => {
+            super::cg_live2_chain_actions::run_insphere(document, label)
+        }
+        "scientific:cg_live_ham_sandwich_cut" => {
+            super::cg_live2_chain_actions::run_ham_sandwich_cut(document, label)
+        }
+        "scientific:cg_live_smallest_enclosing_disk" => {
+            super::cg_live2_chain_actions::run_smallest_enclosing_disk(document, label)
+        }
+        "scientific:cg_live_polygon_signed_area" => {
+            super::cg_live2_chain_actions::run_polygon_signed_area(document, label)
+        }
+        "scientific:cg_live_polygon_area" => {
+            super::cg_live2_chain_actions::run_polygon_area(document, label)
+        }
+        "scientific:cg_live_point_in_polygon" => {
+            super::cg_live2_chain_actions::run_point_in_polygon(document, label)
+        }
+        "scientific:cg_live_minkowski_sum_convex" => {
+            super::cg_live2_chain_actions::run_minkowski_sum_convex(document, label)
+        }
+        "scientific:cg_live_nearest_segment_site" => {
+            super::cg_live2_chain_actions::run_nearest_segment_site(document, label)
         }
         "scientific:eng_natural_freq" => {
             super::eng_chain_actions::run_natural_frequency_sdof(document, label)

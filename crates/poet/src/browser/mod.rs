@@ -116,6 +116,8 @@ mod sf_chain_actions;
 mod calc_chain_actions;
 mod transforms_chain_actions;
 mod cg_chain_actions;
+mod cg_live_chain_actions;
+mod cg_live2_chain_actions;
 mod ga_chain_actions;
 mod eng_chain_actions;
 mod physics_chain_actions;

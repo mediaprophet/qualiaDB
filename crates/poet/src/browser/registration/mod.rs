@@ -31,6 +31,7 @@ mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
 mod register_scientific_toolbox;
+mod register_cg_live;
 mod register_sdn_toolbox;
 mod register_sheet_toolbox;
 mod register_spatial_toolbox;
@@ -4340,5 +4341,43 @@ mod tests {
         assert!(tools.contains(&("render:live_svg_bezier", Some("Render.svg_bezier"))));
         assert!(tools.contains(&("render:live_svg_field", Some("Render.svg_field"))));
         assert_eq!(tools.len(), 17);
+    }
+
+    #[test]
+    fn cg_live_binds_wave31_cg_caps() {
+        let registry = super::build_registry();
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:cg_live")
+            .expect("scientific:cg_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:cg_live_average_spacing_3d",
+            Some("ComputationalGeometry.average_spacing_3d")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_incircle",
+            Some("ComputationalGeometry.incircle")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_insphere",
+            Some("ComputationalGeometry.insphere")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_nearest_segment_site",
+            Some("ComputationalGeometry.nearest_segment_site")
+        )));
+        assert_eq!(tools.len(), 25);
     }
 }

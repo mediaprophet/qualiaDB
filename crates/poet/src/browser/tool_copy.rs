@@ -1751,6 +1751,131 @@ fn named(id: &str) -> Option<Presentation> {
             "Nearest Voronoi site by brute-force distance (sites + query).",
             Proficiency::Novice,
         ),
+        "scientific:cg_live_average_spacing_3d" => (
+            "Average spacing 3D",
+            "Mean kNN spacing via ComputationalGeometry.average_spacing_3d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_local_density_3d" => (
+            "Local density 3D",
+            "Per-point kNN density via ComputationalGeometry.local_density_3d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_mean_knn_distance_3d" => (
+            "Mean kNN distance 3D",
+            "Per-point mean kNN distance via ComputationalGeometry.mean_knn_distance_3d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_fisher_distance" => (
+            "Fisher distance",
+            "Fisher–Rao geodesic via ComputationalGeometry.fisher_distance.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_kl_divergence" => (
+            "KL divergence",
+            "KL(p‖q) via ComputationalGeometry.kl_divergence.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_kl_bregman_form" => (
+            "KL Bregman form",
+            "Bregman KL via ComputationalGeometry.kl_bregman_form.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_triangle_signed_area" => (
+            "Triangle signed area",
+            "Signed 2D triangle area via ComputationalGeometry.triangle_signed_area.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_dist_point_to_segment" => (
+            "Dist point–segment",
+            "Point-to-segment distance via ComputationalGeometry.dist_point_to_segment.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_dist_sq_point_to_segment" => (
+            "Dist² point–segment",
+            "Squared point-to-segment distance via ComputationalGeometry.dist_sq_point_to_segment.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_incircle" => (
+            "Incircle",
+            "Exact in-circle predicate via ComputationalGeometry.incircle.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_tukey_depth" => (
+            "Tukey depth",
+            "Tukey depth via ComputationalGeometry.tukey_depth.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_directional_width" => (
+            "Directional width",
+            "Projected width via ComputationalGeometry.directional_width.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_width" => (
+            "Width",
+            "Sampled minimum width via ComputationalGeometry.width.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_farthest_site_brute" => (
+            "Farthest site",
+            "Farthest site index via ComputationalGeometry.farthest_site_brute.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_k_nearest_sites" => (
+            "k nearest sites",
+            "k nearest site indices via ComputationalGeometry.k_nearest_sites.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_is_hull_site" => (
+            "Is hull site",
+            "Hull membership via ComputationalGeometry.is_hull_site.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_diameter_and_width" => (
+            "Diameter and width",
+            "Rotating-caliper diameter and width via ComputationalGeometry.diameter_and_width.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_insphere" => (
+            "Insphere",
+            "Exact in-sphere predicate via ComputationalGeometry.insphere.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_ham_sandwich_cut" => (
+            "Ham-sandwich cut",
+            "Bisecting line via ComputationalGeometry.ham_sandwich_cut.",
+            Proficiency::Expert,
+        ),
+        "scientific:cg_live_smallest_enclosing_disk" => (
+            "Smallest enclosing disk",
+            "Welzl disk via ComputationalGeometry.smallest_enclosing_disk.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_polygon_signed_area" => (
+            "Polygon signed area",
+            "Signed polygon area via ComputationalGeometry.polygon_signed_area.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_polygon_area" => (
+            "Polygon area",
+            "Absolute polygon area via ComputationalGeometry.polygon_area.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_point_in_polygon" => (
+            "Point in polygon",
+            "Interior test via ComputationalGeometry.point_in_polygon.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_minkowski_sum_convex" => (
+            "Minkowski sum",
+            "Convex Minkowski sum via ComputationalGeometry.minkowski_sum_convex.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_nearest_segment_site" => (
+            "Nearest segment site",
+            "Nearest segment-site via ComputationalGeometry.nearest_segment_site.",
+            Proficiency::Intermediate,
+        ),
         "scientific:ga_dot" => (
             "Dot product",
             "Dot product of two 3-vectors from surface numbers or data-a*/data-b*.",
