@@ -1,0 +1,4 @@
+errors=1 warnings=0 unique_diagnostic_lines=3
+
+error: failed to run custom build command for `ring v0.17.14`
+error occurred in cc-rs: host `cc --target=arm64-apple-macosx` cannot compile C for aarch64-apple-darwin (no Apple SDK; CoreServices.h missing)
