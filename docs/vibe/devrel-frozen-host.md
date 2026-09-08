@@ -1,4 +1,4 @@
-# Vibe DevRel — frozen host contract (`vibe-host-0.1`)
+# Vibe DevRel — closed grammar, growing host (`vibe-host-0.1`)
 
 **Language:** `vibe-0.1` · **Host ABI:** `vibe-host-0.1` · **Freeze:** `6dc2b8b8`  
 **Four ops only:** parse · check · diagnose · `capability.invoke`  
