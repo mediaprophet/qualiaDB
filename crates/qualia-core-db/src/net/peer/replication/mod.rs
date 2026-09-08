@@ -5,12 +5,13 @@
 //! after redaction. This library does not claim exactly-once external work,
 //! content swarms, or RAM-sized datasets.
 //!
-//! Remaining SVC-01 packages (admission, proofs, merge, content transfer)
+//! Remaining SVC-01 packages (admission, merge, content transfer)
 //! stay open. Checkpoints are partial (SVC-01.07). Tombstones are partial
-//! (SVC-01.11).
+//! (SVC-01.11). Membership proofs are partial (SVC-01.08).
 
 pub mod checkpoint;
 pub mod operation;
+pub mod proof;
 pub mod tombstone;
 
 pub use checkpoint::{
@@ -20,6 +21,10 @@ pub use checkpoint::{
 pub use operation::{
     operation_id, source_signature_reusable_after_redaction, transport_ack_is_durable,
     tx_from_operation_id, OpTable, OperationDesc, MAX_OPS, MAX_PARENTS,
+};
+pub use proof::{
+    membership_implies_range_coverage, private_neighbor_metadata_in_proof, prove_membership,
+    verify_membership, MembershipProof, MAX_PROOF_IDS,
 };
 pub use tombstone::{
     tombstone_implies_global_completeness, transport_ack_is_compaction_frontier, ReplicaGate,

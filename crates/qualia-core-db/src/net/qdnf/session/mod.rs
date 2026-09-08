@@ -7,6 +7,7 @@ pub mod loss;
 pub mod packet;
 pub mod paths;
 pub mod policy;
+pub mod rekey;
 pub mod streams;
 
 pub use handshake::{SessionBinding, SessionState};
