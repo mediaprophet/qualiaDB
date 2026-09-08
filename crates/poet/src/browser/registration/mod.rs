@@ -21,6 +21,7 @@ mod register_code_toolbox;
 mod register_communication_toolbox;
 mod register_compact_toolbox;
 mod register_epistemic_toolbox;
+mod register_research_live;
 mod register_erp_toolbox;
 mod register_econ_toolbox;
 mod register_health_toolbox;
@@ -4139,6 +4140,96 @@ mod tests {
             "research:live_validate_inference",
             Some("Research.validate_inference")
         )));
-        assert_eq!(tools.len(), 20);
+        assert_eq!(tools.len(), 40);
+    }
+
+    #[test]
+    fn research_live_binds_wave28_investigation_caps() {
+        let registry = super::build_registry();
+        let epi = registry.toolbox("epistemic").expect("epistemic toolbox");
+        let chain = epi
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "research:live")
+            .expect("research:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "research:live_new_investigation",
+            Some("Research.new_investigation")
+        )));
+        assert!(tools.contains(&(
+            "research:live_collect_evidence",
+            Some("Research.collect_evidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_set_reliability",
+            Some("Research.set_reliability")
+        )));
+        assert!(tools.contains(&(
+            "research:live_propose_hypothesis",
+            Some("Research.propose_hypothesis")
+        )));
+        assert!(tools.contains(&(
+            "research:live_evaluate_evidence",
+            Some("Research.evaluate_evidence")
+        )));
+        assert!(tools.contains(&(
+            "research:live_create_timeline",
+            Some("Research.create_timeline")
+        )));
+        assert!(tools.contains(&("research:live_add_link", Some("Research.add_link"))));
+        assert!(tools.contains(&("research:live_find_path", Some("Research.find_path"))));
+        assert!(tools.contains(&(
+            "research:live_create_hypothesis_graph",
+            Some("Research.create_hypothesis_graph")
+        )));
+        assert!(tools.contains(&(
+            "research:live_contribute_evaluation",
+            Some("Research.contribute_evaluation")
+        )));
+        assert!(tools.contains(&(
+            "research:live_bridge_dark_link",
+            Some("Research.bridge_dark_link")
+        )));
+        assert!(tools.contains(&(
+            "research:live_reframe_hypothesis",
+            Some("Research.reframe_hypothesis")
+        )));
+        assert!(tools.contains(&(
+            "research:live_merge_hypotheses",
+            Some("Research.merge_hypotheses")
+        )));
+        assert!(tools.contains(&("research:live_flag_gap", Some("Research.flag_gap"))));
+        assert!(tools.contains(&("research:live_close_gap", Some("Research.close_gap"))));
+        assert!(tools.contains(&(
+            "research:live_create_revision",
+            Some("Research.create_revision")
+        )));
+        assert!(tools.contains(&(
+            "research:live_diff_revisions",
+            Some("Research.diff_revisions")
+        )));
+        assert!(tools.contains(&(
+            "research:live_subscribe_updates",
+            Some("Research.subscribe_updates")
+        )));
+        assert!(tools.contains(&(
+            "research:live_create_assessment",
+            Some("Research.create_assessment")
+        )));
+        assert!(tools.contains(&(
+            "research:live_set_epistemic_mode",
+            Some("Research.set_epistemic_mode")
+        )));
+        assert_eq!(tools.len(), 40);
     }
 }

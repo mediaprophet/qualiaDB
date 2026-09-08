@@ -4092,6 +4092,106 @@ fn named(id: &str) -> Option<Presentation> {
             "Validate an inference via Research.validate_inference.",
             Proficiency::Intermediate,
         ),
+        "research:live_new_investigation" => (
+            "New investigation",
+            "Create an investigation via Research.new_investigation.",
+            Proficiency::Novice,
+        ),
+        "research:live_collect_evidence" => (
+            "Collect evidence",
+            "Collect evidence via Research.collect_evidence.",
+            Proficiency::Novice,
+        ),
+        "research:live_set_reliability" => (
+            "Set reliability",
+            "Set evidence reliability via Research.set_reliability.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_propose_hypothesis" => (
+            "Propose hypothesis",
+            "Propose a hypothesis via Research.propose_hypothesis.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_evaluate_evidence" => (
+            "Evaluate evidence",
+            "Evaluate evidence against a hypothesis.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_create_timeline" => (
+            "Create timeline",
+            "Add a timeline event via Research.create_timeline.",
+            Proficiency::Novice,
+        ),
+        "research:live_add_link" => (
+            "Add link",
+            "Add an investigation link via Research.add_link.",
+            Proficiency::Novice,
+        ),
+        "research:live_find_path" => (
+            "Find path",
+            "Find a path via Research.find_path.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_create_hypothesis_graph" => (
+            "Hypothesis graph",
+            "Create a hypothesis graph via Research.create_hypothesis_graph.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_contribute_evaluation" => (
+            "Contribute evaluation",
+            "Contribute an evaluation via Research.contribute_evaluation.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_bridge_dark_link" => (
+            "Bridge dark link",
+            "Bridge a dark link via Research.bridge_dark_link.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_reframe_hypothesis" => (
+            "Reframe hypothesis",
+            "Reframe a hypothesis via Research.reframe_hypothesis.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_merge_hypotheses" => (
+            "Merge hypotheses",
+            "Merge two hypotheses via Research.merge_hypotheses.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_flag_gap" => (
+            "Flag gap",
+            "Flag a gap via Research.flag_gap.",
+            Proficiency::Novice,
+        ),
+        "research:live_close_gap" => (
+            "Close gap",
+            "Close a gap via Research.close_gap.",
+            Proficiency::Novice,
+        ),
+        "research:live_create_revision" => (
+            "Create revision",
+            "Create a revision via Research.create_revision.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_diff_revisions" => (
+            "Diff revisions",
+            "Diff two revisions via Research.diff_revisions.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_subscribe_updates" => (
+            "Subscribe updates",
+            "Subscribe to updates via Research.subscribe_updates.",
+            Proficiency::Novice,
+        ),
+        "research:live_create_assessment" => (
+            "Create assessment",
+            "Create an epistemic assessment via Research.create_assessment.",
+            Proficiency::Intermediate,
+        ),
+        "research:live_set_epistemic_mode" => (
+            "Set epistemic mode",
+            "Set epistemic mode via Research.set_epistemic_mode.",
+            Proficiency::Intermediate,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

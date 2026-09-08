@@ -828,6 +828,26 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "research:live_chain_inference"
         | "research:live_set_inference_confidence"
         | "research:live_validate_inference"
+        | "research:live_new_investigation"
+        | "research:live_collect_evidence"
+        | "research:live_set_reliability"
+        | "research:live_propose_hypothesis"
+        | "research:live_evaluate_evidence"
+        | "research:live_create_timeline"
+        | "research:live_add_link"
+        | "research:live_find_path"
+        | "research:live_create_hypothesis_graph"
+        | "research:live_contribute_evaluation"
+        | "research:live_bridge_dark_link"
+        | "research:live_reframe_hypothesis"
+        | "research:live_merge_hypotheses"
+        | "research:live_flag_gap"
+        | "research:live_close_gap"
+        | "research:live_create_revision"
+        | "research:live_diff_revisions"
+        | "research:live_subscribe_updates"
+        | "research:live_create_assessment"
+        | "research:live_set_epistemic_mode"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3157,6 +3177,64 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "research:live_validate_inference" => {
             super::research_live_chain_actions::run_validate_inference(document, label)
+        }
+        "research:live_new_investigation" => {
+            super::research_live2_chain_actions::run_new_investigation(document, label)
+        }
+        "research:live_collect_evidence" => {
+            super::research_live2_chain_actions::run_collect_evidence(document, label)
+        }
+        "research:live_set_reliability" => {
+            super::research_live2_chain_actions::run_set_reliability(document, label)
+        }
+        "research:live_propose_hypothesis" => {
+            super::research_live2_chain_actions::run_propose_hypothesis(document, label)
+        }
+        "research:live_evaluate_evidence" => {
+            super::research_live2_chain_actions::run_evaluate_evidence(document, label)
+        }
+        "research:live_create_timeline" => {
+            super::research_live2_chain_actions::run_create_timeline(document, label)
+        }
+        "research:live_add_link" => super::research_live2_chain_actions::run_add_link(document, label),
+        "research:live_find_path" => {
+            super::research_live2_chain_actions::run_find_path(document, label)
+        }
+        "research:live_create_hypothesis_graph" => {
+            super::research_live2_chain_actions::run_create_hypothesis_graph(document, label)
+        }
+        "research:live_contribute_evaluation" => {
+            super::research_live2_chain_actions::run_contribute_evaluation(document, label)
+        }
+        "research:live_bridge_dark_link" => {
+            super::research_live2_chain_actions::run_bridge_dark_link(document, label)
+        }
+        "research:live_reframe_hypothesis" => {
+            super::research_live2_chain_actions::run_reframe_hypothesis(document, label)
+        }
+        "research:live_merge_hypotheses" => {
+            super::research_live2_chain_actions::run_merge_hypotheses(document, label)
+        }
+        "research:live_flag_gap" => {
+            super::research_live2_chain_actions::run_flag_gap(document, label)
+        }
+        "research:live_close_gap" => {
+            super::research_live2_chain_actions::run_close_gap(document, label)
+        }
+        "research:live_create_revision" => {
+            super::research_live2_chain_actions::run_create_revision(document, label)
+        }
+        "research:live_diff_revisions" => {
+            super::research_live2_chain_actions::run_diff_revisions(document, label)
+        }
+        "research:live_subscribe_updates" => {
+            super::research_live2_chain_actions::run_subscribe_updates(document, label)
+        }
+        "research:live_create_assessment" => {
+            super::research_live2_chain_actions::run_create_assessment(document, label)
+        }
+        "research:live_set_epistemic_mode" => {
+            super::research_live2_chain_actions::run_set_epistemic_mode(document, label)
         }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),

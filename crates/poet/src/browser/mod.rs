@@ -140,6 +140,7 @@ mod asset_chain_actions;
 mod pulse_live_chain_actions;
 mod portal_chain_actions;
 mod research_live_chain_actions;
+mod research_live2_chain_actions;
 mod ode_chain_actions;
 mod agent_chain_actions;
 mod cooperative_chain_actions;
