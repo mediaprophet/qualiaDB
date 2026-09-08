@@ -1,12 +1,5 @@
-===== START 15-vibe  2026-09-08T11:54:25Z =====
+===== START 15-vibe  2026-09-08T13:56:22Z =====
 CMD: cargo build --release -p vibe
-warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
-package:   /workspace/crates/vibe-wasm/Cargo.toml
-workspace: /workspace/Cargo.toml
-warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
-package:   /workspace/crates/poet/Cargo.toml
-workspace: /workspace/Cargo.toml
-   Compiling vibe v0.0.37 (/workspace/crates/vibe)
-    Finished `release` profile [optimized] target(s) in 1.16s
-===== END 15-vibe  rc=0  elapsed=1s  2026-09-08T11:54:26Z =====
-errors=0 warnings=1 unique_diagnostic_lines=1
+    Finished `release` profile [optimized] target(s) in 0.19s
+===== END 15-vibe  rc=0  elapsed=1s  2026-09-08T13:56:23Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0
