@@ -16,6 +16,9 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  # deploy-pages ListArtifacts requires actions:read; missing this 403s the deploy.
+  actions: read
+  deployments: write
 
 concurrency:
   group: "pages"
