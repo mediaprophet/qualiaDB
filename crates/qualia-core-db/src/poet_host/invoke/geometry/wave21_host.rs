@@ -4,15 +4,12 @@
 //! — no forge / `caps()` / CUDA / GPU.
 
 use super::super::args;
-use crate::specialized_libs::computational_geometry::statistical_manifold::{
-    fisher_distance, kl_bregman_form, kl_divergence,
-};
-use crate::specialized_libs::computational_geometry::triangulation_2::Triangle;
-use crate::specialized_libs::computational_geometry::voronoi_variants::{
+use crate::specialized_libs::computational_geometry::{
     dist_point_to_segment as raw_dist_point_to_segment,
     dist_sq_point_to_segment as raw_dist_sq_point_to_segment,
+    fisher_distance, kl_bregman_form, kl_divergence,
+    Point2, Triangle,
 };
-use crate::specialized_libs::computational_geometry::Point2;
 use vibe::{Diagnostic, Span, Value};
 
 fn parse_f32_vec(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Vec<f32>, Diagnostic> {

@@ -511,6 +511,11 @@ pub use tri_tri_3::{
     tri_tri_intersect_3, tri_tri_intersect_3_exact, tri_tri_intersect_3_with_kernel,
     ExactTriTriSegment, TriPair, TriTriError, TriTriSegment,
 };
+pub use statistical_manifold::{
+    fisher_distance, fisher_inner_product, kl_bregman_form, kl_divergence, neg_entropy,
+    neg_entropy_grad, simplex_project, simplex_project_idempotent, validate_probability,
+    StatManifoldError,
+};
 pub use triangulation_2::{
     triangulate_ear_clipping, triangulate_monotone, triangulate_polygon, verify_triangulation,
     Triangle,
@@ -522,6 +527,10 @@ pub use triangulation_opt::{
 pub use voronoi_2::{
     circumcenter, nearest_site_brute_force, nearest_site_via_delaunay, verify_voronoi_vertices,
     voronoi_diagram_2, voronoi_hash, VoronoiEdge, VoronoiError, VoronoiVertex,
+};
+pub use voronoi_variants::{
+    dist_point_to_segment, dist_sq, dist_sq_point_to_segment, FarthestEdge, FarthestVertex,
+    FarthestVoronoi,
 };
 
 /// Versioned native geometry ABI. Increment only when public POD layouts or
