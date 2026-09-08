@@ -433,3 +433,9 @@
 - Human input needed: whether to land the retargeted PR onto `0.0.37`.
 - Next: remaining CORE-03 / NET-04 as before. Packages stay open.
 
+## 2026-09-08 — land networking onto `0.0.37` — the prior step was the wrong direction
+
+- Harm: the instruction was merge QDNF/QPR **onto** `0.0.37`. The previous step merged `0.0.37` into the feature branch and retargeted a draft. `origin/0.0.37` still lacked the networking commits (`83607188`; networking ancestor check: no).
+- Remedy: fast-forward `0.0.37` to the networking HEAD so Poet work on `0.0.37` contains waves 1–14. Packages remain open. Not Ethernet. Not Native Independent for default daemons. Not package completion.
+- Human input needed: none this step.
+
