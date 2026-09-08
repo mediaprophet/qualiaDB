@@ -9,13 +9,14 @@
 | Wave | Status | Notes |
 |------|--------|-------|
 | 1–26 | **Complete (integrated)** | Through Asset persist, Pulse live, Portal/Avatar, Host CG through affine/quat/quadratic |
-| 27 | **Complete (pending verify)** | Inference remainder×5 · Research live first×20 |
+| 27 | **Complete (integrated)** | Inference remainder×5 · Research live first×20 |
 
 ### Wave 27 (this session)
 
 - Live: Inference remainder×5 (`ai:inf_load_model` … `constrained_decode`) · Research enquiry/corpus/dark-link/inference first×20 (`research:live_*` on chain `research:live`)
 - Host: none (Live-first to close Q2)
-- Expected: `ALL_BOUND=1102` · `PoetLive≈823` · `Q2≈279`
+- Verify: poet `wave27` 4 · policy ok · integrity 11 · catalog ok
+- Backlog: **`ALL_BOUND=1102` · `PoetLive≈823` · `Q2≈279`**
 
 ## Remaining waves (estimate)
 

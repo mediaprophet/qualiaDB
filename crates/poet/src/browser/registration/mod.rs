@@ -3151,7 +3151,7 @@ mod tests {
     }
 
     #[test]
-    fn ai_inf_binds_wave20_inference_caps() {
+    fn ai_inf_binds_wave27_inference_caps() {
         let registry = super::build_registry();
         let ai = registry.toolbox("ai").expect("ai toolbox");
         let chain = ai
