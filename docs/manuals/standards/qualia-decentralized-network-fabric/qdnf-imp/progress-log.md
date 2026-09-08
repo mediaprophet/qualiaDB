@@ -319,6 +319,14 @@
 - Integrator wires `crypto/network/dual_sign`, `replication/manifest`, `session/iri`. Packages stay **open**.
 - Human input needed: none this step.
 
+## 2026-09-08 — Wave 10 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers: CRY-02.05 (`DualProof` requires ML-DSA-65 and Ed25519; COSE_Sign1 not frozen), SVC-01.12 (`ContentManifest` SHA-384, 8 ranges, 4 MiB decoded bound, container generation ≠ QSync root), NET-05.06 (`ChannelTable` IRI/service collision, transport ACK is not durable).
+- Measured: `cargo +stable test -p qualia-core-db --lib -- crypto::network::dual_sign net::peer::replication::manifest net::qdnf::session::iri net::qdnf net::peer crypto::network wal_intent governance::webizen::arena_admit q42::q42_volume::volume::network_quanta` → **367 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion.
+- Human input needed: none this step.
+- Next: remaining NET-05.16 cancel/reconnect, SVC-01.13 transfer, RT-03.07 wgpu gating. Packages stay open.
+
+
 
 
 
