@@ -12,6 +12,11 @@ assert.match(html, /eval_program_src/);
 assert.match(html, /effect fn main/);
 assert.match(html, /LocalHost/);
 assert.match(html, /trait Host/);
+assert.match(html, /new URL\('dev-docs\.json'/);
+assert.doesNotMatch(html, /fetch\("\{\{ '\/vibe\/dev-docs\.json' \| relative_url \}\}"\)/);
+assert.match(html, /moduleFromHash/);
+assert.match(html, /&gt;/);
+assert.match(html, /a\.name === 'wasm'/);
 
 const wasmMod = json.find((m) => m.name === 'wasm');
 assert.ok(wasmMod, 'dev-docs.json must include module wasm');
