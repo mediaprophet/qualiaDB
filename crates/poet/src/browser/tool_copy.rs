@@ -3862,6 +3862,111 @@ fn named(id: &str) -> Option<Presentation> {
             "Count persisted assets via Asset.count.",
             Proficiency::Novice,
         ),
+        "office:asset_persist_create" => (
+            "Persist create",
+            "Create and persist an asset via Asset.persist_create.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_add_temporal" => (
+            "Persist add temporal",
+            "Add a temporal aspect via Asset.persist_add_temporal.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_add_topic" => (
+            "Persist add topic",
+            "Add a topic via Asset.persist_add_topic.",
+            Proficiency::Novice,
+        ),
+        "office:asset_persist_set_spatial" => (
+            "Persist set spatial",
+            "Set a spatial anchor via Asset.persist_set_spatial.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_compile" => (
+            "Persist compile",
+            "Compile a persisted asset via Asset.persist_compile.",
+            Proficiency::Intermediate,
+        ),
+        "office:asset_persist_temporal_span" => (
+            "Persist temporal span",
+            "Measure persisted aspect span via Asset.persist_temporal_span.",
+            Proficiency::Novice,
+        ),
+        "office:asset_persist_query_aspects" => (
+            "Persist query aspects",
+            "Query persisted aspects via Asset.persist_query_aspects.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_publish" => (
+            "Publish pulse",
+            "Publish a generic pulse via Pulse.publish.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_graph_mutation" => (
+            "Publish graph mutation",
+            "Publish a graph-mutation pulse via Pulse.publish_graph_mutation.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_notification" => (
+            "Publish notification",
+            "Publish a notification pulse via Pulse.publish_notification.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_telemetry" => (
+            "Publish telemetry",
+            "Publish a telemetry pulse via Pulse.publish_telemetry.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_agent_message" => (
+            "Publish agent message",
+            "Publish an agent-message pulse via Pulse.publish_agent_message.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_sync" => (
+            "Publish sync",
+            "Publish a sync pulse via Pulse.publish_sync.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_open_channel" => (
+            "Open channel",
+            "Open a pulse channel via Pulse.open_channel.",
+            Proficiency::Intermediate,
+        ),
+        "comm:pulse_live_close_channel" => (
+            "Close channel",
+            "Close a pulse channel via Pulse.close_channel.",
+            Proficiency::Novice,
+        ),
+        "comm:pulse_live_set_transport" => (
+            "Set transport",
+            "Set pulse transport via Pulse.set_transport.",
+            Proficiency::Intermediate,
+        ),
+        "spatial:portal_set_target" => (
+            "Portal target",
+            "Set a portal target via Portal.set_target.",
+            Proficiency::Novice,
+        ),
+        "spatial:portal_activate" => (
+            "Activate portal",
+            "Activate a portal via Portal.activate.",
+            Proficiency::Novice,
+        ),
+        "spatial:portal_deactivate" => (
+            "Deactivate portal",
+            "Deactivate a portal via Portal.deactivate.",
+            Proficiency::Novice,
+        ),
+        "spatial:avatar_move" => (
+            "Move avatar",
+            "Move an avatar via Avatar.move.",
+            Proficiency::Novice,
+        ),
+        "spatial:avatar_set_appearance" => (
+            "Avatar appearance",
+            "Set avatar appearance via Avatar.set_appearance.",
+            Proficiency::Novice,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

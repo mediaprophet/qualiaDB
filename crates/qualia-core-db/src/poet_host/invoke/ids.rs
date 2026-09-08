@@ -789,6 +789,14 @@ pub const GEOM_SO3_EXP: &str = "ComputationalGeometry.so3_exp";
 pub const GEOM_SO3_LOG: &str = "ComputationalGeometry.so3_log";
 pub const GEOM_PROJECTIVE_FROM_POINT: &str = "ComputationalGeometry.projective_from_point";
 pub const GEOM_POINT_FROM_PROJECTIVE: &str = "ComputationalGeometry.point_from_projective";
+pub const GEOM_FRAME_TO_WORLD: &str = "ComputationalGeometry.frame_to_world";
+pub const GEOM_WORLD_TO_FRAME: &str = "ComputationalGeometry.world_to_frame";
+pub const GEOM_BARYCENTRIC_TETRA: &str = "ComputationalGeometry.barycentric_tetra";
+pub const GEOM_QUATERNION_SLERP: &str = "ComputationalGeometry.quaternion_slerp";
+pub const GEOM_QUATERNION_TO_MATRIX: &str = "ComputationalGeometry.quaternion_to_matrix";
+pub const GEOM_SOLVE_DIAGONAL_QUADRATIC: &str = "ComputationalGeometry.solve_diagonal_quadratic";
+pub const GEOM_SCHUR_COMPLEMENT_2X2: &str = "ComputationalGeometry.schur_complement_2x2";
+pub const GEOM_SEPARATING_PLANE_AABB: &str = "ComputationalGeometry.separating_plane_aabb";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1878,6 +1886,14 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_SO3_LOG,
     GEOM_PROJECTIVE_FROM_POINT,
     GEOM_POINT_FROM_PROJECTIVE,
+    GEOM_FRAME_TO_WORLD,
+    GEOM_WORLD_TO_FRAME,
+    GEOM_BARYCENTRIC_TETRA,
+    GEOM_QUATERNION_SLERP,
+    GEOM_QUATERNION_TO_MATRIX,
+    GEOM_SOLVE_DIAGONAL_QUADRATIC,
+    GEOM_SCHUR_COMPLEMENT_2X2,
+    GEOM_SEPARATING_PLANE_AABB,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2716,7 +2732,15 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_SO3_EXP
         | GEOM_SO3_LOG
         | GEOM_PROJECTIVE_FROM_POINT
-        | GEOM_POINT_FROM_PROJECTIVE => "geometry",
+        | GEOM_POINT_FROM_PROJECTIVE
+        | GEOM_FRAME_TO_WORLD
+        | GEOM_WORLD_TO_FRAME
+        | GEOM_BARYCENTRIC_TETRA
+        | GEOM_QUATERNION_SLERP
+        | GEOM_QUATERNION_TO_MATRIX
+        | GEOM_SOLVE_DIAGONAL_QUADRATIC
+        | GEOM_SCHUR_COMPLEMENT_2X2
+        | GEOM_SEPARATING_PLANE_AABB => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE

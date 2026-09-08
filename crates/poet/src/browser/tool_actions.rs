@@ -786,6 +786,27 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "office:asset_resolve_by_temporal"
         | "office:asset_list"
         | "office:asset_count"
+        | "office:asset_persist_create"
+        | "office:asset_persist_add_temporal"
+        | "office:asset_persist_add_topic"
+        | "office:asset_persist_set_spatial"
+        | "office:asset_persist_compile"
+        | "office:asset_persist_temporal_span"
+        | "office:asset_persist_query_aspects"
+        | "comm:pulse_live_publish"
+        | "comm:pulse_live_graph_mutation"
+        | "comm:pulse_live_notification"
+        | "comm:pulse_live_telemetry"
+        | "comm:pulse_live_agent_message"
+        | "comm:pulse_live_sync"
+        | "comm:pulse_live_open_channel"
+        | "comm:pulse_live_close_channel"
+        | "comm:pulse_live_set_transport"
+        | "spatial:portal_set_target"
+        | "spatial:portal_activate"
+        | "spatial:portal_deactivate"
+        | "spatial:avatar_move"
+        | "spatial:avatar_set_appearance"
         | "scientific:ode_lin1"
         | "scientific:ode_lin2"
         | "scientific:ode_classify_pde"
@@ -2986,6 +3007,59 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "office:asset_list" => super::asset_chain_actions::run_list(document, label),
         "office:asset_count" => super::asset_chain_actions::run_count(document, label),
+        "office:asset_persist_create" => {
+            super::asset_chain_actions::run_persist_create(document, label)
+        }
+        "office:asset_persist_add_temporal" => {
+            super::asset_chain_actions::run_persist_add_temporal(document, label)
+        }
+        "office:asset_persist_add_topic" => {
+            super::asset_chain_actions::run_persist_add_topic(document, label)
+        }
+        "office:asset_persist_set_spatial" => {
+            super::asset_chain_actions::run_persist_set_spatial(document, label)
+        }
+        "office:asset_persist_compile" => {
+            super::asset_chain_actions::run_persist_compile(document, label)
+        }
+        "office:asset_persist_temporal_span" => {
+            super::asset_chain_actions::run_persist_temporal_span(document, label)
+        }
+        "office:asset_persist_query_aspects" => {
+            super::asset_chain_actions::run_persist_query_aspects(document, label)
+        }
+        "comm:pulse_live_publish" => super::pulse_live_chain_actions::run_publish(document, label),
+        "comm:pulse_live_graph_mutation" => {
+            super::pulse_live_chain_actions::run_publish_graph_mutation(document, label)
+        }
+        "comm:pulse_live_notification" => {
+            super::pulse_live_chain_actions::run_publish_notification(document, label)
+        }
+        "comm:pulse_live_telemetry" => {
+            super::pulse_live_chain_actions::run_publish_telemetry(document, label)
+        }
+        "comm:pulse_live_agent_message" => {
+            super::pulse_live_chain_actions::run_publish_agent_message(document, label)
+        }
+        "comm:pulse_live_sync" => super::pulse_live_chain_actions::run_publish_sync(document, label),
+        "comm:pulse_live_open_channel" => {
+            super::pulse_live_chain_actions::run_open_channel(document, label)
+        }
+        "comm:pulse_live_close_channel" => {
+            super::pulse_live_chain_actions::run_close_channel(document, label)
+        }
+        "comm:pulse_live_set_transport" => {
+            super::pulse_live_chain_actions::run_set_transport(document, label)
+        }
+        "spatial:portal_set_target" => super::portal_chain_actions::run_set_target(document, label),
+        "spatial:portal_activate" => super::portal_chain_actions::run_activate(document, label),
+        "spatial:portal_deactivate" => {
+            super::portal_chain_actions::run_deactivate(document, label)
+        }
+        "spatial:avatar_move" => super::portal_chain_actions::run_move(document, label),
+        "spatial:avatar_set_appearance" => {
+            super::portal_chain_actions::run_set_appearance(document, label)
+        }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
         "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),

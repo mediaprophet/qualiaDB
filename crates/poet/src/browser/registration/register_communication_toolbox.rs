@@ -161,6 +161,63 @@ pub(super) fn register_communication_toolbox(reg: &mut Registry) {
         ),
     ];
 
+    let pulse_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        hid_live_tool(
+            "comm:pulse_live_publish",
+            "Publish pulse",
+            "Pulse.publish",
+            "Publish a generic pulse via Pulse.publish.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_graph_mutation",
+            "Publish graph mutation",
+            "Pulse.publish_graph_mutation",
+            "Publish a graph-mutation pulse via Pulse.publish_graph_mutation.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_notification",
+            "Publish notification",
+            "Pulse.publish_notification",
+            "Publish a notification pulse via Pulse.publish_notification.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_telemetry",
+            "Publish telemetry",
+            "Pulse.publish_telemetry",
+            "Publish a telemetry pulse via Pulse.publish_telemetry.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_agent_message",
+            "Publish agent message",
+            "Pulse.publish_agent_message",
+            "Publish an agent-message pulse via Pulse.publish_agent_message.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_sync",
+            "Publish sync",
+            "Pulse.publish_sync",
+            "Publish a sync pulse via Pulse.publish_sync.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_open_channel",
+            "Open channel",
+            "Pulse.open_channel",
+            "Open a pulse channel via Pulse.open_channel.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_close_channel",
+            "Close channel",
+            "Pulse.close_channel",
+            "Close a pulse channel via Pulse.close_channel.",
+        ),
+        hid_live_tool(
+            "comm:pulse_live_set_transport",
+            "Set transport",
+            "Pulse.set_transport",
+            "Set pulse transport via Pulse.set_transport.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "communication".into(),
@@ -210,6 +267,15 @@ pub(super) fn register_communication_toolbox(reg: &mut Registry) {
                         .into(),
                 },
                 hid_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "comm:pulse_live".into(),
+                    label: "Live Pulse".into(),
+                    icon: "comm".into(),
+                    description: "Curated Pulse.* publish, channel, and transport binds.".into(),
+                },
+                pulse_live,
             ),
         ],
     ));

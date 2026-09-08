@@ -1,4 +1,4 @@
-# Q1/Q2 incorporation handover — waves 22–25 complete
+# Q1/Q2 incorporation handover — waves 22–26 complete
 
 **Date:** 2026-09-08  
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
@@ -8,37 +8,37 @@
 
 | Wave | Status | Notes |
 |------|--------|-------|
-| 1–24 | **Complete (integrated)** | Through VC/Interp/Spectral/World Live and Host CG through boolean area |
-| 25 | **Complete (integrated)** | Asset×14 · SymbolicODE×5 · Agent×5 Live; Host math-geometry×8 |
+| 1–25 | **Complete (integrated)** | Through Asset in-memory + SymbolicODE + Agent Live and Host CG through projective/quat |
+| 26 | **Complete (integrated)** | Asset persist_*×7 · Pulse remainder×9 · Portal/Avatar×5 Live; Host math-geometry×8 |
 
-### Wave 25 (this session)
+### Wave 26 (this session)
 
-- Live: Asset×14 (`office:asset_*`) · SymbolicODE×5 (`scientific:ode_*`) · Agent×5 (`ai:agent_*` on chain `ai:agent_live`; spec `ai:agent` already exists)
-- Host×8: `cross_ratio_1d`, `hyperplane_eval`, `householder_reflect`, `quaternion_normalize`, `so3_exp`, `so3_log`, `projective_from_point`, `point_from_projective`
-- Verify: poet `wave25` 6 · policy ok · integrity 11 · host `wave25_*` 8 · catalog ok
-- Backlog after wave 25: **`ALL_BOUND=1094` · `PoetLive≈777` · `Q2≈317`**
+- Live: Asset persist remainder×7 (`office:asset_persist_*`) · Pulse×9 (`comm:pulse_live_*` on chain `comm:pulse_live`) · Portal/Avatar×5 (`spatial:portal_*` / `spatial:avatar_*` on chain `spatial:portal`)
+- Host×8: `frame_to_world`, `world_to_frame`, `barycentric_tetra`, `quaternion_slerp`, `quaternion_to_matrix`, `solve_diagonal_quadratic`, `schur_complement_2x2`, `separating_plane_aabb`
+- Verify: poet `wave26` · policy ok · integrity 11 · host `wave26_*` 8 · catalog ok
+- Backlog after wave 26: **`ALL_BOUND=1102` · `PoetLive≈798` · `Q2≈296`**
 
 ## Remaining waves (estimate)
 
-Throughput recent waves: **~24–40 Poet Live + ~8 Host / wave**.
+Throughput recent waves: **~21–40 Poet Live + ~8 Host / wave**.
 
-| Bucket | Count (post-w25) | Est. Live waves @ ~30/wave |
+| Bucket | Count (post-w26) | Est. Live waves @ ~30/wave |
 |--------|------------------|----------------------------|
-| **Q2 Host-bound not Live** | **≈317** | **~10–11** |
-| Large families | Research 73, Render 51, Asset persist_* 7 | Research/Render ≈ 4 waves |
+| **Q2 Host-bound not Live** | **≈296** | **~10** |
+| Large families | Research 73, Render 51 (CPU CSS/SVG/animation first; skip GPU Host-widen) | Research/Render ≈ 4 waves |
 | **Q1 Host-missing** | **~12k** (mostly CoreDb / shellish) | Curated Host lane stays **4–8 pure specialized_libs per wave**; not exhaust Q1 |
 
-**Practical estimate to finish curated Q2:** **~10–13 more waves**.
+**Practical estimate to finish curated Q2:** **~10 more waves**.
 
 **Not in that estimate:** exhaustively Host-binding all of Q1 CoreDb.
 
 ## How to continue (cloud)
 
-1. Wave 26: remaining Asset persist_* (7) + Pulse remainder + Portal/Avatar + Host×8 CPU math.
-2. Then Inference remainder, Research/Render curated slices, long-tail scientific remainders.
+1. Wave 27: Inference remainder (`load_model` / `unload_model` / `run_transformer` / `run_reranker` / `constrained_decode`) + Research live slice (`research:live_*` — spec already occupies hyphenated `research:*`) + Host×8 CPU math.
+2. Then Render CPU (CSS/SVG/animation, not GPU), long-tail scientific remainders.
 3. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
 4. **Never `Proficiency::Advanced`**. Dual-path. Exact Host scopes. Append-only shared files.
-5. Avoid `LinearAlgebra.gemm` CUDA/`caps()` Host path. Avoid `centrepoint` O(n⁴). Spec chain id collisions: use `*:live` suffix (see `ai:agent_live`, `video:live_*`).
+5. Avoid `LinearAlgebra.gemm` CUDA/`caps()` Host path. Avoid `centrepoint` O(n⁴). Spec chain id collisions: use `*:live` suffix (see `ai:agent_live`, `video:live_*`, `comm:pulse_live`).
 
 ## Register / ledger
 

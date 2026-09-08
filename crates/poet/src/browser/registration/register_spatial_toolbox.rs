@@ -567,6 +567,39 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
         ),
     ];
 
+    let portal_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        dmx_live_tool(
+            "spatial:portal_set_target",
+            "Portal target",
+            "Portal.set_target",
+            "Set a portal target world via Portal.set_target.",
+        ),
+        dmx_live_tool(
+            "spatial:portal_activate",
+            "Activate portal",
+            "Portal.activate",
+            "Activate a portal via Portal.activate.",
+        ),
+        dmx_live_tool(
+            "spatial:portal_deactivate",
+            "Deactivate portal",
+            "Portal.deactivate",
+            "Deactivate a portal via Portal.deactivate.",
+        ),
+        dmx_live_tool(
+            "spatial:avatar_move",
+            "Move avatar",
+            "Avatar.move",
+            "Move an avatar via Avatar.move.",
+        ),
+        dmx_live_tool(
+            "spatial:avatar_set_appearance",
+            "Avatar appearance",
+            "Avatar.set_appearance",
+            "Set avatar appearance via Avatar.set_appearance.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "spatial".into(),
@@ -652,6 +685,16 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
                         .into(),
                 },
                 world_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:portal".into(),
+                    label: "Live Portal & Avatar".into(),
+                    icon: "3d".into(),
+                    description: "Curated Portal.* target/activate and Avatar.* move/appearance binds."
+                        .into(),
+                },
+                portal_live,
             ),
             ToolChain::new(
                 ToolChainMetadata {

@@ -3832,7 +3832,57 @@ mod tests {
         )));
         assert!(tools.contains(&("office:asset_list", Some("Asset.list"))));
         assert!(tools.contains(&("office:asset_count", Some("Asset.count"))));
-        assert_eq!(tools.len(), 14);
+        assert_eq!(tools.len(), 21);
+    }
+
+    #[test]
+    fn asset_binds_wave26_persist_caps() {
+        let registry = super::build_registry();
+        let office = registry.toolbox("office").expect("office toolbox");
+        let chain = office
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "office:asset")
+            .expect("office:asset toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "office:asset_persist_create",
+            Some("Asset.persist_create")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_add_temporal",
+            Some("Asset.persist_add_temporal")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_add_topic",
+            Some("Asset.persist_add_topic")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_set_spatial",
+            Some("Asset.persist_set_spatial")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_compile",
+            Some("Asset.persist_compile")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_temporal_span",
+            Some("Asset.persist_temporal_span")
+        )));
+        assert!(tools.contains(&(
+            "office:asset_persist_query_aspects",
+            Some("Asset.persist_query_aspects")
+        )));
+        assert_eq!(tools.len(), 21);
     }
 
     #[test]
@@ -3898,6 +3948,87 @@ mod tests {
         assert!(tools.contains(&("ai:agent_plan", Some("Agent.plan"))));
         assert!(tools.contains(&("ai:agent_execute", Some("Agent.execute"))));
         assert!(tools.contains(&("ai:agent_evaluate", Some("Agent.evaluate"))));
+        assert_eq!(tools.len(), 5);
+    }
+
+    #[test]
+    fn pulse_live_binds_wave26_pulse_caps() {
+        let registry = super::build_registry();
+        let comm = registry
+            .toolbox("communication")
+            .expect("communication toolbox");
+        let chain = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:pulse_live")
+            .expect("comm:pulse_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("comm:pulse_live_publish", Some("Pulse.publish"))));
+        assert!(tools.contains(&(
+            "comm:pulse_live_graph_mutation",
+            Some("Pulse.publish_graph_mutation")
+        )));
+        assert!(tools.contains(&(
+            "comm:pulse_live_notification",
+            Some("Pulse.publish_notification")
+        )));
+        assert!(tools.contains(&(
+            "comm:pulse_live_telemetry",
+            Some("Pulse.publish_telemetry")
+        )));
+        assert!(tools.contains(&(
+            "comm:pulse_live_agent_message",
+            Some("Pulse.publish_agent_message")
+        )));
+        assert!(tools.contains(&("comm:pulse_live_sync", Some("Pulse.publish_sync"))));
+        assert!(tools.contains(&("comm:pulse_live_open_channel", Some("Pulse.open_channel"))));
+        assert!(tools.contains(&("comm:pulse_live_close_channel", Some("Pulse.close_channel"))));
+        assert!(tools.contains(&(
+            "comm:pulse_live_set_transport",
+            Some("Pulse.set_transport")
+        )));
+        assert_eq!(tools.len(), 9);
+    }
+
+    #[test]
+    fn portal_binds_wave26_portal_avatar_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:portal")
+            .expect("spatial:portal toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("spatial:portal_set_target", Some("Portal.set_target"))));
+        assert!(tools.contains(&("spatial:portal_activate", Some("Portal.activate"))));
+        assert!(tools.contains(&(
+            "spatial:portal_deactivate",
+            Some("Portal.deactivate")
+        )));
+        assert!(tools.contains(&("spatial:avatar_move", Some("Avatar.move"))));
+        assert!(tools.contains(&(
+            "spatial:avatar_set_appearance",
+            Some("Avatar.set_appearance")
+        )));
         assert_eq!(tools.len(), 5);
     }
 }

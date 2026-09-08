@@ -188,6 +188,48 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
         ),
         office_live_tool("office:asset_list", "List assets", "Asset.list", "List persisted asset ids."),
         office_live_tool("office:asset_count", "Count assets", "Asset.count", "Count persisted assets."),
+        office_live_tool(
+            "office:asset_persist_create",
+            "Persist create",
+            "Asset.persist_create",
+            "Create and persist an asset in one call.",
+        ),
+        office_live_tool(
+            "office:asset_persist_add_temporal",
+            "Persist add temporal",
+            "Asset.persist_add_temporal",
+            "Add a temporal aspect to a persisted asset.",
+        ),
+        office_live_tool(
+            "office:asset_persist_add_topic",
+            "Persist add topic",
+            "Asset.persist_add_topic",
+            "Add a topic to a persisted asset.",
+        ),
+        office_live_tool(
+            "office:asset_persist_set_spatial",
+            "Persist set spatial",
+            "Asset.persist_set_spatial",
+            "Set a spatial anchor on a persisted asset.",
+        ),
+        office_live_tool(
+            "office:asset_persist_compile",
+            "Persist compile",
+            "Asset.persist_compile",
+            "Compile a persisted asset to graph quins.",
+        ),
+        office_live_tool(
+            "office:asset_persist_temporal_span",
+            "Persist temporal span",
+            "Asset.persist_temporal_span",
+            "Span between earliest and latest persisted aspects.",
+        ),
+        office_live_tool(
+            "office:asset_persist_query_aspects",
+            "Persist query aspects",
+            "Asset.persist_query_aspects",
+            "Query persisted temporal aspects by kind.",
+        ),
     ];
 
     reg.register_toolbox(Toolbox::new(
@@ -292,7 +334,7 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
                     id: "office:asset".into(),
                     label: "Live Asset".into(),
                     icon: "doc".into(),
-                    description: "Curated Asset.* create, aspect, persist, resolve, list, and count binds."
+                    description: "Curated Asset.* create, aspect, persist, persist_* remainder, resolve, list, and count binds."
                         .into(),
                 },
                 asset_tools,

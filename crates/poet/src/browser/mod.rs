@@ -136,6 +136,8 @@ mod interp_chain_actions;
 mod spectral_chain_actions;
 mod world_chain_actions;
 mod asset_chain_actions;
+mod pulse_live_chain_actions;
+mod portal_chain_actions;
 mod ode_chain_actions;
 mod agent_chain_actions;
 mod cooperative_chain_actions;

@@ -277,6 +277,96 @@ pub(super) fn run_count(document: &Document, label: &str) {
     );
 }
 
+/// `Asset.persist_create` — `{ asset_id, kind, owner_did? }`.
+pub(super) fn run_persist_create(document: &Document, label: &str) {
+    let id = resolve_id(document);
+    invoke_dual(
+        document,
+        label,
+        "Asset.persist_create",
+        format!("asset persist_create sketch id={id} kind={DEFAULT_KIND}"),
+        json!({ "asset_id": id, "kind": DEFAULT_KIND }),
+    );
+}
+
+/// `Asset.persist_add_temporal` — `{ asset_id, kind_iri, seconds, nanos? }`.
+pub(super) fn run_persist_add_temporal(document: &Document, label: &str) {
+    let id = resolve_id(document);
+    invoke_dual(
+        document,
+        label,
+        "Asset.persist_add_temporal",
+        format!("asset persist_add_temporal sketch id={id} kind_iri={DEFAULT_ASPECT} seconds=0"),
+        json!({ "asset_id": id, "kind_iri": DEFAULT_ASPECT, "seconds": 0, "nanos": 0 }),
+    );
+}
+
+/// `Asset.persist_add_topic` — `{ asset_id, topic }`.
+pub(super) fn run_persist_add_topic(document: &Document, label: &str) {
+    let id = resolve_id(document);
+    invoke_dual(
+        document,
+        label,
+        "Asset.persist_add_topic",
+        format!("asset persist_add_topic sketch id={id} topic={DEFAULT_TOPIC}"),
+        json!({ "asset_id": id, "topic": DEFAULT_TOPIC }),
+    );
+}
+
+/// `Asset.persist_set_spatial` — `{ asset_id, anchor_iri, latitude?, longitude?, altitude? }`.
+pub(super) fn run_persist_set_spatial(document: &Document, label: &str) {
+    let id = resolve_id(document);
+    invoke_dual(
+        document,
+        label,
+        "Asset.persist_set_spatial",
+        format!("asset persist_set_spatial sketch id={id} anchor={DEFAULT_ANCHOR}"),
+        json!({
+            "asset_id": id,
+            "anchor_iri": DEFAULT_ANCHOR,
+            "latitude": 0.0,
+            "longitude": 0.0,
+            "altitude": 0.0
+        }),
+    );
+}
+
+/// `Asset.persist_compile` — `{ asset_id }`.
+pub(super) fn run_persist_compile(document: &Document, label: &str) {
+    let id = resolve_id(document);
+    invoke_dual(
+        document,
+        label,
+        "Asset.persist_compile",
+        format!("asset persist_compile sketch id={id}"),
+        json!({ "asset_id": id }),
+    );
+}
+
+/// `Asset.persist_temporal_span` — `{ asset_id }`.
+pub(super) fn run_persist_temporal_span(document: &Document, label: &str) {
+    let id = resolve_id(document);
+    invoke_dual(
+        document,
+        label,
+        "Asset.persist_temporal_span",
+        format!("asset persist_temporal_span sketch id={id} (needs ≥2 persisted aspects)"),
+        json!({ "asset_id": id }),
+    );
+}
+
+/// `Asset.persist_query_aspects` — `{ asset_id, kind_iri }`.
+pub(super) fn run_persist_query_aspects(document: &Document, label: &str) {
+    let id = resolve_id(document);
+    invoke_dual(
+        document,
+        label,
+        "Asset.persist_query_aspects",
+        format!("asset persist_query_aspects sketch id={id} kind_iri={DEFAULT_ASPECT}"),
+        json!({ "asset_id": id, "kind_iri": DEFAULT_ASPECT }),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

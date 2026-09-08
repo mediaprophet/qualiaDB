@@ -23,6 +23,8 @@ mod wave23_host;
 mod wave24_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave25_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave26_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -79,6 +81,14 @@ pub use wave25_host::{
     projective_from_point_host as projective_from_point,
     quaternion_normalize_host as quaternion_normalize, so3_exp_host as so3_exp,
     so3_log_host as so3_log,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave26_host::{
+    barycentric_tetra_host as barycentric_tetra, frame_to_world_host as frame_to_world,
+    quaternion_slerp_host as quaternion_slerp, quaternion_to_matrix_host as quaternion_to_matrix,
+    schur_complement_2x2_host as schur_complement_2x2,
+    separating_plane_aabb_host as separating_plane_aabb,
+    solve_diagonal_quadratic_host as solve_diagonal_quadratic, world_to_frame_host as world_to_frame,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -189,5 +199,13 @@ geom_stub!(
     so3_exp,
     so3_log,
     projective_from_point,
-    point_from_projective
+    point_from_projective,
+    frame_to_world,
+    world_to_frame,
+    barycentric_tetra,
+    quaternion_slerp,
+    quaternion_to_matrix,
+    solve_diagonal_quadratic,
+    schur_complement_2x2,
+    separating_plane_aabb
 );
