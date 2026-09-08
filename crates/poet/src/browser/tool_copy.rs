@@ -1876,6 +1876,126 @@ fn named(id: &str) -> Option<Presentation> {
             "Nearest segment-site via ComputationalGeometry.nearest_segment_site.",
             Proficiency::Intermediate,
         ),
+        "scientific:cg_live_width_coreset" => (
+            "Width coreset",
+            "Dudley width coreset via ComputationalGeometry.width_coreset.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_dual_point_to_line" => (
+            "Dual point to line",
+            "Point–line duality via ComputationalGeometry.dual_point_to_line.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_dual_round_trip" => (
+            "Dual round trip",
+            "Dual round-trip via ComputationalGeometry.dual_round_trip.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_is_convex_polygon" => (
+            "Is convex polygon",
+            "Convexity test via ComputationalGeometry.is_convex_polygon.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_point_in_or_on_polygon" => (
+            "Point in or on polygon",
+            "Interior-or-boundary test via ComputationalGeometry.point_in_or_on_polygon.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_boolean_union_area" => (
+            "Boolean union area",
+            "Union area via ComputationalGeometry.boolean_union_area.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_boolean_intersection_area" => (
+            "Boolean intersection area",
+            "Intersection area via ComputationalGeometry.boolean_intersection_area.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_boolean_difference_area" => (
+            "Boolean difference area",
+            "Difference area via ComputationalGeometry.boolean_difference_area.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_cross_ratio_1d" => (
+            "Cross ratio 1D",
+            "1D cross-ratio via ComputationalGeometry.cross_ratio_1d.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_hyperplane_eval" => (
+            "Hyperplane eval",
+            "Hyperplane evaluation via ComputationalGeometry.hyperplane_eval.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_householder_reflect" => (
+            "Householder reflect",
+            "Householder reflection via ComputationalGeometry.householder_reflect.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_quaternion_normalize" => (
+            "Quaternion normalize",
+            "Unit quaternion via ComputationalGeometry.quaternion_normalize.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_so3_exp" => (
+            "SO(3) exp",
+            "Axis-angle exponential via ComputationalGeometry.so3_exp.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_so3_log" => (
+            "SO(3) log",
+            "Quaternion logarithm via ComputationalGeometry.so3_log.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_projective_from_point" => (
+            "Projective from point",
+            "Homogeneous lift via ComputationalGeometry.projective_from_point.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_point_from_projective" => (
+            "Point from projective",
+            "Euclidean drop via ComputationalGeometry.point_from_projective.",
+            Proficiency::Novice,
+        ),
+        "scientific:cg_live_frame_to_world" => (
+            "Frame to world",
+            "Local→world via ComputationalGeometry.frame_to_world.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_world_to_frame" => (
+            "World to frame",
+            "World→local via ComputationalGeometry.world_to_frame.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_barycentric_tetra" => (
+            "Barycentric tetra",
+            "Tetra barycentrics via ComputationalGeometry.barycentric_tetra.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_quaternion_slerp" => (
+            "Quaternion slerp",
+            "Quaternion slerp via ComputationalGeometry.quaternion_slerp.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_quaternion_to_matrix" => (
+            "Quaternion to matrix",
+            "SO(3) matrix via ComputationalGeometry.quaternion_to_matrix.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_solve_diagonal_quadratic" => (
+            "Solve diagonal quadratic",
+            "Diagonal quadratic via ComputationalGeometry.solve_diagonal_quadratic.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_schur_complement_2x2" => (
+            "Schur complement 2×2",
+            "2×2 Schur complement via ComputationalGeometry.schur_complement_2x2.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:cg_live_separating_plane_aabb" => (
+            "Separating plane AABB",
+            "AABB SAT plane via ComputationalGeometry.separating_plane_aabb.",
+            Proficiency::Intermediate,
+        ),
         "scientific:ga_dot" => (
             "Dot product",
             "Dot product of two 3-vectors from surface numbers or data-a*/data-b*.",

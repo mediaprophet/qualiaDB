@@ -629,6 +629,30 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "scientific:cg_live_point_in_polygon"
             | "scientific:cg_live_minkowski_sum_convex"
             | "scientific:cg_live_nearest_segment_site"
+            | "scientific:cg_live_width_coreset"
+            | "scientific:cg_live_dual_point_to_line"
+            | "scientific:cg_live_dual_round_trip"
+            | "scientific:cg_live_is_convex_polygon"
+            | "scientific:cg_live_point_in_or_on_polygon"
+            | "scientific:cg_live_boolean_union_area"
+            | "scientific:cg_live_boolean_intersection_area"
+            | "scientific:cg_live_boolean_difference_area"
+            | "scientific:cg_live_cross_ratio_1d"
+            | "scientific:cg_live_hyperplane_eval"
+            | "scientific:cg_live_householder_reflect"
+            | "scientific:cg_live_quaternion_normalize"
+            | "scientific:cg_live_so3_exp"
+            | "scientific:cg_live_so3_log"
+            | "scientific:cg_live_projective_from_point"
+            | "scientific:cg_live_point_from_projective"
+            | "scientific:cg_live_frame_to_world"
+            | "scientific:cg_live_world_to_frame"
+            | "scientific:cg_live_barycentric_tetra"
+            | "scientific:cg_live_quaternion_slerp"
+            | "scientific:cg_live_quaternion_to_matrix"
+            | "scientific:cg_live_solve_diagonal_quadratic"
+            | "scientific:cg_live_schur_complement_2x2"
+            | "scientific:cg_live_separating_plane_aabb"
             | "scientific:eng_natural_freq"
             | "scientific:eng_harmonic_sdof"
             | "scientific:eng_euler"
@@ -2825,6 +2849,78 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "scientific:cg_live_nearest_segment_site" => {
             super::cg_live2_chain_actions::run_nearest_segment_site(document, label)
+        }
+        "scientific:cg_live_width_coreset" => {
+            super::cg_live3_chain_actions::run_width_coreset(document, label)
+        }
+        "scientific:cg_live_dual_point_to_line" => {
+            super::cg_live3_chain_actions::run_dual_point_to_line(document, label)
+        }
+        "scientific:cg_live_dual_round_trip" => {
+            super::cg_live3_chain_actions::run_dual_round_trip(document, label)
+        }
+        "scientific:cg_live_is_convex_polygon" => {
+            super::cg_live3_chain_actions::run_is_convex_polygon(document, label)
+        }
+        "scientific:cg_live_point_in_or_on_polygon" => {
+            super::cg_live3_chain_actions::run_point_in_or_on_polygon(document, label)
+        }
+        "scientific:cg_live_boolean_union_area" => {
+            super::cg_live3_chain_actions::run_boolean_union_area(document, label)
+        }
+        "scientific:cg_live_boolean_intersection_area" => {
+            super::cg_live3_chain_actions::run_boolean_intersection_area(document, label)
+        }
+        "scientific:cg_live_boolean_difference_area" => {
+            super::cg_live3_chain_actions::run_boolean_difference_area(document, label)
+        }
+        "scientific:cg_live_cross_ratio_1d" => {
+            super::cg_live4_chain_actions::run_cross_ratio_1d(document, label)
+        }
+        "scientific:cg_live_hyperplane_eval" => {
+            super::cg_live4_chain_actions::run_hyperplane_eval(document, label)
+        }
+        "scientific:cg_live_householder_reflect" => {
+            super::cg_live4_chain_actions::run_householder_reflect(document, label)
+        }
+        "scientific:cg_live_quaternion_normalize" => {
+            super::cg_live4_chain_actions::run_quaternion_normalize(document, label)
+        }
+        "scientific:cg_live_so3_exp" => {
+            super::cg_live4_chain_actions::run_so3_exp(document, label)
+        }
+        "scientific:cg_live_so3_log" => {
+            super::cg_live4_chain_actions::run_so3_log(document, label)
+        }
+        "scientific:cg_live_projective_from_point" => {
+            super::cg_live4_chain_actions::run_projective_from_point(document, label)
+        }
+        "scientific:cg_live_point_from_projective" => {
+            super::cg_live4_chain_actions::run_point_from_projective(document, label)
+        }
+        "scientific:cg_live_frame_to_world" => {
+            super::cg_live4_chain_actions::run_frame_to_world(document, label)
+        }
+        "scientific:cg_live_world_to_frame" => {
+            super::cg_live4_chain_actions::run_world_to_frame(document, label)
+        }
+        "scientific:cg_live_barycentric_tetra" => {
+            super::cg_live4_chain_actions::run_barycentric_tetra(document, label)
+        }
+        "scientific:cg_live_quaternion_slerp" => {
+            super::cg_live4_chain_actions::run_quaternion_slerp(document, label)
+        }
+        "scientific:cg_live_quaternion_to_matrix" => {
+            super::cg_live4_chain_actions::run_quaternion_to_matrix(document, label)
+        }
+        "scientific:cg_live_solve_diagonal_quadratic" => {
+            super::cg_live4_chain_actions::run_solve_diagonal_quadratic(document, label)
+        }
+        "scientific:cg_live_schur_complement_2x2" => {
+            super::cg_live4_chain_actions::run_schur_complement_2x2(document, label)
+        }
+        "scientific:cg_live_separating_plane_aabb" => {
+            super::cg_live4_chain_actions::run_separating_plane_aabb(document, label)
         }
         "scientific:eng_natural_freq" => {
             super::eng_chain_actions::run_natural_frequency_sdof(document, label)

@@ -4378,6 +4378,40 @@ mod tests {
             "scientific:cg_live_nearest_segment_site",
             Some("ComputationalGeometry.nearest_segment_site")
         )));
-        assert_eq!(tools.len(), 25);
+        assert!(tools.len() >= 25);
+    }
+
+    #[test]
+    fn cg_live_binds_wave32_cg_remainder_caps() {
+        let registry = super::build_registry();
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let chain = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:cg_live")
+            .expect("scientific:cg_live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&(
+            "scientific:cg_live_width_coreset",
+            Some("ComputationalGeometry.width_coreset")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_cross_ratio_1d",
+            Some("ComputationalGeometry.cross_ratio_1d")
+        )));
+        assert!(tools.contains(&(
+            "scientific:cg_live_separating_plane_aabb",
+            Some("ComputationalGeometry.separating_plane_aabb")
+        )));
+        assert_eq!(tools.len(), 49);
     }
 }
