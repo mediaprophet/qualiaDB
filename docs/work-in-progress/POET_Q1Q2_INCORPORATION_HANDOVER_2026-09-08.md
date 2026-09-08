@@ -15,8 +15,8 @@
 
 - Live: Asset persist remainder×7 (`office:asset_persist_*`) · Pulse×9 (`comm:pulse_live_*` on chain `comm:pulse_live`) · Portal/Avatar×5 (`spatial:portal_*` / `spatial:avatar_*` on chain `spatial:portal`)
 - Host×8: `frame_to_world`, `world_to_frame`, `barycentric_tetra`, `quaternion_slerp`, `quaternion_to_matrix`, `solve_diagonal_quadratic`, `schur_complement_2x2`, `separating_plane_aabb`
-- Verify: poet `wave26` · policy ok · integrity 11 · host `wave26_*` 8 · catalog ok
-- Backlog after wave 26: **`ALL_BOUND=1102` · `PoetLive≈798` · `Q2≈296`**
+- Verify: poet `wave26` 5 · policy ok · integrity 11 · host `wave26_*` 8 · catalog ok
+- Backlog after wave 26: **`ALL_BOUND=1102` · `PoetLive≈798` · `Q2≈304`**
 
 ## Remaining waves (estimate)
 
@@ -24,7 +24,7 @@ Throughput recent waves: **~21–40 Poet Live + ~8 Host / wave**.
 
 | Bucket | Count (post-w26) | Est. Live waves @ ~30/wave |
 |--------|------------------|----------------------------|
-| **Q2 Host-bound not Live** | **≈296** | **~10** |
+| **Q2 Host-bound not Live** | **≈304** | **~10** |
 | Large families | Research 73, Render 51 (CPU CSS/SVG/animation first; skip GPU Host-widen) | Research/Render ≈ 4 waves |
 | **Q1 Host-missing** | **~12k** (mostly CoreDb / shellish) | Curated Host lane stays **4–8 pure specialized_libs per wave**; not exhaust Q1 |
 

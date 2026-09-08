@@ -94,11 +94,6 @@ fn portal_id(document: &Document) -> String {
     resolve_id(el.as_ref(), "data-portal-id", DEFAULT_PORTAL_ID)
 }
 
-fn avatar_id(document: &Document) -> String {
-    let el = selected_container(document);
-    resolve_id(el.as_ref(), "data-avatar-id", DEFAULT_AVATAR_ID)
-}
-
 /// `Portal.set_target` — `{ id, target_world }`.
 pub(super) fn run_set_target(document: &Document, label: &str) {
     let el = selected_container(document);

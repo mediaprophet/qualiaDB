@@ -28,4 +28,15 @@ cargo test -p qualia-core-db --lib wave26
 cargo test -p qualia-core-db --lib vibe_catalog_contains_every_bound_invoke_id
 ```
 
-Expected after this wave: `ALL_BOUND=1102` · `PoetLive≈798` · `Q2≈296`.
+Expected after this wave: `ALL_BOUND=1102` · `PoetLive≈798` · `Q2≈304`.
+
+## Verification (parent)
+
+- `cargo test -p poet --lib wave26`: **5 passed**
+- `cargo test -p poet --lib every_registered_nonplacement_tool_has_an_explicit_policy`: **1 passed**
+- `cargo test -p poet --test product_integrity`: **11 passed**
+- `cargo test -p qualia-core-db --lib wave26`: **8 passed**
+- `cargo test -p qualia-core-db --lib vibe_catalog_contains_every_bound_invoke_id`: **1 passed**
+- Derived counts: `ALL_BOUND=1102` · `PoetLive≈798` · `Q2≈304`
+
+Next: Wave 27 — Inference remainder, Research live slice (`research:live_*`), Host math.
