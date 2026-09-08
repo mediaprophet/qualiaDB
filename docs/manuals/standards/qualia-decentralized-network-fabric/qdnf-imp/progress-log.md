@@ -235,6 +235,29 @@
 - Human input needed: none this step.
 - Next: Wave 6 candidates: NET-05 session dial races, remaining SVC checkpoints, GPU/wgpu feature-gating for full RT-03.07, raw Ethernet. Packages stay open.
 
+## 2026-09-08 — Wave 6 swarm claim
+
+- Integrator claims Wave 6 provisional: NET-05 path races + stream credit, SVC-01 checkpoints. Packages stay **open**.
+- Disjoint writes: NET-05 `net/qdnf/session/paths.rs` and `net/qdnf/session/credit.rs` (do not edit `session/mod.rs` — integrator wires); SVC `net/peer/replication/checkpoint.rs` + replication/mod.rs one line.
+- Shared files forbidden: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
+- Human input needed: none this step.
+
+## 2026-09-08 — Wave 6 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers: NET-05.10 (`PathTable` max 3 Active, 8 race slots, `lose_generation` stale, operation id preserved across path change, compat-carrier duplicate recovery off), NET-05.07 (`CreditTable` 64 streams/dir, one aggregate `BufferLease` per direction vs 32 `LEASE_SLOTS`, window vs `ReservationLedger`, purchased service does not disable congestion, ACK range cap 8), SVC-01.07 (`build_checkpoint` SHA-384, empty ≠ ZERO, duplicates Conflict, membership ≠ completeness). Integrator wired `session/{paths,credit}` and `replication/checkpoint`.
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf::session::paths net::qdnf::session::credit net::peer::replication net::qdnf net::peer crypto::network wal_intent governance::webizen::arena_admit q42::q42_volume::volume::network_quanta` → **273 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion. `IpcEndpoint::recv` still dequeues before checking output length.
+- Human input needed: none this step.
+- Next: Wave 7 (NET-05 packet/replay/nonce, NET-05 ACK/PTO, CRY-02 responder-share encoding + live KEM). Packages stay open.
+
+## 2026-09-08 — Wave 7 swarm claim
+
+- Integrator claims Wave 7 provisional: NET-05.04 packet/replay/nonce, NET-05.08 ACK/loss/PTO, CRY-02.03 responder-share encoding. Packages stay **open**.
+- Disjoint writes: NET-05 `net/qdnf/session/packet.rs` and `net/qdnf/session/loss.rs` (do not edit `session/mod.rs` — integrator wires); CRY-02 `crypto/network/share_encoding.rs` (do not edit `pq_handshake.rs` / `handshake.rs` / `mod.rs` — integrator wires).
+- Shared files forbidden to workers: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`, `wal.rs`, `arena.rs`.
+- Human input needed: none this step.
+- Next: integrate child patches, run `cargo +stable` tests, record measurements.
+
+
 
 
 

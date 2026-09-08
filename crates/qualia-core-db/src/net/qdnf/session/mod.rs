@@ -1,7 +1,9 @@
 //! QSession handshake, streams, datagrams and policy admission.
 
+pub mod credit;
 pub mod datagrams;
 pub mod handshake;
+pub mod paths;
 pub mod policy;
 pub mod streams;
 
