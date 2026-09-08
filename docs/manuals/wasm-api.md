@@ -9,12 +9,13 @@ The `qualia-core-db` crate compiles to `wasm32-unknown-unknown` with two feature
 
 | Profile | Features | Use case |
 |---------|----------|----------|
-| **Portal slim** | `portal` | GitHub Pages, spatial demo, QApp embed — viewport + acoustic (kept under the 2 MB / 800 KB size budget) |
-| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM** |
+| **Portal** | `portal` | GitHub Pages, spatial demo, QApp embed — full WASM-safe engine (logic + science + WebGPU). CI sanity cap 16 MiB raw / 4 MiB gzip |
+| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM**. Same 16 MiB / 4 MiB sanity cap |
 
-> The **browser LLM lives in the `wasm-full` playground bundle**, not the slim portal — keeping every
-> spatial page lean. LLM demos (`llmdemo/`, `online-llm-demo.html`, `wasm-llm-test.html`, `benchmark.html`)
-> all import from `playground/qualia_core_db.js`.
+> The **browser LLM lives in the `wasm-full` playground bundle**, not the portal package.
+> LLM demos (`llmdemo/`, `online-llm-demo.html`, `wasm-llm-test.html`, `benchmark.html`)
+> all import from `playground/qualia_core_db.js`. Ontology MCP (`webizen-lite-wasm`) keeps
+> the tight 640 KiB / 200 KiB product budget and does not pull science or LLM.
 
 ---
 
@@ -32,7 +33,7 @@ This is a separate crate backed by the `wasm-ontology` kernel. It excludes the
 portal, WebGPU, scientific and LLM profiles. See
 [`wasm-capability-profiles.md`](wasm-capability-profiles.md).
 
-### 1.1 Portal slim (recommended for demos)
+### 1.1 Portal (GitHub Pages / spatial demo)
 
 ```powershell
 $env:RUSTFLAGS = "-C target-feature=+simd128"
@@ -60,6 +61,9 @@ wasm-pack build crates/qualia-core-db \
 ```powershell
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features portal
 node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
+node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
+node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
+node docs/tests/wasm-size-check.mjs docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 655360 204800
 ```
 
 **Portal features enabled:** `serde-wasm-bindgen`, `js-sys`, `web-sys` (canvas, WebGPU, `SharedArrayBuffer`), embedded viewport WGSL.

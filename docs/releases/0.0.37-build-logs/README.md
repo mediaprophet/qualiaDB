@@ -5,8 +5,17 @@ Captured on the `0.0.37` line after the workspace version bump. Each
 Each `*.diagnostics.log` lists only `error` / `warning` lines plus a
 count summary. `SUMMARY.md` is the exit-code table.
 
-Host: Linux x86_64, rustc 1.98.1. Windows NSIS and macOS Metal installer
-jobs from `release-desktop.yml` are not reproduced here.
+Host: Linux x86_64, rustc 1.98.1.
+
+Windows / macOS: see [`CROSS-PLATFORM.md`](CROSS-PLATFORM.md). This host
+produced a MinGW `qualia-cli.exe` and type-checked `webizen-desktop` for
+`x86_64-pc-windows-gnu`. It did **not** produce the signed NSIS / Metal
+installers from `release-desktop.yml`. macOS `aarch64-apple-darwin` fails
+here (no Apple SDK).
+
+GitHub Pages WASM size gates: see [`WASM-SIZE-GATES.md`](WASM-SIZE-GATES.md).
+Portal and playground fail the old 2.6 MiB / 800 KiB cap and pass the
+16 MiB / 4 MiB sanity cap used by `pages.yml` and `release-wasm.yml`.
 
 ## First-pass outcome
 

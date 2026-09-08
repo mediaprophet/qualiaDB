@@ -92,5 +92,14 @@ Build the ontology package:
 wasm-pack build crates/webizen-lite-wasm --target web --out-dir pkg --release
 ```
 
-The 2026-06-27 reference build is 267,993 bytes raw and 94,971 bytes gzip.
-CI limits it to 512 KiB raw / 200 KiB gzip.
+The 2026-06-27 reference ontology build is 267,993 bytes raw and 94,971 bytes gzip.
+
+GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured 0.0.37:
+
+| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.37 |
+|---|---|---|---|
+| Ontology MCP | `-p webizen-lite-wasm` | 640 KiB / 200 KiB | ~529 KiB / ~162 KiB gzip |
+| Portal | `--features portal` | 16 MiB / 4 MiB | ~7.70 MiB / ~2.15 MiB gzip |
+| Playground | `--features wasm-full` | 16 MiB / 4 MiB | ~8.23 MiB / ~2.32 MiB gzip |
+
+Portal and playground share a sanity cap for the full WASM-safe engine; they are not a slim viewport budget. Do not fold science or LLM into `wasm-ontology` to keep Pages green — that kernel stays the size-bounded MCP product.

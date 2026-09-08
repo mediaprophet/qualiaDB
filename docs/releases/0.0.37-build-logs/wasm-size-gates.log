@@ -1,0 +1,16 @@
+=== ontology lite (docs/pkg/webizen-lite) ===
+[wasm-size] raw=540847 (0.52 MB) gzip=165726 (162 KB)
+[wasm-size] OK
+=== portal (fresh pkg-qualia, GH Pages source) ===
+[wasm-size] raw=8075313 (7.70 MB) gzip=2256664 (2204 KB)
+[wasm-size] OK
+=== portal (stale docs/pkg/qualia copy) ===
+[wasm-size] raw=1974851 (1.88 MB) gzip=638612 (624 KB)
+[wasm-size] OK
+=== playground wasm-full ===
+[wasm-size] raw=8630624 (8.23 MB) gzip=2431169 (2374 KB)
+[wasm-size] OK
+=== portal against OLD 2.6 MiB / 800 KiB gate (should FAIL) ===
+[wasm-size] raw=8075313 (7.70 MB) gzip=2256664 (2204 KB)
+=== playground against OLD 2.6 MiB / 800 KiB gate (should FAIL) ===
+[wasm-size] raw=8630624 (8.23 MB) gzip=2431169 (2374 KB)

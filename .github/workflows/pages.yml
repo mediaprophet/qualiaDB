@@ -8,7 +8,6 @@ on:
     branches:
       - main
       - "0.0.37"
-      - "0.0.37"
     tags:
       - "v*"
   workflow_dispatch:
@@ -138,7 +137,8 @@ jobs:
 
       - name: Phase 7.1 — portal WASM size budget
         # Sanity cap for the full WASM-safe engine (not a slim product budget).
-        # Ontology MCP keeps the tight 640/200 KiB gate.
+        # Measured 0.0.37 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
+        # Ontology MCP keeps the tight 640 KiB / 200 KiB gate.
         run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
 
       - name: PR-C11b — phenomenal viewport contract checklist
@@ -175,6 +175,11 @@ jobs:
             --no-typescript \
             -- --no-default-features --features wasm-full
           ls -la docs/playground/qualia_core_db.js docs/playground/qualia_core_db_bg.wasm
+
+      - name: Playground WASM size budget
+        # Same 16 MiB / 4 MiB sanity cap as portal. Measured 0.0.37 wasm-full:
+        # ~8.23 MiB raw / ~2.32 MiB gzip. Keep in step with release-wasm.yml.
+        run: node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
 
       - name: Prepare Schema.org benchmark artifacts for Pages
         continue-on-error: true   # non-fatal: Pages deploys fine without Schema.org artifacts
