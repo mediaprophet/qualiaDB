@@ -2,6 +2,26 @@
 
 use super::*;
 
+fn sci_live_tool(
+    id: &'static str,
+    label: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: "lab".into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "sci".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
     let lab_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
@@ -374,6 +394,66 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
                 capability_scope: Some("LinearAlgebra.symmetric_eigen_3x3".into()),
                 ontology_prefix: "sci".into(),
                 description: "Closed-form symmetric 3×3 eigenvalues (Smith).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_dot".into(),
+                label: "Dot product".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.dot".into()),
+                ontology_prefix: "sci".into(),
+                description: "Inner product of two equal-length vectors.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_norm".into(),
+                label: "L2 norm".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.norm".into()),
+                ontology_prefix: "sci".into(),
+                description: "Euclidean length of a vector.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_trace".into(),
+                label: "Trace".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.trace".into()),
+                ontology_prefix: "sci".into(),
+                description: "Sum of diagonal entries of a square matrix.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_identity".into(),
+                label: "Identity".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.identity".into()),
+                ontology_prefix: "sci".into(),
+                description: "n×n identity (n from data-n, max 256).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "scientific:la_inverse".into(),
+                label: "Inverse".into(),
+                icon: "lab".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("LinearAlgebra.inverse".into()),
+                ontology_prefix: "sci".into(),
+                description: "Dense inverse via LU; fails closed if singular.".into(),
             },
             ActionType::Invoke,
         )),
@@ -1904,6 +1984,156 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let vc_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:vc_gradient",
+            "Gradient",
+            "VectorCalculus.gradient",
+            "Symbolic gradient of a scalar field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_divergence",
+            "Divergence",
+            "VectorCalculus.divergence",
+            "Divergence of a vector field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_curl",
+            "Curl",
+            "VectorCalculus.curl",
+            "Curl of a 3-component vector field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_laplacian",
+            "Laplacian",
+            "VectorCalculus.laplacian",
+            "Scalar Laplacian.",
+        ),
+        sci_live_tool(
+            "scientific:vc_line_integral_scalar",
+            "Scalar line integral",
+            "VectorCalculus.line_integral_scalar",
+            "Scalar line integral along a parametric curve.",
+        ),
+        sci_live_tool(
+            "scientific:vc_line_integral_work",
+            "Work line integral",
+            "VectorCalculus.line_integral_work",
+            "Work line integral of a vector field.",
+        ),
+        sci_live_tool(
+            "scientific:vc_surface_flux",
+            "Surface flux",
+            "VectorCalculus.surface_flux",
+            "Flux through a parametric surface.",
+        ),
+    ];
+
+    let interp_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:interp_linear",
+            "Linear interpolate",
+            "Interpolation.linear_interp",
+            "Piecewise linear interpolation.",
+        ),
+        sci_live_tool(
+            "scientific:interp_lagrange",
+            "Lagrange evaluate",
+            "Interpolation.lagrange_eval",
+            "Lagrange polynomial evaluation.",
+        ),
+        sci_live_tool(
+            "scientific:interp_newton_coef",
+            "Newton coefficients",
+            "Interpolation.newton_coefficients",
+            "Newton divided-difference coefficients.",
+        ),
+        sci_live_tool(
+            "scientific:interp_newton_eval",
+            "Newton evaluate",
+            "Interpolation.newton_eval",
+            "Evaluate a Newton interpolant.",
+        ),
+        sci_live_tool(
+            "scientific:interp_poly_fit",
+            "Polynomial fit",
+            "Interpolation.poly_fit",
+            "Least-squares polynomial fit.",
+        ),
+        sci_live_tool(
+            "scientific:interp_poly_eval",
+            "Polynomial evaluate",
+            "Interpolation.poly_eval",
+            "Evaluate a polynomial from coefficients.",
+        ),
+    ];
+
+    let spectral_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:spectral_emf_to_spd",
+            "EMF to SPD",
+            "Spectral.emf_to_spd",
+            "Emission spectrum from EMF parameters.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_spd_to_xyz",
+            "SPD to XYZ",
+            "Spectral.spd_to_xyz",
+            "CIE XYZ from a 41-sample SPD.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_emf_to_rgb",
+            "EMF to RGB",
+            "Spectral.emf_to_rgb",
+            "Display RGB from EMF parameters.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_blend",
+            "Blend spectra",
+            "Spectral.blend",
+            "Blend two EMF spectra.",
+        ),
+        sci_live_tool(
+            "scientific:spectral_gamut_map",
+            "Gamut map",
+            "Spectral.gamut_map",
+            "Map XYZ into the display gamut.",
+        ),
+    ];
+
+    let ode_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        sci_live_tool(
+            "scientific:ode_lin1",
+            "Linear first-order ODE",
+            "SymbolicODE.solve_linear_first_order",
+            "Closed form for y' + a·y = b.",
+        ),
+        sci_live_tool(
+            "scientific:ode_lin2",
+            "Linear second-order ODE",
+            "SymbolicODE.solve_linear_second_order",
+            "Closed form for a·y'' + b·y' + c·y = 0.",
+        ),
+        sci_live_tool(
+            "scientific:ode_classify_pde",
+            "Classify PDE",
+            "SymbolicODE.classify_second_order_pde",
+            "Elliptic / parabolic / hyperbolic by B²−4AC.",
+        ),
+        sci_live_tool(
+            "scientific:ode_separable",
+            "Separable ODE",
+            "SymbolicODE.solve_separable",
+            "Implicit solution for y' = g(x)·h(y).",
+        ),
+        sci_live_tool(
+            "scientific:ode_pde1",
+            "Linear first-order PDE",
+            "SymbolicODE.solve_first_order_linear_pde",
+            "Characteristics for a·uₓ + b·u_y = 0.",
+        ),
+    ];
+
     let chem_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
             ToolMetadata {
@@ -2266,6 +2496,16 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
             ),
             ToolChain::new(
                 ToolChainMetadata {
+                    id: "scientific:cg_live".into(),
+                    label: "Live CG remainder".into(),
+                    icon: "lab".into(),
+                    description: "Host-bound ComputationalGeometry leftovers (point-set, predicates, polygons)."
+                        .into(),
+                },
+                super::register_cg_live::cg_live_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
                     id: "scientific:eng".into(),
                     label: "Live engineering analysis".into(),
                     icon: "lab".into(),
@@ -2283,6 +2523,80 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
                         .into(),
                 },
                 ga_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:vc".into(),
+                    label: "Live vector calculus".into(),
+                    icon: "lab".into(),
+                    description: "Curated VectorCalculus.* gradient, divergence, curl, Laplacian, and integrals."
+                        .into(),
+                },
+                vc_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:interp".into(),
+                    label: "Live interpolation".into(),
+                    icon: "lab".into(),
+                    description: "Curated Interpolation.* linear, Lagrange, Newton, and polynomial binds."
+                        .into(),
+                },
+                interp_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:spectral".into(),
+                    label: "Live spectral colour".into(),
+                    icon: "lab".into(),
+                    description: "Curated Spectral.* EMF, SPD, RGB, blend, and gamut binds.".into(),
+                },
+                spectral_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:ode".into(),
+                    label: "Live symbolic ODE".into(),
+                    icon: "lab".into(),
+                    description: "Curated SymbolicODE.* linear ODE, separable, and PDE binds.".into(),
+                },
+                ode_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:num_ode".into(),
+                    label: "Live numeric ODE".into(),
+                    icon: "lab".into(),
+                    description: "Curated Ode.* RK4, DOPRI5, BDF, and symplectic binds.".into(),
+                },
+                super::register_wave33_live::ode_num_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:graph_reason".into(),
+                    label: "Live graph match & optimization".into(),
+                    icon: "lab".into(),
+                    description: "Host-bound GraphMatch.*, GraphReasoning.*, Optimization leftovers.".into(),
+                },
+                super::register_wave37_live::graph_reason_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:crypto_priv".into(),
+                    label: "Live crypto, GEMM, privacy, sentinel".into(),
+                    icon: "lab".into(),
+                    description: "Host-bound hash / LinearAlgebra.gemm / Privacy / Sentinel leftovers.".into(),
+                },
+                super::register_wave38_live::crypto_priv_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:longtail".into(),
+                    label: "Live scientific long-tail".into(),
+                    icon: "lab".into(),
+                    description: "Remaining curated Host singles (bio, calculus, units, LTL, hash.iri).".into(),
+                },
+                super::register_wave39_live::longtail_tools(),
             ),
         ],
     ));

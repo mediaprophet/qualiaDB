@@ -82,11 +82,27 @@ mod tests {
 
     #[test]
     fn dual_path_callers_do_not_promote_rejection_to_success() {
-        for path in ["tool_actions.rs", "shapes_actions.rs", "chain_actions.rs"] {
+        for path in [
+            "tool_actions.rs",
+            "shapes_actions.rs",
+            "chain_actions.rs",
+            "wave38_chain_actions.rs",
+            "wave39_chain_actions.rs",
+            "gpu_live_chain_actions.rs",
+            "gpu_live2_chain_actions.rs",
+            "linalg_chain_actions.rs",
+            "linalg_app_chain_actions.rs",
+        ] {
             let src = match path {
                 "tool_actions.rs" => include_str!("tool_actions.rs"),
                 "shapes_actions.rs" => include_str!("shapes_actions.rs"),
                 "chain_actions.rs" => include_str!("chain_actions.rs"),
+                "wave38_chain_actions.rs" => include_str!("wave38_chain_actions.rs"),
+                "wave39_chain_actions.rs" => include_str!("wave39_chain_actions.rs"),
+                "gpu_live_chain_actions.rs" => include_str!("gpu_live_chain_actions.rs"),
+                "gpu_live2_chain_actions.rs" => include_str!("gpu_live2_chain_actions.rs"),
+                "linalg_chain_actions.rs" => include_str!("linalg_chain_actions.rs"),
+                "linalg_app_chain_actions.rs" => include_str!("linalg_app_chain_actions.rs"),
                 _ => unreachable!(),
             };
             assert!(

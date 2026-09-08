@@ -8,7 +8,9 @@ use qualia_cooperative_core::trigger::TriggerContext;
 use vibe::{Span, Value};
 
 use super::super::args;
-use super::codec::{decode_field, encode_json};
+use super::codec::decode_field;
+#[cfg(test)]
+use super::codec::encode_json;
 
 /// Evaluate whether a delegation permits an access request.
 ///

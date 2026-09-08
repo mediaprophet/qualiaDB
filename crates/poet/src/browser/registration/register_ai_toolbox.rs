@@ -1150,6 +1150,69 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
             },
             ActionType::Invoke,
         )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_load_model".into(),
+                label: "Load model".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.load_model".into()),
+                ontology_prefix: "ai".into(),
+                description: "Mount a resident GGUF (data-model-path / data-model-id / data-mlock)."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_unload_model".into(),
+                label: "Unload model".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.unload_model".into()),
+                ontology_prefix: "ai".into(),
+                description: "Drop the resident model mmap via Inference.unload_model.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_run_transformer".into(),
+                label: "Run transformer".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.run_transformer".into()),
+                ontology_prefix: "ai".into(),
+                description: "Forward-pass token ids (needs resident model; data-max-layers)."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_run_reranker".into(),
+                label: "Rerank candidates".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.run_reranker".into()),
+                ontology_prefix: "ai".into(),
+                description: "Rerank candidate lines by query relevance (data-query).".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:inf_constrained_decode".into(),
+                label: "Constrained decode".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Inference.constrained_decode".into()),
+                ontology_prefix: "ai".into(),
+                description: "Mask logits to an allowed vocab via Inference.constrained_decode."
+                    .into(),
+            },
+            ActionType::Invoke,
+        )),
     ];
 
     let orch_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
@@ -1252,6 +1315,69 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let agent_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_trace".into(),
+                label: "Agent trace".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.trace".into()),
+                ontology_prefix: "ai".into(),
+                description: "Inspect instrument trace via Agent.trace.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_verify".into(),
+                label: "Agent verify".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.verify".into()),
+                ontology_prefix: "ai".into(),
+                description: "Verify agent priority via Agent.verify.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_plan".into(),
+                label: "Agent plan".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.plan".into()),
+                ontology_prefix: "ai".into(),
+                description: "Plan a task via Agent.plan.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_execute".into(),
+                label: "Agent execute".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.execute".into()),
+                ontology_prefix: "ai".into(),
+                description: "Prepare planned execution via Agent.execute.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "ai:agent_evaluate".into(),
+                label: "Agent evaluate".into(),
+                icon: "ai".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: Some("Agent.evaluate".into()),
+                ontology_prefix: "ai".into(),
+                description: "Score outputs via Agent.evaluate.".into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "ai".into(),
@@ -1322,7 +1448,7 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
                     label: "Live inference".into(),
                     icon: "ai".into(),
                     description:
-                        "Curated Inference.* activations, embed, classifier, and vector search."
+                        "Curated Inference.* activations, embed, classifier, search, and model load."
                             .into(),
                 },
                 inf_tools,
@@ -1350,6 +1476,17 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
             ),
             ToolChain::new(
                 ToolChainMetadata {
+                    id: "ai:nlp".into(),
+                    label: "Live natural language".into(),
+                    icon: "ai".into(),
+                    description:
+                        "Curated NLP.* tokenization, coreference, frames, and GraphRAG binds."
+                            .into(),
+                },
+                register_ai_nlp::nlp_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
                     id: "ai:tools".into(),
                     label: "Co-Pilot Capabilities".into(),
                     icon: "tools".into(),
@@ -1357,6 +1494,34 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
                         .into(),
                 },
                 tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:agent_live".into(),
+                    label: "Live Agent runtime".into(),
+                    icon: "ai".into(),
+                    description: "Curated Agent.* trace, verify, plan, execute, and evaluate binds."
+                        .into(),
+                },
+                agent_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:sampler_live".into(),
+                    label: "Live sampler & capability".into(),
+                    icon: "ai".into(),
+                    description: "Host-bound sampler.* and Capability.* leftovers.".into(),
+                },
+                super::register_wave37_live::sampler_cap_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:disc_dag".into(),
+                    label: "Live discovery & DAG".into(),
+                    icon: "ai".into(),
+                    description: "Host-bound CapabilityDiscovery.* and agent.dag leftovers.".into(),
+                },
+                super::register_wave38_live::disc_dag_tools(),
             ),
         ],
     ));

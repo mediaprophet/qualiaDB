@@ -95,8 +95,11 @@ pub fn gemm(
         use crate::wgsl_forge::dispatch::{caps, GEMM_GPU_THRESHOLD};
         use std::borrow::Cow;
         let work = m.saturating_mul(n).saturating_mul(k);
-        let caps = caps();
-        if (caps.cuda || caps.wgpu) && work >= GEMM_GPU_THRESHOLD {
+        // Skip caps() on small work — the CUDA probe can panic if libcuda is missing
+        // and we do not need it below the GPU threshold.
+        if work >= GEMM_GPU_THRESHOLD {
+            let caps = caps();
+            if caps.cuda || caps.wgpu {
             // op(A): row-major m×k — stored m×k already (No) or k×m (Yes → transpose).
             let a_eff: Cow<[f64]> = match transa {
                 Transpose::No => Cow::Borrowed(a),
@@ -139,6 +142,7 @@ pub fn gemm(
                 return Ok(());
             }
             // Forge path was eligible but errored — fall through to the CPU floor.
+            }
         }
     }
 

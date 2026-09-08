@@ -26,19 +26,22 @@ RFC 2119 words (`MUST`, `MUST NOT`, `SHOULD`, `MAY`) apply only in numbered norm
 
 ## 0. What 0.1 is, and what it is not
 
-**Vibe 0.1 is** a typed, capability-bounded, non-JIT interpreted language for:
+**Vibe 0.1 is** a typed, capability-bounded, non-JIT interpreted **REPL language** for:
 
 - reactive HCF cell formulas (Pure only);
 - signed document/agent modules that query and transact on a graph snapshot;
-- host event handlers (`on pulse…`, `on ui…`) that Poet (or any host) dispatches.
+- host event handlers (`on pulse…`, `on ui…`) that Poet (or any host) dispatches;
+- **application support** — scripts that call Host families (`using LinearAlgebra;`, `capability.invoke("Family.method", {…})`) so Poet and other hosts can host apps, not only workshop cells.
 
-**Human dialect (workshop).** Authors write `using Animation;`, `cell score := …;`, `present lamp { color: #ff8800 }`, color literals, and catalog `Family.method()` calls. `capability.invoke("Family.method", {…})` remains the JNI/catalog spelling. Both are the same language; `using` is the lease, not a second grammar.
+The **grammar is closed**. The **Host catalog grows**: `ALL_BOUND` / `capability.invoke("Family.method")` MAY gain new ids when they improve the app/REPL surface. Adding a Host id MUST NOT change this document’s grammar, types, or effect classes.
+
+**Human dialect (workshop).** Authors write `using Animation;`, `using LinearAlgebra;`, `cell score := …;`, `present lamp { color: #ff8800 }`, color literals, and catalog `Family.method()` calls. `capability.invoke("Family.method", {…})` remains the JNI/catalog spelling. Both are the same language; `using` is the lease, not a second grammar.
 
 **Locale.** English keywords are always legal. Additional keyword locales are opt-in (`locale zh;`) and MUST round-trip on the AST (`Program.locales`).
 
 **Vibe 0.1 is not** a general-purpose language, a JavaScript clone, a second Webizen VM opcode set, a replacement for `SlgOpcode`, or a surface that authors raw 48-byte Quin overlays. It MUST NOT grow a DOM or `eval`. Replacing JavaScript as Qualia’s *application* language is the product destination; 0.1 is the closed core that destination builds on, not a denial of it. The matching wire is CBOR-LD (HCF), not JSON — Canonical AST in the table below.
 
-A package that uses only this document’s grammar, types, effects, and the **0.1 binding profile** (§11) is a conforming 0.1 program. Later bindings (`geom`, `audio`, `model`, `extension`) MUST NOT change the grammar.
+A package that uses only this document’s grammar, types, effects, and the **0.1 binding profile** (§11) is a conforming 0.1 program. Later Host catalog ids (`LinearAlgebra.*`, `geom`, `audio`, `model`, `extension`) MUST NOT change the grammar. `vibe-host-0.1` is the **outcome** of incorporating existing engine libraries into that catalog — not a freeze of `ALL_BOUND`.
 
 ---
 
@@ -354,7 +357,7 @@ These are **library functions**, not grammar. Hosts MUST implement the ones mark
 
 > **Note on Time Bindings (0.1 vs Post-0.1):** `time.unix() -> i64` (seconds) is the 0.1 binding. Structured `Instant`, `time.unix_nanos`, and `time.monotonic_nanos` are post-0.1 (per the decisions register X6 and vibe-design to-do T19).
 
-Logic, geometry, inference, vision, audio, and extension codecs are **out of 0.1** except as later `capability.invoke` IDs.
+Logic, geometry, inference, vision, audio, and extension codecs are **out of 0.1** except as later `capability.invoke` IDs. Linear algebra for apps is a first-class post-0.1 Host family (§11.5).
 
 ### 11.1 Cosmic coordinate bindings (OCS)
 
@@ -531,6 +534,24 @@ Post-0.1 extensions exposing the persistent asset store via `capability.invoke` 
 | `Asset.resolve_by_temporal` | Pure | `{ kind_iri: string }` | `{ assets: [Record], count }` |
 | `Asset.list` | Pure | `{}` | `{ asset_ids: [string], count }` |
 | `Asset.count` | Pure | `{}` | `{ count }` |
+
+### 11.5 Linear algebra (app / REPL)
+
+Post-0.1 Host family for dense linear algebra in Vibe apps and the Poet REPL. Grammar stays closed; ids live in paired catalogs (`vibe::catalog::ALL_INVOKE_IDS` and `poet_host::invoke::ids::ALL_BOUND`). Matrices are row-major `{ rows, cols, data }` records. `LinearAlgebra.gemm` is the BLAS-3 entry and MUST call the engine solver (`solvers::linear_algebra::gemm`), including the solver’s CPU floor and optional GPU offload when the machine actually has an accelerator.
+
+| Binding | Effect | Input | Output |
+|---|---|---|---|
+| `LinearAlgebra.gemm` | Pure | `{ a, b, c?, alpha?, beta?, transa?, transb? }` | `{ c: { rows, cols, data } }` |
+| `LinearAlgebra.matmul` | Pure | `{ a, b }` (lists or matrices) | list / matrix |
+| `LinearAlgebra.dot` | Pure | `{ a, b }` number lists | `{ value }` |
+| `LinearAlgebra.norm` | Pure | `{ a }` number list | `{ value }` (L2) |
+| `LinearAlgebra.trace` | Pure | `{ a: { rows, cols, data } }` square | `{ value }` |
+| `LinearAlgebra.identity` | Pure | `{ n }` (`1..=256`) | `{ a: { rows, cols, data } }` |
+| `LinearAlgebra.inverse` | Pure | `{ a: { rows, cols, data } }` square | `{ a: { rows, cols, data } }` (fail if singular) |
+| `LinearAlgebra.transpose` `determinant` `solve` | Pure | matrix records | family-specific |
+| `LinearAlgebra.lu_*` `qr_*` `cholesky_*` `svd` `eigen_*` | Pure | matrix records | family-specific |
+
+Hosts MUST fail closed on a dimension mismatch. WASM-ontology without `wasm-scientific` MUST return the scientific-profile diagnostic (E300) rather than a fake product.
 
 ---
 

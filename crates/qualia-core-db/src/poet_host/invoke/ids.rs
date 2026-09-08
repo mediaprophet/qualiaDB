@@ -673,6 +673,11 @@ pub const CHEM_N_CARTESIAN: &str = "Chemistry.n_cartesian";
 pub const CHEM_N_SPHERICAL: &str = "Chemistry.n_spherical";
 pub const CHEM_FROM_LETTER: &str = "Chemistry.from_letter";
 pub const LA_GEMM: &str = "LinearAlgebra.gemm";
+pub const LA_DOT: &str = "LinearAlgebra.dot";
+pub const LA_NORM: &str = "LinearAlgebra.norm";
+pub const LA_TRACE: &str = "LinearAlgebra.trace";
+pub const LA_IDENTITY: &str = "LinearAlgebra.identity";
+pub const LA_INVERSE: &str = "LinearAlgebra.inverse";
 pub const POLY_COEFFS: &str = "PolynomialAlgebra.coeffs";
 
 // ── Wave-14 Host binds (calculus / graph helpers) ────────────────────────
@@ -746,6 +751,57 @@ pub const AUDIO_BIN_TO_FREQ_LOG: &str = "Audio.bin_to_freq_log";
 pub const SCENE_LERP_CAMERA: &str = "Scene.lerp_camera";
 pub const SCENE_CAMERA_FRAME_NODE: &str = "Scene.camera_frame_node";
 pub const GEOM_MEAN_KNN_DISTANCE_3D: &str = "ComputationalGeometry.mean_knn_distance_3d";
+// ── Wave-21 Host binds (Statistical manifold & distance numerics) ──
+pub const GEOM_FISHER_DISTANCE: &str = "ComputationalGeometry.fisher_distance";
+pub const GEOM_KL_DIVERGENCE: &str = "ComputationalGeometry.kl_divergence";
+pub const GEOM_KL_BREGMAN_FORM: &str = "ComputationalGeometry.kl_bregman_form";
+pub const GEOM_TRIANGLE_SIGNED_AREA: &str = "ComputationalGeometry.triangle_signed_area";
+pub const GEOM_DIST_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_point_to_segment";
+pub const GEOM_DIST_SQ_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_sq_point_to_segment";
+// ── Wave-22 Host binds (predicates / Tukey / width / site queries) ──
+pub const GEOM_INCIRCLE: &str = "ComputationalGeometry.incircle";
+pub const GEOM_TUKEY_DEPTH: &str = "ComputationalGeometry.tukey_depth";
+pub const GEOM_DIRECTIONAL_WIDTH: &str = "ComputationalGeometry.directional_width";
+pub const GEOM_WIDTH: &str = "ComputationalGeometry.width";
+pub const GEOM_FARTHEST_SITE_BRUTE: &str = "ComputationalGeometry.farthest_site_brute";
+pub const GEOM_K_NEAREST_SITES: &str = "ComputationalGeometry.k_nearest_sites";
+pub const GEOM_IS_HULL_SITE: &str = "ComputationalGeometry.is_hull_site";
+pub const GEOM_DIAMETER_AND_WIDTH: &str = "ComputationalGeometry.diameter_and_width";
+// ── Wave-23 Host binds (insphere / ham-sandwich / disk / polygon / Minkowski) ──
+pub const GEOM_INSPHERE: &str = "ComputationalGeometry.insphere";
+pub const GEOM_HAM_SANDWICH_CUT: &str = "ComputationalGeometry.ham_sandwich_cut";
+pub const GEOM_SMALLEST_ENCLOSING_DISK: &str = "ComputationalGeometry.smallest_enclosing_disk";
+pub const GEOM_POLYGON_SIGNED_AREA: &str = "ComputationalGeometry.polygon_signed_area";
+pub const GEOM_POLYGON_AREA: &str = "ComputationalGeometry.polygon_area";
+pub const GEOM_POINT_IN_POLYGON: &str = "ComputationalGeometry.point_in_polygon";
+pub const GEOM_MINKOWSKI_SUM_CONVEX: &str = "ComputationalGeometry.minkowski_sum_convex";
+pub const GEOM_NEAREST_SEGMENT_SITE: &str = "ComputationalGeometry.nearest_segment_site";
+// ── Wave-24 Host binds (coreset / duality / convexity / boolean area) ──
+pub const GEOM_WIDTH_CORESET: &str = "ComputationalGeometry.width_coreset";
+pub const GEOM_DUAL_POINT_TO_LINE: &str = "ComputationalGeometry.dual_point_to_line";
+pub const GEOM_DUAL_ROUND_TRIP: &str = "ComputationalGeometry.dual_round_trip";
+pub const GEOM_IS_CONVEX_POLYGON: &str = "ComputationalGeometry.is_convex_polygon";
+pub const GEOM_POINT_IN_OR_ON_POLYGON: &str = "ComputationalGeometry.point_in_or_on_polygon";
+pub const GEOM_BOOLEAN_UNION_AREA: &str = "ComputationalGeometry.boolean_union_area";
+pub const GEOM_BOOLEAN_INTERSECTION_AREA: &str = "ComputationalGeometry.boolean_intersection_area";
+pub const GEOM_BOOLEAN_DIFFERENCE_AREA: &str = "ComputationalGeometry.boolean_difference_area";
+// ── Wave-25 Host binds (projective / quaternion / hyperplane) ──
+pub const GEOM_CROSS_RATIO_1D: &str = "ComputationalGeometry.cross_ratio_1d";
+pub const GEOM_HYPERPLANE_EVAL: &str = "ComputationalGeometry.hyperplane_eval";
+pub const GEOM_HOUSEHOLDER_REFLECT: &str = "ComputationalGeometry.householder_reflect";
+pub const GEOM_QUATERNION_NORMALIZE: &str = "ComputationalGeometry.quaternion_normalize";
+pub const GEOM_SO3_EXP: &str = "ComputationalGeometry.so3_exp";
+pub const GEOM_SO3_LOG: &str = "ComputationalGeometry.so3_log";
+pub const GEOM_PROJECTIVE_FROM_POINT: &str = "ComputationalGeometry.projective_from_point";
+pub const GEOM_POINT_FROM_PROJECTIVE: &str = "ComputationalGeometry.point_from_projective";
+pub const GEOM_FRAME_TO_WORLD: &str = "ComputationalGeometry.frame_to_world";
+pub const GEOM_WORLD_TO_FRAME: &str = "ComputationalGeometry.world_to_frame";
+pub const GEOM_BARYCENTRIC_TETRA: &str = "ComputationalGeometry.barycentric_tetra";
+pub const GEOM_QUATERNION_SLERP: &str = "ComputationalGeometry.quaternion_slerp";
+pub const GEOM_QUATERNION_TO_MATRIX: &str = "ComputationalGeometry.quaternion_to_matrix";
+pub const GEOM_SOLVE_DIAGONAL_QUADRATIC: &str = "ComputationalGeometry.solve_diagonal_quadratic";
+pub const GEOM_SCHUR_COMPLEMENT_2X2: &str = "ComputationalGeometry.schur_complement_2x2";
+pub const GEOM_SEPARATING_PLANE_AABB: &str = "ComputationalGeometry.separating_plane_aabb";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1738,6 +1794,11 @@ pub const ALL_BOUND: &[&str] = &[
     CHEM_N_SPHERICAL,
     CHEM_FROM_LETTER,
     LA_GEMM,
+    LA_DOT,
+    LA_NORM,
+    LA_TRACE,
+    LA_IDENTITY,
+    LA_INVERSE,
     POLY_COEFFS,
     CALC_HERMITE_DENSE_OUTPUT,
     CALC_BDF1_STEP,
@@ -1797,6 +1858,52 @@ pub const ALL_BOUND: &[&str] = &[
     SCENE_LERP_CAMERA,
     SCENE_CAMERA_FRAME_NODE,
     GEOM_MEAN_KNN_DISTANCE_3D,
+    GEOM_FISHER_DISTANCE,
+    GEOM_KL_DIVERGENCE,
+    GEOM_KL_BREGMAN_FORM,
+    GEOM_TRIANGLE_SIGNED_AREA,
+    GEOM_DIST_POINT_TO_SEGMENT,
+    GEOM_DIST_SQ_POINT_TO_SEGMENT,
+    GEOM_INCIRCLE,
+    GEOM_TUKEY_DEPTH,
+    GEOM_DIRECTIONAL_WIDTH,
+    GEOM_WIDTH,
+    GEOM_FARTHEST_SITE_BRUTE,
+    GEOM_K_NEAREST_SITES,
+    GEOM_IS_HULL_SITE,
+    GEOM_DIAMETER_AND_WIDTH,
+    GEOM_INSPHERE,
+    GEOM_HAM_SANDWICH_CUT,
+    GEOM_SMALLEST_ENCLOSING_DISK,
+    GEOM_POLYGON_SIGNED_AREA,
+    GEOM_POLYGON_AREA,
+    GEOM_POINT_IN_POLYGON,
+    GEOM_MINKOWSKI_SUM_CONVEX,
+    GEOM_NEAREST_SEGMENT_SITE,
+    GEOM_WIDTH_CORESET,
+    GEOM_DUAL_POINT_TO_LINE,
+    GEOM_DUAL_ROUND_TRIP,
+    GEOM_IS_CONVEX_POLYGON,
+    GEOM_POINT_IN_OR_ON_POLYGON,
+    GEOM_BOOLEAN_UNION_AREA,
+    GEOM_BOOLEAN_INTERSECTION_AREA,
+    GEOM_BOOLEAN_DIFFERENCE_AREA,
+    GEOM_CROSS_RATIO_1D,
+    GEOM_HYPERPLANE_EVAL,
+    GEOM_HOUSEHOLDER_REFLECT,
+    GEOM_QUATERNION_NORMALIZE,
+    GEOM_SO3_EXP,
+    GEOM_SO3_LOG,
+    GEOM_PROJECTIVE_FROM_POINT,
+    GEOM_POINT_FROM_PROJECTIVE,
+    GEOM_FRAME_TO_WORLD,
+    GEOM_WORLD_TO_FRAME,
+    GEOM_BARYCENTRIC_TETRA,
+    GEOM_QUATERNION_SLERP,
+    GEOM_QUATERNION_TO_MATRIX,
+    GEOM_SOLVE_DIAGONAL_QUADRATIC,
+    GEOM_SCHUR_COMPLEMENT_2X2,
+    GEOM_SEPARATING_PLANE_AABB,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2449,6 +2556,11 @@ pub fn seam_for(id: &str) -> &'static str {
         | CAS_FROM_QUINS
         | LA_SYMMETRIC_EIGEN_3X3
         | LA_GEMM
+        | LA_DOT
+        | LA_NORM
+        | LA_TRACE
+        | LA_IDENTITY
+        | LA_INVERSE
         | CALC_HERMITE_DENSE_OUTPUT
         | CALC_BDF1_STEP
         | CALC_BDF2_STEP
@@ -2597,7 +2709,53 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_ORIENT_3D
         | GEOM_AVERAGE_SPACING_3D
         | GEOM_LOCAL_DENSITY_3D
-        | GEOM_MEAN_KNN_DISTANCE_3D => "geometry",
+        | GEOM_MEAN_KNN_DISTANCE_3D
+        | GEOM_FISHER_DISTANCE
+        | GEOM_KL_DIVERGENCE
+        | GEOM_KL_BREGMAN_FORM
+        | GEOM_TRIANGLE_SIGNED_AREA
+        | GEOM_DIST_POINT_TO_SEGMENT
+        | GEOM_DIST_SQ_POINT_TO_SEGMENT
+        | GEOM_INCIRCLE
+        | GEOM_TUKEY_DEPTH
+        | GEOM_DIRECTIONAL_WIDTH
+        | GEOM_WIDTH
+        | GEOM_FARTHEST_SITE_BRUTE
+        | GEOM_K_NEAREST_SITES
+        | GEOM_IS_HULL_SITE
+        | GEOM_DIAMETER_AND_WIDTH
+        | GEOM_INSPHERE
+        | GEOM_HAM_SANDWICH_CUT
+        | GEOM_SMALLEST_ENCLOSING_DISK
+        | GEOM_POLYGON_SIGNED_AREA
+        | GEOM_POLYGON_AREA
+        | GEOM_POINT_IN_POLYGON
+        | GEOM_MINKOWSKI_SUM_CONVEX
+        | GEOM_NEAREST_SEGMENT_SITE
+        | GEOM_WIDTH_CORESET
+        | GEOM_DUAL_POINT_TO_LINE
+        | GEOM_DUAL_ROUND_TRIP
+        | GEOM_IS_CONVEX_POLYGON
+        | GEOM_POINT_IN_OR_ON_POLYGON
+        | GEOM_BOOLEAN_UNION_AREA
+        | GEOM_BOOLEAN_INTERSECTION_AREA
+        | GEOM_BOOLEAN_DIFFERENCE_AREA
+        | GEOM_CROSS_RATIO_1D
+        | GEOM_HYPERPLANE_EVAL
+        | GEOM_HOUSEHOLDER_REFLECT
+        | GEOM_QUATERNION_NORMALIZE
+        | GEOM_SO3_EXP
+        | GEOM_SO3_LOG
+        | GEOM_PROJECTIVE_FROM_POINT
+        | GEOM_POINT_FROM_PROJECTIVE
+        | GEOM_FRAME_TO_WORLD
+        | GEOM_WORLD_TO_FRAME
+        | GEOM_BARYCENTRIC_TETRA
+        | GEOM_QUATERNION_SLERP
+        | GEOM_QUATERNION_TO_MATRIX
+        | GEOM_SOLVE_DIAGONAL_QUADRATIC
+        | GEOM_SCHUR_COMPLEMENT_2X2
+        | GEOM_SEPARATING_PLANE_AABB => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE
@@ -3278,6 +3436,7 @@ mod tests {
         assert_eq!(seam_for(PHYS_PROJECTILE), "science");
         assert_eq!(seam_for(VISION_AHASH), "vision");
         assert_eq!(seam_for(ML_OLS), "ml");
+        assert_eq!(seam_for(LA_DOT), "math");
         assert_eq!(seam_for("DoesNotExist.nope"), "unbound");
     }
 

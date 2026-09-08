@@ -2,6 +2,26 @@
 
 use super::*;
 
+fn office_live_tool(
+    id: &'static str,
+    label: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: "doc".into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "hm".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 pub(super) fn register_office_toolbox(reg: &mut Registry) {
     let typography_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
@@ -118,6 +138,100 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let asset_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        office_live_tool("office:asset_create", "Create asset", "Asset.create", "Create an aspect-graph record."),
+        office_live_tool(
+            "office:asset_add_temporal",
+            "Add temporal aspect",
+            "Asset.add_temporal",
+            "Add a temporal aspect to an in-memory asset.",
+        ),
+        office_live_tool("office:asset_add_topic", "Add topic", "Asset.add_topic", "Associate a topic with an asset."),
+        office_live_tool(
+            "office:asset_set_spatial",
+            "Set spatial anchor",
+            "Asset.set_spatial",
+            "Set a spatial anchor on an in-memory asset.",
+        ),
+        office_live_tool("office:asset_compile", "Compile asset", "Asset.compile", "Compile an asset to graph quins."),
+        office_live_tool(
+            "office:asset_temporal_span",
+            "Temporal span",
+            "Asset.temporal_span",
+            "Span between earliest and latest aspects.",
+        ),
+        office_live_tool(
+            "office:asset_query_aspects",
+            "Query aspects",
+            "Asset.query_aspects",
+            "Query temporal aspects by kind.",
+        ),
+        office_live_tool("office:asset_persist", "Persist asset", "Asset.persist", "Persist an asset record."),
+        office_live_tool("office:asset_resolve", "Resolve asset", "Asset.resolve", "Resolve a persisted asset by id."),
+        office_live_tool(
+            "office:asset_resolve_by_spatial",
+            "Resolve by spatial",
+            "Asset.resolve_by_spatial",
+            "Resolve assets by spatial anchor.",
+        ),
+        office_live_tool(
+            "office:asset_resolve_by_topic",
+            "Resolve by topic",
+            "Asset.resolve_by_topic",
+            "Resolve assets by topic.",
+        ),
+        office_live_tool(
+            "office:asset_resolve_by_temporal",
+            "Resolve by temporal",
+            "Asset.resolve_by_temporal",
+            "Resolve assets by temporal aspect kind.",
+        ),
+        office_live_tool("office:asset_list", "List assets", "Asset.list", "List persisted asset ids."),
+        office_live_tool("office:asset_count", "Count assets", "Asset.count", "Count persisted assets."),
+        office_live_tool(
+            "office:asset_persist_create",
+            "Persist create",
+            "Asset.persist_create",
+            "Create and persist an asset in one call.",
+        ),
+        office_live_tool(
+            "office:asset_persist_add_temporal",
+            "Persist add temporal",
+            "Asset.persist_add_temporal",
+            "Add a temporal aspect to a persisted asset.",
+        ),
+        office_live_tool(
+            "office:asset_persist_add_topic",
+            "Persist add topic",
+            "Asset.persist_add_topic",
+            "Add a topic to a persisted asset.",
+        ),
+        office_live_tool(
+            "office:asset_persist_set_spatial",
+            "Persist set spatial",
+            "Asset.persist_set_spatial",
+            "Set a spatial anchor on a persisted asset.",
+        ),
+        office_live_tool(
+            "office:asset_persist_compile",
+            "Persist compile",
+            "Asset.persist_compile",
+            "Compile a persisted asset to graph quins.",
+        ),
+        office_live_tool(
+            "office:asset_persist_temporal_span",
+            "Persist temporal span",
+            "Asset.persist_temporal_span",
+            "Span between earliest and latest persisted aspects.",
+        ),
+        office_live_tool(
+            "office:asset_persist_query_aspects",
+            "Persist query aspects",
+            "Asset.persist_query_aspects",
+            "Query persisted temporal aspects by kind.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "office".into(),
@@ -214,6 +328,16 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
                         ActionType::Query,
                     )),
                 ],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "office:asset".into(),
+                    label: "Live Asset".into(),
+                    icon: "doc".into(),
+                    description: "Curated Asset.* create, aspect, persist, persist_* remainder, resolve, list, and count binds."
+                        .into(),
+                },
+                asset_tools,
             ),
         ],
     ));
