@@ -400,3 +400,17 @@
 - Integrator wires `harness::multihop`, `replication::{crash,scan}`, `session::{clinical,contact,fetch}` and the `IpcEndpoint::recv` short-buffer fix. Combined tests not yet run this revision. Packages remain open.
 - Human input needed: none this step.
 
+## 2026-09-08 — Wave 14 swarm integrated — partial, packages remain open
+
+- Integrator: `IpcEndpoint::recv` checks `out.len()` before dequeue. Short buffer is `Capacity`; the same frame is received on the next adequate `recv`. `LeasedIpc` docs/tests match.
+- Six disjoint implementers: NET-05.15 in-process multi-hop (`FaultPipe` loss/reorder, hop_limit, revocation, path handoff; not Ethernet/OS isolation), SVC-01.15 in-memory crash restore at identity/effect/receipt (not CORE-03 disk), SVC-01.16 logical 8 GiB vs 4 MiB resident with 4 KiB pages (no RAM-sized allocation), NET-05.17/20 contact/help, NET-05.21–24 clinical pairing/mailbox, NET-05.19 unconsented fetch never writes locators.
+- Measured (`cargo +stable`):
+  - Combined native filter (qdnf/peer/crypto/wal_intent/arena_admit/network_quanta + wave 14) → **471 passed**, 0 failed (was 422).
+  - `qualia-peer` `--lib` → **2 passed**.
+  - `native_ipc_peers` → `native ipc exchanged 11 bytes (libp2p not used)`.
+  - `cargo +stable check -p qualia-core-db --no-default-features --features qdnf --lib` → **Finished**.
+  - `cargo +stable tree -p qualia-peer -i libp2p` / `-i wgpu` → package not in graph.
+- Not Ethernet. Not Native Independent for default daemons (`libp2p-compat` + GPU still default on core-db). Not package completion. COSE_Sign1 still unfrozen. Crash injection is Copy snapshot, not WAL torn-write. Scan does not materialize RAM-sized datasets.
+- Human input needed: Ethernet capture + CAP_NET_RAW for NET-01.14; reviewed COSE_Sign1 freeze; whether daemons may drop default `libp2p-compat`.
+- Next: remaining CORE-03 disk durability classes, NET-04 QSR evaluation vs Kademlia, default-feature isolation. Packages stay open.
+
