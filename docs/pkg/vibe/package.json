@@ -1,0 +1,24 @@
+{
+  "name": "vibe-wasm",
+  "type": "module",
+  "collaborators": [
+    "Timothy Charles Holborn <timothy.holborn@gmail.com>"
+  ],
+  "description": "WASM bindings for VibeScript — parse, check, evaluate, and compile bytecode in the browser.",
+  "version": "0.0.37",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mediaprophet/qualiaDB"
+  },
+  "files": [
+    "vibe_wasm_bg.wasm",
+    "vibe_wasm.js",
+    "vibe_wasm.d.ts"
+  ],
+  "main": "vibe_wasm.js",
+  "types": "vibe_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

@@ -10,9 +10,9 @@ use wasm_bindgen::prelude::*;
 
 use vibe::{
     bytecode::{self, compile, compile_expr, decode_chunk, encode_chunk, Vm},
-    check_cell, check_program, diagnose, eval_cell, load_program, parse_cell, parse_program,
-    Budget, DiagCode, Diagnostic, Engine, Env, LocalHost, Span, Value, HOST_VERSION,
-    LANGUAGE_VERSION,
+    check_cell, check_program, diagnose, eval_cell, eval_function, load_program, parse_cell,
+    parse_program, Budget, DiagCode, Diagnostic, Engine, Env, Item, LocalHost, Span, Value,
+    HOST_VERSION, LANGUAGE_VERSION,
 };
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -256,7 +256,7 @@ pub fn check_program_src(src: &str) -> JsValue {
 }
 
 /// Evaluate a cell and return the result as a JSON-compatible JS value.
-/// This is the main entry point for the playground.
+/// Playground Run uses `eval_program_src` (module + optional `main`), not this.
 #[wasm_bindgen]
 pub fn eval_cell_json(src: &str) -> JsValue {
     eval_cell_src(src)
@@ -271,14 +271,29 @@ pub fn diagnose_src(src: &str) -> JsValue {
 }
 
 /// Evaluate a full program on LocalHost (workshop dialect).
+///
+/// Runs preamble items, then `main` when present — same as `vibe eval FILE main`.
 #[wasm_bindgen]
 pub fn eval_program_src(src: &str) -> JsValue {
     match parse_program(src).and_then(|p| check_program(&p).map(|_| p)) {
         Ok(prog) => {
             let mut host = LocalHost::default();
             let mut env = Env::default();
-            let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
-            match engine.eval_program(&prog, &mut env) {
+            let result = (|| {
+                {
+                    let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
+                    engine.eval_program(&prog, &mut env)?;
+                }
+                let has_main = prog.items.iter().any(|item| {
+                    matches!(item, Item::Function(f) if f.name == "main")
+                });
+                if has_main {
+                    eval_function(&prog, "main", Vec::new(), &mut host, &mut env)
+                } else {
+                    Ok(Value::Null)
+                }
+            })();
+            match result {
                 Ok(v) => {
                     let o = Object::new();
                     Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();

@@ -28,6 +28,18 @@ assert.match(html, /returned no visible text/);
 const wasmVersion = wasmPackage.version.replaceAll('.', '\\.');
 assert.match(html, new RegExp(`qualia_core_db\\.js\\?v=${wasmVersion}-`));
 assert.match(html, new RegExp(`qualia_core_db_bg\\.wasm\\?v=${wasmVersion}-`));
+assert.match(html, /id="inference-meter"/);
+assert.match(html, /id="chat-inference-meter"/);
+assert.match(html, /data-meter="path"/);
+assert.match(html, /data-meter="ttft"/);
+assert.match(html, /data-meter="tps"/);
+assert.match(html, /data-meter="npu"/);
+assert.match(html, /decodePathLabel/);
+assert.match(html, /npuExposureLabel/);
+assert.match(html, /lastGenerationMetrics/);
+assert.match(html, /TTFT/);
+assert.match(html, /navigator\.ml/);
+assert.doesNotMatch(html, /id="chat-inference-meter" class="hidden/);
 assert.equal(wasmPackage.version, '0.0.37');
 
 console.log('Online LLM demo catalogue tests passed.');

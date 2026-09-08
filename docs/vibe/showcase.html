@@ -2,6 +2,7 @@
 layout: qualia
 title: VibeScript Showcase
 ---
+<meta charset="utf-8">
 
 <div class="vibe-showcase">
   <style>
@@ -90,7 +91,7 @@ title: VibeScript Showcase
 </div>
 
 <script type="module">
-  import init, { eval_cell_src, run_program_bytecode } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
+  import init, { eval_cell_src, eval_program_src } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
 
   const demos = [
     {
@@ -106,9 +107,9 @@ title: VibeScript Showcase
       title: "Fibonacci (iterative)",
       badge: "program",
       code: `fn fib_iter(n: i64) budget(steps: 100000) -> i64 {
-  let a = 0;
-  let b = 1;
-  let i = 0;
+  let mut a = 0;
+  let mut b = 1;
+  let mut i = 0;
   while i < n {
     let t = a + b;
     a = b;
@@ -153,7 +154,7 @@ fn main() -> i64 {
       title: "For Loop Sum",
       badge: "program",
       code: `fn sum_list() budget(steps: 10000) -> i64 {
-  let s = 0;
+  let mut s = 0;
   for x in [10, 20, 30, 40, 50] {
     s = s + x;
   }
@@ -189,8 +190,8 @@ fn main() -> i64 {
       title: "While Loop Accumulator",
       badge: "program",
       code: `fn sum_to(n: i64) budget(steps: 10000) -> i64 {
-  let s = 0;
-  let i = 0;
+  let mut s = 0;
+  let mut i = 0;
   while i < n {
     s = s + i;
     i = i + 1;
@@ -260,16 +261,10 @@ fn main() -> Record {
       badge: "program",
       code: `using Animation;
 
-cell pose := Animation.orbit_spin(1.0);
-cell glow := oklch(0.72, 0.12, 230.0);
-
-present lamp {
-    color: glow
-    pose: pose
-}
-
 fn main() -> Record {
-  return glow;
+  let glow = oklch(0.72, 0.12, 230.0);
+  let pose = Animation.orbit_spin(1.0);
+  return { color: glow, pose: pose };
 }`,
       mode: "program",
       fn: "main",
@@ -322,6 +317,22 @@ fn main() -> f64 {
       mode: "program",
       fn: "main",
     },
+    {
+      icon: "🌍",
+      title: "Cosmic geodesy (WGS84)",
+      badge: "program",
+      code: `using Cosmic;
+
+effect fn main() -> Record {
+  return Cosmic.geodetic_to_ecef({
+    lat_deg: -37.8,
+    lon_deg: 144.9,
+    alt_m: 0.0
+  });
+}`,
+      mode: "program",
+      fn: "main",
+    },
   ];
 
   async function run() {
@@ -356,7 +367,7 @@ fn main() -> f64 {
           if (demo.mode === 'cell') {
             result = eval_cell_src(demo.code);
           } else {
-            result = run_program_bytecode(demo.code, demo.fn || 'main', []);
+            result = eval_program_src(demo.code);
           }
           if (result.ok) {
             outputEl.innerHTML = `<span class="result">→ ${formatValue(result.value)}</span>`;

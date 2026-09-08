@@ -2,6 +2,7 @@
 layout: qualia
 title: VibeScript Dev Docs
 ---
+<meta charset="utf-8">
 
 <div class="vibe-devdocs">
   <style>
@@ -118,19 +119,46 @@ title: VibeScript Dev Docs
       font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;
     }
 
+    .vibe-devdocs .dd-intro {
+      font-size: 0.88rem; color: #94a3b8; line-height: 1.65; margin-bottom: 1rem;
+    }
+    .vibe-devdocs .dd-mobile-toggle {
+      display: none;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(15,23,42,0.8);
+      border: 1px solid rgba(148,163,184,0.2);
+      color: #e2e8f0;
+      font-size: 0.85rem;
+    }
+    .vibe-devdocs .dd-item-kind.dd-kind-wasm {
+      background: rgba(56,189,248,0.18); color: #7dd3fc;
+    }
     @media (max-width: 768px) {
       .vibe-devdocs .dd-layout { grid-template-columns: 1fr; }
-      .vibe-devdocs .dd-sidebar { display: none; }
+      .vibe-devdocs .dd-mobile-toggle { display: block; }
+      .vibe-devdocs .dd-sidebar {
+        display: none;
+        position: static;
+        max-height: 40vh;
+      }
+      .vibe-devdocs.dd-nav-open .dd-sidebar { display: block; }
     }
   </style>
 
   <div class="dd-layout">
+    <button type="button" class="dd-mobile-toggle" id="dd-mobile-toggle">Modules</button>
     <nav class="dd-sidebar">
-      <input type="text" class="dd-search" id="dd-search" placeholder="Search items..." />
+      <input type="text" class="dd-search" id="dd-search" placeholder="Search items, signatures…" />
       <div id="dd-module-list"></div>
     </nav>
-    <div class="dd-content" id="dd-content">
-      <div class="dd-loading">Loading dev docs...</div>
+    <div class="dd-content-wrap">
+      <div id="dd-intro" class="dd-intro"></div>
+      <div class="dd-content" id="dd-content">
+        <div class="dd-loading">Loading dev docs…</div>
+      </div>
     </div>
   </div>
 </div>
@@ -141,11 +169,20 @@ title: VibeScript Dev Docs
 
   (async function() {
     try {
-      const resp = await fetch("{{ '/vibe/dev-docs.json' | relative_url }}");
+      // Same-directory fetch works on GitHub Pages (/vibe/dev-docs.html) and
+      // a plain static server; do not require Jekyll `relative_url`.
+      const resp = await fetch(new URL('dev-docs.json', window.location.href));
       allModules = await resp.json();
 
-      // Sort modules alphabetically
-      allModules.sort((a, b) => a.name.localeCompare(b.name));
+      allModules.sort((a, b) => {
+        if (a.name === 'wasm') return -1;
+        if (b.name === 'wasm') return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      document.getElementById('dd-mobile-toggle')?.addEventListener('click', () => {
+        document.querySelector('.vibe-devdocs')?.classList.toggle('dd-nav-open');
+      });
 
       // Build sidebar
       const sidebar = document.getElementById('dd-module-list');
@@ -167,49 +204,82 @@ title: VibeScript Dev Docs
       document.getElementById('dd-search').addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         if (!query) {
-          // Show module list
           document.querySelectorAll('.dd-module').forEach(el => el.style.display = '');
+          if (currentModule) renderModule(currentModule);
           return;
         }
-        // Search across all items
         const results = [];
+        const matchingModules = new Set();
         allModules.forEach((mod, mi) => {
+          const moduleHit = (mod.name || '').toLowerCase().includes(query)
+            || (mod.doc || '').toLowerCase().includes(query);
+          if (moduleHit) matchingModules.add(mi);
           mod.items.forEach(item => {
             if (item.name.toLowerCase().includes(query) ||
-                item.doc.toLowerCase().includes(query) ||
-                item.kind.toLowerCase().includes(query)) {
+                (item.doc || '').toLowerCase().includes(query) ||
+                (item.kind || '').toLowerCase().includes(query) ||
+                (item.signature || '').toLowerCase().includes(query) ||
+                (item.file || '').toLowerCase().includes(query)) {
               results.push({ module: mod.name, mi, ...item });
+              matchingModules.add(mi);
             }
           });
+        });
+        document.querySelectorAll('.dd-module').forEach((el, i) => {
+          el.style.display = matchingModules.has(i) ? '' : 'none';
         });
         renderSearchResults(results);
       });
 
-      // Select first module by default
-      if (allModules.length > 0) {
-        selectModule(0);
+      const intro = document.getElementById('dd-intro');
+      if (intro) {
+        intro.innerHTML = `Generated from <code>crates/vibe/src</code> plus the browser ABI in <code>crates/vibe-wasm/src/lib.rs</code>
+          (module <code>wasm</code>). Playground <strong>Run</strong> is <code>eval_program_src</code>:
+          LocalHost, workshop dialect, preamble then <code>effect fn main</code> when present.
+          Host catalog lives under <code>bind::host</code> (<code>trait Host</code>) and <code>bind::local</code> (<code>LocalHost</code>).
+          Grammar is closed; Host catalog grows.
+          <div class="dd-stats">${allModules.length} modules · ${totalItems} public items</div>`;
       }
 
-      document.getElementById('dd-content').insertAdjacentHTML('afterbegin',
-        `<div class="dd-stats">${allModules.length} modules · ${totalItems} public items · generated from source</div>`);
+      if (allModules.length > 0) {
+        const { idx, item } = moduleFromHash();
+        selectModule(idx, item);
+      }
     } catch (err) {
       document.getElementById('dd-content').innerHTML =
         `<p style="color:#f87171;">Failed to load dev docs: ${err.message}</p>`;
     }
   })();
 
-  function selectModule(idx) {
+  function moduleFromHash() {
+    const raw = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+    if (!raw) return { idx: 0, item: '' };
+    const slash = raw.indexOf('/');
+    const modName = slash === -1 ? raw : raw.slice(0, slash);
+    const item = slash === -1 ? '' : raw.slice(slash + 1);
+    const idx = allModules.findIndex((m) => m.name === modName);
+    return { idx: idx >= 0 ? idx : 0, item };
+  }
+
+  function selectModule(idx, itemName) {
     currentModule = allModules[idx];
     document.querySelectorAll('.dd-module').forEach((el, i) => {
       el.classList.toggle('active', i === idx);
     });
-    renderModule(currentModule);
+    const hash = itemName
+      ? `#${currentModule.name}/${itemName}`
+      : `#${currentModule.name}`;
+    if (location.hash !== hash) {
+      history.replaceState(null, '', hash);
+    }
+    renderModule(currentModule, itemName);
   }
 
-  function renderModule(mod) {
+  function renderModule(mod, itemName) {
     const content = document.getElementById('dd-content');
     let html = `<div class="dd-module-header">
       <h2>${mod.name || '(root)'}</h2>
+      ${mod.items[0]?.file ? `<div class="file">${escapeHtml(mod.items[0].file)}</div>` : ''}
     </div>`;
 
     if (mod.doc) {
@@ -234,10 +304,18 @@ title: VibeScript Dev Docs
     });
 
     content.innerHTML = html;
+    if (itemName) {
+      const el = document.getElementById(itemDomId(itemName));
+      if (el) el.scrollIntoView({ block: 'start' });
+    }
+  }
+
+  function itemDomId(name) {
+    return `dd-item-${encodeURIComponent(name)}`;
   }
 
   function renderItem(item) {
-    let html = `<div class="dd-item">
+    let html = `<div class="dd-item" id="${itemDomId(item.name)}">
       <div class="dd-item-header">
         <span class="dd-item-kind dd-kind-${item.kind}">${item.kind}</span>
         <span class="dd-item-name">${escapeHtml(item.name)}</span>
@@ -261,7 +339,7 @@ title: VibeScript Dev Docs
     }
     let html = `<div class="dd-stats">${results.length} results</div>`;
     results.forEach(r => {
-      html += `<div class="dd-item">
+      html += `<div class="dd-item" data-mi="${r.mi}" data-item="${escapeHtml(r.name)}" role="button" tabindex="0">
         <div class="dd-item-header">
           <span class="dd-item-kind dd-kind-${r.kind}">${r.kind}</span>
           <span class="dd-item-name">${escapeHtml(r.name)}</span>
@@ -273,6 +351,17 @@ title: VibeScript Dev Docs
       </div>`;
     });
     content.innerHTML = html;
+    content.querySelectorAll('.dd-item[data-mi]').forEach((el) => {
+      const open = () => {
+        document.getElementById('dd-search').value = '';
+        document.querySelectorAll('.dd-module').forEach((modEl) => { modEl.style.display = ''; });
+        selectModule(Number(el.dataset.mi), el.dataset.item);
+      };
+      el.addEventListener('click', open);
+      el.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); }
+      });
+    });
   }
 
   function escapeHtml(s) {

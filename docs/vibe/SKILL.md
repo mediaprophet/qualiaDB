@@ -27,6 +27,17 @@ You are authoring **Vibe**, Qualia's typed graph/document language. Poet is the 
 - `crates/vibe/grammar/vibe-0.1.gbnf` (in-process constrained decode, not Ollama)
 - `crates/vibe/grammar/source.schema.json`
 
+## Pages (`docs/vibe/`)
+
+Regenerate before a Pages deploy:
+
+```
+cargo run -p vibe-wasm --bin gen-dev-docs -- docs/vibe/dev-docs.json
+wasm-pack build crates/vibe-wasm --target web --release --out-dir ../../docs/pkg/vibe
+```
+
+Do not wasm-opt the playground binary. GitHub Pages CI rebuilds both artifacts.`
+
 ## Fixtures that already pass
 
 - `crates/vibe/fixtures/12_1_cell.vibe` — clamp a score

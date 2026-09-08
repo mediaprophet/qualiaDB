@@ -6,11 +6,11 @@
 // an ambient-field channel (off by default) and a per-body-system channel row.
 // Mobile: full-viewport canvas + bottom-sheet controls, pinch zoom, orbit drag.
 
-import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js?v=0.0.37-mobile-recovery4";
+import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js?v=0.0.37-anatomy-boot2";
 import {
   getBrowserCapabilityReceipt,
   recordBackendDeviceOutcome,
-} from "../js/browser-capability.js?v=0.0.37-mobile-recovery4";
+} from "../js/browser-capability.js?v=0.0.37-anatomy-boot2";
 
 const container = document.getElementById("canvas-container");
 const statusEl = document.getElementById("status");
@@ -29,6 +29,7 @@ let bodyBytes = null;
 let capabilityReceipt = null;
 let anatomyRenderer = "unsupported";
 let renderGeneration = 0;
+window.__anatomyBooted = true;
 // Pack manifest — [{ key, label, system, systems }] per part — built from the pack itself.
 let packParts = [];
 const disabledParts = new Set();
@@ -122,8 +123,8 @@ function bodyUrls(key) {
     // Complete body is file-picker only in the browser (CORS + ~700 MB).
     return [];
   }
-  const name = `anatomy-${key}.hmc`;
-  return [name];
+  // Pin ?v= so a stale Pages 404 cannot stick in force-cache / CDN.
+  return [`anatomy-${key}.hmc?v=${ENGINE_VERSION}`];
 }
 
 /** OPFS cache key for a body pack (versioned so engine bumps invalidate). */
@@ -341,6 +342,8 @@ function setupSheet() {
 }
 
 async function boot() {
+  window.__anatomyBooted = true;
+  setStatus("Probing WebGPU / WebGL2…");
   renderAttribution();
   setupSheet();
 
@@ -488,10 +491,21 @@ function showCompleteLoader(show) {
 async function fetchWithProgress(url, label) {
   setProgress(true, 0, label || "Downloading…");
   // Prefer HTTP cache on revisit; first visit still streams once.
-  const resp = await fetch(url, { cache: "force-cache" });
-  if (!resp.ok) {
+  let resp;
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    resp = await fetch(url, { cache: "default" });
+    lastStatus = resp.status;
+    if (resp.ok) break;
+    if (![408, 425, 429, 500, 502, 503, 504].includes(resp.status) || attempt === 4) {
+      setProgress(false);
+      throw Object.assign(new Error(`HTTP ${resp.status}`), { status: resp.status, resp });
+    }
+    await new Promise((r) => setTimeout(r, 250 * (2 ** (attempt - 1))));
+  }
+  if (!resp || !resp.ok) {
     setProgress(false);
-    throw Object.assign(new Error(`HTTP ${resp.status}`), { status: resp.status, resp });
+    throw Object.assign(new Error(`HTTP ${lastStatus}`), { status: lastStatus, resp });
   }
   // Content-Length is often the *transfer* size. With Content-Encoding (gzip/br)
   // or CDN quirks, the decoded ReadableStream can be larger than CL — never treat
@@ -762,7 +776,7 @@ async function confirmBodyPresented(generation, summary) {
     setStatus("The loaded renderer is stale: Anatomy lifecycle receipts are unavailable.", "error");
     return;
   }
-  for (let frame = 0; frame < 20; frame++) {
+  for (let frame = 0; frame < 120; frame++) {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     if (generation !== renderGeneration) return;
     const receipt = portal.body_render_receipt();

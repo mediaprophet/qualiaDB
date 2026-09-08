@@ -142,6 +142,21 @@
             <div id="engine-status" class="mb-3 rounded-xl border border-zinc-700/80 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
                 Starting WASM engine…
             </div>
+            <div id="inference-meter" class="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-xs text-zinc-300">
+                <div class="font-semibold text-cyan-200 mb-1.5">Decode path</div>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                    <dt class="text-zinc-500">Path</dt>
+                    <dd data-meter="path" class="font-mono text-zinc-200">probing…</dd>
+                    <dt class="text-zinc-500">Device</dt>
+                    <dd data-meter="device" class="font-mono text-zinc-200">—</dd>
+                    <dt class="text-zinc-500">NPU</dt>
+                    <dd data-meter="npu" class="font-mono text-zinc-200">not exposed in this browser</dd>
+                    <dt class="text-zinc-500">TTFT</dt>
+                    <dd data-meter="ttft" class="font-mono text-zinc-200">—</dd>
+                    <dt class="text-zinc-500">tok/s</dt>
+                    <dd data-meter="tps" class="font-mono text-zinc-200">—</dd>
+                </dl>
+            </div>
             <div id="mobile-model-hint" class="hidden mb-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2.5 text-xs leading-relaxed text-cyan-100"></div>
             <!-- WebGPU capability notice — populated by checkWebgpuSupport() so unsupported devices
                  (esp. some Android browsers) get a clear message instead of a silent stall. -->
@@ -254,6 +269,23 @@
                 <div class="text-xs text-zinc-500 text-center pt-6 px-2 leading-relaxed">
                     1) Open <strong class="text-zinc-300">Setup</strong> (phones) · 2) Tap <strong class="text-zinc-300">Load Model</strong> · 3) Chat fully on-device via CPU-WASM or WebGPU.
                 </div>
+            </div>
+
+            <div id="chat-inference-meter" class="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-xs text-zinc-300">
+                <div class="font-semibold text-cyan-200 mb-1.5">Decode path</div>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                    <dt class="text-zinc-500">Path</dt>
+                    <dd data-meter="path" class="font-mono text-zinc-200">probing…</dd>
+                    <dt class="text-zinc-500">Device</dt>
+                    <dd data-meter="device" class="font-mono text-zinc-200">—</dd>
+                    <dt class="text-zinc-500">NPU</dt>
+                    <dd data-meter="npu" class="font-mono text-zinc-200">not exposed in this browser</dd>
+                    <dt class="text-zinc-500">TTFT</dt>
+                    <dd data-meter="ttft" class="font-mono text-zinc-200">—</dd>
+                    <dt class="text-zinc-500">tok/s</dt>
+                    <dd data-meter="tps" class="font-mono text-zinc-200">—</dd>
+                </dl>
+                <p class="mt-2 text-[11px] leading-relaxed text-zinc-500">GPU = WebGPU adapter. CPU = WASM on this device. Browsers do not report an NPU over WebGPU; WebNN (<code class="text-zinc-400">navigator.ml</code>) is noted when present, but the UA still picks NPU vs GPU vs CPU without saying which. On phones, Path is usually CPU-WASM unless Chrome exposes a GPU adapter.</p>
             </div>
 
             <!-- Streaming Output (active generation) -->
@@ -462,6 +494,66 @@ let loadInFlight = false;
 let selectedInferenceBackend = 'none';
 /** Last successful OPFS/model source so a WebGPU 0-token decode can retry on CPU-WASM. */
 let lastLoadedModel = null;
+let lastGenerationMetrics = null;
+let capabilityReceiptCache = null;
+
+function npuExposureLabel() {
+    // WebGPU never names an NPU. WebNN (`navigator.ml`) is the browser neural surface when present;
+    // the UA still chooses NPU vs GPU vs CPU and does not report which.
+    if (navigator.ml || globalThis.ml) {
+        return 'WebNN present — NPU/GPU/CPU chosen by the browser, not reported';
+    }
+    return 'not exposed in this browser';
+}
+
+function effectiveLlmBackend() {
+    if (selectedInferenceBackend === 'webgpu' || selectedInferenceBackend === 'cpu-wasm' || selectedInferenceBackend === 'unsupported') {
+        return selectedInferenceBackend;
+    }
+    const sel = (capabilityReceiptCache || window.__qualiaCapabilityReceipt)?.selection?.llm;
+    return sel || selectedInferenceBackend;
+}
+
+function decodePathLabel() {
+    const backend = effectiveLlmBackend();
+    if (backend === 'webgpu') return 'GPU (WebGPU)';
+    if (backend === 'cpu-wasm') return 'CPU (WASM)';
+    if (backend === 'unsupported') return 'unsupported';
+    return backend && backend !== 'none' ? backend : 'probing…';
+}
+
+function decodeDeviceLabel(capabilities) {
+    const cap = capabilities || capabilityReceiptCache || window.__qualiaCapabilityReceipt;
+    const backend = effectiveLlmBackend();
+    if (backend === 'webgpu') {
+        const info = cap?.webgpu?.info;
+        const bits = [info?.vendor, info?.architecture, info?.device, info?.description].filter(Boolean);
+        return bits.join(' · ') || 'WebGPU adapter (vendor not reported)';
+    }
+    if (backend === 'cpu-wasm') {
+        const threads = Number(navigator.hardwareConcurrency || 0);
+        const simd = cap?.wasm?.simd ? 'SIMD128' : 'scalar';
+        const mem = Number(navigator.deviceMemory || 0);
+        const memBit = mem > 0 ? ` · ~${mem} GB` : '';
+        return (threads > 0 ? `${threads} threads · ${simd}` : simd) + memBit;
+    }
+    return '—';
+}
+
+function setMeterText(name, text) {
+    document.querySelectorAll(`[data-meter="${name}"]`).forEach((el) => {
+        el.textContent = text;
+    });
+}
+
+function renderInferenceMeter(metrics) {
+    const m = metrics || lastGenerationMetrics || {};
+    setMeterText('path', decodePathLabel());
+    setMeterText('device', decodeDeviceLabel());
+    setMeterText('npu', npuExposureLabel());
+    setMeterText('ttft', m.ttftMs == null ? '—' : `${m.ttftMs} ms`);
+    setMeterText('tps', m.tokensPerSec == null ? '—' : `${Number(m.tokensPerSec).toFixed(1)} tok/s`);
+}
 
 const isMobileDevice = () =>
     /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
@@ -750,12 +842,14 @@ async function loadModel() {
                 : 'Chrome is not exposing WebGPU; Qualia will use CPU-WASM.',
         );
         setEngineStatus('CPU-WASM fallback selected', 'warn');
+        renderInferenceMeter();
     } else {
         void mobileLab.emit('webgpu_adapter_ready', {
             attempt: capabilities.webgpu.adapterAttempt,
             info: capabilities.webgpu.info,
             limits: capabilities.webgpu.limits,
         });
+        renderInferenceMeter();
     }
 
     loadInFlight = true;
@@ -993,6 +1087,7 @@ async function loadModel() {
         showDlStatus('');
         const vocabNote = vocab > 0 ? ` · vocab ${vocab.toLocaleString()}` : '';
         setEngineStatus(`Model ready on ${selectedInferenceBackend} — chat below${vocabNote}`, 'ok');
+        renderInferenceMeter();
         document.getElementById('model-badge').textContent = name;
         document.getElementById('model-badge').className = 'px-2 sm:px-3 py-1.5 rounded-2xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs max-w-[9rem] sm:max-w-none truncate';
         document.getElementById('load-btn').classList.add('hidden');
@@ -1288,7 +1383,13 @@ async function generate(system, user, opts = {}) {
         }
         streamEl.textContent = cleaned || '▍';
         const secs = (performance.now() - t0) / 1000;
-        statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${(tokens / Math.max(secs, 0.001)).toFixed(1)} tok/s`;
+        const tps = tokens / Math.max(secs, 0.001);
+        statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${tps.toFixed(1)} tok/s`;
+        renderInferenceMeter({
+            ttftMs: Math.round(firstTokenMs),
+            tokensPerSec: tps,
+            generatedTokens: tokens,
+        });
     };
 
     // The measured path returns an exact token count, allowing the UI to reject
@@ -1351,6 +1452,16 @@ async function generate(system, user, opts = {}) {
         preview: mobileLab.textPreview(cleaned),
         memory: mobileLab.memorySnapshot(),
     });
+    const elapsedMs = Math.max(1, performance.now() - t0);
+    const generatedTokens = Number(result?.generatedTokens || tokens || 0);
+    lastGenerationMetrics = {
+        path: decodePathLabel(),
+        ttftMs: firstTokenMs == null ? null : Math.round(firstTokenMs),
+        tokensPerSec: generatedTokens / (elapsedMs / 1000),
+        generatedTokens,
+        elapsedMs: Math.round(elapsedMs),
+    };
+    renderInferenceMeter(lastGenerationMetrics);
     return cleaned;
 }
 
@@ -1536,7 +1647,14 @@ async function checkWebgpuSupport() {
     const el = document.getElementById('webgpu-notice');
     if (!el) return;
     const capabilities = await browserCapabilityReceiptPromise;
+    capabilityReceiptCache = capabilities;
     window.__qualiaCapabilityReceipt = capabilities;
+    if (selectedInferenceBackend === 'none') {
+        selectedInferenceBackend = BACKEND_OVERRIDE === 'cpu' || BACKEND_OVERRIDE === 'cpu-wasm'
+            ? 'cpu-wasm'
+            : (capabilities.selection.llm || 'none');
+    }
+    renderInferenceMeter();
     if (capabilities.selection.llm === 'webgpu') {
         // A real adapter was acquired by the shared capability probe.
         // Expand setup on first visit for phones so people see Load Model.

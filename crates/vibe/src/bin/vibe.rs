@@ -141,7 +141,12 @@ fn cmd_eval(args: &[String]) -> ExitCode {
     };
 
     let fn_name = args.get(1).map(|s| s.as_str()).unwrap_or("main");
-    let fn_args: Vec<Value> = args[2..].iter().map(|s| Value::String(s.clone())).collect();
+    let fn_args: Vec<Value> = args
+        .get(2..)
+        .unwrap_or(&[])
+        .iter()
+        .map(|s| Value::String(s.clone()))
+        .collect();
 
     let mut host = LocalHost::default();
     let mut env = Env::default();

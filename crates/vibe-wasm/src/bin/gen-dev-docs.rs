@@ -24,8 +24,18 @@ struct ApiModule {
     items: Vec<ApiItem>,
 }
 
+fn is_attribute_line(trimmed: &str) -> bool {
+    trimmed.starts_with("#[")
+        || trimmed.starts_with("#![")
+        || trimmed.starts_with('#') && trimmed.contains(']')
+        || (trimmed.starts_with('#') && trimmed.contains('['))
+        || trimmed == "]"
+        || trimmed.ends_with(")]") && !trimmed.starts_with("///")
+}
+
 fn extract_doc_comments(lines: &[String], line_idx: usize) -> String {
     // Walk backwards from line_idx to collect consecutive /// comments.
+    // Skip `#[…]` (including `#[wasm_bindgen]`) so wasm ABI docs survive.
     let mut doc_lines = Vec::new();
     let mut i = line_idx;
     while i > 0 {
@@ -37,7 +47,7 @@ fn extract_doc_comments(lines: &[String], line_idx: usize) -> String {
         } else if trimmed.starts_with("//!") {
             // Module doc — stop here
             break;
-        } else if trimmed.is_empty() || trimmed.starts_with("//") {
+        } else if trimmed.is_empty() || trimmed.starts_with("//") || is_attribute_line(trimmed) {
             continue;
         } else {
             break;
@@ -95,19 +105,24 @@ fn process_file(path: &Path, module_name: &str) -> ApiModule {
         }
 
         let doc = extract_doc_comments(&lines, i);
+        let file = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
 
         items.push(ApiItem {
-            name,
-            kind,
+            name: name.clone(),
+            kind: kind.clone(),
             doc,
-            file: path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
+            file: file.clone(),
             line: i + 1,
             signature,
         });
+
+        if kind == "trait" {
+            items.extend(collect_trait_methods(&lines, i, &name, &file));
+        }
     }
 
     ApiModule {
@@ -115,6 +130,54 @@ fn process_file(path: &Path, module_name: &str) -> ApiModule {
         doc: module_doc,
         items,
     }
+}
+
+/// Index `fn` methods inside a `pub trait` body (they are not `pub fn`).
+fn collect_trait_methods(
+    lines: &[String],
+    trait_line: usize,
+    trait_name: &str,
+    file: &str,
+) -> Vec<ApiItem> {
+    let mut items = Vec::new();
+    let mut depth = 0usize;
+    let mut started = false;
+    for (i, line) in lines.iter().enumerate().skip(trait_line) {
+        for c in line.chars() {
+            match c {
+                '{' => {
+                    depth += 1;
+                    started = true;
+                }
+                '}' => {
+                    depth = depth.saturating_sub(1);
+                }
+                _ => {}
+            }
+        }
+        if started && depth == 0 {
+            break;
+        }
+        if i == trait_line {
+            continue;
+        }
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed.strip_prefix("fn ") {
+            let name = extract_fn_name(rest);
+            if name.is_empty() {
+                continue;
+            }
+            items.push(ApiItem {
+                name: format!("{trait_name}::{name}"),
+                kind: "fn".to_string(),
+                doc: extract_doc_comments(lines, i),
+                file: file.to_string(),
+                line: i + 1,
+                signature: trimmed.trim_end_matches('{').trim().to_string(),
+            });
+        }
+    }
+    items
 }
 
 fn extract_item(rest: &str, full_line: &str) -> (String, String, String) {
@@ -315,12 +378,19 @@ fn main() {
         PathBuf::from("docs/vibe/dev-docs.json")
     };
 
-    // Find vibe source directory
+    // Find vibe source directory. Engine lives at crates/vibe (legacy sibling
+    // checkout was crates/vibe-script).
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-    let vibe_src = PathBuf::from(&manifest_dir)
-        .join("..")
-        .join("vibe-script")
-        .join("src");
+    let crates_dir = PathBuf::from(&manifest_dir).join("..");
+    let vibe_src = {
+        let current = crates_dir.join("vibe").join("src");
+        let legacy = crates_dir.join("vibe-script").join("src");
+        if current.exists() {
+            current
+        } else {
+            legacy
+        }
+    };
 
     if !vibe_src.exists() {
         eprintln!("vibe source not found at {:?}", vibe_src);
@@ -328,7 +398,12 @@ fn main() {
     }
 
     eprintln!("Scanning {:?} ...", vibe_src);
-    let modules = scan_directory(&vibe_src, "");
+    let mut modules = scan_directory(&vibe_src, "");
+
+    let wasm_lib = PathBuf::from(&manifest_dir).join("src").join("lib.rs");
+    if wasm_lib.exists() {
+        modules.push(process_file(&wasm_lib, "wasm"));
+    }
 
     // Sort modules by name
     let mut module_map: BTreeMap<String, ApiModule> = BTreeMap::new();
@@ -353,4 +428,37 @@ fn main() {
         module_map.len(),
         total_items
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wasm_bindgen_attribute_does_not_drop_docs() {
+        let lines = [
+            "/// Runs preamble then main.".to_string(),
+            "#[wasm_bindgen]".to_string(),
+            "pub fn eval_program_src(src: &str) -> JsValue {".to_string(),
+        ];
+        let doc = extract_doc_comments(&lines, 2);
+        assert_eq!(doc, "Runs preamble then main.");
+    }
+
+    #[test]
+    fn host_trait_methods_are_indexed() {
+        let lines = [
+            "/// Host supplied by Qualia / tests.".to_string(),
+            "pub trait Host {".to_string(),
+            "    /// Wall clock.".to_string(),
+            "    fn time_unix(&mut self, span: Span) -> Result<Value, Diagnostic> {".to_string(),
+            "        Ok(())".to_string(),
+            "    }".to_string(),
+            "}".to_string(),
+        ];
+        let methods = collect_trait_methods(&lines, 1, "Host", "host.rs");
+        assert_eq!(methods.len(), 1);
+        assert_eq!(methods[0].name, "Host::time_unix");
+        assert_eq!(methods[0].doc, "Wall clock.");
+    }
 }

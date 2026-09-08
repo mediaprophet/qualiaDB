@@ -2,6 +2,7 @@
 layout: qualia
 title: VibeScript Playground
 ---
+<meta charset="utf-8">
 
 <div id="vibe-playground" style="max-width:100%;margin:0;padding:0;">
   <style>
@@ -176,6 +177,7 @@ title: VibeScript Playground
     <div class="pg-output-wrap">
       <div class="pg-tabs">
         <div class="pg-tab active" data-tab="result">Result</div>
+        <div class="pg-tab" data-tab="diagnose">Diagnose</div>
         <div class="pg-tab" data-tab="bytecode">Bytecode</div>
         <div class="pg-tab" data-tab="ast">AST / Check</div>
         <div class="pg-tab" data-tab="grammar">Grammar</div>
@@ -188,6 +190,7 @@ title: VibeScript Playground
     <div class="pg-footer">
       <button class="pg-btn pg-btn-primary" id="pg-run">▶ Run (Ctrl+Enter)</button>
       <button class="pg-btn" id="pg-check">✓ Check</button>
+      <button class="pg-btn" id="pg-diagnose">🩺 Diagnose</button>
       <button class="pg-btn" id="pg-bytecode">⚙ Compile</button>
       <button class="pg-btn" id="pg-encode">↓ Encode</button>
       <select id="pg-examples" class="pg-select">
@@ -211,6 +214,8 @@ title: VibeScript Playground
         <option value="tween">Tween ease</option>
         <option value="bind">Two-way bind</option>
         <option value="triple">RDF Triple</option>
+        <option value="cosmic">Cosmic geodesy</option>
+        <option value="diagnose">Diagnose E300</option>
       </select>
       <span id="pg-stats" class="pg-status"></span>
     </div>
@@ -220,6 +225,7 @@ title: VibeScript Playground
 <script type="module">
   import init, {
     language_version,
+    host_version,
     eval_cell_src,
     check_cell_src,
     parse_cell_src,
@@ -228,11 +234,13 @@ title: VibeScript Playground
     compile_cell_bytecode,
     run_cell_bytecode,
     run_program_bytecode,
+    eval_program_src,
     encode_cell_bytecode,
     decode_and_run,
     ebnf_grammar,
     gbnf_grammar,
     ast_schema_json,
+    diagnose_src,
   } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
 
   let wasmReady = false;
@@ -242,24 +250,26 @@ title: VibeScript Playground
   // Example snippets
   const examples = {
     arith: { mode: 'cell', code: '= 1 + 2 * 3 - 4' },
-    fib: { mode: 'program', code: 'fn fib_iter(n: i64) budget(steps: 100000) -> i64 {\n  let a = 0;\n  let b = 1;\n  let i = 0;\n  while i < n {\n    let t = a + b;\n    a = b;\n    b = t;\n    i = i + 1;\n  }\n  return a;\n}\n\nfn main() -> i64 {\n  return fib_iter(10);\n}' },
+    fib: { mode: 'program', code: 'fn fib_iter(n: i64) budget(steps: 100000) -> i64 {\n  let mut a = 0;\n  let mut b = 1;\n  let mut i = 0;\n  while i < n {\n    let t = a + b;\n    a = b;\n    b = t;\n    i = i + 1;\n  }\n  return a;\n}\n\nfn main() -> i64 {\n  return fib_iter(10);\n}' },
     list: { mode: 'cell', code: '= [1, 2, 3, 4, 5][2]' },
     record: { mode: 'cell', code: '= { name: "alice", age: 30 }.age' },
     logic: { mode: 'cell', code: '= true && (false || true)' },
-    forloop: { mode: 'program', code: 'fn sum_list() budget(steps: 10000) -> i64 {\n  let s = 0;\n  for x in [10, 20, 30, 40, 50] {\n    s = s + x;\n  }\n  return s;\n}\n\nfn main() -> i64 {\n  return sum_list();\n}' },
-    while: { mode: 'program', code: 'fn sum_to(n: i64) budget(steps: 10000) -> i64 {\n  let s = 0;\n  let i = 0;\n  while i < n {\n    s = s + i;\n    i = i + 1;\n  }\n  return s;\n}\n\nfn main() -> i64 {\n  return sum_to(100);\n}' },
+    forloop: { mode: 'program', code: 'fn sum_list() budget(steps: 10000) -> i64 {\n  let mut s = 0;\n  for x in [10, 20, 30, 40, 50] {\n    s = s + x;\n  }\n  return s;\n}\n\nfn main() -> i64 {\n  return sum_list();\n}' },
+    while: { mode: 'program', code: 'fn sum_to(n: i64) budget(steps: 10000) -> i64 {\n  let mut s = 0;\n  let mut i = 0;\n  while i < n {\n    s = s + i;\n    i = i + 1;\n  }\n  return s;\n}\n\nfn main() -> i64 {\n  return sum_to(100);\n}' },
     match: { mode: 'program', code: 'fn classify(x: i64) -> i64 {\n  match x {\n    0 => { return 100; }\n    1 => { return 200; }\n    _ => { return 999; }\n  }\n}\n\nfn main() -> i64 {\n  return classify(1);\n}' },
     string: { mode: 'cell', code: '= "hello" == "hello"' },
     physics: { mode: 'cell', code: '= 500ms + 20ms' },
     color: { mode: 'cell', code: '= #ff2d95' },
     orbit: { mode: 'program', code: 'using Animation;\n\nfn main() -> Record {\n  return Animation.orbit_spin(0.25);\n}' },
-    lamp: { mode: 'program', code: 'module lamp;\nimport "vibe:0.1/math" as math;\nusing Animation;\n\ncell pose := Animation.orbit_spin(1.0);\ncell hue := 230.0 + 20.0 * math.sin(1.0);\ncell glow := oklch(0.72, 0.12, hue);\n\npresent lamp {\n    color: glow\n    pose: pose\n    speech: "lamp on"\n}\n\nfn main() -> Record {\n  return glow;\n}' },
+    lamp: { mode: 'program', code: 'using Animation;\n\nfn main() -> Record {\n  let glow = oklch(0.72, 0.12, 230.0);\n  let pose = Animation.orbit_spin(1.0);\n  return { color: glow, pose: pose };\n}' },
     clinic: { mode: 'program', code: 'using DeonticLogic;\n\nlaw overheat\n    when 90.0 > 80.0\n    => forbid { "haptic" };\n\nfn main() -> Record {\n  return obligate { "sign" };\n}' },
     zh: { mode: 'program', code: 'locale zh;\n函数 main() -> i64 {\n  返回 1;\n}' },
     lambda: { mode: 'program', code: 'fn main() {\n  return [1, 2, 3].map(|x| x * x);\n}' },
     tween: { mode: 'program', code: 'fn main() {\n  let t = 200ms;\n  return 0.0 ~ 10.0 over 400ms ease linear;\n}' },
-    bind: { mode: 'program', code: 'let volume = 1.5;\nlet slider = { value: 0.2 };\nbind slider.value <-> volume using Clamp[0, 1] resolve latest;\n\nfn main() {\n  return 1;\n}' },
+    bind: { mode: 'program', code: 'let mut volume = 1.5;\nlet mut slider = { value: 0.2 };\nbind slider.value <-> volume using Clamp[0, 1] resolve latest;\n\nfn main() {\n  return 1;\n}' },
     triple: { mode: 'cell', code: '= <<( <ex:s1> ex:emitsAlert ex:Overheat )>>' },
+    cosmic: { mode: 'program', code: 'using Cosmic;\n\neffect fn main() -> Record {\n  return Cosmic.geodetic_to_ecef({\n    lat_deg: -37.8,\n    lon_deg: 144.9,\n    alt_m: 0.0\n  });\n}' },
+    diagnose: { mode: 'program', code: 'effect fn main() {\n  return HID.poll();\n}\n' },
   };
 
   // Tab switching
@@ -294,8 +304,9 @@ title: VibeScript Playground
 
   // Run button
   document.getElementById('pg-run').addEventListener('click', rerun);
-  document.getElementById('pg-check').addEventListener('click', () => { currentTab = 'ast'; rerun(); });
-  document.getElementById('pg-bytecode').addEventListener('click', () => { currentTab = 'bytecode'; rerun(); });
+  document.getElementById('pg-check').addEventListener('click', () => { currentTab = 'ast'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'ast')); rerun(); });
+  document.getElementById('pg-diagnose').addEventListener('click', () => { currentTab = 'diagnose'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'diagnose')); rerun(); });
+  document.getElementById('pg-bytecode').addEventListener('click', () => { currentTab = 'bytecode'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'bytecode')); rerun(); });
   document.getElementById('pg-encode').addEventListener('click', encodeDecode);
 
   function getMode() { return modeSelect.value; }
@@ -312,8 +323,9 @@ title: VibeScript Playground
         const result = eval_cell_src(src);
         output.innerHTML = formatResult(result);
       } else {
-        // For programs, try to run main()
-        const result = run_program_bytecode(src, 'main', []);
+        // Host-family programs (Cosmic, Animation, …) evaluate through LocalHost.
+        // Bytecode still does not encode Family.method as CallHost.
+        const result = eval_program_src(src);
         output.innerHTML = formatResult(result);
       }
     } else if (currentTab === 'bytecode') {
@@ -331,6 +343,9 @@ title: VibeScript Playground
         const result = check_program_src(src);
         output.innerHTML = formatCheck(result);
       }
+    } else if (currentTab === 'diagnose') {
+      const result = diagnose_src(src);
+      output.innerHTML = formatDiagnose(result);
     } else if (currentTab === 'grammar') {
       output.innerHTML = `<div class="pg-disasm">${escapeHtml(ebnf_grammar())}</div>`;
     }
@@ -398,6 +413,14 @@ title: VibeScript Playground
     }
   }
 
+  function formatDiagnose(result) {
+    const json = JSON.stringify(result, null, 2);
+    const valid = result && result.valid === true;
+    const cls = valid ? 'pg-result' : 'pg-error';
+    const label = valid ? '✓ Diagnose valid' : '✗ Diagnose';
+    return `<div class="${cls}">${label}</div><pre class="pg-disasm">${syntaxHighlight(json)}</pre>`;
+  }
+
   function syntaxHighlight(json) {
     json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*)/g, (match) => {
@@ -425,7 +448,8 @@ title: VibeScript Playground
     try {
       await init();
       wasmReady = true;
-      document.getElementById('pg-version').textContent = `vibe-${language_version()}`;
+      document.getElementById('pg-version').textContent =
+        `${language_version()} · ${host_version()}`;
 
       // Load Monaco
       require.config({
@@ -443,9 +467,8 @@ title: VibeScript Playground
               [/\d+\.\d+/, 'number.float'],
               [/\d+/, 'number'],
               [/"[^"]*"/, 'string'],
-              [/'[^'*'/, 'string'],
               [/\b(true|false|null)\b/, 'keyword'],
-              [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction)\b/, 'keyword'],
+              [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction|using|locale|cell|present|pure)\b/, 'keyword'],
               [/\b(i64|u64|f64|string|bool|Result|Option|List|Iri)\b/, 'type'],
               [/[+\-*/%]/, 'operator'],
               [/[<>=!]=/, 'operator'],
@@ -459,7 +482,7 @@ title: VibeScript Playground
         monaco.languages.setMonarchTokensProvider('vibe-module', {
           tokenizer: {
             root: [
-              [/(module|prefix|requires|capability|import|on)\b/, 'keyword'],
+              [/(module|prefix|requires|capability|import|on|using|locale|cell|present)\b/, 'keyword'],
               [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction|pure|budget|steps)\b/, 'keyword'],
               [/\b(i64|u64|f64|string|bool|Result|Option|List|Iri|Receipt)\b/, 'type'],
               [/\d+\.\d+/, 'number.float'],

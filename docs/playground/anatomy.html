@@ -524,7 +524,7 @@
                 <button type="button" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
                 <button type="button" id="btn-zoom-reset" title="Reset view" aria-label="Reset view">↻</button>
             </div>
-            <div id="status" class="status">Starting…</div>
+            <div id="status" class="status">Probing renderer…</div>
             <details id="attribution" class="attribution">
                 <summary>ⓘ Sources</summary>
                 <div id="attribution-body"></div>
@@ -532,19 +532,26 @@
         </div>
     </div>
 
-    <!-- Fallback if the ES module never runs (file:// or blocked WASM). -->
+    <!-- Fallback if the ES module never runs (file:// or blocked WASM).
+         Do not treat a live boot as failure: WebGPU requestAdapter can sit
+         pending for many seconds. Skip if the module marked boot, or a canvas
+         already exists, or status has moved off the initial probe line. -->
     <script>
       setTimeout(function () {
+        if (window.__anatomyBooted) return;
+        var stage = document.getElementById('canvas-container');
+        if (stage && stage.querySelector('canvas')) return;
         var s = document.getElementById('status');
-        if (s && s.textContent.trim().indexOf('Starting') === 0) {
+        var text = s ? s.textContent.trim() : '';
+        if (text.indexOf('Starting') === 0 || text.indexOf('Probing') === 0) {
           s.className = 'status error';
           s.textContent = (location.protocol === 'file:')
-            ? 'This demo must be SERVED over HTTP, not opened as a file. Serve docs/ and open playground/anatomy.html in a WebGPU browser (Chrome/Edge, Safari 18+).'
-            : 'The renderer module did not load. Needs a WebGPU browser over HTTPS/HTTP. Open the console for the specific error.';
+            ? 'This demo must be SERVED over HTTP, not opened as a file. Serve docs/ and open playground/anatomy.html in a WebGPU or WebGL2 browser (Chrome/Edge, Safari 18+).'
+            : 'The renderer module did not load. Needs a WebGPU or WebGL2 browser over HTTPS/HTTP. Open the console for the specific error.';
         }
-      }, 8000);
+      }, 45000);
     </script>
 
-    <script type="module" src="anatomy.js?v=0.0.33-mobile-recovery4"></script>
+    <script type="module" src="anatomy.js?v=0.0.37-anatomy-boot2"></script>
 </body>
 </html>
