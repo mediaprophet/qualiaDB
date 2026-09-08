@@ -4917,6 +4917,86 @@ fn named(id: &str) -> Option<Presentation> {
             "Query EMF field via Render.emf_field_info.",
             Proficiency::Novice,
         ),
+        "social:live_gini" => (
+            "Social Gini",
+            "Inequality via Social.gini.",
+            Proficiency::Novice,
+        ),
+        "social:live_lorenz" => (
+            "Social Lorenz",
+            "Lorenz curve via Social.lorenz.",
+            Proficiency::Novice,
+        ),
+        "social:live_degree_centrality" => (
+            "Degree centrality",
+            "Degree centrality via Social.degree_centrality.",
+            Proficiency::Intermediate,
+        ),
+        "social:live_lww" => (
+            "LWW merge",
+            "Last-writer-wins merge via Social.lww.",
+            Proficiency::Intermediate,
+        ),
+        "forensic:live_malfeasance_delta" => (
+            "Malfeasance delta",
+            "Capital vs utility via Forensic.malfeasance_delta.",
+            Proficiency::Intermediate,
+        ),
+        "forensic:live_narrative_divergence" => (
+            "Narrative divergence",
+            "Factual vs fantasy via Forensic.narrative_divergence.",
+            Proficiency::Expert,
+        ),
+        "finance:live_convert_currency" => (
+            "Convert currency",
+            "Convert via Finance.convert_currency.",
+            Proficiency::Novice,
+        ),
+        "finance:live_multisig_check" => (
+            "Multisig check",
+            "k-of-N check via Finance.multisig_check.",
+            Proficiency::Novice,
+        ),
+        "finance:live_ledger_balance" => (
+            "Ledger balance",
+            "Account balances via Finance.ledger_balance.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_corpus_load" => (
+            "Corpus load",
+            "Load a corpus path via Corpus.load.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_corpus_parse" => (
+            "Corpus parse",
+            "Parse corpus text via Corpus.parse.",
+            Proficiency::Novice,
+        ),
+        "comm:graph_live_validate_fragment" => (
+            "Validate fragment",
+            "Validate a chat fragment via ChatGraph.validate_fragment.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_link_reply" => (
+            "Link reply",
+            "Link a reply via ChatGraph.link_reply.",
+            Proficiency::Intermediate,
+        ),
+        "comm:graph_live_add_social_post" => (
+            "Add social post",
+            "Add a post via Interactive.add_social_post.",
+            Proficiency::Novice,
+        ),
+        "comm:graph_live_add_trigger" => (
+            "Add trigger",
+            "Add a timed trigger via Interactive.add_trigger.",
+            Proficiency::Novice,
+        ),
+        "comm:graph_live_second_screen_sync" => (
+            "Second screen sync",
+            "Companion sync via SecondScreen.sync.",
+            Proficiency::Novice,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

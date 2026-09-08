@@ -993,6 +993,22 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "render:gpu_live_emf_upload_field"
         | "render:gpu_live_emf_render_slice"
         | "render:gpu_live_emf_field_info"
+        | "social:live_gini"
+        | "social:live_lorenz"
+        | "social:live_degree_centrality"
+        | "social:live_lww"
+        | "forensic:live_malfeasance_delta"
+        | "forensic:live_narrative_divergence"
+        | "finance:live_convert_currency"
+        | "finance:live_multisig_check"
+        | "finance:live_ledger_balance"
+        | "comm:graph_live_corpus_load"
+        | "comm:graph_live_corpus_parse"
+        | "comm:graph_live_validate_fragment"
+        | "comm:graph_live_link_reply"
+        | "comm:graph_live_add_social_post"
+        | "comm:graph_live_add_trigger"
+        | "comm:graph_live_second_screen_sync"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3775,6 +3791,48 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         }
         "render:gpu_live_emf_field_info" => {
             super::gpu_live2_chain_actions::run_emf_field_info(document, label)
+        }
+        "social:live_gini" => super::wave36_chain_actions::run_social_gini(document, label),
+        "social:live_lorenz" => super::wave36_chain_actions::run_social_lorenz(document, label),
+        "social:live_degree_centrality" => {
+            super::wave36_chain_actions::run_social_degree_centrality(document, label)
+        }
+        "social:live_lww" => super::wave36_chain_actions::run_social_lww(document, label),
+        "forensic:live_malfeasance_delta" => {
+            super::wave36_chain_actions::run_forensic_malfeasance_delta(document, label)
+        }
+        "forensic:live_narrative_divergence" => {
+            super::wave36_chain_actions::run_forensic_narrative_divergence(document, label)
+        }
+        "finance:live_convert_currency" => {
+            super::wave36_chain_actions::run_finance_convert_currency(document, label)
+        }
+        "finance:live_multisig_check" => {
+            super::wave36_chain_actions::run_finance_multisig_check(document, label)
+        }
+        "finance:live_ledger_balance" => {
+            super::wave36_chain_actions::run_finance_ledger_balance(document, label)
+        }
+        "comm:graph_live_corpus_load" => {
+            super::wave36_chain_actions::run_corpus_load(document, label)
+        }
+        "comm:graph_live_corpus_parse" => {
+            super::wave36_chain_actions::run_corpus_parse(document, label)
+        }
+        "comm:graph_live_validate_fragment" => {
+            super::wave36_chain_actions::run_chat_validate_fragment(document, label)
+        }
+        "comm:graph_live_link_reply" => {
+            super::wave36_chain_actions::run_chat_link_reply(document, label)
+        }
+        "comm:graph_live_add_social_post" => {
+            super::wave36_chain_actions::run_interactive_add_social_post(document, label)
+        }
+        "comm:graph_live_add_trigger" => {
+            super::wave36_chain_actions::run_interactive_add_trigger(document, label)
+        }
+        "comm:graph_live_second_screen_sync" => {
+            super::wave36_chain_actions::run_second_screen_sync(document, label)
         }
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),

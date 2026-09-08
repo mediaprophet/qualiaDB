@@ -1363,6 +1363,25 @@ pub(super) fn register_econ_toolbox(reg: &mut Registry) {
                     ActionType::Invoke,
                 )),
             ],
-        )],
+        ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "social:live".into(),
+                    label: "Live social & forensic".into(),
+                    icon: "finance".into(),
+                    description: "Host-bound Social.* and Forensic.* leftovers.".into(),
+                },
+                super::register_wave36_live::social_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "finance:live".into(),
+                    label: "Live finance remainder".into(),
+                    icon: "finance".into(),
+                    description: "Host-bound Finance.convert_currency / multisig / ledger binds.".into(),
+                },
+                super::register_wave36_live::finance_tools(),
+            ),
+        ],
     ));
 }

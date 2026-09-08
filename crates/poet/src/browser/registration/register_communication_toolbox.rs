@@ -286,6 +286,15 @@ pub(super) fn register_communication_toolbox(reg: &mut Registry) {
                 },
                 super::register_wave33_live::hbbtv_tools(),
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "comm:graph_live".into(),
+                    label: "Live corpus & chat graph".into(),
+                    icon: "comm".into(),
+                    description: "Host-bound Corpus.*, ChatGraph.*, Interactive.*, SecondScreen leftovers.".into(),
+                },
+                super::register_wave36_live::graph_live_tools(),
+            ),
         ],
     ));
 }

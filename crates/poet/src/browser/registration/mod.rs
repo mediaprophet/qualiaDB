@@ -29,6 +29,7 @@ mod register_image_toolbox;
 mod register_render_live;
 mod register_wave33_live;
 mod register_gpu_live;
+mod register_wave36_live;
 mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
@@ -4527,5 +4528,38 @@ mod tests {
             Some("Render.emf_field_info")
         )));
         assert_eq!(tools.len(), 34);
+    }
+
+    #[test]
+    fn wave36_binds_social_finance_graph_caps() {
+        let registry = super::build_registry();
+        let econ = registry.toolbox("econ").expect("econ toolbox");
+        let social = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "social:live")
+            .expect("social:live toolchain");
+        assert_eq!(social.tools().len(), 6);
+        assert!(social.tools().iter().any(|t| {
+            t.metadata().id == "social:live_gini"
+                && t.metadata().capability_scope.as_deref() == Some("Social.gini")
+        }));
+        let finance = econ
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "finance:live")
+            .expect("finance:live toolchain");
+        assert_eq!(finance.tools().len(), 3);
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let graph = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:graph_live")
+            .expect("comm:graph_live toolchain");
+        assert_eq!(graph.tools().len(), 7);
+        assert!(graph.tools().iter().any(|t| {
+            t.metadata().id == "comm:graph_live_validate_fragment"
+                && t.metadata().capability_scope.as_deref() == Some("ChatGraph.validate_fragment")
+        }));
     }
 }
