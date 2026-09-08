@@ -8,7 +8,7 @@ repository = "https://github.com/mediaprophet/qualiaDB"
 license-file = "LICENSE"
 
 [features]
-default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"]
+default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he", "libp2p-compat"]
 
 # ── Qualia WASM portal build profiles (use with --no-default-features on wasm32) ──
 # Ontology MCP kernel:              --features wasm-ontology (exclusive)
@@ -77,6 +77,12 @@ pq-kem = ["thiserror"]
 # Large BFV keys/ciphertexts remain outside the NQuin ABI.
 privacy-he = ["dep:fhe", "dep:fhe-traits", "dep:rand09"]
 
+# Native Qualia Decentralized Network Fabric (QDNF / QPR). Does not pull libp2p.
+qdnf = []
+# Inherited libp2p transition stack. Native Independent acceptance must compile
+# without this feature (see NET-01 / RT-03.07). Kept in default for existing daemons.
+libp2p-compat = ["dep:libp2p"]
+
 # QPU internal functionality (undocumented, private)
 # This feature gate enables internal QPU modules that are not publicly documented
 qpu_internal = []
@@ -128,6 +134,7 @@ aead = { version = "0.6", default-features = false }
 chacha20poly1305 = { version = "0.11", default-features = false, features = ["alloc"] }
 x25519-dalek = { version = "3", default-features = false, features = ["static_secrets", "zeroize"] }
 hkdf = { version = "0.13", default-features = false }
+hmac = { version = "0.13", default-features = false }
 blake3 = { version = "1", default-features = false }
 fips204 = { version = "0.4", default-features = false, features = ["ml-dsa-65", "default-rng"] }
 fips203 = { version = "0.4", default-features = false, features = ["ml-kem-512", "ml-kem-768", "ml-kem-1024", "default-rng"] }
@@ -264,7 +271,7 @@ sysinfo = "0.39.3"
 # W7: NVIDIA GPU thermal/power telemetry (opt-in via the `nvml` feature). Loads the driver's NVML
 # library at runtime (dlopen) — builds without the CUDA SDK; init fails gracefully on non-NVIDIA hosts.
 nvml-wrapper = { version = "0.12", optional = true }
-libp2p = { version = "0.56.0", features = ["tcp", "dns", "noise", "yamux", "request-response", "kad", "mdns", "macros", "tokio"] }
+libp2p = { version = "0.56.0", optional = true, features = ["tcp", "dns", "noise", "yamux", "request-response", "kad", "mdns", "macros", "tokio"] }
 reqwest = { version = "0.13.4", features = ["json", "rustls", "blocking"] }
 boringtun = "0.7.1"
 rcgen = "0.14.8"

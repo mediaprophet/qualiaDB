@@ -153,3 +153,11 @@
   git diff whitespace checks passed. The existing Sanctuary source link resolves locally.
 - The definition and ten implementation checks are saved; no missing user input remains.
   No runtime clinical exchange, endpoint security test or medical/legal compliance result is claimed.
+
+## 2026-09-08 — Native QPR slice (libp2p replacement code) — in progress, not complete
+
+- Step: first native vertical slice (FND types/errors, CRY adapters, NET frame/IPC/QLink/QRoute/QSR/QSession, RT leases, `qualia-peer` host). Status: **partial**. Programme packages remain pending; no checkboxes marked complete.
+- Built: `crates/qualia-core-db/src/net/qdnf/`, `crypto/network/`, `net/peer/` (leases + `NativePeer`), facade `crates/qualia-peer`. Inherited Swarm/Kad/Yamux/mDNS stay behind `libp2p-compat`. Native modules do not `use libp2p`.
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf net::peer crypto::network` → **59 passed**. `cargo +stable test -p qualia-peer` → **2 passed**. Example `native_ipc_peers` printed `native ipc exchanged 11 bytes (libp2p not used)`. These are in-process `local-ipc-v1` results, not Ethernet/IP-absent hardware, not end-to-end application migration, not a full Native Independent cargo-tree closure (core-db default still includes `libp2p-compat` and GPU features).
+- Human input needed: none this step. Raw Ethernet remains `PlatformUnsupported` without CAP_NET_RAW.
+- Next: remaining NET/RT/SVC packages; isolate `qualia-peer` from default libp2p/GPU closure (RT-03.07).

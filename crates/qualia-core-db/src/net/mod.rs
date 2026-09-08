@@ -1,5 +1,8 @@
 //! `net` category (reorg).
 
+pub mod peer;
+pub mod qdnf;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod acoustic_ble_mesh;
 pub mod disclosure;

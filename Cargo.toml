@@ -25,6 +25,7 @@ members = [
     "crates/vibe-lsp",
     "crates/vibe-wasm",
     "crates/poet",
+    "crates/qualia-peer",
 ]
 resolver = "2"
 

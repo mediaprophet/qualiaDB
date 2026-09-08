@@ -1,5 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 
+#[cfg(feature = "libp2p-compat")]
 use futures_util::StreamExt;
 use serde_json::json;
 use tokio::sync::mpsc;
@@ -199,12 +200,16 @@ pub async fn start_local_daemon_with_options(
         pub warning_issued_at: Option<std::time::Instant>,
     }
     let bandwidth_meter = std::sync::Arc::new(dashmap::DashMap::<String, PeerLedger>::new());
+    #[cfg(feature = "libp2p-compat")]
     let bandwidth_meter_swarm = bandwidth_meter.clone();
 
     // -----------------------------------------------------------------------
     // P2P Network Swarm (CBOR-LD Semantic Sync)
+    // Inherited libp2p path. Native Independent operation uses QDNF instead.
     // -----------------------------------------------------------------------
+    #[cfg(feature = "libp2p-compat")]
     let p2p_vault = security.vault.clone();
+    #[cfg(feature = "libp2p-compat")]
     tokio::spawn(async move {
         let master_key_bytes = {
             let v = p2p_vault.lock().unwrap();
@@ -364,6 +369,11 @@ pub async fn start_local_daemon_with_options(
             }
         }
     });
+
+    #[cfg(not(feature = "libp2p-compat"))]
+    println!(
+        "[Qualia Daemon] Native Qualia Peer Runtime active (libp2p absent). QLink/QSR/QSession replace Swarm/Kademlia/Yamux."
+    );
 
     // -----------------------------------------------------------------------
     // Web Civics SOCKS5 Userspace Proxy
