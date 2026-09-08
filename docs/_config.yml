@@ -23,6 +23,8 @@ include:
   - "playground/*.wasm"
   - "playground/*.json"
   - "playground/*.css"
+  - "playground/*.hmc"
+  - "playground/*.q42"
   - "playground/wordnet.q42"
   - "data/**/*.q42"
   - "data/**/*.nt"

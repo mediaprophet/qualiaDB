@@ -532,19 +532,22 @@
         </div>
     </div>
 
-    <!-- Fallback if the ES module never runs (file:// or blocked WASM). -->
+    <!-- Fallback if the ES module never runs (file:// or blocked WASM).
+         Do not fire while boot() is still probing adapters — WebGPU requestAdapter
+         can sit on "Starting…" for well over 8s before status updates. -->
     <script>
       setTimeout(function () {
         var s = document.getElementById('status');
+        if (window.__anatomyBooted) return;
         if (s && s.textContent.trim().indexOf('Starting') === 0) {
           s.className = 'status error';
           s.textContent = (location.protocol === 'file:')
-            ? 'This demo must be SERVED over HTTP, not opened as a file. Serve docs/ and open playground/anatomy.html in a WebGPU browser (Chrome/Edge, Safari 18+).'
-            : 'The renderer module did not load. Needs a WebGPU browser over HTTPS/HTTP. Open the console for the specific error.';
+            ? 'This demo must be SERVED over HTTP, not opened as a file. Serve docs/ and open playground/anatomy.html in a WebGPU or WebGL2 browser (Chrome/Edge, Safari 18+).'
+            : 'The renderer module did not load. Needs a WebGPU or WebGL2 browser over HTTPS/HTTP. Open the console for the specific error.';
         }
-      }, 8000);
+      }, 45000);
     </script>
 
-    <script type="module" src="anatomy.js?v=0.0.33-mobile-recovery4"></script>
+    <script type="module" src="anatomy.js?v=0.0.37-anatomy-boot1"></script>
 </body>
 </html>
