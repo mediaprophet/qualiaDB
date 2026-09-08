@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../vibe/playground.html', import.meta.url), 'utf8');
 
+assert.match(html, /eval_program_src\(src\)/);
+assert.doesNotMatch(html, /run_program_bytecode\(src,/);
 assert.match(html, /diagnose_src/);
 assert.match(html, /host_version/);
 assert.match(html, /Cosmic geodesy/);

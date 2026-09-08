@@ -90,7 +90,7 @@ title: VibeScript Showcase
 </div>
 
 <script type="module">
-  import init, { eval_cell_src, run_program_bytecode } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
+  import init, { eval_cell_src, eval_program_src } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
 
   const demos = [
     {
@@ -372,7 +372,7 @@ effect fn main() -> Record {
           if (demo.mode === 'cell') {
             result = eval_cell_src(demo.code);
           } else {
-            result = run_program_bytecode(demo.code, demo.fn || 'main', []);
+            result = eval_program_src(demo.code);
           }
           if (result.ok) {
             outputEl.innerHTML = `<span class="result">→ ${formatValue(result.value)}</span>`;

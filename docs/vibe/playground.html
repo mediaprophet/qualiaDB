@@ -233,6 +233,7 @@ title: VibeScript Playground
     compile_cell_bytecode,
     run_cell_bytecode,
     run_program_bytecode,
+    eval_program_src,
     encode_cell_bytecode,
     decode_and_run,
     ebnf_grammar,
@@ -321,8 +322,9 @@ title: VibeScript Playground
         const result = eval_cell_src(src);
         output.innerHTML = formatResult(result);
       } else {
-        // For programs, try to run main()
-        const result = run_program_bytecode(src, 'main', []);
+        // Host-family programs (Cosmic, Animation, …) evaluate through LocalHost.
+        // Bytecode still does not encode Family.method as CallHost.
+        const result = eval_program_src(src);
         output.innerHTML = formatResult(result);
       }
     } else if (currentTab === 'bytecode') {
