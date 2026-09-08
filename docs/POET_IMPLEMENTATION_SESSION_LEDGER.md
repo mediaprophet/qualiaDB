@@ -99,7 +99,7 @@ This is the sequential handoff record for
 | 2026-09-08 | Q1/Q2 wave 27 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Inference remainder×5 · Research live first×20; Host none | poet wave27 4; policy ok; integrity 11; catalog ok; ALL_BOUND=1102 PoetLive≈823 Q2≈279 | Not re-run | Research remainder (~53) next | Wave 28 |
 | 2026-09-08 | Q1/Q2 wave 28 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Research investigation/hypothesis/assessment×20; Host none | poet wave28 2; policy ok; integrity 11; ALL_BOUND=1102 PoetLive≈843 Q2≈259 | Not re-run | Research remainder (~33) next | Wave 29 |
 | 2026-09-08 | Q1/Q2 wave 29 | Cursor Grok 4.6 | Complete (integrated) | Poet Live Research remainder×33 (Research Q2 exhausted); Host none | poet wave29 3; policy ok; integrity 11; ALL_BOUND=1102 PoetLive≈876 Q2≈226 | Not re-run | Render CPU / CG leftovers / long-tail next | Wave 30 |
-| 2026-09-08 | Q1/Q2 wave 31 | Cursor Grok 4.6 | Complete (integrated) | Poet Live CG leftovers waves 19–23 ×25; Host none | poet wave31 2; policy ok; integrity 11; ALL_BOUND=1102 PoetLive≈918 Q2≈184 | Not re-run | CG remainder 24 / Animation / long-tail | Wave 32 |
+| 2026-09-08 | Q1/Q2 wave 32 | Cursor Grok 4.6 | Complete (integrated) | Poet Live CG leftovers waves 24–26 ×24 (CG leftover Q2 exhausted); Host none | poet wave32 1; policy ok; integrity 11; ALL_BOUND=1102 PoetLive≈942 helper-aware Q2≈127 | Not re-run | Animation / Ode / HbbTV / Render GPU / long-tail | Wave 33 |
 
 ## Required closeout detail
 

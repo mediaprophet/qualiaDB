@@ -1,7 +1,7 @@
 # Q1/Q2 incorporation wave 32 swarm — 2026-09-08
 
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
-**Status:** **Complete (pending parent verify)**  
+**Status:** **Complete (verified)**  
 **Prior:** wave 31 Complete — CG leftovers 19–23 ×25  
 **Derived inventory after w31:** `ALL_BOUND=1102` · `PoetLive≈918` · Q2 ≈ 184
 
@@ -24,7 +24,9 @@ cargo test -p poet --lib every_registered_nonplacement_tool_has_an_explicit_poli
 cargo test -p poet --test product_integrity
 ```
 
-Expected after this wave: `ALL_BOUND=1102` · `PoetLive≈942` · `Q2≈160`.
+**Results (2026-09-08):** poet `wave32` **1** · policy **1** · integrity **11**.
+
+After this wave: `ALL_BOUND=1102` · `PoetLive≈942` · helper-aware Q2 ≈ 127 (CG leftover Host IDs exhausted).
 
 ## Next
 
