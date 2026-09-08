@@ -21,6 +21,8 @@ this is **not** “bind all remaining CoreDb `pub fn`s.”
 | D Poet Live | `scientific:la_dot` … `la_inverse`; surface-aware `gemm_live` | `linalg_app_chain_actions.rs` |
 | E Polish | machine schemas, dual-path scan, Poet-JSON Host tests, Econ stub honesty | coverage / tool_dual_path |
 
+## Parent verify
+
 **Results (2026-09-08):** gemm_host **3** · la_app **6** · catalog **1** · poet `wave40` **1** · policy **1** · dual-path **1** · integrity **11**.
 
 `LinearAlgebra.gemm` now calls the engine solver. CUDA `caps()` probe is fail-closed (`catch_unwind`) so missing `libcuda` does not abort Host/REPL.
