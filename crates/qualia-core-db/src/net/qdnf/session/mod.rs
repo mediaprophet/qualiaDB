@@ -3,12 +3,14 @@
 pub mod bind;
 pub mod credit;
 pub mod datagrams;
+pub mod freshness;
 pub mod handshake;
 pub mod iri;
 pub mod loss;
 pub mod packet;
 pub mod paths;
 pub mod policy;
+pub mod recovery;
 pub mod rekey;
 pub mod streams;
 

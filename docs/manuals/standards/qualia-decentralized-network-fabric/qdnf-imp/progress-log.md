@@ -326,15 +326,20 @@
 - Human input needed: none this step.
 - Next: remaining NET-05.16 cancel/reconnect, SVC-01.13 transfer, RT-03.07 wgpu gating. Packages stay open.
 
+## 2026-09-08 — Wave 11 swarm claim — in progress
 
+- Claimed exclusive write sets (one file each; do not rewrite design suite; do not tick qdnf-imp checkboxes):
+  1. `crates/qualia-core-db/src/net/qdnf/session/recovery.rs` — NET-05.16 reconnect/cancel: reconnect must not duplicate durable actions; transport delivery is not accepted work or payment; reuse `net/peer/runtime/cancel.rs` OperationTable/CancelEpoch, do not rewrite that kernel.
+  2. `crates/qualia-core-db/src/net/peer/replication/transfer.rs` — SVC-01.13 bounded transfer: shared receive/storage/verify credit; retries and old+new generations charged to parent reservation.
+  3. `crates/qualia-core-db/src/net/peer/replication/resume.rs` — SVC-01.14 resume only verified blocks of a pinned manifest; container generation ≠ QSync root.
+  4. `crates/qualia-core-db/src/crypto/network/malformed.rs` — CRY-02.13 truncation, noncanonical, unknown critical, signature stripping, all-zero DH, malformed KEM, reordered flights fail closed.
+  5. `crates/qualia-core-db/src/net/qdnf/session/freshness.rs` — NET-05.18 recheck policy freshness at queued/offline/migration; sensitive stays pending; help still accessible.
+  6. `crates/qualia-core-db/src/net/peer/replication/receipts.rs` — SVC-01.04 identity/effect/receipt: acknowledge only the durability class achieved; transport ACK is not that class.
+- Integrator (this agent) owns `session/mod.rs`, `replication/mod.rs`, `crypto/network/mod.rs`, Cargo.toml, and wgpu cfg-gating investigation (RT-03.07 remainder).
+- Status: claimed. Packages remain open.
 
+## 2026-09-08 — Wave 11 swarm integrating
 
-
-
-
-
-
-
-
-
+- Integrator wires `session::{recovery,freshness}`, `replication::{transfer,resume,receipts}`, `crypto/network/malformed`. Combined tests not yet run this revision. Packages remain open.
+- Human input needed: none this step.
 

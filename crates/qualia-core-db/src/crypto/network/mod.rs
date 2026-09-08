@@ -11,6 +11,7 @@ pub mod hardware;
 pub mod kdf;
 pub mod kem;
 pub mod key_provider;
+pub mod malformed;
 pub mod minima;
 pub mod mldsa;
 pub mod pq_handshake;
