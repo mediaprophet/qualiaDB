@@ -44,7 +44,7 @@ pub struct McpIntentFrame {
     /// A genuine 32-byte cryptographic egress-override token, or `None` when the
     /// caller supplied no override — or supplied a malformed / placeholder /
     /// all-zero value, all of which fail closed to `None`. See
-    /// [`parse_sanctuary_override`] for the validation contract.
+    /// `parse_sanctuary_override` for the validation contract.
     pub sanctuary_override: Option<[u8; 32]>,
     pub qpu_enabled: bool,
     pub llm_enabled: bool,

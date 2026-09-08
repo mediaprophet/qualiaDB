@@ -39,10 +39,10 @@ pub enum GeometryGpuKernel {
     /// One invocation per packed `(a,b,c,d)` f32 point quadruple (8 f32s).
     /// P1.9.
     IncircleF32,
-    /// One invocation per AABB pair (12 f32s: amin[3], amax[3], bmin[3], bmax[3]).
+    /// One invocation per AABB pair (12 f32s: amin\[3\], amax\[3\], bmin\[3\], bmax\[3\]).
     /// P3.6: GPU broad-phase overlap test with filtered error bound.
     AabbOverlapF32,
-    /// One invocation per point-AABB pair (6 f32s: point[3], amin[3]) + 3 f32s (amax[3]).
+    /// One invocation per point-AABB pair (6 f32s: point\[3\], amin\[3\]) + 3 f32s (amax\[3\]).
     /// P3.6: GPU point-to-AABB distance squared for NN candidate filtering.
     PointAabbDistSqF32,
 }

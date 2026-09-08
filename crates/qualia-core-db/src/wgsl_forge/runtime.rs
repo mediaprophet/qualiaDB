@@ -21,7 +21,7 @@
 //! topology, the cached winner is used; otherwise a documented per-kernel default
 //! is used. Populate the cache for this machine with the CLI's `shader
 //! auto-tune-all` (it tunes every built-in and writes a topology-keyed
-//! [`TuningManifest`] per kernel).
+//! `TuningManifest()` per kernel).
 
 use std::path::PathBuf;
 
@@ -166,7 +166,7 @@ impl ForgeRuntime {
 
     /// The tuned [`Schedule`] for `builtin` on this hardware.
     ///
-    /// If a cache is attached and holds a [`TuningManifest`] for
+    /// If a cache is attached and holds a `TuningManifest()` for
     /// `(topology_hash, builtin)`, the winning schedule from that record is
     /// returned. Otherwise — no cache, no topology hash, no record for this
     /// kernel, or a cache read error — the per-kernel default is returned.

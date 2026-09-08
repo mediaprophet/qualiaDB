@@ -2,7 +2,7 @@
 //!
 //! The honest LOCAL answer to a federated question — "is this camera's biometric
 //! use permitted?" — by composing the existing fail-closed policy engine
-//! [`evaluate_processing_act`]. It does NOT reimplement the consent/purpose matrix.
+//! [`evaluate_processing_act()`]. It does NOT reimplement the consent/purpose matrix.
 //!
 //! FEDERATION NOTE: the transport that carries such a question between peers (a
 //! signed FED ask/answer over the mixnet) is future work. This function is the
@@ -25,7 +25,7 @@ pub struct PermitAnswer {
 
 /// Fail-closed permit check for a camera + processing act under a consent record.
 ///
-/// Composes [`evaluate_processing_act`] and attaches a clear static reason per
+/// Composes [`evaluate_processing_act()`] and attaches a clear static reason per
 /// outcome. No consent → `Forbid`. Never panics; no `unwrap`.
 pub fn policy_permit_check(
     camera_id: u64,

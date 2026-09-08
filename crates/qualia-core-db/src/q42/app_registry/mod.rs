@@ -6,7 +6,7 @@
 //! when identity is recoverable; otherwise rejected. **Inspection never
 //! launches or executes an app.**
 //!
-//! POET is the first bundled fixture via [`AppRegistry::with_bundled_poet_fixture`].
+//! POET is the first bundled fixture via `AppRegistry::with_bundled_poet_fixture`.
 
 mod compat;
 mod error;

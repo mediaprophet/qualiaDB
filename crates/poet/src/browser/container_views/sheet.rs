@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
-/// Spreadsheet container — polymorphic <q-view-switcher> + formula bar + reactive grid.
+/// Spreadsheet container — polymorphic \<q-view-switcher\> + formula bar + reactive grid.
 pub fn build_sheet_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

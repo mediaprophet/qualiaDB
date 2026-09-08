@@ -425,7 +425,7 @@ impl SubgraphLayer {
         }
     }
 
-    /// Minimum sensitivity metadata bits[59:56] required to reach this layer.
+    /// Minimum sensitivity metadata bits\[59:56\] required to reach this layer.
     pub fn sensitivity_tier(self) -> u8 {
         self as u8
     }

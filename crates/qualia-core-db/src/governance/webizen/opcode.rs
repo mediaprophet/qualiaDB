@@ -243,7 +243,7 @@ pub enum SlgOpcode {
     /// manifold states through the existing LTL evaluator.
     ///
     /// `mode`: 0=Globally, 1=Finally, 2=Next.
-    /// `dimension`: [`manifold::ManifoldDimension`] discriminant.
+    /// `dimension`: `manifold::ManifoldDimension()` discriminant.
     /// `threshold_bits`: IEEE-754 f32 threshold.
     /// `at_least`: true for >=, false for <=.
     NativeManifoldLtl {

@@ -61,7 +61,7 @@ pub struct CircuitBench {
     /// signal); `f64::INFINITY` for the CPU (data is already in its pool — no transfer). Decode that
     /// streams weights to a device pays this every token; in-pool compute does not.
     pub upload_gbps: f64,
-    /// Relative score in [0,1]: fastest circuit = 1.0, others = fastest_ms / this_ms
+    /// Relative score in \[0,1\]: fastest circuit = 1.0, others = fastest_ms / this_ms
     /// (or highest decode_proxy_tok_s when decode ranking is active).
     pub rel_score: f64,
     /// Optional real-decode proxy (tok/s) from a short resident decode on a small model.

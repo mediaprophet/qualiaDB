@@ -1,7 +1,7 @@
 //! Context Markup Language (CML) HyperDoc Document Model & Serialization Engine.
 //!
 //! Provides the structured representation of documents annotated with CML
-//! (<q-entity>, <q-relation>), bi-directional serialization (Visual HTML,
+//! (\<q-entity\>, \<q-relation\>), bi-directional serialization (Visual HTML,
 //! Markdown, RDF-Star), and live SHACL/Aura validation metrics.
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.

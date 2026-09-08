@@ -1,7 +1,7 @@
 //! A0 — native LLM benchmark harness (STELLAR §A; decisions D17 + D22).
 //!
 //! This is the **shared** measurement surface for the performance push. It drives
-//! the *real* inference path ([`LocalLlmAgent::infer_local_model_streaming`]) and
+//! the *real* inference path (`LocalLlmAgent::infer_local_model_streaming()`) and
 //! reads per-phase timing recorded *inside that same path* — so the existing
 //! F16/Q8 path and the future ternary/top-k paths are measured by **one** harness
 //! rather than a forked benchmark loop (D22 "shared-improvement" rule). A speedup

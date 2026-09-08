@@ -1,10 +1,10 @@
 //! Webizen VM — the Rights-Ontology governance gate over LLM/graph operations.
 //!
 //! Library-ized from the former `webizen.rs` (pure code motion, no behaviour change):
-//! * [`arena`]     — the 42MB zero-allocation SLG tabling arena + N3 rule firing.
-//! * [`opcode`]    — the `SlgOpcode` WAM instruction set.
-//! * [`vm`]        — `VmFrame`, the VM helpers, and `execute_vm_frame`.
-//! * [`agreement`] — agreement DIDs + the personhood-category-error guard.
+//! * `arena`     — the 42MB zero-allocation SLG tabling arena + N3 rule firing.
+//! * `opcode`    — the `SlgOpcode` WAM instruction set.
+//! * `vm`        — `VmFrame`, the VM helpers, and `execute_vm_frame`.
+//! * `agreement` — agreement DIDs + the personhood-category-error guard.
 //!
 //! The full public surface is re-exported here, so every external path
 //! (`crate::governance::webizen::<Item>`) resolves exactly as before.

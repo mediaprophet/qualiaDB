@@ -2,7 +2,7 @@
 //! analysing experiments, with uncertainty made explicit.
 //!
 //! - [`power`] — power analysis & required sample size.
-//! - [`ab_test`] — A/B testing (two-proportion comparison with a lift CI).
+//! - [`mod@ab_test`] — A/B testing (two-proportion comparison with a lift CI).
 //! - [`bandit`] — multi-armed bandits (ε-greedy / UCB1 / Thompson sampling).
 //!
 //! Reuses `statistics::distributions::normal`; no new silo.

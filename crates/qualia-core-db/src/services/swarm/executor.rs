@@ -5,7 +5,7 @@
 //!
 //! In the distributed setting the executor is *untrusted* (it could be a stranger's
 //! solar node). That is exactly why dispatch always follows execution with independent
-//! verification ([`super::verify`]) before any payment.
+//! verification ([`super::verify()`]) before any payment.
 
 use super::job::{JobInput, JobResult};
 use super::SwarmError;

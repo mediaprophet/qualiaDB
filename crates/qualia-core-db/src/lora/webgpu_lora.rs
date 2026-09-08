@@ -7,10 +7,10 @@
 //!
 //! | binding | type            | content                           |
 //! |---------|-----------------|-----------------------------------|
-//! | 0       | storage rw      | `output` array<f32> (n_out)       |
-//! | 1       | storage r       | `input`  array<f32> (n_in)        |
-//! | 2       | storage r       | `lora_a` array<f32> (rank × n_in) |
-//! | 3       | storage r       | `lora_b` array<f32> (n_out × rank)|
+//! | 0       | storage rw      | `output` array\<f32\> (n_out)       |
+//! | 1       | storage r       | `input`  array\<f32\> (n_in)        |
+//! | 2       | storage r       | `lora_a` array\<f32\> (rank × n_in) |
+//! | 3       | storage r       | `lora_b` array\<f32\> (n_out × rank)|
 //! | 4       | uniform         | `LoraGpuParams`                   |
 
 #![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]

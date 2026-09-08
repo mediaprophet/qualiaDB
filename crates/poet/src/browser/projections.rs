@@ -1,4 +1,4 @@
-//! Polymorphic Presentation Engine & Data Projection Switcher (<q-view-switcher>).
+//! Polymorphic Presentation Engine & Data Projection Switcher (\<q-view-switcher\>).
 //!
 //! Provides substrate-neutral dynamic projections of Knowledge Graph data, Super-Quins,
 //! and VibeScript structures across 10 primary presentation domains and 35+ visual modes.

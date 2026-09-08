@@ -15,7 +15,7 @@ use super::experiment::ExperimentResult;
 
 // ── Sobol quasi-random sequence ───────────────────────────────────────────────
 
-/// A Sobol quasi-random sequence generator for uniform coverage of the [0,1]^d
+/// A Sobol quasi-random sequence generator for uniform coverage of the \[0,1\]^d
 /// unit hypercube. Uses the Joe & Kuo direction numbers (compact implementation).
 pub struct SobolSequence {
     dim: usize,
@@ -34,7 +34,7 @@ impl SobolSequence {
         }
     }
 
-    /// Generate the next point in [0,1]^d.
+    /// Generate the next point in \[0,1\]^d.
     pub fn next(&mut self) -> Vec<f64> {
         self.index += 1;
         let mut x = vec![0u64; self.dim];

@@ -1,10 +1,10 @@
 //! HLSL lowering of the **portable** compute-graph nodes (plan §4 / P7) — the fourth backend
 //! the one `lower_graph` driver walks. [`HlslLowerer`] implements the same
-//! [`Lowerer`](crate::wgsl_forge::ir::graph::Lowerer) trait, emitting HLSL compute shaders for
+//! [`Lowerer`] trait, emitting HLSL compute shaders for
 //! the portable native kit (`Elementwise`/`Reduce`/`Broadcast`) with the same binding ABI +
 //! math as the WGSL `graph_ops` kernels.
 //!
-//! Validation: the emitted HLSL is compiled to SPIR-V by **DXC** ([`compile_hlsl_to_spirv`],
+//! Validation: the emitted HLSL is compiled to SPIR-V by **DXC** (`compile_hlsl_to_spirv()`,
 //! behind the `dxc` feature + a `dxc` CLI) — a real toolchain check; structural checks run
 //! unconditionally. Non-portable / not-yet-built op-classes inherit the trait's explicit `Err`.
 

@@ -7,9 +7,9 @@
 //! the *same contract* executed on `wgpu` and is checked against this code as its
 //! CPU parity reference (`gemm_parity_probe`).
 //!
-//! Idiom (matches [`super::cholesky`]): **zero allocation**, caller-owned **row-major**
+//! Idiom (matches `super::cholesky`): **zero allocation**, caller-owned **row-major**
 //! slices with explicit dimensions, fail-closed on a dimension mismatch
-//! ([`SolversError::InvalidDimension`]). No `DMatrix`, no heap, no dependency.
+//! (`SolversError::InvalidDimension`). No `DMatrix`, no heap, no dependency.
 
 use crate::solvers::SolversError;
 
@@ -41,7 +41,7 @@ pub enum Transpose {
 /// may be uninitialised garbage, are *not* read) — matching BLAS semantics so a
 /// fresh output buffer need not be zeroed first.
 ///
-/// Returns [`SolversError::InvalidDimension`] if any slice length disagrees with
+/// Returns `SolversError::InvalidDimension` if any slice length disagrees with
 /// `m`, `n`, `k`.
 pub fn gemm(
     transa: Transpose,

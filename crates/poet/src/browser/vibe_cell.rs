@@ -1,4 +1,4 @@
-//! Reactive Execution Cell (<q-cell>) & VibeScript Sandbox Engine.
+//! Reactive Execution Cell (\<q-cell\>) & VibeScript Sandbox Engine.
 //!
 //! Provides the inline interactive `<q-cell>` reactive component with gas-metered
 //! expression evaluation, 42MB SlgArena memory bounds, formula execution (`fx`),

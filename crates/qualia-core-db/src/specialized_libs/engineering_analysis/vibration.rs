@@ -75,7 +75,7 @@ impl VibrationAnalysis {
 
     /// Undamped free-vibration analysis of an `num_dofs`-DOF lumped-mass system.
     /// Delegates to the same generalized eigenproblem as modal analysis
-    /// (`K φ = ω² M φ`, wired to `symmetric_eigen` via [`solve_modal_eigen`]) and
+    /// (`K φ = ω² M φ`, wired to `symmetric_eigen` via `solve_modal_eigen`) and
     /// packs the result into [`FreeVibration`]: `natural_frequencies` are the
     /// **natural angular frequencies ω (rad/s), ascending**, with their mass-
     /// normalized mode shapes and zero damping ratios (undamped). Cached into

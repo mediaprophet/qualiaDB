@@ -30,7 +30,7 @@ pub enum AudioMode {
 /// Maps directly to 10D tensor dimensions for zero-copy transport
 ///
 /// Zero-Heap Consideration: Clone type, heap-allocated Vec for spectral data
-/// (Serde doesn't support [f32; 64] serialization, using Vec<f32> instead)
+/// (Serde doesn't support [f32; 64] serialization, using Vec\<f32\> instead)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpectralParams {
     /// σ (Spectral Signature): Frequency bins
@@ -55,7 +55,7 @@ impl Default for SpectralParams {
 ///
 /// Contains spectral parameters for real-time AudioWorklet synthesis
 ///
-/// Zero-Heap Consideration: Clone type (not Copy due to Vec<f32> in SpectralParams)
+/// Zero-Heap Consideration: Clone type (not Copy due to Vec\<f32\> in SpectralParams)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerativeAudioSheet {
     /// Spectral parameters for synthesis
@@ -202,7 +202,7 @@ impl Default for AudioTrack {
 ///
 /// Represents a complete audio session with multiple tracks
 ///
-/// Zero-Heap Consideration: Vec<T> is heap-allocated but necessary for
+/// Zero-Heap Consideration: Vec\<T\> is heap-allocated but necessary for
 /// dynamic track management. The per-track data is stack-allocated.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioScene {

@@ -65,7 +65,7 @@ impl Dual {
 }
 
 /// Local Density Approximation (LDA) Exchange Functional (Dirac / Slater)
-/// E_x[rho] = - (3/4) * (3/pi)^(1/3) * int rho(r)^(4/3) dr
+/// E_x`rho` = - (3/4) * (3/pi)^(1/3) * int rho(r)^(4/3) dr
 /// Returns (Energy Density, Potential)
 pub fn lda_exchange(rho: f64) -> (f64, f64) {
     if rho <= 1e-12 {

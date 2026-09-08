@@ -4,8 +4,8 @@ use crate::ode_solver::{rk4_step, PhysicalState};
 
 /// Evaluates a simple macroeconomic System Dynamics flow.
 /// Models the Equation of Exchange (M*V = P*Q).
-/// - state[0] = Money Supply (M)
-/// - state[1] = Price Level (P)
+/// - state\[0\] = Money Supply (M)
+/// - state\[1\] = Price Level (P)
 pub fn simulate_macroeconomic_flow(
     initial_m: f64,
     initial_p: f64,

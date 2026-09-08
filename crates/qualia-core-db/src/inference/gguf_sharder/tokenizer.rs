@@ -242,7 +242,7 @@ impl GgufTokenizer {
     /// Phase 4 v3 / v2: serialize the tokenizer into a compact, contiguous P64 section (no page
     /// alignment needed). Fields: vocab / merges / bos / eos / add_bos / pre, plus (v2) the
     /// stop-token set so decode does not re-guess chat ends. Derived maps are rebuilt by
-    /// [`from_p64_section`]. Heap use here is load-time only.
+    /// `from_p64_section()`. Heap use here is load-time only.
     pub fn to_p64_section(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(1 << 20);
         out.extend_from_slice(b"Q42T");
@@ -483,7 +483,7 @@ impl GgufTokenizer {
         self.stop_token_count = n as u8;
     }
 
-    /// Tokenize `text`, prepending [`bos_token_id`] when [`add_bos_token`] is set and absent.
+    /// Tokenize `text`, prepending `bos_token_id()` when `add_bos_token()` is set and absent.
     pub fn encode_prompt(&self, text: &str) -> Vec<u32> {
         let mut ids = self.encode(text);
         if self.add_bos_token && ids.first().copied() != Some(self.bos_token_id) {
@@ -516,7 +516,7 @@ impl GgufTokenizer {
 
     /// Wrap a user prompt (and optional system message) in the model's chat template, cueing the
     /// assistant turn so an instruct model answers instead of degenerating. The tokenizer BOS is
-    /// still prepended by [`encode_prompt`]; it is NOT embedded here (avoids a double BOS). Returns
+    /// still prepended by `encode_prompt()`; it is NOT embedded here (avoids a double BOS). Returns
     /// the raw prompt unchanged when no chat family is recognised.
     pub fn apply_chat_template(&self, system: Option<&str>, user: &str) -> String {
         match self.chat_family() {
@@ -572,7 +572,7 @@ impl GgufTokenizer {
     }
 
     /// Apply the model's chat template (if any), then tokenize (+BOS per `add_bos_token`). This is
-    /// the path for interactive chat/instruct inference; [`encode_prompt`] stays the raw-completion
+    /// the path for interactive chat/instruct inference; `encode_prompt()` stays the raw-completion
     /// path. Chat models without a recognised family fall back to the raw prompt.
     pub fn encode_chat_prompt(&self, user: &str) -> Vec<u32> {
         let templated = self.apply_chat_template(None, user);

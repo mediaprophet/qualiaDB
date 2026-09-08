@@ -1,6 +1,6 @@
 //! **Multivariable symbolic differentiation** — gradient, Jacobian, Hessian (Calculus
 //! plan §3, the ★★ standout). Built on the CAS's existing single-variable
-//! [`differentiate`](super::symbolic_algebra::differentiate), so every partial is a
+//! [`differentiate`], so every partial is a
 //! *symbolic, provenance-bearing* derivative (citable via the CAS's `to_quins`/
 //! `expr_citation_hash`) — honest math, not a black-box autodiff number.
 //!

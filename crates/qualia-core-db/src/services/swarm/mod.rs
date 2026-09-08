@@ -26,7 +26,7 @@
 //!
 //! Verification never trusts the executor — it re-derives correctness with a cheap
 //! **trusted reference** (Freivalds' algorithm for matrix products in O(n²); ranking
-//! reproduction for embedding artifacts; see [`verify`]). Only a `Verified` verdict
+//! reproduction for embedding artifacts; see [`verify()`]). Only a `Verified` verdict
 //! lets [`settlement`] emit a [`crate::rpc::MicropaymentInstruction`]. **This library
 //! never moves funds** — it emits the instruction that the existing
 //! [`crate::ilp_dispatcher`] (the actual rail) executes under human authorisation.

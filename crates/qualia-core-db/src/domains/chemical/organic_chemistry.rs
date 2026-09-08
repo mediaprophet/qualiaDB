@@ -1206,7 +1206,7 @@ pub fn count_chiral_centers(mol: &Molecule) -> u32 {
 
 // ─── Morgan circular fingerprint ─────────────────────────────────────────────
 
-/// Morgan algorithm: radius-`r` circular fingerprint as sorted Vec<u64> identifiers.
+/// Morgan algorithm: radius-`r` circular fingerprint as sorted Vec\<u64\> identifiers.
 pub fn circular_fingerprint(mol: &Molecule, radius: usize) -> Vec<u64> {
     let n = mol.atoms.len();
     if n == 0 {
@@ -1371,7 +1371,7 @@ pub fn vant_hoff_enthalpy(k1: f64, k2: f64, t1_k: f64, t2_k: f64) -> f64 {
     -R_J_MOL_K * (k2 / k1).ln() / (1.0 / t2_k - 1.0 / t1_k)
 }
 
-/// Henderson–Hasselbalch: pH = pKa + log10([A-] / [HA])
+/// Henderson–Hasselbalch: pH = pKa + log10([A-] / `HA`)
 pub fn henderson_hasselbalch(pka: f64, conc_base: f64, conc_acid: f64) -> f64 {
     if conc_acid <= 0.0 || conc_base < 0.0 {
         return pka;

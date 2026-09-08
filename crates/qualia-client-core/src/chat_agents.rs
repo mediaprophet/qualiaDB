@@ -419,7 +419,7 @@ pub fn strip_mention(prompt: &str) -> String {
 
 /// Resolve a parsed mention against the roster.
 ///
-/// Returns the matching [`AgentDefinition`] if the slug exists and is
+/// Returns the matching `AgentDefinition()` if the slug exists and is
 /// enabled, or `None` if the slug is not in the roster or the agent is
 /// disabled.
 pub fn resolve_mention(

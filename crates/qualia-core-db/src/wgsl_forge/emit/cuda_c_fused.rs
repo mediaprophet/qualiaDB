@@ -14,8 +14,8 @@
 //! The fused QKV+RoPE kernel uses the same bindings as `Q4K_SOA_QKV_SRC` plus
 //! extra RoPE parameter buffers:
 //! - bindings 0-7: x, Wq, Wk, Wv, yq, yk, yv, dims (same as QKV)
-//! - binding 8: rope_params_q (u32[5] = {n_head, head_dim, pos, base_bits, scale_bits})
-//! - binding 9: rope_params_k (u32[5] = {n_kv, head_dim, pos, base_bits, scale_bits})
+//! - binding 8: rope_params_q (u32\[5\] = {n_head, head_dim, pos, base_bits, scale_bits})
+//! - binding 9: rope_params_k (u32\[5\] = {n_kv, head_dim, pos, base_bits, scale_bits})
 
 /// Entry point for the fused QKV+RoPE kernel.
 pub const Q4K_SOA_QKV_ROPE_ENTRY: &str = "q4k_soa_qkv_rope";
@@ -233,8 +233,8 @@ pub const KV_SLOT_WRITE_BOTH_ENTRY: &str = "kv_slot_write_both";
 /// device KV cache in a single kernel launch. Grid is doubled: first half writes K,
 /// second half writes V.
 ///
-/// Bindings: `src_k` f32[n_kv*head_dim], `src_v` f32[n_kv*head_dim], `kv` f32[total],
-/// `params` u32[5] = `{n_kv, head_dim, block_size, blocks_per_layer, slot_kv_elems}`.
+/// Bindings: `src_k` f32\[n_kv*head_dim\], `src_v` f32\[n_kv*head_dim\], `kv` f32\[total\],
+/// `params` u32\[5\] = `{n_kv, head_dim, block_size, blocks_per_layer, slot_kv_elems}`.
 /// Dispatch: `grid = ceil(2*n_kv*head_dim / 256)`, `block = 256`.
 pub const KV_SLOT_WRITE_BOTH_SRC: &str = r#"
 extern "C" __global__ void kv_slot_write_both(

@@ -255,7 +255,7 @@ impl WebizenHostApi {
 
     /// Policy-gated write that surfaces the guardian-escrow outcome instead of collapsing it to an
     /// error. A **proxy** write of a protected (Restricted) record does not commit immediately — it
-    /// is held in a [`GuardianshipProposal`] pending M-of-N guardian co-signature (see
+    /// is held in a `GuardianshipProposal()` pending M-of-N guardian co-signature (see
     /// [`Self::vote_guardianship_proposal`]). Non-proxy writes commit exactly as before.
     pub fn submit_record_guarded(
         &mut self,

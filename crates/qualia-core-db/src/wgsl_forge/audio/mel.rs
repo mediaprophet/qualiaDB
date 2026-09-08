@@ -56,7 +56,7 @@ pub fn mel_apply_cpu(
 /// free for the LLM: the device is taken from
 /// [`crate::gpu_context::device_registry::try_auxiliary_gpu`] (falls back
 /// auxiliary → primary → `None`) and the compute context is built with
-/// [`WgpuComputeContext::from_device`] on that shared device, rather than requesting its
+/// `WgpuComputeContext::from_device()` on that shared device, rather than requesting its
 /// own HighPerformance adapter.
 ///
 /// Uploads `spectrum` (binding 0, read), `mel_fb` (binding 1, read), a zeroed output

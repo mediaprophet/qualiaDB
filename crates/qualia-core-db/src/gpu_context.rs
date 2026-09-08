@@ -32,7 +32,7 @@ pub use caps::{recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps, GpuL
 
 /// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
 /// (e.g. the integrated GPU), not just the single process-wide primary (STELLAR H3 foundation).
-/// Native only; mirrors [`try_shared_gpu`] — never panics on a missing/failed device.
+/// Native only; mirrors `try_shared_gpu` — never panics on a missing/failed device.
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub mod device_registry;
 

@@ -2,7 +2,7 @@
 //! noncanonical / stripped / reordered network crypto.
 //!
 //! Thin wrappers over caller buffers. No heap. No reimplementation of KEM, DH,
-//! or dual-sign. Handshake skip/reorder is [`pq_handshake::transition`].
+//! or dual-sign. Handshake skip/reorder is `pq_handshake::transition()`.
 //! Duplicate chunk identity is [`CryptoError::Replay`] in `chunks::ChunkTable`.
 //!
 //! | Defect | `CryptoError` |
@@ -103,7 +103,7 @@ pub fn reject_malformed_kem_ct(len: usize) -> Result<(), CryptoError> {
     }
 }
 
-/// Reordered handshake flights: fail-closed via [`pq_handshake::transition`].
+/// Reordered handshake flights: fail-closed via `pq_handshake::transition()`.
 ///
 /// Skip-to-Traffic / 0-RTT → [`CryptoError::Downgrade`]. Reverse →
 /// [`CryptoError::Unauthorized`]. Other illegal steps → [`CryptoError::Malformed`].

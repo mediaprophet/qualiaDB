@@ -95,7 +95,7 @@ impl WebizenHostApi {
     /// the reading they can act on. Forum-internum / `Sanctuary`-class selfhood content; a set of
     /// **hypotheses** and pathway-starts, never a diagnosis, never a rating. The card is computed at the
     /// person's **declared physiological state** (their point on the reproductive continuum), or
-    /// [`PhysiologicalState::Baseline`] if they have not declared one.
+    /// `PhysiologicalState::Baseline()` if they have not declared one.
     pub fn compute_scorecard(
         &self,
         convergence_threshold: usize,
@@ -160,7 +160,7 @@ impl WebizenHostApi {
     // of their own body. Forum-internum / Sanctuary-class. The score-card is computed at this state so it
     // reads them at their current life stage, not a neutral baseline.
 
-    /// The person's **declared** physiological state, or [`PhysiologicalState::Baseline`] if they have not
+    /// The person's **declared** physiological state, or `PhysiologicalState::Baseline()` if they have not
     /// declared one. Their own statement; the software never assumes.
     pub fn get_physiological_state(&self) -> wellfare_core::anatomy::PhysiologicalState {
         super::super::physiology_prefs::load(&self.storage_root)
@@ -181,7 +181,7 @@ impl WebizenHostApi {
         super::super::physiology_prefs::save(&self.storage_root, state)
     }
 
-    /// **Clear** the declared state — revert to the implicit [`PhysiologicalState::Baseline`]. Idempotent.
+    /// **Clear** the declared state — revert to the implicit `PhysiologicalState::Baseline()`. Idempotent.
     pub fn reset_physiological_state(&self) -> Result<(), String> {
         super::super::physiology_prefs::clear(&self.storage_root)
     }

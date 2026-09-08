@@ -32,7 +32,7 @@ const A_ABOVE_C_OCTAVES: f32 = 0.75;
 /// Accumulate spectral peaks into a Harmonic Pitch Class Profile.
 ///
 /// - `peak_freqs` / `peak_mags`: parallel arrays of peak frequency (Hz) and
-///   magnitude, e.g. from [`crate::features::peaks::spectral_peaks`].
+///   magnitude, e.g. from [`crate::features::peaks::spectral_peaks()`].
 /// - `n_peaks`: how many leading entries of those arrays to use (clamped to the
 ///   shorter of the two).
 /// - `ref_freq_hz`: tuning reference frequency (frequency of A4); **parameterised**,

@@ -2,8 +2,8 @@
 //!
 //! It hosts the **addressbook** (Parties) organised into **categories** (organisational units / groups —
 //! a Party may be in several, like AD groups), and is the home for the **agreements** governing each
-//! relationship. It unifies the two pre-existing stores — directory [`Actor`](crate::state::Actor)s and
-//! chat [`ChatContact`](crate::social_connect::ChatContact)s — into ONE categorised view joined by pairwise
+//! relationship. It unifies the two pre-existing stores — directory [`Actor`]s and
+//! chat [`ChatContact`]s — into ONE categorised view joined by pairwise
 //! DID, **without a destructive migration**: it reads both and persists only the additive parts (custom
 //! categories + per-entry category assignments) in their own files under [`app_meta_dir`].
 //!

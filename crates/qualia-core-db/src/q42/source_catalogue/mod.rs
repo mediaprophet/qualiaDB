@@ -119,9 +119,9 @@ pub fn validate_descriptor(d: &SourceDescriptor) -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Optional bridge: map a catalogue row to a known [`LicenceClass`] only when
+/// Optional bridge: map a catalogue row to a known `LicenceClass()` only when
 /// terms are already verified in programme notes. Everything else is
-/// [`LicenceClass::Unknown`] (fail closed — never invent permission).
+/// `LicenceClass::Unknown()` (fail closed — never invent permission).
 pub fn known_licence_class(d: &SourceDescriptor) -> crate::q42::asset_envelope::LicenceClass {
     use crate::q42::asset_envelope::LicenceClass;
     match d.id {

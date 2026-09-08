@@ -24,7 +24,7 @@
 //! `f64` now has a GPU path on **every** machine, not just NVIDIA. The chain in
 //! [`gemm_f64`] is three tiers:
 //!
-//! 1. **native CUDA-f64** ([`gemm_f64_cuda`]) — exact double via PTX `fma.rn.f64`,
+//! 1. **native CUDA-f64** (`gemm_f64_cuda`) — exact double via PTX `fma.rn.f64`,
 //!    NVIDIA only (`cuda` feature + a CUDA device).
 //! 2. **df64 / double-single WGSL** ([`gemm_f64_df64`]) — *emulated* double on any
 //!    other wgpu adapter (AMD, Intel, Apple, mobile). Each `f64` is a hi/lo pair of
@@ -38,7 +38,7 @@
 //! the df64 error-free transforms.** Many drivers (incl. the naga→SPIR-V→NVIDIA-Vulkan
 //! path) reassociate floats (`c - (c - a)` → `a`, `fma(x,y,-(x*y))` → `0`), which
 //! silently collapses df64 to f32 precision. WGSL exposes no portable way to forbid
-//! that, so tier 2 is gated on a runtime precision probe ([`df64_usable`]): df64 runs
+//! that, so tier 2 is gated on a runtime precision probe (`df64_usable`): df64 runs
 //! only where it actually delivers ~double precision; elsewhere the chain uses native
 //! CUDA (if present) or the exact CPU floor — never a degraded df64 masquerading as f64.
 //! (GEMV's f64 chain is `CUDA-f64 → CPU` — the df64 path is GEMM-only today.)
@@ -267,7 +267,7 @@ fn gemm_f32_gpu(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Option<Ve
 ///
 /// | tier | path                              | when                                                    |
 /// |------|-----------------------------------|---------------------------------------------------------|
-/// | 1    | **native CUDA-f64** ([`gemm_f64_cuda`], NVIDIA only) | [`caps().cuda`](caps) and ≥ [`GEMM_GPU_THRESHOLD`] FMAs |
+/// | 1    | **native CUDA-f64** (`gemm_f64_cuda`, NVIDIA only) | [`caps().cuda`](caps) and ≥ [`GEMM_GPU_THRESHOLD`] FMAs |
 /// | 2    | **df64 / double-single WGSL** ([`gemm_f64_df64`], any other GPU) | [`caps().wgpu`](caps) and ≥ [`GEMM_GPU_THRESHOLD`] FMAs |
 /// | 3    | **CPU floor** ([`gemm_cpu_f64`])  | otherwise, or if every eligible accelerator errors      |
 ///
@@ -358,7 +358,7 @@ fn df64_usable() -> bool {
 
 /// Runtime probe: does this adapter's WGSL **cooperative-matrix** (tensor-core) multiply
 /// actually compute, or does it return zeros? Measured once, then cached — the f32 mirror
-/// of [`df64_usable`].
+/// of `df64_usable`.
 ///
 /// The coopmat kernels are correct and naga-validated, but on wgpu 29.0.3 the
 /// `coopMultiplyAdd` is a no-op that returns all-zeros (gfx-rs/wgpu #9741: coopmat emits
@@ -368,7 +368,7 @@ fn df64_usable() -> bool {
 /// it by running a tiny 8×8×8 coopmat GEMM whose exact result is non-zero (all-ones inputs
 /// → every output `= 8.0`) and accepting coopmat only if the result matches. On 29.0.3 this
 /// returns `false` (zeros); it returns `true` automatically once a wgpu release (or the
-/// [`docs/WGPU_UPSTREAM_TRACKING.md`] soft-fork) carries the fix. Gated first on
+/// `docs/WGPU_UPSTREAM_TRACKING.md()` soft-fork) carries the fix. Gated first on
 /// [`caps().wgpu`](caps) and [`caps().coopmat`](caps) so non-coopmat adapters never dispatch.
 pub fn coopmat_usable() -> bool {
     static USABLE: OnceLock<bool> = OnceLock::new();
@@ -533,7 +533,7 @@ fn gemm_f64_cuda(
 ///    accurate path. Gated on [`coopmat_usable`]: on wgpu ≤30 the coopmat multiply returns
 ///    zeros on adapters that don't compute it (e.g. this machine's DX12 backend, #9741), so
 ///    the probe is `false` and this tier stays dormant, self-activating the moment an adapter
-///    computes coopmat correctly (see [`docs/WGPU_UPSTREAM_TRACKING.md`]). 8-multiple dims.
+///    computes coopmat correctly (see `docs/WGPU_UPSTREAM_TRACKING.md()`). 8-multiple dims.
 /// 2. **plain f32 GEMM** ([`gemm_f32`]) — the always-correct full-f32 floor.
 ///
 /// **The lossy f16 CUDA WMMA tier is deliberately NOT here** — it lives in
@@ -768,7 +768,7 @@ fn unpack_df32(packed: &[f32]) -> Vec<f64> {
 ///
 /// WGSL has no `f64`, so each double is carried as a hi/lo pair of `f32` and the
 /// accumulation runs with error-free transforms (Dekker/Knuth `two_prod`/`two_sum`)
-/// inside the raw kernel [`GEMM_DF64_WGSL`]. This is the portable f64-on-GPU path
+/// inside the raw kernel `GEMM_DF64_WGSL()`. This is the portable f64-on-GPU path
 /// that complements the NVIDIA-only native-CUDA-f64 path: an AMD/Intel/Apple/mobile
 /// GPU gets real f64 acceleration here, at ~44–48 effective mantissa bits (vs a
 /// single f32's 24).
@@ -778,7 +778,7 @@ fn unpack_df32(packed: &[f32]) -> Vec<f64> {
 /// [`WgpuComputeContext`], pack `a`→`2*M*K` f32 (binding 0, [`StorageRead`]) and
 /// `b`→`2*K*N` f32 (binding 1, [`StorageRead`]), allocate a zeroed `c` of `2*M*N`
 /// f32 (binding 2, [`StorageReadWrite`]) and `dims = [m, n, k]` as `u32` (binding 3,
-/// [`StorageRead`]), compile [`GEMM_DF64_WGSL`] / [`GEMM_DF64_ENTRY`], dispatch one
+/// [`StorageRead`]), compile `GEMM_DF64_WGSL()` / `GEMM_DF64_ENTRY()`, dispatch one
 /// invocation per output element (`element_count = m * n`, `workgroup_size = 64`),
 /// read back `c` as `2*M*N` f32 and unpack to `M*N` f64.
 ///

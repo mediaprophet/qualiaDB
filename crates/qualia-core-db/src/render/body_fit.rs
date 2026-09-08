@@ -1,4 +1,4 @@
-//! Apply a person-authored [`AnatomyBodyFit`] to decoded organ vertices.
+//! Apply a person-authored `AnatomyBodyFit` to decoded organ vertices.
 //!
 //! The numbers come from `wellfare_core::anatomy::BodyFit` (same serde shape). This module
 //! lives in the renderer so the portal WASM can fit a body without depending on wellfare-core.

@@ -11,7 +11,7 @@
 //! - [`kernel_class`] — the fixed kernel-shape taxonomy routed per class.
 //! - [`backend`] — the open `ProbeableBackend` registry (the expansion point: a new
 //!   accelerator is one `register()`, never an edit to the decision tree).
-//! - [`reference`] — correct CPU microkernels: the always-present path AND the
+//! - [`mod@reference`] — correct CPU microkernels: the always-present path AND the
 //!   correctness reference a GPU/NPU/vendor kernel must match before it may default.
 //! - [`matrix`] — the per-class capability matrix + the built-in CPU/wgpu backends.
 //! - [`policy`] — `ComputePolicy::select` → `Plan` (wraps `hetero_dispatch`).

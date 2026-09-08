@@ -7,8 +7,8 @@
 //! canvas — is then a projection of that **same** world point onto a target, not an independent
 //! re-computation. This module is the single entry point that makes that explicit:
 //!
-//!   * [`manifold_world`] — the shared step: `Tensor10D → [x,y,z]` world.
-//!   * [`project`] — that world point as the requested [`ProjectionTarget`] (3D volume, or its 2D
+//!   * `manifold_world` — the shared step: `Tensor10D → [x,y,z]` world.
+//!   * `project` — that world point as the requested `ProjectionTarget` (3D volume, or its 2D
 //!     planar shadow). One call, selectable view.
 //!
 //! The 3D *scene* additionally applies the orbit camera ([`crate::render::camera`]) on top of the

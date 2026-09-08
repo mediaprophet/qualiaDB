@@ -171,7 +171,7 @@ impl<'a> TensorBufferView<'a> {
 
     /// Create a binary index table from sequential tensor buffer
     ///
-    /// Zero-heap consideration: Returns Vec<u64> (heap-allocated, but this is
+    /// Zero-heap consideration: Returns Vec\<u64\> (heap-allocated, but this is
     /// a one-time construction cost. The actual runtime access is zero-heap.)
     /// Binary IPC: This table is sent once, then reused for O(1) lookups
     pub fn build_index_table(count: usize) -> Vec<u64> {

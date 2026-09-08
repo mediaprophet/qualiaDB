@@ -45,7 +45,7 @@ impl TrainingEngine {
     }
 
     /// Start a training *job* (the catalog/scheduler path). This records the job with the
-    /// scheduler but performs no weight updates; use [`start_training`] for the real SGD
+    /// scheduler but performs no weight updates; use `start_training()` for the real SGD
     /// loop that mutates a model's weights.
     pub fn start_training_job(&mut self, _job: &TrainingJob) -> Result<(), MLError> {
         // Start training job

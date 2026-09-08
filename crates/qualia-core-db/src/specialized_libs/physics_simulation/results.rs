@@ -242,17 +242,17 @@ pub struct EmfFieldGrid3DResult {
     pub ny: usize,
     pub nz: usize,
     pub nt: usize,
-    /// Grid extents: [x_min, x_max, y_min, y_max, z_min, z_max].
+    /// Grid extents: \[x_min, x_max, y_min, y_max, z_min, z_max\].
     pub bounds: [f64; 6],
     /// Time values for each time slice.
     pub times: Vec<f64>,
-    /// Flat amplitude array, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    /// Flat amplitude array, indexed as \[t\]\[z\]\[y\]\[x\], length nx*ny*nz*nt.
     pub amplitudes: Vec<f64>,
-    /// Flat phase array, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    /// Flat phase array, indexed as \[t\]\[z\]\[y\]\[x\], length nx*ny*nz*nt.
     pub phases: Vec<f64>,
-    /// Flat frequency array, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    /// Flat frequency array, indexed as \[t\]\[z\]\[y\]\[x\], length nx*ny*nz*nt.
     pub frequencies: Vec<f64>,
-    /// Flat manifold coordinates, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    /// Flat manifold coordinates, indexed as \[t\]\[z\]\[y\]\[x\], length nx*ny*nz*nt.
     pub manifold_coords: Vec<crate::modalities::manifold::ManifoldCoordinate10D>,
     /// Number of sources.
     pub num_sources: usize,

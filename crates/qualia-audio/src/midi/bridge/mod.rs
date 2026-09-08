@@ -8,7 +8,7 @@
 //! - [`pair_note_events`] — a timed MIDI stream (sequencer / flattened SMF track,
 //!   AUTHORITATIVE) → whole [`PairedNote`]s.
 //! - [`midi_to_sonic_token`] / [`sonic_token_to_midi`] — canonical
-//!   [`crate::midi::message::MidiMessage`] ↔ a packed `u64` [`SonicToken`]-shaped
+//!   [`crate::midi::message::MidiMessage`] ↔ a packed `u64` `SonicToken()`-shaped
 //!   word mirroring core-db's `net/sonic_token.rs`.
 //! - [`extract_smf_provenance`] — a parsed [`crate::midi::smf::SmfFile`] → bounded
 //!   [`ProvenancePair`]s for NQuin emission.

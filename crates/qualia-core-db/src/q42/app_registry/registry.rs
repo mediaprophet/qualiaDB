@@ -15,7 +15,7 @@ pub const MAX_INSTALLED_APPS: usize = 32;
 /// Default engine version string used for compatibility checks.
 ///
 /// Keep in sync with the workspace release line when bumping; comparison is
-/// the simple dotted numeric helper in [`super::compat`].
+/// the simple dotted numeric helper in `super::compat`.
 pub const DEFAULT_ENGINE_VERSION: &str = "0.0.37";
 
 /// Internal slot payload (record + inspect snapshot).

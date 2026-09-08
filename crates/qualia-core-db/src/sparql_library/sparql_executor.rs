@@ -276,7 +276,7 @@ mod range_q42_exec {
     /// Execute one bounded page of a two-pattern nested-loop join across a
     /// manifest-backed Q42 snapshot.  It has the same binding and output contract
     /// as [`execute_range_nested_loop_join_page_into`], while the child selection
-    /// remains inside [`Q42RangeVolumeSet`].
+    /// remains inside `Q42RangeVolumeSet()`.
     pub fn execute_range_volume_set_nested_loop_join_page_into<
         S: crate::q42_volume::Q42RangeSource,
     >(

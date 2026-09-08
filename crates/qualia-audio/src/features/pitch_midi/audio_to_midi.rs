@@ -1,8 +1,8 @@
 //! End-to-end audio → MIDI note transcription.
 //!
 //! Pipeline: slice the mono signal into overlapping analysis frames → estimate a
-//! per-frame fundamental with [`yin_pitch`](crate::features::pitch::yin_pitch) →
-//! [`segment_notes`](super::note_segmentation::segment_notes) that pitch track
+//! per-frame fundamental with [`yin_pitch`] →
+//! [`segment_notes`] that pitch track
 //! into MIDI note events. This is the composed convenience entry point; the two
 //! stages remain usable on their own.
 //!

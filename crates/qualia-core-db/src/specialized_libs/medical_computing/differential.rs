@@ -25,7 +25,7 @@ pub struct ConditionModel {
     /// Prior weight P(condition). Must be finite and > 0. Need not sum to 1 across
     /// conditions — the posterior is normalized regardless.
     pub prior: f64,
-    /// finding_id → P(finding present | condition), each in [0,1].
+    /// finding_id → P(finding present | condition), each in \[0,1\].
     pub likelihoods: HashMap<String, f64>,
 }
 
@@ -69,7 +69,7 @@ pub struct DifferentialProposal {
 /// is proportional to `prior · Π P(finding | condition)` over those findings.
 ///
 /// Fails closed ([`MedicalError`]) on an empty KB, a non-finite/non-positive prior,
-/// a likelihood outside [0,1], or when every condition's unnormalized posterior is
+/// a likelihood outside \[0,1\], or when every condition's unnormalized posterior is
 /// zero (findings incompatible with the whole KB) — never returns a fabricated result.
 pub fn analyze_differential(
     observed: &[String],

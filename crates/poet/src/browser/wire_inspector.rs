@@ -156,7 +156,7 @@ pub fn wire_wire_inspector(document: &Document) {
     }
 }
 
-/// Replace a wire label <text> element with an inline <foreignObject> input
+/// Replace a wire label \<text\> element with an inline \<foreignObject\> input
 /// for editing. On Enter or blur, commit the new label text.
 pub fn edit_wire_label(document: &Document, label_el: &Element) {
     let current_text = label_el.text_content().unwrap_or_default();

@@ -304,7 +304,7 @@ impl MedicalComputingLibrary {
 
     /// Renal dose adjustment, Giusti-Hayton method (1973):
     /// `Q = 1 − Fe × (1 − CrCl_patient / CrCl_normal)`;
-    /// `adjusted_dose = normal_dose × Q`. `fraction_renally_excreted` (Fe) ∈ [0,1]
+    /// `adjusted_dose = normal_dose × Q`. `fraction_renally_excreted` (Fe) ∈ \[0,1\]
     /// is the fraction of drug eliminated unchanged by the kidney.
     pub fn giusti_hayton_adjusted_dose(
         &self,

@@ -195,7 +195,7 @@ impl LocalJobScheduler {
 
     /// Spawn the background worker. Uses `tokio::spawn` — only call this from within a Tokio runtime
     /// context. For callers outside a runtime (e.g. Tauri's `setup` hook), use
-    /// [`spawn_global_worker_with_runtime`] with an explicit handle.
+    /// `spawn_global_worker_with_runtime()` with an explicit handle.
     pub fn spawn_global_worker(runtime: Option<tokio::runtime::Handle>) {
         let scheduler = Self::global();
         if scheduler

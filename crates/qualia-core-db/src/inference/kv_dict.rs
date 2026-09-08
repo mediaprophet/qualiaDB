@@ -10,7 +10,7 @@
 //! The MOD **learner** that PRODUCES a dictionary is a forge/training step and lives in
 //! `wgsl_forge::calibration::kv_dictionary` (which re-exports this type). Colocation would blur "forge
 //! produces, engine runs", so only the data + codec + the small numeric helpers they share live here.
-//! Pure CPU + `f32`; the GPU reconstruction shader (Phase 4b step 5) mirrors [`reconstruct`] in WGSL.
+//! Pure CPU + `f32`; the GPU reconstruction shader (Phase 4b step 5) mirrors `reconstruct()` in WGSL.
 
 /// A learned per-layer KV dictionary: `n_atoms` atoms, each of length `dim`, row-major in `atoms`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -149,7 +149,7 @@ impl KvDictionary {
     }
 
     /// Reconstruct a vector from `k` contiguous code words (`words` len ≥ `k`) into `out` (len = `dim`).
-    /// The exact `f16`-coefficient inverse of [`encode_to_words`] — the compressed-cache read path.
+    /// The exact `f16`-coefficient inverse of `encode_to_words()` — the compressed-cache read path.
     pub fn reconstruct_from_words(&self, words: &[f32], k: usize, out: &mut [f32]) {
         for o in out.iter_mut() {
             *o = 0.0;

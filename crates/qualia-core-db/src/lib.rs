@@ -1129,7 +1129,7 @@ impl NQuin {
         crate::frame_layout::quin_type(self.metadata)
     }
 
-    /// Write the 4-bit Quin Type nibble into bits [63:60], preserving all other bits.
+    /// Write the 4-bit Quin Type nibble into bits \[63:60\], preserving all other bits.
     #[inline(always)]
     pub fn set_quin_type(&mut self, quin_type: u8) {
         self.metadata = crate::frame_layout::with_quin_type(self.metadata, quin_type);
@@ -1143,13 +1143,13 @@ impl NQuin {
     pub const SENSITIVITY_TIER_MEDICAL: u8 = 0x03;
     pub const SENSITIVITY_TIER_FIDUCIARY: u8 = 0x04;
 
-    /// Read the 4-bit ODRL sensitivity tier from bits [59:56].
+    /// Read the 4-bit ODRL sensitivity tier from bits \[59:56\].
     #[inline(always)]
     pub fn get_sensitivity_tier(&self) -> u8 {
         ((self.metadata >> 56) & 0xF) as u8
     }
 
-    /// Write the 4-bit ODRL sensitivity tier into bits [59:56], preserving all other bits.
+    /// Write the 4-bit ODRL sensitivity tier into bits \[59:56\], preserving all other bits.
     #[inline(always)]
     pub fn set_sensitivity_tier(&mut self, tier: u8) {
         self.metadata = (self.metadata & !(0xFu64 << 56)) | ((tier as u64 & 0xF) << 56);
@@ -1157,19 +1157,19 @@ impl NQuin {
 
     // ── Lamport clock (bits [31:0]) ───────────────────────────────────────────
 
-    /// Extracts the 32-bit Lamport logical clock from bits [31:0].
+    /// Extracts the 32-bit Lamport logical clock from bits \[31:0\].
     #[inline(always)]
     pub fn extract_lamport_clock(&self) -> u32 {
         (self.metadata & 0xFFFF_FFFF) as u32
     }
 
-    /// Sets the 32-bit Lamport logical clock in bits [31:0], preserving all upper bits.
+    /// Sets the 32-bit Lamport logical clock in bits \[31:0\], preserving all upper bits.
     #[inline(always)]
     pub fn set_lamport_clock(&mut self, clock: u32) {
         self.metadata = (self.metadata & !0xFFFF_FFFFu64) | (clock as u64);
     }
 
-    /// Returns bits [31:0] of the metadata field.
+    /// Returns bits \[31:0\] of the metadata field.
     /// After the v3 migration this is the Lamport clock; call `extract_lamport_clock()`
     /// directly for clarity in new code.
     #[inline(always)]

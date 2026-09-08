@@ -71,7 +71,7 @@ impl HonestyLabel {
 pub struct SchemaArg {
     /// The argument name (for named args) or position (for positional).
     pub name: String,
-    /// The expected type name (e.g. "string", "i64", "Instant", "List<f64>").
+    /// The expected type name (e.g. "string", "i64", "Instant", "List\<f64\>").
     pub ty: String,
     /// Whether the argument is required.
     pub required: bool,

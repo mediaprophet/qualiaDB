@@ -10,7 +10,7 @@
 //! ## Why this matters
 //!
 //! Without frame morphisms, a pose in "camera space" and a pose in
-//! "world space" are just two Vec<f64> values with no relationship.
+//! "world space" are just two Vec\<f64\> values with no relationship.
 //! The engine can't compose them, invert them, or chain them. Frame
 //! morphisms make the relationship explicit and computable.
 //!

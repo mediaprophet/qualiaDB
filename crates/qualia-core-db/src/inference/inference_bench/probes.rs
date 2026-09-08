@@ -430,7 +430,7 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
 /// GPU-readback KV capture for the W5b sparse-dictionary go/no-go — the independent route to the
 /// CPU-reference hook. Loads the model with an **f32** KV cache, runs the REAL fast GPU decode forward
 /// over the eval corpus, and after each passage reads the KV arena back from VRAM
-/// ([`QTensorEngine::capture_kv_f32`]), accumulating up to `max_per_layer` K and V vectors per layer.
+/// (`QTensorEngine::capture_kv_f32()`), accumulating up to `max_per_layer` K and V vectors per layer.
 /// Because it samples the actual decode-path vectors (not the CPU reference), it cross-checks the hook
 /// capture: if both agree, the measured KV geometry is trustworthy. Stops early once every layer's cap
 /// is hit. Needs a GPU.

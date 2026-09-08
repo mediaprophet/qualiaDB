@@ -18,7 +18,7 @@
 //! ## Payment pointer resolution
 //!
 //! `$ilp.qualia.coop/account` →
-//!   GET https://ilp.qualia.coop/.well-known/pay/account
+//!   GET <https://ilp.qualia.coop/.well-known/pay/account>
 //!   → SPSP JSON { "destination_account": "...", "shared_secret": "..." }
 //!   → Open ILP STREAM connection → send amount → get `PaymentReceipt`
 //!

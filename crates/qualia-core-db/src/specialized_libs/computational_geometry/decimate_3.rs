@@ -457,8 +457,8 @@ pub fn decimate_qem(
 /// compacted to a dense `0..vertices` range in ascending original-id order (a
 /// canonical, deterministic remap); triangles reference the compacted ids.
 ///
-/// Buffer sizing: `out_vertices` needs [`required_vertices(vertices.len())`]
-/// entries and `out_triangles` needs [`required_triangles(triangles.len())`]
+/// Buffer sizing: `out_vertices` needs `required_vertices(vertices.len())()`
+/// entries and `out_triangles` needs `required_triangles(triangles.len())()`
 /// entries (decimation never grows the mesh).
 pub fn decimate_qem_with_kernel<K: GeometryKernel>(
     kernel: &K,

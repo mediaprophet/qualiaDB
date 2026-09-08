@@ -27,7 +27,7 @@ const GENESIS_HASH: &str = "0000000000000000000000000000000000000000000000000000
 pub struct LedgerEntry {
     /// Monotone position in the chain (0-based).
     pub seq: u64,
-    /// Hash of the previous entry (or [`GENESIS_HASH`] for the first) — the chain link.
+    /// Hash of the previous entry (or `GENESIS_HASH` for the first) — the chain link.
     pub prev_hash_hex: String,
     /// Hash of this entry's content (`seq ∥ prev ∥ kind ∥ payload ∥ signer ∥ time`) — the next entry chains
     /// to it, and it is what the signature signs.

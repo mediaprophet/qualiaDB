@@ -6,7 +6,7 @@
 
 use crate::biosense::liveness::landmark_types::{Landmark2, LandmarkFrame, PadLandmarkId};
 
-/// Scale a packed frame from normalized \(x,y \in [0,1]\) (or similar) to pixels.
+/// Scale a packed frame from normalized \(x,y \in \[0,1\]\) (or similar) to pixels.
 ///
 /// \(x' = x \cdot width\), \(y' = y \cdot height\). Invalid slots stay invalid.
 /// Does not touch any depth channel (there is none on [`Landmark2`]).

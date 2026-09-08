@@ -709,7 +709,7 @@ pub fn list_notes(
 
 /// Append a note to the lane the PIN opens (real PIN → real lane; duress PIN → decoy only).
 ///
-/// A **decoy** write also leaves a blind, sealed audit record on [`DEFAULT_DECOY_BRANCH`] that the
+/// A **decoy** write also leaves a blind, sealed audit record on `DEFAULT_DECOY_BRANCH` that the
 /// coercer cannot read; the real lane reviews it via [`review_decoy_activity`]. For git-like
 /// per-session branches (one branch per duress unlock), use [`add_note_in_session`].
 pub fn add_note(

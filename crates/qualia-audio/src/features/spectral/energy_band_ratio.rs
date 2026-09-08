@@ -6,9 +6,9 @@ use crate::types::AudioError;
 /// Ratio of the spectral energy in band 1 to that in band 2.
 ///
 /// Both bands are evaluated over the one-sided magnitude spectrum `mag` with
-/// [`energy_band`](crate::features::spectral::energy_band): the numerator is the
-/// energy in `[f_lo1, f_hi1]` Hz and the denominator the energy in
-/// `[f_lo2, f_hi2]` Hz. The result is `E1 / E2`, a scale-invariant balance
+/// [`crate::features::spectral::energy_band()`]: the numerator is the
+/// energy in \[f_lo1, f_hi1\] Hz and the denominator the energy in
+/// \[f_lo2, f_hi2\] Hz. The result is `E1 / E2`, a scale-invariant balance
 /// measure (e.g. high-band vs low-band brightness).
 ///
 /// Zero-heap: two passes, scalar result.

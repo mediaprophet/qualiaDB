@@ -248,7 +248,7 @@ impl CudaComputeContext {
 
     /// Overwrite a device view with host bytes on the **prefetch stream**,
     /// overlapping with compute on the primary stream. Caller must invoke
-    /// [`join_prefetch`] before launching a kernel that reads this data.
+    /// `join_prefetch()` before launching a kernel that reads this data.
     pub fn write_view_prefetch(
         &mut self,
         view: &BufferView,
@@ -486,7 +486,7 @@ impl<'a> CudaPipeline<'a> {
     }
 
     /// Compile (or reuse cached PTX for) raw CUDA-C and load — same as
-    /// [`compile_cuda_c_source`] but shares the process NVRTC cache when `source`
+    /// `compile_cuda_c_source()` but shares the process NVRTC cache when `source`
     /// matches a previously compiled kernel body.
     pub fn compile_cuda_c_source_cached(
         context: &'a CudaComputeContext,

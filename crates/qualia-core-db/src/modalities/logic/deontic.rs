@@ -542,7 +542,7 @@ fn opcode_from_predicate_hash(
     }
 }
 
-/// Compile an N3 [`Rule`] into a norm Quin (or defeater Quin for `^>` rules).
+/// Compile an N3 `Rule()` into a norm Quin (or defeater Quin for `^>` rules).
 ///
 /// Maps premise triple → party / property / action; `rule_type` → opcode + defeater flag.
 pub fn compile_n3_rule_to_norm(
@@ -675,10 +675,10 @@ pub fn evaluate_conditional_obligation(
 /// 2. `expiry != 0 && now > expiry` → [`Expired`](DeonticStatus::Expired).
 /// 3. a matching defeater → [`Defeated`](DeonticStatus::Defeated).
 /// 4. in-force, then the facts decide:
-///    - `OP_OBLIGATE`: `(party, q42:fulfilled, action)` → [`Discharged`]; else
-///      `(party, q42:breached, action)` → [`Violated`]; else [`Active`].
-///    - `OP_FORBID`: `(party, q42:performed, action)` → [`Violated`]; else [`Active`].
-///    - `OP_PERMIT`: always [`Active`] (a liberty cannot be violated or discharged).
+///    - `OP_OBLIGATE`: `(party, q42:fulfilled, action)` → `Discharged()`; else
+///      `(party, q42:breached, action)` → `Violated()`; else `Active()`.
+///    - `OP_FORBID`: `(party, q42:performed, action)` → `Violated()`; else `Active()`.
+///    - `OP_PERMIT`: always `Active()` (a liberty cannot be violated or discharged).
 ///
 /// Zero-heap (linear scans). `active_defeaters` is the buffer from
 /// [`harvest_defeater_fingerprints`].

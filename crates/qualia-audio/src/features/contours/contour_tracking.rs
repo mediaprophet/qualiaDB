@@ -33,7 +33,7 @@ const NO_CONTOUR: i32 = -1;
 ///
 /// Writes one contour id per candidate slot into `out_contour_id` (same layout as
 /// `peak_bins`): candidates sharing an id form one contour; unused slots are set
-/// to [`NO_CONTOUR`] (`-1`). Two candidates in consecutive frames whose bins
+/// to `NO_CONTOUR` (`-1`). Two candidates in consecutive frames whose bins
 /// differ by at most `pitch_tol_bins` may join the same contour.
 ///
 /// Returns the number of distinct contours created.

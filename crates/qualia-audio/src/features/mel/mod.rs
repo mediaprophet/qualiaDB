@@ -3,8 +3,8 @@
 //! The **real** triangular filterbanks (this module) replace the fake linear-band
 //! "log_mel" averaging in `stft_stream.rs`. Banks are precomputed once into a
 //! caller-owned weight table ([`build_mel_bank`] / [`build_bark_bank`] /
-//! [`build_erb_bank`]) and applied allocation-free per frame ([`mel_bands`],
-//! [`mfcc`], [`bfcc`], [`gfcc`]). Re-exports only.
+//! [`build_erb_bank`]) and applied allocation-free per frame ([`mel_bands()`],
+//! [`mfcc()`], [`bfcc()`], [`gfcc()`]). Re-exports only.
 
 pub mod bark_bank;
 pub mod bfcc;

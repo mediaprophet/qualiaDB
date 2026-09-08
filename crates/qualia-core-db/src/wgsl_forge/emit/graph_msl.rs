@@ -1,6 +1,6 @@
 //! MSL (Metal) lowering of the **portable** compute-graph nodes (plan §4 / P7) — the third
 //! backend the one `lower_graph` driver walks, after WGSL and CUDA-C. [`MslLowerer`] implements
-//! the same [`Lowerer`](crate::wgsl_forge::ir::graph::Lowerer) trait, emitting Metal for the
+//! the same [`Lowerer`] trait, emitting Metal for the
 //! portable native kit (`Elementwise`/`Reduce`/`Broadcast`) — same binding ABI + math as the
 //! WGSL `graph_ops` kernels, so a portable graph lowers to Metal with no per-id branch.
 //!

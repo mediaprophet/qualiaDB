@@ -48,7 +48,7 @@ pub const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
 /// end the float-vs-integer clash (formerly squatted on `INLINE_TAG_INTEGER`). Canonical
 /// home for this tag; `frame_layout` re-exports it.
 pub const INLINE_TAG_FLOAT: u64 = 0b101u64 << 60;
-/// SPARQL-Star embedded triple tag: indicates the value is a Virtual ID for <<s p o>>
+/// SPARQL-Star embedded triple tag: indicates the value is a Virtual ID for `<<s p o>>`
 pub const TAG_EMBEDDED: u64 = 0b001u64 << 60;
 /// Webizen identity tag: indicates the value is a person-controlled WebID agent identifier
 /// Uses 0x8 prefix for instant identification without dictionary lookup

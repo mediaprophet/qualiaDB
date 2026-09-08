@@ -2,7 +2,7 @@
 //!
 //! Implements zero-heap, hardware-accelerated rendering using Projective Geometric Algebra (PGA).
 //!
-//! The renderer draws to one of two targets ([`RenderTarget`]):
+//! The renderer draws to one of two targets (`RenderTarget`):
 //! - **Surface** — a windowed swapchain (`WgpuRenderer::new`), for a future native
 //!   windowed host.
 //! - **Offscreen** — a render-target texture (`WgpuRenderer::new_offscreen`), with

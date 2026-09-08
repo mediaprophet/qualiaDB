@@ -6,13 +6,13 @@
 //! factors, [`accumulate`] rolls per-system burden, [`interactions`] finds compounding / opposing /
 //! herb–drug pairs, and [`systemic_implications`] emits **proposals** — never diagnoses.
 //!
-//! The [`temporal`] layer turns static factors into time-stamped [`FactorEvent`]s with **kinetics**
+//! The `temporal` layer turns static factors into time-stamped [`FactorEvent`]s with **kinetics**
 //! (onset → clearance), [`EnvironmentModulator`]s, and per-system recovery trajectories — so the view
 //! can show that *different subsystems recover on different clocks and respond to different
 //! interventions* (the hot-week / beer / water example).
 //!
 //! **Honesty boundaries baked in:** every emitted [`SystemicImplication`] carries
-//! [`EpistemicStatus::Hypothesis`] and the dominant evidence tier of its contributors; community /
+//! `EpistemicStatus::Hypothesis()` and the dominant evidence tier of its contributors; community /
 //! anecdotal claims sit at the lowest tier; temporal projection is coarse ([`RecoveryBand`] "hours vs
 //! days", never a BAC or a fitness-to-operate claim); no advice. The 17 systems mirror
 //! `bundled/qapps/Anatomy/Knowledge/system-map.json` so the native 3D view and this engine agree on

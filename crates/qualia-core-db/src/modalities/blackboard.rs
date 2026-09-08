@@ -449,7 +449,7 @@ impl BlackboardBus {
 
     /// Read all inputs for a DAG node from the blackboard.
     ///
-    /// Returns a map of channel_name → Vec<NQuin> for each input channel.
+    /// Returns a map of channel_name → Vec\<NQuin\> for each input channel.
     /// Channels that don't exist or have no data are included as empty Vecs.
     pub fn read_inputs(&self, inputs: &[String]) -> Vec<(String, Vec<NQuin>)> {
         inputs

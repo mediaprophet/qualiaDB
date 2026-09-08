@@ -11,22 +11,22 @@
 //! `(ux, uy, θz)`. Global DOF index for node `n`: `ux = 3n`, `uy = 3n+1`, `θz = 3n+2`.
 //! Two element families are provided:
 //!
-//! * [`FeElement::Truss`] — pin-jointed axial bar, element stiffness
+//! * `FeElement::Truss` — pin-jointed axial bar, element stiffness
 //!   `kₑ = (EA/L)·[[1,−1],[−1,1]]` in the axial coordinate, rotated into global
 //!   `(ux,uy)` DOFs by direction cosines. Rotational DOFs are untouched (the caller
 //!   constrains them for a pure truss).
-//! * [`FeElement::Frame`] — 2-node Euler–Bernoulli beam-column: axial `EA/L` plus the
+//! * `FeElement::Frame` — 2-node Euler–Bernoulli beam-column: axial `EA/L` plus the
 //!   4×4 bending block with `EI/L³` terms, assembled as a 6×6 local matrix and rotated
 //!   into global coordinates. Consistent 6×6 mass is provided.
 //!
 //! ## Solvers
-//! * [`solve_static`] — `K u = F` with boundary conditions applied by row/column
+//! * `solve_static` — `K u = F` with boundary conditions applied by row/column
 //!   elimination (exact reactions), solved via LU.
-//! * [`newmark_linear`] — average-acceleration Newmark-β (β=¼, γ=½) time integration of
+//! * `newmark_linear` — average-acceleration Newmark-β (β=¼, γ=½) time integration of
 //!   `M ü + C u̇ + K u = F(t)`.
-//! * [`newton_raphson`] — Newton iteration `R(u) = f_int(u) − F_ext → 0` with a
+//! * `newton_raphson` — Newton iteration `R(u) = f_int(u) − F_ext → 0` with a
 //!   caller-supplied tangent.
-//! * [`newmark_nonlinear`] — Newmark with an inner Newton–Raphson iteration each step
+//! * `newmark_nonlinear` — Newmark with an inner Newton–Raphson iteration each step
 //!   (composition of the two above) for `M ü + C u̇ + f_int(u) = F(t)`.
 
 use super::EngineeringError;

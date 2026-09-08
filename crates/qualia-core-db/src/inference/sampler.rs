@@ -272,7 +272,7 @@ impl SamplerState {
     /// Sample with a DOMINO constrained-decoding mask applied first.
     ///
     /// This is the R9 integration point: the decode loop calls this instead
-    /// of [`sample`](Self::sample) when a [`DominoMasker`] is active. The
+    /// of [`sample`](Self::sample) when a `DominoMasker()` is active. The
     /// masker sets disallowed token logits to `-inf` before the sampling
     /// chain runs, so the sampler can only select grammar-valid tokens.
     ///
@@ -280,7 +280,7 @@ impl SamplerState {
     /// calling `sample` directly — the mask is a no-op.
     ///
     /// After sampling, the chosen token's bytes should be fed back into the
-    /// masker via [`DominoMasker::feed_token`] so the grammar state advances.
+    /// masker via `DominoMasker::feed_token()` so the grammar state advances.
     pub fn sample_constrained(
         &mut self,
         logits: &mut [f32],

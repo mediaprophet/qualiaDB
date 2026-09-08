@@ -9,7 +9,7 @@
 //!
 //! REUSE: the per-iteration salience is built from the shared primitives — the
 //! residual's spectral peaks come from
-//! [`crate::features::peaks::spectral_peaks`] and are folded into a harmonic
+//! [`crate::features::peaks::spectral_peaks()`] and are folded into a harmonic
 //! pitch-salience curve by [`crate::features::salience::pitch_salience`]. This
 //! module adds only the *iteration + cancellation* on top of those.
 //!

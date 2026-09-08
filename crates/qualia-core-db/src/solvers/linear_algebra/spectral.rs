@@ -3,7 +3,7 @@
 //!
 //! `characteristic_polynomial` uses Faddeev–LeVerrier; `eigenvalues_general` factors it
 //! with the engine's [`crate::solvers::polynomial::polynomial_roots`]. For symmetric
-//! matrices prefer [`super::eigen::symmetric_eigen`] (eigenvectors + better conditioning).
+//! matrices prefer `super::eigen::symmetric_eigen` (eigenvectors + better conditioning).
 
 use crate::solvers::polynomial::{polynomial_roots, Complex};
 use crate::solvers::SolversError;

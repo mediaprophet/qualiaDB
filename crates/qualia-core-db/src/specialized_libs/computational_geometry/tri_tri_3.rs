@@ -72,7 +72,7 @@ pub enum TriTriError {
     NonFiniteCoordinate { index: usize },
     /// `out_pairs` output buffer too small; `required` is a sufficient size.
     OutputTooSmall { required: usize },
-    /// The BVH broad phase failed to build (propagated from [`super::bvh`]).
+    /// The BVH broad phase failed to build (propagated from `super::bvh`).
     BroadPhaseFailed,
 }
 
@@ -548,7 +548,7 @@ fn construct_intersection_segment(
 /// The boolean decision is identical (exact `orient_3d` signs via
 /// [`FilteredF64Kernel`]). The intersection segment endpoints are now
 /// exact-rational [`ExactPoint3`] values — no f64 rounding — so downstream
-/// predicates on those points (e.g. [`orient_3d_exact_3`]) will not mis-sign
+/// predicates on those points (e.g. `orient_3d_exact_3()`) will not mis-sign
 /// due to cascaded rounding error.
 ///
 /// Returns `(intersect, segment)`. `segment` is `Some` for both the
@@ -856,7 +856,7 @@ fn tri_aabb(tri: [Point3; 3]) -> Aabb {
 }
 
 /// Find every pair of mesh triangles that genuinely intersect, using the P3 BVH
-/// ([`super::bvh`]) as the broad phase and the exact [`tri_tri_intersect_3`]
+/// (`super::bvh`) as the broad phase and the exact [`tri_tri_intersect_3`]
 /// predicate as the narrow phase. Pairs of triangles that share a vertex index
 /// (adjacent / neighbouring faces) are **excluded** — those are connectivity,
 /// not self-intersection.

@@ -26,11 +26,11 @@
 //!
 //! # Quarantine vs error
 //!
-//! - Oversize whole input (`max_bytes`) → [`ParseError::ByteBudgetExceeded`]
-//! - Oversize single line (`max_line_bytes`) → [`ParseError::LineTooLong`]
-//! - Header mismatch / missing → [`ParseError::BadHeader`]
-//! - Cancel flag set → [`ParseError::Cancelled`]
-//! - Deleted / malformed / empty-name rows → [`QuarantinedRow`] (others continue)
+//! - Oversize whole input (`max_bytes`) → `ParseError::ByteBudgetExceeded`
+//! - Oversize single line (`max_line_bytes`) → `ParseError::LineTooLong`
+//! - Header mismatch / missing → `ParseError::BadHeader`
+//! - Cancel flag set → `ParseError::Cancelled`
+//! - Deleted / malformed / empty-name rows → `QuarantinedRow` (others continue)
 //!
 //! Cold construction: `String` fields are intentional. Hot-path Quin mapping is
 //! AST-04.

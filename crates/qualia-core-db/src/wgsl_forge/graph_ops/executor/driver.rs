@@ -31,7 +31,7 @@ pub struct ForgeGraphExecutor {
 }
 
 impl ForgeGraphExecutor {
-    /// Create an executor with the default per-slab capacity ([`EXEC_CAPACITY`]). Acquires its
+    /// Create an executor with the default per-slab capacity (`EXEC_CAPACITY`). Acquires its
     /// **own** GPU adapter + device once; reuse the returned value across calls/decode steps.
     /// To instead run on the process-wide LLM device, use [`Self::on_shared_gpu`].
     pub fn new() -> Result<Self, ForgeError> {

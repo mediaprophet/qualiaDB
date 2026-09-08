@@ -9,7 +9,7 @@
 //! * **Scoring / ranking** ([`score`], [`predict`]) — a few dot products per triple.
 //!   Trivially cheap, always present, runs on any device. This is the path a *user*
 //!   exercises: given an already-trained [`EmbeddingTable`], score and rank.
-//! * **Training** ([`train`]) — gradient descent over many epochs and negatives. This
+//! * **Training** ([`train()`]) — gradient descent over many epochs and negatives. This
 //!   is the **heavy, run-once** pass: it is structured as an artifact producer that
 //!   runs on capable hardware and is then *distributed* (the trained table), never on
 //!   a user's critical path. It is dispatch-ready (§13): the per-triple score/gradient

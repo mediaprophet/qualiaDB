@@ -34,7 +34,7 @@ const HARMONIC_ALPHA: f32 = 0.8;
 /// which softens grid quantisation without smearing across notes.
 ///
 /// - `peak_freqs` / `peak_mags`: the frame's spectral peaks (Hz, linear
-///   magnitude), as produced by [`crate::features::peaks::spectral_peaks`]. Only
+///   magnitude), as produced by [`crate::features::peaks::spectral_peaks()`]. Only
 ///   the first `n_peaks` entries are read.
 /// - `f_min_hz`: frequency of salience bin 0 (the low edge of the pitch range).
 /// - `bins_per_semitone`: grid resolution (e.g. `10.0` → 10 cents per bin).

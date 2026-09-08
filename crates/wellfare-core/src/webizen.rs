@@ -28,7 +28,7 @@ pub enum WebizenOpcode {
     },
     HaltIfFalse,
     /// Numeric comparison opcodes (extension for N3Logic rules)
-    /// Compare the float value in register[register_index] against threshold.
+    /// Compare the float value in register`register_index` against threshold.
     LessThan {
         register_index: usize,
         threshold: f64,

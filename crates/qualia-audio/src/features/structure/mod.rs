@@ -3,7 +3,7 @@
 //! "structure" heuristic in `music.rs` with a real SSM + novelty approach.
 //!
 //! The caller supplies a per-frame feature matrix (e.g. from
-//! [`crate::features::mel::mfcc`] or chroma / tonal features); these modules
+//! [`crate::features::mel::mfcc()`] or chroma / tonal features); these modules
 //! never recompute features. The frames²-sized SSM is written into a
 //! caller-provided buffer — see each function's caller-buffer contract.
 //!

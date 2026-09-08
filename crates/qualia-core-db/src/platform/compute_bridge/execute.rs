@@ -83,7 +83,7 @@ fn cpu_gemm_f32(_m: usize, k: usize, n: usize, a: &[f32], b: &[f32], c: &mut [f3
 
 /// Accelerated `C = A·B` (f32). `a` is `m×k`, `b` is `k×n`, `c` is `m×n` (overwritten).
 /// With `gpu-runtime`, routes to the GPU when the measured matrix favours it for
-/// `DenseLinear`, the job clears [`GPU_MIN_FLOPS`], and it fits in GPU buffers;
+/// `DenseLinear`, the job clears `GPU_MIN_FLOPS`, and it fits in GPU buffers;
 /// otherwise the CPU path. Without `gpu-runtime` this is always the rayon CPU path
 /// and never reports [`RanOn::Gpu`]. On any GPU shortfall it falls back to CPU —
 /// never a hard fail.

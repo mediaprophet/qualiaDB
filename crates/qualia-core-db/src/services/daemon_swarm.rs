@@ -514,7 +514,7 @@ pub mod swarm {
         /// 3. If `dig` is unavailable or fails, fall back to a deterministic mapping from the
         ///    domain name to a plausible endpoint so bootstrapping can proceed offline.
         ///
-        /// The result is always cached with [`DNSSEC_CACHE_TTL_SECONDS`].
+        /// The result is always cached with `DNSSEC_CACHE_TTL_SECONDS`.
         pub fn resolve_peer_dnssec(&mut self, domain: &str) -> Result<PeerEndpoint, DaemonError> {
             let now = unix_now();
 

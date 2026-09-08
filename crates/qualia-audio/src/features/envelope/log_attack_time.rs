@@ -8,7 +8,7 @@ const START_THRESHOLD: f32 = 0.02;
 /// Log (base 10) of the attack time of an amplitude `envelope`.
 ///
 /// The attack runs from the first sample whose value exceeds
-/// [`START_THRESHOLD`] × max up to the sample of maximum amplitude (the
+/// `START_THRESHOLD` × max up to the sample of maximum amplitude (the
 /// "stop"). The returned value is `log10(attack_seconds)`. Following Essentia,
 /// an effectively-zero attack is clamped to one sample so the log is finite.
 ///

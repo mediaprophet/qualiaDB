@@ -199,7 +199,7 @@ impl Presentation {
 /// modalities.
 ///
 /// The sheaf condition is that all presentations agree on the
-/// underlying value. This is checked by [`PresentationSheaf::check`],
+/// underlying value. This is checked by `PresentationSheaf::check()`,
 /// which verifies that every presentation maps back to the same
 /// source value.
 #[derive(Debug, Clone)]

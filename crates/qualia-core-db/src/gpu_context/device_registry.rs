@@ -1,16 +1,16 @@
 //! Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
 //! (STELLAR §A H3 foundation for heterogeneous GPU routing).
 //!
-//! [`super::shared_gpu`] / [`super::try_shared_gpu`] give you the single process-wide *primary*
+//! `super::shared_gpu` / `super::try_shared_gpu` give you the single process-wide *primary*
 //! device (a `PowerPreference::HighPerformance` pick — the discrete GPU on a discrete+integrated
 //! box). This module lets code obtain a device for a **specific** enumerated circuit — e.g. the
 //! integrated GPU — so audio/vision work can run off the LLM's silicon.
 //!
 //! **Role policy:** keep the primary circuit free for the LLM; audio/vision use the *auxiliary*
-//! circuit. [`try_auxiliary_gpu`] gives callers the fallback chain **auxiliary → primary → None**
+//! circuit. `try_auxiliary_gpu` gives callers the fallback chain **auxiliary → primary → None**
 //! (the caller then degrades to CPU) so they always get *a* device or `None`, never a panic.
 //!
-//! Mirrors [`super::try_shared_gpu`]'s discipline: no `unwrap()` outside tests, and it NEVER panics
+//! Mirrors `super::try_shared_gpu`'s discipline: no `unwrap()` outside tests, and it NEVER panics
 //! on a missing or failed device — every failure path returns `None`. Native only.
 #![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 

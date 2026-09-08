@@ -17,7 +17,7 @@
 //! Subject for every Quin is `q_hash(accession)`. Context is
 //! `q_hash(release_label)`. No network; no new Host/Vibe invoke IDs.
 //!
-//! Hot API: [`map_records_into`] — caller-buffered. Report types may allocate.
+//! Hot API: `map_records_into` — caller-buffered. Report types may allocate.
 
 mod map;
 mod report;

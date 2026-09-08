@@ -1,10 +1,10 @@
-//! Compile an imported triangle [`Mesh`] into a sealed `.10d` container — the
+//! Compile an imported triangle `Mesh` into a sealed `.10d` container — the
 //! **dense compiled-geometry** half of a geometry asset (see
 //! `docs/manuals/standards/geometry-asset-ontology.md` §3). This is the
 //! "mesh → `.10d`" step of the 3-D-anatomy asset pipeline: the renderer and the
-//! anatomy layer read the `.10d` back with [`decode_10d_mesh`] instead of
+//! anatomy layer read the `.10d` back with `decode_10d_mesh` instead of
 //! reparsing the source GLB, and the q42 semantic manifest cites the container's
-//! [`compiled_digest`].
+//! `compiled_digest`.
 //!
 //! **Scope (honest):** emits a `QuantizedMesh` section (u16-quantized
 //! vertices in the bbox + u16/u32 indices). Optional `Tensor10DNodes` (D1),
@@ -400,7 +400,7 @@ pub fn compiled_digest(container_10d: &[u8]) -> u32 {
     compute_whole_file_crc32c(container_10d)
 }
 
-/// Read a `.10d` container back into a dequantized [`Mesh`] — the renderer /
+/// Read a `.10d` container back into a dequantized `Mesh` — the renderer /
 /// anatomy path that avoids reparsing the source GLB. Extracts the first
 /// `QuantizedMesh` section.
 pub fn decode_10d_mesh(container_10d: &[u8]) -> Result<Mesh, Compile10dError> {
@@ -453,7 +453,7 @@ pub fn decode_10d_nodes(
     Err(Compile10dError::NoNodesSection)
 }
 
-/// A fully compiled geometry asset: the source-imported [`Mesh`], the sealed `.10d`
+/// A fully compiled geometry asset: the source-imported `Mesh`, the sealed `.10d`
 /// container, its two content digests, and the q42 semantic manifest that cites the
 /// container by `compiledDigest` (geometry-asset-ontology §1 two-layer model).
 ///
@@ -470,7 +470,7 @@ pub struct CompiledAsset {
     pub compiled_digest: u32,
     /// CRC-32C of the immutable source bytes — the manifest's `sourceDigest`.
     pub source_digest: u32,
-    /// The q42 manifest facts, including both digests (via [`mesh_to_nquins_with_digests`]).
+    /// The q42 manifest facts, including both digests (via `mesh_to_nquins_with_digests()`).
     pub quins: Vec<NQuin>,
     /// Object-lexicon for the string-valued facts in `quins`.
     pub lexicon: HashMap<u64, String>,
@@ -480,7 +480,7 @@ pub struct CompiledAsset {
 ///
 /// Runs the full pipeline — import the source ([`import_asset`]), compile the dense
 /// `.10d` ([`compile_mesh_to_10d`]), hash both layers, then emit the q42 manifest that
-/// binds them ([`mesh_to_nquins_with_digests`]). Deterministic: identical
+/// binds them (`mesh_to_nquins_with_digests()`). Deterministic: identical
 /// `(source_bytes, asset_uri, source_format)` → byte-identical container and identical
 /// digests, so the manifest→container citation is attestable.
 ///

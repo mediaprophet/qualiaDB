@@ -4,7 +4,7 @@
 //! Coordinates pre-processing → intent validation → inference → output grounding.
 //!
 //! Flow:
-//!   RawInput → [Orchestrator] → validate_intent → [LlmAgent.infer] → validate_output → .q42 commit
+//!   RawInput → `Orchestrator` → validate_intent → [LlmAgent.infer] → validate_output → .q42 commit
 
 use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict};
 use crate::modalities::logic::n3_compiler::{

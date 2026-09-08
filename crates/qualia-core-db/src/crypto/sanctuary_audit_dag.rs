@@ -9,7 +9,7 @@
 //! # What the DAG guarantees
 //!
 //! Records are content-addressed and hash-chained with
-//! [`chain_hash`](super::sanctuary_audit::chain_hash): a record's `id` is
+//! [`chain_hash`]: a record's `id` is
 //! `chain_hash(&parent, &canonical_bytes(record))`, and each record's `parent` is the previous
 //! record's `id`. Because [`canonical_bytes`] is a deterministic, unambiguous (length-prefixed)
 //! encoding of the *content* fields, any of the following becomes detectable by
@@ -293,7 +293,7 @@ fn order_branch(mut records: Vec<AuditRecord>) -> Vec<AuditRecord> {
 /// Group records into sessions, one per distinct `branch_ref`.
 ///
 /// Branches are emitted in first-seen order (the order their first record appears in `records`), so
-/// the result is deterministic. Each branch's records are ordered by [`order_branch`], `opened_unix`
+/// the result is deterministic. Each branch's records are ordered by `order_branch`, `opened_unix`
 /// is the minimum `unix` on the branch, and `action_count == records.len()`.
 ///
 /// **Honesty note (read this):** the number of returned sessions is the number of distinct

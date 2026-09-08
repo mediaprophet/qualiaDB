@@ -9,26 +9,26 @@
 //!
 //! ## Passes
 //!
-//! * **Flip** ([`flip_pass`]): 2-3 and 3-2 bistellar flips on interior faces /
+//! * **Flip** (`flip_pass`): 2-3 and 3-2 bistellar flips on interior faces /
 //!   edges. A 2-3 flip replaces two tets sharing a face with three tets around
 //!   the new edge joining their apices; a 3-2 flip is the reverse. Accepted
 //!   only when the worst score of the new configuration exceeds the worst
 //!   score of the old configuration.
-//! * **Smooth** ([`smooth_pass`]): optimisation-based vertex smoothing. For
+//! * **Smooth** (`smooth_pass`): optimisation-based vertex smoothing. For
 //!   each interior vertex a deterministic set of candidate positions
 //!   (Laplacian centroid, volume-weighted tet centroid, and a fixed
 //!   direction-probe set around the current position) is evaluated; the
 //!   candidate maximising the minimum score over the incident tets is
 //!   accepted, but only if it beats the current minimum. Boundary and
 //!   caller-fixed vertices are pinned.
-//! * **Insert** ([`insert_pass`]): Delaunay-style cavity refinement. The
+//! * **Insert** (`insert_pass`): Delaunay-style cavity refinement. The
 //!   worst tet is located, its circumcenter is computed, the Delaunay cavity
 //!   around that point is flood-filled (tets whose circumsphere contains the
 //!   point), the cavity is checked to be star-shaped w.r.t. the new point,
 //!   and the cavity tets are replaced by a star of new tets joining the
 //!   boundary triangles to the new point. Accepted only when the new tets'
 //!   minimum score beats the removed tets'. Steiner count is capped.
-//! * **Exude** ([`exude_pass`]): sliver exudation by local perturbation. For
+//! * **Exude** (`exude_pass`): sliver exudation by local perturbation. For
 //!   each sliver (min dihedral below the threshold) each of its interior
 //!   vertices is perturbed over a fixed deterministic direction/magnitude
 //!   probe set; the first perturbation that removes the sliver without

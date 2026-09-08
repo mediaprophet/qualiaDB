@@ -24,7 +24,7 @@
 //! ## Robustness
 //!
 //! All classification uses the exact orientation predicate
-//! ([`super::primitives::orientation_2`]) which has a filtered → compensated
+//! (`super::primitives::orientation_2`) which has a filtered → compensated
 //! → exact ladder (P1.2–P1.7). The sign is always correct, even for
 //! near-degenerate inputs.
 //!
@@ -32,8 +32,8 @@
 //!
 //! When the intersection is a single point (Proper, Endpoint, T-junction,
 //! CollinearTouch), the caller can request an exact construction via
-//! [`super::kernel::ConstructionKernel::segment_intersection_2`], which
-//! returns an [`super::kernel::ExactPoint2`] that re-predicates without sign
+//! `super::kernel::ConstructionKernel::segment_intersection_2`, which
+//! returns an `super::kernel::ExactPoint2` that re-predicates without sign
 //! drift. The `classify_and_construct` function combines classification and
 //! construction in one call.
 //!

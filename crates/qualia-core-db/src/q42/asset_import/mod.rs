@@ -1,9 +1,9 @@
 //! Bounded Q42 asset import jobs (AST-02).
 //!
 //! Cold-construction framework: unique [`tempfile::TempDir`], explicit byte /
-//! record / chunk budgets (chunk pass ≤ [`SENTINEL_PASS_BUDGET_BYTES`]), streaming
+//! record / chunk budgets (chunk pass ≤ `SENTINEL_PASS_BUDGET_BYTES`), streaming
 //! `Read`, cancellation, quarantine counts, and promote-on-success. Caller
-//! supplies a local [`Path`] — no network downloader. The raw caller path is
+//! supplies a local `Path` — no network downloader. The raw caller path is
 //! never mutated; only the job TempDir is cleaned via RAII.
 
 mod budgets;

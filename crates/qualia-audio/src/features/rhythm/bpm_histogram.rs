@@ -21,7 +21,7 @@ fn bin_center_bpm(b: usize, n_bins: usize, bpm_min: f32, bpm_max: f32) -> f32 {
 /// beat[i]` frames, an instantaneous tempo `bpm = frame_rate_hz*60/d`. Tempi
 /// inside `[bpm_min, bpm_max]` are binned into `out_hist` (linearly, `out_hist`
 /// spanning the whole range). The **dominant** tempo is the most-populated bin;
-/// the **secondary** tempo is the most-populated bin at least [`MIN_PEAK_SEP`]
+/// the **secondary** tempo is the most-populated bin at least `MIN_PEAK_SEP`
 /// bins away from the dominant (a distinct mode, e.g. a half/double-time
 /// alias), or `0.0` if there is no such bin. Both are returned as bin-centre
 /// BPMs.

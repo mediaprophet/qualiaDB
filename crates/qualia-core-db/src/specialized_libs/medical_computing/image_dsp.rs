@@ -52,7 +52,7 @@ pub struct ImageAnalysisResult {
     pub segmented_mean_intensity: f64,
     /// Per-pixel Sobel edge-gradient magnitude, row-major (length = width*height).
     pub sobel_magnitude: Vec<f64>,
-    /// Window/level normalized intensities in [0,1], row-major.
+    /// Window/level normalized intensities in \[0,1\], row-major.
     pub windowed: Vec<f64>,
 }
 

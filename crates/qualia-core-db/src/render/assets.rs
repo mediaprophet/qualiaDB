@@ -7,9 +7,9 @@
 //! `kml_bridge`.
 //!
 //! Two layers, per STELLAR §E ("artefacts carry their geometry, and are *semantically known*"):
-//!   * [`Mesh`] — raw geometry (vertex positions + triangle indices + bounding box): the data the
+//!   * `Mesh` — raw geometry (vertex positions + triangle indices + bounding box): the data the
 //!     GPU vertex/index buffers (Phase 1.2) will consume.
-//!   * [`mesh_to_nquins`] — the **semantic** layer: the asset is *known* (type, counts, bounding
+//!   * `mesh_to_nquins` — the **semantic** layer: the asset is *known* (type, counts, bounding
 //!     box, centroid, source format) as NQuins in the one identity space — not just points/pixels.
 //!
 //! Hot-path rendering (depth-stencil, mesh buffers, projection) is the GPU half of Phase 1 and is
@@ -607,7 +607,7 @@ pub fn mesh_to_nquins(
     (quins, lexicon)
 }
 
-/// Like [`mesh_to_nquins`] but also asserts the immutable `sourceDigest` and the `.10d`
+/// Like `mesh_to_nquins` but also asserts the immutable `sourceDigest` and the `.10d`
 /// `compiledDigest` — the manifest→container join (geometry-asset-ontology §4). Both are CRC-32C
 /// `u32` content hashes stored as `u64` objects: `sourceDigest` over the immutable source asset
 /// bytes, `compiledDigest` the whole-file CRC of the `.10d` container this manifest describes.

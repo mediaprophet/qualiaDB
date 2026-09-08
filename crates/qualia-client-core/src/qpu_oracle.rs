@@ -112,9 +112,9 @@ pub struct QpuOracleState {
     pub dwave_token_enc: String,
     pub ionq_token_enc: String,
     pub rigetti_token_enc: String,
-    /// Azure: "<subscription_id>/<resource_group>/<workspace>/<api_key>"
+    /// Azure: "<subscription_id>/<resource_group>/\<workspace\>/<api_key>"
     pub azure_credentials_enc: String,
-    /// Braket: "<aws_access_key_id>|<aws_secret_access_key>|<region>"
+    /// Braket: "<aws_access_key_id>|<aws_secret_access_key>|\<region\>"
     pub braket_credentials_enc: String,
     pub google_token_enc: String,
     pub quantinuum_token_enc: String,
@@ -213,9 +213,9 @@ pub struct QpuOracleSettingsInput {
     pub dwave_token: Option<String>,
     pub ionq_token: Option<String>,
     pub rigetti_token: Option<String>,
-    /// Format: "<subscription_id>/<resource_group>/<workspace>/<api_key>"
+    /// Format: "<subscription_id>/<resource_group>/\<workspace\>/<api_key>"
     pub azure_credentials: Option<String>,
-    /// Format: "<aws_access_key_id>|<aws_secret_access_key>|<region>"
+    /// Format: "<aws_access_key_id>|<aws_secret_access_key>|\<region\>"
     pub braket_credentials: Option<String>,
     pub google_token: Option<String>,
     pub quantinuum_token: Option<String>,

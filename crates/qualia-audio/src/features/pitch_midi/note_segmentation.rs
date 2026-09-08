@@ -2,7 +2,7 @@
 //! events.
 //!
 //! Each voiced frame is quantised to a MIDI note number (via
-//! [`hz_to_midi`](super::pitch_to_midi::hz_to_midi)). A *note* is a maximal run
+//! [`hz_to_midi`]). A *note* is a maximal run
 //! of consecutive frames that quantise to the **same** note number; the run ends
 //! when the pitch crosses the half-semitone quantisation boundary into a
 //! different note (the pitch-change threshold) or when a low-confidence /

@@ -28,7 +28,7 @@ pub struct RpcResponse {
 /// Execute a SPARQL (or SPARQL-Star) query string against a `.q42` vault.
 ///
 /// Range operators are tried first. Vaults larger than
-/// [`RESIDENT_QUERY_MAX_BYTES`] never call `read_q42_quins` / `read_all_quins`;
+/// `RESIDENT_QUERY_MAX_BYTES()` never call `read_q42_quins` / `read_all_quins`;
 /// they fail if no range plan applies. Smaller files may still use the
 /// resident executor.
 pub fn run_sparql_query(vault: &std::path::Path, query_str: &str) {

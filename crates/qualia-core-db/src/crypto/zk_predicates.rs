@@ -6,7 +6,7 @@
 //! "score ∈ [lo, hi]". The proofs are **real Groth16 over BLS12-381** (arkworks
 //! 0.6), built on genuine R1CS constraints (bit-decomposition range checks), not
 //! a hash commitment. It is a sibling of [`crate::crypto::zk_proofs`] and reuses
-//! the same curve, RNG ([`crate::zk_proofs::zk_secure_rng`]), and serialization
+//! the same curve, RNG (`crate::zk_proofs::zk_secure_rng`), and serialization
 //! conventions (`CanonicalSerialize` / compressed bytes).
 //!
 //! # How soundness is enforced (bit-decomposition)

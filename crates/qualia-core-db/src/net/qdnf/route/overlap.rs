@@ -41,7 +41,7 @@ impl GenerationPair {
     }
 
     /// Atomic: unpublished `new` cannot activate. If `old_readers == 0`, swap
-    /// `new` → `old`. If readers remain, keep `old` until [`release_old`].
+    /// `new` → `old`. If readers remain, keep `old` until `release_old()`.
     pub fn activate_new(&mut self) -> Result<(), QdnfError> {
         if !self.new.published {
             return Err(QdnfError::Incomplete);

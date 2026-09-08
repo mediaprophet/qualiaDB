@@ -6,7 +6,7 @@
 //! Honest labels: `VisionBackendKind::ProductionWeights` only when a bundle is loaded.
 //! Seed-built fixtures are regenerable test weights, not a third-party foundation model.
 //!
-//! Vendor pack (MIT/Apache ONNX/TFLite): see [`resolve_vision_asset`] — **PermissiveReady**,
+//! Vendor pack (MIT/Apache ONNX/TFLite): see [`resolve_vision_asset()`] — **PermissiveReady**,
 //! never commercial-licence gated. States: WeightAbsent / AdapterMissing.
 
 pub mod load_litert_bytes;

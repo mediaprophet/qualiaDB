@@ -134,7 +134,7 @@ pub trait Host {
 
     /// Reach an engine capability by id. Default fails closed.
     ///
-    /// [`LocalHost`] answers from in-process catalog kernels (animation, HID).
+    /// `LocalHost()` answers from in-process catalog kernels (animation, HID).
     /// Poet and other hosts override this to reach the engine.
     fn capability_invoke(
         &mut self,

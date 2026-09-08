@@ -1,5 +1,5 @@
 //! Credential transport codecs (from `0.0.19-g3-cbor-ld`) — encode/decode a
-//! [`Credential`](super::Credential) to alternative carriers. Uses the unified
+//! [`Credential`] to alternative carriers. Uses the unified
 //! `Credential` type from the parent module (the branch's duplicate was dropped).
 
 use super::Credential;

@@ -4,7 +4,7 @@
 //! capabilities/assets, state schema, permission intents, presentation hints,
 //! compatibility, integrity digests, and update channel.
 //!
-//! [`project_manifest`] resolves one manifest into host-neutral Poet manifold,
+//! `project_manifest` resolves one manifest into host-neutral Poet manifold,
 //! Poet container, focused mini-app, and Desktop launch descriptors without a
 //! projection-specific private database or divergent permission model.
 //!
@@ -15,7 +15,7 @@
 //! - Permission intents that exceed a host grant ceiling fail closed.
 //! - Package path fields reject `..`, absolute escapes, and URL schemes.
 //! - **Presentation hints are inert for authority** — they never grant
-//!   permissions; see [`authority_from_presentation_hints`].
+//!   permissions; see `authority_from_presentation_hints`.
 //! - Projection adapters authorize once and copy the same IDs / permission
 //!   outcome into every descriptor.
 

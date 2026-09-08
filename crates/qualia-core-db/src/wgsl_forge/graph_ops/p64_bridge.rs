@@ -1,7 +1,7 @@
 //! p64 → forge bridge: read a transcoded model's role-tagged weights out of a p64 volume as f32,
 //! laid out for the forge decode-layer graph.
 //!
-//! GGUF/p64 store a projection weight as `[out,in]` row-major (ne[0]=in is the contiguous dim).
+//! GGUF/p64 store a projection weight as `[out,in]` row-major (ne\[0\]=in is the contiguous dim).
 //! The forge's plain `MatMul(m=1,n=out,k=in)` wants B as `[in,out]` = `[k,n]`, so the bridge
 //! transposes each 2-D projection weight once at load (a cheap one-time cost; the result is then
 //! uploaded resident). The certified `MatMul.trans_b` path *can* consume `[out,in]` with no copy

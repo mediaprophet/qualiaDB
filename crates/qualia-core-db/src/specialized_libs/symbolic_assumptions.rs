@@ -1,7 +1,7 @@
 //! **Simplification under assumptions** (Gap analysis §3.3) — CAS simplifications that are
 //! only *valid* when the simplifier knows a variable's sign / nonzero-ness.
 //!
-//! Plain [`simplify`](super::symbolic_algebra::simplify) must stay sound for *all* real
+//! Plain [`simplify`] must stay sound for *all* real
 //! inputs, so it cannot turn `√(x²)` into `x` (that is `|x|`), or `ln(a·b)` into
 //! `ln a + ln b` (the log laws need positivity). This module takes an explicit
 //! [`Assumptions`] set (`x > 0`, `n ≠ 0`, …) and applies exactly those rewrites the

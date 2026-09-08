@@ -220,7 +220,7 @@ impl Face {
 ///
 /// Uses the default [`FilteredF64Kernel`] exact-ladder predicates.
 ///
-/// `out` must have room for [`required_tetrahedra_3(points.len())`] entries.
+/// `out` must have room for `required_tetrahedra_3(points.len())()` entries.
 ///
 /// # Errors
 ///

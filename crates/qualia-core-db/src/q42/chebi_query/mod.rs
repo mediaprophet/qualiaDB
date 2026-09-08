@@ -6,7 +6,7 @@
 //! `chebi:accession` / `hasName` / `hasParent` / `fromRelease`).
 //!
 //! No network. No Host/Vibe invoke IDs. Empty / ambiguous / limit paths fail
-//! closed with [`QueryError`].
+//! closed with `QueryError`.
 
 mod access;
 mod error;

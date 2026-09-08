@@ -1,5 +1,5 @@
 //! **Trigonometric simplification** (Gap analysis §3.3) — identity-driven rewrites over the
-//! CAS's `Sin`/`Cos`/`Tan` nodes that plain [`simplify`](super::symbolic_algebra::simplify)
+//! CAS's `Sin`/`Cos`/`Tan` nodes that plain [`simplify`]
 //! cannot do (it knows only constant folding and algebraic identities).
 //!
 //! Implemented identities, each value-preserving for all real inputs:

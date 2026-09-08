@@ -155,9 +155,9 @@ pub const Q4K_SOA_GEMV_ENTRY: &str = "q4k_soa_gemv";
 /// activation **once** per K-superblock, and FMA-s into all live rows (3B lever:
 /// gate/up n_out=8192 reloaded act 8192× under 1-row-per-block).
 ///
-/// Layout: per 256-weight superblock = 160 B: qs[128] | d_sub f16[8] | m_sub f16[8].
-/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
-/// `dims` uint[3] = {n_in, n_out, row_bytes}.
+/// Layout: per 256-weight superblock = 160 B: qs\[128\] | d_sub f16\[8\] | m_sub f16\[8\].
+/// Bindings: `x` f32\[n_in\], `W` `uchar[n_out * row_bytes]`, `y` f32\[n_out\],
+/// `dims` uint\[3\] = {n_in, n_out, row_bytes}.
 ///
 /// Dispatch: `grid = ceil(n_out / Q4K_SOA_GEMV_ROWS)`, `block = 256`.
 /// 16 rows/block amortizes act loads vs serial 1-row (3B FFN n_out=8192).
@@ -274,9 +274,9 @@ pub const Q4K_SOA_WMMA_GEMV_ROWS: u32 = 64;
 /// This trades f32 precision for tensor-core throughput (f16×f16→f32 accumulate).
 /// The scalar [`Q4K_SOA_GEMV_SRC`] remains the precision-safe fallback.
 ///
-/// Layout: per 256-weight superblock = 160 B: qs[128] | d_sub f16[8] | m_sub f16[8].
-/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
-/// `dims` uint[3] = {n_in, n_out, row_bytes}.
+/// Layout: per 256-weight superblock = 160 B: qs\[128\] | d_sub f16\[8\] | m_sub f16\[8\].
+/// Bindings: `x` f32\[n_in\], `W` `uchar[n_out * row_bytes]`, `y` f32\[n_out\],
+/// `dims` uint\[3\] = {n_in, n_out, row_bytes}.
 ///
 /// Dispatch: `grid = ceil(n_out / 64)`, `block = 128`.
 pub const Q4K_SOA_WMMA_GEMV_SRC: &str = r#"#include <mma.h>
@@ -428,8 +428,8 @@ pub const Q4K_SOA_WMMA_GEMV_RESID_ENTRY: &str = "q4k_soa_wmma_gemv_resid";
 /// `y[i] = residual[i] + W[i]·x`. Same WMMA geometry as [`Q4K_SOA_WMMA_GEMV_SRC`]
 /// but adds residual to the output.
 ///
-/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
-/// `dims` uint[3] = {n_in, n_out, row_bytes}, `residual` f32[n_out].
+/// Bindings: `x` f32\[n_in\], `W` `uchar[n_out * row_bytes]`, `y` f32\[n_out\],
+/// `dims` uint\[3\] = {n_in, n_out, row_bytes}, `residual` f32\[n_out\].
 /// Dispatch: `grid = ceil(n_out / 64)`, `block = 128`.
 pub const Q4K_SOA_WMMA_GEMV_RESID_SRC: &str = r#"#include <mma.h>
 using namespace nvcuda;
@@ -825,7 +825,7 @@ extern "C" __global__ void q4k_soa_fused_swiglu(const float *x,
 "#;
 
 /// Interleaved RoPE (Llama / SmolLM GGUF): rotate adjacent pairs `(2i, 2i+1)`.
-/// Bindings: `vec` f32[n_heads*head_dim], `params` u32[5] =
+/// Bindings: `vec` f32\[n_heads*head_dim\], `params` u32\[5\] =
 /// `{n_heads, head_dim, pos, base_bits, scale_bits}` (base/scale as f32 bit patterns).
 /// Dispatch: `grid = ceil(n_heads * (head_dim/2) / 256)`, `block = 256`.
 pub const ROPE_INTERLEAVED_ENTRY: &str = "rope_interleaved";
@@ -860,7 +860,7 @@ extern "C" __global__ void rope_interleaved(float *vec, const unsigned *params) 
 /// Layout matches `KvCacheLayout::k_index` / `v_index` (f32, non-int8, non-dict):
 /// `base = layer*layer_stride + slot*slot_kv_elems*2 + stream_off + kv_h*head_dim + d`
 /// where `stream_off = 0` for K and `n_kv_head*head_dim` for V.
-/// Bindings: `src` f32[n_kv*head_dim], `kv` f32[total], `params` u32[7] =
+/// Bindings: `src` f32\[n_kv*head_dim\], `kv` f32\[total\], `params` u32\[7\] =
 /// `{n_kv, head_dim, layer, slot, layer_stride, slot_kv_elems, is_v}`.
 /// Dispatch: `grid = ceil(n_kv*head_dim / 256)`, `block = 256`.
 pub const KV_SLOT_WRITE_ENTRY: &str = "kv_slot_write";
@@ -890,10 +890,10 @@ extern "C" __global__ void kv_slot_write(
 
 /// Single-token GQA causal SDPA over device KV (decode).
 /// One block per Q head. Scores past positions `0..=pos` against the matching KV head.
-/// Bindings: `q` f32[n_head*head_dim] (already RoPE'd), `kv` f32[total],
-/// `out` f32[n_head*head_dim], `params` u32[9] =
+/// Bindings: `q` f32\[n_head*head_dim\] (already RoPE'd), `kv` f32\[total\],
+/// `out` f32\[n_head*head_dim\], `params` u32\[9\] =
 /// `{n_head, n_kv, head_dim, layer, pos, max_context, layer_stride, slot_kv_elems, q_heads_per_kv}`,
-/// `scale_bits` u32[1] = f32 scale bit pattern (`1/sqrt(head_dim)`).
+/// `scale_bits` u32\[1\] = f32 scale bit pattern (`1/sqrt(head_dim)`).
 /// Dispatch: `grid = n_head`, `block = 256` (coop-reduce dots along head_dim).
 /// Caps: `head_dim ≤ 256`, `pos < 1024`, `max_context ≤ 1024` (engine MAX_CONTEXT_WINDOW).
 pub const SDPA_DECODE_ENTRY: &str = "sdpa_decode_gqa";
@@ -991,7 +991,7 @@ pub const RMSNORM_F32_ENTRY: &str = "rmsnorm_f32";
 
 /// Device-side RMSNorm: `out[i] = x[i] * rsqrt(mean(x²) + eps) * weight[i]`.
 /// One block of 256 threads, grid-stride + tree reduction. Handles n up to ~65k.
-/// Bindings: `x` f32[n], `weight` f32[n], `out` f32[n], `params` u32[2] = {n, eps_bits}.
+/// Bindings: `x` f32\[n\], `weight` f32\[n\], `out` f32\[n\], `params` u32\[2\] = {n, eps_bits}.
 /// Dispatch: `grid = 1`, `block = 256`.
 pub const RMSNORM_F32_SRC: &str = r#"
 extern "C" __global__ void rmsnorm_f32(const float *x, const float *weight, float *out, const unsigned *params) {
@@ -1021,7 +1021,7 @@ extern "C" __global__ void rmsnorm_f32(const float *x, const float *weight, floa
 pub const RESIDUAL_ADD_ENTRY: &str = "residual_add";
 
 /// Device-side residual add: `out[i] = base[i] + delta[i]`.
-/// Grid-stride loop. Bindings: `delta` f32[n], `base` f32[n], `out` f32[n], `params` u32[1] = {n}.
+/// Grid-stride loop. Bindings: `delta` f32\[n\], `base` f32\[n\], `out` f32\[n\], `params` u32\[1\] = {n}.
 /// Dispatch: `grid = ceil(n / 256)`, `block = 256`.
 pub const RESIDUAL_ADD_SRC: &str = r#"
 extern "C" __global__ void residual_add(const float *delta, const float *base, float *out, const unsigned *params) {
@@ -1037,7 +1037,7 @@ pub const ARGMAX_F32_ENTRY: &str = "argmax_f32";
 /// Device-side argmax: finds the index of the maximum value in `logits[0..n]`.
 /// Single block of 256 threads with grid-stride scan + tree reduction.
 /// Handles n up to ~128k (500 elements/thread for 128k vocab).
-/// Bindings: `logits` f32[n], `out_token` u32[1], `params` u32[1] = {n}.
+/// Bindings: `logits` f32\[n\], `out_token` u32\[1\], `params` u32\[1\] = {n}.
 /// Dispatch: `grid = 1`, `block = 256`.
 pub const ARGMAX_F32_SRC: &str = r#"
 extern "C" __global__ void argmax_f32(const float *logits, unsigned *out_token, const unsigned *params) {
@@ -1383,12 +1383,12 @@ pub const Q6K_SOA_GEMV_ROWS: u32 = 16;
 /// Q6_K block: 210 bytes, 256 weights. 6-bit quantization with per-block
 /// scales. Each block owns `Q6K_SOA_GEMV_ROWS` consecutive output rows.
 ///
-/// Layout: ql[128] | qh[64] | scales[16] (i8) | d (f16).
+/// Layout: ql\[128\] | qh\[64\] | scales\[16\] (i8) | d (f16).
 /// 6-bit value = lower 4 bits from ql, upper 2 bits from qh.
 /// deq = d * scale * (q - 32).
 ///
-/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
-/// `dims` uint[3] = {n_in, n_out, row_bytes}.
+/// Bindings: `x` f32\[n_in\], `W` `uchar[n_out * row_bytes]`, `y` f32\[n_out\],
+/// `dims` uint\[3\] = {n_in, n_out, row_bytes}.
 /// Dispatch: `grid = ceil(n_out / Q6K_SOA_GEMV_ROWS)`, `block = 256`.
 pub const Q6K_SOA_GEMV_SRC: &str = r#"
 #define Q6K_ROWS 16u

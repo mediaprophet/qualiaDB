@@ -8,7 +8,7 @@
 //!
 //! Every score returns a value where **higher = more plausible** (translational
 //! models return the negative distance). The gradient helpers return `∂score/∂·` for
-//! each of head, relation and tail, used by [`super::train`].
+//! each of head, relation and tail, used by [`super::train()`].
 
 use super::KgEmbeddingError;
 

@@ -205,8 +205,8 @@ impl EmfState {
 impl super::PortalGpu {
     /// Upload an EMF field grid to the GPU for volumetric visualization.
     ///
-    /// `cells` is the flat field array indexed as [t][z][y][x], with
-    /// `nx*ny*nz*nt` elements. `bounds` is [x_min, x_max, y_min, y_max, z_min, z_max].
+    /// `cells` is the flat field array indexed as \[t\]\[z\]\[y\]\[x\], with
+    /// `nx*ny*nz*nt` elements. `bounds` is \[x_min, x_max, y_min, y_max, z_min, z_max\].
     pub fn emf_upload_field(
         &mut self,
         cells: &[EmfFieldCell],

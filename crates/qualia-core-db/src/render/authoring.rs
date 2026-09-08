@@ -1,6 +1,6 @@
 //! Phase 5 — the authoring vocabulary (`ns/ui`) + render **planner** *(the qapps upgrade; §6/§7)*.
 //!
-//! Upgrades the qapps model ([`docs/manuals/qapps_specification.md`]) from 2D-pane CSS-grid layouts
+//! Upgrades the qapps model (`docs/manuals/qapps_specification.md`) from 2D-pane CSS-grid layouts
 //! to **manifold worlds**: a qapp declares *views over one manifold* (a 3D scene **and** a 2D pane
 //! from the SAME source), each carrying **governance** + **budget** annotations the engine
 //! **enforces at plan time** — before anything is drawn.
@@ -19,7 +19,7 @@
 //!   trigger). Signature *verification* is the identity/key-vault layer's job (it fails closed
 //!   there); this gate enforces the *presence* of an attestation, the out-of-band hook.
 //! * **Affordability at authoring time.** Budget is declared, not hoped-for: on a constrained
-//!   device tier a `Scene3D` view **degrades to 2D** ([`ViewDisposition::Collapsed2D`]) rather than
+//!   device tier a `Scene3D` view **degrades to 2D** (`ViewDisposition::Collapsed2D`) rather than
 //!   failing — graceful 3D→2D, so the qapp still works on hardware people own.
 //! * **Fail closed.** Rights-bounded render in a shared/civic standpoint defaults to **refuse**.
 

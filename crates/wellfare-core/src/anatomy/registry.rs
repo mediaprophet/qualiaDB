@@ -148,7 +148,7 @@ impl SystemRegistry {
     }
 
     /// The built-in seed: the 17 systems from [`BODY_SYSTEMS`], each enriched with its representation
-    /// and overlay hosts (from [`super::model`]) and a default identity colour. Provenance = `Seed`.
+    /// and overlay hosts (from `super::model`) and a default identity colour. Provenance = `Seed`.
     pub fn seed() -> Self {
         let systems = BODY_SYSTEMS
             .iter()

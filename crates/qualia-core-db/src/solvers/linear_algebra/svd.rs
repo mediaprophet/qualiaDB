@@ -2,7 +2,7 @@
 //!
 //! Computed from the symmetric eigendecomposition of `AᵀA` (right singular vectors +
 //! squared singular values), then `U = A·V·Σ⁻¹`. Builds on the engine's GEMM-style
-//! accumulation and [`super::eigen::symmetric_eigen`] — the engine's single eigen home,
+//! accumulation and `super::eigen::symmetric_eigen` — the engine's single eigen home,
 //! so there is no second Jacobi here.
 //!
 //! Allocating (the outputs are inherently dynamic), but all scratch is local and the

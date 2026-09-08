@@ -6,7 +6,7 @@
 use crate::solvers::learning::kg_embedding::{EmbeddingTable, TrainConfig};
 
 /// The kind of work a job carries. Each maps to a kernel-class with a CPU reference
-/// (§13) and a verification strategy ([`super::verify`]).
+/// (§13) and a verification strategy ([`super::verify()`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JobKind {
     /// Dense matrix product `C = A·B` (kernel-class `DenseLinear`). Verified by
