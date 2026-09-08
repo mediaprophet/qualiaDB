@@ -3501,4 +3501,137 @@ mod tests {
         assert!(tools.contains(&("ai:nlp_substrate_extract", Some("NLP.substrate_extract"))));
         assert_eq!(tools.len(), 9);
     }
+
+    #[test]
+    fn dmx_live_binds_wave23_dmx_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let chain = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "dmx:live")
+            .expect("dmx:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("dmx:live_new_universe", Some("Dmx.new_universe"))));
+        assert!(tools.contains(&("dmx:live_set_channel", Some("Dmx.set_channel"))));
+        assert!(tools.contains(&("dmx:live_add_fixture", Some("Dmx.add_fixture"))));
+        assert!(tools.contains(&(
+            "dmx:live_fixture_set_colour",
+            Some("Dmx.fixture_set_colour")
+        )));
+        assert!(tools.contains(&(
+            "dmx:live_fixture_set_intensity",
+            Some("Dmx.fixture_set_intensity")
+        )));
+        assert!(tools.contains(&(
+            "dmx:live_fixture_set_pan_tilt",
+            Some("Dmx.fixture_set_pan_tilt")
+        )));
+        assert!(tools.contains(&("dmx:live_new_cue", Some("Dmx.new_cue"))));
+        assert!(tools.contains(&("dmx:live_cue_set_channel", Some("Dmx.cue_set_channel"))));
+        assert!(tools.contains(&("dmx:live_cue_set_fade", Some("Dmx.cue_set_fade"))));
+        assert!(tools.contains(&("dmx:live_new_cue_stack", Some("Dmx.new_cue_stack"))));
+        assert!(tools.contains(&("dmx:live_cue_stack_add", Some("Dmx.cue_stack_add"))));
+        assert!(tools.contains(&("dmx:live_cue_stack_go", Some("Dmx.cue_stack_go"))));
+        assert!(tools.contains(&(
+            "dmx:live_cue_stack_go_back",
+            Some("Dmx.cue_stack_go_back")
+        )));
+        assert!(tools.contains(&("dmx:live_cue_stack_reset", Some("Dmx.cue_stack_reset"))));
+        assert_eq!(tools.len(), 14);
+    }
+
+    #[test]
+    fn video_live_binds_wave23_video_caps() {
+        let registry = super::build_registry();
+        let image = registry.toolbox("image").expect("image toolbox");
+        let chain = image
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "video:live")
+            .expect("video:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("video:live_new_project", Some("Video.new_project"))));
+        assert!(tools.contains(&("video:live_add_track", Some("Video.add_track"))));
+        assert!(tools.contains(&("video:live_add_clip", Some("Video.add_clip"))));
+        assert!(tools.contains(&("video:live_trim_clip", Some("Video.trim_clip"))));
+        assert!(tools.contains(&("video:live_set_speed", Some("Video.set_speed"))));
+        assert!(tools.contains(&("video:live_colour_grade", Some("Video.colour_grade"))));
+        assert!(tools.contains(&(
+            "video:live_add_transition",
+            Some("Video.add_transition")
+        )));
+        assert!(tools.contains(&(
+            "video:live_set_render_format",
+            Some("Video.set_render_format")
+        )));
+        assert!(tools.contains(&(
+            "video:live_set_render_bitrate",
+            Some("Video.set_render_bitrate")
+        )));
+        assert!(tools.contains(&("video:live_remove_clip", Some("Video.remove_clip"))));
+        assert_eq!(tools.len(), 10);
+    }
+
+    #[test]
+    fn hid_live_binds_wave23_hid_caps() {
+        let registry = super::build_registry();
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let chain = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "hid:live")
+            .expect("hid:live toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("hid:live_poll", Some("HID.poll"))));
+        assert!(tools.contains(&("hid:live_wait", Some("HID.wait"))));
+        assert!(tools.contains(&("hid:live_clear", Some("HID.clear"))));
+        assert!(tools.contains(&("hid:live_pointer_capture", Some("HID.pointer_capture"))));
+        assert!(tools.contains(&("hid:live_pointer_release", Some("HID.pointer_release"))));
+        assert!(tools.contains(&("hid:live_set_cursor", Some("HID.set_cursor"))));
+        assert!(tools.contains(&("hid:live_gamepad_poll", Some("HID.gamepad_poll"))));
+        assert!(tools.contains(&("hid:live_gamepad_vibrate", Some("HID.gamepad_vibrate"))));
+        assert!(tools.contains(&("hid:live_midi_send", Some("HID.midi_send"))));
+        assert!(tools.contains(&("hid:live_midi_poll", Some("HID.midi_poll"))));
+        assert!(tools.contains(&("hid:live_haptic_pulse", Some("HID.haptic_pulse"))));
+        assert!(tools.contains(&("hid:live_haptic_pattern", Some("HID.haptic_pattern"))));
+        assert!(tools.contains(&(
+            "hid:live_spatial_head_pose",
+            Some("HID.spatial_head_pose")
+        )));
+        assert!(tools.contains(&(
+            "hid:live_spatial_hand_skeleton",
+            Some("HID.spatial_hand_skeleton")
+        )));
+        assert!(tools.contains(&("hid:live_spatial_gaze_ray", Some("HID.spatial_gaze_ray"))));
+        assert!(tools.contains(&("hid:live_biosignal_poll", Some("HID.biosignal_poll"))));
+        assert_eq!(tools.len(), 16);
+    }
 }

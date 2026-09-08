@@ -2,6 +2,26 @@
 
 use super::*;
 
+fn dmx_live_tool(
+    id: &'static str,
+    label: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: "3d".into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "hm".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
@@ -415,6 +435,93 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
         )),
     ];
 
+    let dmx_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        dmx_live_tool(
+            "dmx:live_new_universe",
+            "New universe",
+            "Dmx.new_universe",
+            "Create a 512-channel DMX universe via Dmx.new_universe.",
+        ),
+        dmx_live_tool(
+            "dmx:live_set_channel",
+            "Set channel",
+            "Dmx.set_channel",
+            "Set a universe channel value via Dmx.set_channel.",
+        ),
+        dmx_live_tool(
+            "dmx:live_add_fixture",
+            "Add fixture",
+            "Dmx.add_fixture",
+            "Add a fixture to the selected lighting surface via Dmx.add_fixture.",
+        ),
+        dmx_live_tool(
+            "dmx:live_fixture_set_colour",
+            "Fixture colour",
+            "Dmx.fixture_set_colour",
+            "Set fixture RGB via Dmx.fixture_set_colour.",
+        ),
+        dmx_live_tool(
+            "dmx:live_fixture_set_intensity",
+            "Fixture intensity",
+            "Dmx.fixture_set_intensity",
+            "Set fixture intensity via Dmx.fixture_set_intensity.",
+        ),
+        dmx_live_tool(
+            "dmx:live_fixture_set_pan_tilt",
+            "Fixture pan/tilt",
+            "Dmx.fixture_set_pan_tilt",
+            "Set fixture pan and tilt via Dmx.fixture_set_pan_tilt.",
+        ),
+        dmx_live_tool(
+            "dmx:live_new_cue",
+            "New cue",
+            "Dmx.new_cue",
+            "Create a lighting cue via Dmx.new_cue.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_set_channel",
+            "Cue channel",
+            "Dmx.cue_set_channel",
+            "Set a cue channel value via Dmx.cue_set_channel.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_set_fade",
+            "Cue fade",
+            "Dmx.cue_set_fade",
+            "Set cue fade in/out via Dmx.cue_set_fade.",
+        ),
+        dmx_live_tool(
+            "dmx:live_new_cue_stack",
+            "New cue stack",
+            "Dmx.new_cue_stack",
+            "Create a cue stack via Dmx.new_cue_stack.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_add",
+            "Stack add cue",
+            "Dmx.cue_stack_add",
+            "Add a cue to a stack via Dmx.cue_stack_add.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_go",
+            "Stack go",
+            "Dmx.cue_stack_go",
+            "Advance the cue stack via Dmx.cue_stack_go.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_go_back",
+            "Stack go back",
+            "Dmx.cue_stack_go_back",
+            "Step the cue stack back via Dmx.cue_stack_go_back.",
+        ),
+        dmx_live_tool(
+            "dmx:live_cue_stack_reset",
+            "Stack reset",
+            "Dmx.cue_stack_reset",
+            "Reset the cue stack via Dmx.cue_stack_reset.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "spatial".into(),
@@ -481,6 +588,15 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
                             .into(),
                 },
                 scene_tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "dmx:live".into(),
+                    label: "Live DMX lighting",
+                    icon: "3d".into(),
+                    description: "Curated Dmx.* universe, fixture, cue, and stack binds.".into(),
+                },
+                dmx_live,
             ),
             ToolChain::new(
                 ToolChainMetadata {

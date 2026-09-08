@@ -707,6 +707,46 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "audio:fx_phase_meter"
         | "audio:fx_loudness_meter"
         | "audio:fx_spectrum"
+        | "dmx:live_new_universe"
+        | "dmx:live_set_channel"
+        | "dmx:live_add_fixture"
+        | "dmx:live_fixture_set_colour"
+        | "dmx:live_fixture_set_intensity"
+        | "dmx:live_fixture_set_pan_tilt"
+        | "dmx:live_new_cue"
+        | "dmx:live_cue_set_channel"
+        | "dmx:live_cue_set_fade"
+        | "dmx:live_new_cue_stack"
+        | "dmx:live_cue_stack_add"
+        | "dmx:live_cue_stack_go"
+        | "dmx:live_cue_stack_go_back"
+        | "dmx:live_cue_stack_reset"
+        | "video:live_new_project"
+        | "video:live_add_track"
+        | "video:live_add_clip"
+        | "video:live_trim_clip"
+        | "video:live_set_speed"
+        | "video:live_colour_grade"
+        | "video:live_add_transition"
+        | "video:live_set_render_format"
+        | "video:live_set_render_bitrate"
+        | "video:live_remove_clip"
+        | "hid:live_poll"
+        | "hid:live_wait"
+        | "hid:live_clear"
+        | "hid:live_pointer_capture"
+        | "hid:live_pointer_release"
+        | "hid:live_set_cursor"
+        | "hid:live_gamepad_poll"
+        | "hid:live_gamepad_vibrate"
+        | "hid:live_midi_send"
+        | "hid:live_midi_poll"
+        | "hid:live_haptic_pulse"
+        | "hid:live_haptic_pattern"
+        | "hid:live_spatial_head_pose"
+        | "hid:live_spatial_hand_skeleton"
+        | "hid:live_spatial_gaze_ray"
+        | "hid:live_biosignal_poll"
         | "ai:nlp_tokenize"
         | "ai:nlp_split_sentences"
         | "ai:nlp_coref_resolve"
@@ -2770,6 +2810,68 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
             super::audio_fx_chain_actions::run_fx_loudness_meter(document, label)
         }
         "audio:fx_spectrum" => super::audio_fx_chain_actions::run_fx_spectrum(document, label),
+        "dmx:live_new_universe" => super::dmx_chain_actions::run_new_universe(document, label),
+        "dmx:live_set_channel" => super::dmx_chain_actions::run_set_channel(document, label),
+        "dmx:live_add_fixture" => super::dmx_chain_actions::run_add_fixture(document, label),
+        "dmx:live_fixture_set_colour" => {
+            super::dmx_chain_actions::run_fixture_set_colour(document, label)
+        }
+        "dmx:live_fixture_set_intensity" => {
+            super::dmx_chain_actions::run_fixture_set_intensity(document, label)
+        }
+        "dmx:live_fixture_set_pan_tilt" => {
+            super::dmx_chain_actions::run_fixture_set_pan_tilt(document, label)
+        }
+        "dmx:live_new_cue" => super::dmx_chain_actions::run_new_cue(document, label),
+        "dmx:live_cue_set_channel" => super::dmx_chain_actions::run_cue_set_channel(document, label),
+        "dmx:live_cue_set_fade" => super::dmx_chain_actions::run_cue_set_fade(document, label),
+        "dmx:live_new_cue_stack" => super::dmx_chain_actions::run_new_cue_stack(document, label),
+        "dmx:live_cue_stack_add" => super::dmx_chain_actions::run_cue_stack_add(document, label),
+        "dmx:live_cue_stack_go" => super::dmx_chain_actions::run_cue_stack_go(document, label),
+        "dmx:live_cue_stack_go_back" => super::dmx_chain_actions::run_cue_stack_go_back(document, label),
+        "dmx:live_cue_stack_reset" => super::dmx_chain_actions::run_cue_stack_reset(document, label),
+        "video:live_new_project" => {
+            super::video_live_chain_actions::run_new_project(document, label)
+        }
+        "video:live_add_track" => super::video_live_chain_actions::run_add_track(document, label),
+        "video:live_add_clip" => super::video_live_chain_actions::run_add_clip(document, label),
+        "video:live_trim_clip" => super::video_live_chain_actions::run_trim_clip(document, label),
+        "video:live_set_speed" => super::video_live_chain_actions::run_set_speed(document, label),
+        "video:live_colour_grade" => {
+            super::video_live_chain_actions::run_colour_grade(document, label)
+        }
+        "video:live_add_transition" => {
+            super::video_live_chain_actions::run_add_transition(document, label)
+        }
+        "video:live_set_render_format" => {
+            super::video_live_chain_actions::run_set_render_format(document, label)
+        }
+        "video:live_set_render_bitrate" => {
+            super::video_live_chain_actions::run_set_render_bitrate(document, label)
+        }
+        "video:live_remove_clip" => super::video_live_chain_actions::run_remove_clip(document, label),
+        "hid:live_poll" => super::hid_chain_actions::run_poll(document, label),
+        "hid:live_wait" => super::hid_chain_actions::run_wait(document, label),
+        "hid:live_clear" => super::hid_chain_actions::run_clear(document, label),
+        "hid:live_pointer_capture" => super::hid_chain_actions::run_pointer_capture(document, label),
+        "hid:live_pointer_release" => super::hid_chain_actions::run_pointer_release(document, label),
+        "hid:live_set_cursor" => super::hid_chain_actions::run_set_cursor(document, label),
+        "hid:live_gamepad_poll" => super::hid_chain_actions::run_gamepad_poll(document, label),
+        "hid:live_gamepad_vibrate" => super::hid_chain_actions::run_gamepad_vibrate(document, label),
+        "hid:live_midi_send" => super::hid_chain_actions::run_midi_send(document, label),
+        "hid:live_midi_poll" => super::hid_chain_actions::run_midi_poll(document, label),
+        "hid:live_haptic_pulse" => super::hid_chain_actions::run_haptic_pulse(document, label),
+        "hid:live_haptic_pattern" => super::hid_chain_actions::run_haptic_pattern(document, label),
+        "hid:live_spatial_head_pose" => {
+            super::hid_chain_actions::run_spatial_head_pose(document, label)
+        }
+        "hid:live_spatial_hand_skeleton" => {
+            super::hid_chain_actions::run_spatial_hand_skeleton(document, label)
+        }
+        "hid:live_spatial_gaze_ray" => {
+            super::hid_chain_actions::run_spatial_gaze_ray(document, label)
+        }
+        "hid:live_biosignal_poll" => super::hid_chain_actions::run_biosignal_poll(document, label),
         "ai:nlp_tokenize" => super::nlp_chain_actions::run_tokenize(document, label),
         "ai:nlp_split_sentences" => {
             super::nlp_chain_actions::run_split_sentences(document, label)

@@ -3467,6 +3467,206 @@ fn named(id: &str) -> Option<Presentation> {
             "Clear all selections via Image.clear_selections.",
             Proficiency::Novice,
         ),
+        "dmx:live_new_universe" => (
+            "New universe",
+            "Create a 512-channel DMX universe via Dmx.new_universe.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_set_channel" => (
+            "Set channel",
+            "Set a DMX channel via Dmx.set_channel.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_add_fixture" => (
+            "Add fixture",
+            "Add a lighting fixture via Dmx.add_fixture.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_fixture_set_colour" => (
+            "Fixture colour",
+            "Set fixture RGB via Dmx.fixture_set_colour.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_fixture_set_intensity" => (
+            "Fixture intensity",
+            "Set fixture intensity via Dmx.fixture_set_intensity.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_fixture_set_pan_tilt" => (
+            "Fixture pan/tilt",
+            "Set fixture pan and tilt via Dmx.fixture_set_pan_tilt.",
+            Proficiency::Intermediate,
+        ),
+        "dmx:live_new_cue" => (
+            "New cue",
+            "Create a lighting cue via Dmx.new_cue.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_set_channel" => (
+            "Cue channel",
+            "Set a cue channel via Dmx.cue_set_channel.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_set_fade" => (
+            "Cue fade",
+            "Set cue fade times via Dmx.cue_set_fade.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_new_cue_stack" => (
+            "New cue stack",
+            "Create a cue stack via Dmx.new_cue_stack.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_add" => (
+            "Stack add cue",
+            "Add a cue to a stack via Dmx.cue_stack_add.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_go" => (
+            "Stack go",
+            "Advance the cue stack via Dmx.cue_stack_go.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_go_back" => (
+            "Stack go back",
+            "Step the cue stack back via Dmx.cue_stack_go_back.",
+            Proficiency::Novice,
+        ),
+        "dmx:live_cue_stack_reset" => (
+            "Stack reset",
+            "Reset the cue stack via Dmx.cue_stack_reset.",
+            Proficiency::Novice,
+        ),
+        "video:live_new_project" => (
+            "New project",
+            "Create a video project via Video.new_project.",
+            Proficiency::Novice,
+        ),
+        "video:live_add_track" => (
+            "Add track",
+            "Add a named track via Video.add_track.",
+            Proficiency::Novice,
+        ),
+        "video:live_add_clip" => (
+            "Add clip",
+            "Add a source clip via Video.add_clip.",
+            Proficiency::Novice,
+        ),
+        "video:live_trim_clip" => (
+            "Trim clip",
+            "Trim clip in/out via Video.trim_clip.",
+            Proficiency::Novice,
+        ),
+        "video:live_set_speed" => (
+            "Set speed",
+            "Set playback speed via Video.set_speed.",
+            Proficiency::Novice,
+        ),
+        "video:live_colour_grade" => (
+            "Colour grade",
+            "Grade brightness, contrast, and saturation via Video.colour_grade.",
+            Proficiency::Intermediate,
+        ),
+        "video:live_add_transition" => (
+            "Add transition",
+            "Add a transition via Video.add_transition.",
+            Proficiency::Novice,
+        ),
+        "video:live_set_render_format" => (
+            "Render format",
+            "Set the render format via Video.set_render_format.",
+            Proficiency::Novice,
+        ),
+        "video:live_set_render_bitrate" => (
+            "Render bitrate",
+            "Set the render bitrate via Video.set_render_bitrate.",
+            Proficiency::Novice,
+        ),
+        "video:live_remove_clip" => (
+            "Remove clip",
+            "Remove a clip via Video.remove_clip.",
+            Proficiency::Novice,
+        ),
+        "hid:live_poll" => (
+            "Poll HID",
+            "Poll the next HID event via HID.poll.",
+            Proficiency::Novice,
+        ),
+        "hid:live_wait" => (
+            "Wait HID",
+            "Wait for a HID event via HID.wait.",
+            Proficiency::Novice,
+        ),
+        "hid:live_clear" => (
+            "Clear HID",
+            "Clear queued HID events via HID.clear.",
+            Proficiency::Novice,
+        ),
+        "hid:live_pointer_capture" => (
+            "Pointer capture",
+            "Capture pointer focus via HID.pointer_capture.",
+            Proficiency::Novice,
+        ),
+        "hid:live_pointer_release" => (
+            "Pointer release",
+            "Release pointer capture via HID.pointer_release.",
+            Proficiency::Novice,
+        ),
+        "hid:live_set_cursor" => (
+            "Set cursor",
+            "Set cursor style via HID.set_cursor.",
+            Proficiency::Novice,
+        ),
+        "hid:live_gamepad_poll" => (
+            "Gamepad poll",
+            "Poll gamepad state via HID.gamepad_poll.",
+            Proficiency::Novice,
+        ),
+        "hid:live_gamepad_vibrate" => (
+            "Gamepad rumble",
+            "Dispatch gamepad rumble via HID.gamepad_vibrate.",
+            Proficiency::Novice,
+        ),
+        "hid:live_midi_send" => (
+            "MIDI send",
+            "Send a MIDI packet via HID.midi_send.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_midi_poll" => (
+            "MIDI poll",
+            "Poll incoming MIDI via HID.midi_poll.",
+            Proficiency::Novice,
+        ),
+        "hid:live_haptic_pulse" => (
+            "Haptic pulse",
+            "Trigger a haptic pulse via HID.haptic_pulse.",
+            Proficiency::Novice,
+        ),
+        "hid:live_haptic_pattern" => (
+            "Haptic pattern",
+            "Play a haptic pattern via HID.haptic_pattern.",
+            Proficiency::Novice,
+        ),
+        "hid:live_spatial_head_pose" => (
+            "Head pose",
+            "Read spatial head pose via HID.spatial_head_pose.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_spatial_hand_skeleton" => (
+            "Hand skeleton",
+            "Read hand skeleton via HID.spatial_hand_skeleton.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_spatial_gaze_ray" => (
+            "Gaze ray",
+            "Read gaze ray via HID.spatial_gaze_ray.",
+            Proficiency::Intermediate,
+        ),
+        "hid:live_biosignal_poll" => (
+            "Biosignal poll",
+            "Poll privacy-filtered biosignal via HID.biosignal_poll.",
+            Proficiency::Expert,
+        ),
         "ai:co_author" => (
             "Write together",
             "Ask the local model to help write. Needs a selected page and a loaded model.",

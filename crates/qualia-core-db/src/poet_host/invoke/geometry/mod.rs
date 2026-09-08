@@ -17,6 +17,8 @@ mod wave20_host;
 mod wave21_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave22_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave23_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -48,6 +50,15 @@ pub use wave22_host::{
     directional_width_host as directional_width, farthest_site_brute_host as farthest_site_brute,
     incircle_host as incircle, is_hull_site_host as is_hull_site,
     k_nearest_sites_host as k_nearest_sites, tukey_depth_host as tukey_depth, width_host as width,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave23_host::{
+    ham_sandwich_cut_host as ham_sandwich_cut, insphere_host as insphere,
+    minkowski_sum_convex_host as minkowski_sum_convex,
+    nearest_segment_site_host as nearest_segment_site,
+    point_in_polygon_host as point_in_polygon, polygon_area_host as polygon_area,
+    polygon_signed_area_host as polygon_signed_area,
+    smallest_enclosing_disk_host as smallest_enclosing_disk,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -134,5 +145,13 @@ geom_stub!(
     farthest_site_brute,
     k_nearest_sites,
     is_hull_site,
-    diameter_and_width
+    diameter_and_width,
+    insphere,
+    ham_sandwich_cut,
+    smallest_enclosing_disk,
+    polygon_signed_area,
+    polygon_area,
+    point_in_polygon,
+    minkowski_sum_convex,
+    nearest_segment_site
 );

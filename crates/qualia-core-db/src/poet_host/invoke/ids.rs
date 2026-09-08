@@ -762,6 +762,15 @@ pub const GEOM_FARTHEST_SITE_BRUTE: &str = "ComputationalGeometry.farthest_site_
 pub const GEOM_K_NEAREST_SITES: &str = "ComputationalGeometry.k_nearest_sites";
 pub const GEOM_IS_HULL_SITE: &str = "ComputationalGeometry.is_hull_site";
 pub const GEOM_DIAMETER_AND_WIDTH: &str = "ComputationalGeometry.diameter_and_width";
+// ── Wave-23 Host binds (insphere / ham-sandwich / disk / polygon / Minkowski) ──
+pub const GEOM_INSPHERE: &str = "ComputationalGeometry.insphere";
+pub const GEOM_HAM_SANDWICH_CUT: &str = "ComputationalGeometry.ham_sandwich_cut";
+pub const GEOM_SMALLEST_ENCLOSING_DISK: &str = "ComputationalGeometry.smallest_enclosing_disk";
+pub const GEOM_POLYGON_SIGNED_AREA: &str = "ComputationalGeometry.polygon_signed_area";
+pub const GEOM_POLYGON_AREA: &str = "ComputationalGeometry.polygon_area";
+pub const GEOM_POINT_IN_POLYGON: &str = "ComputationalGeometry.point_in_polygon";
+pub const GEOM_MINKOWSKI_SUM_CONVEX: &str = "ComputationalGeometry.minkowski_sum_convex";
+pub const GEOM_NEAREST_SEGMENT_SITE: &str = "ComputationalGeometry.nearest_segment_site";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1827,6 +1836,14 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_K_NEAREST_SITES,
     GEOM_IS_HULL_SITE,
     GEOM_DIAMETER_AND_WIDTH,
+    GEOM_INSPHERE,
+    GEOM_HAM_SANDWICH_CUT,
+    GEOM_SMALLEST_ENCLOSING_DISK,
+    GEOM_POLYGON_SIGNED_AREA,
+    GEOM_POLYGON_AREA,
+    GEOM_POINT_IN_POLYGON,
+    GEOM_MINKOWSKI_SUM_CONVEX,
+    GEOM_NEAREST_SEGMENT_SITE,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2641,7 +2658,15 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_FARTHEST_SITE_BRUTE
         | GEOM_K_NEAREST_SITES
         | GEOM_IS_HULL_SITE
-        | GEOM_DIAMETER_AND_WIDTH => "geometry",
+        | GEOM_DIAMETER_AND_WIDTH
+        | GEOM_INSPHERE
+        | GEOM_HAM_SANDWICH_CUT
+        | GEOM_SMALLEST_ENCLOSING_DISK
+        | GEOM_POLYGON_SIGNED_AREA
+        | GEOM_POLYGON_AREA
+        | GEOM_POINT_IN_POLYGON
+        | GEOM_MINKOWSKI_SUM_CONVEX
+        | GEOM_NEAREST_SEGMENT_SITE => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE

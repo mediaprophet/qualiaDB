@@ -2,6 +2,26 @@
 
 use super::*;
 
+fn video_live_tool(
+    id: &'static str,
+    label: &'static str,
+    scope: &'static str,
+    description: &'static str,
+) -> Box<dyn crate::tool_chest::core::tool::Tool> {
+    Box::new(SimpleTool::new(
+        ToolMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: "media".into(),
+            kind: ToolKind::RunAction,
+            capability_scope: Some(scope.into()),
+            ontology_prefix: "hm".into(),
+            description: description.into(),
+        },
+        ActionType::Invoke,
+    ))
+}
+
 fn image_edit_tool(
     id: &'static str,
     label: &'static str,
@@ -238,6 +258,69 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
         ),
     ];
 
+    let video_live: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        video_live_tool(
+            "video:live_new_project",
+            "New project",
+            "Video.new_project",
+            "Create a video project via Video.new_project.",
+        ),
+        video_live_tool(
+            "video:live_add_track",
+            "Add track",
+            "Video.add_track",
+            "Add a named track via Video.add_track.",
+        ),
+        video_live_tool(
+            "video:live_add_clip",
+            "Add clip",
+            "Video.add_clip",
+            "Add a source clip via Video.add_clip.",
+        ),
+        video_live_tool(
+            "video:live_trim_clip",
+            "Trim clip",
+            "Video.trim_clip",
+            "Trim in/out points via Video.trim_clip.",
+        ),
+        video_live_tool(
+            "video:live_set_speed",
+            "Set speed",
+            "Video.set_speed",
+            "Set playback speed via Video.set_speed.",
+        ),
+        video_live_tool(
+            "video:live_colour_grade",
+            "Colour grade",
+            "Video.colour_grade",
+            "Set brightness, contrast, and saturation via Video.colour_grade.",
+        ),
+        video_live_tool(
+            "video:live_add_transition",
+            "Add transition",
+            "Video.add_transition",
+            "Add a transition via Video.add_transition.",
+        ),
+        video_live_tool(
+            "video:live_set_render_format",
+            "Render format",
+            "Video.set_render_format",
+            "Set the render format via Video.set_render_format.",
+        ),
+        video_live_tool(
+            "video:live_set_render_bitrate",
+            "Render bitrate",
+            "Video.set_render_bitrate",
+            "Set the render bitrate via Video.set_render_bitrate.",
+        ),
+        video_live_tool(
+            "video:live_remove_clip",
+            "Remove clip",
+            "Video.remove_clip",
+            "Remove a clip via Video.remove_clip.",
+        ),
+    ];
+
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "image".into(),
@@ -351,6 +434,17 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                             .into(),
                 },
                 edit_live,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "video:live".into(),
+                    label: "Live video edit".into(),
+                    icon: "media".into(),
+                    description:
+                        "Curated Video.* project, track, clip, grade, transition, and render binds."
+                            .into(),
+                },
+                video_live,
             ),
         ],
     ));
