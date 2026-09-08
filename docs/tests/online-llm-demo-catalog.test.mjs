@@ -40,6 +40,6 @@ assert.match(html, /lastGenerationMetrics/);
 assert.match(html, /TTFT/);
 assert.match(html, /navigator\.ml/);
 assert.doesNotMatch(html, /id="chat-inference-meter" class="hidden/);
-assert.equal(wasmPackage.version, '0.0.37');
+assert.equal(wasmPackage.version, '0.0.38');
 
 console.log('Online LLM demo catalogue tests passed.');

@@ -1,5 +1,5 @@
 /**
- * Measure GitHub Pages WASM artifacts against the 0.0.37 size gates.
+ * Measure GitHub Pages WASM artifacts against the 0.0.38 size gates.
  * Gzip uses CompressionStream when the browser supports it.
  */
 

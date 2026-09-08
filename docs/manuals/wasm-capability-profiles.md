@@ -94,9 +94,9 @@ wasm-pack build crates/webizen-lite-wasm --target web --out-dir pkg --release
 
 The 2026-06-27 reference ontology build is 267,993 bytes raw and 94,971 bytes gzip.
 
-GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured 0.0.37:
+GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured 0.0.38:
 
-| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.37 |
+| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.38 |
 |---|---|---|---|
 | Ontology MCP | `-p webizen-lite-wasm` | 640 KiB / 200 KiB | ~529 KiB / ~162 KiB gzip |
 | Portal | `--features portal` | 16 MiB / 4 MiB | ~7.70 MiB / ~2.15 MiB gzip |

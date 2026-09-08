@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.38] — 2026-09-08
+
+### Changed
+
+- Opened the `0.0.38` development line from `0.0.37`.
+- Workspace crates, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.38`.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version track `0.0.38`.
+
 ## [0.0.37] — 2026-09-08
 
 ### Changed

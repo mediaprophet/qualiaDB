@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to upload assets to, for example v0.0.37"
+        description: "Existing release tag to upload assets to, for example v0.0.38"
         required: true
 
 permissions:
@@ -101,11 +101,11 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           cp crates/qualia-core-db/LICENSE docs/pkg/qualia/LICENSE
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.37","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.38","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
 
       - name: Portal WASM size budget
         # Sanity cap for the full WASM-safe engine (not a slim product budget).
-        # Measured 0.0.37 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
+        # Measured 0.0.38 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
         # Ontology MCP keeps the tight 640 KiB / 200 KiB gate.
         run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
 
@@ -194,7 +194,7 @@ jobs:
             -- --no-default-features --features wasm-full
 
       - name: Playground WASM size budget
-        # Same 16 MiB / 4 MiB sanity cap as portal. Measured 0.0.37 wasm-full:
+        # Same 16 MiB / 4 MiB sanity cap as portal. Measured 0.0.38 wasm-full:
         # ~8.23 MiB raw / ~2.32 MiB gzip. Keep in step with pages.yml.
         run: node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
 
