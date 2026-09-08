@@ -7,8 +7,12 @@
 
 use crate::net::qdnf::authority::{evaluate_precedence, ContactState, PolicyOutcome};
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::harness::faults::{FaultPipe, FaultSchedule, FRAME_CAP, PIPE_SLOTS};
-use crate::net::qdnf::harness::oracle::{independent_hop_limit, independent_magic_ok};
+use crate::net::qdnf::harness::faults::{FaultPipe, FaultSchedule, FRAME_CAP};
+#[cfg(test)]
+use crate::net::qdnf::harness::faults::PIPE_SLOTS;
+use crate::net::qdnf::harness::oracle::independent_magic_ok;
+#[cfg(test)]
+use crate::net::qdnf::harness::oracle::independent_hop_limit;
 use crate::net::qdnf::route::forwarding::{decrement_hop, ForwardingGeneration};
 use crate::net::qdnf::route::spf::{compute_spf, LinkMetric, SpfTable};
 use crate::net::qdnf::session::datagrams::{Datagram, DeliveryStage};

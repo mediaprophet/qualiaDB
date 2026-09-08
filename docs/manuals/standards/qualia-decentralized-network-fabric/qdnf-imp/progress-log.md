@@ -414,3 +414,22 @@
 - Human input needed: Ethernet capture + CAP_NET_RAW for NET-01.14; reviewed COSE_Sign1 freeze; whether daemons may drop default `libp2p-compat`.
 - Next: remaining CORE-03 disk durability classes, NET-04 QSR evaluation vs Kademlia, default-feature isolation. Packages stay open.
 
+## 2026-09-08 — merge networking onto `0.0.37` (in progress)
+
+- Integrator merges `origin/0.0.37` into `cursor/qdnf-native-fabric-cc6e` so QDNF/QPR rides with Poet/Vibe waves 22–40. Shared file expected: `poet_host/invoke/mod.rs` (keep 0.0.37 LA/GEOM arms and `gpu-runtime` cfg on GPU render arms).
+- Do not tick qdnf-imp checkboxes. Packages remain open.
+- Human input needed: none this step.
+
+## 2026-09-08 — merge networking onto `0.0.37` — done, packages remain open
+
+- Merged `origin/0.0.37` (Poet/Vibe waves 22–40, 42 commits) into `cursor/qdnf-native-fabric-cc6e`. Merge-base was `0.0.36-dev` (`d05f1ef6`). Only overlapping file: `poet_host/invoke/mod.rs` — auto-merged; both LA/GEOM arms and `gpu-runtime` cfg remain.
+- Wave 14 `multihop.rs` unused imports (`PIPE_SLOTS`, `independent_hop_limit`) gated behind `cfg(test)` so the default-feature check stays warning-clean on those names.
+- Measured after merge (`cargo +stable`):
+  - `check -p qualia-core-db --no-default-features --features qdnf --lib` → **Finished**, 0 errors.
+  - `check -p qualia-core-db --lib` (default, GPU on) → **Finished**, 0 errors.
+  - Combined native filter → **471 passed**, 0 failed.
+  - `qualia-peer` lib tests + `native_ipc_peers` → **2 passed**; `native ipc exchanged 11 bytes (libp2p not used)`.
+- Not Ethernet. Not Native Independent for default daemons. Not package completion. Not landing the PR onto `0.0.37` (retarget only).
+- Human input needed: whether to land the retargeted PR onto `0.0.37`.
+- Next: remaining CORE-03 / NET-04 as before. Packages stay open.
+
