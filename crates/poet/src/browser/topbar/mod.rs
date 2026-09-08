@@ -29,5 +29,5 @@ use manifold::{
     add_new_manifold, append_manifold_option, open_new_manifold_dialog, show_menu_notification,
     trigger_file_download, trigger_file_import_dialog,
 };
-use pods::{show_a11y_notification, toggle_pod_tray};
+use pods::{hide_pod_drop_tray, position_pod_drop_tray, show_a11y_notification, toggle_pod_tray};
 use save_dialog::open_save_mode_dialog;
