@@ -6,6 +6,8 @@
 
 ## Status
 
+Curated Q2 is **complete**: every Host-bound `Family.method` in `ALL_BOUND` now has a Poet Tool Chest Live dual-path tool (helper-aware leftover **0**). Exhaustive Host-binding of remaining Q1 CoreDb is **not** in scope.
+
 | Wave | Status | Notes |
 |------|--------|-------|
 | 1–26 | **Complete (integrated)** | Through Asset persist, Pulse live, Portal/Avatar, Host CG through affine/quat/quadratic |
@@ -34,14 +36,14 @@
 
 | Bucket | Count (post-w39) | Notes |
 |--------|------------------|-------|
-| **Q2 Host-bound not Live** | **0** (pending parent leftover inventory) | Curated Host `Family.method` Live dual-path exhausted |
+| **Q2 Host-bound not Live** | **0** | Curated Host `Family.method` Live dual-path exhausted |
 | **Q1 Host-missing** | **~12k** | Not in scope |
 
 **Not in that estimate:** exhaustively Host-binding all of Q1 CoreDb.
 
 ## How to continue
 
-1. Confirm leftover inventory is 0 (ALL_BOUND const-map vs poet `Family.method` strings, allowing extra dots).
+1. Curated Q2 leftover inventory is **0** (ALL_BOUND const-map vs poet `Family.method` strings, allowing extra dots).
 2. Do **not** exhaustively Host-bind remaining Q1 CoreDb.
 3. Methodology: `VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md` · Host constraint: `VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
 4. **Never `Proficiency::Advanced`.** Dual-path. Exact Host scopes. Skip GPU Host-widen. Skip `LinearAlgebra.gemm` Host-widen. Avoid `centrepoint`.

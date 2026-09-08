@@ -1,7 +1,7 @@
 # Q1/Q2 incorporation wave 39 swarm — 2026-09-08
 
 **Branch:** `cursor/poet-q1q2-wave22-bb54` (from `0.0.37`)  
-**Status:** **Complete (pending parent verify)**  
+**Status:** **Complete (verified)**  
 **Prior:** wave 38 Complete — Medical / Manifold / crypto / DAG / FinancialModeling  
 **Derived inventory after w38:** helper-aware Q2 ≈ 24
 
@@ -23,4 +23,6 @@ cargo test -p poet --lib every_registered_nonplacement_tool_has_an_explicit_poli
 cargo test -p poet --test product_integrity
 ```
 
-Expected after this wave: helper-aware Q2 = **0** (curated Q2 complete). Host-binding remaining Q1 CoreDb is **not** in scope.
+**Results (2026-09-08):** poet `wave39` **1** · policy **1** · integrity **11**. Helper-aware leftover inventory: **0**.
+
+Curated Q2 complete. Host-binding remaining Q1 CoreDb is **not** in scope.
