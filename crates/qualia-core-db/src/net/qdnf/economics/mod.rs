@@ -1,5 +1,8 @@
 //! Typed resource quantities. Payment cannot enlarge consent or budgets.
 
+pub mod consent;
+pub use consent::*;
+
 use crate::net::qdnf::authority::{CompensationClass, ObservationQuality, ResourceKind};
 use crate::net::qdnf::errors::QdnfError;
 

@@ -213,3 +213,11 @@
 - Shared files forbidden: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
 - Human input needed: none this step.
 
+## 2026-09-08 — Wave 4 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers: NET-02 (`CookieJar` HMAC-SHA-384 reachability cookies, 32 slots, 2 per locator, reply cap 3; membership/application grants stay false), ECO-01 (`apply_payment_to_consent` is a no-op on budgets; host remaining from RT-01 ledger; aborted TxId recovers as Ambiguous), NET-04 (`QueryBudget` 64/16/8/3 caps; `lookup_with_budget` still uses authenticated `lookup_exact`; compact hash is not authority).
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf::link::cookies net::qdnf::economics net::qdnf::resolve net::qdnf net::peer crypto::network wal_intent governance::webizen::arena_admit q42::q42_volume::volume::network_quanta` → **229 passed**, 0 failed. Not Ethernet, not Native Independent closure, not package completion.
+- Human input needed: none this step.
+- Next: Wave 5 candidates remain NET-03 forwarding/session races, CRY-02.12 independent vectors, SVC QSync, RT-03.07 libp2p/GPU-free `qualia-peer` closure. Packages stay open.
+
+
