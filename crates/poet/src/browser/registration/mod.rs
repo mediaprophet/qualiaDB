@@ -27,6 +27,7 @@ mod register_econ_toolbox;
 mod register_health_toolbox;
 mod register_image_toolbox;
 mod register_render_live;
+mod register_wave33_live;
 mod register_mail_toolbox;
 mod register_office_toolbox;
 mod register_rights_toolbox;
@@ -4413,5 +4414,60 @@ mod tests {
             Some("ComputationalGeometry.separating_plane_aabb")
         )));
         assert_eq!(tools.len(), 49);
+    }
+
+    #[test]
+    fn wave33_binds_anim_ode_hbbtv_caps() {
+        let registry = super::build_registry();
+        let spatial = registry.toolbox("spatial").expect("spatial toolbox");
+        let anim = spatial
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "spatial:anim_live")
+            .expect("spatial:anim_live toolchain");
+        let anim_tools: Vec<_> = anim
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools_contains(
+            &anim_tools,
+            "animation:live_spring_step",
+            "Animation.spring_step"
+        ));
+        assert_eq!(anim_tools.len(), 4);
+
+        let scientific = registry.toolbox("scientific").expect("scientific toolbox");
+        let ode = scientific
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "scientific:num_ode")
+            .expect("scientific:num_ode toolchain");
+        assert_eq!(ode.tools().len(), 4);
+        assert!(ode.tools().iter().any(|t| {
+            t.metadata().id == "scientific:num_ode_rk4"
+                && t.metadata().capability_scope.as_deref() == Some("Ode.rk4_integrate")
+        }));
+
+        let comm = registry.toolbox("communication").expect("communication toolbox");
+        let hbbtv = comm
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "comm:hbbtv")
+            .expect("comm:hbbtv toolchain");
+        assert_eq!(hbbtv.tools().len(), 4);
+        assert!(hbbtv.tools().iter().any(|t| {
+            t.metadata().id == "comm:hbbtv_new_app"
+                && t.metadata().capability_scope.as_deref() == Some("HbbTV.new_app")
+        }));
+    }
+
+    fn tools_contains(tools: &[(&str, Option<&str>)], id: &str, scope: &str) -> bool {
+        tools.contains(&(id, Some(scope)))
     }
 }

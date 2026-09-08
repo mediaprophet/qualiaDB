@@ -4687,6 +4687,66 @@ fn named(id: &str) -> Option<Presentation> {
             "Visualise a 2D field via Render.svg_field.",
             Proficiency::Intermediate,
         ),
+        "animation:live_spring_step" => (
+            "Spring step",
+            "Step a spring via Animation.spring_step.",
+            Proficiency::Intermediate,
+        ),
+        "animation:live_sclerp_step" => (
+            "ScLERP step",
+            "Screw-linear interpolate motors via Animation.sclerp_step.",
+            Proficiency::Intermediate,
+        ),
+        "animation:live_squad_step" => (
+            "SQUAD step",
+            "Squad-interpolate quaternions via Animation.squad_step.",
+            Proficiency::Intermediate,
+        ),
+        "animation:live_list_presets" => (
+            "List presets",
+            "List animation presets via Animation.list_presets.",
+            Proficiency::Novice,
+        ),
+        "scientific:num_ode_rk4" => (
+            "RK4 integrate",
+            "Multi-step RK4 via Ode.rk4_integrate.",
+            Proficiency::Intermediate,
+        ),
+        "scientific:num_ode_dopri5" => (
+            "DOPRI5",
+            "Adaptive Dormand–Prince via Ode.dopri5.",
+            Proficiency::Expert,
+        ),
+        "scientific:num_ode_bdf" => (
+            "BDF",
+            "Stiff BDF integrator via Ode.bdf.",
+            Proficiency::Expert,
+        ),
+        "scientific:num_ode_symplectic_step" => (
+            "Symplectic step",
+            "Verlet/Ruth/Yoshida step via Ode.symplectic_step.",
+            Proficiency::Intermediate,
+        ),
+        "comm:hbbtv_new_app" => (
+            "New HbbTV app",
+            "Create an HbbTV app via HbbTV.new_app.",
+            Proficiency::Novice,
+        ),
+        "comm:hbbtv_add_page" => (
+            "Add page",
+            "Add a page via HbbTV.add_page.",
+            Proficiency::Novice,
+        ),
+        "comm:hbbtv_navigate" => (
+            "Navigate",
+            "Navigate via HbbTV.navigate.",
+            Proficiency::Novice,
+        ),
+        "comm:hbbtv_set_state" => (
+            "Set state",
+            "Set app state via HbbTV.set_state.",
+            Proficiency::Novice,
+        ),
         "scientific:ode_lin1" => (
             "Linear first-order ODE",
             "Solve y' + a·y = b via SymbolicODE.solve_linear_first_order.",

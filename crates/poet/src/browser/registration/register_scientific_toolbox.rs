@@ -2502,6 +2502,15 @@ pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
                 },
                 ode_tools,
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "scientific:num_ode".into(),
+                    label: "Live numeric ODE".into(),
+                    icon: "lab".into(),
+                    description: "Curated Ode.* RK4, DOPRI5, BDF, and symplectic binds.".into(),
+                },
+                super::register_wave33_live::ode_num_tools(),
+            ),
         ],
     ));
 }

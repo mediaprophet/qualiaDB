@@ -277,6 +277,15 @@ pub(super) fn register_communication_toolbox(reg: &mut Registry) {
                 },
                 pulse_live,
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "comm:hbbtv".into(),
+                    label: "Live HbbTV".into(),
+                    icon: "comm".into(),
+                    description: "Curated HbbTV.* app, page, navigate, and state binds.".into(),
+                },
+                super::register_wave33_live::hbbtv_tools(),
+            ),
         ],
     ));
 }

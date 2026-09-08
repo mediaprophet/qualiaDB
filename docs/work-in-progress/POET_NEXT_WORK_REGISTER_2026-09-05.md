@@ -62,6 +62,7 @@ evidence.
 | 48 | Q1/Q2 wave 30 | **Complete** | Render CPU scene/CSS/animation/SVG +17; Host none | Closed — wave 30 |
 | 49 | Q1/Q2 wave 31 | **Complete** | CG Host leftovers waves 19–23 +25; Host none | Closed — wave 31 |
 | 50 | Q1/Q2 wave 32 | **Complete** | CG Host leftovers waves 24–26 +24 (CG leftover Q2 exhausted); Host none | Closed — wave 32 |
+| 51 | Q1/Q2 wave 33 | **Complete** | Animation leftovers +4 · numeric Ode +4 · HbbTV +4; Host none | Closed — wave 33 |
 
 ## Latest execution evidence
 

@@ -947,6 +947,18 @@ fn has_live_invoke(tool_id: &str) -> bool {
         | "render:live_svg_line"
         | "render:live_svg_bezier"
         | "render:live_svg_field"
+        | "animation:live_spring_step"
+        | "animation:live_sclerp_step"
+        | "animation:live_squad_step"
+        | "animation:live_list_presets"
+        | "scientific:num_ode_rk4"
+        | "scientific:num_ode_dopri5"
+        | "scientific:num_ode_bdf"
+        | "scientific:num_ode_symplectic_step"
+        | "comm:hbbtv_new_app"
+        | "comm:hbbtv_add_page"
+        | "comm:hbbtv_navigate"
+        | "comm:hbbtv_set_state"
         | "spatial:portal_activate"
         | "spatial:portal_deactivate"
         | "spatial:avatar_move"
@@ -3614,6 +3626,28 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "render:live_svg_line" => super::render_live_chain_actions::run_svg_line(document, label),
         "render:live_svg_bezier" => super::render_live_chain_actions::run_svg_bezier(document, label),
         "render:live_svg_field" => super::render_live_chain_actions::run_svg_field(document, label),
+        "animation:live_spring_step" => {
+            super::anim_live_chain_actions::run_spring_step(document, label)
+        }
+        "animation:live_sclerp_step" => {
+            super::anim_live_chain_actions::run_sclerp_step(document, label)
+        }
+        "animation:live_squad_step" => {
+            super::anim_live_chain_actions::run_squad_step(document, label)
+        }
+        "animation:live_list_presets" => {
+            super::anim_live_chain_actions::run_list_presets(document, label)
+        }
+        "scientific:num_ode_rk4" => super::ode_num_chain_actions::run_rk4(document, label),
+        "scientific:num_ode_dopri5" => super::ode_num_chain_actions::run_dopri5(document, label),
+        "scientific:num_ode_bdf" => super::ode_num_chain_actions::run_bdf(document, label),
+        "scientific:num_ode_symplectic_step" => {
+            super::ode_num_chain_actions::run_symplectic_step(document, label)
+        }
+        "comm:hbbtv_new_app" => super::hbbtv_chain_actions::run_new_app(document, label),
+        "comm:hbbtv_add_page" => super::hbbtv_chain_actions::run_add_page(document, label),
+        "comm:hbbtv_navigate" => super::hbbtv_chain_actions::run_navigate(document, label),
+        "comm:hbbtv_set_state" => super::hbbtv_chain_actions::run_set_state(document, label),
         "scientific:ode_lin1" => super::ode_chain_actions::run_lin1(document, label),
         "scientific:ode_lin2" => super::ode_chain_actions::run_lin2(document, label),
         "scientific:ode_classify_pde" => super::ode_chain_actions::run_classify_pde(document, label),

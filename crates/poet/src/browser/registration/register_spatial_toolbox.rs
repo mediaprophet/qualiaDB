@@ -698,6 +698,16 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
             ),
             ToolChain::new(
                 ToolChainMetadata {
+                    id: "spatial:anim_live".into(),
+                    label: "Live Animation remainder".into(),
+                    icon: "3d".into(),
+                    description: "Host-bound Animation.* leftovers (spring, ScLERP, SQUAD, presets)."
+                        .into(),
+                },
+                super::register_wave33_live::anim_live_tools(),
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
                     id: "spatial:tools".into(),
                     label: "GIS Maps & Tracking".into(),
                     icon: "tools".into(),
