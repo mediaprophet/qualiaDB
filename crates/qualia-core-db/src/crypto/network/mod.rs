@@ -3,6 +3,7 @@
 pub mod aead;
 pub mod chunks;
 pub mod digest;
+pub mod dual_sign;
 pub mod ed25519;
 pub mod entropy;
 pub mod errors;

@@ -4,6 +4,7 @@ pub mod bind;
 pub mod credit;
 pub mod datagrams;
 pub mod handshake;
+pub mod iri;
 pub mod loss;
 pub mod packet;
 pub mod paths;

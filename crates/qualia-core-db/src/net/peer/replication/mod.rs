@@ -8,9 +8,10 @@
 //! Remaining SVC-01 packages (admission, content transfer)
 //! stay open. Checkpoints are partial (SVC-01.07). Tombstones are partial
 //! (SVC-01.11). Membership proofs are partial (SVC-01.08). Merge is partial
-//! (SVC-01.10).
+//! (SVC-01.10). Manifests are partial (SVC-01.12).
 
 pub mod checkpoint;
+pub mod manifest;
 pub mod merge;
 pub mod operation;
 pub mod proof;
@@ -19,6 +20,11 @@ pub mod tombstone;
 pub use checkpoint::{
     build_checkpoint, forged_count_rejected, membership_implies_completeness, verify_checkpoint,
     Checkpoint, MAX_CHECKPOINT_OPS,
+};
+pub use manifest::{
+    container_generation_is_qsync_root, disclose_raw_artifact,
+    raw_artifact_requires_full_authorization, ByteRange, ContentManifest, MAX_DECODED_BYTES,
+    MAX_RANGES,
 };
 pub use merge::{
     decide, lww_overrides_revocation, wall_clock_is_membership_authority, Alternate, MergeProfile,
