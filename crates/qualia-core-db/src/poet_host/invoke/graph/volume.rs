@@ -7,9 +7,12 @@
 //! `.q42` then opens — UAT-friendly create-on-open; set `create: false` to fail.
 //! No Host widen — Capability.method binds only (G-B-001).
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::super::args;
 use crate::poet_host::PoetSnapshot;
-use vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
+#[cfg(target_arch = "wasm32")]
+use vibe::DiagCode;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::q42_volume::{
@@ -23,7 +26,7 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
-#[allow(dead_code)]
+#[cfg(target_arch = "wasm32")]
 fn wasm_denied(span: Span, id: &str) -> Diagnostic {
     Diagnostic::new(
         DiagCode::E300,

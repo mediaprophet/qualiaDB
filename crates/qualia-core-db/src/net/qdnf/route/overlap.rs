@@ -2,8 +2,8 @@
 
 use crate::net::qdnf::errors::QdnfError;
 
-use super::forwarding::{decrement_hop, ForwardingGeneration};
-use super::spf::{compute_spf, LinkMetric, SpfTable};
+use super::forwarding::ForwardingGeneration;
+use super::spf::SpfTable;
 
 /// Charged old generation plus the candidate new table. Never a third live gen.
 pub const MAX_LIVE_GENERATIONS: usize = 2;
@@ -101,7 +101,8 @@ impl GenerationPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::net::qdnf::route::forwarding::require_adjacency;
+    use crate::net::qdnf::route::forwarding::{decrement_hop, require_adjacency};
+    use crate::net::qdnf::route::spf::{compute_spf, LinkMetric};
     use crate::net::qdnf::types::LinkId;
 
     fn abc_links() -> [LinkMetric; 2] {

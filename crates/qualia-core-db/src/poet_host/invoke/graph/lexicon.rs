@@ -4,6 +4,7 @@
 //! `.q42` path). No in-binary WordNet. Missing/unknown → diagnose **held /
 //! not yet** (never "broken"). No Host widen.
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::super::args;
 use crate::poet_host::PoetSnapshot;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -17,6 +18,7 @@ fn held(span: Span, msg: impl Into<String>, fix: &str) -> Diagnostic {
     Diagnostic::new(DiagCode::E300, span, msg).with_fix(fix)
 }
 
+#[cfg(target_arch = "wasm32")]
 fn wasm_denied(span: Span) -> Diagnostic {
     held(
         span,

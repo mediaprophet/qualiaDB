@@ -10,13 +10,14 @@ license-file = "LICENSE"
 [features]
 default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he", "libp2p-compat"]
 
-# ── Qualia WASM portal build profiles (use with --no-default-features on wasm32) ──
-# Ontology MCP kernel:              --features wasm-ontology (exclusive)
-# Slim GitHub Pages / QApp export:  --features portal
-# Logic demos (N3/SHACL):           --features wasm-logic
+# ── Qualia WASM build profiles (use with --no-default-features on wasm32) ──
+# Ontology MCP kernel (exclusive):  --features wasm-ontology
+# Full browser engine:              --features portal  (logic + WASM-safe science + WebGPU)
+# Logic + WASM-safe science:        --features wasm-logic
 # Science playground:               --features wasm-scientific
 # Browser model runtime:            --features wasm-llm
-# Full API explorer / playground:   --features wasm-full
+# API explorer / playground:        --features wasm-full
+# Native-only stays native: daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF.
 gpu-runtime = ["dep:wgpu", "dep:raw-window-handle"]
 wgsl-forge = ["dep:naga", "dxc", "cuda"]
 webgl2 = ["dep:naga"]
@@ -30,9 +31,9 @@ nvml = ["dep:nvml-wrapper"]
 # binaries only when explicitly enabled.
 vision-onnx = ["dep:ort"]
 dxc = []
-portal = ["wasm_simd", "gpu-runtime", "wasm-logic"]
+portal = ["wasm_simd", "gpu-runtime", "wasm-logic", "wasm-scientific"]
 wasm-ontology = []
-wasm-logic = []
+wasm-logic = ["wasm-scientific"]
 wasm-scientific = ["gpu-runtime"]
 wasm-llm = ["gpu-runtime", "wasm-logic", "wasm-scientific"]
 # Optional browser GPU differential probes and legacy readback experiments.

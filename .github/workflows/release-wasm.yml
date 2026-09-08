@@ -38,7 +38,7 @@ jobs:
           key: wasm-check-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: wasm-check-cargo-
 
-      - name: WASM smoke-check (portal slim)
+      - name: WASM smoke-check (portal)
         run: |
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
@@ -85,7 +85,7 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
-      - name: Build Qualia portal WASM (viewport + acoustic, slim)
+      - name: Build Qualia portal WASM (full browser engine)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
         run: |
@@ -104,9 +104,9 @@ jobs:
           printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.37","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
 
       - name: Portal WASM size budget
-        # The portal now includes the shipped WASM-capable execution surface.
-        # Keep its transfer budget hard at 800 KiB gzip while allowing 2.6 MiB raw.
-        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 2726298 819200
+        # Sanity cap for the full WASM-safe engine (not a slim product budget).
+        # Ontology MCP keeps the tight 640/200 KiB gate.
+        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
 
       - name: Build ontology MCP WASM
         run: |

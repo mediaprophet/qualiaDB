@@ -20,6 +20,7 @@ pub mod secret_lease;
 pub mod share_encoding;
 pub mod transcript;
 pub mod types;
+#[cfg(test)]
 pub mod vectors;
 pub mod x25519;
 

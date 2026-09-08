@@ -140,8 +140,6 @@ fn bind_macos(#[allow(unused_variables)] class: QosClass) -> Result<(), Schedule
 fn bind_linux(#[allow(unused_variables)] class: QosClass) -> Result<(), SchedulerError> {
     #[cfg(target_os = "linux")]
     {
-        use core_affinity::CoreId;
-
         let all_cores = core_affinity::get_core_ids()
             .ok_or_else(|| SchedulerError::Unsupported("core_affinity unavailable".into()))?;
 
@@ -198,7 +196,7 @@ fn bind_linux(#[allow(unused_variables)] class: QosClass) -> Result<(), Schedule
 // Windows implementation — SetThreadPriority
 // ──────────────────────────────────────────────────────────────────────────────
 
-fn bind_windows(class: QosClass) -> Result<(), SchedulerError> {
+fn bind_windows(#[allow(unused_variables)] class: QosClass) -> Result<(), SchedulerError> {
     #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
     {
         use windows::Win32::System::Threading::{

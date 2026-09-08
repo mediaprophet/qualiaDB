@@ -352,7 +352,7 @@ impl NetworkFilter for WfpFilter {
     }
 
     fn describe(&self) -> &str {
-        if self.active {
+        if self.engine_handle != 0 {
             "WfpFilter (Windows Filtering Platform — FwpmFilterAdd0 active)"
         } else {
             "WfpFilter (WFP unavailable — noop mode)"

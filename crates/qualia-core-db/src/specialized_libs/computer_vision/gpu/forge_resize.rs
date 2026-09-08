@@ -12,7 +12,9 @@
 //! CPU oracle. It never panics.
 
 use super::dispatch::VisionComputeReport;
-use crate::specialized_libs::computer_vision::{types::VisionError, VisionComputeDevice};
+use crate::specialized_libs::computer_vision::types::VisionError;
+#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+use crate::specialized_libs::computer_vision::VisionComputeDevice;
 
 /// Attempt GPU resize on the process-wide shared device.
 ///
@@ -114,6 +116,7 @@ pub fn try_resize_nearest_shared_gpu(
 mod tests {
     use super::*;
     use crate::specialized_libs::computer_vision::ops::resize_nearest_nchw_f32;
+    use crate::specialized_libs::computer_vision::VisionComputeDevice;
 
     #[test]
     fn forge_path_or_unavailable_matches_cpu_when_ok() {

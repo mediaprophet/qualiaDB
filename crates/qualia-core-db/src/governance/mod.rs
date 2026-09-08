@@ -10,6 +10,12 @@
     ))
 )))]
 pub mod consent_contract;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod coord_seams;
 #[cfg(any(
     not(target_arch = "wasm32"),

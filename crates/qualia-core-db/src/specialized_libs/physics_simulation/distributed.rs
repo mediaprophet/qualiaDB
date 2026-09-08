@@ -1,7 +1,11 @@
 use super::*;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::acoustic_ble_mesh::{MeshNetworkManager, MessagePriority, NetworkStatus};
 
 /// Mesh coordinator for distributed simulations
 pub struct MeshCoordinator {
+    /// BLE/acoustic mesh cannot run in the browser; native only.
+    #[cfg(not(target_arch = "wasm32"))]
     mesh_network: Arc<Mutex<MeshNetworkManager>>,
     node_manager: NodeManager,
     load_balancer: MeshLoadBalancer,
@@ -236,6 +240,7 @@ pub enum ResolutionAction {
 impl MeshCoordinator {
     pub fn new() -> Self {
         Self {
+            #[cfg(not(target_arch = "wasm32"))]
             mesh_network: Arc::new(Mutex::new(MeshNetworkManager::new())),
             node_manager: NodeManager::new(),
             load_balancer: MeshLoadBalancer::new(),
@@ -251,39 +256,62 @@ impl MeshCoordinator {
     }
 
     pub fn initialize_mesh_network(&mut self) -> Result<(), PhysicsError> {
-        // Lock the mesh network and call its initialization method.
-        let mut network = self.mesh_network.lock().map_err(|e| {
-            PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
-        })?;
-        network
-            .initialize()
-            .map_err(|e| PhysicsError::NetworkError(format!("Mesh init failed: {}", e)))
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut network = self.mesh_network.lock().map_err(|e| {
+                PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
+            })?;
+            return network
+                .initialize()
+                .map_err(|e| PhysicsError::NetworkError(format!("Mesh init failed: {}", e)));
+        }
+        #[cfg(target_arch = "wasm32")]
+        Err(PhysicsError::NetworkError(
+            "BLE/acoustic mesh cannot run in WASM".into(),
+        ))
     }
 
     /// Query the current mesh network status.
     pub fn get_mesh_status(&self) -> Result<MeshStatus, PhysicsError> {
-        let network = self.mesh_network.lock().map_err(|e| {
-            PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
-        })?;
-        let status: NetworkStatus = network.get_network_status();
-        Ok(MeshStatus {
-            total_nodes: status.total_nodes,
-            acoustic_nodes: status.acoustic_nodes,
-            ble_nodes: status.ble_nodes,
-            active_routes: status.active_routes,
-            pending_messages: status.pending_messages,
-        })
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let network = self.mesh_network.lock().map_err(|e| {
+                PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
+            })?;
+            let status: NetworkStatus = network.get_network_status();
+            return Ok(MeshStatus {
+                total_nodes: status.total_nodes,
+                acoustic_nodes: status.acoustic_nodes,
+                ble_nodes: status.ble_nodes,
+                active_routes: status.active_routes,
+                pending_messages: status.pending_messages,
+            });
+        }
+        #[cfg(target_arch = "wasm32")]
+        Err(PhysicsError::NetworkError(
+            "BLE/acoustic mesh cannot run in WASM".into(),
+        ))
     }
 
     /// Distribute a simulation task (raw bytes) through the mesh network.
     pub fn distribute_simulation_task(&self, task_data: &[u8]) -> Result<(), PhysicsError> {
-        let mut network = self.mesh_network.lock().map_err(|e| {
-            PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
-        })?;
-        network
-            .send_message_ephemeral("broadcast", task_data, MessagePriority::High)
-            .map_err(|e| PhysicsError::NetworkError(format!("Mesh send failed: {}", e)))?;
-        Ok(())
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut network = self.mesh_network.lock().map_err(|e| {
+                PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
+            })?;
+            network
+                .send_message_ephemeral("broadcast", task_data, MessagePriority::High)
+                .map_err(|e| PhysicsError::NetworkError(format!("Mesh send failed: {}", e)))?;
+            return Ok(());
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = task_data;
+            Err(PhysicsError::NetworkError(
+                "BLE/acoustic mesh cannot run in WASM".into(),
+            ))
+        }
     }
 
     pub fn distribute_simulation(

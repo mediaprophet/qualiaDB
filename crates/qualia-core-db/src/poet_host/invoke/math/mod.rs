@@ -1,5 +1,6 @@
 //! Future seam: `qualia-math` (`solvers/` + CAS today).
-//! Native / wasm-scientific only — solvers are not on wasm-ontology.
+//! Real solvers on native and every poet-bearing WASM profile (`wasm-scientific`,
+//! which portal and wasm-logic now pull). Ontology-only has no poet_host.
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod calculus;

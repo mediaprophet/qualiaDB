@@ -562,7 +562,13 @@ pub struct WinNvmeDriver {
 impl WinNvmeDriver {
     /// IOCTL_STORAGE_QUERY_PROPERTY (read-only, no admin required):
     /// CTL_CODE(0x2D, 0x0500, METHOD_BUFFERED, FILE_ANY_ACCESS) = 0x002D1400
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
     const IOCTL_STORAGE_QUERY_PROPERTY: u32 = 0x002D_1400;
+
+    /// Path last probed for NVMe passthrough (`\\.\PhysicalDriveN`), or empty.
+    pub fn probed_device_path(&self) -> &str {
+        &self.device_path
+    }
 
     pub fn new<P: AsRef<Path>>(overlay_dir: P) -> Self {
         let (hw, path) = Self::probe_devices();
@@ -583,7 +589,7 @@ impl WinNvmeDriver {
         (false, String::new())
     }
 
-    fn probe_nvme(device_path: &str) -> bool {
+    fn probe_nvme(#[allow(unused_variables)] device_path: &str) -> bool {
         #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
         {
             use windows::core::PCWSTR;
@@ -775,7 +781,10 @@ pub fn open_storage<P: AsRef<Path>>(data_dir: P) -> Box<dyn StorageDriver> {
     {
         let drv = WinNvmeDriver::new(&data_dir);
         if drv.hardware_present {
-            log::info!("[storage] WinNvmeDriver selected: {}", drv.device_path);
+            log::info!(
+                "[storage] WinNvmeDriver selected: {}",
+                drv.probed_device_path()
+            );
         } else {
             log::info!("[storage] MmapDriver selected (Windows, no NVMe hardware/admin)");
         }

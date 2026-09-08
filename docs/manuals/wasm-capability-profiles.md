@@ -1,7 +1,10 @@
 # Qualia WebAssembly capability profiles
 
-The WASM builds are deliberately separate products. A profile must not expose a
-library merely because the native engine has it.
+The WASM builds are separate products. Full browser packages (`portal`, `wasm-logic`,
+`wasm-scientific`, `wasm-llm`, `wasm-full`) include every engine capability that can
+run in WebAssembly. The only exclusions are native-only facilities (daemon, filesystem
+volumes, NVMe/ZNS/CSD, BLE mesh, eBPF). The ontology MCP kernel (`wasm-ontology`) stays
+a size-bounded reasoning kernel and does not pull the poet/science host.
 
 This family is the **interop bridge**: a foreign host or agent loads a
 **proportionate** package plus CBOR-LD / Q42 data. It is not a reason to emit
@@ -14,8 +17,8 @@ The compile-time source of truth is
 | Product | Cargo selection | Intended use | Included | Explicitly excluded |
 |---|---|---|---|---|
 | Ontology MCP | `-p webizen-lite-wasm` | Read-only ontology sites such as `ns.webcivics.net` | MCP JSON-RPC, N3 inspection, bounded Quin query, SHACL property validation, deontic, epistemic, paraconsistent, LTL, DL, ASP/linear kernels, governance mapping | Portal, WebGPU, science, LLM, daemon, network, filesystem storage |
-| Portal | `qualia-core-db --no-default-features --features portal` | Spatial/phenomenal pages | JSON/CBOR ingest, 10D tensor, spatial encoding, WebGPU viewport, AcousticPlane | Logic bridge, science, LLM |
-| Logic | `qualia-core-db --no-default-features --features wasm-logic` | RDF/rule demos and the larger browser reasoning API | N3/Turtle, RDF serialization, bytecode query, numeric SHACL, modal logic, LWW CRDT | Scientific domain libraries, LLM |
+| Portal | `qualia-core-db --no-default-features --features portal` | Full browser engine (GitHub Pages / QApp) | JSON/CBOR ingest, 10D tensor, spatial encoding, WebGPU viewport, AcousticPlane, N3/SHACL/modal logic, WASM-safe science (CAS, DFT, ODE, bio, chem) | Native daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF. LLM is the `wasm-llm` / `wasm-full` package |
+| Logic | `qualia-core-db --no-default-features --features wasm-logic` | RDF/rule demos and the browser reasoning API | N3/Turtle, RDF serialization, bytecode query, numeric SHACL, modal logic, LWW CRDT, WASM-safe science | Native daemon/filesystem/NVMe/BLE mesh; LLM |
 | Scientific | `qualia-core-db --no-default-features --features wasm-scientific` | Browser scientific playground | Logic surface plus WASM-safe bioinformatics, clinical, chemistry, economics, symbolic/numerical solvers, control, GA and DFT | LLM |
 | LLM | `qualia-core-db --no-default-features --features wasm-llm` | Browser model runtime | Logic + scientific prerequisites, GGUF/Q42 model loading, WebGPU inference, streaming decode | Portal |
 | Full playground | `qualia-core-db --no-default-features --features wasm-full` | API explorer and local development | Portal + logic + scientific + LLM + playground exports | Native daemon/network/filesystem-only facilities |
