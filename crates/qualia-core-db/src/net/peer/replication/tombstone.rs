@@ -237,11 +237,13 @@ mod tests {
         let mut table = TombstoneTable::new();
         let mut old = ts(1);
         old.epoch = 3;
+        let mut keep = ts(9);
+        keep.epoch = 5;
         table.retain(old).unwrap();
-        table.retain(ts(9)).unwrap();
+        table.retain(keep).unwrap();
         let n = table.apply_epoch_exclusion(4).unwrap();
         assert_eq!(n, 1);
-        assert!(table.contains(&ts(9).op_id));
+        assert!(table.contains(&keep.op_id));
         assert!(!table.contains(&old.op_id));
     }
 

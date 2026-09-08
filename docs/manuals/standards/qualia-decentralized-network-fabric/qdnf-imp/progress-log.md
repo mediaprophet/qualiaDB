@@ -257,6 +257,27 @@
 - Human input needed: none this step.
 - Next: integrate child patches, run `cargo +stable` tests, record measurements.
 
+## 2026-09-08 — Wave 7 swarm integrating
+
+- Integrator wires `session/{packet,loss}`, `crypto/network/share_encoding`, plus integrator-owned `replication/tombstone` (SVC-01.11 partial). Packages stay **open**.
+- Human input needed: none this step.
+
+## 2026-09-08 — Wave 7 swarm integrated — partial, packages remain open
+
+- Three disjoint implementers plus integrator: NET-05.04 (`PacketSpace` 64-bit replay window, nonce = 4 zero ‖ u64be pn, QUIC varint rejects overlong), NET-05.08 (`AckFrame` 8 ranges no merge, `SentTable` 32, PTO `rtt*2^n` cap 8, unknown RTT not zero), CRY-02.03 (`ml_kem_ct || x25519_pk`, hybrid IKM kem-then-x25519, live encapsulate is **not** a frozen vector). Integrator: SVC-01.11 `TombstoneTable` until authorized frontier; transport ACK is not compaction.
+- Measured: `cargo +stable test -p qualia-core-db --lib -- net::qdnf::session::packet net::qdnf::session::loss crypto::network::share_encoding net::peer::replication net::qdnf net::peer crypto::network wal_intent governance::webizen::arena_admit q42::q42_volume::volume::network_quanta` → **299 passed**, 0 failed. `qualia-peer` → **2 passed**. Not Ethernet, not Native Independent closure, not package completion.
+- Human input needed: none this step.
+- Next: Wave 8 (NET-05.12 rekey vs authority, SVC-01.08 membership proofs, CRY-02.08 minima/no classical retry). Packages stay open.
+
+## 2026-09-08 — Wave 8 swarm claim
+
+- Integrator claims Wave 8 provisional: NET-05.12 key update, SVC-01.08 membership proofs, CRY-02.08 minima. Packages stay **open**.
+- Disjoint writes: NET-05 `net/qdnf/session/rekey.rs` (do not edit `session/mod.rs`); SVC `net/peer/replication/proof.rs` (do not edit `replication/mod.rs`); CRY-02 `crypto/network/minima.rs` (do not edit `crypto/network/mod.rs`).
+- Shared files forbidden: Cargo.toml, `registries.rs`, design suite, AGENTS.md, `p2p/`.
+- Human input needed: none this step.
+
+
+
 
 
 
