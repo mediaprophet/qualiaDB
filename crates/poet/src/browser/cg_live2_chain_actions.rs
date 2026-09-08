@@ -136,7 +136,7 @@ pub(super) fn run_insphere(document: &Document, label: &str) {
         document,
         label,
         "ComputationalGeometry.insphere",
-        "insphere sketch (unit tet vs origin)",
+        "insphere sketch (unit tet vs origin)".to_string(),
         json!({
             "a": triple(&n, 0, [0.0, 0.0, 0.0]),
             "b": triple(&n, 3, [1.0, 0.0, 0.0]),

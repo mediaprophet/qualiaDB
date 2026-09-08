@@ -242,7 +242,7 @@ pub(super) fn run_triangle_signed_area(document: &Document, label: &str) {
         document,
         label,
         "ComputationalGeometry.triangle_signed_area",
-        "triangle_signed_area sketch (unit right triangle)",
+        "triangle_signed_area sketch (unit right triangle)".to_string(),
         json!({ "a": a, "b": b, "c": c }),
     );
 }
@@ -285,7 +285,7 @@ pub(super) fn run_incircle(document: &Document, label: &str) {
         document,
         label,
         "ComputationalGeometry.incircle",
-        "incircle sketch (unit triangle vs origin)",
+        "incircle sketch (unit triangle vs origin)".to_string(),
         json!({
             "a": pair2(&n, 0, [0.0, 0.0]),
             "b": pair2(&n, 2, [1.0, 0.0]),
