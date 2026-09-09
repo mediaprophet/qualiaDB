@@ -1,4 +1,7 @@
 //! Finalise, chargeback and fulfilment (E17.6–E17.7). Live rails are Unsupported.
+//!
+//! Funded in-process settlement is [`crate::net::qdnf::economics::adapter`].
+//! `live_payment_rail` stays Unsupported: no fake Stripe or ILP.
 
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;

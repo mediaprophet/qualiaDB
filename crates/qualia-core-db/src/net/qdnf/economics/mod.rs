@@ -3,20 +3,26 @@
 //! Finite commons recovery is owned by [`Obligation`]. [`RemainingTarget`] remains
 //! a compatibility snapshot of copied milli-units and is not the owner.
 
+pub mod adapter;
 pub mod classify;
 pub mod consent;
 pub mod meters;
 pub mod obligation;
+pub mod recover;
 pub mod reserve;
 pub mod roles;
+pub mod router;
 pub mod settle;
 
+pub use adapter::*;
 pub use classify::*;
 pub use consent::*;
 pub use meters::*;
 pub use obligation::*;
+pub use recover::*;
 pub use reserve::*;
 pub use roles::*;
+pub use router::*;
 pub use settle::*;
 
 use crate::net::qdnf::authority::{CompensationClass, ObservationQuality, ResourceKind};

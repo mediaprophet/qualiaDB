@@ -47,6 +47,20 @@ pub fn natural_person_wallet_required() -> bool {
     false
 }
 
+/// Routing turn-on requires a routing grant, a funding source, and remaining budget.
+pub fn role_admits_router(grant: &RoleGrant) -> Result<(), QdnfError> {
+    if grant.role != FundedRole::Routing {
+        return Err(QdnfError::Denied);
+    }
+    if grant.funding_source.is_zero() {
+        return Err(QdnfError::Malformed);
+    }
+    if grant.budget.bytes == 0 && grant.budget.work == 0 && grant.budget.io == 0 {
+        return Err(QdnfError::BudgetExhausted);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,5 +101,21 @@ mod tests {
             assert!(activate_role(roles[i], budget, src).is_ok());
             i += 1;
         }
+    }
+
+    #[test]
+    fn routing_grant_requires_budget_and_role() {
+        let src = sha384(b"fund-2");
+        let budget = ResourceBudget {
+            bytes: 8,
+            work: 1,
+            io: 1,
+        };
+        let routing = activate_role(FundedRole::Routing, budget, src).unwrap();
+        assert!(role_admits_router(&routing).is_ok());
+        let relay = activate_role(FundedRole::Relay, budget, src).unwrap();
+        assert_eq!(role_admits_router(&relay), Err(QdnfError::Denied));
+        let empty = activate_role(FundedRole::Routing, ResourceBudget::ZERO, src).unwrap();
+        assert_eq!(role_admits_router(&empty), Err(QdnfError::BudgetExhausted));
     }
 }

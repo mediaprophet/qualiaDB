@@ -136,6 +136,11 @@ pub fn remaining_recovery(ob: &Obligation) -> Result<u64, QdnfError> {
     Ok(ob.target_t.saturating_sub(used))
 }
 
+/// True when unused recovery remains to fund an in-process settlement.
+pub fn is_funded(ob: &Obligation) -> Result<bool, QdnfError> {
+    Ok(remaining_recovery(ob)? > 0)
+}
+
 /// Authorised non-cash discharge W. Denied if it would exceed remaining T.
 pub fn authorise_discharge(ob: &mut Obligation, amount: u64) -> Result<(), QdnfError> {
     if amount == 0 {
@@ -215,5 +220,13 @@ mod tests {
         assert_eq!(remaining_recovery(&ob).unwrap(), 0);
         assert_eq!(authorise_discharge(&mut ob, 1), Err(QdnfError::Denied));
         assert_eq!(ob.target_t, 5);
+    }
+
+    #[test]
+    fn open_target_is_funded_zero_target_is_not() {
+        let funded = Obligation::open(id(), 5).unwrap();
+        assert!(is_funded(&funded).unwrap());
+        let empty = Obligation::open(id(), 0).unwrap();
+        assert!(!is_funded(&empty).unwrap());
     }
 }

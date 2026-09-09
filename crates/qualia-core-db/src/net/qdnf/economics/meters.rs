@@ -80,6 +80,14 @@ pub fn unknown_meter_as_zero(reading: MeterReading) -> bool {
     false
 }
 
+/// Unknown quality cannot admit funded service. Measured and estimated may.
+pub fn meter_admits_service(reading: MeterReading) -> Result<u64, QdnfError> {
+    if unknown_meter_as_zero(reading) {
+        return Err(QdnfError::Malformed);
+    }
+    reading.value()
+}
+
 /// Map a Quantity into a meter of the same ResourceKind.
 pub fn reading_from_quantity(q: Quantity) -> MeterReading {
     MeterReading {
@@ -137,5 +145,12 @@ mod tests {
         let r = reading_from_quantity(q);
         assert_eq!(r.kind, MeterKind::TypedCompute);
         assert_eq!(r.value().unwrap(), 9);
+        assert_eq!(meter_admits_service(r).unwrap(), 9);
+        let unknown = MeterReading {
+            kind: MeterKind::NetBytes,
+            milli_units: 4,
+            quality: ObservationQuality::Unknown,
+        };
+        assert_eq!(meter_admits_service(unknown), Err(QdnfError::Incomplete));
     }
 }
