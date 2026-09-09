@@ -48,6 +48,54 @@ pub fn on_paced_send(pacer: &mut Pacer, bytes: u64, now_us: u64) -> Result<(), Q
     Ok(())
 }
 
+/// Idle send fence. After `idle_us` with no send, further send is Closed.
+/// Reopen with the same generation is Replay (nonce reuse). A new generation
+/// is required. Not wired into packet protection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct IdleWatch {
+    last_activity_us: u64,
+    idle_us: u64,
+    generation: u64,
+    closed: bool,
+}
+
+impl IdleWatch {
+    pub const fn new(idle_us: u64, generation: u64) -> Self {
+        Self {
+            last_activity_us: 0,
+            idle_us,
+            generation,
+            closed: false,
+        }
+    }
+
+    pub fn on_send(&mut self, now_us: u64) -> Result<(), QdnfError> {
+        if self.closed {
+            return Err(QdnfError::Closed);
+        }
+        if now_us.saturating_sub(self.last_activity_us) >= self.idle_us && self.last_activity_us > 0
+        {
+            self.closed = true;
+            return Err(QdnfError::Closed);
+        }
+        self.last_activity_us = now_us;
+        Ok(())
+    }
+
+    pub fn reopen(&mut self, generation: u64) -> Result<(), QdnfError> {
+        if generation == self.generation {
+            return Err(QdnfError::Replay);
+        }
+        if generation < self.generation {
+            return Err(QdnfError::StaleGeneration);
+        }
+        self.generation = generation;
+        self.closed = false;
+        self.last_activity_us = 0;
+        Ok(())
+    }
+}
+
 /// Rate ≈ window / smoothed_rtt (RFC 9002 pacing). Unknown RTT fails closed.
 pub fn set_rate_from_window_rtt(
     pacer: &mut Pacer,
@@ -103,5 +151,17 @@ mod tests {
         on_ack_sample(&mut rtt, 1000);
         set_rate_from_window_rtt(&mut pacer, 1200, &rtt).unwrap();
         assert_eq!(pacer.rate_bytes_per_s, 1_200_000);
+    }
+
+    #[test]
+    fn idle_shutdown_closes_without_nonce_reuse() {
+        let mut idle = IdleWatch::new(100, 1);
+        idle.on_send(1).unwrap();
+        idle.on_send(50).unwrap();
+        assert_eq!(idle.on_send(150), Err(QdnfError::Closed));
+        assert_eq!(idle.on_send(151), Err(QdnfError::Closed));
+        assert_eq!(idle.reopen(1), Err(QdnfError::Replay));
+        idle.reopen(2).unwrap();
+        idle.on_send(200).unwrap();
     }
 }

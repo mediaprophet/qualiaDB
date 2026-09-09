@@ -358,6 +358,32 @@ mod tests {
     }
 
     #[test]
+    fn coupled_multipath_does_not_multiply_window() {
+        use crate::net::qdnf::session::congestion::PathCcTable;
+        let mut table = PathTable::new();
+        let a = table.start_race(1).unwrap();
+        let b = table.start_race(1).unwrap();
+        table.mark_active(a).unwrap();
+        table.mark_active(b).unwrap();
+        let ha = table.handle_of(a).unwrap();
+        let hb = table.handle_of(b).unwrap();
+        let mut coupled = PathCcTable::new(500);
+        assert!(!coupled.independent_bottleneck);
+        coupled.attach(ha).unwrap();
+        coupled.attach(hb).unwrap();
+        coupled.send(ha, 1, 400).unwrap();
+        assert_eq!(coupled.send(hb, 2, 200), Err(QdnfError::BudgetExhausted));
+        assert!(coupled.total_in_flight() <= 500);
+        let mut independent = PathCcTable::new(500);
+        independent.independent_bottleneck = true;
+        independent.attach(ha).unwrap();
+        independent.attach(hb).unwrap();
+        independent.send(ha, 1, 500).unwrap();
+        independent.send(hb, 2, 500).unwrap();
+        assert_eq!(independent.total_in_flight(), 1000);
+    }
+
+    #[test]
     fn mutate_active_requires_reachability_proof() {
         let mut table = PathTable::new();
         let id = table.start_race(1).unwrap();

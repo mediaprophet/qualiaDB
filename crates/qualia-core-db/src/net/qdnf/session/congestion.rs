@@ -91,6 +91,26 @@ impl PmtuState {
         self.mtu = Some(mtu);
         Ok(mtu)
     }
+
+    /// Reduce a known MTU. Unknown is Incomplete; increase is Range.
+    pub fn shrink(&mut self, mtu: u16) -> Result<u16, QdnfError> {
+        let cur = self.current()?;
+        if mtu == 0 || mtu > cur {
+            return Err(QdnfError::Range);
+        }
+        self.mtu = Some(mtu);
+        Ok(mtu)
+    }
+
+    /// Oversize is Capacity. Unknown is Incomplete, never a silent 1280 clamp.
+    pub fn admit_bytes(&self, len: usize) -> Result<(), QdnfError> {
+        let mtu = self.current()?;
+        if len > mtu as usize {
+            Err(QdnfError::Capacity)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -436,6 +456,42 @@ mod tests {
         assert_eq!(tbl.send(hb, 2, 1), Err(QdnfError::BudgetExhausted));
         assert!(tbl.total_in_flight() <= 500);
         assert!(!path_cc_is_connection_authority());
+    }
+
+    #[test]
+    fn pmtu_shrink_rejects_oversize() {
+        let mut pmtu = PmtuState::unknown();
+        assert_eq!(pmtu.admit_bytes(1), Err(QdnfError::Incomplete));
+        assert_eq!(pmtu.shrink(1280), Err(QdnfError::Incomplete));
+        pmtu.discover(1500).unwrap();
+        pmtu.admit_bytes(1500).unwrap();
+        pmtu.shrink(1400).unwrap();
+        assert_eq!(pmtu.admit_bytes(1401), Err(QdnfError::Capacity));
+        pmtu.admit_bytes(1400).unwrap();
+    }
+
+    #[test]
+    fn forged_ack_unknown_pn_malformed() {
+        let mut cc = Congestion::with_window(10_000);
+        on_send(&mut cc, 1, 100).unwrap();
+        assert_eq!(on_acked_pn(&mut cc, 99), Err(QdnfError::Malformed));
+        assert_eq!(cc.bytes_in_flight, 100);
+    }
+
+    #[test]
+    fn packet_or_stream_exhaustion_is_capacity() {
+        let mut cc = Congestion::with_window(1_000_000);
+        let mut pn = 1u64;
+        while pn <= 16 {
+            on_send(&mut cc, pn, 10).unwrap();
+            pn += 1;
+        }
+        assert_eq!(on_send(&mut cc, 17, 10), Err(QdnfError::Capacity));
+        let credit = CreditTable::new(0);
+        assert_eq!(
+            admit_send(&cc, &credit, DIR_CLIENT, 1),
+            Err(QdnfError::Capacity)
+        );
     }
 
     #[test]

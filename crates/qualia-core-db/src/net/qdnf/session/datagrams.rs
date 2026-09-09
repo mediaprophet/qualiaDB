@@ -134,4 +134,18 @@ mod tests {
         let got = inbox.take(1).unwrap();
         assert_eq!(got.expires_unix, 20);
     }
+
+    #[test]
+    fn inbox_full_is_capacity() {
+        let mut inbox = DatagramInbox::new();
+        let mut i = 0u8;
+        while i < MAX_DATAGRAMS as u8 {
+            let mut d = dg(20);
+            d.len = u16::from(i);
+            inbox.enqueue(d, 1).unwrap();
+            i += 1;
+        }
+        assert_eq!(inbox.enqueue(dg(20), 1), Err(QdnfError::Capacity));
+        assert!(!datagrams_are_retransmitted());
+    }
 }

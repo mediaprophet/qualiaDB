@@ -21,6 +21,7 @@ pub mod checkpoint;
 pub mod commit_adapter;
 pub mod crash;
 pub mod custody;
+pub mod disk_crash;
 pub mod dtn;
 pub mod manifest;
 pub mod merge;
