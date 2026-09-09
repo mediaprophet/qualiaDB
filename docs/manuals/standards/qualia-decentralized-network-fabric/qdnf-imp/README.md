@@ -7,6 +7,8 @@ Webizen Sentinel, semantic authority, bounded cells and recoverable services.
 
 ## 1. Entry point
 
+For the implemented `0.0.37` baseline, start with the [implementation review and enhancement plan](0.0.37-enhancement-plan.md), the [sensitive-operations blueprint](sensitive-operations-blueprint.md) and the [advanced algorithm recipes](advanced-algorithm-recipes.md). These add evidence-based priorities, junior-developer assignments, hostile-environment medical/biometric profiles and mandatory response-marking inheritance. They do not mark the original packages complete.
+
 This package expands [P0–P21](../implementation-conformance.md) into 30 claimable task packages
 with 490 individually numbered child checks across eight workstreams. Read the [design suite](../README.md) and
 [verified core findings](../core-memory-and-parallel-networking.md) first. Plan completion does not

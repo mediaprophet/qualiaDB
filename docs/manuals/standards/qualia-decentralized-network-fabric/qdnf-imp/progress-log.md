@@ -439,3 +439,15 @@
 - Remedy: fast-forward `0.0.37` to the networking HEAD so Poet work on `0.0.37` contains waves 1–14. Packages remain open. Not Ethernet. Not Native Independent for default daemons. Not package completion.
 - Human input needed: none this step.
 
+## 2026-09-09 — implementation review and detailed enhancement programme
+
+- Reviewed `0.0.37` at `17b6b467c8a4548e302f603674dd594a67be7398`; three independent read-only audits covered crypto/session/bearers, QSR/replication and semantics/clinical/economics. Parent reviewed facade, leases, memory and integration.
+- Saved the [enhancement plan](0.0.37-enhancement-plan.md), [sensitive-operations blueprint](sensitive-operations-blueprint.md) and [advanced algorithm recipes](advanced-algorithm-recipes.md). They contain 19 baseline findings, 22 enhancement packages, 133 child checks, seven completion checks, 40 algorithm assignments and 40 sensitive-operation scenarios.
+- The plan preserves native replacement of libp2p, shared Q42/core ownership, Webizen, 42 MiB total passes, 512 MiB ordinary cells, enterprise parallelism, finite commons recovery, humanitarian exemptions and selective evidence preservation. Added explicit hostile-environment profiles, medical/biometric handling and enforced propagation of markings to responses and derived outputs.
+- A separate document reviewer identified five gaps; added per-source release-authority composition, host-owned dependency tracking, atomic revocation/release ordering, corrected profile/evidence sequencing and biometric qualification thresholds.
+- Extended the read-only plan validator with a focused enhancement validator; original registry completion checks remain intact. Measured: 22 enhancement packages/133 checks/7 final checks/40 recipe assignments/40 scenarios and acyclic dependencies pass. Original 30-package/490-child/72-edge programme remains intact. Negative controls detected an injected dependency cycle, duplicate child and duplicate scenario using bounded temporary copies, which were cleaned up.
+- Runtime test attempt: `cargo +stable test -p qualia-peer --lib --offline` failed before tests because the MSVC linker `link.exe` was unavailable. No fresh runtime passes, Ethernet performance, biometric accuracy or security certification are claimed.
+- The first enhancement-file save was rejected by automatic approval review at the account usage limit. After the user's continuation, the direct save succeeded; all three documents were verified present on disk.
+- Human input needed: none for the review/plan. Future deployment qualification needs supported runners, hardware, approved biometric criteria/corpora and the responsible organisation's classification mapping and operational acceptance.
+- Next implementation step: E00 instrumentation/claim mapping and E01 verified authority interfaces; follow the dependency order rather than treating existing state-table tests as end-to-end qualification. Original implementation packages remain open.
+

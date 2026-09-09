@@ -130,7 +130,7 @@ try {
                 if ($headings.ContainsKey($id)) { Add-Issue "Duplicate task heading: $id" }
                 $headings[$id] = $doc.FullName
             }
-            if ($line -match '^- \[([ xX])\] ') {
+            if ($line -match '^- \[([ xX])\] ' -and $doc.Name -notin @('0.0.37-enhancement-plan.md', 'advanced-algorithm-recipes.md')) {
                 if ($line -notmatch '^- \[([ xX])\] ([A-Z]+-[0-9]{2})\.([0-9]{2})[ \t]+') {
                     Add-Issue "Unnumbered checklist item: $($doc.Name)"; continue
                 }
@@ -171,11 +171,15 @@ try {
         if ($tasks[$id].status -eq 'pending' -and $checked[$id] -gt 0) { Add-Issue "Pending task has completed checks: $id" }
         if ($tasks[$id].status -eq 'complete' -and $checked[$id] -ne $children[$id]) { Add-Issue "Completed task has unchecked work: $id" }
     }
+    . (Join-Path $planRoot 'validate-enhancements.ps1')
+    $enhancements = Test-EnhancementPlan -Root $planRoot
+    foreach ($issue in $enhancements.Issues) { Add-Issue $issue }
     if ($issues.Count -gt 0) {
         foreach ($issue in $issues) { Write-Output "FAIL: $issue" }
         exit 1
     }
     $total = ($children.Values | Measure-Object -Sum).Sum
+    Write-Output "PASS: $($enhancements.Packages) enhancement packages; $($enhancements.Children) enhancement child checks; $($enhancements.FinalChecks) final checks; $($enhancements.Recipes) recipe assignments; $($enhancements.Scenarios) sensitive-operation scenarios; acyclic enhancement dependencies."
     Write-Output "PASS: $($tasks.Count) packages; $total child checks; $edgeCount dependency edges; $($documents.Count) Markdown files; $links local links; P0-P21 covered by domain owners."
     exit 0
 } catch {
