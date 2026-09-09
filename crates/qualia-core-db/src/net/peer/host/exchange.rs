@@ -4,7 +4,6 @@ use crate::crypto::network::digest::sha384;
 use crate::crypto::network::kem::MlKem768Secret;
 use crate::crypto::network::transcript::Transcript;
 use crate::net::peer::host::{ControllerIdentity, NativePeer};
-use crate::net::qdnf::bearer::contract::Bearer;
 use crate::net::qdnf::authority::{
     binding_for_controllers, AuthorityOwner, ContactState, ExecutionPermit, InstalledSessionKeys,
 };
@@ -16,7 +15,6 @@ use crate::net::qdnf::crypto::handshake::{
 use crate::net::qdnf::crypto::schedule::derive_handshake_keys;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::harness::oracles::wire::{require_protected, ProtectedView};
-use crate::net::qdnf::session::handshake::SessionBinding;
 use crate::net::qdnf::types::{Generation, ScopeEpoch};
 
 fn handshake_keys(
@@ -141,109 +139,4 @@ pub fn authorised_ipc_stream_exchange(payload: &[u8]) -> Result<usize, QdnfError
         return Err(QdnfError::Malformed);
     }
     Ok(n)
-}
-
-/// Capture helper: last sealed frame bytes for the wire oracle (bounded).
-#[derive(Clone, Copy, Debug)]
-pub struct SealedFrame {
-    bytes: [u8; 160],
-    len: u8,
-}
-
-impl SealedFrame {
-    pub fn as_slice(&self) -> &[u8] {
-        &self.bytes[..self.len as usize]
-    }
-}
-
-impl NativePeer {
-    pub fn activate_protected(
-        &mut self,
-        permit: ExecutionPermit,
-        keys: InstalledSessionKeys,
-        now_unix: u64,
-    ) -> Result<(), QdnfError> {
-        let session = SessionBinding::from_permit(&permit, &keys, now_unix)?;
-        let protection = crate::net::qdnf::session::ProtectedAckSession::from_keys(
-            *keys.send_key(),
-            *keys.recv_key(),
-            keys.generation(),
-        )?;
-        let add = crate::net::peer::runtime::ResourceBudget {
-            bytes: 256,
-            work: 1,
-            io: 1,
-        };
-        let handle = self.ledger.reserve(add, true)?;
-        self.reservation = Some(handle);
-        self.session = Some(session);
-        self.protection = Some(protection);
-        Ok(())
-    }
-
-    /// Traffic-secret update. Does not mint a new permit or grant.
-    pub fn rekey_protected(&mut self, table: &mut crate::net::qdnf::session::rekey::RekeyTable) -> Result<u64, QdnfError> {
-        let protection = self.protection.as_mut().ok_or(QdnfError::Unauthorized)?;
-        let _session = self.session.ok_or(QdnfError::Unauthorized)?;
-        let next = table.rotate()?;
-        let (send, recv) = table.keys(next)?;
-        protection.install_update(send, recv, crate::net::qdnf::types::Generation(next))?;
-        Ok(next)
-    }
-
-    pub fn send_protected(
-        &mut self,
-        dest: &crate::net::qdnf::types::ObservedLocator,
-        payload: &[u8],
-    ) -> Result<SealedFrame, QdnfError> {
-        let session = self.session.ok_or(QdnfError::Unauthorized)?;
-        session.admit_application()?;
-        let remote = self.remote_or_reject()?;
-        if self.neighbors.forwarding(remote).is_none() {
-            return Err(QdnfError::NoRoute);
-        }
-        let protection = self.protection.as_mut().ok_or(QdnfError::Unauthorized)?;
-        let mut pt = [0u8; 64];
-        if payload.len() > pt.len() {
-            return Err(QdnfError::Capacity);
-        }
-        pt[..payload.len()].copy_from_slice(payload);
-        let mut sealed = [0u8; 96];
-        let n = protection.seal_tracked(b"qsession/stream", &mut pt[..payload.len()], &mut sealed)?;
-        let mut header = crate::net::qdnf::frame::FrameHeader::new(
-            crate::net::qdnf::registries::FrameType::SessionStream,
-            crate::net::qdnf::registries::NextProtocol::QSession,
-        );
-        header.source_link_id = self.local_link;
-        header.payload_len = n as u16;
-        let mut wire = [0u8; 256];
-        let wn = crate::net::qdnf::frame::encode_frame(&header, &sealed[..n], &mut wire)?;
-        self.bearer.send(dest, &wire[..wn])?;
-        let mut out = SealedFrame {
-            bytes: [0u8; 160],
-            len: 0,
-        };
-        let copy = n.min(out.bytes.len());
-        out.bytes[..copy].copy_from_slice(&sealed[..copy]);
-        out.len = copy as u8;
-        Ok(out)
-    }
-
-    pub fn recv_protected(&mut self, out: &mut [u8]) -> Result<usize, QdnfError> {
-        let session = self.session.ok_or(QdnfError::Unauthorized)?;
-        session.admit_application()?;
-        let protection = self.protection.as_mut().ok_or(QdnfError::Unauthorized)?;
-        let mut wire = [0u8; 256];
-        let (got, _meta) = self.bearer.recv(&mut wire)?;
-        let (decoded, off, len) = crate::net::qdnf::frame::decode_frame(&wire[..got])?;
-        if decoded.frame_type != crate::net::qdnf::registries::FrameType::SessionStream {
-            return Err(QdnfError::Malformed);
-        }
-        let mut sealed = [0u8; 96];
-        let copied = crate::net::qdnf::frame::copy_payload(&wire[..got], off, len, &mut sealed)?;
-        match protection.open_tracked(b"qsession/stream", &sealed[..copied], out)? {
-            (crate::net::qdnf::session::ProtectedRecv::Delivered, n) => Ok(n),
-            (crate::net::qdnf::session::ProtectedRecv::Duplicate, _) => Err(QdnfError::Replay),
-        }
-    }
 }
