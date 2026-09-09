@@ -15,10 +15,12 @@
 //! not storage evidence.
 
 pub mod checkpoint;
+pub mod commit_adapter;
 pub mod crash;
 pub mod manifest;
 pub mod merge;
 pub mod operation;
+pub mod pair;
 pub mod proof;
 pub mod receipts;
 pub mod resume;
@@ -31,6 +33,7 @@ pub use checkpoint::{
     build_checkpoint, forged_count_rejected, membership_implies_completeness, verify_checkpoint,
     Checkpoint, MAX_CHECKPOINT_OPS,
 };
+pub use commit_adapter::{commit_verified_block, resume_from_log};
 pub use manifest::{
     container_generation_is_qsync_root, disclose_raw_artifact,
     raw_artifact_requires_full_authorization, ByteRange, ContentManifest, MAX_DECODED_BYTES,
@@ -44,6 +47,7 @@ pub use operation::{
     operation_id, source_signature_reusable_after_redaction, transport_ack_is_durable,
     tx_from_operation_id, OpTable, OperationDesc, MAX_OPS, MAX_PARENTS,
 };
+pub use pair::{commit_pair, recover_pair, stage_paired, DurablePairing};
 pub use proof::{
     membership_implies_range_coverage, private_neighbor_metadata_in_proof, prove_membership,
     verify_membership, MembershipProof, MAX_PROOF_IDS,

@@ -34,6 +34,8 @@ struct Slot {
     effect: bool,
     durable_applied: bool,
     id: StrongDigest,
+    /// SHA-384 of exact effect bytes. ZERO means no effect digest recorded.
+    effect_digest: StrongDigest,
 }
 
 /// Sixteen-slot identity / effect / receipt table.
@@ -49,6 +51,7 @@ impl ReceiptTable {
                 effect: false,
                 durable_applied: false,
                 id: StrongDigest::ZERO,
+                effect_digest: StrongDigest::ZERO,
             }; MAX_RECEIPTS],
         }
     }
@@ -104,6 +107,7 @@ pub fn bind_identity(table: &mut ReceiptTable, id: StrongDigest) -> Result<(), Q
         effect: false,
         durable_applied: false,
         id,
+        effect_digest: StrongDigest::ZERO,
     };
     Ok(())
 }
@@ -115,6 +119,57 @@ pub fn apply_effect(table: &mut ReceiptTable, id: StrongDigest) -> Result<(), Qd
     let idx = table.find_id(&id).ok_or(QdnfError::Unauthorized)?;
     table.slots[idx].effect = true;
     Ok(())
+}
+
+/// Record SHA-384 of exact effect bytes on a bound identity.
+///
+/// Same digest is idempotent. A different digest for the same id is
+/// [`QdnfError::Conflict`]. Zero digest is malformed. Unknown id is unauthorized.
+pub fn bind_effect_digest(
+    table: &mut ReceiptTable,
+    id: StrongDigest,
+    digest: StrongDigest,
+) -> Result<(), QdnfError> {
+    reject_zero(id)?;
+    if digest == StrongDigest::ZERO {
+        return Err(QdnfError::Malformed);
+    }
+    let idx = table.find_id(&id).ok_or(QdnfError::Unauthorized)?;
+    let slot = &mut table.slots[idx];
+    if slot.effect_digest != StrongDigest::ZERO && slot.effect_digest != digest {
+        return Err(QdnfError::Conflict);
+    }
+    slot.effect_digest = digest;
+    slot.effect = true;
+    Ok(())
+}
+
+/// SHA-384 of effect bytes recorded for `id`, if any.
+pub fn effect_digest_of(table: &ReceiptTable, id: StrongDigest) -> Result<StrongDigest, QdnfError> {
+    reject_zero(id)?;
+    let idx = table.find_id(&id).ok_or(QdnfError::Unauthorized)?;
+    let digest = table.slots[idx].effect_digest;
+    if digest == StrongDigest::ZERO {
+        Err(QdnfError::Incomplete)
+    } else {
+        Ok(digest)
+    }
+}
+
+/// Durability class actually achieved for `id` without acknowledging a stage.
+///
+/// Transport ACK is never consulted. Unknown id is unauthorized.
+pub fn class_of(table: &ReceiptTable, id: StrongDigest) -> Result<ReceiptClass, QdnfError> {
+    reject_zero(id)?;
+    let idx = table.find_id(&id).ok_or(QdnfError::Unauthorized)?;
+    let slot = &table.slots[idx];
+    if slot.durable_applied {
+        Ok(ReceiptClass::DurableReceipt)
+    } else if slot.effect {
+        Ok(ReceiptClass::Effect)
+    } else {
+        Ok(ReceiptClass::Identity)
+    }
 }
 
 /// Map a delivery stage onto the durability class actually achieved.
@@ -292,5 +347,29 @@ mod tests {
         bind_identity(&mut table, id).unwrap();
         let class = acknowledge(&mut table, id, DeliveryStage::TransportAck).unwrap();
         assert_eq!(class, ReceiptClass::Identity);
+    }
+
+    #[test]
+    fn bind_effect_digest_same_is_idempotent_different_is_conflict() {
+        let mut table = ReceiptTable::new();
+        let id = digest(8);
+        let d1 = digest(0xA1);
+        let d2 = digest(0xA2);
+        bind_identity(&mut table, id).unwrap();
+        bind_effect_digest(&mut table, id, d1).unwrap();
+        bind_effect_digest(&mut table, id, d1).unwrap();
+        assert_eq!(effect_digest_of(&table, id).unwrap(), d1);
+        assert_eq!(class_of(&table, id).unwrap(), ReceiptClass::Effect);
+        assert_eq!(
+            bind_effect_digest(&mut table, id, d2),
+            Err(QdnfError::Conflict)
+        );
+        assert_eq!(class_of(&table, id).unwrap(), ReceiptClass::Effect);
+    }
+
+    #[test]
+    fn class_of_unknown_id_is_unauthorized() {
+        let table = ReceiptTable::new();
+        assert_eq!(class_of(&table, digest(9)), Err(QdnfError::Unauthorized));
     }
 }
