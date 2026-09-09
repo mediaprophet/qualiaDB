@@ -7,6 +7,7 @@
 pub mod authority;
 pub mod bearer;
 pub mod biometrics;
+pub mod cells;
 pub mod clinical;
 pub mod contracts;
 pub mod crypto;
