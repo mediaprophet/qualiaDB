@@ -20,8 +20,11 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::frame::{copy_payload, decode_frame, encode_frame, FrameHeader};
 use crate::net::qdnf::link::{Adjacency, AdjacencyState, Beacon, DiscoveryMode, NeighborTable};
 use crate::net::qdnf::registries::{FrameType, NextProtocol};
-use crate::net::qdnf::resolve::qsr::{lookup_exact, CoverInterval, QsrOutcome};
-use crate::net::qdnf::types::{LinkId, ObservedLocator, StrongDigest};
+use crate::net::qdnf::resolve::qsr::{
+    lookup_exact, lookup_qsr_full as qsr_lookup_full, CoverInterval, HandoverStage, QsrOutcome,
+    QsrSnapshot, TokenStage,
+};
+use crate::net::qdnf::types::{Generation, LinkId, ObservedLocator, StrongDigest};
 
 pub use builder::{PeerBuilder, CELL_BYTES_DEFAULT};
 pub use driver::SealedFrame;
@@ -102,13 +105,34 @@ impl NativePeer {
         Ok(beacon.link_id)
     }
 
-    /// QSR exact lookup. Replaces Kademlia `get_record`. Cover membership is
-    /// not authenticated existence (`NeedContinuation` vs `Found`).
+    /// Cover-interval membership only. Not authenticated existence.
+    /// Use [`Self::lookup_qsr_full`] for tokens and handover.
     pub fn lookup_qsr(
         key: &StrongDigest,
         covers: &[CoverInterval],
     ) -> Result<QsrOutcome, QdnfError> {
         lookup_exact(key, covers)
+    }
+
+    /// Production QSR lookup: exact cover/snapshot, then tokens, then handover.
+    pub fn lookup_qsr_full(
+        key: &StrongDigest,
+        covers: &[CoverInterval],
+        snapshot: &QsrSnapshot,
+        required_generation: Generation,
+        token: Option<TokenStage<'_>>,
+        handover: Option<HandoverStage<'_>>,
+        out: &mut [StrongDigest],
+    ) -> Result<QsrOutcome, QdnfError> {
+        qsr_lookup_full(
+            key,
+            covers,
+            snapshot,
+            required_generation,
+            token,
+            handover,
+            out,
+        )
     }
 
     /// Service identifier alone cannot open an application session (E01/R01).
@@ -179,6 +203,21 @@ mod tests {
         let covers = [CoverInterval { start: 0, end: 15 }];
         assert_eq!(
             NativePeer::lookup_qsr(&key, &covers).unwrap(),
+            QsrOutcome::NeedContinuation
+        );
+        let snap = QsrSnapshot::empty(Generation(1));
+        let mut out = [StrongDigest::ZERO; 1];
+        assert_eq!(
+            NativePeer::lookup_qsr_full(
+                &key,
+                &covers,
+                &snap,
+                Generation(1),
+                None,
+                None,
+                &mut out,
+            )
+            .unwrap(),
             QsrOutcome::NeedContinuation
         );
     }

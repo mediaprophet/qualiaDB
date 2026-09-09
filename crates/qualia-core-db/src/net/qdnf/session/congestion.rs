@@ -157,7 +157,18 @@ impl PathCcTable {
         Ok(self.local(handle)?.rtt)
     }
 
+    /// Window check without consuming a packet number.
+    pub fn check_send(&self, handle: PathHandle, bytes: u64) -> Result<(), QdnfError> {
+        if self.independent_bottleneck {
+            can_send(&self.local(handle)?.cc, bytes)
+        } else {
+            let _ = self.local(handle)?;
+            can_send(&self.shared, bytes)
+        }
+    }
+
     pub fn send(&mut self, handle: PathHandle, pn: u64, bytes: u64) -> Result<(), QdnfError> {
+        self.check_send(handle, bytes)?;
         let independent = self.independent_bottleneck;
         if independent {
             return on_send(&mut self.local_mut(handle)?.cc, pn, bytes);

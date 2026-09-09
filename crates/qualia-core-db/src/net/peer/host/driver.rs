@@ -200,6 +200,11 @@ impl NativePeer {
             return Err(QdnfError::Capacity);
         }
         let _ = self.sessions.path_cc.path_rtt(path)?;
+        if !payload.is_empty() {
+            self.sessions
+                .path_cc
+                .check_send(path, payload.len() as u64)?;
+        }
         let mut pass = PassGuard::enter(&PassCharge {
             arena: 0,
             scratch: payload.len() as u64,

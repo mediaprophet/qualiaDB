@@ -31,8 +31,8 @@ pub struct HandoverStage<'a> {
     pub generation: Generation,
 }
 
-/// Public QSR lookup surface. `NativePeer::lookup_qsr` still calls cover-only
-/// [`lookup_exact`]; call [`Qsr::lookup`] / [`super::lookup_qsr_full`] instead.
+/// Public QSR lookup surface. `NativePeer::lookup_qsr` is cover-only
+/// [`lookup_exact`]; `NativePeer::lookup_qsr_full` calls [`Qsr::lookup`].
 pub struct Qsr;
 
 impl Qsr {

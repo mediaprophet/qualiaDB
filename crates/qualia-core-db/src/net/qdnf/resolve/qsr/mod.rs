@@ -51,8 +51,8 @@ use crate::net::qdnf::types::{Generation, StrongDigest};
 /// Public QSR lookup: exact cover/snapshot, then tokens, then handover.
 ///
 /// Cover membership ([`lookup_exact`]) is not existence. [`QsrOutcome::Found`]
-/// is membership, not completeness. `NativePeer::lookup_qsr` still calls
-/// [`lookup_exact`] only; this is the function that peer can later call.
+/// is membership, not completeness. `NativePeer::lookup_qsr` remains cover-only;
+/// `NativePeer::lookup_qsr_full` calls this production path.
 pub fn lookup_qsr_full(
     key: &StrongDigest,
     covers: &[CoverInterval],
