@@ -12,8 +12,17 @@
 //! Hardware-backed references are reported only when a real token exists;
 //! this Linux CI path does not fake a TPM.
 
+use crate::crypto::network::aead::{decrypt_in_place, encrypt_in_place};
+use crate::crypto::network::types::{AEAD_KEY_LEN, AEAD_NONCE_LEN, AEAD_TAG_LEN};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{Generation, StrongDigest};
+
+use super::catalog::{catalog_entry, ProtectionProfile};
+
+/// AEAD AAD for sealed catalog-profile blobs.
+const SEALED_PROFILE_AAD: &[u8] = b"qdnf-profile-vault-v1";
+/// `profile_u8` + `control_count` + catalog digest.
+pub const SEALED_PROFILE_PLAIN_LEN: usize = 1 + 1 + 48;
 
 /// Maximum notification preview size. Not a full payload.
 pub const NOTIFICATION_PREVIEW_MAX_BYTES: usize = 32;
@@ -235,6 +244,80 @@ pub fn require_hardware_backed_p4() -> Result<(), QdnfError> {
     }
 }
 
+/// Catalog profile sealed under a wrap key. Ciphertext is not a key dump.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SealedProfileBlob {
+    pub ct: [u8; SEALED_PROFILE_PLAIN_LEN],
+    pub tag: [u8; AEAD_TAG_LEN],
+    pub nonce: [u8; AEAD_NONCE_LEN],
+}
+
+fn encode_profile_plain(profile: ProtectionProfile) -> [u8; SEALED_PROFILE_PLAIN_LEN] {
+    let set = catalog_entry(profile);
+    let mut plain = [0u8; SEALED_PROFILE_PLAIN_LEN];
+    plain[0] = profile.to_u8();
+    plain[1] = set.control_count;
+    plain[2..].copy_from_slice(set.digest.as_bytes());
+    plain
+}
+
+/// Seal a catalog profile. Locked vaults fail closed. Zero keys are Malformed.
+pub fn seal_profile_blob(
+    vault: &LocalVault,
+    profile: ProtectionProfile,
+    key: &[u8; AEAD_KEY_LEN],
+    nonce: &[u8; AEAD_NONCE_LEN],
+) -> Result<SealedProfileBlob, QdnfError> {
+    if vault.locked {
+        return Err(QdnfError::Denied);
+    }
+    if key == &[0u8; AEAD_KEY_LEN] {
+        return Err(QdnfError::Malformed);
+    }
+    let mut ct = encode_profile_plain(profile);
+    let mut tag = [0u8; AEAD_TAG_LEN];
+    encrypt_in_place(key, nonce, SEALED_PROFILE_AAD, &mut ct, &mut tag)?;
+    Ok(SealedProfileBlob {
+        ct,
+        tag,
+        nonce: *nonce,
+    })
+}
+
+/// Open a sealed catalog profile. Wrong key is CryptoFailure (fail closed).
+pub fn open_profile_blob(
+    vault: &LocalVault,
+    blob: &SealedProfileBlob,
+    key: &[u8; AEAD_KEY_LEN],
+) -> Result<ProtectionProfile, QdnfError> {
+    if vault.locked {
+        return Err(QdnfError::Denied);
+    }
+    let mut plain = blob.ct;
+    match decrypt_in_place(key, &blob.nonce, SEALED_PROFILE_AAD, &mut plain, &blob.tag) {
+        Ok(()) => {}
+        Err(e) => {
+            let mut i = 0usize;
+            while i < plain.len() {
+                plain[i] = 0;
+                i += 1;
+            }
+            return Err(e);
+        }
+    }
+    let profile = ProtectionProfile::from_u8(plain[0])?;
+    let expected = encode_profile_plain(profile);
+    let mut i = 0usize;
+    while i < SEALED_PROFILE_PLAIN_LEN {
+        if plain[i] != expected[i] {
+            return Err(QdnfError::Malformed);
+        }
+        i += 1;
+    }
+    Ok(profile)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -328,6 +411,37 @@ mod tests {
         assert_eq!(
             store_ref(&mut v, digest(99), 2, 100).unwrap_err(),
             QdnfError::Capacity
+        );
+    }
+
+    #[test]
+    fn sealed_profile_blob_round_trip() {
+        let v = LocalVault::new();
+        let key = [7u8; AEAD_KEY_LEN];
+        let nonce = [3u8; AEAD_NONCE_LEN];
+        let blob = seal_profile_blob(&v, ProtectionProfile::P2, &key, &nonce).unwrap();
+        assert_eq!(
+            open_profile_blob(&v, &blob, &key).unwrap(),
+            ProtectionProfile::P2
+        );
+    }
+
+    #[test]
+    fn sealed_profile_wrong_key_fails_closed() {
+        let v = LocalVault::new();
+        let key = [7u8; AEAD_KEY_LEN];
+        let nonce = [3u8; AEAD_NONCE_LEN];
+        let blob = seal_profile_blob(&v, ProtectionProfile::P3, &key, &nonce).unwrap();
+        let wrong = [8u8; AEAD_KEY_LEN];
+        assert_eq!(
+            open_profile_blob(&v, &blob, &wrong).unwrap_err(),
+            QdnfError::CryptoFailure
+        );
+        let mut locked = LocalVault::new();
+        lock(&mut locked);
+        assert_eq!(
+            seal_profile_blob(&locked, ProtectionProfile::P1, &key, &nonce).unwrap_err(),
+            QdnfError::Denied
         );
     }
 }

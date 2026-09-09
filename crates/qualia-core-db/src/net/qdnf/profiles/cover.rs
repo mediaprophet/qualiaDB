@@ -20,7 +20,8 @@
 //! compromise or seizure (E16.7).
 
 use super::budget::{
-    record_bucket, P1_PADDING_BUCKET, P2_RECORD_BYTES, P3_CELL_BYTES, P3_COVER_BYTES_PER_SEC,
+    pad_to_next_bucket, record_bucket, P1_PADDING_BUCKET, P2_RECORD_BYTES, P3_CELL_BYTES,
+    P3_COVER_BYTES_PER_SEC,
 };
 use super::catalog::{catalog_entry, ControlPredicate, ControlSet, ProtectionProfile};
 use crate::net::qdnf::errors::QdnfError;
@@ -108,6 +109,31 @@ pub fn correlation_resistance_measured() -> bool {
     false
 }
 
+/// Test oracle: observed cover/pad length for `real_len`.
+///
+/// Intra-bucket application lengths collapse to the pad bucket. Cover
+/// classes with a byte-rate (P3/P4) always emit the cell size when the
+/// application fits in one cell, so slack inside the cell is not a length
+/// oracle.
+pub fn cover_oracle_observed_bytes(
+    profile: ProtectionProfile,
+    real_len: u64,
+) -> Result<u64, QdnfError> {
+    let class = cover_class(profile);
+    if class.pad_bucket == 0 {
+        return Ok(real_len);
+    }
+    let padded = pad_to_next_bucket(real_len, class.pad_bucket as u64)?;
+    if class.cover_bps == 0 {
+        return Ok(padded);
+    }
+    if real_len <= class.pad_bucket as u64 {
+        Ok(class.pad_bucket as u64)
+    } else {
+        Ok(padded)
+    }
+}
+
 pub const fn p1_padding_bucket() -> u64 {
     P1_PADDING_BUCKET
 }
@@ -183,5 +209,24 @@ mod tests {
     #[test]
     fn correlation_resistance_is_unmeasured() {
         assert!(!correlation_resistance_measured());
+    }
+
+    #[test]
+    fn cover_oracle_does_not_leak_real_length_class() {
+        let a = 17u64;
+        let b = 200u64;
+        assert_ne!(a, b);
+        let p1_a = cover_oracle_observed_bytes(ProtectionProfile::P1, a).unwrap();
+        let p1_b = cover_oracle_observed_bytes(ProtectionProfile::P1, b).unwrap();
+        assert_eq!(p1_a, p1_b);
+        assert_eq!(p1_a, P1_PADDING_BUCKET);
+        let p3_a = cover_oracle_observed_bytes(ProtectionProfile::P3, 1).unwrap();
+        let p3_b = cover_oracle_observed_bytes(ProtectionProfile::P3, 4000).unwrap();
+        assert_eq!(p3_a, p3_b);
+        assert_eq!(p3_a, P3_CELL_BYTES);
+        assert_ne!(
+            cover_oracle_observed_bytes(ProtectionProfile::P1, 17).unwrap(),
+            cover_oracle_observed_bytes(ProtectionProfile::P1, 300).unwrap()
+        );
     }
 }

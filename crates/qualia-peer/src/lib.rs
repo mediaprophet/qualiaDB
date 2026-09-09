@@ -19,6 +19,7 @@ pub use api::PeerHost;
 pub use inventory::{libp2p_imported, public_entry_points, InventoryEntry};
 pub use native_independent::{
     cargo_toml_depends_on_libp2p, implicit_dns_ip_fallback, native_independent_daemon_proven,
+    remaining_libp2p_couplings, Libp2pCoupling,
 };
 pub use negotiate::{
     admit_capability_generation, negotiate_capability, pin_capability_version, verify_update_bytes,
@@ -30,9 +31,7 @@ pub use ops::{
     revoked_credential_count, safe_failure, universal_org_superuser, CredentialScope,
     RedactedDashboard,
 };
-pub use qualia_core_db::net::peer::cells::{
-    extra_identity_multiplies_host_budget, HostAdmission,
-};
+pub use qualia_core_db::net::peer::cells::{extra_identity_multiplies_host_budget, HostAdmission};
 pub use qualia_core_db::net::peer::host::exchange::{
     authorised_ipc_stream_exchange_in, pair_ipc_cells, AUTHORISED_IPC_MTU, AUTHORISED_PAYLOAD_CAP,
     AUTHORISED_ROUNDTRIP_CAP,
@@ -44,7 +43,7 @@ pub use qualia_core_db::net::peer::host::{
 pub use qualia_core_db::net::peer::runtime::{
     LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
 };
-pub use qualia_core_db::net::qdnf::authority::{PolicyOutcome, Plane};
+pub use qualia_core_db::net::qdnf::authority::{Plane, PolicyOutcome};
 pub use qualia_core_db::net::qdnf::bearer::{ipc_pair, Bearer, IpcEndpoint};
 pub use qualia_core_db::net::qdnf::errors::QdnfError;
 pub use qualia_core_db::net::qdnf::session::{SessionBinding, SessionState};

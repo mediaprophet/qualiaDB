@@ -51,6 +51,39 @@ pub fn gateway_transfer(
     Ok(())
 }
 
+/// Negotiated floor cannot be lowered at a gateway.
+pub fn refuse_negotiated_downgrade(
+    negotiated: ProtectionProfile,
+    proposed: ProtectionProfile,
+) -> Result<(), QdnfError> {
+    if proposed.floor_rank() < negotiated.floor_rank() {
+        Err(QdnfError::Downgrade)
+    } else {
+        Ok(())
+    }
+}
+
+/// Transfer using a profile that must not sit below the negotiated floor.
+pub fn gateway_transfer_negotiated(
+    source: &VerifiedLabel,
+    destination: &VerifiedLabel,
+    proposed: &LabelFields,
+    reviewer: StrongDigest,
+    media: GatewayMedia,
+    negotiated: ProtectionProfile,
+    transfer_profile: ProtectionProfile,
+) -> Result<(), QdnfError> {
+    refuse_negotiated_downgrade(negotiated, transfer_profile)?;
+    gateway_transfer(
+        source,
+        destination,
+        proposed,
+        reviewer,
+        media,
+        transfer_profile,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,5 +213,37 @@ mod tests {
             ),
             Err(QdnfError::Denied)
         );
+    }
+
+    #[test]
+    fn cannot_downgrade_negotiated_profile() {
+        let src = verified(Confidentiality::C2Sensitive, issuer(1), 0);
+        let dst = verified(Confidentiality::C2Sensitive, issuer(1), 0);
+        assert_eq!(
+            refuse_negotiated_downgrade(ProtectionProfile::P3, ProtectionProfile::P1),
+            Err(QdnfError::Downgrade)
+        );
+        assert_eq!(
+            gateway_transfer_negotiated(
+                &src,
+                &dst,
+                src.fields(),
+                issuer(1),
+                GatewayMedia::Network,
+                ProtectionProfile::P3,
+                ProtectionProfile::P1,
+            ),
+            Err(QdnfError::Downgrade)
+        );
+        gateway_transfer_negotiated(
+            &src,
+            &dst,
+            src.fields(),
+            issuer(1),
+            GatewayMedia::Network,
+            ProtectionProfile::P2,
+            ProtectionProfile::P2,
+        )
+        .unwrap();
     }
 }

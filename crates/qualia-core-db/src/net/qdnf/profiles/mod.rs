@@ -33,10 +33,12 @@ pub use catalog::{
 };
 pub use cover::{
     approved_relay_required, correlation_resistance_measured, cover_class, cover_mandatory,
-    cover_mandatory_controls, drop_cover_for_controls, drop_cover_for_cost,
-    isolated_bearer_required, CoverClass,
+    cover_mandatory_controls, cover_oracle_observed_bytes, drop_cover_for_controls,
+    drop_cover_for_cost, isolated_bearer_required, CoverClass,
 };
-pub use gateway::{gateway_transfer, GatewayMedia};
+pub use gateway::{
+    gateway_transfer, gateway_transfer_negotiated, refuse_negotiated_downgrade, GatewayMedia,
+};
 pub use negotiate::{
     bind_version_digest, negotiate, negotiate_outcome, CostPreference, NegotiateOutcome,
     SelectedProfile,
@@ -51,8 +53,9 @@ pub use requirements::{
 };
 pub use vault::{
     crash_dump_redacted, hardware_key_ref_supported, load_key_ref, load_ref, lock,
-    notification_preview_max_bytes, require_hardware_backed_p4, store_ref, KeyRef, LocalVault,
-    VaultSlot, NOTIFICATION_PREVIEW_MAX_BYTES, VAULT_SLOTS,
+    notification_preview_max_bytes, open_profile_blob, require_hardware_backed_p4,
+    seal_profile_blob, store_ref, KeyRef, LocalVault, SealedProfileBlob, VaultSlot,
+    NOTIFICATION_PREVIEW_MAX_BYTES, SEALED_PROFILE_PLAIN_LEN, VAULT_SLOTS,
 };
 
 // Concurrent host tests call `Result<(NativePeer, NativePeer), _>::unwrap_err`,
