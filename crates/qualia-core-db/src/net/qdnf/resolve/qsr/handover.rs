@@ -5,7 +5,11 @@
 //! returns Conflict. Writes after fence are Unauthorized. Drain copies a
 //! bounded accepted-count so no acknowledged mutation is dropped.
 
+use super::cover::CoverInterval;
+use super::outcome::QsrOutcome;
+use super::traversal::{lookup_into, QsrSnapshot};
 use crate::net::qdnf::errors::QdnfError;
+use crate::net::qdnf::types::{Generation, StrongDigest};
 
 /// Maximum acknowledged mutations retained across drain/transfer.
 pub const ACCEPTED_CAP: u8 = 8;
@@ -129,6 +133,29 @@ pub fn accept_mutation(h: &mut Handover) -> Result<u8, QdnfError> {
     Ok(h.accepted)
 }
 
+/// Successor snapshot lookup after a completed transfer.
+///
+/// Transferred, or Active with a persisted boundary, may answer. Ambiguous
+/// ownership is Conflict. An incomplete cutover is Incomplete, not Found.
+pub fn lookup_via_handover(
+    h: &Handover,
+    snapshot: &QsrSnapshot,
+    key: &StrongDigest,
+    covers: &[CoverInterval],
+    required_generation: Generation,
+    out: &mut [StrongDigest],
+) -> Result<QsrOutcome, QdnfError> {
+    match h.state {
+        WriterEpoch::Transferred => {}
+        WriterEpoch::Active if h.transferred > 0 => {}
+        WriterEpoch::Ambiguous => return Ok(QsrOutcome::Conflict),
+        WriterEpoch::Fenced | WriterEpoch::Draining | WriterEpoch::Active => {
+            return Ok(QsrOutcome::Incomplete);
+        }
+    }
+    lookup_into(snapshot, key, covers, required_generation, out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,5 +232,39 @@ mod tests {
             i = i + 1;
         }
         assert_eq!(accept_mutation(&mut h), Err(QdnfError::Capacity));
+    }
+
+    #[test]
+    fn lookup_before_transfer_is_incomplete_not_found() {
+        let mut snap = QsrSnapshot::empty(Generation(1));
+        snap.insert(StrongDigest::ZERO, StrongDigest::ZERO).unwrap();
+        let covers = [CoverInterval { start: 0, end: 15 }];
+        let mut out = [StrongDigest::ZERO; 1];
+        let mut h = Handover::start(1, 2);
+        assert_eq!(
+            lookup_via_handover(
+                &h,
+                &snap,
+                &StrongDigest::ZERO,
+                &covers,
+                Generation(1),
+                &mut out
+            ),
+            Ok(QsrOutcome::Incomplete)
+        );
+        fence_old(&mut h);
+        drain_accepted(&mut h);
+        persist_boundary(&mut h);
+        assert_eq!(
+            lookup_via_handover(
+                &h,
+                &snap,
+                &StrongDigest::ZERO,
+                &covers,
+                Generation(1),
+                &mut out
+            ),
+            Ok(QsrOutcome::Found { count: 1 })
+        );
     }
 }
