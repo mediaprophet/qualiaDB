@@ -2,7 +2,7 @@
 //!
 //! Implementation lives in [`crate::net::qdnf::clinical`]. This module re-exports
 //! pairing, standing permits, ciphertext-only intermediaries and the encrypted
-//! mailbox (length + digest only).
+//! mailbox (bounded ciphertext bytes).
 
 pub use crate::net::qdnf::clinical::{
     forward_ciphertext, generic_log_contains_medical_payload, intermediary_decrypts,

@@ -1,4 +1,5 @@
-//! Encrypted mailbox: length + digest only. Transport never asserts review.
+//! Encrypted mailbox: bounded ciphertext bytes, not length + digest only.
+//! Transport never asserts review.
 
 use super::{first_empty, require_active_mutual, MAX_SLOTS};
 use crate::crypto::network::digest::sha384;
@@ -8,158 +9,14 @@ use crate::net::qdnf::policy_labels::VerifiedLabel;
 use crate::net::qdnf::types::StrongDigest;
 use sha2::{Digest, Sha384};
 
-/// Page size for streaming attachment bytes. Matches replication originals.
-pub const STREAM_PAGE_BYTES: u32 = 4096;
+mod lifecycle;
+mod slot;
 
-/// Transport delivery never asserts clinical review or care.
-#[inline]
-pub const fn network_asserts_clinical_review() -> bool {
-    false
-}
-
-/// Mailbox lifecycle. Stored cannot skip to ClinicianReviewed.
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MailboxState {
-    Stored = 1,
-    Delivered = 2,
-    ClinicianReviewed = 3,
-}
-
-/// Encrypted mailbox slot. Ciphertext bytes are not retained.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct MailboxSlot {
-    pub ciphertext_len: u32,
-    pub ciphertext_digest: StrongDigest,
-    pub recipient: StrongDigest,
-    pub key_generation: u64,
-    pub grant_revoked: bool,
-    pub state: MailboxState,
-}
-
-/// Eight-slot pending encrypted mailbox.
-#[derive(Clone, Copy, Debug)]
-pub struct Mailbox {
-    slots: [Option<MailboxSlot>; MAX_SLOTS],
-}
-
-impl Mailbox {
-    pub const fn new() -> Self {
-        Self {
-            slots: [None; MAX_SLOTS],
-        }
-    }
-
-    pub fn get(&self, slot: usize) -> Result<MailboxSlot, QdnfError> {
-        let err = if slot >= MAX_SLOTS {
-            QdnfError::Range
-        } else {
-            QdnfError::Closed
-        };
-        self.slots.get(slot).copied().flatten().ok_or(err)
-    }
-
-    /// Store ciphertext as length + digest + recipient. Pending state is Stored.
-    pub fn store(
-        &mut self,
-        ct: &[u8],
-        recipient: StrongDigest,
-        key_generation: u64,
-    ) -> Result<usize, QdnfError> {
-        if ct.is_empty() || recipient == StrongDigest::ZERO {
-            return Err(QdnfError::Malformed);
-        }
-        let len = u32::try_from(ct.len()).map_err(|_| QdnfError::Range)?;
-        let i = first_empty(&self.slots).ok_or(QdnfError::Capacity)?;
-        self.slots[i] = Some(MailboxSlot {
-            ciphertext_len: len,
-            ciphertext_digest: sha384(ct),
-            recipient,
-            key_generation,
-            grant_revoked: false,
-            state: MailboxState::Stored,
-        });
-        Ok(i)
-    }
-
-    /// Revoke clinician grants. Pending slots stay Stored.
-    pub fn revoke_clinician(&mut self, clinician: StrongDigest) -> Result<(), QdnfError> {
-        if clinician == StrongDigest::ZERO {
-            return Err(QdnfError::Malformed);
-        }
-        let mut i = 0usize;
-        while i < MAX_SLOTS {
-            if let Some(s) = self.slots[i].as_mut() {
-                if s.recipient == clinician {
-                    s.grant_revoked = true;
-                }
-            }
-            i += 1;
-        }
-        Ok(())
-    }
-
-    /// Deliver Stored material to the recorded recipient. No substitution.
-    /// Transport delivery does not mark ClinicianReviewed.
-    pub fn deliver(
-        &mut self,
-        slot: usize,
-        recipient: StrongDigest,
-        key_generation: u64,
-    ) -> Result<(), QdnfError> {
-        debug_assert!(!network_asserts_clinical_review());
-        let mut s = self.get(slot)?;
-        if recipient != s.recipient {
-            return Err(QdnfError::Unauthorized);
-        }
-        if s.grant_revoked {
-            return Err(QdnfError::Revoked);
-        }
-        if key_generation != s.key_generation {
-            return Err(QdnfError::StaleGeneration);
-        }
-        match s.state {
-            MailboxState::Stored => {
-                s.state = MailboxState::Delivered;
-                self.slots[slot] = Some(s);
-                Ok(())
-            }
-            MailboxState::Delivered => Ok(()),
-            MailboxState::ClinicianReviewed => Err(QdnfError::Conflict),
-        }
-    }
-
-    /// ClinicianReviewed requires Delivered. Stored cannot skip.
-    pub fn mark_reviewed(&mut self, slot: usize) -> Result<(), QdnfError> {
-        let mut s = self.get(slot)?;
-        match s.state {
-            MailboxState::Stored => Err(QdnfError::Denied),
-            MailboxState::Delivered => {
-                s.state = MailboxState::ClinicianReviewed;
-                self.slots[slot] = Some(s);
-                Ok(())
-            }
-            MailboxState::ClinicianReviewed => Ok(()),
-        }
-    }
-
-    /// Unapproved recipient substitution is always Unauthorized.
-    pub fn substitute_recipient(
-        &mut self,
-        slot: usize,
-        new_recipient: StrongDigest,
-    ) -> Result<(), QdnfError> {
-        let _ = (self.get(slot)?, new_recipient);
-        Err(QdnfError::Unauthorized)
-    }
-}
-
-impl Default for Mailbox {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub use lifecycle::Mailbox;
+pub use slot::{
+    network_asserts_clinical_review, MailboxSlot, MailboxState, MAILBOX_CIPHERTEXT_BYTES,
+    STREAM_PAGE_BYTES,
+};
 
 /// Offline queued ciphertext metadata. Expired packages stay sealed.
 #[repr(C)]
@@ -334,38 +191,6 @@ mod tests {
         let mut x = StrongDigest::ZERO;
         x.0[0] = tag;
         x
-    }
-
-    #[test]
-    fn mailbox_revoke_substitute_generation_states() {
-        let ct = b"pending-encrypted";
-        let clinician = d(2);
-        let other = d(3);
-        let mut mb = Mailbox::new();
-        let slot = mb.store(ct, clinician, 1).expect("store");
-        assert_eq!(mb.get(slot).unwrap().state, MailboxState::Stored);
-        assert_eq!(mb.mark_reviewed(slot), Err(QdnfError::Denied));
-        assert_eq!(
-            mb.substitute_recipient(slot, other),
-            Err(QdnfError::Unauthorized)
-        );
-        assert_eq!(mb.deliver(slot, other, 1), Err(QdnfError::Unauthorized));
-        assert_eq!(
-            mb.deliver(slot, clinician, 2),
-            Err(QdnfError::StaleGeneration)
-        );
-        assert!(mb.deliver(slot, clinician, 1).is_ok());
-        assert_eq!(mb.get(slot).unwrap().state, MailboxState::Delivered);
-        assert!(!network_asserts_clinical_review());
-        assert!(mb.mark_reviewed(slot).is_ok());
-        assert_eq!(mb.get(slot).unwrap().state, MailboxState::ClinicianReviewed);
-        let mut pending = Mailbox::new();
-        let s = pending.store(ct, clinician, 1).expect("pending");
-        assert!(pending.revoke_clinician(clinician).is_ok());
-        assert_eq!(pending.get(s).unwrap().state, MailboxState::Stored);
-        assert_eq!(pending.deliver(s, clinician, 1), Err(QdnfError::Revoked));
-        assert_eq!(pending.get(s).unwrap().ciphertext_digest, sha384(ct));
-        assert_eq!(pending.get(s).unwrap().ciphertext_len as usize, ct.len());
     }
 
     #[test]

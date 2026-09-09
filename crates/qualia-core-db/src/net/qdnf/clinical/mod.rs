@@ -1,7 +1,7 @@
 //! Known-peer medical communications (E14 / NET-05.21–24).
 //!
 //! Private authenticated pairing, standing care permits, recipient envelopes
-//! and an encrypted mailbox (length + digest only). Transport delivery never
+//! and an encrypted mailbox (bounded ciphertext bytes). Transport delivery never
 //! asserts clinical review. No medical payload bytes are stored on generic logs.
 
 pub mod envelope;
@@ -24,7 +24,8 @@ pub use help::{
 pub use mailbox::{
     digest_attachment_pages, enqueue_offline, export_interchange, network_asserts_clinical_review,
     patient_record_associated, release_queued, stream_attachment, InterchangeAdapter, Mailbox,
-    MailboxSlot, MailboxState, OfflineQueue, OfflineSlot, STREAM_PAGE_BYTES,
+    MailboxSlot, MailboxState, OfflineQueue, OfflineSlot, MAILBOX_CIPHERTEXT_BYTES,
+    STREAM_PAGE_BYTES,
 };
 pub use pairing::{
     diagnosis_discovery_allowed, public_patient_index_allowed, publish_relationship,
