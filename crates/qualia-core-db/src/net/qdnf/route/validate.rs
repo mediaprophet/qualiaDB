@@ -196,10 +196,7 @@ mod tests {
     #[test]
     fn origin_zero_is_range() {
         let r = rec(0, 1, 2, 1, 10);
-        assert_eq!(
-            validate_record(&r, 1, 1, None, None),
-            Err(QdnfError::Range)
-        );
+        assert_eq!(validate_record(&r, 1, 1, None, None), Err(QdnfError::Range));
     }
 
     #[test]
@@ -214,10 +211,7 @@ mod tests {
     #[test]
     fn endpoint_zero_is_range() {
         let r = rec(1, 0, 2, 1, 10);
-        assert_eq!(
-            validate_record(&r, 1, 1, None, None),
-            Err(QdnfError::Range)
-        );
+        assert_eq!(validate_record(&r, 1, 1, None, None), Err(QdnfError::Range));
     }
 
     #[test]
@@ -258,7 +252,10 @@ mod tests {
     fn insert_happens_only_after_validation() {
         let mut index = AdjacencyIndex::new(1);
         let bad = rec(1, 1, 2, 1, 10);
-        assert_eq!(insert(&bad, 2, 1, None, &mut index), Err(QdnfError::Unauthorized));
+        assert_eq!(
+            insert(&bad, 2, 1, None, &mut index),
+            Err(QdnfError::Unauthorized)
+        );
         assert_eq!(index.live_count(1), 0);
         insert(&rec(1, 1, 2, 1, 10), 1, 1, None, &mut index).unwrap();
         assert_eq!(index.live_count(1), 1);

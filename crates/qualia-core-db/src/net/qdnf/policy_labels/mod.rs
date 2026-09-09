@@ -1,23 +1,30 @@
 //! Bounded protection labels. Separate from NQuin sensitivity-byte cache.
 
+pub mod declassify;
 pub mod decode;
+pub mod egress;
 pub mod flow;
 pub mod join;
+pub mod lattice;
 pub mod projection;
 pub mod release;
 pub mod types;
 pub mod verify;
 
+pub use declassify::{declassify, declassify_record, declassify_to, DeclassifyRecord};
 pub use decode::{decode_label_into, encode_label_into};
+pub use egress::{admit_cache_insert, admit_caller_egress, admit_egress, EgressCaller};
 pub use flow::{protected_read, JobLabelContext};
 pub use join::{join_labels_into, join_one};
+pub use lattice::join_confidentiality;
 pub use projection::{
     project_sensitivity, project_sink, require_labelled, require_labelled_content, DerivedSink,
 };
 pub use release::release_derivation;
 pub use types::{
-    Confidentiality, LabelFields, VerifiedLabel, MAX_COMPARTMENTS, MAX_JOIN_INPUTS, MAX_LABEL_BYTES,
-    MAX_PURPOSES, NO_BIOMETRIC_REUSE, NO_EXTERNAL_AI, NO_PUBLIC_INDEX, NO_REDISTRIBUTE, NO_TRAINING,
+    Confidentiality, LabelFields, VerifiedLabel, MAX_COMPARTMENTS, MAX_JOIN_INPUTS,
+    MAX_LABEL_BYTES, MAX_PURPOSES, NO_BIOMETRIC_REUSE, NO_EXTERNAL_AI, NO_PUBLIC_INDEX,
+    NO_REDISTRIBUTE, NO_TRAINING,
 };
 pub use verify::{verify_label, verify_label_digest};
 
@@ -76,10 +83,7 @@ mod tests {
         let n = protected_read(&mut ctx, &object, src, &mut dst).unwrap();
         assert_eq!(n, 7);
         assert_eq!(&dst[..7], src);
-        assert_eq!(
-            ctx.current().confidentiality,
-            Confidentiality::C2Sensitive
-        );
+        assert_eq!(ctx.current().confidentiality, Confidentiality::C2Sensitive);
         assert_eq!(ctx.current().restriction_bits & NO_TRAINING, NO_TRAINING);
     }
 

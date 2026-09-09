@@ -1,7 +1,7 @@
 //! Transcript-bound handshake key schedule (E02.1).
 
-use crate::crypto::network::kdf::hkdf_sha384;
 use crate::crypto::network::errors::CryptoError;
+use crate::crypto::network::kdf::hkdf_sha384;
 use crate::crypto::network::transcript::Transcript;
 use crate::crypto::network::types::AEAD_KEY_LEN;
 use crate::net::qdnf::types::StrongDigest;

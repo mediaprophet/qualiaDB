@@ -31,10 +31,7 @@ mod tests {
     #[test]
     fn empty_bytes_are_malformed_even_with_matching_digest() {
         let digest = sha384(b"contract-bytes");
-        assert_eq!(
-            verify_exact_bytes(digest, b""),
-            Err(QdnfError::Malformed)
-        );
+        assert_eq!(verify_exact_bytes(digest, b""), Err(QdnfError::Malformed));
     }
 
     #[test]

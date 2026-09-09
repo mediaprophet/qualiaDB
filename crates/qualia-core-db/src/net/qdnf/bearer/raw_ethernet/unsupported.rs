@@ -5,8 +5,8 @@ use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
 
 use super::super::contract::{Bearer, RecvMeta};
-use super::frame::validate_ifname;
 use super::EthernetEvidence;
+use super::frame::validate_ifname;
 
 #[derive(Debug)]
 pub struct RawEthernet {

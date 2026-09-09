@@ -3,10 +3,11 @@
 use crate::crypto::network::digest::sha384;
 use crate::crypto::network::kem::MlKem768Secret;
 use crate::crypto::network::transcript::Transcript;
-use crate::net::peer::host::{ControllerIdentity, NativePeer};
+use super::{PeerBuilder, CELL_BYTES_DEFAULT, ControllerIdentity, NativePeer};
 use crate::net::qdnf::authority::{
     binding_for_controllers, AuthorityOwner, ContactState, ExecutionPermit, InstalledSessionKeys,
 };
+use crate::net::qdnf::bearer::ipc_pair;
 use crate::net::qdnf::crypto::finished::{finished_mac, verify_finished};
 use crate::net::qdnf::crypto::handshake::{
     initiator_complete, initiator_share, qualified_handshake_gate, reject_unknown_key_share,
@@ -15,7 +16,38 @@ use crate::net::qdnf::crypto::handshake::{
 use crate::net::qdnf::crypto::schedule::derive_handshake_keys;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::harness::oracles::wire::{require_protected, ProtectedView};
-use crate::net::qdnf::types::{Generation, ScopeEpoch};
+use crate::net::qdnf::types::{Generation, LinkId, ScopeEpoch};
+
+/// Authorised application payload ceiling (E04.5 / P2). Round-trip success is
+/// also bounded by bearer MTU and packet-protection open (256-byte body).
+pub const AUTHORISED_PAYLOAD_CAP: usize = 4096;
+
+/// Practical protected round-trip size while packet-protection `open` stays 256.
+pub const AUTHORISED_ROUNDTRIP_CAP: usize = 256;
+
+/// Two native peers over `local-ipc-v1`, sized to the caller’s cell budget.
+pub fn pair_ipc_cells(
+    a_controller: &[u8],
+    b_controller: &[u8],
+    scope: ScopeEpoch,
+    mtu: u16,
+    cell_bytes: u64,
+) -> Result<(NativePeer, NativePeer), QdnfError> {
+    let a_id = ControllerIdentity::from_controller(a_controller)?;
+    let b_id = ControllerIdentity::from_controller(b_controller)?;
+    if a_id == b_id {
+        return Err(QdnfError::Conflict);
+    }
+    let (a_bearer, b_bearer) = ipc_pair(scope, mtu)?;
+    let mut a_link = LinkId::ZERO;
+    a_link.0[0] = 1;
+    let mut b_link = LinkId::ZERO;
+    b_link.0[0] = 2;
+    Ok((
+        PeerBuilder::new(a_controller, a_link, cell_bytes)?.with_bearer(a_bearer)?,
+        PeerBuilder::new(b_controller, b_link, cell_bytes)?.with_bearer(b_bearer)?,
+    ))
+}
 
 fn handshake_keys(
     a_id: ControllerIdentity,
@@ -105,7 +137,16 @@ fn issue_permit(
 
 /// Two separately constructed peers exchange authorised protected data.
 pub fn authorised_ipc_stream_exchange(payload: &[u8]) -> Result<usize, QdnfError> {
-    if payload.is_empty() || payload.len() > 64 {
+    authorised_ipc_stream_exchange_in(payload, CELL_BYTES_DEFAULT, 1280)
+}
+
+/// Same protected path, with the caller’s cell budget and bearer MTU.
+pub fn authorised_ipc_stream_exchange_in(
+    payload: &[u8],
+    cell_bytes: u64,
+    mtu: u16,
+) -> Result<usize, QdnfError> {
+    if payload.is_empty() || payload.len() > AUTHORISED_PAYLOAD_CAP {
         return Err(QdnfError::Capacity);
     }
     let now = 1_700_000_000u64;
@@ -113,7 +154,7 @@ pub fn authorised_ipc_stream_exchange(payload: &[u8]) -> Result<usize, QdnfError
     let a_did = b"did:q42:a";
     let b_did = b"did:q42:b";
     let purpose = b"q42:QSync/1";
-    let (mut a, mut b) = NativePeer::pair_ipc(a_did, b_did, scope, 1280)?;
+    let (mut a, mut b) = pair_ipc_cells(a_did, b_did, scope, mtu, cell_bytes)?;
     a.announce(&b.locator(), now)?;
     let _ = b.accept_announce()?;
     b.announce(&a.locator(), now)?;
@@ -133,10 +174,124 @@ pub fn authorised_ipc_stream_exchange(payload: &[u8]) -> Result<usize, QdnfError
         wire_payload: sealed.as_slice(),
         application: payload,
     })?;
-    let mut out = [0u8; 64];
+    let mut out = [0u8; AUTHORISED_PAYLOAD_CAP];
     let n = b.recv_protected(&mut out)?;
     if &out[..n] != payload {
         return Err(QdnfError::Malformed);
     }
     Ok(n)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builder_cell_bytes_zero_is_capacity() {
+        let link = LinkId::ZERO;
+        assert_eq!(
+            PeerBuilder::new(b"did:q42:a", link, 0).unwrap_err(),
+            QdnfError::Capacity
+        );
+    }
+
+    #[test]
+    fn pair_ipc_cells_uses_caller_cell_bytes() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (a, _b) =
+            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, 2048).unwrap();
+        assert_eq!(a.remaining_host_bytes(), 2048);
+        assert_eq!(
+            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, 0).unwrap_err(),
+            QdnfError::Capacity
+        );
+    }
+
+    #[test]
+    fn authorised_path_exchanges_roundtrip_cap() {
+        let mut app = [0u8; AUTHORISED_ROUNDTRIP_CAP];
+        let mut i = 0usize;
+        while i < app.len() {
+            app[i] = (i as u8).wrapping_add(0xA5);
+            i = i.saturating_add(1);
+        }
+        let n = authorised_ipc_stream_exchange(&app).unwrap();
+        assert_eq!(n, AUTHORISED_ROUNDTRIP_CAP);
+    }
+
+    #[test]
+    fn authorised_path_rejects_over_payload_cap() {
+        let app = [7u8; AUTHORISED_PAYLOAD_CAP + 1];
+        assert_eq!(
+            authorised_ipc_stream_exchange(&app).unwrap_err(),
+            QdnfError::Capacity
+        );
+    }
+
+    fn install_session(peer: &mut NativePeer, local: &[u8], remote: &[u8], tag: u8, now: u64) {
+        let mut owner = AuthorityOwner::new();
+        let binding =
+            binding_for_controllers(local, remote, b"q42:QSync/1", &[b'o', tag]).unwrap();
+        let (_cred, _contact, handle) = owner
+            .install_grant(binding, now, now.saturating_add(3600), ContactState::Active)
+            .unwrap();
+        let permit = owner.issue_permit(handle, binding, now, 4096).unwrap();
+        let mut send = [tag.saturating_add(1); 32];
+        let mut recv = [tag.saturating_add(80); 32];
+        send[31] = 1;
+        recv[31] = 2;
+        let keys = InstalledSessionKeys::new(Generation(1), send, recv, true).unwrap();
+        peer.activate_protected(permit, keys, now).unwrap();
+    }
+
+    #[test]
+    fn send_without_announce_is_no_route() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (mut a, b) =
+            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, CELL_BYTES_DEFAULT)
+                .unwrap();
+        let now = 1_700_000_000u64;
+        install_session(&mut a, b"did:q42:a", b"did:q42:b", 1, now);
+        assert_eq!(a.send_stream(&b.locator(), b"x"), Err(QdnfError::NoRoute));
+    }
+
+    #[test]
+    fn wrong_recipient_is_unauthorized() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (mut a, mut b) =
+            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, CELL_BYTES_DEFAULT)
+                .unwrap();
+        let now = 1_700_000_000u64;
+        a.announce(&b.locator(), now).unwrap();
+        let _ = b.accept_announce().unwrap();
+        b.announce(&a.locator(), now).unwrap();
+        let _ = a.accept_announce().unwrap();
+        install_session(&mut a, b"did:q42:a", b"did:q42:b", 1, now);
+        let wrong = crate::net::qdnf::types::ObservedLocator::from_slice(&[0x99]).unwrap();
+        assert_eq!(
+            a.send_protected(&wrong, b"x").unwrap_err(),
+            QdnfError::Unauthorized
+        );
+    }
+
+    #[test]
+    fn stale_permit_does_not_activate() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (mut a, _b) =
+            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, CELL_BYTES_DEFAULT)
+                .unwrap();
+        let now = 1_700_000_000u64;
+        let mut owner = AuthorityOwner::new();
+        let binding =
+            binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-s").unwrap();
+        let (_cred, _contact, handle) = owner
+            .install_grant(binding, now, now.saturating_add(3600), ContactState::Active)
+            .unwrap();
+        let permit = owner.issue_permit(handle, binding, now, 4096).unwrap();
+        let keys = InstalledSessionKeys::new(Generation(1), [1u8; 32], [2u8; 32], true).unwrap();
+        let err = a
+            .activate_protected(permit, keys, now.saturating_add(3600))
+            .unwrap_err();
+        assert!(err == QdnfError::Expired || err == QdnfError::Unauthorized);
+    }
 }

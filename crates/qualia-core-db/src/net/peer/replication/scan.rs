@@ -71,6 +71,8 @@ pub struct ScanCursor {
     /// ZERO means no authenticated source (synthetic `next_page` is not evidence).
     source_digest: StrongDigest,
     cancelled: bool,
+    /// Production scans require [`ScanSource`] via [`open_production_scan`].
+    production: bool,
 }
 
 impl ScanCursor {
@@ -108,6 +110,7 @@ pub fn open_scan(
         resident_cap,
         source_digest: StrongDigest::ZERO,
         cancelled: false,
+        production: false,
     })
 }
 
@@ -128,6 +131,21 @@ pub fn open_scan_bound(
     Ok(cursor)
 }
 
+/// Open a production scan bound to `source`. Requires a non-zero source digest.
+///
+/// Uses [`ScanSource::logical_len`]. Production pages must be copied with
+/// [`next_page_from`]; the synthetic XOR [`next_page`] is [`QdnfError::Unsupported`].
+pub fn open_production_scan(
+    source: &impl ScanSource,
+    resident_cap: u32,
+    budget: ScanBudget,
+    source_digest: StrongDigest,
+) -> Result<ScanCursor, QdnfError> {
+    let mut cursor = open_scan_bound(source.logical_len(), resident_cap, budget, source_digest)?;
+    cursor.production = true;
+    Ok(cursor)
+}
+
 /// Copy the next page into `out` using the synthetic XOR fill.
 ///
 /// This path is **not** storage evidence. Production scans must use
@@ -138,6 +156,9 @@ pub fn open_scan_bound(
 /// does not advance offset. Exhausted remaining caps are
 /// [`QdnfError::BudgetExhausted`] and do not reset on retry.
 pub fn next_page(cursor: &mut ScanCursor, out: &mut [u8]) -> Result<usize, QdnfError> {
+    if cursor.production {
+        return Err(QdnfError::Unsupported);
+    }
     let n = next_page_prepare(cursor, out)?;
     if n == 0 {
         return Ok(0);
@@ -294,6 +315,12 @@ pub fn continuation_refills_budget() -> bool {
 /// Synthetic XOR `next_page` fill is never storage evidence.
 #[inline]
 pub fn synthetic_scan_is_storage_evidence() -> bool {
+    false
+}
+
+/// Production scans copy through [`ScanSource`], never the XOR fill.
+#[inline]
+pub fn production_scan_uses_synthetic_xor() -> bool {
     false
 }
 
@@ -566,6 +593,32 @@ mod tests {
         assert_eq!(pa, a);
         assert_eq!(pb, b);
         assert_ne!(pa, pb);
+    }
+
+    #[test]
+    fn production_scan_does_not_use_synthetic_xor() {
+        use crate::net::peer::replication::source::MemorySource;
+
+        assert!(!production_scan_uses_synthetic_xor());
+        assert!(!synthetic_scan_is_storage_evidence());
+        let src = [0x5Au8; 32];
+        let mut d = StrongDigest::ZERO;
+        d.0[0] = 0x5a;
+        let mem = MemorySource::from_slice(&src);
+        let mut cursor =
+            open_production_scan(&mem, RESIDENT_CAP_BYTES, ScanBudget::initial(), d).unwrap();
+        let mut xor_try = [0u8; 32];
+        assert_eq!(
+            next_page(&mut cursor, &mut xor_try),
+            Err(QdnfError::Unsupported)
+        );
+        let mut page = [0u8; 32];
+        let n = next_page_from(&mut cursor, &mem, &mut page).unwrap();
+        assert_eq!(n, 32);
+        assert_eq!(&page[..], &src[..]);
+        let mut expected_xor = [0u8; 32];
+        fill_page(0, &mut expected_xor);
+        assert_ne!(page, expected_xor);
     }
 
     #[test]

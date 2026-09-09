@@ -4,9 +4,7 @@ use crate::net::qdnf::errors::QdnfError;
 
 use super::constraints::{edge_feasible, path_feasible, PathConstraint};
 use super::index::{AdjacencyIndex, MAX_ADMITTED_EDGES};
-use super::select::{
-    pareto_select, CandidatePath, PathMetrics, MAX_PARETO_IN, MAX_PATH_HOPS,
-};
+use super::select::{pareto_select, CandidatePath, PathMetrics, MAX_PARETO_IN, MAX_PATH_HOPS};
 use super::validate::ValidatedEdge;
 
 const MAX_NODES: usize = 256;
@@ -320,13 +318,7 @@ fn directed_pair(edge: &ValidatedEdge, u: u8) -> Option<(u8, u8)> {
     }
 }
 
-fn reachable(
-    live: &[ValidatedEdge],
-    origin: u8,
-    start: u8,
-    dest: u8,
-    now_unix: u64,
-) -> bool {
+fn reachable(live: &[ValidatedEdge], origin: u8, start: u8, dest: u8, now_unix: u64) -> bool {
     if start == dest {
         return true;
     }
@@ -487,9 +479,6 @@ mod tests {
         insert(&rec(1, 1, 2, 1, 1), 1, 1, None, &mut index).unwrap();
         let mut out = [CandidatePath::EMPTY; 3];
         plan_routes(&index, 1, 2, &PathConstraint::UNRESTRICTED, 1, &mut out).unwrap();
-        assert_eq!(
-            index.published().lookup_next(2),
-            Err(QdnfError::Incomplete)
-        );
+        assert_eq!(index.published().lookup_next(2), Err(QdnfError::Incomplete));
     }
 }

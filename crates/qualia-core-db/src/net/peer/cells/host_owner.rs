@@ -4,7 +4,9 @@
 //! charges bind to this owner; copied cell-slot byte fields are not authority.
 
 use crate::governance::webizen::{classify_budget, ArenaBudgetClass};
-use crate::net::peer::cells::admit::{CellProfile, CellSlot, CellTable, MAX_ORDINARY_CELL};
+use crate::net::peer::cells::admit::{
+    CellProfile, CellSlot, CellTable, MAX_CELLS, MAX_ORDINARY_CELL,
+};
 use crate::net::peer::runtime::{
     LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
 };
@@ -14,6 +16,10 @@ use crate::net::qdnf::types::StrongDigest;
 const HOST_WORK: u64 = 1024;
 const HOST_IO: u64 = 1024;
 const MAX_TRACKED_IDENTITIES: usize = 8;
+
+/// Aggregate host byte cap: one owner, up to [`MAX_CELLS`] ordinary cells.
+/// Per-cell ceiling remains [`MAX_ORDINARY_CELL`]; this is accounting, not RSS.
+pub const MAX_HOST_BYTES: u64 = MAX_CELLS as u64 * MAX_ORDINARY_CELL;
 
 /// Aggregate admission owner for one host process.
 pub struct HostAdmission {
@@ -27,7 +33,7 @@ pub struct HostAdmission {
 
 impl HostAdmission {
     pub fn new(host_bytes: u64) -> Result<Self, QdnfError> {
-        if host_bytes == 0 || host_bytes > MAX_ORDINARY_CELL {
+        if host_bytes == 0 || host_bytes > MAX_HOST_BYTES {
             return Err(QdnfError::Capacity);
         }
         let cap = ResourceBudget {
@@ -80,6 +86,11 @@ impl HostAdmission {
     pub fn release_cell(&mut self, slot: CellSlot) -> Result<(), QdnfError> {
         self.cells
             .release(&mut self.leases, &mut self.ledger, slot)
+    }
+
+    #[inline]
+    pub fn occupied_cells(&self) -> usize {
+        self.cells.occupied()
     }
 
     /// Charge work for a peer identity. The identity is recorded; it does not
@@ -191,11 +202,12 @@ mod tests {
     }
 
     #[test]
-    fn host_zero_or_over_ordinary_is_capacity() {
+    fn host_zero_or_over_aggregate_is_capacity() {
         assert_eq!(HostAdmission::new(0).err(), Some(QdnfError::Capacity));
         assert_eq!(
-            HostAdmission::new(MAX_ORDINARY_CELL + 1).err(),
+            HostAdmission::new(MAX_HOST_BYTES + 1).err(),
             Some(QdnfError::Capacity)
         );
+        HostAdmission::new(MAX_ORDINARY_CELL + 1).expect("host aggregates more than one cell");
     }
 }

@@ -1,7 +1,23 @@
 //! Typed resource quantities. Payment cannot enlarge consent or budgets.
+//!
+//! Finite commons recovery is owned by [`Obligation`]. [`RemainingTarget`] remains
+//! a compatibility snapshot of copied milli-units and is not the owner.
 
+pub mod classify;
 pub mod consent;
+pub mod meters;
+pub mod obligation;
+pub mod reserve;
+pub mod roles;
+pub mod settle;
+
+pub use classify::*;
 pub use consent::*;
+pub use meters::*;
+pub use obligation::*;
+pub use reserve::*;
+pub use roles::*;
+pub use settle::*;
 
 use crate::net::qdnf::authority::{CompensationClass, ObservationQuality, ResourceKind};
 use crate::net::qdnf::errors::QdnfError;
@@ -38,7 +54,8 @@ impl Quantity {
     }
 }
 
-/// Finite remaining compensation target. Zero target refuses further recovery.
+/// Compatibility snapshot of a remaining amount. Not the obligation owner.
+/// Copied `milli_units` cannot settle; use [`Obligation`] + [`reserve_hold`].
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RemainingTarget {
@@ -47,14 +64,10 @@ pub struct RemainingTarget {
 }
 
 impl RemainingTarget {
+    /// Always Denied. A copied RemainingTarget is not the owner (E17 / R17).
     pub fn apply_payment(&self, amount: u64) -> Result<Self, QdnfError> {
-        if self.milli_units == 0 {
-            return Err(QdnfError::Denied);
-        }
-        Ok(Self {
-            milli_units: self.milli_units.saturating_sub(amount),
-            class: self.class,
-        })
+        let _ = (self, amount);
+        Err(QdnfError::Denied)
     }
 }
 
@@ -72,6 +85,18 @@ mod tests {
     }
 
     #[test]
+    fn copied_remaining_target_is_not_owner() {
+        let t = RemainingTarget {
+            milli_units: 100,
+            class: CompensationClass::CorporateDelegated,
+        };
+        let copy = t;
+        assert_eq!(t.apply_payment(1), Err(QdnfError::Denied));
+        assert_eq!(copy.apply_payment(t.milli_units), Err(QdnfError::Denied));
+        assert_eq!(copy.milli_units, 100);
+    }
+
+    #[test]
     fn energy_and_time_do_not_add() {
         let e = Quantity {
             kind: ResourceKind::EnergyJoules,
@@ -84,5 +109,26 @@ mod tests {
             quality: ObservationQuality::Measured,
         };
         assert_eq!(e.add(t), Err(QdnfError::Malformed));
+    }
+
+    #[test]
+    fn fulfilment_cannot_bypass_bilateral_identity_lock() {
+        use crate::{
+            evaluate_permissive_runtime_gate, MASK_AUTHENTICATED_NATURAL_PERSON,
+            MASK_BILATERAL_IDENTITY_LOCKED, MASK_WORK_OBLIGATION_SATISFIED,
+        };
+        let entry = MASK_BILATERAL_IDENTITY_LOCKED | MASK_WORK_OBLIGATION_SATISFIED;
+        assert!(
+            !evaluate_permissive_runtime_gate(entry, 0),
+            "work-obligation satisfied must not open bilateral-locked data"
+        );
+        assert!(evaluate_permissive_runtime_gate(
+            entry,
+            MASK_AUTHENTICATED_NATURAL_PERSON
+        ));
+        assert!(evaluate_permissive_runtime_gate(
+            MASK_WORK_OBLIGATION_SATISFIED,
+            0
+        ));
     }
 }

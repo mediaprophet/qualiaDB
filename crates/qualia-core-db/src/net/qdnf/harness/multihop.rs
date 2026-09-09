@@ -7,12 +7,12 @@
 
 use crate::net::qdnf::authority::{evaluate_precedence, ContactState, PolicyOutcome};
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::harness::faults::{FaultPipe, FaultSchedule, FRAME_CAP};
 #[cfg(test)]
 use crate::net::qdnf::harness::faults::PIPE_SLOTS;
-use crate::net::qdnf::harness::oracle::independent_magic_ok;
+use crate::net::qdnf::harness::faults::{FaultPipe, FaultSchedule, FRAME_CAP};
 #[cfg(test)]
 use crate::net::qdnf::harness::oracle::independent_hop_limit;
+use crate::net::qdnf::harness::oracle::independent_magic_ok;
 use crate::net::qdnf::route::forwarding::{decrement_hop, ForwardingGeneration};
 use crate::net::qdnf::route::spf::{compute_spf, LinkMetric, SpfTable};
 use crate::net::qdnf::session::datagrams::{Datagram, DeliveryStage};
@@ -308,7 +308,9 @@ fn pack_stream_meta(frame: StreamFrame, data: &[u8], out: &mut [u8]) -> Result<u
     if data.len() != frame.len as usize {
         return Err(QdnfError::Malformed);
     }
-    let n = STREAM_META.checked_add(data.len()).ok_or(QdnfError::Capacity)?;
+    let n = STREAM_META
+        .checked_add(data.len())
+        .ok_or(QdnfError::Capacity)?;
     if out.len() < n {
         return Err(QdnfError::Capacity);
     }

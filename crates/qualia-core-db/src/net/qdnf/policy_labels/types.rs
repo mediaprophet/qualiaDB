@@ -158,7 +158,10 @@ mod tests {
     #[test]
     fn unknown_is_not_public() {
         assert_ne!(Confidentiality::Unknown, Confidentiality::C0Public);
-        assert_eq!(LabelFields::blank().confidentiality, Confidentiality::Unknown);
+        assert_eq!(
+            LabelFields::blank().confidentiality,
+            Confidentiality::Unknown
+        );
         assert_eq!(
             Confidentiality::Unknown.lattice_rank(),
             Err(QdnfError::Conflict)
@@ -172,7 +175,10 @@ mod tests {
             Confidentiality::from_wire(255).unwrap(),
             Confidentiality::Unknown
         );
-        assert_eq!(Confidentiality::from_wire(0).unwrap(), Confidentiality::C0Public);
+        assert_eq!(
+            Confidentiality::from_wire(0).unwrap(),
+            Confidentiality::C0Public
+        );
         assert_eq!(Confidentiality::from_wire(99), Err(QdnfError::Malformed));
     }
 }

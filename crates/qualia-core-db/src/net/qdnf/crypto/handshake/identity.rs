@@ -6,10 +6,7 @@ use crate::crypto::network::transcript::Transcript;
 use crate::net::qdnf::types::StrongDigest;
 
 /// Reject a peer X25519 public that equals the local public (reflection).
-pub fn reject_reflected_share(
-    local_pk: &[u8; 32],
-    peer_pk: &[u8; 32],
-) -> Result<(), CryptoError> {
+pub fn reject_reflected_share(local_pk: &[u8; 32], peer_pk: &[u8; 32]) -> Result<(), CryptoError> {
     if local_pk == peer_pk {
         Err(CryptoError::Unauthorized)
     } else {

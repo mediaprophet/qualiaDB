@@ -1,8 +1,6 @@
 //! Label join: max confidentiality, union compartments/restrictions, purpose conjunction.
 
-use super::types::{
-    Confidentiality, LabelFields, MAX_COMPARTMENTS, MAX_PURPOSES, MAX_JOIN_INPUTS,
-};
+use super::types::{Confidentiality, LabelFields, MAX_COMPARTMENTS, MAX_JOIN_INPUTS, MAX_PURPOSES};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;
 

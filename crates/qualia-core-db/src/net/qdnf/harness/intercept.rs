@@ -6,7 +6,7 @@
 #![cfg(test)]
 
 use crate::specialized_libs::computational_geometry::allocation_counter::{
-    AllocSnapshot, AllocGuard,
+    AllocGuard, AllocSnapshot,
 };
 
 /// Issued alloc calls, dealloc calls and bytes while `f` ran on this thread.

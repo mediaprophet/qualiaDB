@@ -10,12 +10,12 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
 
-use super::super::contract::{check_frame_mtu, Bearer, RecvMeta};
-use super::frame::{
-    decapsulate_ethernet, encapsulate_ethernet, locator_from_mac, mac_from_locator, validate_ifname,
-    DEV_ETHERTYPE, IFNAMSIZ,
-};
+use super::super::contract::{Bearer, RecvMeta, check_frame_mtu};
 use super::EthernetEvidence;
+use super::frame::{
+    DEV_ETHERTYPE, IFNAMSIZ, decapsulate_ethernet, encapsulate_ethernet, locator_from_mac,
+    mac_from_locator, validate_ifname,
+};
 
 const WIRE_CAP: usize = 2048;
 

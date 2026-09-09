@@ -35,10 +35,20 @@ impl NeighborTable {
         Err(QdnfError::Capacity)
     }
 
+    /// Neighbor insert after a verified challenge. Unverified beacons occupy
+    /// no extra slot. The table cap is still [`MAX_NEIGHBORS`].
+    pub fn insert_verified(&mut self, adj: Adjacency, verified: bool) -> Result<usize, QdnfError> {
+        if !verified {
+            return Err(QdnfError::Unauthorized);
+        }
+        self.insert(adj)
+    }
+
     pub fn forwarding(&self, remote: LinkId) -> Option<&Adjacency> {
-        self.slots.iter().flatten().find(|a| {
-            a.remote.0 == remote.0 && a.state == AdjacencyState::Adjacent
-        })
+        self.slots
+            .iter()
+            .flatten()
+            .find(|a| a.remote.0 == remote.0 && a.state == AdjacencyState::Adjacent)
     }
 
     pub fn len(&self) -> usize {
@@ -87,5 +97,25 @@ mod tests {
             }),
             Err(QdnfError::Capacity)
         );
+    }
+
+    #[test]
+    fn unverified_challenge_does_not_insert() {
+        let mut table = NeighborTable::new();
+        assert_eq!(
+            table.insert_verified(
+                Adjacency {
+                    local: LinkId::ZERO,
+                    remote: LinkId([1u8; 16]),
+                    observed_peer: ObservedLocator::EMPTY,
+                    state: AdjacencyState::BeaconSeen,
+                    generation: 1,
+                    mtu: 1280,
+                },
+                false,
+            ),
+            Err(QdnfError::Unauthorized)
+        );
+        assert_eq!(table.len(), 0);
     }
 }

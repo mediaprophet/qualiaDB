@@ -86,10 +86,10 @@ mod tests {
 
     #[test]
     fn bindings_are_full_sha384_not_first_byte() {
-        let a = bind_authority_digests(b"alice", b"bob", b"grant", b"care", b"chart", b"op-1")
-            .unwrap();
-        let b = bind_authority_digests(b"alice", b"bob", b"grant", b"care", b"chart", b"op-2")
-            .unwrap();
+        let a =
+            bind_authority_digests(b"alice", b"bob", b"grant", b"care", b"chart", b"op-1").unwrap();
+        let b =
+            bind_authority_digests(b"alice", b"bob", b"grant", b"care", b"chart", b"op-2").unwrap();
         assert_ne!(a.operation, b.operation);
         assert_ne!(a.principal.0, [0u8; 48]);
         assert_ne!(a.principal, a.recipient);

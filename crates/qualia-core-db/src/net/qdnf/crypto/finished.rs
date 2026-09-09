@@ -1,7 +1,7 @@
 //! Directional secret-derived Finished confirmation (E02.2).
 
-use crate::crypto::network::kdf::{hmac_sha384, hmac_sha384_verify};
 use crate::crypto::network::errors::CryptoError;
+use crate::crypto::network::kdf::{hmac_sha384, hmac_sha384_verify};
 use crate::crypto::network::types::AEAD_KEY_LEN;
 use crate::net::qdnf::types::StrongDigest;
 

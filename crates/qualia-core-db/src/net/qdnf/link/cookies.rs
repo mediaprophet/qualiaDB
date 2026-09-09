@@ -5,7 +5,7 @@
 
 use crate::crypto::network::kdf::hmac_sha384;
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::types::ObservedLocator;
+use crate::net::qdnf::types::{LinkId, ObservedLocator, ScopeEpoch};
 
 pub const COOKIE_LEN: usize = 16;
 pub const MAX_PENDING: usize = 32;
@@ -18,6 +18,8 @@ pub const REPLY_CAP: u8 = 3;
 pub struct ReachabilityCookie {
     pub bytes: [u8; COOKIE_LEN],
     pub locator: ObservedLocator,
+    pub scope: ScopeEpoch,
+    pub peer: LinkId,
     pub expiry_unix: u64,
     replies: u8,
 }
@@ -46,10 +48,46 @@ impl CookieJar {
             return Err(QdnfError::Capacity);
         }
         let slot = self.free_slot(now_unix).ok_or(QdnfError::Capacity)?;
-        let bytes = mint_cookie(&locator, expiry_unix, secret)?;
+        let bytes = mint_cookie(
+            &locator,
+            ScopeEpoch { scope: 0, epoch: 0 },
+            LinkId::ZERO,
+            expiry_unix,
+            secret,
+        )?;
         let cookie = ReachabilityCookie {
             bytes,
             locator,
+            scope: ScopeEpoch { scope: 0, epoch: 0 },
+            peer: LinkId::ZERO,
+            expiry_unix,
+            replies: 0,
+        };
+        self.slots[slot] = Some(cookie);
+        Ok(cookie)
+    }
+
+    /// Issue a cookie HMAC-bound to scope, peer, and observed locator.
+    pub fn issue_bound(
+        &mut self,
+        locator: ObservedLocator,
+        scope: ScopeEpoch,
+        peer: LinkId,
+        now_unix: u64,
+        ttl_secs: u64,
+        secret: &[u8],
+    ) -> Result<ReachabilityCookie, QdnfError> {
+        let expiry_unix = now_unix.checked_add(ttl_secs).ok_or(QdnfError::Range)?;
+        if self.live_for_locator(&locator, now_unix) >= MAX_PER_LOCATOR {
+            return Err(QdnfError::Capacity);
+        }
+        let slot = self.free_slot(now_unix).ok_or(QdnfError::Capacity)?;
+        let bytes = mint_cookie(&locator, scope, peer, expiry_unix, secret)?;
+        let cookie = ReachabilityCookie {
+            bytes,
+            locator,
+            scope,
+            peer,
             expiry_unix,
             replies: 0,
         };
@@ -64,6 +102,23 @@ impl CookieJar {
         locator: &ObservedLocator,
         now_unix: u64,
     ) -> Result<(), QdnfError> {
+        self.accept_bound_reply(
+            cookie,
+            locator,
+            &ScopeEpoch { scope: 0, epoch: 0 },
+            &LinkId::ZERO,
+            now_unix,
+        )
+    }
+
+    pub fn accept_bound_reply(
+        &mut self,
+        cookie: &[u8; COOKIE_LEN],
+        locator: &ObservedLocator,
+        scope: &ScopeEpoch,
+        peer: &LinkId,
+        now_unix: u64,
+    ) -> Result<(), QdnfError> {
         let stored = match self.find_mut(cookie) {
             Some(slot) => slot,
             None => return Err(QdnfError::Unauthorized),
@@ -71,7 +126,7 @@ impl CookieJar {
         if now_unix >= stored.expiry_unix {
             return Err(QdnfError::Expired);
         }
-        if stored.locator != *locator {
+        if stored.locator != *locator || stored.scope != *scope || stored.peer != *peer {
             return Err(QdnfError::Unauthorized);
         }
         if stored.replies >= REPLY_CAP {
@@ -136,16 +191,26 @@ impl Default for CookieJar {
 
 fn mint_cookie(
     locator: &ObservedLocator,
+    scope: ScopeEpoch,
+    peer: LinkId,
     expiry_unix: u64,
     secret: &[u8],
 ) -> Result<[u8; COOKIE_LEN], QdnfError> {
     let loc = locator.as_slice();
-    let mut info = [0u8; 40];
+    let mut info = [0u8; 80];
     let n = loc.len();
     info[..n].copy_from_slice(loc);
-    info[n..n + 8].copy_from_slice(&expiry_unix.to_be_bytes());
+    let mut off = n;
+    info[off..off + 8].copy_from_slice(&expiry_unix.to_be_bytes());
+    off += 8;
+    info[off..off + 8].copy_from_slice(&scope.scope.to_be_bytes());
+    off += 8;
+    info[off..off + 8].copy_from_slice(&scope.epoch.to_be_bytes());
+    off += 8;
+    info[off..off + 16].copy_from_slice(&peer.0);
+    off += 16;
     let mut mac = [0u8; 48];
-    hmac_sha384(secret, &info[..n + 8], &mut mac).map_err(|_| QdnfError::CryptoFailure)?;
+    hmac_sha384(secret, &info[..off], &mut mac).map_err(|_| QdnfError::CryptoFailure)?;
     let mut out = [0u8; COOKIE_LEN];
     out.copy_from_slice(&mac[..COOKIE_LEN]);
     Ok(out)
@@ -250,6 +315,31 @@ mod tests {
         let mut jar = CookieJar::new();
         assert_eq!(
             jar.accept_reply(&[0u8; COOKIE_LEN], &loc(1), 1_000),
+            Err(QdnfError::Unauthorized)
+        );
+    }
+
+    #[test]
+    fn bound_cookie_rejects_wrong_scope_or_peer() {
+        let mut jar = CookieJar::new();
+        let locator = loc(3);
+        let scope = ScopeEpoch { scope: 1, epoch: 2 };
+        let peer = LinkId([9u8; 16]);
+        let cookie = jar
+            .issue_bound(locator, scope, peer, 1_000, 30, SECRET)
+            .unwrap();
+        assert_eq!(
+            jar.accept_bound_reply(&cookie.bytes, &locator, &scope, &peer, 1_000),
+            Ok(())
+        );
+        let other_scope = ScopeEpoch { scope: 2, epoch: 2 };
+        assert_eq!(
+            jar.accept_bound_reply(&cookie.bytes, &locator, &other_scope, &peer, 1_000),
+            Err(QdnfError::Unauthorized)
+        );
+        let other_peer = LinkId([8u8; 16]);
+        assert_eq!(
+            jar.accept_bound_reply(&cookie.bytes, &locator, &scope, &other_peer, 1_000),
             Err(QdnfError::Unauthorized)
         );
     }

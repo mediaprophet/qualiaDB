@@ -164,12 +164,17 @@ impl NativePeer {
         let session = self.sessions.binding(h)?;
         session.admit_application()?;
         let _remote = self.require_verified_dest(dest)?;
-        if payload.len() > 64 {
+        // E04.5 / P2: authorised path ceiling is 4096. Round-trip success is
+        // also bounded by bearer MTU and packet-protection open (256-byte body).
+        const MAX_PROTECTED_PAYLOAD: usize = 4096;
+        const PROTECTED_SEAL_CAP: usize = MAX_PROTECTED_PAYLOAD + 24;
+        const PROTECTED_WIRE_CAP: usize = 80 + PROTECTED_SEAL_CAP;
+        if payload.len() > MAX_PROTECTED_PAYLOAD {
             return Err(QdnfError::Capacity);
         }
-        let mut pt = [0u8; 64];
+        let mut pt = [0u8; MAX_PROTECTED_PAYLOAD];
         pt[..payload.len()].copy_from_slice(payload);
-        let mut sealed = [0u8; 96];
+        let mut sealed = [0u8; PROTECTED_SEAL_CAP];
         let n = {
             let protection = self.sessions.get_mut(h)?;
             protection.seal_tracked(b"qsession/stream", &mut pt[..payload.len()], &mut sealed)?
@@ -177,7 +182,7 @@ impl NativePeer {
         let mut header = FrameHeader::new(FrameType::SessionStream, NextProtocol::QSession);
         header.source_link_id = self.local_link;
         header.payload_len = n as u16;
-        let mut wire = [0u8; 256];
+        let mut wire = [0u8; PROTECTED_WIRE_CAP];
         let wn = encode_frame(&header, &sealed[..n], &mut wire)?;
         match self.bearer.send(dest, &wire[..wn]) {
             Ok(sent) if sent == wn => {
@@ -204,13 +209,16 @@ impl NativePeer {
         let session = self.sessions.binding(h)?;
         session.admit_application()?;
         let _ = self.remote_or_reject()?;
-        let mut wire = [0u8; 256];
+        const MAX_PROTECTED_PAYLOAD: usize = 4096;
+        const PROTECTED_SEAL_CAP: usize = MAX_PROTECTED_PAYLOAD + 24;
+        const PROTECTED_WIRE_CAP: usize = 80 + PROTECTED_SEAL_CAP;
+        let mut wire = [0u8; PROTECTED_WIRE_CAP];
         let (got, _meta) = self.bearer.recv(&mut wire)?;
         let (decoded, off, len) = decode_frame(&wire[..got])?;
         if decoded.frame_type != FrameType::SessionStream {
             return Err(QdnfError::Malformed);
         }
-        let mut sealed = [0u8; 96];
+        let mut sealed = [0u8; PROTECTED_SEAL_CAP];
         let copied = copy_payload(&wire[..got], off, len, &mut sealed)?;
         let protection = self.sessions.get_mut(h)?;
         match protection.open_tracked(b"qsession/stream", &sealed[..copied], out)? {

@@ -8,7 +8,10 @@ use crate::net::qdnf::types::StrongDigest;
 
 /// Bind untrusted fields to exact original bytes. Fields must decode from
 /// `original_bytes`; a digest without those bytes is malformed.
-pub fn verify_label(fields: LabelFields, original_bytes: &[u8]) -> Result<VerifiedLabel, QdnfError> {
+pub fn verify_label(
+    fields: LabelFields,
+    original_bytes: &[u8],
+) -> Result<VerifiedLabel, QdnfError> {
     if original_bytes.is_empty() {
         return Err(QdnfError::Malformed);
     }
@@ -60,10 +63,7 @@ mod tests {
     #[test]
     fn empty_bytes_are_malformed() {
         let fields = LabelFields::request(Confidentiality::C1Private, StrongDigest([1u8; 48]));
-        assert_eq!(
-            verify_label(fields, b"").unwrap_err(),
-            QdnfError::Malformed
-        );
+        assert_eq!(verify_label(fields, b"").unwrap_err(), QdnfError::Malformed);
     }
 
     #[test]

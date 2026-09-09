@@ -1,6 +1,7 @@
 //! Independent test harness. Product APIs are not used as the sole oracle.
 
 pub mod allocation;
+pub mod claims;
 pub mod clock;
 pub mod entropy;
 pub mod faults;
@@ -12,6 +13,7 @@ pub mod oracle;
 pub mod oracles;
 pub mod partition;
 pub mod qualification;
+pub mod scenarios;
 
 pub use allocation::{record_alloc, take_alloc, HarnessLease, ReservationTracker};
 pub use clock::FakeClock;

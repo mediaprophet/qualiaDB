@@ -1,8 +1,6 @@
 //! Decode untrusted label bytes into [`LabelFields`].
 
-use super::types::{
-    Confidentiality, LabelFields, MAX_COMPARTMENTS, MAX_LABEL_BYTES, MAX_PURPOSES,
-};
+use super::types::{Confidentiality, LabelFields, MAX_COMPARTMENTS, MAX_LABEL_BYTES, MAX_PURPOSES};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;
 

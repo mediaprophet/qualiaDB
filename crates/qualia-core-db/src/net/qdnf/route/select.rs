@@ -192,7 +192,15 @@ pub fn pareto_select(
 mod tests {
     use super::*;
 
-    fn cand(first: u8, dest: u8, cost: u16, lat: u32, energy: u32, known: bool, dom: u8) -> CandidatePath {
+    fn cand(
+        first: u8,
+        dest: u8,
+        cost: u16,
+        lat: u32,
+        energy: u32,
+        known: bool,
+        dom: u8,
+    ) -> CandidatePath {
         let mut p = CandidatePath::EMPTY;
         p.first_hop = first;
         p.dest = dest;

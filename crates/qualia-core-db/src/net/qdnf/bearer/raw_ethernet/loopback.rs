@@ -6,11 +6,11 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
 
-use super::super::contract::{check_frame_mtu, Bearer, RecvMeta};
+use super::super::contract::{Bearer, RecvMeta, check_frame_mtu};
+use super::EthernetEvidence;
 use super::frame::{
     decapsulate_ethernet, encapsulate_ethernet, locator_from_mac, mac_from_locator,
 };
-use super::EthernetEvidence;
 
 const QUEUE_CAP: usize = 32;
 const FRAME_CAP: usize = 2048;
@@ -173,8 +173,7 @@ impl Bearer for EthernetLoop {
             queue[i] = queue[i + 1];
         }
         *len -= 1;
-        let (got, _src_mac, _dst_mac) =
-            decapsulate_ethernet(&frame.bytes[..frame.len], out)?;
+        let (got, _src_mac, _dst_mac) = decapsulate_ethernet(&frame.bytes[..frame.len], out)?;
         Ok((
             got,
             RecvMeta {
@@ -218,10 +217,7 @@ mod tests {
     fn loop_evidence_is_in_process() {
         let scope = ScopeEpoch { scope: 1, epoch: 1 };
         let (a, _b) = ethernet_loop_pair(scope, 1280).unwrap();
-        assert_eq!(
-            a.ethernet_evidence_level(),
-            EthernetEvidence::InProcessLoop
-        );
+        assert_eq!(a.ethernet_evidence_level(), EthernetEvidence::InProcessLoop);
         assert_ne!(a.ethernet_evidence_level(), EthernetEvidence::PhysicalLink);
         assert_ne!(
             a.ethernet_evidence_level(),

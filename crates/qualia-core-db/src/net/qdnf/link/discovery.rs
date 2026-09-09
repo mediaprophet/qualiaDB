@@ -64,6 +64,20 @@ impl Beacon {
             mtu: u16::from_be_bytes([src[49], src[50]]),
         })
     }
+
+    #[inline]
+    pub fn is_expired(&self, now_unix: u64) -> bool {
+        now_unix >= self.expiry_unix
+    }
+
+    /// Reject expired beacons before any neighbor insert.
+    pub fn accept(&self, now_unix: u64) -> Result<(), QdnfError> {
+        if self.is_expired(now_unix) {
+            Err(QdnfError::Expired)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 /// Rotating private rendezvous tag from a relationship secret.
@@ -96,5 +110,21 @@ mod tests {
         let decoded = Beacon::decode(&buf[..n]).unwrap();
         assert_eq!(decoded.mode, DiscoveryMode::PrivatePairwise);
         assert_eq!(decoded.mtu, 1280);
+    }
+
+    #[test]
+    fn expired_beacon_is_expired() {
+        let beacon = Beacon {
+            mode: DiscoveryMode::PrivatePairwise,
+            tag: [1u8; 16],
+            link_id: LinkId([2u8; 16]),
+            epoch: 3,
+            expiry_unix: 10,
+            mtu: 1280,
+        };
+        assert_eq!(beacon.accept(9), Ok(()));
+        assert_eq!(beacon.accept(10), Err(QdnfError::Expired));
+        assert_eq!(beacon.accept(11), Err(QdnfError::Expired));
+        assert!(beacon.is_expired(10));
     }
 }

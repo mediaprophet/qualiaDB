@@ -337,8 +337,14 @@ mod tests {
         }];
         let mut table = SpfTable::EMPTY;
         // Origin 15 is in the demo table; neighbor 16 is not.
-        assert_eq!(compute_spf(15, &oversize, &mut table), Err(QdnfError::Range));
-        assert_eq!(compute_spf(MAX_NODES as u8, &[], &mut table), Err(QdnfError::Range));
+        assert_eq!(
+            compute_spf(15, &oversize, &mut table),
+            Err(QdnfError::Range)
+        );
+        assert_eq!(
+            compute_spf(MAX_NODES as u8, &[], &mut table),
+            Err(QdnfError::Range)
+        );
         assert!(MAX_ADMITTED_EDGES > MAX_NODES);
     }
 

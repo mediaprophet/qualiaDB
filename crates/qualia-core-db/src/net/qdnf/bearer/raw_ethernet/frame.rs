@@ -88,8 +88,8 @@ mod tests {
     #[test]
     fn ethernet_header_uses_dev_ethertype() {
         let mut out = [0u8; 32];
-        let n = encapsulate_ethernet(&[0xff; 6], &[1, 2, 3, 4, 5, 6], &[0x51, 0x44], &mut out)
-            .unwrap();
+        let n =
+            encapsulate_ethernet(&[0xff; 6], &[1, 2, 3, 4, 5, 6], &[0x51, 0x44], &mut out).unwrap();
         assert_eq!(n, 16);
         assert_eq!(&out[12..14], &DEV_ETHERTYPE.to_be_bytes());
     }

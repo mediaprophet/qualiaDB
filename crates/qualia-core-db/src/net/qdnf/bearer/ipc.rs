@@ -6,7 +6,7 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
 
-use super::contract::{check_frame_mtu, Bearer, BearerCapabilities, RecvMeta};
+use super::contract::{Bearer, BearerCapabilities, RecvMeta, check_frame_mtu};
 
 const QUEUE_CAP: usize = 32;
 const FRAME_CAP: usize = 2048;
@@ -190,7 +190,7 @@ impl IpcEndpoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::net::qdnf::frame::{encode_frame, FrameHeader};
+    use crate::net::qdnf::frame::{FrameHeader, encode_frame};
     use crate::net::qdnf::registries::{FrameType, NextProtocol};
 
     #[test]

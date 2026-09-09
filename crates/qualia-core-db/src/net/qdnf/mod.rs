@@ -6,10 +6,13 @@
 
 pub mod authority;
 pub mod bearer;
+pub mod biometrics;
+pub mod clinical;
 pub mod contracts;
 pub mod crypto;
 pub mod economics;
 pub mod errors;
+pub mod evidence;
 pub mod fabric;
 pub mod fixtures;
 pub mod frame;

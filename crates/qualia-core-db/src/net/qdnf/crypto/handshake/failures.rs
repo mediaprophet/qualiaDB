@@ -55,10 +55,7 @@ mod tests {
 
     #[test]
     fn admit_early_application_data_is_downgrade() {
-        assert_eq!(
-            admit_early_application_data(),
-            Err(CryptoError::Downgrade)
-        );
+        assert_eq!(admit_early_application_data(), Err(CryptoError::Downgrade));
     }
 
     #[test]
@@ -88,10 +85,7 @@ mod tests {
             qualified_handshake_gate(HandshakeState::Idle),
             Err(CryptoError::Downgrade)
         );
-        assert_eq!(
-            qualified_application_data(HandshakeState::Traffic),
-            Ok(())
-        );
+        assert_eq!(qualified_application_data(HandshakeState::Traffic), Ok(()));
         assert_eq!(qualified_handshake_gate(HandshakeState::Traffic), Ok(()));
         assert_eq!(
             qualified_application_data(HandshakeState::Finished),

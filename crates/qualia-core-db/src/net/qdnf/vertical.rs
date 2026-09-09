@@ -1,7 +1,9 @@
-//! Two-peer native vertical slice over `local-ipc-v1`.
+//! Example 64-byte two-peer vertical slice over `local-ipc-v1`.
 //!
-//! This is an intra-realm demonstration: QFrame, QLink adjacency, QRoute SPF,
-//! QSession policy gate and QSync payload. libp2p is not imported.
+//! This module is **not** the application API. Applications use
+//! `qualia_peer::PeerHost::{pair, exchange_protected}` (public QPR). This file
+//! keeps a bounded 64-byte demo of QFrame, QLink adjacency, QRoute SPF, QSession
+//! policy gate and QSync payload. libp2p is not imported.
 
 use crate::crypto::network::kem::MlKem768Secret;
 use crate::crypto::network::transcript::Transcript;
@@ -20,6 +22,9 @@ use crate::net::qdnf::session::packet_protection::PacketProtection;
 use crate::net::qdnf::types::{Generation, LinkId, ScopeEpoch};
 
 /// Run A↔B native exchange and return payload bytes copied at B.
+///
+/// Demo ceiling remains 64 bytes. The authorised application path is
+/// `authorised_ipc_stream_exchange` / `PeerHost::exchange_protected` (4096).
 pub fn two_peer_ipc_exchange(payload: &[u8]) -> Result<usize, QdnfError> {
     if payload.len() > 64 {
         return Err(QdnfError::Capacity);
@@ -163,6 +168,15 @@ mod tests {
     fn two_peer_native_stream_without_libp2p() {
         let n = two_peer_ipc_exchange(b"qsync-hello").unwrap();
         assert_eq!(n, 11);
+    }
+
+    #[test]
+    fn demo_keeps_64_byte_ceiling() {
+        assert_eq!(
+            two_peer_ipc_exchange(&[0u8; 65]).unwrap_err(),
+            QdnfError::Capacity
+        );
+        assert_eq!(two_peer_ipc_exchange(&[1u8; 64]).unwrap(), 64);
     }
 
     #[test]

@@ -215,6 +215,19 @@ pub fn verify_block(
     Ok(())
 }
 
+/// A block is usable only after [`verify_block`] matches authenticated bytes.
+pub fn block_verified(
+    table: &TransferTable,
+    manifest_digest: StrongDigest,
+    block_index: u8,
+    generation: Generation,
+) -> bool {
+    match find_slot(table, &manifest_digest, block_index, generation) {
+        Some(i) => table.slots[i].verified,
+        None => false,
+    }
+}
+
 /// Release one generation's admit reservation. Other generations are kept.
 pub fn release_block(
     table: &mut TransferTable,
@@ -559,8 +572,10 @@ mod tests {
         let expected = fill_payload(&mut payload, 0xAB);
         admit_block_with_digest(&mut table, &mut ledger, digest(7), 0, 32, gen, expected).unwrap();
         assert!(!slot_verified(&table, digest(7), 0, gen));
+        assert!(!block_verified(&table, digest(7), 0, gen));
         verify_block(&mut table, digest(7), 0, gen, &payload).unwrap();
         assert!(slot_verified(&table, digest(7), 0, gen));
+        assert!(block_verified(&table, digest(7), 0, gen));
     }
 
     #[test]

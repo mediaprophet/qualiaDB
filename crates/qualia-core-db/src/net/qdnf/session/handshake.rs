@@ -1,7 +1,9 @@
 //! QSession handshake binding. No 0-RTT application data.
 
 use crate::crypto::network::transcript::Transcript;
-use crate::net::qdnf::authority::{admit_service, ExecutionPermit, InstalledSessionKeys, PolicyOutcome};
+use crate::net::qdnf::authority::{
+    admit_service, ExecutionPermit, InstalledSessionKeys, PolicyOutcome,
+};
 use crate::net::qdnf::crypto::finished::finished_mac;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{OperationId, StrongDigest};
@@ -50,7 +52,9 @@ impl SessionBinding {
     ) -> Result<Self, QdnfError> {
         permit.current_at(now_unix)?;
         permit.require_keys(keys)?;
-        if permit.operation().is_zero() || permit.recipient().is_zero() || permit.purpose().is_zero()
+        if permit.operation().is_zero()
+            || permit.recipient().is_zero()
+            || permit.purpose().is_zero()
         {
             return Err(QdnfError::Unauthorized);
         }

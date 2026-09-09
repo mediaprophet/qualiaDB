@@ -120,7 +120,8 @@ impl ProtectedAckSession {
         recv_key: [u8; 32],
         generation: Generation,
     ) -> Result<(), QdnfError> {
-        self.protection.install_update(send_key, recv_key, generation)?;
+        self.protection
+            .install_update(send_key, recv_key, generation)?;
         self.sent = SentTable::new();
         Ok(())
     }
@@ -130,9 +131,7 @@ pub fn packet_number_of(sealed: &[u8], len: usize) -> Result<u64, QdnfError> {
     if len < OVERHEAD || sealed.len() < PN_LEN {
         return Err(QdnfError::Truncated);
     }
-    let bytes: [u8; 8] = sealed[..PN_LEN]
-        .try_into()
-        .map_err(|_| QdnfError::Range)?;
+    let bytes: [u8; 8] = sealed[..PN_LEN].try_into().map_err(|_| QdnfError::Range)?;
     Ok(u64::from_be_bytes(bytes))
 }
 
