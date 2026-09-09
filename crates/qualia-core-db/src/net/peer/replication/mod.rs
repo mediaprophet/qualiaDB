@@ -10,7 +10,9 @@
 //! Merge is partial (SVC-01.10). Manifests are partial (SVC-01.12). Transfer is
 //! partial (SVC-01.13). Resume is partial (SVC-01.14). Receipts are partial
 //! (SVC-01.04). Crash injection is in-memory (SVC-01.15). Scan is bounded-page
-//! (SVC-01.16) and does not materialize RAM-sized datasets.
+//! (SVC-01.16) and does not materialize RAM-sized datasets. Evidential pages
+//! copy through [`source::ScanSource`]; the synthetic XOR `next_page` fill is
+//! not storage evidence.
 
 pub mod checkpoint;
 pub mod crash;
@@ -21,6 +23,7 @@ pub mod proof;
 pub mod receipts;
 pub mod resume;
 pub mod scan;
+pub mod source;
 pub mod tombstone;
 pub mod transfer;
 

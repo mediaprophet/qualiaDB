@@ -2,4 +2,4 @@
 
 pub mod compile;
 
-pub use compile::{compile_decision, ContractBundle};
+pub use compile::{compile_decision, verify_exact_bytes, ContractBundle};

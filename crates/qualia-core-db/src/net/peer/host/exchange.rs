@@ -10,13 +10,13 @@ use crate::net::qdnf::authority::{
 };
 use crate::net::qdnf::crypto::finished::{finished_mac, verify_finished};
 use crate::net::qdnf::crypto::handshake::{
-    initiator_complete, initiator_share, responder_complete,
+    initiator_complete, initiator_share, qualified_handshake_gate, reject_unknown_key_share,
+    require_bound_identities, responder_complete, HandshakeState,
 };
 use crate::net::qdnf::crypto::schedule::derive_handshake_keys;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::harness::oracles::wire::{require_protected, ProtectedView};
 use crate::net::qdnf::session::handshake::SessionBinding;
-use crate::net::qdnf::session::packet_protection::PacketProtection;
 use crate::net::qdnf::types::{Generation, ScopeEpoch};
 
 fn handshake_keys(
@@ -54,6 +54,11 @@ fn handshake_keys(
     t.append(b"i-x", &ishare.x25519_pk)?;
     t.append(b"r-x", &rshare.x25519_pk)?;
     t.append(b"0rtt", &[0])?;
+    let a_digest = a_id.digest();
+    let b_digest = b_id.digest();
+    require_bound_identities(&t, &a_digest, &b_digest)?;
+    reject_unknown_key_share(b_digest, b_digest)?;
+    qualified_handshake_gate(HandshakeState::Traffic)?;
     let keys = derive_handshake_keys(&i_kem, &i_dh, &t)?;
     let fin_i = finished_mac(&keys.initiator_to_responder, &keys.transcript_digest, true)?;
     verify_finished(
@@ -159,7 +164,7 @@ impl NativePeer {
         now_unix: u64,
     ) -> Result<(), QdnfError> {
         let session = SessionBinding::from_permit(&permit, &keys, now_unix)?;
-        let protection = PacketProtection::from_keys(
+        let protection = crate::net::qdnf::session::ProtectedAckSession::from_keys(
             *keys.send_key(),
             *keys.recv_key(),
             keys.generation(),
@@ -204,7 +209,7 @@ impl NativePeer {
         }
         pt[..payload.len()].copy_from_slice(payload);
         let mut sealed = [0u8; 96];
-        let n = protection.seal(b"qsession/stream", &mut pt[..payload.len()], &mut sealed)?;
+        let n = protection.seal_tracked(b"qsession/stream", &mut pt[..payload.len()], &mut sealed)?;
         let mut header = crate::net::qdnf::frame::FrameHeader::new(
             crate::net::qdnf::registries::FrameType::SessionStream,
             crate::net::qdnf::registries::NextProtocol::QSession,
@@ -236,6 +241,9 @@ impl NativePeer {
         }
         let mut sealed = [0u8; 96];
         let copied = crate::net::qdnf::frame::copy_payload(&wire[..got], off, len, &mut sealed)?;
-        protection.open(b"qsession/stream", &sealed[..copied], out)
+        match protection.open_tracked(b"qsession/stream", &sealed[..copied], out)? {
+            (crate::net::qdnf::session::ProtectedRecv::Delivered, n) => Ok(n),
+            (crate::net::qdnf::session::ProtectedRecv::Duplicate, _) => Err(QdnfError::Replay),
+        }
     }
 }

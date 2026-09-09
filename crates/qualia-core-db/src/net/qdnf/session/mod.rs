@@ -13,6 +13,7 @@ pub mod loss;
 pub mod packet;
 pub mod packet_protection;
 pub mod paths;
+pub mod protected_ack;
 pub mod policy;
 pub mod recovery;
 pub mod rekey;
@@ -20,4 +21,5 @@ pub mod streams;
 
 pub use handshake::{SessionBinding, SessionState};
 pub use packet_protection::PacketProtection;
+pub use protected_ack::{ProtectedAckSession, ProtectedRecv};
 pub use streams::StreamState;

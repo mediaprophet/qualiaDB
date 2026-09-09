@@ -476,4 +476,25 @@
 - Human input needed: none this step.
 - Next: E02.5 remaining handshake failure classes; E05 Ethernet; E06 storage.
 
+## 2026-09-09 — E02.5 through E13 foundations — partial, packages remain open
+
+- Step: continue the enhancement programme after E00–E04 / E02.4. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E02.5: `crypto/handshake/` — 0-RTT `admit_early_application_data` is Downgrade; reflection, UKS and transcript identity binding; OS entropy fill; `qualified_handshake_gate(Traffic)` on the protected IPC path.
+  - E03.2/E03.6: `HostAdmission` aggregates cell/session charges; extra identities cannot mint a second host cap. `PeerHost.exchange` admits `cell_bytes` before the protected exchange.
+  - E03.3: `ArenaAdmit::reset_bound_slots` / `reset_slg_arena` bind reuse to caller scratch or `SlgArena::reset_pass` without constructing a 42 MiB arena in tests.
+  - E05: Linux AF_PACKET + Ethernet-II codec + in-process loop. Evidence level is `InProcessLoop` or `AfPacketAttempt`; `PhysicalLink` is never returned from unit tests. `eth0` open remains `PlatformUnsupported` without CAP_NET_RAW.
+  - E06.1: `ScanSource` / `next_page_from` copies real caller bytes; synthetic XOR `next_page` is not storage evidence. `verify_block` hashes payload with SHA-384 and will not mark verified without a matching payload.
+  - E07.1–E07.3 (QSR-A–D): four-bit digits over the full 48-byte key, 0..=15 covers, tagged `QsrOutcome`. First-byte modulo is rejected by tests. Cover membership is `NeedContinuation`, not Found.
+  - E09.1: `ProtectedAckSession` tracks packet numbers with ACK/loss; reorder/duplicate do not close; retransmit uses a fresh PN. `NativePeer` send/recv use this owner.
+  - E12.1–E12.2: `compile_decision` verifies exact original bytes (no signed/supported booleans). Unknown required vocabulary is Incomplete, never Allow.
+  - E13.1–E13.3: `policy_labels/` join/flow/release. `protected_read` joins object labels before copying bytes. One issuer cannot relax another source.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`:
+  - Focused `qualia-core-db --lib` filter (handshake, QSR, labels, protected ACK, host admission, contracts, Ethernet, scan/source/transfer, host tests): **113 passed**, 0 failed.
+  - `qualia-peer --lib`: **3 passed**, 0 failed (including `PeerHost.exchange` after host admission).
+- Not claimed: physical two-host Ethernet; 42 MiB total pass accounting including scratch; QSR publication/handover (E07.4–E07.8); durable receipts/clinical (E11/E14); financial fulfilment (E17/E19); default-daemon libp2p removal; enhancement-package completion; independent acceptance.
+- Human input needed: none this step. CAP_NET_RAW / veth qualification remains an E05.2 out-of-band gate.
+- Next ready: E04.1 host driver split; E06.2 durable transaction pairing; E07.4 completeness vs membership; E08 constraint-first routing; E16 profile foundations before E14 clinical.
+
+
 

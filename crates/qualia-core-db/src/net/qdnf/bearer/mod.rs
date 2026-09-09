@@ -11,4 +11,7 @@ pub use contract::{Bearer, BearerCapabilities, RecvMeta};
 pub use ipc::{ipc_pair, IpcEndpoint};
 pub use leased_ipc::{leased_ipc_pair, LeasedIpc};
 pub use lifecycle::{BearerLifecycle, BearerPhase};
-pub use raw_ethernet::RawEthernet;
+pub use raw_ethernet::{
+    decapsulate_ethernet, encapsulate_ethernet, ethernet_loop_pair, EthernetEvidence, EthernetLoop,
+    RawEthernet, DEV_ETHERTYPE,
+};

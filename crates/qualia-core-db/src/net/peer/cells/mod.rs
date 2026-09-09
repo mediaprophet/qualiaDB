@@ -7,8 +7,10 @@
 //! or allocate backing storage.
 
 pub mod admit;
+pub mod host_owner;
 
 pub use admit::{
     llm_shares_ordinary_network_reserve, CellProfile, CellSlot, CellTable, MAX_CELLS,
     MAX_ORDINARY_CELL,
 };
+pub use host_owner::{extra_identity_multiplies_host_budget, HostAdmission};

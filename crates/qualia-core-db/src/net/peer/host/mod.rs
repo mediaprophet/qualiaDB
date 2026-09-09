@@ -15,9 +15,8 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::frame::{copy_payload, decode_frame, encode_frame, FrameHeader};
 use crate::net::qdnf::link::{Adjacency, AdjacencyState, Beacon, DiscoveryMode, NeighborTable};
 use crate::net::qdnf::registries::{FrameType, NextProtocol};
-use crate::net::qdnf::resolve::qsr::{lookup_exact, CoverInterval};
-use crate::net::qdnf::session::packet_protection::PacketProtection;
-use crate::net::qdnf::session::{SessionBinding, StreamState};
+use crate::net::qdnf::resolve::qsr::{lookup_exact, CoverInterval, QsrOutcome};
+use crate::net::qdnf::session::{ProtectedAckSession, SessionBinding, StreamState};
 use crate::net::qdnf::types::{LinkId, ObservedLocator, ScopeEpoch, StrongDigest};
 
 pub use exchange::{authorised_ipc_stream_exchange, SealedFrame};
@@ -35,7 +34,7 @@ pub struct NativePeer {
     #[allow(dead_code)]
     pub(crate) stream: StreamState,
     pub(crate) bearer: IpcEndpoint,
-    pub(crate) protection: Option<PacketProtection>,
+    pub(crate) protection: Option<ProtectedAckSession>,
     pub(crate) reservation: Option<ReservationHandle>,
 }
 
@@ -144,8 +143,12 @@ impl NativePeer {
         Ok(beacon.link_id)
     }
 
-    /// QSR exact lookup. Replaces Kademlia `get_record`.
-    pub fn lookup_qsr(key: &StrongDigest, covers: &[CoverInterval]) -> Result<bool, QdnfError> {
+    /// QSR exact lookup. Replaces Kademlia `get_record`. Cover membership is
+    /// not authenticated existence (`NeedContinuation` vs `Found`).
+    pub fn lookup_qsr(
+        key: &StrongDigest,
+        covers: &[CoverInterval],
+    ) -> Result<QsrOutcome, QdnfError> {
         lookup_exact(key, covers)
     }
 
@@ -205,8 +208,11 @@ mod tests {
     #[test]
     fn qsr_lookup_is_not_kademlia() {
         let key = StrongDigest([7u8; 48]);
-        let covers = [CoverInterval { start: 0, end: 95 }];
-        assert!(NativePeer::lookup_qsr(&key, &covers).unwrap());
+        let covers = [CoverInterval { start: 0, end: 15 }];
+        assert_eq!(
+            NativePeer::lookup_qsr(&key, &covers).unwrap(),
+            QsrOutcome::NeedContinuation
+        );
     }
 
     #[test]

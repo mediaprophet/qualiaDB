@@ -15,6 +15,7 @@ pub mod fixtures;
 pub mod frame;
 pub mod harness;
 pub mod link;
+pub mod policy_labels;
 pub mod registries;
 pub mod resolve;
 pub mod route;

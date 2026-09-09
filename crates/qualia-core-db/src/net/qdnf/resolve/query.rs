@@ -1,12 +1,12 @@
 //! Bounded QSR query pipeline (NET-04 partial).
 //!
-//! Caps are remaining work, not a coverage proof. Authenticated covers still
-//! go through `lookup_exact`. Compact hashes and `sameAs` are not authority.
-//! This is not Kademlia.
+//! Caps are remaining work, not a coverage proof. Authenticated exact lookup
+//! goes through snapshot `lookup` / `lookup_into` and returns [`QsrOutcome`].
+//! Compact hashes and `sameAs` are not authority. This is not Kademlia.
 
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::resolve::qsr::{lookup_exact, CoverInterval};
-use crate::net::qdnf::types::{QHashIndex, StrongDigest};
+use crate::net::qdnf::resolve::qsr::{lookup_into, CoverInterval, QsrOutcome, QsrSnapshot};
+use crate::net::qdnf::types::{Generation, QHashIndex, StrongDigest};
 
 pub const MAX_CANDIDATES: usize = 64;
 pub const MAX_VERIFICATIONS: usize = 16;
@@ -85,15 +85,19 @@ pub fn unsupported_policy_is_allow() -> bool {
     false
 }
 
-/// Exact lookup still requires authenticated covers via existing `lookup_exact`.
+/// Exact lookup against a generation-pinned snapshot. Cover membership alone
+/// is not existence; the snapshot walk compares the full 48-byte key.
 pub fn lookup_with_budget(
+    snapshot: &QsrSnapshot,
     key: &StrongDigest,
     covers: &[CoverInterval],
+    required_generation: Generation,
     budget: &mut QueryBudget,
-) -> Result<bool, QdnfError> {
+    out: &mut [StrongDigest],
+) -> Result<QsrOutcome, QdnfError> {
     budget.collect_candidate()?;
     budget.verify_one()?;
-    lookup_exact(key, covers)
+    lookup_into(snapshot, key, covers, required_generation, out)
 }
 
 /// Epochs, retries, branches and continuations cannot reset work or byte caps.
@@ -163,12 +167,21 @@ mod tests {
     #[test]
     fn lookup_with_budget_rejects_overlapping_covers() {
         let mut budget = QueryBudget::initial();
+        let snap = QsrSnapshot::empty(Generation::ZERO);
         let covers = [
             CoverInterval { start: 0, end: 10 },
-            CoverInterval { start: 8, end: 20 },
+            CoverInterval { start: 8, end: 12 },
         ];
+        let mut out = [StrongDigest::ZERO; 1];
         assert_eq!(
-            lookup_with_budget(&StrongDigest::ZERO, &covers, &mut budget),
+            lookup_with_budget(
+                &snap,
+                &StrongDigest::ZERO,
+                &covers,
+                Generation::ZERO,
+                &mut budget,
+                &mut out
+            ),
             Err(QdnfError::Overlap)
         );
         assert_eq!(budget.candidates, MAX_CANDIDATES as u8 - 1);
@@ -178,10 +191,39 @@ mod tests {
     #[test]
     fn lookup_with_budget_uses_authenticated_exact_hit() {
         let mut budget = QueryBudget::initial();
+        let mut snap = QsrSnapshot::empty(Generation(1));
+        snap.insert(StrongDigest::ZERO, StrongDigest::ZERO).unwrap();
         let covers = [CoverInterval { start: 0, end: 10 }];
+        let mut out = [StrongDigest::ZERO; 1];
         assert_eq!(
-            lookup_with_budget(&StrongDigest::ZERO, &covers, &mut budget),
-            Ok(true)
+            lookup_with_budget(
+                &snap,
+                &StrongDigest::ZERO,
+                &covers,
+                Generation(1),
+                &mut budget,
+                &mut out
+            ),
+            Ok(QsrOutcome::Found { count: 1 })
+        );
+    }
+
+    #[test]
+    fn lookup_with_budget_empty_snapshot_is_empty_not_found() {
+        let mut budget = QueryBudget::initial();
+        let snap = QsrSnapshot::empty(Generation(1));
+        let covers = [CoverInterval { start: 0, end: 15 }];
+        let mut out = [StrongDigest::ZERO; 1];
+        assert_eq!(
+            lookup_with_budget(
+                &snap,
+                &StrongDigest::ZERO,
+                &covers,
+                Generation(1),
+                &mut budget,
+                &mut out
+            ),
+            Ok(QsrOutcome::EmptyInSnapshot)
         );
     }
 

@@ -5,6 +5,9 @@
 //! `wgsl-forge`, `privacy-he`, `zk-culling`, or `profile_target_1024`).
 //! Default `qualia-core-db` still has those features. Packages remain open.
 
+pub use qualia_core_db::net::peer::cells::{
+    extra_identity_multiplies_host_budget, HostAdmission,
+};
 pub use qualia_core_db::net::peer::host::{
     authorised_ipc_stream_exchange, native_ipc_stream_exchange, ControllerIdentity, NativePeer,
     ServiceId,
@@ -36,8 +39,17 @@ impl PeerHost {
     }
 
     /// Native two-peer exchange. Replaces a libp2p Swarm request-response round trip.
+    ///
+    /// `cell_bytes` is charged on the host admission owner before the protected
+    /// exchange runs. Extra identities cannot mint a second host budget.
     pub fn exchange(&self, payload: &[u8]) -> Result<usize, QdnfError> {
-        native_ipc_stream_exchange(payload)
+        let mut host = HostAdmission::new(self.cell_bytes)?;
+        let profile = HostAdmission::profile_for_bytes(self.cell_bytes)?;
+        let slot = host.admit_cell(profile, self.cell_bytes)?;
+        let n = native_ipc_stream_exchange(payload)?;
+        host.release_cell(slot)?;
+        let _ = extra_identity_multiplies_host_budget();
+        Ok(n)
     }
 }
 

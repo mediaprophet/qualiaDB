@@ -1,9 +1,12 @@
-//! Hybrid qpr-pq-1 handshake: ML-KEM-768 then X25519 into HKDF-SHA-384.
+//! Share-exchange: initiator ML-KEM public + X25519, responder ciphertext + X25519.
 
 use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::kem::{encapsulate, MlKem768Secret};
+use crate::crypto::network::malformed::{reject_all_zero_dh, reject_malformed_kem_ct};
 use crate::crypto::network::types::{ML_KEM_768_CT_LEN, ML_KEM_768_PK_LEN, X25519_LEN};
 use crate::crypto::network::x25519::X25519Secret;
+
+use super::identity::reject_reflected_share;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,14 +44,29 @@ fn reject_zero(ss: &[u8; 32]) -> Result<(), CryptoError> {
     }
 }
 
+/// Fail-closed checks on the complete path: all-zero peer DH public, KEM
+/// ciphertext length, and reflected X25519 publics.
+fn reject_complete_failures(
+    local_pk: &[u8; 32],
+    peer_pk: &[u8; 32],
+    kem_ct_len: usize,
+) -> Result<(), CryptoError> {
+    reject_all_zero_dh(peer_pk)?;
+    reject_malformed_kem_ct(kem_ct_len)?;
+    reject_reflected_share(local_pk, peer_pk)?;
+    Ok(())
+}
+
 pub fn initiator_share(
     x25519_secret: &[u8; 32],
     ml_kem_pk: &[u8; ML_KEM_768_PK_LEN],
 ) -> Result<InitiatorShare, CryptoError> {
     reject_zero(x25519_secret)?;
+    let x25519_pk = X25519Secret::from_bytes(*x25519_secret).public();
+    reject_all_zero_dh(&x25519_pk)?;
     Ok(InitiatorShare {
         ml_kem_pk: *ml_kem_pk,
-        x25519_pk: X25519Secret::from_bytes(*x25519_secret).public(),
+        x25519_pk,
     })
 }
 
@@ -57,13 +75,16 @@ pub fn responder_complete(
     x25519_secret: &[u8; 32],
 ) -> Result<(ResponderShare, [u8; 32], [u8; 32]), CryptoError> {
     reject_zero(x25519_secret)?;
+    let local_pk = X25519Secret::from_bytes(*x25519_secret).public();
+    reject_complete_failures(&local_pk, &initiator.x25519_pk, ML_KEM_768_CT_LEN)?;
     let (kem_ss, ct) = encapsulate(&initiator.ml_kem_pk)?;
+    reject_malformed_kem_ct(ct.len())?;
     reject_zero(&kem_ss)?;
     let x_ss = X25519Secret::from_bytes(*x25519_secret).diffie_hellman(&initiator.x25519_pk)?;
     reject_zero(&x_ss)?;
     let share = ResponderShare {
         ml_kem_ct: ct,
-        x25519_pk: X25519Secret::from_bytes(*x25519_secret).public(),
+        x25519_pk: local_pk,
     };
     Ok((share, kem_ss, x_ss))
 }
@@ -74,6 +95,8 @@ pub fn initiator_complete(
     responder: &ResponderShare,
 ) -> Result<([u8; 32], [u8; 32]), CryptoError> {
     reject_zero(x25519_secret)?;
+    let local_pk = X25519Secret::from_bytes(*x25519_secret).public();
+    reject_complete_failures(&local_pk, &responder.x25519_pk, responder.ml_kem_ct.len())?;
     let kem_ss = ml_kem_sk.decapsulate(&responder.ml_kem_ct)?;
     reject_zero(&kem_ss)?;
     let x_ss = X25519Secret::from_bytes(*x25519_secret).diffie_hellman(&responder.x25519_pk)?;
@@ -81,14 +104,12 @@ pub fn initiator_complete(
     Ok((kem_ss, x_ss))
 }
 
-pub use super::schedule::derive_handshake_keys;
-pub use super::schedule::HandshakeKeys;
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::crypto::network::kem::MlKem768Secret;
     use crate::crypto::network::transcript::Transcript;
+    use crate::net::qdnf::crypto::handshake::{derive_handshake_keys, HandshakeKeys};
 
     #[test]
     fn hybrid_handshake_agrees() {
