@@ -512,4 +512,21 @@
 - Human input needed: none this step.
 - Next ready: E04.5 public facade; E08.5–E08.6 routing repair; E09.2 RTT/congestion; E10 cell parallelism; E16.2 vaults; then E11 / E16 remainder before E14.
 
+## 2026-09-09 — E04.5–E21 libraries landed; production-path callers wired — partial, packages remain open
+
+- Step: continue after E04/E06.2/E07.4/E08/E16 foundations through remaining in-tree production-path gaps. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built (this checkpoint, on top of the E04.5–E21 library landing at `c5be0062`):
+  - E02.3/E02.4: `PacketProtection` opens a 4096-byte body and retains the immediately previous generation’s keys and packet-number space. In-flight ciphertext opens after rotate; a further rotate past overlap is CryptoFailure.
+  - E03.2/E04.5: `pair_ipc_cells` admits two cells from one `HostAdmission`. A host sized for one cell cannot pair two peers. Local-ipc `FRAME_CAP` is 8192 (not Ethernet MTU). `PeerHost::exchange_protected` round-trips 4096 bytes. `PassGuard` charges scratch/crypto/kernel on protected send (accounting only; not RSS).
+  - E08 ROUTE-F: in-process 1→2→3 harness calls `plan_routes` then publishes forwarding. Forbidden-realm shortcuts cannot bypass. `ethernet_demonstrated()` remains false.
+  - E09.5/E09.6: shared-bottleneck `PathCcTable` does not double the window when a second path opens; PMTU shrink rejects oversize; idle send after the deadline is Closed and same-generation reopen is Replay; unknown-PN ACK is Malformed; flight-map and datagram inbox exhaustion are Capacity.
+  - E11.5/E14: clinical mailbox stores bounded ciphertext bytes. Length/digest-only insert is Incomplete. Delivered ≠ application-acked ≠ clinician-reviewed.
+  - E06.6: `replication/disk_crash.rs` tempfile identity→effect→receipt store. Torn/truncated volumes are Incomplete or Conflict. `disk_backend_crash_injected()` and `os_process_kill_qualified()` stay false.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`:
+  - Focused core filter (packet_protection, host, ipc, multihop, mailbox, congestion/paths/pacing/streams/datagrams, disk_crash): first run 103 passed / 1 idle-timeout assertion failed; after the idle-since-last-send fix, host/ipc/pacing/disk_crash re-run **42 passed**, 0 failed. Clinical + session clinical: **29 passed**. Combined prior filter after the fix is the 103 minus that one failure plus the idle test = **104** on that original filter.
+  - `qualia-peer --lib`: **18 passed**, 0 failed (including `exchange_protected_roundtrip_cap` at 4096).
+- Not claimed: physical two-host Ethernet / veth; AF_XDP; live settlement rails; Native Independent default daemons; independent cryptographic review; operational biometric accuracy; OS process-kill WAL; networked Kademlia comparison; enhancement-package completion; deployment certification from test counts.
+- Human input needed: none this step. CAP_NET_RAW / veth, live rails, and independent review remain out-of-band.
+- Next ready (honest leftovers): E05.2 physical/veth qualification; E06.5 QNF extension decision; E07.8 networked comparison harness without superiority claims; E09.5 wiring `PathCcTable` into `NativePeer` send; E10.5 scaling measurement; E18.4–E18.6 live adapters stay Unsupported; E20.2 daemon proof; E21.2–E21.4 fuzz/review/churn.
+
 
