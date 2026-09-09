@@ -223,7 +223,7 @@ mod tests {
         assert_eq!(decoded.ml_kem_pk, share.ml_kem_pk);
         assert_eq!(decoded.x25519_pk, share.x25519_pk);
 
-        let from_helper = initiator_share(&TEST_X25519_SK, &share.ml_kem_pk);
+        let from_helper = initiator_share(&TEST_X25519_SK, &share.ml_kem_pk).unwrap();
         assert_eq!(from_helper.x25519_pk, share.x25519_pk);
         assert_eq!(from_helper.ml_kem_pk, share.ml_kem_pk);
     }

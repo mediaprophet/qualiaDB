@@ -451,3 +451,20 @@
 - Human input needed: none for the review/plan. Future deployment qualification needs supported runners, hardware, approved biometric criteria/corpora and the responsible organisation's classification mapping and operational acceptance.
 - Next implementation step: E00 instrumentation/claim mapping and E01 verified authority interfaces; follow the dependency order rather than treating existing state-table tests as end-to-end qualification. Original implementation packages remain open.
 
+## 2026-09-09 — E00–E04 native enforcement checkpoint — partial, packages remain open
+
+- Step: E00 qualification instrumentation, E01 verified authority, E02 handshake/Finished/packet protection, E03 reservation handles, E04 protected public IPC path. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**.
+- Built:
+  - E00: evidence classes, fail-closed `qualify()`, wire/crypto/graph oracles, allocator intercept wrapping `CountingAllocator`, negative controls, source fingerprint map.
+  - E01: `authority/` library (`DecodedClaim` cannot admit; `AuthorityOwner` issues `ExecutionPermit`; `SessionBinding` fields private; `open_session` returns `Unauthorized`).
+  - E02: transcript-salt HKDF; HMAC-SHA-384 directional Finished (full role labels; I2R/R2I no longer truncate to a colliding 16-byte prefix); AEAD packet protection authenticates before replay/plaintext.
+  - E03: `ReservationHandle` is not `Copy`; release uses owner-held charges, not caller-supplied byte amounts.
+  - E04: `authorised_ipc_stream_exchange` is the public QPR path: permits + hybrid handshake + Finished + sealed frames. Wire oracle rejects plaintext copies.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1** (not the snapshot 1.83.0; edition-2024 requires this). MSVC/`link.exe` **unavailable** here (explicit). `--offline` core lib tests ran after the crate was already downloaded.
+  - Focused `qualia-core-db --lib` filter (harness/authority/finished/schedule/handshake/packet_protection/host/ledger/admit/vertical/vectors/pq_handshake/kdf): **89 passed**, 0 failed.
+  - `qualia-peer --lib`: **3 passed**, 0 failed (cell ceiling, Allow cannot open session, protected facade exchange).
+  - Independent HMAC Finished matches production and frozen hex `5cde4e85…`; historical unkeyed SHA-384 vector is retained as a negative control and does **not** equal production.
+- Not claimed: Ethernet; rekey secret rotation (E02.4 still generation-only); QSR full-key traversal; durable storage/receipts; clinical/financial evidence; default-daemon libp2p removal; security certification; enhancement-package completion.
+- Human input needed: none this step. Ethernet/CAP_NET_RAW remains an E05 out-of-band gate.
+- Next: E02.4 traffic-secret rotation; then E05 Ethernet gate, E06 storage/evidence, E07 QSR authenticated lookup, following the documented DAG.
+

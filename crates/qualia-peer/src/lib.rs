@@ -6,10 +6,11 @@
 //! Default `qualia-core-db` still has those features. Packages remain open.
 
 pub use qualia_core_db::net::peer::host::{
-    native_ipc_stream_exchange, ControllerIdentity, NativePeer, ServiceId,
+    authorised_ipc_stream_exchange, native_ipc_stream_exchange, ControllerIdentity, NativePeer,
+    ServiceId,
 };
 pub use qualia_core_db::net::peer::runtime::{
-    LeaseTable, ReservationLedger, ResourceBudget,
+    LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
 };
 pub use qualia_core_db::net::qdnf::authority::{PolicyOutcome, Plane};
 pub use qualia_core_db::net::qdnf::bearer::{ipc_pair, Bearer, IpcEndpoint};
@@ -56,5 +57,15 @@ mod tests {
     fn native_facade_exchanges_without_ip() {
         let host = PeerHost::new(64 * 1024 * 1024).unwrap();
         assert_eq!(host.exchange(b"hello-qpr").unwrap(), 9);
+    }
+
+    #[test]
+    fn allow_enum_does_not_open_session() {
+        let _ = PolicyOutcome::Allow;
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (mut a, _b) =
+            NativePeer::pair_ipc(b"did:q42:a", b"did:q42:b", scope, 1280).unwrap();
+        let service = ServiceId::from_iri(b"q42:QSync/1").unwrap();
+        assert_eq!(a.open_session(service), Err(QdnfError::Unauthorized));
     }
 }

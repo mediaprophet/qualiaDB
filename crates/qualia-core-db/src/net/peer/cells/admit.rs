@@ -12,7 +12,9 @@
 use crate::governance::webizen::{
     classify_budget, ArenaBudgetClass, ORDINARY_CELL_BYTES, SENTINEL_PASS_BYTES,
 };
-use crate::net::peer::runtime::{BufferLease, LeaseTable, ReservationLedger, ResourceBudget};
+use crate::net::peer::runtime::{
+    BufferLease, LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
+};
 use crate::net::qdnf::errors::QdnfError;
 
 /// Ordinary cell ceiling. Same value as [`ORDINARY_CELL_BYTES`].
@@ -40,15 +42,17 @@ pub struct CellSlot {
     pub lease: BufferLease,
 }
 
-/// Four occupancy flags. Does not own a scheduler or arena.
+/// Four occupancy flags plus owner-held reservation handles.
 pub struct CellTable {
     occupied: [bool; MAX_CELLS],
+    charges: [Option<ReservationHandle>; MAX_CELLS],
 }
 
 impl CellTable {
     pub const fn new() -> Self {
         Self {
             occupied: [false; MAX_CELLS],
+            charges: [None, None, None, None],
         }
     }
 
@@ -103,15 +107,16 @@ impl CellTable {
         };
         let capacity = u32::try_from(bytes).map_err(|_| QdnfError::Capacity)?;
         let budget = cell_bytes_budget(bytes);
-        ledger.reserve(budget, true)?;
+        let charge = ledger.reserve(budget, true)?;
         let lease = match leases.acquire(capacity, true) {
             Ok(lease) => lease,
             Err(e) => {
-                let _ = ledger.release(budget, true);
+                let _ = ledger.release(charge);
                 return Err(e);
             }
         };
         self.occupied[id as usize] = true;
+        self.charges[id as usize] = Some(charge);
         Ok(CellSlot {
             id,
             profile,
@@ -134,7 +139,9 @@ impl CellTable {
             return Err(QdnfError::DoubleRelease);
         }
         leases.release(slot.lease.handle)?;
-        ledger.release(cell_bytes_budget(slot.bytes), true)?;
+        let charge = self.charges[idx].take().ok_or(QdnfError::DoubleRelease)?;
+        let _ = slot.bytes;
+        ledger.release(charge)?;
         self.occupied[idx] = false;
         Ok(())
     }
@@ -363,5 +370,23 @@ mod tests {
             Err(QdnfError::Capacity)
         );
         assert_eq!(table.occupied(), 1);
+    }
+
+    #[test]
+    fn copied_token_byte_mutation_does_not_change_release() {
+        let mut table = CellTable::new();
+        let mut leases = LeaseTable::new();
+        let mut ledger = cell_ledger();
+        let slot = table
+            .reserve(&mut leases, &mut ledger, CellProfile::Ordinary, ORDINARY_64)
+            .expect("reserve");
+        assert_eq!(ledger.used().cell.bytes, ORDINARY_64);
+        let mut mutated = slot;
+        mutated.bytes = 1;
+        table
+            .release(&mut leases, &mut ledger, mutated)
+            .expect("owner-held charge");
+        assert_eq!(ledger.used().cell.bytes, 0);
+        assert_eq!(table.occupied(), 0);
     }
 }

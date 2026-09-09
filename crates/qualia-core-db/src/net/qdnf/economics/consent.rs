@@ -125,7 +125,7 @@ mod tests {
         let mut ledger = ledger(100);
         let before = ledger.host_remaining_bytes();
         assert_eq!(before, 100);
-        ledger
+        let _h = ledger
             .reserve(
                 ResourceBudget {
                     bytes: 40,

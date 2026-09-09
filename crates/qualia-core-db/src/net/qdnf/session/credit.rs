@@ -11,8 +11,9 @@
 //! slot per stream. `LeaseTable` has 32 slots; the protocol limit is 64.
 
 use crate::net::peer::runtime::{
-    BufferLease, LeaseHandle, LeaseTable, ReservationLedger, ResourceBudget,
+    BufferLease, LeaseHandle, LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
 };
+use crate::net::peer::runtime::ledger::ChargeRef;
 use crate::net::qdnf::errors::QdnfError;
 
 pub use super::streams::MAX_STREAMS_PER_DIR;
@@ -39,6 +40,8 @@ pub struct CreditTable {
     server_used: u32,
     client_lease: Option<BufferLease>,
     server_lease: Option<BufferLease>,
+    client_charges: [Option<ChargeRef>; 8],
+    server_charges: [Option<ChargeRef>; 8],
 }
 
 impl CreditTable {
@@ -58,7 +61,42 @@ impl CreditTable {
             server_used: 0,
             client_lease: None,
             server_lease: None,
+            client_charges: [None; 8],
+            server_charges: [None; 8],
         }
+    }
+
+    fn charges_mut(&mut self, dir: u8) -> Result<&mut [Option<ChargeRef>; 8], QdnfError> {
+        match dir {
+            DIR_CLIENT => Ok(&mut self.client_charges),
+            DIR_SERVER => Ok(&mut self.server_charges),
+            _ => Err(QdnfError::Range),
+        }
+    }
+
+    fn store_charge(&mut self, dir: u8, charge: ChargeRef) -> Result<(), QdnfError> {
+        let charges = self.charges_mut(dir)?;
+        let mut i = 0;
+        while i < charges.len() {
+            if charges[i].is_none() {
+                charges[i] = Some(charge);
+                return Ok(());
+            }
+            i += 1;
+        }
+        Err(QdnfError::Capacity)
+    }
+
+    fn take_charge(&mut self, dir: u8) -> Result<ReservationHandle, QdnfError> {
+        let charges = self.charges_mut(dir)?;
+        let mut i = charges.len();
+        while i > 0 {
+            i -= 1;
+            if let Some(r) = charges[i].take() {
+                return Ok(ReservationHandle::from_ref(r));
+            }
+        }
+        Err(QdnfError::Incomplete)
     }
 
     /// Grant one stream in `dir`. Ledger + first-open lease are all-or-nothing
@@ -88,7 +126,12 @@ impl CreditTable {
 
         let budget = stream_bytes_budget(bytes);
         if bytes > 0 {
-            ledger.reserve(budget, true)?;
+            let handle = ledger.reserve(budget, true)?;
+            let charge = handle.as_ref();
+            if let Err(e) = self.store_charge(dir, charge) {
+                let _ = ledger.release(handle);
+                return Err(e);
+            }
         }
 
         let credit = self.credit(dir)?;
@@ -100,7 +143,9 @@ impl CreditTable {
                 }
                 Err(e) => {
                     if bytes > 0 {
-                        let _ = ledger.release(budget, true);
+                        if let Ok(handle) = self.take_charge(dir) {
+                            let _ = ledger.release(handle);
+                        }
                     }
                     return Err(e);
                 }
@@ -161,7 +206,8 @@ impl CreditTable {
         }
 
         if bytes > 0 {
-            ledger.release(stream_bytes_budget(bytes), true)?;
+            let handle = self.take_charge(dir)?;
+            ledger.release(handle)?;
         }
         *self.used_mut(dir)? = used.saturating_sub(bytes);
         self.credit_mut(dir)?.open = credit.open.saturating_sub(1);

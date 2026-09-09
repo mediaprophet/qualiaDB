@@ -6,7 +6,7 @@
 //! occupy admit credit until the old slot is released. Packages remain open.
 
 use crate::net::peer::replication::manifest::{ByteRange, ContentManifest};
-use crate::net::peer::runtime::ledger::{ReservationLedger, ResourceBudget};
+use crate::net::peer::runtime::ledger::{ChargeRef, ReservationHandle, ReservationLedger, ResourceBudget};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{Generation, StrongDigest};
 
@@ -28,7 +28,7 @@ struct Slot {
     block_index: u8,
     generation: Generation,
     range: ByteRange,
-    charged: ResourceBudget,
+    charge: ChargeRef,
 }
 
 /// Eight-slot table of admitted (manifest, block, generation) transfers.
@@ -46,7 +46,7 @@ impl TransferTable {
                 block_index: 0,
                 generation: Generation::ZERO,
                 range: ByteRange { offset: 0, len: 0 },
-                charged: ResourceBudget::ZERO,
+                charge: ChargeRef::EMPTY,
             }; MAX_BLOCKS],
         }
     }
@@ -133,7 +133,11 @@ pub fn retry_block(
         return Err(QdnfError::Malformed);
     }
     match find_slot(table, &manifest_digest, block_index, generation) {
-        Some(_) => ledger.reserve(retry_budget(), true),
+        Some(_) => {
+            let handle = ledger.reserve(retry_budget(), true)?;
+            let _ = handle;
+            Ok(())
+        }
         None => Err(QdnfError::Incomplete),
     }
 }
@@ -170,8 +174,8 @@ pub fn release_block(
     }
     let idx =
         find_slot(table, &manifest_digest, block_index, generation).ok_or(QdnfError::Incomplete)?;
-    let charged = table.slots[idx].charged;
-    ledger.release(charged, true)?;
+    let charged = table.slots[idx].charge;
+    ledger.release(ReservationHandle::from_ref(charged))?;
     table.slots[idx].occupied = false;
     table.slots[idx].verified = false;
     Ok(())
@@ -232,7 +236,7 @@ fn admit_range(
     }
     let free = find_free(table).ok_or(QdnfError::Capacity)?;
     let charged = admit_budget(range.len);
-    ledger.reserve(charged, true)?;
+    let handle = ledger.reserve(charged, true)?;
     table.slots[free] = Slot {
         occupied: true,
         verified: false,
@@ -240,7 +244,7 @@ fn admit_range(
         block_index,
         generation,
         range,
-        charged,
+        charge: handle.as_ref(),
     };
     Ok(())
 }

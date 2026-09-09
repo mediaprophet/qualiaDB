@@ -140,7 +140,7 @@ pub fn admit_after_rekey(binding: &SessionBinding, grant_current: bool) -> Resul
     if !grant_current {
         return Err(QdnfError::Unauthorized);
     }
-    if matches!(binding.state, SessionState::Draining | SessionState::Closed) {
+    if matches!(binding.state(), SessionState::Draining | SessionState::Closed) {
         return Err(QdnfError::Closed);
     }
     binding.admit_application()
@@ -158,14 +158,14 @@ mod tests {
     use crate::net::qdnf::types::{OperationId, StrongDigest};
 
     fn binding(state: SessionState, policy: PolicyOutcome) -> SessionBinding {
-        SessionBinding {
-            operation: OperationId::ZERO,
-            target: StrongDigest::ZERO,
-            dni_digest: StrongDigest::ZERO,
-            purpose: StrongDigest::ZERO,
+        SessionBinding::test_fixture(
+            OperationId([1u8; 16]),
+            StrongDigest([2u8; 48]),
+            StrongDigest([3u8; 48]),
+            StrongDigest([4u8; 48]),
             policy,
             state,
-        }
+        )
     }
 
     #[test]

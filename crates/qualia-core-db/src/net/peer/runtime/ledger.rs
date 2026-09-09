@@ -1,6 +1,12 @@
 //! Atomic host/cell/role reservation ledger. All-or-nothing admission.
+//!
+//! Release requires a non-forgeable [`ReservationHandle`]. Arbitrary resource
+//! amounts cannot reclaim budget (E03.1).
 
 use crate::net::qdnf::errors::QdnfError;
+use crate::net::qdnf::types::Generation;
+
+const HANDLE_SLOTS: usize = 32;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,7 +42,66 @@ pub struct AdmissionScopes {
     pub operation: ResourceBudget,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
+struct HandleSlot {
+    occupied: bool,
+    generation: Generation,
+    budget: ResourceBudget,
+    verified_peer: bool,
+}
+
+impl HandleSlot {
+    const EMPTY: Self = Self {
+        occupied: false,
+        generation: Generation::ZERO,
+        budget: ResourceBudget::ZERO,
+        verified_peer: false,
+    };
+}
+
+/// Owner-issued reservation. Not `Copy`: a copied token cannot be mutated to
+/// reclaim a different amount.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ReservationHandle {
+    slot: u8,
+    generation: Generation,
+}
+
+/// Copyable owner reference used by bounded tables. Not a public budget token.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ChargeRef {
+    pub slot: u8,
+    pub generation: Generation,
+}
+
+impl ChargeRef {
+    pub const EMPTY: Self = Self {
+        slot: 0,
+        generation: Generation::ZERO,
+    };
+}
+
+impl ReservationHandle {
+    #[inline]
+    pub const fn generation(&self) -> Generation {
+        self.generation
+    }
+
+    pub(crate) fn as_ref(&self) -> ChargeRef {
+        ChargeRef {
+            slot: self.slot,
+            generation: self.generation,
+        }
+    }
+
+    pub(crate) fn from_ref(r: ChargeRef) -> Self {
+        Self {
+            slot: r.slot,
+            generation: r.generation,
+        }
+    }
+}
+
 pub struct ReservationLedger {
     host_cap: ResourceBudget,
     cell_cap: ResourceBudget,
@@ -46,6 +111,7 @@ pub struct ReservationLedger {
     used: AdmissionScopes,
     transient_used: ResourceBudget,
     verified_used: ResourceBudget,
+    handles: [HandleSlot; HANDLE_SLOTS],
 }
 
 impl ReservationLedger {
@@ -71,6 +137,7 @@ impl ReservationLedger {
             },
             transient_used: ResourceBudget::ZERO,
             verified_used: ResourceBudget::ZERO,
+            handles: [HandleSlot::EMPTY; HANDLE_SLOTS],
         }
     }
 
@@ -80,12 +147,23 @@ impl ReservationLedger {
             && used.io.saturating_add(add.io) <= cap.io
     }
 
+    fn free_slot(&self) -> Result<usize, QdnfError> {
+        let mut i = 0;
+        while i < HANDLE_SLOTS {
+            if !self.handles[i].occupied {
+                return Ok(i);
+            }
+            i += 1;
+        }
+        Err(QdnfError::Capacity)
+    }
+
     /// Reserve every listed scope or leave every counter unchanged.
     pub fn reserve(
         &mut self,
         add: ResourceBudget,
         verified_peer: bool,
-    ) -> Result<(), QdnfError> {
+    ) -> Result<ReservationHandle, QdnfError> {
         if !Self::fits(self.host_cap, self.used.host, add)
             || !Self::fits(self.cell_cap, self.used.cell, add)
             || !Self::fits(self.role_cap, self.used.role, add)
@@ -94,11 +172,11 @@ impl ReservationLedger {
         {
             return Err(QdnfError::BudgetExhausted);
         }
-        if !verified_peer {
-            if !Self::fits(self.host_cap, self.transient_used, add) {
-                return Err(QdnfError::BudgetExhausted);
-            }
+        if !verified_peer && !Self::fits(self.host_cap, self.transient_used, add) {
+            return Err(QdnfError::BudgetExhausted);
         }
+        let slot = self.free_slot()?;
+        let generation = self.handles[slot].generation.next()?;
         self.used.host = self.used.host.saturating_add(add)?;
         self.used.cell = self.used.cell.saturating_add(add)?;
         self.used.role = self.used.role.saturating_add(add)?;
@@ -109,10 +187,38 @@ impl ReservationLedger {
         } else {
             self.transient_used = self.transient_used.saturating_add(add)?;
         }
-        Ok(())
+        self.handles[slot] = HandleSlot {
+            occupied: true,
+            generation,
+            budget: add,
+            verified_peer,
+        };
+        Ok(ReservationHandle {
+            slot: slot as u8,
+            generation,
+        })
     }
 
-    pub fn release(&mut self, add: ResourceBudget, verified_peer: bool) -> Result<(), QdnfError> {
+    pub fn release(&mut self, handle: ReservationHandle) -> Result<(), QdnfError> {
+        let i = handle.slot as usize;
+        if i >= HANDLE_SLOTS {
+            return Err(QdnfError::Range);
+        }
+        let slot = &mut self.handles[i];
+        if !slot.occupied {
+            return Err(QdnfError::DoubleRelease);
+        }
+        if slot.generation != handle.generation {
+            return Err(QdnfError::StaleGeneration);
+        }
+        let add = slot.budget;
+        let verified_peer = slot.verified_peer;
+        slot.occupied = false;
+        slot.budget = ResourceBudget::ZERO;
+        self.sub_used(add, verified_peer)
+    }
+
+    fn sub_used(&mut self, add: ResourceBudget, verified_peer: bool) -> Result<(), QdnfError> {
         self.used.host.bytes = self.used.host.bytes.saturating_sub(add.bytes);
         self.used.host.work = self.used.host.work.saturating_sub(add.work);
         self.used.host.io = self.used.host.io.saturating_sub(add.io);
@@ -174,18 +280,20 @@ mod tests {
             work: 1,
             io: 1,
         };
-        ledger.reserve(add, true).unwrap();
+        let _h = ledger.reserve(add, true).unwrap();
         let before = ledger.used();
         assert_eq!(
-            ledger.reserve(
-                ResourceBudget {
-                    bytes: 50,
-                    work: 1,
-                    io: 1
-                },
-                true
-            ),
-            Err(QdnfError::BudgetExhausted)
+            ledger
+                .reserve(
+                    ResourceBudget {
+                        bytes: 50,
+                        work: 1,
+                        io: 1
+                    },
+                    true
+                )
+                .unwrap_err(),
+            QdnfError::BudgetExhausted
         );
         assert_eq!(ledger.used(), before);
     }
@@ -198,10 +306,56 @@ mod tests {
             work: 1,
             io: 1,
         };
-        ledger.reserve(add, false).unwrap();
+        let _h = ledger.reserve(add, false).unwrap();
         assert_eq!(
-            ledger.reserve(add, false),
-            Err(QdnfError::BudgetExhausted)
+            ledger.reserve(add, false).unwrap_err(),
+            QdnfError::BudgetExhausted
         );
+    }
+
+    #[test]
+    fn release_requires_owner_handle() {
+        let mut ledger = caps();
+        let add = ResourceBudget {
+            bytes: 10,
+            work: 1,
+            io: 1,
+        };
+        let handle = ledger.reserve(add, true).unwrap();
+        assert_eq!(ledger.release(handle), Ok(()));
+    }
+
+    #[test]
+    fn double_release_is_rejected() {
+        let mut ledger = caps();
+        let add = ResourceBudget {
+            bytes: 10,
+            work: 1,
+            io: 1,
+        };
+        let handle = ledger.reserve(add, true).unwrap();
+        ledger.release(handle).unwrap();
+        let stale = ReservationHandle {
+            slot: 0,
+            generation: Generation(1),
+        };
+        assert_eq!(ledger.release(stale), Err(QdnfError::DoubleRelease));
+    }
+
+    #[test]
+    fn foreign_generation_is_stale() {
+        let mut ledger = caps();
+        let add = ResourceBudget {
+            bytes: 10,
+            work: 1,
+            io: 1,
+        };
+        let handle = ledger.reserve(add, true).unwrap();
+        let forged = ReservationHandle {
+            slot: handle.slot,
+            generation: Generation(99),
+        };
+        let _ = handle;
+        assert_eq!(ledger.release(forged), Err(QdnfError::StaleGeneration));
     }
 }

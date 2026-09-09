@@ -5,5 +5,8 @@ pub mod host;
 pub mod replication;
 pub mod runtime;
 
-pub use host::{native_ipc_stream_exchange, ControllerIdentity, NativePeer, ServiceId};
-pub use runtime::{LeaseTable, ReservationLedger, ResourceBudget};
+pub use host::{
+    authorised_ipc_stream_exchange, native_ipc_stream_exchange, ControllerIdentity, NativePeer,
+    ServiceId,
+};
+pub use runtime::{LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget};

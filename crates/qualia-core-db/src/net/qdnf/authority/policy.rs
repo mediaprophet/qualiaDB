@@ -4,8 +4,8 @@
 //! NaturalAgent join key, reputation score, or authority from similarity, wallet
 //! possession or nominal signature count.
 
-use super::errors::QdnfError;
-use super::types::{ProfileId, StrongDigest};
+use crate::net::qdnf::errors::QdnfError;
+use crate::net::qdnf::types::{ProfileId, StrongDigest};
 
 /// Identifier fabric planes. A verified route is not a NaturalAgent.
 #[repr(u8)]

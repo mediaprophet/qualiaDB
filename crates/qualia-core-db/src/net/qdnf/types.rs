@@ -20,6 +20,18 @@ impl StrongDigest {
         let arr: [u8; 48] = bytes.try_into().map_err(|_| QdnfError::Range)?;
         Ok(Self(arr))
     }
+
+    #[inline]
+    pub const fn is_zero(self) -> bool {
+        let mut i = 0;
+        while i < 48 {
+            if self.0[i] != 0 {
+                return false;
+            }
+            i += 1;
+        }
+        true
+    }
 }
 
 impl core::fmt::Debug for StrongDigest {
@@ -138,6 +150,18 @@ pub struct OperationId(pub [u8; 16]);
 
 impl OperationId {
     pub const ZERO: Self = Self([0u8; 16]);
+
+    #[inline]
+    pub const fn is_zero(self) -> bool {
+        let mut i = 0;
+        while i < 16 {
+            if self.0[i] != 0 {
+                return false;
+            }
+            i += 1;
+        }
+        true
+    }
 }
 
 /// Scope / cell epoch binding for leases and caches.

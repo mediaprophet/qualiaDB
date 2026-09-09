@@ -1,9 +1,12 @@
 //! qpr-pq-1 protocol-crypto adapters.
 
+pub mod finished;
 pub mod handshake;
+pub mod schedule;
 
+pub use finished::{finished_mac, verify_finished, ROLE_I2R, ROLE_R2I};
 pub use handshake::{
-    derive_handshake_keys, finished_mac, initiator_complete, initiator_share,
-    responder_complete, HandshakeKeys, HandshakeState, InitiatorShare, ResponderShare,
-    FORBIDDEN_ZERO_RTT,
+    initiator_complete, initiator_share, responder_complete, HandshakeState, InitiatorShare,
+    ResponderShare, FORBIDDEN_ZERO_RTT,
 };
+pub use schedule::{derive_handshake_keys, HandshakeKeys};
