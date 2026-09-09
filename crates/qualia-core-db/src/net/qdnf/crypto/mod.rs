@@ -9,4 +9,4 @@ pub use handshake::{
     initiator_complete, initiator_share, responder_complete, HandshakeState, InitiatorShare,
     ResponderShare, FORBIDDEN_ZERO_RTT,
 };
-pub use schedule::{derive_handshake_keys, HandshakeKeys};
+pub use schedule::{derive_handshake_keys, derive_traffic_update, HandshakeKeys};

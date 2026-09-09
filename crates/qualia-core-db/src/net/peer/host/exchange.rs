@@ -176,6 +176,16 @@ impl NativePeer {
         Ok(())
     }
 
+    /// Traffic-secret update. Does not mint a new permit or grant.
+    pub fn rekey_protected(&mut self, table: &mut crate::net::qdnf::session::rekey::RekeyTable) -> Result<u64, QdnfError> {
+        let protection = self.protection.as_mut().ok_or(QdnfError::Unauthorized)?;
+        let _session = self.session.ok_or(QdnfError::Unauthorized)?;
+        let next = table.rotate()?;
+        let (send, recv) = table.keys(next)?;
+        protection.install_update(send, recv, crate::net::qdnf::types::Generation(next))?;
+        Ok(next)
+    }
+
     pub fn send_protected(
         &mut self,
         dest: &crate::net::qdnf::types::ObservedLocator,

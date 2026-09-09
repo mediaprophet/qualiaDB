@@ -468,3 +468,12 @@
 - Human input needed: none this step. Ethernet/CAP_NET_RAW remains an E05 out-of-band gate.
 - Next: E02.4 traffic-secret rotation; then E05 Ethernet gate, E06 storage/evidence, E07 QSR authenticated lookup, following the documented DAG.
 
+## 2026-09-09 — E02.4 traffic-secret rotation — partial, packages remain open
+
+- Replaced generation-only `RekeyTable` with owned directional secrets. `rotate()` HKDF-derives the next pair, installs it, and zeroizes the retired generation after the two-slot overlap. `PacketProtection::install_update` erases prior keys and starts a new packet-number space. `NativePeer::rekey_protected` is the production caller; it cannot mint a grant.
+- Measured: focused `session::rekey`, `packet_protection`, `crypto::schedule` → **19 passed**, 0 failed before the host caller test. Not hybrid recovery. Not Ethernet. Enhancement checkboxes unmarked. Original packages remain pending.
+- Limit: the live `PacketProtection` object holds only current keys; previous-generation in-flight open still needs an explicit table lookup (follow-up inside E02.4/E09).
+- Human input needed: none this step.
+- Next: E02.5 remaining handshake failure classes; E05 Ethernet; E06 storage.
+
+

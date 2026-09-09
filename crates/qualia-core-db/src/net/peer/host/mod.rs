@@ -237,4 +237,14 @@ mod tests {
         let n = authorised_ipc_stream_exchange(app).unwrap();
         assert_eq!(n, 9);
     }
+
+    #[test]
+    fn rekey_without_protection_is_unauthorized() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (mut a, _b) = NativePeer::pair_ipc(b"did:q42:a", b"did:q42:b", scope, 1280).unwrap();
+        let mut table =
+            crate::net::qdnf::session::rekey::RekeyTable::from_keys([1u8; 32], [2u8; 32])
+                .unwrap();
+        assert_eq!(a.rekey_protected(&mut table), Err(QdnfError::Unauthorized));
+    }
 }

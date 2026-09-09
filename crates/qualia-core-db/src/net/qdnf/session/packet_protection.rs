@@ -100,6 +100,32 @@ impl PacketProtection {
         out[..body_len].copy_from_slice(&body[..body_len]);
         Ok(body_len)
     }
+
+    /// Install a derived traffic update. Erases prior keys and starts a new
+    /// packet-number space so nonces are not reused with the new secrets.
+    pub fn install_update(
+        &mut self,
+        send_key: [u8; AEAD_KEY_LEN],
+        recv_key: [u8; AEAD_KEY_LEN],
+        generation: Generation,
+    ) -> Result<(), QdnfError> {
+        if send_key == [0u8; AEAD_KEY_LEN]
+            || recv_key == [0u8; AEAD_KEY_LEN]
+            || send_key == recv_key
+        {
+            return Err(QdnfError::CryptoFailure);
+        }
+        if generation == Generation::ZERO || generation.0 <= self.generation.0 {
+            return Err(QdnfError::StaleGeneration);
+        }
+        self.send_key.zeroize();
+        self.recv_key.zeroize();
+        self.send_key = send_key;
+        self.recv_key = recv_key;
+        self.space = PacketSpace::new();
+        self.generation = generation;
+        Ok(())
+    }
 }
 
 impl Drop for PacketProtection {
@@ -169,5 +195,30 @@ mod tests {
         let n = a.seal(b"aad-1", &mut pt, &mut sealed).unwrap();
         let mut out = [0u8; 16];
         assert!(b.open(b"aad-2", &sealed[..n], &mut out).is_err());
+    }
+
+    #[test]
+    fn install_update_uses_new_keys_and_fresh_packet_space() {
+        let (mut a, mut b) = pair();
+        let mut pt = *b"hello-qpr";
+        let mut sealed_old = [0u8; 64];
+        let n_old = a.seal(b"aad", &mut pt, &mut sealed_old).unwrap();
+        a.install_update([3u8; 32], [4u8; 32], Generation(2))
+            .unwrap();
+        b.install_update([4u8; 32], [3u8; 32], Generation(2))
+            .unwrap();
+        let mut out = [0u8; 16];
+        assert!(b.open(b"aad", &sealed_old[..n_old], &mut out).is_err());
+        let mut pt2 = *b"hello-qpr";
+        let mut sealed = [0u8; 64];
+        let n2 = a.seal(b"aad", &mut pt2, &mut sealed).unwrap();
+        assert_eq!(&sealed[..PN_LEN], &[0, 0, 0, 0, 0, 0, 0, 0]);
+        let got = b.open(b"aad", &sealed[..n2], &mut out).unwrap();
+        assert_eq!(&out[..got], b"hello-qpr");
+        assert_eq!(a.generation(), Generation(2));
+        assert_eq!(
+            a.install_update([5u8; 32], [6u8; 32], Generation(2)),
+            Err(QdnfError::StaleGeneration)
+        );
     }
 }

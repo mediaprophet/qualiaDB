@@ -50,6 +50,46 @@ pub fn derive_handshake_keys(
     })
 }
 
+pub const INFO_TRAFFIC_SEND: &[u8] = b"qpr-pq-1/traffic-update/send";
+pub const INFO_TRAFFIC_RECV: &[u8] = b"qpr-pq-1/traffic-update/recv";
+
+/// Derive the next traffic keys from the current pair. Not a hybrid recovery.
+pub fn derive_traffic_update(
+    send: &[u8; AEAD_KEY_LEN],
+    recv: &[u8; AEAD_KEY_LEN],
+    next_generation: u64,
+) -> Result<([u8; AEAD_KEY_LEN], [u8; AEAD_KEY_LEN]), CryptoError> {
+    if send == &[0u8; AEAD_KEY_LEN] || recv == &[0u8; AEAD_KEY_LEN] || send == recv {
+        return Err(CryptoError::CryptoFailure);
+    }
+    if next_generation == 0 {
+        return Err(CryptoError::Unauthorized);
+    }
+    let mut salt = [0u8; 8];
+    salt.copy_from_slice(&next_generation.to_be_bytes());
+    let mut ikm = [0u8; 64];
+    ikm[..32].copy_from_slice(send);
+    ikm[32..].copy_from_slice(recv);
+    let mut next_send = [0u8; AEAD_KEY_LEN];
+    let mut next_recv = [0u8; AEAD_KEY_LEN];
+    let send_res = hkdf_sha384(Some(&salt), &ikm, INFO_TRAFFIC_SEND, &mut next_send);
+    let recv_res = hkdf_sha384(Some(&salt), &ikm, INFO_TRAFFIC_RECV, &mut next_recv);
+    ikm.zeroize();
+    send_res?;
+    recv_res?;
+    if next_send == next_recv
+        || next_send == *send
+        || next_recv == *recv
+        || next_send == [0u8; AEAD_KEY_LEN]
+        || next_recv == [0u8; AEAD_KEY_LEN]
+    {
+        next_send.zeroize();
+        next_recv.zeroize();
+        return Err(CryptoError::CryptoFailure);
+    }
+    Ok((next_send, next_recv))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,5 +117,18 @@ mod tests {
         t.append(b"suite", b"qpr-pq-1").unwrap();
         assert!(derive_handshake_keys(&[0u8; 32], &[1u8; 32], &t).is_err());
         assert!(derive_handshake_keys(&[1u8; 32], &[0u8; 32], &t).is_err());
+    }
+
+    #[test]
+    fn traffic_update_changes_keys_and_is_not_identity() {
+        let send = [5u8; AEAD_KEY_LEN];
+        let recv = [6u8; AEAD_KEY_LEN];
+        let (s2, r2) = derive_traffic_update(&send, &recv, 2).unwrap();
+        assert_ne!(s2, send);
+        assert_ne!(r2, recv);
+        assert_ne!(s2, r2);
+        let (s3, r3) = derive_traffic_update(&s2, &r2, 3).unwrap();
+        assert_ne!(s3, s2);
+        assert_ne!(r3, r2);
     }
 }
