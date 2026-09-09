@@ -14,6 +14,7 @@ use crate::net::qdnf::errors::QdnfError;
 
 mod frame;
 mod loopback;
+mod two_host;
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -22,6 +23,7 @@ mod unsupported;
 
 pub use frame::{DEV_ETHERTYPE, decapsulate_ethernet, encapsulate_ethernet};
 pub use loopback::{EthernetLoop, ethernet_loop_pair};
+pub use two_host::{TwoHostProbe, TwoHostProbeReason, probe_two_host};
 
 #[cfg(target_os = "linux")]
 pub use linux::RawEthernet;

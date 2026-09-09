@@ -23,7 +23,10 @@ pub use ads::{
 pub use constraints::{edge_feasible, path_feasible, PathConstraint};
 pub use flood::{FloodTable, LsaRecord};
 pub use forwarding::ForwardingGeneration;
-pub use hysteresis::{decide_replace, hold_planned_routes, should_replace, HysteresisPolicy};
+pub use hysteresis::{
+    admit_healed_routes, decide_replace, hold_planned_routes, hop_is_held_down,
+    should_replace, suppress_held_hops, HopHoldDown, HysteresisPolicy,
+};
 pub use index::{insert_edge, AdjacencyIndex, MAX_ADMITTED_EDGES};
 pub use overlap::GenerationPair;
 pub use plan::plan_routes;

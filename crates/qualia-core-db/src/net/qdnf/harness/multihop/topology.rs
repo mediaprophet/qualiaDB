@@ -1,6 +1,7 @@
 //! Caller-backed adjacency and `plan_routes` before any forwarding publish.
 
 use crate::net::qdnf::errors::QdnfError;
+use crate::net::qdnf::route::hysteresis::{admit_healed_routes, HopHoldDown};
 use crate::net::qdnf::route::{
     insert_edge, plan_routes, AdjacencyIndex, CandidatePath, ForwardingGeneration, PathConstraint,
     SpfTable, ValidatedEdge,
@@ -171,8 +172,91 @@ pub(super) fn publish_planned(
 
 pub(super) fn publish_line(m: &mut MultiHop) -> Result<(), QdnfError> {
     let index = line_index()?;
+    let origin = plan_one(&index, ORIGIN_NODE, DEST_NODE, &PathConstraint::UNRESTRICTED)?;
     m.planned_hops = publish_planned(&mut m.gens, &index, &PathConstraint::UNRESTRICTED)?;
+    m.current_path = origin;
+    m.last_change_unix = PLAN_NOW;
+    m.held = HopHoldDown::EMPTY;
     Ok(())
+}
+
+fn unpublish(m: &mut MultiHop) {
+    m.gens = [
+        ForwardingGeneration::empty(1),
+        ForwardingGeneration::empty(2),
+        ForwardingGeneration::empty(3),
+    ];
+    m.planned_hops = 0;
+}
+
+/// Partition the middle next-hop. Forwarding is unpublished and the hop is held down.
+pub(super) fn partition_next_hop(m: &mut MultiHop, now_unix: u64) -> Result<(), QdnfError> {
+    m.held = HopHoldDown {
+        hop: MIDDLE_NODE,
+        last_down_unix: now_unix,
+    };
+    m.current_path = CandidatePath::EMPTY;
+    m.last_change_unix = now_unix;
+    unpublish(m);
+    Ok(())
+}
+
+/// Heal 1→2→3 advertisements. Hold-down still blocks the flapping first hop.
+pub(super) fn heal_next_hop(m: &mut MultiHop, now_unix: u64) -> Result<(), QdnfError> {
+    let index = line_index()?;
+    let constraint = PathConstraint::UNRESTRICTED;
+    let mut planned = [CandidatePath::EMPTY; 3];
+    let n = match plan_routes(
+        &index,
+        ORIGIN_NODE,
+        DEST_NODE,
+        &constraint,
+        now_unix.max(PLAN_NOW),
+        &mut planned,
+    ) {
+        Ok(k) => k,
+        Err(QdnfError::NoRoute) => 0,
+        Err(e) => return Err(e),
+    };
+    let mut admitted = [CandidatePath::EMPTY; 3];
+    match admit_healed_routes(
+        &m.current_path,
+        &planned[..n],
+        &[m.held],
+        &constraint,
+        &m.policy,
+        now_unix,
+        m.last_change_unix,
+        &mut admitted,
+    ) {
+        Ok(k) if k > 0 && admitted[0].first_hop == MIDDLE_NODE => {
+            m.planned_hops = publish_admitted(&mut m.gens, &index, &admitted[0], &constraint)?;
+            m.current_path = admitted[0];
+            m.last_change_unix = now_unix;
+            Ok(())
+        }
+        Ok(_) | Err(QdnfError::NoRoute) => {
+            unpublish(m);
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
+
+fn publish_admitted(
+    gens: &mut [ForwardingGeneration; NODE_COUNT],
+    index: &AdjacencyIndex,
+    admitted: &CandidatePath,
+    constraint: &PathConstraint,
+) -> Result<u8, QdnfError> {
+    if admitted.first_hop != MIDDLE_NODE {
+        return Err(QdnfError::NoRoute);
+    }
+    gens[ORIGIN_SLOT].publish(table_from_planned(admitted)?)?;
+    let middle = plan_one(index, MIDDLE_NODE, DEST_NODE, constraint)?;
+    gens[MIDDLE_SLOT].publish(table_from_planned(&middle)?)?;
+    gens[DEST_SLOT].publish(local_table(DEST_NODE)?)?;
+    Ok(admitted.hop_len)
 }
 
 pub(super) fn plan_unrestricted(index: &AdjacencyIndex) -> Result<CandidatePath, QdnfError> {

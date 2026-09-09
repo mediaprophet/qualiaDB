@@ -7,7 +7,8 @@
 use crate::net::qdnf::authority::{evaluate_precedence, ContactState, PolicyOutcome};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::harness::faults::FaultPipe;
-use crate::net::qdnf::route::ForwardingGeneration;
+use crate::net::qdnf::route::hysteresis::{hop_is_held_down, HopHoldDown, HysteresisPolicy};
+use crate::net::qdnf::route::{CandidatePath, ForwardingGeneration};
 use crate::net::qdnf::session::datagrams::DeliveryStage;
 use crate::net::qdnf::session::paths::PathTable;
 use crate::net::qdnf::session::policy::gate_channel;
@@ -74,6 +75,10 @@ pub struct MultiHop {
     paths: PathTable,
     active_path: u8,
     planned_hops: u8,
+    current_path: CandidatePath,
+    last_change_unix: u64,
+    held: HopHoldDown,
+    policy: HysteresisPolicy,
     pub auth: AuthState,
     pub operation: OperationId,
     last_stage: DeliveryStage,
@@ -95,6 +100,10 @@ impl MultiHop {
             paths,
             active_path,
             planned_hops: 0,
+            current_path: CandidatePath::EMPTY,
+            last_change_unix: 0,
+            held: HopHoldDown::EMPTY,
+            policy: HysteresisPolicy::STRICT,
             auth: AuthState::OPEN,
             operation: OperationId::ZERO,
             last_stage: DeliveryStage::TransportAck,
@@ -135,6 +144,21 @@ impl MultiHop {
     pub fn planned_hop_count(&self) -> u8 { self.planned_hops }
     #[rustfmt::skip]
     pub fn tick(&mut self) { self.middle.tick(); }
+
+    /// Withdraw the 1→2 next hop and start the hold-down timer.
+    pub fn partition_next_hop(&mut self, now_unix: u64) -> Result<(), QdnfError> {
+        topology::partition_next_hop(self, now_unix)
+    }
+
+    /// Re-advertise 1→2→3. A hop still in hold-down does not rejoin forwarding.
+    pub fn heal_next_hop(&mut self, now_unix: u64) -> Result<(), QdnfError> {
+        topology::heal_next_hop(self, now_unix)
+    }
+
+    #[inline]
+    pub fn next_hop_held_down(&self, now_unix: u64) -> bool {
+        hop_is_held_down(&self.held, now_unix, &self.policy)
+    }
 
     pub fn handoff(&mut self) -> Result<u8, QdnfError> {
         let next = self.paths.start_race(self.active_path as u64 + 2)?;

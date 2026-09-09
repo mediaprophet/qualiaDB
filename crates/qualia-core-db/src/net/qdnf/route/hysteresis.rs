@@ -169,6 +169,108 @@ pub fn hold_planned_routes(
     }
 }
 
+/// Compact next-hop that withdrew. `last_down_unix == 0` means not held.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HopHoldDown {
+    pub hop: u8,
+    pub last_down_unix: u64,
+}
+
+impl HopHoldDown {
+    pub const EMPTY: Self = Self {
+        hop: 0,
+        last_down_unix: 0,
+    };
+}
+
+/// True while `now` is still inside the hold-down window after withdrawal.
+pub fn hop_is_held_down(entry: &HopHoldDown, now_unix: u64, policy: &HysteresisPolicy) -> bool {
+    if entry.hop == 0 || entry.last_down_unix == 0 {
+        return false;
+    }
+    now_unix.saturating_sub(entry.last_down_unix) < policy.hold_down_unix
+}
+
+fn first_hop_held(
+    first_hop: u8,
+    held: &[HopHoldDown],
+    now_unix: u64,
+    policy: &HysteresisPolicy,
+) -> bool {
+    let mut i = 0usize;
+    while i < held.len() {
+        if held[i].hop == first_hop && hop_is_held_down(&held[i], now_unix, policy) {
+            return true;
+        }
+        i += 1;
+    }
+    false
+}
+
+/// Drop planned paths whose first hop is still in hold-down after a flap.
+pub fn suppress_held_hops(
+    planned: &[CandidatePath],
+    held: &[HopHoldDown],
+    policy: &HysteresisPolicy,
+    now_unix: u64,
+    out: &mut [CandidatePath],
+) -> usize {
+    let mut n = 0usize;
+    let mut i = 0usize;
+    while i < planned.len() && n < out.len() {
+        let p = planned[i];
+        if usable(&p) && !first_hop_held(p.first_hop, held, now_unix, policy) {
+            out[n] = p;
+            n += 1;
+        }
+        i += 1;
+    }
+    n
+}
+
+/// Partition heal: suppress held-down first hops, then apply replacement hysteresis.
+///
+/// A flapping hop cannot rejoin merely because `current` became unusable. After
+/// the timer, [`hold_planned_routes`] may admit it again.
+pub fn admit_healed_routes(
+    current: &CandidatePath,
+    planned: &[CandidatePath],
+    held: &[HopHoldDown],
+    constraint: &PathConstraint,
+    policy: &HysteresisPolicy,
+    now_unix: u64,
+    last_change_unix: u64,
+    out: &mut [CandidatePath],
+) -> Result<usize, QdnfError> {
+    if out.is_empty() {
+        return Err(QdnfError::Capacity);
+    }
+    let mut filtered = [CandidatePath::EMPTY; 16];
+    let n_f = suppress_held_hops(planned, held, policy, now_unix, &mut filtered);
+    let effective = if first_hop_held(current.first_hop, held, now_unix, policy) {
+        CandidatePath::EMPTY
+    } else {
+        *current
+    };
+    if n_f == 0 {
+        if usable(&effective) && path_feasible(&effective.metrics, constraint).is_ok() {
+            out[0] = effective;
+            return Ok(1);
+        }
+        return Err(QdnfError::NoRoute);
+    }
+    hold_planned_routes(
+        &effective,
+        &filtered[..n_f],
+        constraint,
+        policy,
+        now_unix,
+        last_change_unix,
+        out,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,5 +373,59 @@ mod tests {
         let n = pareto_select(&cands, &mut out).unwrap();
         assert_eq!(n, 2);
         assert_ne!(out[0].metrics.failure_domain, out[1].metrics.failure_domain);
+    }
+
+    #[test]
+    fn held_down_first_hop_cannot_rejoin_during_timer() {
+        let policy = HysteresisPolicy::STRICT;
+        let current = CandidatePath::EMPTY;
+        let flap = cheap();
+        let held = [HopHoldDown {
+            hop: flap.first_hop,
+            last_down_unix: 10,
+        }];
+        let constraint = PathConstraint::UNRESTRICTED;
+        let mut out = [CandidatePath::EMPTY; 3];
+        assert!(hop_is_held_down(&held[0], 11, &policy));
+        assert_eq!(
+            admit_healed_routes(
+                &current, &[flap], &held, &constraint, &policy, 11, 10, &mut out
+            ),
+            Err(QdnfError::NoRoute)
+        );
+        assert!(!hop_is_held_down(&held[0], 70, &policy));
+        let n = admit_healed_routes(
+            &current, &[flap], &held, &constraint, &policy, 70, 10, &mut out,
+        )
+        .unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(out[0].first_hop, flap.first_hop);
+    }
+
+    #[test]
+    fn alternate_not_held_is_used_while_flap_is_suppressed() {
+        let policy = HysteresisPolicy::STRICT;
+        let current = CandidatePath::EMPTY;
+        let flap = cheap();
+        let alt = fast();
+        let held = [HopHoldDown {
+            hop: flap.first_hop,
+            last_down_unix: 1,
+        }];
+        let mut out = [CandidatePath::EMPTY; 3];
+        let n = admit_healed_routes(
+            &current,
+            &[flap, alt],
+            &held,
+            &PathConstraint::UNRESTRICTED,
+            &policy,
+            2,
+            1,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(out[0].first_hop, alt.first_hop);
+        assert_ne!(out[0].first_hop, flap.first_hop);
     }
 }

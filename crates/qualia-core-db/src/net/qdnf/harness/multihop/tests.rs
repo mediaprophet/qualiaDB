@@ -197,3 +197,26 @@ fn oracle_hop_limit_independent_of_product_decrement() {
     assert_eq!(product, 6);
     assert_ne!(product, independent_hop_limit(&src).unwrap());
 }
+
+#[test]
+fn flapping_next_hop_held_down_does_not_immediately_rejoin() {
+    let mut m = MultiHop::line();
+    assert_eq!(m.lookup_dest(), Ok(MIDDLE_NODE));
+    m.partition_next_hop(10).unwrap();
+    assert!(m.next_hop_held_down(10));
+    assert_eq!(m.lookup_dest(), Err(QdnfError::Incomplete));
+    assert_eq!(m.send_stream(sf(0, 1), &[1]), Err(QdnfError::Incomplete));
+    m.heal_next_hop(11).unwrap();
+    assert!(m.next_hop_held_down(11));
+    assert_ne!(m.lookup_dest(), Ok(MIDDLE_NODE));
+    assert_eq!(m.lookup_dest(), Err(QdnfError::Incomplete));
+    assert!(!ethernet_demonstrated());
+    m.heal_next_hop(70).unwrap();
+    assert!(!m.next_hop_held_down(70));
+    assert_eq!(m.lookup_dest(), Ok(MIDDLE_NODE));
+    m.send_stream(sf(0, 1), &[1]).unwrap();
+    let mut out = [0u8; 8];
+    assert_eq!(m.consume(&mut out).unwrap(), 1);
+    assert!(!ethernet_demonstrated());
+    assert!(!os_isolation_evidence());
+}
