@@ -285,6 +285,20 @@ pub fn decode_fragment(src: &[u8]) -> Result<(FragmentHeader, &[u8]), QdnfError>
     Ok((header, &src[FRAG_HDR_LEN..need]))
 }
 
+/// Decode, admit, then copy. Truncated or oversize wire never copies.
+///
+/// Admission is charged before [`HandshakeReassembler::buffer`]. A missing
+/// ticket cannot be skipped: there is no whole-datagram fallback here.
+pub fn admit_and_buffer(
+    reassembler: &mut HandshakeReassembler,
+    src: &[u8],
+    complete_out: &mut [u8],
+) -> Result<Option<usize>, QdnfError> {
+    let (header, body) = decode_fragment(src)?;
+    let ticket = reassembler.admit(header.msg_id, header.total, header.frag_len)?;
+    reassembler.buffer(ticket, header.offset, body, complete_out)
+}
+
 pub fn fragment_payload_mtu(mtu: u16) -> Result<u16, QdnfError> {
     if mtu < MIN_QDNF_MTU {
         return Err(QdnfError::Range);
@@ -444,5 +458,36 @@ mod tests {
         assert_eq!(r.admit(3, 8, 4), Err(QdnfError::Capacity));
         assert_eq!(r.occupied(), 2);
         assert_eq!(r.buffered_len(3), 0);
+    }
+
+    #[test]
+    fn admit_and_buffer_completes_and_oversize_total_is_capacity() {
+        let mut payload = [0u8; 24];
+        payload[0] = 0xA1;
+        payload[23] = 0xA2;
+        let mut frames = [[0u8; MAX_FRAME]; MAX_FRAGMENTS];
+        let mut lens = [0usize; MAX_FRAGMENTS];
+        let n = split_handshake(3, &payload, 16, &mut frames, &mut lens).unwrap();
+        assert!(n >= 2);
+        let mut r = HandshakeReassembler::new();
+        let mut out = [0u8; 32];
+        let mut complete = None;
+        for i in 0..n {
+            complete = admit_and_buffer(&mut r, &frames[i][..lens[i]], &mut out).unwrap();
+        }
+        assert_eq!(complete, Some(24));
+        assert_eq!(&out[..24], &payload);
+        assert_eq!(r.occupied(), 0);
+
+        let mut closed = HandshakeReassembler::new();
+        let too_big = (MAX_HANDSHAKE_BYTES as u16).saturating_add(1);
+        assert_eq!(closed.admit(9, too_big, 8), Err(QdnfError::Capacity));
+        assert_eq!(closed.occupied(), 0);
+        assert_eq!(closed.buffered_len(9), 0);
+        assert_eq!(
+            admit_and_buffer(&mut closed, &[0u8; 4], &mut out),
+            Err(QdnfError::Truncated)
+        );
+        assert_eq!(closed.buffered_len(9), 0);
     }
 }

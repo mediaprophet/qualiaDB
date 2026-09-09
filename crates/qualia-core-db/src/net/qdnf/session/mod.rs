@@ -23,7 +23,10 @@ pub mod rtt;
 pub mod streams;
 
 pub use congestion::{can_send, on_acked, on_ecn, on_lost, Congestion, EcnState, PmtuState};
-pub use handshake::{SessionBinding, SessionState};
+pub use handshake::{
+    handshake_over_fragments, FragmentedHandshake, SessionBinding, SessionState,
+    CLIENT_HELLO_WIRE_LEN, SERVER_HELLO_WIRE_LEN,
+};
 pub use pacing::{wait_until, Pacer};
 pub use packet_protection::PacketProtection;
 pub use paths::{mutate_path, PathHandle};

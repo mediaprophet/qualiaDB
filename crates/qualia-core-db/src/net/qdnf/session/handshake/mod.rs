@@ -1,12 +1,23 @@
 //! QSession handshake binding. No 0-RTT application data.
 
+mod fragmented;
+mod hello;
+
 use crate::crypto::network::transcript::Transcript;
 use crate::net::qdnf::authority::{
-    admit_service, ExecutionPermit, InstalledSessionKeys, PolicyOutcome,
+    ExecutionPermit, InstalledSessionKeys, PolicyOutcome, admit_service,
 };
 use crate::net::qdnf::crypto::finished::finished_mac;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{OperationId, StrongDigest};
+
+pub use fragmented::{
+    FragmentedHandshake, handshake_over_fragments, hello_fragment_payload_mtu, send_hello_fragments,
+};
+pub use hello::{
+    CLIENT_HELLO_WIRE_LEN, SERVER_HELLO_WIRE_LEN, encode_client_hello_with_certs,
+    encode_server_hello_with_certs,
+};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
