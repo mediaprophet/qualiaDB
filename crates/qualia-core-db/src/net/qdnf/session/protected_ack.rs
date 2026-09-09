@@ -114,6 +114,9 @@ impl ProtectedAckSession {
         self.seal_tracked(aad, plaintext, out)
     }
 
+    /// Install new traffic keys via [`PacketProtection::install_update`].
+    /// The immediately previous generation remains openable during overlap.
+    /// Sent-table ownership starts a new packet-number space.
     pub fn install_update(
         &mut self,
         send_key: [u8; 32],
@@ -199,6 +202,40 @@ mod tests {
         bogus.insert_range(99, 99).unwrap();
         assert_eq!(a.apply_ack(&bogus), Err(QdnfError::Malformed));
         assert!(!a.is_closed());
+    }
+
+    #[test]
+    fn previous_generation_in_flight_opens_during_overlap() {
+        use crate::net::qdnf::session::rekey::MAX_OLD_KEYS;
+        let (mut a, mut b) = pair();
+        let mut pt = *b"hello-qpr";
+        let mut sealed_old = [0u8; 64];
+        let n_old = a.seal_tracked(b"aad", &mut pt, &mut sealed_old).unwrap();
+        a.install_update([3u8; 32], [4u8; 32], Generation(2))
+            .unwrap();
+        b.install_update([4u8; 32], [3u8; 32], Generation(2))
+            .unwrap();
+        let mut out = [0u8; 16];
+        let (kind, n) = b
+            .open_tracked(b"aad", &sealed_old[..n_old], &mut out)
+            .unwrap();
+        assert_eq!(kind, ProtectedRecv::Delivered);
+        assert_eq!(&out[..n], b"hello-qpr");
+        let mut gen = 2u64;
+        let mut k = 5u8;
+        while gen < 2 + MAX_OLD_KEYS as u64 {
+            gen += 1;
+            a.install_update([k; 32], [k.wrapping_add(1); 32], Generation(gen))
+                .unwrap();
+            b.install_update([k.wrapping_add(1); 32], [k; 32], Generation(gen))
+                .unwrap();
+            k = k.wrapping_add(2);
+        }
+        assert_eq!(
+            b.open_tracked(b"aad", &sealed_old[..n_old], &mut out),
+            Err(QdnfError::CryptoFailure)
+        );
+        assert!(!b.is_closed());
     }
 
     #[test]
