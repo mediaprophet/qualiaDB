@@ -14,3 +14,7 @@ qualia-core-db = { path = "../qualia-core-db", default-features = false, feature
 [[example]]
 name = "native_ipc_peers"
 path = "examples/native_ipc_peers.rs"
+
+[[example]]
+name = "vertical_64"
+path = "examples/vertical_64.rs"
