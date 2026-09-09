@@ -529,4 +529,22 @@
 - Human input needed: none this step. CAP_NET_RAW / veth, live rails, and independent review remain out-of-band.
 - Next ready (honest leftovers): E05.2 physical/veth qualification; E06.5 QNF extension decision; E07.8 networked comparison harness without superiority claims; E09.5 wiring `PathCcTable` into `NativePeer` send; E10.5 scaling measurement; E18.4–E18.6 live adapters stay Unsupported; E20.2 daemon proof; E21.2–E21.4 fuzz/review/churn.
 
+## 2026-09-09 — remaining in-tree production paths — partial, packages remain open
+
+- Step: continue E05–E21 after the E02.4–E11 production-path checkpoint. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E05.4: `session/handshake/{hello,fragmented}.rs`. Oversized ClientHello/ServerHello (dual ML-DSA-65 + Ed25519 proofs) split through admit-before-buffer reassembly on MTU 1500. Dual proofs sign SHA-384 of the prefix so the Ed25519 512-byte binder is not overflowed. Split failure is not a whole-datagram fallback. Finished remains HMAC-SHA-384.
+  - E05.2: `raw_ethernet/two_host.rs` probe. This environment has CapEff=0 and no `ip`. `physical_two_host_qualified()` stays false. Evidence level stays `AfPacketAttempt` / `InProcessLoop`, never `PhysicalLink`.
+  - E08.5: hysteresis hold-down wired into in-process 1→2→3. A withdrawn middle hop cannot rejoin during the timer. `ethernet_demonstrated()` stays false.
+  - E09.5: `PathCcTable::check_send` before seal so a shared-bottleneck exhaust does not consume a packet number.
+  - E07: `NativePeer::lookup_qsr_full` is the production exact/token/handover path. Cover-only `lookup_qsr` remains membership (`NeedContinuation`). Closed-world XOR comparison does not set `kademlia_comparison_executed()`.
+  - Prior swarm commits on this branch already landed QNF evaluation (not adopted), paged replica streams, sixteen-cell scaling, fail-closed AF_XDP, in-process settlement without live rails, profile vaults, and Native Independent coupling inventory.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`:
+  - Focused handshake / hysteresis / two-host / host / exact-QSR / fragment filter: **73 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-slice-suite.log`).
+  - `qualia-peer --lib`: **19 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-peer.log`).
+- Not claimed: physical two-host / veth Ethernet; AF_XDP acceleration; live settlement rails; Native Independent default daemons (`native_independent_daemon_proven()==false`); networked Kademlia; operational FAR/FRR; independent cryptographic review; libFuzzer / model-check; long-duration churn; MSVC runner; enhancement-package completion; deployment certification from test counts.
+- Human input needed: CAP_NET_RAW / veth two-host qualification; whether default daemons may drop `libp2p-compat`; independent review; live-rail selection. None of those can be completed in this process.
+- Next: remaining E21.1 observational fixtures may still be wired to existing libraries with `qualified=false`. E21.2–E21.4, E05.2 physical, E15.6 operational, E18 live rails, and E20.2 daemon proof stay out-of-band.
+
+
 
