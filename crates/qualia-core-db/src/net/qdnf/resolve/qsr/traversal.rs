@@ -53,6 +53,15 @@ impl QsrSnapshot {
         self.len = self.len + 1;
         Ok(())
     }
+
+    /// Occupied `(key, value)` at insert index `i`. Read-only; not a membership answer.
+    #[inline]
+    pub fn pair_at(&self, i: usize) -> Option<(StrongDigest, StrongDigest)> {
+        if i >= self.len as usize {
+            return None;
+        }
+        Some((self.keys[i], self.values[i]))
+    }
 }
 
 /// Exact lookup. Copies matching targets into `out` when `Found`.
