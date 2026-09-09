@@ -144,8 +144,9 @@ mod tests {
         [CoverInterval { start: 0, end: 15 }]
     }
 
-    fn uncovered_digit_zero() -> [CoverInterval; 1] {
-        [CoverInterval { start: 1, end: 15 }]
+    fn uncovered_first_digit() -> [CoverInterval; 1] {
+        // Depth-0 digit of `key_rest` is 0x1 (high nibble of 0x10). 2..=15 misses it.
+        [CoverInterval { start: 2, end: 15 }]
     }
 
     #[test]
@@ -153,7 +154,7 @@ mod tests {
         let key = key_rest(0x21);
         assert_eq!(digit(&key, 0).unwrap(), 0x01);
         assert_eq!(DIGIT_RADIX, 16);
-        let miss_covers = uncovered_digit_zero();
+        let miss_covers = uncovered_first_digit();
         assert_eq!(lookup_exact(&key, &miss_covers), Ok(QsrOutcome::Incomplete));
 
         let public = QsrSnapshot::empty(Generation(1));
@@ -190,7 +191,7 @@ mod tests {
     #[test]
     fn exact_miss_handover_hit() {
         let key = key_rest(0x22);
-        let miss_covers = uncovered_digit_zero();
+        let miss_covers = uncovered_first_digit();
         assert_eq!(lookup_exact(&key, &miss_covers), Ok(QsrOutcome::Incomplete));
 
         let public = QsrSnapshot::empty(Generation(2));
@@ -230,7 +231,7 @@ mod tests {
     #[test]
     fn wrong_token_does_not_fall_through_to_handover() {
         let key = key_rest(0x23);
-        let miss_covers = uncovered_digit_zero();
+        let miss_covers = uncovered_first_digit();
         let public = QsrSnapshot::empty(Generation(1));
         let mut private = QsrSnapshot::empty(Generation(1));
         private.insert(key, StrongDigest::ZERO).unwrap();

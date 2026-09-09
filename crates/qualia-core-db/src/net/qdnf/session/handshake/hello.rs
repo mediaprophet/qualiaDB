@@ -1,5 +1,6 @@
 //! Oversized ClientHello / ServerHello codec: hybrid share plus dual proof.
 
+use crate::crypto::network::digest::sha384;
 use crate::crypto::network::dual_sign::{DualProof, sign_dual, verify_dual};
 use crate::crypto::network::ed25519::public_from_seed;
 use crate::crypto::network::pq_handshake::{
@@ -61,6 +62,7 @@ fn append_hello(
     out[off..off + ML_DSA_65_SIG_LEN].copy_from_slice(&proof.mldsa_sig);
     off += ML_DSA_65_SIG_LEN;
     out[off..off + ED25519_SIG_LEN].copy_from_slice(&proof.ed25519_sig);
+    off += ED25519_SIG_LEN;
     Ok(off)
 }
 
@@ -122,7 +124,8 @@ fn sign_hello_body(
     sign_dual(
         mldsa_sk,
         ed_seed,
-        &out[..signed],
+        // Ed25519 context binder is 512 bytes; dual-sign the SHA-384 of the prefix.
+        &sha384(&out[..signed]).0,
         qsession_domain(),
         &mut proof,
     )?;
@@ -132,7 +135,13 @@ fn sign_hello_body(
 fn verify_hello_body(src: &[u8], share_len: usize) -> Result<(), QdnfError> {
     let signed = signed_prefix_len(share_len)?;
     let (mldsa_pk, ed_pk, proof) = parse_proof_and_certs(src, share_len)?;
-    verify_dual(&mldsa_pk, &ed_pk, &src[..signed], qsession_domain(), &proof)
+    verify_dual(
+        &mldsa_pk,
+        &ed_pk,
+        &sha384(&src[..signed]).0,
+        qsession_domain(),
+        &proof,
+    )
 }
 
 /// Encode ClientHello with the certs that match the signing secrets.
@@ -181,4 +190,26 @@ pub fn decode_server_hello(src: &[u8]) -> Result<ResponderShare, QdnfError> {
         ml_kem_ct: ct,
         x25519_pk: pk,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::crypto::network::kem::MlKem768Secret;
+    use crate::crypto::network::mldsa;
+    use crate::net::qdnf::crypto::handshake::initiator_share;
+
+    #[test]
+    fn client_hello_wire_len_includes_ed25519_sig() {
+        let (sk, pk) = MlKem768Secret::generate().unwrap();
+        let _ = sk;
+        let x = [3u8; 32];
+        let share = initiator_share(&x, &pk).unwrap();
+        let (mldsa_sk, mldsa_pk) = mldsa::generate_keypair().unwrap();
+        let ed = [9u8; 32];
+        let mut out = [0u8; CLIENT_HELLO_WIRE_LEN];
+        let n = encode_client_hello_with_certs(&share, &mldsa_sk, &mldsa_pk, &ed, &mut out).unwrap();
+        assert_eq!(n, CLIENT_HELLO_WIRE_LEN);
+        decode_client_hello(&out[..n]).unwrap();
+    }
 }

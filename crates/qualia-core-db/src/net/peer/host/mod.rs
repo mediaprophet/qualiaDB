@@ -218,7 +218,7 @@ mod tests {
                 &mut out,
             )
             .unwrap(),
-            QsrOutcome::NeedContinuation
+            QsrOutcome::EmptyInSnapshot
         );
     }
 
