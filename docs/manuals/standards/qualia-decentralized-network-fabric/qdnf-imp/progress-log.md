@@ -496,5 +496,20 @@
 - Human input needed: none this step. CAP_NET_RAW / veth qualification remains an E05.2 out-of-band gate.
 - Next ready: E04.1 host driver split; E06.2 durable transaction pairing; E07.4 completeness vs membership; E08 constraint-first routing; E16 profile foundations before E14 clinical.
 
+## 2026-09-09 — E04/E06.2/E07.4/E08/E16 foundations — partial, packages remain open
+
+- Step: continue after E02.5–E13 foundations. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E04.1–E04.4: `host/` split into `builder`, `driver`, `session_table`. `PeerBuilder` takes actual `cell_bytes` and bearer. `SessionTable` holds four live sessions; close releases via `ReservationHandle`; fifth session is `Capacity`. Send offset commits only after `bearer.send` accepts the full frame. `poll_recv` is WouldBlock before deadline and Expired at/after it with an empty queue. `open_session` remains `Unauthorized`.
+  - E06.2: `replication/pair.rs` + `commit_adapter.rs`. Operation identity, exact effect bytes and receipt share one `IntentTable` owner. Empty bytes are `Malformed`. Transport ACK is never `DurableReceipt`. Tampered payload is `Conflict` and not committed. Recovery is CORE-03 marker replay, not OS process-kill disk durability.
+  - E07.4: `qsr/completeness.rs` + `roots.rs`. Membership (`Found` / `EmptyInSnapshot`) is not completeness. `absence_is_authoritative` is true only for reconstructed prefix-complete `EmptyInSnapshot`. Publisher-asserted completeness cannot prove absence. Root mismatch is `Conflict`.
+  - E08.1–E08.4: `route/{validate,index,constraints,select,plan}.rs`. Production admission is `plan_routes` (feasibility then Pareto ≤3). `compute_spf` remains the 16-node demo/oracle (`Range` on node ≥16). Cheapest forbidden-realm/profile path is discarded. Unknown energy is not zero. Expired/withdrawn edges are unused. Disconnected dest is `NoRoute`.
+  - E16.1: `qdnf/profiles/` catalog, requirements, negotiate, budget. C2 cannot be lowered to P1 by a paid-tier preference. P3 required with only P1 available is `UnknownProfile`. Extra protection may raise P1→P2 when both exist. Ledger reserve failure is `BudgetExhausted` with no selection. Padding is `ceil(n/256)*256`.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`:
+  - Combined `qualia-core-db --lib` filter (`net::qdnf::route`, `profiles`, `resolve::qsr`, `peer::replication`, `peer::host`): **232 passed**, 0 failed.
+  - `qualia-peer --lib`: **3 passed**, 0 failed.
+- Not claimed: E04.5 facade replacement of the 64-byte two-peer demo as the application API; E08.5–E08.6 hysteresis/untrusted ads; E06.3–E06.6 cache keys / large objects / process-kill durability; E07.5–E07.8 private tokens / handover / Kademlia comparison; E16.2–E16.7 vaults/cover/offline/seizure; E14 clinical; physical Ethernet; default-daemon libp2p removal; enhancement-package completion.
+- Human input needed: none this step.
+- Next ready: E04.5 public facade; E08.5–E08.6 routing repair; E09.2 RTT/congestion; E10 cell parallelism; E16.2 vaults; then E11 / E16 remainder before E14.
 
 
