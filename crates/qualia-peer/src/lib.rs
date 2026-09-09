@@ -34,7 +34,7 @@ pub use qualia_core_db::net::peer::cells::{
     extra_identity_multiplies_host_budget, HostAdmission,
 };
 pub use qualia_core_db::net::peer::host::exchange::{
-    authorised_ipc_stream_exchange_in, pair_ipc_cells, AUTHORISED_PAYLOAD_CAP,
+    authorised_ipc_stream_exchange_in, pair_ipc_cells, AUTHORISED_IPC_MTU, AUTHORISED_PAYLOAD_CAP,
     AUTHORISED_ROUNDTRIP_CAP,
 };
 pub use qualia_core_db::net::peer::host::{

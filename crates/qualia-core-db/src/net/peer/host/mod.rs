@@ -11,6 +11,7 @@ pub mod identity;
 pub mod services;
 pub mod session_table;
 
+use crate::net::peer::cells::CellSlot;
 use crate::net::peer::runtime::{CancelEpoch, ReservationLedger};
 use crate::net::qdnf::bearer::contract::Bearer;
 use crate::net::qdnf::bearer::IpcEndpoint;
@@ -38,6 +39,7 @@ pub struct NativePeer {
     pub(crate) bearer: IpcEndpoint,
     pub(crate) cancel_epoch: CancelEpoch,
     pub(crate) cancelled: bool,
+    pub(crate) cell_slot: Option<CellSlot>,
 }
 
 impl NativePeer {

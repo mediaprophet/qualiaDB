@@ -1,13 +1,14 @@
 //! Authorised protected IPC exchange. Public QPR must not copy plaintext.
 
+use super::{ControllerIdentity, NativePeer, PeerBuilder, CELL_BYTES_DEFAULT};
 use crate::crypto::network::digest::sha384;
 use crate::crypto::network::kem::MlKem768Secret;
 use crate::crypto::network::transcript::Transcript;
-use super::{PeerBuilder, CELL_BYTES_DEFAULT, ControllerIdentity, NativePeer};
+use crate::net::peer::cells::host_owner::HostAdmission;
 use crate::net::qdnf::authority::{
     binding_for_controllers, AuthorityOwner, ContactState, ExecutionPermit, InstalledSessionKeys,
 };
-use crate::net::qdnf::bearer::ipc_pair;
+use crate::net::qdnf::bearer::ipc::{ipc_pair, FRAME_CAP};
 use crate::net::qdnf::crypto::finished::{finished_mac, verify_finished};
 use crate::net::qdnf::crypto::handshake::{
     initiator_complete, initiator_share, qualified_handshake_gate, reject_unknown_key_share,
@@ -18,15 +19,21 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::harness::oracles::wire::{require_protected, ProtectedView};
 use crate::net::qdnf::types::{Generation, LinkId, ScopeEpoch};
 
-/// Authorised application payload ceiling (E04.5 / P2). Round-trip success is
-/// also bounded by bearer MTU and packet-protection open (256-byte body).
+/// Authorised application payload ceiling (E04.5 / P2).
 pub const AUTHORISED_PAYLOAD_CAP: usize = 4096;
 
-/// Practical protected round-trip size while packet-protection `open` stays 256.
-pub const AUTHORISED_ROUNDTRIP_CAP: usize = 256;
+/// Protected round-trip size. Equals [`AUTHORISED_PAYLOAD_CAP`] on local-ipc.
+pub const AUTHORISED_ROUNDTRIP_CAP: usize = AUTHORISED_PAYLOAD_CAP;
 
-/// Two native peers over `local-ipc-v1`, sized to the caller’s cell budget.
+/// Local-ipc MTU that fits 4096 + AEAD overhead + QFrame header.
+pub const AUTHORISED_IPC_MTU: u16 = FRAME_CAP as u16;
+
+/// Two native peers over `local-ipc-v1`, admitted from one [`HostAdmission`].
+///
+/// Each peer needs `cell_bytes`. If remaining host bytes cannot cover the
+/// second cell, this returns [`QdnfError::Capacity`].
 pub fn pair_ipc_cells(
+    host: &mut HostAdmission,
     a_controller: &[u8],
     b_controller: &[u8],
     scope: ScopeEpoch,
@@ -38,15 +45,53 @@ pub fn pair_ipc_cells(
     if a_id == b_id {
         return Err(QdnfError::Conflict);
     }
-    let (a_bearer, b_bearer) = ipc_pair(scope, mtu)?;
+    let need = cell_bytes.checked_mul(2).ok_or(QdnfError::Capacity)?;
+    if cell_bytes == 0 || host.remaining_host_bytes() < need {
+        return Err(QdnfError::Capacity);
+    }
+    let profile = HostAdmission::profile_for_bytes(cell_bytes)?;
+    let slot_a = host.admit_cell(profile, cell_bytes)?;
+    let slot_b = match host.admit_cell(profile, cell_bytes) {
+        Ok(s) => s,
+        Err(_) => {
+            let _ = host.release_cell(slot_a);
+            return Err(QdnfError::Capacity);
+        }
+    };
+    let (a_bearer, b_bearer) = match ipc_pair(scope, mtu) {
+        Ok(p) => p,
+        Err(e) => {
+            let _ = host.release_cell(slot_b);
+            let _ = host.release_cell(slot_a);
+            return Err(e);
+        }
+    };
     let mut a_link = LinkId::ZERO;
     a_link.0[0] = 1;
     let mut b_link = LinkId::ZERO;
     b_link.0[0] = 2;
-    Ok((
-        PeerBuilder::new(a_controller, a_link, cell_bytes)?.with_bearer(a_bearer)?,
-        PeerBuilder::new(b_controller, b_link, cell_bytes)?.with_bearer(b_bearer)?,
-    ))
+    let a = match PeerBuilder::new(a_controller, a_link, cell_bytes)
+        .and_then(|b| b.with_bearer_cell(a_bearer, Some(slot_a)))
+    {
+        Ok(p) => p,
+        Err(e) => {
+            let _ = host.release_cell(slot_b);
+            let _ = host.release_cell(slot_a);
+            return Err(e);
+        }
+    };
+    let b = match PeerBuilder::new(b_controller, b_link, cell_bytes)
+        .and_then(|b| b.with_bearer_cell(b_bearer, Some(slot_b)))
+    {
+        Ok(p) => p,
+        Err(e) => {
+            let mut a = a;
+            let _ = a.release_into_host(host);
+            let _ = host.release_cell(slot_b);
+            return Err(e);
+        }
+    };
+    Ok((a, b))
 }
 
 fn handshake_keys(
@@ -135,9 +180,9 @@ fn issue_permit(
     owner.issue_permit(handle, binding, now, 4096)
 }
 
-/// Two separately constructed peers exchange authorised protected data.
+/// Two peers constructed through one host owner exchange authorised protected data.
 pub fn authorised_ipc_stream_exchange(payload: &[u8]) -> Result<usize, QdnfError> {
-    authorised_ipc_stream_exchange_in(payload, CELL_BYTES_DEFAULT, 1280)
+    authorised_ipc_stream_exchange_in(payload, CELL_BYTES_DEFAULT, AUTHORISED_IPC_MTU)
 }
 
 /// Same protected path, with the caller’s cell budget and bearer MTU.
@@ -149,12 +194,29 @@ pub fn authorised_ipc_stream_exchange_in(
     if payload.is_empty() || payload.len() > AUTHORISED_PAYLOAD_CAP {
         return Err(QdnfError::Capacity);
     }
+    let host_bytes = cell_bytes.checked_mul(2).ok_or(QdnfError::Capacity)?;
+    let mut host = HostAdmission::new(host_bytes)?;
     let now = 1_700_000_000u64;
     let scope = ScopeEpoch { scope: 1, epoch: 1 };
     let a_did = b"did:q42:a";
     let b_did = b"did:q42:b";
     let purpose = b"q42:QSync/1";
-    let (mut a, mut b) = pair_ipc_cells(a_did, b_did, scope, mtu, cell_bytes)?;
+    let (mut a, mut b) = pair_ipc_cells(&mut host, a_did, b_did, scope, mtu, cell_bytes)?;
+    let result = authorised_exchange_peers(&mut a, &mut b, payload, purpose, now);
+    let _ = a.release_into_host(&mut host);
+    let _ = b.release_into_host(&mut host);
+    result
+}
+
+fn authorised_exchange_peers(
+    a: &mut NativePeer,
+    b: &mut NativePeer,
+    payload: &[u8],
+    purpose: &[u8],
+    now: u64,
+) -> Result<usize, QdnfError> {
+    let a_did = b"did:q42:a";
+    let b_did = b"did:q42:b";
     a.announce(&b.locator(), now)?;
     let _ = b.accept_announce()?;
     b.announce(&a.locator(), now)?;
@@ -185,6 +247,12 @@ pub fn authorised_ipc_stream_exchange_in(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::net::peer::cells::host_owner::extra_identity_multiplies_host_budget;
+
+    fn host_for_pair(cell_bytes: u64) -> HostAdmission {
+        let host_bytes = cell_bytes.saturating_mul(2).max(1);
+        HostAdmission::new(host_bytes).unwrap()
+    }
 
     #[test]
     fn builder_cell_bytes_zero_is_capacity() {
@@ -198,25 +266,49 @@ mod tests {
     #[test]
     fn pair_ipc_cells_uses_caller_cell_bytes() {
         let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let mut host = host_for_pair(2048);
         let (a, _b) =
-            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, 2048).unwrap();
+            pair_ipc_cells(&mut host, b"did:q42:a", b"did:q42:b", scope, 1280, 2048).unwrap();
         assert_eq!(a.remaining_host_bytes(), 2048);
+        assert_eq!(host.occupied_cells(), 2);
+        let mut zero = HostAdmission::new(4096).unwrap();
         assert_eq!(
-            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, 0).unwrap_err(),
+            pair_ipc_cells(&mut zero, b"did:q42:a", b"did:q42:b", scope, 1280, 0).unwrap_err(),
             QdnfError::Capacity
         );
     }
 
     #[test]
-    fn authorised_path_exchanges_roundtrip_cap() {
-        let mut app = [0u8; AUTHORISED_ROUNDTRIP_CAP];
+    fn native_peer_pair_shares_one_host_admission() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let cell = 2048u64;
+        let mut one = HostAdmission::new(cell).unwrap();
+        assert_eq!(
+            pair_ipc_cells(&mut one, b"did:q42:a", b"did:q42:b", scope, 1280, cell)
+                .unwrap_err(),
+            QdnfError::Capacity
+        );
+        assert_eq!(one.occupied_cells(), 0);
+        let mut two = HostAdmission::new(cell.saturating_mul(2)).unwrap();
+        let (a, b) =
+            pair_ipc_cells(&mut two, b"did:q42:a", b"did:q42:b", scope, 1280, cell).unwrap();
+        assert_eq!(two.occupied_cells(), 2);
+        assert_eq!(a.remaining_host_bytes(), cell);
+        assert_eq!(b.remaining_host_bytes(), cell);
+        assert!(!extra_identity_multiplies_host_budget());
+    }
+
+    #[test]
+    fn authorised_path_exchanges_full_payload_cap() {
+        // Packet-protection `open` body must be 4096 for this round-trip.
+        let mut app = [0u8; AUTHORISED_PAYLOAD_CAP];
         let mut i = 0usize;
         while i < app.len() {
             app[i] = (i as u8).wrapping_add(0xA5);
             i = i.saturating_add(1);
         }
         let n = authorised_ipc_stream_exchange(&app).unwrap();
-        assert_eq!(n, AUTHORISED_ROUNDTRIP_CAP);
+        assert_eq!(n, AUTHORISED_PAYLOAD_CAP);
     }
 
     #[test]
@@ -247,9 +339,16 @@ mod tests {
     #[test]
     fn send_without_announce_is_no_route() {
         let scope = ScopeEpoch { scope: 1, epoch: 1 };
-        let (mut a, b) =
-            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, CELL_BYTES_DEFAULT)
-                .unwrap();
+        let mut host = host_for_pair(CELL_BYTES_DEFAULT);
+        let (mut a, b) = pair_ipc_cells(
+            &mut host,
+            b"did:q42:a",
+            b"did:q42:b",
+            scope,
+            1280,
+            CELL_BYTES_DEFAULT,
+        )
+        .unwrap();
         let now = 1_700_000_000u64;
         install_session(&mut a, b"did:q42:a", b"did:q42:b", 1, now);
         assert_eq!(a.send_stream(&b.locator(), b"x"), Err(QdnfError::NoRoute));
@@ -258,9 +357,16 @@ mod tests {
     #[test]
     fn wrong_recipient_is_unauthorized() {
         let scope = ScopeEpoch { scope: 1, epoch: 1 };
-        let (mut a, mut b) =
-            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, CELL_BYTES_DEFAULT)
-                .unwrap();
+        let mut host = host_for_pair(CELL_BYTES_DEFAULT);
+        let (mut a, mut b) = pair_ipc_cells(
+            &mut host,
+            b"did:q42:a",
+            b"did:q42:b",
+            scope,
+            1280,
+            CELL_BYTES_DEFAULT,
+        )
+        .unwrap();
         let now = 1_700_000_000u64;
         a.announce(&b.locator(), now).unwrap();
         let _ = b.accept_announce().unwrap();
@@ -277,9 +383,16 @@ mod tests {
     #[test]
     fn stale_permit_does_not_activate() {
         let scope = ScopeEpoch { scope: 1, epoch: 1 };
-        let (mut a, _b) =
-            pair_ipc_cells(b"did:q42:a", b"did:q42:b", scope, 1280, CELL_BYTES_DEFAULT)
-                .unwrap();
+        let mut host = host_for_pair(CELL_BYTES_DEFAULT);
+        let (mut a, _b) = pair_ipc_cells(
+            &mut host,
+            b"did:q42:a",
+            b"did:q42:b",
+            scope,
+            1280,
+            CELL_BYTES_DEFAULT,
+        )
+        .unwrap();
         let now = 1_700_000_000u64;
         let mut owner = AuthorityOwner::new();
         let binding =

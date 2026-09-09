@@ -1,8 +1,8 @@
 //! Application QPR host. Replaces the 64-byte two-peer demo as the public API.
 
 use crate::{
-    extra_identity_multiplies_host_budget, authorised_ipc_stream_exchange_in, pair_ipc_cells,
-    HostAdmission, NativePeer, QdnfError, ScopeEpoch,
+    authorised_ipc_stream_exchange_in, extra_identity_multiplies_host_budget, pair_ipc_cells,
+    HostAdmission, NativePeer, QdnfError, ScopeEpoch, AUTHORISED_IPC_MTU,
 };
 
 /// Host builder for a bounded native peer cell.
@@ -21,7 +21,7 @@ impl PeerHost {
         Ok(Self { cell_bytes })
     }
 
-    /// Two separately constructed peers sized to this host’s `cell_bytes`.
+    /// Two peers admitted from one [`HostAdmission`] whose cap is `2 * cell_bytes`.
     pub fn pair(
         &self,
         a: &[u8],
@@ -29,21 +29,18 @@ impl PeerHost {
         scope: ScopeEpoch,
         mtu: u16,
     ) -> Result<(NativePeer, NativePeer), QdnfError> {
-        pair_ipc_cells(a, b, scope, mtu, self.cell_bytes)
+        let host_bytes = self.cell_bytes.checked_mul(2).ok_or(QdnfError::Capacity)?;
+        let mut host = HostAdmission::new(host_bytes)?;
+        pair_ipc_cells(&mut host, a, b, scope, mtu, self.cell_bytes)
     }
 
-    /// Authorised protected exchange. Payloads up to min(4096, MTU-related cap).
+    /// Authorised protected exchange. Payloads up to [`crate::AUTHORISED_PAYLOAD_CAP`].
     ///
-    /// `cell_bytes` is charged on the host admission owner before the protected
-    /// handshake+send/recv path runs. Extra identities cannot mint a second
-    /// host budget. Denied, stale, and wrong-recipient traffic never reaches
-    /// the application.
+    /// Both peers are constructed through one host admission owner. Extra
+    /// identities cannot mint a second host budget. Denied, stale, and
+    /// wrong-recipient traffic never reaches the application.
     pub fn exchange_protected(&self, payload: &[u8]) -> Result<usize, QdnfError> {
-        let mut host = HostAdmission::new(self.cell_bytes)?;
-        let profile = HostAdmission::profile_for_bytes(self.cell_bytes)?;
-        let slot = host.admit_cell(profile, self.cell_bytes)?;
-        let n = authorised_ipc_stream_exchange_in(payload, self.cell_bytes, 1280)?;
-        host.release_cell(slot)?;
+        let n = authorised_ipc_stream_exchange_in(payload, self.cell_bytes, AUTHORISED_IPC_MTU)?;
         let _ = extra_identity_multiplies_host_budget();
         Ok(n)
     }
@@ -58,8 +55,8 @@ impl PeerHost {
 mod tests {
     use super::*;
     use crate::{
-        two_peer_ipc_exchange, PeerBuilder, PolicyOutcome, ServiceId, AUTHORISED_ROUNDTRIP_CAP,
-        LinkId,
+        two_peer_ipc_exchange, LinkId, PeerBuilder, PolicyOutcome, ServiceId,
+        AUTHORISED_ROUNDTRIP_CAP,
     };
 
     #[test]

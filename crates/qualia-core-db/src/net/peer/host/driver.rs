@@ -2,6 +2,7 @@
 
 use super::session_table::SessionHandle;
 use super::NativePeer;
+use crate::net::peer::cells::pass_budget::{PassCharge, PassGuard};
 use crate::net::peer::runtime::{CancelEpoch, ResourceBudget};
 use crate::net::qdnf::authority::{ExecutionPermit, InstalledSessionKeys};
 use crate::net::qdnf::bearer::contract::Bearer;
@@ -17,11 +18,14 @@ const SESSION_CHARGE: ResourceBudget = ResourceBudget {
     io: 1,
 };
 
+/// Capture enough sealed bytes that [`require_protected`] can see ciphertext vs plaintext.
+const SEALED_CAPTURE: usize = 4096 + 64;
+
 /// Capture helper: last sealed frame bytes for the wire oracle (bounded).
 #[derive(Clone, Copy, Debug)]
 pub struct SealedFrame {
-    pub(crate) bytes: [u8; 160],
-    pub(crate) len: u8,
+    pub(crate) bytes: [u8; SEALED_CAPTURE],
+    pub(crate) len: u16,
 }
 
 impl SealedFrame {
@@ -31,12 +35,12 @@ impl SealedFrame {
 
     fn from_sealed(sealed: &[u8]) -> Self {
         let mut out = Self {
-            bytes: [0u8; 160],
+            bytes: [0u8; SEALED_CAPTURE],
             len: 0,
         };
         let copy = sealed.len().min(out.bytes.len());
         out.bytes[..copy].copy_from_slice(&sealed[..copy]);
-        out.len = copy as u8;
+        out.len = copy as u16;
         out
     }
 }
@@ -132,6 +136,15 @@ impl NativePeer {
         Ok(next)
     }
 
+    /// Charge one Sentinel network pass (accounting only; no 42 MiB map).
+    pub fn network_pass(&mut self, charge: PassCharge) -> Result<u64, QdnfError> {
+        let _ = self;
+        let mut guard = PassGuard::enter(&charge)?;
+        let n = guard.charged();
+        guard.success();
+        Ok(n)
+    }
+
     pub fn send_stream(
         &mut self,
         dest: &ObservedLocator,
@@ -164,14 +177,19 @@ impl NativePeer {
         let session = self.sessions.binding(h)?;
         session.admit_application()?;
         let _remote = self.require_verified_dest(dest)?;
-        // E04.5 / P2: authorised path ceiling is 4096. Round-trip success is
-        // also bounded by bearer MTU and packet-protection open (256-byte body).
         const MAX_PROTECTED_PAYLOAD: usize = 4096;
         const PROTECTED_SEAL_CAP: usize = MAX_PROTECTED_PAYLOAD + 24;
         const PROTECTED_WIRE_CAP: usize = 80 + PROTECTED_SEAL_CAP;
         if payload.len() > MAX_PROTECTED_PAYLOAD {
             return Err(QdnfError::Capacity);
         }
+        let mut pass = PassGuard::enter(&PassCharge {
+            arena: 0,
+            scratch: payload.len() as u64,
+            crypto: 24,
+            kernel: 80,
+            pinned: 0,
+        })?;
         let mut pt = [0u8; MAX_PROTECTED_PAYLOAD];
         pt[..payload.len()].copy_from_slice(payload);
         let mut sealed = [0u8; PROTECTED_SEAL_CAP];
@@ -188,6 +206,7 @@ impl NativePeer {
             Ok(sent) if sent == wn => {
                 let len = u16::try_from(payload.len()).map_err(|_| QdnfError::Capacity)?;
                 self.sessions.commit_send_offset(h, len)?;
+                pass.success();
                 Ok(SealedFrame::from_sealed(&sealed[..n]))
             }
             Ok(_) => Err(QdnfError::WouldBlock),
@@ -246,5 +265,37 @@ impl NativePeer {
             }
             Err(e) => Err(e),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::net::peer::cells::pass_budget::{PassCharge, SENTINEL_PASS_TOTAL};
+    use crate::net::qdnf::types::ScopeEpoch;
+
+    #[test]
+    fn network_pass_charges_scratch_crypto_kernel() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (mut a, _b) = NativePeer::pair_ipc(b"did:q42:a", b"did:q42:b", scope, 1280).unwrap();
+        let ok = PassCharge {
+            scratch: 16,
+            crypto: 16,
+            kernel: 16,
+            ..PassCharge::ZERO
+        };
+        assert_eq!(a.network_pass(ok).unwrap(), 48);
+        let over = PassCharge {
+            scratch: SENTINEL_PASS_TOTAL,
+            crypto: 1,
+            kernel: 1,
+            ..PassCharge::ZERO
+        };
+        assert_eq!(a.network_pass(over).unwrap_err(), QdnfError::Capacity);
+        let dest = crate::net::qdnf::types::ObservedLocator::from_slice(&[0x02]).unwrap();
+        assert_eq!(
+            a.send_protected(&dest, b"x").unwrap_err(),
+            QdnfError::Unauthorized
+        );
     }
 }

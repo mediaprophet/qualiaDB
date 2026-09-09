@@ -62,6 +62,37 @@ pub fn reclaim_pass(_outcome: PassOutcome, charged: u64) -> u64 {
     0
 }
 
+/// RAII Sentinel pass. Reclaims on success, error, and unwind. Does not map 42 MiB.
+pub struct PassGuard {
+    charged: u64,
+    outcome: PassOutcome,
+}
+
+impl PassGuard {
+    pub fn enter(charge: &PassCharge) -> Result<Self, QdnfError> {
+        Ok(Self {
+            charged: charge_pass(charge)?,
+            outcome: PassOutcome::Error,
+        })
+    }
+
+    #[inline]
+    pub const fn charged(&self) -> u64 {
+        self.charged
+    }
+
+    #[inline]
+    pub fn success(&mut self) {
+        self.outcome = PassOutcome::Success;
+    }
+}
+
+impl Drop for PassGuard {
+    fn drop(&mut self) {
+        let _ = reclaim_pass(self.outcome, self.charged);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,5 +161,31 @@ mod tests {
             ..PassCharge::ZERO
         };
         assert_eq!(charge_pass(&c), Err(QdnfError::Capacity));
+    }
+
+    #[test]
+    fn network_pass_charges_scratch_crypto_kernel() {
+        let over = PassCharge {
+            scratch: SENTINEL_PASS_TOTAL,
+            crypto: 1,
+            kernel: 1,
+            ..PassCharge::ZERO
+        };
+        assert_eq!(PassGuard::enter(&over).err(), Some(QdnfError::Capacity));
+        let ok = PassCharge {
+            scratch: 8,
+            crypto: 8,
+            kernel: 8,
+            ..PassCharge::ZERO
+        };
+        {
+            let mut g = PassGuard::enter(&ok).unwrap();
+            assert_eq!(g.charged(), 24);
+            g.success();
+        }
+        {
+            let g = PassGuard::enter(&ok).unwrap();
+            assert_eq!(g.charged(), 24);
+        }
     }
 }

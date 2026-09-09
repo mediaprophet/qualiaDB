@@ -9,7 +9,8 @@ use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
 use super::contract::{Bearer, BearerCapabilities, RecvMeta, check_frame_mtu};
 
 const QUEUE_CAP: usize = 32;
-const FRAME_CAP: usize = 2048;
+/// In-process `local-ipc-v1` frame cap. Not Ethernet [`super::mtu::MAX_QDNF_MTU`].
+pub const FRAME_CAP: usize = 8192;
 
 #[derive(Clone, Copy)]
 struct QueuedFrame {
@@ -227,5 +228,16 @@ mod tests {
         assert_eq!(&out[..n], &wire[..n]);
         assert_eq!(meta.observed_source.as_slice(), &[0x01]);
         assert_eq!(b.recv(&mut out), Err(QdnfError::WouldBlock));
+    }
+
+    #[test]
+    fn local_ipc_frame_cap_fits_authorised_payload() {
+        assert_eq!(FRAME_CAP, 8192);
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        assert!(ipc_pair(scope, FRAME_CAP as u16).is_ok());
+        match ipc_pair(scope, (FRAME_CAP as u16).saturating_add(1)) {
+            Err(e) => assert_eq!(e, QdnfError::Capacity),
+            Ok(_) => panic!("mtu above FRAME_CAP must be Capacity"),
+        }
     }
 }
