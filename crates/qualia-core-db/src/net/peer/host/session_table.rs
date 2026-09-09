@@ -2,6 +2,8 @@
 
 use crate::net::peer::runtime::{ReservationHandle, ReservationLedger};
 use crate::net::qdnf::errors::QdnfError;
+use crate::net::qdnf::session::congestion::{PathCcTable, INITIAL_WINDOW_BYTES};
+use crate::net::qdnf::session::paths::{PathHandle, PathTable};
 use crate::net::qdnf::session::streams::StreamFrame;
 use crate::net::qdnf::session::{ProtectedAckSession, SessionBinding, StreamState};
 use crate::net::qdnf::types::Generation;
@@ -54,6 +56,9 @@ impl SessionSlot {
 
 pub struct SessionTable {
     slots: [SessionSlot; MAX_SESSIONS],
+    pub(crate) paths: PathTable,
+    pub(crate) path_cc: PathCcTable,
+    pub(crate) primary_path: Option<PathHandle>,
 }
 
 impl SessionTable {
@@ -65,6 +70,9 @@ impl SessionTable {
                 SessionSlot::empty(),
                 SessionSlot::empty(),
             ],
+            paths: PathTable::new(),
+            path_cc: PathCcTable::new(INITIAL_WINDOW_BYTES),
+            primary_path: None,
         }
     }
 

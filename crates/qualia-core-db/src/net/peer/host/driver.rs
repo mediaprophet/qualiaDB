@@ -9,6 +9,8 @@ use crate::net::qdnf::bearer::contract::Bearer;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::frame::{copy_payload, decode_frame, encode_frame, FrameHeader};
 use crate::net::qdnf::registries::{FrameType, NextProtocol};
+use crate::net::qdnf::session::paths::PathHandle;
+use crate::net::qdnf::session::protected_ack::packet_number_of;
 use crate::net::qdnf::session::{ProtectedAckSession, ProtectedRecv, SessionBinding};
 use crate::net::qdnf::types::{LinkId, ObservedLocator};
 
@@ -46,7 +48,7 @@ impl SealedFrame {
 }
 
 impl NativePeer {
-    fn require_not_cancelled(&self) -> Result<(), QdnfError> {
+    pub(super) fn require_not_cancelled(&self) -> Result<(), QdnfError> {
         if self.cancelled {
             Err(QdnfError::Cancelled)
         } else {
@@ -54,12 +56,15 @@ impl NativePeer {
         }
     }
 
-    fn require_primary(&self) -> Result<SessionHandle, QdnfError> {
+    pub(super) fn require_primary(&self) -> Result<SessionHandle, QdnfError> {
         self.primary.ok_or(QdnfError::Unauthorized)
     }
 
     /// Verified neighbor for `dest`. Missing adjacency is [`QdnfError::NoRoute`].
-    fn require_verified_dest(&self, dest: &ObservedLocator) -> Result<LinkId, QdnfError> {
+    pub(super) fn require_verified_dest(
+        &self,
+        dest: &ObservedLocator,
+    ) -> Result<LinkId, QdnfError> {
         let remote = self.remote_or_reject()?;
         let adj = self
             .neighbors
@@ -173,6 +178,17 @@ impl NativePeer {
         dest: &ObservedLocator,
         payload: &[u8],
     ) -> Result<SealedFrame, QdnfError> {
+        let path = self.ensure_primary_path()?;
+        self.send_protected_with_path(h, path, dest, payload)
+    }
+
+    pub(super) fn send_protected_with_path(
+        &mut self,
+        h: SessionHandle,
+        path: PathHandle,
+        dest: &ObservedLocator,
+        payload: &[u8],
+    ) -> Result<SealedFrame, QdnfError> {
         self.require_not_cancelled()?;
         let session = self.sessions.binding(h)?;
         session.admit_application()?;
@@ -183,6 +199,7 @@ impl NativePeer {
         if payload.len() > MAX_PROTECTED_PAYLOAD {
             return Err(QdnfError::Capacity);
         }
+        let _ = self.sessions.path_cc.path_rtt(path)?;
         let mut pass = PassGuard::enter(&PassCharge {
             arena: 0,
             scratch: payload.len() as u64,
@@ -197,6 +214,10 @@ impl NativePeer {
             let protection = self.sessions.get_mut(h)?;
             protection.seal_tracked(b"qsession/stream", &mut pt[..payload.len()], &mut sealed)?
         };
+        if !payload.is_empty() {
+            let pn = packet_number_of(&sealed[..n], n)?;
+            self.sessions.path_cc.send(path, pn, payload.len() as u64)?;
+        }
         let mut header = FrameHeader::new(FrameType::SessionStream, NextProtocol::QSession);
         header.source_link_id = self.local_link;
         header.payload_len = n as u16;
