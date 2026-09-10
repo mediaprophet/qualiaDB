@@ -3,7 +3,8 @@
 //! This crate is the application replacement for libp2p. It does not import
 //! `libp2p`. It enables core-db `qdnf` only (no `libp2p-compat`, `gpu-runtime`,
 //! `wgsl-forge`, `privacy-he`, `zk-culling`, or `profile_target_1024`).
-//! Default `qualia-core-db` still has those features. Packages remain open.
+//! Default `qualia-core-db` is Native Independent (`libp2p-compat` is LIG-only).
+//! Packages remain open.
 //!
 //! Application API: [`PeerHost::pair`], [`PeerHost::exchange_protected`],
 //! and [`PeerHost::clinical_session`]. The 64-byte vertical slice

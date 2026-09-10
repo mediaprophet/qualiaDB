@@ -8,7 +8,8 @@ license-file = "../../LICENSE"
 
 [dependencies]
 # Native Independent slice: `qdnf` only. No libp2p-compat, gpu-runtime, wgsl-forge,
-# privacy-he, zk-culling, or profile_target_1024. Default core-db still has those.
+# privacy-he, zk-culling, or profile_target_1024. Core-db default is also Native
+# Independent; LIG remains `--features libp2p-compat`.
 qualia-core-db = { path = "../qualia-core-db", default-features = false, features = ["qdnf"] }
 
 [[example]]

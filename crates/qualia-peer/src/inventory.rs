@@ -1,7 +1,7 @@
 //! E20.1 inventory of public networking entry points.
 //!
-//! Every listed call goes through QPR (`qdnf`), not libp2p. This slice does
-//! **not** claim Native Independent daemon completion (E20.2).
+//! Every listed call goes through QPR (`qdnf`), not libp2p. Default daemons
+//! omit `libp2p-compat` (E20.2). LIG Swarm remains an explicit feature.
 
 /// One public networking entry. Names match the application-facing surface.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,7 +50,7 @@ pub fn public_entry_points() -> &'static [InventoryEntry] {
     ENTRIES
 }
 
-/// This crate does not import `libp2p`. E20.2 daemon isolation is not claimed.
+/// This crate does not import `libp2p`.
 pub fn libp2p_imported() -> bool {
     false
 }

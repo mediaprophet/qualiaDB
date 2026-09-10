@@ -1,7 +1,9 @@
 //! E20.2 Native Independent honesty for this crate's QPR path.
 //!
-//! Absence of a `libp2p` crate dependency here is not Native Independent
-//! daemon completion. Default daemons are not yet migrated.
+//! Default core-db daemons compile without `libp2p-compat`. The LIG Swarm
+//! remains an explicit `--features libp2p-compat` build. Absence of a `libp2p`
+//! crate dependency here is necessary but not sufficient; proven also requires
+//! the default feature list to omit `libp2p-compat`.
 
 use crate::inventory::libp2p_imported;
 
@@ -35,7 +37,7 @@ const P2P_MOD_RS: &str = include_str!(concat!(
     "/../qualia-core-db/src/p2p/mod.rs"
 ));
 
-/// One remaining libp2p (or gossipsub-class) coupling that keeps E20.2 false.
+/// One remaining libp2p (or gossipsub-class) coupling isolated behind LIG.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Libp2pCoupling {
     pub module: &'static str,
@@ -43,17 +45,9 @@ pub struct Libp2pCoupling {
     pub coupling: &'static str,
 }
 
-/// Witness list. Empty only when default daemons no longer compile libp2p.
-///
-/// gossipsub is not a current `libp2p` feature, but kad/mdns/request-response
-/// still ride the same Swarm. That pubsub-class coupling is why the Native
-/// Independent daemon claim stays false.
-const REMAINING_LIBP2P: &[Libp2pCoupling] = &[
-    Libp2pCoupling {
-        module: "qualia_core_db",
-        path: "crates/qualia-core-db/Cargo.toml",
-        coupling: "default features include libp2p-compat (tcp, dns, kad, mdns, request-response)",
-    },
+/// LIG surface. Non-empty because compatibility builds still compile Swarm.
+/// Proven does **not** require this list to be empty.
+const LIG_LIBP2P: &[Libp2pCoupling] = &[
     Libp2pCoupling {
         module: "qualia_core_db::services::daemon",
         path: "crates/qualia-core-db/src/services/daemon.rs",
@@ -86,15 +80,32 @@ const REMAINING_LIBP2P: &[Libp2pCoupling] = &[
     },
 ];
 
-/// Remaining default-daemon libp2p/gossipsub couplings. Non-empty until
-/// those modules drop the Swarm. Proven stays false while this is non-empty.
+/// Isolated LIG couplings. Not the Native Independent proven predicate.
 pub fn remaining_libp2p_couplings() -> &'static [Libp2pCoupling] {
-    REMAINING_LIBP2P
+    LIG_LIBP2P
 }
 
-/// Default daemons are not yet migrated off libp2p. Honest negative.
+/// Default feature array from core-db Cargo.toml, or empty if unparseable.
+pub fn default_features_csv() -> &'static str {
+    default_features_inner(CORE_DB_CARGO).unwrap_or("")
+}
+
+fn default_features_inner(toml: &str) -> Option<&str> {
+    let key = "default = [";
+    let i = toml.find(key)?;
+    let rest = &toml[i + key.len()..];
+    let j = rest.find(']')?;
+    Some(rest[..j].trim())
+}
+
+/// True when the default feature list names `libp2p-compat`.
+pub fn default_includes_libp2p_compat() -> bool {
+    default_features_csv().contains("libp2p-compat")
+}
+
+/// Default daemons compile without libp2p. LIG remains an explicit feature.
 pub fn native_independent_daemon_proven() -> bool {
-    remaining_libp2p_couplings().is_empty()
+    !default_includes_libp2p_compat() && !implicit_dns_ip_fallback()
 }
 
 /// This crate's QPR path does not fall back to DNS or IP sockets.
@@ -196,7 +207,8 @@ mod tests {
         assert!(!libp2p_imported());
         assert!(!cargo_toml_depends_on_libp2p());
         assert!(!implicit_dns_ip_fallback());
-        assert!(!native_independent_daemon_proven());
+        assert!(native_independent_daemon_proven());
+        assert!(!default_includes_libp2p_compat());
         assert!(CARGO_TOML.contains("name = \"qualia-peer\""));
         assert!(CARGO_TOML.contains("features = [\"qdnf\"]"));
         assert!(CARGO_TOML.contains("default-features = false"));
@@ -209,10 +221,20 @@ mod tests {
     }
 
     #[test]
-    fn remaining_couplings_are_real_and_keep_proven_false() {
+    fn default_feature_list_omits_libp2p_compat() {
+        let listed = default_features_csv();
+        assert!(!listed.is_empty());
+        assert!(!listed.contains("libp2p-compat"));
+        assert!(listed.contains("profile_target_1024"));
+        assert!(CORE_DB_CARGO.contains("libp2p-compat = "));
+        assert!(P2P_MOD_RS.contains("feature = \"libp2p-compat\""));
+        assert!(DAEMON_RS.contains("#[cfg(not(feature = \"libp2p-compat\"))]"));
+    }
+
+    #[test]
+    fn lig_couplings_remain_feature_gated() {
         let listed = remaining_libp2p_couplings();
         assert!(!listed.is_empty());
-        assert!(!native_independent_daemon_proven());
         let mut saw_swarm = false;
         let mut saw_daemon = false;
         let mut i = 0usize;
@@ -243,8 +265,5 @@ mod tests {
         }
         assert!(saw_swarm);
         assert!(saw_daemon);
-        assert!(CORE_DB_CARGO.contains("libp2p-compat"));
-        assert!(CORE_DB_CARGO.contains("default = ["));
-        assert!(P2P_MOD_RS.contains("feature = \"libp2p-compat\""));
     }
 }

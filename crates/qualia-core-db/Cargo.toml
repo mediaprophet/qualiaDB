@@ -8,7 +8,7 @@ repository = "https://github.com/mediaprophet/qualiaDB"
 license-file = "LICENSE"
 
 [features]
-default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he", "libp2p-compat"]
+default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"]
 
 # ── Qualia WASM build profiles (use with --no-default-features on wasm32) ──
 # Ontology MCP kernel (exclusive):  --features wasm-ontology
@@ -80,8 +80,8 @@ privacy-he = ["dep:fhe", "dep:fhe-traits", "dep:rand09"]
 
 # Native Qualia Decentralized Network Fabric (QDNF / QPR). Does not pull libp2p.
 qdnf = []
-# Inherited libp2p transition stack. Native Independent acceptance must compile
-# without this feature (see NET-01 / RT-03.07). Kept in default for existing daemons.
+# Inherited libp2p transition stack (LIG). Native Independent is the default
+# daemon path (E20.2). Opt in with `--features libp2p-compat`.
 libp2p-compat = ["dep:libp2p"]
 
 # QPU internal functionality (undocumented, private)
