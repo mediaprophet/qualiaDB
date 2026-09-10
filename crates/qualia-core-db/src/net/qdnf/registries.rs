@@ -152,6 +152,8 @@ pub enum BearerProfile {
     LocalIpcV1 = 1,
     RawEthernetV1 = 2,
     UdpTransitionV1 = 3,
+    /// SocialWebNet userspace-WireGuard overlay. Labelled transition, not Native Independent.
+    WireGuardTransitionV1 = 4,
 }
 
 impl BearerProfile {
@@ -160,6 +162,7 @@ impl BearerProfile {
             1 => Self::LocalIpcV1,
             2 => Self::RawEthernetV1,
             3 => Self::UdpTransitionV1,
+            4 => Self::WireGuardTransitionV1,
             _ => return Err(QdnfError::UnknownProfile),
         })
     }
@@ -196,6 +199,11 @@ mod tests {
     #[test]
     fn udp_transition_is_not_native_independent() {
         assert!(!BearerProfile::UdpTransitionV1.native_independent());
+        assert!(!BearerProfile::WireGuardTransitionV1.native_independent());
         assert!(BearerProfile::LocalIpcV1.native_independent());
+        assert_eq!(
+            BearerProfile::from_u16(4).unwrap(),
+            BearerProfile::WireGuardTransitionV1
+        );
     }
 }
