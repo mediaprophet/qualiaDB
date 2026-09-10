@@ -2,8 +2,9 @@
 
 use super::{
     finish, locator_kind_byte, locator_kind_from, parse_header, path_class_byte, path_class_from,
-    u16_be, u32_be, u64_be, walk_tlvs, write_tlv, CscpError, MSG_CONNECT_ACCEPT, MSG_CONNECT_REJECT,
-    MSG_CONTACT, MSG_CUSTODY_LEASE, MSG_PATH_EVIDENCE, MSG_RECEIPT, MSG_RELAY_LEASE, TAG_CRITICAL,
+    require_tags, u16_be, u32_be, u64_be, walk_tlvs_seen, write_tlv, CscpError, MSG_CONNECT_ACCEPT,
+    MSG_CONNECT_REJECT, MSG_CONTACT, MSG_CUSTODY_LEASE, MSG_PATH_EVIDENCE, MSG_RECEIPT,
+    MSG_RELAY_LEASE, TAG_CRITICAL,
 };
 use crate::net::peer::fabric::carrier::PathClass;
 use crate::net::peer::fabric::contact::ContactDescriptor;
@@ -26,6 +27,9 @@ fn known_contact(t: u8) -> bool {
 }
 fn known_lease(t: u8) -> bool {
     matches!(t, 1 | 2 | 3 | 4 | 5 | 6)
+}
+fn known_custody(t: u8) -> bool {
+    matches!(t, 1 | 2 | 3 | 4)
 }
 fn known_evidence(t: u8) -> bool {
     matches!(t, 1 | 2 | 3 | 4 | 5)
@@ -59,18 +63,37 @@ pub fn encode_contact(d: &ContactDescriptor, out: &mut [u8]) -> Result<usize, Cs
 pub fn decode_contact(bytes: &[u8]) -> Result<ContactDescriptor, CscpError> {
     let body = parse_header(bytes, MSG_CONTACT)?;
     let mut d = ContactDescriptor::mailbox([0u8; 32], 0, 0);
-    walk_tlvs(body, known_contact, |tag, val| {
+    let seen = walk_tlvs_seen(body, known_contact, |tag, val| {
         match tag {
-            1 if val.len() == 32 => d.contact_key.copy_from_slice(val),
+            1 => {
+                if val.len() != 32 {
+                    return Err(CscpError::Malformed);
+                }
+                d.contact_key.copy_from_slice(val);
+            }
             2 => d.generation = u32_be(val)?,
             3 => d.expiry_unix = u32_be(val)?,
-            4 if val.len() == 1 => d.kind = locator_kind_from(val[0])?,
-            5 if val.len() == 16 => d.locator.copy_from_slice(val),
+            4 => {
+                if val.len() != 1 {
+                    return Err(CscpError::Malformed);
+                }
+                d.kind = locator_kind_from(val[0])?;
+            }
+            5 => {
+                if val.len() != 16 {
+                    return Err(CscpError::Malformed);
+                }
+                d.locator.copy_from_slice(val);
+            }
             6 => d.network_generation = u32_be(val)?,
             _ => {}
         }
         Ok(())
     })?;
+    require_tags(seen, &[1, 2, 3, 4])?;
+    if d.contact_key == [0u8; 32] {
+        return Err(CscpError::Malformed);
+    }
     Ok(d)
 }
 
@@ -102,27 +125,45 @@ pub fn encode_relay_lease(l: &RelayLease, out: &mut [u8]) -> Result<usize, CscpE
 pub fn decode_relay_lease(bytes: &[u8]) -> Result<RelayLease, CscpError> {
     let body = parse_header(bytes, MSG_RELAY_LEASE)?;
     let mut l = RelayLease::grant(0, 0, [0u8; 32], [0u8; 32], 0, 0, 0, false);
-    walk_tlvs(body, known_lease, |tag, val| {
+    let seen = walk_tlvs_seen(body, known_lease, |tag, val| {
         match tag {
             1 => l.lease_id = u64_be(val)?,
             2 => l.operator = u64_be(val)?,
-            3 if val.len() == 64 => {
+            3 => {
+                if val.len() != 64 {
+                    return Err(CscpError::Malformed);
+                }
                 l.participants[0].copy_from_slice(&val[..32]);
                 l.participants[1].copy_from_slice(&val[32..]);
             }
-            4 if val.len() == 16 => {
+            4 => {
+                if val.len() != 16 {
+                    return Err(CscpError::Malformed);
+                }
                 l.max_bytes = u64_be(&val[..8])?;
                 l.remaining_bytes = u64_be(&val[8..])?;
             }
-            5 if val.len() == 12 => {
+            5 => {
+                if val.len() != 12 {
+                    return Err(CscpError::Malformed);
+                }
                 l.expiry_ms = u64_be(&val[..8])?;
                 l.generation = u32_be(&val[8..])?;
             }
-            6 if val.len() == 1 => l.export_observations = val[0] != 0,
+            6 => {
+                if val.len() != 1 {
+                    return Err(CscpError::Malformed);
+                }
+                l.export_observations = val[0] != 0;
+            }
             _ => {}
         }
         Ok(())
     })?;
+    require_tags(seen, &[1, 2, 3, 4, 5, 6])?;
+    if l.remaining_bytes > l.max_bytes {
+        return Err(CscpError::Malformed);
+    }
     Ok(l)
 }
 
@@ -139,7 +180,7 @@ pub fn encode_custody(c: &CustodyLease, out: &mut [u8]) -> Result<usize, CscpErr
 pub fn decode_custody(bytes: &[u8]) -> Result<CustodyLease, CscpError> {
     let body = parse_header(bytes, MSG_CUSTODY_LEASE)?;
     let mut c = CustodyLease::grant(0, 0, 0, 0);
-    walk_tlvs(body, known_lease, |tag, val| {
+    let seen = walk_tlvs_seen(body, known_custody, |tag, val| {
         match tag {
             1 => c.lease_id = u64_be(val)?,
             2 => c.operator = u64_be(val)?,
@@ -149,6 +190,7 @@ pub fn decode_custody(bytes: &[u8]) -> Result<CustodyLease, CscpError> {
         }
         Ok(())
     })?;
+    require_tags(seen, &[1, 2, 3, 4])?;
     Ok(c)
 }
 
@@ -185,13 +227,33 @@ pub fn decode_evidence(bytes: &[u8]) -> Result<PathEvidence, CscpError> {
     let mut max_payload = 0u16;
     let mut rtt_ms = 0u32;
     let mut at = 0u64;
-    walk_tlvs(body, known_evidence, |tag, val| {
+    let mut have_class = false;
+    let seen = walk_tlvs_seen(body, known_evidence, |tag, val| {
         match tag {
-            1 if val.len() == 1 => class = path_class_from(val[0])?,
+            1 => {
+                if val.len() != 1 {
+                    return Err(CscpError::Malformed);
+                }
+                class = path_class_from(val[0])?;
+                have_class = true;
+            }
             2 => generation = u32_be(val)?,
-            3 if val.len() == 1 => observer = val[0],
-            4 if val.len() == 1 => validated = val[0],
-            5 if val.len() == 14 => {
+            3 => {
+                if val.len() != 1 {
+                    return Err(CscpError::Malformed);
+                }
+                observer = val[0];
+            }
+            4 => {
+                if val.len() != 1 {
+                    return Err(CscpError::Malformed);
+                }
+                validated = val[0];
+            }
+            5 => {
+                if val.len() != 14 {
+                    return Err(CscpError::Malformed);
+                }
                 max_payload = u16_be(&val[..2])?;
                 rtt_ms = u32_be(&val[2..6])?;
                 at = u64_be(&val[6..])?;
@@ -200,6 +262,10 @@ pub fn decode_evidence(bytes: &[u8]) -> Result<PathEvidence, CscpError> {
         }
         Ok(())
     })?;
+    require_tags(seen, &[1, 2, 3, 4])?;
+    if !have_class {
+        return Err(CscpError::Malformed);
+    }
     if observer == 2 && validated != 0 {
         return Err(CscpError::Malformed);
     }
@@ -230,13 +296,26 @@ pub fn encode_receipt(r: &OpReceipt, out: &mut [u8]) -> Result<usize, CscpError>
 pub fn decode_receipt(bytes: &[u8]) -> Result<OpReceipt, CscpError> {
     let body = parse_header(bytes, MSG_RECEIPT)?;
     let mut r = OpReceipt::queued(0, [0u8; 32], [0u8; 32], 0, 0);
-    walk_tlvs(body, known_receipt, |tag, val| {
+    let seen = walk_tlvs_seen(body, known_receipt, |tag, val| {
         match tag {
             1 => r.op_id = u64_be(val)?,
-            2 if val.len() == 32 => r.content_digest.copy_from_slice(val),
-            3 if val.len() == 32 => r.peer.copy_from_slice(val),
+            2 => {
+                if val.len() != 32 {
+                    return Err(CscpError::Malformed);
+                }
+                r.content_digest.copy_from_slice(val);
+            }
+            3 => {
+                if val.len() != 32 {
+                    return Err(CscpError::Malformed);
+                }
+                r.peer.copy_from_slice(val);
+            }
             4 => r.grant_generation = u32_be(val)?,
-            5 if val.len() == 1 => {
+            5 => {
+                if val.len() != 1 {
+                    return Err(CscpError::Malformed);
+                }
                 r.status = match val[0] {
                     1 => ReceiptStatus::Queued,
                     2 => ReceiptStatus::Received,
@@ -252,6 +331,7 @@ pub fn decode_receipt(bytes: &[u8]) -> Result<OpReceipt, CscpError> {
         }
         Ok(())
     })?;
+    require_tags(seen, &[1, 2, 3, 4, 5, 6])?;
     Ok(r)
 }
 
@@ -267,14 +347,25 @@ pub fn decode_accept(bytes: &[u8]) -> Result<(PathClass, u32), CscpError> {
     let body = parse_header(bytes, MSG_CONNECT_ACCEPT)?;
     let mut class = PathClass::Offline;
     let mut generation = 0u32;
-    walk_tlvs(body, known_accept, |tag, val| {
+    let mut have_class = false;
+    let seen = walk_tlvs_seen(body, known_accept, |tag, val| {
         match tag {
-            1 if val.len() == 1 => class = path_class_from(val[0])?,
+            1 => {
+                if val.len() != 1 {
+                    return Err(CscpError::Malformed);
+                }
+                class = path_class_from(val[0])?;
+                have_class = true;
+            }
             2 => generation = u32_be(val)?,
             _ => {}
         }
         Ok(())
     })?;
+    require_tags(seen, &[1, 2])?;
+    if !have_class {
+        return Err(CscpError::Malformed);
+    }
     Ok((class, generation))
 }
 
@@ -287,8 +378,12 @@ pub fn encode_reject(reason: RejectReason, out: &mut [u8]) -> Result<usize, Cscp
 pub fn decode_reject(bytes: &[u8]) -> Result<RejectReason, CscpError> {
     let body = parse_header(bytes, MSG_CONNECT_REJECT)?;
     let mut reason = RejectReason::Policy;
-    walk_tlvs(body, known_reject, |tag, val| {
-        if tag == 1 && val.len() == 1 {
+    let mut have = false;
+    let seen = walk_tlvs_seen(body, known_reject, |tag, val| {
+        if tag == 1 {
+            if val.len() != 1 {
+                return Err(CscpError::Malformed);
+            }
             reason = match val[0] {
                 1 => RejectReason::Policy,
                 2 => RejectReason::Stale,
@@ -297,9 +392,14 @@ pub fn decode_reject(bytes: &[u8]) -> Result<RejectReason, CscpError> {
                 5 => RejectReason::Capacity,
                 _ => return Err(CscpError::Malformed),
             };
+            have = true;
         }
         Ok(())
     })?;
+    require_tags(seen, &[1])?;
+    if !have {
+        return Err(CscpError::Malformed);
+    }
     Ok(reason)
 }
 
@@ -423,5 +523,46 @@ mod tests {
         assert_eq!(got.observer, ObserverKind::RemoteAssertion);
         assert_eq!(got.class, PathClass::Relayed);
         assert_eq!(got.generation, 7);
+    }
+
+    fn empty_msg(msg: u8) -> [u8; 10] {
+        let mut b = [0u8; 10];
+        b[..4].copy_from_slice(super::super::MAGIC);
+        b[4] = super::super::VERSION;
+        b[5] = msg;
+        b
+    }
+
+    #[test]
+    fn empty_body_and_bad_flags_fail_closed() {
+        assert_eq!(decode_accept(&empty_msg(MSG_CONNECT_ACCEPT)), Err(CscpError::Malformed));
+        assert_eq!(decode_reject(&empty_msg(MSG_CONNECT_REJECT)), Err(CscpError::Malformed));
+        assert_eq!(decode_contact(&empty_msg(MSG_CONTACT)), Err(CscpError::Malformed));
+        assert_eq!(decode_relay_lease(&empty_msg(MSG_RELAY_LEASE)), Err(CscpError::Malformed));
+        assert_eq!(decode_custody(&empty_msg(MSG_CUSTODY_LEASE)), Err(CscpError::Malformed));
+        assert_eq!(decode_evidence(&empty_msg(MSG_PATH_EVIDENCE)), Err(CscpError::Malformed));
+        assert_eq!(decode_receipt(&empty_msg(MSG_RECEIPT)), Err(CscpError::Malformed));
+        let mut flagged = empty_msg(MSG_CONNECT_ACCEPT);
+        flagged[6] = 0x02;
+        assert_eq!(decode_accept(&flagged), Err(CscpError::Malformed));
+    }
+
+    #[test]
+    fn remaining_bytes_over_max_is_malformed() {
+        let l = RelayLease::grant(7, 1, [1u8; 32], [2u8; 32], 8, 100, 1, false);
+        let mut buf = [0u8; 256];
+        let n = encode_relay_lease(&l, &mut buf).unwrap();
+        let mut i = 10usize;
+        while i + 3 <= n {
+            let tag = buf[i] & 0x7f;
+            let len = u16::from_be_bytes([buf[i + 1], buf[i + 2]]) as usize;
+            if tag == 4 && len == 16 {
+                buf[i + 3..i + 11].copy_from_slice(&1u64.to_be_bytes());
+                buf[i + 11..i + 19].copy_from_slice(&1000u64.to_be_bytes());
+                break;
+            }
+            i += 3 + len;
+        }
+        assert_eq!(decode_relay_lease(&buf[..n]), Err(CscpError::Malformed));
     }
 }

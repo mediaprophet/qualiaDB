@@ -4,6 +4,7 @@
 //! contact, excludes prohibited paths, then scores the remainder. CSCP is a
 //! control protocol. This crate does not implement QUIC, MASQUE, or a new cipher.
 
+pub mod capsule;
 pub mod carrier;
 pub mod connect;
 pub mod contact;

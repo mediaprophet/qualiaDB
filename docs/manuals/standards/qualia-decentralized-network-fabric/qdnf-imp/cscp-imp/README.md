@@ -1,6 +1,6 @@
 # CSCP implementation programme
 
-**Status:** Wave 1 local control plane in-tree (CSCP-01–06 tested); Wave 2 swarm on CSCP-07/09/10/11; CSCP-08/12 blocked  
+**Status:** Wave 1 local control plane tested and fail-closed after independent review; QUIC deferred; local DATAGRAM capsules in-tree; browser profile recorded; CSCP-08/12 blocked  
 **Date:** 2026-09-10  
 **Normative spec:** [draft-webcivics-cscp-00.md](../draft-webcivics-cscp-00.md)  
 **Swarm rules:** reuse [qdnf-imp swarm protocol](../swarm-protocol.md), briefs, handoffs, evidence manifests  
@@ -23,11 +23,11 @@ This programme implements CSCP as specified. It does **not** implement QUIC, MAS
 | PathEvidence: remote `validated=1` fail closed; Accept/Reject | yes (Wave 1) | keep tests |
 | CSCP control on TLS WSS + QSession | yes (local rustls) | not browser / not Internet |
 | Receipt persist/recover | yes (CRC file) | RAM queue still not crash-safe |
-| QUIC ALPN `cscp/1` | no | CSCP-07 (evaluate quinn/noq; do not write QUIC) |
+| QUIC ALPN `cscp/1` | deferred (CSCP-07) | no engine admitted |
 | MASQUE bound UDP on Internet | no | CSCP-08 blocked on operator |
-| HTTP/2 capsule fallback | no | CSCP-09 |
-| Browser profile | no | CSCP-10 |
-| Independent review | no | CSCP-11 |
+| HTTP/2 capsule fallback | local DATAGRAM framing only | CSCP-09 HTTP/2 CONNECT still open |
+| Browser profile | profile note | interop not executed |
+| Independent review | yes (accept-with-fixes; F1–F4 applied) | — |
 | Datatracker submit | no | CSCP-12 human |
 
 “Fully implemented” for the **local control plane** (Wave 1) is CSCP-01–06: every message type on the wire, mailbox, leases, evidence rules, Accept/Reject, QSession-bound local TLS WSS, durable receipts. That is now in-tree and tested. Wave 2 is the Internet profile and stays explicitly incomplete until Gates B–E in the architecture note.

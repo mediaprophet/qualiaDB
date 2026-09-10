@@ -1,9 +1,9 @@
 //! ConnectRequest codec and `connect_from_wire`.
 
 use super::{
-    disclosure_byte, disclosure_from, finish, walk_tlvs, write_tlv, CscpError, MAGIC, MAX_BODY,
-    MSG_CONNECT_REQUEST, TAG_AUTHORITY, TAG_BUDGET, TAG_CRITICAL, TAG_DEADLINE, TAG_PEER,
-    TAG_PROTECTION, TAG_PURPOSE, VERSION,
+    disclosure_byte, disclosure_from, finish, require_tags, walk_tlvs_seen, write_tlv, CscpError,
+    MAGIC, MAX_BODY, MSG_CONNECT_REQUEST, TAG_AUTHORITY, TAG_BUDGET, TAG_CRITICAL, TAG_DEADLINE,
+    TAG_PEER, TAG_PROTECTION, TAG_PURPOSE, VERSION,
 };
 use crate::net::peer::connectivity::policy::Disclosure;
 use crate::net::peer::fabric::connect::{connect, ConnectHandle, Fabric};
@@ -66,10 +66,18 @@ pub fn decode_connect_request(bytes: &[u8], now_ms: u64) -> Result<ConnectionInt
     let mut created = 0u64;
     let mut deadline = 0u64;
     let mut authority = 0u64;
-    walk_tlvs(body, known, |tag, val| {
+    let seen = walk_tlvs_seen(body, known, |tag, val| {
         match tag {
-            TAG_PEER if val.len() == 32 => peer.copy_from_slice(val),
-            TAG_PURPOSE if val.len() == 9 => {
+            TAG_PEER => {
+                if val.len() != 32 {
+                    return Err(CscpError::Malformed);
+                }
+                peer.copy_from_slice(val);
+            }
+            TAG_PURPOSE => {
+                if val.len() != 9 {
+                    return Err(CscpError::Malformed);
+                }
                 purpose_hash = super::u64_be(&val[..8])?;
                 purpose_class = match val[8] {
                     1 => PurposeClass::Ordinary,
@@ -78,25 +86,55 @@ pub fn decode_connect_request(bytes: &[u8], now_ms: u64) -> Result<ConnectionInt
                     _ => return Err(CscpError::Policy),
                 };
             }
-            TAG_PROTECTION if val.len() == 3 => {
+            TAG_PROTECTION => {
+                if val.len() != 3 {
+                    return Err(CscpError::Malformed);
+                }
                 disclosure = disclosure_from(val[0])?;
                 require_e2e = val[1] != 0;
                 public_dht = val[2] != 0;
             }
-            TAG_BUDGET if val.len() == 24 => {
+            TAG_BUDGET => {
+                if val.len() != 24 {
+                    return Err(CscpError::Malformed);
+                }
                 budget.bytes = super::u64_be(&val[..8])?;
                 budget.work = super::u64_be(&val[8..16])?;
                 budget.io = super::u64_be(&val[16..24])?;
             }
-            TAG_DEADLINE if val.len() == 16 => {
+            TAG_DEADLINE => {
+                if val.len() != 16 {
+                    return Err(CscpError::Malformed);
+                }
                 created = super::u64_be(&val[..8])?;
                 deadline = super::u64_be(&val[8..16])?;
             }
-            TAG_AUTHORITY if val.len() == 8 => authority = super::u64_be(val)?,
+            TAG_AUTHORITY => {
+                if val.len() != 8 {
+                    return Err(CscpError::Malformed);
+                }
+                authority = super::u64_be(val)?;
+            }
             _ => {}
         }
         Ok(())
     })?;
+    require_tags(
+        seen,
+        &[
+            TAG_PEER,
+            TAG_PURPOSE,
+            TAG_PROTECTION,
+            TAG_BUDGET,
+            TAG_DEADLINE,
+        ],
+    )?;
+    if peer == [0u8; 32] {
+        return Err(CscpError::Malformed);
+    }
+    if !matches!(disclosure, Disclosure::DirectPermitted) {
+        public_dht = false;
+    }
     if now_ms >= deadline {
         return Err(CscpError::Policy);
     }
@@ -193,5 +231,16 @@ mod tests {
         let h = connect_from_wire(&mut f, &buf[..n], 20).unwrap();
         assert_eq!(h.state, FabricState::OfflineQueued);
         assert!(f.session().is_none());
+    }
+
+    #[test]
+    fn empty_connect_request_is_malformed() {
+        let mut b = [0u8; 10];
+        b[..4].copy_from_slice(MAGIC);
+        b[4] = VERSION;
+        b[5] = MSG_CONNECT_REQUEST;
+        assert_eq!(decode_connect_request(&b, 20), Err(CscpError::Malformed));
+        b[7] = 1;
+        assert_eq!(decode_connect_request(&b, 20), Err(CscpError::Malformed));
     }
 }

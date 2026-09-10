@@ -1,5 +1,6 @@
 //! SessionReady exists only after verified path evidence and a live grant.
 
+use super::carrier::prohibited;
 use super::evidence::PathEvidence;
 use super::intent::PeerId;
 use super::kernel::{FabricError, Kernel};
@@ -25,6 +26,13 @@ impl SessionReady {
             return Err(FabricError::Illegal);
         }
         if kernel.state != super::kernel::FabricState::SessionLive {
+            return Err(FabricError::Illegal);
+        }
+        let intent = kernel.intent().ok_or(FabricError::Illegal)?;
+        if prohibited(intent.protection.disclosure, path.class) {
+            return Err(FabricError::PolicyDenied);
+        }
+        if kernel.selected != Some(path.class) {
             return Err(FabricError::Illegal);
         }
         Ok(Self {
@@ -91,5 +99,61 @@ mod tests {
         );
         k.step(KernelEvent::SessionAuthenticated, 1);
         assert!(SessionReady::try_new(&k, [9u8; 32], path).is_ok());
+    }
+
+    #[test]
+    fn relay_only_session_rejects_direct_evidence() {
+        let mut k = Kernel::new();
+        k.admit(
+            ConnectionIntent::new(
+                [9u8; 32],
+                Purpose::ordinary(),
+                ProtectionPolicy::RELAY_ONLY,
+                ResourceBudget {
+                    bytes: 64,
+                    work: 1,
+                    io: 1,
+                },
+                0,
+                1000,
+            ),
+            0,
+        )
+        .unwrap();
+        k.step(
+            KernelEvent::Descriptor {
+                stale: false,
+                expired: false,
+                direct_locator: false,
+            },
+            1,
+        );
+        k.step(KernelEvent::LeaseLive, 1);
+        k.step(
+            KernelEvent::PathValidated {
+                class: PathClass::Relayed,
+            },
+            1,
+        );
+        k.step(KernelEvent::SessionAuthenticated, 1);
+        let relayed = PathEvidence::from_witness(TransportWitness::from_local(
+            PathClass::Relayed,
+            1,
+            64,
+            5,
+            1,
+        ));
+        assert!(SessionReady::try_new(&k, [9u8; 32], relayed).is_ok());
+        let direct = PathEvidence::from_witness(TransportWitness::from_local(
+            PathClass::DirectV6,
+            1,
+            64,
+            1,
+            1,
+        ));
+        assert_eq!(
+            SessionReady::try_new(&k, [9u8; 32], direct),
+            Err(FabricError::PolicyDenied)
+        );
     }
 }

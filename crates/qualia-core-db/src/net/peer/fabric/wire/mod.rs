@@ -149,6 +149,9 @@ pub(crate) fn parse_header(bytes: &[u8], expect: u8) -> Result<&[u8], CscpError>
     if bytes[5] != expect {
         return Err(CscpError::Policy);
     }
+    if bytes[6] != 0 || bytes[7] != 0 {
+        return Err(CscpError::Malformed);
+    }
     let blen = u16::from_be_bytes([bytes[8], bytes[9]]) as usize;
     if blen > MAX_BODY || 10 + blen > bytes.len() {
         return Err(CscpError::Capacity);
@@ -192,8 +195,32 @@ pub(crate) fn walk_tlvs(
     Ok(())
 }
 
+pub(crate) fn walk_tlvs_seen(
+    body: &[u8],
+    known: fn(u8) -> bool,
+    mut visit: impl FnMut(u8, &[u8]) -> Result<(), CscpError>,
+) -> Result<u16, CscpError> {
+    let mut seen_mask = 0u16;
+    walk_tlvs(body, known, |tag, val| {
+        if tag < 16 {
+            seen_mask |= 1u16 << tag;
+        }
+        visit(tag, val)
+    })?;
+    Ok(seen_mask)
+}
+
+pub(crate) fn require_tags(seen: u16, tags: &[u8]) -> Result<(), CscpError> {
+    for &t in tags {
+        if t >= 16 || seen & (1u16 << t) == 0 {
+            return Err(CscpError::Malformed);
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn finish(out: &mut [u8], msg: u8, body: &[u8]) -> Result<usize, CscpError> {
-    if 10 + body.len() > out.len() {
+    if body.len() > MAX_BODY || 10 + body.len() > out.len() {
         return Err(CscpError::Capacity);
     }
     header(out, msg, body.len() as u16)?;

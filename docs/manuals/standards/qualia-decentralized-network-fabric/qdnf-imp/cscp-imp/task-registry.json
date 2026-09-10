@@ -88,7 +88,7 @@
     {
       "id": "CSCP-07",
       "title": "QUIC ALPN evaluation",
-      "status": "claimed",
+      "status": "complete",
       "depends_on": ["CSCP-05"],
       "checklist": "workstream.md",
       "allowed_paths": [
@@ -96,7 +96,7 @@
         "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-07.md"
       ],
       "assignee": "swarm-cscp-07",
-      "evidence": []
+      "evidence": ["decisions/CSCP-07-quic-alpn.md"]
     },
     {
       "id": "CSCP-08",
@@ -111,7 +111,7 @@
     {
       "id": "CSCP-09",
       "title": "HTTP/2 capsule fallback",
-      "status": "claimed",
+      "status": "in_progress",
       "depends_on": ["CSCP-01"],
       "checklist": "workstream.md",
       "allowed_paths": [
@@ -119,12 +119,13 @@
         "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-09.md"
       ],
       "assignee": "swarm-cscp-09",
-      "evidence": []
+      "evidence": ["/opt/cursor/artifacts/cscp-wave1-review-fixes.log"],
+      "note": "Local DATAGRAM capsule framing done (CSCP-09.01). HTTP/2 CONNECT stack not done."
     },
     {
       "id": "CSCP-10",
       "title": "Browser profile",
-      "status": "claimed",
+      "status": "complete",
       "depends_on": ["CSCP-05"],
       "checklist": "workstream.md",
       "allowed_paths": [
@@ -132,12 +133,13 @@
         "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-10.md"
       ],
       "assignee": "swarm-cscp-10",
-      "evidence": []
+      "evidence": ["decisions/CSCP-10-browser-profile.md"],
+      "note": "Profile note only. browser_turn_interop_executed remains false."
     },
     {
       "id": "CSCP-11",
       "title": "Independent review of Wave 1",
-      "status": "claimed",
+      "status": "complete",
       "depends_on": ["CSCP-01", "CSCP-02", "CSCP-03", "CSCP-04", "CSCP-05", "CSCP-06"],
       "checklist": "workstream.md",
       "allowed_paths": [
@@ -145,7 +147,7 @@
         "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-11.md"
       ],
       "assignee": "swarm-cscp-11",
-      "evidence": []
+      "evidence": ["reviews/CSCP-11-wave1.md", "/opt/cursor/artifacts/cscp-wave1-review-fixes.log"]
     },
     {
       "id": "CSCP-12",

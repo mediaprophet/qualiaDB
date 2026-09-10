@@ -708,6 +708,14 @@
 - Human input needed: CSCP-12 datatracker submit; CSCP-08 operator URL.
 - Next: integrate CSCP-07/09/10/11 swarm exports.
 
+## 2026-09-10 — CSCP Wave 2 swarm + fail-closed codec
+
+- Step: swarm CSCP-07/09/10/11; integrator applied independent-review F1–F4. Status: **local control plane fail-closed; QUIC deferred; not Internet**.
+- Measured: `net::peer::fabric` **46 passed** (includes capsule + empty-body/lease-cap/session disclosure tests); WSS **1 passed**.
+- Human input needed: still CSCP-12 submit and CSCP-08 operator URL.
+- Next: HTTP/2 CONNECT stack and MASQUE remain open; do not tick original 30 packages.
+
+
 
 
 

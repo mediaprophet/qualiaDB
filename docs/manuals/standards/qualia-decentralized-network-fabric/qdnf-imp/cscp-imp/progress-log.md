@@ -27,3 +27,16 @@
 - Measured: not yet; workers report evidence in their handoffs.
 - Human input needed: still CSCP-08 URL and CSCP-12 submit.
 - Next: integrate worker exports; tick CSCP-07/09/10/11 only after evidence.
+
+## 2026-09-10 — Wave 2 first swarm integrated; CSCP-11 fixes applied
+
+- Step: swarm CSCP-07/09/10/11 + integrator F1–F4. Status: **Wave 1 codec fail-closed; QUIC deferred; capsule framing local-only; browser profile recorded; CSCP-08/12 blocked**.
+- Built:
+  - CSCP-07: defer quinn/noq. ALPN `cscp/1` not implemented. `noq_transport_admitted()` remains false.
+  - CSCP-09.01: `fabric/capsule.rs` RFC 9297-style DATAGRAM capsules. Integrator added `pub mod capsule`. Not HTTP/2 CONNECT, not MASQUE Internet.
+  - CSCP-10: browser profile note. Local rustls WSS is not WebTransport interop.
+  - CSCP-11: accept-with-fixes. Integrator applied F1 (required critical TLVs), F2 (`remaining_bytes > max_bytes` malformed), F3 (SessionReady re-checks disclosure + selected class), F4 (non-zero Flags/Reserved malformed). Mailbox `encode_current` refuses Direct under relay-only disclosure.
+- Measured: `net::peer::fabric` **46 passed**, 0 failed; `p2p::connectivity::cscp_wss` **1 passed**. Honesty flags unchanged.
+- Human input needed: CSCP-12 datatracker; CSCP-08 operator URL. none this step otherwise.
+- Next: do not claim HTTP/2 CONNECT, QUIC, MASQUE Internet, or RFC.
+

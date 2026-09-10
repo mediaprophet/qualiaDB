@@ -94,9 +94,18 @@ impl PrivateMailbox {
         self.resolve(&d.contact_key, now_unix, disclosure)
     }
 
-    pub fn encode_current(&self, key: &PeerId, out: &mut [u8]) -> Result<usize, FabricError> {
+    pub fn encode_current(
+        &self,
+        key: &PeerId,
+        disclosure: Disclosure,
+        out: &mut [u8],
+    ) -> Result<usize, FabricError> {
         let i = self.find(key).ok_or(FabricError::Illegal)?;
         let d = self.slots[i].ok_or(FabricError::Illegal)?;
+        if d.kind == LocatorKind::Direct && prohibited(disclosure, super::carrier::PathClass::DirectV6)
+        {
+            return Err(FabricError::PolicyDenied);
+        }
         encode_contact(&d, out).map_err(FabricError::from)
     }
 }
@@ -129,8 +138,12 @@ mod tests {
         );
         let mut wire = [0u8; 256];
         let n = m
-            .encode_current(&key, &mut wire)
-            .expect("direct locator still stored");
+            .encode_current(&key, Disclosure::DirectPermitted, &mut wire)
+            .expect("direct locator export only when disclosure permits");
+        assert_eq!(
+            m.encode_current(&key, Disclosure::ApprovedRelaysOnly, &mut wire),
+            Err(FabricError::PolicyDenied)
+        );
         let mut other = PrivateMailbox::new();
         assert_eq!(
             other.ingest_wire(&wire[..n], 10, Disclosure::ApprovedRelaysOnly),

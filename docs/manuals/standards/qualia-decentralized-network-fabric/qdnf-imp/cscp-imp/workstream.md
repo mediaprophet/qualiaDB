@@ -65,14 +65,15 @@ Integrator ticks a box only after recorded evidence. Do not tick because a stub 
 
 ## CSCP-07 — QUIC ALPN (evaluate, do not write QUIC)
 
-- [ ] CSCP-07.01 Decision record: quinn vs noq vs defer
-- [ ] CSCP-07.02 If admitted: ALPN `cscp/1` on loopback only; Qualia session still required
-- [ ] CSCP-07.03 `noq_transport_admitted()` stays false until an admitted revision is reviewed
+- [x] CSCP-07.01 Decision record: quinn vs noq vs defer (**defer**; no first-party engine)
+- [x] CSCP-07.02 Not admitted: ALPN `cscp/1` reserved in the draft, not implemented
+- [x] CSCP-07.03 `noq_transport_admitted()` stays false until an admitted revision is reviewed
 
 ## CSCP-08–12 — Internet / review / submit
 
 - [ ] CSCP-08 MASQUE bound-UDP Internet (blocked: operator URL)
-- [ ] CSCP-09 HTTP/2 capsule fallback
-- [ ] CSCP-10 Browser WebTransport/WSS profile
-- [ ] CSCP-11 Independent review of CSCP-01–06
+- [x] CSCP-09.01 Local RFC 9297 DATAGRAM capsule framing (`fabric/capsule.rs`); not HTTP/2, not MASQUE Internet
+- [ ] CSCP-09 HTTP/2 CONNECT/capsule stack on a live path
+- [x] CSCP-10 Browser WebTransport/WSS profile note (local WSS ≠ browser interop)
+- [x] CSCP-11 Independent review of CSCP-01–06 (accept-with-fixes; F1–F4 applied)
 - [ ] CSCP-12 Human: submit `-00` to IETF datatracker
