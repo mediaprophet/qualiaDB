@@ -2,9 +2,11 @@
 //!
 //! Digit indexing, cover validation, closed-world snapshot traversal, tagged
 //! outcomes, membership-versus-completeness evidence, scoped private tokens,
-//! hot-key coalescing, writer handover, and an honest closed-world XOR
-//! comparison (not networked Kademlia). Authenticated lookup never returns
-//! bool. Found/EmptyInSnapshot is not completeness.
+//! hot-key coalescing, writer handover, closed-world XOR comparison, and an
+//! in-process k-bucket table. In-process k-buckets are not equivalent
+//! transport, crypto, or replication Kademlia and are not a two-host overlay.
+//! Authenticated lookup never returns bool. Found/EmptyInSnapshot is not
+//! completeness.
 
 mod compare;
 mod completeness;
@@ -12,6 +14,7 @@ mod cover;
 mod exact;
 mod handover;
 mod hot;
+mod kbucket;
 mod key;
 mod outcome;
 mod roots;
@@ -19,8 +22,13 @@ mod tokens;
 mod traversal;
 
 pub use compare::{
-    kademlia_comparison_executed, local_xor_nearest, run_closed_world_comparison,
-    unmeasured_better_than_kademlia_claimed, xor_distance, ClosedWorldComparison, LOCAL_XOR_CAP,
+    in_process_kbucket_comparison_executed, kademlia_comparison_executed, local_xor_nearest,
+    networked_kademlia_comparison_executed, run_closed_world_comparison,
+    run_in_process_kbucket_comparison, unmeasured_better_than_kademlia_claimed, xor_distance,
+    ClosedWorldComparison, KBucketComparison, LOCAL_XOR_CAP,
+};
+pub use kbucket::{
+    bucket_index, KBucketTable, ALPHA, BUCKET_COUNT, CONTACT_CAP, K, STALE_GENERATIONS,
 };
 pub use completeness::{
     absence_is_authoritative, lookup_with_completeness, membership_implies_completeness,

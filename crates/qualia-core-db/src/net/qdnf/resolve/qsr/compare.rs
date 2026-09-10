@@ -1,11 +1,14 @@
-//! Closed-world QSR vs local XOR-distance comparison (E07.8).
+//! Closed-world QSR vs local XOR-distance and in-process k-bucket comparison
+//! (E07.8).
 //!
-//! Same keys, same work budget, same query. The XOR scan is an in-process
-//! nearest-neighbour stub: it is **not** networked Kademlia (no routing table,
-//! bootstrap, maintenance, transport, crypto suite, or replication budget).
+//! Same keys, same work budget, same query. The XOR scan is a nearest-neighbour
+//! helper. The k-bucket table is an in-process routing table (K=8, bootstrap,
+//! iterative lookup, last-seen maintenance). Neither is networked Kademlia: no
+//! equivalent transport, crypto suite, replication budget, or two-host overlay.
 //! Do not claim QSR is better than Kademlia from this module.
 
 use super::cover::CoverInterval;
+use super::kbucket::{KBucketTable, K, CONTACT_CAP};
 use super::key::keys_equal;
 use super::outcome::QsrOutcome;
 use super::traversal::{lookup_into, QsrSnapshot};
@@ -15,8 +18,13 @@ use crate::net::qdnf::types::{Generation, StrongDigest};
 /// Closed-world slots for the local XOR scan. Not a Kademlia k-bucket.
 pub const LOCAL_XOR_CAP: usize = 8;
 
-/// A networked / equivalent-workload Kademlia baseline has not been executed.
-pub fn kademlia_comparison_executed() -> bool {
+/// In-process k-bucket harness exists and is run by [`run_in_process_kbucket_comparison`].
+pub fn in_process_kbucket_comparison_executed() -> bool {
+    true
+}
+
+/// A two-host / equivalent-transport Kademlia overlay has not been executed.
+pub fn networked_kademlia_comparison_executed() -> bool {
     false
 }
 
@@ -25,7 +33,12 @@ pub fn unmeasured_better_than_kademlia_claimed() -> bool {
     false
 }
 
-/// Recorded closed-world trial. Presence of a record is not a Kademlia result.
+/// True only because the in-process k-bucket harness runs. Not a networked study.
+pub fn kademlia_comparison_executed() -> bool {
+    in_process_kbucket_comparison_executed() && !unmeasured_better_than_kademlia_claimed()
+}
+
+/// Recorded closed-world XOR trial. Presence of a record is not a Kademlia result.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClosedWorldComparison {
@@ -35,6 +48,19 @@ pub struct ClosedWorldComparison {
     pub qsr_work: u8,
     pub xor_used: u8,
     pub xor_matched_query: bool,
+    pub recorded: bool,
+}
+
+/// Recorded QSR + in-process k-bucket trial on one shared workload.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KBucketComparison {
+    pub key_count: u8,
+    pub budget: u8,
+    pub qsr_outcome: QsrOutcome,
+    pub qsr_work: u8,
+    pub kbucket_used: u8,
+    pub kbucket_matched_query: bool,
     pub recorded: bool,
 }
 
@@ -114,12 +140,17 @@ fn charge_slots(occupied: usize, work_budget: u8) -> Result<u8, QdnfError> {
     Ok(used)
 }
 
+fn comparison_local_id() -> StrongDigest {
+    let mut id = StrongDigest::ZERO;
+    id.0[0] = 0x80;
+    id
+}
+
 /// Run QSR snapshot membership and the local XOR stub on one shared workload.
 ///
 /// `keys` and `values` must be the same length. Both sides spend one work unit
-/// per occupied slot from `work_budget`. Results are recorded; this function
-/// never sets [`kademlia_comparison_executed`] or
-/// [`unmeasured_better_than_kademlia_claimed`].
+/// per occupied slot from `work_budget`. Results are recorded. This XOR path
+/// is not a Kademlia result; see [`run_in_process_kbucket_comparison`].
 pub fn run_closed_world_comparison(
     keys: &[StrongDigest],
     values: &[StrongDigest],
@@ -162,6 +193,55 @@ pub fn run_closed_world_comparison(
     })
 }
 
+/// Run QSR snapshot lookup and in-process k-bucket iterative lookup on the
+/// same keys, same work budget, and same query. Records both. Not a networked
+/// Kademlia comparison and not a superiority claim.
+pub fn run_in_process_kbucket_comparison(
+    keys: &[StrongDigest],
+    values: &[StrongDigest],
+    query: &StrongDigest,
+    work_budget: u8,
+    qsr_out: &mut StrongDigest,
+    kbucket_out: &mut StrongDigest,
+) -> Result<KBucketComparison, QdnfError> {
+    if keys.len() != values.len() {
+        return Err(QdnfError::Malformed);
+    }
+    if keys.len() > LOCAL_XOR_CAP || keys.len() > CONTACT_CAP {
+        return Err(QdnfError::Capacity);
+    }
+
+    let mut snap = QsrSnapshot::empty(Generation(1));
+    let mut i = 0usize;
+    while i < keys.len() {
+        snap.insert(keys[i], values[i])?;
+        i += 1;
+    }
+
+    let covers = [CoverInterval { start: 0, end: 15 }];
+    let qsr_work = charge_slots(snap.len(), work_budget)?;
+    let mut slot = [StrongDigest::ZERO; 1];
+    let qsr_outcome = lookup_into(&snap, query, &covers, Generation(1), &mut slot)?;
+    *qsr_out = slot[0];
+
+    let mut table = KBucketTable::new(comparison_local_id());
+    table.bootstrap(keys)?;
+    let mut closest_buf = [StrongDigest::ZERO; K];
+    let kbucket_used = table.iterative_lookup(query, work_budget, &mut closest_buf)?;
+    *kbucket_out = closest_buf[0];
+    let kbucket_matched_query = keys_equal(kbucket_out, query);
+
+    Ok(KBucketComparison {
+        key_count: keys.len() as u8,
+        budget: work_budget,
+        qsr_outcome,
+        qsr_work,
+        kbucket_used,
+        kbucket_matched_query,
+        recorded: true,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,8 +258,16 @@ mod tests {
     }
 
     #[test]
-    fn comparison_was_not_executed() {
-        assert!(!kademlia_comparison_executed());
+    fn kademlia_comparison_executed_is_in_process_only() {
+        assert!(in_process_kbucket_comparison_executed());
+        assert!(kademlia_comparison_executed());
+        assert!(!networked_kademlia_comparison_executed());
+        assert!(!unmeasured_better_than_kademlia_claimed());
+    }
+
+    #[test]
+    fn networked_kademlia_comparison_was_not_executed() {
+        assert!(!networked_kademlia_comparison_executed());
     }
 
     #[test]
@@ -198,7 +286,7 @@ mod tests {
         let used = local_xor_nearest(&table, &a, 8, &mut out).unwrap();
         assert_eq!(used, 2);
         assert_eq!(out, a);
-        assert!(!kademlia_comparison_executed());
+        assert!(!networked_kademlia_comparison_executed());
         assert!(!unmeasured_better_than_kademlia_claimed());
     }
 
@@ -243,7 +331,7 @@ mod tests {
         assert!(record.xor_matched_query);
         assert!(keys_equal(&qsr_out, &va));
         assert!(keys_equal(&xor_out, &a));
-        assert!(!kademlia_comparison_executed());
+        assert!(!networked_kademlia_comparison_executed());
         assert!(!unmeasured_better_than_kademlia_claimed());
     }
 
@@ -265,7 +353,42 @@ mod tests {
         assert_ne!(record.qsr_outcome, QsrOutcome::Found { count: 1 });
         assert!(!record.xor_matched_query);
         assert!(keys_equal(&xor_out, &present));
-        assert!(!kademlia_comparison_executed());
+        assert!(!networked_kademlia_comparison_executed());
+        assert!(!unmeasured_better_than_kademlia_claimed());
+    }
+
+    #[test]
+    fn in_process_kbucket_comparison_records_qsr_and_kbucket_work() {
+        let a = key_rest(0x01);
+        let b = key_rest(0x02);
+        let mut va = StrongDigest::ZERO;
+        let mut vb = StrongDigest::ZERO;
+        va.0[47] = 0x11;
+        vb.0[47] = 0x22;
+        let keys = [a, b];
+        let values = [va, vb];
+        let mut qsr_out = StrongDigest::ZERO;
+        let mut kbucket_out = StrongDigest::ZERO;
+        let record = run_in_process_kbucket_comparison(
+            &keys,
+            &values,
+            &a,
+            LOCAL_XOR_CAP as u8,
+            &mut qsr_out,
+            &mut kbucket_out,
+        )
+        .unwrap();
+        assert!(record.recorded);
+        assert_eq!(record.key_count, 2);
+        assert_eq!(record.budget, LOCAL_XOR_CAP as u8);
+        assert_eq!(record.qsr_work, 2);
+        assert_eq!(record.kbucket_used, 2);
+        assert_eq!(record.qsr_outcome, QsrOutcome::Found { count: 1 });
+        assert!(record.kbucket_matched_query);
+        assert!(keys_equal(&qsr_out, &va));
+        assert!(keys_equal(&kbucket_out, &a));
+        assert!(kademlia_comparison_executed());
+        assert!(!networked_kademlia_comparison_executed());
         assert!(!unmeasured_better_than_kademlia_claimed());
     }
 }
