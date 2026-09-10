@@ -700,6 +700,15 @@
 - Human input needed: whether to **submit** `draft-webcivics-cscp-00` to the IETF datatracker (author email, shepherd, intended WG/area); named operators / live URLs for Gate B; whether noq evaluation is authorised; acceptable disclosure per deployment.
 - Next: do not mark programme packages complete. Gate A mapping of QSession-to-CSCP on a real QUIC engine remains a qualification step, not done here.
 
+## 2026-09-10 — CSCP Wave 1 local control plane + swarm programme
+
+- Step: principal asked whether CSCP was fully implemented and to plan/launch a swarm. Status: **Wave 1 (CSCP-01–06) done and tested; Wave 2 swarm dispatched; not Internet, not RFC**.
+- Built: full CSCP v1 TLV set, mailbox, lease protocol, Accept/Reject, durable receipts, local TLS WSS + QSession. Programme at [cscp-imp/](./cscp-imp/).
+- Measured: `net::peer::fabric` **34 passed**; `p2p::connectivity::cscp_wss` **1 passed**. Honesty flags unchanged (Internet/MASQUE/noq still false).
+- Human input needed: CSCP-12 datatracker submit; CSCP-08 operator URL.
+- Next: integrate CSCP-07/09/10/11 swarm exports.
+
+
 
 
 
