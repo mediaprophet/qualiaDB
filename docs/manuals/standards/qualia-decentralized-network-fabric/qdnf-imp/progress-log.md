@@ -664,7 +664,8 @@
   - `p2p/wg_engine.rs` — socket-free caller-buffered boringtun engine.
   - `qualia-client-core/src/introduction.rs` — QINV1 import; `qcx1_` private-bootstrap only. Not compiled here (openssl-sys / missing `libssl-dev`).
 - Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
-  - Filter recorded after this landing in `/opt/cursor/artifacts/connectivity-impl.log`.
+  - Filter `net::peer::connectivity` + `p2p::connectivity` + `p2p::wg_engine` + `p2p::outbound_relay`: **33 passed**, 0 failed, 0.77s (`/opt/cursor/artifacts/connectivity-impl.log`). Includes two-process WSS child, `wg_over_local_wss_reaches_session_ready`, consent/role-conflict, and NAT64 unset-env.
+  - `p2p::social_qdnf`: **5 passed**, 0.31s (`/opt/cursor/artifacts/social-qdnf-regression.log`).
 - Not claimed: `public_relay_dialed()`; `internet_two_host_handshake_executed()`; live coturn; rustls/public WSS/443; full RFC 8445 consent against public STUN; browser TURN interop; QUIC/iroh benchmark; Native Independent.
 - Human input needed: still **B** — operator, verified WSS URL/certificate, TURN URIs. Or a reachable `LISTEN_ADDR`.
 - Next: dial that URL when supplied. Do not invent one.
