@@ -5,17 +5,19 @@
 //! `wgsl-forge`, `privacy-he`, `zk-culling`, or `profile_target_1024`).
 //! Default `qualia-core-db` still has those features. Packages remain open.
 //!
-//! Application API: [`PeerHost::pair`] and [`PeerHost::exchange_protected`].
-//! The 64-byte vertical slice (`two_peer_ipc_exchange`) is an example, not the
-//! application API.
+//! Application API: [`PeerHost::pair`], [`PeerHost::exchange_protected`],
+//! and [`PeerHost::clinical_session`]. The 64-byte vertical slice
+//! (`two_peer_ipc_exchange`) is an example, not the application API.
 
 mod api;
+mod clinical;
 mod inventory;
 mod native_independent;
 mod negotiate;
 mod ops;
 
 pub use api::PeerHost;
+pub use clinical::ClinicalSession;
 pub use inventory::{libp2p_imported, public_entry_points, InventoryEntry};
 pub use native_independent::{
     cargo_toml_depends_on_libp2p, implicit_dns_ip_fallback, native_independent_daemon_proven,

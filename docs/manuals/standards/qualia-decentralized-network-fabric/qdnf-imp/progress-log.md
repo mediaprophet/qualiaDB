@@ -546,5 +546,23 @@
 - Human input needed: CAP_NET_RAW / veth two-host qualification; whether default daemons may drop `libp2p-compat`; independent review; live-rail selection. None of those can be completed in this process.
 - Next: remaining E21.1 observational fixtures may still be wired to existing libraries with `qualified=false`. E21.2–E21.4, E05.2 physical, E15.6 operational, E18 live rails, and E20.2 daemon proof stay out-of-band.
 
+## 2026-09-09 — E05 public handshake, E21 fixtures, E12.5/E14 callers — partial, packages remain open
+
+- Step: continue in-tree production-path work after the fragmented-hello checkpoint. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E05.3: `NativePeer::announce` uses `rotating_tag`; `accept_announce_at` charges `PreAuthBudget`, rejects expired beacons, and inserts only after a locator-bound `ChallengeTable` challenge. Expired beacons leave `neighbor_count()==0`.
+  - E05.4: public `authorised_ipc_stream_exchange` now runs `handshake_over_fragments` on the bearer (MTU capped at Ethernet 1500 even on local-ipc 8192). Client/server fragment counts must be ≥2. Clocked `accept_announce_at(now)` is the production accept path.
+  - E17.7: concurrent last-payment test — two threads `reserve_hold(10)` on remaining 10; exactly one `Ok(10)`, the other `Denied`. Chargeback does not grow `target_t`. Duplicate finalise is idempotent.
+  - E21.1: all 40 S01–S40 observational fixtures call real libraries. `qualified` stays false. `implemented_fixture_count()==40`.
+  - E00.5 / E21.5: four unqualified CI buckets; documented honest limitations (`physical_two_host_qualified()==false`, `live_payment_rail()==Unsupported`).
+  - E20.1: inventory lists 8 QPR entry points including `lookup_qsr_full` and `handshake_over_fragments`.
+  - E12.5: mailbox `store_bound` / `deliver_live` and `PermitTable::set_live` call `recheck_permit` at commit/release. A live policy generation bump is `StaleGeneration`.
+  - E14: `PeerHost::clinical_session` is the public application owner for pairing, permits, envelopes, mailbox, offline queues, interchange, imaging pages, confidential help and backup restore. Public patient/VIP/diagnosis indexes stay Denied. Transport delivery does not assert clinical review.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Focused core filter (scenarios, limitations, ci_classes, discovery, concurrent, handshake, exchange, mailbox lifecycle, permits): **20 + 11** on split runs, 0 failed (`/opt/cursor/artifacts/qdnf-handshake-exchange.log`, `/opt/cursor/artifacts/qdnf-e12-fixtures.log`). Scenario suite: every S01–S40 fixture runs, `qualified_count()==0`.
+  - `qualia-peer --lib`: **22 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-peer.log`), including `exchange_protected_roundtrip_cap` after fragmented handshake and the three ClinicalSession tests.
+- Not claimed: physical two-host / veth Ethernet; AF_XDP acceleration; live settlement rails; Native Independent default daemons; networked Kademlia; operational FAR/FRR; independent cryptographic review; libFuzzer / model-check; long-duration churn; MSVC runner; enhancement-package completion; deployment certification from test counts.
+- Human input needed: CAP_NET_RAW / veth two-host qualification; whether default daemons may drop `libp2p-compat`; independent review; live-rail selection; biometric FAR/FRR corpora. None of those can be completed in this process.
+- Next: E05.2 physical, E15.6 operational, E18 live rails, E20.2 daemon proof, E21.2–E21.4 fuzz/review/churn remain out-of-band. In-tree leftovers are measurement (E10.5 RSS/NUMA/joules stay unmeasured) and any remaining production callers that still go through tests-only helpers.
 
 
