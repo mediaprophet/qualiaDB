@@ -565,4 +565,27 @@
 - Human input needed: CAP_NET_RAW / veth two-host qualification; whether default daemons may drop `libp2p-compat`; independent review; live-rail selection; biometric FAR/FRR corpora. None of those can be completed in this process.
 - Next: E05.2 physical, E15.6 operational, E18 live rails, E20.2 daemon proof, E21.2–E21.4 fuzz/review/churn remain out-of-band. In-tree leftovers are measurement (E10.5 RSS/NUMA/joules stay unmeasured) and any remaining production callers that still go through tests-only helpers.
 
+## 2026-09-10 — swarm wave: in-tree E00.2 / E05.2 process / E07.8 / E10.5 / E20.2 / E21.2–E21.4 — partial, packages remain open
+
+- Step: user asked what “out of band” meant and to swarm remaining work rather than skip it. Status: **partial**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Clarification: “out of band” meant **qualification this VM cannot prove** (physical two-host Ethernet, AF_XDP caps, live Stripe/ILP keys, operational FAR/FRR corpora, an independent reviewer). It did **not** mean “leave the libraries unimplemented.” This wave implemented every remaining in-tree item that does not require those external gates.
+- Built:
+  - E10.5: `cells/hardware.rs` reads `/proc/self/status` VmRSS and NUMA from `numa_maps` / sysfs. `pass_maps_process_rss()` stays false. `idle_energy_measured()` stays false (no RAPL `powercap` on this host).
+  - E20.2: `libp2p-compat` removed from core-db **default**. Default `cargo tree -p qualia-core-db -i libp2p` → package not in graph. LIG remains `--features libp2p-compat`. `qualia-client-core` opts into LIG explicitly for wellfair sync. `native_independent_daemon_proven()` is true when the default feature list omits `libp2p-compat`.
+  - E07.8: real in-process k-buckets (K=8, bootstrap, iterative lookup, stale maintenance) plus QSR comparison. `kademlia_comparison_executed()` is true for that in-process harness. `networked_kademlia_comparison_executed()` and `unmeasured_better_than_kademlia_claimed()` stay false.
+  - E21.2: deterministic 4096-iteration codec campaign (frame/label/beacon); ownership/commit/epoch model-check. `libfuzzer_executed()` and `tla_plus_executed()` stay false.
+  - E21.3: unsigned independent-review packet/checklist. `independent_review_executed()` stays false.
+  - E21.4: 2-second conservation/confidentiality churn. `long_duration_churn_days_executed()` stays false.
+  - E05.2: two OS processes exchange 8 bytes on a Unix socket. `physical_two_host_qualified()` stays false.
+  - E00.2: `.github/workflows/qdnf-msvc.yml` Windows MSVC + Linux gnu jobs. `MSVC_RUNNER` on this host stays `None`.
+  - E18: already present (role activation, meters, in-process router, live rails Unsupported). Not re-implemented.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - E10.5/E07.8/E21/E05 focused filter: **27 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-swarm-wave.log`). Two-process child spawned and exchanged. Bounded churn waited the 2000 ms cap.
+  - Hardware: `/proc/self/status` VmRSS is readable; `/sys/devices/system/node/node0` exists; `/sys/class/powercap` is absent (idle joules Unmeasured).
+  - Default graph: `cargo tree -p qualia-core-db -i libp2p` → `package ID specification libp2p did not match any packages`. `--features libp2p-compat` still `cargo check`s.
+  - `qualia-peer --lib`: **23 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-peer-wave.log`), including `native_independent_daemon_proven()==true`.
+- Not claimed: physical two-host / veth Ethernet; AF_XDP umem; live settlement rails; networked equivalent-workload Kademlia; operational FAR/FRR; independent cryptographic review executed; libFuzzer / TLA+ / multi-day churn; MSVC results from this Linux host; enhancement-package completion; deployment certification from test counts.
+- Human input needed: CAP_NET_RAW / veth two-host Ethernet; live-rail credentials if Stripe/ILP should ever settle; a separate cryptographic reviewer to execute E21.3; operational biometric corpora for E15.6. None of those can be faked here.
+- Next: remaining honest gates above; do not mark E00–E21 packages complete until those qualifications exist.
+
 
