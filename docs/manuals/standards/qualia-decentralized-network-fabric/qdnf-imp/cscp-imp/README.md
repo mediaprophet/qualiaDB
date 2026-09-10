@@ -25,7 +25,7 @@ This programme implements CSCP as specified. It does **not** implement QUIC, MAS
 | Receipt persist/recover | yes (CRC file) | RAM queue still not crash-safe |
 | QUIC ALPN `cscp/1` | deferred (CSCP-07) | no engine admitted |
 | MASQUE bound UDP on Internet | no | CSCP-08 blocked on operator |
-| HTTP/2 capsule fallback | local DATAGRAM framing only | CSCP-09 HTTP/2 CONNECT still open |
+| HTTP/2 capsule fallback | local DATAGRAM framing + loopback TLS HTTP/2 Extended CONNECT (CSCP-09.02) | parent CSCP-09 Internet/MASQUE still open |
 | Browser profile | profile note | interop not executed |
 | Independent review | yes (accept-with-fixes; F1–F4 applied) | — |
 | Datatracker submit | no | CSCP-12 human |
@@ -59,4 +59,4 @@ cargo test -p qualia-core-db --lib --offline net::peer::fabric -- --test-threads
 
 Do not match `identity::`. Do not invent a public relay URL. Do not set Internet honesty flags true.
 
-Identifier split (not a CSCP wire task): `did:qi:` is the Qualia Identifier method **name** for ☉ Human-Centric Internet (HCInet) instruments; QRC stays `did:q42:`; do not call this 🎯 Human-Centered AI. See [human-centric-nomenclature.md](../../../human-centric-nomenclature.md) and [decisions/did-qi-git-utxo.md](./decisions/did-qi-git-utxo.md). No resolver until a method spec exists.
+Identifier split (not a CSCP wire task): `did:qi:` is the Qualia Identifier method **name** for ☉ Human-Centric Internet (HCInet) instruments; QRC stays `did:q42:`; do not call this 🎯 Human-Centered AI. Spec: [did-qi-method.md](../../../did-qi-method.md). Runtime: `did_qi`. See [human-centric-nomenclature.md](../../../human-centric-nomenclature.md).

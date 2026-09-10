@@ -278,6 +278,11 @@ boringtun = "0.7.1"
 rcgen = "0.14.8"
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"] }
 rustls-pki-types = "1"
+# CSCP-09 local HTTP/2 Extended CONNECT + RFC 9297 capsules (loopback only; not MASQUE Internet).
+h2 = "0.4.15"
+http = "1"
+bytes = "1"
+tokio-rustls = "0.26.4"
 # DNSSEC and WireGuard dependencies for SocialWebNet bootstrapping
 trust-dns-resolver = { version = "0.23.2", features = ["dnssec-ring", "dns-over-rustls"] }
 # wireguard-rs = "0.1.1" # Currently unavailable - commented out
