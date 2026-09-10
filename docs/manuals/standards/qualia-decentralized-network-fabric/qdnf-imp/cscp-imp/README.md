@@ -59,4 +59,4 @@ cargo test -p qualia-core-db --lib --offline net::peer::fabric -- --test-threads
 
 Do not match `identity::`. Do not invent a public relay URL. Do not set Internet honesty flags true.
 
-Identifier split (not a CSCP wire task): `did:qi:` is the Qualia Identifier method **name** for Human-Centric Internet (HCInet) instruments; QRC stays `did:q42:`; do not call this HCAI (Human-Centered AI). See [decisions/did-qi-git-utxo.md](./decisions/did-qi-git-utxo.md). No resolver until a method spec exists.
+Identifier split (not a CSCP wire task): `did:qi:` is the Qualia Identifier method **name** for ☉ Human-Centric Internet (HCInet) instruments; QRC stays `did:q42:`; do not call this 🎯 Human-Centered AI. See [human-centric-nomenclature.md](../../../human-centric-nomenclature.md) and [decisions/did-qi-git-utxo.md](./decisions/did-qi-git-utxo.md). No resolver until a method spec exists.

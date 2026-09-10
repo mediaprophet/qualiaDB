@@ -8,12 +8,15 @@ human-centric QualiaDB node. This is the interoperability surface of the WebAI
 Orchestration Layer: the contract independent parties must implement to reach a
 user, without that user exposing their local graph.
 
-> **Nomenclature.** **HCAI** in common use means **Human-Centered AI**. This
-> draft is **Human-Centric** AI Agreement Negotiation: fiduciary Duty of Care,
-> not the Human-Centered AI literature. The acronym **HCAI-ANP** is
-> protocol-local (this document, the agreement vocabulary, and
-> `HCAIAgreementNegotiation`). It is not the Human-Centric Internet (HCInet)
-> and not the Qualia Identifier method (`did:qi`). See
+> **Nomenclature.** **Centered** (🎯) is a design methodology; **centric** (☉) is
+> structural topology — the human is the permanent nucleus, not a temporary
+> target. Canonical marks:
+> [human-centric-nomenclature.md](./human-centric-nomenclature.md).
+> **HCAI** in common use means **Human-Centered AI**. This draft is
+> **Human-Centric** AI Agreement Negotiation: fiduciary Duty of Care.
+> The acronym **HCAI-ANP** is protocol-local (this document, the agreement
+> vocabulary, and `HCAIAgreementNegotiation`). It is not the Human-Centric
+> Internet (☉ HCInet) and not the Qualia Identifier method (`did:qi`). See
 > [did-qi-git-utxo.md](./qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md).
 
 > This draft follows the discipline of `standards-backlog.md`: it specifies a

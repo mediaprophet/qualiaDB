@@ -64,4 +64,12 @@
 - Human input needed: confirm `did:qi` vs `did:hcinet`. none otherwise this step.
 - Next: same as prior DID-QI entry.
 
+## 2026-09-10 — ☉ centric vs 🎯 centered topology
+
+- Step: principal supplied the architectural distinction: centered = static design methodology (human as target); centric = structural topology (human as permanent nucleus). Status: **recorded**.
+- Built: [human-centric-nomenclature.md](../../../human-centric-nomenclature.md) (orbit ☉⊚⚛, radiation ✺⟡✹, contrast 🎯⌖). DID-QI, glossary, HCAI-ANP, identifier-resolution, ADR 0011 cite it. CSCP `-00` §1.1 / §2 state the topology in ASCII (no symbol on the wire or in RFCXML).
+- Measured: not applicable.
+- Human input needed: none this step (symbols are documentation/presentation only).
+- Next: do not mint `did:☉` or put marks in TLVs.
+
 

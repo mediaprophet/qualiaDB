@@ -53,10 +53,11 @@ calls this role a **Q42 Resource Coordinate (QRC)**.
 - Public documentation must not claim W3C DID-method conformance until a method defines
   create/read/update/deactivate operations, resolution metadata, verification relationships, and
   security/privacy properties.
-- Do not promote QRC to the Human-Centric Internet (HCInet) DID. The recorded split is
+- Do not promote QRC to the Human-Centric Internet (☉ HCInet) DID. The recorded split is
   `did:qi:` (Qualia Identifier) for HCInet instrument identity, with git / multi-chain UTXO /
   invitation mailbox as parameterized backings and hostname/`did:web` as alias/Frontdoor only.
-  Do not call this an HCAI method (HCAI commonly means Human-Centered AI). See
+  Do not call this a Human-Centered AI (🎯) method. See
+  [human-centric-nomenclature.md](../human-centric-nomenclature.md) and
   [did-qi-git-utxo.md](./qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md). `did:q42:` remains the
   storage coordinate.
 

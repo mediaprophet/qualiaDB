@@ -8,22 +8,28 @@
 
 This is not a W3C DID Method specification. It freezes collisions and the ledger/hostname split so a later spec does not mint a stub or fold human identity into QRC.
 
-## Nomenclature (do not use HCAI for this method)
+## Nomenclature (☉ human-centric, not 🎯 human-centered)
 
-**HCAI** in common use means **Human-Centered AI** (UX, human-in-the-loop, often still platform-hosted). That is not this work. Qualia writes **human-centric**: the natural-person principal remains in control; no automated system may override an explicit human decision.
+**Centered** is a design methodology: the human is a temporary focal point (User-Centered Design, Human-Centered AI). Visual: 🎯 / ⌖ — the human is the **target**.
+
+**Centric** is structural topology: the human is the permanent nucleus from which data, credentials, and agency radiate. Visual: **☉** (default HCInet mark) / ⊚ — the human is the **core**. Other elements orbit; they do not replace the principal.
+
+Canonical table, orbit/radiation marks, and “do not put ☉ on the wire”: [human-centric-nomenclature.md](../../../../human-centric-nomenclature.md).
+
+**HCAI** in common use means **Human-Centered AI** (🎯). That is not this work. Qualia writes **human-centric** (☉): the natural-person principal remains in control; no automated system may override an explicit human decision.
 
 Do not call `did:qi` “the HCAI DID”. Do not register `did:hcai` or `did:hci` (`hci` is Human-Computer Interaction).
 
 | Term | Expansion | Use |
 |---|---|---|
-| Human-Centered AI | Spell out | External field only. Not an acronym in Qualia identifier or CSCP prose. |
-| Human-Centric Internet | **HCInet** when a short form is required | WebCivics / Qualia network thesis: capability-scoped connectivity (CSCP), fiduciary gates, invitation-scoped discovery. |
+| Human-Centered AI | 🎯 Spell out | External field / static methodology. Not an acronym in Qualia identifier or CSCP prose. |
+| Human-Centric Internet | ☉ **HCInet** | Structural topology: capability-scoped connectivity (CSCP), fiduciary gates, invitation-scoped discovery. |
 | Human-Centric AI Agreement Negotiation Protocol | **HCAI-ANP** only | Existing ingress-contract draft and RDF types (`HCAIAgreementNegotiation`). Protocol-local acronym; not the internet, not the DID method. |
 | Qualia Identifier | `did:qi:` | DID method **name** for HCInet node / organisation / contextual **instrument** identity. |
 | Q42 Resource Coordinate | `did:q42:` | Storage/VM pointer. Not a DID method. |
 | App / RDF `qualia:` | `qualia://`, CURIE, `urn:qualia:` | Local URL scheme and ontology prefix. Not a DID method. |
 
-First use in a document spells **Human-Centric Internet**. **HCInet** is the only short form for that thesis. **HCAI-ANP** is never shortened to **HCAI** in new identifier text.
+First use in a document spells **Human-Centric Internet**. Mark **☉**. **HCInet** is the only short form for that thesis. **HCAI-ANP** is never shortened to **HCAI** in new identifier text. IETF drafts stay ASCII (see the CSCP `-00` terminology note).
 
 ## What a DID method is (and is not)
 

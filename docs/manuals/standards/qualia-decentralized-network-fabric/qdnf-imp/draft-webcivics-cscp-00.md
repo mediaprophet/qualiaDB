@@ -85,6 +85,14 @@ repository.
 
 ### 1.1. Human-centric inversion
 
+In this document, "human-centric" names a structural topology: the
+natural person is the permanent nucleus of agency, disclosure, and
+grant authority. Data, agents, credentials, and relays orbit that
+nucleus. They MUST NOT replace it. This is not "human-centered" as in
+User-Centered Design or Human-Centered AI, where the human is a
+temporary focal point of a design process. Qualia manuals record that
+visual contrast separately; this Internet-Draft stays ASCII.
+
 The application requests:
 
 ```text
@@ -127,6 +135,11 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "OPTIONAL" in this document are to be interpreted as described in
 BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
 capitals, as shown here.
+
+**Human-centric:** structural topology, not a design workshop. The
+natural person remains the nucleus of admission and disclosure. A
+faster path that treats that person as a reachability target is
+non-conformant.
 
 **Peer:** an intended counterpart identified by a 32-byte digest, not
 by a socket address.
