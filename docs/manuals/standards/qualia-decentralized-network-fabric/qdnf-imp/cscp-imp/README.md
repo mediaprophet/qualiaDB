@@ -58,3 +58,5 @@ cargo test -p qualia-core-db --lib --offline net::peer::fabric -- --test-threads
 ```
 
 Do not match `identity::`. Do not invent a public relay URL. Do not set Internet honesty flags true.
+
+Identifier split (not a CSCP wire task): `did:qi:` is the recorded HCAI DID method **name**; QRC stays `did:q42:`; see [decisions/did-qi-git-utxo.md](./decisions/did-qi-git-utxo.md). No resolver until a method spec exists.

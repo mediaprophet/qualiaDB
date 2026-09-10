@@ -50,9 +50,14 @@ calls this role a **Q42 Resource Coordinate (QRC)**.
 - A QRC MAY index a local volume, resolver cache, or signed-record blob.
 - A QRC is not a content digest, DID-method result, global route, or cryptographic DNI.
 - A security decision dereferences the QRC and verifies the full identifier, strong digest, and proof.
-- Public documentation must not claim W3C DID-method conformance until a `did:q42` method defines
+- Public documentation must not claim W3C DID-method conformance until a method defines
   create/read/update/deactivate operations, resolution metadata, verification relationships, and
   security/privacy properties.
+- Do not promote QRC to the Human-Centric Internet DID. The recorded split is `did:qi:` (Qualia
+  Identifier) for controller identity, with git / multi-chain UTXO / invitation mailbox as
+  parameterized backings and hostname/`did:web` as alias/Frontdoor only. See
+  [did-qi-git-utxo.md](./qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md). `did:q42:` remains the
+  storage coordinate.
 
 ## 4. DNI structure
 
