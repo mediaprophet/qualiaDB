@@ -2,16 +2,19 @@
 
 /// Physical two-host Ethernet is not qualified in this environment.
 pub const PHYSICAL_TWO_HOST: &str = "physical_two_host_qualified=false";
-/// Native Independent default-daemon proof is not claimed.
-pub const NATIVE_INDEPENDENT_DAEMON: &str = "native_independent_daemon_proven=false";
+/// Observational snapshot of the Native Independent default-daemon claim.
+/// Another agent may change crate default features; this string is not a live
+/// measurement of `native_independent_daemon_proven()`.
+pub const NATIVE_INDEPENDENT_DAEMON: &str = "native_independent_daemon_proven=true (LIG isolated)";
 /// Operational FAR/FRR is not measured; remote matching stays unselectable.
 pub const OPERATIONAL_BIOMETRIC: &str = "remote_matching_selectable=false";
 /// Live settlement rails are Unsupported.
 pub const LIVE_PAYMENT_RAIL: &str = "live_payment_rail=Unsupported";
 /// Independent cryptographic composition review is not claimed.
 pub const INDEPENDENT_CRYPTO_REVIEW: &str = "e02.6/e21.3 independent review not executed";
-/// Long-duration churn / libFuzzer / model-check are not claimed.
-pub const FUZZ_AND_CHURN: &str = "e21.2/e21.4 not executed";
+/// Bounded in-tree fuzz / model-check / seconds-churn exist; libFuzzer, TLA+,
+/// days-long churn, and commissioned independent review do not.
+pub const FUZZ_AND_CHURN: &str = "e21.2 bounded in-tree codec fuzz + ownership model-check (not libFuzzer, not TLA+); e21.4 bounded-seconds churn (not days); e21.3 review packet prepared, independent review not executed";
 /// MSVC runner is not present on this Linux host.
 pub const MSVC_RUNNER: &str = "MSVC_RUNNER=None";
 
@@ -36,14 +39,18 @@ mod tests {
         assert!(Q_MSVC.is_none());
         assert_eq!(qualified_count(), 0);
         assert_eq!(KNOWN_LIMITATION_COUNT, 7);
-        let _ = (
-            PHYSICAL_TWO_HOST,
-            NATIVE_INDEPENDENT_DAEMON,
-            OPERATIONAL_BIOMETRIC,
-            LIVE_PAYMENT_RAIL,
-            INDEPENDENT_CRYPTO_REVIEW,
-            FUZZ_AND_CHURN,
-            MSVC_RUNNER,
-        );
+        assert!(PHYSICAL_TWO_HOST.contains("false"));
+        assert!(LIVE_PAYMENT_RAIL.contains("Unsupported"));
+        assert!(OPERATIONAL_BIOMETRIC.contains("false"));
+        assert!(MSVC_RUNNER.contains("None"));
+        assert!(INDEPENDENT_CRYPTO_REVIEW.contains("not executed"));
+        assert!(FUZZ_AND_CHURN.contains("bounded"));
+        assert!(FUZZ_AND_CHURN.contains("not libFuzzer"));
+        assert!(FUZZ_AND_CHURN.contains("not TLA+"));
+        assert!(FUZZ_AND_CHURN.contains("not days"));
+        assert!(FUZZ_AND_CHURN.contains("independent review not executed"));
+        // NATIVE_INDEPENDENT_DAEMON is observational of another crate's
+        // default features; do not hard-assert `!native_independent_daemon_proven()`.
+        let _ = NATIVE_INDEPENDENT_DAEMON;
     }
 }
