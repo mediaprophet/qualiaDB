@@ -60,6 +60,8 @@ impl PeerBuilder {
             cancel_epoch: CancelEpoch::ZERO,
             cancelled: false,
             cell_slot,
+            challenges: crate::net::qdnf::link::ChallengeTable::new(),
+            preauth: crate::net::qdnf::link::PreAuthBudget::new(),
         })
     }
 }

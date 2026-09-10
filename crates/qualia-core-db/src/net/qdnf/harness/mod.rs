@@ -1,12 +1,14 @@
 //! Independent test harness. Product APIs are not used as the sole oracle.
 
 pub mod allocation;
+pub mod ci_classes;
 pub mod claims;
 pub mod clock;
 pub mod entropy;
 pub mod faults;
 #[cfg(test)]
 pub mod intercept;
+pub mod limitations;
 pub mod multihop;
 pub mod negative;
 pub mod oracle;

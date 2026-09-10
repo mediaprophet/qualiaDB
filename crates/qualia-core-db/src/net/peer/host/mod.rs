@@ -5,6 +5,7 @@
 //! Application send/receive requires a verified permit and packet protection.
 
 pub mod builder;
+mod discovery;
 pub mod driver;
 pub mod exchange;
 pub mod identity;
@@ -14,12 +15,9 @@ pub mod session_table;
 
 use crate::net::peer::cells::CellSlot;
 use crate::net::peer::runtime::{CancelEpoch, ReservationLedger};
-use crate::net::qdnf::bearer::contract::Bearer;
 use crate::net::qdnf::bearer::IpcEndpoint;
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::frame::{copy_payload, decode_frame, encode_frame, FrameHeader};
-use crate::net::qdnf::link::{Adjacency, AdjacencyState, Beacon, DiscoveryMode, NeighborTable};
-use crate::net::qdnf::registries::{FrameType, NextProtocol};
+use crate::net::qdnf::link::{ChallengeTable, NeighborTable, PreAuthBudget};
 use crate::net::qdnf::resolve::qsr::{
     lookup_exact, lookup_qsr_full as qsr_lookup_full, CoverInterval, HandoverStage, QsrOutcome,
     QsrSnapshot, TokenStage,
@@ -44,6 +42,8 @@ pub struct NativePeer {
     pub(crate) cancel_epoch: CancelEpoch,
     pub(crate) cancelled: bool,
     pub(crate) cell_slot: Option<CellSlot>,
+    pub(crate) challenges: ChallengeTable,
+    pub(crate) preauth: PreAuthBudget,
 }
 
 impl NativePeer {
@@ -60,49 +60,6 @@ impl NativePeer {
     #[inline]
     pub fn local_link(&self) -> LinkId {
         self.local_link
-    }
-
-    /// QLink beacon announce. Replaces mDNS.
-    pub fn announce(&mut self, dest: &ObservedLocator, now_unix: u64) -> Result<(), QdnfError> {
-        let beacon = Beacon {
-            mode: DiscoveryMode::PrivatePairwise,
-            tag: [0x11; 16],
-            link_id: self.local_link,
-            epoch: 1,
-            expiry_unix: now_unix.saturating_add(60),
-            mtu: self.bearer.mtu(),
-        };
-        let mut payload = [0u8; Beacon::WIRE_LEN];
-        let pn = beacon.encode(&mut payload)?;
-        let mut header = FrameHeader::new(FrameType::DiscoveryBeacon, NextProtocol::QLink);
-        header.source_link_id = self.local_link;
-        header.payload_len = pn as u16;
-        let mut wire = [0u8; 256];
-        let n = encode_frame(&header, &payload[..pn], &mut wire)?;
-        self.bearer.send(dest, &wire[..n])?;
-        Ok(())
-    }
-
-    /// Accept a QLink beacon and install adjacency. Link possession is not DID authority.
-    pub fn accept_announce(&mut self) -> Result<LinkId, QdnfError> {
-        let mut out = [0u8; 256];
-        let (got, meta) = self.bearer.recv(&mut out)?;
-        let (decoded, off, len) = decode_frame(&out[..got])?;
-        if decoded.frame_type != FrameType::DiscoveryBeacon {
-            return Err(QdnfError::Malformed);
-        }
-        let mut payload = [0u8; 64];
-        let copied = copy_payload(&out[..got], off, len, &mut payload)?;
-        let beacon = Beacon::decode(&payload[..copied])?;
-        self.neighbors.insert(Adjacency {
-            local: self.local_link,
-            remote: beacon.link_id,
-            observed_peer: meta.observed_source,
-            state: AdjacencyState::Adjacent,
-            generation: 1,
-            mtu: beacon.mtu,
-        })?;
-        Ok(beacon.link_id)
     }
 
     /// Cover-interval membership only. Not authenticated existence.

@@ -32,8 +32,16 @@ const ENTRIES: &[InventoryEntry] = &[
         path: "NativePeer::lookup_qsr",
     },
     InventoryEntry {
+        name: "lookup_qsr_full",
+        path: "NativePeer::lookup_qsr_full",
+    },
+    InventoryEntry {
         name: "open_session",
         path: "NativePeer::open_session",
+    },
+    InventoryEntry {
+        name: "handshake_over_fragments",
+        path: "handshake_over_fragments",
     },
 ];
 
@@ -53,16 +61,18 @@ mod tests {
 
     #[test]
     fn inventory_lists_qpr_entry_points() {
-        let names: [&str; 6] = [
+        let names: [&str; 8] = [
             "pair",
             "exchange_protected",
             "announce",
             "send_stream",
             "lookup_qsr",
+            "lookup_qsr_full",
             "open_session",
+            "handshake_over_fragments",
         ];
         let listed = public_entry_points();
-        assert_eq!(listed.len(), 6);
+        assert_eq!(listed.len(), 8);
         let mut i = 0usize;
         while i < names.len() {
             assert_eq!(listed[i].name, names[i]);

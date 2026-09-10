@@ -14,6 +14,9 @@ pub mod roles;
 pub mod router;
 pub mod settle;
 
+#[cfg(test)]
+mod concurrent;
+
 pub use adapter::*;
 pub use classify::*;
 pub use consent::*;

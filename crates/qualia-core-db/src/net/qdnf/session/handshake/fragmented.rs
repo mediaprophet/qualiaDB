@@ -193,7 +193,10 @@ where
     if initiator_id.is_zero() || responder_id.is_zero() || initiator_id == responder_id {
         return Err(QdnfError::Unauthorized);
     }
-    let mtu = negotiate_mtu(initiator.mtu(), responder.mtu())?;
+    // PQ hellos exceed Ethernet MTU. Cap even when the local bearer is larger
+    // (local-ipc 8192) so the public path still fragments instead of whole-datagram.
+    let negotiated = negotiate_mtu(initiator.mtu(), responder.mtu())?;
+    let mtu = core::cmp::min(negotiated, MAX_QDNF_MTU);
     let (sk, pk) = MlKem768Secret::generate()?;
     let (i_x, r_x) = distinct_x25519()?;
     let ishare = initiator_share(&i_x, &pk)?;

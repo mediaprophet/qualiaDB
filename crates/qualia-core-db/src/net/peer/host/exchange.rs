@@ -1,22 +1,14 @@
 //! Authorised protected IPC exchange. Public QPR must not copy plaintext.
 
 use super::{ControllerIdentity, NativePeer, PeerBuilder, CELL_BYTES_DEFAULT};
-use crate::crypto::network::digest::sha384;
-use crate::crypto::network::kem::MlKem768Secret;
-use crate::crypto::network::transcript::Transcript;
 use crate::net::peer::cells::host_owner::HostAdmission;
 use crate::net::qdnf::authority::{
     binding_for_controllers, AuthorityOwner, ContactState, ExecutionPermit, InstalledSessionKeys,
 };
 use crate::net::qdnf::bearer::ipc::{ipc_pair, FRAME_CAP};
-use crate::net::qdnf::crypto::finished::{finished_mac, verify_finished};
-use crate::net::qdnf::crypto::handshake::{
-    initiator_complete, initiator_share, qualified_handshake_gate, reject_unknown_key_share,
-    require_bound_identities, responder_complete, HandshakeState,
-};
-use crate::net::qdnf::crypto::schedule::derive_handshake_keys;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::harness::oracles::wire::{require_protected, ProtectedView};
+use crate::net::qdnf::session::handshake::handshake_over_fragments;
 use crate::net::qdnf::types::{Generation, LinkId, ScopeEpoch};
 
 /// Authorised application payload ceiling (E04.5 / P2).
@@ -94,75 +86,40 @@ pub fn pair_ipc_cells(
     Ok((a, b))
 }
 
-fn handshake_keys(
-    a_id: ControllerIdentity,
-    b_id: ControllerIdentity,
+fn handshake_on_bearer(
+    a: &mut NativePeer,
+    b: &mut NativePeer,
 ) -> Result<(InstalledSessionKeys, InstalledSessionKeys), QdnfError> {
-    let (sk, pk) = MlKem768Secret::generate()?;
-    let i_x = {
-        let d = sha384(a_id.digest().as_bytes());
-        let mut x = [0u8; 32];
-        x.copy_from_slice(&d.0[..32]);
-        if x.iter().all(|b| *b == 0) {
-            x[0] = 1;
-        }
-        x
-    };
-    let r_x = {
-        let d = sha384(b_id.digest().as_bytes());
-        let mut x = [0u8; 32];
-        x.copy_from_slice(&d.0[..32]);
-        if x == i_x || x.iter().all(|b| *b == 0) {
-            x[0] ^= 0x5a;
-        }
-        x
-    };
-    let ishare = initiator_share(&i_x, &pk)?;
-    let (rshare, r_kem, r_dh) = responder_complete(&ishare, &r_x)?;
-    let (i_kem, i_dh) = initiator_complete(&sk, &i_x, &rshare)?;
-    debug_assert_eq!(i_kem, r_kem);
-    debug_assert_eq!(i_dh, r_dh);
-    let mut t = Transcript::new();
-    t.append(b"suite", b"qpr-pq-1")?;
-    t.append(b"initiator", a_id.digest().as_bytes())?;
-    t.append(b"responder", b_id.digest().as_bytes())?;
-    t.append(b"i-x", &ishare.x25519_pk)?;
-    t.append(b"r-x", &rshare.x25519_pk)?;
-    t.append(b"0rtt", &[0])?;
-    let a_digest = a_id.digest();
-    let b_digest = b_id.digest();
-    require_bound_identities(&t, &a_digest, &b_digest)?;
-    reject_unknown_key_share(b_digest, b_digest)?;
-    qualified_handshake_gate(HandshakeState::Traffic)?;
-    let keys = derive_handshake_keys(&i_kem, &i_dh, &t)?;
-    let fin_i = finished_mac(&keys.initiator_to_responder, &keys.transcript_digest, true)?;
-    verify_finished(
-        &keys.responder_to_initiator,
-        &keys.transcript_digest,
-        false,
-        &finished_mac(&keys.responder_to_initiator, &keys.transcript_digest, false)?,
+    let dest_b = b.locator();
+    let dest_a = a.locator();
+    let id_a = a.identity().digest();
+    let id_b = b.identity().digest();
+    let hs = handshake_over_fragments(
+        &mut a.bearer,
+        &mut b.bearer,
+        &dest_b,
+        &dest_a,
+        &id_a,
+        &id_b,
     )?;
-    verify_finished(
-        &keys.initiator_to_responder,
-        &keys.transcript_digest,
-        true,
-        &fin_i,
-    )?;
+    if hs.keys.transcript_digest.is_zero() {
+        return Err(QdnfError::CryptoFailure);
+    }
+    if hs.client_fragments < 2 || hs.server_fragments < 2 {
+        return Err(QdnfError::Capacity);
+    }
     let a_keys = InstalledSessionKeys::new(
         Generation(1),
-        keys.initiator_to_responder,
-        keys.responder_to_initiator,
+        hs.keys.initiator_to_responder,
+        hs.keys.responder_to_initiator,
         true,
     )?;
     let b_keys = InstalledSessionKeys::new(
         Generation(1),
-        keys.responder_to_initiator,
-        keys.initiator_to_responder,
+        hs.keys.responder_to_initiator,
+        hs.keys.initiator_to_responder,
         true,
     )?;
-    if keys.transcript_digest.is_zero() {
-        return Err(QdnfError::CryptoFailure);
-    }
     Ok((a_keys, b_keys))
 }
 
@@ -218,15 +175,15 @@ fn authorised_exchange_peers(
     let a_did = b"did:q42:a";
     let b_did = b"did:q42:b";
     a.announce(&b.locator(), now)?;
-    let _ = b.accept_announce()?;
+    let _ = b.accept_announce_at(now)?;
     b.announce(&a.locator(), now)?;
-    let _ = a.accept_announce()?;
+    let _ = a.accept_announce_at(now)?;
 
     let mut owner_a = AuthorityOwner::new();
     let mut owner_b = AuthorityOwner::new();
     let permit_a = issue_permit(&mut owner_a, a_did, b_did, purpose, b"op-a", now)?;
     let permit_b = issue_permit(&mut owner_b, b_did, a_did, purpose, b"op-b", now)?;
-    let (keys_a, keys_b) = handshake_keys(a.identity(), b.identity())?;
+    let (keys_a, keys_b) = handshake_on_bearer(a, b)?;
 
     a.activate_protected(permit_a, keys_a, now)?;
     b.activate_protected(permit_b, keys_b, now)?;
@@ -369,9 +326,9 @@ mod tests {
         .unwrap();
         let now = 1_700_000_000u64;
         a.announce(&b.locator(), now).unwrap();
-        let _ = b.accept_announce().unwrap();
+        let _ = b.accept_announce_at(now).unwrap();
         b.announce(&a.locator(), now).unwrap();
-        let _ = a.accept_announce().unwrap();
+        let _ = a.accept_announce_at(now).unwrap();
         install_session(&mut a, b"did:q42:a", b"did:q42:b", 1, now);
         let wrong = crate::net::qdnf::types::ObservedLocator::from_slice(&[0x99]).unwrap();
         assert_eq!(
