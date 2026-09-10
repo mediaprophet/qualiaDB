@@ -17,7 +17,7 @@ Two hosts on the public Internet, each behind some NAT, want an authenticated tu
 | Session (optional) | QSession `handshake_over_fragments` | Already proven on two **loopback** WireGuard meshes. Same bytes can ride the internet overlay once the outer tunnel is up. |
 | NAT | RFC 5389 STUN Binding on **one** socket toward **two** servers | Classifies endpoint-independent vs address-dependent mapping (RFC 4787). A STUN address is an observation, not a listen locator. |
 | Roles | One **listen** (reachable UDP), one **connect** (outbound) | Symmetric / address-dependent SNAT cannot publish a STUN mapping for a third host. Hole punching will not work from that side. |
-| Relay | In-process hub proven; **no public URL** | If **both** sides are address-dependent and neither has a port-forward, both must **dial outbound** to a third party that forwards opaque WireGuard datagrams (DERP/TURN shape). See [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md). This Cursor cloud VM cannot be that relay. |
+| Relay | In-process hub proven; **no public URL** | Consultant architecture: concurrent approved relay + bounded direct checks; TURN/UDP and WSS/443 as complementary transports. See [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md). This Cursor cloud VM cannot be that relay. |
 
 What we will **not** do:
 
@@ -145,9 +145,9 @@ and record whether the handshake completed. That is the missing evidence. Nothin
 
 If grok-bot **also** sits on address-dependent SNAT with no port-forward, **WireGuard configuration cannot create a path**. Roaming does not punch SNAT. WebRTC without TURN has the same hole (`RTCConfiguration` in desktop currently has **no ICE servers**).
 
-What works: both peers **dial outbound** (HTTPS/WSS/443 preferred) to a third party that forwards **opaque WireGuard datagrams**. That is Tailscale DERP / ICE+TURN, not “WG by itself” and not libp2p circuit-relay. In-tree proof: `p2p/outbound_relay.rs` (`public_relay_dialed()==false`). Full recommendation and expert questions A–E: [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md).
+What works: establish an **approved relay concurrently** with bounded direct checks; use the first authenticated, policy-compatible path; upgrade to direct IPv6 when it performs. Complementary transports: TURN/UDP and outbound WSS/443. Neither is a firewall guarantee. In-tree fixture: `p2p/outbound_relay.rs` (`public_relay_dialed()==false`). Architecture and A–E answers: [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md).
 
-This Cursor cloud pod cannot host that relay (same SNAT). Barrier A (one reachable UDP listen) is cheaper **if** grok-bot can listen. If it cannot, the next paste we need is a **dialable relay URL**, not more STUN.
+This Cursor cloud pod cannot host that relay (same SNAT). Barrier A (one reachable UDP listen) is cheaper **if** grok-bot can listen. If it cannot, the next paste is still a **dialable relay URL plus named operator** — the architecture does not invent one.
 
 ### Barrier F — physical Ethernet (separate from internet)
 
@@ -215,7 +215,7 @@ These tools do not complete the internet test by themselves. They make Barrier D
 One of:
 
 1. **LISTEN_ADDR + PASS** from grok-bot (or any reachable listen host) while listen is running, or
-2. Confirmation grok-bot cannot listen **plus** expert answers A–E in [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md) (at least: who operates the public relay and the first dialable WSS/443 URL), or
+2. Confirmation grok-bot cannot listen **plus** the still-missing **B** inventory from [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md) (named operator, verified WSS URL/certificate, quotas), or
 3. A self-hosted Cursor worker on grok-bot’s machine **if and only if** that machine’s UDP `51820` is reachable; the worker still has to run `mesh-probe listen`.
 
 I do not need Ethernet privileges to run the **internet** test. I do need Barrier A and D, **or** a dialable relay.

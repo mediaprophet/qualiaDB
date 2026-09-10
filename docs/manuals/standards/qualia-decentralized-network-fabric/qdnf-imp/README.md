@@ -22,6 +22,7 @@ implement networking, certify cryptography or change memory constants.
 | [Task register](./task-registry.json) | Canonical dependencies, ownership roles and implementation status |
 | [Validation matrix](./validation-matrix.md) | Required test evidence, platform matrix and completion standard |
 | [Progress log](./progress-log.md) | Dated outcomes, measurements, limitations and next actions |
+| [Internet peer connectivity architecture](./internet-peer-connectivity-architecture.md) | Retain WireGuard; six connection-manager principles; A–E answers. Not implemented. |
 
 ## 2. Detailed checklists
 

@@ -3,7 +3,9 @@
 **Date:** 2026-09-10  
 **Audience:** networking expert asked to direct the implementation.  
 **Status:** recommendation recorded; in-process outbound relay proven; **no public relay operated yet**; internet two-host handshake **not** executed.  
-**Related:** [internet-two-host.md](./internet-two-host.md) (measured SNAT on this Cursor cloud pod).
+**Related:** [internet-two-host.md](./internet-two-host.md) (measured SNAT on this Cursor cloud pod);
+[internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md) (consultant
+decision: retain WireGuard; six connection-manager principles; A–E answered).
 
 This is not Native Independent Ethernet. It is the labelled **transition** path (WireGuard / ICE / outbound relay / optional WebRTC). Programme checkboxes stay unchecked.
 
@@ -113,12 +115,18 @@ Until (1) has a URL this agent can **dial outbound**, the internet two-host test
 
 `internet_two_host_handshake_executed()` remains false. The in-process relay is not an internet test.
 
-## 6. Expert: please answer these and nothing else
+## 6. Expert answers (recorded 2026-09-10)
 
-A. Confirm or reject §3 (WG + ICE race + outbound DERP-shaped relay; WebRTC = browser profile).  
-B. Name the relay operator and the first URL/port this cloud agent may dial (WSS preferred).  
-C. Choose signalling for the first two-host run: paste / `qcx1_` mailbox / HTTPS rendezvous.  
-D. Confirm TURN URIs for desktop WebRTC if browsers must join the same mesh.  
-E. Explicitly reject libp2p circuit-relay unless you want it back in the default graph.
+Normative write-up: [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md) §2.
 
-With A–C, implementation of a real dialer against that URL is straightforward. Without a dialable relay or a reachable grok-bot UDP listen, no software change on this pod can complete the internet test.
+| | Decision |
+|---|---|
+| **A** | Confirm WireGuard + concurrent ICE checks + outbound relay. ICE discovers/checks direct and TURN candidates; it is not a second transport after WireGuard. WSS circuits are separately scheduled. WebRTC remains the browser profile. |
+| **B** | Mission/commons-controlled infrastructure with independently administered backup. **No operator or live URL has been supplied.** First service: authenticated WSS on TCP 443. Host, certificate, administrator and quotas are still deployment inventory. |
+| **C** | First two-host test: privately exchanged, expiring invitations with independently verified key fingerprints. Production: invitation-bootstrapped, end-to-end protected HTTPS rendezvous/mailboxes, integrated with QSR. Ordinary phrases must not mint production WireGuard keys. |
+| **D** | TURN required for a qualified WebRTC fallback. Mission-operated TURN, short-lived credentials. **URIs remain a deployment input.** A WSS relay is not a TURN server. |
+| **E** | Exclude libp2p circuit-relay from the replacement default graph. Compatibility apps migrate through explicit adapters only. |
+
+Corrections carried forward: STUN pair is an observation, not a complete RFC 4787 classification; do not treat `relay_required_for_address_dependent()` as a universal theorem; WSS/443 is not a firewall guarantee; establish relay concurrently with direct checks; privacy policy filters probes before discovery.
+
+Implementation of a real dialer still waits on **B** (a named operator and verified WSS URL) or a reachable grok-bot UDP listen. No software change on this pod can complete the internet test without one of those.

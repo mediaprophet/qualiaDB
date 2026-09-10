@@ -643,5 +643,17 @@
 - Human input needed: consultant should `git fetch origin 0.0.38`. Expert answers A–E still open.
 - Next: same as prior entry (dialable relay URL or `LISTEN_ADDR`).
 
+## 2026-09-10 — consultant connectivity architecture landed (docs only)
+
+- Step: principal delivered [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md). Status: **docs landed on `0.0.38`**. No connection-manager refactor, no runtime tests, no deployment. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - In-tree copy of the proposal at `qdnf-imp/internet-peer-connectivity-architecture.md`.
+  - Recorded A–E in `nat-traversal-expert-brief.md` §6. Direction: retain WireGuard; concurrent relay + ICE; complementary TURN/UDP and WSS/443; privacy filters probes; durable QSession across reconnect; disconnection is a delivery mode.
+  - Pointed `internet-two-host.md` and the programme README at that file.
+- Measured: not measured this step (documentation only). Relative links used: `sensitive-operations-blueprint.md`, `../core-memory-and-parallel-networking.md` (both present).
+- Not claimed: Internet handshake; public relay; `public_relay_dialed()`; implementation of `net/peer/connectivity/` or ICE/TURN/WSS adapters.
+- Human input needed: **B** — named operator(s), verified WSS URL/certificate, TURN URIs/port ranges, issuing authority, first two endpoints, selected protection policy. The architecture explicitly does not invent these.
+- Next: do not start the substantial socket/ICE/relay refactor until the principal assigns that stage. First Internet trial still needs the deployment inventory above or a reachable `LISTEN_ADDR`.
+
 
 
