@@ -35,6 +35,47 @@ struct HubState {
     b_len: usize,
 }
 
+impl HubState {
+    fn push(&mut self, from_a: bool, datagram: &[u8]) -> Result<usize, &'static str> {
+        let (q, n) = if from_a {
+            (&mut self.a_to_b, &mut self.a_len)
+        } else {
+            (&mut self.b_to_a, &mut self.b_len)
+        };
+        if *n >= QUEUE {
+            return Err("would-block");
+        }
+        q[*n].len = datagram.len();
+        q[*n].bytes[..datagram.len()].copy_from_slice(datagram);
+        *n += 1;
+        Ok(datagram.len())
+    }
+
+    fn pop(&mut self, into_a: bool, out: &mut [u8]) -> Result<usize, &'static str> {
+        let (q, n) = if into_a {
+            (&mut self.b_to_a, &mut self.b_len)
+        } else {
+            (&mut self.a_to_b, &mut self.a_len)
+        };
+        if *n == 0 {
+            return Err("would-block");
+        }
+        let slot = q[0];
+        if slot.len > out.len() {
+            return Err("capacity");
+        }
+        out[..slot.len].copy_from_slice(&slot.bytes[..slot.len]);
+        let mut i = 0;
+        while i + 1 < *n {
+            q[i] = q[i + 1];
+            i += 1;
+        }
+        *n -= 1;
+        q[*n] = Slot::EMPTY;
+        Ok(slot.len)
+    }
+}
+
 /// One dialed end of an outbound relay pair.
 pub struct RelayEndpoint {
     is_a: bool,
@@ -67,45 +108,18 @@ impl RelayEndpoint {
         if datagram.len() > MAX_DATAGRAM {
             return Err("capacity");
         }
-        let mut st = self.hub.lock().map_err(|_| "closed")?;
-        let (q, n) = if self.is_a {
-            (&mut st.a_to_b, &mut st.a_len)
-        } else {
-            (&mut st.b_to_a, &mut st.b_len)
-        };
-        if *n >= QUEUE {
-            return Err("would-block");
-        }
-        q[*n].len = datagram.len();
-        q[*n].bytes[..datagram.len()].copy_from_slice(datagram);
-        *n += 1;
-        Ok(datagram.len())
+        self.hub
+            .lock()
+            .map_err(|_| "closed")?
+            .push(self.is_a, datagram)
     }
 
     /// Pop one datagram. `Err("would-block")` if empty.
     pub fn recv(&mut self, out: &mut [u8]) -> Result<usize, &'static str> {
-        let mut st = self.hub.lock().map_err(|_| "closed")?;
-        let (q, n) = if self.is_a {
-            (&mut st.b_to_a, &mut st.b_len)
-        } else {
-            (&mut st.a_to_b, &mut st.a_len)
-        };
-        if *n == 0 {
-            return Err("would-block");
-        }
-        let slot = q[0];
-        if slot.len > out.len() {
-            return Err("capacity");
-        }
-        out[..slot.len].copy_from_slice(&slot.bytes[..slot.len]);
-        let mut i = 0;
-        while i + 1 < *n {
-            q[i] = q[i + 1];
-            i += 1;
-        }
-        *n -= 1;
-        q[*n] = Slot::EMPTY;
-        Ok(slot.len)
+        self.hub
+            .lock()
+            .map_err(|_| "closed")?
+            .pop(self.is_a, out)
     }
 }
 
