@@ -60,6 +60,21 @@ pub const fn quic_iroh_benchmark_executed() -> bool {
     false
 }
 
+/// Local capability-scoped fabric (kernel, leases, loopback bound-UDP).
+pub const fn capability_fabric_local_executed() -> bool {
+    true
+}
+
+/// Public MASQUE bound-UDP / HTTP/3 proxy has not been dialed.
+pub const fn masque_bound_udp_internet_executed() -> bool {
+    false
+}
+
+/// noq has not been admitted as the Internet QUIC engine.
+pub const fn noq_transport_admitted() -> bool {
+    false
+}
+
 /// Native Independent Ethernet is a different path.
 pub const fn native_independent_from_this_path() -> bool {
     false
@@ -82,6 +97,9 @@ mod tests {
         assert!(address_dependent_is_not_universal_relay_law());
         assert!(!browser_turn_interop_executed());
         assert!(!quic_iroh_benchmark_executed());
+        assert!(capability_fabric_local_executed());
+        assert!(!masque_bound_udp_internet_executed());
+        assert!(!noq_transport_admitted());
         assert!(!native_independent_from_this_path());
     }
 }

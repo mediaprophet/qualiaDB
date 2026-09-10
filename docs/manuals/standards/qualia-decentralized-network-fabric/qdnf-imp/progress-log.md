@@ -685,5 +685,21 @@
 - Human input needed: still **B** for public-network qualification only. Local path no longer waits on a purchased server.
 - Next: public-network qualification when an operator URL or `LISTEN_ADDR` exists.
 
+## 2026-09-10 — CSCP Internet-Draft and local fabric supervisor
+
+- Step: principal asked for a novel, state-of-the-art connection architecture from primitives, then explicitly authorised defining novel protocols as IETF Internet-Drafts when they are transformationally better for a human-centric Internet. Status: **`-00` written; local supervisor implemented; not RFC, not datatracker, not Internet**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**.
+- Built:
+  - Research: [quic-native-connectivity-research-2026.md](./quic-native-connectivity-research-2026.md) (32 sources; DCUtR retains relays; Pkarr is discovery not concealment; Holepunch is not infrastructure-free).
+  - Normative protocol: [draft-webcivics-cscp-00.md](./draft-webcivics-cscp-00.md) — Capability-Scoped Connectivity Protocol. Purpose, protection and budget are connection objects. Exclude-then-rank is a MUST. Working document; expires 14 March 2027. Not submitted to datatracker in this step.
+  - Architecture note: [capability-scoped-connection-fabric.md](./capability-scoped-connection-fabric.md).
+  - Runtime: `crates/qualia-core-db/src/net/peer/fabric/` — intent, private contact, relay vs custody leases, path evidence (no public SessionReady hatch), receipts, kernel, exclude-then-rank, CSCP ConnectRequest TLV codec (`CSCP` v1), loopback bound-UDP relay with lease charge/expiry.
+  - Honesty flags: `capability_fabric_local_executed()=true`; `masque_bound_udp_internet_executed()=false`; `noq_transport_admitted()=false`; public relay / Internet two-host / QUIC-iroh benchmark remain false.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter `net::peer::fabric`: **24 passed**, 0 failed, ~0.00s test runtime after compile (`/opt/cursor/artifacts/capability-fabric-tests.log`). Includes `faster_direct_cannot_beat_relay_only_policy`, four named experiments, `local_bound_udp_delivers_and_admits_session`, `connect_request_round_trip`, `unknown_critical_tlv_is_rejected`.
+- Not claimed: IETF publication; RFC; public MASQUE/bound-UDP; noq admission; Internet two-host; public relay; new cryptography; a Qualia QUIC implementation; NAT physics disappearing.
+- Human input needed: whether to **submit** `draft-webcivics-cscp-00` to the IETF datatracker (author email, shepherd, intended WG/area); named operators / live URLs for Gate B; whether noq evaluation is authorised; acceptable disclosure per deployment.
+- Next: do not mark programme packages complete. Gate A mapping of QSession-to-CSCP on a real QUIC engine remains a qualification step, not done here.
+
+
 
 

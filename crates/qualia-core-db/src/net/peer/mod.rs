@@ -2,6 +2,7 @@
 
 pub mod cells;
 pub mod connectivity;
+pub mod fabric;
 pub mod host;
 pub mod replication;
 pub mod runtime;
