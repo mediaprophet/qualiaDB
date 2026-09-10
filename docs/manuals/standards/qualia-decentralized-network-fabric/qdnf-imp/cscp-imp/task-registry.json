@@ -154,7 +154,7 @@
       "title": "IETF datatracker submission",
       "status": "blocked",
       "depends_on": ["CSCP-11"],
-      "blocked_reason": "Human author contact, intended WG/area, submission decision",
+      "blocked_reason": "Author recorded (Timothy Charles Holborn <timothy.holborn@gmail.com>). WG/area not chosen. Not posted to datatracker.",
       "checklist": "workstream.md",
       "assignee": null,
       "evidence": []

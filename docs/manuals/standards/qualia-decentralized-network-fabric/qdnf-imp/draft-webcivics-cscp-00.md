@@ -413,9 +413,15 @@ noq engine, and not RFC publication.
 
 ## Authors' Addresses
 
-Timothy Holborn
+Timothy Charles Holborn
 WebCivics
-Email: (as on existing WebCivics Internet-Drafts)
+Email: timothy.holborn@gmail.com
+
+This revision is an individual Internet-Draft. It is not adopted by an
+IETF working group. A working-group filename (draft-ietf-…) is assigned
+only if a WG later adopts the document. The human-centric Internet
+rationale may be discussed in IRTF venues (for example HRPC) without
+that discussion being the protocol's IETF home.
 
 ## Acknowledgements
 

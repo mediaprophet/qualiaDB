@@ -76,4 +76,4 @@ Integrator ticks a box only after recorded evidence. Do not tick because a stub 
 - [ ] CSCP-09 HTTP/2 CONNECT/capsule stack on a live path
 - [x] CSCP-10 Browser WebTransport/WSS profile note (local WSS ≠ browser interop)
 - [x] CSCP-11 Independent review of CSCP-01–06 (accept-with-fixes; F1–F4 applied)
-- [ ] CSCP-12 Human: submit `-00` to IETF datatracker
+- [ ] CSCP-12 Human: submit `-00` to IETF datatracker (author recorded: Timothy Charles Holborn <timothy.holborn@gmail.com>; WG/area not chosen; not posted)

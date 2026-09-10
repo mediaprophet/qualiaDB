@@ -40,3 +40,12 @@
 - Human input needed: CSCP-12 datatracker; CSCP-08 operator URL. none this step otherwise.
 - Next: do not claim HTTP/2 CONNECT, QUIC, MASQUE Internet, or RFC.
 
+## 2026-09-10 — CSCP-12 author recorded; CSCP-08 still not a URL
+
+- Step: principal named the I-D author and asked whether GitHub Pages / CloudFront / a firewalled home PC / IPFS / chains can stand in for a public relay. Status: **author filled in; not submitted; no public relay**.
+- Built: Authors' Addresses in `draft-webcivics-cscp-00.md` now Timothy Charles Holborn <timothy.holborn@gmail.com>. Individual draft; WG not chosen.
+- Measured: not applicable (document identity, not a network trial).
+- Human input needed: datatracker post (his login + confirmation mail); WG later via DISPATCH if he wants a home. CSCP-08 still needs a process that accepts inbound Internet sessions (WSS/443 or MASQUE), not a static CDN and not a ledger.
+- Next: do not set Internet honesty flags. Pages/WASM can be a *client* origin later; they cannot be Gate B.
+
+

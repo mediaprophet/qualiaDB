@@ -715,6 +715,12 @@
 - Human input needed: still CSCP-12 submit and CSCP-08 operator URL.
 - Next: HTTP/2 CONNECT stack and MASQUE remain open; do not tick original 30 packages.
 
+## 2026-09-10 — CSCP author identity recorded
+
+- Step: principal supplied I-D author Timothy Charles Holborn <timothy.holborn@gmail.com>. Status: **recorded in `-00`; not datatracker-posted**. WG/area still unchosen. Public relay still not a CDN, IPFS, or chain.
+- Human input needed: whether to click submit on datatracker; a live inbound WSS/MASQUE origin if Gate B is wanted.
+
+
 
 
 
