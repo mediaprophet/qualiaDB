@@ -588,4 +588,21 @@
 - Human input needed: CAP_NET_RAW / veth two-host Ethernet; live-rail credentials if Stripe/ILP should ever settle; a separate cryptographic reviewer to execute E21.3; operational biometric corpora for E15.6. None of those can be faked here.
 - Next: remaining honest gates above; do not mark E00–E21 packages complete until those qualifications exist.
 
+## 2026-09-10 — SocialWebNet QDNF-over-WireGuard overlay — done in-tree, not Native Independent
+
+- Step: user asked to update SocialWebNet to use QDNF, replace libp2p with the native stack, and keep WireGuard as part of the SocialWebNet profile. Status: **done** for the in-tree overlay adapter. Enhancement-plan checkboxes were **not** marked (E05.5 stays open). Original 30 packages remain **pending**.
+- Built:
+  - SocialWebNet already had no libp2p (userspace WireGuard + IPv6 overlay). That outer carrier is kept.
+  - Overlay port `mesh_datagram::ports::QDNF = 6423` carries encoded QFrames. Chat stays on `6420`; `chat_mesh_service` already ignores non-CHAT ports.
+  - `p2p/social_qdnf.rs` implements `SocialQdnfLink` (`Bearer` profile `WireGuardTransitionV1 = 4`). Lives in `p2p/`, not `net/qdnf/` (QDNF must not import IP sockets).
+  - Honesty: `uses_libp2p()==false`, `carrier_is_wireguard()==true`, `native_independent()==false`. Inner packets remain IPv6 because boringtun drops non-IPv6.
+  - `SocialWebNet::send_qdnf_frame` plus `copy_qdnf_frame` for MeshService/chat demux.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - `p2p::social_webnet` / `p2p::social_qdnf` / `p2p::mesh_datagram` / WireGuard profile test: **16 passed**, 0 failed, 0.33s (`/opt/cursor/artifacts/social-qdnf-tests.log`). Includes two-mesh QFrame exchange, CHAT/QDNF demux on one tunnel, and `handshake_over_fragments` over the WG overlay.
+  - `p2p::mesh_service`: **2 passed**, 0 failed (`/opt/cursor/artifacts/social-qdnf-mesh-service.log`).
+  - Default graph: `cargo tree -p qualia-core-db -i libp2p` → package did not match any packages.
+- Not claimed: Native Independent (this is labelled IP/WG transition); physical two-host Ethernet; silent IP fallback of the raw-ethernet bearer; E05.5 platform encapsulation complete; chat/UI migration off WireGuard.
+- Human input needed: none this step for the overlay adapter. Physical Ethernet and Native Independent still need the same external gates as the prior swarm wave.
+- Next: production callers that still want QSession on SocialWebNet can attach `SocialQdnfLink` or demux `ports::QDNF` from `MeshService` inbound; do not treat this as Native Independent.
+
 
