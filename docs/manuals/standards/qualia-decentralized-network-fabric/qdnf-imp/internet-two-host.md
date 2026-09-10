@@ -114,6 +114,15 @@ cargo build -p qualia-cli --offline   # or with network if the host has no cargo
 
 If grok-bot cannot build, say so: we can add a tiny standalone listen recipe, but someone still has to run a UDP process on a reachable address.
 
+This Cursor cloud image could not build `qualia-cli` (`openssl-sys` / missing `libssl-dev`). The **connect** half therefore lives in `qualia-core-db` as `p2p::mesh_probe::connect_probe`. After you paste Barrier D, this agent runs:
+
+```text
+QDNF_LISTEN_ADDR=203.0.113.5:51820 QDNF_MESH_PASS='THE_PHRASE' \
+  cargo test -p qualia-core-db --lib internet_connect_if_env_set -- --exact --nocapture
+```
+
+That test is a no-op when the env vars are unset, so CI does not hang.
+
 ### Barrier D — tell this agent the locator (one line)
 
 Paste back **exactly**:
@@ -162,9 +171,11 @@ qualia-cli mesh-probe listen --pass 'THE_PHRASE' --port 51820 --seconds 300
 ### On this Cursor cloud agent (after Barrier D)
 
 ```text
-qualia-cli mesh-probe observe --port 51820
-qualia-cli mesh-probe connect --pass 'THE_PHRASE' --peer LISTEN_ADDR --qdnf --timeout 20
+QDNF_LISTEN_ADDR=LISTEN_ADDR QDNF_MESH_PASS='THE_PHRASE' \
+  cargo test -p qualia-core-db --lib internet_connect_if_env_set -- --exact --nocapture
 ```
+
+(`qualia-cli mesh-probe connect` is the same protocol if that host has OpenSSL headers.)
 
 Expect listen to print `QDNF overlay` with `magic_ok=true`.
 
@@ -188,7 +199,8 @@ E05.5 / OPS-01 checkboxes stay unchecked.
 ## 7. What was implemented in-tree with this note
 
 - `p2p/stun_observe.rs` — RFC 5389 XOR-MAPPED-ADDRESS parse/encode, two-server mapping class, connect-only role recommendation.
-- `qualia-cli mesh-probe observe` — live STUN on a bound UDP socket.
+- `p2p/mesh_probe.rs` — `connect_probe` plus env-gated `internet_connect_if_env_set` so this cloud agent can dial without `qualia-cli`.
+- `qualia-cli mesh-probe observe` — live STUN on a bound UDP socket (needs OpenSSL headers to build the CLI on this image).
 - `mesh-probe listen` prints the same observe report on the tunnel socket.
 - `mesh-probe connect --qdnf` sends a QFrame on overlay port `6423`.
 

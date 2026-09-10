@@ -605,4 +605,20 @@
 - Human input needed: none this step for the overlay adapter. Physical Ethernet and Native Independent still need the same external gates as the prior swarm wave.
 - Next: production callers that still want QSession on SocialWebNet can attach `SocialQdnfLink` or demux `ports::QDNF` from `MeshService` inbound; do not treat this as Native Independent.
 
+## 2026-09-10 — internet two-host: barriers documented, handshake not executed
+
+- Step: user asked for a state-of-the-art two-host internet path **or** a markdown of barriers so they can be cleared. Status: **barriers documented + observe/connect tools landed; internet handshake not executed**. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - Design/barriers: `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/internet-two-host.md`.
+  - `p2p/stun_observe.rs` — RFC 5389 XOR-MAPPED-ADDRESS; two-server RFC 4787 mapping class; `internet_two_host_handshake_executed()==false`.
+  - `p2p/mesh_probe.rs` — `connect_probe` + env-gated `internet_connect_if_env_set` (`QDNF_LISTEN_ADDR` / `QDNF_MESH_PASS`) so this cloud agent can dial without `qualia-cli`.
+  - `qualia-cli mesh-probe observe` and `connect --qdnf` (CLI did not build **on this image**: `openssl-sys` / missing `libssl-dev`).
+- Measured on this pod:
+  - Same UDP socket, two STUN servers: **address-dependent** mapping (Google `54.235.250.208:7013` vs Cloudflare `54.235.254.240:52034`). Hairpin to own mapping timed out. `CapEff=0`. Egress unrestricted. Outbound UDP works.
+  - Library tests: **6 passed** (`p2p::stun_observe` + `p2p::mesh_probe`), including live STUN class=`AddressDependent` (`/opt/cursor/artifacts/stun-observe-live.log`). Env-gated internet connect skipped (no listen address).
+- Not claimed: internet two-host handshake; Native Independent; physical Ethernet; hole punch from this SNAT.
+- Human input needed: **Barrier A+D** — a reachable UDP `LISTEN_ADDR` (grok-bot / desktop / VPS port-forward) plus passphrase while listen is running. This pod is connect-only. Do not paste this pod's STUN address as a listen locator.
+- Next: when `LISTEN_ADDR` and `PASS` are pasted, run `internet_connect_if_env_set` and record handshake true/false honestly.
+
+
 

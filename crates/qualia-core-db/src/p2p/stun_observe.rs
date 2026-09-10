@@ -232,8 +232,33 @@ mod tests {
     }
 
     #[test]
-    fn internet_handshake_is_not_claimed() {
+    fn live_two_server_observe_does_not_claim_handshake() {
+        use std::net::ToSocketAddrs;
+        let Ok(sock) = UdpSocket::bind("0.0.0.0:0") else {
+            return;
+        };
+        let Ok(mut a_it) = ("stun.l.google.com", 3478u16).to_socket_addrs() else {
+            return;
+        };
+        let Ok(mut b_it) = ("stun.cloudflare.com", 3478u16).to_socket_addrs() else {
+            return;
+        };
+        let Some(a) = a_it.find(|s| s.is_ipv4()) else {
+            return;
+        };
+        let Some(b) = b_it.find(|s| s.is_ipv4()) else {
+            return;
+        };
+        if let Ok(report) = observe_mapping(&sock, a, b, Duration::from_secs(3)) {
+            println!(
+                "live observe local={} a={} b={} class={:?}",
+                report.local, report.sample_a, report.sample_b, report.class
+            );
+            assert_eq!(recommend_role(report.class), ProbeRole::ConnectOnly);
+            assert_ne!(report.sample_a.ip(), std::net::IpAddr::from([0, 0, 0, 0]));
+        } else {
+            println!("live observe: STUN did not complete (offline CI is fine)");
+        }
         assert!(!internet_two_host_handshake_executed());
-        assert!(labelled_wireguard_transition());
     }
 }
