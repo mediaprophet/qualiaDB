@@ -1,8 +1,8 @@
 //! In-process 1..=16 cell scaling under one host budget (E10.5).
 //!
 //! Admission is fair-share: a greedy request is capped so remaining cohort
-//! cells keep an equal floor of leftover bytes. RSS, NUMA, and joules are
-//! not measured here — those APIs return [`HardwareObservation`].
+//! cells keep an equal floor of leftover bytes. RSS and NUMA live in
+//! [`super::hardware`]. Idle joules stay unmeasured.
 //!
 //! Tests charge KiB-scale [`CellProfile::NetworkSmall`] slots. The 42 MiB
 //! Sentinel figure stays in [`super::pass_budget`] as accounting.
@@ -117,42 +117,10 @@ impl ScaleHost {
     }
 }
 
-/// Process RSS is not sampled by this library.
-pub fn rss_bytes() -> Result<u64, HardwareObservation> {
-    Err(HardwareObservation::Unsupported)
-}
-
-/// NUMA placement is not sampled by this library.
-pub fn numa_node() -> Result<u32, HardwareObservation> {
-    Err(HardwareObservation::Unsupported)
-}
-
-/// Idle energy is not metered in this userspace.
-pub fn idle_joules() -> Result<u64, HardwareObservation> {
-    Err(HardwareObservation::Unmeasured)
-}
-
-#[inline]
-pub const fn rss_measured() -> bool {
-    false
-}
-
-#[inline]
-pub const fn numa_measured() -> bool {
-    false
-}
-
-#[inline]
-pub const fn idle_energy_measured() -> bool {
-    false
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::net::qdnf::cells::pass_budget::{
-        pass_maps_process_rss, SENTINEL_PASS_TOTAL,
-    };
+    use crate::net::qdnf::cells::pass_budget::SENTINEL_PASS_TOTAL;
     use crate::net::qdnf::errors::QdnfError;
 
     const CELL: u64 = 64;
@@ -215,17 +183,6 @@ mod tests {
             assert_eq!(host.occupied(), n);
             c += 1;
         }
-    }
-
-    #[test]
-    fn rss_numa_joules_are_unsupported_or_unmeasured() {
-        assert_eq!(rss_bytes(), Err(HardwareObservation::Unsupported));
-        assert_eq!(numa_node(), Err(HardwareObservation::Unsupported));
-        assert_eq!(idle_joules(), Err(HardwareObservation::Unmeasured));
-        assert!(!rss_measured());
-        assert!(!numa_measured());
-        assert!(!idle_energy_measured());
-        assert!(!pass_maps_process_rss());
     }
 
     #[test]
