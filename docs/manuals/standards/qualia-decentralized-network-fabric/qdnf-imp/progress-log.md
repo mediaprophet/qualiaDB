@@ -620,5 +620,20 @@
 - Human input needed: **Barrier A+D** — a reachable UDP `LISTEN_ADDR` (grok-bot / desktop / VPS port-forward) plus passphrase while listen is running. This pod is connect-only. Do not paste this pod's STUN address as a listen locator.
 - Next: when `LISTEN_ADDR` and `PASS` are pasted, run `internet_connect_if_env_set` and record handshake true/false honestly.
 
+## 2026-09-10 — SNAT / WireGuard / WebRTC: solution defined, public relay not dialed
+
+- Step: user expected WireGuard (perhaps via WebRTC) to get through SNAT / missing port-forwards. Status: **recommendation recorded + in-process outbound relay proven; internet handshake not executed**. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - Physics: WireGuard is Noise_IK over UDP + roaming. Roaming does not punch address-dependent SNAT. “WG through NAT” in the wild is WG + ICE + **DERP/TURN** (both sides *dial outbound*). Desktop WebRTC uses empty `RTCConfiguration` (no ICE/TURN).
+  - Recommended SocialWebNet path: (1) direct WG UDP if reachable, (2) ICE/STUN short timeout, (3) outbound packet relay (WSS/443 preferred) carrying **opaque** WG datagrams. WebRTC = browser/HCAI-ANP profile of 2+3, not the native default. No `webrtc-rs` in `qualia-core-db`. No libp2p circuit-relay.
+  - `p2p/outbound_relay.rs` — both endpoints dial a hub; bounded queues (`MAX_DATAGRAM=2048`, `QUEUE=16`); fail closed on oversize. Inner overlay stays IPv6. `public_relay_dialed()==false`. `relay_required_for_address_dependent()==true`.
+  - Expert brief: `qdnf-imp/nat-traversal-expert-brief.md` (questions A–E). Barrier E in `internet-two-host.md` now points there.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter `p2p::outbound_relay` + `p2p::stun_observe` + `p2p::mesh_probe` + `p2p::social_qdnf`: **14 passed**, 0 failed, 0.33s (`/opt/cursor/artifacts/outbound-relay-tests.log`). Includes `wireguard_handshake_and_data_over_outbound_relay` (in-process hub, not internet).
+  - This number is **not** an internet two-host handshake. `internet_two_host_handshake_executed()` and `public_relay_dialed()` stay false. Env-gated `internet_connect_if_env_set` still a no-op without `QDNF_LISTEN_ADDR`.
+- Not claimed: public WSS/TURN deployment; Cursor cloud as a relay (same SNAT); Native Independent; physical Ethernet; WebRTC-as-default-mesh.
+- Human input needed: expert answers **A–E** in the brief (confirm/reject the three-layer design; who operates the first dialable WSS/443 URL; signalling; TURN URIs for browsers; reject libp2p circuit-relay), **or** Barrier A+D (`LISTEN_ADDR` + passphrase) if grok-bot can listen.
+- Next: with a dialable relay URL, add the WSS/443 dialer against that URL. With a reachable UDP listen, run `internet_connect_if_env_set`. Neither can be minted inside this pod.
+
 
 
