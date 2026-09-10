@@ -4,6 +4,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
+pub mod cscp_wss;
 pub mod demux;
 pub mod establish;
 pub mod ice;

@@ -26,6 +26,7 @@ implement networking, certify cryptography or change memory constants.
 | [QUIC-native connectivity research](./quic-native-connectivity-research-2026.md) | 32-source report: published vs experimental vs proposed; DCUtR/Pkarr/Holepunch corrections |
 | [Capability-scoped connection fabric](./capability-scoped-connection-fabric.md) | Architecture note for CSCP. Local supervisor in-tree; not MASQUE/noq/Internet/RFC. |
 | [draft-webcivics-cscp-00](./draft-webcivics-cscp-00.md) | Proposed IETF Internet-Draft: purpose-bound connect, exclude-then-rank, leases, evidence, receipts. Working document, not an RFC. |
+| [CSCP implementation programme](./cscp-imp/README.md) | Swarm plan, registry and Wave 1 tracking. Not the original 30 QDNF packages. |
 
 ## 2. Detailed checklists
 
