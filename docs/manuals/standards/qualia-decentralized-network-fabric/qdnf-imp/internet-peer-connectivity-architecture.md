@@ -1,13 +1,15 @@
 # QDNF Internet peer connectivity — architecture decision proposal
 
-Date: 2026-09-10. Status: in-tree implementation on `0.0.38`; no deployment certification.
+Date: 2026-09-10. Status: local production path verified on `0.0.38`; no Internet
+or deployment certification.
 
 Related notes: [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md),
 [internet-two-host.md](./internet-two-host.md).
-A–E decisions in §2 are the recorded answers. Real relay URLs and operators remain
-deployment inputs. The connection manager, ICE checklist, TURN codec, local
-authenticated WSS, invitations, durable queues, consent/path-bind, and NAT64
-contract are in-tree. They are not an Internet trial.
+A–E decisions in §2 are the recorded answers. Real public relay URLs remain
+deployment inputs. A public URL is not the only remaining blocker: earlier
+in-tree work overstated TLS, framing, QSession admission, ICE/TURN, and durable
+recovery. Those five items now have local proofs. They are still not an Internet
+trial.
 
 Reviewed local baseline: `0.0.37`, `79231d7d98bee8bce1b02e93f3253d198582d3d2`.
 Reviewed selected remote sources: `cursor/qdnf-enhancement-e00-e01-cb60`,

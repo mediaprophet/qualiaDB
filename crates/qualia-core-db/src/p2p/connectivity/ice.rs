@@ -56,7 +56,25 @@ impl IceAgent {
         .unwrap_or(Scheduled::Close)
     }
 
-    /// Nominate the first waiting pair of `kind` that is eligible at `now_ms`.
+    /// Record that a real STUN/TURN transaction succeeded for `kind`.
+    pub fn mark_checked(&mut self, kind: CandidateKind) -> bool {
+        let mut i = 0;
+        while i < self.tables.pair_len {
+            if let Some(mut p) = self.tables.pairs[i] {
+                if let Some(l) = self.tables.local[p.local_idx as usize] {
+                    if l.kind == kind && p.state == PairState::Waiting {
+                        p.checked = true;
+                        self.tables.pairs[i] = Some(p);
+                        return true;
+                    }
+                }
+            }
+            i += 1;
+        }
+        false
+    }
+
+    /// Nominate only a pair that already passed a connectivity check.
     pub fn nominate(&mut self, kind: CandidateKind, now_ms: u64) -> bool {
         if kind != CandidateKind::Relayed && !self.policy.allows_direct_probes() {
             return false;
@@ -72,7 +90,7 @@ impl IceAgent {
         while i < self.tables.pair_len {
             if let Some(mut p) = self.tables.pairs[i] {
                 if let Some(l) = self.tables.local[p.local_idx as usize] {
-                    if l.kind == kind && p.state == PairState::Waiting {
+                    if l.kind == kind && p.state == PairState::Waiting && p.checked {
                         p.state = PairState::Succeeded;
                         self.tables.pairs[i] = Some(p);
                         return true;
@@ -140,6 +158,11 @@ mod tests {
         let mut a = IceAgent::new(IceRole::Controlling, PathPolicy::RELAY_ONLY, true, true);
         assert_eq!(a.next(0), Scheduled::CheckRelay);
         assert!(!a.nominate(CandidateKind::Host, 0));
+        assert!(
+            !a.nominate(CandidateKind::Relayed, 0),
+            "nominate without a check must fail"
+        );
+        assert!(a.mark_checked(CandidateKind::Relayed));
         assert!(a.nominate(CandidateKind::Relayed, 0));
         assert!(a.has_succeeded());
         assert!(stun_check_roundtrip());
@@ -159,6 +182,7 @@ mod tests {
         assert_eq!(a.role, IceRole::Controlling);
         a.apply_role_conflict(1, 10);
         assert_eq!(a.role, IceRole::Controlled);
+        assert!(a.mark_checked(CandidateKind::Relayed));
         assert!(a.nominate(CandidateKind::Relayed, 0));
         assert!(a.nominated_may_send(0, 4_999));
         assert!(!a.nominated_may_send(0, 30_000));

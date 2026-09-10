@@ -13,7 +13,10 @@ use sha1::{Digest, Sha1};
 use sha2::Sha256;
 
 const GUID: &[u8] = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-const MAX_FRAME: usize = 2048;
+pub const MAX_FRAME: usize = 2048;
+pub const ENVELOPE_HDR: usize = 12;
+pub const MAX_PAYLOAD: usize = MAX_FRAME - ENVELOPE_HDR;
+pub const ENVELOPE_VERSION: u8 = 2;
 type HmacSha256 = Hmac<Sha256>;
 
 pub const ENV_CHILD: &str = "QDNF_WSS_RELAY_CHILD";
@@ -51,21 +54,30 @@ pub fn encode_envelope(
     payload: &[u8],
     out: &mut [u8],
 ) -> Result<usize, &'static str> {
-    let n = 11 + payload.len();
+    if payload.len() > MAX_PAYLOAD {
+        return Err("capacity");
+    }
+    let n = ENVELOPE_HDR + payload.len();
     if n > MAX_FRAME || out.len() < n {
         return Err("capacity");
     }
-    out[0] = 1;
+    out[0] = ENVELOPE_VERSION;
     out[1] = typ as u8;
     out[2..6].copy_from_slice(&circuit.to_be_bytes());
     out[6..10].copy_from_slice(&gen.to_be_bytes());
-    out[10] = payload.len() as u8;
-    out[11..n].copy_from_slice(payload);
+    out[10..12].copy_from_slice(&(payload.len() as u16).to_be_bytes());
+    out[12..n].copy_from_slice(payload);
     Ok(n)
 }
 
 pub fn decode_envelope(buf: &[u8]) -> Result<(FrameType, u32, u32, &[u8]), &'static str> {
-    if buf.len() < 11 || buf[0] != 1 {
+    if buf.len() < ENVELOPE_HDR {
+        return Err("envelope");
+    }
+    if buf[0] == 1 {
+        return Err("obsolete-u8-length");
+    }
+    if buf[0] != ENVELOPE_VERSION {
         return Err("envelope");
     }
     let typ = match buf[1] {
@@ -76,11 +88,14 @@ pub fn decode_envelope(buf: &[u8]) -> Result<(FrameType, u32, u32, &[u8]), &'sta
     };
     let circuit = u32::from_be_bytes([buf[2], buf[3], buf[4], buf[5]]);
     let gen = u32::from_be_bytes([buf[6], buf[7], buf[8], buf[9]]);
-    let len = buf[10] as usize;
-    if buf.len() < 11 + len {
+    let len = u16::from_be_bytes([buf[10], buf[11]]) as usize;
+    if len > MAX_PAYLOAD {
+        return Err("capacity");
+    }
+    if buf.len() < ENVELOPE_HDR + len {
         return Err("truncated");
     }
-    Ok((typ, circuit, gen, &buf[11..11 + len]))
+    Ok((typ, circuit, gen, &buf[ENVELOPE_HDR..ENVELOPE_HDR + len]))
 }
 
 fn write_ws_binary<W: Write>(
@@ -159,7 +174,7 @@ fn read_ws_binary<R: Read>(r: &mut R) -> std::io::Result<Vec<u8>> {
     Ok(body)
 }
 
-fn client_handshake(stream: &mut TcpStream, key_b64: &str) -> std::io::Result<()> {
+pub fn client_handshake<S: Read + Write>(stream: &mut S, key_b64: &str) -> std::io::Result<()> {
     let req = format!(
         "GET /relay HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key_b64}\r\nSec-WebSocket-Version: 13\r\n\r\n"
     );
@@ -184,7 +199,7 @@ fn client_handshake(stream: &mut TcpStream, key_b64: &str) -> std::io::Result<()
     Ok(())
 }
 
-fn server_handshake(stream: &mut TcpStream) -> std::io::Result<()> {
+pub fn server_handshake<S: Read + Write>(stream: &mut S) -> std::io::Result<()> {
     let mut buf = [0u8; 1024];
     let n = stream.read(&mut buf)?;
     let text = core::str::from_utf8(&buf[..n]).unwrap_or("");
@@ -218,8 +233,8 @@ pub fn loopback_pair() -> std::io::Result<(TcpStream, TcpStream)> {
     Ok((client, server))
 }
 
-pub fn send_datagram(
-    stream: &mut TcpStream,
+pub fn send_datagram<W: Write>(
+    stream: &mut W,
     circuit: u32,
     gen: u32,
     payload: &[u8],
@@ -232,7 +247,7 @@ pub fn send_datagram(
     write_ws_binary(stream, &env[..n], mask)
 }
 
-pub fn recv_datagram(stream: &mut TcpStream) -> std::io::Result<(u32, u32, Vec<u8>)> {
+pub fn recv_datagram<R: Read>(stream: &mut R) -> std::io::Result<(u32, u32, Vec<u8>)> {
     let body = read_ws_binary(stream)?;
     let (typ, c, g, p) = decode_envelope(&body)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
@@ -245,8 +260,8 @@ pub fn recv_datagram(stream: &mut TcpStream) -> std::io::Result<(u32, u32, Vec<u
     Ok((c, g, p.to_vec()))
 }
 
-pub fn send_auth(
-    stream: &mut TcpStream,
+pub fn send_auth<W: Write>(
+    stream: &mut W,
     secret: &[u8],
     circuit: u32,
     gen: u32,
@@ -258,8 +273,8 @@ pub fn send_auth(
     write_ws_binary(stream, &env[..n], Some([9, 8, 7, 6]))
 }
 
-pub fn expect_auth(
-    stream: &mut TcpStream,
+pub fn expect_auth<R: Read>(
+    stream: &mut R,
     secret: &[u8],
     circuit: u32,
     gen: u32,
@@ -350,5 +365,22 @@ mod tests {
         send_datagram(&mut c, 1, 1, b"ping", true).unwrap();
         let (_, _, p) = recv_datagram(&mut s).unwrap();
         assert_eq!(p, b"ping");
+    }
+
+    #[test]
+    fn u16_length_keeps_256_and_rejects_oversize() {
+        let mut env = [0u8; MAX_FRAME];
+        let p256 = [0x5au8; 256];
+        let n = encode_envelope(FrameType::Datagram, 1, 1, &p256, &mut env).unwrap();
+        let (_, _, _, body) = decode_envelope(&env[..n]).unwrap();
+        assert_eq!(body, &p256);
+        let too_big = vec![0u8; MAX_PAYLOAD + 1];
+        assert_eq!(
+            encode_envelope(FrameType::Datagram, 1, 1, &too_big, &mut env),
+            Err("capacity")
+        );
+        let mut legacy = [0u8; 20];
+        legacy[0] = 1;
+        assert_eq!(decode_envelope(&legacy), Err("obsolete-u8-length"));
     }
 }

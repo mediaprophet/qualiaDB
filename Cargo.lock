@@ -9976,6 +9976,8 @@ dependencies = [
  "rio_xml",
  "rsa",
  "rtrb",
+ "rustls 0.23.42",
+ "rustls-pki-types",
  "secp256k1 0.31.1",
  "serde",
  "serde-wasm-bindgen",

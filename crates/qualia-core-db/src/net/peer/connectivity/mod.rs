@@ -6,6 +6,7 @@
 pub mod browser;
 pub mod candidates;
 pub mod durable;
+pub mod durable_store;
 pub mod evidence;
 pub mod invitation;
 pub mod matrix;
@@ -24,7 +25,9 @@ pub use candidates::{
 pub use durable::{Delivery, DurableQueue};
 pub use evidence::{
     address_dependent_is_not_universal_relay_law, browser_turn_interop_executed,
-    connection_manager_implemented, internet_two_host_handshake_executed, public_relay_dialed,
+    connection_manager_implemented, durable_storage_recovery_verified, envelope_length_is_u16,
+    ice_requires_connectivity_check, internet_two_host_handshake_executed, local_tls_wss_verified,
+    public_relay_dialed, session_ready_requires_qsession,
 };
 pub use invitation::{
     phrase_must_not_mint_wg_keys, sign_invitation, verify_invitation, Invitation,

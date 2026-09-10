@@ -670,5 +670,20 @@
 - Human input needed: still **B** — operator, verified WSS URL/certificate, TURN URIs. Or a reachable `LISTEN_ADDR`.
 - Next: dial that URL when supplied. Do not invent one.
 
+## 2026-09-10 — local production path: five inspection findings closed
+
+- Step: source inspection of `7a275039` found the completion claim overstated. Status: **local proofs landed; Internet still unexecuted**. Enhancement-plan checkboxes were **not** marked.
+- Built / corrected:
+  1. TLS: `p2p/connectivity/wss_tls.rs` — rustls 0.23, CA-pinned client, wrong-CA rejected. Plain TCP remains a labeled fixture (`plain_tcp_is_not_tls()`).
+  2. Framing: envelope version 2, `u16` length, 256-byte payload kept, oversize rejected, v1 u8 length rejected.
+  3. QSession: `establish.rs` refuses SessionReady without handshake. Local path runs fragmented `handshake_over_fragments` over TLS WSS, then `SessionBinding::from_permit` + `admit_application`.
+  4. ICE/TURN: `nominate` requires `mark_checked`. `ice_udp.rs` does a real local STUN Binding. `turn_local.rs` does Allocate + Send/Data forward on localhost UDP.
+  5. Durable: `durable_store.rs` writes CRC-32C records; recover after persist; truncated file fails closed. RAM queue test renamed so it is not called crash-safe.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter `net::peer::connectivity` + `p2p::connectivity` + `p2p::wg_engine`: **36 passed**, 0 failed, 5.87s (`/opt/cursor/artifacts/connectivity-local-path.log`). Includes `tls_wss_verifies_cert_and_carries_256`, `local_production_path_requires_qsession`, `binding_check_required_before_nominate`, `allocate_then_send_reaches_peer`, `persist_drop_recover_and_corrupt_fail_closed`.
+- Not claimed: public relay; Internet two-host; rustls against a public CA/URL; coturn; browser TURN; full RFC 8445 consent freshness on the public Internet; Native Independent.
+- Human input needed: still **B** for public-network qualification only. Local path no longer waits on a purchased server.
+- Next: public-network qualification when an operator URL or `LISTEN_ADDR` exists.
+
 
 

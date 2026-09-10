@@ -109,6 +109,27 @@ impl DurableQueue {
         self.find(op_id).map(|i| self.jobs[i].state)
     }
 
+    pub(crate) fn len(&self) -> usize {
+        self.len
+    }
+
+    pub(crate) fn job_at(&self, i: usize) -> Option<DurableJob> {
+        if i < self.len {
+            Some(self.jobs[i])
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn restore(&mut self, job: DurableJob) -> Result<(), ()> {
+        if self.len >= MAX_JOBS {
+            return Err(());
+        }
+        self.jobs[self.len] = job;
+        self.len += 1;
+        Ok(())
+    }
+
     fn find(&self, op_id: u64) -> Option<usize> {
         let mut i = 0;
         while i < self.len {
@@ -147,7 +168,7 @@ mod tests {
     }
 
     #[test]
-    fn crash_safe_dedup_and_expiry() {
+    fn ram_dedup_and_expiry_is_not_persistence() {
         let mut q = DurableQueue::new();
         assert_eq!(q.enqueue(9, 100, b"op").unwrap(), 0);
         assert_eq!(q.enqueue(9, 100, b"op").unwrap(), 0);

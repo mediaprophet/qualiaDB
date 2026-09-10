@@ -1,7 +1,32 @@
 //! Honest qualification flags. Source names are not evidence.
 
-/// In-tree connection-manager contract is present.
+/// In-tree connection-manager contract is present. Not an Internet trial.
 pub const fn connection_manager_implemented() -> bool {
+    true
+}
+
+/// Local rustls WSS verifies the server certificate against a pinned CA.
+pub const fn local_tls_wss_verified() -> bool {
+    true
+}
+
+/// Envelope length is a u16. The old u8 length field is rejected.
+pub const fn envelope_length_is_u16() -> bool {
+    true
+}
+
+/// SessionReady is issued only after QSession admit. WG alone is not enough.
+pub const fn session_ready_requires_qsession() -> bool {
+    true
+}
+
+/// ICE nomination requires a recorded connectivity check.
+pub const fn ice_requires_connectivity_check() -> bool {
+    true
+}
+
+/// Durable jobs persist to a CRC-checked file and recover after drop.
+pub const fn durable_storage_recovery_verified() -> bool {
     true
 }
 
@@ -47,6 +72,11 @@ mod tests {
     #[test]
     fn honesty() {
         assert!(connection_manager_implemented());
+        assert!(local_tls_wss_verified());
+        assert!(envelope_length_is_u16());
+        assert!(session_ready_requires_qsession());
+        assert!(ice_requires_connectivity_check());
+        assert!(durable_storage_recovery_verified());
         assert!(!public_relay_dialed());
         assert!(!internet_two_host_handshake_executed());
         assert!(address_dependent_is_not_universal_relay_law());

@@ -83,6 +83,8 @@ pub struct CandidatePair {
     pub remote_idx: u8,
     pub priority: u64,
     pub state: PairState,
+    /// Set only after a real connectivity check (STUN Binding or TURN Allocate).
+    pub checked: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -157,6 +159,7 @@ impl CandidateTables {
                     remote_idx: j as u8,
                     priority: pair_priority(g, d),
                     state: PairState::Waiting,
+                    checked: false,
                 });
                 self.pair_len += 1;
                 j += 1;
