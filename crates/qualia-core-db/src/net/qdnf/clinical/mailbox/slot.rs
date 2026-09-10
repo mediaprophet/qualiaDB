@@ -2,8 +2,9 @@
 
 use crate::crypto::network::digest::sha384;
 use crate::net::peer::replication::custody::{mark_stored, CustodyState};
+use crate::net::qdnf::contracts::BoundGenerations;
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::types::StrongDigest;
+use crate::net::qdnf::types::{Generation, StrongDigest};
 
 /// Page size for streaming attachment bytes. Matches replication originals.
 pub const STREAM_PAGE_BYTES: u32 = 4096;
@@ -36,6 +37,7 @@ pub struct MailboxSlot {
     pub ciphertext_digest: StrongDigest,
     pub recipient: StrongDigest,
     pub key_generation: u64,
+    pub bound: BoundGenerations,
     pub grant_revoked: bool,
     pub state: MailboxState,
     pub custody: CustodyState,
@@ -63,6 +65,11 @@ impl MailboxSlot {
             ciphertext_digest: sha384(ct),
             recipient,
             key_generation,
+            bound: BoundGenerations::new(
+                Generation(key_generation),
+                Generation(key_generation),
+                Generation(key_generation),
+            ),
             grant_revoked: false,
             state: MailboxState::Stored,
             custody,

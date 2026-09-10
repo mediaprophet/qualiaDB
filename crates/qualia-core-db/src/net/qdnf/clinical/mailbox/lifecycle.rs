@@ -5,6 +5,7 @@ use super::slot::{network_asserts_clinical_review, MailboxSlot, MailboxState};
 use crate::net::peer::replication::custody::{
     mark_application_acked, mark_delivered, mark_stored, CustodyState,
 };
+use crate::net::qdnf::contracts::{recheck_permit, BoundGenerations, LiveGenerations};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;
 
@@ -94,6 +95,14 @@ impl Mailbox {
         if key_generation != s.key_generation {
             return Err(QdnfError::StaleGeneration);
         }
+        recheck_permit(
+            s.bound,
+            LiveGenerations {
+                source: crate::net::qdnf::types::Generation(key_generation),
+                policy: crate::net::qdnf::types::Generation(key_generation),
+                identity: crate::net::qdnf::types::Generation(key_generation),
+            },
+        )?;
         match s.state {
             MailboxState::Stored => {
                 s.custody = mark_delivered(s.custody)?;
@@ -104,6 +113,32 @@ impl Mailbox {
             MailboxState::Delivered => Ok(()),
             MailboxState::ClinicianReviewed => Err(QdnfError::Conflict),
         }
+    }
+
+    /// Commit/release recheck using live source/policy/identity generations (E12.5).
+    pub fn deliver_live(
+        &mut self,
+        slot: usize,
+        recipient: StrongDigest,
+        live: LiveGenerations,
+    ) -> Result<(), QdnfError> {
+        let s = self.get(slot)?;
+        recheck_permit(s.bound, live)?;
+        self.deliver(slot, recipient, s.key_generation)
+    }
+
+    /// Store ciphertext bound to compiled source/policy/identity generations.
+    pub fn store_bound(
+        &mut self,
+        ct: &[u8],
+        recipient: StrongDigest,
+        bound: BoundGenerations,
+    ) -> Result<usize, QdnfError> {
+        let i = self.store(ct, recipient, bound.source.0)?;
+        if let Some(slot) = self.slots[i].as_mut() {
+            slot.bound = bound;
+        }
+        Ok(i)
     }
 
     /// Application acknowledgement. Requires transport Delivered.
@@ -263,5 +298,22 @@ mod tests {
         assert_eq!(pending.get(s).unwrap().ciphertext_digest, sha384(ct));
         assert_eq!(pending.get(s).unwrap().ciphertext_len as usize, ct.len());
         assert_eq!(pending.get(s).unwrap().ciphertext_bytes(), ct);
+    }
+
+    #[test]
+    fn live_policy_generation_advance_is_stale() {
+        use crate::net::qdnf::types::Generation;
+        let clinician = d(2);
+        let mut mb = Mailbox::new();
+        let bound = BoundGenerations::new(Generation(1), Generation(1), Generation(1));
+        let slot = mb.store_bound(b"ct", clinician, bound).expect("store");
+        let mut live = bound.as_live();
+        live.policy = Generation(2);
+        assert_eq!(
+            mb.deliver_live(slot, clinician, live),
+            Err(QdnfError::StaleGeneration)
+        );
+        assert_eq!(mb.get(slot).unwrap().state, MailboxState::Stored);
+        assert!(mb.deliver_live(slot, clinician, bound.as_live()).is_ok());
     }
 }

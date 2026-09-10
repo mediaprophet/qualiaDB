@@ -2,8 +2,9 @@
 
 use super::{admit_outcome, first_empty, require_active_mutual, MAX_SLOTS};
 use crate::net::qdnf::authority::{ContactState, PolicyOutcome, TemporalGrant};
+use crate::net::qdnf::contracts::{recheck_permit, BoundGenerations, LiveGenerations};
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::types::StrongDigest;
+use crate::net::qdnf::types::{Generation, StrongDigest};
 
 /// Routine transfer/reply between a pair, bound to purpose and record scope.
 #[repr(C)]
@@ -21,6 +22,7 @@ pub struct StandingPermit {
 pub struct PermitTable {
     slots: [Option<StandingPermit>; MAX_SLOTS],
     revoked: [bool; MAX_SLOTS],
+    live: LiveGenerations,
 }
 
 impl PermitTable {
@@ -28,6 +30,11 @@ impl PermitTable {
         Self {
             slots: [None; MAX_SLOTS],
             revoked: [false; MAX_SLOTS],
+            live: LiveGenerations {
+                source: Generation(1),
+                policy: Generation(1),
+                identity: Generation(1),
+            },
         }
     }
 
@@ -79,6 +86,11 @@ impl PermitTable {
         Ok(idx)
     }
 
+    /// Live generations at commit/release. A policy bump stale-fails authorize.
+    pub fn set_live(&mut self, live: LiveGenerations) {
+        self.live = live;
+    }
+
     pub fn revoke(
         &mut self,
         patient: StrongDigest,
@@ -117,6 +129,12 @@ impl PermitTable {
             return Err(QdnfError::Denied);
         }
         let p = self.slots[i].ok_or(QdnfError::Unauthorized)?;
+        let bound = BoundGenerations::new(
+            Generation(p.grant.authority_generation),
+            Generation(p.grant.authority_generation),
+            Generation(p.grant.authority_generation),
+        );
+        recheck_permit(bound, self.live)?;
         require_active_mutual(patient_contact, clinician_contact)?;
         p.grant.current_at(now_unix)?;
         if p.grant.audience_digest != StrongDigest::ZERO
@@ -331,6 +349,37 @@ mod tests {
                 10
             ),
             Err(QdnfError::Expired)
+        );
+    }
+
+    #[test]
+    fn live_policy_generation_advance_is_stale() {
+        let mut t = PermitTable::new();
+        let clinician = d(2);
+        let p = StandingPermit {
+            patient: d(1),
+            clinician,
+            purpose: d(3),
+            record_scope: d(4),
+            grant: grant_until(clinician, 100),
+        };
+        t.add(p).unwrap();
+        t.set_live(LiveGenerations {
+            source: Generation(1),
+            policy: Generation(2),
+            identity: Generation(1),
+        });
+        assert_eq!(
+            auth(
+                &t,
+                &p,
+                p.record_scope,
+                p.clinician,
+                ContactState::Active,
+                ContactState::Active,
+                10
+            ),
+            Err(QdnfError::StaleGeneration)
         );
     }
 }
