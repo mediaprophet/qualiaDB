@@ -115,12 +115,47 @@
       "depends_on": ["CSCP-01"],
       "checklist": "workstream.md",
       "allowed_paths": [
-        "crates/qualia-core-db/src/net/peer/fabric/capsule.rs",
-        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-09.md"
+        "crates/qualia-core-db/src/p2p/connectivity/cscp_h2.rs",
+        "crates/qualia-core-db/src/p2p/connectivity/h2_capsule.rs",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-09-h2.md"
       ],
-      "assignee": "swarm-cscp-09",
-      "evidence": ["/opt/cursor/artifacts/cscp-wave1-review-fixes.log"],
-      "note": "Local DATAGRAM capsule framing done (CSCP-09.01). HTTP/2 CONNECT stack not done."
+      "assignee": "integrator",
+      "evidence": [
+        "handoffs/CSCP-09-h2.md",
+        "reviews/SWARM-09-DIDQI.md",
+        "/opt/cursor/artifacts/swarm-h2-fabric-tests.log"
+      ],
+      "note": "CSCP-09.01 framing done. CSCP-09.02 loopback TLS HTTP/2 Extended CONNECT accepted. Parent CSCP-09 Internet/MASQUE still open."
+    },
+    {
+      "id": "DID-QI-SPEC",
+      "title": "did:qi W3C DID Method specification",
+      "status": "complete",
+      "depends_on": [],
+      "checklist": "briefs/DID-QI-spec.md",
+      "allowed_paths": [
+        "docs/manuals/standards/did-qi-method.md",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/DID-QI-spec.md"
+      ],
+      "assignee": "integrator",
+      "evidence": ["docs/manuals/standards/did-qi-method.md"]
+    },
+    {
+      "id": "DID-QI-IMPL",
+      "title": "did:qi create/read/update/deactivate runtime",
+      "status": "complete",
+      "depends_on": [],
+      "checklist": "briefs/DID-QI-impl.md",
+      "allowed_paths": [
+        "crates/qualia-core-db/src/did_qi/",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/DID-QI-impl.md"
+      ],
+      "assignee": "integrator",
+      "evidence": [
+        "reviews/SWARM-09-DIDQI.md",
+        "/opt/cursor/artifacts/swarm-did-qi-f1-f4-tests.log"
+      ],
+      "note": "F1–F4 applied. Method not registered. Parent DID-QI registration remains open."
     },
     {
       "id": "CSCP-10",

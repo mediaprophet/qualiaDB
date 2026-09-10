@@ -7,9 +7,9 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
 use super::document::{
-    decode_canonical, encode_unsigned, genesis_digest, proof_message, sha256_32, QiDocument,
-    MAX_CANONICAL,
+    encode_unsigned, genesis_digest, proof_message, sha256_32, QiDocument, MAX_CANONICAL,
 };
+use super::document_decode::decode_canonical;
 use super::git_object::MAX_RECORD;
 use super::id::DidQi;
 use super::service::check_relay_only;
@@ -151,10 +151,24 @@ pub fn read<S: QiStore>(store: &S, id: &DidQi, out: &mut QiDocument) -> Result<u
     let parts = unpack_record(&rec[..n])?;
     decode_canonical(parts.canonical, out)?;
     verify_unsigned(&out.controller_pk, parts.canonical, &parts.signature)?;
-    if parts.flags & FLAG_UTXO_TOMBSTONE != 0 {
-        out.deactivated = true;
+    if parts.flags & FLAG_UTXO_TOMBSTONE != 0 && !out.deactivated {
+        return Err(QiError::TombstoneRequiresDeactivate);
     }
     Ok(parts.generation)
+}
+
+/// Spec §12.7: an older signed generation presented as current is stale.
+pub fn read_generation<S: QiStore>(
+    store: &S,
+    id: &DidQi,
+    claimed: u64,
+    out: &mut QiDocument,
+) -> Result<u64, QiError> {
+    let gen = read(store, id, out)?;
+    if claimed != gen {
+        return Err(QiError::StaleGeneration);
+    }
+    Ok(gen)
 }
 
 pub fn update<S: QiStore>(
@@ -273,8 +287,22 @@ mod tests {
         let mut out = QiDocument::empty();
         assert_eq!(read(&store, &id, &mut out).unwrap(), 1);
         assert_eq!(out.generation, 1);
+        assert_eq!(out.aka_count, 1);
+        assert_eq!(
+            &out.aka[0].bytes[..out.aka[0].len as usize],
+            b"did:web:example.invalid"
+        );
+        assert!(out.has_previous);
+        assert_eq!(out.service_count, 1);
+        assert_eq!(out.services[0].contact_key, public_from_secret(&sk()));
         assert!(store.is_stale(&id, 0).unwrap());
         assert!(!store.is_stale(&id, 1).unwrap());
+        let mut stale = QiDocument::empty();
+        assert_eq!(
+            read_generation(&store, &id, 0, &mut stale),
+            Err(QiError::StaleGeneration)
+        );
+        assert_eq!(read_generation(&store, &id, 1, &mut stale).unwrap(), 1);
     }
 
     #[test]

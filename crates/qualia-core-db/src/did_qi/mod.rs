@@ -10,22 +10,26 @@
 //! SHA-256 genesis payload digest.
 
 mod document;
+mod document_decode;
 mod git_object;
 mod id;
 mod method;
 mod service;
 mod utxo;
+#[cfg(test)]
+mod vectors;
 
 pub use document::{
     canonical_digest, encode_canonical, encode_genesis, encode_jsonld_cold, encode_signed,
-    encode_unsigned, genesis_digest, sha256_32, unsigned_digest, AkaEntry, QiDocument,
-    CREATED_UNIX_VECTOR, MAX_AKA, MAX_AKA_LEN, MAX_CANONICAL, MAX_SERVICES,
+    encode_unsigned, genesis_digest, sha256_32, signed_git_object_id, unsigned_digest, AkaEntry,
+    QiDocument, CREATED_UNIX_VECTOR, MAX_AKA, MAX_AKA_LEN, MAX_CANONICAL, MAX_SERVICES,
 };
+pub use document_decode::{decode_canonical, ingest_unsigned_json, reject_forbidden_locators};
 pub use git_object::{
     blob_object_id, encode_blob, GitObjectStore, GIT_STORE_CAP, MAX_BLOB, MAX_RECORD,
 };
 pub use id::{format_did, parse_did, DidQi, MAX_DID_TEXT};
-pub use method::{create, deactivate, read, update};
+pub use method::{create, deactivate, read, read_generation, update};
 pub use service::{
     check_relay_only, CscpMailbox, Disclosure, LocatorClass, RelayHint, SERVICE_TYPE, MAX_HINTS,
 };
@@ -59,6 +63,7 @@ pub enum QiError {
     MalformedDocument,
     ControllerMismatch,
     MalformedChainId,
+    TombstoneRequiresDeactivate,
 }
 
 /// In-process document store. Implementations keep a fixed slot cap.

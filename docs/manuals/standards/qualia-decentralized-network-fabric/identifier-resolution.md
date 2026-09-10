@@ -56,10 +56,11 @@ calls this role a **Q42 Resource Coordinate (QRC)**.
 - Do not promote QRC to the Human-Centric Internet (☉ HCInet) DID. The recorded split is
   `did:qi:` (Qualia Identifier) for HCInet instrument identity, with git / multi-chain UTXO /
   invitation mailbox as parameterized backings and hostname/`did:web` as alias/Frontdoor only.
-  Do not call this a Human-Centered AI (🎯) method. See
+  Do not call this a Human-Centered AI (🎯) method. Method specification:
+  [did-qi-method.md](../did-qi-method.md). Naming decision:
   [human-centric-nomenclature.md](../human-centric-nomenclature.md) and
   [did-qi-git-utxo.md](./qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md). `did:q42:` remains the
-  storage coordinate.
+  storage coordinate. The method is **not** registered.
 
 ## 4. DNI structure
 

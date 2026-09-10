@@ -127,7 +127,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **Threshold Shift Licence (TSL)**: Fires automatically when the mathematical ILP threshold for an asset is met, shifting it to the Permissive Commons.
 - **did:git**: Git-based decentralized identity for Webizen agency and axiomatic evolution.
 - **did:q42**: Q42 Resource Coordinate — topological pointer encoded in a Quin's object field (MSB=1). Used by `resolver.rs` and `identifier.rs`. Not a W3C DID method.
-- **did:qi**: Qualia Identifier — recorded method **name** for ☉ Human-Centric Internet (HCInet) instruments. Not implemented. Not 🎯 Human-Centered AI. See `human-centric-nomenclature.md` and `qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md`.
+- **did:qi**: Qualia Identifier — DID method **name** for ☉ Human-Centric Internet (HCInet) instruments. In-process create/read/update/deactivate lives in `qualia-core-db::did_qi`. Not registered. Not Gate B. Not 🎯 Human-Centered AI. See `docs/manuals/standards/did-qi-method.md`, `human-centric-nomenclature.md`, and `qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md`.
 - **Human-Centric Internet (☉ HCInet)**: Structural topology — the natural person is the permanent nucleus; agents, data, and credentials orbit. Not a User-Centered Design process. Spell out on first use.
 - **Human-Centered AI (🎯)**: Static methodology / external field (usual expansion of HCAI). The human is a temporary design target. Spell out; do not use HCAI as a Qualia identifier or internet label.
 - **Author-Scoped Merkle Aggregation**: Users sign only the Merkle sub-roots of their own authored Quins, not the global root.

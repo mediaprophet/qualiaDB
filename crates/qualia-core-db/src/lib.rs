@@ -255,6 +255,7 @@ pub use extensions::resource_catalog;
 pub mod modalities;
 // --- identity/ category (reorg) ---
 pub mod identity;
+pub mod did_qi;
 pub use identity::agency;
 pub use identity::identifier;
 #[cfg(not(target_arch = "wasm32"))]

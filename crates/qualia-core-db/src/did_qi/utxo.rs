@@ -5,12 +5,9 @@
 //! Tombstone: `OP_RETURN 0x23 0x51 0x49 0xFF || 32 zero octets`.
 //! No Chronik, no node, no network. Chain id is CAIP-2 `bip122:<32-hex>`.
 
-use super::document::sha256_32;
-use super::git_object::MAX_RECORD;
+use super::document::{sha256_32, QiDocument};
 use super::id::DidQi;
-use super::method::{
-    load_canonical_digest, pack_record, unpack_record, FLAG_UTXO_TOMBSTONE,
-};
+use super::method::{load_canonical_digest, FLAG_UTXO_TOMBSTONE};
 use super::{QiError, QiStore};
 
 pub const OP_RETURN: u8 = 0x6a;
@@ -276,19 +273,12 @@ pub fn apply_utxo_attestation<S: QiStore>(
     }
     let c = extract_op_return(tx)?;
     if c.tombstone {
-        let mut rec = [0u8; MAX_RECORD];
-        let (_, n) = store.get(id, &mut rec)?;
-        let parts = unpack_record(&rec[..n])?;
-        let mut packed = [0u8; MAX_RECORD];
-        let pn = pack_record(
-            FLAG_UTXO_TOMBSTONE,
-            generation + 1,
-            parts.canonical,
-            &parts.signature,
-            &mut packed,
-        )?;
-        store.put(id, generation + 1, &packed[..pn])?;
-        return Ok(generation + 1);
+        let mut current = QiDocument::empty();
+        super::method::read(store, id, &mut current)?;
+        if !current.deactivated {
+            return Err(QiError::TombstoneRequiresDeactivate);
+        }
+        return Ok(generation);
     }
     if c.digest != digest {
         return Err(QiError::CommitmentMismatch);
@@ -301,7 +291,7 @@ mod tests {
     use super::*;
     use super::super::document::QiDocument;
     use super::super::git_object::GitObjectStore;
-    use super::super::method::{create, read, update};
+    use super::super::method::{create, deactivate, read, update};
     use super::super::service::{CscpMailbox, Disclosure};
     use ed25519_dalek::SigningKey;
 
@@ -353,11 +343,25 @@ mod tests {
         let (tomb, tn) = tx_for(&digest, true);
         let t = extract_op_return(&tomb[..tn]).unwrap();
         assert!(t.tombstone);
-        let g = apply_utxo_attestation(&mut store, &id, &tomb[..tn]).unwrap();
+        assert_eq!(
+            apply_utxo_attestation(&mut store, &id, &tomb[..tn]),
+            Err(QiError::TombstoneRequiresDeactivate)
+        );
+        let mut live = QiDocument::empty();
+        read(&store, &id, &mut live).unwrap();
+        assert!(!live.deactivated);
+        assert_eq!(live.service_count, 1);
+
+        deactivate(&mut store, &sk(), &id).unwrap();
+        let (digest2, gen2, _) = load_canonical_digest(&store, &id).unwrap();
+        assert_eq!(gen2, 1);
+        let (tomb2, tn2) = tx_for(&digest2, true);
+        let g = apply_utxo_attestation(&mut store, &id, &tomb2[..tn2]).unwrap();
         assert_eq!(g, 1);
         let mut out = QiDocument::empty();
         read(&store, &id, &mut out).unwrap();
         assert!(out.deactivated);
+        assert_eq!(out.service_count, 0);
         assert_eq!(
             update(&mut store, &sk(), &id, &sample_doc()),
             Err(QiError::Deactivated)

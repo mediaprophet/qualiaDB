@@ -3,8 +3,8 @@
 
 use sha2::{Digest, Sha256};
 
-use super::id::{decode_b58, encode_b58, format_did, DidQi, MAX_DID_TEXT};
-use super::service::{check_relay_only, CscpMailbox, Disclosure, LocatorClass, MAX_HINTS};
+use super::id::{encode_b58, format_did, DidQi, MAX_DID_TEXT};
+use super::service::{check_relay_only, CscpMailbox, Disclosure, MAX_HINTS};
 use super::QiError;
 
 pub const MAX_AKA: usize = 4;
@@ -47,6 +47,8 @@ pub struct QiDocument {
     pub aka: [AkaEntry; MAX_AKA],
     pub service_count: u8,
     pub services: [CscpMailbox; MAX_SERVICES],
+    pub has_hostname_alias: bool,
+    pub hostname_did_web: AkaEntry,
 }
 
 impl QiDocument {
@@ -65,6 +67,11 @@ impl QiDocument {
             }; MAX_AKA],
             service_count: 0,
             services: [CscpMailbox::mailbox([0u8; 32], Disclosure::ApprovedRelaysOnly); MAX_SERVICES],
+            has_hostname_alias: false,
+            hostname_did_web: AkaEntry {
+                bytes: [0u8; MAX_AKA_LEN],
+                len: 0,
+            },
         }
     }
 
@@ -203,6 +210,19 @@ fn emit_service(out: &mut [u8], mut n: usize, id: Option<&DidQi>, s: &CscpMailbo
     Ok(n)
 }
 
+fn emit_hostname_alias(
+    out: &mut [u8],
+    mut n: usize,
+    id: Option<&DidQi>,
+    did_web: &AkaEntry,
+) -> Result<usize, QiError> {
+    n = push(out, n, b"{\"id\":")?;
+    n = emit_did_url(out, n, id, b"#frontdoor")?;
+    n = push(out, n, b",\"serviceEndpoint\":{\"didWeb\":\"")?;
+    n = push(out, n, &did_web.bytes[..did_web.len as usize])?;
+    push(out, n, b"\"},\"type\":\"HostnameAlias\"}")
+}
+
 fn emit_vm(out: &mut [u8], mut n: usize, id: Option<&DidQi>, pk: &[u8; 32]) -> Result<usize, QiError> {
     n = push(out, n, b"{\"")?;
     if id.is_some() {
@@ -239,17 +259,11 @@ pub fn encode_genesis(doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError
     n = push(out, n, b",")?;
     n = emit_relationships(out, n, None)?;
     n = push(out, n, b",\"service\":[")?;
-    let mut i = 0;
-    while i < doc.service_count as usize {
-        if i > 0 {
-            n = push(out, n, b",")?;
-        }
-        n = emit_service(out, n, None, &doc.services[i])?;
-        i += 1;
-    }
+    n = emit_service_array(out, n, None, doc)?;
     n = push(out, n, b"],\"verificationMethod\":[")?;
     n = emit_vm(out, n, None, &doc.controller_pk)?;
-    push(out, n, b"]}")
+    n = push(out, n, b"]}")?;
+    finish_encode(out, n)
 }
 
 pub fn encode_unsigned(id: &DidQi, doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError> {
@@ -321,17 +335,41 @@ fn encode_document(
         n = push(out, n, b"\"")?;
     }
     n = push(out, n, b"},\"service\":[")?;
-    let mut i = 0;
-    while i < doc.service_count as usize {
-        if i > 0 {
-            n = push(out, n, b",")?;
-        }
-        n = emit_service(out, n, Some(id), &doc.services[i])?;
-        i += 1;
-    }
+    n = emit_service_array(out, n, Some(id), doc)?;
     n = push(out, n, b"],\"verificationMethod\":[")?;
     n = emit_vm(out, n, Some(id), &doc.controller_pk)?;
-    push(out, n, b"]}")
+    n = push(out, n, b"]}")?;
+    finish_encode(out, n)
+}
+
+fn finish_encode(out: &[u8], n: usize) -> Result<usize, QiError> {
+    super::document_decode::reject_forbidden_locators(&out[..n])?;
+    Ok(n)
+}
+
+fn emit_service_array(
+    out: &mut [u8],
+    mut n: usize,
+    id: Option<&DidQi>,
+    doc: &QiDocument,
+) -> Result<usize, QiError> {
+    let mut wrote = false;
+    let mut i = 0;
+    while i < doc.service_count as usize {
+        if wrote {
+            n = push(out, n, b",")?;
+        }
+        n = emit_service(out, n, id, &doc.services[i])?;
+        wrote = true;
+        i += 1;
+    }
+    if doc.has_hostname_alias {
+        if wrote {
+            n = push(out, n, b",")?;
+        }
+        n = emit_hostname_alias(out, n, id, &doc.hostname_did_web)?;
+    }
+    Ok(n)
 }
 
 fn encode_mb32_sig(sig: &[u8; 64], out: &mut [u8]) -> Result<usize, QiError> {
@@ -369,78 +407,14 @@ pub fn encode_jsonld_cold(id: &DidQi, doc: &QiDocument, out: &mut [u8]) -> Resul
     encode_unsigned(id, doc, out)
 }
 
-fn find_after<'a>(buf: &'a [u8], key: &[u8]) -> Option<&'a [u8]> {
-    let mut i = 0;
-    while i + key.len() <= buf.len() {
-        if &buf[i..i + key.len()] == key {
-            return Some(&buf[i + key.len()..]);
-        }
-        i += 1;
-    }
-    None
-}
-
-fn parse_bool_at(s: &[u8]) -> bool {
-    s.starts_with(b"true")
-}
-
-fn parse_u32_at(s: &[u8]) -> u32 {
-    let mut v = 0u32;
-    let mut i = 0;
-    while i < s.len() && s[i].is_ascii_digit() {
-        v = v.saturating_mul(10).saturating_add((s[i] - b'0') as u32);
-        i += 1;
-    }
-    v
-}
-
-pub fn decode_canonical(buf: &[u8], out: &mut QiDocument) -> Result<(), QiError> {
-    *out = QiDocument::empty();
-    if let Some(rest) = find_after(buf, b"\"generation\":") {
-        out.generation = parse_u32_at(rest);
-    }
-    if let Some(rest) = find_after(buf, b"\"deactivated\":") {
-        out.deactivated = parse_bool_at(rest);
-    }
-    if let Some(rest) = find_after(buf, b"\"createdUnix\":") {
-        out.created_unix = parse_u32_at(rest);
-    }
-    if let Some(rest) = find_after(buf, b"\"publicKeyMultibase\":\"") {
-        let mb = take_token(rest);
-        decode_pk_multibase(mb, &mut out.controller_pk)?;
-    }
-    if find_after(buf, b"\"locatorKind\":\"direct\"").is_some() {
-        out.services[0].kind = LocatorClass::Direct;
-        out.service_count = out.service_count.max(1);
-    }
-    if find_after(buf, b"\"type\":\"CscpMailbox\"").is_some() && out.service_count == 0 {
-        out.service_count = 1;
-    }
-    if find_after(buf, b"ApprovedRelaysOnly").is_some() {
-        out.services[0].disclosure = Disclosure::ApprovedRelaysOnly;
-    }
-    out.validate()
-}
-
-fn take_token(s: &[u8]) -> &[u8] {
-    let mut i = 0;
-    while i < s.len() && s[i] != b'"' {
-        i += 1;
-    }
-    &s[..i]
-}
-
-fn decode_pk_multibase(mb: &[u8], pk: &mut [u8; 32]) -> Result<(), QiError> {
-    if mb.first() != Some(&b'z') || mb.len() < 2 {
-        return Err(QiError::MalformedDocument);
-    }
-    let mut raw = [0u8; 34];
-    decode_b58(&mb[1..], &mut raw)?;
-    if raw[0] != 0xed || raw[1] != 0x01 {
-        return Err(QiError::MalformedDocument);
-    }
-    pk.copy_from_slice(&raw[2..]);
-    Ok(())
+pub fn signed_git_object_id(
+    id: &DidQi,
+    doc: &QiDocument,
+    signature: &[u8; 64],
+) -> Result<[u8; 32], QiError> {
+    let mut buf = [0u8; MAX_CANONICAL];
+    let n = encode_signed(id, doc, signature, &mut buf)?;
+    Ok(super::git_object::blob_object_id(&buf[..n]))
 }
 
 #[cfg(test)]

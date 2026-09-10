@@ -72,4 +72,20 @@
 - Human input needed: none this step (symbols are documentation/presentation only).
 - Next: do not mint `did:☉` or put marks in TLVs.
 
+## 2026-09-10 — Swarm CSCP-09.02 + DID-QI spec/impl (integrating)
+
+- Step: three implementers returned; integrator wiring on `0.0.38`. Status: **in review**.
+- Built: HTTP/2 Extended CONNECT + capsules (`cscp_h2.rs`, `h2_capsule.rs`); `did-qi-method.md`; `did_qi/` CRUD. `pub mod did_qi` at crate root (not `identity::`). `pub mod cscp_h2` / `h2_capsule` under connectivity. Native `h2`/`http`/`tokio-rustls`. CSCP-08/12 still blocked. Worker commits on side branches had Co-authored-by footers; landing commits on `0.0.38` omit those.
+- Measured: pending cargo tests this step.
+- Human input needed: still CSCP-08 URL and CSCP-12 datatracker.
+- Next: run tests, independent review, fix gaps.
+
+## 2026-09-10 — Swarm check complete: CSCP-09.02 accept; DID-QI F1–F4 applied
+
+- Step: independent review `reviews/SWARM-09-DIDQI.md` checked; DID-QI-IMPL must-fix F1–F4 applied. Status: **done** for the three children; parent CSCP-09 Internet and DID Spec Registries remain open.
+- Built: QCDE-1 Read reconstructs aka / previousDigest / mailbox contact+hints / HostnameAlias (`document_decode.rs`). `read_generation` returns `StaleGeneration` when an older generation is presented as current. Spec §10.3 JSON ingest rejects Vector 4 `ipv6`/`port`/`direct`. UTXO tombstone corroborates only after `deactivate()` (does not impersonate §14). Vector 1 unsigned digest, RFC 8032 proof, and signed-document git object id asserted in-crate. CSCP-09.02 loopback TLS HTTP/2 Extended CONNECT wired (`pub mod cscp_h2`, `h2_capsule`). Honesty flags unchanged (false). Method `qi` not registered.
+- Measured: `cargo test -p qualia-core-db --lib --offline did_qi -- --test-threads=1` → **25 passed**, 0 failed; `p2p::connectivity::cscp_h2` → **4 passed**; `net::peer::fabric` → **46 passed** (`CARGO_TARGET_DIR=/tmp/qdnf-continue-target`, `--offline`). That is the in-process resolver + spec vectors + loopback H2, not a live git daemon, not Chronik, not DID Spec Registries, not Gate B, not Internet MASQUE.
+- Human input needed: CSCP-08 named operator / live inbound URL; CSCP-12 datatracker post (Timothy’s login). Optional: confirm `did:qi` vs reserved `did:hcinet`.
+- Next: keep parent CSCP-09 open until Internet HTTP/2 CONNECT or MASQUE exists. Do not invent a public relay URL.
+
 
