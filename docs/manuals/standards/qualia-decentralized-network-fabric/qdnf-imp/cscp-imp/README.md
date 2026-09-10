@@ -1,6 +1,6 @@
 # CSCP implementation programme
 
-**Status:** Wave 0 in-tree; Wave 1 first swarm authorised; Wave 2 blocked on operators / QUIC engine admission  
+**Status:** Wave 1 local control plane in-tree (CSCP-01–06 tested); Wave 2 swarm on CSCP-07/09/10/11; CSCP-08/12 blocked  
 **Date:** 2026-09-10  
 **Normative spec:** [draft-webcivics-cscp-00.md](../draft-webcivics-cscp-00.md)  
 **Swarm rules:** reuse [qdnf-imp swarm protocol](../swarm-protocol.md), briefs, handoffs, evidence manifests  
@@ -17,12 +17,12 @@ This programme implements CSCP as specified. It does **not** implement QUIC, MAS
 |---|---|---|
 | Exclude-then-rank | yes | keep tests |
 | ConnectRequest TLV | yes | — |
-| ContactDescriptor / RelayLease / CustodyLease / PathEvidence / Receipt / Accept / Reject codecs | partial (reject + receipt encode only) | CSCP-01 |
-| Private mailbox resolve, stale reject | in-kernel only | CSCP-02 |
-| Lease charge/cancel on a live two-peer CSCP exchange | UDP topology only | CSCP-03 |
-| PathEvidence: remote `validated=1` fail closed; Accept/Reject | missing | CSCP-04 |
-| CSCP control on TLS WSS + QSession | missing | CSCP-05 |
-| Receipt persist/recover | RAM only | CSCP-06 |
+| ContactDescriptor / RelayLease / CustodyLease / PathEvidence / Receipt / Accept / Reject codecs | yes (Wave 1) | keep tests |
+| Private mailbox resolve, stale reject | yes (Wave 1) | keep tests |
+| Lease charge/cancel on a live two-peer CSCP exchange | yes (local UDP + CSCP lease bytes) | Internet lease still no |
+| PathEvidence: remote `validated=1` fail closed; Accept/Reject | yes (Wave 1) | keep tests |
+| CSCP control on TLS WSS + QSession | yes (local rustls) | not browser / not Internet |
+| Receipt persist/recover | yes (CRC file) | RAM queue still not crash-safe |
 | QUIC ALPN `cscp/1` | no | CSCP-07 (evaluate quinn/noq; do not write QUIC) |
 | MASQUE bound UDP on Internet | no | CSCP-08 blocked on operator |
 | HTTP/2 capsule fallback | no | CSCP-09 |
@@ -30,7 +30,7 @@ This programme implements CSCP as specified. It does **not** implement QUIC, MAS
 | Independent review | no | CSCP-11 |
 | Datatracker submit | no | CSCP-12 human |
 
-“Fully implemented” for CSCP means Wave 1 complete: every message type on the wire, mailbox, leases, evidence rules, Accept/Reject, QSession-bound local TLS WSS, durable receipts. Wave 2 is the Internet profile and stays explicitly incomplete until Gates B–E in the architecture note.
+“Fully implemented” for the **local control plane** (Wave 1) is CSCP-01–06: every message type on the wire, mailbox, leases, evidence rules, Accept/Reject, QSession-bound local TLS WSS, durable receipts. That is now in-tree and tested. Wave 2 is the Internet profile and stays explicitly incomplete until Gates B–E in the architecture note.
 
 ## Wave dispatch
 
@@ -39,12 +39,16 @@ Wave 1 packages are disjoint writes. Workers do not edit `mod.rs`, `Cargo.toml`,
 | ID | Owner files | Depends |
 |---|---|---|
 | CSCP-00 | done: kernel, connect, select, experiments, local UDP | — |
-| CSCP-01 | `net/peer/fabric/wire/` | — |
-| CSCP-02 | `net/peer/fabric/mailbox.rs` | CSCP-01 interface |
-| CSCP-03 | `net/peer/fabric/lease_protocol.rs` | CSCP-01, lease.rs (read) |
-| CSCP-04 | `net/peer/fabric/outcome.rs` | CSCP-01, kernel (read) |
-| CSCP-05 | `p2p/connectivity/cscp_wss.rs` | CSCP-01, existing wss_tls/QSession |
-| CSCP-06 | `net/peer/fabric/receipt_store.rs` | CSCP-01, durable_store (read) |
+| CSCP-01 | done: `net/peer/fabric/wire/` | — |
+| CSCP-02 | done: `net/peer/fabric/mailbox.rs` | CSCP-01 |
+| CSCP-03 | done: `net/peer/fabric/lease_protocol.rs` | CSCP-01 |
+| CSCP-04 | done: `net/peer/fabric/outcome.rs` | CSCP-01 |
+| CSCP-05 | done: `p2p/connectivity/cscp_wss.rs` | CSCP-01 |
+| CSCP-06 | done: `net/peer/fabric/receipt_store.rs` | CSCP-01 |
+| CSCP-07 | `cscp-imp/decisions/CSCP-07-quic-alpn.md` (swarm) | CSCP-05 |
+| CSCP-09 | `net/peer/fabric/capsule.rs` (swarm; integrator merges `mod.rs`) | CSCP-01 |
+| CSCP-10 | `cscp-imp/decisions/CSCP-10-browser-profile.md` (swarm) | CSCP-05 |
+| CSCP-11 | `cscp-imp/reviews/CSCP-11-wave1.md` (swarm) | CSCP-01–06 |
 
 Commands:
 

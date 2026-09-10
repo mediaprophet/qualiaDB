@@ -14,54 +14,54 @@ Integrator ticks a box only after recorded evidence. Do not tick because a stub 
 
 ## CSCP-01 — Complete CSCP v1 TLV codec
 
-- [ ] CSCP-01.01 Split `wire.rs` into `wire/` below 500 lines per file
-- [ ] CSCP-01.02 ContactDescriptor encode/decode; stale is a receiver policy, not a missing field
-- [ ] CSCP-01.03 RelayLease encode/decode; `export_observations` must be 0 for relay-only callers
-- [ ] CSCP-01.04 CustodyLease encode/decode; must not be usable as forwarding budget
-- [ ] CSCP-01.05 PathEvidence encode/decode; `observer=2 && validated=1` rejected
-- [ ] CSCP-01.06 Decoded PathEvidence is never locally validated (demote to assertion)
-- [ ] CSCP-01.07 Receipt encode/decode round-trip; Committed not implied by relay
-- [ ] CSCP-01.08 ConnectAccept / ConnectReject encode/decode
-- [ ] CSCP-01.09 Unknown critical TLV rejected on every message type
-- [ ] CSCP-01.10 Tests: `cargo test -p qualia-core-db --lib --offline net::peer::fabric::wire`
+- [x] CSCP-01.01 Split `wire.rs` into `wire/` below 500 lines per file
+- [x] CSCP-01.02 ContactDescriptor encode/decode; stale is a receiver policy, not a missing field
+- [x] CSCP-01.03 RelayLease encode/decode; `export_observations` must be 0 for relay-only callers
+- [x] CSCP-01.04 CustodyLease encode/decode; must not be usable as forwarding budget
+- [x] CSCP-01.05 PathEvidence encode/decode; `observer=2 && validated=1` rejected
+- [x] CSCP-01.06 Decoded PathEvidence is never locally validated (demote to assertion)
+- [x] CSCP-01.07 Receipt encode/decode round-trip; Committed not implied by relay
+- [x] CSCP-01.08 ConnectAccept / ConnectReject encode/decode
+- [x] CSCP-01.09 Unknown critical TLV rejected on every message type
+- [x] CSCP-01.10 Tests: `cargo test -p qualia-core-db --lib --offline net::peer::fabric::wire`
 
 ## CSCP-02 — Private mailbox
 
-- [ ] CSCP-02.01 Bounded mailbox store (fixed slots, no DHT)
-- [ ] CSCP-02.02 Publish descriptor; resolve by contact key
-- [ ] CSCP-02.03 Stale generation rejected; expired rejected
-- [ ] CSCP-02.04 Direct locator in mailbox not probed when disclosure forbids
-- [ ] CSCP-02.05 `public_dht` false remains default
+- [x] CSCP-02.01 Bounded mailbox store (fixed slots, no DHT)
+- [x] CSCP-02.02 Publish descriptor; resolve by contact key
+- [x] CSCP-02.03 Stale generation rejected; expired rejected
+- [x] CSCP-02.04 Direct locator in mailbox not probed when disclosure forbids
+- [x] CSCP-02.05 `public_dht` false remains default
 
 ## CSCP-03 — Lease protocol
 
-- [ ] CSCP-03.01 Apply RelayLease from CSCP bytes; charge; cancel
-- [ ] CSCP-03.02 Mid-transfer expiry stops forward; cap not enlarged
-- [ ] CSCP-03.03 Relay-only forces `export_observations=0` even if the bytes say 1
-- [ ] CSCP-03.04 CustodyLease cannot satisfy a forwarding charge
-- [ ] CSCP-03.05 Two local peers exchange a lease then data under it
+- [x] CSCP-03.01 Apply RelayLease from CSCP bytes; charge; cancel
+- [x] CSCP-03.02 Mid-transfer expiry stops forward; cap not enlarged
+- [x] CSCP-03.03 Relay-only forces `export_observations=0` even if the bytes say 1
+- [x] CSCP-03.04 CustodyLease cannot satisfy a forwarding charge
+- [x] CSCP-03.05 Two local peers exchange a lease then data under it
 
 ## CSCP-04 — Accept / Reject / evidence
 
-- [ ] CSCP-04.01 ConnectAccept only after locally validated permitted path
-- [ ] CSCP-04.02 ConnectReject on stale, expired, revoked, isolated, policy
-- [ ] CSCP-04.03 Remote assertion cannot become selected path
-- [ ] CSCP-04.04 Kernel + codec integration test
+- [x] CSCP-04.01 ConnectAccept only after locally validated permitted path
+- [x] CSCP-04.02 ConnectReject on stale, expired, revoked, isolated, policy
+- [x] CSCP-04.03 Remote assertion cannot become selected path
+- [x] CSCP-04.04 Kernel + codec integration test
 
 ## CSCP-05 — TLS WSS + QSession carrier
 
-- [ ] CSCP-05.01 Two loopback TLS WSS peers exchange ConnectRequest/Accept
-- [ ] CSCP-05.02 QSession `handshake_over_fragments` then `SessionBinding::from_permit`
-- [ ] CSCP-05.03 Relay-only: no direct locator TLVs on that control stream
-- [ ] CSCP-05.04 Plain TCP fixture is not this path
-- [ ] CSCP-05.05 Do not set `public_relay_dialed` or Internet flags
+- [x] CSCP-05.01 Two loopback TLS WSS peers exchange ConnectRequest/Accept
+- [x] CSCP-05.02 QSession `handshake_over_fragments` then `SessionBinding::from_permit`
+- [x] CSCP-05.03 Relay-only: no direct locator TLVs on that control stream
+- [x] CSCP-05.04 Plain TCP fixture is not this path
+- [x] CSCP-05.05 Do not set `public_relay_dialed` or Internet flags
 
 ## CSCP-06 — Durable receipts
 
-- [ ] CSCP-06.01 Persist CSCP receipts to CRC file (reuse durable_store pattern or sibling file)
-- [ ] CSCP-06.02 Recover after drop; truncated fails closed
-- [ ] CSCP-06.03 Replay after recover + grant revoke still Denied
-- [ ] CSCP-06.04 RAM queue is not claimed crash-safe
+- [x] CSCP-06.01 Persist CSCP receipts to CRC file (reuse durable_store pattern or sibling file)
+- [x] CSCP-06.02 Recover after drop; truncated fails closed
+- [x] CSCP-06.03 Replay after recover + grant revoke still Denied
+- [x] CSCP-06.04 RAM queue is not claimed crash-safe
 
 ## CSCP-07 — QUIC ALPN (evaluate, do not write QUIC)
 
