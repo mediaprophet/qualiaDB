@@ -31,14 +31,15 @@ pub fn format_did(id: &DidQi, out: &mut [u8]) -> Result<usize, QiError> {
 }
 
 pub fn parse_did(s: &[u8]) -> Result<DidQi, QiError> {
-    if s.starts_with(b"did:q42:")
-        || s.starts_with(b"did:hcai:")
-        || s.starts_with(b"did:hci:")
-        || s.starts_with(b"did:qualia:")
+    if starts_ignore_ascii(s, b"did:q42:")
+        || starts_ignore_ascii(s, b"did:hcai:")
+        || starts_ignore_ascii(s, b"did:hcinet:")
+        || starts_ignore_ascii(s, b"did:hci:")
+        || starts_ignore_ascii(s, b"did:qualia:")
     {
         return Err(QiError::RejectedMethod);
     }
-    if !s.starts_with(PREFIX) {
+    if !starts_ignore_ascii(s, PREFIX) {
         return Err(QiError::InvalidPrefix);
     }
     let rest = &s[PREFIX.len()..];
@@ -54,6 +55,20 @@ pub fn parse_did(s: &[u8]) -> Result<DidQi, QiError> {
         return Err(QiError::MalformedId);
     }
     Ok(DidQi(id))
+}
+
+fn starts_ignore_ascii(s: &[u8], prefix: &[u8]) -> bool {
+    if s.len() < prefix.len() {
+        return false;
+    }
+    let mut i = 0;
+    while i < prefix.len() {
+        if s[i].to_ascii_lowercase() != prefix[i] {
+            return false;
+        }
+        i += 1;
+    }
+    true
 }
 
 pub(crate) fn encode_b58(input: &[u8], out: &mut [u8]) -> Result<usize, QiError> {
@@ -145,11 +160,26 @@ mod tests {
             Err(QiError::RejectedMethod)
         );
         assert_eq!(
+            parse_did(b"did:hcinet:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu"),
+            Err(QiError::RejectedMethod)
+        );
+        assert_eq!(
             parse_did(b"did:qualia:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu"),
             Err(QiError::RejectedMethod)
         );
         assert_eq!(
             parse_did(b"did:qi:example.invalid"),
+            Err(QiError::MalformedId)
+        );
+    }
+
+    #[test]
+    fn parse_did_ascii_case_folds_prefix_not_multibase() {
+        let folded = b"DID:QI:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu";
+        let expected = parse_did(b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu").unwrap();
+        assert_eq!(parse_did(folded).unwrap(), expected);
+        assert_eq!(
+            parse_did(b"did:qi:ZDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu"),
             Err(QiError::MalformedId)
         );
     }

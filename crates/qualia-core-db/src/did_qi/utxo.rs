@@ -7,7 +7,7 @@
 
 use super::document::{sha256_32, QiDocument};
 use super::id::DidQi;
-use super::method::{load_canonical_digest, FLAG_UTXO_TOMBSTONE};
+use super::method::{load_canonical_digest, read};
 use super::{QiError, QiStore};
 
 pub const OP_RETURN: u8 = 0x6a;
@@ -16,6 +16,39 @@ pub const LIVE_KIND: u8 = 0x01;
 /// Registered tombstone kind in the 35-byte OP_RETURN push (`0xFF`).
 pub const TOMBSTONE_OPCODE: u8 = 0xFF;
 pub const MAX_CAIP2: usize = 72;
+
+/// Bitcoin mainnet genesis, first 16 bytes of block hash (CAIP-2 `bip122`).
+pub const CONSTITUTION_MAINNET: &[u8] = b"bip122:000000000019d6689c085ae165831e93";
+/// Bitcoin testnet3 genesis identifier (distinct ledger, same DID).
+pub const CONSTITUTION_TESTNET: &[u8] = b"bip122:000000000933ea01ad0ee984209779ba";
+
+/// True when `chain` is an admitted BIP-122 constitution identifier (spec §17.1).
+pub fn chain_admitted(chain: &[u8]) -> bool {
+    chain == CONSTITUTION_MAINNET || chain == CONSTITUTION_TESTNET
+}
+
+/// Parse then admit. Well-formed but unlisted `bip122:` ids are `unsupported_chain`.
+pub fn admit_chain(chain: &[u8]) -> Result<ChainId, QiError> {
+    let id = parse_chain_id(chain)?;
+    if !chain_admitted(id.as_bytes()) {
+        return Err(QiError::UnsupportedChain);
+    }
+    Ok(id)
+}
+
+/// Bitcoin RPC display encoding of a 32-byte SHA-256d digest (byte-reversed hex).
+pub fn txid_display(digest: &[u8; 32]) -> [u8; 64] {
+    let mut out = [0u8; 64];
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut i = 0;
+    while i < 32 {
+        let b = digest[31 - i];
+        out[i * 2] = HEX[(b >> 4) as usize];
+        out[i * 2 + 1] = HEX[(b & 0x0f) as usize];
+        i += 1;
+    }
+    out
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ChainId {
@@ -265,16 +298,15 @@ pub fn encode_commitment_tx(
 pub fn apply_utxo_attestation<S: QiStore>(
     store: &mut S,
     id: &DidQi,
+    chain: &[u8],
     tx: &[u8],
 ) -> Result<u64, QiError> {
-    let (digest, generation, flags) = load_canonical_digest(store, id)?;
-    if flags & FLAG_UTXO_TOMBSTONE != 0 {
-        return Err(QiError::Deactivated);
-    }
+    admit_chain(chain)?;
+    let (digest, generation) = load_canonical_digest(store, id)?;
     let c = extract_op_return(tx)?;
     if c.tombstone {
         let mut current = QiDocument::empty();
-        super::method::read(store, id, &mut current)?;
+        read(store, id, &mut current)?;
         if !current.deactivated {
             return Err(QiError::TombstoneRequiresDeactivate);
         }
@@ -317,7 +349,7 @@ mod tests {
     fn op_return_commitment_matches_wrong_fails_tombstone_deactivates() {
         let mut store = GitObjectStore::new();
         let id = create(&mut store, &sk(), &sample_doc()).unwrap();
-        let (digest, gen, _) = load_canonical_digest(&store, &id).unwrap();
+        let (digest, gen) = load_canonical_digest(&store, &id).unwrap();
         assert_eq!(gen, 0);
 
         let (tx, n) = tx_for(&digest, false);
@@ -326,7 +358,10 @@ mod tests {
         let extracted = extract_op_return(&tx[..n]).unwrap();
         assert_eq!(extracted.digest, digest);
         assert!(!extracted.tombstone);
-        assert_eq!(apply_utxo_attestation(&mut store, &id, &tx[..n]).unwrap(), 0);
+        assert_eq!(
+            apply_utxo_attestation(&mut store, &id, CONSTITUTION_MAINNET, &tx[..n]).unwrap(),
+            0
+        );
 
         let mut wrong = digest;
         wrong[0] ^= 0xff;
@@ -336,7 +371,7 @@ mod tests {
             Err(QiError::CommitmentMismatch)
         );
         assert_eq!(
-            apply_utxo_attestation(&mut store, &id, &bad[..bn]),
+            apply_utxo_attestation(&mut store, &id, CONSTITUTION_MAINNET, &bad[..bn]),
             Err(QiError::CommitmentMismatch)
         );
 
@@ -344,7 +379,7 @@ mod tests {
         let t = extract_op_return(&tomb[..tn]).unwrap();
         assert!(t.tombstone);
         assert_eq!(
-            apply_utxo_attestation(&mut store, &id, &tomb[..tn]),
+            apply_utxo_attestation(&mut store, &id, CONSTITUTION_MAINNET, &tomb[..tn]),
             Err(QiError::TombstoneRequiresDeactivate)
         );
         let mut live = QiDocument::empty();
@@ -353,10 +388,10 @@ mod tests {
         assert_eq!(live.service_count, 1);
 
         deactivate(&mut store, &sk(), &id).unwrap();
-        let (digest2, gen2, _) = load_canonical_digest(&store, &id).unwrap();
+        let (digest2, gen2) = load_canonical_digest(&store, &id).unwrap();
         assert_eq!(gen2, 1);
         let (tomb2, tn2) = tx_for(&digest2, true);
-        let g = apply_utxo_attestation(&mut store, &id, &tomb2[..tn2]).unwrap();
+        let g = apply_utxo_attestation(&mut store, &id, CONSTITUTION_MAINNET, &tomb2[..tn2]).unwrap();
         assert_eq!(g, 1);
         let mut out = QiDocument::empty();
         read(&store, &id, &mut out).unwrap();
@@ -375,6 +410,39 @@ mod tests {
         assert!(id.is_bip122());
         assert_eq!(parse_chain_id(b"eip155:1"), Err(QiError::MalformedChainId));
         assert_eq!(parse_chain_id(b"did:btc:x"), Err(QiError::MalformedChainId));
+        assert!(chain_admitted(CONSTITUTION_MAINNET));
+        assert!(chain_admitted(CONSTITUTION_TESTNET));
+        assert_eq!(
+            admit_chain(b"bip122:ffffffffffffffffffffffffffffffff"),
+            Err(QiError::UnsupportedChain)
+        );
+        assert_eq!(admit_chain(b"eip155:1"), Err(QiError::MalformedChainId));
+        assert_eq!(QiError::UnsupportedChain.token(), "unsupported_chain");
+    }
+
+    #[test]
+    fn vector1_txid_display_is_byte_reversed() {
+        let hex = b"010000000111111111111111111111111111111111111111111111111111111111111111110000000000ffffffff010000000000000000256a2351490173432eeabe01888f4770654fcd9a85b59605a2b3eb9d82b16b700c17345c674400000000";
+        let mut tx = [0u8; 128];
+        let n = hex.len() / 2;
+        let mut i = 0;
+        while i < n {
+            tx[i] = hex_byte(hex[i * 2], hex[i * 2 + 1]);
+            i += 1;
+        }
+        let c = extract_op_return(&tx[..n]).unwrap();
+        assert_eq!(
+            &txid_display(&c.outpoint.txid)[..],
+            b"e9dfb2471de55f2d1702a5dd1c560a28c4a632640d5f8d0648613b69f6a5a176"
+        );
+        let mut wire = [0u8; 32];
+        let wh = b"76a1a5f6693b6148068d5f0d6432a6c4280a561cdda502172d5fe51d47b2dfe9";
+        i = 0;
+        while i < 32 {
+            wire[i] = hex_byte(wh[i * 2], wh[i * 2 + 1]);
+            i += 1;
+        }
+        assert_eq!(c.outpoint.txid, wire);
     }
 
     #[test]

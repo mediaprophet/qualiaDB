@@ -7,69 +7,16 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
 use super::document::{
-    encode_unsigned, genesis_digest, proof_message, sha256_32, QiDocument, MAX_CANONICAL,
+    encode_signed, encode_unsigned, genesis_digest, proof_message, sha256_32, QiDocument,
+    MAX_CANONICAL, MAX_SIGNED,
 };
-use super::document_decode::decode_canonical;
+use super::document_decode::{decode_canonical, extract_proof_sig};
 use super::git_object::MAX_RECORD;
 use super::id::DidQi;
 use super::service::check_relay_only;
 use super::{QiError, QiStore};
 
-pub(crate) const FLAG_UTXO_TOMBSTONE: u8 = 0x01;
 const SIG_LEN: usize = 64;
-const HDR_LEN: usize = 1 + 8 + 2;
-
-pub(crate) struct RecordParts<'a> {
-    pub flags: u8,
-    pub generation: u64,
-    pub canonical: &'a [u8],
-    pub signature: [u8; SIG_LEN],
-}
-
-pub(crate) fn pack_record(
-    flags: u8,
-    generation: u64,
-    canonical: &[u8],
-    signature: &[u8; SIG_LEN],
-    out: &mut [u8],
-) -> Result<usize, QiError> {
-    let n = HDR_LEN + canonical.len() + SIG_LEN;
-    if canonical.len() > MAX_CANONICAL || n > MAX_RECORD {
-        return Err(QiError::CanonicalTooLarge);
-    }
-    if out.len() < n {
-        return Err(QiError::BufferTooSmall);
-    }
-    out[0] = flags;
-    out[1..9].copy_from_slice(&generation.to_be_bytes());
-    let len = u16::try_from(canonical.len()).map_err(|_| QiError::CanonicalTooLarge)?;
-    out[9..11].copy_from_slice(&len.to_be_bytes());
-    out[11..11 + canonical.len()].copy_from_slice(canonical);
-    out[11 + canonical.len()..n].copy_from_slice(signature);
-    Ok(n)
-}
-
-pub(crate) fn unpack_record(buf: &[u8]) -> Result<RecordParts<'_>, QiError> {
-    if buf.len() < HDR_LEN + SIG_LEN {
-        return Err(QiError::MalformedDocument);
-    }
-    let flags = buf[0];
-    let generation = u64::from_be_bytes(buf[1..9].try_into().unwrap());
-    let canon_len = u16::from_be_bytes(buf[9..11].try_into().unwrap()) as usize;
-    let need = HDR_LEN + canon_len + SIG_LEN;
-    if buf.len() != need {
-        return Err(QiError::MalformedDocument);
-    }
-    let canonical = &buf[HDR_LEN..HDR_LEN + canon_len];
-    let mut signature = [0u8; SIG_LEN];
-    signature.copy_from_slice(&buf[need - SIG_LEN..need]);
-    Ok(RecordParts {
-        flags,
-        generation,
-        canonical,
-        signature,
-    })
-}
 
 fn public_from_secret(sk: &[u8; 32]) -> [u8; 32] {
     SigningKey::from_bytes(sk).verifying_key().to_bytes()
@@ -105,14 +52,13 @@ fn verify_unsigned(pk: &[u8; 32], unsigned: &[u8], signature: &[u8; SIG_LEN]) ->
 fn write_signed<S: QiStore>(
     store: &mut S,
     id: &DidQi,
-    flags: u8,
     generation: u64,
-    canonical: &[u8],
+    doc: &QiDocument,
     signature: &[u8; SIG_LEN],
 ) -> Result<u64, QiError> {
-    let mut rec = [0u8; MAX_RECORD];
-    let n = pack_record(flags, generation, canonical, signature, &mut rec)?;
-    store.put(id, generation, &rec[..n])?;
+    let mut signed = [0u8; MAX_SIGNED];
+    let n = encode_signed(id, doc, signature, &mut signed)?;
+    store.put(id, generation, &signed[..n])?;
     Ok(generation)
 }
 
@@ -141,20 +87,19 @@ pub fn create<S: QiStore>(
     let mut canonical = [0u8; MAX_CANONICAL];
     let n = encode_unsigned(&id, &doc, &mut canonical)?;
     let sig = sign_unsigned(controller_sk, &canonical[..n])?;
-    write_signed(store, &id, 0, 0, &canonical[..n], &sig)?;
+    write_signed(store, &id, 0, &doc, &sig)?;
     Ok(id)
 }
 
 pub fn read<S: QiStore>(store: &S, id: &DidQi, out: &mut QiDocument) -> Result<u64, QiError> {
     let mut rec = [0u8; MAX_RECORD];
-    let (_slot_gen, n) = store.get(id, &mut rec)?;
-    let parts = unpack_record(&rec[..n])?;
-    decode_canonical(parts.canonical, out)?;
-    verify_unsigned(&out.controller_pk, parts.canonical, &parts.signature)?;
-    if parts.flags & FLAG_UTXO_TOMBSTONE != 0 && !out.deactivated {
-        return Err(QiError::TombstoneRequiresDeactivate);
-    }
-    Ok(parts.generation)
+    let (slot_gen, n) = store.get(id, &mut rec)?;
+    decode_canonical(&rec[..n], out)?;
+    let sig = extract_proof_sig(&rec[..n])?;
+    let mut unsigned = [0u8; MAX_CANONICAL];
+    let un = encode_unsigned(id, out, &mut unsigned)?;
+    verify_unsigned(&out.controller_pk, &unsigned[..un], &sig)?;
+    Ok(slot_gen)
 }
 
 /// Spec §12.7: an older signed generation presented as current is stale.
@@ -189,7 +134,7 @@ pub fn update<S: QiStore>(
     if public_from_secret(controller_sk) != current.controller_pk {
         return Err(QiError::ControllerMismatch);
     }
-    let (prev, _, _) = load_canonical_digest(store, id)?;
+    let (prev, _) = load_canonical_digest(store, id)?;
     doc.generation = current.generation + 1;
     doc.created_unix = current.created_unix;
     doc.has_previous = true;
@@ -199,7 +144,7 @@ pub fn update<S: QiStore>(
     let mut canonical = [0u8; MAX_CANONICAL];
     let n = encode_unsigned(id, &doc, &mut canonical)?;
     let sig = sign_unsigned(controller_sk, &canonical[..n])?;
-    write_signed(store, id, 0, gen + 1, &canonical[..n], &sig)
+    write_signed(store, id, gen + 1, &doc, &sig)
 }
 
 pub fn deactivate<S: QiStore>(
@@ -215,26 +160,35 @@ pub fn deactivate<S: QiStore>(
     if public_from_secret(controller_sk) != current.controller_pk {
         return Err(QiError::ControllerMismatch);
     }
-    let (prev, _, _) = load_canonical_digest(store, id)?;
+    let (prev, _) = load_canonical_digest(store, id)?;
     current.deactivated = true;
     current.service_count = 0;
+    current.has_hostname_alias = false;
+    current.hostname_did_web = super::document::AkaEntry {
+        bytes: [0u8; super::document::MAX_AKA_LEN],
+        len: 0,
+    };
+    current.aka_count = 0;
     current.generation += 1;
     current.has_previous = true;
     current.previous_digest = prev;
     let mut canonical = [0u8; MAX_CANONICAL];
     let n = encode_unsigned(id, &current, &mut canonical)?;
     let sig = sign_unsigned(controller_sk, &canonical[..n])?;
-    write_signed(store, id, 0, gen + 1, &canonical[..n], &sig)
+    write_signed(store, id, gen + 1, &current, &sig)
 }
 
 pub(crate) fn load_canonical_digest<S: QiStore>(
     store: &S,
     id: &DidQi,
-) -> Result<([u8; 32], u64, u8), QiError> {
+) -> Result<([u8; 32], u64), QiError> {
     let mut rec = [0u8; MAX_RECORD];
-    let (_, n) = store.get(id, &mut rec)?;
-    let parts = unpack_record(&rec[..n])?;
-    Ok((sha256_32(parts.canonical), parts.generation, parts.flags))
+    let (generation, n) = store.get(id, &mut rec)?;
+    let mut doc = QiDocument::empty();
+    decode_canonical(&rec[..n], &mut doc)?;
+    let mut unsigned = [0u8; MAX_CANONICAL];
+    let un = encode_unsigned(id, &doc, &mut unsigned)?;
+    Ok((sha256_32(&unsigned[..un]), generation))
 }
 
 #[cfg(test)]
@@ -315,6 +269,9 @@ mod tests {
         let mut out = QiDocument::empty();
         read(&store, &id, &mut out).unwrap();
         assert!(out.deactivated);
+        assert_eq!(out.service_count, 0);
+        assert_eq!(out.aka_count, 0);
+        assert!(!out.has_hostname_alias);
         assert_eq!(
             update(&mut store, &sk(), &id, &doc),
             Err(QiError::Deactivated)

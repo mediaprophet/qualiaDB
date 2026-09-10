@@ -9,8 +9,10 @@ use super::QiError;
 
 pub const MAX_AKA: usize = 4;
 pub const MAX_AKA_LEN: usize = 96;
-pub const MAX_SERVICES: usize = 4;
-pub const MAX_CANONICAL: usize = 2048;
+pub const MAX_SERVICES: usize = 8;
+pub const MAX_UNSIGNED: usize = 8192;
+pub const MAX_SIGNED: usize = 9216;
+pub const MAX_CANONICAL: usize = MAX_UNSIGNED;
 pub const CREATED_UNIX_VECTOR: u32 = 1_788_998_400;
 const CTX: &[u8] = b"[\"https://www.w3.org/ns/did/v1\",\"https://w3id.org/security/suites/ed25519-2020/v1\",\"https://webizen.network/ns/did-qi/v1\"]";
 const PROOF_PREFIX: &[u8] = b"did:qi:document:v1\0";
@@ -263,7 +265,7 @@ pub fn encode_genesis(doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError
     n = push(out, n, b"],\"verificationMethod\":[")?;
     n = emit_vm(out, n, None, &doc.controller_pk)?;
     n = push(out, n, b"]}")?;
-    finish_encode(out, n)
+    finish_encode(out, n, false)
 }
 
 pub fn encode_unsigned(id: &DidQi, doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError> {
@@ -339,11 +341,15 @@ fn encode_document(
     n = push(out, n, b"],\"verificationMethod\":[")?;
     n = emit_vm(out, n, Some(id), &doc.controller_pk)?;
     n = push(out, n, b"]}")?;
-    finish_encode(out, n)
+    finish_encode(out, n, signature.is_some())
 }
 
-fn finish_encode(out: &[u8], n: usize) -> Result<usize, QiError> {
+fn finish_encode(out: &[u8], n: usize, signed: bool) -> Result<usize, QiError> {
     super::document_decode::reject_forbidden_locators(&out[..n])?;
+    let cap = if signed { MAX_SIGNED } else { MAX_UNSIGNED };
+    if n > cap {
+        return Err(QiError::CanonicalTooLarge);
+    }
     Ok(n)
 }
 
@@ -412,7 +418,7 @@ pub fn signed_git_object_id(
     doc: &QiDocument,
     signature: &[u8; 64],
 ) -> Result<[u8; 32], QiError> {
-    let mut buf = [0u8; MAX_CANONICAL];
+    let mut buf = [0u8; MAX_SIGNED];
     let n = encode_signed(id, doc, signature, &mut buf)?;
     Ok(super::git_object::blob_object_id(&buf[..n]))
 }

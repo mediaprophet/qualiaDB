@@ -88,4 +88,12 @@
 - Human input needed: CSCP-08 named operator / live inbound URL; CSCP-12 datatracker post (Timothy’s login). Optional: confirm `did:qi` vs reserved `did:hcinet`.
 - Next: keep parent CSCP-09 open until Internet HTTP/2 CONNECT or MASQUE exists. Do not invent a public relay URL.
 
+## 2026-09-10 — Continue: spec caps, signed git blobs, Vector 3, constitution, CSCP `did:qi` fixtures
+
+- Step: principal continue command for remaining implementable completeness. Status: **done** for in-process spec vectors; CSCP-08/12 still blocked.
+- Built: store slots are signed QCDE-1 (spec §16), not packed records. Caps unsigned 8192 / signed 9216 / services 8 / hints 8. `deactivate()` clears mailbox, HostnameAlias, and `alsoKnownAs`. Vector 3 (gen 2, empty service, unsigned digest `03d83bce…`, git id `83484695…`). Constitution admits only Bitcoin mainnet + testnet3 `bip122:` ids (`unsupported_chain` otherwise). `txid_display` is SHA-256d byte-reversed. `QiError::token()` maps to spec §4 tokens. `parse_did` ASCII-folds `did:qi:` and rejects `did:hcinet:`. CSCP H2/WSS loopback fixtures use Vector 1 `did:qi:` plus a second formatted Qualia Identifier (not `did:q42:cscp-*`). Honesty flags unchanged (false). Method `qi` not registered.
+- Measured: pending cargo tests this step (commit-before-test).
+- Human input needed: CSCP-08 named operator / live inbound URL; CSCP-12 datatracker post (Timothy’s login). Optional: confirm `did:qi` vs reserved `did:hcinet`.
+- Next: do not tick parent CSCP-09, CSCP-08, or CSCP-12. Do not invent a public relay URL.
+
 

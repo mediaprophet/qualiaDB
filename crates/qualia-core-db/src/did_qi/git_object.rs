@@ -10,7 +10,7 @@ use super::id::DidQi;
 use super::{QiError, QiStore};
 
 pub const GIT_STORE_CAP: usize = 32;
-pub const MAX_BLOB: usize = 4096;
+pub const MAX_BLOB: usize = super::document::MAX_SIGNED;
 pub const MAX_RECORD: usize = MAX_BLOB;
 
 #[derive(Clone, Copy)]
@@ -23,13 +23,13 @@ struct GitSlot {
 }
 
 pub struct GitObjectStore {
-    slots: [Option<GitSlot>; GIT_STORE_CAP],
+    slots: Box<[Option<GitSlot>]>,
 }
 
 impl GitObjectStore {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            slots: [None; GIT_STORE_CAP],
+            slots: vec![None; GIT_STORE_CAP].into_boxed_slice(),
         }
     }
 

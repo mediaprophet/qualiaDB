@@ -470,3 +470,16 @@ pub fn decode_canonical(buf: &[u8], out: &mut QiDocument) -> Result<(), QiError>
     parse_services(buf, out)?;
     out.validate()
 }
+
+/// Extract `proof.proofValue` (multibase-z of 64-octet Ed25519 signature).
+pub fn extract_proof_sig(buf: &[u8]) -> Result<[u8; 64], QiError> {
+    let rest = after(buf, b"\"proofValue\":\"").ok_or(QiError::BadSignature)?;
+    let mb = take_token(rest);
+    if mb.first() != Some(&b'z') || mb.len() < 2 {
+        return Err(QiError::BadSignature);
+    }
+    let mut sig = [0u8; 64];
+    decode_b58(&mb[1..], &mut sig).map_err(|_| QiError::BadSignature)?;
+    Ok(sig)
+}
+

@@ -6,6 +6,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use crate::crypto::network::digest::sha384;
+use crate::did_qi::{format_did, DidQi};
 use crate::net::peer::fabric::carrier::PathClass;
 use crate::net::peer::fabric::connect::{connect, Fabric};
 use crate::net::peer::fabric::evidence::{PathEvidence, TransportWitness};
@@ -33,6 +34,15 @@ use crate::p2p::connectivity::wss_tls::mint_ca;
 
 fn loc(b: u8) -> ObservedLocator {
     ObservedLocator::from_slice(&[b]).unwrap()
+}
+
+fn qi_controller_pair() -> ([u8; 64], usize, [u8; 64], usize) {
+    let a_src = b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu";
+    let mut a = [0u8; 64];
+    a[..a_src.len()].copy_from_slice(a_src);
+    let mut b = [0u8; 64];
+    let nb = format_did(&DidQi([0x22; 32]), &mut b).expect("did:qi b");
+    (a, a_src.len(), b, nb)
 }
 
 struct H2CapsuleBearer {
@@ -163,13 +173,14 @@ pub fn cscp_then_qsession_over_local_tls_h2() -> Result<SessionBinding, String> 
         remote: dest_a,
         scope,
     };
-    let id_a = sha384(b"did:q42:cscp-a");
-    let id_b = sha384(b"did:q42:cscp-b");
+    let (did_a, na, did_b, nb) = qi_controller_pair();
+    let id_a = sha384(&did_a[..na]);
+    let id_b = sha384(&did_b[..nb]);
     let hs = handshake_over_fragments(&mut a, &mut b, &dest_b, &dest_a, &id_a, &id_b)
         .map_err(|e| format!("qsession: {e:?}"))?;
     let now = 1_700_000_000u64;
     let mut owner = AuthorityOwner::new();
-    let binding = binding_for_controllers(b"did:q42:cscp-a", b"did:q42:cscp-b", b"q42:QSync/1", b"op-c")
+    let binding = binding_for_controllers(&did_a[..na], &did_b[..nb], b"q42:QSync/1", b"op-c")
         .map_err(|e| format!("bind: {e:?}"))?;
     let (_cred, _contact, handle) = owner
         .install_grant(binding, now, now.saturating_add(3600), ContactState::Active)

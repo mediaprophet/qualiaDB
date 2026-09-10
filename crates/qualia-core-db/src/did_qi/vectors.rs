@@ -1,8 +1,8 @@
 //! Spec §20 vector checks for the Qualia Identifier runtime.
 //!
 //! Vector 1 unsigned digest, RFC 8032 proof, and §16 git object id of the
-//! **signed** QCDE-1 document. Store slots remain packed records; git ids in
-//! this module hash `encode_signed` output, not the slot payload.
+//! **signed** QCDE-1 document. `create` stores those signed bytes, so
+//! `GitObjectStore::object_id_of` matches the published git id.
 
 #![cfg(test)]
 
@@ -10,12 +10,12 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
 use super::document::{
     encode_signed, encode_unsigned, genesis_digest, proof_message, sha256_32, signed_git_object_id,
-    AkaEntry, QiDocument, MAX_CANONICAL,
+    AkaEntry, QiDocument, MAX_CANONICAL, MAX_SIGNED,
 };
 use super::document_decode::ingest_unsigned_json;
 use super::git_object::GitObjectStore;
 use super::id::{format_did, DidQi, MAX_DID_TEXT};
-use super::method::{create, read, update};
+use super::method::{create, deactivate, read, update};
 use super::service::{CscpMailbox, Disclosure, RelayHint};
 use super::QiError;
 
@@ -107,9 +107,17 @@ fn vector1_unsigned_proof_and_git_id() {
         hex32(b"18962a639bdbe09b3998105716944d34b9da606d2d945701e6d68eff90aacddd")
     );
 
-    let mut signed = [0u8; MAX_CANONICAL];
+    let mut signed = [0u8; MAX_SIGNED];
     let sn = encode_signed(&id, &doc, &sig.to_bytes(), &mut signed).unwrap();
     assert_eq!(sn, 1550);
+
+    let mut store = GitObjectStore::new();
+    let stored = create(&mut store, &rfc8032_sk(), &doc).unwrap();
+    assert_eq!(stored, id);
+    assert_eq!(
+        store.object_id_of(&id).unwrap(),
+        hex32(b"18962a639bdbe09b3998105716944d34b9da606d2d945701e6d68eff90aacddd")
+    );
 }
 
 #[test]
@@ -151,6 +159,54 @@ fn vector2_hostname_alias_and_stale_generation() {
     assert_eq!(
         super::method::read_generation(&store, &id, 0, &mut QiDocument::empty()),
         Err(QiError::StaleGeneration)
+    );
+}
+
+#[test]
+fn vector3_deactivate_clears_locators_and_matches_git_id() {
+    let mut store = GitObjectStore::new();
+    let (_id, doc) = vector1_unsigned_doc();
+    let id = create(&mut store, &rfc8032_sk(), &doc).unwrap();
+    let mut next = doc;
+    next.aka[0] = AkaEntry::from_slice(b"did:web:example.invalid").unwrap();
+    next.aka_count = 1;
+    next.has_hostname_alias = true;
+    next.hostname_did_web = AkaEntry::from_slice(b"did:web:example.invalid").unwrap();
+    update(&mut store, &rfc8032_sk(), &id, &next).unwrap();
+    let g2 = deactivate(&mut store, &rfc8032_sk(), &id).unwrap();
+    assert_eq!(g2, 2);
+    let mut out = QiDocument::empty();
+    read(&store, &id, &mut out).unwrap();
+    assert_eq!(out.generation, 2);
+    assert!(out.deactivated);
+    assert_eq!(out.service_count, 0);
+    assert_eq!(out.aka_count, 0);
+    assert!(!out.has_hostname_alias);
+    assert!(out.has_previous);
+    let digest = super::document::unsigned_digest(&id, &out).unwrap();
+    assert_eq!(
+        digest,
+        hex32(b"03d83bce6f4abfcf88fc48da535e407d61090f0a95678a02e02cae50ecef311d")
+    );
+    let mut msg = [0u8; 64];
+    let mn = proof_message(&digest, &mut msg).unwrap();
+    let sig = SigningKey::from_bytes(&rfc8032_sk()).sign(&msg[..mn]);
+    let published_sig = hex64(b"3c9de6e392eef7b1c5a367e705cbab7b93c6e34f56b635827a4251f8402bb1f10e3b7be11a7e557cae88470814b3b6edf5f017396d193532cba03480ada7cb03");
+    assert_eq!(sig.to_bytes(), published_sig);
+    let mut signed = [0u8; MAX_SIGNED];
+    let sn = encode_signed(&id, &out, &sig.to_bytes(), &mut signed).unwrap();
+    assert_eq!(sn, 1222);
+    assert_eq!(
+        store.object_id_of(&id).unwrap(),
+        hex32(b"834846958cca9eb34fd2abcf559372f703fbe87da7d37f7b0f876673bce21860")
+    );
+    assert_eq!(
+        signed_git_object_id(&id, &out, &sig.to_bytes()).unwrap(),
+        hex32(b"834846958cca9eb34fd2abcf559372f703fbe87da7d37f7b0f876673bce21860")
+    );
+    assert_eq!(
+        update(&mut store, &rfc8032_sk(), &id, &doc),
+        Err(QiError::Deactivated)
     );
 }
 

@@ -5,8 +5,8 @@
 use super::QiError;
 
 pub const SERVICE_TYPE: &str = "CscpMailbox";
-pub const MAX_HINTS: usize = 2;
-pub const MAX_HINT_ID: usize = 32;
+pub const MAX_HINTS: usize = 8;
+pub const MAX_HINT_ID: usize = 64;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
