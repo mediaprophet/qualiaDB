@@ -123,7 +123,8 @@ impl RelayEndpoint {
     }
 }
 
-/// Address-dependent mapping cannot use STUN as a listen locator; relay is required.
+/// Recommendation for this pod’s measured class, not a universal connectivity theorem.
+/// See `address_dependent_is_not_universal_relay_law`.
 pub const fn relay_required_for_address_dependent() -> bool {
     true
 }

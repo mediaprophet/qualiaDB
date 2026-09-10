@@ -1,18 +1,17 @@
 # QDNF Internet peer connectivity — architecture decision proposal
 
-Date: 2026-09-10. Status: proposed design and implementation direction; no deployment certification.
+Date: 2026-09-10. Status: in-tree implementation on `0.0.38`; no deployment certification.
 
-Landed in-tree on `0.0.38` as documentation only. Related notes:
-[nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md),
+Related notes: [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md),
 [internet-two-host.md](./internet-two-host.md).
-A–E decisions in §2 are now the recorded answers. Real relay URLs and operators remain
-deployment inputs. This file does not implement the connection manager.
+A–E decisions in §2 are the recorded answers. Real relay URLs and operators remain
+deployment inputs. The connection manager, ICE checklist, TURN codec, local
+authenticated WSS, invitations, durable queues, consent/path-bind, and NAT64
+contract are in-tree. They are not an Internet trial.
 
 Reviewed local baseline: `0.0.37`, `79231d7d98bee8bce1b02e93f3253d198582d3d2`.
 Reviewed selected remote sources: `cursor/qdnf-enhancement-e00-e01-cb60`,
 `16ed59e7fe514f39d39f3e9473ae3649a743055f`, including Cursor's brief introduced in `38112131`.
-The remote branch was fetched, not merged. Its tests and reported network observations were not
-rerun in this review. This proposal defines the solution; it does not implement it.
 
 ## 1. Decision
 

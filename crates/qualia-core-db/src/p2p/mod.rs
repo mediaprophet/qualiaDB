@@ -10,7 +10,11 @@ pub mod mesh_probe;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stun_observe;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod connectivity;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod outbound_relay;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod wg_engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod social_qdnf;
 #[cfg(not(target_arch = "wasm32"))]

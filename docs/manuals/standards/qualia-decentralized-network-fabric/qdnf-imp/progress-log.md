@@ -655,5 +655,19 @@
 - Human input needed: **B** — named operator(s), verified WSS URL/certificate, TURN URIs/port ranges, issuing authority, first two endpoints, selected protection policy. The architecture explicitly does not invent these.
 - Next: do not start the substantial socket/ICE/relay refactor until the principal assigns that stage. First Internet trial still needs the deployment inventory above or a reachable `LISTEN_ADDR`.
 
+## 2026-09-10 — connection manager implemented in-tree (Internet still unexecuted)
+
+- Step: principal said get the architecture done. Status: **in-tree stages implemented; Internet trial still blocked on B**. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - `net/peer/connectivity/` — policy, generations, bounded candidates, dual-stack planner (relay then IPv6 then IPv4 at 250 ms), QINV1 invitations, rendezvous store, durable delivery states, browser contract, failure-matrix oracle, MTU budget 1152 on 1280, generation-safe path bind + RFC 7675 consent timers.
+  - `p2p/connectivity/` — UDP/overlay demux, ICE checklist (role conflict + consent freshness), TURN Allocate codec, RFC 6455 WSS + HMAC, two-process authenticated relay, WG-over-local-WSS to SessionReady, NAT64 that does not assume `64:ff9b::/96`.
+  - `p2p/wg_engine.rs` — socket-free caller-buffered boringtun engine.
+  - `qualia-client-core/src/introduction.rs` — QINV1 import; `qcx1_` private-bootstrap only. Not compiled here (openssl-sys / missing `libssl-dev`).
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter recorded after this landing in `/opt/cursor/artifacts/connectivity-impl.log`.
+- Not claimed: `public_relay_dialed()`; `internet_two_host_handshake_executed()`; live coturn; rustls/public WSS/443; full RFC 8445 consent against public STUN; browser TURN interop; QUIC/iroh benchmark; Native Independent.
+- Human input needed: still **B** — operator, verified WSS URL/certificate, TURN URIs. Or a reachable `LISTEN_ADDR`.
+- Next: dial that URL when supplied. Do not invent one.
+
 
 
