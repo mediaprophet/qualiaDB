@@ -17,7 +17,7 @@ Two hosts on the public Internet, each behind some NAT, want an authenticated tu
 | Session (optional) | QSession `handshake_over_fragments` | Already proven on two **loopback** WireGuard meshes. Same bytes can ride the internet overlay once the outer tunnel is up. |
 | NAT | RFC 5389 STUN Binding on **one** socket toward **two** servers | Classifies endpoint-independent vs address-dependent mapping (RFC 4787). A STUN address is an observation, not a listen locator. |
 | Roles | One **listen** (reachable UDP), one **connect** (outbound) | Symmetric / address-dependent SNAT cannot publish a STUN mapping for a third host. Hole punching will not work from that side. |
-| Relay | Not implemented | Needed only if **both** sides are address-dependent and neither has a port-forward or public UDP. That requires a host you control. This Cursor cloud VM cannot be that relay. |
+| Relay | In-process hub proven; **no public URL** | If **both** sides are address-dependent and neither has a port-forward, both must **dial outbound** to a third party that forwards opaque WireGuard datagrams (DERP/TURN shape). See [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md). This Cursor cloud VM cannot be that relay. |
 
 What we will **not** do:
 
@@ -143,9 +143,11 @@ and record whether the handshake completed. That is the missing evidence. Nothin
 
 ### Barrier E — both sides address-dependent, no port-forward (relay)
 
-If grok-bot **also** sits on address-dependent SNAT with no port-forward, neither side can listen. Then we need a **TURN/DERP-style relay** on a host you control (VPS with a public UDP or TCP port). This repo does not ship that relay. Do not ask the Cursor cloud pod to be it; it has the same SNAT problem.
+If grok-bot **also** sits on address-dependent SNAT with no port-forward, **WireGuard configuration cannot create a path**. Roaming does not punch SNAT. WebRTC without TURN has the same hole (`RTCConfiguration` in desktop currently has **no ICE servers**).
 
-If you stand up a relay, say so and we can bind an explicit “QFrames over relay” adapter. Until then, Barrier A is the cheaper fix.
+What works: both peers **dial outbound** (HTTPS/WSS/443 preferred) to a third party that forwards **opaque WireGuard datagrams**. That is Tailscale DERP / ICE+TURN, not “WG by itself” and not libp2p circuit-relay. In-tree proof: `p2p/outbound_relay.rs` (`public_relay_dialed()==false`). Full recommendation and expert questions A–E: [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md).
+
+This Cursor cloud pod cannot host that relay (same SNAT). Barrier A (one reachable UDP listen) is cheaper **if** grok-bot can listen. If it cannot, the next paste we need is a **dialable relay URL**, not more STUN.
 
 ### Barrier F — physical Ethernet (separate from internet)
 
@@ -193,6 +195,7 @@ Two loopback WireGuard meshes already exchange QFrames and run `handshake_over_f
 | `internet_two_host_handshake_executed()` | **false** |
 | `physical_two_host_qualified()` | false |
 | `silent_ip_fallback()` | false (this path is labelled IP/WG, not a silent Ethernet fallback) |
+| `public_relay_dialed()` | **false** (in-process hub is not a public WSS/TURN) |
 
 E05.5 / OPS-01 checkboxes stay unchecked.
 
@@ -200,6 +203,7 @@ E05.5 / OPS-01 checkboxes stay unchecked.
 
 - `p2p/stun_observe.rs` — RFC 5389 XOR-MAPPED-ADDRESS parse/encode, two-server mapping class, connect-only role recommendation.
 - `p2p/mesh_probe.rs` — `connect_probe` plus env-gated `internet_connect_if_env_set` so this cloud agent can dial without `qualia-cli`.
+- `p2p/outbound_relay.rs` — both-sides-dial-out hub; WireGuard handshake + inner IPv6 over opaque datagrams. Not a public relay.
 - `qualia-cli mesh-probe observe` — live STUN on a bound UDP socket (needs OpenSSL headers to build the CLI on this image).
 - `mesh-probe listen` prints the same observe report on the tunnel socket.
 - `mesh-probe connect --qdnf` sends a QFrame on overlay port `6423`.
@@ -211,7 +215,7 @@ These tools do not complete the internet test by themselves. They make Barrier D
 One of:
 
 1. **LISTEN_ADDR + PASS** from grok-bot (or any reachable listen host) while listen is running, or
-2. Confirmation that grok-bot cannot listen (then we plan a relay on a VPS you name), or
+2. Confirmation grok-bot cannot listen **plus** expert answers A–E in [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md) (at least: who operates the public relay and the first dialable WSS/443 URL), or
 3. A self-hosted Cursor worker on grok-bot’s machine **if and only if** that machine’s UDP `51820` is reachable; the worker still has to run `mesh-probe listen`.
 
-I do not need Ethernet privileges to run the **internet** test. I do need Barrier A and D.
+I do not need Ethernet privileges to run the **internet** test. I do need Barrier A and D, **or** a dialable relay.
