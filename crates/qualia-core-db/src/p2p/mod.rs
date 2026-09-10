@@ -6,6 +6,8 @@ pub mod mesh_service;
 pub mod protocol;
 pub mod routing;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod stun_observe;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod social_qdnf;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod social_webnet;
