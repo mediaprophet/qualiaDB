@@ -92,7 +92,7 @@
 
 - Step: principal continue command for remaining implementable completeness. Status: **done** for in-process spec vectors; CSCP-08/12 still blocked.
 - Built: store slots are signed QCDE-1 (spec §16), not packed records. Caps unsigned 8192 / signed 9216 / services 8 / hints 8. `deactivate()` clears mailbox, HostnameAlias, and `alsoKnownAs`. Vector 3 (gen 2, empty service, unsigned digest `03d83bce…`, git id `83484695…`). Constitution admits only Bitcoin mainnet + testnet3 `bip122:` ids (`unsupported_chain` otherwise). `txid_display` is SHA-256d byte-reversed. `QiError::token()` maps to spec §4 tokens. `parse_did` ASCII-folds `did:qi:` and rejects `did:hcinet:`. CSCP H2/WSS loopback fixtures use Vector 1 `did:qi:` plus a second formatted Qualia Identifier (not `did:q42:cscp-*`). Honesty flags unchanged (false). Method `qi` not registered.
-- Measured: pending cargo tests this step (commit-before-test).
+- Measured: `cargo test -p qualia-core-db --lib --offline --test-threads=1` (`CARGO_TARGET_DIR=/tmp/qdnf-continue-target`): `did_qi` **29 passed** (Vectors 1–4, including Vector 3 git id `83484695…`); `p2p::connectivity::cscp_h2` **4 passed**; `p2p::connectivity::cscp_wss` **1 passed**; `net::peer::fabric` **46 passed**. In-process resolver + loopback H2/WSS only. Not a live git daemon, not Chronik, not DID Spec Registries, not Gate B, not Internet MASQUE. Honesty flags remain false.
 - Human input needed: CSCP-08 named operator / live inbound URL; CSCP-12 datatracker post (Timothy’s login). Optional: confirm `did:qi` vs reserved `did:hcinet`.
 - Next: do not tick parent CSCP-09, CSCP-08, or CSCP-12. Do not invent a public relay URL.
 

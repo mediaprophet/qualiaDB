@@ -1189,6 +1189,6 @@ cargo test
 - `QiError::token()`; ASCII case-fold of `did:qi:`; reject `did:hcinet:`.
 - CSCP loopback H2/WSS controller strings are `did:qi:` (Vector 1 + a second formatted id).
 
-**Verification:** `cargo test -p qualia-core-db --lib --offline did_qi`, `cscp_h2`, `cscp_wss`, `net::peer::fabric` (measured after this note’s landing tests).
+**Verification:** `cargo test -p qualia-core-db --lib --offline -- --test-threads=1`: `did_qi` 29 passed; `cscp_h2` 4 passed; `cscp_wss` 1 passed; `net::peer::fabric` 46 passed.
 
 **Not done (human):** CSCP-08 public relay URL; CSCP-12 datatracker submit. Honesty flags remain false. Method not registered.
