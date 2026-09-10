@@ -17,7 +17,7 @@ Two hosts on the public Internet, each behind some NAT, want an authenticated tu
 | Session (optional) | QSession `handshake_over_fragments` | Already proven on two **loopback** WireGuard meshes. Same bytes can ride the internet overlay once the outer tunnel is up. |
 | NAT | RFC 5389 STUN Binding on **one** socket toward **two** servers | Classifies endpoint-independent vs address-dependent mapping (RFC 4787). A STUN address is an observation, not a listen locator. |
 | Roles | One **listen** (reachable UDP), one **connect** (outbound) | Symmetric / address-dependent SNAT cannot publish a STUN mapping for a third host. Hole punching will not work from that side. |
-| Relay | In-process hub proven; **no public URL** | Consultant architecture: concurrent approved relay + bounded direct checks; TURN/UDP and WSS/443 as complementary transports. See [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md). This Cursor cloud VM cannot be that relay. |
+| Relay | In-process hub proven; **no public URL** | Incremental WG path: concurrent approved relay + bounded direct checks; TURN/UDP and WSS/443. Greenfield supervisor: [capability-scoped-connection-fabric.md](./capability-scoped-connection-fabric.md); research: [quic-native-connectivity-research-2026.md](./quic-native-connectivity-research-2026.md). See [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md). This Cursor cloud VM cannot be a public relay. |
 
 What we will **not** do:
 

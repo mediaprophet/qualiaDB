@@ -4,8 +4,12 @@
 **Audience:** networking expert asked to direct the implementation.  
 **Status:** recommendation recorded; in-process outbound relay proven; **no public relay operated yet**; internet two-host handshake **not** executed.  
 **Related:** [internet-two-host.md](./internet-two-host.md) (measured SNAT on this Cursor cloud pod);
-[internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md) (consultant
-decision: retain WireGuard; six connection-manager principles; A–E answered).
+[internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md) (incremental
+SocialWebNet: retain WireGuard; six connection-manager principles; A–E answered);
+[quic-native-connectivity-research-2026.md](./quic-native-connectivity-research-2026.md) (QUIC-native
+greenfield research);
+[capability-scoped-connection-fabric.md](./capability-scoped-connection-fabric.md) (supervisor:
+exclude prohibited paths before scoring).
 
 This is not Native Independent Ethernet. It is the labelled **transition** path (WireGuard / ICE / outbound relay / optional WebRTC). Programme checkboxes stay unchecked.
 
@@ -130,3 +134,20 @@ Normative write-up: [internet-peer-connectivity-architecture.md](./internet-peer
 Corrections carried forward: STUN pair is an observation, not a complete RFC 4787 classification; do not treat `relay_required_for_address_dependent()` as a universal theorem; WSS/443 is not a firewall guarantee; establish relay concurrently with direct checks; privacy policy filters probes before discovery.
 
 Implementation of a real dialer still waits on **B** (a named operator and verified WSS URL) or a reachable grok-bot UDP listen. No software change on this pod can complete the internet test without one of those.
+
+## 7. Capability-scoped fabric (greenfield supervisor)
+
+The incremental A–E table above is the SocialWebNet transition. The connection
+**architecture** for new Internet work is the [capability-scoped fabric](./capability-scoped-connection-fabric.md):
+`connect(peer, purpose, protection_policy, resource_budget)`, private contact
+descriptors, relay leases distinct from custody, path evidence, durable receipts.
+Prohibited paths are excluded before performance is compared.
+
+That supervisor is in-tree (`net/peer/fabric/`) with a local bound-UDP topology
+and a CSCP ConnectRequest codec (`draft-webcivics-cscp-00`). Novel protocols may
+be defined; CSCP is specified as an Internet-Draft because the control plane
+(purpose, protection, exclude-then-rank, leases, evidence, receipts) is the
+human-centric contribution. The file in this tree is not datatracker publication
+and not an RFC. It is not MASQUE bound UDP on the public Internet, not noq, and
+not a claim that DCUtR/Pkarr/Pear remove relays or private publication. Public
+DHT discovery stays optional and off by default for protected contact.

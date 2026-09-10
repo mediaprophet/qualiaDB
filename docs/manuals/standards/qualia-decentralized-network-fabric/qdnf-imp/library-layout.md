@@ -53,6 +53,7 @@ compatible directory instead of duplicating it; FND-01 records the final map.
 | Sessions | `net/qdnf/session/` | handshake binding; packet spaces; recovery; congestion; streams; datagrams; migration; service dispatch |
 | Semantic policy | `net/qdnf/contracts/` over existing fabric/modalities | bundle loader; codec; shape validation; supported rule compiler; temporal grant and purpose checks |
 | Runtime | `net/peer/runtime/`, `resources/` | kernel step; events/effects; leases; reservation ledger; quotas/fairness; cancellation |
+| Connection fabric | `net/peer/fabric/` | CSCP (`draft-webcivics-cscp-00`): intent, private contact, relay/custody leases, path evidence, receipts, exclude-then-rank, local bound-UDP |
 | Cell hosts | `net/peer/host/`, `cells/` | cell supervisor; IPC descriptors; ownership handoff; each OS backend; shutdown/restart |
 | Facade | proposed `qualia-peer/src/` | typed public API; host builder; C/WASM adapters; examples; no duplicate protocol engine |
 | Services | `net/peer/replication/`, `subscriptions/`, `custody/`, `compute/` | journal/checkpoints; projection planning; feeds; envelope storage; bounded RPC jobs; distinct receipts |

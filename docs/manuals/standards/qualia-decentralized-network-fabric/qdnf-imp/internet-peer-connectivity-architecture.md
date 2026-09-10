@@ -4,7 +4,18 @@ Date: 2026-09-10. Status: local production path verified on `0.0.38`; no Interne
 or deployment certification.
 
 Related notes: [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md),
-[internet-two-host.md](./internet-two-host.md).
+[internet-two-host.md](./internet-two-host.md),
+[quic-native-connectivity-research-2026.md](./quic-native-connectivity-research-2026.md),
+[capability-scoped-connection-fabric.md](./capability-scoped-connection-fabric.md).
+
+**Greenfield vs this document.** This file records the **incremental SocialWebNet**
+decision: retain WireGuard and add ICE/TURN/WSS around it. The 32-source research
+changes the **new Internet profile** to QUIC-native, relay-assisted, MASQUE bound
+UDP, with WireGuard as VPN/compatibility rather than the mandatory underlay.
+Neither write-up deletes these A–E answers. Native QDNF remains independent of IP.
+The capability-scoped fabric is the supervisor for every carrier, including this
+one. Noq/MASQUE/Internet are not certified here.
+
 A–E decisions in §2 are the recorded answers. Real public relay URLs remain
 deployment inputs. A public URL is not the only remaining blocker: earlier
 in-tree work overstated TLS, framing, QSession admission, ICE/TURN, and durable
