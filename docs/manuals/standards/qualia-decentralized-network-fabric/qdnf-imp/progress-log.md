@@ -635,5 +635,13 @@
 - Human input needed: expert answers **A–E** in the brief (confirm/reject the three-layer design; who operates the first dialable WSS/443 URL; signalling; TURN URIs for browsers; reject libp2p circuit-relay), **or** Barrier A+D (`LISTEN_ADDR` + passphrase) if grok-bot can listen.
 - Next: with a dialable relay URL, add the WSS/443 dialer against that URL. With a reachable UDP listen, run `internet_connect_if_env_set`. Neither can be minted inside this pod.
 
+## 2026-09-10 — landed on origin/0.0.38
+
+- Step: principal directed the complete update onto `0.0.38` (not only the `cursor/` working branch). Status: **done**. Fast-forward `origin/0.0.38` `f17ebd69` → `16ed59e7`. No rebase, no force-push.
+- Built: nothing new this step. The expert brief, outbound relay, STUN observe, mesh-probe, and SocialWebNet QDNF overlay are now on `0.0.38`.
+- Measured: `origin/0.0.38` == `16ed59e7`. Path present: `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/nat-traversal-expert-brief.md`.
+- Human input needed: consultant should `git fetch origin 0.0.38`. Expert answers A–E still open.
+- Next: same as prior entry (dialable relay URL or `LISTEN_ADDR`).
+
 
 
