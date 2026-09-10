@@ -17,6 +17,8 @@ use crate::net::peer::runtime::ResourceBudget;
 use crate::net::qdnf::authority::{
     binding_for_controllers, AuthorityOwner, ContactState, InstalledSessionKeys,
 };
+use crate::net::qdnf::bearer::contract::Bearer;
+use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::session::handshake::handshake_over_fragments;
 use crate::net::qdnf::session::{SessionBinding, SessionState};
 use crate::net::qdnf::types::{Generation, ObservedLocator, ScopeEpoch};
@@ -104,6 +106,11 @@ pub fn cscp_then_qsession_over_local_tls_wss() -> Result<SessionBinding, String>
     let dest_a = loc(0x01);
     let mut a = WssBearer::new(client, dest_a, dest_b, scope, true);
     let mut b = WssBearer::new(server, dest_b, dest_a, scope, false);
+    if a.profile() != BearerProfile::TlsWssTransitionV1
+        || b.profile() != BearerProfile::TlsWssTransitionV1
+    {
+        return Err("wss bearer must be TlsWssTransitionV1".into());
+    }
     let (did_a, na, did_b, nb) = qi_controller_pair();
     let id_a = sha384(&did_a[..na]);
     let id_b = sha384(&did_b[..nb]);

@@ -53,7 +53,7 @@ struct H2CapsuleBearer {
 
 impl Bearer for H2CapsuleBearer {
     fn profile(&self) -> BearerProfile {
-        BearerProfile::UdpTransitionV1
+        BearerProfile::Http2CapsuleTransitionV1
     }
 
     fn mtu(&self) -> u16 {
@@ -173,6 +173,11 @@ pub fn cscp_then_qsession_over_local_tls_h2() -> Result<SessionBinding, String> 
         remote: dest_a,
         scope,
     };
+    if a.profile() != BearerProfile::Http2CapsuleTransitionV1
+        || b.profile() != BearerProfile::Http2CapsuleTransitionV1
+    {
+        return Err("h2 bearer must be Http2CapsuleTransitionV1".into());
+    }
     let (did_a, na, did_b, nb) = qi_controller_pair();
     let id_a = sha384(&did_a[..na]);
     let id_b = sha384(&did_b[..nb]);

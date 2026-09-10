@@ -161,7 +161,7 @@ async fn establish(
             let _ = std::future::poll_fn(|cx| h2.poll_closed(cx)).await;
         });
         let proto = req.extensions().get::<Protocol>().map(|p| p.as_str());
-        if proto != Some(CAPSULE_PROTOCOL) {
+        if req.method() != Method::CONNECT || proto != Some(CAPSULE_PROTOCOL) {
             let _ = respond.send_response(
                 Response::builder()
                     .status(StatusCode::BAD_REQUEST)
@@ -170,7 +170,8 @@ async fn establish(
                 true,
             );
             return Err(format!(
-                "CONNECT requires :protocol=capsule (got {:?})",
+                "CONNECT requires method CONNECT and :protocol=capsule (got {:?} {:?})",
+                req.method(),
                 proto
             ));
         }

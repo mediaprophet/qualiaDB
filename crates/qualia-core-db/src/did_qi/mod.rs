@@ -13,6 +13,7 @@ mod document;
 mod document_decode;
 mod git_object;
 mod id;
+mod mailbox_bind;
 mod method;
 mod service;
 mod utxo;
@@ -32,6 +33,7 @@ pub use git_object::{
     blob_object_id, encode_blob, GitObjectStore, GIT_STORE_CAP, MAX_BLOB, MAX_RECORD,
 };
 pub use id::{format_did, parse_did, DidQi, MAX_DID_TEXT};
+pub use mailbox_bind::publish_qi_document;
 pub use method::{create, deactivate, read, read_generation, update};
 pub use service::{
     check_relay_only, CscpMailbox, Disclosure, LocatorClass, RelayHint, SERVICE_TYPE, MAX_HINTS,

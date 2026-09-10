@@ -145,7 +145,11 @@ impl Kernel {
                     };
                 }
                 self.state = FabricState::ContactResolved;
-                if prohibited(disclosure, PathClass::Relayed) {
+                if direct_locator && !prohibited(disclosure, PathClass::DirectV6) {
+                    KernelEffect::Probe {
+                        class: PathClass::DirectV6,
+                    }
+                } else if prohibited(disclosure, PathClass::Relayed) {
                     self.state = FabricState::OfflineQueued;
                     KernelEffect::QueueOffline
                 } else {
@@ -198,7 +202,7 @@ impl Kernel {
                     }
                 } else {
                     KernelEffect::Probe {
-                        class: PathClass::Relayed,
+                        class: PathClass::DirectV6,
                     }
                 }
             }
@@ -291,5 +295,52 @@ mod tests {
         );
         assert_eq!(k.direct_probe_count, 0);
         assert_ne!(k.state, FabricState::PathLive);
+    }
+
+    #[test]
+    fn ordinary_direct_descriptor_probes_direct() {
+        let mut k = Kernel::new();
+        k.admit(intent(ProtectionPolicy::ORDINARY), 0).unwrap();
+        let e = k.step(
+            KernelEvent::Descriptor {
+                stale: false,
+                expired: false,
+                direct_locator: true,
+            },
+            1,
+        );
+        assert_eq!(
+            e,
+            KernelEffect::Probe {
+                class: PathClass::DirectV6
+            }
+        );
+        let switch = k.step(KernelEvent::NetworkGenerationChanged, 2);
+        assert_eq!(
+            switch,
+            KernelEffect::Probe {
+                class: PathClass::DirectV6
+            }
+        );
+    }
+
+    #[test]
+    fn mailbox_descriptor_still_probes_relayed() {
+        let mut k = Kernel::new();
+        k.admit(intent(ProtectionPolicy::ORDINARY), 0).unwrap();
+        let e = k.step(
+            KernelEvent::Descriptor {
+                stale: false,
+                expired: false,
+                direct_locator: false,
+            },
+            1,
+        );
+        assert_eq!(
+            e,
+            KernelEffect::Probe {
+                class: PathClass::Relayed
+            }
+        );
     }
 }

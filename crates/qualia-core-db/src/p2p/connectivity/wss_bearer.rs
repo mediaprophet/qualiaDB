@@ -40,7 +40,7 @@ impl<S> WssBearer<S> {
 
 impl<S: Read + Write> Bearer for WssBearer<S> {
     fn profile(&self) -> BearerProfile {
-        BearerProfile::UdpTransitionV1
+        BearerProfile::TlsWssTransitionV1
     }
 
     fn mtu(&self) -> u16 {

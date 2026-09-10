@@ -155,7 +155,7 @@
         "reviews/SWARM-09-DIDQI.md",
         "/opt/cursor/artifacts/swarm-did-qi-f1-f4-tests.log"
       ],
-      "note": "F1–F4 applied. Method not registered. Parent DID-QI registration remains open."
+      "note": "F1–F4 applied. Method not registered. Parent DID-QI registration remains open. `publish_qi_document` binds CscpMailbox services into PrivateMailbox."
     },
     {
       "id": "CSCP-10",

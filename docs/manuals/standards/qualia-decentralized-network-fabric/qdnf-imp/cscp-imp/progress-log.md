@@ -96,4 +96,12 @@
 - Human input needed: CSCP-08 named operator / live inbound URL; CSCP-12 datatracker post (Timothy’s login). Optional: confirm `did:qi` vs reserved `did:hcinet`.
 - Next: do not tick parent CSCP-09, CSCP-08, or CSCP-12. Do not invent a public relay URL.
 
+## 2026-09-10 — Continue: did:qi mailbox bind, kernel Direct probe, honest bearer profiles
+
+- Step: principal continue. Status: **done** for local bind + kernel ranking residual + bearer labels; CSCP-08/12 still blocked.
+- Built: `did_qi::publish_qi_document` writes `CscpMailbox` services into `PrivateMailbox`. Deactivated documents publish nothing. HostnameAlias is not a CSCP locator. `publish_under` / `ingest_wire` refuse Direct under relay-only **before** the slot is stored. Kernel `Descriptor` with DirectPermitted + Direct locator probes `DirectV6`; network-switch under DirectPermitted probes Direct (relay-only still Relayed). Bearer labels: `TlsWssTransitionV1` (5), `Http2CapsuleTransitionV1` (6); not Native Independent, not MASQUE. H2 server requires `CONNECT` and `:protocol=capsule`. Honesty flags unchanged (false).
+- Measured: `did_qi` **33 passed**; `net::peer::fabric` **49 passed**; `cscp_h2` **4 passed**; `cscp_wss` **1 passed**; `registries` **3 passed** (`CARGO_TARGET_DIR=/tmp/qdnf-continue-target`, `--offline`, `--test-threads=1`).
+- Human input needed: CSCP-08 live inbound URL; CSCP-12 datatracker. Optional: confirm `did:qi` vs reserved `did:hcinet`.
+- Next: do not tick parent CSCP-09, CSCP-08, or CSCP-12. Do not invent a public relay URL.
+
 

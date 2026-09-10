@@ -38,6 +38,19 @@ impl PrivateMailbox {
         None
     }
 
+    /// Store `d` only when `disclosure` permits its locator class.
+    pub fn publish_under(
+        &mut self,
+        d: ContactDescriptor,
+        disclosure: Disclosure,
+    ) -> Result<(), FabricError> {
+        if d.kind == LocatorKind::Direct && prohibited(disclosure, super::carrier::PathClass::DirectV6)
+        {
+            return Err(FabricError::PolicyDenied);
+        }
+        self.publish(d)
+    }
+
     pub fn publish(&mut self, d: ContactDescriptor) -> Result<(), FabricError> {
         if d.contact_key == [0u8; 32] {
             return Err(FabricError::Illegal);
@@ -90,7 +103,7 @@ impl PrivateMailbox {
         if d.is_expired(now_unix) {
             return Err(FabricError::Expired);
         }
-        self.publish(d)?;
+        self.publish_under(d, disclosure)?;
         self.resolve(&d.contact_key, now_unix, disclosure)
     }
 
@@ -150,5 +163,27 @@ mod tests {
             Err(FabricError::PolicyDenied)
         );
         assert!(!crate::net::peer::fabric::intent::ProtectionPolicy::RELAY_ONLY.public_dht);
+    }
+
+    #[test]
+    fn ingest_relay_only_direct_does_not_retain_locator() {
+        let mut src = PrivateMailbox::new();
+        let key = [3u8; 32];
+        let mut direct = ContactDescriptor::mailbox(key, 1, 2_000_000_000);
+        direct.kind = LocatorKind::Direct;
+        src.publish(direct).unwrap();
+        let mut wire = [0u8; 256];
+        let n = src
+            .encode_current(&key, Disclosure::DirectPermitted, &mut wire)
+            .unwrap();
+        let mut dst = PrivateMailbox::new();
+        assert_eq!(
+            dst.ingest_wire(&wire[..n], 10, Disclosure::ApprovedRelaysOnly),
+            Err(FabricError::PolicyDenied)
+        );
+        assert_eq!(
+            dst.resolve(&key, 10, Disclosure::DirectPermitted),
+            Err(FabricError::Illegal)
+        );
     }
 }
