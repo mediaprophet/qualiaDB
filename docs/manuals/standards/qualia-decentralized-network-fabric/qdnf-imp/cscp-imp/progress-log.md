@@ -50,10 +50,18 @@
 
 ## 2026-09-10 — DID-QI-01: `did:qi`, git, hostname alias, multi-chain UTXO
 
-- Step: principal asked whether a DID method (git protocol, not GitHub) could serve discovery, then whether HCAI could be `qualia:` / `qi`, and whether a hostname method could span multiple blockchains via UTXO. Status: **naming recorded; method not specified; not implemented**.
-- Built: [decisions/did-qi-git-utxo.md](./decisions/did-qi-git-utxo.md). Split: `did:qi:` = HCAI DID method name; `did:q42:` stays QRC; `qualia://` stays the app URL scheme; hostname/`did:web` = Frontdoor alias; git = invitation/Isolated document backing; UTXO = parameterized multi-chain attestation (CAIP-2), not `did:btc` / `did:xec`. Pointer in identifier-resolution §3 and standards-backlog §2.
+- Step: principal asked whether a DID method (git protocol, not GitHub) could serve discovery, then whether the Human-Centric Internet could be `qualia:` / `qi`, and whether a hostname method could span multiple blockchains via UTXO. Status: **naming recorded; method not specified; not implemented**.
+- Built: [decisions/did-qi-git-utxo.md](./decisions/did-qi-git-utxo.md). Split: `did:qi:` = Qualia Identifier for HCInet instruments; `did:q42:` stays QRC; `qualia://` stays the app URL scheme; hostname/`did:web` = Frontdoor alias; git = invitation/Isolated document backing; UTXO = parameterized multi-chain attestation (CAIP-2), not `did:btc` / `did:xec`. Pointer in identifier-resolution §3 and standards-backlog §2.
 - Measured: not applicable (identifier architecture, no resolver, no chain trial).
-- Human input needed: confirm the method string `qi`; whether a first UTXO profile is eCash / generic Bitcoin-family / none; whether to write the actual DID Method spec next. CSCP-08 URL and CSCP-12 datatracker unchanged.
+- Human input needed: confirm the method string `qi` vs `hcinet`; whether a first UTXO profile is eCash / generic Bitcoin-family / none; whether to write the actual DID Method spec next. CSCP-08 URL and CSCP-12 datatracker unchanged. Do not confirm `did:hcai`.
 - Next: do not implement a resolver or register the method until asked. Do not treat git or UTXO as Gate B.
+
+## 2026-09-10 — DID-QI-01 nomenclature: HCAI ≠ Human-Centric Internet
+
+- Step: principal noted that HCAI commonly means Human-Centered AI, so names must be more specific. Status: **nomenclature tightened; method still unspecified**.
+- Built: nomenclature table in [decisions/did-qi-git-utxo.md](./decisions/did-qi-git-utxo.md). Short form for the network thesis is **HCInet**. **HCAI-ANP** stays the ingress-protocol acronym only. `did:qi` is Qualia Identifier, not “the HCAI DID”. Glossary + HCAI-ANP header disambiguation.
+- Measured: not applicable.
+- Human input needed: confirm `did:qi` vs `did:hcinet`. none otherwise this step.
+- Next: same as prior DID-QI entry.
 
 

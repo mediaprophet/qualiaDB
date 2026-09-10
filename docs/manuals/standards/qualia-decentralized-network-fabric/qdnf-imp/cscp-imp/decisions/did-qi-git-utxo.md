@@ -1,12 +1,29 @@
-# DID method for the Human-Centric Internet — `did:qi`, git, hostname, UTXO
+# Qualia Identifier (`did:qi`) for the Human-Centric Internet — git, hostname, UTXO
 
 - Decision ID: **DID-QI-01**
 - Date: 2026-09-10
 - Status: **recorded naming and backing split; method not specified; not implemented; not registered**
-- Owner: integrator on `0.0.38` after principal questions (git protocol, then `qualia:` / `qi` / multi-chain UTXO)
+- Owner: integrator on `0.0.38` after principal questions (git protocol, then `qualia:` / `qi` / multi-chain UTXO, then HCAI vs human-centered collision)
 - Does not unblock: CSCP-08 (live relay), CSCP-12 (datatracker), Internet honesty flags
 
 This is not a W3C DID Method specification. It freezes collisions and the ledger/hostname split so a later spec does not mint a stub or fold human identity into QRC.
+
+## Nomenclature (do not use HCAI for this method)
+
+**HCAI** in common use means **Human-Centered AI** (UX, human-in-the-loop, often still platform-hosted). That is not this work. Qualia writes **human-centric**: the natural-person principal remains in control; no automated system may override an explicit human decision.
+
+Do not call `did:qi` “the HCAI DID”. Do not register `did:hcai` or `did:hci` (`hci` is Human-Computer Interaction).
+
+| Term | Expansion | Use |
+|---|---|---|
+| Human-Centered AI | Spell out | External field only. Not an acronym in Qualia identifier or CSCP prose. |
+| Human-Centric Internet | **HCInet** when a short form is required | WebCivics / Qualia network thesis: capability-scoped connectivity (CSCP), fiduciary gates, invitation-scoped discovery. |
+| Human-Centric AI Agreement Negotiation Protocol | **HCAI-ANP** only | Existing ingress-contract draft and RDF types (`HCAIAgreementNegotiation`). Protocol-local acronym; not the internet, not the DID method. |
+| Qualia Identifier | `did:qi:` | DID method **name** for HCInet node / organisation / contextual **instrument** identity. |
+| Q42 Resource Coordinate | `did:q42:` | Storage/VM pointer. Not a DID method. |
+| App / RDF `qualia:` | `qualia://`, CURIE, `urn:qualia:` | Local URL scheme and ontology prefix. Not a DID method. |
+
+First use in a document spells **Human-Centric Internet**. **HCInet** is the only short form for that thesis. **HCAI-ANP** is never shortened to **HCAI** in new identifier text.
 
 ## What a DID method is (and is not)
 
@@ -14,7 +31,7 @@ A W3C DID is `did:<method>:<method-specific-id>`. The method must define create,
 
 A DID method publishes **identity and a DID document**. CSCP may put mailbox keys and approved **relay hints** in `service` entries. It does **not** forward datagrams. Git objects, UTXO commitments, and `did.json` on a hostname do not replace Gate B.
 
-A natural person is not a DID ([identifier-fabric-integration.md](../../../identifier-fabric-integration.md)). Pairwise invitation identifiers remain available (`did:peer`-class). `did:qi` is for HCAI **node / organisation / contextual instrument** identity, not a universal person key.
+A natural person is not a DID ([identifier-fabric-integration.md](../../../identifier-fabric-integration.md)). Pairwise invitation identifiers remain available (`did:peer`-class). `did:qi` is for **HCInet instrument** identity (node, organisation, contextual persona), not a universal person key.
 
 ## Do not reuse `qualia:` as the method name
 
@@ -25,21 +42,21 @@ A natural person is not a DID ([identifier-fabric-integration.md](../../../ident
 | `urn:qualia:…` | Profile and registry URNs | Persistence of engine profiles, not controller identity |
 | `did:q42:…` | Q42 Resource Coordinate: 60-bit FNV + MSB for VM/storage dispatch (`identity/identifier.rs`) | Not create/read/update/deactivate; not a content digest; not a route |
 
-**Chosen method name:** `did:qi:` — Qualia Identifier. Short, DID-Core shaped, and not one of the four collisions above.
+**Chosen method name:** `did:qi:` — Qualia Identifier. DID-Core shaped; names the product, not Human-Centered AI and not Human-Computer Interaction. Bound in prose to the Human-Centric Internet (HCInet), never to HCAI.
 
 **Compact display form (optional later):** `qi:<id>` MAY expand to `did:qi:<id>` in UI. Do not register a competing IANA URI scheme until a method spec exists. Do not teach software that `qualia:alice` is a DID.
 
-**Rejected:** `did:qualia:` (collides with the RDF prefix and will be mis-CURIE’d). `did:q42:` as the HCAI method (QRC stays QRC; standards-backlog item 2 must not fold HCAI identity into the pointer parser). Bare `qi:` as the only identifier (DID tooling and HCAI `did:web` Frontdoor expect `did:`).
+**Rejected:** `did:qualia:` (collides with the RDF prefix and will be mis-CURIE’d). `did:q42:` as the HCInet method (QRC stays QRC; standards-backlog item 2 must not fold HCInet identity into the pointer parser). `did:hcai:` / `did:hci:` (wrong expansions). Bare `qi:` as the only identifier (DID tooling and the HCAI-ANP `did:web` Frontdoor expect `did:`). `did:hcinet:` is reserved as an alternative method string only if `qi` is too opaque; it is not registered either.
 
 ## Hostname is an alias, not the chain
 
-HCAI already uses `did:web:<domain>` as a DNS/HTTPS Frontdoor with `alsoKnownAs: did:q42:…` and exactly one `HCAIAgreementNegotiation` service. That path **requires** DNS and Web PKI. QDNF marks `did:web` legacy-dependent ([cryptographic-profile.md](../../../cryptographic-profile.md) §11).
+HCAI-ANP already uses `did:web:<domain>` as a DNS/HTTPS Frontdoor with `alsoKnownAs: did:q42:…` and exactly one `HCAIAgreementNegotiation` service. That path **requires** DNS and Web PKI. QDNF marks `did:web` legacy-dependent ([cryptographic-profile.md](../../../cryptographic-profile.md) §11).
 
 A hostname method that **is** the DID (`did:qi:example.org` with the same resolution rules as `did:web`) locks the human-centric identifier to ICANN + HTTPS. That is the opposite of chain- and operator-portability.
 
 **Rule:** the stable DID is `did:qi:<self-certifying-id>` (genesis document hash or controller key, multibase). A hostname, if any, is `alsoKnownAs` / Frontdoor / CSCP mailbox hint. Rotating DNS, GitHub Pages, or a registrar MUST NOT change the DID.
 
-`did:web` remains the LIG compatibility Frontdoor. Native HCAI identity is `did:qi`.
+`did:web` remains the LIG compatibility Frontdoor. Native **HCInet** instrument identity is `did:qi`. HCAI-ANP may list `did:qi` in `alsoKnownAs` once the method exists; it does not own the method name.
 
 ## Backings (parameterized; not one ticker)
 
@@ -90,9 +107,9 @@ Default CSCP discovery stays invitation-scoped. `public_dht` remains off unless 
 | Method / pattern | Use |
 |---|---|
 | `did:peer` | Pairwise invitation; closest existing method to CSCP mailbox |
-| `did:web` | HCAI Frontdoor / LIG only |
+| `did:web` | HCAI-ANP Frontdoor / LIG only |
 | `did:key` | Static keys; no document updates |
-| `did:btcr` | Proof that UTXO spend = update; do not bind HCAI to Bitcoin alone |
+| `did:btcr` | Proof that UTXO spend = update; do not bind HCInet to Bitcoin alone |
 | `did:ion` | Sidetree + Bitcoin batching; different architecture |
 | `did:pkh` | CAIP-10 account ids; account model, not UTXO |
 | Historical `did:git` drafts | Git object backing; do not take GitHub as the method |
@@ -107,6 +124,6 @@ Default CSCP discovery stays invitation-scoped. `public_dht` remains off unless 
 
 ## Human input still needed
 
-1. Confirm `did:qi` as the method string (vs a different short name that does not collide).
+1. Confirm `did:qi` (Qualia Identifier) vs the more explicit `did:hcinet` (Human-Centric Internet). Do not confirm `did:hcai`.
 2. Whether a first UTXO profile is eCash (already in-tree for payments), Bitcoin-family generic, or none until a constitution lists chains.
 3. Whether to write the actual DID Method spec next (W3C CG-style; completeness bar: CRUD, test vectors, security/privacy — not a stub).

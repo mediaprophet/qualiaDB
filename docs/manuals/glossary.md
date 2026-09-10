@@ -126,9 +126,12 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **Permissive Commons**: Shared data governance with automatic Threshold Shift License (TSL) via ILP streams.
 - **Threshold Shift Licence (TSL)**: Fires automatically when the mathematical ILP threshold for an asset is met, shifting it to the Permissive Commons.
 - **did:git**: Git-based decentralized identity for Webizen agency and axiomatic evolution.
-- **did:q42**: Topological pointer encoded in a Quin's object field (MSB=1). Used by `resolver.rs` and `identifier.rs`.
+- **did:q42**: Q42 Resource Coordinate — topological pointer encoded in a Quin's object field (MSB=1). Used by `resolver.rs` and `identifier.rs`. Not a W3C DID method.
+- **did:qi**: Qualia Identifier — recorded method **name** for Human-Centric Internet (HCInet) instruments. Not implemented. Not Human-Centered AI (HCAI). See `qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md`.
+- **Human-Centric Internet (HCInet)**: WebCivics / Qualia network thesis (CSCP, fiduciary gates, invitation-scoped discovery). Spell out on first use. Not HCAI.
+- **Human-Centered AI**: External field (usual expansion of the acronym HCAI in literature). Spell out; do not use HCAI as a Qualia identifier or internet label.
 - **Author-Scoped Merkle Aggregation**: Users sign only the Merkle sub-roots of their own authored Quins, not the global root.
-- **HCAI Agreements**: Human Centric AI relationship contracts explicitly defined mathematically in the DB and bound by Duty of Care.
+- **HCAI-ANP / Human-Centric AI Agreements**: Ingress-protocol acronym and Duty-of-Care agreement types (`HCAIAgreementNegotiation`). Protocol-local. Not Human-Centered AI and not the HCInet DID method.
 - **DNS Frontdoor**: CLI subcommand (`webizen dns-frontdoor`) to generate zero-permission W3C `did:web` and DNS `TXT` records.
 
 ---
