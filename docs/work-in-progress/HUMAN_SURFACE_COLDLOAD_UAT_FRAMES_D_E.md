@@ -30,7 +30,7 @@
 
 | Item | Desktop | WASM | Evidence |
 |------|---------|------|----------|
-| **A3 soft-rise feel** | — | **PASS*** | Capt Frame A WASM shots 01–02; first paint not modal slap |
+| **A3 soft-rise feel** | **PASS*** | **PASS*** | monet mark — Capt Desktop `d7f0bdc` + WASM `f712e97`; first paint not modal slap |
 | **Frame A empty-bay arrive** | — | **PASS** | Capt re-UAT `cfac542` A1/A2 — studio bay + Ask·Keep·Play live |
 | **A4 / E4 wheel** | **PASS** | **PASS** | Capt Desktop `d7f0bdc` + WASM `f712e97`: empty-bay right-click → 8-sector wheel |
 | D1 Keep soft-rise | PASS* | **HELD** | Checkpoint modal only; no daemon — retake pending (shots `d1-keep-soft-rise` + `d1-volume-after`) |

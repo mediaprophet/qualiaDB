@@ -41,7 +41,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | held / not yet (never broken) | PASS | PASS* | Catalog · Lexicon held-gate UAT PASS on 0.0.36-dev lineage; confirm on 0.0.38 | Spot-check tip `541c3a6`+ |
 | Catalog chips living · artifact · machine | PASS | PASS* | G-LEXICON-0 bay chrome | Confirm mixed framing split |
 | Native Connected cold-load | PASS* | PASS* | Probe tips `64b21384`+; WASM needs same honesty | Cold-load alone |
-| Soft-rise arrive (feel) | PASS* | **PASS*** (Capt A3) | Soft-rise OK; empty-bay choreography still FAIL (A2) | Frame A chrome |
+| Soft-rise arrive (feel) | **PASS*** (monet · Capt `d7f0bdc`) | **PASS*** (monet · Capt `f712e97`) | Frame A soft-rise + wheel WASM↔Desktop **PASS*** | Frame B care-look next |
 | Commit celebrate only on real write | PASS* | NEEDS_UAT | B-ui `f45212c` / Capt `volume_commit` written:1; WASM twin beat unproven | Frame D |
 
 \*Mark with asterisk = prior tip evidence; re-confirm on `0.0.38` human cold-load.
@@ -119,8 +119,8 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 ## 5. Ordered chrome work (after this audit folds)
 
-1. **Frame A empty-state** — studio bay first paint with Ask · Keep · Play (Capability muted).  
-2. **Radial wheel parity** — prove WASM human path; fix or honest held if host can’t.  
+1. ~~**Frame A empty-state**~~ — **PASS** both surfaces (`d7f0bdc` / `f712e97`).  
+2. ~~**Radial wheel parity**~~ — **PASS** both surfaces.  
 3. **Unavailable → held / not yet** where wait-honest (Pulse, Job, Mesh, etc.).  
 4. **Sanctuary Keep without absolute path** — human browse / recent volumes.  
 5. **Cold-load UAT script** (Capt) — person alone, WASM then desktop, Frames A–E checklist.  
@@ -132,7 +132,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Who | Ask |
 |-----|-----|
-| **monet** | Motion marks filled this amend; Capt UAT A3 + D–E need live shots (no `:8080` from monet agent). |
+| **monet** | Frame A soft-rise + wheel **PASS*** both; Frame B care-look + Continuity pending Capt scores. |
 | **Vibe** | Confirm empty-state strings for Frame A; diagnose voice on path-truncate. |
 | **Marvin** | Spot-check chrome for Thing-wash; cite plane table. |
 | **Capt** | Human-alone cold-load UAT on tip after fold; promote/WIP gate. |
@@ -156,6 +156,10 @@ Capt Frame A WASM score: [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`](./
 Re-UAT after PR #90: [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_cfac542.md`](./HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_cfac542.md) — A1–A3/A5 **PASS** · A4 wheel **FAIL**.
 
 Frames D–E motion checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md).
+
+## 8b. Frame A motion (monet)
+
+Soft-rise + wheel WASM↔Desktop **PASS*** on fold tip `0d2106e` (Capt `d7f0bdc` Desktop · `f712e97` WASM). Frame B held/not-yet care-look (+ Continuity) pending Capt.
 
 ## 9. Frames D–E motion (monet)
 
