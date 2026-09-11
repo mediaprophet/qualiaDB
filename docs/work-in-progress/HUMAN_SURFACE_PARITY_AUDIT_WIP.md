@@ -41,7 +41,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | held / not yet (never broken) | PASS | PASS* | Catalog · Lexicon held-gate UAT PASS on 0.0.36-dev lineage; confirm on 0.0.38 | Spot-check tip `541c3a6`+ |
 | Catalog chips living · artifact · machine | PASS | PASS* | G-LEXICON-0 bay chrome | Confirm mixed framing split |
 | Native Connected cold-load | PASS* | PASS* | Probe tips `64b21384`+; WASM needs same honesty | Cold-load alone |
-| Soft-rise arrive | PASS* | **PASS** (Capt A3) | Soft-rise OK on WASM first paint; sayables empty-state still A2 FAIL | Frame A chrome |
+| Soft-rise arrive (feel) | PASS* | **PASS*** (Capt A3) | Soft-rise OK; empty-bay choreography still FAIL (A2) | Frame A chrome |
 | Commit celebrate only on real write | PASS* | NEEDS_UAT | B-ui `f45212c` / Capt `volume_commit` written:1; WASM twin beat unproven | Frame D |
 
 \*Mark with asterisk = prior tip evidence; re-confirm on `0.0.38` human cold-load.
@@ -57,7 +57,8 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | Check | D | W | Notes |
 |-------|---|---|-------|
 | Empty bay uses Frame A voice (not Capability dump) | NEEDS_UAT | NEEDS_UAT | Wire empty-state copy to lexicon §7.A |
-| Soft-rise on first paint | PARTIAL | **PASS** (Capt WASM UAT) | Soft-rise OK; empty-state gap stays **A2 sayables FAIL** (davinci chrome) — not a motion miss |
+| Soft-rise feel (first paint) | PARTIAL | **PASS*** (Capt WASM) | Soft-rise OK — not modal slap |
+| Empty-bay arrive choreography | PARTIAL | **FAIL** | Research manifold jump; no Ask·Keep·Play bay (stricter than A3 feel; davinci chrome) |
 | Advanced method names muted | PARTIAL | PARTIAL | Secondary chrome only |
 | Human finds Ask / Keep / Play without agent | FAIL | FAIL | Critical gap — onboarding chrome missing |
 
@@ -156,4 +157,6 @@ Frames D–E motion checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md`](./HU
 
 ## 9. Frames D–E motion (monet)
 
-Look + named beats: [`HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md`](./HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md).
+Look + named beats: [`HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md`](./HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md) · tip `f22851d`.
+
+Cold-load A–C: tip `c42f8e2` · D–E checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md).

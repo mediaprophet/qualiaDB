@@ -1,6 +1,6 @@
 # Cold-load UAT — Frames D–E (motion · monet)
 
-**Branch:** `0.0.38` · **Parity tip:** ≥ `c6ab0f6` · **Lexicon:** `541c3a6`  
+**Branch:** `0.0.38` · **Parity tip:** ≥ `c6ab0f6` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
 **Surfaces:** WASM then Desktop — same steps · same beats  
 **Owners:** Capt (run + shots) · monet (score motion) · davinci (Keep discoverability chrome)
 
@@ -24,28 +24,24 @@
 | E3 | Re-enter | Arrive again — same dialect | Alternate cold-load motion dialect |
 | E4 | Wheel (cross-check A4) | Same wheel dialect both surfaces | WASM missing wheel / thinner path |
 
-## Provisional scores (monet — evidence to date, tip lineage)
+---
 
-| Item | Desktop | WASM | Evidence / blocker |
-|------|---------|------|--------------------|
-| D1 Keep soft-rise | PASS* | NEEDS_UAT | Desktop sanctuary entrance; need W shot |
-| D2 Closed = care | PASS* | PARTIAL | Volume CLOSED honesty; W confirm |
-| D3 Commit celebrate | PASS* | NEEDS_UAT | Capt B-ui `f45212c` written:1; need W shot |
-| E1 Leave reverse | PARTIAL | PARTIAL | Lexicon dismiss partial; global uneven |
-| E2 still-leave | NEEDS_UAT | NEEDS_UAT | Need reduced-motion pass both |
-| E4 Wheel | PASS* | FAIL* | Timothy/davinci: wheel missing WASM |
-| A3 Soft-rise first paint | PARTIAL | **PASS** (Capt WASM) | Soft-rise OK; A2 sayables FAIL is chrome (davinci) |
+## Scores (monet)
 
-**Blocker:** monet cannot reach Capt `127.0.0.1:8080` — @Capt please drop WASM+Desktop shots for D1/D3/E1/E2/A3; I’ll finalize marks.
+| Item | Desktop | WASM | Evidence |
+|------|---------|------|----------|
+| **A3 soft-rise feel** | — | **PASS*** | Capt Frame A WASM shots 01–02; first paint not modal slap |
+| **Frame A empty-bay arrive** | — | **FAIL** | Cold-load = Research manifold jump; no studio bay Ask·Keep·Play; Keep absent (stricter than A3 feel) |
+| **A4 / E4 wheel** | PASS* | **FAIL** | Capt shot 03 + A4 FAIL confirmed |
+| D1 Keep soft-rise | PASS* | **HELD** | Blocked until davinci Ask·Keep chrome; Capt reshoot after |
+| D2 Closed = care | PASS* | **PASS*** | Footer `Volume: CLOSED` honest (shot 01); Aura “unavailable” still chrome B gap |
+| D3 Commit celebrate | PASS* | **HELD** | Need Keep path + W commit shot |
+| E1 Leave reverse | PARTIAL | PARTIAL | Not in Frame A pack |
+| E2 still-leave | NEEDS_UAT | NEEDS_UAT | Need reduced-motion pass |
+| GIS held/not yet (adjacent) | — | PASS* | Remap Cosmic `held / not yet` on Map (shot 02) |
 
-```
-Tip: <sha>
-Surface: WASM | Desktop
-A3 soft-rise: PASS/FAIL/PARTIAL
-Frame D: PASS/FAIL/PARTIAL — D1–D4
-Frame E: PASS/FAIL/PARTIAL — E1–E4
-Wheel: PASS/FAIL
-Screenshots: <paths>
-```
+**Chrome note (davinci):** Doc/LaTeX red `missing` reads harsher than held/not yet — align when empty-state lands. UI stamp on shots: `0.0.37` while branch tip is `0.0.38` — Capt/Neo confirm stamp path.
 
-Wave-22 stays held.
+**Blocker:** D1/D3/E1/E2 after Keep chrome + Desktop shots.
+
+Wave-22 stays **held**.
