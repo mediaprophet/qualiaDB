@@ -34,7 +34,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Affordance | D | W | Evidence / note | Next |
 |------------|---|---|-----------------|------|
-| Right-click **radial wheel** | PASS* | **PASS** | Capt `f712e97` PR #92: 8-sector wheel on empty-bay right-click; OS menu suppressed | Desktop A next |
+| Right-click **radial wheel** | **PASS** (Capt `d7f0bdc`) | **PASS** (Capt `f712e97`) | Empty-bay right-click → 8-sector wheel both surfaces | Frame B next |
 | Toolchest / Layout · Stage · Timeline twins | PARTIAL | PARTIAL | G-A freeze landed; human discoverability still agent-guided | First-session map |
 | Studio bay (not terminal-first) | PARTIAL | PARTIAL | Zone D / Catalog · Lexicon exists; cold-load still feels agent UI | Frame A empty-state |
 | Sayables-first Ask · Keep · Play | PARTIAL | PARTIAL | Lexicon + office:graph sayables wishlist; Capability.method still too loud in places | Scan primary labels |
@@ -56,13 +56,13 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Check | D | W | Notes |
 |-------|---|---|-------|
-| Empty bay uses Frame A voice (not Capability dump) | **HELD** | **PASS** (Capt `f712e97`) | Desktop cold open = Local foundations; Studio never reached (`OS_SAFETY_VIOLATION` &lt;15 GB) |
-| Soft-rise feel (first paint) | **HELD** | **PASS*** (Capt WASM) | Desktop A HELD before Studio; WASM soft-rise OK |
-| Empty-bay arrive choreography | **HELD** | **PASS** (Capt `f712e97`) | WASM PASS; Desktop blocked at Welcome Continue |
-| Advanced method names muted | **HELD** | PARTIAL | Desktop A not reached Studio |
-| Human finds Ask / Keep / Play without agent | **HELD** | **PASS** (Capt `f712e97`) | Desktop HELD — disk safety gate, not chrome FAIL |
+| Empty bay uses Frame A voice (not Capability dump) | **PASS** (Capt `d7f0bdc`) | **PASS** (Capt `f712e97`) | Both surfaces studio bay first-arrive |
+| Soft-rise feel (first paint) | **PASS** (Capt `d7f0bdc`) | **PASS*** (Capt WASM) | Soft-rise OK both |
+| Empty-bay arrive choreography | **PASS** (Capt `d7f0bdc`) | **PASS** (Capt `f712e97`) | A4 wheel PASS both; prior Desktop disk-HELD superseded |
+| Advanced method names muted | **PASS** (Capt `d7f0bdc`) | PARTIAL | Desktop A5 PASS; WASM still PARTIAL scan |
+| Human finds Ask / Keep / Play without agent | **PASS** (Capt `d7f0bdc`) | **PASS** (Capt `f712e97`) | Sayables-first both |
 
-**Gap:** Desktop Frame A **HELD** on tip `c6007e0` — `OS_SAFETY_VIOLATION` (&lt;15 GB margin); Studio/Ask·Keep·Play/wheel never reached. WASM Frame A PASS. Free disk / re-UAT Desktop A before Wave-22.
+**Gap:** Frame A both surfaces **PASS** (`d7f0bdc` Desktop · `f712e97` WASM). Wave-22 still held until Frame B both surfaces. Prior Desktop disk-HELD on `c6007e0` superseded.
 
 ### Frame B — Held / not yet
 
@@ -112,7 +112,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 |-------|---|---|-------|
 | Dismiss / leave uses leave beat | PARTIAL | PARTIAL | Exit = dissolve on same z-path as arrive; uneven globally |
 | Reduced-motion still-leave | NEEDS_UAT | NEEDS_UAT | Named beat; state ≠ motion-only |
-| Wheel feel D↔W same dialect | PASS* | **PASS** | Capt `f712e97` A4 PASS; Desktop A still pending for full D↔W |
+| Wheel feel D↔W same dialect | **PASS** | **PASS** | Capt Desktop `d7f0bdc` + WASM `f712e97` A4 both PASS |
 | No “kill/abort” primary voice | PARTIAL | PARTIAL | Copy sweep |
 
 ---

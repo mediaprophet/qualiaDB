@@ -32,7 +32,7 @@
 |------|---------|------|----------|
 | **A3 soft-rise feel** | — | **PASS*** | Capt Frame A WASM shots 01–02; first paint not modal slap |
 | **Frame A empty-bay arrive** | — | **PASS** | Capt re-UAT `cfac542` A1/A2 — studio bay + Ask·Keep·Play live |
-| **A4 / E4 wheel** | PASS* | **PASS** | Capt `f712e97` PR #92: empty-bay right-click → 8-sector wheel; OS menu suppressed |
+| **A4 / E4 wheel** | **PASS** | **PASS** | Capt Desktop `d7f0bdc` + WASM `f712e97`: empty-bay right-click → 8-sector wheel |
 | D1 Keep soft-rise | PASS* | **HELD** | Checkpoint modal only; no daemon — retake pending (shots `d1-keep-soft-rise` + `d1-volume-after`) |
 | Deny care / no celebrate (DENIED·NO DAEMON) | — | **PASS*** | Checkpoint deny care look; no celebrate on DENIED·NO DAEMON (`d1-keep-soft-rise` + `d1-volume-after`) |
 | Studio bay before Keep (A2 context) | — | **PASS*** | Ask·Keep·Play live; studio bay precedes Keep attempt |
@@ -48,4 +48,4 @@
 
 Wave-22 stays **held** until real Keep entrance + commit path.
 
-**Desktop Frame A:** **HELD** tip `c6007e0` — Local foundations Continue blocked by `OS_SAFETY_VIOLATION` (&lt;15 GB); Studio never reached (not chrome FAIL). WASM A4 remains **PASS**.
+**Desktop Frame A:** **PASS** tip `d7f0bdc` (onboarding 8/8 · A1–A5 · wheel). Prior disk-HELD on `c6007e0` superseded. WASM A4 PASS. Wave-22 held until Frame B both surfaces.

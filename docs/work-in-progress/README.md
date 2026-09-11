@@ -87,6 +87,7 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_b3b8e2e.md` | Capt | Frame A WASM FAIL after PR #91 |
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_f712e97.md` | Capt | Frame A WASM PASS after PR #92 |
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_DESKTOP_c6007e0.md` | Capt | Frame A Desktop HELD — OS disk safety gate |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_DESKTOP_d7f0bdc.md` | Capt | Frame A Desktop PASS after disk cleanup |
 | `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md` | monet · Capt | Cold-load UAT Frames D–E (motion) |
 | `HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md` | monet | Frames D–E motion parity (desktop ↔ WASM) |
 | `BUILD_DISK_HYGIENE_WIP.md` | Capt / Neo | One `target/`; prune when free &lt;~20G; no parallel build trees |
