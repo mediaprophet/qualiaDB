@@ -56,11 +56,11 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Check | D | W | Notes |
 |-------|---|---|-------|
-| Empty bay uses Frame A voice (not Capability dump) | NEEDS_UAT | NEEDS_UAT | Wire empty-state copy to lexicon §7.A |
+| Empty bay uses Frame A voice (not Capability dump) | NEEDS_UAT | **PASS** (Capt `cfac542`) | Studio bay first-arrive voice |
 | Soft-rise feel (first paint) | PARTIAL | **PASS*** (Capt WASM) | Soft-rise OK — not modal slap |
-| Empty-bay arrive choreography | PARTIAL | **FAIL** | Research manifold jump; no Ask·Keep·Play bay (stricter than A3 feel; davinci chrome) |
+| Empty-bay arrive choreography | PARTIAL | **PASS** (Capt `cfac542`) | Studio bay first paint; A4 wheel still FAIL |
 | Advanced method names muted | PARTIAL | PARTIAL | Secondary chrome only |
-| Human finds Ask / Keep / Play without agent | FAIL | FAIL | Critical gap — onboarding chrome missing |
+| Human finds Ask / Keep / Play without agent | NEEDS_UAT | **PASS** (Capt `cfac542`) | Studio bay Frame A sayables; Desktop still NEEDS_UAT |
 
 **Gap:** No dedicated first-arrive empty state teaching the trio. Agent paths jump to manifolds/tools.
 
@@ -151,7 +151,9 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 Runnable checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md) · tip cite `c42f8e2`+.
 
-Capt Frame A WASM score: [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`](./HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md) (A2/A4 FAIL · A3 PASS).
+Capt Frame A WASM score: [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`](./HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md) (pre-PR).
+
+Re-UAT after PR #90: [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_cfac542.md`](./HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_cfac542.md) — A1–A3/A5 **PASS** · A4 wheel **FAIL**.
 
 Frames D–E motion checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md).
 

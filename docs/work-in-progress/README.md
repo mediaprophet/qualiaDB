@@ -83,6 +83,7 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
 | `HUMAN_SURFACE_PARITY_AUDIT_WIP.md` | davinci · monet | Frames A–E WASM↔desktop scoreboard |
 | `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md` | davinci · Capt | Cold-load UAT Frames A–C checklist |
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md` | Capt | Frame A WASM cold-load score |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_cfac542.md` | Capt | Frame A WASM re-UAT after PR #90 |
 | `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md` | monet · Capt | Cold-load UAT Frames D–E (motion) |
 | `HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md` | monet | Frames D–E motion parity (desktop ↔ WASM) |
 | `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` | Noddy | Diagram → fabric plane crosswalk |
