@@ -147,3 +147,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 ## 8. Capt cold-load UAT (Frames A–C)
 
 Runnable checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md) · tip cite `c6ab0f6`+.
+
+## 9. Frames D–E motion (monet)
+
+Look + named beats: [`HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md`](./HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md).
