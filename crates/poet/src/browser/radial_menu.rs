@@ -11,7 +11,61 @@
 use base64::Engine;
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlElement, KeyboardEvent, MouseEvent};
+use web_sys::{
+    AddEventListenerOptions, Document, Element, HtmlElement, KeyboardEvent, MouseEvent,
+    PointerEvent,
+};
+
+use super::interactions::set_timeout;
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = "clearTimeout")]
+    fn clear_timeout(id: i32);
+}
+
+thread_local! {
+    static LONG_PRESS: std::cell::Cell<Option<i32>> = const { std::cell::Cell::new(None) };
+}
+
+/// Resolve a contextmenu/pointer target, including Text nodes (common on WASM).
+fn event_element_from_target(target: Option<web_sys::EventTarget>) -> Option<Element> {
+    let target = target?;
+    if let Ok(el) = target.clone().dyn_into::<Element>() {
+        return Some(el);
+    }
+    target
+        .dyn_into::<web_sys::Node>()
+        .ok()
+        .and_then(|node| node.parent_element())
+}
+
+fn selection_wants_text_popover(target: &Element) -> bool {
+    if target.closest(".doc-editor").ok().flatten().is_none() {
+        return false;
+    }
+    let window = match web_sys::window() {
+        Some(w) => w,
+        None => return false,
+    };
+    match window.get_selection() {
+        Ok(Some(sel)) => !sel
+            .to_string()
+            .as_string()
+            .unwrap_or_default()
+            .trim()
+            .is_empty(),
+        _ => false,
+    }
+}
+
+fn cancel_long_press() {
+    LONG_PRESS.with(|slot| {
+        if let Some(id) = slot.take() {
+            clear_timeout(id);
+        }
+    });
+}
 
 /// A sector definition within the 8-sector radial action ring.
 pub struct RadialSector {
@@ -200,6 +254,11 @@ pub const RADIAL_SECTORS: [RadialSector; 8] = [
 ];
 
 /// Wire global contextmenu handler on canvas and containers.
+///
+/// WASM browsers show the native menu unless `preventDefault` runs on the
+/// `contextmenu` event. Text-node targets (labels, empty-state copy) used to
+/// return before that call — desktop webviews often suppress the default
+/// anyway, so the bug only failed Capt's :8080 UAT.
 pub fn wire_radial_menu(document: &Document) {
     if let Some(body) = document.body() {
         let body_element: Element = body.dyn_into().unwrap();
@@ -210,32 +269,20 @@ pub fn wire_radial_menu(document: &Document) {
     let doc_clone = document.clone();
 
     let context_closure = Closure::wrap(Box::new(move |e: MouseEvent| {
-        let target: Element = match e.target().and_then(|t| t.dyn_into::<Element>().ok()) {
-            Some(t) => t,
-            None => return,
-        };
-
-        // If inside contenteditable text selection, allow text popover
-        if let Ok(Some(_)) = target.closest(".doc-editor") {
-            let window = web_sys::window().unwrap();
-            if let Ok(Some(sel)) = window.get_selection() {
-                if !sel
-                    .to_string()
-                    .as_string()
-                    .unwrap_or_default()
-                    .trim()
-                    .is_empty()
-                {
-                    return; // text selection popover takes precedence
-                }
+        let target = event_element_from_target(e.target());
+        if let Some(ref el) = target {
+            if selection_wants_text_popover(el) {
+                return;
             }
         }
-
-        // Prevent default browser context menu
+        // Own the gesture even when the hit target is a Text node.
         e.prevent_default();
         e.stop_propagation();
+        cancel_long_press();
 
-        let container_opt = target.closest(".canvas-container-node").ok().flatten();
+        let container_opt = target
+            .as_ref()
+            .and_then(|el| el.closest(".canvas-container-node").ok().flatten());
         show_radial_ring(
             &doc_clone,
             e.client_x() as f64,
@@ -244,10 +291,74 @@ pub fn wire_radial_menu(document: &Document) {
         );
     }) as Box<dyn FnMut(MouseEvent)>);
 
+    let opts = AddEventListenerOptions::new();
+    opts.set_capture(true);
     document
-        .add_event_listener_with_callback("contextmenu", context_closure.as_ref().unchecked_ref())
+        .add_event_listener_with_callback_and_add_event_listener_options(
+            "contextmenu",
+            context_closure.as_ref().unchecked_ref(),
+            &opts,
+        )
         .unwrap();
     context_closure.forget();
+
+    // Long-press (touch / pen) — UAT A4 accepts right-click or long-press.
+    let press_doc = document.clone();
+    let press_closure = Closure::wrap(Box::new(move |e: PointerEvent| {
+        if e.pointer_type() == "mouse" && e.button() != 0 {
+            return;
+        }
+        if e.pointer_type() == "mouse" {
+            return;
+        }
+        if let Some(el) = event_element_from_target(e.target()) {
+            if selection_wants_text_popover(&el) {
+                return;
+            }
+        }
+        cancel_long_press();
+        let cx = e.client_x() as f64;
+        let cy = e.client_y() as f64;
+        let doc = press_doc.clone();
+        let timeout = Closure::wrap(Box::new(move || {
+            LONG_PRESS.with(|slot| slot.set(None));
+            if let Some(el) = web_sys::window()
+                .and_then(|w| w.document())
+                .and_then(|d| d.element_from_point(cx as f32, cy as f32))
+            {
+                let container_opt = el.closest(".canvas-container-node").ok().flatten();
+                show_radial_ring(&doc, cx, cy, container_opt.as_ref());
+            } else {
+                show_radial_ring(&doc, cx, cy, None);
+            }
+        }) as Box<dyn FnMut()>);
+        let id = set_timeout(timeout.as_ref().unchecked_ref(), 550);
+        timeout.forget();
+        LONG_PRESS.with(|slot| slot.set(Some(id)));
+    }) as Box<dyn FnMut(PointerEvent)>);
+    document
+        .add_event_listener_with_callback_and_add_event_listener_options(
+            "pointerdown",
+            press_closure.as_ref().unchecked_ref(),
+            &opts,
+        )
+        .unwrap();
+    press_closure.forget();
+
+    let cancel_move = Closure::wrap(Box::new(move |_e: PointerEvent| {
+        cancel_long_press();
+    }) as Box<dyn FnMut(PointerEvent)>);
+    document
+        .add_event_listener_with_callback("pointerup", cancel_move.as_ref().unchecked_ref())
+        .unwrap();
+    cancel_move.forget();
+    let cancel_leave = Closure::wrap(Box::new(move |_e: PointerEvent| {
+        cancel_long_press();
+    }) as Box<dyn FnMut(PointerEvent)>);
+    document
+        .add_event_listener_with_callback("pointercancel", cancel_leave.as_ref().unchecked_ref())
+        .unwrap();
+    cancel_leave.forget();
 
     // Click outside dismisses the radial ring
     let doc_clone2 = document.clone();
@@ -779,6 +890,12 @@ mod tests {
             assert!(!sector.glyph.is_empty());
             assert!(ids.insert(sector.id), "Duplicate sector ID: {}", sector.id);
         }
+    }
+
+    #[test]
+    fn context_target_prefers_element_over_empty() {
+        // Contract: Text-node hits must not skip preventDefault (WASM A4).
+        assert!(event_element_from_target(None).is_none());
     }
 
     #[test]

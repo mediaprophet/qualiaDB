@@ -31,5 +31,13 @@
 - Keyboard-first focus order for toolchains
 - Commit-history cue (gated until history bind)
 
+## Frame A chrome (2026-09-11)
+
+Cold-load WASM UAT (`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`): A2 Ask/Keep missing; A4 browser default menu.
+
+- First-arrive banner + studio-bay compact use lexicon §7 Frame A verbatim. Primary sayables: **Ask graph · Keep volume · Play cell**. `GraphDatabase.*` stays on `data-capability` / muted advanced line (A5).
+- `office:graph` / `graph:sparql_query` human label is Ask graph (Getting started). Statusbar Keep chip + save-dialog **Keep volume** open the existing `volume_open` dialog — no new Capability id.
+- WASM radial: `contextmenu` capture + `preventDefault` before target inspect. Text-node hits (labels) no longer skip the ring. Long-press for touch. Desktop same listener.
+
 ## Out of scope now
 Implementation · next inventory toolchain · Solid IdP · Host invent · dotted `qualia.*`
