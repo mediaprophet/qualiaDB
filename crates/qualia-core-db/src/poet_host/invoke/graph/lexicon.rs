@@ -225,3 +225,44 @@ fn resolve_paths(
         "held / not yet — open lexicon pack",
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn empty_path_is_held_not_unavailable() {
+        let mut snap = PoetSnapshot::live();
+        let mut rec = BTreeMap::new();
+        rec.insert("path".into(), Value::String(String::new()));
+        let err = snap
+            .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
+            .expect_err("empty path stays held");
+        let json = err.to_json();
+        let folded = json.to_ascii_lowercase();
+        assert!(
+            json.contains("held / not yet") || json.contains("E300"),
+            "{json}"
+        );
+        assert!(!folded.contains("unavailable"));
+        assert!(!folded.contains("broken"));
+    }
+
+    #[test]
+    fn missing_pack_is_held_open_lexicon_pack() {
+        let mut snap = PoetSnapshot::live();
+        let mut rec = BTreeMap::new();
+        rec.insert(
+            "path".into(),
+            Value::String("/tmp/does-not-exist-lexicon-pack.lexicon.json".into()),
+        );
+        let err = snap
+            .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
+            .expect_err("missing pack stays held");
+        let json = err.to_json();
+        assert!(json.contains("held / not yet — open lexicon pack"), "{json}");
+        assert!(!json.to_ascii_lowercase().contains("broken"));
+        assert!(!json.to_ascii_lowercase().contains("unavailable"));
+    }
+}
