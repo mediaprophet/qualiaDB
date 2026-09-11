@@ -89,5 +89,6 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_DESKTOP_c6007e0.md` | Capt | Frame A Desktop HELD — OS disk safety gate |
 | `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md` | monet · Capt | Cold-load UAT Frames D–E (motion) |
 | `HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md` | monet | Frames D–E motion parity (desktop ↔ WASM) |
+| `BUILD_DISK_HYGIENE_WIP.md` | Capt / Neo | One `target/`; prune when free &lt;~20G; no parallel build trees |
 | `CONTINUITY_GATE_HANDLE_REVOKE_WIP.md` | Marvin / Neo | Continuity gate: handle revoke ≠ who-erase (IHL cold-load) |
 | `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` | Noddy | Diagram → fabric plane crosswalk |
