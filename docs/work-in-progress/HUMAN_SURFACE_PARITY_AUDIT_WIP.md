@@ -64,6 +64,8 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 **Gap:** Frame A both surfaces **PASS** (`d7f0bdc` Desktop · `f712e97` WASM). Wave-22 still held until Frame B both surfaces. Prior Desktop disk-HELD on `c6007e0` superseded.
 
+**Desktop apps walkthrough** (Capt `d7f0bdc`, fold tip follows): see [`HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md`](./HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md) — Studio/Poet·Dual·Talk·Browser·QApps·Sanctuary·Keep **PASS**; Settings/Library/Continuity copy **PARTIAL**; Catalog·Lexicon **HELD**.
+
 ### Frame B — Held / not yet
 
 > Held / not yet — open a lexicon pack… Nothing is broken.
