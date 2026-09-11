@@ -142,3 +142,8 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 > Same words. Same wheel. Soft arrive. Honest hold. Leave clean.  
 > Humans finish session one without a bot — or we failed.
 
+---
+
+## 8. Capt cold-load UAT (Frames A–C)
+
+Runnable checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md) · tip cite `c6ab0f6`+.

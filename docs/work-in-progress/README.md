@@ -81,4 +81,5 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
 | `IDENTIFIER_FABRIC_CONSULTATION_BRIEF.md` | Capt | Consultation summary + intake path |
 | `HUMAN_ONBOARDING_LEXICON_WIP.md` | Vibe | Human-alone cold-load · sayables-first · who·claim·handle·tool |
 | `HUMAN_SURFACE_PARITY_AUDIT_WIP.md` | davinci · monet | Frames A–E WASM↔desktop scoreboard |
+| `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md` | davinci · Capt | Cold-load UAT Frames A–C checklist |
 | `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` | Noddy | Diagram → fabric plane crosswalk |
