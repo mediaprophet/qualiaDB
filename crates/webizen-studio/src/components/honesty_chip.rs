@@ -31,7 +31,7 @@ impl HonestyLevel {
             Self::Scaffold => "Scaffold",
             Self::NeedsModel => "Needs model",
             Self::NeedsConsent => "Needs consent",
-            Self::Unavailable => "Unavailable",
+            Self::Unavailable => "held / not yet",
         }
     }
 
@@ -42,7 +42,7 @@ impl HonestyLevel {
             Self::Scaffold => ("#374151", "#d1d5db"),
             Self::NeedsModel => ("#78350f", "#fde68a"),
             Self::NeedsConsent => ("#4c1d95", "#e9d5ff"),
-            Self::Unavailable => ("#450a0a", "#fecaca"),
+            Self::Unavailable => ("#78350f", "#fde68a"),
         }
     }
 }
@@ -67,6 +67,7 @@ pub fn HonestyChip(level: HonestyLevel, #[props(default)] detail: String) -> Ele
         span {
             style: "{style}",
             title: "{title}",
+            "data-honesty": "{label}",
             "{label}"
             if !detail.is_empty() {
                 span {
@@ -75,5 +76,18 @@ pub fn HonestyChip(level: HonestyLevel, #[props(default)] detail: String) -> Ele
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wait_honest_chip_says_held_not_unavailable() {
+        assert_eq!(HonestyLevel::Unavailable.label(), "held / not yet");
+        assert!(!HonestyLevel::Unavailable.label().contains("Unavailable"));
+        let (bg, _) = HonestyLevel::Unavailable.bg_fg();
+        assert_ne!(bg, "#450a0a", "held look is amber, not panic red");
     }
 }

@@ -72,12 +72,12 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Check | D | W | Notes |
 |-------|---|---|-------|
-| Catalog · Lexicon held-gate string | **HELD** | **PASS** (Capt `d08d1c9`) | Desktop Catalog/Lexicon not mounted; WASM held/not yet string PASS |
+| Catalog · Lexicon held-gate string | **NEEDS_UAT** (mount landed) | **PASS** (Capt `d08d1c9`) | Desktop now mounts Catalog · Lexicon (`lexicon_bay` cherry-pick); Capt re-UAT Frame B |
 | Never “broken” / red missing for lexicon path | **PASS*** | **PASS** | Desktop shell steady no panic-red; WASM PASS |
 | Soft held look (not panic) | **PASS*** | **PASS** | Steady dwell both |
 | Daemon-down honesty | PASS* | PASS* | held when Native offline |
 
-**Gap:** Desktop Frame B **HELD** until Catalog mounts under Ask · Keep · Talk (or honest held path). WASM Frame B **PASS**. Wave-22 held until Desktop B clears. Broader Mesh/Aura/Pulse still “unavailable” → held/not yet (davinci). Cherry-pick, not parity.
+**Gap:** Desktop Catalog mount landed (NEEDS_UAT). WASM Frame B **PASS**. Capt re-UAT Desktop B1–B4. Mesh/Aura/Pulse/Job chrome now says held / not yet. Cherry-pick, not parity.
 
 ### Frame C — Living-safe vs tool
 

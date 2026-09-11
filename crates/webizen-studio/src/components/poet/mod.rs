@@ -12,6 +12,7 @@ mod engine;
 mod gpu_frame;
 pub mod icons;
 mod kinds;
+pub mod lexicon_bay;
 mod manifolds;
 mod radial_menu;
 mod stage;

@@ -395,8 +395,10 @@
 .main-workspace {
   flex: 1;
   display: flex;
+  flex-direction: column;
   position: relative;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* Canvas Viewport */
@@ -405,6 +407,7 @@
   position: relative;
   overflow: hidden;
   background: var(--canvas-bg);
+  min-height: 0;
 }
 
 /* Slide-out Technical Info Sidebar */

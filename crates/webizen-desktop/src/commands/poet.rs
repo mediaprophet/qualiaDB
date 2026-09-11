@@ -9,8 +9,10 @@ use qualia_core_db::poet_host::catalog::{engine_families_mcp_only, VIBE_0_1};
 use qualia_core_db::poet_host::{format_value, PoetSnapshot, PulseRecord};
 use qualia_core_db::text_span::{annotation_quin, TextSpan};
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::sync::Mutex;
 use tauri::State;
+use vibe::Value;
 
 pub struct PoetHarnessState {
     pub(crate) snap: Mutex<PoetSnapshot>,
@@ -187,6 +189,18 @@ pub fn poet_eval(
         }
     }
     result
+}
+
+/// Live ALL_BOUND bind used by Desktop Catalog · Lexicon. No Host widen.
+#[tauri::command]
+pub fn poet_lexicon_manifest(state: State<PoetHarnessState>, path: String) -> PoetEvalResult {
+    let mut snap = state.snap.lock().expect("poet snapshot");
+    let mut rec = BTreeMap::new();
+    rec.insert("path".into(), Value::String(path));
+    match snap.invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec)) {
+        Ok(v) => snapshot_result(&snap, true, format_value(&v), None),
+        Err(e) => snapshot_result(&snap, false, String::new(), Some(e.to_json())),
+    }
 }
 
 #[tauri::command]
@@ -570,5 +584,46 @@ pub fn poet_capabilities(state: State<PoetHarnessState>) -> PoetCatalog {
         honesty: overall_honesty,
         vibe,
         engine_not_yet_on_vibe,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lexicon_manifest_empty_path_is_held_not_unavailable() {
+        let state = PoetHarnessState::default();
+        let mut snap = state.snap.lock().expect("poet snapshot");
+        let mut rec = BTreeMap::new();
+        rec.insert("path".into(), Value::String(String::new()));
+        let err = snap
+            .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
+            .expect_err("empty path stays held");
+        let json = err.to_json();
+        let folded = json.to_ascii_lowercase();
+        assert!(
+            json.contains("held / not yet") || json.contains("E300"),
+            "{json}"
+        );
+        assert!(!folded.contains("unavailable"));
+        assert!(!folded.contains("broken"));
+    }
+
+    #[test]
+    fn lexicon_manifest_missing_pack_is_held() {
+        let state = PoetHarnessState::default();
+        let mut snap = state.snap.lock().expect("poet snapshot");
+        let mut rec = BTreeMap::new();
+        rec.insert(
+            "path".into(),
+            Value::String("/tmp/does-not-exist-lexicon-pack.lexicon.json".into()),
+        );
+        let err = snap
+            .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
+            .expect_err("missing pack stays held");
+        let json = err.to_json();
+        assert!(json.contains("held / not yet — open lexicon pack"), "{json}");
+        assert!(!json.to_ascii_lowercase().contains("broken"));
     }
 }

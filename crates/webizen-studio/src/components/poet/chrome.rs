@@ -67,7 +67,7 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                     class: "ambient-job-indicator",
                     style: "display:flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(0,200,255,0.08);border:1px solid rgba(0,200,255,0.25);border-radius:12px;font-size:11px;color:var(--accent-cyan);",
                     span { style: "display:inline-block;width:7px;height:7px;border-radius:50%;background:#00E676;box-shadow:0 0 6px #00E676;" }
-                    span { "Mesh Active · 42MB Sentinel OK" }
+                    span { "Mesh · held / not yet · 42MB Sentinel OK" }
                 }
                 span { style: "font-family:var(--font-mono);font-size:11px;color:var(--text-muted);", "Poet HyperCanvas · vibe-0.1" }
             }

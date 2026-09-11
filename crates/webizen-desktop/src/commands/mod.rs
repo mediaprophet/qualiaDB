@@ -277,6 +277,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         // ── Local (mod.rs) ──
         get_desktop_status,
         poet::poet_eval,
+        poet::poet_lexicon_manifest,
         poet::poet_reset,
         poet::poet_gazetteer,
         poet::poet_capabilities,

@@ -24,3 +24,11 @@
 **Screenshots:** `/workspace/uat-frame-b-d08d1c9/`  
 **Wave-22:** still **held** until Desktop B clears (Catalog mount or honest held path).  
 **Next:** davinci surface Catalog under Ask · Keep · Talk on Desktop; cherry-pick Desktop wins into WASM; three human loops.
+
+## Follow-up (agent, 2026-09-11)
+
+**Root cause (confirmed):** Desktop `webizen-studio` Dioxus Poet never mounted `lexicon_bay`. WASM `poet-ui` did.
+
+**Fix landed** on branch `cursor/desktop-catalog-lexicon-57c7`: Catalog · Lexicon studio bay on Desktop Poet + Script/Zone D tabs + `GraphDatabase.lexicon_manifest` bind. Mesh/Aura/SHACL/Pulse/Job wait-honest → held / not yet.
+
+**Ask Capt:** re-UAT Desktop Frame B (B1–B4) on the PR tip. WASM Frame B remains PASS.

@@ -363,6 +363,7 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     { id: 'library',     label: 'Library',            icon: '📚', hint: 'Hypermedia shelf',       keys: 'library hypermedia models' },
     { id: 'qapps',       label: 'QApps',              icon: '⬡',  hint: 'QApp catalog',           keys: 'qapps apps catalog' },
     { id: 'keep',        label: 'Keep',               icon: '🗄',  hint: 'Vault & places hub',     keys: 'keep vault' },
+    { id: 'poet',        label: 'Catalog · Lexicon',  icon: '📖', hint: 'Open a lexicon pack',    keys: 'catalog lexicon pack poet vibe held' },
     { id: 'logs',        label: 'Desktop logs',       icon: '📋', hint: 'Host log stream',        keys: 'logs log' },
   ];
 
