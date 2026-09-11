@@ -135,6 +135,8 @@ on tick.frame (dt, time) {
 /// Build the DOM Dual Studio Viewport (`<dual-studio>`).
 pub fn build_dual_studio_view(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
+    root.set_class_name("dual-studio poet-radial-surface");
+    root.set_attribute("data-dual-studio", "").ok();
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; height: 100%; \
@@ -290,6 +292,7 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
 
     // Right Column: Reactive QViewport Preview
     let viewport_pane = document.create_element("div").unwrap();
+    viewport_pane.set_class_name("dual-studio-viewport poet-radial-surface");
     let vp_el: HtmlElement = viewport_pane.clone().dyn_into().unwrap();
     vp_el.style().set_css_text(
         "display: flex; flex-direction: column; background: #080c18; padding: 8px; gap: 8px; \
@@ -420,6 +423,9 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
         .add_event_listener_with_callback("input", scrub_closure.as_ref().unchecked_ref())
         .unwrap();
     scrub_closure.forget();
+
+    crate::browser::radial_gesture::bind_element_surface(&root);
+    crate::browser::radial_gesture::bind_element_surface(&viewport_pane);
 
     root
 }

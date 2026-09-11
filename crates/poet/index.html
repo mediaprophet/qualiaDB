@@ -20,6 +20,50 @@
 </head>
 <body>
   <script>
+    // A4: own contextmenu/right-click before Chrome paints the native menu.
+    // wasm-bindgen MouseEvent.preventDefault on document alone failed Capt
+    // UAT on cfac542 (Dual Studio / live viewport). This capture listener
+    // suppressses the browser menu and hands coords to Poet via poet:radial.
+    (function () {
+      function hit(el) {
+        if (!el) return null;
+        if (el.nodeType === 3) el = el.parentElement;
+        return el && el.closest ? el : null;
+      }
+      function yieldsPopover(el) {
+        if (!el || !el.closest || !el.closest('.doc-editor')) return false;
+        var sel = window.getSelection && window.getSelection();
+        return !!(sel && String(sel).trim());
+      }
+      function inApp(el) {
+        return !!(el && el.closest && (
+          el.closest('.app') ||
+          el.closest('#manifold-canvas') ||
+          el.closest('.canvas-viewport-container') ||
+          el.closest('.poet-radial-surface') ||
+          el.closest('[data-dual-studio]')
+        ));
+      }
+      function emit(x, y) {
+        try {
+          window.dispatchEvent(new CustomEvent('poet:radial', { detail: { x: x, y: y } }));
+        } catch (_) {}
+      }
+      function own(e) {
+        var el = hit(e.target);
+        if (!inApp(el) || yieldsPopover(el)) return;
+        e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        emit(e.clientX, e.clientY);
+      }
+      var opts = { capture: true, passive: false };
+      window.addEventListener('contextmenu', own, opts);
+      document.addEventListener('contextmenu', own, opts);
+      window.addEventListener('pointerdown', function (e) {
+        if (e.button !== 2) return;
+        own(e);
+      }, opts);
+    })();
     // Error catchers — must be first to catch WASM init failures
     window.addEventListener('error', (e) => {
       console.error('[qualia-ui] window error:', e.error || e.message, e.filename, e.lineno);
