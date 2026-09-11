@@ -592,6 +592,27 @@ button[disabled]:hover,
   cursor: pointer;
 }
 
+.canvas-empty-state.frame-a-empty-bay[data-studio-bay="first-arrive"],
+.canvas-empty-state.frame-a-empty-bay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  max-width: 420px;
+  padding: 20px 24px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-panel) 90%, var(--accent-cyan) 6%);
+}
+.canvas-empty-state.frame-a-empty-bay .frame-a-sayables {
+  justify-content: center;
+}
+
 /* ---------- G-LEXICON-0 studio bay (Catalog peer) ---------- */
 .lexicon-bay {
   display: flex;

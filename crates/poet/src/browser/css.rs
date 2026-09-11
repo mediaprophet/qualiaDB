@@ -52,6 +52,8 @@ mod tests {
         assert!(CSS.contains(".lexicon-chip"));
         assert!(CSS.contains(".frame-a-banner"));
         assert!(CSS.contains(".frame-a-sayable"));
+        assert!(CSS.contains(".frame-a-empty-bay"));
+        assert!(CSS.contains("[data-studio-bay=\"first-arrive\"]"));
         assert!(CSS.contains(".honesty-held"));
         assert!(!CSS.contains("honesty-missing { background: rgba(239, 68, 68"));
         assert!(CSS.contains(".lexicon-held-gate"));

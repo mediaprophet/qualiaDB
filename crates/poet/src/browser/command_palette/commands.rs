@@ -530,6 +530,11 @@ pub(super) fn build_command_list() -> Vec<CommandEntry> {
         },
         CommandEntry {
             icon: "\u{2B07}",
+            label: "Switch Manifold: Studio bay",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{2B07}",
             label: "Switch Manifold: Research",
             shortcut: "",
         },

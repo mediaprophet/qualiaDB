@@ -550,6 +550,7 @@ fn execute_command(label: &str) {
     // Check for manifold switch commands
     if let Some(manifold_id) = label.strip_prefix("Switch Manifold: ") {
         let id = match manifold_id {
+            "Studio bay" => "studio-bay",
             "Research" => "research",
             "Social" => "social",
             "Knowledge" => "knowledge",

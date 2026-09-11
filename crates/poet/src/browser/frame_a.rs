@@ -9,6 +9,10 @@ use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
 use crate::tool_chest::core::intent_bus::ActionType;
+use crate::tool_chest::core::registry::ManifoldSeed;
+use crate::tool_chest::manifolds::studio_bay::{
+    studio_bay_manifold_seed, STUDIO_BAY_ID, STUDIO_BAY_LABEL,
+};
 
 /// Lexicon §7 Frame A — first arrive (verbatim lines).
 pub const FRAME_A_WHERE: &str = "You're in the studio bay.";
@@ -23,12 +27,61 @@ pub const SAYABLE_PLAY: &str = "Play cell";
 /// Live catalog id already bound as office:graph. Not a new Capability.
 pub const ASK_TOOL_ID: &str = "graph:sparql_query";
 
-/// Always-visible cold-load banner (Research first paint included).
+pub const FIRST_ARRIVE_MANIFOLD_ID: &str = STUDIO_BAY_ID;
+pub const FIRST_ARRIVE_LABEL: &str = STUDIO_BAY_LABEL;
+
+/// Empty studio-bay seed used for first-arrive teaching.
+pub fn first_arrive_seed() -> ManifoldSeed {
+    studio_bay_manifold_seed()
+}
+
+pub fn is_first_arrive(id: &str) -> bool {
+    id == FIRST_ARRIVE_MANIFOLD_ID
+}
+
+/// Keep the teaching bay first on the poet construct so cold-load is not Research.
+pub fn ensure_first_arrive(seeds: &mut Vec<ManifoldSeed>) {
+    if let Some(index) = seeds.iter().position(|seed| is_first_arrive(&seed.id)) {
+        if index != 0 {
+            let seed = seeds.remove(index);
+            seeds.insert(0, seed);
+        }
+        return;
+    }
+    seeds.insert(0, first_arrive_seed());
+}
+
+/// Open the studio bay when it is in the visible set; never default to Research.
+pub fn pick_opening(visible: &[ManifoldSeed]) -> ManifoldSeed {
+    visible
+        .iter()
+        .find(|seed| is_first_arrive(&seed.id))
+        .cloned()
+        .or_else(|| visible.first().cloned())
+        .unwrap_or_else(first_arrive_seed)
+}
+
+/// Always-visible Ask · Keep · Play strip.
 pub fn mount_banner(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
     root.set_class_name("frame-a-banner");
     root.set_attribute("data-frame-a", "arrive").ok();
     root.set_attribute("data-recipe", "arrive").ok();
+    super::surface_aspects::mark(&root, "entrance");
+    paint_copy(&root, true);
+    wire_sayables(&root);
+    root
+}
+
+/// Canvas first-arrive: studio bay room with Frame A sayables (not Research).
+pub fn mount_empty_bay(document: &Document) -> Element {
+    let root = document.create_element("div").unwrap();
+    root.set_class_name("canvas-empty-state frame-a-empty-bay");
+    root.set_attribute("data-frame-a", "arrive").ok();
+    root.set_attribute("data-recipe", "arrive").ok();
+    root.set_attribute("data-studio-bay", "first-arrive").ok();
+    root.set_attribute("data-honesty", "held").ok();
+    root.set_attribute("data-gate", "held").ok();
     super::surface_aspects::mark(&root, "entrance");
     paint_copy(&root, true);
     wire_sayables(&root);
@@ -209,5 +262,27 @@ mod tests {
         }
         assert_eq!(ASK_TOOL_ID, "graph:sparql_query");
         assert!(primary_copy_is_sayable(SAYABLE_ASK));
+    }
+
+    #[test]
+    fn cold_load_opens_studio_bay_not_research() {
+        assert_eq!(FIRST_ARRIVE_MANIFOLD_ID, "studio-bay");
+        assert_eq!(FIRST_ARRIVE_LABEL, "Studio bay");
+        let arrive = first_arrive_seed();
+        assert!(arrive.containers.is_empty());
+        assert_ne!(arrive.id, "research");
+
+        let mut seeds = vec![
+            ManifoldSeed {
+                id: "research".into(),
+                label: "Research".into(),
+                ..Default::default()
+            },
+            first_arrive_seed(),
+        ];
+        ensure_first_arrive(&mut seeds);
+        assert_eq!(seeds[0].id, "studio-bay");
+        assert_eq!(pick_opening(&seeds).id, "studio-bay");
+        assert_ne!(pick_opening(&seeds).id, "research");
     }
 }

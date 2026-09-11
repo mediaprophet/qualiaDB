@@ -35,6 +35,7 @@
 
 Cold-load WASM UAT (`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`): A2 Ask/Keep missing; A4 browser default menu.
 
+- **First paint is the studio bay**, not Research. Empty `studio-bay` seed (no Doc/LaTeX) + Frame A sayables in the canvas. Poet construct `default_manifold` is `studio-bay`. Research remains a later lens.
 - First-arrive banner + studio-bay compact use lexicon §7 Frame A verbatim. Primary sayables: **Ask graph · Keep volume · Play cell**. `GraphDatabase.*` stays on `data-capability` / muted advanced line (A5).
 - `office:graph` / `graph:sparql_query` human label is Ask graph (Getting started). Statusbar Keep chip + save-dialog **Keep volume** open the existing `volume_open` dialog — no new Capability id.
 - WASM radial: `contextmenu` capture + `preventDefault` before target inspect. Text-node hits (labels) no longer skip the ring. Long-press for touch. Desktop same listener.

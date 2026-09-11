@@ -33,11 +33,12 @@ pub fn poet_construct() -> ConstructSeed {
     construct(
         "poet",
         "POET",
-        "Default observer-scope: every seeded lens (research, health, anatomy, studio, knowledge, rights, social).",
+        "Default observer-scope: studio bay first, then every seeded lens (research, health, anatomy, studio, knowledge, rights, social).",
         "poet",
         "live",
-        "research",
+        "studio-bay",
         &[
+            "studio-bay",
             "research",
             "media",
             "social",
@@ -213,6 +214,9 @@ mod tests {
         assert!(all.len() >= 6);
         let poet = construct_by_id("poet").unwrap();
         assert!(poet.contains_manifold("health"));
+        assert!(poet.contains_manifold("studio-bay"));
+        assert_eq!(poet.default_manifold, "studio-bay");
+        assert_ne!(poet.default_manifold, "research");
         assert_eq!(poet.honesty, "live");
         assert!(construct_by_id("anatomy").is_none());
         let health = construct_by_id("health").unwrap();
