@@ -34,7 +34,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Affordance | D | W | Evidence / note | Next |
 |------------|---|---|-----------------|------|
-| Right-click **radial wheel** | PASS* | FAIL* | No sixth beat; W missing ≠ lite motion — fix or honest held (Timothy/davinci) | Chrome priority + Capt UAT |
+| Right-click **radial wheel** | PASS* | **FAIL** | Capt `b3b8e2e` PR #91: preventDefault owns gesture (no OS menu) but **no 8-sector ring**; stamp `0.0.37` | davinci residual ring paint |
 | Toolchest / Layout · Stage · Timeline twins | PARTIAL | PARTIAL | G-A freeze landed; human discoverability still agent-guided | First-session map |
 | Studio bay (not terminal-first) | PARTIAL | PARTIAL | Zone D / Catalog · Lexicon exists; cold-load still feels agent UI | Frame A empty-state |
 | Sayables-first Ask · Keep · Play | PARTIAL | PARTIAL | Lexicon + office:graph sayables wishlist; Capability.method still too loud in places | Scan primary labels |
@@ -112,7 +112,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 |-------|---|---|-------|
 | Dismiss / leave uses leave beat | PARTIAL | PARTIAL | Exit = dissolve on same z-path as arrive; uneven globally |
 | Reduced-motion still-leave | NEEDS_UAT | NEEDS_UAT | Named beat; state ≠ motion-only |
-| Wheel feel D↔W same dialect | PASS* | FAIL* | Align with §3 wheel FAIL* |
+| Wheel feel D↔W same dialect | PASS* | **FAIL** | Align with §3 / Capt `b3b8e2e` A4 FAIL (no ring) |
 | No “kill/abort” primary voice | PARTIAL | PARTIAL | Copy sweep |
 
 ---

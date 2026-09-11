@@ -1,6 +1,6 @@
 # Cold-load UAT — Frames D–E (motion · monet)
 
-**Branch:** `0.0.38` · **Parity tip:** ≥ `cfac542` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
+**Branch:** `0.0.38` · **Parity tip:** ≥ `b3b8e2e` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
 **Surfaces:** WASM then Desktop — same steps · same beats  
 **Owners:** Capt (run + shots) · monet (score motion) · davinci (Keep discoverability chrome)
 
@@ -32,7 +32,7 @@
 |------|---------|------|----------|
 | **A3 soft-rise feel** | — | **PASS*** | Capt Frame A WASM shots 01–02; first paint not modal slap |
 | **Frame A empty-bay arrive** | — | **PASS** | Capt re-UAT `cfac542` A1/A2 — studio bay + Ask·Keep·Play live |
-| **A4 / E4 wheel** | PASS* | **FAIL** | Capt shot 03 + A4 FAIL confirmed |
+| **A4 / E4 wheel** | PASS* | **FAIL** | Capt re-UAT `b3b8e2e` PR #91: right-click owns menu (no OS) but **no ring paint**; stamp `0.0.37` |
 | D1 Keep soft-rise | PASS* | **HELD** | Checkpoint modal only; no daemon — retake pending (shots `d1-keep-soft-rise` + `d1-volume-after`) |
 | Deny care / no celebrate (DENIED·NO DAEMON) | — | **PASS*** | Checkpoint deny care look; no celebrate on DENIED·NO DAEMON (`d1-keep-soft-rise` + `d1-volume-after`) |
 | Studio bay before Keep (A2 context) | — | **PASS*** | Ask·Keep·Play live; studio bay precedes Keep attempt |
