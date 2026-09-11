@@ -143,3 +143,7 @@ Wait-honest gaps (bind or mount really missing / not ready) — say **held / not
 > WASM already teaches held/not yet for Catalog.  
 > Buried live (Directory, Library bounce, Ontology, Mesh, Pulse) is the chrome FAIL.  
 > Cherry-pick joy under Ask · Keep · Talk — no parity theatre, no Host invent.
+
+## Related
+
+- [`HUMAN_SURFACE_VOCAB_FOR_CHROME_WIP.md`](./HUMAN_SURFACE_VOCAB_FOR_CHROME_WIP.md) — Marvin plane vocab for chrome
