@@ -536,6 +536,58 @@ button[disabled]:hover,
   border: 1px solid var(--accent-cyan);
 }
 
+/* ---------- Frame A first-arrive (lexicon §7) ---------- */
+.frame-a-banner,
+.frame-a-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-panel) 88%, var(--accent-cyan) 6%);
+}
+.frame-a-compact {
+  border-bottom: none;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, var(--border-subtle));
+  border-radius: var(--radius-xs);
+  margin: 0 0 6px;
+  padding: 6px 8px;
+}
+.frame-a-where,
+.frame-a-trio {
+  font: 600 12px/1.35 var(--font-sans);
+  color: var(--text-primary);
+}
+.frame-a-compact .frame-a-trio {
+  font-size: 11px;
+}
+.frame-a-sayables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.frame-a-sayable {
+  font: 700 11px/1 var(--font-sans);
+  padding: 5px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 16%, var(--surface-panel));
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.frame-a-advanced,
+.frame-a-held-note {
+  font: 500 10px/1.35 var(--font-sans);
+  color: var(--text-muted);
+}
+.frame-a-held-note {
+  color: var(--accent-amber);
+}
+.statusbar-item[data-frame-a-keep] {
+  cursor: pointer;
+}
+
 /* ---------- G-LEXICON-0 studio bay (Catalog peer) ---------- */
 .lexicon-bay {
   display: flex;

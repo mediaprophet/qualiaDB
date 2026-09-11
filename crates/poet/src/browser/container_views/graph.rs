@@ -22,7 +22,8 @@ pub fn build_graph_view(document: &Document) -> Element {
     run_btn
         .set_attribute("data-instrument-action", "graph:sparql")
         .unwrap();
-    run_btn.set_text_content(Some("\u{25B6} Run SPARQL"));
+    run_btn.set_text_content(Some("\u{25B6} Ask graph"));
+    run_btn.set_attribute("aria-label", "Ask graph").ok();
     query_bar.append_child(&run_btn).unwrap();
     wrapper.append_child(&query_bar).unwrap();
 

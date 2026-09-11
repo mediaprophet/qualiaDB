@@ -336,7 +336,8 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     rb_el
         .style()
         .set_css_text("padding: 3px 8px; font-size: 10px;");
-    run_btn.set_text_content(Some("\u{25B6} Play"));
+    run_btn.set_text_content(Some("\u{25B6} Play cell"));
+    run_btn.set_attribute("aria-label", "Play cell").ok();
     bar.append_child(&run_btn).unwrap();
     container.append_child(&bar).unwrap();
 

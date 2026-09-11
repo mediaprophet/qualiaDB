@@ -151,9 +151,9 @@ fn named(id: &str) -> Option<Presentation> {
             Proficiency::Novice,
         ),
         "graph:sparql_query" => (
-            "Search records",
-            "Look through your notes and records for a match.",
-            Proficiency::Intermediate,
+            "Ask graph",
+            "Ask a question of living or stored graph meaning.",
+            Proficiency::Novice,
         ),
         "n3:evaluate" => (
             "Apply written rules",
@@ -5646,6 +5646,14 @@ mod tests {
             assert!(!blob.contains("capability"), "{id}");
             assert!(!blob.contains("n3logic"), "{id}");
         }
+    }
+
+    #[test]
+    fn graph_ask_is_frame_a_sayable_on_getting_started() {
+        let copy = named("graph:sparql_query").expect("graph:sparql_query");
+        assert_eq!(copy.label, "Ask graph");
+        assert_eq!(copy.min_proficiency, Proficiency::Novice);
+        assert!(!copy.tooltip.to_ascii_lowercase().contains("graphdatabase"));
     }
 
     #[test]

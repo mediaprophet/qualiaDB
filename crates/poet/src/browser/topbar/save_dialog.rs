@@ -6,7 +6,7 @@ use super::*;
 /// provide a label, and see the actor identity that will be recorded.
 ///
 /// See `SAVE_ARCHITECTURE.md` for the full specification.
-pub(super) fn open_save_mode_dialog(document: &Document) {
+pub fn open_save_mode_dialog(document: &Document) {
     let return_focus = document.active_element();
     // Remove any existing dialog
     if let Some(existing) = document.get_element_by_id("save-mode-dialog") {
@@ -248,7 +248,10 @@ pub(super) fn open_save_mode_dialog(document: &Document) {
 
     let open_vol_btn = document.create_element("button").unwrap();
     open_vol_btn.set_id("save-volume-open-btn");
-    open_vol_btn.set_text_content(Some("Open .q42"));
+    open_vol_btn.set_text_content(Some("Keep volume"));
+    open_vol_btn
+        .set_attribute("aria-label", "Keep volume")
+        .ok();
     let ov_el: HtmlElement = open_vol_btn.clone().dyn_into().unwrap();
     ov_el.style().set_css_text(
         "padding: 8px 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); \

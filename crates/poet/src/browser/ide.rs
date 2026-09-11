@@ -560,6 +560,9 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
         "height: 220px; background: #090e1a; border-top: 1px solid rgba(255, 255, 255, 0.08); \
          display: flex; flex-direction: column;",
     );
+    drawer
+        .append_child(&super::frame_a::mount_compact(document))
+        .unwrap();
 
     let drawer_tabs = document.create_element("div").unwrap();
     drawer_tabs.set_attribute("role", "tablist").ok();

@@ -125,7 +125,7 @@ pub(super) fn build_command_list() -> Vec<CommandEntry> {
         },
         CommandEntry {
             icon: "\u{1F50D}",
-            label: "Run SPARQL Query",
+            label: "Ask graph",
             shortcut: "",
         },
         CommandEntry {

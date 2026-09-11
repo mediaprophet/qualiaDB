@@ -52,6 +52,8 @@ pub fn build_lexicon_bay(document: &Document) -> Element {
         )
         .ok();
     root.append_child(&title).unwrap();
+    root.append_child(&super::frame_a::mount_compact(document))
+        .unwrap();
 
     let path_row = document.create_element("div").unwrap();
     path_row.set_class_name("lexicon-path-row");

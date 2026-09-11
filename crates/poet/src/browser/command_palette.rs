@@ -665,7 +665,7 @@ fn execute_command(label: &str) {
             super::search_workbench::open_to_mode(&document, "saved");
             return;
         }
-        "Run SPARQL Query" => {
+        "Ask graph" | "Run SPARQL Query" => {
             super::search_workbench::open_to_mode(&document, "sparql");
             return;
         }

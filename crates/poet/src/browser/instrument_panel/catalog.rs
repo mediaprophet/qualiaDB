@@ -256,8 +256,8 @@ pub(super) fn tools_for_type(container_type: &str) -> Vec<RibbonTool> {
             RibbonTool {
                 id: "graph:sparql",
                 icon: "\u{1F50D}",
-                label: "SPARQL",
-                description: "Run SPARQL query",
+                label: "Ask graph",
+                description: "Ask a question of living or stored graph meaning",
             },
             RibbonTool {
                 id: "graph:expand",

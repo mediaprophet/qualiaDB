@@ -57,6 +57,7 @@ pub mod instrument_panel;
 pub mod intent_bus;
 pub mod interactions;
 pub mod job_queue;
+pub mod frame_a;
 pub mod lexicon_bay;
 pub mod live_invoke;
 pub mod lived_memory_archive;
@@ -740,6 +741,9 @@ fn build_app(document: &Document) -> HtmlElement {
     app.append_child(&control_bar).unwrap();
     topbar::refresh_construct_chrome(document, &current_construct_id(), &opening.id);
 
+    // Frame A first-arrive — Ask · Keep · Play visible on Research cold-load.
+    app.append_child(&frame_a::mount_banner(document)).unwrap();
+
     // Main workspace
     let workspace = document.create_element("div").unwrap();
     workspace.set_class_name("main-workspace");
@@ -1004,9 +1008,11 @@ pub fn rerender_canvas(seed: &ManifoldSeed) {
             let hint = document.create_element("div").unwrap();
             hint.set_attribute("style", "font-size: 11px; color: var(--text-muted);")
                 .unwrap();
-            hint.set_text_content(Some(
-                "Click a toolbox on the left and place a container to get started.",
-            ));
+            hint.set_text_content(Some(frame_a::FRAME_A_TRIO));
+            let advanced = document.create_element("div").unwrap();
+            advanced.set_class_name("frame-a-advanced");
+            advanced.set_text_content(Some(frame_a::FRAME_A_ADVANCED));
+            empty.append_child(&advanced).unwrap();
             empty.append_child(&hint).unwrap();
 
             content_layer.append_child(&empty).unwrap();

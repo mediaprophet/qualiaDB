@@ -277,19 +277,19 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
             ToolChain::new(
                 ToolChainMetadata {
                     id: "office:graph".into(),
-                    label: "Graph Query".into(),
+                    label: "Ask graph".into(),
                     icon: "graph".into(),
-                    description: "Run SPARQL against the live QualiaDB graph (GraphDatabase.sparql).".into(),
+                    description: "Ask a question of living or stored graph meaning.".into(),
                 },
                 vec![Box::new(SimpleTool::new(
                     ToolMetadata {
                         id: "graph:sparql_query".into(),
-                        label: "Run SPARQL".into(),
+                        label: "Ask graph".into(),
                         icon: "query".into(),
                         kind: ToolKind::Query,
                         capability_scope: Some("GraphDatabase.sparql".into()),
                         ontology_prefix: "ont".into(),
-                        description: "Invoke live Capability.method GraphDatabase.sparql via the local daemon. Select SPARQL text first, or a bounded ASK is used.".into(),
+                        description: "Ask a question of living or stored graph meaning. Select query text first, or a bounded ASK is used.".into(),
                     },
                     ActionType::Query,
                 ))],

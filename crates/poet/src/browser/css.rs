@@ -50,6 +50,8 @@ mod tests {
         assert!(CSS.contains("[data-media-surface=\"film\"]"));
         assert!(CSS.contains(".aspect-chip"));
         assert!(CSS.contains(".lexicon-chip"));
+        assert!(CSS.contains(".frame-a-banner"));
+        assert!(CSS.contains(".frame-a-sayable"));
         assert!(CSS.contains(".lexicon-held-gate"));
         assert!(CSS.contains("[data-recipe=\"arrive\"]"));
         assert!(CSS.contains("--chip-living"));
