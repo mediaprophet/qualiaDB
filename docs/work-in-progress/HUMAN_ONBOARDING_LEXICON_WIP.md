@@ -243,6 +243,7 @@ All under `docs/work-in-progress/` unless noted.
 | **Crosswalk** | [`IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md`](./IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md) | Diagram intake / SAME AS |
 | **F6** | [`alice-f6-classifier-symbolic-binding-pressure-test.md`](./alice-f6-classifier-symbolic-binding-pressure-test.md) | Inference namespaces; who ≠ claim ≠ handle ≠ instrument |
 | **Marvin ontology** | [`ontology-design-notes-marvin.md`](./ontology-design-notes-marvin.md) | B-OWL-PERSON / NATURAL / LIFE-UPLIFT |
+| **One Poet cut** | [`ONE_POET_PRODUCT_CUT_WIP.md`](./ONE_POET_PRODUCT_CUT_WIP.md) | One Poet · two hosts · Webizen shell · Desktop→WASM |
 | **davinci chrome** | [`poet-chrome-design-notes-davinci.md`](./poet-chrome-design-notes-davinci.md) | Studio aspects · living-safe UI |
 | **monet motion** | [`poet-motion-design-notes-monet.md`](./poet-motion-design-notes-monet.md) | Entrance/dwell/exit · soft-rise |
 | **G-LEXICON bay** | [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) | Held-gate + chips |
