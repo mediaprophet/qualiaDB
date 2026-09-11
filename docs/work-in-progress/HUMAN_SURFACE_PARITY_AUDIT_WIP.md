@@ -34,7 +34,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Affordance | D | W | Evidence / note | Next |
 |------------|---|---|-----------------|------|
-| Right-click **radial wheel** | PASS* | **FAIL** | Capt `b3b8e2e` PR #91: preventDefault owns gesture (no OS menu) but **no 8-sector ring**; stamp `0.0.37` | davinci residual ring paint |
+| Right-click **radial wheel** | PASS* | **PASS** | Capt `f712e97` PR #92: 8-sector wheel on empty-bay right-click; OS menu suppressed | Desktop A next |
 | Toolchest / Layout · Stage · Timeline twins | PARTIAL | PARTIAL | G-A freeze landed; human discoverability still agent-guided | First-session map |
 | Studio bay (not terminal-first) | PARTIAL | PARTIAL | Zone D / Catalog · Lexicon exists; cold-load still feels agent UI | Frame A empty-state |
 | Sayables-first Ask · Keep · Play | PARTIAL | PARTIAL | Lexicon + office:graph sayables wishlist; Capability.method still too loud in places | Scan primary labels |
@@ -58,7 +58,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 |-------|---|---|-------|
 | Empty bay uses Frame A voice (not Capability dump) | NEEDS_UAT | **PASS** (Capt `cfac542`) | Studio bay first-arrive voice |
 | Soft-rise feel (first paint) | PARTIAL | **PASS*** (Capt WASM) | Soft-rise OK — not modal slap |
-| Empty-bay arrive choreography | PARTIAL | **PASS** (Capt `cfac542`) | Studio bay first paint; A4 wheel still FAIL |
+| Empty-bay arrive choreography | PARTIAL | **PASS** (Capt `f712e97`) | Studio bay + A4 wheel PASS on WASM; Desktop A pending |
 | Advanced method names muted | PARTIAL | PARTIAL | Secondary chrome only |
 | Human finds Ask / Keep / Play without agent | NEEDS_UAT | **PASS** (Capt `cfac542`) | Studio bay Frame A sayables; Desktop still NEEDS_UAT |
 
@@ -112,7 +112,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 |-------|---|---|-------|
 | Dismiss / leave uses leave beat | PARTIAL | PARTIAL | Exit = dissolve on same z-path as arrive; uneven globally |
 | Reduced-motion still-leave | NEEDS_UAT | NEEDS_UAT | Named beat; state ≠ motion-only |
-| Wheel feel D↔W same dialect | PASS* | **FAIL** | Align with §3 / Capt `b3b8e2e` A4 FAIL (no ring) |
+| Wheel feel D↔W same dialect | PASS* | **PASS** | Capt `f712e97` A4 PASS; Desktop A still pending for full D↔W |
 | No “kill/abort” primary voice | PARTIAL | PARTIAL | Copy sweep |
 
 ---
