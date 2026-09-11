@@ -720,6 +720,15 @@
 - Step: principal supplied I-D author Timothy Charles Holborn <timothy.holborn@gmail.com>. Status: **recorded in `-00`; not datatracker-posted**. WG/area still unchosen. Public relay still not a CDN, IPFS, or chain.
 - Human input needed: whether to click submit on datatracker; a live inbound WSS/MASQUE origin if Gate B is wanted.
 
+## 2026-09-11 — IETF drafts relocated to `docs/standards/ietf/`
+
+- Step: principal asked to put draft IETF files in `docs/standards` and to give grok-bot / local CSCP-08 directions. Status: **relocated**; CSCP-08 still blocked.
+- Built: canonical CSCP `-00` at [docs/standards/ietf/draft-webcivics-cscp-00.md](../../../../standards/ietf/draft-webcivics-cscp-00.md). ADP and QDP I-D copies alongside. CSCP-08 chore sheet: [CSCP-08-LOCAL-CHORES.md](../../../../standards/ietf/CSCP-08-LOCAL-CHORES.md). Stub remains at the old `qdnf-imp/` path.
+- Measured: not applicable (docs). Honesty flags unchanged. CSCP-08 / parent CSCP-09 / CSCP-12 not ticked.
+- Human input needed: CSCP-08 operator URL; CSCP-12 datatracker.
+- Next: grok-bot or local tree follows the chore sheet only after a hostname he already controls is supplied.
+
+
 
 
 

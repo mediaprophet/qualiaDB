@@ -2,7 +2,7 @@
 
 **Status:** Wave 1 local control plane tested and fail-closed after independent review; QUIC deferred; local DATAGRAM capsules in-tree; browser profile recorded; CSCP-08/12 blocked  
 **Date:** 2026-09-10  
-**Normative spec:** [draft-webcivics-cscp-00.md](../draft-webcivics-cscp-00.md)  
+**Normative spec:** [draft-webcivics-cscp-00.md](../../../../../standards/ietf/draft-webcivics-cscp-00.md)  
 **Swarm rules:** reuse [qdnf-imp swarm protocol](../swarm-protocol.md), briefs, handoffs, evidence manifests  
 **Branch:** `0.0.38`  
 **Integrator:** this session  
@@ -24,7 +24,7 @@ This programme implements CSCP as specified. It does **not** implement QUIC, MAS
 | CSCP control on TLS WSS + QSession | yes (local rustls) | not browser / not Internet |
 | Receipt persist/recover | yes (CRC file) | RAM queue still not crash-safe |
 | QUIC ALPN `cscp/1` | deferred (CSCP-07) | no engine admitted |
-| MASQUE bound UDP on Internet | no | CSCP-08 blocked on operator |
+| MASQUE bound UDP on Internet | no | CSCP-08 blocked on operator; local/grok-bot chores: [CSCP-08-LOCAL-CHORES.md](../../../../../standards/ietf/CSCP-08-LOCAL-CHORES.md) |
 | HTTP/2 capsule fallback | local DATAGRAM framing + loopback TLS HTTP/2 Extended CONNECT (CSCP-09.02) | parent CSCP-09 Internet/MASQUE still open |
 | Browser profile | profile note | interop not executed |
 | Independent review | yes (accept-with-fixes; F1–F4 applied) | — |

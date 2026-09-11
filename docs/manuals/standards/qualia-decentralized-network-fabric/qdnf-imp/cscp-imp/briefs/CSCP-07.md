@@ -15,7 +15,7 @@ Read:
 
 - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/quic-native-connectivity-research-2026.md`
 - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/capability-scoped-connection-fabric.md`
-- `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/draft-webcivics-cscp-00.md` (ALPN `cscp/1`)
+- `docs/standards/ietf/draft-webcivics-cscp-00.md` (ALPN `cscp/1`)
 - `crates/qualia-core-db/Cargo.toml` and workspace `Cargo.toml` for quinn/noq/iroh
 - `crates/qualia-core-db/src/net/peer/connectivity/evidence.rs`
 

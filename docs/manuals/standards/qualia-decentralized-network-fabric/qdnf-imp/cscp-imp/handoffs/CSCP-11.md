@@ -7,7 +7,7 @@
   - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/reviews/CSCP-11-wave1.md`
   - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-11.md`
 - Public behavior: **unchanged**. Reviewer did not author Wave 1 and did not patch implementation.
-- Accepted predecessor: CSCP-01–06 in-tree on `0.0.38` at `4cb9f9b1aeb8c733785324550126164ac7fececf`. Draft: `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/draft-webcivics-cscp-00.md`.
+- Accepted predecessor: CSCP-01–06 in-tree on `0.0.38` at `4cb9f9b1aeb8c733785324550126164ac7fececf`. Draft: `docs/standards/ietf/draft-webcivics-cscp-00.md`.
 - Evidence: the review file. Independent test re-run (not the author log):
   - `CARGO_TARGET_DIR=/tmp/qdnf-continue-target cargo test -p qualia-core-db --lib --offline net::peer::fabric -- --test-threads=1` → **34 passed**, 0 failed.
   - `cargo test -p qualia-core-db --lib --offline p2p::connectivity::cscp_wss -- --test-threads=1` → **1 passed**, 0 failed, 0.26s.

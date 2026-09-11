@@ -8,7 +8,7 @@ This is a credible alternative to using the ICE/STUN/TURN protocols in native Qu
 
 The proposed Qualia-specific contribution is now specified as the
 **Capability-Scoped Connectivity Protocol (CSCP)**, Internet-Draft
-[draft-webcivics-cscp-00](draft-webcivics-cscp-00.md): intent, disclosure,
+[draft-webcivics-cscp-00](../../../../standards/ietf/draft-webcivics-cscp-00.md): intent, disclosure,
 expiring private contact, admitted relay resources, path evidence and
 durable receipts under one bounded supervisor. CSCP is a working document,
 not an RFC. Sections 10–11 examine DCUtR, Pkarr and Holepunch and define

@@ -6,7 +6,7 @@ implemented on `0.0.38`. This is **not** an RFC, **not** IETF datatracker
 publication, **not** Internet MASQUE, **not** an admitted noq/QUIC engine,
 **not** a public relay, and **not** a deployment claim.
 
-Related: [draft-webcivics-cscp-00.md](./draft-webcivics-cscp-00.md) (proposed
+Related: [draft-webcivics-cscp-00.md](../../../../standards/ietf/draft-webcivics-cscp-00.md) (proposed
 Internet-Draft), [quic-native-connectivity-research-2026.md](./quic-native-connectivity-research-2026.md)
 (32-source report), [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md)
 (incremental SocialWebNet / WireGuard A–E), [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md).

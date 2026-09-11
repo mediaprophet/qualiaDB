@@ -71,7 +71,7 @@ Integrator ticks a box only after recorded evidence. Do not tick because a stub 
 
 ## CSCP-08–12 — Internet / review / submit
 
-- [ ] CSCP-08 MASQUE bound-UDP Internet (blocked: operator URL)
+- [ ] CSCP-08 MASQUE bound-UDP Internet (blocked: operator URL; chores: [CSCP-08-LOCAL-CHORES.md](../../../../../standards/ietf/CSCP-08-LOCAL-CHORES.md), brief: [briefs/CSCP-08.md](./briefs/CSCP-08.md))
 - [x] CSCP-09.01 Local RFC 9297 DATAGRAM capsule framing (`fabric/capsule.rs`); not HTTP/2, not MASQUE Internet
 - [x] CSCP-09.02 HTTP/2 Extended CONNECT + DATAGRAM capsules + CSCP/QSession on loopback TLS (not Internet)
 - [ ] CSCP-09 HTTP/2 CONNECT/capsule stack on a live Internet path

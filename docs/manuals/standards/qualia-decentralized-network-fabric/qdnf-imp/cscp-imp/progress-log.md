@@ -104,4 +104,12 @@
 - Human input needed: CSCP-08 live inbound URL; CSCP-12 datatracker. Optional: confirm `did:qi` vs reserved `did:hcinet`.
 - Next: do not tick parent CSCP-09, CSCP-08, or CSCP-12. Do not invent a public relay URL.
 
+## 2026-09-11 — IETF drafts under `docs/standards/ietf/`; CSCP-08 chore sheet
+
+- Step: principal asked to put draft IETF files in `docs/standards` and to give grok-bot / local directions for CSCP-08. Status: **docs done**; CSCP-08 still **blocked** (no operator URL).
+- Built: canonical CSCP `-00` moved to [`docs/standards/ietf/draft-webcivics-cscp-00.md`](../../../../../standards/ietf/draft-webcivics-cscp-00.md). ADP `-01` and QDP `-02` copied there (WIP originals kept). Stub left at the old `qdnf-imp/` path. CSCP-08 directions: [`CSCP-08-LOCAL-CHORES.md`](../../../../../standards/ietf/CSCP-08-LOCAL-CHORES.md) and [`briefs/CSCP-08.md`](./briefs/CSCP-08.md). Honesty flags not touched. Workstream CSCP-08 box not ticked.
+- Measured: not applicable (document relocation + chore sheet). No Internet trial. No datatracker post.
+- Human input needed: CSCP-08 named operator + live inbound WSS/443 or MASQUE URL; CSCP-12 datatracker post (Timothy’s login). Optional: confirm `did:qi` vs reserved `did:hcinet`.
+- Next: paste the grok-bot block from `CSCP-08-LOCAL-CHORES.md` on `C:\Projects\qualia-27062026`. Do not invent a public relay URL. Do not tick CSCP-08, parent CSCP-09, or CSCP-12.
+
 
