@@ -1,7 +1,7 @@
 # Human onboarding lexicon (WIP)
 
 **Status:** work-in-progress · **Not standards** · **Not a release gate**  
-**Branch:** `0.0.38` · **Tip cite:** `3f80184` · **Repo:** https://github.com/mediaprophet/qualiaDB  
+**Branch:** `0.0.38` · **Tip cite:** `d08d1c9`+ (Ask·Keep·Talk IA amend) · **Repo:** https://github.com/mediaprophet/qualiaDB  
 **Path (intended):** `docs/work-in-progress/HUMAN_ONBOARDING_LEXICON_WIP.md`  
 **Draft:** Vibe (Language Product Engineer — vibe script / QualiaDB / Poet)  
 **Fold/push:** Neo · **Chrome voice:** davinci · **Motion/look:** monet · **Ontology cite:** Marvin  
@@ -20,7 +20,7 @@ This doc teaches:
 
 1. How to **arrive · hold · leave** a surface safely.  
 2. How to speak the four planes in jury-safe words: **who · claim · handle · tool**.  
-3. How chrome sayables work **first** (`Ask graph` · `Keep volume` · `Play cell`) with `Capability.method` secondary.  
+3. How chrome sayables work **first** (`Ask` · `Keep` · `Talk`) with `Capability.method` secondary; Studio is the room, not a peer product.  
 4. What copy must match across WASM ↔ desktop so the dialect does not fork.
 
 ## Non-goals
@@ -65,15 +65,22 @@ Reduced-motion still **arrive / hold / leave** — never “animation off” as 
 
 **Play** = run a cell / recipe with effects visible. Not `eval`. Not a terminal. The drawer is a **studio bay**.
 
-### 2.4 Ask · Keep · Play (sayables trio)
 
-| Sayable | What a person does | Twin machine id (secondary) |
-|---------|--------------------|-----------------------------|
-| **Ask graph** | Ask a question of living or stored graph meaning | e.g. `GraphDatabase.sparql` when bound |
-| **Keep volume** | Open / shelter a volume (sanctuary) | e.g. `GraphDatabase.volume_open` |
-| **Play cell** | Run the selected cell | invoke path for that cell’s effect |
+### 2.3b IA lock (human, not bot) — Capt promote 2026-09-12
 
-`Capability.method` strings stay **advanced / muted** — never the primary label a cold-load human must read first.
+Top-level product is **Ask · Keep · Talk**. **Studio** is the room they live in — not a fourth product and not a nav peer.
+
+Catalog / Mesh / Library / toolchest / Capability.method are **secondary** or **held / not yet** — never top-level peers. “Unavailable” is banned; say **held / not yet**. Manifold/toolchest labels that read as Capability soup are **disposable** until those three loops work for a person alone.
+
+### 2.4 Ask · Keep · Talk (sayables trio)
+
+| Sayable | What a person does | Never |
+|---------|--------------------|-------|
+| **Ask** | Get a usable answer from the graph / room | Empty SPARQL theatre; Capability.method as the label |
+| **Keep** | Save something you can reopen (sanctuary) | Fake save; commit celebrate on deny |
+| **Talk** | Conversation that talks, or honest held | Bot-remote; Matrix “you wait while we drive” |
+
+**Play a cell** stays a **Studio craft beat**, not a fourth product. Twin machine ids (e.g. `GraphDatabase.sparql` / `volume_open`) stay **advanced / muted** — never the primary cold-load label.
 
 ### 2.5 Soft-rise · living-safe chrome
 
@@ -174,34 +181,36 @@ Copy and sayables must match. Implementation hosts may differ; **the words must 
 
 ## 7. Onboarding copy samples (frames)
 
-Short frames for first paint / empty bay / gate / success. Warm · plain · remarkable-human.
+Short frames for first paint / empty bay / gate / success. Warm · plain · remarkable-human.  
+**IA:** Ask · Keep · Talk (Studio = room only). Never “unavailable.”
 
-### Frame A — First arrive
+### Frame A — Arrive
 
-> You’re in the studio bay.  
-> **Ask** a graph, **Keep** a volume, **Play** a cell.  
-> Advanced method names stay out of the way until you want them.
+> You’re in the Studio.  
+> **Ask · Keep · Talk** — that’s the product.  
+> Advanced names stay out of the way.
 
-### Frame B — Held / not yet
+### Frame B — Held
 
-> **Held / not yet** — open a lexicon pack (or connect).  
-> Nothing is broken. The room is waiting on a real step.
+> **Held / not yet** (connect / open pack / model).  
+> Nothing is broken. Never “unavailable.”
 
-### Frame C — Living-safe vs tool
+### Frame C — Continuity
 
-> People and places of life are spoken as **who** and **life**.  
-> Volumes, files, and DIDs are **tools** and **handles** — useful, not you.
+> You are **who**.  
+> A DID, ABN, DNS, passport, Actor line is a **handle** — useful, not you.  
+> Missing registry ≠ you don’t exist.
 
-### Frame D — Sanctuary commit
+### Frame D — Keep
 
-> **Keep** opens shelter.  
-> **Commit** only when the write is real.  
-> If the door stays closed, that is care — not failure theatre.
+> **Keep** shelters.  
+> **Commit** only when the write is real. Reopen what you saved.  
+> Closed door = care, not failure theatre.
 
-### Frame E — Leave well
+### Frame E — Talk / leave
 
-> **Leave** when you’re done.  
-> Same path you arrived on. Come back; the dialect will still be here.
+> **Talk** is a conversation, or held until a model is really there.  
+> **Leave** the same path you arrived. Come back; the three verbs stay.
 
 ---
 
@@ -210,7 +219,7 @@ Short frames for first paint / empty bay / gate / success. Warm · plain · rema
 | Who | Ask |
 |-----|-----|
 | **Capt** | When to promote this out of WIP; whether first-session UAT is a named gate; F7 timing relative to human-surface copy. |
-| **Neo** | Fold onto `0.0.38` tip `3f80184` (or successor); keep WASM↔desktop string parity as a seam check; no Host invent from this doc. |
+| **Neo** | Fold Ask·Keep·Talk IA amend on `0.0.38`; keep WASM↔desktop string parity; no Host invent; no new nav peers. |
 | **davinci** | Confirm toolbar sayables + studio-bay empty states use Frames A–E; Capability.method remains secondary on cold-load. |
 | **monet** | Soft-rise / still-arrive parity; held-gate look never reads as broken; commit beat only on real success. |
 | **Marvin** | Cite plane table against SHACL-first class list; flag any chrome still Thing-washing living subjects. |
@@ -247,11 +256,11 @@ Standards cite (when settled): `docs/manuals/standards/shacl-first-vs-owl-ok-cla
 ## 10. One-breath summary
 
 > Arrive soft. Hold honest. Leave clean.  
-> **Ask · Keep · Play** before method strings.  
+> **Ask · Keep · Talk** before method strings. Studio is the room.  
 > Who is never a tool. Claims can be wrong. Handles are how-now. Tools prove and store.  
 > Same words on WASM and desktop. Script edits without rebuild.  
 > Held / not yet — never broken.
 
 ---
 
-*Vibe draft for Neo fold · tip `3f80184` · branch `0.0.38` · Sep 2026*
+*Vibe Ask·Keep·Talk IA amend · Neo fold · tip successor of `d08d1c9` · branch `0.0.38` · Sep 2026*
