@@ -1,6 +1,6 @@
 # Cold-load UAT — Frames D–E (motion · monet)
 
-**Branch:** `0.0.38` · **Parity tip:** ≥ `c6ab0f6` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
+**Branch:** `0.0.38` · **Parity tip:** ≥ `6d6fce8` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
 **Surfaces:** WASM then Desktop — same steps · same beats  
 **Owners:** Capt (run + shots) · monet (score motion) · davinci (Keep discoverability chrome)
 
@@ -33,11 +33,11 @@
 | **A3 soft-rise feel** | — | **PASS*** | Capt Frame A WASM shots 01–02; first paint not modal slap |
 | **Frame A empty-bay arrive** | — | **FAIL** | Cold-load = Research manifold jump; no studio bay Ask·Keep·Play; Keep absent (stricter than A3 feel) |
 | **A4 / E4 wheel** | PASS* | **FAIL** | Capt shot 03 + A4 FAIL confirmed |
-| D1 Keep soft-rise | PASS* | **HELD** | Blocked until davinci Ask·Keep chrome; Capt reshoot after |
-| D2 Closed = care | PASS* | **PASS*** | Footer `Volume: CLOSED` honest (shot 01); Aura “unavailable” still chrome B gap |
-| D3 Commit celebrate | PASS* | **HELD** | Need Keep path + W commit shot |
+| D1 Keep soft-rise | PASS* | **HELD** | Sanctuary selected; Keep UI absent (davinci shots) |
+| D2 / D3 Volume CLOSED care | PASS* | **PASS*** | Footer CLOSED honest; Graph live 708 quins |
+| D3 commit celebrate | PASS* | **HELD** | No Keep→commit path yet |
 | E1 Leave reverse | PARTIAL | PARTIAL | Not in Frame A pack |
-| E2 still-leave | NEEDS_UAT | NEEDS_UAT | Need reduced-motion pass |
+| E2 still-leave | NEEDS_UAT | **NEEDS_UAT** | Three shot files byte-identical; Studio STILL ≠ still-leave; need distinct reduced-motion leave dismiss |
 | GIS held/not yet (adjacent) | — | PASS* | Remap Cosmic `held / not yet` on Map (shot 02) |
 
 **Chrome note (davinci):** Doc/LaTeX red `missing` reads harsher than held/not yet — align when empty-state lands. UI stamp on shots: `0.0.37` while branch tip is `0.0.38` — Capt/Neo confirm stamp path.
