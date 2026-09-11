@@ -423,7 +423,7 @@ impl JobStatus {
             Self::Queued => "honesty-partial",
             Self::Running => "honesty-live",
             Self::Complete => "honesty-live",
-            Self::Failed => "honesty-missing",
+            Self::Failed => "honesty-error",
             Self::Cancelled => "honesty-present",
         }
     }

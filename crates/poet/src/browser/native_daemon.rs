@@ -469,10 +469,10 @@ pub fn get_connected_daemon_url() -> Option<String> {
 /// A connected daemon makes particular operations available; it does not turn
 /// static or prototype data into a live result.
 pub fn effective_honesty(base_honesty: &str) -> &'static str {
-    match base_honesty {
+    match crate::browser::surface_honesty::persist_token(base_honesty) {
         "live" => "live",
         "present" => "present",
-        "missing" => "missing",
+        "held" => "held",
         _ => "partial",
     }
 }
@@ -1336,7 +1336,8 @@ mod tests {
         assert!(!is_daemon_connected());
         assert_eq!(effective_honesty("partial"), "partial");
         assert_eq!(effective_honesty("present"), "present");
-        assert_eq!(effective_honesty("missing"), "missing");
+        assert_eq!(effective_honesty("missing"), "held");
+        assert_eq!(effective_honesty("held"), "held");
         assert_eq!(effective_honesty("live"), "live");
     }
 

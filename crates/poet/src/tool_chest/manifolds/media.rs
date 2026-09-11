@@ -33,7 +33,7 @@ pub fn media_manifold_seed() -> ManifoldSeed {
                 width: 420.0,
                 height: 360.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -44,7 +44,7 @@ pub fn media_manifold_seed() -> ManifoldSeed {
                 width: 420.0,
                 height: 280.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -55,7 +55,7 @@ pub fn media_manifold_seed() -> ManifoldSeed {
                 width: 420.0,
                 height: 280.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -66,7 +66,7 @@ pub fn media_manifold_seed() -> ManifoldSeed {
                 width: 860.0,
                 height: 200.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
         ],

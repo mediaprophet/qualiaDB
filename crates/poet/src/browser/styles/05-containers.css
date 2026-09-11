@@ -50,7 +50,12 @@
 .honesty-live { background: rgba(0, 242, 169, 0.18); color: var(--accent-emerald); border: 1px solid var(--accent-emerald); }
 .honesty-partial { background: rgba(56, 189, 248, 0.18); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
 .honesty-present { background: rgba(255, 184, 52, 0.18); color: var(--accent-amber); border: 1px solid var(--accent-amber); }
-.honesty-missing { background: rgba(239, 68, 68, 0.18); color: var(--accent-rose); border: 1px solid var(--accent-rose); }
+.honesty-held,
+.honesty-missing {
+  background: color-mix(in srgb, var(--accent-amber) 16%, transparent);
+  color: var(--accent-amber);
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 55%, transparent);
+}
 
 /* Strata Badges */
 .strata-badge {

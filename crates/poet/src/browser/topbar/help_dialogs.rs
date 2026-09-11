@@ -167,10 +167,10 @@ pub(super) fn open_honesty_dialog(document: &Document) {
             "Full UI components and interactivity implemented; awaiting persistent cluster wiring.",
         ),
         (
-            "missing",
-            "var(--accent-rose)",
-            "Missing / Pending",
-            "Under construction or queued on roadmap.",
+            "held / not yet",
+            "var(--accent-amber)",
+            "Held / not yet",
+            "The room is waiting on a real step. Nothing is broken.",
         ),
     ];
 

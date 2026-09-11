@@ -517,11 +517,15 @@ button[disabled]:hover,
 .g-coord-timeline input[type="range"] { flex: 1; }
 
 /* Honesty badges — local vs live vs unavailable already exist; keep them readable on studio surfaces */
+.honesty-badge.honesty-held,
+.honesty-held,
+.honesty-badge.honesty-missing,
+.honesty-missing,
 .honesty-badge.honesty-unavailable,
 .honesty-unavailable {
-  background: rgba(94, 115, 148, 0.16);
-  color: var(--text-muted);
-  border: 1px solid var(--border-medium);
+  background: color-mix(in srgb, var(--accent-amber) 16%, transparent);
+  color: var(--accent-amber);
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 55%, transparent);
 }
 .honesty-badge.honesty-error,
 .honesty-error {

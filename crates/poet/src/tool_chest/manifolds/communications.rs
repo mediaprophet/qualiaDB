@@ -26,7 +26,7 @@ pub fn communications_manifold_seed() -> ManifoldSeed {
                 width: 420.0,
                 height: 360.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -37,7 +37,7 @@ pub fn communications_manifold_seed() -> ManifoldSeed {
                 width: 380.0,
                 height: 200.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -48,7 +48,7 @@ pub fn communications_manifold_seed() -> ManifoldSeed {
                 width: 380.0,
                 height: 140.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -59,7 +59,7 @@ pub fn communications_manifold_seed() -> ManifoldSeed {
                 width: 420.0,
                 height: 280.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -70,7 +70,7 @@ pub fn communications_manifold_seed() -> ManifoldSeed {
                 width: 480.0,
                 height: 280.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
         ],

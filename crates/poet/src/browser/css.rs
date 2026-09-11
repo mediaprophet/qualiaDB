@@ -52,6 +52,8 @@ mod tests {
         assert!(CSS.contains(".lexicon-chip"));
         assert!(CSS.contains(".frame-a-banner"));
         assert!(CSS.contains(".frame-a-sayable"));
+        assert!(CSS.contains(".honesty-held"));
+        assert!(!CSS.contains("honesty-missing { background: rgba(239, 68, 68"));
         assert!(CSS.contains(".lexicon-held-gate"));
         assert!(CSS.contains("[data-recipe=\"arrive\"]"));
         assert!(CSS.contains("--chip-living"));

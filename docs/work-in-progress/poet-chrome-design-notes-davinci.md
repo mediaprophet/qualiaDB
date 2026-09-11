@@ -39,5 +39,13 @@ Cold-load WASM UAT (`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`): A2 Ask/
 - `office:graph` / `graph:sparql_query` human label is Ask graph (Getting started). Statusbar Keep chip + save-dialog **Keep volume** open the existing `volume_open` dialog — no new Capability id.
 - WASM radial: `contextmenu` capture + `preventDefault` before target inspect. Text-node hits (labels) no longer skip the ring. Long-press for touch. Desktop same listener.
 
+## Frame B wait-honest empties (2026-09-11, monet/Capt addendum)
+
+Doc / LaTeX / slides (and similar wait-honest rooms) used a rose `missing` badge. That is broken-theatre. Lexicon Frame B voice is **held / not yet**.
+
+- Seed + default honesty token is `held`. Legacy persisted `missing` still deserializes and paints as held / not yet (amber, not rose).
+- Real faults stay rose (`honesty-error`): job Failed, SHACL violation.
+- A2 Ask·Keep·Play and A4 WASM radial stay primary. No Host invent.
+
 ## Out of scope now
 Implementation · next inventory toolchain · Solid IdP · Host invent · dotted `qualia.*`

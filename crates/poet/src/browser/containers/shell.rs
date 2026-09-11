@@ -84,10 +84,9 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
     title.set_text_content(Some(&container.title));
     title_group.append_child(&title).unwrap();
 
-    // Honesty badge
+    // Honesty badge — wait-honest empties speak held / not yet, never missing.
     let badge = document.create_element("span").unwrap();
-    badge.set_class_name(&format!("honesty-badge honesty-{}", container.honesty));
-    badge.set_text_content(Some(&container.honesty));
+    crate::browser::surface_honesty::paint_badge(&badge, &container.honesty);
     title_group.append_child(&badge).unwrap();
 
     title_group

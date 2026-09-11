@@ -50,7 +50,7 @@ pub(super) const HONESTY_LEVELS: &[(&str, &str)] = &[
     ("live", "Live"),
     ("present", "Present"),
     ("partial", "Partial"),
-    ("missing", "Missing"),
+    ("held", "Held / not yet"),
 ];
 
 pub(super) const CONTAINER_TYPES: &[(&str, &str)] = &[
@@ -104,3 +104,18 @@ pub(super) const COMMON_PREDICATES: &[(&str, &str)] = &[
     ("selfhood:access", "selfhood:access"),
     ("set:capability", "set:capability"),
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn honesty_facet_uses_held_not_missing() {
+        assert!(HONESTY_LEVELS
+            .iter()
+            .any(|(k, v)| *k == "held" && v.contains("not yet")));
+        assert!(!HONESTY_LEVELS
+            .iter()
+            .any(|(k, v)| k.contains("missing") || v.contains("Missing")));
+    }
+}

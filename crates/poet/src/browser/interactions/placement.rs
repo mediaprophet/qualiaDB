@@ -174,7 +174,7 @@ pub(super) fn place_container_on_canvas(document: &Document, container_type: &st
         width,
         height,
         z: next_z as f32,
-        honesty: "missing".into(),
+        honesty: "held".into(),
         ..Default::default()
     };
 

@@ -361,8 +361,13 @@ fn container_matches_facets(container: &Element, facets: &[(String, Vec<String>)
                 .query_selector(".honesty-badge")
                 .ok()
                 .flatten()
-                .and_then(|badge| badge.text_content())
-                .unwrap_or_default(),
+                .and_then(|badge| {
+                    badge
+                        .get_attribute("data-honesty")
+                        .or_else(|| badge.text_content())
+                })
+                .map(|token| crate::browser::surface_honesty::persist_token(&token).to_string())
+                .unwrap_or_else(|| "held".into()),
             "ontology-prefix" => format!(
                 "{} {}",
                 container

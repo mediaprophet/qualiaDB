@@ -89,4 +89,31 @@ mod tests {
         assert!(social_manifold_seed().is_social());
         assert!(!anatomy_manifold_seed().is_social());
     }
+
+    #[test]
+    fn wait_honest_seeds_never_say_missing() {
+        let research = research_manifold_seed();
+        for title in ["Document", "LaTeX", "Slides"] {
+            let container = research
+                .containers
+                .iter()
+                .find(|c| c.title == title)
+                .unwrap_or_else(|| panic!("{title} seed"));
+            assert_eq!(container.honesty, "held", "{title}");
+        }
+        for seed in all_seeds() {
+            for container in &seed.containers {
+                assert_ne!(
+                    container.honesty, "missing",
+                    "{} / {}",
+                    seed.id, container.title
+                );
+                assert_ne!(
+                    container.honesty, "broken",
+                    "{} / {}",
+                    seed.id, container.title
+                );
+            }
+        }
+    }
 }
