@@ -23,6 +23,7 @@
 - **AI-agent** ≠ person ≠ machine  
 - **Machine** = device + network instruments, not who  
 - **Organization / persona ficta** ≠ NaturalAgent  
+- **Human** (NaturalAgent / living) ≠ legal “person” / company / persona ficta ≠ bot — only a **human being** can be sent to prison; chrome never launders corp or model into who  
 - **Flora / fauna** = living-typed, not personhood by default; not Thing-wash  
 - **SHACL-first** living/sacred · **OWL ok** artifacts (Volume, InvokeId, CRS, catalogs)
 
@@ -37,7 +38,7 @@
 | **ChatGraph / Talk** | claim · relation | Reveal live `ChatGraph.*` / Pulse / Inference when bound |
 | **Keep / sanctuary / volume** | tool (instrument) | Care look; Continuity — not the person-as-asset |
 | **Selfhood / Continuity** | who + handle care | Actor `did:qualia:…` = **handle/coord**, never who; pair with handle≠who copy |
-| **Relations / address book** | relation lifecycle | Links + assessments over time — never social-graph-as-identity |
+| **Relations / address book** | relation lifecycle | Directory lists **humans** first; orgs = Organization (not who); never social-graph-as-identity |
 | **Instrument bay** | tool | Empty = **held / not yet**, not “none” as broken |
 | **Browser / hypermedia** | handle + claim | Optional DNS/ABN attach-later — cold-load without them |
 | **Ontology workbench** | claim + tool | SHACL shapes / packs; no Thing-wash of living |
