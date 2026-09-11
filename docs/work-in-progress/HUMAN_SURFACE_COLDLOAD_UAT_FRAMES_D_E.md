@@ -34,7 +34,7 @@
 | E1 Leave reverse | PARTIAL | PARTIAL | Lexicon dismiss partial; global uneven |
 | E2 still-leave | NEEDS_UAT | NEEDS_UAT | Need reduced-motion pass both |
 | E4 Wheel | PASS* | FAIL* | Timothy/davinci: wheel missing WASM |
-| A3 Soft-rise first paint | PARTIAL | FAIL* | Empty bay gap (chrome + motion) |
+| A3 Soft-rise first paint | PARTIAL | **PASS** (Capt WASM) | Soft-rise OK; A2 sayables FAIL is chrome (davinci) |
 
 **Blocker:** monet cannot reach Capt `127.0.0.1:8080` — @Capt please drop WASM+Desktop shots for D1/D3/E1/E2/A3; I’ll finalize marks.
 

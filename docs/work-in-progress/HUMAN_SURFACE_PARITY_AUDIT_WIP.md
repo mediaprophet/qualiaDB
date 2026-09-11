@@ -41,7 +41,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | held / not yet (never broken) | PASS | PASS* | Catalog · Lexicon held-gate UAT PASS on 0.0.36-dev lineage; confirm on 0.0.38 | Spot-check tip `541c3a6`+ |
 | Catalog chips living · artifact · machine | PASS | PASS* | G-LEXICON-0 bay chrome | Confirm mixed framing split |
 | Native Connected cold-load | PASS* | PASS* | Probe tips `64b21384`+; WASM needs same honesty | Cold-load alone |
-| Soft-rise arrive | PASS* | NEEDS_UAT | Lexicon arrive soft-rise PASS (`a06179c9`/`9a1438d`); empty-bay first paint still skips → Frame A | Frame A / Capt UAT |
+| Soft-rise arrive | PASS* | **PASS** (Capt A3) | Soft-rise OK on WASM first paint; sayables empty-state still A2 FAIL | Frame A chrome |
 | Commit celebrate only on real write | PASS* | NEEDS_UAT | B-ui `f45212c` / Capt `volume_commit` written:1; WASM twin beat unproven | Frame D |
 
 \*Mark with asterisk = prior tip evidence; re-confirm on `0.0.38` human cold-load.
@@ -57,7 +57,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | Check | D | W | Notes |
 |-------|---|---|-------|
 | Empty bay uses Frame A voice (not Capability dump) | NEEDS_UAT | NEEDS_UAT | Wire empty-state copy to lexicon §7.A |
-| Soft-rise on first paint | PARTIAL | FAIL* | Entrance locked; agent paths skip; empty bay no soft-rise → slap |
+| Soft-rise on first paint | PARTIAL | **PASS** (Capt WASM UAT) | Soft-rise OK; empty-state gap stays **A2 sayables FAIL** (davinci chrome) — not a motion miss |
 | Advanced method names muted | PARTIAL | PARTIAL | Secondary chrome only |
 | Human finds Ask / Keep / Play without agent | FAIL | FAIL | Critical gap — onboarding chrome missing |
 
@@ -149,6 +149,8 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 ## 8. Capt cold-load UAT (Frames A–C)
 
 Runnable checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md) · tip cite `c42f8e2`+.
+
+Capt Frame A WASM score: [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`](./HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md) (A2/A4 FAIL · A3 PASS).
 
 Frames D–E motion checklist: [`HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md`](./HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md).
 
