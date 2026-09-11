@@ -46,14 +46,16 @@
       }
       function emit(x, y) {
         try {
-          window.dispatchEvent(new CustomEvent('poet:radial', { detail: { x: x, y: y } }));
+          window.dispatchEvent(new CustomEvent('poet:radial', {
+            bubbles: true,
+            detail: { x: x, y: y }
+          }));
         } catch (_) {}
       }
       function own(e) {
         var el = hit(e.target);
         if (!inApp(el) || yieldsPopover(el)) return;
         e.preventDefault();
-        if (typeof e.stopPropagation === 'function') e.stopPropagation();
         emit(e.clientX, e.clientY);
       }
       var opts = { capture: true, passive: false };

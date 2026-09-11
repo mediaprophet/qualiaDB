@@ -54,6 +54,8 @@ mod tests {
         assert!(CSS.contains(".frame-a-sayable"));
         assert!(CSS.contains(".frame-a-empty-bay"));
         assert!(CSS.contains(".poet-radial-surface"));
+        assert!(CSS.contains("#radial-action-ring"));
+        assert!(CSS.contains("z-index: 12050"));
         assert!(CSS.contains("[data-studio-bay=\"first-arrive\"]"));
         assert!(CSS.contains(".honesty-held"));
         assert!(!CSS.contains("honesty-missing { background: rgba(239, 68, 68"));

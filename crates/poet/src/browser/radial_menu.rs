@@ -218,13 +218,13 @@ pub fn show_radial_ring(document: &Document, cx: f64, cy: f64, target_container:
     hide_radial_ring(document);
 
     let overlay = document.create_element("div").unwrap();
-    overlay.set_id("radial-action-ring");
+    overlay.set_id(super::radial_gesture::RADIAL_ROOT_ID);
+    overlay.set_attribute("data-poet-radial", "open").ok();
+    overlay.set_attribute("aria-hidden", "false").ok();
     let ov_el: HtmlElement = overlay.clone().dyn_into().unwrap();
-    ov_el.style().set_css_text(&format!(
-        "position: fixed; left: {}px; top: {}px; width: 240px; height: 240px; \
-         transform: translate(-50%, -50%); z-index: 9999; pointer-events: auto;",
-        cx, cy
-    ));
+    ov_el
+        .style()
+        .set_css_text(&super::radial_gesture::radial_overlay_style(cx, cy));
 
     let container_id = target_container.and_then(|c| c.get_attribute("data-id"));
     let sectors = if target_container.is_some() {
@@ -240,10 +240,12 @@ pub fn show_radial_ring(document: &Document, cx: f64, cy: f64, target_container:
     svg.set_attribute("viewBox", "0 0 240 240").unwrap();
     svg.set_attribute("width", "100%").unwrap();
     svg.set_attribute("height", "100%").unwrap();
-    let svg_el: HtmlElement = svg.clone().dyn_into().unwrap();
-    svg_el
-        .style()
-        .set_css_text("filter: drop-shadow(0 8px 32px rgba(0,0,0,0.85));");
+    // SVGElement is not HtmlElement — dyn_into::<HtmlElement>() panics on WASM
+    // and was Capt's A4 blank (menu suppressed, wheel never attached).
+    let _ = svg.set_attribute(
+        "style",
+        "filter: drop-shadow(0 8px 32px rgba(0,0,0,0.85));",
+    );
 
     let r_inner = 38.0;
     let r_outer = 110.0;
@@ -283,9 +285,10 @@ pub fn show_radial_ring(document: &Document, cx: f64, cy: f64, target_container:
             &format!("{}: {}", sector.label, sector.description),
         )
         .unwrap();
-        let g_el: HtmlElement = g.clone().dyn_into().unwrap();
-        g_el.style()
-            .set_css_text("cursor: pointer; transition: transform 0.15s ease-out;");
+        let _ = g.set_attribute(
+            "style",
+            "cursor: pointer; transition: transform 0.15s ease-out;",
+        );
 
         // Sector Wedge Path
         let path = document
@@ -452,6 +455,7 @@ pub fn show_radial_ring(document: &Document, cx: f64, cy: f64, target_container:
     overlay.append_child(&svg).unwrap();
 
     if let Some(body) = document.body() {
+        body.set_attribute("data-poet-radial-open", "true").ok();
         body.append_child(&overlay).unwrap();
     }
 }
@@ -689,8 +693,11 @@ fn show_toast(document: &Document, msg: &str) {
 
 /// Hide the radial action ring.
 pub fn hide_radial_ring(document: &Document) {
-    if let Some(existing) = document.get_element_by_id("radial-action-ring") {
+    if let Some(existing) = document.get_element_by_id(super::radial_gesture::RADIAL_ROOT_ID) {
         existing.remove();
+    }
+    if let Some(body) = document.body() {
+        let _ = body.remove_attribute("data-poet-radial-open");
     }
 }
 

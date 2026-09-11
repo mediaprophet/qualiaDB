@@ -40,6 +40,7 @@ Cold-load WASM UAT (`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md`): A2 Ask/
 - `office:graph` / `graph:sparql_query` human label is Ask graph (Getting started). Statusbar Keep chip + save-dialog **Keep volume** open the existing `volume_open` dialog — no new Capability id.
 - WASM radial: `contextmenu` capture + `preventDefault` before target inspect. Text-node hits (labels) no longer skip the ring. Long-press for touch. Desktop same listener.
 - A4 re-UAT on `cfac542` still FAIL (browser menu). Next: bind live `#manifold-canvas` / Dual Studio viewport; open on right-button `pointerdown`; JS capture `poet:radial` bridge; do not dismiss on secondary `mousedown`.
+- A4 re-UAT on `b3b8e2e` (PR #91): menu suppressed, wheel blank. Paint panicked: SVG `dyn_into::<HtmlElement>()`. JS `stopPropagation` also blocked WASM. Fix: style SVG via attributes; JS preventDefault only; visible overlay contract z-index 12050.
 
 ## Frame B wait-honest empties (2026-09-11, monet/Capt addendum)
 

@@ -29,6 +29,9 @@ thread_local! {
 pub const SECONDARY_BUTTON: i16 = 2;
 pub const PRIMARY_BUTTON: i16 = 0;
 pub const LONG_PRESS_MS: u32 = 550;
+pub const RADIAL_ROOT_ID: &str = "radial-action-ring";
+pub const RADIAL_Z_INDEX: u32 = 12050;
+pub const RADIAL_SIZE_PX: u32 = 240;
 
 /// What a `pointerdown` should do for the radial wheel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,6 +78,41 @@ pub fn pointer_intent(pointer_type: &str, button: i16) -> PointerIntent {
 /// `mousedown` must not erase a ring opened on `pointerdown`.
 pub fn should_dismiss_radial_on_mousedown(button: i16) -> bool {
     button == PRIMARY_BUTTON
+}
+
+/// Secondary pointer / contextmenu must invoke paint, not only preventDefault.
+pub fn secondary_gesture_invokes_open(intent: PointerIntent) -> bool {
+    matches!(intent, PointerIntent::OpenNow)
+}
+
+/// Overlay contract Capt UAT can see: fixed, on-cursor, above Frame A chrome.
+pub fn radial_overlay_style(cx: f64, cy: f64) -> String {
+    format!(
+        "position:fixed;left:{cx}px;top:{cy}px;width:{size}px;height:{size}px;\
+         transform:translate(-50%,-50%);z-index:{z};pointer-events:auto;\
+         opacity:1;visibility:visible;display:block;",
+        cx = cx,
+        cy = cy,
+        size = RADIAL_SIZE_PX,
+        z = RADIAL_Z_INDEX
+    )
+}
+
+pub fn radial_root_is_visible_contract(style: &str) -> bool {
+    style.contains("position:fixed")
+        && style.contains(&format!("z-index:{}", RADIAL_Z_INDEX))
+        && style.contains("opacity:1")
+        && style.contains("visibility:visible")
+        && style.contains("display:block")
+        && !style.contains("display:none")
+}
+
+/// `poet:radial` detail must be real cursor coords — never silently paint at 0,0.
+pub fn parse_bridge_coords(x: Option<f64>, y: Option<f64>) -> Option<(f64, f64)> {
+    match (x, y) {
+        (Some(x), Some(y)) if x.is_finite() && y.is_finite() => Some((x, y)),
+        _ => None,
+    }
 }
 
 pub fn is_studio_radial_surface(id: Option<&str>, class_list: &[&str]) -> bool {
@@ -255,6 +293,15 @@ pub fn wire_human_gestures(document: &Document) {
             &opts,
         )
         .ok();
+    if let Some(window) = web_sys::window() {
+        window
+            .add_event_listener_with_callback_and_add_event_listener_options(
+                "pointerdown",
+                press_closure.as_ref().unchecked_ref(),
+                &opts,
+            )
+            .ok();
+    }
     press_closure.forget();
 
     let cancel_up = Closure::wrap(Box::new(move |_e: PointerEvent| {
@@ -280,12 +327,13 @@ pub fn wire_human_gestures(document: &Document) {
         let detail = custom.detail();
         let x = js_sys::Reflect::get(&detail, &"x".into())
             .ok()
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
+            .and_then(|v| v.as_f64());
         let y = js_sys::Reflect::get(&detail, &"y".into())
             .ok()
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
+            .and_then(|v| v.as_f64());
+        let Some((x, y)) = parse_bridge_coords(x, y) else {
+            return;
+        };
         open_ring_from_point(&doc_bridge, x, y);
     }) as Box<dyn FnMut(Event)>);
     if let Some(window) = web_sys::window() {
@@ -473,5 +521,29 @@ mod tests {
     #[test]
     fn text_node_target_without_element_is_none() {
         assert!(event_element_from_target(None).is_none());
+    }
+
+    #[test]
+    fn secondary_pointer_invokes_open_not_only_prevent_default() {
+        let intent = pointer_intent("mouse", SECONDARY_BUTTON);
+        assert!(secondary_gesture_invokes_open(intent));
+        assert!(!secondary_gesture_invokes_open(PointerIntent::Ignore));
+    }
+
+    #[test]
+    fn radial_root_style_is_attached_and_visible() {
+        let style = radial_overlay_style(420.0, 310.0);
+        assert_eq!(RADIAL_ROOT_ID, "radial-action-ring");
+        assert!(radial_root_is_visible_contract(&style));
+        assert!(style.contains("left:420px"));
+        assert!(style.contains("top:310px"));
+        assert!(style.contains("width:240px"));
+    }
+
+    #[test]
+    fn bridge_coords_do_not_fallback_to_origin() {
+        assert_eq!(parse_bridge_coords(Some(12.0), Some(34.0)), Some((12.0, 34.0)));
+        assert_eq!(parse_bridge_coords(None, Some(1.0)), None);
+        assert_eq!(parse_bridge_coords(Some(f64::NAN), Some(1.0)), None);
     }
 }

@@ -159,6 +159,17 @@ fn chemical_explorer_uses_pub_fn_workspace_not_thin_delegation() {
 }
 
 #[test]
+fn radial_paint_does_not_cast_svg_to_html_element() {
+    let src = fs::read_to_string(manifest_dir().join("src/browser/radial_menu.rs"))
+        .expect("radial_menu.rs");
+    assert!(
+        !src.contains("svg.clone().dyn_into::<HtmlElement>()"),
+        "SVG dyn_into HtmlElement panics on WASM and leaves A4 blank"
+    );
+    assert!(src.contains("SVGElement is not HtmlElement"));
+}
+
+#[test]
 fn wasm_index_owns_contextmenu_for_radial_a4() {
     let html = fs::read_to_string(manifest_dir().join("index.html")).expect("poet index.html");
     assert!(
@@ -170,6 +181,10 @@ fn wasm_index_owns_contextmenu_for_radial_a4() {
     assert!(html.contains("contextmenu"));
     assert!(html.contains("pointerdown"));
     assert!(html.contains("preventDefault"));
+    assert!(
+        !html.contains("e.stopPropagation"),
+        "JS must not stopPropagation — WASM has to paint the wheel"
+    );
 }
 
 fn manifest_dir() -> PathBuf {
