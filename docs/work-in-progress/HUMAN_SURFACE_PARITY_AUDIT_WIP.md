@@ -97,9 +97,9 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | Check | D | W | Notes |
 |-------|---|---|-------|
 | Keep / open volume path discoverable | PARTIAL | PARTIAL | Path fields truncate; agent-known paths |
-| Keep open = entrance soft-rise | PASS* | NEEDS_UAT | Dock open = arrive (monet) |
+| Keep open = entrance soft-rise | PASS* | **HELD** | Checkpoint modal only; no daemon — retake pending (monet ≥ `cfac542`) |
 | Save Checkpoint dialog modes clear | PASS* | NEEDS_UAT | Auto / Checkpoint / Snapshot / Pruned |
-| Celebrate only on volume_commit success | PASS* | NEEDS_UAT | Twin beat only on real write; deny/fault/E300 = gated |
+| Celebrate only on volume_commit success | PASS* | **PASS*** (deny) / **HELD** (commit) | Deny care look · no celebrate on DENIED·NO DAEMON (`d1-*`); real commit path still held |
 | Closed door = care look | PASS* | PARTIAL | CLOSED = shelter, not failure flash |
 
 **Gap:** Human-alone Keep→Commit without knowing `/workspace/...` paths — need picker / recent / sayable browse.
@@ -124,7 +124,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 3. **Unavailable → held / not yet** where wait-honest (Pulse, Job, Mesh, etc.).  
 4. **Sanctuary Keep without absolute path** — human browse / recent volumes.  
 5. **Cold-load UAT script** (Capt) — person alone, WASM then desktop, Frames A–E checklist.  
-6. Wave-22 remains **held** until Capt promotes first-session gate.
+6. Wave-22 remains **held** until real Keep entrance + commit path (Capt first-session gate).
 
 ---
 

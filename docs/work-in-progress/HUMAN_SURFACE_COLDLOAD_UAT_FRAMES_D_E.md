@@ -1,6 +1,6 @@
 # Cold-load UAT — Frames D–E (motion · monet)
 
-**Branch:** `0.0.38` · **Parity tip:** ≥ `da5aa12` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
+**Branch:** `0.0.38` · **Parity tip:** ≥ `cfac542` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
 **Surfaces:** WASM then Desktop — same steps · same beats  
 **Owners:** Capt (run + shots) · monet (score motion) · davinci (Keep discoverability chrome)
 
@@ -31,9 +31,11 @@
 | Item | Desktop | WASM | Evidence |
 |------|---------|------|----------|
 | **A3 soft-rise feel** | — | **PASS*** | Capt Frame A WASM shots 01–02; first paint not modal slap |
-| **Frame A empty-bay arrive** | — | **FAIL** | Cold-load = Research manifold jump; no studio bay Ask·Keep·Play; Keep absent (stricter than A3 feel) |
+| **Frame A empty-bay arrive** | — | **PASS** | Capt re-UAT `cfac542` A1/A2 — studio bay + Ask·Keep·Play live |
 | **A4 / E4 wheel** | PASS* | **FAIL** | Capt shot 03 + A4 FAIL confirmed |
-| D1 Keep soft-rise | PASS* | **HELD** | Sanctuary selected; Keep UI absent (davinci shots) |
+| D1 Keep soft-rise | PASS* | **HELD** | Checkpoint modal only; no daemon — retake pending (shots `d1-keep-soft-rise` + `d1-volume-after`) |
+| Deny care / no celebrate (DENIED·NO DAEMON) | — | **PASS*** | Checkpoint deny care look; no celebrate on DENIED·NO DAEMON (`d1-keep-soft-rise` + `d1-volume-after`) |
+| Studio bay before Keep (A2 context) | — | **PASS*** | Ask·Keep·Play live; studio bay precedes Keep attempt |
 | D2 / D3 Volume CLOSED care | PASS* | **PASS*** | Footer CLOSED honest; Graph live 708 quins |
 | D3 commit celebrate | PASS* | **HELD** | No Keep→commit path yet |
 | E1 global leave | PARTIAL | PARTIAL | Modal still-leave PASS*; uneven elsewhere |
@@ -42,6 +44,6 @@
 
 **Chrome note (davinci):** Doc/LaTeX red `missing` reads harsher than held/not yet — align when empty-state lands. UI stamp on shots: `0.0.37` while branch tip is `0.0.38` — Capt/Neo confirm stamp path.
 
-**Blocker:** D1/D3/E1/E2 after Keep chrome + Desktop shots.
+**Blocker:** Real Keep entrance + commit path (daemon) before D1/D3 retake; Desktop shots still thin.
 
-Wave-22 stays **held**.
+Wave-22 stays **held** until real Keep entrance + commit path.
