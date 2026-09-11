@@ -1,13 +1,14 @@
 # Vibescript Sprint Deltas (Workstream B)
 
-> Intake for the next sprint. Implementation proceeds on the frozen `vibe-host-0.1` four-op surface.
-> Capability / definition / ontology deltas land here — **no Host widen mid-sprint**.
-> Triage owner: **Vibe**. Gate reports: **Capt.** (delegate ungate → report done).
+> Intake for capability / definition / ontology deltas. Triage owner: **Vibe**. Gate reports: **Capt.**
+> **Normative:** `vibescript-core.md` (§11.5) — the Host catalog **grows**; `vibe-host-0.1` is an **outcome**, not a freeze of `ALL_BOUND`.
+> Grammar / four-op language contracts stay stable; new `Capability.method` ids land via Host-widen + catalog honesty — **do not invent** dotted `qualia.*` IRIs ahead of live `ALL_BOUND`.
+> Historical Sprint-B rows below keep their original notes (including period “no Host widen” wording); treat those as sprint-of-record, superseded by core for current policy.
 
-**Repo / branch:** `mediaprophet/qualiaDB` @ `0.0.36-dev`  
-**Catalog truth:** live `ALL_BOUND` / `vibe:InvokeId` (`Capability.method`) in  
-`crates/qualia-core-db/src/poet_host/invoke/ids.rs` + `catalog_ttl.rs` (~885 ids).  
-**Do not invent** dotted `qualia.*` IRIs ahead of `ALL_BOUND`.
+**Repo / branch:** `mediaprophet/qualiaDB` @ `0.0.38`
+**Catalog truth:** live `ALL_BOUND` / `vibe:InvokeId` (`Capability.method`) in
+`crates/qualia-core-db/src/poet_host/invoke/ids.rs` + `catalog_ttl.rs` (post–Wave 40 / `7928e3d` ≈ **1121** ids; count the tip, don’t hardcode forever).
+**Cite also:** `docs/work-in-progress/VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
 
 ---
 
@@ -205,3 +206,5 @@
 - 2026-09-05: Locked B-OWL-PERSON — persons/sacred-human relations SHACL-first, not under `owl:Thing` (Timothy / Marvin).
 
 - 2026-09-04: Initial park from Capt / Vibe / Neo / davinci / monet / Marvin group session.
+
+- 2026-09-11: Header refresh — Host catalog grows (core §11.5); drop stale freeze/~885; branch cite → `0.0.38` (Vibe / Capt SPEC_UPDATED).
