@@ -62,22 +62,22 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | Advanced method names muted | **PASS** (Capt `d7f0bdc`) | PARTIAL | Desktop A5 PASS; WASM still PARTIAL scan |
 | Human finds Ask / Keep / Play without agent | **PASS** (Capt `d7f0bdc`) | **PASS** (Capt `f712e97`) | Sayables-first both |
 
-**Gap:** Frame A both surfaces **PASS** (`d7f0bdc` Desktop · `f712e97` WASM). Wave-22 still held until Frame B both surfaces. Prior Desktop disk-HELD on `c6007e0` superseded.
+**Gap:** Frame A both surfaces **PASS**. Frame B: WASM **PASS** · Desktop **HELD** (Catalog) — Wave-22 held until Desktop B clears. Cherry-pick Desktop↔WASM under Ask · Keep · Talk.
 
 **Desktop apps walkthrough** (Capt `d7f0bdc`, fold tip follows): see [`HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md`](./HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md) — Studio/Poet·Dual·Talk·Browser·QApps·Sanctuary·Keep **PASS**; Settings/Library/Continuity copy **PARTIAL**; Catalog·Lexicon **HELD**.
 
 ### Frame B — Held / not yet
 
-> Held / not yet — open a lexicon pack… Nothing is broken.
+> Held / not yet — open a lexicon pack… Nothing is broken. Never “unavailable.”
 
 | Check | D | W | Notes |
 |-------|---|---|-------|
-| Catalog · Lexicon held-gate string | PASS | PASS* | Exact: held / not yet — open lexicon pack |
-| Never “broken” / red missing for lexicon path | PASS | PASS* | Red missing ≠ lexicon gate |
-| Soft held look (not panic) | PASS* | PASS* | Steady dwell; confirm on tip ≥ `c6ab0f6` |
+| Catalog · Lexicon held-gate string | **HELD** | **PASS** (Capt `d08d1c9`) | Desktop Catalog/Lexicon not mounted; WASM held/not yet string PASS |
+| Never “broken” / red missing for lexicon path | **PASS*** | **PASS** | Desktop shell steady no panic-red; WASM PASS |
+| Soft held look (not panic) | **PASS*** | **PASS** | Steady dwell both |
 | Daemon-down honesty | PASS* | PASS* | held when Native offline |
 
-**Gap:** Broader surfaces (GIS, Pulse, Job Center) still say “unavailable” — align to held / not yet where product means wait-honest.
+**Gap:** Desktop Frame B **HELD** until Catalog mounts under Ask · Keep · Talk (or honest held path). WASM Frame B **PASS**. Wave-22 held until Desktop B clears. Broader Mesh/Aura/Pulse still “unavailable” → held/not yet (davinci). Cherry-pick, not parity.
 
 ### Frame C — Living-safe vs tool
 
