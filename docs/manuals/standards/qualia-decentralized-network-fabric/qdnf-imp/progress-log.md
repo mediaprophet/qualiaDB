@@ -451,3 +451,287 @@
 - Human input needed: none for the review/plan. Future deployment qualification needs supported runners, hardware, approved biometric criteria/corpora and the responsible organisation's classification mapping and operational acceptance.
 - Next implementation step: E00 instrumentation/claim mapping and E01 verified authority interfaces; follow the dependency order rather than treating existing state-table tests as end-to-end qualification. Original implementation packages remain open.
 
+## 2026-09-09 — E00–E04 native enforcement checkpoint — partial, packages remain open
+
+- Step: E00 qualification instrumentation, E01 verified authority, E02 handshake/Finished/packet protection, E03 reservation handles, E04 protected public IPC path. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**.
+- Built:
+  - E00: evidence classes, fail-closed `qualify()`, wire/crypto/graph oracles, allocator intercept wrapping `CountingAllocator`, negative controls, source fingerprint map.
+  - E01: `authority/` library (`DecodedClaim` cannot admit; `AuthorityOwner` issues `ExecutionPermit`; `SessionBinding` fields private; `open_session` returns `Unauthorized`).
+  - E02: transcript-salt HKDF; HMAC-SHA-384 directional Finished (full role labels; I2R/R2I no longer truncate to a colliding 16-byte prefix); AEAD packet protection authenticates before replay/plaintext.
+  - E03: `ReservationHandle` is not `Copy`; release uses owner-held charges, not caller-supplied byte amounts.
+  - E04: `authorised_ipc_stream_exchange` is the public QPR path: permits + hybrid handshake + Finished + sealed frames. Wire oracle rejects plaintext copies.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1** (not the snapshot 1.83.0; edition-2024 requires this). MSVC/`link.exe` **unavailable** here (explicit). `--offline` core lib tests ran after the crate was already downloaded.
+  - Focused `qualia-core-db --lib` filter (harness/authority/finished/schedule/handshake/packet_protection/host/ledger/admit/vertical/vectors/pq_handshake/kdf): **89 passed**, 0 failed.
+  - `qualia-peer --lib`: **3 passed**, 0 failed (cell ceiling, Allow cannot open session, protected facade exchange).
+  - Independent HMAC Finished matches production and frozen hex `5cde4e85…`; historical unkeyed SHA-384 vector is retained as a negative control and does **not** equal production.
+- Not claimed: Ethernet; rekey secret rotation (E02.4 still generation-only); QSR full-key traversal; durable storage/receipts; clinical/financial evidence; default-daemon libp2p removal; security certification; enhancement-package completion.
+- Human input needed: none this step. Ethernet/CAP_NET_RAW remains an E05 out-of-band gate.
+- Next: E02.4 traffic-secret rotation; then E05 Ethernet gate, E06 storage/evidence, E07 QSR authenticated lookup, following the documented DAG.
+
+## 2026-09-09 — E02.4 traffic-secret rotation — partial, packages remain open
+
+- Replaced generation-only `RekeyTable` with owned directional secrets. `rotate()` HKDF-derives the next pair, installs it, and zeroizes the retired generation after the two-slot overlap. `PacketProtection::install_update` erases prior keys and starts a new packet-number space. `NativePeer::rekey_protected` is the production caller; it cannot mint a grant.
+- Measured: focused `session::rekey`, `packet_protection`, `crypto::schedule` → **19 passed**, 0 failed before the host caller test. Not hybrid recovery. Not Ethernet. Enhancement checkboxes unmarked. Original packages remain pending.
+- Limit: the live `PacketProtection` object holds only current keys; previous-generation in-flight open still needs an explicit table lookup (follow-up inside E02.4/E09).
+- Human input needed: none this step.
+- Next: E02.5 remaining handshake failure classes; E05 Ethernet; E06 storage.
+
+## 2026-09-09 — E02.5 through E13 foundations — partial, packages remain open
+
+- Step: continue the enhancement programme after E00–E04 / E02.4. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E02.5: `crypto/handshake/` — 0-RTT `admit_early_application_data` is Downgrade; reflection, UKS and transcript identity binding; OS entropy fill; `qualified_handshake_gate(Traffic)` on the protected IPC path.
+  - E03.2/E03.6: `HostAdmission` aggregates cell/session charges; extra identities cannot mint a second host cap. `PeerHost.exchange` admits `cell_bytes` before the protected exchange.
+  - E03.3: `ArenaAdmit::reset_bound_slots` / `reset_slg_arena` bind reuse to caller scratch or `SlgArena::reset_pass` without constructing a 42 MiB arena in tests.
+  - E05: Linux AF_PACKET + Ethernet-II codec + in-process loop. Evidence level is `InProcessLoop` or `AfPacketAttempt`; `PhysicalLink` is never returned from unit tests. `eth0` open remains `PlatformUnsupported` without CAP_NET_RAW.
+  - E06.1: `ScanSource` / `next_page_from` copies real caller bytes; synthetic XOR `next_page` is not storage evidence. `verify_block` hashes payload with SHA-384 and will not mark verified without a matching payload.
+  - E07.1–E07.3 (QSR-A–D): four-bit digits over the full 48-byte key, 0..=15 covers, tagged `QsrOutcome`. First-byte modulo is rejected by tests. Cover membership is `NeedContinuation`, not Found.
+  - E09.1: `ProtectedAckSession` tracks packet numbers with ACK/loss; reorder/duplicate do not close; retransmit uses a fresh PN. `NativePeer` send/recv use this owner.
+  - E12.1–E12.2: `compile_decision` verifies exact original bytes (no signed/supported booleans). Unknown required vocabulary is Incomplete, never Allow.
+  - E13.1–E13.3: `policy_labels/` join/flow/release. `protected_read` joins object labels before copying bytes. One issuer cannot relax another source.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`:
+  - Focused `qualia-core-db --lib` filter (handshake, QSR, labels, protected ACK, host admission, contracts, Ethernet, scan/source/transfer, host tests): **113 passed**, 0 failed.
+  - `qualia-peer --lib`: **3 passed**, 0 failed (including `PeerHost.exchange` after host admission).
+- Not claimed: physical two-host Ethernet; 42 MiB total pass accounting including scratch; QSR publication/handover (E07.4–E07.8); durable receipts/clinical (E11/E14); financial fulfilment (E17/E19); default-daemon libp2p removal; enhancement-package completion; independent acceptance.
+- Human input needed: none this step. CAP_NET_RAW / veth qualification remains an E05.2 out-of-band gate.
+- Next ready: E04.1 host driver split; E06.2 durable transaction pairing; E07.4 completeness vs membership; E08 constraint-first routing; E16 profile foundations before E14 clinical.
+
+## 2026-09-09 — E04/E06.2/E07.4/E08/E16 foundations — partial, packages remain open
+
+- Step: continue after E02.5–E13 foundations. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E04.1–E04.4: `host/` split into `builder`, `driver`, `session_table`. `PeerBuilder` takes actual `cell_bytes` and bearer. `SessionTable` holds four live sessions; close releases via `ReservationHandle`; fifth session is `Capacity`. Send offset commits only after `bearer.send` accepts the full frame. `poll_recv` is WouldBlock before deadline and Expired at/after it with an empty queue. `open_session` remains `Unauthorized`.
+  - E06.2: `replication/pair.rs` + `commit_adapter.rs`. Operation identity, exact effect bytes and receipt share one `IntentTable` owner. Empty bytes are `Malformed`. Transport ACK is never `DurableReceipt`. Tampered payload is `Conflict` and not committed. Recovery is CORE-03 marker replay, not OS process-kill disk durability.
+  - E07.4: `qsr/completeness.rs` + `roots.rs`. Membership (`Found` / `EmptyInSnapshot`) is not completeness. `absence_is_authoritative` is true only for reconstructed prefix-complete `EmptyInSnapshot`. Publisher-asserted completeness cannot prove absence. Root mismatch is `Conflict`.
+  - E08.1–E08.4: `route/{validate,index,constraints,select,plan}.rs`. Production admission is `plan_routes` (feasibility then Pareto ≤3). `compute_spf` remains the 16-node demo/oracle (`Range` on node ≥16). Cheapest forbidden-realm/profile path is discarded. Unknown energy is not zero. Expired/withdrawn edges are unused. Disconnected dest is `NoRoute`.
+  - E16.1: `qdnf/profiles/` catalog, requirements, negotiate, budget. C2 cannot be lowered to P1 by a paid-tier preference. P3 required with only P1 available is `UnknownProfile`. Extra protection may raise P1→P2 when both exist. Ledger reserve failure is `BudgetExhausted` with no selection. Padding is `ceil(n/256)*256`.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`:
+  - Combined `qualia-core-db --lib` filter (`net::qdnf::route`, `profiles`, `resolve::qsr`, `peer::replication`, `peer::host`): **232 passed**, 0 failed.
+  - `qualia-peer --lib`: **3 passed**, 0 failed.
+- Not claimed: E04.5 facade replacement of the 64-byte two-peer demo as the application API; E08.5–E08.6 hysteresis/untrusted ads; E06.3–E06.6 cache keys / large objects / process-kill durability; E07.5–E07.8 private tokens / handover / Kademlia comparison; E16.2–E16.7 vaults/cover/offline/seizure; E14 clinical; physical Ethernet; default-daemon libp2p removal; enhancement-package completion.
+- Human input needed: none this step.
+- Next ready: E04.5 public facade; E08.5–E08.6 routing repair; E09.2 RTT/congestion; E10 cell parallelism; E16.2 vaults; then E11 / E16 remainder before E14.
+
+## 2026-09-09 — E04.5–E21 libraries landed; production-path callers wired — partial, packages remain open
+
+- Step: continue after E04/E06.2/E07.4/E08/E16 foundations through remaining in-tree production-path gaps. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built (this checkpoint, on top of the E04.5–E21 library landing at `c5be0062`):
+  - E02.3/E02.4: `PacketProtection` opens a 4096-byte body and retains the immediately previous generation’s keys and packet-number space. In-flight ciphertext opens after rotate; a further rotate past overlap is CryptoFailure.
+  - E03.2/E04.5: `pair_ipc_cells` admits two cells from one `HostAdmission`. A host sized for one cell cannot pair two peers. Local-ipc `FRAME_CAP` is 8192 (not Ethernet MTU). `PeerHost::exchange_protected` round-trips 4096 bytes. `PassGuard` charges scratch/crypto/kernel on protected send (accounting only; not RSS).
+  - E08 ROUTE-F: in-process 1→2→3 harness calls `plan_routes` then publishes forwarding. Forbidden-realm shortcuts cannot bypass. `ethernet_demonstrated()` remains false.
+  - E09.5/E09.6: shared-bottleneck `PathCcTable` does not double the window when a second path opens; PMTU shrink rejects oversize; idle send after the deadline is Closed and same-generation reopen is Replay; unknown-PN ACK is Malformed; flight-map and datagram inbox exhaustion are Capacity.
+  - E11.5/E14: clinical mailbox stores bounded ciphertext bytes. Length/digest-only insert is Incomplete. Delivered ≠ application-acked ≠ clinician-reviewed.
+  - E06.6: `replication/disk_crash.rs` tempfile identity→effect→receipt store. Torn/truncated volumes are Incomplete or Conflict. `disk_backend_crash_injected()` and `os_process_kill_qualified()` stay false.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`:
+  - Focused core filter (packet_protection, host, ipc, multihop, mailbox, congestion/paths/pacing/streams/datagrams, disk_crash): first run 103 passed / 1 idle-timeout assertion failed; after the idle-since-last-send fix, host/ipc/pacing/disk_crash re-run **42 passed**, 0 failed. Clinical + session clinical: **29 passed**. Combined prior filter after the fix is the 103 minus that one failure plus the idle test = **104** on that original filter.
+  - `qualia-peer --lib`: **18 passed**, 0 failed (including `exchange_protected_roundtrip_cap` at 4096).
+- Not claimed: physical two-host Ethernet / veth; AF_XDP; live settlement rails; Native Independent default daemons; independent cryptographic review; operational biometric accuracy; OS process-kill WAL; networked Kademlia comparison; enhancement-package completion; deployment certification from test counts.
+- Human input needed: none this step. CAP_NET_RAW / veth, live rails, and independent review remain out-of-band.
+- Next ready (honest leftovers): E05.2 physical/veth qualification; E06.5 QNF extension decision; E07.8 networked comparison harness without superiority claims; E09.5 wiring `PathCcTable` into `NativePeer` send; E10.5 scaling measurement; E18.4–E18.6 live adapters stay Unsupported; E20.2 daemon proof; E21.2–E21.4 fuzz/review/churn.
+
+## 2026-09-09 — remaining in-tree production paths — partial, packages remain open
+
+- Step: continue E05–E21 after the E02.4–E11 production-path checkpoint. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E05.4: `session/handshake/{hello,fragmented}.rs`. Oversized ClientHello/ServerHello (dual ML-DSA-65 + Ed25519 proofs) split through admit-before-buffer reassembly on MTU 1500. Dual proofs sign SHA-384 of the prefix so the Ed25519 512-byte binder is not overflowed. Split failure is not a whole-datagram fallback. Finished remains HMAC-SHA-384.
+  - E05.2: `raw_ethernet/two_host.rs` probe. This environment has CapEff=0 and no `ip`. `physical_two_host_qualified()` stays false. Evidence level stays `AfPacketAttempt` / `InProcessLoop`, never `PhysicalLink`.
+  - E08.5: hysteresis hold-down wired into in-process 1→2→3. A withdrawn middle hop cannot rejoin during the timer. `ethernet_demonstrated()` stays false.
+  - E09.5: `PathCcTable::check_send` before seal so a shared-bottleneck exhaust does not consume a packet number.
+  - E07: `NativePeer::lookup_qsr_full` is the production exact/token/handover path. Cover-only `lookup_qsr` remains membership (`NeedContinuation`). Closed-world XOR comparison does not set `kademlia_comparison_executed()`.
+  - Prior swarm commits on this branch already landed QNF evaluation (not adopted), paged replica streams, sixteen-cell scaling, fail-closed AF_XDP, in-process settlement without live rails, profile vaults, and Native Independent coupling inventory.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`:
+  - Focused handshake / hysteresis / two-host / host / exact-QSR / fragment filter: **73 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-slice-suite.log`).
+  - `qualia-peer --lib`: **19 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-peer.log`).
+- Not claimed: physical two-host / veth Ethernet; AF_XDP acceleration; live settlement rails; Native Independent default daemons (`native_independent_daemon_proven()==false`); networked Kademlia; operational FAR/FRR; independent cryptographic review; libFuzzer / model-check; long-duration churn; MSVC runner; enhancement-package completion; deployment certification from test counts.
+- Human input needed: CAP_NET_RAW / veth two-host qualification; whether default daemons may drop `libp2p-compat`; independent review; live-rail selection. None of those can be completed in this process.
+- Next: remaining E21.1 observational fixtures may still be wired to existing libraries with `qualified=false`. E21.2–E21.4, E05.2 physical, E15.6 operational, E18 live rails, and E20.2 daemon proof stay out-of-band.
+
+## 2026-09-09 — E05 public handshake, E21 fixtures, E12.5/E14 callers — partial, packages remain open
+
+- Step: continue in-tree production-path work after the fragmented-hello checkpoint. Status: **partial / in progress**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Built:
+  - E05.3: `NativePeer::announce` uses `rotating_tag`; `accept_announce_at` charges `PreAuthBudget`, rejects expired beacons, and inserts only after a locator-bound `ChallengeTable` challenge. Expired beacons leave `neighbor_count()==0`.
+  - E05.4: public `authorised_ipc_stream_exchange` now runs `handshake_over_fragments` on the bearer (MTU capped at Ethernet 1500 even on local-ipc 8192). Client/server fragment counts must be ≥2. Clocked `accept_announce_at(now)` is the production accept path.
+  - E17.7: concurrent last-payment test — two threads `reserve_hold(10)` on remaining 10; exactly one `Ok(10)`, the other `Denied`. Chargeback does not grow `target_t`. Duplicate finalise is idempotent.
+  - E21.1: all 40 S01–S40 observational fixtures call real libraries. `qualified` stays false. `implemented_fixture_count()==40`.
+  - E00.5 / E21.5: four unqualified CI buckets; documented honest limitations (`physical_two_host_qualified()==false`, `live_payment_rail()==Unsupported`).
+  - E20.1: inventory lists 8 QPR entry points including `lookup_qsr_full` and `handshake_over_fragments`.
+  - E12.5: mailbox `store_bound` / `deliver_live` and `PermitTable::set_live` call `recheck_permit` at commit/release. A live policy generation bump is `StaleGeneration`.
+  - E14: `PeerHost::clinical_session` is the public application owner for pairing, permits, envelopes, mailbox, offline queues, interchange, imaging pages, confidential help and backup restore. Public patient/VIP/diagnosis indexes stay Denied. Transport delivery does not assert clinical review.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Focused core filter (scenarios, limitations, ci_classes, discovery, concurrent, handshake, exchange, mailbox lifecycle, permits): **20 + 11** on split runs, 0 failed (`/opt/cursor/artifacts/qdnf-handshake-exchange.log`, `/opt/cursor/artifacts/qdnf-e12-fixtures.log`). Scenario suite: every S01–S40 fixture runs, `qualified_count()==0`.
+  - `qualia-peer --lib`: **22 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-peer.log`), including `exchange_protected_roundtrip_cap` after fragmented handshake and the three ClinicalSession tests.
+- Not claimed: physical two-host / veth Ethernet; AF_XDP acceleration; live settlement rails; Native Independent default daemons; networked Kademlia; operational FAR/FRR; independent cryptographic review; libFuzzer / model-check; long-duration churn; MSVC runner; enhancement-package completion; deployment certification from test counts.
+- Human input needed: CAP_NET_RAW / veth two-host qualification; whether default daemons may drop `libp2p-compat`; independent review; live-rail selection; biometric FAR/FRR corpora. None of those can be completed in this process.
+- Next: E05.2 physical, E15.6 operational, E18 live rails, E20.2 daemon proof, E21.2–E21.4 fuzz/review/churn remain out-of-band. In-tree leftovers are measurement (E10.5 RSS/NUMA/joules stay unmeasured) and any remaining production callers that still go through tests-only helpers.
+
+## 2026-09-10 — swarm wave: in-tree E00.2 / E05.2 process / E07.8 / E10.5 / E20.2 / E21.2–E21.4 — partial, packages remain open
+
+- Step: user asked what “out of band” meant and to swarm remaining work rather than skip it. Status: **partial**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**. Independent review is not claimed.
+- Clarification: “out of band” meant **qualification this VM cannot prove** (physical two-host Ethernet, AF_XDP caps, live Stripe/ILP keys, operational FAR/FRR corpora, an independent reviewer). It did **not** mean “leave the libraries unimplemented.” This wave implemented every remaining in-tree item that does not require those external gates.
+- Built:
+  - E10.5: `cells/hardware.rs` reads `/proc/self/status` VmRSS and NUMA from `numa_maps` / sysfs. `pass_maps_process_rss()` stays false. `idle_energy_measured()` stays false (no RAPL `powercap` on this host).
+  - E20.2: `libp2p-compat` removed from core-db **default**. Default `cargo tree -p qualia-core-db -i libp2p` → package not in graph. LIG remains `--features libp2p-compat`. `qualia-client-core` opts into LIG explicitly for wellfair sync. `native_independent_daemon_proven()` is true when the default feature list omits `libp2p-compat`.
+  - E07.8: real in-process k-buckets (K=8, bootstrap, iterative lookup, stale maintenance) plus QSR comparison. `kademlia_comparison_executed()` is true for that in-process harness. `networked_kademlia_comparison_executed()` and `unmeasured_better_than_kademlia_claimed()` stay false.
+  - E21.2: deterministic 4096-iteration codec campaign (frame/label/beacon); ownership/commit/epoch model-check. `libfuzzer_executed()` and `tla_plus_executed()` stay false.
+  - E21.3: unsigned independent-review packet/checklist. `independent_review_executed()` stays false.
+  - E21.4: 2-second conservation/confidentiality churn. `long_duration_churn_days_executed()` stays false.
+  - E05.2: two OS processes exchange 8 bytes on a Unix socket. `physical_two_host_qualified()` stays false.
+  - E00.2: `.github/workflows/qdnf-msvc.yml` Windows MSVC + Linux gnu jobs. `MSVC_RUNNER` on this host stays `None`.
+  - E18: already present (role activation, meters, in-process router, live rails Unsupported). Not re-implemented.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - E10.5/E07.8/E21/E05 focused filter: **27 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-swarm-wave.log`). Two-process child spawned and exchanged. Bounded churn waited the 2000 ms cap.
+  - Hardware: `/proc/self/status` VmRSS is readable; `/sys/devices/system/node/node0` exists; `/sys/class/powercap` is absent (idle joules Unmeasured).
+  - Default graph: `cargo tree -p qualia-core-db -i libp2p` → `package ID specification libp2p did not match any packages`. `--features libp2p-compat` still `cargo check`s.
+  - `qualia-peer --lib`: **23 passed**, 0 failed (`/opt/cursor/artifacts/qdnf-peer-wave.log`), including `native_independent_daemon_proven()==true`.
+- Not claimed: physical two-host / veth Ethernet; AF_XDP umem; live settlement rails; networked equivalent-workload Kademlia; operational FAR/FRR; independent cryptographic review executed; libFuzzer / TLA+ / multi-day churn; MSVC results from this Linux host; enhancement-package completion; deployment certification from test counts.
+- Human input needed: CAP_NET_RAW / veth two-host Ethernet; live-rail credentials if Stripe/ILP should ever settle; a separate cryptographic reviewer to execute E21.3; operational biometric corpora for E15.6. None of those can be faked here.
+- Next: remaining honest gates above; do not mark E00–E21 packages complete until those qualifications exist.
+
+## 2026-09-10 — SocialWebNet QDNF-over-WireGuard overlay — done in-tree, not Native Independent
+
+- Step: user asked to update SocialWebNet to use QDNF, replace libp2p with the native stack, and keep WireGuard as part of the SocialWebNet profile. Status: **done** for the in-tree overlay adapter. Enhancement-plan checkboxes were **not** marked (E05.5 stays open). Original 30 packages remain **pending**.
+- Built:
+  - SocialWebNet already had no libp2p (userspace WireGuard + IPv6 overlay). That outer carrier is kept.
+  - Overlay port `mesh_datagram::ports::QDNF = 6423` carries encoded QFrames. Chat stays on `6420`; `chat_mesh_service` already ignores non-CHAT ports.
+  - `p2p/social_qdnf.rs` implements `SocialQdnfLink` (`Bearer` profile `WireGuardTransitionV1 = 4`). Lives in `p2p/`, not `net/qdnf/` (QDNF must not import IP sockets).
+  - Honesty: `uses_libp2p()==false`, `carrier_is_wireguard()==true`, `native_independent()==false`. Inner packets remain IPv6 because boringtun drops non-IPv6.
+  - `SocialWebNet::send_qdnf_frame` plus `copy_qdnf_frame` for MeshService/chat demux.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - `p2p::social_webnet` / `p2p::social_qdnf` / `p2p::mesh_datagram` / WireGuard profile test: **16 passed**, 0 failed, 0.33s (`/opt/cursor/artifacts/social-qdnf-tests.log`). Includes two-mesh QFrame exchange, CHAT/QDNF demux on one tunnel, and `handshake_over_fragments` over the WG overlay.
+  - `p2p::mesh_service`: **2 passed**, 0 failed (`/opt/cursor/artifacts/social-qdnf-mesh-service.log`).
+  - Default graph: `cargo tree -p qualia-core-db -i libp2p` → package did not match any packages.
+- Not claimed: Native Independent (this is labelled IP/WG transition); physical two-host Ethernet; silent IP fallback of the raw-ethernet bearer; E05.5 platform encapsulation complete; chat/UI migration off WireGuard.
+- Human input needed: none this step for the overlay adapter. Physical Ethernet and Native Independent still need the same external gates as the prior swarm wave.
+- Next: production callers that still want QSession on SocialWebNet can attach `SocialQdnfLink` or demux `ports::QDNF` from `MeshService` inbound; do not treat this as Native Independent.
+
+## 2026-09-10 — internet two-host: barriers documented, handshake not executed
+
+- Step: user asked for a state-of-the-art two-host internet path **or** a markdown of barriers so they can be cleared. Status: **barriers documented + observe/connect tools landed; internet handshake not executed**. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - Design/barriers: `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/internet-two-host.md`.
+  - `p2p/stun_observe.rs` — RFC 5389 XOR-MAPPED-ADDRESS; two-server RFC 4787 mapping class; `internet_two_host_handshake_executed()==false`.
+  - `p2p/mesh_probe.rs` — `connect_probe` + env-gated `internet_connect_if_env_set` (`QDNF_LISTEN_ADDR` / `QDNF_MESH_PASS`) so this cloud agent can dial without `qualia-cli`.
+  - `qualia-cli mesh-probe observe` and `connect --qdnf` (CLI did not build **on this image**: `openssl-sys` / missing `libssl-dev`).
+- Measured on this pod:
+  - Same UDP socket, two STUN servers: **address-dependent** mapping (Google `54.235.250.208:7013` vs Cloudflare `54.235.254.240:52034`). Hairpin to own mapping timed out. `CapEff=0`. Egress unrestricted. Outbound UDP works.
+  - Library tests: **6 passed** (`p2p::stun_observe` + `p2p::mesh_probe`), including live STUN class=`AddressDependent` (`/opt/cursor/artifacts/stun-observe-live.log`). Env-gated internet connect skipped (no listen address).
+- Not claimed: internet two-host handshake; Native Independent; physical Ethernet; hole punch from this SNAT.
+- Human input needed: **Barrier A+D** — a reachable UDP `LISTEN_ADDR` (grok-bot / desktop / VPS port-forward) plus passphrase while listen is running. This pod is connect-only. Do not paste this pod's STUN address as a listen locator.
+- Next: when `LISTEN_ADDR` and `PASS` are pasted, run `internet_connect_if_env_set` and record handshake true/false honestly.
+
+## 2026-09-10 — SNAT / WireGuard / WebRTC: solution defined, public relay not dialed
+
+- Step: user expected WireGuard (perhaps via WebRTC) to get through SNAT / missing port-forwards. Status: **recommendation recorded + in-process outbound relay proven; internet handshake not executed**. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - Physics: WireGuard is Noise_IK over UDP + roaming. Roaming does not punch address-dependent SNAT. “WG through NAT” in the wild is WG + ICE + **DERP/TURN** (both sides *dial outbound*). Desktop WebRTC uses empty `RTCConfiguration` (no ICE/TURN).
+  - Recommended SocialWebNet path: (1) direct WG UDP if reachable, (2) ICE/STUN short timeout, (3) outbound packet relay (WSS/443 preferred) carrying **opaque** WG datagrams. WebRTC = browser/HCAI-ANP profile of 2+3, not the native default. No `webrtc-rs` in `qualia-core-db`. No libp2p circuit-relay.
+  - `p2p/outbound_relay.rs` — both endpoints dial a hub; bounded queues (`MAX_DATAGRAM=2048`, `QUEUE=16`); fail closed on oversize. Inner overlay stays IPv6. `public_relay_dialed()==false`. `relay_required_for_address_dependent()==true`.
+  - Expert brief: `qdnf-imp/nat-traversal-expert-brief.md` (questions A–E). Barrier E in `internet-two-host.md` now points there.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter `p2p::outbound_relay` + `p2p::stun_observe` + `p2p::mesh_probe` + `p2p::social_qdnf`: **14 passed**, 0 failed, 0.33s (`/opt/cursor/artifacts/outbound-relay-tests.log`). Includes `wireguard_handshake_and_data_over_outbound_relay` (in-process hub, not internet).
+  - This number is **not** an internet two-host handshake. `internet_two_host_handshake_executed()` and `public_relay_dialed()` stay false. Env-gated `internet_connect_if_env_set` still a no-op without `QDNF_LISTEN_ADDR`.
+- Not claimed: public WSS/TURN deployment; Cursor cloud as a relay (same SNAT); Native Independent; physical Ethernet; WebRTC-as-default-mesh.
+- Human input needed: expert answers **A–E** in the brief (confirm/reject the three-layer design; who operates the first dialable WSS/443 URL; signalling; TURN URIs for browsers; reject libp2p circuit-relay), **or** Barrier A+D (`LISTEN_ADDR` + passphrase) if grok-bot can listen.
+- Next: with a dialable relay URL, add the WSS/443 dialer against that URL. With a reachable UDP listen, run `internet_connect_if_env_set`. Neither can be minted inside this pod.
+
+## 2026-09-10 — landed on origin/0.0.38
+
+- Step: principal directed the complete update onto `0.0.38` (not only the `cursor/` working branch). Status: **done**. Fast-forward `origin/0.0.38` `f17ebd69` → `16ed59e7`. No rebase, no force-push.
+- Built: nothing new this step. The expert brief, outbound relay, STUN observe, mesh-probe, and SocialWebNet QDNF overlay are now on `0.0.38`.
+- Measured: `origin/0.0.38` == `16ed59e7`. Path present: `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/nat-traversal-expert-brief.md`.
+- Human input needed: consultant should `git fetch origin 0.0.38`. Expert answers A–E still open.
+- Next: same as prior entry (dialable relay URL or `LISTEN_ADDR`).
+
+## 2026-09-10 — consultant connectivity architecture landed (docs only)
+
+- Step: principal delivered [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md). Status: **docs landed on `0.0.38`**. No connection-manager refactor, no runtime tests, no deployment. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - In-tree copy of the proposal at `qdnf-imp/internet-peer-connectivity-architecture.md`.
+  - Recorded A–E in `nat-traversal-expert-brief.md` §6. Direction: retain WireGuard; concurrent relay + ICE; complementary TURN/UDP and WSS/443; privacy filters probes; durable QSession across reconnect; disconnection is a delivery mode.
+  - Pointed `internet-two-host.md` and the programme README at that file.
+- Measured: not measured this step (documentation only). Relative links used: `sensitive-operations-blueprint.md`, `../core-memory-and-parallel-networking.md` (both present).
+- Not claimed: Internet handshake; public relay; `public_relay_dialed()`; implementation of `net/peer/connectivity/` or ICE/TURN/WSS adapters.
+- Human input needed: **B** — named operator(s), verified WSS URL/certificate, TURN URIs/port ranges, issuing authority, first two endpoints, selected protection policy. The architecture explicitly does not invent these.
+- Next: do not start the substantial socket/ICE/relay refactor until the principal assigns that stage. First Internet trial still needs the deployment inventory above or a reachable `LISTEN_ADDR`.
+
+## 2026-09-10 — connection manager implemented in-tree (Internet still unexecuted)
+
+- Step: principal said get the architecture done. Status: **in-tree stages implemented; Internet trial still blocked on B**. Enhancement-plan checkboxes were **not** marked.
+- Built:
+  - `net/peer/connectivity/` — policy, generations, bounded candidates, dual-stack planner (relay then IPv6 then IPv4 at 250 ms), QINV1 invitations, rendezvous store, durable delivery states, browser contract, failure-matrix oracle, MTU budget 1152 on 1280, generation-safe path bind + RFC 7675 consent timers.
+  - `p2p/connectivity/` — UDP/overlay demux, ICE checklist (role conflict + consent freshness), TURN Allocate codec, RFC 6455 WSS + HMAC, two-process authenticated relay, WG-over-local-WSS to SessionReady, NAT64 that does not assume `64:ff9b::/96`.
+  - `p2p/wg_engine.rs` — socket-free caller-buffered boringtun engine.
+  - `qualia-client-core/src/introduction.rs` — QINV1 import; `qcx1_` private-bootstrap only. Not compiled here (openssl-sys / missing `libssl-dev`).
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter `net::peer::connectivity` + `p2p::connectivity` + `p2p::wg_engine` + `p2p::outbound_relay`: **33 passed**, 0 failed, 0.77s (`/opt/cursor/artifacts/connectivity-impl.log`). Includes two-process WSS child, `wg_over_local_wss_reaches_session_ready`, consent/role-conflict, and NAT64 unset-env.
+  - `p2p::social_qdnf`: **5 passed**, 0.31s (`/opt/cursor/artifacts/social-qdnf-regression.log`).
+- Not claimed: `public_relay_dialed()`; `internet_two_host_handshake_executed()`; live coturn; rustls/public WSS/443; full RFC 8445 consent against public STUN; browser TURN interop; QUIC/iroh benchmark; Native Independent.
+- Human input needed: still **B** — operator, verified WSS URL/certificate, TURN URIs. Or a reachable `LISTEN_ADDR`.
+- Next: dial that URL when supplied. Do not invent one.
+
+## 2026-09-10 — local production path: five inspection findings closed
+
+- Step: source inspection of `7a275039` found the completion claim overstated. Status: **local proofs landed; Internet still unexecuted**. Enhancement-plan checkboxes were **not** marked.
+- Built / corrected:
+  1. TLS: `p2p/connectivity/wss_tls.rs` — rustls 0.23, CA-pinned client, wrong-CA rejected. Plain TCP remains a labeled fixture (`plain_tcp_is_not_tls()`).
+  2. Framing: envelope version 2, `u16` length, 256-byte payload kept, oversize rejected, v1 u8 length rejected.
+  3. QSession: `establish.rs` refuses SessionReady without handshake. Local path runs fragmented `handshake_over_fragments` over TLS WSS, then `SessionBinding::from_permit` + `admit_application`.
+  4. ICE/TURN: `nominate` requires `mark_checked`. `ice_udp.rs` does a real local STUN Binding. `turn_local.rs` does Allocate + Send/Data forward on localhost UDP.
+  5. Durable: `durable_store.rs` writes CRC-32C records; recover after persist; truncated file fails closed. RAM queue test renamed so it is not called crash-safe.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter `net::peer::connectivity` + `p2p::connectivity` + `p2p::wg_engine`: **36 passed**, 0 failed, 5.87s (`/opt/cursor/artifacts/connectivity-local-path.log`). Includes `tls_wss_verifies_cert_and_carries_256`, `local_production_path_requires_qsession`, `binding_check_required_before_nominate`, `allocate_then_send_reaches_peer`, `persist_drop_recover_and_corrupt_fail_closed`.
+- Not claimed: public relay; Internet two-host; rustls against a public CA/URL; coturn; browser TURN; full RFC 8445 consent freshness on the public Internet; Native Independent.
+- Human input needed: still **B** for public-network qualification only. Local path no longer waits on a purchased server.
+- Next: public-network qualification when an operator URL or `LISTEN_ADDR` exists.
+
+## 2026-09-10 — CSCP Internet-Draft and local fabric supervisor
+
+- Step: principal asked for a novel, state-of-the-art connection architecture from primitives, then explicitly authorised defining novel protocols as IETF Internet-Drafts when they are transformationally better for a human-centric Internet. Status: **`-00` written; local supervisor implemented; not RFC, not datatracker, not Internet**. Enhancement-plan checkboxes were **not** marked. Original 30 packages remain **pending**.
+- Built:
+  - Research: [quic-native-connectivity-research-2026.md](./quic-native-connectivity-research-2026.md) (32 sources; DCUtR retains relays; Pkarr is discovery not concealment; Holepunch is not infrastructure-free).
+  - Normative protocol: [draft-webcivics-cscp-00.md](./draft-webcivics-cscp-00.md) — Capability-Scoped Connectivity Protocol. Purpose, protection and budget are connection objects. Exclude-then-rank is a MUST. Working document; expires 14 March 2027. Not submitted to datatracker in this step.
+  - Architecture note: [capability-scoped-connection-fabric.md](./capability-scoped-connection-fabric.md).
+  - Runtime: `crates/qualia-core-db/src/net/peer/fabric/` — intent, private contact, relay vs custody leases, path evidence (no public SessionReady hatch), receipts, kernel, exclude-then-rank, CSCP ConnectRequest TLV codec (`CSCP` v1), loopback bound-UDP relay with lease charge/expiry.
+  - Honesty flags: `capability_fabric_local_executed()=true`; `masque_bound_udp_internet_executed()=false`; `noq_transport_admitted()=false`; public relay / Internet two-host / QUIC-iroh benchmark remain false.
+- Measured on Linux `x86_64-unknown-linux-gnu`, rustc/cargo **1.98.1**, `--offline`, `--test-threads=1`, `CARGO_TARGET_DIR=/tmp/qdnf-continue-target`:
+  - Filter `net::peer::fabric`: **24 passed**, 0 failed, ~0.00s test runtime after compile (`/opt/cursor/artifacts/capability-fabric-tests.log`). Includes `faster_direct_cannot_beat_relay_only_policy`, four named experiments, `local_bound_udp_delivers_and_admits_session`, `connect_request_round_trip`, `unknown_critical_tlv_is_rejected`.
+- Not claimed: IETF publication; RFC; public MASQUE/bound-UDP; noq admission; Internet two-host; public relay; new cryptography; a Qualia QUIC implementation; NAT physics disappearing.
+- Human input needed: whether to **submit** `draft-webcivics-cscp-00` to the IETF datatracker (author email, shepherd, intended WG/area); named operators / live URLs for Gate B; whether noq evaluation is authorised; acceptable disclosure per deployment.
+- Next: do not mark programme packages complete. Gate A mapping of QSession-to-CSCP on a real QUIC engine remains a qualification step, not done here.
+
+## 2026-09-10 — CSCP Wave 1 local control plane + swarm programme
+
+- Step: principal asked whether CSCP was fully implemented and to plan/launch a swarm. Status: **Wave 1 (CSCP-01–06) done and tested; Wave 2 swarm dispatched; not Internet, not RFC**.
+- Built: full CSCP v1 TLV set, mailbox, lease protocol, Accept/Reject, durable receipts, local TLS WSS + QSession. Programme at [cscp-imp/](./cscp-imp/).
+- Measured: `net::peer::fabric` **34 passed**; `p2p::connectivity::cscp_wss` **1 passed**. Honesty flags unchanged (Internet/MASQUE/noq still false).
+- Human input needed: CSCP-12 datatracker submit; CSCP-08 operator URL.
+- Next: integrate CSCP-07/09/10/11 swarm exports.
+
+## 2026-09-10 — CSCP Wave 2 swarm + fail-closed codec
+
+- Step: swarm CSCP-07/09/10/11; integrator applied independent-review F1–F4. Status: **local control plane fail-closed; QUIC deferred; not Internet**.
+- Measured: `net::peer::fabric` **46 passed** (includes capsule + empty-body/lease-cap/session disclosure tests); WSS **1 passed**.
+- Human input needed: still CSCP-12 submit and CSCP-08 operator URL.
+- Next: HTTP/2 CONNECT stack and MASQUE remain open; do not tick original 30 packages.
+
+## 2026-09-10 — CSCP author identity recorded
+
+- Step: principal supplied I-D author Timothy Charles Holborn <timothy.holborn@gmail.com>. Status: **recorded in `-00`; not datatracker-posted**. WG/area still unchosen. Public relay still not a CDN, IPFS, or chain.
+- Human input needed: whether to click submit on datatracker; a live inbound WSS/MASQUE origin if Gate B is wanted.
+
+## 2026-09-11 — IETF drafts relocated to `docs/standards/ietf/`
+
+- Step: principal asked to put draft IETF files in `docs/standards` and to give grok-bot / local CSCP-08 directions. Status: **relocated**; CSCP-08 still blocked.
+- Built: canonical CSCP `-00` at [docs/standards/ietf/draft-webcivics-cscp-00.md](../../../../standards/ietf/draft-webcivics-cscp-00.md). ADP and QDP I-D copies alongside. CSCP-08 chore sheet: [CSCP-08-LOCAL-CHORES.md](../../../../standards/ietf/CSCP-08-LOCAL-CHORES.md). Stub remains at the old `qdnf-imp/` path.
+- Measured: not applicable (docs). Honesty flags unchanged. CSCP-08 / parent CSCP-09 / CSCP-12 not ticked.
+- Human input needed: CSCP-08 operator URL; CSCP-12 datatracker.
+- Next: grok-bot or local tree follows the chore sheet only after a hostname he already controls is supplied.
+
+
+
+
+
+
+
+

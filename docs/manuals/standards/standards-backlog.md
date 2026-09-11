@@ -106,23 +106,32 @@ Each of those should become its own draft with its own conformance language.
   - [ ] worked example vectors (v3 + legacy compatibility set)
   - [ ] playground / WASM reader aligned or explicitly scoped out
 
-## 2. did:q42 method / pointer syntax
+## 2. did:q42 pointer syntax vs `did:qi` method
 
-- Scope: DID syntax, method-specific identifier rules, normalization,
-  resolution expectations, and the pointer / topology semantics currently
-  implemented in `identifier.rs`, `mini_parser.rs`, and `resolver.rs`.
-- Why it is non-standard: custom DID method and custom resolution behavior.
-- First doc to write here: `did-q42-method-draft.md`
-- Primary SDO: W3C
-- Recommended format: DID Method Specification as a W3C Community Group
-  Report-style draft, then pursue DID Spec Registries registration.
-- Why this fit: DID Core explicitly expects a method specification and
-  recommends registry registration.
-- Exit criteria before submission:
-  - exact DID method syntax frozen
+- Scope is now **two documents**, not one:
+  - **QRC / pointer:** `did:q42:` syntax, 60-bit FNV + MSB dispatch, normalization
+    of the coordinate payload. Implemented today in `identifier.rs`,
+    `mini_parser.rs`, and `resolver.rs`. This is not a W3C DID method.
+  - **Qualia Identifier (HCInet DID method name):** `did:qi:`. Naming and backing
+    split recorded in
+    `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md`.
+    Not an HCAI method (that acronym is Human-Centered AI in common use).
+    Hostname/`did:web` is alias/Frontdoor. Optional ledger attestation is
+    parameterized UTXO (CAIP-2 `bip122:<genesis>`), not a single ticker.
+    Invitation git protocol (not GitHub) is an Isolated/mailbox backing.
+- Why it is non-standard: `did:q42` was described as a custom DID method; it is a
+  storage coordinate. `did:qi` is not specified yet (no CRUD, no registry).
+- First docs: keep QRC in [identifier-resolution.md](./qualia-decentralized-network-fabric/identifier-resolution.md)
+  §3; write a DID Method spec for `did:qi` only when the principal asks (W3C CG
+  Report-style, then DID Spec Registries). Do not write `did-q42-method-draft.md`
+  as if QRC were Human-Centric Internet identity.
+- Primary SDO: W3C (DID Core) for `did:qi`; QRC stays Qualia ABI.
+- Exit criteria before `did:qi` submission:
+  - exact DID method syntax frozen (`did:qi:<self-certifying-id>`)
   - normalization and uniqueness rules written down
-  - representation and resolution behavior defined
+  - representation and resolution behavior defined per backing (git, UTXO, mailbox)
   - privacy and security considerations section added
+  - QRC and `qualia://` documented as non-methods
 
 ## 3. `.qualia` vault manifest
 
@@ -310,13 +319,15 @@ Each of those should become its own draft with its own conformance language.
 - Why: standardize the externally visible RDF / SHACL / DID surfaces before
   standardizing the internal machine model.
 
-## 12. HCAI Agreement Negotiation Protocol (HCAI-ANP)
+## 12. Human-Centric AI Agreement Negotiation Protocol (HCAI-ANP)
 
 - Scope: the inbound-agent ingress contract â€” `did:web` / NS-encoded Frontdoor
-  discovery, the HCAI Agreement vocabulary and Duty-of-Care terms, the
+  discovery, the Human-Centric AI Agreement vocabulary and Duty-of-Care terms, the
   sign-and-verify negotiation handshake, and the WebRTC session binding. The one
   genuine multi-party interoperability surface carved out of the WebAI
   Orchestration Layer (`devnotes/orchastration-webai.md`).
+  **Not** Human-Centered AI (the usual expansion of HCAI). The acronym HCAI-ANP
+  is protocol-local; Human-Centric Internet identity is `did:qi` / HCInet.
 - Why it is a candidate (not yet submittable): the identifier substrate, **DNS Front Door
   discovery** (`qualia-client-core/src/dns_resolver.rs::verify_front_door_did_via_dns`), and the
   **Front Door identity + invite** flow (`state::FrontDoor`; `api::generate_front_door` /

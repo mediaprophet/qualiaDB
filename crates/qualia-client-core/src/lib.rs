@@ -49,6 +49,7 @@ pub mod handshake;
 pub mod identity_plane;
 pub mod incapacity_switch;
 pub mod inference_backend;
+pub mod introduction;
 pub mod job_router;
 pub mod local_job_scheduler;
 pub mod magic_link;

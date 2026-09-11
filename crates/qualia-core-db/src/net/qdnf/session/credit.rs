@@ -10,8 +10,9 @@
 //! One lease slot backs the configured direction window (aggregate), not one
 //! slot per stream. `LeaseTable` has 32 slots; the protocol limit is 64.
 
+use crate::net::peer::runtime::ledger::ChargeRef;
 use crate::net::peer::runtime::{
-    BufferLease, LeaseHandle, LeaseTable, ReservationLedger, ResourceBudget,
+    BufferLease, LeaseHandle, LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
 };
 use crate::net::qdnf::errors::QdnfError;
 
@@ -39,6 +40,8 @@ pub struct CreditTable {
     server_used: u32,
     client_lease: Option<BufferLease>,
     server_lease: Option<BufferLease>,
+    client_charge: Option<ChargeRef>,
+    server_charge: Option<ChargeRef>,
 }
 
 impl CreditTable {
@@ -58,7 +61,42 @@ impl CreditTable {
             server_used: 0,
             client_lease: None,
             server_lease: None,
+            client_charge: None,
+            server_charge: None,
         }
+    }
+
+    fn charge_mut(&mut self, dir: u8) -> Result<&mut Option<ChargeRef>, QdnfError> {
+        match dir {
+            DIR_CLIENT => Ok(&mut self.client_charge),
+            DIR_SERVER => Ok(&mut self.server_charge),
+            _ => Err(QdnfError::Range),
+        }
+    }
+
+    /// One ledger handle per direction (aggregate), matching the lease.
+    fn sync_ledger(
+        &mut self,
+        dir: u8,
+        ledger: &mut ReservationLedger,
+        bytes: u32,
+    ) -> Result<(), QdnfError> {
+        if bytes == 0 {
+            if let Some(r) = self.charge_mut(dir)?.take() {
+                ledger.release(ReservationHandle::from_ref(r))?;
+            }
+            return Ok(());
+        }
+        let handle = ledger.reserve(stream_bytes_budget(bytes), true)?;
+        let old = self.charge_mut(dir)?.replace(handle.as_ref());
+        if let Some(r) = old {
+            if let Err(e) = ledger.release(ReservationHandle::from_ref(r)) {
+                let _ = ledger.release(handle);
+                *self.charge_mut(dir)? = None;
+                return Err(e);
+            }
+        }
+        Ok(())
     }
 
     /// Grant one stream in `dir`. Ledger + first-open lease are all-or-nothing
@@ -86,9 +124,10 @@ impl CreditTable {
             }
         }
 
-        let budget = stream_bytes_budget(bytes);
+        let prior_used = self.used(dir)?;
+        let next_used = prior_used.saturating_add(bytes);
         if bytes > 0 {
-            ledger.reserve(budget, true)?;
+            self.sync_ledger(dir, ledger, next_used)?;
         }
 
         let credit = self.credit(dir)?;
@@ -100,14 +139,12 @@ impl CreditTable {
                 }
                 Err(e) => {
                     if bytes > 0 {
-                        let _ = ledger.release(budget, true);
+                        let _ = self.sync_ledger(dir, ledger, prior_used);
                     }
                     return Err(e);
                 }
             }
         }
-
-        let next_used = self.used(dir)?.saturating_add(bytes);
         let next_open = credit.open.saturating_add(1);
         *self.used_mut(dir)? = next_used;
         self.credit_mut(dir)?.open = next_open;
@@ -160,12 +197,32 @@ impl CreditTable {
             }
         }
 
+        let next_used = used.saturating_sub(bytes);
         if bytes > 0 {
-            ledger.release(stream_bytes_budget(bytes), true)?;
+            self.sync_ledger(dir, ledger, next_used)?;
         }
-        *self.used_mut(dir)? = used.saturating_sub(bytes);
+        *self.used_mut(dir)? = next_used;
         self.credit_mut(dir)?.open = credit.open.saturating_sub(1);
         Ok(())
+    }
+
+    /// Remaining application window for `dir`. Not a congestion window.
+    pub fn remaining(&self, dir: u8) -> Result<u32, QdnfError> {
+        let window = self.credit(dir)?.window_bytes;
+        let used = self.used(dir)?;
+        Ok(window.saturating_sub(used))
+    }
+
+    /// Application flow-control admit. Exhaustion is Capacity, not BudgetExhausted.
+    pub fn admit_application(&self, dir: u8, bytes: u64) -> Result<(), QdnfError> {
+        if bytes == 0 || bytes > u32::MAX as u64 {
+            return Err(QdnfError::Range);
+        }
+        if bytes > self.remaining(dir)? as u64 {
+            Err(QdnfError::Capacity)
+        } else {
+            Ok(())
+        }
     }
 
     pub fn credit(&self, dir: u8) -> Result<StreamCredit, QdnfError> {
@@ -357,6 +414,20 @@ mod tests {
             table.close_stream(DIR_CLIENT, &mut leases, &mut ledger, again, STREAM_BYTES),
             Err(QdnfError::DoubleRelease)
         );
+    }
+
+    #[test]
+    fn remaining_is_application_credit_not_congestion() {
+        let table = CreditTable::new(0);
+        assert_eq!(table.remaining(DIR_CLIENT).unwrap(), 0);
+        assert_eq!(
+            table.admit_application(DIR_CLIENT, 1),
+            Err(QdnfError::Capacity)
+        );
+        let open = CreditTable::new(STREAM_BYTES);
+        open.admit_application(DIR_CLIENT, STREAM_BYTES as u64)
+            .expect("full remaining window");
+        assert!(!purchased_service_disables_congestion());
     }
 
     #[test]

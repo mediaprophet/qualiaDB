@@ -10,6 +10,7 @@
 use hkdf::Hkdf;
 use sha2::{Digest, Sha384};
 
+use crate::crypto::network::types::AEAD_KEY_LEN;
 use crate::net::qdnf::types::StrongDigest;
 
 /// Test-only ML-KEM shared-secret stand-in. Not a live encapsulate output.
@@ -31,9 +32,15 @@ const FROZEN_TRANSCRIPT_SHA384: &str =
 /// HKDF-SHA-384 OKM-32; salt `qpr-pq-1`; IKM = kem_ss || x25519_ss; info i2r.
 const FROZEN_HYBRID_I2R: &str = "e4c3fcd4ce69a212c883d7114078ce410751cf110fb37d61ee618df833e1bea5";
 
-/// SHA-384(transcript_digest[48] || `qsession` padded into a 64-byte buffer).
-const FROZEN_FINISHED_MAC: &str =
+/// Historical unkeyed SHA-384(transcript_digest[48] || `qsession` in a 64-byte buffer).
+/// Kept as a negative control: production Finished must not equal this.
+const FROZEN_UNKEYED_FINISHED_MAC: &str =
     "e54cbc5e7a76090d363870c177dcae3585212d137ad915883472ab3707387f88ef2aaec684bd799d9ad65ad074d707d8";
+
+/// HMAC-SHA-384 Finished (secret `[0x42; 32]`, I2R role, frozen transcript).
+const FROZEN_HMAC_FINISHED_I2R: &str =
+    "5cde4e858f2da421619aa6b32ff7f2501cbd3eb67b690fbd69ca82c7d87da8711a77626b7f0abc02d78a71bc36cb58d9";
+const TEST_FINISHED_SECRET: [u8; AEAD_KEY_LEN] = [0x42; AEAD_KEY_LEN];
 
 /// Independent transcript digest: SHA-384 over domain || `u16be(label)||label||u32be(value)||value`.
 /// Must not call [`super::transcript::Transcript`].
@@ -123,7 +130,8 @@ mod tests {
     use crate::crypto::network::kdf::{hkdf_sha384, hybrid_shared_secret};
     use crate::crypto::network::transcript::{Transcript, MAX_TRANSCRIPT};
     use crate::crypto::network::x25519::X25519Secret;
-    use crate::net::qdnf::crypto::handshake::finished_mac;
+    use crate::net::qdnf::crypto::finished::finished_mac;
+    use crate::net::qdnf::harness::oracles::independent_finished;
 
     #[test]
     fn transcript_matches_oracle_and_frozen_hex() {
@@ -173,13 +181,18 @@ mod tests {
     #[test]
     fn finished_mac_is_stable() {
         let digest = production_transcript().digest();
-        let production = finished_mac(&digest, FINISHED_ROLE);
-        let oracle = oracle_finished_mac(&digest, FINISHED_ROLE);
-        let frozen = StrongDigest(decode_hex::<48>(FROZEN_FINISHED_MAC));
+        let production = finished_mac(&TEST_FINISHED_SECRET, &digest, true).unwrap();
+        let oracle = independent_finished(&TEST_FINISHED_SECRET, &digest, true);
+        let frozen = StrongDigest(decode_hex::<48>(FROZEN_HMAC_FINISHED_I2R));
         assert_eq!(production, oracle);
         assert_eq!(production, frozen);
-        let again = finished_mac(&digest, FINISHED_ROLE);
+        let again = finished_mac(&TEST_FINISHED_SECRET, &digest, true).unwrap();
         assert_eq!(production, again);
+
+        let unkeyed = oracle_finished_mac(&digest, FINISHED_ROLE);
+        let historical = StrongDigest(decode_hex::<48>(FROZEN_UNKEYED_FINISHED_MAC));
+        assert_eq!(unkeyed, historical);
+        assert_ne!(production, unkeyed);
     }
 
     #[test]

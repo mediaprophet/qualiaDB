@@ -85,6 +85,44 @@ impl ArenaAdmit {
         Ok(())
     }
 
+    /// Reset caller-owned scratch slots that stand in for Sentinel backing.
+    /// Tests must not allocate 42 MiB to prove this binding.
+    pub fn reset_bound_slots(
+        &mut self,
+        slots: &mut [NQuin],
+        recent: &mut [usize],
+        head: &mut usize,
+    ) -> Result<(), QdnfError> {
+        self.reset_for_reuse()?;
+        let empty = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        let mut i = 0usize;
+        while i < slots.len() {
+            slots[i] = empty;
+            i += 1;
+        }
+        let mut j = 0usize;
+        while j < recent.len() {
+            recent[j] = 0;
+            j += 1;
+        }
+        *head = 0;
+        Ok(())
+    }
+
+    /// Bind reuse to a live [`super::SlgArena`] pass. Does not construct one.
+    pub fn reset_slg_arena(&mut self, arena: &mut super::SlgArena) -> Result<(), QdnfError> {
+        self.reset_for_reuse()?;
+        arena.reset_pass();
+        Ok(())
+    }
+
     /// Bind this admit record to `scope` + policy/source generations.
     ///
     /// Cross-scope → [`QdnfError::Unauthorized`]. Generation mismatch →
@@ -386,5 +424,30 @@ mod tests {
         assert_eq!(SENTINEL_SLOTS, 917_504);
         assert_eq!(SENTINEL_PASS_BYTES, 42 * 1024 * 1024);
         assert_eq!(SENTINEL_SLOTS, SENTINEL_PASS_BYTES / QUIN_ABI_BYTES);
+    }
+
+    #[test]
+    fn reset_bound_slots_clears_scratch_without_42mib_arena() {
+        let mut leases = LeaseTable::new();
+        let mut rec = admit_sentinel(&mut leases, 3, 1, 1);
+        rec.reserve_rule_slot().unwrap();
+        rec.activate_reserved_rule().unwrap();
+        let mut slots = [NQuin {
+            subject: 9,
+            predicate: 8,
+            object: 7,
+            context: 6,
+            metadata: 5,
+            parity: 4,
+        }; 4];
+        let mut recent = [1usize, 2, 3, 0];
+        let mut head = 7usize;
+        rec.reset_bound_slots(&mut slots, &mut recent, &mut head)
+            .unwrap();
+        assert_eq!(rec.live_rules(), 0);
+        assert_eq!(head, 0);
+        assert_eq!(recent, [0, 0, 0, 0]);
+        assert_eq!(slots[0].subject, 0);
+        rec.revoke(&mut leases).unwrap();
     }
 }

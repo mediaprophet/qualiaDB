@@ -11,6 +11,7 @@
 //! Not exactly-once. Continuations do not refill remaining caps. Cancelled
 //! complete cannot resurrect.
 
+use crate::net::peer::replication::source::ScanSource;
 use crate::net::peer::runtime::cancel::{CancelEpoch, OperationTable};
 use crate::net::peer::runtime::leases::LeaseTable;
 use crate::net::qdnf::errors::QdnfError;
@@ -67,7 +68,11 @@ pub struct ScanCursor {
     pub remaining: ScanBudget,
     pub logical_bytes: u64,
     pub resident_cap: u32,
+    /// ZERO means no authenticated source (synthetic `next_page` is not evidence).
+    source_digest: StrongDigest,
     cancelled: bool,
+    /// Production scans require [`ScanSource`] via [`open_production_scan`].
+    production: bool,
 }
 
 impl ScanCursor {
@@ -103,45 +108,97 @@ pub fn open_scan(
         remaining: budget,
         logical_bytes,
         resident_cap,
+        source_digest: StrongDigest::ZERO,
         cancelled: false,
+        production: false,
     })
 }
 
-/// Copy the next page into `out`. Charges remaining pages/work/bytes.
+/// Open a scan bound to an authenticated source identity (not computed here).
+///
+/// [`QdnfError::Malformed`] if `source_digest` is [`StrongDigest::ZERO`].
+pub fn open_scan_bound(
+    logical_bytes: u64,
+    resident_cap: u32,
+    budget: ScanBudget,
+    source_digest: StrongDigest,
+) -> Result<ScanCursor, QdnfError> {
+    if source_digest == StrongDigest::ZERO {
+        return Err(QdnfError::Malformed);
+    }
+    let mut cursor = open_scan(logical_bytes, resident_cap, budget)?;
+    cursor.source_digest = source_digest;
+    Ok(cursor)
+}
+
+/// Open a production scan bound to `source`. Requires a non-zero source digest.
+///
+/// Uses [`ScanSource::logical_len`]. Production pages must be copied with
+/// [`next_page_from`]; the synthetic XOR [`next_page`] is [`QdnfError::Unsupported`].
+pub fn open_production_scan(
+    source: &impl ScanSource,
+    resident_cap: u32,
+    budget: ScanBudget,
+    source_digest: StrongDigest,
+) -> Result<ScanCursor, QdnfError> {
+    let mut cursor = open_scan_bound(source.logical_len(), resident_cap, budget, source_digest)?;
+    cursor.production = true;
+    Ok(cursor)
+}
+
+/// Copy the next page into `out` using the synthetic XOR fill.
+///
+/// This path is **not** storage evidence. Production scans must use
+/// [`next_page_from`] with a [`ScanSource`]. [`synthetic_scan_is_storage_evidence`]
+/// is always false. Kept for budget/cursor tests.
 ///
 /// Empty `out` with remaining logical bytes is [`QdnfError::Capacity`] and
 /// does not advance offset. Exhausted remaining caps are
 /// [`QdnfError::BudgetExhausted`] and do not reset on retry.
 pub fn next_page(cursor: &mut ScanCursor, out: &mut [u8]) -> Result<usize, QdnfError> {
-    if cursor.cancelled {
-        return Err(QdnfError::Cancelled);
+    if cursor.production {
+        return Err(QdnfError::Unsupported);
     }
-    if cursor.offset > cursor.logical_bytes {
-        return Err(QdnfError::Range);
-    }
-    let remaining_logical = cursor.logical_bytes - cursor.offset;
-    if remaining_logical == 0 {
+    let n = next_page_prepare(cursor, out)?;
+    if n == 0 {
         return Ok(0);
     }
-    if out.is_empty() {
-        return Err(QdnfError::Capacity);
-    }
-
-    let n = page_len(out.len(), remaining_logical);
-    if cursor.remaining.pages == 0 || cursor.remaining.work < PAGE_WORK {
-        return Err(QdnfError::BudgetExhausted);
-    }
-    let n_u32 = n as u32;
-    if cursor.remaining.bytes < n_u32 {
-        return Err(QdnfError::BudgetExhausted);
-    }
-
     fill_page(cursor.offset, &mut out[..n]);
-    cursor.remaining.pages -= 1;
-    cursor.remaining.work -= PAGE_WORK;
-    cursor.remaining.bytes -= n_u32;
-    cursor.offset += n as u64;
+    commit_page(cursor, n);
     Ok(n)
+}
+
+/// Copy the next page from `source` via [`ScanSource::read_at`] at `cursor.offset`.
+///
+/// Bytes come from the source, never the synthetic XOR fill. Budget and
+/// cursor rules match [`next_page`].
+pub fn next_page_from(
+    cursor: &mut ScanCursor,
+    source: &impl ScanSource,
+    out: &mut [u8],
+) -> Result<usize, QdnfError> {
+    let n = next_page_prepare(cursor, out)?;
+    if n == 0 {
+        return Ok(0);
+    }
+    if cursor.offset >= source.logical_len() {
+        return Err(QdnfError::Incomplete);
+    }
+    let source_remaining = source.logical_len() - cursor.offset;
+    let want = if source_remaining < n as u64 {
+        source_remaining as usize
+    } else {
+        n
+    };
+    if want == 0 {
+        return Err(QdnfError::Incomplete);
+    }
+    let got = source.read_at(cursor.offset, &mut out[..want])?;
+    if got == 0 {
+        return Err(QdnfError::Incomplete);
+    }
+    commit_page(cursor, got);
+    Ok(got)
 }
 
 /// Stop further pages. A cancelled cursor cannot resume as if cancel never
@@ -253,6 +310,56 @@ pub fn allocation_class_hot_zero_heap() -> bool {
 #[inline]
 pub fn continuation_refills_budget() -> bool {
     false
+}
+
+/// Synthetic XOR `next_page` fill is never storage evidence.
+#[inline]
+pub fn synthetic_scan_is_storage_evidence() -> bool {
+    false
+}
+
+/// Production scans copy through [`ScanSource`], never the XOR fill.
+#[inline]
+pub fn production_scan_uses_synthetic_xor() -> bool {
+    false
+}
+
+/// True only when [`open_scan_bound`] attached a non-zero source digest.
+#[inline]
+pub fn scan_pages_are_storage_evidence(cursor: &ScanCursor) -> bool {
+    cursor.source_digest != StrongDigest::ZERO
+}
+
+fn next_page_prepare(cursor: &ScanCursor, out: &[u8]) -> Result<usize, QdnfError> {
+    if cursor.cancelled {
+        return Err(QdnfError::Cancelled);
+    }
+    if cursor.offset > cursor.logical_bytes {
+        return Err(QdnfError::Range);
+    }
+    let remaining_logical = cursor.logical_bytes - cursor.offset;
+    if remaining_logical == 0 {
+        return Ok(0);
+    }
+    if out.is_empty() {
+        return Err(QdnfError::Capacity);
+    }
+
+    let n = page_len(out.len(), remaining_logical);
+    if cursor.remaining.pages == 0 || cursor.remaining.work < PAGE_WORK {
+        return Err(QdnfError::BudgetExhausted);
+    }
+    if cursor.remaining.bytes < n as u32 {
+        return Err(QdnfError::BudgetExhausted);
+    }
+    Ok(n)
+}
+
+fn commit_page(cursor: &mut ScanCursor, n: usize) {
+    cursor.remaining.pages -= 1;
+    cursor.remaining.work -= PAGE_WORK;
+    cursor.remaining.bytes -= n as u32;
+    cursor.offset += n as u64;
 }
 
 fn scan_op_id(logical_bytes: u64, resident_cap: u32) -> OperationId {
@@ -431,5 +538,105 @@ mod tests {
         assert!(LEASE_SLOTS >= 32);
         complete_scan(&mut ops, &mut leases, &mut cursor).unwrap();
         assert_eq!(leases.occupied_count(), 0);
+    }
+
+    #[test]
+    fn synthetic_scan_is_not_storage_evidence() {
+        assert!(!synthetic_scan_is_storage_evidence());
+        let cursor = open_large();
+        assert!(!scan_pages_are_storage_evidence(&cursor));
+    }
+
+    #[test]
+    fn next_page_from_copies_source_bytes_not_xor() {
+        use crate::net::peer::replication::source::MemorySource;
+
+        let src = [0xAAu8; 64];
+        let mut cursor_xor = open_scan(64, RESIDENT_CAP_BYTES, ScanBudget::initial()).unwrap();
+        let mut cursor_src = open_scan(64, RESIDENT_CAP_BYTES, ScanBudget::initial()).unwrap();
+        let mut xor_page = [0u8; 64];
+        let mut src_page = [0u8; 64];
+        let n_xor = next_page(&mut cursor_xor, &mut xor_page).unwrap();
+        let n_src = next_page_from(
+            &mut cursor_src,
+            &MemorySource::from_slice(&src),
+            &mut src_page,
+        )
+        .unwrap();
+        assert_eq!(n_xor, 64);
+        assert_eq!(n_src, 64);
+        assert_eq!(&src_page[..n_src], &src[..]);
+        assert_ne!(&xor_page[..n_xor], &src[..]);
+        let mut expected_xor = [0u8; 64];
+        fill_page(0, &mut expected_xor);
+        assert_eq!(xor_page, expected_xor);
+    }
+
+    #[test]
+    fn two_sources_same_length_different_pages() {
+        use crate::net::peer::replication::source::MemorySource;
+
+        let a = [1u8; 32];
+        let b = [2u8; 32];
+        let mut ca = open_scan(32, RESIDENT_CAP_BYTES, ScanBudget::initial()).unwrap();
+        let mut cb = open_scan(32, RESIDENT_CAP_BYTES, ScanBudget::initial()).unwrap();
+        let mut pa = [0u8; 32];
+        let mut pb = [0u8; 32];
+        assert_eq!(
+            next_page_from(&mut ca, &MemorySource::from_slice(&a), &mut pa).unwrap(),
+            32
+        );
+        assert_eq!(
+            next_page_from(&mut cb, &MemorySource::from_slice(&b), &mut pb).unwrap(),
+            32
+        );
+        assert_eq!(pa, a);
+        assert_eq!(pb, b);
+        assert_ne!(pa, pb);
+    }
+
+    #[test]
+    fn production_scan_does_not_use_synthetic_xor() {
+        use crate::net::peer::replication::source::MemorySource;
+
+        assert!(!production_scan_uses_synthetic_xor());
+        assert!(!synthetic_scan_is_storage_evidence());
+        let src = [0x5Au8; 32];
+        let mut d = StrongDigest::ZERO;
+        d.0[0] = 0x5a;
+        let mem = MemorySource::from_slice(&src);
+        let mut cursor =
+            open_production_scan(&mem, RESIDENT_CAP_BYTES, ScanBudget::initial(), d).unwrap();
+        let mut xor_try = [0u8; 32];
+        assert_eq!(
+            next_page(&mut cursor, &mut xor_try),
+            Err(QdnfError::Unsupported)
+        );
+        let mut page = [0u8; 32];
+        let n = next_page_from(&mut cursor, &mem, &mut page).unwrap();
+        assert_eq!(n, 32);
+        assert_eq!(&page[..], &src[..]);
+        let mut expected_xor = [0u8; 32];
+        fill_page(0, &mut expected_xor);
+        assert_ne!(page, expected_xor);
+    }
+
+    #[test]
+    fn bound_source_digest_is_storage_evidence_identity() {
+        let mut d = StrongDigest::ZERO;
+        d.0[0] = 0x42;
+        let unbound = open_scan(16, RESIDENT_CAP_BYTES, ScanBudget::initial()).unwrap();
+        assert!(!scan_pages_are_storage_evidence(&unbound));
+        let bound = open_scan_bound(16, RESIDENT_CAP_BYTES, ScanBudget::initial(), d).unwrap();
+        assert!(scan_pages_are_storage_evidence(&bound));
+        assert_eq!(
+            open_scan_bound(
+                16,
+                RESIDENT_CAP_BYTES,
+                ScanBudget::initial(),
+                StrongDigest::ZERO
+            ),
+            Err(QdnfError::Malformed)
+        );
     }
 }

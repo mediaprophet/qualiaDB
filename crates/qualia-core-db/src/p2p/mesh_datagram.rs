@@ -26,6 +26,9 @@ pub mod ports {
     pub const SHARE: u16 = 6422;
     /// Self-hosted QDP profile / HTTP-like requests over the mesh (mirrors well-known HTTP).
     pub const QDP: u16 = 80;
+    /// QDNF QFrames on the SocialWebNet overlay. This is an inner UDP port, not the
+    /// graph daemon's TCP 4242, and not a Native Independent bearer.
+    pub const QDNF: u16 = 6423;
 }
 
 /// Overlay ULA source/destination addresses used for framed datagrams (`fd00::1` → `fd00::2`).
@@ -125,13 +128,13 @@ pub fn encode_datagram(src_port: u16, dst_port: u16, payload: &[u8]) -> Vec<u8> 
     pkt
 }
 
-/// Parse an inner IPv6/UDP packet back into a [`Datagram`]. Returns `None` if it is not a
+/// Parse an inner IPv6/UDP packet into ports plus a borrowed payload. Returns `None` if it is not a
 /// well-formed IPv6 UDP datagram (wrong version, not UDP, truncated, or inconsistent length).
 ///
 /// The checksum is *not* re-verified here: boringtun has already authenticated the packet end-to-end
 /// (an attacker cannot forge one), so re-checking the UDP checksum would only guard against local
 /// corruption, which the AEAD already rules out.
-pub fn decode_datagram(packet: &[u8]) -> Option<Datagram> {
+pub fn decode_datagram_ref(packet: &[u8]) -> Option<(u16, u16, &[u8])> {
     if packet.len() < IPV6_HEADER + UDP_HEADER {
         return None;
     }
@@ -156,10 +159,16 @@ pub fn decode_datagram(packet: &[u8]) -> Option<Datagram> {
     if udp_len < UDP_HEADER || udp_len > udp.len() {
         return None; // inconsistent UDP length
     }
+    Some((src_port, dst_port, &udp[UDP_HEADER..udp_len]))
+}
+
+/// Parse an inner IPv6/UDP packet back into a [`Datagram`]. See [`decode_datagram_ref`].
+pub fn decode_datagram(packet: &[u8]) -> Option<Datagram> {
+    let (src_port, dst_port, payload) = decode_datagram_ref(packet)?;
     Some(Datagram {
         src_port,
         dst_port,
-        payload: udp[UDP_HEADER..udp_len].to_vec(),
+        payload: payload.to_vec(),
     })
 }
 
@@ -174,6 +183,16 @@ mod tests {
         assert_eq!(d.src_port, ports::CHAT);
         assert_eq!(d.dst_port, ports::QDP);
         assert_eq!(d.payload, b"hello mesh app");
+    }
+
+    #[test]
+    fn qdnf_overlay_port_is_distinct_and_round_trips() {
+        let pkt = encode_datagram(ports::QDNF, ports::QDNF, b"QDNF");
+        let (src, dst, payload) = decode_datagram_ref(&pkt).expect("valid datagram");
+        assert_eq!((src, dst), (ports::QDNF, ports::QDNF));
+        assert_eq!(payload, b"QDNF");
+        assert_ne!(ports::QDNF, ports::CHAT);
+        assert_ne!(ports::QDNF, 4242, "overlay port is not the graph daemon TCP port");
     }
 
     #[test]

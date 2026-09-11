@@ -7,6 +7,11 @@
 // mesh the peer's WireGuard public key and (once known) endpoint; this mesh owns the crypto
 // state and the sockets.
 //
+// Application payload on an established tunnel is an inner IPv6/UDP datagram
+// ([`super::mesh_datagram`]). Chat stays on `ports::CHAT`. QDNF QFrames use
+// `ports::QDNF` through [`super::social_qdnf`] — WireGuard remains the labelled
+// transition carrier; this path is not Native Independent and does not use libp2p.
+//
 // Separation of concerns:
 //   * **This module (core-db)** owns the mesh mechanism: bind sockets, build `Tunn`s, drive
 //     handshakes/timers, route inner packets to/from the right peer. It speaks raw keys and
@@ -160,6 +165,15 @@ impl SocialWebNet {
     ) -> Result<bool, String> {
         let pkt = super::mesh_datagram::encode_datagram(src_port, dst_port, payload);
         self.send_to(peer_id, &pkt)
+    }
+
+    /// Send one QDNF QFrame as an overlay datagram on [`super::mesh_datagram::ports::QDNF`].
+    ///
+    /// The frame bytes are already encoded (`encode_frame`). Chat and other overlay
+    /// ports are unchanged; receivers demultiplex on destination port.
+    pub fn send_qdnf_frame(&mut self, peer_id: &str, frame: &[u8]) -> Result<bool, String> {
+        let port = super::mesh_datagram::ports::QDNF;
+        self.send_datagram(peer_id, port, port, frame)
     }
 
     /// Pump one datagram for a single peer. See [`WgTunnel::pump`].

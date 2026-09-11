@@ -8,6 +8,7 @@
 //! (NET-05.11).
 
 use crate::net::qdnf::errors::QdnfError;
+use crate::net::qdnf::types::Generation;
 
 /// Negotiated multipath ceiling (QSession max paths = 3).
 pub const MAX_ACTIVE_PATHS: usize = 3;
@@ -29,6 +30,40 @@ pub struct PathSlot {
     pub id: u8,
     pub generation: u64,
     pub state: PathState,
+    pub proven: bool,
+}
+
+/// Generation-bearing path mutation handle. Not a budget or permit token.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PathHandle {
+    slot: u8,
+    generation: Generation,
+}
+
+impl PathHandle {
+    #[inline]
+    pub const fn slot(self) -> u8 {
+        self.slot
+    }
+
+    #[inline]
+    pub const fn generation(self) -> Generation {
+        self.generation
+    }
+}
+
+pub const fn path_handle_is_budget_token() -> bool {
+    false
+}
+
+/// Mutate `handle`'s slot. Stale generation → [`QdnfError::StaleGeneration`].
+/// Promoting to [`PathState::Active`] requires attested reachability.
+pub fn mutate_path(
+    table: &mut PathTable,
+    handle: PathHandle,
+    next: PathState,
+) -> Result<PathHandle, QdnfError> {
+    table.mutate(handle, next)
 }
 
 /// Eight-slot table. Occupied entries are Racing, Active, or Losing.
@@ -55,8 +90,63 @@ impl PathTable {
             id,
             generation,
             state: PathState::Racing,
+            proven: false,
         });
         Ok(id)
+    }
+
+    pub fn handle_of(&self, id: u8) -> Result<PathHandle, QdnfError> {
+        let slot = self.get(id).ok_or(QdnfError::Closed)?;
+        Ok(PathHandle {
+            slot: slot.id,
+            generation: Generation(slot.generation),
+        })
+    }
+
+    /// Authenticated reachability proof already verified by the caller.
+    /// Mismatched generation → [`QdnfError::StaleGeneration`].
+    pub fn attest_reachability(&mut self, handle: PathHandle) -> Result<(), QdnfError> {
+        let idx = self.index_of(handle.slot)?;
+        let slot = self.slots[idx].as_mut().ok_or(QdnfError::Closed)?;
+        if slot.generation != handle.generation.0 {
+            return Err(QdnfError::StaleGeneration);
+        }
+        slot.proven = true;
+        Ok(())
+    }
+
+    pub fn mutate(&mut self, handle: PathHandle, next: PathState) -> Result<PathHandle, QdnfError> {
+        let idx = self.index_of(handle.slot)?;
+        {
+            let slot = self.slots[idx].as_ref().ok_or(QdnfError::Closed)?;
+            if slot.generation != handle.generation.0 {
+                return Err(QdnfError::StaleGeneration);
+            }
+            if next == PathState::Active {
+                if !slot.proven {
+                    return Err(QdnfError::Unauthorized);
+                }
+                if slot.state != PathState::Active && self.active_count() >= MAX_ACTIVE_PATHS {
+                    return Err(QdnfError::Capacity);
+                }
+            }
+        }
+        if matches!(next, PathState::Closed | PathState::Losing) {
+            let new_gen = Generation(handle.generation.0).next()?;
+            self.slots[idx] = None;
+            return Ok(PathHandle {
+                slot: handle.slot,
+                generation: new_gen,
+            });
+        }
+        let slot = self.slots[idx].as_mut().ok_or(QdnfError::Closed)?;
+        let new_gen = Generation(slot.generation).next()?;
+        slot.generation = new_gen.0;
+        slot.state = next;
+        Ok(PathHandle {
+            slot: handle.slot,
+            generation: new_gen,
+        })
     }
 
     /// Promote a Racing slot to Active. A fourth Active is Capacity.
@@ -180,6 +270,7 @@ impl Default for PathTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::net::qdnf::types::Generation;
 
     #[test]
     fn fourth_mark_active_is_capacity() {
@@ -245,5 +336,65 @@ mod tests {
     #[test]
     fn duplicate_recovery_on_compat_carrier_is_disabled() {
         assert!(!PathTable::duplicate_recovery_on_compat_carrier());
+    }
+
+    #[test]
+    fn stale_path_handle_is_stale_generation() {
+        let mut table = PathTable::new();
+        let id = table.start_race(4).unwrap();
+        let h = table.handle_of(id).unwrap();
+        table.attest_reachability(h).unwrap();
+        let fresh = mutate_path(&mut table, h, PathState::Racing).unwrap();
+        assert_eq!(
+            mutate_path(&mut table, h, PathState::Racing),
+            Err(QdnfError::StaleGeneration)
+        );
+        assert_eq!(fresh.generation(), Generation(5));
+        assert!(!path_handle_is_budget_token());
+        assert_eq!(
+            table.attest_reachability(h),
+            Err(QdnfError::StaleGeneration)
+        );
+    }
+
+    #[test]
+    fn coupled_multipath_does_not_multiply_window() {
+        use crate::net::qdnf::session::congestion::PathCcTable;
+        let mut table = PathTable::new();
+        let a = table.start_race(1).unwrap();
+        let b = table.start_race(1).unwrap();
+        table.mark_active(a).unwrap();
+        table.mark_active(b).unwrap();
+        let ha = table.handle_of(a).unwrap();
+        let hb = table.handle_of(b).unwrap();
+        let mut coupled = PathCcTable::new(500);
+        assert!(!coupled.independent_bottleneck);
+        coupled.attach(ha).unwrap();
+        coupled.attach(hb).unwrap();
+        coupled.send(ha, 1, 400).unwrap();
+        assert_eq!(coupled.send(hb, 2, 200), Err(QdnfError::BudgetExhausted));
+        assert!(coupled.total_in_flight() <= 500);
+        let mut independent = PathCcTable::new(500);
+        independent.independent_bottleneck = true;
+        independent.attach(ha).unwrap();
+        independent.attach(hb).unwrap();
+        independent.send(ha, 1, 500).unwrap();
+        independent.send(hb, 2, 500).unwrap();
+        assert_eq!(independent.total_in_flight(), 1000);
+    }
+
+    #[test]
+    fn mutate_active_requires_reachability_proof() {
+        let mut table = PathTable::new();
+        let id = table.start_race(1).unwrap();
+        let h = table.handle_of(id).unwrap();
+        assert_eq!(
+            mutate_path(&mut table, h, PathState::Active),
+            Err(QdnfError::Unauthorized)
+        );
+        table.attest_reachability(h).unwrap();
+        let active = mutate_path(&mut table, h, PathState::Active).unwrap();
+        assert_eq!(table.get(id).unwrap().state, PathState::Active);
+        assert_eq!(active.generation(), Generation(2));
     }
 }

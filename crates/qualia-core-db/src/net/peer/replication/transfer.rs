@@ -5,8 +5,11 @@
 //! Retries charge that parent again (io/work). Old and new generations each
 //! occupy admit credit until the old slot is released. Packages remain open.
 
+use crate::crypto::network::digest::sha384;
 use crate::net::peer::replication::manifest::{ByteRange, ContentManifest};
-use crate::net::peer::runtime::ledger::{ReservationLedger, ResourceBudget};
+use crate::net::peer::runtime::ledger::{
+    ChargeRef, ReservationHandle, ReservationLedger, ResourceBudget,
+};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{Generation, StrongDigest};
 
@@ -25,10 +28,12 @@ struct Slot {
     occupied: bool,
     verified: bool,
     digest: StrongDigest,
+    /// Per-block content hash. ZERO means compare `sha384(payload)` to `digest`.
+    expected: StrongDigest,
     block_index: u8,
     generation: Generation,
     range: ByteRange,
-    charged: ResourceBudget,
+    charge: ChargeRef,
 }
 
 /// Eight-slot table of admitted (manifest, block, generation) transfers.
@@ -43,10 +48,11 @@ impl TransferTable {
                 occupied: false,
                 verified: false,
                 digest: StrongDigest::ZERO,
+                expected: StrongDigest::ZERO,
                 block_index: 0,
                 generation: Generation::ZERO,
                 range: ByteRange { offset: 0, len: 0 },
-                charged: ResourceBudget::ZERO,
+                charge: ChargeRef::EMPTY,
             }; MAX_BLOCKS],
         }
     }
@@ -78,6 +84,27 @@ pub fn admit_block(
     len: u32,
     generation: Generation,
 ) -> Result<(), QdnfError> {
+    admit_block_with_digest(
+        table,
+        ledger,
+        manifest_digest,
+        block_index,
+        len,
+        generation,
+        StrongDigest::ZERO,
+    )
+}
+
+/// Admit one bounded block with a per-block content digest for [`verify_block`].
+pub fn admit_block_with_digest(
+    table: &mut TransferTable,
+    ledger: &mut ReservationLedger,
+    manifest_digest: StrongDigest,
+    block_index: u8,
+    len: u32,
+    generation: Generation,
+    expected: StrongDigest,
+) -> Result<(), QdnfError> {
     admit_range(
         table,
         ledger,
@@ -85,6 +112,7 @@ pub fn admit_block(
         block_index,
         ByteRange { offset: 0, len },
         generation,
+        expected,
     )
 }
 
@@ -104,6 +132,7 @@ pub fn admit_manifest_block(
         block_index,
         range,
         generation,
+        StrongDigest::ZERO,
     )
 }
 
@@ -133,28 +162,70 @@ pub fn retry_block(
         return Err(QdnfError::Malformed);
     }
     match find_slot(table, &manifest_digest, block_index, generation) {
-        Some(_) => ledger.reserve(retry_budget(), true),
+        Some(_) => {
+            let handle = ledger.reserve(retry_budget(), true)?;
+            let _ = handle;
+            Ok(())
+        }
         None => Err(QdnfError::Incomplete),
     }
 }
 
-/// Verify uses the admit charge. Never admitted → [`QdnfError::Incomplete`].
+/// Verify `payload` against the admitted slot. Uses the admit charge.
+///
+/// Never admitted → [`QdnfError::Incomplete`]. Empty `payload` with `len > 0`
+/// → [`QdnfError::Malformed`]. Length mismatch → [`QdnfError::Range`].
+/// `sha384(payload)` must equal the per-block digest stored at admit, or the
+/// manifest digest when no per-block digest was stored; mismatch →
+/// [`QdnfError::Conflict`] and `verified` stays false. `verified` is set only
+/// after a matching hash.
 pub fn verify_block(
     table: &mut TransferTable,
     manifest_digest: StrongDigest,
     block_index: u8,
     generation: Generation,
+    payload: &[u8],
 ) -> Result<(), QdnfError> {
     if manifest_digest == StrongDigest::ZERO {
         return Err(QdnfError::Malformed);
     }
     let idx =
         find_slot(table, &manifest_digest, block_index, generation).ok_or(QdnfError::Incomplete)?;
-    if table.slots[idx].range.len == 0 {
+    let range_len = table.slots[idx].range.len;
+    if range_len == 0 {
         return Err(QdnfError::Range);
+    }
+    if payload.is_empty() {
+        return Err(QdnfError::Malformed);
+    }
+    if payload.len() != range_len as usize {
+        return Err(QdnfError::Range);
+    }
+    let hashed = sha384(payload);
+    let want = if table.slots[idx].expected != StrongDigest::ZERO {
+        table.slots[idx].expected
+    } else {
+        table.slots[idx].digest
+    };
+    if hashed != want {
+        table.slots[idx].verified = false;
+        return Err(QdnfError::Conflict);
     }
     table.slots[idx].verified = true;
     Ok(())
+}
+
+/// A block is usable only after [`verify_block`] matches authenticated bytes.
+pub fn block_verified(
+    table: &TransferTable,
+    manifest_digest: StrongDigest,
+    block_index: u8,
+    generation: Generation,
+) -> bool {
+    match find_slot(table, &manifest_digest, block_index, generation) {
+        Some(i) => table.slots[i].verified,
+        None => false,
+    }
 }
 
 /// Release one generation's admit reservation. Other generations are kept.
@@ -170,8 +241,8 @@ pub fn release_block(
     }
     let idx =
         find_slot(table, &manifest_digest, block_index, generation).ok_or(QdnfError::Incomplete)?;
-    let charged = table.slots[idx].charged;
-    ledger.release(charged, true)?;
+    let charged = table.slots[idx].charge;
+    ledger.release(ReservationHandle::from_ref(charged))?;
     table.slots[idx].occupied = false;
     table.slots[idx].verified = false;
     Ok(())
@@ -219,6 +290,7 @@ fn admit_range(
     block_index: u8,
     range: ByteRange,
     generation: Generation,
+    expected: StrongDigest,
 ) -> Result<(), QdnfError> {
     if digest == StrongDigest::ZERO {
         return Err(QdnfError::Malformed);
@@ -232,15 +304,16 @@ fn admit_range(
     }
     let free = find_free(table).ok_or(QdnfError::Capacity)?;
     let charged = admit_budget(range.len);
-    ledger.reserve(charged, true)?;
+    let handle = ledger.reserve(charged, true)?;
     table.slots[free] = Slot {
         occupied: true,
         verified: false,
         digest,
+        expected,
         block_index,
         generation,
         range,
-        charged,
+        charge: handle.as_ref(),
     };
     Ok(())
 }
@@ -285,6 +358,27 @@ mod tests {
         let mut d = StrongDigest::ZERO;
         d.0[0] = tag;
         d
+    }
+
+    fn fill_payload(buf: &mut [u8], tag: u8) -> StrongDigest {
+        let mut i = 0usize;
+        while i < buf.len() {
+            buf[i] = tag;
+            i += 1;
+        }
+        sha384(buf)
+    }
+
+    fn slot_verified(
+        table: &TransferTable,
+        d: StrongDigest,
+        block_index: u8,
+        generation: Generation,
+    ) -> bool {
+        match find_slot(table, &d, block_index, generation) {
+            Some(i) => table.slots[i].verified,
+            None => false,
+        }
     }
 
     fn fat_ledger() -> ReservationLedger {
@@ -373,16 +467,19 @@ mod tests {
         let old = Generation(1);
         let new = Generation(2);
         let len = 48u32;
-        admit_block(&mut table, &mut ledger, digest(5), 0, len, old).unwrap();
-        admit_block(&mut table, &mut ledger, digest(5), 0, len, new).unwrap();
+        let mut payload = [0u8; 48];
+        let expected = fill_payload(&mut payload, 0x51);
+        admit_block_with_digest(&mut table, &mut ledger, digest(5), 0, len, old, expected).unwrap();
+        admit_block_with_digest(&mut table, &mut ledger, digest(5), 0, len, new, expected).unwrap();
         assert_eq!(table.occupied_count(), 2);
         assert_eq!(ledger.used().host.bytes, u64::from(len) * 2);
         release_block(&mut table, &mut ledger, digest(5), 0, old).unwrap();
         assert_eq!(table.occupied_count(), 1);
         assert_eq!(ledger.used().host.bytes, u64::from(len));
-        verify_block(&mut table, digest(5), 0, new).unwrap();
+        verify_block(&mut table, digest(5), 0, new, &payload).unwrap();
+        assert!(slot_verified(&table, digest(5), 0, new));
         assert_eq!(
-            verify_block(&mut table, digest(5), 0, old),
+            verify_block(&mut table, digest(5), 0, old, &payload),
             Err(QdnfError::Incomplete)
         );
     }
@@ -391,7 +488,7 @@ mod tests {
     fn verify_without_admit_is_incomplete() {
         let mut table = TransferTable::new();
         assert_eq!(
-            verify_block(&mut table, digest(1), 0, Generation(1)),
+            verify_block(&mut table, digest(1), 0, Generation(1), &[0u8; 16]),
             Err(QdnfError::Incomplete)
         );
     }
@@ -412,7 +509,7 @@ mod tests {
             Err(QdnfError::Malformed)
         );
         assert_eq!(
-            verify_block(&mut table, z, 0, gen),
+            verify_block(&mut table, z, 0, gen, &[1u8; 8]),
             Err(QdnfError::Malformed)
         );
     }
@@ -426,13 +523,30 @@ mod tests {
         let ranges = [ByteRange { offset: 0, len: 16 }];
         let m = ContentManifest::bind(digest(1), 0, 64, &ranges).unwrap();
         let range = manifest_block_range(&m, 0).unwrap();
-        admit_manifest_block(&mut table, &mut ledger, &m, 0, gen).unwrap();
+        let mut payload = [0u8; 16];
+        let expected = fill_payload(&mut payload, 0x10);
+        admit_block_with_digest(
+            &mut table,
+            &mut ledger,
+            m.digest,
+            0,
+            range.len,
+            gen,
+            expected,
+        )
+        .unwrap();
         let after_admit = ledger.used().host;
         assert_eq!(after_admit.bytes, u64::from(range.len));
         assert_eq!(after_admit.work, ADMIT_WORK);
         assert_eq!(after_admit.io, ADMIT_IO);
-        verify_block(&mut table, m.digest, 0, gen).unwrap();
+        verify_block(&mut table, m.digest, 0, gen, &payload).unwrap();
+        assert!(slot_verified(&table, m.digest, 0, gen));
         assert_eq!(ledger.used().host, after_admit);
+        // Manifest-path admit (no per-block digest) still occupies one charge.
+        let mut table2 = TransferTable::new();
+        let mut ledger2 = fat_ledger();
+        admit_manifest_block(&mut table2, &mut ledger2, &m, 0, gen).unwrap();
+        assert_eq!(ledger2.used().host.bytes, u64::from(range.len));
     }
 
     #[test]
@@ -447,5 +561,69 @@ mod tests {
         );
         assert_eq!(table.occupied_count(), before);
         assert_eq!(ledger.used(), used_before);
+    }
+
+    #[test]
+    fn matching_payload_sets_verified() {
+        let mut table = TransferTable::new();
+        let mut ledger = fat_ledger();
+        let gen = Generation(1);
+        let mut payload = [0u8; 32];
+        let expected = fill_payload(&mut payload, 0xAB);
+        admit_block_with_digest(&mut table, &mut ledger, digest(7), 0, 32, gen, expected).unwrap();
+        assert!(!slot_verified(&table, digest(7), 0, gen));
+        assert!(!block_verified(&table, digest(7), 0, gen));
+        verify_block(&mut table, digest(7), 0, gen, &payload).unwrap();
+        assert!(slot_verified(&table, digest(7), 0, gen));
+        assert!(block_verified(&table, digest(7), 0, gen));
+    }
+
+    #[test]
+    fn wrong_payload_digest_is_conflict_and_verified_stays_false() {
+        let mut table = TransferTable::new();
+        let mut ledger = fat_ledger();
+        let gen = Generation(1);
+        let mut good = [0u8; 32];
+        let expected = fill_payload(&mut good, 0x01);
+        let mut bad = [0u8; 32];
+        fill_payload(&mut bad, 0x02);
+        admit_block_with_digest(&mut table, &mut ledger, digest(8), 0, 32, gen, expected).unwrap();
+        assert_eq!(
+            verify_block(&mut table, digest(8), 0, gen, &bad),
+            Err(QdnfError::Conflict)
+        );
+        assert!(!slot_verified(&table, digest(8), 0, gen));
+        verify_block(&mut table, digest(8), 0, gen, &good).unwrap();
+        assert!(slot_verified(&table, digest(8), 0, gen));
+    }
+
+    #[test]
+    fn empty_payload_with_nonzero_len_is_malformed() {
+        let mut table = TransferTable::new();
+        let mut ledger = fat_ledger();
+        let gen = Generation(1);
+        let mut payload = [0u8; 8];
+        let expected = fill_payload(&mut payload, 0x03);
+        admit_block_with_digest(&mut table, &mut ledger, digest(9), 0, 8, gen, expected).unwrap();
+        assert_eq!(
+            verify_block(&mut table, digest(9), 0, gen, &[]),
+            Err(QdnfError::Malformed)
+        );
+        assert!(!slot_verified(&table, digest(9), 0, gen));
+    }
+
+    #[test]
+    fn payload_len_mismatch_is_range() {
+        let mut table = TransferTable::new();
+        let mut ledger = fat_ledger();
+        let gen = Generation(1);
+        let mut payload = [0u8; 8];
+        let expected = fill_payload(&mut payload, 0x04);
+        admit_block_with_digest(&mut table, &mut ledger, digest(10), 0, 8, gen, expected).unwrap();
+        assert_eq!(
+            verify_block(&mut table, digest(10), 0, gen, &[0u8; 4]),
+            Err(QdnfError::Range)
+        );
+        assert!(!slot_verified(&table, digest(10), 0, gen));
     }
 }

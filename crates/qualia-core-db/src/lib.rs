@@ -255,6 +255,7 @@ pub use extensions::resource_catalog;
 pub mod modalities;
 // --- identity/ category (reorg) ---
 pub mod identity;
+pub mod did_qi;
 pub use identity::agency;
 pub use identity::identifier;
 #[cfg(not(target_arch = "wasm32"))]
@@ -1307,6 +1308,15 @@ pub fn evaluate_permissive_runtime_gate(
     entry_policy_mask: u16,
     requesting_agent_signature_flags: u16,
 ) -> bool {
+    // Fulfilment / work-obligation recovery cannot bypass bilateral identity
+    // lock or unauthenticated personhood (E17.6). Check this before the
+    // zero-cost open on MASK_WORK_OBLIGATION_SATISFIED.
+    if (entry_policy_mask & MASK_BILATERAL_IDENTITY_LOCKED) != 0
+        && (requesting_agent_signature_flags & MASK_AUTHENTICATED_NATURAL_PERSON) == 0
+    {
+        return false;
+    }
+
     // If permissive commons work metrics or cost recoupments are met, data opens at zero cost
     if (entry_policy_mask & MASK_WORK_OBLIGATION_SATISFIED) != 0 {
         return true;
@@ -1315,13 +1325,6 @@ pub fn evaluate_permissive_runtime_gate(
     // Halt corporate analytics data mining if programmatic micro-payment ticks fail
     if (requesting_agent_signature_flags & MASK_COMMERCIAL_BILLABLE_GATE) != 0
         && (entry_policy_mask & MASK_COMMERCIAL_BILLABLE_GATE) != 0
-    {
-        return false;
-    }
-
-    // Multi-signatory guardian/ward validation constraints check
-    if (entry_policy_mask & MASK_BILATERAL_IDENTITY_LOCKED) != 0
-        && (requesting_agent_signature_flags & MASK_AUTHENTICATED_NATURAL_PERSON) == 0
     {
         return false;
     }

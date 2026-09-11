@@ -41,11 +41,7 @@ impl SpfTable {
 }
 
 /// Deterministic Dijkstra with stable node-id tie-break. One-sided links are ignored.
-pub fn compute_spf(
-    origin: u8,
-    links: &[LinkMetric],
-    out: &mut SpfTable,
-) -> Result<(), QdnfError> {
+pub fn compute_spf(origin: u8, links: &[LinkMetric], out: &mut SpfTable) -> Result<(), QdnfError> {
     *out = SpfTable::EMPTY;
     let mut dist = [u16::MAX; MAX_NODES];
     let mut prev = [u8::MAX; MAX_NODES];

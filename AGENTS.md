@@ -1178,3 +1178,28 @@ cargo test
 3. Each physical adapter/backend benchmark owns its native driver lifetime in a separate bounded process; the parent never successively owns Vulkan and DX12 devices.
 4. GPU correctness tests execute by default when their capability is present and share a serialized
    hardware lane so the default parallel suite does not race native driver/context lifetimes.
+
+### 2026-09-10 — Continue `did:qi` spec completeness (signed git blobs, Vector 3)
+
+**Completed:**
+- Qualia Identifier store writes signed QCDE-1 blobs; `object_id_of` after Create matches Vector 1 git id.
+- Spec caps: unsigned 8192, signed 9216, 8 services, 8 hints.
+- Deactivate clears locators; Vector 3 unsigned digest / signed length / git id asserted.
+- UTXO constitution list (Bitcoin mainnet + testnet3); `txid_display` byte-reversed; `unsupported_chain`.
+- `QiError::token()`; ASCII case-fold of `did:qi:`; reject `did:hcinet:`.
+- CSCP loopback H2/WSS controller strings are `did:qi:` (Vector 1 + a second formatted id).
+
+**Verification:** `cargo test -p qualia-core-db --lib --offline -- --test-threads=1`: `did_qi` 29 passed; `cscp_h2` 4 passed; `cscp_wss` 1 passed; `net::peer::fabric` 46 passed.
+
+**Not done (human):** CSCP-08 public relay URL; CSCP-12 datatracker submit. Honesty flags remain false. Method not registered.
+
+### 2026-09-10 — Continue CSCP mailbox bind + Direct probe + bearer labels
+
+**Completed:**
+- `publish_qi_document` maps Qualia Identifier `CscpMailbox` services into the CSCP private mailbox.
+- Relay-only ingest does not retain Direct locators. Kernel probes DirectV6 when disclosure permits and the descriptor is Direct.
+- Bearer profiles `TlsWssTransitionV1` / `Http2CapsuleTransitionV1` (transition, not Native Independent). H2 CONNECT method re-checked.
+
+**Verification:** `did_qi` 33; fabric 49; `cscp_h2` 4; `cscp_wss` 1.
+
+**Not done (human):** CSCP-08 URL; CSCP-12 datatracker. Parent CSCP-09 Internet still open.

@@ -40,6 +40,27 @@ impl AckFrame {
         self.count as usize
     }
 
+    pub fn range_at(&self, i: usize) -> Option<AckRange> {
+        if i < self.range_count() {
+            Some(self.ranges[i])
+        } else {
+            None
+        }
+    }
+
+    pub fn contains(&self, pn: u64) -> bool {
+        let n = self.range_count();
+        let mut i = 0usize;
+        while i < n {
+            let other = self.ranges[i];
+            if pn >= other.start && pn <= other.end {
+                return true;
+            }
+            i += 1;
+        }
+        false
+    }
+
     /// Insert inclusive range. Empty (`end < start`) → [`QdnfError::Range`].
     /// Overlap with an existing range (`end >= other.start && start <= other.end`)
     /// → [`QdnfError::Overlap`] (no silent merge). Ninth disjoint range →
@@ -123,6 +144,14 @@ impl SentTable {
             i += 1;
         }
         n
+    }
+
+    pub fn packet_at(&self, i: usize) -> Option<u64> {
+        if i < SENT_HISTORY {
+            self.slots[i]
+        } else {
+            None
+        }
     }
 }
 

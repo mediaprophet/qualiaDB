@@ -24,7 +24,7 @@ impl ResourceGovernor {
     pub fn charge_unknown(
         ledger: &mut ReservationLedger,
         add: ResourceBudget,
-    ) -> Result<(), QdnfError> {
+    ) -> Result<crate::net::peer::runtime::ReservationHandle, QdnfError> {
         ledger.reserve(add, false)
     }
 
@@ -36,7 +36,7 @@ impl ResourceGovernor {
         add: ResourceBudget,
         class: WorkClass,
         verified_peer: bool,
-    ) -> Result<(), QdnfError> {
+    ) -> Result<crate::net::peer::runtime::ReservationHandle, QdnfError> {
         if class != WorkClass::Control {
             let remaining = ledger.host_remaining_bytes();
             if remaining.saturating_sub(add.bytes) < self.essential_floor_bytes {

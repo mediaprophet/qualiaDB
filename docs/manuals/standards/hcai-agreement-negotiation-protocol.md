@@ -8,6 +8,17 @@ human-centric QualiaDB node. This is the interoperability surface of the WebAI
 Orchestration Layer: the contract independent parties must implement to reach a
 user, without that user exposing their local graph.
 
+> **Nomenclature.** **Centered** (🎯) is a design methodology; **centric** (☉) is
+> structural topology — the human is the permanent nucleus, not a temporary
+> target. Canonical marks:
+> [human-centric-nomenclature.md](./human-centric-nomenclature.md).
+> **HCAI** in common use means **Human-Centered AI**. This draft is
+> **Human-Centric** AI Agreement Negotiation: fiduciary Duty of Care.
+> The acronym **HCAI-ANP** is protocol-local (this document, the agreement
+> vocabulary, and `HCAIAgreementNegotiation`). It is not the Human-Centric
+> Internet (☉ HCInet) and not the Qualia Identifier method (`did:qi`). See
+> [did-qi-git-utxo.md](./qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md).
+
 > This draft follows the discipline of `standards-backlog.md`: it specifies a
 > single narrow protocol with explicit conformance targets, not the entire
 > orchestration layer. The local defensive mechanisms (inference scheduling,
@@ -30,7 +41,7 @@ The protocol covers three phases:
 1. **Discovery** — how an external agent locates a user's single ingress
    endpoint without probing or crawling the user's data (§4).
 2. **Negotiation** — how the agent receives, signs, and returns a Human-Centric
-   AI (HCAI) Agreement encoding the user's Duty of Care (§5–§6).
+   AI Agreement encoding the user's Duty of Care (§5–§6).
 3. **Binding** — how a verified agent is granted a session-scoped, transport-
    level credential and what enforcement applies for the session lifetime (§7–§9).
 

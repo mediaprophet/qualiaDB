@@ -12,8 +12,8 @@ use crate::net::peer::runtime::{BufferLease, LeaseTable};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
 
-use super::contract::{check_frame_mtu, Bearer, RecvMeta};
-use super::ipc::{ipc_pair, IpcEndpoint};
+use super::contract::{Bearer, RecvMeta, check_frame_mtu};
+use super::ipc::{IpcEndpoint, ipc_pair};
 use super::lifecycle::{BearerLifecycle, BearerPhase};
 
 pub struct LeasedIpc {
@@ -112,10 +112,10 @@ fn finish_lease<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::net::peer::runtime::{LeaseTable, LEASE_SLOTS};
+    use crate::net::peer::runtime::{LEASE_SLOTS, LeaseTable};
     use crate::net::qdnf::bearer::lifecycle::BearerPhase;
     use crate::net::qdnf::errors::QdnfError;
-    use crate::net::qdnf::frame::{encode_frame, FrameHeader};
+    use crate::net::qdnf::frame::{FrameHeader, encode_frame};
     use crate::net::qdnf::registries::{FrameType, NextProtocol};
     use crate::net::qdnf::types::ScopeEpoch;
 

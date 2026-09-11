@@ -6,16 +6,23 @@
 
 pub mod authority;
 pub mod bearer;
+pub mod biometrics;
+pub mod cells;
+pub mod clinical;
 pub mod contracts;
 pub mod crypto;
 pub mod economics;
 pub mod errors;
+pub mod evidence;
 pub mod fabric;
 pub mod fixtures;
 pub mod frame;
 pub mod harness;
 pub mod link;
+pub mod policy_labels;
+pub mod profiles;
 pub mod registries;
+pub mod replication;
 pub mod resolve;
 pub mod route;
 pub mod session;

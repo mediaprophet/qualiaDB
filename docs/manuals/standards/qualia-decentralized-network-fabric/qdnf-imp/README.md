@@ -22,6 +22,11 @@ implement networking, certify cryptography or change memory constants.
 | [Task register](./task-registry.json) | Canonical dependencies, ownership roles and implementation status |
 | [Validation matrix](./validation-matrix.md) | Required test evidence, platform matrix and completion standard |
 | [Progress log](./progress-log.md) | Dated outcomes, measurements, limitations and next actions |
+| [Internet peer connectivity architecture](./internet-peer-connectivity-architecture.md) | Incremental SocialWebNet: retain WireGuard; A–E. Local production path on `0.0.38`; not Internet. |
+| [QUIC-native connectivity research](./quic-native-connectivity-research-2026.md) | 32-source report: published vs experimental vs proposed; DCUtR/Pkarr/Holepunch corrections |
+| [Capability-scoped connection fabric](./capability-scoped-connection-fabric.md) | Architecture note for CSCP. Local supervisor in-tree; not MASQUE/noq/Internet/RFC. |
+| [draft-webcivics-cscp-00](../../../../standards/ietf/draft-webcivics-cscp-00.md) | Proposed IETF Internet-Draft: purpose-bound connect, exclude-then-rank, leases, evidence, receipts. Canonical copy under `docs/standards/ietf/`. Working document, not an RFC. |
+| [CSCP implementation programme](./cscp-imp/README.md) | Swarm plan, registry and Wave 1 tracking. Not the original 30 QDNF packages. |
 
 ## 2. Detailed checklists
 
