@@ -17,7 +17,7 @@ use webizen_studio::lexicon_catalog::{
 pub fn LexiconBay() -> Element {
     let mut path = use_signal(String::new);
     let mut outcome = use_signal(|| held_outcome(WHY));
-    let mut busy = use_signal(|| false);
+    let busy = use_signal(|| false);
 
     let current = outcome();
     let (gate, honesty, beat, chips, framing_attr) = match &current {
