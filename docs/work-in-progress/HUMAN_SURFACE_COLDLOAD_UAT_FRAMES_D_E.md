@@ -1,6 +1,6 @@
 # Cold-load UAT — Frames D–E (motion · monet)
 
-**Branch:** `0.0.38` · **Parity tip:** ≥ `6d6fce8` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
+**Branch:** `0.0.38` · **Parity tip:** ≥ `da5aa12` · **Lexicon:** `541c3a6` · **D–E motion:** `f22851d`  
 **Surfaces:** WASM then Desktop — same steps · same beats  
 **Owners:** Capt (run + shots) · monet (score motion) · davinci (Keep discoverability chrome)
 
@@ -36,8 +36,8 @@
 | D1 Keep soft-rise | PASS* | **HELD** | Sanctuary selected; Keep UI absent (davinci shots) |
 | D2 / D3 Volume CLOSED care | PASS* | **PASS*** | Footer CLOSED honest; Graph live 708 quins |
 | D3 commit celebrate | PASS* | **HELD** | No Keep→commit path yet |
-| E1 Leave reverse | PARTIAL | PARTIAL | Not in Frame A pack |
-| E2 still-leave | NEEDS_UAT | **NEEDS_UAT** | Three shot files byte-identical; Studio STILL ≠ still-leave; need distinct reduced-motion leave dismiss |
+| E1 global leave | PARTIAL | PARTIAL | Modal still-leave PASS*; uneven elsewhere |
+| E2 still-leave | NEEDS_UAT | **PASS*** | e0 Reduce motion ON (`44c3ba15`); e1 Container settings open (`1c8180cb`); e2 Esc dismiss panel gone (`e3403df1`). Paths `/workspace/uat-monet-de-wasm/e0|e1|e2-*.png`. |
 | GIS held/not yet (adjacent) | — | PASS* | Remap Cosmic `held / not yet` on Map (shot 02) |
 
 **Chrome note (davinci):** Doc/LaTeX red `missing` reads harsher than held/not yet — align when empty-state lands. UI stamp on shots: `0.0.37` while branch tip is `0.0.38` — Capt/Neo confirm stamp path.
