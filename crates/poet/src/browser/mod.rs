@@ -74,6 +74,7 @@ pub mod project_views;
 pub mod projections;
 pub mod publication_panel;
 pub mod pulse_stream;
+pub mod radial_gesture;
 pub mod radial_menu;
 pub mod registration;
 mod render_preview;
@@ -833,7 +834,7 @@ fn wire_app(document: &Document, seeds: &[ManifoldSeed]) {
 
 fn build_canvas(document: &Document, seed: &ManifoldSeed) -> Element {
     let canvas = document.create_element("div").unwrap();
-    canvas.set_class_name("canvas-viewport-container");
+    canvas.set_class_name("canvas-viewport-container poet-radial-surface");
     surface_aspects::mark(&canvas, "entrance");
     canvas.set_attribute("data-zoom", "1.0").unwrap();
     canvas.set_attribute("data-pan-x", "0").unwrap();
@@ -1033,6 +1034,7 @@ pub fn rerender_canvas(seed: &ManifoldSeed) {
         contextual_popover::wire_contextual_popover(&document);
         history::wire_editable_history(&document);
         canvas_extent::ensure_manifold_extent(&document);
+        radial_menu::bind_live_surfaces(&document);
     }
 }
 

@@ -207,6 +207,7 @@ pub(super) fn place_container_on_canvas(document: &Document, container_type: &st
         wire_container_resize(document);
         wire_container_deletion(document);
         wire_port_dragging(document);
+        super::super::radial_menu::bind_live_surfaces(document);
 
         super::super::canvas_extent::pan_to_show(document, x, y, width, height);
         super::super::history::push_current_frame("place container");

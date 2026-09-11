@@ -158,6 +158,20 @@ fn chemical_explorer_uses_pub_fn_workspace_not_thin_delegation() {
     assert!(source.contains("chemical_explorer::build_chemical_explorer_view"));
 }
 
+#[test]
+fn wasm_index_owns_contextmenu_for_radial_a4() {
+    let html = fs::read_to_string(manifest_dir().join("index.html")).expect("poet index.html");
+    assert!(
+        html.contains("poet:radial"),
+        "index.html must emit poet:radial so WASM can paint the wheel"
+    );
+    assert!(html.contains("capture: true"));
+    assert!(html.contains("passive: false"));
+    assert!(html.contains("contextmenu"));
+    assert!(html.contains("pointerdown"));
+    assert!(html.contains("preventDefault"));
+}
+
 fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
