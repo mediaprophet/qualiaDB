@@ -1,6 +1,7 @@
 //! Vibe console — lives inside a `code` container (or the Vibe manifold).
 
 use super::engine::{self, PoetEvalResult};
+use super::lexicon_bay::LexiconBay;
 use dioxus::prelude::*;
 
 const SAMPLE_CELL: &str = "= math.max(0, math.min(100, 42))";
@@ -59,8 +60,34 @@ pub fn VibeConsole() -> Element {
         });
     };
 
+    let mut peer = use_signal(|| "catalog");
+
     rsx! {
         div { style: "display:grid;gap:8px;",
+            div {
+                class: "lexicon-peer-tabs",
+                role: "tablist",
+                "aria-label": "Script and Catalog · Lexicon",
+                button {
+                    r#type: "button",
+                    class: if peer() == "script" { "lexicon-peer-tab is-active" } else { "lexicon-peer-tab" },
+                    "data-bay-tab": "script",
+                    "aria-selected": "{peer() == \"script\"}",
+                    onclick: move |_| peer.set("script"),
+                    "Script"
+                }
+                button {
+                    r#type: "button",
+                    class: if peer() == "catalog" { "lexicon-peer-tab is-active" } else { "lexicon-peer-tab" },
+                    "data-bay-tab": "catalog",
+                    "aria-selected": "{peer() == \"catalog\"}",
+                    onclick: move |_| peer.set("catalog"),
+                    "Catalog · Lexicon"
+                }
+            }
+            if peer() == "catalog" {
+                LexiconBay {}
+            } else {
             div { style: "display:flex;gap:6px;flex-wrap:wrap;",
                 button { r#type: "button", style: chip(), onclick: move |_| { source.set(SAMPLE_CELL.into()); function_name.set(String::new()); }, "cell" }
                 button { r#type: "button", style: chip(), onclick: move |_| { source.set(SAMPLE_QUERY.into()); function_name.set("count".into()); }, "graph.query" }
@@ -96,6 +123,7 @@ pub fn VibeConsole() -> Element {
                 pre { style: "background:#131822;border:1px solid #1a2230;border-radius:8px;padding:10px;white-space:pre-wrap;font-size:.76rem;",
                     if result().ok { "ok {result().value}" } else { "{result().diagnostic.clone().unwrap_or_default()}" }
                 }
+            }
             }
         }
     }

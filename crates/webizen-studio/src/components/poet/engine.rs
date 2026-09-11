@@ -91,3 +91,8 @@ pub async fn render_preview(
     )
     .await
 }
+
+/// Live ALL_BOUND bind — same id WASM Catalog uses. No Host widen.
+pub async fn lexicon_manifest(path: String) -> Result<PoetEvalResult, String> {
+    invoke_json("poet_lexicon_manifest", json!({ "path": path })).await
+}

@@ -1,0 +1,215 @@
+/* G-LEXICON-0 Desktop Catalog · Lexicon — cherry-picked from Poet WASM chrome. */
+
+:root {
+  --chip-living: #f4b183;
+  --chip-living-fill: rgba(244, 177, 131, 0.12);
+  --chip-artifact: #7dd3fc;
+  --chip-artifact-fill: rgba(125, 211, 252, 0.1);
+  --chip-machine: #94a3b8;
+  --chip-machine-fill: rgba(148, 163, 184, 0.08);
+}
+
+.catalog-studio-bay {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 196px;
+  max-height: 42vh;
+  border-top: 1px solid var(--border-medium);
+  background: color-mix(in srgb, var(--surface-panel) 92%, var(--accent-cyan) 4%);
+  z-index: 40;
+}
+
+.catalog-studio-bay-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 0;
+}
+
+.lexicon-peer-tabs,
+.catalog-studio-bay-head {
+  gap: 4px;
+}
+
+.lexicon-peer-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 2px;
+}
+
+.lexicon-peer-tab,
+.catalog-studio-bay-tab {
+  font: 600 11px/1 var(--font-sans);
+  padding: 5px 10px;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  border: 1px solid var(--border-medium);
+  border-bottom: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.lexicon-peer-tab.is-active,
+.catalog-studio-bay-tab.is-active {
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  border-color: var(--border-bright);
+}
+
+.lexicon-bay {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 8px 10px 10px;
+  overflow: auto;
+}
+
+.lexicon-bay-title {
+  font: 700 12px/1.2 var(--font-sans);
+  color: var(--text-primary);
+}
+
+.lexicon-bay-lede {
+  margin: 0;
+  font: 500 11px/1.4 var(--font-sans);
+  color: var(--text-secondary);
+}
+
+.lexicon-path-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.lexicon-path-row input {
+  flex: 1;
+  min-width: 0;
+  font: 11px/1.3 var(--font-mono);
+  padding: 5px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+}
+
+.lexicon-open-btn,
+.lexicon-dismiss-btn {
+  font: 600 10px/1 var(--font-sans);
+  padding: 5px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.lexicon-open-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.lexicon-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.lexicon-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font: 700 9px/1 var(--font-sans);
+  letter-spacing: 0.2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.lexicon-chip-ns {
+  font: 500 8px/1.2 var(--font-mono);
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.lexicon-chip[data-tone="warm"] {
+  color: var(--chip-living);
+  border-color: color-mix(in srgb, var(--chip-living) 55%, transparent);
+  background: var(--chip-living-fill);
+}
+
+.lexicon-chip[data-tone="crisp"] {
+  color: var(--chip-artifact);
+  border-color: color-mix(in srgb, var(--chip-artifact) 55%, transparent);
+  background: var(--chip-artifact-fill);
+}
+
+.lexicon-chip[data-tone="muted"] {
+  color: var(--chip-machine);
+  border-color: color-mix(in srgb, var(--chip-machine) 45%, transparent);
+  background: var(--chip-machine-fill);
+}
+
+.lexicon-held-gate {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 35%, var(--border-medium));
+  background: color-mix(in srgb, var(--surface-panel) 88%, var(--accent-amber) 8%);
+}
+
+.lexicon-held-label {
+  font: 700 12px/1.2 var(--font-sans);
+  color: var(--accent-amber);
+}
+
+.gated-reason {
+  margin-top: 4px;
+  font: 500 11px/1.4 var(--font-sans);
+  color: var(--text-secondary);
+}
+
+.lexicon-pack-card {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent-emerald) 40%, var(--border-medium));
+  background: color-mix(in srgb, var(--surface-panel) 88%, var(--accent-emerald) 8%);
+}
+
+.lexicon-pack-semver {
+  font: 700 12px/1.3 var(--font-sans);
+  color: var(--text-primary);
+}
+
+.lexicon-pack-framing,
+.lexicon-uplift,
+.lexicon-concept-id {
+  font: 500 11px/1.4 var(--font-sans);
+  color: var(--text-secondary);
+}
+
+.lexicon-upgrade {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.workspace-row {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.held-bind-note {
+  margin: 0;
+  font: 500 11px/1.4 var(--font-sans);
+  color: var(--accent-amber);
+}

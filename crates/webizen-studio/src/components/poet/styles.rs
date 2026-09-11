@@ -7,10 +7,11 @@ const LAYOUT: &str = include_str!("css/layout.css");
 const CANVAS: &str = include_str!("css/canvas.css");
 const TOOLBOXES: &str = include_str!("css/toolboxes.css");
 const ICONS: &str = include_str!("css/icons.css");
+const LEXICON_BAY: &str = include_str!("css/lexicon_bay.css");
 
 #[component]
 pub fn HyperCanvasStyles() -> Element {
     rsx! {
-        style { "{THEME}\n{LAYOUT}\n{CANVAS}\n{TOOLBOXES}\n{ICONS}" }
+        style { "{THEME}\n{LAYOUT}\n{CANVAS}\n{TOOLBOXES}\n{ICONS}\n{LEXICON_BAY}" }
     }
 }

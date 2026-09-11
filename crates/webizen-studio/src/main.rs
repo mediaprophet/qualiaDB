@@ -205,6 +205,10 @@ pub enum Route {
     #[route("/poet")]
     PoetRoute {},
 
+    /// Secondary deep link — Catalog · Lexicon on Poet (not a top-level IA peer).
+    #[route("/poet/catalog")]
+    PoetCatalogRoute {},
+
     #[route("/about")]
     AboutRoute {},
 
@@ -370,6 +374,7 @@ fn KeepHub() -> Element {
                 KeepLink { to: Route::AnatomyRoute {}, title: "Care — Anatomy", blurb: "See systems and conditions on a reference body." }
                 KeepLink { to: Route::HealthRoute {}, title: "Care — Health vault", blurb: "Vitals, sleep, medication, wellbeing — local journal, not cloud." }
                 KeepLink { to: Route::LibraryRoute {}, title: "Memory — Lived Memory", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
+                KeepLink { to: Route::PoetCatalogRoute {}, title: "Catalog · Lexicon", blurb: "Open a lexicon pack — or honest held / not yet. Live GraphDatabase.lexicon_manifest." }
                 KeepLink { to: Route::VisionRoute {}, title: "Instruments — Vision", blurb: "Local detect/overlay — not a peer person. Synthetic scenes, reject/correct without erasing claims." }
                 KeepLink { to: Route::ListenRoute {}, title: "Instruments — Listen", blurb: "Local ears — features, reference events (not full ASR). Not social." }
                 KeepLink { to: Route::IdentityRoute {}, title: "You — Identity", blurb: "Personal profile, social book, consent. Identifiers ≠ the natural person." }
@@ -481,6 +486,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "jobs" | "tasks" | "downloads" | "queue" => return Route::JobsRoute {},
         "qa" | "debug" | "diagnostics" | "agent-qa" => return Route::AgentQaRoute {},
         "poet" | "vibe" | "vibescript" => return Route::PoetRoute {},
+        "catalog" | "lexicon" | "lexicon-pack" => return Route::PoetCatalogRoute {},
         "identity" => return Route::IdentityRoute {},
         "sanctuary" => return Route::SanctuaryRoute {},
         _ => {}
@@ -792,6 +798,11 @@ fn PoetRoute() -> Element {
 }
 
 #[component]
+fn PoetCatalogRoute() -> Element {
+    rsx! { components::poet_harness::PoetHarness {} }
+}
+
+#[component]
 fn SupervisorRoute() -> Element {
     rsx! { components::problems_pane::ProblemsPane {} }
 }
@@ -1002,7 +1013,7 @@ fn DesktopLogsPage() -> Element {
 #[component]
 fn AppLayout() -> Element {
     let route = use_route::<Route>();
-    if matches!(route, Route::PoetRoute {}) {
+    if matches!(route, Route::PoetRoute {} | Route::PoetCatalogRoute {}) {
         return rsx! { Outlet::<Route> {} };
     }
     let theme_state = consume_context::<Signal<ResolvedTheme>>();

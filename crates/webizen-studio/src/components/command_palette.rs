@@ -80,10 +80,16 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         keywords: "10d ten-d infosphere anatomy vision",
     },
     PaletteDestination {
+        id: "catalog",
+        label: "Catalog · Lexicon",
+        hint: "Open a lexicon pack · held / not yet",
+        keywords: "catalog lexicon pack living artifact machine held vibe poet",
+    },
+    PaletteDestination {
         id: "qapps",
         label: "QApps (Advanced)",
-        hint: "Catalog · Active/Beta default",
-        keywords: "qapps apps catalog advanced",
+        hint: "QApp catalog · Active/Beta default",
+        keywords: "qapps apps advanced",
     },
     PaletteDestination {
         id: "logs",
@@ -107,6 +113,8 @@ pub fn route_for_palette_id(id: &str) -> Route {
         "10d-browser" | "10d" | "infosphere" => Route::TenDBrowserRoute {},
         "settings" | "prefs" => Route::SettingsRoute {},
         "qapps" | "apps" => Route::QAppsRoute {},
+        "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
+        "poet" | "vibe" => Route::PoetRoute {},
         "logs" => Route::LogsRoute {},
         _ => Route::LibraryRoute {},
     }
@@ -390,5 +398,20 @@ mod tests {
             route_for_palette_id("library"),
             Route::LibraryRoute {}
         ));
+        assert!(matches!(
+            route_for_palette_id("catalog"),
+            Route::PoetCatalogRoute {}
+        ));
+        assert!(matches!(
+            route_for_palette_id("lexicon"),
+            Route::PoetCatalogRoute {}
+        ));
+    }
+
+    #[test]
+    fn catalog_lexicon_is_discoverable() {
+        let hits = filter_destinations("lexicon");
+        assert!(hits.iter().any(|d| d.id == "catalog"));
+        assert_eq!(hits.iter().find(|d| d.id == "catalog").unwrap().label, "Catalog · Lexicon");
     }
 }

@@ -32,12 +32,14 @@ pub fn NodeBody(kind: ContainerKind) -> Element {
             ContainerKind::Mesh3d => rsx! {
                 div { style: "padding:12px;",
                     h4 { style: "margin:0 0 6px;color:var(--accent-cyan);font-size:12px;", "3D Kinematics & CCF Anatomy" }
+                    p { class: "held-bind-note", "held / not yet — mesh bind not on this desk." }
                     p { style: muted(), "3D vocal-tract & cardiac .10d mesh representation. Projected via shared wgpu 30 device." }
                 }
             },
             ContainerKind::WebRtc => rsx! {
                 div { style: "padding:12px;",
                     h4 { style: "margin:0 0 6px;color:var(--accent-emerald);font-size:12px;", "WebRTC P2P Data Mesh" }
+                    p { class: "held-bind-note", "held / not yet — mesh channel bind missing." }
                     p { style: muted(), "Zero-leak P2P direct data channel. Peer DID hash verified with Ed25519 root signatures." }
                 }
             },

@@ -16,6 +16,7 @@ pub fn JobCenterBody() -> Element {
 
     rsx! {
         div { style: "display:grid;gap:8px;padding:8px;",
+            p { class: "held-bind-note", "Job · held / not yet until Jobs.stats bind answers." }
             p { style: muted(), "Webizen Job Centre: Async task state machine, progress telemetry HUD, and ambient background worker supervision." }
             div { style: "display:flex;gap:8px;flex-wrap:wrap;",
                 button {
