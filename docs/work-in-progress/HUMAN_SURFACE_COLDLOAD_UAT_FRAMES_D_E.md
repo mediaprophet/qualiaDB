@@ -47,3 +47,5 @@
 **Blocker:** Real Keep entrance + commit path (daemon) before D1/D3 retake; Desktop shots still thin.
 
 Wave-22 stays **held** until real Keep entrance + commit path.
+
+**Desktop Frame A:** **HELD** tip `c6007e0` — Local foundations Continue blocked by `OS_SAFETY_VIOLATION` (&lt;15 GB); Studio never reached (not chrome FAIL). WASM A4 remains **PASS**.

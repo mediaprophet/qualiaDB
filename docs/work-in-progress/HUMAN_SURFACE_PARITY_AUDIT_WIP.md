@@ -56,13 +56,13 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Check | D | W | Notes |
 |-------|---|---|-------|
-| Empty bay uses Frame A voice (not Capability dump) | NEEDS_UAT | **PASS** (Capt `cfac542`) | Studio bay first-arrive voice |
-| Soft-rise feel (first paint) | PARTIAL | **PASS*** (Capt WASM) | Soft-rise OK — not modal slap |
-| Empty-bay arrive choreography | PARTIAL | **PASS** (Capt `f712e97`) | Studio bay + A4 wheel PASS on WASM; Desktop A pending |
-| Advanced method names muted | PARTIAL | PARTIAL | Secondary chrome only |
-| Human finds Ask / Keep / Play without agent | NEEDS_UAT | **PASS** (Capt `cfac542`) | Studio bay Frame A sayables; Desktop still NEEDS_UAT |
+| Empty bay uses Frame A voice (not Capability dump) | **HELD** | **PASS** (Capt `f712e97`) | Desktop cold open = Local foundations; Studio never reached (`OS_SAFETY_VIOLATION` &lt;15 GB) |
+| Soft-rise feel (first paint) | **HELD** | **PASS*** (Capt WASM) | Desktop A HELD before Studio; WASM soft-rise OK |
+| Empty-bay arrive choreography | **HELD** | **PASS** (Capt `f712e97`) | WASM PASS; Desktop blocked at Welcome Continue |
+| Advanced method names muted | **HELD** | PARTIAL | Desktop A not reached Studio |
+| Human finds Ask / Keep / Play without agent | **HELD** | **PASS** (Capt `f712e97`) | Desktop HELD — disk safety gate, not chrome FAIL |
 
-**Gap:** No dedicated first-arrive empty state teaching the trio. Agent paths jump to manifolds/tools.
+**Gap:** Desktop Frame A **HELD** on tip `c6007e0` — `OS_SAFETY_VIOLATION` (&lt;15 GB margin); Studio/Ask·Keep·Play/wheel never reached. WASM Frame A PASS. Free disk / re-UAT Desktop A before Wave-22.
 
 ### Frame B — Held / not yet
 
