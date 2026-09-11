@@ -92,6 +92,7 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_d08d1c9.md` | Capt | Frame B: WASM PASS · Desktop HELD (Catalog not mounted) |
 | `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md` | monet · Capt | Cold-load UAT Frames D–E (motion) |
 | `HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md` | monet | Frames D–E motion parity (desktop ↔ WASM) |
+| `HUMAN_SURFACE_APPS_AUDIT_WIP.md` | Capt / Neo | Intended apps scoreboard — reveal buried live, progress to useful |
 | `ONE_POET_PRODUCT_CUT_WIP.md` | Capt / Neo | One Poet two hosts; Webizen = shell; cherry-pick Desktop↔WASM |
 | `BUILD_DISK_HYGIENE_WIP.md` | Capt / Neo | One `target/`; prune when free &lt;~20G; no parallel build trees |
 | `CONTINUITY_GATE_HANDLE_REVOKE_WIP.md` | Marvin / Neo | Continuity gate: handle revoke ≠ who-erase (IHL cold-load) |
