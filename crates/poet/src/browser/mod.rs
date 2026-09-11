@@ -57,6 +57,7 @@ pub mod instrument_panel;
 pub mod intent_bus;
 pub mod interactions;
 pub mod job_queue;
+pub mod frame_a;
 pub mod lexicon_bay;
 pub mod live_invoke;
 pub mod lived_memory_archive;
@@ -712,12 +713,16 @@ fn build_app(document: &Document) -> HtmlElement {
     }
     canvas_state::normalise_seed_ids(&mut seeds);
     upgrade_bundled_sociality(&mut seeds);
+    CURRENT_CONSTRUCT.with(|slot| *slot.borrow_mut() = load_stored_construct_id());
+    let construct_id = current_construct_id();
+    if construct_id.is_empty() || construct_id == "poet" {
+        frame_a::ensure_first_arrive(&mut seeds);
+    }
     store_current_seeds(&seeds);
     load_construct_extras();
     load_subjects();
-    CURRENT_CONSTRUCT.with(|slot| *slot.borrow_mut() = load_stored_construct_id());
     let visible = visible_seeds();
-    let opening = visible.first().cloned().unwrap_or_else(|| seeds[0].clone());
+    let opening = frame_a::pick_opening(&visible);
     CONSTRUCT_NAV.with(|slot| {
         *slot.borrow_mut() =
             submanifold_nav::SubmanifoldNavigator::new(&opening.id, &opening.label);
@@ -728,7 +733,7 @@ fn build_app(document: &Document) -> HtmlElement {
     let toolbox_views = docks::extract_toolbox_views(registry.toolboxes());
     docks::store_toolbox_views(toolbox_views);
 
-    // Initialise canvas undo/redo history with the first visible manifold seed.
+    // Initialise canvas undo/redo history with the first-arrive studio bay.
     history::init_history(opening.clone());
 
     // Top menubar
@@ -739,6 +744,9 @@ fn build_app(document: &Document) -> HtmlElement {
     let control_bar = topbar::build_canvas_control_bar(document, &visible);
     app.append_child(&control_bar).unwrap();
     topbar::refresh_construct_chrome(document, &current_construct_id(), &opening.id);
+
+    // Frame A sayables stay findable; first canvas paint is the studio bay.
+    app.append_child(&frame_a::mount_banner(document)).unwrap();
 
     // Main workspace
     let workspace = document.create_element("div").unwrap();
@@ -848,6 +856,12 @@ fn build_canvas(document: &Document, seed: &ManifoldSeed) -> Element {
     for container in &seed.containers {
         let el = containers::build_container(document, container);
         content_layer.append_child(&el).unwrap();
+    }
+
+    if seed.containers.is_empty() {
+        content_layer
+            .append_child(&frame_a::mount_empty_bay(document))
+            .unwrap();
     }
 
     canvas.append_child(&content_layer).unwrap();
@@ -981,35 +995,10 @@ pub fn rerender_canvas(seed: &ManifoldSeed) {
             content_layer.append_child(&el).unwrap();
         }
 
-        // Empty state if no containers
         if seed.containers.is_empty() {
-            let empty = document.create_element("div").unwrap();
-            empty.set_class_name("canvas-empty-state");
-            let e_el: HtmlElement = empty.clone().dyn_into().unwrap();
-            e_el.style().set_css_text(
-                "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); \
-                 text-align: center; color: var(--text-muted); font-size: 14px; \
-                 display: flex; flex-direction: column; gap: 12px; align-items: center;",
-            );
-            let icon = document.create_element("div").unwrap();
-            icon.set_attribute("style", "font-size: 48px; opacity: 0.3;")
+            content_layer
+                .append_child(&frame_a::mount_empty_bay(&document))
                 .unwrap();
-            icon.set_text_content(Some("\u{1F30C}"));
-            empty.append_child(&icon).unwrap();
-
-            let msg = document.create_element("div").unwrap();
-            msg.set_text_content(Some(&format!("\"{}\" is empty", seed.label)));
-            empty.append_child(&msg).unwrap();
-
-            let hint = document.create_element("div").unwrap();
-            hint.set_attribute("style", "font-size: 11px; color: var(--text-muted);")
-                .unwrap();
-            hint.set_text_content(Some(
-                "Click a toolbox on the left and place a container to get started.",
-            ));
-            empty.append_child(&hint).unwrap();
-
-            content_layer.append_child(&empty).unwrap();
         }
 
         canvas.append_child(&content_layer).unwrap();

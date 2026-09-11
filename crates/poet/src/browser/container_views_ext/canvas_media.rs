@@ -54,7 +54,7 @@ pub fn build_aura_view(document: &Document) -> Element {
 
         let badge = document.create_element("span").unwrap();
         let badge_class = if *status == "violation" {
-            "honesty-badge honesty-missing"
+            "honesty-badge honesty-error"
         } else {
             "honesty-badge honesty-live"
         };

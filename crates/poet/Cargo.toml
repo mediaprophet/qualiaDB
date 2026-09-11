@@ -43,6 +43,8 @@ web-sys = { version = "0.3", features = [
     "DomTokenList",
     "Event",
     "EventTarget",
+    "AddEventListenerOptions",
+    "PointerEvent",
     "HtmlDocument",
     "HtmlDivElement",
     "HtmlButtonElement",

@@ -46,7 +46,7 @@ pub fn sanctuary_manifold_seed() -> ManifoldSeed {
                 width: 400.0,
                 height: 280.0,
                 z: 1.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -57,7 +57,7 @@ pub fn sanctuary_manifold_seed() -> ManifoldSeed {
                 width: 400.0,
                 height: 280.0,
                 z: 1.0,
-                honesty: "missing".into(),
+                honesty: "held".into(),
                 ..Default::default()
             },
         ],

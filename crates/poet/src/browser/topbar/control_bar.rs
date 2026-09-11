@@ -35,7 +35,7 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
         seeds
             .first()
             .map(|s| s.label.as_str())
-            .unwrap_or("Research"),
+            .unwrap_or(crate::browser::frame_a::FIRST_ARRIVE_LABEL),
     ));
     summary.append_child(&summary_label).unwrap();
     bar.append_child(&summary).unwrap();
@@ -143,7 +143,7 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
         seeds
             .first()
             .map(|seed| seed.id.as_str())
-            .unwrap_or("research")
+            .unwrap_or(crate::browser::frame_a::FIRST_ARRIVE_MANIFOLD_ID)
     )));
     title_box.append_child(&graph_badge).unwrap();
     bar.append_child(&title_box).unwrap();

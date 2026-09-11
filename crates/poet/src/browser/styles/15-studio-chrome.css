@@ -517,11 +517,15 @@ button[disabled]:hover,
 .g-coord-timeline input[type="range"] { flex: 1; }
 
 /* Honesty badges — local vs live vs unavailable already exist; keep them readable on studio surfaces */
+.honesty-badge.honesty-held,
+.honesty-held,
+.honesty-badge.honesty-missing,
+.honesty-missing,
 .honesty-badge.honesty-unavailable,
 .honesty-unavailable {
-  background: rgba(94, 115, 148, 0.16);
-  color: var(--text-muted);
-  border: 1px solid var(--border-medium);
+  background: color-mix(in srgb, var(--accent-amber) 16%, transparent);
+  color: var(--accent-amber);
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 55%, transparent);
 }
 .honesty-badge.honesty-error,
 .honesty-error {
@@ -534,6 +538,79 @@ button[disabled]:hover,
   background: rgba(0, 210, 255, 0.14);
   color: var(--accent-cyan);
   border: 1px solid var(--accent-cyan);
+}
+
+/* ---------- Frame A first-arrive (lexicon §7) ---------- */
+.frame-a-banner,
+.frame-a-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-panel) 88%, var(--accent-cyan) 6%);
+}
+.frame-a-compact {
+  border-bottom: none;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, var(--border-subtle));
+  border-radius: var(--radius-xs);
+  margin: 0 0 6px;
+  padding: 6px 8px;
+}
+.frame-a-where,
+.frame-a-trio {
+  font: 600 12px/1.35 var(--font-sans);
+  color: var(--text-primary);
+}
+.frame-a-compact .frame-a-trio {
+  font-size: 11px;
+}
+.frame-a-sayables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.frame-a-sayable {
+  font: 700 11px/1 var(--font-sans);
+  padding: 5px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 16%, var(--surface-panel));
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.frame-a-advanced,
+.frame-a-held-note {
+  font: 500 10px/1.35 var(--font-sans);
+  color: var(--text-muted);
+}
+.frame-a-held-note {
+  color: var(--accent-amber);
+}
+.statusbar-item[data-frame-a-keep] {
+  cursor: pointer;
+}
+
+.canvas-empty-state.frame-a-empty-bay[data-studio-bay="first-arrive"],
+.canvas-empty-state.frame-a-empty-bay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  max-width: 420px;
+  padding: 20px 24px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-panel) 90%, var(--accent-cyan) 6%);
+}
+.canvas-empty-state.frame-a-empty-bay .frame-a-sayables {
+  justify-content: center;
 }
 
 /* ---------- G-LEXICON-0 studio bay (Catalog peer) ---------- */

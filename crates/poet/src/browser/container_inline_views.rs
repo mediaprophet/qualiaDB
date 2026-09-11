@@ -291,6 +291,9 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     let console = document.create_element("div").unwrap();
     console.set_class_name("vibe-console");
     super::surface_aspects::mark(&console, "entrance");
+    console
+        .append_child(&super::frame_a::mount_compact(document))
+        .unwrap();
 
     // Peer tabs: Script | Catalog · Lexicon (same bind as Zone D IDE Catalog).
     let tabs = document.create_element("div").unwrap();
@@ -325,7 +328,10 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     run_btn
         .set_attribute("data-instrument-action", "code:run")
         .unwrap();
-    run_btn.set_text_content(Some("\u{25B6} Play"));
+    run_btn.set_text_content(Some("\u{25B6} Play cell"));
+    run_btn
+        .set_attribute("aria-label", "Play cell")
+        .ok();
     toolbar.append_child(&run_btn).unwrap();
     let diag_btn = document.create_element("button").unwrap();
     diag_btn.set_class_name("vibe-run-btn");

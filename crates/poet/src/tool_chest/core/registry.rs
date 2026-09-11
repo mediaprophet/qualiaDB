@@ -251,7 +251,8 @@ pub struct SeedContainer {
     /// Z-order.
     #[serde(default = "default_z")]
     pub z: f32,
-    /// Honesty label — `live`, `partial`, `present`, `missing`.
+    /// Honesty label — `live`, `partial`, `present`, `held` (wait-honest empty).
+    /// Legacy `missing` still deserializes and paints as held / not yet.
     #[serde(default = "default_honesty")]
     pub honesty: String,
     /// Optional semantic type/URI assigned through the container inspector.
@@ -306,7 +307,7 @@ fn default_z() -> f32 {
 }
 
 fn default_honesty() -> String {
-    "missing".into()
+    "held".into()
 }
 
 impl Default for SeedContainer {
@@ -447,5 +448,13 @@ mod tests {
         assert!(restored.content_html.is_empty());
         assert!(restored.tool_settings.is_empty());
         assert!(restored.view_state.is_empty());
+        assert_eq!(restored.honesty, "held");
+    }
+
+    #[test]
+    fn new_container_defaults_to_held_not_missing() {
+        let container = SeedContainer::new("latex", "LaTeX", 0.0, 0.0, 480.0, 280.0);
+        assert_eq!(container.honesty, "held");
+        assert_ne!(container.honesty, "missing");
     }
 }

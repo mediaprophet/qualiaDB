@@ -125,7 +125,7 @@ pub(super) fn build_command_list() -> Vec<CommandEntry> {
         },
         CommandEntry {
             icon: "\u{1F50D}",
-            label: "Run SPARQL Query",
+            label: "Ask graph",
             shortcut: "",
         },
         CommandEntry {
@@ -526,6 +526,11 @@ pub(super) fn build_command_list() -> Vec<CommandEntry> {
         CommandEntry {
             icon: "\u{1F4B0}",
             label: "Open Wallet",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{2B07}",
+            label: "Switch Manifold: Studio bay",
             shortcut: "",
         },
         CommandEntry {

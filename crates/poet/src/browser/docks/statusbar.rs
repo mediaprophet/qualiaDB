@@ -1,7 +1,36 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 //! Bottom status bar Graph/Merkle/Gas/Strata/Volume chrome.
 
-use web_sys::{Document, Element};
+use wasm_bindgen::prelude::Closure;
+use wasm_bindgen::JsCast;
+use web_sys::{Document, Element, KeyboardEvent};
+
+fn wire_keep_volume_chip(volume: &Element) {
+    let listen = volume.clone();
+    let click = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+            crate::browser::topbar::open_save_mode_dialog(&doc);
+        }
+    }) as Box<dyn FnMut(web_sys::Event)>);
+    listen
+        .add_event_listener_with_callback("click", click.as_ref().unchecked_ref())
+        .ok();
+    click.forget();
+
+    let key_listen = volume.clone();
+    let key = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+        if event.key() == "Enter" || event.key() == " " {
+            event.prevent_default();
+            if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                crate::browser::topbar::open_save_mode_dialog(&doc);
+            }
+        }
+    }) as Box<dyn FnMut(KeyboardEvent)>);
+    key_listen
+        .add_event_listener_with_callback("keydown", key.as_ref().unchecked_ref())
+        .ok();
+    key.forget();
+}
 
 /// Build the bottom status bar.
 pub fn build_bottom_statusbar(document: &Document) -> Element {
@@ -74,7 +103,14 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     volume.set_class_name("statusbar-item");
     let v_label = document.create_element("span").unwrap();
     v_label.set_class_name("statusbar-label");
-    v_label.set_text_content(Some("Volume:"));
+    v_label.set_text_content(Some("Keep:"));
+    volume
+        .set_attribute("title", "Keep volume — open a sanctuary volume")
+        .ok();
+    volume.set_attribute("data-frame-a-keep", "1").ok();
+    volume.set_attribute("role", "button").ok();
+    volume.set_attribute("tabindex", "0").ok();
+    volume.set_attribute("aria-label", "Keep volume").ok();
     let v_val = document.create_element("span").unwrap();
     v_val.set_id("statusbar-volume-state");
     v_val.set_class_name("volume-state-chip");
@@ -82,6 +118,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     v_val.set_text_content(Some("closed"));
     volume.append_child(&v_label).unwrap();
     volume.append_child(&v_val).unwrap();
+    wire_keep_volume_chip(&volume);
     right.append_child(&volume).unwrap();
 
     bar.append_child(&right).unwrap();
@@ -121,7 +158,7 @@ pub fn refresh_bottom_statusbar_from_daemon(bar: &Element) {
                     v.set_text_content(Some("closed"));
                     v.set_attribute(
                         "title",
-                        "Sanctuary volume closed — open via GraphDatabase.volume_open",
+                        "Keep volume — sanctuary closed. Open a volume when a daemon is connected.",
                     )
                     .ok();
                 }

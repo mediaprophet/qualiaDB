@@ -22,6 +22,7 @@ pub use control_bar::{build_canvas_control_bar, wire_pods};
 pub use manifold::{rebuild_pager, refresh_construct_chrome, wire_title_rename};
 pub use menu::{build_top_menubar, MenuItemDef};
 pub use pods::toggle_tech_sidebar;
+pub use save_dialog::open_save_mode_dialog;
 
 use filters::{populate_dim_tray, populate_epistemic_tray, populate_strata_tray};
 use help_dialogs::{open_about_dialog, open_honesty_dialog, open_shortcuts_dialog};
@@ -30,4 +31,3 @@ use manifold::{
     trigger_file_download, trigger_file_import_dialog,
 };
 use pods::{hide_pod_drop_tray, position_pod_drop_tray, show_a11y_notification, toggle_pod_tray};
-use save_dialog::open_save_mode_dialog;
