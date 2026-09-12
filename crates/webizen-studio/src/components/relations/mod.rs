@@ -1,6 +1,8 @@
 //! 0.0.28 Relations habitat.
 
 pub mod groups;
+pub mod mail;
+pub mod mail_model;
 pub mod people;
 pub mod technical;
 pub mod types;
@@ -11,6 +13,10 @@ use groups::GroupsOverview;
 use people::PeopleOverview;
 use technical::RelationshipTechnicalInspector;
 use types::{RelationsSection, ALL_SECTIONS};
+#[cfg(target_arch = "wasm32")]
+use types::section_from_talk_tab;
+
+pub use mail::MailInboxPane;
 
 /// Palette / omnibox / QApp handoff: open Talk → People with Directory visible.
 /// Not a new top-level IA name — Directory stays under Relations / People.
@@ -59,6 +65,7 @@ pub fn RelationsShell() -> Element {
             main { style: "min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;",
                 match section() {
                     RelationsSection::Inbox => rsx! { crate::components::connect_chat::ConnectChat {} },
+                    RelationsSection::Mail => rsx! { MailInboxPane {} },
                     RelationsSection::People => rsx! {
                         div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;",
                             PeopleOverview {}
@@ -114,17 +121,7 @@ fn initial_section(advanced: bool) -> RelationsSection {
         if let Ok(Some(storage)) = window.session_storage() {
             if let Ok(Some(tab)) = storage.get_item("webizen_talk_tab") {
                 let _ = storage.remove_item("webizen_talk_tab");
-                return match tab.as_str() {
-                    "people" | "directory" | "contacts" | "addressbook" | "address-book" => {
-                        RelationsSection::People
-                    }
-                    "projects" => RelationsSection::Groups,
-                    "reception" | "mail" | "email" => RelationsSection::Reception,
-                    "requests" => RelationsSection::Requests,
-                    "agreements" => RelationsSection::Agreements,
-                    "topology" if advanced => RelationsSection::Topology,
-                    _ => RelationsSection::Inbox,
-                };
+                return section_from_talk_tab(&tab, advanced);
             }
         }
     }

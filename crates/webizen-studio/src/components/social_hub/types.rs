@@ -7,7 +7,7 @@ pub enum HubTab {
     Chat,
     People,
     Reception,
-    /// Domains & mail (purpose inboxes, relationship addresses, transport).
+    /// Daily inbox (purpose mailboxes + landed mail). Domain admin stays on Reception.
     Mail,
     Projects,
 }

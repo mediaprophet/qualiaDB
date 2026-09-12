@@ -593,18 +593,7 @@ pub fn SocialHub() -> Element {
             // ── Mail ──────────────────────────────────────────────────────
             if tab() == HubTab::Mail {
                 div { style: "flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;",
-                    div { style: "padding:12px 16px;border-bottom:1px solid #1f2937;background:linear-gradient(180deg,#111827,#0f172a);flex-shrink:0;",
-                        div { style: "display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem;",
-                            span { style: "font-size:0.62rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:#a5b4fc;", "Mail" }
-                            span { style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #065f46;color:#6ee7b7;font-weight:700;", "Local apparatus" }
-                        }
-                        p { style: "margin:0;color:#94a3b8;font-size:0.8rem;line-height:1.45;max-width:42rem;",
-                            "Reception (domain) → purpose inboxes → local SMTP receiver → MX/SPF when you want the public internet. Mail lands here with semantic rules. External SMTP/IMAP is optional import/send only — not the product host."
-                        }
-                    }
-                    div { style: "flex:1;min-height:0;overflow:hidden;",
-                        crate::components::domains_pane::DomainsPane {}
-                    }
+                    crate::components::relations::MailInboxPane {}
                 }
             }
 

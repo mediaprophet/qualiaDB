@@ -302,6 +302,8 @@ Ordered for Timothy’s ask. Max **8** P0/P1. Acceptance criteria sized so a clo
 - Receiver down → **held / not yet** with one control to start `mail_receiver_*` (existing cmds).
 - No claim of Gmail parity; cherry-pick inbox readability only.
 
+**2026-09-12 implement (davinci chrome):** Talk `RelationsSection::Mail` is a first-class daily destination. `MailInboxPane` lists purpose inboxes + landed mail via `mail_list` / `list_mail_addresses`; receiver-down paints **held / not yet** and one `mail_receiver_start` control. Reply/compose stays on the purpose inbox (no Directory). SocialHub Mail tab, palette `mail`, Keep deep-link, and QApp `mail` use the same pane. Domains pane remains Reception admin, not the daily path. Not a Gmail-parity claim.
+
 ---
 
 ## Non-goals (this doc)
