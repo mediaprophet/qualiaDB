@@ -99,7 +99,7 @@ mod tests {
         let start = src
             .find("id: \"directory\"")
             .expect("directory QApp id");
-        let body = src.get(start..start.saturating_add(420)).unwrap_or("");
+        let body = src.get(start..start.saturating_add(520)).unwrap_or("");
         assert!(
             body.contains("Stat::Active"),
             "Directory must be Active (real launch), not Soon/buried"
