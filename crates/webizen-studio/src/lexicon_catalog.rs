@@ -334,8 +334,12 @@ pub fn copy_avoids_unavailable(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("unavailable")
 }
 
-/// Wait-honest copy for Mesh / Aura / SHACL / Pulse / Job when the bind is missing.
+/// Wait-honest copy for Mesh / Aura / SHACL / Pulse / Job / Graph / Morpha
+/// when the bind is missing. Never "unavailable".
 pub const HELD_BIND_MISSING: &str = "held / not yet";
+
+/// Desktop / Poet chrome when `127.0.0.1:4242` `/health` answers.
+pub const NATIVE_CONNECTED_LABEL: &str = "Native Connected to 127.0.0.1:4242";
 
 pub fn framing_copy(framing: Framing) -> &'static str {
     match framing {
@@ -396,6 +400,8 @@ mod tests {
             assert!(copy_avoids_unavailable(text), "{text}");
             assert!(text.contains(HELD_BIND_MISSING), "{text}");
         }
+        assert!(copy_avoids_unavailable(NATIVE_CONNECTED_LABEL));
+        assert!(NATIVE_CONNECTED_LABEL.contains("127.0.0.1:4242"));
         assert!(copy_avoids_thing_wash(LIVING_SAYABLE));
         assert!(copy_avoids_thing_wash(ARTIFACT_SAYABLE));
         match interpret_invoke(false, "", Some("E300@0..0: lexicon pack not found")) {

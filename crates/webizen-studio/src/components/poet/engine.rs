@@ -118,3 +118,25 @@ pub async fn browse_q42_volume() -> Result<Option<String>, String> {
 pub async fn start_q42_volume() -> Result<Option<String>, String> {
     invoke_json("save_q42_file_picker", json!({})).await
 }
+
+/// HTTP `/health` on local QualiaDB (`127.0.0.1:4242`). Same probe Poet WASM uses.
+#[derive(Clone, Deserialize, Default)]
+pub struct DaemonProbe {
+    #[serde(default)]
+    pub reachable: bool,
+    #[serde(default)]
+    pub url: String,
+    #[serde(default)]
+    pub port: u16,
+    pub engine: Option<String>,
+    pub version: Option<String>,
+    pub graph_quin_count: Option<usize>,
+    #[serde(default)]
+    pub honesty: String,
+    #[serde(default)]
+    pub label: String,
+}
+
+pub async fn daemon_probe() -> Result<DaemonProbe, String> {
+    invoke_json("poet_daemon_probe", json!({})).await
+}

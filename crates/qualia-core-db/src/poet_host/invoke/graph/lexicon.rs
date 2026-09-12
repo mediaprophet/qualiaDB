@@ -265,4 +265,26 @@ mod tests {
         assert!(!json.to_ascii_lowercase().contains("broken"));
         assert!(!json.to_ascii_lowercase().contains("unavailable"));
     }
+
+    #[test]
+    fn real_en_core_fixture_opens_pack_card() {
+        let mut snap = PoetSnapshot::live();
+        let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../crates/vibe/fixtures/lexicon/en-core.lexicon.json")
+            .canonicalize()
+            .expect("en-core fixture");
+        let mut rec = BTreeMap::new();
+        rec.insert(
+            "path".into(),
+            Value::String(fixture.display().to_string()),
+        );
+        let value = snap
+            .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
+            .expect("real pack opens");
+        let rendered = crate::poet_host::format_value(&value);
+        assert!(rendered.contains("mixed"), "{rendered}");
+        assert!(rendered.contains("0.1.0"), "{rendered}");
+        assert!(!rendered.to_ascii_lowercase().contains("unavailable"));
+        assert!(!rendered.to_ascii_lowercase().contains("broken"));
+    }
 }

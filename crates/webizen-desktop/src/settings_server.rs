@@ -86,6 +86,8 @@ struct StatusResponse {
     companion_port: u16,
     graph_daemon_port: u16,
     graph_daemon_reachable: bool,
+    graph_daemon_label: String,
+    graph_daemon_honesty: String,
     graph_engine_version: Option<String>,
     qapps_protocol_port: u16,
     storage_path: String,
@@ -830,8 +832,14 @@ pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLo
 
 async fn status_handler(State(state): State<SettingsServerState>) -> Json<StatusResponse> {
     let config = state.app_state.config.lock().unwrap().clone();
-    let graph_port = qualia_client_core::api::get_active_daemon_port();
-    let (reachable, engine_version) = probe_graph_daemon(graph_port).await;
+    let probe = tokio::task::spawn_blocking(crate::commands::poet_daemon::probe_local_daemon)
+        .await
+        .unwrap_or_else(|_| crate::commands::poet_daemon::DaemonProbe::held(4242));
+    let graph_port = probe.port;
+    let reachable = probe.reachable;
+    let engine_version = probe.version.clone();
+    let graph_daemon_label = probe.label.clone();
+    let graph_daemon_honesty = probe.honesty.clone();
     let daemon_flag = *state.app_state.daemon_running.lock().unwrap();
     let settings_port = *state.listen_port.lock().unwrap();
     let jobs = LocalJobScheduler::global()
@@ -854,6 +862,8 @@ async fn status_handler(State(state): State<SettingsServerState>) -> Json<Status
         companion_port: crate::companion_gateway::companion_listen_port(),
         graph_daemon_port: graph_port,
         graph_daemon_reachable: reachable,
+        graph_daemon_label,
+        graph_daemon_honesty,
         graph_engine_version: engine_version,
         qapps_protocol_port: qualia_client_core::qapps_protocol::qualia_protocol_port(),
         storage_path: config.storage_path,
@@ -868,28 +878,6 @@ async fn status_handler(State(state): State<SettingsServerState>) -> Json<Status
         services,
         operations,
     })
-}
-
-async fn probe_graph_daemon(port: u16) -> (bool, Option<String>) {
-    let url = format!("http://127.0.0.1:{port}/health");
-    let Ok(client) = reqwest::Client::builder()
-        .timeout(Duration::from_millis(800))
-        .build()
-    else {
-        return (false, None);
-    };
-    let Ok(res) = client.get(&url).send().await else {
-        return (false, None);
-    };
-    if !res.status().is_success() {
-        return (false, None);
-    }
-    let version = res.json::<serde_json::Value>().await.ok().and_then(|v| {
-        v.get("engine_version")
-            .and_then(|x| x.as_str())
-            .map(str::to_string)
-    });
-    (true, version)
 }
 
 async fn get_config_handler(State(state): State<SettingsServerState>) -> Json<AgentConfig> {
@@ -1099,11 +1087,12 @@ async fn sparql_endpoints_handler() -> Result<Json<SparqlEndpointsResponse>, (St
         .get("endpoints")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
         .unwrap_or_default();
-    let port = qualia_client_core::api::get_active_daemon_port();
-    let (reachable, _) = probe_graph_daemon(port).await;
+    let probe = tokio::task::spawn_blocking(crate::commands::poet_daemon::probe_local_daemon)
+        .await
+        .unwrap_or_else(|_| crate::commands::poet_daemon::DaemonProbe::held(4242));
     Ok(Json(SparqlEndpointsResponse {
-        local_daemon_port: port,
-        local_daemon_reachable: reachable,
+        local_daemon_port: probe.port,
+        local_daemon_reachable: probe.reachable,
         endpoints,
     }))
 }
@@ -1122,7 +1111,10 @@ async fn sparql_query_handler(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let (status, content_type, text) = if body.target == "local" {
-        let port = qualia_client_core::api::get_active_daemon_port();
+        let probe = tokio::task::spawn_blocking(crate::commands::poet_daemon::probe_local_daemon)
+            .await
+            .unwrap_or_else(|_| crate::commands::poet_daemon::DaemonProbe::held(4242));
+        let port = probe.port;
         let url = format!("http://127.0.0.1:{port}/query");
         let res = client
             .post(&url)
@@ -1131,7 +1123,12 @@ async fn sparql_query_handler(
             .body(query.to_string())
             .send()
             .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("daemon unreachable: {e}")))?;
+            .map_err(|e| {
+                (
+                    StatusCode::BAD_GATEWAY,
+                    format!("held / not yet — local daemon 127.0.0.1:{port}: {e}"),
+                )
+            })?;
         let status = res.status();
         let ct = res
             .headers()
