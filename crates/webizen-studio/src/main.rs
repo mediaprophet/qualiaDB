@@ -165,6 +165,21 @@ pub enum Route {
     #[route("/")]
     TalkRoute {},
 
+    /// Talk → Mail daily inbox (purpose inboxes). Not Poet Domain.info admin.
+    #[route("/talk/mail")]
+    TalkMailRoute {},
+
+    /// Address-bar / Desktop `qualia://mail` alias — same daily inbox.
+    #[route("/mail")]
+    MailDailyRoute {},
+
+    /// Talk → People with Directory visible (palette `dir` / contacts / address book).
+    #[route("/talk/directory")]
+    TalkDirectoryRoute {},
+
+    #[route("/talk/people")]
+    TalkPeopleRoute {},
+
     /// Deep link kept so Relations bookmarks and `/talk` hashes still resolve.
     #[route("/talk")]
     TalkAliasRoute {},
@@ -295,21 +310,46 @@ fn AnatomyTestRoute() -> Element {
     rsx! { components::anatomy_test::AnatomyTest {} }
 }
 
-/// Relations domain: people, chat, reception, projects (SocialHub).
-#[component]
-fn TalkRoute() -> Element {
+fn talk_surface(initial_tab: &'static str) -> Element {
     rsx! {
         div {
             "data-surface": "talk",
+            "data-talk-open": "{initial_tab}",
             style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
-            components::relations::RelationsShell {}
+            components::relations::RelationsShell { initial_tab: initial_tab.to_string() }
         }
     }
 }
 
+/// Relations domain: people, chat, reception, mail, projects.
+#[component]
+fn TalkRoute() -> Element {
+    talk_surface("")
+}
+
 #[component]
 fn TalkAliasRoute() -> Element {
-    rsx! { TalkRoute {} }
+    talk_surface("")
+}
+
+#[component]
+fn TalkMailRoute() -> Element {
+    talk_surface("mail")
+}
+
+#[component]
+fn MailDailyRoute() -> Element {
+    talk_surface("mail")
+}
+
+#[component]
+fn TalkDirectoryRoute() -> Element {
+    talk_surface("directory")
+}
+
+#[component]
+fn TalkPeopleRoute() -> Element {
+    talk_surface("people")
 }
 
 /// Keep — personal records, body, vault, library. Not an ops dashboard.
@@ -375,13 +415,14 @@ fn route_from_omnibox(query: &str) -> Route {
             stash_talk_tab("chat");
             return Route::TalkRoute {};
         }
-        "people" | "invite" | "contacts" => {
+        "people" | "invite" => {
             stash_talk_tab("people");
-            return Route::TalkRoute {};
+            return Route::TalkPeopleRoute {};
         }
-        "directory" | "address book" | "addressbook" | "address-book" | "rolodex" => {
+        "dir" | "directory" | "contacts" | "address book" | "addressbook" | "address-book"
+        | "rolodex" => {
             crate::components::relations::stash_directory_handoff();
-            return Route::TalkRoute {};
+            return Route::TalkDirectoryRoute {};
         }
         "reception" | "frontdoor" | "front-door" | "dns" => {
             stash_talk_tab("reception");
@@ -389,7 +430,7 @@ fn route_from_omnibox(query: &str) -> Route {
         }
         "mail" | "email" => {
             stash_talk_tab("mail");
-            return Route::TalkRoute {};
+            return Route::TalkMailRoute {};
         }
         "projects" | "coop" | "cooperative" => {
             stash_talk_tab("projects");
@@ -1310,6 +1351,10 @@ fn AppLayout() -> Element {
             .graph_engine_version
             .clone()
             .unwrap_or_else(|| format!("Graph :{}", host_snapshot.graph_daemon_port))
+    } else if crate::components::talk_human_alone::instrument_is_missing(
+        &host_snapshot.inference_backend,
+    ) {
+        "held / not yet".to_string()
     } else {
         format!("{} · local", host_snapshot.inference_backend)
     };
@@ -1879,13 +1924,25 @@ mod route_identity_tests {
         assert_eq!(route_from_omnibox("memory"), Route::LibraryRoute {});
         assert_eq!(route_from_omnibox("settings"), Route::SettingsRoute {});
         assert_ne!(route_from_omnibox("library"), Route::TalkRoute {});
+        assert_eq!(route_from_omnibox("dir"), Route::TalkDirectoryRoute {});
+        assert_eq!(route_from_omnibox("contacts"), Route::TalkDirectoryRoute {});
+        assert_eq!(
+            route_from_omnibox("address book"),
+            Route::TalkDirectoryRoute {}
+        );
+        assert_eq!(route_from_omnibox("mail"), Route::TalkMailRoute {});
+        assert_ne!(route_from_omnibox("mail"), Route::PoetRoute {});
     }
 
     #[test]
     fn canonical_paths_do_not_share_home() {
         assert_eq!(Route::TalkRoute {}.to_string(), "/");
         assert_eq!(Route::TalkAliasRoute {}.to_string(), "/talk");
+        assert_eq!(Route::TalkMailRoute {}.to_string(), "/talk/mail");
+        assert_eq!(Route::MailDailyRoute {}.to_string(), "/mail");
+        assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
         assert_eq!(Route::LibraryRoute {}.to_string(), "/library");
         assert_eq!(Route::SettingsRoute {}.to_string(), "/settings");
+        assert_ne!(Route::TalkMailRoute {}.to_string(), Route::PoetRoute {}.to_string());
     }
 }

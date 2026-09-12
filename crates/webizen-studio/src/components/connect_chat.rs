@@ -604,7 +604,9 @@ pub fn ConnectChat() -> Element {
             // Initial state.
             if let Ok(Some(m)) = invoke_json::<Option<String>>("get_active_model", json!({})).await
             {
-                active_model.set(m);
+                if !crate::components::talk_human_alone::instrument_is_missing(&m) {
+                    active_model.set(m);
+                }
             } else {
                 // Soft discover so the model picker is ready without an extra click.
                 // Exactly one model → pre-select in dropdown (no auto-activate).
@@ -881,7 +883,7 @@ pub fn ConnectChat() -> Element {
         })
         .collect();
 
-    let has_model = !active_model().is_empty();
+    let has_model = !crate::components::talk_human_alone::instrument_is_missing(&active_model());
     let (instrument_hold, instrument_detail, instrument_chip) =
         crate::components::talk_human_alone::instrument_honesty(&active_model());
     let (mesh_hold, mesh_chip) =

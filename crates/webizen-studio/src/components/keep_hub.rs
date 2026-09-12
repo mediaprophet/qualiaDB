@@ -225,8 +225,9 @@ fn KeepDirectory() -> Element {
         div { style: "display:flex; flex-direction:column; gap:0.65rem;",
             KeepTalkTabLink { tab: "chat", title: "Relations — Chat", blurb: "Private local agent. Nothing leaves this machine unless you send it. Instruments are not peers." }
             KeepTalkTabLink { tab: "people", title: "Relations — People", blurb: "Invites, contacts, magic links, groups — natural persons, not identity assets." }
-            KeepTalkTabLink { tab: "reception", title: "Relations — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
-            KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Purpose inboxes, relationship addresses, catchall, SMTP/IMAP after domain setup." }
+            KeepTalkTabLink { tab: "directory", title: "Relations — Directory", blurb: "Humans-first address book under Talk / People. Ctrl+K dir · contacts · address book." }
+            KeepTalkTabLink { tab: "reception", title: "Relations — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault. Domains admin stays here — secondary to daily Mail." }
+            KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Daily purpose inboxes and landed mail. Not Poet Inalienable Domain Inboxes / Domain.info." }
             KeepTalkTabLink { tab: "projects", title: "Practice — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed · Remember → Memory." }
             KeepLink { to: Route::WellfairRoute {}, title: "Care — Wellfair shell", blurb: "Body, rights, welfare, labour under principal control. Unlock vault for private records." }
             KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary (vault)", blurb: "Unlock when cooperative projects or work board need the host API." }
@@ -260,16 +261,21 @@ fn KeepLink(to: Route, title: &'static str, blurb: &'static str) -> Element {
 
 #[component]
 fn KeepTalkTabLink(tab: &'static str, title: &'static str, blurb: &'static str) -> Element {
+    let dest = match tab {
+        "mail" | "email" => Route::TalkMailRoute {},
+        "directory" | "dir" | "contacts" => Route::TalkDirectoryRoute {},
+        "people" => Route::TalkPeopleRoute {},
+        _ => Route::TalkRoute {},
+    };
     rsx! {
         Link {
-            to: Route::TalkRoute {},
+            to: dest,
             style: "display:block; text-decoration:none; color:inherit; padding:1rem 1.15rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.22); transition:border-color 0.15s;",
             onclick: move |_| {
-                #[cfg(target_arch = "wasm32")]
-                if let Some(win) = web_sys::window() {
-                    if let Ok(Some(storage)) = win.session_storage() {
-                        let _ = storage.set_item("webizen_talk_tab", tab);
-                    }
+                if matches!(tab, "directory" | "dir" | "contacts") {
+                    crate::components::relations::stash_directory_handoff();
+                } else {
+                    crate::components::relations::write_talk_handoff(tab, false);
                 }
             },
             strong { style: "display:block; font-size:1rem; margin-bottom:0.25rem;", "{title}" }

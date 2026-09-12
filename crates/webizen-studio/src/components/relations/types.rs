@@ -35,7 +35,8 @@ impl RelationsSection {
 /// Deep-link / palette / Keep handoff for Talk tabs.
 pub fn section_from_talk_tab(tab: &str, advanced: bool) -> RelationsSection {
     match tab {
-        "people" | "directory" | "contacts" | "addressbook" | "address-book" => RelationsSection::People,
+        "people" | "directory" | "dir" | "contacts" | "addressbook" | "address-book"
+        | "address book" | "rolodex" => RelationsSection::People,
         "projects" => RelationsSection::Groups,
         "reception" => RelationsSection::Reception,
         "mail" | "email" => RelationsSection::Mail,
@@ -84,6 +85,15 @@ mod tests {
     fn mail_deep_link_opens_daily_inbox_not_domains_admin() {
         assert_eq!(section_from_talk_tab("mail", false), RelationsSection::Mail);
         assert_eq!(section_from_talk_tab("email", true), RelationsSection::Mail);
+        assert_eq!(section_from_talk_tab("dir", false), RelationsSection::People);
+        assert_eq!(
+            section_from_talk_tab("directory", false),
+            RelationsSection::People
+        );
+        assert_eq!(
+            section_from_talk_tab("address book", false),
+            RelationsSection::People
+        );
         assert_eq!(
             section_from_talk_tab("reception", false),
             RelationsSection::Reception

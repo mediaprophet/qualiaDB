@@ -15,6 +15,8 @@ fn qapp_route(qapp_id: &str) -> &str {
     match qapp_id {
         // Talk is home (studio root). Legacy "dashboard" aliases the same route.
         "talk" | "dashboard" | "home" => "/",
+        "directory" | "contacts" | "dir" => "/talk/directory",
+        "mail" | "email" => "/talk/mail",
         "wellfair" => "/wellfair",
         "chora" => "/chora",
         "browser" => "/browser",
@@ -258,6 +260,8 @@ pub fn build_app_menu(
     let ten_d = MenuItem::with_id(app, "open_10d", "10D Browser", true, Some("Ctrl+4"))?;
     // Home shortcut: Talk (not a legacy "Dashboard" product surface).
     let talk = MenuItem::with_id(app, "open_talk", "Talk", true, Some("Ctrl+0"))?;
+    let directory = MenuItem::with_id(app, "open_directory", "Directory", true, None::<&str>)?;
+    let mail = MenuItem::with_id(app, "open_mail", "Mail", true, None::<&str>)?;
     let qapp_studio =
         MenuItem::with_id(app, "open_qapp_studio", "QApp Studio", true, None::<&str>)?;
     let qapp_manager = MenuItem::with_id(
@@ -270,6 +274,8 @@ pub fn build_app_menu(
 
     let qapps_menu = SubmenuBuilder::new(app, "QApps")
         .item(&talk)
+        .item(&directory)
+        .item(&mail)
         .item(&wellfair)
         .item(&chora)
         .item(&browser)
@@ -513,6 +519,9 @@ mod tests {
             ("talk", "/"),
             ("dashboard", "/"), // legacy alias → same home route as Talk
             ("home", "/"),
+            ("directory", "/talk/directory"),
+            ("dir", "/talk/directory"),
+            ("mail", "/talk/mail"),
             ("wellfair", "/wellfair"),
             ("chora", "/chora"),
             ("browser", "/browser"),

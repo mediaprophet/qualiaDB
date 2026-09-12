@@ -22,7 +22,11 @@ pub fn PeopleOverview() -> Element {
     let mut show_directory = use_signal(|| {
         #[cfg(target_arch = "wasm32")]
         if let Some(window) = web_sys::window() {
-            if let Ok(Some(storage)) = window.session_storage() {
+            let stores = [
+                window.session_storage().ok().flatten(),
+                window.local_storage().ok().flatten(),
+            ];
+            for storage in stores.into_iter().flatten() {
                 if let Ok(Some(flag)) = storage.get_item("webizen_open_directory") {
                     let _ = storage.remove_item("webizen_open_directory");
                     if flag == "1" || flag.eq_ignore_ascii_case("true") {
@@ -31,6 +35,7 @@ pub fn PeopleOverview() -> Element {
                 }
             }
         }
+        // Directory is the People default — hide is optional, discover is not.
         true
     });
 
@@ -131,7 +136,11 @@ pub fn PeopleOverview() -> Element {
                 div { style: "{crate::components::settings::PANEL}", crate::components::connect_pane::ConnectPane {} }
             }
             if show_directory() {
-                div { style: "{crate::components::settings::PANEL}", crate::components::directory_pane::DirectoryPane {} }
+                div {
+                    "data-directory-visible": "true",
+                    style: "{crate::components::settings::PANEL}",
+                    crate::components::directory_pane::DirectoryPane {}
+                }
             }
         }
     }

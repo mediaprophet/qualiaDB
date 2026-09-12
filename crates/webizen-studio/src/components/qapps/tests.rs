@@ -107,6 +107,29 @@ mod tests {
     }
 
     #[test]
+    fn mail_is_an_active_talk_daily_inbox_qapp() {
+        let src = include_str!("catalog/platform.rs");
+        assert!(
+            src.contains("id: \"mail\""),
+            "Mail must be in the QApp catalog so Talk → Mail is findable"
+        );
+        let start = src.find("id: \"mail\"").expect("mail QApp id");
+        let body = src.get(start..start.saturating_add(640)).unwrap_or("");
+        assert!(
+            body.contains("TalkMail"),
+            "Mail launch must be Talk daily inbox, not Poet Domain.info"
+        );
+        assert!(
+            body.contains("Stat::Active"),
+            "Mail must be Active (real launch), not Soon/buried"
+        );
+        assert!(
+            body.contains("Talk → Mail") || body.contains("purpose"),
+            "Mail card must describe the Talk daily inbox"
+        );
+    }
+
+    #[test]
     fn academic_catalogue_ids_are_unique() {
         let ids = academic_ids(QAPPS_SRC);
         let mut seen = std::collections::HashSet::new();

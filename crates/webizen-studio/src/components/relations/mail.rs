@@ -232,7 +232,9 @@ pub fn MailInboxPane() -> Element {
     let held = matches!(receiver(), ReceiverState::Held);
 
     rsx! {
-        section { style: "height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;",
+        section {
+            "data-mail-daily": "true",
+            style: "height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;",
             header { style: "padding:16px 18px 12px;border-bottom:1px solid #243044;flex-shrink:0;",
                 div { style: "display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;",
                     div {

@@ -12,31 +12,82 @@ use dioxus::prelude::*;
 use groups::GroupsOverview;
 use people::PeopleOverview;
 use technical::RelationshipTechnicalInspector;
-use types::{RelationsSection, ALL_SECTIONS};
-#[cfg(target_arch = "wasm32")]
-use types::section_from_talk_tab;
+use types::{section_from_talk_tab, RelationsSection, ALL_SECTIONS};
 
 pub use mail::MailInboxPane;
+
+/// Palette / omnibox / QApp / Desktop-shell handoff.
+/// Writes both session and local storage so a parent chrome window and the
+/// studio iframe (same origin) share the flag. Prefer `/talk/directory` and
+/// `/talk/mail` routes — storage is only a fallback.
+pub fn write_talk_handoff(tab: &str, open_directory: bool) {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(window) = web_sys::window() {
+        let stores = [
+            window.session_storage().ok().flatten(),
+            window.local_storage().ok().flatten(),
+        ];
+        for storage in stores.into_iter().flatten() {
+            let _ = storage.set_item("webizen_talk_tab", tab);
+            if open_directory {
+                let _ = storage.set_item("webizen_open_directory", "1");
+            }
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = (tab, open_directory);
+    }
+}
 
 /// Palette / omnibox / QApp handoff: open Talk → People with Directory visible.
 /// Not a new top-level IA name — Directory stays under Relations / People.
 pub fn stash_directory_handoff() {
+    write_talk_handoff("people", true);
+}
+
+fn take_stored_talk_tab() -> Option<String> {
     #[cfg(target_arch = "wasm32")]
     if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.session_storage() {
-            let _ = storage.set_item("webizen_talk_tab", "people");
-            let _ = storage.set_item("webizen_open_directory", "1");
+        let stores = [
+            window.session_storage().ok().flatten(),
+            window.local_storage().ok().flatten(),
+        ];
+        for storage in stores.into_iter().flatten() {
+            if let Ok(Some(tab)) = storage.get_item("webizen_talk_tab") {
+                let _ = storage.remove_item("webizen_talk_tab");
+                if !tab.is_empty() {
+                    return Some(tab);
+                }
+            }
         }
     }
+    None
 }
 
 #[component]
-pub fn RelationsShell() -> Element {
+pub fn RelationsShell(#[props(default)] initial_tab: String) -> Element {
     let mode = use_experience_mode();
-    let mut section = use_signal(|| initial_section(mode().is_advanced()));
+    let mut section = use_signal(|| {
+        let advanced = mode().is_advanced();
+        if !initial_tab.trim().is_empty() {
+            return section_from_talk_tab(initial_tab.trim(), advanced);
+        }
+        initial_section(advanced)
+    });
+    let surface = match section() {
+        RelationsSection::Mail => "mail",
+        RelationsSection::People => "people",
+        RelationsSection::Inbox => "inbox",
+        RelationsSection::Reception => "reception",
+        _ => "talk",
+    };
 
     rsx! {
-        div { style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:205px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:#08101d;color:#e5edf8;overflow:hidden;",
+        div {
+            "data-surface": "talk",
+            "data-talk-tab": "{surface}",
+            style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:205px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:#08101d;color:#e5edf8;overflow:hidden;",
             aside { style: "min-height:0;overflow-y:auto;overscroll-behavior:contain;border-right:1px solid #243044;background:#0b1424;padding:16px 10px;display:flex;flex-direction:column;",
                 div { style: "padding:0 9px 14px;",
                     div { style: "font-size:.62rem;color:#a78bfa;font-weight:850;letter-spacing:.09em;text-transform:uppercase;", "Life domain" }
@@ -116,14 +167,8 @@ pub fn RelationsShell() -> Element {
 }
 
 fn initial_section(advanced: bool) -> RelationsSection {
-    #[cfg(target_arch = "wasm32")]
-    if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.session_storage() {
-            if let Ok(Some(tab)) = storage.get_item("webizen_talk_tab") {
-                let _ = storage.remove_item("webizen_talk_tab");
-                return section_from_talk_tab(&tab, advanced);
-            }
-        }
+    if let Some(tab) = take_stored_talk_tab() {
+        return section_from_talk_tab(&tab, advanced);
     }
     let _ = advanced;
     RelationsSection::Inbox
