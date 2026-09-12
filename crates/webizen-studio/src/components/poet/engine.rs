@@ -127,10 +127,14 @@ async fn http_lexicon_manifest(base: &str, path: &str) -> Result<PoetEvalResult,
         "id": "GraphDatabase.lexicon_manifest",
         "args": { "path": path },
     });
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(8))
-        .build()
-        .map_err(|e| e.to_string())?;
+    // wasm32 reqwest (fetch backend) has no ClientBuilder::timeout.
+    // Keep the 8s bound on native; browser fetch uses its own abort path.
+    let mut builder = reqwest::Client::builder();
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        builder = builder.timeout(std::time::Duration::from_secs(8));
+    }
+    let client = builder.build().map_err(|e| e.to_string())?;
     let res = client
         .post(&url)
         .json(&body)
