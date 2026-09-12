@@ -72,12 +72,12 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Check | D | W | Notes |
 |-------|---|---|-------|
-| Catalog · Lexicon held-gate string | **PARTIAL** (Capt `9738911`) | **PASS** (Capt `d08d1c9`) | Desktop B1–B3 PASS via Vibe→Script→Catalog; B4 live-bind UNVERIFIED |
+| Catalog · Lexicon held-gate string | **PARTIAL** (Capt `9738911`) | **PASS** (Capt `d08d1c9`) | Desktop B1–B3 PASS; B4 PARTIAL — open-pack needs Desktop→daemon `:4242` connect |
 | Never “broken” / red missing for lexicon path | **PASS** | **PASS** | Catalog held/not yet; other panes still say unavailable (davinci debt) |
 | Soft held look (not panic) | **PASS** | **PASS** | Catalog chips living · artifact · machine |
 | Daemon-down honesty | PASS* | PASS* | held when Native offline |
 
-**Gap:** Desktop Frame B **PARTIAL** — Catalog mount findable (B1–B3); B4 live ALL_BOUND bind unverified. WASM Frame B **PASS**. Wave-22 held until B4 or team accepts Catalog-gate clear only. Broader **unavailable** on Graph/Morpha still chrome debt.
+**Gap:** Desktop Frame B **PARTIAL** — Catalog findable (B1–B3); B4 open-pack still held on real fixture (Desktop not live-bound to `:4242`). WASM Frame B **PASS**. Wave-22 held. Need Desktop→daemon graph connect, not another Catalog mount. Broader **unavailable** still chrome debt.
 
 ### Frame C — Living-safe vs tool
 

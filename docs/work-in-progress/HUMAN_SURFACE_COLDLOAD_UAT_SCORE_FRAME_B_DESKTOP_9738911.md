@@ -12,13 +12,14 @@
 | B1 Mount / discoverable | **PASS** | Catalog · Lexicon findable on path 2 |
 | B2 held / not yet wording | **PASS** | Catalog held-gate uses held / not yet (not scored as unavailable on Catalog surface) |
 | B3 Chips | **PASS** | living · artifact · machine |
-| B4 No false-held on live ALL_BOUND | **UNVERIFIED** | No live bind path exercised in-session; daemon `:4242` was up but Desktop live-binding not confirmed |
+| B4 No false-held on live ALL_BOUND | **PARTIAL** | Empty/nonsense → held ✓; valid `en-core.lexicon.json` still held (no pack card); Desktop not connected to `:4242` for live `lexicon_manifest` |
 
 ## Shots
 
 - `/workspace/uat-frame-b-592c99a/catalog-success-surface.png`
 - `/workspace/uat-frame-b-592c99a/catalog-success-surface-native.webp`
 - (miss earlier) `poet-catalog-no-surface.png`
+- `b4-empty.png` · `b4-nonsense.png` · `b4-real.png`
 
 ## Ops notes
 
@@ -31,3 +32,16 @@
 - Chrome: `592c99a` (PR #93)  
 - Tests: `18fb063` (PR #94)  
 - Vocab human≠company≠bot: `9738911`
+
+## B4 follow-up (same tip lineage / rebuilt Desktop)
+
+**Result:** **PARTIAL** (not PASS)
+
+- Empty path → held / not yet ✓
+- Nonsense path → held / not yet ✓
+- Valid fixture `crates/vibe/fixtures/lexicon/en-core.lexicon.json` → still **held** (no open pack card)
+- Desktop showed Mesh/Graph unavailable — live `GraphDatabase.lexicon_manifest` bind not exercised against `:4242`
+
+Shots: `b4-empty.png`, `b4-nonsense.png`, `b4-real.png` under `/workspace/uat-frame-b-592c99a/`
+
+**Wave-22:** remains held until Desktop Catalog talks to live daemon bind (or team re-scopes B4).
