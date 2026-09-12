@@ -8,7 +8,7 @@
 
 pub const LANGUAGE_VERSION: &str = "vibe-0.1";
 
-/// Frozen host ABI stamp (`Host::host_version`).
+/// Current host ABI stamp (`Host::host_version`). `vibe-host-0.1` is the incorporation outcome, not an `ALL_BOUND` freeze.
 pub const HOST_VERSION: &str = "vibe-host-0.1";
 
 mod accel;

@@ -29,7 +29,7 @@
 > `crates/qualia-core-db/src/poet_host/`. Where this essay and the core spec
 > disagree, **the core spec wins**. The essay is retained as the architectural
 > rationale for the v1.0 destination (CBOR-LD AST, SHACL-AF, N3Logic interop,
-> multi-platform matrix) that 0.1 is the closed core of — not a denial of.
+> multi-platform matrix) that 0.1 is the current dialect of — not a denial of.
 
 ## 1. Vision & Execution Philosophy
 **VibeScript** (or **Vibe**, `.vibe`) is an embedded, interpreted domain-specific language (DSL) evaluated by the **Poet Engine** in Rust/WASM. It is designed for **dynamic hypermedia documents, reactive semantic mindware, spatiotemporal reasoning, and decentralized graph automation** within the QualiaDB / Webizen ecosystem.

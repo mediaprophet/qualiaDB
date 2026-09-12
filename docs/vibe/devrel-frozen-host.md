@@ -1,10 +1,12 @@
-# Vibe DevRel — closed grammar, growing host (`vibe-host-0.1`)
+# Vibe DevRel — current dialect, growing host (`vibe-host-0.1`)
 
-**Language:** `vibe-0.1` · **Host ABI:** `vibe-host-0.1` · **Freeze:** `6dc2b8b8`  
-**Four ops only:** parse · check · diagnose · `capability.invoke`  
-**Rules:** no Host widen · no dotted `qualia.*` · live `ALL_BOUND` / `vibe:InvokeId` only · a script change must never force a host rebuild.
+**Language:** `vibe-0.1` (current dialect; may grow, versioned and documented) · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze)
+**Four ops only:** parse · check · diagnose · `capability.invoke`
+**Rules:** no invented Host APIs / dotted `qualia.*` · live `ALL_BOUND` / `vibe:InvokeId` only · a script change must never force a host rebuild.
 
-This is the Stage 1 pack for Poet and agents. It describes what is frozen, not a new API.
+This is the Stage 1 pack for Poet and agents. It describes the live four-op ABI and diagnose JSON — not a grammar lock.
+
+**Customer chips:** **live** = it runs (if not, bug — finish it); **planned** = not built yet. Keep `held` only as an internal gate when a bind is truly unbound.
 
 ---
 

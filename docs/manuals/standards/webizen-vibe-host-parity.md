@@ -1,6 +1,6 @@
 # Webizen Desktop — Vibe host parity
 
-**Packet:** W12 · **Frozen:** `vibe-host-0.1`  
+**Packet:** W12 · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze)  
 **Commands:** `crates/webizen-desktop/src/commands/vibe_host.rs`
 
 Webizen Desktop exposes the same four ops as `poet::vibe_host` and `vibe-wasm`.
@@ -16,7 +16,7 @@ the desktop binary.
 | invoke | `vibe_capability_invoke` | in-process catalog kernels (`invoke_local`); unknown ids fail closed |
 
 `poet_eval` remains the snapshot/eval harness (graph, pulse, ticks). It is not
-a fifth frozen op.
+a fifth host op.
 
 ## Tests
 

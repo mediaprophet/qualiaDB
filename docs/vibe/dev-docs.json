@@ -9953,7 +9953,7 @@
       {
         "name": "HOST_VERSION",
         "kind": "const",
-        "doc": "Frozen host ABI stamp (`Host::host_version`).",
+        "doc": "Current host ABI stamp (`Host::host_version`). `vibe-host-0.1` is the incorporation outcome, not an `ALL_BOUND` freeze.",
         "file": "lib.rs",
         "line": 12,
         "signature": "pub const HOST_VERSION: &str = \"vibe-host-0.1\""
@@ -11929,7 +11929,7 @@
       {
         "name": "host_version",
         "kind": "fn",
-        "doc": "Frozen host ABI stamp (`vibe-host-0.1`).",
+        "doc": "Current host ABI stamp (`vibe-host-0.1`). Outcome, not an `ALL_BOUND` freeze.",
         "file": "lib.rs",
         "line": 111,
         "signature": "pub fn host_version() -> String {"

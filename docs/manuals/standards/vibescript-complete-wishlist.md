@@ -1,8 +1,9 @@
 # Complete wishlist — VibeScript · Poet · QualiaDB (post `vibe-host-0.1`)
 
-**Compiled by:** Vibe · **Seam push:** Neo · **Freeze:** `vibe-host-0.1` @ `6dc2b8b8` · **Plans tip:** `1add316e` · **Amended tip:** (see commit) — davinci/monet/Marvin extras folded
-**Branch:** `0.0.36-dev`
-**Rules:** no Host widen · no dotted `qualia.*` · live `ALL_BOUND` / `vibe:InvokeId` only · hot-edit must never force host rebuild · gaps → `vibescript-sprint-deltas.md`
+**Compiled by:** Vibe · **Seam push:** Neo · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze) · **Plans tip:** `1add316e` · **Amended tip:** (see commit) — davinci/monet/Marvin extras folded
+**Branch:** `0.0.38`
+**Current dialect:** `vibe-0.1` may grow (versioned + documented). **Rules:** no invented Host APIs / dotted `qualia.*` · live `ALL_BOUND` / `vibe:InvokeId` only · hot-edit must never force host rebuild · gaps → `vibescript-sprint-deltas.md`
+**Customer chips:** **live** / **planned**.
 
 ## North star
 Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Humans and agents share one language; Poet is a live studio, not a code shell.
