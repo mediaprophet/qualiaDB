@@ -367,7 +367,7 @@ fn KeepHub() -> Element {
                 KeepTalkTabLink { tab: "people", title: "Relations — People", blurb: "Invites, contacts, magic links, groups — humans, not identity assets. Directory lists humans first." }
                 KeepTalkTabLink { tab: "directory", title: "Relations — Directory", blurb: "Humans-first address book under People. Organizations = legal-person who-kind; chatbots = tools." }
                 KeepTalkTabLink { tab: "reception", title: "Relations — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
-                KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Purpose inboxes, relationship addresses, catchall, SMTP/IMAP after domain setup." }
+                KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Purpose inboxes and landed mail. Start the receiver if held; domain DNS stays under Reception." }
                 KeepTalkTabLink { tab: "projects", title: "Practice — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed · Remember → Memory." }
                 KeepLink { to: Route::WellfairRoute {}, title: "Care — Wellfair shell", blurb: "Body, rights, welfare, labour under principal control. Unlock vault for private records." }
                 KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary (vault)", blurb: "Unlock when cooperative projects or work board need the host API." }

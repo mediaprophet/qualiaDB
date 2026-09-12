@@ -43,7 +43,7 @@ const LATER_PATHS: &[(&str, &str, &str)] = &[
     (
         "Mail & domains",
         "Relations → Mail",
-        "Purpose inboxes and DNS after a domain is under your control.",
+        "Read landed mail and purpose inboxes. Reception holds domain and DNS.",
     ),
     (
         "Backup you trust",

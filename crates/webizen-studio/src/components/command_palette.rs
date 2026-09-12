@@ -29,7 +29,13 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         id: "relations",
         label: "Relations",
         hint: "People, chat, offers",
-        keywords: "relations talk chat people agent social",
+        keywords: "relations talk chat people agent social mail email inbox",
+    },
+    PaletteDestination {
+        id: "mail",
+        label: "Mail",
+        hint: "Talk → purpose inboxes & landed mail",
+        keywords: "mail email inbox receiver smtp purpose",
     },
     PaletteDestination {
         id: "directory",
@@ -105,6 +111,19 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
     },
 ];
 
+/// Stash Talk sub-tab before routing so Mail opens the daily inbox, not chat.
+pub fn prepare_palette_navigation(id: &str) {
+    if !matches!(id, "mail" | "email") {
+        return;
+    }
+    #[cfg(target_arch = "wasm32")]
+    if let Some(window) = web_sys::window() {
+        if let Ok(Some(storage)) = window.session_storage() {
+            let _ = storage.set_item("webizen_talk_tab", "mail");
+        }
+    }
+}
+
 /// Map a palette id to a studio [`Route`].
 pub fn route_for_palette_id(id: &str) -> Route {
     match id {
@@ -113,7 +132,7 @@ pub fn route_for_palette_id(id: &str) -> Route {
             crate::components::relations::stash_directory_handoff();
             Route::TalkRoute {}
         }
-        "relations" | "talk" | "chat" | "people" => Route::TalkRoute {},
+        "relations" | "talk" | "chat" | "people" | "mail" | "email" => Route::TalkRoute {},
         "selfhood" | "identity" => Route::IdentityRoute {},
         "care" | "wellfair" | "health" => Route::WellfairRoute {},
         "world" | "browser" | "reach" | "web" => Route::BrowserRoute {},
@@ -283,6 +302,7 @@ pub fn CommandPalette() -> Element {
                                 Key::Enter => {
                                     e.prevent_default();
                                     if let Some(dest) = items.get(idx) {
+                                        prepare_palette_navigation(dest.id);
                                         let route = route_for_palette_id(dest.id);
                                         open.set(false);
                                         query.set(String::new());
@@ -324,6 +344,7 @@ pub fn CommandPalette() -> Element {
                                                     background: {bg}; color: var(--qualia-text);",
                                             onmouseenter: move |_| active.set(i),
                                             onclick: move |_| {
+                                                prepare_palette_navigation(dest_id);
                                                 let route = route_for_palette_id(dest_id);
                                                 open.set(false);
                                                 query.set(String::new());
@@ -419,10 +440,20 @@ mod tests {
     }
 
     #[test]
+    fn mail_is_a_talk_destination() {
+        let hits = filter_destinations("mail");
+        assert!(hits.iter().any(|d| d.id == "mail"));
+        assert!(matches!(route_for_palette_id("mail"), Route::TalkRoute {}));
+    }
+
+    #[test]
     fn catalog_lexicon_is_discoverable() {
         let hits = filter_destinations("lexicon");
         assert!(hits.iter().any(|d| d.id == "catalog"));
-        assert_eq!(hits.iter().find(|d| d.id == "catalog").unwrap().label, "Catalog · Lexicon");
+        assert_eq!(
+            hits.iter().find(|d| d.id == "catalog").unwrap().label,
+            "Catalog · Lexicon"
+        );
     }
 
     #[test]

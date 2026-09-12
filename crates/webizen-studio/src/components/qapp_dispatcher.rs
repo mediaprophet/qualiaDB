@@ -87,6 +87,9 @@ pub fn QAppDispatcher(element_tag: String) -> Element {
             rsx! { crate::components::listen_workbench::ListenWorkbench {} }
         }
         "directory" => rsx! { crate::components::directory_pane::DirectoryPane {} },
+        "mail" | "email" | "inalienable-mail" => {
+            rsx! { crate::components::relations::MailInboxPane {} }
+        }
         "domains" => rsx! { crate::components::domains_pane::DomainsPane {} },
         "connect" => rsx! { crate::components::connect_pane::ConnectPane {} },
         "inference-monitor" => rsx! { crate::components::inference_monitor::InferenceMonitor {} },
