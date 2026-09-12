@@ -34,15 +34,16 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="mb-8 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-100/90">
-      <strong class="text-amber-200">VERSION_BUMP_SEPARATE.</strong>
-      This page is the 0.0.38 operator record. Workspace crate stamps, portal
+    <div class="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100/90">
+      <strong class="text-emerald-200">Crate stamps are 0.0.38.</strong>
+      Workspace crates, portal
       <code class="q-mono">package.json</code>, and
       <code class="q-mono">docs/tests/release-version-consistency.test.mjs</code>
-      still identify <code class="q-mono">0.0.37</code> until Neo’s crate-version wake.
+      identify <code class="q-mono">0.0.38</code>.
       Publish path is tag <code class="q-mono">v0.0.38</code> (matches the
       <code class="q-mono">github-pages</code> <code class="q-mono">v*</code> policy).
-      Branch <code class="q-mono">0.0.38</code> deploys may still be rejected until
+      Neo sole-pushes this line, then creates the annotated tag. Branch
+      <code class="q-mono">0.0.38</code> deploys may still be rejected until
       repo settings add that branch.
     </div>
 
@@ -87,7 +88,7 @@
 
     <section class="q-card p-8 mb-12">
       <p class="q-kicker mb-2">What is real in 0.0.38</p>
-      <h2 class="text-3xl font-semibold mb-6">Habitat honesty, not a crate stamp</h2>
+      <h2 class="text-3xl font-semibold mb-6">Habitat honesty, now with crate stamps</h2>
       <div class="grid sm:grid-cols-2 gap-x-10 gap-y-5 text-sm text-white/80">
         <div>
           <strong class="text-emerald-400">Held / not yet.</strong>
@@ -134,14 +135,14 @@
           <li>Neo sole-pushes this wake onto branch <code class="q-mono">0.0.38</code>. Do not merge from a guest fork.</li>
           <li>Neo creates annotated tag <code class="q-mono">v0.0.38</code> on the published tip. This PR does not create the tag.</li>
           <li><code class="q-mono">pages.yml</code> runs on tags <code class="q-mono">v*</code>. That is the intended deploy.</li>
-          <li>Crate stamps stay <code class="q-mono">0.0.37</code> until the separate version-bump wake.</li>
+          <li>Crate stamps, lock, and live-surface identifiers are <code class="q-mono">0.0.38</code>. This PR does not create the git tag.</li>
         </ol>
       </div>
       <div class="q-card p-7 border-amber-500/25">
         <p class="q-kicker mb-2" style="color:var(--q-amber)">Honest gaps</p>
         <h2 class="text-xl font-semibold mb-4">Not claimed</h2>
         <ul class="space-y-3 text-sm text-white/75">
-          <li>This is not a workspace version bump. Consistency tests that Pages runs still expect <code class="q-mono">0.0.37</code> crate and live-surface stamps.</li>
+          <li>Consistency tests that Pages runs now expect <code class="q-mono">0.0.38</code> crate and live-surface stamps.</li>
           <li>This is not Gmail / Apple Mail / Contacts parity. Human-alone paths are teachable, not peer clones.</li>
           <li>QDNF / QPR public relay is still unticked. Handle ≠ human is a Continuity rule, not a finished mesh.</li>
           <li>WASM size numbers on this site remain 0.0.37 measurements until the next measured Pages build.</li>
@@ -152,18 +153,18 @@
     <section class="mb-6">
       <h2 class="text-2xl font-semibold mb-4">Try it on this site</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <a class="q-card p-5 block no-underline text-inherit" href="release-matrix.html"><div class="font-semibold mb-1">Qualia · Webizen · Poet</div><p class="text-xs text-white/55">Product map · 0.0.37 GitHub Release artefacts still ship until <code class="q-mono">v0.0.38</code></p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="release-matrix.html"><div class="font-semibold mb-1">Qualia · Webizen · Poet</div><p class="text-xs text-white/55">Product map · ship from tag <code class="q-mono">v0.0.38</code></p></a>
         <a class="q-card p-5 block no-underline text-inherit" href="poet-app/index.html"><div class="font-semibold mb-1">Poet habitat</div><p class="text-xs text-white/55">Directory · Talk · Mail · Catalog in the browser shell</p></a>
         <a class="q-card p-5 block no-underline text-inherit" href="qdnf.html"><div class="font-semibold mb-1">QDNF fabric</div><p class="text-xs text-white/55">Handle ≠ human · no DNS-as-who</p></a>
         <a class="q-card p-5 block no-underline text-inherit" href="wasm-engine.html"><div class="font-semibold mb-1">WASM engine</div><p class="text-xs text-white/55">0.0.37 portal / playground / ontology budgets</p></a>
         <a class="q-card p-5 block no-underline text-inherit" href="progress-0.0.37.html"><div class="font-semibold mb-1">0.0.37 archive</div><p class="text-xs text-white/55">Full WASM-safe engine operator record</p></a>
-        <a class="q-card p-5 block no-underline text-inherit" href="releases/0.0.38-pages-wake.md"><div class="font-semibold mb-1">Wake notes</div><p class="text-xs text-white/55">VERSION_BUMP_SEPARATE for Neo</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="releases/0.0.38-pages-wake.md"><div class="font-semibold mb-1">Wake notes</div><p class="text-xs text-white/55">Pages wake record · crate stamps now 0.0.38</p></a>
       </div>
     </section>
   </main>
 
   <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
-    QualiaDB · Webizen · 0.0.38 operator record · crate stamps 0.0.37
+    QualiaDB · Webizen · 0.0.38 operator record · crate stamps 0.0.38
   </footer>
 </body>
 </html>

@@ -126,12 +126,13 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.38 (active branch)** — habitat line on the 0.0.37 engine. Unified Q42 v3 is the
-only new-write graph container. **Pages / release:** operator record is
+**0.0.38 (active branch)** — habitat line on the 0.0.37 WASM-safe engine. Unified Q42 v3 is the
+only new-write graph container. Workspace crate stamps are **0.0.38**.
+
+**Pages / release:** operator record is
 [`docs/progress-0.0.38.html`](docs/progress-0.0.38.html) and
 [`docs/releases/0.0.38-pages-wake.md`](docs/releases/0.0.38-pages-wake.md).
-Next human / Neo step is **sole-push onto `0.0.38`**, then annotated tag
-**`v0.0.38`**. Do not merge from a guest fork. Tag `v*` is the intended GitHub
+Annotated tag **`v0.0.38`** is on tip `cdd7ae728` (PR #111). Branch continues on `0.0.38`. Do not merge from a guest fork. Tag `v*` is the intended GitHub
 Pages publish path (`github-pages` environment historically allows `main`,
 `0.0.24`–`0.0.34`, and `v*` — branch `0.0.38` deploy may still be rejected until
 settings add it).
