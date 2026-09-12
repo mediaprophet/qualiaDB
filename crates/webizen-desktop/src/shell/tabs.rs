@@ -116,6 +116,8 @@ pub fn qapp_url(qapp_id: &str) -> String {
     match qapp_id {
         // Talk is home (empty studio hash). Legacy dashboard/home alias the same URL.
         "talk" | "dashboard" | "home" => "/studio/#/".to_string(),
+        // Directory is Talk / People — not a new top-level IA name.
+        "directory" | "contacts" | "addressbook" => "/studio/#/talk".to_string(),
         "wellfair" => "/studio/#/wellfair".to_string(),
         "chora" => "/studio/#/chora".to_string(),
         "browser" => "/studio/#/browser".to_string(),
@@ -135,6 +137,7 @@ pub fn qapp_url(qapp_id: &str) -> String {
 pub fn qapp_title(qapp_id: &str) -> &'static str {
     match qapp_id {
         "talk" | "dashboard" | "home" => "Talk",
+        "directory" | "contacts" | "addressbook" => "Directory",
         "wellfair" => "WellFair",
         "chora" => "Chora",
         "browser" => "Browser",
@@ -148,5 +151,17 @@ pub fn qapp_title(qapp_id: &str) -> &'static str {
         "render-preview" => "Render Preview",
         "anatomy-test" => "Anatomy Test",
         _ => "Webizen",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn directory_is_talk_people_not_a_new_top_level() {
+        assert_eq!(qapp_url("directory"), "/studio/#/talk");
+        assert_eq!(qapp_url("contacts"), "/studio/#/talk");
+        assert_eq!(qapp_title("directory"), "Directory");
     }
 }

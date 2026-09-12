@@ -69,6 +69,10 @@ pub struct DirectoryEntry {
     pub categories: Vec<String>,
     /// Agreements governing this relationship (ids). Empty until the agreement store lands (plan P1).
     pub agreement_ids: Vec<String>,
+    /// Who-kind for humans-first listing: `human` | `organization` | `tool`.
+    /// Organization = legal person / persona ficta. Tool = agent/bot. Never collapse those into "human".
+    #[serde(default)]
+    pub who_kind: String,
 }
 
 /// The whole categorised directory returned to the UI.
@@ -188,31 +192,120 @@ pub fn set_entry_categories(did: &str, categories: Vec<String>) -> Result<(), St
     save_assignments(&a)
 }
 
+/// Who-kind of a directory entry. Chrome must say **human**, not law's "person",
+/// for living beings; orgs are Organization (legal person); chatbots are tools.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WhoKind {
+    Human,
+    Organization,
+    Tool,
+}
+
+impl WhoKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Human => "human",
+            Self::Organization => "organization",
+            Self::Tool => "tool",
+        }
+    }
+
+    /// Chrome label — never call a company or bot "a person".
+    pub fn chrome_label(self) -> &'static str {
+        match self {
+            Self::Human => "Human",
+            Self::Organization => "Organization · legal person",
+            Self::Tool => "Tool",
+        }
+    }
+
+    pub fn sort_rank(self) -> u8 {
+        match self {
+            Self::Human => 0,
+            Self::Organization => 1,
+            Self::Tool => 2,
+        }
+    }
+}
+
+fn kind_tokens(kinds: &[String]) -> Vec<String> {
+    kinds
+        .iter()
+        .flat_map(|k| {
+            k.split(|c: char| !c.is_ascii_alphanumeric())
+                .map(|s| s.to_ascii_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// Classify who-kind from actor/contact labels. Affiliation (`organization` field
+/// on a human practitioner) does not by itself make the entry an Organization.
+pub fn classify_who_kind(kinds: &[String], organization: &Option<String>) -> WhoKind {
+    let tokens = kind_tokens(kinds);
+    let has_tok = |needles: &[&str]| tokens.iter().any(|t| needles.iter().any(|n| t == n));
+    if has_tok(&[
+        "agent", "ai", "bot", "assistant", "subagent", "chatbot", "llm",
+    ]) {
+        return WhoKind::Tool;
+    }
+    if has_tok(&[
+        "organization",
+        "organisation",
+        "org",
+        "company",
+        "institution",
+        "business",
+        "ngo",
+    ]) {
+        return WhoKind::Organization;
+    }
+    if kinds.is_empty() && organization.is_some() {
+        return WhoKind::Organization;
+    }
+    WhoKind::Human
+}
+
+pub fn parse_who_kind(raw: &str) -> WhoKind {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "organization" | "organisation" | "org" => WhoKind::Organization,
+        "tool" | "agent" | "bot" => WhoKind::Tool,
+        _ => WhoKind::Human,
+    }
+}
+
 /// Default category inference from an entry's kinds/organisation (used when no explicit assignment exists).
 fn infer_categories(kinds: &[String], organization: &Option<String>) -> Vec<String> {
     let hay = kinds.join(" ").to_lowercase();
     let has = |needle: &str| hay.contains(needle);
-    let mut cats = vec!["people".to_string()];
-    if has("agent") {
-        cats.push("agents".into());
+    let who = classify_who_kind(kinds, organization);
+    let mut cats = Vec::new();
+    match who {
+        WhoKind::Human => cats.push("people".into()),
+        WhoKind::Organization => cats.push("organizations".into()),
+        WhoKind::Tool => cats.push("agents".into()),
     }
-    if has("clinician")
-        || has("practitioner")
-        || has("doctor")
-        || has("health")
-        || has("nurse")
-        || has("therapist")
-    {
-        cats.push("health".into());
-    }
-    if has("cooperative") || has("coop") {
-        cats.push("cooperative".into());
-    }
-    if has("friend") || has("family") {
-        cats.push("family-friends".into());
-    }
-    if organization.is_some() || has("organization") || has("org") {
-        cats.push("organizations".into());
+    if who == WhoKind::Human {
+        if has("clinician")
+            || has("practitioner")
+            || has("doctor")
+            || has("health")
+            || has("nurse")
+            || has("therapist")
+        {
+            cats.push("health".into());
+        }
+        if has("cooperative") || has("coop") {
+            cats.push("cooperative".into());
+        }
+        if has("friend") || has("family") {
+            cats.push("family-friends".into());
+        }
+        // Affiliation group — the human is still who-kind Human.
+        if organization.is_some() {
+            cats.push("organizations".into());
+        }
     }
     cats.sort();
     cats.dedup();
@@ -262,6 +355,7 @@ pub fn build_view_core(
             sources: vec![],
             categories: vec![],
             agreement_ids: vec![],
+            who_kind: WhoKind::Human.as_str().into(),
         });
         if entry.display_name.is_empty() {
             entry.display_name = a.name.clone();
@@ -288,6 +382,7 @@ pub fn build_view_core(
                 sources: vec![],
                 categories: vec![],
                 agreement_ids: vec![],
+                who_kind: WhoKind::Human.as_str().into(),
             });
         if entry.display_name.is_empty() {
             entry.display_name = c.display_name.clone();
@@ -310,13 +405,21 @@ pub fn build_view_core(
                 .filter(|a| a.relationship_did == e.did || a.parties.iter().any(|p| *p == e.did))
                 .map(|a| a.id.clone())
                 .collect();
+            e.who_kind = classify_who_kind(&e.kinds, &e.organization)
+                .as_str()
+                .to_string();
             e
         })
         .collect();
     entries.sort_by(|a, b| {
-        a.display_name
-            .to_lowercase()
-            .cmp(&b.display_name.to_lowercase())
+        parse_who_kind(&a.who_kind)
+            .sort_rank()
+            .cmp(&parse_who_kind(&b.who_kind).sort_rank())
+            .then(
+                a.display_name
+                    .to_lowercase()
+                    .cmp(&b.display_name.to_lowercase()),
+            )
     });
 
     DirectoryView {
@@ -602,11 +705,17 @@ pub fn search_core(
         .filter(|(e, _)| passes_facets(e, selected, None))
         .collect();
     narrowed.sort_by(|a, b| {
-        b.1.cmp(&a.1).then(
-            a.0.display_name
-                .to_lowercase()
-                .cmp(&b.0.display_name.to_lowercase()),
-        )
+        b.1.cmp(&a.1)
+            .then(
+                parse_who_kind(&a.0.who_kind)
+                    .sort_rank()
+                    .cmp(&parse_who_kind(&b.0.who_kind).sort_rank()),
+            )
+            .then(
+                a.0.display_name
+                    .to_lowercase()
+                    .cmp(&b.0.display_name.to_lowercase()),
+            )
     });
     let entries: Vec<DirectoryEntry> = narrowed.into_iter().map(|(e, _)| e).collect();
     let total = entries.len();
@@ -673,10 +782,61 @@ mod tests {
     fn inference_routes_by_kind_and_org() {
         assert!(infer_categories(&["clinician".into()], &None).contains(&"health".to_string()));
         assert!(infer_categories(&["AGENT".into()], &None).contains(&"agents".to_string()));
+        assert!(
+            !infer_categories(&["AGENT".into()], &None).contains(&"people".to_string()),
+            "tools are not listed as humans"
+        );
         assert!(infer_categories(&["FRIEND".into()], &None).contains(&"family-friends".to_string()));
         assert!(infer_categories(&[], &Some("Acme".into())).contains(&"organizations".to_string()));
-        // Everyone is in People.
+        assert!(
+            !infer_categories(&[], &Some("Acme".into())).contains(&"people".to_string()),
+            "org-only signal is Organization who-kind, not a human"
+        );
+        // Unlabelled entries default to humans.
         assert!(infer_categories(&[], &None).contains(&"people".to_string()));
+        // Human with an org affiliation stays human and also sits in Organizations.
+        let affiliated = infer_categories(&["clinician".into()], &Some("Acme".into()));
+        assert!(affiliated.contains(&"people".to_string()));
+        assert!(affiliated.contains(&"organizations".to_string()));
+    }
+
+    #[test]
+    fn who_kind_cuts_human_org_tool() {
+        assert_eq!(classify_who_kind(&["FRIEND".into()], &None), WhoKind::Human);
+        assert_eq!(
+            classify_who_kind(&["ORGANIZATION".into()], &None),
+            WhoKind::Organization
+        );
+        assert_eq!(classify_who_kind(&["AGENT".into()], &None), WhoKind::Tool);
+        assert_eq!(
+            classify_who_kind(&["chatbot".into()], &None),
+            WhoKind::Tool,
+            "chatbot is a tool, not a human"
+        );
+        assert_eq!(
+            classify_who_kind(&["clinician".into()], &Some("Acme Hospital".into())),
+            WhoKind::Human,
+            "affiliation is not who-kind"
+        );
+        assert_eq!(WhoKind::Organization.chrome_label(), "Organization · legal person");
+        assert_eq!(WhoKind::Tool.chrome_label(), "Tool");
+        assert_eq!(WhoKind::Human.chrome_label(), "Human");
+    }
+
+    #[test]
+    fn directory_lists_humans_first() {
+        let actors = vec![
+            actor("org", "Acme Ltd", "did:wf:acme", "ORGANIZATION", &[]),
+            actor("bot", "HelpBot", "did:wf:bot", "AGENT", &["chatbot"]),
+            actor("zed", "Zed", "did:wf:zed", "FRIEND", &[]),
+            actor("ann", "Ann", "did:wf:ann", "FRIEND", &[]),
+        ];
+        let view = build_view_core(&actors, &[], &BTreeMap::new(), builtin_categories(), &[]);
+        let names: Vec<&str> = view.entries.iter().map(|e| e.display_name.as_str()).collect();
+        assert_eq!(names, vec!["Ann", "Zed", "Acme Ltd", "HelpBot"]);
+        assert_eq!(view.entries[0].who_kind, "human");
+        assert_eq!(view.entries[2].who_kind, "organization");
+        assert_eq!(view.entries[3].who_kind, "tool");
     }
 
     #[test]

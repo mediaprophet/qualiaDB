@@ -88,6 +88,8 @@ pub(crate) enum AppRoute {
     ContextStudio,
     QAppStudio,
     Nexus,
+    /// Directory lives under Talk / People — not a new top-level IA name.
+    TalkPeople,
 }
 
 pub(crate) struct QApp {
@@ -197,6 +199,7 @@ pub(crate) enum BtnKind {
     LaunchContext,
     LaunchQAppStudio,
     LaunchNexus,
+    LaunchTalkPeople,
     OpenInStudio,
     ComingSoon,
 }

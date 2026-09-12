@@ -32,6 +32,12 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         keywords: "relations talk chat people agent social",
     },
     PaletteDestination {
+        id: "directory",
+        label: "Directory",
+        hint: "Humans-first address book · Talk / People",
+        keywords: "directory contacts address book people humans rolodex addressbook",
+    },
+    PaletteDestination {
         id: "selfhood",
         label: "Selfhood",
         hint: "Profile & rights summary",
@@ -103,6 +109,10 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
 pub fn route_for_palette_id(id: &str) -> Route {
     match id {
         "memory" | "library" | "home" | "lived-memory" => Route::LibraryRoute {},
+        "directory" | "contacts" | "addressbook" | "address-book" => {
+            crate::components::relations::stash_directory_handoff();
+            Route::TalkRoute {}
+        }
         "relations" | "talk" | "chat" | "people" => Route::TalkRoute {},
         "selfhood" | "identity" => Route::IdentityRoute {},
         "care" | "wellfair" | "health" => Route::WellfairRoute {},
@@ -413,5 +423,28 @@ mod tests {
         let hits = filter_destinations("lexicon");
         assert!(hits.iter().any(|d| d.id == "catalog"));
         assert_eq!(hits.iter().find(|d| d.id == "catalog").unwrap().label, "Catalog · Lexicon");
+    }
+
+    #[test]
+    fn directory_is_discoverable_from_palette() {
+        for needle in ["directory", "contacts", "address book", "humans"] {
+            let hits = filter_destinations(needle);
+            assert!(
+                hits.iter().any(|d| d.id == "directory"),
+                "palette must find Directory from {needle:?}"
+            );
+        }
+        assert!(matches!(
+            route_for_palette_id("directory"),
+            Route::TalkRoute {}
+        ));
+        assert_eq!(
+            filter_destinations("directory")
+                .iter()
+                .find(|d| d.id == "directory")
+                .unwrap()
+                .label,
+            "Directory"
+        );
     }
 }

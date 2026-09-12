@@ -364,7 +364,8 @@ fn KeepHub() -> Element {
             }
             div { style: "display:flex; flex-direction:column; gap:0.65rem;",
                 KeepTalkTabLink { tab: "chat", title: "Relations — Chat", blurb: "Private local agent. Nothing leaves this machine unless you send it. Instruments are not peers." }
-                KeepTalkTabLink { tab: "people", title: "Relations — People", blurb: "Invites, contacts, magic links, groups — natural persons, not identity assets." }
+                KeepTalkTabLink { tab: "people", title: "Relations — People", blurb: "Invites, contacts, magic links, groups — humans, not identity assets. Directory lists humans first." }
+                KeepTalkTabLink { tab: "directory", title: "Relations — Directory", blurb: "Humans-first address book under People. Organizations = legal-person who-kind; chatbots = tools." }
                 KeepTalkTabLink { tab: "reception", title: "Relations — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
                 KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Purpose inboxes, relationship addresses, catchall, SMTP/IMAP after domain setup." }
                 KeepTalkTabLink { tab: "projects", title: "Practice — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed · Remember → Memory." }
@@ -446,6 +447,10 @@ fn route_from_omnibox(query: &str) -> Route {
         }
         "people" | "invite" | "contacts" => {
             stash_talk_tab("people");
+            return Route::TalkRoute {};
+        }
+        "directory" | "address book" | "addressbook" | "address-book" | "rolodex" => {
+            crate::components::relations::stash_directory_handoff();
             return Route::TalkRoute {};
         }
         "reception" | "frontdoor" | "front-door" | "dns" => {
@@ -1109,6 +1114,10 @@ fn AppLayout() -> Element {
                     };
                     let _ = match target.as_str() {
                         "talk" | "chat" => menu_nav.push(Route::TalkRoute {}),
+                        "directory" | "contacts" | "addressbook" => {
+                            components::relations::stash_directory_handoff();
+                            menu_nav.push(Route::TalkRoute {})
+                        }
                         "keep" => menu_nav.push(Route::KeepRoute {}),
                         "dashboard" | "home" => menu_nav.push(Route::DashboardRoute {}),
                         "wellfair" => menu_nav.push(Route::WellfairRoute {}),
