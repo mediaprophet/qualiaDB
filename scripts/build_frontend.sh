@@ -54,8 +54,6 @@ echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
 # objects remain. Identical Tauri wasm-bindgen `listen`/`invoke` imports in
 # the studio bin + lib then become hard rust-lld duplicates without LTO;
 # allow the identical first definition (same describe hash).
-# debuginfo=0: wasm-opt SIGABRTs on un-LTO studio DWARF ("compile unit size
-# was incorrect"). Stripping debuginfo lets Binaryen run or fail closed cleanly.
 FRONTEND_WASM_RUSTFLAGS="-C lto=off -C embed-bitcode=no -C debuginfo=0 -C link-arg=--allow-multiple-definition"
 export RUSTFLAGS="${RUSTFLAGS_WASM:-$FRONTEND_WASM_RUSTFLAGS}"
 export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-$FRONTEND_WASM_RUSTFLAGS}"

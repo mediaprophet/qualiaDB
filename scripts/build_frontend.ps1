@@ -196,7 +196,6 @@ $env:NO_DOWNLOADS = "1"
 #   failed to load bitcode of module "webizen_studio-*.rcgu.o"
 # --allow-multiple-definition: studio bin+lib both emit the same Tauri
 # wasm-bindgen listen/invoke describe symbols (warning under LTO; error without).
-# debuginfo=0: wasm-opt SIGABRTs on un-LTO studio DWARF.
 $frontendWasmRustflags = "-C lto=off -C embed-bitcode=no -C debuginfo=0 -C link-arg=--allow-multiple-definition"
 if ($env:RUSTFLAGS_WASM) {
     $env:RUSTFLAGS = $env:RUSTFLAGS_WASM
