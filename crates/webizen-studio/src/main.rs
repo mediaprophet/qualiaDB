@@ -7,7 +7,8 @@ pub mod components;
 pub mod endpoints;
 mod pane_generator;
 mod pane_registry;
-pub mod render;
+// Single-owner: render (spatial_bridge Tauri FFI) lives in the lib rlib only.
+pub use webizen_studio::render;
 mod shell_dest;
 mod studio_canvas;
 pub mod telemetry;
