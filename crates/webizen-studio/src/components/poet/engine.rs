@@ -96,3 +96,25 @@ pub async fn render_preview(
 pub async fn lexicon_manifest(path: String) -> Result<PoetEvalResult, String> {
     invoke_json("poet_lexicon_manifest", json!({ "path": path })).await
 }
+
+/// Live ALL_BOUND bind. Reopen defaults `create: false` so a missing volume stays held.
+pub async fn volume_open(path: String, create: bool) -> Result<PoetEvalResult, String> {
+    invoke_json(
+        "poet_volume_open",
+        json!({ "path": path, "create": create }),
+    )
+    .await
+}
+
+/// Live ALL_BOUND bind. Callers must celebrate only when `written > 0`.
+pub async fn volume_commit(path: String) -> Result<PoetEvalResult, String> {
+    invoke_json("poet_volume_commit", json!({ "path": path })).await
+}
+
+pub async fn browse_q42_volume() -> Result<Option<String>, String> {
+    invoke_json("open_q42_file_picker", json!({})).await
+}
+
+pub async fn start_q42_volume() -> Result<Option<String>, String> {
+    invoke_json("save_q42_file_picker", json!({})).await
+}

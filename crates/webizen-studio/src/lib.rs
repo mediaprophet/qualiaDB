@@ -5,6 +5,7 @@
 pub mod canvas_graph;
 pub mod canvas_model;
 pub mod endpoints;
+pub mod keep_volume;
 pub mod lexicon_catalog;
 pub mod render;
 pub mod theme_engine;
