@@ -27,6 +27,12 @@
       "group": "Core"
     },
     {
+      "label": "0.0.37 Progress",
+      "href": "progress-0.0.37.html",
+      "icon": "fa-clock-rotate-left",
+      "group": "Core"
+    },
+    {
       "label": "WASM Engine",
       "href": "wasm-engine.html",
       "icon": "fa-microchip",

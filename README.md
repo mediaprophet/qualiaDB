@@ -126,8 +126,18 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.37 (active branch)** — active development, pre-release. Unified Q42 v3 is the
-only new-write graph container.
+**0.0.38 (active branch)** — habitat line on the 0.0.37 engine. Unified Q42 v3 is the
+only new-write graph container. Workspace crate stamps remain **0.0.37**
+(`VERSION_BUMP_SEPARATE`) until Neo’s crate-version wake.
+
+**Pages / release:** operator record is
+[`docs/progress-0.0.38.html`](docs/progress-0.0.38.html) and
+[`docs/releases/0.0.38-pages-wake.md`](docs/releases/0.0.38-pages-wake.md).
+Next human / Neo step is **sole-push onto `0.0.38`**, then annotated tag
+**`v0.0.38`**. Do not merge from a guest fork. Tag `v*` is the intended GitHub
+Pages publish path (`github-pages` environment historically allows `main`,
+`0.0.24`–`0.0.34`, and `v*` — branch `0.0.38` deploy may still be rejected until
+settings add it).
 
 Recent verification of the implemented surfaces includes:
 
@@ -159,6 +169,9 @@ capabilities, and remaining pre-v0.1 work, see the
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full technical architecture — Quin bit layout, all modalities, inference stack, every module |
 | [docs/manuals/qualia_db_functionality_manual.md](docs/manuals/qualia_db_functionality_manual.md) | Per-crate functionality manual — what each part of the workspace actually does today |
 | [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build, test, benchmark, CLI reference, cross-compilation |
+| [docs/progress-0.0.38.html](docs/progress-0.0.38.html) | 0.0.38 progress — habitat honesty, Native prefer :4242 |
+| [docs/releases/0.0.38-pages-wake.md](docs/releases/0.0.38-pages-wake.md) | 0.0.38 Pages wake — VERSION_BUMP_SEPARATE, tag `v0.0.38` |
+| [docs/progress-0.0.37.html](docs/progress-0.0.37.html) | 0.0.37 progress — WASM-safe engine, size gates |
 | [docs/progress-0.0.33.html](docs/progress-0.0.33.html) | 0.0.33 progress — Q42 v3 volumes, Pages, desktop |
 | [docs/manuals/standards/q42-format-internal-draft.md](docs/manuals/standards/q42-format-internal-draft.md) | Canonical Q42 v3 physical layout (48-byte NQuin, 40,960-byte SuperBlock, 256-byte header) |
 | [docs/manuals/qapps_specification.md](docs/manuals/qapps_specification.md) | QApp manifest spec — build apps for the Webizen platform |

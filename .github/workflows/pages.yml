@@ -4,8 +4,9 @@ name: Deploy Qualia-DB Playground to GitHub Pages
 # Triggers: main, active release branches 0.0.37 / 0.0.38, version tags, or manual run.
 # Build/test runs on those refs without the github-pages environment so a missing
 # deployment-branch policy cannot skip node/wasm/jekyll verification.
-# Deploy still needs environment github-pages. Current allowed refs (repo settings):
-# main, 0.0.24–0.0.34, tags v*. Add 0.0.37 there or deploy stays rejected.
+# Deploy still needs environment github-pages. Historical allowed refs (repo settings):
+# main, 0.0.24–0.0.34, tags v*. Branch 0.0.38 (and 0.0.37) may still be rejected
+# until settings add those branches. Tag v0.0.38 is the intended publish path.
 on:
   push:
     branches:
