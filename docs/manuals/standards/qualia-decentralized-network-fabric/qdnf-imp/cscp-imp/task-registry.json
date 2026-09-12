@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "created": "2026-09-10",
+  "updated": "2026-09-10",
+  "scope": "CSCP protocol implementation against draft-webcivics-cscp-00; not the original 30 QDNF packages",
+  "policy": {
+    "status_values": ["pending", "claimed", "in_progress", "review", "blocked", "complete"],
+    "claim_authority": "cscp swarm integrator",
+    "completion": "All child checks complete, evidence recorded, independent review for security-sensitive packages",
+    "forbidden": [
+      "Do not tick original 30 QDNF packages",
+      "Do not implement QUIC or new cryptography",
+      "Do not invent public relay URLs",
+      "Do not set Internet honesty flags true"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "CSCP-00",
+      "title": "Wave 0 kernel and local UDP slice",
+      "status": "complete",
+      "depends_on": [],
+      "checklist": "workstream.md",
+      "allowed_paths": ["crates/qualia-core-db/src/net/peer/fabric/"],
+      "assignee": "integrator",
+      "evidence": ["../progress-log.md", "progress-log.md"]
+    },
+    {
+      "id": "CSCP-01",
+      "title": "Complete CSCP v1 TLV codec",
+      "status": "complete",
+      "depends_on": ["CSCP-00"],
+      "checklist": "workstream.md",
+      "allowed_paths": ["crates/qualia-core-db/src/net/peer/fabric/wire/"],
+      "assignee": "integrator-wave1",
+      "evidence": ["/opt/cursor/artifacts/cscp-wave1-fabric-tests.log"]
+    },
+    {
+      "id": "CSCP-02",
+      "title": "Private mailbox",
+      "status": "complete",
+      "depends_on": ["CSCP-01"],
+      "checklist": "workstream.md",
+      "allowed_paths": ["crates/qualia-core-db/src/net/peer/fabric/mailbox.rs"],
+      "assignee": "integrator-wave1",
+      "evidence": ["/opt/cursor/artifacts/cscp-wave1-fabric-tests.log"]
+    },
+    {
+      "id": "CSCP-03",
+      "title": "Lease protocol",
+      "status": "complete",
+      "depends_on": ["CSCP-01"],
+      "checklist": "workstream.md",
+      "allowed_paths": ["crates/qualia-core-db/src/net/peer/fabric/lease_protocol.rs"],
+      "assignee": "integrator-wave1",
+      "evidence": ["/opt/cursor/artifacts/cscp-wave1-fabric-tests.log"]
+    },
+    {
+      "id": "CSCP-04",
+      "title": "Accept Reject evidence",
+      "status": "complete",
+      "depends_on": ["CSCP-01"],
+      "checklist": "workstream.md",
+      "allowed_paths": ["crates/qualia-core-db/src/net/peer/fabric/outcome.rs"],
+      "assignee": "integrator-wave1",
+      "evidence": ["/opt/cursor/artifacts/cscp-wave1-fabric-tests.log"]
+    },
+    {
+      "id": "CSCP-05",
+      "title": "TLS WSS plus QSession CSCP control",
+      "status": "complete",
+      "depends_on": ["CSCP-01"],
+      "checklist": "workstream.md",
+      "allowed_paths": ["crates/qualia-core-db/src/p2p/connectivity/cscp_wss.rs"],
+      "assignee": "integrator-wave1",
+      "evidence": ["/opt/cursor/artifacts/cscp-wave1-wss-tests.log"]
+    },
+    {
+      "id": "CSCP-06",
+      "title": "Durable CSCP receipts",
+      "status": "complete",
+      "depends_on": ["CSCP-01"],
+      "checklist": "workstream.md",
+      "allowed_paths": ["crates/qualia-core-db/src/net/peer/fabric/receipt_store.rs"],
+      "assignee": "integrator-wave1",
+      "evidence": ["/opt/cursor/artifacts/cscp-wave1-fabric-tests.log"]
+    },
+    {
+      "id": "CSCP-07",
+      "title": "QUIC ALPN evaluation",
+      "status": "complete",
+      "depends_on": ["CSCP-05"],
+      "checklist": "workstream.md",
+      "allowed_paths": [
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/CSCP-07-quic-alpn.md",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-07.md"
+      ],
+      "assignee": "swarm-cscp-07",
+      "evidence": ["decisions/CSCP-07-quic-alpn.md"]
+    },
+    {
+      "id": "CSCP-08",
+      "title": "MASQUE bound-UDP Internet",
+      "status": "blocked",
+      "depends_on": ["CSCP-07"],
+      "blocked_reason": "No operator URL; pod cannot be a public relay",
+      "checklist": "workstream.md",
+      "assignee": null,
+      "evidence": []
+    },
+    {
+      "id": "CSCP-09",
+      "title": "HTTP/2 capsule fallback",
+      "status": "in_progress",
+      "depends_on": ["CSCP-01"],
+      "checklist": "workstream.md",
+      "allowed_paths": [
+        "crates/qualia-core-db/src/p2p/connectivity/cscp_h2.rs",
+        "crates/qualia-core-db/src/p2p/connectivity/h2_capsule.rs",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-09-h2.md"
+      ],
+      "assignee": "integrator",
+      "evidence": [
+        "handoffs/CSCP-09-h2.md",
+        "reviews/SWARM-09-DIDQI.md",
+        "/opt/cursor/artifacts/swarm-h2-fabric-tests.log"
+      ],
+      "note": "CSCP-09.01 framing done. CSCP-09.02 loopback TLS HTTP/2 Extended CONNECT accepted. Parent CSCP-09 Internet/MASQUE still open."
+    },
+    {
+      "id": "DID-QI-SPEC",
+      "title": "did:qi W3C DID Method specification",
+      "status": "complete",
+      "depends_on": [],
+      "checklist": "briefs/DID-QI-spec.md",
+      "allowed_paths": [
+        "docs/manuals/standards/did-qi-method.md",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/DID-QI-spec.md"
+      ],
+      "assignee": "integrator",
+      "evidence": ["docs/manuals/standards/did-qi-method.md"]
+    },
+    {
+      "id": "DID-QI-IMPL",
+      "title": "did:qi create/read/update/deactivate runtime",
+      "status": "complete",
+      "depends_on": [],
+      "checklist": "briefs/DID-QI-impl.md",
+      "allowed_paths": [
+        "crates/qualia-core-db/src/did_qi/",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/DID-QI-impl.md"
+      ],
+      "assignee": "integrator",
+      "evidence": [
+        "reviews/SWARM-09-DIDQI.md",
+        "/opt/cursor/artifacts/swarm-did-qi-f1-f4-tests.log"
+      ],
+      "note": "F1–F4 applied. Method not registered. Parent DID-QI registration remains open. `publish_qi_document` binds CscpMailbox services into PrivateMailbox."
+    },
+    {
+      "id": "CSCP-10",
+      "title": "Browser profile",
+      "status": "complete",
+      "depends_on": ["CSCP-05"],
+      "checklist": "workstream.md",
+      "allowed_paths": [
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/CSCP-10-browser-profile.md",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-10.md"
+      ],
+      "assignee": "swarm-cscp-10",
+      "evidence": ["decisions/CSCP-10-browser-profile.md"],
+      "note": "Profile note only. browser_turn_interop_executed remains false."
+    },
+    {
+      "id": "CSCP-11",
+      "title": "Independent review of Wave 1",
+      "status": "complete",
+      "depends_on": ["CSCP-01", "CSCP-02", "CSCP-03", "CSCP-04", "CSCP-05", "CSCP-06"],
+      "checklist": "workstream.md",
+      "allowed_paths": [
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/reviews/CSCP-11-wave1.md",
+        "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-11.md"
+      ],
+      "assignee": "swarm-cscp-11",
+      "evidence": ["reviews/CSCP-11-wave1.md", "/opt/cursor/artifacts/cscp-wave1-review-fixes.log"]
+    },
+    {
+      "id": "CSCP-12",
+      "title": "IETF datatracker submission",
+      "status": "blocked",
+      "depends_on": ["CSCP-11"],
+      "blocked_reason": "Author recorded (Timothy Charles Holborn <timothy.holborn@gmail.com>). WG/area not chosen. Not posted to datatracker.",
+      "checklist": "workstream.md",
+      "assignee": null,
+      "evidence": []
+    }
+  ]
+}

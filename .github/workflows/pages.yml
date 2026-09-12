@@ -1,13 +1,16 @@
 name: Deploy Qualia-DB Playground to GitHub Pages
 
 # Deploys Jekyll site under /docs to GitHub Pages (baseurl: /qualiaDB).
-# Triggers: main, active release branch 0.0.30, version tags, or manual run.
+# Triggers: main, 0.0.30 / 0.0.37 / 0.0.38, version tags, or manual run.
 # Environment github-pages must also allow the branch (deployment branch policies).
+# Deploy still needs environment github-pages; add 0.0.37/0.0.38 there or branch deploys stay rejected.
 on:
   push:
     branches:
       - main
       - "0.0.30"
+      - "0.0.37"
+      - "0.0.38"
     tags:
       - "v*"
   workflow_dispatch:

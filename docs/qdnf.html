@@ -96,6 +96,41 @@
       </article>
     </section>
 
+
+    <section class="q-card p-8 mb-12">
+      <h2 class="text-2xl font-semibold mb-3">0.0.38 networking — honest ledger</h2>
+      <p class="text-sm text-white/65 mb-5">Language only. Flags and workstream boxes are the contract — this honeycomb does not flip them.</p>
+      <div class="grid md:grid-cols-3 gap-4 text-sm">
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-5">
+          <p class="q-kicker text-emerald-300 mb-2">Landed</p>
+          <ul class="text-white/75 space-y-2">
+            <li>QDNF <strong>connection manager</strong> in-tree (policy, dual-stack planner, invitations, durable delivery) — Internet trial still unexecuted.</li>
+            <li><strong>CSCP</strong> local control plane (Wave 0–1): fail-closed TLV codec, mailbox, leases, receipts; loopback bound-UDP; local rustls WSS ↔ QSession.</li>
+            <li>CSCP-09.01/09.02: local DATAGRAM capsules + loopback HTTP/2 Extended CONNECT — <em>not</em> Internet MASQUE.</li>
+            <li><code class="q-mono">did:qi</code> method draft + in-process CRUD/vectors (not DID Spec Registries).</li>
+            <li>Continuity: handle revoke ≠ who-erase; DNS/ABN/passport optional attach-later handles.</li>
+          </ul>
+        </article>
+        <article class="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5">
+          <p class="q-kicker text-amber-300 mb-2">In progress</p>
+          <ul class="text-white/75 space-y-2">
+            <li>QPR / native fabric depth beyond local slices.</li>
+            <li>Parent CSCP-09 on a <em>live Internet</em> path (loopback H2 is not that).</li>
+            <li>Identifier Fabric chrome fold (docs WIP — not a new paper gate).</li>
+            <li>GitHub Pages deploy still keyed to 0.0.37 until workflow/environment admit 0.0.38.</li>
+          </ul>
+        </article>
+        <article class="rounded-2xl border border-rose-500/25 bg-rose-500/5 p-5">
+          <p class="q-kicker text-rose-300 mb-2">Parked</p>
+          <ul class="text-white/75 space-y-2">
+            <li><strong>CSCP-08</strong> — Internet WSS/MASQUE relay trial waits on a hostname Timothy controls. No invented <code class="q-mono">wss://</code>.</li>
+            <li><strong>CSCP-12</strong> — datatracker submit (author recorded; not posted).</li>
+            <li>Honesty flags stay false: public relay, two-host Internet, MASQUE Internet, noq/QUIC admit.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
     <section class="q-card p-8">
       <h2 class="text-2xl font-semibold mb-3">Read the actual design</h2>
       <p class="text-sm text-white/65 mb-5">The honeycomb is a map. The standards folder is the contract.</p>
@@ -103,8 +138,11 @@
         <a class="px-4 py-2 rounded-2xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/">QDNF specification</a>
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/peer-runtime.md">Peer runtime</a>
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/network-cell.md">Network cells</a>
-        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="progress-0.0.37.html">0.0.37 progress</a>
-        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/briefs/CSCP-08.md">CSCP-08 chores (no tick)</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/did-qi-method.md">did:qi method draft</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/">CSCP implementation</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="standards/ietf/CSCP-08-LOCAL-CHORES.md">CSCP-08 local chores (no tick)</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="work-in-progress/CONTINUITY_GATE_HANDLE_REVOKE_WIP.md">Continuity · handle revoke</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="progress-0.0.37.html">0.0.37 progress (archive)</a>
       </div>
     </section>
   </main>
