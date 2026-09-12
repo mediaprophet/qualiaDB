@@ -6,6 +6,10 @@ import vm from 'node:vm';
 const docsRoot = path.resolve(import.meta.dirname, '..');
 const read = (relativePath) => fs.readFileSync(path.join(docsRoot, relativePath), 'utf8');
 
+const menuLoader = read('js/menu-loader.js');
+assert.match(menuLoader, /rawName === 'Webizen'/);
+assert.match(menuLoader, /Webizen<\/span>.*QualiaDB/);
+
 const css = read('css/release-showcase.css');
 assert.match(css, /\[data-theme="release-038"\]/, '038 theme tokens must exist');
 assert.match(css, /\.q-prose/, 'markdown prose styles must exist');
