@@ -268,6 +268,7 @@ Ordered for Timothy’s ask. Max **8** P0/P1. Acceptance criteria sized so a clo
 
 ### 4. P0 — Unavailable → held / not yet sweep
 **Owner:** davinci chrome · Capt UAT  
+**Status:** chrome landed on `cursor/held-not-yet-wait-honest-c283` — Capt re-UAT: [`CAPT_REUAT_HELD_NOT_YET_WAIT_HONEST.md`](./CAPT_REUAT_HELD_NOT_YET_WAIT_HONEST.md)  
 **Acceptance:**
 - Grep/UI sweep: Mesh, Pulse, Aura, Job, Graph/Morpha sibling panes on Catalog screen — zero user-visible **"unavailable"** / **"Unavailable"** for wait-honest states.
 - Replace with **held / not yet** (+ short why). Live binds must not false-held.
