@@ -6,10 +6,9 @@ default_theme = "dark"
 # base_path removed for Tauri desktop app compatibility
 # base_path = "webizen-browser"  # This is for GitHub Pages, not Tauri
 
-# Skip Binaryen. The studio wasm is built without fat LTO (see workspace
-# [profile.web-release]); wasm-opt then SIGABRTs with
-# "compile unit size was incorrect (this may be an unsupported version of DWARF)".
-# dx 0.8 currently continues after that abort — do not depend on it.
-# level "0" = do not run the optimizer.
+# dx 0.8 still invokes wasm-opt on every --release web build (even level 0
+# is `-O0`). Un-LTO studio wasm with DWARF makes Binaryen SIGABRT
+# ("compile unit size was incorrect"). scripts/build_frontend.* pass
+# `-C debuginfo=0` so there is no DWARF for wasm-opt to choke on.
 [web.wasm_opt]
-level = "0"
+level = "s"
