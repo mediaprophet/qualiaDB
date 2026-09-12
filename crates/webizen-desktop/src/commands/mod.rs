@@ -43,6 +43,7 @@ pub use render::{
 };
 pub mod browser_10d;
 pub mod native_bindings;
+pub mod graph_daemon;
 pub mod poet;
 pub mod poet_render;
 pub mod semantic_logic;
@@ -166,7 +167,7 @@ pub fn get_desktop_status(
     serde_json::json!({
         "settings_port": crate::settings_server::current_settings_port(),
         "graph_daemon_port": qualia_client_core::api::get_active_daemon_port(),
-        "graph_daemon_reachable": daemon_running,
+        "graph_daemon_reachable": graph_daemon::probe_health_blocking(),
         "graph_engine_version": serde_json::Value::Null,
         "qapps_protocol_port": qualia_client_core::qapps_protocol::qualia_protocol_port(),
         "storage_path": config.storage_path,

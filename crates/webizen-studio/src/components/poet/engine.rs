@@ -1,6 +1,7 @@
 //! Host bridge — WASM talks to Tauri; native studio can call the same commands
 //! when compiled inside Webizen Desktop.
 
+use super::graph_daemon::{daemon_lexicon_manifest, daemon_lexicon_manifest_wait};
 use crate::components::settings::host::invoke_json;
 use serde::Deserialize;
 use serde_json::json;
@@ -92,7 +93,25 @@ pub async fn render_preview(
     .await
 }
 
-/// Live ALL_BOUND bind — same id WASM Catalog uses. No Host widen.
+/// Live ALL_BOUND bind — daemon-first `:4242/invoke`, then Desktop host.
+/// Never returns an "unavailable" string. No Host widen.
 pub async fn lexicon_manifest(path: String) -> Result<PoetEvalResult, String> {
-    invoke_json("poet_lexicon_manifest", json!({ "path": path })).await
+    let resolved = path.trim().to_string();
+    if let Ok(from_daemon) = daemon_lexicon_manifest(&resolved).await {
+        return Ok(from_daemon);
+    }
+    match invoke_json("poet_lexicon_manifest", json!({ "path": resolved })).await {
+        Ok(result) => Ok(result),
+        Err(err) => {
+            if let Ok(from_daemon) = daemon_lexicon_manifest_wait(&resolved).await {
+                return Ok(from_daemon);
+            }
+            let folded = err.to_ascii_lowercase();
+            if folded.contains("unavailable") || folded.contains("broken") {
+                Err(webizen_studio::lexicon_catalog::HELD_WHY.to_string())
+            } else {
+                Err(err)
+            }
+        }
+    }
 }

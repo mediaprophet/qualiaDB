@@ -250,6 +250,27 @@ mod tests {
     }
 
     #[test]
+    fn valid_en_core_fixture_opens_gate() {
+        let mut snap = PoetSnapshot::live();
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert!(path.is_file(), "fixture {}", path.display());
+        let mut rec = BTreeMap::new();
+        rec.insert(
+            "path".into(),
+            Value::String(path.to_string_lossy().into_owned()),
+        );
+        let value = snap
+            .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
+            .expect("valid fixture bind must succeed");
+        let printed = crate::poet_host::format_value(&value);
+        assert!(printed.contains("0.1.0"), "{printed}");
+        assert!(printed.contains("mixed"), "{printed}");
+        assert!(printed.contains("open"), "{printed}");
+        assert!(!printed.to_ascii_lowercase().contains("unavailable"));
+    }
+
+    #[test]
     fn missing_pack_is_held_open_lexicon_pack() {
         let mut snap = PoetSnapshot::live();
         let mut rec = BTreeMap::new();

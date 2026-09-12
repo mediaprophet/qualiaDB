@@ -6,8 +6,72 @@
 /// Live ALL_BOUND id. Do not invent a Host method.
 pub const INVOKE_ID: &str = "GraphDatabase.lexicon_manifest";
 
+/// Capt / UAT graph daemon HTTP port. Desktop Open pack posts `/invoke` here.
+pub const PRIMARY_DAEMON_PORT: u16 = 4242;
+
 /// Soft why-text for missing / unknown / E300. Never "broken".
 pub const HELD_WHY: &str = "held / not yet — open lexicon pack";
+
+/// Body for `POST /invoke` — same bind WASM Catalog uses. No Host widen.
+pub fn invoke_body(path: &str) -> serde_json::Value {
+    serde_json::json!({
+        "id": INVOKE_ID,
+        "args": { "path": path }
+    })
+}
+
+pub fn health_url(port: u16) -> String {
+    format!("http://127.0.0.1:{port}/health")
+}
+
+pub fn invoke_url(port: u16) -> String {
+    format!("http://127.0.0.1:{port}/invoke")
+}
+
+/// Resolve a Catalog path so relative fixture pins work when Desktop cwd ≠ repo.
+pub fn resolve_lexicon_path(path: &str) -> String {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    let given = std::path::Path::new(trimmed);
+    if given.is_file() {
+        return given.to_string_lossy().into_owned();
+    }
+    if given.is_absolute() {
+        return trimmed.to_string();
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        let direct = cwd.join(given);
+        if direct.is_file() {
+            return direct.to_string_lossy().into_owned();
+        }
+        let mut dir: &std::path::Path = &cwd;
+        for _ in 0..8 {
+            let candidate = dir.join(given);
+            if candidate.is_file() {
+                return candidate.to_string_lossy().into_owned();
+            }
+            match dir.parent() {
+                Some(parent) => dir = parent,
+                None => break,
+            }
+        }
+    }
+    let here = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut dir: &std::path::Path = &here;
+    for _ in 0..8 {
+        let candidate = dir.join(given);
+        if candidate.is_file() {
+            return candidate.to_string_lossy().into_owned();
+        }
+        match dir.parent() {
+            Some(parent) => dir = parent,
+            None => break,
+        }
+    }
+    trimmed.to_string()
+}
 
 pub const LIVING_SAYABLE: &str = "person / living / country";
 pub const ARTIFACT_SAYABLE: &str = "tool / volume / file";
@@ -353,6 +417,19 @@ mod tests {
     fn bind_is_live_lexicon_manifest() {
         assert_eq!(INVOKE_ID, "GraphDatabase.lexicon_manifest");
         assert!(!INVOKE_ID.contains("qualia."));
+        assert_eq!(PRIMARY_DAEMON_PORT, 4242);
+        assert_eq!(invoke_url(4242), "http://127.0.0.1:4242/invoke");
+        let body = invoke_body("crates/vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert_eq!(body["id"], INVOKE_ID);
+        assert_eq!(
+            body["args"]["path"],
+            "crates/vibe/fixtures/lexicon/en-core.lexicon.json"
+        );
+        let resolved = resolve_lexicon_path("crates/vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert!(
+            std::path::Path::new(&resolved).is_file(),
+            "workspace fixture must resolve, got {resolved}"
+        );
     }
 
     #[test]
@@ -396,6 +473,17 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+        match interpret_invoke(
+            false,
+            "",
+            Some("E300@0..0: lexicon pack manifest not found: /tmp/x.lexicon.json"),
+        ) {
+            ManifestOutcome::Held { why } => {
+                assert!(copy_avoids_unavailable(&why));
+                assert!(copy_avoids_broken(&why));
+            }
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]
@@ -428,6 +516,62 @@ mod tests {
         assert_eq!(recipe_beat(RecipeEvent::PackWriteHeld), RecipeBeat::Hold);
         assert_eq!(RecipeBeat::Arrive.named_beat(), "entrance");
         assert_eq!(RecipeBeat::Leave.named_beat(), "exit");
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn valid_en_core_bind_opens_pack_card() {
+        use qualia_core_db::poet_host::{format_value, PoetSnapshot};
+        use vibe::Value;
+        let path = resolve_lexicon_path("crates/vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert!(
+            std::path::Path::new(&path).is_file(),
+            "fixture must resolve: {path}"
+        );
+        let mut snap = PoetSnapshot::live();
+        let mut rec = std::collections::BTreeMap::new();
+        rec.insert("path".into(), Value::String(path));
+        let value = snap
+            .invoke_id(INVOKE_ID, Value::Record(rec))
+            .expect("valid fixture bind must succeed");
+        let printed = format_value(&value);
+        match interpret_invoke(true, &printed, None) {
+            ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+                assert_eq!(card.framing, Framing::Mixed);
+            }
+            other => panic!("{other:?} from {printed}"),
+        }
+        assert!(copy_avoids_unavailable(&printed));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn invoke_path(path: &str) -> (bool, String, Option<String>) {
+        use qualia_core_db::poet_host::{format_value, PoetSnapshot};
+        use vibe::Value;
+        let mut snap = PoetSnapshot::live();
+        let mut rec = std::collections::BTreeMap::new();
+        rec.insert("path".into(), Value::String(path.into()));
+        match snap.invoke_id(INVOKE_ID, Value::Record(rec)) {
+            Ok(v) => (true, format_value(&v), None),
+            Err(e) => (false, String::new(), Some(e.to_json())),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn empty_and_nonsense_stay_held_never_unavailable() {
+        for path in ["", "/tmp/does-not-exist-lexicon-pack.lexicon.json", "not-a-pack"] {
+            let (ok, value, diagnostic) = invoke_path(path);
+            assert!(!ok, "{path}");
+            match interpret_invoke(ok, &value, diagnostic.as_deref()) {
+                ManifestOutcome::Held { why } => {
+                    assert!(copy_avoids_unavailable(&why), "{why}");
+                    assert!(copy_avoids_broken(&why), "{why}");
+                }
+                other => panic!("{path} → {other:?}"),
+            }
+        }
     }
 
     #[test]

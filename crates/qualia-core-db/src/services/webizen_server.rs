@@ -26,6 +26,28 @@ const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
 const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
 const PROXY_FETCH_MAX_BYTES: usize = 64 * 1024 * 1024;
 
+/// Loopback + Desktop webview origins so Catalog · Lexicon can POST `/invoke`
+/// on `:4242` without Host widen. Not a public CORS open.
+fn desktop_catalog_origins() -> Vec<HeaderValue> {
+    [
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:8788",
+        "http://127.0.0.1:8788",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+        "https://tauri.localhost",
+        "http://tauri.localhost",
+        "https://org.webizen.browser.localhost",
+        OFFICIAL_WEB_HUB_ORIGIN,
+    ]
+    .into_iter()
+    .filter_map(|origin| origin.parse().ok())
+    .collect()
+}
+
 /// Block loopback / RFC1918 targets for the browser CORS relay (`GET /proxy/fetch`).
 fn proxy_target_allowed(url: &reqwest::Url) -> bool {
     match url.scheme() {
@@ -246,21 +268,7 @@ pub fn spawn_loopback_server(
             let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
 
             rt.block_on(async move {
-                let allowed_origins: Vec<HeaderValue> = if server_state.dev {
-                    vec![
-                        "http://localhost:8080".parse().unwrap(),
-                        "http://127.0.0.1:8080".parse().unwrap(),
-                        "http://localhost:8788".parse().unwrap(),
-                        "http://127.0.0.1:8788".parse().unwrap(),
-                        "http://localhost:5173".parse().unwrap(),
-                        "http://127.0.0.1:5173".parse().unwrap(),
-                        "http://localhost:4173".parse().unwrap(),
-                        "http://127.0.0.1:4173".parse().unwrap(),
-                        OFFICIAL_WEB_HUB_ORIGIN.parse().unwrap(),
-                    ]
-                } else {
-                    vec![OFFICIAL_WEB_HUB_ORIGIN.parse().unwrap()]
-                };
+                let allowed_origins = desktop_catalog_origins();
 
                 let cors = if server_state.dev {
                     CorsLayer::permissive()

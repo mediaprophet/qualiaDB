@@ -9,6 +9,7 @@ mod chest;
 mod chrome;
 mod containers;
 mod engine;
+mod graph_daemon;
 mod gpu_frame;
 pub mod icons;
 mod kinds;

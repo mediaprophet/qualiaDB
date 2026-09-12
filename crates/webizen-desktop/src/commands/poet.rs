@@ -2,7 +2,8 @@
 //!
 //! Two tracks: Vibe reaches existing Qualia capabilities for humans/apps.
 //! Gazetteer is document NLP (`qualia_core_db::nlp`), not the language.
-//! Honesty: graph is an in-process snapshot until daemon wiring (Partial).
+//! Catalog · Lexicon Open pack is daemon-first (`POST :4242/invoke`
+//! `GraphDatabase.lexicon_manifest`) with in-process fallback. No Host widen.
 
 use qualia_core_db::nlp::analyze_document;
 use qualia_core_db::poet_host::catalog::{engine_families_mcp_only, VIBE_0_1};
@@ -192,15 +193,13 @@ pub fn poet_eval(
 }
 
 /// Live ALL_BOUND bind used by Desktop Catalog · Lexicon. No Host widen.
+/// Hits the local graph daemon `:4242/invoke` when Native Connected.
 #[tauri::command]
-pub fn poet_lexicon_manifest(state: State<PoetHarnessState>, path: String) -> PoetEvalResult {
-    let mut snap = state.snap.lock().expect("poet snapshot");
-    let mut rec = BTreeMap::new();
-    rec.insert("path".into(), Value::String(path));
-    match snap.invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec)) {
-        Ok(v) => snapshot_result(&snap, true, format_value(&v), None),
-        Err(e) => snapshot_result(&snap, false, String::new(), Some(e.to_json())),
-    }
+pub async fn poet_lexicon_manifest(
+    _state: State<'_, PoetHarnessState>,
+    path: String,
+) -> PoetEvalResult {
+    super::graph_daemon::lexicon_manifest_live(path).await
 }
 
 #[tauri::command]
