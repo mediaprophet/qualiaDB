@@ -15694,6 +15694,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "work-graph"
+version = "0.0.38"
+
+[[package]]
 name = "wrapcenum-derive"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

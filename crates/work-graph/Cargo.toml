@@ -1,0 +1,16 @@
+[package]
+name = "work-graph"
+version = "0.0.38"
+edition = "2021"
+description = "Work graph (Implementation Graph) Beat B MVP indexer — presence extract, no Host invent"
+license-file = "../../LICENSE"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+repository = "https://github.com/mediaprophet/qualiaDB"
+
+[lib]
+name = "work_graph"
+path = "src/lib.rs"
+
+[[bin]]
+name = "work-graph"
+path = "src/main.rs"
