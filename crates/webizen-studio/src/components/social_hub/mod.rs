@@ -438,8 +438,8 @@ pub fn SocialHub() -> Element {
                         if active_model_chip().is_empty() {
                             span {
                                 style: "font-size:11px;color:#fde68a;background:#78350f;border:1px solid #b45309;padding:5px 11px;border-radius:999px;white-space:nowrap;",
-                                title: "No local model active — instrument path unavailable until you activate one in Settings",
-                                "Instrument · none"
+                                title: "{crate::components::talk_human_alone::INSTRUMENT_HELD_SAYABLE}",
+                                "{crate::components::talk_human_alone::INSTRUMENT_HELD_CHIP}"
                             }
                         } else {
                             span {

@@ -29,7 +29,7 @@ impl HonestyLevel {
             Self::Ready => "Ready",
             Self::Partial => "Partial",
             Self::Scaffold => "Scaffold",
-            Self::NeedsModel => "Needs model",
+            Self::NeedsModel => "held / not yet",
             Self::NeedsConsent => "Needs consent",
             Self::Unavailable => "held / not yet",
         }
@@ -88,6 +88,14 @@ mod tests {
         assert_eq!(HonestyLevel::Unavailable.label(), "held / not yet");
         assert!(!HonestyLevel::Unavailable.label().contains("Unavailable"));
         let (bg, _) = HonestyLevel::Unavailable.bg_fg();
+        assert_ne!(bg, "#450a0a", "held look is amber, not panic red");
+    }
+
+    #[test]
+    fn needs_model_voice_is_held_not_yet() {
+        assert_eq!(HonestyLevel::NeedsModel.label(), "held / not yet");
+        assert!(!HonestyLevel::NeedsModel.label().to_ascii_lowercase().contains("needs model"));
+        let (bg, _) = HonestyLevel::NeedsModel.bg_fg();
         assert_ne!(bg, "#450a0a", "held look is amber, not panic red");
     }
 }

@@ -1,8 +1,10 @@
-//! **Chat pane** — conversation with people and local instruments (agents under gate).
+//! **Chat pane** — human-alone messaging; instruments stay tools.
 //!
-//! Hosted under the **Relations** domain (`social_hub`) as the **Chat** tab. People / Reception /
-//! Mail / Projects are sibling tabs. Local models are instruments — never peer persons.
-//! Streaming inference via `stream_chat_inference` + `chat-token` events.
+//! Hosted under **Relations** as Inbox / Chat. People / Reception / Mail / Projects
+//! are sibling tabs. A person can send and receive without an agent remote-drive.
+//! Local models are instruments — never peer persons. Inference is opt-in via
+//! `@slug` or Ask instrument (`stream_chat_inference`). Missing model is
+//! **held / not yet**, never red-broken theatre.
 //!
 //! Conduct / gate denials surface via [`ConductBanner`] (U1-B) from `block_reason`,
 //! `shield_alert`, and `chat-done` — never silent.
@@ -16,6 +18,7 @@ use crate::components::conduct_banner::{
 };
 use crate::components::conduct_banner::{ConductBanner, ConductNotice};
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
+use crate::components::talk_human_alone::TalkHoldLevel;
 use crate::components::tool_use_card::ToolUseCard;
 
 #[cfg(target_arch = "wasm32")]
@@ -48,7 +51,7 @@ where
     T: serde::de::DeserializeOwned,
 {
     if !crate::endpoints::is_native_host() {
-        return Err("The desktop host is unavailable in this preview.".to_string());
+        return Err("Talk host is held / not yet in this preview — open the desktop app to send.".to_string());
     }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
@@ -135,33 +138,19 @@ fn auto_select_model_label(list: &[serde_json::Value], current: &str) -> Option<
     list.first().map(model_label)
 }
 
-/// Return explicit `@slug` targets in first-mention order.  Handles are kept
-/// as stable slugs; display-name matching belongs in the picker/autocomplete,
-/// never in dispatch where an ambiguous name could invoke the wrong agent.
+/// Create a session if needed, append the human message, then optionally ask
+/// a local instrument. Plain Send never remote-drives an agent.
 #[cfg(target_arch = "wasm32")]
-fn mentioned_agent_slugs(body: &str, roster: &[serde_json::Value]) -> Result<Vec<String>, String> {
-    let mut requested = Vec::new();
-    for token in body.split_whitespace() {
-        let Some(rest) = token.strip_prefix('@') else {
-            continue;
-        };
-        let slug = rest
-            .trim_matches(|c: char| !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '-')
-            .to_string();
-        if slug.is_empty() {
-            continue;
-        }
-        if !roster.iter().any(|agent| s(agent, "slug") == slug) {
-            return Err(format!("No agent is registered as @{slug}."));
-        }
-        if !requested.iter().any(|known| known == &slug) {
-            requested.push(slug);
-        }
+async fn reload_session_messages(sid: &str, mut messages: Signal<Vec<serde_json::Value>>) {
+    if let Ok(full) = invoke_json::<serde_json::Value>("load_chat_session", json!({ "id": sid })).await
+    {
+        let msgs = full
+            .get("messages")
+            .and_then(|m| m.as_array())
+            .cloned()
+            .unwrap_or_default();
+        messages.set(msgs);
     }
-    if requested.len() > 4 {
-        return Err("A message may invoke at most four agents.".to_string());
-    }
-    Ok(requested)
 }
 
 /// Build the bounded answer-summary context that a recipient is explicitly
@@ -245,7 +234,7 @@ fn flash_status(mut status: Signal<String>, msg: String, clear_after_ms: u32) {
     });
 }
 
-/// Create a session if needed, append user message, stream agent reply.
+/// Persist a human message. Ask a local instrument only when classified as such.
 #[cfg(target_arch = "wasm32")]
 async fn send_chat_turn(
     mut active_session: Signal<String>,
@@ -258,40 +247,31 @@ async fn send_chat_turn(
     mut streaming_for: Signal<String>,
     mut status: Signal<String>,
     mut conduct: Signal<Option<ConductNotice>>,
+    ask_instrument: bool,
+    has_model: bool,
 ) {
+    use crate::components::talk_human_alone::{
+        classify_talk_send, mentioned_instrument_slugs, should_invoke_instrument,
+        DEFAULT_CONVERSATION_TITLE, INSTRUMENT_HELD_SAYABLE, INSTRUMENT_WORKING_SAYABLE,
+        SENT_SAYABLE,
+    };
+
     let body = draft();
     if body.trim().is_empty() {
         return;
     }
-    // Resolve explicit mentions before persisting the user message.  An unknown
-    // `@handle` must not become a misleading, unfulfilled chat request.
-    let mentioned =
-        match invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({})).await {
-            Ok(roster) => match mentioned_agent_slugs(&body, &roster) {
-                Ok(slugs) => slugs,
-                Err(reason) => {
-                    status.set(reason.clone());
-                    conduct.set(Some(ConductNotice::inference_block(reason)));
-                    return;
-                }
-            },
-            Err(e) => {
-                status.set(format!("Could not resolve agents: {e}"));
-                return;
-            }
-        };
-    let target_agents: Vec<Option<String>> = if mentioned.is_empty() {
-        vec![(!active_agent().is_empty()).then(|| active_agent())]
-    } else {
-        mentioned.into_iter().map(Some).collect()
+    let roster = invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({}))
+        .await
+        .unwrap_or_default();
+    let mentioned = mentioned_instrument_slugs(&body, &roster);
+    let kind = classify_talk_send(&body, ask_instrument, &active_agent(), &mentioned);
+    let target_agents: Vec<Option<String>> = match &kind {
+        crate::components::talk_human_alone::TalkSendKind::HumanOnly => Vec::new(),
+        crate::components::talk_human_alone::TalkSendKind::AskInstrument { slugs } => slugs.clone(),
     };
-    // A roster agent may require explicit review of each context manifest.
-    // This first slice has only the addressed message/retrieval context, so the
-    // confirmation names that exact boundary rather than implying transcript
-    // sharing.  More detailed manifest review is added with multi-job groups.
+
     let mut remote_consent_approved = false;
-    if let Ok(roster) = invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({})).await
-    {
+    if should_invoke_instrument(&kind, has_model) && !roster.is_empty() {
         let needs_confirmation = target_agents.iter().flatten().any(|slug| {
             roster.iter().any(|agent| {
                 s(agent, "slug") == *slug
@@ -305,11 +285,11 @@ async fn send_chat_turn(
         if needs_confirmation {
             let approved = web_sys::window()
                 .and_then(|window| window.confirm_with_message(
-                    "Send this message to the selected agent? Only the addressed message and permitted retrieval context will be included.",
+                    "Ask this instrument? Only the addressed message and permitted retrieval context will be included.",
                 ).ok())
                 .unwrap_or(false);
             if !approved {
-                status.set("Agent context dispatch cancelled.".into());
+                flash_status(status, "Instrument ask cancelled.".into(), 1600);
                 return;
             }
         }
@@ -331,7 +311,7 @@ async fn send_chat_turn(
                 .and_then(|value| value.as_str())
                 == Some("never")
         }) {
-            status.set("A selected agent has remote use disabled by its policy.".into());
+            status.set("That instrument has remote use closed by its policy.".into());
             return;
         }
         let needs_remote_confirmation = remote_agents.iter().any(|agent| {
@@ -344,31 +324,29 @@ async fn send_chat_turn(
         if needs_remote_confirmation {
             let approved = web_sys::window()
                 .and_then(|window| window.confirm_with_message(
-                    "This turn will send the addressed message and permitted retrieval context to the selected external MCP provider. Continue?",
+                    "This ask will send the addressed message and permitted retrieval context to the selected external MCP provider. Continue?",
                 ).ok())
                 .unwrap_or(false);
             if !approved {
-                status.set("Remote agent dispatch cancelled.".into());
+                flash_status(status, "Remote instrument ask cancelled.".into(), 1600);
                 return;
             }
             remote_consent_approved = true;
         }
     }
-    let roster_for_sharing = invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({}))
-        .await
-        .unwrap_or_default();
+
     let mut sid = active_session();
     if sid.is_empty() {
         match invoke_json::<String>(
             "create_chat_session",
-            json!({ "title": "Chat with your agent" }),
+            json!({ "title": DEFAULT_CONVERSATION_TITLE }),
         )
         .await
         {
             Ok(id) => {
                 sid = id.clone();
                 active_session.set(id);
-                active_title.set("Chat with your agent".into());
+                active_title.set(DEFAULT_CONVERSATION_TITLE.into());
                 messages.set(Vec::new());
                 if let Ok(list) =
                     invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({})).await
@@ -377,10 +355,7 @@ async fn send_chat_turn(
                 }
             }
             Err(e) => {
-                status.set(format!("Could not start chat: {e}"));
-                conduct.set(Some(ConductNotice::inference_block(format!(
-                    "Could not start chat: {e}"
-                ))));
+                status.set(format!("Could not start conversation: {e}"));
                 return;
             }
         }
@@ -396,156 +371,117 @@ async fn send_chat_turn(
     {
         Ok(_) => {
             draft.set(String::new());
-            if let Ok(full) =
-                invoke_json::<serde_json::Value>("load_chat_session", json!({ "id": sid })).await
-            {
-                let msgs = full
-                    .get("messages")
-                    .and_then(|m| m.as_array())
-                    .cloned()
-                    .unwrap_or_default();
-                messages.set(msgs);
-            }
-            status.set("Your agent is thinking…".into());
-            // Mentions resolve to stable roster slugs.  Turns are run in a
-            // bounded sequence on the current local decode lane, so consumer
-            // GPUs never receive competing full-model generations.
-            let target = target_agents.first().cloned().flatten();
-            let agent_arg = target
-                .as_ref()
-                .map_or(serde_json::Value::Null, |slug| json!(slug));
-            let mut completed_summaries: Vec<(String, String)> = Vec::new();
-            match invoke_json::<serde_json::Value>(
-                "stream_chat_inference",
-                json!({ "sessionId": sid, "prompt": body, "agentSlug": agent_arg, "remoteConsentApproved": remote_consent_approved }),
+            reload_session_messages(&sid, messages).await;
+            scroll_chat_to_bottom();
+            let _ = invoke_json::<usize>(
+                "ingest_chat_cml",
+                json!({ "sessionId": sid, "text": body_cml }),
             )
-            .await
-            {
-                Ok(result) => {
-                    let committed = result
-                        .get("committed")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
-                    if committed {
-                        if let (Some(source), Some(text)) = (
-                            target.as_deref(),
-                            result.get("text").and_then(|value| value.as_str()),
-                        ) {
-                            if !text.trim().is_empty() {
-                                completed_summaries.push((source.to_string(), text.to_string()));
-                            }
-                        }
-                    }
-                    // Conduct / shield / block_reason → dedicated banner (U1-B).
-                    // Also keep a short status line so non-banner chrome still shows failure.
-                    if let Some(notice) = notice_from_chat_result(&result) {
-                        let line = format!("No reply: {}", notice.reason);
-                        status.set(line);
-                        conduct.set(Some(notice));
-                    } else if committed {
-                        // Clear "thinking…" / any success noise — header + thread carry the answer.
-                        // Do not clear an earlier banner here: chat-done may race; only success
-                        // without a notice means this turn is clean.
-                        status.set(String::new());
-                    } else {
-                        // Fail closed: uncommitted without parseable reason still surfaces.
-                        let fallback = ConductNotice::inference_block(
-                            "No active model — activate one first (or host omitted block_reason).",
-                        );
-                        status.set(format!("No reply: {}", fallback.reason));
-                        conduct.set(Some(fallback));
-                    }
-                    streaming.set(String::new());
-                    if let Ok(full) =
-                        invoke_json::<serde_json::Value>("load_chat_session", json!({ "id": sid }))
-                            .await
-                    {
-                        let msgs = full
-                            .get("messages")
-                            .and_then(|m| m.as_array())
-                            .cloned()
-                            .unwrap_or_default();
-                        messages.set(msgs);
-                    }
-                    // Belt-and-suspenders: pin after final message list is in place.
-                    scroll_chat_to_bottom();
-                    let _ = invoke_json::<usize>(
-                        "ingest_chat_cml",
-                        json!({ "sessionId": sid, "text": body_cml }),
-                    )
-                    .await;
-                }
-                Err(e) => {
-                    streaming.set(String::new());
-                    let msg = format!("Inference failed: {e}");
-                    status.set(msg.clone());
-                    conduct.set(Some(ConductNotice::inference_block(msg)));
-                }
-            }
-            for (index, extra) in target_agents.iter().enumerate().skip(1) {
-                let Some(extra_slug) = extra.as_deref() else {
-                    continue;
-                };
-                status.set(format!(
-                    "Agent {}/{} (@{}) is thinkingâ€¦",
-                    index + 1,
-                    target_agents.len(),
-                    extra_slug
-                ));
-                let shared = permitted_agent_summaries(
-                    &roster_for_sharing,
-                    extra_slug,
-                    &completed_summaries,
-                );
-                let prompt_for_agent = format!("{body}{shared}");
-                match invoke_json::<serde_json::Value>(
-                    "stream_chat_inference",
-                    json!({ "sessionId": sid.clone(), "prompt": prompt_for_agent, "agentSlug": extra_slug, "remoteConsentApproved": remote_consent_approved }),
-                )
-                .await
-                {
-                    Ok(result) => {
-                        if let Some(text) = result.get("text").and_then(|value| value.as_str()) {
-                            if !text.trim().is_empty() {
-                                completed_summaries.push((extra_slug.to_string(), text.to_string()));
-                            }
-                        }
-                        if let Some(notice) = notice_from_chat_result(&result) {
-                            status.set(format!("No reply: {}", notice.reason));
-                            conduct.set(Some(notice));
-                        }
-                    }
-                    Err(e) => {
-                        let msg = format!("Inference failed: {e}");
-                        status.set(msg.clone());
-                        conduct.set(Some(ConductNotice::inference_block(msg)));
-                    }
-                }
-            }
-            if target_agents.len() > 1 {
-                streaming.set(String::new());
-                if let Ok(full) = invoke_json::<serde_json::Value>(
-                    "load_chat_session",
-                    json!({ "id": sid.clone() }),
-                )
-                .await
-                {
-                    let msgs = full
-                        .get("messages")
-                        .and_then(|m| m.as_array())
-                        .cloned()
-                        .unwrap_or_default();
-                    messages.set(msgs);
-                }
-                status.set(String::new());
-                scroll_chat_to_bottom();
-            }
+            .await;
         }
         Err(e) => {
             let msg = format!("Send failed: {e}");
             status.set(msg.clone());
             conduct.set(Some(ConductNotice::inference_block(msg)));
+            return;
         }
+    }
+
+    if !should_invoke_instrument(&kind, has_model) {
+        if matches!(
+            kind,
+            crate::components::talk_human_alone::TalkSendKind::AskInstrument { .. }
+        ) {
+            flash_status(status, INSTRUMENT_HELD_SAYABLE.into(), 5000);
+        } else {
+            flash_status(status, SENT_SAYABLE.into(), 1600);
+        }
+        return;
+    }
+
+    status.set(INSTRUMENT_WORKING_SAYABLE.into());
+    let target = target_agents.first().cloned().flatten();
+    let agent_arg = target
+        .as_ref()
+        .map_or(serde_json::Value::Null, |slug| json!(slug));
+    let mut completed_summaries: Vec<(String, String)> = Vec::new();
+    match invoke_json::<serde_json::Value>(
+        "stream_chat_inference",
+        json!({ "sessionId": sid, "prompt": body, "agentSlug": agent_arg, "remoteConsentApproved": remote_consent_approved }),
+    )
+    .await
+    {
+        Ok(result) => {
+            let committed = result
+                .get("committed")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if committed {
+                if let (Some(source), Some(text)) = (
+                    target.as_deref(),
+                    result.get("text").and_then(|value| value.as_str()),
+                ) {
+                    if !text.trim().is_empty() {
+                        completed_summaries.push((source.to_string(), text.to_string()));
+                    }
+                }
+            }
+            if let Some(notice) = notice_from_chat_result(&result) {
+                status.set(format!("Instrument held: {}", notice.reason));
+                conduct.set(Some(notice));
+            } else if committed {
+                status.set(String::new());
+            } else {
+                flash_status(status, INSTRUMENT_HELD_SAYABLE.into(), 5000);
+            }
+            streaming.set(String::new());
+            reload_session_messages(&sid, messages).await;
+            scroll_chat_to_bottom();
+        }
+        Err(e) => {
+            streaming.set(String::new());
+            flash_status(status, format!("Instrument held / not yet: {e}"), 4000);
+        }
+    }
+    for (index, extra) in target_agents.iter().enumerate().skip(1) {
+        let Some(extra_slug) = extra.as_deref() else {
+            continue;
+        };
+        status.set(format!(
+            "Instrument {}/{} (@{}) working…",
+            index + 1,
+            target_agents.len(),
+            extra_slug
+        ));
+        let shared = permitted_agent_summaries(&roster, extra_slug, &completed_summaries);
+        let prompt_for_agent = format!("{body}{shared}");
+        match invoke_json::<serde_json::Value>(
+            "stream_chat_inference",
+            json!({ "sessionId": sid.clone(), "prompt": prompt_for_agent, "agentSlug": extra_slug, "remoteConsentApproved": remote_consent_approved }),
+        )
+        .await
+        {
+            Ok(result) => {
+                if let Some(text) = result.get("text").and_then(|value| value.as_str()) {
+                    if !text.trim().is_empty() {
+                        completed_summaries.push((extra_slug.to_string(), text.to_string()));
+                    }
+                }
+                if let Some(notice) = notice_from_chat_result(&result) {
+                    status.set(format!("Instrument held: {}", notice.reason));
+                    conduct.set(Some(notice));
+                }
+            }
+            Err(e) => {
+                flash_status(status, format!("Instrument held / not yet: {e}"), 4000);
+            }
+        }
+    }
+    if target_agents.len() > 1 {
+        streaming.set(String::new());
+        reload_session_messages(&sid, messages).await;
+        status.set(String::new());
+        scroll_chat_to_bottom();
     }
 }
 
@@ -570,9 +506,11 @@ pub fn ConnectChat() -> Element {
     let active_model = use_signal(String::new);
     let models = use_signal(Vec::<serde_json::Value>::new);
     let selected_model = use_signal(String::new);
-    // Agent roster (diverse agents under the principal) + "who answers" selection.
+    // Agent roster — tools under the principal. Empty slug = people-only thread.
     let agents = use_signal(Vec::<serde_json::Value>::new);
-    let active_agent = use_signal(String::new); // roster slug; "" ⇒ default local
+    let active_agent = use_signal(String::new);
+    let mesh_running = use_signal(|| false);
+    let mesh_peer_count = use_signal(|| 0usize);
     let na_name = use_signal(String::new);
     let na_kind = use_signal(|| "tcp".to_string());
     let na_endpoint = use_signal(String::new);
@@ -592,7 +530,8 @@ pub fn ConnectChat() -> Element {
         let mut sessions = sessions;
         let mut contacts = contacts;
         let mut agents = agents;
-        let mut active_agent = active_agent;
+        let mut mesh_running = mesh_running;
+        let mut mesh_peer_count = mesh_peer_count;
         let mut jobs = jobs;
         let mut draft = draft;
         let mut models = models;
@@ -724,12 +663,13 @@ pub fn ConnectChat() -> Element {
             if let Ok(list) =
                 invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({})).await
             {
-                if active_agent().is_empty() {
-                    if let Some(first) = list.first() {
-                        active_agent.set(s(first, "slug"));
-                    }
-                }
                 agents.set(list);
+            }
+            if let Ok(st) = invoke_json::<serde_json::Value>("mesh_status", json!({})).await {
+                let running = st.get("running").and_then(|v| v.as_bool()).unwrap_or(false);
+                let n = st.get("peers").and_then(|p| p.as_array()).map(|a| a.len()).unwrap_or(0);
+                mesh_running.set(running);
+                mesh_peer_count.set(n);
             }
             if let Ok(snap) = invoke_json::<serde_json::Value>("list_local_jobs", json!({})).await {
                 if let Some(arr) = snap.get("jobs").and_then(|j| j.as_array()) {
@@ -774,20 +714,18 @@ pub fn ConnectChat() -> Element {
                                 }
                                 sessions.set(list);
                             }
-                            if let Ok(msgs) = invoke_json::<Vec<serde_json::Value>>(
-                                "list_chat_messages",
-                                json!({ "sessionId": sid }),
-                            )
-                            .await
-                            {
-                                messages.set(msgs);
-                            }
+                            reload_session_messages(&sid, messages).await;
                         }
                     }
                     // People → Open Chat: start (or reuse) a titled session for that peer.
                     if let Ok(Some(peer_title)) = storage.get_item("webizen_chat_peer_title") {
                         let title = peer_title.trim().to_string();
                         if !title.is_empty() {
+                            let peer_did = storage
+                                .get_item("webizen_chat_peer_did")
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default();
                             let _ = storage.remove_item("webizen_chat_peer_title");
                             let _ = storage.remove_item("webizen_chat_peer_did");
                             // Prefer existing session with same title.
@@ -805,8 +743,16 @@ pub fn ConnectChat() -> Element {
                                     .unwrap_or("")
                                     .to_string();
                                 if !id.is_empty() {
-                                    active_session.set(id);
+                                    active_session.set(id.clone());
                                     active_title.set(title.clone());
+                                    if !peer_did.trim().is_empty() {
+                                        let _ = invoke_json::<serde_json::Value>(
+                                            "add_chat_participant",
+                                            json!({ "sessionId": id, "participantDid": peer_did }),
+                                        )
+                                        .await;
+                                    }
+                                    reload_session_messages(&id, messages).await;
                                 }
                             } else {
                                 match invoke_json::<String>(
@@ -816,6 +762,13 @@ pub fn ConnectChat() -> Element {
                                 .await
                                 {
                                     Ok(id) => {
+                                        if !peer_did.trim().is_empty() {
+                                            let _ = invoke_json::<serde_json::Value>(
+                                                "add_chat_participant",
+                                                json!({ "sessionId": id, "participantDid": peer_did }),
+                                            )
+                                            .await;
+                                        }
                                         active_session.set(id);
                                         active_title.set(title);
                                         if let Ok(list) = invoke_json::<Vec<serde_json::Value>>(
@@ -827,11 +780,52 @@ pub fn ConnectChat() -> Element {
                                             sessions.set(list);
                                         }
                                     }
-                                    Err(e) => status.set(format!("Could not open peer chat: {e}")),
+                                    Err(e) => status.set(format!("Could not open conversation: {e}")),
                                 }
                             }
                         }
                     }
+                }
+            }
+        });
+    });
+
+    // Receive: reload the open thread so mesh / relay arrivals appear without an agent.
+    #[cfg(target_arch = "wasm32")]
+    use_hook(|| {
+        if !crate::endpoints::is_native_host() {
+            return;
+        }
+        let active_session = active_session;
+        let mut messages = messages;
+        let streaming = streaming;
+        let mut sessions = sessions;
+        let mut mesh_running = mesh_running;
+        let mut mesh_peer_count = mesh_peer_count;
+        spawn(async move {
+            loop {
+                gloo_timers::future::TimeoutFuture::new(2500).await;
+                if !streaming().is_empty() {
+                    continue;
+                }
+                let sid = active_session();
+                if !sid.is_empty() {
+                    reload_session_messages(&sid, messages).await;
+                }
+                if let Ok(list) =
+                    invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({})).await
+                {
+                    sessions.set(list);
+                }
+                if let Ok(st) = invoke_json::<serde_json::Value>("mesh_status", json!({})).await {
+                    let running = st.get("running").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let n = st
+                        .get("peers")
+                        .and_then(|p| p.as_array())
+                        .map(|a| a.len())
+                        .unwrap_or(0);
+                    mesh_running.set(running);
+                    mesh_peer_count.set(n);
                 }
             }
         });
@@ -856,6 +850,8 @@ pub fn ConnectChat() -> Element {
             &selected_model,
             &agents,
             &active_agent,
+            &mesh_running,
+            &mesh_peer_count,
             &na_name,
             &na_kind,
             &na_endpoint,
@@ -876,7 +872,7 @@ pub fn ConnectChat() -> Element {
                 .map(|x| x.to_string())
                 .unwrap_or_else(|| {
                     if is_agent {
-                        "Agent".into()
+                        "Instrument".into()
                     } else {
                         "You".into()
                     }
@@ -886,6 +882,24 @@ pub fn ConnectChat() -> Element {
         .collect();
 
     let has_model = !active_model().is_empty();
+    let (instrument_hold, instrument_detail, instrument_chip) =
+        crate::components::talk_human_alone::instrument_honesty(&active_model());
+    let (mesh_hold, mesh_chip) =
+        crate::components::talk_human_alone::mesh_honesty(mesh_running(), mesh_peer_count());
+    let instrument_level = match instrument_hold {
+        TalkHoldLevel::Held => HonestyLevel::Unavailable,
+        TalkHoldLevel::Partial => HonestyLevel::Partial,
+    };
+    let mesh_level = match mesh_hold {
+        TalkHoldLevel::Held => HonestyLevel::Unavailable,
+        TalkHoldLevel::Partial => HonestyLevel::Partial,
+    };
+    let talk_blurb = crate::components::talk_human_alone::TALK_PEOPLE_BLURB;
+    let empty_invite = crate::components::talk_human_alone::EMPTY_THREAD_INVITE;
+    let instrument_held = crate::components::talk_human_alone::INSTRUMENT_HELD_SAYABLE;
+    let composer_ph = crate::components::talk_human_alone::COMPOSER_PLACEHOLDER;
+    let people_only = crate::components::talk_human_alone::PEOPLE_ONLY_LABEL;
+    let new_convo = crate::components::talk_human_alone::NEW_CONVERSATION_LABEL;
     let draft_empty = draft().trim().is_empty();
     let send_btn_style = if draft_empty {
         "background:#6d28d9; color:#e9d5ff; padding:8px 14px; border:none; border-radius:8px; font-weight:600; cursor:not-allowed; font-size:13px; opacity:0.45;"
@@ -893,7 +907,7 @@ pub fn ConnectChat() -> Element {
         BTN
     };
     let thread_heading = if active_session().is_empty() {
-        "New chat".to_string()
+        "New conversation".to_string()
     } else {
         let t = active_title();
         if t.is_empty() {
@@ -951,30 +965,53 @@ pub fn ConnectChat() -> Element {
             // ── Header (Relations hub owns domain title; this is chat-only chrome) ──
             div { style: "{HEADER}",
                 div {
-                    h2 { style: "color:#a78bfa; margin:0; font-size:16px; font-weight:700;", "Chat" }
+                    h2 { style: "color:#a78bfa; margin:0; font-size:16px; font-weight:700;", "Talk" }
                     p { style: "color:#94a3b8; margin:4px 0 0; font-size:12px; line-height:1.45; max-width:36rem;",
-                        "Conversations with people and local instruments. Invites → People · shared labour → Projects · keep by meaning → Lived Memory."
+                        "{talk_blurb} Invites → People · shared labour → Projects."
                     }
                 }
                 div { style: "display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end;",
-                    if has_model {
-                        HonestyChip {
-                            level: HonestyLevel::Partial,
-                            detail: "Instrument under principal — not a peer person".to_string(),
-                        }
-                        span {
-                            style: "font-size:12px; color:#a7f3d0; background:#064e3b; border:1px solid #10b981; padding:4px 12px; border-radius:999px;",
-                            title: "Active local model · gated inference",
-                            "Instrument · {active_model}"
-                        }
-                    } else {
-                        HonestyChip {
-                            level: HonestyLevel::NeedsModel,
-                            detail: "Choose and test a local model in Settings → AI instruments".to_string(),
-                        }
-                        span {
-                            style: "font-size:12px; color:#fde68a; background:#78350f; border:1px solid #b45309; padding:4px 12px; border-radius:999px;",
-                            "Instrument · none"
+                    HonestyChip {
+                        level: mesh_level,
+                        detail: mesh_chip.clone(),
+                    }
+                    HonestyChip {
+                        level: instrument_level,
+                        detail: instrument_detail.clone(),
+                    }
+                    span {
+                        style: if has_model {
+                            "font-size:12px; color:#a7f3d0; background:#064e3b; border:1px solid #10b981; padding:4px 12px; border-radius:999px;"
+                        } else {
+                            "font-size:12px; color:#fde68a; background:#78350f; border:1px solid #b45309; padding:4px 12px; border-radius:999px;"
+                        },
+                        title: "{instrument_detail}",
+                        "{instrument_chip}"
+                    }
+                    if !mesh_running() {
+                        button {
+                            style: "{BTN2} margin:0;",
+                            title: "{mesh_chip}",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let (mut mesh_running, mut mesh_peer_count, mut status) =
+                                        (mesh_running, mesh_peer_count, status);
+                                    spawn(async move {
+                                        match invoke_json::<serde_json::Value>("mesh_start", json!({})).await {
+                                            Ok(v) => {
+                                                let running = v.get("running").and_then(|x| x.as_bool()).unwrap_or(true);
+                                                let n = v.get("peers").and_then(|p| p.as_array()).map(|a| a.len()).unwrap_or(0);
+                                                mesh_running.set(running);
+                                                mesh_peer_count.set(n);
+                                                flash_status(status, format!("Mesh on · {n} peer(s)."), 2000);
+                                            }
+                                            Err(e) => flash_status(status, format!("Mesh held / not yet: {e}"), 4000),
+                                        }
+                                    });
+                                }
+                            },
+                            "Start mesh"
                         }
                     }
                 }
@@ -1005,9 +1042,9 @@ pub fn ConnectChat() -> Element {
                         h3 { style: "{H3}", "Local instrument" }
                         p { style: "color:#94a3b8; font-size:12px; margin:0 0 8px; line-height:1.4;",
                             if has_model {
-                                "Active model: {active_model}. Serves under your Permit path — not a social peer."
+                                "Active model: {active_model}. A tool under your Permit path — not a social peer."
                             } else {
-                                "No model active. Detect and activate one so the instrument can answer locally."
+                                "{instrument_held}"
                             }
                         }
                         button {
@@ -1086,7 +1123,7 @@ pub fn ConnectChat() -> Element {
                         }
                         if agents().is_empty() {
                             div { style: "padding:6px 8px; background:#0b1220; border-radius:6px; margin-bottom:4px; font-size:12px; color:#94a3b8;",
-                                "Local agent (default) — activates with your model."
+                                "No instrument roster yet. Send still works — people first."
                             }
                         }
                         for a in agents() {
@@ -1252,21 +1289,21 @@ pub fn ConnectChat() -> Element {
                                     let (mut sessions, mut active_session, mut active_title, mut messages, mut streaming, mut status) =
                                         (sessions, active_session, active_title, messages, streaming, status);
                                     spawn(async move {
-                                        match invoke_json::<String>("create_chat_session", json!({ "title": serde_json::Value::Null })).await {
+                                        match invoke_json::<String>("create_chat_session", json!({ "title": crate::components::talk_human_alone::DEFAULT_CONVERSATION_TITLE })).await {
                                             Ok(id) => {
                                                 streaming.set(String::new());
                                                 active_session.set(id.clone());
-                                                active_title.set("Chat with your agent".into());
+                                                active_title.set(crate::components::talk_human_alone::DEFAULT_CONVERSATION_TITLE.into());
                                                 messages.set(Vec::new());
                                                 if let Ok(list) = invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({})).await { sessions.set(list); }
-                                                flash_status(status, "New chat started — say hello.".into(), 1600);
+                                                flash_status(status, "New conversation — write a message.".into(), 1600);
                                             }
-                                            Err(e) => status.set(format!("New chat failed: {e}")),
+                                            Err(e) => status.set(format!("New conversation failed: {e}")),
                                         }
                                     });
                                 }
                             },
-                            "＋ New chat with your agent"
+                            "{new_convo}"
                         }
                         button {
                             style: "{BTN2} margin-top:8px;",
@@ -1330,9 +1367,69 @@ pub fn ConnectChat() -> Element {
                         }
                     }
 
-                    // People / invites live in Relations → People (avoid duplicate sidebar sprawl).
+                    div { style: "{CARD}",
+                        h3 { style: "{H3}", "People" }
+                        if contacts().is_empty() {
+                            p { style: "color:#64748b;font-size:11px;line-height:1.4;margin:0;",
+                                "No contacts yet. Invite someone in People — you can still write here."
+                            }
+                        }
+                        for c in contacts() {
+                            {
+                                let name = {
+                                    let n = s(&c, "display_name");
+                                    if n.is_empty() { s(&c, "did") } else { n }
+                                };
+                                let did = s(&c, "did");
+                                rsx! {
+                                    button {
+                                        style: "display:block;width:100%;text-align:left;padding:7px 8px;background:#0b1220;border:1px solid #1f2937;border-radius:8px;margin-bottom:5px;color:#e5e7eb;font-size:12px;cursor:pointer;",
+                                        onclick: move |_| {
+                                            let name = name.clone();
+                                            let did = did.clone();
+                                            #[cfg(target_arch = "wasm32")]
+                                            {
+                                                let (mut sessions, mut active_session, mut active_title, mut messages, mut status) =
+                                                    (sessions, active_session, active_title, messages, status);
+                                                spawn(async move {
+                                                    let list = invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({})).await.unwrap_or_default();
+                                                    let existing = list.iter().find(|s| {
+                                                        s.get("title").and_then(|t| t.as_str()).map(|t| t.eq_ignore_ascii_case(&name)).unwrap_or(false)
+                                                    });
+                                                    let sid = if let Some(s) = existing {
+                                                        s.get("id").and_then(|x| x.as_str()).unwrap_or("").to_string()
+                                                    } else {
+                                                        invoke_json::<String>("create_chat_session", json!({ "title": name.clone() })).await.unwrap_or_default()
+                                                    };
+                                                    if sid.is_empty() {
+                                                        status.set("Could not open conversation.".into());
+                                                        return;
+                                                    }
+                                                    if !did.is_empty() {
+                                                        let _ = invoke_json::<serde_json::Value>(
+                                                            "add_chat_participant",
+                                                            json!({ "sessionId": sid, "participantDid": did }),
+                                                        ).await;
+                                                    }
+                                                    active_session.set(sid.clone());
+                                                    active_title.set(name);
+                                                    reload_session_messages(&sid, messages).await;
+                                                    if let Ok(fresh) = invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({})).await {
+                                                        sessions.set(fresh);
+                                                    }
+                                                });
+                                            }
+                                            #[cfg(not(target_arch = "wasm32"))]
+                                            { let _ = (name, did); }
+                                        },
+                                        "{name}"
+                                    }
+                                }
+                            }
+                        }
+                    }
                     p { style: "color:#64748b;font-size:11px;line-height:1.4;margin:4px 0 0;",
-                        "Invites, contacts, domain front door, cooperative projects → tabs above (People · Reception · Projects)."
+                        "Invites, domain front door, cooperative projects → tabs above (People · Reception · Projects)."
                     }
                 }
 
@@ -1343,11 +1440,13 @@ pub fn ConnectChat() -> Element {
                     div { style: "padding:10px 18px; border-bottom:1px solid #1f2937; display:flex; justify-content:space-between; align-items:center; gap:10px;",
                         span { style: "font-weight:600; font-size:14px; color:#e5e7eb;", "{thread_heading}" }
                         div { style: "display:flex; align-items:center; gap:6px;",
-                            span { style: "font-size:11px; color:#94a3b8;", "Answering:" }
+                            span { style: "font-size:11px; color:#94a3b8;", "Instrument (tool):" }
                             select {
                                 style: "padding:5px 8px; background:#0b1220; color:#f3f4f6; border:1px solid #334155; border-radius:6px; font-size:12px;",
                                 value: "{active_agent}",
+                                title: "Used only when you Ask instrument or @mention a roster slug. Send stays people-only.",
                                 onchange: move |e| { let mut aa = active_agent; aa.set(e.value()); },
+                                option { value: "", "{people_only}" }
                                 for a in agents() {
                                     option { value: "{s(&a, \"slug\")}", "{s(&a, \"display_name\")}" }
                                 }
@@ -1362,10 +1461,11 @@ pub fn ConnectChat() -> Element {
                                 div { style: "font-size:36px; margin-bottom:12px;", "💬" }
                                 p { style: "margin:0; font-size:16px; color:#e5e7eb; font-weight:600;", "Nothing leaves this machine unless you send it." }
                                 p { style: "margin:10px 0 0; font-size:13px; line-height:1.5; color:#94a3b8;",
-                                    if has_model {
-                                        "Type below and press Send (or Enter) — a chat starts automatically if needed. Open a past conversation on the left anytime."
-                                    } else {
-                                        "Choose and test a model in Settings → AI instruments, then return here."
+                                    "{empty_invite}"
+                                }
+                                if !has_model {
+                                    p { style: "margin:8px 0 0; font-size:12px; line-height:1.45; color:#fde68a;",
+                                        "{instrument_held}"
                                     }
                                 }
                             }
@@ -1380,7 +1480,7 @@ pub fn ConnectChat() -> Element {
                             && (streaming_for() == active_session() || active_session().is_empty())
                         {
                             div { style: "{MSG_AGENT}",
-                                div { style: "font-size:10px; opacity:0.6; margin-bottom:3px;", "Agent" }
+                                div { style: "font-size:10px; opacity:0.6; margin-bottom:3px;", "Instrument" }
                                 "{streaming()}▍"
                             }
                         }
@@ -1425,7 +1525,7 @@ pub fn ConnectChat() -> Element {
                     div { style: "{COMPOSER}",
                         textarea {
                             style: "{INPUT} margin:0; height:52px; resize:none; font-size:14px;",
-                            placeholder: if has_model { "Message your agent… (Enter to send, Shift+Enter for line)" } else { "Activate a model first, then message…" },
+                            placeholder: "{composer_ph}",
                             value: "{draft}",
                             oninput: move |e| { let mut d = draft; d.set(e.value()); },
                             onkeydown: move |e| {
@@ -1460,6 +1560,8 @@ pub fn ConnectChat() -> Element {
                                                 streaming_for,
                                                 status,
                                                 conduct,
+                                                false,
+                                                has_model,
                                             )
                                             .await;
                                         });
@@ -1470,7 +1572,7 @@ pub fn ConnectChat() -> Element {
                         button {
                             style: "{send_btn_style}",
                             disabled: draft_empty,
-                            title: if draft_empty { "Type a message first" } else { "Send message" },
+                            title: if draft_empty { "Type a message first" } else { "Send to people in this thread" },
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
@@ -1496,12 +1598,52 @@ pub fn ConnectChat() -> Element {
                                             streaming_for,
                                             status,
                                             conduct,
+                                            false,
+                                            has_model,
                                         )
                                         .await;
                                     });
                                 }
                             },
                             "Send"
+                        }
+                        button {
+                            style: "{BTN2} margin:0;",
+                            disabled: draft_empty,
+                            title: if has_model { "Ask the selected instrument as a tool — not a peer" } else { instrument_held },
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let active_session = active_session;
+                                    let active_title = active_title;
+                                    let sessions = sessions;
+                                    let active_agent = active_agent;
+                                    let draft = draft;
+                                    let messages = messages;
+                                    let streaming = streaming;
+                                    let streaming_for = streaming_for;
+                                    let status = status;
+                                    let conduct = conduct;
+                                    spawn(async move {
+                                        send_chat_turn(
+                                            active_session,
+                                            active_title,
+                                            sessions,
+                                            active_agent,
+                                            draft,
+                                            messages,
+                                            streaming,
+                                            streaming_for,
+                                            status,
+                                            conduct,
+                                            true,
+                                            has_model,
+                                        )
+                                        .await;
+                                    });
+                                }
+                            },
+                            "Ask instrument"
                         }
                         button {
                             style: "{BTN2} margin:0;",
