@@ -106,7 +106,8 @@ pub fn build_lexicon_bay(document: &Document) -> Element {
 
 fn paint_held(root: &Element) {
     root.set_attribute("data-gate", "held").ok();
-    root.set_attribute("data-honesty", "unavailable").ok();
+    root.set_attribute("data-honesty", super::surface_honesty::honesty_attr("held"))
+        .ok();
     root.set_attribute("data-recipe", Beat::Hold.as_str()).ok();
     root.set_attribute("data-beat", Beat::Hold.named_beat())
         .ok();
@@ -156,7 +157,8 @@ fn render_held_stage(root: &Element, why: &str) {
     let gate = doc.create_element("div").unwrap();
     gate.set_class_name("lexicon-held-gate");
     gate.set_attribute("data-gate", "held").ok();
-    gate.set_attribute("data-honesty", "unavailable").ok();
+    gate.set_attribute("data-honesty", super::surface_honesty::honesty_attr("held"))
+        .ok();
     gate.set_attribute("data-recipe", Beat::Hold.as_str()).ok();
     let label = doc.create_element("div").unwrap();
     label.set_class_name("lexicon-held-label");
@@ -272,7 +274,6 @@ fn apply_outcome(root: &Element, outcome: ManifestOutcome) {
         }
     }
 }
-
 
 async fn sleep_ms(ms: i32) {
     let promise = js_sys::Promise::new(&mut |resolve, _reject| {

@@ -17,8 +17,7 @@ use crate::tool_chest::manifolds::studio_bay::{
 /// Lexicon §7 Frame A — first arrive (verbatim lines).
 pub const FRAME_A_WHERE: &str = "You're in the studio bay.";
 pub const FRAME_A_TRIO: &str = "Ask a graph, Keep a volume, Play a cell.";
-pub const FRAME_A_ADVANCED: &str =
-    "Advanced method names stay out of the way until you want them.";
+pub const FRAME_A_ADVANCED: &str = "Advanced method names stay out of the way until you want them.";
 
 pub const SAYABLE_ASK: &str = "Ask graph";
 pub const SAYABLE_KEEP: &str = "Keep volume";
@@ -169,13 +168,11 @@ fn wire_sayables(root: &Element) {
             };
             let listen = btn.clone();
             let document = doc.clone();
-            let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
-                match kind.as_str() {
-                    "ask" => dispatch_ask(&document),
-                    "keep" => dispatch_keep(&document),
-                    "play" => dispatch_play(&document),
-                    _ => {}
-                }
+            let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| match kind.as_str() {
+                "ask" => dispatch_ask(&document),
+                "keep" => dispatch_keep(&document),
+                "play" => dispatch_play(&document),
+                _ => {}
             }) as Box<dyn FnMut(web_sys::Event)>);
             listen
                 .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
@@ -217,7 +214,8 @@ fn dispatch_play(document: &Document) {
     let note = document.create_element("div").unwrap();
     note.set_id("frame-a-play-held");
     note.set_class_name("frame-a-held-note");
-    note.set_attribute("data-honesty", "unavailable").ok();
+    note.set_attribute("data-honesty", super::surface_honesty::honesty_attr("held"))
+        .ok();
     note.set_text_content(Some(
         "held / not yet — place or open a cell, then Play cell.",
     ));

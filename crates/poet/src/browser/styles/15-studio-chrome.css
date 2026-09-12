@@ -130,11 +130,13 @@
 
 /* ---------- Gated ≠ broken ---------- */
 [data-honesty="unavailable"],
+[data-honesty="held"],
 [data-honesty="local"],
 [aria-disabled="true"] {
   filter: none;
 }
-[data-honesty="unavailable"] {
+[data-honesty="unavailable"],
+[data-honesty="held"] {
   color: var(--text-muted);
   border-color: var(--border-medium);
 }

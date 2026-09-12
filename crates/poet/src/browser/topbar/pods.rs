@@ -60,9 +60,13 @@ pub fn toggle_tech_sidebar(document: &Document) {
          background: var(--canvas-bg); border: 1px solid var(--border-subtle); \
          border-radius: var(--radius-xs); padding: 8px; line-height: 1.6;",
     );
-    dag_viz.set_text_content(Some(
-        "Unavailable: live Merkle-CRDT DAG data is not connected.",
-    ));
+    dag_viz.set_text_content(Some(&crate::browser::surface_honesty::dag_held_copy()));
+    dag_viz
+        .set_attribute(
+            "data-honesty",
+            crate::browser::surface_honesty::honesty_attr("held"),
+        )
+        .ok();
     dag_section.append_child(&dag_viz).unwrap();
     body.append_child(&dag_section).unwrap();
 
@@ -80,9 +84,13 @@ pub fn toggle_tech_sidebar(document: &Document) {
          background: var(--canvas-bg); border: 1px solid var(--border-subtle); \
          border-radius: var(--radius-xs); padding: 8px; line-height: 1.6;",
     );
-    quads_list.set_text_content(Some(
-        "Unavailable: live container quad data is not connected.",
-    ));
+    quads_list.set_text_content(Some(&crate::browser::surface_honesty::quads_held_copy()));
+    quads_list
+        .set_attribute(
+            "data-honesty",
+            crate::browser::surface_honesty::honesty_attr("held"),
+        )
+        .ok();
     quads_section.append_child(&quads_list).unwrap();
     body.append_child(&quads_section).unwrap();
 
@@ -101,17 +109,21 @@ pub fn toggle_tech_sidebar(document: &Document) {
          border-radius: var(--radius-xs); padding: 8px; line-height: 1.6;",
     );
     conn_info.set_text_content(Some(
-        "Unavailable: live connection ontology data is not connected.",
+        &crate::browser::surface_honesty::conn_ontology_held_copy(),
     ));
+    conn_info
+        .set_attribute(
+            "data-honesty",
+            crate::browser::surface_honesty::honesty_attr("held"),
+        )
+        .ok();
     conn_section.append_child(&conn_info).unwrap();
     body.append_child(&conn_section).unwrap();
 
     // Honesty note
     let note = document.create_element("div").unwrap();
     note.set_attribute("style", "font-size: 9px; color: var(--text-muted); padding-top: 4px; border-top: 1px solid var(--border-subtle);").unwrap();
-    note.set_text_content(Some(
-        "unavailable \u{00B7} telemetry and DAG data require a live backend connection",
-    ));
+    note.set_text_content(Some(crate::browser::surface_honesty::TELEMETRY_NOTE));
     body.append_child(&note).unwrap();
 
     sidebar.append_child(&body).unwrap();

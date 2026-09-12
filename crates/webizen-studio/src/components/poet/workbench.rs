@@ -74,7 +74,7 @@ pub fn PoetWorkbench() -> Element {
                         div { style: "padding:14px;display:grid;gap:8px;",
                             h3 { style: "margin:0;font-size:13px;color:var(--accent-cyan);", "Telemetry & Governance DAG" }
                             p { style: "margin:0;color:var(--text-secondary);font-size:12px;line-height:1.45;",
-                                "Pulse bus · held / not yet — bind missing. Graph address: {wb().graph_iri}. Nodes on desk: {wb().nodes.len()}."
+                                "Pulse bus · held / not yet — Pulse waits on the local daemon. Graph address: {wb().graph_iri}. Nodes on desk: {wb().nodes.len()}."
                             }
                             div { style: "margin-top:8px;padding:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:6px;font-size:11px;",
                                 div { style: "color:var(--accent-emerald);", "● 42MB Prolog Sentinel: ENFORCED" }

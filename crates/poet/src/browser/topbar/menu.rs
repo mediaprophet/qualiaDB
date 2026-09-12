@@ -366,10 +366,16 @@ pub fn build_top_menubar(document: &Document) -> Element {
     // Ambient Mesh Sentinel Indicator
     let mesh_badge = document.create_element("span").unwrap();
     mesh_badge.set_class_name("mesh-sentinel-badge");
-    mesh_badge.set_text_content(Some("\u{25CF} Mesh unavailable"));
+    mesh_badge.set_text_content(Some(&super::super::surface_honesty::mesh_badge_copy()));
     mesh_badge
-        .set_attribute("title", "Unavailable: live mesh status is not connected")
+        .set_attribute("title", &super::super::surface_honesty::mesh_badge_title())
         .unwrap();
+    mesh_badge
+        .set_attribute(
+            "data-honesty",
+            super::super::surface_honesty::honesty_attr("held"),
+        )
+        .ok();
     right.append_child(&mesh_badge).unwrap();
 
     let version = document.create_element("span").unwrap();
