@@ -357,6 +357,7 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   // ── Command palette (U6-A) — ≥5 destinations, Ctrl+K / Ctrl+P ──────────
   const PALETTE_ITEMS = [
     { id: 'talk',        label: 'Talk',              icon: '💬', hint: 'Home · chat & people',   keys: 'talk chat agent home' },
+    { id: 'directory',   label: 'Directory',         icon: '📒', hint: 'Humans-first address book · Talk / People', keys: 'directory contacts address book people humans rolodex addressbook' },
     { id: 'browser',     label: 'Browser (Reach)',    icon: '🌐', hint: 'Web browser',            keys: 'browser reach web' },
     { id: '10d-browser', label: '10D / Infosphere',   icon: '◈',  hint: 'Anatomy & vision .10d',  keys: '10d ten-d infosphere anatomy vision' },
     { id: 'settings',    label: 'Settings',           icon: '⚙',  hint: 'Backend & preferences',  keys: 'settings prefs config' },
@@ -428,8 +429,33 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     paletteInput.blur();
   }
 
+  function stashDirectoryHandoff() {
+    try {
+      sessionStorage.setItem('webizen_talk_tab', 'people');
+      sessionStorage.setItem('webizen_open_directory', '1');
+    } catch (e) { /* sessionStorage may be blocked in some embeds */ }
+  }
+
   function runPaletteItem(id) {
     closeCommandPalette();
+    if (id === 'directory' || id === 'contacts' || id === 'addressbook') {
+      stashDirectoryHandoff();
+      // Deep-link Talk / People (not a new top-level IA name).
+      if (activeTabId === 'talk') {
+        contentIframe.src = window.location.origin + '/studio/#/talk';
+        return;
+      }
+      const talkTab = tabs.find(t => t.qappId === 'talk');
+      if (talkTab) {
+        talkTab.url = '/studio/#/talk';
+        switchToTab(talkTab.el, 'talk');
+        contentIframe.src = window.location.origin + '/studio/#/talk';
+        return;
+      }
+      createTab('talk');
+      contentIframe.src = window.location.origin + '/studio/#/talk';
+      return;
+    }
     navigate(id);
   }
 

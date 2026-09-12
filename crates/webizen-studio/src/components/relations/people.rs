@@ -19,7 +19,20 @@ pub fn PeopleOverview() -> Element {
     let mut peers = use_signal(Vec::<serde_json::Value>::new);
     let mut status = use_signal(String::new);
     let mut show_connect = use_signal(|| false);
-    let mut show_directory = use_signal(|| false);
+    let mut show_directory = use_signal(|| {
+        #[cfg(target_arch = "wasm32")]
+        if let Some(window) = web_sys::window() {
+            if let Ok(Some(storage)) = window.session_storage() {
+                if let Ok(Some(flag)) = storage.get_item("webizen_open_directory") {
+                    let _ = storage.remove_item("webizen_open_directory");
+                    if flag == "1" || flag.eq_ignore_ascii_case("true") {
+                        return true;
+                    }
+                }
+            }
+        }
+        true
+    });
 
     let mut refresh = move || {
         status.set("Refreshing relationships…".to_string());
@@ -58,9 +71,9 @@ pub fn PeopleOverview() -> Element {
         section { style: "height:100%;overflow-y:auto;padding:22px;display:grid;gap:15px;",
             div { style: "display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;",
                 div {
-                    h2 { style: "margin:0;font-size:1.15rem;", "People and relationships" }
+                    h2 { style: "margin:0;font-size:1.15rem;", "People and Directory" }
                     p { style: "margin:5px 0 0;color:var(--qualia-text-muted);font-size:.76rem;line-height:1.5;max-width:46rem;",
-                        "A person is more than a contact, peer endpoint or identifier. This view brings those facets together without collapsing them."
+                        "Humans first. A handle (DID) is not the human. Organizations are a legal-person who-kind; chatbots are tools — never called a person here."
                     }
                 }
                 button { style: "{crate::components::settings::SECONDARY_BUTTON}", onclick: move |_| refresh(), "Refresh" }
@@ -71,7 +84,7 @@ pub fn PeopleOverview() -> Element {
                     {
                         let name = {
                             let candidate = text(&contact, &["display_name", "name", "label"]);
-                            if candidate.is_empty() { "Known person".to_string() } else { candidate }
+                            if candidate.is_empty() { "Known human".to_string() } else { candidate }
                         };
                         let did = text(&contact, &["did", "contact_did"]);
                         let reachable = peers().iter().any(|peer| text(peer, &["did"]) == did);
@@ -83,11 +96,11 @@ pub fn PeopleOverview() -> Element {
                                     div { style: "width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--qualia-accent-glow);color:var(--qualia-accent);font-weight:850;", "P" }
                                     div {
                                         strong { "{name}" }
-                                        div { style: "margin-top:3px;font-size:.65rem;color:var(--qualia-text-muted);", "Person · {reachability_label}" }
+                                        div { style: "margin-top:3px;font-size:.65rem;color:var(--qualia-text-muted);", "Human · {reachability_label}" }
                                     }
                                 }
                                 if !did.is_empty() {
-                                    div { style: "margin-top:10px;font-size:.62rem;color:var(--qualia-text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;", "{did}" }
+                                    div { style: "margin-top:10px;font-size:.62rem;color:var(--qualia-text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;", "Handle · {did}" }
                                 }
                             }
                         }
@@ -106,7 +119,7 @@ pub fn PeopleOverview() -> Element {
                 button {
                     style: "{crate::components::settings::SECONDARY_BUTTON}",
                     onclick: move |_| show_directory.set(!show_directory()),
-                    if show_directory() { "Hide directory" } else { "Open personal directory" }
+                    if show_directory() { "Hide Directory" } else { "Show Directory" }
                 }
                 Link {
                     to: Route::ChoraRoute {},
