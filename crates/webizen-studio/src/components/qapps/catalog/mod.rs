@@ -90,6 +90,8 @@ pub(crate) enum AppRoute {
     Nexus,
     /// Directory lives under Talk / People — not a new top-level IA name.
     TalkPeople,
+    /// Daily inbox under Talk → Mail — not Poet Domain.info admin.
+    TalkMail,
 }
 
 pub(crate) struct QApp {
@@ -200,6 +202,7 @@ pub(crate) enum BtnKind {
     LaunchQAppStudio,
     LaunchNexus,
     LaunchTalkPeople,
+    LaunchTalkMail,
     OpenInStudio,
     ComingSoon,
 }

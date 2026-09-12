@@ -50,6 +50,8 @@ impl ShellAction {
             "open_10d" => Some(Self::Navigate("10d-browser".to_string())),
             // Home is Talk (human-first). Legacy open_dashboard / tray "show" land on talk.
             "open_dashboard" | "open_talk" | "show" => Some(Self::Navigate("talk".to_string())),
+            "open_directory" | "open_contacts" => Some(Self::Navigate("directory".to_string())),
+            "open_mail" | "open_email" => Some(Self::Navigate("mail".to_string())),
             "open_qapp_studio" => Some(Self::Navigate("qapp-studio".to_string())),
             "open_qapp_manager" => Some(Self::Navigate("qapps".to_string())),
             "open_settings" | "settings" => Some(Self::Navigate("settings".to_string())),
@@ -97,6 +99,18 @@ mod tests {
         assert_eq!(
             ShellAction::from_id("open_talk"),
             Some(ShellAction::Navigate("talk".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_directory"),
+            Some(ShellAction::Navigate("directory".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_mail"),
+            Some(ShellAction::Navigate("mail".to_string()))
+        );
+        assert_ne!(
+            ShellAction::from_id("open_mail"),
+            ShellAction::from_id("open_poet")
         );
         assert_eq!(
             ShellAction::from_id("open_poet"),

@@ -136,10 +136,22 @@ pub fn mentioned_instrument_slugs(body: &str, roster: &[serde_json::Value]) -> V
     requested
 }
 
+/// True when the host has no usable local instrument. Treats empty and
+/// theatre sentinels (`none`, `null`, `Needs model`) as missing.
+pub fn instrument_is_missing(active_model: &str) -> bool {
+    let t = active_model.trim();
+    t.is_empty()
+        || t.eq_ignore_ascii_case("none")
+        || t.eq_ignore_ascii_case("null")
+        || t.eq_ignore_ascii_case("n/a")
+        || t.eq_ignore_ascii_case("needs model")
+        || t == "-"
+}
+
 /// Instrument honesty for Talk chrome. Missing model → held, never “Needs model”
 /// / “Instrument none”, never panic red.
 pub fn instrument_honesty(active_model: &str) -> (TalkHoldLevel, String, String) {
-    if active_model.trim().is_empty() {
+    if instrument_is_missing(active_model) {
         (
             TalkHoldLevel::Held,
             INSTRUMENT_HELD_SAYABLE.to_string(),
@@ -244,13 +256,21 @@ mod tests {
 
     #[test]
     fn missing_model_chip_is_held_not_needs_model() {
-        let (level, detail, chip) = instrument_honesty("");
-        assert_eq!(level, TalkHoldLevel::Held);
-        assert_eq!(level.label(), "held / not yet");
-        assert_eq!(chip, INSTRUMENT_HELD_CHIP);
-        assert!(talk_copy_is_human_alone(&detail));
-        assert!(talk_copy_is_human_alone(&chip));
-        assert!(!level.bg_is_panic_red());
+        for sentinel in ["", "none", "None", "NONE", "null", "-", "Needs model"] {
+            assert!(
+                instrument_is_missing(sentinel),
+                "sentinel {sentinel:?} must count as missing"
+            );
+            let (level, detail, chip) = instrument_honesty(sentinel);
+            assert_eq!(level, TalkHoldLevel::Held);
+            assert_eq!(level.label(), "held / not yet");
+            assert_eq!(chip, INSTRUMENT_HELD_CHIP);
+            assert!(talk_copy_is_human_alone(&detail), "banned voice in {detail}");
+            assert!(talk_copy_is_human_alone(&chip), "banned voice in {chip}");
+            assert!(!chip.to_ascii_lowercase().contains("none"));
+            assert!(!detail.to_ascii_lowercase().contains("needs model"));
+            assert!(!level.bg_is_panic_red());
+        }
     }
 
     #[test]

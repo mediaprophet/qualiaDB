@@ -67,6 +67,7 @@ pub fn QApps() -> Element {
                 (Stat::Active, Some(AppRoute::QAppStudio)) => BtnKind::LaunchQAppStudio,
                 (Stat::Active, Some(AppRoute::Nexus)) => BtnKind::LaunchNexus,
                 (Stat::Active, Some(AppRoute::TalkPeople)) => BtnKind::LaunchTalkPeople,
+                (Stat::Active, Some(AppRoute::TalkMail)) => BtnKind::LaunchTalkMail,
                 (Stat::Soon, _) => BtnKind::ComingSoon,
                 _ => BtnKind::OpenInStudio,
             };
@@ -287,11 +288,20 @@ pub fn QApps() -> Element {
                                         },
                                         BtnKind::LaunchTalkPeople => rsx! {
                                             Link {
-                                                to: Route::TalkRoute {},
+                                                to: Route::TalkDirectoryRoute {},
                                                 style: "display: inline-flex; align-items: center; gap: 0.35rem; background: var(--qualia-accent); color: white; border-radius: 8px; padding: 0.38rem 0.75rem; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: opacity 0.15s;",
                                                 onclick: move |_| crate::components::relations::stash_directory_handoff(),
                                                 sl-icon { "name": "person-rolodex", style: "font-size: 0.68rem;" }
                                                 "Open Directory"
+                                            }
+                                        },
+                                        BtnKind::LaunchTalkMail => rsx! {
+                                            Link {
+                                                to: Route::TalkMailRoute {},
+                                                style: "display: inline-flex; align-items: center; gap: 0.35rem; background: var(--qualia-accent); color: white; border-radius: 8px; padding: 0.38rem 0.75rem; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: opacity 0.15s;",
+                                                onclick: move |_| crate::components::relations::write_talk_handoff("mail", false),
+                                                sl-icon { "name": "envelope", style: "font-size: 0.68rem;" }
+                                                "Open Mail"
                                             }
                                         },
                                         BtnKind::LaunchNexus => rsx! {

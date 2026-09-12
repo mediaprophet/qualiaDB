@@ -41,7 +41,7 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         id: "directory",
         label: "Directory",
         hint: "Humans-first address book · Talk / People",
-        keywords: "directory contacts address book people humans rolodex addressbook",
+        keywords: "dir directory contacts address book people humans rolodex addressbook",
     },
     PaletteDestination {
         id: "selfhood",
@@ -111,16 +111,14 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
     },
 ];
 
-/// Stash Talk sub-tab before routing so Mail opens the daily inbox, not chat.
+/// Stash Talk sub-tab before routing so Mail/Directory survive iframe remount.
 pub fn prepare_palette_navigation(id: &str) {
-    if !matches!(id, "mail" | "email") {
-        return;
-    }
-    #[cfg(target_arch = "wasm32")]
-    if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.session_storage() {
-            let _ = storage.set_item("webizen_talk_tab", "mail");
+    match id {
+        "mail" | "email" => crate::components::relations::write_talk_handoff("mail", false),
+        "directory" | "dir" | "contacts" | "addressbook" | "address-book" => {
+            crate::components::relations::stash_directory_handoff();
         }
+        _ => {}
     }
 }
 
@@ -128,11 +126,15 @@ pub fn prepare_palette_navigation(id: &str) {
 pub fn route_for_palette_id(id: &str) -> Route {
     match id {
         "memory" | "library" | "lived-memory" => Route::LibraryRoute {},
-        "directory" | "contacts" | "addressbook" | "address-book" => {
+        "dir" | "directory" | "contacts" | "addressbook" | "address-book" => {
             crate::components::relations::stash_directory_handoff();
-            Route::TalkRoute {}
+            Route::TalkDirectoryRoute {}
         }
-        "relations" | "talk" | "chat" | "people" | "mail" | "email" | "home" => Route::TalkRoute {},
+        "mail" | "email" => {
+            crate::components::relations::write_talk_handoff("mail", false);
+            Route::TalkMailRoute {}
+        }
+        "relations" | "talk" | "chat" | "people" | "home" => Route::TalkRoute {},
         "selfhood" | "identity" => Route::IdentityRoute {},
         "care" | "wellfair" | "health" => Route::WellfairRoute {},
         "world" | "browser" | "reach" | "web" => Route::BrowserRoute {},
@@ -149,19 +151,44 @@ pub fn route_for_palette_id(id: &str) -> Route {
     }
 }
 
+fn destination_rank(dest: &PaletteDestination, needle: &str) -> u8 {
+    let id = dest.id.to_ascii_lowercase();
+    let label = dest.label.to_ascii_lowercase();
+    if id == needle || label == needle {
+        0
+    } else if id.starts_with(needle) || label.starts_with(needle) {
+        1
+    } else if dest
+        .keywords
+        .split_whitespace()
+        .any(|word| word.eq_ignore_ascii_case(needle) || word.starts_with(needle))
+    {
+        2
+    } else {
+        3
+    }
+}
+
 /// Filter destinations by free-text query (label, hint, keywords, id).
+/// Prefix / keyword-token hits rank first so `dir` opens Directory, not a
+/// accidental substring later in the list.
 pub fn filter_destinations(query: &str) -> Vec<&'static PaletteDestination> {
     let needle = query.trim().to_lowercase();
     if needle.is_empty() {
         return PALETTE_DESTINATIONS.iter().collect();
     }
-    PALETTE_DESTINATIONS
+    let mut hits: Vec<_> = PALETTE_DESTINATIONS
         .iter()
         .filter(|d| {
             let hay = format!("{} {} {} {}", d.id, d.label, d.hint, d.keywords).to_lowercase();
             hay.contains(&needle)
+                || d.keywords
+                    .split_whitespace()
+                    .any(|word| word.starts_with(&needle) || needle.starts_with(word))
         })
-        .collect()
+        .collect();
+    hits.sort_by_key(|d| destination_rank(d, &needle));
+    hits
 }
 
 /// Modal command palette overlay. Listens for Ctrl/Cmd+K and Ctrl/Cmd+P on wasm.
@@ -448,7 +475,12 @@ mod tests {
     fn mail_is_a_talk_destination() {
         let hits = filter_destinations("mail");
         assert!(hits.iter().any(|d| d.id == "mail"));
-        assert!(matches!(route_for_palette_id("mail"), Route::TalkRoute {}));
+        assert!(matches!(
+            route_for_palette_id("mail"),
+            Route::TalkMailRoute {}
+        ));
+        assert_ne!(route_for_palette_id("mail"), Route::PoetRoute {});
+        assert_eq!(Route::TalkMailRoute {}.to_string(), "/talk/mail");
     }
 
     #[test]
@@ -463,17 +495,23 @@ mod tests {
 
     #[test]
     fn directory_is_discoverable_from_palette() {
-        for needle in ["directory", "contacts", "address book", "humans"] {
+        for needle in ["dir", "directory", "contacts", "address book", "humans"] {
             let hits = filter_destinations(needle);
             assert!(
                 hits.iter().any(|d| d.id == "directory"),
                 "palette must find Directory from {needle:?}"
             );
+            assert_eq!(
+                hits.first().map(|d| d.id),
+                Some("directory"),
+                "Directory must rank first for {needle:?}"
+            );
         }
         assert!(matches!(
             route_for_palette_id("directory"),
-            Route::TalkRoute {}
+            Route::TalkDirectoryRoute {}
         ));
+        assert!(matches!(route_for_palette_id("dir"), Route::TalkDirectoryRoute {}));
         assert_eq!(
             filter_destinations("directory")
                 .iter()
@@ -481,6 +519,10 @@ mod tests {
                 .unwrap()
                 .label,
             "Directory"
+        );
+        assert_eq!(
+            Route::TalkDirectoryRoute {}.to_string(),
+            "/talk/directory"
         );
     }
 }

@@ -202,8 +202,9 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     const path = studioPath(qappId);
     const url = '/studio/#/' + path;
     const title =
-      qappId === 'talk'
-        ? 'Talk'
+      qappId === 'talk' ? 'Talk'
+        : (qappId === 'directory' || qappId === 'dir' || qappId === 'contacts') ? 'Directory'
+        : (qappId === 'mail' || qappId === 'email') ? 'Mail'
         : qappId.charAt(0).toUpperCase() + qappId.slice(1);
 
     const tab = document.createElement('div');
@@ -235,6 +236,11 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   function studioPath(qappId) {
     qappId = normalizeQappId(qappId);
     if (qappId === 'talk') return '';
+    if (qappId === 'directory' || qappId === 'contacts' || qappId === 'addressbook'
+        || qappId === 'address-book' || qappId === 'dir' || qappId === 'rolodex') {
+      return 'talk/directory';
+    }
+    if (qappId === 'mail' || qappId === 'email') return 'talk/mail';
     if (qappId === 'keep') return 'keep';
     if (qappId === 'reach' || qappId === 'browser') return 'browser';
     return qappId;
@@ -358,7 +364,8 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   // ── Command palette (U6-A) — ≥5 destinations, Ctrl+K / Ctrl+P ──────────
   const PALETTE_ITEMS = [
     { id: 'talk',        label: 'Talk',              icon: '💬', hint: 'Home · chat & people',   keys: 'talk chat agent home' },
-    { id: 'directory',   label: 'Directory',         icon: '📒', hint: 'Humans-first address book · Talk / People', keys: 'directory contacts address book people humans rolodex addressbook' },
+    { id: 'directory',   label: 'Directory',         icon: '📒', hint: 'Humans-first address book · Talk / People', keys: 'dir directory contacts address book people humans rolodex addressbook' },
+    { id: 'mail',        label: 'Mail',              icon: '✉',  hint: 'Talk → purpose inboxes & landed mail', keys: 'mail email inbox receiver smtp purpose' },
     { id: 'browser',     label: 'Browser (Reach)',    icon: '🌐', hint: 'Web browser',            keys: 'browser reach web' },
     { id: '10d-browser', label: '10D / Infosphere',   icon: '◈',  hint: 'Anatomy & vision .10d',  keys: '10d ten-d infosphere anatomy vision' },
     { id: 'settings',    label: 'Settings',           icon: '⚙',  hint: 'Backend & preferences',  keys: 'settings prefs config' },
@@ -430,32 +437,24 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     paletteInput.blur();
   }
 
-  function stashDirectoryHandoff() {
+  function stashTalkHandoff(tab, openDirectory) {
     try {
-      sessionStorage.setItem('webizen_talk_tab', 'people');
-      sessionStorage.setItem('webizen_open_directory', '1');
-    } catch (e) { /* sessionStorage may be blocked in some embeds */ }
+      // localStorage is shared with the studio iframe; sessionStorage is not.
+      localStorage.setItem('webizen_talk_tab', tab);
+      sessionStorage.setItem('webizen_talk_tab', tab);
+      if (openDirectory) {
+        localStorage.setItem('webizen_open_directory', '1');
+        sessionStorage.setItem('webizen_open_directory', '1');
+      }
+    } catch (e) { /* storage may be blocked in some embeds */ }
   }
 
   function runPaletteItem(id) {
     closeCommandPalette();
-    if (id === 'directory' || id === 'contacts' || id === 'addressbook') {
-      stashDirectoryHandoff();
-      // Deep-link Talk / People (not a new top-level IA name).
-      if (activeTabId === 'talk') {
-        contentIframe.src = window.location.origin + '/studio/#/talk';
-        return;
-      }
-      const talkTab = tabs.find(t => t.qappId === 'talk');
-      if (talkTab) {
-        talkTab.url = '/studio/#/talk';
-        switchToTab(talkTab.el, 'talk');
-        contentIframe.src = window.location.origin + '/studio/#/talk';
-        return;
-      }
-      createTab('talk');
-      contentIframe.src = window.location.origin + '/studio/#/talk';
-      return;
+    if (id === 'directory' || id === 'contacts' || id === 'addressbook' || id === 'dir') {
+      stashTalkHandoff('people', true);
+    } else if (id === 'mail' || id === 'email') {
+      stashTalkHandoff('mail', false);
     }
     navigate(id);
   }
