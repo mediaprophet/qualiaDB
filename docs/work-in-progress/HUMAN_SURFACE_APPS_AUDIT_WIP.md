@@ -1,7 +1,7 @@
 # Human-surface apps audit
 
 **Status:** work-in-progress · Capt ops · **Not a release gate**  
-**Branch:** `0.0.38` · **Tip:** `1e2605c` (fold) · prior product-cut tip `b07ddef` · **Repo:** `mediaprophet/qualiaDB`  
+**Branch:** `0.0.38` · **Tip:** `1a77869` (Catalog findable B1–B3 · B4 Wave-22 held) · prior fold `1e2605c` · product-cut `b07ddef` · **Repo:** `mediaprophet/qualiaDB`  
 **Workspace:** `/workspace/qualiaDB`  
 **Date:** 2026-09-12 (AEST) · **Runner:** Capt (ops scan)  
 **Product context:** One Poet · human-alone · cherry-pick not parity · reveal live `ALL_BOUND` · **top-level IA names wait on Timothy (or BRICS)** · Ask · Keep · Talk cited below as **teachable loops only**, not locked nav chrome.
@@ -12,16 +12,19 @@
 
 1. Scanned `crates/webizen-desktop` (shell menu/routes, Tauri commands), `crates/webizen-studio` (Dioxus `Route` + panels), `crates/poet` (manifolds, container views, lexicon bay), and Capt/UAT docs under `docs/work-in-progress/`.
 2. Cross-checked live Host catalog: `crates/qualia-core-db/src/poet_host/invoke/ids.rs` → `ALL_BOUND` ≈ **1121** const entries (~**1116** resolved `Family.method` strings; 5 const names unresolved in the same file at tip). **No Host ids invented.**
-3. Chrome status from code + prior Capt circuits: Desktop apps walkthrough tip `d7f0bdc`; Frame B tip `d08d1c9` folded at `1e2605c`; One Poet cut `2532cde` / `b07ddef`.
+3. Chrome status from code + prior Capt circuits: Desktop apps walkthrough tip `d7f0bdc`; Frame B WASM `d08d1c9` folded at `1e2605c`; Desktop Catalog findable `9738911` / `1a77869` (B4 Wave-22 held); One Poet cut `2532cde` / `b07ddef`.
 4. Scores: **WORKING** | **PARTIAL** | **HELD** | **MISSING** | **BURIED** (live bind/UI exists but not surfaced for human-alone).
 
 ### Tip lineage (cite only)
 
 | Tip | Role |
 |-----|------|
-| `1e2605c` | Docs fold: Frame B — WASM **PASS**, Desktop **HELD** (Catalog) |
+| `1a77869` | Capt Desktop B4 **PARTIAL** — Catalog open-pack needs daemon; B1–B3 findable |
+| `9738911` | Frame B Desktop re-UAT — Catalog **findable** (B1–B3 PASS); Wave-22 held |
+| `592c99a` | Desktop Catalog · Lexicon chrome mount (PR #93) |
+| `1e2605c` | Docs fold: Frame B — WASM **PASS**, Desktop **HELD** (Catalog) — **superseded for mount** by `9738911` |
 | `b07ddef` | One Poet cut — cherry-pick, drop parity theatre |
-| `d08d1c9` | Capt Frame B UAT score |
+| `d08d1c9` | Capt Frame B UAT score (WASM) |
 | `d7f0bdc` | Desktop apps walkthrough |
 | `8f5b7d6` | Ask · Keep · Talk IA amend (cited by Frame B / lexicon) |
 
@@ -39,7 +42,7 @@
 | **Hypermedia Library** | Local lived-memory shelf (docs, models, knowledge) | **PARTIAL** · chrome **BURIED**/bounce | Tools → Hypermedia Library → `/library`; wellfair `library_*` / `wellfair_*_library` commands **live**; Capt: entry **bounced to home** | Studio `LibraryRoute` (Route enum `/` still named Library — shell remaps empty hash to Talk); Poet `build_library_view` (placeholder stats — not daemon-backed UI) | `menu.rs`; `commands/wellfair/library.rs`; `container_views_ext/library.rs`; Capt `d7f0bdc` Library **PARTIAL**; product cut: Library secondary/held | Reveal real library under Keep/Memory without false-held; wire Poet view to live library cmds or honest held |
 | **Directory / address book** | AD-like categorised addressbook + agreement slots | **BURIED** (live) | Tauri: `list_directory`, `search_directory`, categories (`personal_directory.rs`); UI: Relations → People → “Open personal directory” (`DirectoryPane`) — **not** top-level QApp/menu | Pane invokes need Native host; no Poet manifold seed named directory | `commands/personal_directory.rs`; `directory_pane.rs`; `relations/people.rs`; plan cite in pane header | Surface under Talk/People for human-alone; agreement slot honesty already empty-until-P1 |
 | **Ontology workbench** | Visual ontology authoring, vocab map, SHACL, N3 | **PARTIAL** · **BURIED** in Poet | No dedicated Desktop menu/`qapp_route` for ontology; knowledge packs via portal jobs | Poet `ontology` manifold seed honesty=`present` for graph/library/mapper/relation/SHACL/N3; `ontology_views/*` builders wired in `body_ontology.rs`; Knowledge manifold Ontology Browser `partial` | `manifolds/ontology.rs`; `browser/ontology_views/`; `containers/body_ontology.rs` | Reveal under Ask/Studio craft — not top-level peer until Timothy names IA; no Host invent for Ontology.* (none in `ALL_BOUND` families named Ontology) |
-| **Catalog · Lexicon** | Lexicon packs; living/artifact/machine chips; held-gate | **HELD** (D) · **WORKING** held-gate (W) | Catalog/Lexicon **not mounted** this tip (Frame B Desktop **HELD**) | Lexicon bay chrome; bind `GraphDatabase.lexicon_manifest`; held string `held / not yet — open lexicon pack` | `poet/.../lexicon_bay/`; Frame B `d08d1c9` / fold `1e2605c`; parity audit | davinci: mount Catalog under Ask·Keep·Talk on Desktop **or** honest held path — Wave-22 held until Desktop B clears |
+| **Catalog · Lexicon** | Lexicon packs; living/artifact/machine chips; held-gate | **WORKING** findable (D B1–B3) · **PARTIAL** open-pack (D B4) · **WORKING** held-gate (W) | Catalog **findable** via Vibe → Script → Catalog · Lexicon (`/poet/catalog`); chips + held/not yet PASS | Lexicon bay; bind `GraphDatabase.lexicon_manifest`; B4 still held on real fixture until Desktop↔`:4242` | `poet/.../lexicon_bay/`; Frame B Desktop `9738911` / tip `1a77869`; chrome `592c99a`; WASM `d08d1c9` | Neo: B4 daemon connect; davinci: unavailable→held on sibling panes; Wave-22 held until B4 |
 | **Poet (shell + sought function)** | One human product dialect inside Desktop shell; toolchest, manifolds, Dual Studio, radial wheel, honesty chrome | **WORKING** (arrive) · **PARTIAL** (sought depth) | Tools → Poet Harness `/poet`; View Shell: Poet; Capt Studio/Poet **PASS** | Trunk/WASM Poet: studio bay, docks, 17 manifold seeds, Dual Studio `live`, ontology/library/comm views | `poet_harness`; `manifolds/mod.rs` `all_seeds()`; `IMPLEMENTATION_TRACKER.md`; Frame A PASS both | Cherry-pick great Desktop↔WASM; drop parity theatre; reveal buried live capability |
 | **Dual Studio** | VibeScript + GPU viewport on Media manifold (not nested DCC) | **WORKING** | Capt Dual Studio under Media **PASS** | `media` seed `dual_studio` honesty=`live`; `build_dual_studio_view`; studio Dioxus `dual_studio.rs` | `manifolds/media.rs`; `studio_views/dual_studio`; Capt `d7f0bdc` | Keep as Media craft — not nav peer |
 | **Sanctuary (vault UI)** | Vault lock/unlock, protected spaces | **WORKING** | `/sanctuary`; Wellfair sanctuary panels; shell SanctuaryLock | Poet sanctuary manifold Vault `present` | `main.rs` SanctuaryRoute; `wellfair/sanctuary_*`; Capt Sanctuary **PASS** | Continuity copy handle≠who still PARTIAL |
@@ -64,7 +67,7 @@ Live capability or UI that a person cannot find without an agent — chrome FAIL
 | **Directory / address book** | Toggle inside Relations → People; no menu/QApp/palette entry | `search_directory` et al. Tauri cmds; `DirectoryPane` |
 | **Hypermedia Library (Poet view)** | Desktop menu bounces home (Capt); Poet library view uses placeholder stats | `wellfair`/`library_*` cmds; `build_library_view` |
 | **Ontology workbench** | Seeded + views built in Poet; no Desktop route/menu; not cold-load | `ontology` manifold `present`; `ontology_views` |
-| **Catalog · Lexicon (Desktop)** | WASM bay exists; Desktop not mounted → Frame B **HELD** | `GraphDatabase.lexicon_manifest`; lexicon_bay |
+| **Catalog · Lexicon (Desktop open-pack)** | Mount/findable (B1–B3); B4 open-pack still held without live `:4242` lexicon_manifest | `GraphDatabase.lexicon_manifest`; tip `1a77869` / `9738911` |
 | **Mesh controls** | Inside Connect / social hubs; chrome says Unavailable | `mesh_start`/`status`; no Mesh.* ALL_BOUND family |
 | **ChatGraph.* (tip)** | Three ids now in `ALL_BOUND`; Talk UI still primarily FRB/`stream_chat_inference` — ribbon may not expose ChatGraph | `ChatGraph.validate_fragment` · `link_reply` · `session_summary` |
 | **Pulse.*** | Ten live binds; UAT still sees unavailable panels | `Pulse.publish*` · `open_channel` · … |
@@ -78,7 +81,7 @@ Wait-honest gaps (bind or mount really missing / not ready) — say **held / not
 
 | Item | Why honest held | Cite |
 |------|-----------------|------|
-| Desktop **Catalog · Lexicon** mount | Not surfaced this circuit; shell steady, no panic-red | Frame B Desktop `d08d1c9` / fold `1e2605c` |
+| Desktop **Catalog · Lexicon** open-pack (B4) | Findable (B1–B3); valid pack still held until daemon graph connect | Frame B Desktop `9738911` · tip `1a77869` · Wave-22 |
 | Poet **communications** containers | Seed honesty `held` (conversations, channels, presence, WebRTC, webview) | `manifolds/communications.rs` |
 | Sanctuary Health / Anatomy containers | Seed `held` | `manifolds/sanctuary.rs` |
 | Media 3D / Vision / Listen / Triad | Seed `held` (Dual Studio alone `live`) | `manifolds/media.rs` |
@@ -95,7 +98,7 @@ Wait-honest gaps (bind or mount really missing / not ready) — say **held / not
 1. **Talk that talks** — Inbox/`ConnectChat` human-alone with local model; honest held when model missing (never agent-remote Matrix).  
 2. **Keep that reopens** — volume picker/recent/sayables; commit celebrate only on real write (`GraphDatabase.volume_commit`).  
 3. **Ask that answers** — studio bay sayables; mute Capability.method; reveal `GraphDatabase.sparql` under Ask craft.  
-4. **Desktop Catalog · Lexicon** — mount or honest held path (clears Frame B / Wave-22 blocker).  
+4. **Desktop Catalog · Lexicon B4** — open-pack via live `:4242` (mount findable already; clears Wave-22).  
 5. **Reveal Directory** under Talk/People (already live) — fun addressbook, not AD cosplay.  
 6. **Library that opens** — fix Desktop bounce; wire or honest-held Poet library vs live `library_*` cmds.  
 7. **Settings that paints** — fix Capt PARTIAL (route exists, chrome miss).  
@@ -132,6 +135,8 @@ Wait-honest gaps (bind or mount really missing / not ready) — say **held / not
 - [`HUMAN_ONBOARDING_LEXICON_WIP.md`](./HUMAN_ONBOARDING_LEXICON_WIP.md)  
 - [`HUMAN_SURFACE_PARITY_AUDIT_WIP.md`](./HUMAN_SURFACE_PARITY_AUDIT_WIP.md)  
 - [`HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md`](./HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md)  
+- [`HUMAN_SURFACE_COMPETITIVE_USABILITY_WIP.md`](./HUMAN_SURFACE_COMPETITIVE_USABILITY_WIP.md) — peer grades + fix queue  
+- [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_DESKTOP_9738911.md`](./HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_DESKTOP_9738911.md)  
 - [`HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_d08d1c9.md`](./HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_d08d1c9.md)  
 - [`EXP_B0_CHAT_GRAPH_SEAM_DECISION.md`](./EXP_B0_CHAT_GRAPH_SEAM_DECISION.md) (stale vs tip ChatGraph binds — diagnose, don’t invent)
 
@@ -140,9 +145,10 @@ Wait-honest gaps (bind or mount really missing / not ready) — say **held / not
 ## One-breath
 
 > Desktop already runs Talk, Browser, Dual Studio, Sanctuary, WellFair, Chora, Keep.  
-> WASM already teaches held/not yet for Catalog.  
+> Catalog · Lexicon now **findable** (B1–B3); B4 / Wave-22 still held for open-pack.  
 > Buried live (Directory, Library bounce, Ontology, Mesh, Pulse) is the chrome FAIL.  
-> Cherry-pick joy under Ask · Keep · Talk — no parity theatre, no Host invent.
+> Cherry-pick joy under Ask · Keep · Talk — no parity theatre, no Host invent.  
+> Competitive peer grades: [`HUMAN_SURFACE_COMPETITIVE_USABILITY_WIP.md`](./HUMAN_SURFACE_COMPETITIVE_USABILITY_WIP.md).
 
 ## Related
 
