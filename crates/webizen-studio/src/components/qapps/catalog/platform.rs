@@ -37,6 +37,18 @@ pub(super) fn apps() -> Vec<QApp> {
             cat: Cat::Platform,
         },
         QApp {
+            id: "mail",
+            name: "Mail",
+            tagline: "Talk → purpose inboxes",
+            desc: "Daily inbox: purpose mailboxes and mail that has landed. \
+                   Opens Talk → Mail — not Poet Domain.info / Inalienable Domain Inboxes. \
+                   Receiver down stays held / not yet.",
+            icon: "envelope",
+            route: Some(AppRoute::TalkMail),
+            stat: Stat::Active,
+            cat: Cat::Platform,
+        },
+        QApp {
             id: "profile-identity",
             name: "Profile & Identity",
             tagline: "DID Management",

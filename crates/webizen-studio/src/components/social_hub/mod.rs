@@ -119,7 +119,7 @@ pub fn SocialHub() -> Element {
                 if let Ok(Some(m)) =
                     invoke_json::<Option<String>>("get_active_model", json!({})).await
                 {
-                    if !m.is_empty() {
+                    if !crate::components::talk_human_alone::instrument_is_missing(&m) {
                         active_model_chip.set(m);
                     }
                 }
@@ -251,10 +251,12 @@ pub fn SocialHub() -> Element {
                         }
                     }
                 };
-                let model_bit = if active_model_chip().is_empty() {
-                    "no model"
+                let model_bit = if crate::components::talk_human_alone::instrument_is_missing(
+                    &active_model_chip(),
+                ) {
+                    "instrument held / not yet"
                 } else {
-                    "model on"
+                    "instrument ready"
                 };
                 status.set(format!(
                     "Relations ready · {n_contacts} contact(s) · {n_peers} peer(s) · {model_bit}{project_note}. Private by default."
@@ -386,7 +388,9 @@ pub fn SocialHub() -> Element {
                             if let Ok(Some(m)) =
                                 invoke_json::<Option<String>>("get_active_model", json!({})).await
                             {
-                                active_model_chip.set(m);
+                                if !crate::components::talk_human_alone::instrument_is_missing(&m) {
+                                    active_model_chip.set(m);
+                                }
                             }
                         });
                     }
@@ -435,7 +439,9 @@ pub fn SocialHub() -> Element {
                             style: "font-size:11px;font-weight:600;color:{vault_chip.1};background:{vault_chip.2};border:1px solid {vault_chip.3};padding:5px 11px;border-radius:999px;white-space:nowrap;",
                             "{vault_chip.0}"
                         }
-                        if active_model_chip().is_empty() {
+                        if crate::components::talk_human_alone::instrument_is_missing(
+                            &active_model_chip(),
+                        ) {
                             span {
                                 style: "font-size:11px;color:#fde68a;background:#78350f;border:1px solid #b45309;padding:5px 11px;border-radius:999px;white-space:nowrap;",
                                 title: "{crate::components::talk_human_alone::INSTRUMENT_HELD_SAYABLE}",

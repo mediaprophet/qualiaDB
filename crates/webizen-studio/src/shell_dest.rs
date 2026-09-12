@@ -31,8 +31,10 @@ pub fn normalize_shell_target(raw: &str) -> String {
 pub fn route_from_shell_target(raw: &str) -> Route {
     match normalize_shell_target(raw).as_str() {
         "" | "talk" | "chat" | "home" | "dashboard" => Route::TalkRoute {},
-        // Directory is Talk / People — not a new top-level IA name.
-        "directory" | "contacts" | "addressbook" | "address-book" => Route::TalkRoute {},
+        // Directory is Talk / People — hash must not fall through to DynamicPage.
+        "dir" | "directory" | "contacts" | "addressbook" | "address-book" | "rolodex"
+        | "talk/directory" | "talk/people" | "talk/dir" => Route::TalkDirectoryRoute {},
+        "mail" | "email" | "talk/mail" | "talk/email" => Route::TalkMailRoute {},
         "library" | "memory" | "lived-memory" => Route::LibraryRoute {},
         "settings" | "prefs" | "preferences" => Route::SettingsRoute {},
         "keep" => Route::KeepRoute {},
@@ -76,7 +78,17 @@ mod tests {
         );
         assert_eq!(route_from_shell_target("memory"), Route::LibraryRoute {});
         assert_ne!(route_from_shell_target("library"), Route::TalkRoute {});
-        assert_eq!(route_from_shell_target("directory"), Route::TalkRoute {});
+        assert_eq!(
+            route_from_shell_target("directory"),
+            Route::TalkDirectoryRoute {}
+        );
+        assert_eq!(route_from_shell_target("dir"), Route::TalkDirectoryRoute {});
+        assert_eq!(route_from_shell_target("mail"), Route::TalkMailRoute {});
+        assert_eq!(
+            route_from_shell_target("/studio/#/mail"),
+            Route::TalkMailRoute {}
+        );
+        assert_ne!(route_from_shell_target("mail"), Route::PoetRoute {});
     }
 
     #[test]
@@ -90,6 +102,8 @@ mod tests {
     #[test]
     fn route_paths_are_distinct() {
         assert_eq!(Route::TalkRoute {}.to_string(), "/");
+        assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
+        assert_eq!(Route::TalkMailRoute {}.to_string(), "/talk/mail");
         assert_eq!(Route::LibraryRoute {}.to_string(), "/library");
         assert_eq!(Route::SettingsRoute {}.to_string(), "/settings");
     }
