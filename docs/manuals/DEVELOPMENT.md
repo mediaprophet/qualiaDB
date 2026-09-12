@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.37` | Last updated: 2026-09-08_
+_Branch: `0.0.38` | Last updated: 2026-09-12_
 
 ---
 
@@ -12,7 +12,7 @@ _Branch: `0.0.37` | Last updated: 2026-09-08_
 |---|---|---|
 | [Rust stable](https://rustup.rs/) | Everything | `rustup update stable` |
 | [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) | WASM browser build | |
-| [Dioxus CLI](https://dioxuslabs.com/learn/0.5/getting_started) | Webizen Studio | Primary shipped desktop target (`cargo binstall dioxus-cli`) |
+| [Dioxus CLI](https://dioxuslabs.com/learn/0.5/getting_started) | Webizen Studio | Pin **0.8.0-alpha.1** (`bash scripts/build_frontend.sh` installs it) |
 | Node.js ≥ 18 | Docs test suite, API explorer | `docs/tests/run-local.ps1` |
 | [Tauri CLI v1.x](https://tauri.app/v1/guides/getting-started/prerequisites/) | Legacy desktop only | `qualia-desktop` crate — not in release CI |
 
@@ -27,14 +27,30 @@ cargo build --release -p qualia-cli
 ./target/release/qualia-cli --help
 ```
 
-### Webizen Studio desktop app (primary shipped desktop target)
+### Webizen Studio desktop frontend (Capt / Desktop re-UAT)
+
+From the repository root, **one command** rebuilds the WASM UI and stages
+`crates/webizen-studio/dist` (including `source-revision.txt` at the current tip):
+
+```bash
+bash scripts/build_frontend.sh
+```
+
+On Windows PowerShell the equivalent is `.\scripts\build_frontend.ps1`.
+
+The script installs `dioxus-cli` **0.8.0-alpha.1** (same pin as
+`crates/webizen-studio/Cargo.toml`) and builds with wasm LTO/bitcode off so
+`dx build --web --release` can link. Success ends with:
+
+```
+Build complete. Staged fresh desktop assets in crates/webizen-studio/dist.
+```
+
+For local iteration without restaging dist:
 
 ```bash
 cd crates/webizen-studio
-dx build --release
-
-# Or to run in development mode:
-dx serve --platform desktop
+dx serve --web
 ```
 
 ### WASM browser module

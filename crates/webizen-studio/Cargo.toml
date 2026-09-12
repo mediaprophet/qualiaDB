@@ -15,6 +15,7 @@ reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 # These give the native build access to the render pipeline types.
 # dioxus is included with "router" only (not "desktop") to avoid wry conflicts.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Exact pin: must match installed dioxus-cli (see scripts/build_frontend.*).
 dioxus = { version = "=0.8.0-alpha.1", features = ["router"] }
 qualia-core-db = { path = "../qualia-core-db" }
 webizen-render = { path = "../webizen-render" }

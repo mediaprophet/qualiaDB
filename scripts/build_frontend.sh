@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Rebuild Webizen Studio web assets for Desktop / Capt re-UAT.
+# One command from the repository root:
+#   bash scripts/build_frontend.sh
+# Stages crates/webizen-studio/dist and writes source-revision.txt at HEAD.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -6,15 +10,24 @@ public="$repo_root/target/dx/webizen-studio/release/web/public"
 dist="$repo_root/crates/webizen-studio/dist"
 assets="$dist/assets"
 browser_source="$repo_root/crates/webizen-desktop/src/browser"
-# Keep in lockstep with crates/webizen-studio/Cargo.toml wasm-bindgen pin.
+# Keep in lockstep with crates/webizen-studio/Cargo.toml dioxus / wasm-bindgen pins.
+DIOXUS_CLI_VERSION="${DIOXUS_CLI_VERSION:-0.8.0-alpha.1}"
 WASM_BINDGEN_CLI_VERSION="${WASM_BINDGEN_CLI_VERSION:-0.2.125}"
 source_revision="$(git -C "$repo_root" rev-parse HEAD)"
 if [[ -n "$(git -C "$repo_root" status --porcelain)" ]]; then
   source_revision="${source_revision}-dirty"
 fi
 
-if ! command -v dx >/dev/null 2>&1; then
-  cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+need_dx_install=1
+if command -v dx >/dev/null 2>&1; then
+  dx_ver="$(dx --version 2>/dev/null || true)"
+  if [[ "$dx_ver" == *"${DIOXUS_CLI_VERSION}"* ]]; then
+    need_dx_install=0
+  fi
+fi
+if [[ "$need_dx_install" -eq 1 ]]; then
+  echo "Installing dioxus-cli ${DIOXUS_CLI_VERSION} (must match crates/webizen-studio dioxus pin)..."
+  cargo install dioxus-cli --version "${DIOXUS_CLI_VERSION}" --locked --force
 fi
 
 # dx shell-outs to whatever `wasm-bindgen` is on PATH. A CLI/crate mismatch fails with:
@@ -32,17 +45,23 @@ if [[ "$need_wb_install" -eq 1 ]]; then
 fi
 # Prefer cargo-installed tools over any host/Homebrew wasm-bindgen.
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+echo "Using $(command -v dx): $(dx --version 2>/dev/null || true)"
 echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
 # Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.
-# Clear for the frontend build only.
-export RUSTFLAGS="${RUSTFLAGS_WASM:-}"
-export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-}"
+# Also disable wasm fat-LTO / bitcode: rustc fails at link with
+#   failed to load bitcode of module "webizen_studio-*.rcgu.o"
+# when leftover LTO objects or a dioxus-cli/crate skew are present.
+FRONTEND_WASM_RUSTFLAGS="-C lto=off -C embed-bitcode=no"
+export RUSTFLAGS="${RUSTFLAGS_WASM:-$FRONTEND_WASM_RUSTFLAGS}"
+export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-$FRONTEND_WASM_RUSTFLAGS}"
+export CARGO_PROFILE_WEB_RELEASE_LTO="${CARGO_PROFILE_WEB_RELEASE_LTO:-off}"
+export CARGO_INCREMENTAL=0
 unset CARGO_ENCODED_RUSTFLAGS || true
 
 (
   cd "$repo_root/crates/webizen-studio"
-  # Prefer a clean bindgen output dir so a previous failed mac run cannot leave a half file.
-  rm -rf "$repo_root/target/dx/webizen-studio/release/web/public/wasm" || true
+  # Drop stale dx artifacts so mixed bitcode objects cannot relink.
+  rm -rf "$repo_root/target/dx/webizen-studio" || true
   dx build --web --release
 )
 

@@ -50,6 +50,22 @@ updater `pubkey` in `tauri.conf.json` with the generated public key. Rotating
 the key breaks updates for already-installed clients unless a migration release
 signed by the old key is shipped first.
 
+## Rebuild desktop frontend assets (Capt)
+
+From the repository root, one command:
+
+```bash
+bash scripts/build_frontend.sh
+```
+
+Windows: `.\scripts\build_frontend.ps1`. This installs matching `dioxus-cli`
+0.8.0-alpha.1, links wasm without LTO/bitcode, and stages
+`crates/webizen-studio/dist` with `source-revision.txt` at HEAD. Success:
+
+```
+Build complete. Staged fresh desktop assets in crates/webizen-studio/dist.
+```
+
 ## Local Validation
 
 Build without bundling:

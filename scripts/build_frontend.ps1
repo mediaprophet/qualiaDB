@@ -1,5 +1,9 @@
 # build_frontend.ps1
-# Script to build webizen-studio as WASM and stage it for the daemon
+# Rebuild Webizen Studio web assets for Desktop / Capt re-UAT.
+# One command from the repository root:
+#   .\scripts\build_frontend.ps1
+# (Linux/macOS: bash scripts/build_frontend.sh)
+# Stages crates/webizen-studio/dist and writes source-revision.txt at HEAD.
 
 $ErrorActionPreference = "Stop"
 
@@ -16,15 +20,23 @@ if ($LASTEXITCODE -ne 0) {
 }
 $sourceTreeDirty = -not [string]::IsNullOrWhiteSpace(($initialStatus -join "`n"))
 
-# Keep in lockstep with crates/webizen-studio/Cargo.toml wasm-bindgen pin.
+# Keep in lockstep with crates/webizen-studio/Cargo.toml dioxus / wasm-bindgen pins.
+$DioxusCliVersion = if ($env:DIOXUS_CLI_VERSION) { $env:DIOXUS_CLI_VERSION } else { "0.8.0-alpha.1" }
 $WasmBindgenCliVersion = if ($env:WASM_BINDGEN_CLI_VERSION) { $env:WASM_BINDGEN_CLI_VERSION } else { "0.2.125" }
-# Keep in lockstep with dioxus-cli 0.8.0-alpha.0/src/esbuild.rs.
+# Keep in lockstep with dioxus-cli 0.8.0-alpha.1/src/esbuild.rs.
 $EsbuildVersion = if ($env:ESBUILD_VERSION) { $env:ESBUILD_VERSION } else { "0.27.3" }
 
-Write-Host "Ensuring dioxus-cli is installed..."
-if (!(Get-Command "dx" -ErrorAction SilentlyContinue)) {
-    Write-Host "Installing dioxus-cli..."
-    cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+Write-Host "Ensuring dioxus-cli $DioxusCliVersion is installed..."
+$needDxInstall = $true
+if (Get-Command "dx" -ErrorAction SilentlyContinue) {
+    $dxVer = (& dx --version 2>$null | Out-String).Trim()
+    if ($dxVer -match [regex]::Escape($DioxusCliVersion)) {
+        $needDxInstall = $false
+    }
+}
+if ($needDxInstall) {
+    Write-Host "Installing dioxus-cli $DioxusCliVersion (must match crates/webizen-studio dioxus pin)..."
+    cargo install dioxus-cli --version $DioxusCliVersion --locked --force
 }
 
 # dx uses whatever wasm-bindgen is on PATH. CLI/crate mismatch fails with:
@@ -179,19 +191,29 @@ Write-Host "Using wasm-opt: $((Get-Command wasm-opt).Source)"
 # redownload a managed wasm-bindgen on every invocation. Agents and offline
 # builds must use the exact pinned local CLI established above.
 $env:NO_DOWNLOADS = "1"
-# Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen; clear for frontend only.
-if ($env:RUSTFLAGS_WASM) { $env:RUSTFLAGS = $env:RUSTFLAGS_WASM } else { Remove-Item Env:RUSTFLAGS -ErrorAction SilentlyContinue }
+# Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen. Also disable wasm fat-LTO /
+# bitcode so rust-lld does not fail with:
+#   failed to load bitcode of module "webizen_studio-*.rcgu.o"
+$frontendWasmRustflags = "-C lto=off -C embed-bitcode=no"
+if ($env:RUSTFLAGS_WASM) {
+    $env:RUSTFLAGS = $env:RUSTFLAGS_WASM
+} else {
+    $env:RUSTFLAGS = $frontendWasmRustflags
+}
+if (-not $env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS) {
+    $env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS = $frontendWasmRustflags
+}
+if (-not $env:CARGO_PROFILE_WEB_RELEASE_LTO) {
+    $env:CARGO_PROFILE_WEB_RELEASE_LTO = "off"
+}
+$env:CARGO_INCREMENTAL = "0"
 Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
 
+Write-Host "Using dx: $((Get-Command dx).Source) $(dx --version)"
 Write-Host "Building webizen-studio..."
-$publicAssets = "$PSScriptRoot/../target/dx/webizen-studio/release/web/public/assets"
-if (Test-Path $publicAssets) {
-    Get-ChildItem -LiteralPath $publicAssets -Filter "webizen-studio*" -File |
-        Remove-Item -Force
-}
-$wasmOut = "$PSScriptRoot/../target/dx/webizen-studio/release/web/public/wasm"
-if (Test-Path $wasmOut) {
-    Remove-Item -LiteralPath $wasmOut -Recurse -Force -ErrorAction SilentlyContinue
+$dxStudio = Join-Path $PSScriptRoot "../target/dx/webizen-studio"
+if (Test-Path -LiteralPath $dxStudio) {
+    Remove-Item -LiteralPath $dxStudio -Recurse -Force -ErrorAction SilentlyContinue
 }
 Push-Location "$PSScriptRoot/../crates/webizen-studio"
 $dxBuildCommand = "dx build --web --release 2>&1"
