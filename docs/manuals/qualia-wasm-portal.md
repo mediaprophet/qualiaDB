@@ -1,8 +1,8 @@
 # Qualia WASM Portal — Operator & Integrator Manual
 
 **Product name:** Qualia — *Semantic Subjectivity Bifurcation Portal*  
-**Version:** 0.0.37
-**Branch:** `0.0.37`
+**Version:** 0.0.38
+**Branch:** `0.0.38`
 **Artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm`  
 **Companion:** [`wasm-viewport-migration-plan.md`](../plans/wasm-viewport-migration-plan.md), [`q42-acoustic-plane-draft.md`](standards/q42-acoustic-plane-draft.md)
 

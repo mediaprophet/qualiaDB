@@ -25,6 +25,13 @@ Pages / operator copy only.
 - `pages.yml` comment now states that tag `v0.0.38` is the intended publish
   path; branch `0.0.38` may still be rejected by the `github-pages` environment
   until repo settings add it.
+## [0.0.38] — 2026-09-08
+
+### Changed
+
+- Opened the `0.0.38` development line from `0.0.37`.
+- Workspace crates, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.38`.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version track `0.0.38`.
 
 ## [0.0.37] — 2026-09-08
 

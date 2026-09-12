@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn numeric_ordering() {
-        assert!(engine_too_old("0.0.37", "0.0.36"));
+        assert!(engine_too_old("0.0.38", "0.0.36"));
         assert!(!engine_too_old("0.0.36", "0.0.36"));
         assert!(!engine_too_old("0.0.35", "0.0.36"));
         assert!(engine_too_old("1.0.0", "0.9.9"));
@@ -82,6 +82,6 @@ mod tests {
     fn upper_bound() {
         assert!(!engine_too_new("", "9.9.9"));
         assert!(!engine_too_new("1.0.0", "1.0.0"));
-        assert!(engine_too_new("0.0.36", "0.0.37"));
+        assert!(engine_too_new("0.0.36", "0.0.38"));
     }
 }

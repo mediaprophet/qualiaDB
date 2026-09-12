@@ -1,17 +1,16 @@
 name: Deploy Qualia-DB Playground to GitHub Pages
 
 # Deploys Jekyll site under /docs to GitHub Pages (baseurl: /qualiaDB).
-# Triggers: main, active release branches 0.0.37 / 0.0.38, version tags, or manual run.
+# Triggers: main, active release branch 0.0.38, version tags, or manual run.
 # Build/test runs on those refs without the github-pages environment so a missing
 # deployment-branch policy cannot skip node/wasm/jekyll verification.
 # Deploy still needs environment github-pages. Historical allowed refs (repo settings):
-# main, 0.0.24–0.0.34, tags v*. Branch 0.0.38 (and 0.0.37) may still be rejected
-# until settings add those branches. Tag v0.0.38 is the intended publish path.
+# main, 0.0.24–0.0.34, tags v*. Branch 0.0.38 may still be rejected until settings
+# add that branch. Tag v0.0.38 is the intended publish path.
 on:
   push:
     branches:
       - main
-      - "0.0.37"
       - "0.0.38"
     tags:
       - "v*"
@@ -158,13 +157,13 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.37","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.38","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
           grep -q 'qualia_bg.wasm' docs/pkg/qualia/qualia.js
 
       - name: Phase 7.1 — portal WASM size budget
         # Sanity cap for the full WASM-safe engine (not a slim product budget).
-        # Measured 0.0.37 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
+        # Measured 0.0.38 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
         # Ontology MCP keeps the tight 640 KiB / 200 KiB gate.
         run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
 
@@ -204,7 +203,7 @@ jobs:
           ls -la docs/playground/qualia_core_db.js docs/playground/qualia_core_db_bg.wasm
 
       - name: Playground WASM size budget
-        # Same 16 MiB / 4 MiB sanity cap as portal. Measured 0.0.37 wasm-full:
+        # Same 16 MiB / 4 MiB sanity cap as portal. Measured 0.0.38 wasm-full:
         # ~8.23 MiB raw / ~2.32 MiB gzip. Keep in step with release-wasm.yml.
         run: node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
 

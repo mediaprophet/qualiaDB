@@ -16,7 +16,7 @@ pub const MAX_INSTALLED_APPS: usize = 32;
 ///
 /// Keep in sync with the workspace release line when bumping; comparison is
 /// the simple dotted numeric helper in `super::compat`.
-pub const DEFAULT_ENGINE_VERSION: &str = "0.0.37";
+pub const DEFAULT_ENGINE_VERSION: &str = "0.0.38";
 
 /// Internal slot payload (record + inspect snapshot).
 #[derive(Debug, Clone)]
