@@ -2,7 +2,9 @@
 //!
 //! Two tracks: Vibe reaches existing Qualia capabilities for humans/apps.
 //! Gazetteer is document NLP (`qualia_core_db::nlp`), not the language.
-//! Honesty: graph is an in-process snapshot until daemon wiring (Partial).
+//! Honesty: Catalog open-pack prefers live HTTP `/invoke` on `:4242`
+//! (`poet_daemon`); in-process `PoetSnapshot` is the fallback when the
+//! daemon is not yet reachable.
 
 use qualia_core_db::nlp::analyze_document;
 use qualia_core_db::poet_host::catalog::{engine_families_mcp_only, VIBE_0_1};
@@ -49,7 +51,9 @@ pub struct StoredProgram {
 impl Default for PoetHarnessState {
     fn default() -> Self {
         Self {
-            snap: Mutex::new(PoetSnapshot::live()),
+            // Attach to the process daemon graph when present so Catalog
+            // fallback is the same bind HTTP `/invoke` uses.
+            snap: Mutex::new(PoetSnapshot::from_daemon()),
             cells: Mutex::new(Vec::new()),
             programs: Mutex::new(Vec::new()),
         }
@@ -192,8 +196,25 @@ pub fn poet_eval(
 }
 
 /// Live ALL_BOUND bind used by Desktop Catalog · Lexicon. No Host widen.
+/// Prefers HTTP `/invoke` on Native Connected `:4242` (Poet WASM path).
 #[tauri::command]
 pub fn poet_lexicon_manifest(state: State<PoetHarnessState>, path: String) -> PoetEvalResult {
+    if let Some(http) = super::poet_daemon::http_invoke(
+        "GraphDatabase.lexicon_manifest",
+        serde_json::json!({ "path": path.clone() }),
+    ) {
+        return PoetEvalResult {
+            ok: http.ok,
+            value: http.value,
+            diagnostic: http.diagnostic,
+            revision: http.revision,
+            committed: http.committed,
+            published: Vec::new(),
+            honesty: if http.ok { "live" } else { "held" },
+            language: vibe::LANGUAGE_VERSION,
+            value_cbor_hex: encode_cbor_text(""),
+        };
+    }
     let mut snap = state.snap.lock().expect("poet snapshot");
     let mut rec = BTreeMap::new();
     rec.insert("path".into(), Value::String(path));
@@ -237,7 +258,7 @@ pub fn poet_volume_commit(state: State<PoetHarnessState>, path: String) -> PoetE
 #[tauri::command]
 pub fn poet_reset(state: State<PoetHarnessState>) -> PoetEvalResult {
     let mut snap = state.snap.lock().expect("poet snapshot");
-    *snap = PoetSnapshot::live();
+    *snap = PoetSnapshot::from_daemon();
     let mut cells = state.cells.lock().expect("poet cells");
     cells.clear();
     snapshot_result(&snap, true, "reset".into(), None)
@@ -656,5 +677,35 @@ mod tests {
         let json = err.to_json();
         assert!(json.contains("held / not yet — open lexicon pack"), "{json}");
         assert!(!json.to_ascii_lowercase().contains("broken"));
+    }
+
+    #[test]
+    fn lexicon_manifest_real_en_core_fixture_opens() {
+        let state = PoetHarnessState::default();
+        let mut snap = state.snap.lock().expect("poet snapshot");
+        let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../crates/vibe/fixtures/lexicon/en-core.lexicon.json")
+            .canonicalize()
+            .expect("en-core fixture");
+        let mut rec = BTreeMap::new();
+        rec.insert(
+            "path".into(),
+            Value::String(fixture.display().to_string()),
+        );
+        let value = snap
+            .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
+            .expect("real pack opens on live bind");
+        let rendered = format_value(&value);
+        assert!(rendered.contains("0.1.0"), "{rendered}");
+        assert!(rendered.contains("mixed"), "{rendered}");
+        assert!(!rendered.to_ascii_lowercase().contains("unavailable"));
+        let outcome = webizen_studio::lexicon_catalog::interpret_invoke(true, &rendered, None);
+        match outcome {
+            webizen_studio::lexicon_catalog::ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+                assert_eq!(card.framing, webizen_studio::lexicon_catalog::Framing::Mixed);
+            }
+            other => panic!("expected open pack card, got {other:?}"),
+        }
     }
 }

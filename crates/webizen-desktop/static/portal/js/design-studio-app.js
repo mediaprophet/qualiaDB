@@ -474,8 +474,8 @@ async function probePortal() {
       const st = await res.json();
       portalLive = true;
       badge.textContent = st.graph_daemon_reachable
-        ? `Desktop :8080 · daemon :${st.graph_daemon_port}`
-        : "Desktop portal live";
+        ? (st.graph_daemon_label || `Native Connected to 127.0.0.1:${st.graph_daemon_port}`)
+        : (st.graph_daemon_label || `held / not yet — local daemon 127.0.0.1:${st.graph_daemon_port || 4242}`);
       badge.className = "badge-live";
       return;
     } catch {

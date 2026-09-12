@@ -4,6 +4,7 @@
 //! consoles (Script | Catalog · Lexicon). Missing pack → held / not yet.
 //! Never "unavailable". Never "broken". No Host widen.
 
+use super::chrome::NativeDaemonChip;
 use super::engine::{self, PoetEvalResult};
 use dioxus::prelude::*;
 use webizen_studio::lexicon_catalog::{
@@ -56,6 +57,7 @@ pub fn LexiconBay() -> Element {
             p { class: "lexicon-bay-lede",
                 "Open a lexicon pack. Missing pack stays held / not yet — nothing is broken."
             }
+            NativeDaemonChip {}
 
             div { class: "lexicon-path-row",
                 input {
@@ -229,6 +231,22 @@ fn open_pack(path: String, mut outcome: Signal<ManifestOutcome>, mut busy: Signa
     }
     busy.set(true);
     spawn(async move {
+        // Soft wait for Native Connected — same flap guard as Poet WASM Catalog.
+        if let Ok(probe) = engine::daemon_probe().await {
+            if !probe.reachable {
+                for _ in 0..8 {
+                    #[cfg(target_arch = "wasm32")]
+                    gloo_timers::future::sleep(std::time::Duration::from_millis(250)).await;
+                    #[cfg(not(target_arch = "wasm32"))]
+                    std::thread::sleep(std::time::Duration::from_millis(250));
+                    if let Ok(again) = engine::daemon_probe().await {
+                        if again.reachable {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         let next = match engine::lexicon_manifest(path).await {
             Ok(PoetEvalResult {
                 ok,

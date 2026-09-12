@@ -2,6 +2,7 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
+use super::engine::{self, DaemonProbe};
 use super::kinds::{DimMode, Epistemic, ManifoldId, Strata};
 use super::store::Workbench;
 use dioxus::prelude::*;
@@ -62,6 +63,7 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                     title: "Pivot Habitat: Switch to Webizen Classic Console (Alt+U)",
                     "✨ Poet / ⚙️ Admin ⇄"
                 }
+                NativeDaemonChip {}
                 // Ambient Job Indicator
                 div {
                     class: "ambient-job-indicator",
@@ -245,6 +247,62 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
 }
 
 #[component]
+pub fn NativeDaemonChip() -> Element {
+    let mut probe = use_signal(DaemonProbe::default);
+    use_effect(move || {
+        spawn(async move {
+            if let Ok(next) = engine::daemon_probe().await {
+                probe.set(next);
+            }
+        });
+    });
+    let p = probe();
+    let live = p.reachable;
+    let label = if p.label.is_empty() {
+        "held / not yet — local daemon 127.0.0.1:4242".to_string()
+    } else {
+        p.label.clone()
+    };
+    let title = if live {
+        format!(
+            "{} · {} · {}",
+            label,
+            p.engine.clone().unwrap_or_else(|| "qualia-core-db".into()),
+            p.version.clone().unwrap_or_else(|| p.honesty.clone())
+        )
+    } else {
+        label.clone()
+    };
+    let color = if live {
+        "var(--accent-emerald)"
+    } else {
+        "var(--accent-gold, #fbbf24)"
+    };
+    rsx! {
+        button {
+            r#type: "button",
+            class: "webizen-native-status-badge",
+            "data-honesty": if live { "live" } else { "held" },
+            "data-daemon-port": "{p.port}",
+            "data-daemon-url": "{p.url}",
+            style: "display:flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(0,200,255,0.08);border:1px solid rgba(0,200,255,0.25);border-radius:12px;font-size:11px;color:{color};cursor:pointer;",
+            title: "{title}",
+            onclick: move |_| {
+                spawn(async move {
+                    if let Ok(next) = engine::daemon_probe().await {
+                        probe.set(next);
+                    }
+                });
+            },
+            span {
+                style: "display:inline-block;width:7px;height:7px;border-radius:50%;background:{color};box-shadow:0 0 6px {color};",
+            }
+            span { "{label}" }
+        }
+    }
+}
+
+#[component]
 pub fn StatusBar(wb: Signal<Workbench>) -> Element {
     let w = wb();
     let node = w.selected.clone().unwrap_or_else(|| "none".into());
@@ -259,7 +317,9 @@ pub fn StatusBar(wb: Signal<Workbench>) -> Element {
     };
     rsx! {
         footer { class: "bottom-statusbar",
-            div { style: "display:flex;gap:16px;",
+            div { style: "display:flex;gap:16px;align-items:center;flex-wrap:wrap;",
+                NativeDaemonChip {}
+                span { strong { "Graph:" } " " NativeGraphHint {} }
                 span { strong { "Active Node:" } " " span { style: "color:var(--accent-cyan);", "{node}" } }
                 span { strong { "Strata:" } " " span { style: "color:var(--accent-emerald);", "{strata}" } }
                 span { strong { "Epistemic Lens:" } " " span { style: "color:var(--modality-objective);", "{w.epistemic.id()}" } }
@@ -269,6 +329,25 @@ pub fn StatusBar(wb: Signal<Workbench>) -> Element {
                 span { strong { "Fiduciary Gate:" } " " span { style: "color:var(--accent-emerald);", "Level 3 Inalienable Custody" } }
             }
         }
+    }
+}
+
+#[component]
+fn NativeGraphHint() -> Element {
+    let mut probe = use_signal(DaemonProbe::default);
+    use_effect(move || {
+        spawn(async move {
+            if let Ok(next) = engine::daemon_probe().await {
+                probe.set(next);
+            }
+        });
+    });
+    let p = probe();
+    if p.reachable {
+        let quins = p.graph_quin_count.unwrap_or(0);
+        rsx! { span { style: "color:var(--accent-emerald);", "live · {quins} quins" } }
+    } else {
+        rsx! { span { style: "color:var(--accent-gold, #fbbf24);", "held / not yet" } }
     }
 }
 

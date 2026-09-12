@@ -44,6 +44,7 @@ pub use render::{
 pub mod browser_10d;
 pub mod native_bindings;
 pub mod poet;
+pub mod poet_daemon;
 pub mod poet_render;
 pub mod semantic_logic;
 pub mod telemetry;
@@ -163,11 +164,14 @@ pub fn get_desktop_status(
             completed: 0,
             failed: 0,
         });
+    let probe = poet_daemon::probe_local_daemon();
     serde_json::json!({
         "settings_port": crate::settings_server::current_settings_port(),
-        "graph_daemon_port": qualia_client_core::api::get_active_daemon_port(),
-        "graph_daemon_reachable": daemon_running,
-        "graph_engine_version": serde_json::Value::Null,
+        "graph_daemon_port": probe.port,
+        "graph_daemon_reachable": probe.reachable,
+        "graph_daemon_label": probe.label,
+        "graph_daemon_honesty": probe.honesty,
+        "graph_engine_version": probe.version,
         "qapps_protocol_port": qualia_client_core::qapps_protocol::qualia_protocol_port(),
         "storage_path": config.storage_path,
         "inference_backend": config.inference_backend,
@@ -280,6 +284,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         poet::poet_lexicon_manifest,
         poet::poet_volume_open,
         poet::poet_volume_commit,
+        poet_daemon::poet_daemon_probe,
         poet::poet_reset,
         poet::poet_gazetteer,
         poet::poet_capabilities,
