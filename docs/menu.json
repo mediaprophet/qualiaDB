@@ -20,10 +20,16 @@
       "group": "Core"
     },
     {
-      "label": "0.0.37 Progress",
-      "href": "progress-0.0.37.html",
+      "label": "0.0.38 Progress",
+      "href": "progress-0.0.38.html",
       "icon": "fa-heart-pulse",
       "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "0.0.37 Progress",
+      "href": "progress-0.0.37.html",
+      "icon": "fa-clock-rotate-left",
       "group": "Core"
     },
     {

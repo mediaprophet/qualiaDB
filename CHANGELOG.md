@@ -6,6 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 0.0.38 Pages wake — 2026-09-12
+
+`VERSION_BUMP_SEPARATE`: workspace crate stamps remain `0.0.37`. This entry is
+Pages / operator copy only.
+
+### Added
+
+- GitHub Pages operator record for the 0.0.38 habitat line:
+  `docs/progress-0.0.38.html` and `docs/releases/0.0.38-pages-wake.md`.
+- Site description and home / manuals / release-matrix copy now point at 0.0.38
+  habitat honesty: held / not yet, Directory humans-first, Talk / Mail
+  human-alone, Catalog Open pack live bind, Continuity handle ≠ human, Desktop
+  Native prefer existing `:4242`.
+
+### Changed
+
+- `pages.yml` comment now states that tag `v0.0.38` is the intended publish
+  path; branch `0.0.38` may still be rejected by the `github-pages` environment
+  until repo settings add it.
+
 ## [0.0.37] — 2026-09-08
 
 ### Changed

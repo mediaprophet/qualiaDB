@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen 0.0.38 — Honest Progress</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .hero-num { font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+    .pillar { min-height: 16rem; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="mb-8 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-100/90">
+      <strong class="text-amber-200">VERSION_BUMP_SEPARATE.</strong>
+      This page is the 0.0.38 operator record. Workspace crate stamps, portal
+      <code class="q-mono">package.json</code>, and
+      <code class="q-mono">docs/tests/release-version-consistency.test.mjs</code>
+      still identify <code class="q-mono">0.0.37</code> until Neo’s crate-version wake.
+      Publish path is tag <code class="q-mono">v0.0.38</code> (matches the
+      <code class="q-mono">github-pages</code> <code class="q-mono">v*</code> policy).
+      Branch <code class="q-mono">0.0.38</code> deploys may still be rejected until
+      repo settings add that branch.
+    </div>
+
+    <div class="q-chip mb-6"><i class="fa-solid fa-shield-halved"></i> Local-first · human-centric · branch <code class="q-mono">0.0.38</code> · tip <code class="q-mono">7a868ecd</code></div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
+      The habitat a person can use<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-violet-300 to-emerald-300">without an agent in the loop.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-4">
+      0.0.38 is the habitat line on top of the 0.0.37 WASM-safe engine.
+      Desktop UAT is green for Directory, Talk, Mail, Catalog, and Native Connected.
+      Wait-honest chrome says <strong>held / not yet</strong> — never broken theatre.
+    </p>
+    <p class="text-sm text-white/45 mb-12">
+      Engine archive: <a class="q-link" href="progress-0.0.37.html">0.0.37</a> ·
+      <a class="q-link" href="progress-0.0.33.html">0.0.33</a> ·
+      <a class="q-link" href="qdnf.html">QDNF</a> ·
+      <a class="q-link" href="release-matrix.html">Release matrix</a> ·
+      notes <a class="q-link" href="releases/0.0.38-pages-wake.md">0.0.38-pages-wake.md</a>
+    </p>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
+      <div class="q-card pillar p-7">
+        <p class="q-kicker mb-3">UAT · Desktop</p>
+        <h2 class="text-2xl font-semibold mb-3">Live board is green</h2>
+        <p class="text-sm text-white/65 mb-4">Directory / Talk / Mail / Catalog <strong class="text-emerald-300">PASS</strong> at tip <code class="q-mono">a536a9ea</code>.</p>
+        <p class="text-sm text-white/65">Native Connected <strong class="text-emerald-300">PASS</strong> at tip <code class="q-mono">7a868ecd</code> — prefer the existing daemon on <code class="q-mono">:4242</code>.</p>
+      </div>
+      <a href="qdnf.html" class="q-card pillar p-7 block no-underline text-inherit">
+        <p class="q-kicker mb-3">Fabric</p>
+        <h2 class="text-2xl font-semibold mb-3">Handle ≠ human</h2>
+        <p class="text-sm text-white/65 mb-6">Continuity treats a DID as a handle / coord, never as the natural person. DNS is never who. Public relay stays unticked until a real second-host URL exists.</p>
+        <p class="text-cyan-300 text-sm">QDNF map →</p>
+      </a>
+      <a href="poet-app/index.html" class="q-card pillar p-7 block no-underline text-inherit">
+        <p class="q-kicker mb-3">Habitat</p>
+        <h2 class="text-2xl font-semibold mb-3">Poet stays one product</h2>
+        <p class="text-sm text-white/65 mb-6">Ask · Keep · Talk are teachable loops, not a locked top nav. Chatbot is a tool. Humans first in Directory. Catalog Open pack binds live on <code class="q-mono">:4242</code>.</p>
+        <p class="text-cyan-300 text-sm">Open the live habitat →</p>
+      </a>
+    </section>
+
+    <section class="q-card p-8 mb-12">
+      <p class="q-kicker mb-2">What is real in 0.0.38</p>
+      <h2 class="text-3xl font-semibold mb-6">Habitat honesty, not a crate stamp</h2>
+      <div class="grid sm:grid-cols-2 gap-x-10 gap-y-5 text-sm text-white/80">
+        <div>
+          <strong class="text-emerald-400">Held / not yet.</strong>
+          Wait-honest chrome no longer paints user-visible “unavailable”.
+          Empty, unbound, or daemon-down states say <em>held / not yet</em> plus a short why.
+          Live binds must not false-held.
+        </div>
+        <div>
+          <strong class="text-emerald-400">Directory, humans first.</strong>
+          Palette <code class="q-mono">dir</code> / <code class="q-mono">contacts</code> / <code class="q-mono">address book</code>
+          opens Talk → People. Humans list first; organizations are a legal-person who-kind; tools last.
+          No agent required.
+        </div>
+        <div>
+          <strong class="text-emerald-400">Talk / Mail, human-alone.</strong>
+          Send works without a local model. Missing instrument stays held / not yet — the chatbot is not the other party.
+          Talk → Mail is the daily inbox. Receiver-down is held, not a red broken page.
+        </div>
+        <div>
+          <strong class="text-emerald-400">Catalog Open pack, live bind.</strong>
+          Desktop Catalog · Lexicon prefers HTTP <code class="q-mono">/invoke</code>
+          <code class="q-mono">GraphDatabase.lexicon_manifest</code> on Native Connected
+          <code class="q-mono">:4242</code>. Empty or nonsense path stays held / not yet — open lexicon pack.
+        </div>
+        <div>
+          <strong class="text-emerald-400">Continuity: handle ≠ human.</strong>
+          Actor <code class="q-mono">did:qualia:…</code> is a handle / coord.
+          Revoking a handle is not who-erase. Sanctuary Keep / volumes survive handle death.
+        </div>
+        <div>
+          <strong class="text-emerald-400">Desktop Native prefers <code class="q-mono">:4242</code>.</strong>
+          A healthy Qualia daemon on the contract port is reused. Desktop does not spawn
+          <code class="q-mono">:4243</code> just because the bind probe sees
+          <code class="q-mono">:4242</code> in use.
+        </div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-5 mb-12">
+      <div class="q-card p-7">
+        <p class="q-kicker mb-2">Publish path</p>
+        <h2 class="text-xl font-semibold mb-4">Tag <code class="q-mono">v0.0.38</code>, then Pages</h2>
+        <ol class="space-y-3 text-sm text-white/75 list-decimal pl-5">
+          <li>Neo sole-pushes this wake onto branch <code class="q-mono">0.0.38</code>. Do not merge from a guest fork.</li>
+          <li>Neo creates annotated tag <code class="q-mono">v0.0.38</code> on the published tip. This PR does not create the tag.</li>
+          <li><code class="q-mono">pages.yml</code> runs on tags <code class="q-mono">v*</code>. That is the intended deploy.</li>
+          <li>Crate stamps stay <code class="q-mono">0.0.37</code> until the separate version-bump wake.</li>
+        </ol>
+      </div>
+      <div class="q-card p-7 border-amber-500/25">
+        <p class="q-kicker mb-2" style="color:var(--q-amber)">Honest gaps</p>
+        <h2 class="text-xl font-semibold mb-4">Not claimed</h2>
+        <ul class="space-y-3 text-sm text-white/75">
+          <li>This is not a workspace version bump. Consistency tests that Pages runs still expect <code class="q-mono">0.0.37</code> crate and live-surface stamps.</li>
+          <li>This is not Gmail / Apple Mail / Contacts parity. Human-alone paths are teachable, not peer clones.</li>
+          <li>QDNF / QPR public relay is still unticked. Handle ≠ human is a Continuity rule, not a finished mesh.</li>
+          <li>WASM size numbers on this site remain 0.0.37 measurements until the next measured Pages build.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Try it on this site</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a class="q-card p-5 block no-underline text-inherit" href="release-matrix.html"><div class="font-semibold mb-1">Qualia · Webizen · Poet</div><p class="text-xs text-white/55">Product map · 0.0.37 GitHub Release artefacts still ship until <code class="q-mono">v0.0.38</code></p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="poet-app/index.html"><div class="font-semibold mb-1">Poet habitat</div><p class="text-xs text-white/55">Directory · Talk · Mail · Catalog in the browser shell</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="qdnf.html"><div class="font-semibold mb-1">QDNF fabric</div><p class="text-xs text-white/55">Handle ≠ human · no DNS-as-who</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="wasm-engine.html"><div class="font-semibold mb-1">WASM engine</div><p class="text-xs text-white/55">0.0.37 portal / playground / ontology budgets</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="progress-0.0.37.html"><div class="font-semibold mb-1">0.0.37 archive</div><p class="text-xs text-white/55">Full WASM-safe engine operator record</p></a>
+        <a class="q-card p-5 block no-underline text-inherit" href="releases/0.0.38-pages-wake.md"><div class="font-semibold mb-1">Wake notes</div><p class="text-xs text-white/55">VERSION_BUMP_SEPARATE for Neo</p></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
+    QualiaDB · Webizen · 0.0.38 operator record · crate stamps 0.0.37
+  </footer>
+</body>
+</html>
