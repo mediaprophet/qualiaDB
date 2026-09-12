@@ -48,21 +48,29 @@ export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 echo "Using $(command -v dx): $(dx --version 2>/dev/null || true)"
 echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
 # Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.
-# Also disable wasm fat-LTO / bitcode: rustc fails at link with
+# Disable wasm fat-LTO / bitcode: rustc fails at link with
 #   failed to load bitcode of module "webizen_studio-*.rcgu.o"
-# when leftover LTO objects or a dioxus-cli/crate skew are present.
-FRONTEND_WASM_RUSTFLAGS="-C lto=off -C embed-bitcode=no"
+# when dx uses the workspace wasm-release profile (LTO=true) or leftover
+# objects remain. Identical Tauri wasm-bindgen `listen`/`invoke` imports in
+# the studio bin + lib then become hard rust-lld duplicates without LTO;
+# allow the identical first definition (same describe hash).
+FRONTEND_WASM_RUSTFLAGS="-C lto=off -C embed-bitcode=no -C link-arg=--allow-multiple-definition"
 export RUSTFLAGS="${RUSTFLAGS_WASM:-$FRONTEND_WASM_RUSTFLAGS}"
 export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-$FRONTEND_WASM_RUSTFLAGS}"
 export CARGO_PROFILE_WEB_RELEASE_LTO="${CARGO_PROFILE_WEB_RELEASE_LTO:-off}"
+export CARGO_PROFILE_WASM_RELEASE_LTO="${CARGO_PROFILE_WASM_RELEASE_LTO:-off}"
 export CARGO_INCREMENTAL=0
-unset CARGO_ENCODED_RUSTFLAGS || true
+# Never inherit a `cargo install` scratch dir (CARGO_BUILD_BUILD_DIR) or a
+# foreign CARGO_TARGET_DIR — those mix bitcode objects across profiles.
+unset CARGO_ENCODED_RUSTFLAGS CARGO_BUILD_BUILD_DIR CARGO_TARGET_DIR || true
 
 (
   cd "$repo_root/crates/webizen-studio"
   # Drop stale dx artifacts so mixed bitcode objects cannot relink.
   rm -rf "$repo_root/target/dx/webizen-studio" || true
-  dx build --web --release
+  # --profile web-release: do not use dx's default name `wasm-release`
+  # (workspace LTO=true profile for mobile-harness / Windows wasm-opt).
+  dx build --web --release --profile web-release
 )
 
 test -f "$public/index.html"

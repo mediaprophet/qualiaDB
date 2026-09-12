@@ -59,8 +59,9 @@ bash scripts/build_frontend.sh
 ```
 
 Windows: `.\scripts\build_frontend.ps1`. This installs matching `dioxus-cli`
-0.8.0-alpha.1, links wasm without LTO/bitcode, and stages
-`crates/webizen-studio/dist` with `source-revision.txt` at HEAD. Success:
+0.8.0-alpha.1, runs `dx build --web --release --profile web-release` (not
+the LTO `wasm-release` profile), and stages `crates/webizen-studio/dist`
+with `source-revision.txt` at HEAD. Success:
 
 ```
 Build complete. Staged fresh desktop assets in crates/webizen-studio/dist.

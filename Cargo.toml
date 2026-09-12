@@ -41,12 +41,14 @@ lto = true
 codegen-units = 1
 strip = "symbols"
 
-# Dioxus CLI (`dx build --web --release`) uses this named profile for webizen-studio.
+# dioxus-cli 0.8 names the default web release profile `wasm-release` (see
+# platform.rs profile_name: Web → "wasm" + "release"). That collides with the
+# LTO=true profile above. scripts/build_frontend.* therefore pass
+# `--profile web-release` so studio wasm does not inherit fat LTO.
 # Fat LTO / embed-bitcode on wasm32 fails at rust-lld with:
 #   failed to load bitcode of module "webizen_studio-*.rcgu.o"
-# plus a prior `__wbindgen_describe` multiply-defined warning. Keep LTO off here.
-# Do not reuse [profile.wasm-release] — that profile is LTO=true for the
-# mobile-harness Windows wasm-opt stack-overflow workaround above.
+# plus `__wbindgen_describe` multiply-defined (bin + lib both emit the same
+# Tauri listen/invoke bindgen). Keep LTO off here.
 [profile.web-release]
 inherits = "release"
 lto = false

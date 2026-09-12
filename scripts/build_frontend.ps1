@@ -191,10 +191,12 @@ Write-Host "Using wasm-opt: $((Get-Command wasm-opt).Source)"
 # redownload a managed wasm-bindgen on every invocation. Agents and offline
 # builds must use the exact pinned local CLI established above.
 $env:NO_DOWNLOADS = "1"
-# Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen. Also disable wasm fat-LTO /
+# Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen. Disable wasm fat-LTO /
 # bitcode so rust-lld does not fail with:
 #   failed to load bitcode of module "webizen_studio-*.rcgu.o"
-$frontendWasmRustflags = "-C lto=off -C embed-bitcode=no"
+# --allow-multiple-definition: studio bin+lib both emit the same Tauri
+# wasm-bindgen listen/invoke describe symbols (warning under LTO; error without).
+$frontendWasmRustflags = "-C lto=off -C embed-bitcode=no -C link-arg=--allow-multiple-definition"
 if ($env:RUSTFLAGS_WASM) {
     $env:RUSTFLAGS = $env:RUSTFLAGS_WASM
 } else {
@@ -206,8 +208,13 @@ if (-not $env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS) {
 if (-not $env:CARGO_PROFILE_WEB_RELEASE_LTO) {
     $env:CARGO_PROFILE_WEB_RELEASE_LTO = "off"
 }
+if (-not $env:CARGO_PROFILE_WASM_RELEASE_LTO) {
+    $env:CARGO_PROFILE_WASM_RELEASE_LTO = "off"
+}
 $env:CARGO_INCREMENTAL = "0"
 Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
+Remove-Item Env:CARGO_BUILD_BUILD_DIR -ErrorAction SilentlyContinue
+Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue
 
 Write-Host "Using dx: $((Get-Command dx).Source) $(dx --version)"
 Write-Host "Building webizen-studio..."
@@ -216,7 +223,7 @@ if (Test-Path -LiteralPath $dxStudio) {
     Remove-Item -LiteralPath $dxStudio -Recurse -Force -ErrorAction SilentlyContinue
 }
 Push-Location "$PSScriptRoot/../crates/webizen-studio"
-$dxBuildCommand = "dx build --web --release 2>&1"
+$dxBuildCommand = "dx build --web --release --profile web-release 2>&1"
 cmd.exe /d /s /c $dxBuildCommand
 $dxBuildExitCode = $LASTEXITCODE
 if ($dxBuildExitCode -ne 0) {

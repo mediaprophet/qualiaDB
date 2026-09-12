@@ -39,8 +39,10 @@ bash scripts/build_frontend.sh
 On Windows PowerShell the equivalent is `.\scripts\build_frontend.ps1`.
 
 The script installs `dioxus-cli` **0.8.0-alpha.1** (same pin as
-`crates/webizen-studio/Cargo.toml`) and builds with wasm LTO/bitcode off so
-`dx build --web --release` can link. Success ends with:
+`crates/webizen-studio/Cargo.toml`) and runs
+`dx build --web --release --profile web-release` with wasm LTO/bitcode off
+(dx's default profile name `wasm-release` is the mobile-harness LTO profile
+and fails rust-lld bitcode load). Success ends with:
 
 ```
 Build complete. Staged fresh desktop assets in crates/webizen-studio/dist.
