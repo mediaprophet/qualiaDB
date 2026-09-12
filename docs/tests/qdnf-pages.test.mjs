@@ -1,100 +1,69 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import vm from 'node:vm';
 
 const docsRoot = path.resolve(import.meta.dirname, '..');
 const read = (relativePath) => fs.readFileSync(path.join(docsRoot, relativePath), 'utf8');
 
-const menuLoader = read('js/menu-loader.js');
-assert.match(menuLoader, /rawName === 'Webizen'/);
-assert.match(menuLoader, /Webizen<\/span>.*QualiaDB/);
-
 const css = read('css/release-showcase.css');
-assert.match(css, /\[data-theme="release-038"\]/, '038 theme tokens must exist');
-assert.match(css, /\.q-prose/, 'markdown prose styles must exist');
-assert.match(css, /\.hex-stack/, 'mobile honeycomb fallback must exist');
+assert.match(css, /\[data-theme="release-037"\]/);
+assert.match(css, /\[data-theme="release-038"\]/);
+assert.match(css, /--q-bg:\s*#05070c/);
+assert.match(css, /--q-ink:\s*#e8eef7/);
+assert.match(css, /--q-muted:\s*rgba\(232, 238, 247, 0\.62\)/);
+assert.match(css, /--q-cyan:\s*#22d3ee/);
+assert.match(css, /--q-emerald:\s*#34d399/);
+assert.match(css, /--q-violet:\s*#a78bfa/);
+assert.match(css, /"Space Grotesk"/);
+assert.match(css, /"Inter"/);
+assert.match(css, /"JetBrains Mono"/);
+assert.doesNotMatch(css, /Fraunces|Source Sans 3|IBM Plex Mono/);
+assert.match(css, /q-soft-rise/);
+assert.match(css, /translateY\(10px\)/);
+assert.match(css, /380ms ease-out/);
+assert.match(css, /prefers-reduced-motion:\s*reduce/);
+assert.match(css, /q-soft-rise-opacity/);
+assert.match(css, /140ms ease-out/);
+assert.match(css, /\.hex:hover/);
 
 const qdnf = read('qdnf.html');
 assert.match(qdnf, /data-theme="release-038"/);
 assert.match(qdnf, /0\.0\.38/);
+assert.match(qdnf, /Space\+Grotesk/);
+assert.match(qdnf, /family=Inter/);
+assert.match(qdnf, /JetBrains\+Mono/);
 assert.match(qdnf, /human \(NaturalAgent\)/);
-assert.match(qdnf, /Handle revoke ≠ who-erase|handle revoke ≠ who-erase/i);
 assert.match(qdnf, /connection manager/);
 assert.match(qdnf, /did:qi/);
 assert.match(qdnf, /CSCP-08/);
 assert.match(qdnf, /CSCP-12/);
+assert.match(qdnf, /Handle revoke ≠ who-erase/);
+assert.match(qdnf, /q-soft-rise/);
+assert.match(qdnf, /q-pill-primary/);
+assert.match(qdnf, /id="continuity"/);
+assert.match(qdnf, /id="cscp-08"/);
+assert.match(qdnf, /Handle ≠ human/);
 assert.doesNotMatch(qdnf, /Ask · Keep · Talk/);
-assert.doesNotMatch(
-  qdnf,
-  /href="(?!read\.html\?doc=)[^"]+\.md"/,
-  'qdnf.html must not dump readers into raw markdown',
-);
-assert.match(qdnf, /read\.html\?doc=manuals\/standards\/qualia-decentralized-network-fabric\/README\.md/);
-assert.match(qdnf, /read\.html\?doc=manuals\/standards\/did-qi-method\.md/);
-assert.match(qdnf, /read\.html\?doc=standards\/ietf\/CSCP-08-LOCAL-CHORES\.md/);
-assert.match(qdnf, /read\.html\?doc=work-in-progress\/CONTINUITY_GATE_HANDLE_REVOKE_WIP\.md/);
+assert.doesNotMatch(qdnf, /href="[^"]+\.md"/);
+assert.doesNotMatch(qdnf, /read\.html\?doc=/);
+assert.doesNotMatch(qdnf, /border-rose-500/);
+assert.match(qdnf, /href="manuals\/standards\/qualia-decentralized-network-fabric\/"/);
+assert.match(qdnf, /href="qdnf-peer-runtime.html"/);
+assert.match(qdnf, /href="qdnf-network-cells.html"/);
+assert.match(qdnf, /href="qdnf-did-qi.html"/);
+assert.match(qdnf, /href="#cscp-08"/);
+assert.match(qdnf, /href="#continuity"/);
 assert.doesNotMatch(qdnf, /public_relay_dialed\(\)\s*=\s*true/);
 assert.doesNotMatch(qdnf, /MASQUE evidence flags stay <strong>true/);
 
-const reader = read('read.html');
-assert.match(reader, /data-theme="release-038"/);
-assert.match(reader, /markdown-doc\.js/);
-assert.match(reader, /marked@12/);
-
-const layout = read('_layouts/qualia.html');
-assert.match(layout, /data-theme="release-038"/);
-assert.match(layout, /release-showcase\.css/);
-assert.match(layout, /markdown-doc\.js/);
-assert.match(layout, /data-mode="rewrite"/);
-
-const relatedDocs = [
-  'manuals/standards/qualia-decentralized-network-fabric/README.md',
-  'manuals/standards/qualia-decentralized-network-fabric/peer-runtime.md',
-  'manuals/standards/qualia-decentralized-network-fabric/network-cell.md',
-  'manuals/standards/did-qi-method.md',
-  'manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/README.md',
-  'standards/ietf/CSCP-08-LOCAL-CHORES.md',
-  'work-in-progress/CONTINUITY_GATE_HANDLE_REVOKE_WIP.md',
-];
-for (const relativePath of relatedDocs) {
-  assert.ok(fs.existsSync(path.join(docsRoot, relativePath)), relativePath);
+for (const stub of ['qdnf-peer-runtime.html', 'qdnf-network-cells.html', 'qdnf-did-qi.html']) {
+  const html = read(stub);
+  assert.match(html, /data-theme="release-038"/);
+  assert.match(html, /Handle ≠ human/);
+  assert.doesNotMatch(html, /href="[^"]+\.md"/);
 }
 
-const scriptSource = read('js/markdown-doc.js');
-const sandbox = {
-  window: {
-    location: { pathname: '/qdnf.html' },
-  },
-  document: {
-    querySelector: () => null,
-    querySelectorAll: () => [],
-    currentScript: { dataset: { mode: 'rewrite' } },
-    readyState: 'complete',
-    addEventListener() {},
-    getElementById: () => null,
-  },
-  URLSearchParams,
-};
-vm.runInNewContext(scriptSource, sandbox, { filename: 'markdown-doc.js' });
-const api = sandbox.window.QualiaMarkdownDoc;
-assert.ok(api, 'QualiaMarkdownDoc exports');
-assert.equal(
-  api.normalizeDocPath('manuals/standards/did-qi-method.md'),
-  'manuals/standards/did-qi-method.md',
-);
-assert.equal(api.normalizeDocPath('../secret.md'), null);
-assert.equal(api.normalizeDocPath('https://example.com/x.md'), null);
-assert.equal(api.normalizeDocPath('crates/qualia-core-db/README.md'), null);
-const resolved = api.resolveRelativeDoc(
-  'manuals/standards/qualia-decentralized-network-fabric/README.md',
-  './peer-runtime.md',
-);
-assert.equal(resolved.path, 'manuals/standards/qualia-decentralized-network-fabric/peer-runtime.md');
-assert.equal(resolved.hash, '');
-assert.equal(
-  api.readerHref('standards/ietf/CSCP-08-LOCAL-CHORES.md', ''),
-  'read.html?doc=standards%2Fietf%2FCSCP-08-LOCAL-CHORES.md',
-);
+const menuLoader = read('js/menu-loader.js');
+assert.match(menuLoader, /rawName === 'Webizen'/);
 
 console.log('qdnf Pages chrome checks passed.');

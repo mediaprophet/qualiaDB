@@ -8,13 +8,12 @@
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <script src="js/menu-loader.js"></script>
 </head>
 <body class="min-h-screen">
   <div class="q-mesh" aria-hidden="true"></div>
-  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(7,8,12,0.82);backdrop-filter:blur(32px)">
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
     <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
       <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
         <a href="index.html" class="flex items-center gap-3 shrink-0">
@@ -28,32 +27,25 @@
     </div>
   </nav>
 
-  <main class="q-wrap max-w-6xl mx-auto px-5 sm:px-8 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · map · 0.0.38</div>
-    <h1 class="font-display text-4xl sm:text-6xl font-semibold tracking-[-0.02em] leading-[1.15] mb-5">
-      A network that does not borrow DNS<br class="hidden sm:block">
-      to know a human.
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · in progress · 0.0.38</div>
+    <h1 class="q-hero-title font-display mb-5">
+      A network that does not borrow DNS to know a human.
     </h1>
     <p class="q-lede mb-6">
       QDNF is Qualia’s native networking model. Inside a QDNF realm it does not require ARP, IPv6 neighbour discovery, DHCP, DNS, ICANN names, BGP, or a mandatory cloud relay.
       The Qualia Peer Runtime (QPR) is the library over that fabric — the intended replacement for libp2p, not a wrapper around it.
     </p>
-    <p class="q-note mb-8">
+    <p class="q-note mb-12">
       Honest status: QPR is native and still being built on <code class="q-mono">0.0.38</code>. This page is a map, not a live packet capture.
       Locators and DNS names are handles — never the human (NaturalAgent). Law keeps the word <strong>person</strong> where statutes need it.
       Ordinary Internet stays a Legacy Internet Gateway.
       Public Internet relay / MASQUE evidence flags stay <strong>false</strong> until a second host dials a URL Timothy supplies (CSCP-08 chores wait on that). No invented ticks.
       The older <a class="q-link" href="network_webizen.html">Network Webizen</a> screen still plays a mock table.
     </p>
-    <p class="flex flex-wrap gap-x-5 gap-y-2 text-sm mb-14" style="color:var(--q-faint)">
-      <a class="q-link" href="#ledger">Honest ledger</a>
-      <a class="q-link" href="#layers">Layers</a>
-      <a class="q-link" href="#reading">Read the design</a>
-    </p>
 
-    <section class="q-card p-6 sm:p-8 mb-12 overflow-x-auto" aria-labelledby="honey-title">
-      <p class="q-kicker mb-3 text-center">Protocol honeycomb</p>
-      <h2 id="honey-title" class="font-display text-2xl text-center font-semibold mb-6">Seven named pieces. None of them are who.</h2>
+    <section class="q-card p-8 mb-12 overflow-x-auto">
+      <p class="q-kicker mb-6 text-center">Protocol honeycomb</p>
       <div class="hex-grid">
         <div class="hex-row">
           <div class="hex">QLink</div>
@@ -78,41 +70,21 @@
       </dl>
     </section>
 
-    <section id="layers" class="grid md:grid-cols-2 gap-5 mb-12">
+    <section class="grid md:grid-cols-2 gap-5 mb-12">
       <article class="q-card p-7">
-        <p class="q-kicker mb-2">Map</p>
-        <h2 class="text-2xl font-semibold mb-5">What the layers do</h2>
-        <dl class="space-y-4 text-[0.98rem]" style="color:var(--q-muted)">
-          <div>
-            <dt class="text-cyan-300 q-mono mb-1">QLink</dt>
-            <dd>Cryptographic adjacency. Neighbours are proven, not guessed from ARP.</dd>
-          </div>
-          <div>
-            <dt class="text-cyan-300 q-mono mb-1">DNI</dt>
-            <dd>Self-certifying, expiring topological identifiers — locators / handles, not forever-who from a path.</dd>
-          </div>
-          <div>
-            <dt class="text-cyan-300 q-mono mb-1">QRoute</dt>
-            <dd>Intra-realm link state and inter-realm path vector.</dd>
-          </div>
-          <div>
-            <dt class="text-cyan-300 q-mono mb-1">QResolve</dt>
-            <dd>DID / content / resource resolution without DNS-as-who. Optional domain names remain handles only.</dd>
-          </div>
-          <div>
-            <dt class="text-cyan-300 q-mono mb-1">QPolicy</dt>
-            <dd>Consent, capability, deontic authorization.</dd>
-          </div>
-          <div>
-            <dt class="text-cyan-300 q-mono mb-1">QSession / QSync</dt>
-            <dd>Encrypted datagrams and streams; signed bounded Q42 / CRDT exchange.</dd>
-          </div>
+        <h2 class="text-xl font-semibold mb-3">What the layers do</h2>
+        <dl class="text-[1.05rem] space-y-3" style="color:var(--q-muted)">
+          <div><dt class="text-cyan-300 q-mono">QLink</dt><dd>Cryptographic adjacency. Neighbours are proven, not guessed from ARP.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">DNI</dt><dd>Self-certifying, expiring topological identifiers — locators / handles, not forever-who from a path.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QRoute</dt><dd>Intra-realm link state and inter-realm path vector.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QResolve</dt><dd>DID / content / resource resolution without DNS-as-who. Optional domain names remain handles only.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QPolicy</dt><dd>Consent, capability, deontic authorization.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QSession / QSync</dt><dd>Encrypted datagrams and streams; signed bounded Q42 / CRDT exchange.</dd></div>
         </dl>
       </article>
       <article class="q-card p-7">
-        <p class="q-kicker mb-2">Bounds</p>
-        <h2 class="text-2xl font-semibold mb-5">What it is not</h2>
-        <ul class="space-y-4 text-[0.98rem]" style="color:var(--q-muted)">
+        <h2 class="text-xl font-semibold mb-3">What it is not</h2>
+        <ul class="text-[1.05rem] space-y-3" style="color:var(--q-muted)">
           <li>Not a browser libpcap. GitHub Pages cannot see your NIC.</li>
           <li>Not identity. Locators, sessions, and instruments stay off the who-plane (Identifier Fabric). Handle revoke ≠ who-erase. Human ≠ legal “person” ≠ bot.</li>
           <li>Not DNS-as-who. A lost domain must not erase a human from the fabric; domains are optional handles.</li>
@@ -122,15 +94,12 @@
       </article>
     </section>
 
-    <section id="ledger" class="q-card p-6 sm:p-8 mb-12">
-      <p class="q-kicker mb-2">0.0.38</p>
-      <h2 class="text-3xl font-semibold mb-3">Networking — honest ledger</h2>
-      <p class="mb-7 text-[0.98rem]" style="color:var(--q-muted);max-width:40rem">
-        Language only. Flags and workstream boxes are the contract — this honeycomb does not flip them.
-      </p>
-      <div class="grid md:grid-cols-3 gap-4 text-[0.95rem]">
-        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-5">
-          <p class="q-kicker text-emerald-300 mb-3">Landed</p>
+    <section id="ledger" class="q-card p-8 mb-12">
+      <h2 class="text-2xl font-semibold mb-3">0.0.38 networking — honest ledger</h2>
+      <p class="text-[1.05rem] mb-5" style="color:var(--q-muted);max-width:40rem">Language only. Flags and workstream boxes are the contract — this honeycomb does not flip them.</p>
+      <div class="grid md:grid-cols-3 gap-4 text-[1.05rem]">
+        <article class="q-soft-rise rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-7">
+          <p class="q-kicker text-emerald-300 mb-2">Landed</p>
           <ul class="q-ledger" style="color:var(--q-muted)">
             <li>QDNF <strong>connection manager</strong> in-tree (policy, dual-stack planner, invitations, durable delivery) — Internet trial still unexecuted.</li>
             <li><strong>CSCP</strong> local control plane (Wave 0–1): fail-closed TLV codec, mailbox, leases, receipts; loopback bound-UDP; local rustls WSS ↔ QSession.</li>
@@ -139,8 +108,8 @@
             <li>Continuity: handle revoke ≠ who-erase; DNS/ABN/passport optional attach-later handles.</li>
           </ul>
         </article>
-        <article class="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5">
-          <p class="q-kicker text-amber-300 mb-3">In progress</p>
+        <article class="q-soft-rise q-care rounded-2xl p-7">
+          <p class="q-kicker mb-2" style="color:var(--q-amber)">In progress</p>
           <ul class="q-ledger" style="color:var(--q-muted)">
             <li>QPR / native fabric depth beyond local slices.</li>
             <li>Parent CSCP-09 on a <em>live Internet</em> path (loopback H2 is not that).</li>
@@ -148,8 +117,8 @@
             <li>GitHub Pages: workflow lists <code class="q-mono">0.0.38</code>; environment may still reject the branch — publish path is tag <code class="q-mono">v0.0.38</code>.</li>
           </ul>
         </article>
-        <article class="rounded-2xl border border-rose-500/25 bg-rose-500/5 p-5">
-          <p class="q-kicker text-rose-300 mb-3">Parked</p>
+        <article class="q-soft-rise q-care rounded-2xl p-7">
+          <p class="q-kicker mb-2" style="color:var(--q-amber)">Parked</p>
           <ul class="q-ledger" style="color:var(--q-muted)">
             <li><strong>CSCP-08</strong> — Internet WSS/MASQUE relay trial waits on a hostname Timothy controls. No invented <code class="q-mono">wss://</code>.</li>
             <li><strong>CSCP-12</strong> — datatracker submit (author recorded; not posted).</li>
@@ -159,45 +128,33 @@
       </div>
     </section>
 
-    <section id="reading">
-      <p class="q-kicker mb-2">Reading</p>
-      <h2 class="text-3xl font-semibold mb-3">Read the actual design</h2>
-      <p class="mb-7 text-[0.98rem]" style="color:var(--q-muted);max-width:40rem">
-        The honeycomb is a map. These open as set type — not a naked <code class="q-mono">.md</code> dump in the browser. Source files stay on the branch.
-      </p>
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <a class="q-read-card" href="read.html?doc=manuals/standards/qualia-decentralized-network-fabric/README.md">
-          <h3>QDNF specification</h3>
-          <p>Design suite 0.1 — purpose, non-goals, and the document set.</p>
-        </a>
-        <a class="q-read-card" href="read.html?doc=manuals/standards/qualia-decentralized-network-fabric/peer-runtime.md">
-          <h3>Peer runtime</h3>
-          <p>QPR as the intended libp2p replacement. Architecture, not a finished crate claim.</p>
-        </a>
-        <a class="q-read-card" href="read.html?doc=manuals/standards/qualia-decentralized-network-fabric/network-cell.md">
-          <h3>Network cells</h3>
-          <p>512&nbsp;MiB cells, 42&nbsp;MiB Sentinel pass. Proposed profile, not a sandbox yet.</p>
-        </a>
-        <a class="q-read-card" href="read.html?doc=manuals/standards/did-qi-method.md">
-          <h3>did:qi method draft</h3>
-          <p>Instrument identity. Not DID Spec Registries. Not a CSCP relay tick.</p>
-        </a>
-        <a class="q-read-card" href="read.html?doc=manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/README.md">
-          <h3>CSCP implementation</h3>
-          <p>Local control plane programme. Wave 1 local; Internet / MASQUE still open.</p>
-        </a>
-        <a class="q-read-card" href="read.html?doc=standards/ietf/CSCP-08-LOCAL-CHORES.md">
-          <h3>CSCP-08 local chores</h3>
-          <p>Directions only. Blocked on a hostname Timothy supplies. No tick.</p>
-        </a>
-        <a class="q-read-card" href="read.html?doc=work-in-progress/CONTINUITY_GATE_HANDLE_REVOKE_WIP.md">
-          <h3>Continuity · handle revoke</h3>
-          <p>Handle revoke ≠ who-erase. Sanctuary volumes survive locator death.</p>
-        </a>
-        <a class="q-read-card" href="progress-0.0.37.html">
-          <h3>0.0.37 progress</h3>
-          <p>Archive of the WASM-safe engine line. Habitat honesty lives on 0.0.38.</p>
-        </a>
+    <section class="grid md:grid-cols-2 gap-5 mb-12">
+      <article id="continuity" class="q-card q-care p-7">
+        <p class="q-kicker mb-2" style="color:var(--q-amber)">Continuity</p>
+        <h2 class="text-xl font-semibold mb-3">Handle revoke ≠ who-erase</h2>
+        <p class="mb-3" style="color:var(--q-muted);max-width:40rem">ABN / DNS / passport / registry strings sit on the <strong>handle</strong> plane only — never NaturalAgent who. Who persists without any state-issued handle. Sanctuary Keep / volumes are independent instruments: locator death must not cascade into who-erase or volume wipe.</p>
+        <p style="color:var(--q-muted);max-width:40rem">Diagnose: handle revoke → held/closed on the locator. The human is already here. Continuity for a jury — not “get a new ABN.” Collapse detector FAIL: treating domain loss as person-deletion. No Host invent. No CSCP-08 tick.</p>
+      </article>
+      <article id="cscp-08" class="q-card q-care p-7">
+        <p class="q-kicker mb-2" style="color:var(--q-amber)">CSCP-08</p>
+        <h2 class="text-xl font-semibold mb-3">Local chores. No tick.</h2>
+        <p class="mb-3" style="color:var(--q-muted);max-width:40rem">CSCP-08 is MASQUE bound-UDP on the public Internet. Status: blocked on a human-supplied inbound URL. This is directions, not a completion claim. A cloud agent cannot be that relay. GitHub Pages, CloudFront, IPFS, a chain, and a ledger are not Gate B.</p>
+        <p style="color:var(--q-muted);max-width:40rem">Do not invent <code class="q-mono">wss://</code>, MASQUE, or <code class="q-mono">/dns4/</code> locators. Flags stay false: public relay, two-host Internet, MASQUE Internet. CSCP-12 (datatracker) is a different human action.</p>
+      </article>
+    </section>
+
+    <section class="q-card p-8 mb-12">
+      <h2 class="text-2xl font-semibold mb-3">Read the actual design</h2>
+      <p class="text-[1.05rem] mb-5" style="color:var(--q-muted);max-width:40rem">The honeycomb is a map. These open as HTML — not a naked markdown dump. Continuity and CSCP-08 stay on this page as honesty cards.</p>
+      <div class="flex flex-wrap gap-3">
+        <a class="q-pill q-pill-primary" href="manuals/standards/qualia-decentralized-network-fabric/">QDNF specification</a>
+        <a class="q-pill" href="qdnf-peer-runtime.html">Peer runtime</a>
+        <a class="q-pill" href="qdnf-network-cells.html">Network cells</a>
+        <a class="q-pill" href="qdnf-did-qi.html">did:qi method draft</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/">CSCP implementation</a>
+        <a class="q-pill" href="#cscp-08">CSCP-08 local chores (no tick)</a>
+        <a class="q-pill" href="#continuity">Continuity · handle revoke</a>
+        <a class="q-pill" href="progress-0.0.37.html">0.0.37 progress (archive)</a>
       </div>
     </section>
   </main>

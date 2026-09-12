@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Read · QualiaDB</title>
+  <title>did:qi method draft</title>
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <script src="js/menu-loader.js"></script>
 </head>
@@ -27,35 +26,23 @@
       </div>
     </div>
   </nav>
-
-  <main class="q-wrap max-w-6xl mx-auto px-5 sm:px-8 pt-10 pb-24">
-    <p class="q-chip mb-4"><i class="fa-solid fa-book-open"></i> Readable source · not a packet capture</p>
-    <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
-      <div>
-        <p class="q-kicker mb-2">Document</p>
-        <h1 id="doc-title" class="font-display text-3xl sm:text-4xl font-semibold tracking-[-0.03em] m-0">Loading…</h1>
-        <p id="doc-crumb" class="q-mono text-sm mt-2" style="color:var(--q-faint)"></p>
-      </div>
-      <div class="flex flex-wrap gap-3 text-sm">
-        <a class="q-link" href="qdnf.html">Back to QDNF</a>
-        <a id="doc-source" class="q-link" hidden href="#">Source on GitHub</a>
-      </div>
+  <main class="q-wrap max-w-3xl mx-auto px-6 pt-14 pb-24">
+    <p class="q-chip mb-6">Instrument identity · not DID Spec Registries</p>
+    <h1 class="q-hero-title font-display mb-5">did:qi</h1>
+    <p class="q-lede mb-6">Qualia Identifier method for instrument identity (node, organisation, contextual persona). Prefix <code class="q-mono">did:qi:</code>. Internal draft 0.1.0 — not a W3C Technical Report, not registered, not a CSCP relay.</p>
+    <div class="q-card p-8 mb-12">
+      <p class="q-kicker mb-3">Honesty</p>
+      <ul class="q-ledger" style="color:var(--q-muted);max-width:40rem">
+        <li>In-process CRUD / vectors exist. This is not DID Spec Registries.</li>
+        <li>It is not <code class="q-mono">did:q42</code> (Q42 Resource Coordinate) and not Human-Centered AI.</li>
+        <li>Not a claim that CSCP-08 or CSCP-12 is done. A locator is a handle — never the human (NaturalAgent).</li>
+      </ul>
     </div>
-    <p class="text-sm mb-8" style="color:var(--q-faint);max-width:40rem">
-      This is the contract text, set in type. Locators, DNS names, and file paths are handles — never the human (NaturalAgent). Law still says <em>person</em> where it must.
+    <p class="flex flex-wrap gap-3">
+      <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
+      <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/">QDNF specification</a>
     </p>
-    <div class="q-doc-layout">
-      <nav id="doc-toc" class="q-toc" aria-label="On this page"></nav>
-      <article id="doc-content" class="q-prose q-card p-6 sm:p-8">
-        <p>Loading the markdown…</p>
-      </article>
-    </div>
   </main>
-
-  <footer class="q-site-footer">
-    Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.
-  </footer>
-  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
-  <script src="js/markdown-doc.js"></script>
+  <footer class="q-site-footer">Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.</footer>
 </body>
 </html>
