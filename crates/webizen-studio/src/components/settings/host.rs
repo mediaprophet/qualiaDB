@@ -19,7 +19,7 @@ pub async fn invoke_json<T: DeserializeOwned>(
     args: serde_json::Value,
 ) -> Result<T, String> {
     if !crate::endpoints::is_native_host() {
-        return Err("Desktop host unavailable".to_string());
+        return Err("held / not yet — desktop host not on this surface".to_string());
     }
     let args = serde_wasm_bindgen::to_value(&args).map_err(|error| error.to_string())?;
     let result = tauri_invoke(command, args.into())

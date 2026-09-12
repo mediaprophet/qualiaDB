@@ -106,5 +106,17 @@ mod tests {
             ShellAction::from_id("shell_classic"),
             Some(ShellAction::SetShellKind("classic"))
         );
+        assert_eq!(
+            ShellAction::from_id("open_settings"),
+            Some(ShellAction::Navigate("settings".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_library"),
+            Some(ShellAction::Navigate("library".to_string()))
+        );
+        assert_ne!(
+            ShellAction::from_id("open_library"),
+            ShellAction::from_id("open_talk")
+        );
     }
 }
