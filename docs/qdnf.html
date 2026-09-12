@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="release-037">
+<html lang="en" data-theme="release-038">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,17 +42,19 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · in progress · 0.0.37</div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · in progress · 0.0.38</div>
     <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] mb-4">
-      A network that does not borrow DNS to know who you are.
+      A network that does not borrow DNS to know a human.
     </h1>
     <p class="text-lg text-white/70 max-w-3xl mb-4">
       QDNF is Qualia’s native networking model. Inside a QDNF realm it does not require ARP, IPv6 neighbour discovery, DHCP, DNS, ICANN names, BGP, or a mandatory cloud relay.
       The Qualia Peer Runtime (QPR) is the library over that fabric — the intended replacement for libp2p, not a wrapper around it.
     </p>
     <p class="text-sm text-amber-200/80 max-w-3xl mb-12">
-      Honest status: QPR is native and still being built. This page is a map of what landed on <code class="q-mono">0.0.37</code>, not a live packet capture. The older
-      <a class="q-link" href="network_webizen.html">Network Webizen</a> screen plays a mock table.
+      Honest status: QPR is native and still being built on <code class="q-mono">0.0.38</code>. This page is a map, not a live packet capture.
+      Locators and DNS names are handles — never the human (NaturalAgent). Ordinary Internet stays a Legacy Internet Gateway.
+      Public Internet relay / MASQUE evidence flags stay <strong>false</strong> until a second host dials a URL Timothy supplies (CSCP-08 chores wait on that). No invented ticks.
+      The older <a class="q-link" href="network_webizen.html">Network Webizen</a> screen still plays a mock table.
     </p>
 
     <section class="q-card p-8 mb-12 overflow-x-auto">
@@ -75,9 +77,9 @@
         <h2 class="text-xl font-semibold mb-3">What the layers do</h2>
         <dl class="text-sm space-y-3 text-white/75">
           <div><dt class="text-cyan-300 q-mono">QLink</dt><dd>Cryptographic adjacency. Neighbours are proven, not guessed from ARP.</dd></div>
-          <div><dt class="text-cyan-300 q-mono">DNI</dt><dd>Self-certifying, expiring topological identifiers — not forever-who from a path.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">DNI</dt><dd>Self-certifying, expiring topological identifiers — locators / handles, not forever-who from a path.</dd></div>
           <div><dt class="text-cyan-300 q-mono">QRoute</dt><dd>Intra-realm link state and inter-realm path vector.</dd></div>
-          <div><dt class="text-cyan-300 q-mono">QResolve</dt><dd>DID / content / resource resolution without DNS.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QResolve</dt><dd>DID / content / resource resolution without DNS-as-who. Optional domain names remain handles only.</dd></div>
           <div><dt class="text-cyan-300 q-mono">QPolicy</dt><dd>Consent, capability, deontic authorization.</dd></div>
           <div><dt class="text-cyan-300 q-mono">QSession / QSync</dt><dd>Encrypted datagrams and streams; signed bounded Q42 / CRDT exchange.</dd></div>
         </dl>
@@ -86,9 +88,10 @@
         <h2 class="text-xl font-semibold mb-3">What it is not</h2>
         <ul class="text-sm text-white/75 space-y-3">
           <li>Not a browser libpcap. GitHub Pages cannot see your NIC.</li>
-          <li>Not identity. Locators, sessions, and instruments stay off the who-plane (Identifier Fabric F6).</li>
+          <li>Not identity. Locators, sessions, and instruments stay off the who-plane (Identifier Fabric). Handle revoke ≠ who-erase. Human ≠ legal “person” ≠ bot.</li>
+          <li>Not DNS-as-who. A lost domain must not erase a human from the fabric; domains are optional handles.</li>
           <li>Not “Solid as the architecture.” Solid LDP remains a federated access surface; QDNF owns naming and routing.</li>
-          <li>Not finished. Wave work on <code class="q-mono">0.0.37</code> landed native QPR slices over local IPC. Measured completeness lives in the spec programme, not in this honeycomb.</li>
+          <li>Not finished. On <code class="q-mono">0.0.38</code>: native QPR / CSCP local slices (loopback H2 Extended CONNECT, local WSS patterns, fail-closed decode) — still not a public relay claim. Measured completeness lives in the CSCP programme and honesty flags, not in this honeycomb.</li>
         </ul>
       </article>
     </section>
@@ -101,12 +104,13 @@
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/peer-runtime.md">Peer runtime</a>
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/network-cell.md">Network cells</a>
         <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="progress-0.0.37.html">0.0.37 progress</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/briefs/CSCP-08.md">CSCP-08 chores (no tick)</a>
       </div>
     </section>
   </main>
 
   <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
-    Ordinary Internet remains a Legacy Internet Gateway — never QDNF identity.
+    Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.
   </footer>
 </body>
 </html>
