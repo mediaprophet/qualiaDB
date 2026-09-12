@@ -35,8 +35,15 @@ export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
 # Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.
 # Clear for the frontend build only.
-export RUSTFLAGS="${RUSTFLAGS_WASM:-}"
-export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-}"
+#
+# rustc 1.98 LTO cannot merge duplicate wasm-bindgen describe symbols emitted
+# once from the studio lib (`render/spatial_bridge`) and again from the bin
+# (`main.rs` re-declares the same modules): `__wbindgen_describe___wbg_invoke_*`
+# / `_listen_*`. LTO-off + rust-lld `--allow-multiple-definition` is wasm-link
+# only. No Host invent. Override via RUSTFLAGS_WASM / CARGO_PROFILE_WASM_RELEASE_LTO.
+export CARGO_PROFILE_WASM_RELEASE_LTO="${CARGO_PROFILE_WASM_RELEASE_LTO:-off}"
+export RUSTFLAGS="${RUSTFLAGS_WASM:--C link-arg=--allow-multiple-definition}"
+export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:--C link-arg=--allow-multiple-definition}"
 unset CARGO_ENCODED_RUSTFLAGS || true
 
 (
