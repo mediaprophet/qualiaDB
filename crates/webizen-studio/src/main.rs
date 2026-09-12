@@ -1055,7 +1055,7 @@ fn AppLayout() -> Element {
                         let _ = settings_nav.push(Route::SettingsRoute {});
                     }));
 
-                match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
+                match tauri_listen("open-settings", settings_callback.as_ref())
                     .await
                 {
                     Ok(_unlisten) => {
@@ -1092,7 +1092,7 @@ fn AppLayout() -> Element {
                         components::shell_kind::persist_shell_kind(kind);
                     }
                 }));
-                match tauri_listen("shell-kind-set", kind_callback.as_ref().unchecked_ref()).await {
+                match tauri_listen("shell-kind-set", kind_callback.as_ref()).await {
                     Ok(_unlisten) => {
                         kind_callback.forget();
                     }
@@ -1103,7 +1103,7 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                match tauri_listen("shell-navigate", menu_callback.as_ref().unchecked_ref()).await {
+                match tauri_listen("shell-navigate", menu_callback.as_ref()).await {
                     Ok(_unlisten) => {
                         menu_callback.forget();
                     }
@@ -1122,7 +1122,7 @@ fn AppLayout() -> Element {
 
                 match tauri_listen(
                     "diagnostics-result",
-                    diagnostics_callback.as_ref().unchecked_ref(),
+                    diagnostics_callback.as_ref(),
                 )
                 .await
                 {
@@ -1141,7 +1141,7 @@ fn AppLayout() -> Element {
                     let _ = health_nav.push(Route::HealthRoute {});
                 }));
 
-                match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref())
+                match tauri_listen("open-med-reminders", med_callback.as_ref())
                     .await
                 {
                     Ok(_unlisten) => {
@@ -1162,7 +1162,7 @@ fn AppLayout() -> Element {
 
                 match tauri_listen(
                     "open-sanctuary-unlock",
-                    sanctuary_callback.as_ref().unchecked_ref(),
+                    sanctuary_callback.as_ref(),
                 )
                 .await
                 {
@@ -1182,7 +1182,7 @@ fn AppLayout() -> Element {
                         let _ = backup_nav.push(Route::ToolsRoute {});
                     }));
 
-                match tauri_listen("open-backup", backup_callback.as_ref().unchecked_ref()).await {
+                match tauri_listen("open-backup", backup_callback.as_ref()).await {
                     Ok(_unlisten) => {
                         backup_callback.forget();
                     }
@@ -1198,7 +1198,7 @@ fn AppLayout() -> Element {
                     let _ = sync_nav.push(Route::ToolsRoute {});
                 }));
 
-                match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await
+                match tauri_listen("open-sync-inbox", sync_callback.as_ref()).await
                 {
                     Ok(_unlisten) => {
                         sync_callback.forget();
@@ -1218,7 +1218,7 @@ fn AppLayout() -> Element {
 
                 match tauri_listen(
                     "shell-import-samsung",
-                    import_callback.as_ref().unchecked_ref(),
+                    import_callback.as_ref(),
                 )
                 .await
                 {
@@ -1241,7 +1241,7 @@ fn AppLayout() -> Element {
 
                 match tauri_listen(
                     "shell-view-logs",
-                    view_logs_callback.as_ref().unchecked_ref(),
+                    view_logs_callback.as_ref(),
                 )
                 .await
                 {
@@ -1261,7 +1261,7 @@ fn AppLayout() -> Element {
                             let _ = window.location().reload();
                         }
                     }));
-                if tauri_listen("shell-nav-reload", reload_callback.as_ref().unchecked_ref())
+                if tauri_listen("shell-nav-reload", reload_callback.as_ref())
                     .await
                     .is_ok()
                 {
@@ -1273,7 +1273,7 @@ fn AppLayout() -> Element {
                         let _ = window.history().and_then(|history| history.back());
                     }
                 }));
-                if tauri_listen("shell-nav-back", back_callback.as_ref().unchecked_ref())
+                if tauri_listen("shell-nav-back", back_callback.as_ref())
                     .await
                     .is_ok()
                 {
@@ -1288,7 +1288,7 @@ fn AppLayout() -> Element {
                     }));
                 if tauri_listen(
                     "shell-nav-forward",
-                    forward_callback.as_ref().unchecked_ref(),
+                    forward_callback.as_ref(),
                 )
                 .await
                 .is_ok()
@@ -1300,7 +1300,7 @@ fn AppLayout() -> Element {
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
                         web_sys::console::debug_1(&"zoom in requested".into());
                     }));
-                if tauri_listen("shell-zoom-in", zoom_in_callback.as_ref().unchecked_ref())
+                if tauri_listen("shell-zoom-in", zoom_in_callback.as_ref())
                     .await
                     .is_ok()
                 {
@@ -1311,7 +1311,7 @@ fn AppLayout() -> Element {
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
                         web_sys::console::debug_1(&"zoom out requested".into());
                     }));
-                if tauri_listen("shell-zoom-out", zoom_out_callback.as_ref().unchecked_ref())
+                if tauri_listen("shell-zoom-out", zoom_out_callback.as_ref())
                     .await
                     .is_ok()
                 {
@@ -1324,7 +1324,7 @@ fn AppLayout() -> Element {
                     }));
                 if tauri_listen(
                     "shell-reset-zoom",
-                    reset_zoom_callback.as_ref().unchecked_ref(),
+                    reset_zoom_callback.as_ref(),
                 )
                 .await
                 .is_ok()

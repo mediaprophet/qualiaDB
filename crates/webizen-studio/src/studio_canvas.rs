@@ -755,7 +755,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     }
                 }
             }));
-            if tauri_listen("hardware-telemetry", callback.as_ref().unchecked_ref())
+            if tauri_listen("hardware-telemetry", callback.as_ref())
                 .await
                 .is_ok()
             {

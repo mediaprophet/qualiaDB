@@ -26,23 +26,22 @@ mod bindings {
     }
 }
 
-/// Invoke a Tauri command. `args` accepts `JsValue` or `js_sys::Object`.
+/// Invoke a Tauri command.
 #[cfg(target_arch = "wasm32")]
 pub async fn invoke(
     cmd: &str,
-    args: impl Into<wasm_bindgen::JsValue>,
+    args: wasm_bindgen::JsValue,
 ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue> {
-    bindings::invoke_raw(cmd, args.into()).await
+    bindings::invoke_raw(cmd, args).await
 }
 
-/// Subscribe to a Tauri event. `handler` accepts `JsValue`, `js_sys::Function`,
-/// or `Closure<T>` (all `AsRef<JsValue>`).
+/// Subscribe to a Tauri event. Pass `closure.as_ref()` (a `&JsValue`).
 #[cfg(target_arch = "wasm32")]
 pub async fn listen(
     event: &str,
-    handler: impl AsRef<wasm_bindgen::JsValue>,
+    handler: &wasm_bindgen::JsValue,
 ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue> {
-    bindings::listen_raw(event, handler.as_ref()).await
+    bindings::listen_raw(event, handler).await
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -89,7 +89,7 @@ pub fn UpdaterPanel() -> Element {
                 }
             }) as Box<dyn FnMut(js_sys::Object)>);
 
-            let _ = tauri_listen("updater-progress", &cb).await;
+            let _ = tauri_listen("updater-progress", cb.as_ref()).await;
             cb.forget(); // Leak closure so it stays alive during download
 
             let res =

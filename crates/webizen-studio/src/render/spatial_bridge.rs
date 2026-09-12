@@ -12,8 +12,6 @@ use serde::de::DeserializeOwned;
 use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
 
 #[cfg(target_arch = "wasm32")]
 use crate::tauri_ffi::{invoke as tauri_invoke, listen as tauri_listen};
@@ -127,7 +125,7 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event: JsValue| {
                         epoch.set(epoch() + 1);
                     }));
-                if tauri_listen("render-preview-ready", callback.as_ref().unchecked_ref())
+                if tauri_listen("render-preview-ready", callback.as_ref())
                     .await
                     .is_ok()
                 {

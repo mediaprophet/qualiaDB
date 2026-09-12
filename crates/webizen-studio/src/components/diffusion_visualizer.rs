@@ -201,7 +201,7 @@ pub fn DiffusionVisualizer() -> Element {
                         }
                     }));
 
-                match tauri_listen("diffusion-epoch-ready", callback.as_ref().unchecked_ref()).await
+                match tauri_listen("diffusion-epoch-ready", callback.as_ref()).await
                 {
                     Ok(_unlisten) => {
                         callback.forget();
@@ -230,7 +230,7 @@ pub fn DiffusionVisualizer() -> Element {
 
                 match tauri_listen(
                     "diffusion-ledger-health",
-                    ledger_callback.as_ref().unchecked_ref(),
+                    ledger_callback.as_ref(),
                 )
                 .await
                 {
