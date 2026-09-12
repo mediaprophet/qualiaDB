@@ -503,10 +503,7 @@ fn set_daemon_state(state: DaemonConnectionState) {
 pub fn spawn_daemon_probe() {
     // Keep Connected while refreshing — flipping to Probing drops
     // `is_daemon_connected()` and Open pack short-circuits to held (Capt D2 flap).
-    let keep_connected = matches!(
-        get_daemon_state(),
-        DaemonConnectionState::Connected { .. }
-    );
+    let keep_connected = matches!(get_daemon_state(), DaemonConnectionState::Connected { .. });
     if !keep_connected {
         set_daemon_state(DaemonConnectionState::Probing);
     }
@@ -627,16 +624,12 @@ fn schedule_offline_probe_retry() {
         let should_retry = DAEMON_STATE.with(|s| {
             matches!(
                 *s.borrow(),
-                DaemonConnectionState::Offline { .. }
-                    | DaemonConnectionState::Connected { .. }
+                DaemonConnectionState::Offline { .. } | DaemonConnectionState::Connected { .. }
             )
         });
         if should_retry {
             web_sys::console::log_1(
-                &format!(
-                    "[Webizen Probe] retry {attempt}/{PROBE_OFFLINE_RETRY_MAX}"
-                )
-                .into(),
+                &format!("[Webizen Probe] retry {attempt}/{PROBE_OFFLINE_RETRY_MAX}").into(),
             );
             spawn_daemon_probe();
         }
@@ -722,10 +715,8 @@ async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
     };
     if resp_val.is_null() {
         web_sys::console::log_1(
-            &format!(
-                "[Webizen Probe] timed out after {PROBE_HEALTH_TIMEOUT_MS}ms at {health_url}"
-            )
-            .into(),
+            &format!("[Webizen Probe] timed out after {PROBE_HEALTH_TIMEOUT_MS}ms at {health_url}")
+                .into(),
         );
         return None;
     }
@@ -764,9 +755,7 @@ async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
         }
     };
     let Some(text) = text_val.as_string() else {
-        web_sys::console::log_1(
-            &format!("[Webizen Probe] non-text body at {health_url}").into(),
-        );
+        web_sys::console::log_1(&format!("[Webizen Probe] non-text body at {health_url}").into());
         return None;
     };
     match serde_json::from_str::<DaemonHealthResponse>(&text) {
@@ -783,7 +772,6 @@ async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
         }
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Remote Execution Endpoints (HTTP / JSON-RPC)
@@ -1187,8 +1175,8 @@ pub fn build_daemon_status_badge(document: &Document) -> Element {
 /// Refresh all rendered `.webizen-native-status-badge` elements across the DOM.
 pub fn update_all_status_badges(document: &Document) {
     if let Ok(list) = document.query_selector_all(".webizen-native-status-badge") {
-    super::docks::refresh_bottom_statusbar_in_document(document);
-    super::g_coord::refresh_g_coord_from_daemon(document);
+        super::docks::refresh_bottom_statusbar_in_document(document);
+        super::g_coord::refresh_g_coord_from_daemon(document);
         for i in 0..list.length() {
             if let Some(el) = list.item(i).and_then(|n| n.dyn_into::<Element>().ok()) {
                 render_badge_content(&el);
@@ -1233,7 +1221,13 @@ pub fn update_all_status_badges(document: &Document) {
                 let title = button
                     .get_attribute("data-enabled-title")
                     .unwrap_or_default();
-                let _ = button.set_attribute("title", &format!("{title} Unavailable: {reason}"));
+                let _ = button.set_attribute(
+                    "title",
+                    &format!(
+                        "{title} {}",
+                        crate::browser::surface_honesty::held_why(reason)
+                    ),
+                );
             }
         }
     }

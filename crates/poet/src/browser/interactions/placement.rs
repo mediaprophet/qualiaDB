@@ -150,8 +150,7 @@ pub fn place_container_via_menu(document: &Document, container_type: &str, label
 pub(super) fn place_container_on_canvas(document: &Document, container_type: &str, label: &str) {
     use crate::tool_chest::core::registry::SeedContainer;
 
-    let width = if container_type == "health_calculators" || container_type == "chemical_explorer"
-    {
+    let width = if container_type == "health_calculators" || container_type == "chemical_explorer" {
         720.0
     } else {
         400.0
@@ -253,7 +252,7 @@ pub fn show_tool_status(document: &Document, title_text: &str, message: &str, st
         "success" => "live",
         "local" => "local",
         "error" => "error",
-        "unavailable" => "unavailable",
+        "unavailable" => "held",
         "running" => "pending",
         _ => "info",
     };

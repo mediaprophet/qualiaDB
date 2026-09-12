@@ -387,6 +387,15 @@ mod tests {
         assert!(copy_avoids_thing_wash(HELD_WHY));
         assert!(copy_avoids_unavailable(HELD_WHY));
         assert!(copy_avoids_unavailable(HELD_BIND_MISSING));
+        for text in [
+            "Mesh · held / not yet — no live mesh bind",
+            "Pulse bus · held / not yet — Pulse waits on the local daemon",
+            "Aura / SHACL · held / not yet — SHACL waits on the local daemon",
+            "Job · held / not yet — no live job-queue bind",
+        ] {
+            assert!(copy_avoids_unavailable(text), "{text}");
+            assert!(text.contains(HELD_BIND_MISSING), "{text}");
+        }
         assert!(copy_avoids_thing_wash(LIVING_SAYABLE));
         assert!(copy_avoids_thing_wash(ARTIFACT_SAYABLE));
         match interpret_invoke(false, "", Some("E300@0..0: lexicon pack not found")) {

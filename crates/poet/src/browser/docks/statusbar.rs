@@ -50,8 +50,12 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     let g_val = document.create_element("span").unwrap();
     g_val.set_id("statusbar-graph-state");
     g_val.set_class_name("statusbar-value");
-    g_val.set_text_content(Some("unavailable"));
-    bar.set_attribute("data-honesty", "unavailable").ok();
+    g_val.set_text_content(Some(&crate::browser::surface_honesty::graph_held_copy()));
+    bar.set_attribute(
+        "data-honesty",
+        crate::browser::surface_honesty::honesty_attr("held"),
+    )
+    .ok();
     bar.set_attribute("data-statusbar", "poet-bottom").ok();
     graph.append_child(&g_label).unwrap();
     graph.append_child(&g_val).unwrap();
@@ -64,7 +68,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     m_label.set_text_content(Some("Merkle:"));
     let m_val = document.create_element("span").unwrap();
     m_val.set_class_name("statusbar-value");
-    m_val.set_text_content(Some("unavailable"));
+    m_val.set_text_content(Some(&crate::browser::surface_honesty::merkle_held_copy()));
     merkle.append_child(&m_label).unwrap();
     merkle.append_child(&m_val).unwrap();
     left.append_child(&merkle).unwrap();
@@ -82,7 +86,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     g_label.set_text_content(Some("Gas:"));
     let g_val = document.create_element("span").unwrap();
     g_val.set_class_name("statusbar-gas");
-    g_val.set_text_content(Some("unavailable"));
+    g_val.set_text_content(Some(&crate::browser::surface_honesty::gas_held_copy()));
     gas.append_child(&g_label).unwrap();
     gas.append_child(&g_val).unwrap();
     right.append_child(&gas).unwrap();
@@ -94,7 +98,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     s_label.set_text_content(Some("Strata:"));
     let s_val = document.create_element("span").unwrap();
     s_val.set_class_name("statusbar-value");
-    s_val.set_text_content(Some("unavailable"));
+    s_val.set_text_content(Some(&crate::browser::surface_honesty::strata_held_copy()));
     strata.append_child(&s_label).unwrap();
     strata.append_child(&s_val).unwrap();
     right.append_child(&strata).unwrap();
@@ -166,10 +170,18 @@ pub fn refresh_bottom_statusbar_from_daemon(bar: &Element) {
         }
         _ => {
             if !is_daemon_connected() {
-                bar.set_attribute("data-honesty", "unavailable").ok();
+                bar.set_attribute(
+                    "data-honesty",
+                    crate::browser::surface_honesty::honesty_attr("held"),
+                )
+                .ok();
                 if let Some(g) = document.get_element_by_id("statusbar-graph-state") {
-                    g.set_text_content(Some("unavailable"));
-                    g.set_attribute("data-honesty", "unavailable").ok();
+                    g.set_text_content(Some(&crate::browser::surface_honesty::graph_held_copy()));
+                    g.set_attribute(
+                        "data-honesty",
+                        crate::browser::surface_honesty::honesty_attr("held"),
+                    )
+                    .ok();
                 }
             }
         }
@@ -184,9 +196,10 @@ pub fn refresh_bottom_statusbar_in_document(document: &Document) {
     // Vibe UI Live Engine is a separate host — not implied by Native: Connected.
     if let Ok(Some(body)) = document.query_selector("[data-vibe-ui-host]") {
         if crate::browser::native_daemon::is_daemon_connected() {
-            body.set_text_content(Some(
-                "Unavailable: Vibe UI host not mounted (Native Connected is separate — Catalog · Lexicon / invoke use the daemon).",
-            ));
+            body.set_text_content(Some(&format!(
+                "{} (Native Connected is separate — Catalog · Lexicon / invoke use the daemon).",
+                crate::browser::surface_honesty::vibe_ui_held_copy()
+            )));
         }
     }
 }

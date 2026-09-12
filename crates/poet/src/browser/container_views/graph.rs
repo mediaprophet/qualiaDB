@@ -62,7 +62,9 @@ pub fn build_graph_view(document: &Document) -> Element {
         }
         if !crate::browser::native_daemon::is_daemon_connected() {
             let Some(document) = web_sys::window().and_then(|window| window.document()) else {
-                results_for_run.set_text_content(Some("Browser document is unavailable."));
+                results_for_run.set_text_content(Some(&crate::browser::surface_honesty::held_why(
+                    "browser document not mounted",
+                )));
                 return;
             };
             let result = crate::browser::tool_actions::local_graph_query(&document, &query);

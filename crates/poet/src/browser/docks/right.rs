@@ -49,11 +49,9 @@ pub fn build_right_dock(document: &Document) -> Element {
     // 1. Aura Tray — wired to diagnostics module with collapsible sub-trays
     let shacl_results = crate::browser::diagnostics::default_shacl_results();
     let passed = shacl_results.iter().filter(|r| r.conformant).count();
-    let aura_badge = if shacl_results.is_empty() {
-        "unavailable".to_string()
-    } else {
-        format!("{}/{} valid", passed, shacl_results.len())
-    };
+    let daemon_up = crate::browser::native_daemon::is_daemon_connected();
+    let aura_badge =
+        crate::browser::surface_honesty::aura_badge_copy(daemon_up, shacl_results.len(), passed);
     let aura_body = crate::browser::diagnostics::render_aura_tray(document, &shacl_results);
     let aura_panel = super::panel::create_collapsible_dock_panel(
         document,
@@ -67,11 +65,8 @@ pub fn build_right_dock(document: &Document) -> Element {
 
     // 2. Pulse Stream — wired to diagnostics module
     let pulse_events = crate::browser::diagnostics::default_pulse_events();
-    let pulse_badge = if pulse_events.is_empty() {
-        "unavailable".to_string()
-    } else {
-        format!("{} events", pulse_events.len())
-    };
+    let pulse_badge =
+        crate::browser::surface_honesty::pulse_badge_copy(daemon_up, pulse_events.len());
     let pulse_body = crate::browser::diagnostics::render_pulse_stream(document, &pulse_events);
     let pulse_panel = super::panel::create_collapsible_dock_panel(
         document,
@@ -89,11 +84,7 @@ pub fn build_right_dock(document: &Document) -> Element {
         .iter()
         .filter(|j| j.status == crate::browser::diagnostics::JobStatus::Running)
         .count();
-    let jobs_badge = if jobs.is_empty() {
-        "unavailable".to_string()
-    } else {
-        format!("{} running", active_jobs)
-    };
+    let jobs_badge = crate::browser::surface_honesty::job_badge_copy(jobs.len(), active_jobs);
     let job_body = crate::browser::diagnostics::render_job_body(document, &jobs);
     let job_panel = super::panel::create_collapsible_dock_panel(
         document,
@@ -121,16 +112,17 @@ pub fn build_right_dock(document: &Document) -> Element {
     let vibe_ui_host = document.create_element("div").unwrap();
     vibe_ui_host.set_class_name("container-placeholder");
     vibe_ui_host
-        .set_attribute("data-honesty", "unavailable")
+        .set_attribute(
+            "data-honesty",
+            crate::browser::surface_honesty::honesty_attr("held"),
+        )
         .ok();
-    vibe_ui_host.set_text_content(Some(
-        "Unavailable: the live VibeScript UI runtime is not connected.",
-    ));
+    vibe_ui_host.set_text_content(Some(&crate::browser::surface_honesty::vibe_ui_held_copy()));
     vibe_ui_host.set_attribute("data-vibe-ui-host", "1").ok();
     let vibe_ui_panel = super::panel::create_collapsible_dock_panel(
         document,
         "Vibe UI Live Engine",
-        Some("unavailable"),
+        Some(crate::browser::surface_honesty::HELD_SAYABLE),
         vibe_ui_host,
         false, // collapsed by default
         false, // flex_grow

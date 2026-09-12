@@ -151,8 +151,19 @@ pub fn render_aura_tray(document: &Document, results: &[ShaclResult]) -> Element
         )
         .unwrap();
     if results.is_empty() {
-        body.set_attribute("data-honesty", "unavailable").ok();
-        summary.set_text_content(Some("Unavailable: live SHACL validation is not connected."));
+        let connected = crate::browser::native_daemon::is_daemon_connected();
+        body.set_attribute(
+            "data-honesty",
+            if connected {
+                "running"
+            } else {
+                crate::browser::surface_honesty::honesty_attr("held")
+            },
+        )
+        .ok();
+        summary.set_text_content(Some(&crate::browser::surface_honesty::aura_empty_copy(
+            connected,
+        )));
     } else {
         summary.set_text_content(Some(&format!("Status: {}/{} conformant", passed, total)));
     }
@@ -353,12 +364,21 @@ pub fn render_pulse_stream(document: &Document, events: &[PulseEvent]) -> Elemen
         .unwrap();
 
     if events.is_empty() {
-        body.set_attribute("data-honesty", "unavailable").ok();
+        let connected = crate::browser::native_daemon::is_daemon_connected();
+        body.set_attribute(
+            "data-honesty",
+            if connected {
+                "running"
+            } else {
+                crate::browser::surface_honesty::honesty_attr("held")
+            },
+        )
+        .ok();
         let empty = document.create_element("div").unwrap();
         empty.set_class_name("container-placeholder");
-        empty.set_text_content(Some(
-            "Unavailable: live Pulse SSE events are not connected.",
-        ));
+        empty.set_text_content(Some(&crate::browser::surface_honesty::pulse_empty_copy(
+            connected,
+        )));
         body.append_child(&empty).unwrap();
     }
 
@@ -480,10 +500,14 @@ pub fn render_job_body(document: &Document, jobs: &[JobEntry]) -> Element {
     }
 
     if jobs.is_empty() {
-        body.set_attribute("data-honesty", "unavailable").ok();
+        body.set_attribute(
+            "data-honesty",
+            crate::browser::surface_honesty::honesty_attr("held"),
+        )
+        .ok();
         let empty = document.create_element("div").unwrap();
         empty.set_class_name("container-placeholder");
-        empty.set_text_content(Some("Unavailable: the live job queue is not connected."));
+        empty.set_text_content(Some(&crate::browser::surface_honesty::job_empty_copy()));
         body.append_child(&empty).unwrap();
     }
 
@@ -567,5 +591,25 @@ mod tests {
     fn test_default_jobs() {
         let jobs = default_jobs();
         assert!(jobs.is_empty());
+    }
+
+    #[test]
+    fn wait_honest_empty_copy_never_says_unavailable() {
+        use crate::browser::surface_honesty::{
+            aura_empty_copy, copy_avoids_unavailable, job_empty_copy, pulse_empty_copy,
+            HELD_SAYABLE, PULSE_LIVE_EMPTY,
+        };
+        let held_pulse = pulse_empty_copy(false);
+        let live_pulse = pulse_empty_copy(true);
+        let held_aura = aura_empty_copy(false);
+        let live_aura = aura_empty_copy(true);
+        let job = job_empty_copy();
+        for text in [&held_pulse, &live_pulse, &held_aura, &live_aura, &job] {
+            assert!(copy_avoids_unavailable(text), "{text}");
+        }
+        assert!(held_pulse.contains(HELD_SAYABLE));
+        assert_eq!(live_pulse, PULSE_LIVE_EMPTY);
+        assert!(!live_pulse.contains(HELD_SAYABLE));
+        assert!(job.contains(HELD_SAYABLE));
     }
 }

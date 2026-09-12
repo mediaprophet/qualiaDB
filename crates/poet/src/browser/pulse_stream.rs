@@ -14,7 +14,7 @@ pub fn build_live_stream(document: &Document) -> Element {
         if super::native_daemon::is_daemon_connected() {
             "running"
         } else {
-            "unavailable"
+            super::surface_honesty::honesty_attr("held")
         },
     )
     .ok();
@@ -26,11 +26,9 @@ pub fn build_live_stream(document: &Document) -> Element {
     let status = document.create_element("div").unwrap();
     status.set_attribute("role", "status").ok();
     status.set_attribute("data-pulse-live-status", "").ok();
-    status.set_text_content(Some(if super::native_daemon::is_daemon_connected() {
-        "Waiting for the next live Pulse SSE event…"
-    } else {
-        "Pulse SSE unavailable until the local daemon is connected."
-    }));
+    status.set_text_content(Some(&super::surface_honesty::pulse_empty_copy(
+        super::native_daemon::is_daemon_connected(),
+    )));
     root.append_child(&status).unwrap();
     let list = document.create_element("div").unwrap();
     list.set_attribute("data-pulse-live-list", "").ok();

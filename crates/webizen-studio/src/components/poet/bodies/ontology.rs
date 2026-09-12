@@ -21,7 +21,7 @@ pub fn OntologyBody() -> Element {
     let mut busy = use_signal(|| false);
     rsx! {
         div { style: "display:grid;gap:8px;",
-            p { class: "held-bind-note", "Aura / SHACL · held / not yet until extensions arrive." }
+            p { class: "held-bind-note", "Aura / SHACL · held / not yet — SHACL waits on the local daemon." }
             p { style: muted(), "Aura catalog via SHACL.extensions. Full shape-IRI registry is later." }
             button {
                 disabled: busy(),
