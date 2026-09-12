@@ -1,18 +1,17 @@
 #![allow(non_snake_case)]
 
 pub mod canvas_editor;
-pub mod canvas_graph;
-pub mod canvas_model;
 pub mod components;
-pub mod endpoints;
 mod pane_generator;
 mod pane_registry;
-// Single-owner: render (spatial_bridge Tauri FFI) lives in the lib rlib only.
-pub use webizen_studio::render;
 mod shell_dest;
 mod studio_canvas;
 pub mod telemetry;
-pub mod theme_engine;
+
+// Shared modules live in the lib rlib once. Re-export so `crate::…` in the bin
+// uses the same types (Page, motion, endpoints) and spatial_bridge Tauri FFI
+// is not compiled a second time into the wasm link.
+pub use webizen_studio::{canvas_graph, canvas_model, endpoints, render, theme_engine};
 
 use dioxus::prelude::*;
 use serde::Deserialize;
