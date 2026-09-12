@@ -86,6 +86,27 @@ mod tests {
     }
 
     #[test]
+    fn directory_is_an_active_platform_qapp() {
+        let src = include_str!("catalog/platform.rs");
+        assert!(
+            src.contains("id: \"directory\""),
+            "Directory must be in the QApp catalog so humans can find it without an agent"
+        );
+        assert!(
+            src.contains("TalkPeople"),
+            "Directory launch must stay under Talk / People (no new top-level IA name)"
+        );
+        let start = src
+            .find("id: \"directory\"")
+            .expect("directory QApp id");
+        let body = src.get(start..start.saturating_add(520)).unwrap_or("");
+        assert!(
+            body.contains("Stat::Active"),
+            "Directory must be Active (real launch), not Soon/buried"
+        );
+    }
+
+    #[test]
     fn academic_catalogue_ids_are_unique() {
         let ids = academic_ids(QAPPS_SRC);
         let mut seen = std::collections::HashSet::new();

@@ -32,7 +32,7 @@ where
     T: serde::de::DeserializeOwned,
 {
     if !crate::endpoints::is_native_host() {
-        return Err("The desktop host is unavailable in this preview.".to_string());
+        return Err("Directory host is held / not yet in this preview.".to_string());
     }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
@@ -63,6 +63,63 @@ fn strs(v: &serde_json::Value, key: &str) -> Vec<String> {
         .iter()
         .filter_map(|x| x.as_str().map(|s| s.to_string()))
         .collect()
+}
+
+/// Chrome who-kind: human | organization | tool. Never call company/bot "a person".
+fn who_kind_of(entry: &serde_json::Value) -> &'static str {
+    let raw = s(entry, "who_kind").to_ascii_lowercase();
+    match raw.as_str() {
+        "organization" | "organisation" | "org" => "organization",
+        "tool" | "agent" | "bot" => "tool",
+        "human" => "human",
+        _ => {
+            let kinds = strs(entry, "kinds");
+            let hay = kinds.join(" ").to_ascii_lowercase();
+            if hay.split(|c: char| !c.is_ascii_alphanumeric()).any(|t| {
+                matches!(
+                    t,
+                    "agent" | "ai" | "bot" | "assistant" | "subagent" | "chatbot" | "llm"
+                )
+            }) {
+                "tool"
+            } else if hay.split(|c: char| !c.is_ascii_alphanumeric()).any(|t| {
+                matches!(
+                    t,
+                    "organization" | "organisation" | "org" | "company" | "institution"
+                        | "business" | "ngo"
+                )
+            }) {
+                "organization"
+            } else {
+                "human"
+            }
+        }
+    }
+}
+
+fn who_kind_label(kind: &str) -> &'static str {
+    match kind {
+        "organization" => "Organization · legal person",
+        "tool" => "Tool",
+        _ => "Human",
+    }
+}
+
+fn who_kind_rank(kind: &str) -> u8 {
+    match kind {
+        "human" => 0,
+        "organization" => 1,
+        "tool" => 2,
+        _ => 3,
+    }
+}
+
+fn entries_humans_first(entries: Vec<serde_json::Value>) -> Vec<serde_json::Value> {
+    let mut out = entries;
+    out.sort_by(|a, b| {
+        who_kind_rank(who_kind_of(a)).cmp(&who_kind_rank(who_kind_of(b)))
+    });
+    out
 }
 
 #[component]
@@ -100,7 +157,7 @@ pub fn DirectoryPane() -> Element {
 
     let r = result();
     let facet_defs = arr(&r, "facets");
-    let entries = arr(&r, "entries");
+    let entries = entries_humans_first(arr(&r, "entries"));
     let categories = arr(&r, "categories");
     let total = r.get("total").and_then(|x| x.as_u64()).unwrap_or(0);
 
@@ -109,13 +166,13 @@ pub fn DirectoryPane() -> Element {
             div { style: "max-width: 1000px; margin: 0 auto;",
                 h2 { style: "color: #a78bfa; margin: 0 0 4px; font-size: 24px;", "Directory" }
                 p { style: "color: #9ca3af; margin: 0 0 12px; font-size: 13px;",
-                    "Your people, organisations and agents — searchable by meaning, filterable by facet, each carrying the agreements that define your relationship. The terms are between you and them; no platform in the middle."
+                    "Humans first. Organizations are a legal-person who-kind; chatbots are tools. A handle is not the human. Search by meaning; agreements stay held / empty until they exist."
                 }
 
                 // ── Search box ───────────────────────────────────────────────
                 input {
                     style: "{INPUT} margin-bottom: 6px; font-size: 15px;",
-                    placeholder: "Search — try \"doctor\", a name, an organisation…", value: "{query}",
+                    placeholder: "Search — try \"doctor\", a human name, an organisation…", value: "{query}",
                     oninput: move |e| {
                         let mut q = query; q.set(e.value());
                         #[cfg(target_arch = "wasm32")]
@@ -222,107 +279,21 @@ pub fn DirectoryPane() -> Element {
                         }
                     }
 
-                    // ── Entries ─────────────────────────────────────────────
+                    // ── Entries (humans first; orgs and tools as separate who-kinds) ──
                     div {
                         if entries.is_empty() {
                             div { style: "{PANEL} color: #6b7280; font-size: 13px;",
-                                "Nothing matches. Clear the search/facets, or connect with someone (Connect & Chat → generate/accept an invite) and they'll appear here."
+                                "Directory is empty or nothing matches. Invite a human under People — they appear here after you accept a connect invite. No agent required."
                             }
-                        }
-                        for entry in entries.clone() {
+                        } else {
                             {
-                                let did = s(&entry, "did");
-                                let name = s(&entry, "display_name");
-                                let org = s(&entry, "organization");
-                                let kinds = strs(&entry, "kinds");
-                                let sources = strs(&entry, "sources");
-                                let cats = strs(&entry, "categories");
-                                let agreements = strs(&entry, "agreement_ids");
-                                let all_cats = categories.clone();
-                                #[cfg(target_arch = "wasm32")]
-                                let did_add = did.clone();
-                                #[cfg(target_arch = "wasm32")]
-                                let cats_add = cats.clone();
+                                let humans: Vec<_> = entries.iter().filter(|e| who_kind_of(e) == "human").cloned().collect();
+                                let orgs: Vec<_> = entries.iter().filter(|e| who_kind_of(e) == "organization").cloned().collect();
+                                let tools: Vec<_> = entries.iter().filter(|e| who_kind_of(e) == "tool").cloned().collect();
                                 rsx! {
-                                    div { style: "{PANEL} margin-bottom: 10px;",
-                                        div { style: "display: flex; justify-content: space-between; align-items: baseline; gap: 10px;",
-                                            div {
-                                                span { style: "font-weight: 700; color: #f3f4f6; font-size: 15px;", "{name}" }
-                                                if !org.is_empty() {
-                                                    span { style: "color: #9ca3af; font-size: 12px; margin-left: 8px;", "· {org}" }
-                                                }
-                                            }
-                                            span { style: "color: #4b5563; font-size: 10px;", "{sources.join(\" · \")}" }
-                                        }
-                                        div { style: "color: #6b7280; font-size: 11px; font-family: monospace; margin: 3px 0 6px; word-break: break-all;", "{did}" }
-                                        if !kinds.is_empty() {
-                                            div { style: "margin-bottom: 4px;",
-                                                for k in kinds.clone() { span { style: "{CHIP} color: #7dd3fc;", "{k}" } }
-                                            }
-                                        }
-                                        div { style: "margin-bottom: 6px;",
-                                            for c in cats.clone() {
-                                                {
-                                                    let label = all_cats.iter().find(|x| s(x, "id") == c).map(|x| s(x, "label")).unwrap_or_else(|| c.clone());
-                                                    #[cfg(target_arch = "wasm32")]
-                                                    let did_rm = did.clone();
-                                                    #[cfg(target_arch = "wasm32")]
-                                                    let remaining: Vec<String> = cats.iter().filter(|x| **x != c).cloned().collect();
-                                                    rsx! {
-                                                        span { style: "{CHIP}",
-                                                            "{label} "
-                                                            button {
-                                                                style: "background: none; border: none; color: #f87171; cursor: pointer; font-size: 11px; padding: 0 0 0 2px;",
-                                                                onclick: move |_| {
-                                                                    #[cfg(target_arch = "wasm32")]
-                                                                    {
-                                                                        let (did_rm, remaining, query, facets, mut result) = (did_rm.clone(), remaining.clone(), query, facets, result);
-                                                                        spawn(async move {
-                                                                            let _ = invoke_json::<serde_json::Value>("set_directory_entry_categories", json!({ "did": did_rm, "categories": remaining })).await;
-                                                                            let fj = serde_json::to_string(&facets()).unwrap_or_else(|_| "{}".into());
-                                                                            if let Ok(v) = invoke_json::<serde_json::Value>("search_directory", json!({ "query": query(), "facetsJson": fj })).await { result.set(v); }
-                                                                        });
-                                                                    }
-                                                                },
-                                                                "✕"
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            select {
-                                                style: "background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; padding: 3px 6px; font-size: 11px; margin-left: 4px;",
-                                                onchange: move |e| {
-                                                    #[cfg(not(target_arch = "wasm32"))]
-                                                    let _ = &e;
-                                                    #[cfg(target_arch = "wasm32")]
-                                                    {
-                                                        let chosen = e.value();
-                                                        if chosen.is_empty() { return; }
-                                                        let (did_add, cats_add, query, facets, mut result) = (did_add.clone(), cats_add.clone(), query, facets, result);
-                                                        spawn(async move {
-                                                            let mut next = cats_add.clone();
-                                                            if !next.contains(&chosen) { next.push(chosen); }
-                                                            let _ = invoke_json::<serde_json::Value>("set_directory_entry_categories", json!({ "did": did_add, "categories": next })).await;
-                                                            let fj = serde_json::to_string(&facets()).unwrap_or_else(|_| "{}".into());
-                                                            if let Ok(v) = invoke_json::<serde_json::Value>("search_directory", json!({ "query": query(), "facetsJson": fj })).await { result.set(v); }
-                                                        });
-                                                    }
-                                                },
-                                                option { value: "", "＋ category…" }
-                                                for c in all_cats.clone() {
-                                                    option { value: "{s(&c, \"id\")}", "{s(&c, \"label\")}" }
-                                                }
-                                            }
-                                        }
-                                        div { style: "border-top: 1px solid #374151; padding-top: 6px; margin-top: 4px; font-size: 12px; color: #9ca3af;",
-                                            if agreements.is_empty() {
-                                                span { "Agreements: none yet — the terms of this relationship will live here." }
-                                            } else {
-                                                span { "Agreements: {agreements.len()}" }
-                                            }
-                                        }
-                                    }
+                                    DirectoryWhoSection { title: "Humans", entries: humans, categories: categories.clone(), query, facets, result }
+                                    DirectoryWhoSection { title: "Organizations · legal person", entries: orgs, categories: categories.clone(), query, facets, result }
+                                    DirectoryWhoSection { title: "Tools", entries: tools, categories: categories.clone(), query, facets, result }
                                 }
                             }
                         }
@@ -330,5 +301,172 @@ pub fn DirectoryPane() -> Element {
                 }
             }
         }
+    }
+}
+
+#[component]
+fn DirectoryWhoSection(
+    title: &'static str,
+    entries: Vec<serde_json::Value>,
+    categories: Vec<serde_json::Value>,
+    query: Signal<String>,
+    facets: Signal<serde_json::Value>,
+    result: Signal<serde_json::Value>,
+) -> Element {
+    if entries.is_empty() {
+        return rsx! {};
+    }
+    rsx! {
+        div { style: "color: #e5e7eb; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin: 4px 0 8px;", "{title}" }
+        for entry in entries {
+            DirectoryEntryCard { entry, categories: categories.clone(), query, facets, result }
+        }
+    }
+}
+
+#[component]
+fn DirectoryEntryCard(
+    entry: serde_json::Value,
+    categories: Vec<serde_json::Value>,
+    query: Signal<String>,
+    facets: Signal<serde_json::Value>,
+    result: Signal<serde_json::Value>,
+) -> Element {
+    let did = s(&entry, "did");
+    let name = s(&entry, "display_name");
+    let org = s(&entry, "organization");
+    let kinds = strs(&entry, "kinds");
+    let sources = strs(&entry, "sources");
+    let cats = strs(&entry, "categories");
+    let agreements = strs(&entry, "agreement_ids");
+    let who_label = who_kind_label(who_kind_of(&entry));
+    let all_cats = categories.clone();
+    #[cfg(target_arch = "wasm32")]
+    let did_add = did.clone();
+    #[cfg(target_arch = "wasm32")]
+    let cats_add = cats.clone();
+    rsx! {
+        div { style: "{PANEL} margin-bottom: 10px;",
+            div { style: "display: flex; justify-content: space-between; align-items: baseline; gap: 10px;",
+                div {
+                    span { style: "font-weight: 700; color: #f3f4f6; font-size: 15px;", "{name}" }
+                    if !org.is_empty() {
+                        span { style: "color: #9ca3af; font-size: 12px; margin-left: 8px;", "· {org}" }
+                    }
+                }
+                span { style: "{CHIP} color: #c4b5fd;", "{who_label}" }
+            }
+            div { style: "color: #6b7280; font-size: 11px; font-family: monospace; margin: 3px 0 6px; word-break: break-all;", "Handle · {did}" }
+            if !sources.is_empty() {
+                div { style: "color: #4b5563; font-size: 10px; margin-bottom: 4px;", "{sources.join(\" · \")}" }
+            }
+            if !kinds.is_empty() {
+                div { style: "margin-bottom: 4px;",
+                    for k in kinds.clone() { span { style: "{CHIP} color: #7dd3fc;", "{k}" } }
+                }
+            }
+            div { style: "margin-bottom: 6px;",
+                for c in cats.clone() {
+                    {
+                        let label = all_cats.iter().find(|x| s(x, "id") == c).map(|x| s(x, "label")).unwrap_or_else(|| c.clone());
+                        #[cfg(target_arch = "wasm32")]
+                        let did_rm = did.clone();
+                        #[cfg(target_arch = "wasm32")]
+                        let remaining: Vec<String> = cats.iter().filter(|x| **x != c).cloned().collect();
+                        rsx! {
+                            span { style: "{CHIP}",
+                                "{label} "
+                                button {
+                                    style: "background: none; border: none; color: #f87171; cursor: pointer; font-size: 11px; padding: 0 0 0 2px;",
+                                    onclick: move |_| {
+                                        #[cfg(target_arch = "wasm32")]
+                                        {
+                                            let (did_rm, remaining, query, facets, mut result) = (did_rm.clone(), remaining.clone(), query, facets, result);
+                                            spawn(async move {
+                                                let _ = invoke_json::<serde_json::Value>("set_directory_entry_categories", json!({ "did": did_rm, "categories": remaining })).await;
+                                                let fj = serde_json::to_string(&facets()).unwrap_or_else(|_| "{}".into());
+                                                if let Ok(v) = invoke_json::<serde_json::Value>("search_directory", json!({ "query": query(), "facetsJson": fj })).await { result.set(v); }
+                                            });
+                                        }
+                                    },
+                                    "✕"
+                                }
+                            }
+                        }
+                    }
+                }
+                select {
+                    style: "background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; padding: 3px 6px; font-size: 11px; margin-left: 4px;",
+                    onchange: move |e| {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        let _ = &e;
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            let chosen = e.value();
+                            if chosen.is_empty() { return; }
+                            let (did_add, cats_add, query, facets, mut result) = (did_add.clone(), cats_add.clone(), query, facets, result);
+                            spawn(async move {
+                                let mut next = cats_add.clone();
+                                if !next.contains(&chosen) { next.push(chosen); }
+                                let _ = invoke_json::<serde_json::Value>("set_directory_entry_categories", json!({ "did": did_add, "categories": next })).await;
+                                let fj = serde_json::to_string(&facets()).unwrap_or_else(|_| "{}".into());
+                                if let Ok(v) = invoke_json::<serde_json::Value>("search_directory", json!({ "query": query(), "facetsJson": fj })).await { result.set(v); }
+                            });
+                        }
+                    },
+                    option { value: "", "＋ category…" }
+                    for c in all_cats.clone() {
+                        option { value: "{s(&c, \"id\")}", "{s(&c, \"label\")}" }
+                    }
+                }
+            }
+            div { style: "border-top: 1px solid #374151; padding-top: 6px; margin-top: 4px; font-size: 12px; color: #9ca3af;",
+                if agreements.is_empty() {
+                    span { "Agreements: held / empty — no agreement recorded for this relationship yet." }
+                } else {
+                    span { "Agreements: {agreements.len()}" }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(name: &str, who: &str, kinds: &[&str]) -> serde_json::Value {
+        serde_json::json!({
+            "display_name": name,
+            "who_kind": who,
+            "kinds": kinds,
+        })
+    }
+
+    #[test]
+    fn chrome_never_calls_org_or_bot_a_person() {
+        assert_eq!(who_kind_label("organization"), "Organization · legal person");
+        assert_eq!(who_kind_label("tool"), "Tool");
+        assert_eq!(who_kind_label("human"), "Human");
+        assert!(!who_kind_label("organization").to_ascii_lowercase().contains("a person"));
+        assert!(!who_kind_label("tool").eq_ignore_ascii_case("person"));
+    }
+
+    #[test]
+    fn ui_sorts_humans_ahead_of_org_and_tool() {
+        let sorted = entries_humans_first(vec![
+            entry("Acme", "organization", &["ORGANIZATION"]),
+            entry("HelpBot", "tool", &["chatbot"]),
+            entry("Zed", "human", &["FRIEND"]),
+            entry("Ann", "human", &["FRIEND"]),
+        ]);
+        let names: Vec<String> = sorted.iter().map(|e| s(e, "display_name")).collect();
+        assert_eq!(names, vec!["Zed", "Ann", "Acme", "HelpBot"]);
+    }
+
+    #[test]
+    fn chatbot_kind_is_tool_even_without_who_kind_field() {
+        let e = serde_json::json!({ "kinds": ["chatbot"] });
+        assert_eq!(who_kind_of(&e), "tool");
     }
 }

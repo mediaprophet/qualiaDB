@@ -12,6 +12,18 @@ use people::PeopleOverview;
 use technical::RelationshipTechnicalInspector;
 use types::{RelationsSection, ALL_SECTIONS};
 
+/// Palette / omnibox / QApp handoff: open Talk → People with Directory visible.
+/// Not a new top-level IA name — Directory stays under Relations / People.
+pub fn stash_directory_handoff() {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(window) = web_sys::window() {
+        if let Ok(Some(storage)) = window.session_storage() {
+            let _ = storage.set_item("webizen_talk_tab", "people");
+            let _ = storage.set_item("webizen_open_directory", "1");
+        }
+    }
+}
+
 #[component]
 pub fn RelationsShell() -> Element {
     let mode = use_experience_mode();
@@ -103,7 +115,9 @@ fn initial_section(advanced: bool) -> RelationsSection {
             if let Ok(Some(tab)) = storage.get_item("webizen_talk_tab") {
                 let _ = storage.remove_item("webizen_talk_tab");
                 return match tab.as_str() {
-                    "people" => RelationsSection::People,
+                    "people" | "directory" | "contacts" | "addressbook" | "address-book" => {
+                        RelationsSection::People
+                    }
                     "projects" => RelationsSection::Groups,
                     "reception" | "mail" | "email" => RelationsSection::Reception,
                     "requests" => RelationsSection::Requests,
