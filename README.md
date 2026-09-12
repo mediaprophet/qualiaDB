@@ -126,9 +126,8 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.38 (active branch)** — habitat line on the 0.0.37 engine. Unified Q42 v3 is the
-only new-write graph container. Workspace crate stamps remain **0.0.37**
-(`VERSION_BUMP_SEPARATE`) until Neo’s crate-version wake.
+**0.0.38 (active branch)** — habitat line on the 0.0.37 WASM-safe engine. Unified Q42 v3 is the
+only new-write graph container. Workspace crate stamps are **0.0.38**.
 
 **Pages / release:** operator record is
 [`docs/progress-0.0.38.html`](docs/progress-0.0.38.html) and

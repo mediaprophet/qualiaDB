@@ -6,10 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.38] — 2026-09-12
+
+### Changed
+
+- Workspace crates, `Cargo.lock`, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.38`.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version track `0.0.38`.
+- Operator surfaces no longer say crate stamps remain `0.0.37`. Neo sole-pushes this line, then annotated tag `v0.0.38`. This commit does not create the git tag.
+
 ## [Unreleased] — 0.0.38 Pages wake — 2026-09-12
 
-`VERSION_BUMP_SEPARATE`: workspace crate stamps remain `0.0.37`. This entry is
-Pages / operator copy only.
+Pages / operator copy landed before the crate-version wake. Crate stamps are now `0.0.38`.
 
 ### Added
 

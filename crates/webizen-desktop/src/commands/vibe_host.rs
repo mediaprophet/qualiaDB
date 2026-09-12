@@ -166,7 +166,7 @@ mod tests {
         let info = vibe_host_info();
         assert_eq!(info.language_version, "vibe-0.1");
         assert_eq!(info.host_version, "vibe-host-0.1");
-        assert_eq!(info.crate_stamp, "0.0.37");
+        assert_eq!(info.crate_stamp, "0.0.38");
     }
 
     #[test]

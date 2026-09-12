@@ -26,7 +26,7 @@ assert.doesNotMatch(anatomy, /if \(!navigator\.gpu\)/);
 const anatomyHtml = readFileSync(new URL('../playground/anatomy.html', import.meta.url), 'utf8');
 assert.match(anatomyHtml, /45000/);
 assert.match(anatomyHtml, /__anatomyBooted/);
-assert.match(anatomyHtml, /anatomy\.js\?v=0\.0\.37-anatomy-boot2/);
+assert.match(anatomyHtml, /anatomy\.js\?v=0\.0\.38-anatomy-boot2/);
 assert.match(anatomyHtml, /Probing renderer/);
 assert.doesNotMatch(anatomyHtml, />Starting/);
 assert.match(readFileSync(new URL('../js/browser-capability.js', import.meta.url), 'utf8'), /WEBGPU_PROBE_BUDGET_MS/);
