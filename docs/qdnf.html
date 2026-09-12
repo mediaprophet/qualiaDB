@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QDNF — Qualia Decentralized Network Fabric</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .hex {
+      width: 7.2rem; height: 8.2rem;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      background: linear-gradient(160deg, rgba(34,211,238,0.18), rgba(167,139,250,0.12));
+      border: 0;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      padding: 0.9rem; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em;
+      box-shadow: inset 0 0 0 1px rgba(34,211,238,0.28);
+    }
+    .hex-row { display: flex; justify-content: center; gap: 0.6rem; }
+    .hex-row + .hex-row { margin-top: -1.55rem; }
+    .hex-row:nth-child(even) { padding-left: 3.9rem; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">Q</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · in progress · 0.0.38</div>
+    <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] mb-4">
+      A network that does not borrow DNS to know a human.
+    </h1>
+    <p class="text-lg text-white/70 max-w-3xl mb-4">
+      QDNF is Qualia’s native networking model. Inside a QDNF realm it does not require ARP, IPv6 neighbour discovery, DHCP, DNS, ICANN names, BGP, or a mandatory cloud relay.
+      The Qualia Peer Runtime (QPR) is the library over that fabric — the intended replacement for libp2p, not a wrapper around it.
+    </p>
+    <p class="text-sm text-amber-200/80 max-w-3xl mb-12">
+      Honest status: QPR is native and still being built on <code class="q-mono">0.0.38</code>. This page is a map, not a live packet capture.
+      Locators and DNS names are handles — never the human (NaturalAgent). Ordinary Internet stays a Legacy Internet Gateway.
+      Public Internet relay / MASQUE evidence flags stay <strong>false</strong> until a second host dials a URL Timothy supplies (CSCP-08 chores wait on that). No invented ticks.
+      The older <a class="q-link" href="network_webizen.html">Network Webizen</a> screen still plays a mock table.
+    </p>
+
+    <section class="q-card p-8 mb-12 overflow-x-auto">
+      <p class="q-kicker mb-6 text-center">Protocol honeycomb</p>
+      <div class="hex-row">
+        <div class="hex">QLink</div>
+        <div class="hex">DNI</div>
+        <div class="hex">QRoute</div>
+      </div>
+      <div class="hex-row">
+        <div class="hex">QResolve</div>
+        <div class="hex">QPolicy</div>
+        <div class="hex">QSession</div>
+        <div class="hex">QSync</div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-5 mb-12">
+      <article class="q-card p-7">
+        <h2 class="text-xl font-semibold mb-3">What the layers do</h2>
+        <dl class="text-sm space-y-3 text-white/75">
+          <div><dt class="text-cyan-300 q-mono">QLink</dt><dd>Cryptographic adjacency. Neighbours are proven, not guessed from ARP.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">DNI</dt><dd>Self-certifying, expiring topological identifiers — locators / handles, not forever-who from a path.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QRoute</dt><dd>Intra-realm link state and inter-realm path vector.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QResolve</dt><dd>DID / content / resource resolution without DNS-as-who. Optional domain names remain handles only.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QPolicy</dt><dd>Consent, capability, deontic authorization.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QSession / QSync</dt><dd>Encrypted datagrams and streams; signed bounded Q42 / CRDT exchange.</dd></div>
+        </dl>
+      </article>
+      <article class="q-card p-7">
+        <h2 class="text-xl font-semibold mb-3">What it is not</h2>
+        <ul class="text-sm text-white/75 space-y-3">
+          <li>Not a browser libpcap. GitHub Pages cannot see your NIC.</li>
+          <li>Not identity. Locators, sessions, and instruments stay off the who-plane (Identifier Fabric). Handle revoke ≠ who-erase. Human ≠ legal “person” ≠ bot.</li>
+          <li>Not DNS-as-who. A lost domain must not erase a human from the fabric; domains are optional handles.</li>
+          <li>Not “Solid as the architecture.” Solid LDP remains a federated access surface; QDNF owns naming and routing.</li>
+          <li>Not finished. On <code class="q-mono">0.0.38</code>: native QPR / CSCP local slices (loopback H2 Extended CONNECT, local WSS patterns, fail-closed decode) — still not a public relay claim. Measured completeness lives in the CSCP programme and honesty flags, not in this honeycomb.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="q-card p-8">
+      <h2 class="text-2xl font-semibold mb-3">Read the actual design</h2>
+      <p class="text-sm text-white/65 mb-5">The honeycomb is a map. The standards folder is the contract.</p>
+      <div class="flex flex-wrap gap-3">
+        <a class="px-4 py-2 rounded-2xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/">QDNF specification</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/peer-runtime.md">Peer runtime</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/network-cell.md">Network cells</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="progress-0.0.37.html">0.0.37 progress</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/briefs/CSCP-08.md">CSCP-08 chores (no tick)</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
+    Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.
+  </footer>
+</body>
+</html>
