@@ -62,7 +62,7 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 | Advanced method names muted | **PASS** (Capt `d7f0bdc`) | PARTIAL | Desktop A5 PASS; WASM still PARTIAL scan |
 | Human finds Ask / Keep / Play without agent | **PASS** (Capt `d7f0bdc`) | **PASS** (Capt `f712e97`) | Sayables-first both |
 
-**Gap:** Frame A both surfaces **PASS**. Frame B: WASM **PASS** · Desktop **HELD** (Catalog) — Wave-22 held until Desktop B clears. Cherry-pick Desktop↔WASM under Ask · Keep · Talk.
+**Gap:** Frame A both surfaces **PASS**. Frame B: WASM **PASS** · Desktop **PARTIAL** (`9738911` Catalog findable; B4 unverified). Wave-22 held. Cherry-pick stands.
 
 **Desktop apps walkthrough** (Capt `d7f0bdc`, fold tip follows): see [`HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md`](./HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md) — Studio/Poet·Dual·Talk·Browser·QApps·Sanctuary·Keep **PASS**; Settings/Library/Continuity copy **PARTIAL**; Catalog·Lexicon **HELD**.
 
@@ -72,12 +72,12 @@ Surfaces: **D** = Webizen Desktop Poet · **W** = WASM / trunk-serve browser Poe
 
 | Check | D | W | Notes |
 |-------|---|---|-------|
-| Catalog · Lexicon held-gate string | **NEEDS_UAT** (mount landed) | **PASS** (Capt `d08d1c9`) | Desktop now mounts Catalog · Lexicon (`lexicon_bay` cherry-pick); Capt re-UAT Frame B |
-| Never “broken” / red missing for lexicon path | **PASS*** | **PASS** | Desktop shell steady no panic-red; WASM PASS |
-| Soft held look (not panic) | **PASS*** | **PASS** | Steady dwell both |
+| Catalog · Lexicon held-gate string | **PARTIAL** (Capt `9738911`) | **PASS** (Capt `d08d1c9`) | Desktop B1–B3 PASS via Vibe→Script→Catalog; B4 live-bind UNVERIFIED |
+| Never “broken” / red missing for lexicon path | **PASS** | **PASS** | Catalog held/not yet; other panes still say unavailable (davinci debt) |
+| Soft held look (not panic) | **PASS** | **PASS** | Catalog chips living · artifact · machine |
 | Daemon-down honesty | PASS* | PASS* | held when Native offline |
 
-**Gap:** Desktop Catalog mount landed (NEEDS_UAT). WASM Frame B **PASS**. Capt re-UAT Desktop B1–B4. Mesh/Aura/Pulse/Job chrome now says held / not yet. Cherry-pick, not parity.
+**Gap:** Desktop Frame B **PARTIAL** — Catalog mount findable (B1–B3); B4 live ALL_BOUND bind unverified. WASM Frame B **PASS**. Wave-22 held until B4 or team accepts Catalog-gate clear only. Broader **unavailable** on Graph/Morpha still chrome debt.
 
 ### Frame C — Living-safe vs tool
 

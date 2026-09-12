@@ -90,6 +90,7 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_DESKTOP_d7f0bdc.md` | Capt | Frame A Desktop PASS after disk cleanup |
 | `HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md` | Capt | Desktop apps walkthrough scoreboard (PASS/PARTIAL/HELD) |
 | `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_d08d1c9.md` | Capt | Frame B: WASM PASS · Desktop HELD (Catalog not mounted) |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_DESKTOP_9738911.md` | Capt | Desktop Frame B PARTIAL — Catalog findable; B4 unverified |
 | `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md` | monet · Capt | Cold-load UAT Frames D–E (motion) |
 | `HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md` | monet | Frames D–E motion parity (desktop ↔ WASM) |
 | `HUMAN_SURFACE_VOCAB_FOR_CHROME_WIP.md` | Marvin / Neo | Plane vocab for chrome — who·claim·handle·tool |
