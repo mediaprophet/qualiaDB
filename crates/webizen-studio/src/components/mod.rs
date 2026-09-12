@@ -65,6 +65,7 @@ pub mod graph_proof;
 pub mod health_vital_monitor;
 pub mod inference_monitor;
 pub mod job_center;
+pub mod keep_hub;
 pub mod key_vault_manager;
 pub mod listen_workbench;
 pub mod logic_modeler;

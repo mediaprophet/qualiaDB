@@ -12,6 +12,7 @@ mod actions;
 mod control_bar;
 mod filters;
 mod help_dialogs;
+mod keep_picker;
 mod manifold;
 mod menu;
 mod pods;

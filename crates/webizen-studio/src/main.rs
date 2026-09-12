@@ -315,7 +315,7 @@ fn TalkAliasRoute() -> Element {
 /// Keep — personal records, body, vault, library. Not an ops dashboard.
 #[component]
 fn KeepRoute() -> Element {
-    rsx! { KeepHub {} }
+    rsx! { crate::components::keep_hub::KeepHub {} }
 }
 
 #[component]
@@ -350,84 +350,6 @@ fn DomainRouteHeader(domain: &'static str, title: &'static str, blurb: &'static 
     }
 }
 
-/// Legacy Keep landing — secondary directory into life domains (not primary nav language).
-#[component]
-fn KeepHub() -> Element {
-    rsx! {
-        div {
-            style: "flex:1; min-height:0; overflow-y:auto; padding:2rem 2rem 3rem; max-width:720px; margin:0 auto; color:var(--qualia-text); box-sizing:border-box; width:100%;",
-            div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;",
-                span {
-                    style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94a3b8;",
-                    "Directory"
-                }
-                span {
-                    style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #475569;background:rgba(71,85,105,0.2);color:#cbd5e1;font-weight:700;",
-                    "Secondary · prefer life-domain nav"
-                }
-            }
-            h1 { style: "margin:0 0 0.35rem; font-size:1.6rem; font-weight:700;", "All destinations" }
-            p { style: "margin:0 0 1.5rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.95rem;",
-                "Private on this machine. Primary shell uses life domains: Memory · Relations · Care · Practice · World · Instruments. This page is a full index for deep links."
-            }
-            div { style: "display:flex; flex-direction:column; gap:0.65rem;",
-                KeepTalkTabLink { tab: "chat", title: "Relations — Chat", blurb: "Private local agent. Nothing leaves this machine unless you send it. Instruments are not peers." }
-                KeepTalkTabLink { tab: "people", title: "Relations — People", blurb: "Invites, contacts, magic links, groups — humans, not identity assets. Directory lists humans first." }
-                KeepTalkTabLink { tab: "directory", title: "Relations — Directory", blurb: "Humans-first address book under People. Organizations = legal-person who-kind; chatbots = tools." }
-                KeepTalkTabLink { tab: "reception", title: "Relations — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
-                KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Purpose inboxes and landed mail. Start the receiver if held; domain DNS stays under Reception." }
-                KeepTalkTabLink { tab: "projects", title: "Practice — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed · Remember → Memory." }
-                KeepLink { to: Route::WellfairRoute {}, title: "Care — Wellfair shell", blurb: "Body, rights, welfare, labour under principal control. Unlock vault for private records." }
-                KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary (vault)", blurb: "Unlock when cooperative projects or work board need the host API." }
-                KeepLink { to: Route::WorkRoute {}, title: "Practice — Work board", blurb: "Kanban — project id fills from Relations → Projects." }
-                KeepLink { to: Route::AnatomyRoute {}, title: "Care — Anatomy", blurb: "See systems and conditions on a reference body." }
-                KeepLink { to: Route::HealthRoute {}, title: "Care — Health vault", blurb: "Vitals, sleep, medication, wellbeing — local journal, not cloud." }
-                KeepLink { to: Route::LibraryRoute {}, title: "Memory — Lived Memory", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
-                KeepLink { to: Route::PoetCatalogRoute {}, title: "Catalog · Lexicon", blurb: "Open a lexicon pack — or honest held / not yet. Live GraphDatabase.lexicon_manifest." }
-                KeepLink { to: Route::VisionRoute {}, title: "Instruments — Vision", blurb: "Local detect/overlay — not a peer person. Synthetic scenes, reject/correct without erasing claims." }
-                KeepLink { to: Route::ListenRoute {}, title: "Instruments — Listen", blurb: "Local ears — features, reference events (not full ASR). Not social." }
-                KeepLink { to: Route::IdentityRoute {}, title: "You — Identity", blurb: "Personal profile, social book, consent. Identifiers ≠ the natural person." }
-                KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary", blurb: "Vault lock and protected spaces." }
-                KeepLink { to: Route::AgencyRoute {}, title: "Care — Agency", blurb: "Guardianship, accountability, safeguards." }
-                KeepLink { to: Route::ChoraRoute {}, title: "World — Chora commons", blurb: "Spatio-temporal commons manifold — attributed public layers." }
-                KeepLink { to: Route::BrowserRoute {}, title: "World — Browser", blurb: "Web pages project into the same entity session as Memory." }
-            }
-        }
-    }
-}
-
-#[component]
-fn KeepLink(to: Route, title: &'static str, blurb: &'static str) -> Element {
-    rsx! {
-        Link {
-            to: to,
-            style: "display:block; text-decoration:none; color:inherit; padding:1rem 1.15rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.22); transition:border-color 0.15s;",
-            strong { style: "display:block; font-size:1rem; margin-bottom:0.25rem;", "{title}" }
-            span { style: "font-size:0.85rem; color:var(--qualia-text-muted); line-height:1.4;", "{blurb}" }
-        }
-    }
-}
-
-/// Keep → Talk deep link: stash SocialHub tab before navigation.
-#[component]
-fn KeepTalkTabLink(tab: &'static str, title: &'static str, blurb: &'static str) -> Element {
-    rsx! {
-        Link {
-            to: Route::TalkRoute {},
-            style: "display:block; text-decoration:none; color:inherit; padding:1rem 1.15rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.22); transition:border-color 0.15s;",
-            onclick: move |_| {
-                #[cfg(target_arch = "wasm32")]
-                if let Some(win) = web_sys::window() {
-                    if let Ok(Some(storage)) = win.session_storage() {
-                        let _ = storage.set_item("webizen_talk_tab", tab);
-                    }
-                }
-            },
-            strong { style: "display:block; font-size:1rem; margin-bottom:0.25rem;", "{title}" }
-            span { style: "font-size:0.85rem; color:var(--qualia-text-muted); line-height:1.4;", "{blurb}" }
-        }
-    }
-}
 
 /// Map omnibox text to a destination. Prefer honest routing over fake multi-product promises.
 fn route_from_omnibox(query: &str) -> Route {

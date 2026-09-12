@@ -203,6 +203,37 @@ pub fn poet_lexicon_manifest(state: State<PoetHarnessState>, path: String) -> Po
     }
 }
 
+/// Live ALL_BOUND bind. Reopen passes `create: false` so a missing file stays held.
+#[tauri::command]
+pub fn poet_volume_open(
+    state: State<PoetHarnessState>,
+    path: String,
+    create: Option<bool>,
+) -> PoetEvalResult {
+    let mut snap = state.snap.lock().expect("poet snapshot");
+    let mut rec = BTreeMap::new();
+    rec.insert("path".into(), Value::String(path));
+    rec.insert("load".into(), Value::Bool(true));
+    rec.insert("create".into(), Value::Bool(create.unwrap_or(false)));
+    match snap.invoke_id("GraphDatabase.volume_open", Value::Record(rec)) {
+        Ok(v) => snapshot_result(&snap, true, format_value(&v), None),
+        Err(e) => snapshot_result(&snap, false, String::new(), Some(e.to_json())),
+    }
+}
+
+/// Live ALL_BOUND bind. UI may celebrate only when the formatted value has `written > 0`.
+#[tauri::command]
+pub fn poet_volume_commit(state: State<PoetHarnessState>, path: String) -> PoetEvalResult {
+    let mut snap = state.snap.lock().expect("poet snapshot");
+    let mut rec = BTreeMap::new();
+    rec.insert("path".into(), Value::String(path));
+    rec.insert("sanctuary".into(), Value::Bool(true));
+    match snap.invoke_id("GraphDatabase.volume_commit", Value::Record(rec)) {
+        Ok(v) => snapshot_result(&snap, true, format_value(&v), None),
+        Err(e) => snapshot_result(&snap, false, String::new(), Some(e.to_json())),
+    }
+}
+
 #[tauri::command]
 pub fn poet_reset(state: State<PoetHarnessState>) -> PoetEvalResult {
     let mut snap = state.snap.lock().expect("poet snapshot");

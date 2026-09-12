@@ -8,7 +8,7 @@ mod bodies;
 mod chest;
 mod chrome;
 mod containers;
-mod engine;
+pub(crate) mod engine;
 mod gpu_frame;
 pub mod icons;
 mod kinds;

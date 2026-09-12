@@ -86,7 +86,7 @@ pub fn open_save_mode_dialog(document: &Document) {
             btn.set_attribute("aria-disabled", "true").ok();
             btn.set_attribute(
                 "title",
-                "Unavailable: the checkpoint store does not yet retain an operation/tombstone DAG to prune.",
+                "held / not yet — prune waits on an operation/tombstone DAG.",
             )
             .ok();
         }
@@ -164,7 +164,7 @@ pub fn open_save_mode_dialog(document: &Document) {
          border-left: 2px solid var(--accent-cyan);",
     );
     honesty.set_text_content(Some(
-        "Auto / Checkpoint / Snapshot write the UI seed to browser storage. They are not a .q42 volume. Durable sanctuary save uses GraphDatabase.volume_commit when a daemon is connected and a path is set. Pruned stays disabled until an operation DAG exists. wasm without a daemon never pretends a volume was saved.",
+        "Auto / Checkpoint / Snapshot write the UI seed to browser storage. They are not a .q42 volume. Durable keep uses GraphDatabase.volume_commit only after a real write. Missing volume or daemon stays held / not yet. Pruned stays held until an operation DAG exists.",
     ));
     panel.append_child(&honesty).unwrap();
 
@@ -181,42 +181,13 @@ pub fn open_save_mode_dialog(document: &Document) {
         .ok();
     vol_state.set_attribute("data-beat", "entrance").ok();
     vol_state.set_text_content(Some(if initial_state == "denied" {
-        "denied · no daemon"
+        crate::keep_volume::HELD_WHY
     } else {
         "closed"
     }));
     panel.append_child(&vol_state).unwrap();
 
-    let vol_div = document.create_element("div").unwrap();
-    vol_div
-        .set_attribute("style", "display: flex; flex-direction: column; gap: 4px;")
-        .unwrap();
-    let vol_label = document.create_element("div").unwrap();
-    vol_label.set_text_content(Some("Sanctuary .q42 path (optional, daemon):"));
-    vol_label
-        .set_attribute("style", "font-size: 11px; color: var(--text-secondary);")
-        .unwrap();
-    vol_div.append_child(&vol_label).unwrap();
-    let vol_input = document.create_element("input").unwrap();
-    vol_input.set_id("save-volume-path");
-    vol_input
-        .set_attribute(
-            "style",
-            "padding: 8px 10px; background: var(--canvas-bg); border: 1px solid var(--border-subtle); \
-             border-radius: var(--radius-xs); color: var(--text-primary); font-family: var(--font-mono); \
-             font-size: 12px; outline: none;",
-        )
-        .unwrap();
-    if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            if let Ok(Some(path)) = storage.get_item("qualia-ui:sanctuary-volume-path") {
-                let input: HtmlInputElement = vol_input.clone().dyn_into().unwrap();
-                input.set_value(&path);
-            }
-        }
-    }
-    vol_div.append_child(&vol_input).unwrap();
-    panel.append_child(&vol_div).unwrap();
+    super::keep_picker::mount_volume_browse(document, &panel);
 
     // Buttons
     let btn_row = document.create_element("div").unwrap();
@@ -358,18 +329,9 @@ pub fn open_save_mode_dialog(document: &Document) {
             _ => super::super::manifest::SaveMode::Checkpoint,
         };
 
-        let volume_path = doc
-            .get_element_by_id("save-volume-path")
-            .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
-            .map(|input| input.value())
-            .unwrap_or_default();
-        let volume_path = volume_path.trim().to_string();
+        let volume_path = super::keep_picker::selected_path(&doc);
         if !volume_path.is_empty() {
-            if let Some(window) = web_sys::window() {
-                if let Ok(Some(storage)) = window.local_storage() {
-                    let _ = storage.set_item("qualia-ui:sanctuary-volume-path", &volume_path);
-                }
-            }
+            super::keep_picker::remember_path(&volume_path);
         }
 
         // Local UI seed persistence — not a .q42 volume.
@@ -413,35 +375,50 @@ pub fn open_save_mode_dialog(document: &Document) {
                 wasm_bindgen_futures::spawn_local(async move {
                     let args = serde_json::json!({ "path": path, "sanctuary": true });
                     match super::super::native_daemon::daemon_invoke(
-                        "GraphDatabase.volume_commit",
+                        crate::keep_volume::COMMIT_ID,
                         args,
                     )
                     .await
                     {
-                        Ok(_) => {
+                        Ok(resp)
+                            if crate::keep_volume::celebrate_commit(
+                                resp.ok,
+                                crate::keep_volume::parse_u64_field(&resp.value, "written"),
+                            ) =>
+                        {
                             set_volume_state(&notify_doc, "committed", "committed");
                             show_menu_notification(
                                 &notify_doc,
-                                "Sanctuary volume committed via GraphDatabase.volume_commit.",
+                                "Keep · committed — GraphDatabase.volume_commit wrote.",
                             );
                         }
-                        Err(err) => {
-                            set_volume_state(&notify_doc, "fault", "fault");
+                        Ok(_) => {
+                            set_volume_state(
+                                &notify_doc,
+                                "held",
+                                crate::keep_volume::HELD_WHY,
+                            );
                             show_menu_notification(
                                 &notify_doc,
-                                &format!(
-                                    "Volume commit failed ({err}). Browser checkpoint is local only — not a durable .q42."
-                                ),
+                                crate::keep_volume::HELD_WHY,
+                            );
+                        }
+                        Err(_) => {
+                            set_volume_state(
+                                &notify_doc,
+                                "fault",
+                                crate::keep_volume::HELD_WHY,
+                            );
+                            show_menu_notification(
+                                &notify_doc,
+                                "held / not yet — browser checkpoint is local only, not a durable .q42.",
                             );
                         }
                     }
                 });
             } else {
-                set_volume_state(&doc, "denied", "denied · no daemon");
-                show_menu_notification(
-                    &doc,
-                    "Unavailable: start the local QualiaDB daemon to run GraphDatabase.volume_commit. Browser checkpoint is local only.",
-                );
+                set_volume_state(&doc, "held", crate::keep_volume::HELD_WHY);
+                show_menu_notification(&doc, crate::keep_volume::HELD_WHY);
             }
         }
     }) as Box<dyn FnMut(web_sys::Event)>);
@@ -452,44 +429,38 @@ pub fn open_save_mode_dialog(document: &Document) {
 
     let open_vol_closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
         let doc = web_sys::window().unwrap().document().unwrap();
-        let volume_path = doc
-            .get_element_by_id("save-volume-path")
-            .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
-            .map(|input| input.value())
-            .unwrap_or_default();
-        let volume_path = volume_path.trim().to_string();
+        let volume_path = super::keep_picker::selected_path(&doc);
         if volume_path.is_empty() {
-            show_menu_notification(&doc, "Set a sanctuary .q42 path before opening.");
+            set_volume_state(&doc, "held", crate::keep_volume::HELD_WHY);
+            show_menu_notification(&doc, crate::keep_volume::HELD_WHY);
             return;
         }
         if !super::super::native_daemon::is_daemon_connected() {
-            set_volume_state(&doc, "denied", "denied · no daemon");
-            show_menu_notification(
-                &doc,
-                "Unavailable: start the local QualiaDB daemon to run GraphDatabase.volume_open.",
-            );
+            set_volume_state(&doc, "held", crate::keep_volume::HELD_WHY);
+            show_menu_notification(&doc, crate::keep_volume::HELD_WHY);
             return;
         }
-        set_volume_state(&doc, "open", "open");
+        super::keep_picker::remember_path(&volume_path);
         let notify_doc = doc.clone();
         wasm_bindgen_futures::spawn_local(async move {
-            let args = serde_json::json!({ "path": volume_path, "load": true });
-            match super::super::native_daemon::daemon_invoke("GraphDatabase.volume_open", args)
+            let args = serde_json::json!({ "path": volume_path, "load": true, "create": false });
+            match super::super::native_daemon::daemon_invoke(crate::keep_volume::OPEN_ID, args)
                 .await
             {
-                Ok(_) => {
+                Ok(resp) if resp.ok => {
                     set_volume_state(&notify_doc, "open", "open");
                     show_menu_notification(
                         &notify_doc,
-                        "Sanctuary volume opened via GraphDatabase.volume_open.",
+                        "Keep opened via GraphDatabase.volume_open.",
                     );
                 }
-                Err(err) => {
-                    set_volume_state(&notify_doc, "fault", "fault");
-                    show_menu_notification(
+                Ok(_) | Err(_) => {
+                    set_volume_state(
                         &notify_doc,
-                        &format!("Volume open failed ({err}). No fake graph was loaded."),
+                        "held",
+                        crate::keep_volume::HELD_WHY,
                     );
+                    show_menu_notification(&notify_doc, crate::keep_volume::HELD_WHY);
                 }
             }
         });
