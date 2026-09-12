@@ -30,14 +30,7 @@ struct HardwareTelemetry {
 }
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    async fn tauri_listen(
-        event: &str,
-        handler: &js_sys::Function,
-    ) -> Result<js_sys::Function, wasm_bindgen::JsValue>;
-}
+use crate::tauri_ffi::listen as tauri_listen;
 
 use crate::canvas_editor::{
     clamp_pane_origin, clamp_pane_size, grid_metrics, new_workspace_shell, pixel_delta_to_grid,

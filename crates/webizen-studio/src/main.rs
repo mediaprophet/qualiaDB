@@ -9,9 +9,8 @@ mod studio_canvas;
 pub mod telemetry;
 
 // Shared modules live in the lib rlib once. Re-export so `crate::…` in the bin
-// uses the same types (Page, motion, endpoints) and spatial_bridge Tauri FFI
-// is not compiled a second time into the wasm link.
-pub use webizen_studio::{canvas_graph, canvas_model, endpoints, render, theme_engine};
+// uses the same types (Page, motion, endpoints) and the single-owner Tauri FFI.
+pub use webizen_studio::{canvas_graph, canvas_model, endpoints, render, tauri_ffi, theme_engine};
 
 use dioxus::prelude::*;
 use serde::Deserialize;
@@ -23,14 +22,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    async fn tauri_listen(
-        event: &str,
-        handler: &js_sys::Function,
-    ) -> Result<js_sys::Function, wasm_bindgen::JsValue>;
-}
+use crate::tauri_ffi::listen as tauri_listen;
 
 #[cfg(target_arch = "wasm32")]
 fn event_payload_string(event: &JsValue) -> Option<String> {
@@ -389,7 +381,6 @@ fn DomainRouteHeader(domain: &'static str, title: &'static str, blurb: &'static 
         }
     }
 }
-
 
 /// Map omnibox text to a destination. Prefer honest routing over fake multi-product promises.
 fn route_from_omnibox(query: &str) -> Route {
@@ -1943,6 +1934,9 @@ mod route_identity_tests {
         assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
         assert_eq!(Route::LibraryRoute {}.to_string(), "/library");
         assert_eq!(Route::SettingsRoute {}.to_string(), "/settings");
-        assert_ne!(Route::TalkMailRoute {}.to_string(), Route::PoetRoute {}.to_string());
+        assert_ne!(
+            Route::TalkMailRoute {}.to_string(),
+            Route::PoetRoute {}.to_string()
+        );
     }
 }

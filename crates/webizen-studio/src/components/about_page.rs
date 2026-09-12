@@ -2,22 +2,12 @@ use dioxus::prelude::*;
 use serde::Deserialize;
 
 #[cfg(target_arch = "wasm32")]
-use serde_json::json;
+use crate::tauri_ffi::invoke as tauri_invoke;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use serde_json::json;
 
 const PAGE_STYLE: &str = "width: 100%; height: 100%; overflow-y: auto; padding: 2rem 2rem 3rem;";
 const PANEL_STYLE: &str = "background: var(--qualia-surface); border: 1px solid var(--qualia-border); border-radius: 18px; padding: 1.2rem; backdrop-filter: blur(22px); box-shadow: 0 10px 32px rgba(0,0,0,0.08);";
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
 
 #[cfg(target_arch = "wasm32")]
 async fn invoke_tauri_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>

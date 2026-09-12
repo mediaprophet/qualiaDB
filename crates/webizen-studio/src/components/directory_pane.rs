@@ -12,19 +12,9 @@
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
+use crate::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
 use serde_json::json;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
 
 #[cfg(target_arch = "wasm32")]
 async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
@@ -85,8 +75,13 @@ fn who_kind_of(entry: &serde_json::Value) -> &'static str {
             } else if hay.split(|c: char| !c.is_ascii_alphanumeric()).any(|t| {
                 matches!(
                     t,
-                    "organization" | "organisation" | "org" | "company" | "institution"
-                        | "business" | "ngo"
+                    "organization"
+                        | "organisation"
+                        | "org"
+                        | "company"
+                        | "institution"
+                        | "business"
+                        | "ngo"
                 )
             }) {
                 "organization"
@@ -116,9 +111,7 @@ fn who_kind_rank(kind: &str) -> u8 {
 
 fn entries_humans_first(entries: Vec<serde_json::Value>) -> Vec<serde_json::Value> {
     let mut out = entries;
-    out.sort_by(|a, b| {
-        who_kind_rank(who_kind_of(a)).cmp(&who_kind_rank(who_kind_of(b)))
-    });
+    out.sort_by(|a, b| who_kind_rank(who_kind_of(a)).cmp(&who_kind_rank(who_kind_of(b))));
     out
 }
 
@@ -445,10 +438,15 @@ mod tests {
 
     #[test]
     fn chrome_never_calls_org_or_bot_a_person() {
-        assert_eq!(who_kind_label("organization"), "Organization · legal person");
+        assert_eq!(
+            who_kind_label("organization"),
+            "Organization · legal person"
+        );
         assert_eq!(who_kind_label("tool"), "Tool");
         assert_eq!(who_kind_label("human"), "Human");
-        assert!(!who_kind_label("organization").to_ascii_lowercase().contains("a person"));
+        assert!(!who_kind_label("organization")
+            .to_ascii_lowercase()
+            .contains("a person"));
         assert!(!who_kind_label("tool").eq_ignore_ascii_case("person"));
     }
 

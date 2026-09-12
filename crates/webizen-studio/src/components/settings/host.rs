@@ -1,17 +1,7 @@
 use serde::de::DeserializeOwned;
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        command: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use crate::tauri_ffi::invoke as tauri_invoke;
 
 #[cfg(target_arch = "wasm32")]
 pub async fn invoke_json<T: DeserializeOwned>(

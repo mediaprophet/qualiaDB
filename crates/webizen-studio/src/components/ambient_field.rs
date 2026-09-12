@@ -29,14 +29,7 @@ pub struct AmbientTelemetry {
 }
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use crate::tauri_ffi::invoke as tauri_invoke;
 
 #[cfg(target_arch = "wasm32")]
 async fn fetch_telemetry() -> Result<AmbientTelemetry, String> {

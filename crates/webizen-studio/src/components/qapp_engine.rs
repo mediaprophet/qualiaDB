@@ -14,19 +14,6 @@ use serde::Deserialize;
 mod imp {
     use wasm_bindgen::prelude::*;
 
-    #[wasm_bindgen::prelude::wasm_bindgen]
-    extern "C" {
-        #[wasm_bindgen(
-            js_namespace = ["window", "__TAURI__", "core"],
-            js_name = invoke,
-            catch
-        )]
-        async fn tauri_invoke_raw(
-            cmd: &str,
-            args: wasm_bindgen::JsValue,
-        ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-    }
-
     pub async fn tauri_invoke(
         cmd: &str,
         args: wasm_bindgen::JsValue,
@@ -51,7 +38,7 @@ mod imp {
             ));
         }
 
-        tauri_invoke_raw(cmd, args).await
+        crate::tauri_ffi::invoke(cmd, args).await
     }
 }
 
