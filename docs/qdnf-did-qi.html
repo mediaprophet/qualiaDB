@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>did:qi method draft</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">Q</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+  <main class="q-wrap max-w-3xl mx-auto px-6 pt-14 pb-24">
+    <p class="q-chip mb-6">Instrument identity · not DID Spec Registries</p>
+    <h1 class="q-hero-title font-display mb-5">did:qi</h1>
+    <p class="q-lede mb-6">Qualia Identifier method for instrument identity (node, organisation, contextual persona). Prefix <code class="q-mono">did:qi:</code>. Internal draft 0.1.0 — not a W3C Technical Report, not registered, not a CSCP relay.</p>
+    <div class="q-card p-8 mb-12">
+      <p class="q-kicker mb-3">Honesty</p>
+      <ul class="q-ledger" style="color:var(--q-muted);max-width:40rem">
+        <li>In-process CRUD / vectors exist. This is not DID Spec Registries.</li>
+        <li>It is not <code class="q-mono">did:q42</code> (Q42 Resource Coordinate) and not Human-Centered AI.</li>
+        <li>Not a claim that CSCP-08 or CSCP-12 is done. A locator is a handle — never the human (NaturalAgent).</li>
+      </ul>
+    </div>
+    <p class="flex flex-wrap gap-3">
+      <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
+      <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/">QDNF specification</a>
+    </p>
+  </main>
+  <footer class="q-site-footer">Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.</footer>
+</body>
+</html>
