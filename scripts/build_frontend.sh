@@ -44,18 +44,22 @@ fi
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
 # Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.
-# Clear for the frontend build only.
-export RUSTFLAGS="${RUSTFLAGS_WASM:-}"
-export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-}"
-unset CARGO_ENCODED_RUSTFLAGS || true
-# Mixed-toolchain / fat-LTO wasm links fail with "failed to load bitcode".
-# Force release LTO off for this dx web build only (workspace wasm-release profile untouched).
+# Also disable wasm fat-LTO / bitcode: rust-lld fails with
+#   failed to load bitcode of module "webizen_studio-*.rcgu.o"
+FRONTEND_WASM_RUSTFLAGS="-C lto=off -C embed-bitcode=no"
+export RUSTFLAGS="${RUSTFLAGS_WASM:-$FRONTEND_WASM_RUSTFLAGS}"
+export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-$FRONTEND_WASM_RUSTFLAGS}"
+# dx --release uses web-release; also clear release/wasm-release LTO env overrides Capt may set.
+export CARGO_PROFILE_WEB_RELEASE_LTO="${CARGO_PROFILE_WEB_RELEASE_LTO:-false}"
 export CARGO_PROFILE_RELEASE_LTO="${CARGO_PROFILE_RELEASE_LTO:-false}"
+export CARGO_PROFILE_WASM_RELEASE_LTO="${CARGO_PROFILE_WASM_RELEASE_LTO:-false}"
+export CARGO_INCREMENTAL=0
+unset CARGO_ENCODED_RUSTFLAGS || true
 
 (
   cd "$repo_root/crates/webizen-studio"
-  # Prefer a clean bindgen output dir so a previous failed mac run cannot leave a half file.
-  rm -rf "$repo_root/target/dx/webizen-studio/release/web/public/wasm" || true
+  # Drop stale dx artifacts so mixed bitcode / duplicate wbindgen objects cannot relink.
+  rm -rf "$repo_root/target/dx/webizen-studio" || true
   dx build --web --release
 )
 

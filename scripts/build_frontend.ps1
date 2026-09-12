@@ -188,12 +188,17 @@ Write-Host "Using wasm-opt: $((Get-Command wasm-opt).Source)"
 # redownload a managed wasm-bindgen on every invocation. Agents and offline
 # builds must use the exact pinned local CLI established above.
 $env:NO_DOWNLOADS = "1"
-# Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen; clear for frontend only.
-if ($env:RUSTFLAGS_WASM) { $env:RUSTFLAGS = $env:RUSTFLAGS_WASM } else { Remove-Item Env:RUSTFLAGS -ErrorAction SilentlyContinue }
+# Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen; also force LTO/bitcode off for dx wasm.
+$FrontendWasmRustflags = "-C lto=off -C embed-bitcode=no"
+if ($env:RUSTFLAGS_WASM) { $env:RUSTFLAGS = $env:RUSTFLAGS_WASM } else { $env:RUSTFLAGS = $FrontendWasmRustflags }
+if (-not $env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS) {
+    $env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS = $FrontendWasmRustflags
+}
 Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
-# Mixed-toolchain / fat-LTO wasm links fail with "failed to load bitcode".
-# Force release LTO off for this dx web build only (workspace wasm-release untouched).
+if (-not $env:CARGO_PROFILE_WEB_RELEASE_LTO) { $env:CARGO_PROFILE_WEB_RELEASE_LTO = "false" }
 if (-not $env:CARGO_PROFILE_RELEASE_LTO) { $env:CARGO_PROFILE_RELEASE_LTO = "false" }
+if (-not $env:CARGO_PROFILE_WASM_RELEASE_LTO) { $env:CARGO_PROFILE_WASM_RELEASE_LTO = "false" }
+$env:CARGO_INCREMENTAL = "0"
 
 Write-Host "Building webizen-studio..."
 $publicAssets = "$PSScriptRoot/../target/dx/webizen-studio/release/web/public/assets"
@@ -201,9 +206,9 @@ if (Test-Path $publicAssets) {
     Get-ChildItem -LiteralPath $publicAssets -Filter "webizen-studio*" -File |
         Remove-Item -Force
 }
-$wasmOut = "$PSScriptRoot/../target/dx/webizen-studio/release/web/public/wasm"
-if (Test-Path $wasmOut) {
-    Remove-Item -LiteralPath $wasmOut -Recurse -Force -ErrorAction SilentlyContinue
+$dxOut = "$PSScriptRoot/../target/dx/webizen-studio"
+if (Test-Path $dxOut) {
+    Remove-Item -LiteralPath $dxOut -Recurse -Force -ErrorAction SilentlyContinue
 }
 Push-Location "$PSScriptRoot/../crates/webizen-studio"
 $dxBuildCommand = "dx build --web --release 2>&1"

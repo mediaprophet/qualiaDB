@@ -41,6 +41,17 @@ lto = true
 codegen-units = 1
 strip = "symbols"
 
+# Dioxus CLI (`dx build --web --release`) uses this named profile for webizen-studio.
+# Fat LTO / embed-bitcode on wasm32 fails at rust-lld with:
+#   failed to load bitcode of module "webizen_studio-*.rcgu.o"
+# Keep LTO off here. Do not reuse [profile.wasm-release] (LTO=true for mobile-harness).
+[profile.web-release]
+inherits = "release"
+lto = false
+codegen-units = 16
+opt-level = "s"
+incremental = false
+
 [profile.release.package.poet]
 opt-level = "s"
 
