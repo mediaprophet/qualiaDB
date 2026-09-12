@@ -13,8 +13,8 @@ pub fn SetupHealthPanel(
     let Some(snapshot) = snapshot else {
         return rsx! {
             div { style: "{super::WARNING_CARD}",
-                strong { "Desktop host not available" }
-                p { style: "margin:6px 0 12px;font-size:.74rem;", "Setup health uses structured native diagnostics and is unavailable in the public preview." }
+                strong { "held / not yet" }
+                p { style: "margin:6px 0 12px;font-size:.74rem;", "Setup health uses structured native diagnostics and is held / not yet in the public preview." }
                 button { style: "{super::SECONDARY_BUTTON}", onclick: move |_| on_refresh.call(()), "Try again" }
             }
         };

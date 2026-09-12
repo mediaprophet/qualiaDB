@@ -66,7 +66,9 @@ pub fn SettingsShell() -> Element {
         .collect();
 
     rsx! {
-        div { style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:var(--qualia-bg);color:var(--qualia-text);overflow:hidden;",
+        div {
+            "data-surface": "settings",
+            style: "flex:1;width:100%;min-height:28rem;display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:var(--qualia-bg);color:var(--qualia-text);overflow:hidden;",
             aside { style: "min-height:0;border-right:1px solid var(--qualia-border);background:color-mix(in srgb,var(--qualia-surface) 94%,var(--qualia-bg));padding:18px 12px;overflow-y:auto;overscroll-behavior:contain;",
                 div { style: "padding:0 8px 15px;",
                     div { style: "font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--qualia-accent);", "Your Webizen" }

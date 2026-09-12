@@ -50,7 +50,13 @@ pub fn HostSnapshotProvider(children: Element) -> Element {
     });
 
     use_context_provider(|| snapshot);
-    rsx! { {children} }
+    rsx! {
+        div {
+            class: "host-snapshot-provider",
+            style: "flex:1;min-height:0;min-width:0;width:100%;height:100%;display:flex;flex-direction:column;",
+            {children}
+        }
+    }
 }
 
 pub fn use_host_snapshot() -> Signal<WellfairHostSnapshot> {

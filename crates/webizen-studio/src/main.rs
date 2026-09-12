@@ -8,6 +8,7 @@ pub mod endpoints;
 mod pane_generator;
 mod pane_registry;
 pub mod render;
+mod shell_dest;
 mod studio_canvas;
 pub mod telemetry;
 pub mod theme_engine;
@@ -160,13 +161,13 @@ fn main() {
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
     #[layout(AppLayout)]
-    /// Default open: Lived Memory (Library) — flagship habitat surface.
+    /// Talk is Desktop home (empty hash). Lived Memory is `/library`.
     #[route("/")]
-    LibraryRoute {},
-
-    /// Relations domain (people, chat, offers) — formerly Talk.
-    #[route("/talk")]
     TalkRoute {},
+
+    /// Deep link kept so Relations bookmarks and `/talk` hashes still resolve.
+    #[route("/talk")]
+    TalkAliasRoute {},
 
     #[route("/home")]
     DashboardRoute {},
@@ -231,8 +232,9 @@ pub enum Route {
     #[route("/nexus")]
     NexusRoute {},
 
+    /// Hypermedia Library / Lived Memory — distinct from Talk home.
     #[route("/library")]
-    LibraryAliasRoute {},
+    LibraryRoute {},
 
     #[route("/vision")]
     VisionRoute {},
@@ -298,10 +300,16 @@ fn AnatomyTestRoute() -> Element {
 fn TalkRoute() -> Element {
     rsx! {
         div {
+            "data-surface": "talk",
             style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
             components::relations::RelationsShell {}
         }
     }
+}
+
+#[component]
+fn TalkAliasRoute() -> Element {
+    rsx! { TalkRoute {} }
 }
 
 /// Keep — personal records, body, vault, library. Not an ops dashboard.
@@ -480,7 +488,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "universe" | "chora" | "stars" | "space" => return Route::ChoraRoute {},
         "anatomy" | "body" => return Route::AnatomyRoute {},
         "settings" | "prefs" => return Route::SettingsRoute {},
-        "home" | "dashboard" | "overview" => return Route::LibraryRoute {},
+        "home" | "dashboard" | "overview" => return Route::TalkRoute {},
         "library" | "memory" | "lived-memory" => return Route::LibraryRoute {},
         "vision" | "detect" | "overlay" => return Route::VisionRoute {},
         "listen" | "audio" | "ears" => return Route::ListenRoute {},
@@ -585,7 +593,9 @@ fn LibraryRoute() -> Element {
     let mode = components::experience_mode::use_experience_mode();
     rsx! {
         div {
-            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;",
+            "data-surface": "library",
+            "aria-label": "Hypermedia Library",
+            style: "flex: 1; min-height: 28rem; display: flex; flex-direction: column; overflow: hidden;",
             if mode().is_advanced() {
                 div {
                     style: "flex:1;min-height:0;overflow-y:auto;padding:1rem;box-sizing:border-box;",
@@ -596,11 +606,6 @@ fn LibraryRoute() -> Element {
             }
         }
     }
-}
-
-#[component]
-fn LibraryAliasRoute() -> Element {
-    rsx! { LibraryRoute {} }
 }
 
 #[component]
@@ -776,7 +781,9 @@ fn GpuViewportRoute() -> Element {
 fn SettingsRoute() -> Element {
     rsx! {
         div {
-            style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;",
+            "data-surface": "settings",
+            "aria-label": "Settings",
+            style: "flex:1;min-height:28rem;width:100%;display:flex;flex-direction:column;overflow:hidden;",
             components::settings_page::SettingsPage {}
         }
     }
@@ -1112,34 +1119,13 @@ fn AppLayout() -> Element {
                     let Some(target) = event_payload_string(&event) else {
                         return;
                     };
-                    let _ = match target.as_str() {
-                        "talk" | "chat" => menu_nav.push(Route::TalkRoute {}),
-                        "directory" | "contacts" | "addressbook" => {
+                    match shell_dest::normalize_shell_target(&target).as_str() {
+                        "directory" | "contacts" | "addressbook" | "address-book" => {
                             components::relations::stash_directory_handoff();
-                            menu_nav.push(Route::TalkRoute {})
                         }
-                        "keep" => menu_nav.push(Route::KeepRoute {}),
-                        "dashboard" | "home" => menu_nav.push(Route::DashboardRoute {}),
-                        "wellfair" => menu_nav.push(Route::WellfairRoute {}),
-                        "chora" => menu_nav.push(Route::ChoraRoute {}),
-                        "browser" | "reach" => menu_nav.push(Route::BrowserRoute {}),
-                        "10d-browser" => menu_nav.push(Route::TenDBrowserRoute {}),
-                        "settings" => menu_nav.push(Route::SettingsRoute {}),
-                        "library" | "memory" => menu_nav.push(Route::LibraryRoute {}),
-                        "wallet" | "identity" => menu_nav.push(Route::IdentityRoute {}),
-                        "qapp-studio" => menu_nav.push(Route::StudioRoute {}),
-                        "qapps" => menu_nav.push(Route::QAppsRoute {}),
-                        "render-preview" => menu_nav.push(Route::RenderPreviewRoute {}),
-                        "anatomy" => menu_nav.push(Route::AnatomyRoute {}),
-                        "health" => menu_nav.push(Route::HealthRoute {}),
-                        "tools" => menu_nav.push(Route::ToolsRoute {}),
-                        "sanctuary" => menu_nav.push(Route::SanctuaryRoute {}),
-                        "logs" => menu_nav.push(Route::LogsRoute {}),
-                        "jobs" => menu_nav.push(Route::JobsRoute {}),
-                        "gpu-viewport" => menu_nav.push(Route::GpuViewportRoute {}),
-                        "poet" | "vibe" => menu_nav.push(Route::PoetRoute {}),
-                        _ => menu_nav.push(Route::TalkRoute {}),
-                    };
+                        _ => {}
+                    }
+                    let _ = menu_nav.push(shell_dest::route_from_shell_target(&target));
                 }));
 
                 let mut kind_signal = shell_kind;
@@ -1437,9 +1423,9 @@ fn AppLayout() -> Element {
                     }
                 } else {
                     Link {
-                        to: Route::LibraryRoute {},
+                        to: Route::TalkRoute {},
                         style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
-                        title: "Lived Memory — meaning shelf (flagship habitat surface)",
+                        title: "Talk — home (chat & people). Lived Memory is Memory / Library.",
                         div {
                             style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
                             "⬡"
@@ -1846,6 +1832,8 @@ fn App() -> Element {
                 flex: 1 1 auto;
                 min-height: 0;
                 min-width: 0;
+                display: flex;
+                flex-direction: column;
             }}
             .app-sidebar-nav::-webkit-scrollbar {{ width: 8px; }}
             .app-sidebar-nav::-webkit-scrollbar-track {{ background: transparent; }}
@@ -1954,5 +1942,28 @@ fn App() -> Element {
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; max-height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden; display: flex; flex-direction: column; min-height: 0;",
             components::onboarding::OnboardingGate {}
         }
+    }
+}
+
+#[cfg(test)]
+mod route_identity_tests {
+    use super::*;
+
+    #[test]
+    fn omnibox_home_is_talk_library_is_shelf() {
+        assert_eq!(route_from_omnibox("home"), Route::TalkRoute {});
+        assert_eq!(route_from_omnibox("talk"), Route::TalkRoute {});
+        assert_eq!(route_from_omnibox("library"), Route::LibraryRoute {});
+        assert_eq!(route_from_omnibox("memory"), Route::LibraryRoute {});
+        assert_eq!(route_from_omnibox("settings"), Route::SettingsRoute {});
+        assert_ne!(route_from_omnibox("library"), Route::TalkRoute {});
+    }
+
+    #[test]
+    fn canonical_paths_do_not_share_home() {
+        assert_eq!(Route::TalkRoute {}.to_string(), "/");
+        assert_eq!(Route::TalkAliasRoute {}.to_string(), "/talk");
+        assert_eq!(Route::LibraryRoute {}.to_string(), "/library");
+        assert_eq!(Route::SettingsRoute {}.to_string(), "/settings");
     }
 }

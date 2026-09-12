@@ -127,12 +127,12 @@ pub fn prepare_palette_navigation(id: &str) {
 /// Map a palette id to a studio [`Route`].
 pub fn route_for_palette_id(id: &str) -> Route {
     match id {
-        "memory" | "library" | "home" | "lived-memory" => Route::LibraryRoute {},
+        "memory" | "library" | "lived-memory" => Route::LibraryRoute {},
         "directory" | "contacts" | "addressbook" | "address-book" => {
             crate::components::relations::stash_directory_handoff();
             Route::TalkRoute {}
         }
-        "relations" | "talk" | "chat" | "people" | "mail" | "email" => Route::TalkRoute {},
+        "relations" | "talk" | "chat" | "people" | "mail" | "email" | "home" => Route::TalkRoute {},
         "selfhood" | "identity" => Route::IdentityRoute {},
         "care" | "wellfair" | "health" => Route::WellfairRoute {},
         "world" | "browser" | "reach" | "web" => Route::BrowserRoute {},
@@ -145,7 +145,7 @@ pub fn route_for_palette_id(id: &str) -> Route {
         "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
         "poet" | "vibe" => Route::PoetRoute {},
         "logs" => Route::LogsRoute {},
-        _ => Route::LibraryRoute {},
+        _ => Route::TalkRoute {},
     }
 }
 
@@ -429,6 +429,11 @@ mod tests {
             route_for_palette_id("library"),
             Route::LibraryRoute {}
         ));
+        assert!(matches!(route_for_palette_id("home"), Route::TalkRoute {}));
+        assert_ne!(
+            route_for_palette_id("library"),
+            route_for_palette_id("talk")
+        );
         assert!(matches!(
             route_for_palette_id("catalog"),
             Route::PoetCatalogRoute {}

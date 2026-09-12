@@ -196,7 +196,8 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   }
 
   function createTab(qappId) {
-    // Default tab: Talk (human-first front door). Empty hash → studio `/` = TalkRoute.
+    // Default tab: Talk (human-first front door). Empty hash → studio `/` = Talk.
+    // Library is `/studio/#/library` — never recycle the empty hash.
     qappId = normalizeQappId(qappId);
     const path = studioPath(qappId);
     const url = '/studio/#/' + path;
