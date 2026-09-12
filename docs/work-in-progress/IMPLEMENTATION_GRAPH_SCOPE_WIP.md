@@ -120,7 +120,7 @@ Poet / Desktop: Catalog-adjacent panel — “what’s Present / Live / Planned�
 | Beat | What | Done when |
 |------|------|-----------|
 | **A** | This scope folded; Capt agrees scorecard can consume graph emit | Neo fold |
-| **B** | MVP indexer: tip + ALL_BOUND + file list + doc cite scrape → N-Quads/JSON | CLI runs on QualiaDB checkout in CI or agent box |
+| **B** | MVP indexer: tip + ALL_BOUND + file list + doc cite scrape → N-Quads/JSON | CLI: `cargo run -p work-graph -- index` → `target/work-graph/impl-graph.{nq,json}` (scaffold in `crates/work-graph`; see `WORK_GRAPH_INDEXER.md`) |
 | **C** | Note attach CLI + shape validate | Notes round-trip; revoke note ≠ delete symbol |
 | **D** | Coverage query: Present families missing from vibe-script Pages | Replaces manual scorecard gaps |
 | **E** | Poet/Desktop read-only viewer (plain words) | Capt UAT: no false Live |
@@ -157,7 +157,7 @@ Poet / Desktop: Catalog-adjacent panel — “what’s Present / Live / Planned�
 1. @Neo fold → `docs/work-in-progress/IMPLEMENTATION_GRAPH_SCOPE_WIP.md`.  
 2. @Vibe customer-facing name + query sayables.  
 3. @Capt confirm scorecard will take graph emit as SoT for Pages UAT.  
-4. @Neo Beat B scaffold (cloud agent) after fold — Marvin stays on shapes if gaps appear.
+4. @Neo Beat B scaffold — `crates/work-graph` CLI (`work-graph index`). Marvin stays on shapes if gaps appear.
 
 ---
 
