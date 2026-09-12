@@ -105,7 +105,7 @@ pub fn MailInboxPane() -> Element {
         });
     };
 
-    let open_message = move |id: String| {
+    let mut open_message = move |id: String| {
         selected_id.set(id.clone());
         spawn(async move {
             match invoke_json::<serde_json::Value>(

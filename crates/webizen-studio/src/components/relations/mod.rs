@@ -10,10 +10,11 @@ pub mod types;
 use crate::components::experience_mode::{use_experience_mode, ExperienceModeSwitch};
 use dioxus::prelude::*;
 use groups::GroupsOverview;
-use mail::MailInboxPane;
 use people::PeopleOverview;
 use technical::RelationshipTechnicalInspector;
-use types::{section_from_talk_tab, RelationsSection, ALL_SECTIONS};
+use types::{RelationsSection, ALL_SECTIONS};
+#[cfg(target_arch = "wasm32")]
+use types::section_from_talk_tab;
 
 pub use mail::MailInboxPane;
 
