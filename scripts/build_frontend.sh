@@ -13,8 +13,18 @@ if [[ -n "$(git -C "$repo_root" status --porcelain)" ]]; then
   source_revision="${source_revision}-dirty"
 fi
 
-if ! command -v dx >/dev/null 2>&1; then
-  cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+# Keep dx in lockstep with crates/webizen-studio dioxus "=0.8.0-alpha.1".
+DX_CLI_VERSION="${DX_CLI_VERSION:-0.8.0-alpha.1}"
+need_dx_install=1
+if command -v dx >/dev/null 2>&1; then
+  # `dx --version` prints e.g. "dioxus 0.8.0-alpha.1" (or dx/dioxus-cli variants).
+  if dx --version 2>/dev/null | grep -Eq "${DX_CLI_VERSION}"; then
+    need_dx_install=0
+  fi
+fi
+if [[ "$need_dx_install" -eq 1 ]]; then
+  echo "Installing dioxus-cli ${DX_CLI_VERSION} (must match studio dioxus pin)..."
+  cargo install dioxus-cli --version "${DX_CLI_VERSION}" --locked --force
 fi
 
 # dx shell-outs to whatever `wasm-bindgen` is on PATH. A CLI/crate mismatch fails with:
@@ -38,6 +48,9 @@ echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
 export RUSTFLAGS="${RUSTFLAGS_WASM:-}"
 export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-}"
 unset CARGO_ENCODED_RUSTFLAGS || true
+# Mixed-toolchain / fat-LTO wasm links fail with "failed to load bitcode".
+# Force release LTO off for this dx web build only (workspace wasm-release profile untouched).
+export CARGO_PROFILE_RELEASE_LTO="${CARGO_PROFILE_RELEASE_LTO:-false}"
 
 (
   cd "$repo_root/crates/webizen-studio"

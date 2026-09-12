@@ -18,13 +18,22 @@ $sourceTreeDirty = -not [string]::IsNullOrWhiteSpace(($initialStatus -join "`n")
 
 # Keep in lockstep with crates/webizen-studio/Cargo.toml wasm-bindgen pin.
 $WasmBindgenCliVersion = if ($env:WASM_BINDGEN_CLI_VERSION) { $env:WASM_BINDGEN_CLI_VERSION } else { "0.2.125" }
-# Keep in lockstep with dioxus-cli 0.8.0-alpha.0/src/esbuild.rs.
+# Keep in lockstep with crates/webizen-studio dioxus "=0.8.0-alpha.1" and dx esbuild bundling.
 $EsbuildVersion = if ($env:ESBUILD_VERSION) { $env:ESBUILD_VERSION } else { "0.27.3" }
 
-Write-Host "Ensuring dioxus-cli is installed..."
-if (!(Get-Command "dx" -ErrorAction SilentlyContinue)) {
-    Write-Host "Installing dioxus-cli..."
-    cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+# Keep dx in lockstep with crates/webizen-studio dioxus "=0.8.0-alpha.1".
+$DxCliVersion = if ($env:DX_CLI_VERSION) { $env:DX_CLI_VERSION } else { "0.8.0-alpha.1" }
+Write-Host "Ensuring dioxus-cli $DxCliVersion is installed..."
+$needDxInstall = $true
+if (Get-Command "dx" -ErrorAction SilentlyContinue) {
+    $dxVer = (& dx --version 2>$null | Out-String).Trim()
+    if ($dxVer -match [regex]::Escape($DxCliVersion)) {
+        $needDxInstall = $false
+    }
+}
+if ($needDxInstall) {
+    Write-Host "Installing dioxus-cli $DxCliVersion (must match studio dioxus pin)..."
+    cargo install dioxus-cli --version $DxCliVersion --locked --force
 }
 
 # dx uses whatever wasm-bindgen is on PATH. CLI/crate mismatch fails with:
@@ -182,6 +191,9 @@ $env:NO_DOWNLOADS = "1"
 # Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen; clear for frontend only.
 if ($env:RUSTFLAGS_WASM) { $env:RUSTFLAGS = $env:RUSTFLAGS_WASM } else { Remove-Item Env:RUSTFLAGS -ErrorAction SilentlyContinue }
 Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
+# Mixed-toolchain / fat-LTO wasm links fail with "failed to load bitcode".
+# Force release LTO off for this dx web build only (workspace wasm-release untouched).
+if (-not $env:CARGO_PROFILE_RELEASE_LTO) { $env:CARGO_PROFILE_RELEASE_LTO = "false" }
 
 Write-Host "Building webizen-studio..."
 $publicAssets = "$PSScriptRoot/../target/dx/webizen-studio/release/web/public/assets"
