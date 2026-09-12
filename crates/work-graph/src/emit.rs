@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::model::WorkGraph;
 
 pub const NS: &str = "https://webizen.org/ns/work-graph#";
-pub const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+pub const RDF_TYPE: &str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 pub const NQ_NAME: &str = "impl-graph.nq";
 pub const JSON_NAME: &str = "impl-graph.json";
 
@@ -354,6 +354,10 @@ mod tests {
         assert!(nq.contains("ClinicalRisk.framingham"));
         assert!(nq.contains("documentedBy"));
         assert!(nq.contains("emitHonesty"));
+        assert!(
+            nq.contains("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"),
+            "rdf:type must be an IRI in N-Quads"
+        );
         assert!(!nq.contains("ImplGraph."));
         assert!(!nq.contains("held"));
     }
