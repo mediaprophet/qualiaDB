@@ -61,15 +61,14 @@ impl DaemonProbe {
     }
 }
 
-/// Ports to try: active process port first, then canonical 4242.
+/// Ports to try: canonical 4242 first, then any active bumped port.
+/// Preferring 4242 stops Catalog from following a Desktop spawn on :4243 when
+/// a healthy Qualia daemon is already on the contract port.
 pub fn candidate_ports() -> Vec<u16> {
     let active = qualia_client_core::api::get_active_daemon_port();
-    let mut ports = Vec::new();
-    if active != 0 {
+    let mut ports = vec![GRAPH_DAEMON_PORT];
+    if active != 0 && active != GRAPH_DAEMON_PORT && !ports.contains(&active) {
         ports.push(active);
-    }
-    if !ports.contains(&GRAPH_DAEMON_PORT) {
-        ports.push(GRAPH_DAEMON_PORT);
     }
     ports
 }
@@ -98,24 +97,33 @@ fn blocking_client(timeout_ms: u64) -> Result<reqwest::blocking::Client, String>
         .map_err(|e| e.to_string())
 }
 
+/// HTTP GET `/health` on one port — Qualia engine only (must carry `engine`).
+pub fn probe_daemon_port(port: u16) -> DaemonProbe {
+    let Ok(client) = blocking_client(HEALTH_TIMEOUT_MS) else {
+        return DaemonProbe::held(port);
+    };
+    let url = format!("http://127.0.0.1:{port}/health");
+    let Ok(res) = client.get(&url).send() else {
+        return DaemonProbe::held(port);
+    };
+    if !res.status().is_success() {
+        return DaemonProbe::held(port);
+    }
+    let Ok(v) = res.json::<JsonValue>() else {
+        return DaemonProbe::held(port);
+    };
+    if let Some((engine, version, quins)) = parse_health_json(&v) {
+        return DaemonProbe::live(port, engine, version, quins);
+    }
+    DaemonProbe::held(port)
+}
+
 /// HTTP GET `/health` — Qualia engine only (must carry `engine`).
 pub fn probe_local_daemon() -> DaemonProbe {
-    let Ok(client) = blocking_client(HEALTH_TIMEOUT_MS) else {
-        return DaemonProbe::held(GRAPH_DAEMON_PORT);
-    };
     for port in candidate_ports() {
-        let url = format!("http://127.0.0.1:{port}/health");
-        let Ok(res) = client.get(&url).send() else {
-            continue;
-        };
-        if !res.status().is_success() {
-            continue;
-        }
-        let Ok(v) = res.json::<JsonValue>() else {
-            continue;
-        };
-        if let Some((engine, version, quins)) = parse_health_json(&v) {
-            return DaemonProbe::live(port, engine, version, quins);
+        let p = probe_daemon_port(port);
+        if p.reachable {
+            return p;
         }
     }
     DaemonProbe::held(GRAPH_DAEMON_PORT)
@@ -198,7 +206,9 @@ mod tests {
 
     #[test]
     fn candidate_ports_always_include_4242() {
-        assert!(candidate_ports().contains(&GRAPH_DAEMON_PORT));
+        let ports = candidate_ports();
+        assert!(ports.contains(&GRAPH_DAEMON_PORT));
+        assert_eq!(ports[0], GRAPH_DAEMON_PORT);
     }
 
     #[test]

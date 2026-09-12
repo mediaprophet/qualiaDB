@@ -610,73 +610,86 @@ fn main() {
             });
 
             // ── Start daemon ──────────────────────────────────────────────────
-            // ── Start daemon ──────────────────────────────────────────────────────────
+            // Prefer an already-healthy Qualia daemon on the contract port (:4242).
+            // Do not spawn :4243 just because the bind probe sees :4242 in use —
+            // that made Native Connected PARTIAL while Catalog still talked to :4242.
             let flag = daemon_flag.clone();
-            // Extract port and host from config, cloning them for the background thread
             let config_clone = default_config.clone();
             let host = config_clone.daemon_host;
             let mut target_port = config_clone.daemon_port;
 
-            // Check for port conflicts
-            loop {
-                if std::net::TcpListener::bind((host.as_str(), target_port)).is_ok() {
-                    break;
-                }
+            let existing = commands::poet_daemon::probe_daemon_port(target_port);
+            let reuse_existing = existing.reachable;
+            if reuse_existing {
                 eprintln!(
-                    "Port {} is in use, trying {}...",
-                    target_port,
-                    target_port + 1
+                    "Reusing healthy Qualia daemon on :{target_port} — not spawning a second port"
                 );
-                target_port += 1;
-                if target_port > 4300 {
-                    eprintln!("Could not find an open port for the daemon! Falling back to 4242.");
-                    target_port = 4242;
-                    break;
-                }
-            }
-
-            let final_port = target_port;
-            qualia_client_core::api::set_active_daemon_port(final_port);
-
-            let vault_clone = vault_for_daemon.clone();
-            let daemon_status_for_runtime = daemon_status_item.clone();
-
-            tauri::async_runtime::spawn(async move {
+                qualia_client_core::api::set_active_daemon_port(target_port);
+                let _ = daemon_status_item
+                    .set_text(format!("Daemon: connected (:{target_port})"));
                 *flag.lock().unwrap() = true;
-                let _ = daemon_status_for_runtime
-                    .set_text(format!("Daemon: running (:{final_port})"));
-
-                let control_tx = qualia_core_db::daemon::start_local_daemon_with_options(
-                    final_port,
-                    false,
-                    vault_clone,
-                    false,
-                )
-                .await;
-
-                // Forward tray commands to daemon. RESTART and STOP are handled here;
-                // other commands (REVOKE, etc.) are forwarded to the daemon control channel.
-                while let Some(cmd) = rx.recv().await {
-                    match cmd.as_str() {
-                        "STOP" => {
-                            eprintln!("Daemon stop requested via tray — forwarding STOP to daemon");
-                            let _ = control_tx.send("STOP".to_string()).await;
-                            *flag.lock().unwrap() = false;
-                            let _ = daemon_status_for_runtime.set_text("Daemon: stopped");
-                        }
-                        "RESTART" => {
-                            eprintln!("Daemon restart requested via tray — forwarding RESTART to daemon");
-                            let _ = control_tx.send("RESTART".to_string()).await;
-                        }
-                        _ => {
-                            let _ = control_tx.send(cmd).await;
-                        }
+            } else {
+                // Check for port conflicts only when we must spawn.
+                loop {
+                    if std::net::TcpListener::bind((host.as_str(), target_port)).is_ok() {
+                        break;
+                    }
+                    eprintln!(
+                        "Port {} is in use (not a Qualia /health), trying {}...",
+                        target_port,
+                        target_port + 1
+                    );
+                    target_port += 1;
+                    if target_port > 4300 {
+                        eprintln!("Could not find an open port for the daemon! Falling back to 4242.");
+                        target_port = 4242;
+                        break;
                     }
                 }
 
-                *flag.lock().unwrap() = false;
-                let _ = daemon_status_for_runtime.set_text("Daemon: stopped");
-            });
+                let final_port = target_port;
+                qualia_client_core::api::set_active_daemon_port(final_port);
+
+                let vault_clone = vault_for_daemon.clone();
+                let daemon_status_for_runtime = daemon_status_item.clone();
+
+                tauri::async_runtime::spawn(async move {
+                    *flag.lock().unwrap() = true;
+                    let _ = daemon_status_for_runtime
+                        .set_text(format!("Daemon: running (:{final_port})"));
+
+                    let control_tx = qualia_core_db::daemon::start_local_daemon_with_options(
+                        final_port,
+                        false,
+                        vault_clone,
+                        false,
+                    )
+                    .await;
+
+                    // Forward tray commands to daemon. RESTART and STOP are handled here;
+                    // other commands (REVOKE, etc.) are forwarded to the daemon control channel.
+                    while let Some(cmd) = rx.recv().await {
+                        match cmd.as_str() {
+                            "STOP" => {
+                                eprintln!("Daemon stop requested via tray — forwarding STOP to daemon");
+                                let _ = control_tx.send("STOP".to_string()).await;
+                                *flag.lock().unwrap() = false;
+                                let _ = daemon_status_for_runtime.set_text("Daemon: stopped");
+                            }
+                            "RESTART" => {
+                                eprintln!("Daemon restart requested via tray — forwarding RESTART to daemon");
+                                let _ = control_tx.send("RESTART".to_string()).await;
+                            }
+                            _ => {
+                                let _ = control_tx.send(cmd).await;
+                            }
+                        }
+                    }
+
+                    *flag.lock().unwrap() = false;
+                    let _ = daemon_status_for_runtime.set_text("Daemon: stopped");
+                });
+            }
 
 
             Ok(())
