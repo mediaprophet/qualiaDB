@@ -2,7 +2,7 @@
   "version": "0.0.37",
   "brand": {
     "name": "Webizen",
-    "tagline": "Life-domain habitat · QualiaDB engine",
+    "tagline": "Life-domain habitat \u00b7 QualiaDB engine",
     "icon": "W"
   },
   "navigation": [
@@ -20,8 +20,8 @@
       "group": "Core"
     },
     {
-      "label": "0.0.37 Progress",
-      "href": "progress-0.0.37.html",
+      "label": "0.0.38 Progress",
+      "href": "progress-0.0.38.html",
       "icon": "fa-heart-pulse",
       "highlight": true,
       "group": "Core"
@@ -97,7 +97,7 @@
       "group": "VibeScript"
     },
     {
-      "label": "RDF → Q42 → Vibe",
+      "label": "RDF \u2192 Q42 \u2192 Vibe",
       "href": "rdf-q42-vibe-demo.html",
       "icon": "fa-diagram-project",
       "highlight": true,

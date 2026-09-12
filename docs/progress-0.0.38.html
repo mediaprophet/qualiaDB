@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen 0.0.38 — Honest Progress</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-shield-halved"></i> Local-first · human-centric · branch <code class="q-mono">0.0.38</code></div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
+      Human surface first.<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">Honest habitat chrome.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-4">
+      0.0.38 is the Desktop human-surface cut: Directory, Talk, Mail, Catalog · Lexicon Open pack, and Native Connected on <code class="q-mono">:4242</code>.
+      Chrome says <strong>human</strong>; law keeps <strong>person</strong>. Handle revoke ≠ who-erase.
+    </p>
+    <p class="text-sm text-white/45 mb-12">
+      Prior honesty:
+      <a class="q-link" href="progress-0.0.37.html">0.0.37 archive</a> ·
+      <a class="q-link" href="qdnf.html">QDNF ledger</a> ·
+      <a class="q-link" href="release-matrix.html">Release matrix</a>
+    </p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-12">
+      <article class="q-card p-7 border border-emerald-500/25">
+        <p class="q-kicker text-emerald-300 mb-2">What shipped (human)</p>
+        <ul class="text-sm text-white/75 space-y-2">
+          <li><strong>Directory</strong> — humans-first address book.</li>
+          <li><strong>Talk</strong> — held / not yet (not “NEEDS MODEL” theatre); human-alone send.</li>
+          <li><strong>Mail</strong> — daily inbox path, not Domains admin soup.</li>
+          <li><strong>Catalog · Lexicon Open pack</strong> — live <code class="q-mono">en-core@0.1.0</code> via <code class="q-mono">:4242</code> /invoke.</li>
+          <li><strong>Native Connected</strong> — prefers an existing healthy <code class="q-mono">:4242</code>; does not spawn <code class="q-mono">:4243</code> over a live Qualia daemon.</li>
+        </ul>
+      </article>
+      <article class="q-card p-7 border border-amber-500/25">
+        <p class="q-kicker text-amber-300 mb-2">Networking (honest)</p>
+        <ul class="text-sm text-white/75 space-y-2">
+          <li>Connection manager + CSCP <strong>local</strong> (loopback WSS / H2) + <code class="q-mono">did:qi</code> in-process.</li>
+          <li><strong>Parked:</strong> CSCP-08 / CSCP-12 / Internet MASQUE — no invented public <code class="q-mono">wss://</code>.</li>
+          <li>Full ledger: <a class="q-link" href="qdnf.html">qdnf.html</a>.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="q-card p-8 mb-12 border border-rose-500/20">
+      <p class="q-kicker text-rose-300 mb-2">Not claimed</p>
+      <ul class="text-sm text-white/75 space-y-2">
+        <li>Not a Word / Docs / Pages clone.</li>
+        <li>Not chatbot-as-the-other-human.</li>
+        <li>WASM size artefacts on Pages remain measured against the last tagged portal build unless <code class="q-mono">v0.0.38</code> proves otherwise.</li>
+        <li>No Host invent. No CSCP Internet ticks.</li>
+      </ul>
+    </section>
+
+    <section class="q-card p-8 mb-12">
+      <p class="q-kicker mb-2">Desktop UAT board (Capt)</p>
+      <p class="text-sm text-white/70 mb-4">Cold board locked on tip line <code class="q-mono">a536a9eab</code> / Native <code class="q-mono">7a868ecd9</code>:</p>
+      <ul class="text-sm text-white/80 space-y-1">
+        <li>Directory · Talk · Mail · Catalog Open pack — <strong class="text-emerald-300">PASS</strong></li>
+        <li>Native Connected (<code class="q-mono">:4242</code>) — <strong class="text-emerald-300">PASS</strong></li>
+      </ul>
+    </section>
+
+    <section class="q-card p-8">
+      <h2 class="text-2xl font-semibold mb-3">Publish path</h2>
+      <p class="text-sm text-white/65 mb-5">GitHub Pages workflow triggers on <code class="q-mono">main</code>, branch <code class="q-mono">0.0.38</code>, and tags <code class="q-mono">v*</code>. The <code class="q-mono">github-pages</code> environment may still reject the branch; <strong>tag <code class="q-mono">v0.0.38</code></strong> is the ship path once copy is folded.</p>
+      <div class="flex flex-wrap gap-3">
+        <a class="px-4 py-2 rounded-2xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-sm" href="qdnf.html">QDNF ledger</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="progress-0.0.37.html">0.0.37 archive</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="release-matrix.html">Release matrix</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
+    Human ≠ legal “person” ≠ bot. Handle ≠ human. Ordinary Internet remains a Legacy Internet Gateway — never QDNF who.
+  </footer>
+</body>
+</html>
