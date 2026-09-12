@@ -46,7 +46,11 @@ echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
 # Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.
 # Also disable wasm fat-LTO / bitcode: rust-lld fails with
 #   failed to load bitcode of module "webizen_studio-*.rcgu.o"
-FRONTEND_WASM_RUSTFLAGS="-C lto=off -C embed-bitcode=no"
+# rust-lld 1.98 still rejects duplicate wasm-bindgen describe symbols for the
+# same Tauri invoke/listen import compiled into both the studio lib
+# (render/spatial_bridge) and the bin (component FFI). Allow the second
+# definition at link time only. No Host invent.
+FRONTEND_WASM_RUSTFLAGS="-C lto=off -C embed-bitcode=no -C link-arg=--allow-multiple-definition"
 export RUSTFLAGS="${RUSTFLAGS_WASM:-$FRONTEND_WASM_RUSTFLAGS}"
 export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-$FRONTEND_WASM_RUSTFLAGS}"
 # dx --release uses web-release; also clear release/wasm-release LTO env overrides Capt may set.
