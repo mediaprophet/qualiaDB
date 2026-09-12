@@ -380,6 +380,20 @@ mod tests {
     }
 
     #[test]
+    fn live_daemon_format_value_opens_pack_card() {
+        // Exact shape returned by POST :4242/invoke GraphDatabase.lexicon_manifest
+        // on en-core (Capt B4 host curl). Must arrive Open, never default held.
+        let value = r#"{conceptIds: ["concept:arrive", "concept:hold", "concept:leave"], framing: "mixed", gate: "open", manifest_path: "/workspace/qualiaDB/crates/vibe/fixtures/lexicon/en-core.lexicon.json", packSemVer: "0.1.0", pack_id: "en-core@0.1.0", upliftFrom: "", volume_ok: false, volume_path: ""}"#;
+        match interpret_invoke(true, value, None) {
+            ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+                assert_eq!(card.pack_id, "en-core@0.1.0");
+            }
+            other => panic!("expected Open, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn held_gate_copy_never_says_broken() {
         assert_eq!(sanitize_held_why("volume broken"), HELD_WHY);
         assert_eq!(sanitize_held_why(""), HELD_WHY);

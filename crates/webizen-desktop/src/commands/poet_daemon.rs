@@ -145,13 +145,14 @@ pub fn http_invoke(id: &str, args: JsonValue) -> Option<HttpInvokeResult> {
         return None;
     }
     let v: JsonValue = res.json().ok()?;
+    let value = match v.get("value") {
+        Some(JsonValue::String(s)) => s.clone(),
+        Some(other) => other.to_string(),
+        None => String::new(),
+    };
     Some(HttpInvokeResult {
         ok: v.get("ok").and_then(|x| x.as_bool()).unwrap_or(false),
-        value: v
-            .get("value")
-            .and_then(|x| x.as_str())
-            .unwrap_or("")
-            .to_string(),
+        value,
         diagnostic: v
             .get("diagnostic")
             .and_then(|x| x.as_str())

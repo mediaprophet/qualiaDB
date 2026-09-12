@@ -93,8 +93,75 @@ pub async fn render_preview(
 }
 
 /// Live ALL_BOUND bind — same id WASM Catalog uses. No Host widen.
+///
+/// Prefer HTTP `POST {daemon}/invoke` when Native Connected (Capt curl path).
+/// Tauri `poet_lexicon_manifest` stays a fallback — Desktop Catalog must not
+/// strand on in-process held while `:4242` already gates open.
 pub async fn lexicon_manifest(path: String) -> Result<PoetEvalResult, String> {
+    let mut bases = Vec::new();
+    if let Ok(probe) = daemon_probe().await {
+        if probe.reachable && !probe.url.is_empty() {
+            bases.push(probe.url);
+        }
+    }
+    bases.push("http://127.0.0.1:4242".into());
+    for base in bases {
+        if let Ok(http) = http_lexicon_manifest(&base, &path).await {
+            return Ok(http);
+        }
+    }
     invoke_json("poet_lexicon_manifest", json!({ "path": path })).await
+}
+
+fn coerce_invoke_value(v: &serde_json::Value) -> String {
+    match v.get("value") {
+        Some(serde_json::Value::String(s)) => s.clone(),
+        Some(other) => other.to_string(),
+        None => String::new(),
+    }
+}
+
+async fn http_lexicon_manifest(base: &str, path: &str) -> Result<PoetEvalResult, String> {
+    let url = format!("{}/invoke", base.trim_end_matches('/'));
+    let body = json!({
+        "id": "GraphDatabase.lexicon_manifest",
+        "args": { "path": path },
+    });
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let res = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    if !res.status().is_success() {
+        return Err(format!("invoke HTTP {}", res.status()));
+    }
+    let v: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    Ok(PoetEvalResult {
+        ok: v.get("ok").and_then(|x| x.as_bool()).unwrap_or(false),
+        value: coerce_invoke_value(&v),
+        diagnostic: v
+            .get("diagnostic")
+            .and_then(|x| x.as_str())
+            .map(str::to_string),
+        revision: v.get("revision").and_then(|x| x.as_u64()).unwrap_or(0),
+        committed: v.get("committed").and_then(|x| x.as_u64()).unwrap_or(0) as usize,
+        honesty: v
+            .get("honesty")
+            .and_then(|x| x.as_str())
+            .unwrap_or(if v.get("ok").and_then(|x| x.as_bool()).unwrap_or(false) {
+                "live"
+            } else {
+                "held"
+            })
+            .to_string(),
+        language: String::new(),
+        value_cbor_hex: String::new(),
+    })
 }
 
 /// Live ALL_BOUND bind. Reopen defaults `create: false` so a missing volume stays held.

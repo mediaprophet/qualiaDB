@@ -254,7 +254,7 @@ fn open_pack(path: String, mut outcome: Signal<ManifestOutcome>, mut busy: Signa
                 diagnostic,
                 ..
             }) => interpret_invoke(ok, &value, diagnostic.as_deref()),
-            Err(_) => held_outcome(WHY),
+            Err(err) => interpret_invoke(false, "", Some(&err)),
         };
         outcome.set(next);
         busy.set(false);
