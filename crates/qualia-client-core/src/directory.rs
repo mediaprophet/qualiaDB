@@ -246,7 +246,13 @@ pub fn classify_who_kind(kinds: &[String], organization: &Option<String>) -> Who
     let tokens = kind_tokens(kinds);
     let has_tok = |needles: &[&str]| tokens.iter().any(|t| needles.iter().any(|n| t == n));
     if has_tok(&[
-        "agent", "ai", "bot", "assistant", "subagent", "chatbot", "llm",
+        "agent",
+        "ai",
+        "bot",
+        "assistant",
+        "subagent",
+        "chatbot",
+        "llm",
     ]) {
         return WhoKind::Tool;
     }
@@ -818,7 +824,10 @@ mod tests {
             WhoKind::Human,
             "affiliation is not who-kind"
         );
-        assert_eq!(WhoKind::Organization.chrome_label(), "Organization · legal person");
+        assert_eq!(
+            WhoKind::Organization.chrome_label(),
+            "Organization · legal person"
+        );
         assert_eq!(WhoKind::Tool.chrome_label(), "Tool");
         assert_eq!(WhoKind::Human.chrome_label(), "Human");
     }
@@ -832,7 +841,11 @@ mod tests {
             actor("ann", "Ann", "did:wf:ann", "FRIEND", &[]),
         ];
         let view = build_view_core(&actors, &[], &BTreeMap::new(), builtin_categories(), &[]);
-        let names: Vec<&str> = view.entries.iter().map(|e| e.display_name.as_str()).collect();
+        let names: Vec<&str> = view
+            .entries
+            .iter()
+            .map(|e| e.display_name.as_str())
+            .collect();
         assert_eq!(names, vec!["Ann", "Zed", "Acme Ltd", "HelpBot"]);
         assert_eq!(view.entries[0].who_kind, "human");
         assert_eq!(view.entries[2].who_kind, "organization");

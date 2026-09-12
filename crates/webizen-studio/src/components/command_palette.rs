@@ -422,7 +422,10 @@ mod tests {
     fn catalog_lexicon_is_discoverable() {
         let hits = filter_destinations("lexicon");
         assert!(hits.iter().any(|d| d.id == "catalog"));
-        assert_eq!(hits.iter().find(|d| d.id == "catalog").unwrap().label, "Catalog · Lexicon");
+        assert_eq!(
+            hits.iter().find(|d| d.id == "catalog").unwrap().label,
+            "Catalog · Lexicon"
+        );
     }
 
     #[test]

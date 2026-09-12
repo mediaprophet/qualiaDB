@@ -96,13 +96,13 @@ mod tests {
             src.contains("TalkPeople"),
             "Directory launch must stay under Talk / People (no new top-level IA name)"
         );
-        let start = src
-            .find("id: \"directory\"")
-            .expect("directory QApp id");
-        let body = src.get(start..start.saturating_add(420)).unwrap_or("");
+        let start = src.find("id: \"directory\"").expect("directory QApp id");
+        let rest = &src[start..];
+        let end = rest.find("QApp {").unwrap_or(rest.len());
+        let body = &rest[..end];
         assert!(
             body.contains("Stat::Active"),
-            "Directory must be Active (real launch), not Soon/buried"
+            "Directory must be Active (real launch), not Soon/buried. body={body}"
         );
     }
 
