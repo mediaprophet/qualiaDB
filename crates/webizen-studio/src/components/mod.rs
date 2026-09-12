@@ -51,6 +51,7 @@ pub mod comorbidity_analyzer;
 pub mod conduct_banner;
 pub mod connect_chat;
 pub mod connect_pane;
+pub mod talk_human_alone;
 pub mod deontic_logic_editor;
 pub mod dicom_viewer;
 pub mod directory_pane;
