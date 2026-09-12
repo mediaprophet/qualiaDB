@@ -484,4 +484,50 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[tokio::test]
+    async fn lexicon_manifest_http_invoke_opens_en_core() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert!(path.is_file(), "{}", path.display());
+        let body = serde_json::json!({
+            "id": "GraphDatabase.lexicon_manifest",
+            "args": { "path": path.to_string_lossy() }
+        });
+        let response = invoke_handler(Bytes::from(serde_json::to_vec(&body).unwrap())).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .expect("body");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+        assert_eq!(v["ok"], true, "{v}");
+        let value = v["value"].as_str().unwrap_or("");
+        assert!(value.contains("0.1.0"), "{value}");
+        assert!(value.contains("mixed"), "{value}");
+        assert!(value.contains("open"), "{value}");
+        assert!(!value.to_ascii_lowercase().contains("unavailable"));
+        assert!(!value.to_ascii_lowercase().contains("broken"));
+    }
+
+    #[tokio::test]
+    async fn lexicon_manifest_http_invoke_empty_is_held() {
+        let body = serde_json::json!({
+            "id": "GraphDatabase.lexicon_manifest",
+            "args": { "path": "" }
+        });
+        let response = invoke_handler(Bytes::from(serde_json::to_vec(&body).unwrap())).await;
+        let bytes = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .expect("body");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+        assert_eq!(v["ok"], false, "{v}");
+        let diag = v["diagnostic"].as_str().unwrap_or("");
+        let folded = diag.to_ascii_lowercase();
+        assert!(
+            folded.contains("e300") || folded.contains("held") || folded.contains("lexicon"),
+            "{diag}"
+        );
+        assert!(!folded.contains("unavailable"));
+        assert!(!folded.contains("broken"));
+    }
 }

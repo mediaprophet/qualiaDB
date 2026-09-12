@@ -6,6 +6,31 @@ pub const INVOKE_ID: &str = "GraphDatabase.lexicon_manifest";
 /// Soft why-text for missing / unknown / E300. Never "broken".
 pub const HELD_WHY: &str = "held / not yet — open lexicon pack";
 
+fn gate_is_open(value: &str) -> bool {
+    value.contains("gate: \"open\"")
+        || value.contains("\"gate\": \"open\"")
+        || value.contains("\"gate\":\"open\"")
+}
+
+fn flatten_invoke_value(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(trimmed) {
+        if let Some(inner) = v.get("value") {
+            return match inner {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+        }
+        if v.get("packSemVer").is_some() || v.get("framing").is_some() {
+            return trimmed.to_string();
+        }
+    }
+    trimmed.to_string()
+}
+
 pub const LIVING_SAYABLE: &str = "person / living / country";
 pub const ARTIFACT_SAYABLE: &str = "tool / volume / file";
 pub const MACHINE_SAYABLE: &str = "Capability.method";
@@ -181,17 +206,13 @@ pub fn sanitize_held_why(raw: &str) -> String {
 }
 
 pub fn interpret_invoke(ok: bool, value: &str, diagnostic: Option<&str>) -> ManifestOutcome {
-    if ok {
-        if let Some(card) = parse_pack_card(value) {
-            return ManifestOutcome::Open(card);
-        }
-        // ok:true but strict card parse missed — still arrive if framing+semver present
-        // (format_value key order / extra fields must not strand the bay on held).
-        if let Some(card) = parse_pack_card_lenient(value) {
+    let value = flatten_invoke_value(value);
+    if let Some(card) = parse_pack_card(&value).or_else(|| parse_pack_card_lenient(&value)) {
+        if ok || gate_is_open(&value) || !card.pack_semver.is_empty() {
             return ManifestOutcome::Open(card);
         }
     }
-    let blob = diagnostic.unwrap_or(value);
+    let blob = diagnostic.unwrap_or(value.as_str());
     let why = if blob.to_ascii_lowercase().contains("e300")
         || blob.contains("held / not yet")
         || blob.contains("open lexicon pack")
@@ -382,6 +403,18 @@ mod tests {
                 assert_eq!(why, HELD_WHY);
                 assert!(copy_avoids_broken(&why));
             }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn live_gate_open_is_not_false_held() {
+        match interpret_invoke(
+            false,
+            r#"{"framing":"mixed","packSemVer":"0.1.0","gate":"open"}"#,
+            None,
+        ) {
+            ManifestOutcome::Open(card) => assert_eq!(card.pack_semver, "0.1.0"),
             other => panic!("{other:?}"),
         }
     }

@@ -199,14 +199,15 @@ pub fn poet_eval(
 /// Prefers HTTP `/invoke` on Native Connected `:4242` (Poet WASM path).
 #[tauri::command]
 pub fn poet_lexicon_manifest(state: State<PoetHarnessState>, path: String) -> PoetEvalResult {
+    let path = webizen_studio::lexicon_catalog::resolve_lexicon_path(&path);
     if let Some(http) = super::poet_daemon::http_invoke(
         "GraphDatabase.lexicon_manifest",
         serde_json::json!({ "path": path.clone() }),
     ) {
-        return PoetEvalResult {
+        let from_http = PoetEvalResult {
             ok: http.ok,
-            value: http.value,
-            diagnostic: http.diagnostic,
+            value: http.value.clone(),
+            diagnostic: http.diagnostic.clone(),
             revision: http.revision,
             committed: http.committed,
             published: Vec::new(),
@@ -214,10 +215,29 @@ pub fn poet_lexicon_manifest(state: State<PoetHarnessState>, path: String) -> Po
             language: vibe::LANGUAGE_VERSION,
             value_cbor_hex: encode_cbor_text(""),
         };
+        match webizen_studio::lexicon_catalog::interpret_invoke(
+            http.ok,
+            &http.value,
+            http.diagnostic.as_deref(),
+        ) {
+            webizen_studio::lexicon_catalog::ManifestOutcome::Open(_) => return from_http,
+            webizen_studio::lexicon_catalog::ManifestOutcome::Held { .. } => {
+                // HTTP held — in-process same bind may still open if value parse missed.
+                let snap_res = snapshot_lexicon_manifest(&state, &path);
+                if snap_res.ok {
+                    return snap_res;
+                }
+                return from_http;
+            }
+        }
     }
+    snapshot_lexicon_manifest(&state, &path)
+}
+
+fn snapshot_lexicon_manifest(state: &PoetHarnessState, path: &str) -> PoetEvalResult {
     let mut snap = state.snap.lock().expect("poet snapshot");
     let mut rec = BTreeMap::new();
-    rec.insert("path".into(), Value::String(path));
+    rec.insert("path".into(), Value::String(path.to_string()));
     match snap.invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec)) {
         Ok(v) => snapshot_result(&snap, true, format_value(&v), None),
         Err(e) => snapshot_result(&snap, false, String::new(), Some(e.to_json())),
@@ -706,6 +726,62 @@ mod tests {
                 assert_eq!(card.framing, webizen_studio::lexicon_catalog::Framing::Mixed);
             }
             other => panic!("expected open pack card, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn lexicon_manifest_invoke_wiring_opens_fixture_and_holds_empty() {
+        use webizen_studio::lexicon_catalog::{
+            invoke_body, invoke_url, resolve_lexicon_path, value_from_invoke_json, INVOKE_ID,
+        };
+        assert_eq!(INVOKE_ID, "GraphDatabase.lexicon_manifest");
+        assert_eq!(invoke_url(4242), "http://127.0.0.1:4242/invoke");
+        let body = invoke_body("/tmp/pack.lexicon.json");
+        assert_eq!(body["id"], INVOKE_ID);
+        assert_eq!(body["args"]["path"], "/tmp/pack.lexicon.json");
+
+        let object_envelope = serde_json::json!({
+            "ok": true,
+            "value": {
+                "packSemVer": "0.1.0",
+                "framing": "mixed",
+                "gate": "open"
+            }
+        });
+        let extracted = value_from_invoke_json(&object_envelope);
+        match webizen_studio::lexicon_catalog::interpret_invoke(true, &extracted, None) {
+            webizen_studio::lexicon_catalog::ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+            }
+            other => panic!("{other:?}"),
+        }
+
+        let state = PoetHarnessState::default();
+        let empty = snapshot_lexicon_manifest(&state, "");
+        assert!(!empty.ok);
+        match webizen_studio::lexicon_catalog::interpret_invoke(
+            empty.ok,
+            &empty.value,
+            empty.diagnostic.as_deref(),
+        ) {
+            webizen_studio::lexicon_catalog::ManifestOutcome::Held { why } => {
+                assert!(!why.to_ascii_lowercase().contains("unavailable"));
+            }
+            other => panic!("{other:?}"),
+        }
+
+        let fixture = resolve_lexicon_path("crates/vibe/fixtures/lexicon/en-core.lexicon.json");
+        let opened = snapshot_lexicon_manifest(&state, &fixture);
+        assert!(
+            opened.ok,
+            "in-process bind must open fixture: {} {:?}",
+            opened.value, opened.diagnostic
+        );
+        match webizen_studio::lexicon_catalog::interpret_invoke(opened.ok, &opened.value, None) {
+            webizen_studio::lexicon_catalog::ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+            }
+            other => panic!("{other:?} {}", opened.value),
         }
     }
 }

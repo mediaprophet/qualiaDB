@@ -1,9 +1,13 @@
-//! Host bridge — WASM talks to Tauri; native studio can call the same commands
-//! when compiled inside Webizen Desktop.
+//! Host bridge — Catalog Open pack is daemon-first (`:4242/invoke`).
+//! Tauri / in-process binds are fallbacks. No Host widen.
 
+use super::graph_daemon::{
+    daemon_http_probe, daemon_lexicon_manifest, daemon_lexicon_manifest_wait,
+};
 use crate::components::settings::host::invoke_json;
 use serde::Deserialize;
 use serde_json::json;
+use webizen_studio::lexicon_catalog::{resolve_lexicon_path, HELD_WHY};
 
 #[allow(dead_code)]
 #[derive(Clone, Deserialize, Default)]
@@ -92,9 +96,69 @@ pub async fn render_preview(
     .await
 }
 
-/// Live ALL_BOUND bind — same id WASM Catalog uses. No Host widen.
+/// Live ALL_BOUND bind — daemon-first `:4242/invoke`, then Desktop host,
+/// then in-process `GraphDatabase.lexicon_manifest`. Never "unavailable".
 pub async fn lexicon_manifest(path: String) -> Result<PoetEvalResult, String> {
-    invoke_json("poet_lexicon_manifest", json!({ "path": path })).await
+    let resolved = resolve_lexicon_path(path.trim());
+    if let Ok(from_daemon) = daemon_lexicon_manifest(&resolved).await {
+        return Ok(from_daemon);
+    }
+    match invoke_json("poet_lexicon_manifest", json!({ "path": resolved.clone() })).await {
+        Ok(result) => Ok(result),
+        Err(err) => {
+            if let Ok(from_daemon) = daemon_lexicon_manifest_wait(&resolved).await {
+                return Ok(from_daemon);
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let _ = err;
+                return Ok(in_process_lexicon_manifest(&resolved));
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let folded = err.to_ascii_lowercase();
+                if folded.contains("unavailable") || folded.contains("broken") {
+                    Err(HELD_WHY.to_string())
+                } else {
+                    Err(err)
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn in_process_lexicon_manifest(path: &str) -> PoetEvalResult {
+    use qualia_core_db::poet_host::{format_value, PoetSnapshot};
+    use vibe::Value;
+    let mut snap = PoetSnapshot::from_daemon();
+    let mut rec = std::collections::BTreeMap::new();
+    rec.insert("path".into(), Value::String(path.into()));
+    match snap.invoke_id(
+        webizen_studio::lexicon_catalog::INVOKE_ID,
+        Value::Record(rec),
+    ) {
+        Ok(v) => PoetEvalResult {
+            ok: true,
+            value: format_value(&v),
+            diagnostic: None,
+            revision: snap.revision,
+            committed: snap.visible_count(),
+            honesty: "live".into(),
+            language: vibe::LANGUAGE_VERSION.to_string(),
+            value_cbor_hex: String::new(),
+        },
+        Err(e) => PoetEvalResult {
+            ok: false,
+            value: String::new(),
+            diagnostic: Some(e.to_json()),
+            revision: snap.revision,
+            committed: snap.visible_count(),
+            honesty: "held".into(),
+            language: vibe::LANGUAGE_VERSION.to_string(),
+            value_cbor_hex: String::new(),
+        },
+    }
 }
 
 /// Live ALL_BOUND bind. Reopen defaults `create: false` so a missing volume stays held.
@@ -138,5 +202,21 @@ pub struct DaemonProbe {
 }
 
 pub async fn daemon_probe() -> Result<DaemonProbe, String> {
-    invoke_json("poet_daemon_probe", json!({})).await
+    if let Some(probe) = daemon_http_probe().await {
+        return Ok(probe);
+    }
+    match invoke_json("poet_daemon_probe", json!({})).await {
+        Ok(probe) => Ok(probe),
+        Err(err) => {
+            if let Some(probe) = daemon_http_probe().await {
+                return Ok(probe);
+            }
+            let folded = err.to_ascii_lowercase();
+            if folded.contains("unavailable") || folded.contains("broken") {
+                Err(HELD_WHY.to_string())
+            } else {
+                Err(err)
+            }
+        }
+    }
 }

@@ -31,7 +31,7 @@ fn protocol_response(status: u16, mime: Option<&str>, body: Vec<u8>) -> Protocol
     }
     builder = builder.header(
         "Content-Security-Policy",
-        "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: ws: wss: http://127.0.0.1:8080 http://localhost:8080;"
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: ws: wss: http://127.0.0.1:8080 http://localhost:8080; connect-src 'self' http://127.0.0.1:4242 http://localhost:4242 http://127.0.0.1:8080 http://localhost:8080 ws: wss:;"
     );
     builder = builder.header("X-Content-Type-Options", "nosniff");
     builder = builder.header("Referrer-Policy", "no-referrer");

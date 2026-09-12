@@ -231,22 +231,6 @@ fn open_pack(path: String, mut outcome: Signal<ManifestOutcome>, mut busy: Signa
     }
     busy.set(true);
     spawn(async move {
-        // Soft wait for Native Connected — same flap guard as Poet WASM Catalog.
-        if let Ok(probe) = engine::daemon_probe().await {
-            if !probe.reachable {
-                for _ in 0..8 {
-                    #[cfg(target_arch = "wasm32")]
-                    gloo_timers::future::sleep(std::time::Duration::from_millis(250)).await;
-                    #[cfg(not(target_arch = "wasm32"))]
-                    std::thread::sleep(std::time::Duration::from_millis(250));
-                    if let Ok(again) = engine::daemon_probe().await {
-                        if again.reachable {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
         let next = match engine::lexicon_manifest(path).await {
             Ok(PoetEvalResult {
                 ok,
@@ -254,7 +238,14 @@ fn open_pack(path: String, mut outcome: Signal<ManifestOutcome>, mut busy: Signa
                 diagnostic,
                 ..
             }) => interpret_invoke(ok, &value, diagnostic.as_deref()),
-            Err(_) => held_outcome(WHY),
+            Err(err) => {
+                let folded = err.to_ascii_lowercase();
+                if folded.contains("unavailable") || folded.contains("broken") {
+                    held_outcome(WHY)
+                } else {
+                    held_outcome(WHY)
+                }
+            }
         };
         outcome.set(next);
         busy.set(false);

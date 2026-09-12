@@ -145,13 +145,11 @@ pub fn http_invoke(id: &str, args: JsonValue) -> Option<HttpInvokeResult> {
         return None;
     }
     let v: JsonValue = res.json().ok()?;
+    let value = webizen_studio::lexicon_catalog::value_from_invoke_json(&v);
+    let ok = webizen_studio::lexicon_catalog::ok_from_invoke_json(&v, &value);
     Some(HttpInvokeResult {
-        ok: v.get("ok").and_then(|x| x.as_bool()).unwrap_or(false),
-        value: v
-            .get("value")
-            .and_then(|x| x.as_str())
-            .unwrap_or("")
-            .to_string(),
+        ok,
+        value,
         diagnostic: v
             .get("diagnostic")
             .and_then(|x| x.as_str())
@@ -161,7 +159,7 @@ pub fn http_invoke(id: &str, args: JsonValue) -> Option<HttpInvokeResult> {
         honesty: v
             .get("honesty")
             .and_then(|x| x.as_str())
-            .unwrap_or("live")
+            .unwrap_or(if ok { "live" } else { "held" })
             .to_string(),
     })
 }
@@ -212,6 +210,23 @@ mod tests {
         let parsed = parse_health_json(&ok).expect("engine health");
         assert_eq!(parsed.0.as_deref(), Some("qualia-core-db"));
         assert_eq!(parsed.2, Some(3));
+    }
+
+    #[test]
+    fn invoke_value_object_is_not_dropped() {
+        let v = serde_json::json!({
+            "ok": true,
+            "value": { "packSemVer": "0.1.0", "framing": "mixed", "gate": "open" }
+        });
+        let value = webizen_studio::lexicon_catalog::value_from_invoke_json(&v);
+        assert!(value.contains("0.1.0"), "{value}");
+        assert!(webizen_studio::lexicon_catalog::ok_from_invoke_json(&v, &value));
+        match webizen_studio::lexicon_catalog::interpret_invoke(true, &value, None) {
+            webizen_studio::lexicon_catalog::ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+            }
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]

@@ -6,8 +6,100 @@
 /// Live ALL_BOUND id. Do not invent a Host method.
 pub const INVOKE_ID: &str = "GraphDatabase.lexicon_manifest";
 
+/// Capt / UAT graph daemon HTTP port. Catalog Open pack posts `/invoke` here.
+pub const PRIMARY_DAEMON_PORT: u16 = 4242;
+
 /// Soft why-text for missing / unknown / E300. Never "broken".
 pub const HELD_WHY: &str = "held / not yet — open lexicon pack";
+
+/// Body for `POST /invoke` — same bind WASM Catalog uses. No Host widen.
+pub fn invoke_body(path: &str) -> serde_json::Value {
+    serde_json::json!({
+        "id": INVOKE_ID,
+        "args": { "path": path }
+    })
+}
+
+pub fn health_url(port: u16) -> String {
+    format!("http://127.0.0.1:{port}/health")
+}
+
+pub fn invoke_url(port: u16) -> String {
+    format!("http://127.0.0.1:{port}/invoke")
+}
+
+/// `format_value` / JSON `gate: "open"`. Does not match “open lexicon pack”.
+pub fn gate_is_open(value: &str) -> bool {
+    value.contains("gate: \"open\"")
+        || value.contains("\"gate\": \"open\"")
+        || value.contains("\"gate\":\"open\"")
+}
+
+/// Daemon `/invoke` `value` may be a formatted string or a JSON object.
+pub fn flatten_invoke_value(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(trimmed) {
+        if let Some(inner) = v.get("value") {
+            return match inner {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+        }
+        if v.get("packSemVer").is_some()
+            || v.get("pack_semver").is_some()
+            || v.get("framing").is_some()
+        {
+            return trimmed.to_string();
+        }
+    }
+    trimmed.to_string()
+}
+
+/// Text of `/invoke` `value` whether the daemon sent a string or an object.
+pub fn value_from_invoke_json(v: &serde_json::Value) -> String {
+    match v.get("value") {
+        Some(serde_json::Value::String(s)) => s.clone(),
+        Some(other) => other.to_string(),
+        None => String::new(),
+    }
+}
+
+pub fn ok_from_invoke_json(v: &serde_json::Value, value: &str) -> bool {
+    v.get("ok").and_then(|x| x.as_bool()).unwrap_or(false) || gate_is_open(value)
+}
+
+/// Resolve a Catalog path so relative fixture pins work when Desktop cwd ≠ repo.
+/// Never rewrites an absolute path. Empty stays empty.
+pub fn resolve_lexicon_path(path: &str) -> String {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    let given = std::path::Path::new(trimmed);
+    if given.is_file() {
+        return given.to_string_lossy().into_owned();
+    }
+    if given.is_absolute() {
+        return trimmed.to_string();
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut dir: &std::path::Path = &cwd;
+        for _ in 0..8 {
+            let candidate = dir.join(given);
+            if candidate.is_file() {
+                return candidate.to_string_lossy().into_owned();
+            }
+            match dir.parent() {
+                Some(parent) => dir = parent,
+                None => break,
+            }
+        }
+    }
+    trimmed.to_string()
+}
 
 pub const LIVING_SAYABLE: &str = "person / living / country";
 pub const ARTIFACT_SAYABLE: &str = "tool / volume / file";
@@ -184,17 +276,15 @@ pub fn sanitize_held_why(raw: &str) -> String {
 }
 
 pub fn interpret_invoke(ok: bool, value: &str, diagnostic: Option<&str>) -> ManifestOutcome {
-    if ok {
-        if let Some(card) = parse_pack_card(value) {
-            return ManifestOutcome::Open(card);
-        }
-        // ok:true but strict card parse missed — still arrive if framing+semver present
-        // (format_value key order / extra fields must not strand the bay on held).
-        if let Some(card) = parse_pack_card_lenient(value) {
+    let value = flatten_invoke_value(value);
+    // Live bind with a pack card must arrive — do not require ok:true
+    // (HTTP object `value`, missing ok, or gate:open must not false-held).
+    if let Some(card) = parse_pack_card(&value).or_else(|| parse_pack_card_lenient(&value)) {
+        if ok || gate_is_open(&value) || !card.pack_semver.is_empty() {
             return ManifestOutcome::Open(card);
         }
     }
-    let blob = diagnostic.unwrap_or(value);
+    let blob = diagnostic.unwrap_or(value.as_str());
     let why = if blob.to_ascii_lowercase().contains("e300")
         || blob.contains("held / not yet")
         || blob.contains("open lexicon pack")
@@ -357,6 +447,20 @@ mod tests {
     fn bind_is_live_lexicon_manifest() {
         assert_eq!(INVOKE_ID, "GraphDatabase.lexicon_manifest");
         assert!(!INVOKE_ID.contains("qualia."));
+        assert_eq!(PRIMARY_DAEMON_PORT, 4242);
+        assert_eq!(invoke_url(4242), "http://127.0.0.1:4242/invoke");
+        assert_eq!(health_url(4242), "http://127.0.0.1:4242/health");
+        let body = invoke_body("crates/vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert_eq!(body["id"], INVOKE_ID);
+        assert_eq!(
+            body["args"]["path"],
+            "crates/vibe/fixtures/lexicon/en-core.lexicon.json"
+        );
+        let resolved = resolve_lexicon_path("crates/vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert!(
+            std::path::Path::new(&resolved).is_file(),
+            "workspace fixture must resolve, got {resolved}"
+        );
     }
 
     #[test]
@@ -414,6 +518,59 @@ mod tests {
     }
 
     #[test]
+    fn live_gate_open_object_value_is_not_false_held() {
+        let envelope = serde_json::json!({
+            "ok": true,
+            "honesty": "live",
+            "value": {
+                "pack_id": "en-core@0.1.0",
+                "packSemVer": "0.1.0",
+                "framing": "mixed",
+                "gate": "open",
+                "upliftFrom": "",
+                "conceptIds": ["concept:arrive"]
+            }
+        });
+        let value = value_from_invoke_json(&envelope);
+        assert!(ok_from_invoke_json(&envelope, &value));
+        match interpret_invoke(true, &value, None) {
+            ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+                assert_eq!(card.framing, Framing::Mixed);
+            }
+            other => panic!("{other:?} from {value}"),
+        }
+        // ok flag dropped — gate:open still arrives
+        match interpret_invoke(false, r#"{"framing":"mixed","packSemVer":"0.1.0","gate":"open"}"#, None)
+        {
+            ManifestOutcome::Open(card) => assert_eq!(card.pack_semver, "0.1.0"),
+            other => panic!("{other:?}"),
+        }
+        assert!(!gate_is_open("held / not yet — open lexicon pack"));
+    }
+
+    #[test]
+    fn empty_and_nonsense_interpret_as_held() {
+        for (ok, value, diag) in [
+            (false, "", Some("E300@0..0: lexicon pack not found")),
+            (
+                false,
+                "",
+                Some("held / not yet — open lexicon pack"),
+            ),
+        ] {
+            match interpret_invoke(ok, value, diag) {
+                ManifestOutcome::Held { why } => {
+                    assert!(copy_avoids_unavailable(&why));
+                    assert!(copy_avoids_broken(&why));
+                    assert!(!why.to_ascii_lowercase().contains("unavailable"));
+                }
+                other => panic!("{other:?}"),
+            }
+        }
+    }
+
+    #[test]
     fn success_parses_live_format_value_shape() {
         let src = r#"{conceptIds: ["concept:arrive", "concept:hold", "concept:leave"], framing: "mixed", gate: "open", manifest_path: "/tmp/en-core.lexicon.json", packSemVer: "0.1.0", pack_id: "en-core@0.1.0", upliftFrom: "", volume_ok: false, volume_path: ""}"#;
         match interpret_invoke(true, src, None) {
@@ -451,5 +608,66 @@ mod tests {
         assert_eq!(FramingChip::Artifact.tone(), "crisp");
         assert_eq!(FramingChip::Machine.tone(), "muted");
         assert_eq!(FramingChip::Machine.sayable(), MACHINE_SAYABLE);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn valid_en_core_bind_opens_pack_card() {
+        use qualia_core_db::poet_host::{format_value, PoetSnapshot};
+        use vibe::Value;
+        let path = resolve_lexicon_path("crates/vibe/fixtures/lexicon/en-core.lexicon.json");
+        assert!(
+            std::path::Path::new(&path).is_file(),
+            "fixture must resolve: {path}"
+        );
+        let mut snap = PoetSnapshot::live();
+        let mut rec = std::collections::BTreeMap::new();
+        rec.insert("path".into(), Value::String(path));
+        let value = snap
+            .invoke_id(INVOKE_ID, Value::Record(rec))
+            .expect("valid fixture bind must succeed");
+        let printed = format_value(&value);
+        assert!(gate_is_open(&printed), "{printed}");
+        match interpret_invoke(true, &printed, None) {
+            ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+                assert_eq!(card.framing, Framing::Mixed);
+            }
+            other => panic!("{other:?} from {printed}"),
+        }
+        assert!(copy_avoids_unavailable(&printed));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn invoke_path(path: &str) -> (bool, String, Option<String>) {
+        use qualia_core_db::poet_host::{format_value, PoetSnapshot};
+        use vibe::Value;
+        let mut snap = PoetSnapshot::live();
+        let mut rec = std::collections::BTreeMap::new();
+        rec.insert("path".into(), Value::String(path.into()));
+        match snap.invoke_id(INVOKE_ID, Value::Record(rec)) {
+            Ok(v) => (true, format_value(&v), None),
+            Err(e) => (false, String::new(), Some(e.to_json())),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn empty_and_nonsense_stay_held_never_unavailable() {
+        for path in [
+            "",
+            "/tmp/does-not-exist-lexicon-pack.lexicon.json",
+            "not-a-pack",
+        ] {
+            let (ok, value, diagnostic) = invoke_path(path);
+            assert!(!ok, "{path}");
+            match interpret_invoke(ok, &value, diagnostic.as_deref()) {
+                ManifestOutcome::Held { why } => {
+                    assert!(copy_avoids_unavailable(&why), "{why}");
+                    assert!(copy_avoids_broken(&why), "{why}");
+                }
+                other => panic!("{path} → {other:?}"),
+            }
+        }
     }
 }
