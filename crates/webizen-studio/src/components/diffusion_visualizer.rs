@@ -9,6 +9,10 @@ use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::listen as tauri_listen;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::JsFuture;
@@ -36,22 +40,6 @@ struct RuntimeLedgerHealth {
     last_gap_from_epoch: Option<u64>,
     last_gap_to_epoch: Option<u64>,
     degraded: bool,
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    async fn tauri_listen(
-        event: &str,
-        handler: &js_sys::Function,
-    ) -> Result<js_sys::Function, wasm_bindgen::JsValue>;
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -27,23 +27,12 @@ use serde_json::json;
 use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-
-    // Tauri v2 event bus — used to stream generation tokens into the UI live.
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    async fn tauri_listen(
-        event: &str,
-        handler: &wasm_bindgen::JsValue,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use wasm_bindgen::JsCast;
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::listen as tauri_listen;
 
 #[cfg(target_arch = "wasm32")]
 async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
@@ -552,7 +541,7 @@ pub fn ConnectChat() -> Element {
                     streaming.set(cur);
                 }
             }) as Box<dyn FnMut(wasm_bindgen::JsValue)>);
-            let _ = tauri_listen("chat-token", tok.as_ref()).await;
+            let _ = tauri_listen("chat-token", tok.as_ref().unchecked_ref()).await;
             tok.forget();
 
             // chat-done → clear stream bubble; surface block_reason / shield_alert if present.
@@ -575,7 +564,7 @@ pub fn ConnectChat() -> Element {
                     }
                 }
             }) as Box<dyn FnMut(wasm_bindgen::JsValue)>);
-            let _ = tauri_listen("chat-done", done.as_ref()).await;
+            let _ = tauri_listen("chat-done", done.as_ref().unchecked_ref()).await;
             done.forget();
 
             // conduct-violation — host may emit later; listen so UI never needs a second pass.
@@ -598,7 +587,7 @@ pub fn ConnectChat() -> Element {
                     }
                 }
             }) as Box<dyn FnMut(wasm_bindgen::JsValue)>);
-            let _ = tauri_listen("conduct-violation", cv.as_ref()).await;
+            let _ = tauri_listen("conduct-violation", cv.as_ref().unchecked_ref()).await;
             cv.forget();
 
             // Initial state.

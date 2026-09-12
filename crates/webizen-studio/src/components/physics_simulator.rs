@@ -12,6 +12,8 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local;
 #[cfg(target_arch = "wasm32")]
@@ -41,17 +43,6 @@ struct ForgePhysicsCertification {
     q42_provenance: String,
     sample_positions: Vec<[f32; 3]>,
     note: String,
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: wasm_bindgen::JsValue,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
 }
 
 #[cfg(target_arch = "wasm32")]

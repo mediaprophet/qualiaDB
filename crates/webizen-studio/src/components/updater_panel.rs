@@ -3,28 +3,16 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::listen as tauri_listen;
 
 const PANEL_STYLE: &str = "background: var(--qualia-surface); border: 1px solid var(--qualia-border); border-radius: 18px; padding: 1.5rem; backdrop-filter: blur(22px); box-shadow: 0 10px 32px rgba(0,0,0,0.08); margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 1rem;";
 const TITLE_STYLE: &str = "font-size: 1.1rem; font-weight: 700; color: var(--qualia-text); margin: 0;";
 const DESC_STYLE: &str = "font-size: 0.85rem; color: var(--qualia-text-muted); line-height: 1.5; margin: 0;";
 const PROGRESS_CONTAINER: &str = "width: 100%; height: 6px; background: rgba(128,128,128,0.2); border-radius: 3px; overflow: hidden; margin-top: 0.5rem;";
 const PROGRESS_BAR: &str = "height: 100%; background: var(--qualia-brand); transition: width 0.2s ease;";
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    async fn tauri_listen(
-        event: &str,
-        handler: &Closure<dyn FnMut(js_sys::Object)>,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
 
 #[cfg(target_arch = "wasm32")]
 async fn invoke_tauri_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>

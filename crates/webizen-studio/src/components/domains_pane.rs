@@ -14,16 +14,8 @@ use dioxus::prelude::*;
 use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
 
 #[cfg(target_arch = "wasm32")]
 async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>

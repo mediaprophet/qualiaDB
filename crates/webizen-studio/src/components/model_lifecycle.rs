@@ -1,18 +1,10 @@
 use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke;
 
 // The engine runs NATIVELY; this wasm UI only reads its lifecycle state over the Tauri invoke bridge.
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn invoke(
-        cmd: &str,
-        args: wasm_bindgen::JsValue,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
-
 #[component]
 pub fn ModelLifecycle() -> Element {
     let mut step = use_signal(|| 2);
