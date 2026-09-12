@@ -229,6 +229,32 @@
   font-size: 0.86em;
 }
 
+[data-theme="release-038"] .q-continuity-strip {
+  max-width: 40rem;
+  margin-left: 0;
+  padding: 0.85rem 1.15rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: rgba(251, 191, 36, 0.06);
+  box-shadow: 0 0 28px rgba(251, 191, 36, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: rgba(253, 230, 176, 0.95);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+[data-theme="release-038"] .hex-hint {
+  color: var(--q-faint);
+  font-size: 0.88rem;
+}
+
+[data-theme="release-038"] button.hex {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
 [data-theme="release-038"] .hex {
   width: 7.2rem;
   height: 8.2rem;
@@ -252,6 +278,17 @@
   filter: brightness(1.1);
 }
 
+[data-theme="release-038"] .hex:focus-visible,
+[data-theme="release-038"] .hex[aria-expanded="true"] {
+  filter: brightness(1.16);
+  box-shadow: inset 0 0 0 2px rgba(34, 211, 238, 0.7);
+}
+
+[data-theme="release-038"] .hex:focus-visible {
+  outline: 2px solid var(--q-cyan);
+  outline-offset: 3px;
+}
+
 [data-theme="release-038"] .hex-row {
   display: flex;
   justify-content: center;
@@ -272,6 +309,16 @@
   gap: 0.7rem;
 }
 
+[data-theme="release-038"] button.hex-tile {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
 [data-theme="release-038"] .hex-tile {
   min-height: 5rem;
   padding: 0.95rem 1rem;
@@ -280,17 +327,61 @@
   background: rgba(8, 14, 22, 0.55);
 }
 
-[data-theme="release-038"] .hex-tile dt {
+[data-theme="release-038"] .hex-tile:focus-visible,
+[data-theme="release-038"] .hex-tile[aria-expanded="true"] {
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(34, 211, 238, 0.25);
+}
+
+[data-theme="release-038"] .hex-tile:focus-visible {
+  outline: 2px solid var(--q-cyan);
+  outline-offset: 2px;
+}
+
+[data-theme="release-038"] .hex-tile-name {
+  display: block;
   font-family: var(--q-mono);
   color: var(--q-cyan);
   font-size: 0.82rem;
   margin-bottom: 0.3rem;
 }
 
-[data-theme="release-038"] .hex-tile dd {
+[data-theme="release-038"] .hex-tile-hint {
+  display: block;
   margin: 0;
   color: var(--q-muted);
   font-size: 0.88rem;
+}
+
+[data-theme="release-038"] .hex-detail {
+  margin-top: 1.4rem;
+  padding: 1.15rem 1.25rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  background: rgba(8, 14, 22, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="release-038"] .hex-detail-name {
+  color: var(--q-cyan);
+  font-size: 0.82rem;
+  margin: 0 0 0.45rem;
+}
+
+[data-theme="release-038"] .hex-detail-plain {
+  color: var(--q-ink);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  max-width: 40rem;
+  margin: 0 0 0.45rem;
+}
+
+[data-theme="release-038"] .hex-detail-tech {
+  color: var(--q-muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  max-width: 40rem;
+  margin: 0;
 }
 
 [data-theme="release-038"] .q-pill {
@@ -522,7 +613,9 @@
     transition: filter 140ms ease-out;
   }
 
-  [data-theme="release-038"] .hex:hover {
+  [data-theme="release-038"] .hex:hover,
+  [data-theme="release-038"] .hex:focus-visible,
+  [data-theme="release-038"] .hex[aria-expanded="true"] {
     transform: none;
     filter: brightness(1.08);
   }

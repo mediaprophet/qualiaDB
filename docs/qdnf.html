@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <script src="js/menu-loader.js"></script>
+  <script src="js/qdnf-map.js" defer></script>
 </head>
 <body class="min-h-screen">
   <div class="q-mesh" aria-hidden="true"></div>
@@ -36,38 +37,46 @@
       QDNF is Qualia’s native networking model. Inside a QDNF realm it does not require ARP, IPv6 neighbour discovery, DHCP, DNS, ICANN names, BGP, or a mandatory cloud relay.
       The Qualia Peer Runtime (QPR) is the library over that fabric — the intended replacement for libp2p, not a wrapper around it.
     </p>
-    <p class="q-note mb-12">
+    <p class="q-note mb-6">
       Honest status: QPR is native and still being built on <code class="q-mono">0.0.38</code>. This page is a map, not a live packet capture.
       Locators and DNS names are handles — never the human (NaturalAgent). Law keeps the word <strong>person</strong> where statutes need it.
       Ordinary Internet stays a Legacy Internet Gateway.
       Public Internet relay / MASQUE evidence flags stay <strong>false</strong> until a second host dials a URL Timothy supplies (CSCP-08 chores wait on that). No invented ticks.
       The older <a class="q-link" href="network_webizen.html">Network Webizen</a> screen still plays a mock table.
     </p>
+    <p class="q-continuity-strip mb-12" role="note">
+      <strong>Handle ≠ human.</strong>
+      Chrome says <em>human</em> (NaturalAgent). Law keeps the word <strong>person</strong> where statutes need it.
+    </p>
 
-    <section class="q-card p-8 mb-12 overflow-x-auto">
-      <p class="q-kicker mb-6 text-center">Protocol honeycomb</p>
-      <div class="hex-grid">
+    <section class="q-card p-8 mb-12 overflow-x-auto" id="honeycomb">
+      <p class="q-kicker mb-3 text-center">Protocol honeycomb</p>
+      <p class="hex-hint mb-6 text-center">Tap a layer for a plain line and a technical line. Escape closes.</p>
+      <div class="hex-grid" role="group" aria-label="QDNF layers">
         <div class="hex-row">
-          <div class="hex">QLink</div>
-          <div class="hex">DNI</div>
-          <div class="hex">QRoute</div>
+          <button type="button" class="hex" data-hex="qlink" data-name="QLink" data-plain="Proven neighbours, not ARP guesses." data-tech="Cryptographic adjacency — neighbours are proven, not guessed from ARP." aria-expanded="false" aria-controls="hex-detail">QLink</button>
+          <button type="button" class="hex" data-hex="dni" data-name="DNI" data-plain="Expiring locators — handles, not forever-who." data-tech="Self-certifying topological identifiers; a path is a locator, never who." aria-expanded="false" aria-controls="hex-detail">DNI</button>
+          <button type="button" class="hex" data-hex="qroute" data-name="QRoute" data-plain="Link state inside a realm; path vector between realms." data-tech="Intra-realm link state and inter-realm path vector. Not BGP-as-who." aria-expanded="false" aria-controls="hex-detail">QRoute</button>
         </div>
         <div class="hex-row">
-          <div class="hex">QResolve</div>
-          <div class="hex">QPolicy</div>
-          <div class="hex">QSession</div>
-          <div class="hex">QSync</div>
+          <button type="button" class="hex" data-hex="qresolve" data-name="QResolve" data-plain="DID and content without DNS-as-who." data-tech="Resolve DID / content / resource; optional domain names stay handles only." aria-expanded="false" aria-controls="hex-detail">QResolve</button>
+          <button type="button" class="hex" data-hex="qpolicy" data-name="QPolicy" data-plain="Consent, capability, and deontic authorization." data-tech="Capability and consent gates on the fabric — not a Host policy invention." aria-expanded="false" aria-controls="hex-detail">QPolicy</button>
+          <button type="button" class="hex" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="Encrypted sessions; signed, bounded Q42 / CRDT exchange." data-tech="Encrypted datagrams and streams, then signed bounded Q42 / CRDT sync — not a public relay or CSCP-08 tick." aria-expanded="false" aria-controls="hex-detail">QSession<br>QSync</button>
         </div>
       </div>
-      <dl class="hex-stack">
-        <div class="hex-tile"><dt>QLink</dt><dd>Proven neighbours, not ARP guesses.</dd></div>
-        <div class="hex-tile"><dt>DNI</dt><dd>Expiring locators — handles, not forever-who.</dd></div>
-        <div class="hex-tile"><dt>QRoute</dt><dd>Link state inside a realm; path vector between realms.</dd></div>
-        <div class="hex-tile"><dt>QResolve</dt><dd>DID and content without DNS-as-who.</dd></div>
-        <div class="hex-tile"><dt>QPolicy</dt><dd>Consent, capability, deontic authorization.</dd></div>
-        <div class="hex-tile"><dt>QSession</dt><dd>Encrypted datagrams and streams.</dd></div>
-        <div class="hex-tile"><dt>QSync</dt><dd>Signed, bounded Q42 / CRDT exchange.</dd></div>
-      </dl>
+      <div class="hex-stack" role="group" aria-label="QDNF layers">
+        <button type="button" class="hex-tile" data-hex="qlink" data-name="QLink" data-plain="Proven neighbours, not ARP guesses." data-tech="Cryptographic adjacency — neighbours are proven, not guessed from ARP." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QLink</span><span class="hex-tile-hint">Proven neighbours, not ARP guesses.</span></button>
+        <button type="button" class="hex-tile" data-hex="dni" data-name="DNI" data-plain="Expiring locators — handles, not forever-who." data-tech="Self-certifying topological identifiers; a path is a locator, never who." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">DNI</span><span class="hex-tile-hint">Expiring locators — handles, not forever-who.</span></button>
+        <button type="button" class="hex-tile" data-hex="qroute" data-name="QRoute" data-plain="Link state inside a realm; path vector between realms." data-tech="Intra-realm link state and inter-realm path vector. Not BGP-as-who." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QRoute</span><span class="hex-tile-hint">Link state inside a realm; path vector between realms.</span></button>
+        <button type="button" class="hex-tile" data-hex="qresolve" data-name="QResolve" data-plain="DID and content without DNS-as-who." data-tech="Resolve DID / content / resource; optional domain names stay handles only." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QResolve</span><span class="hex-tile-hint">DID and content without DNS-as-who.</span></button>
+        <button type="button" class="hex-tile" data-hex="qpolicy" data-name="QPolicy" data-plain="Consent, capability, and deontic authorization." data-tech="Capability and consent gates on the fabric — not a Host policy invention." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QPolicy</span><span class="hex-tile-hint">Consent, capability, and deontic authorization.</span></button>
+        <button type="button" class="hex-tile" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="Encrypted sessions; signed, bounded Q42 / CRDT exchange." data-tech="Encrypted datagrams and streams, then signed bounded Q42 / CRDT sync — not a public relay or CSCP-08 tick." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QSession / QSync</span><span class="hex-tile-hint">Encrypted sessions; signed, bounded Q42 / CRDT exchange.</span></button>
+      </div>
+      <div id="hex-detail" class="hex-detail" hidden>
+        <p class="hex-detail-name q-mono" data-hex-name></p>
+        <p class="hex-detail-plain" data-hex-plain></p>
+        <p class="hex-detail-tech" data-hex-tech></p>
+      </div>
     </section>
 
     <section class="grid md:grid-cols-2 gap-5 mb-12">
