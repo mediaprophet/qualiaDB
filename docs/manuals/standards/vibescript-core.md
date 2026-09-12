@@ -15,7 +15,7 @@ Consult inputs incorporated here (not restated as competing specs):
 
 | Source | What this document takes |
 |---|---|
-| `consult/20260815_codex.md` | Small closed grammar; generated capability bindings; no raw NQuin overlays; exact RDF 1.2 Turtle spellings; QApp stays declarative; effects, budgets, receipts; staged delivery |
+| `consult/20260815_codex.md` | Compact current grammar (may grow, versioned); generated capability bindings; no raw NQuin overlays; exact RDF 1.2 Turtle spellings; QApp stays declarative; effects, budgets, receipts; staged delivery |
 | `consult/20260815_qapp-script-gemini.md` | Three-tier split (UI / interpreted DSL / compiled engine); document+graph DSL not a JS replacement; zero JIT (iOS); mobile FFI and edge profiles as *profiles*, not extra grammars |
 | `consult/branding.md` | Vibe / VibeScript = language; Poet = human creative environment (UI/CLI) that hosts Vibe; Pulse = transport/events; Aura = ontology/schema |
 | `consult/Rust Extensible Runtime Architecture.pdf` | Scripts call **capabilities**, never plugins. Sandboxed extensions = WASM components. Hardware/GPU/HSM/codecs = native child processes under Qualia, registered into the same capability table |
@@ -33,15 +33,15 @@ RFC 2119 words (`MUST`, `MUST NOT`, `SHOULD`, `MAY`) apply only in numbered norm
 - host event handlers (`on pulse…`, `on ui…`) that Poet (or any host) dispatches;
 - **application support** — scripts that call Host families (`using LinearAlgebra;`, `capability.invoke("Family.method", {…})`) so Poet and other hosts can host apps, not only workshop cells.
 
-The **grammar is closed**. The **Host catalog grows**: `ALL_BOUND` / `capability.invoke("Family.method")` MAY gain new ids when they improve the app/REPL surface. Adding a Host id MUST NOT change this document’s grammar, types, or effect classes.
+**vibe-0.1 is the current dialect.** It MAY grow when humans need a better form; growth is versioned and documented (a dated revision of this document, or `vibe-0.2` when the dialect itself breaks). The **Host catalog grows**: `ALL_BOUND` / `capability.invoke("Family.method")` MAY gain new ids when they improve the app/REPL surface. Adding a Host id MUST NOT silently rewrite this document’s types or effect classes — grammar edits ship with a versioned dialect note.
 
 **Human dialect (workshop).** Authors write `using Animation;`, `using LinearAlgebra;`, `cell score := …;`, `present lamp { color: #ff8800 }`, color literals, and catalog `Family.method()` calls. `capability.invoke("Family.method", {…})` remains the JNI/catalog spelling. Both are the same language; `using` is the lease, not a second grammar.
 
 **Locale.** English keywords are always legal. Additional keyword locales are opt-in (`locale zh;`) and MUST round-trip on the AST (`Program.locales`).
 
-**Vibe 0.1 is not** a general-purpose language, a JavaScript clone, a second Webizen VM opcode set, a replacement for `SlgOpcode`, or a surface that authors raw 48-byte Quin overlays. It MUST NOT grow a DOM or `eval`. Replacing JavaScript as Qualia’s *application* language is the product destination; 0.1 is the closed core that destination builds on, not a denial of it. The matching wire is CBOR-LD (HCF), not JSON — Canonical AST in the table below.
+**Vibe 0.1 is not** a general-purpose language, a JavaScript clone, a second Webizen VM opcode set, a replacement for `SlgOpcode`, or a surface that authors raw 48-byte Quin overlays. It MUST NOT grow a DOM or `eval`. Replacing JavaScript as Qualia’s *application* language is the product destination; 0.1 is the current dialect that destination builds on, not a denial of it. The matching wire is CBOR-LD (HCF), not JSON — Canonical AST in the table below.
 
-A package that uses only this document’s grammar, types, effects, and the **0.1 binding profile** (§11) is a conforming 0.1 program. Later Host catalog ids (`LinearAlgebra.*`, `geom`, `audio`, `model`, `extension`) MUST NOT change the grammar. `vibe-host-0.1` is the **outcome** of incorporating existing engine libraries into that catalog — not a freeze of `ALL_BOUND`.
+A package that uses only this document’s grammar, types, effects, and the **0.1 binding profile** (§11) is a conforming 0.1 program. Later Host catalog ids (`LinearAlgebra.*`, `geom`, `audio`, `model`, `extension`) MUST NOT require a silent grammar rewrite. `vibe-host-0.1` is the **outcome** of incorporating existing engine libraries into that catalog — not a freeze of `ALL_BOUND`.
 
 ---
 
@@ -537,7 +537,7 @@ Post-0.1 extensions exposing the persistent asset store via `capability.invoke` 
 
 ### 11.5 Linear algebra (app / REPL)
 
-Post-0.1 Host family for dense linear algebra in Vibe apps and the Poet REPL. Grammar stays closed; ids live in paired catalogs (`vibe::catalog::ALL_INVOKE_IDS` and `poet_host::invoke::ids::ALL_BOUND`). Matrices are row-major `{ rows, cols, data }` records. `LinearAlgebra.gemm` is the BLAS-3 entry and MUST call the engine solver (`solvers::linear_algebra::gemm`), including the solver’s CPU floor and optional GPU offload when the machine actually has an accelerator.
+Post-0.1 Host family for dense linear algebra in Vibe apps and the Poet REPL. The dialect is current and may grow; ids live in paired catalogs (`vibe::catalog::ALL_INVOKE_IDS` and `poet_host::invoke::ids::ALL_BOUND`). Matrices are row-major `{ rows, cols, data }` records. `LinearAlgebra.gemm` is the BLAS-3 entry and MUST call the engine solver (`solvers::linear_algebra::gemm`), including the solver’s CPU floor and optional GPU offload when the machine actually has an accelerator.
 
 | Binding | Effect | Input | Output |
 |---|---|---|---|

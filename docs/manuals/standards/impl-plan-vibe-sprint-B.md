@@ -1,8 +1,9 @@
 # Impl plan — Vibe / Sprint B (language · DevRel · deltas)
 
-**Owner:** Vibe · **Seam commits:** Neo · **Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8`
-**Branch:** `0.0.36-dev` · **North star:** vibe = hot-edit JS alternative over QualiaDB / Webizen / Poet (script change must never force host rebuild)
-**Rules:** no Host widen · no invented dotted `qualia.*` · seams only to live `ALL_BOUND` / `vibe:InvokeId` · gaps → `docs/manuals/standards/vibescript-sprint-deltas.md`
+**Owner:** Vibe · **Seam commits:** Neo · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze)
+**Branch:** `0.0.38` · **North star:** vibe = hot-edit JS alternative over QualiaDB / Webizen / Poet (script change must never force host rebuild)
+**Current dialect:** `vibe-0.1` may grow when humans need a better form (versioned + documented). **Rules:** no invented Host APIs / dotted `qualia.*` · seams only to live `ALL_BOUND` / `vibe:InvokeId` · gaps → `docs/manuals/standards/vibescript-sprint-deltas.md`
+**Customer chips:** **live** / **planned**. Historical Stage rows below keep period “freeze” wording as sprint-of-record.
 
 ## Done (do not reopen)
 - Workstream A freeze: parse / check / diagnose / capability invoke + `LANGUAGE_VERSION` / `host_version`

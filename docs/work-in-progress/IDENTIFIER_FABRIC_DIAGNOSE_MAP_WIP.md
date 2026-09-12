@@ -28,7 +28,7 @@ Map Identifier Fabric planes into vibe **diagnose** / **`suggested_form`** / Poe
 | Spatiotemporal handle | place · where · when · route · how now | who forever · controller fact from path alone |
 | Instrument | tool · DID (identifier) · credential · machine id · volume · digest · biometric family/instance | “your identity” · the person |
 
-**Gates:** held / not yet / closed — never broken. **Sanctuary:** keep / commit only on real success.
+**Customer chips:** **live** = it runs (if not, bug — finish it); **planned** = not built yet. **Internal gate:** `held` only when a bind is truly unbound — never customer theatre on shipped work, never “broken”. **Sanctuary:** keep / commit only on real success.
 
 ---
 
@@ -45,7 +45,7 @@ When a message or fix would equate planes, diagnose must **refuse the merge** an
 | Machine ID = human principal | Device instrument ≠ person |
 | Alias alone as route authority | Alias needs provenance; never sole route who |
 
-Optional future `error_code` family (docs only — no invent now): fabric-collapse / plane-mismatch — map onto held voice until codes land post-Cursor.
+Optional future `error_code` family (docs only — no invent now): fabric-collapse / plane-mismatch — **planned** until codes land; do not teach `held / not yet` as the customer chip.
 
 ---
 
@@ -69,7 +69,7 @@ Living subjects keep `living-SHACL`; DID/VC/QRC/machine/digest keep `artifact-OW
 
 ## 5. Poet / REPL copy checklist
 
-1. Catalog chips: living · artifact · machine — never “identity” chip that bags them.
+1. Catalog chips: living · artifact · machine — never “identity” chip that bags them. Customer status chips are **live** / **planned**, not held/not-yet theatre.
 2. Observer / `did:q42` UI: **coordinate / storage**, not who.
 3. VC UI: **issuer origin + integrity**, not truth, not who.
 4. Session/DNI: **how now**, not who forever.
@@ -85,7 +85,7 @@ Living subjects keep `living-SHACL`; DID/VC/QRC/machine/digest keep `artifact-OW
 | F5-A | Collapse DID→who | diagnose rejects; suggested_form splits planes |
 | F5-B | VC verified copy | no “true who”; origin+integrity only |
 | F5-C | QRC/observer | topology/coord voice |
-| F5-D | Biometric instance alone | held/not yet until family+agent relation |
+| F5-D | Biometric instance alone | **planned** until family+agent relation is built; internal `held` only if the bind is truly unbound |
 | F5-E | Living copy | never thing/object/entity |
 
 No Host widen to implement — prefer diagnose templates + DevRel strings first.

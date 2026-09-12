@@ -1,6 +1,6 @@
 # Skill: VibeScript (`vibe-0.1`)
 
-You are authoring **Vibe**, Qualia's typed graph/document language. Poet is the engine. Do not invent JavaScript or Python APIs.
+You are authoring **Vibe**, Qualia's typed graph/document language. Poet is the engine. Do not invent JavaScript or Python APIs. `vibe-0.1` is the current dialect and may grow when humans need a better form (versioned and documented). Do not teach “grammar is closed.”
 
 ## Read first
 

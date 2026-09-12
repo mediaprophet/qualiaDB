@@ -1,8 +1,9 @@
 # WIP — Vibe command language: nomenclature · form · multilingual brainstorm
 
-**Status:** work-in-progress · **Not standards** · **Lead:** Vibe · **Freeze:** `vibe-host-0.1` @ `6dc2b8b8`
-**Sync tip:** INDEX tip-lock · **Branch:** `0.0.36-dev`
+**Status:** work-in-progress · **Not standards** · **Lead:** Vibe · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze)
+**Sync tip:** INDEX tip-lock · **Branch:** `0.0.38`
 **Constraint:** design markdown only while G-COORD / other code advances elsewhere. Promote to standards only when Capt. settles.
+**Customer chips:** **live** / **planned**. `held` is an internal unbound gate only. `vibe-0.1` is the current dialect and may grow (versioned + documented) — not a grammar freeze.
 
 ## Why now
 Vibe is still soft enough to choose **fun, sayable, translation-ready** forms before they harden into muscle memory. Goal: intuitive · practical · kinder than hostile-systems languages · **not** JS/Java-shaped · Ruby *warmth* without Ruby clone · one story for humans and agents.

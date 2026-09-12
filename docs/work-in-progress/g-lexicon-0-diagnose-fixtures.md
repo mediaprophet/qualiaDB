@@ -1,6 +1,6 @@
 # G-LEXICON-0 — diagnose / lexicon pin fixtures (Vibe)
 
-**Status:** landed (fixtures + diagnose hooks) · **Freeze:** `vibe-host-0.1`  
+**Status:** landed (fixtures + diagnose hooks) · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze)  
 **Parent tip:** `6df915a0` (G-LEXICON-0 accept `641c2460` / bind `720bd5a9`)  
 **Gate:** additive · **no Host widen** · **no dotted `qualia.*`** · **no in-binary WordNet**  
 **Owner:** Vibe · Seam: Neo (`GraphDatabase.lexicon_manifest`) · Shape: Marvin
@@ -29,7 +29,8 @@ added to `ALL_INVOKE_IDS` (already in `ALL_BOUND` — not a new Host method).
 
 1. **A — Missing pack / E300.** `diagnose_lexicon_pin(missing_pack.vibe, false)` →
    `valid: false`, `kind: "module"`, `error_code: "E300"`, `suggested_fix` contains
-   `held / not yet` and `open lexicon pack`. Never “broken”. `diagnose()` of the
+   `held / not yet` and `open lexicon pack` as the **internal** unbound-pack gate.
+   Customer chips stay **live** / **planned**. Never “broken”. `diagnose()` of the
    same file stays valid (parse+check does not invoke).
 2. **B — Valid pin.** `parse_lexicon_pin_from_source(pin_ok.vibe)` records
    `en-core@0.1.0`. Example pack fields: `packSemVer: 0.1.0`, `framing: mixed`,
@@ -39,7 +40,8 @@ added to `ALL_INVOKE_IDS` (already in `ALL_BOUND` — not a new Host method).
    back to the same rows.
 4. **D — Living not Thing-washed.** Upgrade map requesting artifact-OWL on a
    living-SHACL row keeps `living-SHACL`.
-5. **Freeze.** `LANGUAGE_VERSION == vibe-0.1`, `HOST_VERSION == vibe-host-0.1`.
+5. **Versions.** `LANGUAGE_VERSION == vibe-0.1` (current dialect; may grow),
+   `HOST_VERSION == vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze).
    Four-ops unchanged. Workshop files have no `qualia.*` and no agent
    `capability.invoke`.
 

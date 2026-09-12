@@ -35,8 +35,7 @@ and `crates/qualia-core-db/src/poet_host/invoke/ids.rs` (`ALL_BOUND`) + dispatch
 
 ## 2026-09-08 — Host-widen for apps / REPL (owner)
 
-Timothy: **VibeScript is a REPL language intended to support apps.** The grammar stays
-closed; the Host catalog **grows**. Do **not** treat `vibe-host-0.1` as a freeze of
+Timothy: **VibeScript is a REPL language intended to support apps.** The Host catalog **grows**. Do **not** treat `vibe-host-0.1` as a freeze of
 `ALL_BOUND`. Linear algebra is first-class: bind missing app primitives and route
 `LinearAlgebra.gemm` through the engine solver (CPU floor, GPU when `caps()` says so).
 Production polish (live invoke with the JSON Poet sends, honesty labels, machine
@@ -44,3 +43,7 @@ schemas, dual-path scan of late-wave Live files) is in-scope — not inventory-o
 
 Still not in scope: binding every Q1 CoreDb `pub fn`. Host-widen where it improves the
 app/REPL surface, starting with `LinearAlgebra.*`.
+
+## 2026-09-12 — dialect may grow (owner)
+
+Timothy rejected “grammar is locked/closed” as an artificial freeze. **`vibe-0.1` is the current dialect and MAY grow** when humans need a better form — versioned and documented. `vibe-host-0.1` remains the incorporation **outcome**, not an `ALL_BOUND` freeze. Customer chips: **live** / **planned**. `held` is an internal unbound gate only.

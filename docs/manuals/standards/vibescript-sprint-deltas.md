@@ -2,8 +2,8 @@
 
 > Intake for capability / definition / ontology deltas. Triage owner: **Vibe**. Gate reports: **Capt.**
 > **Normative:** `vibescript-core.md` (§11.5) — the Host catalog **grows**; `vibe-host-0.1` is an **outcome**, not a freeze of `ALL_BOUND`.
-> Grammar / four-op language contracts stay stable; new `Capability.method` ids land via Host-widen + catalog honesty — **do not invent** dotted `qualia.*` IRIs ahead of live `ALL_BOUND`.
-> Historical Sprint-B rows below keep their original notes (including period “no Host widen” wording); treat those as sprint-of-record, superseded by core for current policy.
+> The `vibe-0.1` grammar is **current and may grow** when humans need a better form (versioned + documented). Four-op language contracts stay the authoring ABI until a dialect bump; new `Capability.method` ids land via Host-widen + catalog honesty — **do not invent** dotted `qualia.*` IRIs ahead of live `ALL_BOUND`.
+> Historical Sprint-B rows below keep their original notes (including period “no Host widen” / “freeze” wording); treat those as sprint-of-record, superseded by core for current policy. No leftover grammar-lock.
 
 **Repo / branch:** `mediaprophet/qualiaDB` @ `0.0.38`
 **Catalog truth:** live `ALL_BOUND` / `vibe:InvokeId` (`Capability.method`) in
@@ -102,7 +102,7 @@
 | **summary** | Branch `0.0.36-dev` vs crate stamp still `0.0.35` |
 | **notes** | Crate stamp is `0.0.36-dev` (`crates/vibe/Cargo.toml`). EBNF ↔ `vibescript-core.md` §3 is asserted by `vibe::grammar` tests. |
 | **owner** | Neo + Vibe |
-| **gate** | Part of `vibe-host-0.1` freeze |
+| **gate** | Historical sprint note (crate stamp + EBNF sync). Not a grammar lock. `vibe-host-0.1` is an outcome, not an `ALL_BOUND` freeze. |
 | **landed** | 2026-09-05 Vibe Stage 0 |
 
 ### B-007 — Preview handle still / clip / scene + cross-frame spans
@@ -208,3 +208,4 @@
 - 2026-09-04: Initial park from Capt / Vibe / Neo / davinci / monet / Marvin group session.
 
 - 2026-09-11: Header refresh — Host catalog grows (core §11.5); drop stale freeze/~885; branch cite → `0.0.38` (Vibe / Capt SPEC_UPDATED).
+- 2026-09-12: Confirm no grammar-lock leftover. `vibe-0.1` is the current dialect and may grow; B-006 “freeze” gate wording marked historical.

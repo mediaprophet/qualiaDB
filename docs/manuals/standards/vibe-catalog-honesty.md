@@ -1,16 +1,20 @@
 # Vibe catalog honesty (W1 / B-002–B-005 / B-007)
 
-**Date:** 2026-09-05 · **Freeze:** `vibe-host-0.1`  
-**Live list:** `crates/qualia-core-db/src/poet_host/invoke/ids.rs` `ALL_BOUND`  
+**Date:** 2026-09-12 · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze)
+**Live list:** `crates/qualia-core-db/src/poet_host/invoke/ids.rs` `ALL_BOUND`
 **Language list:** `crates/vibe/src/catalog/ids.rs` `ALL_INVOKE_IDS`
+**Tip count:** `ALL_BOUND` length **1121** on branch `0.0.38` at this edit (count the tip in `ids.rs`; do not hardcode ~885).
 
-## Diff result (2026-09-05)
+## Diff result (2026-09-12)
 
-Every `ALL_BOUND` string is present in the Vibe catalog (885 unique host ids).
+Every `ALL_BOUND` string is present in the Vibe catalog. The 2026-09-05 “885 unique host ids” figure is stale — cite the tip, not ~885.
+
 `GraphDatabase.volume_open` / `volume_commit` were the last host ids missing from
 Vibe and are now catalogued. Vibe may list additional local kernels
 (`biosignal.dp_*`) that LocalHost can run without a Poet bind; those are not
 Host methods and are not dotted `qualia.*` IRIs.
+
+Customer chips: **live** = it runs (if not, it is a bug — finish it); **planned** = not built yet. `held` is an internal gate only when a bind is truly unbound — not customer theatre on shipped work.
 
 ## Aspirational → live remap (B-002)
 
@@ -58,9 +62,9 @@ surfaces them only as `GraphDatabase.sparql` results plus existing
 
 | Surface | Honest label |
 |---------|--------------|
-| Native `GraphDatabase.volume_commit` | durable when sanctuary permits |
-| wasm / LocalHost volume invoke | `honesty: local` or E300 — not a saved `.q42` |
-| SPARQL showcase pages | recorded engine version in the page; not live-unless-connected |
-| Inference chrome | live `Inference.*` or gated |
+| Native `GraphDatabase.volume_commit` | **live** when sanctuary permits a real write |
+| wasm / LocalHost volume invoke | **planned** for durable `.q42` on that surface — or E300 if the bind is truly unbound |
+| SPARQL showcase pages | recorded engine version in the page; **live** only when connected |
+| Inference chrome | **live** `Inference.*` or **planned** if the chrome is not built |
 
-A demo that cannot open a volume must say unavailable, not “saved”.
+A demo that cannot open a volume must say **planned** (path not built) or treat a failed live bind as a bug. Do not say “saved”. Do not dress a missing write as a customer “unavailable” chip.
