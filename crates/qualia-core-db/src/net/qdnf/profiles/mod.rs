@@ -19,6 +19,7 @@ pub mod gateway;
 pub mod negotiate;
 pub mod offline;
 pub mod requirements;
+#[cfg(test)]
 pub mod scenarios;
 pub mod vault;
 

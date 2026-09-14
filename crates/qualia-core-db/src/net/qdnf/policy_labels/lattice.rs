@@ -1,7 +1,10 @@
 //! Confidentiality lattice properties over [`join_one`].
 
+#[cfg(test)]
 use super::join::{join_labels_into, join_one};
-use super::types::{Confidentiality, LabelFields};
+use super::types::Confidentiality;
+#[cfg(test)]
+use super::types::LabelFields;
 use crate::net::qdnf::errors::QdnfError;
 
 /// Lattice join of two confidentiality ranks. Unknown cannot join.

@@ -2,9 +2,11 @@
 
 use super::{
     disclosure_byte, disclosure_from, finish, require_tags, walk_tlvs_seen, write_tlv, CscpError,
-    MAGIC, MAX_BODY, MSG_CONNECT_REQUEST, TAG_AUTHORITY, TAG_BUDGET, TAG_CRITICAL, TAG_DEADLINE,
-    TAG_PEER, TAG_PROTECTION, TAG_PURPOSE, VERSION,
+    MSG_CONNECT_REQUEST, TAG_AUTHORITY, TAG_BUDGET, TAG_CRITICAL, TAG_DEADLINE, TAG_PEER,
+    TAG_PROTECTION, TAG_PURPOSE,
 };
+#[cfg(test)]
+use super::{MAGIC, MAX_BODY, VERSION};
 use crate::net::peer::connectivity::policy::Disclosure;
 use crate::net::peer::fabric::connect::{connect, ConnectHandle, Fabric};
 use crate::net::peer::fabric::intent::{

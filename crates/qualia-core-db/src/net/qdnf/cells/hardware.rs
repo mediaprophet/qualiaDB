@@ -70,8 +70,10 @@ pub const fn idle_energy_measured() -> bool {
     false
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 const PROC_CAP: usize = 8192;
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn read_limited(path: &str) -> Result<String, HardwareObservation> {
     let bytes = std::fs::read(path).map_err(|_| HardwareObservation::Unmeasured)?;
     if bytes.len() > PROC_CAP {
@@ -80,6 +82,7 @@ fn read_limited(path: &str) -> Result<String, HardwareObservation> {
     String::from_utf8(bytes).map_err(|_| HardwareObservation::Unmeasured)
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn parse_vmrss_bytes(status: &str) -> Option<u64> {
     for line in status.lines() {
         let Some(rest) = line.strip_prefix("VmRSS:") else {
@@ -92,6 +95,7 @@ fn parse_vmrss_bytes(status: &str) -> Option<u64> {
     None
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn parse_numa_maps_node(maps: &str) -> Option<u32> {
     let mut best_node = 0u32;
     let mut best_pages = 0u64;
@@ -131,6 +135,7 @@ fn parse_numa_maps_node(maps: &str) -> Option<u32> {
     }
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn first_sysfs_node() -> Option<u32> {
     let mut n = 0u32;
     while n < 8 {
@@ -144,6 +149,7 @@ fn first_sysfs_node() -> Option<u32> {
     None
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn format_node_path<'a>(buf: &'a mut [u8], n: u32) -> Option<&'a str> {
     let prefix = b"/sys/devices/system/node/node";
     if buf.len() < prefix.len() + 2 {
@@ -157,6 +163,7 @@ fn format_node_path<'a>(buf: &'a mut [u8], n: u32) -> Option<&'a str> {
     core::str::from_utf8(&buf[..prefix.len() + 1]).ok()
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn parse_u64_file(path: &str) -> Option<u64> {
     let raw = std::fs::read_to_string(path).ok()?;
     raw.trim().parse().ok()

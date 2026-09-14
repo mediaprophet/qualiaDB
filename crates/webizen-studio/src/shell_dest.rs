@@ -8,6 +8,7 @@ use crate::Route;
 
 /// Strip `studio/#/`, leading slashes, and `qualia://` so menu payloads,
 /// hash paths, and address-bar tokens share one matcher.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub fn normalize_shell_target(raw: &str) -> String {
     let mut t = raw.trim().to_ascii_lowercase();
     if let Some(rest) = t.strip_prefix("qualia://") {
@@ -28,6 +29,7 @@ pub fn normalize_shell_target(raw: &str) -> String {
 }
 
 /// Map a native `shell-navigate` payload (or equivalent) to a studio route.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub fn route_from_shell_target(raw: &str) -> Route {
     match normalize_shell_target(raw).as_str() {
         "" | "talk" | "chat" | "home" | "dashboard" => Route::TalkRoute {},

@@ -7,7 +7,9 @@
 //! Tests charge KiB-scale [`CellProfile::NetworkSmall`] slots. The 42 MiB
 //! Sentinel figure stays in [`super::pass_budget`] as accounting.
 
-use crate::net::peer::cells::admit::{CellProfile, CellSlot, MAX_CELLS};
+use crate::net::peer::cells::admit::{CellSlot, MAX_CELLS};
+#[cfg(test)]
+use crate::net::peer::cells::admit::CellProfile;
 use crate::net::peer::cells::host_owner::HostAdmission;
 use crate::net::qdnf::errors::QdnfError;
 

@@ -3,11 +3,16 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use core::sync::atomic::{AtomicBool, Ordering};
+#[cfg(test)]
 use std::net::TcpListener;
+#[cfg(test)]
 use std::process::Command;
+#[cfg(test)]
 use std::time::Duration;
 
-use super::wss::{self, ENV_ADDR, ENV_CHILD, ENV_SECRET};
+#[cfg(test)]
+use super::wss::{self, ENV_ADDR, ENV_SECRET};
+use super::wss::ENV_CHILD;
 
 static DONE: AtomicBool = AtomicBool::new(false);
 
@@ -15,10 +20,12 @@ pub fn local_wss_two_process_executed() -> bool {
     DONE.load(Ordering::SeqCst) || std::env::var(ENV_CHILD).ok().as_deref() == Some("1")
 }
 
+#[cfg(test)]
 fn is_child() -> bool {
     std::env::var(ENV_CHILD).ok().as_deref() == Some("1")
 }
 
+#[cfg(test)]
 fn child_main() -> Result<(), String> {
     let addr = std::env::var(ENV_ADDR).map_err(|e| e.to_string())?;
     let secret = std::env::var(ENV_SECRET).map_err(|e| e.to_string())?;
@@ -35,6 +42,7 @@ fn child_main() -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(test)]
 fn parent_main() -> Result<(), String> {
     let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
     let addr = listener.local_addr().map_err(|e| e.to_string())?;

@@ -263,4 +263,11 @@ mod tests {
             Err(QiError::StoreFull)
         );
     }
+
+    #[test]
+    fn tag_name_formats_correctly() {
+        let mut buf = [0u8; 16];
+        let len = tag_name(42, &mut buf).unwrap();
+        assert_eq!(&buf[..len], b"qi/42");
+    }
 }

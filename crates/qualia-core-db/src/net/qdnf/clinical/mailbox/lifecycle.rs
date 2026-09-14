@@ -3,8 +3,10 @@
 use super::super::{first_empty, MAX_SLOTS};
 use super::slot::{network_asserts_clinical_review, MailboxSlot, MailboxState};
 use crate::net::peer::replication::custody::{
-    mark_application_acked, mark_delivered, mark_stored, CustodyState,
+    mark_application_acked, mark_delivered, mark_stored,
 };
+#[cfg(test)]
+use crate::net::peer::replication::custody::CustodyState;
 use crate::net::qdnf::contracts::{recheck_permit, BoundGenerations, LiveGenerations};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;

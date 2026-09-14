@@ -16,4 +16,6 @@ pub use policy::{
     CompensationClass, ContactState, IndependentFacts, ObservationQuality, Plane, PolicyOutcome,
     ResourceKind, TemporalGrant,
 };
-pub use verified::{AuthorisedContact, InstalledSessionKeys, VerifiedCredential};
+pub use verified::{
+    grant_matches_contact, AuthorisedContact, InstalledSessionKeys, VerifiedCredential,
+};

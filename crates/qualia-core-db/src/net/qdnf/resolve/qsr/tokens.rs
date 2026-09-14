@@ -6,6 +6,7 @@
 //! private-graph degree.
 
 use super::cover::CoverInterval;
+#[cfg(test)]
 use super::key::keys_equal;
 use super::outcome::QsrOutcome;
 use super::traversal::{lookup_into, QsrSnapshot};

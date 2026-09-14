@@ -4,20 +4,15 @@
 //! through this owner. Transport delivery never asserts clinical review.
 
 use crate::{PeerHost, QdnfError};
-use qualia_core_db::net::qdnf::authority::{ContactState, PolicyOutcome, TemporalGrant};
+use qualia_core_db::net::qdnf::authority::{ContactState, PolicyOutcome};
 use qualia_core_db::net::qdnf::clinical::{
-    admit_confidential_help, diagnosis_discovery_allowed, enqueue_offline, export_interchange,
-    inherit_response_label, notify_guardian, patient_record_associated, public_patient_index_allowed,
-    release_queued, restore_labelled_backup, seal_envelope, stream_attachment, vip_association_indexed,
-    CapacityMandatePolicy, CareGrant, CareGrantKind, ClinicalPair, GrantTable, InterchangeAdapter,
-    Mailbox, OfflineQueue, OfflineSlot, PairingTable, PayloadEnvelope, PermitTable, StandingPermit,
-    STREAM_PAGE_BYTES,
+    diagnosis_discovery_allowed, enqueue_offline, public_patient_index_allowed, release_queued,
+    seal_envelope, vip_association_indexed, CareGrant, ClinicalPair, GrantTable, Mailbox,
+    OfflineQueue, OfflineSlot, PairingTable, PayloadEnvelope, PermitTable, StandingPermit,
 };
 use qualia_core_db::net::qdnf::contracts::{BoundGenerations, LiveGenerations};
-use qualia_core_db::net::qdnf::policy_labels::{
-    encode_label_into, verify_label, Confidentiality, LabelFields, VerifiedLabel,
-};
-use qualia_core_db::net::qdnf::types::{Generation, ProfileId, StrongDigest};
+use qualia_core_db::net::qdnf::policy_labels::VerifiedLabel;
+use qualia_core_db::net::qdnf::types::StrongDigest;
 
 /// Session-owned clinical tables. Not a public patient index.
 #[derive(Clone, Copy, Debug)]
@@ -168,40 +163,48 @@ impl Default for ClinicalSession {
     }
 }
 
-fn digest(tag: u8) -> StrongDigest {
-    let mut d = StrongDigest::ZERO;
-    d.0[0] = tag;
-    d.0[47] = 0xC1;
-    d
-}
-
-fn grant_until(audience: StrongDigest, exp: u64) -> TemporalGrant {
-    TemporalGrant {
-        purpose_digest: digest(0x11),
-        audience_digest: audience,
-        authority_generation: 1,
-        not_before_unix: 0,
-        expires_unix: exp,
-        profile: ProfileId::QDNF_CRYPTO_1,
-    }
-}
-
-fn label(conf: Confidentiality, iss: StrongDigest) -> VerifiedLabel {
-    let mut fields = LabelFields::request(conf, iss);
-    if conf.requires_audience() {
-        fields.audience = iss;
-    }
-    let mut buf = [0u8; 256];
-    let n = encode_label_into(&fields, &mut buf).expect("encode");
-    verify_label(fields, &buf[..n]).expect("verify")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use qualia_core_db::net::qdnf::authority::TemporalGrant;
     use qualia_core_db::net::qdnf::clinical::{
-        network_asserts_clinical_review, notify_guardian_automatically,
+        admit_confidential_help, export_interchange, inherit_response_label,
+        network_asserts_clinical_review, notify_guardian, notify_guardian_automatically,
+        patient_record_associated, restore_labelled_backup, stream_attachment,
+        CapacityMandatePolicy, CareGrantKind, InterchangeAdapter, STREAM_PAGE_BYTES,
     };
+    use qualia_core_db::net::qdnf::policy_labels::{
+        encode_label_into, verify_label, Confidentiality, LabelFields,
+    };
+    use qualia_core_db::net::qdnf::types::{Generation, ProfileId};
+
+    fn digest(tag: u8) -> StrongDigest {
+        let mut d = StrongDigest::ZERO;
+        d.0[0] = tag;
+        d.0[47] = 0xC1;
+        d
+    }
+
+    fn grant_until(audience: StrongDigest, exp: u64) -> TemporalGrant {
+        TemporalGrant {
+            purpose_digest: digest(0x11),
+            audience_digest: audience,
+            authority_generation: 1,
+            not_before_unix: 0,
+            expires_unix: exp,
+            profile: ProfileId::QDNF_CRYPTO_1,
+        }
+    }
+
+    fn label(conf: Confidentiality, iss: StrongDigest) -> VerifiedLabel {
+        let mut fields = LabelFields::request(conf, iss);
+        if conf.requires_audience() {
+            fields.audience = iss;
+        }
+        let mut buf = [0u8; 256];
+        let n = encode_label_into(&fields, &mut buf).expect("encode");
+        verify_label(fields, &buf[..n]).expect("verify")
+    }
 
     fn host() -> PeerHost {
         PeerHost::new(4096).unwrap()

@@ -2,6 +2,7 @@
 //! Transport never asserts review.
 
 use super::{first_empty, require_active_mutual, MAX_SLOTS};
+#[cfg(test)]
 use crate::crypto::network::digest::sha384;
 use crate::net::qdnf::authority::ContactState;
 use crate::net::qdnf::errors::QdnfError;

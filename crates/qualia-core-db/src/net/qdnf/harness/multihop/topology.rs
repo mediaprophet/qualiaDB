@@ -14,10 +14,15 @@ use super::{
 pub(super) const PLAN_NOW: u64 = 1;
 const SCOPE: u64 = 1;
 const EXPIRY: u64 = 100;
+#[cfg(test)]
 pub(super) const FORBIDDEN_REALM: u8 = 1;
+#[cfg(test)]
 pub(super) const PERMITTED_REALM: u8 = 0;
+#[cfg(test)]
 const CHEAP_COST: u16 = 1;
+#[cfg(test)]
 const ALLOWED_COST: u16 = 50;
+#[cfg(test)]
 const MIN_PROFILE: u8 = 2;
 
 fn edge(
@@ -57,6 +62,7 @@ pub(super) fn line_index() -> Result<AdjacencyIndex, QdnfError> {
 }
 
 /// Cheap 1→3 shortcut (forbidden realm / P0) plus expensive permitted 1→2→3.
+#[cfg(test)]
 pub(super) fn shortcut_index() -> Result<AdjacencyIndex, QdnfError> {
     let mut index = AdjacencyIndex::new(SCOPE);
     insert_edge(
@@ -90,6 +96,7 @@ pub(super) fn shortcut_index() -> Result<AdjacencyIndex, QdnfError> {
     Ok(index)
 }
 
+#[cfg(test)]
 pub(super) fn realm_constraint() -> PathConstraint {
     PathConstraint {
         permitted_realms: 1u64 << PERMITTED_REALM,
@@ -101,6 +108,7 @@ pub(super) fn realm_constraint() -> PathConstraint {
     }
 }
 
+#[cfg(test)]
 pub(super) fn profile_constraint() -> PathConstraint {
     PathConstraint {
         permitted_realms: u64::MAX,
@@ -259,10 +267,12 @@ fn publish_admitted(
     Ok(admitted.hop_len)
 }
 
+#[cfg(test)]
 pub(super) fn plan_unrestricted(index: &AdjacencyIndex) -> Result<CandidatePath, QdnfError> {
     plan_one(index, ORIGIN_NODE, DEST_NODE, &PathConstraint::UNRESTRICTED)
 }
 
+#[cfg(test)]
 pub(super) fn plan_with(
     index: &AdjacencyIndex,
     constraint: &PathConstraint,

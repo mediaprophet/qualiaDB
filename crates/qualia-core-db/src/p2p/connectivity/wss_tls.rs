@@ -17,7 +17,9 @@ use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, Serve
 use rustls::StreamOwned;
 use rustls::{ClientConfig, ClientConnection, RootCertStore, ServerConfig, ServerConnection};
 
-use super::wss::{self, send_datagram};
+use super::wss;
+#[cfg(test)]
+use super::wss::send_datagram;
 
 fn install_ring() {
     let _ = rustls::crypto::ring::default_provider().install_default();

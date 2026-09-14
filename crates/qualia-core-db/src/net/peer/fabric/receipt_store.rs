@@ -7,7 +7,9 @@ use std::path::Path;
 use crate::container_10d::crc32c::crc32c;
 
 use super::kernel::FabricError;
-use super::receipt::{OpReceipt, ReceiptStatus};
+use super::receipt::OpReceipt;
+#[cfg(test)]
+use super::receipt::ReceiptStatus;
 use super::wire::{decode_receipt, encode_receipt};
 
 const MAGIC: &[u8; 8] = b"CSCPRC1\0";

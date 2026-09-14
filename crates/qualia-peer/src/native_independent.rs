@@ -5,6 +5,7 @@
 //! crate dependency here is necessary but not sufficient; proven also requires
 //! the default feature list to omit `libp2p-compat`.
 
+#[cfg(test)]
 use crate::inventory::libp2p_imported;
 
 const CARGO_TOML: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"));
@@ -12,26 +13,32 @@ const CORE_DB_CARGO: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../qualia-core-db/Cargo.toml"
 ));
+#[cfg(test)]
 const DAEMON_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../qualia-core-db/src/services/daemon.rs"
 ));
+#[cfg(test)]
 const SWARM_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../qualia-core-db/src/p2p/swarm.rs"
 ));
+#[cfg(test)]
 const PROTOCOL_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../qualia-core-db/src/p2p/protocol.rs"
 ));
+#[cfg(test)]
 const SYNC_NODE_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../qualia-core-db/src/p2p/sync_node.rs"
 ));
+#[cfg(test)]
 const SYNC_OPS_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../qualia-core-db/src/p2p/sync_ops.rs"
 ));
+#[cfg(test)]
 const P2P_MOD_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../qualia-core-db/src/p2p/mod.rs"

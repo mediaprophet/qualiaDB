@@ -44,6 +44,7 @@ pub fn held_why(why: &str) -> String {
     }
 }
 
+#[cfg(test)]
 pub fn copy_avoids_unavailable(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("unavailable")
 }

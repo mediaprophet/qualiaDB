@@ -8,8 +8,11 @@ use crate::net::qdnf::harness::qualification::{
 };
 
 const CHILD_ENV: &str = "QDNF_TWO_PROCESS_CHILD";
+#[cfg(unix)]
 const SOCK_ENV: &str = "QDNF_TWO_PROCESS_SOCK";
+#[cfg(unix)]
 const PARENT_MSG: &[u8; 8] = b"QDNF-E05";
+#[cfg(unix)]
 const CHILD_ACK: &[u8; 8] = b"ACK-E052";
 
 static SPAWNED: AtomicBool = AtomicBool::new(false);

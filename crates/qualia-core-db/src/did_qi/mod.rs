@@ -30,7 +30,7 @@ pub use document_decode::{
     decode_canonical, extract_proof_sig, ingest_unsigned_json, reject_forbidden_locators,
 };
 pub use git_object::{
-    blob_object_id, encode_blob, GitObjectStore, GIT_STORE_CAP, MAX_BLOB, MAX_RECORD,
+    blob_object_id, encode_blob, tag_name, GitObjectStore, GIT_STORE_CAP, MAX_BLOB, MAX_RECORD,
 };
 pub use id::{format_did, parse_did, DidQi, MAX_DID_TEXT};
 pub use mailbox_bind::publish_qi_document;

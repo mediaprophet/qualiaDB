@@ -10,6 +10,7 @@
 use sha2::{Digest, Sha384};
 
 use crate::net::qdnf::errors::QdnfError;
+#[cfg(test)]
 use crate::net::qdnf::replication::qnf_eval::QnfExtensionAdopted;
 use crate::net::qdnf::replication::stream::PAGE_BYTES;
 use crate::net::qdnf::types::StrongDigest;
