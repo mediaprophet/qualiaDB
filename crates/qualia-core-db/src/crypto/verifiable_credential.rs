@@ -112,6 +112,90 @@ pub fn verify_grounded(
     verify(credential, issuer_key, signature, now)
 }
 
+/// Issue: seal the credential with the issuer's post-quantum ML-DSA-65 secret key.
+pub fn issue_pq(
+    signing_key: &[u8; crate::crypto::network::types::ML_DSA_65_SK_LEN],
+    credential: &Credential,
+    out_sig: &mut [u8; crate::crypto::network::types::ML_DSA_65_SIG_LEN],
+) -> Result<(), VcError> {
+    use fips204::ml_dsa_65::PrivateKey;
+    use fips204::traits::{SerDes, Signer};
+
+    let Ok(sk) = PrivateKey::try_from_bytes(*signing_key) else {
+        return Err(VcError::InvalidSignature);
+    };
+    let d = digest(credential);
+    let Ok(sig) = sk.try_sign(&d, b"qualia:vc:pq:v1") else {
+        return Err(VcError::InvalidSignature);
+    };
+    out_sig.copy_from_slice(&sig);
+    Ok(())
+}
+
+/// Verify a post-quantum ML-DSA-65 credential signature + expiry.
+pub fn verify_pq(
+    credential: &Credential,
+    issuer_pk: &[u8; crate::crypto::network::types::ML_DSA_65_PK_LEN],
+    signature: &[u8; crate::crypto::network::types::ML_DSA_65_SIG_LEN],
+    now: u32,
+) -> Result<(), VcError> {
+    use fips204::ml_dsa_65::PublicKey;
+    use fips204::traits::{SerDes, Verifier};
+
+    if credential.valid_until != 0 && now > credential.valid_until {
+        return Err(VcError::Expired);
+    }
+    let Ok(pk) = PublicKey::try_from_bytes(*issuer_pk) else {
+        return Err(VcError::InvalidSignature);
+    };
+    let d = digest(credential);
+    if pk.verify(&d, signature, b"qualia:vc:pq:v1") {
+        Ok(())
+    } else {
+        Err(VcError::InvalidSignature)
+    }
+}
+
+/// Issue: seal the credential with a hybrid DualProof (ML-DSA-65 + Ed25519).
+pub fn issue_dual(
+    mldsa_sk: &[u8; crate::crypto::network::types::ML_DSA_65_SK_LEN],
+    ed25519_seed: &[u8; 32],
+    credential: &Credential,
+    out: &mut crate::crypto::network::dual_sign::DualProof,
+) -> Result<(), VcError> {
+    let d = digest(credential);
+    crate::crypto::network::dual_sign::sign_dual(
+        mldsa_sk,
+        ed25519_seed,
+        &d,
+        b"qualia:vc:dual:v1",
+        out,
+    )
+    .map_err(|_| VcError::InvalidSignature)
+}
+
+/// Verify a hybrid DualProof (ML-DSA-65 + Ed25519) credential signature + expiry.
+pub fn verify_dual(
+    credential: &Credential,
+    ed25519_pk: &[u8; crate::crypto::network::types::ED25519_PK_LEN],
+    mldsa_pk: &[u8; crate::crypto::network::types::ML_DSA_65_PK_LEN],
+    proof: &crate::crypto::network::dual_sign::DualProof,
+    now: u32,
+) -> Result<(), VcError> {
+    if credential.valid_until != 0 && now > credential.valid_until {
+        return Err(VcError::Expired);
+    }
+    let d = digest(credential);
+    crate::crypto::network::dual_sign::verify_dual(
+        mldsa_pk,
+        ed25519_pk,
+        &d,
+        b"qualia:vc:dual:v1",
+        proof,
+    )
+    .map_err(|_| VcError::InvalidSignature)
+}
+
 /// Serialize a `Credential` to binary format.
 pub fn encode_credential(c: &Credential) -> Vec<u8> {
     let mut out = Vec::with_capacity(28 + c.claims.len() * 48);
@@ -285,4 +369,51 @@ mod tests {
         bytes.truncate(bytes.len() - 10);
         assert_eq!(decode_credential(&bytes), Err(VcError::DecodeBadClaimCount));
     }
+
+    #[test]
+    fn test_pq_and_dual_credential_issue_and_verify() {
+        use crate::crypto::network::dual_sign::DualProof;
+        use crate::crypto::network::mldsa::generate_keypair;
+        use crate::crypto::network::types::{
+            ED25519_PK_LEN, ED25519_SIG_LEN, ML_DSA_65_SIG_LEN,
+        };
+
+        let c = sample();
+        let (mldsa_sk, mldsa_pk) = generate_keypair().unwrap();
+        let ed_seed = [55u8; 32];
+        let ed_signing = SigningKey::from_bytes(&ed_seed);
+        let ed_pk_bytes: [u8; ED25519_PK_LEN] = ed_signing.verifying_key().to_bytes();
+
+        // 1. Post-Quantum ML-DSA-65 test
+        let mut pq_sig = [0u8; ML_DSA_65_SIG_LEN];
+        issue_pq(&mldsa_sk, &c, &mut pq_sig).unwrap();
+        assert_eq!(verify_pq(&c, &mldsa_pk, &pq_sig, 1_500), Ok(()));
+
+        // Expired fails
+        assert_eq!(verify_pq(&c, &mldsa_pk, &pq_sig, 2_500), Err(VcError::Expired));
+
+        // 2. Hybrid DualProof test
+        let mut dual_proof = DualProof {
+            mldsa_sig: [0u8; ML_DSA_65_SIG_LEN],
+            ed25519_sig: [0u8; ED25519_SIG_LEN],
+        };
+        issue_dual(&mldsa_sk, &ed_seed, &c, &mut dual_proof).unwrap();
+        assert_eq!(
+            verify_dual(&c, &ed_pk_bytes, &mldsa_pk, &dual_proof, 1_500),
+            Ok(())
+        );
+
+        // Tampering fails
+        let mut tampered = c.clone();
+        tampered.claims[0].object = 999_999;
+        assert_eq!(
+            verify_pq(&tampered, &mldsa_pk, &pq_sig, 1_500),
+            Err(VcError::InvalidSignature)
+        );
+        assert_eq!(
+            verify_dual(&tampered, &ed_pk_bytes, &mldsa_pk, &dual_proof, 1_500),
+            Err(VcError::InvalidSignature)
+        );
+    }
 }
+

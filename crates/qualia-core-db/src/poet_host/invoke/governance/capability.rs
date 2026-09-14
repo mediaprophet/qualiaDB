@@ -184,54 +184,98 @@ pub fn agency_evaluate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let sig_bytes = args::rec_u8_list(args, "signature")
         .ok_or_else(|| args::bad(span, "Agency.evaluate needs signature (list of u8)"))?;
 
-    let key_arr: [u8; 32] = if key_bytes.len() == 32 {
-        key_bytes[..32].try_into().unwrap()
-    } else {
-        return Err(args::bad(
-            span,
-            "Agency.evaluate: verifying_key must be exactly 32 bytes",
-        ));
-    };
-    let sig_arr: [u8; 64] = if sig_bytes.len() == 64 {
-        sig_bytes[..64].try_into().unwrap()
-    } else {
-        return Err(args::bad(
-            span,
-            "Agency.evaluate: signature must be exactly 64 bytes",
-        ));
-    };
-
-    let verifying_key = match VerifyingKey::from_bytes(&key_arr) {
-        Ok(k) => k,
-        Err(e) => {
-            return Err(Diagnostic::new(
-                DiagCode::E100,
-                span,
-                format!("Agency.evaluate: invalid verifying key: {e}"),
-            ))
-        }
-    };
-    let signature = Signature::from_bytes(&sig_arr);
-
     let frame: Vec<crate::NQuin> = frame_vals
         .iter()
         .map(|h| crate::NQuin {
             subject: *h,
+            context: author_did,
             ..Default::default()
         })
         .collect();
 
-    match agency::verify_human_agency(&frame, author_did, &verifying_key, &signature) {
-        Ok(()) => Ok(args::record([
-            ("verified", Value::Bool(true)),
-            ("author_did", Value::U64(author_did)),
-        ])),
-        Err(e) => Ok(args::record([
-            ("verified", Value::Bool(false)),
-            ("author_did", Value::U64(author_did)),
-            ("error", Value::String(format!("{e:?}"))),
-        ])),
-    }
+    let (verified, scheme, qr) = if key_bytes.len() == 32 && sig_bytes.len() == 64 {
+        // Classical Ed25519
+        let key_arr: [u8; 32] = key_bytes.as_slice().try_into().unwrap();
+        let sig_arr: [u8; 64] = sig_bytes.as_slice().try_into().unwrap();
+        let verifying_key = match VerifyingKey::from_bytes(&key_arr) {
+            Ok(k) => k,
+            Err(e) => {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("Agency.evaluate: invalid verifying key: {e}"),
+                ))
+            }
+        };
+        let signature = Signature::from_bytes(&sig_arr);
+        (
+            agency::verify_human_agency(&frame, author_did, &verifying_key, &signature).is_ok(),
+            "ed25519",
+            false,
+        )
+    } else if key_bytes.len() == crate::crypto::network::types::ML_DSA_65_PK_LEN
+        && sig_bytes.len() == crate::crypto::network::types::ML_DSA_65_SIG_LEN
+    {
+        // Post-Quantum ML-DSA-65 (FIPS-204)
+        let key_arr: [u8; crate::crypto::network::types::ML_DSA_65_PK_LEN] =
+            key_bytes.as_slice().try_into().unwrap();
+        let sig_arr: [u8; crate::crypto::network::types::ML_DSA_65_SIG_LEN] =
+            sig_bytes.as_slice().try_into().unwrap();
+        (
+            agency::verify_human_agency_pq(&frame, author_did, &key_arr, &sig_arr).is_ok(),
+            "ml-dsa-65",
+            true,
+        )
+    } else if key_bytes.len()
+        == crate::crypto::network::types::ML_DSA_65_PK_LEN
+            + crate::crypto::network::types::ED25519_PK_LEN
+        && sig_bytes.len()
+            == crate::crypto::network::types::ML_DSA_65_SIG_LEN
+                + crate::crypto::network::types::ED25519_SIG_LEN
+    {
+        // Hybrid DualProof: mldsa_pk (1952) || ed25519_pk (32) and mldsa_sig (3309) || ed25519_sig (64)
+        let mldsa_pk: [u8; crate::crypto::network::types::ML_DSA_65_PK_LEN] = key_bytes
+            [..crate::crypto::network::types::ML_DSA_65_PK_LEN]
+            .try_into()
+            .unwrap();
+        let ed_pk: [u8; crate::crypto::network::types::ED25519_PK_LEN] = key_bytes
+            [crate::crypto::network::types::ML_DSA_65_PK_LEN..]
+            .try_into()
+            .unwrap();
+        let mldsa_sig: [u8; crate::crypto::network::types::ML_DSA_65_SIG_LEN] = sig_bytes
+            [..crate::crypto::network::types::ML_DSA_65_SIG_LEN]
+            .try_into()
+            .unwrap();
+        let ed_sig: [u8; crate::crypto::network::types::ED25519_SIG_LEN] = sig_bytes
+            [crate::crypto::network::types::ML_DSA_65_SIG_LEN..]
+            .try_into()
+            .unwrap();
+        let proof = crate::crypto::network::dual_sign::DualProof {
+            mldsa_sig,
+            ed25519_sig: ed_sig,
+        };
+        (
+            agency::verify_human_agency_dual(&frame, author_did, &ed_pk, &mldsa_pk, &proof).is_ok(),
+            "dual-proof",
+            true,
+        )
+    } else {
+        return Err(args::bad(
+            span,
+            format!(
+                "Agency.evaluate: unsupported key length {} or signature length {} (expected 32/64 for Ed25519, 1952/3309 for ML-DSA-65, or 1984/3373 for DualProof)",
+                key_bytes.len(),
+                sig_bytes.len()
+            ),
+        ));
+    };
+
+    Ok(args::record([
+        ("verified", Value::Bool(verified)),
+        ("author_did", Value::U64(author_did)),
+        ("quantum_resistant", Value::Bool(qr)),
+        ("scheme", Value::String(scheme.into())),
+    ]))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -310,4 +354,93 @@ mod tests {
             _ => panic!("expected record"),
         }
     }
+
+    #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+    #[test]
+    fn agency_evaluate_pq_and_dual_proof_test() {
+        use crate::crypto::network::dual_sign::{sign_dual, DualProof};
+        use crate::crypto::network::mldsa::generate_keypair;
+        use crate::crypto::network::types::{
+            ED25519_PK_LEN, ED25519_SIG_LEN, ML_DSA_65_PK_LEN, ML_DSA_65_SIG_LEN,
+        };
+        use crate::identity::agency::{compute_scoped_merkle_root, sign_agency_root_pq};
+        use ed25519_dalek::SigningKey;
+
+        let author_did = 7777u64;
+        let frame_quins = vec![crate::NQuin {
+            subject: 101,
+            context: author_did,
+            ..Default::default()
+        }];
+        let root = compute_scoped_merkle_root(&frame_quins, author_did);
+
+        let (mldsa_sk, mldsa_pk) = generate_keypair().unwrap();
+        let ed_seed = [33u8; 32];
+        let ed_signing = SigningKey::from_bytes(&ed_seed);
+        let ed_pk_bytes: [u8; ED25519_PK_LEN] = ed_signing.verifying_key().to_bytes();
+
+        // 1. Post-Quantum ML-DSA-65
+        let mut pq_sig = [0u8; ML_DSA_65_SIG_LEN];
+        sign_agency_root_pq(&mldsa_sk, &root, &mut pq_sig).unwrap();
+
+        let mut m_pq = BTreeMap::new();
+        m_pq.insert("frame".into(), Value::List(vec![Value::U64(101)]));
+        m_pq.insert("author_did".into(), Value::U64(author_did));
+        m_pq.insert(
+            "verifying_key".into(),
+            Value::List(mldsa_pk.iter().map(|&b| Value::U64(b as u64)).collect()),
+        );
+        m_pq.insert(
+            "signature".into(),
+            Value::List(pq_sig.iter().map(|&b| Value::U64(b as u64)).collect()),
+        );
+
+        let res_pq = agency_evaluate(&Value::Record(m_pq), Span { start: 0, end: 0 }).unwrap();
+        match res_pq {
+            Value::Record(rec) => {
+                assert_eq!(rec.get("verified"), Some(&Value::Bool(true)));
+                assert_eq!(rec.get("quantum_resistant"), Some(&Value::Bool(true)));
+                assert_eq!(rec.get("scheme"), Some(&Value::String("ml-dsa-65".into())));
+            }
+            _ => panic!("expected record"),
+        }
+
+        // 2. Hybrid DualProof
+        let mut dual_proof = DualProof {
+            mldsa_sig: [0u8; ML_DSA_65_SIG_LEN],
+            ed25519_sig: [0u8; ED25519_SIG_LEN],
+        };
+        sign_dual(&mldsa_sk, &ed_seed, &root, b"qualia:agency:dual:v1", &mut dual_proof).unwrap();
+
+        let mut combined_pk = Vec::with_capacity(ML_DSA_65_PK_LEN + ED25519_PK_LEN);
+        combined_pk.extend_from_slice(&mldsa_pk);
+        combined_pk.extend_from_slice(&ed_pk_bytes);
+
+        let mut combined_sig = Vec::with_capacity(ML_DSA_65_SIG_LEN + ED25519_SIG_LEN);
+        combined_sig.extend_from_slice(&dual_proof.mldsa_sig);
+        combined_sig.extend_from_slice(&dual_proof.ed25519_sig);
+
+        let mut m_dual = BTreeMap::new();
+        m_dual.insert("frame".into(), Value::List(vec![Value::U64(101)]));
+        m_dual.insert("author_did".into(), Value::U64(author_did));
+        m_dual.insert(
+            "verifying_key".into(),
+            Value::List(combined_pk.iter().map(|&b| Value::U64(b as u64)).collect()),
+        );
+        m_dual.insert(
+            "signature".into(),
+            Value::List(combined_sig.iter().map(|&b| Value::U64(b as u64)).collect()),
+        );
+
+        let res_dual = agency_evaluate(&Value::Record(m_dual), Span { start: 0, end: 0 }).unwrap();
+        match res_dual {
+            Value::Record(rec) => {
+                assert_eq!(rec.get("verified"), Some(&Value::Bool(true)));
+                assert_eq!(rec.get("quantum_resistant"), Some(&Value::Bool(true)));
+                assert_eq!(rec.get("scheme"), Some(&Value::String("dual-proof".into())));
+            }
+            _ => panic!("expected record"),
+        }
+    }
 }
+

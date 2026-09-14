@@ -60,6 +60,99 @@ pub fn verify_human_agency(
     }
 }
 
+/// Sign an Author-Scoped Merkle Sub-Root with post-quantum ML-DSA-65 (FIPS-204).
+///
+/// Caller supplies the fixed-size 3309-byte output buffer for the signature.
+/// Zero heap allocations.
+pub fn sign_agency_root_pq(
+    signing_key: &[u8; crate::crypto::network::types::ML_DSA_65_SK_LEN],
+    sub_root_hash: &[u8; 32],
+    out_sig: &mut [u8; crate::crypto::network::types::ML_DSA_65_SIG_LEN],
+) -> Result<(), AgencyError> {
+    use fips204::ml_dsa_65::PrivateKey;
+    use fips204::traits::{SerDes, Signer};
+
+    let Ok(sk) = PrivateKey::try_from_bytes(*signing_key) else {
+        return Err(AgencyError::InvalidSignature);
+    };
+    let Ok(sig) = sk.try_sign(sub_root_hash, b"qualia:agency:pq:v1") else {
+        return Err(AgencyError::InvalidSignature);
+    };
+    out_sig.copy_from_slice(&sig);
+    Ok(())
+}
+
+/// Verify an Author-Scoped Merkle Sub-Root with post-quantum ML-DSA-65 (FIPS-204).
+///
+/// Validates an incoming 3309-byte FIPS-204 signature against the author's
+/// 1952-byte ML-DSA-65 public key over the author-scoped Merkle sub-root.
+/// Guaranteed zero heap allocations in hot path.
+pub fn verify_human_agency_pq(
+    frame: &[NQuin],
+    author_did: u64,
+    public_key: &[u8; crate::crypto::network::types::ML_DSA_65_PK_LEN],
+    signature: &[u8; crate::crypto::network::types::ML_DSA_65_SIG_LEN],
+) -> Result<(), AgencyError> {
+    use fips204::ml_dsa_65::PublicKey;
+    use fips204::traits::{SerDes, Verifier};
+
+    let expected_sub_root = compute_scoped_merkle_root(frame, author_did);
+
+    let Ok(pk) = PublicKey::try_from_bytes(*public_key) else {
+        return Err(AgencyError::InvalidSignature);
+    };
+
+    if pk.verify(&expected_sub_root, signature, b"qualia:agency:pq:v1") {
+        Ok(())
+    } else {
+        Err(AgencyError::InvalidSignature)
+    }
+}
+
+/// Sign an Author-Scoped Merkle Sub-Root with hybrid DualProof (ML-DSA-65 + Ed25519).
+///
+/// Produces both post-quantum and classical signatures over the identical Merkle sub-root.
+/// Zero heap allocations.
+pub fn sign_agency_root_dual(
+    mldsa_sk: &[u8; crate::crypto::network::types::ML_DSA_65_SK_LEN],
+    ed25519_seed: &[u8; 32],
+    sub_root_hash: &[u8; 32],
+    out: &mut crate::crypto::network::dual_sign::DualProof,
+) -> Result<(), AgencyError> {
+    crate::crypto::network::dual_sign::sign_dual(
+        mldsa_sk,
+        ed25519_seed,
+        sub_root_hash,
+        b"qualia:agency:dual:v1",
+        out,
+    )
+    .map_err(|_| AgencyError::InvalidSignature)
+}
+
+/// Verify an Author-Scoped Merkle Sub-Root with hybrid DualProof (ML-DSA-65 + Ed25519).
+///
+/// Both signatures must verify mathematically over the recomputed Merkle sub-root.
+/// If either fails, the transaction is rejected.
+/// Guaranteed zero heap allocations in hot path.
+pub fn verify_human_agency_dual(
+    frame: &[NQuin],
+    author_did: u64,
+    ed25519_pk: &[u8; crate::crypto::network::types::ED25519_PK_LEN],
+    mldsa_pk: &[u8; crate::crypto::network::types::ML_DSA_65_PK_LEN],
+    proof: &crate::crypto::network::dual_sign::DualProof,
+) -> Result<(), AgencyError> {
+    let expected_sub_root = compute_scoped_merkle_root(frame, author_did);
+
+    crate::crypto::network::dual_sign::verify_dual(
+        mldsa_pk,
+        ed25519_pk,
+        &expected_sub_root,
+        b"qualia:agency:dual:v1",
+        proof,
+    )
+    .map_err(|_| AgencyError::InvalidSignature)
+}
+
 /// Stamp fiduciary metadata and refresh the XOR parity block before WAL commit.
 /// `principal_did_hash` is embedded in `context`; agent identity in metadata low bits.
 pub fn stamp_fiduciary_metadata(quin: &mut NQuin, principal_did_hash: u64, agent_did_hash: u64) {
@@ -152,6 +245,72 @@ mod tests {
         frame[0].subject = 999;
         assert_eq!(
             verify_human_agency(&frame, author_did_alice, &verifying_key, &alice_sig),
+            Err(AgencyError::InvalidSignature)
+        );
+    }
+
+    #[test]
+    fn test_human_agency_pq_and_dual_verification() {
+        use crate::crypto::network::dual_sign::DualProof;
+        use crate::crypto::network::mldsa::generate_keypair;
+        use crate::crypto::network::types::{ED25519_SIG_LEN, ML_DSA_65_SIG_LEN};
+
+        let author_did_alice = 5001;
+        let mut frame = [NQuin {
+            subject: 42,
+            predicate: 100,
+            object: 200,
+            context: author_did_alice,
+            metadata: 0,
+            parity: 0,
+        }; 4];
+
+        let (mldsa_sk, mldsa_pk) = generate_keypair().unwrap();
+        let ed_seed = [99u8; 32];
+        let ed_signing = SigningKey::from_bytes(&ed_seed);
+        let ed_pk_bytes: [u8; 32] = ed_signing.verifying_key().to_bytes();
+
+        let alice_root = compute_scoped_merkle_root(&frame, author_did_alice);
+
+        // 1. Post-Quantum ML-DSA-65 test
+        let mut pq_sig = [0u8; ML_DSA_65_SIG_LEN];
+        sign_agency_root_pq(&mldsa_sk, &alice_root, &mut pq_sig).unwrap();
+        assert_eq!(
+            verify_human_agency_pq(&frame, author_did_alice, &mldsa_pk, &pq_sig),
+            Ok(())
+        );
+
+        // 2. Hybrid DualProof test
+        let mut dual_proof = DualProof {
+            mldsa_sig: [0u8; ML_DSA_65_SIG_LEN],
+            ed25519_sig: [0u8; ED25519_SIG_LEN],
+        };
+        sign_agency_root_dual(&mldsa_sk, &ed_seed, &alice_root, &mut dual_proof).unwrap();
+        assert_eq!(
+            verify_human_agency_dual(
+                &frame,
+                author_did_alice,
+                &ed_pk_bytes,
+                &mldsa_pk,
+                &dual_proof
+            ),
+            Ok(())
+        );
+
+        // 3. Tampering detection
+        frame[0].subject = 9999;
+        assert_eq!(
+            verify_human_agency_pq(&frame, author_did_alice, &mldsa_pk, &pq_sig),
+            Err(AgencyError::InvalidSignature)
+        );
+        assert_eq!(
+            verify_human_agency_dual(
+                &frame,
+                author_did_alice,
+                &ed_pk_bytes,
+                &mldsa_pk,
+                &dual_proof
+            ),
             Err(AgencyError::InvalidSignature)
         );
     }

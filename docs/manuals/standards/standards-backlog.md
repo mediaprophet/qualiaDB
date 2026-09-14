@@ -1,4 +1,4 @@
-﻿# Standards Backlog
+# Standards Backlog
 
 This backlog is intentionally strict. It is better to ship one precise,
 credible draft than to spray half-stable ideas across multiple standards
@@ -106,32 +106,29 @@ Each of those should become its own draft with its own conformance language.
   - [ ] worked example vectors (v3 + legacy compatibility set)
   - [ ] playground / WASM reader aligned or explicitly scoped out
 
-## 2. did:q42 pointer syntax vs `did:qi` method
+## 2. Identifier taxonomy: `did:webizen` vs `did:qi` vs `did:q42` (QRC)
 
-- Scope is now **two documents**, not one:
-  - **QRC / pointer:** `did:q42:` syntax, 60-bit FNV + MSB dispatch, normalization
-    of the coordinate payload. Implemented today in `identifier.rs`,
-    `mini_parser.rs`, and `resolver.rs`. This is not a W3C DID method.
-  - **Qualia Identifier (HCInet DID method name):** `did:qi:`. Naming and backing
-    split recorded in
-    `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/did-qi-git-utxo.md`.
-    Not an HCAI method (that acronym is Human-Centered AI in common use).
-    Hostname/`did:web` is alias/Frontdoor. Optional ledger attestation is
-    parameterized UTXO (CAIP-2 `bip122:<genesis>`), not a single ticker.
-    Invitation git protocol (not GitHub) is an Isolated/mailbox backing.
-- Why it is non-standard: `did:q42` was described as a custom DID method; it is a
-  storage coordinate. `did:qi` is not specified yet (no CRUD, no registry).
-- First docs: keep QRC in [identifier-resolution.md](./qualia-decentralized-network-fabric/identifier-resolution.md)
-  §3; write a DID Method spec for `did:qi` only when the principal asks (W3C CG
-  Report-style, then DID Spec Registries). Do not write `did-q42-method-draft.md`
-  as if QRC were Human-Centric Internet identity.
-- Primary SDO: W3C (DID Core) for `did:qi`; QRC stays Qualia ABI.
-- Exit criteria before `did:qi` submission:
-  - exact DID method syntax frozen (`did:qi:<self-certifying-id>`)
-  - normalization and uniqueness rules written down
-  - representation and resolution behavior defined per backing (git, UTXO, mailbox)
-  - privacy and security considerations section added
-  - QRC and `qualia://` documented as non-methods
+- Scope is partitioned across **three distinct layers**:
+  - **Web of Data & Semantic DID method (`did:webizen:`):** Specified in
+    `docs/manuals/standards/did-webizen-method.md`. Method for domain-decoupled
+    semantic concepts (`did:webizen:concept:<uuid>`), versioned ontology packages
+    (`did:webizen:ont:<name>@<semver>`), bilateral agreements (`did:webizen:agreement:<hash>`),
+    and Web of Data principals (`did:webizen:agent:<id>`). Supports multi-transport
+    resolution (IPFS, WebTorrent, local `.q42` shard, and `https://ns.webizen.org/` gateway),
+    version evolution delta mappings, and publisher attestation by `did:qi` controllers.
+  - **Qualia Identifier (HCInet Instrument DID method, `did:qi:`):** Specified in
+    `docs/manuals/standards/did-qi-method.md`. Method for low-level network instruments,
+    CSCP nodes, mailboxes, and key controllers. Backed by invitation git stores and
+    parameterized UTXO commitments. Not a content-semantic identifier.
+  - **Q42 Resource Coordinate (QRC / storage pointer, `did:q42:`):** Implemented in
+    `identifier.rs`, `mini_parser.rs`, and `resolver.rs`. A 60-bit FNV-1a hardware/disk
+    storage pointer with MSB=1 for zero-copy VM execution. This is a local execution ABI
+    coordinate, NOT a W3C DID method.
+- Primary SDO: W3C (DID Core / RDF) for `did:webizen` and `did:qi`; QRC stays Qualia ABI.
+- Exit criteria achieved:
+  - [x] `did:webizen` specification written (`docs/manuals/standards/did-webizen-method.md`)
+  - [x] `did:qi` specification written (`docs/manuals/standards/did-qi-method.md`)
+  - [x] QRC and `qualia://` documented as non-methods (physical memory/storage coordinates)
 
 ## 3. `.qualia` vault manifest
 
