@@ -185,6 +185,33 @@ use web_sys::{Document, Element, HtmlElement};
 use crate::tool_chest::core::registry::ManifoldSeed;
 use crate::tool_chest::core::{ManifoldParticipant, ManifoldSociality, SubjectSeed};
 
+/// Safe wrapper for browser console.log.
+#[inline]
+pub fn console_log(msg: &str) {
+    #[allow(unused_unsafe)]
+    unsafe {
+        web_sys::console::log_1(&msg.into());
+    }
+}
+
+/// Safe wrapper for browser console.warn.
+#[inline]
+pub fn console_warn(msg: &str) {
+    #[allow(unused_unsafe)]
+    unsafe {
+        web_sys::console::warn_1(&msg.into());
+    }
+}
+
+/// Safe wrapper for browser console.error.
+#[inline]
+pub fn console_error(msg: &str) {
+    #[allow(unused_unsafe)]
+    unsafe {
+        web_sys::console::error_1(&msg.into());
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Thread-local state
 // ---------------------------------------------------------------------------
@@ -627,7 +654,7 @@ pub fn start() {
     let document = window.document().expect("no document");
 
     if let Err(msg) = try_start(&document) {
-        web_sys::console::error_1(&format!("[qualia-ui] FATAL: {}", msg).into());
+        console_error(&format!("[qualia-ui] FATAL: {}", msg));
         show_fatal_error(&document, &msg);
     }
 }

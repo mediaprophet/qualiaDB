@@ -158,6 +158,8 @@ pub enum BearerProfile {
     TlsWssTransitionV1 = 5,
     /// HTTP/2 Extended CONNECT + RFC 9297 capsules. Labelled transition, not Native Independent, not MASQUE.
     Http2CapsuleTransitionV1 = 6,
+    /// Nym decentralized mixnet overlay. Labelled transition, not Native Independent.
+    NymMixnetTransitionV1 = 7,
 }
 
 impl BearerProfile {
@@ -169,6 +171,7 @@ impl BearerProfile {
             4 => Self::WireGuardTransitionV1,
             5 => Self::TlsWssTransitionV1,
             6 => Self::Http2CapsuleTransitionV1,
+            7 => Self::NymMixnetTransitionV1,
             _ => return Err(QdnfError::UnknownProfile),
         })
     }
@@ -209,6 +212,7 @@ mod tests {
         assert!(BearerProfile::LocalIpcV1.native_independent());
         assert!(!BearerProfile::TlsWssTransitionV1.native_independent());
         assert!(!BearerProfile::Http2CapsuleTransitionV1.native_independent());
+        assert!(!BearerProfile::NymMixnetTransitionV1.native_independent());
         assert_eq!(
             BearerProfile::from_u16(4).unwrap(),
             BearerProfile::WireGuardTransitionV1
@@ -221,6 +225,10 @@ mod tests {
             BearerProfile::from_u16(6).unwrap(),
             BearerProfile::Http2CapsuleTransitionV1
         );
-        assert_eq!(BearerProfile::from_u16(7), Err(QdnfError::UnknownProfile));
+        assert_eq!(
+            BearerProfile::from_u16(7).unwrap(),
+            BearerProfile::NymMixnetTransitionV1
+        );
+        assert_eq!(BearerProfile::from_u16(8), Err(QdnfError::UnknownProfile));
     }
 }

@@ -168,7 +168,7 @@ pub fn build_publication_workflow_view(document: &Document) -> Element {
 
     let nsb_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
         move |_e: web_sys::MouseEvent| {
-            web_sys::console::log_1(&"[Publication Workflow] Advanced to next publication stage (prov:DerivativeChain verified)".into());
+            crate::browser::console_log("[Publication Workflow] Advanced to next publication stage (prov:DerivativeChain verified)");
         },
     )
         as Box<dyn FnMut(web_sys::MouseEvent)>);
@@ -179,9 +179,8 @@ pub fn build_publication_workflow_view(document: &Document) -> Element {
 
     let cb_closure =
         wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-            web_sys::console::log_1(
-                &"[Publication Workflow] Consent verification passed for 3 active constituencies"
-                    .into(),
+            crate::browser::console_log(
+                "[Publication Workflow] Consent verification passed for 3 active constituencies",
             );
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
     consent_btn
@@ -191,7 +190,7 @@ pub fn build_publication_workflow_view(document: &Document) -> Element {
 
     let edb_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
         move |_e: web_sys::MouseEvent| {
-            web_sys::console::log_1(&"[Publication Workflow] Generated signed distribution bundle with prov:Credits and W3C RDFa sidecars".into());
+            crate::browser::console_log("[Publication Workflow] Generated signed distribution bundle with prov:Credits and W3C RDFa sidecars");
         },
     )
         as Box<dyn FnMut(web_sys::MouseEvent)>);

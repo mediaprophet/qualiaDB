@@ -19,3 +19,7 @@ path = "examples/native_ipc_peers.rs"
 [[example]]
 name = "vertical_64"
 path = "examples/vertical_64.rs"
+
+[[example]]
+name = "nym_peer_bootstrap"
+path = "examples/nym_peer_bootstrap.rs"

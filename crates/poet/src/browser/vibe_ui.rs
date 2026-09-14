@@ -436,7 +436,7 @@ pub fn render_vibe_ui_node(document: &Document, node: &VibeUiNode) -> Element {
 
             let act = action.clone();
             let click_closure = Closure::wrap(Box::new(move |_e: Event| {
-                web_sys::console::log_1(&format!("[VibeUi Action] Triggered: {act}").into());
+                super::console_log(&format!("[VibeUi Action] Triggered: {act}"));
             }) as Box<dyn FnMut(Event)>);
             btn.add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref())
                 .unwrap();

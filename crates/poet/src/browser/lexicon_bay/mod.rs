@@ -298,7 +298,7 @@ fn wire_open(root: &Element, button: &Element) {
             .unwrap_or_default();
         let path = path.trim().to_string();
         if path.is_empty() {
-            web_sys::console::log_1(&"[Lexicon Bay] Open pack: empty path → held".into());
+            crate::browser::console_log("[Lexicon Bay] Open pack: empty path → held");
             paint_outcome_all_bays(&root, held_outcome(WHY));
             return;
         }
@@ -306,8 +306,8 @@ fn wire_open(root: &Element, button: &Element) {
         let path_log = path.clone();
         wasm_bindgen_futures::spawn_local(async move {
             if !is_daemon_connected() {
-                web_sys::console::log_1(
-                    &"[Lexicon Bay] Open pack: waiting briefly for Native Connected…".into(),
+                crate::browser::console_log(
+                    "[Lexicon Bay] Open pack: waiting briefly for Native Connected…",
                 );
                 // Soft wait: probe flap must not strand Open pack on held.
                 for _ in 0..20 {
@@ -317,8 +317,8 @@ fn wire_open(root: &Element, button: &Element) {
                     }
                 }
                 if !is_daemon_connected() {
-                    web_sys::console::log_1(
-                        &"[Lexicon Bay] Open pack: daemon still not connected → held".into(),
+                    crate::browser::console_log(
+                        "[Lexicon Bay] Open pack: daemon still not connected → held",
                     );
                     paint_outcome_all_bays(&root_async, held_outcome(WHY));
                     return;
@@ -331,19 +331,18 @@ fn wire_open(root: &Element, button: &Element) {
                         &response.value,
                         response.diagnostic.as_deref(),
                     );
-                    web_sys::console::log_1(
+                    crate::browser::console_log(
                         &format!(
                             "[Lexicon Bay] invoke path={path_log:?} ok={} value_prefix={:?} outcome={outcome:?}",
                             response.ok,
                             response.value.chars().take(120).collect::<String>(),
-                        )
-                        .into(),
+                        ),
                     );
                     paint_outcome_all_bays(&root_async, outcome);
                 }
                 Err(err) => {
-                    web_sys::console::log_1(
-                        &format!("[Lexicon Bay] invoke error → held: {err}").into(),
+                    crate::browser::console_log(
+                        &format!("[Lexicon Bay] invoke error → held: {err}"),
                     );
                     paint_outcome_all_bays(&root_async, held_outcome(WHY));
                 }

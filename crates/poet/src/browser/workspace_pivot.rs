@@ -78,8 +78,8 @@ pub fn toggle_workspace_pivot(document: &Document) {
             UiParadigm::WebizenClassicConsole => "\u{2699}\u{FE0F} Admin Mode Active \u{21C4}",
         }));
     }
-    web_sys::console::log_1(
-        &format!("[Habitat Pivot] Switched to: {}", new_paradigm.label()).into(),
+    super::console_log(
+        &format!("[Habitat Pivot] Switched to: {}", new_paradigm.label()),
     );
 }
 

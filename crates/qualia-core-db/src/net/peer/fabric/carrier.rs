@@ -27,6 +27,8 @@ pub enum CarrierKind {
     WireGuardIceWss = 4,
     Browser = 5,
     OfflineDurable = 6,
+    /// Nym decentralized mixnet overlay. Zero IP disclosure, operates over Sphinx packets.
+    NymMixnet = 7,
 }
 
 impl PathClass {

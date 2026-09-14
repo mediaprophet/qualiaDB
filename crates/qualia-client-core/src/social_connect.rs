@@ -24,6 +24,8 @@ pub struct ConnectInvitePayload {
     pub created_at: u64,
     pub expires_at: u64,
     pub signature_hex: String,
+    #[serde(default)]
+    pub nym_address: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +46,8 @@ pub struct ChatContact {
     pub added_at: u64,
     #[serde(default)]
     pub relay_endpoint: Option<String>,
+    #[serde(default)]
+    pub nym_address: Option<String>,
     /// Optional tags for ontology / torrent sharing filters (e.g. `health`, `research`).
     #[serde(default)]
     pub categories: Vec<String>,
@@ -141,7 +145,7 @@ pub fn generate_connect_invite(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(crate::chat_relay::local_relay_base_url);
 
-    let payload_unsigned = serde_json::json!({
+    let mut payload_unsigned = serde_json::json!({
         "version": 1,
         "code": code,
         "inviter_name": profile.display_name,
@@ -153,6 +157,9 @@ pub fn generate_connect_invite(
         "created_at": created,
         "expires_at": expires,
     });
+    if let Some(ref nym) = profile.nym_address {
+        payload_unsigned["nym_address"] = serde_json::json!(nym);
+    }
 
     let payload_str = serde_json::to_string(&payload_unsigned).map_err(|e| e.to_string())?;
     let sig = vault.sign_payload(&signing_key, payload_str.as_bytes());
@@ -172,6 +179,7 @@ pub fn generate_connect_invite(
         created_at: created,
         expires_at: expires,
         signature_hex,
+        nym_address: profile.nym_address.clone(),
     };
 
     let invite_json = serde_json::to_string(&invite).map_err(|e| e.to_string())?;
@@ -218,7 +226,7 @@ pub fn accept_connect_invite(input: &str) -> Result<ChatContact, String> {
                 pk_arr.copy_from_slice(&pk_bytes);
                 let mut sig_arr = [0u8; 64];
                 sig_arr.copy_from_slice(&sig_bytes);
-                let payload_unsigned = serde_json::json!({
+                let mut payload_unsigned = serde_json::json!({
                     "version": invite.version,
                     "code": invite.code,
                     "inviter_name": invite.inviter_name,
@@ -230,6 +238,9 @@ pub fn accept_connect_invite(input: &str) -> Result<ChatContact, String> {
                     "created_at": invite.created_at,
                     "expires_at": invite.expires_at,
                 });
+                if let Some(ref nym) = invite.nym_address {
+                    payload_unsigned["nym_address"] = serde_json::json!(nym);
+                }
                 let payload_str =
                     serde_json::to_string(&payload_unsigned).map_err(|e| e.to_string())?;
                 if qualia_core_db::key_vault::KeyVault::verify_signature(
@@ -286,6 +297,7 @@ pub fn accept_connect_invite(input: &str) -> Result<ChatContact, String> {
         } else {
             Some(invite.relay_endpoint)
         },
+        nym_address: invite.nym_address,
         categories: vec![],
     };
 
@@ -352,10 +364,57 @@ pub fn list_chat_contacts() -> Vec<ChatContact> {
                     source: "directory".to_string(),
                     added_at: unix_now(),
                     relay_endpoint: None,
+                    nym_address: None,
                     categories: vec![],
                 })
                 .collect();
         }
     }
     contacts
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connect_invite_payload_serializes_and_deserializes_nym_address() {
+        let payload = ConnectInvitePayload {
+            version: 1,
+            code: "QUALIA-ABCD-1234".into(),
+            inviter_name: "Alice".into(),
+            inviter_did: "did:qi:alice".into(),
+            inviter_pubkey_hex: "aa".repeat(32),
+            relay_endpoint: "".into(),
+            front_door_did: "did:qi:alice-fd".into(),
+            profile_card: serde_json::json!({ "display_name": "Alice" }),
+            created_at: 1000,
+            expires_at: 2000,
+            signature_hex: "bb".repeat(64),
+            nym_address: Some("alice_client.sphinx@gateway_1".into()),
+        };
+
+        let json_str = serde_json::to_string(&payload).unwrap();
+        assert!(json_str.contains("alice_client.sphinx@gateway_1"));
+
+        let deserialized: ConnectInvitePayload = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(deserialized.nym_address, Some("alice_client.sphinx@gateway_1".into()));
+
+        // Also test backward compatibility when nym_address is missing in json
+        let legacy_json = serde_json::json!({
+            "version": 1,
+            "code": "QUALIA-LEGACY",
+            "inviter_name": "Bob",
+            "inviter_did": "did:qi:bob",
+            "inviter_pubkey_hex": "aa".repeat(32),
+            "relay_endpoint": "",
+            "front_door_did": "did:qi:bob-fd",
+            "profile_card": {},
+            "created_at": 1000,
+            "expires_at": 2000,
+            "signature_hex": "bb".repeat(64),
+        });
+        let legacy: ConnectInvitePayload = serde_json::from_value(legacy_json).unwrap();
+        assert_eq!(legacy.nym_address, None);
+    }
 }

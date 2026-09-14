@@ -630,6 +630,7 @@ pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
         identity_pubkey_hex: None,
         wireguard_pubkey_hex: None,
         overlay_addr: None,
+        nym_address: None,
         profile_url: None,
     };
     let mail_dns = crate::mail_inbound::mail_dns_forms(&d.name, None);
@@ -662,6 +663,7 @@ fn build_front_door_record(domain: &str) -> Result<crate::front_door::FrontDoorR
         identity_pubkey_hex: None,
         wireguard_pubkey_hex: None,
         overlay_addr: None,
+        nym_address: None,
         profile_url: None,
     })
 }

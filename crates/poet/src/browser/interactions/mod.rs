@@ -15,7 +15,16 @@ use crate::tool_chest::core::registry::ManifoldSeed;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_name = "setTimeout")]
-    pub fn set_timeout(callback: &js_sys::Function, delay: u32) -> i32;
+    fn raw_set_timeout(callback: &js_sys::Function, delay: u32) -> i32;
+}
+
+/// JS `window.setTimeout` safe wrapper.
+#[inline]
+pub fn set_timeout(callback: &js_sys::Function, delay: u32) -> i32 {
+    #[allow(unused_unsafe)]
+    unsafe {
+        raw_set_timeout(callback, delay)
+    }
 }
 
 const SVG_NS: &str = "http://www.w3.org/2000/svg";

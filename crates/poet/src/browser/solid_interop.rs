@@ -360,7 +360,7 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
 
     let exp_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
         move |_e: web_sys::MouseEvent| {
-            web_sys::console::log_1(&"[Solid Interop] Exported 9 LDP resources to bundle (Profile card, WebACL, publicTypeIndex, Catchment_Study.meta.ttl)".into());
+            super::console_log("[Solid Interop] Exported 9 LDP resources to bundle (Profile card, WebACL, publicTypeIndex, Catchment_Study.meta.ttl)");
         },
     )
         as Box<dyn FnMut(web_sys::MouseEvent)>);

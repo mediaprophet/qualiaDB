@@ -73,6 +73,9 @@ pub struct DirectoryEntry {
     /// Organization = legal person / persona ficta. Tool = agent/bot. Never collapse those into "human".
     #[serde(default)]
     pub who_kind: String,
+    /// Optional Nym mixnet address for decentralized mixnet routing.
+    #[serde(default)]
+    pub nym_address: Option<String>,
 }
 
 /// The whole categorised directory returned to the UI.
@@ -356,6 +359,7 @@ pub fn build_view_core(
             categories: vec![],
             agreement_ids: vec![],
             who_kind: WhoKind::Human.as_str().into(),
+            nym_address: None,
         });
         if entry.display_name.is_empty() {
             entry.display_name = a.name.clone();
@@ -383,9 +387,13 @@ pub fn build_view_core(
                 categories: vec![],
                 agreement_ids: vec![],
                 who_kind: WhoKind::Human.as_str().into(),
+                nym_address: c.nym_address.clone(),
             });
         if entry.display_name.is_empty() {
             entry.display_name = c.display_name.clone();
+        }
+        if entry.nym_address.is_none() {
+            entry.nym_address = c.nym_address.clone();
         }
         merge_kinds(&mut entry.kinds, c.categories.clone());
         push_unique(&mut entry.sources, "contact");
@@ -767,6 +775,7 @@ mod tests {
             source: "connect".into(),
             added_at: 0,
             relay_endpoint: None,
+            nym_address: None,
             categories: categories.iter().map(|s| s.to_string()).collect(),
         }
     }
@@ -859,12 +868,29 @@ mod tests {
         assert_eq!(
             view.entries.len(),
             1,
-            "one DID → one entry across both stores"
+            "two stores for same DID produce 1 entry"
         );
         let e = &view.entries[0];
-        assert!(e.sources.contains(&"directory-actor".to_string()));
-        assert!(e.sources.contains(&"contact".to_string()));
+        assert_eq!(e.sources, vec!["directory-actor", "contact"]);
         assert!(e.categories.contains(&"health".to_string()));
+    }
+
+    #[test]
+    fn directory_entry_carries_nym_address_from_contact() {
+        let mut c = contact("Bob", "did:qi:bob", &[]);
+        c.nym_address = Some("bob_client.bob_sphinx@nym_gateway".into());
+        let view = build_view_core(
+            &[],
+            &[c],
+            &BTreeMap::new(),
+            builtin_categories(),
+            &[],
+        );
+        assert_eq!(view.entries.len(), 1);
+        assert_eq!(
+            view.entries[0].nym_address,
+            Some("bob_client.bob_sphinx@nym_gateway".into())
+        );
     }
 
     #[test]

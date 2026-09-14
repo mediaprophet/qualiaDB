@@ -23,6 +23,8 @@ use web_sys::{
     Response,
 };
 
+use super::{console_log, console_warn};
+
 /// Daemon HTTP loopback only — not libp2p (4243) or Poet HTML (8080),
 /// which can 200 `/health` without being the QualiaDB engine.
 /// Primary daemon HTTP port. Extra ports (8000/3030) deferred — sequential
@@ -511,27 +513,20 @@ pub fn spawn_daemon_probe() {
     wasm_bindgen_futures::spawn_local(async move {
         let ports = DEFAULT_CANDIDATE_PORTS;
         let hosts = probe_loopback_hosts();
-        web_sys::console::log_1(
-            &format!("[Webizen Probe] candidates hosts={hosts:?} ports={ports:?}").into(),
-        );
+        console_log(&format!("[Webizen Probe] candidates hosts={hosts:?} ports={ports:?}"));
         for host in &hosts {
             for &port in ports {
                 let url = format!("http://{host}:{port}");
                 let health_url = format!("{url}/health");
 
                 let Some(health) = fetch_daemon_health(&health_url).await else {
-                    web_sys::console::log_1(
-                        &format!("[Webizen Probe] no usable /health on {url}").into(),
-                    );
+                    console_log(&format!("[Webizen Probe] no usable /health on {url}"));
                     continue;
                 };
                 if !is_qualia_daemon_health(&health) {
-                    web_sys::console::log_1(
-                        &format!(
-                            "[Webizen Probe] Ignoring non-daemon /health on {url} (missing engine)"
-                        )
-                        .into(),
-                    );
+                    console_log(&format!(
+                        "[Webizen Probe] Ignoring non-daemon /health on {url} (missing engine)"
+                    ));
                     continue;
                 }
 
@@ -539,13 +534,10 @@ pub fn spawn_daemon_probe() {
                     .engine
                     .clone()
                     .unwrap_or_else(|| "qualia-core-db".into());
-                web_sys::console::log_1(
-                    &format!(
-                        "[Webizen Probe] Found running native daemon at {url} (engine: {engine}, quins: {})",
-                        health.graph_quin_count.unwrap_or(0)
-                    )
-                    .into(),
-                );
+                console_log(&format!(
+                    "[Webizen Probe] Found running native daemon at {url} (engine: {engine}, quins: {})",
+                    health.graph_quin_count.unwrap_or(0)
+                ));
 
                 // Elevate to Connected before the heavy caps fetch — UAT arrive /
                 // Open pack must not stay held on Probing while schemas deserialize.
@@ -579,21 +571,15 @@ pub fn spawn_daemon_probe() {
         if keep_connected {
             let attempt = OFFLINE_PROBE_ATTEMPTS.with(|c| *c.borrow());
             if attempt >= PROBE_OFFLINE_RETRY_MAX {
-                web_sys::console::log_1(
-                    &"[Webizen Probe] refresh miss budget exhausted → Standalone".into(),
-                );
+                console_log("[Webizen Probe] refresh miss budget exhausted → Standalone");
             } else {
-                web_sys::console::log_1(
-                    &"[Webizen Probe] refresh miss — keeping Native Connected; retrying".into(),
-                );
+                console_log("[Webizen Probe] refresh miss — keeping Native Connected; retrying");
                 schedule_offline_probe_retry();
                 return;
             }
         }
 
-        web_sys::console::log_1(
-            &"[Webizen Probe] No native daemon running on local ports (running in Standalone WASM mode)".into(),
-        );
+        console_log("[Webizen Probe] No native daemon running on local ports (running in Standalone WASM mode)");
 
         NATIVE_CAPABILITY_IDS.with(|ids| ids.borrow_mut().clear());
         set_daemon_state(DaemonConnectionState::Offline {
@@ -628,9 +614,7 @@ fn schedule_offline_probe_retry() {
             )
         });
         if should_retry {
-            web_sys::console::log_1(
-                &format!("[Webizen Probe] retry {attempt}/{PROBE_OFFLINE_RETRY_MAX}").into(),
-            );
+            console_log(&format!("[Webizen Probe] retry {attempt}/{PROBE_OFFLINE_RETRY_MAX}"));
             spawn_daemon_probe();
         }
     });
@@ -707,67 +691,51 @@ async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
     let resp_val = match wasm_bindgen_futures::JsFuture::from(raced).await {
         Ok(v) => v,
         Err(e) => {
-            web_sys::console::log_1(
-                &format!("[Webizen Probe] fetch failed {health_url}: {e:?}").into(),
-            );
+            console_log(&format!("[Webizen Probe] fetch failed {health_url}: {e:?}"));
             return None;
         }
     };
     if resp_val.is_null() {
-        web_sys::console::log_1(
-            &format!("[Webizen Probe] timed out after {PROBE_HEALTH_TIMEOUT_MS}ms at {health_url}")
-                .into(),
-        );
+        console_log(&format!("[Webizen Probe] timed out after {PROBE_HEALTH_TIMEOUT_MS}ms at {health_url}"));
         return None;
     }
     let resp: Response = match resp_val.dyn_into() {
         Ok(r) => r,
         Err(_) => {
-            web_sys::console::log_1(
-                &format!("[Webizen Probe] non-Response at {health_url}").into(),
-            );
+            console_log(&format!("[Webizen Probe] non-Response at {health_url}"));
             return None;
         }
     };
     if !resp.ok() {
-        web_sys::console::log_1(
-            &format!("[Webizen Probe] HTTP {} at {health_url}", resp.status()).into(),
-        );
+        console_log(&format!("[Webizen Probe] HTTP {} at {health_url}", resp.status()));
         return None;
     }
 
     let text_promise = match resp.text() {
         Ok(p) => p,
         Err(_) => {
-            web_sys::console::log_1(
-                &format!("[Webizen Probe] body read failed at {health_url}").into(),
-            );
+            console_log(&format!("[Webizen Probe] body read failed at {health_url}"));
             return None;
         }
     };
     let text_val = match wasm_bindgen_futures::JsFuture::from(text_promise).await {
         Ok(v) => v,
         Err(e) => {
-            web_sys::console::log_1(
-                &format!("[Webizen Probe] body await failed {health_url}: {e:?}").into(),
-            );
+            console_log(&format!("[Webizen Probe] body await failed {health_url}: {e:?}"));
             return None;
         }
     };
     let Some(text) = text_val.as_string() else {
-        web_sys::console::log_1(&format!("[Webizen Probe] non-text body at {health_url}").into());
+        console_log(&format!("[Webizen Probe] non-text body at {health_url}"));
         return None;
     };
     match serde_json::from_str::<DaemonHealthResponse>(&text) {
         Ok(h) => Some(h),
         Err(e) => {
-            web_sys::console::log_1(
-                &format!(
-                    "[Webizen Probe] health JSON parse failed at {health_url}: {e} (prefix {:?})",
-                    text.chars().take(80).collect::<String>()
-                )
-                .into(),
-            );
+            console_log(&format!(
+                "[Webizen Probe] health JSON parse failed at {health_url}: {e} (prefix {:?})",
+                text.chars().take(80).collect::<String>()
+            ));
             None
         }
     }
@@ -944,9 +912,7 @@ pub fn open_llm_job_stream(
         };
         match serde_json::from_str::<NativeLlmJobEvent>(&data) {
             Ok(event) => on_event(event),
-            Err(error) => web_sys::console::warn_1(
-                &format!("Ignored malformed local-model event: {error}").into(),
-            ),
+            Err(error) => console_warn(&format!("Ignored malformed local-model event: {error}")),
         }
     }) as Box<dyn FnMut(MessageEvent)>);
     event_source.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
@@ -1103,13 +1069,10 @@ fn init_daemon_event_streams(base_url: &str) {
                 if let Ok(pulse) = serde_json::from_str::<PulseEvent>(&data) {
                     super::pulse_stream::render_event(&pulse);
                     if !pulse.topic.is_empty() {
-                        web_sys::console::log_1(
-                            &format!(
-                                "[Pulse Stream] Received topic: '{}' (seq: {})",
-                                pulse.topic, pulse.seq
-                            )
-                            .into(),
-                        );
+                        console_log(&format!(
+                            "[Pulse Stream] Received topic: '{}' (seq: {})",
+                            pulse.topic, pulse.seq
+                        ));
                     }
                 }
             }
@@ -1127,10 +1090,7 @@ fn init_daemon_event_streams(base_url: &str) {
             if let Some(data) = e.data().as_string() {
                 if let Ok(rev_event) = serde_json::from_str::<GraphRevisionEvent>(&data) {
                     if rev_event.revision > 0 {
-                        web_sys::console::log_1(
-                            &format!("[Graph Stream] Revision advanced to {}", rev_event.revision)
-                                .into(),
-                        );
+                        console_log(&format!("[Graph Stream] Revision advanced to {}", rev_event.revision));
                     }
                 }
             }
@@ -1161,7 +1121,7 @@ pub fn build_daemon_status_badge(document: &Document) -> Element {
     render_badge_content(&badge);
 
     let click_closure = Closure::wrap(Box::new(move |_e: Event| {
-        web_sys::console::log_1(&"[Webizen Probe] Manual probe requested by user".into());
+        console_log("[Webizen Probe] Manual probe requested by user");
         spawn_daemon_probe();
     }) as Box<dyn FnMut(Event)>);
     badge

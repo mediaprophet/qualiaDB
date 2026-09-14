@@ -47,7 +47,10 @@ pub use qualia_core_db::net::peer::runtime::{
     LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
 };
 pub use qualia_core_db::net::qdnf::authority::{Plane, PolicyOutcome};
-pub use qualia_core_db::net::qdnf::bearer::{ipc_pair, Bearer, IpcEndpoint};
+pub use qualia_core_db::net::qdnf::bearer::{
+    decapsulate_nym, encapsulate_nym, ipc_pair, Bearer, IpcEndpoint, NymSimulatedBearer,
+    NYM_SPHINX_MTU,
+};
 pub use qualia_core_db::net::qdnf::errors::QdnfError;
 pub use qualia_core_db::net::qdnf::session::{SessionBinding, SessionState};
 pub use qualia_core_db::net::qdnf::types::{LinkId, ObservedLocator, OperationId, ScopeEpoch};

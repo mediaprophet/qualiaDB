@@ -365,7 +365,7 @@ pub fn build_shader_pipeline_view(document: &Document) -> Element {
                     .set_property("color", "var(--accent-emerald, #00f2a9)")
                     .unwrap();
                 ob_clone.set_text_content(Some("\u{2713} 0-Heap Validated \u{00B7} 0.14ms"));
-                web_sys::console::log_1(&format!("[WGSL Forge] Executed pipeline '{}' \u{2014} Naga validated, 0 allocations in hot path", file_name).into());
+                super::console_log(&format!("[WGSL Forge] Executed pipeline '{}' \u{2014} Naga validated, 0 allocations in hot path", file_name));
             },
         )
             as Box<dyn FnMut(web_sys::MouseEvent)>);

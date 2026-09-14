@@ -7,6 +7,7 @@ pub mod leased_ipc;
 pub mod lifecycle;
 pub mod metadata;
 pub mod mtu;
+pub mod nym;
 pub mod raw_ethernet;
 
 pub use contract::{Bearer, BearerCapabilities, RecvMeta};
@@ -20,6 +21,10 @@ pub use lifecycle::{BearerLifecycle, BearerPhase};
 pub use mtu::{
     DEFAULT_QDNF_MTU, MAX_QDNF_MTU, MIN_QDNF_MTU, interface_loss_error, negotiate_mtu,
     reconnect_requires_new_admission, unfragmented_fit,
+};
+pub use nym::{
+    decapsulate_nym, encapsulate_nym, NymSimulatedBearer, NYM_ENVELOPE_VERSION, NYM_HEADER_LEN,
+    NYM_MAGIC, NYM_SPHINX_MTU,
 };
 pub use raw_ethernet::{
     DEV_ETHERTYPE, EthernetEvidence, EthernetLoop, RawEthernet, TwoHostProbe, TwoHostProbeReason,
