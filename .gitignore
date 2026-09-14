@@ -160,6 +160,7 @@ scripts/*
 !scripts/fetch_wordnet_release.ps1
 !scripts/rustdoc-workspace.sh
 !scripts/vibe-coverage-from-rustdoc.mjs
+!scripts/validate-nlp-plan.ps1
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json
