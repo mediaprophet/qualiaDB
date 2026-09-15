@@ -189,7 +189,7 @@ Write-Host "Using wasm-opt: $((Get-Command wasm-opt).Source)"
 # builds must use the exact pinned local CLI established above.
 $env:NO_DOWNLOADS = "1"
 # Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen; also force LTO/bitcode off for dx wasm.
-$FrontendWasmRustflags = "-C lto=off -C embed-bitcode=no"
+$FrontendWasmRustflags = "-C lto=off -C embed-bitcode=no -C link-arg=--allow-multiple-definition"
 if ($env:RUSTFLAGS_WASM) { $env:RUSTFLAGS = $env:RUSTFLAGS_WASM } else { $env:RUSTFLAGS = $FrontendWasmRustflags }
 if (-not $env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS) {
     $env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS = $FrontendWasmRustflags
