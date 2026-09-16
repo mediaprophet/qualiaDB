@@ -4,7 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
----
+## [0.0.39] — 2026-09-16
+
+### Added
+
+- **Prompt Precision Conditioning Runtime**: Waves W0–W8 implementation featuring deterministic prompt conditioning contracts, strict 6-zone token budgeting algebra, zero-heap byte layout emitters, 14 cross-cutting invariant suites, and PP-090 LoRA hot-path readiness under the 42MB Sentinel budget.
+- **Automated Model Precision Optimizer**: Machine-learned model precision calibration pipeline (`qualia-core-db::inference::conditioning_opt`) supporting candidate strategy generation (B0–B5), strict split-isolated evaluation, held-out validation, versioning, rollback, and signed `ModelOptimizationReceipt` tracking.
+- **Semantic Instruments Studio Bay**: First-class metamodel, SHACL validation shapes, execution receipts, keyboard-only authoring path, and interactive Webizen Studio Instrument Bay UI components.
+- **NLP Substrate & Gold Benchmark Corpus**: Formal NLP contracts, token budgeting algebra, gold benchmark evaluation datasets (`qualia-catchment-notes-v0` & `qualia-english-notes-v0`), and automated plan validation scripts.
+- **GitHub Pages 0.0.39 Showcase**: New `progress-0.0.39.html` with interactive Token Budget Simulator, and `prompt-precision.html` architectural reference.
+
+### Changed
+
+- All 27 workspace crates, `Cargo.lock`, Tauri manifest, portal packages, and release workflows bumped from `0.0.38` to `0.0.39`.
+- Poet and Webizen runtime stamps updated to `0.0.39`.
 
 ## [0.0.38] — 2026-09-12
 

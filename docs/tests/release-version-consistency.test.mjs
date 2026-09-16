@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.38';
+const releaseVersion = '0.0.39';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -62,7 +62,7 @@ const liveReleaseSurfaces = [
   'docs/js/qualia-wasm-runtime.js',
   'docs/online-llm-demo.html',
   'docs/playground/anatomy.js',
-  'docs/progress-0.0.38.html',
+  'docs/progress-0.0.39.html',
   'docs/qdnf.html',
   'docs/release-matrix.html',
   'docs/tests/index.html',

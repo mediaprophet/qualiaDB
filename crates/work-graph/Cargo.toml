@@ -1,6 +1,6 @@
 [package]
 name = "work-graph"
-version = "0.0.38"
+version = "0.0.39"
 edition = "2021"
 description = "Work graph (Implementation Graph) Beat B MVP indexer — presence extract, no Host invent"
 license-file = "../../LICENSE"
