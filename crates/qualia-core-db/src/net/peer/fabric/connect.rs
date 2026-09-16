@@ -101,8 +101,10 @@ pub fn connect(
     let intent = ConnectionIntent::new(peer, purpose, protection, budget, now_ms, deadline_ms);
     fabric.kernel.admit(intent, now_ms)?;
     fabric.kernel.step(KernelEvent::IntentAdmitted, now_ms);
-    if matches!(protection.disclosure, crate::net::peer::connectivity::policy::Disclosure::Isolated)
-    {
+    if matches!(
+        protection.disclosure,
+        crate::net::peer::connectivity::policy::Disclosure::Isolated
+    ) {
         fabric.kernel.step(KernelEvent::Deadline, now_ms);
         return Ok(ConnectHandle {
             peer,
@@ -121,7 +123,9 @@ pub fn drive(fabric: &mut Fabric, event: KernelEvent, now_ms: u64) -> DriveOutco
         KernelEffect::Deny => DriveOutcome::Denied,
         KernelEffect::QueueOffline | KernelEffect::Close => DriveOutcome::Queued,
         KernelEffect::AdmitSession => DriveOutcome::Live,
-        KernelEffect::Probe { class: PathClass::Offline } => DriveOutcome::Queued,
+        KernelEffect::Probe {
+            class: PathClass::Offline,
+        } => DriveOutcome::Queued,
         _ => match fabric.kernel.state {
             FabricState::SessionLive => DriveOutcome::Live,
             FabricState::Closed => DriveOutcome::Closed,
@@ -144,11 +148,7 @@ pub fn admit_session(
     path: super::evidence::PathEvidence,
     now_ms: u64,
 ) -> Result<SessionReady, FabricError> {
-    let peer = fabric
-        .kernel
-        .intent()
-        .ok_or(FabricError::Illegal)?
-        .peer;
+    let peer = fabric.kernel.intent().ok_or(FabricError::Illegal)?.peer;
     let _ = fabric
         .kernel
         .step(KernelEvent::SessionAuthenticated, now_ms);
@@ -326,14 +326,9 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn local_bound_udp_delivers_and_admits_session() {
-        let (fa, _fb, n) = local_bound_udp_exchange(
-            ProtectionPolicy::RELAY_ONLY,
-            b"q-fabric",
-            10,
-            4096,
-            10_000,
-        )
-        .unwrap();
+        let (fa, _fb, n) =
+            local_bound_udp_exchange(ProtectionPolicy::RELAY_ONLY, b"q-fabric", 10, 4096, 10_000)
+                .unwrap();
         assert!(n >= b"q-fabric".len());
         let s = fa.session().unwrap();
         assert_eq!(s.path.class, PathClass::Relayed);

@@ -1,13 +1,13 @@
 //! Oversized ClientHello / ServerHello codec: hybrid share plus dual proof.
 
 use crate::crypto::network::digest::sha384;
-use crate::crypto::network::dual_sign::{DualProof, sign_dual, verify_dual};
+use crate::crypto::network::dual_sign::{sign_dual, verify_dual, DualProof};
 use crate::crypto::network::ed25519::public_from_seed;
 use crate::crypto::network::pq_handshake::{
-    INITIATOR_SHARE_WIRE_LEN, decode_initiator_share, encode_initiator_share, qsession_domain,
+    decode_initiator_share, encode_initiator_share, qsession_domain, INITIATOR_SHARE_WIRE_LEN,
 };
 use crate::crypto::network::share_encoding::{
-    RESPONDER_SHARE_WIRE_LEN, decode_responder_share, encode_responder_share,
+    decode_responder_share, encode_responder_share, RESPONDER_SHARE_WIRE_LEN,
 };
 use crate::crypto::network::types::{
     ED25519_PK_LEN, ED25519_SIG_LEN, ML_DSA_65_PK_LEN, ML_DSA_65_SIG_LEN, ML_DSA_65_SK_LEN,
@@ -208,7 +208,8 @@ mod tests {
         let (mldsa_sk, mldsa_pk) = mldsa::generate_keypair().unwrap();
         let ed = [9u8; 32];
         let mut out = [0u8; CLIENT_HELLO_WIRE_LEN];
-        let n = encode_client_hello_with_certs(&share, &mldsa_sk, &mldsa_pk, &ed, &mut out).unwrap();
+        let n =
+            encode_client_hello_with_certs(&share, &mldsa_sk, &mldsa_pk, &ed, &mut out).unwrap();
         assert_eq!(n, CLIENT_HELLO_WIRE_LEN);
         decode_client_hello(&out[..n]).unwrap();
     }

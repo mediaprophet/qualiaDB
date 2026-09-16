@@ -25,9 +25,7 @@ pub use admit::{
 pub use descriptors::{admit_descriptors, CellDescriptor, MAX_DESCRIPTOR_CELLS};
 pub use host_owner::{extra_identity_multiplies_host_budget, HostAdmission, MAX_HOST_BYTES};
 pub use isolation::{admit_llm_cannot_starve_network, llm_backing_profile_allowed};
-pub use pass_budget::{
-    charge_pass, reclaim_pass, PassCharge, PassOutcome, SENTINEL_PASS_TOTAL,
-};
+pub use pass_budget::{charge_pass, reclaim_pass, PassCharge, PassOutcome, SENTINEL_PASS_TOTAL};
 pub use spsc::{OwnershipReceipt, SpscQueue, SPSC_CAP};
 pub use workers::{
     cancel_worker, drain_and_handover, fail_worker, release_worker, start_worker, WorkerFence,

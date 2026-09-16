@@ -27,8 +27,8 @@ fn is_classified_label(label: &str) -> bool {
 }
 
 fn record_is_classified(rec: &Value) -> bool {
-    if let Some(s) = args::rec_str(rec, "sensitivity")
-        .or_else(|| args::rec_str(rec, "sensitivity_label"))
+    if let Some(s) =
+        args::rec_str(rec, "sensitivity").or_else(|| args::rec_str(rec, "sensitivity_label"))
     {
         return is_classified_label(s);
     }
@@ -84,18 +84,15 @@ fn need_fragment_fields<'a>(
     span: Span,
     what: &str,
 ) -> Result<(u64, u32, u32, &'a str), Diagnostic> {
-    let lamport = args::rec_u64(frag, "message_lamport").ok_or_else(|| {
-        args::bad(span, format!("{what} needs message_lamport"))
-    })?;
-    let start = args::rec_u64(frag, "anchor_start").ok_or_else(|| {
-        args::bad(span, format!("{what} needs anchor_start"))
-    })? as u32;
-    let end = args::rec_u64(frag, "anchor_end").ok_or_else(|| {
-        args::bad(span, format!("{what} needs anchor_end"))
-    })? as u32;
-    let text = args::rec_str(frag, "anchor_text").ok_or_else(|| {
-        args::bad(span, format!("{what} needs anchor_text"))
-    })?;
+    let lamport = args::rec_u64(frag, "message_lamport")
+        .ok_or_else(|| args::bad(span, format!("{what} needs message_lamport")))?;
+    let start = args::rec_u64(frag, "anchor_start")
+        .ok_or_else(|| args::bad(span, format!("{what} needs anchor_start")))?
+        as u32;
+    let end = args::rec_u64(frag, "anchor_end")
+        .ok_or_else(|| args::bad(span, format!("{what} needs anchor_end")))? as u32;
+    let text = args::rec_str(frag, "anchor_text")
+        .ok_or_else(|| args::bad(span, format!("{what} needs anchor_text")))?;
     Ok((lamport, start, end, text))
 }
 
@@ -123,8 +120,8 @@ pub fn validate_fragment(args_v: &Value, span: Span) -> Result<Value, Diagnostic
         ));
     }
 
-    let session_id = args::rec_str(args_v, "session_id")
-        .or_else(|| args::rec_str(frag, "session_id"));
+    let session_id =
+        args::rec_str(args_v, "session_id").or_else(|| args::rec_str(frag, "session_id"));
     let supplied_id = args::rec_str(frag, "fragment_id");
     let fragment_id = match (supplied_id, session_id) {
         (Some(id), _) if !id.is_empty() => id.to_string(),
@@ -164,12 +161,10 @@ pub fn validate_fragment(args_v: &Value, span: Span) -> Result<Value, Diagnostic
 pub fn link_reply(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     refuse_classified(args_v, span, "ChatGraph.link_reply")?;
 
-    let parent = args::rec_str(args_v, "parent_fragment_id").ok_or_else(|| {
-        args::bad(span, "ChatGraph.link_reply needs parent_fragment_id")
-    })?;
-    let reply_lamport = args::rec_u64(args_v, "reply_message_lamport").ok_or_else(|| {
-        args::bad(span, "ChatGraph.link_reply needs reply_message_lamport")
-    })?;
+    let parent = args::rec_str(args_v, "parent_fragment_id")
+        .ok_or_else(|| args::bad(span, "ChatGraph.link_reply needs parent_fragment_id"))?;
+    let reply_lamport = args::rec_u64(args_v, "reply_message_lamport")
+        .ok_or_else(|| args::bad(span, "ChatGraph.link_reply needs reply_message_lamport"))?;
     let session_id = args::rec_str(args_v, "session_id").unwrap_or("anon");
 
     let frags = as_record_list(args_v, "fragments", span, "ChatGraph.link_reply")?;
@@ -199,8 +194,7 @@ pub fn link_reply(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
     // Quin object payloads stay in the 60-bit mask (client-core parity).
     let child_obj = u64::from_str_radix(&child, 16).unwrap_or(q_hash(&child)) & OBJECT_HASH_MASK;
-    let parent_obj =
-        u64::from_str_radix(parent, 16).unwrap_or(q_hash(parent)) & OBJECT_HASH_MASK;
+    let parent_obj = u64::from_str_radix(parent, 16).unwrap_or(q_hash(parent)) & OBJECT_HASH_MASK;
 
     Ok(args::record([
         ("child_fragment_id", Value::String(child)),
@@ -382,9 +376,7 @@ mod tests {
             ("reply_message_lamport", Value::U64(2)),
             (
                 "fragments",
-                Value::List(vec![rec(&[
-                    ("fragment_id", Value::String("other".into())),
-                ])]),
+                Value::List(vec![rec(&[("fragment_id", Value::String("other".into()))])]),
             ),
         ]);
         assert!(link_reply(&args, span()).is_err());

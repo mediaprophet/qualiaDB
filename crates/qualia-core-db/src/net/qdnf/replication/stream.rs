@@ -169,9 +169,7 @@ pub fn hash_file_pages(
         if (pages as usize) < page_digests.len() {
             page_digests[pages as usize] = page_digest(&window.buf[..n]);
         }
-        offset = offset
-            .checked_add(n as u64)
-            .ok_or(QdnfError::Range)?;
+        offset = offset.checked_add(n as u64).ok_or(QdnfError::Range)?;
         pages = pages.checked_add(1).ok_or(QdnfError::Range)?;
     }
     if offset != file.logical_len() {

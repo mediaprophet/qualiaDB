@@ -7,9 +7,7 @@ use crate::governance::webizen::{classify_budget, ArenaBudgetClass};
 use crate::net::peer::cells::admit::{
     CellProfile, CellSlot, CellTable, MAX_CELLS, MAX_ORDINARY_CELL,
 };
-use crate::net::peer::runtime::{
-    LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget,
-};
+use crate::net::peer::runtime::{LeaseTable, ReservationHandle, ReservationLedger, ResourceBudget};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;
 
@@ -74,18 +72,13 @@ impl HostAdmission {
     }
 
     /// Admit one cell against the shared host ledger.
-    pub fn admit_cell(
-        &mut self,
-        profile: CellProfile,
-        bytes: u64,
-    ) -> Result<CellSlot, QdnfError> {
+    pub fn admit_cell(&mut self, profile: CellProfile, bytes: u64) -> Result<CellSlot, QdnfError> {
         self.cells
             .reserve(&mut self.leases, &mut self.ledger, profile, bytes)
     }
 
     pub fn release_cell(&mut self, slot: CellSlot) -> Result<(), QdnfError> {
-        self.cells
-            .release(&mut self.leases, &mut self.ledger, slot)
+        self.cells.release(&mut self.leases, &mut self.ledger, slot)
     }
 
     #[inline]

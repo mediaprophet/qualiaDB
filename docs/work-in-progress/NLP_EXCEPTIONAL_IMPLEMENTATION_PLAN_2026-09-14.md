@@ -5,9 +5,9 @@
 **Source review:** repository audit completed 2026-09-14; 62 focused NLP/host tests passed and the `wasm-ontology` target checked successfully  
 **Programme objective:** Deliver an evidence-backed, local-first NLP system that is exceptional in linguistic quality, deterministic execution, provenance, ontology grounding, privacy, and constrained-runtime operation.
 
-**Revision:** 2 · reviewed 2026-09-14 against checkout `edd94f0fc695ba41adaf9ec38f857709a874c002`. The earlier test results above are historical observations, not tests rerun for this documentation revision. The original review's “15–20% complete” estimate had no defined denominator and is withdrawn; use the capability matrix and evaluation evidence instead.
+**Revision:** 3 · swarm and supervision added 2026-09-14. Revision 2 was reviewed against checkout `edd94f0fc695ba41adaf9ec38f857709a874c002`. The earlier test results above are historical observations, not tests rerun for this documentation revision. The original review's “15–20% complete” estimate had no defined denominator and is withdrawn; use the capability matrix and evaluation evidence instead.
 
-**Tracking home:** This document is the editable source of truth. `docs/plans/` is ignored by Git in this checkout; keep this programme in `docs/work-in-progress/`. Work-package counts measure accepted packages, not effort completed or NLP accuracy. Run `scripts/validate-nlp-plan.ps1` after tracker changes. Review and planning do not themselves authorize executing every implementation package, downloading models, or publishing comparison claims.
+**Tracking home:** This document is the editable source of truth. `docs/plans/` is ignored by Git in this checkout; keep this programme in `docs/work-in-progress/`. Work-package counts measure accepted packages, not effort completed or NLP accuracy. Run `scripts/validate-nlp-plan.ps1` after tracker changes (UTF-8; Windows PowerShell 5 can run it if the script is loaded as UTF-8 — see §14.6). Review and planning do not themselves authorize downloading models or publishing comparison claims. Swarm implementation is authorized under §14.7 and the live board in §20; it does not authorize skipping independent review or treating package counts as quality.
 
 ---
 
@@ -299,8 +299,8 @@ Update this table whenever a work package changes state.
 
 | Milestone | Theme | Done / total | Status | Exit evidence |
 |---|---|---:|---|---|
-| M0 | Truth, safety, and measurement | 1 / 10 | `IN_PROGRESS` | Immediate resource defects closed; evaluation and feasibility receipts |
-| M1 | Unicode text foundation | 0 / 8 | `PLANNED` | Token/sentence gates, first runnable pipeline and streaming parity |
+| M0 | Truth, safety, and measurement | 8 / 10 | `IN_PROGRESS` | Immediate resource defects closed; evaluation and feasibility receipts |
+| M1 | Unicode text foundation | 1 / 8 | `IN_PROGRESS` | Token/sentence gates, first runnable pipeline and streaming parity |
 | M2 | Normalization and morphology | 0 / 7 | `PLANNED` | Temporal/quantity/lemma gates pass |
 | M3 | POS and syntax | 0 / 7 | `PLANNED` | POS/LAS/UAS gates and artifact reproduction pass |
 | M4 | Entities and ontology linking | 0 / 7 | `PLANNED` | NER/linking/calibration gates pass |
@@ -309,7 +309,7 @@ Update this table whenever a work package changes state.
 | M7 | Real GraphRAG | 0 / 8 | `PLANNED` | Retrieval/faithfulness/resource gates pass |
 | M8 | Multilingual and domain packs | 0 / 7 | `PLANNED` | Per-language/domain/geo release cards pass |
 | M9 | Productization and exceptional release | 0 / 8 | `PLANNED` | Full release gate and comparison report pass |
-| **Total** |  | **1 / 75** | `IN_PROGRESS` | Package counts are not effort or linguistic completeness percentages |
+| **Total** |  | **9 / 75** | `IN_PROGRESS` | Package counts are not effort or linguistic completeness percentages |
 
 ### 7.2 Work packages
 
@@ -318,15 +318,15 @@ Update this table whenever a work package changes state.
 | ID | Status | Priority | Depends on | Deliverable and acceptance summary | Owner | Evidence |
 |---|---|---|---|---|---|---|
 | NLP-000 | `DONE` | P0 | — | Baseline code review, focused test run, WASM check, gap inventory | Codex review 2026-09-14 | 62 tests pass; WASM check pass; this plan |
-| NLP-001 | `IN_PROGRESS` | P0 | NLP-000 | Bound existing coreference with collision-safe grouping, preflight validation and explicit errors; preserve linguistic behavior except documented defects; §7.3 contract | Grok 2026-09-14 · review: self-verify then independent | — |
-| NLP-002 | `READY` | P0 | NLP-000 | Correct decimal sentence boundaries, Unicode terminators, degree-unit spans, compound-unit precedence, calendar validity | — | — |
-| NLP-003 | `READY` | P0 | NLP-000 | Capability maturity descriptors; label keyword retrieval and rule demos honestly in APIs/UI | — | — |
-| NLP-004 | `READY` | P0 | NLP-000 | Evaluation crate/module, benchmark manifest schema, JSON/Markdown receipts, frozen seed policy | — | — |
-| NLP-005 | `PLANNED` | P0 | NLP-004 | Initial general/domain/adversarial corpus with licensing and split manifests | — | — |
-| NLP-006 | `PLANNED` | P0 | NLP-004, NLP-005, NLP-008 | Frozen local reference runners, gold scoring, numeric gate manifests and reproducible baseline reports | — | — |
-| NLP-007 | `PLANNED` | P1 | NLP-001, NLP-004 | Per-component resource budgets, cancellation, allocation and 42 MiB gates | — | — |
-| NLP-008 | `READY` | P0 | NLP-000 | Release charter: first use cases/languages/profiles, evaluation inventory, resource envelope and scope decisions; §8.1 | — | — |
-| NLP-009 | `PLANNED` | P0 | NLP-008 | Reuse inventory and measured feasibility of candidate runtimes/models, with licensing, resident bytes and quality tradeoffs; §8.2 | — | — |
+| NLP-001 | `DONE` | P0 | NLP-000 | Bound existing coreference with collision-safe grouping, preflight validation and explicit errors; preserve linguistic behavior except documented defects; §7.3 contract | Grok 2026-09-14 · accepted Swarm-S1 (gpt-5.6) 2026-09-14 | 2026-09-14 · DONE · uncommitted. `cargo test -p qualia-core-db --lib -- nlp::coref` 42 passed. Wave integration: `--lib` **8572 passed, 0 failed, 4 ignored**; portal wasm check pass. D-007..011 accepted. Limitations: experimental name-gender heuristic; every-word mentions (D-005). |
+| NLP-002 | `DONE` | P0 | NLP-000 | Correct decimal sentence boundaries, Unicode terminators, degree-unit spans, compound-unit precedence, calendar validity | Swarm-A · accepted Swarm-R2 (Claude Opus) 2026-09-14 | 2026-09-14 · DONE. Independent probe 47 extra cases. Follow-ups D-014 (not blockers). |
+| NLP-003 | `DONE` | P0 | NLP-000 | Capability maturity descriptors; label keyword retrieval and rule demos honestly in APIs/UI | Swarm-D · REOPEN patched · accepted independent re-review 2026-09-14 | Surfaces `native`+`library`; FST discloses caller-supplied entries + poet demo dict; coref/graphrag headers honest. `nlp::capability` 4; discovery surfaces guarded. IDs unchanged. |
+| NLP-004 | `DONE` | P0 | NLP-000 | Evaluation crate/module, benchmark manifest schema, JSON/Markdown receipts, frozen seed policy | Swarm-B · accepted Swarm-R4 (Claude Opus) 2026-09-14 | `nlp_suite` 11 passed. D-015: handwritten `pass` is not a measured comparison; documented in SCHEMA.md; NLP-006 owns `achieved_score`. |
+| NLP-005 | `DONE` | P0 | NLP-004 | Initial general/domain/adversarial corpus with licensing and split manifests | Swarm-E · REOPEN patched · accepted independent re-review 2026-09-14 | `docs/benchmark-datasets/nlp/`; checksums.rs enforces SHA-256 + split hashes. `nlp_suite` 23 passed / 1 ignored dump. Dual-annotator still a principal limitation. |
+| NLP-006 | `REVIEW` | P0 | NLP-004, NLP-005, NLP-008 | Frozen local reference runners, gold scoring, numeric gate manifests and reproducible baseline reports | Grok 2026-09-14 first slice | `achieved_score >= minimum_score` (D-015); schema requires both on `pass`; authored gold exact-match freeze still UNEVALUATED. UD/OntoNotes remain unavailable. |
+| NLP-007 | `DONE` | P1 | NLP-001, NLP-004 | Per-component resource budgets, cancellation, allocation and 42 MiB gates | Swarm-F · accepted independent review 2026-09-14 | `nlp/budget.rs`; hosts refuse oversize before clone. `nlp::budget` 7; `vibe_host::invoke::nlp` 35. D-004 closed. |
+| NLP-008 | `DONE` | P0 | NLP-000 | Release charter: first use cases/languages/profiles, evaluation inventory, resource envelope and scope decisions; §8.1 | Swarm-C; Swarm-R8 REOPEN; supervisor patch; second independent ACCEPT_DONE 2026-09-14 | `docs/work-in-progress/NLP_RELEASE_CHARTER_WIP.md`. D-016 closed. Duplicate Sensitivity paragraph removed. |
+| NLP-009 | `REVIEW` | P0 | NLP-008 | Reuse inventory and measured feasibility of candidate runtimes/models, with licensing, resident bytes and quality tradeoffs; §8.2 | Swarm-H 2026-09-14 · REOPEN patched (header + sensitivity ABI) | `docs/work-in-progress/NLP_REUSE_INVENTORY_WIP.md`. Hardware: i7-6700, 63.84 GiB; wgpu adapter not measured. Keep symbolic-lite. No download. Independent re-review still needed after patch. |
 
 M0 exit criteria:
 
@@ -340,7 +340,7 @@ M0 exit criteria:
 
 | ID | Status | Priority | Depends on | Deliverable and acceptance summary | Owner | Evidence |
 |---|---|---|---|---|---|---|
-| NLP-100 | `PLANNED` | P0 | NLP-004 | Versioned annotation contracts and caller-buffered APIs | — | — |
+| NLP-100 | `DONE` | P0 | NLP-004 | Versioned annotation contracts and caller-buffered APIs | Swarm-G · REOPEN patched · accepted independent re-review 2026-09-14 | `nlp/contracts/`; one-pass cold adapter; `required_capacities`; v1 in-process Rust ABI. `nlp::contracts` 10. Alignment maps / token layers deferred NLP-101/103. |
 | NLP-101 | `PLANNED` | P0 | NLP-100 | Unicode-aware, non-destructive tokenizer with exact original spans | — | — |
 | NLP-102 | `PLANNED` | P0 | NLP-101 | Robust sentence segmenter: abbreviations, decimals, quotes, lists, emoji and Unicode enders | — | — |
 | NLP-103 | `PLANNED` | P1 | NLP-101 | Multi-word-token and contraction layer without altering source spans | — | — |
@@ -494,13 +494,15 @@ M8 language/domain packs can begin after M1/M2 -----+
                                                M9 release
 ```
 
-Milestones group ownership and exit evidence; row-level dependencies are authoritative. M7 may start against an existing validated graph before M6 extraction is finished. Language routing (NLP-800), trained artifact feasibility (NLP-009/NLP-306), and pipeline integration (NLP-107) begin early. Dependencies do not require every earlier-numbered milestone to finish. If parallel agents are explicitly authorized, allocate disjoint files after shared contracts land; this plan does not itself initiate delegation.
+Milestones group ownership and exit evidence; row-level dependencies are authoritative. M7 may start against an existing validated graph before M6 extraction is finished. Language routing (NLP-800), trained artifact feasibility (NLP-009/NLP-306), and pipeline integration (NLP-107) begin early. Dependencies do not require every earlier-numbered milestone to finish.
+
+Parallel work is authorized. Allocate disjoint files after reading §14.7 and claiming a free lane on the §20 board. Shared contracts (`nlp/mod.rs`, this tracker’s non-row prose, host `ids.rs`, `lib.rs`) stay frozen or move through the supervisor. This revision is the swarm authorization; it does not dispatch unnamed agents or waive review.
 
 ### 8.1 Release charter and effort planning (NLP-008)
 
 Record two or three concrete document-to-output use cases with representative inputs, target languages/domains, maximum document size, deployed hardware/browser, sensitivity, acceptable latency and output acceptance. Defaults for initial engineering are English general text plus an independently authored measurement/catchment corpus; clinical and legal deployment remain separate later profiles. Resolve mandatory versus optional processors for each profile. A domain pack is not a medical or legal performance certification.
 
-Estimate effort only after inventorying reuse and completing the feasibility spike. The 75 rows are capability packages, many requiring several sessions and a real data/model programme; they are not a 75-session promise. Each ready package gets a small first slice, effort range/confidence, owner, review method and evidence deliverable. Keep at most one primary implementation slice active per owner. Milestone scheduling uses remaining estimated effort, dependency blockers and data availability rather than raw checkbox counts.
+Estimate effort only after inventorying reuse and completing the feasibility spike. The 75 rows are capability packages, many requiring several sessions and a real data/model programme; they are not a 75-session promise. Each ready package gets a small first slice, effort range/confidence, owner, review method and evidence deliverable. Keep at most one primary implementation slice active per owner. Several owners may run at once when their file lanes do not overlap. Milestone scheduling uses remaining estimated effort, dependency blockers and data availability rather than raw checkbox counts.
 
 ### 8.2 Reuse and model lifecycle (NLP-009 / NLP-306)
 
@@ -702,6 +704,8 @@ In NLP-600..606, retain speaker/source attribution, experiencer, polarity, hypot
 | R-13 | Release threshold tuning leaks test labels | High / High | Locked splits; separate calibration; paired comparisons and minimum coverage | Open |
 | R-14 | A resource fix silently changes linguistic behavior | Medium / High | NLP-001 bounded contract and legacy oracle; detector/model changes in M5 | Open |
 | R-15 | Feature count or compilation is reported as production readiness | High / High | Package/maturity/quality evidence tracked separately; actual browser execution | Open |
+| R-16 | Swarm agents collide on shared files or skip review | High / High | Disjoint lanes, NOTICES claims, supervisor serialization, independent DONE | Open |
+| R-17 | Self-review parks a package in `REVIEW` indefinitely or promotes it to `DONE` | High / High | Named reviewer distinct from implementer; defect reopen; §14.8 SLA | Open |
 
 ---
 
@@ -712,23 +716,27 @@ Every implementation session must update this document as part of the same chang
 ### 14.1 Starting a work package
 
 1. Confirm dependencies and read all referenced contracts.
-2. Change exactly one primary work package from `READY`/`PLANNED` to `IN_PROGRESS`.
-3. Add owner/agent and start date to its row.
+2. Each owner moves **exactly one** primary work package from `READY`/`PLANNED` to `IN_PROGRESS`. A swarm may have several `IN_PROGRESS` rows, one per owner.
+3. Add owner/agent and start date to its row. Record the allowed file set on the §20 board and in `coordination/NOTICES.md`.
 4. Record any scope adjustment in the decision log before coding.
 5. Do not claim adjacent work packages merely because supporting code was touched.
+6. Stop if the intended files are `CLAIM`ed by another live owner. Report the collision; do not compete.
 
-Priority `P0` in this tracker means required before the applicable release gate; it is not automatically a security severity or permission to preempt the first slice. `P1` is sequenced improvement. Current immediate work is NLP-001/NLP-002. Use the numbered sequence and explicit dependencies to schedule the other required packages.
+Priority `P0` in this tracker means required before the applicable release gate; it is not automatically a security severity or permission to preempt the first slice. `P1` is sequenced improvement. Current immediate work is the §20 wave, plus independent review of any `REVIEW` row. Use row-level dependencies, not checkbox order, to take a lane.
 
 ### 14.2 Completing a work package
 
 1. Run its focused tests and all named cross-cutting gates.
 2. Record exact commands, pass/fail counts, relevant artifact paths and commit in Evidence.
 3. Add a progress-log entry describing behavior, limitations and compatibility changes.
-4. Change status to `REVIEW`; an independent review or explicit owner acceptance changes it to `DONE`.
+4. Change status to `REVIEW`; an **independent** reviewer (a different instrument or the principal) changes it to `DONE`. The implementer must not mark their own package `DONE`.
 5. Update milestone and total dashboard counts.
-6. Update risks and decisions affected by the work.
+6. Update risks, decisions, and the §21 defect register affected by the work.
+7. `RELEASE` the file claim in `NOTICES.md`. The supervisor runs an integration check if more than one packet landed in the wave.
 
-Choose the review method when claiming the packet. `REVIEW` requires evidence and a named reviewer/next action; it must not become an indefinite parking state. Review need not require a new user confirmation for each routine edit: use an already authorized review process, or report precisely what acceptance remains. Creating this plan does not dispatch review agents. A `DONE` package can reopen when its behavior regresses; its prior receipt stays in history. Record `uncommitted` with a patch/source digest when no commit exists; this workflow does not require a push to attach evidence.
+Choose the review method when claiming the packet. `REVIEW` requires evidence and a named reviewer/next action; it must not become an indefinite parking state. A `REVIEW` row older than one working session without a reviewer claim is a supervisor defect (`process`). Review need not wait for a new principal confirmation of each routine packet once swarm is authorized, but comparative publication, model download, and governed-domain certification still need the principal. A `DONE` package can reopen when its behavior regresses; its prior receipt stays in history. Record `uncommitted` with a patch/source digest when no commit exists; this workflow does not require a push to attach evidence.
+
+Creating this plan does not spawn agents. Taking a free §20 lane and CLAIMing it does.
 
 ### 14.3 Blocking a work package
 
@@ -772,7 +780,59 @@ Evidence: <source revision, command exits, receipts>
 Next action / blocker: <concrete step>
 ```
 
-Run `pwsh -NoProfile -File scripts/validate-nlp-plan.ps1` after editing. Use the available PowerShell 7 runtime; no execution-policy changes are needed. The read-only validator checks row shape, unique IDs, legal statuses, dependency references/ranges, cycles, per-milestone totals, completion counts, owners for active/reviewed/completed rows, and evidence for reviewed/completed rows. `READY`/active/completed rows require completed prerequisites. It validates structure, not the truth of a receipt or benchmark score. `-SelfTest` exercises rejected malformed plans in memory. Keep Markdown as the only status source to avoid a second stale spreadsheet/JSON tracker.
+Run `pwsh -NoProfile -File scripts/validate-nlp-plan.ps1` after editing. If PowerShell 7 is absent, load the script as UTF-8 (Windows PowerShell 5 otherwise misreads the file) and invoke it; do not change execution policy. The read-only validator checks row shape, unique IDs, legal statuses, dependency references/ranges, cycles, per-milestone totals, completion counts, owners for active/reviewed/completed rows, and evidence for reviewed/completed rows. `READY`/active/completed rows require completed prerequisites. It validates structure, not the truth of a receipt or benchmark score. `-SelfTest` exercises rejected malformed plans in memory. Keep Markdown as the only status source to avoid a second stale spreadsheet/JSON tracker.
+
+### 14.7 Swarm allocation
+
+A swarm is several named owners implementing **disjoint** packages at once in the canonical tree. It is not extra checkboxes, git worktrees, or silent edits to another lane.
+
+| Rule | Detail |
+|---|---|
+| One primary package per owner | Secondary file touches require a listed defect or an explicit supervisor exception |
+| Disjoint files | The §20 `Allowed files` sets of live `IN_PROGRESS` rows must be disjoint |
+| Shared freeze | `nlp/mod.rs`, `lib.rs`, `poet_host/invoke/ids.rs`, and non-row prose in this plan are supervisor-serialized |
+| Row edits | Implementers may update only their package row, their progress-log line, and a defect they own |
+| NOTICES | `CLAIM` before the first edit; `PROGRESS` at a milestone; `RELEASE` when the lane is idle |
+| Collision | If files are already claimed, stop and report; do not overwrite |
+| Integration | After two or more packets land in a wave, one supervisor run of `cargo test -p qualia-core-db --lib nlp::` plus any named packet gates |
+| No quality leapfrog | Learned syntax/NER/coref still wait for NLP-100 and evaluation receipts |
+
+Wave construction: pick packages whose dependencies are `DONE`, whose files do not overlap, and whose combined risk does not include two writers on the same ABI. Prefer a mix of implementation and review lanes so `REVIEW` does not stall.
+
+### 14.8 Supervision, review, and error resolution
+
+Roles are functions, not extra NLP-xxx packages.
+
+| Role | Who | Authority | Must not |
+|---|---|---|---|
+| Principal | Timothy | Authorizes swarm, model/data download, comparative claims, governed-domain use | Be required to re-approve each routine packet |
+| Supervisor | Named instrument or principal | Allocates/freezes lanes, serializes shared files, reopens packages, records defects, runs wave integration | Implement a lane they are independently reviewing |
+| Implementer | Named instrument | Executes one claimed package | Mark that package `DONE`; edit another live lane |
+| Reviewer | Different instrument or principal | Accepts `REVIEW` → `DONE`, or reopens with a defect | Rubber-stamp without reading evidence and the contract |
+
+Review method for every `REVIEW` row:
+
+1. Read the package contract, allowed files, and evidence commands.
+2. Re-run the focused tests named in Evidence, or record why a rerun was impossible.
+3. Check honesty: no empty-success wrapping, no silent span coercion, no production claim without a receipt.
+4. Classify each finding with §14.9. Mechanical defects may be fixed in-lane by the supervisor if the implementer has `RELEASE`d; otherwise assign the implementer.
+5. Either set `DONE` with reviewer name and date, or set `IN_PROGRESS`/`READY` with the defect id in Evidence.
+
+A supervisor session that only updates this board is management, not implementation completion.
+
+### 14.9 Defect register
+
+Defects are distinct from the §13 risk register. Risks are forward-looking; defects are specific failures of an already-touched package, review, or tool.
+
+| Field | Values |
+|---|---|
+| ID | `D-nnn` sequential in §21 |
+| Class | `impl` (wrong behavior) · `contract` (missed acceptance case) · `evidence` (unrerunnable or overclaimed receipt) · `process` (review/claim/collision) · `tooling` |
+| Severity | `blocker` (cannot `DONE`) · `major` (must fix this wave) · `minor` (fix or schedule) · `note` |
+| Status | `OPEN` · `ASSIGNED` · `FIXED` · `DEFERRED` (named later package) · `DISMISSED` |
+| Package | NLP-xxx or `tracker`/`validator` |
+
+Resolution: name the harm, name the cost, reverse what is reversible, complete or defer with a named package, record against interest in §21. Apology text does not close a defect. Reopening a `DONE` row uses a new defect and restores `READY` or `IN_PROGRESS`; the old receipt stays in the progress log.
 
 ---
 
@@ -828,6 +888,8 @@ Requires M8 and M9.
 | 2026-09-14 | Stage the legacy name-heuristic replacement in M5 | The first resource repair should not silently remove existing pronoun behavior | NLP-001 documents experimental behavior; NLP-501 replaces it with contextual agreement and abstention |
 | 2026-09-14 | Freeze dataset-specific thresholds and measure feasibility early | Universal F1 targets and exempting mapped weights would create unsupported release promises | NLP-008/NLP-009/NLP-306 added; release claims require resource and quality evidence |
 | 2026-09-14 | Add an early pipeline and explicit geo/training work | Late integration and missing deliverables would hide major effort | NLP-107, NLP-306, NLP-806; 75 packages with an acyclic validated tracker |
+| 2026-09-14 | NLP-001 checked APIs return `Result`; host rejects unknown kinds, negative offsets and unsorted lists | Resource/span failures must not look like empty success; historical invalid spans were test bugs | Migrated `resolve_coreferences` and `extract_substrate` callers; missing host `mentions` remains documented no-detection |
+| 2026-09-14 | Authorize swarm implementation with disjoint lanes and a supervisor | Principal asked for parallel delivery plus review/error governance | §14.7–14.9, §20 board, §21 defects; implementers still cannot `DONE` their own work |
 
 ---
 
@@ -839,6 +901,21 @@ Requires M8 and M9.
 | 2026-09-14 | Programme plan | Active | Established 70 tracked work packages, gates, architecture, metrics, risks and start prompt | Planning artifact only; no NLP behavior changed |
 | 2026-09-14 | Programme revision 2 | Active | Corrected benchmark, memory, dependency and compatibility assumptions; added five packages and tracker validator; narrowed first slice | Validator: 75 unique packages, 1 DONE, 10 milestones, acyclic; 2 valid and 10 rejected malformed self-test fixtures. Planning/tooling only; historical Rust/WASM results not rerun |
 | 2026-09-14 | NLP-001 | `IN_PROGRESS` | Started bounded coreference resource repair per §7.3 | Owner Grok; review method: self-verify then independent; no other packages claimed |
+| 2026-09-14 | NLP-001 | `REVIEW` | Bounded coref: O(n log n) grouping, preflight budgets, caller-buffered hot path, typed errors through host/substrate | `nlp::` 92 passed; lib 8560 passed / 0 failed / 4 ignored; wasm-ontology and portal checks pass. Compatibility: `resolve_coreferences` and `extract_substrate` now return `Result`. Limitations: name-gender heuristic experimental; mention detector unchanged. Next: independent review, then NLP-002 |
+| 2026-09-14 | Wave 0 closeout | `DONE`×3 + `REVIEW` | Independent accept NLP-001/002/004; NLP-008 REOPEN then patched; NLP-003 implemented to REVIEW | `--lib` 8572/0/4; portal wasm check pass |
+| 2026-09-14 | NLP-003 | `REVIEW` | Honest NLP family + per-invoke maturity table; Poet copy no longer claims GraphRAG/FrameNet/sieve quality | `nlp::capability` 3; IDs unchanged |
+| 2026-09-14 | NLP-002 | `REVIEW` | Decimal / Unicode terminators / degree spans / longest units / Gregorian ISO | tokenize+normalize+host tests in `nlp::` 104 |
+| 2026-09-14 | NLP-004 | `REVIEW` | Eval scaffold: manifest schema, seed policy, JSON/MD receipts, smoke + unavailable stub | `cargo test -p qualia-core-db --test nlp_suite` 11 passed; not a quality claim |
+| 2026-09-14 | Finish wave | `DONE`×9 + `REVIEW`×2 | Closed remaining unblocked M0/M1: 003/005/007/008/100 DONE; 006/009 REVIEW. Learned models still blocked. | `nlp_suite` 22+1 ignored; `nlp::contracts` 10; `nlp::capability` 4. Dual-annotator and downloads remain principal items. |
+| 2026-09-14 | NLP-008 | `DONE` | Second independent review ACCEPT_DONE after REOPEN patch | Charter; D-016 FIXED |
+| 2026-09-14 | NLP-003 | `DONE` | REOPEN labels patched (surfaces, FST entries, headers) then re-review ACCEPT_DONE | `nlp::capability` 4 |
+| 2026-09-14 | NLP-005 | `DONE` | Adversarial gold + checksum/split-hash suite after REOPEN | `nlp_suite` checksums tests |
+| 2026-09-14 | NLP-007 | `DONE` | Shared host budgets; D-004 closed | `nlp::budget` 7 |
+| 2026-09-14 | NLP-100 | `DONE` | Caller-buffered contracts; one-pass cold adapter after REOPEN | `nlp::contracts` 10 |
+| 2026-09-14 | NLP-006 | `REVIEW` | First slice: measured `achieved_score` vs `minimum_score`; authored freeze is not a quality gate | `tests/nlp/score.rs`; schema `achieved_score` |
+| 2026-09-14 | NLP-009 | `REVIEW` | Reuse inventory; hardware receipt; symbolic-lite Alpha; NLP-306 blocked | `NLP_REUSE_INVENTORY_WIP.md`; wgpu adapter not measured |
+| 2026-09-14 | NLP-001 | `REVIEW` | After S0 REOPEN: transitive exact-match, Proper-only antecedent charging, panic-free comparison budget | `nlp::coref` 42; `nlp::` 104; wasm-ontology pass. Still not DONE |
+| 2026-09-14 | Programme revision 3 | Active | Swarm lanes, supervisor/reviewer roles, defect register; Wave 0 board; D-002/D-003 fixed | Validator encoding-safe heading match; host substrate uses `CorefLimits`. NLP-001 remains `REVIEW` (D-001). Planning/governance; no new linguistic capability |
 
 ---
 
@@ -907,6 +984,89 @@ Tracking and handoff:
   next review action. Keep the scope to NLP-001; do not mark other packages complete.
 ```
 
+### 18.2 Swarm implementer prompt
+
+Use this for any free §20 lane. Substitute the package id and file set from the board.
+
+```text
+Implement work package NLP-xxx from
+docs/work-in-progress/NLP_EXCEPTIONAL_IMPLEMENTATION_PLAN_2026-09-14.md §20.
+
+Before editing:
+1. Obey AGENTS.md (canonical tree, zero-heap, 42 MiB, honesty, no worktrees).
+2. Read §14.7–14.9 and the live board. If the files are CLAIMed, stop.
+3. CLAIM the lane in coordination/NOTICES.md. Move only this package to
+   IN_PROGRESS with owner/date. Write a §14.6 slice record if the package is
+   not already fully specified.
+4. Do not edit frozen shared files (nlp/mod.rs, lib.rs, invoke/ids.rs, plan
+   prose) without a supervisor exception. Do not mark other packages complete.
+
+After implementation:
+- Focused tests + named gates in §9.4; record unrelated failures without
+  editing other lanes.
+- Set REVIEW with evidence, not DONE. RELEASE the claim.
+- Append a progress-log row and any defects. Run the plan validator.
+```
+
+### 18.3 Independent reviewer prompt
+
+```text
+Review work package NLP-xxx (status REVIEW) using §14.8.
+
+You must not be the implementer named in the Owner cell.
+Read the package contract, Evidence, and the claimed files.
+Re-run the focused commands in Evidence or record why you could not.
+Accept to DONE only if the contract and honesty rules hold.
+Otherwise reopen IN_PROGRESS/READY and add a §21 defect with class,
+severity, owner, and the smallest fix. Do not silently rewrite the packet
+into a new feature.
+```
+
+---
+
+## 20. Live swarm board
+
+Update this table when a lane is claimed, released, frozen, or completed. It is an allocation map, not a second status source; package state in §7.2 remains authoritative.
+
+**Finish wave** (2026-09-14). Remaining unblocked M0/M1 packets; learned models still blocked.
+
+| Lane | Package | Board state | Allowed files | Frozen / do not touch | Owner |
+|---|---|---|---|---|---|
+| S0 | NLP-001 | `DONE` | — | — | Accepted Swarm-S1 |
+| A | NLP-002 | `DONE` | — | — | Accepted Swarm-R2 |
+| B | NLP-004 | `DONE` | — | — | Accepted Swarm-R4 |
+| C | NLP-008 | `DONE` | — | — | Second independent ACCEPT_DONE |
+| D | NLP-003 | `DONE` | — | — | REOPEN patched; re-review ACCEPT_DONE |
+| E | NLP-005 | `DONE` | — | — | REOPEN patched; re-review ACCEPT_DONE |
+| F | NLP-007 | `DONE` | — | — | Independent ACCEPT_DONE |
+| G | NLP-100 | `DONE` | — | — | REOPEN patched; re-review ACCEPT_DONE |
+| H | NLP-009 | `REVIEW` | inventory WIP | kernels | Swarm-H; REOPEN patched; needs re-review |
+| I | NLP-006 | `REVIEW` | tests/nlp/gate.rs, score.rs, schema | kernels | First slice (D-015); UD still unavailable |
+
+Blocked without principal action: model/dataset download, dual annotator, clinical/legal certification, NLP-306, NLP-106 browser runtime.
+
+---
+
+## 21. Defect register
+
+| ID | Status | Class | Severity | Package | Finding | Resolution |
+|---|---|---|---|---|---|---|
+| D-001 | `FIXED` | `process` | `blocker` | NLP-001 | Implementer cannot accept own `REVIEW` row to `DONE` | Swarm-S0 completed §18.3 (verdict REOPEN). Standing rule remains: implementer still cannot self-DONE |
+| D-002 | `FIXED` | `impl` | `minor` | NLP-001 | Host `NLP.substrate_extract` used a literal `256 * 1024` instead of `CorefLimits::DEFAULT.max_source_bytes` | 2026-09-14 Grok: host now uses the shared limit |
+| D-003 | `FIXED` | `tooling` | `major` | tracker | Validator heading regex used a UTF-8 em dash; Windows PowerShell 5 reported every package as missing a milestone | 2026-09-14 Grok: match `^#### (M\d+)`; resolve plan path without `$MyInvocation.Path`; document UTF-8 load |
+| D-004 | `FIXED` | `impl` | `note` | NLP-007 | Other NLP hosts (`nlp.analyze`, tokenize, gazetteer, …) still use private 256 KiB literals and clone before a general work budget | 2026-09-14 Swarm-F: `nlp/budget.rs`; hosts `reject_source` / list caps before clone. Independent ACCEPT_DONE |
+| D-005 | `DEFERRED` | `contract` | `note` | NLP-500 | Substrate still emits a mention for every word; documented, not a silent NLP-001 behavior change | NLP-500/NLP-501 |
+| D-006 | `OPEN` | `process` | `minor` | tracker | This plan file may be `assume-unchanged` in some checkouts, hiding tracker diffs from `git status` | Supervisors: `git ls-files -v` on this path; do not `git update-index` as a workaround. Principal can clear the bit if desired |
+| D-007 | `FIXED` | `impl` | `major` | NLP-001 | Adjacent-only equal-key union split proper-noun runs when a same-key pronoun sat between them | 2026-09-14 Grok: walk equal-key runs; test `exact_match_is_transitive_across_pronoun_kind` |
+| D-008 | `FIXED` | `contract` | `major` | NLP-001 | Antecedent checks charged every scanned mention, so defaults failed around ~2k mentions | 2026-09-14 Grok: charge inspected Proper only; 2000-mention 5% pronoun fixture succeeds at defaults |
+| D-009 | `FIXED` | `evidence` | `minor` | NLP-001 | Cold-adapter peak bytes unmeasured; workspace helper omitted validated/heads/ids | Documented in `workspace_bytes_required`; sentinel test counts cold extras; pronoun hot path `assert_zero_alloc` |
+| D-010 | `FIXED` | `contract` | `major` | NLP-001 | Comparison budget inside sort comparator was not a total order; NormalizationBudget untested | Sort always total-order then fail closed; pre-check fold length; boundary tests for both budgets |
+| D-011 | `FIXED` | `evidence` | `note` | NLP-001 | `default_workspace_fits_sentinel` used a disjunct that could not fail | Assert against `DEFAULT_MAX_WORKSPACE_BYTES` only |
+| D-012 | `FIXED` | `process` | `note` | tracker | Concurrent Wave 0 compile of tokenize_host blocked S0's first rerun (~4 min) | Tree compiles; host test iterates `sents` as `&Vec<Value>` |
+| D-014 | `DEFERRED` | `contract` | `note` | NLP-102 / NLP-202 | NLP-002 follow-ups: remaining Unicode enders; no-space units only `°C`/`°F`; tokenize vs normalize `25°C` split; rejected dates fall through to numbers | NLP-102 / NLP-202 |
+| D-015 | `FIXED` | `contract` | `major` | NLP-006 | NLP-004 gate can record `pass` without comparing an achieved score; SCHEMA.md now discloses it | 2026-09-14: `achieved_score >= minimum_score`; schema requires both on `pass`; handwritten pass without measured score is UNEVALUATED |
+| D-016 | `FIXED` | `contract` | `major` | NLP-008 | Swarm-R8 REOPEN: hardware SKU, “certified” wording, stale NLP-002 text, gazetteer obligation | 2026-09-14 supervisor patched; second independent ACCEPT_DONE |
+
 ---
 
 ## 19. Change log
@@ -915,3 +1075,4 @@ Tracking and handoff:
 |---|---|
 | 2026-09-14 | Initial programme created from the NLP completeness review. Added architecture, quality targets, 70 work packages, tracking protocol, risk/decision/progress logs, release gates, and NLP-001 start prompt. |
 | 2026-09-14 | Revision 2: replaced ungrounded universal thresholds with frozen dataset-specific gates; corrected graph dependencies, memory accounting, GraphRAG terminology and API compatibility; added early integration, model lifecycle, release charter, reuse feasibility and geographic extraction; 75 packages; revised starter prompt and added a read-only tracker validator. |
+| 2026-09-14 | Revision 3: swarm allocation (§14.7, §20), supervision/review/defect governance (§14.8–14.9, §21), independent-DONE rule, Wave 0 lanes. Validator heading match encoding-safe. Host substrate uses `CorefLimits`. |

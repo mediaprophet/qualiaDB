@@ -72,6 +72,29 @@
   color: var(--text-primary);
 }
 
+.instrument-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.instrument-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.instrument-layer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.instrument-card {
+  text-align: left;
+  cursor: pointer;
+}
+
 .lexicon-bay-lede {
   margin: 0;
   font: 500 11px/1.4 var(--font-sans);

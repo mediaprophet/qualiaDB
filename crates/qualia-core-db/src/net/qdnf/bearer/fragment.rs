@@ -7,7 +7,7 @@
 
 use crate::net::qdnf::errors::QdnfError;
 
-use super::mtu::{MAX_QDNF_MTU, MIN_QDNF_MTU, unfragmented_fit};
+use super::mtu::{unfragmented_fit, MAX_QDNF_MTU, MIN_QDNF_MTU};
 
 /// `msg_id(4) || offset(2) || total(2) || frag_len(2)`.
 pub const FRAG_HDR_LEN: usize = 10;

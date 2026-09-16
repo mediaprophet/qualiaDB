@@ -50,12 +50,8 @@ pub enum KernelEvent {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KernelEffect {
     None,
-    Probe {
-        class: PathClass,
-    },
-    Exclude {
-        class: PathClass,
-    },
+    Probe { class: PathClass },
+    Exclude { class: PathClass },
     QueueOffline,
     AdmitSession,
     Close,

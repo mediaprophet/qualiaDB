@@ -37,7 +37,8 @@ pub fn sign(
     context: &[u8],
     sig_out: &mut [u8; ML_DSA_65_SIG_LEN],
 ) -> Result<(), CryptoError> {
-    let sk = ml_dsa_65::PrivateKey::try_from_bytes(*secret).map_err(|_| CryptoError::CryptoFailure)?;
+    let sk =
+        ml_dsa_65::PrivateKey::try_from_bytes(*secret).map_err(|_| CryptoError::CryptoFailure)?;
     let ctx = network_ctx(context);
     let sig = sk
         .try_sign(message, &ctx)
@@ -52,7 +53,8 @@ pub fn verify(
     context: &[u8],
     signature: &[u8; ML_DSA_65_SIG_LEN],
 ) -> Result<(), CryptoError> {
-    let pk = ml_dsa_65::PublicKey::try_from_bytes(*public).map_err(|_| CryptoError::CryptoFailure)?;
+    let pk =
+        ml_dsa_65::PublicKey::try_from_bytes(*public).map_err(|_| CryptoError::CryptoFailure)?;
     let ctx = network_ctx(context);
     if pk.verify(message, signature, &ctx) {
         Ok(())

@@ -25,7 +25,10 @@ impl ResourceBudget {
 
     pub fn saturating_add(self, other: Self) -> Result<Self, QdnfError> {
         Ok(Self {
-            bytes: self.bytes.checked_add(other.bytes).ok_or(QdnfError::Range)?,
+            bytes: self
+                .bytes
+                .checked_add(other.bytes)
+                .ok_or(QdnfError::Range)?,
             work: self.work.checked_add(other.work).ok_or(QdnfError::Range)?,
             io: self.io.checked_add(other.io).ok_or(QdnfError::Range)?,
         })

@@ -8,14 +8,12 @@ pub mod app_registry;
 pub mod asset_envelope;
 /// Bounded cold-construction asset import jobs (AST-02).
 pub mod asset_import;
-/// ChEBI compounds.tsv local parser (AST-03).
-pub mod chebi_parse;
 /// ChEBI record → Quin mapping (AST-04).
 pub mod chebi_map;
+/// ChEBI compounds.tsv local parser (AST-03).
+pub mod chebi_parse;
 /// ChEBI in-memory chemical knowledge queries (AST-05).
 pub mod chebi_query;
-/// Upstream source / connector catalogue without data bundling (AST-07).
-pub mod source_catalogue;
 pub mod design_encode;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
 pub mod execution_profile;
@@ -31,4 +29,6 @@ pub mod q42_lexicon;
 pub mod q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_volume;
+/// Upstream source / connector catalogue without data bundling (AST-07).
+pub mod source_catalogue;
 pub mod yaml_ld_q42;

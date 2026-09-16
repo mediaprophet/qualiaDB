@@ -66,20 +66,16 @@ pub(super) fn decode_field<T: DeserializeOwned>(
     span: Span,
     what: &str,
 ) -> Result<T, vibe::Diagnostic> {
-    let field = args::rec(args_v, key)
-        .ok_or_else(|| args::bad(span, format!("{what} needs `{key}`")))?;
+    let field =
+        args::rec(args_v, key).ok_or_else(|| args::bad(span, format!("{what} needs `{key}`")))?;
     let json = vibe_to_json(field).ok_or_else(|| {
         args::bad(
             span,
             format!("{what}: `{key}` contains unsupported Value variants"),
         )
     })?;
-    serde_json::from_value(json).map_err(|e| {
-        args::bad(
-            span,
-            format!("{what}: failed to decode `{key}` ({e})"),
-        )
-    })
+    serde_json::from_value(json)
+        .map_err(|e| args::bad(span, format!("{what}: failed to decode `{key}` ({e})")))
 }
 
 pub(super) fn encode_json<T: Serialize>(

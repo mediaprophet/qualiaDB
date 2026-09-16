@@ -5,17 +5,22 @@
 //! No forge / `caps()` / CUDA / GPU.
 
 use super::super::args;
-use crate::specialized_libs::computational_geometry::{
-    diameter_and_width, directional_width, incircle, tukey_depth, width, Point2, Sign,
-};
 use crate::specialized_libs::computational_geometry::voronoi_variants::{
     farthest_site_brute, is_hull_site, k_nearest_sites,
+};
+use crate::specialized_libs::computational_geometry::{
+    diameter_and_width, directional_width, incircle, tukey_depth, width, Point2, Sign,
 };
 use vibe::{Diagnostic, Span, Value};
 
 const MAX_POINTS: usize = 256;
 
-fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Point2, Diagnostic> {
+fn parse_point2_arg(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Point2, Diagnostic> {
     let coords = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64; 2]")))?;
     if coords.len() < 2 {
@@ -24,10 +29,16 @@ fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result
     Ok(Point2::new(coords[0], coords[1]))
 }
 
-fn parse_point2_list(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Vec<Point2>, Diagnostic> {
+fn parse_point2_list(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Vec<Point2>, Diagnostic> {
     let v = args::rec(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [[f64;2]; N]")))?;
-    let list = args::list(v).ok_or_else(|| args::bad(span, format!("{what}: {key} must be list")))?;
+    let list =
+        args::list(v).ok_or_else(|| args::bad(span, format!("{what}: {key} must be list")))?;
     if list.is_empty() || list.len() > MAX_POINTS {
         return Err(args::bad(
             span,
@@ -39,7 +50,10 @@ fn parse_point2_list(args_v: &Value, key: &str, span: Span, what: &str) -> Resul
         let coords = args::f64s(item)
             .ok_or_else(|| args::bad(span, format!("{what}: each point must be [f64;2]")))?;
         if coords.len() < 2 {
-            return Err(args::bad(span, format!("{what}: each point needs ≥2 coords")));
+            return Err(args::bad(
+                span,
+                format!("{what}: each point needs ≥2 coords"),
+            ));
         }
         pts.push(Point2::new(coords[0], coords[1]));
     }
@@ -61,7 +75,10 @@ pub fn incircle_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let b = parse_point2_arg(args_v, "b", span, "incircle")?;
     let c = parse_point2_arg(args_v, "c", span, "incircle")?;
     let d = parse_point2_arg(args_v, "d", span, "incircle")?;
-    Ok(args::record([("sign", Value::I64(sign_i64(incircle(a, b, c, d))))]))
+    Ok(args::record([(
+        "sign",
+        Value::I64(sign_i64(incircle(a, b, c, d))),
+    )]))
 }
 
 /// `ComputationalGeometry.tukey_depth` — Tukey depth of query vs point set.
@@ -163,12 +180,7 @@ mod tests {
     }
 
     fn pts(pairs: &[[f64; 2]]) -> Value {
-        Value::List(
-            pairs
-                .iter()
-                .map(|p| args::f64_list_value(*p))
-                .collect(),
-        )
+        Value::List(pairs.iter().map(|p| args::f64_list_value(*p)).collect())
     }
 
     #[test]
@@ -222,10 +234,7 @@ mod tests {
     #[test]
     fn wave22_farthest_site_brute_far_corner() {
         let mut m = BTreeMap::new();
-        m.insert(
-            "sites".into(),
-            pts(&[[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]),
-        );
+        m.insert("sites".into(), pts(&[[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]));
         m.insert("q".into(), args::f64_list_value([-1.0, -1.0]));
         let out = farthest_site_brute_host(&Value::Record(m), span()).unwrap();
         assert_eq!(args::rec_u64(&out, "index").unwrap(), 1);
@@ -234,10 +243,7 @@ mod tests {
     #[test]
     fn wave22_k_nearest_sites_k1_is_nearest() {
         let mut m = BTreeMap::new();
-        m.insert(
-            "sites".into(),
-            pts(&[[0.0, 0.0], [10.0, 0.0], [0.0, 10.0]]),
-        );
+        m.insert("sites".into(), pts(&[[0.0, 0.0], [10.0, 0.0], [0.0, 10.0]]));
         m.insert("q".into(), args::f64_list_value([0.1, 0.0]));
         m.insert("k".into(), Value::U64(1));
         let out = k_nearest_sites_host(&Value::Record(m), span()).unwrap();

@@ -1,5 +1,6 @@
 //! Gazetteer invoke — Aho-Corasick matching with byte spans.
 
+use crate::nlp::budget::reject_source;
 use crate::nlp::gazetteer::Gazetteer;
 use std::collections::BTreeMap;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -17,13 +18,8 @@ pub fn gazetteer_run(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             ))
         }
     };
-    if text.len() > 256 * 1024 {
-        return Err(Diagnostic::new(
-            DiagCode::E400,
-            span,
-            "NLP.gazetteer_run exceeds 256 KiB",
-        ));
-    }
+    reject_source(text.len())
+        .map_err(|_| Diagnostic::new(DiagCode::E400, span, "NLP.gazetteer_run exceeds 256 KiB"))?;
     let g = Gazetteer::default();
     let hits = g.find(text);
     let list: Vec<Value> = hits
@@ -97,5 +93,13 @@ mod tests {
             }
             _ => panic!("expected record"),
         }
+    }
+
+    #[test]
+    fn gazetteer_run_rejects_oversize_source() {
+        let src = "x".repeat(crate::nlp::budget::MAX_SOURCE_BYTES + 1);
+        let err = gazetteer_run(&Value::String(src), Span { start: 0, end: 0 }).unwrap_err();
+        assert_eq!(err.code, DiagCode::E400);
+        assert!(err.message.contains("256 KiB"));
     }
 }

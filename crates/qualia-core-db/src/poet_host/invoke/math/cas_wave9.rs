@@ -24,7 +24,10 @@ fn binary(
         .ok_or_else(|| args::bad(span, format!("{id} needs b: string")))?;
     let ea = parse_expr(a, span)?;
     let eb = parse_expr(b, span)?;
-    Ok(args::record([("expr", Value::String(op(ea, eb).to_string()))]))
+    Ok(args::record([(
+        "expr",
+        Value::String(op(ea, eb).to_string()),
+    )]))
 }
 
 /// `SymbolicAlgebra.c` — constant leaf. Args: `{ value }`. Out: `{ expr }`.
@@ -42,7 +45,10 @@ pub fn var(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let name = args::rec_str(args_v, "name")
         .ok_or_else(|| args::bad(span, "SymbolicAlgebra.var needs name: string"))?;
     if name.is_empty() {
-        return Err(args::bad(span, "SymbolicAlgebra.var: name must be non-empty"));
+        return Err(args::bad(
+            span,
+            "SymbolicAlgebra.var: name must be non-empty",
+        ));
     }
     Ok(args::record([(
         "expr",

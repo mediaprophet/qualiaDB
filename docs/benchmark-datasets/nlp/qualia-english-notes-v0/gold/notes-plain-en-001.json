@@ -1,0 +1,82 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-plain-en-001",
+  "split": "train",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "The kettle boiled. The toast was ready.",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 3,
+      "surface": "The",
+      "kind": "Word"
+    },
+    {
+      "start": 4,
+      "end": 10,
+      "surface": "kettle",
+      "kind": "Word"
+    },
+    {
+      "start": 11,
+      "end": 17,
+      "surface": "boiled",
+      "kind": "Word"
+    },
+    {
+      "start": 17,
+      "end": 18,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 19,
+      "end": 22,
+      "surface": "The",
+      "kind": "Word"
+    },
+    {
+      "start": 23,
+      "end": 28,
+      "surface": "toast",
+      "kind": "Word"
+    },
+    {
+      "start": 29,
+      "end": 32,
+      "surface": "was",
+      "kind": "Word"
+    },
+    {
+      "start": 33,
+      "end": 38,
+      "surface": "ready",
+      "kind": "Word"
+    },
+    {
+      "start": 38,
+      "end": 39,
+      "surface": ".",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 18,
+      "surface": "The kettle boiled."
+    },
+    {
+      "start": 19,
+      "end": 39,
+      "surface": "The toast was ready."
+    }
+  ],
+  "notes": "UC-B plain ASCII. Two sentences. Zero gazetteer hits is success."
+}

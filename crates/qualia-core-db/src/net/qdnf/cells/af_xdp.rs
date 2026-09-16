@@ -86,10 +86,7 @@ mod tests {
     #[test]
     fn invalid_ifname_is_range_not_success() {
         assert_eq!(AfXdp::open(b"").unwrap_err(), QdnfError::Range);
-        assert_eq!(
-            AfXdp::open(&[b'x'; 16]).unwrap_err(),
-            QdnfError::Range
-        );
+        assert_eq!(AfXdp::open(&[b'x'; 16]).unwrap_err(), QdnfError::Range);
         assert!(AfXdp::open(b"eth0").is_err());
     }
 }

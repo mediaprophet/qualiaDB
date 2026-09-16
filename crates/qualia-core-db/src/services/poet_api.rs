@@ -256,6 +256,20 @@ pub async fn gazetteer_handler(body: Bytes) -> Response {
         Ok(request) => request,
         Err(response) => return response,
     };
+    if crate::nlp::budget::reject_source(request.source.len()).is_err() {
+        return (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(serde_json::json!({
+                "ok": false,
+                "code": "source_too_large",
+                "diagnostic": format!(
+                    "nlp gazetteer source exceeds {} bytes",
+                    crate::nlp::budget::MAX_SOURCE_BYTES
+                )
+            })),
+        )
+            .into_response();
+    }
     let analysis = crate::nlp::analyze_document(&request.source);
     let hits = analysis
         .hits

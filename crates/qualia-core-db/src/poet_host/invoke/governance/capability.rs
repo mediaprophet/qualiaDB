@@ -410,7 +410,14 @@ mod tests {
             mldsa_sig: [0u8; ML_DSA_65_SIG_LEN],
             ed25519_sig: [0u8; ED25519_SIG_LEN],
         };
-        sign_dual(&mldsa_sk, &ed_seed, &root, b"qualia:agency:dual:v1", &mut dual_proof).unwrap();
+        sign_dual(
+            &mldsa_sk,
+            &ed_seed,
+            &root,
+            b"qualia:agency:dual:v1",
+            &mut dual_proof,
+        )
+        .unwrap();
 
         let mut combined_pk = Vec::with_capacity(ML_DSA_65_PK_LEN + ED25519_PK_LEN);
         combined_pk.extend_from_slice(&mldsa_pk);
@@ -443,4 +450,3 @@ mod tests {
         }
     }
 }
-

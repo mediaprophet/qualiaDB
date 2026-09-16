@@ -48,15 +48,8 @@ fn map_fixture(records: &[ChebiRecord], release: &str) -> (Vec<NQuin>, usize) {
 
 #[test]
 fn empty_input_resolve_fails_closed() {
-    let err = resolve_chemical_into(
-        &[],
-        "CHEBI:1",
-        "",
-        limits(4, 2, 16),
-        None,
-        &mut [],
-    )
-    .unwrap_err();
+    let err =
+        resolve_chemical_into(&[], "CHEBI:1", "", limits(4, 2, 16), None, &mut []).unwrap_err();
     assert_eq!(err, QueryError::EmptyInput);
 }
 
@@ -139,15 +132,8 @@ fn ambiguous_same_accession_two_releases() {
     let mut merged = a;
     merged.extend(b);
     let mut hits = [empty_hit()];
-    let err = resolve_chemical_into(
-        &merged,
-        "CHEBI:1",
-        "",
-        limits(4, 2, 32),
-        None,
-        &mut hits,
-    )
-    .unwrap_err();
+    let err = resolve_chemical_into(&merged, "CHEBI:1", "", limits(4, 2, 32), None, &mut hits)
+        .unwrap_err();
     assert_eq!(err, QueryError::Ambiguous { hits: 2 });
 }
 
@@ -155,15 +141,8 @@ fn ambiguous_same_accession_two_releases() {
 fn resolve_limit_exceeded_zero_capacity() {
     let records = [rec(1, "CHEBI:1", "a", None, 2)];
     let (quins, _) = map_fixture(&records, "rel");
-    let err = resolve_chemical_into(
-        &quins,
-        "CHEBI:1",
-        "",
-        limits(4, 1, 8),
-        None,
-        &mut [],
-    )
-    .unwrap_err();
+    let err =
+        resolve_chemical_into(&quins, "CHEBI:1", "", limits(4, 1, 8), None, &mut []).unwrap_err();
     assert_eq!(
         err,
         QueryError::LimitExceeded {
@@ -297,7 +276,8 @@ fn describe_release_licence_fields_from_catalogue() {
     assert!(desc.licence_obligation_present);
     assert!(!desc.licence_note.is_empty());
     assert!(
-        desc.licence_note.contains("CC BY") || desc.licence_note.to_ascii_lowercase().contains("licence"),
+        desc.licence_note.contains("CC BY")
+            || desc.licence_note.to_ascii_lowercase().contains("licence"),
         "unexpected licence stub: {}",
         desc.licence_note
     );

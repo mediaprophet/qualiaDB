@@ -68,7 +68,8 @@ impl QiDocument {
                 len: 0,
             }; MAX_AKA],
             service_count: 0,
-            services: [CscpMailbox::mailbox([0u8; 32], Disclosure::ApprovedRelaysOnly); MAX_SERVICES],
+            services: [CscpMailbox::mailbox([0u8; 32], Disclosure::ApprovedRelaysOnly);
+                MAX_SERVICES],
             has_hostname_alias: false,
             hostname_did_web: AkaEntry {
                 bytes: [0u8; MAX_AKA_LEN],
@@ -166,7 +167,12 @@ fn hex_lower(bytes: &[u8], out: &mut [u8]) -> Result<usize, QiError> {
     Ok(bytes.len() * 2)
 }
 
-fn emit_did_url(out: &mut [u8], n: usize, id: Option<&DidQi>, frag: &[u8]) -> Result<usize, QiError> {
+fn emit_did_url(
+    out: &mut [u8],
+    n: usize,
+    id: Option<&DidQi>,
+    frag: &[u8],
+) -> Result<usize, QiError> {
     let mut n = n;
     n = push(out, n, b"\"")?;
     if let Some(id) = id {
@@ -178,7 +184,12 @@ fn emit_did_url(out: &mut [u8], n: usize, id: Option<&DidQi>, frag: &[u8]) -> Re
     push(out, n, b"\"")
 }
 
-fn emit_service(out: &mut [u8], mut n: usize, id: Option<&DidQi>, s: &CscpMailbox) -> Result<usize, QiError> {
+fn emit_service(
+    out: &mut [u8],
+    mut n: usize,
+    id: Option<&DidQi>,
+    s: &CscpMailbox,
+) -> Result<usize, QiError> {
     n = push(out, n, b"{\"id\":")?;
     n = emit_did_url(out, n, id, b"#mailbox")?;
     n = push(out, n, b",\"serviceEndpoint\":{\"contactKeyMultibase\":\"")?;
@@ -200,7 +211,11 @@ fn emit_service(out: &mut [u8], mut n: usize, id: Option<&DidQi>, s: &CscpMailbo
             n = push(out, n, b",")?;
         }
         n = push(out, n, b"{\"hintId\":\"")?;
-        n = push(out, n, &s.hints[i].hint_id[..s.hints[i].hint_id_len as usize])?;
+        n = push(
+            out,
+            n,
+            &s.hints[i].hint_id[..s.hints[i].hint_id_len as usize],
+        )?;
         n = push(out, n, b"\",\"operatorHashHex\":\"")?;
         let mut hx = [0u8; 64];
         hex_lower(&s.hints[i].operator_hash, &mut hx)?;
@@ -225,7 +240,12 @@ fn emit_hostname_alias(
     push(out, n, b"\"},\"type\":\"HostnameAlias\"}")
 }
 
-fn emit_vm(out: &mut [u8], mut n: usize, id: Option<&DidQi>, pk: &[u8; 32]) -> Result<usize, QiError> {
+fn emit_vm(
+    out: &mut [u8],
+    mut n: usize,
+    id: Option<&DidQi>,
+    pk: &[u8; 32],
+) -> Result<usize, QiError> {
     n = push(out, n, b"{\"")?;
     if id.is_some() {
         n = push(out, n, b"controller\":")?;
@@ -319,7 +339,11 @@ fn encode_document(
         let mut pv = [0u8; 96];
         let pn = encode_mb32_sig(sig, &mut pv)?;
         n = push(out, n, &pv[..pn])?;
-        n = push(out, n, b"\",\"type\":\"QiDocumentSignature2026\",\"verificationMethod\":")?;
+        n = push(
+            out,
+            n,
+            b"\",\"type\":\"QiDocumentSignature2026\",\"verificationMethod\":",
+        )?;
         n = emit_did_url(out, n, Some(id), b"#key-0")?;
         n = push(out, n, b"}")?;
     }
@@ -425,8 +449,8 @@ pub fn signed_git_object_id(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::service::RelayHint;
+    use super::*;
 
     fn rfc8032_pk() -> [u8; 32] {
         let hex = b"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
@@ -459,7 +483,10 @@ mod tests {
         let d = genesis_digest(&doc).unwrap();
         let mut did = [0u8; MAX_DID_TEXT];
         let n = format_did(&DidQi(d), &mut did).unwrap();
-        assert_eq!(&did[..n], b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu");
+        assert_eq!(
+            &did[..n],
+            b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu"
+        );
     }
 
     #[test]

@@ -18,9 +18,8 @@ pub fn analyze_harmonic_sdof(args_v: &Value, span: Span) -> Result<Value, Diagno
         .ok_or_else(|| args::bad(span, "analyze_harmonic_sdof needs stiffness"))?;
     let force_amplitude = args::rec_f64(args_v, "force_amplitude")
         .ok_or_else(|| args::bad(span, "analyze_harmonic_sdof needs force_amplitude"))?;
-    let freqs = args::rec_f64_list(args_v, "excitation_freqs").ok_or_else(|| {
-        args::bad(span, "analyze_harmonic_sdof needs excitation_freqs: [f64]")
-    })?;
+    let freqs = args::rec_f64_list(args_v, "excitation_freqs")
+        .ok_or_else(|| args::bad(span, "analyze_harmonic_sdof needs excitation_freqs: [f64]"))?;
     let mut vib = eng::VibrationAnalysis::new();
     match vib.analyze_harmonic_sdof(mass, damping, stiffness, force_amplitude, &freqs) {
         Ok(fv) => Ok(args::record([
@@ -64,7 +63,8 @@ pub fn analyze_euler(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let k = args::rec_f64(args_v, "effective_length_factor")
         .ok_or_else(|| args::bad(span, "analyze_euler needs effective_length_factor"))?;
     let num_modes = args::rec_u64(args_v, "num_modes")
-        .ok_or_else(|| args::bad(span, "analyze_euler needs num_modes"))? as usize;
+        .ok_or_else(|| args::bad(span, "analyze_euler needs num_modes"))?
+        as usize;
     let mut ba = eng::BucklingAnalysis::new();
     match ba.analyze_euler(e, i, length, k, num_modes) {
         Ok(eb) => Ok(args::record([(

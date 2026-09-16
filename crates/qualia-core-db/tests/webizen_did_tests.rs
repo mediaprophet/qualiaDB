@@ -3,9 +3,7 @@
 use ed25519_dalek::SigningKey;
 use qualia_core_db::crypto::network::dual_sign::{sign_dual, DualProof};
 use qualia_core_db::crypto::network::mldsa::generate_keypair;
-use qualia_core_db::crypto::network::types::{
-    ED25519_PK_LEN, ED25519_SIG_LEN, ML_DSA_65_SIG_LEN,
-};
+use qualia_core_db::crypto::network::types::{ED25519_PK_LEN, ED25519_SIG_LEN, ML_DSA_65_SIG_LEN};
 use qualia_core_db::crypto::verifiable_credential::{
     issue_dual, issue_pq, verify_dual, verify_pq, Credential, VcError,
 };
@@ -15,8 +13,7 @@ use qualia_core_db::identity::agency::{
 };
 use qualia_core_db::identity::webizen_did::{
     derive_concept_uuid, derive_concept_uuid_pq, format_concept_urn, parse_did_webizen,
-    quin_concept_token, verify_dual_signature, verify_pq_signature, WebizenDidError,
-    WebizenRealm,
+    quin_concept_token, verify_dual_signature, verify_pq_signature, WebizenDidError, WebizenRealm,
 };
 use qualia_core_db::NQuin;
 

@@ -1,0 +1,52 @@
+# Conditioning SHACL shapes (P1B).
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cond: <https://qualiadb.org/schema/conditioning#> .
+
+cond:ConditioningProfileShape a sh:NodeShape ;
+  sh:targetClass cond:ConditioningProfile ;
+  sh:property [
+    sh:path cond:schemaVersion ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+  ] ;
+  sh:property [
+    sh:path cond:profileId ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:minLength 1 ; sh:datatype xsd:string ;
+  ] ;
+  sh:property [
+    sh:path cond:contentDigest ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+  ] ;
+  sh:property [
+    sh:path cond:hasRequirement ;
+    sh:class cond:Requirement ;
+  ] .
+
+cond:EnforcedRequirementShape a sh:NodeShape ;
+  sh:targetClass cond:EnforcedRequirement ;
+  sh:property [
+    sh:path cond:validatorRef ;
+    sh:minCount 1 ; sh:maxCount 1 ;
+  ] ;
+  sh:property [
+    sh:path cond:priority ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+  ] .
+
+cond:CompiledPlanShape a sh:NodeShape ;
+  sh:targetClass cond:CompiledPlan ;
+  sh:property [
+    sh:path cond:compiledFrom ;
+    sh:minCount 1 ; sh:maxCount 1 ;
+  ] ;
+  sh:property [
+    sh:path cond:targetsModel ;
+    sh:minCount 1 ;
+  ] .
+
+cond:CompilationReceiptShape a sh:NodeShape ;
+  sh:targetClass cond:CompilationReceipt ;
+  sh:property [
+    sh:path cond:outcomeStatus ;
+    sh:minCount 1 ;
+  ] .

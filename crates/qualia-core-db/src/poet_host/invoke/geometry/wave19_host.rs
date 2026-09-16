@@ -14,7 +14,8 @@ const MAX_POINTS: usize = 4096;
 fn parse_points(args_v: &Value, span: Span, what: &str) -> Result<Vec<Point3>, Diagnostic> {
     let v = args::rec(args_v, "points")
         .ok_or_else(|| args::bad(span, format!("{what} needs points: [[f64;3]; N]")))?;
-    let list = args::list(v).ok_or_else(|| args::bad(span, format!("{what}: points must be list")))?;
+    let list =
+        args::list(v).ok_or_else(|| args::bad(span, format!("{what}: points must be list")))?;
     if list.len() > MAX_POINTS {
         return Err(args::bad(
             span,
@@ -26,7 +27,10 @@ fn parse_points(args_v: &Value, span: Span, what: &str) -> Result<Vec<Point3>, D
         let coords = args::f64s(item)
             .ok_or_else(|| args::bad(span, format!("{what}: each point must be [f64;3]")))?;
         if coords.len() < 3 {
-            return Err(args::bad(span, format!("{what}: each point needs ≥3 coords")));
+            return Err(args::bad(
+                span,
+                format!("{what}: each point needs ≥3 coords"),
+            ));
         }
         pts.push(Point3::new(coords[0], coords[1], coords[2]));
     }
@@ -73,14 +77,8 @@ pub fn local_density_3d_host(args_v: &Value, span: Span) -> Result<Value, Diagno
     let mut density = vec![0.0f64; n];
     let mut knn_buffer = vec![KnnEntry::default(); n * k];
     let mut scratch = vec![KnnEntry::default(); MAX_K + 1];
-    local_density_3d(
-        &points,
-        k,
-        &mut density,
-        &mut knn_buffer,
-        &mut scratch,
-    )
-    .map_err(|e| args::bad(span, format!("local_density_3d: {e}")))?;
+    local_density_3d(&points, k, &mut density, &mut knn_buffer, &mut scratch)
+        .map_err(|e| args::bad(span, format!("local_density_3d: {e}")))?;
     Ok(args::record([("density", args::f64_list_value(density))]))
 }
 

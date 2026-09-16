@@ -27,7 +27,8 @@ fn f64_list_value(xs: &[f64]) -> Value {
 /// Args: `{ p }`. Out: `{ ok: true }` or error.
 pub fn validate_probability(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = f32_list(args_v, "p", span)?;
-    sm::validate_probability(&p).map_err(|e| args::bad(span, format!("validate_probability: {e}")))?;
+    sm::validate_probability(&p)
+        .map_err(|e| args::bad(span, format!("validate_probability: {e}")))?;
     Ok(args::record([("ok", Value::Bool(true))]))
 }
 
@@ -168,7 +169,10 @@ mod tests {
         m.insert("q".into(), args::f64_list_value(vec![0.3, 0.3, 0.4]));
         let out = fisher_distance(&Value::Record(m), span()).unwrap();
         let d = args::rec_f64(&out, "value").unwrap();
-        assert!(d.abs() < 1e-6, "Fisher distance to self must be ~0, got {d}");
+        assert!(
+            d.abs() < 1e-6,
+            "Fisher distance to self must be ~0, got {d}"
+        );
     }
 
     #[test]

@@ -105,7 +105,11 @@ impl KBucketTable {
     }
 
     /// Up to K XOR-nearest contacts. Empty `out` with contacts present is Capacity.
-    pub fn closest(&self, target: &StrongDigest, out: &mut [StrongDigest]) -> Result<usize, QdnfError> {
+    pub fn closest(
+        &self,
+        target: &StrongDigest,
+        out: &mut [StrongDigest],
+    ) -> Result<usize, QdnfError> {
         if out.is_empty() {
             return Err(QdnfError::Capacity);
         }

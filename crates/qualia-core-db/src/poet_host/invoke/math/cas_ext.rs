@@ -38,7 +38,10 @@ fn pde_class_str(c: PdeClass) -> &'static str {
 /// Args: `{ expr, a, b, var?, steps? }`. Out: `{ value }`.
 pub fn integrate_definite(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let expr = args::rec_str(args_v, "expr").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.integrate_definite needs expr: string")
+        args::bad(
+            span,
+            "SymbolicAlgebra.integrate_definite needs expr: string",
+        )
     })?;
     let a = args::rec_f64(args_v, "a")
         .ok_or_else(|| args::bad(span, "integrate_definite needs a: number"))?;
@@ -47,17 +50,17 @@ pub fn integrate_definite(args_v: &Value, span: Span) -> Result<Value, Diagnosti
     let var = args::rec_str(args_v, "var").unwrap_or("x");
     let steps = args::rec_u64(args_v, "steps").unwrap_or(64) as usize;
     let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
-    let value = crate::specialized_libs::symbolic_integration::integrate_definite(&e, var, a, b, steps)
-        .ok_or_else(|| args::bad(span, "integrate_definite: non-finite evaluation"))?;
+    let value =
+        crate::specialized_libs::symbolic_integration::integrate_definite(&e, var, a, b, steps)
+            .ok_or_else(|| args::bad(span, "integrate_definite: non-finite evaluation"))?;
     Ok(args::record([("value", Value::F64(value))]))
 }
 
 /// `SymbolicAlgebra.limit_at_infinity` — lim_{x→∞} f(x) via numeric probe.
 /// Args: `{ expr, var? }`. Out: `{ value }`.
 pub fn limit_at_infinity(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let expr = args::rec_str(args_v, "expr").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.limit_at_infinity needs expr: string")
-    })?;
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.limit_at_infinity needs expr: string"))?;
     let var = args::rec_str(args_v, "var").unwrap_or("x");
     let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
     let value = crate::specialized_libs::symbolic_limits::limit_at_infinity(&e, var)
@@ -169,10 +172,7 @@ mod tests {
         m.insert("a".into(), Value::F64(2.0));
         m.insert("b".into(), Value::F64(4.0));
         let out = solve_linear_first_order(&Value::Record(m), span()).unwrap();
-        assert_eq!(
-            args::rec_str(&out, "kind"),
-            Some("explicit")
-        );
+        assert_eq!(args::rec_str(&out, "kind"), Some("explicit"));
         let y = args::rec_str(&out, "y").unwrap();
         assert!(y.contains('C') || y.contains('e'), "got {y}");
     }

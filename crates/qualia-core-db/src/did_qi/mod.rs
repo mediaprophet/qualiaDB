@@ -23,8 +23,8 @@ mod vectors;
 pub use document::{
     canonical_digest, encode_canonical, encode_genesis, encode_jsonld_cold, encode_signed,
     encode_unsigned, genesis_digest, sha256_32, signed_git_object_id, unsigned_digest, AkaEntry,
-    QiDocument, CREATED_UNIX_VECTOR, MAX_AKA, MAX_AKA_LEN, MAX_CANONICAL, MAX_SERVICES,
-    MAX_SIGNED, MAX_UNSIGNED,
+    QiDocument, CREATED_UNIX_VECTOR, MAX_AKA, MAX_AKA_LEN, MAX_CANONICAL, MAX_SERVICES, MAX_SIGNED,
+    MAX_UNSIGNED,
 };
 pub use document_decode::{
     decode_canonical, extract_proof_sig, ingest_unsigned_json, reject_forbidden_locators,
@@ -36,7 +36,7 @@ pub use id::{format_did, parse_did, DidQi, MAX_DID_TEXT};
 pub use mailbox_bind::publish_qi_document;
 pub use method::{create, deactivate, read, read_generation, update};
 pub use service::{
-    check_relay_only, CscpMailbox, Disclosure, LocatorClass, RelayHint, SERVICE_TYPE, MAX_HINTS,
+    check_relay_only, CscpMailbox, Disclosure, LocatorClass, RelayHint, MAX_HINTS, SERVICE_TYPE,
 };
 pub use utxo::{
     admit_chain, apply_utxo_attestation, chain_admitted, encode_commitment_tx, extract_op_return,

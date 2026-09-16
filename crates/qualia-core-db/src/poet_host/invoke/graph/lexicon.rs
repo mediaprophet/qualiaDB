@@ -98,16 +98,13 @@ fn lexicon_manifest_native(args_v: &Value, span: Span) -> Result<Value, Diagnost
             )
         })?;
 
-    let framing = v
-        .get("framing")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| {
-            held(
-                span,
-                "lexicon pack manifest missing framing",
-                "held / not yet — set framing to living-SHACL | artifact-OWL | mixed",
-            )
-        })?;
+    let framing = v.get("framing").and_then(|x| x.as_str()).ok_or_else(|| {
+        held(
+            span,
+            "lexicon pack manifest missing framing",
+            "held / not yet — set framing to living-SHACL | artifact-OWL | mixed",
+        )
+    })?;
 
     match framing {
         "living-SHACL" | "artifact-OWL" | "mixed" => {}
@@ -169,10 +166,7 @@ fn lexicon_manifest_native(args_v: &Value, span: Span) -> Result<Value, Diagnost
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn resolve_paths(
-    path: &Path,
-    span: Span,
-) -> Result<(PathBuf, Option<PathBuf>, bool), Diagnostic> {
+fn resolve_paths(path: &Path, span: Span) -> Result<(PathBuf, Option<PathBuf>, bool), Diagnostic> {
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
@@ -261,7 +255,10 @@ mod tests {
             .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
             .expect_err("missing pack stays held");
         let json = err.to_json();
-        assert!(json.contains("held / not yet — open lexicon pack"), "{json}");
+        assert!(
+            json.contains("held / not yet — open lexicon pack"),
+            "{json}"
+        );
         assert!(!json.to_ascii_lowercase().contains("broken"));
         assert!(!json.to_ascii_lowercase().contains("unavailable"));
     }
@@ -274,10 +271,7 @@ mod tests {
             .canonicalize()
             .expect("en-core fixture");
         let mut rec = BTreeMap::new();
-        rec.insert(
-            "path".into(),
-            Value::String(fixture.display().to_string()),
-        );
+        rec.insert("path".into(), Value::String(fixture.display().to_string()));
         let value = snap
             .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
             .expect("real pack opens");

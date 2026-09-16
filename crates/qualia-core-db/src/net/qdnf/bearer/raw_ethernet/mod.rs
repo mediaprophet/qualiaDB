@@ -21,9 +21,9 @@ mod linux;
 #[cfg(not(target_os = "linux"))]
 mod unsupported;
 
-pub use frame::{DEV_ETHERTYPE, decapsulate_ethernet, encapsulate_ethernet};
-pub use loopback::{EthernetLoop, ethernet_loop_pair};
-pub use two_host::{TwoHostProbe, TwoHostProbeReason, probe_two_host};
+pub use frame::{decapsulate_ethernet, encapsulate_ethernet, DEV_ETHERTYPE};
+pub use loopback::{ethernet_loop_pair, EthernetLoop};
+pub use two_host::{probe_two_host, TwoHostProbe, TwoHostProbeReason};
 
 #[cfg(target_os = "linux")]
 pub use linux::RawEthernet;

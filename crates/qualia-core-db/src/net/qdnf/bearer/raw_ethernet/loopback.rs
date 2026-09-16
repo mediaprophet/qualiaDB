@@ -6,11 +6,11 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
 
-use super::super::contract::{Bearer, RecvMeta, check_frame_mtu};
-use super::EthernetEvidence;
+use super::super::contract::{check_frame_mtu, Bearer, RecvMeta};
 use super::frame::{
     decapsulate_ethernet, encapsulate_ethernet, locator_from_mac, mac_from_locator,
 };
+use super::EthernetEvidence;
 
 const QUEUE_CAP: usize = 32;
 const FRAME_CAP: usize = 2048;

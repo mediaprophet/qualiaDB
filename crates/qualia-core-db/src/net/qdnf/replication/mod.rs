@@ -12,8 +12,8 @@ pub mod qnf_eval;
 pub mod stream;
 
 pub use disk_crash::{
-    disk_backend_crash_injected, os_process_kill_qualified, FilePairStore, RecoveredPair,
-    ReceiptClass, MAX_EFFECT_BYTES,
+    disk_backend_crash_injected, os_process_kill_qualified, FilePairStore, ReceiptClass,
+    RecoveredPair, MAX_EFFECT_BYTES,
 };
 pub use originals::{
     projection_replaces_original, store_original, OriginalObject, STREAM_PAGE_BYTES,

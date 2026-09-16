@@ -124,7 +124,10 @@ pub fn sample_packed_quins_wasm(db_bytes: &[u8], max_quins: usize) -> Result<Vec
         ));
     }
     let quins = unsafe {
-        std::slice::from_raw_parts(db_bytes.as_ptr() as *const crate::NQuin, db_bytes.len() / 48)
+        std::slice::from_raw_parts(
+            db_bytes.as_ptr() as *const crate::NQuin,
+            db_bytes.len() / 48,
+        )
     };
     let sampled = crate::query_engine::sample_quins(quins, max_quins);
     let mut out = Vec::with_capacity(sampled.len() * 48);

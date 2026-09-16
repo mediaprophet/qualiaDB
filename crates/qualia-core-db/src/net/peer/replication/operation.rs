@@ -322,9 +322,7 @@ mod tests {
         let gen = Generation(1);
         let mut seq = 0u32;
         while seq < MAX_OPS as u32 {
-            table
-                .submit(distinct(seq), &mut intents, 8, gen)
-                .unwrap();
+            table.submit(distinct(seq), &mut intents, 8, gen).unwrap();
             seq += 1;
         }
         assert_eq!(

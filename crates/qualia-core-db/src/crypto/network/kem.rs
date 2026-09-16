@@ -15,7 +15,12 @@ pub struct MlKem768Secret {
 impl MlKem768Secret {
     pub fn generate() -> Result<(Self, [u8; ML_KEM_768_PK_LEN]), CryptoError> {
         let (ek, dk) = ml_kem_768::KG::try_keygen().map_err(|_| CryptoError::CryptoFailure)?;
-        Ok((Self { bytes: dk.into_bytes() }, ek.into_bytes()))
+        Ok((
+            Self {
+                bytes: dk.into_bytes(),
+            },
+            ek.into_bytes(),
+        ))
     }
 
     pub fn from_bytes(bytes: [u8; ML_KEM_768_SK_LEN]) -> Self {

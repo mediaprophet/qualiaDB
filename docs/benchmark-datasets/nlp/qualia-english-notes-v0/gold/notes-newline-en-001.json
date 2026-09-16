@@ -1,0 +1,57 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-newline-en-001",
+  "split": "dev",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "Line one\nLine two.",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 4,
+      "surface": "Line",
+      "kind": "Word"
+    },
+    {
+      "start": 5,
+      "end": 8,
+      "surface": "one",
+      "kind": "Word"
+    },
+    {
+      "start": 9,
+      "end": 13,
+      "surface": "Line",
+      "kind": "Word"
+    },
+    {
+      "start": 14,
+      "end": 17,
+      "surface": "two",
+      "kind": "Word"
+    },
+    {
+      "start": 17,
+      "end": 18,
+      "surface": ".",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 8,
+      "surface": "Line one"
+    },
+    {
+      "start": 9,
+      "end": 18,
+      "surface": "Line two."
+    }
+  ]
+}

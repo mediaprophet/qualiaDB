@@ -25,13 +25,15 @@ fn vec2(vals: &[f64], span: Span, what: &str) -> Result<Vector<2>, Diagnostic> {
 }
 
 fn parse_matrix_2x2(a_val: &Value, span: Span, what: &str) -> Result<LinearMap<2, 2>, Diagnostic> {
-    let rows = args::list(a_val).ok_or_else(|| args::bad(span, format!("{what}: a must be [[f64;2];2]")))?;
+    let rows = args::list(a_val)
+        .ok_or_else(|| args::bad(span, format!("{what}: a must be [[f64;2];2]")))?;
     if rows.len() != 2 {
         return Err(args::bad(span, format!("{what}: need 2×2 matrix")));
     }
     let mut coef = [[0.0; 2]; 2];
     for (i, row) in rows.iter().enumerate() {
-        let vals = args::f64s(row).ok_or_else(|| args::bad(span, format!("{what}: row must be [f64]")))?;
+        let vals =
+            args::f64s(row).ok_or_else(|| args::bad(span, format!("{what}: row must be [f64]")))?;
         if vals.len() != 2 {
             return Err(args::bad(span, format!("{what}: each row length 2")));
         }
@@ -121,8 +123,8 @@ pub fn jvp_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a_val = args::rec(args_v, "a").ok_or_else(|| args::bad(span, "jvp needs a"))?;
     let v = args::rec_f64_list(args_v, "v").ok_or_else(|| args::bad(span, "jvp needs v"))?;
     let map = parse_matrix_2x2(a_val, span, "jvp")?;
-    let out = jvp(&map, vec2(&v, span, "v")?)
-        .map_err(|e| args::bad(span, format!("jvp: {e:?}")))?;
+    let out =
+        jvp(&map, vec2(&v, span, "v")?).map_err(|e| args::bad(span, format!("jvp: {e:?}")))?;
     Ok(args::record([(
         "out",
         Value::List(vec![Value::F64(out.data[0]), Value::F64(out.data[1])]),
@@ -135,8 +137,8 @@ pub fn vjp_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a_val = args::rec(args_v, "a").ok_or_else(|| args::bad(span, "vjp needs a"))?;
     let w = args::rec_f64_list(args_v, "w").ok_or_else(|| args::bad(span, "vjp needs w"))?;
     let map = parse_matrix_2x2(a_val, span, "vjp")?;
-    let out = vjp(&map, vec2(&w, span, "w")?)
-        .map_err(|e| args::bad(span, format!("vjp: {e:?}")))?;
+    let out =
+        vjp(&map, vec2(&w, span, "w")?).map_err(|e| args::bad(span, format!("vjp: {e:?}")))?;
     Ok(args::record([(
         "out",
         Value::List(vec![Value::F64(out.data[0]), Value::F64(out.data[1])]),

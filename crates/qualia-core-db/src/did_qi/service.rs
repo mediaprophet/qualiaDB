@@ -153,10 +153,7 @@ mod tests {
             Disclosure::ApprovedRelaysOnly,
         )];
         assert_eq!(check_relay_only(&mailbox), Ok(()));
-        let permitted_direct = [CscpMailbox::direct(
-            [9u8; 32],
-            Disclosure::DirectPermitted,
-        )];
+        let permitted_direct = [CscpMailbox::direct([9u8; 32], Disclosure::DirectPermitted)];
         assert_eq!(check_relay_only(&permitted_direct), Ok(()));
     }
 
@@ -164,6 +161,9 @@ mod tests {
     fn service_type_is_cscp_mailbox() {
         assert_eq!(SERVICE_TYPE, "CscpMailbox");
         assert_eq!(LocatorClass::Direct.json_name(), b"direct");
-        assert_eq!(Disclosure::ApprovedRelaysOnly.json_name(), b"ApprovedRelaysOnly");
+        assert_eq!(
+            Disclosure::ApprovedRelaysOnly.json_name(),
+            b"ApprovedRelaysOnly"
+        );
     }
 }

@@ -88,20 +88,14 @@ mod tests {
         let args_v = rec(&[
             ("delegation", granted_delegation(dom::PERSONAL_WELFARE)),
             ("request", read_request(dom::PERSONAL_WELFARE)),
-            (
-                "context",
-                rec(&[("now_unix", Value::U64(200))]),
-            ),
+            ("context", rec(&[("now_unix", Value::U64(200))])),
         ]);
         let out = permits(&args_v, Span { start: 0, end: 0 }).expect("ok");
         let Value::Record(m) = out else {
             panic!("expected record");
         };
         assert_eq!(m.get("permitted"), Some(&Value::Bool(true)));
-        assert_eq!(
-            m.get("decision"),
-            Some(&Value::String("permit".into()))
-        );
+        assert_eq!(m.get("decision"), Some(&Value::String("permit".into())));
     }
 
     #[test]
@@ -109,10 +103,7 @@ mod tests {
         let args_v = rec(&[
             ("delegation", granted_delegation(dom::FINANCIAL)),
             ("request", read_request(dom::MEDICAL)),
-            (
-                "context",
-                rec(&[("now_unix", Value::U64(200))]),
-            ),
+            ("context", rec(&[("now_unix", Value::U64(200))])),
         ]);
         let out = permits(&args_v, Span { start: 0, end: 0 }).expect("ok");
         let Value::Record(m) = out else {

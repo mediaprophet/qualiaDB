@@ -79,7 +79,10 @@ mod tests {
     #[test]
     fn fill_entropy_is_platform_unsupported_without_software_fill() {
         let mut buf = [0xAAu8; 16];
-        assert_eq!(fill_entropy(&mut buf), Err(CryptoError::PlatformUnsupported));
+        assert_eq!(
+            fill_entropy(&mut buf),
+            Err(CryptoError::PlatformUnsupported)
+        );
         assert_eq!(buf, [0xAAu8; 16]);
     }
 

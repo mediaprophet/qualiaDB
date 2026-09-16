@@ -8,7 +8,7 @@
 //! Do not claim QSR is better than Kademlia from this module.
 
 use super::cover::CoverInterval;
-use super::kbucket::{KBucketTable, K, CONTACT_CAP};
+use super::kbucket::{KBucketTable, CONTACT_CAP, K};
 use super::key::keys_equal;
 use super::outcome::QsrOutcome;
 use super::traversal::{lookup_into, QsrSnapshot};

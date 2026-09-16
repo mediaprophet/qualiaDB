@@ -117,8 +117,8 @@ mod tests {
             !pass.is_empty(),
             "QDNF_LISTEN_ADDR is set; also set QDNF_MESH_PASS"
         );
-        let report = connect_probe(&pass, &peer, true, Duration::from_secs(20))
-            .expect("connect_probe");
+        let report =
+            connect_probe(&pass, &peer, true, Duration::from_secs(20)).expect("connect_probe");
         assert!(
             report.handshake,
             "internet WireGuard handshake failed toward {peer}"

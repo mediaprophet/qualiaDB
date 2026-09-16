@@ -1,0 +1,82 @@
+{
+  "corpus_id": "qualia-catchment-notes-v0",
+  "doc_id": "west-pond-invalid-date-001",
+  "split": "train",
+  "language": "en",
+  "domain": "catchment-measurement-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "Logged 2026-02-31 at the weir.",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 6,
+      "surface": "Logged",
+      "kind": "Word"
+    },
+    {
+      "start": 7,
+      "end": 11,
+      "surface": "2026",
+      "kind": "Number"
+    },
+    {
+      "start": 11,
+      "end": 12,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 12,
+      "end": 14,
+      "surface": "02",
+      "kind": "Number"
+    },
+    {
+      "start": 14,
+      "end": 15,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 15,
+      "end": 17,
+      "surface": "31",
+      "kind": "Number"
+    },
+    {
+      "start": 18,
+      "end": 20,
+      "surface": "at",
+      "kind": "Word"
+    },
+    {
+      "start": 21,
+      "end": 24,
+      "surface": "the",
+      "kind": "Word"
+    },
+    {
+      "start": 25,
+      "end": 29,
+      "surface": "weir",
+      "kind": "Word"
+    },
+    {
+      "start": 29,
+      "end": 30,
+      "surface": ".",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 30,
+      "surface": "Logged 2026-02-31 at the weir."
+    }
+  ]
+}

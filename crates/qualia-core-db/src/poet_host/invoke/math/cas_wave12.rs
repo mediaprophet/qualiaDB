@@ -54,7 +54,10 @@ pub fn to_quins(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let quins = sa::to_quins(&e);
     let count = quins.len() as u64;
     let list = Value::List(quins.iter().map(quin_record).collect());
-    Ok(args::record([("quins", list), ("count", Value::U64(count))]))
+    Ok(args::record([
+        ("quins", list),
+        ("count", Value::U64(count)),
+    ]))
 }
 
 /// `SymbolicAlgebra.from_quins` — reconstruct expression from `to_quins` records.

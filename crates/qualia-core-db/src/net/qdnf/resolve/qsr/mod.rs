@@ -27,9 +27,6 @@ pub use compare::{
     run_in_process_kbucket_comparison, unmeasured_better_than_kademlia_claimed, xor_distance,
     ClosedWorldComparison, KBucketComparison, LOCAL_XOR_CAP,
 };
-pub use kbucket::{
-    bucket_index, KBucketTable, ALPHA, BUCKET_COUNT, CONTACT_CAP, K, STALE_GENERATIONS,
-};
 pub use completeness::{
     absence_is_authoritative, lookup_with_completeness, membership_implies_completeness,
     CompletenessEvidence, CompletenessKind, QsrAnswer,
@@ -43,6 +40,9 @@ pub use handover::{
 pub use hot::{
     coalesce_hot, insert_parent, partition_record, ParentTable, Partition, MAX_HOT_REPLICAS,
     PARENT_CAP,
+};
+pub use kbucket::{
+    bucket_index, KBucketTable, ALPHA, BUCKET_COUNT, CONTACT_CAP, K, STALE_GENERATIONS,
 };
 pub use key::{digit, keys_equal, DIGIT_RADIX, KEY_DEPTH};
 pub use outcome::QsrOutcome;

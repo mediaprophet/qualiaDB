@@ -40,13 +40,18 @@ fn sign_unsigned(sk: &[u8; 32], unsigned: &[u8]) -> Result<[u8; SIG_LEN], QiErro
     Ok(SigningKey::from_bytes(sk).sign(&msg[..n]).to_bytes())
 }
 
-fn verify_unsigned(pk: &[u8; 32], unsigned: &[u8], signature: &[u8; SIG_LEN]) -> Result<(), QiError> {
+fn verify_unsigned(
+    pk: &[u8; 32],
+    unsigned: &[u8],
+    signature: &[u8; SIG_LEN],
+) -> Result<(), QiError> {
     let digest = sha256_32(unsigned);
     let mut msg = [0u8; 64];
     let n = proof_message(&digest, &mut msg)?;
     let vk = VerifyingKey::from_bytes(pk).map_err(|_| QiError::InvalidKey)?;
     let sig = Signature::from_bytes(signature);
-    vk.verify(&msg[..n], &sig).map_err(|_| QiError::BadSignature)
+    vk.verify(&msg[..n], &sig)
+        .map_err(|_| QiError::BadSignature)
 }
 
 fn write_signed<S: QiStore>(
@@ -193,11 +198,11 @@ pub(crate) fn load_canonical_digest<S: QiStore>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::document::{genesis_digest, AkaEntry};
     use super::super::git_object::GitObjectStore;
     use super::super::service::{CscpMailbox, Disclosure};
     use super::super::{format_did, parse_did};
+    use super::*;
 
     fn sk() -> [u8; 32] {
         [7u8; 32]
@@ -205,7 +210,8 @@ mod tests {
 
     fn sample_doc() -> QiDocument {
         let mut doc = QiDocument::empty();
-        doc.services[0] = CscpMailbox::mailbox(public_from_secret(&sk()), Disclosure::ApprovedRelaysOnly);
+        doc.services[0] =
+            CscpMailbox::mailbox(public_from_secret(&sk()), Disclosure::ApprovedRelaysOnly);
         doc.service_count = 1;
         doc
     }

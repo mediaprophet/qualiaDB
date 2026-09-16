@@ -27,8 +27,9 @@ pub use evidence::{
     address_dependent_is_not_universal_relay_law, browser_turn_interop_executed,
     capability_fabric_local_executed, connection_manager_implemented,
     durable_storage_recovery_verified, envelope_length_is_u16, ice_requires_connectivity_check,
-    internet_two_host_handshake_executed, local_tls_wss_verified, masque_bound_udp_internet_executed,
-    noq_transport_admitted, public_relay_dialed, session_ready_requires_qsession,
+    internet_two_host_handshake_executed, local_tls_wss_verified,
+    masque_bound_udp_internet_executed, noq_transport_admitted, public_relay_dialed,
+    session_ready_requires_qsession,
 };
 pub use invitation::{
     phrase_must_not_mint_wg_keys, sign_invitation, verify_invitation, Invitation,

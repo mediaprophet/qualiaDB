@@ -10,7 +10,11 @@ pub enum ParseError {
     /// Whole input exceeds [`super::ParseBudgets::max_bytes`].
     ByteBudgetExceeded { size: u64, max: u64 },
     /// A single line exceeds [`super::ParseBudgets::max_line_bytes`].
-    LineTooLong { source_line: u64, len: u64, max: u64 },
+    LineTooLong {
+        source_line: u64,
+        len: u64,
+        max: u64,
+    },
     /// Accepted + quarantined rows would exceed [`super::ParseBudgets::max_records`].
     RecordBudgetExceeded { used: u64, max: u64 },
     /// Budget fields must be strictly positive.
@@ -43,9 +47,10 @@ impl PartialEq for ParseError {
                     max: f,
                 },
             ) => a == d && b == e && c == f,
-            (RecordBudgetExceeded { used: a, max: b }, RecordBudgetExceeded { used: c, max: d }) => {
-                a == c && b == d
-            }
+            (
+                RecordBudgetExceeded { used: a, max: b },
+                RecordBudgetExceeded { used: c, max: d },
+            ) => a == c && b == d,
             (Io(a), Io(b)) => a.kind() == b.kind(),
             _ => false,
         }

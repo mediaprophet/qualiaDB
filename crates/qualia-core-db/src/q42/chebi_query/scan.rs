@@ -1,8 +1,6 @@
 //! Quin-slice scanners aligned with [`crate::q42::chebi_map`] encoding.
 
-use crate::q42::chebi_map::{
-    PRED_ACCESSION, PRED_FROM_RELEASE, PRED_HAS_NAME, PRED_HAS_PARENT,
-};
+use crate::q42::chebi_map::{PRED_ACCESSION, PRED_FROM_RELEASE, PRED_HAS_NAME, PRED_HAS_PARENT};
 use crate::{q_hash, NQuin};
 
 use super::types::Uncertainty;

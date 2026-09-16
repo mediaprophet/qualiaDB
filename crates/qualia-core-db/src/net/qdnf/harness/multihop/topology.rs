@@ -180,7 +180,12 @@ pub(super) fn publish_planned(
 
 pub(super) fn publish_line(m: &mut MultiHop) -> Result<(), QdnfError> {
     let index = line_index()?;
-    let origin = plan_one(&index, ORIGIN_NODE, DEST_NODE, &PathConstraint::UNRESTRICTED)?;
+    let origin = plan_one(
+        &index,
+        ORIGIN_NODE,
+        DEST_NODE,
+        &PathConstraint::UNRESTRICTED,
+    )?;
     m.planned_hops = publish_planned(&mut m.gens, &index, &PathConstraint::UNRESTRICTED)?;
     m.current_path = origin;
     m.last_change_unix = PLAN_NOW;

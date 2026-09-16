@@ -245,7 +245,10 @@ mod tests {
     fn empty_store_get_fails_closed() {
         let store = GitObjectStore::new();
         let mut out = [0u8; 8];
-        assert_eq!(store.get(&DidQi([1u8; 32]), &mut out), Err(QiError::NotFound));
+        assert_eq!(
+            store.get(&DidQi([1u8; 32]), &mut out),
+            Err(QiError::NotFound)
+        );
     }
 
     #[test]

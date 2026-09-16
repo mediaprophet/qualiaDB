@@ -49,7 +49,10 @@ pub fn la_dot(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = f64_list(args_v, "a", span, "LinearAlgebra.dot")?;
     let b = f64_list(args_v, "b", span, "LinearAlgebra.dot")?;
     if a.len() != b.len() || a.is_empty() {
-        return Err(args::bad(span, "LinearAlgebra.dot needs equal non-empty lists"));
+        return Err(args::bad(
+            span,
+            "LinearAlgebra.dot needs equal non-empty lists",
+        ));
     }
     let value: f64 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
     if !value.is_finite() {
@@ -107,7 +110,10 @@ pub fn la_identity(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn la_inverse(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let m = matrix(args_v, "a", span)?;
     if m.rows != m.cols || m.rows == 0 {
-        return Err(args::bad(span, "LinearAlgebra.inverse needs a square matrix"));
+        return Err(args::bad(
+            span,
+            "LinearAlgebra.inverse needs a square matrix",
+        ));
     }
     let n = m.rows;
     if n > INVERSE_MAX {
@@ -184,10 +190,7 @@ mod tests {
 
     #[test]
     fn wave40_norm_poet_json() {
-        let out = invoke(
-            "LinearAlgebra.norm",
-            serde_json::json!({ "a": [3.0, 4.0] }),
-        );
+        let out = invoke("LinearAlgebra.norm", serde_json::json!({ "a": [3.0, 4.0] }));
         let v = args::rec_f64(&out, "value").unwrap();
         assert!((v - 5.0).abs() < 1e-12);
     }
@@ -208,10 +211,7 @@ mod tests {
         let out = invoke("LinearAlgebra.identity", serde_json::json!({ "n": 3 }));
         let a = args::rec(&out, "a").unwrap();
         let data = args::rec_f64_list(a, "data").unwrap();
-        assert_eq!(
-            data,
-            vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-        );
+        assert_eq!(data, vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]);
     }
 
     #[test]

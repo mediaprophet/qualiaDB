@@ -25,9 +25,9 @@ pub fn s02_unsigned_mutation() -> Result<(), QdnfError> {
     let expected = verify_label(fields, &buf[..n])?.exact_bytes_digest();
     buf[0] ^= 1;
     match verify_label(fields, &buf[..n]) {
-        Err(QdnfError::Conflict)
-        | Err(QdnfError::Malformed)
-        | Err(QdnfError::Unsupported) => Ok(()),
+        Err(QdnfError::Conflict) | Err(QdnfError::Malformed) | Err(QdnfError::Unsupported) => {
+            Ok(())
+        }
         Err(e) => Err(e),
         Ok(_) => Err(QdnfError::Conflict),
     }
@@ -39,11 +39,8 @@ pub fn s02_unsigned_mutation() -> Result<(), QdnfError> {
             let n = encode_label_into(&fields, &mut b)?;
             (b, n)
         };
-        match crate::net::qdnf::policy_labels::verify_label_digest(
-            other,
-            &ok_buf[..ok_n],
-            expected,
-        ) {
+        match crate::net::qdnf::policy_labels::verify_label_digest(other, &ok_buf[..ok_n], expected)
+        {
             Err(QdnfError::Conflict) => Ok(()),
             Err(e) => Err(e),
             Ok(_) => Err(QdnfError::Conflict),

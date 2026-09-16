@@ -11,7 +11,12 @@ use crate::specialized_libs::computational_geometry::{
 };
 use vibe::{Diagnostic, Span, Value};
 
-fn parse_point3_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Point3, Diagnostic> {
+fn parse_point3_arg(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Point3, Diagnostic> {
     let coords = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64; 3]")))?;
     if coords.len() < 3 {
@@ -65,7 +70,10 @@ pub fn hyperplane_eval_host(args_v: &Value, span: Span) -> Result<Value, Diagnos
     let point = parse_point3_arg(args_v, "point", span, "hyperplane_eval")?;
     let offset = args::rec_f64(args_v, "offset").unwrap_or(0.0);
     let plane = Hyperplane3 { normal, offset };
-    Ok(args::record([("value", Value::F64(hyperplane_eval(plane, point)))]))
+    Ok(args::record([(
+        "value",
+        Value::F64(hyperplane_eval(plane, point)),
+    )]))
 }
 
 /// `ComputationalGeometry.householder_reflect` — reflect v in the plane of `normal`.
@@ -113,10 +121,14 @@ pub fn projective_from_point_host(args_v: &Value, span: Span) -> Result<Value, D
 /// `ComputationalGeometry.point_from_projective` — homogeneous → Euclidean.
 /// Args: `{ x, y, z, w }`. Out: `{ x, y, z }`.
 pub fn point_from_projective_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let x = args::rec_f64(args_v, "x").ok_or_else(|| args::bad(span, "point_from_projective needs x"))?;
-    let y = args::rec_f64(args_v, "y").ok_or_else(|| args::bad(span, "point_from_projective needs y"))?;
-    let z = args::rec_f64(args_v, "z").ok_or_else(|| args::bad(span, "point_from_projective needs z"))?;
-    let w = args::rec_f64(args_v, "w").ok_or_else(|| args::bad(span, "point_from_projective needs w"))?;
+    let x = args::rec_f64(args_v, "x")
+        .ok_or_else(|| args::bad(span, "point_from_projective needs x"))?;
+    let y = args::rec_f64(args_v, "y")
+        .ok_or_else(|| args::bad(span, "point_from_projective needs y"))?;
+    let z = args::rec_f64(args_v, "z")
+        .ok_or_else(|| args::bad(span, "point_from_projective needs z"))?;
+    let w = args::rec_f64(args_v, "w")
+        .ok_or_else(|| args::bad(span, "point_from_projective needs w"))?;
     let p = point_from_projective(HomogeneousPoint3 { x, y, z, w })
         .map_err(|e| args::bad(span, format!("point_from_projective: {e:?}")))?;
     Ok(point3_record(p))

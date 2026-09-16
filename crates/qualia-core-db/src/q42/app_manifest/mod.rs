@@ -257,10 +257,7 @@ mod tests {
     fn path_traversal_in_entry_fails() {
         let mut manifest = sample_manifest();
         manifest.entries[0].relative_path = "../escape.bin".into();
-        assert_eq!(
-            manifest.validate(),
-            Err(AppManifestError::PathTraversal)
-        );
+        assert_eq!(manifest.validate(), Err(AppManifestError::PathTraversal));
         assert_eq!(manifest.encode(), Err(AppManifestError::PathTraversal));
     }
 

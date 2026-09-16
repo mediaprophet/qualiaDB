@@ -95,10 +95,7 @@ pub fn relay_pair() -> (RelayEndpoint, RelayEndpoint) {
             is_a: true,
             hub: hub.clone(),
         },
-        RelayEndpoint {
-            is_a: false,
-            hub,
-        },
+        RelayEndpoint { is_a: false, hub },
     )
 }
 
@@ -116,10 +113,7 @@ impl RelayEndpoint {
 
     /// Pop one datagram. `Err("would-block")` if empty.
     pub fn recv(&mut self, out: &mut [u8]) -> Result<usize, &'static str> {
-        self.hub
-            .lock()
-            .map_err(|_| "closed")?
-            .pop(self.is_a, out)
+        self.hub.lock().map_err(|_| "closed")?.pop(self.is_a, out)
     }
 }
 

@@ -305,10 +305,7 @@ mod tests {
         let mut leases = LeaseTable::new();
         let rec = admit_sentinel(&mut leases, 0xA, 1, 10);
         rec.require_scope(0xA, 1, 10).unwrap();
-        assert_eq!(
-            rec.require_scope(0xB, 1, 10),
-            Err(QdnfError::Unauthorized)
-        );
+        assert_eq!(rec.require_scope(0xB, 1, 10), Err(QdnfError::Unauthorized));
         assert_eq!(
             rec.require_scope(0xA, 1, 9),
             Err(QdnfError::StaleGeneration)
@@ -339,10 +336,7 @@ mod tests {
         rec.reserve_rule_slot().unwrap();
         rec.activate_reserved_rule().unwrap();
         assert_eq!(rec.live_rules(), 1);
-        assert_eq!(
-            rec.activate_reserved_rule(),
-            Err(QdnfError::Conflict)
-        );
+        assert_eq!(rec.activate_reserved_rule(), Err(QdnfError::Conflict));
         rec.reset_for_reuse().unwrap();
         for _ in 0..MAX_RULE_STAGING {
             rec.reserve_rule_slot().unwrap();
@@ -360,8 +354,7 @@ mod tests {
         rec.revoke(&mut leases).unwrap();
         let second = leases.release(handle);
         assert!(
-            second == Err(QdnfError::DoubleRelease)
-                || second == Err(QdnfError::StaleGeneration),
+            second == Err(QdnfError::DoubleRelease) || second == Err(QdnfError::StaleGeneration),
             "expected DoubleRelease or StaleGeneration, got {second:?}"
         );
     }
@@ -383,7 +376,10 @@ mod tests {
         let metadata = 0x55;
         let five = NQuin::calculate_parity(s, p, o, ctx, metadata);
         let four = s ^ p ^ o ^ ctx;
-        assert_ne!(five, four, "non-zero metadata must distinguish the two folds");
+        assert_ne!(
+            five, four,
+            "non-zero metadata must distinguish the two folds"
+        );
         assert_eq!(
             classify_parity(five, s, p, o, ctx, metadata),
             Ok(ParityKind::FiveFieldCanonical)

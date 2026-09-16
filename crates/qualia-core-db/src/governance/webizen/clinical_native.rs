@@ -21,7 +21,9 @@ pub enum NativeClinicalRiskOutcome {
     UnknownModel,
     /// Engine ran. `value` is the model-native score (Framingham fraction,
     /// CHA₂DS₂-VASc points, or SCORE2 percent).
-    Calculated { value: f64 },
+    Calculated {
+        value: f64,
+    },
 }
 
 /// `model_id`: 0 Framingham, 1 CHA₂DS₂-VASc, 2 SCORE2.
@@ -30,11 +32,7 @@ pub fn evaluate(model_id: u8) -> NativeClinicalRiskOutcome {
 }
 
 /// Evaluate against Quins already in the SLG arena for `patient`.
-pub fn evaluate_patient(
-    model_id: u8,
-    patient: u64,
-    quins: &[NQuin],
-) -> NativeClinicalRiskOutcome {
+pub fn evaluate_patient(model_id: u8, patient: u64, quins: &[NQuin]) -> NativeClinicalRiskOutcome {
     match model_id {
         0 => match framingham_from_quins(patient, quins) {
             Some(input) => NativeClinicalRiskOutcome::Calculated {

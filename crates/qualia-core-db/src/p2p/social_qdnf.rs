@@ -296,8 +296,9 @@ mod tests {
         let mut b_link =
             SocialQdnfLink::attach(&mut b, "a", dest_b, dest_a, scope, SOCIAL_QDNF_MTU).unwrap();
         let (id_a, id_b) = ids();
-        let done = handshake_over_fragments(&mut a_link, &mut b_link, &dest_b, &dest_a, &id_a, &id_b)
-            .expect("QSession handshake over WG overlay");
+        let done =
+            handshake_over_fragments(&mut a_link, &mut b_link, &dest_b, &dest_a, &id_a, &id_b)
+                .expect("QSession handshake over WG overlay");
         assert!(done.client_fragments >= 2);
         assert!(done.server_fragments >= 2);
         assert_ne!(

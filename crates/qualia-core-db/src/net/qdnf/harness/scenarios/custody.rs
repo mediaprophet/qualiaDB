@@ -9,7 +9,9 @@ use crate::net::qdnf::evidence::{
     classify, gc_expired, live_hold_count, place_hold, promote, release_hold, verify_offline,
     AuthorityAtTime, CustodyBind, EvidenceClass, EvidenceStore, MAX_ORIGINAL,
 };
-use crate::net::qdnf::policy_labels::{project_sink, Confidentiality, DerivedSink, JobLabelContext};
+use crate::net::qdnf::policy_labels::{
+    project_sink, Confidentiality, DerivedSink, JobLabelContext,
+};
 use crate::net::qdnf::replication::{
     os_process_kill_qualified, FilePairStore, ReceiptClass, MAX_EFFECT_BYTES,
 };
@@ -38,7 +40,11 @@ fn tx(n: u8) -> TxId {
     TxId { bytes }
 }
 
-fn seed_evidence(store: &mut EvidenceStore, intents: &mut IntentTable, now: u64) -> Result<StrongDigest, QdnfError> {
+fn seed_evidence(
+    store: &mut EvidenceStore,
+    intents: &mut IntentTable,
+    now: u64,
+) -> Result<StrongDigest, QdnfError> {
     let label = verified(Confidentiality::C1Private, sha384(b"e19-issuer"))?;
     let classified = classify(EvidenceClass::BoundedOperational, &label)?;
     let mut out = [0u8; MAX_ORIGINAL];
@@ -93,7 +99,10 @@ pub fn s29_restored_backup() -> Result<(), QdnfError> {
     let mut dropped = backup;
     dropped.confidentiality = Confidentiality::C0Public;
     dropped.restriction_bits = 0;
-    expect_err(restore_labelled_backup(&stored, &dropped), QdnfError::Denied)
+    expect_err(
+        restore_labelled_backup(&stored, &dropped),
+        QdnfError::Denied,
+    )
 }
 
 pub fn s30_independent_verifier() -> Result<(), QdnfError> {

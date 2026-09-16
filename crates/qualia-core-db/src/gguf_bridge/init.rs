@@ -1368,7 +1368,9 @@ impl QTensorEngine {
 
     #[cfg(not(feature = "gpu-runtime"))]
     pub async fn try_new() -> Result<Self, String> {
-        log::info!("LLM_LOAD|engine-init|0.10|Initializing CPU-only GGUF runtime (gpu-runtime off)");
+        log::info!(
+            "LLM_LOAD|engine-init|0.10|Initializing CPU-only GGUF runtime (gpu-runtime off)"
+        );
         Ok(Self::cpu_runtime())
     }
 

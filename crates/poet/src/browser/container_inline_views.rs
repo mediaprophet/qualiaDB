@@ -299,7 +299,7 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     let tabs = document.create_element("div").unwrap();
     tabs.set_class_name("studio-bay-tabs vibe-console-tabs");
     tabs.set_attribute("role", "tablist").ok();
-    tabs.set_attribute("aria-label", "Script and Catalog · Lexicon").ok();
+    tabs.set_attribute("aria-label", "Script, Catalog · Lexicon, and Instruments").ok();
 
     let script_tab = document.create_element("button").unwrap();
     script_tab.set_class_name("studio-bay-tab is-active");
@@ -316,6 +316,13 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     catalog_tab.set_attribute("aria-selected", "false").ok();
     catalog_tab.set_text_content(Some("Catalog · Lexicon"));
     tabs.append_child(&catalog_tab).unwrap();
+    let instruments_tab = document.create_element("button").unwrap();
+    instruments_tab.set_class_name("studio-bay-tab");
+    instruments_tab.set_attribute("type", "button").ok();
+    instruments_tab.set_attribute("data-bay-tab", "instruments").ok();
+    instruments_tab.set_attribute("aria-selected", "false").ok();
+    instruments_tab.set_text_content(Some("Catalog · Instruments"));
+    tabs.append_child(&instruments_tab).unwrap();
     console.append_child(&tabs).unwrap();
 
     let script_pane = document.create_element("div").unwrap();
@@ -373,9 +380,18 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     catalog_peer.set_attribute("hidden", "").ok();
     console.append_child(&catalog_peer).unwrap();
 
+    let instrument_peer = super::semantic_instruments::build_instrument_bay(document);
+    instrument_peer.set_attribute("data-bay-pane", "instruments").ok();
+    instrument_peer.set_attribute("hidden", "").ok();
+    console.append_child(&instrument_peer).unwrap();
+
     super::lexicon_bay::wire_bay_tabs(
         &tabs,
-        &[("script", &script_pane), ("catalog", &catalog_peer)],
+        &[
+            ("script", &script_pane),
+            ("catalog", &catalog_peer),
+            ("instruments", &instrument_peer),
+        ],
     );
 
     console

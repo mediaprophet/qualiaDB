@@ -22,6 +22,8 @@ pub struct PoetLlmRequest {
     pub model_path: String,
     pub prompt: String,
     #[serde(default)]
+    pub conditioning: Option<serde_json::Value>,
+    #[serde(default)]
     pub graph_context: String,
     #[serde(default = "default_agent_did")]
     pub agent_did: String,

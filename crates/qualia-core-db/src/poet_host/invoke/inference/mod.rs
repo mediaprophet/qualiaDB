@@ -2,8 +2,13 @@
 //!
 //! Future crate: `qualia-inference`.
 
+mod conditioning_host;
 mod wave19_host;
 
+pub use conditioning_host::{
+    conditioning_activate, conditioning_compile, conditioning_evaluate, conditioning_inspect,
+    conditioning_rollback, conditioning_validate,
+};
 pub use wave19_host::{
     gelu_host as gelu, relu_host as relu, rms_norm_host as rms_norm, sigmoid_host as sigmoid,
     softmax_host as softmax,

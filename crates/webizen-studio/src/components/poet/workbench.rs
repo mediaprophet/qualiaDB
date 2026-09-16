@@ -4,12 +4,41 @@
 
 use super::chest::ToolChest;
 use super::chrome::{ControlBar, Expose, StatusBar, TopMenubar};
+use super::instrument_bay::InstrumentBay;
 use super::lexicon_bay::LexiconBay;
 use super::radial_menu::{RadialActionRing, RadialState};
 use super::stage::CanvasStage;
 use super::store::Workbench;
 use super::styles::HyperCanvasStyles;
 use dioxus::prelude::*;
+
+#[component]
+fn CatalogStudioBay() -> Element {
+    let mut tab = use_signal(|| "catalog");
+    rsx! {
+        div { class: "catalog-studio-bay-head", role: "tablist", "aria-label": "Catalog peers",
+            button {
+                r#type: "button",
+                class: if tab() == "catalog" { "catalog-studio-bay-tab is-active" } else { "catalog-studio-bay-tab" },
+                "aria-selected": "{tab() == \"catalog\"}",
+                onclick: move |_| tab.set("catalog"),
+                "Catalog · Lexicon"
+            }
+            button {
+                r#type: "button",
+                class: if tab() == "instruments" { "catalog-studio-bay-tab is-active" } else { "catalog-studio-bay-tab" },
+                "aria-selected": "{tab() == \"instruments\"}",
+                onclick: move |_| tab.set("instruments"),
+                "Catalog · Instruments"
+            }
+        }
+        if tab() == "catalog" {
+            LexiconBay {}
+        } else {
+            InstrumentBay {}
+        }
+    }
+}
 
 #[component]
 pub fn PoetWorkbench() -> Element {
@@ -87,11 +116,8 @@ pub fn PoetWorkbench() -> Element {
                 section {
                     class: "catalog-studio-bay",
                     "data-catalog-studio-bay": "1",
-                    "aria-label": "Catalog · Lexicon",
-                    div { class: "catalog-studio-bay-head",
-                        span { class: "catalog-studio-bay-tab is-active", "data-bay-tab": "catalog", "Catalog · Lexicon" }
-                    }
-                    LexiconBay {}
+                    "aria-label": "Catalog · Lexicon and Instruments",
+                    CatalogStudioBay {}
                 }
             }
             StatusBar { wb }

@@ -5,11 +5,11 @@
 use std::net::{SocketAddr, UdpSocket};
 use std::time::Duration;
 
+use super::carrier::PathClass;
 use super::evidence::TransportWitness;
 use super::intent::PeerId;
 use super::kernel::FabricError;
 use super::lease::RelayLease;
-use super::carrier::PathClass;
 
 pub const MAGIC: &[u8; 4] = b"QBD1";
 pub const MAX_PAYLOAD: usize = 1152;

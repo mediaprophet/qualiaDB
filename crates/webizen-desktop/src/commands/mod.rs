@@ -33,6 +33,7 @@ pub mod q42;
 pub mod qapp_host;
 pub mod qapp_telemetry;
 pub mod semantic;
+pub mod semantic_instruments;
 pub mod social;
 pub mod wallet;
 pub use qapp_host::HostApiState;
@@ -636,6 +637,18 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         semantic::update_solar_input,
         semantic::fetch_torrent_telemetry,
         semantic::fetch_remote_manifest,
+        semantic_instruments::si_list_demos,
+        semantic_instruments::si_list_references,
+        semantic_instruments::si_collect_demo,
+        semantic_instruments::si_activate_demo,
+        semantic_instruments::si_inspect_demo,
+        semantic_instruments::si_run_demo,
+        semantic_instruments::si_set_run_permitted,
+        semantic_instruments::si_list_receipts,
+        semantic_instruments::si_revoke_demo,
+        semantic_instruments::si_suspend_demo,
+        semantic_instruments::si_remove_demo,
+        semantic_instruments::si_cancel_run,
         // ── directory ──
         semantic::load_imported_accounts,
         semantic::save_imported_accounts,

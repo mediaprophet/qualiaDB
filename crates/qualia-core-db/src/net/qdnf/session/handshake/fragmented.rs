@@ -7,30 +7,29 @@
 use crate::crypto::network::kem::MlKem768Secret;
 use crate::crypto::network::mldsa;
 use crate::crypto::network::transcript::Transcript;
-use crate::net::qdnf::bearer::contract::{Bearer, check_frame_mtu};
+use crate::net::qdnf::bearer::contract::{check_frame_mtu, Bearer};
 use crate::net::qdnf::bearer::fragment::{
-    FRAG_HDR_LEN, HandshakeReassembler, MAX_FRAGMENTS, MAX_FRAME, MAX_HANDSHAKE_BYTES,
-    admit_and_buffer, split_handshake,
+    admit_and_buffer, split_handshake, HandshakeReassembler, FRAG_HDR_LEN, MAX_FRAGMENTS,
+    MAX_FRAME, MAX_HANDSHAKE_BYTES,
 };
-use crate::net::qdnf::bearer::mtu::{MAX_QDNF_MTU, MIN_QDNF_MTU, negotiate_mtu, unfragmented_fit};
+use crate::net::qdnf::bearer::mtu::{negotiate_mtu, unfragmented_fit, MAX_QDNF_MTU, MIN_QDNF_MTU};
 use crate::net::qdnf::crypto::finished::{finished_mac, verify_finished};
 use crate::net::qdnf::crypto::handshake::failures::entropy_fill;
 use crate::net::qdnf::crypto::handshake::{
-    FORBIDDEN_ZERO_RTT, HandshakeState, initiator_complete, initiator_share,
-    qualified_handshake_gate, reject_unknown_key_share, require_bound_identities,
-    responder_complete,
+    initiator_complete, initiator_share, qualified_handshake_gate, reject_unknown_key_share,
+    require_bound_identities, responder_complete, HandshakeState, FORBIDDEN_ZERO_RTT,
 };
-use crate::net::qdnf::crypto::schedule::{HandshakeKeys, derive_handshake_keys};
+use crate::net::qdnf::crypto::schedule::{derive_handshake_keys, HandshakeKeys};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::frame::{
-    BASE_HEADER_LEN, FrameHeader, copy_payload, decode_frame, encode_frame,
+    copy_payload, decode_frame, encode_frame, FrameHeader, BASE_HEADER_LEN,
 };
-use crate::net::qdnf::registries::{FrameType, NextProtocol, flags};
+use crate::net::qdnf::registries::{flags, FrameType, NextProtocol};
 use crate::net::qdnf::types::{ObservedLocator, StrongDigest};
 
 use super::hello::{
-    CLIENT_HELLO_WIRE_LEN, SERVER_HELLO_WIRE_LEN, decode_client_hello, decode_server_hello,
-    encode_client_hello_with_certs, encode_server_hello_with_certs,
+    decode_client_hello, decode_server_hello, encode_client_hello_with_certs,
+    encode_server_hello_with_certs, CLIENT_HELLO_WIRE_LEN, SERVER_HELLO_WIRE_LEN,
 };
 
 const CLIENT_HELLO_MSG: u32 = 1;

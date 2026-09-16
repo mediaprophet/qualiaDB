@@ -1,5 +1,6 @@
 //! `NLP.relation_extract` — RDF-Star triple extraction.
 
+use crate::nlp::budget::reject_source;
 use crate::nlp::relation::extract_relations;
 use std::collections::BTreeMap;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -18,13 +19,9 @@ pub fn relation_extract(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             ))
         }
     };
-    if text.len() > 256 * 1024 {
-        return Err(Diagnostic::new(
-            DiagCode::E400,
-            span,
-            "NLP.relation_extract exceeds 256 KiB",
-        ));
-    }
+    reject_source(text.len()).map_err(|_| {
+        Diagnostic::new(DiagCode::E400, span, "NLP.relation_extract exceeds 256 KiB")
+    })?;
     let rels = extract_relations(text);
     let list: Vec<Value> = rels
         .iter()
@@ -77,5 +74,13 @@ mod tests {
     fn rejects_non_string() {
         let r = relation_extract(&Value::I64(1), Span { start: 0, end: 0 });
         assert!(r.is_err());
+    }
+
+    #[test]
+    fn rejects_oversize_source() {
+        let src = "x".repeat(crate::nlp::budget::MAX_SOURCE_BYTES + 1);
+        let err = relation_extract(&Value::String(src), Span { start: 0, end: 0 }).unwrap_err();
+        assert_eq!(err.code, DiagCode::E400);
+        assert!(err.message.contains("256 KiB"));
     }
 }

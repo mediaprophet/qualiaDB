@@ -1,0 +1,117 @@
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix cml:    <https://ns.webcivics.net/cml/> .
+@prefix cap:    <https://ns.webcivics.net/capability/> .
+@prefix si:     <https://ns.webizen.org/semantic-instrument/> .
+
+# SI-01 positive fixture: RPL/capability requirement graph plus a gap report
+# that treats unavailable evidence as unresolved, not as absence.
+
+ex:infra-role a si:SemanticInstrument ;
+    si:instrumentId "https://example.org/instruments/community-infra-role" ;
+    si:name "Community infrastructure role (labelled fixture)" .
+
+ex:infra-role-1-0-0 a si:InstrumentRelease ;
+    si:instrument ex:infra-role ;
+    si:releaseId "https://example.org/instruments/community-infra-role/releases/1.0.0" ;
+    si:version "1.0.0" ;
+    si:purpose "capability-recognition-and-gap-analysis" ;
+    si:contentCategory si:Demo ;
+    si:prohibitedInterpretation "automatic-issuance-without-issuer-policy" ;
+    si:domain "https://example.org/concepts/community-infrastructure" ;
+    si:ontologyReference "https://ns.webcivics.net/capability/" ;
+    si:entryPoint ex:infra-assess ;
+    si:citation "https://example.org/guidelines/rpl-2026" ;
+    si:applicability ex:infra-appl ;
+    si:honestyPolicy ex:infra-honesty ;
+    si:resourceLimits ex:infra-limits ;
+    si:testManifest ex:infra-tests ;
+    si:badgePresentation ex:infra-badge ;
+    si:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000003" ;
+    si:authoredBy ex:infra-author ;
+    si:publishedBy ex:infra-issuer ;
+    si:licence "https://spdx.org/licenses/CC-BY-4.0.html" ;
+    si:hasPackage ex:infra-pkg ;
+    si:publicationState si:Published ;
+    si:activationState si:Inactive .
+
+ex:infra-pkg a si:InstrumentPackage ;
+    si:packageOf ex:infra-role-1-0-0 ;
+    si:formatVersion "0.1" ;
+    si:packageDigest "sha256:0000000000000000000000000000000000000000000000000000000000000003" .
+
+ex:infra-assess a si:EntryPoint ;
+    si:entryPointName "recognise" ;
+    si:inputShape "https://example.org/instruments/community-infra-role/shapes/evidence" ;
+    si:outputShape "https://example.org/instruments/community-infra-role/shapes/gap-report" ;
+    si:resourceLimits ex:infra-limits .
+
+ex:infra-honesty a si:HonestyPolicy ;
+    si:incompleteInputBehaviour si:Held ;
+    si:resultKind "gap-report-claim" ;
+    si:requiredNotice "Missing evidence is unresolved, not proof of missing capability." ;
+    si:signatureIsNotTruth "true" .
+
+ex:infra-appl a si:Applicability ;
+    si:unrestrictedDeclaration "true" .
+
+ex:infra-limits a si:ResourceLimits ;
+    si:memoryBytes "1048576" ;
+    si:maxSteps "100000" ;
+    si:maxOutputQuins "256" .
+
+ex:infra-tests a si:TestManifest ;
+    si:assetLocator "tests/rpl.n3" .
+
+ex:infra-badge a si:BadgePresentation ;
+    si:identifiesRelease ex:infra-role-1-0-0 ;
+    si:badgeAsset ex:infra-icon .
+
+ex:infra-icon a si:BadgeAsset ;
+    si:assetLocator "assets/badge.svg" ;
+    si:mediaType "image/svg+xml" ;
+    si:assetDigest "sha256:00000000000000000000000000000000000000000000000000000000000000c3" ;
+    si:accessibleText "Community infrastructure role instrument (labelled fixture)" .
+
+ex:cap-welding a cap:Capability ;
+    si:name "Welding (labelled concept)" .
+
+ex:req-welding a si:CapabilityRequirement ;
+    si:requiredCapability ex:cap-welding ;
+    si:requiredLevel "3" ;
+    si:requirementObligation "mandatory" ;
+    si:acceptableBasis cml:Formal ;
+    si:acceptableBasis cml:PriorLearning ;
+    si:acceptableBasis cml:Experiential ;
+    si:acceptableBasis cml:PeerAttested .
+
+ex:equiv-apprenticeship a si:EquivalenceMapping ;
+    si:mapsRequired ex:cap-welding ;
+    si:mapsHeld ex:cap-apprenticeship ;
+    si:mappingAuthority ex:infra-issuer .
+
+ex:cap-apprenticeship a cap:Capability ;
+    si:name "Supervised apprenticeship welding (labelled concept)" .
+
+ex:ev-portfolio a si:CapabilityEvidence ;
+    si:evidenceFor ex:cap-welding ;
+    si:evidenceHeldBy ex:learner ;
+    si:recognitionBasis cml:Experiential ;
+    si:evidenceUnavailable "true" .
+
+ex:gap-1 a si:GapReport ;
+    si:gapTarget ex:infra-role-1-0-0 ;
+    si:requirementSet ex:infra-role-1-0-0 ;
+    si:unresolvedEvidence ex:ev-portfolio ;
+    si:recognisedEquivalent ex:equiv-apprenticeship .
+
+ex:award-1 a si:CapabilityCredential ;
+    si:credentialSubjectAgent ex:learner ;
+    si:awardedCapability ex:cap-welding ;
+    si:assessmentInstrument ex:infra-role-1-0-0 ;
+    cap:heldBy ex:learner ;
+    cap:capability ex:cap-welding ;
+    cml:recognitionBasis cml:Experiential .
+
+ex:learner a values:NaturalPerson .
+ex:infra-author a values:NaturalPerson .
+ex:infra-issuer a values:LegalPerson .

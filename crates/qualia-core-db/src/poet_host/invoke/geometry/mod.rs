@@ -45,25 +45,22 @@ pub use wave20_host::mean_knn_distance_3d_host as mean_knn_distance_3d;
 pub use wave21_host::{
     dist_point_to_segment_host as dist_point_to_segment,
     dist_sq_point_to_segment_host as dist_sq_point_to_segment,
-    fisher_distance_host as fisher_distance,
-    kl_bregman_form_host as kl_bregman_form,
-    kl_divergence_host as kl_divergence,
-    triangle_signed_area_host as triangle_signed_area,
+    fisher_distance_host as fisher_distance, kl_bregman_form_host as kl_bregman_form,
+    kl_divergence_host as kl_divergence, triangle_signed_area_host as triangle_signed_area,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use wave22_host::{
-    diameter_and_width_host as diameter_and_width,
-    directional_width_host as directional_width, farthest_site_brute_host as farthest_site_brute,
-    incircle_host as incircle, is_hull_site_host as is_hull_site,
-    k_nearest_sites_host as k_nearest_sites, tukey_depth_host as tukey_depth, width_host as width,
+    diameter_and_width_host as diameter_and_width, directional_width_host as directional_width,
+    farthest_site_brute_host as farthest_site_brute, incircle_host as incircle,
+    is_hull_site_host as is_hull_site, k_nearest_sites_host as k_nearest_sites,
+    tukey_depth_host as tukey_depth, width_host as width,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use wave23_host::{
     ham_sandwich_cut_host as ham_sandwich_cut, insphere_host as insphere,
     minkowski_sum_convex_host as minkowski_sum_convex,
-    nearest_segment_site_host as nearest_segment_site,
-    point_in_polygon_host as point_in_polygon, polygon_area_host as polygon_area,
-    polygon_signed_area_host as polygon_signed_area,
+    nearest_segment_site_host as nearest_segment_site, point_in_polygon_host as point_in_polygon,
+    polygon_area_host as polygon_area, polygon_signed_area_host as polygon_signed_area,
     smallest_enclosing_disk_host as smallest_enclosing_disk,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -88,7 +85,8 @@ pub use wave26_host::{
     quaternion_slerp_host as quaternion_slerp, quaternion_to_matrix_host as quaternion_to_matrix,
     schur_complement_2x2_host as schur_complement_2x2,
     separating_plane_aabb_host as separating_plane_aabb,
-    solve_diagonal_quadratic_host as solve_diagonal_quadratic, world_to_frame_host as world_to_frame,
+    solve_diagonal_quadratic_host as solve_diagonal_quadratic,
+    world_to_frame_host as world_to_frame,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]

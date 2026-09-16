@@ -145,6 +145,9 @@ pub fn route_for_palette_id(id: &str) -> Route {
         "settings" | "prefs" => Route::SettingsRoute {},
         "qapps" | "apps" => Route::QAppsRoute {},
         "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
+        "semantic-instrument" | "semantic-instruments" | "instrument-pack" => {
+            Route::PoetInstrumentRoute {}
+        }
         "poet" | "vibe" => Route::PoetRoute {},
         "logs" => Route::LogsRoute {},
         _ => Route::TalkRoute {},
@@ -468,6 +471,10 @@ mod tests {
         assert!(matches!(
             route_for_palette_id("lexicon"),
             Route::PoetCatalogRoute {}
+        ));
+        assert!(matches!(
+            route_for_palette_id("semantic-instrument"),
+            Route::PoetInstrumentRoute {}
         ));
     }
 

@@ -139,7 +139,8 @@ impl Q42AssetEnvelope {
         write_str_list(&mut buf, &self.derived_from)?;
         write_str(&mut buf, &self.shacl_profile)?;
         write_str(&mut buf, &self.validation_report)?;
-        let chunk_len = u16::try_from(self.chunk_plan.len()).map_err(|_| AssetEnvelopeError::Oversize)?;
+        let chunk_len =
+            u16::try_from(self.chunk_plan.len()).map_err(|_| AssetEnvelopeError::Oversize)?;
         write_u16(&mut buf, chunk_len);
         for chunk in &self.chunk_plan {
             write_u32(&mut buf, chunk.index);
@@ -189,13 +190,8 @@ impl Q42AssetEnvelope {
         let terms_url = read_str(bytes, &mut cursor)?;
         let attribution = read_str(bytes, &mut cursor)?;
         // Reconstruct via try_new so Unknown fails closed even if wire was tampered.
-        let mut licence = LicencePolicy::try_new(
-            class,
-            use_class,
-            redistribution,
-            terms_url,
-            attribution,
-        )?;
+        let mut licence =
+            LicencePolicy::try_new(class, use_class, redistribution, terms_url, attribution)?;
         // Preserve exact obligation bitfield from the wire (union may have added flags).
         licence.obligations = obligations;
         let toolchain = ToolchainVersions {

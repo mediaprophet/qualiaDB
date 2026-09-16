@@ -165,16 +165,8 @@ mod tests {
         let snap = QsrSnapshot::empty(Generation(1));
         let mut out = [StrongDigest::ZERO; 1];
         assert_eq!(
-            NativePeer::lookup_qsr_full(
-                &key,
-                &covers,
-                &snap,
-                Generation(1),
-                None,
-                None,
-                &mut out,
-            )
-            .unwrap(),
+            NativePeer::lookup_qsr_full(&key, &covers, &snap, Generation(1), None, None, &mut out,)
+                .unwrap(),
             QsrOutcome::EmptyInSnapshot
         );
     }

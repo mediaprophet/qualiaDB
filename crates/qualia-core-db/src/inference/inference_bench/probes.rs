@@ -194,9 +194,7 @@ pub fn gemm_parity_probe_blocking(
     seed: u64,
 ) -> Result<(f32, f64, u64, u64), String> {
     let _ = (n_in, n_out, seed);
-    Err(
-        "GEMM parity probe requires the `gpu-runtime` feature; refusing to stub GPU success".into(),
-    )
+    Err("GEMM parity probe requires the `gpu-runtime` feature; refusing to stub GPU success".into())
 }
 
 /// W3/F16 — GPU↔CPU parity for the new **F16** GEMM path (`unpack2x16float` in the shader vs the CPU
@@ -593,9 +591,7 @@ pub fn capture_kv_gpu_readback(
     max_per_layer: usize,
 ) -> Result<crate::kv_capture::KvCapture, String> {
     let _ = (model_path, max_tok, max_per_layer);
-    Err(
-        "GPU KV readback requires the `gpu-runtime` feature; refusing to stub GPU success".into(),
-    )
+    Err("GPU KV readback requires the `gpu-runtime` feature; refusing to stub GPU success".into())
 }
 
 /// AWQ α-sweep on the ternary FFN (AWQ steps 1–3 end to end): capture activation salience from the Q8

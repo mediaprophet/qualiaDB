@@ -192,7 +192,11 @@ mod tests {
         assert_eq!((src, dst), (ports::QDNF, ports::QDNF));
         assert_eq!(payload, b"QDNF");
         assert_ne!(ports::QDNF, ports::CHAT);
-        assert_ne!(ports::QDNF, 4242, "overlay port is not the graph daemon TCP port");
+        assert_ne!(
+            ports::QDNF,
+            4242,
+            "overlay port is not the graph daemon TCP port"
+        );
     }
 
     #[test]

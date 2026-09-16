@@ -35,9 +35,9 @@ pub use execute::{accelerated_gemm_f32, shared_policy, RanOn};
 #[cfg(feature = "gpu-runtime")]
 pub use gpu_gemm::WgpuGemm;
 pub use kernel_class::KernelClass;
-pub use matrix::{probe_class_matrix, ClassMatrix, CpuBackend};
 #[cfg(feature = "gpu-runtime")]
 pub use matrix::WgpuBackend;
+pub use matrix::{probe_class_matrix, ClassMatrix, CpuBackend};
 pub use policy::{ComputePolicy, Plan};
 
 /// The default backend registry: the always-present native CPU path plus the

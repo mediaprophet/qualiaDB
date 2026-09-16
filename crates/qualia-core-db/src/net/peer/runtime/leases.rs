@@ -137,10 +137,7 @@ mod tests {
         let mut table = LeaseTable::new();
         let lease = table.acquire(64, true).unwrap();
         table.release(lease.handle).unwrap();
-        assert_eq!(
-            table.release(lease.handle),
-            Err(QdnfError::DoubleRelease)
-        );
+        assert_eq!(table.release(lease.handle), Err(QdnfError::DoubleRelease));
     }
 
     #[test]

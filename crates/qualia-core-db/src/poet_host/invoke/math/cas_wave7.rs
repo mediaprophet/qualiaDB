@@ -53,7 +53,10 @@ pub fn is_power_of_two(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
 /// Args: `{ n }`. Out: `{ value: bool }`.
 pub fn is_central_angle_constructible(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let n = args::rec_u64(args_v, "n").ok_or_else(|| {
-        args::bad(span, "Constructibility.is_central_angle_constructible needs n")
+        args::bad(
+            span,
+            "Constructibility.is_central_angle_constructible needs n",
+        )
     })?;
     Ok(args::record([(
         "value",
@@ -63,10 +66,7 @@ pub fn is_central_angle_constructible(args_v: &Value, span: Span) -> Result<Valu
 
 /// `Constructibility.doubling_the_cube_constructible` — classical impossibility (false).
 /// Args: `{}`. Out: `{ value: bool }`.
-pub fn doubling_the_cube_constructible(
-    _args_v: &Value,
-    _span: Span,
-) -> Result<Value, Diagnostic> {
+pub fn doubling_the_cube_constructible(_args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     Ok(args::record([(
         "value",
         Value::Bool(constr::doubling_the_cube_constructible()),
@@ -101,7 +101,10 @@ pub fn squaring_the_circle_constructible(
 /// Args: `{ expr }`. Out: `{ verdict, value, degree_bound? }`.
 pub fn is_constructible_number(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let expr = args::rec_str(args_v, "expr").ok_or_else(|| {
-        args::bad(span, "Constructibility.is_constructible_number needs expr: string")
+        args::bad(
+            span,
+            "Constructibility.is_constructible_number needs expr: string",
+        )
     })?;
     let e = parse_expr(expr, span)?;
     Ok(verdict_record(constr::is_constructible_number(&e)))
@@ -110,15 +113,12 @@ pub fn is_constructible_number(args_v: &Value, span: Span) -> Result<Value, Diag
 /// `SymbolicAlgebra.solve_quadratic_symbolic` — exact `Expr` roots of `a x² + b x + c`.
 /// Args: `{ a, b, c }`. Out: `{ roots: [string] }`.
 pub fn solve_quadratic_symbolic(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let a = args::rec_f64(args_v, "a").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.solve_quadratic_symbolic needs a")
-    })?;
-    let b = args::rec_f64(args_v, "b").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.solve_quadratic_symbolic needs b")
-    })?;
-    let c = args::rec_f64(args_v, "c").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.solve_quadratic_symbolic needs c")
-    })?;
+    let a = args::rec_f64(args_v, "a")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.solve_quadratic_symbolic needs a"))?;
+    let b = args::rec_f64(args_v, "b")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.solve_quadratic_symbolic needs b"))?;
+    let c = args::rec_f64(args_v, "c")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.solve_quadratic_symbolic needs c"))?;
     let roots = sa::solve_quadratic_symbolic(a, b, c);
     Ok(args::record([(
         "roots",
@@ -141,9 +141,8 @@ pub fn factor_quadratic(args_v: &Value, span: Span) -> Result<Value, Diagnostic>
     let c = args::rec_f64(args_v, "c")
         .ok_or_else(|| args::bad(span, "SymbolicAlgebra.factor_quadratic needs c"))?;
     let var = args::rec_str(args_v, "var").unwrap_or("x");
-    let factored = sa::factor_quadratic(a, b, c, var).ok_or_else(|| {
-        args::bad(span, "factor_quadratic: no real factorisation")
-    })?;
+    let factored = sa::factor_quadratic(a, b, c, var)
+        .ok_or_else(|| args::bad(span, "factor_quadratic: no real factorisation"))?;
     Ok(args::record([(
         "factor",
         Value::String(factored.to_string()),

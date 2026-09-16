@@ -56,7 +56,9 @@ pub const fn labelled_wireguard_transition() -> bool {
 /// Address-dependent mapping cannot publish a STUN address as a listen locator.
 pub fn recommend_role(class: MappingClass) -> ProbeRole {
     match class {
-        MappingClass::EndpointIndependent | MappingClass::AddressDependent => ProbeRole::ConnectOnly,
+        MappingClass::EndpointIndependent | MappingClass::AddressDependent => {
+            ProbeRole::ConnectOnly
+        }
     }
 }
 
@@ -141,8 +143,13 @@ pub fn encode_binding_success_v4(tid: &[u8; 12], mapped: SocketAddr) -> Result<[
 }
 
 /// Send one Binding request on `sock` toward `server` and parse XOR-MAPPED-ADDRESS.
-pub fn stun_bind(sock: &UdpSocket, server: SocketAddr, timeout: Duration) -> Result<SocketAddr, String> {
-    sock.set_read_timeout(Some(timeout)).map_err(|e| e.to_string())?;
+pub fn stun_bind(
+    sock: &UdpSocket,
+    server: SocketAddr,
+    timeout: Duration,
+) -> Result<SocketAddr, String> {
+    sock.set_read_timeout(Some(timeout))
+        .map_err(|e| e.to_string())?;
     let mut tid = [0u8; 12];
     fill_tid(&mut tid)?;
     let mut req = [0u8; 20];
@@ -209,22 +216,21 @@ mod tests {
         let mapped: SocketAddr = "192.0.2.1:9".parse().unwrap();
         let pkt = encode_binding_success_v4(&tid, mapped).unwrap();
         let other = [2u8; 12];
-        assert!(parse_xor_mapped_v4(&pkt, &other).unwrap_err().contains("tid"));
+        assert!(parse_xor_mapped_v4(&pkt, &other)
+            .unwrap_err()
+            .contains("tid"));
     }
 
     #[test]
     fn address_dependent_when_samples_differ() {
         let a: SocketAddr = "198.51.100.1:1000".parse().unwrap();
         let b: SocketAddr = "198.51.100.2:2000".parse().unwrap();
+        assert_eq!(classify_samples(a, b), MappingClass::AddressDependent);
         assert_eq!(
-            classify_samples(a, b),
-            MappingClass::AddressDependent
+            recommend_role(MappingClass::AddressDependent),
+            ProbeRole::ConnectOnly
         );
-        assert_eq!(recommend_role(MappingClass::AddressDependent), ProbeRole::ConnectOnly);
-        assert_eq!(
-            classify_samples(a, a),
-            MappingClass::EndpointIndependent
-        );
+        assert_eq!(classify_samples(a, a), MappingClass::EndpointIndependent);
         assert_eq!(
             recommend_role(MappingClass::EndpointIndependent),
             ProbeRole::ConnectOnly

@@ -1,5 +1,8 @@
-//! `NLP.fst_lookup` — FST morphology lookup over a word.
+//! `NLP.fst_lookup` — trie lookup over caller-supplied entries, plus English
+//! suffix stripping (`-s`/`-es`/`-ies`/`-ed`/`-ing`). Empty `entries` yield
+//! no results. Not a language pack.
 
+use crate::nlp::budget::{reject_fst_entries, reject_fst_word};
 use crate::nlp::fst::FstDict;
 use std::collections::BTreeMap;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -8,24 +11,8 @@ use vibe::{DiagCode, Diagnostic, Span, Value};
 /// `entries` argument (a list of `[surface, "lemma|features"]` pairs).
 /// Returns a list of `{ lemma, features, start, end }` records.
 pub fn fst_lookup(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let (word, entries) = match args {
-        Value::Record(rec) => {
-            let word = match rec.get("word") {
-                Some(Value::String(s)) => s.as_str(),
-                _ => {
-                    return Err(Diagnostic::new(
-                        DiagCode::E100,
-                        span,
-                        "NLP.fst_lookup needs a { word: string } record",
-                    ))
-                }
-            };
-            let entries = match rec.get("entries") {
-                Some(Value::List(list)) => list.clone(),
-                _ => Vec::new(),
-            };
-            (word, entries)
-        }
+    let rec = match args {
+        Value::Record(rec) => rec,
         _ => {
             return Err(Diagnostic::new(
                 DiagCode::E100,
@@ -34,15 +21,28 @@ pub fn fst_lookup(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             ))
         }
     };
-    if word.len() > 4 * 1024 {
-        return Err(Diagnostic::new(
-            DiagCode::E400,
-            span,
-            "NLP.fst_lookup word exceeds 4 KiB",
-        ));
-    }
+    let word = match rec.get("word") {
+        Some(Value::String(s)) => s.as_str(),
+        _ => {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "NLP.fst_lookup needs a { word: string } record",
+            ))
+        }
+    };
+    reject_fst_word(word.len())
+        .map_err(|e| Diagnostic::new(DiagCode::E400, span, e.to_string()))?;
+    let entries: &[Value] = match rec.get("entries") {
+        Some(Value::List(list)) => {
+            reject_fst_entries(list.len())
+                .map_err(|e| Diagnostic::new(DiagCode::E400, span, e.to_string()))?;
+            list.as_slice()
+        }
+        _ => &[],
+    };
     let mut pairs: Vec<(String, String)> = Vec::with_capacity(entries.len());
-    for e in &entries {
+    for e in entries {
         match e {
             Value::List(pair) if pair.len() == 2 => {
                 let surface = match &pair[0] {
@@ -142,5 +142,17 @@ mod tests {
     fn rejects_non_record() {
         let r = fst_lookup(&Value::I64(1), Span { start: 0, end: 0 });
         assert!(r.is_err());
+    }
+
+    #[test]
+    fn rejects_oversize_entries_list() {
+        let mut rec = BTreeMap::new();
+        rec.insert("word".into(), Value::String("cat".into()));
+        rec.insert(
+            "entries".into(),
+            Value::List(vec![Value::Null; crate::nlp::budget::MAX_FST_ENTRIES + 1]),
+        );
+        let err = fst_lookup(&Value::Record(rec), Span { start: 0, end: 0 }).unwrap_err();
+        assert_eq!(err.code, DiagCode::E400);
     }
 }

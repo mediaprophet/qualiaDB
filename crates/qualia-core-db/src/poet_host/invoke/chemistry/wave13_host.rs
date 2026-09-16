@@ -37,7 +37,10 @@ fn am_from_args(args_v: &Value, span: Span) -> Result<AngularMomentum, Diagnosti
     }
     if let Some(s) = args::rec_str(args_v, "letter") {
         let c = s.chars().next().ok_or_else(|| {
-            args::bad(span, "Chemistry angular helpers need letter: non-empty string")
+            args::bad(
+                span,
+                "Chemistry angular helpers need letter: non-empty string",
+            )
         })?;
         return AngularMomentum::from_letter(c)
             .ok_or_else(|| args::bad(span, format!("unknown spectroscopic letter '{c}'")));
@@ -108,13 +111,19 @@ pub fn letter(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// `Chemistry.n_cartesian` — (l+1)(l+2)/2. Args: `{ l }` or `{ letter }`. Out: `{ value }`.
 pub fn n_cartesian(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let am = am_from_args(args_v, span)?;
-    Ok(args::record([("value", Value::U64(am.n_cartesian() as u64))]))
+    Ok(args::record([(
+        "value",
+        Value::U64(am.n_cartesian() as u64),
+    )]))
 }
 
 /// `Chemistry.n_spherical` — 2l+1. Args: `{ l }` or `{ letter }`. Out: `{ value }`.
 pub fn n_spherical(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let am = am_from_args(args_v, span)?;
-    Ok(args::record([("value", Value::U64(am.n_spherical() as u64))]))
+    Ok(args::record([(
+        "value",
+        Value::U64(am.n_spherical() as u64),
+    )]))
 }
 
 /// `Chemistry.from_letter` — letter → l. Args: `{ letter }`. Out: `{ l }`.
@@ -180,11 +189,17 @@ mod tests {
         let mut m = BTreeMap::new();
         m.insert("l".into(), Value::U64(2));
         assert_eq!(
-            args::rec_str(&letter(&Value::Record(m.clone()), span()).unwrap(), "letter"),
+            args::rec_str(
+                &letter(&Value::Record(m.clone()), span()).unwrap(),
+                "letter"
+            ),
             Some("d")
         );
         assert_eq!(
-            args::rec_u64(&n_cartesian(&Value::Record(m.clone()), span()).unwrap(), "value"),
+            args::rec_u64(
+                &n_cartesian(&Value::Record(m.clone()), span()).unwrap(),
+                "value"
+            ),
             Some(6)
         );
         assert_eq!(

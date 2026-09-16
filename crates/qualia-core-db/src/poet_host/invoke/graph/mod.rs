@@ -1,12 +1,12 @@
 //! Future seam: `qualia-graph` (`query/`, `sparql_library/`, `daemon_graph`).
 
+mod lexicon;
 mod n3;
 mod personhood;
 mod shacl;
 mod sparql;
 mod stats;
 mod volume;
-mod lexicon;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod activation;
@@ -14,12 +14,12 @@ mod authoring;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod path;
 
+pub use lexicon::lexicon_manifest;
 pub use n3::evaluate as n3_evaluate;
 pub use shacl::{extensions as shacl_extensions, validate as shacl_validate};
 pub use sparql::query as sparql;
 pub use stats::stats;
 pub use volume::{commit as volume_commit, open as volume_open};
-pub use lexicon::lexicon_manifest;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use activation::spreading_activation;

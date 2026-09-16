@@ -236,6 +236,7 @@ fn KeepDirectory() -> Element {
             KeepLink { to: Route::HealthRoute {}, title: "Care — Health vault", blurb: "Vitals, sleep, medication, wellbeing — local journal, not cloud." }
             KeepLink { to: Route::LibraryRoute {}, title: "Memory — Lived Memory", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
             KeepLink { to: Route::PoetCatalogRoute {}, title: "Catalog · Lexicon", blurb: "Open a lexicon pack — or honest held / not yet. Live GraphDatabase.lexicon_manifest." }
+            KeepLink { to: Route::PoetInstrumentRoute {}, title: "Catalog · Instruments", blurb: "Demo and Reference semantic instruments. Collect is not activate. Artwork is not proof." }
             KeepLink { to: Route::VisionRoute {}, title: "Instruments — Vision", blurb: "Local detect/overlay — not a peer person. Synthetic scenes, reject/correct without erasing claims." }
             KeepLink { to: Route::ListenRoute {}, title: "Instruments — Listen", blurb: "Local ears — features, reference events (not full ASR). Not social." }
             KeepLink { to: Route::IdentityRoute {}, title: "You — Identity", blurb: "Personal profile, social book, consent. Identifiers ≠ the natural person." }

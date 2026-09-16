@@ -78,7 +78,10 @@ fn vector1_unsigned_proof_and_git_id() {
     let (id, doc) = vector1_unsigned_doc();
     let mut did = [0u8; MAX_DID_TEXT];
     let n = format_did(&id, &mut did).unwrap();
-    assert_eq!(&did[..n], b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu");
+    assert_eq!(
+        &did[..n],
+        b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu"
+    );
     assert_eq!(
         SigningKey::from_bytes(&rfc8032_sk())
             .verifying_key()

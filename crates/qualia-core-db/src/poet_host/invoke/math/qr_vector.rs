@@ -111,12 +111,12 @@ pub fn add_into(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// `LinearAlgebra.cholesky_solve` — solve `A x = b` given Cholesky factor `L`.
 /// Args: `{ l, n, b }`. Out: `{ x }`.
 pub fn cholesky_solve(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let l = args::rec_f64_list(args_v, "l")
-        .ok_or_else(|| args::bad(span, "cholesky_solve needs l"))?;
-    let n = args::rec_u64(args_v, "n")
-        .ok_or_else(|| args::bad(span, "cholesky_solve needs n"))? as usize;
-    let b = args::rec_f64_list(args_v, "b")
-        .ok_or_else(|| args::bad(span, "cholesky_solve needs b"))?;
+    let l =
+        args::rec_f64_list(args_v, "l").ok_or_else(|| args::bad(span, "cholesky_solve needs l"))?;
+    let n = args::rec_u64(args_v, "n").ok_or_else(|| args::bad(span, "cholesky_solve needs n"))?
+        as usize;
+    let b =
+        args::rec_f64_list(args_v, "b").ok_or_else(|| args::bad(span, "cholesky_solve needs b"))?;
     let mut x = vec![0.0; n];
     chol_solve(n, &l, &b, &mut x).map_err(|e| args::bad(span, format!("cholesky_solve: {e:?}")))?;
     Ok(args::record([("x", args::f64_list_value(x))]))
@@ -124,7 +124,8 @@ pub fn cholesky_solve(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `LinearAlgebra.axpy` — `y += α·x` (BLAS axpy). Args: `{ alpha, x, y }`. Out: `{ y }`.
 pub fn axpy(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let alpha = args::rec_f64(args_v, "alpha").ok_or_else(|| args::bad(span, "axpy needs alpha"))?;
+    let alpha =
+        args::rec_f64(args_v, "alpha").ok_or_else(|| args::bad(span, "axpy needs alpha"))?;
     let x = args::rec_f64_list(args_v, "x").ok_or_else(|| args::bad(span, "axpy needs x"))?;
     let mut y = args::rec_f64_list(args_v, "y").ok_or_else(|| args::bad(span, "axpy needs y"))?;
     blas_axpy(alpha, &x, &mut y).map_err(|e| args::bad(span, format!("axpy: {e:?}")))?;
@@ -146,8 +147,7 @@ pub fn hadamard_into(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn add_assign(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mut a =
         args::rec_f64_list(args_v, "a").ok_or_else(|| args::bad(span, "add_assign needs a"))?;
-    let b =
-        args::rec_f64_list(args_v, "b").ok_or_else(|| args::bad(span, "add_assign needs b"))?;
+    let b = args::rec_f64_list(args_v, "b").ok_or_else(|| args::bad(span, "add_assign needs b"))?;
     vec_add_assign(&mut a, &b).map_err(|e| args::bad(span, format!("add_assign: {e:?}")))?;
     Ok(args::record([("a", args::f64_list_value(a))]))
 }
@@ -289,7 +289,11 @@ mod tests {
         let mut args = BTreeMap::new();
         args.insert(
             "matrix".into(),
-            mat(3, 3, vec![12.0, -51.0, 4.0, 6.0, 167.0, -68.0, -4.0, 24.0, -41.0]),
+            mat(
+                3,
+                3,
+                vec![12.0, -51.0, 4.0, 6.0, 167.0, -68.0, -4.0, 24.0, -41.0],
+            ),
         );
         let fac = qr_factor(&Value::Record(args), span()).unwrap();
         let mut q_args = BTreeMap::new();

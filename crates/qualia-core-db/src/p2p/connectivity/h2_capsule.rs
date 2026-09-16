@@ -99,9 +99,7 @@ fn h2_tls_cfgs(
 }
 
 /// Two loopback TLS HTTP/2 peers with `:protocol` = `capsule`.
-pub fn loopback_tls_h2_capsule(
-    ca: &LocalCa,
-) -> Result<(CapsuleEndpoint, CapsuleEndpoint), String> {
+pub fn loopback_tls_h2_capsule(ca: &LocalCa) -> Result<(CapsuleEndpoint, CapsuleEndpoint), String> {
     loopback_tls_h2_connect(ca, CAPSULE_PROTOCOL)
 }
 
@@ -131,10 +129,7 @@ pub fn loopback_tls_h2_connect(
     ))
 }
 
-async fn establish(
-    ca: &LocalCa,
-    protocol: &'static str,
-) -> Result<(Half, Half), String> {
+async fn establish(ca: &LocalCa, protocol: &'static str) -> Result<(Half, Half), String> {
     let (srv_cfg, cli_cfg) = h2_tls_cfgs(ca)?;
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
@@ -419,9 +414,11 @@ fn decode_varint(src: &[u8]) -> Result<(u64, usize), CapsuleError> {
         1 => first as u64,
         2 => u16::from_be_bytes([src[0], src[1]]) as u64 & 0x3fff,
         4 => u32::from_be_bytes([src[0], src[1], src[2], src[3]]) as u64 & 0x3fff_ffff,
-        8 => u64::from_be_bytes([
-            src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7],
-        ]) & MAX_VARINT,
+        8 => {
+            u64::from_be_bytes([
+                src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7],
+            ]) & MAX_VARINT
+        }
         _ => return Err(CapsuleError::Malformed),
     };
     if varint_len(value) != len {

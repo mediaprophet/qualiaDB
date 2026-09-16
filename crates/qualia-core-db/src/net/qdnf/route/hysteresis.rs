@@ -389,13 +389,27 @@ mod tests {
         assert!(hop_is_held_down(&held[0], 11, &policy));
         assert_eq!(
             admit_healed_routes(
-                &current, &[flap], &held, &constraint, &policy, 11, 10, &mut out
+                &current,
+                &[flap],
+                &held,
+                &constraint,
+                &policy,
+                11,
+                10,
+                &mut out
             ),
             Err(QdnfError::NoRoute)
         );
         assert!(!hop_is_held_down(&held[0], 70, &policy));
         let n = admit_healed_routes(
-            &current, &[flap], &held, &constraint, &policy, 70, 10, &mut out,
+            &current,
+            &[flap],
+            &held,
+            &constraint,
+            &policy,
+            70,
+            10,
+            &mut out,
         )
         .unwrap();
         assert_eq!(n, 1);

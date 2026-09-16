@@ -1,0 +1,80 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-eg-en-001",
+  "split": "train",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "See e.g. later notes.",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 3,
+      "surface": "See",
+      "kind": "Word"
+    },
+    {
+      "start": 4,
+      "end": 5,
+      "surface": "e",
+      "kind": "Word"
+    },
+    {
+      "start": 5,
+      "end": 6,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 6,
+      "end": 7,
+      "surface": "g",
+      "kind": "Word"
+    },
+    {
+      "start": 7,
+      "end": 8,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 9,
+      "end": 14,
+      "surface": "later",
+      "kind": "Word"
+    },
+    {
+      "start": 15,
+      "end": 20,
+      "surface": "notes",
+      "kind": "Word"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "surface": ".",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 6,
+      "surface": "See e."
+    },
+    {
+      "start": 6,
+      "end": 8,
+      "surface": "g."
+    },
+    {
+      "start": 9,
+      "end": 21,
+      "surface": "later notes."
+    }
+  ]
+}

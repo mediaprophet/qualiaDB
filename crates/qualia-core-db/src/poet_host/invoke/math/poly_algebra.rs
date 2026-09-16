@@ -25,7 +25,10 @@ pub fn div_rem(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let (q, r) = a
         .div_rem(&b)
         .ok_or_else(|| args::bad(span, "div_rem: division by zero polynomial"))?;
-    Ok(args::record([("q", coeffs_value(&q)), ("r", coeffs_value(&r))]))
+    Ok(args::record([
+        ("q", coeffs_value(&q)),
+        ("r", coeffs_value(&r)),
+    ]))
 }
 
 /// `PolynomialAlgebra.derivative` — first derivative. Args: `{ a }`. Out: `{ coeffs }`.
@@ -122,7 +125,10 @@ pub fn eval(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `PolynomialAlgebra.zero` — the zero polynomial. Args: `{}`. Out: `{ coeffs }`.
 pub fn zero(_args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    Ok(args::record([("coeffs", coeffs_value(&Polynomial::zero()))]))
+    Ok(args::record([(
+        "coeffs",
+        coeffs_value(&Polynomial::zero()),
+    )]))
 }
 
 /// `PolynomialAlgebra.constant` — constant polynomial `c`.
@@ -225,10 +231,8 @@ mod tests {
     #[test]
     fn resultant_shared_root_is_zero() {
         // (x−1)(x−2) and (x−2)(x−3) share root → resultant 0
-        let a = Polynomial::new(vec![-1.0, 1.0])
-            .mul(&Polynomial::new(vec![-2.0, 1.0]));
-        let b = Polynomial::new(vec![-2.0, 1.0])
-            .mul(&Polynomial::new(vec![-3.0, 1.0]));
+        let a = Polynomial::new(vec![-1.0, 1.0]).mul(&Polynomial::new(vec![-2.0, 1.0]));
+        let b = Polynomial::new(vec![-2.0, 1.0]).mul(&Polynomial::new(vec![-3.0, 1.0]));
         let mut m = BTreeMap::new();
         m.insert("a".into(), coeffs_value(&a));
         m.insert("b".into(), coeffs_value(&b));
@@ -242,7 +246,10 @@ mod tests {
         let mut m = BTreeMap::new();
         m.insert("a".into(), args::f64_list_value(vec![2.0, 3.0, 4.0]));
         assert_eq!(
-            args::rec_u64(&degree(&Value::Record(m.clone()), span()).unwrap(), "degree"),
+            args::rec_u64(
+                &degree(&Value::Record(m.clone()), span()).unwrap(),
+                "degree"
+            ),
             Some(2)
         );
         assert_eq!(
@@ -266,7 +273,6 @@ mod tests {
             Some(false)
         );
     }
-
 
     #[test]
     fn degree_of_zero_is_null() {

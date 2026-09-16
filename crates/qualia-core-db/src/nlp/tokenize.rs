@@ -69,7 +69,7 @@ pub fn tokenize(source: &str) -> Vec<Token<'_>> {
             });
             continue;
         }
-        if ch.is_ascii_punctuation() {
+        if is_punct_token(ch) {
             out.push(Token {
                 kind: TokenKind::Punct,
                 text: &source[i..i + len],
@@ -96,7 +96,7 @@ pub fn split_sentences(source: &str) -> Vec<Sentence> {
     while i < bytes.len() {
         let ch = source[i..].chars().next().unwrap();
         let len = ch.len_utf8();
-        let ender = ch == '.' || ch == '!' || ch == '?' || ch == '\n';
+        let ender = is_sentence_ender(ch) && !is_ascii_decimal_dot(bytes, i, ch);
         i += len;
         if ender {
             let end = i;
@@ -130,6 +130,29 @@ fn is_word_cont(ch: char) -> bool {
     ch.is_alphanumeric() || ch == '_' || ch == '\'' || ch == '-'
 }
 
+/// ASCII `.?!` plus CJK/fullwidth terminators used by `split_sentences`.
+fn is_sentence_ender(ch: char) -> bool {
+    matches!(
+        ch,
+        '.' | '!' | '?' | '\n' | '\u{3002}' | '\u{FF01}' | '\u{FF1F}'
+    )
+}
+
+/// ASCII `.` between two ASCII digits is a decimal point, not a sentence end.
+fn is_ascii_decimal_dot(bytes: &[u8], i: usize, ch: char) -> bool {
+    if ch != '.' {
+        return false;
+    }
+    let prev_digit = i > 0 && bytes[i - 1].is_ascii_digit();
+    let next = i + 1;
+    let next_digit = next < bytes.len() && bytes[next].is_ascii_digit();
+    prev_digit && next_digit
+}
+
+fn is_punct_token(ch: char) -> bool {
+    ch.is_ascii_punctuation() || matches!(ch, '\u{3002}' | '\u{FF01}' | '\u{FF1F}')
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +173,40 @@ mod tests {
         let src = "One. Two!";
         let sents = split_sentences(src);
         assert_eq!(sents.len(), 2);
+        assert_eq!(&src[sents[0].span.as_range()], "One.");
+        assert_eq!(&src[sents[1].span.as_range()], "Two!");
+    }
+
+    #[test]
+    fn splits_decimal_not_sentence() {
+        let src = "Recorded 12.5 mm. Next.";
+        let sents = split_sentences(src);
+        assert_eq!(sents.len(), 2, "decimal point must not split a sentence");
+        assert_eq!(&src[sents[0].span.as_range()], "Recorded 12.5 mm.");
+        assert_eq!(&src[sents[1].span.as_range()], "Next.");
+    }
+
+    #[test]
+    fn splits_unicode_terminators() {
+        let src = "你好。世界！";
+        let sents = split_sentences(src);
+        assert_eq!(sents.len(), 2);
+        assert_eq!(&src[sents[0].span.as_range()], "你好。");
+        assert_eq!(&src[sents[1].span.as_range()], "世界！");
+    }
+
+    #[test]
+    fn unicode_terminators_are_punct() {
+        let src = "你好。世界！吗？";
+        let toks = tokenize(src);
+        let punct: Vec<&str> = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::Punct)
+            .map(|t| t.text)
+            .collect();
+        assert_eq!(punct, vec!["。", "！", "？"]);
+        for t in toks.iter().filter(|t| t.kind == TokenKind::Punct) {
+            assert_eq!(&src[t.span.as_range()], t.text);
+        }
     }
 }

@@ -6,37 +6,12 @@
 mod calculus;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod calculus_workbench;
-pub mod closure_solvers;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod ga;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod linear;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod number;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod optimize;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod polynomial;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod poly_algebra;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod gemm_host;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod la_app;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod wave14_host;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod wave15_host;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod wave18_host;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod qr_vector;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod special;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod symbolic;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod cas_ext;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod cas_wave10;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod cas_wave12;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod cas_wave5;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -47,90 +22,44 @@ mod cas_wave7;
 mod cas_wave8;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod cas_wave9;
+pub mod closure_solvers;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod cas_wave10;
+mod ga;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-mod cas_wave12;
+mod gemm_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod la_app;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod linear;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod number;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod optimize;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod poly_algebra;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod polynomial;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod qr_vector;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod special;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod symbolic;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod transforms;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod units;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave14_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave15_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave18_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use calculus::integrate as simpson;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use calculus_workbench::compute as calculus_compute;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use ga::{
-    angle_between_vectors_host as ga_angle_between_vectors,
-    cross_product_host as ga_cross_product, dot as ga_dot,
-    normalize_vector_host as ga_normalize_vector,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use linear::{
-    determinant as la_determinant, eigen_symmetric as la_eigen_symmetric,
-    eigenvalues as la_eigenvalues, multiply as matmul, solve as la_solve, svd as la_svd,
-    transpose as la_transpose,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use number::{gcd, is_prime, lcm};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use optimize::hill_climb;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use polynomial::roots as polynomial_roots;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use qr_vector::{
-    add_assign as la_add_assign, add_into as la_add_into, axpy as la_axpy,
-    cholesky_solve as la_cholesky_solve, hadamard_assign as la_hadamard_assign,
-    hadamard_into as la_hadamard_into, matvec as la_matvec, qr_factor as la_qr_factor,
-    qr_form_q_host as la_qr_form_q, qr_solve_least_squares_host as la_qr_solve_least_squares,
-    scale as la_scale, symmetric_eigen_3x3 as la_symmetric_eigen_3x3,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use poly_algebra::{
-    add as poly_add, coeffs as poly_coeffs, constant as poly_constant, degree as poly_degree,
-    derivative as poly_derivative, div_rem as poly_div_rem, eval as poly_eval, gcd as poly_gcd,
-    is_zero as poly_is_zero, leading as poly_leading, monic as poly_monic, mul as poly_mul,
-    resultant as poly_resultant, scale as poly_scale, sub as poly_sub, zero as poly_zero,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use gemm_host::gemm_host as la_gemm;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use la_app::{
-    la_dot, la_identity, la_inverse, la_norm, la_trace,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use wave14_host::{
-    bdf1_step_host as calc_bdf1_step, bdf2_step_host as calc_bdf2_step,
-    hermite_dense_output_host as calc_hermite_dense_output,
-    invariant_drift_host as calc_invariant_drift, pack_f32_pair_host as calc_pack_f32_pair,
-    permutation_parity_host as calc_permutation_parity, top_k_host as graph_top_k,
-    unpack_f32_pair_host as calc_unpack_f32_pair,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use wave15_host::{
-    integrate_bdf_host as calc_integrate_bdf,
-    integrate_with_sensitivity_host as calc_integrate_with_sensitivity,
-    ruth3_step_host as calc_ruth3_step, verlet_step_host as calc_verlet_step,
-    yoshida4_step_host as calc_yoshida4_step,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use wave18_host::{
-    adaptive_gauss_kronrod_15_host as calc_adaptive_gauss_kronrod_15,
-    canonical_poisson_bracket_host as calc_canonical_poisson_bracket,
-    jvp_host as calc_jvp, stormer_verlet_step_host as calc_stormer_verlet_step,
-    vjp_host as calc_vjp,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use special::bessel_jn;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use symbolic::{
-    curl, differentiate as cas_differentiate, divergence, eval_poly, expand as cas_expand,
-    factor as cas_factor, gradient, integrate as cas_integrate, laplacian, limit as cas_limit,
-    simplify as cas_simplify, simplify_trig as cas_simplify_trig,
-    solve_quadratic as cas_solve_quadratic, taylor_coefficients as cas_taylor_coefficients,
-    taylor_eval as cas_taylor_eval,
-};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use cas_ext::{
     classify_second_order_pde as ode_classify_second_order_pde,
@@ -139,13 +68,16 @@ pub use cas_ext::{
     solve_linear_second_order as ode_solve_linear_second_order,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use cas_wave10::parse as cas_parse;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use cas_wave12::{from_quins as cas_from_quins, to_quins as cas_to_quins};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use cas_wave5::{
     expr_citation_hash as cas_expr_citation_hash, roots as cas_roots,
     simplify_with_assumptions as cas_simplify_with_assumptions,
     solve_first_order_linear_pde as ode_solve_first_order_linear_pde,
     solve_linear_system as la_solve_linear_system,
-    solve_polynomial_expr as cas_solve_polynomial_expr,
-    solve_separable as ode_solve_separable,
+    solve_polynomial_expr as cas_solve_polynomial_expr, solve_separable as ode_solve_separable,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use cas_wave6::{
@@ -168,21 +100,84 @@ pub use cas_wave7::{
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use cas_wave8::{
-    cos as cas_cos, exp as cas_exp, ln as cas_ln, neg as cas_neg, pow as cas_pow,
-    sin as cas_sin, sqrt as cas_sqrt, tan as cas_tan,
+    cos as cas_cos, exp as cas_exp, ln as cas_ln, neg as cas_neg, pow as cas_pow, sin as cas_sin,
+    sqrt as cas_sqrt, tan as cas_tan,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use cas_wave9::{
     add as cas_add, c as cas_c, div as cas_div, mul as cas_mul, sub as cas_sub, var as cas_var,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use cas_wave10::parse as cas_parse;
+pub use ga::{
+    angle_between_vectors_host as ga_angle_between_vectors, cross_product_host as ga_cross_product,
+    dot as ga_dot, normalize_vector_host as ga_normalize_vector,
+};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use cas_wave12::{from_quins as cas_from_quins, to_quins as cas_to_quins};
+pub use gemm_host::gemm_host as la_gemm;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use la_app::{la_dot, la_identity, la_inverse, la_norm, la_trace};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use linear::{
+    determinant as la_determinant, eigen_symmetric as la_eigen_symmetric,
+    eigenvalues as la_eigenvalues, multiply as matmul, solve as la_solve, svd as la_svd,
+    transpose as la_transpose,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use number::{gcd, is_prime, lcm};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use optimize::hill_climb;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use poly_algebra::{
+    add as poly_add, coeffs as poly_coeffs, constant as poly_constant, degree as poly_degree,
+    derivative as poly_derivative, div_rem as poly_div_rem, eval as poly_eval, gcd as poly_gcd,
+    is_zero as poly_is_zero, leading as poly_leading, monic as poly_monic, mul as poly_mul,
+    resultant as poly_resultant, scale as poly_scale, sub as poly_sub, zero as poly_zero,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use polynomial::roots as polynomial_roots;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use qr_vector::{
+    add_assign as la_add_assign, add_into as la_add_into, axpy as la_axpy,
+    cholesky_solve as la_cholesky_solve, hadamard_assign as la_hadamard_assign,
+    hadamard_into as la_hadamard_into, matvec as la_matvec, qr_factor as la_qr_factor,
+    qr_form_q_host as la_qr_form_q, qr_solve_least_squares_host as la_qr_solve_least_squares,
+    scale as la_scale, symmetric_eigen_3x3 as la_symmetric_eigen_3x3,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use special::bessel_jn;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use symbolic::{
+    curl, differentiate as cas_differentiate, divergence, eval_poly, expand as cas_expand,
+    factor as cas_factor, gradient, integrate as cas_integrate, laplacian, limit as cas_limit,
+    simplify as cas_simplify, simplify_trig as cas_simplify_trig,
+    solve_quadratic as cas_solve_quadratic, taylor_coefficients as cas_taylor_coefficients,
+    taylor_eval as cas_taylor_eval,
+};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use transforms::{dft, dft_complex};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use units::convert_unit;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave14_host::{
+    bdf1_step_host as calc_bdf1_step, bdf2_step_host as calc_bdf2_step,
+    hermite_dense_output_host as calc_hermite_dense_output,
+    invariant_drift_host as calc_invariant_drift, pack_f32_pair_host as calc_pack_f32_pair,
+    permutation_parity_host as calc_permutation_parity, top_k_host as graph_top_k,
+    unpack_f32_pair_host as calc_unpack_f32_pair,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave15_host::{
+    integrate_bdf_host as calc_integrate_bdf,
+    integrate_with_sensitivity_host as calc_integrate_with_sensitivity,
+    ruth3_step_host as calc_ruth3_step, verlet_step_host as calc_verlet_step,
+    yoshida4_step_host as calc_yoshida4_step,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave18_host::{
+    adaptive_gauss_kronrod_15_host as calc_adaptive_gauss_kronrod_15,
+    canonical_poisson_bracket_host as calc_canonical_poisson_bracket, jvp_host as calc_jvp,
+    stormer_verlet_step_host as calc_stormer_verlet_step, vjp_host as calc_vjp,
+};
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 fn missing(span: vibe::Span, family: &str) -> Result<vibe::Value, vibe::Diagnostic> {
@@ -318,10 +313,7 @@ pub fn la_qr_solve_least_squares(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn la_add_into(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn la_add_into(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -437,12 +429,18 @@ pub fn poly_degree(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value,
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn poly_leading(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn poly_leading(
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn poly_is_zero(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn poly_is_zero(
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -533,10 +531,7 @@ pub fn cas_expr_citation_hash(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_partial(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_partial(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -547,10 +542,7 @@ pub fn cas_jacobian(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_hessian(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_hessian(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -645,59 +637,35 @@ pub fn cas_factor_quadratic(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_pow(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_pow(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_neg(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_neg(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_sqrt(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_sqrt(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_exp(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_exp(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_ln(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_ln(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_sin(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_sin(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_cos(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_cos(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_tan(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_tan(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]

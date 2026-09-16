@@ -44,7 +44,8 @@ impl PrivateMailbox {
         d: ContactDescriptor,
         disclosure: Disclosure,
     ) -> Result<(), FabricError> {
-        if d.kind == LocatorKind::Direct && prohibited(disclosure, super::carrier::PathClass::DirectV6)
+        if d.kind == LocatorKind::Direct
+            && prohibited(disclosure, super::carrier::PathClass::DirectV6)
         {
             return Err(FabricError::PolicyDenied);
         }
@@ -86,7 +87,8 @@ impl PrivateMailbox {
         if d.is_stale(self.last_gen[i]) {
             return Err(FabricError::StaleDescriptor);
         }
-        if d.kind == LocatorKind::Direct && prohibited(disclosure, super::carrier::PathClass::DirectV6)
+        if d.kind == LocatorKind::Direct
+            && prohibited(disclosure, super::carrier::PathClass::DirectV6)
         {
             return Err(FabricError::PolicyDenied);
         }
@@ -115,7 +117,8 @@ impl PrivateMailbox {
     ) -> Result<usize, FabricError> {
         let i = self.find(key).ok_or(FabricError::Illegal)?;
         let d = self.slots[i].ok_or(FabricError::Illegal)?;
-        if d.kind == LocatorKind::Direct && prohibited(disclosure, super::carrier::PathClass::DirectV6)
+        if d.kind == LocatorKind::Direct
+            && prohibited(disclosure, super::carrier::PathClass::DirectV6)
         {
             return Err(FabricError::PolicyDenied);
         }

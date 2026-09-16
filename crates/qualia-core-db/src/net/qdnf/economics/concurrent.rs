@@ -31,11 +31,15 @@ fn concurrent_last_payments_conserve_cap() {
     let ob = Arc::new(Mutex::new(open(10)));
     let a = {
         let ob = Arc::clone(&ob);
-        thread::spawn(move || reserve_hold(&mut ob.lock().unwrap(), 10, ActingClass::Corporate, op(1)))
+        thread::spawn(move || {
+            reserve_hold(&mut ob.lock().unwrap(), 10, ActingClass::Corporate, op(1))
+        })
     };
     let b = {
         let ob = Arc::clone(&ob);
-        thread::spawn(move || reserve_hold(&mut ob.lock().unwrap(), 10, ActingClass::Corporate, op(2)))
+        thread::spawn(move || {
+            reserve_hold(&mut ob.lock().unwrap(), 10, ActingClass::Corporate, op(2))
+        })
     };
     let ra = a.join().expect("thread a");
     let rb = b.join().expect("thread b");

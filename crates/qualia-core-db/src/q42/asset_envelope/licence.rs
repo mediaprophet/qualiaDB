@@ -208,7 +208,8 @@ impl LicencePolicy {
             redistribution,
             RedistributionClass::NoRedistribution | RedistributionClass::NonCommercialOnly
         ) {
-            obligations = obligations.union(LicenceObligations(LicenceObligations::NO_REDISTRIBUTION));
+            obligations =
+                obligations.union(LicenceObligations(LicenceObligations::NO_REDISTRIBUTION));
         }
         if redistribution == RedistributionClass::NonCommercialOnly {
             obligations = obligations.union(LicenceObligations(LicenceObligations::NON_COMMERCIAL));
@@ -234,11 +235,18 @@ impl LicencePolicy {
     ) -> Result<Self, AssetEnvelopeError> {
         let class = LicenceClass::parse(tag);
         let (use_class, redistribution) = match class {
-            LicenceClass::Cc0 => (UseClass::Commercial, RedistributionClass::FreelyRedistributable),
-            LicenceClass::CcBy | LicenceClass::CcBySa => {
-                (UseClass::Commercial, RedistributionClass::AttributionRequired)
-            }
-            LicenceClass::CcByNc => (UseClass::NonCommercial, RedistributionClass::NonCommercialOnly),
+            LicenceClass::Cc0 => (
+                UseClass::Commercial,
+                RedistributionClass::FreelyRedistributable,
+            ),
+            LicenceClass::CcBy | LicenceClass::CcBySa => (
+                UseClass::Commercial,
+                RedistributionClass::AttributionRequired,
+            ),
+            LicenceClass::CcByNc => (
+                UseClass::NonCommercial,
+                RedistributionClass::NonCommercialOnly,
+            ),
             LicenceClass::ProprietaryPermitted => {
                 (UseClass::Internal, RedistributionClass::NoRedistribution)
             }

@@ -148,21 +148,20 @@ pub fn lookup_parents_into(
             continue;
         }
         let child_view = view_subject(quins, &preds, child, Some(q.context));
-        let parent_surface =
-            accession_from_records(records, q.object).unwrap_or_else(|| {
-                // Parent object is q_hash("CHEBI:{id}"); recover surface from child record.
-                records
-                    .and_then(|rs| {
-                        rs.iter()
-                            .find(|r| q_hash(&r.accession) == child)
-                            .and_then(|r| r.parent_id)
-                    })
-                    .map(|pid| {
-                        let mut buf = [0u8; 32];
-                        super::access::format_chebi_accession(pid, &mut buf).to_owned()
-                    })
-                    .unwrap_or_default()
-            });
+        let parent_surface = accession_from_records(records, q.object).unwrap_or_else(|| {
+            // Parent object is q_hash("CHEBI:{id}"); recover surface from child record.
+            records
+                .and_then(|rs| {
+                    rs.iter()
+                        .find(|r| q_hash(&r.accession) == child)
+                        .and_then(|r| r.parent_id)
+                })
+                .map(|pid| {
+                    let mut buf = [0u8; 32];
+                    super::access::format_chebi_accession(pid, &mut buf).to_owned()
+                })
+                .unwrap_or_default()
+        });
         out[written] = RelationHit {
             child_hash: child,
             parent_hash: q.object,

@@ -208,9 +208,8 @@ impl PortalGpu {
         particle_cap: usize,
     ) -> Result<Self, String> {
         crate::gpu_context::ensure_shared_gpu().await?;
-        let shared = crate::gpu_context::try_shared_gpu().ok_or_else(|| {
-            "shared WebGPU device missing after ensure_shared_gpu".to_string()
-        })?;
+        let shared = crate::gpu_context::try_shared_gpu()
+            .ok_or_else(|| "shared WebGPU device missing after ensure_shared_gpu".to_string())?;
         Self::from_device(
             Arc::new(shared.device.clone()),
             Arc::new(shared.queue.clone()),

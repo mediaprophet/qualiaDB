@@ -3,11 +3,14 @@
 use super::common::{digest, expect_err, verified};
 use crate::net::peer::runtime::{ReservationLedger, ResourceBudget};
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::policy_labels::{encode_label_into, verify_label, Confidentiality, LabelFields};
+use crate::net::qdnf::policy_labels::{
+    encode_label_into, verify_label, Confidentiality, LabelFields,
+};
 use crate::net::qdnf::profiles::{
-    catalog_entry, correlation_resistance_measured, cover_class, drop_cover_for_controls,
-    gateway_transfer, negotiate, queue_offline, release_queued, control_set_from_predicates,
-    CostPreference, ControlPredicate, GatewayMedia, OfflinePackage, OfflineQueue, ProtectionProfile,
+    catalog_entry, control_set_from_predicates, correlation_resistance_measured, cover_class,
+    drop_cover_for_controls, gateway_transfer, negotiate, queue_offline, release_queued,
+    ControlPredicate, CostPreference, GatewayMedia, OfflinePackage, OfflineQueue,
+    ProtectionProfile,
 };
 use crate::net::qdnf::route::{plan_routes, AdjacencyIndex, CandidatePath, PathConstraint};
 use crate::net::qdnf::types::Generation;

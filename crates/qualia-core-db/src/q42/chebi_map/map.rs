@@ -195,15 +195,7 @@ pub fn map_records_into(
         let name_obj = q_hash(&record.name);
 
         // 1. Identity / type
-        write_quin(
-            out,
-            written,
-            subject,
-            pred_type,
-            class_compound,
-            context,
-            0,
-        );
+        write_quin(out, written, subject, pred_type, class_compound, context, 0);
         written += 1;
 
         // 2. Accession evidence
@@ -219,15 +211,7 @@ pub fn map_records_into(
         written += 1;
 
         // 3. Name (hash + lexicon note)
-        write_quin(
-            out,
-            written,
-            subject,
-            pred_has_name,
-            name_obj,
-            context,
-            0,
-        );
+        write_quin(out, written, subject, pred_has_name, name_obj, context, 0);
         written += 1;
 
         // 4. Optional parent
@@ -323,8 +307,8 @@ mod tests {
         ];
         // 4 + (4+1) = 9
         let mut out = [NQuin::default(); 16];
-        let report = map_records_into(&records, "chebi-test-2026", budgets(16, 8), &mut out)
-            .expect("map");
+        let report =
+            map_records_into(&records, "chebi-test-2026", budgets(16, 8), &mut out).expect("map");
         assert_eq!(report.records_mapped, 2);
         assert_eq!(report.quins_written, 9);
         assert!(report.conflicts.is_empty());
@@ -351,8 +335,7 @@ mod tests {
             rec(10, "CHEBI:10", "second-overwrite-attempt", None, 3),
         ];
         let mut out = [NQuin::default(); 16];
-        let report =
-            map_records_into(&records, "rel", budgets(16, 8), &mut out).expect("map");
+        let report = map_records_into(&records, "rel", budgets(16, 8), &mut out).expect("map");
         assert_eq!(report.records_mapped, 1);
         assert_eq!(report.quins_written, QUINS_PER_RECORD_BASE);
         assert_eq!(report.conflicts.len(), 1);
@@ -372,8 +355,7 @@ mod tests {
     fn parent_relationship_when_parent_id_set() {
         let records = [rec(99, "CHEBI:99", "child", Some(7), 5)];
         let mut out = [NQuin::default(); 8];
-        let report =
-            map_records_into(&records, "rel-p", budgets(8, 4), &mut out).expect("map");
+        let report = map_records_into(&records, "rel-p", budgets(8, 4), &mut out).expect("map");
         assert_eq!(report.quins_written, 5);
         let parent_pred = q_hash(PRED_HAS_PARENT);
         let parent_q = out[..report.quins_written]

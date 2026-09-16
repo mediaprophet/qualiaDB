@@ -254,8 +254,8 @@ pub use extensions::extension_manifest;
 pub use extensions::resource_catalog;
 pub mod modalities;
 // --- identity/ category (reorg) ---
-pub mod identity;
 pub mod did_qi;
+pub mod identity;
 pub use identity::agency;
 pub use identity::identifier;
 #[cfg(not(target_arch = "wasm32"))]
@@ -292,6 +292,8 @@ pub mod audio;
 /// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
 /// both native and WASM builds (native adds the zero-copy `BundleMmap`).
 pub mod bundle;
+/// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
+pub mod semantic_instruments;
 /// `.10d` living-container v1 — normative header, axis-role taxonomy, and
 /// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
 /// task. Available to browser/WASM builds (P0.8 parity target). See
@@ -1024,6 +1026,40 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
         mcp_tools: &["qpu_optimize", "qpu_dft", "qpu_status"],
         maturity: "experimental",
         surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "NLP",
+        domain: "language",
+        operations: &[
+            "tokenize (deterministic UTF-8 prototype)",
+            "sentence split (deterministic UTF-8 prototype)",
+            "gazetteer (compiled default lexicon, not NER)",
+            "ISO dates and unit symbols",
+            "exact-match coreference plus experimental pronoun sieve",
+            "keyword-triple search (not GraphRAG)",
+            "tiny suffix FST demo (not a language pack)",
+            "rule-demo frames (not FrameNet)",
+            "rule-demo relations (not OpenIE)",
+            "symbolic substrate (every-word mentions)",
+        ],
+        mcp_tools: &[],
+        maturity: "experimental",
+        surfaces: &["native", "library"],
+    },
+    CapabilityDescriptor {
+        name: "Conditioning",
+        domain: "inference",
+        operations: &[
+            "validate profile",
+            "compile conditioning contract",
+            "inspect requirement trace",
+            "evaluate conditioning campaign",
+            "activate profile version",
+            "rollback profile version",
+        ],
+        mcp_tools: &["conditioning_compile", "conditioning_validate"],
+        maturity: "stable",
+        surfaces: &["native", "mcp", "cli", "chat"],
     },
 ];
 

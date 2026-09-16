@@ -14,8 +14,7 @@ pub const MAX_DID_TEXT: usize = 64;
 
 const PREFIX: &[u8] = b"did:qi:";
 const MULTIBASE_Z: u8 = b'z';
-pub(crate) const B58: &[u8; 58] =
-    b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+pub(crate) const B58: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 pub fn format_did(id: &DidQi, out: &mut [u8]) -> Result<usize, QiError> {
     let mut digits = [0u8; 64];
@@ -194,7 +193,10 @@ mod tests {
         let id = DidQi(raw);
         let mut buf = [0u8; MAX_DID_TEXT];
         let n = format_did(&id, &mut buf).unwrap();
-        assert_eq!(&buf[..n], b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu");
+        assert_eq!(
+            &buf[..n],
+            b"did:qi:zDgtiZgtgfbh7upfLB47yVTWLdSN4CcoaPHok9sew2BVu"
+        );
         assert_eq!(parse_did(&buf[..n]).unwrap(), id);
     }
 

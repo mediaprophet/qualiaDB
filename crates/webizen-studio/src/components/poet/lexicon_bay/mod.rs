@@ -196,7 +196,7 @@ pub fn CatalogPeerTabs(script: Element) -> Element {
             div {
                 class: "lexicon-peer-tabs",
                 role: "tablist",
-                "aria-label": "Script and Catalog · Lexicon",
+                "aria-label": "Script, Catalog · Lexicon, and Instruments",
                 button {
                     r#type: "button",
                     class: if tab() == "script" { "lexicon-peer-tab is-active" } else { "lexicon-peer-tab" },
@@ -213,11 +213,21 @@ pub fn CatalogPeerTabs(script: Element) -> Element {
                     onclick: move |_| tab.set("catalog"),
                     "Catalog · Lexicon"
                 }
+                button {
+                    r#type: "button",
+                    class: if tab() == "instruments" { "lexicon-peer-tab is-active" } else { "lexicon-peer-tab" },
+                    "data-bay-tab": "instruments",
+                    "aria-selected": "{tab() == \"instruments\"}",
+                    onclick: move |_| tab.set("instruments"),
+                    "Catalog · Instruments"
+                }
             }
             if tab() == "script" {
                 div { "data-bay-pane": "script", {script} }
-            } else {
+            } else if tab() == "catalog" {
                 div { "data-bay-pane": "catalog", LexiconBay {} }
+            } else {
+                div { "data-bay-pane": "instruments", crate::components::poet::instrument_bay::InstrumentBay {} }
             }
         }
     }

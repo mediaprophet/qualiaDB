@@ -31,7 +31,10 @@ pub fn verlet_step_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic>
     let h = args::rec_f64(args_v, "h").ok_or_else(|| args::bad(span, "needs h"))?;
     let (force, kv) = harmonic_force_kv(args_v);
     let (q_new, p_new) = verlet_step(q, p, h, force, kv);
-    Ok(args::record([("q", Value::F64(q_new)), ("p", Value::F64(p_new))]))
+    Ok(args::record([
+        ("q", Value::F64(q_new)),
+        ("p", Value::F64(p_new)),
+    ]))
 }
 
 /// `Calculus.ruth3_step` — one Ruth 3rd-order symplectic step.
@@ -41,7 +44,10 @@ pub fn ruth3_step_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
     let h = args::rec_f64(args_v, "h").ok_or_else(|| args::bad(span, "needs h"))?;
     let (force, kv) = harmonic_force_kv(args_v);
     let (q_new, p_new) = ruth3_step(q, p, h, force, kv);
-    Ok(args::record([("q", Value::F64(q_new)), ("p", Value::F64(p_new))]))
+    Ok(args::record([
+        ("q", Value::F64(q_new)),
+        ("p", Value::F64(p_new)),
+    ]))
 }
 
 /// `Calculus.yoshida4_step` — one Yoshida 4th-order symplectic step.
@@ -51,7 +57,10 @@ pub fn yoshida4_step_host(args_v: &Value, span: Span) -> Result<Value, Diagnosti
     let h = args::rec_f64(args_v, "h").ok_or_else(|| args::bad(span, "needs h"))?;
     let (force, kv) = harmonic_force_kv(args_v);
     let (q_new, p_new) = yoshida4_step(q, p, h, force, kv);
-    Ok(args::record([("q", Value::F64(q_new)), ("p", Value::F64(p_new))]))
+    Ok(args::record([
+        ("q", Value::F64(q_new)),
+        ("p", Value::F64(p_new)),
+    ]))
 }
 
 /// `Calculus.integrate_bdf` — BDF2 integration. Args: `{ t0, y0, h, steps, rate?, power? }`.

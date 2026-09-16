@@ -514,10 +514,12 @@ mod tests {
         let input = rec(&[("z", Value::F64(0.0))]);
         let out = observe_redshift(&input, S).unwrap();
         assert!(args::rec_f64(&out, "comoving_distance_mpc").unwrap().abs() < 1e-9);
-        assert!(args::rec_f64(&out, "recession_velocity_km_s")
-            .unwrap()
-            .abs()
-            < 1e-6);
+        assert!(
+            args::rec_f64(&out, "recession_velocity_km_s")
+                .unwrap()
+                .abs()
+                < 1e-6
+        );
     }
 
     #[test]

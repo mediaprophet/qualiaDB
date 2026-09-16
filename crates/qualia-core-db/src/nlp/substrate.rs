@@ -5,9 +5,14 @@
 //! borrow from the caller's `text`), plus owned hits/norms/relations/frames/
 //! coref chains.
 //!
-//! Deterministic, WASM-compatible, no LLM.
+//! Mention generation is unchanged for NLP-001 (every word becomes a mention).
+//! Coreference failures are returned; they are never reported as a successful
+//! substrate. Detector quality belongs to NLP-500.
 
-use super::coref::{resolve_coreferences, CorefChain, CorefMention, MentionKind};
+use super::coref::{
+    resolve_coreferences_counted, CancellationToken, CorefChain, CorefError, CorefLimits,
+    CorefMention, MentionKind,
+};
 use super::frame::FrameInstance;
 use super::gazetteer::{Gazetteer, Hit};
 use super::normalize::Normalized;
@@ -26,32 +31,46 @@ pub struct Substrate<'a> {
 }
 
 /// Extract the full substrate from `text`.
-pub fn extract_substrate(text: &str) -> Substrate<'_> {
+pub fn extract_substrate(text: &str) -> Result<Substrate<'_>, CorefError> {
+    extract_substrate_with_limits(text, &CorefLimits::DEFAULT)
+}
+
+/// Extract the substrate using explicit coreference limits.
+pub fn extract_substrate_with_limits<'a>(
+    text: &'a str,
+    limits: &CorefLimits,
+) -> Result<Substrate<'a>, CorefError> {
+    if text.len() > limits.max_source_bytes {
+        return Err(limits.source_too_large(text.len()));
+    }
     let tokens = tokenize(text);
     let hits = Gazetteer::default().find(text);
     let norms = super::normalize::normalize_dates_and_numbers(text);
     let relations = super::relation::extract_relations(text);
     let frames = super::frame::extract_frames(text);
 
-    // Build mentions for coref from tokens: proper (capitalised non-sentence-
-    // initial words) and pronouns.
-    let mentions = build_mentions(text, &tokens);
-    let coref_chains = resolve_coreferences(text, mentions);
+    let mentions = build_mentions(text, &tokens, limits)?;
+    let (coref_chains, _) =
+        resolve_coreferences_counted(text, &mentions, limits, &CancellationToken::new())?;
 
-    Substrate {
+    Ok(Substrate {
         tokens,
         hits,
         norms,
         relations,
         frames,
         coref_chains,
-    }
+    })
 }
 
 /// Derive coref mentions from tokens. A word is `Proper` when it is
 /// capitalised and not sentence-initial; pronouns are matched against a small
-/// closed set; everything else word is `Common`.
-fn build_mentions(text: &str, tokens: &[Token<'_>]) -> Vec<CorefMention> {
+/// closed set; every other word is `Common`. Over-broad by design until NLP-500.
+fn build_mentions(
+    _text: &str,
+    tokens: &[Token<'_>],
+    limits: &CorefLimits,
+) -> Result<Vec<CorefMention>, CorefError> {
     let mut out = Vec::new();
     let mut at_sentence_start = true;
     for tok in tokens {
@@ -62,39 +81,36 @@ fn build_mentions(text: &str, tokens: &[Token<'_>]) -> Vec<CorefMention> {
         if tok.kind != TokenKind::Word {
             continue;
         }
+        if out.len() >= limits.max_mentions {
+            return Err(CorefError::TooManyMentions {
+                count: out.len().saturating_add(1),
+                max: limits.max_mentions,
+            });
+        }
         let lower = tok.text.to_ascii_lowercase();
-        if is_pronoun(&lower) {
-            out.push(CorefMention {
-                span: tok.span,
-                text: tok.text.to_string(),
-                kind: MentionKind::Pronoun,
-            });
-            at_sentence_start = false;
-            continue;
-        }
-        let is_capitalised = tok
-            .text
-            .chars()
-            .next()
-            .map(|c| c.is_uppercase())
-            .unwrap_or(false);
-        if is_capitalised && !at_sentence_start {
-            out.push(CorefMention {
-                span: tok.span,
-                text: tok.text.to_string(),
-                kind: MentionKind::Proper,
-            });
+        let kind = if is_pronoun(&lower) {
+            MentionKind::Pronoun
         } else {
-            out.push(CorefMention {
-                span: tok.span,
-                text: tok.text.to_string(),
-                kind: MentionKind::Common,
-            });
-        }
+            let is_capitalised = tok
+                .text
+                .chars()
+                .next()
+                .map(|c| c.is_uppercase())
+                .unwrap_or(false);
+            if is_capitalised && !at_sentence_start {
+                MentionKind::Proper
+            } else {
+                MentionKind::Common
+            }
+        };
+        out.push(CorefMention {
+            span: tok.span,
+            text: tok.text.to_string(),
+            kind,
+        });
         at_sentence_start = false;
     }
-    let _ = text;
-    out
+    Ok(out)
 }
 
 fn is_pronoun(s: &str) -> bool {
@@ -125,14 +141,12 @@ mod tests {
     #[test]
     fn end_to_end_paragraph() {
         let src = "John bought a book from Mary. She gave it to John.";
-        let sub = extract_substrate(src);
+        let sub = extract_substrate(src).expect("substrate");
         assert!(!sub.tokens.is_empty());
         assert_eq!(sub.frames.len(), 2);
         assert!(sub.frames.iter().any(|f| f.frame_type == "BUY"));
         assert!(sub.frames.iter().any(|f| f.frame_type == "TRANSFER"));
-        // coref: "She" should link to "Mary", "John" mentions should merge.
         assert!(!sub.coref_chains.is_empty());
-        // There should be a chain containing "Mary" and "She".
         let mary_she_chain = sub.coref_chains.iter().any(|c| {
             c.mentions.iter().any(|m| m.text == "Mary")
                 && c.mentions.iter().any(|m| m.text == "She")
@@ -143,7 +157,7 @@ mod tests {
     #[test]
     fn tokens_borrow_source() {
         let src = "Hello world";
-        let sub = extract_substrate(src);
+        let sub = extract_substrate(src).expect("substrate");
         assert!(sub.tokens.iter().any(|t| t.text == "Hello"));
         assert!(sub.tokens.iter().any(|t| t.text == "world"));
     }
@@ -151,16 +165,28 @@ mod tests {
     #[test]
     fn relations_extracted() {
         let src = "Socrates is a philosopher";
-        let sub = extract_substrate(src);
+        let sub = extract_substrate(src).expect("substrate");
         assert_eq!(sub.relations.len(), 1);
         assert_eq!(sub.relations[0].predicate, "rdf:type");
     }
 
     #[test]
     fn empty_input() {
-        let sub = extract_substrate("");
+        let sub = extract_substrate("").expect("empty substrate");
         assert!(sub.tokens.is_empty());
         assert!(sub.frames.is_empty());
         assert!(sub.relations.is_empty());
+        assert!(sub.coref_chains.is_empty());
+    }
+
+    #[test]
+    fn coref_failure_is_not_a_successful_substrate() {
+        let mut limits = CorefLimits::DEFAULT;
+        limits.max_mentions = 2;
+        let src = "alpha beta gamma";
+        assert!(matches!(
+            extract_substrate_with_limits(src, &limits),
+            Err(CorefError::TooManyMentions { .. })
+        ));
     }
 }

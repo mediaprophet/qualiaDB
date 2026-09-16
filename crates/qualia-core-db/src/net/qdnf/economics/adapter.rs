@@ -6,9 +6,9 @@ use crate::net::qdnf::types::StrongDigest;
 use super::classify::ActingClass;
 use super::obligation::Obligation;
 use super::reserve::reserve_hold;
-use super::settle::{finalise, settlement_receipt, SettlementReceipt};
 #[cfg(test)]
 use super::settle::live_payment_rail;
+use super::settle::{finalise, settlement_receipt, SettlementReceipt};
 
 /// Selected settlement systems. Only [`Self::InProcess`] may settle here.
 #[repr(u8)]

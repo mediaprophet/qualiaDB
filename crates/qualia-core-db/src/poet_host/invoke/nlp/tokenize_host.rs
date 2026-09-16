@@ -1,8 +1,9 @@
 //! `NLP.tokenize` / `NLP.split_sentences` Host binds.
 
 use super::super::args;
+use crate::nlp::budget::reject_source;
 use crate::nlp::tokenize::{split_sentences, tokenize, TokenKind};
-use vibe::{Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 fn kind_name(k: TokenKind) -> &'static str {
     match k {
@@ -20,9 +21,8 @@ pub fn tokenize_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         _ => args::rec_str(args_v, "text")
             .ok_or_else(|| args::bad(span, "NLP.tokenize needs text: string"))?,
     };
-    if text.len() > 256 * 1024 {
-        return Err(args::bad(span, "NLP.tokenize exceeds 256 KiB"));
-    }
+    reject_source(text.len())
+        .map_err(|_| Diagnostic::new(DiagCode::E400, span, "NLP.tokenize exceeds 256 KiB"))?;
     let tokens: Vec<Value> = tokenize(text)
         .into_iter()
         .map(|t| {
@@ -44,9 +44,9 @@ pub fn split_sentences_host(args_v: &Value, span: Span) -> Result<Value, Diagnos
         _ => args::rec_str(args_v, "text")
             .ok_or_else(|| args::bad(span, "NLP.split_sentences needs text: string"))?,
     };
-    if text.len() > 256 * 1024 {
-        return Err(args::bad(span, "NLP.split_sentences exceeds 256 KiB"));
-    }
+    reject_source(text.len()).map_err(|_| {
+        Diagnostic::new(DiagCode::E400, span, "NLP.split_sentences exceeds 256 KiB")
+    })?;
     let sentences: Vec<Value> = split_sentences(text)
         .into_iter()
         .map(|s| {
@@ -92,5 +92,51 @@ mod tests {
             panic!("sentences");
         };
         assert!(sents.len() >= 2);
+    }
+
+    #[test]
+    fn split_sentences_host_decimal_and_unicode() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "text".into(),
+            Value::String("Recorded 12.5 mm. 你好。世界！".into()),
+        );
+        let out = split_sentences_host(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let Value::List(sents) = args::rec(&out, "sentences").unwrap() else {
+            panic!("sentences");
+        };
+        assert_eq!(
+            sents.len(),
+            3,
+            "decimal must not split; Unicode 。！ must split"
+        );
+        for s in sents {
+            let start = args::rec_u64(s, "start").expect("start");
+            let end = args::rec_u64(s, "end").expect("end");
+            assert!(end > start, "sentence span must be non-empty");
+        }
+    }
+
+    #[test]
+    fn tokenize_rejects_oversize_source() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "text".into(),
+            Value::String("x".repeat(crate::nlp::budget::MAX_SOURCE_BYTES + 1)),
+        );
+        let err = tokenize_host(&Value::Record(m), Span { start: 0, end: 0 }).unwrap_err();
+        assert_eq!(err.code, DiagCode::E400);
+        assert!(err.message.contains("256 KiB"));
+    }
+
+    #[test]
+    fn split_sentences_rejects_oversize_source() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "text".into(),
+            Value::String("x".repeat(crate::nlp::budget::MAX_SOURCE_BYTES + 1)),
+        );
+        let err = split_sentences_host(&Value::Record(m), Span { start: 0, end: 0 }).unwrap_err();
+        assert_eq!(err.code, DiagCode::E400);
     }
 }

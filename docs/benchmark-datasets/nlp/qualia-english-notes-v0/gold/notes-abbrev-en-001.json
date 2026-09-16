@@ -1,0 +1,64 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-abbrev-en-001",
+  "split": "test",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "Dr. Smith arrived later.",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 2,
+      "surface": "Dr",
+      "kind": "Word"
+    },
+    {
+      "start": 2,
+      "end": 3,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 4,
+      "end": 9,
+      "surface": "Smith",
+      "kind": "Word"
+    },
+    {
+      "start": 10,
+      "end": 17,
+      "surface": "arrived",
+      "kind": "Word"
+    },
+    {
+      "start": 18,
+      "end": 23,
+      "surface": "later",
+      "kind": "Word"
+    },
+    {
+      "start": 23,
+      "end": 24,
+      "surface": ".",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 3,
+      "surface": "Dr."
+    },
+    {
+      "start": 4,
+      "end": 24,
+      "surface": "Smith arrived later."
+    }
+  ],
+  "notes": "Honest gold: current split_sentences treats ASCII . after Dr as a sentence ender (NLP-102). This is not a quality claim."
+}

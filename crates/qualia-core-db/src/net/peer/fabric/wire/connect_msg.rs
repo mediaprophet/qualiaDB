@@ -9,9 +9,7 @@ use super::{
 use super::{MAGIC, MAX_BODY, VERSION};
 use crate::net::peer::connectivity::policy::Disclosure;
 use crate::net::peer::fabric::connect::{connect, ConnectHandle, Fabric};
-use crate::net::peer::fabric::intent::{
-    ConnectionIntent, ProtectionPolicy, Purpose, PurposeClass,
-};
+use crate::net::peer::fabric::intent::{ConnectionIntent, ProtectionPolicy, Purpose, PurposeClass};
 use crate::net::peer::fabric::kernel::FabricError;
 use crate::net::peer::runtime::ResourceBudget;
 
@@ -179,8 +177,8 @@ pub fn connect_from_wire(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::net::peer::fabric::kernel::FabricState;
     use crate::net::peer::fabric::intent::ProtectionPolicy;
+    use crate::net::peer::fabric::kernel::FabricState;
 
     fn sample() -> ConnectionIntent {
         ConnectionIntent::new(

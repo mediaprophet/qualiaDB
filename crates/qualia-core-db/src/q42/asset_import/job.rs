@@ -187,7 +187,10 @@ impl ImportJob {
         self.output_bytes = written;
 
         let added = outcome.accepted.saturating_add(outcome.quarantined);
-        let next_records = self.accepted.saturating_add(self.quarantined).saturating_add(added);
+        let next_records = self
+            .accepted
+            .saturating_add(self.quarantined)
+            .saturating_add(added);
         if next_records > self.budgets.max_records {
             self.status = ImportStatus::Failed("record budget exceeded".into());
             return Err(ImportError::RecordBudgetExceeded {
@@ -207,12 +210,10 @@ impl ImportJob {
             Ok(1) => {
                 // Put the byte back by seeking -1; File is Seek for regular files.
                 use std::io::Seek;
-                self.reader
-                    .seek(io::SeekFrom::Current(-1))
-                    .map_err(|e| {
-                        self.status = ImportStatus::Failed(e.to_string());
-                        ImportError::Io(e)
-                    })?;
+                self.reader.seek(io::SeekFrom::Current(-1)).map_err(|e| {
+                    self.status = ImportStatus::Failed(e.to_string());
+                    ImportError::Io(e)
+                })?;
                 false
             }
             Ok(_) => false,
@@ -251,8 +252,7 @@ impl ImportJob {
         if self.cancelled || matches!(self.status, ImportStatus::Cancelled) {
             return Err(ImportError::Cancelled);
         }
-        let (_bytes_read, accepted, quarantined, output_bytes) =
-            self.status.require_succeeded()?;
+        let (_bytes_read, accepted, quarantined, output_bytes) = self.status.require_succeeded()?;
 
         fs::create_dir_all(dest_dir).map_err(ImportError::Io)?;
         let dest = dest_dir.join(PROMOTE_NAME);

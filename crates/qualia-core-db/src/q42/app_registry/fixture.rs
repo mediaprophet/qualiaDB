@@ -1,9 +1,9 @@
 //! Bundled POET fixture manifest (test / seed only — not on-disk package bytes).
 
 use crate::q42::app_manifest::{
-    sha256_of, AppAuthor, AppIdentity, Compatibility, EntryProjection, Integrity,
-    PermissionIntent, PermissionKind, PortableAppManifest, PresentationHint, ProjectionKind,
-    RequiredCapability, StateSchema, UpdateChannel,
+    sha256_of, AppAuthor, AppIdentity, Compatibility, EntryProjection, Integrity, PermissionIntent,
+    PermissionKind, PortableAppManifest, PresentationHint, ProjectionKind, RequiredCapability,
+    StateSchema, UpdateChannel,
 };
 
 /// Canonical bundled POET app id for registry seeding.

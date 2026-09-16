@@ -103,10 +103,7 @@ pub fn cancel_worker(worker: &mut WorkerFence) -> Result<(), QdnfError> {
 }
 
 /// Release the worker cell on success, error, cancel, or unwind (E03.5).
-pub fn release_worker(
-    worker: &mut WorkerFence,
-    host: &mut HostAdmission,
-) -> Result<(), QdnfError> {
+pub fn release_worker(worker: &mut WorkerFence, host: &mut HostAdmission) -> Result<(), QdnfError> {
     let slot = match worker.slot.take() {
         Some(s) => s,
         None => return Err(QdnfError::DoubleRelease),

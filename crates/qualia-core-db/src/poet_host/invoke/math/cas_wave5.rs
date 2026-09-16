@@ -1,4 +1,4 @@
-﻿//! Wave-5 CAS / ODE / LinAlg Host binds over specialized_libs pure helpers.
+//! Wave-5 CAS / ODE / LinAlg Host binds over specialized_libs pure helpers.
 //!
 //! Host-missing `pub fn`s not bound in waves 1–4:
 //! `solve_separable`, `solve_first_order_linear_pde`, `solve_polynomial_expr`,
@@ -8,8 +8,7 @@ use super::super::args;
 use crate::specialized_libs::symbolic_algebra as sa;
 use crate::specialized_libs::symbolic_assumptions::{Assumptions, Sign};
 use crate::specialized_libs::symbolic_ode::{
-    solve_first_order_linear_pde as ode_pde1, solve_separable as ode_sep, OdeSolution,
-    PdeSolution,
+    solve_first_order_linear_pde as ode_pde1, solve_separable as ode_sep, OdeSolution, PdeSolution,
 };
 use crate::specialized_libs::symbolic_solve::{
     roots as complex_roots, solve_linear_system as lin_solve, solve_polynomial_expr as poly_expr,
@@ -125,9 +124,8 @@ pub fn solve_polynomial_expr(args_v: &Value, span: Span) -> Result<Value, Diagno
 /// Args: `{ expr, assumptions? }` where assumptions is `[{ var, sign }, ...]`.
 /// Out: `{ simplified }`.
 pub fn simplify_with_assumptions(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let expr = args::rec_str(args_v, "expr").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.simplify_with_assumptions needs expr")
-    })?;
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.simplify_with_assumptions needs expr"))?;
     let asm = assumptions_from(args_v, span)?;
     let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
     let s = crate::specialized_libs::symbolic_assumptions::simplify_with_assumptions(&e, &asm);
@@ -166,7 +164,10 @@ pub fn solve_linear_system(args_v: &Value, span: Span) -> Result<Value, Diagnost
 /// Args: `{ expr }`. Out: `{ hash }` (u64).
 pub fn expr_citation_hash(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let expr = args::rec_str(args_v, "expr").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.expr_citation_hash needs expr: string")
+        args::bad(
+            span,
+            "SymbolicAlgebra.expr_citation_hash needs expr: string",
+        )
     })?;
     let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
     let hash = sa::expr_citation_hash(&e);

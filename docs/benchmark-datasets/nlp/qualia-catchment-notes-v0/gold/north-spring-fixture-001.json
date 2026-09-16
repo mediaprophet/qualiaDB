@@ -1,0 +1,194 @@
+{
+  "corpus_id": "qualia-catchment-notes-v0",
+  "doc_id": "north-spring-fixture-001",
+  "split": "train",
+  "language": "en",
+  "domain": "catchment-measurement-notes",
+  "sensitivity": "Restricted",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "North Spring is the reference site. Timothy Charles Holborn recorded 12.5 mm of rain on 2026-08-15.",
+  "gazetteer": [
+    {
+      "start": 0,
+      "end": 12,
+      "surface": "North Spring",
+      "iri": "https://qualiadb.org/catchment/NorthSpring"
+    },
+    {
+      "start": 20,
+      "end": 34,
+      "surface": "reference site",
+      "iri": "https://qualiadb.org/catchment/ReferenceSite"
+    },
+    {
+      "start": 36,
+      "end": 59,
+      "surface": "Timothy Charles Holborn",
+      "iri": "did:qualia:timothy_charles_holborn"
+    },
+    {
+      "start": 80,
+      "end": 84,
+      "surface": "rain",
+      "iri": "https://qualiadb.org/meteo/Rain"
+    }
+  ],
+  "dates": [
+    {
+      "start": 88,
+      "end": 98,
+      "surface": "2026-08-15",
+      "yyyy_mm_dd": "2026-08-15"
+    }
+  ],
+  "quantities": [
+    {
+      "start": 69,
+      "end": 76,
+      "surface": "12.5 mm",
+      "value": 12.5,
+      "unit": "mm"
+    }
+  ],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 5,
+      "surface": "North",
+      "kind": "Word"
+    },
+    {
+      "start": 6,
+      "end": 12,
+      "surface": "Spring",
+      "kind": "Word"
+    },
+    {
+      "start": 13,
+      "end": 15,
+      "surface": "is",
+      "kind": "Word"
+    },
+    {
+      "start": 16,
+      "end": 19,
+      "surface": "the",
+      "kind": "Word"
+    },
+    {
+      "start": 20,
+      "end": 29,
+      "surface": "reference",
+      "kind": "Word"
+    },
+    {
+      "start": 30,
+      "end": 34,
+      "surface": "site",
+      "kind": "Word"
+    },
+    {
+      "start": 34,
+      "end": 35,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 36,
+      "end": 43,
+      "surface": "Timothy",
+      "kind": "Word"
+    },
+    {
+      "start": 44,
+      "end": 51,
+      "surface": "Charles",
+      "kind": "Word"
+    },
+    {
+      "start": 52,
+      "end": 59,
+      "surface": "Holborn",
+      "kind": "Word"
+    },
+    {
+      "start": 60,
+      "end": 68,
+      "surface": "recorded",
+      "kind": "Word"
+    },
+    {
+      "start": 69,
+      "end": 73,
+      "surface": "12.5",
+      "kind": "Number"
+    },
+    {
+      "start": 74,
+      "end": 76,
+      "surface": "mm",
+      "kind": "Word"
+    },
+    {
+      "start": 77,
+      "end": 79,
+      "surface": "of",
+      "kind": "Word"
+    },
+    {
+      "start": 80,
+      "end": 84,
+      "surface": "rain",
+      "kind": "Word"
+    },
+    {
+      "start": 85,
+      "end": 87,
+      "surface": "on",
+      "kind": "Word"
+    },
+    {
+      "start": 88,
+      "end": 92,
+      "surface": "2026",
+      "kind": "Number"
+    },
+    {
+      "start": 92,
+      "end": 93,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 93,
+      "end": 95,
+      "surface": "08",
+      "kind": "Number"
+    },
+    {
+      "start": 95,
+      "end": 96,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 96,
+      "end": 99,
+      "surface": "15.",
+      "kind": "Number"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 35,
+      "surface": "North Spring is the reference site."
+    },
+    {
+      "start": 36,
+      "end": 99,
+      "surface": "Timothy Charles Holborn recorded 12.5 mm of rain on 2026-08-15."
+    }
+  ],
+  "notes": "Charter UC-A year-one fixture. Gazetteer hits are DEFAULT_LEXICON only. Restricted: principal name present."
+}

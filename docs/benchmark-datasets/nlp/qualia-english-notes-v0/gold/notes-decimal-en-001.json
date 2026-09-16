@@ -1,0 +1,132 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-decimal-en-001",
+  "split": "dev",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "Recorded 12.5 mm. Next. The staff gauge also showed 3.5 km.",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [
+    {
+      "start": 9,
+      "end": 16,
+      "surface": "12.5 mm",
+      "value": 12.5,
+      "unit": "mm"
+    },
+    {
+      "start": 52,
+      "end": 58,
+      "surface": "3.5 km",
+      "value": 3.5,
+      "unit": "km"
+    }
+  ],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 8,
+      "surface": "Recorded",
+      "kind": "Word"
+    },
+    {
+      "start": 9,
+      "end": 13,
+      "surface": "12.5",
+      "kind": "Number"
+    },
+    {
+      "start": 14,
+      "end": 16,
+      "surface": "mm",
+      "kind": "Word"
+    },
+    {
+      "start": 16,
+      "end": 17,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 18,
+      "end": 22,
+      "surface": "Next",
+      "kind": "Word"
+    },
+    {
+      "start": 22,
+      "end": 23,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 24,
+      "end": 27,
+      "surface": "The",
+      "kind": "Word"
+    },
+    {
+      "start": 28,
+      "end": 33,
+      "surface": "staff",
+      "kind": "Word"
+    },
+    {
+      "start": 34,
+      "end": 39,
+      "surface": "gauge",
+      "kind": "Word"
+    },
+    {
+      "start": 40,
+      "end": 44,
+      "surface": "also",
+      "kind": "Word"
+    },
+    {
+      "start": 45,
+      "end": 51,
+      "surface": "showed",
+      "kind": "Word"
+    },
+    {
+      "start": 52,
+      "end": 55,
+      "surface": "3.5",
+      "kind": "Number"
+    },
+    {
+      "start": 56,
+      "end": 58,
+      "surface": "km",
+      "kind": "Word"
+    },
+    {
+      "start": 58,
+      "end": 59,
+      "surface": ".",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 17,
+      "surface": "Recorded 12.5 mm."
+    },
+    {
+      "start": 18,
+      "end": 23,
+      "surface": "Next."
+    },
+    {
+      "start": 24,
+      "end": 59,
+      "surface": "The staff gauge also showed 3.5 km."
+    }
+  ],
+  "notes": "Decimal point in 12.5 must not split the first sentence. ASCII period after mm does end it."
+}

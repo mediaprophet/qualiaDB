@@ -374,9 +374,7 @@ mod tests {
     fn test_pq_and_dual_credential_issue_and_verify() {
         use crate::crypto::network::dual_sign::DualProof;
         use crate::crypto::network::mldsa::generate_keypair;
-        use crate::crypto::network::types::{
-            ED25519_PK_LEN, ED25519_SIG_LEN, ML_DSA_65_SIG_LEN,
-        };
+        use crate::crypto::network::types::{ED25519_PK_LEN, ED25519_SIG_LEN, ML_DSA_65_SIG_LEN};
 
         let c = sample();
         let (mldsa_sk, mldsa_pk) = generate_keypair().unwrap();
@@ -390,7 +388,10 @@ mod tests {
         assert_eq!(verify_pq(&c, &mldsa_pk, &pq_sig, 1_500), Ok(()));
 
         // Expired fails
-        assert_eq!(verify_pq(&c, &mldsa_pk, &pq_sig, 2_500), Err(VcError::Expired));
+        assert_eq!(
+            verify_pq(&c, &mldsa_pk, &pq_sig, 2_500),
+            Err(VcError::Expired)
+        );
 
         // 2. Hybrid DualProof test
         let mut dual_proof = DualProof {
@@ -416,4 +417,3 @@ mod tests {
         );
     }
 }
-

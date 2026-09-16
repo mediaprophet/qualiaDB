@@ -320,11 +320,11 @@ pub fn apply_utxo_attestation<S: QiStore>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::document::QiDocument;
     use super::super::git_object::GitObjectStore;
     use super::super::method::{create, deactivate, read, update};
     use super::super::service::{CscpMailbox, Disclosure};
+    use super::*;
     use ed25519_dalek::SigningKey;
 
     fn sk() -> [u8; 32] {
@@ -391,7 +391,8 @@ mod tests {
         let (digest2, gen2) = load_canonical_digest(&store, &id).unwrap();
         assert_eq!(gen2, 1);
         let (tomb2, tn2) = tx_for(&digest2, true);
-        let g = apply_utxo_attestation(&mut store, &id, CONSTITUTION_MAINNET, &tomb2[..tn2]).unwrap();
+        let g =
+            apply_utxo_attestation(&mut store, &id, CONSTITUTION_MAINNET, &tomb2[..tn2]).unwrap();
         assert_eq!(g, 1);
         let mut out = QiDocument::empty();
         read(&store, &id, &mut out).unwrap();
@@ -459,10 +460,7 @@ mod tests {
         let c = extract_op_return(&tx[..n]).unwrap();
         assert!(!c.tombstone);
         assert_eq!(c.outpoint.vout, 0);
-        assert_eq!(
-            &c.digest[..4],
-            &[0x73, 0x43, 0x2e, 0xea]
-        );
+        assert_eq!(&c.digest[..4], &[0x73, 0x43, 0x2e, 0xea]);
     }
 
     fn hex_byte(a: u8, b: u8) -> u8 {

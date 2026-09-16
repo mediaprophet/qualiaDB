@@ -54,6 +54,7 @@ pub mod icon_registry;
 pub mod icon_session;
 pub mod ide;
 pub mod instrument_panel;
+pub mod semantic_instruments;
 pub mod intent_bus;
 pub mod interactions;
 pub mod job_queue;

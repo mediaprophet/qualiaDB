@@ -34,9 +34,8 @@ pub fn gaussian_elimination_host(args_v: &Value, span: Span) -> Result<Value, Di
         2 => {
             let mut mat = ZeroHeapMatrix::<f64, 2, 2>::zeros();
             for (i, row) in rows.iter().enumerate() {
-                let vals = args::f64s(row).ok_or_else(|| {
-                    args::bad(span, "gaussian_elimination: row must be [f64]")
-                })?;
+                let vals = args::f64s(row)
+                    .ok_or_else(|| args::bad(span, "gaussian_elimination: row must be [f64]"))?;
                 if vals.len() != 2 {
                     return Err(args::bad(
                         span,
@@ -52,9 +51,8 @@ pub fn gaussian_elimination_host(args_v: &Value, span: Span) -> Result<Value, Di
         3 => {
             let mut mat = ZeroHeapMatrix::<f64, 3, 3>::zeros();
             for (i, row) in rows.iter().enumerate() {
-                let vals = args::f64s(row).ok_or_else(|| {
-                    args::bad(span, "gaussian_elimination: row must be [f64]")
-                })?;
+                let vals = args::f64s(row)
+                    .ok_or_else(|| args::bad(span, "gaussian_elimination: row must be [f64]"))?;
                 if vals.len() != 3 {
                     return Err(args::bad(
                         span,

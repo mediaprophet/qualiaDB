@@ -56,10 +56,7 @@ mod tests {
         let second = table.acquire(8, true).unwrap();
         assert_eq!(second.handle.slot, first.handle.slot);
         assert_ne!(second.handle.generation, first.handle.generation);
-        assert_eq!(
-            table.release(first.handle),
-            Err(QdnfError::StaleGeneration)
-        );
+        assert_eq!(table.release(first.handle), Err(QdnfError::StaleGeneration));
         table.release(second.handle).unwrap();
     }
 }

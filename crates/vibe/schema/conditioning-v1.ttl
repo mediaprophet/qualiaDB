@@ -1,0 +1,54 @@
+# Generated conditioning vocabulary (P1B). Namespace freeze: cond → https://qualiadb.org/schema/conditioning#
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cond: <https://qualiadb.org/schema/conditioning#> .
+
+cond:ConditioningProfile a rdfs:Class .
+cond:Objective a rdfs:Class .
+cond:DomainScope a rdfs:Class .
+cond:Requirement a rdfs:Class .
+cond:EnforcedRequirement a rdfs:Class ; rdfs:subClassOf cond:Requirement .
+cond:EvidenceObligation a rdfs:Class ; rdfs:subClassOf cond:Requirement .
+cond:Guidance a rdfs:Class ; rdfs:subClassOf cond:Requirement .
+cond:MethodConstraint a rdfs:Class .
+cond:EvidencePolicy a rdfs:Class .
+cond:OutputContract a rdfs:Class .
+cond:ResourceBudget a rdfs:Class .
+cond:BackendCapability a rdfs:Class .
+cond:CompiledPlan a rdfs:Class .
+cond:RequirementOutcome a rdfs:Class .
+cond:CompilationReceipt a rdfs:Class .
+cond:EvaluationSuite a rdfs:Class .
+cond:EvaluationRun a rdfs:Class .
+cond:CandidateProfile a rdfs:Class .
+cond:PromotionDecision a rdfs:Class .
+
+cond:schemaVersion a rdf:Property ; rdfs:domain cond:ConditioningProfile ; rdfs:range xsd:integer .
+cond:profileId a rdf:Property ; rdfs:domain cond:ConditioningProfile ; rdfs:range xsd:string .
+cond:contentDigest a rdf:Property ; rdfs:domain cond:ConditioningProfile ; rdfs:range xsd:string .
+cond:hasObjective a rdf:Property ; rdfs:domain cond:ConditioningProfile .
+cond:hasDomainScope a rdf:Property ; rdfs:domain cond:ConditioningProfile .
+cond:hasRequirement a rdf:Property ; rdfs:domain cond:ConditioningProfile ; rdfs:range cond:Requirement .
+cond:authoritySource a rdf:Property ; rdfs:domain cond:Requirement .
+cond:priority a rdf:Property ; rdfs:domain cond:Requirement ; rdfs:range xsd:integer .
+cond:isRequired a rdf:Property ; rdfs:domain cond:Requirement ; rdfs:range xsd:boolean .
+cond:validatorRef a rdf:Property ; rdfs:domain cond:EnforcedRequirement .
+cond:hasEvidencePolicy a rdf:Property .
+cond:allowedGraphScope a rdf:Property .
+cond:disclosureCeiling a rdf:Property .
+cond:hasOutputContract a rdf:Property .
+cond:hasBudget a rdf:Property .
+cond:targetsBackend a rdf:Property .
+cond:targetsModel a rdf:Property .
+cond:usesTokenizer a rdf:Property .
+cond:usesTemplate a rdf:Property .
+cond:selectedEvidence a rdf:Property .
+cond:compiledFrom a rdf:Property .
+cond:expressedBy a rdf:Property .
+cond:outcomeStatus a rdf:Property .
+cond:fallbackReason a rdf:Property .
+cond:measuredBy a rdf:Property .
+cond:evaluatedBy a rdf:Property .
+cond:promotes a rdf:Property .
+cond:replaces a rdf:Property .

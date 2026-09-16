@@ -1,8 +1,10 @@
 //! Dual-path Tool Chest actions for curated `NLP.*` ALL_BOUND ids (wave 21).
 //!
-//! Exposes tokenization, sentence splitting, coreference, frame extraction,
-//! FST lookup, gazetteer compilation, graph-augmented retrieval, relation
-//! extraction, and substrate synthesis.
+//! Experimental prototypes: UTF-8 tokenize / sentence split, exact-string
+//! coref, tiny suffix FST, default-lexicon gazetteer metadata, keyword-triple
+//! overlap (`NLP.graphrag_query` is not GraphRAG), and small rule demos for
+//! frames/relations. Not FrameNet, OpenIE, NER, multi-pass sieve quality, or a
+//! morphology language pack.
 //! No Host widen — scopes must already exist in `poet_host/invoke/ids.rs`.
 
 use serde_json::{json, Value};
@@ -113,7 +115,7 @@ pub(crate) fn local_sentence_count(text: &str) -> usize {
 
 // ── Live action runners ───────────────────────────────────────────────────
 
-/// `NLP.tokenize` — tokenize selected text into words and punctuation.
+/// `NLP.tokenize` — experimental UTF-8 tokenizer prototype.
 pub fn run_tokenize(document: &Document, label: &str) {
     let text = source_or_default(document, "The reference system processed the input stream.");
     let words = local_word_count(&text);
@@ -121,12 +123,12 @@ pub fn run_tokenize(document: &Document, label: &str) {
         document,
         label,
         "NLP.tokenize",
-        format!("tokenized sketch ~{words} tokens from {} chars", text.len()),
+        format!("UTF-8 tokenize prototype sketch ~{words} tokens from {} chars", text.len()),
         json!({ "text": text }),
     );
 }
 
-/// `NLP.split_sentences` — segment text into sentences.
+/// `NLP.split_sentences` — experimental UTF-8 sentence-split prototype.
 pub fn run_split_sentences(document: &Document, label: &str) {
     let text = source_or_default(
         document,
@@ -137,12 +139,12 @@ pub fn run_split_sentences(document: &Document, label: &str) {
         document,
         label,
         "NLP.split_sentences",
-        format!("split sketch into ~{sents} sentences"),
+        format!("UTF-8 sentence-split prototype sketch ~{sents} sentences"),
         json!({ "text": text }),
     );
 }
 
-/// `NLP.coref_resolve` — resolve coreference chains.
+/// `NLP.coref_resolve` — bounded exact-string grouping; not multi-pass sieve quality.
 pub fn run_coref_resolve(document: &Document, label: &str) {
     let text = source_or_default(
         document,
@@ -152,12 +154,15 @@ pub fn run_coref_resolve(document: &Document, label: &str) {
         document,
         label,
         "NLP.coref_resolve",
-        format!("coref sketch over {} chars (antecedent detection)", text.len()),
+        format!(
+            "exact-string coref sketch over {} chars (empty mentions skip detection)",
+            text.len()
+        ),
         json!({ "text": text }),
     );
 }
 
-/// `NLP.frame_extract` — extract semantic frame instances.
+/// `NLP.frame_extract` — small lexical-trigger rule demo, not FrameNet.
 pub fn run_frame_extract(document: &Document, label: &str) {
     let text = source_or_default(
         document,
@@ -167,12 +172,13 @@ pub fn run_frame_extract(document: &Document, label: &str) {
         document,
         label,
         "NLP.frame_extract",
-        format!("frame extraction sketch over {} chars", text.len()),
+        format!("frame rule-demo sketch over {} chars (not FrameNet)", text.len()),
         Value::String(text),
     );
 }
 
-/// `NLP.fst_lookup` — morphological lookup via finite state transducer.
+/// `NLP.fst_lookup` — trie over caller-supplied entries plus English suffix
+/// stripping. Empty entries yield no results. Not a language pack.
 pub fn run_fst_lookup(document: &Document, label: &str) {
     let word = source_or_default(document, "verifying");
     let clean_word = word.split_whitespace().next().unwrap_or("verifying");
@@ -180,12 +186,23 @@ pub fn run_fst_lookup(document: &Document, label: &str) {
         document,
         label,
         "NLP.fst_lookup",
-        format!("FST lemma sketch for word '{clean_word}'"),
-        json!({ "word": clean_word }),
+        format!(
+            "suffix-FST demo sketch for word '{clean_word}' over a tiny caller-supplied dictionary (not a language pack)"
+        ),
+        json!({
+            "word": clean_word,
+            "entries": [
+                ["verify", "verify|V"],
+                ["walk", "walk|V"],
+                ["cat", "cat|N"],
+                ["city", "city|N"],
+                ["carry", "carry|V"]
+            ]
+        }),
     );
 }
 
-/// `NLP.gazetteer_build` — compile a gazetteer matcher index.
+/// `NLP.gazetteer_build` — default compiled lexicon metadata, not NER.
 pub fn run_gazetteer_build(document: &Document, label: &str) {
     let text = source_or_default(document, "catchment sensor station");
     let patterns: Vec<String> = text
@@ -197,19 +214,22 @@ pub fn run_gazetteer_build(document: &Document, label: &str) {
         document,
         label,
         "NLP.gazetteer_build",
-        format!("gazetteer built sketch with {} patterns", patterns.len()),
+        format!(
+            "default-lexicon gazetteer metadata sketch ({} local tokens; not NER)",
+            patterns.len()
+        ),
         json!({ "patterns": patterns }),
     );
 }
 
-/// `NLP.graphrag_query` — graph-augmented contextual retrieval.
+/// `NLP.graphrag_query` — keyword-triple term overlap; not GraphRAG.
 pub fn run_graphrag_query(document: &Document, label: &str) {
     let query = source_or_default(document, "catchment safety bounds");
     invoke_dual(
         document,
         label,
         "NLP.graphrag_query",
-        format!("graph-rag query sketch: '{query}'"),
+        format!("keyword-triple overlap sketch: '{query}' (not GraphRAG)"),
         json!({
             "query": query,
             "k": 5,
@@ -221,7 +241,7 @@ pub fn run_graphrag_query(document: &Document, label: &str) {
     );
 }
 
-/// `NLP.relation_extract` — extract RDF-Star relation statements.
+/// `NLP.relation_extract` — small is/has/located-in rule demo, not OpenIE.
 pub fn run_relation_extract(document: &Document, label: &str) {
     let text = source_or_default(
         document,
@@ -231,12 +251,12 @@ pub fn run_relation_extract(document: &Document, label: &str) {
         document,
         label,
         "NLP.relation_extract",
-        format!("relation extraction sketch over {} chars", text.len()),
+        format!("relation rule-demo sketch over {} chars (not OpenIE)", text.len()),
         Value::String(text),
     );
 }
 
-/// `NLP.substrate_extract` — end-to-end symbolic extraction pipeline.
+/// `NLP.substrate_extract` — symbolic pipeline; every word becomes a mention.
 pub fn run_substrate_extract(document: &Document, label: &str) {
     let text = source_or_default(
         document,
@@ -246,7 +266,10 @@ pub fn run_substrate_extract(document: &Document, label: &str) {
         document,
         label,
         "NLP.substrate_extract",
-        format!("full substrate extraction pipeline over {} chars", text.len()),
+        format!(
+            "symbolic substrate sketch over {} chars (every-word mentions)",
+            text.len()
+        ),
         Value::String(text),
     );
 }

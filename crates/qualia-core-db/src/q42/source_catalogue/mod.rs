@@ -101,8 +101,7 @@ pub fn validate_descriptor(d: &SourceDescriptor) -> Result<(), &'static str> {
     if d.official_url.is_empty() {
         return Err("empty official_url");
     }
-    let url_ok = d.official_url.starts_with("https://")
-        || d.official_url.starts_with("http://");
+    let url_ok = d.official_url.starts_with("https://") || d.official_url.starts_with("http://");
     if !url_ok {
         return Err("official_url must be http(s)");
     }
@@ -162,10 +161,7 @@ mod tests {
             sources.len()
         );
         for id in REQUIRED_IDS {
-            assert!(
-                lookup(id).is_some(),
-                "missing required source id `{id}`"
-            );
+            assert!(lookup(id).is_some(), "missing required source id `{id}`");
         }
     }
 
@@ -270,11 +266,7 @@ mod tests {
     #[test]
     fn every_descriptor_has_official_url() {
         for d in all_sources() {
-            assert!(
-                !d.official_url.is_empty(),
-                "{} missing official_url",
-                d.id
-            );
+            assert!(!d.official_url.is_empty(), "{} missing official_url", d.id);
         }
     }
 }

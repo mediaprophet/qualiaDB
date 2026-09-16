@@ -198,6 +198,7 @@ pub use arrangement_3d::{
     build_arrangement_3d, radial_sort_around_edge, validate_arrangement, Arrangement3D,
     ArrangementError as Arrangement3DError, EdgeKey, Region, Shell,
 };
+pub use arrangements::{dual_point_to_line, dual_round_trip, Line2};
 pub use benchmark_corpus::{
     compute_p10_corpus_baseline_hash, run_p10_corpus, CorpusReport, CORPUS_VERSION,
 };
@@ -205,7 +206,6 @@ pub use bentley_ottmann::{
     bentley_ottmann_intersections, brute_force_intersections, brute_force_red_blue_intersections,
     red_blue_intersections, SweepSegment,
 };
-pub use arrangements::{dual_point_to_line, dual_round_trip, Line2};
 pub use boolean_2::{
     boolean_difference_area, boolean_intersection_area, boolean_union_area, point_in_or_on_polygon,
     point_in_polygon, polygon_area, polygon_signed_area, verify_area_conservation, BooleanError,
@@ -490,6 +490,11 @@ pub use spatial_order::{
     hilbert_encode_2d, morton_decode_2d, morton_encode_2d, morton_encode_3d, sort_by_hilbert_2d,
     sort_by_morton_2d, sort_by_morton_3d, SpatialOrderError, SpatialOrderHeader,
 };
+pub use statistical_manifold::{
+    fisher_distance, fisher_inner_product, kl_bregman_form, kl_divergence, neg_entropy,
+    neg_entropy_grad, simplex_project, simplex_project_idempotent, validate_probability,
+    StatManifoldError,
+};
 pub use surface_mesh::{
     build_surface_mesh_maps, BoundaryLoopWalker, FaceLoopCirculator, OneRingCirculator,
     SurfaceMeshError, SurfaceMeshView,
@@ -512,11 +517,6 @@ pub use tri_tri_3::{
     required_self_intersection_pairs, self_intersecting_pairs, self_intersecting_pairs_with_kernel,
     tri_tri_intersect_3, tri_tri_intersect_3_exact, tri_tri_intersect_3_with_kernel,
     ExactTriTriSegment, TriPair, TriTriError, TriTriSegment,
-};
-pub use statistical_manifold::{
-    fisher_distance, fisher_inner_product, kl_bregman_form, kl_divergence, neg_entropy,
-    neg_entropy_grad, simplex_project, simplex_project_idempotent, validate_probability,
-    StatManifoldError,
 };
 pub use triangulation_2::{
     triangulate_ear_clipping, triangulate_monotone, triangulate_polygon, verify_triangulation,

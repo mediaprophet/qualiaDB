@@ -13,13 +13,11 @@ mod licence;
 pub use codec::ASSET_ENVELOPE_MAGIC;
 pub use envelope::{
     sha256_into, sha256_of, AssetRoutingLane, AssetSensitivity, ChunkSpec, Q42AssetEnvelope,
-    RecordCounts, ToolchainVersions, UpstreamRelease, ASSET_ENVELOPE_VERSION, MAX_ENVELOPE_BYTES,
-    MAX_DERIVED_FROM, MAX_NAMESPACES, MAX_REJECTION_REASONS, SENTINEL_PASS_BUDGET_BYTES,
+    RecordCounts, ToolchainVersions, UpstreamRelease, ASSET_ENVELOPE_VERSION, MAX_DERIVED_FROM,
+    MAX_ENVELOPE_BYTES, MAX_NAMESPACES, MAX_REJECTION_REASONS, SENTINEL_PASS_BUDGET_BYTES,
 };
 pub use error::AssetEnvelopeError;
-pub use licence::{
-    LicenceClass, LicenceObligations, LicencePolicy, RedistributionClass, UseClass,
-};
+pub use licence::{LicenceClass, LicenceObligations, LicencePolicy, RedistributionClass, UseClass};
 
 #[cfg(test)]
 mod tests {

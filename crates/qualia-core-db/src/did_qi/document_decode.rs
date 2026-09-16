@@ -482,4 +482,3 @@ pub fn extract_proof_sig(buf: &[u8]) -> Result<[u8; 64], QiError> {
     decode_b58(&mb[1..], &mut sig).map_err(|_| QiError::BadSignature)?;
     Ok(sig)
 }
-

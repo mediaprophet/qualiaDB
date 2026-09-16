@@ -1,0 +1,44 @@
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix si:     <https://ns.webizen.org/semantic-instrument/> .
+
+# Negative: missing honesty / fail-closed policy.
+
+ex:bad-instrument a si:SemanticInstrument ;
+    si:instrumentId "https://example.org/instruments/missing-honesty" ;
+    si:name "Missing honesty (negative fixture)" .
+
+ex:bad-release a si:InstrumentRelease ;
+    si:expectedViolation si:MissingHonestyPolicy ;
+    si:instrument ex:bad-instrument ;
+    si:releaseId "https://example.org/instruments/missing-honesty/releases/1.0.0" ;
+    si:version "1.0.0" ;
+    si:purpose "training-and-field-screening" ;
+    si:contentCategory si:Demo ;
+    si:prohibitedInterpretation "sole-basis-for-regulatory-enforcement" ;
+    si:domain "https://example.org/concepts/units" ;
+    si:ontologyReference "https://example.org/ontologies/units" ;
+    si:entryPoint ex:bad-ep ;
+    si:citation "https://example.org/guidelines/si-units" ;
+    si:applicability ex:bad-appl ;
+    si:resourceLimits ex:bad-limits ;
+    si:testManifest ex:bad-tests ;
+    si:badgePresentation ex:bad-badge ;
+    si:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000004" ;
+    si:authoredBy ex:bad-author ;
+    si:licence "https://spdx.org/licenses/CC-BY-4.0.html" .
+
+ex:bad-ep a si:EntryPoint ;
+    si:entryPointName "assess" ;
+    si:inputShape "https://example.org/shapes/in" ;
+    si:outputShape "https://example.org/shapes/out" ;
+    si:resourceLimits ex:bad-limits .
+ex:bad-appl a si:Applicability ; si:unrestrictedDeclaration "true" .
+ex:bad-limits a si:ResourceLimits ; si:memoryBytes "1024" ; si:maxSteps "10" ; si:maxOutputQuins "8" .
+ex:bad-tests a si:TestManifest ; si:assetLocator "tests/tests.n3" .
+ex:bad-badge a si:BadgePresentation ; si:identifiesRelease ex:bad-release ; si:badgeAsset ex:bad-icon .
+ex:bad-icon a si:BadgeAsset ;
+    si:assetLocator "assets/badge.svg" ;
+    si:mediaType "image/svg+xml" ;
+    si:assetDigest "sha256:00000000000000000000000000000000000000000000000000000000000000ff" ;
+    si:accessibleText "negative fixture icon" .
+ex:bad-author a values:NaturalPerson .

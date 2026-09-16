@@ -25,22 +25,20 @@ pub fn encode_outcome(
     if !kernel.grant_live {
         return encode_reject(RejectReason::Revoked, out).map_err(FabricError::from);
     }
-    if prohibited(intent.protection.disclosure, evidence.class) || !evidence.validated()
-    {
+    if prohibited(intent.protection.disclosure, evidence.class) || !evidence.validated() {
         return encode_reject(RejectReason::Policy, out).map_err(FabricError::from);
     }
     match kernel.state {
-        FabricState::PathLive | FabricState::SessionLive => encode_accept(
-            evidence.class,
-            kernel.generation,
-            out,
-        )
-        .map_err(FabricError::from),
+        FabricState::PathLive | FabricState::SessionLive => {
+            encode_accept(evidence.class, kernel.generation, out).map_err(FabricError::from)
+        }
         _ => encode_reject(RejectReason::Policy, out).map_err(FabricError::from),
     }
 }
 
-pub fn decode_outcome_accept(bytes: &[u8]) -> Result<(super::carrier::PathClass, u32), FabricError> {
+pub fn decode_outcome_accept(
+    bytes: &[u8],
+) -> Result<(super::carrier::PathClass, u32), FabricError> {
     decode_accept(bytes).map_err(FabricError::from)
 }
 
@@ -96,7 +94,10 @@ mod tests {
         ));
         let mut buf = [0u8; 64];
         let n = encode_outcome(&k, local, &mut buf).unwrap();
-        assert_eq!(decode_outcome_accept(&buf[..n]).unwrap().0, PathClass::Relayed);
+        assert_eq!(
+            decode_outcome_accept(&buf[..n]).unwrap().0,
+            PathClass::Relayed
+        );
         let remote = PathEvidence::remote_assertion(PathClass::Relayed, 1, 1);
         let n = encode_outcome(&k, remote, &mut buf).unwrap();
         assert!(decode_outcome_accept(&buf[..n]).is_err());

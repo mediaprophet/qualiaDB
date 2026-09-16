@@ -1,0 +1,41 @@
+{
+  "id": "nlp-004-smoke-tokenize-en",
+  "task": "tokenize",
+  "language": "en",
+  "dataset_id": "nlp-004-authored-smoke",
+  "dataset_revision": "authored-2026-09-14",
+  "split": "smoke",
+  "split_hash": "inline-authored-no-hash",
+  "domain": "catchment-example",
+  "profile": "symbolic-lite",
+  "label_mapping": "identity",
+  "scorer_revision": "nlp-004-plumbing-v0",
+  "primary_metric": "span_in_source",
+  "metric_names": ["span_in_source", "token_text_is_source_slice"],
+  "minimum_score": null,
+  "baseline_score": null,
+  "noninferiority_margin": null,
+  "minimum_effect": null,
+  "confidence_method": "none",
+  "coverage_floor": null,
+  "latency_budget": null,
+  "memory_budget": "42MiB",
+  "release_required": false,
+  "gate_status": "UNEVALUATED",
+  "unavailable_reason": null,
+  "seed": 42,
+  "seed_policy": "frozen-u64-42",
+  "resource_envelope": {
+    "max_source_bytes": 4096,
+    "max_working_memory_bytes": 44040192,
+    "network": "forbidden",
+    "download_datasets": false,
+    "download_models": false
+  },
+  "corpus": [
+    "North Spring is the reference site.",
+    "Timothy Charles Holborn recorded rainfall on 2026-08-15.",
+    "The catchment report is filed."
+  ],
+  "notes": "Offline CI plumbing only. Spans must stay inside source. Do not freeze tokenizer splits as a quality gate. Unset numeric thresholds remain UNEVALUATED."
+}

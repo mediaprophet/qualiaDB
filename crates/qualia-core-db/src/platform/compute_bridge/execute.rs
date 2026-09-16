@@ -160,7 +160,11 @@ mod tests {
         let ran = accelerated_gemm_f32(m, k, n, &a, &b, &mut c);
         eprintln!("[accelerated_gemm_f32] 128³ ran on {ran:?}");
         #[cfg(not(feature = "gpu-runtime"))]
-        assert_eq!(ran, RanOn::Cpu, "without gpu-runtime the path is always CPU");
+        assert_eq!(
+            ran,
+            RanOn::Cpu,
+            "without gpu-runtime the path is always CPU"
+        );
         let reference = ref_gemm(m, k, n, &a, &b);
         let max_err = c
             .iter()

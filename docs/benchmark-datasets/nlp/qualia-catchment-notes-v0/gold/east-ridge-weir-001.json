@@ -1,0 +1,153 @@
+{
+  "corpus_id": "qualia-catchment-notes-v0",
+  "doc_id": "east-ridge-weir-001",
+  "split": "dev",
+  "language": "en",
+  "domain": "catchment-measurement-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "East Ridge weir logged 18.0 °C after a 3.2 km transect on 2026-09-01.",
+  "gazetteer": [],
+  "dates": [
+    {
+      "start": 59,
+      "end": 69,
+      "surface": "2026-09-01",
+      "yyyy_mm_dd": "2026-09-01"
+    }
+  ],
+  "quantities": [
+    {
+      "start": 23,
+      "end": 31,
+      "surface": "18.0 °C",
+      "value": 18.0,
+      "unit": "°C"
+    },
+    {
+      "start": 40,
+      "end": 46,
+      "surface": "3.2 km",
+      "value": 3.2,
+      "unit": "km"
+    }
+  ],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 4,
+      "surface": "East",
+      "kind": "Word"
+    },
+    {
+      "start": 5,
+      "end": 10,
+      "surface": "Ridge",
+      "kind": "Word"
+    },
+    {
+      "start": 11,
+      "end": 15,
+      "surface": "weir",
+      "kind": "Word"
+    },
+    {
+      "start": 16,
+      "end": 22,
+      "surface": "logged",
+      "kind": "Word"
+    },
+    {
+      "start": 23,
+      "end": 27,
+      "surface": "18.0",
+      "kind": "Number"
+    },
+    {
+      "start": 28,
+      "end": 30,
+      "surface": "°",
+      "kind": "Other"
+    },
+    {
+      "start": 30,
+      "end": 31,
+      "surface": "C",
+      "kind": "Word"
+    },
+    {
+      "start": 32,
+      "end": 37,
+      "surface": "after",
+      "kind": "Word"
+    },
+    {
+      "start": 38,
+      "end": 39,
+      "surface": "a",
+      "kind": "Word"
+    },
+    {
+      "start": 40,
+      "end": 43,
+      "surface": "3.2",
+      "kind": "Number"
+    },
+    {
+      "start": 44,
+      "end": 46,
+      "surface": "km",
+      "kind": "Word"
+    },
+    {
+      "start": 47,
+      "end": 55,
+      "surface": "transect",
+      "kind": "Word"
+    },
+    {
+      "start": 56,
+      "end": 58,
+      "surface": "on",
+      "kind": "Word"
+    },
+    {
+      "start": 59,
+      "end": 63,
+      "surface": "2026",
+      "kind": "Number"
+    },
+    {
+      "start": 63,
+      "end": 64,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 64,
+      "end": 66,
+      "surface": "09",
+      "kind": "Number"
+    },
+    {
+      "start": 66,
+      "end": 67,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 67,
+      "end": 70,
+      "surface": "01.",
+      "kind": "Number"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 70,
+      "surface": "East Ridge weir logged 18.0 °C after a 3.2 km transect on 2026-09-01."
+    }
+  ],
+  "notes": "Independent site/units (East Ridge, °C, km). East Ridge is not in DEFAULT_LEXICON; no gazetteer hit is golded."
+}

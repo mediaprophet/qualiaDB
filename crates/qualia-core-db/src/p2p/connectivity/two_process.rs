@@ -10,9 +10,9 @@ use std::process::Command;
 #[cfg(test)]
 use std::time::Duration;
 
+use super::wss::ENV_CHILD;
 #[cfg(test)]
 use super::wss::{self, ENV_ADDR, ENV_SECRET};
-use super::wss::ENV_CHILD;
 
 static DONE: AtomicBool = AtomicBool::new(false);
 

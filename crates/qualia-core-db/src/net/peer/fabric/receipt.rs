@@ -69,18 +69,9 @@ mod tests {
     #[test]
     fn revoked_grant_cannot_commit() {
         let r = OpReceipt::queued(9, [3u8; 32], [1u8; 32], 4, 100);
-        assert_eq!(
-            r.replay(9, &[3u8; 32], false, 4, 10),
-            ReceiptStatus::Denied
-        );
-        assert_eq!(
-            r.replay(9, &[3u8; 32], true, 5, 10),
-            ReceiptStatus::Denied
-        );
-        assert_eq!(
-            r.replay(9, &[4u8; 32], true, 4, 10),
-            ReceiptStatus::Denied
-        );
+        assert_eq!(r.replay(9, &[3u8; 32], false, 4, 10), ReceiptStatus::Denied);
+        assert_eq!(r.replay(9, &[3u8; 32], true, 5, 10), ReceiptStatus::Denied);
+        assert_eq!(r.replay(9, &[4u8; 32], true, 4, 10), ReceiptStatus::Denied);
         assert_eq!(
             r.replay(9, &[3u8; 32], true, 4, 10),
             ReceiptStatus::Committed

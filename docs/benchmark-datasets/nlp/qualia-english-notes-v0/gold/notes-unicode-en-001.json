@@ -1,0 +1,122 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-unicode-en-001",
+  "split": "test",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "She wrote “notes”. 你好。世界！ Wait… later.",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 3,
+      "surface": "She",
+      "kind": "Word"
+    },
+    {
+      "start": 4,
+      "end": 9,
+      "surface": "wrote",
+      "kind": "Word"
+    },
+    {
+      "start": 10,
+      "end": 13,
+      "surface": "“",
+      "kind": "Other"
+    },
+    {
+      "start": 13,
+      "end": 18,
+      "surface": "notes",
+      "kind": "Word"
+    },
+    {
+      "start": 18,
+      "end": 21,
+      "surface": "”",
+      "kind": "Other"
+    },
+    {
+      "start": 21,
+      "end": 22,
+      "surface": ".",
+      "kind": "Punct"
+    },
+    {
+      "start": 23,
+      "end": 29,
+      "surface": "你好",
+      "kind": "Word"
+    },
+    {
+      "start": 29,
+      "end": 32,
+      "surface": "。",
+      "kind": "Punct"
+    },
+    {
+      "start": 32,
+      "end": 38,
+      "surface": "世界",
+      "kind": "Word"
+    },
+    {
+      "start": 38,
+      "end": 41,
+      "surface": "！",
+      "kind": "Punct"
+    },
+    {
+      "start": 42,
+      "end": 46,
+      "surface": "Wait",
+      "kind": "Word"
+    },
+    {
+      "start": 46,
+      "end": 49,
+      "surface": "…",
+      "kind": "Other"
+    },
+    {
+      "start": 50,
+      "end": 55,
+      "surface": "later",
+      "kind": "Word"
+    },
+    {
+      "start": 55,
+      "end": 56,
+      "surface": ".",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 22,
+      "surface": "She wrote “notes”."
+    },
+    {
+      "start": 23,
+      "end": 32,
+      "surface": "你好。"
+    },
+    {
+      "start": 32,
+      "end": 41,
+      "surface": "世界！"
+    },
+    {
+      "start": 42,
+      "end": 56,
+      "surface": "Wait… later."
+    }
+  ],
+  "notes": "Curly quotes are Other tokens. CJK/fullwidth U+3002 and U+FF01 end sentences. U+2026 ellipsis does not (NLP-102)."
+}

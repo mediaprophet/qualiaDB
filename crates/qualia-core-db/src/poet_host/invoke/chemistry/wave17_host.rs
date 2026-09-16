@@ -17,27 +17,21 @@ fn parse_square_f64(
 ) -> Result<(usize, Vec<Vec<f64>>), Diagnostic> {
     let rows = match a_val {
         Value::List(l) => l,
-        _ => {
-            return Err(args::bad(
-                span,
-                format!("{what}: a must be a list of rows"),
-            ))
-        }
+        _ => return Err(args::bad(span, format!("{what}: a must be a list of rows"))),
     };
     let n = rows.len();
     if n != 2 && n != 3 {
-        return Err(args::bad(span, format!("{what}: only 2×2 or 3×3 supported")));
+        return Err(args::bad(
+            span,
+            format!("{what}: only 2×2 or 3×3 supported"),
+        ));
     }
     let mut out = Vec::with_capacity(n);
     for row in rows {
-        let vals = args::f64s(row).ok_or_else(|| {
-            args::bad(span, format!("{what}: row must be [f64]"))
-        })?;
+        let vals =
+            args::f64s(row).ok_or_else(|| args::bad(span, format!("{what}: row must be [f64]")))?;
         if vals.len() != n {
-            return Err(args::bad(
-                span,
-                format!("{what}: rows must be length {n}"),
-            ));
+            return Err(args::bad(span, format!("{what}: rows must be length {n}")));
         }
         out.push(vals);
     }
@@ -106,7 +100,8 @@ pub fn jacobi_diagonalization_host(args_v: &Value, span: Span) -> Result<Value, 
 /// `Chemistry.transpose` — square transpose (N∈{2,3}).
 /// Args: `{ a: [[f64;N];N] }`. Out: `{ a: [[f64]] }`.
 pub fn transpose_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let a_val = args::rec(args_v, "a").ok_or_else(|| args::bad(span, "transpose needs a: matrix"))?;
+    let a_val =
+        args::rec(args_v, "a").ok_or_else(|| args::bad(span, "transpose needs a: matrix"))?;
     let (n, rows) = parse_square_f64(a_val, span, "transpose")?;
     match n {
         2 => {

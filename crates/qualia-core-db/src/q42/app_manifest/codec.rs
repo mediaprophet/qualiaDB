@@ -115,8 +115,8 @@ impl PortableAppManifest {
         write_str(&mut buf, &self.state_schema.schema_id)?;
         write_str(&mut buf, &self.state_schema.schema_version)?;
 
-        let perm_len = u16::try_from(self.permission_intents.len())
-            .map_err(|_| AppManifestError::Oversize)?;
+        let perm_len =
+            u16::try_from(self.permission_intents.len()).map_err(|_| AppManifestError::Oversize)?;
         write_u16(&mut buf, perm_len);
         for intent in &self.permission_intents {
             buf.push(intent.kind as u8);
@@ -125,8 +125,8 @@ impl PortableAppManifest {
             write_str(&mut buf, &intent.scope)?;
         }
 
-        let hint_len = u16::try_from(self.presentation_hints.len())
-            .map_err(|_| AppManifestError::Oversize)?;
+        let hint_len =
+            u16::try_from(self.presentation_hints.len()).map_err(|_| AppManifestError::Oversize)?;
         write_u16(&mut buf, hint_len);
         for hint in &self.presentation_hints {
             write_str(&mut buf, &hint.key)?;

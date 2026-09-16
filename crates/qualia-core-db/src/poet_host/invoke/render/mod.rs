@@ -50,8 +50,8 @@ pub use scene_graph::{
     scene_set_clear_colour, scene_set_mesh, scene_set_render_budget, scene_set_transform,
     scene_set_viewport, scene_smooth_damp, scene_smooth_damp_vec3,
 };
+pub use shader_compile::{gpu_compile_shader, gpu_compile_to_glsl, gpu_validate_shader};
+pub use svg::{svg_bezier, svg_circle, svg_field, svg_line, svg_path, svg_rect};
 pub use wave20_host::{
     camera_frame_node_host as scene_camera_frame_node, lerp_camera_host as scene_lerp_camera,
 };
-pub use shader_compile::{gpu_compile_shader, gpu_compile_to_glsl, gpu_validate_shader};
-pub use svg::{svg_bezier, svg_circle, svg_field, svg_line, svg_path, svg_rect};

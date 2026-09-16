@@ -12,7 +12,12 @@ use vibe::{Diagnostic, Span, Value};
 
 const MAX_POINTS: usize = 256;
 
-fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Point2, Diagnostic> {
+fn parse_point2_arg(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Point2, Diagnostic> {
     let coords = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64; 2]")))?;
     if coords.len() < 2 {
@@ -21,10 +26,16 @@ fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result
     Ok(Point2::new(coords[0], coords[1]))
 }
 
-fn parse_point2_list(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Vec<Point2>, Diagnostic> {
+fn parse_point2_list(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Vec<Point2>, Diagnostic> {
     let v = args::rec(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [[f64;2]; N]")))?;
-    let list = args::list(v).ok_or_else(|| args::bad(span, format!("{what}: {key} must be list")))?;
+    let list =
+        args::list(v).ok_or_else(|| args::bad(span, format!("{what}: {key} must be list")))?;
     if list.is_empty() || list.len() > MAX_POINTS {
         return Err(args::bad(
             span,
@@ -36,7 +47,10 @@ fn parse_point2_list(args_v: &Value, key: &str, span: Span, what: &str) -> Resul
         let coords = args::f64s(item)
             .ok_or_else(|| args::bad(span, format!("{what}: each point must be [f64;2]")))?;
         if coords.len() < 2 {
-            return Err(args::bad(span, format!("{what}: each point needs ≥2 coords")));
+            return Err(args::bad(
+                span,
+                format!("{what}: each point needs ≥2 coords"),
+            ));
         }
         pts.push(Point2::new(coords[0], coords[1]));
     }
@@ -84,7 +98,10 @@ pub fn dual_point_to_line_host(args_v: &Value, span: Span) -> Result<Value, Diag
 pub fn dual_round_trip_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = parse_point2_arg(args_v, "point", span, "dual_round_trip")?;
     let q = dual_round_trip(p);
-    Ok(args::record([("x", Value::F64(q.x)), ("y", Value::F64(q.y))]))
+    Ok(args::record([
+        ("x", Value::F64(q.x)),
+        ("y", Value::F64(q.y)),
+    ]))
 }
 
 /// `ComputationalGeometry.is_convex_polygon` — CCW/CW convexity of a simple polygon.

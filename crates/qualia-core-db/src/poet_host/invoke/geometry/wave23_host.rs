@@ -5,18 +5,23 @@
 //! No forge / `caps()` / CUDA / GPU.
 
 use super::super::args;
+use crate::specialized_libs::computational_geometry::voronoi_variants::{
+    nearest_segment_site, SegmentSite,
+};
 use crate::specialized_libs::computational_geometry::{
     ham_sandwich_cut, insphere, minkowski_sum_convex, point_in_polygon, polygon_area,
     polygon_signed_area, smallest_enclosing_disk, Point2, Point3, Sign,
-};
-use crate::specialized_libs::computational_geometry::voronoi_variants::{
-    nearest_segment_site, SegmentSite,
 };
 use vibe::{Diagnostic, Span, Value};
 
 const MAX_POINTS: usize = 256;
 
-fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Point2, Diagnostic> {
+fn parse_point2_arg(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Point2, Diagnostic> {
     let coords = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64; 2]")))?;
     if coords.len() < 2 {
@@ -25,7 +30,12 @@ fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result
     Ok(Point2::new(coords[0], coords[1]))
 }
 
-fn parse_point3_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Point3, Diagnostic> {
+fn parse_point3_arg(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Point3, Diagnostic> {
     let coords = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64; 3]")))?;
     if coords.len() < 3 {
@@ -34,14 +44,25 @@ fn parse_point3_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result
     Ok(Point3::new(coords[0], coords[1], coords[2]))
 }
 
-fn parse_point2_list(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Vec<Point2>, Diagnostic> {
+fn parse_point2_list(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Vec<Point2>, Diagnostic> {
     let v = args::rec(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [[f64;2]; N]")))?;
     parse_point2_list_value(v, span, what, key)
 }
 
-fn parse_point2_list_value(v: &Value, span: Span, what: &str, key: &str) -> Result<Vec<Point2>, Diagnostic> {
-    let list = args::list(v).ok_or_else(|| args::bad(span, format!("{what}: {key} must be list")))?;
+fn parse_point2_list_value(
+    v: &Value,
+    span: Span,
+    what: &str,
+    key: &str,
+) -> Result<Vec<Point2>, Diagnostic> {
+    let list =
+        args::list(v).ok_or_else(|| args::bad(span, format!("{what}: {key} must be list")))?;
     if list.is_empty() || list.len() > MAX_POINTS {
         return Err(args::bad(
             span,
@@ -53,7 +74,10 @@ fn parse_point2_list_value(v: &Value, span: Span, what: &str, key: &str) -> Resu
         let coords = args::f64s(item)
             .ok_or_else(|| args::bad(span, format!("{what}: each point must be [f64;2]")))?;
         if coords.len() < 2 {
-            return Err(args::bad(span, format!("{what}: each point needs ≥2 coords")));
+            return Err(args::bad(
+                span,
+                format!("{what}: each point needs ≥2 coords"),
+            ));
         }
         pts.push(Point2::new(coords[0], coords[1]));
     }
@@ -137,7 +161,10 @@ pub fn polygon_signed_area_host(args_v: &Value, span: Span) -> Result<Value, Dia
 /// Args: `{ vertices: [[f64;2]] }`. Out: `{ area: f64 }`.
 pub fn polygon_area_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let vertices = parse_point2_list(args_v, "vertices", span, "polygon_area")?;
-    Ok(args::record([("area", Value::F64(polygon_area(&vertices)))]))
+    Ok(args::record([(
+        "area",
+        Value::F64(polygon_area(&vertices)),
+    )]))
 }
 
 /// `ComputationalGeometry.point_in_polygon` — winding / even-odd interior test.
@@ -172,7 +199,10 @@ pub fn minkowski_sum_convex_host(args_v: &Value, span: Span) -> Result<Value, Di
 pub fn nearest_segment_site_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let q = parse_point2_arg(args_v, "q", span, "nearest_segment_site")?;
     let v = args::rec(args_v, "segments").ok_or_else(|| {
-        args::bad(span, "nearest_segment_site needs segments: [[[f64;2],[f64;2]]]")
+        args::bad(
+            span,
+            "nearest_segment_site needs segments: [[[f64;2],[f64;2]]]",
+        )
     })?;
     let list = args::list(v)
         .ok_or_else(|| args::bad(span, "nearest_segment_site: segments must be list"))?;
@@ -188,14 +218,20 @@ pub fn nearest_segment_site_host(args_v: &Value, span: Span) -> Result<Value, Di
             args::bad(span, "nearest_segment_site: each segment is [[x,y],[x,y]]")
         })?;
         if pair.len() < 2 {
-            return Err(args::bad(span, "nearest_segment_site: each segment needs 2 points"));
+            return Err(args::bad(
+                span,
+                "nearest_segment_site: each segment needs 2 points",
+            ));
         }
         let a = args::f64s(&pair[0])
             .ok_or_else(|| args::bad(span, "nearest_segment_site: segment a needs [f64;2]"))?;
         let b = args::f64s(&pair[1])
             .ok_or_else(|| args::bad(span, "nearest_segment_site: each segment b needs [f64;2]"))?;
         if a.len() < 2 || b.len() < 2 {
-            return Err(args::bad(span, "nearest_segment_site: endpoints need ≥2 coords"));
+            return Err(args::bad(
+                span,
+                "nearest_segment_site: endpoints need ≥2 coords",
+            ));
         }
         segs.push(SegmentSite {
             a: Point2::new(a[0], a[1]),
@@ -295,8 +331,14 @@ mod tests {
     #[test]
     fn wave23_minkowski_sum_convex_unit_squares() {
         let mut m = BTreeMap::new();
-        m.insert("a".into(), pts(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]));
-        m.insert("b".into(), pts(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]));
+        m.insert(
+            "a".into(),
+            pts(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
+        );
+        m.insert(
+            "b".into(),
+            pts(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
+        );
         let out = minkowski_sum_convex_host(&Value::Record(m), span()).unwrap();
         assert!(args::rec_u64(&out, "count").unwrap() >= 4);
     }

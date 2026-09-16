@@ -199,10 +199,7 @@ mod tests {
         assert_eq!(poet.state, AppRecordState::Active);
         assert!(poet.integrity_ok);
         let view = reg.inspect(POET_APP_ID).unwrap();
-        assert!(view
-            .permission_summary
-            .kinds
-            .contains(&"read_local_state"));
+        assert!(view.permission_summary.kinds.contains(&"read_local_state"));
         // First occupied slot is POET.
         assert_eq!(reg.list()[0].app_id, POET_APP_ID);
     }

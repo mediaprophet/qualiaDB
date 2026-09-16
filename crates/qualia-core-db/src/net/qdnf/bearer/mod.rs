@@ -12,22 +12,22 @@ pub mod raw_ethernet;
 
 pub use contract::{Bearer, BearerCapabilities, RecvMeta};
 pub use fragment::{
-    AdmitTicket, FRAG_HDR_LEN, FragmentHeader, HandshakeReassembler, MAX_HANDSHAKE_BYTES,
     admit_and_buffer, decode_fragment, encode_fragment, fragment_payload_mtu, split_handshake,
+    AdmitTicket, FragmentHeader, HandshakeReassembler, FRAG_HDR_LEN, MAX_HANDSHAKE_BYTES,
 };
-pub use ipc::{IpcEndpoint, ipc_pair};
-pub use leased_ipc::{LeasedIpc, leased_ipc_pair};
+pub use ipc::{ipc_pair, IpcEndpoint};
+pub use leased_ipc::{leased_ipc_pair, LeasedIpc};
 pub use lifecycle::{BearerLifecycle, BearerPhase};
 pub use mtu::{
-    DEFAULT_QDNF_MTU, MAX_QDNF_MTU, MIN_QDNF_MTU, interface_loss_error, negotiate_mtu,
-    reconnect_requires_new_admission, unfragmented_fit,
+    interface_loss_error, negotiate_mtu, reconnect_requires_new_admission, unfragmented_fit,
+    DEFAULT_QDNF_MTU, MAX_QDNF_MTU, MIN_QDNF_MTU,
 };
 pub use nym::{
     decapsulate_nym, encapsulate_nym, NymSimulatedBearer, NYM_ENVELOPE_VERSION, NYM_HEADER_LEN,
     NYM_MAGIC, NYM_SPHINX_MTU,
 };
 pub use raw_ethernet::{
-    DEV_ETHERTYPE, EthernetEvidence, EthernetLoop, RawEthernet, TwoHostProbe, TwoHostProbeReason,
     decapsulate_ethernet, encapsulate_ethernet, ethernet_loop_pair, physical_two_host_qualified,
     probe_two_host, probe_veth_namespace, silent_ip_fallback, veth_namespace_qualified,
+    EthernetEvidence, EthernetLoop, RawEthernet, TwoHostProbe, TwoHostProbeReason, DEV_ETHERTYPE,
 };

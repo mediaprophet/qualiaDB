@@ -175,7 +175,7 @@ fn run_on_worker_engine(config: RawDecodeConfig) -> Result<RawDecodeResult, Stri
                         })?;
                     if token == u32::MAX {
                         return Err(
-                            "prepared CUDA raw decode did not own the output projection".into(),
+                            "prepared CUDA raw decode did not own the output projection".into()
                         );
                     }
                     token

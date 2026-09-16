@@ -124,8 +124,7 @@ impl Q42AssetEnvelope {
         if self.asset_id.trim().is_empty() {
             return Err(AssetEnvelopeError::MissingAssetId);
         }
-        if self.upstream.source_name.trim().is_empty()
-            || self.upstream.release_id.trim().is_empty()
+        if self.upstream.source_name.trim().is_empty() || self.upstream.release_id.trim().is_empty()
         {
             return Err(AssetEnvelopeError::MissingUpstreamRelease);
         }

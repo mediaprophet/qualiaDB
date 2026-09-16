@@ -6,7 +6,14 @@ plans, trackers, or historical ledgers until the project owner promotes them.
 
 ## Current documents
 
-- [NLP Exceptional Implementation Plan](./NLP_EXCEPTIONAL_IMPLEMENTATION_PLAN_2026-09-14.md) — NLP review, 75-package implementation tracker, dataset-specific gates and first implementation prompt; checked by `scripts/validate-nlp-plan.ps1`.
+- [Semantic instruments overview](./SEMANTIC_INSTRUMENTS_OVERVIEW_WIP.md) — conceptual model for expert-authored ontology/logic instruments, badge presentations, capability credentials, RPL and traceable employment.
+- [Semantic instrument package specification](./SEMANTIC_INSTRUMENT_PACKAGE_SPEC_WIP.md) — draft package, dependency, attestation, execution-receipt, capability and Poet/Webizen requirements.
+- [Semantic instrument implementation plan](./SEMANTIC_INSTRUMENT_IMPLEMENTATION_PLAN_WIP.md) — SI-0 dependency graph, bounded swarm packets, acceptance gates and reference vertical slices.
+- [Semantic instrument decision register (SI-00)](./SEMANTIC_INSTRUMENT_DECISION_REGISTER_WIP.md) — inventory of existing package/credential/provenance/UI models, reuse map, conflicts, and HELD/PROVISIONAL ABI decisions. Not a runtime-complete claim.
+- [Semantic instrument UX contract (SI-02)](./SEMANTIC_INSTRUMENT_UX_CONTRACT_WIP.md) — catalogue vs badge vs inspect vs collect vs activate; Demo labelled; no Host IDs.
+- [NLP Exceptional Implementation Plan](./NLP_EXCEPTIONAL_IMPLEMENTATION_PLAN_2026-09-14.md) — NLP review, 75-package tracker, swarm board (§20), defect register (§21); checked by `scripts/validate-nlp-plan.ps1`.
+- [NLP Release Charter (NLP-008)](./NLP_RELEASE_CHARTER_WIP.md) — first use cases, profiles, evaluation inventory, resource envelope, in/out scope.
+- [NLP Reuse Inventory (NLP-009)](./NLP_REUSE_INVENTORY_WIP.md) — verified APIs vs gaps, candidate feasibility, hardware receipt; REVIEW not DONE.
 - [`alice-f6-classifier-symbolic-binding-pressure-test.md`](./alice-f6-classifier-symbolic-binding-pressure-test.md) — Alice F6: classifier/symbolic pressure-test — who ≠ claim ≠ spatiotemporal ≠ instruments (plus `keyRole`, DNI ≠ RAR ≠ QSession); docs map only
 - [`g-lexicon-0-slice1.md`](./g-lexicon-0-slice1.md) — G-LEXICON-0 slice 1: `GraphDatabase.lexicon_manifest` (Neo); held/not-yet diagnose; no in-binary WordNet
 - [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) — G-LEXICON-0 Poet bay chrome: held-gate + living/artifact/machine chips on `lexicon_manifest` (davinci/monet)

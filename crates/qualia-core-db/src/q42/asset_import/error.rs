@@ -39,9 +39,10 @@ impl PartialEq for ImportError {
             (ByteBudgetExceeded { used: a, max: b }, ByteBudgetExceeded { used: c, max: d }) => {
                 a == c && b == d
             }
-            (RecordBudgetExceeded { used: a, max: b }, RecordBudgetExceeded { used: c, max: d }) => {
-                a == c && b == d
-            }
+            (
+                RecordBudgetExceeded { used: a, max: b },
+                RecordBudgetExceeded { used: c, max: d },
+            ) => a == c && b == d,
             (RawNotFound(a), RawNotFound(b)) => a == b,
             (DestinationExists(a), DestinationExists(b)) => a == b,
             (Failed(a), Failed(b)) => a == b,
@@ -63,7 +64,10 @@ impl std::fmt::Display for ImportError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ChunkBudgetExceeded => {
-                write!(f, "chunk_byte_budget exceeds Sentinel pass budget or is zero")
+                write!(
+                    f,
+                    "chunk_byte_budget exceeds Sentinel pass budget or is zero"
+                )
             }
             Self::ByteBudgetExceeded { used, max } => {
                 write!(f, "byte budget exceeded (used={used}, max={max})")

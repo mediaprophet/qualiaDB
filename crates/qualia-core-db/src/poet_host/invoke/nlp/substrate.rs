@@ -1,5 +1,6 @@
 //! `NLP.substrate_extract` — full symbolic pipeline.
 
+use crate::nlp::coref::{CorefError, CorefLimits};
 use crate::nlp::substrate::extract_substrate;
 use std::collections::BTreeMap;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -18,14 +19,14 @@ pub fn substrate_extract(args: &Value, span: Span) -> Result<Value, Diagnostic> 
             ))
         }
     };
-    if text.len() > 256 * 1024 {
+    if text.len() > CorefLimits::DEFAULT.max_source_bytes {
         return Err(Diagnostic::new(
             DiagCode::E400,
             span,
             "NLP.substrate_extract exceeds 256 KiB",
         ));
     }
-    let sub = extract_substrate(text);
+    let sub = extract_substrate(text).map_err(|err| substrate_coref_diag(err, span))?;
 
     let frames: Vec<Value> = sub
         .frames
@@ -93,6 +94,15 @@ pub fn substrate_extract(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     rec.insert("relations".into(), Value::List(relations));
     rec.insert("coref_chains".into(), Value::List(coref_chains));
     Ok(Value::Record(rec))
+}
+
+fn substrate_coref_diag(err: CorefError, span: Span) -> Diagnostic {
+    let code = if err.is_resource_error() {
+        DiagCode::E400
+    } else {
+        DiagCode::E100
+    };
+    Diagnostic::new(code, span, err.to_string())
 }
 
 #[cfg(test)]

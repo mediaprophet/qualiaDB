@@ -38,7 +38,10 @@ pub fn bdf1_step_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let y0 = args::rec_f64(args_v, "y0").ok_or_else(|| args::bad(span, "needs y0"))?;
     let h = args::rec_f64(args_v, "h").ok_or_else(|| args::bad(span, "needs h"))?;
     let f = power_rhs(args_v);
-    Ok(args::record([("value", Value::F64(bdf1_step(t0, y0, h, f)))]))
+    Ok(args::record([(
+        "value",
+        Value::F64(bdf1_step(t0, y0, h, f)),
+    )]))
 }
 
 /// `Calculus.bdf2_step` — BDF2. Args: `{ t1, y1, y0, h, rate?, power? }`.
@@ -91,8 +94,7 @@ pub fn pack_f32_pair_host(args_v: &Value, span: Span) -> Result<Value, Diagnosti
 
 /// `Calculus.unpack_f32_pair` — unpack u64 → `{ step, comp }`.
 pub fn unpack_f32_pair_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let packed =
-        args::rec_u64(args_v, "packed").ok_or_else(|| args::bad(span, "needs packed"))?;
+    let packed = args::rec_u64(args_v, "packed").ok_or_else(|| args::bad(span, "needs packed"))?;
     let (step, comp) = unpack_f32_pair(packed);
     Ok(args::record([
         ("step", Value::F64(f64::from(step))),

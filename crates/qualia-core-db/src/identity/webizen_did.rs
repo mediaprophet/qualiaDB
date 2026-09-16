@@ -175,7 +175,8 @@ pub fn verify_pq_signature(
     signature_bytes: &[u8; 3309],
     context: &[u8],
 ) -> bool {
-    crate::crypto::network::mldsa::verify(public_key_bytes, message, context, signature_bytes).is_ok()
+    crate::crypto::network::mldsa::verify(public_key_bytes, message, context, signature_bytes)
+        .is_ok()
 }
 
 /// Verify a hybrid DualProof (ML-DSA-65 + Ed25519) digital signature over a message.
@@ -189,14 +190,8 @@ pub fn verify_dual_signature(
     context: &[u8],
     proof: &crate::crypto::network::dual_sign::DualProof,
 ) -> bool {
-    crate::crypto::network::dual_sign::verify_dual(
-        mldsa_pk,
-        ed25519_pk,
-        message,
-        context,
-        proof,
-    )
-    .is_ok()
+    crate::crypto::network::dual_sign::verify_dual(mldsa_pk, ed25519_pk, message, context, proof)
+        .is_ok()
 }
 
 /// Format a 16-byte UUID into standard 36-character hyphenated lowercase hex ASCII.

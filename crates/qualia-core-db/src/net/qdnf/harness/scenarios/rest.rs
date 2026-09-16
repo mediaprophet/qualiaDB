@@ -5,16 +5,16 @@ use crate::net::qdnf::contracts::identity::{refuse_alias_merge, ReferentKind};
 use crate::net::qdnf::economics::{apply_payment_to_consent, ConsentBudget, PaidCredit};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::link::cookies::CookieJar;
-use crate::net::qdnf::policy_labels::{
-    join_one, Confidentiality, LabelFields, NO_TRAINING,
-};
+use crate::net::qdnf::policy_labels::{join_one, Confidentiality, LabelFields, NO_TRAINING};
 
 pub fn s24_payment_not_consent() -> Result<(), QdnfError> {
     let consent = ConsentBudget {
         allowed_bytes: 64,
         allowed_work: 8,
     };
-    let paid = PaidCredit { milli_units: 10_000 };
+    let paid = PaidCredit {
+        milli_units: 10_000,
+    };
     let after = apply_payment_to_consent(consent, paid);
     if after != consent {
         return Err(QdnfError::Denied);

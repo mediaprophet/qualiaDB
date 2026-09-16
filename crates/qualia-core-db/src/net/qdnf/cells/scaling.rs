@@ -7,9 +7,9 @@
 //! Tests charge KiB-scale [`CellProfile::NetworkSmall`] slots. The 42 MiB
 //! Sentinel figure stays in [`super::pass_budget`] as accounting.
 
-use crate::net::peer::cells::admit::{CellSlot, MAX_CELLS};
 #[cfg(test)]
 use crate::net::peer::cells::admit::CellProfile;
+use crate::net::peer::cells::admit::{CellSlot, MAX_CELLS};
 use crate::net::peer::cells::host_owner::HostAdmission;
 use crate::net::qdnf::errors::QdnfError;
 
@@ -138,10 +138,7 @@ mod tests {
         assert_eq!(n, MAX_SCALE_CELLS);
         assert_eq!(host.occupied(), MAX_SCALE_CELLS);
         assert_eq!(host.remaining_slots(), 0);
-        assert_eq!(
-            host.admit_fair(CELL, 1),
-            Err(QdnfError::Capacity)
-        );
+        assert_eq!(host.admit_fair(CELL, 1), Err(QdnfError::Capacity));
         assert_eq!(host.occupied(), MAX_SCALE_CELLS);
         let mut i = 0usize;
         while i < MAX_SCALE_CELLS {

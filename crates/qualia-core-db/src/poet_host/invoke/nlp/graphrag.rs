@@ -1,5 +1,7 @@
-//! `NLP.graphrag_query` — graph-augmented retrieval.
+//! `NLP.graphrag_query` — keyword-triple term overlap over caller-supplied
+//! triples. Not GraphRAG, embeddings, or graph-neighborhood retrieval.
 
+use crate::nlp::budget::{reject_query, reject_triples};
 use crate::nlp::graphrag::GraphRagIndex;
 use std::collections::BTreeMap;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -29,24 +31,22 @@ pub fn graphrag_query(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             ))
         }
     };
+    reject_query(query.len()).map_err(|e| Diagnostic::new(DiagCode::E400, span, e.to_string()))?;
     let k = match rec.get("k") {
         Some(Value::U64(n)) => *n as usize,
         Some(Value::I64(n)) => (*n).max(0) as usize,
         _ => 10,
     };
-    let triples = match rec.get("triples") {
-        Some(Value::List(list)) => list.clone(),
-        _ => Vec::new(),
+    let triples: &[Value] = match rec.get("triples") {
+        Some(Value::List(list)) => {
+            reject_triples(list.len())
+                .map_err(|e| Diagnostic::new(DiagCode::E400, span, e.to_string()))?;
+            list.as_slice()
+        }
+        _ => &[],
     };
-    if query.len() > 64 * 1024 {
-        return Err(Diagnostic::new(
-            DiagCode::E400,
-            span,
-            "NLP.graphrag_query query exceeds 64 KiB",
-        ));
-    }
     let mut idx = GraphRagIndex::new();
-    for t in &triples {
+    for t in triples {
         let parts: Vec<String> = match t {
             Value::List(list) => list
                 .iter()
@@ -147,5 +147,25 @@ mod tests {
     fn rejects_non_record() {
         let r = graphrag_query(&Value::I64(1), Span { start: 0, end: 0 });
         assert!(r.is_err());
+    }
+
+    #[test]
+    fn rejects_oversize_query() {
+        let q = "q".repeat(crate::nlp::budget::MAX_GRAPHRAG_QUERY_BYTES + 1);
+        let err = graphrag_query(&args(&q), Span { start: 0, end: 0 }).unwrap_err();
+        assert_eq!(err.code, DiagCode::E400);
+    }
+
+    #[test]
+    fn rejects_oversize_triple_list() {
+        let mut rec = BTreeMap::new();
+        rec.insert("query".into(), Value::String("Paris".into()));
+        rec.insert("k".into(), Value::U64(10));
+        rec.insert(
+            "triples".into(),
+            Value::List(vec![Value::Null; crate::nlp::budget::MAX_TRIPLES + 1]),
+        );
+        let err = graphrag_query(&Value::Record(rec), Span { start: 0, end: 0 }).unwrap_err();
+        assert_eq!(err.code, DiagCode::E400);
     }
 }

@@ -112,9 +112,11 @@ fn decode_varint(src: &[u8]) -> Result<(u64, usize), CapsuleError> {
         1 => first as u64,
         2 => u16::from_be_bytes([src[0], src[1]]) as u64 & 0x3fff,
         4 => u32::from_be_bytes([src[0], src[1], src[2], src[3]]) as u64 & 0x3fff_ffff,
-        8 => u64::from_be_bytes([
-            src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7],
-        ]) & MAX_VARINT,
+        8 => {
+            u64::from_be_bytes([
+                src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7],
+            ]) & MAX_VARINT
+        }
         _ => return Err(CapsuleError::Malformed),
     };
     if varint_len(value) != len {
@@ -323,7 +325,10 @@ mod tests {
         assert_eq!(decode_capsule(&[0x40, 0x00]), Err(CapsuleError::Malformed));
         assert_eq!(decode_varint(&[0x00]), Ok((0, 1)));
         assert_eq!(encode_varint(63, &mut [0u8; 1]), Ok(1));
-        assert_eq!(encode_varint(64, &mut [0u8; 1]), Err(CapsuleError::Capacity));
+        assert_eq!(
+            encode_varint(64, &mut [0u8; 1]),
+            Err(CapsuleError::Capacity)
+        );
     }
 
     #[test]

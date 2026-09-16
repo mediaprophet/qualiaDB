@@ -547,12 +547,7 @@ pub fn fuzzy_negate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let out = degrees_to_set(&degrees).negate(norm);
     Ok(args::record([(
         "degrees",
-        Value::List(
-            out.solutions
-                .iter()
-                .map(|s| Value::F64(s.degree))
-                .collect(),
-        ),
+        Value::List(out.solutions.iter().map(|s| Value::F64(s.degree)).collect()),
     )]))
 }
 
@@ -580,11 +575,7 @@ mod wave16_fuzzy_tests {
         let mut m = BTreeMap::new();
         m.insert(
             "degrees".into(),
-            Value::List(vec![
-                Value::F64(0.1),
-                Value::F64(0.5),
-                Value::F64(0.9),
-            ]),
+            Value::List(vec![Value::F64(0.1), Value::F64(0.5), Value::F64(0.9)]),
         );
         m.insert("alpha".into(), Value::F64(0.5));
         let out = fuzzy_threshold(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
@@ -605,11 +596,7 @@ mod wave17_fuzzy_tests {
         let mut m = BTreeMap::new();
         m.insert(
             "degrees".into(),
-            Value::List(vec![
-                Value::F64(0.2),
-                Value::F64(0.9),
-                Value::F64(0.5),
-            ]),
+            Value::List(vec![Value::F64(0.2), Value::F64(0.9), Value::F64(0.5)]),
         );
         m.insert("k".into(), Value::U64(1));
         let out = fuzzy_top_k(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
@@ -621,10 +608,7 @@ mod wave17_fuzzy_tests {
     #[test]
     fn wave17_fuzzy_negate_godel() {
         let mut m = BTreeMap::new();
-        m.insert(
-            "degrees".into(),
-            Value::List(vec![Value::F64(0.3)]),
-        );
+        m.insert("degrees".into(), Value::List(vec![Value::F64(0.3)]));
         let out = fuzzy_negate(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
         let d = args::rec_f64_list(&out, "degrees").unwrap();
         // DegreeNorm routes through f32 modality ops.
@@ -637,23 +621,27 @@ mod wave17_fuzzy_tests {
         aand.insert("a".into(), Value::F64(0.3));
         aand.insert("b".into(), Value::F64(0.7));
         let and_v = fuzzy_and(&Value::Record(aand), Span { start: 0, end: 0 }).unwrap();
-        assert!((match and_v {
-            Value::F64(x) => x,
-            _ => panic!(),
-        } - 0.3)
-            .abs()
-            < 1e-6);
+        assert!(
+            (match and_v {
+                Value::F64(x) => x,
+                _ => panic!(),
+            } - 0.3)
+                .abs()
+                < 1e-6
+        );
 
         let mut aor = BTreeMap::new();
         aor.insert("a".into(), Value::F64(0.3));
         aor.insert("b".into(), Value::F64(0.7));
         let or_v = fuzzy_or(&Value::Record(aor), Span { start: 0, end: 0 }).unwrap();
-        assert!((match or_v {
-            Value::F64(x) => x,
-            _ => panic!(),
-        } - 0.7)
-            .abs()
-            < 1e-6);
+        assert!(
+            (match or_v {
+                Value::F64(x) => x,
+                _ => panic!(),
+            } - 0.7)
+                .abs()
+                < 1e-6
+        );
     }
 }
 

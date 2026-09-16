@@ -1006,7 +1006,10 @@ pub fn econ_ols(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 pub fn econ_aggregate_wealth(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     // Honesty: availability stub — agent-based aggregate is not computed here.
-    Ok(args::record([("status", Value::String("agent_based_available".into()))]))
+    Ok(args::record([(
+        "status",
+        Value::String("agent_based_available".into()),
+    )]))
 }
 
 // ── Input-output ─────────────────────────────────────────────────────────────

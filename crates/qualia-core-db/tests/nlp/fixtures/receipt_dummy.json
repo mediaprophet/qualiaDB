@@ -1,0 +1,17 @@
+{
+  "suite_id": "nlp-004",
+  "source_revision": "uncommitted",
+  "command": "cargo test -p qualia-core-db --test nlp_suite",
+  "passed": 2,
+  "failed": 0,
+  "clock": "1970-01-01T00:00:00Z",
+  "seed": 42,
+  "artifact_paths": [
+    "benchmarks/nlp/manifests/nlp-004-smoke-tokenize-en.json",
+    "benchmarks/nlp/manifests/nlp-004-ud-en-ewt-unavailable.json"
+  ],
+  "notes": [
+    "In-process plumbing counts, not F1/accuracy.",
+    "Dummy clock; semantic receipt is timestamp-free."
+  ]
+}

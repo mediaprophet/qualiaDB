@@ -33,6 +33,7 @@ pub mod companion_bundle;
 pub mod connection_identifier;
 pub mod consent_credential;
 pub mod context_binding;
+pub mod conditioning;
 pub mod cookie_graph;
 pub mod dead_mans_switch;
 pub mod directory;

@@ -219,7 +219,10 @@ pub fn integrate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// Args: `{ expr, a, order, var? }`. Out: `{ coeffs }` or error if singular at `a`.
 pub fn taylor_coefficients(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let expr = args::rec_str(args_v, "expr").ok_or_else(|| {
-        args::bad(span, "SymbolicAlgebra.taylor_coefficients needs expr: string")
+        args::bad(
+            span,
+            "SymbolicAlgebra.taylor_coefficients needs expr: string",
+        )
     })?;
     let a = args::rec_f64(args_v, "a")
         .ok_or_else(|| args::bad(span, "taylor_coefficients needs a: number"))?;
@@ -228,8 +231,9 @@ pub fn taylor_coefficients(args_v: &Value, span: Span) -> Result<Value, Diagnost
         as usize;
     let var = args::rec_str(args_v, "var").unwrap_or("x");
     let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
-    let coeffs = crate::specialized_libs::symbolic_series::taylor_coefficients(&e, var, a, order)
-        .ok_or_else(|| args::bad(span, "taylor_coefficients: singular or non-finite at a"))?;
+    let coeffs =
+        crate::specialized_libs::symbolic_series::taylor_coefficients(&e, var, a, order)
+            .ok_or_else(|| args::bad(span, "taylor_coefficients: singular or non-finite at a"))?;
     Ok(args::record([("coeffs", args::f64_list_value(coeffs))]))
 }
 
@@ -288,10 +292,7 @@ mod tests {
     #[test]
     fn simplify_trig_pythagorean() {
         let mut m = BTreeMap::new();
-        m.insert(
-            "expr".into(),
-            Value::String("sin(x)^2 + cos(x)^2".into()),
-        );
+        m.insert("expr".into(), Value::String("sin(x)^2 + cos(x)^2".into()));
         let v = simplify_trig(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
         let rec = match v {
             Value::Record(r) => r,
@@ -354,10 +355,7 @@ mod tests {
     #[test]
     fn limit_lhopital_zero_over_zero() {
         let mut m = BTreeMap::new();
-        m.insert(
-            "expr".into(),
-            Value::String("(x^2 - 1) / (x - 1)".into()),
-        );
+        m.insert("expr".into(), Value::String("(x^2 - 1) / (x - 1)".into()));
         m.insert("a".into(), Value::F64(1.0));
         let out = limit(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
         assert!((args::rec_f64(&out, "value").unwrap() - 2.0).abs() < 1e-7);

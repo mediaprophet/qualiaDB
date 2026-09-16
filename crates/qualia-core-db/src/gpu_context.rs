@@ -942,7 +942,9 @@ async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
             .request_adapter(&wgpu::RequestAdapterOptions::default())
             .await
             .map_err(|e| {
-                format!("Failed to find WebGPU adapter (high-performance: {high_err}; default: {e})")
+                format!(
+                    "Failed to find WebGPU adapter (high-performance: {high_err}; default: {e})"
+                )
             })?,
     };
     init_shared_gpu_for_adapter(instance, adapter).await

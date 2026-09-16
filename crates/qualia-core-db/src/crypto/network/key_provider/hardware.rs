@@ -107,7 +107,10 @@ mod tests {
 
     #[test]
     fn all_ops_are_platform_unsupported() {
-        assert_eq!(HardwareBackend::sign(), Err(CryptoError::PlatformUnsupported));
+        assert_eq!(
+            HardwareBackend::sign(),
+            Err(CryptoError::PlatformUnsupported)
+        );
         let mut sig = [0u8; ED25519_SIG_LEN];
         assert_eq!(
             HardwareBackend::sign_ed25519(&grant(), &[3u8; 32], b"m", b"c", 10, 9, 1, &mut sig),

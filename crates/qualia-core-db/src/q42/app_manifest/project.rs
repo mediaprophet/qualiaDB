@@ -360,7 +360,10 @@ mod tests {
     fn assert_shared_ids(shared: &SharedProjectionIds, app_id: &str, version: &str) {
         assert_eq!(shared.app_id, app_id);
         assert_eq!(shared.version, version);
-        assert_eq!(shared.capability_ids, vec!["qualia.graph.query".to_string()]);
+        assert_eq!(
+            shared.capability_ids,
+            vec!["qualia.graph.query".to_string()]
+        );
         assert_eq!(
             shared.asset_ids,
             vec!["did:q42:asset:chebi:261".to_string()]
@@ -380,11 +383,7 @@ mod tests {
         let manifest = base_manifest(all_four_entries());
         let projected = project_manifest(&manifest, &full_grant()).unwrap();
         assert_eq!(projected.descriptor_count(), 4);
-        assert_shared_ids(
-            &projected.shared,
-            "did:q42:app:health.proof",
-            "1.0.0",
-        );
+        assert_shared_ids(&projected.shared, "did:q42:app:health.proof", "1.0.0");
 
         let m = projected.manifold.as_ref().unwrap();
         let c = projected.container.as_ref().unwrap();
@@ -472,21 +471,12 @@ mod tests {
             allowed: vec![PermissionKind::ReadLocalState],
         };
         let deny_all = project_manifest(&manifest, &short);
-        let deny_manifold = project_manifest_kinds(
-            &manifest,
-            &short,
-            Some(&[ProjectionKind::Manifold]),
-        );
-        let deny_desktop = project_manifest_kinds(
-            &manifest,
-            &short,
-            Some(&[ProjectionKind::DesktopHost]),
-        );
-        let deny_focused = project_manifest_kinds(
-            &manifest,
-            &short,
-            Some(&[ProjectionKind::FocusedMiniApp]),
-        );
+        let deny_manifold =
+            project_manifest_kinds(&manifest, &short, Some(&[ProjectionKind::Manifold]));
+        let deny_desktop =
+            project_manifest_kinds(&manifest, &short, Some(&[ProjectionKind::DesktopHost]));
+        let deny_focused =
+            project_manifest_kinds(&manifest, &short, Some(&[ProjectionKind::FocusedMiniApp]));
         assert_eq!(deny_all, Err(AppManifestError::PermissionEscalation));
         assert_eq!(deny_all, deny_manifold);
         assert_eq!(deny_all, deny_desktop);

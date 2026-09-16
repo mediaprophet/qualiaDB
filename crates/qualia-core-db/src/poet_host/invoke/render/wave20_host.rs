@@ -7,10 +7,14 @@ use crate::render::camera::CameraState;
 use crate::render::navigation::{camera_frame_node, lerp_camera};
 use vibe::{Diagnostic, Span, Value};
 
-fn read_camera(args_v: &Value, key: &str, span: Span, what: &str) -> Result<CameraState, Diagnostic> {
-    let rec = args::rec(args_v, key).ok_or_else(|| {
-        args::bad(span, format!("{what} needs {key}: {{ yaw, pitch, zoom }}"))
-    })?;
+fn read_camera(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<CameraState, Diagnostic> {
+    let rec = args::rec(args_v, key)
+        .ok_or_else(|| args::bad(span, format!("{what} needs {key}: {{ yaw, pitch, zoom }}")))?;
     let yaw = args::rec_f64(rec, "yaw").unwrap_or(0.0) as f32;
     let pitch = args::rec_f64(rec, "pitch").unwrap_or(0.0) as f32;
     let zoom = args::rec_f64(rec, "zoom").unwrap_or(3.5) as f32;

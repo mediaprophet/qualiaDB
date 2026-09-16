@@ -7,12 +7,12 @@ pub mod cookies;
 pub mod discovery;
 pub mod neighbor;
 
-pub use adjacency::{Adjacency, AdjacencyState, link_id_from_key};
-pub use budget::{MAX_UNAUTH_BYTES, MAX_UNAUTH_WORK, PreAuthBudget, admit_unauthenticated};
+pub use adjacency::{link_id_from_key, Adjacency, AdjacencyState};
+pub use budget::{admit_unauthenticated, PreAuthBudget, MAX_UNAUTH_BYTES, MAX_UNAUTH_WORK};
 pub use challenge::{
-    ChallengeTable, DiscoveryChallenge, MAX_PENDING_CHALLENGES, accept_beacon,
-    insert_after_challenge,
+    accept_beacon, insert_after_challenge, ChallengeTable, DiscoveryChallenge,
+    MAX_PENDING_CHALLENGES,
 };
 pub use cookies::{CookieJar, ReachabilityCookie};
-pub use discovery::{Beacon, DiscoveryMode, rotating_tag};
+pub use discovery::{rotating_tag, Beacon, DiscoveryMode};
 pub use neighbor::NeighborTable;

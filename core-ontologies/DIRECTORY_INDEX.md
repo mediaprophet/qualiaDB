@@ -18,6 +18,7 @@ Comprehensive index of functionality for `core-ontologies`. This document serves
 - 📁 `[tools](tools/DIRECTORY_INDEX.md)`
 - 📁 `[traces](traces/DIRECTORY_INDEX.md)`
 - 📁 `[un-instruments](un-instruments/DIRECTORY_INDEX.md)`
+- 📁 `fixtures/semantic-instruments/` — SI-01 positive/negative contract fixtures (not values-credentials)
 
 ### Files & Exported Functionality
 - 📄 `.gitignore`
@@ -35,10 +36,14 @@ Comprehensive index of functionality for `core-ontologies`. This document serves
 - 📄 `permissive-commons.n3`
 - 📄 `policy.n3`
 - 📄 `selfhood.n3`
+- 📄 `semantic-instruments.n3`
+- 📄 `semantic-instrument-shapes.n3`
+- 📄 `semantic-instrument-capability-profile.n3`
 - 📄 `sense.n3`
 - 📄 `social-permissive-commons.n3`
 - 📄 `tiering.n3`
 - 📄 `values.n3`
 
 ## Changelog
+- **2026-09-15**: SI-01 draft `semantic-instrument*.n3` plus `fixtures/semantic-instruments/` (not a values-credential schema bump).
 - **2026-06-30**: Automated full index generation, extracting code definitions.

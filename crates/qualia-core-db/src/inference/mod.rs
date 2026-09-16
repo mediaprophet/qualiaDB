@@ -159,3 +159,12 @@ pub mod thermal_wal;
 // optional `nvml` feature). The module's own inner cfg makes it empty on wasm32.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod thermal_telemetry;
+
+// Portable conditioning compiler (Prompt Precision P1C)
+pub mod conditioning;
+
+// Prompt precision evaluation and paired scoring (Prompt Precision P5)
+pub mod conditioning_eval;
+
+// Model mapping and precision optimization pipeline
+pub mod conditioning_opt;

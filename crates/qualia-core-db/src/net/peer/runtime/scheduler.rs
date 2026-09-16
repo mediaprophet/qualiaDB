@@ -177,9 +177,7 @@ impl FairScheduler {
     }
 
     fn scope_index(&self, id: u64) -> Option<usize> {
-        self.scopes
-            .iter()
-            .position(|s| s.occupied && s.id == id)
+        self.scopes.iter().position(|s| s.occupied && s.id == id)
     }
 
     fn try_take(&mut self, idx: usize, class_i: usize) -> Option<ScheduledWork> {
@@ -301,9 +299,7 @@ mod tests {
             sched.enqueue(work(80, WorkClass::Control)),
             Err(QdnfError::Capacity)
         );
-        sched
-            .enqueue(work(40, WorkClass::Background))
-            .unwrap();
+        sched.enqueue(work(40, WorkClass::Background)).unwrap();
         let mut saw_background = false;
         let mut remaining_control = CONTROL_CAP;
         for _ in 0..(CONTROL_CAP + 2) {

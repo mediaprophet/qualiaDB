@@ -98,7 +98,9 @@ impl FilePairStore {
                 receipt_class: ReceiptClass::Effect,
                 effect_digest: Some(got),
                 ..
-            } if got == effect_digest => write_exact(&self.path("receipt"), effect_digest.as_bytes()),
+            } if got == effect_digest => {
+                write_exact(&self.path("receipt"), effect_digest.as_bytes())
+            }
             _ => Err(QdnfError::Incomplete),
         }
     }

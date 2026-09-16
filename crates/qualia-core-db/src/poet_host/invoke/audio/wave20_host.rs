@@ -99,8 +99,7 @@ pub fn bin_to_freq_linear_host(args_v: &Value, span: Span) -> Result<Value, Diag
 /// Args: `{ bin: u64, f_min: f64, bins_per_octave: u64 }`. Out: `{ frequency_hz: f64 }`.
 pub fn bin_to_freq_log_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let bin = args::rec_u64(args_v, "bin")
-        .ok_or_else(|| args::bad(span, "Audio.bin_to_freq_log needs bin"))?
-        as usize;
+        .ok_or_else(|| args::bad(span, "Audio.bin_to_freq_log needs bin"))? as usize;
     let f_min = args::rec_f64(args_v, "f_min")
         .ok_or_else(|| args::bad(span, "Audio.bin_to_freq_log needs f_min"))?
         as f32;

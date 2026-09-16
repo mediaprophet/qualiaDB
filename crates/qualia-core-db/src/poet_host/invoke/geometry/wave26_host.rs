@@ -5,13 +5,18 @@
 
 use super::super::args;
 use crate::specialized_libs::computational_geometry::{
-    barycentric_tetra, frame_to_world, quaternion_slerp, quaternion_to_matrix, schur_complement_2x2,
-    separating_plane_aabb, solve_diagonal_quadratic, world_to_frame, AffineFrame3, Point3,
-    Quaternion,
+    barycentric_tetra, frame_to_world, quaternion_slerp, quaternion_to_matrix,
+    schur_complement_2x2, separating_plane_aabb, solve_diagonal_quadratic, world_to_frame,
+    AffineFrame3, Point3, Quaternion,
 };
 use vibe::{Diagnostic, Span, Value};
 
-fn parse_point3_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Point3, Diagnostic> {
+fn parse_point3_arg(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Point3, Diagnostic> {
     let coords = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64; 3]")))?;
     if coords.len() < 3 {
@@ -89,7 +94,10 @@ pub fn frame_to_world_host(args_v: &Value, span: Span) -> Result<Value, Diagnost
         return Err(args::bad(span, "frame_to_world: coords needs ≥3 values"));
     }
     let frame = parse_frame(args_v, span, "frame_to_world")?;
-    Ok(point3_record(frame_to_world(frame, [coords[0], coords[1], coords[2]])))
+    Ok(point3_record(frame_to_world(
+        frame,
+        [coords[0], coords[1], coords[2]],
+    )))
 }
 
 /// `ComputationalGeometry.world_to_frame` — world point → local coords.
@@ -97,7 +105,8 @@ pub fn frame_to_world_host(args_v: &Value, span: Span) -> Result<Value, Diagnost
 pub fn world_to_frame_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = parse_point3_arg(args_v, "point", span, "world_to_frame")?;
     let frame = parse_frame(args_v, span, "world_to_frame")?;
-    let uvw = world_to_frame(frame, p).map_err(|e| args::bad(span, format!("world_to_frame: {e:?}")))?;
+    let uvw =
+        world_to_frame(frame, p).map_err(|e| args::bad(span, format!("world_to_frame: {e:?}")))?;
     Ok(args::record([
         ("u", Value::F64(uvw[0])),
         ("v", Value::F64(uvw[1])),
@@ -128,7 +137,8 @@ pub fn barycentric_tetra_host(args_v: &Value, span: Span) -> Result<Value, Diagn
 pub fn quaternion_slerp_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = parse_quat_keys(args_v, "a_w", "a_x", "a_y", "a_z", span, "quaternion_slerp")?;
     let b = parse_quat_keys(args_v, "b_w", "b_x", "b_y", "b_z", span, "quaternion_slerp")?;
-    let t = args::rec_f64(args_v, "t").ok_or_else(|| args::bad(span, "quaternion_slerp needs t"))?;
+    let t =
+        args::rec_f64(args_v, "t").ok_or_else(|| args::bad(span, "quaternion_slerp needs t"))?;
     Ok(quat_record(quaternion_slerp(a, b, t)))
 }
 
@@ -139,11 +149,7 @@ pub fn quaternion_to_matrix_host(args_v: &Value, span: Span) -> Result<Value, Di
     let m = quaternion_to_matrix(q);
     Ok(args::record([(
         "rows",
-        Value::List(
-            m.into_iter()
-                .map(|row| args::f64_list_value(row))
-                .collect(),
-        ),
+        Value::List(m.into_iter().map(|row| args::f64_list_value(row)).collect()),
     )]))
 }
 
@@ -155,7 +161,10 @@ pub fn solve_diagonal_quadratic_host(args_v: &Value, span: Span) -> Result<Value
     let linear = args::rec_f64_list(args_v, "linear")
         .ok_or_else(|| args::bad(span, "solve_diagonal_quadratic needs linear: [f64; 3]"))?;
     if diag.len() < 3 || linear.len() < 3 {
-        return Err(args::bad(span, "solve_diagonal_quadratic: diag and linear need ≥3 values"));
+        return Err(args::bad(
+            span,
+            "solve_diagonal_quadratic: diag and linear need ≥3 values",
+        ));
     }
     let sol = solve_diagonal_quadratic(
         [diag[0], diag[1], diag[2]],

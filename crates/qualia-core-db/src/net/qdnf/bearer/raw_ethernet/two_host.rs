@@ -216,7 +216,7 @@ fn probe_af_packet() -> (bool, bool) {
 mod tests {
     use super::*;
     use crate::net::qdnf::bearer::raw_ethernet::{
-        EthernetEvidence, physical_two_host_qualified, silent_ip_fallback,
+        physical_two_host_qualified, silent_ip_fallback, EthernetEvidence,
     };
 
     #[test]

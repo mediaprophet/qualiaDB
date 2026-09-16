@@ -4,6 +4,8 @@ Read-only consistency checks for the NLP implementation plan's Markdown tracker.
 .DESCRIPTION
 No dependencies or filesystem writes. -SelfTest checks malformed plans in memory.
 Does not verify that referenced test results or completion claims are true.
+Milestone headings match '^#### (M\d+)' so the tracker works when the script is
+read as Windows-1252 or UTF-8 (the previous em-dash class failed on PowerShell 5).
 #>
 [CmdletBinding()]
 param(
@@ -15,7 +17,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if (-not $PlanPath) {
-    $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
+    $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Join-Path (Get-Location) 'scripts' }
     $PlanPath = Join-Path $scriptDir '../docs/work-in-progress/NLP_EXCEPTIONAL_IMPLEMENTATION_PLAN_2026-09-14.md'
 }
 
@@ -32,7 +34,7 @@ function Test-NlpPlanText {
     $lineNumber = 0
     foreach ($line in ($Content -split '\r?\n')) {
         $lineNumber++
-        if ($line -match '^#### (M\d+)\s+[—-]') {
+        if ($line -match '^#### (M\d+)(\s|$)') {
             $current = $Matches[1]
             if ($milestones.ContainsKey($current)) {
                 $errors.Add("Duplicate milestone heading $current at line $lineNumber")

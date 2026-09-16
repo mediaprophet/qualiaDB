@@ -48,8 +48,16 @@ pub fn encode_contact(d: &ContactDescriptor, out: &mut [u8]) -> Result<usize, Cs
     let mut body = [0u8; 128];
     let mut n = 0usize;
     n += write_tlv(&mut body[n..], 1 | TAG_CRITICAL, &d.contact_key)?;
-    n += write_tlv(&mut body[n..], 2 | TAG_CRITICAL, &d.generation.to_be_bytes())?;
-    n += write_tlv(&mut body[n..], 3 | TAG_CRITICAL, &d.expiry_unix.to_be_bytes())?;
+    n += write_tlv(
+        &mut body[n..],
+        2 | TAG_CRITICAL,
+        &d.generation.to_be_bytes(),
+    )?;
+    n += write_tlv(
+        &mut body[n..],
+        3 | TAG_CRITICAL,
+        &d.expiry_unix.to_be_bytes(),
+    )?;
     n += write_tlv(
         &mut body[n..],
         4 | TAG_CRITICAL,
@@ -172,8 +180,16 @@ pub fn encode_custody(c: &CustodyLease, out: &mut [u8]) -> Result<usize, CscpErr
     let mut n = 0usize;
     n += write_tlv(&mut body[n..], 1 | TAG_CRITICAL, &c.lease_id.to_be_bytes())?;
     n += write_tlv(&mut body[n..], 2 | TAG_CRITICAL, &c.operator.to_be_bytes())?;
-    n += write_tlv(&mut body[n..], 3 | TAG_CRITICAL, &c.expiry_unix.to_be_bytes())?;
-    n += write_tlv(&mut body[n..], 4 | TAG_CRITICAL, &c.max_objects.to_be_bytes())?;
+    n += write_tlv(
+        &mut body[n..],
+        3 | TAG_CRITICAL,
+        &c.expiry_unix.to_be_bytes(),
+    )?;
+    n += write_tlv(
+        &mut body[n..],
+        4 | TAG_CRITICAL,
+        &c.max_objects.to_be_bytes(),
+    )?;
     finish(out, MSG_CUSTODY_LEASE, &body[..n])
 }
 
@@ -202,7 +218,11 @@ pub fn encode_evidence(e: &PathEvidence, out: &mut [u8]) -> Result<usize, CscpEr
         1 | TAG_CRITICAL,
         &[path_class_byte(e.class)],
     )?;
-    n += write_tlv(&mut body[n..], 2 | TAG_CRITICAL, &e.generation.to_be_bytes())?;
+    n += write_tlv(
+        &mut body[n..],
+        2 | TAG_CRITICAL,
+        &e.generation.to_be_bytes(),
+    )?;
     let obs = match e.observer {
         ObserverKind::LocalTransport => 1u8,
         ObserverKind::RemoteAssertion => 2u8,
@@ -335,7 +355,11 @@ pub fn decode_receipt(bytes: &[u8]) -> Result<OpReceipt, CscpError> {
     Ok(r)
 }
 
-pub fn encode_accept(class: PathClass, generation: u32, out: &mut [u8]) -> Result<usize, CscpError> {
+pub fn encode_accept(
+    class: PathClass,
+    generation: u32,
+    out: &mut [u8],
+) -> Result<usize, CscpError> {
     let mut body = [0u8; 32];
     let mut n = 0usize;
     n += write_tlv(&mut body[n..], 1 | TAG_CRITICAL, &[path_class_byte(class)])?;
@@ -479,7 +503,10 @@ mod tests {
         let l = RelayLease::grant(7, 1, [1u8; 32], [2u8; 32], 32, 100, 1, false);
         let encoded = encode_relay_lease(&l, &mut buf).unwrap();
         let n = append_unknown_critical(&mut buf, encoded);
-        assert_eq!(decode_relay_lease(&buf[..n]), Err(CscpError::UnknownCritical));
+        assert_eq!(
+            decode_relay_lease(&buf[..n]),
+            Err(CscpError::UnknownCritical)
+        );
         let c = CustodyLease::grant(3, 1, 50, 4);
         let encoded = encode_custody(&c, &mut buf).unwrap();
         let n = append_unknown_critical(&mut buf, encoded);
@@ -535,13 +562,34 @@ mod tests {
 
     #[test]
     fn empty_body_and_bad_flags_fail_closed() {
-        assert_eq!(decode_accept(&empty_msg(MSG_CONNECT_ACCEPT)), Err(CscpError::Malformed));
-        assert_eq!(decode_reject(&empty_msg(MSG_CONNECT_REJECT)), Err(CscpError::Malformed));
-        assert_eq!(decode_contact(&empty_msg(MSG_CONTACT)), Err(CscpError::Malformed));
-        assert_eq!(decode_relay_lease(&empty_msg(MSG_RELAY_LEASE)), Err(CscpError::Malformed));
-        assert_eq!(decode_custody(&empty_msg(MSG_CUSTODY_LEASE)), Err(CscpError::Malformed));
-        assert_eq!(decode_evidence(&empty_msg(MSG_PATH_EVIDENCE)), Err(CscpError::Malformed));
-        assert_eq!(decode_receipt(&empty_msg(MSG_RECEIPT)), Err(CscpError::Malformed));
+        assert_eq!(
+            decode_accept(&empty_msg(MSG_CONNECT_ACCEPT)),
+            Err(CscpError::Malformed)
+        );
+        assert_eq!(
+            decode_reject(&empty_msg(MSG_CONNECT_REJECT)),
+            Err(CscpError::Malformed)
+        );
+        assert_eq!(
+            decode_contact(&empty_msg(MSG_CONTACT)),
+            Err(CscpError::Malformed)
+        );
+        assert_eq!(
+            decode_relay_lease(&empty_msg(MSG_RELAY_LEASE)),
+            Err(CscpError::Malformed)
+        );
+        assert_eq!(
+            decode_custody(&empty_msg(MSG_CUSTODY_LEASE)),
+            Err(CscpError::Malformed)
+        );
+        assert_eq!(
+            decode_evidence(&empty_msg(MSG_PATH_EVIDENCE)),
+            Err(CscpError::Malformed)
+        );
+        assert_eq!(
+            decode_receipt(&empty_msg(MSG_RECEIPT)),
+            Err(CscpError::Malformed)
+        );
         let mut flagged = empty_msg(MSG_CONNECT_ACCEPT);
         flagged[6] = 0x02;
         assert_eq!(decode_accept(&flagged), Err(CscpError::Malformed));

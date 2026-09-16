@@ -37,6 +37,7 @@ mod value;
 
 pub mod animation;
 pub mod ast_merge;
+pub mod conditioning;
 pub mod cosmic;
 pub mod crypto;
 pub mod dag;
@@ -46,6 +47,7 @@ pub mod frame_morphism;
 pub mod hid;
 pub mod law_package;
 pub mod locale;
+pub mod metamodel;
 pub mod module_system;
 pub mod observer;
 pub mod physics;

@@ -1,0 +1,51 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-punct-en-001",
+  "split": "train",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "Really? Yes!",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 6,
+      "surface": "Really",
+      "kind": "Word"
+    },
+    {
+      "start": 6,
+      "end": 7,
+      "surface": "?",
+      "kind": "Punct"
+    },
+    {
+      "start": 8,
+      "end": 11,
+      "surface": "Yes",
+      "kind": "Word"
+    },
+    {
+      "start": 11,
+      "end": 12,
+      "surface": "!",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 7,
+      "surface": "Really?"
+    },
+    {
+      "start": 8,
+      "end": 12,
+      "surface": "Yes!"
+    }
+  ]
+}

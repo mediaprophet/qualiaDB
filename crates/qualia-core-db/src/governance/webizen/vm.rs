@@ -1500,9 +1500,7 @@ pub fn execute_vm_frame(
 
                 #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
                 {
-                    vm_log!(
-                        "[Webizen] NativeCalcGpu: GPU runtime unavailable, using CPU fallback"
-                    );
+                    vm_log!("[Webizen] NativeCalcGpu: GPU runtime unavailable, using CPU fallback");
                     let grid_data: Vec<u8> = vec![0u8; 1001 * 8];
                     let grid =
                         crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1001).unwrap();

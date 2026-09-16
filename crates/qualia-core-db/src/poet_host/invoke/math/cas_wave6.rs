@@ -18,8 +18,7 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, Diagnostic> {
 }
 
 fn vars_from(args_v: &Value, span: Span) -> Result<Vec<String>, Diagnostic> {
-    args::rec_str_list(args_v, "vars")
-        .ok_or_else(|| args::bad(span, "needs vars: [string]"))
+    args::rec_str_list(args_v, "vars").ok_or_else(|| args::bad(span, "needs vars: [string]"))
 }
 
 fn point_from(args_v: &Value, span: Span) -> Result<HashMap<String, f64>, Diagnostic> {
@@ -31,9 +30,8 @@ fn point_from(args_v: &Value, span: Span) -> Result<HashMap<String, f64>, Diagno
     };
     let mut out = HashMap::new();
     for (k, v) in m {
-        let n = args::as_f64(v).ok_or_else(|| {
-            args::bad(span, format!("point.{k} must be a number"))
-        })?;
+        let n = args::as_f64(v)
+            .ok_or_else(|| args::bad(span, format!("point.{k} must be a number")))?;
         out.insert(k.clone(), n);
     }
     Ok(out)
@@ -42,13 +40,7 @@ fn point_from(args_v: &Value, span: Span) -> Result<HashMap<String, f64>, Diagno
 fn expr_matrix(rows: &[Vec<Expr>]) -> Value {
     Value::List(
         rows.iter()
-            .map(|row| {
-                Value::List(
-                    row.iter()
-                        .map(|e| Value::String(e.to_string()))
-                        .collect(),
-                )
-            })
+            .map(|row| Value::List(row.iter().map(|e| Value::String(e.to_string())).collect()))
             .collect(),
     )
 }
@@ -132,7 +124,10 @@ pub fn hessian_at(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// Args: `{ n }`. Out: `{ value: bool }`.
 pub fn is_regular_polygon_constructible(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let n = args::rec_u64(args_v, "n").ok_or_else(|| {
-        args::bad(span, "Constructibility.is_regular_polygon_constructible needs n")
+        args::bad(
+            span,
+            "Constructibility.is_regular_polygon_constructible needs n",
+        )
     })?;
     Ok(args::record([(
         "value",

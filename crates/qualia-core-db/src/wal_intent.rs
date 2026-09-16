@@ -438,8 +438,13 @@ mod tests {
         let object = bind(ArtifactKind::Contract, b"marker-a");
         let mut stream = [0u8; MARKER_LEN * 2 + 10];
         assert_eq!(
-            IntentTable::encode_marker(MarkerKind::Intent, tx(10), &object.digest, &mut stream[..MARKER_LEN])
-                .unwrap(),
+            IntentTable::encode_marker(
+                MarkerKind::Intent,
+                tx(10),
+                &object.digest,
+                &mut stream[..MARKER_LEN]
+            )
+            .unwrap(),
             MARKER_LEN
         );
         assert_eq!(
@@ -456,7 +461,10 @@ mod tests {
         let mut out = [IntentRecord::EMPTY; MAX_INTENTS];
         let intact = IntentTable::recover_into(&stream[..MARKER_LEN * 2], &mut out).unwrap();
         assert_eq!(intact, 2);
-        assert_eq!(IntentTable::recover_into(&stream, &mut out).unwrap(), intact);
+        assert_eq!(
+            IntentTable::recover_into(&stream, &mut out).unwrap(),
+            intact
+        );
         assert_eq!(out[0].tx, tx(10));
         assert_eq!(out[0].kind, MarkerKind::Intent);
         assert_eq!(out[0].object.digest, object.digest);

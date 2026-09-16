@@ -206,10 +206,7 @@ mod tests {
             ops.complete(id, handle.generation, &mut leases),
             Err(QdnfError::Cancelled)
         );
-        assert_eq!(
-            leases.release(lease.handle),
-            Err(QdnfError::DoubleRelease)
-        );
+        assert_eq!(leases.release(lease.handle), Err(QdnfError::DoubleRelease));
         assert_eq!(
             ops.complete(id, handle.generation, &mut leases),
             Err(QdnfError::Closed)

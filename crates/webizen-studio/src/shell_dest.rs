@@ -57,6 +57,9 @@ pub fn route_from_shell_target(raw: &str) -> Route {
         "gpu-viewport" => Route::GpuViewportRoute {},
         "poet" | "vibe" => Route::PoetRoute {},
         "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
+        "instruments" | "semantic-instrument" | "semantic-instruments" => {
+            Route::PoetInstrumentRoute {}
+        }
         _ => Route::TalkRoute {},
     }
 }

@@ -11,9 +11,7 @@
 
 use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::types::{ML_KEM_768_PK_LEN, X25519_LEN};
-use crate::net::qdnf::crypto::handshake::{
-    HandshakeState, InitiatorShare, FORBIDDEN_ZERO_RTT,
-};
+use crate::net::qdnf::crypto::handshake::{HandshakeState, InitiatorShare, FORBIDDEN_ZERO_RTT};
 
 /// Exact initiator-share slice length: `ML_KEM_768_PK_LEN || X25519_LEN`.
 pub const INITIATOR_SHARE_WIRE_LEN: usize = ML_KEM_768_PK_LEN + X25519_LEN;
@@ -46,10 +44,7 @@ pub fn application_data_allowed(state: HandshakeState) -> bool {
 /// Forbidden: skip, reverse, stay, `Idle → Traffic`, or any `→ Traffic` before `Finished`.
 /// Skip-to-traffic / 0-RTT attempts map to [`CryptoError::Downgrade`]. Reverse maps to
 /// [`CryptoError::Unauthorized`]. Other illegal steps map to [`CryptoError::Malformed`].
-pub fn transition(
-    from: HandshakeState,
-    to: HandshakeState,
-) -> Result<HandshakeState, CryptoError> {
+pub fn transition(from: HandshakeState, to: HandshakeState) -> Result<HandshakeState, CryptoError> {
     if successor(from) == Some(to) {
         return Ok(to);
     }
@@ -136,9 +131,9 @@ mod tests {
     }
 
     const TEST_X25519_SK: [u8; 32] = [
-        0x42, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-        0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B,
-        0x1C, 0x1D, 0x1E, 0x1F,
+        0x42, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+        0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D,
+        0x1E, 0x1F,
     ];
 
     fn test_share_from_fixed_keys() -> InitiatorShare {
@@ -152,8 +147,14 @@ mod tests {
     fn successive_transitions_ok() {
         let chain = [
             (HandshakeState::Idle, HandshakeState::Reachability),
-            (HandshakeState::Reachability, HandshakeState::SharesExchanged),
-            (HandshakeState::SharesExchanged, HandshakeState::HandshakeKeys),
+            (
+                HandshakeState::Reachability,
+                HandshakeState::SharesExchanged,
+            ),
+            (
+                HandshakeState::SharesExchanged,
+                HandshakeState::HandshakeKeys,
+            ),
             (HandshakeState::HandshakeKeys, HandshakeState::Proofs),
             (HandshakeState::Proofs, HandshakeState::Finished),
             (HandshakeState::Finished, HandshakeState::Traffic),

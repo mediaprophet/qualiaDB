@@ -182,9 +182,7 @@ fn reject_key_pair(
     send_key: &[u8; AEAD_KEY_LEN],
     recv_key: &[u8; AEAD_KEY_LEN],
 ) -> Result<(), QdnfError> {
-    if *send_key == [0u8; AEAD_KEY_LEN]
-        || *recv_key == [0u8; AEAD_KEY_LEN]
-        || send_key == recv_key
+    if *send_key == [0u8; AEAD_KEY_LEN] || *recv_key == [0u8; AEAD_KEY_LEN] || send_key == recv_key
     {
         return Err(QdnfError::CryptoFailure);
     }
@@ -313,10 +311,7 @@ mod tests {
         let (_a, mut b) = pair();
         let sealed = [0u8; MAX_PROTECTED_BODY + OVERHEAD + 1];
         let mut out = [0u8; MAX_PROTECTED_BODY + 1];
-        assert_eq!(
-            b.open(b"aad", &sealed, &mut out),
-            Err(QdnfError::Capacity)
-        );
+        assert_eq!(b.open(b"aad", &sealed, &mut out), Err(QdnfError::Capacity));
     }
 
     #[test]

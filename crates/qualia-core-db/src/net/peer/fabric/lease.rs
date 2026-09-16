@@ -78,12 +78,7 @@ pub struct CustodyLease {
 }
 
 impl CustodyLease {
-    pub const fn grant(
-        lease_id: u64,
-        operator: u64,
-        expiry_unix: u32,
-        max_objects: u16,
-    ) -> Self {
+    pub const fn grant(lease_id: u64, operator: u64, expiry_unix: u32, max_objects: u16) -> Self {
         Self {
             lease_id,
             operator,

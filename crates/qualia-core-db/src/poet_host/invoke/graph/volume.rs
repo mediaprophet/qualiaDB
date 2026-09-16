@@ -10,17 +10,17 @@
 #[cfg(not(target_arch = "wasm32"))]
 use super::super::args;
 use crate::poet_host::PoetSnapshot;
-use vibe::{Diagnostic, Span, Value};
 #[cfg(target_arch = "wasm32")]
 use vibe::DiagCode;
+use vibe::{Diagnostic, Span, Value};
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::lexicon::generate_60bit_token;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::q42_volume::{
     classify_q42_volume, write_sorted_quins_volume_with_author, PublicationIntent,
     Q42PublicationClass, Q42Volume, UnifiedVolumeBuilder, FLAG_SANCTUARY,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use crate::lexicon::generate_60bit_token;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{NQuin, QUINS_PER_BLOCK};
 #[cfg(not(target_arch = "wasm32"))]
@@ -76,8 +76,12 @@ fn open_native(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Va
     let volume = match Q42Volume::open(path_buf) {
         Ok(v) => v,
         Err(e) if create && is_createable_open_error(&e) => {
-            ensure_sanctuary_seed_volume(path_buf)
-                .map_err(|ce| args::bad(span, format!("GraphDatabase.volume_open create failed: {ce}")))?;
+            ensure_sanctuary_seed_volume(path_buf).map_err(|ce| {
+                args::bad(
+                    span,
+                    format!("GraphDatabase.volume_open create failed: {ce}"),
+                )
+            })?;
             created = true;
             Q42Volume::open(path_buf).map_err(|e2| {
                 args::bad(
@@ -224,7 +228,6 @@ fn commit_native(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<
         ("honesty", Value::String(snap.honesty().into())),
     ]))
 }
-
 
 #[cfg(not(target_arch = "wasm32"))]
 fn is_createable_open_error(err: &std::io::Error) -> bool {

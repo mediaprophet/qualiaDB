@@ -1,0 +1,299 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix cap:     <https://ns.webcivics.net/capability/> .
+@prefix si:      <https://ns.webizen.org/semantic-instrument/> .
+
+# ===========================================================================
+# Semantic instruments — closed-world SHACL (SI-01 draft).
+#
+# Property shapes are NAMED (not nested blank nodes) so the QualiaDB N3 parser
+# can stream them. Critical fields match specification §4.2. Living-safe:
+# InstrumentRelease is not a who-class; NaturalPerson is not an InstrumentRelease.
+# ===========================================================================
+
+# --- SemanticInstrument ------------------------------------------------------
+
+si:SemanticInstrumentShape a sh:NodeShape ;
+    sh:targetClass si:SemanticInstrument ;
+    sh:property si:SemanticInstrument-instrumentId ;
+    sh:property si:SemanticInstrument-name ;
+    sh:message "A semantic instrument must have a stable identity and a human name." .
+
+si:SemanticInstrument-instrumentId a sh:PropertyShape ;
+    sh:path si:instrumentId ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:message "Stable instrument identity is required." .
+si:SemanticInstrument-name a sh:PropertyShape ;
+    sh:path si:name ; sh:minCount 1 ;
+    sh:message "A human-facing name is required." .
+
+# --- InstrumentRelease (the critical closed-world surface) -------------------
+
+si:InstrumentReleaseShape a sh:NodeShape ;
+    sh:targetClass si:InstrumentRelease ;
+    sh:property si:InstrumentRelease-instrument ;
+    sh:property si:InstrumentRelease-releaseId ;
+    sh:property si:InstrumentRelease-version ;
+    sh:property si:InstrumentRelease-purpose ;
+    sh:property si:InstrumentRelease-prohibitedInterpretation ;
+    sh:property si:InstrumentRelease-domain ;
+    sh:property si:InstrumentRelease-ontologyReference ;
+    sh:property si:InstrumentRelease-entryPoint ;
+    sh:property si:InstrumentRelease-citation ;
+    sh:property si:InstrumentRelease-applicability ;
+    sh:property si:InstrumentRelease-honestyPolicy ;
+    sh:property si:InstrumentRelease-resourceLimits ;
+    sh:property si:InstrumentRelease-testManifest ;
+    sh:property si:InstrumentRelease-badgePresentation ;
+    sh:property si:InstrumentRelease-contentDigest ;
+    sh:property si:InstrumentRelease-authoredBy ;
+    sh:property si:InstrumentRelease-licence ;
+    sh:property si:InstrumentRelease-contentCategory ;
+    sh:not si:InstrumentRelease-notAPerson ;
+    sh:message "An instrument release must carry identity, purpose, honesty, citations, applicability, tests, a digested accessible icon, a content digest, and authorship." .
+
+si:InstrumentRelease-notAPerson a sh:NodeShape ;
+    sh:class values:NaturalPerson ;
+    sh:message "An InstrumentRelease MUST NOT be a living person (who/tool collapse)." .
+
+si:InstrumentRelease-instrument a sh:PropertyShape ;
+    sh:path si:instrument ; sh:minCount 1 ; sh:maxCount 1 ; sh:class si:SemanticInstrument ;
+    sh:message "A release must identify its abstract instrument. Identifiers must differ." .
+si:InstrumentRelease-releaseId a sh:PropertyShape ;
+    sh:path si:releaseId ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:message "Stable immutable release identity is required." .
+si:InstrumentRelease-version a sh:PropertyShape ;
+    sh:path si:version ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:message "Semantic version is required." .
+si:InstrumentRelease-purpose a sh:PropertyShape ;
+    sh:path si:purpose ; sh:minCount 1 ;
+    sh:message "Declared purpose is required." .
+si:InstrumentRelease-prohibitedInterpretation a sh:PropertyShape ;
+    sh:path si:prohibitedInterpretation ; sh:minCount 1 ;
+    sh:message "At least one prohibited interpretation is required so fail-closed boundaries are explicit." .
+si:InstrumentRelease-domain a sh:PropertyShape ;
+    sh:path si:domain ; sh:minCount 1 ;
+    sh:message "At least one resolvable domain concept is required." .
+si:InstrumentRelease-ontologyReference a sh:PropertyShape ;
+    sh:path si:ontologyReference ; sh:minCount 1 ;
+    sh:message "At least one ontology reference is required." .
+si:InstrumentRelease-entryPoint a sh:PropertyShape ;
+    sh:path si:entryPoint ; sh:minCount 1 ; sh:class si:EntryPoint ;
+    sh:message "At least one named entry point with input/output shapes is required." .
+si:InstrumentRelease-citation a sh:PropertyShape ;
+    sh:path si:citation ; sh:minCount 1 ;
+    sh:message "At least one citation is required." .
+si:InstrumentRelease-applicability a sh:PropertyShape ;
+    sh:path si:applicability ; sh:minCount 1 ; sh:class si:Applicability ;
+    sh:message "Applicability (or an explicit unrestricted declaration on that node) is required." .
+si:InstrumentRelease-honestyPolicy a sh:PropertyShape ;
+    sh:path si:honestyPolicy ; sh:minCount 1 ; sh:class si:HonestyPolicy ;
+    sh:message "Honesty / fail-closed policy is required." .
+si:InstrumentRelease-resourceLimits a sh:PropertyShape ;
+    sh:path si:resourceLimits ; sh:minCount 1 ; sh:class si:ResourceLimits ;
+    sh:message "Resource limits are required." .
+si:InstrumentRelease-testManifest a sh:PropertyShape ;
+    sh:path si:testManifest ; sh:minCount 1 ; sh:class si:TestManifest ;
+    sh:message "A test/fixture manifest is required." .
+si:InstrumentRelease-badgePresentation a sh:PropertyShape ;
+    sh:path si:badgePresentation ; sh:minCount 1 ; sh:class si:BadgePresentation ;
+    sh:message "An accessible badge/icon presentation is required." .
+si:InstrumentRelease-contentDigest a sh:PropertyShape ;
+    sh:path si:contentDigest ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:message "Content digest of the canonical package is required." .
+si:InstrumentRelease-authoredBy a sh:PropertyShape ;
+    sh:path si:authoredBy ; sh:minCount 1 ; sh:class values:Agent ;
+    sh:message "Authorship reference is required. Review and publication remain separate predicates." .
+si:InstrumentRelease-licence a sh:PropertyShape ;
+    sh:path si:licence ; sh:minCount 1 ;
+    sh:message "A package licence is required." .
+si:InstrumentRelease-contentCategory a sh:PropertyShape ;
+    sh:path si:contentCategory ; sh:minCount 1 ; sh:maxCount 1 ; sh:class si:ContentCategory ;
+    sh:message "A release must declare Demo, Reference or Operational. Demo seed must stay labelled." .
+
+# --- InstrumentPackage -------------------------------------------------------
+
+si:InstrumentPackageShape a sh:NodeShape ;
+    sh:targetClass si:InstrumentPackage ;
+    sh:property si:InstrumentPackage-packageOf ;
+    sh:property si:InstrumentPackage-packageDigest ;
+    sh:property si:InstrumentPackage-formatVersion ;
+    sh:message "Package bytes are distinct from the abstract instrument and from any credential." .
+
+si:InstrumentPackage-packageOf a sh:PropertyShape ;
+    sh:path si:packageOf ; sh:minCount 1 ; sh:class si:InstrumentRelease .
+si:InstrumentPackage-packageDigest a sh:PropertyShape ;
+    sh:path si:packageDigest ; sh:minCount 1 .
+si:InstrumentPackage-formatVersion a sh:PropertyShape ;
+    sh:path si:formatVersion ; sh:minCount 1 .
+
+# --- EntryPoint --------------------------------------------------------------
+
+si:EntryPointShape a sh:NodeShape ;
+    sh:targetClass si:EntryPoint ;
+    sh:property si:EntryPoint-name ;
+    sh:property si:EntryPoint-inputShape ;
+    sh:property si:EntryPoint-outputShape ;
+    sh:property si:EntryPoint-limits .
+
+si:EntryPoint-name a sh:PropertyShape ;
+    sh:path si:entryPointName ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:message "Entry point name is required and is the dispatch key (no per-score Host ID)." .
+si:EntryPoint-inputShape a sh:PropertyShape ;
+    sh:path si:inputShape ; sh:minCount 1 ;
+    sh:message "Input SHACL/shape reference is required." .
+si:EntryPoint-outputShape a sh:PropertyShape ;
+    sh:path si:outputShape ; sh:minCount 1 ;
+    sh:message "Output SHACL/shape reference is required." .
+si:EntryPoint-limits a sh:PropertyShape ;
+    sh:path si:resourceLimits ; sh:minCount 1 ; sh:class si:ResourceLimits .
+
+# --- HonestyPolicy / Applicability / ResourceLimits / TestManifest -----------
+
+si:HonestyPolicyShape a sh:NodeShape ;
+    sh:targetClass si:HonestyPolicy ;
+    sh:property si:HonestyPolicy-incomplete ;
+    sh:property si:HonestyPolicy-resultKind ;
+    sh:property si:HonestyPolicy-notice ;
+    sh:property si:HonestyPolicy-originNotTruth .
+
+si:HonestyPolicy-incomplete a sh:PropertyShape ;
+    sh:path si:incompleteInputBehaviour ; sh:minCount 1 ; sh:class si:IncompleteInputBehaviour ;
+    sh:message "Incomplete-input behaviour must be Held or FailClosed." .
+si:HonestyPolicy-resultKind a sh:PropertyShape ;
+    sh:path si:resultKind ; sh:minCount 1 ;
+    sh:message "Result kind (claim, not silent fact) is required." .
+si:HonestyPolicy-notice a sh:PropertyShape ;
+    sh:path si:requiredNotice ; sh:minCount 1 .
+si:HonestyPolicy-originNotTruth a sh:PropertyShape ;
+    sh:path si:signatureIsNotTruth ; sh:minCount 1 ; sh:hasValue true ;
+    sh:message "A signature proves origin/integrity, not substantive truth." .
+
+si:ApplicabilityShape a sh:NodeShape ;
+    sh:targetClass si:Applicability ;
+    sh:property si:Applicability-declared ;
+    sh:message "Applicability must be explicit constraints or an unrestricted declaration." .
+si:Applicability-declared a sh:PropertyShape ;
+    sh:path si:unrestrictedDeclaration ; sh:maxCount 1 .
+
+si:ResourceLimitsShape a sh:NodeShape ;
+    sh:targetClass si:ResourceLimits ;
+    sh:property si:ResourceLimits-memory ;
+    sh:property si:ResourceLimits-steps ;
+    sh:property si:ResourceLimits-output .
+si:ResourceLimits-memory a sh:PropertyShape ; sh:path si:memoryBytes ; sh:minCount 1 .
+si:ResourceLimits-steps a sh:PropertyShape ; sh:path si:maxSteps ; sh:minCount 1 .
+si:ResourceLimits-output a sh:PropertyShape ; sh:path si:maxOutputQuins ; sh:minCount 1 .
+
+si:TestManifestShape a sh:NodeShape ;
+    sh:targetClass si:TestManifest ;
+    sh:property si:TestManifest-locator .
+si:TestManifest-locator a sh:PropertyShape ;
+    sh:path si:assetLocator ; sh:minCount 1 ;
+    sh:message "Tests/fixtures must be locatable." .
+
+# --- Badge presentation and asset --------------------------------------------
+
+si:BadgePresentationShape a sh:NodeShape ;
+    sh:targetClass si:BadgePresentation ;
+    sh:property si:BadgePresentation-identifies ;
+    sh:property si:BadgePresentation-asset ;
+    sh:message "A badge identifies a release; artwork is not proof." .
+
+si:BadgePresentation-identifies a sh:PropertyShape ;
+    sh:path si:identifiesRelease ; sh:minCount 1 ; sh:class si:InstrumentRelease .
+si:BadgePresentation-asset a sh:PropertyShape ;
+    sh:path si:badgeAsset ; sh:minCount 1 ; sh:class si:BadgeAsset .
+
+si:BadgeAssetShape a sh:NodeShape ;
+    sh:targetClass si:BadgeAsset ;
+    sh:property si:BadgeAsset-locator ;
+    sh:property si:BadgeAsset-digest ;
+    sh:property si:BadgeAsset-media ;
+    sh:property si:BadgeAsset-accessible ;
+    sh:not si:BadgeAsset-notAnAttestation .
+
+si:BadgeAsset-notAnAttestation a sh:NodeShape ;
+    sh:class si:Attestation ;
+    sh:message "Artwork MUST NOT be typed as an attestation or proof." .
+
+si:BadgeAsset-locator a sh:PropertyShape ;
+    sh:path si:assetLocator ; sh:minCount 1 ;
+    sh:message "Icon asset must be locatable (path or content-addressed locator)." .
+si:BadgeAsset-digest a sh:PropertyShape ;
+    sh:path si:assetDigest ; sh:minCount 1 ;
+    sh:message "Icon asset must be digested. Undigested artwork is not a conformant handle." .
+si:BadgeAsset-media a sh:PropertyShape ;
+    sh:path si:mediaType ; sh:minCount 1 .
+si:BadgeAsset-accessible a sh:PropertyShape ;
+    sh:path si:accessibleText ; sh:minCount 1 ;
+    sh:message "Accessible text or language-keyed label is required." .
+
+# --- DependencyRequirement ---------------------------------------------------
+
+si:DependencyRequirementShape a sh:NodeShape ;
+    sh:targetClass si:DependencyRequirement ;
+    sh:property si:DependencyRequirement-id ;
+    sh:property si:DependencyRequirement-kind ;
+    sh:property si:DependencyRequirement-required ;
+    sh:property si:DependencyRequirement-purpose .
+
+si:DependencyRequirement-id a sh:PropertyShape ; sh:path si:dependencyId ; sh:minCount 1 .
+si:DependencyRequirement-kind a sh:PropertyShape ; sh:path si:dependencyKind ; sh:minCount 1 .
+si:DependencyRequirement-required a sh:PropertyShape ; sh:path si:required ; sh:minCount 1 .
+si:DependencyRequirement-purpose a sh:PropertyShape ; sh:path si:dependencyPurpose ; sh:minCount 1 .
+
+si:RequiredDependencyDigestShape a sh:NodeShape ;
+    sh:targetClass si:DependencyRequirement ;
+    sh:property si:RequiredDependency-digestGate .
+si:RequiredDependency-digestGate a sh:PropertyShape ;
+    sh:path si:expectedDigest ;
+    sh:message "A required dependency that is treated as executable MUST have an expected digest. Checked closed-world with si:required true in the SI-01 test validator." .
+
+# --- Capacity vs permission vs skill -----------------------------------------
+
+si:CapacityGrantShape a sh:NodeShape ;
+    sh:targetClass si:CapacityGrant ;
+    sh:property si:CapacityGrant-role ;
+    sh:property si:CapacityGrant-grantedTo ;
+    sh:not si:CapacityGrant-notASkill ;
+    sh:not si:CapacityGrant-notAHostGrant .
+
+si:CapacityGrant-role a sh:PropertyShape ; sh:path si:capacityRole ; sh:minCount 1 .
+si:CapacityGrant-grantedTo a sh:PropertyShape ; sh:path si:grantedTo ; sh:minCount 1 ; sh:class values:Agent .
+si:CapacityGrant-notASkill a sh:NodeShape ; sh:class cap:Capability ;
+    sh:message "Professional capacity is not a skill concept." .
+si:CapacityGrant-notAHostGrant a sh:NodeShape ; sh:class si:HostCapabilityGrant ;
+    sh:message "Professional capacity is not runtime permission." .
+
+si:HostCapabilityGrantShape a sh:NodeShape ;
+    sh:targetClass si:HostCapabilityGrant ;
+    sh:not si:HostGrant-notASkill .
+si:HostGrant-notASkill a sh:NodeShape ; sh:class cap:Capability ;
+    sh:message "Runtime permission is not a competence." .
+
+# --- Software agent grounding ------------------------------------------------
+
+si:ArtificialAgentInstrumentActionShape a sh:NodeShape ;
+    sh:targetClass values:ArtificialAgent ;
+    sh:message "A software agent that authors, reviews, publishes or executes must expose values:actsFor / values:principal or explicitly declare values:hasNoPrincipal / si:noHumanPrincipalAsserted." .
+
+# --- Execution receipt -------------------------------------------------------
+
+si:ExecutionReceiptShape a sh:NodeShape ;
+    sh:targetClass si:ExecutionReceipt ;
+    sh:property si:ExecutionReceipt-event ;
+    sh:property si:ExecutionReceipt-release .
+si:ExecutionReceipt-event a sh:PropertyShape ;
+    sh:path si:recordsEvent ; sh:minCount 1 ; sh:class si:ExecutionEvent .
+si:ExecutionReceipt-release a sh:PropertyShape ;
+    sh:path si:receiptOfRelease ; sh:minCount 1 ; sh:class si:InstrumentRelease .
+
+# --- Distinct identifiers (closed-world reminder) ----------------------------
+
+si:DistinctIdentityNote a sh:NodeShape ;
+    sh:targetClass si:InstrumentRelease ;
+    sh:message "Abstract instrument, release, package, badge presentation and credentials MUST have different identifiers. Enforced in SI-01 fixtures by distinct IRIs plus who/tool collapse negatives." .

@@ -27,9 +27,7 @@ use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::session::handshake::handshake_over_fragments;
 use crate::net::qdnf::session::{SessionBinding, SessionState};
 use crate::net::qdnf::types::{Generation, ObservedLocator, ScopeEpoch};
-use crate::p2p::connectivity::h2_capsule::{
-    loopback_tls_h2_capsule, CapsuleEndpoint,
-};
+use crate::p2p::connectivity::h2_capsule::{loopback_tls_h2_capsule, CapsuleEndpoint};
 use crate::p2p::connectivity::wss_tls::mint_ca;
 
 fn loc(b: u8) -> ObservedLocator {

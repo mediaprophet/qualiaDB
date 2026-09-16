@@ -1,8 +1,10 @@
 //! Wave-21 Live NLP tools for the AI toolbox.
 //!
-//! Dual-path `NLP.*` tools for tokenization, sentence splitting, coreference,
-//! frame extraction, FST lookup, gazetteer compilation, graph-augmented
-//! retrieval, relation extraction, and substrate synthesis.
+//! Dual-path `NLP.*` tools. These are experimental prototypes: UTF-8 tokenize /
+//! sentence split, exact-string coref, a tiny suffix FST, default-lexicon
+//! gazetteer metadata, keyword-triple overlap (`NLP.graphrag_query` is not
+//! GraphRAG), and small rule demos for frames/relations. Not FrameNet, OpenIE,
+//! NER, or a morphology language pack.
 
 use super::*;
 
@@ -16,7 +18,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.tokenize".into()),
                 ontology_prefix: "ai".into(),
-                description: "Tokenize text into words and punctuation (Host NLP.tokenize).".into(),
+                description: "Experimental UTF-8 tokenizer prototype: words and punctuation with byte spans (Host NLP.tokenize). Not Stanford/spaCy.".into(),
             },
             ActionType::Invoke,
         )),
@@ -28,7 +30,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.split_sentences".into()),
                 ontology_prefix: "ai".into(),
-                description: "Segment text into discrete sentence spans (Host NLP.split_sentences).".into(),
+                description: "Experimental UTF-8 sentence-split prototype (Host NLP.split_sentences). Not Stanford/spaCy.".into(),
             },
             ActionType::Invoke,
         )),
@@ -40,7 +42,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.coref_resolve".into()),
                 ontology_prefix: "ai".into(),
-                description: "Multi-pass sieve coreference resolution (Host NLP.coref_resolve).".into(),
+                description: "Bounded exact-string grouping plus experimental pronoun sieve (Host NLP.coref_resolve). Not multi-pass sieve quality; empty mentions skip detection.".into(),
             },
             ActionType::Invoke,
         )),
@@ -52,7 +54,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.frame_extract".into()),
                 ontology_prefix: "ai".into(),
-                description: "Extract frame semantics and roles from text (Host NLP.frame_extract).".into(),
+                description: "Small lexical-trigger rule demo, not FrameNet (Host NLP.frame_extract).".into(),
             },
             ActionType::Invoke,
         )),
@@ -64,7 +66,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.fst_lookup".into()),
                 ontology_prefix: "ai".into(),
-                description: "Finite-state morphological lemma lookup (Host NLP.fst_lookup).".into(),
+                description: "Trie lookup over caller-supplied entries plus English suffix stripping (-s/-es/-ies/-ed/-ing). Empty entries yield no results. Not a language pack (Host NLP.fst_lookup).".into(),
             },
             ActionType::Invoke,
         )),
@@ -76,7 +78,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.gazetteer_build".into()),
                 ontology_prefix: "ai".into(),
-                description: "Compile an Aho-Corasick gazetteer index (Host NLP.gazetteer_build).".into(),
+                description: "Reports default compiled gazetteer lexicon size, not NER (Host NLP.gazetteer_build).".into(),
             },
             ActionType::Invoke,
         )),
@@ -88,7 +90,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.graphrag_query".into()),
                 ontology_prefix: "ai".into(),
-                description: "Graph-augmented retrieval over semantic triples (Host NLP.graphrag_query).".into(),
+                description: "Experimental keyword-triple term overlap (Host NLP.graphrag_query). Not GraphRAG, embeddings, or graph-neighborhood retrieval.".into(),
             },
             ActionType::Invoke,
         )),
@@ -100,7 +102,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.relation_extract".into()),
                 ontology_prefix: "ai".into(),
-                description: "Extract RDF-Star relation statements from text (Host NLP.relation_extract).".into(),
+                description: "Small is/has/located-in rule demo, not OpenIE (Host NLP.relation_extract).".into(),
             },
             ActionType::Invoke,
         )),
@@ -112,7 +114,7 @@ pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
                 kind: ToolKind::RunAction,
                 capability_scope: Some("NLP.substrate_extract".into()),
                 ontology_prefix: "ai".into(),
-                description: "Full symbolic extraction pipeline (Host NLP.substrate_extract).".into(),
+                description: "Experimental symbolic pipeline; every word becomes a mention (Host NLP.substrate_extract).".into(),
             },
             ActionType::Invoke,
         )),

@@ -343,8 +343,13 @@ mod tests {
 
         let empty = b"";
         assert_eq!(
-            parse_compounds_tsv(empty, budgets(10_000, 100, 2_000), "rel", &cancel_flag(false))
-                .unwrap_err(),
+            parse_compounds_tsv(
+                empty,
+                budgets(10_000, 100, 2_000),
+                "rel",
+                &cancel_flag(false)
+            )
+            .unwrap_err(),
             ParseError::BadHeader
         );
     }

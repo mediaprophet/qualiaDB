@@ -878,6 +878,12 @@ pub const COSMIC_USRI_PARSE: &str = "Cosmic.usri_parse";
 // ── N1: Expose-only bindings for Poet interface gap closure ────────────────
 pub const NLP_GAZETTEER_RUN: &str = "NLP.gazetteer_run";
 pub const NLP_GAZETTEER_BUILD: &str = "NLP.gazetteer_build";
+pub const CONDITIONING_VALIDATE: &str = "Conditioning.validate";
+pub const CONDITIONING_COMPILE: &str = "Conditioning.compile";
+pub const CONDITIONING_INSPECT: &str = "Conditioning.inspect";
+pub const CONDITIONING_EVALUATE: &str = "Conditioning.evaluate";
+pub const CONDITIONING_ACTIVATE: &str = "Conditioning.activate";
+pub const CONDITIONING_ROLLBACK: &str = "Conditioning.rollback";
 pub const INFERENCE_EMBED: &str = "Inference.embed";
 pub const INFERENCE_GROUNDING: &str = "Inference.grounding";
 pub const INFERENCE_VERIFY_TURN: &str = "Inference.verify_turn";
@@ -2019,6 +2025,12 @@ pub const ALL_BOUND: &[&str] = &[
     COSMIC_USRI_PARSE,
     NLP_GAZETTEER_RUN,
     NLP_GAZETTEER_BUILD,
+    CONDITIONING_VALIDATE,
+    CONDITIONING_COMPILE,
+    CONDITIONING_INSPECT,
+    CONDITIONING_EVALUATE,
+    CONDITIONING_ACTIVATE,
+    CONDITIONING_ROLLBACK,
     INFERENCE_EMBED,
     INFERENCE_GROUNDING,
     INFERENCE_VERIFY_TURN,
@@ -2851,9 +2863,7 @@ pub fn seam_for(id: &str) -> &'static str {
         NT_NEXT_PRIME | NT_PRIME_FACTORS | NT_DIVISORS | NT_EULER_TOTIENT | NT_MOBIUS
         | NT_DIVISOR_COUNT | NT_DIVISOR_SUM | NT_MOD_POW | NT_MOD_INVERSE | NT_FACTORIAL
         | NT_BINOMIAL | NT_PARTITIONS | NT_CATALAN | NT_STIRLING_SECOND | NT_STIRLING_FIRST
-        | NT_EXTENDED_GCD | NT_CRT => {
-            "number_theory"
-        }
+        | NT_EXTENDED_GCD | NT_CRT => "number_theory",
         // Special functions
         SF_AIRY_AI | SF_AIRY_BI | SF_ZETA | SF_LEGENDRE | SF_CHEBYSHEV_T | SF_CHEBYSHEV_U
         | SF_HERMITE | SF_LAGUERRE | SF_BESSEL_J | SF_BESSEL_I | SF_BESSEL_Y | SF_BESSEL_K => {
@@ -2942,9 +2952,9 @@ pub fn seam_for(id: &str) -> &'static str {
         MANIFOLD_DISTANCE | MANIFOLD_AXES | MANIFOLD_PROJECT => "manifold",
         DOC_INGEST => "docs",
         SHEET_STATS | SHEET_SUM => "sheet",
-        CHAT_GRAPH_VALIDATE_FRAGMENT
-        | CHAT_GRAPH_LINK_REPLY
-        | CHAT_GRAPH_SESSION_SUMMARY => "chat_graph",
+        CHAT_GRAPH_VALIDATE_FRAGMENT | CHAT_GRAPH_LINK_REPLY | CHAT_GRAPH_SESSION_SUMMARY => {
+            "chat_graph"
+        }
         SOCIAL_LWW => "social",
         NET_PEER
         | NET_SONIC
@@ -3075,7 +3085,13 @@ pub fn seam_for(id: &str) -> &'static str {
         | NLP_RELATION_EXTRACT
         | NLP_SUBSTRATE_EXTRACT
         | NLP_GRAPHRAG_QUERY => "nlp",
-        INFERENCE_EMBED
+        CONDITIONING_VALIDATE
+        | CONDITIONING_COMPILE
+        | CONDITIONING_INSPECT
+        | CONDITIONING_EVALUATE
+        | CONDITIONING_ACTIVATE
+        | CONDITIONING_ROLLBACK
+        | INFERENCE_EMBED
         | INFERENCE_GROUNDING
         | INFERENCE_VERIFY_TURN
         | INFERENCE_DETECT_UNGROUNDED
@@ -3211,9 +3227,20 @@ pub fn seam_for(id: &str) -> &'static str {
         | AGENT_VERIFY
         | IDENTITY_CURRENT_USER => "governance",
         AUDIO_SPECTRUM => "audio",
-        AUDIO_OSCILLATOR | AUDIO_ENVELOPE | AUDIO_FILTER | AUDIO_LFO | AUDIO_DELAY
-        | AUDIO_REVERB | AUDIO_COMPRESSOR | AUDIO_EQ | AUDIO_MIDI_NOTE | AUDIO_QUANTIZE
-        | AUDIO_TRANSPOSE | AUDIO_TRANSPORT | AUDIO_WAVEFORM_METER | AUDIO_PHASE_METER
+        AUDIO_OSCILLATOR
+        | AUDIO_ENVELOPE
+        | AUDIO_FILTER
+        | AUDIO_LFO
+        | AUDIO_DELAY
+        | AUDIO_REVERB
+        | AUDIO_COMPRESSOR
+        | AUDIO_EQ
+        | AUDIO_MIDI_NOTE
+        | AUDIO_QUANTIZE
+        | AUDIO_TRANSPOSE
+        | AUDIO_TRANSPORT
+        | AUDIO_WAVEFORM_METER
+        | AUDIO_PHASE_METER
         | AUDIO_LOUDNESS_METER
         | AUDIO_EPISTEMIC_TEMPERATURE_FROM_Q
         | AUDIO_EPISTEMIC_FM_INDEX

@@ -4,9 +4,7 @@ use super::compat::{engine_too_new, engine_too_old};
 use super::error::AppRegistryError;
 use super::fixture::{poet_fixture_manifest, POET_APP_ID};
 use super::probe::probe_identity;
-use super::record::{
-    AppInspectView, AppRecordState, InstalledAppRecord, PermissionIntentSummary,
-};
+use super::record::{AppInspectView, AppRecordState, InstalledAppRecord, PermissionIntentSummary};
 use crate::q42::app_manifest::{PermissionIntent, PortableAppManifest};
 
 /// Maximum installed / quarantined slots retained in memory.
@@ -71,7 +69,10 @@ impl AppRegistry {
         let manifest = poet_fixture_manifest();
         reg.register_manifest(&manifest)
             .expect("poet fixture must register");
-        debug_assert_eq!(reg.get(POET_APP_ID).map(|r| r.app_id.as_str()), Some(POET_APP_ID));
+        debug_assert_eq!(
+            reg.get(POET_APP_ID).map(|r| r.app_id.as_str()),
+            Some(POET_APP_ID)
+        );
         reg
     }
 
@@ -141,7 +142,8 @@ impl AppRegistry {
 
     /// Look up by `app_id` (exact match).
     pub fn get(&self, app_id: &str) -> Option<&InstalledAppRecord> {
-        self.find_slot(app_id).map(|i| &self.slots[i].as_ref().unwrap().record)
+        self.find_slot(app_id)
+            .map(|i| &self.slots[i].as_ref().unwrap().record)
     }
 
     /// Read-only inspect view. Does not mutate the registry and does not launch.
@@ -181,8 +183,7 @@ impl AppRegistry {
         }
         let min = &manifest.compatibility.min_engine_version;
         let max = &manifest.compatibility.max_engine_version;
-        if engine_too_old(min, &self.engine_version) || engine_too_new(max, &self.engine_version)
-        {
+        if engine_too_old(min, &self.engine_version) || engine_too_new(max, &self.engine_version) {
             return AppRecordState::Incompatible;
         }
         AppRecordState::Active

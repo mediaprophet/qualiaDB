@@ -104,7 +104,9 @@ fn parse_numa_maps_node(maps: &str) -> Option<u32> {
         let mut rest = line;
         while let Some(i) = rest.find('N') {
             rest = &rest[i + 1..];
-            let digits_end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+            let digits_end = rest
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(rest.len());
             if digits_end == 0 {
                 continue;
             }

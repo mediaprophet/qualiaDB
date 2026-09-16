@@ -85,13 +85,7 @@ mod tests {
         assert!(!p1.eof);
         // Second chunk: 4 bytes → at max_bytes with more remaining → fail
         let err = feed_passthrough(&mut job).unwrap_err();
-        assert_eq!(
-            err,
-            ImportError::ByteBudgetExceeded {
-                used: 8,
-                max: 8
-            }
-        );
+        assert_eq!(err, ImportError::ByteBudgetExceeded { used: 8, max: 8 });
         assert!(matches!(job.status(), ImportStatus::Failed(_)));
     }
 
@@ -153,10 +147,7 @@ mod tests {
             assert!(result.is_err());
             scratch
         };
-        assert!(
-            !scratch_gone.exists(),
-            "TempDir must clean up on unwind"
-        );
+        assert!(!scratch_gone.exists(), "TempDir must clean up on unwind");
     }
 
     #[test]
@@ -167,7 +158,10 @@ mod tests {
         let _ = feed_passthrough(&mut job).unwrap();
         job.cancel();
         assert_eq!(job.status(), &ImportStatus::Cancelled);
-        assert_eq!(feed_passthrough(&mut job).err(), Some(ImportError::Cancelled));
+        assert_eq!(
+            feed_passthrough(&mut job).err(),
+            Some(ImportError::Cancelled)
+        );
         let dest = dir.path().join("cancelled-out");
         assert_eq!(job.promote(&dest).err(), Some(ImportError::Cancelled));
     }
@@ -263,9 +257,6 @@ mod tests {
                 })
             })
             .unwrap_err();
-        assert_eq!(
-            err,
-            ImportError::RecordBudgetExceeded { used: 4, max: 3 }
-        );
+        assert_eq!(err, ImportError::RecordBudgetExceeded { used: 4, max: 3 });
     }
 }

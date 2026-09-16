@@ -6,22 +6,34 @@
 use super::super::args;
 use crate::specialized_libs::computational_geometry::{
     dist_point_to_segment as raw_dist_point_to_segment,
-    dist_sq_point_to_segment as raw_dist_sq_point_to_segment,
-    fisher_distance, kl_bregman_form, kl_divergence,
-    Point2, Triangle,
+    dist_sq_point_to_segment as raw_dist_sq_point_to_segment, fisher_distance, kl_bregman_form,
+    kl_divergence, Point2, Triangle,
 };
 use vibe::{Diagnostic, Span, Value};
 
-fn parse_f32_vec(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Vec<f32>, Diagnostic> {
+fn parse_f32_vec(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Vec<f32>, Diagnostic> {
     let f64s = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64]")))?;
     if f64s.is_empty() || f64s.len() > 1024 {
-        return Err(args::bad(span, format!("{what}: {key} must have 1..=1024 elements")));
+        return Err(args::bad(
+            span,
+            format!("{what}: {key} must have 1..=1024 elements"),
+        ));
     }
     Ok(f64s.into_iter().map(|x| x as f32).collect())
 }
 
-fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result<Point2, Diagnostic> {
+fn parse_point2_arg(
+    args_v: &Value,
+    key: &str,
+    span: Span,
+    what: &str,
+) -> Result<Point2, Diagnostic> {
     let coords = args::rec_f64_list(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{what} needs {key}: [f64; 2]")))?;
     if coords.len() < 2 {
@@ -35,8 +47,8 @@ fn parse_point2_arg(args_v: &Value, key: &str, span: Span, what: &str) -> Result
 pub fn fisher_distance_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = parse_f32_vec(args_v, "p", span, "fisher_distance")?;
     let q = parse_f32_vec(args_v, "q", span, "fisher_distance")?;
-    let dist = fisher_distance(&p, &q)
-        .map_err(|e| args::bad(span, format!("fisher_distance: {e}")))?;
+    let dist =
+        fisher_distance(&p, &q).map_err(|e| args::bad(span, format!("fisher_distance: {e}")))?;
     Ok(args::record([("distance", Value::F64(dist))]))
 }
 
@@ -45,8 +57,7 @@ pub fn fisher_distance_host(args_v: &Value, span: Span) -> Result<Value, Diagnos
 pub fn kl_divergence_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = parse_f32_vec(args_v, "p", span, "kl_divergence")?;
     let q = parse_f32_vec(args_v, "q", span, "kl_divergence")?;
-    let div = kl_divergence(&p, &q)
-        .map_err(|e| args::bad(span, format!("kl_divergence: {e}")))?;
+    let div = kl_divergence(&p, &q).map_err(|e| args::bad(span, format!("kl_divergence: {e}")))?;
     Ok(args::record([("divergence", Value::F64(div))]))
 }
 
@@ -55,8 +66,8 @@ pub fn kl_divergence_host(args_v: &Value, span: Span) -> Result<Value, Diagnosti
 pub fn kl_bregman_form_host(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = parse_f32_vec(args_v, "p", span, "kl_bregman_form")?;
     let q = parse_f32_vec(args_v, "q", span, "kl_bregman_form")?;
-    let div = kl_bregman_form(&p, &q)
-        .map_err(|e| args::bad(span, format!("kl_bregman_form: {e}")))?;
+    let div =
+        kl_bregman_form(&p, &q).map_err(|e| args::bad(span, format!("kl_bregman_form: {e}")))?;
     Ok(args::record([("divergence", Value::F64(div))]))
 }
 
@@ -67,7 +78,10 @@ pub fn triangle_signed_area_host(args_v: &Value, span: Span) -> Result<Value, Di
     let b = parse_point2_arg(args_v, "b", span, "triangle_signed_area")?;
     let c = parse_point2_arg(args_v, "c", span, "triangle_signed_area")?;
     let tri = Triangle::new(a, b, c);
-    Ok(args::record([("signed_area", Value::F64(tri.signed_area()))]))
+    Ok(args::record([(
+        "signed_area",
+        Value::F64(tri.signed_area()),
+    )]))
 }
 
 /// `ComputationalGeometry.dist_point_to_segment` — Euclidean distance from point to 2D line segment ab.

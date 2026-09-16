@@ -94,14 +94,8 @@ fn handshake_on_bearer(
     let dest_a = a.locator();
     let id_a = a.identity().digest();
     let id_b = b.identity().digest();
-    let hs = handshake_over_fragments(
-        &mut a.bearer,
-        &mut b.bearer,
-        &dest_b,
-        &dest_a,
-        &id_a,
-        &id_b,
-    )?;
+    let hs =
+        handshake_over_fragments(&mut a.bearer, &mut b.bearer, &dest_b, &dest_a, &id_a, &id_b)?;
     if hs.keys.transcript_digest.is_zero() {
         return Err(QdnfError::CryptoFailure);
     }
@@ -241,8 +235,7 @@ mod tests {
         let cell = 2048u64;
         let mut one = HostAdmission::new(cell).unwrap();
         assert_eq!(
-            pair_ipc_cells(&mut one, b"did:q42:a", b"did:q42:b", scope, 1280, cell)
-                .unwrap_err(),
+            pair_ipc_cells(&mut one, b"did:q42:a", b"did:q42:b", scope, 1280, cell).unwrap_err(),
             QdnfError::Capacity
         );
         assert_eq!(one.occupied_cells(), 0);
@@ -279,8 +272,7 @@ mod tests {
 
     fn install_session(peer: &mut NativePeer, local: &[u8], remote: &[u8], tag: u8, now: u64) {
         let mut owner = AuthorityOwner::new();
-        let binding =
-            binding_for_controllers(local, remote, b"q42:QSync/1", &[b'o', tag]).unwrap();
+        let binding = binding_for_controllers(local, remote, b"q42:QSync/1", &[b'o', tag]).unwrap();
         let (_cred, _contact, handle) = owner
             .install_grant(binding, now, now.saturating_add(3600), ContactState::Active)
             .unwrap();

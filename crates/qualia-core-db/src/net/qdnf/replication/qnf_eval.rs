@@ -184,9 +184,7 @@ fn q42_envelope_bytes(payload: u32) -> u32 {
     // SHA-384 identity + u32 length + 48-byte NQuin projection + payload.
     let identity = 48u32.saturating_add(4);
     let projection = core::mem::size_of::<NQuin>() as u32;
-    identity
-        .saturating_add(projection)
-        .saturating_add(payload)
+    identity.saturating_add(projection).saturating_add(payload)
 }
 
 fn qnf_candidate_bytes(payload: u32) -> u32 {
@@ -288,10 +286,7 @@ mod tests {
     #[test]
     fn adopted_flag_is_not_a_silent_true() {
         assert_eq!(QnfExtensionAdopted, EVALUATION.adopted);
-        assert_ne!(
-            EVALUATION.selected,
-            SelectedRepresentation::QnfExtension
-        );
+        assert_ne!(EVALUATION.selected, SelectedRepresentation::QnfExtension);
         assert_eq!(QnfExtensionAdopted, false);
     }
 }

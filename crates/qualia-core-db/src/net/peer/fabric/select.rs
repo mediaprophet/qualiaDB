@@ -33,11 +33,7 @@ pub fn exclude_then_rank(
             i += 1;
             continue;
         }
-        let rtt = if e.rtt_ms > 60_000 {
-            60_000
-        } else {
-            e.rtt_ms
-        };
+        let rtt = if e.rtt_ms > 60_000 { 60_000 } else { e.rtt_ms };
         let score = (i32::from(e.max_payload) / 8) - (rtt as i32);
         out[n] = RankedPath {
             index: i as u8,
@@ -74,10 +70,7 @@ mod tests {
 
     #[test]
     fn faster_direct_cannot_beat_relay_only_policy() {
-        let rows = [
-            local(PathClass::DirectV6, 1),
-            local(PathClass::Relayed, 50),
-        ];
+        let rows = [local(PathClass::DirectV6, 1), local(PathClass::Relayed, 50)];
         let mut out = [RankedPath {
             index: 0,
             class: PathClass::Offline,
@@ -90,10 +83,7 @@ mod tests {
 
     #[test]
     fn ordinary_prefers_faster_validated_direct() {
-        let rows = [
-            local(PathClass::Relayed, 50),
-            local(PathClass::DirectV6, 1),
-        ];
+        let rows = [local(PathClass::Relayed, 50), local(PathClass::DirectV6, 1)];
         let mut out = [RankedPath {
             index: 0,
             class: PathClass::Offline,

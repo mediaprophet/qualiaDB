@@ -92,6 +92,18 @@ pub enum ChatFamily {
     None,
 }
 
+impl ChatFamily {
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::ChatMl => "chatml",
+            Self::Llama3 => "llama3",
+            Self::Gemma => "gemma",
+            Self::Gemma4 => "gemma4",
+            Self::None => "none",
+        }
+    }
+}
+
 impl Default for GgufTokenizer {
     /// 256-entry byte-level fallback tokenizer — used when no GGUF is loaded.
     fn default() -> Self {
@@ -578,6 +590,13 @@ impl GgufTokenizer {
         let templated = self.apply_chat_template(None, user);
         self.encode_prompt(&templated)
     }
+
+    /// Apply the model's chat template with explicit system and user roles, then tokenize.
+    pub fn encode_chat_roles(&self, system: Option<&str>, user: &str) -> Vec<u32> {
+        let templated = self.apply_chat_template(system, user);
+        self.encode_prompt(&templated)
+    }
+
 
     /// Format token IDs for diagnostic logging (MC3f).
     pub fn format_ids_for_log(ids: &[u32]) -> String {

@@ -100,48 +100,49 @@ pub fn gemm(
         if work >= GEMM_GPU_THRESHOLD {
             let caps = caps();
             if caps.cuda || caps.wgpu {
-            // op(A): row-major m×k — stored m×k already (No) or k×m (Yes → transpose).
-            let a_eff: Cow<[f64]> = match transa {
-                Transpose::No => Cow::Borrowed(a),
-                Transpose::Yes => {
-                    let mut t = vec![0.0_f64; m * k];
-                    for i in 0..m {
+                // op(A): row-major m×k — stored m×k already (No) or k×m (Yes → transpose).
+                let a_eff: Cow<[f64]> = match transa {
+                    Transpose::No => Cow::Borrowed(a),
+                    Transpose::Yes => {
+                        let mut t = vec![0.0_f64; m * k];
+                        for i in 0..m {
+                            for l in 0..k {
+                                t[i * k + l] = a[l * m + i];
+                            }
+                        }
+                        Cow::Owned(t)
+                    }
+                };
+                // op(B): row-major k×n — stored k×n already (No) or n×k (Yes → transpose).
+                let b_eff: Cow<[f64]> = match transb {
+                    Transpose::No => Cow::Borrowed(b),
+                    Transpose::Yes => {
+                        let mut t = vec![0.0_f64; k * n];
                         for l in 0..k {
-                            t[i * k + l] = a[l * m + i];
+                            for j in 0..n {
+                                t[l * n + j] = b[j * k + l];
+                            }
+                        }
+                        Cow::Owned(t)
+                    }
+                };
+                // BLAS gemm dims are (m, n, k); the dispatcher takes (m, k, n): op(A) is m×k,
+                // op(B) is k×n, C is m×n, so the mapping is gemm(m,n,k) → dispatch(m,k,n).
+                if let Ok(product) = crate::wgsl_forge::dispatch::gemm_f64(m, k, n, &a_eff, &b_eff)
+                {
+                    // Apply alpha/beta exactly as the CPU loop would (beta==0 ⇒ c not read).
+                    if beta == 0.0 {
+                        for (ci, &p) in c.iter_mut().zip(product.iter()) {
+                            *ci = alpha * p;
+                        }
+                    } else {
+                        for (ci, &p) in c.iter_mut().zip(product.iter()) {
+                            *ci = alpha * p + beta * *ci;
                         }
                     }
-                    Cow::Owned(t)
+                    return Ok(());
                 }
-            };
-            // op(B): row-major k×n — stored k×n already (No) or n×k (Yes → transpose).
-            let b_eff: Cow<[f64]> = match transb {
-                Transpose::No => Cow::Borrowed(b),
-                Transpose::Yes => {
-                    let mut t = vec![0.0_f64; k * n];
-                    for l in 0..k {
-                        for j in 0..n {
-                            t[l * n + j] = b[j * k + l];
-                        }
-                    }
-                    Cow::Owned(t)
-                }
-            };
-            // BLAS gemm dims are (m, n, k); the dispatcher takes (m, k, n): op(A) is m×k,
-            // op(B) is k×n, C is m×n, so the mapping is gemm(m,n,k) → dispatch(m,k,n).
-            if let Ok(product) = crate::wgsl_forge::dispatch::gemm_f64(m, k, n, &a_eff, &b_eff) {
-                // Apply alpha/beta exactly as the CPU loop would (beta==0 ⇒ c not read).
-                if beta == 0.0 {
-                    for (ci, &p) in c.iter_mut().zip(product.iter()) {
-                        *ci = alpha * p;
-                    }
-                } else {
-                    for (ci, &p) in c.iter_mut().zip(product.iter()) {
-                        *ci = alpha * p + beta * *ci;
-                    }
-                }
-                return Ok(());
-            }
-            // Forge path was eligible but errored — fall through to the CPU floor.
+                // Forge path was eligible but errored — fall through to the CPU floor.
             }
         }
     }

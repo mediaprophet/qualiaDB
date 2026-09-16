@@ -13,7 +13,9 @@ pub fn encrypt_in_place(
     buffer: &mut [u8],
     tag_out: &mut [u8; AEAD_TAG_LEN],
 ) -> Result<(), CryptoError> {
-    let cipher = ChaCha20Poly1305::new(&Key::try_from(key.as_slice()).map_err(|_| CryptoError::CryptoFailure)?);
+    let cipher = ChaCha20Poly1305::new(
+        &Key::try_from(key.as_slice()).map_err(|_| CryptoError::CryptoFailure)?,
+    );
     let tag = cipher
         .encrypt_inout_detached(
             &Nonce::try_from(nonce.as_slice()).map_err(|_| CryptoError::CryptoFailure)?,
@@ -32,7 +34,9 @@ pub fn decrypt_in_place(
     buffer: &mut [u8],
     tag: &[u8; AEAD_TAG_LEN],
 ) -> Result<(), CryptoError> {
-    let cipher = ChaCha20Poly1305::new(&Key::try_from(key.as_slice()).map_err(|_| CryptoError::CryptoFailure)?);
+    let cipher = ChaCha20Poly1305::new(
+        &Key::try_from(key.as_slice()).map_err(|_| CryptoError::CryptoFailure)?,
+    );
     let tag = Tag::try_from(tag.as_slice()).map_err(|_| CryptoError::CryptoFailure)?;
     cipher
         .decrypt_inout_detached(

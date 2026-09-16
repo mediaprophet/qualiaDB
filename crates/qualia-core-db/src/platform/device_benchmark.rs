@@ -600,45 +600,45 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
     // ── GPUs / iGPU via wgpu — one circuit row per backend that can open the device ──
     #[cfg(feature = "gpu-runtime")]
     {
-    let instance = wgpu::Instance::default();
-    let mut cand: Vec<(u8, wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
-    for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
-        let info = adapter.get_info();
-        if info.device_type == wgpu::DeviceType::Cpu || info.device == 0 {
-            continue;
+        let instance = wgpu::Instance::default();
+        let mut cand: Vec<(u8, wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
+        for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
+            let info = adapter.get_info();
+            if info.device_type == wgpu::DeviceType::Cpu || info.device == 0 {
+                continue;
+            }
+            cand.push((backend_rank(info.backend), adapter, info));
         }
-        cand.push((backend_rank(info.backend), adapter, info));
-    }
-    cand.sort_by_key(|(r, _, _)| *r);
-    // Dedup exact (vendor, device, backend) only — keep Metal+DX12+Vulkan rows for the same card.
-    let mut seen: std::collections::HashSet<(u32, u32, u32)> = std::collections::HashSet::new();
-    let mut chosen: Vec<DeviceBenchmarkRequest> = Vec::new();
-    for (_, _adapter, info) in cand {
-        let backend_id = info.backend as u32;
-        if seen.insert((info.vendor, info.device, backend_id)) {
-            chosen.push(DeviceBenchmarkRequest {
-                backend: backend_name(info.backend).to_string(),
-                vendor: info.vendor,
-                device: info.device,
-                gemv_n: n,
-            });
+        cand.sort_by_key(|(r, _, _)| *r);
+        // Dedup exact (vendor, device, backend) only — keep Metal+DX12+Vulkan rows for the same card.
+        let mut seen: std::collections::HashSet<(u32, u32, u32)> = std::collections::HashSet::new();
+        let mut chosen: Vec<DeviceBenchmarkRequest> = Vec::new();
+        for (_, _adapter, info) in cand {
+            let backend_id = info.backend as u32;
+            if seen.insert((info.vendor, info.device, backend_id)) {
+                chosen.push(DeviceBenchmarkRequest {
+                    backend: backend_name(info.backend).to_string(),
+                    vendor: info.vendor,
+                    device: info.device,
+                    gemv_n: n,
+                });
+            }
         }
-    }
-    for request in chosen {
-        match invoke_worker(&request) {
-            Ok(bench) => circuits.push(bench),
-            Err(error) => log::warn!(
-                "device_benchmark|skip|{:04x}:{:04x}|{}|{}",
-                request.vendor,
-                request.device,
-                request.backend,
-                error
-            ),
+        for request in chosen {
+            match invoke_worker(&request) {
+                Ok(bench) => circuits.push(bench),
+                Err(error) => log::warn!(
+                    "device_benchmark|skip|{:04x}:{:04x}|{}|{}",
+                    request.vendor,
+                    request.device,
+                    request.backend,
+                    error
+                ),
+            }
+            // Guard: if a backend hangs the probe, the process may stick — operators can
+            // Each worker has a hard deadline, so a wedged backend is skipped without
+            // poisoning the parent or preventing the remaining adapters from running.
         }
-        // Guard: if a backend hangs the probe, the process may stick — operators can
-        // Each worker has a hard deadline, so a wedged backend is skipped without
-        // poisoning the parent or preventing the remaining adapters from running.
-    }
     }
 
     // ── CPU via native rayon ──

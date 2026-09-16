@@ -54,8 +54,7 @@ pub fn check_ownership_state_machine() -> Result<usize, QdnfError> {
     let mut contact_i = 0usize;
     while contact_i < 5 {
         let mut owner = AuthorityOwner::new();
-        let binding =
-            binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a")?;
+        let binding = binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a")?;
         let contact = contact_at(contact_i);
         let installed = owner.install_grant(binding, 10, 100, contact);
         match (contact, installed) {
@@ -73,8 +72,7 @@ pub fn check_ownership_state_machine() -> Result<usize, QdnfError> {
     let bind_a2 = binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a2")?;
     let bind_b = binding_for_controllers(b"did:q42:c", b"did:q42:d", b"q42:QSync/1", b"op-b")?;
 
-    let (cred, contact, handle) =
-        owner.install_grant(bind_a, 10, 100, ContactState::Active)?;
+    let (cred, contact, handle) = owner.install_grant(bind_a, 10, 100, ContactState::Active)?;
     checked = checked.saturating_add(1);
 
     let permit = owner.issue_permit(handle, bind_a, 20, 256)?;
@@ -117,8 +115,7 @@ pub fn check_ownership_state_machine() -> Result<usize, QdnfError> {
     checked = checked.saturating_add(1);
 
     let mut owner2 = AuthorityOwner::new();
-    let (_c, _k, live) =
-        owner2.install_grant(bind_a, 10, 100, ContactState::Active)?;
+    let (_c, _k, live) = owner2.install_grant(bind_a, 10, 100, ContactState::Active)?;
     owner2.validate_handle(live)?;
     let issued: Result<ExecutionPermit, QdnfError> = owner2.issue_permit(live, bind_a, 20, 0);
     match issued {
@@ -146,9 +143,6 @@ mod tests {
 
     #[test]
     fn generation_exhaustion_is_stale_not_wrap() {
-        assert_eq!(
-            Generation(u64::MAX).next(),
-            Err(QdnfError::StaleGeneration)
-        );
+        assert_eq!(Generation(u64::MAX).next(), Err(QdnfError::StaleGeneration));
     }
 }

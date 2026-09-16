@@ -139,11 +139,7 @@ mod tests {
         let mut kin = BTreeMap::new();
         kin.insert("a".into(), a.clone());
         kin.insert("b".into(), b.clone());
-        let k = args::rec_f64(
-            &kinetic_s(&Value::Record(kin), span()).unwrap(),
-            "value",
-        )
-        .unwrap();
+        let k = args::rec_f64(&kinetic_s(&Value::Record(kin), span()).unwrap(), "value").unwrap();
         assert!(k > 0.0, "kinetic {k}");
 
         let mut nuc = BTreeMap::new();
@@ -160,6 +156,9 @@ mod tests {
         let out = dipole_s(&Value::Record(dip), span()).unwrap();
         let d = args::rec_f64_list(&out, "dipole").unwrap();
         assert_eq!(d.len(), 3);
-        assert!(d.iter().all(|x| x.abs() < 1e-12), "on-origin dipole ~0: {d:?}");
+        assert!(
+            d.iter().all(|x| x.abs() < 1e-12),
+            "on-origin dipole ~0: {d:?}"
+        );
     }
 }

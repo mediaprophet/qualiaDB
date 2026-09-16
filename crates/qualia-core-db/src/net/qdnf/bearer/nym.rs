@@ -4,7 +4,7 @@
 //! Bounded, zero-heap in hot path. Labelled transition carrier (not Native Independent).
 //! Authoritative QdnfError variants mapped (Closed, NoRoute, WouldBlock, Capacity).
 
-use crate::net::qdnf::bearer::contract::{Bearer, RecvMeta, check_frame_mtu};
+use crate::net::qdnf::bearer::contract::{check_frame_mtu, Bearer, RecvMeta};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::registries::BearerProfile;
 use crate::net::qdnf::types::{ObservedLocator, ScopeEpoch};
@@ -208,7 +208,8 @@ mod tests {
 
         let mut out_sender = ObservedLocator::EMPTY;
         let mut out_frame = [0u8; 256];
-        let dec_len = decapsulate_nym(&envelope[..enc_len], &mut out_sender, &mut out_frame).unwrap();
+        let dec_len =
+            decapsulate_nym(&envelope[..enc_len], &mut out_sender, &mut out_frame).unwrap();
 
         assert_eq!(dec_len, payload.len());
         assert_eq!(&out_frame[..dec_len], payload);
