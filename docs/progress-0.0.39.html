@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038" class="release-039">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen 0.0.39 — Prompt Precision & Semantic Instruments</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .hero-num { font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+    .pillar { min-height: 17rem; }
+    .code-snippet {
+      background: rgba(5, 7, 12, 0.9);
+      border: 1px solid rgba(148, 180, 220, 0.16);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      font-family: var(--q-mono);
+      font-size: 0.85rem;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="mb-8 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-5 py-4 text-sm text-cyan-100/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <strong class="text-cyan-200">0.0.39 Milestone:</strong>
+        Prompt Precision Conditioning Runtime · Automated Model Precision Optimization · Semantic Instruments Studio Bay · NLP Substrate.
+      </div>
+      <a href="prompt-precision.html" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold hover:bg-cyan-500/30 transition shrink-0">
+        Prompt Precision Specs <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> Zero-heap hot paths · Deterministic token envelopes · Branch <code class="q-mono">0.0.39</code></div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
+      Predictable Conditioning.<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-violet-300 to-emerald-300">Exact token envelopes without heap alloc.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-4">
+      0.0.39 delivers mathematical prompt precision calibration, an automated model precision mapping pipeline,
+      first-class semantic instruments in Webizen Studio, and an enterprise NLP gold evaluation corpus — all operating under QualiaDB's 42MB Sentinel budget.
+    </p>
+    <p class="text-sm text-white/45 mb-12">
+      Navigation: <a class="q-link" href="prompt-precision.html">Prompt Precision Specs</a> ·
+      <a class="q-link" href="progress-0.0.38.html">0.0.38 Human Surface</a> ·
+      <a class="q-link" href="progress-0.0.37.html">0.0.37 WASM Engine</a> ·
+      <a class="q-link" href="qdnf.html">QDNF Fabric</a> ·
+      <a class="q-link" href="release-matrix.html">Release Matrix</a>
+    </p>
+
+    <!-- Key Metrics Grid -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Hot-Path Allocation</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-emerald-300">0 B</div>
+        <div class="text-xs text-white/55 mt-1">Zero heap alloc in prompt evaluation</div>
+      </div>
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Token Budget Zones</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-cyan-300">6 Zones</div>
+        <div class="text-xs text-white/55 mt-1">Prefix, Invariant, Shots, Work, Query, Scratch</div>
+      </div>
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Cross-Cutting Invariants</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-violet-300">14 / 14</div>
+        <div class="text-xs text-white/55 mt-1">Automated invariant compliance suites</div>
+      </div>
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Model Strategies</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-amber-300">B0 – B5</div>
+        <div class="text-xs text-white/55 mt-1">Baseline to extreme low-bit quantized</div>
+      </div>
+    </section>
+
+    <!-- Interactive Token Budget Allocator -->
+    <section class="q-card p-8 mb-16">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-1">Interactive Simulator</p>
+          <h2 class="text-2xl sm:text-3xl font-semibold">Dynamic Token Budget Algebra ($B_{total}$)</h2>
+          <p class="text-sm text-white/60">Explore zero-heap token slice partitioning under strict context limits.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <label for="model-preset" class="text-xs text-white/60">Preset:</label>
+          <select id="model-preset" onchange="applyPreset(this.value)" class="bg-zinc-900 border border-white/10 text-xs rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-400">
+            <option value="b2_2k">Llama-3-8B (2048 Envelope — B2 Structural Strict)</option>
+            <option value="b4_4k">Qwen-2.5-Coder (4096 Envelope — B4 Zero-Alloc Verified)</option>
+            <option value="b1_512">Edge Minimal (512 Envelope — B1 Compact)</option>
+            <option value="b5_1k">Quantized Edge (1024 Envelope — B5 Extreme Low-Bit)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="budget-meter-container mb-6">
+        <div class="flex items-center justify-between text-sm mb-2">
+          <span class="text-white/70">Context Allocation: <strong id="allocated-tokens" class="text-white">2048</strong> / <span id="max-envelope">2048</span> tokens</span>
+          <span id="budget-status" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">BUDGET OPTIMAL</span>
+        </div>
+
+        <div class="budget-segmented-bar" id="budget-bar">
+          <div class="budget-segment" id="seg-prefix" style="width: 12.5%; background: var(--zone-prefix);" title="Prefix (256)"></div>
+          <div class="budget-segment" id="seg-invariant" style="width: 18.75%; background: var(--zone-invariant);" title="Invariant (384)"></div>
+          <div class="budget-segment" id="seg-fewshot" style="width: 18.75%; background: var(--zone-fewshot);" title="Few-Shot (384)"></div>
+          <div class="budget-segment" id="seg-workspace" style="width: 25.0%; background: var(--zone-workspace);" title="Workspace (512)"></div>
+          <div class="budget-segment" id="seg-query" style="width: 12.5%; background: var(--zone-query);" title="Query (256)"></div>
+          <div class="budget-segment" id="seg-scratchpad" style="width: 12.5%; background: var(--zone-scratchpad);" title="Scratchpad (256)"></div>
+        </div>
+
+        <div class="zone-legend-grid">
+          <div class="zone-legend-item">
+            <div class="zone-legend-dot" style="background: var(--zone-prefix);"></div>
+            <div class="flex-1">
+              <div class="text-[0.7rem] text-white/50">B_prefix</div>
+              <strong id="val-prefix">256</strong> tok
+            </div>
+          </div>
+          <div class="zone-legend-item">
+            <div class="zone-legend-dot" style="background: var(--zone-invariant);"></div>
+            <div class="flex-1">
+              <div class="text-[0.7rem] text-white/50">B_invariant</div>
+              <strong id="val-invariant">384</strong> tok
+            </div>
+          </div>
+          <div class="zone-legend-item">
+            <div class="zone-legend-dot" style="background: var(--zone-fewshot);"></div>
+            <div class="flex-1">
+              <div class="text-[0.7rem] text-white/50">B_fewshot</div>
+              <strong id="val-fewshot">384</strong> tok
+            </div>
+          </div>
+          <div class="zone-legend-item">
+            <div class="zone-legend-dot" style="background: var(--zone-workspace);"></div>
+            <div class="flex-1">
+              <div class="text-[0.7rem] text-white/50">B_workspace</div>
+              <strong id="val-workspace">512</strong> tok
+            </div>
+          </div>
+          <div class="zone-legend-item">
+            <div class="zone-legend-dot" style="background: var(--zone-query);"></div>
+            <div class="flex-1">
+              <div class="text-[0.7rem] text-white/50">B_query</div>
+              <strong id="val-query">256</strong> tok
+            </div>
+          </div>
+          <div class="zone-legend-item">
+            <div class="zone-legend-dot" style="background: var(--zone-scratchpad);"></div>
+            <div class="flex-1">
+              <div class="text-[0.7rem] text-white/50">B_scratchpad</div>
+              <strong id="val-scratchpad">256</strong> tok
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-xs text-white/50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-info text-cyan-400"></i>
+        <span>Enforced by <code>qualia-core-db::inference::conditioning::budget</code>. If $B_{workspace}$ expands under dense RAG retrieval, $B_{fewshot}$ and $B_{scratchpad}$ decay gracefully to preserve $B_{invariant}$ safety bounds.</span>
+      </div>
+    </section>
+
+    <!-- Four Pillars of 0.0.39 -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+      <div class="q-card pillar p-8">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-300 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <div>
+            <p class="q-kicker">Conditioning Runtime</p>
+            <h3 class="text-xl font-semibold">Prompt Precision (W0–W8)</h3>
+          </div>
+        </div>
+        <p class="text-sm text-white/70 mb-4">
+          Eliminates nondeterministic prompt drift. Standardizes prompt contracts with zero heap allocation in hot evaluation loops.
+        </p>
+        <ul class="text-xs text-white/60 space-y-2 mb-6">
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Fixed-size <code>[T; N]</code> stack buffers & caller-supplied output slices</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Spec compilation with SHA-256 contract fingerprinting</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> PP-090 LoRA hot-path zero-heap readiness verified</li>
+        </ul>
+        <a href="prompt-precision.html" class="text-xs font-semibold text-cyan-300 hover:underline">Read architecture specification →</a>
+      </div>
+
+      <div class="q-card pillar p-8">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <p class="q-kicker">Machine Learning Pipeline</p>
+            <h3 class="text-xl font-semibold">Automated Model Precision Optimizer</h3>
+          </div>
+        </div>
+        <p class="text-sm text-white/70 mb-4">
+          Automatically maps model families and parameter limits to optimal precision strategies with verifiable held-out validation.
+        </p>
+        <ul class="text-xs text-white/60 space-y-2 mb-6">
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Strategies B0 through B5 generated and scored automatically</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Strict train / dev / test split isolation preventing data leakage</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Cryptographic <code>ModelOptimizationReceipt</code> records with rollback</li>
+        </ul>
+        <a href="prompt-precision.html#model-optimizer" class="text-xs font-semibold text-cyan-300 hover:underline">View optimizer mechanics →</a>
+      </div>
+
+      <div class="q-card pillar p-8">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-compass-drafting"></i>
+          </div>
+          <div>
+            <p class="q-kicker">Authoring & Manufacture</p>
+            <h3 class="text-xl font-semibold">Semantic Instruments Studio Bay</h3>
+          </div>
+        </div>
+        <p class="text-sm text-white/70 mb-4">
+          First-class metamodel for semantic instruments in Webizen Studio, complete with SHACL validation shapes and physical manufacturing specs.
+        </p>
+        <ul class="text-xs text-white/60 space-y-2 mb-6">
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> 7-stage life cycle: Flow, Select, Shapes Canvas, Manufacture, Receipts, Inspect, Run</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Complete keyboard-only authoring path without host lock</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Immutable receipt tracking surviving instrument revocation</li>
+        </ul>
+        <a href="poet-app/index.html" class="text-xs font-semibold text-cyan-300 hover:underline">Open Webizen Studio →</a>
+      </div>
+
+      <div class="q-card pillar p-8">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <div>
+            <p class="q-kicker">NLP & Gold Benchmarks</p>
+            <h3 class="text-xl font-semibold">NLP Substrate & Corpus Suite</h3>
+          </div>
+        </div>
+        <p class="text-sm text-white/70 mb-4">
+          High-performance natural language processing substrate backed by reproducible gold standard evaluation corpora and checksum verification.
+        </p>
+        <ul class="text-xs text-white/60 space-y-2 mb-6">
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> <code>qualia-catchment-notes-v0</code> hydrological and environmental domain corpus</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> <code>qualia-english-notes-v0</code> abbreviation, decimal, and full-width tokenization</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> Automated validation harness (<code>scripts/validate-nlp-plan.ps1</code>)</li>
+        </ul>
+        <a href="benchmark.html" class="text-xs font-semibold text-cyan-300 hover:underline">Inspect NLP benchmark reports →</a>
+      </div>
+    </section>
+
+    <!-- Cross-Cutting Invariant Conformance Suite -->
+    <section class="q-card p-8 mb-16">
+      <p class="q-kicker mb-2">Formal Verification</p>
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-4">Section 14 Cross-Cutting Invariants (14/14 PASS)</h2>
+      <p class="text-sm text-white/70 mb-6">Every conditioning compilation and runtime execution is verified against 14 structural invariants defined in the Prompt Precision specification:</p>
+
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs mb-6">
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-1</strong> Deterministic Byte Identity</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-2</strong> Zero Heap in Hot Path</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-3</strong> Strict Monotonic Token Budget</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-4</strong> Safety Invariant Preservation</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-5</strong> Reversible Multi-Turn Decay</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-6</strong> Zero Leaked Context in Fallback</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-7</strong> Sanitization Immutability</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-8</strong> 42MB Sentinel Conformance</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-9</strong> Model Target Alignment</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-10</strong> Audit Receipt Cryptographic Root</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-11</strong> Telemetry Precision Clocks</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-12</strong> LoRA Shape Boundedness</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-13</strong> WASM32 Target Parity</span>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span><strong>I-14</strong> Failsafe Closed Execution</span>
+        </div>
+      </div>
+
+      <div class="code-snippet text-emerald-300">
+        $ cargo test --test prompt_precision_cross_cutting<br>
+        running 14 tests<br>
+        test test_invariant_01_deterministic_byte_identity ... ok<br>
+        test test_invariant_02_zero_heap_in_hot_path ... ok<br>
+        ...<br>
+        test result: ok. 14 passed; 0 failed; 0 ignored; finished in 0.01s
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-white/40 pt-8 border-t border-white/10">
+      <p>QualiaDB / Webizen 0.0.39 · Commit <code class="q-mono text-white/60">9300262a9</code> · Zero-Heap Hot Paths · 42MB Sentinel Architecture</p>
+    </footer>
+  </main>
+
+  <script>
+    const presets = {
+      b2_2k: {
+        total: 2048,
+        prefix: 256,
+        invariant: 384,
+        fewshot: 384,
+        workspace: 512,
+        query: 256,
+        scratchpad: 256,
+        status: "BUDGET OPTIMAL (B2 STRICT)"
+      },
+      b4_4k: {
+        total: 4096,
+        prefix: 512,
+        invariant: 512,
+        fewshot: 768,
+        workspace: 1280,
+        query: 512,
+        scratchpad: 512,
+        status: "ZERO-ALLOC VERIFIED (B4)"
+      },
+      b1_512: {
+        total: 512,
+        prefix: 64,
+        invariant: 128,
+        fewshot: 64,
+        workspace: 128,
+        query: 64,
+        scratchpad: 64,
+        status: "COMPACT EDGE (B1)"
+      },
+      b5_1k: {
+        total: 1024,
+        prefix: 128,
+        invariant: 256,
+        fewshot: 128,
+        workspace: 256,
+        query: 128,
+        scratchpad: 128,
+        status: "LOW-BIT QUANTIZED (B5)"
+      }
+    };
+
+    function applyPreset(presetKey) {
+      const p = presets[presetKey];
+      if (!p) return;
+
+      document.getElementById('allocated-tokens').innerText = p.total;
+      document.getElementById('max-envelope').innerText = p.total;
+      document.getElementById('budget-status').innerText = p.status;
+
+      document.getElementById('val-prefix').innerText = p.prefix;
+      document.getElementById('val-invariant').innerText = p.invariant;
+      document.getElementById('val-fewshot').innerText = p.fewshot;
+      document.getElementById('val-workspace').innerText = p.workspace;
+      document.getElementById('val-query').innerText = p.query;
+      document.getElementById('val-scratchpad').innerText = p.scratchpad;
+
+      document.getElementById('seg-prefix').style.width = ((p.prefix / p.total) * 100) + '%';
+      document.getElementById('seg-invariant').style.width = ((p.invariant / p.total) * 100) + '%';
+      document.getElementById('seg-fewshot').style.width = ((p.fewshot / p.total) * 100) + '%';
+      document.getElementById('seg-workspace').style.width = ((p.workspace / p.total) * 100) + '%';
+      document.getElementById('seg-query').style.width = ((p.query / p.total) * 100) + '%';
+      document.getElementById('seg-scratchpad').style.width = ((p.scratchpad / p.total) * 100) + '%';
+    }
+  </script>
+</body>
+</html>

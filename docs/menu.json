@@ -20,10 +20,23 @@
       "group": "Core"
     },
     {
+      "label": "0.0.39 Progress",
+      "href": "progress-0.0.39.html",
+      "icon": "fa-wand-magic-sparkles",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Prompt Precision",
+      "href": "prompt-precision.html",
+      "icon": "fa-sliders",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "0.0.38 Progress",
       "href": "progress-0.0.38.html",
       "icon": "fa-heart-pulse",
-      "highlight": true,
       "group": "Core"
     },
     {
