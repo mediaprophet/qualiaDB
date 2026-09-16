@@ -4,10 +4,9 @@
 
 use super::inspect::{
     activate_requires_closed, collect_without_activate, record_run, revoke_keeps_receipts,
-    InspectState, ACTIONS as INSPECT_ACTIONS, HELD_REVOKED,
+    InspectState, HELD_REVOKED,
 };
-use super::manufacture::{can_publish, next_action, Draft, ACTIONS as MFG_ACTIONS, NEXT_PUBLISH};
-use super::manufacture_keys::keyboard_only_author_to_publish;
+use super::manufacture::{can_publish, next_action, Draft, NEXT_PUBLISH};
 use super::round_trip::{loss_reasons, source_visual_round_trip_ok, sync_round_trip_flag};
 use super::validate::{evidence_for, validation_held};
 
@@ -132,6 +131,9 @@ pub fn collect_to_receipt_walkthrough() -> Result<Vec<Step>, &'static str> {
 mod tests {
     use super::*;
     use super::super::a11y::action_name_ok;
+    use super::super::inspect::ACTIONS as INSPECT_ACTIONS;
+    use super::super::manufacture::ACTIONS as MFG_ACTIONS;
+    use super::super::manufacture_keys::keyboard_only_author_to_publish;
 
     #[test]
     fn scripted_author_to_publish_completes() {
