@@ -15,7 +15,6 @@ pub fn SetupHealthPanel(
             }
         };
     }
-    }
     let Some(snapshot) = snapshot else {
         return rsx! {
             div { style: "{super::WARNING_CARD}",
