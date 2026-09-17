@@ -48,16 +48,11 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
         );
         return;
     }
-    // Settings: Classic + popstate. dioxus-web 0.8 HashHistory listens to
-    // popstate (not hashchange). Do NOT also emit open-settings (studio
-    // shell-navigate already opens Settings via the same popstate path).
+    // Settings: Classic shell. Studio shell-navigate sets pending_settings and
+    // AppLayout's use_effect does navigator.push (dioxus-owned stack). No
+    // Closure push, no synthetic popstate (those failed UAT on e6a53c4 / 08b8c93).
     if qapp_id == "settings" {
         let _ = app.emit("shell-kind-set", "classic");
-        if let Some(window) = app.get_webview_window("main") {
-            let _ = window.eval(
-                "try { const h = '#/settings'; const url = location.pathname + location.search + h; history.pushState(null, '', url); window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) { console.warn(e); }",
-            );
-        }
     }
     if qapp_id == "library" || qapp_id == "memory" {
         if let Some(window) = app.get_webview_window("main") {

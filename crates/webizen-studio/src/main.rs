@@ -43,17 +43,6 @@ fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
     });
 }
 
-/// dioxus-web 0.8 HashHistory only listens to `popstate`, not `hashchange`.
-/// `location.hash = ...` alone never paints; sync `navigator.push` on a Tauri
-/// Closure re-borrows dioxus (runtime.rs:223/280). Drive the Router the way
-/// HashHistory's updater expects: pushState + PopStateEvent.
-#[cfg(target_arch = "wasm32")]
-fn open_settings_via_popstate() {
-    components::shell_kind::persist_shell_kind(components::shell_kind::ShellKind::Classic);
-    let _ = js_sys::eval(
-        "try { const h = '#/settings'; const url = location.pathname + location.search + h; history.pushState(null, '', url); window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) { console.warn(e); }",
-    );
-}
 
 
 #[cfg(target_arch = "wasm32")]
@@ -1024,6 +1013,10 @@ fn AppLayout() -> Element {
     // so Tools→Settings / Ctrl+, closed without painting Settings. Listeners always attach;
     // Poet stays full-bleed via PoetHarness; Tools→Settings forces Classic + deferred Settings push.
     let host_status = use_signal(DesktopStatus::default);
+    /// Tools→Settings / Ctrl+, : Closure only sets this; a dioxus use_effect
+    /// performs navigator.push so we never push on the Tauri RefCell stack
+    /// and never rely on synthetic popstate (which did not remount Settings).
+    let mut pending_settings = use_signal(|| false);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = navigator;
     #[cfg(not(target_arch = "wasm32"))]
@@ -1085,12 +1078,16 @@ fn AppLayout() -> Element {
             let mut native_menu_listener_started = native_menu_listener_started;
             native_menu_listener_started.set(true);
             let navigator = navigator;
+            let pending_settings = pending_settings;
 
             wasm_bindgen_futures::spawn_local(async move {
-                // popstate (not navigator.push) — avoids RefCell and actually paints
+                let mut settings_pending = pending_settings;
                 let settings_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        open_settings_via_popstate();
+                        components::shell_kind::persist_shell_kind(
+                            components::shell_kind::ShellKind::Classic,
+                        );
+                        settings_pending.set(true);
                     }));
 
                 match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
@@ -1107,6 +1104,7 @@ fn AppLayout() -> Element {
                 }
 
                 let menu_nav = navigator;
+                let mut menu_pending = pending_settings;
                 let menu_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event| {
                     let Some(target) = event_payload_string(&event) else {
                         return;
@@ -1117,9 +1115,10 @@ fn AppLayout() -> Element {
                             components::relations::stash_directory_handoff();
                         }
                         "settings" | "prefs" => {
-                            // Menu.rs also forces Classic + popstate; do both here so
-                            // tray/open-settings paths paint without navigator.push.
-                            open_settings_via_popstate();
+                            components::shell_kind::persist_shell_kind(
+                                components::shell_kind::ShellKind::Classic,
+                            );
+                            menu_pending.set(true);
                             return;
                         }
                         _ => {}
@@ -1379,6 +1378,14 @@ fn AppLayout() -> Element {
                     reset_zoom_callback.forget();
                 }
             });
+        }
+    });
+
+    // Run on dioxus's stack (not the Tauri Closure): paint SettingsRoute.
+    use_effect(move || {
+        if pending_settings() {
+            pending_settings.set(false);
+            let _ = navigator.push(Route::SettingsRoute {});
         }
     });
 
