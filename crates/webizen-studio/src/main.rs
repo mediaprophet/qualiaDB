@@ -35,17 +35,7 @@ fn event_payload_string(event: &JsValue) -> Option<String> {
 }
 
 
-/// Defer router pushes off the Tauri Closure stack so dioxus can finish its
-/// current borrow before the route tree remounts.
-///
-/// Sync `navigator.push` inside a Tauri `listen` Closure re-enters dioxus while
-/// `scope_states`/`scope_stack` are borrowed → runtime.rs:223 unwrap / :280
-/// RefCell already borrowed. Hash-only (`location.set_hash`) is insufficient:
-/// dioxus-web 0.8 HashHistory/WebHistory only subscribe to `popstate`, not
-/// `hashchange`, so the Router never leaves Talk/Relations.
-///
-/// Takes a push closure (not a named Navigator type) so we don't depend on
-/// `dioxus::router::Navigator` path quirks across dioxus 0.8 alphas.
+/// Defer non-settings router pushes off the Tauri Closure stack (RefCell).
 #[cfg(target_arch = "wasm32")]
 fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
     wasm_bindgen_futures::spawn_local(async move {
@@ -53,11 +43,16 @@ fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
     });
 }
 
-/// Classic shell + deferred Settings push (Tools→Settings / Ctrl+, / tray).
+/// dioxus-web 0.8 HashHistory only listens to `popstate`, not `hashchange`.
+/// `location.hash = ...` alone never paints; sync `navigator.push` on a Tauri
+/// Closure re-borrows dioxus (runtime.rs:223/280). Drive the Router the way
+/// HashHistory's updater expects: pushState + PopStateEvent.
 #[cfg(target_arch = "wasm32")]
-fn open_settings_deferred(nav: impl FnOnce(Route) + 'static) {
+fn open_settings_via_popstate() {
     components::shell_kind::persist_shell_kind(components::shell_kind::ShellKind::Classic);
-    defer_navigator_push(nav, Route::SettingsRoute {});
+    let _ = js_sys::eval(
+        "try { const h = '#/settings'; const url = location.pathname + location.search + h; history.pushState(null, '', url); window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) { console.warn(e); }",
+    );
 }
 
 
@@ -1092,12 +1087,10 @@ fn AppLayout() -> Element {
             let navigator = navigator;
 
             wasm_bindgen_futures::spawn_local(async move {
-                // Deferred push: sync push on this Closure panics (RefCell);
-                // hash-only never notifies dioxus (popstate-only history).
-                let settings_nav = navigator;
+                // popstate (not navigator.push) — avoids RefCell and actually paints
                 let settings_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        open_settings_deferred(move |r| { let _ = settings_nav.push(r); });
+                        open_settings_via_popstate();
                     }));
 
                 match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
@@ -1124,11 +1117,10 @@ fn AppLayout() -> Element {
                             components::relations::stash_directory_handoff();
                         }
                         "settings" | "prefs" => {
-                            // Force Classic before deferred push (Poet full-bleed
-                            // must yield Settings). Do not push on this stack.
-                            components::shell_kind::persist_shell_kind(
-                                components::shell_kind::ShellKind::Classic,
-                            );
+                            // Menu.rs also forces Classic + popstate; do both here so
+                            // tray/open-settings paths paint without navigator.push.
+                            open_settings_via_popstate();
+                            return;
                         }
                         _ => {}
                     }

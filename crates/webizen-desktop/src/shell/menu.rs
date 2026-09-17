@@ -48,15 +48,14 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
         );
         return;
     }
-    // Settings: force Classic shell. Do NOT emit open-settings here (studio
-    // shell-navigate already deferred-pushes SettingsRoute; a second emit raced
-    // dioxus RefCell). Hash write is URL sync only — dioxus history listens to
-    // popstate, so Router paint comes from studio's spawn_local navigator.push.
+    // Settings: Classic + popstate. dioxus-web 0.8 HashHistory listens to
+    // popstate (not hashchange). Do NOT also emit open-settings (studio
+    // shell-navigate already opens Settings via the same popstate path).
     if qapp_id == "settings" {
         let _ = app.emit("shell-kind-set", "classic");
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.eval(
-                "try { const h = '#/settings'; if (location.hash !== h) { location.hash = h; } } catch (e) { console.warn(e); }",
+                "try { const h = '#/settings'; const url = location.pathname + location.search + h; history.pushState(null, '', url); window.dispatchEvent(new PopStateEvent('popstate')); } catch (e) { console.warn(e); }",
             );
         }
     }
