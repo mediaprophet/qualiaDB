@@ -55,7 +55,18 @@ pub const INSTRUMENT_WORKING_SAYABLE: &str = "Instrument working…";
 
 /// Empty-thread invite — works with or without a model.
 pub const EMPTY_THREAD_INVITE: &str =
-    "Type below and press Send — a conversation starts if needed. Ask an instrument only when you want a tool.";
+    "Write to a person below and press Send — the thread starts if needed. No agent or model required.";
+
+/// Soft Continuity rise — handle is not the living subject.
+pub const CONTINUITY_HANDLE_BLURB: &str =
+    "Continuity · a handle is not the human. Talk is human ↔ human; a chatbot is a tool.";
+
+/// Sidebar card title — instruments are tools, never the other party.
+pub const INSTRUMENTS_CARD_TITLE: &str = "Instruments (tools)";
+
+/// Sidebar card body — Send stays people-first.
+pub const INSTRUMENTS_CARD_BLURB: &str =
+    "Optional tools for Ask / @mention. Send stays people-only — never who answers the thread.";
 
 /// Mesh not running: wait-honest, not broken.
 pub const MESH_HELD_SAYABLE: &str =
@@ -306,6 +317,9 @@ mod tests {
             INSTRUMENT_HELD_CHIP,
             INSTRUMENT_WORKING_SAYABLE,
             EMPTY_THREAD_INVITE,
+            CONTINUITY_HANDLE_BLURB,
+            INSTRUMENTS_CARD_TITLE,
+            INSTRUMENTS_CARD_BLURB,
             MESH_HELD_SAYABLE,
             NEW_CONVERSATION_LABEL,
             PEOPLE_ONLY_LABEL,
