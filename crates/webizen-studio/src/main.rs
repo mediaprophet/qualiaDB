@@ -995,15 +995,15 @@ fn DesktopLogsPage() -> Element {
 #[component]
 fn AppLayout() -> Element {
     let route = use_route::<Route>();
-    if matches!(
-        route,
-        Route::PoetRoute {} | Route::PoetCatalogRoute {} | Route::PoetInstrumentRoute {}
-    ) {
-        return rsx! { Outlet::<Route> {} };
-    }
     let theme_state = consume_context::<Signal<ResolvedTheme>>();
     let navigator = use_navigator();
     let native_menu_listener_started = use_signal(|| false);
+    // Poet routes used to early-return before shell-navigate / open-settings listeners,
+    // so Tools→Settings / Ctrl+, closed without painting Settings. Always attach listeners.
+    let poet_fullscreen = matches!(
+        route,
+        Route::PoetRoute {} | Route::PoetCatalogRoute {} | Route::PoetInstrumentRoute {}
+    );
     let host_status = use_signal(DesktopStatus::default);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = navigator;
@@ -1912,12 +1912,21 @@ fn App() -> Element {
             "
         }
 
+        if poet_fullscreen {
+            // Keep native menu listeners active (mounted above) while Settings/Library
+            // routes paint full-bleed — Tools→Settings must leave Poet without a bounce.
+            div {
+                style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;",
+                Outlet::<Route> {}
+            }
+        } else {
         div {
             class: "webizen-studio-shell {shell_class}",
             "data-theme-scope": "app",
             "data-theme": "{data_theme}",
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; max-height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden; display: flex; flex-direction: column; min-height: 0;",
             components::onboarding::OnboardingGate {}
+        }
         }
     }
 }

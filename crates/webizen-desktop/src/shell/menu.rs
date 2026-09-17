@@ -51,6 +51,19 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
     // Belt-and-braces: studio also listens for open-settings (tray / Ctrl+,).
     if qapp_id == "settings" {
         let _ = app.emit("open-settings", ());
+        // Force hash even if the webview is mid-Poet fullscreen (listeners now always on).
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.eval(
+                "try { location.hash = '#/settings'; } catch (e) { console.warn(e); }",
+            );
+        }
+    }
+    if qapp_id == "library" || qapp_id == "memory" {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.eval(
+                "try { location.hash = '#/library'; } catch (e) { console.warn(e); }",
+            );
+        }
     }
     crate::desktop_log::record("info", format!("desktop route -> {qapp_id} ({route})"));
 }
