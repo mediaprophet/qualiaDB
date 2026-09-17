@@ -360,6 +360,17 @@ async fn send_chat_turn(
     {
         Ok(_) => {
             draft.set(String::new());
+            // Optimistic paint so Send never looks like a no-op if reload lags.
+            {
+                let mut painted = messages();
+                painted.push(json!({
+                    "role": "user",
+                    "content": body_cml,
+                    "author_name": "You",
+                }));
+                messages.set(painted);
+            }
+            scroll_chat_to_bottom();
             reload_session_messages(&sid, messages).await;
             scroll_chat_to_bottom();
             let _ = invoke_json::<usize>(
@@ -887,11 +898,14 @@ pub fn ConnectChat() -> Element {
         TalkHoldLevel::Partial => HonestyLevel::Partial,
     };
     let talk_blurb = crate::components::talk_human_alone::TALK_PEOPLE_BLURB;
+    let continuity_blurb = crate::components::talk_human_alone::CONTINUITY_HANDLE_BLURB;
     let empty_invite = crate::components::talk_human_alone::EMPTY_THREAD_INVITE;
     let instrument_held = crate::components::talk_human_alone::INSTRUMENT_HELD_SAYABLE;
     let composer_ph = crate::components::talk_human_alone::COMPOSER_PLACEHOLDER;
     let people_only = crate::components::talk_human_alone::PEOPLE_ONLY_LABEL;
     let new_convo = crate::components::talk_human_alone::NEW_CONVERSATION_LABEL;
+    let instruments_title = crate::components::talk_human_alone::INSTRUMENTS_CARD_TITLE;
+    let instruments_blurb = crate::components::talk_human_alone::INSTRUMENTS_CARD_BLURB;
     let draft_empty = draft().trim().is_empty();
     let send_btn_style = if draft_empty {
         "background:#6d28d9; color:#e9d5ff; padding:8px 14px; border:none; border-radius:8px; font-weight:600; cursor:not-allowed; font-size:13px; opacity:0.45;"
@@ -960,6 +974,9 @@ pub fn ConnectChat() -> Element {
                     h2 { style: "color:#a78bfa; margin:0; font-size:16px; font-weight:700;", "Talk" }
                     p { style: "color:#94a3b8; margin:4px 0 0; font-size:12px; line-height:1.45; max-width:36rem;",
                         "{talk_blurb} Invites → People · shared labour → Projects."
+                    }
+                    p { style: "color:#64748b; margin:6px 0 0; font-size:11px; line-height:1.4; max-width:36rem;",
+                        "{continuity_blurb}"
                     }
                 }
                 div { style: "display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end;",
@@ -1107,11 +1124,11 @@ pub fn ConnectChat() -> Element {
                         }
                     }
 
-                    // Agents — roster only; add remote/MCP under advanced details
+                    // Instruments — optional tools; never the other party in Talk
                     div { style: "{CARD}",
-                        h3 { style: "{H3}", "Agents" }
+                        h3 { style: "{H3}", "{instruments_title}" }
                         p { style: "color:#94a3b8; font-size:12px; margin:0 0 8px;",
-                            "Who answers in this thread (header). People & invites: Relations → People."
+                            "{instruments_blurb} People & invites: Relations → People."
                         }
                         if agents().is_empty() {
                             div { style: "padding:6px 8px; background:#0b1220; border-radius:6px; margin-bottom:4px; font-size:12px; color:#94a3b8;",
@@ -1456,8 +1473,9 @@ pub fn ConnectChat() -> Element {
                                     "{empty_invite}"
                                 }
                                 if !has_model {
-                                    p { style: "margin:8px 0 0; font-size:12px; line-height:1.45; color:#fde68a;",
-                                        "{instrument_held}"
+                                    p { style: "margin:8px 0 0; font-size:11px; line-height:1.45; color:#94a3b8;",
+                                        title: "{instrument_held}",
+                                        "Instrument path is held / not yet — that is a tool lane, not a send gate."
                                     }
                                 }
                             }
