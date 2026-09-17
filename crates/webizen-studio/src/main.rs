@@ -34,6 +34,40 @@ fn event_payload_string(event: &JsValue) -> Option<String> {
         .and_then(|payload| payload.as_string())
 }
 
+
+#[cfg(target_arch = "wasm32")]
+fn set_location_hash(hash: &str) {
+    if let Some(window) = web_sys::window() {
+        let loc = window.location();
+        if loc.hash().ok().as_deref() != Some(hash) {
+            let _ = loc.set_hash(hash);
+        }
+    }
+}
+
+/// Tools→Settings / Ctrl+, must not call `navigator.push` on the Tauri event
+/// stack: menu already forces `#/settings`, and a sync push re-enters dioxus
+/// while `scope_states`/`scope_stack` are borrowed → runtime.rs:223 unwrap /
+/// :280 RefCell already borrowed.
+#[cfg(target_arch = "wasm32")]
+fn open_settings_via_hash() {
+    components::shell_kind::persist_shell_kind(components::shell_kind::ShellKind::Classic);
+    set_location_hash("#/settings");
+}
+
+/// Defer router pushes off the Tauri Closure stack so dioxus can finish its
+/// current borrow before the route tree remounts.
+///
+/// Takes a push closure (not a named Navigator type) so we don't depend on
+/// `dioxus::router::Navigator` path quirks across dioxus 0.8 alphas.
+#[cfg(target_arch = "wasm32")]
+fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
+    wasm_bindgen_futures::spawn_local(async move {
+        push(route);
+    });
+}
+
+
 #[cfg(target_arch = "wasm32")]
 fn reflected_string(value: &JsValue, property: &str) -> Option<String> {
     js_sys::Reflect::get(value, &JsValue::from_str(property))
@@ -1065,10 +1099,11 @@ fn AppLayout() -> Element {
             let navigator = navigator;
 
             wasm_bindgen_futures::spawn_local(async move {
-                let settings_nav = navigator.clone();
+                // Hash-only: Router owns the transition. Sync push here races
+                // menu.rs hash force + shell-navigate (dioxus RefCell / empty scope).
                 let settings_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = settings_nav.push(Route::SettingsRoute {});
+                        open_settings_via_hash();
                     }));
 
                 match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
@@ -1084,23 +1119,24 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let menu_nav = navigator.clone();
+                let menu_nav = navigator;
                 let menu_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event| {
                     let Some(target) = event_payload_string(&event) else {
                         return;
                     };
-                    match shell_dest::normalize_shell_target(&target).as_str() {
+                    let normalized = shell_dest::normalize_shell_target(&target);
+                    match normalized.as_str() {
                         "directory" | "contacts" | "addressbook" | "address-book" => {
                             components::relations::stash_directory_handoff();
                         }
                         "settings" | "prefs" => {
-                            components::shell_kind::persist_shell_kind(
-                                components::shell_kind::ShellKind::Classic,
-                            );
+                            // Prefer hash; do not push on this stack (see open_settings_via_hash).
+                            open_settings_via_hash();
+                            return;
                         }
                         _ => {}
                     }
-                    let _ = menu_nav.push(shell_dest::route_from_shell_target(&target));
+                    defer_navigator_push(move |r| { let _ = menu_nav.push(r); }, shell_dest::route_from_shell_target(&target));
                 }));
 
                 let mut kind_signal = shell_kind;
@@ -1109,8 +1145,10 @@ fn AppLayout() -> Element {
                         return;
                     };
                     if let Some(kind) = components::shell_kind::ShellKind::from_storage(&target) {
-                        kind_signal.set(kind);
                         components::shell_kind::persist_shell_kind(kind);
+                        wasm_bindgen_futures::spawn_local(async move {
+                            kind_signal.set(kind);
+                        });
                     }
                 }));
                 match tauri_listen("shell-kind-set", kind_callback.as_ref().unchecked_ref()).await {
@@ -1135,10 +1173,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let diagnostics_nav = navigator.clone();
+                let diagnostics_nav = navigator;
                 let diagnostics_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = diagnostics_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = diagnostics_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen(
@@ -1157,9 +1195,9 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let health_nav = navigator.clone();
+                let health_nav = navigator;
                 let med_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = health_nav.push(Route::HealthRoute {});
+                    defer_navigator_push(move |r| { let _ = health_nav.push(r); }, Route::HealthRoute {});
                 }));
 
                 match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref())
@@ -1175,10 +1213,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let sanctuary_nav = navigator.clone();
+                let sanctuary_nav = navigator;
                 let sanctuary_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = sanctuary_nav.push(Route::SanctuaryRoute {});
+                        defer_navigator_push(move |r| { let _ = sanctuary_nav.push(r); }, Route::SanctuaryRoute {});
                     }));
 
                 match tauri_listen(
@@ -1197,10 +1235,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let backup_nav = navigator.clone();
+                let backup_nav = navigator;
                 let backup_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = backup_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = backup_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen("open-backup", backup_callback.as_ref().unchecked_ref()).await {
@@ -1214,9 +1252,9 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let sync_nav = navigator.clone();
+                let sync_nav = navigator;
                 let sync_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = sync_nav.push(Route::ToolsRoute {});
+                    defer_navigator_push(move |r| { let _ = sync_nav.push(r); }, Route::ToolsRoute {});
                 }));
 
                 match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await
@@ -1231,10 +1269,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let import_nav = navigator.clone();
+                let import_nav = navigator;
                 let import_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = import_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = import_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen(

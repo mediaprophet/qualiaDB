@@ -48,14 +48,15 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
         );
         return;
     }
-    // Belt-and-braces: studio also listens for open-settings (tray / Ctrl+,).
+    // Settings: hash is the sole navigation authority. Do NOT also emit
+    // open-settings here — studio Closures used to navigator.push on that
+    // event and raced this hash write (dioxus-core RefCell / empty scope_stack).
+    // shell-navigate still fires above; studio handles settings/prefs hash-only.
     if qapp_id == "settings" {
-        let _ = app.emit("open-settings", ());
         let _ = app.emit("shell-kind-set", "classic");
-        // Force hash even if the webview is mid-Poet (listeners stay mounted for all routes).
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.eval(
-                "try { const h = '#/settings'; if (location.hash !== h) { location.hash = h; } window.dispatchEvent(new HashChangeEvent('hashchange')); } catch (e) { console.warn(e); }",
+                "try { const h = '#/settings'; if (location.hash !== h) { location.hash = h; } } catch (e) { console.warn(e); }",
             );
         }
     }
