@@ -198,6 +198,8 @@ pub fn talk_copy_is_human_alone(text: &str) -> bool {
         && !lower.contains("chat with your agent")
         && !lower.contains("message your agent")
         && !lower.contains("your agent is thinking")
+        && !lower.contains("agent wall")
+        && !lower.contains("model wall")
 }
 
 #[cfg(test)]

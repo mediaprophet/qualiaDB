@@ -42,6 +42,7 @@ fn CatalogStudioBay() -> Element {
 
 #[component]
 pub fn PoetWorkbench() -> Element {
+    let nav = use_navigator();
     let mut wb = use_signal(Workbench::new);
     let mut radial = use_signal(RadialState::default);
 
@@ -82,6 +83,12 @@ pub fn PoetWorkbench() -> Element {
                         let mut s = wb();
                         s.auto_arrange();
                         wb.set(s);
+                    } else if key.eq_ignore_ascii_case("u") {
+                        // Alt+U — pivot to Classic Settings (Tools→Settings / Ctrl+, target).
+                        crate::components::shell_kind::persist_shell_kind(
+                            crate::components::shell_kind::ShellKind::Classic,
+                        );
+                        let _ = nav.push(crate::Route::SettingsRoute {});
                     } else if let Ok(digit) = key.parse::<usize>() {
                         let idx = if digit == 0 { 9 } else { digit - 1 };
                         if let Some(id) = super::kinds::ManifoldId::ALL.get(idx) {

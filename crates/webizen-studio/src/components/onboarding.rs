@@ -502,8 +502,9 @@ pub fn OnboardingGate() -> Element {
     });
 
     if loading() {
+        // Overlay only — do not unmount the layout Outlet sibling in AppLayout.
         return rsx! {
-            div { style: "width:100%;height:100%;display:grid;place-items:center;background:#07101f;color:#e5edf8;",
+            div { style: "position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#07101f;color:#e5edf8;",
                 div { style: "text-align:center;",
                     h1 { style: "margin:0;font-size:1.7rem;", "Webizen" }
                     p { style: "color:#94a3b8;", "Inspecting your local apparatus…" }
@@ -512,7 +513,9 @@ pub fn OnboardingGate() -> Element {
         };
     }
     if complete() {
-        // Fill the themed shell so nested 100% / flex layouts get a real height budget.
+        // Root Router lives here (0.0.39 architecture). AppLayout is rendered *by* this
+        // Router as the #[layout]; AppLayout's Outlet then paints Talk/Settings/Library.
+        // Do NOT put Outlet in App — there is no Router ancestor there (panic @ outlet.rs:45).
         return rsx! {
             div { style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;",
                 Router::<crate::Route> {}
@@ -558,7 +561,7 @@ pub fn OnboardingGate() -> Element {
     };
 
     rsx! {
-        div { style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:245px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:radial-gradient(circle at 72% 10%,rgba(56,189,248,.09),transparent 32%),#07101f;color:#e5edf8;overflow:hidden;",
+        div { style: "position:fixed;inset:0;z-index:70;width:100%;height:100%;min-height:0;display:grid;grid-template-columns:245px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:radial-gradient(circle at 72% 10%,rgba(56,189,248,.09),transparent 32%),#07101f;color:#e5edf8;overflow:hidden;",
             aside { style: "min-height:0;border-right:1px solid #243044;background:#0a1424;padding:24px 16px;overflow-y:auto;overscroll-behavior:contain;",
                 div { style: "padding:0 8px 18px;",
                     div { style: "font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:#7dd3fc;font-weight:850;", "Your Webizen" }

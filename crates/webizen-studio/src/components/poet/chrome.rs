@@ -10,6 +10,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
     let open = wb().menu;
+    let nav = use_navigator();
     rsx! {
         header { class: "top-menubar",
             div { class: "menu-items-group",
@@ -60,7 +61,16 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                 button {
                     class: "habitat-switch-btn",
                     style: "background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.35);color:var(--accent-cyan);font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;cursor:pointer;",
-                    title: "Pivot Habitat: Switch to Webizen Classic Console (Alt+U)",
+                    title: "Open Webizen Settings (Classic console)",
+                    onclick: {
+                        let nav = nav;
+                        move |_| {
+                            crate::components::shell_kind::persist_shell_kind(
+                                crate::components::shell_kind::ShellKind::Classic,
+                            );
+                            let _ = nav.push(crate::Route::SettingsRoute {});
+                        }
+                    },
                     "✨ Poet / ⚙️ Admin ⇄"
                 }
                 NativeDaemonChip {}

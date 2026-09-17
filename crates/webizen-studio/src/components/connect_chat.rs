@@ -877,12 +877,13 @@ pub fn ConnectChat() -> Element {
         crate::components::talk_human_alone::instrument_honesty(&active_model());
     let (mesh_hold, mesh_chip) =
         crate::components::talk_human_alone::mesh_honesty(mesh_running(), mesh_peer_count());
+    // Held maps to NeedsModel chip voice ("held / not yet") — never the banned word "unavailable".
     let instrument_level = match instrument_hold {
-        TalkHoldLevel::Held => HonestyLevel::Unavailable,
+        TalkHoldLevel::Held => HonestyLevel::NeedsModel,
         TalkHoldLevel::Partial => HonestyLevel::Partial,
     };
     let mesh_level = match mesh_hold {
-        TalkHoldLevel::Held => HonestyLevel::Unavailable,
+        TalkHoldLevel::Held => HonestyLevel::NeedsModel,
         TalkHoldLevel::Partial => HonestyLevel::Partial,
     };
     let talk_blurb = crate::components::talk_human_alone::TALK_PEOPLE_BLURB;
@@ -1479,7 +1480,7 @@ pub fn ConnectChat() -> Element {
                     }
                     if !agents().is_empty() {
                         div { style: "display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 16px;border-top:1px solid #162033;background:#0d1628;",
-                            span { style: "font-size:11px;color:#94a3b8;", "Mention:" }
+                            span { style: "font-size:11px;color:#94a3b8;", "Optional tool @mention (not required to send):" }
                             for agent in agents() {
                                 {
                                     let slug = s(&agent, "slug");

@@ -34,6 +34,17 @@ fn event_payload_string(event: &JsValue) -> Option<String> {
         .and_then(|payload| payload.as_string())
 }
 
+
+/// Defer non-settings router pushes off the Tauri Closure stack (RefCell).
+#[cfg(target_arch = "wasm32")]
+fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
+    wasm_bindgen_futures::spawn_local(async move {
+        push(route);
+    });
+}
+
+
+
 #[cfg(target_arch = "wasm32")]
 fn reflected_string(value: &JsValue, property: &str) -> Option<String> {
     js_sys::Reflect::get(value, &JsValue::from_str(property))
@@ -995,16 +1006,17 @@ fn DesktopLogsPage() -> Element {
 #[component]
 fn AppLayout() -> Element {
     let route = use_route::<Route>();
-    if matches!(
-        route,
-        Route::PoetRoute {} | Route::PoetCatalogRoute {} | Route::PoetInstrumentRoute {}
-    ) {
-        return rsx! { Outlet::<Route> {} };
-    }
     let theme_state = consume_context::<Signal<ResolvedTheme>>();
     let navigator = use_navigator();
     let native_menu_listener_started = use_signal(|| false);
+    // Poet routes used to early-return before shell-navigate / open-settings listeners,
+    // so Tools→Settings / Ctrl+, closed without painting Settings. Listeners always attach;
+    // Poet stays full-bleed via PoetHarness; Tools→Settings forces Classic + deferred Settings push.
     let host_status = use_signal(DesktopStatus::default);
+    /// Tools→Settings / Ctrl+, : Closure only sets this; a dioxus use_effect
+    /// performs navigator.push so we never push on the Tauri RefCell stack
+    /// and never rely on synthetic popstate (which did not remount Settings).
+    let mut pending_settings = use_signal(|| false);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = navigator;
     #[cfg(not(target_arch = "wasm32"))]
@@ -1066,12 +1078,16 @@ fn AppLayout() -> Element {
             let mut native_menu_listener_started = native_menu_listener_started;
             native_menu_listener_started.set(true);
             let navigator = navigator;
+            let pending_settings = pending_settings;
 
             wasm_bindgen_futures::spawn_local(async move {
-                let settings_nav = navigator.clone();
+                let mut settings_pending = pending_settings;
                 let settings_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = settings_nav.push(Route::SettingsRoute {});
+                        components::shell_kind::persist_shell_kind(
+                            components::shell_kind::ShellKind::Classic,
+                        );
+                        settings_pending.set(true);
                     }));
 
                 match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
@@ -1087,18 +1103,27 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let menu_nav = navigator.clone();
+                let menu_nav = navigator;
+                let mut menu_pending = pending_settings;
                 let menu_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event| {
                     let Some(target) = event_payload_string(&event) else {
                         return;
                     };
-                    match shell_dest::normalize_shell_target(&target).as_str() {
+                    let normalized = shell_dest::normalize_shell_target(&target);
+                    match normalized.as_str() {
                         "directory" | "contacts" | "addressbook" | "address-book" => {
                             components::relations::stash_directory_handoff();
                         }
+                        "settings" | "prefs" => {
+                            components::shell_kind::persist_shell_kind(
+                                components::shell_kind::ShellKind::Classic,
+                            );
+                            menu_pending.set(true);
+                            return;
+                        }
                         _ => {}
                     }
-                    let _ = menu_nav.push(shell_dest::route_from_shell_target(&target));
+                    defer_navigator_push(move |r| { let _ = menu_nav.push(r); }, shell_dest::route_from_shell_target(&target));
                 }));
 
                 let mut kind_signal = shell_kind;
@@ -1107,8 +1132,10 @@ fn AppLayout() -> Element {
                         return;
                     };
                     if let Some(kind) = components::shell_kind::ShellKind::from_storage(&target) {
-                        kind_signal.set(kind);
                         components::shell_kind::persist_shell_kind(kind);
+                        wasm_bindgen_futures::spawn_local(async move {
+                            kind_signal.set(kind);
+                        });
                     }
                 }));
                 match tauri_listen("shell-kind-set", kind_callback.as_ref().unchecked_ref()).await {
@@ -1133,10 +1160,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let diagnostics_nav = navigator.clone();
+                let diagnostics_nav = navigator;
                 let diagnostics_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = diagnostics_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = diagnostics_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen(
@@ -1155,9 +1182,9 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let health_nav = navigator.clone();
+                let health_nav = navigator;
                 let med_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = health_nav.push(Route::HealthRoute {});
+                    defer_navigator_push(move |r| { let _ = health_nav.push(r); }, Route::HealthRoute {});
                 }));
 
                 match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref())
@@ -1173,10 +1200,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let sanctuary_nav = navigator.clone();
+                let sanctuary_nav = navigator;
                 let sanctuary_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = sanctuary_nav.push(Route::SanctuaryRoute {});
+                        defer_navigator_push(move |r| { let _ = sanctuary_nav.push(r); }, Route::SanctuaryRoute {});
                     }));
 
                 match tauri_listen(
@@ -1195,10 +1222,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let backup_nav = navigator.clone();
+                let backup_nav = navigator;
                 let backup_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = backup_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = backup_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen("open-backup", backup_callback.as_ref().unchecked_ref()).await {
@@ -1212,9 +1239,9 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let sync_nav = navigator.clone();
+                let sync_nav = navigator;
                 let sync_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = sync_nav.push(Route::ToolsRoute {});
+                    defer_navigator_push(move |r| { let _ = sync_nav.push(r); }, Route::ToolsRoute {});
                 }));
 
                 match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await
@@ -1229,10 +1256,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let import_nav = navigator.clone();
+                let import_nav = navigator;
                 let import_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = import_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = import_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen(
@@ -1354,6 +1381,14 @@ fn AppLayout() -> Element {
         }
     });
 
+    // Run on dioxus's stack (not the Tauri Closure): paint SettingsRoute.
+    use_effect(move || {
+        if pending_settings() {
+            pending_settings.set(false);
+            let _ = navigator.push(Route::SettingsRoute {});
+        }
+    });
+
     let host_snapshot = host_status();
     let (host_label, host_color) = status_chip(&host_snapshot);
     let backend_label = if host_snapshot.graph_daemon_reachable {
@@ -1372,6 +1407,15 @@ fn AppLayout() -> Element {
     // Omnibox — real routing (no fake multi-product promises).
     let mut omnibox = use_signal(String::new);
     let omnibox_nav = use_navigator();
+
+    // All hooks above have run. Poet routes full-bleed; Tools→Settings / Ctrl+,
+    // hash force + listeners (always subscribed) leave Poet for SettingsRoute.
+    if matches!(
+        route,
+        Route::PoetRoute {} | Route::PoetCatalogRoute {} | Route::PoetInstrumentRoute {}
+    ) {
+        return rsx! { Outlet::<Route> {} };
+    }
 
     rsx! {
         div {

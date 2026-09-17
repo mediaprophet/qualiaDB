@@ -48,6 +48,19 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
         );
         return;
     }
+    // Settings: Classic shell. Studio shell-navigate sets pending_settings and
+    // AppLayout's use_effect does navigator.push (dioxus-owned stack). No
+    // Closure push, no synthetic popstate (those failed UAT on e6a53c4 / 08b8c93).
+    if qapp_id == "settings" {
+        let _ = app.emit("shell-kind-set", "classic");
+    }
+    if qapp_id == "library" || qapp_id == "memory" {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.eval(
+                "try { location.hash = '#/library'; } catch (e) { console.warn(e); }",
+            );
+        }
+    }
     crate::desktop_log::record("info", format!("desktop route -> {qapp_id} ({route})"));
 }
 
@@ -272,10 +285,19 @@ pub fn build_app_menu(
         None::<&str>,
     )?;
 
+    let library = MenuItem::with_id(
+        app,
+        "open_library",
+        "Hypermedia Library",
+        true,
+        Some("Ctrl+Shift+L"),
+    )?;
+
     let qapps_menu = SubmenuBuilder::new(app, "QApps")
         .item(&talk)
         .item(&directory)
         .item(&mail)
+        .item(&library)
         .item(&wellfair)
         .item(&chora)
         .item(&browser)
@@ -288,13 +310,6 @@ pub fn build_app_menu(
     let settings = MenuItem::with_id(app, "open_settings", "Settings...", true, Some("Ctrl+,"))?;
     let diagnostics =
         MenuItem::with_id(app, "open_diagnostics", "Diagnostics", true, None::<&str>)?;
-    let library = MenuItem::with_id(
-        app,
-        "open_library",
-        "Hypermedia Library",
-        true,
-        None::<&str>,
-    )?;
     let wallet = MenuItem::with_id(app, "open_wallet", "Wallet", true, None::<&str>)?;
     let poet = MenuItem::with_id(app, "open_poet", "Poet Harness", true, None::<&str>)?;
 
@@ -302,7 +317,6 @@ pub fn build_app_menu(
         .item(&settings)
         .item(&diagnostics)
         .separator()
-        .item(&library)
         .item(&wallet)
         .item(&poet)
         .separator()

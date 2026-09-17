@@ -8,7 +8,12 @@ pub fn SetupHealthPanel(
     on_refresh: EventHandler<()>,
 ) -> Element {
     if loading {
-        return rsx! { div { style: "{super::EMPTY_CARD}", "Inspecting this Webizen…" } };
+        return rsx! {
+            div { style: "display:grid;gap:14px;",
+                div { style: "{super::WARNING_CARD}", "Inspecting this Webizen… Settings stay open — refresh when ready." }
+                div { style: "{super::EMPTY_CARD}", "Setup health will paint here." }
+            }
+        };
     }
     let Some(snapshot) = snapshot else {
         return rsx! {
