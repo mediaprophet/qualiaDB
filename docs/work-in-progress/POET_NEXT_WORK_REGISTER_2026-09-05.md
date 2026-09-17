@@ -1,0 +1,511 @@
+# POET Reconciled Next-Work Register
+
+**Status:** Work in progress  
+**Date:** 2026-09-05
+
+This register orders remaining work without assigning exclusive ownership to a
+model or agent. Named lanes describe responsibility and review context; any
+agent may contribute when it follows the governing contracts and records useful
+evidence.
+
+## Immediate sequence
+
+| Order | Work | State | Required evidence | Gate/owner decision |
+|---|---|---|---|---|
+| 1 | Re-baseline after concurrent changes (`RBL-01`) | Audited; compile blocker found | Baseline `4eade061`; both focused suites fail at the same 16 missing registration modules before tests run | None |
+| 2 | Restore registration library ownership (`FIX-REG-01` / `RM-01`) | Complete | Directory-backed module tree; product integrity 9/9; surface inventory 1/1; `trunk build` passed | None |
+| 3 | Decompose POET style asset (`RM-02`) | Complete | 14 assets at no more than 421 lines; normalized CSS hash preserved; focused tests, build, desktop/mobile UAT passed | None |
+| 4 | Review `HLT-03` consent contract (`HLT-R1`) | Complete | 12 `consent_contract` tests pass; Poet share projection fail-closed; `clinical_notes` removed from grantable UI flags | Closed under Gate A |
+| 5 | Complete `HLT-07` clinical calculator integrity | Complete (`HLT-07` + `HLT-07b`) | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Closed under Gate A |
+| 6 | Complete `HLT-08` Health UAT pack | Source contracts + offline UAT accepted | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Closed under Gate A |
+| 7 | Close Review Gate A | **CLOSED 2026-09-06** | `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md` — owner instruction; residuals accepted | Project owner (`D5`) |
+| 8 | Audit standalone Tool Chest semantics (`PFT-01`) | Complete; defects repaired in `PFT-02` | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
+| 9 | Select next Tool Chest chain | Complete (`PFT-03`/`PFT-04`) | Owner continue-instruction; deepened epistemic/AI/image live dual-path | Project owner (`continue to implement poet`) |
+| 10 | Q42 asset envelope + licence policy (`AST-01`) | Complete | Round-trip, deterministic digest, obligation-union, unknown-licence fail-closed (11 tests) | None |
+| 11 | Bounded import jobs (`AST-02`) | Complete | TempDir RAII, budgets, cancel, promote-on-success; asset_import tests | None |
+| 12 | Source catalogue (`AST-07`) | Complete | 11 descriptors; fail-closed statuses; 8 catalogue tests | None |
+| 13 | Live logic ribbon binds (`PFT-05`) | Complete | Paraconsistent / LTL / Symbolic dual-path tools | Owner continue |
+| 14 | Vibe/Poet surface exposure (`EXP-A0`–`B1a`) | **Complete** | Econ Live; coop Gini; finance CAPM; chat-graph Desktop-only | Gate B / residuals |
+| 15 | ChEBI asset vertical (`AST-03`–`AST-06`) | **Complete** | parse 13; map 10; query 12; Poet explorer 10 + integrity 11 | Closed under residual swarm |
+| 16 | Residual swarm (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`) | **Complete** | Parent verify: consent_persist 5; health_views 58; consent_contract 12; chemical 20; app_manifest 14; integrity 11 | Closed |
+| 17 | Gate B swarm (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`) | **Complete** | Incorporation doc; app_manifest **21**; app_registry **11**; WD-01 IA map | Constraint corrected — vibescript-first |
+| 18 | Constraint correction + vibescript-first impl | **Complete** | CV Live 5; Econ Live +5; CooperativeDelegation Host; ChatGraph Host×3 | Closed |
+| 19 | Q1/Q2 incorporation waves | **Complete** | Econ +8 · Stats +11 · ML +11 Live; Host +7 LinearAlgebra QR/vector | Closed — wave 1 |
+| 20 | Q1/Q2 wave 2 | **Complete** | Econ +8 · Stats +9 · ML +8 Live; Host +8 LinAlg/Symbolic/Poly | Closed |
+| 21 | Q1/Q2 wave 3 | **Complete** | Econ +10 · Stats +8 · ML +8 Live; Host +8 matvec/Poly/Symbolic | Closed |
+| 22 | Q1/Q2 wave 4 | **Complete** | Econ +10 · Stats +8 · ML +8 Live; Host +8 CAS/ODE/Poly | Closed |
+| 23 | Q1/Q2 wave 5 | **Complete** | Econ +11 · Stats +8 · ML +8 Live; Host +8 CAS/ODE/LinAlg | Closed |
+| 24 | Q1/Q2 wave 6 | **Complete** | Econ +10 · Stats +8 · ML +10 Live; Host +8 CAS/Constructibility | Closed |
+| 25 | Q1/Q2 wave 7 | **Complete** | Econ +10 · Stats +8 · ML +10 Live; Host +8 Constructibility/quadratic | Closed |
+| 26 | Q1/Q2 wave 8 | **Complete** | Econ +10 · Stats +8 · ML +8 Live; Host +8 CAS expr constructors | Closed |
+| 27 | Q1/Q2 wave 9 | **Complete** | Econ +10 · Stats +9 · ML +10 Live; Host +8 CAS/poly constructors | Closed |
+| 28 | Q1/Q2 wave 10 | **Complete** | Econ +6 (exhausted) · Stats +10 · CAS +8 Live; Host +8 poly/CAS/stats | Closed |
+| 29 | Q1/Q2 wave 11 | **Complete** | LinAlg +10 · Stats +8 · CAS +8 Live; Host +6 stats manifold | Closed |
+| 30 | Q1/Q2 wave 12 | **Complete** | LinAlg +8 · Poly +12 · CAS +8 Live; Host +8 chem/LinAlg/CAS | Closed |
+| 31 | Q1/Q2 wave 13 | **Complete** | LinAlg +9 · Sheet poly+manifold +9 · CAS +8 Live; Host chem/gemm/coeffs +8 | Closed |
+| 32 | Q1/Q2 wave 14 | **Complete** | Chem +11 · CAS +9 · Physics +10 Live; Host Calculus/graph +8 | Closed |
+| 33 | Q1/Q2 wave 15 | **Complete** | Physics +8 · Constr +9 · SF +12 Live; Host Calculus/NT/Eng +8 | Closed |
+| 34 | Q1/Q2 wave 16 | **Complete** | NT +10 · Calc +12 · CG +10 Live; Host Eng/GA/Fuzzy/Chem +8 | Closed |
+| 35 | Q1/Q2 wave 17 | **Complete** | Eng +10 · GA +11 · CG +9 Live; Host Chem/Fuzzy/IT +8 | Closed |
+| 36 | Q1/Q2 wave 18 | **Complete** | NT +10 · Chem +10 · Fuzzy +12 Live; Host Calc/Cosmic/NLP +10 | Closed |
+| 37 | Q1/Q2 wave 19 | **Complete** | Calc +10 · Cosmic +12 · IT +8 Live; Host Inference/CG/Audio +8 | Closed |
+| 38 | Q1/Q2 wave 20 | **Complete** | Inf +8 · Cosmic +11 · Orch/ThreeD +16 Live; Host Audio/Scene/CG +8 | Closed |
+| 39 | Q1/Q2 wave 21 | **Complete** | Audio +9 · Scene +8 · NLP +9 Live; Host CG/Stats +6 | Closed — wave 21 |
+| 40 | Q1/Q2 wave 22 | **Complete** | Audio FX +13 · Scene graph +11 · Image edit +15 Live; Host CG predicates +8 | Closed — wave 22 |
+| 41 | Q1/Q2 wave 23 | **Complete** | Dmx +14 · Video +10 · HID +16 Live; Host CG insphere/disk/polygon/Minkowski +8 | Closed — wave 23 |
+| 42 | Q1/Q2 wave 24 | **Complete** | VectorCalculus +7 · Interpolation +6 · Spectral +5 · World +7 Live; Host CG coreset/duality/boolean +8 | Closed — wave 24 |
+| 43 | Q1/Q2 wave 25 | **Complete** | Asset +14 · SymbolicODE +5 · Agent +5 Live; Host math-geometry projective/quat/hyperplane +8 | Closed — wave 25 |
+| 44 | Q1/Q2 wave 26 | **Complete** | Asset persist_* +7 · Pulse live +9 · Portal/Avatar +5 Live; Host math-geometry affine/quat/quadratic +8 | Closed — wave 26 |
+| 45 | Q1/Q2 wave 27 | **Complete** | Inference remainder +5 · Research live first +20; Host none | Closed — wave 27 |
+| 46 | Q1/Q2 wave 28 | **Complete** | Research investigation/hypothesis/assessment +20; Host none | Closed — wave 28 |
+| 47 | Q1/Q2 wave 29 | **Complete** | Research remainder +33 (Research Q2 exhausted); Host none | Closed — wave 29 |
+| 48 | Q1/Q2 wave 30 | **Complete** | Render CPU scene/CSS/animation/SVG +17; Host none | Closed — wave 30 |
+| 49 | Q1/Q2 wave 31 | **Complete** | CG Host leftovers waves 19–23 +25; Host none | Closed — wave 31 |
+| 50 | Q1/Q2 wave 32 | **Complete** | CG Host leftovers waves 24–26 +24 (CG leftover Q2 exhausted); Host none | Closed — wave 32 |
+| 51 | Q1/Q2 wave 33 | **Complete** | Animation leftovers +4 · numeric Ode +4 · HbbTV +4; Host none | Closed — wave 33 |
+| 52 | Q1/Q2 wave 34 | **Complete** | Render GPU already-bound honest Live +17; Host none | Closed — wave 34 |
+| 53 | Q1/Q2 wave 35 | **Complete** | Remaining Render GPU/EMF +17 (GPU leftover Q2 exhausted); Host none | Closed — wave 35 |
+| 54 | Q1/Q2 wave 36 | **Complete** | Social/Forensic +6 · Finance +3 · Corpus/ChatGraph/Interactive/SecondScreen +7; Host none | Closed — wave 36 |
+| 55 | Q1/Q2 wave 37 | **Complete** | GraphMatch/GraphReasoning/Optimization +9 · sampler/Capability +10; Host none | Closed — wave 37 |
+| 56 | Q1/Q2 wave 38 | **Complete** | Medical/MedicalComputing +5 · Manifold +3 · crypto/GEMM/Privacy/Sentinel +6 · discovery/DAG +5 · FinancialModeling +2; Host none | Closed — wave 38 |
+| 57 | Q1/Q2 wave 39 | **Complete** | Remaining curated Host singles +24 (helper-aware Q2 exhausted); Host none | Closed — wave 39 |
+
+## Latest execution evidence
+
+### `GATE-A` - 2026-09-06
+
+- Project-owner D5 instruction: close Review Gate A so Poet implementation can proceed.
+- Decision record: `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`.
+- Tip: `9909c1b4` on `0.0.36-dev` (PR #75 + env).
+- Residuals accepted at close: Poet grant persist without `ConsentLedger` (cleared 2026-09-06 via `HLT-CL`); live-daemon browser UAT still optional.
+- Unparked: `health:framingham` / `health:cha2ds2` / `health:score2` in Tool Chest tracker.
+- Next: `PFT-03` or `AST-01`.
+
+### `PFT-04` - 2026-09-06 (live registry deepen)
+
+- Owner continue-instruction treated as chain selection after Gate A close.
+- Ribbon: `epistemic:evaluate` → `EpistemicLogic.evaluate`; `ai:detect_ungrounded` /
+  `ai:verify_turn` → Inference.*; `image:histogram` dual-path via `chain_actions`.
+- Spec Live rows: `epistemic:scan-frame`, `epistemic:verify-turn`.
+- `spec_tools/dispatch::apply_live` uses `tool_dual_path` local sketch / live ok / denied.
+- `live_args` covers `Inference.verify_turn`.
+- Focused tests: tool_actions + live_args + chain_actions **13 passed**.
+- Next: `AST-01` or further PFT live binds from inventory (no Host widen).
+
+### `AST-01` - 2026-09-06 (Q42 asset envelope)
+
+- Module: `crates/qualia-core-db/src/q42/asset_envelope/` (`licence`, `envelope`,
+  `codec`, `error`).
+- Wire magic `Q42AST\0\0` v1; SHA-256 payload + envelope digests; 42 MiB chunk
+  budget; unknown licence fails closed; derived assets inherit obligation union.
+- `cargo test -p qualia-core-db --lib asset_envelope` → **11 passed**.
+- Next: `AST-02` (bounded import job framework).
+
+### `AST-02` / `AST-07` / `PFT-05` swarm - 2026-09-06
+
+- Swarm note: `docs/work-in-progress/POET_AST_PFT_SWARM_2026-09-06.md`.
+- `AST-02`: `q42/asset_import/` — ImportJob TempDir, budgets, cancel, promote.
+- `AST-07`: `q42/source_catalogue/` — 11 static sources; no bundling.
+- `PFT-05`: `epistemic:paraconsistent_route`, `code:ltl_evaluate`, `code:symbolic_eval`.
+- Parent verify: core **19** + poet filter **10** passed.
+- Next: `AST-03` (ChEBI release parser) or further PFT.
+
+### `EXP-PLAN` - 2026-09-06 (Vibe / Poet surface exposure)
+
+- Tooling: `scripts/vibe_surface_gap_review.py` — multi-seam matrix (Vibe / MCP /
+  WASM engine / desktop commands / Poet Live scopes) + optional `--rustdoc`.
+- Report: `docs/work-in-progress/VIBE_SURFACE_GAP_REVIEW.md` regenerated
+  (ALL_BOUND=892 = catalog; `Econ.*` ~106 already bound).
+- Plan: `docs/plans/vibe-poet-surface-exposure-plan-2026-09-06.md` — waves A–D;
+  first packet `EXP-A0` then curated `Econ.*` Tool Chest Live tools; chat-graph
+  seam needs owner decision (desktop-only recommended).
+- Verdict: economics gap is **Poet consumption**, not missing Host family;
+  chat-graph remains client-core/desktop unless `ChatGraph.*` is approved.
+- Next: owner selects `EXP-A0` / `AST-03` / Gate B path.
+
+### `EXP-A0` / `EXP-A1` - 2026-09-06 (Econ consumption + Live tools)
+
+- A0 inventory: `docs/work-in-progress/EXP_A0_ECON_CONSUMPTION_INVENTORY.md`
+  (pre-A1: 106 `Econ.*`, **0** Poet citations).
+- A1: toolbox `econ` / chain `econ:live` — Live dual-path tools citing
+  `Econ.capm_expected_return`, `Econ.gini`, `Econ.mixed_nash_2x2`,
+  `Econ.black_scholes`, `Econ.solow_steady_state` (no Host widen).
+- Modules: `registration/register_econ_toolbox.rs`, `econ_chain_actions.rs`;
+  wired in `tool_actions` / `tool_copy`.
+- Verify: `cargo test -p poet --lib econ` **8**; every_registered_nonplacement
+  **1**; product_integrity **10**.
+- Next: `EXP-A2` cooperative-economics Live invoke, or `AST-03`.
+
+### `EXP-A2` / `EXP-A3` - 2026-09-06 (coop Live + finance Econ)
+
+- Split `cooperative_economics/` (model / view / live_welfare); no `pub use`
+  thin-view growth (integrity ceiling held at 112).
+- Live welfare panel: user-supplied incomes → dual-path `Econ.gini`
+  (offline local sketch; daemon live). True-cost labeled local-only.
+- Finance/wallet specialist: `Econ.capm_expected_return` + keep
+  `FinancialModeling.gbm_var` for composed GBM/VaR.
+- Verify: cooperative_economics **5**; specialist_families **2**;
+  product_integrity **10**.
+- Next: `AST-03` (asset vertical) or EXP-B0 chat-graph decision.
+
+### `EXP-B0` / `EXP-B1a` - 2026-09-06 (chat-graph seam)
+
+- Decision: `docs/work-in-progress/EXP_B0_CHAT_GRAPH_SEAM_DECISION.md` —
+  Desktop/client-core only; no `ChatGraph.*` under freeze.
+- `social:graph` ribbon → honest unavailable (points at `get_chat_graph`);
+  no longer misuses `GraphDatabase.stats`.
+- Verify: instrument_panel **6**; product_integrity **10**.
+
+### `AST-03`–`AST-06` - 2026-09-06 (ChEBI vertical)
+
+- `AST-03` `q42/chebi_parse/` compounds.tsv local parser — **13** tests.
+- `AST-04` `q42/chebi_map/` caller-buffered Quin map — **10** tests.
+- `AST-05` `q42/chebi_query/` describe/resolve/parents/evidence/export — **12**.
+- `AST-06` Poet Health chemical explorer (NoAsset honesty; research-evidence
+  banner; import path copy) — chemical **10**; product_integrity **11**.
+- Cleared by residual swarm: `AST-06b` fixture-backed local TSV bind; `HLT-CL`
+  ConsentLedger session persist.
+
+### Residual swarm - 2026-09-06 (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`)
+
+- Plan: `docs/work-in-progress/POET_RESIDUAL_SWARM_2026-09-06.md`.
+- `HLT-CL`: `consent_persist` seam — issue/revoke before COP upsert; fail-closed;
+  no private keys in UI. Parent: consent_persist **5**; health_views **58**;
+  consent_contract **12**; product_integrity **11**.
+- `AST-06b`: chemical explorer live bind via local fixture TSV (no Host ID);
+  chemical **20**; integrity **11**.
+- `APP-01`: ADR `docs/manuals/adr/0013-portable-application-manifest-reconciliation.md`.
+- `APP-02`: `q42/app_manifest/` v1 — **14** tests.
+- Next: `APP-03`+ projections; WD-01…WD-08; Review Gate B.
+
+### Gate B swarm - 2026-09-06 (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`)
+
+- Plan: `docs/work-in-progress/POET_GATE_B_SWARM_2026-09-06.md`.
+- `EXP-C1`: sibling-crate incorporation inventory — cooperative-core / vision /
+  client-core classified; **no Host widen**; Poet `cooperative_economics` ≠
+  cooperative-core duplicate. Prefer remaining `ComputerVision.*` + `Econ.*` Live.
+- `APP-03`: `project_manifest` shared IDs across four projections — parent **21**.
+- `WD-01`: control-plane IA map (Apps/Node/Identity/Assets/Connections/Recovery).
+- `WD-02`: bounded `app_registry` — parent **11**; POET fixture; quarantine.
+- Next: `APP-04` / `WD-03` / shell IA apply / Review Gate B.
+
+### Vibescript-first swarm - 2026-09-06
+
+- Constraint correction: Host widen in scope; methodology = Host then Poet.
+- Exhaustive backlog tool: `scripts/vibe_incorporation_backlog.py`.
+- `VIBE-CV`: remaining 5 `ComputerVision.*` → Poet `image:vision` Live.
+- `VIBE-ECON`: +5 Live (`cournot` / `bertrand` / `historical_var` / `atkinson` /
+  `gordon_growth`).
+- `VIBE-COOP`: Host `CooperativeDelegation.permits` + `CooperativeWork.board_project`
+  (not `Agency.*`); Poet rights Live.
+- `VIBE-CHAT`: Host `ChatGraph.validate_fragment` / `link_reply` / `session_summary`;
+  Poet `social:graph` dual-path.
+- Next: backlog Q1/Q2 waves; biosense follow-on.
+
+### `RBL-01` - 2026-09-05
+
+- Platform routing: platform-neutral `D3` coordination/specification/QA audit.
+- Baseline: `0.0.36-dev` at `4eade061`; fetched remote is synchronized.
+- Preserved state: pre-existing modified `Cargo.lock`; no product files edited.
+- `cargo test -p poet --test product_integrity`: compile failed with 16
+  `E0583` missing-module errors; no tests ran.
+- `cargo test -p poet --test surface_inventory`: same compile gate; no tests ran.
+- Cause: `crates/poet/src/browser/registration.rs` declares child modules, but
+  the tracked `register_*_toolbox.rs` files are siblings under `browser/`.
+- Provenance: the declarations entered in commit `43e759fa`; this identifies
+  the change boundary, not agent ownership or intent.
+- Broader build: not run because the same POET library compilation gate must be
+  repaired first.
+- Audit recommendation at that point: execute `FIX-REG-01` / `RM-01`, then
+  `RM-02` before new styling. `RM-01` is now completed below.
+
+### `RM-01` - 2026-09-05
+
+- Filesystem structure: `browser/registration/mod.rs` plus 16 purpose-specific
+  child modules; source contents were moved unchanged.
+- `cargo test -p poet --test product_integrity`: 9 passed.
+- `cargo test -p poet --test surface_inventory`: 1 passed.
+- `trunk build`: passed; the first invocation was rejected by Trunk because the
+  inherited `NO_COLOR=1` is not a valid Boolean for Trunk 0.21.14, then passed
+  with process-local `NO_COLOR=true`.
+- No capability, host, ABI, or product behavior change.
+- Pre-existing `Cargo.lock` remained byte-for-byte unchanged.
+- Next packet: `RM-02` (`D2`, `FE`, `UX`, `QA`).
+
+### `RM-02` - 2026-09-05
+
+- Structure: 43-line `browser/css.rs` composition module plus 14 named CSS
+  assets; maximum asset size 421 lines.
+- Preservation: assembled normalized CSS body retains SHA-256
+  `BFF95C324960484900865245E6133D2D702A8AF96D5373220EC238EEC84786AB`.
+- Focused CSS composition/order test: 1 passed.
+- Product integrity: 9 passed; surface inventory: 1 passed.
+- `trunk build`: passed.
+- Browser UAT: 1280x720 and 390x844 rendered with the complete stylesheet;
+  mobile body width matched its 390-pixel viewport.
+- Repository policy: under 500 is the target; 500-1,199 requires ownership
+  review; 1,200 triggers decomposition before new behavior; 1,400 escalates.
+- Exceptions are documented for prose, generated artifacts, fixtures/tables,
+  static registries, and genuinely cohesive algorithms.
+- Next packet: `HLT-R1` (`D4`, `SEC`, `RUST`, `SPEC`, then `D5` review).
+
+### `RM-03` - 2026-09-05
+
+- Structure: 2,734-line `browser/topbar.rs` replaced by a 33-line stable
+  router and eight purpose-specific child modules, all below 500 lines.
+- API: all former public topbar functions and `MenuItemDef` remain re-exported.
+- Links: browser-parent references were updated for the new module depth; no
+  action, persistence, capability, or host semantics changed.
+- Verification: `cargo check`, product integrity 9/9, surface inventory 1/1,
+  `trunk build`, and scoped rustfmt passed.
+- Browser UAT: File menu and Strata tray worked at desktop and mobile widths;
+  browser logs contained no warnings or errors.
+- Current decomposition counts: 67 implementation-focused files over 1,400
+  lines and 12 over 2,000.
+- Next decomposition candidate: `RM-04`, `browser/interactions.rs` (`D3`).
+- Next programme assurance packet remains `HLT-R1` (`D4` plus independent
+  review); either lane must remain one packet per session.
+
+### `RM-04` - 2026-09-05
+
+- Structure: 2,148-line `browser/interactions.rs` replaced by a 92-line stable
+  router and seven purpose-specific child modules, all below 500 lines.
+- API: every former public interaction function and `ContainerRect` remains
+  re-exported; shared pointer state remains in the router.
+- Verification: `cargo check`, five geometry tests, product integrity 9/9,
+  surface inventory 1/1, `trunk build`, and scoped rustfmt passed.
+- Browser UAT: selection, canvas zoom, Tool Chest flyout, right/left docking,
+  and mobile layout passed; browser logs contained no warnings or errors.
+- Current decomposition counts: 66 implementation-focused files over 1,400
+  lines and 11 over 2,000.
+- Next decomposition candidate: `RM-05`, `browser/search_workbench.rs` (`D3`).
+- Next programme assurance packet remains `HLT-R1`; the project owner may
+  continue either the POET decomposition lane or the Health assurance lane.
+
+### `RM-05` - 2026-09-05
+
+- Structure: 2,033-line `browser/search_workbench.rs` replaced by a 34-line
+  stable router and eight purpose-specific child modules, all below 500 lines.
+- API: `build_search_workbench`, `toggle_search_workbench`, `open_to_mode`,
+  and `wire_search_workbench_shortcut` remain re-exported; no caller paths
+  changed.
+- Honesty: SPARQL execution still requires the QualiaDB daemon; the
+  unavailable path still refuses to fabricate results.
+- Verification: `cargo check` (no new warnings), five persist tests,
+  product integrity 9/9, surface inventory 1/1, `trunk build`, and scoped
+  rustfmt passed. Fresh wasm contains the workbench ids and the daemon
+  unavailable string.
+- Interactive browser click-UAT was not re-run (no click driver this
+  session); `trunk` is serving `127.0.0.1:8080` from the new dist.
+- Current decomposition counts: 66 crates-`src` files over 1,400 lines and
+  10 over 2,000. POET has no remaining file over 2,000.
+- Next decomposition candidate: `RM-06`, `browser/containers.rs` (`D3`),
+  coordinated with the container-view cluster.
+- Next programme assurance packet is `HLT-07` (`D4` CLIN); `HLT-R1` instrument
+  review is recorded below. Review Gate A remains a `D5` owner close.
+
+### `HLT-R1` - 2026-09-05
+
+- Read: `governance/consent_contract.rs`, Poet `disclosure_model.rs`,
+  `project_shares` / revocation payload, HLT-03 playbook acceptance.
+- Held without change: signed digest immutability of principal/scope; expiry
+  `now >= expires_at`; principal-only revoke; no private key on the grant
+  struct (verifying key + 64-byte signature).
+- Repaired: unused `ReplayDetected`; stateless omit-receipt reactivation;
+  unknown/empty scope labels; Poet "All categories" / missing-expiry Active
+  defaults; grantable `clinical_notes` UI flag (not a contract bit).
+- Verification: 12 `consent_contract` tests passed; 27 `health_views` tests
+  passed (includes 3 share-projection tests).
+- Not claimed: Review Gate A / `D5` clinical-authorization close; live daemon
+  signing of grants still goes through record upsert, not `ConsentLedger`
+  issue/revoke (seam for Neo if Health persist should remember revocations).
+- Next packet: `HLT-07`.
+
+### `HLT-07` - 2026-09-05
+
+- Native `ClinicalRisk.framingham` / `.cha2ds2_vasc` / `.score2` fail closed
+  on missing fields, omitted booleans, inapplicable age/AF/region, and
+  HDL ≥ total cholesterol. Success names algorithm, version, citation, and
+  `not_diagnosis`.
+- Poet calculator workspace: empty fields, units on labels, Calculate
+  disabled until complete + daemon connected. Toolbox tools place the form
+  instead of invoking empty args. Health vault container no longer shows a
+  fabricated 12% Framingham / Metformin list. `Render.scene` health is
+  geometry only.
+- Verification: `invoke::clinical` 16 passed; `health_is_not_a_named_person`
+  1 passed; `health_views` 33 passed; product integrity 10; surface inventory
+  1; capability-scope and non-placement policy tests passed.
+- Browser UAT of the calculator form is the remaining verification row.
+- Next packet: `HLT-08`. Do not close Review Gate A.
+
+Browser offline follow-up: Health construct opened via Help → Command Palette.
+Calculators showed disabled Calculate, not-a-diagnosis copy, and Graph
+unavailable. Live daemon fixture was not available on this VM.
+
+### `HLT-08` - 2026-09-05
+
+- Executable source contracts for the eight Health completion workflows
+  (`crates/poet/tests/health_uat_pack.rs`, 8 passed).
+- Direct defect found in add-measurement: systolic/diastolic/HR placeholders
+  presented 120/80/68 mmHg/bpm as if they were patient values. Cleared.
+- Browser UAT rows remain open until trunk serve.
+- Review Gate A remains a `D5` owner close.
+
+### `HLT-07b` - 2026-09-05
+
+- MCP `clinical_risk` extracted and fail-closed: no age/lipid/SBP/boolean
+  defaults; SCORE2 is its own score (not Framingham); SOFA/eGFR do not invent
+  organ values. Success names algorithm/version/`not_diagnosis`.
+- WebizenVM `NativeClinicalRisk` holds: frame registers are not a complete
+  clinical input; lipids/`Score2Region::Moderate`/`Default` CHA₂DS₂ booleans
+  are not fabricated.
+- WASM playground JSON fail-closed; HTML presets are complete labeled
+  reference profiles.
+- Verification: MCP `clinical_risk` 7 passed; incomplete Framingham reject 1;
+  playground 3; VM `clinical_native` 2; `invoke::clinical` 16 (no regression).
+- Review Gate A remains a `D5` owner close. Next ready non-AST packet:
+  Tool Chest audit (`PFT-01`) or `RM-06` `containers.rs` split.
+
+### `PFT-01` / `PFT-02` - 2026-09-05
+
+- Audit: daemon rejection on SPARQL, gazetteer, Sentinel, N3, SHACL, and
+  sheet mean was shown as success because a local sketch ran.
+- Repair: `tool_dual_path` — local / live / denied are distinct status kinds;
+  local messages name the live id they are not; rejection does not attach a
+  canvas sketch as a live result. `requires_daemon` stays false on dual-path
+  tools so standalone remains runnable.
+- Review Gate A remains a `D5` owner close. Next: `PFT-03` (owner selects a
+  chain) or `RM-06` `containers.rs` split.
+
+### `RM-06` - 2026-09-05
+
+- Structure: 1,507-line `browser/containers.rs` replaced by a 14-line
+  router and eight purpose-specific child modules, all below 500 lines.
+- API: `build_container` remains the only public export. No
+  `pub use … build_*_view` wrappers were added (delegation ceiling still 112).
+- Verification: `cargo +stable check`, containers attrs 4/4, product
+  integrity 10/10, surface inventory 1/1, `trunk build` (stable toolchain)
+  passed. Wasm still contains `health_calculators` and `canvas-container-node`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-07`, `browser/docks.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-07` - 2026-09-05
+
+- Structure: 1,575-line `browser/docks.rs` replaced by a 27-line router
+  and eight purpose-specific child modules, all below 500 lines.
+- API: former public dock functions remain re-exported. No
+  `pub use … build_*_view` wrappers (delegation ceiling still 112).
+- Verification: docks tests 2/2, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed. Wasm still
+  contains `toolbox-dock` and `bottom-statusbar`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-08`, `browser/instrument_panel.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-08` - 2026-09-05
+
+- Structure: 1,475-line `browser/instrument_panel.rs` replaced by a 17-line
+  router and six purpose-specific child modules, all below 500 lines.
+- API: `show_for_container`, `hide`, `activate_chain`,
+  `activate_chain_on_container`, and `deactivate_chain` remain re-exported.
+  No `pub use … build_*_view` wrappers (delegation ceiling still 112).
+- Verification: instrument_panel tests 6/6, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed. Wasm still contains
+  `contextual-instrument-panel` and `doc:bold`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-09`, `browser/workflow_panels.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-09` - 2026-09-05
+
+- Structure: 1,418-line `browser/workflow_panels.rs` replaced by a 27-line
+  router and seven purpose-specific child modules, all below 500 lines.
+- API: former `build_*_view` names remain via `pub use <module>::*` glob
+  re-exports. No `pub use … build_*_view` wrappers (delegation ceiling
+  still 112).
+- Verification: workflow_panels tests 2/2, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed.
+- Honest leftover: these builders are not on the live container routes
+  (`checkpoint_panel` / `publication_panel` / `governance_workflow`); unique
+  panel honesty strings are absent from the wasm. Pre-existing, not caused
+  by the split.
+- Interactive browser click-UAT was not re-run.
+- P2 dock/instrument/workflow cluster is complete. Next POET files over
+  1,200 are the held view cluster and `native_daemon.rs` (`D4`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-10` - 2026-09-05
+
+- Structure: 1,227-line `browser/container_views.rs` replaced by a 19-line
+  router and seven purpose-specific child modules, all below 500 lines.
+- API: `build_doc_view`, `build_sheet_view`, `build_graph_view`,
+  `build_ontology_view`, and `build_pulse_view` remain via glob
+  re-exports. No `pub use … build_*_view` wrappers (ceiling still 112).
+- These builders are on the live container routes.
+- Verification: container_views tests 2/2, product integrity 10/10,
+  surface inventory 1/1, `trunk build` passed. Wasm contains
+  `doc-view-switcher` and `never owl:Thing`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-11`, `browser/container_views_ext.rs`.
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-11` - 2026-09-05
+
+- Structure: 1,387-line `browser/container_views_ext.rs` replaced by a
+  26-line router and nine purpose-specific child modules, all below 500
+  lines.
+- API: former `build_*_view` names remain via glob re-exports. No
+  `pub use … build_*_view` wrappers (ceiling still 112).
+- Honest leftover: no in-crate callers; live routes use
+  `specialist_persist` / `local_container_views`. Pre-existing, not
+  caused by the split.
+- Verification: container_views tests 2/2, product integrity 10/10,
+  surface inventory 1/1, `trunk build` passed.
+- Interactive browser click-UAT was not re-run.
+- View cluster over-1,200 files are done. Remaining over 1,200:
+  `native_daemon.rs` (`D4`) and `command_palette/commands.rs`.
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+## Post-gate programme
+
+The earlier programme remains the dependency backbone after Gate A:
+
+| Programme | Higher-assurance contract work | Bounded product/design work | Review point |
+|---|---|---|---|
+| Governed Q42 health assets | `AST-01` to `AST-04` | `AST-05` to `AST-07` | Licence, provenance, mapping, and ABI issues escalate |
+| Portable application contract | `APP-01` to `APP-03` | `APP-04` to `APP-06` | Manifest and projection parity review |
+| Webizen Desktop host | `WD-02`, `WD-03`, `WD-05` | `WD-01`, `WD-04`, `WD-06` to `WD-08` | Review Gate B |
+| Wider restoration | `GOV-01`, `GOV-02`, `DEV-01`, `SOC-01` | `PRJ-01` to `PRJ-03`, `KNOW-01` to `KNOW-02`, `STU-01` to `STU-02` | Domain-specific review as required |
+
+## Post-freeze lane alignment
+
+| Lane plan | First reconciled action | Dependency |
+|---|---|---|
+| Davinci / POET chrome | Compare Stage 0-1 acceptance against completed `UX-01` to `UX-04`; record only real deltas | Current UX implementation and Tool Chest inventory |
+| Monet / visual grammar | Publish the motion contract, then verify existing reduced-motion and container states before new motion | Davinci delta audit |
+| Marvin / ontology | Publish Container/Manifold/Link joins with precise SHACL-first wording | Existing vocabularies and live Invoke IDs |
+| Neo / seams | Surface exposure plan landed (`EXP-*`); start with `EXP-A0` Econ consumption inventory — no bind before owner selects | `docs/plans/vibe-poet-surface-exposure-plan-2026-09-06.md`, `ALL_BOUND` |
+| Vibe / language | Stage 0–1 landed 2026-09-05; remaining stages stay parked on Marvin/Neo/Capt. gates | Frozen host facade and Neo findings |
+
+## Evidence vocabulary
+
+- **Implemented:** code is present and linked to focused verification.
+- **UAT verified:** the named user task was exercised in the relevant host.
+- **Document landed:** a plan/specification exists; implementation is not implied.
+- **Ready:** dependencies are present and work may begin.
+- **Blocked:** a named dependency or authority decision is missing.
+- **Parked:** intentionally excluded until a project gate opens.
+- **Review required:** implementation evidence exists but the risk boundary has
+  not received the required independent assessment.
+
+## Change discipline
+
+1. Start from the first ready item whose dependencies are met.
+2. Preserve unrelated agent changes and record the baseline commit/status.
+3. Make product behavior distinguish live, local, unavailable, denied, and fault.
+4. Do not infer capability completion from a plan, label, or decorative shell.
+5. Update this register by appending evidence; historical source ledgers remain
+   append-only.
+6. Review Gate A is closed (2026-09-06). Stop at Review Gate B until the project
+   owner accepts that review outcome.

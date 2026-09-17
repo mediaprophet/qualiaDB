@@ -6,7 +6,7 @@ import init, {
     initializeCpuWasmEngine,
     isWasmEngineReady,
     releaseWebgpuEngine,
-} from '../playground/qualia_core_db.js?v=0.0.30-mobile-performance1';
+} from '../playground/qualia_core_db.js?v=0.0.33-mobile-performance1';
 
 let wasmReady;
 

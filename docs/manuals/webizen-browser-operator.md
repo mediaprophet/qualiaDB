@@ -1,7 +1,7 @@
 # Webizen Browser — Operator Stub
 
 **Status:** stub (accurate to code as of U2-A, 2026-07-18)  
-**Branch:** `0.0.28`  
+**Branch:** `0.0.33`  
 **Detail plans:** [`webizen-browser-and-trust.md`](../plans/webizen-browser-and-trust.md), [`webizen-browser-dogfood-notes.md`](../plans/webizen-browser-dogfood-notes.md), [`servo-experimental.md`](../plans/servo-experimental.md)
 
 ---

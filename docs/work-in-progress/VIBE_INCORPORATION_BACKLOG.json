@@ -1,0 +1,6156 @@
+{
+  "generated_utc": "2026-09-08 00:21 UTC",
+  "all_bound_count": 1056,
+  "all_invoke_count": 1056,
+  "catalog_drift_only_bound": [],
+  "catalog_drift_only_invoke": [],
+  "pub_fn_count": 19606,
+  "host_bound_fn_count": 3264,
+  "q1_host_missing": [
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "calculate_parity",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.calculate_parity",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "evaluate_permissive_runtime_gate",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.evaluate_permissive_runtime_gate",
+      "fuzzy_method_hints": [
+        "evaluate",
+        "eval",
+        "gate"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "extract_clean_metadata_value",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.extract_clean_metadata_value",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "extract_lamport_clock",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.extract_lamport_clock",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "from_bytes",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "get_quin_type",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_quin_type",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "get_sensitivity_byte",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_sensitivity_byte",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "get_sensitivity_tier",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_sensitivity_tier",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "get_subject_literal_id",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_subject_literal_id",
+      "fuzzy_method_hints": [
+        "sub",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "identify_routing_lane",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.identify_routing_lane",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "is_subject_nested",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.is_subject_nested",
+      "fuzzy_method_hints": [
+        "sub",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "lookup_embedded_triple",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.lookup_embedded_triple",
+      "fuzzy_method_hints": [
+        "embed"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "lookup_hash",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.lookup_hash",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "new_conduct_violation",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.new_conduct_violation",
+      "fuzzy_method_hints": [
+        "new",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "open",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.open",
+      "fuzzy_method_hints": [
+        "volume_open",
+        "open_channel"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "recalculate_parity",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.recalculate_parity",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "set_lamport_clock",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_lamport_clock",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "set_quin_type",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_quin_type",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "set_sensitivity_byte",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_sensitivity_byte",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "set_sensitivity_tier",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_sensitivity_tier",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "verify_ecc_parity",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_ecc_parity",
+      "fuzzy_method_hints": [
+        "verify",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "",
+      "fn": "view",
+      "path": "crates/qualia-core-db/src/lib.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.view",
+      "fuzzy_method_hints": [
+        "set_viewport"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::corpus",
+      "fn": "all_tags",
+      "path": "crates/qualia-core-db/src/agent_runtime/corpus.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.all_tags",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::corpus",
+      "fn": "cases_with_tag",
+      "path": "crates/qualia-core-db/src/agent_runtime/corpus.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.cases_with_tag",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::corpus",
+      "fn": "is_empty",
+      "path": "crates/qualia-core-db/src/agent_runtime/corpus.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.is_empty",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::corpus",
+      "fn": "len",
+      "path": "crates/qualia-core-db/src/agent_runtime/corpus.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.len",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::corpus",
+      "fn": "load_corpus_from_file",
+      "path": "crates/qualia-core-db/src/agent_runtime/corpus.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.load_corpus_from_file",
+      "fuzzy_method_hints": [
+        "load",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::corpus",
+      "fn": "parse_corpus",
+      "path": "crates/qualia-core-db/src/agent_runtime/corpus.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.parse_corpus",
+      "fuzzy_method_hints": [
+        "parse",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::evaluator",
+      "fn": "compute_metrics",
+      "path": "crates/qualia-core-db/src/agent_runtime/evaluator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.compute_metrics",
+      "fuzzy_method_hints": [
+        "compute",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::evaluator",
+      "fn": "eval_case",
+      "path": "crates/qualia-core-db/src/agent_runtime/evaluator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.eval_case",
+      "fuzzy_method_hints": [
+        "eval",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::evaluator",
+      "fn": "evaluate_corpus",
+      "path": "crates/qualia-core-db/src/agent_runtime/evaluator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.evaluate_corpus",
+      "fuzzy_method_hints": [
+        "evaluate",
+        "eval",
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::evaluator",
+      "fn": "score_case",
+      "path": "crates/qualia-core-db/src/agent_runtime/evaluator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.score_case",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "active_agents",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.active_agents",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "add_capability",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.add_capability",
+      "fuzzy_method_hints": [
+        "add",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "all_capabilities",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.all_capabilities",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "as_str",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.as_str",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "create_blackboard",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.create_blackboard",
+      "fuzzy_method_hints": [
+        "create",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "create_phase_leaser",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.create_phase_leaser",
+      "fuzzy_method_hints": [
+        "create",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "create_session",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.create_session",
+      "fuzzy_method_hints": [
+        "create",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "execute_session",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.execute_session",
+      "fuzzy_method_hints": [
+        "execute",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "find_agent_for_capability",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.find_agent_for_capability",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "get",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "has_capability",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.has_capability",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "plan_session",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.plan_session",
+      "fuzzy_method_hints": [
+        "plan"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "register",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.register",
+      "fuzzy_method_hints": [
+        "roster_register",
+        "register_perspective"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "session_to_pipeline",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.session_to_pipeline",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::orchestration",
+      "fn": "unregister",
+      "path": "crates/qualia-core-db/src/agent_runtime/orchestration.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.unregister",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::planner",
+      "fn": "classify",
+      "path": "crates/qualia-core-db/src/agent_runtime/planner.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.classify",
+      "fuzzy_method_hints": [
+        "c",
+        "classify_mistake",
+        "classify_reality"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::planner",
+      "fn": "plan_task",
+      "path": "crates/qualia-core-db/src/agent_runtime/planner.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.plan_task",
+      "fuzzy_method_hints": [
+        "plan"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "agent_runtime::planner",
+      "fn": "plan_to_record_map",
+      "path": "crates/qualia-core-db/src/agent_runtime/planner.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.plan_to_record_map",
+      "fuzzy_method_hints": [
+        "plan",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "archive",
+      "fn": "decompress_frame",
+      "path": "crates/qualia-core-db/src/archive.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decompress_frame",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "archive",
+      "fn": "open",
+      "path": "crates/qualia-core-db/src/archive.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.open",
+      "fuzzy_method_hints": [
+        "volume_open",
+        "open_channel"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "archive",
+      "fn": "physical_offset",
+      "path": "crates/qualia-core-db/src/archive.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.physical_offset",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "archive",
+      "fn": "preamble",
+      "path": "crates/qualia-core-db/src/archive.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.preamble",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "archive",
+      "fn": "read_dictionary",
+      "path": "crates/qualia-core-db/src/archive.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.read_dictionary",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "archive",
+      "fn": "read_jump_table",
+      "path": "crates/qualia-core-db/src/archive.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.read_jump_table",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "acoustic_effective_mode",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.acoustic_effective_mode",
+      "fuzzy_method_hints": [
+        "mode",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "acoustic_enabled_for_mode",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.acoustic_enabled_for_mode",
+      "fuzzy_method_hints": [
+        "mode",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "acoustic_params_from_tensor",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.acoustic_params_from_tensor",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "apply_binaural_to_uniform",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.apply_binaural_to_uniform",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "drain_sonic_tokens",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.drain_sonic_tokens",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "from_tensor",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_tensor",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "is_empty",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.is_empty",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "len",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.len",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "pop_sonic_token",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.pop_sonic_token",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "push_sonic_token",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.push_sonic_token",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "sonic_token_ring",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sonic_token_ring",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "sonify_tensor_node",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sonify_tensor_node",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "to_phenomenal_uniform",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.to_phenomenal_uniform",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "to_uniform",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.to_uniform",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "try_pop",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.try_pop",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_plane",
+      "fn": "try_push",
+      "path": "crates/qualia-core-db/src/audio/acoustic_plane.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.try_push",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_sab",
+      "fn": "init_acoustic_sab",
+      "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.init_acoustic_sab",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_sab",
+      "fn": "push_token_to_sab",
+      "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.push_token_to_sab",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_sab",
+      "fn": "read_uniform_from_sab",
+      "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.read_uniform_from_sab",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_sab",
+      "fn": "write_uniform_to_sab",
+      "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.write_uniform_to_sab",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::acoustic_sab",
+      "fn": "write_uniform_to_sab_with_mirror",
+      "path": "crates/qualia-core-db/src/audio/acoustic_sab.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.write_uniform_to_sab_with_mirror",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_sidecar_link",
+      "fn": "bake_audio_sidecar_into",
+      "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bake_audio_sidecar_into",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_sidecar_link",
+      "fn": "compile_spectral_sheet_quin",
+      "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.compile_spectral_sheet_quin",
+      "fuzzy_method_hints": [
+        "compile",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_sidecar_link",
+      "fn": "enrich_preview_from_sidecar",
+      "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.enrich_preview_from_sidecar",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_sidecar_link",
+      "fn": "format_sidecar_relpath",
+      "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.format_sidecar_relpath",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_sidecar_link",
+      "fn": "link_tensor_audio_sidecar",
+      "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.link_tensor_audio_sidecar",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_sidecar_link",
+      "fn": "sidecar_content_hash",
+      "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sidecar_content_hash",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_sidecar_link",
+      "fn": "write_sidecar_file",
+      "path": "crates/qualia-core-db/src/audio/audio_sidecar_link.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.write_sidecar_file",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "bake_spectral_v2_from_samples",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bake_spectral_v2_from_samples",
+      "fuzzy_method_hints": [
+        "sample",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "copy_sidecar_frame_to_preview_bins",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.copy_sidecar_frame_to_preview_bins",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "from_tensor_preview",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_tensor_preview",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "is_valid",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.is_valid",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "is_valid",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.is_valid",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "parse_sidecar_header",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.parse_sidecar_header",
+      "fuzzy_method_hints": [
+        "parse",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "parse_v2_subheader",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.parse_v2_subheader",
+      "fuzzy_method_hints": [
+        "parse",
+        "sub"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "payload_bytes",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.payload_bytes",
+      "fuzzy_method_hints": [
+        "load"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "preview_bins_from_tensor",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.preview_bins_from_tensor",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "sidecar_frame_view",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sidecar_frame_view",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "sidecar_mel_frame_view",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sidecar_mel_frame_view",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "sidecar_mfcc_frame_view",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sidecar_mfcc_frame_view",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::audio_spectral_sheet",
+      "fn": "v2_sidecar_size",
+      "path": "crates/qualia-core-db/src/audio/audio_spectral_sheet.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.v2_sidecar_size",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::cqt_bake",
+      "fn": "bake_cqt_sidecar_from_preview",
+      "path": "crates/qualia-core-db/src/audio/cqt_bake.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bake_cqt_sidecar_from_preview",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::cqt_bake",
+      "fn": "bake_cqt_sidecar_from_samples",
+      "path": "crates/qualia-core-db/src/audio/cqt_bake.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bake_cqt_sidecar_from_samples",
+      "fuzzy_method_hints": [
+        "sample",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::cqt_bake",
+      "fn": "forward_cqt",
+      "path": "crates/qualia-core-db/src/audio/cqt_bake.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.forward_cqt",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::cqt_bake",
+      "fn": "preview_to_cqt_frame",
+      "path": "crates/qualia-core-db/src/audio/cqt_bake.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.preview_to_cqt_frame",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "reset",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reset",
+      "fuzzy_method_hints": [
+        "list_presets",
+        "constrain_reset",
+        "cue_stack_reset"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "reset",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reset",
+      "fuzzy_method_hints": [
+        "list_presets",
+        "constrain_reset",
+        "cue_stack_reset"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "reset",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reset",
+      "fuzzy_method_hints": [
+        "list_presets",
+        "constrain_reset",
+        "cue_stack_reset"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "set_band_gains",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_band_gains",
+      "fuzzy_method_hints": [
+        "and"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "set_delay_samples",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_delay_samples",
+      "fuzzy_method_hints": [
+        "sample",
+        "delay"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::effects",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/effects.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::envelope",
+      "fn": "note_off",
+      "path": "crates/qualia-core-db/src/audio/dsp/envelope.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.note_off",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::envelope",
+      "fn": "note_on",
+      "path": "crates/qualia-core-db/src/audio/dsp/envelope.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.note_on",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::envelope",
+      "fn": "reset",
+      "path": "crates/qualia-core-db/src/audio/dsp/envelope.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reset",
+      "fuzzy_method_hints": [
+        "list_presets",
+        "constrain_reset",
+        "cue_stack_reset"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::envelope",
+      "fn": "stage",
+      "path": "crates/qualia-core-db/src/audio/dsp/envelope.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.stage",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::envelope",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/envelope.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::envelope",
+      "fn": "value",
+      "path": "crates/qualia-core-db/src/audio/dsp/envelope.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.value",
+      "fuzzy_method_hints": [
+        "eigenvalues",
+        "prospect_value",
+        "value_iteration"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::filter",
+      "fn": "recalculate",
+      "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.recalculate",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::filter",
+      "fn": "reset",
+      "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reset",
+      "fuzzy_method_hints": [
+        "list_presets",
+        "constrain_reset",
+        "cue_stack_reset"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::filter",
+      "fn": "set_cutoff",
+      "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_cutoff",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::filter",
+      "fn": "set_q",
+      "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_q",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::filter",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/filter.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::lfo",
+      "fn": "reset",
+      "path": "crates/qualia-core-db/src/audio/dsp/lfo.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reset",
+      "fuzzy_method_hints": [
+        "list_presets",
+        "constrain_reset",
+        "cue_stack_reset"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::lfo",
+      "fn": "set_depth",
+      "path": "crates/qualia-core-db/src/audio/dsp/lfo.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_depth",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::lfo",
+      "fn": "set_frequency",
+      "path": "crates/qualia-core-db/src/audio/dsp/lfo.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_frequency",
+      "fuzzy_method_hints": [
+        "eq",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::lfo",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/lfo.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::meters",
+      "fn": "analyse",
+      "path": "crates/qualia-core-db/src/audio/dsp/meters.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.analyse",
+      "fuzzy_method_hints": [
+        "analyse_diffusion",
+        "analyse_inequality",
+        "analyse_social_network"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::meters",
+      "fn": "analyse",
+      "path": "crates/qualia-core-db/src/audio/dsp/meters.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.analyse",
+      "fuzzy_method_hints": [
+        "analyse_diffusion",
+        "analyse_inequality",
+        "analyse_social_network"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::meters",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/meters.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::meters",
+      "fn": "waveform_display",
+      "path": "crates/qualia-core-db/src/audio/dsp/meters.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.waveform_display",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "clear_loop",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.clear_loop",
+      "fuzzy_method_hints": [
+        "clear",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "freq_to_midi_note",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.freq_to_midi_note",
+      "fuzzy_method_hints": [
+        "midi_note",
+        "eq"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "metronome_phase",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.metronome_phase",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "metronome_sample",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.metronome_sample",
+      "fuzzy_method_hints": [
+        "sample"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "midi_note_to_freq",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.midi_note_to_freq",
+      "fuzzy_method_hints": [
+        "midi_note",
+        "eq"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "midi_to_note_name",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.midi_to_note_name",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "note_name_to_midi",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.note_name_to_midi",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "pause",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.pause",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "play",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.play",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "position_beats",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.position_beats",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "position_seconds",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.position_seconds",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "record",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.record",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "set_loop",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_loop",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "set_metronome",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_metronome",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "set_tempo",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_tempo",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "stop",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.stop",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::midi_transport",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/midi_transport.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::oscillator",
+      "fn": "reset",
+      "path": "crates/qualia-core-db/src/audio/dsp/oscillator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reset",
+      "fuzzy_method_hints": [
+        "list_presets",
+        "constrain_reset",
+        "cue_stack_reset"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::oscillator",
+      "fn": "set_frequency",
+      "path": "crates/qualia-core-db/src/audio/dsp/oscillator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_frequency",
+      "fuzzy_method_hints": [
+        "eq",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::oscillator",
+      "fn": "set_gain",
+      "path": "crates/qualia-core-db/src/audio/dsp/oscillator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_gain",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp::oscillator",
+      "fn": "tick",
+      "path": "crates/qualia-core-db/src/audio/dsp/oscillator.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tick",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::dsp_kernel",
+      "fn": "configure_voice_from_tensor",
+      "path": "crates/qualia-core-db/src/audio/dsp_kernel.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.configure_voice_from_tensor",
+      "fuzzy_method_hints": [
+        "configure",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "binaural_analytic",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.binaural_analytic",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "binaural_from_position",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.binaural_from_position",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "binaural_kemar_lite",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.binaural_kemar_lite",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "binaural_render",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.binaural_render",
+      "fuzzy_method_hints": [
+        "render"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "convolve_fir",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.convolve_fir",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "head_relative_position",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.head_relative_position",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "hrtf_profile",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.hrtf_profile",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "room_damp_from_manifold",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.room_damp_from_manifold",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "set_hrtf_profile",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_hrtf_profile",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::hrtf",
+      "fn": "synthesize_hrir",
+      "path": "crates/qualia-core-db/src/audio/hrtf.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.synthesize_hrir",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::istft",
+      "fn": "inverse_stft",
+      "path": "crates/qualia-core-db/src/audio/istft.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.inverse_stft",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::stft",
+      "fn": "bake_stft_sidecar_from_samples",
+      "path": "crates/qualia-core-db/src/audio/stft.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bake_stft_sidecar_from_samples",
+      "fuzzy_method_hints": [
+        "sample",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::stft",
+      "fn": "forward_stft",
+      "path": "crates/qualia-core-db/src/audio/stft.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.forward_stft",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::stft",
+      "fn": "stft_magnitudes",
+      "path": "crates/qualia-core-db/src/audio/stft.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.stft_magnitudes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::stft_bake",
+      "fn": "bake_stft_sidecar_from_preview",
+      "path": "crates/qualia-core-db/src/audio/stft_bake.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bake_stft_sidecar_from_preview",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::stft_bake",
+      "fn": "bake_tensor_stft_sidecar",
+      "path": "crates/qualia-core-db/src/audio/stft_bake.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bake_tensor_stft_sidecar",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::stft_bake",
+      "fn": "synthesize_stft_frame",
+      "path": "crates/qualia-core-db/src/audio/stft_bake.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.synthesize_stft_frame",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "frame_energy",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.frame_energy",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "frame_to_time",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.frame_to_time",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "freq_gradient",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.freq_gradient",
+      "fuzzy_method_hints": [
+        "gradient",
+        "eq"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "get",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "ridge_bin",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.ridge_bin",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "ridges",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.ridges",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "sample_bilinear",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sample_bilinear",
+      "fuzzy_method_hints": [
+        "sample"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "spectral_flux",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.spectral_flux",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "time_gradient",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.time_gradient",
+      "fuzzy_method_hints": [
+        "gradient"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "to_height_mesh",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.to_height_mesh",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface",
+      "fn": "total_energy",
+      "path": "crates/qualia-core-db/src/audio/tf_surface.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.total_energy",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "apply_gain",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.apply_gain",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "bin_span",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.bin_span",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "copy_patch",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.copy_patch",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "crossfade",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.crossfade",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "fade_in",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.fade_in",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "fade_out",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.fade_out",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "frame_span",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.frame_span",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "full",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.full",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "is_valid",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.is_valid",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "pitch_shift",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.pitch_shift",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "spectral_gate",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.spectral_gate",
+      "fuzzy_method_hints": [
+        "gate",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "audio::tf_surface_edit",
+      "fn": "time_stretch",
+      "path": "crates/qualia-core-db/src/audio/tf_surface_edit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.time_stretch",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "as_bytes",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.as_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "entries",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.entries",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "entry",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.entry",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "flags",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.flags",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "get",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "open",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.open",
+      "fuzzy_method_hints": [
+        "volume_open",
+        "open_channel"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "reader",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.reader",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "segment",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.segment",
+      "fuzzy_method_hints": [
+        "point_segment_distance_2d",
+        "point_segment_distance_3d",
+        "line_segment_intersection_2"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::reader",
+      "fn": "verify_entry",
+      "path": "crates/qualia-core-db/src/bundle/reader.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_entry",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::writer",
+      "fn": "add_file",
+      "path": "crates/qualia-core-db/src/bundle/writer.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.add_file",
+      "fuzzy_method_hints": [
+        "add"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::writer",
+      "fn": "build",
+      "path": "crates/qualia-core-db/src/bundle/writer.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.build",
+      "fuzzy_method_hints": [
+        "gazetteer_build"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::writer",
+      "fn": "is_empty",
+      "path": "crates/qualia-core-db/src/bundle/writer.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.is_empty",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "bundle::writer",
+      "fn": "len",
+      "path": "crates/qualia-core-db/src/bundle/writer.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.len",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "cha2ds2_vasc_score",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.cha2ds2_vasc_score",
+      "fuzzy_method_hints": [
+        "cha2ds2_vasc",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "check_contraindications",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.check_contraindications",
+      "fuzzy_method_hints": [
+        "contraindication",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "check_drug_interactions",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.check_drug_interactions",
+      "fuzzy_method_hints": [
+        "drug_interaction",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "ckd_epi_egfr",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.ckd_epi_egfr",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "cockcroft_gault_crcl",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.cockcroft_gault_crcl",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "evaluate_gene_expression",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.evaluate_gene_expression",
+      "fuzzy_method_hints": [
+        "evaluate",
+        "eval",
+        "exp"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "framingham_10yr_risk",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.framingham_10yr_risk",
+      "fuzzy_method_hints": [
+        "framingham",
+        "min"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "longitudinal_trend",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.longitudinal_trend",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "one_compartment_pk_model",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.one_compartment_pk_model",
+      "fuzzy_method_hints": [
+        "mode",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "score2_risk",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.score2_risk",
+      "fuzzy_method_hints": [
+        "score2",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "sofa_score",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sofa_score",
+      "fuzzy_method_hints": [
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "clinical_engine",
+      "fn": "validate_fhir_observation",
+      "path": "crates/qualia-core-db/src/clinical_engine.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.validate_fhir_observation",
+      "fuzzy_method_hints": [
+        "fhir_observation",
+        "validate"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::conformance",
+      "fn": "assert_layout_invariants",
+      "path": "crates/qualia-core-db/src/container_10d/conformance.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.assert_layout_invariants",
+      "fuzzy_method_hints": [
+        "var"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::crc32c",
+      "fn": "crc32c",
+      "path": "crates/qualia-core-db/src/container_10d/crc32c.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.crc32c",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::crc32c",
+      "fn": "crc32c_update",
+      "path": "crates/qualia-core-db/src/container_10d/crc32c.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.crc32c_update",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::field_section",
+      "fn": "decode_field_section",
+      "path": "crates/qualia-core-db/src/container_10d/field_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decode_field_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::field_section",
+      "fn": "encode_field_section",
+      "path": "crates/qualia-core-db/src/container_10d/field_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_field_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::field_section",
+      "fn": "field_section_size",
+      "path": "crates/qualia-core-db/src/container_10d/field_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.field_section_size",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::header",
+      "fn": "encode",
+      "path": "crates/qualia-core-db/src/container_10d/header.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode",
+      "fuzzy_method_hints": [
+        "c",
+        "morton_encode_2d",
+        "morton_encode_3d"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::header",
+      "fn": "encode_to_vec64",
+      "path": "crates/qualia-core-db/src/container_10d/header.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_to_vec64",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::header",
+      "fn": "proposed",
+      "path": "crates/qualia-core-db/src/container_10d/header.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.proposed",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::integrity",
+      "fn": "compute_whole_file_crc32c",
+      "path": "crates/qualia-core-db/src/container_10d/integrity.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.compute_whole_file_crc32c",
+      "fuzzy_method_hints": [
+        "compute",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::integrity",
+      "fn": "seal_whole_file_crc32c",
+      "path": "crates/qualia-core-db/src/container_10d/integrity.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.seal_whole_file_crc32c",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::integrity",
+      "fn": "verify_whole_file_crc32c",
+      "path": "crates/qualia-core-db/src/container_10d/integrity.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_whole_file_crc32c",
+      "fuzzy_method_hints": [
+        "verify",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::mesh_section",
+      "fn": "decode_mesh_section",
+      "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decode_mesh_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::mesh_section",
+      "fn": "encode_mesh_section",
+      "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_mesh_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::mesh_section",
+      "fn": "encoded_len",
+      "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encoded_len",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::mesh_section",
+      "fn": "fits_u16_indices",
+      "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.fits_u16_indices",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::mesh_section",
+      "fn": "parse_mesh_header",
+      "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.parse_mesh_header",
+      "fuzzy_method_hints": [
+        "parse"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::mesh_section",
+      "fn": "payload_bytes",
+      "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.payload_bytes",
+      "fuzzy_method_hints": [
+        "load"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::mesh_section",
+      "fn": "raw_geometry_len",
+      "path": "crates/qualia-core-db/src/container_10d/mesh_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.raw_geometry_len",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::metric_check",
+      "fn": "probe_folded_axes",
+      "path": "crates/qualia-core-db/src/container_10d/metric_check.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.probe_folded_axes",
+      "fuzzy_method_hints": [
+        "axes"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::metric_check",
+      "fn": "verify_descriptor_against_reality",
+      "path": "crates/qualia-core-db/src/container_10d/metric_check.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_descriptor_against_reality",
+      "fuzzy_method_hints": [
+        "verify",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "parse_node_header",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.parse_node_header",
+      "fuzzy_method_hints": [
+        "parse"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "read_node",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.read_node",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "read_node_aos",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.read_node_aos",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "read_node_soa",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.read_node_soa",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "read_node_soa_lane",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.read_node_soa_lane",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "transpose_aos_to_soa",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.transpose_aos_to_soa",
+      "fuzzy_method_hints": [
+        "transpose"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "transpose_soa_to_aos",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.transpose_soa_to_aos",
+      "fuzzy_method_hints": [
+        "transpose"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "write_node_q_at",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.write_node_q_at",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "write_node_section_aos",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.write_node_section_aos",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::node_section",
+      "fn": "write_node_section_soa",
+      "path": "crates/qualia-core-db/src/container_10d/node_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.write_node_section_soa",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "decode_provenance_section",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decode_provenance_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "encode_provenance_section",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_provenance_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "encoded_len",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encoded_len",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "licence",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.licence",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "semantic_metadata",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.semantic_metadata",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "source_bytes",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.source_bytes",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "source_digest",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.source_digest",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "source_digest",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.source_digest",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "source_media_type",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.source_media_type",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "timestamp_epoch_s",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.timestamp_epoch_s",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "validate_provenance",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.validate_provenance",
+      "fuzzy_method_hints": [
+        "validate",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "vc",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.vc",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "version_hash",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.version_hash",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "with_metadata",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.with_metadata",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::provenance_section",
+      "fn": "with_vc",
+      "path": "crates/qualia-core-db/src/container_10d/provenance_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.with_vc",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::section",
+      "fn": "encode_container",
+      "path": "crates/qualia-core-db/src/container_10d/section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_container",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::section",
+      "fn": "parse_section_table",
+      "path": "crates/qualia-core-db/src/container_10d/section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.parse_section_table",
+      "fuzzy_method_hints": [
+        "parse",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::section",
+      "fn": "tier",
+      "path": "crates/qualia-core-db/src/container_10d/section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.tier",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::section",
+      "fn": "typ",
+      "path": "crates/qualia-core-db/src/container_10d/section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.typ",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::spatial_index_section",
+      "fn": "decode_spatial_index_section",
+      "path": "crates/qualia-core-db/src/container_10d/spatial_index_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decode_spatial_index_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::spatial_index_section",
+      "fn": "encode_spatial_index_section",
+      "path": "crates/qualia-core-db/src/container_10d/spatial_index_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_spatial_index_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::spatial_index_section",
+      "fn": "encoded_len",
+      "path": "crates/qualia-core-db/src/container_10d/spatial_index_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encoded_len",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::topology_section",
+      "fn": "decode_topology_section",
+      "path": "crates/qualia-core-db/src/container_10d/topology_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decode_topology_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::topology_section",
+      "fn": "encode_topology_section",
+      "path": "crates/qualia-core-db/src/container_10d/topology_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_topology_section",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "container_10d::topology_section",
+      "fn": "encoded_len",
+      "path": "crates/qualia-core-db/src/container_10d/topology_section.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encoded_len",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::deontic_circuit",
+      "fn": "generate_deontic_crs",
+      "path": "crates/qualia-core-db/src/crypto/deontic_circuit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_deontic_crs",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::deontic_circuit",
+      "fn": "verify_access",
+      "path": "crates/qualia-core-db/src/crypto/deontic_circuit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_access",
+      "fuzzy_method_hints": [
+        "verify",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "check_compliance",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.check_compliance",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "check_quantum_readiness",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.check_quantum_readiness",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "check_quantum_readiness",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.check_quantum_readiness",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "clear_audit_log",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.clear_audit_log",
+      "fuzzy_method_hints": [
+        "audit",
+        "clear",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "context_manager",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.context_manager",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "create_context",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.create_context",
+      "fuzzy_method_hints": [
+        "create",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "export_secret_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.export_secret_key",
+      "fuzzy_method_hints": [
+        "exp",
+        "or",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "fiduciary_standards",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.fiduciary_standards",
+      "fuzzy_method_hints": [
+        "and",
+        "tan",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "from_keypair",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_keypair",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "from_public_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_public_key",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "from_secret_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_secret_key",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "generate",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "generate_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "generate_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "generate_keypair",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_keypair",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "get_audit_log",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_audit_log",
+      "fuzzy_method_hints": [
+        "audit"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "get_audit_log",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_audit_log",
+      "fuzzy_method_hints": [
+        "audit"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "get_context",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_context",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "get_default_signer",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_default_signer",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "get_signer",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_signer",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "hash_token",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.hash_token",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "issue_vc_mldsa",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.issue_vc_mldsa",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "key_id",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.key_id",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "list_keys",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.list_keys",
+      "fuzzy_method_hints": [
+        "list"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "list_keys",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.list_keys",
+      "fuzzy_method_hints": [
+        "list"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "public_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.public_key",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "public_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.public_key",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "quantum_resistance_threshold",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.quantum_resistance_threshold",
+      "fuzzy_method_hints": [
+        "threshold",
+        "tan",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "remove_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.remove_key",
+      "fuzzy_method_hints": [
+        "move"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "rotation_policy",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.rotation_policy",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "set_key_id",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.set_key_id",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "should_rotate_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.should_rotate_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "should_rotate_key",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.should_rotate_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "sign",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sign",
+      "fuzzy_method_hints": [
+        "add_assign",
+        "assign_agents",
+        "signed_volume"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "sign",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sign",
+      "fuzzy_method_hints": [
+        "add_assign",
+        "assign_agents",
+        "signed_volume"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "sign",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sign",
+      "fuzzy_method_hints": [
+        "add_assign",
+        "assign_agents",
+        "signed_volume"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "sign_with_managed_context",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sign_with_managed_context",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "sign_with_secret",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.sign_with_secret",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "verify_vc_mldsa",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_vc_mldsa",
+      "fuzzy_method_hints": [
+        "verify",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::fiduciary_crypto",
+      "fn": "verify_with_public",
+      "path": "crates/qualia-core-db/src/crypto/fiduciary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_with_public",
+      "fuzzy_method_hints": [
+        "verify",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "as_bytes",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.as_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "as_bytes",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.as_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "as_bytes",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.as_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "decapsulate",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decapsulate",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "encapsulate",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encapsulate",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "from_bytes",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "from_bytes",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "from_bytes",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::pq_kem_shim",
+      "fn": "generate_kyber768_keypair",
+      "path": "crates/qualia-core-db/src/crypto/pq_kem_shim.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_kyber768_keypair",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "chain_hash",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.chain_hash",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "from_secret",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.from_secret",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "generate",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "open_sealed",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.open_sealed",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "seal_to",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.seal_to",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "secret_bytes",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.secret_bytes",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "unwrap_key",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.unwrap_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit",
+      "fn": "wrap_key",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.wrap_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit_dag",
+      "fn": "canonical_bytes",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit_dag.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.canonical_bytes",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit_dag",
+      "fn": "derive_sessions",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit_dag.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.derive_sessions",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit_dag",
+      "fn": "recomputed_id",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit_dag.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.recomputed_id",
+      "fuzzy_method_hints": [
+        "compute",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_audit_dag",
+      "fn": "verify_chain",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_audit_dag.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_chain",
+      "fuzzy_method_hints": [
+        "verify",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "decrypt_sanctuary_chunk",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decrypt_sanctuary_chunk",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "decrypt_sanctuary_chunk_in_place",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decrypt_sanctuary_chunk_in_place",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "derive_chacha_nonce",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.derive_chacha_nonce",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "derive_chunk_nonce",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.derive_chunk_nonce",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "derive_lane_cipher_key",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.derive_lane_cipher_key",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "derive_sanctuary_key_material",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.derive_sanctuary_key_material",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "derive_sanctuary_key_material_argon2",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.derive_sanctuary_key_material_argon2",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "derive_xchacha_nonce",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.derive_xchacha_nonce",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "encrypt_sanctuary_chunk",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encrypt_sanctuary_chunk",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_crypto",
+      "fn": "encrypt_sanctuary_chunk_in_place",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_crypto.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encrypt_sanctuary_chunk_in_place",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_keychain",
+      "fn": "delete_pepper",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_keychain.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.delete_pepper",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_keychain",
+      "fn": "generate_pepper",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_keychain.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_pepper",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_keychain",
+      "fn": "get_pepper",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_keychain.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_pepper",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::sanctuary_keychain",
+      "fn": "store_pepper",
+      "path": "crates/qualia-core-db/src/crypto/sanctuary_keychain.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.store_pepper",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::verifiable_credential",
+      "fn": "decode_credential",
+      "path": "crates/qualia-core-db/src/crypto/verifiable_credential.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.decode_credential",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::verifiable_credential",
+      "fn": "encode_credential",
+      "path": "crates/qualia-core-db/src/crypto/verifiable_credential.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.encode_credential",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::verifiable_credential",
+      "fn": "issue",
+      "path": "crates/qualia-core-db/src/crypto/verifiable_credential.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.issue",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::verifiable_credential",
+      "fn": "verify_grounded",
+      "path": "crates/qualia-core-db/src/crypto/verifiable_credential.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_grounded",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_predicates",
+      "fn": "prove",
+      "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.prove",
+      "fuzzy_method_hints": [
+        "detect_provenance_gaps"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_predicates",
+      "fn": "prove",
+      "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.prove",
+      "fuzzy_method_hints": [
+        "detect_provenance_gaps"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_predicates",
+      "fn": "prove_range",
+      "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.prove_range",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_predicates",
+      "fn": "prove_threshold",
+      "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.prove_threshold",
+      "fuzzy_method_hints": [
+        "threshold"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_predicates",
+      "fn": "size_bytes",
+      "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.size_bytes",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_predicates",
+      "fn": "verify_range",
+      "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_range",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_predicates",
+      "fn": "verify_threshold",
+      "path": "crates/qualia-core-db/src/crypto/zk_predicates.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_threshold",
+      "fuzzy_method_hints": [
+        "threshold",
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "add_variable",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.add_variable",
+      "fuzzy_method_hints": [
+        "add",
+        "var"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "add_variable",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.add_variable",
+      "fuzzy_method_hints": [
+        "add",
+        "var"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "create_circuit",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.create_circuit",
+      "fuzzy_method_hints": [
+        "create",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "create_circuit",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.create_circuit",
+      "fuzzy_method_hints": [
+        "create",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "field_element_to_fr",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.field_element_to_fr",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_keys",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_keys",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_proof",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_proof",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_proof",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_proving_key",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_proving_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_semantic_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_semantic_proof",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_verifying_key",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_verifying_key",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "generate_witness",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.generate_witness",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "get_circuit",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_circuit",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "get_circuit_info",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_circuit_info",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "get_global_stats",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_global_stats",
+      "fuzzy_method_hints": [
+        "stats"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "get_performance_stats",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_performance_stats",
+      "fuzzy_method_hints": [
+        "stats",
+        "erf",
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "get_proving_key",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_proving_key",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "get_verifying_key",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.get_verifying_key",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "i128_to_field_element",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.i128_to_field_element",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "list_circuits",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.list_circuits",
+      "fuzzy_method_hints": [
+        "list",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "list_circuits",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.list_circuits",
+      "fuzzy_method_hints": [
+        "list",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "prove_matrix_multiply",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.prove_matrix_multiply",
+      "fuzzy_method_hints": [
+        "mul"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "prove_matrix_multiply",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.prove_matrix_multiply",
+      "fuzzy_method_hints": [
+        "mul"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "setup",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.setup",
+      "fuzzy_method_hints": [],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "store_proving_key",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.store_proving_key",
+      "fuzzy_method_hints": [
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "store_verifying_key",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.store_verifying_key",
+      "fuzzy_method_hints": [
+        "verify",
+        "or"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "update_proof_metrics",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.update_proof_metrics",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "verify_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_proof",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "verify_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_proof",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "verify_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_proof",
+      "fuzzy_method_hints": [
+        "verify"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "crypto::zk_proofs",
+      "fn": "verify_semantic_proof",
+      "path": "crates/qualia-core-db/src/crypto/zk_proofs.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.verify_semantic_proof",
+      "fuzzy_method_hints": [
+        "verify",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "add_matrix_multiply",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.add_matrix_multiply",
+      "fuzzy_method_hints": [
+        "add",
+        "mul"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "build",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.build",
+      "fuzzy_method_hints": [
+        "gazetteer_build"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "convolution",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.convolution",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "convolution_into",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.convolution_into",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "discover_devices",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.discover_devices",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "discover_devices_into",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.discover_devices_into",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "drain_completions",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.drain_completions",
+      "fuzzy_method_hints": [
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    },
+    {
+      "crate": "qualia-core-db",
+      "module": "csd_storage",
+      "fn": "execute_operation",
+      "path": "crates/qualia-core-db/src/csd_storage.rs",
+      "visibility": "pub",
+      "proposed_host_id": "CoreDb.execute_operation",
+      "fuzzy_method_hints": [
+        "execute",
+        "c"
+      ],
+      "priority": 100,
+      "shellish": false
+    }
+  ],
+  "q2_poet_consume": [
+    "AdvancedLogic.compute",
+    "Agency.evaluate",
+    "Agent.evaluate",
+    "Agent.execute",
+    "Agent.plan",
+    "Agent.trace",
+    "Agent.verify",
+    "Animation.list_presets",
+    "Animation.sclerp_step",
+    "Animation.spring_step",
+    "Animation.squad_step",
+    "Asset.add_temporal",
+    "Asset.add_topic",
+    "Asset.compile",
+    "Asset.count",
+    "Asset.create",
+    "Asset.list",
+    "Asset.persist",
+    "Asset.persist_add_temporal",
+    "Asset.persist_add_topic",
+    "Asset.persist_compile",
+    "Asset.persist_create",
+    "Asset.persist_query_aspects",
+    "Asset.persist_set_spatial",
+    "Asset.persist_temporal_span",
+    "Asset.query_aspects",
+    "Asset.resolve",
+    "Asset.resolve_by_spatial",
+    "Asset.resolve_by_temporal",
+    "Asset.resolve_by_topic",
+    "Asset.set_spatial",
+    "Asset.temporal_span",
+    "Audio.bin_to_freq_linear",
+    "Audio.bin_to_freq_log",
+    "Audio.compressor",
+    "Audio.delay",
+    "Audio.envelope",
+    "Audio.epistemic_fm_index",
+    "Audio.epistemic_temperature_from_q",
+    "Audio.eq",
+    "Audio.filter",
+    "Audio.lfo",
+    "Audio.loudness_meter",
+    "Audio.midi_note",
+    "Audio.oscillator",
+    "Audio.parametric_sample",
+    "Audio.phase_meter",
+    "Audio.quantize",
+    "Audio.reverb",
+    "Audio.sigma_dominant_frequency",
+    "Audio.spectrum",
+    "Audio.transport",
+    "Audio.transpose",
+    "Audio.waveform_meter",
+    "Avatar.move",
+    "Avatar.set_appearance",
+    "Bioinformatics.align",
+    "Bioinformatics.compute",
+    "Calculus.discrete_maximum_principle_holds",
+    "Calculus.solve_poisson_dirichlet",
+    "CalculusWorkbench.compute",
+    "Capability.audit",
+    "Capability.declare",
+    "Capability.grant",
+    "Capability.revoke",
+    "Capability.test_gating",
+    "CapabilityDiscovery.catalog",
+    "CapabilityDiscovery.coverage",
+    "CapabilityDiscovery.list",
+    "CausalFuzzyAndControl.t_norm",
+    "ChatGraph.link_reply",
+    "ChatGraph.session_summary",
+    "ChatGraph.validate_fragment",
+    "Chemistry.parse_bse_json",
+    "ClinicalRisk.comorbidity",
+    "ClinicalRisk.contraindication",
+    "ClinicalRisk.drug_interaction",
+    "ClinicalRisk.fhir_observation",
+    "ComputationalGeometry.average_spacing_3d",
+    "ComputationalGeometry.local_density_3d",
+    "ComputationalGeometry.mean_knn_distance_3d",
+    "ComputerVision.ahash",
+    "ComputerVision.canny_edges",
+    "ComputerVision.sobel_magnitude",
+    "ContractsIdentityAndConsensus.parse_did_q42",
+    "CooperativeWork.board_project",
+    "Corpus.load",
+    "Corpus.parse",
+    "Dmx.add_fixture",
+    "Dmx.cue_set_channel",
+    "Dmx.cue_set_fade",
+    "Dmx.cue_stack_add",
+    "Dmx.cue_stack_go",
+    "Dmx.cue_stack_go_back",
+    "Dmx.cue_stack_reset",
+    "Dmx.fixture_set_colour",
+    "Dmx.fixture_set_intensity",
+    "Dmx.fixture_set_pan_tilt",
+    "Dmx.new_cue",
+    "Dmx.new_cue_stack",
+    "Dmx.new_universe",
+    "Dmx.set_channel",
+    "Econ.aggregate_wealth",
+    "Econ.cumulative_wealth",
+    "Econ.narrative_divergence",
+    "EngineeringAnalysis.analyze_conduction",
+    "EngineeringAnalysis.fem_static",
+    "Finance.convert_currency",
+    "Finance.ledger_balance",
+    "Finance.multisig_check",
+    "FinancialModeling.black_scholes",
+    "FinancialModeling.gbm_var",
+    "FinancialModeling.portfolio_risk",
+    "Forensic.malfeasance_delta",
+    "Forensic.narrative_divergence",
+    "FormalLogic.compute",
+    "GovernanceLogic.compute",
+    "GraphDatabase.lexicon_manifest",
+    "GraphDatabase.stats",
+    "GraphMatch.approximate_match",
+    "GraphMatch.fuzzy_dice",
+    "GraphMatch.fuzzy_jaccard",
+    "GraphReasoning.shortest_path",
+    "GraphReasoning.spreading_activation",
+    "GraphReasoning.top_k",
+    "HID.biosignal_poll",
+    "HID.clear",
+    "HID.gamepad_poll",
+    "HID.gamepad_vibrate",
+    "HID.haptic_pattern",
+    "HID.haptic_pulse",
+    "HID.midi_poll",
+    "HID.midi_send",
+    "HID.pointer_capture",
+    "HID.pointer_release",
+    "HID.poll",
+    "HID.set_cursor",
+    "HID.spatial_gaze_ray",
+    "HID.spatial_hand_skeleton",
+    "HID.spatial_head_pose",
+    "HID.wait",
+    "HbbTV.add_page",
+    "HbbTV.navigate",
+    "HbbTV.new_app",
+    "HbbTV.set_state",
+    "Image.add_layer",
+    "Image.add_selection",
+    "Image.apply_filter",
+    "Image.brush",
+    "Image.clear_mask",
+    "Image.clear_selections",
+    "Image.composite",
+    "Image.fill",
+    "Image.new",
+    "Image.remove_layer",
+    "Image.set_blend_mode",
+    "Image.set_mask",
+    "Image.set_opacity",
+    "Image.set_pixel",
+    "Image.set_visible",
+    "Inference.constrained_decode",
+    "Inference.load_model",
+    "Inference.run_reranker",
+    "Inference.run_transformer",
+    "Inference.unload_model",
+    "InfraExtLogic.compute",
+    "InfraLogic.compute",
+    "Interactive.add_social_post",
+    "Interactive.add_trigger",
+    "Interpolation.lagrange_eval",
+    "Interpolation.linear_interp",
+    "Interpolation.newton_coefficients",
+    "Interpolation.newton_eval",
+    "Interpolation.poly_eval",
+    "Interpolation.poly_fit",
+    "LegalLogic.compute",
+    "LinearAlgebra.gemm",
+    "Manifold.axes",
+    "Manifold.distance",
+    "Manifold.project",
+    "Medical.analyze_intensity_grid",
+    "Medical.structural_fingerprint",
+    "Medical.tanimoto",
+    "MedicalComputing.analyze_differential",
+    "MedicalComputing.screen_compounds",
+    "MedicalImaging.hu_window",
+    "NLP.coref_resolve",
+    "NLP.frame_extract",
+    "NLP.fst_lookup",
+    "NLP.gazetteer_build",
+    "NLP.graphrag_query",
+    "NLP.relation_extract",
+    "NLP.split_sentences",
+    "NLP.substrate_extract",
+    "NLP.tokenize",
+    "Net.peer_hash",
+    "Net.sonic_pack",
+    "NumericalCalculus.simpson",
+    "Ode.bdf",
+    "Ode.dopri5",
+    "Ode.rk4_integrate",
+    "Ode.symplectic_step",
+    "OntologyAlignment.align",
+    "Optimization.artificial_bee_colony",
+    "Optimization.hill_climb",
+    "Optimization.simulated_annealing",
+    "OrganicChemistry.compute",
+    "OrganicChemistry.validate_smiles",
+    "PhysicalUnits.convert",
+    "PhysicsAndODE.projectile",
+    "PhysicsWorkbench.compute",
+    "Poet.manifold_create",
+    "Poet.nested_link",
+    "Poet.participant_invite",
+    "Poet.subject_declare",
+    "PolynomialAlgebra.coeffs",
+    "Portal.activate",
+    "Portal.deactivate",
+    "Portal.set_target",
+    "Privacy.gaussian_sigma",
+    "Pulse.close_channel",
+    "Pulse.open_channel",
+    "Pulse.publish_graph_mutation",
+    "Pulse.publish_notification",
+    "Pulse.publish_sync",
+    "Pulse.publish_telemetry",
+    "Pulse.set_transport",
+    "QuantumAndCryptographic.blake3",
+    "QuantumAndCryptographic.sha256",
+    "QuantumAndCryptographic.sha512",
+    "Render.animation_compute_pass",
+    "Render.animation_eval_curve",
+    "Render.animation_eval_preset",
+    "Render.animation_list_presets",
+    "Render.animation_sclerp",
+    "Render.animation_spring_step",
+    "Render.animation_squad_step",
+    "Render.css_animation",
+    "Render.css_color",
+    "Render.css_transform",
+    "Render.emf_field_info",
+    "Render.emf_render_slice",
+    "Render.emf_upload_field",
+    "Render.gpu_adapter_info",
+    "Render.gpu_artefact_refused",
+    "Render.gpu_backend_info",
+    "Render.gpu_camera_state",
+    "Render.gpu_compile_shader",
+    "Render.gpu_compile_to_glsl",
+    "Render.gpu_compute_dispatch",
+    "Render.gpu_compute_readback",
+    "Render.gpu_destroy",
+    "Render.gpu_has_mesh",
+    "Render.gpu_has_tensor",
+    "Render.gpu_init",
+    "Render.gpu_init_surface",
+    "Render.gpu_observer_standpoint",
+    "Render.gpu_particle_count",
+    "Render.gpu_pick",
+    "Render.gpu_poll_pick",
+    "Render.gpu_read_pixels",
+    "Render.gpu_render_frame",
+    "Render.gpu_required_rgba8_bytes",
+    "Render.gpu_resize",
+    "Render.gpu_set_ambient",
+    "Render.gpu_set_artefact_joint",
+    "Render.gpu_set_artefact_world",
+    "Render.gpu_set_standpoint",
+    "Render.gpu_surface_size",
+    "Render.gpu_sync_bloom",
+    "Render.gpu_tensor_node_count",
+    "Render.gpu_upload_mesh",
+    "Render.gpu_upload_mesh_colored",
+    "Render.gpu_upload_tensor",
+    "Render.gpu_validate_shader",
+    "Render.svg_bezier",
+    "Render.svg_circle",
+    "Render.svg_field",
+    "Render.svg_line",
+    "Render.svg_path",
+    "Render.svg_rect",
+    "Research.add_bias",
+    "Research.add_constraint",
+    "Research.add_corpus_item",
+    "Research.add_link",
+    "Research.add_question",
+    "Research.analyse_diffusion",
+    "Research.analyse_inequality",
+    "Research.analyse_sentiment_trends",
+    "Research.analyse_social_network",
+    "Research.assess_grounding",
+    "Research.assess_intentionality",
+    "Research.assess_sentiment",
+    "Research.bridge_dark_link",
+    "Research.chain_inference",
+    "Research.classify_mistake",
+    "Research.classify_reality",
+    "Research.close_gap",
+    "Research.collect_evidence",
+    "Research.compare_perspectives",
+    "Research.confirm_dark_link",
+    "Research.contribute_evaluation",
+    "Research.create_assessment",
+    "Research.create_hypothesis_graph",
+    "Research.create_revision",
+    "Research.create_timeline",
+    "Research.create_ug_instance",
+    "Research.define_economic_dynamics",
+    "Research.define_scope",
+    "Research.define_social_dynamics",
+    "Research.define_spatiotemporal_dynamics",
+    "Research.detect_blended",
+    "Research.detect_concealment",
+    "Research.detect_deceptive_fiction",
+    "Research.detect_performed_sentiment",
+    "Research.detect_perspective_conflict",
+    "Research.detect_provenance_gaps",
+    "Research.detect_sentiment_manipulation",
+    "Research.detect_ug_patterns",
+    "Research.detect_ungrounded_behaviour",
+    "Research.diff_revisions",
+    "Research.evaluate_evidence",
+    "Research.extract_from_corpus",
+    "Research.find_path",
+    "Research.flag_gap",
+    "Research.import_dataset",
+    "Research.import_literature",
+    "Research.infer_dark_link",
+    "Research.link_questions",
+    "Research.make_inference",
+    "Research.map_sentiment_network",
+    "Research.merge_hypotheses",
+    "Research.new",
+    "Research.new_investigation",
+    "Research.propose_hypothesis",
+    "Research.reconcile_perspectives",
+    "Research.reframe_hypothesis",
+    "Research.refute_dark_link",
+    "Research.register_perspective",
+    "Research.set_corpus_confidence",
+    "Research.set_epistemic_mode",
+    "Research.set_inference_confidence",
+    "Research.set_purpose",
+    "Research.set_reality_category",
+    "Research.set_reliability",
+    "Research.set_ug_calibration",
+    "Research.set_ug_cause",
+    "Research.set_ug_consequence",
+    "Research.set_ug_detection",
+    "Research.set_ug_mitigation",
+    "Research.subscribe_updates",
+    "Research.trace_fiction",
+    "Research.validate_inference",
+    "Research.verify_grounding",
+    "SHACL.extensions",
+    "Scene.add_camera",
+    "Scene.add_light",
+    "Scene.add_node",
+    "Scene.camera_frame_node",
+    "Scene.capture_frame",
+    "Scene.create",
+    "Scene.duplicate_node",
+    "Scene.ik_ccd",
+    "Scene.ik_look_at",
+    "Scene.lerp_camera",
+    "Scene.link_semantic",
+    "Scene.render",
+    "Scene.set_clear_colour",
+    "Scene.set_mesh",
+    "Scene.set_render_budget",
+    "Scene.set_transform",
+    "Scene.set_viewport",
+    "Scene.smooth_damp",
+    "Scene.smooth_damp_vec3",
+    "SecondScreen.sync",
+    "Sentinel.gate",
+    "Sheet.stats",
+    "Sheet.sum_range",
+    "Social.degree_centrality",
+    "Social.gini",
+    "Social.lorenz",
+    "Social.lww",
+    "SpatialLogic.compute",
+    "SpecialFunctionsAndTransforms.bessel_j",
+    "Spectral.blend",
+    "Spectral.emf_to_rgb",
+    "Spectral.emf_to_spd",
+    "Spectral.gamut_map",
+    "Spectral.spd_to_xyz",
+    "SymbolicAndDefeasibleLogic.asp",
+    "SymbolicODE.classify_second_order_pde",
+    "SymbolicODE.solve_first_order_linear_pde",
+    "SymbolicODE.solve_linear_first_order",
+    "SymbolicODE.solve_linear_second_order",
+    "SymbolicODE.solve_separable",
+    "TemporalAndDescriptionLogic.ltl.finally",
+    "TemporalAndDescriptionLogic.ltl.globally",
+    "TemporalAndDescriptionLogic.subsumption",
+    "VectorCalculus.curl",
+    "VectorCalculus.divergence",
+    "VectorCalculus.gradient",
+    "VectorCalculus.laplacian",
+    "VectorCalculus.line_integral_scalar",
+    "VectorCalculus.line_integral_work",
+    "VectorCalculus.surface_flux",
+    "Video.add_clip",
+    "Video.add_track",
+    "Video.add_transition",
+    "Video.colour_grade",
+    "Video.new_project",
+    "Video.remove_clip",
+    "Video.set_render_bitrate",
+    "Video.set_render_format",
+    "Video.set_speed",
+    "Video.trim_clip",
+    "World.add_avatar",
+    "World.add_object",
+    "World.add_portal",
+    "World.new",
+    "World.object_apply_force",
+    "World.object_step_physics",
+    "World.set_gravity",
+    "agent.dag.execute",
+    "agent.dag.status",
+    "agent.dag.validate",
+    "biosignal.dp_config",
+    "biosignal.dp_filter",
+    "hash.iri",
+    "sampler.configure",
+    "sampler.constrain_disable",
+    "sampler.constrain_enable",
+    "sampler.constrain_reset",
+    "sampler.sample"
+  ],
+  "q2_by_family": {
+    "Research": [
+      "Research.add_bias",
+      "Research.add_constraint",
+      "Research.add_corpus_item",
+      "Research.add_link",
+      "Research.add_question",
+      "Research.analyse_diffusion",
+      "Research.analyse_inequality",
+      "Research.analyse_sentiment_trends",
+      "Research.analyse_social_network",
+      "Research.assess_grounding",
+      "Research.assess_intentionality",
+      "Research.assess_sentiment",
+      "Research.bridge_dark_link",
+      "Research.chain_inference",
+      "Research.classify_mistake",
+      "Research.classify_reality",
+      "Research.close_gap",
+      "Research.collect_evidence",
+      "Research.compare_perspectives",
+      "Research.confirm_dark_link",
+      "Research.contribute_evaluation",
+      "Research.create_assessment",
+      "Research.create_hypothesis_graph",
+      "Research.create_revision",
+      "Research.create_timeline",
+      "Research.create_ug_instance",
+      "Research.define_economic_dynamics",
+      "Research.define_scope",
+      "Research.define_social_dynamics",
+      "Research.define_spatiotemporal_dynamics",
+      "Research.detect_blended",
+      "Research.detect_concealment",
+      "Research.detect_deceptive_fiction",
+      "Research.detect_performed_sentiment",
+      "Research.detect_perspective_conflict",
+      "Research.detect_provenance_gaps",
+      "Research.detect_sentiment_manipulation",
+      "Research.detect_ug_patterns",
+      "Research.detect_ungrounded_behaviour",
+      "Research.diff_revisions",
+      "Research.evaluate_evidence",
+      "Research.extract_from_corpus",
+      "Research.find_path",
+      "Research.flag_gap",
+      "Research.import_dataset",
+      "Research.import_literature",
+      "Research.infer_dark_link",
+      "Research.link_questions",
+      "Research.make_inference",
+      "Research.map_sentiment_network",
+      "Research.merge_hypotheses",
+      "Research.new",
+      "Research.new_investigation",
+      "Research.propose_hypothesis",
+      "Research.reconcile_perspectives",
+      "Research.reframe_hypothesis",
+      "Research.refute_dark_link",
+      "Research.register_perspective",
+      "Research.set_corpus_confidence",
+      "Research.set_epistemic_mode",
+      "Research.set_inference_confidence",
+      "Research.set_purpose",
+      "Research.set_reality_category",
+      "Research.set_reliability",
+      "Research.set_ug_calibration",
+      "Research.set_ug_cause",
+      "Research.set_ug_consequence",
+      "Research.set_ug_detection",
+      "Research.set_ug_mitigation",
+      "Research.subscribe_updates",
+      "Research.trace_fiction",
+      "Research.validate_inference",
+      "Research.verify_grounding"
+    ],
+    "Render": [
+      "Render.animation_compute_pass",
+      "Render.animation_eval_curve",
+      "Render.animation_eval_preset",
+      "Render.animation_list_presets",
+      "Render.animation_sclerp",
+      "Render.animation_spring_step",
+      "Render.animation_squad_step",
+      "Render.css_animation",
+      "Render.css_color",
+      "Render.css_transform",
+      "Render.emf_field_info",
+      "Render.emf_render_slice",
+      "Render.emf_upload_field",
+      "Render.gpu_adapter_info",
+      "Render.gpu_artefact_refused",
+      "Render.gpu_backend_info",
+      "Render.gpu_camera_state",
+      "Render.gpu_compile_shader",
+      "Render.gpu_compile_to_glsl",
+      "Render.gpu_compute_dispatch",
+      "Render.gpu_compute_readback",
+      "Render.gpu_destroy",
+      "Render.gpu_has_mesh",
+      "Render.gpu_has_tensor",
+      "Render.gpu_init",
+      "Render.gpu_init_surface",
+      "Render.gpu_observer_standpoint",
+      "Render.gpu_particle_count",
+      "Render.gpu_pick",
+      "Render.gpu_poll_pick",
+      "Render.gpu_read_pixels",
+      "Render.gpu_render_frame",
+      "Render.gpu_required_rgba8_bytes",
+      "Render.gpu_resize",
+      "Render.gpu_set_ambient",
+      "Render.gpu_set_artefact_joint",
+      "Render.gpu_set_artefact_world",
+      "Render.gpu_set_standpoint",
+      "Render.gpu_surface_size",
+      "Render.gpu_sync_bloom",
+      "Render.gpu_tensor_node_count",
+      "Render.gpu_upload_mesh",
+      "Render.gpu_upload_mesh_colored",
+      "Render.gpu_upload_tensor",
+      "Render.gpu_validate_shader",
+      "Render.svg_bezier",
+      "Render.svg_circle",
+      "Render.svg_field",
+      "Render.svg_line",
+      "Render.svg_path",
+      "Render.svg_rect"
+    ],
+    "Audio": [
+      "Audio.bin_to_freq_linear",
+      "Audio.bin_to_freq_log",
+      "Audio.compressor",
+      "Audio.delay",
+      "Audio.envelope",
+      "Audio.epistemic_fm_index",
+      "Audio.epistemic_temperature_from_q",
+      "Audio.eq",
+      "Audio.filter",
+      "Audio.lfo",
+      "Audio.loudness_meter",
+      "Audio.midi_note",
+      "Audio.oscillator",
+      "Audio.parametric_sample",
+      "Audio.phase_meter",
+      "Audio.quantize",
+      "Audio.reverb",
+      "Audio.sigma_dominant_frequency",
+      "Audio.spectrum",
+      "Audio.transport",
+      "Audio.transpose",
+      "Audio.waveform_meter"
+    ],
+    "Asset": [
+      "Asset.add_temporal",
+      "Asset.add_topic",
+      "Asset.compile",
+      "Asset.count",
+      "Asset.create",
+      "Asset.list",
+      "Asset.persist",
+      "Asset.persist_add_temporal",
+      "Asset.persist_add_topic",
+      "Asset.persist_compile",
+      "Asset.persist_create",
+      "Asset.persist_query_aspects",
+      "Asset.persist_set_spatial",
+      "Asset.persist_temporal_span",
+      "Asset.query_aspects",
+      "Asset.resolve",
+      "Asset.resolve_by_spatial",
+      "Asset.resolve_by_temporal",
+      "Asset.resolve_by_topic",
+      "Asset.set_spatial",
+      "Asset.temporal_span"
+    ],
+    "Scene": [
+      "Scene.add_camera",
+      "Scene.add_light",
+      "Scene.add_node",
+      "Scene.camera_frame_node",
+      "Scene.capture_frame",
+      "Scene.create",
+      "Scene.duplicate_node",
+      "Scene.ik_ccd",
+      "Scene.ik_look_at",
+      "Scene.lerp_camera",
+      "Scene.link_semantic",
+      "Scene.render",
+      "Scene.set_clear_colour",
+      "Scene.set_mesh",
+      "Scene.set_render_budget",
+      "Scene.set_transform",
+      "Scene.set_viewport",
+      "Scene.smooth_damp",
+      "Scene.smooth_damp_vec3"
+    ],
+    "HID": [
+      "HID.biosignal_poll",
+      "HID.clear",
+      "HID.gamepad_poll",
+      "HID.gamepad_vibrate",
+      "HID.haptic_pattern",
+      "HID.haptic_pulse",
+      "HID.midi_poll",
+      "HID.midi_send",
+      "HID.pointer_capture",
+      "HID.pointer_release",
+      "HID.poll",
+      "HID.set_cursor",
+      "HID.spatial_gaze_ray",
+      "HID.spatial_hand_skeleton",
+      "HID.spatial_head_pose",
+      "HID.wait"
+    ],
+    "Image": [
+      "Image.add_layer",
+      "Image.add_selection",
+      "Image.apply_filter",
+      "Image.brush",
+      "Image.clear_mask",
+      "Image.clear_selections",
+      "Image.composite",
+      "Image.fill",
+      "Image.new",
+      "Image.remove_layer",
+      "Image.set_blend_mode",
+      "Image.set_mask",
+      "Image.set_opacity",
+      "Image.set_pixel",
+      "Image.set_visible"
+    ],
+    "Dmx": [
+      "Dmx.add_fixture",
+      "Dmx.cue_set_channel",
+      "Dmx.cue_set_fade",
+      "Dmx.cue_stack_add",
+      "Dmx.cue_stack_go",
+      "Dmx.cue_stack_go_back",
+      "Dmx.cue_stack_reset",
+      "Dmx.fixture_set_colour",
+      "Dmx.fixture_set_intensity",
+      "Dmx.fixture_set_pan_tilt",
+      "Dmx.new_cue",
+      "Dmx.new_cue_stack",
+      "Dmx.new_universe",
+      "Dmx.set_channel"
+    ],
+    "Video": [
+      "Video.add_clip",
+      "Video.add_track",
+      "Video.add_transition",
+      "Video.colour_grade",
+      "Video.new_project",
+      "Video.remove_clip",
+      "Video.set_render_bitrate",
+      "Video.set_render_format",
+      "Video.set_speed",
+      "Video.trim_clip"
+    ],
+    "NLP": [
+      "NLP.coref_resolve",
+      "NLP.frame_extract",
+      "NLP.fst_lookup",
+      "NLP.gazetteer_build",
+      "NLP.graphrag_query",
+      "NLP.relation_extract",
+      "NLP.split_sentences",
+      "NLP.substrate_extract",
+      "NLP.tokenize"
+    ],
+    "Pulse": [
+      "Pulse.close_channel",
+      "Pulse.open_channel",
+      "Pulse.publish_graph_mutation",
+      "Pulse.publish_notification",
+      "Pulse.publish_sync",
+      "Pulse.publish_telemetry",
+      "Pulse.set_transport"
+    ],
+    "VectorCalculus": [
+      "VectorCalculus.curl",
+      "VectorCalculus.divergence",
+      "VectorCalculus.gradient",
+      "VectorCalculus.laplacian",
+      "VectorCalculus.line_integral_scalar",
+      "VectorCalculus.line_integral_work",
+      "VectorCalculus.surface_flux"
+    ],
+    "World": [
+      "World.add_avatar",
+      "World.add_object",
+      "World.add_portal",
+      "World.new",
+      "World.object_apply_force",
+      "World.object_step_physics",
+      "World.set_gravity"
+    ],
+    "Interpolation": [
+      "Interpolation.lagrange_eval",
+      "Interpolation.linear_interp",
+      "Interpolation.newton_coefficients",
+      "Interpolation.newton_eval",
+      "Interpolation.poly_eval",
+      "Interpolation.poly_fit"
+    ],
+    "Agent": [
+      "Agent.evaluate",
+      "Agent.execute",
+      "Agent.plan",
+      "Agent.trace",
+      "Agent.verify"
+    ],
+    "Capability": [
+      "Capability.audit",
+      "Capability.declare",
+      "Capability.grant",
+      "Capability.revoke",
+      "Capability.test_gating"
+    ],
+    "Inference": [
+      "Inference.constrained_decode",
+      "Inference.load_model",
+      "Inference.run_reranker",
+      "Inference.run_transformer",
+      "Inference.unload_model"
+    ],
+    "Spectral": [
+      "Spectral.blend",
+      "Spectral.emf_to_rgb",
+      "Spectral.emf_to_spd",
+      "Spectral.gamut_map",
+      "Spectral.spd_to_xyz"
+    ],
+    "SymbolicODE": [
+      "SymbolicODE.classify_second_order_pde",
+      "SymbolicODE.solve_first_order_linear_pde",
+      "SymbolicODE.solve_linear_first_order",
+      "SymbolicODE.solve_linear_second_order",
+      "SymbolicODE.solve_separable"
+    ],
+    "sampler": [
+      "sampler.configure",
+      "sampler.constrain_disable",
+      "sampler.constrain_enable",
+      "sampler.constrain_reset",
+      "sampler.sample"
+    ],
+    "Animation": [
+      "Animation.list_presets",
+      "Animation.sclerp_step",
+      "Animation.spring_step",
+      "Animation.squad_step"
+    ],
+    "ClinicalRisk": [
+      "ClinicalRisk.comorbidity",
+      "ClinicalRisk.contraindication",
+      "ClinicalRisk.drug_interaction",
+      "ClinicalRisk.fhir_observation"
+    ],
+    "HbbTV": [
+      "HbbTV.add_page",
+      "HbbTV.navigate",
+      "HbbTV.new_app",
+      "HbbTV.set_state"
+    ],
+    "Ode": [
+      "Ode.bdf",
+      "Ode.dopri5",
+      "Ode.rk4_integrate",
+      "Ode.symplectic_step"
+    ],
+    "Poet": [
+      "Poet.manifold_create",
+      "Poet.nested_link",
+      "Poet.participant_invite",
+      "Poet.subject_declare"
+    ],
+    "Social": [
+      "Social.degree_centrality",
+      "Social.gini",
+      "Social.lorenz",
+      "Social.lww"
+    ],
+    "CapabilityDiscovery": [
+      "CapabilityDiscovery.catalog",
+      "CapabilityDiscovery.coverage",
+      "CapabilityDiscovery.list"
+    ],
+    "ChatGraph": [
+      "ChatGraph.link_reply",
+      "ChatGraph.session_summary",
+      "ChatGraph.validate_fragment"
+    ],
+    "ComputationalGeometry": [
+      "ComputationalGeometry.average_spacing_3d",
+      "ComputationalGeometry.local_density_3d",
+      "ComputationalGeometry.mean_knn_distance_3d"
+    ],
+    "ComputerVision": [
+      "ComputerVision.ahash",
+      "ComputerVision.canny_edges",
+      "ComputerVision.sobel_magnitude"
+    ],
+    "Econ": [
+      "Econ.aggregate_wealth",
+      "Econ.cumulative_wealth",
+      "Econ.narrative_divergence"
+    ],
+    "Finance": [
+      "Finance.convert_currency",
+      "Finance.ledger_balance",
+      "Finance.multisig_check"
+    ],
+    "FinancialModeling": [
+      "FinancialModeling.black_scholes",
+      "FinancialModeling.gbm_var",
+      "FinancialModeling.portfolio_risk"
+    ],
+    "GraphMatch": [
+      "GraphMatch.approximate_match",
+      "GraphMatch.fuzzy_dice",
+      "GraphMatch.fuzzy_jaccard"
+    ],
+    "GraphReasoning": [
+      "GraphReasoning.shortest_path",
+      "GraphReasoning.spreading_activation",
+      "GraphReasoning.top_k"
+    ],
+    "Manifold": [
+      "Manifold.axes",
+      "Manifold.distance",
+      "Manifold.project"
+    ],
+    "Medical": [
+      "Medical.analyze_intensity_grid",
+      "Medical.structural_fingerprint",
+      "Medical.tanimoto"
+    ],
+    "Optimization": [
+      "Optimization.artificial_bee_colony",
+      "Optimization.hill_climb",
+      "Optimization.simulated_annealing"
+    ],
+    "Portal": [
+      "Portal.activate",
+      "Portal.deactivate",
+      "Portal.set_target"
+    ],
+    "QuantumAndCryptographic": [
+      "QuantumAndCryptographic.blake3",
+      "QuantumAndCryptographic.sha256",
+      "QuantumAndCryptographic.sha512"
+    ],
+    "TemporalAndDescriptionLogic": [
+      "TemporalAndDescriptionLogic.ltl.finally",
+      "TemporalAndDescriptionLogic.ltl.globally",
+      "TemporalAndDescriptionLogic.subsumption"
+    ],
+    "agent": [
+      "agent.dag.execute",
+      "agent.dag.status",
+      "agent.dag.validate"
+    ],
+    "Avatar": [
+      "Avatar.move",
+      "Avatar.set_appearance"
+    ],
+    "Bioinformatics": [
+      "Bioinformatics.align",
+      "Bioinformatics.compute"
+    ],
+    "Calculus": [
+      "Calculus.discrete_maximum_principle_holds",
+      "Calculus.solve_poisson_dirichlet"
+    ],
+    "Corpus": [
+      "Corpus.load",
+      "Corpus.parse"
+    ],
+    "EngineeringAnalysis": [
+      "EngineeringAnalysis.analyze_conduction",
+      "EngineeringAnalysis.fem_static"
+    ],
+    "Forensic": [
+      "Forensic.malfeasance_delta",
+      "Forensic.narrative_divergence"
+    ],
+    "GraphDatabase": [
+      "GraphDatabase.lexicon_manifest",
+      "GraphDatabase.stats"
+    ],
+    "Interactive": [
+      "Interactive.add_social_post",
+      "Interactive.add_trigger"
+    ],
+    "MedicalComputing": [
+      "MedicalComputing.analyze_differential",
+      "MedicalComputing.screen_compounds"
+    ],
+    "Net": [
+      "Net.peer_hash",
+      "Net.sonic_pack"
+    ],
+    "OrganicChemistry": [
+      "OrganicChemistry.compute",
+      "OrganicChemistry.validate_smiles"
+    ],
+    "Sheet": [
+      "Sheet.stats",
+      "Sheet.sum_range"
+    ],
+    "biosignal": [
+      "biosignal.dp_config",
+      "biosignal.dp_filter"
+    ],
+    "AdvancedLogic": [
+      "AdvancedLogic.compute"
+    ],
+    "Agency": [
+      "Agency.evaluate"
+    ],
+    "CalculusWorkbench": [
+      "CalculusWorkbench.compute"
+    ],
+    "CausalFuzzyAndControl": [
+      "CausalFuzzyAndControl.t_norm"
+    ],
+    "Chemistry": [
+      "Chemistry.parse_bse_json"
+    ],
+    "ContractsIdentityAndConsensus": [
+      "ContractsIdentityAndConsensus.parse_did_q42"
+    ],
+    "CooperativeWork": [
+      "CooperativeWork.board_project"
+    ],
+    "FormalLogic": [
+      "FormalLogic.compute"
+    ],
+    "GovernanceLogic": [
+      "GovernanceLogic.compute"
+    ],
+    "InfraExtLogic": [
+      "InfraExtLogic.compute"
+    ],
+    "InfraLogic": [
+      "InfraLogic.compute"
+    ],
+    "LegalLogic": [
+      "LegalLogic.compute"
+    ],
+    "LinearAlgebra": [
+      "LinearAlgebra.gemm"
+    ],
+    "MedicalImaging": [
+      "MedicalImaging.hu_window"
+    ],
+    "NumericalCalculus": [
+      "NumericalCalculus.simpson"
+    ],
+    "OntologyAlignment": [
+      "OntologyAlignment.align"
+    ],
+    "PhysicalUnits": [
+      "PhysicalUnits.convert"
+    ],
+    "PhysicsAndODE": [
+      "PhysicsAndODE.projectile"
+    ],
+    "PhysicsWorkbench": [
+      "PhysicsWorkbench.compute"
+    ],
+    "PolynomialAlgebra": [
+      "PolynomialAlgebra.coeffs"
+    ],
+    "Privacy": [
+      "Privacy.gaussian_sigma"
+    ],
+    "SHACL": [
+      "SHACL.extensions"
+    ],
+    "SecondScreen": [
+      "SecondScreen.sync"
+    ],
+    "Sentinel": [
+      "Sentinel.gate"
+    ],
+    "SpatialLogic": [
+      "SpatialLogic.compute"
+    ],
+    "SpecialFunctionsAndTransforms": [
+      "SpecialFunctionsAndTransforms.bessel_j"
+    ],
+    "SymbolicAndDefeasibleLogic": [
+      "SymbolicAndDefeasibleLogic.asp"
+    ],
+    "hash": [
+      "hash.iri"
+    ]
+  },
+  "poet_live_count": 623,
+  "poet_stale": [],
+  "crates_scanned": [
+    "poet",
+    "poet-cli",
+    "qualia-audio",
+    "qualia-cli",
+    "qualia-client-core",
+    "qualia-cooperative-core",
+    "qualia-core-db",
+    "qualia-extensions",
+    "qualia-inference-kernel",
+    "qualia-mobile-harness",
+    "qualia-q-forge",
+    "qualia-semantic-library",
+    "qualia-solid-bridge",
+    "qualia-vision",
+    "vibe",
+    "vibe-lsp",
+    "vibe-wasm",
+    "webizen-component-harvester",
+    "webizen-desktop",
+    "webizen-lite-wasm",
+    "webizen-render",
+    "webizen-runtime",
+    "webizen-studio",
+    "webizen-web",
+    "wellfare-core"
+  ],
+  "method_index_size": 1011,
+  "q1_host_missing_total": 12074,
+  "methodology": "docs/work-in-progress/VIBE_INCORPORATION_METHODOLOGY_2026-09-06.md"
+}

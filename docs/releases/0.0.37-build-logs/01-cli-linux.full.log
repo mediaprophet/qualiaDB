@@ -1,0 +1,13 @@
+===== START 01-cli-linux  2026-09-08T13:33:16Z =====
+CMD: cargo build --release -p qualia-cli
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+   Compiling qualia-solid-bridge v0.0.37 (/workspace/crates/qualia-solid-bridge)
+   Compiling qualia-vision v0.0.37 (/workspace/crates/qualia-vision)
+   Compiling webizen-render v0.0.37 (/workspace/crates/webizen-render)
+   Compiling qualia-client-core v0.0.37 (/workspace/crates/qualia-client-core)
+   Compiling qualia-cli v0.0.37 (/workspace/crates/qualia-cli)
+    Finished `release` profile [optimized] target(s) in 3m 37s
+===== END 01-cli-linux  rc=0  elapsed=218s  2026-09-08T13:36:54Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

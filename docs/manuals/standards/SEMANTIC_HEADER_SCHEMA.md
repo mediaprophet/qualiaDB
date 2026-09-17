@@ -1,6 +1,6 @@
 # Semantic Header Schema
 **Version:** 1.0.0
-**Target Environment:** QualiaDB `0.0.28` _(draft — not a conformance claim; portions are proposed, not yet shipped)_
+**Target Environment:** QualiaDB `0.0.33` _(draft — not a conformance claim; portions are proposed, not yet shipped)_
 
 ## 1. Overview
 The Semantic Header is a mandatory block of N3/Turtle code prepended to every Agent Intent JSONL log. It explicitly binds the unstructured conversation log to the rigid 48-byte nquin graph, enabling the `n3logic.rs` AOT compiler to dynamically enforce execution constraints (epistemic, temporal, defeasible, and deontic) prior to graph entry.

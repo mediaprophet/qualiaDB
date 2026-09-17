@@ -1,0 +1,8 @@
+===== START 10-p64-converter  2026-09-08T13:42:16Z =====
+CMD: cargo build --release -p qualia-core-db --example build_p64_release
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+    Finished `release` profile [optimized] target(s) in 2m 26s
+===== END 10-p64-converter  rc=0  elapsed=147s  2026-09-08T13:44:43Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

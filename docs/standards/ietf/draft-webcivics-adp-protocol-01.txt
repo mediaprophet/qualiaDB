@@ -1,0 +1,546 @@
+Internet Engineering Task Force (IETF)                     Timothy Holborn
+Internet-Draft                                            WebCivics
+Intended status: Standards Track                           July 10, 2025
+Expires: January 11, 2026
+
+                      Agent Discovery Protocol (ADP)
+                   draft-webcivics-adp-protocol-01
+
+Abstract
+
+   The Agent Discovery Protocol (ADP) enables clients to discover services
+   and metadata associated with a domain or subdomain acting as an agent.
+   ADP uses HTTP and RDF to provide machine-readable descriptions,
+   leveraging W3C standards such as WebID, Solid, and RDF for
+   decentralized, user-centric web ecosystems. This document specifies the
+   protocol elements, including discovery endpoints, file formats,
+   mandatory and optional fields, verification mechanisms, and API-like
+   query capabilities. ADP supports various agent types (e.g., natural
+   persons, organizations, AI agents, humanitarian services, content
+   providers) and integrates with DNS-based verification and Verifiable
+   Credentials for trust and authenticity. The WebCard Utility is an
+   example implementation of ADP.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering Task
+   Force (IETF). Note that other groups may also distribute working
+   documents as Internet-Drafts. The list of current Internet-Drafts is at
+   https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time. It is inappropriate to use Internet-Drafts as reference material
+   or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on January 11, 2026.
+
+Copyright Notice
+
+   Copyright (c) 2025 IETF Trust and the persons identified as the
+   document authors. All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document. Please review these documents carefully,
+   as they describe your rights and restrictions with respect to this
+   document.
+
+Table of Contents
+
+   1. Introduction
+      1.1. Scope
+      1.2. Use Cases
+   2. Terminology
+   3. Protocol Overview
+      3.1. Discovery Endpoint
+      3.2. File Formats
+      3.3. Mandatory Fields
+      3.4. Optional Fields
+      3.5. API Query Mechanism
+      3.6. Verification Mechanisms
+   4. Ontology Definition
+      4.1. Namespace
+      4.2. Classes
+      4.3. Properties
+      4.4. SHACL Constraints
+   5. Security Considerations
+   6. Privacy Considerations
+   7. IANA Considerations
+      7.1. Well-Known URI Registration
+      7.2. Media Type Registration
+   8. Examples
+      8.1. Natural Person
+      8.2. Organization
+      8.3. AI Agent
+      8.4. Humanitarian Service
+      8.5. Adult Content Website
+   9. References
+      9.1. Normative References
+      9.2. Informative References
+   Appendix A. Example Implementation
+   Appendix B. Test Vectors
+   Acknowledgements
+   Author's Address
+
+1. Introduction
+
+   The Agent Discovery Protocol (ADP) enables clients to discover metadata
+   and services associated with an agent, identified by a domain or
+   subdomain. Agents may represent natural persons, organizations, AI
+   services, humanitarian services, or content providers. ADP provides a
+   standardized mechanism to retrieve machine-readable metadata using HTTP
+   and RDF, building on W3C standards such as WebID, RDF, Solid, and OWL.
+   It supports decentralized, user-centric web applications by facilitating
+   agent identification, service discovery, and metadata verification.
+
+   Unlike robots.txt or sitemap.xml, which focus on web crawling, ADP
+   leverages RDF for rich, structured metadata. It supports integration
+   with Solid PODs, Verifiable Credentials, and DNS-based verification to
+   enhance trust and interoperability. The protocol is extensible through
+   ontologies (e.g., FOAF, Schema.org) and supports various agent types,
+   including classifications for humanitarian services and age-appropriate
+   content. The WebCard Utility (https://webcivics.github.io/Webcard) is
+   an example implementation of ADP, providing a user interface for
+   creating and viewing ADP profiles.
+
+1.1. Scope
+
+   This document defines:
+   - The discovery endpoint (`/.well-known/adp`) and file formats (Turtle,
+     JSON-LD).
+   - Mandatory and optional metadata fields for agent description.
+   - API-like query mechanisms for retrieving specific fields or eCash
+     addresses.
+   - Verification mechanisms (DNS-based, Verifiable Credentials).
+   - The ADP ontology (classes, properties, SHACL constraints).
+   - Security and privacy considerations for implementations.
+
+   ADP focuses on metadata structure and discovery, not the underlying
+   services (e.g., APIs, data stores).
+
+1.2. Use Cases
+
+   - Personal Data Management: Discover a user’s Solid POD for data access.
+   - Service Discovery: Retrieve an organization’s SPARQL or API endpoints.
+   - Human Agency Verification: Validate an agent’s WebID or credentials.
+   - AI Applications: Query metadata for AI agent capabilities.
+   - Humanitarian Services: Identify essential services for emergency access.
+   - Content Filtering: Flag adult content websites for age restrictions.
+
+2. Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in BCP 14 [RFC2119]
+   [RFC8174] when, and only when, they appear in all capitals.
+
+   - Agent: An entity (e.g., person, organization, service) identified by
+     a URI, typically a domain or subdomain.
+   - Principal Agent: The primary entity delegating tasks to an agent,
+     typically a natural person or organization.
+   - Natural Agent: A natural person, as opposed to an artificial or legal
+     entity.
+   - Guardianship Agent: A legal guardian acting on behalf of a ward (e.g.,
+     a minor).
+   - Service: A resource (e.g., API, data store) associated with an agent.
+   - Metadata: Descriptive information about an agent or service.
+   - WebID: A URI identifying an agent, per [WebID].
+   - Solid POD: A personal data store, per [Solid].
+   - ADP File: A Turtle or JSON-LD file containing agent metadata, located
+     at `/.well-known/adp`.
+
+3. Protocol Overview
+
+3.1. Discovery Endpoint
+
+   Agents MUST provide a discovery endpoint at
+   `https://<domain>/.well-known/adp`, as defined in [RFC8615]. This
+   endpoint returns RDF metadata describing the agent, its services, and
+   related resources.
+
+3.2. File Formats
+
+   ADP files MUST support Turtle (`text/turtle`) and JSON-LD
+   (`application/ld+json`) serializations, per [RFC3870] and [RFC6839].
+   Implementations MAY support additional formats, such as N3. The file
+   MUST be encoded in UTF-8.
+
+3.3. Mandatory Fields
+
+   ADP files MUST include:
+   - `schema:domain`: The domain or subdomain the ADP file describes
+     (e.g., "example.com").
+   - `rdf:type`: The agent type, using controlled vocabularies:
+     - `foaf:Person` for natural persons.
+     - `schema:Organization` for organizations.
+     - `adp:AIAgent` for AI services.
+     - `adp:EssentialService` for humanitarian services.
+     - `adp:ContentProvider` for content providers (e.g., adult websites).
+
+3.4. Optional Fields
+
+   ADP files MAY include:
+   - Agent Identification: `foaf:name`, `adp:hasWebID`, `foaf:mbox`.
+   - Service Descriptions: `adp:hasService`, `adp:sparqlEndpoint`,
+     `adp:serviceEndpoint`, `adp:hasSolidPod`.
+   - Classifications: `schema:isAdultOriented`, `adp:contentRating`
+     (e.g., "PG-13", "MA15+").
+   - Access Control: `adp:accessControlPolicy`.
+   - Verifiable Credentials: `adp:verifiableCredentials`.
+   - Social Accounts: `adp:hasTwitterAccount`, `adp:hasLinkedinAccount`,
+     `adp:hasGithubAccount`, `adp:hasEcashAccount`.
+
+3.5. API Query Mechanism
+
+   Clients MAY query specific fields or eCash addresses using URL
+   parameters at the ADP endpoint or an implementation’s root URL
+   (e.g., `https://webcivics.github.io/Webcard/`).
+
+   - **Field Query**:
+     - Endpoint: `/?domain=<domain>&field=<prefix:property>[&format=<json|turtle>]`
+     - Example: `GET /?domain=sailingdigital.com&field=foaf:name`
+     - Response (JSON): `{"foaf:name":"Timothy Holborn"}`
+     - Response (Turtle): `<#this> foaf:name "Timothy Holborn" .`
+   - **eCash Query**:
+     - Endpoint: `/?domain=<domain>&ecash`
+     - Example: `GET /?domain=sailingdigital.com&ecash`
+     - Response: `{"eCashAddress":"ecash:q..."}`
+
+3.6. Verification Mechanisms
+
+   ADP supports multiple verification methods to ensure trust and
+   authenticity.
+
+   - **DNS-Based Verification**:
+     - A DNS TXT record at `_adp.<domain>` MUST contain an RDF snippet,
+       e.g., `"adp:signer <https://ipfs.io/ipfs/Qm...#this>"`.
+     - Clients verify the ADP file by checking the DNS record and
+       optionally validating signatures or hashes.
+   - **Verifiable Credentials**:
+     - ADP files MAY include `adp:verifiableCredentials` linking to
+       Verifiable Credentials (VCs) per [VC-DATA].
+     - Clients verify VCs using issuer trust anchors.
+   - **Other Methods**: Future methods (e.g., DANE) MAY be supported.
+
+4. Ontology Definition
+
+4.1. Namespace
+
+   The ADP namespace is `https://webcivics.github.io/adp/ontdev/adp#`.
+   Prefixes used:
+   ```
+   @prefix adp: <https://webcivics.github.io/adp/ontdev/adp#> .
+   @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+   @prefix owl: <http://www.w3.org/2002/07/owl#> .
+   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+   @prefix schema: <https://schema.org/> .
+   @prefix sh: <http://www.w3.org/ns/shacl#> .
+   ```
+
+4.2. Classes
+
+   - `adp:Agent`: An entity (person, organization, service).
+     - Subclasses: `adp:PersonAgent`, `adp:OrganizationAgent`,
+       `adp:AutomatedAgent`, `adp:EssentialService`, `adp:ContentProvider`.
+   - `adp:Service`: A resource provided by an agent (e.g., API, data store).
+   - `adp:Metadata`: Descriptive information about an agent or service.
+   - `adp:SolidPod`: A personal data store, per [Solid].
+
+4.3. Properties
+
+   - `adp:hasService`: Links an agent to a service.
+     - Domain: `adp:Agent`, Range: `adp:Service`.
+   - `adp:hasMetadata`: Associates metadata with an agent or service.
+     - Domain: `adp:Agent` or `adp:Service`, Range: `adp:Metadata`.
+   - `adp:webid`: Links an agent to its WebID.
+     - Domain: `adp:Agent`, Range: `foaf:Agent`.
+   - `adp:hasSolidPod`: Links an agent to its Solid POD.
+     - Domain: `adp:Agent`, Range: `adp:SolidPod`.
+   - `adp:metadataType`: Specifies metadata type (e.g., "profile").
+     - Domain: `adp:Metadata`, Range: `rdfs:Literal`.
+   - `adp:sparqlEndpoint`, `adp:serviceEndpoint`, `adp:hasTwitterAccount`,
+     `adp:hasLinkedinAccount`, `adp:hasGithubAccount`, `adp:hasEcashAccount`.
+
+4.4. SHACL Constraints
+
+   ```
+   adp:AgentShape a sh:NodeShape ;
+     sh:targetClass adp:Agent ;
+     sh:property [
+       sh:path adp:webid ;
+       sh:minCount 1 ;
+       sh:maxCount 1 ;
+       sh:nodeKind sh:IRI ;
+     ] ;
+     sh:property [
+       sh:path adp:hasMetadata ;
+       sh:minCount 1 ;
+     ] .
+   adp:ServiceShape a sh:NodeShape ;
+     sh:targetClass adp:Service ;
+     sh:property [
+       sh:path adp:hasMetadata ;
+       sh:minCount 1 ;
+     ] .
+   ```
+
+5. Security Considerations
+
+   Implementations MUST:
+   - Use HTTPS with TLS 1.3 [RFC8446] for all endpoints.
+   - Validate WebID URIs and DNS TXT records to prevent spoofing.
+   - Support DNSSEC [RFC4033] for secure domain resolution.
+   - Limit ADP file sizes to mitigate denial-of-service attacks.
+   - Avoid including sensitive data (e.g., private keys) in ADP files.
+   - Use access controls for Solid PODs, per [Solid].
+
+   Clients MUST verify server certificates and handle authentication
+   failures securely. See Section 6 for privacy considerations.
+
+6. Privacy Considerations
+
+   ADP files are publicly accessible, so implementers MUST:
+   - Minimize personally identifiable information (PII).
+   - Use selective disclosure with Verifiable Credentials when supported.
+   - Store sensitive data in secure locations, referenced indirectly.
+   - Be transparent about data collection and usage.
+   - Comply with data protection regulations (e.g., GDPR).
+
+   Aggregators MAY combine ADP data, posing profiling risks. Agents SHOULD
+   use pseudonymization or limit metadata to mitigate this.
+
+7. IANA Considerations
+
+7.1. Well-Known URI Registration
+
+   This document registers the `adp` well-known URI in the "Well-Known
+   URIs" registry, per [RFC8615].
+
+   URI suffix: adp
+   Change controller: IETF
+   Specification document: This document
+   Related information: None
+
+7.2. Media Type Registration
+
+   This document uses existing media types:
+   - `text/turtle` [RFC3870]
+   - `application/ld+json` [RFC6839]
+
+   No new media types are registered.
+
+8. Examples
+
+8.1. Natural Person
+
+   Turtle:
+   ```
+   @prefix adp: <https://webcivics.github.io/adp/ontdev/adp#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+   @prefix schema: <https://schema.org/> .
+   <#this>
+       a adp:Agent , schema:Person ;
+       schema:domain "sailingdigital.com" ;
+       foaf:name "Timothy Holborn" ;
+       adp:hasWebID <https://ubiquitous.solidcommunity.net/profile/card#me> ;
+       adp:hasTwitterAccount "SailingDigital" ;
+       adp:hasLinkedinAccount "ubiquitous" ;
+       adp:hasGithubAccount "timothy-holborn" .
+   ```
+
+8.2. Organization
+
+   Turtle:
+   ```
+   @prefix adp: <https://webcivics.github.io/adp/ontdev/adp#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+   @prefix schema: <https://schema.org/> .
+   <#this>
+       a adp:Agent , schema:Organization ;
+       schema:domain "example.com" ;
+       foaf:name "Example Corp" ;
+       schema:url <https://example.com> ;
+       adp:sparqlEndpoint <https://example.com/sparql> .
+   ```
+
+8.3. AI Agent
+
+   Turtle:
+   ```
+   @prefix adp: <https://webcivics.github.io/adp/ontdev/adp#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+   @prefix schema: <https://schema.org/> .
+   <#this>
+       a adp:Agent , adp:AIAgent ;
+       schema:domain "ai-service.com" ;
+       foaf:name "AI Assistant" ;
+       adp:serviceEndpoint <https://ai-service.com/api> ;
+       schema:provider "Example Corp" .
+   ```
+
+8.4. Humanitarian Service
+
+   Turtle:
+   ```
+   @prefix adp: <https://webcivics.github.io/adp/ontdev/adp#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+   @prefix schema: <https://schema.org/> .
+   <#this>
+       a adp:Agent , adp:EssentialService ;
+       schema:domain "humanitarian-aid.org" ;
+       foaf:name "Global Aid Org" ;
+       schema:description "Emergency relief organization" .
+   ```
+
+8.5. Adult Content Website
+
+   Turtle:
+   ```
+   @prefix adp: <https://webcivics.github.io/adp/ontdev/adp#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+   @prefix schema: <https://schema.org/> .
+   <#this>
+       a adp:Agent , adp:ContentProvider ;
+       schema:domain "media-site.com" ;
+       foaf:name "Adult Content Site" ;
+       schema:isAdultOriented "true" .
+   ```
+
+9. References
+
+9.1. Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC3870]  Swartz, A., "Resource Description Framework (RDF) Turtle",
+              <https://www.w3.org/TR/turtle/>.
+
+   [RFC6839]  Hansen, T. and A. Melnikov, "Additional Media Type Structured
+              Syntax Suffixes", RFC 6839, DOI 10.17487/RFC6839,
+              January 2013, <https://www.rfc-editor.org/info/rfc6839>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119
+              Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8446]  Rescorla, E., "The Transport Layer Security (TLS) Protocol
+              Version 1.3", RFC 8446, DOI 10.17487/RFC8446, August 2018,
+              <https://www.rfc-editor.org/info/rfc8446>.
+
+   [RFC8615]  Nottingham, M., "Well-Known Uniform Resource Identifiers
+              (URIs)", RFC 8615, DOI 10.17487/RFC8615, May 2019,
+              <https://www.rfc-editor.org/info/rfc8615>.
+
+   [WebID]    W3C, "WebID 1.0", <https://www.w3.org/2005/Incubator/webid/spec/>.
+
+   [VC-DATA]  Sporny, M., et al., "Verifiable Credentials Data Model",
+              <https://www.w3.org/TR/vc-data-model/>.
+
+9.2. Informative References
+
+   [RFC4033]  Arends, R., et al., "DNS Security Introduction and
+              Requirements", RFC 4033, DOI 10.17487/RFC4033, May 2005,
+              <https://www.rfc-editor.org/info/rfc4033>.
+
+   [Solid]    Solid Community, "Solid Protocol",
+              <https://solidproject.org/TR/protocol>.
+
+   [Schema.org] Schema.org, <https://schema.org/>.
+
+Appendix A. Example Implementation
+
+   The WebCard Utility (https://webcivics.github.io/Webcard) is a React-based
+   implementation of ADP, providing a user interface for creating and viewing
+   ADP profiles. Source code is available at
+   https://github.com/WebCivics/Webcard.
+
+   Pseudocode for a server implementing the ADP endpoint:
+   ```
+   const http = require('https');
+   const rdf = require('rdf-lib');
+   const server = http.createServer((req, res) => {
+      if (req.url === '/.well-known/adp' && req.method === 'GET') {
+         if (req.headers.accept.includes('text/turtle')) {
+            res.writeHead(200, {'Content-Type': 'text/turtle'});
+            const graph = rdf.createGraph();
+            graph.add('<https://sailingdigital.com>', 'a', 'adp:Agent');
+            graph.add('<https://sailingdigital.com>', 'foaf:name', '"Timothy Holborn"');
+            graph.add('<https://sailingdigital.com>', 'adp:hasWebID',
+                      '<https://ubiquitous.solidcommunity.net/profile/card#me>');
+            res.end(graph.serialize('text/turtle'));
+         } else {
+            res.writeHead(406);
+            res.end();
+         }
+      } else if (req.url.startsWith('/?domain=')) {
+         const params = new URLSearchParams(req.url.split('?')[1]);
+         const domain = params.get('domain');
+         const field = params.get('field');
+         if (field && req.headers.accept.includes('application/json')) {
+            res.writeHead(200, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify({[field]: getFieldValue(domain, field)}));
+         }
+      } else {
+         res.writeHead(404);
+         res.end();
+      }
+   });
+   server.listen(443);
+   ```
+
+Appendix B. Test Vectors
+
+   Test Case 1: Successful Discovery
+   Request:
+   ```
+   GET /.well-known/adp HTTP/1.1
+   Host: sailingdigital.com
+   Accept: text/turtle
+   ```
+   Response:
+   ```
+   HTTP/1.1 200 OK
+   Content-Type: text/turtle
+   @prefix adp: <https://webcivics.github.io/adp/ontdev/adp#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+   <#this> a adp:Agent ;
+      foaf:name "Timothy Holborn" ;
+      adp:hasWebID <https://ubiquitous.solidcommunity.net/profile/card#me> .
+   ```
+
+   Test Case 2: API Field Query
+   Request:
+   ```
+   GET /?domain=sailingdigital.com&field=foaf:name HTTP/1.1
+   Host: webcivics.github.io
+   Accept: application/json
+   ```
+   Response:
+   ```
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+   {"foaf:name":"Timothy Holborn"}
+   ```
+
+Acknowledgements
+
+   The author thanks the W3C Semantic Web Interest Group, W3C Human Centric
+   AI Community Group, Solid Community, and IETF HTTP Working Group for
+   their contributions and feedback. Development was assisted by xAI Grok 3
+   and Google Gemini 2.5 Pro.
+
+Author's Address
+
+   Timothy Holborn
+   WebCivics
+   Email: timothy.holborn@gmail.com
+   URI: https://sailingdigital.com

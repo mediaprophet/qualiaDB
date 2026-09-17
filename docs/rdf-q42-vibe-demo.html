@@ -1,0 +1,154 @@
+---
+layout: qualia
+title: RDF to Q42 to Vibe
+---
+
+<style>
+  .proof-hero { padding: 2.5rem; border: 1px solid rgba(34,211,238,.30); border-radius: 1.5rem; background: radial-gradient(circle at 85% 15%, rgba(34,211,238,.18), transparent 32%), linear-gradient(135deg, rgba(8,47,73,.48), rgba(15,23,42,.72)); }
+  .proof-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .proof-card { background: rgba(15,23,42,.65); border: 1px solid rgba(148,163,184,.16); padding: 1.25rem; border-radius: 1rem; }
+  .proof-number { display:inline-flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:999px; background:rgba(34,211,238,.16); color:#67e8f9; font-weight:700; margin-bottom:.75rem; }
+  .proof-card h3 { margin:.1rem 0 .55rem; color:#e2e8f0; }
+  .proof-card p { margin:0; color:#94a3b8; line-height:1.55; }
+  .proof-terminal { background:#070b12; border:1px solid rgba(34,211,238,.22); border-radius:1rem; padding:1rem 1.2rem; overflow:auto; color:#cbd5e1; line-height:1.55; }
+  .proof-terminal .prompt { color:#67e8f9; }
+  .proof-terminal .ok { color:#86efac; }
+  .proof-route { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.75rem; margin:1rem 0 1.5rem; }
+  .route { border-left:3px solid #22d3ee; background:rgba(15,23,42,.6); padding:1rem; border-radius:0 .75rem .75rem 0; }
+  .route h3 { margin:0 0 .35rem; color:#e2e8f0; font-size:1rem; }
+  .route p { margin:0; color:#94a3b8; font-size:.9rem; line-height:1.5; }
+  #bridge-output { min-height:4rem; white-space:pre-wrap; word-break:break-word; }
+</style>
+
+<section class="proof-hero">
+  <div class="text-cyan-300 uppercase tracking-widest text-xs font-semibold mb-3">A real boundary, not a mock pipeline</div>
+  <h1 class="text-4xl sm:text-5xl font-bold text-white mb-4">One RDF source.<br>Three accountable execution surfaces.</h1>
+  <p class="text-slate-300 text-lg max-w-3xl">Start with no install: this page loads a committed Q42 volume and runs a real query engine in your browser's WASM sandbox. Native persistence is an optional, explicit next step—not a prerequisite for exploring the system.</p>
+  <div class="flex flex-wrap gap-3 mt-7">
+    <a class="px-4 py-2 rounded-xl bg-cyan-400 text-slate-950 font-semibold hover:bg-cyan-300" href="#browser-demo">Run the browser demo</a>
+    <a class="px-4 py-2 rounded-xl border border-white/20 text-slate-100 hover:bg-white/5" href="vibe/playground.html">Open Vibe playground</a>
+  </div>
+</section>
+
+<section id="browser-demo" class="mt-10">
+  <h2>Run Q42 in this browser — no install</h2>
+  <p>This fetches the committed Schema.org Q42 volume, flattens its real Quin records, and calls the browser WASM query engine. It does not contact a daemon and does not send data off this page.</p>
+  <div class="proof-grid">
+    <div class="proof-card" style="grid-column:span 2;">
+      <label for="browser-query" class="text-sm text-slate-300 font-semibold block mb-2">SPARQL triple pattern</label>
+      <textarea id="browser-query" rows="4" class="w-full rounded-xl bg-slate-950/80 border border-slate-700 p-3 font-mono text-sm text-slate-100">SELECT ?s ?p ?o WHERE { ?s ?p ?o }</textarea>
+      <div class="flex flex-wrap items-center gap-3 mt-3">
+        <button id="run-browser-query" type="button" class="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/30 font-semibold">Load Q42 + run in WASM</button>
+        <span id="browser-metrics" class="text-sm text-slate-400">Awaiting a browser-only run.</span>
+      </div>
+    </div>
+    <div class="proof-card"><div class="proof-number">W</div><h3>Browser WASM</h3><p>Runs the shipped query kernel locally after the Q42 volume has loaded.</p></div>
+  </div>
+  <pre id="browser-output" class="proof-terminal" aria-live="polite">Choose “Load Q42 + run in WASM” to begin. The first run downloads the demonstration data volume.</pre>
+</section>
+
+<section class="mt-10">
+  <h2>The proof trail</h2>
+  <div class="proof-grid">
+    <article class="proof-card"><div class="proof-number">1</div><h3>Explore in browser</h3><p>The standalone WASM route is fully local: it reads an immutable Q42 demonstration volume and evaluates supported logic/query operations.</p></article>
+    <article class="proof-card"><div class="proof-number">2</div><h3>Make a volume when ready</h3><p>Later, the CLI streams your own RDF into Q42 with an optional durable job. That native step creates a local artifact; it is not required for the demo above.</p></article>
+    <article class="proof-card"><div class="proof-number">3</div><h3>Escalate authority explicitly</h3><p>A paired native daemon is only for persistent graph and model operations. The browser reports that need rather than simulating it.</p></article>
+  </div>
+</section>
+
+<section>
+  <h2>When you are ready: create your own durable Q42 volume</h2>
+  <p>The local CLI makes progress observable and gives long imports a restartable identity. This is how a local dataset becomes a persistent artifact; the browser demo above deliberately does not pretend it has written to your machine.</p>
+  <pre class="proof-terminal"><code><span class="prompt">&gt;</span> qualia-cli import ./data/clinic.n3 ./data/clinic.q42 --job-dir ./jobs/clinic --progress json
+<span class="ok">{"event":"source_detected","format":"n3"}</span>
+<span class="ok">{"event":"checkpoint_written"}</span>
+<span class="ok">{"event":"complete","output":"./data/clinic.q42"}</span>
+
+<span class="prompt">&gt;</span> qualia-cli ingest-job status ./jobs/clinic
+<span class="prompt">&gt;</span> qualia-cli q42 verify ./data/clinic.q42 --level full
+<span class="prompt">&gt;</span> qualia-cli verify-graph --input ./data/clinic.n3 --dataset ./data/clinic.q42 --memory-mib 32 --temp-gib 24</code></pre>
+  <p class="text-sm text-slate-400 mt-3">The output above illustrates the command sequence and event shape; use the CLI's emitted values as the authoritative result for your dataset.</p>
+</section>
+
+<section class="mt-10">
+  <h2>Carry the semantic model into Vibe</h2>
+  <p>Vibe makes the difference between a standalone value calculation and a persistent graph operation visible in the program's host capability. A Vibe workspace targeted at standalone WASM flags native-only operations before it runs them.</p>
+  <pre class="proof-terminal"><code><span class="prompt">// Pure, exact in standalone WASM</span>
+using Math;
+pure fn dosage_window(weight: f64) -&gt; f64 {
+  return Math.min(weight * 2.0, 100.0);
+}
+
+<span class="prompt">// Persistent graph operation: requires a paired native daemon</span>
+using GraphDatabase;
+fn find_protocols() -&gt; Record {
+  return GraphDatabase.sparql("SELECT ?protocol WHERE { ?protocol a &lt;https://example.org/Protocol&gt; . }");
+}
+
+<span class="ok">// wasm-standalone diagnostic: QDB0402 — GraphDatabase.sparql requires QualiaDB native engine</span></code></pre>
+</section>
+
+<section class="mt-10">
+  <h2>Optional: inspect a paired local host</h2>
+  <div class="proof-route">
+    <div class="route"><h3>Standalone WASM</h3><p>Pure math, RDF construction, and declared local operations run in the loaded module.</p></div>
+    <div class="route"><h3>Standalone snapshot</h3><p>Graph reads and writes refer to an isolated browser snapshot—not a persistent native transaction.</p></div>
+    <div class="route"><h3>Native bridge</h3><p>SPARQL and model operations need a paired local daemon. Without one they are unavailable, not silently approximated.</p></div>
+  </div>
+  <button id="probe-bridge" type="button" class="px-4 py-2 rounded-xl bg-cyan-500/15 border border-cyan-300/40 text-cyan-100 hover:bg-cyan-500/25 font-semibold">Probe paired local daemon (optional)</button>
+  <pre id="bridge-output" class="proof-terminal mt-4" aria-live="polite">This probe runs only after you choose it. It asks a development daemon for its public capability negotiation document; it never sends a token or a graph update.</pre>
+  <p class="text-sm text-slate-400 mt-3">A production daemon requires its local pairing token. Browser host invocation remains asynchronous by design; this probe demonstrates negotiation, not a shortcut around that boundary.</p>
+</section>
+
+<section class="mt-10 mb-5">
+  <h2>Continue with real data</h2>
+  <p><a href="data-formats.html">RDF and mapped-data import reference</a> · <a href="sparql-showcase.html">live Q42 SPARQL showcase</a> · <a href="science-playground.html">browser scientific surface</a> · <a href="vibe-host-native-bridge.html">Vibe-host bridge contract</a></p>
+</section>
+
+<script type="module">
+  (() => {
+    const browserButton = document.getElementById('run-browser-query');
+    const browserOutput = document.getElementById('browser-output');
+    const browserMetrics = document.getElementById('browser-metrics');
+    browserButton.addEventListener('click', async () => {
+      browserButton.disabled = true;
+      browserOutput.textContent = 'Loading the committed Schema.org Q42 volume and the query WASM module…';
+      browserMetrics.textContent = 'Loading locally…';
+      try {
+        const { ensureSparqlLive } = await import('./js/sparql-live.js?v=0.0.33-vfs-fullget2');
+        const session = await ensureSparqlLive('schemaorg-30');
+        const result = session.run(document.getElementById('browser-query').value, 12);
+        browserOutput.textContent = JSON.stringify(result.result, null, 2);
+        browserMetrics.textContent = `${result.quinCount.toLocaleString()} real Quins loaded · ${result.elapsedMs.toFixed(2)} ms query time`;
+      } catch (error) {
+        browserOutput.textContent = `Browser-only run could not complete: ${error.message}`;
+        browserMetrics.textContent = 'No local daemon was used.';
+      } finally {
+        browserButton.disabled = false;
+      }
+    });
+    const button = document.getElementById('probe-bridge');
+    const output = document.getElementById('bridge-output');
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      output.textContent = 'Probing local development daemon…';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4500);
+      try {
+        const response = await fetch('http://127.0.0.1:4242/vibe/capabilities', {
+          headers: { Accept: 'application/json' }, signal: controller.signal,
+        });
+        const body = await response.text();
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${body}`);
+        const document = JSON.parse(body);
+        const capabilities = (document.capabilities || []).map((item) => `${item.id}: ${item.mode} (${item.semantics})`).join('\n');
+        output.textContent = `Connected to ${document.execution_host || 'local daemon'} using ${document.protocol || 'an unknown protocol'}\n\n${capabilities || 'No capabilities returned.'}`;
+      } catch (error) {
+        output.textContent = `No development daemon was reachable at 127.0.0.1:4242. This is expected in standalone mode.\n\n${error.message}\n\nStart one with: cargo run --release -p qualia-cli -- daemon start`;
+      } finally {
+        clearTimeout(timeout);
+        button.disabled = false;
+      }
+    });
+  })();
+</script>

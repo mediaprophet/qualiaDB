@@ -1,6 +1,6 @@
 # Bio / Medical / Histopathology CV — Native Implementation Map
 
-**Branch:** `0.0.28`  
+**Branch:** `0.0.33`  
 **Library:** `crates/qualia-vision/src/bio/`  
 **Rule:** pure Rust; no Python product path; OpenCV/HistomicsTK/QuPath are **algorithm references**, not ABI.
 

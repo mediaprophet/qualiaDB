@@ -1,0 +1,7 @@
+===== START 03-wasm-check-lite  2026-09-08T13:37:16Z =====
+CMD: cargo check --target wasm32-unknown-unknown -p webizen-lite-wasm
+    Checking qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+    Checking webizen-lite-wasm v0.0.37 (/workspace/crates/webizen-lite-wasm)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.15s
+===== END 03-wasm-check-lite  rc=0  elapsed=12s  2026-09-08T13:37:28Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

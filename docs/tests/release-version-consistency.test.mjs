@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.30';
+const releaseVersion = '0.0.39';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -11,7 +11,7 @@ const workspaceMembers = [...rootManifest.matchAll(/^\s*"([^"]+)",?\s*$/gm)]
   .map((match) => match[1])
   .filter((member) => member.startsWith('crates/'));
 
-assert.equal(workspaceMembers.length, 20, 'expected all 20 workspace crates');
+assert.equal(workspaceMembers.length, 27, 'expected all 27 workspace crates');
 
 const workspacePackageNames = [];
 for (const member of workspaceMembers) {
@@ -57,11 +57,18 @@ const liveReleaseSurfaces = [
   'docs/api-explorer/index.html',
   'docs/api.html',
   'docs/benchmark.html',
+  'docs/index.html',
   'docs/js/mobile-wasm-lab.js',
   'docs/js/qualia-wasm-runtime.js',
   'docs/online-llm-demo.html',
   'docs/playground/anatomy.js',
+  'docs/progress-0.0.39.html',
+  'docs/qdnf.html',
+  'docs/qdnf-status.html',
+  'docs/release-matrix.html',
+  'docs/semantic-instruments.html',
   'docs/tests/index.html',
+  'docs/wasm-engine.html',
 ];
 for (const relativePath of liveReleaseSurfaces) {
   const text = read(relativePath);
@@ -77,8 +84,34 @@ assert.match(apiExplorer, /href="\.\.\/css\/site-nav\.css"/,
 assert.match(apiExplorer, /menu-loader\.js/,
   'API Explorer must load the shared navigation renderer');
 
-assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.30"/);
-assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.30/);
+assert.match(read('.github/workflows/pages.yml'), new RegExp(`- "${releaseVersion}"`));
+assert.match(read('.github/workflows/release-p64-models.yml'), new RegExp(`- ${releaseVersion}`));
+
+const releaseMatrix = read('docs/release-matrix.html');
+assert.match(releaseMatrix, /Qualia · Webizen · Poet/);
+assert.match(releaseMatrix, /What 0\.0\.39 is for/);
+assert.match(releaseMatrix, /vibe-wasm/);
+assert.match(releaseMatrix, /Published from GitHub Actions/);
+assert.match(releaseMatrix, /release-cli\.yml/);
+assert.match(releaseMatrix, /release-desktop\.yml/);
+assert.doesNotMatch(releaseMatrix, /What this Linux host actually did/);
+assert.doesNotMatch(releaseMatrix, /Zero invented installers/);
+assert.doesNotMatch(releaseMatrix, /Fifteen greens/);
+assert.doesNotMatch(releaseMatrix, /checklist of labour/);
+assert.doesNotMatch(releaseMatrix, /rustc 1\.98/);
+assert.doesNotMatch(releaseMatrix, /15 \/ 15/);
+assert.doesNotMatch(read('docs/index.html'), /Linux release matrix that is actually green/);
+assert.doesNotMatch(read('docs/index.html'), /15 \/ 15 green on Linux/);
+
+const pagesMenu = JSON.parse(read('docs/menu.json'));
+assert.ok(
+  pagesMenu.navigation.some((entry) => entry.href === 'semantic-instruments.html'),
+  'Pages navigation must expose the Semantic Instruments guide',
+);
+const instrumentGuide = read('docs/semantic-instruments.html');
+assert.match(instrumentGuide, /Honest release boundary/);
+assert.match(instrumentGuide, /Reference runner/);
+assert.match(instrumentGuide, /SI-12/);
 
 const comparative = JSON.parse(read('docs/comparative_benchmark_results.json'));
 assert.equal(

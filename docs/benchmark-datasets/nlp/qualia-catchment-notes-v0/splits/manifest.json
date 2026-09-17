@@ -1,0 +1,37 @@
+{
+  "corpus_id": "qualia-catchment-notes-v0",
+  "frozen_date": "2026-09-14",
+  "seed": 42,
+  "seed_policy": "frozen-u64-42",
+  "algorithm": "sha256 of UTF-8 lines \"{doc_id} {gold_sha256}\\n\" in listed order",
+  "membership_algorithm": "sha256 of UTF-8 lines \"{doc_id}\\n\" in split txt order (annotation revision does not change membership)",
+  "files": {
+    "train": [
+      {
+        "doc_id": "north-spring-fixture-001",
+        "gold_sha256": "577886c3817728ac426fbf216c8bc1dd0a693501addff8259de85363526473a7"
+      },
+      {
+        "doc_id": "west-pond-invalid-date-001",
+        "gold_sha256": "13f4b028726a938cdf21765c5c77617e52c0a846a6bb1d858bc059f94094e670"
+      }
+    ],
+    "dev": [
+      {
+        "doc_id": "east-ridge-weir-001",
+        "gold_sha256": "7f7dc8ddc8c4d0d8e41ae17c44f4c39e8d4918283e861a2a878d80c306497814"
+      }
+    ],
+    "test": [
+      {
+        "doc_id": "south-bend-gauge-001",
+        "gold_sha256": "4f687d49834035e71b8f5eb12a45fff3b7f04bff1df832cf51cadb7039ec5edc"
+      }
+    ]
+  },
+  "split_hashes": {
+    "train": "8c46f225cb7d1242fc7bff341c2667297207a2c67a8ee4d66071911ca98ab378",
+    "dev": "8d2afa0f356ce9476c6d89d6d89e9cc1f9e4f1bafeb4d92a2d6ff605a77f2ca8",
+    "test": "ad2de8cec5c1efad0384acea3e2b8888a50c3a3bda083079b02b2961fcc18736"
+  }
+}

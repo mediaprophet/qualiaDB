@@ -1,0 +1,53 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "frozen_date": "2026-09-14",
+  "seed": 42,
+  "seed_policy": "frozen-u64-42",
+  "algorithm": "sha256 of UTF-8 lines \"{doc_id} {gold_sha256}\\n\" in listed order",
+  "membership_algorithm": "sha256 of UTF-8 lines \"{doc_id}\\n\" in split txt order (annotation revision does not change membership)",
+  "files": {
+    "train": [
+      {
+        "doc_id": "notes-plain-en-001",
+        "gold_sha256": "bc6cab10463eb6a4898e0935b1d269183cb2c17957cfb49f77e92d7e06088dad"
+      },
+      {
+        "doc_id": "notes-eg-en-001",
+        "gold_sha256": "4edd2d860e26578c97eddd64b92347ee467dfdd23cdf38a54ee2121284639def"
+      },
+      {
+        "doc_id": "notes-punct-en-001",
+        "gold_sha256": "28a229da9f92805cca58897a325233ba6975d789ed7ff9727a09a0f08c26eb34"
+      },
+      {
+        "doc_id": "notes-fullwidth-q-en-001",
+        "gold_sha256": "48b8f12aca198ececfde35aad391242ba4b3e0d0358524429221d48d3b8a66a7"
+      }
+    ],
+    "dev": [
+      {
+        "doc_id": "notes-decimal-en-001",
+        "gold_sha256": "02575dac3d88dfc6148e5ba0adc6fadb21dd4fce626e6bf2a13d1c0d773726f5"
+      },
+      {
+        "doc_id": "notes-newline-en-001",
+        "gold_sha256": "67a0661afe899a629b7f3649084ec4190b7ef4315cf901c2077c0b5aafe643fd"
+      }
+    ],
+    "test": [
+      {
+        "doc_id": "notes-abbrev-en-001",
+        "gold_sha256": "2f47cbf356d0ea94deb40251b28799c2b574379c1c314b44176c1e41a76360f0"
+      },
+      {
+        "doc_id": "notes-unicode-en-001",
+        "gold_sha256": "4e317e463f5e8dc1c70fde122fde9e44e31d43c18f61509f3119404eef8878fe"
+      }
+    ]
+  },
+  "split_hashes": {
+    "train": "7fed513098b0b5dcfd21a0ca92a5f5517dccbdfd6678b3f96b23f023749a5563",
+    "dev": "1b6f6945d25cb4aa51c787758461537a39f432e437e16c7a11355a1154c89ddb",
+    "test": "020c1caadff0ccbbba230b52e4547070c71f64354b19d8f51527560240ed0f0b"
+  }
+}

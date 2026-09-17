@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038" class="release-039">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB — Prompt Precision & Model Optimization Specification</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .code-box {
+      background: rgba(8, 12, 20, 0.95);
+      border: 1px solid rgba(148, 180, 220, 0.2);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      font-family: var(--q-mono);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+      overflow-x: auto;
+    }
+    .code-kw { color: #f472b6; }
+    .code-fn { color: #38bdf8; }
+    .code-str { color: #34d399; }
+    .code-cm { color: #94a3b8; font-style: italic; }
+    .code-ty { color: #fbbf24; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-layer-group"></i> Architecture Reference · Waves W0–W8 · Zero-Heap Hot Paths</div>
+    <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] leading-[1.08] mb-5">
+      Prompt Precision &<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-violet-300 to-emerald-300">Automated Model Optimization.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8">
+      A deterministic, zero-allocation conditioning architecture designed to guarantee monotonic token budgets,
+      eliminate nondeterministic prompt degradation, and automatically calibrate compression strategies to target LLMs.
+    </p>
+
+    <!-- Strategy Selection Grid -->
+    <section class="mb-16">
+      <div class="mb-6">
+        <p class="q-kicker mb-1">Adaptive Strategy Matrix</p>
+        <h2 class="text-2xl sm:text-3xl font-semibold">Strategies B0 through B5</h2>
+        <p class="text-sm text-white/60">The automated optimizer evaluates candidate strategies on held-out task splits to select the pareto-optimal configuration.</p>
+      </div>
+
+      <div class="strategy-grid mb-6">
+        <div class="strategy-card" id="card-b0" onclick="selectStrategy('b0')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-white/50">STRATEGY B0</span>
+            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-white/10 text-white/70">BASELINE</span>
+          </div>
+          <h3 class="text-base font-semibold text-white mb-1">Raw Uncompressed</h3>
+          <p class="text-xs text-white/60 mb-3">No structural compaction. Invariant contracts appended without prefix token tuning.</p>
+          <div class="text-xs text-cyan-300 font-mono">1.0x Ratio · Raw Memory</div>
+        </div>
+
+        <div class="strategy-card" id="card-b1" onclick="selectStrategy('b1')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-cyan-400">STRATEGY B1</span>
+            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">LOW-FOOTPRINT</span>
+          </div>
+          <h3 class="text-base font-semibold text-white mb-1">Minimal Compact</h3>
+          <p class="text-xs text-white/60 mb-3">Whitespace normalized, blank lines stripped, semantic whitespace folded.</p>
+          <div class="text-xs text-cyan-300 font-mono">0.82x Ratio · Edge Safe</div>
+        </div>
+
+        <div class="strategy-card active" id="card-b2" onclick="selectStrategy('b2')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-emerald-400">STRATEGY B2</span>
+            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">RECOMMENDED</span>
+          </div>
+          <h3 class="text-base font-semibold text-white mb-1">Structural Strict</h3>
+          <p class="text-xs text-white/60 mb-3">Grammar-enforced invariant contracts with strict delimiter preservation.</p>
+          <div class="text-xs text-emerald-300 font-mono">0.75x Ratio · High Fidelity</div>
+        </div>
+
+        <div class="strategy-card" id="card-b3" onclick="selectStrategy('b3')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-violet-400">STRATEGY B3</span>
+            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">GUIDED</span>
+          </div>
+          <h3 class="text-base font-semibold text-white mb-1">Few-Shot Calibrated</h3>
+          <p class="text-xs text-white/60 mb-3">Dynamically selected exemplars from task registry, calibrated per model family.</p>
+          <div class="text-xs text-violet-300 font-mono">0.88x Ratio · Task Specific</div>
+        </div>
+
+        <div class="strategy-card" id="card-b4" onclick="selectStrategy('b4')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-amber-400">STRATEGY B4</span>
+            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">ZERO-ALLOC</span>
+          </div>
+          <h3 class="text-base font-semibold text-white mb-1">Zero-Alloc Verified</h3>
+          <p class="text-xs text-white/60 mb-3">Pre-compiled binary token emitter layout with deterministic SHA-256 fingerprint.</p>
+          <div class="text-xs text-amber-300 font-mono">0.68x Ratio · Ultra Fast</div>
+        </div>
+
+        <div class="strategy-card" id="card-b5" onclick="selectStrategy('b5')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-rose-400">STRATEGY B5</span>
+            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">QUANTIZED</span>
+          </div>
+          <h3 class="text-base font-semibold text-white mb-1">Extreme Low-Bit</h3>
+          <p class="text-xs text-white/60 mb-3">Maximum token compaction for constrained edge and mobile devices (&le; 512 context).</p>
+          <div class="text-xs text-rose-300 font-mono">0.52x Ratio · Ultra Compact</div>
+        </div>
+      </div>
+
+      <!-- Live Code Example for Selected Strategy -->
+      <div class="code-box" id="strategy-code-box">
+        <span class="code-cm">// Compiling Prompt Strategy B2 (Structural Strict)</span><br>
+        <span class="code-kw">let</span> target = <span class="code-ty">ModelPrecisionTarget</span>::new(<span class="code-str">"llama-3-8b-instruct"</span>, <span class="code-ty">ModelFamily</span>::Llama3, <span class="code-fn">8_000_000_000</span>, <span class="code-fn">2048</span>);<br>
+        <span class="code-kw">let</span> optimizer = <span class="code-ty">ModelPrecisionOptimizer</span>::default();<br>
+        <span class="code-kw">let</span> receipt = optimizer.<span class="code-fn">optimize_model</span>(&amp;target, &amp;train_set, &amp;dev_set, &amp;test_set)?;<br>
+        <span class="code-cm">// Emits signed ModelOptimizationReceipt with cryptographic fingerprint</span><br>
+        <span class="code-fn">assert!</span>(receipt.validation_score &gt;= <span class="code-fn">0.85</span>);
+      </div>
+    </section>
+
+    <!-- Mathematical Equation Section -->
+    <section class="q-card p-8 mb-16">
+      <p class="q-kicker mb-2">Token Budget Algebra</p>
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-4">The 6-Zone Equation</h2>
+      <p class="text-sm text-white/70 mb-6">
+        Total prompt context is strictly budgeted according to the conservation law:
+      </p>
+
+      <div class="p-6 rounded-2xl bg-black/40 border border-white/10 font-mono text-center text-lg sm:text-xl text-cyan-300 mb-6">
+        $$B_{total} = B_{prefix} + B_{invariant} + B_{fewshot} + B_{workspace} + B_{query} + B_{scratchpad} \le C_{max}$$
+      </div>
+
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs text-white/75">
+        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+          <strong class="text-violet-300 block mb-1">B_prefix (Model Prefix)</strong>
+          System prompt tokens, role identity, and model-specific formatting tokens.
+        </div>
+        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+          <strong class="text-cyan-300 block mb-1">B_invariant (Integrity & Safety)</strong>
+          Non-negotiable ethical constraints, human rights safeguards, and protocol rules.
+        </div>
+        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+          <strong class="text-emerald-300 block mb-1">B_fewshot (Exemplars)</strong>
+          Calibrated input/output demonstrations selected per model family.
+        </div>
+        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+          <strong class="text-amber-300 block mb-1">B_workspace (Retrieved Context)</strong>
+          SPARQL/Quin graph context, volumetric nodes, or retrieved RAG passages.
+        </div>
+        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+          <strong class="text-orange-300 block mb-1">B_query (User Intent)</strong>
+          Sanitized user input tokens with bounded length limits.
+        </div>
+        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+          <strong class="text-pink-300 block mb-1">B_scratchpad (Output Space)</strong>
+          Guaranteed tokens reserved for reasoning traces and model completion.
+        </div>
+      </div>
+    </section>
+
+    <!-- Hot Path Zero Heap Contract -->
+    <section class="grid md:grid-cols-2 gap-6 mb-16">
+      <div class="q-card p-8">
+        <p class="q-kicker mb-2">Engine Rules</p>
+        <h3 class="text-xl font-semibold mb-3">Tier 1: Mandatory Zero Heap</h3>
+        <p class="text-sm text-white/70 mb-4">
+          All conditioning evaluators and token emitters operate inside QualiaDB's hot path.
+          No <code>Vec</code>, <code>String</code>, or <code>Box</code> allocations are permitted during prompt emission.
+        </p>
+        <div class="code-box text-xs">
+          <span class="code-kw">pub fn</span> <span class="code-fn">emit_conditioning_bytes</span>&lt;<span class="code-ty">'a</span>&gt;(<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;spec: &amp;<span class="code-ty">ConditioningSpec</span>,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;out_buffer: &amp;<span class="code-ty">'a</span> <span class="code-kw">mut</span> [<span class="code-ty">u8</span>],<br>
+          ) -&gt; <span class="code-ty">Result</span>&lt;&amp;<span class="code-ty">'a</span> [<span class="code-ty">u8</span>], <span class="code-ty">ConditioningError</span>&gt; {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-cm">// Zero-allocation byte slice writes</span><br>
+          }
+        </div>
+      </div>
+
+      <div class="q-card p-8">
+        <p class="q-kicker mb-2">LoRA Hot Path</p>
+        <h3 class="text-xl font-semibold mb-3">PP-090: Adapter Layout</h3>
+        <p class="text-sm text-white/70 mb-4">
+          Continuous prefix adaptors conform to flat <code>repr(C)</code> buffers directly mappable into GPU VRAM or CPU SIMD lanes.
+        </p>
+        <div class="code-box text-xs">
+          <span class="code-kw">pub struct</span> <span class="code-ty">LoraPrefixAdapter</span> {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">pub</span> rank: <span class="code-ty">usize</span>,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">pub</span> scaling_factor: <span class="code-ty">f32</span>,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">pub</span> fixed_weights: [<span class="code-ty">f32</span>; <span class="code-fn">4096</span>],<br>
+          }<br>
+          <span class="code-cm">// Verified against 42MB Sentinel boundaries</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-white/40 pt-8 border-t border-white/10">
+      <p>QualiaDB Architecture · Prompt Precision Specification 0.0.39 · Implemented in <code class="q-mono text-white/60">qualia-core-db::inference::conditioning</code></p>
+    </footer>
+  </main>
+
+  <script>
+    const codeExamples = {
+      b0: `<span class="code-cm">// Compiling Prompt Strategy B0 (Raw Baseline)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::raw_baseline(input_prompt);<br><span class="code-cm">// Emits without structural reordering or compression</span>`,
+      b1: `<span class="code-cm">// Compiling Prompt Strategy B1 (Minimal Compact)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::minimal_compact(input_prompt);<br><span class="code-cm">// Normalizes whitespace, strips blank lines: 0.82x ratio</span>`,
+      b2: `<span class="code-cm">// Compiling Prompt Strategy B2 (Structural Strict)</span><br><span class="code-kw">let</span> target = <span class="code-ty">ModelPrecisionTarget</span>::new(<span class="code-str">"llama-3-8b-instruct"</span>, <span class="code-ty">ModelFamily</span>::Llama3, <span class="code-fn">8_000_000_000</span>, <span class="code-fn">2048</span>);<br><span class="code-kw">let</span> optimizer = <span class="code-ty">ModelPrecisionOptimizer</span>::default();<br><span class="code-kw">let</span> receipt = optimizer.<span class="code-fn">optimize_model</span>(&amp;target, &amp;train_set, &amp;dev_set, &amp;test_set)?;<br><span class="code-fn">assert!</span>(receipt.validation_score &gt;= <span class="code-fn">0.85</span>);`,
+      b3: `<span class="code-cm">// Compiling Prompt Strategy B3 (Few-Shot Calibrated)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::few_shot_calibrated(input_prompt, &amp;exemplars);<br><span class="code-cm">// Automatically injects calibrated exemplars within B_fewshot budget</span>`,
+      b4: `<span class="code-cm">// Compiling Prompt Strategy B4 (Zero-Alloc Verified)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::zero_alloc_verified(input_prompt, &amp;contract);<br><span class="code-cm">// Pre-computes fixed byte layouts with SHA-256 fingerprint</span>`,
+      b5: `<span class="code-cm">// Compiling Prompt Strategy B5 (Extreme Low-Bit)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::extreme_low_bit(input_prompt, <span class="code-fn">512</span>);<br><span class="code-cm">// Aggressive dictionary encoding for tight edge envelopes: 0.52x ratio</span>`
+    };
+
+    function selectStrategy(id) {
+      document.querySelectorAll('.strategy-card').forEach(c => c.classList.remove('active'));
+      const activeCard = document.getElementById('card-' + id);
+      if (activeCard) activeCard.classList.add('active');
+      document.getElementById('strategy-code-box').innerHTML = codeExamples[id] || '';
+    }
+  </script>
+</body>
+</html>

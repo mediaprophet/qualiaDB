@@ -1,7 +1,15 @@
 # Qualia WebAssembly capability profiles
 
-The WASM builds are deliberately separate products. A profile must not expose a
-library merely because the native engine has it.
+The WASM builds are separate products. Full browser packages (`portal`, `wasm-logic`,
+`wasm-scientific`, `wasm-llm`, `wasm-full`) include every engine capability that can
+run in WebAssembly. The only exclusions are native-only facilities (daemon, filesystem
+volumes, NVMe/ZNS/CSD, BLE mesh, eBPF). The ontology MCP kernel (`wasm-ontology`) stays
+a size-bounded reasoning kernel and does not pull the poet/science host.
+
+This family is the **interop bridge**: a foreign host or agent loads a
+**proportionate** package plus CBOR-LD / Q42 data. It is not a reason to emit
+HTML+RDFa as the application surface. Role in the HID/wire story:
+[`native-presentation-and-vibe-beyond-webview-2026-08-16.md`](../plans/native-presentation-and-vibe-beyond-webview-2026-08-16.md) §0.3.
 
 The compile-time source of truth is
 `crates/qualia-core-db/src/wasm_capabilities.rs`.
@@ -9,11 +17,39 @@ The compile-time source of truth is
 | Product | Cargo selection | Intended use | Included | Explicitly excluded |
 |---|---|---|---|---|
 | Ontology MCP | `-p webizen-lite-wasm` | Read-only ontology sites such as `ns.webcivics.net` | MCP JSON-RPC, N3 inspection, bounded Quin query, SHACL property validation, deontic, epistemic, paraconsistent, LTL, DL, ASP/linear kernels, governance mapping | Portal, WebGPU, science, LLM, daemon, network, filesystem storage |
-| Portal | `qualia-core-db --no-default-features --features portal` | Spatial/phenomenal pages | JSON/CBOR ingest, 10D tensor, spatial encoding, WebGPU viewport, AcousticPlane | Logic bridge, science, LLM |
-| Logic | `qualia-core-db --no-default-features --features wasm-logic` | RDF/rule demos and the larger browser reasoning API | N3/Turtle, RDF serialization, bytecode query, numeric SHACL, modal logic, LWW CRDT | Scientific domain libraries, LLM |
+| Portal | `qualia-core-db --no-default-features --features portal` | Full browser engine (GitHub Pages / QApp) | JSON/CBOR ingest, 10D tensor, spatial encoding, WebGPU viewport, AcousticPlane, N3/SHACL/modal logic, WASM-safe science (CAS, DFT, ODE, bio, chem) | Native daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF. LLM is the `wasm-llm` / `wasm-full` package |
+| Logic | `qualia-core-db --no-default-features --features wasm-logic` | RDF/rule demos and the browser reasoning API | N3/Turtle, RDF serialization, bytecode query, numeric SHACL, modal logic, LWW CRDT, WASM-safe science | Native daemon/filesystem/NVMe/BLE mesh; LLM |
 | Scientific | `qualia-core-db --no-default-features --features wasm-scientific` | Browser scientific playground | Logic surface plus WASM-safe bioinformatics, clinical, chemistry, economics, symbolic/numerical solvers, control, GA and DFT | LLM |
 | LLM | `qualia-core-db --no-default-features --features wasm-llm` | Browser model runtime | Logic + scientific prerequisites, GGUF/Q42 model loading, WebGPU inference, streaming decode | Portal |
 | Full playground | `qualia-core-db --no-default-features --features wasm-full` | API explorer and local development | Portal + logic + scientific + LLM + playground exports | Native daemon/network/filesystem-only facilities |
+
+## Vibe execution boundary
+
+Vibe programs use **vibe-host** as their execution/adapter boundary. Poet is a
+user interface that can use that host; it is not the host ABI. A WASM profile
+does not silently claim native persistence or substitute a different result for
+a missing capability.
+
+| Route | Browser meaning | Native meaning |
+|---|---|---|
+| `standalone-wasm` | The loaded WASM module performs the operation exactly. | The same capability runs directly in-process. |
+| `standalone-snapshot` | The operation uses the browser's isolated graph snapshot; it is not a persistent native graph read or transaction. | The operation can use the persistent native graph. |
+| `native-bridge` | Requires a paired local daemon; unavailable when no pairing exists. | Reached through the authenticated local adapter. |
+| `native-direct` | Not a browser route. | Uses the in-process native engine directly. |
+
+The daemon publishes a versioned `qualia-vibe-bridge/1` negotiation document at
+`GET /vibe/capabilities`. A browser probes after a user gesture and uses its
+pairing token; production daemon requests require `X-Qualia-Token`. The
+current Vibe `Host` trait is synchronous, so browser calls that need native IPC
+remain an explicit asynchronous bridge integration rather than a blocking host
+call.
+
+Tooling should select a target before execution. In a `wasm-standalone`
+workspace, native-only bindings are surfaced as diagnostic `QDB0402` rather
+than left to fail ambiguously at runtime.
+
+See [Vibe-host native bridge](../vibe-host-native-bridge.html) for the
+protocol, security boundary, and capability examples.
 
 ## Ontology MCP contract
 
@@ -56,5 +92,14 @@ Build the ontology package:
 wasm-pack build crates/webizen-lite-wasm --target web --out-dir pkg --release
 ```
 
-The 2026-06-27 reference build is 267,993 bytes raw and 94,971 bytes gzip.
-CI limits it to 512 KiB raw / 200 KiB gzip.
+The 2026-06-27 reference ontology build is 267,993 bytes raw and 94,971 bytes gzip.
+
+GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured 0.0.38:
+
+| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.38 |
+|---|---|---|---|
+| Ontology MCP | `-p webizen-lite-wasm` | 640 KiB / 200 KiB | ~529 KiB / ~162 KiB gzip |
+| Portal | `--features portal` | 16 MiB / 4 MiB | ~7.70 MiB / ~2.15 MiB gzip |
+| Playground | `--features wasm-full` | 16 MiB / 4 MiB | ~8.23 MiB / ~2.32 MiB gzip |
+
+Portal and playground share a sanity cap for the full WASM-safe engine; they are not a slim viewport budget. Do not fold science or LLM into `wasm-ontology` to keep Pages green — that kernel stays the size-bounded MCP product.

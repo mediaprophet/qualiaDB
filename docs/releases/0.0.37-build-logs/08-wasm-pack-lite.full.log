@@ -1,0 +1,16 @@
+===== START 08-wasm-pack-lite  2026-09-08T13:39:49Z =====
+CMD: wasm-pack build crates/webizen-lite-wasm --target web --release --out-dir /workspace/docs/pkg/webizen-lite
+[INFO]: 🎯  Checking for the Wasm target...
+[INFO]: 🌀  Compiling to Wasm...
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+   Compiling webizen-lite-wasm v0.0.37 (/workspace/crates/webizen-lite-wasm)
+    Finished `release` profile [optimized] target(s) in 51.38s
+[INFO]: ⬇️  Installing wasm-bindgen...
+[INFO]: Optimizing wasm binaries with `wasm-opt`...
+[INFO]: ✨   Done in 1m 06s
+[INFO]: 📦   Your wasm pkg is ready to publish at /workspace/docs/pkg/webizen-lite.
+[WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.15.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/
+===== END 08-wasm-pack-lite  rc=0  elapsed=67s  2026-09-08T13:40:56Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

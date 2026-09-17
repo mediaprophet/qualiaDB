@@ -1,0 +1,14 @@
+===== START 07-wasm-pack-portal  2026-09-08T13:38:28Z =====
+CMD: env RUSTFLAGS=-C target-feature=+simd128 wasm-pack build crates/qualia-core-db --target web --release --out-dir pkg-qualia -- --no-default-features --features portal
+[INFO]: 🎯  Checking for the Wasm target...
+[INFO]: 🌀  Compiling to Wasm...
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+    Finished `release` profile [optimized] target(s) in 1m 17s
+[INFO]: ⬇️  Installing wasm-bindgen...
+[INFO]: ✨   Done in 1m 19s
+[INFO]: 📦   Your wasm pkg is ready to publish at crates/qualia-core-db/pkg-qualia.
+[WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.15.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/
+===== END 07-wasm-pack-portal  rc=0  elapsed=81s  2026-09-08T13:39:49Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

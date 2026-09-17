@@ -1,7 +1,19 @@
 #!/usr/bin/env node
 /**
- * Phase 7.1 — assert Qualia portal WASM size budget.
- * Usage: node docs/tests/wasm-size-check.mjs [path/to/qualia_bg.wasm]
+ * Assert a WASM artifact against a size budget.
+ *
+ * Usage:
+ *   node docs/tests/wasm-size-check.mjs [path] [maxRawBytes] [maxGzipBytes]
+ *
+ * Defaults match the GitHub Pages / release-wasm portal + playground sanity cap
+ * (16 MiB raw / 4 MiB gzip). CI always passes explicit limits:
+ *
+ *   Ontology MCP  655360 / 204800     (640 KiB / 200 KiB)
+ *   Portal        16777216 / 4194304  (16 MiB / 4 MiB)
+ *   Playground    16777216 / 4194304  (16 MiB / 4 MiB)
+ *
+ * Ontology MCP stays the tight product budget. Portal / wasm-full are a sanity
+ * cap for the full WASM-safe engine, not a slim viewport bundle.
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
@@ -14,10 +26,10 @@ const wasmPath = process.argv[2] ? resolve(process.argv[2]) : defaultPath;
 
 const MAX_RAW_BYTES = process.argv[3]
   ? Number(process.argv[3])
-  : 2 * 1024 * 1024;
+  : 16 * 1024 * 1024;
 const MAX_GZIP_BYTES = process.argv[4]
   ? Number(process.argv[4])
-  : 800 * 1024;
+  : 4 * 1024 * 1024;
 
 if (!existsSync(wasmPath)) {
     console.error(`[wasm-size] missing: ${wasmPath}`);

@@ -207,7 +207,7 @@ IFrameSandbox
 Docked
 FloatingOverlay
 ModalOverlay
-FullCanvas
+FullManifold
 ```
 
 ## 8. Theme Model
@@ -367,6 +367,11 @@ Open questions that should be resolved before external standardization:
 1. Should `@context` and `@type` be mandatory or optional in all documents?
 2. Should `yaml-ld-q42` be purely YAML surface syntax for a CBOR-LD / Quin
    projection, or remain a first-class authoring format on its own?
+   **Working answer (HCF §3, restated 2026-08-16):** both, at different layers.
+   `yaml-ld-q42` stays the human authoring surface. **CBOR-LD 1.0** is the
+   machine/wire projection of the same RDF model. JSON-LD may be a *view* for
+   foreign tools; it is not the Qualia wire. See
+   [`native-presentation-and-vibe-beyond-webview-2026-08-16.md`](../../plans/native-presentation-and-vibe-beyond-webview-2026-08-16.md) §0.1.
 3. Which rich runtime fields should become mandatory parts of the compiled Quin
    projection?
 4. Should pane identifiers remain `component_id` strings, or become explicit

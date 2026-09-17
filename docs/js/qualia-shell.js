@@ -161,7 +161,7 @@ export function ensureCanvasBackingStore(canvas, minW = 640, minH = 360, opts = 
 function portalPkgUrls() {
     const base = new URL('../pkg/qualia/', import.meta.url);
     return {
-        js: new URL('qualia.js?v=0.0.30-mobile-recovery4', base).href,
+        js: new URL('qualia.js?v=0.0.33-mobile-recovery4', base).href,
         wasm: new URL('qualia_bg.wasm', base).href,
     };
 }
@@ -239,7 +239,7 @@ export async function loadQualiaPortal(canvas, options = {}) {
         debugWarn('portal pkg failed, falling back to playground wasm-full', e);
         console.warn('Qualia portal pkg not found, falling back to qualia_core_db.wasm', e);
         try {
-            const fallback = new URL('../playground/qualia_core_db.js?v=0.0.30-mobile-recovery4', import.meta.url).href;
+            const fallback = new URL('../playground/qualia_core_db.js?v=0.0.33-mobile-recovery4', import.meta.url).href;
             debugLog('import fallback', fallback);
             const mod = await import(fallback);
             const fallbackWasm = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href;

@@ -1,0 +1,110 @@
+# Work In Progress
+
+This directory holds reconciliation documents that are still being reviewed.
+They do not replace normative specifications, accepted standards, implementation
+plans, trackers, or historical ledgers until the project owner promotes them.
+
+## Current documents
+
+- [Semantic instruments overview](./SEMANTIC_INSTRUMENTS_OVERVIEW_WIP.md) — conceptual model for expert-authored ontology/logic instruments, badge presentations, capability credentials, RPL and traceable employment.
+- [Semantic instrument package specification](./SEMANTIC_INSTRUMENT_PACKAGE_SPEC_WIP.md) — draft package, dependency, attestation, execution-receipt, capability and Poet/Webizen requirements.
+- [Semantic instrument implementation plan](./SEMANTIC_INSTRUMENT_IMPLEMENTATION_PLAN_WIP.md) — SI-0 dependency graph, bounded swarm packets, acceptance gates and reference vertical slices.
+- [Semantic instrument decision register (SI-00)](./SEMANTIC_INSTRUMENT_DECISION_REGISTER_WIP.md) — inventory of existing package/credential/provenance/UI models, reuse map, conflicts, and HELD/PROVISIONAL ABI decisions. Not a runtime-complete claim.
+- [Semantic instrument UX contract (SI-02)](./SEMANTIC_INSTRUMENT_UX_CONTRACT_WIP.md) — catalogue vs badge vs inspect vs collect vs activate; Demo labelled; no Host IDs.
+- [NLP Exceptional Implementation Plan](./NLP_EXCEPTIONAL_IMPLEMENTATION_PLAN_2026-09-14.md) — NLP review, 75-package tracker, swarm board (§20), defect register (§21); checked by `scripts/validate-nlp-plan.ps1`.
+- [NLP Release Charter (NLP-008)](./NLP_RELEASE_CHARTER_WIP.md) — first use cases, profiles, evaluation inventory, resource envelope, in/out scope.
+- [NLP Reuse Inventory (NLP-009)](./NLP_REUSE_INVENTORY_WIP.md) — verified APIs vs gaps, candidate feasibility, hardware receipt; REVIEW not DONE.
+- [`alice-f6-classifier-symbolic-binding-pressure-test.md`](./alice-f6-classifier-symbolic-binding-pressure-test.md) — Alice F6: classifier/symbolic pressure-test — who ≠ claim ≠ spatiotemporal ≠ instruments (plus `keyRole`, DNI ≠ RAR ≠ QSession); docs map only
+- [`g-lexicon-0-slice1.md`](./g-lexicon-0-slice1.md) — G-LEXICON-0 slice 1: `GraphDatabase.lexicon_manifest` (Neo); held/not-yet diagnose; no in-binary WordNet
+- [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) — G-LEXICON-0 Poet bay chrome: held-gate + living/artifact/machine chips on `lexicon_manifest` (davinci/monet)
+- [`uat-lexicon-catalog-click-path-davinci.md`](./uat-lexicon-catalog-click-path-davinci.md) — davinci UAT: Zone D Catalog click-path (Neo wired `build_ide_view` + console tabs)
+- [`g-lexicon-0-diagnose-fixtures.md`](./g-lexicon-0-diagnose-fixtures.md) — G-LEXICON-0 Vibe diagnose/lexicon pin fixtures (held E300 · pin · alias round-trip · living upgrade)
+- Shape (standards): [`lexicon-pack-shape-G-LEXICON-0.md`](../manuals/standards/lexicon-pack-shape-G-LEXICON-0.md) — Marvin pack framing for `lexicon_manifest`
+- [`POET_RECONCILIATION_2026-09-05.md`](POET_RECONCILIATION_2026-09-05.md)
+  reconciles the earlier POET execution programme with the post-`vibe-host-0.1`
+  specification, design, ontology, language, and implementation plans.
+- [`POET_NEXT_WORK_REGISTER_2026-09-05.md`](POET_NEXT_WORK_REGISTER_2026-09-05.md)
+  records the ordered remaining work, dependencies, review gates, and ownership
+  boundaries without assigning exclusive control to any agent.
+- [`GATE_A_CLOSE_2026-09-06.md`](./GATE_A_CLOSE_2026-09-06.md)
+  — Review Gate A D5 close (owner instruction; residuals accepted)
+- [`hlt-r1-consent-review-2026-09-05.md`](./hlt-r1-consent-review-2026-09-05.md)
+  — HLT-R1 consent-contract review (accepted under Gate A)
+- [`POET_UPDATED_IMPLEMENTATION_PLAN_2026-09-05.md`](POET_UPDATED_IMPLEMENTATION_PLAN_2026-09-05.md)
+  defines the multi-platform difficulty/role routing, bounded packets,
+  acceptance evidence, stop rules, and review gates for implementation.
+- [`RUST_MODULE_DECOMPOSITION_REGISTER_2026-09-05.md`](RUST_MODULE_DECOMPOSITION_REGISTER_2026-09-05.md)
+  records the large-Rust-file baseline, structural rules, priorities, and
+  bounded module/library decomposition packets.
+- [`VIBE_WISHLIST_REGISTER_2026-09-05.md`](VIBE_WISHLIST_REGISTER_2026-09-05.md)
+  absorbs `vibescript-complete-wishlist.md` into evidence-based Vibe language
+  packets; Poet chrome/motion stay parked on their own lanes.
+- [`VIBE_WISHLIST_IMPLEMENTATION_PLAN_2026-09-05.md`](VIBE_WISHLIST_IMPLEMENTATION_PLAN_2026-09-05.md)
+  is the active check-off tracker for remaining wishlist packets (W1–W11).
+
+## Working rules
+
+1. Preserve source documents and historical ledgers unchanged.
+2. Distinguish a document being landed from implementation being complete.
+3. Credit work by evidence: commit, file, test, UAT record, or accepted review.
+4. Reconcile overlapping plans as deltas; do not reopen completed work by default.
+5. Record conflicts and missing evidence without deleting another agent's work.
+6. Promote a document out of this directory only with project-owner approval.
+
+## Source set
+
+- `docs/POET_LOWER_COST_AGENT_EXECUTION_PLAYBOOK_2026-09-04.md`
+- `docs/POET_IMPLEMENTATION_SESSION_LEDGER.md`
+- `docs/POET_VIBE_CONTINUATION_HANDOVER_2026-09-04.md`
+- `docs/manuals/standards/impl-plans-INDEX.md`
+- `docs/manuals/standards/impl-plan-davinci-poet-chrome.md`
+- `docs/manuals/standards/impl-plan-monet-visual.md`
+- `docs/manuals/standards/impl-plan-marvin-ontology.md`
+- `docs/manuals/standards/impl-plan-neo-G-A-followon.md`
+- `docs/manuals/standards/impl-plan-vibe-sprint-B.md`
+- `docs/manuals/standards/poet-toolchest-inventory-G-POET-TOOLCHEST.md`
+- `docs/manuals/standards/vibescript-sprint-deltas.md`
+- `docs/manuals/standards/vibescript-complete-wishlist.md`
+
+| [`uat-office-graph-volume-vibe-host-0.1.md`](uat-office-graph-volume-vibe-host-0.1.md) | Vibe · chrome davinci/monet · Neo seam | UAT checklist — office:graph + volume + **lexicon held-gate** (tip `641c2460`; G-COORD held until pass) |
+
+WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
+- [`poet-chrome-design-notes-davinci.md`](poet-chrome-design-notes-davinci.md)
+  Poet chrome design notes (UAT accept + G-COORD ahead-of-bind) (davinci · pair monet).
+- [`poet-motion-design-notes-monet.md`](poet-motion-design-notes-monet.md)
+  Poet motion/visual design notes (beats, tokens, UAT look) (monet · pair davinci).
+- [`ontology-design-notes-marvin.md`](ontology-design-notes-marvin.md)
+  Ontology design notes (SHACL/OWL cuts, G-COORD ahead-of-bind) (Marvin).
+- [`qualia-core-db-uplift-audit.md`](qualia-core-db-uplift-audit.md)
+  Capability uplift audit — expose core-db vs reimplement; matrix programme (Neo).
+- [`vibe-repl-poet-ui.md`](vibe-repl-poet-ui.md)
+  Vibe REPL in Poet — make live engine useful (diagnose/catalog/recipes) (Neo · Vibe).
+- [`review-tip-5c758e63-poet-vibe-suites.md`](review-tip-5c758e63-poet-vibe-suites.md)
+  Review/feedback on operational suites + REPL tip (Neo).
+- [`ontology-uplift-audit-notes-marvin.md`](ontology-uplift-audit-notes-marvin.md)
+  Ontology framing columns on uplift matrix + REPL catalog locks (Marvin).
+- [`vibe-language-nomenclature-brainstorm.md`](vibe-language-nomenclature-brainstorm.md)
+  Vibe command language nomenclature/form/multilingual brainstorm + Neo freeze seams + WordNet/SHACL lexicon principles (Vibe lead · Neo fold).
+
+| `IDENTIFIER_FABRIC_CONSULTATION_BRIEF.md` | Capt | Consultation summary + intake path |
+| `HUMAN_ONBOARDING_LEXICON_WIP.md` | Vibe | Human-alone cold-load · sayables-first · who·claim·handle·tool |
+| `HUMAN_SURFACE_PARITY_AUDIT_WIP.md` | davinci · monet | Frames A–E WASM↔desktop scoreboard |
+| `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_A_C.md` | davinci · Capt | Cold-load UAT Frames A–C checklist |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM.md` | Capt | Frame A WASM cold-load score |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_cfac542.md` | Capt | Frame A WASM re-UAT after PR #90 |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_b3b8e2e.md` | Capt | Frame A WASM FAIL after PR #91 |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_WASM_f712e97.md` | Capt | Frame A WASM PASS after PR #92 |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_DESKTOP_c6007e0.md` | Capt | Frame A Desktop HELD — OS disk safety gate |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_A_DESKTOP_d7f0bdc.md` | Capt | Frame A Desktop PASS after disk cleanup |
+| `HUMAN_SURFACE_DESKTOP_APPS_WALKTHROUGH_d7f0bdc.md` | Capt | Desktop apps walkthrough scoreboard (PASS/PARTIAL/HELD) |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_d08d1c9.md` | Capt | Frame B: WASM PASS · Desktop HELD (Catalog not mounted) |
+| `HUMAN_SURFACE_COLDLOAD_UAT_SCORE_FRAME_B_DESKTOP_9738911.md` | Capt | Desktop Frame B PARTIAL — Catalog findable; B4 unverified |
+| `HUMAN_SURFACE_COLDLOAD_UAT_FRAMES_D_E.md` | monet · Capt | Cold-load UAT Frames D–E (motion) |
+| `HUMAN_SURFACE_FRAMES_DE_MOTION_PARITY_WIP.md` | monet | Frames D–E motion parity (desktop ↔ WASM) |
+| `HUMAN_SURFACE_VOCAB_FOR_CHROME_WIP.md` | Marvin / Neo | Plane vocab for chrome — who·claim·handle·tool |
+| `HUMAN_SURFACE_COMPETITIVE_USABILITY_WIP.md` | Capt / Neo | Competitive matrix vs Docs/Mail/etc. + fix queue |
+| `HUMAN_SURFACE_APPS_AUDIT_WIP.md` | Capt / Neo | Intended apps scoreboard — reveal buried live, progress to useful |
+| `ONE_POET_PRODUCT_CUT_WIP.md` | Capt / Neo | One Poet two hosts; Webizen = shell; cherry-pick Desktop↔WASM |
+| `BUILD_DISK_HYGIENE_WIP.md` | Capt / Neo | One `target/`; prune when free &lt;~20G; no parallel build trees |
+| `CONTINUITY_GATE_HANDLE_REVOKE_WIP.md` | Marvin / Neo | Continuity gate: handle revoke ≠ who-erase (IHL cold-load) |
+| `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` | Noddy | Diagram → fabric plane crosswalk |

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantic Instruments — QualiaDB / Webizen 0.0.39</title>
+  <meta name="description" content="A public guide to QualiaDB Semantic Instruments: inspectable semantic packages, bounded execution, receipts, attestations, capability recognition, and their current limits.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .stage { min-height: 8.75rem; }
+    .stage-number { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-toolbox"></i> Semantic Instruments · 0.0.39 reference slice</div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
+      Knowledge that can be inspected<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-cyan-300 to-emerald-300">before it is trusted or run.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-5">
+      A Semantic Instrument is an inspectable, versioned semantic package: it declares its purpose, inputs, dependencies, limits, and the evidence behind a result. It is a tool, never a peer person or an authority by presentation alone.
+    </p>
+    <div class="mb-12 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-100/90 max-w-4xl">
+      <strong class="text-amber-200">Honest release boundary.</strong> The 0.0.39 reference slice has package, validation, registry, resolution, receipt, attestation, RPL, and Studio workflows with scripted conformance coverage. It is not a claim that every sector workflow has completed live human UAT or that a demo runner is a clinical, legal, or employment decision service.
+    </div>
+
+    <section class="grid lg:grid-cols-2 gap-6 mb-16">
+      <article class="q-card p-8">
+        <p class="q-kicker mb-2">The package</p>
+        <h2 class="text-2xl font-semibold mb-3">A collectable has context, not just a badge</h2>
+        <p class="text-sm text-white/70 mb-5">The shipped collectable binds an HCF description, N3 definition graph, manifest, accessible <code>10d</code> visual, and—on native builds—an optional compact Q42 graph. Larger Q42 volumes are declared dependencies rather than silently becoming the instrument.</p>
+        <ul class="text-sm text-white/65 space-y-2">
+          <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Purpose, prohibited interpretations, category, and version are explicit.</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Inputs, outputs, source graph, visual, and content digest can be inspected.</li>
+          <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Demo and reference packs remain labelled; a visual does not create trust.</li>
+        </ul>
+      </article>
+      <article class="q-card p-8">
+        <p class="q-kicker mb-2">The boundary</p>
+        <h2 class="text-2xl font-semibold mb-3">Keep people, claims, and tools separate</h2>
+        <p class="text-sm text-white/70 mb-5">An author, reviewer, publisher, instrument, execution result, and capability credential are separate records. A signature or catalogue listing establishes provenance; it does not establish that a claim is true.</p>
+        <ul class="text-sm text-white/65 space-y-2">
+          <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Collection, installation, trust, and activation are distinct decisions.</li>
+          <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Required inputs or dependencies that are missing are held, not invented.</li>
+          <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Revocation prevents new reliance without erasing historic receipts.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="mb-16">
+      <p class="q-kicker mb-2">The Studio authoring rail</p>
+      <h2 class="text-3xl font-semibold mb-6">Seven deliberate stages, reachable by keyboard</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="q-card stage p-5"><div class="stage-number text-cyan-300 font-mono text-sm mb-2">01</div><h3 class="font-semibold">Flow</h3><p class="text-xs text-white/60 mt-2">Choose the bounded lifecycle and entry-point intent.</p></div>
+        <div class="q-card stage p-5"><div class="stage-number text-cyan-300 font-mono text-sm mb-2">02</div><h3 class="font-semibold">Select</h3><p class="text-xs text-white/60 mt-2">Choose a labelled demo or reference starting point.</p></div>
+        <div class="q-card stage p-5"><div class="stage-number text-cyan-300 font-mono text-sm mb-2">03</div><h3 class="font-semibold">Shapes Canvas</h3><p class="text-xs text-white/60 mt-2">Inspect and edit the declared semantic shape.</p></div>
+        <div class="q-card stage p-5"><div class="stage-number text-cyan-300 font-mono text-sm mb-2">04</div><h3 class="font-semibold">Manufacture</h3><p class="text-xs text-white/60 mt-2">Build the inspectable collectable and check publication readiness.</p></div>
+        <div class="q-card stage p-5"><div class="stage-number text-cyan-300 font-mono text-sm mb-2">05</div><h3 class="font-semibold">Receipts</h3><p class="text-xs text-white/60 mt-2">Review the chain of executions and their commitments.</p></div>
+        <div class="q-card stage p-5"><div class="stage-number text-cyan-300 font-mono text-sm mb-2">06</div><h3 class="font-semibold">Inspect</h3><p class="text-xs text-white/60 mt-2">See purpose, dependencies, provenance, limits, and held state before use.</p></div>
+        <div class="q-card stage p-5"><div class="stage-number text-cyan-300 font-mono text-sm mb-2">07</div><h3 class="font-semibold">Run</h3><p class="text-xs text-white/60 mt-2">Execute only a closed, preflighted installation and retain a receipt.</p></div>
+        <div class="q-card stage p-5 border border-amber-500/25"><div class="stage-number text-amber-300 font-mono text-sm mb-2">Gate</div><h3 class="font-semibold">Human UAT</h3><p class="text-xs text-white/60 mt-2">Live accessibility, security, and human walkthrough evidence remains the SI-12 release gate.</p></div>
+      </div>
+    </section>
+
+    <section class="grid lg:grid-cols-3 gap-5 mb-16">
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Validate &amp; resolve</p>
+        <h2 class="text-xl font-semibold mb-3">Dependencies are visible</h2>
+        <p class="text-sm text-white/65">SHACL shapes and package inspection reject incomplete material. Resolution creates a dependency lock, distinguishes optional from required dependencies, detects revoked entries, and supports a closed offline install when its declared dependencies are available locally.</p>
+      </article>
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Execute &amp; record</p>
+        <h2 class="text-xl font-semibold mb-3">A receipt binds the run</h2>
+        <p class="text-sm text-white/65">Preflight requires a closed installation. Each outcome binds release, package digest, dependency-lock digest, entry point, input/output commitments, and optional parent receipt. Empty required input produces a held receipt rather than a fabricated result.</p>
+      </article>
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Recognise &amp; attest</p>
+        <h2 class="text-xl font-semibold mb-3">Credentials retain their context</h2>
+        <p class="text-sm text-white/65">Native, W3C VC, and Open Badges-compatible exports are supported as envelopes. Capability recognition can compare formal or prior-learning evidence against requirements and report satisfied, equivalent, unresolved, or unmet elements.</p>
+      </article>
+    </section>
+
+    <section class="q-card p-8 mb-16">
+      <p class="q-kicker mb-2">What is executable today</p>
+      <h2 class="text-2xl font-semibold mb-4">Reference runner, not a disguised sector decision engine</h2>
+      <div class="grid md:grid-cols-2 gap-6 text-sm text-white/65">
+        <div>
+          <h3 class="text-white font-semibold mb-2">Current reference behaviour</h3>
+          <ul class="space-y-2">
+            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Only the labelled <code>assess</code> and <code>recognise</code> demo entry points are dispatched.</li>
+            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>The reference transform is deliberately simple, making its input and output commitments inspectable.</li>
+            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Cancellation, resource limits, unknown entries, and unclosed installs are refused.</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="text-amber-200 font-semibold mb-2">Not claimed by this page</h3>
+          <ul class="space-y-2">
+            <li><i class="fa-solid fa-triangle-exclamation text-amber-300 mr-2"></i>No generic Host-ID dispatch and no production clinical, legal, or employment determination is implied.</li>
+            <li><i class="fa-solid fa-triangle-exclamation text-amber-300 mr-2"></i>Native Q42 content may be held in WASM with an explicit degradation notice.</li>
+            <li><i class="fa-solid fa-triangle-exclamation text-amber-300 mr-2"></i>SI-12’s live security, accessibility, and human-UAT matrix is not represented as complete.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-t border-white/10 pt-8">
+      <div>
+        <h2 class="text-xl font-semibold">Follow the 0.0.39 record</h2>
+        <p class="text-sm text-white/55 mt-1">The release page gives the wider milestone; the source tree and conformance suite remain the technical authority.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a class="px-4 py-2 rounded-2xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-sm" href="progress-0.0.39.html">0.0.39 Progress</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="https://github.com/mediaprophet/qualiaDB/tree/v0.0.39/crates/qualia-core-db/src/semantic_instruments">Runtime source</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="https://github.com/mediaprophet/qualiaDB/blob/v0.0.39/crates/qualia-core-db/tests/semantic_instruments_conformance.rs">Conformance suite</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
+    QualiaDB / Webizen 0.0.39 · Semantic Instruments reference slice · Inspect before trust or execution
+  </footer>
+</body>
+</html>

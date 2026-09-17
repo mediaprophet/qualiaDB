@@ -1,0 +1,5 @@
+===== START 15-vibe  2026-09-08T13:56:22Z =====
+CMD: cargo build --release -p vibe
+    Finished `release` profile [optimized] target(s) in 0.19s
+===== END 15-vibe  rc=0  elapsed=1s  2026-09-08T13:56:23Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

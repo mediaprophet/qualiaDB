@@ -1,0 +1,6 @@
+===== START 05-wasm-check-scientific  2026-09-08T13:37:49Z =====
+CMD: cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-scientific
+    Checking qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.40s
+===== END 05-wasm-check-scientific  rc=0  elapsed=19s  2026-09-08T13:38:08Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

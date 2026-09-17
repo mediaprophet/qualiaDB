@@ -1,0 +1,34 @@
+{
+  "corpus_id": "qualia-english-notes-v0",
+  "doc_id": "notes-fullwidth-q-en-001",
+  "split": "train",
+  "language": "en",
+  "domain": "english-general-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "好吗？",
+  "gazetteer": [],
+  "dates": [],
+  "quantities": [],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 6,
+      "surface": "好吗",
+      "kind": "Word"
+    },
+    {
+      "start": 6,
+      "end": 9,
+      "surface": "？",
+      "kind": "Punct"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 9,
+      "surface": "好吗？"
+    }
+  ]
+}

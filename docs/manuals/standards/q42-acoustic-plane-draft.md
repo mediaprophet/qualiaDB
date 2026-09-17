@@ -3,7 +3,7 @@
 **Version:** 0.1.1 (draft)  
 **Date:** 2026-08-15  
 **Status:** Internal draft — not submitted externally  
-**Branch:** `0.0.30`  
+**Branch:** `0.0.33`  
 **Normative code:** `crates/qualia-core-db/src/audio/` (`acoustic_plane.rs`, `acoustic_sab.rs`, `audio_spectral_sheet.rs`), `crates/qualia-core-db/src/net/sonic_token.rs`, `crates/qualia-core-db/src/render/acoustic.rs`
 
 This is a **U3 binary contract**, not a Q42 volume layout. It does not encode NQuins

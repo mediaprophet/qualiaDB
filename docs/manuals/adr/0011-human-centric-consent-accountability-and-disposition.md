@@ -4,6 +4,9 @@
 - **Date:** 2026-07-06
 - **Direction:** Timothy Charles Holborn, across a design dialogue on the welfare + fairness (wellfair)
   provisions in webizen-desktop.
+- **Nomenclature:** **human-centric** (☉) is structural topology — the person is the permanent
+  nucleus of consent and disposition, not a 🎯 User-Centered Design target. See
+  [human-centric-nomenclature.md](../standards/human-centric-nomenclature.md).
 - **Supersedes / relates:** builds on ADR 0003 (permissive-commons billing gates), ADR 0004 (bilateral
   guardianship scrubbing); realises `docs/plans/social-worker-support-and-accountability.md`,
   `human-centric-care-relationships.md`, `post-death-continuity-and-self-definition.md`,

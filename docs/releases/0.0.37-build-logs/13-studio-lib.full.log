@@ -1,0 +1,13 @@
+===== START 13-studio-lib  2026-09-08T13:52:13Z =====
+CMD: cargo build --release -p webizen-studio
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+   Compiling webizen-render v0.0.37 (/workspace/crates/webizen-render)
+   Compiling qualia-vision v0.0.37 (/workspace/crates/qualia-vision)
+   Compiling qualia-solid-bridge v0.0.37 (/workspace/crates/qualia-solid-bridge)
+   Compiling qualia-client-core v0.0.37 (/workspace/crates/qualia-client-core)
+   Compiling webizen-studio v0.0.37 (/workspace/crates/webizen-studio)
+    Finished `release` profile [optimized] target(s) in 4m 09s
+===== END 13-studio-lib  rc=0  elapsed=249s  2026-09-08T13:56:22Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

@@ -1,0 +1,12 @@
+===== START 11-anatomy-example  2026-09-08T13:44:43Z =====
+CMD: cargo build --release -p qualia-client-core --example build_anatomy_pack
+   Compiling wellfare-core v0.0.37 (/workspace/crates/wellfare-core)
+   Compiling qualia-cooperative-core v0.0.37 (/workspace/crates/qualia-cooperative-core)
+   Compiling qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+   Compiling webizen-render v0.0.37 (/workspace/crates/webizen-render)
+   Compiling qualia-vision v0.0.37 (/workspace/crates/qualia-vision)
+   Compiling qualia-solid-bridge v0.0.37 (/workspace/crates/qualia-solid-bridge)
+   Compiling qualia-client-core v0.0.37 (/workspace/crates/qualia-client-core)
+    Finished `release` profile [optimized] target(s) in 3m 07s
+===== END 11-anatomy-example  rc=0  elapsed=187s  2026-09-08T13:47:50Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

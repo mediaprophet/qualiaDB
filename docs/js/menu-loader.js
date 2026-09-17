@@ -256,11 +256,15 @@ function updateBrand(menu) {
     const brandLink = document.querySelector('nav a[href*="index.html"]');
     if (!brandLink || !menu.brand) return;
     brandLink.href = resolveHref('index.html');
+    const rawName = menu.brand.name || 'QualiaDB';
+    const brandLabel = rawName === 'Webizen'
+        ? '<span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-300 text-xl"> / QualiaDB</span>'
+        : `<span class="font-semibold tracking-tight text-xl">${rawName.replace(/DB$/i, '')}</span><span class="text-emerald-400 text-xl">DB</span>`;
     brandLink.innerHTML = `
-        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center shrink-0">
-            <span class="text-black font-bold text-xl">${menu.brand.icon}</span>
+        <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-xl flex items-center justify-center shrink-0">
+            <span class="text-black font-bold text-xl">${menu.brand.icon || 'Q'}</span>
         </div>
-        <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">${menu.brand.name.replace('DB', '')}</span><span class="text-blue-400 text-xl">DB</span></div>
+        <div class="hidden sm:block">${brandLabel}</div>
     `;
 }
 

@@ -4,7 +4,7 @@
 **Created:** 2026-07-24  
 **Repos:** 2026-07-24  
 **Repos:** Qualia `webizen-lite-wasm` + ns site static surface  
-**Repos:** `0.0.28` / ns `main` as applicable  
+**Repos:** `0.0.33` / ns `main` as applicable  
 
 This document is the durable source of truth for the workstream. Session memory may be lost; **follow this file**.
 

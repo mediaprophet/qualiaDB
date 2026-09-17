@@ -1,0 +1,134 @@
+{
+  "corpus_id": "qualia-catchment-notes-v0",
+  "doc_id": "south-bend-gauge-001",
+  "split": "test",
+  "language": "en",
+  "domain": "catchment-measurement-notes",
+  "sensitivity": "Public",
+  "scheme": "symbolic-lite-spans-v0",
+  "source": "South Bend gauge recorded 4.5 m/s of wind on 2026-07-20.",
+  "gazetteer": [],
+  "dates": [
+    {
+      "start": 45,
+      "end": 55,
+      "surface": "2026-07-20",
+      "yyyy_mm_dd": "2026-07-20"
+    }
+  ],
+  "quantities": [
+    {
+      "start": 26,
+      "end": 33,
+      "surface": "4.5 m/s",
+      "value": 4.5,
+      "unit": "m/s"
+    }
+  ],
+  "tokens": [
+    {
+      "start": 0,
+      "end": 5,
+      "surface": "South",
+      "kind": "Word"
+    },
+    {
+      "start": 6,
+      "end": 10,
+      "surface": "Bend",
+      "kind": "Word"
+    },
+    {
+      "start": 11,
+      "end": 16,
+      "surface": "gauge",
+      "kind": "Word"
+    },
+    {
+      "start": 17,
+      "end": 25,
+      "surface": "recorded",
+      "kind": "Word"
+    },
+    {
+      "start": 26,
+      "end": 29,
+      "surface": "4.5",
+      "kind": "Number"
+    },
+    {
+      "start": 30,
+      "end": 31,
+      "surface": "m",
+      "kind": "Word"
+    },
+    {
+      "start": 31,
+      "end": 32,
+      "surface": "/",
+      "kind": "Punct"
+    },
+    {
+      "start": 32,
+      "end": 33,
+      "surface": "s",
+      "kind": "Word"
+    },
+    {
+      "start": 34,
+      "end": 36,
+      "surface": "of",
+      "kind": "Word"
+    },
+    {
+      "start": 37,
+      "end": 41,
+      "surface": "wind",
+      "kind": "Word"
+    },
+    {
+      "start": 42,
+      "end": 44,
+      "surface": "on",
+      "kind": "Word"
+    },
+    {
+      "start": 45,
+      "end": 49,
+      "surface": "2026",
+      "kind": "Number"
+    },
+    {
+      "start": 49,
+      "end": 50,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 50,
+      "end": 52,
+      "surface": "07",
+      "kind": "Number"
+    },
+    {
+      "start": 52,
+      "end": 53,
+      "surface": "-",
+      "kind": "Punct"
+    },
+    {
+      "start": 53,
+      "end": 56,
+      "surface": "20.",
+      "kind": "Number"
+    }
+  ],
+  "sentences": [
+    {
+      "start": 0,
+      "end": 56,
+      "surface": "South Bend gauge recorded 4.5 m/s of wind on 2026-07-20."
+    }
+  ],
+  "notes": "Held-out test note. Independent site (South Bend) and compound unit m/s. Not a gazetteer hit."
+}

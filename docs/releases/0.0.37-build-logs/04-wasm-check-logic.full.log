@@ -1,0 +1,6 @@
+===== START 04-wasm-check-logic  2026-09-08T13:37:28Z =====
+CMD: cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-logic
+    Checking qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 20.04s
+===== END 04-wasm-check-logic  rc=0  elapsed=21s  2026-09-08T13:37:49Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

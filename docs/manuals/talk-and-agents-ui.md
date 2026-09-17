@@ -5,9 +5,9 @@
 
 ## Talk home
 
-- **Chat** — local agent sessions; `stream_chat_inference` + `chat-token`.  
+- **Chat** — people-first messaging (`append_chat_message`). `stream_chat_inference` + `chat-token` only when the human asks an instrument (`@slug` or Ask instrument).  
 - **People / Reception / Projects / Mail** — social_hub tabs.  
-- Model activate via `discover_models` / `set_active_model`.
+- Model activate via `discover_models` / `set_active_model` — a **tool**, never the other party.
 
 ## Backend labels
 
@@ -19,8 +19,8 @@
 
 Talk header shows:
 
-- **Needs model** when no active GGUF.  
-- **Partial** when model active (runtime dogfood still required until harness proves e2e).
+- **held / not yet** when no active GGUF (teachable instrument path; Send still works).  
+- **Partial** when a model is active (instrument under principal, not a peer person).
 
 ## Agent tools (U3)
 

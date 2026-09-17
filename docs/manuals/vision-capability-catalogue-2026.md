@@ -1,6 +1,6 @@
 # Vision Capability Catalogue → Qualia Implementation Map
 
-**Branch:** `0.0.28`  
+**Branch:** `0.0.33`  
 **Source:** Principal-supplied industry function catalogue (Physiological → Specialty Optics + Decentralized)  
 **Living to-do:** `native-vision-capability-excellence-PROGRESS-LOG.md` § Implementation to-do  
 **Registry spine:** D1–D9 in `qualia-vision` capability registry  

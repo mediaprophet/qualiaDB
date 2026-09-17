@@ -1,6 +1,6 @@
 # Browser Swarm 2 — Hardening (Trust Real / Cookies Clear / Agent Aligned)
 
-**Branch:** `0.0.28` (canonical tree `C:\Projects\qualia-27062026` only)  
+**Branch:** `0.0.33` (canonical tree `C:\Projects\qualia-27062026` only)  
 **Status:** **Ready to execute** when Timothy says go  
 **Decisions:** [`browser-advisor-decisions-addendum-2026-07-17.md`](browser-advisor-decisions-addendum-2026-07-17.md)  
 **Prior swarm:** [`browser-engine-trust-cookies-swarm.md`](browser-engine-trust-cookies-swarm.md) (wave1 done; Servo deferred forever for *this* plan)  

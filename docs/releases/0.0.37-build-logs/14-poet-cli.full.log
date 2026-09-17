@@ -1,0 +1,5 @@
+===== START 14-poet-cli  2026-09-08T13:56:22Z =====
+CMD: cargo build --release -p poet-cli
+    Finished `release` profile [optimized] target(s) in 0.23s
+===== END 14-poet-cli  rc=0  elapsed=0s  2026-09-08T13:56:22Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0

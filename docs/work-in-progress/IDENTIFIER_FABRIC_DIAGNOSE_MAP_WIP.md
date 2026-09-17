@@ -1,0 +1,335 @@
+# WIP — Identifier Fabric diagnose / suggested_form map (F5)
+
+**Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
+**Owner:** Vibe (language · DevRel · diagnose) · **Taxonomy:** Noddy · **Shapes:** Marvin · **Fold/push:** Neo · **Ops:** Capt.  
+**Against:** HEAD `b832708`+ · spine §3e contextual sense · F1 §14 · F2 §14 `9ad8fc8` · spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
+**Cite:** `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` · `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` · nomenclature arrive·hold·leave · living-safe copy  
+**Constraint:** docs only until Cursor vibe delivery; no Host invent; no `ALL_BOUND` invent; collapse who→instrument/claim/handle = **gate fail**.
+
+---
+
+## 1. Purpose
+
+Map Identifier Fabric planes into vibe **diagnose** / **`suggested_form`** / Poet DevRel copy so that:
+
+1. CS “identity” (auth subject + id + attributes bag) never appears as a single diagnose voice.
+2. `suggested_form` names the **plane** being corrected (who · claim · handle · instrument).
+3. Living-safe vs artifact wording matches Marvin framing and nomenclature locks.
+4. Hot-edit scripts can stay honest without Host widen.
+
+---
+
+## 2. Plane voice (locked)
+
+| Plane | Diagnose speak (en seeds) | Never say |
+|-------|---------------------------|-----------|
+| Natural agent | person · people · living · being · kin | thing · object · entity · “identity” as auth bag · DID-as-who |
+| Claim / opinion | claim · assertion · opinion · attestation | “proven true” because VC verified · who |
+| Spatiotemporal handle | place · where · when · route · how now | who forever · controller fact from path alone |
+| Instrument | tool · DID (identifier) · credential · machine id · volume · digest · biometric family/instance | “your identity” · the person |
+
+**Customer chips:** **live** = it runs (if not, bug — finish it); **planned** = not built yet. **Internal gate:** `held` only when a bind is truly unbound — never customer theatre on shipped work, never “broken”. **Sanctuary:** keep / commit only on real success.
+
+---
+
+## 3. Collapse detectors (copy + future codes)
+
+When a message or fix would equate planes, diagnose must **refuse the merge** and suggest the separated form:
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| DID / observer / `did:q42` spoken as who | Rename to identifier/coordinate; keep NaturalAgent separate |
+| VC verified ⇒ claim true ⇒ who | Split: envelope integrity vs claim plane vs agent |
+| DNI / address as persistent who | Speak how-now handle; not person |
+| Biometric instance as timeless who | Family = kind; instance = mutable sample; agent stays living plane |
+| Machine ID = human principal | Device instrument ≠ person |
+| Alias alone as route authority | Alias needs provenance; never sole route who |
+
+Optional future `error_code` family (docs only — no invent now): fabric-collapse / plane-mismatch — **planned** until codes land; do not teach `held / not yet` as the customer chip.
+
+---
+
+## 4. `suggested_form` row shape (additive)
+
+Extend lexicon-style alias honesty where useful:
+
+```json
+{
+  "from": "<collapsed or CS phrasing>",
+  "to": "<plane-correct phrasing>",
+  "plane": "NaturalAgent|ClaimOpinion|SpatiotemporalHandle|Instrument",
+  "framing": "living-SHACL|artifact-OWL|mixed",
+  "instrumentKind": "<optional Noddy kind id>"
+}
+```
+
+Living subjects keep `living-SHACL`; DID/VC/QRC/machine/digest keep `artifact-OWL`; Position/placement `mixed`.
+
+---
+
+## 5. Poet / REPL copy checklist
+
+1. Catalog chips: living · artifact · machine — never “identity” chip that bags them. Customer status chips are **live** / **planned**, not held/not-yet theatre.
+2. Observer / `did:q42` UI: **coordinate / storage**, not who.
+3. VC UI: **issuer origin + integrity**, not truth, not who.
+4. Session/DNI: **how now**, not who forever.
+5. Biometrics: show family vs instance; never one sample = who.
+6. office:graph sayables-first remains wishlist; fabric plane names still beat CS “identity” in any new string.
+
+---
+
+## 6. Fixture accept (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-A | Collapse DID→who | diagnose rejects; suggested_form splits planes |
+| F5-B | VC verified copy | no “true who”; origin+integrity only |
+| F5-C | QRC/observer | topology/coord voice |
+| F5-D | Biometric instance alone | **planned** until family+agent relation is built; internal `held` only if the bind is truly unbound |
+| F5-E | Living copy | never thing/object/entity |
+
+No Host widen to implement — prefer diagnose templates + DevRel strings first.
+
+---
+
+## 7. Non-goals
+
+EBNF invent · ALL_BOUND invent · SemVer bump · Solid IdP · parallel identity ontology · Cursor vibe collision
+
+---
+
+## 8. Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold this file; set F5 landed on spine; tip SHA |
+| **Alice** | F6 can cite §2–§3 as separate feature-space labels |
+| **Capt.** | Blockers if copy still says CS identity |
+| **Vibe** | Amend only if Timothy enumerates new collapse modes |
+
+
+---
+
+## 9. Amend — agent-type cut + jury-safe instruments (F1 §14 / tip `8724174`)
+
+### 9.1 Plane voice — agent-type cut (add to §2)
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| NaturalAgent | person · people · living · being · kin | thing · AI · machine · “identity” bag |
+| AI-agent | AI-agent · software agent · assistant | person · human · machine (device) |
+| Machine/device | machine · device · node | person · who · AI-agent |
+| Organization/service | organisation · service | person |
+
+### 9.2 Collapse detectors (add to §3)
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| AI-agent spoken as person/human | Rename to AI-agent plane; operator remains NaturalAgent relation |
+| Machine ID / hardware / SAN / WebID-TLS/RSA as who | Name as **instrument**; not the entity |
+| FOAF Person-as-Thing / WN-person as who | Living SHACL NaturalAgent; lexical concept ≠ plane |
+| Jury/audit “identity token” narrative | Enumerate who · claim · handle · instrument in plain language; hardness = signatures + time window + scoped machines/networks/agents |
+
+### 9.3 Poet checklist (add to §5)
+
+7. AI-agent chrome ≠ person chrome ≠ machine chrome (three sayables).
+8. WebID/SAN/hardware labeled **tools/instruments**, never “the identity.”
+9. Court/evidence surfaces: jury-safe plane enumeration (F1 §14.4).
+
+### 9.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-F | AI-agent collapsed to person | diagnose rejects; suggested_form splits AI-agent vs NaturalAgent vs machine |
+
+
+---
+
+## 10. Amend — contextual sense + flora/fauna (Capt spine §3e)
+
+**Cite:** Capt lock · spine §3c/§3e · F1 lexicalConcept · F2 lexical≠plane · Timothy room (thongs/gay homographs).
+
+### 10.1 Sense is contextual
+
+Lexical “identity” is **not** one timeless label. Diagnose/`suggested_form` MUST bind:
+
+| Binding | Role |
+|---------|------|
+| WN/OMW concept | Lexical substrate — vocabulary only |
+| Language / locale | e.g. AU “thongs” ≈ footwear, not underwear by default |
+| Era / community / namespace | Older “gay” ≠ sexuality sense without provenance |
+| Time + provenance | Which sense was meant *then* |
+
+**Gate fail:** mega-meaning who-token for a word; crypto as homograph disambiguator (context + provenance does that).
+
+### 10.2 Flora / fauna
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Living flora/fauna | living · plant · animal · organism (typed) | person · human · Thing-washed commodity who |
+| NaturalAgent | person · people · living · kin | flora · fauna · animal-as-citizen who-bag |
+
+Living-typed entities ≠ NaturalAgent personhood ≠ `owl:Thing` wash.
+
+### 10.3 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| One WN sense as timeless meaning | Require locale/era/namespace/provenance bindings |
+| Homograph collapsed across locales | Split senses; cite context |
+| Flora/fauna spoken as person/who | Living-typed entity; not NaturalAgent |
+| “Crypto proves the word’s identity” | Refuse — instruments prove keys/statements, not lexical sense |
+
+### 10.4 Poet checklist
+
+10. Lexicon chips/labels show sense+context when ambiguity matters.
+11. Flora/fauna chrome ≠ person chrome.
+12. Never claim crypto resolves thongs/gay-class homographs.
+
+---
+
+## 11. Amend — ZKP / grant / policy diagnose voice (F1 §18 / tip `4994e15`)
+
+**Cite:** Capt spine §3f · F1 §18 · F2 §18 (`OntologyGovernedPolicyShape` · `ZkpProofShape`) · room (Noddy/Vibe) · situational grants §10/F1 §17.
+
+### 11.1 Plane voice (add to §2)
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Situational capacity grant | purpose · condition · time · qualification — scoped grant | who · person identity · new NaturalAgent |
+| Accountability / logs | provenance · claim–evidence | grant · who · “the identity” |
+| Signed ontology / policy docs | interpret instruments (HTTP-independent) | trust root · who-bag · Solid/HTTP as identity |
+| HTTP / Solid | offramp (LIG) only | policy trust root |
+| ZKP | **proof instrument** — shows a predicate without dumping attributes | anonymous who · person identity · parallel identity system |
+
+### 11.2 Collapse detectors (add to §3)
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| ZKP success ⇒ person / “anonymous who” | Split proof instrument vs NaturalAgent; name circuit/context, not who |
+| Grant success ⇒ person identity | Keep situational capacity grant as relation axiom; operator remains NaturalAgent |
+| Policy/ontology success ⇒ who | Keep on claim–policy–modality; cite signed interpretation binding |
+| Logs treated as grant or who | Provenance / claim–evidence plane only |
+| HTTP endpoint as ZKP/policy trust root | Refuse — Solid/HTTP offramp; signed ontology interprets |
+
+### 11.3 Poet checklist (add to §5)
+
+13. Grant chrome ≠ who chrome; logs ≠ grant.
+14. ZKP labeled **proof instrument**, never “anonymous identity.”
+15. Policy/signed ontology chrome: interpret, not who; HTTP not trust root.
+
+### 11.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-G | ZKP or grant success collapsed to person who | diagnose rejects; suggested_form splits proof/grant vs NaturalAgent |
+
+---
+
+## 12. Amend — relation-scoped locators (spine §3g / F2 §19)
+
+**Cite:** Capt spine §3g tip `1d55f56` · F2 `RelationScopedLocatorShape` · F1 §19 · room email sketch.
+
+### 12.1 Plane voice
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Relation-scoped locator | relation instrument · address for this bond | who · identity address · static forever-address |
+| Pairwise email sketch | Jane→Bob receive relation (`jane@bob.tld`); Bob→Jane is a **second** instrument | `jane@bob.tld` = Jane-as-person |
+| Group / chat / txn / DNS-code | scoped string for that relation | Solid/phone static who |
+| Agents of entities | metadata/semantics on the relation | the NaturalAgent who / mailbox who |
+
+### 12.2 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| Locator spoken as identity / who | Split relation-scoped instrument vs NaturalAgent |
+| Static forever-address (Solid/phone pattern) as who | Prefer relation-scoped locators; HTTP/Solid offramp only |
+| One locator correlating all counterparts into mega-who | Keep directed pairwise instruments unmerged |
+
+### 12.3 Poet checklist
+
+16. Locator chrome = “relation address,” never “your identity.”
+17. Pairwise email = two instruments; neither string *is* the person.
+
+### 12.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-H | Locator / static address collapsed to who | diagnose rejects; splits instrument vs NaturalAgent |
+
+---
+
+## 13. Amend — env-capacity · relationship≠identity · dense-graph≠who (F1/F2 §23–§25 · spine §3k–§3m)
+
+**Cite:** tip `9c66f46` · F1/F2 §23–§25 · spine §3k–§3m · room (geocache · ATM BLE · temporal assessment · Quin).
+
+### 13.1 Plane voice
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Env-conditioned capacity / GIS · sensor · BLE co-presence | context instruments + handles | who · person · banker-from-ATM-BLE |
+| Geocache / place-bound secret | place-bound secret instrument | person identity from find |
+| Relationship assessment arc | views grow/dissolve on claim–relation lifecycle | identity-changed · who-rewrite |
+| Knew vs didn’t-understand breach | epistemic + deontic on claim–policy | permanent who-bit / bad-actor type |
+| Dense social/brand graph | many relations (expected) | who · “they define each other” |
+| Quin / NQuin | axiom storage / graph form | identity |
+
+### 13.2 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| Env-grant / co-presence success ⇒ who | Split instruments+handles vs NaturalAgent |
+| Relationship arc ⇒ identity-changed | Keep RelationshipAssessmentClaim / RelationLifecycle; NaturalAgent stays |
+| Social-graph / counterpart-set embedding as who | Refuse — non-defining high-cardinality relations |
+| Quin as who-token | Name as storage substrate for typed edges |
+
+### 13.3 Poet checklist
+
+18. Env chrome = context instruments/handles, not identity.
+19. “Relationship changed” never paints as “who changed.”
+20. Dense graph chrome ≠ identity collapse; Quin ≠ identity label.
+
+### 13.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-I | Env success or relation arc or social graph collapsed to who | diagnose rejects; splits planes |
+
+---
+
+## 14. Amend — good-faith reliance / RCA / blast radius (F1/F2 §27 · spine §3o)
+
+**Cite:** tip `eece96f` · F1/F2 §27 · spine §3o · room (mushroom meme · org-rep · AI-agent claims).
+
+### 14.1 Plane voice
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Assumption invalidated | claim/reliance graph updated | identity changed · who-rewrite |
+| Reliance / AssumptionChain | acted on this assertion (claim–evidence) | who · person type from reliance |
+| RootCauseBundle / BlastRadiusMap | repercussion review (social · economic · safety · security) | merge impacted parties into one who |
+| Org-rep binding | role instrument | personal who of the speaker |
+| False safety assertion + harm | claim–accountability track | NaturalAgent “updated” by apology |
+
+### 14.2 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| Retract / sorry / RCA success ⇒ person-identity rewrite | Keep who stable; fix claim/reliance/blast graph |
+| Misleading AI ⇒ human fraudster who | Split AI-agent instrument vs NaturalAgent principal |
+| Blast radius ⇒ one identity bag | Enumerate repercussion claims across parties — unmerged |
+
+### 14.3 Poet checklist
+
+21. “Assumption invalidated” never paints as “who changed.”
+22. RCA/blast chrome = repercussion review, not identity rewrite.
+23. Apology after harm stays on claim–accountability — NaturalAgent unchanged.
+
+### 14.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-J | Sorry/RCA collapsed to who-rewrite | diagnose rejects; keeps who stable; points at claim/reliance graph |
+
+*End F5 — Vibe Identifier Fabric diagnose map.*

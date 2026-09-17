@@ -1,0 +1,6 @@
+===== START 02-wasm-check-portal  2026-09-08T13:36:54Z =====
+CMD: cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features portal
+    Checking qualia-core-db v0.0.37 (/workspace/crates/qualia-core-db)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 22.04s
+===== END 02-wasm-check-portal  rc=0  elapsed=22s  2026-09-08T13:37:16Z =====
+errors=0 warnings=0 unique_diagnostic_lines=0
