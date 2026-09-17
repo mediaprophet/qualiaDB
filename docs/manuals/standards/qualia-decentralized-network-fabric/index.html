@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QDNF Standards and Implementation Record</title>
+  <meta name="description" content="Public index for the Qualia Decentralized Network Fabric design, implementation programme, and qualified-status record.">
+  <link rel="stylesheet" href="../../../css/tailwind-built.css">
+  <link rel="stylesheet" href="../../../css/site-nav.css">
+  <link rel="stylesheet" href="../../../css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="../../../js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8"><div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+      <a href="../../../index.html" class="flex items-center gap-3 shrink-0"><div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">Q</span></div><div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div></a>
+      <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+    </div></div>
+  </nav>
+
+  <main class="q-wrap max-w-5xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-book-open"></i> QDNF standards and implementation record</div>
+    <h1 class="q-hero-title font-display mb-5">The fabric is a design, a programme, and working native slices.</h1>
+    <p class="q-lede mb-6">This index makes the QDNF material navigable on Pages. It does not promote a design document or local fixture to a public-network, security, or deployment certification.</p>
+    <div class="q-note mb-12"><strong>Current presentation rule:</strong> read the status guide first for what has landed; then use the source records for exact technical detail, evidence, and outstanding qualification gates.</div>
+
+    <section class="grid md:grid-cols-2 gap-5 mb-14">
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Public guides</p>
+        <h2 class="text-2xl font-semibold mb-4">Start here</h2>
+        <div class="flex flex-col items-start gap-3 text-sm">
+          <a class="q-link" href="../../../qdnf-status.html">QDNF implementation status</a>
+          <a class="q-link" href="../../../qdnf.html">QDNF architecture map</a>
+          <a class="q-link" href="../../../qdnf-did-qi.html"><code>did:qi</code> implementation status</a>
+          <a class="q-link" href="../../../qdnf-peer-runtime.html">QPR overview</a>
+          <a class="q-link" href="../../../qdnf-network-cells.html">Network-cells boundary</a>
+        </div>
+      </article>
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Status vocabulary</p>
+        <h2 class="text-2xl font-semibold mb-4">Do not flatten the states</h2>
+        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+          <li><strong class="text-emerald-300">Implemented locally</strong>: working in-tree behaviour and its bounded evidence.</li>
+          <li><strong class="text-cyan-300">Transition</strong>: a labelled carrier that is useful but not Native Independent.</li>
+          <li><strong class="text-amber-300">Held</strong>: an external qualification or authority is still required.</li>
+          <li><strong class="text-rose-300">Not established</strong>: never infer it from a local test, mock, or static website.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="cscp" class="q-card p-8 mb-14">
+      <p class="q-kicker mb-2">Technical source records</p>
+      <h2 class="text-3xl font-semibold mb-6">Design, programme, and protocol work</h2>
+      <div class="grid md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
+        <div><h3 class="font-semibold text-white mb-2">Fabric design</h3><ul class="space-y-2"><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/manuals/standards/qualia-decentralized-network-fabric/README.md">QDNF design specification</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/manuals/standards/qualia-decentralized-network-fabric/implementation-conformance.md">Implementation and conformance boundary</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/manuals/standards/qualia-decentralized-network-fabric/identifier-resolution.md">Identifier resolution</a></li></ul></div>
+        <div><h3 class="font-semibold text-white mb-2">Implementation evidence</h3><ul class="space-y-2"><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/progress-log.md">QDNF programme progress log</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/validation-matrix.md">Qualification and validation matrix</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/tree/0.0.39/crates/qualia-core-db/src/net/qdnf">Native QDNF source</a></li></ul></div>
+        <div><h3 class="font-semibold text-white mb-2">CSCP and Internet gates</h3><ul class="space-y-2"><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/progress-log.md">CSCP progress record</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/standards/ietf/draft-webcivics-cscp-00.md">CSCP -00 working draft</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/standards/ietf/CSCP-08-LOCAL-CHORES.md">CSCP-08 external-operator chores</a></li></ul></div>
+        <div><h3 class="font-semibold text-white mb-2">Identity and transition</h3><ul class="space-y-2"><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/docs/manuals/standards/did-qi-method.md"><code>did:qi</code> method draft</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/crates/qualia-core-db/src/did_qi/mod.rs"><code>did:qi</code> implementation</a></li><li><a class="q-link" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/crates/qualia-core-db/src/net/qdnf/bearer/nym.rs">Nym transition bearer</a></li></ul></div>
+      </div>
+    </section>
+
+    <section class="q-card p-8">
+      <p class="q-kicker mb-2">Open gates remain open</p>
+      <h2 class="text-2xl font-semibold mb-3">Pages cannot be the network qualification.</h2>
+      <p class="text-sm" style="color:var(--q-muted)">GitHub Pages can describe and link the work. It cannot receive an inbound public session, serve as a MASQUE relay, establish two-host Internet evidence, submit an IETF draft, or perform independent cryptographic review. Those states remain explicit until their named evidence exists.</p>
+    </section>
+  </main>
+  <footer class="q-site-footer">QDNF standards index · 0.0.39 · capability evidence stays scoped to its proof</footer>
+</body>
+</html>

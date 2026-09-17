@@ -29,7 +29,7 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · in progress · 0.0.38</div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · local and transition slices landed · 0.0.39</div>
     <h1 class="q-hero-title font-display mb-5">
       A network that does not borrow DNS to know a human.
     </h1>
@@ -98,13 +98,13 @@
           <li>Not identity. Locators, sessions, and instruments stay off the who-plane (Identifier Fabric). Handle revoke ≠ who-erase. Human ≠ legal “person” ≠ bot.</li>
           <li>Not DNS-as-who. A lost domain must not erase a human from the fabric; domains are optional handles.</li>
           <li>Not “Solid as the architecture.” Solid LDP remains a federated access surface; QDNF owns naming and routing.</li>
-          <li>Not finished. On <code class="q-mono">0.0.38</code>: native QPR / CSCP local slices (loopback H2 Extended CONNECT, local WSS patterns, fail-closed decode) — still not a public relay claim. Measured completeness lives in the CSCP programme and honesty flags, not in this honeycomb.</li>
+          <li>Not finished. On <code class="q-mono">0.0.39</code>: native QPR / CSCP local slices, <code>did:qi</code> mailbox binding, and named transition bearers are in tree. They do not establish a public relay, Internet two-host path, MASQUE, or a Native Independent default daemon. The <a class="q-link" href="qdnf-status.html">implementation status</a> records the evidence boundary.</li>
         </ul>
       </article>
     </section>
 
     <section id="ledger" class="q-card p-8 mb-12">
-      <h2 class="text-2xl font-semibold mb-3">0.0.38 networking — honest ledger</h2>
+      <h2 class="text-2xl font-semibold mb-3">0.0.39 networking — honest ledger</h2>
       <p class="text-[1.05rem] mb-5" style="color:var(--q-muted);max-width:40rem">Language only. Flags and workstream boxes are the contract — this honeycomb does not flip them.</p>
       <div class="grid md:grid-cols-3 gap-4 text-[1.05rem]">
         <article class="q-soft-rise rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-7">
@@ -113,17 +113,18 @@
             <li>QDNF <strong>connection manager</strong> in-tree (policy, dual-stack planner, invitations, durable delivery) — Internet trial still unexecuted.</li>
             <li><strong>CSCP</strong> local control plane (Wave 0–1): fail-closed TLV codec, mailbox, leases, receipts; loopback bound-UDP; local rustls WSS ↔ QSession.</li>
             <li>CSCP-09.01/09.02: local DATAGRAM capsules + loopback HTTP/2 Extended CONNECT — <em>not</em> Internet MASQUE.</li>
-            <li><code class="q-mono">did:qi</code> method draft + in-process CRUD/vectors (not DID Spec Registries).</li>
+            <li><code class="q-mono">did:qi</code>: signed QCDE-1 lifecycle/vectors, mailbox publication, relay-only refusal, and Direct-permitted selection — <em>not</em> DID Spec Registries.</li>
+            <li>Named transition bearers include WireGuard, TLS WSS, HTTP/2 capsules, and bounded Nym mixnet framing. Transition is not Native Independent.</li>
             <li>Continuity: handle revoke ≠ who-erase; DNS/ABN/passport optional attach-later handles.</li>
           </ul>
         </article>
         <article class="q-soft-rise q-care rounded-2xl p-7">
           <p class="q-kicker mb-2" style="color:var(--q-amber)">In progress</p>
           <ul class="q-ledger" style="color:var(--q-muted)">
-            <li>QPR / native fabric depth beyond local slices.</li>
+            <li>QPR / native fabric depth and qualification beyond local slices, including raw Ethernet, AF_XDP, long-duration churn, and independent review.</li>
             <li>Parent CSCP-09 on a <em>live Internet</em> path (loopback H2 is not that).</li>
             <li>Identifier Fabric chrome fold (docs WIP — not a new paper gate).</li>
-            <li>GitHub Pages: workflow lists <code class="q-mono">0.0.38</code>; environment may still reject the branch — publish path is tag <code class="q-mono">v0.0.38</code>.</li>
+            <li>GitHub Pages can publish this status record but cannot supply public-network evidence. Publish path is tag <code class="q-mono">v0.0.39</code>.</li>
           </ul>
         </article>
         <article class="q-soft-rise q-care rounded-2xl p-7">
@@ -154,13 +155,14 @@
 
     <section class="q-card p-8 mb-12">
       <h2 class="text-2xl font-semibold mb-3">Read the actual design</h2>
-      <p class="text-[1.05rem] mb-5" style="color:var(--q-muted);max-width:40rem">The honeycomb is a map. These open as HTML — not a naked markdown dump. Continuity and CSCP-08 stay on this page as honesty cards.</p>
+      <p class="text-[1.05rem] mb-5" style="color:var(--q-muted);max-width:40rem">The honeycomb is an architecture map. The status guide and standards index present the implemented work and its gates without sending readers to raw Markdown paths.</p>
       <div class="flex flex-wrap gap-3">
-        <a class="q-pill q-pill-primary" href="manuals/standards/qualia-decentralized-network-fabric/">QDNF specification</a>
+        <a class="q-pill q-pill-primary" href="qdnf-status.html">QDNF implementation status</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
         <a class="q-pill" href="qdnf-peer-runtime.html">Peer runtime</a>
         <a class="q-pill" href="qdnf-network-cells.html">Network cells</a>
         <a class="q-pill" href="qdnf-did-qi.html">did:qi method draft</a>
-        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/">CSCP implementation</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html#cscp">CSCP implementation record</a>
         <a class="q-pill" href="#cscp-08">CSCP-08 local chores (no tick)</a>
         <a class="q-pill" href="#continuity">Continuity · handle revoke</a>
         <a class="q-pill" href="progress-0.0.37.html">0.0.37 progress (archive)</a>

@@ -64,7 +64,9 @@ const liveReleaseSurfaces = [
   'docs/playground/anatomy.js',
   'docs/progress-0.0.39.html',
   'docs/qdnf.html',
+  'docs/qdnf-status.html',
   'docs/release-matrix.html',
+  'docs/semantic-instruments.html',
   'docs/tests/index.html',
   'docs/wasm-engine.html',
 ];
@@ -87,7 +89,7 @@ assert.match(read('.github/workflows/release-p64-models.yml'), new RegExp(`- ${r
 
 const releaseMatrix = read('docs/release-matrix.html');
 assert.match(releaseMatrix, /Qualia · Webizen · Poet/);
-assert.match(releaseMatrix, /What 0\.0\.38 is for/);
+assert.match(releaseMatrix, /What 0\.0\.39 is for/);
 assert.match(releaseMatrix, /vibe-wasm/);
 assert.match(releaseMatrix, /Published from GitHub Actions/);
 assert.match(releaseMatrix, /release-cli\.yml/);
@@ -100,6 +102,16 @@ assert.doesNotMatch(releaseMatrix, /rustc 1\.98/);
 assert.doesNotMatch(releaseMatrix, /15 \/ 15/);
 assert.doesNotMatch(read('docs/index.html'), /Linux release matrix that is actually green/);
 assert.doesNotMatch(read('docs/index.html'), /15 \/ 15 green on Linux/);
+
+const pagesMenu = JSON.parse(read('docs/menu.json'));
+assert.ok(
+  pagesMenu.navigation.some((entry) => entry.href === 'semantic-instruments.html'),
+  'Pages navigation must expose the Semantic Instruments guide',
+);
+const instrumentGuide = read('docs/semantic-instruments.html');
+assert.match(instrumentGuide, /Honest release boundary/);
+assert.match(instrumentGuide, /Reference runner/);
+assert.match(instrumentGuide, /SI-12/);
 
 const comparative = JSON.parse(read('docs/comparative_benchmark_results.json'));
 assert.equal(

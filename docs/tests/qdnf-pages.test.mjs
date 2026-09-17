@@ -28,13 +28,14 @@ assert.match(css, /\.hex:hover/);
 
 const qdnf = read('qdnf.html');
 assert.match(qdnf, /data-theme="release-038"/);
-assert.match(qdnf, /0\.0\.38/);
+assert.match(qdnf, /0\.0\.39/);
 assert.match(qdnf, /Space\+Grotesk/);
 assert.match(qdnf, /family=Inter/);
 assert.match(qdnf, /JetBrains\+Mono/);
 assert.match(qdnf, /human \(NaturalAgent\)/);
 assert.match(qdnf, /connection manager/);
 assert.match(qdnf, /did:qi/);
+assert.match(qdnf, /Nym mixnet framing/);
 assert.match(qdnf, /CSCP-08/);
 assert.match(qdnf, /CSCP-12/);
 assert.match(qdnf, /Handle revoke ≠ who-erase/);
@@ -67,7 +68,8 @@ assert.doesNotMatch(qdnf, /Ask · Keep · Talk/);
 assert.doesNotMatch(qdnf, /href="[^"]+\.md"/);
 assert.doesNotMatch(qdnf, /read\.html\?doc=/);
 assert.doesNotMatch(qdnf, /border-rose-500/);
-assert.match(qdnf, /href="manuals\/standards\/qualia-decentralized-network-fabric\/"/);
+assert.match(qdnf, /href="qdnf-status.html"/);
+assert.match(qdnf, /href="manuals\/standards\/qualia-decentralized-network-fabric\/index.html"/);
 assert.match(qdnf, /href="qdnf-peer-runtime.html"/);
 assert.match(qdnf, /href="qdnf-network-cells.html"/);
 assert.match(qdnf, /href="qdnf-did-qi.html"/);
@@ -76,12 +78,31 @@ assert.match(qdnf, /href="#continuity"/);
 assert.doesNotMatch(qdnf, /public_relay_dialed\(\)\s*=\s*true/);
 assert.doesNotMatch(qdnf, /MASQUE evidence flags stay <strong>true/);
 
+const qdnfStatus = read('qdnf-status.html');
+assert.match(qdnfStatus, /QDNF \/ QPR · implementation status · 0\.0\.39/);
+assert.match(qdnfStatus, /Implemented in tree/);
+assert.match(qdnfStatus, /Implemented identity slice/);
+assert.match(qdnfStatus, /Nym mixnet framing/);
+assert.match(qdnfStatus, /Not established/);
+assert.match(qdnfStatus, /public relay, Internet two-host, MASQUE, QUIC\/noq/i);
+assert.match(qdnfStatus, /do not become Native Independent merely by carrying a QFrame/);
+
+const qdnfIndex = read('manuals/standards/qualia-decentralized-network-fabric/index.html');
+assert.match(qdnfIndex, /QDNF standards and implementation record/);
+assert.match(qdnfIndex, /QDNF implementation status/);
+assert.match(qdnfIndex, /CSCP progress record/);
+assert.match(qdnfIndex, /Open gates remain open/);
+
 for (const stub of ['qdnf-peer-runtime.html', 'qdnf-network-cells.html', 'qdnf-did-qi.html']) {
   const html = read(stub);
   assert.match(html, /data-theme="release-038"/);
   assert.match(html, /Handle ≠ human/);
+  assert.match(html, /qdnf-status.html/);
   assert.doesNotMatch(html, /href="[^"]+\.md"/);
 }
+
+assert.match(read('qdnf-did-qi.html'), /Bounded QCDE-1 signed documents/);
+assert.match(read('qdnf-did-qi.html'), /CscpMailbox/);
 
 const menuLoader = read('js/menu-loader.js');
 assert.match(menuLoader, /rawName === 'Webizen'/);

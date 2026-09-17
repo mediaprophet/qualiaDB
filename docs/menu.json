@@ -34,6 +34,13 @@
       "group": "Core"
     },
     {
+      "label": "Semantic Instruments",
+      "href": "semantic-instruments.html",
+      "icon": "fa-toolbox",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "0.0.38 Progress",
       "href": "progress-0.0.38.html",
       "icon": "fa-heart-pulse",
@@ -56,6 +63,13 @@
       "label": "QDNF",
       "href": "qdnf.html",
       "icon": "fa-circle-nodes",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "QDNF Status",
+      "href": "qdnf-status.html",
+      "icon": "fa-tower-broadcast",
       "highlight": true,
       "group": "Core"
     },

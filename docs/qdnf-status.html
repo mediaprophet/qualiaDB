@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QDNF Implementation Status — 0.0.39</title>
+  <meta name="description" content="Implemented, transition, local-only, and externally blocked status for the Qualia Decentralized Network Fabric.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">Q</span></div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> QDNF / QPR · implementation status · 0.0.39</div>
+    <h1 class="q-hero-title font-display mb-5">Native networking has landed in layers.</h1>
+    <p class="q-lede mb-6">This is the public status record for the Qualia Decentralized Network Fabric and Qualia Peer Runtime. It distinguishes working in-tree code from transition carriers, local-only qualification, and Internet work that requires a real second host or operator.</p>
+    <div class="q-note mb-12">
+      <strong>Read status literally.</strong> Local execution, conformance fixtures, and a bounded transition bearer are meaningful achievements. They do not prove a public relay, an Internet two-host path, MASQUE, a native-independent default daemon, a production security review, or deployment certification.
+    </div>
+
+    <section class="grid lg:grid-cols-3 gap-5 mb-14">
+      <article class="q-card p-7 border border-emerald-500/25">
+        <p class="q-kicker text-emerald-300 mb-2">Implemented in tree</p>
+        <h2 class="text-2xl font-semibold mb-3">Local control plane</h2>
+        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+          <li>QDNF connection manager: policy, planner, invitations, durable delivery, and local production-path checks.</li>
+          <li>CSCP v1 local control plane: bounded/fail-closed TLV messages, mailbox, leases, receipt persistence, local bound-UDP, and local rustls WSS ↔ QSession.</li>
+          <li>Local DATAGRAM capsule framing and loopback TLS HTTP/2 Extended CONNECT. These are local proof paths, not Internet MASQUE.</li>
+          <li>Bounded routing, handshake, replication, crash-recovery, and QSR-related native modules exercised through in-tree fixtures.</li>
+        </ul>
+      </article>
+      <article class="q-card p-7 border border-cyan-500/25">
+        <p class="q-kicker mb-2">Implemented identity slice</p>
+        <h2 class="text-2xl font-semibold mb-3"><code>did:qi</code> / CSCP binding</h2>
+        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+          <li>Bounded QCDE-1 signed documents with create, read, update generation, and deactivate paths.</li>
+          <li>Specification vectors, signed-document/git-object checks, canonical caps, and explicit stale-generation handling.</li>
+          <li><code>CscpMailbox</code> publication into the private mailbox; deactivated documents publish no services.</li>
+          <li>Relay-only policy rejects direct delivery before storage; permitted Direct locators are ranked as Direct, not relayed.</li>
+        </ul>
+      </article>
+      <article class="q-card p-7 border border-violet-500/25">
+        <p class="q-kicker text-violet-300 mb-2">Implemented transition carriers</p>
+        <h2 class="text-2xl font-semibold mb-3">Useful, not native-independent</h2>
+        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+          <li>WireGuard/SocialWebNet overlay remains a labelled IP transition path.</li>
+          <li>TLS WSS and HTTP/2 capsule profiles are transition bearers, not MASQUE or a native QLink bearer.</li>
+          <li>Nym mixnet framing and deterministic loopback carrier encapsulate bounded QFrames and support QSession integration testing.</li>
+          <li>Transition locators remain handles/instrument-plane data, never a natural-person identity claim.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="q-card p-8 mb-14">
+      <p class="q-kicker mb-2">Capability matrix</p>
+      <h2 class="text-3xl font-semibold mb-6">What each result establishes</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[46rem] text-sm text-left">
+          <thead class="text-white/70 border-b border-white/10"><tr><th class="pb-3 pr-5">Area</th><th class="pb-3 pr-5">Status</th><th class="pb-3">Evidence boundary</th></tr></thead>
+          <tbody class="text-white/65">
+            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">QPR / connection manager</td><td class="py-4 pr-5 text-emerald-300">Implemented locally</td><td class="py-4">In-tree policy, invitations, planning, durable delivery, and local-path tests; no completed Internet trial.</td></tr>
+            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">CSCP Wave 0–2</td><td class="py-4 pr-5 text-emerald-300">Implemented locally</td><td class="py-4">Fail-closed codec, leases, receipts, WSS, capsules, and loopback H2 CONNECT; no public Internet/MASQUE claim.</td></tr>
+            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white"><code>did:qi</code></td><td class="py-4 pr-5 text-emerald-300">Implemented in-process</td><td class="py-4">QCDE-1 document lifecycle, vectors, mailbox binding, and policy gates; not registered in DID Spec Registries.</td></tr>
+            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">Nym / WireGuard / WSS / H2</td><td class="py-4 pr-5 text-cyan-300">Transition carriers</td><td class="py-4">Bounded and named profiles; they do not become Native Independent merely by carrying a QFrame.</td></tr>
+            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">Raw Ethernet, AF_XDP, long churn</td><td class="py-4 pr-5 text-amber-300">Qualification held</td><td class="py-4">Requires physical/veth capability, platform qualification, and additional independent evidence.</td></tr>
+            <tr><td class="py-4 pr-5 font-medium text-white">Public relay, Internet two-host, MASQUE, QUIC/noq</td><td class="py-4 pr-5 text-rose-300">Not established</td><td class="py-4">Honesty flags remain false pending a real externally reachable operator path and the relevant trials.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid lg:grid-cols-2 gap-5 mb-14">
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Continuity and authority</p>
+        <h2 class="text-2xl font-semibold mb-3">A handle is not a human</h2>
+        <p class="text-sm" style="color:var(--q-muted)">DNI, hostnames, DNS, relay hints, Nym addresses, and session locators support routing. They do not define a natural person. Revoking or losing a handle closes or holds that handle; it does not erase the person, their history, or an independent local volume.</p>
+      </article>
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Open external gates</p>
+        <h2 class="text-2xl font-semibold mb-3">Some proof cannot be manufactured locally</h2>
+        <p class="text-sm" style="color:var(--q-muted)">A public relay needs an operator-controlled, inbound Internet endpoint. CSCP-12 needs a human datatracker submission. Native-independent and security claims need their own platform and independent-review evidence. The project does not substitute a CDN, static site, chain, or simulated loopback for those conditions.</p>
+      </article>
+    </section>
+
+    <section class="q-card p-8">
+      <p class="q-kicker mb-2">Technical record</p>
+      <h2 class="text-2xl font-semibold mb-4">Read the standard, programme, and implementation together</h2>
+      <p class="text-sm mb-6" style="color:var(--q-muted)">The public guides explain status. The source and progress records carry exact module and test evidence; they should not be read as a deployment certificate.</p>
+      <div class="flex flex-wrap gap-3">
+        <a class="q-pill q-pill-primary" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
+        <a class="q-pill" href="qdnf.html">QDNF architecture map</a>
+        <a class="q-pill" href="qdnf-did-qi.html"><code>did:qi</code> status</a>
+        <a class="q-pill" href="https://github.com/mediaprophet/qualiaDB/tree/0.0.39/docs/manuals/standards/qualia-decentralized-network-fabric">Programme source</a>
+        <a class="q-pill" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.39/crates/qualia-core-db/src/net/qdnf/bearer/nym.rs">Nym transition bearer</a>
+      </div>
+    </section>
+  </main>
+  <footer class="q-site-footer">QDNF / QPR 0.0.39 · local evidence is not a public-network claim · handle ≠ human</footer>
+</body>
+</html>

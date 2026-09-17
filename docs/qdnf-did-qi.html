@@ -27,20 +27,23 @@
     </div>
   </nav>
   <main class="q-wrap max-w-3xl mx-auto px-6 pt-14 pb-24">
-    <p class="q-chip mb-6">Instrument identity · not DID Spec Registries</p>
+    <p class="q-chip mb-6">Instrument identity · implemented in-process · not DID Spec Registries</p>
     <h1 class="q-hero-title font-display mb-5">did:qi</h1>
     <p class="q-lede mb-6">Qualia Identifier method for instrument identity (node, organisation, contextual persona). Prefix <code class="q-mono">did:qi:</code>. Internal draft 0.1.0 — not a W3C Technical Report, not registered, not a CSCP relay.</p>
     <div class="q-card p-8 mb-12">
       <p class="q-kicker mb-3">Honesty</p>
       <ul class="q-ledger" style="color:var(--q-muted);max-width:40rem">
-        <li>In-process CRUD / vectors exist. This is not DID Spec Registries.</li>
+        <li>Bounded QCDE-1 signed documents support create, read, generation checks, update, and deactivate; specification vectors are exercised in tree.</li>
+        <li><code>CscpMailbox</code> services bind into the private CSCP mailbox. Deactivated documents publish no services; relay-only disclosure rejects Direct before storage.</li>
+        <li>Direct-permitted locators can be selected as Direct. TLS WSS and HTTP/2 capsule profiles remain transition bearers, not Native Independent or MASQUE.</li>
         <li>It is not <code class="q-mono">did:q42</code> (Q42 Resource Coordinate) and not Human-Centered AI.</li>
         <li>Not a claim that CSCP-08 or CSCP-12 is done. A locator is a handle — never the human (NaturalAgent).</li>
       </ul>
     </div>
     <p class="flex flex-wrap gap-3">
       <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
-      <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/">QDNF specification</a>
+      <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
+      <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
     </p>
   </main>
   <footer class="q-site-footer">Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.</footer>
