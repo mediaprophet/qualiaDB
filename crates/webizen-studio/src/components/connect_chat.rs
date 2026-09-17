@@ -17,7 +17,7 @@ use crate::components::conduct_banner::{
     notice_from_chat_done, notice_from_chat_result, notice_from_conduct_violation,
 };
 use crate::components::conduct_banner::{ConductBanner, ConductNotice};
-use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
+use crate::components::honesty_chip::HonestyLevel;
 use crate::components::talk_human_alone::TalkHoldLevel;
 use crate::components::tool_use_card::ToolUseCard;
 
@@ -889,11 +889,11 @@ pub fn ConnectChat() -> Element {
     let (mesh_hold, mesh_chip) =
         crate::components::talk_human_alone::mesh_honesty(mesh_running(), mesh_peer_count());
     // Held maps to NeedsModel chip voice ("held / not yet") — never the banned word "unavailable".
-    let instrument_level = match instrument_hold {
+    let _instrument_level = match instrument_hold {
         TalkHoldLevel::Held => HonestyLevel::NeedsModel,
         TalkHoldLevel::Partial => HonestyLevel::Partial,
     };
-    let mesh_level = match mesh_hold {
+    let _mesh_level = match mesh_hold {
         TalkHoldLevel::Held => HonestyLevel::NeedsModel,
         TalkHoldLevel::Partial => HonestyLevel::Partial,
     };
@@ -980,27 +980,11 @@ pub fn ConnectChat() -> Element {
                     }
                 }
                 div { style: "display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end;",
-                    HonestyChip {
-                        level: mesh_level,
-                        detail: mesh_chip.clone(),
-                    }
-                    HonestyChip {
-                        level: instrument_level,
-                        detail: instrument_detail.clone(),
-                    }
-                    span {
-                        style: if has_model {
-                            "font-size:12px; color:#a7f3d0; background:#064e3b; border:1px solid #10b981; padding:4px 12px; border-radius:999px;"
-                        } else {
-                            "font-size:12px; color:#fde68a; background:#78350f; border:1px solid #b45309; padding:4px 12px; border-radius:999px;"
-                        },
-                        title: "{instrument_detail}",
-                        "{instrument_chip}"
-                    }
+                    // Mesh start stays available; HELD honesty lives under Instruments — not the Talk header wall.
                     if !mesh_running() {
                         button {
                             style: "{BTN2} margin:0;",
-                            title: "{mesh_chip}",
+                            title: "Optional mesh for remote peers — not required to Send",
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
@@ -1149,6 +1133,80 @@ pub fn ConnectChat() -> Element {
                                     if a.get("backend").and_then(|b| b.get("RemoteMcp")).is_some() { "remote · MCP" } else { "local" }
                                 }
                             }
+                        }
+                        div { style: "display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;",
+                            button {
+                                style: "{BTN2} margin:0;",
+                                disabled: draft_empty,
+                                title: if has_model { "Ask the selected instrument as a tool — not a peer" } else { instrument_held },
+                                onclick: move |_| {
+                                    #[cfg(target_arch = "wasm32")]
+                                    {
+                                        let active_session = active_session;
+                                        let active_title = active_title;
+                                        let sessions = sessions;
+                                        let active_agent = active_agent;
+                                        let draft = draft;
+                                        let messages = messages;
+                                        let streaming = streaming;
+                                        let streaming_for = streaming_for;
+                                        let status = status;
+                                        let conduct = conduct;
+                                        spawn(async move {
+                                            send_chat_turn(
+                                                active_session,
+                                                active_title,
+                                                sessions,
+                                                active_agent,
+                                                draft,
+                                                messages,
+                                                streaming,
+                                                streaming_for,
+                                                status,
+                                                conduct,
+                                                true,
+                                                has_model,
+                                            )
+                                            .await;
+                                        });
+                                    }
+                                },
+                                "Ask (tool)"
+                            }
+                            button {
+                                style: "{BTN2} margin:0;",
+                                onclick: move |_| {
+                                    #[cfg(target_arch = "wasm32")]
+                                    {
+                                        let (active_session, active_agent, mut draft, mut jobs, mut status) = (active_session, active_agent, draft, jobs, status);
+                                        spawn(async move {
+                                            let sid = active_session();
+                                            let body = draft();
+                                            if body.trim().is_empty() || sid.is_empty() { return; }
+                                            let agent_arg = if active_agent().is_empty() { serde_json::Value::Null } else { json!(active_agent()) };
+                                            match invoke_json::<serde_json::Value>("schedule_agent_job", json!({ "sessionId": sid, "agentSlug": agent_arg, "prompt": body })).await {
+                                                Ok(_) => {
+                                                    draft.set(String::new());
+                                                    if let Ok(snap) = invoke_json::<serde_json::Value>("list_local_jobs", json!({})).await {
+                                                        if let Some(arr) = snap.get("jobs").and_then(|j| j.as_array()) { jobs.set(arr.clone()); }
+                                                    }
+                                                    flash_status(status, "Scheduled as a background job.".into(), 1600);
+                                                }
+                                                Err(e) => status.set(format!("Schedule failed: {e}")),
+                                            }
+                                        });
+                                    }
+                                },
+                                "Job"
+                            }
+                        }
+                        p { style: "color:#64748b; font-size:11px; margin:6px 0 0;",
+                            title: "{instrument_detail}",
+                            "Tools · {instrument_chip}"
+                        }
+                        p { style: "color:#64748b; font-size:11px; margin:4px 0 0;",
+                            title: "{mesh_chip}",
+                            "Mesh · {mesh_chip}"
                         }
                         details {
                             style: "margin-top:8px;",
@@ -1449,11 +1507,11 @@ pub fn ConnectChat() -> Element {
                     div { style: "padding:10px 18px; border-bottom:1px solid #1f2937; display:flex; justify-content:space-between; align-items:center; gap:10px;",
                         span { style: "font-weight:600; font-size:14px; color:#e5e7eb;", "{thread_heading}" }
                         div { style: "display:flex; align-items:center; gap:6px;",
-                            span { style: "font-size:11px; color:#94a3b8;", "Instrument (tool):" }
+                            span { style: "font-size:11px; color:#64748b;", "Tool (optional):" }
                             select {
                                 style: "padding:5px 8px; background:#0b1220; color:#f3f4f6; border:1px solid #334155; border-radius:6px; font-size:12px;",
                                 value: "{active_agent}",
-                                title: "Used only when you Ask instrument or @mention a roster slug. Send stays people-only.",
+                                title: "Optional tool for @mention. Send stays people-only.",
                                 onchange: move |e| { let mut aa = active_agent; aa.set(e.value()); },
                                 option { value: "", "{people_only}" }
                                 for a in agents() {
@@ -1472,12 +1530,7 @@ pub fn ConnectChat() -> Element {
                                 p { style: "margin:10px 0 0; font-size:13px; line-height:1.5; color:#94a3b8;",
                                     "{empty_invite}"
                                 }
-                                if !has_model {
-                                    p { style: "margin:8px 0 0; font-size:11px; line-height:1.45; color:#94a3b8;",
-                                        title: "{instrument_held}",
-                                        "Instrument path is held / not yet — that is a tool lane, not a send gate."
-                                    }
-                                }
+                                // Instrument held stays under Instruments (tools) — not on the empty person↔person invite.
                             }
                         }
                         for (is_agent, author, content) in msgs_view {
@@ -1617,84 +1670,7 @@ pub fn ConnectChat() -> Element {
                             },
                             "Send"
                         }
-                        button {
-                            style: "{BTN2} margin:0;",
-                            disabled: draft_empty,
-                            title: if has_model { "Ask the selected instrument as a tool — not a peer" } else { instrument_held },
-                            onclick: move |_| {
-                                #[cfg(target_arch = "wasm32")]
-                                {
-                                    let active_session = active_session;
-                                    let active_title = active_title;
-                                    let sessions = sessions;
-                                    let active_agent = active_agent;
-                                    let draft = draft;
-                                    let messages = messages;
-                                    let streaming = streaming;
-                                    let streaming_for = streaming_for;
-                                    let status = status;
-                                    let conduct = conduct;
-                                    spawn(async move {
-                                        send_chat_turn(
-                                            active_session,
-                                            active_title,
-                                            sessions,
-                                            active_agent,
-                                            draft,
-                                            messages,
-                                            streaming,
-                                            streaming_for,
-                                            status,
-                                            conduct,
-                                            true,
-                                            has_model,
-                                        )
-                                        .await;
-                                    });
-                                }
-                            },
-                            "Ask instrument"
-                        }
-                        button {
-                            style: "{BTN2} margin:0;",
-                            onclick: move |_| {
-                                #[cfg(target_arch = "wasm32")]
-                                {
-                                    let (active_session, active_agent, mut draft, mut jobs, mut status) = (active_session, active_agent, draft, jobs, status);
-                                    spawn(async move {
-                                        let sid = active_session();
-                                        let body = draft();
-                                        if body.trim().is_empty() || sid.is_empty() { return; }
-                                        let agent_arg = if active_agent().is_empty() { serde_json::Value::Null } else { json!(active_agent()) };
-                                        match invoke_json::<serde_json::Value>("schedule_agent_job", json!({ "sessionId": sid, "agentSlug": agent_arg, "prompt": body })).await {
-                                            Ok(_) => {
-                                                draft.set(String::new());
-                                                if let Ok(snap) = invoke_json::<serde_json::Value>("list_local_jobs", json!({})).await {
-                                                    if let Some(arr) = snap.get("jobs").and_then(|j| j.as_array()) { jobs.set(arr.clone()); }
-                                                }
-                                                flash_status(status, "Scheduled as a background job.".into(), 1600);
-                                            }
-                                            Err(e) => status.set(format!("Schedule failed: {e}")),
-                                        }
-                                    });
-                                }
-                            },
-                            "⏱ Job"
-                        }
-                        button {
-                            style: "{BTN2} margin:0;",
-                            onclick: move |_| {
-                                #[cfg(target_arch = "wasm32")]
-                                {
-                                    let status = status;
-                                    spawn(async move {
-                                        let _ = invoke_json::<serde_json::Value>("cancel_chat_inference", json!({})).await;
-                                        flash_status(status, "Cancelled.".into(), 1200);
-                                    });
-                                }
-                            },
-                            "Stop"
-                        }
+                        // Ask / Job / Stop live under Instruments (tools) — not on the primary human↔human strip.
                     }
                 }
             }

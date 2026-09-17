@@ -55,7 +55,7 @@ pub const INSTRUMENT_WORKING_SAYABLE: &str = "Instrument working…";
 
 /// Empty-thread invite — works with or without a model.
 pub const EMPTY_THREAD_INVITE: &str =
-    "Write to a person below and press Send — the thread starts if needed. No agent or model required. Ask an instrument only when you want a tool.";
+    "Write to a person below and press Send — the thread starts if needed. No agent or model required.";
 
 /// Soft Continuity rise — handle is not the living subject.
 pub const CONTINUITY_HANDLE_BLURB: &str =
