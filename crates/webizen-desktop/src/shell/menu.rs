@@ -51,7 +51,8 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
     // Belt-and-braces: studio also listens for open-settings (tray / Ctrl+,).
     if qapp_id == "settings" {
         let _ = app.emit("open-settings", ());
-        // Force hash even if the webview is mid-Poet fullscreen (listeners now always on).
+        let _ = app.emit("shell-kind-set", "classic");
+        // Force hash even if the webview is mid-Poet (listeners stay mounted for all routes).
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.eval(
                 "try { location.hash = '#/settings'; } catch (e) { console.warn(e); }",
