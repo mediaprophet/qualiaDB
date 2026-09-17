@@ -81,6 +81,10 @@ impl LayoutUndo {
     pub fn len(&self) -> usize {
         self.frames.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -105,6 +109,22 @@ mod tests {
         assert_eq!(u.current(), Some("a"));
         assert_eq!(u.redo().as_deref(), Some("b"));
         u.push("b".into());
+        assert_eq!(u.len(), 2);
+    }
+
+    #[test]
+    fn len_and_is_empty_track_history() {
+        let mut u = LayoutUndo::new(4);
+        assert!(u.is_empty());
+        assert_eq!(u.len(), 0);
+        u.push("p1".into());
+        assert!(!u.is_empty());
+        assert_eq!(u.len(), 1);
+        u.push("p2".into());
+        assert_eq!(u.len(), 2);
+        u.undo();
+        assert_eq!(u.len(), 1);
+        u.redo();
         assert_eq!(u.len(), 2);
     }
 }

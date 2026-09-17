@@ -21,8 +21,8 @@ mod run;
 mod select;
 mod shapes;
 mod shapes_canvas;
-mod undo;
-mod walkthrough;
+pub mod undo;
+pub mod walkthrough;
 
 use deps::DepsPanel;
 use inspect::InspectPanel;
@@ -31,6 +31,7 @@ use manufacture::ManufacturePanel;
 use receipts::ReceiptPanel;
 use run::RunPanel;
 use select::rail_for_flow_label;
+pub use walkthrough::WalkthroughPanel;
 
 #[derive(Clone, Copy)]
 struct Seed {
@@ -179,6 +180,7 @@ pub fn InstrumentBay() -> Element {
             }
             DepsPanel {}
             LifecyclePanel {}
+            WalkthroughPanel {}
 
             div {
                 class: "lexicon-held-gate",

@@ -148,6 +148,7 @@ pub fn InstrumentShapesCanvas(
     #[props(default = "pipeline".to_string())] rail: String,
 ) -> Element {
     let (inputs, outputs) = visible_rows(&entry, &rail);
+    let all_nodes = canvas_nodes(&entry);
     let in_pts = row_centres(inputs.len(), INPUT_Y);
     let out_pts = row_centres(outputs.len(), OUTPUT_Y);
     let paths: Vec<&'static str> = inputs
@@ -175,6 +176,7 @@ pub fn InstrumentShapesCanvas(
             "aria-label": ARIA,
             "data-shapes-canvas": "1",
             "data-node-count": "{count}",
+            "data-total-nodes": "{all_nodes.len()}",
             "data-shapes-focus": "{focus()}",
             onkeydown: move |e| {
                 let n = key_paths.len();

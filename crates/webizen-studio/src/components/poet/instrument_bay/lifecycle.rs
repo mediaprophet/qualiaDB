@@ -3,11 +3,11 @@
 
 use dioxus::prelude::*;
 
-const HELD_SUSPEND_UPDATE: &str = "held / not yet — suspended or removed pack cannot update";
-const HELD_REMOVED_RUN: &str = "held / not yet — removed pack cannot start a new run";
-const HELD_SUSPENDED_RUN: &str = "held / not yet — suspended pack cannot start a new run";
-const HELD_NOT_ACTIVE: &str = "held / not yet — collect and activate before run";
-const HISTORY_REMAINS: &str = "receipt history remains after remove";
+pub const HELD_SUSPEND_UPDATE: &str = "held / not yet — suspended or removed pack cannot update";
+pub const HELD_REMOVED_RUN: &str = "held / not yet — removed pack cannot start a new run";
+pub const HELD_SUSPENDED_RUN: &str = "held / not yet — suspended pack cannot start a new run";
+pub const HELD_NOT_ACTIVE: &str = "held / not yet — collect and activate before run";
+pub const HISTORY_REMAINS: &str = "receipt history remains after remove";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LibraryLife {
@@ -111,6 +111,19 @@ pub fn LifecyclePanel() -> Element {
                 },
                 "Remove"
             }
+            button {
+                r#type: "button",
+                class: "lexicon-open-btn",
+                "aria-label": "Verify pack run",
+                "data-lifecycle-run": "1",
+                onclick: move |_| {
+                    match can_run(&life()) {
+                        Ok(()) => status.set("ready for run".into()),
+                        Err(e) => status.set(e.into()),
+                    }
+                },
+                "Verify Run"
+            }
 
             div {
                 class: "lexicon-held-gate",
@@ -170,5 +183,18 @@ mod tests {
         assert_eq!(update_pack(&life), Err(HELD_SUSPEND_UPDATE));
         assert!(!HELD_SUSPEND_UPDATE.contains("Host."));
         assert!(!HISTORY_REMAINS.contains("Host."));
+    }
+
+    #[test]
+    fn uncollected_or_inactive_pack_cannot_run() {
+        let mut life = LibraryLife::default();
+        assert_eq!(can_run(&life), Err(HELD_NOT_ACTIVE));
+        life.collected = true;
+        assert_eq!(can_run(&life), Err(HELD_NOT_ACTIVE));
+        life.activated = true;
+        assert_eq!(can_run(&life), Ok(()));
+        life.collected = false;
+        assert_eq!(can_run(&life), Err(HELD_NOT_ACTIVE));
+        assert!(!HELD_NOT_ACTIVE.contains("Host."));
     }
 }

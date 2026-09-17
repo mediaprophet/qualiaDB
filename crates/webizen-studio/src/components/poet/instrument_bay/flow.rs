@@ -7,7 +7,7 @@ use webizen_studio::semantic_instruments::host_id_refused;
 
 const HELD_HOST: &str = "unknown entry point (not a Host ID)";
 const GRAPH_LABEL: &str = "instrument node graph";
-const LAYOUT_ATTR: &str = "data-si-flow-layout";
+pub const LAYOUT_ATTR: &str = "data-si-flow-layout";
 const RAIL: [(f64, f64); 4] = [(50.0, 56.0), (170.0, 56.0), (290.0, 56.0), (410.0, 56.0)];
 const X_MIN: f64 = 48.0;
 const X_MAX: f64 = 472.0;
@@ -80,7 +80,7 @@ fn load_saved_layout(n: usize) -> Option<Vec<(f64, f64)>> {
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = n;
+        let _ = (n, LAYOUT_ATTR);
         None
     }
 }
@@ -100,7 +100,7 @@ fn save_layout(pts: &[(f64, f64)]) {
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    let _ = encoded;
+    let _ = (&encoded, LAYOUT_ATTR);
 }
 
 fn move_held(
@@ -189,6 +189,8 @@ pub fn InstrumentFlow(entry: String) -> Element {
             "aria-label": GRAPH_LABEL,
             "data-node-count": "{nodes.len()}",
             "data-layout": "{encode_positions(&pts)}",
+            "data-si-flow-layout": "{encode_positions(&pts)}",
+            "data-history-len": "{history.read().len()}",
             tabindex: "0",
             onkeydown: move |e| {
                 let key = e.key().to_string();
@@ -365,6 +367,7 @@ mod tests {
         assert!(decode_positions("10.00,20.00;Host.1,2.00;30.00,40.00")
             == vec![(10.00, 20.00), (30.00, 40.00)]);
         assert!(!LAYOUT_ATTR.contains("Host"));
+        assert_eq!(LAYOUT_ATTR, "data-si-flow-layout");
         let clamped = layout_for_count("10.00,0.00;170.00,56.00;290.00,56.00;500.00,200.00", 4)
             .expect("count match");
         assert_eq!(clamped[0], (48.0, 20.0));

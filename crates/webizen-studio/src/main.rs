@@ -1013,9 +1013,9 @@ fn AppLayout() -> Element {
     // so Tools→Settings / Ctrl+, closed without painting Settings. Listeners always attach;
     // Poet stays full-bleed via PoetHarness; Tools→Settings forces Classic + deferred Settings push.
     let host_status = use_signal(DesktopStatus::default);
-    /// Tools→Settings / Ctrl+, : Closure only sets this; a dioxus use_effect
-    /// performs navigator.push so we never push on the Tauri RefCell stack
-    /// and never rely on synthetic popstate (which did not remount Settings).
+    // Tools→Settings / Ctrl+, : Closure only sets this; a dioxus use_effect
+    // performs navigator.push so we never push on the Tauri RefCell stack
+    // and never rely on synthetic popstate (which did not remount Settings).
     let mut pending_settings = use_signal(|| false);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = navigator;

@@ -1,10 +1,11 @@
-//! Studio SI-10 scripted collect→run→revoke walkthrough (pure, no Dioxus).
+//! Studio SI-10 scripted collect→run→revoke walkthrough.
 //! Composes inspect/run/receipts/lifecycle helpers. No Host IDs.
 
 use super::inspect::card_for;
 use super::lifecycle::{can_run, suspend, LibraryLife};
 use super::receipts::{revoke_keeps_rows, visible_rows, SEED_RECEIPTS};
 use super::run::{cancel, run_step, RunPhase, PERMISSION_DENIED};
+use dioxus::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WalkStep {
@@ -88,6 +89,70 @@ pub fn host_entry_refused() -> bool {
     run_step(RunPhase::Idle, "Host.assess", "1m", true) == RunPhase::Held
 }
 
+#[component]
+pub fn WalkthroughPanel() -> Element {
+    let mut steps = use_signal(Vec::<WalkStep>::new);
+    let mut status = use_signal(|| "idle".to_string());
+    let mut host_refused = use_signal(host_entry_refused);
+
+    rsx! {
+        div {
+            class: "instrument-walkthrough-panel",
+            "data-walkthrough-panel": "1",
+            role: "region",
+            "aria-label": "instrument walkthrough",
+
+            div { class: "lexicon-bay-title", "Walkthrough" }
+            p { class: "lexicon-bay-lede",
+                "Scripted collect → run → revoke validation flow. No Host IDs."
+            }
+
+            button {
+                r#type: "button",
+                class: "lexicon-open-btn",
+                "aria-label": "Run walkthrough",
+                "data-walkthrough-run": "1",
+                onclick: move |_| {
+                    match collect_activate_run_revoke() {
+                        Ok(res) => {
+                            status.set("passed".to_string());
+                            steps.set(res);
+                        }
+                        Err(e) => {
+                            status.set(format!("held: {e}"));
+                        }
+                    }
+                    host_refused.set(host_entry_refused());
+                },
+                "Run Walkthrough"
+            }
+
+            div {
+                class: "lexicon-held-gate",
+                role: "status",
+                "data-walkthrough-status": "1",
+                "data-host-refused": "{host_refused()}",
+                "{status}"
+            }
+
+            if !steps().is_empty() {
+                ol {
+                    class: "instrument-walkthrough-steps",
+                    "data-walkthrough-steps": "1",
+                    for step in steps().iter() {
+                        li {
+                            key: "{step.id}",
+                            "data-step-id": "{step.id}",
+                            strong { "{step.id}: " }
+                            span { "{step.detail}" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,5 +172,15 @@ mod tests {
     #[test]
     fn host_entry_is_held() {
         assert!(host_entry_refused());
+    }
+
+    #[test]
+    fn walk_step_fields() {
+        let step = WalkStep {
+            id: "verify",
+            detail: "detail message".into(),
+        };
+        assert_eq!(step.id, "verify");
+        assert_eq!(step.detail, "detail message");
     }
 }
