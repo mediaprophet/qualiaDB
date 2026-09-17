@@ -205,6 +205,8 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
       qappId === 'talk' ? 'Talk'
         : (qappId === 'directory' || qappId === 'dir' || qappId === 'contacts') ? 'Directory'
         : (qappId === 'mail' || qappId === 'email') ? 'Mail'
+        : qappId === 'settings' ? 'Settings'
+        : qappId === 'library' || qappId === 'memory' ? 'Library'
         : qappId.charAt(0).toUpperCase() + qappId.slice(1);
 
     const tab = document.createElement('div');
@@ -289,9 +291,9 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
 
   function navigate(qappId) {
     qappId = normalizeQappId(qappId);
-    if (activeTabId === qappId) return;
     const tab = tabs.find(t => t.qappId === qappId);
     if (tab) {
+      // Always re-assert the iframe URL so Settings/Library cannot bounce to Talk home.
       switchToTab(tab.el, qappId);
     } else {
       createTab(qappId);
@@ -310,8 +312,19 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     } else if (url === '/' || url === '/studio/' || url === '/studio/#' || url === '/studio/#/') {
       // Empty / home studio paths → Talk (not a dashboard default).
       navigate('talk');
-    } else if (url.startsWith('/studio/')) {
-      contentIframe.src = window.location.origin + url;
+    } else if (url.startsWith('/studio/#')) {
+      // Keep Settings / Library / Talk hashes — never collapse to Talk home.
+      const hash = url.split('#')[1] || '';
+      const path = hash.replace(/^\/+/, '').replace(/\/+$/, '');
+      if (!path || path === '/' || path === 'talk' || path === 'home' || path === 'dashboard') {
+        navigate('talk');
+      } else if (path === 'settings' || path.startsWith('settings/')) {
+        navigate('settings');
+      } else if (path === 'library' || path === 'memory' || path.startsWith('library/')) {
+        navigate('library');
+      } else {
+        contentIframe.src = window.location.origin + url;
+      }
     } else if (url.startsWith('http')) {
       contentIframe.src = url;
     } else {

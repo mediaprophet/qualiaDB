@@ -48,6 +48,10 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
         );
         return;
     }
+    // Belt-and-braces: studio also listens for open-settings (tray / Ctrl+,).
+    if qapp_id == "settings" {
+        let _ = app.emit("open-settings", ());
+    }
     crate::desktop_log::record("info", format!("desktop route -> {qapp_id} ({route})"));
 }
 
@@ -272,10 +276,19 @@ pub fn build_app_menu(
         None::<&str>,
     )?;
 
+    let library = MenuItem::with_id(
+        app,
+        "open_library",
+        "Hypermedia Library",
+        true,
+        Some("Ctrl+Shift+L"),
+    )?;
+
     let qapps_menu = SubmenuBuilder::new(app, "QApps")
         .item(&talk)
         .item(&directory)
         .item(&mail)
+        .item(&library)
         .item(&wellfair)
         .item(&chora)
         .item(&browser)
@@ -288,13 +301,6 @@ pub fn build_app_menu(
     let settings = MenuItem::with_id(app, "open_settings", "Settings...", true, Some("Ctrl+,"))?;
     let diagnostics =
         MenuItem::with_id(app, "open_diagnostics", "Diagnostics", true, None::<&str>)?;
-    let library = MenuItem::with_id(
-        app,
-        "open_library",
-        "Hypermedia Library",
-        true,
-        None::<&str>,
-    )?;
     let wallet = MenuItem::with_id(app, "open_wallet", "Wallet", true, None::<&str>)?;
     let poet = MenuItem::with_id(app, "open_poet", "Poet Harness", true, None::<&str>)?;
 
@@ -302,7 +308,6 @@ pub fn build_app_menu(
         .item(&settings)
         .item(&diagnostics)
         .separator()
-        .item(&library)
         .item(&wallet)
         .item(&poet)
         .separator()

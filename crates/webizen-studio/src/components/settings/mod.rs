@@ -73,7 +73,7 @@ pub fn SettingsShell() -> Element {
                 div { style: "padding:0 8px 15px;",
                     div { style: "font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--qualia-accent);", "Your Webizen" }
                     h1 { style: "font-size:1.12rem;margin:5px 0 4px;", "Settings" }
-                    p { style: "font-size:.69rem;color:var(--qualia-text-muted);line-height:1.45;margin:0;", "Set up, configure, maintain and assure your apparatus." }
+                    p { style: "font-size:.69rem;color:var(--qualia-text-muted);line-height:1.45;margin:0;", "Set up, configure, maintain and assure your apparatus. Open with Ctrl+, or Tools → Settings." }
                 }
                 input {
                     r#type: "search",
