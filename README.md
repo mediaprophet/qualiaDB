@@ -126,15 +126,16 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.38 (active branch)** — habitat line on the 0.0.37 WASM-safe engine. Unified Q42 v3 is the
-only new-write graph container. Workspace crate stamps are **0.0.38**.
+**0.0.39 (active release)** — Prompt Precision conditioning runtime, automated Model Precision Optimization, live Semantic Instruments bay in Webizen Studio (SI-09/10), Qualia Decentralized Network Fabric (QDNF) honesty ledger, and NLP substrate. Unified Q42 v3 is the only new-write graph container. Workspace crate stamps are **0.0.39**.
 
 **Pages / release:** operator record is
-[`docs/progress-0.0.38.html`](docs/progress-0.0.38.html) and
-[`docs/releases/0.0.38-pages-wake.md`](docs/releases/0.0.38-pages-wake.md).
-Annotated tag **`v0.0.38`** is on tip `cdd7ae728` (PR #111). Branch continues on `0.0.38`. Do not merge from a guest fork. Tag `v*` is the intended GitHub
+[`docs/progress-0.0.39.html`](docs/progress-0.0.39.html),
+[`docs/semantic-instruments.html`](docs/semantic-instruments.html),
+[`docs/prompt-precision.html`](docs/prompt-precision.html), and
+[`docs/qdnf.html`](docs/qdnf.html).
+Annotated tag **`v0.0.39`** marks the release. Branch continues on `0.0.39`. Do not merge from a guest fork. Tag `v*` is the intended GitHub
 Pages publish path (`github-pages` environment historically allows `main`,
-`0.0.24`–`0.0.34`, and `v*` — branch `0.0.38` deploy may still be rejected until
+`0.0.24`–`0.0.34`, and `v*` — branch `0.0.39` deploy may still be rejected until
 settings add it).
 
 Recent verification of the implemented surfaces includes:
@@ -167,8 +168,11 @@ capabilities, and remaining pre-v0.1 work, see the
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full technical architecture — Quin bit layout, all modalities, inference stack, every module |
 | [docs/manuals/qualia_db_functionality_manual.md](docs/manuals/qualia_db_functionality_manual.md) | Per-crate functionality manual — what each part of the workspace actually does today |
 | [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build, test, benchmark, CLI reference, cross-compilation |
+| [docs/progress-0.0.39.html](docs/progress-0.0.39.html) | 0.0.39 progress — Prompt Precision, Model Precision Optimizer, Semantic Instruments |
+| [docs/semantic-instruments.html](docs/semantic-instruments.html) | Semantic Instruments specification, lifecycle, and Studio bay |
+| [docs/prompt-precision.html](docs/prompt-precision.html) | Prompt Precision conditioning runtime & token envelope verification |
+| [docs/qdnf.html](docs/qdnf.html) | Qualia Decentralized Network Fabric (QDNF) and honesty ledger |
 | [docs/progress-0.0.38.html](docs/progress-0.0.38.html) | 0.0.38 progress — habitat honesty, Native prefer :4242 |
-| [docs/releases/0.0.38-pages-wake.md](docs/releases/0.0.38-pages-wake.md) | 0.0.38 Pages wake — VERSION_BUMP_SEPARATE, tag `v0.0.38` |
 | [docs/progress-0.0.37.html](docs/progress-0.0.37.html) | 0.0.37 progress — WASM-safe engine, size gates |
 | [docs/progress-0.0.33.html](docs/progress-0.0.33.html) | 0.0.33 progress — Q42 v3 volumes, Pages, desktop |
 | [docs/manuals/standards/q42-format-internal-draft.md](docs/manuals/standards/q42-format-internal-draft.md) | Canonical Q42 v3 physical layout (48-byte NQuin, 40,960-byte SuperBlock, 256-byte header) |
