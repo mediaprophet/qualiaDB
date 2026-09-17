@@ -513,10 +513,14 @@ pub fn OnboardingGate() -> Element {
         };
     }
     if complete() {
-        // Setup done — AppLayout renders Outlet::<Route>{} as a *direct* layout child.
-        // (Passing Outlet through here as children double-counted the outlet level and
-        // panicked in dioxus-router 0.8 OutletContext.)
-        return rsx! { Fragment {} };
+        // Root Router lives here (0.0.39 architecture). AppLayout is rendered *by* this
+        // Router as the #[layout]; AppLayout's Outlet then paints Talk/Settings/Library.
+        // Do NOT put Outlet in App — there is no Router ancestor there (panic @ outlet.rs:45).
+        return rsx! {
+            div { style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;",
+                Router::<crate::Route> {}
+            }
+        };
     }
 
     let index = step().min(STEPS.len() - 1);

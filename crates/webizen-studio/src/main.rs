@@ -1375,6 +1375,15 @@ fn AppLayout() -> Element {
     let mut omnibox = use_signal(String::new);
     let omnibox_nav = use_navigator();
 
+    // All hooks above have run. Poet routes full-bleed; Tools→Settings / Ctrl+,
+    // hash force + listeners (always subscribed) leave Poet for SettingsRoute.
+    if matches!(
+        route,
+        Route::PoetRoute {} | Route::PoetCatalogRoute {} | Route::PoetInstrumentRoute {}
+    ) {
+        return rsx! { Outlet::<Route> {} };
+    }
+
     rsx! {
         div {
             // min-height:0 on flex children is required so nested pages can scroll
@@ -1620,8 +1629,7 @@ fn AppLayout() -> Element {
                     class: "app-main-scroll",
                     style: "min-width: 0; min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; position: relative;",
                     components::wellfair::HostSnapshotProvider {
-                        // Route content is the single layout Outlet below (next to OnboardingGate).
-                        // A second Outlet here double-counted nesting and panicked dioxus-router.
+                        Outlet::<Route> {}
                     }
                 }
             }
@@ -1921,9 +1929,6 @@ fn App() -> Element {
             "data-theme": "{data_theme}",
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; max-height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden; display: flex; flex-direction: column; min-height: 0;",
             components::onboarding::OnboardingGate {}
-            // Layout Outlet MUST be a direct child of AppLayout (the Routable layout).
-            // Nesting it inside OnboardingGate double-bumps outlet level and panics.
-            Outlet::<Route> {}
         }
     }
 }
