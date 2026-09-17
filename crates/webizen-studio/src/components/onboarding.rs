@@ -442,7 +442,7 @@ fn comma_values(value: &str) -> Vec<String> {
 }
 
 #[component]
-pub fn OnboardingGate() -> Element {
+pub fn OnboardingGate(children: Element) -> Element {
     let mut loading = use_signal(|| true);
     let mut complete = use_signal(|| false);
     let mut step = use_signal(|| 0usize);
@@ -512,10 +512,11 @@ pub fn OnboardingGate() -> Element {
         };
     }
     if complete() {
-        // Fill the themed shell so nested 100% / flex layouts get a real height budget.
+        // Render the active route via layout Outlet (passed as children from AppLayout).
+        // Never mount a nested Router — that reset to Talk and swallowed Settings paints.
         return rsx! {
             div { style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;",
-                Router::<crate::Route> {}
+                {children}
             }
         };
     }

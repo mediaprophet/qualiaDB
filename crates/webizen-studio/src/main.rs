@@ -1919,7 +1919,9 @@ fn App() -> Element {
             "data-theme-scope": "app",
             "data-theme": "{data_theme}",
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; max-height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden; display: flex; flex-direction: column; min-height: 0;",
-            components::onboarding::OnboardingGate {}
+            components::onboarding::OnboardingGate {
+                Outlet::<Route> {}
+            }
         }
     }
 }

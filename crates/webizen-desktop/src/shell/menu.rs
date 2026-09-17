@@ -55,7 +55,7 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
         // Force hash even if the webview is mid-Poet (listeners stay mounted for all routes).
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.eval(
-                "try { location.hash = '#/settings'; } catch (e) { console.warn(e); }",
+                "try { const h = '#/settings'; if (location.hash !== h) { location.hash = h; } window.dispatchEvent(new HashChangeEvent('hashchange')); } catch (e) { console.warn(e); }",
             );
         }
     }
