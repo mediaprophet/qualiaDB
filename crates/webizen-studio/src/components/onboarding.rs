@@ -442,7 +442,7 @@ fn comma_values(value: &str) -> Vec<String> {
 }
 
 #[component]
-pub fn OnboardingGate(children: Element) -> Element {
+pub fn OnboardingGate() -> Element {
     let mut loading = use_signal(|| true);
     let mut complete = use_signal(|| false);
     let mut step = use_signal(|| 0usize);
@@ -502,8 +502,9 @@ pub fn OnboardingGate(children: Element) -> Element {
     });
 
     if loading() {
+        // Overlay only — do not unmount the layout Outlet sibling in AppLayout.
         return rsx! {
-            div { style: "width:100%;height:100%;display:grid;place-items:center;background:#07101f;color:#e5edf8;",
+            div { style: "position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#07101f;color:#e5edf8;",
                 div { style: "text-align:center;",
                     h1 { style: "margin:0;font-size:1.7rem;", "Webizen" }
                     p { style: "color:#94a3b8;", "Inspecting your local apparatus…" }
@@ -512,13 +513,10 @@ pub fn OnboardingGate(children: Element) -> Element {
         };
     }
     if complete() {
-        // Render the active route via layout Outlet (passed as children from AppLayout).
-        // Never mount a nested Router — that reset to Talk and swallowed Settings paints.
-        return rsx! {
-            div { style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;",
-                {children}
-            }
-        };
+        // Setup done — AppLayout renders Outlet::<Route>{} as a *direct* layout child.
+        // (Passing Outlet through here as children double-counted the outlet level and
+        // panicked in dioxus-router 0.8 OutletContext.)
+        return rsx! { Fragment {} };
     }
 
     let index = step().min(STEPS.len() - 1);
@@ -559,7 +557,7 @@ pub fn OnboardingGate(children: Element) -> Element {
     };
 
     rsx! {
-        div { style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:245px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:radial-gradient(circle at 72% 10%,rgba(56,189,248,.09),transparent 32%),#07101f;color:#e5edf8;overflow:hidden;",
+        div { style: "position:fixed;inset:0;z-index:70;width:100%;height:100%;min-height:0;display:grid;grid-template-columns:245px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:radial-gradient(circle at 72% 10%,rgba(56,189,248,.09),transparent 32%),#07101f;color:#e5edf8;overflow:hidden;",
             aside { style: "min-height:0;border-right:1px solid #243044;background:#0a1424;padding:24px 16px;overflow-y:auto;overscroll-behavior:contain;",
                 div { style: "padding:0 8px 18px;",
                     div { style: "font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:#7dd3fc;font-weight:850;", "Your Webizen" }

@@ -1620,7 +1620,8 @@ fn AppLayout() -> Element {
                     class: "app-main-scroll",
                     style: "min-width: 0; min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; position: relative;",
                     components::wellfair::HostSnapshotProvider {
-                        Outlet::<Route> {}
+                        // Route content is the single layout Outlet below (next to OnboardingGate).
+                        // A second Outlet here double-counted nesting and panicked dioxus-router.
                     }
                 }
             }
@@ -1919,9 +1920,10 @@ fn App() -> Element {
             "data-theme-scope": "app",
             "data-theme": "{data_theme}",
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; max-height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden; display: flex; flex-direction: column; min-height: 0;",
-            components::onboarding::OnboardingGate {
-                Outlet::<Route> {}
-            }
+            components::onboarding::OnboardingGate {}
+            // Layout Outlet MUST be a direct child of AppLayout (the Routable layout).
+            // Nesting it inside OnboardingGate double-bumps outlet level and panics.
+            Outlet::<Route> {}
         }
     }
 }
