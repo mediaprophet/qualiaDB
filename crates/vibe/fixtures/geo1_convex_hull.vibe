@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/convex_hull>;
+import "vibe:0.1/math" as m;
+pure fn cross_product(ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
+    return m.abs(ax * by - ay * bx);
+}

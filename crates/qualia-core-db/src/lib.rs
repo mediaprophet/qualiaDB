@@ -37,6 +37,8 @@ pub use services::daemon_tensor;
 #[cfg(not(target_arch = "wasm32"))]
 pub use services::ilp_dispatcher;
 #[cfg(not(target_arch = "wasm32"))]
+pub use services::pulse_transport;
+#[cfg(not(target_arch = "wasm32"))]
 pub use services::rpc;
 pub use services::solid_ldp;
 #[cfg(not(target_arch = "wasm32"))]
@@ -56,12 +58,15 @@ pub use medical::dicom_ingest;
 // --- query/ category (reorg) ---
 pub mod query;
 pub use query::cbor_compiler;
+pub use query::graph_accel;
 pub use query::graph_index;
 #[cfg(not(target_arch = "wasm32"))]
 pub use query::graph_proof;
 pub use query::indexing;
 #[cfg(not(target_arch = "wasm32"))]
 pub use query::ingest;
+#[cfg(not(target_arch = "wasm32"))]
+pub use query::ingest_job;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -107,7 +112,7 @@ pub use platform::jni_bridge;
 pub use platform::kml_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub use platform::local_scheduler;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use platform::npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub use platform::platform_scheduler;
@@ -135,13 +140,9 @@ pub use inference::cuda_lane::{
 };
 #[cfg(target_os = "windows")]
 pub use inference::directml_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::ggml_quants;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::gguf_sharder;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::inference_agent;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::inference_agent as llm_agent;
 pub use inference::inference_awq;
 pub use inference::inference_awq as llm_awq;
@@ -149,13 +150,13 @@ pub use inference::inference_awq as llm_awq;
 pub use inference::inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench as llm_bench;
-#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+#[cfg(target_arch = "wasm32")]
 pub use inference::inference_bench_wasm as llm_bench;
 pub use inference::inference_eval;
 pub use inference::inference_eval as llm_eval;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub use inference::inference_gpu_profiler;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub use inference::inference_gpu_profiler as llm_gpu_profiler;
 pub use inference::inference_kernel_parity;
 pub use inference::inference_kernel_parity as llm_kernel_parity;
@@ -175,9 +176,6 @@ pub use inference::inference_path_selector::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::kv_capture;
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::kv_dict;
-#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
 pub use inference::kv_dict;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::kv_dict_runtime;
@@ -193,9 +191,7 @@ pub use inference::lab::{
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use inference::metal_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::neuro_symbolic_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::orchestrator;
 pub use inference::post_turn_verify;
 pub use inference::post_turn_verify::{
@@ -216,28 +212,22 @@ pub use inference::quant_graph_grounding::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::residency_planner;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::resident_model;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::safetensor;
 pub use inference::sampler;
 pub use inference::semantic_culler;
 pub use inference::spatial_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::tensor_roles;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::ternary;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use inference::ternary_gpu;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::topk;
 // W7: GPU thermal/power telemetry + auto-cap governor (native-only). Exposes the UI-reachable mode
 // switch (`set_gpu_auto_cap` / `gpu_auto_cap_enabled`) and `sample_gpu_thermal()` telemetry.
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::thermal_telemetry;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use inference::topk_gpu;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod lora;
 // --- q42/ category (reorg) ---
 pub mod q42;
@@ -245,11 +235,9 @@ pub use q42::design_encode;
 pub use q42::execution_profile;
 pub use q42::machine_gpu_profile;
 pub use q42::model_helper;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use q42::p64_weight;
 /// Backward-compatible module name retained for existing inference and
 /// transcode harnesses while the on-disk magic/API is P64.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use q42::p64_weight as q42_weight;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_lexicon;
@@ -260,41 +248,18 @@ pub use q42::q42_volume;
 pub use q42::yaml_ld_q42;
 // --- extensions/ category (reorg) ---
 pub mod extensions;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use extensions::extension_bus;
 pub use extensions::extension_manifest;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use extensions::resource_catalog;
-#[cfg(all(
-    target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
-))]
-#[path = "modalities_lite/mod.rs"]
-pub mod modalities;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod modalities;
 // --- identity/ category (reorg) ---
+pub mod did_qi;
 pub mod identity;
 pub use identity::agency;
 pub use identity::identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub use identity::key_vault;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use identity::profiles;
 pub use identity::vault_manifest;
 pub use identity::webizen_identifiers;
@@ -304,17 +269,10 @@ pub mod shaders;
 pub mod wgsl_forge;
 // --- foundation/ category (reorg) ---
 pub mod foundation;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use foundation::crdt;
 pub use foundation::frame_layout;
 pub use foundation::fuzz_testing;
 pub use foundation::telemetry;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use foundation::topology_draft;
 // --- net/ category (reorg) ---
 pub mod net;
@@ -334,6 +292,8 @@ pub mod audio;
 /// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
 /// both native and WASM builds (native adds the zero-copy `BundleMmap`).
 pub mod bundle;
+/// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
+pub mod semantic_instruments;
 /// `.10d` living-container v1 — normative header, axis-role taxonomy, and
 /// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
 /// task. Available to browser/WASM builds (P0.8 parity target). See
@@ -352,12 +312,7 @@ pub use governance::modal_kind;
 pub use governance::provenance;
 #[cfg(not(target_arch = "wasm32"))]
 pub use governance::web_civics;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use governance::webizen;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    any(feature = "wasm-scientific", feature = "wasm-logic")
-))]
 pub use governance::webizen_bytecode;
 #[cfg(not(target_arch = "wasm32"))]
 pub use governance::webizen_sync;
@@ -395,37 +350,66 @@ pub mod q42_lex {
         }
     }
 }
-#[cfg(not(target_arch = "wasm32"))]
-pub mod clinical_engine;
-#[cfg(target_arch = "wasm32")]
-pub mod clinical_engine {
-    pub struct GeneExpressionResult {
-        pub fold_change: f64,
-        pub log2_fold_change: f64,
-        pub is_significant: bool,
-    }
-    pub fn evaluate_gene_expression(
-        _gene_id: u64,
-        _baseline: f64,
-        _treatment: f64,
-        _fc_threshold: f64,
-    ) -> GeneExpressionResult {
-        GeneExpressionResult {
-            fold_change: 0.0,
-            log2_fold_change: 0.0,
-            is_significant: false,
-        }
-    }
-}
-/// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
-pub mod entity_view;
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
+#[cfg(not(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
+)))]
+pub mod agent_runtime;
+pub mod clinical_engine;
+#[cfg(all(
+    target_arch = "wasm32",
+    any(feature = "wasm-playground", feature = "wasm-full")
+))]
+pub(crate) mod clinical_playground;
+/// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
+pub mod entity_view;
 pub mod hypermedia;
+/// N9: Hypermedia asset authoring — image, video, 3D, interactive, portals, DMX.
+pub mod hypermedia_authoring;
+/// Document NLP (tokenize, gazetteer, span plans). Engine capability, not Vibe.
+pub mod nlp;
+// The ontology MCP binary deliberately contains only its explicit reasoning
+// kernel (`modalities_lite`); it has no VibeScript runtime. Other WASM
+// profiles retain the full browser capability host.
+#[cfg(not(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
+)))]
+#[path = "poet_host/mod.rs"]
+pub mod vibe_host;
+/// Compatibility name for code written before the Vibe execution layer was
+/// separated from Poet, its current UI/client. New integrations use
+/// [`vibe_host`].
+#[cfg(not(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
+)))]
+pub use vibe_host as poet_host;
 pub mod qubo_compiler;
 pub mod render;
+/// N8: Research / investigation / epistemics — enquiry, corpus, dark links, inference chains,
+/// investigations, hypothesis graphs, epistemic assessment, sentiment analysis.
+pub mod research;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
+pub mod text_span;
 #[cfg(all(
     target_arch = "wasm32",
     any(
@@ -504,7 +488,10 @@ pub use crypto::zk_proofs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
 // pub mod clinical_engine; // Temporarily disabled
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+// The portal uses the portable portions of this tree (geometry, symbolic
+// algebra, and computational economics). Individual native-only libraries are
+// gated within `specialized_libs`, so the top-level registry must be present
+// for the corresponding Vibe capabilities to resolve in the browser.
 pub mod specialized_libs;
 
 // pub use specialized_libs::linear_algebra;
@@ -1040,6 +1027,40 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
         maturity: "experimental",
         surfaces: &["native", "mcp", "webizen"],
     },
+    CapabilityDescriptor {
+        name: "NLP",
+        domain: "language",
+        operations: &[
+            "tokenize (deterministic UTF-8 prototype)",
+            "sentence split (deterministic UTF-8 prototype)",
+            "gazetteer (compiled default lexicon, not NER)",
+            "ISO dates and unit symbols",
+            "exact-match coreference plus experimental pronoun sieve",
+            "keyword-triple search (not GraphRAG)",
+            "tiny suffix FST demo (not a language pack)",
+            "rule-demo frames (not FrameNet)",
+            "rule-demo relations (not OpenIE)",
+            "symbolic substrate (every-word mentions)",
+        ],
+        mcp_tools: &[],
+        maturity: "experimental",
+        surfaces: &["native", "library"],
+    },
+    CapabilityDescriptor {
+        name: "Conditioning",
+        domain: "inference",
+        operations: &[
+            "validate profile",
+            "compile conditioning contract",
+            "inspect requirement trace",
+            "evaluate conditioning campaign",
+            "activate profile version",
+            "rollback profile version",
+        ],
+        mcp_tools: &["conditioning_compile", "conditioning_validate"],
+        maturity: "stable",
+        surfaces: &["native", "mcp", "cli", "chat"],
+    },
 ];
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
@@ -1145,7 +1166,7 @@ impl NQuin {
         crate::frame_layout::quin_type(self.metadata)
     }
 
-    /// Write the 4-bit Quin Type nibble into bits [63:60], preserving all other bits.
+    /// Write the 4-bit Quin Type nibble into bits \[63:60\], preserving all other bits.
     #[inline(always)]
     pub fn set_quin_type(&mut self, quin_type: u8) {
         self.metadata = crate::frame_layout::with_quin_type(self.metadata, quin_type);
@@ -1159,13 +1180,13 @@ impl NQuin {
     pub const SENSITIVITY_TIER_MEDICAL: u8 = 0x03;
     pub const SENSITIVITY_TIER_FIDUCIARY: u8 = 0x04;
 
-    /// Read the 4-bit ODRL sensitivity tier from bits [59:56].
+    /// Read the 4-bit ODRL sensitivity tier from bits \[59:56\].
     #[inline(always)]
     pub fn get_sensitivity_tier(&self) -> u8 {
         ((self.metadata >> 56) & 0xF) as u8
     }
 
-    /// Write the 4-bit ODRL sensitivity tier into bits [59:56], preserving all other bits.
+    /// Write the 4-bit ODRL sensitivity tier into bits \[59:56\], preserving all other bits.
     #[inline(always)]
     pub fn set_sensitivity_tier(&mut self, tier: u8) {
         self.metadata = (self.metadata & !(0xFu64 << 56)) | ((tier as u64 & 0xF) << 56);
@@ -1173,19 +1194,19 @@ impl NQuin {
 
     // ── Lamport clock (bits [31:0]) ───────────────────────────────────────────
 
-    /// Extracts the 32-bit Lamport logical clock from bits [31:0].
+    /// Extracts the 32-bit Lamport logical clock from bits \[31:0\].
     #[inline(always)]
     pub fn extract_lamport_clock(&self) -> u32 {
         (self.metadata & 0xFFFF_FFFF) as u32
     }
 
-    /// Sets the 32-bit Lamport logical clock in bits [31:0], preserving all upper bits.
+    /// Sets the 32-bit Lamport logical clock in bits \[31:0\], preserving all upper bits.
     #[inline(always)]
     pub fn set_lamport_clock(&mut self, clock: u32) {
         self.metadata = (self.metadata & !0xFFFF_FFFFu64) | (clock as u64);
     }
 
-    /// Returns bits [31:0] of the metadata field.
+    /// Returns bits \[31:0\] of the metadata field.
     /// After the v3 migration this is the Lamport clock; call `extract_lamport_clock()`
     /// directly for clarity in new code.
     #[inline(always)]
@@ -1323,6 +1344,15 @@ pub fn evaluate_permissive_runtime_gate(
     entry_policy_mask: u16,
     requesting_agent_signature_flags: u16,
 ) -> bool {
+    // Fulfilment / work-obligation recovery cannot bypass bilateral identity
+    // lock or unauthenticated personhood (E17.6). Check this before the
+    // zero-cost open on MASK_WORK_OBLIGATION_SATISFIED.
+    if (entry_policy_mask & MASK_BILATERAL_IDENTITY_LOCKED) != 0
+        && (requesting_agent_signature_flags & MASK_AUTHENTICATED_NATURAL_PERSON) == 0
+    {
+        return false;
+    }
+
     // If permissive commons work metrics or cost recoupments are met, data opens at zero cost
     if (entry_policy_mask & MASK_WORK_OBLIGATION_SATISFIED) != 0 {
         return true;
@@ -1331,13 +1361,6 @@ pub fn evaluate_permissive_runtime_gate(
     // Halt corporate analytics data mining if programmatic micro-payment ticks fail
     if (requesting_agent_signature_flags & MASK_COMMERCIAL_BILLABLE_GATE) != 0
         && (entry_policy_mask & MASK_COMMERCIAL_BILLABLE_GATE) != 0
-    {
-        return false;
-    }
-
-    // Multi-signatory guardian/ward validation constraints check
-    if (entry_policy_mask & MASK_BILATERAL_IDENTITY_LOCKED) != 0
-        && (requesting_agent_signature_flags & MASK_AUTHENTICATED_NATURAL_PERSON) == 0
     {
         return false;
     }
@@ -1494,22 +1517,17 @@ pub mod epistemic;
 pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sync;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod wal;
+pub mod wal_intent;
 
 // The model-inference runtime: reads GGUF weight files and runs the tensor program on the GPU.
 // It is a *runtime*, not an "engine" — the mathematics it executes lives in `crate::solvers`
 // (GEMM, activations/softmax/normalization, attention, RoPE, FFN), each proven equal to the
 // kernels here. `inference_runtime` is the honest name; `gguf_bridge` is retained (the directory
 // rename is deferred — it is a shared performance lane — but the honest name is available).
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub mod gguf_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub use gguf_bridge as inference_runtime;
 /// Phase 4: AOT GGUF → P64 LLM-weight container compiler.
 /// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.
@@ -1540,11 +1558,9 @@ pub mod mcp;
 pub use mcp::mcp_cooperation;
 #[cfg(not(target_arch = "wasm32"))]
 pub use mcp::mcp_server;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod ode_solver;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod qpu_ingress;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod quantum_dft;
 
 #[cfg(target_arch = "wasm32")]
@@ -1884,9 +1900,7 @@ mod tests {
 #[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod domains;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod solvers;
 
 #[cfg(target_os = "linux")]

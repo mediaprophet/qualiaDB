@@ -336,10 +336,10 @@ pub fn orientation_2_exact(a: Point2, b: Point2, c: &ExactPoint2) -> Sign {
 //  ExactConstructionKernel
 // ──────────────────────────────────────────────────────────────────────────
 
-/// An exact-construction kernel that implements [`GeometryKernel`].
+/// An exact-construction kernel that implements `GeometryKernel()`.
 ///
 /// For predicates on plain `f64` points, it delegates to the same
-/// filtered → compensated → exact ladder as [`FilteredF64Kernel`]. The
+/// filtered → compensated → exact ladder as `FilteredF64Kernel()`. The
 /// difference is that it also provides exact construction methods
 /// ([`construct_segment_intersection`]) and exact predicates on constructed
 /// points ([`orientation_2_exact`]).

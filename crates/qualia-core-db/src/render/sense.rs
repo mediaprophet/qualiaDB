@@ -10,11 +10,11 @@
 //!   samples → magnitude bins → dominant tonal bin. (There is no forward STFT elsewhere in the
 //!   crate; the `audio::stft_bake` path *synthesises* spectra for the sidecar raster, it does not
 //!   *analyse* a captured signal. So this is the analysis primitive.)
-//! * **RF / Wi-Fi CSI is DEFERRED** ([`band_available`]) — it needs an SDR / radio plus explicit
+//! * **RF / Wi-Fi CSI is DEFERRED** (`band_available`) — it needs an SDR / radio plus explicit
 //!   hardware permission, and may never be available in-browser. Documented, not stubbed-as-done.
 //!
 //! ## The rails (RENDERER_DEFINITION §8; the memories) — load-bearing here
-//! * **Every sense runs under the deontic/standpoint gate.** [`sense_permitted`] **fails closed**:
+//! * **Every sense runs under the deontic/standpoint gate.** `sense_permitted` **fails closed**:
 //!   no Active `PERMIT` consent for *this agent + this environment* ⇒ **refused**. That is
 //!   *surveillance-refusal by construction* — the default is to **not** capture. An Active `FORBID`
 //!   always wins.
@@ -37,7 +37,7 @@ use crate::{q_hash, NQuin};
 /// Number of DFT magnitude bins computed for a captured frame (analysis resolution).
 pub const SENSE_BINS: usize = 64;
 
-/// Max consent norms evaluated in one [`sense_permitted`] pass (stack-bounded, zero-heap).
+/// Max consent norms evaluated in one `sense_permitted` pass (stack-bounded, zero-heap).
 pub const MAX_SENSE_NORMS: usize = 32;
 
 /// Predicate stamp for a percept→fact quin.

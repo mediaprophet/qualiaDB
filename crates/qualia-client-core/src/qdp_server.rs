@@ -73,6 +73,7 @@ mod tests {
             identity_pubkey_hex: None,
             wireguard_pubkey_hex: None,
             overlay_addr: None,
+            nym_address: None,
             profile_url: None,
         }
     }

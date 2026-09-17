@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/emf_interference>;
+import "vibe:0.1/math" as m;
+pure fn interference_amplitude(a1: f64, a2: f64) -> f64 {
+    let sum = a1 + a2;
+    return m.clamp(sum, -1.0, 1.0);
+}

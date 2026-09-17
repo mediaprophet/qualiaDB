@@ -92,8 +92,8 @@ fn atomic_inference_mode() -> InferenceMode {
 
 /// Resolve mode from `QUALIA_INFERENCE_MODE` at the cold configuration boundary.
 ///
-/// A successful environment parse is published to [`MODE`]. Per-token predicates must read
-/// that atomic via [`atomic_inference_mode`] instead of allocating a fresh environment string.
+/// A successful environment parse is published to `MODE`. Per-token predicates must read
+/// that atomic via `atomic_inference_mode` instead of allocating a fresh environment string.
 pub fn active_inference_mode() -> InferenceMode {
     // Env can override the configured atomic when this cold-boundary API is invoked.
     if let Ok(s) = std::env::var("QUALIA_INFERENCE_MODE") {
@@ -129,6 +129,7 @@ pub fn apply_mode_toggles(mode: InferenceMode) {
                 // Explicit: do not force CUDA TC for dense forge calls.
             }
             InferenceMode::CudaTc => {
+                #[cfg(feature = "wgsl-forge")]
                 crate::wgsl_forge::dispatch::ensure_cuda_runtime_path();
                 // Default: resident mega-pass ON (measured ~6.5–7 tok/s on 3B).
                 // QUALIA_LLM_CUDA_DECODE=1 opts into the layer-by-layer CUDA SoA path
@@ -304,6 +305,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn fast_verify_disables_mid_sentinel() {
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok()
             || std::env::var("QUALIA_SENTINEL_MID").is_ok()
@@ -318,6 +320,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn set_and_read_without_env() {
         // Do not assert env-free if the machine has QUALIA_INFERENCE_MODE set.
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok() {

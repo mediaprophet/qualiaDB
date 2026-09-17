@@ -15,7 +15,7 @@ pub(crate) fn f32_bits_u32(v: f32) -> u32 {
 ///
 /// Dual-writes the current token's K/V into `host_kv` (same indices as
 /// `KvCacheLayout`) so a later host fallback still sees a consistent cache.
-/// Requires [`ensure_device_kv_cache`] to have succeeded for this layout.
+/// Requires `ensure_device_kv_cache()` to have succeeded for this layout.
 pub fn try_q4k_soa_attention_device(
     n_embd: usize,
     n_head: usize,

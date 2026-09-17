@@ -1,0 +1,32 @@
+// VibeScript 0.1 — DMX / lighting fixture
+// Tests: Dmx.new_universe, Dmx.set_channel, Dmx.add_fixture,
+//        Dmx.fixture_set_colour, Dmx.fixture_set_intensity, Dmx.fixture_set_pan_tilt,
+//        Dmx.new_cue, Dmx.cue_set_channel, Dmx.cue_set_fade,
+//        Dmx.new_cue_stack, Dmx.cue_stack_add, Dmx.cue_stack_go
+
+let uni = Dmx.new_universe({ id: 1 });
+
+Dmx.set_channel({ id: 1, channel: 0, value: 128 });
+
+Dmx.add_fixture({
+  id: "f1",
+  name: "Moving Head 1",
+  fixture_type: "moving_head",
+  universe: 1,
+  start_channel: 0,
+  channel_count: 16,
+});
+
+Dmx.fixture_set_colour({ id: "f1", r: 255.0, g: 128.0, b: 0.0 });
+Dmx.fixture_set_intensity({ id: "f1", intensity: 200.0 });
+Dmx.fixture_set_pan_tilt({ id: "f1", pan: 128.0, tilt: 64.0 });
+
+let cue = Dmx.new_cue({ id: "c1", name: "Scene 1" });
+
+Dmx.cue_set_channel({ id: "c1", channel: 0, value: 255 });
+Dmx.cue_set_fade({ id: "c1", fade_in: 2.0, fade_out: 1.0 });
+
+let stack = Dmx.new_cue_stack({ id: "cs1", name: "Show" });
+
+Dmx.cue_stack_add({ id: "cs1", cue_id: "c1" });
+Dmx.cue_stack_go({ id: "cs1" });

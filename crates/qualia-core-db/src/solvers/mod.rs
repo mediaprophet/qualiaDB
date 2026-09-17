@@ -107,9 +107,9 @@ pub struct SolverState {
     pub error: f64,
     pub converged: bool,
     /// Solver-specific packed data:
-    /// - solver_data[0]: cost_value (f64 bits)
-    /// - solver_data[1]: satisfiable (u64 boolean)
-    /// - solver_data[2]: quantum_calls (u32 cast to u64)
+    /// - solver_data\[0\]: cost_value (f64 bits)
+    /// - solver_data\[1\]: satisfiable (u64 boolean)
+    /// - solver_data\[2\]: quantum_calls (u32 cast to u64)
     pub solver_data: [u64; 4],
 }
 

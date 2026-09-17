@@ -4,7 +4,7 @@
 //! - [`lowpass`] / [`highpass`] / [`bandpass`] / [`bandreject`] / [`allpass`] —
 //!   RBJ Audio-EQ-Cookbook coefficient designs feeding the engine.
 //! - [`dc_removal`] — first-order DC blocker.
-//! - [`moving_average`] / [`median_filter`] / [`max_filter`] — windowed
+//! - [`mod@moving_average`] / [`mod@median_filter`] / [`mod@max_filter`] — windowed
 //!   time-domain filters (caller-buffered, zero-heap).
 //!
 //! All hot paths are caller-buffered with fixed-size stack state — no per-call

@@ -1,0 +1,96 @@
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix cml:    <https://ns.webcivics.net/cml/> .
+@prefix si:     <https://ns.webizen.org/semantic-instrument/> .
+
+# SI-01 positive fixture: a small labelled training instrument.
+# Distinct IRIs for instrument, release, package, badge, author.
+
+ex:unit-convert a si:SemanticInstrument ;
+    si:instrumentId "https://example.org/instruments/unit-convert" ;
+    si:name "Unit conversion (labelled fixture)" .
+
+ex:unit-convert-1-0-0 a si:InstrumentRelease ;
+    si:instrument ex:unit-convert ;
+    si:releaseId "https://example.org/instruments/unit-convert/releases/1.0.0" ;
+    si:version "1.0.0" ;
+    si:name "Unit conversion 1.0.0" ;
+    si:description "Converts declared length observations between metre and millimetre." ;
+    si:purpose "training-and-field-screening" ;
+    si:contentCategory si:Demo ;
+    si:prohibitedInterpretation "sole-basis-for-regulatory-enforcement" ;
+    si:domain "https://example.org/concepts/units" ;
+    si:ontologyReference "https://example.org/ontologies/units" ;
+    si:framing si:MixedSplit ;
+    si:entryPoint ex:unit-convert-assess ;
+    si:citation "https://example.org/guidelines/si-units" ;
+    si:applicability ex:unit-convert-appl ;
+    si:honestyPolicy ex:unit-convert-honesty ;
+    si:resourceLimits ex:unit-convert-limits ;
+    si:testManifest ex:unit-convert-tests ;
+    si:badgePresentation ex:unit-convert-badge ;
+    si:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000001" ;
+    si:authoredBy ex:author-person ;
+    si:publishedBy ex:publisher-org ;
+    si:licence "https://spdx.org/licenses/CC-BY-4.0.html" ;
+    si:hasPackage ex:unit-convert-pkg ;
+    si:publicationState si:Published ;
+    si:activationState si:Inactive ;
+    si:trustState si:SelfAsserted .
+
+ex:unit-convert-pkg a si:InstrumentPackage ;
+    si:packageOf ex:unit-convert-1-0-0 ;
+    si:packageId "https://example.org/instruments/unit-convert/packages/1.0.0" ;
+    si:formatVersion "0.1" ;
+    si:packageDigest "sha256:0000000000000000000000000000000000000000000000000000000000000001" .
+
+ex:unit-convert-assess a si:EntryPoint ;
+    si:entryPointName "assess" ;
+    si:operationKind "transform" ;
+    si:inputShape "https://example.org/instruments/unit-convert/shapes/input" ;
+    si:outputShape "https://example.org/instruments/unit-convert/shapes/output" ;
+    si:logicApplication ex:unit-convert-logic ;
+    si:resourceLimits ex:unit-convert-limits ;
+    si:sideEffects "none" .
+
+ex:unit-convert-logic a cml:LogicApplication ;
+    cml:modality cml:N3Logic ;
+    cml:logicSummary "Deterministic unit conversion over declared observations." ;
+    cml:executionSurface "modalities/logic/n3_compiler.rs" ;
+    cml:curationStatus cml:Proposed .
+
+ex:unit-convert-honesty a si:HonestyPolicy ;
+    si:incompleteInputBehaviour si:Held ;
+    si:resultKind "screening-claim" ;
+    si:requiredNotice "Labelled fixture. Result is a claim, not a fact." ;
+    si:signatureIsNotTruth "true" .
+
+ex:unit-convert-appl a si:Applicability ;
+    si:unrestrictedDeclaration "true" ;
+    si:jurisdiction "example" .
+
+ex:unit-convert-limits a si:ResourceLimits ;
+    si:memoryBytes "1048576" ;
+    si:maxSteps "100000" ;
+    si:maxOutputQuins "128" .
+
+ex:unit-convert-tests a si:TestManifest ;
+    si:assetLocator "tests/tests.n3" .
+
+ex:unit-convert-badge a si:BadgePresentation ;
+    si:identifiesRelease ex:unit-convert-1-0-0 ;
+    si:badgeAsset ex:unit-convert-icon .
+
+ex:unit-convert-icon a si:BadgeAsset ;
+    si:assetLocator "assets/badge.svg" ;
+    si:mediaType "image/svg+xml" ;
+    si:byteLength "512" ;
+    si:assetDigest "sha256:00000000000000000000000000000000000000000000000000000000000000a1" ;
+    si:assetPurpose "catalog" ;
+    si:accessibleText "Unit conversion instrument (labelled fixture)" ;
+    si:containsInstitutionalMark "false" .
+
+ex:author-person a values:NaturalPerson ;
+    si:name "Labelled fixture author" .
+
+ex:publisher-org a values:LegalPerson ;
+    si:name "Labelled fixture publisher" .

@@ -1,7 +1,7 @@
 //! Redact known PHI tag keys in a simple DICOM attribute map.
 //!
 //! Operates on [`DicomTagMap`] only — not on raw file bytes. Safe for
-//! pre-export scrub of tags produced by [`parse_dicom_tags_basic`].
+//! pre-export scrub of tags produced by `parse_dicom_tags_basic()`.
 
 use super::parse_dicom_tags_basic::{
     DicomTagMap, TagKey, TAG_PATIENT_BIRTH, TAG_PATIENT_ID, TAG_PATIENT_NAME,

@@ -1,0 +1,18 @@
+{
+  "from_pack": "en-core@0.1.0",
+  "to_pack": "en-core@0.1.1",
+  "aliases": [
+    {"from": "person", "to": "concept:person", "framing": "living-SHACL"},
+    {"from": "kin", "to": "concept:kin", "framing": "living-SHACL"},
+    {"from": "volume", "to": "concept:volume", "framing": "artifact-OWL"}
+  ],
+  "requested_upgrade_framing": [
+    "artifact-OWL",
+    "artifact-OWL",
+    "artifact-OWL"
+  ],
+  "must_remain": [
+    {"from": "person", "framing": "living-SHACL"},
+    {"from": "kin", "framing": "living-SHACL"}
+  ]
+}

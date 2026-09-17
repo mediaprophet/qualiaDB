@@ -288,7 +288,7 @@ pub fn q4k_block_to_soa(src: &[u8], dst: &mut [u8]) -> Result<(), GgmlDequantErr
 }
 
 /// Expand a full Q4_K tensor blob (row-major superblocks) into SoA layout.
-/// `n_row_elems` = dims[0] (weights per row). `n_rows` = dims[1].
+/// `n_row_elems` = dims\[0\] (weights per row). `n_rows` = dims\[1\].
 pub fn expand_q4k_tensor_to_soa(
     raw: &[u8],
     n_row_elems: usize,

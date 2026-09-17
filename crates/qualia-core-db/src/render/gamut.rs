@@ -46,7 +46,7 @@ impl std::error::Error for GamutError {}
 //  Gamut operations
 // ───────────────────────────────────────────────────────────────────────────
 
-/// Check if a colour is in the sRGB gamut (all linear sRGB channels in [0,1]).
+/// Check if a colour is in the sRGB gamut (all linear sRGB channels in \[0,1\]).
 #[inline]
 pub fn is_in_gamut(xyz: &Xyz) -> bool {
     let rgb = xyz_to_linear_srgb(xyz);
@@ -56,7 +56,7 @@ pub fn is_in_gamut(xyz: &Xyz) -> bool {
 /// Map an out-of-gamut colour to the closest in-gamut colour.
 ///
 /// This uses the simple clamping approach: convert to linear sRGB, clamp
-/// each channel to [0,1], and convert back to XYZ.
+/// each channel to \[0,1\], and convert back to XYZ.
 #[inline]
 pub fn gamut_map_clamp(xyz: &Xyz) -> Xyz {
     let rgb = xyz_to_linear_srgb(xyz);

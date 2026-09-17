@@ -2,7 +2,7 @@
 //!
 //! Frequency ↔ MIDI conversion ([`hz_to_midi`] / [`midi_to_hz`]), note-track
 //! segmentation ([`segment_notes`] → [`NoteEvent`]), and the composed
-//! end-to-end [`audio_to_midi`]. Transcribed MIDI is an epistemic *proposal*
+//! end-to-end [`audio_to_midi()`]. Transcribed MIDI is an epistemic *proposal*
 //! carrying a per-note confidence, never authoritative like imported MIDI.
 
 pub mod audio_to_midi;

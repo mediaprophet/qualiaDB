@@ -1,0 +1,11 @@
+@prefix cap:    <https://ns.webcivics.net/capability/> .
+@prefix si:     <https://ns.webizen.org/semantic-instrument/> .
+
+# Negative: a skill concept incorrectly typed as runtime host permission.
+
+ex:welding a cap:Capability ;
+    si:expectedViolation si:CapabilityTreatedAsRuntimePermission ;
+    si:name "Welding (labelled concept)" .
+
+ex:welding a si:HostCapabilityGrant ;
+    si:permissionKind "network_egress" .

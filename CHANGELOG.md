@@ -4,7 +4,87 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
----
+## [0.0.39] — 2026-09-16
+
+### Added
+
+- **Prompt Precision Conditioning Runtime**: Waves W0–W8 implementation featuring deterministic prompt conditioning contracts, strict 6-zone token budgeting algebra, zero-heap byte layout emitters, 14 cross-cutting invariant suites, and PP-090 LoRA hot-path readiness under the 42MB Sentinel budget.
+- **Automated Model Precision Optimizer**: Machine-learned model precision calibration pipeline (`qualia-core-db::inference::conditioning_opt`) supporting candidate strategy generation (B0–B5), strict split-isolated evaluation, held-out validation, versioning, rollback, and signed `ModelOptimizationReceipt` tracking.
+- **Semantic Instruments Studio Bay**: First-class metamodel, SHACL validation shapes, execution receipts, keyboard-only authoring path, and interactive Webizen Studio Instrument Bay UI components.
+- **NLP Substrate & Gold Benchmark Corpus**: Formal NLP contracts, token budgeting algebra, gold benchmark evaluation datasets (`qualia-catchment-notes-v0` & `qualia-english-notes-v0`), and automated plan validation scripts.
+- **GitHub Pages 0.0.39 Showcase**: New `progress-0.0.39.html` with interactive Token Budget Simulator, and `prompt-precision.html` architectural reference.
+
+### Changed
+
+- All 27 workspace crates, `Cargo.lock`, Tauri manifest, portal packages, and release workflows bumped from `0.0.38` to `0.0.39`.
+- Poet and Webizen runtime stamps updated to `0.0.39`.
+
+## [0.0.38] — 2026-09-12
+
+### Changed
+
+- Workspace crates, `Cargo.lock`, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.38`.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version track `0.0.38`.
+- Operator surfaces no longer say crate stamps remain `0.0.37`. Neo sole-pushes this line, then annotated tag `v0.0.38`. This commit does not create the git tag.
+
+## [Unreleased] — 0.0.38 Pages wake — 2026-09-12
+
+Pages / operator copy landed before the crate-version wake. Crate stamps are now `0.0.38`.
+
+### Added
+
+- GitHub Pages operator record for the 0.0.38 habitat line:
+  `docs/progress-0.0.38.html` and `docs/releases/0.0.38-pages-wake.md`.
+- Site description and home / manuals / release-matrix copy now point at 0.0.38
+  habitat honesty: held / not yet, Directory humans-first, Talk / Mail
+  human-alone, Catalog Open pack live bind, Continuity handle ≠ human, Desktop
+  Native prefer existing `:4242`.
+
+### Changed
+
+- `pages.yml` comment now states that tag `v0.0.38` is the intended publish
+  path; branch `0.0.38` may still be rejected by the `github-pages` environment
+  until repo settings add it.
+## [0.0.38] — 2026-09-08
+
+### Changed
+
+- Opened the `0.0.38` development line from `0.0.37`.
+- Workspace crates, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.38`.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version track `0.0.38`.
+
+## [0.0.37] — 2026-09-08
+
+### Changed
+
+- Workspace crates, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.37`.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version track `0.0.37`.
+- Portal and `wasm-logic` packages include WASM-safe science (CAS, DFT, ODE, bio, chem). Slim fail-closed math stubs are not the product. Native-only remains native: daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF. Ontology MCP stays the exclusive lite kernel.
+- GitHub Pages operator surface now showcases 0.0.37: honest progress, live WASM size gates (16 MiB / 4 MiB sanity cap; ontology 640 / 200 KiB), QDNF map, and the measured Linux 15/15 release matrix.
+
+## [Unreleased] — POET product-integrity remediation — 2026-08-29
+
+### Accountability / corrected claims
+
+- Withdrew broad 0.0.35-dev claims that the non-QApps POET UI was fully
+  implemented. An audit found 115 domain view files reduced to delegations and
+  30,870 lines removed from those files, while the authoritative Workstream A
+  plan still held 545 todo markers.
+- Recorded the resulting harm as lost product utility and trust, with costs in
+  principal time, rework, and delayed delivery. Passing structural tests and
+  generic COP persistence did not establish task-level product parity.
+- Opened `docs/POET_PRODUCT_INTEGRITY_REMEDIATION_2026-08-29.md`. Completion now
+  requires user outcomes, domain interactions, real state/actions, derived
+  decision support, lifecycle behavior, accessibility, and human UAT evidence.
+- QApps remain scheduled for refactoring into native POET constructs,
+  manifolds, containers, capabilities, and Library entries; structural
+  conversion may not discard the user job or create a second runtime.
+
+### Remediation
+
+- Reopened Agreement/Rights, Project, Dataset/Ontology, Studio, Health,
+  Governance, Device, Social, and related specialist families in the parity
+  tracker instead of treating generic record forms as completion.
 
 ## [0.0.30] — 2026-08-15
 

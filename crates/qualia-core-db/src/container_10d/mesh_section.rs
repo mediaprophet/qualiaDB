@@ -1,7 +1,7 @@
 //! `.10d` QuantizedMesh section — the geometry half of a mesh asset in the
 //! container (P0.4).
 //!
-//! A QuantizedMesh section wraps a [`Mesh`](crate::render::assets::Mesh) as a
+//! A QuantizedMesh section wraps a [`Mesh`] as a
 //! self-describing `.10d` section. Vertex positions are quantized to **u16
 //! per axis within the mesh's bounding box** — 6 bytes/vertex vs 12 for raw
 //! f32 (2×), and the bbox is exactly what the semantic quins already carry,

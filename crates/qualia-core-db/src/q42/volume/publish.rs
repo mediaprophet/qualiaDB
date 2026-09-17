@@ -4,9 +4,7 @@ use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::super::{
-    write_volume_root, Q42Volume, Q42VolumeManifest, StreamingQ42VolumeWriter,
-};
+use super::super::{write_volume_root, Q42Volume, Q42VolumeManifest, StreamingQ42VolumeWriter};
 use crate::NQuin;
 
 /// Default child-segment cap (512 MiB). Includes header, lexicon, indexes, data.
@@ -25,7 +23,11 @@ pub struct Q42RolloverPublisher {
 }
 
 impl Q42RolloverPublisher {
-    pub fn new(dir: impl Into<PathBuf>, stem: impl Into<String>, lex: HashMap<u64, String>) -> io::Result<Self> {
+    pub fn new(
+        dir: impl Into<PathBuf>,
+        stem: impl Into<String>,
+        lex: HashMap<u64, String>,
+    ) -> io::Result<Self> {
         Self::with_limit(dir, stem, lex, DEFAULT_SEGMENT_MAX_BYTES)
     }
 
@@ -64,10 +66,7 @@ impl Q42RolloverPublisher {
 
     fn roll(&mut self) -> io::Result<()> {
         let path = self.child_path(self.next_index);
-        let writer = std::mem::replace(
-            &mut self.writer,
-            StreamingQ42VolumeWriter::new(&self.lex)?,
-        );
+        let writer = std::mem::replace(&mut self.writer, StreamingQ42VolumeWriter::new(&self.lex)?);
         writer.finish(&path)?;
         self.child_paths.push(path);
         self.next_index += 1;
@@ -131,7 +130,10 @@ pub fn append_segment_to_root(root_path: &Path, new_child: &Path) -> io::Result<
     manifest.generation = manifest.generation.saturating_add(1);
     let tmp = parent.join(format!(
         ".{}.tmp",
-        root_path.file_name().and_then(|n| n.to_str()).unwrap_or("root.q42")
+        root_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("root.q42")
     ));
     write_volume_root(&tmp, &manifest)?;
     std::fs::rename(&tmp, root_path)?;
@@ -178,8 +180,8 @@ mod tests {
         let dir = tempfile::TempDir::new().unwrap();
         let mut lex = HashMap::new();
         lex.insert(1, "p".into());
-        let mut pubr = Q42RolloverPublisher::with_limit(dir.path(), "gen", lex.clone(), 1024 * 1024)
-            .unwrap();
+        let mut pubr =
+            Q42RolloverPublisher::with_limit(dir.path(), "gen", lex.clone(), 1024 * 1024).unwrap();
         pubr.push_block(0, &[quin(1)]).unwrap();
         let root = pubr.finish().unwrap();
         let extra = dir.path().join("extra.q42");

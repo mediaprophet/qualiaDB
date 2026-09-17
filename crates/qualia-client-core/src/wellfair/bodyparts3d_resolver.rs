@@ -10,7 +10,7 @@
 //! Julia code + OBJ→STL packaging, **not** the anatomy data: a permissive wrapper does not relicense the
 //! upstream copyleft meshes. So the meshes remain CC-BY-SA and ship as a **separate, clearly-licensed
 //! pack** (share-alike stays contained; the CCF CC-BY-4.0 pack stays permissive). Attribution + citation
-//! are recorded per the database's terms ([`BP3D_ATTRIBUTION`], [`BP3D_CITATION`], [`BP3D_DATA_DOI`]).
+//! are recorded per the database's terms (`BP3D_ATTRIBUTION`, `BP3D_CITATION`, `BP3D_DATA_DOI`).
 //! Data version 3.0 / 20110915 (a single male reference model).
 //!
 //! **The join (Timothy's "organs are parts of systems" made real):** every mesh is keyed by an FMA id;

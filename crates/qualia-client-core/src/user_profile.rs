@@ -50,6 +50,8 @@ pub struct UserProfile {
     pub active_front_door_id: Option<String>,
     #[serde(default)]
     pub relay_base_url: Option<String>,
+    #[serde(default)]
+    pub nym_address: Option<String>,
     pub sharing: SharingPolicy,
     pub updated_at: u64,
 }
@@ -62,6 +64,7 @@ impl Default for UserProfile {
             public_did: String::new(),
             active_front_door_id: None,
             relay_base_url: None,
+            nym_address: None,
             sharing: SharingPolicy::default(),
             updated_at: 0,
         }
@@ -254,6 +257,7 @@ mod tests {
             public_did: "did:qualia:test:abc".into(),
             active_front_door_id: Some("door-1".into()),
             relay_base_url: Some("https://relay.example".into()),
+            nym_address: None,
             sharing: SharingPolicy {
                 allow_group_chat_invites: false,
                 share_active_model: true, // must survive a partial sharing patch

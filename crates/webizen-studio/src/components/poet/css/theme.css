@@ -1,0 +1,129 @@
+/* ==========================================================================
+   HyperCanvas: Multi-Dimensional Mindware Workbench - Design Tokens
+   Cyber-Semantic Glassmorphism Theme with Strata, Social, Health & Epistemic Modalities
+   ========================================================================== */
+
+:root {
+  /* Canvas Backgrounds & Depths */
+  --canvas-bg: #07090e;
+  --canvas-grid-line: rgba(255, 255, 255, 0.04);
+  --canvas-grid-line-major: rgba(0, 210, 255, 0.1);
+
+  /* Surfaces & Glass */
+  --surface-base: #0c1017;
+  --surface-panel: #131822;
+  --surface-panel-elevated: #1a2230;
+  --surface-glass: rgba(19, 24, 34, 0.78);
+  --surface-glass-heavy: rgba(12, 16, 23, 0.88);
+  --surface-glass-light: rgba(255, 255, 255, 0.05);
+
+  /* Borders & Glows */
+  --border-subtle: #1e2838;
+  --border-medium: #2b384e;
+  --border-bright: #3e5170;
+  --border-active: #00d2ff;
+
+  /* Typography */
+  --text-primary: #f0f4fc;
+  --text-secondary: #9cb1d1;
+  --text-muted: #5e7394;
+  --text-inverse: #07090e;
+
+  /* Brand Accents */
+  --accent-cyan: #00d2ff;
+  --accent-cyan-glow: rgba(0, 210, 255, 0.35);
+  --accent-emerald: #00f2a9;
+  --accent-emerald-glow: rgba(0, 242, 169, 0.35);
+  --accent-amber: #ffb834;
+  --accent-amber-glow: rgba(255, 184, 52, 0.35);
+  --accent-violet: #a855f7;
+  --accent-violet-glow: rgba(168, 85, 247, 0.35);
+  --accent-rose: #ff4d6d;
+  --accent-rose-glow: rgba(255, 77, 109, 0.35);
+  --accent-blue: #3b82f6;
+
+  /* Epistemic Modality Color Palette (Objective vs Subjective) */
+  --modality-objective: #00d2ff;        /* 🔬 Objective / Empirical Telemetry (Cyan) */
+  --modality-subjective: #ec4899;       /* 🧠 Subjective / First-Person Qualia (Pink/Magenta) */
+  --modality-intersubjective: #a855f7;  /* 🌊 Intersubjective / Cultural Consensus (Violet) */
+  --modality-normative: #ffb834;        /* ⚖️ Normative / Legal Mandate (Amber) */
+
+  /* Container Type Semantic Color Codes */
+  --color-doc: #38bdf8;
+  --color-code: #00f2a9;
+  --color-3d: #a855f7;
+  --color-sheet: #ffb834;
+  --color-portal: #ec4899;
+  --color-media: #f97316;
+  --color-ai: #06b6d4;
+  --color-ontology: #8b5cf6;
+  --color-map: #10b981;
+  --color-social: #6366f1;
+  --color-webrtc: #ef4444;
+  --color-health: #14b8a6;
+  --color-webview: #0ea5e9;
+  --color-rights: #f43f5e;
+
+  /* Social Dimensions & Strata Color Palette */
+  --strata-env: #10b981;     /* Environmental / Ecological */
+  --strata-social: #38bdf8;  /* Social / Cultural */
+  --strata-legal: #ec4899;   /* Legal / Fiduciary */
+  --strata-fin: #f59e0b;     /* Financial / Economic */
+  --strata-tech: #8b5cf6;    /* Technical / Cybernetic */
+
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+  /* Elevations & Shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.8);
+  --shadow-container: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 1px 1px var(--border-subtle);
+  --shadow-container-active: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 0 1.5px var(--accent-cyan), 0 0 20px var(--accent-cyan-glow);
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --trans-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --trans-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--canvas-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-bright);
+}

@@ -359,6 +359,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn fact_draft_on_capital_prompt() {
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok() {
             return;
@@ -396,6 +397,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn logit_bias_boosts_vocab_slot() {
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok() {
             return;
@@ -419,6 +421,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn deontic_obligation_on_match() {
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok() {
             return;

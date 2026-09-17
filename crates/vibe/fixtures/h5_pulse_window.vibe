@@ -1,0 +1,21 @@
+module <https://qualiadb.org/modules/pulse_window>;
+requires [ capability("pulse.publish", topic: "pulse/window") ];
+pure fn window_max(values: List<f64>) -> f64 {
+    let mut max_val: f64 = 0.0;
+    let mut first: bool = true;
+    for v in values {
+        if first {
+            max_val = v;
+            first = false;
+        } else {
+            if v > max_val {
+                max_val = v;
+            }
+        }
+    }
+    return max_val;
+}
+effect fn emit_window_peak(peak: f64) {
+    effect pulse.publish("pulse/window", peak);
+    return null;
+}

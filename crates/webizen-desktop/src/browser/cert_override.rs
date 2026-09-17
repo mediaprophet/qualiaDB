@@ -298,17 +298,23 @@ pub fn decide_for_host_with_leaf(
     (action, allow, verify_detail)
 }
 
-/// Attach hook to content webview (Windows only).
+/// Attach hook to content webview. Windows uses WebView2
+/// `ServerCertificateErrorDetected`. Linux uses WebKitGTK
+/// `load-failed-with-tls-errors` plus `allow_tls_certificate_for_host`.
 pub fn attach_to_content_webview(app: &tauri::AppHandle) -> Result<bool, String> {
-    #[cfg(not(windows))]
-    {
-        let _ = app;
-        HOOK_ATTACHED.store(false, Ordering::Relaxed);
-        return Ok(false);
-    }
     #[cfg(windows)]
     {
         attach_windows(app)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        attach_linux(app)
+    }
+    #[cfg(not(any(windows, target_os = "linux")))]
+    {
+        let _ = app;
+        HOOK_ATTACHED.store(false, Ordering::Relaxed);
+        Ok(false)
     }
 }
 
@@ -336,7 +342,6 @@ fn attach_windows(app: &tauri::AppHandle) -> Result<bool, String> {
     Ok(attached)
 }
 
-#[cfg(windows)]
 fn wrap_pem_body(s: String) -> String {
     if s.contains("BEGIN CERTIFICATE") {
         s
@@ -445,6 +450,58 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
     Ok(true)
 }
 
+#[cfg(target_os = "linux")]
+fn attach_linux(app: &tauri::AppHandle) -> Result<bool, String> {
+    use super::CONTENT_LABEL;
+    use tauri::Manager;
+
+    let webview = app
+        .get_webview(CONTENT_LABEL)
+        .ok_or_else(|| "content webview not open".to_string())?;
+
+    let result = std::sync::Arc::new(Mutex::new(Ok(false)));
+    let result_c = result.clone();
+
+    webview
+        .with_webview(move |platform| {
+            let mut slot = result_c.lock().unwrap_or_else(|e| e.into_inner());
+            *slot = attach_on_linux(platform);
+        })
+        .map_err(|e| format!("with_webview: {e}"))?;
+
+    let attached = result.lock().map_err(|e| e.to_string())?.clone()?;
+    HOOK_ATTACHED.store(attached, Ordering::Relaxed);
+    Ok(attached)
+}
+
+#[cfg(target_os = "linux")]
+fn attach_on_linux(platform: tauri::webview::PlatformWebview) -> Result<bool, String> {
+    use gio::prelude::TlsCertificateExt;
+    use webkit2gtk::{WebContextExt, WebViewExt};
+
+    let view = platform.inner();
+    view.connect_load_failed_with_tls_errors(move |view, uri, cert, _errors| {
+        let host = host_from_uri(uri);
+        let leaf_pem = cert.certificate_pem().map(|pem| wrap_pem_body(pem.to_string()));
+        let (label, allow, detail) =
+            decide_for_host_with_leaf(&host, leaf_pem.as_deref(), &[]);
+        let reason = if detail.is_empty() {
+            label.to_string()
+        } else {
+            format!("{label}|{detail}")
+        };
+        record(&host, label, &reason);
+        if allow {
+            if let Some(ctx) = view.web_context() {
+                ctx.allow_tls_certificate_for_host(cert, &host);
+            }
+            view.load_uri(uri);
+        }
+        true
+    });
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use qualia_client_core::webizen_trust::{
@@ -478,6 +535,15 @@ mod tests {
             CertOverrideDecision::AllowHostPinned
         );
         assert!(decision_allows(CertOverrideDecision::AllowHostPinned));
+    }
+
+    #[test]
+    fn host_from_https_uri_strips_scheme_port_and_path() {
+        assert_eq!(
+            super::host_from_uri("https://Example.COM:443/path?q=1"),
+            "example.com"
+        );
+        assert_eq!(super::host_from_uri("http://intranet.test"), "intranet.test");
     }
 
     #[test]

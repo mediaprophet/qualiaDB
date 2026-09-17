@@ -43,7 +43,7 @@ pub enum IntegrityMode {
 impl IntegrityMode {
     /// `QUALIA_P64_INTEGRITY=full|metadata|structure`.
     ///
-    /// **Default is [`Metadata`]** (bounds + metadata CRC only): convert already sealed
+    /// **Default is `Metadata()`** (bounds + metadata CRC only): convert already sealed
     /// per-tensor CRCs, and full re-scan dominated activate (~2.4 s → ~9 ms on SmolLM2).
     /// Use `full` for audit / untrusted download; `structure` for tests only.
     pub fn from_env() -> Self {

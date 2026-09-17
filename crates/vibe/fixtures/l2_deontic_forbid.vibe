@@ -1,0 +1,14 @@
+module <https://qualiadb.org/modules/deontic_forbid>;
+prefix policy: <https://qualiadb.org/policy/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("pulse.publish", topic: "policy/violation")
+];
+effect fn forbid_action(actor: Iri, action: Iri) {
+    let violation = <<( actor policy:forbidden action )>>;
+    graph.stage(violation);
+    graph.commit()?;
+    effect pulse.publish("policy/violation", { actor: actor, action: action })?;
+    return null;
+}

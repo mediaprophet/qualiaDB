@@ -1,0 +1,20 @@
+// VibeScript 0.1 — 3D scene fixture
+// Tests: ThreeD.add_object, ThreeD.set_transform, ThreeD.set_material,
+//        ThreeD.add_camera, ThreeD.add_light, ThreeD.add_rig, ThreeD.add_animation
+
+ThreeD.add_object({ id: "obj1", name: "Cube" });
+
+ThreeD.set_transform({
+  id: "obj1",
+  position: [1.0, 2.0, 3.0],
+});
+
+ThreeD.set_material({ id: "obj1", material_id: "mat_metal" });
+
+ThreeD.add_camera({ id: "cam1", fov: 75.0 });
+
+ThreeD.add_light({ id: "light1", light_type: "point" });
+
+ThreeD.add_rig({ id: "rig1", name: "Armature" });
+
+ThreeD.add_animation({ id: "anim1", duration: 2.5 });

@@ -1,0 +1,6 @@
+field label: string
+  support: point
+  representation: sampled;
+fn main() {
+  return 0;
+}

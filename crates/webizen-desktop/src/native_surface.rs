@@ -9,7 +9,9 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager};
+#[cfg(windows)]
+use tauri::WebviewWindow;
 use webizen_render::scene_contract::RenderScene;
 use webizen_render::telemetry::SystemTelemetry;
 
@@ -277,8 +279,29 @@ pub fn mount_gpu_surface(
 
     #[cfg(not(windows))]
     {
-        let _ = (app, x, y, width, height);
-        return Err("Native GPU surface is only supported on Windows".to_string());
+        let width = width.max(1);
+        let height = height.max(1);
+        let mut renderer_guard = state.renderer.lock().unwrap();
+        if renderer_guard.is_some() {
+            if let Some(ref mut renderer) = *renderer_guard {
+                renderer.resize(width, height);
+            }
+            *state.width.lock().unwrap() = width;
+            *state.height.lock().unwrap() = height;
+            let _ = (x, y);
+            return Ok(());
+        }
+        drop(renderer_guard);
+        // WebKitGTK has no child-HWND punch-through. Mount the same volumetric
+        // renderer offscreen on the shared wgpu device and drive the existing loop.
+        let renderer = webizen_render::VolumetricRenderer::new_offscreen(width, height, 4096)?;
+        *state.renderer.lock().unwrap() = Some(renderer);
+        *state.width.lock().unwrap() = width;
+        *state.height.lock().unwrap() = height;
+        state.running.store(true, Ordering::SeqCst);
+        let state_arc = state.inner().clone();
+        spawn_render_loop(app.clone(), state_arc);
+        let _ = app.emit("gpu-surface-mounted", ());
     }
 
     Ok(())

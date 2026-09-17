@@ -1,0 +1,40 @@
+// VibeScript 0.1 — Video production fixture
+// Tests: Video.new_project, Video.add_track, Video.add_clip, Video.trim_clip,
+//        Video.set_speed, Video.colour_grade, Video.add_transition
+
+let proj = Video.new_project({
+  id: "vid1",
+  name: "Documentary",
+  width: 1920,
+  height: 1080,
+  fps: 30.0,
+});
+
+Video.add_track({ id: "vid1", name: "Main" });
+
+Video.add_clip({
+  id: "vid1",
+  source: "interview.mp4",
+  duration: 120.0,
+});
+
+Video.trim_clip({
+  id: "vid1",
+  in_point: 10.0,
+  out_point: 60.0,
+});
+
+Video.set_speed({ id: "vid1", speed: 1.5 });
+
+Video.colour_grade({
+  id: "vid1",
+  brightness: 0.1,
+  contrast: 0.2,
+  saturation: 0.15,
+});
+
+Video.add_transition({
+  id: "vid1",
+  transition_type: "cross_dissolve",
+  duration: 1.0,
+});

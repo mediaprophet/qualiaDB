@@ -67,6 +67,7 @@ pub struct BenchGpuMeta {
 impl BenchGpuMeta {
     // Widened from module-private `fn` to `pub(super)` so `runner::run_bench`
     // (a sibling submodule) can build this from the shared GPU context.
+    #[cfg(feature = "gpu-runtime")]
     pub(super) fn from_shared_context(ctx: &crate::gpu_context::SharedGpuContext) -> Self {
         let caps = &ctx.adapter_caps;
         Self {
@@ -78,6 +79,20 @@ impl BenchGpuMeta {
             subgroup_min_size: caps.subgroup_min_size,
             subgroup_max_size: caps.subgroup_max_size,
             cooperative_matrix_tiles: caps.cooperative_matrix_tile_count,
+        }
+    }
+
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub(super) fn unavailable() -> Self {
+        Self {
+            adapter: String::new(),
+            backend: String::new(),
+            device_type: String::new(),
+            adapter_feature_flags: String::new(),
+            enabled_feature_flags: String::new(),
+            subgroup_min_size: 0,
+            subgroup_max_size: 0,
+            cooperative_matrix_tiles: 0,
         }
     }
 }

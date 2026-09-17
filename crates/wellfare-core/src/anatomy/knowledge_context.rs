@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::record::EpistemicStatus;
 
 use super::factor::EvidenceTier;
-use super::observations::{bind_for_code, BodyObservation, RepresentationBind};
+use super::observations::{BodyObservation, RepresentationBind, bind_for_code};
 use super::slugify;
 
 /// One self-identified affiliation. Repeatable. Open vocabulary.
@@ -157,7 +157,10 @@ pub fn affiliations_from_observations(obs: &[BodyObservation]) -> Vec<EthnicityA
             continue;
         }
         if let Some(a) = o.named.as_deref().and_then(EthnicityAffiliation::declared) {
-            if !out.iter().any(|x: &EthnicityAffiliation| x.token == a.token) {
+            if !out
+                .iter()
+                .any(|x: &EthnicityAffiliation| x.token == a.token)
+            {
                 out.push(a);
             }
         }
@@ -259,9 +262,7 @@ linked to severe cutaneous reactions with carbamazepine. A labelled pharmacology
 hypothesis (FDA boxed warning), not a prescription decision and not a facial type."
                 .into(),
             evidence: EvidenceTier::ClinicalEvidence,
-            citation: Some(
-                "FDA carbamazepine boxed warning — HLA-B*1502 / SJS-TEN".into(),
-            ),
+            citation: Some("FDA carbamazepine boxed warning — HLA-B*1502 / SJS-TEN".into()),
             illustrative: true,
         },
         KnowledgeContextEdge {
@@ -294,10 +295,11 @@ hypothesis if relevant to the person — never inferred from appearance."
                 "cajun".into(),
             ],
             topic: "tay-sachs".into(),
-            note: "Tay-Sachs carrier frequency is higher in some Ashkenazi Jewish, French-Canadian, \
+            note:
+                "Tay-Sachs carrier frequency is higher in some Ashkenazi Jewish, French-Canadian, \
 and Cajun communities. A carrier-screening hypothesis, not a diagnosis and not a \
 cosmetic cue."
-                .into(),
+                    .into(),
             evidence: EvidenceTier::ClinicalEvidence,
             citation: Some("ACMG / ACOG carrier-screening statements (public)".into()),
             illustrative: true,
@@ -323,26 +325,27 @@ fn tokens_match(subject: &str, edge: &str) -> bool {
 mod tests {
     use super::*;
     use crate::anatomy::constitution::{BodyConstitution, BodyFit};
-    use crate::anatomy::observations::{bind_for_code, InstrumentKind};
+    use crate::anatomy::observations::{InstrumentKind, bind_for_code};
 
     #[test]
     fn ethnicity_does_not_change_body_fit() {
         let mut with = BodyConstitution::default();
-        with.knowledge.ethnicities.push(
-            EthnicityAffiliation::declared("Ashkenazi Jewish").unwrap(),
-        );
-        with.knowledge.ethnicities.push(
-            EthnicityAffiliation::declared("Greek").unwrap(),
-        );
+        with.knowledge
+            .ethnicities
+            .push(EthnicityAffiliation::declared("Ashkenazi Jewish").unwrap());
+        with.knowledge
+            .ethnicities
+            .push(EthnicityAffiliation::declared("Greek").unwrap());
         let empty = BodyConstitution::default();
         let a = with.fit();
         let b = empty.fit();
         assert!(same_geometry(&a, &b));
         assert!(a.identity);
-        assert!(a
-            .honesty_notes
-            .iter()
-            .any(|n| n.contains("knowledge context")));
+        assert!(
+            a.honesty_notes
+                .iter()
+                .any(|n| n.contains("knowledge context"))
+        );
         assert!(!a.used_fields.iter().any(|f| f.contains("ethnic")));
     }
 
@@ -393,7 +396,10 @@ mod tests {
             .push(EthnicityAffiliation::declared("Ashkenazi").unwrap());
         let all = considerations_for_context(&subject, &illustrative_context_pack(), &[]);
         assert!(all.iter().any(|c| c.topic == "tay-sachs"));
-        assert!(all.iter().all(|c| c.epistemic_status == EpistemicStatus::Hypothesis));
+        assert!(
+            all.iter()
+                .all(|c| c.epistemic_status == EpistemicStatus::Hypothesis)
+        );
         assert!(all.iter().all(|c| c.illustrative));
         assert!(!all.iter().any(|c| c.topic == "g6pd"));
 
@@ -427,9 +433,9 @@ mod tests {
         subject
             .ethnicities
             .push(EthnicityAffiliation::declared("Italian").unwrap());
-        subject.genetic_ancestry.push(
-            AncestryRecord::from_import("West African", "imported:ancestry.pack").unwrap(),
-        );
+        subject
+            .genetic_ancestry
+            .push(AncestryRecord::from_import("West African", "imported:ancestry.pack").unwrap());
         let hits = considerations_for_context(&subject, &illustrative_context_pack(), &[]);
         assert!(hits.iter().any(|c| c.topic == "sickle-cell"));
         assert!(hits.iter().any(|c| c.topic == "g6pd"));

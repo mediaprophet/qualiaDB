@@ -275,7 +275,7 @@ impl WgpuComputeContext {
         })
     }
 
-    /// Like [`new`] but tries the Vulkan backend first to find a cooperative-matrix-
+    /// Like `new()` but tries the Vulkan backend first to find a cooperative-matrix-
     /// capable adapter. On Windows/DX12, `EXPERIMENTAL_COOPERATIVE_MATRIX` is not
     /// advertised, but the same NVIDIA GPU exposes `VK_KHR_cooperative_matrix` via
     /// the Vulkan driver. This constructor:
@@ -283,7 +283,7 @@ impl WgpuComputeContext {
     /// 1. Creates a Vulkan-only instance (unless `QUALIA_WGPU_BACKEND` overrides).
     /// 2. Enumerates adapters, looking for one with `EXPERIMENTAL_COOPERATIVE_MATRIX`.
     /// 3. If found, builds the context on that adapter (un-gating coopmat).
-    /// 4. If not found, falls back to [`new`] (which uses the default backend).
+    /// 4. If not found, falls back to `new()` (which uses the default backend).
     ///
     /// This is the primary un-gating path for the HLSL WaveMatrix / WGSL coopmat
     /// tensor-core emitters on NVIDIA hardware where DX12 doesn't expose coopmat.
@@ -793,7 +793,7 @@ impl WgpuComputeContext {
         Ok(pipeline)
     }
 
-    /// Like [`compile_pipeline`] but accepts pre-compiled SPIR-V bytes instead of
+    /// Like `compile_pipeline()` but accepts pre-compiled SPIR-V bytes instead of
     /// WGSL source. This is the execution bridge for native shader profiles that
     /// compile to SPIR-V (notably HLSL via DXC `–spirv`): the forge emits HLSL,
     /// DXC produces a SPIR-V binary, and this method feeds it into the same wgpu
@@ -830,7 +830,7 @@ impl WgpuComputeContext {
     /// [`compile_pipeline`](Self::compile_pipeline) with a process-lifetime cache keyed by
     /// `entry\0source` — the same `(source, entry)` returns the previously-built pipeline
     /// (a cheap `Arc`-clone) instead of recompiling. This is what makes a re-run of a fixed
-    /// graph (e.g. one decode block per generated token, via a held [`ForgeGraphExecutor`])
+    /// graph (e.g. one decode block per generated token, via a held `ForgeGraphExecutor()`)
     /// pay shader compilation **once**, not per call. The graph executor records its nodes
     /// through this path; one-shot callers see a cold cache (built + dropped with the context).
     pub fn compile_pipeline_cached(
@@ -855,7 +855,7 @@ impl WgpuComputeContext {
     }
 
     /// Build a bind group binding each [`BufferView`] at its `binding` slot, choosing the
-    /// physical slab per the view's usage ([`Self::slab_for`]). Shared by the per-node
+    /// physical slab per the view's usage (`Self::slab_for`). Shared by the per-node
     /// [`WgpuPipeline::dispatch`] path and the deferred-submit graph path.
     pub fn create_compute_bind_group(
         &self,
@@ -1088,7 +1088,7 @@ impl<'a> WgpuPipeline<'a> {
         Ok(Self { context, pipeline })
     }
 
-    /// Like [`compile`] but accepts pre-compiled SPIR-V bytes (from HLSL→DXC).
+    /// Like `compile()` but accepts pre-compiled SPIR-V bytes (from HLSL→DXC).
     pub fn compile_spirv(
         context: &'a WgpuComputeContext,
         spirv: &[u8],

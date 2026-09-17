@@ -18,6 +18,8 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::listen as tauri_listen;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{EventSource, MessageEvent};
@@ -27,16 +29,6 @@ use web_sys::{EventSource, MessageEvent};
 struct HardwareTelemetry {
     cpu: String,
     ram: String,
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    async fn tauri_listen(
-        event: &str,
-        handler: &js_sys::Function,
-    ) -> Result<js_sys::Function, wasm_bindgen::JsValue>;
 }
 
 use crate::canvas_editor::{
@@ -457,7 +449,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 app_display_name(aid).to_string(),
                 default_panes_for_app(aid),
             ),
-            None => ("New Canvas".to_string(), vec![]),
+            None => ("New Manifold".to_string(), vec![]),
         };
         let mut ws = new_workspace_shell(name, panes);
         if let Some(page) = ws.pages.first_mut() {
@@ -1274,7 +1266,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 div {
                     style: "flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;max-width:1100px;margin:0 auto;",
                     h1 { style: "font-size:1.6rem;margin:0;", "QApp Studio" }
-                    p { style: "color:var(--qualia-text-muted,#888);margin:0;", "Select a template to start building, or create a blank canvas." }
+                    p { style: "color:var(--qualia-text-muted,#888);margin:0;", "Select a template to start building, or create a blank manifold." }
                     div {
                         style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;width:100%;",
                         for tmpl in templates.iter() {
@@ -1314,7 +1306,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                         onclick: {
                             let mut ws = workspace.clone();
                             move |_| {
-                                let mut new_ws = new_workspace_shell("Blank Canvas".to_string(), vec![]);
+                                let mut new_ws = new_workspace_shell("Blank Manifold".to_string(), vec![]);
                                 if let Some(page) = new_ws.pages.first_mut() {
                                     page.presentation_mode = PresentationMode::GridBound;
                                 }
@@ -1322,7 +1314,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                             }
                         },
                         style: "padding:0.6rem 1.5rem;border:1px dashed var(--qualia-border,#555);border-radius:8px;background:transparent;color:var(--qualia-text-muted,#aaa);cursor:pointer;",
-                        "+ Blank Canvas"
+                        "+ Blank Manifold"
                     }
                 }
             }
@@ -1828,7 +1820,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                                 option { value: "docked", "Docked" }
                                                 option { value: "floating", "Floating Overlay" }
                                                 option { value: "modal", "Modal Overlay" }
-                                                option { value: "full", "Full Canvas" }
+                                                option { value: "full", "Full Manifold" }
                                             }
                                         }
                                         label {
@@ -1950,7 +1942,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     } else {
                         p {
                             style: "color: var(--qualia-text-muted, #555); font-size: 0.8rem;",
-                            "Click a pane on the canvas to inspect its properties."
+                            "Click a pane on the manifold to inspect its properties."
                         }
                     }
                 }
@@ -2164,7 +2156,7 @@ fn layer_behavior_label(layer: &LayerBehavior) -> &'static str {
         LayerBehavior::Docked => "Docked",
         LayerBehavior::FloatingOverlay => "Floating Overlay",
         LayerBehavior::ModalOverlay => "Modal Overlay",
-        LayerBehavior::FullCanvas => "Full Canvas",
+        LayerBehavior::FullManifold => "Full Manifold",
     }
 }
 
@@ -2173,7 +2165,7 @@ fn layer_behavior_value(layer: &LayerBehavior) -> &'static str {
         LayerBehavior::Docked => "docked",
         LayerBehavior::FloatingOverlay => "floating",
         LayerBehavior::ModalOverlay => "modal",
-        LayerBehavior::FullCanvas => "full",
+        LayerBehavior::FullManifold => "full",
     }
 }
 
@@ -2182,7 +2174,7 @@ fn layer_behavior_from_value(value: &str) -> Option<LayerBehavior> {
         "docked" => Some(LayerBehavior::Docked),
         "floating" => Some(LayerBehavior::FloatingOverlay),
         "modal" => Some(LayerBehavior::ModalOverlay),
-        "full" => Some(LayerBehavior::FullCanvas),
+        "full" => Some(LayerBehavior::FullManifold),
         _ => None,
     }
 }
@@ -2353,7 +2345,7 @@ fn pane_style_for_layout(
                     bg,
                     border_color,
                 ),
-                LayerBehavior::FullCanvas => format!(
+                LayerBehavior::FullManifold => format!(
                     "position: absolute; pointer-events: auto; inset: 0; background: {}; border: 1px solid {}; border-radius: 14px; padding: 0.9rem; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 22px 50px rgba(0, 0, 0, 0.32); z-index: 55; overflow: hidden;",
                     bg, border_color,
                 ),

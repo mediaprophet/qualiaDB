@@ -1,0 +1,11 @@
+field temperature: Temperature
+  unit: <qudt:Kelvin>
+  support: region
+  representation: grid;
+field pressure: Pressure
+  unit: <qudt:Pascal>
+  support: region
+  representation: grid;
+fn main() {
+  return 0;
+}

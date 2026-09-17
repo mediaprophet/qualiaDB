@@ -1,0 +1,9 @@
+// lexicon: "missing-core@0.0.0"
+// Invoke-time / diagnose_lexicon_pin(src, false): E300 held / not yet — open lexicon pack
+// diagnose() itself is parse+check only (no disk); helper documents the JSON shape.
+module <https://qualiadb.org/modules/lexicon_missing_pack>;
+using GraphDatabase;
+
+effect fn open_missing_pack() -> Record {
+    return GraphDatabase.lexicon_manifest({ path: "crates/vibe/fixtures/lexicon/does-not-exist.lexicon.json" });
+}

@@ -1,0 +1,8 @@
+module <https://qualiadb.org/modules/advection_diffusion>;
+import "vibe:0.1/math" as m;
+pure fn courant_number(velocity: f64, dt: f64, dx: f64) -> f64 {
+    return m.abs(velocity) * dt / dx;
+}
+pure fn is_stable(cfl: f64) -> bool {
+    return cfl <= 1.0;
+}

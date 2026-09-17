@@ -11,8 +11,6 @@ pub mod api;
 pub mod backup;
 pub mod blob_store;
 pub mod body_constitution;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod workshop_ingest;
 /// The BodyParts3D anatomy ONTOLOGY emitter → `.q42` (OBO FMA IRIs + house aliases, is-a + part-of +
 /// system + geometry). The addressable semantic backbone the `.10d` mesh library is cited by.
 pub mod bodyparts3d_ontology;
@@ -51,6 +49,8 @@ pub mod sanctuary;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sanctuary_vault;
 pub mod scorecard_prefs;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod workshop_ingest;
 // The v2 vault container is a native-only on-disk format (the desktop owns keys + the vault) and it
 // persists the native-only audit DAG; gate it to non-wasm like `sanctuary_vault`.
 pub mod snapshot;

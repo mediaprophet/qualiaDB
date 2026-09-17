@@ -19,7 +19,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// A proxy write held pending M-of-N guardian co-signature.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,6 +43,10 @@ pub struct GuardianshipProposal {
     /// Human-readable reason the write needs co-signature.
     pub reason: String,
     pub created_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `created_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub created_instant: Option<InstantBridge>,
 }
 
 impl GuardianshipProposal {
@@ -65,7 +71,15 @@ impl GuardianshipProposal {
             escrowed_summary,
             reason: reason.into(),
             created_unix,
+            created_instant: Some(InstantBridge::from_coarse(created_unix)),
         }
+    }
+
+    /// Resolve the created instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn created_at(&self) -> InstantBridge {
+        self.created_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.created_unix))
     }
 
     /// Deserialize the escrowed envelope (committed verbatim on ratification).
@@ -89,6 +103,10 @@ pub struct GuardianshipVote {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
     pub voted_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `voted_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub voted_instant: Option<InstantBridge>,
 }
 
 impl GuardianshipVote {
@@ -106,7 +124,15 @@ impl GuardianshipVote {
             approve,
             reason,
             voted_unix,
+            voted_instant: Some(InstantBridge::from_coarse(voted_unix)),
         }
+    }
+
+    /// Resolve the voted instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn voted_at(&self) -> InstantBridge {
+        self.voted_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.voted_unix))
     }
 }
 
@@ -210,8 +236,11 @@ fn governance_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(asserted_unix),
+        valid_time_start_instant: None,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash: None,
         tombstone: false,
@@ -278,8 +307,11 @@ mod tests {
             evidence_type: EvidenceType::SelfReported,
             sensitivity: SensitivityClass::Restricted,
             asserted_time_unix: 1_700_000_000,
+            asserted_instant: None,
             valid_time_start_unix: Some(1_700_000_000),
+            valid_time_start_instant: None,
             valid_time_end_unix: None,
+            valid_time_end_instant: None,
             predecessor_id: None,
             blob_hash: None,
             tombstone: false,

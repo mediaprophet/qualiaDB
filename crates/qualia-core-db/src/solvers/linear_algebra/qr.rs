@@ -8,11 +8,11 @@
 //! only fixed-size `Matrix4x4` LU and the silo's heap routines). It gives:
 //! - orthogonal factorisation `A(m×n) = Q(m×m)·R(m×n)`, `m ≥ n`;
 //! - least-squares `min‖A·x − b‖` for overdetermined full-rank systems
-//!   (the normal-equations route proved in [`super::gemm`], but numerically
+//!   (the normal-equations route proved in `super::gemm`, but numerically
 //!   stable — no `AᵀA` conditioning blow-up);
 //! - a square linear solve as the `m == n` case (alternative to LU).
 //!
-//! Storage convention (LAPACK `geqrf` style): [`qr_factor`] overwrites `a` in
+//! Storage convention (LAPACK `geqrf` style): `qr_factor` overwrites `a` in
 //! place — the upper triangle (incl. diagonal) becomes `R`; below the diagonal
 //! holds the essential Householder vectors `v` (with implicit `v[j] = 1`); the
 //! per-column scalings go in `tau`.
@@ -72,7 +72,7 @@ pub fn qr_factor(m: usize, n: usize, a: &mut [f64], tau: &mut [f64]) -> Result<(
 }
 
 /// Materialise the **thin** orthogonal factor `Q` (`m×n`, row-major) from a
-/// factored `a`/`tau` (from [`qr_factor`]). `q` must be length `m*n`. The thin
+/// factored `a`/`tau` (from `qr_factor`). `q` must be length `m*n`. The thin
 /// `Q` satisfies `Q·R_n = A` (with `R_n` the `n×n` upper triangle of `a`) and
 /// has orthonormal columns (`Qᵀ·Q = I_n`).
 pub fn qr_form_q(
@@ -113,7 +113,7 @@ pub fn qr_form_q(
 }
 
 /// Least-squares solve `min‖A·x − b‖` for an `m×n` (`m ≥ n`) full-rank system,
-/// given the factored `a`/`tau` (from [`qr_factor`]).
+/// given the factored `a`/`tau` (from `qr_factor`).
 ///
 /// `b` (length `m`) is overwritten with `Qᵀ·b`; the first `n` entries are then
 /// back-substituted through `R` into `x` (length `n`). For `m == n` this is an

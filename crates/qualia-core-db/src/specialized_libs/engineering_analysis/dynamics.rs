@@ -303,7 +303,7 @@ impl ModalAnalysis {
     /// `K φ = ω² M φ` for a symmetric stiffness matrix `stiffness` (row-major
     /// `num_dofs × num_dofs`) and a lumped (diagonal) mass matrix `mass_diag`
     /// (`num_dofs` positive entries), wired to the crate's symmetric Jacobi
-    /// eigensolver via [`solve_modal_eigen`]. Returns one [`ModeShape`] per DOF,
+    /// eigensolver via `solve_modal_eigen`. Returns one [`ModeShape`] per DOF,
     /// ordered by ascending **natural angular frequency ω (rad/s)** (stored in
     /// `ModeShape::natural_frequency`), with zero damping (undamped) and the
     /// mass-normalized mode-shape vector (unit maximum component). The result is

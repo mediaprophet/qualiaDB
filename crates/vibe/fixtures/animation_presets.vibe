@@ -1,0 +1,28 @@
+// 10-family animation presets — catalog calls, not capability.invoke strings.
+using Animation;
+
+effect fn test_evaluate_presets() {
+    let orbit = Animation.orbit_spin(1.0);
+    let spring = Animation.spring_settle(0.5);
+    let unfold = Animation.origami_unfold(0.4);
+    let heat = Animation.heat_diffuse(2.0);
+    let wave = Animation.refractive_pulse(0.3);
+    let adsr = Animation.adsr_pulse(0.2);
+    let sync = Animation.polymetric_sync(1.5);
+    let glass = Animation.glass_reveal(0.5);
+    let haptic = Animation.heartbeat_pulse(0.05);
+    let flow = Animation.vortex_swirl(1.0);
+    return glass.scalar;
+}
+
+effect fn test_mathematical_primitives() {
+    let s = Animation.spring_step({
+        current: 0.0,
+        target: 100.0,
+        velocity: 0.0,
+        stiffness: 300.0,
+        damping: 25.0,
+        dt: 0.016
+    });
+    return s.position;
+}

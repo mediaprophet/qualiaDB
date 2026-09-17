@@ -1,0 +1,14 @@
+# Machine learning — extra metrics, resampling, multiple testing, PCA, A/B testing
+invoke MachineLearning.log_loss { probs: [0.9, 0.3, 0.8, 0.6], labels: [true, false, true, false] }
+invoke MachineLearning.confusion_binary { y_true: [true, false, true, false], y_pred: [true, false, false, false] }
+invoke MachineLearning.k_fold { n: 20, k: 5, shuffle: true, seed: 42 }
+invoke MachineLearning.bootstrap_indices { n: 50, seed: 42 }
+invoke MachineLearning.bonferroni { p: [0.01, 0.04, 0.03, 0.06] }
+invoke MachineLearning.holm { p: [0.01, 0.04, 0.03, 0.06] }
+invoke MachineLearning.benjamini_hochberg { p: [0.01, 0.04, 0.03, 0.06] }
+invoke MachineLearning.pca { data: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], n: 4, p: 2 }
+invoke MachineLearning.ab_test { conv_a: 50, n_a: 1000, conv_b: 65, n_b: 1000, alpha: 0.05 }
+invoke MachineLearning.power_two_sample { n: 100, d: 0.5, alpha: 0.05 }
+invoke MachineLearning.required_sample_size { d: 0.5, alpha: 0.05, power: 0.8 }
+invoke MachineLearning.transe_score { h: [1.0, 0.0], r: [0.0, 1.0], t: [1.0, 0.0], p: 2 }
+invoke MachineLearning.distmult_score { h: [1.0, 2.0], r: [0.5, 0.5], t: [2.0, 1.0] }

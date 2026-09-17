@@ -12,7 +12,7 @@
 //! This is part (a) of H1 (probe + matrix); the human-key *signing* of the passport (part (b)) is
 //! blocked on the identity remediation (`identity-governance-remediation.md`) and lives elsewhere.
 //!
-//! Native only.
+//! Native-only (wgpu adapters when `gpu-runtime` is on, plus a `rayon` CPU GEMV row).
 #![cfg(not(target_arch = "wasm32"))]
 
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::time::Instant;
 
+#[cfg(feature = "gpu-runtime")]
 const GEMV_BENCH_WGSL: &str = include_str!("../shaders/gemv_bench.wgsl");
 
 /// A compute circuit's class in the capability matrix.
@@ -34,6 +35,7 @@ pub enum CircuitKind {
 }
 
 impl CircuitKind {
+    #[cfg(feature = "gpu-runtime")]
     fn from_wgpu(t: wgpu::DeviceType) -> Self {
         match t {
             wgpu::DeviceType::DiscreteGpu => Self::DiscreteGpu,
@@ -59,7 +61,7 @@ pub struct CircuitBench {
     /// signal); `f64::INFINITY` for the CPU (data is already in its pool — no transfer). Decode that
     /// streams weights to a device pays this every token; in-pool compute does not.
     pub upload_gbps: f64,
-    /// Relative score in [0,1]: fastest circuit = 1.0, others = fastest_ms / this_ms
+    /// Relative score in \[0,1\]: fastest circuit = 1.0, others = fastest_ms / this_ms
     /// (or highest decode_proxy_tok_s when decode ranking is active).
     pub rel_score: f64,
     /// Optional real-decode proxy (tok/s) from a short resident decode on a small model.
@@ -186,6 +188,7 @@ fn params_bytes(n_in: u32, n_out: u32) -> [u8; 16] {
 
 /// Persistent-pipeline GEMV timing on one wgpu device (ms per dispatch). No readback — we poll to
 /// completion so the timing reflects execution, with submit overhead amortized over K dispatches.
+#[cfg(feature = "gpu-runtime")]
 fn bench_gpu_gemv(device: &wgpu::Device, queue: &wgpu::Queue, n: usize) -> f64 {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("gemv_bench"),
@@ -282,6 +285,7 @@ fn bench_gpu_gemv(device: &wgpu::Device, queue: &wgpu::Queue, n: usize) -> f64 {
 /// Times `write_buffer` + a flushing submit + `poll(Wait)` so the upload is realized. For a discrete
 /// GPU this is the PCIe cost; for an iGPU it's the wgpu staging path (not the true near-zero of a
 /// unified pool — a relative signal, flagged honestly).
+#[cfg(feature = "gpu-runtime")]
 fn bench_upload_gbps(device: &wgpu::Device, queue: &wgpu::Queue, bytes: usize) -> f64 {
     let data = vec![0u8; bytes];
     let buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -341,6 +345,7 @@ fn gflops(n: usize, ms: f64) -> f64 {
     }
 }
 
+#[cfg(feature = "gpu-runtime")]
 fn backend_rank(b: wgpu::Backend) -> u8 {
     match b {
         wgpu::Backend::Metal => 0,
@@ -351,6 +356,7 @@ fn backend_rank(b: wgpu::Backend) -> u8 {
     }
 }
 
+#[cfg(feature = "gpu-runtime")]
 fn backend_name(backend: wgpu::Backend) -> &'static str {
     match backend {
         wgpu::Backend::Vulkan => "vulkan",
@@ -362,6 +368,7 @@ fn backend_name(backend: wgpu::Backend) -> &'static str {
     }
 }
 
+#[cfg(feature = "gpu-runtime")]
 fn backend_from_name(name: &str) -> Option<(wgpu::Backend, wgpu::Backends)> {
     match name {
         "vulkan" => Some((wgpu::Backend::Vulkan, wgpu::Backends::VULKAN)),
@@ -402,6 +409,7 @@ fn decode_response(path: &std::path::Path) -> Result<DeviceBenchmarkResponse, St
     ciborium::from_reader(payload.as_slice()).map_err(|e| format!("decode response: {e}"))
 }
 
+#[cfg(feature = "gpu-runtime")]
 fn benchmark_one(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, String> {
     let (expected_backend, backends) = backend_from_name(&request.backend)
         .ok_or_else(|| format!("unsupported backend {}", request.backend))?;
@@ -442,6 +450,7 @@ fn benchmark_one(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, Strin
 }
 
 /// Worker entry used by the dedicated binary and the unit-test subprocess route.
+#[cfg(feature = "gpu-runtime")]
 pub fn run_worker_from_env() -> Result<(), String> {
     let request: DeviceBenchmarkRequest = DeviceBenchmarkRequest {
         backend: std::env::var("QUALIA_DEVICE_BENCHMARK_BACKEND").map_err(|_| "missing backend")?,
@@ -501,6 +510,7 @@ fn worker_executable() -> Option<std::path::PathBuf> {
     }
 }
 
+#[cfg(feature = "gpu-runtime")]
 fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, String> {
     let sequence = WORKER_SEQUENCE.fetch_add(1, AtomicOrdering::Relaxed);
     let output = std::env::temp_dir().join(format!(
@@ -588,44 +598,47 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
     let mut circuits: Vec<CircuitBench> = Vec::new();
 
     // ── GPUs / iGPU via wgpu — one circuit row per backend that can open the device ──
-    let instance = wgpu::Instance::default();
-    let mut cand: Vec<(u8, wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
-    for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
-        let info = adapter.get_info();
-        if info.device_type == wgpu::DeviceType::Cpu || info.device == 0 {
-            continue;
+    #[cfg(feature = "gpu-runtime")]
+    {
+        let instance = wgpu::Instance::default();
+        let mut cand: Vec<(u8, wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
+        for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
+            let info = adapter.get_info();
+            if info.device_type == wgpu::DeviceType::Cpu || info.device == 0 {
+                continue;
+            }
+            cand.push((backend_rank(info.backend), adapter, info));
         }
-        cand.push((backend_rank(info.backend), adapter, info));
-    }
-    cand.sort_by_key(|(r, _, _)| *r);
-    // Dedup exact (vendor, device, backend) only — keep Metal+DX12+Vulkan rows for the same card.
-    let mut seen: std::collections::HashSet<(u32, u32, u32)> = std::collections::HashSet::new();
-    let mut chosen: Vec<DeviceBenchmarkRequest> = Vec::new();
-    for (_, _adapter, info) in cand {
-        let backend_id = info.backend as u32;
-        if seen.insert((info.vendor, info.device, backend_id)) {
-            chosen.push(DeviceBenchmarkRequest {
-                backend: backend_name(info.backend).to_string(),
-                vendor: info.vendor,
-                device: info.device,
-                gemv_n: n,
-            });
+        cand.sort_by_key(|(r, _, _)| *r);
+        // Dedup exact (vendor, device, backend) only — keep Metal+DX12+Vulkan rows for the same card.
+        let mut seen: std::collections::HashSet<(u32, u32, u32)> = std::collections::HashSet::new();
+        let mut chosen: Vec<DeviceBenchmarkRequest> = Vec::new();
+        for (_, _adapter, info) in cand {
+            let backend_id = info.backend as u32;
+            if seen.insert((info.vendor, info.device, backend_id)) {
+                chosen.push(DeviceBenchmarkRequest {
+                    backend: backend_name(info.backend).to_string(),
+                    vendor: info.vendor,
+                    device: info.device,
+                    gemv_n: n,
+                });
+            }
         }
-    }
-    for request in chosen {
-        match invoke_worker(&request) {
-            Ok(bench) => circuits.push(bench),
-            Err(error) => log::warn!(
-                "device_benchmark|skip|{:04x}:{:04x}|{}|{}",
-                request.vendor,
-                request.device,
-                request.backend,
-                error
-            ),
+        for request in chosen {
+            match invoke_worker(&request) {
+                Ok(bench) => circuits.push(bench),
+                Err(error) => log::warn!(
+                    "device_benchmark|skip|{:04x}:{:04x}|{}|{}",
+                    request.vendor,
+                    request.device,
+                    request.backend,
+                    error
+                ),
+            }
+            // Guard: if a backend hangs the probe, the process may stick — operators can
+            // Each worker has a hard deadline, so a wedged backend is skipped without
+            // poisoning the parent or preventing the remaining adapters from running.
         }
-        // Guard: if a backend hangs the probe, the process may stick — operators can
-        // Each worker has a hard deadline, so a wedged backend is skipped without
-        // poisoning the parent or preventing the remaining adapters from running.
     }
 
     // ── CPU via native rayon ──

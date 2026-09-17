@@ -19,7 +19,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// Locally-derived verification status of a credential.
 ///
@@ -59,8 +61,16 @@ pub struct CredentialRecord {
     pub credential_type: String,
     pub claims: Vec<(String, String)>,
     pub issued_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `issued_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub issued_at_instant: Option<InstantBridge>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expires_at_unix: Option<u32>,
+    /// High-resolution expiry instant (T71 bridge). Preferred over
+    /// `expires_at_unix` when present.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub expires_at_instant: Option<InstantBridge>,
     #[serde(default)]
     pub verification_state: VerificationState,
 }
@@ -79,9 +89,25 @@ impl CredentialRecord {
             credential_type: credential_type.into(),
             claims: Vec::new(),
             issued_at_unix,
+            issued_at_instant: Some(InstantBridge::from_coarse(issued_at_unix)),
             expires_at_unix: None,
+            expires_at_instant: None,
             verification_state: VerificationState::Unverified,
         }
+    }
+
+    /// Resolve the issued-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn issued_at(&self) -> InstantBridge {
+        self.issued_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.issued_at_unix))
+    }
+
+    /// Resolve the expiry instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn expires_at(&self) -> Option<InstantBridge> {
+        self.expires_at_instant
+            .or_else(|| self.expires_at_unix.map(|t| InstantBridge::from_coarse(t)))
     }
 
     /// Add a claim key/value pair (builder-style). Order is preserved.
@@ -215,8 +241,11 @@ pub fn build_credential_envelope(
         evidence_type: EvidenceType::Inferred,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(cred.issued_at_unix),
+        valid_time_start_instant: cred.issued_at_instant,
         valid_time_end_unix: cred.expires_at_unix,
+        valid_time_end_instant: cred.expires_at_instant,
         predecessor_id: None,
         blob_hash,
         tombstone: false,

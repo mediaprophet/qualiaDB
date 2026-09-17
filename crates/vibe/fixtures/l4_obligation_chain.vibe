@@ -1,0 +1,21 @@
+module <https://qualiadb.org/modules/obligation_chain>;
+prefix policy: <https://qualiadb.org/policy/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("aura.validate")
+];
+effect fn create_obligation(debtor: Iri, creditor: Iri, amount: f64) {
+    let claim = <<( debtor policy:owes creditor )>>;
+    graph.stage(claim);
+    aura.validate(debtor, policy:ObligationShape)?;
+    graph.commit()?;
+    return null;
+}
+effect fn discharge_obligation(debtor: Iri, creditor: Iri) {
+    let claim = <<( debtor policy:settled creditor )>>;
+    graph.stage(claim);
+    aura.validate(debtor, policy:SettlementShape)?;
+    graph.commit()?;
+    return null;
+}

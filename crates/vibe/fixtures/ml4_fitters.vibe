@@ -1,0 +1,55 @@
+# ML fitters — regression, clustering, GLM, survival, classification,
+# trees, HMM, variational, MCMC, GP, and more
+
+# Regression fitters
+invoke MachineLearning.ridge_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [1.0, 2.0, 3.0, 4.0], lambda: 0.5 }
+invoke MachineLearning.lasso_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [1.0, 2.0, 3.0, 4.0], lambda: 0.1, max_iter: 100, tol: 0.000001 }
+invoke MachineLearning.pls_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [1.0, 2.0, 3.0, 4.0], n_components: 2 }
+invoke MachineLearning.pcr_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [1.0, 2.0, 3.0, 4.0], n_components: 2 }
+invoke MachineLearning.bayesian_linear_fit { x: [[1.0], [2.0], [3.0], [4.0]], y: [2.0, 4.0, 6.0, 8.0], alpha: 1.0, beta: 100.0, intercept: true }
+
+# Clustering fitters
+invoke MachineLearning.kmeans_fit { x: [[0.0, 0.0], [0.1, 0.1], [5.0, 5.0], [5.1, 5.1]], k: 2, max_iter: 50, seed: 42 }
+invoke MachineLearning.gmm_fit { x: [[0.0, 0.0], [0.1, 0.1], [5.0, 5.0], [5.1, 5.1]], k: 2, max_iter: 50, tol: 0.000001, seed: 42 }
+invoke MachineLearning.hierarchical_fit { x: [[0.0, 0.0], [0.1, 0.1], [5.0, 5.0], [5.1, 5.1]], linkage: "complete" }
+invoke MachineLearning.hierarchical_labels { x: [[0.0, 0.0], [0.1, 0.1], [5.0, 5.0], [5.1, 5.1]], linkage: "complete", k: 2 }
+
+# GLM fitters
+invoke MachineLearning.logistic_fit { x: [[1.0], [2.0], [3.0], [4.0]], y: [0.0, 0.0, 1.0, 1.0], intercept: true }
+invoke MachineLearning.poisson_fit { x: [[1.0], [2.0], [3.0], [4.0]], y: [1.0, 2.0, 4.0, 8.0], intercept: true }
+invoke MachineLearning.multinomial_logistic_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [0, 1, 0, 1], intercept: true, lr: 0.1, l2: 0.01, max_iter: 200 }
+
+# Survival
+invoke MachineLearning.cox_fit { x: [[1.0], [2.0], [3.0], [4.0]], times: [5.0, 3.0, 8.0, 2.0], event: [true, true, false, true] }
+invoke MachineLearning.kaplan_meier_fit { times: [5.0, 3.0, 8.0, 2.0, 10.0], event: [true, true, false, true, true] }
+
+# Classification
+invoke MachineLearning.svm_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [true, false, true, false], c: 1.0, kernel: "linear", max_passes: 5, tol: 0.001 }
+invoke MachineLearning.svm_multiclass_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [0, 1, 2, 0], c: 1.0, kernel: "linear", max_passes: 5, tol: 0.001 }
+invoke MachineLearning.naive_bayes_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [0, 1, 0, 1] }
+invoke MachineLearning.knn_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [0, 1, 0, 1], k: 2 }
+invoke MachineLearning.lda_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [0, 1, 0, 1] }
+invoke MachineLearning.qda_fit { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0], [1.5, 0.5], [0.5, 1.5]], y: [0, 1, 0, 1, 0, 1] }
+
+# Trees
+invoke MachineLearning.decision_tree_fit_regressor { x: [[1.0], [2.0], [3.0], [4.0]], y: [2.0, 4.0, 6.0, 8.0], max_depth: 3, min_samples_split: 2, min_samples_leaf: 1, seed: 42 }
+invoke MachineLearning.decision_tree_fit_classifier { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [0, 1, 0, 1], max_depth: 3, min_samples_split: 2, min_samples_leaf: 1, seed: 42 }
+invoke MachineLearning.random_forest_fit_regressor { x: [[1.0], [2.0], [3.0], [4.0]], y: [2.0, 4.0, 6.0, 8.0], n_trees: 5, max_depth: 3, min_samples_split: 2, min_samples_leaf: 1, seed: 42 }
+invoke MachineLearning.random_forest_fit_classifier { x: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], y: [0, 1, 0, 1], n_trees: 5, max_depth: 3, min_samples_split: 2, min_samples_leaf: 1, seed: 42 }
+invoke MachineLearning.gradient_boosting_fit_regressor { x: [[1.0], [2.0], [3.0], [4.0]], y: [2.0, 4.0, 6.0, 8.0], n_estimators: 20, learning_rate: 0.1, max_depth: 2, min_samples_split: 2, min_samples_leaf: 1, seed: 42 }
+
+# Sequential
+invoke MachineLearning.hmm_baum_welch { obs: [0, 1, 0, 1, 0, 1, 0, 1], k: 2, m: 2, max_iter: 50, tol: 0.000001, seed: 42 }
+invoke MachineLearning.kalman_new { f: [1.0, 0.0, 0.0, 1.0], h: [1.0, 0.0], q: [0.1, 0.0, 0.0, 0.1], r: [1.0], x0: [0.0, 0.0], p0: [1.0, 0.0, 0.0, 1.0], nx: 2, nz: 1, z: [1.0] }
+
+# Variational
+invoke MachineLearning.variational_gaussian_fit { data: [1.0, 2.0, 3.0, 4.0, 5.0], mu0: 0.0, lambda0: 1.0, a0: 1.0, b0: 1.0, max_iter: 100, tol: 0.000001 }
+
+# MCMC
+invoke MachineLearning.mcmc_metropolis { target: "standard_normal", initial: [0.0], proposal_std: 1.0, n_samples: 100, burn_in: 10, seed: 42 }
+
+# Gaussian process
+invoke MachineLearning.gp_fit { x: [[1.0], [2.0], [3.0], [4.0]], y: [2.0, 4.0, 6.0, 8.0], length_scale: 1.0, signal_var: 1.0, noise_var: 0.000001 }
+
+# SOM
+invoke MachineLearning.som_train { data: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 0.0]], grid_w: 3, grid_h: 3, epochs: 50, lr0: 0.1, sigma0: 1.0, seed: 42 }

@@ -16,7 +16,7 @@ const DEFAULT_MIN_CONF: f32 = 0.15;
 /// * `vert_motion` — per-frame chest / torso vertical motion scalar (length `n_frames`).
 /// * `rgb_means` — optional interleaved `[r,g,b,…]` (length `3 * n_frames`) for the
 ///   rPPG low-frequency harmonic path. When `None`, motion-only ensemble (scaled conf).
-/// * `min_confidence` — fused confidence gate; `0.0` → [`DEFAULT_MIN_CONF`].
+/// * `min_confidence` — fused confidence gate; `0.0` → `DEFAULT_MIN_CONF`.
 /// * `min_snr` — spectral SNR gate for each branch; `None` → [`RR_MIN_SNR_DEFAULT`].
 pub fn respiration_monitor(
     consent: BiosenseConsent,

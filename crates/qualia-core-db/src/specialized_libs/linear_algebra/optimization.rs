@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::computation::*;
 use super::core_types::*;
-use super::storage::*;
+use super::storage::AccessPattern;
 
 /// Optimization engine for matrix operations
 pub struct OptimizationEngine {
@@ -142,7 +142,7 @@ pub enum MatrixLayout {
     /// valid elements, so the total buffer length remains `rows * cols`.
     Blocked(Box<MatrixLayout>, usize),
     /// SIMD-packed storage: each row is zero-padded to a multiple of
-    /// [`SIMD_WIDTH`] so that a full SIMD vector load never crosses a row
+    /// `SIMD_WIDTH` so that a full SIMD vector load never crosses a row
     /// boundary. Element `(i, j)` lives at `data[i * stride + j]` where
     /// `stride = ceil(cols / SIMD_WIDTH) * SIMD_WIDTH`; padding slots are `0.0`.
     Packed,

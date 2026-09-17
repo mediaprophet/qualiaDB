@@ -1,0 +1,1 @@
+fn bad() { effect pulse.publish("unauthorized/topic", 1.0); return null; }

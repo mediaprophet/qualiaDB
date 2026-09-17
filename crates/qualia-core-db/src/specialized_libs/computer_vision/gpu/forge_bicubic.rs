@@ -11,8 +11,10 @@
 //! a GPU-less box it returns `None`, so this function reports `BackendUnavailable` and the caller
 //! ([`super::dispatch`]) degrades to the CPU oracle. It never panics.
 
-use super::dispatch::{VisionComputeDevice, VisionComputeReport};
+use super::dispatch::VisionComputeReport;
 use crate::specialized_libs::computer_vision::types::VisionError;
+#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+use crate::specialized_libs::computer_vision::VisionComputeDevice;
 
 pub const BICUBIC_ENTRY: &str = "bicubic2d_main";
 
@@ -251,6 +253,7 @@ pub fn try_resize_bicubic_shared_gpu(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::specialized_libs::computer_vision::VisionComputeDevice;
 
     #[test]
     fn cpu_oracle_upscales_flat() {

@@ -42,7 +42,11 @@ impl Q42Magnet {
         Self::for_path_with_intent(path, webseed, PublicationIntent::Default)
     }
 
-    pub fn for_path_named(path: &Path, display_name: &str, webseed: Option<&str>) -> io::Result<Self> {
+    pub fn for_path_named(
+        path: &Path,
+        display_name: &str,
+        webseed: Option<&str>,
+    ) -> io::Result<Self> {
         Self::for_path_named_with_intent(path, display_name, webseed, PublicationIntent::Default)
     }
 
@@ -86,7 +90,12 @@ impl Q42Magnet {
 
     /// Loopback daemon web-seed (`ws=`). Still fail-closed on Sanctuary volumes.
     pub fn for_daemon_seed(path: &Path, display_name: &str, daemon_port: u16) -> io::Result<Self> {
-        Self::for_daemon_seed_with_intent(path, display_name, daemon_port, PublicationIntent::Default)
+        Self::for_daemon_seed_with_intent(
+            path,
+            display_name,
+            daemon_port,
+            PublicationIntent::Default,
+        )
     }
 
     pub fn for_daemon_seed_with_intent(
@@ -165,7 +174,11 @@ pub fn sha1_hex_file(path: &Path) -> io::Result<String> {
         }
         hasher.update(&buf[..n]);
     }
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
 }
 
 fn webseed_for(path: &Path, base: Option<&str>) -> io::Result<Option<String>> {
@@ -234,7 +247,9 @@ mod tests {
         .unwrap();
         assert!(magnet.magnet_uri.starts_with("magnet:?xt=urn:btih:"));
         assert!(magnet.magnet_uri.contains("&dn=demo.q42"));
-        assert!(magnet.magnet_uri.contains(&format!("&xl={}", magnet.byte_length)));
+        assert!(magnet
+            .magnet_uri
+            .contains(&format!("&xl={}", magnet.byte_length)));
         assert!(magnet.magnet_uri.contains("webseed"));
         assert_eq!(magnet.info_hash_sha1.len(), 40);
     }

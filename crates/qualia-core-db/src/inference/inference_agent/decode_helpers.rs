@@ -12,6 +12,22 @@ use super::config::{TEST_TRANSFORMER_LAYER_CAP, TEST_VOCAB_CHUNK_CAP};
 
 // ─── Embedding dispatch helpers (native) ─────────────────────────────────────
 
+fn fused_block_or_hidden(
+    engine: &crate::gguf_bridge::QTensorEngine,
+    wt: &crate::gguf_bridge::QTensor,
+    hidden: &[f32],
+) -> Vec<f32> {
+    #[cfg(any(target_arch = "wasm32", feature = "gpu-runtime"))]
+    {
+        engine.dispatch_fused_transformer_block(wt, hidden)
+    }
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+    {
+        let _ = (engine, wt);
+        hidden.to_vec()
+    }
+}
+
 fn pseudo_embedding_forward(
     token_id: u32,
     emb_dim: usize,
@@ -23,7 +39,7 @@ fn pseudo_embedding_forward(
         emb_buf[i] = (token_id as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
             * (1.0_f32 / (emb_dim as f32).sqrt());
     }
-    engine.dispatch_fused_transformer_block(wt, &emb_buf[..emb_dim])
+    fused_block_or_hidden(engine, wt, &emb_buf[..emb_dim])
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -38,7 +54,7 @@ fn cpu_embedding_forward(
 ) -> Vec<f32> {
     let n = idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
     if n > 0 {
-        engine.dispatch_fused_transformer_block(wt, &emb_buf[..n])
+        fused_block_or_hidden(engine, wt, &emb_buf[..n])
     } else {
         pseudo_embedding_forward(token_id, emb_dim, emb_buf, engine, wt)
     }
@@ -77,7 +93,7 @@ fn lora_embedding_forward(
         let _ = adapter.apply_cpu(&input_snap, &mut emb_buf[..actual_n]);
     }
 
-    engine.dispatch_fused_transformer_block(wt, &emb_buf[..actual_n])
+    fused_block_or_hidden(engine, wt, &emb_buf[..actual_n])
 }
 
 /// Decode fallback when full hidden-state projection is unavailable: real GGUF
@@ -104,7 +120,7 @@ pub(super) fn embedding_fallback_logits(
                 let n =
                     idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
                 if n > 0 {
-                    engine.dispatch_fused_transformer_block(wt, &emb_buf[..n])
+                    fused_block_or_hidden(engine, wt, &emb_buf[..n])
                 } else {
                     pseudo_embedding_forward(token_id, emb_dim, emb_buf, engine, wt)
                 }

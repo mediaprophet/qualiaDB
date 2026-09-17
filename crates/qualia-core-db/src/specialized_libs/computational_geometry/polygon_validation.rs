@@ -176,8 +176,8 @@ pub fn repair_for(issue: &ValidationIssue) -> RepairSuggestion {
 /// Validate a simple polygon (outer boundary without holes).
 ///
 /// The polygon is given as a sequence of vertices. Edges are
-/// (vertices[0], vertices[1]), (vertices[1], vertices[2]), ...,
-/// (vertices[n-1], vertices[0]).
+/// (vertices\[0\], vertices\[1\]), (vertices\[1\], vertices\[2\]), ...,
+/// (vertices[n-1], vertices\[0\]).
 ///
 /// Checks:
 /// - Minimum 3 vertices.

@@ -1,0 +1,135 @@
+//! HyperCanvas shell — structure from `Canvas_Workbench/index.html` and `POET-SPEC-001..023`.
+//!
+//! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
+
+use super::chest::ToolChest;
+use super::chrome::{ControlBar, Expose, StatusBar, TopMenubar};
+use super::instrument_bay::InstrumentBay;
+use super::lexicon_bay::LexiconBay;
+use super::radial_menu::{RadialActionRing, RadialState};
+use super::stage::CanvasStage;
+use super::store::Workbench;
+use super::styles::HyperCanvasStyles;
+use dioxus::prelude::*;
+
+#[component]
+fn CatalogStudioBay() -> Element {
+    let mut tab = use_signal(|| "catalog");
+    rsx! {
+        div { class: "catalog-studio-bay-head", role: "tablist", "aria-label": "Catalog peers",
+            button {
+                r#type: "button",
+                class: if tab() == "catalog" { "catalog-studio-bay-tab is-active" } else { "catalog-studio-bay-tab" },
+                "aria-selected": "{tab() == \"catalog\"}",
+                onclick: move |_| tab.set("catalog"),
+                "Catalog · Lexicon"
+            }
+            button {
+                r#type: "button",
+                class: if tab() == "instruments" { "catalog-studio-bay-tab is-active" } else { "catalog-studio-bay-tab" },
+                "aria-selected": "{tab() == \"instruments\"}",
+                onclick: move |_| tab.set("instruments"),
+                "Catalog · Instruments"
+            }
+        }
+        if tab() == "catalog" {
+            LexiconBay {}
+        } else {
+            InstrumentBay {}
+        }
+    }
+}
+
+#[component]
+pub fn PoetWorkbench() -> Element {
+    let nav = use_navigator();
+    let mut wb = use_signal(Workbench::new);
+    let mut radial = use_signal(RadialState::default);
+
+    rsx! {
+        HyperCanvasStyles {}
+        div {
+            id: "app-root",
+            onclick: move |_| {
+                let mut s = wb();
+                if s.menu.is_some() {
+                    s.menu = None;
+                    wb.set(s);
+                }
+                let mut rd = radial();
+                if rd.visible {
+                    rd.visible = false;
+                    radial.set(rd);
+                }
+            },
+            oncontextmenu: move |e| {
+                e.prevent_default();
+                let coords = e.data().client_coordinates();
+                radial.set(RadialState {
+                    visible: true,
+                    x: coords.x,
+                    y: coords.y,
+                });
+            },
+            onkeydown: move |e| {
+                let key = e.data().key().to_string();
+                let alt = e.data().modifiers().alt();
+                if alt {
+                    if key.eq_ignore_ascii_case("o") {
+                        let mut s = wb();
+                        s.expose = !s.expose;
+                        wb.set(s);
+                    } else if key.eq_ignore_ascii_case("a") {
+                        let mut s = wb();
+                        s.auto_arrange();
+                        wb.set(s);
+                    } else if key.eq_ignore_ascii_case("u") {
+                        // Alt+U — pivot to Classic Settings (Tools→Settings / Ctrl+, target).
+                        crate::components::shell_kind::persist_shell_kind(
+                            crate::components::shell_kind::ShellKind::Classic,
+                        );
+                        let _ = nav.push(crate::Route::SettingsRoute {});
+                    } else if let Ok(digit) = key.parse::<usize>() {
+                        let idx = if digit == 0 { 9 } else { digit - 1 };
+                        if let Some(id) = super::kinds::ManifoldId::ALL.get(idx) {
+                            let mut s = wb();
+                            s.switch(*id);
+                            wb.set(s);
+                        }
+                    }
+                }
+            },
+            TopMenubar { wb }
+            ControlBar { wb }
+            div { class: "main-workspace",
+                div { class: "workspace-row",
+                    ToolChest { wb }
+                    CanvasStage { wb }
+                    aside {
+                        class: if wb().sidebar { "tech-sidebar open" } else { "tech-sidebar" },
+                        div { style: "padding:14px;display:grid;gap:8px;",
+                            h3 { style: "margin:0;font-size:13px;color:var(--accent-cyan);", "Telemetry & Governance DAG" }
+                            p { style: "margin:0;color:var(--text-secondary);font-size:12px;line-height:1.45;",
+                                "Pulse bus · held / not yet — Pulse waits on the local daemon. Graph address: {wb().graph_iri}. Nodes on desk: {wb().nodes.len()}."
+                            }
+                            div { style: "margin-top:8px;padding:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:6px;font-size:11px;",
+                                div { style: "color:var(--accent-emerald);", "● 42MB Prolog Sentinel: ENFORCED" }
+                                div { style: "color:var(--text-muted);margin-top:4px;", "Zero-Heap Hot-Path: Active" }
+                                div { style: "color:var(--text-muted);margin-top:2px;", "Grid: 8px Snap Math" }
+                            }
+                        }
+                    }
+                }
+                section {
+                    class: "catalog-studio-bay",
+                    "data-catalog-studio-bay": "1",
+                    "aria-label": "Catalog · Lexicon and Instruments",
+                    CatalogStudioBay {}
+                }
+            }
+            StatusBar { wb }
+            Expose { wb }
+            RadialActionRing { wb, state: radial }
+        }
+    }
+}

@@ -22,7 +22,7 @@
 //! This module duplicates ~80% of `prefill_arena.rs`/`resident_decode.rs`; a shared `batched_forward`
 //! helper is the right library-ization (PROJECT RULE §11) but is deferred to the post-feature pass.
 
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 use super::*;
 

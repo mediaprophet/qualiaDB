@@ -116,12 +116,18 @@ pub fn qapp_url(qapp_id: &str) -> String {
     match qapp_id {
         // Talk is home (empty studio hash). Legacy dashboard/home alias the same URL.
         "talk" | "dashboard" | "home" => "/studio/#/".to_string(),
+        // Directory is Talk / People — hash must open /talk/directory, not DynamicPage.
+        "directory" | "contacts" | "addressbook" | "dir" => {
+            "/studio/#/talk/directory".to_string()
+        }
+        "mail" | "email" => "/studio/#/talk/mail".to_string(),
         "wellfair" => "/studio/#/wellfair".to_string(),
         "chora" => "/studio/#/chora".to_string(),
         "browser" => "/studio/#/browser".to_string(),
         "10d-browser" => "/studio/#/10d-browser".to_string(),
         "gpu-viewport" => "/studio/#/gpu-viewport".to_string(),
         "settings" => "/studio/#/settings".to_string(),
+        "library" | "memory" => "/studio/#/library".to_string(),
         "about" => "/studio/#/about".to_string(),
         "qapp-studio" => "/studio/#/qapp-studio".to_string(),
         "qapps" => "/studio/#/qapps".to_string(),
@@ -135,12 +141,15 @@ pub fn qapp_url(qapp_id: &str) -> String {
 pub fn qapp_title(qapp_id: &str) -> &'static str {
     match qapp_id {
         "talk" | "dashboard" | "home" => "Talk",
+        "directory" | "contacts" | "addressbook" | "dir" => "Directory",
+        "mail" | "email" => "Mail",
         "wellfair" => "WellFair",
         "chora" => "Chora",
         "browser" => "Browser",
         "10d-browser" => "10D Browser",
         "gpu-viewport" => "GPU Viewport",
         "settings" => "Settings",
+        "library" | "memory" => "Library",
         "about" => "About",
         "qapp-studio" => "QApp Studio",
         "qapps" => "QApps",
@@ -148,5 +157,34 @@ pub fn qapp_title(qapp_id: &str) -> &'static str {
         "render-preview" => "Render Preview",
         "anatomy-test" => "Anatomy Test",
         _ => "Webizen",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{qapp_title, qapp_url};
+
+    #[test]
+    fn directory_is_talk_people_not_a_new_top_level() {
+        assert_eq!(qapp_url("directory"), "/studio/#/talk/directory");
+        assert_eq!(qapp_url("dir"), "/studio/#/talk/directory");
+        assert_eq!(qapp_url("contacts"), "/studio/#/talk/directory");
+        assert_eq!(qapp_title("directory"), "Directory");
+        assert_eq!(qapp_url("mail"), "/studio/#/talk/mail");
+        assert_eq!(qapp_url("email"), "/studio/#/talk/mail");
+        assert_eq!(qapp_title("mail"), "Mail");
+        assert_ne!(qapp_url("mail"), "/studio/#/poet");
+        assert_ne!(qapp_url("directory"), "/studio/#/directory");
+    }
+
+    #[test]
+    fn library_url_is_not_talk_home() {
+        assert_eq!(qapp_url("talk"), "/studio/#/");
+        assert_eq!(qapp_url("library"), "/studio/#/library");
+        assert_eq!(qapp_url("memory"), "/studio/#/library");
+        assert_eq!(qapp_url("settings"), "/studio/#/settings");
+        assert_ne!(qapp_url("library"), qapp_url("talk"));
+        assert_eq!(qapp_title("library"), "Library");
+        assert_eq!(qapp_title("settings"), "Settings");
     }
 }

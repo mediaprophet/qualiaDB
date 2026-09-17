@@ -7,6 +7,7 @@ use crate::hardware_passport::measure_decode_proxy_tok_s;
 use crate::llm_bench::{
     phase_snapshot, reset_phase_metrics, reset_resident_path_counts, resident_path_counts,
 };
+#[cfg(feature = "gpu-runtime")]
 use crate::llm_gpu_profiler::{self, Phase};
 
 #[derive(Debug, Clone)]
@@ -27,8 +28,11 @@ pub fn run_decode_timeline(model: &Path, tokens: u32) -> DecodeTimeline {
     let tokens = tokens.max(1).min(64);
     reset_phase_metrics();
     reset_resident_path_counts();
-    llm_gpu_profiler::set_enabled(true);
-    llm_gpu_profiler::reset();
+    #[cfg(feature = "gpu-runtime")]
+    {
+        llm_gpu_profiler::set_enabled(true);
+        llm_gpu_profiler::reset();
+    }
 
     let t0 = Instant::now();
     let tok_s = measure_decode_proxy_tok_s(model, tokens);
@@ -46,22 +50,36 @@ pub fn run_decode_timeline(model: &Path, tokens: u32) -> DecodeTimeline {
         snap.decode_output_ns
     );
 
-    let mut gpu_parts = Vec::new();
-    for pt in llm_gpu_profiler::snapshot() {
-        if pt.calls > 0 || pt.total_ns > 0 {
-            gpu_parts.push(format!(
-                "\"{}\":{{\"ns\":{},\"calls\":{}}}",
-                pt.phase.label(),
-                pt.total_ns,
-                pt.calls
-            ));
+    let gpu_phase_ns = {
+        #[cfg(feature = "gpu-runtime")]
+        {
+            let mut gpu_parts = Vec::new();
+            for pt in llm_gpu_profiler::snapshot() {
+                if pt.calls > 0 || pt.total_ns > 0 {
+                    gpu_parts.push(format!(
+                        "\"{}\":{{\"ns\":{},\"calls\":{}}}",
+                        pt.phase.label(),
+                        pt.total_ns,
+                        pt.calls
+                    ));
+                }
+            }
+            format!("{{{}}}", gpu_parts.join(","))
         }
-    }
-    let gpu_phase_ns = format!("{{{}}}", gpu_parts.join(","));
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            "{}".to_string()
+        }
+    };
 
     let mut notes = Vec::new();
+    #[cfg(feature = "gpu-runtime")]
     if !llm_gpu_profiler::enabled() {
         notes.push("GPU timestamps not active (device or flag)".into());
+    }
+    #[cfg(not(feature = "gpu-runtime"))]
+    {
+        notes.push("GPU timestamps not compiled (gpu-runtime feature off)".into());
     }
     if falls > 0 {
         notes.push(format!("resident fallbacks={falls}"));
@@ -69,8 +87,10 @@ pub fn run_decode_timeline(model: &Path, tokens: u32) -> DecodeTimeline {
     if hits == 0 && tok_s.is_some() {
         notes.push("no resident hits counted - check path".into());
     }
+    #[cfg(feature = "gpu-runtime")]
     let _ = Phase::COUNT;
 
+    #[cfg(feature = "gpu-runtime")]
     llm_gpu_profiler::set_enabled(false);
 
     DecodeTimeline {

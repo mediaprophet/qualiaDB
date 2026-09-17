@@ -13,7 +13,7 @@ Webizen Studio pages now support a geometry-first schema instead of assuming eve
   - `Docked`
   - `FloatingOverlay`
   - `ModalOverlay`
-  - `FullCanvas`
+  - `FullManifold` (serde alias: `FullCanvas`)
 - `CoordinateSpace` distinguishes between globally placed panes and panes that should later be anchored relative to other nodes or objects.
 
 ## Page Shape
@@ -96,7 +96,7 @@ pub struct PanePlacement {
       "y": 0,
       "w": 96,
       "h": 64,
-      "layer": "FullCanvas",
+      "layer": "FullManifold",
       "supported_presentations": ["Spatial"]
     }
   ]
@@ -114,5 +114,5 @@ pub struct PanePlacement {
 
 - Responsive behavior can be based on available point-area rather than only viewport breakpoints.
 - Chat, notifications, and similar Qapps can be layered without pretending they are just narrow columns.
-- 3D or immersive Qapps can declare `FullCanvas` without forcing every other Qapp into the same presentation model.
+- 3D or immersive Qapps can declare `FullManifold` without forcing every other Qapp into the same presentation model.
 - The studio can evolve into a renderer/adapter system instead of binding app logic to one layout convention.

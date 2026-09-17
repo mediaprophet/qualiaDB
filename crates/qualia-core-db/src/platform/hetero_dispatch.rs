@@ -44,6 +44,7 @@
 //!
 //! All routines here are pure-scalar policy / planning logic — **zero heap**, no
 //! recursion, run anywhere.
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 // ── 1. Unified-memory zero-copy strategy ───────────────────────────────────────
 

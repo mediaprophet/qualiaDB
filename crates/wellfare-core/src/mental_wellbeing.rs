@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WellbeingObservation {
@@ -33,6 +35,10 @@ pub struct TherapyNote {
     pub provider_label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_date_unix: Option<u32>,
+    /// High-resolution instant (T71 bridge). Preferred over `session_date_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub session_date_instant: Option<InstantBridge>,
     pub notes: String,
 }
 
@@ -42,8 +48,18 @@ impl TherapyNote {
             id: Uuid::new_v4().to_string(),
             provider_label: None,
             session_date_unix: None,
+            session_date_instant: None,
             notes: notes.into(),
         }
+    }
+
+    /// Resolve the session-date instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn session_date(&self) -> Option<InstantBridge> {
+        self.session_date_instant.or_else(|| {
+            self.session_date_unix
+                .map(|t| InstantBridge::from_coarse(t))
+        })
     }
 }
 
@@ -72,8 +88,11 @@ fn wellbeing_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(asserted_unix),
+        valid_time_start_instant: None,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash,
         tombstone: false,

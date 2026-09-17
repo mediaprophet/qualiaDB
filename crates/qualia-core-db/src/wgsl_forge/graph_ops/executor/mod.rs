@@ -1,7 +1,7 @@
-//! Multi-node graph executor — the keystone that runs a whole [`ComputeGraph`] on the GPU
+//! Multi-node graph executor — the keystone that runs a whole `ComputeGraph()` on the GPU
 //! with intermediates kept device-side, plus a topologically-composed CPU oracle. This is
 //! what unblocks softmax, RMSNorm, the SwiGLU-FFN block, and the full LLM decode DAG. See
-//! [`docs/plans/dag-ir-forge.md`] §7–§9.
+//! `docs/plans/dag-ir-forge.md()` §7–§9.
 //!
 //! # Execution model (throughput pass — context reuse + single-encoder fusion)
 //!
@@ -15,11 +15,11 @@
 //!   (GPU→GPU) into a fresh read-slab buffer — the device-side hand-off to the next node, with
 //!   **no host readback between nodes**.
 //!
-//! A producer's output is fed to a consumer by re-binding the (`Copy`) [`BufferView`] to the
-//! consumer's binding slot ([`at`]). Two optimizations vs the original Option-A executor
+//! A producer's output is fed to a consumer by re-binding the (`Copy`) `BufferView()` to the
+//! consumer's binding slot (`at()`). Two optimizations vs the original Option-A executor
 //! (plan §8.1, both proven here against the same CPU oracle):
 //!
-//! 1. **Context reuse.** [`ForgeGraphExecutor`] owns one [`WgpuComputeContext`] (device, queue,
+//! 1. **Context reuse.** [`ForgeGraphExecutor`] owns one `WgpuComputeContext()` (device, queue,
 //!    and the two 64-MiB slabs created **once**); [`ForgeGraphExecutor::run`] resets the slab
 //!    (the bump ring is freed) at the start of each call and reuses everything else. The
 //!    free-function [`execute_graph`] keeps its one-shot signature by building a throwaway
@@ -27,7 +27,7 @@
 //!    [`run`](ForgeGraphExecutor::run) per step, paying device creation only once.
 //! 2. **Single-encoder deferred submit (Option B).** Every node's dispatch *and* its GPU→GPU
 //!    hand-off copy are recorded into **one** [`wgpu::CommandEncoder`] and submitted **once** per
-//!    graph ([`WgpuComputeContext::submit_graph`]), instead of one `queue.submit()` per node.
+//!    graph (`WgpuComputeContext::submit_graph()`), instead of one `queue.submit()` per node.
 //!    wgpu preserves command order within a command buffer and inserts the buffer hazard
 //!    barriers, so the per-node data dependencies (already correct by insertion order) hold.
 //!
@@ -38,11 +38,11 @@
 //!
 //! # Module layout
 //!
-//! - [`cpu_oracle`] — the composed CPU oracle ([`execute_graph_cpu`]).
-//! - [`driver`] — the reusable GPU executor ([`ForgeGraphExecutor`]), the one-shot
+//! - `cpu_oracle` — the composed CPU oracle ([`execute_graph_cpu`]).
+//! - `driver` — the reusable GPU executor ([`ForgeGraphExecutor`]), the one-shot
 //!   [`execute_graph`] free function, and the [`ResidentWeights`] handle.
-//! - [`nodes`] — per-node preparation/dispatch (`prepare_node` and the op-class kernels).
-//! - [`builders`] — the graph builders (softmax / RMSNorm / SwiGLU-FFN / attention / decode).
+//! - `nodes` — per-node preparation/dispatch (`prepare_node` and the op-class kernels).
+//! - `builders` — the graph builders (softmax / RMSNorm / SwiGLU-FFN / attention / decode).
 
 mod builders;
 mod cpu_oracle;

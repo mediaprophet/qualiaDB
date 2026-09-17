@@ -13,6 +13,7 @@ mod algebra;
 #[cfg(not(target_arch = "wasm32"))]
 mod audio;
 mod chemistry;
+mod clinical_risk;
 mod engineering;
 mod geometry;
 mod governance;
@@ -27,6 +28,7 @@ pub use algebra::*;
 #[cfg(not(target_arch = "wasm32"))]
 pub use audio::*;
 pub use chemistry::*;
+pub use clinical_risk::*;
 pub use engineering::*;
 pub use geometry::*;
 pub use governance::*;

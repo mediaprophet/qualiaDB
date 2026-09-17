@@ -8,13 +8,18 @@ pub fn SetupHealthPanel(
     on_refresh: EventHandler<()>,
 ) -> Element {
     if loading {
-        return rsx! { div { style: "{super::EMPTY_CARD}", "Inspecting this Webizen…" } };
+        return rsx! {
+            div { style: "display:grid;gap:14px;",
+                div { style: "{super::WARNING_CARD}", "Inspecting this Webizen… Settings stay open — refresh when ready." }
+                div { style: "{super::EMPTY_CARD}", "Setup health will paint here." }
+            }
+        };
     }
     let Some(snapshot) = snapshot else {
         return rsx! {
             div { style: "{super::WARNING_CARD}",
-                strong { "Desktop host not available" }
-                p { style: "margin:6px 0 12px;font-size:.74rem;", "Setup health uses structured native diagnostics and is unavailable in the public preview." }
+                strong { "held / not yet" }
+                p { style: "margin:6px 0 12px;font-size:.74rem;", "Setup health uses structured native diagnostics and is held / not yet in the public preview." }
                 button { style: "{super::SECONDARY_BUTTON}", onclick: move |_| on_refresh.call(()), "Try again" }
             }
         };

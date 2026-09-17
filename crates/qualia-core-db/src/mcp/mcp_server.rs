@@ -44,7 +44,7 @@ pub struct McpIntentFrame {
     /// A genuine 32-byte cryptographic egress-override token, or `None` when the
     /// caller supplied no override — or supplied a malformed / placeholder /
     /// all-zero value, all of which fail closed to `None`. See
-    /// [`parse_sanctuary_override`] for the validation contract.
+    /// `parse_sanctuary_override` for the validation contract.
     pub sanctuary_override: Option<[u8; 32]>,
     pub qpu_enabled: bool,
     pub llm_enabled: bool,
@@ -882,7 +882,7 @@ unsafe fn execute_describe_qapp_surface_schema(
   "layout_strategies": ["PointGrid", "CssGrid", "FlexBox", "Masonry"],
   "presentation_modes": ["GridBound", "NodeRelational", "Spatial"],
   "coordinate_spaces": ["GlobalCartesian", "RelativeAnchored"],
-  "layer_behaviors": ["Docked", "FloatingOverlay", "ModalOverlay", "FullCanvas"],
+  "layer_behaviors": ["Docked", "FloatingOverlay", "ModalOverlay", "FullManifold"],
   "theme_scopes": ["environment", "app", "page", "module"],
   "manifest_surfaces": ["static-web", "wasm-local", "online-daemon-aware", "native-dioxus-pane"],
   "mcp_tools": ["list_qapps", "get_qapp_manifest", "inspect_qapp_readiness", "list_qapp_updates", "describe_qapp_surface_schema"]

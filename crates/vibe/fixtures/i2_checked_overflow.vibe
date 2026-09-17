@@ -1,0 +1,5 @@
+fn main() {
+  let a = 9223372036854775807;
+  let b = 1;
+  return a + b;
+}

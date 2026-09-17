@@ -263,10 +263,8 @@ impl StreamingQ42VolumeWriter {
         let postings_offset = field_ranges_offset + field_ranges_length;
         let directory_offset = postings_offset + postings_length;
         let data_offset = directory_offset + directory_length;
-        let mut flags = FLAG_BLOCKS_LZ4
-            | FLAG_OBJECT_SORTED
-            | FLAG_FIELD_RANGES
-            | FLAG_FIELD_POSTINGS;
+        let mut flags =
+            FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED | FLAG_FIELD_RANGES | FLAG_FIELD_POSTINGS;
         if self.publication_sanctuary || self.sanctuary_quin_count > 0 {
             flags |= FLAG_SANCTUARY;
         } else if self.publication_commons {

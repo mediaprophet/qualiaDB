@@ -189,8 +189,9 @@ pub fn wellfair_set_body_constitution(
     app: AppHandle,
     constitution_json: String,
 ) -> Result<String, String> {
-    let body: wellfare_core::anatomy::BodyConstitution = serde_json::from_str(&constitution_json)
-        .map_err(|e| format!("invalid body constitution JSON: {e}"))?;
+    let body: wellfare_core::anatomy::BodyConstitution =
+        serde_json::from_str(&constitution_json)
+            .map_err(|e| format!("invalid body constitution JSON: {e}"))?;
     let app_state = app.state::<HostApiState>();
     app_state.0.execute_sync(move |guard| {
         let host = guard

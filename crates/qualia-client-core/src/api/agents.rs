@@ -259,10 +259,14 @@ pub fn run_remote_agent_turn(
     }
     match agent.execution_policy.remote_consent {
         crate::agent_registry::RemoteConsentPolicy::Never => {
-            return Ok(remote_turn_blocked("this agent's remote connection is disabled by its policy"));
+            return Ok(remote_turn_blocked(
+                "this agent's remote connection is disabled by its policy",
+            ));
         }
         crate::agent_registry::RemoteConsentPolicy::PerTurn if !per_turn_consent => {
-            return Ok(remote_turn_blocked("remote dispatch requires this turn's explicit confirmation"));
+            return Ok(remote_turn_blocked(
+                "remote dispatch requires this turn's explicit confirmation",
+            ));
         }
         crate::agent_registry::RemoteConsentPolicy::PerTurn
         | crate::agent_registry::RemoteConsentPolicy::Preapproved => {}
@@ -287,10 +291,11 @@ pub fn run_remote_agent_turn(
     let inputs = crate::job_router::RoutingInputs {
         sensitivity: wellfare_core::record::SensitivityClass::Restricted,
         local_available: local_active,
-        external_consented: per_turn_consent || matches!(
-            agent.execution_policy.remote_consent,
-            crate::agent_registry::RemoteConsentPolicy::Preapproved
-        ),
+        external_consented: per_turn_consent
+            || matches!(
+                agent.execution_policy.remote_consent,
+                crate::agent_registry::RemoteConsentPolicy::Preapproved
+            ),
         requires_capability: None,
         local_has_capability: false,
         estimated_cost_microcents: 0,

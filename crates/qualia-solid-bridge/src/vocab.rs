@@ -1,12 +1,12 @@
 //! Canonical Solid / LDP / WAC / PIM IRIs used by the bridge.
 //!
 //! Source ontologies (tracked under `bundled/ontologies/w3c-archives/`):
-//! - `ldp.ttl` — http://www.w3.org/ns/ldp#
-//! - `auth-acl.ttl` — http://www.w3.org/ns/auth/acl#
-//! - `solid-terms.ttl` — http://www.w3.org/ns/solid/terms#
-//! - `solid-oidc.ttl` — http://www.w3.org/ns/solid/oidc#
-//! - `pim-space.ttl` — http://www.w3.org/ns/pim/space#
-//! - `foaf.ttl` — http://xmlns.com/foaf/0.1/
+//! - `ldp.ttl` — <http://www.w3.org/ns/ldp#>
+//! - `auth-acl.ttl` — <http://www.w3.org/ns/auth/acl#>
+//! - `solid-terms.ttl` — <http://www.w3.org/ns/solid/terms#>
+//! - `solid-oidc.ttl` — <http://www.w3.org/ns/solid/oidc#>
+//! - `pim-space.ttl` — <http://www.w3.org/ns/pim/space#>
+//! - `foaf.ttl` — <http://xmlns.com/foaf/0.1/>
 //!
 //! Copied from Timothy's W3C ns archive (`ontologies-2023/w3c archives/ns-main/w3c-ns`)
 //! except Solid Terms (solid/vocab; not present in the 2023 ns-main dump).

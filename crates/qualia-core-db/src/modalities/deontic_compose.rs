@@ -163,7 +163,7 @@ pub fn fulfilment_degree(requirements: &[NQuin]) -> f32 {
     crate::modalities::fuzzy::conjunction(requirements)
 }
 
-/// Is a progressively-realised obligation met to at least `threshold` ∈ [0,1]?
+/// Is a progressively-realised obligation met to at least `threshold` ∈ \[0,1\]?
 pub fn obligation_fuzzily_met(requirements: &[NQuin], threshold: f32) -> bool {
     fulfilment_degree(requirements) >= threshold
 }

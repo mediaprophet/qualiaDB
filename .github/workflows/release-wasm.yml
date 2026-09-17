@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to upload assets to, for example v0.0.30"
+        description: "Existing release tag to upload assets to, for example v0.0.39"
         required: true
 
 permissions:
@@ -38,7 +38,7 @@ jobs:
           key: wasm-check-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: wasm-check-cargo-
 
-      - name: WASM smoke-check (portal slim)
+      - name: WASM smoke-check (portal)
         run: |
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
@@ -85,7 +85,7 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
-      - name: Build Qualia portal WASM (viewport + acoustic, slim)
+      - name: Build Qualia portal WASM (full browser engine)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
         run: |
@@ -101,11 +101,13 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           cp crates/qualia-core-db/LICENSE docs/pkg/qualia/LICENSE
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.30","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.39","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
 
       - name: Portal WASM size budget
-        # 2.1 MiB raw leaves bounded headroom for the portal profile; gzip remains 800 KiB.
-        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 2202009
+        # Sanity cap for the full WASM-safe engine (not a slim product budget).
+        # Measured 0.0.39 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
+        # Ontology MCP keeps the tight 640 KiB / 200 KiB gate.
+        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
 
       - name: Build ontology MCP WASM
         run: |
@@ -191,6 +193,11 @@ jobs:
             --no-typescript \
             -- --no-default-features --features wasm-full
 
+      - name: Playground WASM size budget
+        # Same 16 MiB / 4 MiB sanity cap as portal. Measured 0.0.39 wasm-full:
+        # ~8.23 MiB raw / ~2.32 MiB gzip. Keep in step with pages.yml.
+        run: node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
+
       - name: Package playground release assets
         run: |
           mkdir -p release-assets/qualia-core-wasm
@@ -212,68 +219,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-anatomy-packs:
-    name: Anatomy .hmc asset packs
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: anatomy-packs-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: anatomy-packs-cargo-
-
-      - name: Build complete anatomy packs (XY + XX) from the HRA
-        # Every discovered CCF/HRA reference organ (CC-BY-4.0) → sealed `.10d` → one transparent
-        # `.hmc` bundle per model. Fetches the HRA CDN once, here, so the Pages deploy pulls
-        # the prebuilt packs from this Release instead of re-fetching the CDN every build.
-        run: |
-          mkdir -p release-assets/anatomy
-          cargo run --release -p qualia-client-core --example build_anatomy_pack -- build both release-assets/anatomy
-          cargo run --release -p qualia-client-core --example build_anatomy_pack -- verify both release-assets/anatomy
-          ls -lh release-assets/anatomy/anatomy-*.hmc release-assets/anatomy/anatomy-*.q42
-
-      - name: Upload anatomy packs to release
-        # Each model ships as its `.hmc` bundle PLUS a byte-identical `.q42` provenance/semantics
-        # sidecar (the bundle's own body.q42 entry, extracted for direct linking by the copyright panel).
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          files: |
-            release-assets/anatomy/anatomy-male.hmc
-            release-assets/anatomy/anatomy-female.hmc
-            release-assets/anatomy/anatomy-male.q42
-            release-assets/anatomy/anatomy-female.q42
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build the BodyParts3D complete ontology + mesh pack (CC-BY-SA)
-        # The FMA-keyed muscles / bones / glands / nerves CCF lacks — every mesh structure as an
-        # addressable ONTOLOGY (`.q42`: OBO FMA IRIs + is-a + part-of + system + geometry) plus a `.10d`
-        # mesh library it cites, in one CC-BY-SA `.hmc`. Large (~1.3 GB of source STL). `all 0 0` =
-        # every system, no count cap, no size cap. Runs AFTER the CCF upload so a BodyParts3D hiccup does
-        # not block the permissive packs. The producer reports per-structure failures without aborting.
-        run: |
-          cargo run --release -p qualia-client-core --example build_anatomy_pack -- bodyparts release-assets/anatomy all 0 0
-          ls -lh release-assets/anatomy/anatomy-bodyparts3d.hmc release-assets/anatomy/anatomy-bodyparts3d.q42
-
-      - name: Upload the BodyParts3D pack to release
-        # A Release asset only — the pack exceeds GitHub Pages' 100 MB/file limit, so the demo's
-        # "Complete body (BodyParts3D)" toggle fetches it on demand from the Release download URL.
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          files: |
-            release-assets/anatomy/anatomy-bodyparts3d.hmc
-            release-assets/anatomy/anatomy-bodyparts3d.q42
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

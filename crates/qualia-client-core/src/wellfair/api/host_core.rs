@@ -255,7 +255,7 @@ impl WebizenHostApi {
 
     /// Policy-gated write that surfaces the guardian-escrow outcome instead of collapsing it to an
     /// error. A **proxy** write of a protected (Restricted) record does not commit immediately — it
-    /// is held in a [`GuardianshipProposal`] pending M-of-N guardian co-signature (see
+    /// is held in a `GuardianshipProposal()` pending M-of-N guardian co-signature (see
     /// [`Self::vote_guardianship_proposal`]). Non-proxy writes commit exactly as before.
     pub fn submit_record_guarded(
         &mut self,
@@ -319,7 +319,7 @@ impl WebizenHostApi {
             .vault
             .commit_envelope(envelope, &self.signing_key, principal_did, source, summary)
             .map_err(|e| e.to_string())?;
-        let ts = envelope.asserted_time_unix;
+        let ts = envelope.asserted_instant().to_unix_secs() as u32;
         let receipt = receipt_from_decision(
             qapp_id,
             &envelope.id,
@@ -530,7 +530,9 @@ impl WebizenHostApi {
             schedule_times,
             prescriber: None,
             ceased_at_unix: None,
+            ceased_at_instant: None,
             created_at_unix: now,
+            created_at_instant: None,
         };
         let packed = medication::medication_envelope(&entry, &self.owner_did, &self.author_did);
         self.submit_record_with_summary(
@@ -560,6 +562,7 @@ impl WebizenHostApi {
             medication_name: medication_name.to_string(),
             status,
             administered_at_unix: now,
+            administered_at_instant: None,
             notes,
         };
         let packed = medication::administration_envelope(&admin, &self.owner_did, &self.author_did);
@@ -589,6 +592,7 @@ impl WebizenHostApi {
             meal_type: meal_type.to_string(),
             calories_kcal,
             logged_at_unix: now,
+            logged_at_instant: None,
         };
         let packed = medication::diet_envelope(&diet, &self.owner_did, &self.author_did);
         self.submit_record_with_summary(

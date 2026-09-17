@@ -1,0 +1,66 @@
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix si:     <https://ns.webizen.org/semantic-instrument/> .
+
+# Negative: revoked release still presented as active for new employment.
+# Historical authorship and a prior receipt remain (must not be erased).
+
+ex:bad-instrument a si:SemanticInstrument ;
+    si:instrumentId "https://example.org/instruments/revoked-active" ;
+    si:name "Revoked still active (negative fixture)" .
+
+ex:bad-release a si:InstrumentRelease ;
+    si:expectedViolation si:RevokedReleasePresentedAsActive ;
+    si:instrument ex:bad-instrument ;
+    si:releaseId "https://example.org/instruments/revoked-active/releases/1.0.0" ;
+    si:version "1.0.0" ;
+    si:purpose "training-and-field-screening" ;
+    si:contentCategory si:Demo ;
+    si:prohibitedInterpretation "sole-basis-for-regulatory-enforcement" ;
+    si:domain "https://example.org/concepts/units" ;
+    si:ontologyReference "https://example.org/ontologies/units" ;
+    si:entryPoint ex:bad-ep ;
+    si:citation "https://example.org/guidelines/si-units" ;
+    si:applicability ex:bad-appl ;
+    si:honestyPolicy ex:bad-honesty ;
+    si:resourceLimits ex:bad-limits ;
+    si:testManifest ex:bad-tests ;
+    si:badgePresentation ex:bad-badge ;
+    si:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000008" ;
+    si:authoredBy ex:bad-author ;
+    si:publishedBy ex:bad-publisher ;
+    si:withdrawnBy ex:bad-publisher ;
+    si:licence "https://spdx.org/licenses/CC-BY-4.0.html" ;
+    si:publicationState si:Revoked ;
+    si:activationState si:Active ;
+    si:presentedAsActive "true" .
+
+ex:prior-event a si:ExecutionEvent ;
+    si:employsRelease ex:bad-release ;
+    si:employsEntryPoint ex:bad-ep ;
+    si:invokedBy ex:bad-author .
+
+ex:prior-receipt a si:ExecutionReceipt ;
+    si:recordsEvent ex:prior-event ;
+    si:receiptOfRelease ex:bad-release .
+
+ex:bad-ep a si:EntryPoint ;
+    si:entryPointName "assess" ;
+    si:inputShape "https://example.org/shapes/in" ;
+    si:outputShape "https://example.org/shapes/out" ;
+    si:resourceLimits ex:bad-limits .
+ex:bad-honesty a si:HonestyPolicy ;
+    si:incompleteInputBehaviour si:Held ;
+    si:resultKind "screening-claim" ;
+    si:requiredNotice "negative fixture" ;
+    si:signatureIsNotTruth "true" .
+ex:bad-appl a si:Applicability ; si:unrestrictedDeclaration "true" .
+ex:bad-limits a si:ResourceLimits ; si:memoryBytes "1024" ; si:maxSteps "10" ; si:maxOutputQuins "8" .
+ex:bad-tests a si:TestManifest ; si:assetLocator "tests/tests.n3" .
+ex:bad-badge a si:BadgePresentation ; si:identifiesRelease ex:bad-release ; si:badgeAsset ex:bad-icon .
+ex:bad-icon a si:BadgeAsset ;
+    si:assetLocator "assets/badge.svg" ;
+    si:mediaType "image/svg+xml" ;
+    si:assetDigest "sha256:00000000000000000000000000000000000000000000000000000000000000ff" ;
+    si:accessibleText "negative fixture icon" .
+ex:bad-author a values:NaturalPerson .
+ex:bad-publisher a values:LegalPerson .

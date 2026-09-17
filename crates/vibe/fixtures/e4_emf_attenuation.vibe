@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/emf_attenuation>;
+import "vibe:0.1/math" as m;
+pure fn attenuated_intensity(i0: f64, distance: f64) -> f64 {
+    let d = m.max(0.001, distance);
+    return m.max(0.0, i0 / (d * d));
+}

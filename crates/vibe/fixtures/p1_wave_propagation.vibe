@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/wave_clamp>;
+import "vibe:0.1/math" as m;
+pure fn wave_clamp(amplitude: f64) -> f64 {
+    return m.clamp(amplitude, -1.0, 1.0);
+}

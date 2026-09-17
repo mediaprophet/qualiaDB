@@ -253,8 +253,7 @@ pub fn query_graph(args: &Value) -> Result<Value, String> {
         let g = map
             .get(graph_id)
             .ok_or_else(|| format!("unknown graphId '{graph_id}'"))?;
-        let mut matches = Vec::new();
-        let mut match_count = 0usize;
+        let mut matched = Vec::new();
         for q in &g.quins {
             if subject.is_some_and(|v| q.subject != v)
                 || predicate.is_some_and(|v| q.predicate != v)
@@ -286,9 +285,13 @@ pub fn query_graph(args: &Value) -> Result<Value, String> {
                     continue;
                 }
             }
-            match_count += 1;
-            if matches.len() < limit {
-                matches.push(json!({
+            matched.push(*q);
+        }
+        let sampled = qualia_core_db::query_engine::sample_quins(&matched, limit);
+        let matches: Vec<Value> = sampled
+            .iter()
+            .map(|q| {
+                json!({
                     "quin": quin_json(q),
                     "labels": {
                         "subject": g.lexicon.get(&q.subject),
@@ -296,14 +299,14 @@ pub fn query_graph(args: &Value) -> Result<Value, String> {
                         "object": g.lexicon.get(&q.object),
                         "context": g.lexicon.get(&q.context)
                     }
-                }));
-            }
-        }
+                })
+            })
+            .collect();
         Ok(json!({
             "graphId": graph_id,
-            "matchCount": match_count,
+            "matchCount": matched.len(),
             "returnedCount": matches.len(),
-            "truncated": match_count > matches.len(),
+            "truncated": matched.len() > matches.len(),
             "matches": matches,
             "queryMeta": {
                 "tool": "query_graph",

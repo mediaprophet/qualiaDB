@@ -6,7 +6,7 @@
 //! then replace the magnitude with the target while keeping the freshly-estimated
 //! phase. Each round is non-increasing in the magnitude inconsistency.
 //!
-//! Reuses [`crate::features::istft`] for the inverse and
+//! Reuses `crate::features::istft()` for the inverse and
 //! [`crate::features::fft::fft_radix2`] for the forward analysis. Zero-heap hot
 //! path: every buffer (including the evolving spectra) is caller-owned.
 

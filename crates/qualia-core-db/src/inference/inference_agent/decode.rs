@@ -8,9 +8,12 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 use super::config::effective_inference_timeout_ms;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use super::config::{DECODE_TOKEN_BUDGET, TEST_TRANSFORMER_LAYER_CAP, TEST_VOCAB_CHUNK_CAP};
+use super::control::DecodeControl;
 #[cfg(not(target_arch = "wasm32"))]
 use super::decode_helpers::get_prefix_cache;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use super::decode_helpers::{
     apply_model_helper_stops, build_sieve, drain_tensor_context_inject, embedding_fallback_logits,
     try_accept_topology_draft, TopologyDraftStep,
@@ -18,7 +21,9 @@ use super::decode_helpers::{
 use super::local_agent::LocalLlmAgent;
 #[cfg(not(target_arch = "wasm32"))]
 use super::sticky_infer;
+#[allow(unused_imports)]
 use super::types::AgentBackend;
+#[allow(unused_imports)]
 use crate::{q_hash, NQuin};
 
 impl LocalLlmAgent {
@@ -39,7 +44,18 @@ impl LocalLlmAgent {
         graph_context: &str,
         on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner(prompt, graph_context, on_token)
+        self.infer_local_model_inner(prompt, graph_context, None, on_token)
+    }
+
+    /// Run local inference with a caller-owned cooperative cancellation token.
+    pub fn infer_local_model_controlled<F: FnMut(String) + Send + 'static>(
+        &self,
+        prompt: &str,
+        graph_context: &str,
+        control: DecodeControl,
+        on_token: Option<F>,
+    ) -> (String, Vec<u64>, u32, Option<NQuin>) {
+        self.infer_local_model_inner(prompt, graph_context, Some(control), on_token)
     }
 
     pub(super) fn infer_local_model(
@@ -47,7 +63,7 @@ impl LocalLlmAgent {
         prompt: &str,
         graph_context: &str,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None)
+        self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None, None)
     }
 
     #[cfg_attr(target_arch = "wasm32", allow(unused_variables, unused_mut))]
@@ -55,6 +71,7 @@ impl LocalLlmAgent {
         &self,
         prompt: &str,
         graph_context: &str,
+        control: Option<DecodeControl>,
         mut on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         let prov_hash = graph_context
@@ -145,6 +162,7 @@ impl LocalLlmAgent {
                 None
             };
             let stream_tx_thread = stream_pair.as_ref().map(|(tx, _)| tx.clone());
+            let control_thread = control.clone();
 
             // Move the (optional) LoRA adapter into the inference thread.
             let lora_for_thread = lora_active_adapter;
@@ -304,6 +322,12 @@ impl LocalLlmAgent {
                                 .max(1);
                             let mut pos = 0usize;
                             while pos < prefill_tokens {
+                                if control_thread
+                                    .as_ref()
+                                    .is_some_and(DecodeControl::is_cancelled)
+                                {
+                                    break;
+                                }
                                 let n = (prefill_tokens - pos).min(chunk_cap);
                                 let batch_elems = n * emb_dim;
                                 {
@@ -372,7 +396,13 @@ impl LocalLlmAgent {
                     } else {
                         DECODE_TOKEN_BUDGET as usize
                     }
-                };
+                }
+                .min(
+                    control
+                        .as_ref()
+                        .map(DecodeControl::token_budget)
+                        .unwrap_or(usize::MAX),
+                );
 
                 #[cfg(not(target_arch = "wasm32"))]
                 crate::compute_universe::start_tensor_search_producer();
@@ -398,7 +428,7 @@ impl LocalLlmAgent {
                 let mut sampler_logits: Vec<f32> = Vec::new();
                 // Decode-profiler (gated): one-shot empty submit→wait baseline on the SAME device, so
                 // the bench can separate per-token fence latency from real kernel compute time.
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                 if std::env::var("QUALIA_LLM_PROFILE_DECODE").is_ok() {
                     let n = 64u32;
                     crate::llm_bench::record_empty_rt(
@@ -426,6 +456,12 @@ impl LocalLlmAgent {
                     tok.encode(s)
                 }) {
                     for &tid in &forced {
+                        if control_thread
+                            .as_ref()
+                            .is_some_and(DecodeControl::is_cancelled)
+                        {
+                            break;
+                        }
                         let next = tid % vlen.max(1);
                         out_ids.push(next);
                         ctx.push(next);
@@ -449,6 +485,12 @@ impl LocalLlmAgent {
 
                 if !graph_force_emitted {
                 for step in 0..gen_budget {
+                    if control_thread
+                        .as_ref()
+                        .is_some_and(DecodeControl::is_cancelled)
+                    {
+                        break;
+                    }
                     crate::gpu_context::record_llm_decode_step();
 
                     // Codex P0 — cooperative deadline: break BEFORE the wall-clock timeout instead of
@@ -472,7 +514,7 @@ impl LocalLlmAgent {
                     // Prefer quant-graph fact draft when mode=quant-graph; else n-gram prompt-lookup.
                     // FastVerify: skip mid-decode fact draft (post-turn heal only) for Ollama-like speed.
                     // Verify drafts in ONE batched forward. Bit-identical to greedy when accepted.
-                    #[cfg(not(target_arch = "wasm32"))]
+                    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                     if (crate::llm_bench::spec_decode_enabled()
                         || (crate::inference_modes::quant_graph_grounding_enabled()
                             && crate::inference_modes::sentinel_mid_decode_enabled()))
@@ -629,7 +671,7 @@ impl LocalLlmAgent {
                             //   • greedy → GPU top-1 inside the encoder
                             //   • sampler → same layer stack, read back post-norm hidden, then
                             //     full logits + CPU sample (chat no longer pays ~107 fences/token)
-                            #[cfg(not(target_arch = "wasm32"))]
+                            #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                             let (resident_hit, resident_hidden_ok) = if sieve_mask.is_none()
                                 && TEST_TRANSFORMER_LAYER_CAP == 0
                             {
@@ -675,7 +717,7 @@ impl LocalLlmAgent {
                             } else {
                                 (None, false)
                             };
-                            #[cfg(target_arch = "wasm32")]
+                            #[cfg(any(target_arch = "wasm32", not(feature = "gpu-runtime")))]
                             let (resident_hit, resident_hidden_ok): (
                                 Option<crate::gguf_bridge::StreamingArgmaxResult>,
                                 bool,
@@ -786,7 +828,18 @@ impl LocalLlmAgent {
                                                 ids.first().copied()
                                             },
                                         );
-                                        let tid = s.sample(&mut sampler_logits[..vocab], &ctx);
+                                        // R9: DOMINO constrained decoding — if a masker is
+                                        // installed and active, apply the grammar constraint
+                                        // mask before sampling. Falls back to plain sample
+                                        // when no masker is active (backward compatible).
+                                        let tid = match crate::llm_bench::domino_sample(
+                                            s,
+                                            &mut sampler_logits[..vocab],
+                                            &ctx,
+                                        ) {
+                                            Some(constrained_tid) => constrained_tid,
+                                            None => s.sample(&mut sampler_logits[..vocab], &ctx),
+                                        };
                                         Some((tid as usize, sampler_logits[tid as usize]))
                                     } else {
                                         None
@@ -809,11 +862,18 @@ impl LocalLlmAgent {
                             } else if resident_hit.is_some() {
                                 resident_hit
                             } else if gpu_topk_enabled && sieve_mask.is_none() {
-                                engine.dispatch_output_top1_chunked(
-                                    idx,
-                                    &emb_buf[..emb_dim],
-                                    emb_dim,
-                                )
+                                #[cfg(feature = "gpu-runtime")]
+                                {
+                                    engine.dispatch_output_top1_chunked(
+                                        idx,
+                                        &emb_buf[..emb_dim],
+                                        emb_dim,
+                                    )
+                                }
+                                #[cfg(not(feature = "gpu-runtime"))]
+                                {
+                                    None
+                                }
                             } else {
                                 None
                             };
@@ -935,6 +995,7 @@ impl LocalLlmAgent {
                             top_v,
                             tok.decode(&[top_i as u32])
                         );
+                        #[cfg(feature = "gpu-runtime")]
                         if let Some(idx) = tensor_idx.as_ref() {
                             if let Some(top5) = engine.dispatch_output_topk_chunked(
                                 idx,
@@ -975,6 +1036,14 @@ impl LocalLlmAgent {
                         );
                     }
                     let next = (top_i as u32) % vlen;
+
+                    // T53/W11: feed the selected token back into the DOMINO
+                    // grammar state machine so the mask advances for the next
+                    // token. No-op when DOMINO is not active.
+                    if crate::llm_bench::domino_active() {
+                        let token_bytes = tok.decode(&[next]);
+                        crate::llm_bench::domino_feed_token(token_bytes.as_bytes());
+                    }
 
                     if let Some(ref mut s) = sieve {
                         match s.apply_token(next) {
@@ -1091,8 +1160,7 @@ impl LocalLlmAgent {
             return (text, prov, tokens, semantic_quin);
         }
 
-        // ── Native GPU path ─────────────────────────────────────────────────
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
         {
             use crate::gguf_bridge::QTensor;
             use crate::gguf_sharder::GgufTokenizer;
@@ -1281,7 +1349,13 @@ impl LocalLlmAgent {
                     3usize
                 } else {
                     DECODE_TOKEN_BUDGET as usize
-                };
+                }
+                .min(
+                    control
+                        .as_ref()
+                        .map(DecodeControl::token_budget)
+                        .unwrap_or(usize::MAX),
+                );
 
                 crate::compute_universe::start_tensor_search_producer();
                 crate::compute_universe::publish_query_tensor(
@@ -1291,6 +1365,9 @@ impl LocalLlmAgent {
                 crate::qualia_hybrid::prepare_hybrid_decode(&prompt_owned);
 
                 for step in 0..gen_budget {
+                    if control.as_ref().is_some_and(DecodeControl::is_cancelled) {
+                        break;
+                    }
                     crate::gpu_context::record_llm_decode_step();
 
                     let on_token_sink = on_token.as_mut().map(|cb| cb as &mut dyn FnMut(String));
@@ -1395,6 +1472,10 @@ impl LocalLlmAgent {
                                         sieve_failed = true;
                                         (0usize, f32::NEG_INFINITY)
                                     }
+                                } else if let Some(tok) =
+                                    engine.browser_top1_readback_bytes(vlen as usize)
+                                {
+                                    (tok as usize, 0.0)
                                 } else {
                                     emb_buf[..emb_dim].iter().enumerate().fold(
                                         (0usize, f32::NEG_INFINITY),
@@ -1437,6 +1518,10 @@ impl LocalLlmAgent {
                                         sieve_failed = true;
                                         (0usize, f32::NEG_INFINITY)
                                     }
+                                } else if let Some(tok) =
+                                    engine.browser_top1_readback_bytes(vlen as usize)
+                                {
+                                    (tok as usize, 0.0)
                                 } else {
                                     emb_buf[..emb_dim].iter().enumerate().fold(
                                         (0usize, f32::NEG_INFINITY),
@@ -1492,6 +1577,14 @@ impl LocalLlmAgent {
                         );
                     }
                     let next = (top_i as u32) % vlen;
+
+                    // T53/W11: feed the selected token back into the DOMINO
+                    // grammar state machine so the mask advances for the next
+                    // token. No-op when DOMINO is not active.
+                    if crate::llm_bench::domino_active() {
+                        let token_bytes = tok.decode(&[next]);
+                        crate::llm_bench::domino_feed_token(token_bytes.as_bytes());
+                    }
 
                     if let Some(ref mut s) = sieve {
                         match s.apply_token(next) {
@@ -1567,6 +1660,25 @@ impl LocalLlmAgent {
                 return (text, prov, tokens, None);
             }
             return (text, prov, tokens, semantic_quin);
+        }
+
+        #[cfg(all(target_arch = "wasm32", not(feature = "gpu-runtime")))]
+        {
+            if crate::extension_bus::wasm_bus::is_connected() {
+                if let Some(cb) = on_token {
+                    let _ = crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, cb);
+                } else {
+                    let _ =
+                        crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, |_| {});
+                }
+                return (String::new(), vec![prov_hash], 0, None);
+            }
+            (
+                String::from("[local LLM execution not compiled into this WASM profile]"),
+                vec![prov_hash],
+                0,
+                None,
+            )
         }
     }
 }

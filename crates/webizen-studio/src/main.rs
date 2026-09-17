@@ -1,16 +1,19 @@
 #![allow(non_snake_case)]
 
 pub mod canvas_editor;
-pub mod canvas_graph;
-pub mod canvas_model;
 pub mod components;
-pub mod endpoints;
 mod pane_generator;
 mod pane_registry;
-pub mod render;
+mod shell_dest;
 mod studio_canvas;
 pub mod telemetry;
-pub mod theme_engine;
+
+// Shared modules live in the lib rlib once. Re-export so `crate::…` in the bin
+// uses the same types (Page, motion, endpoints) and spatial_bridge Tauri FFI
+// is not compiled a second time into the wasm link.
+pub use webizen_studio::{canvas_graph, canvas_model, endpoints, render, theme_engine};
+#[cfg(target_arch = "wasm32")]
+pub use webizen_studio::tauri_ffi;
 
 use dioxus::prelude::*;
 use serde::Deserialize;
@@ -20,16 +23,9 @@ use theme_engine::ResolvedTheme;
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
-
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    async fn tauri_listen(
-        event: &str,
-        handler: &js_sys::Function,
-    ) -> Result<js_sys::Function, wasm_bindgen::JsValue>;
-}
+use webizen_studio::tauri_ffi::listen as tauri_listen;
+
 
 #[cfg(target_arch = "wasm32")]
 fn event_payload_string(event: &JsValue) -> Option<String> {
@@ -37,6 +33,17 @@ fn event_payload_string(event: &JsValue) -> Option<String> {
         .ok()
         .and_then(|payload| payload.as_string())
 }
+
+
+/// Defer non-settings router pushes off the Tauri Closure stack (RefCell).
+#[cfg(target_arch = "wasm32")]
+fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
+    wasm_bindgen_futures::spawn_local(async move {
+        push(route);
+    });
+}
+
+
 
 #[cfg(target_arch = "wasm32")]
 fn reflected_string(value: &JsValue, property: &str) -> Option<String> {
@@ -160,13 +167,28 @@ fn main() {
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
     #[layout(AppLayout)]
-    /// Default open: Lived Memory (Library) — flagship habitat surface.
+    /// Talk is Desktop home (empty hash). Lived Memory is `/library`.
     #[route("/")]
-    LibraryRoute {},
-
-    /// Relations domain (people, chat, offers) — formerly Talk.
-    #[route("/talk")]
     TalkRoute {},
+
+    /// Talk → Mail daily inbox (purpose inboxes). Not Poet Domain.info admin.
+    #[route("/talk/mail")]
+    TalkMailRoute {},
+
+    /// Address-bar / Desktop `qualia://mail` alias — same daily inbox.
+    #[route("/mail")]
+    MailDailyRoute {},
+
+    /// Talk → People with Directory visible (palette `dir` / contacts / address book).
+    #[route("/talk/directory")]
+    TalkDirectoryRoute {},
+
+    #[route("/talk/people")]
+    TalkPeopleRoute {},
+
+    /// Deep link kept so Relations bookmarks and `/talk` hashes still resolve.
+    #[route("/talk")]
+    TalkAliasRoute {},
 
     #[route("/home")]
     DashboardRoute {},
@@ -202,6 +224,17 @@ pub enum Route {
     #[route("/agent-qa")]
     AgentQaRoute {},
 
+    #[route("/poet")]
+    PoetRoute {},
+
+    /// Secondary deep link — Catalog · Lexicon on Poet (not a top-level IA peer).
+    #[route("/poet/catalog")]
+    PoetCatalogRoute {},
+
+    /// Catalog · Instruments on Poet (Demo/Reference packs).
+    #[route("/poet/instruments")]
+    PoetInstrumentRoute {},
+
     #[route("/about")]
     AboutRoute {},
 
@@ -224,8 +257,9 @@ pub enum Route {
     #[route("/nexus")]
     NexusRoute {},
 
+    /// Hypermedia Library / Lived Memory — distinct from Talk home.
     #[route("/library")]
-    LibraryAliasRoute {},
+    LibraryRoute {},
 
     #[route("/vision")]
     VisionRoute {},
@@ -286,21 +320,52 @@ fn AnatomyTestRoute() -> Element {
     rsx! { components::anatomy_test::AnatomyTest {} }
 }
 
-/// Relations domain: people, chat, reception, projects (SocialHub).
-#[component]
-fn TalkRoute() -> Element {
+fn talk_surface(initial_tab: &'static str) -> Element {
     rsx! {
         div {
+            "data-surface": "talk",
+            "data-talk-open": "{initial_tab}",
             style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
-            components::relations::RelationsShell {}
+            components::relations::RelationsShell { initial_tab: initial_tab.to_string() }
         }
     }
+}
+
+/// Relations domain: people, chat, reception, mail, projects.
+#[component]
+fn TalkRoute() -> Element {
+    talk_surface("")
+}
+
+#[component]
+fn TalkAliasRoute() -> Element {
+    talk_surface("")
+}
+
+#[component]
+fn TalkMailRoute() -> Element {
+    talk_surface("mail")
+}
+
+#[component]
+fn MailDailyRoute() -> Element {
+    talk_surface("mail")
+}
+
+#[component]
+fn TalkDirectoryRoute() -> Element {
+    talk_surface("directory")
+}
+
+#[component]
+fn TalkPeopleRoute() -> Element {
+    talk_surface("people")
 }
 
 /// Keep — personal records, body, vault, library. Not an ops dashboard.
 #[component]
 fn KeepRoute() -> Element {
-    rsx! { KeepHub {} }
+    rsx! { crate::components::keep_hub::KeepHub {} }
 }
 
 #[component]
@@ -335,82 +400,6 @@ fn DomainRouteHeader(domain: &'static str, title: &'static str, blurb: &'static 
     }
 }
 
-/// Legacy Keep landing — secondary directory into life domains (not primary nav language).
-#[component]
-fn KeepHub() -> Element {
-    rsx! {
-        div {
-            style: "flex:1; min-height:0; overflow-y:auto; padding:2rem 2rem 3rem; max-width:720px; margin:0 auto; color:var(--qualia-text); box-sizing:border-box; width:100%;",
-            div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;",
-                span {
-                    style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94a3b8;",
-                    "Directory"
-                }
-                span {
-                    style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #475569;background:rgba(71,85,105,0.2);color:#cbd5e1;font-weight:700;",
-                    "Secondary · prefer life-domain nav"
-                }
-            }
-            h1 { style: "margin:0 0 0.35rem; font-size:1.6rem; font-weight:700;", "All destinations" }
-            p { style: "margin:0 0 1.5rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.95rem;",
-                "Private on this machine. Primary shell uses life domains: Memory · Relations · Care · Practice · World · Instruments. This page is a full index for deep links."
-            }
-            div { style: "display:flex; flex-direction:column; gap:0.65rem;",
-                KeepTalkTabLink { tab: "chat", title: "Relations — Chat", blurb: "Private local agent. Nothing leaves this machine unless you send it. Instruments are not peers." }
-                KeepTalkTabLink { tab: "people", title: "Relations — People", blurb: "Invites, contacts, magic links, groups — natural persons, not identity assets." }
-                KeepTalkTabLink { tab: "reception", title: "Relations — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
-                KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Purpose inboxes, relationship addresses, catchall, SMTP/IMAP after domain setup." }
-                KeepTalkTabLink { tab: "projects", title: "Practice — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed · Remember → Memory." }
-                KeepLink { to: Route::WellfairRoute {}, title: "Care — Wellfair shell", blurb: "Body, rights, welfare, labour under principal control. Unlock vault for private records." }
-                KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary (vault)", blurb: "Unlock when cooperative projects or work board need the host API." }
-                KeepLink { to: Route::WorkRoute {}, title: "Practice — Work board", blurb: "Kanban — project id fills from Relations → Projects." }
-                KeepLink { to: Route::AnatomyRoute {}, title: "Care — Anatomy", blurb: "See systems and conditions on a reference body." }
-                KeepLink { to: Route::HealthRoute {}, title: "Care — Health vault", blurb: "Vitals, sleep, medication, wellbeing — local journal, not cloud." }
-                KeepLink { to: Route::LibraryRoute {}, title: "Memory — Lived Memory", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
-                KeepLink { to: Route::VisionRoute {}, title: "Instruments — Vision", blurb: "Local detect/overlay — not a peer person. Synthetic scenes, reject/correct without erasing claims." }
-                KeepLink { to: Route::ListenRoute {}, title: "Instruments — Listen", blurb: "Local ears — features, reference events (not full ASR). Not social." }
-                KeepLink { to: Route::IdentityRoute {}, title: "You — Identity", blurb: "Personal profile, social book, consent. Identifiers ≠ the natural person." }
-                KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary", blurb: "Vault lock and protected spaces." }
-                KeepLink { to: Route::AgencyRoute {}, title: "Care — Agency", blurb: "Guardianship, accountability, safeguards." }
-                KeepLink { to: Route::ChoraRoute {}, title: "World — Chora commons", blurb: "Spatio-temporal commons canvas — attributed public layers." }
-                KeepLink { to: Route::BrowserRoute {}, title: "World — Browser", blurb: "Web pages project into the same entity session as Memory." }
-            }
-        }
-    }
-}
-
-#[component]
-fn KeepLink(to: Route, title: &'static str, blurb: &'static str) -> Element {
-    rsx! {
-        Link {
-            to: to,
-            style: "display:block; text-decoration:none; color:inherit; padding:1rem 1.15rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.22); transition:border-color 0.15s;",
-            strong { style: "display:block; font-size:1rem; margin-bottom:0.25rem;", "{title}" }
-            span { style: "font-size:0.85rem; color:var(--qualia-text-muted); line-height:1.4;", "{blurb}" }
-        }
-    }
-}
-
-/// Keep → Talk deep link: stash SocialHub tab before navigation.
-#[component]
-fn KeepTalkTabLink(tab: &'static str, title: &'static str, blurb: &'static str) -> Element {
-    rsx! {
-        Link {
-            to: Route::TalkRoute {},
-            style: "display:block; text-decoration:none; color:inherit; padding:1rem 1.15rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.22); transition:border-color 0.15s;",
-            onclick: move |_| {
-                #[cfg(target_arch = "wasm32")]
-                if let Some(win) = web_sys::window() {
-                    if let Ok(Some(storage)) = win.session_storage() {
-                        let _ = storage.set_item("webizen_talk_tab", tab);
-                    }
-                }
-            },
-            strong { style: "display:block; font-size:1rem; margin-bottom:0.25rem;", "{title}" }
-            span { style: "font-size:0.85rem; color:var(--qualia-text-muted); line-height:1.4;", "{blurb}" }
-        }
-    }
-}
 
 /// Map omnibox text to a destination. Prefer honest routing over fake multi-product promises.
 fn route_from_omnibox(query: &str) -> Route {
@@ -436,9 +425,14 @@ fn route_from_omnibox(query: &str) -> Route {
             stash_talk_tab("chat");
             return Route::TalkRoute {};
         }
-        "people" | "invite" | "contacts" => {
+        "people" | "invite" => {
             stash_talk_tab("people");
-            return Route::TalkRoute {};
+            return Route::TalkPeopleRoute {};
+        }
+        "dir" | "directory" | "contacts" | "address book" | "addressbook" | "address-book"
+        | "rolodex" => {
+            crate::components::relations::stash_directory_handoff();
+            return Route::TalkDirectoryRoute {};
         }
         "reception" | "frontdoor" | "front-door" | "dns" => {
             stash_talk_tab("reception");
@@ -446,7 +440,7 @@ fn route_from_omnibox(query: &str) -> Route {
         }
         "mail" | "email" => {
             stash_talk_tab("mail");
-            return Route::TalkRoute {};
+            return Route::TalkMailRoute {};
         }
         "projects" | "coop" | "cooperative" => {
             stash_talk_tab("projects");
@@ -467,7 +461,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "universe" | "chora" | "stars" | "space" => return Route::ChoraRoute {},
         "anatomy" | "body" => return Route::AnatomyRoute {},
         "settings" | "prefs" => return Route::SettingsRoute {},
-        "home" | "dashboard" | "overview" => return Route::LibraryRoute {},
+        "home" | "dashboard" | "overview" => return Route::TalkRoute {},
         "library" | "memory" | "lived-memory" => return Route::LibraryRoute {},
         "vision" | "detect" | "overlay" => return Route::VisionRoute {},
         "listen" | "audio" | "ears" => return Route::ListenRoute {},
@@ -477,6 +471,11 @@ fn route_from_omnibox(query: &str) -> Route {
         "logs" => return Route::LogsRoute {},
         "jobs" | "tasks" | "downloads" | "queue" => return Route::JobsRoute {},
         "qa" | "debug" | "diagnostics" | "agent-qa" => return Route::AgentQaRoute {},
+        "poet" | "vibe" | "vibescript" => return Route::PoetRoute {},
+        "catalog" | "lexicon" | "lexicon-pack" => return Route::PoetCatalogRoute {},
+        "instruments" | "semantic-instrument" | "semantic-instruments" => {
+            return Route::PoetInstrumentRoute {}
+        }
         "identity" => return Route::IdentityRoute {},
         "sanctuary" => return Route::SanctuaryRoute {},
         _ => {}
@@ -570,7 +569,9 @@ fn LibraryRoute() -> Element {
     let mode = components::experience_mode::use_experience_mode();
     rsx! {
         div {
-            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;",
+            "data-surface": "library",
+            "aria-label": "Hypermedia Library",
+            style: "flex: 1; min-height: 28rem; display: flex; flex-direction: column; overflow: hidden;",
             if mode().is_advanced() {
                 div {
                     style: "flex:1;min-height:0;overflow-y:auto;padding:1rem;box-sizing:border-box;",
@@ -581,11 +582,6 @@ fn LibraryRoute() -> Element {
             }
         }
     }
-}
-
-#[component]
-fn LibraryAliasRoute() -> Element {
-    rsx! { LibraryRoute {} }
 }
 
 #[component]
@@ -761,7 +757,9 @@ fn GpuViewportRoute() -> Element {
 fn SettingsRoute() -> Element {
     rsx! {
         div {
-            style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;",
+            "data-surface": "settings",
+            "aria-label": "Settings",
+            style: "flex:1;min-height:28rem;width:100%;display:flex;flex-direction:column;overflow:hidden;",
             components::settings_page::SettingsPage {}
         }
     }
@@ -780,6 +778,21 @@ fn JobsRoute() -> Element {
 #[component]
 fn AgentQaRoute() -> Element {
     rsx! { components::agent_qa_panel::AgentQaPanel {} }
+}
+
+#[component]
+fn PoetRoute() -> Element {
+    rsx! { components::poet_harness::PoetHarness {} }
+}
+
+#[component]
+fn PoetCatalogRoute() -> Element {
+    rsx! { components::poet_harness::PoetHarness {} }
+}
+
+#[component]
+fn PoetInstrumentRoute() -> Element {
+    rsx! { components::poet_harness::PoetHarness {} }
 }
 
 #[component]
@@ -992,20 +1005,33 @@ fn DesktopLogsPage() -> Element {
 
 #[component]
 fn AppLayout() -> Element {
+    let route = use_route::<Route>();
     let theme_state = consume_context::<Signal<ResolvedTheme>>();
     let navigator = use_navigator();
     let native_menu_listener_started = use_signal(|| false);
+    // Poet routes used to early-return before shell-navigate / open-settings listeners,
+    // so Tools→Settings / Ctrl+, closed without painting Settings. Listeners always attach;
+    // Poet stays full-bleed via PoetHarness; Tools→Settings forces Classic + deferred Settings push.
     let host_status = use_signal(DesktopStatus::default);
+    // Tools→Settings / Ctrl+, : Closure only sets this; a dioxus use_effect
+    // performs navigator.push so we never push on the Tauri RefCell stack
+    // and never rely on synthetic popstate (which did not remount Settings).
+    let mut pending_settings = use_signal(|| false);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = navigator;
     #[cfg(not(target_arch = "wasm32"))]
     let _ = native_menu_listener_started;
+    let shell_kind = components::shell_kind::use_shell_kind();
+    let poet_chrome = shell_kind().is_poet();
     let t = theme_state();
-    let accent = t
-        .tokens
-        .get("accent")
-        .cloned()
-        .unwrap_or("#e07a5f".to_string());
+    let accent = if poet_chrome {
+        "#00d2ff".to_string()
+    } else {
+        t.tokens
+            .get("accent")
+            .cloned()
+            .unwrap_or("#e07a5f".to_string())
+    };
     let accent_glow = t
         .tokens
         .get("accent-glow")
@@ -1052,12 +1078,16 @@ fn AppLayout() -> Element {
             let mut native_menu_listener_started = native_menu_listener_started;
             native_menu_listener_started.set(true);
             let navigator = navigator;
+            let pending_settings = pending_settings;
 
             wasm_bindgen_futures::spawn_local(async move {
-                let settings_nav = navigator.clone();
+                let mut settings_pending = pending_settings;
                 let settings_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = settings_nav.push(Route::SettingsRoute {});
+                        components::shell_kind::persist_shell_kind(
+                            components::shell_kind::ShellKind::Classic,
+                        );
+                        settings_pending.set(true);
                     }));
 
                 match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
@@ -1073,35 +1103,51 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let menu_nav = navigator.clone();
+                let menu_nav = navigator;
+                let mut menu_pending = pending_settings;
                 let menu_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event| {
                     let Some(target) = event_payload_string(&event) else {
                         return;
                     };
-                    let _ = match target.as_str() {
-                        "talk" | "chat" => menu_nav.push(Route::TalkRoute {}),
-                        "keep" => menu_nav.push(Route::KeepRoute {}),
-                        "dashboard" | "home" => menu_nav.push(Route::DashboardRoute {}),
-                        "wellfair" => menu_nav.push(Route::WellfairRoute {}),
-                        "chora" => menu_nav.push(Route::ChoraRoute {}),
-                        "browser" | "reach" => menu_nav.push(Route::BrowserRoute {}),
-                        "10d-browser" => menu_nav.push(Route::TenDBrowserRoute {}),
-                        "settings" => menu_nav.push(Route::SettingsRoute {}),
-                        "library" | "memory" => menu_nav.push(Route::LibraryRoute {}),
-                        "wallet" | "identity" => menu_nav.push(Route::IdentityRoute {}),
-                        "qapp-studio" => menu_nav.push(Route::StudioRoute {}),
-                        "qapps" => menu_nav.push(Route::QAppsRoute {}),
-                        "render-preview" => menu_nav.push(Route::RenderPreviewRoute {}),
-                        "anatomy" => menu_nav.push(Route::AnatomyRoute {}),
-                        "health" => menu_nav.push(Route::HealthRoute {}),
-                        "tools" => menu_nav.push(Route::ToolsRoute {}),
-                        "sanctuary" => menu_nav.push(Route::SanctuaryRoute {}),
-                        "logs" => menu_nav.push(Route::LogsRoute {}),
-                        "jobs" => menu_nav.push(Route::JobsRoute {}),
-                        "gpu-viewport" => menu_nav.push(Route::GpuViewportRoute {}),
-                        _ => menu_nav.push(Route::TalkRoute {}),
-                    };
+                    let normalized = shell_dest::normalize_shell_target(&target);
+                    match normalized.as_str() {
+                        "directory" | "contacts" | "addressbook" | "address-book" => {
+                            components::relations::stash_directory_handoff();
+                        }
+                        "settings" | "prefs" => {
+                            components::shell_kind::persist_shell_kind(
+                                components::shell_kind::ShellKind::Classic,
+                            );
+                            menu_pending.set(true);
+                            return;
+                        }
+                        _ => {}
+                    }
+                    defer_navigator_push(move |r| { let _ = menu_nav.push(r); }, shell_dest::route_from_shell_target(&target));
                 }));
+
+                let mut kind_signal = shell_kind;
+                let kind_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event| {
+                    let Some(target) = event_payload_string(&event) else {
+                        return;
+                    };
+                    if let Some(kind) = components::shell_kind::ShellKind::from_storage(&target) {
+                        components::shell_kind::persist_shell_kind(kind);
+                        wasm_bindgen_futures::spawn_local(async move {
+                            kind_signal.set(kind);
+                        });
+                    }
+                }));
+                match tauri_listen("shell-kind-set", kind_callback.as_ref().unchecked_ref()).await {
+                    Ok(_unlisten) => {
+                        kind_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("shell-kind listener failed: {err:?}").into(),
+                        );
+                    }
+                }
 
                 match tauri_listen("shell-navigate", menu_callback.as_ref().unchecked_ref()).await {
                     Ok(_unlisten) => {
@@ -1114,10 +1160,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let diagnostics_nav = navigator.clone();
+                let diagnostics_nav = navigator;
                 let diagnostics_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = diagnostics_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = diagnostics_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen(
@@ -1136,9 +1182,9 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let health_nav = navigator.clone();
+                let health_nav = navigator;
                 let med_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = health_nav.push(Route::HealthRoute {});
+                    defer_navigator_push(move |r| { let _ = health_nav.push(r); }, Route::HealthRoute {});
                 }));
 
                 match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref())
@@ -1154,10 +1200,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let sanctuary_nav = navigator.clone();
+                let sanctuary_nav = navigator;
                 let sanctuary_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = sanctuary_nav.push(Route::SanctuaryRoute {});
+                        defer_navigator_push(move |r| { let _ = sanctuary_nav.push(r); }, Route::SanctuaryRoute {});
                     }));
 
                 match tauri_listen(
@@ -1176,10 +1222,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let backup_nav = navigator.clone();
+                let backup_nav = navigator;
                 let backup_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = backup_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = backup_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen("open-backup", backup_callback.as_ref().unchecked_ref()).await {
@@ -1193,9 +1239,9 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let sync_nav = navigator.clone();
+                let sync_nav = navigator;
                 let sync_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = sync_nav.push(Route::ToolsRoute {});
+                    defer_navigator_push(move |r| { let _ = sync_nav.push(r); }, Route::ToolsRoute {});
                 }));
 
                 match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await
@@ -1210,10 +1256,10 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let import_nav = navigator.clone();
+                let import_nav = navigator;
                 let import_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        let _ = import_nav.push(Route::ToolsRoute {});
+                        defer_navigator_push(move |r| { let _ = import_nav.push(r); }, Route::ToolsRoute {});
                     }));
 
                 match tauri_listen(
@@ -1335,6 +1381,14 @@ fn AppLayout() -> Element {
         }
     });
 
+    // Run on dioxus's stack (not the Tauri Closure): paint SettingsRoute.
+    use_effect(move || {
+        if pending_settings() {
+            pending_settings.set(false);
+            let _ = navigator.push(Route::SettingsRoute {});
+        }
+    });
+
     let host_snapshot = host_status();
     let (host_label, host_color) = status_chip(&host_snapshot);
     let backend_label = if host_snapshot.graph_daemon_reachable {
@@ -1342,6 +1396,10 @@ fn AppLayout() -> Element {
             .graph_engine_version
             .clone()
             .unwrap_or_else(|| format!("Graph :{}", host_snapshot.graph_daemon_port))
+    } else if crate::components::talk_human_alone::instrument_is_missing(
+        &host_snapshot.inference_backend,
+    ) {
+        "held / not yet".to_string()
     } else {
         format!("{} · local", host_snapshot.inference_backend)
     };
@@ -1349,6 +1407,15 @@ fn AppLayout() -> Element {
     // Omnibox — real routing (no fake multi-product promises).
     let mut omnibox = use_signal(String::new);
     let omnibox_nav = use_navigator();
+
+    // All hooks above have run. Poet routes full-bleed; Tools→Settings / Ctrl+,
+    // hash force + listeners (always subscribed) leave Poet for SettingsRoute.
+    if matches!(
+        route,
+        Route::PoetRoute {} | Route::PoetCatalogRoute {} | Route::PoetInstrumentRoute {}
+    ) {
+        return rsx! { Outlet::<Route> {} };
+    }
 
     rsx! {
         div {
@@ -1364,15 +1431,28 @@ fn AppLayout() -> Element {
                 // Keep popups from the top bar above the omnibox and route content below.
                 style: "position: relative; z-index: 100; overflow: visible; display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
 
-                Link {
-                    to: Route::LibraryRoute {},
-                    style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
-                    title: "Lived Memory — meaning shelf (flagship habitat surface)",
-                    div {
-                        style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
-                        "⬡"
+                if poet_chrome {
+                    Link {
+                        to: Route::PoetRoute {},
+                        style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
+                        title: "Poet — write Vibe, run Qualia. Classic routes remain.",
+                        div {
+                            style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
+                            "⬡"
+                        }
+                        span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Poet" }
                     }
-                    span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
+                } else {
+                    Link {
+                        to: Route::TalkRoute {},
+                        style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
+                        title: "Talk — home (chat & people). Lived Memory is Memory / Library.",
+                        div {
+                            style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
+                            "⬡"
+                        }
+                        span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
+                    }
                 }
 
                 div {
@@ -1429,6 +1509,15 @@ fn AppLayout() -> Element {
                         sl-icon { "name": "tools", style: "font-size: 0.9rem;" }
                         "Instruments"
                     }
+                    if poet_chrome {
+                        Link {
+                            to: Route::PoetRoute {},
+                            class: "qtab",
+                            title: "Poet harness — Vibe 0.1 interpreter (Classic routes remain)",
+                            sl-icon { "name": "lightning", style: "font-size: 0.9rem;" }
+                            "Poet"
+                        }
+                    }
                     Link {
                         to: Route::SettingsRoute {},
                         class: "qtab",
@@ -1440,6 +1529,7 @@ fn AppLayout() -> Element {
                 div {
                     style: "margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.55rem; flex-wrap: wrap; justify-content: flex-end;",
                     components::experience_mode::ExperienceModeSwitch {}
+                    components::shell_kind::ShellKindSwitch {}
                     components::job_center::JobIndicator {}
                     // Context chip: principal posture · host · instrument backend
                     div {
@@ -1509,6 +1599,10 @@ fn AppLayout() -> Element {
                         }
                         Link { to: Route::WorkRoute {}, class: "nav-item", title: "Practice", sl-icon { "name": "kanban" } "Practice" }
                         Link { to: Route::ToolsRoute {}, class: "nav-item", title: "Instruments", sl-icon { "name": "tools" } "Instruments" }
+                        if poet_chrome {
+                            span { class: "app-sidebar-label", "Mindware" }
+                            Link { to: Route::PoetRoute {}, class: "nav-item", title: "Poet / Vibe harness", sl-icon { "name": "lightning" } "Poet / Vibe" }
+                        }
                         Link {
                             to: Route::SettingsRoute {},
                             class: "nav-item",
@@ -1549,6 +1643,7 @@ fn AppLayout() -> Element {
                                 Link { to: Route::LogsRoute {}, class: "nav-item", "Desktop logs" }
                                 Link { to: Route::JobsRoute {}, class: "nav-item", "Job centre" }
                                 Link { to: Route::AgentQaRoute {}, class: "nav-item", "Agent QA" }
+                                Link { to: Route::PoetRoute {}, class: "nav-item", "Poet / Vibe" }
                                 Link { to: Route::SupervisorRoute {}, class: "nav-item", "Operations" }
                                 Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }
                                 Link { to: Route::ContextStudioRoute {}, class: "nav-item", "Context Studio" }
@@ -1581,6 +1676,8 @@ fn App() -> Element {
 
     let experience_mode = use_signal(components::experience_mode::initial_experience_mode);
     use_context_provider(|| experience_mode);
+    let shell_kind = use_signal(components::shell_kind::initial_shell_kind);
+    use_context_provider(|| shell_kind);
 
     let theme_state = use_signal(|| {
         let catalog = theme_engine::builtin_theme_catalog();
@@ -1756,6 +1853,8 @@ fn App() -> Element {
                 flex: 1 1 auto;
                 min-height: 0;
                 min-width: 0;
+                display: flex;
+                flex-direction: column;
             }}
             .app-sidebar-nav::-webkit-scrollbar {{ width: 8px; }}
             .app-sidebar-nav::-webkit-scrollbar-track {{ background: transparent; }}
@@ -1864,5 +1963,40 @@ fn App() -> Element {
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; max-height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden; display: flex; flex-direction: column; min-height: 0;",
             components::onboarding::OnboardingGate {}
         }
+    }
+}
+
+#[cfg(test)]
+mod route_identity_tests {
+    use super::*;
+
+    #[test]
+    fn omnibox_home_is_talk_library_is_shelf() {
+        assert_eq!(route_from_omnibox("home"), Route::TalkRoute {});
+        assert_eq!(route_from_omnibox("talk"), Route::TalkRoute {});
+        assert_eq!(route_from_omnibox("library"), Route::LibraryRoute {});
+        assert_eq!(route_from_omnibox("memory"), Route::LibraryRoute {});
+        assert_eq!(route_from_omnibox("settings"), Route::SettingsRoute {});
+        assert_ne!(route_from_omnibox("library"), Route::TalkRoute {});
+        assert_eq!(route_from_omnibox("dir"), Route::TalkDirectoryRoute {});
+        assert_eq!(route_from_omnibox("contacts"), Route::TalkDirectoryRoute {});
+        assert_eq!(
+            route_from_omnibox("address book"),
+            Route::TalkDirectoryRoute {}
+        );
+        assert_eq!(route_from_omnibox("mail"), Route::TalkMailRoute {});
+        assert_ne!(route_from_omnibox("mail"), Route::PoetRoute {});
+    }
+
+    #[test]
+    fn canonical_paths_do_not_share_home() {
+        assert_eq!(Route::TalkRoute {}.to_string(), "/");
+        assert_eq!(Route::TalkAliasRoute {}.to_string(), "/talk");
+        assert_eq!(Route::TalkMailRoute {}.to_string(), "/talk/mail");
+        assert_eq!(Route::MailDailyRoute {}.to_string(), "/mail");
+        assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
+        assert_eq!(Route::LibraryRoute {}.to_string(), "/library");
+        assert_eq!(Route::SettingsRoute {}.to_string(), "/settings");
+        assert_ne!(Route::TalkMailRoute {}.to_string(), Route::PoetRoute {}.to_string());
     }
 }

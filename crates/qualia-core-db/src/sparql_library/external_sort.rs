@@ -3,10 +3,9 @@ use crate::q42_volume::StreamingQ42VolumeWriter;
 use crate::NQuin;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::QUINS_PER_BLOCK;
-#[cfg(not(target_arch = "wasm32"))]
 use std::cmp::Ordering;
-#[cfg(not(target_arch = "wasm32"))]
 use std::collections::BinaryHeap;
+#[cfg(target_arch = "wasm32")]
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -17,25 +16,31 @@ use std::path::{Path, PathBuf};
 // 50MB buffer limit: ~1 million Quins (48 bytes each -> 48MB)
 const CHUNK_SIZE_LIMIT: usize = 1_000_000;
 /// Bound simultaneously open sorted runs and their reader buffers.
-const MAX_MERGE_FAN_IN: usize = 32;
+pub(super) const MAX_MERGE_FAN_IN: usize = 32;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod volume_publisher;
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume_publisher::{Q42VolumePublishStats, DEFAULT_Q42_SEGMENT_MAX_BYTES};
+#[cfg(not(target_arch = "wasm32"))]
+mod lexicon_spill;
+#[cfg(not(target_arch = "wasm32"))]
+use lexicon_spill::LexiconSpill;
 
 pub struct ExternalSorter {
     buffer: Vec<NQuin>,
     chunk_files: Vec<PathBuf>,
     temp_dir: PathBuf,
+    note: Option<std::sync::Arc<dyn Fn(&str) + Send + Sync>>,
     total_quins: u64,
-    /// `hash → lexical string` for every term seen, written to the volume's
-    /// front-of-file Q42LEX section so literals/IRIs are recoverable from the `.q42`
-    /// alone (no separate `.lex` sidecar). Cold ingest path — heap is expected here.
+    /// Complete-mode terms. Small catalogs stay in RAM; continent dumps spill
+    /// sorted lex runs under `temp_dir` (see `lexicon_spill`).
+    #[cfg(not(target_arch = "wasm32"))]
+    lex: LexiconSpill,
+    #[cfg(target_arch = "wasm32")]
     lex: HashMap<u64, String>,
-    /// Count of genuine 60-bit handle collisions seen at intern (distinct terms, same
-    /// token). First writer is kept; this makes a collision LOUD instead of a silent
-    /// assumption (lexicon collision backstop, task #22).
+    #[cfg(target_arch = "wasm32")]
+    memory_runs: Vec<Vec<NQuin>>,
     lex_collisions: u64,
 }
 
@@ -46,10 +51,31 @@ impl ExternalSorter {
         Self {
             buffer: Vec::with_capacity(CHUNK_SIZE_LIMIT),
             chunk_files: Vec::new(),
+            note: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            lex: LexiconSpill::new(temp_dir.clone()),
+            #[cfg(target_arch = "wasm32")]
+            lex: HashMap::new(),
+            #[cfg(target_arch = "wasm32")]
+            memory_runs: Vec::new(),
             temp_dir,
             total_quins: 0,
-            lex: HashMap::new(),
             lex_collisions: 0,
+        }
+    }
+
+    pub fn set_note_sink(&mut self, sink: std::sync::Arc<dyn Fn(&str) + Send + Sync>) {
+        self.note = Some(sink.clone());
+        #[cfg(not(target_arch = "wasm32"))]
+        self.lex.set_note_sink(sink);
+    }
+
+    fn note(&self, msg: impl AsRef<str>) {
+        let msg = msg.as_ref();
+        if let Some(sink) = &self.note {
+            sink(msg);
+        } else {
+            println!("{msg}");
         }
     }
 
@@ -68,22 +94,120 @@ impl ExternalSorter {
     /// term hashing to an already-seen token) is COUNTED rather than silently assumed
     /// impossible, so ingest can surface it (lexicon collision backstop, task #22).
     pub fn push_lex(&mut self, hash: u64, term: &str) {
-        match self.lex.get(&hash) {
-            None => {
-                self.lex.insert(hash, term.to_string());
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Err(err) = self.lex.intern(hash, term) {
+                panic!("lexicon spill I/O during intern: {err}");
             }
-            Some(existing) if existing == term => {} // idempotent: same token, same term
-            Some(_) => {
-                self.lex_collisions += 1;
+            self.lex_collisions = self.lex.collision_count();
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            match self.lex.get(&hash) {
+                None => {
+                    self.lex.insert(hash, term.to_string());
+                }
+                Some(existing) if existing == term => {}
+                Some(_) => {
+                    self.lex_collisions += 1;
+                }
             }
         }
     }
 
-    /// Number of distinct-term / same-token collisions detected during ingest. Non-zero
-    /// means a 60-bit handle was reused for different lexical values — rare, but no
-    /// longer silent. (See `lexicon::LexiconInterner` for the value-preserving form.)
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn intern_term(&mut self, hash: u64, term: &str) -> std::io::Result<()> {
+        self.lex.intern(hash, term)?;
+        self.lex_collisions = self.lex.collision_count();
+        Ok(())
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn intern_term(&mut self, hash: u64, term: &str) -> std::io::Result<()> {
+        self.push_lex(hash, term);
+        Ok(())
+    }
+
     pub fn lex_collision_count(&self) -> u64 {
         self.lex_collisions
+    }
+
+    pub fn lex_interned_count(&self) -> u64 {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.lex.interned_count()
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.lex.len() as u64
+        }
+    }
+
+    pub fn quin_run_count(&self) -> usize {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.chunk_files.len()
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.memory_runs.len()
+        }
+    }
+
+    pub fn quin_total(&self) -> u64 {
+        self.total_quins
+    }
+
+    pub fn replace_chunks(&mut self, files: Vec<PathBuf>, total_quins: u64) {
+        self.chunk_files = files;
+        self.total_quins = total_quins;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn adopt_lex_runs(&mut self) -> std::io::Result<()> {
+        self.lex.adopt_existing_runs()
+    }
+
+    /// Rebuild over flushed `chunk_*.tmp` / `lexrun_*.tmp` in `temp_dir`.
+    pub fn adopt_existing(temp_dir: PathBuf) -> std::io::Result<Self> {
+        let mut chunk_files = Vec::new();
+        let mut total_quins = 0u64;
+        if temp_dir.is_dir() {
+            let mut names: Vec<PathBuf> = std::fs::read_dir(&temp_dir)?
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| {
+                    p.file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|n| n.starts_with("chunk_") && n.ends_with(".tmp"))
+                })
+                .collect();
+            names.sort();
+            for path in names {
+                let len = std::fs::metadata(&path)?.len();
+                if len % 48 != 0 {
+                    continue;
+                }
+                total_quins += len / 48;
+                chunk_files.push(path);
+            }
+        }
+        let mut sorter = Self::new(temp_dir);
+        sorter.replace_chunks(chunk_files, total_quins);
+        #[cfg(not(target_arch = "wasm32"))]
+        sorter.adopt_lex_runs()?;
+        Ok(sorter)
+    }
+
+    pub fn lex_run_count(&self) -> usize {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.lex.run_count()
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            0
+        }
     }
 
     fn flush_chunk(&mut self) -> std::io::Result<()> {
@@ -91,22 +215,38 @@ impl ExternalSorter {
             return Ok(());
         }
 
-        // 1. Sort the array by Object Hash in place
-        self.buffer.sort_unstable_by_key(|q| q.object);
+        // 1. Sort by object hash: GPU radix when eligible, CPU radix floor otherwise.
+        let sort_started = std::time::Instant::now();
+        let sort = crate::query::graph_accel::sort_quins_by_object(&mut self.buffer);
+        let sort_ms = sort_started.elapsed().as_millis();
+        self.note(format!(
+            "quin chunk {} sorted n={} path={} {}ms",
+            self.quin_run_count(),
+            sort.n,
+            sort.path,
+            sort_ms
+        ));
 
-        // 2. Flush to disk as a temporary file
-        let chunk_path = self
-            .temp_dir
-            .join(format!("chunk_{}.tmp", self.chunk_files.len()));
-        let mut file = std::io::BufWriter::new(File::create(&chunk_path)?);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            // 2. Flush to disk as a temporary file
+            let chunk_path = self
+                .temp_dir
+                .join(format!("chunk_{}.tmp", self.chunk_files.len()));
+            let mut file = std::io::BufWriter::new(File::create(&chunk_path)?);
 
-        for q in &self.buffer {
-            file.write_all(bytemuck::bytes_of(q))?;
+            for q in &self.buffer {
+                file.write_all(bytemuck::bytes_of(q))?;
+            }
+            file.flush()?;
+
+            self.chunk_files.push(chunk_path);
+            self.buffer.clear();
         }
-        file.flush()?;
-
-        self.chunk_files.push(chunk_path);
-        self.buffer.clear();
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.memory_runs.push(std::mem::take(&mut self.buffer));
+        }
         Ok(())
     }
 
@@ -124,7 +264,16 @@ impl ExternalSorter {
             );
         }
 
-        let mut writer = StreamingQ42VolumeWriter::new(&self.lex)?;
+        let lex_map = match self.lex.memory_map() {
+            Some(map) => map.clone(),
+            None => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "lexicon spilled to disk; republish with --segment-mib so lexicon shards stay bounded",
+                ));
+            }
+        };
+        let mut writer = StreamingQ42VolumeWriter::new(&lex_map)?;
         // Catalog ontologies (Pages ingest), not personal records.
         // Sanctuary bits on a Quin still win inside the writer.
         writer.declare_permissive_commons();
@@ -219,13 +368,108 @@ impl ExternalSorter {
         Ok(block_seq)
     }
 
-    /// Mock for WASM
+    /// In-memory k-way merge of sorted Quin runs. Browser WASM has no spill
+    /// files; fan-in stays bounded by [`MAX_MERGE_FAN_IN`].
     #[cfg(target_arch = "wasm32")]
-    pub fn merge(self, _final_q42: &Path) -> std::io::Result<u64> {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "Not supported on WASM",
-        ))
+    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
+        self.flush_chunk()?;
+        let mut runs = std::mem::take(&mut self.memory_runs);
+        let mut pass = 0usize;
+        while runs.len() > MAX_MERGE_FAN_IN {
+            self.note(format!(
+                "Quin run compact pass {pass}: {} runs (fan-in {MAX_MERGE_FAN_IN}).",
+                runs.len()
+            ));
+            let mut next =
+                Vec::with_capacity((runs.len() + MAX_MERGE_FAN_IN - 1) / MAX_MERGE_FAN_IN);
+            for group in runs.chunks(MAX_MERGE_FAN_IN) {
+                next.push(Self::merge_memory_runs(group));
+            }
+            runs = next;
+            pass += 1;
+        }
+        let merged = Self::merge_memory_runs(&runs);
+        let count = merged.len() as u64;
+        let fallback = self.temp_dir.join("merged.q42");
+        let mut path = final_q42;
+        let mut file = match File::create(path) {
+            Ok(file) => file,
+            Err(_) => {
+                path = fallback.as_path();
+                match File::create(path) {
+                    Ok(file) => file,
+                    Err(err)
+                        if matches!(
+                            err.kind(),
+                            std::io::ErrorKind::Unsupported
+                                | std::io::ErrorKind::NotFound
+                                | std::io::ErrorKind::PermissionDenied
+                        ) =>
+                    {
+                        return Ok(count);
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+        };
+        {
+            let mut writer = std::io::BufWriter::new(&mut file);
+            for quin in &merged {
+                writer.write_all(bytemuck::bytes_of(quin))?;
+            }
+            writer.flush()?;
+        }
+        Ok(count)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn merge_memory_runs(inputs: &[Vec<NQuin>]) -> Vec<NQuin> {
+        #[derive(Eq)]
+        struct Item {
+            quin: NQuin,
+            reader: usize,
+        }
+        impl Ord for Item {
+            fn cmp(&self, other: &Self) -> Ordering {
+                other.quin.object.cmp(&self.quin.object)
+            }
+        }
+        impl PartialOrd for Item {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl PartialEq for Item {
+            fn eq(&self, other: &Self) -> bool {
+                self.quin.object == other.quin.object
+            }
+        }
+        if inputs.is_empty() {
+            return Vec::new();
+        }
+        if inputs.len() == 1 {
+            return inputs[0].clone();
+        }
+        let mut cursors = vec![0usize; inputs.len()];
+        let mut heap = BinaryHeap::new();
+        for (reader, run) in inputs.iter().enumerate() {
+            if let Some(&quin) = run.first() {
+                heap.push(Item { quin, reader });
+                cursors[reader] = 1;
+            }
+        }
+        let total: usize = inputs.iter().map(Vec::len).sum();
+        let mut out = Vec::with_capacity(total);
+        while let Some(item) = heap.pop() {
+            out.push(item.quin);
+            let reader = item.reader;
+            if cursors[reader] < inputs[reader].len() {
+                let quin = inputs[reader][cursors[reader]];
+                cursors[reader] += 1;
+                heap.push(Item { quin, reader });
+            }
+        }
+        out
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -243,15 +487,21 @@ impl ExternalSorter {
         let mut runs = self.chunk_files.clone();
         let mut pass = 0usize;
         while runs.len() > MAX_MERGE_FAN_IN {
+            self.note(format!(
+                "Quin run compact pass {pass}: {} runs (fan-in {MAX_MERGE_FAN_IN}).",
+                runs.len()
+            ));
             let mut next =
                 Vec::with_capacity((runs.len() + MAX_MERGE_FAN_IN - 1) / MAX_MERGE_FAN_IN);
             for (group, inputs) in runs.chunks(MAX_MERGE_FAN_IN).enumerate() {
                 let output = self.temp_dir.join(format!("merge_{pass}_{group}.tmp"));
                 Self::merge_raw_runs(inputs, &output)?;
                 next.push(output);
-            }
-            for input in runs {
-                let _ = std::fs::remove_file(input);
+                // Delete this group immediately. Waiting until the whole pass
+                // finishes doubles disk use (the OSM merge died on that).
+                for input in inputs {
+                    let _ = std::fs::remove_file(input);
+                }
             }
             runs = next;
             pass += 1;

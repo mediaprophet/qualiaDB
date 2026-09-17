@@ -1,5 +1,5 @@
 # QualiaDB — Multi-Agent Collaboration Ecosystem
-_Branch: `0.0.17-dev` | Last updated: 2026-06-17_
+_Branch: `0.0.39` | Last updated: 2026-09-16_
 
 This document is the coordination layer for concurrent or sequential AI-agent sessions
 working on the QualiaDB engine. Read it before writing a single line of code.
@@ -51,12 +51,20 @@ boundedness + determinism. The zero-heap tests cover Tier-1 only.
 
 ### 0-B. Library Structure and Temporary-Artifact Hygiene
 
-New inference capabilities are directory-backed libraries. A `mod.rs` routes modules and
-re-exports the public API; implementation belongs in focused files. New files should remain below
-500 lines and must be split earlier when they own multiple lifecycles or responsibilities. Do not
-add new behaviour to an inference file already above 1,000 lines without a tracked decomposition
-in the same programme. Cold planning, hot execution, backend-specific code, receipts, tests, and
-artifact management remain separate modules.
+New capabilities are directory-backed libraries. A `mod.rs` routes modules and re-exports the
+public API; implementation belongs in focused, single-purpose files. New implementation files
+should remain below 500 lines and must be split earlier when they own multiple lifecycles or
+responsibilities. Files from 500 to 1,199 lines require an ownership review before substantial new
+behaviour is added. Do not add new behaviour to an implementation file at or above 1,200 lines
+without a tracked decomposition in the same programme; 1,400 lines is an escalation threshold,
+not the point at which planning should begin. Cold planning, hot execution, backend-specific code,
+receipts, tests, artifact management, and embedded UI assets remain separate modules or resources.
+
+Line count is a maintainability signal, not a universal content limit. Markdown and other prose,
+generated artifacts, fixtures/test vectors, static registries or tables, and genuinely cohesive
+algorithms may exceed these thresholds when splitting would reduce clarity or auditability. Record
+the exception near the owning module or programme. Exceptions do not permit mixed lifecycles,
+unbounded growth, hidden generated edits, or adding unrelated behaviour to an oversized file.
 
 Temporary files are owned resources, not permanent side effects:
 
@@ -1170,3 +1178,28 @@ cargo test
 3. Each physical adapter/backend benchmark owns its native driver lifetime in a separate bounded process; the parent never successively owns Vulkan and DX12 devices.
 4. GPU correctness tests execute by default when their capability is present and share a serialized
    hardware lane so the default parallel suite does not race native driver/context lifetimes.
+
+### 2026-09-10 — Continue `did:qi` spec completeness (signed git blobs, Vector 3)
+
+**Completed:**
+- Qualia Identifier store writes signed QCDE-1 blobs; `object_id_of` after Create matches Vector 1 git id.
+- Spec caps: unsigned 8192, signed 9216, 8 services, 8 hints.
+- Deactivate clears locators; Vector 3 unsigned digest / signed length / git id asserted.
+- UTXO constitution list (Bitcoin mainnet + testnet3); `txid_display` byte-reversed; `unsupported_chain`.
+- `QiError::token()`; ASCII case-fold of `did:qi:`; reject `did:hcinet:`.
+- CSCP loopback H2/WSS controller strings are `did:qi:` (Vector 1 + a second formatted id).
+
+**Verification:** `cargo test -p qualia-core-db --lib --offline -- --test-threads=1`: `did_qi` 29 passed; `cscp_h2` 4 passed; `cscp_wss` 1 passed; `net::peer::fabric` 46 passed.
+
+**Not done (human):** CSCP-08 public relay URL; CSCP-12 datatracker submit. Honesty flags remain false. Method not registered.
+
+### 2026-09-10 — Continue CSCP mailbox bind + Direct probe + bearer labels
+
+**Completed:**
+- `publish_qi_document` maps Qualia Identifier `CscpMailbox` services into the CSCP private mailbox.
+- Relay-only ingest does not retain Direct locators. Kernel probes DirectV6 when disclosure permits and the descriptor is Direct.
+- Bearer profiles `TlsWssTransitionV1` / `Http2CapsuleTransitionV1` (transition, not Native Independent). H2 CONNECT method re-checked.
+
+**Verification:** `did_qi` 33; fabric 49; `cscp_h2` 4; `cscp_wss` 1.
+
+**Not done (human):** CSCP-08 URL; CSCP-12 datatracker. Parent CSCP-09 Internet still open.

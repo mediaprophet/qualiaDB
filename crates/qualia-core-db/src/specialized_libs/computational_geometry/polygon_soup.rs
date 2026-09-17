@@ -12,7 +12,7 @@
 //!    shared edges (deterministic: seed = face 0, BFS by face index).
 //! 4. [`repair_polygon_soup`] — full pipeline that runs the three steps and then
 //!    fail-closed validates the repaired index buffer through
-//!    [`build_triangle_half_edges`](super::topology::build_triangle_half_edges).
+//!    [`build_triangle_half_edges`].
 //!
 //! # Design notes
 //!
@@ -30,7 +30,7 @@
 //!   then the half-edge builder rejects what repair missed).
 //!
 //! The module is self-contained: it depends only on
-//! [`super::topology`] types and `bytemuck`/`serde` derives already present in
+//! `super::topology` types and `bytemuck`/`serde` derives already present in
 //! the crate.
 
 use bytemuck::{Pod, Zeroable};

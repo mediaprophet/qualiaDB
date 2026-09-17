@@ -1,6 +1,6 @@
 //! Chat over the SocialWebNet mesh — bridge the chat-graph engine to peer tunnels.
 //!
-//! Chat already has a serializable message ([`RelayEnvelope`](crate::chat_relay::RelayEnvelope)), a
+//! Chat already has a serializable message ([`RelayEnvelope`]), a
 //! signer, and a transport-agnostic apply path
 //! ([`apply_incoming_envelope`](crate::chat_relay::apply_incoming_envelope)). Today those ride the
 //! HTTP relay; this module routes them over the mesh instead — peer-to-peer, no relay server.

@@ -44,6 +44,7 @@
 pub mod axis_role;
 pub mod conformance;
 pub mod crc32c;
+pub mod field_section;
 pub mod header;
 pub mod integrity;
 pub mod mesh_section;
@@ -61,9 +62,7 @@ pub mod section;
 // and carry the same gate, so this is symmetric — no portal-path regression
 // (the portal renderer upload path uses `mesh_section`, which has no
 // `specialized_libs` dependency).
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod spatial_index_section;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod topology_section;
 
 pub use axis_role::{
@@ -102,12 +101,22 @@ pub use section::{
     encode_container, parse_section_table, AlignmentTier, SectionDescriptor, SectionInput,
     SectionTableError, SectionType, SECTION_DESCRIPTOR_SIZE,
 };
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub use spatial_index_section::{
     decode_spatial_index_section, encode_spatial_index_section, DecodedSpatialIndex,
     SpatialIndexMiniHeader, SpatialIndexSectionError, SPATIAL_INDEX_MINI_HEADER_SIZE,
 };
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub use topology_section::{
     decode_topology_section, encode_topology_section, TopologyMiniHeader, TopologySectionData,
     TopologySectionError, TOPOLOGY_MINI_HEADER_SIZE,

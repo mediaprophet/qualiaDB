@@ -156,7 +156,7 @@ pub fn list_installed_ontology_ids_for_chat() -> Vec<String> {
 }
 
 pub fn run_chat_inference(session_id: String, prompt: String) -> Result<String, String> {
-    let result = crate::chat_inference::run_chat_inference_with_options(&session_id, &prompt, None);
+    let result = run_chat_inference_dispatch(&session_id, &prompt);
     if result.committed {
         Ok(result.text)
     } else {
@@ -170,8 +170,93 @@ pub fn run_chat_inference_detailed(
     session_id: String,
     prompt: String,
 ) -> Result<serde_json::Value, String> {
-    let result = crate::chat_inference::run_chat_inference_with_options(&session_id, &prompt, None);
+    let result = run_chat_inference_dispatch(&session_id, &prompt);
     serde_json::to_value(result).map_err(|e| e.to_string())
+}
+
+/// Parse any `@mention` in the prompt and dispatch to the appropriate
+/// inference path. If no mention is found, uses the default path. If a
+/// mention resolves to a known roster agent, dispatches through
+/// [`run_chat_inference_for_agent`] with the stripped prompt. If the
+/// mention is unknown, returns an error result.
+fn run_chat_inference_dispatch(
+    session_id: &str,
+    prompt: &str,
+) -> crate::chat_inference::ChatInferenceResult {
+    use crate::chat_agents::{resolve_prompt_dispatch, PromptDispatch};
+
+    let storage = match crate::state::APP_STATE.get() {
+        Some(state) => state
+            .config
+            .lock()
+            .map(|c| c.storage_path.clone())
+            .unwrap_or_default(),
+        None => {
+            return crate::chat_inference::run_chat_inference_with_options(session_id, prompt, None)
+        }
+    };
+
+    match resolve_prompt_dispatch(std::path::Path::new(&storage), prompt) {
+        PromptDispatch::Default => {
+            crate::chat_inference::run_chat_inference_with_options(session_id, prompt, None)
+        }
+        PromptDispatch::Agent {
+            agent,
+            clean_prompt,
+        } => {
+            // T9+: If the agent has a DAG pipeline, execute it through the
+            // agent-turn handler. Otherwise, fall through to single-turn.
+            if !agent.dag_pipeline_json.is_empty() {
+                use crate::agent_turn_handler::{
+                    execute_agent_turn, AgentTurnConfig, AgentTurnOutcome,
+                };
+                let mut config = AgentTurnConfig {
+                    session_id: session_id.to_string(),
+                    storage_path: storage.clone(),
+                    agent_slug: agent.slug.clone(),
+                    dag_pipeline: None, // use agent's stored pipeline
+                };
+                match execute_agent_turn(&mut config) {
+                    AgentTurnOutcome::DagPipeline(result) => {
+                        let mut r = crate::chat_inference::ChatInferenceResult::default();
+                        r.text = result.summary();
+                        r
+                    }
+                    AgentTurnOutcome::SingleTurn => {
+                        // No DAG or non-local agent — fall through.
+                        crate::chat_inference::run_chat_inference_for_agent(
+                            session_id,
+                            &clean_prompt,
+                            Some(&agent.slug),
+                            None,
+                        )
+                    }
+                    AgentTurnOutcome::AgentUnavailable(reason) => {
+                        let mut r = crate::chat_inference::ChatInferenceResult::default();
+                        r.block_reason = Some(reason);
+                        r
+                    }
+                    AgentTurnOutcome::InvalidDag(reason) => {
+                        let mut r = crate::chat_inference::ChatInferenceResult::default();
+                        r.block_reason = Some(reason);
+                        r
+                    }
+                }
+            } else {
+                crate::chat_inference::run_chat_inference_for_agent(
+                    session_id,
+                    &clean_prompt,
+                    Some(&agent.slug),
+                    None,
+                )
+            }
+        }
+        PromptDispatch::UnknownAgent { slug, .. } => {
+            let mut result = crate::chat_inference::ChatInferenceResult::default();
+            result.block_reason = Some(format!("Unknown agent @{slug}"));
+            result
+        }
+    }
 }
 
 pub fn cancel_chat_inference() {

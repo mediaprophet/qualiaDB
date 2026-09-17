@@ -240,7 +240,7 @@ impl StateModulator {
         ((adverse_milli as u64 * self.scale_for(system_id) as u64) / 100).min(1000) as u32
     }
 
-    /// Apply the state modulation to a set of [`SystemBurden`]s: the **adverse** load on each system is
+    /// Apply the state modulation to a set of `SystemBurden()`s: the **adverse** load on each system is
     /// scaled by that system's state engagement, then `net` is recomputed (`adverse − supportive`, floored
     /// at 0). Supportive load is left as entered. This models "the same external load lands harder on a
     /// system this state already engages more" without pathologising the state.

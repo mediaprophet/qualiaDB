@@ -184,7 +184,7 @@ pub fn stencil_cpu(
 }
 
 /// Exact CPU oracle for the real RoPE kernel: rotates each pair by `pos · base^(−2j/head_dim)`
-/// in the configured convention. Mirrors [`ROPE_BODY`] in f32.
+/// in the configured convention. Mirrors `ROPE_BODY` in f32.
 pub fn rope_cpu(input: &[f32], cfg: &RopeConfig) -> Result<Vec<f32>, ForgeError> {
     let n = input.len();
     cfg.validate(n)?;

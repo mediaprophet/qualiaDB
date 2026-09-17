@@ -80,8 +80,8 @@ fn v3_without_postings_still_opens() {
     assert!(volume.block_count() >= 1);
     assert_eq!(volume.header().flags & super::super::FLAG_FIELD_POSTINGS, 0);
 
-    let reprocessed = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../docs/data/dublincore/dct.q42");
+    let reprocessed =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/data/dublincore/dct.q42");
     let dct = Q42Volume::open(&reprocessed).expect("reprocessed dct.q42 must stay readable");
     assert!(dct.block_count() >= 1);
     assert_ne!(dct.header().flags & super::super::FLAG_FIELD_POSTINGS, 0);
@@ -97,12 +97,8 @@ fn v3_with_postings_opens_and_prunes() {
     lex.insert(4, "http://ex/s2".into());
     lex.insert(5, "http://ex/o2".into());
     let mut writer = StreamingQ42VolumeWriter::new(&lex).unwrap();
-    writer
-        .push_block(0, &[quin(1, 2, 3)])
-        .unwrap();
-    writer
-        .push_block(1, &[quin(4, 2, 5)])
-        .unwrap();
+    writer.push_block(0, &[quin(1, 2, 3)]).unwrap();
+    writer.push_block(1, &[quin(4, 2, 5)]).unwrap();
     writer.finish(file.path()).unwrap();
     let volume = Q42Volume::open(file.path()).unwrap();
     let flags = volume.header().flags;
@@ -135,8 +131,13 @@ fn implicit_one_segment_and_manifest_root_are_compatible() {
     let dir = tempfile::TempDir::new().unwrap();
     let child = dir.path().join("child.q42");
     let root = dir.path().join("root.q42");
-    write_unified_volume(child.as_path(), &HashMap::new(), &[(3, 3)], &[vec![quin(1, 2, 3)]])
-        .unwrap();
+    write_unified_volume(
+        child.as_path(),
+        &HashMap::new(),
+        &[(3, 3)],
+        &[vec![quin(1, 2, 3)]],
+    )
+    .unwrap();
     let bare = Q42Volume::open(&child).unwrap();
     assert_eq!(bare.block_count(), 1);
 
@@ -162,8 +163,14 @@ fn lossless_monarch_class_lexicon_gate() {
         let subject = 10_000 + i;
         let predicate = 20_000 + (i % 7);
         let object = 30_000 + i;
-        lex.insert(subject, format!("https://monarchinitiative.org/subject/{i}"));
-        lex.insert(predicate, format!("https://w3id.org/biolink/vocab/pred/{i}"));
+        lex.insert(
+            subject,
+            format!("https://monarchinitiative.org/subject/{i}"),
+        );
+        lex.insert(
+            predicate,
+            format!("https://w3id.org/biolink/vocab/pred/{i}"),
+        );
         lex.insert(object, format!("https://monarchinitiative.org/object/{i}"));
         block.push(quin(subject, predicate, object));
     }
@@ -176,7 +183,10 @@ fn lossless_monarch_class_lexicon_gate() {
     let volume = Q42Volume::open(file.path()).unwrap();
     let lex_offset = volume.header().lex_offset;
     let lex_length = volume.header().lex_length;
-    assert!(lex_length > 32, "lexicon must not be the empty 32-byte stub");
+    assert!(
+        lex_length > 32,
+        "lexicon must not be the empty 32-byte stub"
+    );
     let lex_start = lex_offset as usize;
     let lex_end = lex_start + lex_length as usize;
     let mmap = Q42LexMmap::from_bytes(&bytes[lex_start..lex_end]).unwrap();

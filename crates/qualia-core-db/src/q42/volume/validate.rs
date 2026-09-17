@@ -4,8 +4,7 @@ use std::io;
 
 use super::super::{
     BlockDirectoryEntry, Q42VolumeHeader, FLAG_BLOCKS_LZ4, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES,
-    FLAG_OBJECT_SORTED,
-    HEADER_SIZE, QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
+    FLAG_OBJECT_SORTED, HEADER_SIZE, QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
 };
 use super::index::{validate_bidx, validate_field_range_index};
 use super::postings::validate_postings_section;

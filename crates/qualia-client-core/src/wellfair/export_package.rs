@@ -72,7 +72,7 @@ pub fn build_export_package(
         turtle.push_str(&format!("    wf:sensitivity {:?} ;\n", entry.sensitivity));
         turtle.push_str(&format!(
             "    fhir:Observation.effectiveDateTime \"{}\"^^xsd:unsignedInt ;\n",
-            entry.asserted_time_unix
+            entry.asserted_instant.to_unix_secs() as u32
         ));
         if let Some(ref summary) = entry.summary {
             turtle.push_str(&format!("    schema:description {:?} ;\n", summary));
@@ -87,7 +87,7 @@ pub fn build_export_package(
             kind: entry.kind.clone(),
             evidence_type: entry.evidence_type.clone(),
             sensitivity: entry.sensitivity.clone(),
-            asserted_time_unix: entry.asserted_time_unix,
+            asserted_time_unix: entry.asserted_instant.to_unix_secs() as u32,
             assurance: assurance_label(&entry.evidence_type, &entry.kind).to_string(),
         });
     }
@@ -150,6 +150,7 @@ mod tests {
             id: id.into(),
             kind: kind.into(),
             asserted_time_unix: 1_700_000_000,
+            asserted_instant: wellfare_core::record::InstantBridge::from_coarse(1_700_000_000),
             evidence_type: "DeviceMeasured".into(),
             sensitivity: "Restricted".into(),
             blob_hash: Some("abc".into()),

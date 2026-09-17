@@ -1,0 +1,3484 @@
+//! Stable capability.invoke ids. Grammar does not grow; these strings do.
+//!
+//! Folder under `invoke/` is the future crate seam (D16). Do not invent workspace
+//! crates until the principal asks to split the monorepo.
+
+#[cfg(test)]
+use crate::CAPABILITY_DESCRIPTORS;
+
+pub const DISCOVERY_LIST: &str = "CapabilityDiscovery.list";
+pub const SHACL_VALIDATE: &str = "SHACL.validate";
+pub const SHACL_EXTENSIONS: &str = "SHACL.extensions";
+pub const GRAPH_STATS: &str = "GraphDatabase.stats";
+pub const GRAPH_SPARQL: &str = "GraphDatabase.sparql";
+pub const GRAPH_VOLUME_OPEN: &str = "GraphDatabase.volume_open";
+pub const GRAPH_VOLUME_COMMIT: &str = "GraphDatabase.volume_commit";
+pub const GRAPH_LEXICON_MANIFEST: &str = "GraphDatabase.lexicon_manifest";
+pub const N3_EVALUATE: &str = "N3Logic.evaluate";
+pub const GRAPH_AUTHORING: &str = "GraphAuthoring.process";
+pub const DEONTIC_EVAL: &str = "DeonticLogic.evaluate";
+pub const EPISTEMIC_EVAL: &str = "EpistemicLogic.evaluate";
+pub const PARACONSISTENT_ROUTE: &str = "ParaconsistentLogic.route";
+pub const LTL_GLOBALLY: &str = "TemporalAndDescriptionLogic.ltl.globally";
+pub const LTL_FINALLY: &str = "TemporalAndDescriptionLogic.ltl.finally";
+pub const LTL_EVALUATE: &str = "TemporalAndDescriptionLogic.ltl.evaluate";
+pub const DL_SUBSUMES: &str = "TemporalAndDescriptionLogic.subsumption";
+pub const ASP_ENUMERATE: &str = "SymbolicAndDefeasibleLogic.asp";
+pub const CAUSAL_CAUSED: &str = "CausalFuzzyAndControl.caused";
+pub const FUZZY_TNORM: &str = "CausalFuzzyAndControl.t_norm";
+pub const ADVANCED_LOGIC_WORKBENCH: &str = "AdvancedLogic.compute";
+pub const FORMAL_LOGIC_WORKBENCH: &str = "FormalLogic.compute";
+pub const LEGAL_LOGIC_WORKBENCH: &str = "LegalLogic.compute";
+pub const GOVERNANCE_LOGIC_WORKBENCH: &str = "GovernanceLogic.compute";
+pub const SPATIAL_LOGIC_WORKBENCH: &str = "SpatialLogic.compute";
+pub const INFRA_LOGIC_WORKBENCH: &str = "InfraLogic.compute";
+pub const INFRA_EXT_LOGIC_WORKBENCH: &str = "InfraExtLogic.compute";
+pub const SYMBOLIC_EVAL: &str = "SymbolicAlgebra.eval";
+pub const LINALG_MATMUL: &str = "LinearAlgebra.matmul";
+pub const CALC_SIMPSON: &str = "NumericalCalculus.simpson";
+pub const CALCULUS_WORKBENCH: &str = "CalculusWorkbench.compute";
+pub const OPT_HILL: &str = "Optimization.hill_climb";
+pub const GA_DOT: &str = "GeometricAlgebra.dot";
+pub const GEOM_HULL2: &str = "ComputationalGeometry.convex_hull_2";
+pub const GEOM_DISTANCE_2D: &str = "ComputationalGeometry.distance_2d";
+pub const GEOM_DISTANCE_3D: &str = "ComputationalGeometry.distance_3d";
+pub const GEOM_POINT_SEGMENT_DISTANCE_2D: &str = "ComputationalGeometry.point_segment_distance_2d";
+pub const GEOM_POINT_SEGMENT_DISTANCE_3D: &str = "ComputationalGeometry.point_segment_distance_3d";
+pub const GEOM_POINT_TRIANGLE_DISTANCE_3D: &str =
+    "ComputationalGeometry.point_triangle_distance_3d";
+pub const GEOM_TRIANGULATE_POLYGON: &str = "ComputationalGeometry.triangulate_polygon";
+pub const GEOM_SURFACE_AREA: &str = "ComputationalGeometry.surface_area";
+pub const GEOM_SIGNED_VOLUME: &str = "ComputationalGeometry.signed_volume";
+pub const GEOM_MORTON_ENCODE_2D: &str = "ComputationalGeometry.morton_encode_2d";
+pub const GEOM_MORTON_DECODE_2D: &str = "ComputationalGeometry.morton_decode_2d";
+pub const GEOM_MORTON_ENCODE_3D: &str = "ComputationalGeometry.morton_encode_3d";
+pub const GEOM_HILBERT_ENCODE_2D: &str = "ComputationalGeometry.hilbert_encode_2d";
+pub const GEOM_ORIENTATION_2: &str = "ComputationalGeometry.orientation_2";
+pub const GEOM_CIRCUMCENTER: &str = "ComputationalGeometry.circumcenter";
+pub const GEOM_LINE_SEGMENT_INTERSECTION_2: &str =
+    "ComputationalGeometry.line_segment_intersection_2";
+pub const GEOM_BEZIER_EVAL: &str = "ComputationalGeometry.bezier_eval";
+pub const GEOM_NEAREST_SITE: &str = "ComputationalGeometry.nearest_site_brute_force";
+pub const GEOM_ORIENT_3D: &str = "ComputationalGeometry.orient_3d";
+pub const VISION_AHASH: &str = "ComputerVision.ahash";
+pub const VISION_GAUSSIAN_BLUR: &str = "ComputerVision.gaussian_blur";
+pub const VISION_SOBEL_MAGNITUDE: &str = "ComputerVision.sobel_magnitude";
+pub const VISION_CANNY_EDGES: &str = "ComputerVision.canny_edges";
+pub const VISION_HISTOGRAM: &str = "ComputerVision.histogram";
+pub const VISION_EQUALIZE_HIST: &str = "ComputerVision.equalize_hist";
+pub const VISION_RGB_TO_GRAY: &str = "ComputerVision.rgb_to_gray";
+pub const VISION_DHASH: &str = "ComputerVision.dhash";
+pub const VISION_HAMMING_DISTANCE: &str = "ComputerVision.hamming_distance";
+pub const VISION_COSINE_SIMILARITY: &str = "ComputerVision.cosine_similarity";
+pub const NT_GCD: &str = "NumberTheory.gcd";
+pub const NT_LCM: &str = "NumberTheory.lcm";
+pub const NT_PRIME: &str = "NumberTheory.is_prime";
+pub const SPEC_BESSEL: &str = "SpecialFunctionsAndTransforms.bessel_j";
+pub const STAT_MEAN: &str = "Statistics.mean";
+pub const STAT_PEARSON: &str = "Statistics.pearson";
+pub const STAT_MEDIAN: &str = "Statistics.median";
+pub const STAT_VARIANCE: &str = "Statistics.variance";
+pub const STAT_STD_DEV: &str = "Statistics.std_dev";
+pub const STAT_SKEWNESS: &str = "Statistics.skewness";
+pub const STAT_KURTOSIS: &str = "Statistics.kurtosis";
+pub const STAT_QUANTILE: &str = "Statistics.quantile";
+pub const STAT_COVARIANCE: &str = "Statistics.covariance";
+pub const STAT_MIN: &str = "Statistics.min";
+pub const STAT_MAX: &str = "Statistics.max";
+pub const STAT_SUM: &str = "Statistics.sum";
+pub const STAT_SPEARMAN: &str = "Statistics.spearman";
+pub const STAT_KENDALL: &str = "Statistics.kendall";
+pub const STAT_ONE_SAMPLE_T: &str = "Statistics.one_sample_t";
+pub const STAT_TWO_SAMPLE_T: &str = "Statistics.two_sample_t";
+pub const STAT_PAIRED_T: &str = "Statistics.paired_t";
+pub const STAT_CHI_SQUARE_GOF: &str = "Statistics.chi_square_gof";
+pub const STAT_ONE_WAY_ANOVA: &str = "Statistics.one_way_anova";
+pub const STAT_AUTOCORRELATION: &str = "Statistics.autocorrelation";
+pub const STAT_MOVING_AVERAGE: &str = "Statistics.moving_average";
+pub const STAT_EXPONENTIAL_SMOOTHING: &str = "Statistics.exponential_smoothing";
+pub const STAT_TRIMMED_MEAN: &str = "Statistics.trimmed_mean";
+pub const STAT_IQR: &str = "Statistics.iqr";
+pub const STAT_MAD: &str = "Statistics.median_abs_deviation";
+pub const STAT_ENTROPY: &str = "Statistics.entropy";
+pub const STAT_KL_DIVERGENCE: &str = "Statistics.kl_divergence";
+pub const STAT_Z_SCORE_OUTLIERS: &str = "Statistics.z_score_outliers";
+// Distributions
+pub const STAT_NORMAL_PDF: &str = "Statistics.normal_pdf";
+pub const STAT_NORMAL_CDF: &str = "Statistics.normal_cdf";
+pub const STAT_NORMAL_QUANTILE: &str = "Statistics.normal_quantile";
+pub const STAT_STANDARD_NORMAL_CDF: &str = "Statistics.standard_normal_cdf";
+pub const STAT_TWO_SIDED_P: &str = "Statistics.two_sided_p";
+pub const STAT_STUDENTS_T_PDF: &str = "Statistics.students_t_pdf";
+pub const STAT_STUDENTS_T_CDF: &str = "Statistics.students_t_cdf";
+pub const STAT_STUDENTS_T_TWO_SIDED_P: &str = "Statistics.students_t_two_sided_p";
+pub const STAT_CHI_SQUARED_PDF: &str = "Statistics.chi_squared_pdf";
+pub const STAT_CHI_SQUARED_CDF: &str = "Statistics.chi_squared_cdf";
+pub const STAT_CHI_SQUARED_UPPER_P: &str = "Statistics.chi_squared_upper_p";
+pub const STAT_FISHER_F_PDF: &str = "Statistics.fisher_f_pdf";
+pub const STAT_FISHER_F_CDF: &str = "Statistics.fisher_f_cdf";
+pub const STAT_FISHER_F_UPPER_P: &str = "Statistics.fisher_f_upper_p";
+pub const STAT_BINOMIAL_PMF: &str = "Statistics.binomial_pmf";
+pub const STAT_BINOMIAL_CDF: &str = "Statistics.binomial_cdf";
+pub const STAT_POISSON_PMF: &str = "Statistics.poisson_pmf";
+pub const STAT_POISSON_CDF: &str = "Statistics.poisson_cdf";
+pub const STAT_EXPONENTIAL_PDF: &str = "Statistics.exponential_pdf";
+pub const STAT_EXPONENTIAL_CDF: &str = "Statistics.exponential_cdf";
+pub const STAT_GAMMA_PDF: &str = "Statistics.gamma_pdf";
+pub const STAT_BETA_PDF: &str = "Statistics.beta_pdf";
+pub const STAT_WEIBULL_PDF: &str = "Statistics.weibull_pdf";
+pub const STAT_LOGNORMAL_PDF: &str = "Statistics.lognormal_pdf";
+pub const STAT_UNIFORM_PDF: &str = "Statistics.uniform_pdf";
+pub const STAT_LAPLACE_PDF: &str = "Statistics.laplace_pdf";
+pub const STAT_LN_GAMMA: &str = "Statistics.ln_gamma";
+pub const STAT_GAMMA_FN: &str = "Statistics.gamma_fn";
+pub const STAT_ERF: &str = "Statistics.erf";
+pub const STAT_ERFC: &str = "Statistics.erfc";
+pub const STAT_EMPIRICAL_CDF: &str = "Statistics.empirical_cdf";
+// Extra stats
+pub const STAT_MODE: &str = "Statistics.mode";
+pub const STAT_WINSORIZED_MEAN: &str = "Statistics.winsorized_mean";
+pub const STAT_CROSS_ENTROPY: &str = "Statistics.cross_entropy";
+pub const STAT_MUTUAL_INFORMATION: &str = "Statistics.mutual_information";
+pub const STAT_HISTOGRAM: &str = "Statistics.histogram";
+pub const STAT_CORRELATION_P_VALUE: &str = "Statistics.correlation_p_value";
+pub const STAT_CHI_SQUARE_INDEPENDENCE: &str = "Statistics.chi_square_independence";
+pub const STAT_MODIFIED_Z_SCORE_OUTLIERS: &str = "Statistics.modified_z_score_outliers";
+pub const STAT_IQR_OUTLIERS: &str = "Statistics.iqr_outliers";
+pub const STAT_GRUBBS_TEST: &str = "Statistics.grubbs_test";
+pub const STAT_MANN_WHITNEY_U: &str = "Statistics.mann_whitney_u";
+pub const STAT_KS_1SAMPLE: &str = "Statistics.ks_1sample";
+pub const STAT_FRIEDMAN: &str = "Statistics.friedman";
+pub const STAT_MCNEMAR: &str = "Statistics.mcnemar";
+pub const STAT_BOOTSTRAP_MEANS: &str = "Statistics.bootstrap_means";
+pub const STAT_LJUNG_BOX: &str = "Statistics.ljung_box";
+pub const STAT_ADF_PROXY: &str = "Statistics.adf_proxy";
+pub const STAT_ARGMAX: &str = "Statistics.argmax";
+pub const STAT_STANDARD_PDF: &str = "Statistics.standard_pdf";
+pub const STAT_STANDARD_QUANTILE: &str = "Statistics.standard_quantile";
+pub const STAT_LOGNORMAL_CDF: &str = "Statistics.lognormal_cdf";
+pub const STAT_UNIFORM_CDF: &str = "Statistics.uniform_cdf";
+pub const STAT_LAPLACE_CDF: &str = "Statistics.laplace_cdf";
+pub const STAT_STUDENTS_T_QUANTILE: &str = "Statistics.students_t_quantile";
+pub const STAT_STUDENTS_T_UPPER_P: &str = "Statistics.students_t_upper_p";
+pub const STAT_CHI_SQUARED_QUANTILE: &str = "Statistics.chi_squared_quantile";
+pub const STAT_FISHER_F_QUANTILE: &str = "Statistics.fisher_f_quantile";
+pub const STAT_GAMMP: &str = "Statistics.gammp";
+pub const STAT_GAMMQ: &str = "Statistics.gammq";
+pub const STAT_BETAI: &str = "Statistics.betai";
+pub const STAT_ENTROPY_FROM_COUNTS: &str = "Statistics.entropy_from_counts";
+pub const STAT_TUKEY_FENCES: &str = "Statistics.tukey_fences";
+pub const STAT_MAHALANOBIS_SQ: &str = "Statistics.mahalanobis_sq";
+pub const STAT_MVN_LOG_PDF: &str = "Statistics.mvn_log_pdf";
+pub const STAT_MVN_PDF: &str = "Statistics.mvn_pdf";
+pub const STAT_MVN_SAMPLE: &str = "Statistics.mvn_sample";
+pub const STAT_MVN_MLE: &str = "Statistics.mvn_mle";
+pub const ML_OLS: &str = "MachineLearning.ols";
+pub const ML_MSE: &str = "MachineLearning.mse";
+pub const ML_RMSE: &str = "MachineLearning.rmse";
+pub const ML_MAE: &str = "MachineLearning.mae";
+pub const ML_R2: &str = "MachineLearning.r2_score";
+pub const ML_ACCURACY: &str = "MachineLearning.accuracy";
+pub const ML_ROC_AUC: &str = "MachineLearning.roc_auc";
+pub const ML_KMEANS: &str = "MachineLearning.kmeans";
+pub const ML_TRAIN_TEST_SPLIT: &str = "MachineLearning.train_test_split";
+pub const ML_LOG_LOSS: &str = "MachineLearning.log_loss";
+pub const ML_CONFUSION_BINARY: &str = "MachineLearning.confusion_binary";
+pub const ML_K_FOLD: &str = "MachineLearning.k_fold";
+pub const ML_BOOTSTRAP_INDICES: &str = "MachineLearning.bootstrap_indices";
+pub const ML_BONFERRONI: &str = "MachineLearning.bonferroni";
+pub const ML_HOLM: &str = "MachineLearning.holm";
+pub const ML_BH: &str = "MachineLearning.benjamini_hochberg";
+pub const ML_PCA: &str = "MachineLearning.pca";
+pub const ML_AB_TEST: &str = "MachineLearning.ab_test";
+pub const ML_POWER_TWO_SAMPLE: &str = "MachineLearning.power_two_sample";
+pub const ML_REQUIRED_SAMPLE_SIZE: &str = "MachineLearning.required_sample_size";
+pub const ML_TRANSE_SCORE: &str = "MachineLearning.transe_score";
+pub const ML_DISTMULT_SCORE: &str = "MachineLearning.distmult_score";
+pub const ML_COMPLEX_SCORE: &str = "MachineLearning.complex_score";
+pub const ML_ROTATE_SCORE: &str = "MachineLearning.rotate_score";
+pub const ML_KG_MEAN_RANK: &str = "MachineLearning.kg_mean_rank";
+pub const ML_KG_MRR: &str = "MachineLearning.kg_mean_reciprocal_rank";
+pub const ML_KG_HITS_AT_K: &str = "MachineLearning.kg_hits_at_k";
+pub const ML_POLYNOMIAL_REGRESSION: &str = "MachineLearning.polynomial_regression";
+pub const ML_BOOTSTRAP_ESTIMATE: &str = "MachineLearning.bootstrap_estimate";
+pub const ML_BOOTSTRAP_CI: &str = "MachineLearning.bootstrap_ci";
+pub const ML_PERMUTATION_TEST: &str = "MachineLearning.permutation_test";
+pub const ML_REQUIRED_SAMPLE_SIZE_TWO_PROPORTION: &str =
+    "MachineLearning.required_sample_size_two_proportion";
+pub const ML_LOOCV: &str = "MachineLearning.loocv";
+pub const ML_N_REJECTED: &str = "MachineLearning.n_rejected";
+pub const ML_AL_ROW_SCORE: &str = "MachineLearning.al_row_score";
+pub const ML_AL_SCORE: &str = "MachineLearning.al_score";
+pub const ML_AL_RANK_INFORMATIVE: &str = "MachineLearning.al_rank_informative";
+pub const ML_AL_MOST_INFORMATIVE: &str = "MachineLearning.al_most_informative";
+pub const ML_AL_COSINE_SIMILARITY: &str = "MachineLearning.al_cosine_similarity";
+pub const ML_AL_REPRESENTATIVENESS: &str = "MachineLearning.al_representativeness";
+pub const ML_AL_INFORMATION_DENSITY: &str = "MachineLearning.al_information_density";
+pub const ML_AL_RANK_BY_DENSITY: &str = "MachineLearning.al_rank_by_density";
+pub const ML_AL_VOTE_ENTROPY: &str = "MachineLearning.al_vote_entropy";
+pub const ML_AL_CONSENSUS: &str = "MachineLearning.al_consensus";
+pub const ML_AL_CONSENSUS_ENTROPY: &str = "MachineLearning.al_consensus_entropy";
+pub const ML_AL_AVERAGE_KL_DISAGREEMENT: &str = "MachineLearning.al_average_kl_disagreement";
+pub const ML_AL_RANK_BY_DISAGREEMENT: &str = "MachineLearning.al_rank_by_disagreement";
+pub const ML_RIDGE_FIT: &str = "MachineLearning.ridge_fit";
+pub const ML_LASSO_FIT: &str = "MachineLearning.lasso_fit";
+pub const ML_PLS_FIT: &str = "MachineLearning.pls_fit";
+pub const ML_KMEANS_FIT: &str = "MachineLearning.kmeans_fit";
+pub const ML_GMM_FIT: &str = "MachineLearning.gmm_fit";
+pub const ML_LOGISTIC_FIT: &str = "MachineLearning.logistic_fit";
+pub const ML_POISSON_FIT: &str = "MachineLearning.poisson_fit";
+pub const ML_COX_FIT: &str = "MachineLearning.cox_fit";
+pub const ML_SVM_FIT: &str = "MachineLearning.svm_fit";
+pub const ML_DECISION_TREE_FIT_REGRESSOR: &str = "MachineLearning.decision_tree_fit_regressor";
+pub const ML_DECISION_TREE_FIT_CLASSIFIER: &str = "MachineLearning.decision_tree_fit_classifier";
+pub const ML_HMM_BAUM_WELCH: &str = "MachineLearning.hmm_baum_welch";
+pub const ML_VARIATIONAL_GAUSSIAN_FIT: &str = "MachineLearning.variational_gaussian_fit";
+pub const ML_MCMC_METROPOLIS: &str = "MachineLearning.mcmc_metropolis";
+pub const ML_GP_FIT: &str = "MachineLearning.gp_fit";
+pub const ML_NAIVE_BAYES_FIT: &str = "MachineLearning.naive_bayes_fit";
+pub const ML_KNN_FIT: &str = "MachineLearning.knn_fit";
+pub const ML_LDA_FIT: &str = "MachineLearning.lda_fit";
+pub const ML_QDA_FIT: &str = "MachineLearning.qda_fit";
+pub const ML_MULTINOMIAL_LOGISTIC_FIT: &str = "MachineLearning.multinomial_logistic_fit";
+pub const ML_SVM_MULTICLASS_FIT: &str = "MachineLearning.svm_multiclass_fit";
+pub const ML_HIERARCHICAL_FIT: &str = "MachineLearning.hierarchical_fit";
+pub const ML_HIERARCHICAL_LABELS: &str = "MachineLearning.hierarchical_labels";
+pub const ML_KAPLAN_MEIER_FIT: &str = "MachineLearning.kaplan_meier_fit";
+pub const ML_PCR_FIT: &str = "MachineLearning.pcr_fit";
+pub const ML_BAYESIAN_LINEAR_FIT: &str = "MachineLearning.bayesian_linear_fit";
+pub const ML_SOM_TRAIN: &str = "MachineLearning.som_train";
+pub const ML_KALMAN_NEW: &str = "MachineLearning.kalman_new";
+pub const ML_RANDOM_FOREST_FIT_REGRESSOR: &str = "MachineLearning.random_forest_fit_regressor";
+pub const ML_RANDOM_FOREST_FIT_CLASSIFIER: &str = "MachineLearning.random_forest_fit_classifier";
+pub const ML_GRADIENT_BOOSTING_FIT_REGRESSOR: &str =
+    "MachineLearning.gradient_boosting_fit_regressor";
+pub const ML_FACTOR_GRAPH_MARGINALS: &str = "MachineLearning.factor_graph_marginals";
+pub const ML_STANDARD_SCALER_FIT_TRANSFORM: &str = "MachineLearning.standard_scaler_fit_transform";
+pub const ML_BART_FIT: &str = "MachineLearning.bart_fit";
+pub const BIOSIGNAL_DP_FILTER: &str = "biosignal.dp_filter";
+
+// Number theory
+pub const NT_NEXT_PRIME: &str = "NumberTheory.next_prime";
+pub const NT_PRIME_FACTORS: &str = "NumberTheory.prime_factors";
+pub const NT_DIVISORS: &str = "NumberTheory.divisors";
+pub const NT_EULER_TOTIENT: &str = "NumberTheory.euler_totient";
+pub const NT_MOBIUS: &str = "NumberTheory.mobius";
+pub const NT_DIVISOR_COUNT: &str = "NumberTheory.divisor_count";
+pub const NT_DIVISOR_SUM: &str = "NumberTheory.divisor_sum";
+pub const NT_MOD_POW: &str = "NumberTheory.mod_pow";
+pub const NT_MOD_INVERSE: &str = "NumberTheory.mod_inverse";
+pub const NT_FACTORIAL: &str = "NumberTheory.factorial";
+pub const NT_BINOMIAL: &str = "NumberTheory.binomial";
+pub const NT_PARTITIONS: &str = "NumberTheory.partitions";
+pub const NT_CATALAN: &str = "NumberTheory.catalan";
+pub const NT_STIRLING_SECOND: &str = "NumberTheory.stirling_second";
+pub const NT_STIRLING_FIRST: &str = "NumberTheory.stirling_first";
+
+// Special functions
+pub const SF_AIRY_AI: &str = "SpecialFunctions.airy_ai";
+pub const SF_AIRY_BI: &str = "SpecialFunctions.airy_bi";
+pub const SF_ZETA: &str = "SpecialFunctions.zeta";
+pub const SF_LEGENDRE: &str = "SpecialFunctions.legendre";
+pub const SF_CHEBYSHEV_T: &str = "SpecialFunctions.chebyshev_t";
+pub const SF_CHEBYSHEV_U: &str = "SpecialFunctions.chebyshev_u";
+pub const SF_HERMITE: &str = "SpecialFunctions.hermite";
+pub const SF_LAGUERRE: &str = "SpecialFunctions.laguerre";
+pub const SF_BESSEL_J: &str = "SpecialFunctions.bessel_j";
+pub const SF_BESSEL_I: &str = "SpecialFunctions.bessel_i";
+pub const SF_BESSEL_Y: &str = "SpecialFunctions.bessel_y";
+pub const SF_BESSEL_K: &str = "SpecialFunctions.bessel_k";
+
+// Interpolation
+pub const INTERP_LINEAR: &str = "Interpolation.linear_interp";
+pub const INTERP_LAGRANGE: &str = "Interpolation.lagrange_eval";
+pub const INTERP_NEWTON_COEF: &str = "Interpolation.newton_coefficients";
+pub const INTERP_NEWTON_EVAL: &str = "Interpolation.newton_eval";
+pub const INTERP_POLY_FIT: &str = "Interpolation.poly_fit";
+pub const INTERP_POLY_EVAL: &str = "Interpolation.poly_eval";
+
+// Fuzzy query membership
+pub const FQ_TRIANGULAR: &str = "FuzzyQuery.triangular";
+pub const FQ_TRAPEZOIDAL: &str = "FuzzyQuery.trapezoidal";
+pub const FQ_APPROXIMATELY: &str = "FuzzyQuery.approximately";
+pub const FQ_RAMP_UP: &str = "FuzzyQuery.ramp_up";
+pub const FQ_RAMP_DOWN: &str = "FuzzyQuery.ramp_down";
+pub const FQ_MUCH_GREATER_THAN: &str = "FuzzyQuery.much_greater_than";
+pub const FQ_MUCH_LESS_THAN: &str = "FuzzyQuery.much_less_than";
+pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
+pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
+pub const PHYS_WORKBENCH: &str = "PhysicsWorkbench.compute";
+pub const BIO_ALIGN: &str = "Bioinformatics.align";
+pub const BIO_WORKBENCH: &str = "Bioinformatics.compute";
+pub const CHEM_SMILES: &str = "OrganicChemistry.validate_smiles";
+pub const CHEM_WORKBENCH: &str = "OrganicChemistry.compute";
+pub const CLIN_FRAMINGHAM: &str = "ClinicalRisk.framingham";
+pub const CLIN_CHA2DS2: &str = "ClinicalRisk.cha2ds2_vasc";
+pub const CLIN_SCORE2: &str = "ClinicalRisk.score2";
+pub const CLIN_DRUG_INTERACTION: &str = "ClinicalRisk.drug_interaction";
+pub const CLIN_CONTRAINDICATION: &str = "ClinicalRisk.contraindication";
+pub const CLIN_FHIR_OBSERVATION: &str = "ClinicalRisk.fhir_observation";
+pub const CLIN_COMORBIDITY: &str = "ClinicalRisk.comorbidity";
+pub const MEDICAL_HU_WINDOW: &str = "MedicalImaging.hu_window";
+pub const FIN_BS: &str = "FinancialModeling.black_scholes";
+pub const FIN_GBM_VAR: &str = "FinancialModeling.gbm_var";
+pub const ENG_KIN: &str = "EngineeringAnalysis.kinematics";
+pub const ENG_CAUCHY_STRESS: &str = "EngineeringAnalysis.cauchy_stress";
+pub const ENG_DRAG_FORCE: &str = "EngineeringAnalysis.drag_force";
+pub const ENG_REYNOLDS: &str = "EngineeringAnalysis.reynolds_number";
+pub const ENG_FATIGUE_CYCLES: &str = "EngineeringAnalysis.fatigue_cycles";
+pub const ENG_MINER_DAMAGE: &str = "EngineeringAnalysis.miner_damage";
+pub const ENG_ANALYZE_CONDUCTION: &str = "EngineeringAnalysis.analyze_conduction";
+pub const ENG_FEM_STATIC: &str = "EngineeringAnalysis.fem_static";
+pub const CHEM_ELEMENT_SYMBOL: &str = "Chemistry.element_symbol";
+pub const CHEM_ATOMIC_NUMBER: &str = "Chemistry.atomic_number";
+pub const CHEM_ATOMIC_WEIGHT: &str = "Chemistry.standard_atomic_weight";
+pub const CHEM_LDA_EXCHANGE: &str = "Chemistry.lda_exchange";
+pub const CHEM_LDA_CORRELATION_VWN: &str = "Chemistry.lda_correlation_vwn";
+pub const CHEM_PARSE_BSE_JSON: &str = "Chemistry.parse_bse_json";
+pub const CHEM_STO3G: &str = "Chemistry.sto3g_h2";
+pub const MED_TANIMOTO: &str = "Medical.tanimoto";
+pub const MED_STRUCTURAL_FINGERPRINT: &str = "Medical.structural_fingerprint";
+pub const MED_ANALYZE_INTENSITY_GRID: &str = "Medical.analyze_intensity_grid";
+pub const MED_ANALYZE_DIFFERENTIAL: &str = "MedicalComputing.analyze_differential";
+pub const MED_SCREEN_COMPOUNDS: &str = "MedicalComputing.screen_compounds";
+pub const ID_DID_Q42: &str = "ContractsIdentityAndConsensus.parse_did_q42";
+pub const CRYPTO_SHA256: &str = "QuantumAndCryptographic.sha256";
+pub const NLP_ANALYZE: &str = "nlp.analyze";
+pub const HASH_IRI: &str = "hash.iri";
+pub const MANIFOLD_DISTANCE: &str = "Manifold.distance";
+pub const MANIFOLD_AXES: &str = "Manifold.axes";
+pub const MANIFOLD_PROJECT: &str = "Manifold.project";
+pub const DOC_INGEST: &str = "Document.ingest";
+pub const SHEET_STATS: &str = "Sheet.stats";
+pub const SHEET_SUM: &str = "Sheet.sum_range";
+// ── ChatGraph (caller-supplied payloads; Lane D / VIBE-CHAT) ───────────────
+pub const CHAT_GRAPH_VALIDATE_FRAGMENT: &str = "ChatGraph.validate_fragment";
+pub const CHAT_GRAPH_LINK_REPLY: &str = "ChatGraph.link_reply";
+pub const CHAT_GRAPH_SESSION_SUMMARY: &str = "ChatGraph.session_summary";
+
+pub const SOCIAL_LWW: &str = "Social.lww";
+pub const NET_PEER: &str = "Net.peer_hash";
+pub const NET_SONIC: &str = "Net.sonic_pack";
+// N11: Pulse payload types, channels, transports
+pub const PULSE_PUBLISH: &str = "Pulse.publish";
+pub const PULSE_PUBLISH_GRAPH_MUTATION: &str = "Pulse.publish_graph_mutation";
+pub const PULSE_PUBLISH_NOTIFICATION: &str = "Pulse.publish_notification";
+pub const PULSE_PUBLISH_TELEMETRY: &str = "Pulse.publish_telemetry";
+pub const PULSE_PUBLISH_AGENT_MESSAGE: &str = "Pulse.publish_agent_message";
+pub const PULSE_PUBLISH_PRESENCE: &str = "Pulse.publish_presence";
+pub const PULSE_PUBLISH_SYNC: &str = "Pulse.publish_sync";
+pub const PULSE_OPEN_CHANNEL: &str = "Pulse.open_channel";
+pub const PULSE_CLOSE_CHANNEL: &str = "Pulse.close_channel";
+pub const PULSE_SET_TRANSPORT: &str = "Pulse.set_transport";
+pub const FIN_PORTFOLIO: &str = "FinancialModeling.portfolio_risk";
+pub const COVERAGE_MATRIX: &str = "CapabilityDiscovery.coverage";
+pub const CATALOG_TTL: &str = "CapabilityDiscovery.catalog";
+pub const RENDER_SCENE: &str = "Render.scene";
+pub const RENDER_CSS_ANIMATION: &str = "Render.css_animation";
+pub const RENDER_CSS_COLOR: &str = "Render.css_color";
+pub const RENDER_CSS_TRANSFORM: &str = "Render.css_transform";
+pub const RENDER_ANIMATION_EVAL_CURVE: &str = "Render.animation_eval_curve";
+pub const RENDER_ANIMATION_SPRING_STEP: &str = "Render.animation_spring_step";
+pub const RENDER_ANIMATION_SCLERP: &str = "Render.animation_sclerp";
+pub const RENDER_ANIMATION_EVAL_PRESET: &str = "Render.animation_eval_preset";
+pub const RENDER_ANIMATION_SQUAD_STEP: &str = "Render.animation_squad_step";
+pub const RENDER_ANIMATION_LIST_PRESETS: &str = "Render.animation_list_presets";
+pub const RENDER_ANIMATION_COMPUTE_PASS: &str = "Render.animation_compute_pass";
+
+// ── Animation first-class aliases (T47) ───────────────────────────────────
+pub const ANIMATION_EVALUATE_PRESET: &str = "Animation.evaluate_preset";
+pub const ANIMATION_SPRING_STEP: &str = "Animation.spring_step";
+pub const ANIMATION_SCLERP_STEP: &str = "Animation.sclerp_step";
+pub const ANIMATION_SQUAD_STEP: &str = "Animation.squad_step";
+pub const ANIMATION_BEZIER_EVAL: &str = "Animation.bezier_eval";
+pub const ANIMATION_EASING: &str = "Animation.easing";
+pub const ANIMATION_LIST_PRESETS: &str = "Animation.list_presets";
+pub const RENDER_SVG_PATH: &str = "Render.svg_path";
+pub const RENDER_SVG_CIRCLE: &str = "Render.svg_circle";
+pub const RENDER_SVG_RECT: &str = "Render.svg_rect";
+pub const RENDER_SVG_LINE: &str = "Render.svg_line";
+pub const RENDER_SVG_BEZIER: &str = "Render.svg_bezier";
+pub const RENDER_SVG_FIELD: &str = "Render.svg_field";
+
+// ── WebGPU invoke surface (wraps render::gpu::PortalGpu) ──────────────────
+pub const GPU_ADAPTER_INFO: &str = "Render.gpu_adapter_info";
+pub const GPU_INIT: &str = "Render.gpu_init";
+pub const GPU_INIT_SURFACE: &str = "Render.gpu_init_surface";
+pub const GPU_RENDER_FRAME: &str = "Render.gpu_render_frame";
+pub const GPU_READ_PIXELS: &str = "Render.gpu_read_pixels";
+pub const GPU_UPLOAD_MESH: &str = "Render.gpu_upload_mesh";
+pub const GPU_UPLOAD_TENSOR: &str = "Render.gpu_upload_tensor";
+pub const GPU_SET_CAMERA: &str = "Render.gpu_set_camera";
+pub const GPU_PICK: &str = "Render.gpu_pick";
+pub const GPU_POLL_PICK: &str = "Render.gpu_poll_pick";
+pub const GPU_RESIZE: &str = "Render.gpu_resize";
+pub const GPU_SET_AMBIENT: &str = "Render.gpu_set_ambient";
+pub const GPU_DESTROY: &str = "Render.gpu_destroy";
+pub const GPU_COMPUTE_DISPATCH: &str = "Render.gpu_compute_dispatch";
+pub const GPU_COMPUTE_READBACK: &str = "Render.gpu_compute_readback";
+pub const GPU_VALIDATE_SHADER: &str = "Render.gpu_validate_shader";
+pub const GPU_COMPILE_SHADER: &str = "Render.gpu_compile_shader";
+pub const GPU_COMPILE_TO_GLSL: &str = "Render.gpu_compile_to_glsl";
+pub const GPU_BACKEND_INFO: &str = "Render.gpu_backend_info";
+pub const GPU_UPLOAD_MESH_COLORED: &str = "Render.gpu_upload_mesh_colored";
+pub const GPU_SET_STANDPOINT: &str = "Render.gpu_set_standpoint";
+pub const GPU_OBSERVER_STANDPOINT: &str = "Render.gpu_observer_standpoint";
+pub const GPU_CAMERA_STATE: &str = "Render.gpu_camera_state";
+pub const GPU_SURFACE_SIZE: &str = "Render.gpu_surface_size";
+pub const GPU_HAS_MESH: &str = "Render.gpu_has_mesh";
+pub const GPU_HAS_TENSOR: &str = "Render.gpu_has_tensor";
+pub const GPU_TENSOR_NODE_COUNT: &str = "Render.gpu_tensor_node_count";
+pub const GPU_PARTICLE_COUNT: &str = "Render.gpu_particle_count";
+pub const GPU_SYNC_BLOOM: &str = "Render.gpu_sync_bloom";
+pub const GPU_SET_ARTEFACT_JOINT: &str = "Render.gpu_set_artefact_joint";
+pub const GPU_SET_ARTEFACT_WORLD: &str = "Render.gpu_set_artefact_world";
+pub const GPU_ARTEFACT_REFUSED: &str = "Render.gpu_artefact_refused";
+pub const GPU_REQUIRED_RGBA8_BYTES: &str = "Render.gpu_required_rgba8_bytes";
+pub const EMF_UPLOAD_FIELD: &str = "Render.emf_upload_field";
+pub const EMF_RENDER_SLICE: &str = "Render.emf_render_slice";
+pub const EMF_FIELD_INFO: &str = "Render.emf_field_info";
+
+// ── GBNF constrained sampler (T53/W11) ─────────────────────────────────────
+pub const SAMPLER_CONFIGURE: &str = "sampler.configure";
+pub const SAMPLER_CONSTRAIN_ENABLE: &str = "sampler.constrain_enable";
+pub const SAMPLER_CONSTRAIN_DISABLE: &str = "sampler.constrain_disable";
+pub const SAMPLER_CONSTRAIN_RESET: &str = "sampler.constrain_reset";
+pub const SAMPLER_SAMPLE: &str = "sampler.sample";
+
+// ── Asset aspect sub-graphs (spatial assets with temporal assertions) ─────
+pub const ASSET_CREATE: &str = "Asset.create";
+pub const ASSET_ADD_TEMPORAL: &str = "Asset.add_temporal";
+pub const ASSET_ADD_TOPIC: &str = "Asset.add_topic";
+pub const ASSET_SET_SPATIAL: &str = "Asset.set_spatial";
+pub const ASSET_COMPILE: &str = "Asset.compile";
+pub const ASSET_TEMPORAL_SPAN: &str = "Asset.temporal_span";
+pub const ASSET_QUERY_ASPECTS: &str = "Asset.query_aspects";
+// N16: Persistent asset aspect-graph store
+pub const ASSET_PERSIST: &str = "Asset.persist";
+pub const ASSET_RESOLVE: &str = "Asset.resolve";
+pub const ASSET_RESOLVE_BY_SPATIAL: &str = "Asset.resolve_by_spatial";
+pub const ASSET_RESOLVE_BY_TOPIC: &str = "Asset.resolve_by_topic";
+pub const ASSET_RESOLVE_BY_TEMPORAL: &str = "Asset.resolve_by_temporal";
+pub const ASSET_LIST: &str = "Asset.list";
+pub const ASSET_COUNT: &str = "Asset.count";
+pub const ASSET_PERSIST_CREATE: &str = "Asset.persist_create";
+pub const ASSET_PERSIST_ADD_TEMPORAL: &str = "Asset.persist_add_temporal";
+pub const ASSET_PERSIST_ADD_TOPIC: &str = "Asset.persist_add_topic";
+pub const ASSET_PERSIST_SET_SPATIAL: &str = "Asset.persist_set_spatial";
+pub const ASSET_PERSIST_COMPILE: &str = "Asset.persist_compile";
+pub const ASSET_PERSIST_TEMPORAL_SPAN: &str = "Asset.persist_temporal_span";
+pub const ASSET_PERSIST_QUERY_ASPECTS: &str = "Asset.persist_query_aspects";
+
+// ── Physics wrappers (wrap specialized_libs::physics_simulation) ───────────
+pub const PHYS_WAVE_1D: &str = "Physics.wave_1d";
+pub const PHYS_HEAT_DIFFUSION_1D: &str = "Physics.heat_diffusion_1d";
+pub const PHYS_ADVECTION_DIFFUSION_1D: &str = "Physics.advection_diffusion_1d";
+pub const PHYS_HARMONIC_OSCILLATOR: &str = "Physics.harmonic_oscillator";
+pub const PHYS_PENDULUM: &str = "Physics.pendulum";
+pub const PHYS_N_BODY: &str = "Physics.n_body";
+pub const PHYS_MOLECULAR_DYNAMICS: &str = "Physics.molecular_dynamics";
+pub const PHYS_CFD_STEP: &str = "Physics.cfd_step";
+pub const PHYS_QUANTUM_STATES_1D: &str = "Physics.quantum_states_1d";
+pub const PHYS_LOGISTIC_GROWTH: &str = "Physics.logistic_growth";
+pub const PHYS_EMF_INTERFERENCE: &str = "Physics.emf_interference";
+pub const PHYS_EMF_ATTENUATION: &str = "Physics.emf_attenuation";
+pub const PHYS_DOPPLER_SHIFT: &str = "Physics.doppler_shift";
+pub const PHYS_EMF_FIELD_GRID_3D: &str = "Physics.emf_field_grid_3d";
+pub const PHYS_EMF_SAMPLE_AT_DEPTH: &str = "Physics.emf_sample_at_depth";
+pub const PHYS_FIELD_SAMPLE: &str = "Physics.field_sample";
+pub const PHYS_MATERIAL_QUERY: &str = "Physics.material_query";
+pub const PHYS_EVALUATE_INTERACTION: &str = "Physics.evaluate_interaction";
+
+// ── Spectral/EMF wrappers (wrap render::spectral_kernel + spectral_blend) ──
+pub const SPECTRAL_EMF_TO_SPD: &str = "Spectral.emf_to_spd";
+pub const SPECTRAL_SPD_TO_XYZ: &str = "Spectral.spd_to_xyz";
+pub const SPECTRAL_EMF_TO_RGB: &str = "Spectral.emf_to_rgb";
+pub const SPECTRAL_BLEND: &str = "Spectral.blend";
+pub const SPECTRAL_GAMUT_MAP: &str = "Spectral.gamut_map";
+
+// ── Linear algebra extensions (wrap solvers::linear_algebra) ──────────────
+pub const LA_TRANSPOSE: &str = "LinearAlgebra.transpose";
+pub const LA_DET: &str = "LinearAlgebra.determinant";
+pub const LA_SOLVE: &str = "LinearAlgebra.solve";
+pub const LA_EIGEN_SYM: &str = "LinearAlgebra.eigen_symmetric";
+pub const LA_EIGENVALUES: &str = "LinearAlgebra.eigenvalues";
+pub const LA_SVD: &str = "LinearAlgebra.svd";
+pub const LA_POLY_ROOTS: &str = "LinearAlgebra.polynomial_roots";
+pub const LA_LU_DECOMPOSE: &str = "LinearAlgebra.lu_decompose";
+pub const LA_LU_SOLVE: &str = "LinearAlgebra.lu_solve";
+pub const LA_CHOLESKY_FACTOR: &str = "LinearAlgebra.cholesky_factor";
+pub const LA_CHOLESKY_DET: &str = "LinearAlgebra.cholesky_determinant";
+pub const LA_CHARPOLY: &str = "LinearAlgebra.characteristic_polynomial";
+pub const LA_EIGENVALUES_GENERAL: &str = "LinearAlgebra.eigenvalues_general";
+pub const LA_QR_FACTOR: &str = "LinearAlgebra.qr_factor";
+pub const LA_QR_FORM_Q: &str = "LinearAlgebra.qr_form_q";
+pub const LA_QR_SOLVE_LS: &str = "LinearAlgebra.qr_solve_least_squares";
+pub const LA_ADD_INTO: &str = "LinearAlgebra.add_into";
+pub const LA_CHOLESKY_SOLVE: &str = "LinearAlgebra.cholesky_solve";
+pub const LA_AXPY: &str = "LinearAlgebra.axpy";
+pub const LA_HADAMARD_INTO: &str = "LinearAlgebra.hadamard_into";
+pub const LA_ADD_ASSIGN: &str = "LinearAlgebra.add_assign";
+pub const LA_HADAMARD_ASSIGN: &str = "LinearAlgebra.hadamard_assign";
+pub const LA_SCALE: &str = "LinearAlgebra.scale";
+pub const LA_MATVEC: &str = "LinearAlgebra.matvec";
+pub const ONTOLOGY_ALIGN: &str = "OntologyAlignment.align";
+pub const GRAPH_FUZZY_JACCARD: &str = "GraphMatch.fuzzy_jaccard";
+pub const GRAPH_FUZZY_DICE: &str = "GraphMatch.fuzzy_dice";
+pub const GRAPH_APPROXIMATE_MATCH: &str = "GraphMatch.approximate_match";
+pub const CALC_POISSON_DIRICHLET: &str = "Calculus.solve_poisson_dirichlet";
+pub const CALC_DMP_HOLDS: &str = "Calculus.discrete_maximum_principle_holds";
+pub const GA_GEOMETRIC_PRODUCT: &str = "GeometricAlgebra.geometric_product";
+pub const GA_OUTER_PRODUCT: &str = "GeometricAlgebra.outer_product";
+pub const GA_ROTOR_FROM_ANGLE_AXIS: &str = "GeometricAlgebra.rotor_from_angle_axis";
+pub const GA_APPLY_ROTOR: &str = "GeometricAlgebra.apply_rotor";
+pub const GA_TRANSLATOR_FROM_DISPLACEMENT: &str = "GeometricAlgebra.translator_from_displacement";
+pub const GA_APPLY_TRANSLATOR: &str = "GeometricAlgebra.apply_translator";
+pub const GA_IS_SIMD_AVAILABLE: &str = "GeometricAlgebra.is_simd_available";
+pub const XFORM_IDFT: &str = "IntegralTransforms.idft";
+pub const XFORM_Z_TRANSFORM_FINITE: &str = "IntegralTransforms.z_transform_finite";
+pub const XFORM_UNIT_STEP_Z: &str = "IntegralTransforms.unit_step_z";
+pub const XFORM_GEOMETRIC_Z: &str = "IntegralTransforms.geometric_z";
+pub const VC_GRADIENT: &str = "VectorCalculus.gradient";
+pub const VC_DIVERGENCE: &str = "VectorCalculus.divergence";
+pub const VC_CURL: &str = "VectorCalculus.curl";
+pub const VC_LAPLACIAN: &str = "VectorCalculus.laplacian";
+pub const ODE_RK4_INTEGRATE: &str = "Ode.rk4_integrate";
+pub const ODE_DOPRI5: &str = "Ode.dopri5";
+pub const ODE_BDF: &str = "Ode.bdf";
+pub const ODE_SYMPLECTIC_STEP: &str = "Ode.symplectic_step";
+pub const CALC_ADAPTIVE_SIMPSON: &str = "Calculus.adaptive_simpson";
+pub const CALC_ADAPTIVE_DERIVATIVE: &str = "Calculus.adaptive_derivative";
+pub const CALC_NUMERICAL_JACOBIAN: &str = "Calculus.numerical_jacobian";
+pub const CALC_NUMERICAL_HESSIAN: &str = "Calculus.numerical_hessian";
+pub const CALC_NEWTON_SOLVE: &str = "Calculus.newton_solve";
+pub const OPT_SIMULATED_ANNEALING: &str = "Optimization.simulated_annealing";
+pub const OPT_ARTIFICIAL_BEE_COLONY: &str = "Optimization.artificial_bee_colony";
+pub const VC_LINE_INTEGRAL_SCALAR: &str = "VectorCalculus.line_integral_scalar";
+pub const VC_LINE_INTEGRAL_WORK: &str = "VectorCalculus.line_integral_work";
+pub const VC_SURFACE_FLUX: &str = "VectorCalculus.surface_flux";
+pub const XFORM_LAPLACE_NUMERIC: &str = "IntegralTransforms.laplace_numeric";
+pub const XFORM_LAPLACE_SYMBOLIC: &str = "IntegralTransforms.laplace_symbolic";
+
+// ── CAS extensions (wrap specialized_libs::symbolic_algebra) ──────────────
+pub const CAS_DIFFERENTIATE: &str = "SymbolicAlgebra.differentiate";
+pub const CAS_SIMPLIFY: &str = "SymbolicAlgebra.simplify";
+pub const CAS_EXPAND: &str = "SymbolicAlgebra.expand";
+pub const CAS_FACTOR: &str = "SymbolicAlgebra.factor";
+pub const CAS_SOLVE_QUADRATIC: &str = "SymbolicAlgebra.solve_quadratic";
+pub const CAS_SIMPLIFY_TRIG: &str = "SymbolicAlgebra.simplify_trig";
+pub const CAS_INTEGRATE: &str = "SymbolicAlgebra.integrate";
+pub const CAS_TAYLOR_COEFFICIENTS: &str = "SymbolicAlgebra.taylor_coefficients";
+pub const CAS_TAYLOR_EVAL: &str = "SymbolicAlgebra.taylor_eval";
+pub const CAS_LIMIT: &str = "SymbolicAlgebra.limit";
+pub const CAS_INTEGRATE_DEFINITE: &str = "SymbolicAlgebra.integrate_definite";
+pub const CAS_LIMIT_AT_INFINITY: &str = "SymbolicAlgebra.limit_at_infinity";
+pub const CAS_REAL_ROOTS: &str = "SymbolicAlgebra.real_roots";
+pub const ODE_SOLVE_LINEAR_FIRST_ORDER: &str = "SymbolicODE.solve_linear_first_order";
+pub const ODE_SOLVE_LINEAR_SECOND_ORDER: &str = "SymbolicODE.solve_linear_second_order";
+pub const ODE_CLASSIFY_SECOND_ORDER_PDE: &str = "SymbolicODE.classify_second_order_pde";
+pub const POLY_DIV_REM: &str = "PolynomialAlgebra.div_rem";
+pub const POLY_DERIVATIVE: &str = "PolynomialAlgebra.derivative";
+pub const POLY_MONIC: &str = "PolynomialAlgebra.monic";
+pub const POLY_RESULTANT: &str = "PolynomialAlgebra.resultant";
+pub const POLY_ADD: &str = "PolynomialAlgebra.add";
+pub const POLY_SUB: &str = "PolynomialAlgebra.sub";
+pub const POLY_MUL: &str = "PolynomialAlgebra.mul";
+pub const POLY_DEGREE: &str = "PolynomialAlgebra.degree";
+pub const POLY_LEADING: &str = "PolynomialAlgebra.leading";
+
+// ── Wave-5 Host binds (CAS / ODE / LinAlg remaining) ──────────────────────
+pub const ODE_SOLVE_SEPARABLE: &str = "SymbolicODE.solve_separable";
+pub const ODE_SOLVE_FIRST_ORDER_LINEAR_PDE: &str = "SymbolicODE.solve_first_order_linear_pde";
+pub const CAS_SOLVE_POLYNOMIAL_EXPR: &str = "SymbolicAlgebra.solve_polynomial_expr";
+pub const CAS_SIMPLIFY_WITH_ASSUMPTIONS: &str = "SymbolicAlgebra.simplify_with_assumptions";
+pub const CAS_ROOTS: &str = "SymbolicAlgebra.roots";
+pub const LA_SOLVE_LINEAR_SYSTEM: &str = "LinearAlgebra.solve_linear_system";
+pub const CAS_EXPR_CITATION_HASH: &str = "SymbolicAlgebra.expr_citation_hash";
+pub const POLY_IS_ZERO: &str = "PolynomialAlgebra.is_zero";
+
+// ── Wave-6 Host binds (multivar CAS + constructibility) ───────────────────
+pub const CAS_PARTIAL: &str = "SymbolicAlgebra.partial";
+pub const CAS_JACOBIAN: &str = "SymbolicAlgebra.jacobian";
+pub const CAS_HESSIAN: &str = "SymbolicAlgebra.hessian";
+pub const CAS_GRADIENT_AT: &str = "SymbolicAlgebra.gradient_at";
+pub const CAS_HESSIAN_AT: &str = "SymbolicAlgebra.hessian_at";
+pub const CONSTR_IS_REGULAR_POLYGON: &str = "Constructibility.is_regular_polygon_constructible";
+pub const CONSTR_IS_FERMAT_PRIME: &str = "Constructibility.is_fermat_prime";
+pub const CONSTR_FROM_MIN_POLY_DEGREE: &str = "Constructibility.constructible_from_min_poly_degree";
+
+// ── Wave-7 Host binds (remaining constructibility + CAS) ──────────────────
+pub const CONSTR_IS_POWER_OF_TWO: &str = "Constructibility.is_power_of_two";
+pub const CONSTR_IS_CENTRAL_ANGLE: &str = "Constructibility.is_central_angle_constructible";
+pub const CONSTR_DOUBLING_THE_CUBE: &str = "Constructibility.doubling_the_cube_constructible";
+pub const CONSTR_TRISECTING_GENERAL_ANGLE: &str =
+    "Constructibility.trisecting_general_angle_constructible";
+pub const CONSTR_SQUARING_THE_CIRCLE: &str = "Constructibility.squaring_the_circle_constructible";
+pub const CONSTR_IS_CONSTRUCTIBLE_NUMBER: &str = "Constructibility.is_constructible_number";
+pub const CAS_SOLVE_QUADRATIC_SYMBOLIC: &str = "SymbolicAlgebra.solve_quadratic_symbolic";
+pub const CAS_FACTOR_QUADRATIC: &str = "SymbolicAlgebra.factor_quadratic";
+
+// ── Wave-8 Host binds (remaining CAS expression constructors) ─────────────
+pub const CAS_POW: &str = "SymbolicAlgebra.pow";
+pub const CAS_NEG: &str = "SymbolicAlgebra.neg";
+pub const CAS_SQRT: &str = "SymbolicAlgebra.sqrt";
+pub const CAS_EXP: &str = "SymbolicAlgebra.exp";
+pub const CAS_LN: &str = "SymbolicAlgebra.ln";
+pub const CAS_SIN: &str = "SymbolicAlgebra.sin";
+pub const CAS_COS: &str = "SymbolicAlgebra.cos";
+pub const CAS_TAN: &str = "SymbolicAlgebra.tan";
+
+// ── Wave-9 Host binds (remaining CAS constructors + poly helpers) ─────────
+pub const CAS_C: &str = "SymbolicAlgebra.c";
+pub const CAS_VAR: &str = "SymbolicAlgebra.var";
+pub const CAS_ADD: &str = "SymbolicAlgebra.add";
+pub const CAS_SUB: &str = "SymbolicAlgebra.sub";
+pub const CAS_MUL: &str = "SymbolicAlgebra.mul";
+pub const CAS_DIV: &str = "SymbolicAlgebra.div";
+pub const POLY_GCD: &str = "PolynomialAlgebra.gcd";
+pub const POLY_SCALE: &str = "PolynomialAlgebra.scale";
+
+// ── Wave-10 Host binds (remaining poly/CAS + statistical manifold) ────────
+pub const POLY_EVAL: &str = "PolynomialAlgebra.eval";
+pub const POLY_ZERO: &str = "PolynomialAlgebra.zero";
+pub const POLY_CONSTANT: &str = "PolynomialAlgebra.constant";
+pub const CAS_PARSE: &str = "SymbolicAlgebra.parse";
+pub const STAT_VALIDATE_PROBABILITY: &str = "Statistics.validate_probability";
+pub const STAT_SIMPLEX_PROJECT: &str = "Statistics.simplex_project";
+pub const STAT_FISHER_DISTANCE: &str = "Statistics.fisher_distance";
+pub const STAT_NEG_ENTROPY: &str = "Statistics.neg_entropy";
+
+// ── Wave-11 Host binds (remaining statistical manifold free fns) ──────────
+pub const STAT_SIMPLEX_PROJECT_IDEMPOTENT: &str = "Statistics.simplex_project_idempotent";
+pub const STAT_FISHER_INNER_PRODUCT: &str = "Statistics.fisher_inner_product";
+pub const STAT_NEG_ENTROPY_GRAD: &str = "Statistics.neg_entropy_grad";
+pub const STAT_KL_BREGMAN_FORM: &str = "Statistics.kl_bregman_form";
+pub const STAT_BREGMAN_PYTHAGOREAN_TEST: &str = "Statistics.bregman_pythagorean_test";
+pub const STAT_PROBABILITY_HASH: &str = "Statistics.probability_hash";
+
+// ── Wave-12 Host binds (chem integrals + CAS quin I/O + 3×3 eigen) ────────
+pub const CHEM_BOYS_FUNCTION: &str = "Chemistry.boys_function";
+pub const CHEM_OVERLAP_S: &str = "Chemistry.overlap_s";
+pub const CHEM_KINETIC_S: &str = "Chemistry.kinetic_s";
+pub const CHEM_NUCLEAR_S: &str = "Chemistry.nuclear_s";
+pub const CHEM_DIPOLE_S: &str = "Chemistry.dipole_s";
+pub const LA_SYMMETRIC_EIGEN_3X3: &str = "LinearAlgebra.symmetric_eigen_3x3";
+pub const CAS_TO_QUINS: &str = "SymbolicAlgebra.to_quins";
+pub const CAS_FROM_QUINS: &str = "SymbolicAlgebra.from_quins";
+
+// ── Wave-13 Host binds (chem ERI/angular + gemm CPU + poly coeffs) ────────
+pub const CHEM_EVALUATE_ERI: &str = "Chemistry.evaluate_eri";
+pub const CHEM_TOTAL_ANGULAR_MOMENTUM: &str = "Chemistry.total_angular_momentum";
+pub const CHEM_LETTER: &str = "Chemistry.letter";
+pub const CHEM_N_CARTESIAN: &str = "Chemistry.n_cartesian";
+pub const CHEM_N_SPHERICAL: &str = "Chemistry.n_spherical";
+pub const CHEM_FROM_LETTER: &str = "Chemistry.from_letter";
+pub const LA_GEMM: &str = "LinearAlgebra.gemm";
+pub const LA_DOT: &str = "LinearAlgebra.dot";
+pub const LA_NORM: &str = "LinearAlgebra.norm";
+pub const LA_TRACE: &str = "LinearAlgebra.trace";
+pub const LA_IDENTITY: &str = "LinearAlgebra.identity";
+pub const LA_INVERSE: &str = "LinearAlgebra.inverse";
+pub const POLY_COEFFS: &str = "PolynomialAlgebra.coeffs";
+
+// ── Wave-14 Host binds (calculus / graph helpers) ────────────────────────
+pub const CALC_HERMITE_DENSE_OUTPUT: &str = "Calculus.hermite_dense_output";
+pub const CALC_BDF1_STEP: &str = "Calculus.bdf1_step";
+pub const CALC_BDF2_STEP: &str = "Calculus.bdf2_step";
+pub const CALC_INVARIANT_DRIFT: &str = "Calculus.invariant_drift";
+pub const CALC_PERMUTATION_PARITY: &str = "Calculus.permutation_parity";
+pub const CALC_PACK_F32_PAIR: &str = "Calculus.pack_f32_pair";
+pub const CALC_UNPACK_F32_PAIR: &str = "Calculus.unpack_f32_pair";
+pub const GRAPH_TOP_K: &str = "GraphReasoning.top_k";
+
+// ── Wave-15 Host binds (calculus / NT / engineering) ──────────────────
+pub const CALC_VERLET_STEP: &str = "Calculus.verlet_step";
+pub const CALC_RUTH3_STEP: &str = "Calculus.ruth3_step";
+pub const CALC_YOSHIDA4_STEP: &str = "Calculus.yoshida4_step";
+pub const CALC_INTEGRATE_BDF: &str = "Calculus.integrate_bdf";
+pub const CALC_INTEGRATE_WITH_SENSITIVITY: &str = "Calculus.integrate_with_sensitivity";
+pub const NT_EXTENDED_GCD: &str = "NumberTheory.extended_gcd";
+pub const NT_CRT: &str = "NumberTheory.crt";
+pub const ENG_NATURAL_FREQUENCY_SDOF: &str = "EngineeringAnalysis.natural_frequency_sdof";
+
+// ── Wave-16 Host binds (eng / GA / chem / fuzzy) ─────────────────────
+pub const ENG_ANALYZE_HARMONIC_SDOF: &str = "EngineeringAnalysis.analyze_harmonic_sdof";
+pub const ENG_ANALYZE_EULER: &str = "EngineeringAnalysis.analyze_euler";
+pub const ENG_COMPUTE_RELIABILITY_INDEX: &str = "EngineeringAnalysis.compute_reliability_index";
+pub const GA_CROSS_PRODUCT: &str = "GeometricAlgebra.cross_product";
+pub const GA_NORMALIZE_VECTOR: &str = "GeometricAlgebra.normalize_vector";
+pub const GA_ANGLE_BETWEEN_VECTORS: &str = "GeometricAlgebra.angle_between_vectors";
+pub const FQ_THRESHOLD: &str = "FuzzyQuery.threshold";
+pub const CHEM_GAUSSIAN_ELIMINATION: &str = "Chemistry.gaussian_elimination";
+
+// ── Wave-17 Host binds (chem / fuzzy / transforms) ───────────────────
+pub const CHEM_JACOBI_DIAGONALIZATION: &str = "Chemistry.jacobi_diagonalization";
+pub const CHEM_TRANSPOSE: &str = "Chemistry.transpose";
+pub const CHEM_ORTHOGONALIZATION_MATRIX: &str = "Chemistry.orthogonalization_matrix";
+pub const FQ_TOP_K: &str = "FuzzyQuery.top_k";
+pub const FQ_NEGATE: &str = "FuzzyQuery.negate";
+pub const FQ_AND: &str = "FuzzyQuery.and";
+pub const FQ_OR: &str = "FuzzyQuery.or";
+pub const XFORM_DFT_COMPLEX: &str = "IntegralTransforms.dft_complex";
+
+// ── Wave-18 Host binds (calculus rem / cosmic numeric / NLP) ───────────
+pub const CALC_CANONICAL_POISSON_BRACKET: &str = "Calculus.canonical_poisson_bracket";
+pub const CALC_STORMER_VERLET_STEP: &str = "Calculus.stormer_verlet_step";
+pub const CALC_ADAPTIVE_GAUSS_KRONROD_15: &str = "Calculus.adaptive_gauss_kronrod_15";
+pub const CALC_JVP: &str = "Calculus.jvp";
+pub const CALC_VJP: &str = "Calculus.vjp";
+pub const COSMIC_WARP_FACTOR_C: &str = "Cosmic.warp_factor_c";
+pub const COSMIC_TYPICAL_LENGTH: &str = "Cosmic.typical_length";
+pub const COSMIC_OBSERVE_REDSHIFT: &str = "Cosmic.observe_redshift";
+pub const NLP_TOKENIZE: &str = "NLP.tokenize";
+pub const NLP_SPLIT_SENTENCES: &str = "NLP.split_sentences";
+
+// ── Wave-19 Host binds (Inference / ThreeD point-set / Audio numeric) ──
+pub const INFERENCE_RELU: &str = "Inference.relu";
+pub const INFERENCE_SIGMOID: &str = "Inference.sigmoid";
+pub const INFERENCE_GELU: &str = "Inference.gelu";
+pub const INFERENCE_SOFTMAX: &str = "Inference.softmax";
+pub const INFERENCE_RMS_NORM: &str = "Inference.rms_norm";
+pub const GEOM_AVERAGE_SPACING_3D: &str = "ComputationalGeometry.average_spacing_3d";
+pub const GEOM_LOCAL_DENSITY_3D: &str = "ComputationalGeometry.local_density_3d";
+pub const AUDIO_EPISTEMIC_TEMPERATURE_FROM_Q: &str = "Audio.epistemic_temperature_from_q";
+
+// ── Wave-20 Host binds (Audio / Scene / point-set numeric) ──
+pub const AUDIO_EPISTEMIC_FM_INDEX: &str = "Audio.epistemic_fm_index";
+pub const AUDIO_SIGMA_DOMINANT_FREQUENCY: &str = "Audio.sigma_dominant_frequency";
+pub const AUDIO_PARAMETRIC_SAMPLE: &str = "Audio.parametric_sample";
+pub const AUDIO_BIN_TO_FREQ_LINEAR: &str = "Audio.bin_to_freq_linear";
+pub const AUDIO_BIN_TO_FREQ_LOG: &str = "Audio.bin_to_freq_log";
+pub const SCENE_LERP_CAMERA: &str = "Scene.lerp_camera";
+pub const SCENE_CAMERA_FRAME_NODE: &str = "Scene.camera_frame_node";
+pub const GEOM_MEAN_KNN_DISTANCE_3D: &str = "ComputationalGeometry.mean_knn_distance_3d";
+// ── Wave-21 Host binds (Statistical manifold & distance numerics) ──
+pub const GEOM_FISHER_DISTANCE: &str = "ComputationalGeometry.fisher_distance";
+pub const GEOM_KL_DIVERGENCE: &str = "ComputationalGeometry.kl_divergence";
+pub const GEOM_KL_BREGMAN_FORM: &str = "ComputationalGeometry.kl_bregman_form";
+pub const GEOM_TRIANGLE_SIGNED_AREA: &str = "ComputationalGeometry.triangle_signed_area";
+pub const GEOM_DIST_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_point_to_segment";
+pub const GEOM_DIST_SQ_POINT_TO_SEGMENT: &str = "ComputationalGeometry.dist_sq_point_to_segment";
+// ── Wave-22 Host binds (predicates / Tukey / width / site queries) ──
+pub const GEOM_INCIRCLE: &str = "ComputationalGeometry.incircle";
+pub const GEOM_TUKEY_DEPTH: &str = "ComputationalGeometry.tukey_depth";
+pub const GEOM_DIRECTIONAL_WIDTH: &str = "ComputationalGeometry.directional_width";
+pub const GEOM_WIDTH: &str = "ComputationalGeometry.width";
+pub const GEOM_FARTHEST_SITE_BRUTE: &str = "ComputationalGeometry.farthest_site_brute";
+pub const GEOM_K_NEAREST_SITES: &str = "ComputationalGeometry.k_nearest_sites";
+pub const GEOM_IS_HULL_SITE: &str = "ComputationalGeometry.is_hull_site";
+pub const GEOM_DIAMETER_AND_WIDTH: &str = "ComputationalGeometry.diameter_and_width";
+// ── Wave-23 Host binds (insphere / ham-sandwich / disk / polygon / Minkowski) ──
+pub const GEOM_INSPHERE: &str = "ComputationalGeometry.insphere";
+pub const GEOM_HAM_SANDWICH_CUT: &str = "ComputationalGeometry.ham_sandwich_cut";
+pub const GEOM_SMALLEST_ENCLOSING_DISK: &str = "ComputationalGeometry.smallest_enclosing_disk";
+pub const GEOM_POLYGON_SIGNED_AREA: &str = "ComputationalGeometry.polygon_signed_area";
+pub const GEOM_POLYGON_AREA: &str = "ComputationalGeometry.polygon_area";
+pub const GEOM_POINT_IN_POLYGON: &str = "ComputationalGeometry.point_in_polygon";
+pub const GEOM_MINKOWSKI_SUM_CONVEX: &str = "ComputationalGeometry.minkowski_sum_convex";
+pub const GEOM_NEAREST_SEGMENT_SITE: &str = "ComputationalGeometry.nearest_segment_site";
+// ── Wave-24 Host binds (coreset / duality / convexity / boolean area) ──
+pub const GEOM_WIDTH_CORESET: &str = "ComputationalGeometry.width_coreset";
+pub const GEOM_DUAL_POINT_TO_LINE: &str = "ComputationalGeometry.dual_point_to_line";
+pub const GEOM_DUAL_ROUND_TRIP: &str = "ComputationalGeometry.dual_round_trip";
+pub const GEOM_IS_CONVEX_POLYGON: &str = "ComputationalGeometry.is_convex_polygon";
+pub const GEOM_POINT_IN_OR_ON_POLYGON: &str = "ComputationalGeometry.point_in_or_on_polygon";
+pub const GEOM_BOOLEAN_UNION_AREA: &str = "ComputationalGeometry.boolean_union_area";
+pub const GEOM_BOOLEAN_INTERSECTION_AREA: &str = "ComputationalGeometry.boolean_intersection_area";
+pub const GEOM_BOOLEAN_DIFFERENCE_AREA: &str = "ComputationalGeometry.boolean_difference_area";
+// ── Wave-25 Host binds (projective / quaternion / hyperplane) ──
+pub const GEOM_CROSS_RATIO_1D: &str = "ComputationalGeometry.cross_ratio_1d";
+pub const GEOM_HYPERPLANE_EVAL: &str = "ComputationalGeometry.hyperplane_eval";
+pub const GEOM_HOUSEHOLDER_REFLECT: &str = "ComputationalGeometry.householder_reflect";
+pub const GEOM_QUATERNION_NORMALIZE: &str = "ComputationalGeometry.quaternion_normalize";
+pub const GEOM_SO3_EXP: &str = "ComputationalGeometry.so3_exp";
+pub const GEOM_SO3_LOG: &str = "ComputationalGeometry.so3_log";
+pub const GEOM_PROJECTIVE_FROM_POINT: &str = "ComputationalGeometry.projective_from_point";
+pub const GEOM_POINT_FROM_PROJECTIVE: &str = "ComputationalGeometry.point_from_projective";
+pub const GEOM_FRAME_TO_WORLD: &str = "ComputationalGeometry.frame_to_world";
+pub const GEOM_WORLD_TO_FRAME: &str = "ComputationalGeometry.world_to_frame";
+pub const GEOM_BARYCENTRIC_TETRA: &str = "ComputationalGeometry.barycentric_tetra";
+pub const GEOM_QUATERNION_SLERP: &str = "ComputationalGeometry.quaternion_slerp";
+pub const GEOM_QUATERNION_TO_MATRIX: &str = "ComputationalGeometry.quaternion_to_matrix";
+pub const GEOM_SOLVE_DIAGONAL_QUADRATIC: &str = "ComputationalGeometry.solve_diagonal_quadratic";
+pub const GEOM_SCHUR_COMPLEMENT_2X2: &str = "ComputationalGeometry.schur_complement_2x2";
+pub const GEOM_SEPARATING_PLANE_AABB: &str = "ComputationalGeometry.separating_plane_aabb";
+
+// ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
+pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
+pub const CRYPTO_BLAKE3: &str = "QuantumAndCryptographic.blake3";
+pub const PRIVACY_GAUSSIAN_SIGMA: &str = "Privacy.gaussian_sigma";
+
+// ── Stats extension (wrap solvers::statistics::regression) ────────────────
+pub const STAT_LINEAR_REGRESSION: &str = "Statistics.linear_regression";
+
+// ── Integral transforms (wrap solvers::transforms::fourier) ───────────────
+pub const XFORM_DFT: &str = "IntegralTransforms.dft";
+
+// ── Physical units (wrap solvers::units::conversion) ──────────────────────
+pub const UNITS_CONVERT: &str = "PhysicalUnits.convert";
+
+// ── Graph reasoning (wrap solvers::graph_opt) ─────────────────────────────
+pub const GRAPH_SHORTEST_PATH: &str = "GraphReasoning.shortest_path";
+pub const GRAPH_SPREADING_ACTIVATION: &str = "GraphReasoning.spreading_activation";
+
+// ── Agent DAG orchestration (R3) ──────────────────────────────────────────
+pub const DAG_EXECUTE: &str = "agent.dag.execute";
+pub const DAG_VALIDATE: &str = "agent.dag.validate";
+pub const DAG_STATUS: &str = "agent.dag.status";
+// N15: Multi-agent orchestration
+pub const ORCH_SESSION_CREATE: &str = "Orchestration.session_create";
+pub const ORCH_SESSION_PLAN: &str = "Orchestration.session_plan";
+pub const ORCH_SESSION_EXECUTE: &str = "Orchestration.session_execute";
+pub const ORCH_SESSION_STATUS: &str = "Orchestration.session_status";
+pub const ORCH_ROSTER_REGISTER: &str = "Orchestration.roster_register";
+pub const ORCH_ROSTER_LIST: &str = "Orchestration.roster_list";
+pub const ORCH_ROSTER_CAPABILITIES: &str = "Orchestration.roster_capabilities";
+pub const ORCH_ASSIGN_AGENTS: &str = "Orchestration.assign_agents";
+
+// ── HID & Sensor Telemetry capability invoke ids (T41–T46) ────────────────
+pub const HID_POLL: &str = "HID.poll";
+pub const HID_WAIT: &str = "HID.wait";
+pub const HID_CLEAR: &str = "HID.clear";
+pub const HID_POINTER_CAPTURE: &str = "HID.pointer_capture";
+pub const HID_POINTER_RELEASE: &str = "HID.pointer_release";
+pub const HID_SET_CURSOR: &str = "HID.set_cursor";
+pub const HID_GAMEPAD_POLL: &str = "HID.gamepad_poll";
+pub const HID_GAMEPAD_VIBRATE: &str = "HID.gamepad_vibrate";
+pub const HID_MIDI_SEND: &str = "HID.midi_send";
+pub const HID_MIDI_POLL: &str = "HID.midi_poll";
+pub const HID_HAPTIC_PULSE: &str = "HID.haptic_pulse";
+pub const HID_HAPTIC_PATTERN: &str = "HID.haptic_pattern";
+pub const HID_SPATIAL_HEAD_POSE: &str = "HID.spatial_head_pose";
+pub const HID_SPATIAL_HAND_SKELETON: &str = "HID.spatial_hand_skeleton";
+pub const HID_SPATIAL_GAZE_RAY: &str = "HID.spatial_gaze_ray";
+pub const HID_BIOSIGNAL_POLL: &str = "HID.biosignal_poll";
+
+// ── Cosmic coordinate system (OCS) bindings ───────────────────────────────
+pub const COSMIC_GEODETIC_TO_ECEF: &str = "Cosmic.geodetic_to_ecef";
+pub const COSMIC_ECEF_TO_GEODETIC: &str = "Cosmic.ecef_to_geodetic";
+pub const COSMIC_ECEF_TO_ENU: &str = "Cosmic.ecef_to_enu";
+pub const COSMIC_ENU_TO_ECEF: &str = "Cosmic.enu_to_ecef";
+pub const COSMIC_GEODETIC_DISTANCE: &str = "Cosmic.geodetic_distance";
+pub const COSMIC_BODY_PROFILE: &str = "Cosmic.body_profile";
+pub const COSMIC_SURFACE_GRAVITY: &str = "Cosmic.surface_gravity";
+pub const COSMIC_FLRW_DISTANCE: &str = "Cosmic.flrw_distance";
+pub const COSMIC_FLRW_REDSHIFT: &str = "Cosmic.flrw_redshift";
+pub const COSMIC_FLRW_HUBBLE_VELOCITY: &str = "Cosmic.flrw_hubble_velocity";
+pub const COSMIC_STARDATE_TO_GREGORIAN: &str = "Cosmic.stardate_to_gregorian";
+pub const COSMIC_WARP_VELOCITY: &str = "Cosmic.warp_velocity";
+pub const COSMIC_COCHRANE_UNITS: &str = "Cosmic.cochrane_units";
+pub const COSMIC_ATMOSPHERE_PRESSURE: &str = "Cosmic.atmosphere_pressure";
+pub const COSMIC_ATMOSPHERE_TEMPERATURE: &str = "Cosmic.atmosphere_temperature";
+pub const COSMIC_MAGNETOSPHERE_FIELD: &str = "Cosmic.magnetosphere_field";
+pub const COSMIC_SCALE_FACTOR: &str = "Cosmic.scale_factor";
+pub const COSMIC_COMPTON_WAVELENGTH: &str = "Cosmic.compton_wavelength";
+pub const COSMIC_DE_BROGLIE: &str = "Cosmic.de_broglie_wavelength";
+pub const COSMIC_USRI_PARSE: &str = "Cosmic.usri_parse";
+
+// ── N1: Expose-only bindings for Poet interface gap closure ────────────────
+pub const NLP_GAZETTEER_RUN: &str = "NLP.gazetteer_run";
+pub const NLP_GAZETTEER_BUILD: &str = "NLP.gazetteer_build";
+pub const CONDITIONING_VALIDATE: &str = "Conditioning.validate";
+pub const CONDITIONING_COMPILE: &str = "Conditioning.compile";
+pub const CONDITIONING_INSPECT: &str = "Conditioning.inspect";
+pub const CONDITIONING_EVALUATE: &str = "Conditioning.evaluate";
+pub const CONDITIONING_ACTIVATE: &str = "Conditioning.activate";
+pub const CONDITIONING_ROLLBACK: &str = "Conditioning.rollback";
+pub const INFERENCE_EMBED: &str = "Inference.embed";
+pub const INFERENCE_GROUNDING: &str = "Inference.grounding";
+pub const INFERENCE_VERIFY_TURN: &str = "Inference.verify_turn";
+pub const INFERENCE_DETECT_UNGROUNDED: &str = "Inference.detect_ungrounded";
+pub const FINANCE_CONVERT_CURRENCY: &str = "Finance.convert_currency";
+pub const FINANCE_MULTISIG_CHECK: &str = "Finance.multisig_check";
+pub const FINANCE_LEDGER_BALANCE: &str = "Finance.ledger_balance";
+// N14: Computational economics — ~50 key functions from 22 submodules
+pub const ECON_CAPM_EXPECTED_RETURN: &str = "Econ.capm_expected_return";
+pub const ECON_CAPM_BETA: &str = "Econ.capm_beta";
+pub const ECON_GORDON_GROWTH: &str = "Econ.gordon_growth";
+pub const ECON_MULTI_PERIOD_DDM: &str = "Econ.multi_period_ddm";
+pub const ECON_CCAPM_EQUITY_PREMIUM: &str = "Econ.ccapm_equity_premium";
+pub const ECON_CCAPM_SDF: &str = "Econ.ccapm_sdf";
+pub const ECON_PROSPECT_VALUE: &str = "Econ.prospect_value";
+pub const ECON_PROBABILITY_WEIGHT: &str = "Econ.probability_weight";
+pub const ECON_HYPERBOLIC_DISCOUNT: &str = "Econ.hyperbolic_discount";
+pub const ECON_ENDOWMENT_EFFECT: &str = "Econ.endowment_effect";
+pub const ECON_BLACK_SCHOLES: &str = "Econ.black_scholes";
+pub const ECON_PUT_CALL_PARITY: &str = "Econ.put_call_parity";
+pub const ECON_BINOMIAL_OPTION: &str = "Econ.binomial_option";
+pub const ECON_MIXED_NASH_2X2: &str = "Econ.mixed_nash_2x2";
+pub const ECON_COURNOT_DUOPOLY: &str = "Econ.cournot_duopoly";
+pub const ECON_BERTRAND_DUOPOLY: &str = "Econ.bertrand_duopoly";
+pub const ECON_STACKELBERG_DUOPOLY: &str = "Econ.stackelberg_duopoly";
+pub const ECON_SOLOW_STEADY_STATE: &str = "Econ.solow_steady_state";
+pub const ECON_RAMSEY_STEADY_STATE: &str = "Econ.ramsey_steady_state";
+pub const ECON_OLG_STEADY_STATE: &str = "Econ.olg_steady_state";
+pub const ECON_GINI: &str = "Econ.gini";
+pub const ECON_ATKINSON: &str = "Econ.atkinson";
+pub const ECON_HEADCOUNT_POVERTY: &str = "Econ.headcount_poverty";
+pub const ECON_POVERTY_GAP: &str = "Econ.poverty_gap";
+pub const ECON_UTILITARIAN_WELFARE: &str = "Econ.utilitarian_welfare";
+pub const ECON_RAWLSIAN_WELFARE: &str = "Econ.rawlsian_welfare";
+pub const ECON_NASH_WELFARE: &str = "Econ.nash_welfare";
+pub const ECON_NPV: &str = "Econ.npv";
+pub const ECON_MEAN_RETURN: &str = "Econ.mean_return";
+pub const ECON_SAMPLE_VARIANCE: &str = "Econ.sample_variance";
+pub const ECON_PORTFOLIO_MAX_DRAWDOWN: &str = "Econ.portfolio_max_drawdown";
+pub const ECON_HISTORICAL_VAR: &str = "Econ.historical_var";
+pub const ECON_HISTORICAL_CVAR: &str = "Econ.historical_cvar";
+pub const ECON_PARAMETRIC_VAR: &str = "Econ.parametric_var";
+pub const ECON_AUTOCORRELATION: &str = "Econ.autocorrelation";
+pub const ECON_CROSS_CORRELATION: &str = "Econ.cross_correlation";
+pub const ECON_INTERPOLATE_ZERO_RATE: &str = "Econ.interpolate_zero_rate";
+pub const ECON_DISCOUNT_FACTOR: &str = "Econ.discount_factor";
+pub const ECON_FORWARD_RATE: &str = "Econ.forward_rate";
+pub const ECON_GRAVITY_FLOW: &str = "Econ.gravity_flow";
+pub const ECON_MORANS_I: &str = "Econ.morans_i";
+pub const ECON_TRANSFER_PAYMENT: &str = "Econ.transfer_payment";
+pub const ECON_FISCAL_MULTIPLIER: &str = "Econ.fiscal_multiplier";
+pub const ECON_LAFFER_CURVE: &str = "Econ.laffer_curve";
+pub const ECON_CHECK_IR: &str = "Econ.check_ir";
+pub const ECON_CHECK_BUDGET_BALANCE: &str = "Econ.check_budget_balance";
+pub const ECON_VALIDATE_TRANSITION_MATRIX: &str = "Econ.validate_transition_matrix";
+pub const ECON_TRANSITION_PROBABILITY: &str = "Econ.transition_probability";
+pub const ECON_EXPECTED_HOLDING_TIME: &str = "Econ.expected_holding_time";
+pub const ECON_LABOR_SUPPLY: &str = "Econ.labor_supply";
+pub const ECON_EFFICIENCY_UNITS: &str = "Econ.efficiency_units";
+pub const ECON_SOCIAL_COST_OF_CARBON: &str = "Econ.social_cost_of_carbon";
+pub const ECON_OPTIMAL_POLLUTION: &str = "Econ.optimal_pollution";
+pub const ECON_OPTIMAL_ABATEMENT: &str = "Econ.optimal_abatement";
+pub const ECON_BELLMAN_UPDATE: &str = "Econ.bellman_update";
+pub const ECON_MALFEASANCE_DELTA: &str = "Econ.malfeasance_delta";
+pub const ECON_OLS: &str = "Econ.ols";
+pub const ECON_AGGREGATE_WEALTH: &str = "Econ.aggregate_wealth";
+pub const ECON_TOTAL_TRANSPORT_COST: &str = "Econ.total_transport_cost";
+pub const ECON_LUCAS_ASSET_PRICE: &str = "Econ.lucas_asset_price";
+pub const ECON_PRESENT_BIASED_UTILITY: &str = "Econ.present_biased_utility";
+pub const ECON_REFERENCE_DEPENDENT_UTILITY: &str = "Econ.reference_dependent_utility";
+pub const ECON_PURE_NASH_EQUILIBRIA: &str = "Econ.pure_nash_equilibria";
+pub const ECON_REPEATED_GAME_PAYOFF: &str = "Econ.repeated_game_payoff";
+pub const ECON_BERTRAND_WITH_DEMAND: &str = "Econ.bertrand_with_demand";
+pub const ECON_RAMSEY_EULER_RESIDUAL: &str = "Econ.ramsey_euler_residual";
+pub const ECON_NEW_KEYNESIAN_SOLVE: &str = "Econ.new_keynesian_solve";
+pub const ECON_LORENZ_CURVE: &str = "Econ.lorenz_curve";
+pub const ECON_DISTRIBUTIONAL_NPV: &str = "Econ.distributional_npv";
+pub const ECON_PORTFOLIO_RETURNS: &str = "Econ.portfolio_returns";
+pub const ECON_COVARIANCE_MATRIX: &str = "Econ.covariance_matrix";
+pub const ECON_PORTFOLIO_VARIANCE: &str = "Econ.portfolio_variance";
+pub const ECON_SIMPLE_RETURNS: &str = "Econ.simple_returns";
+pub const ECON_LOG_RETURNS: &str = "Econ.log_returns";
+pub const ECON_CUMULATIVE_WEALTH: &str = "Econ.cumulative_wealth";
+pub const ECON_DRAWDOWN: &str = "Econ.drawdown";
+pub const ECON_ROLLING_MEAN: &str = "Econ.rolling_mean";
+pub const ECON_ROLLING_VARIANCE: &str = "Econ.rolling_variance";
+pub const ECON_GBM_SIMULATE: &str = "Econ.gbm_simulate";
+pub const ECON_STRESS_SCENARIO: &str = "Econ.stress_scenario";
+pub const ECON_BLOCK_BOOTSTRAP: &str = "Econ.block_bootstrap";
+pub const ECON_PAR_YIELD: &str = "Econ.par_yield";
+pub const ECON_NEAREST_FACILITY: &str = "Econ.nearest_facility";
+pub const ECON_PROGRESSIVE_TAX: &str = "Econ.progressive_tax";
+pub const ECON_VCG_PAYMENT: &str = "Econ.vcg_payment";
+pub const ECON_STRATEGY_PROOFNESS: &str = "Econ.strategy_proofness";
+pub const ECON_STATIONARY_DISTRIBUTION: &str = "Econ.stationary_distribution";
+pub const ECON_SIMULATE_CHAIN: &str = "Econ.simulate_chain";
+pub const ECON_MEAN_FIRST_PASSAGE: &str = "Econ.mean_first_passage";
+pub const ECON_HOUSEHOLD_PRODUCTION_CES: &str = "Econ.household_production_ces";
+pub const ECON_POLLUTION_DAMAGE: &str = "Econ.pollution_damage";
+pub const ECON_MARGINAL_DAMAGE: &str = "Econ.marginal_damage";
+pub const ECON_ABATEMENT_NET_BENEFIT: &str = "Econ.abatement_net_benefit";
+pub const ECON_WLS: &str = "Econ.wls";
+pub const ECON_IV_2SLS: &str = "Econ.iv_2sls";
+pub const ECON_LOGISTIC_MLE: &str = "Econ.logistic_mle";
+pub const ECON_VALUE_ITERATION: &str = "Econ.value_iteration";
+pub const ECON_NARRATIVE_DIVERGENCE: &str = "Econ.narrative_divergence";
+pub const ECON_EIGENVECTOR_CENTRALITY: &str = "Econ.eigenvector_centrality";
+pub const ECON_DEGREE_CENTRALITY: &str = "Econ.degree_centrality";
+pub const ECON_INTERBANK_CLEARING: &str = "Econ.interbank_clearing";
+pub const ECON_LEONTIEF_INVERSE: &str = "Econ.leontief_inverse";
+pub const ECON_OUTPUT_MULTIPLIERS: &str = "Econ.output_multipliers";
+pub const ECON_AGENT_BASED_AGGREGATE_WEALTH: &str = "Econ.agent_based_aggregate_wealth";
+pub const ECON_VALIDATE_SCALAR_CONSTRAINT: &str = "Econ.validate_scalar_constraint";
+pub const ECON_AGGREGATE_PAPER_FILLS: &str = "Econ.aggregate_paper_fills";
+pub const CAPABILITY_GRANT: &str = "Capability.grant";
+pub const CAPABILITY_REVOKE: &str = "Capability.revoke";
+pub const CAPABILITY_TEST_GATING: &str = "Capability.test_gating";
+pub const CAPABILITY_AUDIT: &str = "Capability.audit";
+pub const CAPABILITY_DECLARE: &str = "Capability.declare";
+pub const SENTINEL_INSPECT: &str = "Sentinel.inspect";
+pub const SENTINEL_GATE: &str = "Sentinel.gate";
+pub const AGENT_TRACE: &str = "Agent.trace";
+pub const AGENT_VERIFY: &str = "Agent.verify";
+pub const IDENTITY_CURRENT_USER: &str = "Identity.current_user";
+pub const AUDIO_SPECTRUM: &str = "Audio.spectrum";
+pub const SCENE_CREATE: &str = "Scene.create";
+pub const SCENE_ADD_NODE: &str = "Scene.add_node";
+pub const SCENE_SET_TRANSFORM: &str = "Scene.set_transform";
+pub const SCENE_SET_MESH: &str = "Scene.set_mesh";
+pub const SCENE_ADD_CAMERA: &str = "Scene.add_camera";
+pub const SCENE_RENDER: &str = "Scene.render";
+pub const SCENE_SET_VIEWPORT: &str = "Scene.set_viewport";
+pub const SCENE_SET_CLEAR_COLOUR: &str = "Scene.set_clear_colour";
+pub const SCENE_CAPTURE_FRAME: &str = "Scene.capture_frame";
+
+// ── N3: FST morphology, coreference, frames, relations, substrate, graphrag ─
+pub const NLP_FST_LOOKUP: &str = "NLP.fst_lookup";
+pub const NLP_COREF_RESOLVE: &str = "NLP.coref_resolve";
+pub const NLP_FRAME_EXTRACT: &str = "NLP.frame_extract";
+pub const NLP_RELATION_EXTRACT: &str = "NLP.relation_extract";
+pub const NLP_SUBSTRATE_EXTRACT: &str = "NLP.substrate_extract";
+pub const NLP_GRAPHRAG_QUERY: &str = "NLP.graphrag_query";
+
+// ── N2: Partial extensions — social dynamics, forensic economics ───────────
+pub const SOCIAL_GINI: &str = "Social.gini";
+pub const SOCIAL_LORENZ: &str = "Social.lorenz";
+pub const SOCIAL_DEGREE_CENTRALITY: &str = "Social.degree_centrality";
+pub const FORENSIC_MALFEASANCE_DELTA: &str = "Forensic.malfeasance_delta";
+pub const FORENSIC_NARRATIVE_DIVERGENCE: &str = "Forensic.narrative_divergence";
+
+// ── N4: Agent runtime build-new — planner, corpus, evaluator, agency ──────
+pub const AGENT_PLAN: &str = "Agent.plan";
+pub const AGENT_EXECUTE: &str = "Agent.execute";
+pub const AGENT_EVALUATE: &str = "Agent.evaluate";
+pub const CORPUS_LOAD: &str = "Corpus.load";
+pub const CORPUS_PARSE: &str = "Corpus.parse";
+pub const AGENCY_EVALUATE: &str = "Agency.evaluate";
+
+// ── Cooperative ABAC + work board (qualia-cooperative-core; not Agency.*) ──
+pub const COOPERATIVE_DELEGATION_PERMITS: &str = "CooperativeDelegation.permits";
+pub const COOPERATIVE_WORK_BOARD_PROJECT: &str = "CooperativeWork.board_project";
+
+// ── N5: Neural / LLM inference — load, unload, transformer, classifier, reranker ─
+pub const INFERENCE_LOAD_MODEL: &str = "Inference.load_model";
+pub const INFERENCE_UNLOAD_MODEL: &str = "Inference.unload_model";
+pub const INFERENCE_RUN_TRANSFORMER: &str = "Inference.run_transformer";
+pub const INFERENCE_RUN_CLASSIFIER: &str = "Inference.run_classifier";
+pub const INFERENCE_RUN_RERANKER: &str = "Inference.run_reranker";
+pub const INFERENCE_VECTOR_SEARCH: &str = "Inference.vector_search";
+pub const INFERENCE_CONSTRAINED_DECODE: &str = "Inference.constrained_decode";
+
+// ── N6: Audio DAW — oscillator, envelope, filter, LFO, effects, MIDI, transport, meters ─
+pub const AUDIO_OSCILLATOR: &str = "Audio.oscillator";
+pub const AUDIO_ENVELOPE: &str = "Audio.envelope";
+pub const AUDIO_FILTER: &str = "Audio.filter";
+pub const AUDIO_LFO: &str = "Audio.lfo";
+pub const AUDIO_DELAY: &str = "Audio.delay";
+pub const AUDIO_REVERB: &str = "Audio.reverb";
+pub const AUDIO_COMPRESSOR: &str = "Audio.compressor";
+pub const AUDIO_EQ: &str = "Audio.eq";
+pub const AUDIO_MIDI_NOTE: &str = "Audio.midi_note";
+pub const AUDIO_QUANTIZE: &str = "Audio.quantize";
+pub const AUDIO_TRANSPOSE: &str = "Audio.transpose";
+pub const AUDIO_TRANSPORT: &str = "Audio.transport";
+pub const AUDIO_WAVEFORM_METER: &str = "Audio.waveform_meter";
+pub const AUDIO_PHASE_METER: &str = "Audio.phase_meter";
+pub const AUDIO_LOUDNESS_METER: &str = "Audio.loudness_meter";
+
+// ── N7: Scene graph build-new — lights, semantic links, duplication, IK, smooth damp ─
+pub const SCENE_ADD_LIGHT: &str = "Scene.add_light";
+pub const SCENE_LINK_SEMANTIC: &str = "Scene.link_semantic";
+pub const SCENE_DUPLICATE_NODE: &str = "Scene.duplicate_node";
+pub const SCENE_SET_RENDER_BUDGET: &str = "Scene.set_render_budget";
+pub const SCENE_IK_LOOK_AT: &str = "Scene.ik_look_at";
+pub const SCENE_IK_CCD: &str = "Scene.ik_ccd";
+pub const SCENE_SMOOTH_DAMP: &str = "Scene.smooth_damp";
+pub const SCENE_SMOOTH_DAMP_VEC3: &str = "Scene.smooth_damp_vec3";
+
+// ── N8: Research / epistemics — enquiry, corpus, dark links, inference chains, investigation ──
+pub const RESEARCH_NEW: &str = "Research.new";
+pub const RESEARCH_SET_PURPOSE: &str = "Research.set_purpose";
+pub const RESEARCH_DEFINE_SCOPE: &str = "Research.define_scope";
+pub const RESEARCH_ADD_CONSTRAINT: &str = "Research.add_constraint";
+pub const RESEARCH_ADD_QUESTION: &str = "Research.add_question";
+pub const RESEARCH_LINK_QUESTIONS: &str = "Research.link_questions";
+pub const RESEARCH_ADD_CORPUS_ITEM: &str = "Research.add_corpus_item";
+pub const RESEARCH_IMPORT_LITERATURE: &str = "Research.import_literature";
+pub const RESEARCH_IMPORT_DATASET: &str = "Research.import_dataset";
+pub const RESEARCH_SET_CORPUS_CONFIDENCE: &str = "Research.set_corpus_confidence";
+pub const RESEARCH_EXTRACT_FROM_CORPUS: &str = "Research.extract_from_corpus";
+pub const RESEARCH_INFER_DARK_LINK: &str = "Research.infer_dark_link";
+pub const RESEARCH_DETECT_PROVENANCE_GAPS: &str = "Research.detect_provenance_gaps";
+pub const RESEARCH_DETECT_CONCEALMENT: &str = "Research.detect_concealment";
+pub const RESEARCH_CONFIRM_DARK_LINK: &str = "Research.confirm_dark_link";
+pub const RESEARCH_REFUTE_DARK_LINK: &str = "Research.refute_dark_link";
+pub const RESEARCH_MAKE_INFERENCE: &str = "Research.make_inference";
+pub const RESEARCH_CHAIN_INFERENCE: &str = "Research.chain_inference";
+pub const RESEARCH_SET_INFERENCE_CONFIDENCE: &str = "Research.set_inference_confidence";
+pub const RESEARCH_VALIDATE_INFERENCE: &str = "Research.validate_inference";
+pub const RESEARCH_NEW_INVESTIGATION: &str = "Research.new_investigation";
+pub const RESEARCH_COLLECT_EVIDENCE: &str = "Research.collect_evidence";
+pub const RESEARCH_SET_RELIABILITY: &str = "Research.set_reliability";
+pub const RESEARCH_PROPOSE_HYPOTHESIS: &str = "Research.propose_hypothesis";
+pub const RESEARCH_EVALUATE_EVIDENCE: &str = "Research.evaluate_evidence";
+pub const RESEARCH_CREATE_TIMELINE: &str = "Research.create_timeline";
+pub const RESEARCH_ADD_LINK: &str = "Research.add_link";
+pub const RESEARCH_FIND_PATH: &str = "Research.find_path";
+pub const RESEARCH_CREATE_HYPOTHESIS_GRAPH: &str = "Research.create_hypothesis_graph";
+pub const RESEARCH_CONTRIBUTE_EVALUATION: &str = "Research.contribute_evaluation";
+pub const RESEARCH_BRIDGE_DARK_LINK: &str = "Research.bridge_dark_link";
+pub const RESEARCH_REFRAME_HYPOTHESIS: &str = "Research.reframe_hypothesis";
+pub const RESEARCH_MERGE_HYPOTHESES: &str = "Research.merge_hypotheses";
+pub const RESEARCH_FLAG_GAP: &str = "Research.flag_gap";
+pub const RESEARCH_CLOSE_GAP: &str = "Research.close_gap";
+pub const RESEARCH_CREATE_REVISION: &str = "Research.create_revision";
+pub const RESEARCH_DIFF_REVISIONS: &str = "Research.diff_revisions";
+pub const RESEARCH_SUBSCRIBE_UPDATES: &str = "Research.subscribe_updates";
+pub const RESEARCH_CREATE_ASSESSMENT: &str = "Research.create_assessment";
+pub const RESEARCH_SET_EPISTEMIC_MODE: &str = "Research.set_epistemic_mode";
+pub const RESEARCH_SET_REALITY_CATEGORY: &str = "Research.set_reality_category";
+pub const RESEARCH_CLASSIFY_REALITY: &str = "Research.classify_reality";
+pub const RESEARCH_DETECT_BLENDED: &str = "Research.detect_blended";
+pub const RESEARCH_DETECT_DECEPTIVE_FICTION: &str = "Research.detect_deceptive_fiction";
+pub const RESEARCH_TRACE_FICTION: &str = "Research.trace_fiction";
+pub const RESEARCH_ASSESS_SENTIMENT: &str = "Research.assess_sentiment";
+pub const RESEARCH_DETECT_SENTIMENT_MANIPULATION: &str = "Research.detect_sentiment_manipulation";
+pub const RESEARCH_DETECT_PERFORMED_SENTIMENT: &str = "Research.detect_performed_sentiment";
+pub const RESEARCH_MAP_SENTIMENT_NETWORK: &str = "Research.map_sentiment_network";
+pub const RESEARCH_ANALYSE_SENTIMENT_TRENDS: &str = "Research.analyse_sentiment_trends";
+// N10: Research gaps — perspective, intentionality, dynamics, grounding, UG
+pub const RESEARCH_REGISTER_PERSPECTIVE: &str = "Research.register_perspective";
+pub const RESEARCH_ADD_BIAS: &str = "Research.add_bias";
+pub const RESEARCH_COMPARE_PERSPECTIVES: &str = "Research.compare_perspectives";
+pub const RESEARCH_DETECT_PERSPECTIVE_CONFLICT: &str = "Research.detect_perspective_conflict";
+pub const RESEARCH_RECONCILE_PERSPECTIVES: &str = "Research.reconcile_perspectives";
+pub const RESEARCH_ASSESS_INTENTIONALITY: &str = "Research.assess_intentionality";
+pub const RESEARCH_CLASSIFY_MISTAKE: &str = "Research.classify_mistake";
+pub const RESEARCH_DEFINE_SOCIAL_DYNAMICS: &str = "Research.define_social_dynamics";
+pub const RESEARCH_DEFINE_ECONOMIC_DYNAMICS: &str = "Research.define_economic_dynamics";
+pub const RESEARCH_DEFINE_SPATIOTEMPORAL_DYNAMICS: &str = "Research.define_spatiotemporal_dynamics";
+pub const RESEARCH_ANALYSE_SOCIAL_NETWORK: &str = "Research.analyse_social_network";
+pub const RESEARCH_ANALYSE_INEQUALITY: &str = "Research.analyse_inequality";
+pub const RESEARCH_ANALYSE_DIFFUSION: &str = "Research.analyse_diffusion";
+pub const RESEARCH_ASSESS_GROUNDING: &str = "Research.assess_grounding";
+pub const RESEARCH_VERIFY_GROUNDING: &str = "Research.verify_grounding";
+pub const RESEARCH_DETECT_UNGROUNDED_BEHAVIOUR: &str = "Research.detect_ungrounded_behaviour";
+pub const RESEARCH_CREATE_UG_INSTANCE: &str = "Research.create_ug_instance";
+pub const RESEARCH_SET_UG_CAUSE: &str = "Research.set_ug_cause";
+pub const RESEARCH_SET_UG_CONSEQUENCE: &str = "Research.set_ug_consequence";
+pub const RESEARCH_SET_UG_DETECTION: &str = "Research.set_ug_detection";
+pub const RESEARCH_SET_UG_MITIGATION: &str = "Research.set_ug_mitigation";
+pub const RESEARCH_SET_UG_CALIBRATION: &str = "Research.set_ug_calibration";
+pub const RESEARCH_DETECT_UG_PATTERNS: &str = "Research.detect_ug_patterns";
+
+// ── N9: Hypermedia authoring — image, video, 3D, interactive, portals, DMX ─
+// Image editing
+pub const IMAGE_NEW: &str = "Image.new";
+pub const IMAGE_ADD_LAYER: &str = "Image.add_layer";
+pub const IMAGE_REMOVE_LAYER: &str = "Image.remove_layer";
+pub const IMAGE_SET_PIXEL: &str = "Image.set_pixel";
+pub const IMAGE_FILL: &str = "Image.fill";
+pub const IMAGE_BRUSH: &str = "Image.brush";
+pub const IMAGE_APPLY_FILTER: &str = "Image.apply_filter";
+pub const IMAGE_SET_OPACITY: &str = "Image.set_opacity";
+pub const IMAGE_SET_BLEND_MODE: &str = "Image.set_blend_mode";
+pub const IMAGE_SET_VISIBLE: &str = "Image.set_visible";
+pub const IMAGE_SET_MASK: &str = "Image.set_mask";
+pub const IMAGE_CLEAR_MASK: &str = "Image.clear_mask";
+pub const IMAGE_COMPOSITE: &str = "Image.composite";
+pub const IMAGE_ADD_SELECTION: &str = "Image.add_selection";
+pub const IMAGE_CLEAR_SELECTIONS: &str = "Image.clear_selections";
+// Video
+pub const VIDEO_NEW_PROJECT: &str = "Video.new_project";
+pub const VIDEO_ADD_TRACK: &str = "Video.add_track";
+pub const VIDEO_ADD_CLIP: &str = "Video.add_clip";
+pub const VIDEO_TRIM_CLIP: &str = "Video.trim_clip";
+pub const VIDEO_SET_SPEED: &str = "Video.set_speed";
+pub const VIDEO_COLOUR_GRADE: &str = "Video.colour_grade";
+pub const VIDEO_ADD_TRANSITION: &str = "Video.add_transition";
+pub const VIDEO_SET_RENDER_FORMAT: &str = "Video.set_render_format";
+pub const VIDEO_SET_RENDER_BITRATE: &str = "Video.set_render_bitrate";
+pub const VIDEO_REMOVE_CLIP: &str = "Video.remove_clip";
+// 3D
+pub const THREE_D_ADD_OBJECT: &str = "ThreeD.add_object";
+pub const THREE_D_SET_TRANSFORM: &str = "ThreeD.set_transform";
+pub const THREE_D_SET_MATERIAL: &str = "ThreeD.set_material";
+pub const THREE_D_ADD_CAMERA: &str = "ThreeD.add_camera";
+pub const THREE_D_ADD_LIGHT: &str = "ThreeD.add_light";
+pub const THREE_D_ADD_RIG: &str = "ThreeD.add_rig";
+pub const THREE_D_ADD_ANIMATION: &str = "ThreeD.add_animation";
+pub const THREE_D_SET_MESH: &str = "ThreeD.set_mesh";
+// Interactive
+pub const HBBTV_NEW_APP: &str = "HbbTV.new_app";
+pub const HBBTV_ADD_PAGE: &str = "HbbTV.add_page";
+pub const HBBTV_NAVIGATE: &str = "HbbTV.navigate";
+pub const HBBTV_SET_STATE: &str = "HbbTV.set_state";
+pub const SECOND_SCREEN_SYNC: &str = "SecondScreen.sync";
+pub const INTERACTIVE_ADD_TRIGGER: &str = "Interactive.add_trigger";
+pub const INTERACTIVE_ADD_SOCIAL_POST: &str = "Interactive.add_social_post";
+// Portals / worlds
+pub const WORLD_NEW: &str = "World.new";
+pub const WORLD_ADD_OBJECT: &str = "World.add_object";
+pub const WORLD_ADD_PORTAL: &str = "World.add_portal";
+pub const WORLD_ADD_AVATAR: &str = "World.add_avatar";
+pub const WORLD_SET_GRAVITY: &str = "World.set_gravity";
+pub const WORLD_OBJECT_APPLY_FORCE: &str = "World.object_apply_force";
+pub const WORLD_OBJECT_STEP_PHYSICS: &str = "World.object_step_physics";
+pub const PORTAL_SET_TARGET: &str = "Portal.set_target";
+pub const PORTAL_ACTIVATE: &str = "Portal.activate";
+pub const PORTAL_DEACTIVATE: &str = "Portal.deactivate";
+pub const AVATAR_MOVE: &str = "Avatar.move";
+pub const AVATAR_SET_APPEARANCE: &str = "Avatar.set_appearance";
+// DMX
+pub const DMX_NEW_UNIVERSE: &str = "Dmx.new_universe";
+pub const DMX_SET_CHANNEL: &str = "Dmx.set_channel";
+pub const DMX_ADD_FIXTURE: &str = "Dmx.add_fixture";
+pub const DMX_FIXTURE_SET_COLOUR: &str = "Dmx.fixture_set_colour";
+pub const DMX_FIXTURE_SET_INTENSITY: &str = "Dmx.fixture_set_intensity";
+pub const DMX_FIXTURE_SET_PAN_TILT: &str = "Dmx.fixture_set_pan_tilt";
+pub const DMX_NEW_CUE: &str = "Dmx.new_cue";
+pub const DMX_CUE_SET_CHANNEL: &str = "Dmx.cue_set_channel";
+pub const DMX_CUE_SET_FADE: &str = "Dmx.cue_set_fade";
+pub const DMX_NEW_CUE_STACK: &str = "Dmx.new_cue_stack";
+pub const DMX_CUE_STACK_ADD: &str = "Dmx.cue_stack_add";
+pub const DMX_CUE_STACK_GO: &str = "Dmx.cue_stack_go";
+pub const DMX_CUE_STACK_GO_BACK: &str = "Dmx.cue_stack_go_back";
+pub const DMX_CUE_STACK_RESET: &str = "Dmx.cue_stack_reset";
+
+/// POET shell authoring receipts (layout, not 10D geometry). Vibe 0.1, no version bump.
+pub const POET_MANIFOLD_CREATE: &str = "Poet.manifold_create";
+pub const POET_CONTAINER_PLACE: &str = "Poet.container_place";
+pub const POET_NESTED_LINK: &str = "Poet.nested_link";
+pub const POET_SUBJECT_DECLARE: &str = "Poet.subject_declare";
+pub const POET_PARTICIPANT_INVITE: &str = "Poet.participant_invite";
+
+pub const ALL_BOUND: &[&str] = &[
+    CLIN_FRAMINGHAM,
+    CLIN_CHA2DS2,
+    CLIN_SCORE2,
+    CLIN_DRUG_INTERACTION,
+    CLIN_CONTRAINDICATION,
+    CLIN_FHIR_OBSERVATION,
+    CLIN_COMORBIDITY,
+    MEDICAL_HU_WINDOW,
+    NLP_ANALYZE,
+    NLP_GAZETTEER_RUN,
+    NLP_GAZETTEER_BUILD,
+    NLP_FST_LOOKUP,
+    NLP_COREF_RESOLVE,
+    NLP_FRAME_EXTRACT,
+    NLP_RELATION_EXTRACT,
+    NLP_SUBSTRATE_EXTRACT,
+    NLP_GRAPHRAG_QUERY,
+    CHEM_ELEMENT_SYMBOL,
+    CHEM_ATOMIC_NUMBER,
+    CHEM_ATOMIC_WEIGHT,
+    CHEM_LDA_EXCHANGE,
+    CHEM_LDA_CORRELATION_VWN,
+    CHEM_PARSE_BSE_JSON,
+    CHEM_STO3G,
+    HID_POLL,
+    HID_WAIT,
+    HID_CLEAR,
+    HID_POINTER_CAPTURE,
+    HID_POINTER_RELEASE,
+    HID_SET_CURSOR,
+    HID_GAMEPAD_POLL,
+    HID_GAMEPAD_VIBRATE,
+    HID_MIDI_SEND,
+    HID_MIDI_POLL,
+    HID_HAPTIC_PULSE,
+    HID_HAPTIC_PATTERN,
+    HID_SPATIAL_HEAD_POSE,
+    HID_SPATIAL_HAND_SKELETON,
+    HID_SPATIAL_GAZE_RAY,
+    HID_BIOSIGNAL_POLL,
+    DAG_EXECUTE,
+    DAG_VALIDATE,
+    DAG_STATUS,
+    ORCH_SESSION_CREATE,
+    ORCH_SESSION_PLAN,
+    ORCH_SESSION_EXECUTE,
+    ORCH_SESSION_STATUS,
+    ORCH_ROSTER_REGISTER,
+    ORCH_ROSTER_LIST,
+    ORCH_ROSTER_CAPABILITIES,
+    ORCH_ASSIGN_AGENTS,
+    DISCOVERY_LIST,
+    SHACL_VALIDATE,
+    SHACL_EXTENSIONS,
+    GRAPH_STATS,
+    GRAPH_SPARQL,
+    GRAPH_VOLUME_OPEN,
+    GRAPH_VOLUME_COMMIT,
+    GRAPH_LEXICON_MANIFEST,
+    N3_EVALUATE,
+    GRAPH_AUTHORING,
+    DEONTIC_EVAL,
+    EPISTEMIC_EVAL,
+    PARACONSISTENT_ROUTE,
+    LTL_GLOBALLY,
+    LTL_FINALLY,
+    LTL_EVALUATE,
+    DL_SUBSUMES,
+    ASP_ENUMERATE,
+    CAUSAL_CAUSED,
+    FUZZY_TNORM,
+    ADVANCED_LOGIC_WORKBENCH,
+    FORMAL_LOGIC_WORKBENCH,
+    LEGAL_LOGIC_WORKBENCH,
+    GOVERNANCE_LOGIC_WORKBENCH,
+    SPATIAL_LOGIC_WORKBENCH,
+    INFRA_LOGIC_WORKBENCH,
+    INFRA_EXT_LOGIC_WORKBENCH,
+    SYMBOLIC_EVAL,
+    LINALG_MATMUL,
+    CALC_SIMPSON,
+    CALCULUS_WORKBENCH,
+    OPT_HILL,
+    GA_DOT,
+    GEOM_HULL2,
+    GEOM_DISTANCE_2D,
+    GEOM_DISTANCE_3D,
+    GEOM_POINT_SEGMENT_DISTANCE_2D,
+    GEOM_POINT_SEGMENT_DISTANCE_3D,
+    GEOM_POINT_TRIANGLE_DISTANCE_3D,
+    GEOM_TRIANGULATE_POLYGON,
+    GEOM_SURFACE_AREA,
+    GEOM_SIGNED_VOLUME,
+    GEOM_MORTON_ENCODE_2D,
+    GEOM_MORTON_DECODE_2D,
+    GEOM_MORTON_ENCODE_3D,
+    GEOM_HILBERT_ENCODE_2D,
+    GEOM_ORIENTATION_2,
+    GEOM_CIRCUMCENTER,
+    GEOM_LINE_SEGMENT_INTERSECTION_2,
+    GEOM_BEZIER_EVAL,
+    GEOM_NEAREST_SITE,
+    GEOM_ORIENT_3D,
+    VISION_AHASH,
+    VISION_GAUSSIAN_BLUR,
+    VISION_SOBEL_MAGNITUDE,
+    VISION_CANNY_EDGES,
+    VISION_HISTOGRAM,
+    VISION_EQUALIZE_HIST,
+    VISION_RGB_TO_GRAY,
+    VISION_DHASH,
+    VISION_HAMMING_DISTANCE,
+    VISION_COSINE_SIMILARITY,
+    NT_GCD,
+    NT_LCM,
+    NT_PRIME,
+    SPEC_BESSEL,
+    STAT_MEAN,
+    STAT_MEDIAN,
+    STAT_VARIANCE,
+    STAT_STD_DEV,
+    STAT_SKEWNESS,
+    STAT_KURTOSIS,
+    STAT_QUANTILE,
+    STAT_COVARIANCE,
+    STAT_MIN,
+    STAT_MAX,
+    STAT_SUM,
+    STAT_SPEARMAN,
+    STAT_KENDALL,
+    STAT_ONE_SAMPLE_T,
+    STAT_TWO_SAMPLE_T,
+    STAT_PAIRED_T,
+    STAT_CHI_SQUARE_GOF,
+    STAT_ONE_WAY_ANOVA,
+    STAT_AUTOCORRELATION,
+    STAT_MOVING_AVERAGE,
+    STAT_EXPONENTIAL_SMOOTHING,
+    STAT_TRIMMED_MEAN,
+    STAT_IQR,
+    STAT_MAD,
+    STAT_ENTROPY,
+    STAT_KL_DIVERGENCE,
+    STAT_Z_SCORE_OUTLIERS,
+    // Distributions
+    STAT_NORMAL_PDF,
+    STAT_NORMAL_CDF,
+    STAT_NORMAL_QUANTILE,
+    STAT_STANDARD_NORMAL_CDF,
+    STAT_TWO_SIDED_P,
+    STAT_STUDENTS_T_PDF,
+    STAT_STUDENTS_T_CDF,
+    STAT_STUDENTS_T_TWO_SIDED_P,
+    STAT_CHI_SQUARED_PDF,
+    STAT_CHI_SQUARED_CDF,
+    STAT_CHI_SQUARED_UPPER_P,
+    STAT_FISHER_F_PDF,
+    STAT_FISHER_F_CDF,
+    STAT_FISHER_F_UPPER_P,
+    STAT_BINOMIAL_PMF,
+    STAT_BINOMIAL_CDF,
+    STAT_POISSON_PMF,
+    STAT_POISSON_CDF,
+    STAT_EXPONENTIAL_PDF,
+    STAT_EXPONENTIAL_CDF,
+    STAT_GAMMA_PDF,
+    STAT_BETA_PDF,
+    STAT_WEIBULL_PDF,
+    STAT_LOGNORMAL_PDF,
+    STAT_UNIFORM_PDF,
+    STAT_LAPLACE_PDF,
+    STAT_LN_GAMMA,
+    STAT_GAMMA_FN,
+    STAT_ERF,
+    STAT_ERFC,
+    STAT_EMPIRICAL_CDF,
+    // Extra stats
+    STAT_MODE,
+    STAT_WINSORIZED_MEAN,
+    STAT_CROSS_ENTROPY,
+    STAT_MUTUAL_INFORMATION,
+    STAT_HISTOGRAM,
+    STAT_CORRELATION_P_VALUE,
+    STAT_CHI_SQUARE_INDEPENDENCE,
+    STAT_MODIFIED_Z_SCORE_OUTLIERS,
+    STAT_IQR_OUTLIERS,
+    STAT_GRUBBS_TEST,
+    STAT_MANN_WHITNEY_U,
+    STAT_KS_1SAMPLE,
+    STAT_FRIEDMAN,
+    STAT_MCNEMAR,
+    STAT_BOOTSTRAP_MEANS,
+    STAT_LJUNG_BOX,
+    STAT_ADF_PROXY,
+    STAT_ARGMAX,
+    STAT_STANDARD_PDF,
+    STAT_STANDARD_QUANTILE,
+    STAT_LOGNORMAL_CDF,
+    STAT_UNIFORM_CDF,
+    STAT_LAPLACE_CDF,
+    STAT_STUDENTS_T_QUANTILE,
+    STAT_STUDENTS_T_UPPER_P,
+    STAT_CHI_SQUARED_QUANTILE,
+    STAT_FISHER_F_QUANTILE,
+    STAT_GAMMP,
+    STAT_GAMMQ,
+    STAT_BETAI,
+    STAT_ENTROPY_FROM_COUNTS,
+    STAT_TUKEY_FENCES,
+    STAT_MAHALANOBIS_SQ,
+    STAT_MVN_LOG_PDF,
+    STAT_MVN_PDF,
+    STAT_MVN_SAMPLE,
+    STAT_MVN_MLE,
+    STAT_PEARSON,
+    ML_OLS,
+    ML_MSE,
+    ML_RMSE,
+    ML_MAE,
+    ML_R2,
+    ML_ACCURACY,
+    ML_ROC_AUC,
+    ML_KMEANS,
+    ML_TRAIN_TEST_SPLIT,
+    ML_LOG_LOSS,
+    ML_CONFUSION_BINARY,
+    ML_K_FOLD,
+    ML_BOOTSTRAP_INDICES,
+    ML_BONFERRONI,
+    ML_HOLM,
+    ML_BH,
+    ML_PCA,
+    ML_AB_TEST,
+    ML_POWER_TWO_SAMPLE,
+    ML_REQUIRED_SAMPLE_SIZE,
+    ML_TRANSE_SCORE,
+    ML_DISTMULT_SCORE,
+    ML_COMPLEX_SCORE,
+    ML_ROTATE_SCORE,
+    ML_KG_MEAN_RANK,
+    ML_KG_MRR,
+    ML_KG_HITS_AT_K,
+    ML_POLYNOMIAL_REGRESSION,
+    ML_BOOTSTRAP_ESTIMATE,
+    ML_BOOTSTRAP_CI,
+    ML_PERMUTATION_TEST,
+    ML_REQUIRED_SAMPLE_SIZE_TWO_PROPORTION,
+    ML_LOOCV,
+    ML_N_REJECTED,
+    ML_AL_ROW_SCORE,
+    ML_AL_SCORE,
+    ML_AL_RANK_INFORMATIVE,
+    ML_AL_MOST_INFORMATIVE,
+    ML_AL_COSINE_SIMILARITY,
+    ML_AL_REPRESENTATIVENESS,
+    ML_AL_INFORMATION_DENSITY,
+    ML_AL_RANK_BY_DENSITY,
+    ML_AL_VOTE_ENTROPY,
+    ML_AL_CONSENSUS,
+    ML_AL_CONSENSUS_ENTROPY,
+    ML_AL_AVERAGE_KL_DISAGREEMENT,
+    ML_AL_RANK_BY_DISAGREEMENT,
+    ML_RIDGE_FIT,
+    ML_LASSO_FIT,
+    ML_PLS_FIT,
+    ML_KMEANS_FIT,
+    ML_GMM_FIT,
+    ML_LOGISTIC_FIT,
+    ML_POISSON_FIT,
+    ML_COX_FIT,
+    ML_SVM_FIT,
+    ML_DECISION_TREE_FIT_REGRESSOR,
+    ML_DECISION_TREE_FIT_CLASSIFIER,
+    ML_HMM_BAUM_WELCH,
+    ML_VARIATIONAL_GAUSSIAN_FIT,
+    ML_MCMC_METROPOLIS,
+    ML_GP_FIT,
+    ML_NAIVE_BAYES_FIT,
+    ML_KNN_FIT,
+    ML_LDA_FIT,
+    ML_QDA_FIT,
+    ML_MULTINOMIAL_LOGISTIC_FIT,
+    ML_SVM_MULTICLASS_FIT,
+    ML_HIERARCHICAL_FIT,
+    ML_HIERARCHICAL_LABELS,
+    ML_KAPLAN_MEIER_FIT,
+    ML_PCR_FIT,
+    ML_BAYESIAN_LINEAR_FIT,
+    ML_SOM_TRAIN,
+    ML_KALMAN_NEW,
+    ML_RANDOM_FOREST_FIT_REGRESSOR,
+    ML_RANDOM_FOREST_FIT_CLASSIFIER,
+    ML_GRADIENT_BOOSTING_FIT_REGRESSOR,
+    ML_FACTOR_GRAPH_MARGINALS,
+    ML_STANDARD_SCALER_FIT_TRANSFORM,
+    ML_BART_FIT,
+    // Number theory
+    NT_NEXT_PRIME,
+    NT_PRIME_FACTORS,
+    NT_DIVISORS,
+    NT_EULER_TOTIENT,
+    NT_MOBIUS,
+    NT_DIVISOR_COUNT,
+    NT_DIVISOR_SUM,
+    NT_MOD_POW,
+    NT_MOD_INVERSE,
+    NT_FACTORIAL,
+    NT_BINOMIAL,
+    NT_PARTITIONS,
+    NT_CATALAN,
+    NT_STIRLING_SECOND,
+    NT_STIRLING_FIRST,
+    // Special functions
+    SF_AIRY_AI,
+    SF_AIRY_BI,
+    SF_ZETA,
+    SF_LEGENDRE,
+    SF_CHEBYSHEV_T,
+    SF_CHEBYSHEV_U,
+    SF_HERMITE,
+    SF_LAGUERRE,
+    SF_BESSEL_J,
+    SF_BESSEL_I,
+    SF_BESSEL_Y,
+    SF_BESSEL_K,
+    // Interpolation
+    INTERP_LINEAR,
+    INTERP_LAGRANGE,
+    INTERP_NEWTON_COEF,
+    INTERP_NEWTON_EVAL,
+    INTERP_POLY_FIT,
+    INTERP_POLY_EVAL,
+    // Fuzzy query
+    FQ_TRIANGULAR,
+    FQ_TRAPEZOIDAL,
+    FQ_APPROXIMATELY,
+    FQ_RAMP_UP,
+    FQ_RAMP_DOWN,
+    FQ_MUCH_GREATER_THAN,
+    FQ_MUCH_LESS_THAN,
+    PHYS_PROJECTILE,
+    PHYS_WORKBENCH,
+    BIO_ALIGN,
+    BIO_WORKBENCH,
+    CHEM_SMILES,
+    CHEM_WORKBENCH,
+    CLIN_FRAMINGHAM,
+    FIN_BS,
+    FIN_GBM_VAR,
+    ENG_KIN,
+    ENG_CAUCHY_STRESS,
+    ENG_DRAG_FORCE,
+    ENG_REYNOLDS,
+    ENG_FATIGUE_CYCLES,
+    ENG_MINER_DAMAGE,
+    ENG_ANALYZE_CONDUCTION,
+    ENG_FEM_STATIC,
+    CHEM_ELEMENT_SYMBOL,
+    CHEM_ATOMIC_NUMBER,
+    CHEM_ATOMIC_WEIGHT,
+    CHEM_LDA_EXCHANGE,
+    CHEM_LDA_CORRELATION_VWN,
+    CHEM_PARSE_BSE_JSON,
+    MED_TANIMOTO,
+    MED_STRUCTURAL_FINGERPRINT,
+    MED_ANALYZE_INTENSITY_GRID,
+    MED_ANALYZE_DIFFERENTIAL,
+    MED_SCREEN_COMPOUNDS,
+    ID_DID_Q42,
+    CRYPTO_SHA256,
+    NLP_ANALYZE,
+    HASH_IRI,
+    MANIFOLD_DISTANCE,
+    MANIFOLD_AXES,
+    MANIFOLD_PROJECT,
+    DOC_INGEST,
+    SHEET_STATS,
+    SHEET_SUM,
+    CHAT_GRAPH_VALIDATE_FRAGMENT,
+    CHAT_GRAPH_LINK_REPLY,
+    CHAT_GRAPH_SESSION_SUMMARY,
+    SOCIAL_LWW,
+    NET_PEER,
+    NET_SONIC,
+    PULSE_PUBLISH,
+    PULSE_PUBLISH_GRAPH_MUTATION,
+    PULSE_PUBLISH_NOTIFICATION,
+    PULSE_PUBLISH_TELEMETRY,
+    PULSE_PUBLISH_AGENT_MESSAGE,
+    PULSE_PUBLISH_PRESENCE,
+    PULSE_PUBLISH_SYNC,
+    PULSE_OPEN_CHANNEL,
+    PULSE_CLOSE_CHANNEL,
+    PULSE_SET_TRANSPORT,
+    FIN_PORTFOLIO,
+    COVERAGE_MATRIX,
+    CATALOG_TTL,
+    RENDER_SCENE,
+    RENDER_CSS_ANIMATION,
+    RENDER_CSS_COLOR,
+    RENDER_CSS_TRANSFORM,
+    RENDER_ANIMATION_EVAL_CURVE,
+    RENDER_ANIMATION_SPRING_STEP,
+    RENDER_ANIMATION_SCLERP,
+    RENDER_ANIMATION_EVAL_PRESET,
+    RENDER_ANIMATION_SQUAD_STEP,
+    RENDER_ANIMATION_LIST_PRESETS,
+    RENDER_ANIMATION_COMPUTE_PASS,
+    ANIMATION_EVALUATE_PRESET,
+    ANIMATION_SPRING_STEP,
+    ANIMATION_SCLERP_STEP,
+    ANIMATION_SQUAD_STEP,
+    ANIMATION_BEZIER_EVAL,
+    ANIMATION_EASING,
+    ANIMATION_LIST_PRESETS,
+    RENDER_SVG_PATH,
+    RENDER_SVG_CIRCLE,
+    RENDER_SVG_RECT,
+    RENDER_SVG_LINE,
+    RENDER_SVG_BEZIER,
+    RENDER_SVG_FIELD,
+    LA_TRANSPOSE,
+    LA_DET,
+    LA_SOLVE,
+    LA_EIGEN_SYM,
+    LA_EIGENVALUES,
+    LA_SVD,
+    LA_POLY_ROOTS,
+    LA_LU_DECOMPOSE,
+    LA_LU_SOLVE,
+    LA_CHOLESKY_FACTOR,
+    LA_CHOLESKY_DET,
+    LA_CHARPOLY,
+    LA_EIGENVALUES_GENERAL,
+    LA_QR_FACTOR,
+    LA_QR_FORM_Q,
+    LA_QR_SOLVE_LS,
+    LA_ADD_INTO,
+    LA_CHOLESKY_SOLVE,
+    LA_AXPY,
+    LA_HADAMARD_INTO,
+    LA_ADD_ASSIGN,
+    LA_HADAMARD_ASSIGN,
+    LA_SCALE,
+    LA_MATVEC,
+    ONTOLOGY_ALIGN,
+    GRAPH_FUZZY_JACCARD,
+    GRAPH_FUZZY_DICE,
+    GRAPH_APPROXIMATE_MATCH,
+    CALC_POISSON_DIRICHLET,
+    CALC_DMP_HOLDS,
+    GA_GEOMETRIC_PRODUCT,
+    GA_OUTER_PRODUCT,
+    GA_ROTOR_FROM_ANGLE_AXIS,
+    GA_APPLY_ROTOR,
+    GA_TRANSLATOR_FROM_DISPLACEMENT,
+    GA_APPLY_TRANSLATOR,
+    GA_IS_SIMD_AVAILABLE,
+    XFORM_IDFT,
+    XFORM_Z_TRANSFORM_FINITE,
+    XFORM_UNIT_STEP_Z,
+    XFORM_GEOMETRIC_Z,
+    VC_GRADIENT,
+    VC_DIVERGENCE,
+    VC_CURL,
+    VC_LAPLACIAN,
+    CAS_DIFFERENTIATE,
+    CAS_SIMPLIFY,
+    CAS_EXPAND,
+    CAS_FACTOR,
+    CAS_SOLVE_QUADRATIC,
+    CAS_SIMPLIFY_TRIG,
+    CAS_INTEGRATE,
+    CAS_TAYLOR_COEFFICIENTS,
+    CAS_TAYLOR_EVAL,
+    CAS_LIMIT,
+    CAS_INTEGRATE_DEFINITE,
+    CAS_LIMIT_AT_INFINITY,
+    CAS_REAL_ROOTS,
+    ODE_SOLVE_LINEAR_FIRST_ORDER,
+    ODE_SOLVE_LINEAR_SECOND_ORDER,
+    ODE_CLASSIFY_SECOND_ORDER_PDE,
+    POLY_DIV_REM,
+    POLY_DERIVATIVE,
+    POLY_MONIC,
+    POLY_RESULTANT,
+    POLY_ADD,
+    POLY_SUB,
+    POLY_MUL,
+    POLY_DEGREE,
+    POLY_LEADING,
+    POLY_IS_ZERO,
+    ODE_SOLVE_SEPARABLE,
+    ODE_SOLVE_FIRST_ORDER_LINEAR_PDE,
+    CAS_SOLVE_POLYNOMIAL_EXPR,
+    CAS_SIMPLIFY_WITH_ASSUMPTIONS,
+    CAS_ROOTS,
+    LA_SOLVE_LINEAR_SYSTEM,
+    CAS_EXPR_CITATION_HASH,
+    CAS_PARTIAL,
+    CAS_JACOBIAN,
+    CAS_HESSIAN,
+    CAS_GRADIENT_AT,
+    CAS_HESSIAN_AT,
+    CONSTR_IS_REGULAR_POLYGON,
+    CONSTR_IS_FERMAT_PRIME,
+    CONSTR_FROM_MIN_POLY_DEGREE,
+    CONSTR_IS_POWER_OF_TWO,
+    CONSTR_IS_CENTRAL_ANGLE,
+    CONSTR_DOUBLING_THE_CUBE,
+    CONSTR_TRISECTING_GENERAL_ANGLE,
+    CONSTR_SQUARING_THE_CIRCLE,
+    CONSTR_IS_CONSTRUCTIBLE_NUMBER,
+    CAS_SOLVE_QUADRATIC_SYMBOLIC,
+    CAS_FACTOR_QUADRATIC,
+    CAS_POW,
+    CAS_NEG,
+    CAS_SQRT,
+    CAS_EXP,
+    CAS_LN,
+    CAS_SIN,
+    CAS_COS,
+    CAS_TAN,
+    CAS_C,
+    CAS_VAR,
+    CAS_ADD,
+    CAS_SUB,
+    CAS_MUL,
+    CAS_DIV,
+    POLY_GCD,
+    POLY_SCALE,
+    POLY_EVAL,
+    POLY_ZERO,
+    POLY_CONSTANT,
+    CAS_PARSE,
+    STAT_VALIDATE_PROBABILITY,
+    STAT_SIMPLEX_PROJECT,
+    STAT_FISHER_DISTANCE,
+    STAT_NEG_ENTROPY,
+    STAT_SIMPLEX_PROJECT_IDEMPOTENT,
+    STAT_FISHER_INNER_PRODUCT,
+    STAT_NEG_ENTROPY_GRAD,
+    STAT_KL_BREGMAN_FORM,
+    STAT_BREGMAN_PYTHAGOREAN_TEST,
+    STAT_PROBABILITY_HASH,
+    CHEM_BOYS_FUNCTION,
+    CHEM_OVERLAP_S,
+    CHEM_KINETIC_S,
+    CHEM_NUCLEAR_S,
+    CHEM_DIPOLE_S,
+    LA_SYMMETRIC_EIGEN_3X3,
+    CAS_TO_QUINS,
+    CAS_FROM_QUINS,
+    CHEM_EVALUATE_ERI,
+    CHEM_TOTAL_ANGULAR_MOMENTUM,
+    CHEM_LETTER,
+    CHEM_N_CARTESIAN,
+    CHEM_N_SPHERICAL,
+    CHEM_FROM_LETTER,
+    LA_GEMM,
+    LA_DOT,
+    LA_NORM,
+    LA_TRACE,
+    LA_IDENTITY,
+    LA_INVERSE,
+    POLY_COEFFS,
+    CALC_HERMITE_DENSE_OUTPUT,
+    CALC_BDF1_STEP,
+    CALC_BDF2_STEP,
+    CALC_INVARIANT_DRIFT,
+    CALC_PERMUTATION_PARITY,
+    CALC_PACK_F32_PAIR,
+    CALC_UNPACK_F32_PAIR,
+    GRAPH_TOP_K,
+    CALC_VERLET_STEP,
+    CALC_RUTH3_STEP,
+    CALC_YOSHIDA4_STEP,
+    CALC_INTEGRATE_BDF,
+    CALC_INTEGRATE_WITH_SENSITIVITY,
+    NT_EXTENDED_GCD,
+    NT_CRT,
+    ENG_NATURAL_FREQUENCY_SDOF,
+    ENG_ANALYZE_HARMONIC_SDOF,
+    ENG_ANALYZE_EULER,
+    ENG_COMPUTE_RELIABILITY_INDEX,
+    GA_CROSS_PRODUCT,
+    GA_NORMALIZE_VECTOR,
+    GA_ANGLE_BETWEEN_VECTORS,
+    FQ_THRESHOLD,
+    CHEM_GAUSSIAN_ELIMINATION,
+    CHEM_JACOBI_DIAGONALIZATION,
+    CHEM_TRANSPOSE,
+    CHEM_ORTHOGONALIZATION_MATRIX,
+    FQ_TOP_K,
+    FQ_NEGATE,
+    FQ_AND,
+    FQ_OR,
+    XFORM_DFT_COMPLEX,
+    CALC_CANONICAL_POISSON_BRACKET,
+    CALC_STORMER_VERLET_STEP,
+    CALC_ADAPTIVE_GAUSS_KRONROD_15,
+    CALC_JVP,
+    CALC_VJP,
+    COSMIC_WARP_FACTOR_C,
+    COSMIC_TYPICAL_LENGTH,
+    COSMIC_OBSERVE_REDSHIFT,
+    NLP_TOKENIZE,
+    NLP_SPLIT_SENTENCES,
+    INFERENCE_RELU,
+    INFERENCE_SIGMOID,
+    INFERENCE_GELU,
+    INFERENCE_SOFTMAX,
+    INFERENCE_RMS_NORM,
+    GEOM_AVERAGE_SPACING_3D,
+    GEOM_LOCAL_DENSITY_3D,
+    AUDIO_EPISTEMIC_TEMPERATURE_FROM_Q,
+    AUDIO_EPISTEMIC_FM_INDEX,
+    AUDIO_SIGMA_DOMINANT_FREQUENCY,
+    AUDIO_PARAMETRIC_SAMPLE,
+    AUDIO_BIN_TO_FREQ_LINEAR,
+    AUDIO_BIN_TO_FREQ_LOG,
+    SCENE_LERP_CAMERA,
+    SCENE_CAMERA_FRAME_NODE,
+    GEOM_MEAN_KNN_DISTANCE_3D,
+    GEOM_FISHER_DISTANCE,
+    GEOM_KL_DIVERGENCE,
+    GEOM_KL_BREGMAN_FORM,
+    GEOM_TRIANGLE_SIGNED_AREA,
+    GEOM_DIST_POINT_TO_SEGMENT,
+    GEOM_DIST_SQ_POINT_TO_SEGMENT,
+    GEOM_INCIRCLE,
+    GEOM_TUKEY_DEPTH,
+    GEOM_DIRECTIONAL_WIDTH,
+    GEOM_WIDTH,
+    GEOM_FARTHEST_SITE_BRUTE,
+    GEOM_K_NEAREST_SITES,
+    GEOM_IS_HULL_SITE,
+    GEOM_DIAMETER_AND_WIDTH,
+    GEOM_INSPHERE,
+    GEOM_HAM_SANDWICH_CUT,
+    GEOM_SMALLEST_ENCLOSING_DISK,
+    GEOM_POLYGON_SIGNED_AREA,
+    GEOM_POLYGON_AREA,
+    GEOM_POINT_IN_POLYGON,
+    GEOM_MINKOWSKI_SUM_CONVEX,
+    GEOM_NEAREST_SEGMENT_SITE,
+    GEOM_WIDTH_CORESET,
+    GEOM_DUAL_POINT_TO_LINE,
+    GEOM_DUAL_ROUND_TRIP,
+    GEOM_IS_CONVEX_POLYGON,
+    GEOM_POINT_IN_OR_ON_POLYGON,
+    GEOM_BOOLEAN_UNION_AREA,
+    GEOM_BOOLEAN_INTERSECTION_AREA,
+    GEOM_BOOLEAN_DIFFERENCE_AREA,
+    GEOM_CROSS_RATIO_1D,
+    GEOM_HYPERPLANE_EVAL,
+    GEOM_HOUSEHOLDER_REFLECT,
+    GEOM_QUATERNION_NORMALIZE,
+    GEOM_SO3_EXP,
+    GEOM_SO3_LOG,
+    GEOM_PROJECTIVE_FROM_POINT,
+    GEOM_POINT_FROM_PROJECTIVE,
+    GEOM_FRAME_TO_WORLD,
+    GEOM_WORLD_TO_FRAME,
+    GEOM_BARYCENTRIC_TETRA,
+    GEOM_QUATERNION_SLERP,
+    GEOM_QUATERNION_TO_MATRIX,
+    GEOM_SOLVE_DIAGONAL_QUADRATIC,
+    GEOM_SCHUR_COMPLEMENT_2X2,
+    GEOM_SEPARATING_PLANE_AABB,
+    CRYPTO_SHA512,
+    CRYPTO_BLAKE3,
+    PRIVACY_GAUSSIAN_SIGMA,
+    STAT_LINEAR_REGRESSION,
+    XFORM_DFT,
+    UNITS_CONVERT,
+    GRAPH_SHORTEST_PATH,
+    GRAPH_SPREADING_ACTIVATION,
+    PHYS_WAVE_1D,
+    PHYS_HEAT_DIFFUSION_1D,
+    PHYS_ADVECTION_DIFFUSION_1D,
+    PHYS_HARMONIC_OSCILLATOR,
+    PHYS_PENDULUM,
+    PHYS_N_BODY,
+    PHYS_MOLECULAR_DYNAMICS,
+    PHYS_CFD_STEP,
+    PHYS_QUANTUM_STATES_1D,
+    PHYS_LOGISTIC_GROWTH,
+    PHYS_EMF_INTERFERENCE,
+    PHYS_EMF_ATTENUATION,
+    PHYS_DOPPLER_SHIFT,
+    PHYS_EMF_FIELD_GRID_3D,
+    PHYS_EMF_SAMPLE_AT_DEPTH,
+    PHYS_FIELD_SAMPLE,
+    PHYS_MATERIAL_QUERY,
+    PHYS_EVALUATE_INTERACTION,
+    SPECTRAL_EMF_TO_SPD,
+    SPECTRAL_SPD_TO_XYZ,
+    SPECTRAL_EMF_TO_RGB,
+    SPECTRAL_BLEND,
+    SPECTRAL_GAMUT_MAP,
+    GPU_ADAPTER_INFO,
+    GPU_INIT,
+    GPU_INIT_SURFACE,
+    GPU_RENDER_FRAME,
+    GPU_READ_PIXELS,
+    GPU_UPLOAD_MESH,
+    GPU_UPLOAD_TENSOR,
+    GPU_SET_CAMERA,
+    GPU_PICK,
+    GPU_POLL_PICK,
+    GPU_RESIZE,
+    GPU_SET_AMBIENT,
+    GPU_DESTROY,
+    GPU_COMPUTE_DISPATCH,
+    GPU_COMPUTE_READBACK,
+    GPU_VALIDATE_SHADER,
+    GPU_COMPILE_SHADER,
+    GPU_COMPILE_TO_GLSL,
+    GPU_BACKEND_INFO,
+    GPU_UPLOAD_MESH_COLORED,
+    GPU_SET_STANDPOINT,
+    GPU_OBSERVER_STANDPOINT,
+    GPU_CAMERA_STATE,
+    GPU_SURFACE_SIZE,
+    GPU_HAS_MESH,
+    GPU_HAS_TENSOR,
+    GPU_TENSOR_NODE_COUNT,
+    GPU_PARTICLE_COUNT,
+    GPU_SYNC_BLOOM,
+    GPU_SET_ARTEFACT_JOINT,
+    GPU_SET_ARTEFACT_WORLD,
+    GPU_ARTEFACT_REFUSED,
+    GPU_REQUIRED_RGBA8_BYTES,
+    EMF_UPLOAD_FIELD,
+    EMF_RENDER_SLICE,
+    EMF_FIELD_INFO,
+    SAMPLER_CONFIGURE,
+    SAMPLER_CONSTRAIN_ENABLE,
+    SAMPLER_CONSTRAIN_DISABLE,
+    SAMPLER_CONSTRAIN_RESET,
+    SAMPLER_SAMPLE,
+    ASSET_CREATE,
+    ASSET_ADD_TEMPORAL,
+    ASSET_ADD_TOPIC,
+    ASSET_SET_SPATIAL,
+    ASSET_COMPILE,
+    ASSET_TEMPORAL_SPAN,
+    ASSET_QUERY_ASPECTS,
+    ASSET_PERSIST,
+    ASSET_RESOLVE,
+    ASSET_RESOLVE_BY_SPATIAL,
+    ASSET_RESOLVE_BY_TOPIC,
+    ASSET_RESOLVE_BY_TEMPORAL,
+    ASSET_LIST,
+    ASSET_COUNT,
+    ASSET_PERSIST_CREATE,
+    ASSET_PERSIST_ADD_TEMPORAL,
+    ASSET_PERSIST_ADD_TOPIC,
+    ASSET_PERSIST_SET_SPATIAL,
+    ASSET_PERSIST_COMPILE,
+    ASSET_PERSIST_TEMPORAL_SPAN,
+    ASSET_PERSIST_QUERY_ASPECTS,
+    COSMIC_GEODETIC_TO_ECEF,
+    COSMIC_ECEF_TO_GEODETIC,
+    COSMIC_ECEF_TO_ENU,
+    COSMIC_ENU_TO_ECEF,
+    COSMIC_GEODETIC_DISTANCE,
+    COSMIC_BODY_PROFILE,
+    COSMIC_SURFACE_GRAVITY,
+    COSMIC_FLRW_DISTANCE,
+    COSMIC_FLRW_REDSHIFT,
+    COSMIC_FLRW_HUBBLE_VELOCITY,
+    COSMIC_STARDATE_TO_GREGORIAN,
+    COSMIC_WARP_VELOCITY,
+    COSMIC_COCHRANE_UNITS,
+    COSMIC_ATMOSPHERE_PRESSURE,
+    COSMIC_ATMOSPHERE_TEMPERATURE,
+    COSMIC_MAGNETOSPHERE_FIELD,
+    COSMIC_SCALE_FACTOR,
+    COSMIC_COMPTON_WAVELENGTH,
+    COSMIC_DE_BROGLIE,
+    COSMIC_USRI_PARSE,
+    NLP_GAZETTEER_RUN,
+    NLP_GAZETTEER_BUILD,
+    CONDITIONING_VALIDATE,
+    CONDITIONING_COMPILE,
+    CONDITIONING_INSPECT,
+    CONDITIONING_EVALUATE,
+    CONDITIONING_ACTIVATE,
+    CONDITIONING_ROLLBACK,
+    INFERENCE_EMBED,
+    INFERENCE_GROUNDING,
+    INFERENCE_VERIFY_TURN,
+    INFERENCE_DETECT_UNGROUNDED,
+    FINANCE_CONVERT_CURRENCY,
+    FINANCE_MULTISIG_CHECK,
+    FINANCE_LEDGER_BALANCE,
+    ECON_CAPM_EXPECTED_RETURN,
+    ECON_CAPM_BETA,
+    ECON_GORDON_GROWTH,
+    ECON_MULTI_PERIOD_DDM,
+    ECON_CCAPM_EQUITY_PREMIUM,
+    ECON_CCAPM_SDF,
+    ECON_PROSPECT_VALUE,
+    ECON_PROBABILITY_WEIGHT,
+    ECON_HYPERBOLIC_DISCOUNT,
+    ECON_ENDOWMENT_EFFECT,
+    ECON_BLACK_SCHOLES,
+    ECON_PUT_CALL_PARITY,
+    ECON_BINOMIAL_OPTION,
+    ECON_MIXED_NASH_2X2,
+    ECON_COURNOT_DUOPOLY,
+    ECON_BERTRAND_DUOPOLY,
+    ECON_STACKELBERG_DUOPOLY,
+    ECON_SOLOW_STEADY_STATE,
+    ECON_RAMSEY_STEADY_STATE,
+    ECON_OLG_STEADY_STATE,
+    ECON_GINI,
+    ECON_ATKINSON,
+    ECON_HEADCOUNT_POVERTY,
+    ECON_POVERTY_GAP,
+    ECON_UTILITARIAN_WELFARE,
+    ECON_RAWLSIAN_WELFARE,
+    ECON_NASH_WELFARE,
+    ECON_NPV,
+    ECON_MEAN_RETURN,
+    ECON_SAMPLE_VARIANCE,
+    ECON_PORTFOLIO_MAX_DRAWDOWN,
+    ECON_HISTORICAL_VAR,
+    ECON_HISTORICAL_CVAR,
+    ECON_PARAMETRIC_VAR,
+    ECON_AUTOCORRELATION,
+    ECON_CROSS_CORRELATION,
+    ECON_INTERPOLATE_ZERO_RATE,
+    ECON_DISCOUNT_FACTOR,
+    ECON_FORWARD_RATE,
+    ECON_GRAVITY_FLOW,
+    ECON_MORANS_I,
+    ECON_TRANSFER_PAYMENT,
+    ECON_FISCAL_MULTIPLIER,
+    ECON_LAFFER_CURVE,
+    ECON_CHECK_IR,
+    ECON_CHECK_BUDGET_BALANCE,
+    ECON_VALIDATE_TRANSITION_MATRIX,
+    ECON_TRANSITION_PROBABILITY,
+    ECON_EXPECTED_HOLDING_TIME,
+    ECON_LABOR_SUPPLY,
+    ECON_EFFICIENCY_UNITS,
+    ECON_SOCIAL_COST_OF_CARBON,
+    ECON_OPTIMAL_POLLUTION,
+    ECON_OPTIMAL_ABATEMENT,
+    ECON_BELLMAN_UPDATE,
+    ECON_MALFEASANCE_DELTA,
+    ECON_OLS,
+    ECON_AGGREGATE_WEALTH,
+    ECON_TOTAL_TRANSPORT_COST,
+    ECON_LUCAS_ASSET_PRICE,
+    ECON_PRESENT_BIASED_UTILITY,
+    ECON_REFERENCE_DEPENDENT_UTILITY,
+    ECON_PURE_NASH_EQUILIBRIA,
+    ECON_REPEATED_GAME_PAYOFF,
+    ECON_BERTRAND_WITH_DEMAND,
+    ECON_RAMSEY_EULER_RESIDUAL,
+    ECON_NEW_KEYNESIAN_SOLVE,
+    ECON_LORENZ_CURVE,
+    ECON_DISTRIBUTIONAL_NPV,
+    ECON_PORTFOLIO_RETURNS,
+    ECON_COVARIANCE_MATRIX,
+    ECON_PORTFOLIO_VARIANCE,
+    ECON_SIMPLE_RETURNS,
+    ECON_LOG_RETURNS,
+    ECON_CUMULATIVE_WEALTH,
+    ECON_DRAWDOWN,
+    ECON_ROLLING_MEAN,
+    ECON_ROLLING_VARIANCE,
+    ECON_GBM_SIMULATE,
+    ECON_STRESS_SCENARIO,
+    ECON_BLOCK_BOOTSTRAP,
+    ECON_PAR_YIELD,
+    ECON_NEAREST_FACILITY,
+    ECON_PROGRESSIVE_TAX,
+    ECON_VCG_PAYMENT,
+    ECON_STRATEGY_PROOFNESS,
+    ECON_STATIONARY_DISTRIBUTION,
+    ECON_SIMULATE_CHAIN,
+    ECON_MEAN_FIRST_PASSAGE,
+    ECON_HOUSEHOLD_PRODUCTION_CES,
+    ECON_POLLUTION_DAMAGE,
+    ECON_MARGINAL_DAMAGE,
+    ECON_ABATEMENT_NET_BENEFIT,
+    ECON_WLS,
+    ECON_IV_2SLS,
+    ECON_LOGISTIC_MLE,
+    ECON_VALUE_ITERATION,
+    ECON_NARRATIVE_DIVERGENCE,
+    ECON_EIGENVECTOR_CENTRALITY,
+    ECON_DEGREE_CENTRALITY,
+    ECON_INTERBANK_CLEARING,
+    ECON_LEONTIEF_INVERSE,
+    ECON_OUTPUT_MULTIPLIERS,
+    ECON_AGENT_BASED_AGGREGATE_WEALTH,
+    ECON_VALIDATE_SCALAR_CONSTRAINT,
+    ECON_AGGREGATE_PAPER_FILLS,
+    CAPABILITY_GRANT,
+    CAPABILITY_REVOKE,
+    CAPABILITY_TEST_GATING,
+    CAPABILITY_AUDIT,
+    CAPABILITY_DECLARE,
+    SENTINEL_INSPECT,
+    SENTINEL_GATE,
+    AGENT_TRACE,
+    AGENT_VERIFY,
+    IDENTITY_CURRENT_USER,
+    AUDIO_SPECTRUM,
+    SCENE_CREATE,
+    SCENE_ADD_NODE,
+    SCENE_SET_TRANSFORM,
+    SCENE_SET_MESH,
+    SCENE_ADD_CAMERA,
+    SCENE_RENDER,
+    SCENE_SET_VIEWPORT,
+    SCENE_SET_CLEAR_COLOUR,
+    SCENE_CAPTURE_FRAME,
+    SOCIAL_GINI,
+    SOCIAL_LORENZ,
+    SOCIAL_DEGREE_CENTRALITY,
+    FORENSIC_MALFEASANCE_DELTA,
+    FORENSIC_NARRATIVE_DIVERGENCE,
+    NLP_FST_LOOKUP,
+    NLP_COREF_RESOLVE,
+    NLP_FRAME_EXTRACT,
+    NLP_RELATION_EXTRACT,
+    NLP_SUBSTRATE_EXTRACT,
+    NLP_GRAPHRAG_QUERY,
+    AGENT_PLAN,
+    AGENT_EXECUTE,
+    AGENT_EVALUATE,
+    CORPUS_LOAD,
+    CORPUS_PARSE,
+    AGENCY_EVALUATE,
+    COOPERATIVE_DELEGATION_PERMITS,
+    COOPERATIVE_WORK_BOARD_PROJECT,
+    INFERENCE_LOAD_MODEL,
+    INFERENCE_UNLOAD_MODEL,
+    INFERENCE_RUN_TRANSFORMER,
+    INFERENCE_RUN_CLASSIFIER,
+    INFERENCE_RUN_RERANKER,
+    INFERENCE_VECTOR_SEARCH,
+    INFERENCE_CONSTRAINED_DECODE,
+    AUDIO_OSCILLATOR,
+    AUDIO_ENVELOPE,
+    AUDIO_FILTER,
+    AUDIO_LFO,
+    AUDIO_DELAY,
+    AUDIO_REVERB,
+    AUDIO_COMPRESSOR,
+    AUDIO_EQ,
+    AUDIO_MIDI_NOTE,
+    AUDIO_QUANTIZE,
+    AUDIO_TRANSPOSE,
+    AUDIO_TRANSPORT,
+    AUDIO_WAVEFORM_METER,
+    AUDIO_PHASE_METER,
+    AUDIO_LOUDNESS_METER,
+    SCENE_ADD_LIGHT,
+    SCENE_LINK_SEMANTIC,
+    SCENE_DUPLICATE_NODE,
+    SCENE_SET_RENDER_BUDGET,
+    SCENE_IK_LOOK_AT,
+    SCENE_IK_CCD,
+    SCENE_SMOOTH_DAMP,
+    SCENE_SMOOTH_DAMP_VEC3,
+    RESEARCH_NEW,
+    RESEARCH_SET_PURPOSE,
+    RESEARCH_DEFINE_SCOPE,
+    RESEARCH_ADD_CONSTRAINT,
+    RESEARCH_ADD_QUESTION,
+    RESEARCH_LINK_QUESTIONS,
+    RESEARCH_ADD_CORPUS_ITEM,
+    RESEARCH_IMPORT_LITERATURE,
+    RESEARCH_IMPORT_DATASET,
+    RESEARCH_SET_CORPUS_CONFIDENCE,
+    RESEARCH_EXTRACT_FROM_CORPUS,
+    RESEARCH_INFER_DARK_LINK,
+    RESEARCH_DETECT_PROVENANCE_GAPS,
+    RESEARCH_DETECT_CONCEALMENT,
+    RESEARCH_CONFIRM_DARK_LINK,
+    RESEARCH_REFUTE_DARK_LINK,
+    RESEARCH_MAKE_INFERENCE,
+    RESEARCH_CHAIN_INFERENCE,
+    RESEARCH_SET_INFERENCE_CONFIDENCE,
+    RESEARCH_VALIDATE_INFERENCE,
+    RESEARCH_NEW_INVESTIGATION,
+    RESEARCH_COLLECT_EVIDENCE,
+    RESEARCH_SET_RELIABILITY,
+    RESEARCH_PROPOSE_HYPOTHESIS,
+    RESEARCH_EVALUATE_EVIDENCE,
+    RESEARCH_CREATE_TIMELINE,
+    RESEARCH_ADD_LINK,
+    RESEARCH_FIND_PATH,
+    RESEARCH_CREATE_HYPOTHESIS_GRAPH,
+    RESEARCH_CONTRIBUTE_EVALUATION,
+    RESEARCH_BRIDGE_DARK_LINK,
+    RESEARCH_REFRAME_HYPOTHESIS,
+    RESEARCH_MERGE_HYPOTHESES,
+    RESEARCH_FLAG_GAP,
+    RESEARCH_CLOSE_GAP,
+    RESEARCH_CREATE_REVISION,
+    RESEARCH_DIFF_REVISIONS,
+    RESEARCH_SUBSCRIBE_UPDATES,
+    RESEARCH_CREATE_ASSESSMENT,
+    RESEARCH_SET_EPISTEMIC_MODE,
+    RESEARCH_SET_REALITY_CATEGORY,
+    RESEARCH_CLASSIFY_REALITY,
+    RESEARCH_DETECT_BLENDED,
+    RESEARCH_DETECT_DECEPTIVE_FICTION,
+    RESEARCH_TRACE_FICTION,
+    RESEARCH_ASSESS_SENTIMENT,
+    RESEARCH_DETECT_SENTIMENT_MANIPULATION,
+    RESEARCH_DETECT_PERFORMED_SENTIMENT,
+    RESEARCH_MAP_SENTIMENT_NETWORK,
+    RESEARCH_ANALYSE_SENTIMENT_TRENDS,
+    RESEARCH_REGISTER_PERSPECTIVE,
+    RESEARCH_ADD_BIAS,
+    RESEARCH_COMPARE_PERSPECTIVES,
+    RESEARCH_DETECT_PERSPECTIVE_CONFLICT,
+    RESEARCH_RECONCILE_PERSPECTIVES,
+    RESEARCH_ASSESS_INTENTIONALITY,
+    RESEARCH_CLASSIFY_MISTAKE,
+    RESEARCH_DEFINE_SOCIAL_DYNAMICS,
+    RESEARCH_DEFINE_ECONOMIC_DYNAMICS,
+    RESEARCH_DEFINE_SPATIOTEMPORAL_DYNAMICS,
+    RESEARCH_ANALYSE_SOCIAL_NETWORK,
+    RESEARCH_ANALYSE_INEQUALITY,
+    RESEARCH_ANALYSE_DIFFUSION,
+    RESEARCH_ASSESS_GROUNDING,
+    RESEARCH_VERIFY_GROUNDING,
+    RESEARCH_DETECT_UNGROUNDED_BEHAVIOUR,
+    RESEARCH_CREATE_UG_INSTANCE,
+    RESEARCH_SET_UG_CAUSE,
+    RESEARCH_SET_UG_CONSEQUENCE,
+    RESEARCH_SET_UG_DETECTION,
+    RESEARCH_SET_UG_MITIGATION,
+    RESEARCH_SET_UG_CALIBRATION,
+    RESEARCH_DETECT_UG_PATTERNS,
+    IMAGE_NEW,
+    IMAGE_ADD_LAYER,
+    IMAGE_REMOVE_LAYER,
+    IMAGE_SET_PIXEL,
+    IMAGE_FILL,
+    IMAGE_BRUSH,
+    IMAGE_APPLY_FILTER,
+    IMAGE_SET_OPACITY,
+    IMAGE_SET_BLEND_MODE,
+    IMAGE_SET_VISIBLE,
+    IMAGE_SET_MASK,
+    IMAGE_CLEAR_MASK,
+    IMAGE_COMPOSITE,
+    IMAGE_ADD_SELECTION,
+    IMAGE_CLEAR_SELECTIONS,
+    VIDEO_NEW_PROJECT,
+    VIDEO_ADD_TRACK,
+    VIDEO_ADD_CLIP,
+    VIDEO_TRIM_CLIP,
+    VIDEO_SET_SPEED,
+    VIDEO_COLOUR_GRADE,
+    VIDEO_ADD_TRANSITION,
+    VIDEO_SET_RENDER_FORMAT,
+    VIDEO_SET_RENDER_BITRATE,
+    VIDEO_REMOVE_CLIP,
+    THREE_D_ADD_OBJECT,
+    THREE_D_SET_TRANSFORM,
+    THREE_D_SET_MATERIAL,
+    THREE_D_ADD_CAMERA,
+    THREE_D_ADD_LIGHT,
+    THREE_D_ADD_RIG,
+    THREE_D_ADD_ANIMATION,
+    THREE_D_SET_MESH,
+    HBBTV_NEW_APP,
+    HBBTV_ADD_PAGE,
+    HBBTV_NAVIGATE,
+    HBBTV_SET_STATE,
+    SECOND_SCREEN_SYNC,
+    INTERACTIVE_ADD_TRIGGER,
+    INTERACTIVE_ADD_SOCIAL_POST,
+    WORLD_NEW,
+    WORLD_ADD_OBJECT,
+    WORLD_ADD_PORTAL,
+    WORLD_ADD_AVATAR,
+    WORLD_SET_GRAVITY,
+    WORLD_OBJECT_APPLY_FORCE,
+    WORLD_OBJECT_STEP_PHYSICS,
+    PORTAL_SET_TARGET,
+    PORTAL_ACTIVATE,
+    PORTAL_DEACTIVATE,
+    AVATAR_MOVE,
+    AVATAR_SET_APPEARANCE,
+    DMX_NEW_UNIVERSE,
+    DMX_SET_CHANNEL,
+    DMX_ADD_FIXTURE,
+    DMX_FIXTURE_SET_COLOUR,
+    DMX_FIXTURE_SET_INTENSITY,
+    DMX_FIXTURE_SET_PAN_TILT,
+    DMX_NEW_CUE,
+    DMX_CUE_SET_CHANNEL,
+    DMX_CUE_SET_FADE,
+    DMX_NEW_CUE_STACK,
+    DMX_CUE_STACK_ADD,
+    DMX_CUE_STACK_GO,
+    DMX_CUE_STACK_GO_BACK,
+    DMX_CUE_STACK_RESET,
+    POET_MANIFOLD_CREATE,
+    POET_CONTAINER_PLACE,
+    POET_NESTED_LINK,
+    POET_SUBJECT_DECLARE,
+    POET_PARTICIPANT_INVITE,
+    ODE_RK4_INTEGRATE,
+    ODE_DOPRI5,
+    ODE_BDF,
+    ODE_SYMPLECTIC_STEP,
+    CALC_ADAPTIVE_SIMPSON,
+    CALC_ADAPTIVE_DERIVATIVE,
+    CALC_NUMERICAL_JACOBIAN,
+    CALC_NUMERICAL_HESSIAN,
+    CALC_NEWTON_SOLVE,
+    OPT_SIMULATED_ANNEALING,
+    OPT_ARTIFICIAL_BEE_COLONY,
+    VC_LINE_INTEGRAL_SCALAR,
+    VC_LINE_INTEGRAL_WORK,
+    VC_SURFACE_FLUX,
+    XFORM_LAPLACE_NUMERIC,
+    XFORM_LAPLACE_SYMBOLIC,
+];
+
+/// Future extract target for an invoke id. Not a crate today.
+pub fn seam_for(id: &str) -> &'static str {
+    match id {
+        DAG_EXECUTE
+        | DAG_VALIDATE
+        | DAG_STATUS
+        | ORCH_SESSION_CREATE
+        | ORCH_SESSION_PLAN
+        | ORCH_SESSION_EXECUTE
+        | ORCH_SESSION_STATUS
+        | ORCH_ROSTER_REGISTER
+        | ORCH_ROSTER_LIST
+        | ORCH_ROSTER_CAPABILITIES
+        | ORCH_ASSIGN_AGENTS => "agent",
+        DISCOVERY_LIST | HASH_IRI | COVERAGE_MATRIX | CATALOG_TTL => "runtime",
+        SHACL_VALIDATE
+        | SHACL_EXTENSIONS
+        | GRAPH_STATS
+        | GRAPH_SPARQL
+        | GRAPH_VOLUME_OPEN
+        | GRAPH_VOLUME_COMMIT
+        | GRAPH_LEXICON_MANIFEST
+        | N3_EVALUATE
+        | GRAPH_AUTHORING
+        | GRAPH_SHORTEST_PATH
+        | GRAPH_SPREADING_ACTIVATION
+        | GRAPH_TOP_K => "graph",
+        DEONTIC_EVAL
+        | EPISTEMIC_EVAL
+        | PARACONSISTENT_ROUTE
+        | LTL_GLOBALLY
+        | LTL_FINALLY
+        | LTL_EVALUATE
+        | DL_SUBSUMES
+        | ASP_ENUMERATE
+        | CAUSAL_CAUSED
+        | FUZZY_TNORM
+        | ADVANCED_LOGIC_WORKBENCH => "logic",
+        FORMAL_LOGIC_WORKBENCH
+        | LEGAL_LOGIC_WORKBENCH
+        | GOVERNANCE_LOGIC_WORKBENCH
+        | SPATIAL_LOGIC_WORKBENCH
+        | INFRA_LOGIC_WORKBENCH
+        | INFRA_EXT_LOGIC_WORKBENCH => "logic",
+        NLP_ANALYZE => "nlp",
+        NT_GCD
+        | NT_LCM
+        | NT_PRIME
+        | LINALG_MATMUL
+        | SYMBOLIC_EVAL
+        | CALC_SIMPSON
+        | CALCULUS_WORKBENCH
+        | OPT_HILL
+        | GA_DOT
+        | GA_CROSS_PRODUCT
+        | GA_NORMALIZE_VECTOR
+        | GA_ANGLE_BETWEEN_VECTORS
+        | SPEC_BESSEL
+        | LA_TRANSPOSE
+        | LA_DET
+        | LA_SOLVE
+        | LA_EIGEN_SYM
+        | LA_EIGENVALUES
+        | LA_SVD
+        | LA_POLY_ROOTS
+        | LA_LU_DECOMPOSE
+        | LA_LU_SOLVE
+        | LA_CHOLESKY_FACTOR
+        | LA_CHOLESKY_DET
+        | LA_CHARPOLY
+        | LA_EIGENVALUES_GENERAL
+        | LA_QR_FACTOR
+        | LA_QR_FORM_Q
+        | LA_QR_SOLVE_LS
+        | LA_ADD_INTO
+        | LA_CHOLESKY_SOLVE
+        | LA_AXPY
+        | LA_HADAMARD_INTO
+        | LA_ADD_ASSIGN
+        | LA_HADAMARD_ASSIGN
+        | LA_SCALE
+        | LA_MATVEC
+        | ONTOLOGY_ALIGN
+        | GRAPH_FUZZY_JACCARD
+        | GRAPH_FUZZY_DICE
+        | GRAPH_APPROXIMATE_MATCH
+        | CALC_POISSON_DIRICHLET
+        | CALC_DMP_HOLDS
+        | GA_GEOMETRIC_PRODUCT
+        | GA_OUTER_PRODUCT
+        | GA_ROTOR_FROM_ANGLE_AXIS
+        | GA_APPLY_ROTOR
+        | GA_TRANSLATOR_FROM_DISPLACEMENT
+        | GA_APPLY_TRANSLATOR
+        | GA_IS_SIMD_AVAILABLE
+        | XFORM_IDFT
+        | XFORM_Z_TRANSFORM_FINITE
+        | XFORM_UNIT_STEP_Z
+        | XFORM_GEOMETRIC_Z
+        | VC_GRADIENT
+        | VC_DIVERGENCE
+        | VC_CURL
+        | VC_LAPLACIAN
+        | ODE_RK4_INTEGRATE
+        | ODE_DOPRI5
+        | ODE_BDF
+        | ODE_SYMPLECTIC_STEP
+        | CALC_ADAPTIVE_SIMPSON
+        | CALC_ADAPTIVE_DERIVATIVE
+        | CALC_NUMERICAL_JACOBIAN
+        | CALC_NUMERICAL_HESSIAN
+        | CALC_NEWTON_SOLVE
+        | OPT_SIMULATED_ANNEALING
+        | OPT_ARTIFICIAL_BEE_COLONY
+        | VC_LINE_INTEGRAL_SCALAR
+        | VC_LINE_INTEGRAL_WORK
+        | VC_SURFACE_FLUX
+        | XFORM_LAPLACE_NUMERIC
+        | XFORM_LAPLACE_SYMBOLIC
+        | CAS_DIFFERENTIATE
+        | CAS_SIMPLIFY
+        | CAS_EXPAND
+        | CAS_FACTOR
+        | CAS_SOLVE_QUADRATIC
+        | CAS_SIMPLIFY_TRIG
+        | CAS_INTEGRATE
+        | CAS_TAYLOR_COEFFICIENTS
+        | CAS_TAYLOR_EVAL
+        | CAS_LIMIT
+        | CAS_INTEGRATE_DEFINITE
+        | CAS_LIMIT_AT_INFINITY
+        | CAS_REAL_ROOTS
+        | ODE_SOLVE_LINEAR_FIRST_ORDER
+        | ODE_SOLVE_LINEAR_SECOND_ORDER
+        | ODE_CLASSIFY_SECOND_ORDER_PDE
+        | POLY_DIV_REM
+        | POLY_DERIVATIVE
+        | POLY_MONIC
+        | POLY_RESULTANT
+        | POLY_ADD
+        | POLY_SUB
+        | POLY_MUL
+        | POLY_DEGREE
+        | POLY_LEADING
+        | POLY_IS_ZERO
+        | ODE_SOLVE_SEPARABLE
+        | ODE_SOLVE_FIRST_ORDER_LINEAR_PDE
+        | CAS_SOLVE_POLYNOMIAL_EXPR
+        | CAS_SIMPLIFY_WITH_ASSUMPTIONS
+        | CAS_ROOTS
+        | LA_SOLVE_LINEAR_SYSTEM
+        | CAS_EXPR_CITATION_HASH
+        | CAS_PARTIAL
+        | CAS_JACOBIAN
+        | CAS_HESSIAN
+        | CAS_GRADIENT_AT
+        | CAS_HESSIAN_AT
+        | CONSTR_IS_REGULAR_POLYGON
+        | CONSTR_IS_FERMAT_PRIME
+        | CONSTR_FROM_MIN_POLY_DEGREE
+        | CONSTR_IS_POWER_OF_TWO
+        | CONSTR_IS_CENTRAL_ANGLE
+        | CONSTR_DOUBLING_THE_CUBE
+        | CONSTR_TRISECTING_GENERAL_ANGLE
+        | CONSTR_SQUARING_THE_CIRCLE
+        | CONSTR_IS_CONSTRUCTIBLE_NUMBER
+        | CAS_SOLVE_QUADRATIC_SYMBOLIC
+        | CAS_FACTOR_QUADRATIC
+        | CAS_POW
+        | CAS_NEG
+        | CAS_SQRT
+        | CAS_EXP
+        | CAS_LN
+        | CAS_SIN
+        | CAS_COS
+        | CAS_TAN
+        | CAS_C
+        | CAS_VAR
+        | CAS_ADD
+        | CAS_SUB
+        | CAS_MUL
+        | CAS_DIV
+        | POLY_GCD
+        | POLY_SCALE
+        | POLY_EVAL
+        | POLY_ZERO
+        | POLY_CONSTANT
+        | POLY_COEFFS
+        | CAS_PARSE
+        | CAS_TO_QUINS
+        | CAS_FROM_QUINS
+        | LA_SYMMETRIC_EIGEN_3X3
+        | LA_GEMM
+        | LA_DOT
+        | LA_NORM
+        | LA_TRACE
+        | LA_IDENTITY
+        | LA_INVERSE
+        | CALC_HERMITE_DENSE_OUTPUT
+        | CALC_BDF1_STEP
+        | CALC_BDF2_STEP
+        | CALC_INVARIANT_DRIFT
+        | CALC_PERMUTATION_PARITY
+        | CALC_PACK_F32_PAIR
+        | CALC_UNPACK_F32_PAIR
+        | CALC_VERLET_STEP
+        | CALC_RUTH3_STEP
+        | CALC_YOSHIDA4_STEP
+        | CALC_INTEGRATE_BDF
+        | CALC_INTEGRATE_WITH_SENSITIVITY
+        | CALC_CANONICAL_POISSON_BRACKET
+        | CALC_STORMER_VERLET_STEP
+        | CALC_ADAPTIVE_GAUSS_KRONROD_15
+        | CALC_JVP
+        | CALC_VJP
+        | XFORM_DFT
+        | XFORM_DFT_COMPLEX
+        | UNITS_CONVERT => "math",
+        STAT_MEAN
+        | STAT_PEARSON
+        | STAT_LINEAR_REGRESSION
+        | STAT_MEDIAN
+        | STAT_VARIANCE
+        | STAT_STD_DEV
+        | STAT_SKEWNESS
+        | STAT_KURTOSIS
+        | STAT_QUANTILE
+        | STAT_COVARIANCE
+        | STAT_MIN
+        | STAT_MAX
+        | STAT_SUM
+        | STAT_SPEARMAN
+        | STAT_KENDALL
+        | STAT_ONE_SAMPLE_T
+        | STAT_TWO_SAMPLE_T
+        | STAT_PAIRED_T
+        | STAT_CHI_SQUARE_GOF
+        | STAT_ONE_WAY_ANOVA
+        | STAT_AUTOCORRELATION
+        | STAT_MOVING_AVERAGE
+        | STAT_EXPONENTIAL_SMOOTHING
+        | STAT_TRIMMED_MEAN
+        | STAT_IQR
+        | STAT_MAD
+        | STAT_ENTROPY
+        | STAT_KL_DIVERGENCE
+        | STAT_Z_SCORE_OUTLIERS
+        | STAT_NORMAL_PDF
+        | STAT_NORMAL_CDF
+        | STAT_NORMAL_QUANTILE
+        | STAT_STANDARD_NORMAL_CDF
+        | STAT_TWO_SIDED_P
+        | STAT_STUDENTS_T_PDF
+        | STAT_STUDENTS_T_CDF
+        | STAT_STUDENTS_T_TWO_SIDED_P
+        | STAT_CHI_SQUARED_PDF
+        | STAT_CHI_SQUARED_CDF
+        | STAT_CHI_SQUARED_UPPER_P
+        | STAT_FISHER_F_PDF
+        | STAT_FISHER_F_CDF
+        | STAT_FISHER_F_UPPER_P
+        | STAT_BINOMIAL_PMF
+        | STAT_BINOMIAL_CDF
+        | STAT_POISSON_PMF
+        | STAT_POISSON_CDF
+        | STAT_EXPONENTIAL_PDF
+        | STAT_EXPONENTIAL_CDF
+        | STAT_GAMMA_PDF
+        | STAT_BETA_PDF
+        | STAT_WEIBULL_PDF
+        | STAT_LOGNORMAL_PDF
+        | STAT_UNIFORM_PDF
+        | STAT_LAPLACE_PDF
+        | STAT_LN_GAMMA
+        | STAT_GAMMA_FN
+        | STAT_ERF
+        | STAT_ERFC
+        | STAT_EMPIRICAL_CDF
+        | STAT_MODE
+        | STAT_WINSORIZED_MEAN
+        | STAT_CROSS_ENTROPY
+        | STAT_MUTUAL_INFORMATION
+        | STAT_HISTOGRAM
+        | STAT_CORRELATION_P_VALUE
+        | STAT_CHI_SQUARE_INDEPENDENCE
+        | STAT_MODIFIED_Z_SCORE_OUTLIERS
+        | STAT_IQR_OUTLIERS
+        | STAT_GRUBBS_TEST
+        | STAT_MANN_WHITNEY_U
+        | STAT_KS_1SAMPLE
+        | STAT_FRIEDMAN
+        | STAT_MCNEMAR
+        | STAT_BOOTSTRAP_MEANS
+        | STAT_LJUNG_BOX
+        | STAT_ADF_PROXY
+        | STAT_ARGMAX
+        | STAT_STANDARD_PDF
+        | STAT_STANDARD_QUANTILE
+        | STAT_LOGNORMAL_CDF
+        | STAT_UNIFORM_CDF
+        | STAT_LAPLACE_CDF
+        | STAT_STUDENTS_T_QUANTILE
+        | STAT_STUDENTS_T_UPPER_P
+        | STAT_CHI_SQUARED_QUANTILE
+        | STAT_FISHER_F_QUANTILE
+        | STAT_GAMMP
+        | STAT_GAMMQ
+        | STAT_BETAI
+        | STAT_ENTROPY_FROM_COUNTS
+        | STAT_TUKEY_FENCES
+        | STAT_MAHALANOBIS_SQ
+        | STAT_MVN_LOG_PDF
+        | STAT_MVN_PDF
+        | STAT_MVN_SAMPLE
+        | STAT_MVN_MLE
+        | STAT_VALIDATE_PROBABILITY
+        | STAT_SIMPLEX_PROJECT
+        | STAT_FISHER_DISTANCE
+        | STAT_NEG_ENTROPY
+        | STAT_SIMPLEX_PROJECT_IDEMPOTENT
+        | STAT_FISHER_INNER_PRODUCT
+        | STAT_NEG_ENTROPY_GRAD
+        | STAT_KL_BREGMAN_FORM
+        | STAT_BREGMAN_PYTHAGOREAN_TEST
+        | STAT_PROBABILITY_HASH => "stats",
+        GEOM_HULL2
+        | GEOM_DISTANCE_2D
+        | GEOM_DISTANCE_3D
+        | GEOM_POINT_SEGMENT_DISTANCE_2D
+        | GEOM_POINT_SEGMENT_DISTANCE_3D
+        | GEOM_POINT_TRIANGLE_DISTANCE_3D
+        | GEOM_TRIANGULATE_POLYGON
+        | GEOM_SURFACE_AREA
+        | GEOM_SIGNED_VOLUME
+        | GEOM_MORTON_ENCODE_2D
+        | GEOM_MORTON_DECODE_2D
+        | GEOM_MORTON_ENCODE_3D
+        | GEOM_HILBERT_ENCODE_2D
+        | GEOM_ORIENTATION_2
+        | GEOM_CIRCUMCENTER
+        | GEOM_LINE_SEGMENT_INTERSECTION_2
+        | GEOM_BEZIER_EVAL
+        | GEOM_NEAREST_SITE
+        | GEOM_ORIENT_3D
+        | GEOM_AVERAGE_SPACING_3D
+        | GEOM_LOCAL_DENSITY_3D
+        | GEOM_MEAN_KNN_DISTANCE_3D
+        | GEOM_FISHER_DISTANCE
+        | GEOM_KL_DIVERGENCE
+        | GEOM_KL_BREGMAN_FORM
+        | GEOM_TRIANGLE_SIGNED_AREA
+        | GEOM_DIST_POINT_TO_SEGMENT
+        | GEOM_DIST_SQ_POINT_TO_SEGMENT
+        | GEOM_INCIRCLE
+        | GEOM_TUKEY_DEPTH
+        | GEOM_DIRECTIONAL_WIDTH
+        | GEOM_WIDTH
+        | GEOM_FARTHEST_SITE_BRUTE
+        | GEOM_K_NEAREST_SITES
+        | GEOM_IS_HULL_SITE
+        | GEOM_DIAMETER_AND_WIDTH
+        | GEOM_INSPHERE
+        | GEOM_HAM_SANDWICH_CUT
+        | GEOM_SMALLEST_ENCLOSING_DISK
+        | GEOM_POLYGON_SIGNED_AREA
+        | GEOM_POLYGON_AREA
+        | GEOM_POINT_IN_POLYGON
+        | GEOM_MINKOWSKI_SUM_CONVEX
+        | GEOM_NEAREST_SEGMENT_SITE
+        | GEOM_WIDTH_CORESET
+        | GEOM_DUAL_POINT_TO_LINE
+        | GEOM_DUAL_ROUND_TRIP
+        | GEOM_IS_CONVEX_POLYGON
+        | GEOM_POINT_IN_OR_ON_POLYGON
+        | GEOM_BOOLEAN_UNION_AREA
+        | GEOM_BOOLEAN_INTERSECTION_AREA
+        | GEOM_BOOLEAN_DIFFERENCE_AREA
+        | GEOM_CROSS_RATIO_1D
+        | GEOM_HYPERPLANE_EVAL
+        | GEOM_HOUSEHOLDER_REFLECT
+        | GEOM_QUATERNION_NORMALIZE
+        | GEOM_SO3_EXP
+        | GEOM_SO3_LOG
+        | GEOM_PROJECTIVE_FROM_POINT
+        | GEOM_POINT_FROM_PROJECTIVE
+        | GEOM_FRAME_TO_WORLD
+        | GEOM_WORLD_TO_FRAME
+        | GEOM_BARYCENTRIC_TETRA
+        | GEOM_QUATERNION_SLERP
+        | GEOM_QUATERNION_TO_MATRIX
+        | GEOM_SOLVE_DIAGONAL_QUADRATIC
+        | GEOM_SCHUR_COMPLEMENT_2X2
+        | GEOM_SEPARATING_PLANE_AABB => "geometry",
+        VISION_AHASH
+        | VISION_GAUSSIAN_BLUR
+        | VISION_SOBEL_MAGNITUDE
+        | VISION_CANNY_EDGES
+        | VISION_HISTOGRAM
+        | VISION_EQUALIZE_HIST
+        | VISION_RGB_TO_GRAY
+        | VISION_DHASH
+        | VISION_HAMMING_DISTANCE
+        | VISION_COSINE_SIMILARITY => "vision",
+        ML_OLS
+        | ML_MSE
+        | ML_RMSE
+        | ML_MAE
+        | ML_R2
+        | ML_ACCURACY
+        | ML_ROC_AUC
+        | ML_KMEANS
+        | ML_TRAIN_TEST_SPLIT
+        | ML_LOG_LOSS
+        | ML_CONFUSION_BINARY
+        | ML_K_FOLD
+        | ML_BOOTSTRAP_INDICES
+        | ML_BONFERRONI
+        | ML_HOLM
+        | ML_BH
+        | ML_PCA
+        | ML_AB_TEST
+        | ML_POWER_TWO_SAMPLE
+        | ML_REQUIRED_SAMPLE_SIZE
+        | ML_TRANSE_SCORE
+        | ML_DISTMULT_SCORE
+        | ML_COMPLEX_SCORE
+        | ML_ROTATE_SCORE
+        | ML_KG_MEAN_RANK
+        | ML_KG_MRR
+        | ML_KG_HITS_AT_K
+        | ML_POLYNOMIAL_REGRESSION
+        | ML_BOOTSTRAP_ESTIMATE
+        | ML_BOOTSTRAP_CI
+        | ML_PERMUTATION_TEST
+        | ML_REQUIRED_SAMPLE_SIZE_TWO_PROPORTION
+        | ML_LOOCV
+        | ML_N_REJECTED
+        | ML_AL_ROW_SCORE
+        | ML_AL_SCORE
+        | ML_AL_RANK_INFORMATIVE
+        | ML_AL_MOST_INFORMATIVE
+        | ML_AL_COSINE_SIMILARITY
+        | ML_AL_REPRESENTATIVENESS
+        | ML_AL_INFORMATION_DENSITY
+        | ML_AL_RANK_BY_DENSITY
+        | ML_AL_VOTE_ENTROPY
+        | ML_AL_CONSENSUS
+        | ML_AL_CONSENSUS_ENTROPY
+        | ML_AL_AVERAGE_KL_DISAGREEMENT
+        | ML_AL_RANK_BY_DISAGREEMENT
+        | ML_RIDGE_FIT
+        | ML_LASSO_FIT
+        | ML_PLS_FIT
+        | ML_KMEANS_FIT
+        | ML_GMM_FIT
+        | ML_LOGISTIC_FIT
+        | ML_POISSON_FIT
+        | ML_COX_FIT
+        | ML_SVM_FIT
+        | ML_DECISION_TREE_FIT_REGRESSOR
+        | ML_DECISION_TREE_FIT_CLASSIFIER
+        | ML_HMM_BAUM_WELCH
+        | ML_VARIATIONAL_GAUSSIAN_FIT
+        | ML_MCMC_METROPOLIS
+        | ML_GP_FIT
+        | ML_NAIVE_BAYES_FIT
+        | ML_KNN_FIT
+        | ML_LDA_FIT
+        | ML_QDA_FIT
+        | ML_MULTINOMIAL_LOGISTIC_FIT
+        | ML_SVM_MULTICLASS_FIT
+        | ML_HIERARCHICAL_FIT
+        | ML_HIERARCHICAL_LABELS
+        | ML_KAPLAN_MEIER_FIT
+        | ML_PCR_FIT
+        | ML_BAYESIAN_LINEAR_FIT
+        | ML_SOM_TRAIN
+        | ML_KALMAN_NEW
+        | ML_RANDOM_FOREST_FIT_REGRESSOR
+        | ML_RANDOM_FOREST_FIT_CLASSIFIER
+        | ML_GRADIENT_BOOSTING_FIT_REGRESSOR
+        | ML_FACTOR_GRAPH_MARGINALS
+        | ML_STANDARD_SCALER_FIT_TRANSFORM
+        | ML_BART_FIT => "ml",
+        // Number theory
+        NT_NEXT_PRIME | NT_PRIME_FACTORS | NT_DIVISORS | NT_EULER_TOTIENT | NT_MOBIUS
+        | NT_DIVISOR_COUNT | NT_DIVISOR_SUM | NT_MOD_POW | NT_MOD_INVERSE | NT_FACTORIAL
+        | NT_BINOMIAL | NT_PARTITIONS | NT_CATALAN | NT_STIRLING_SECOND | NT_STIRLING_FIRST
+        | NT_EXTENDED_GCD | NT_CRT => "number_theory",
+        // Special functions
+        SF_AIRY_AI | SF_AIRY_BI | SF_ZETA | SF_LEGENDRE | SF_CHEBYSHEV_T | SF_CHEBYSHEV_U
+        | SF_HERMITE | SF_LAGUERRE | SF_BESSEL_J | SF_BESSEL_I | SF_BESSEL_Y | SF_BESSEL_K => {
+            "special_functions"
+        }
+        // Interpolation
+        INTERP_LINEAR | INTERP_LAGRANGE | INTERP_NEWTON_COEF | INTERP_NEWTON_EVAL
+        | INTERP_POLY_FIT | INTERP_POLY_EVAL => "interpolation",
+        // Fuzzy query
+        FQ_TRIANGULAR | FQ_TRAPEZOIDAL | FQ_APPROXIMATELY | FQ_RAMP_UP | FQ_RAMP_DOWN
+        | FQ_MUCH_GREATER_THAN | FQ_MUCH_LESS_THAN | FQ_THRESHOLD | FQ_TOP_K | FQ_NEGATE
+        | FQ_AND | FQ_OR => "fuzzy_query",
+        PHYS_PROJECTILE | PHYS_WORKBENCH | BIO_ALIGN | BIO_WORKBENCH | CHEM_SMILES
+        | CHEM_WORKBENCH => "science",
+        CHEM_ELEMENT_SYMBOL
+        | CHEM_ATOMIC_NUMBER
+        | CHEM_ATOMIC_WEIGHT
+        | CHEM_LDA_EXCHANGE
+        | CHEM_LDA_CORRELATION_VWN
+        | CHEM_PARSE_BSE_JSON
+        | CHEM_STO3G
+        | CHEM_BOYS_FUNCTION
+        | CHEM_OVERLAP_S
+        | CHEM_KINETIC_S
+        | CHEM_NUCLEAR_S
+        | CHEM_DIPOLE_S
+        | CHEM_EVALUATE_ERI
+        | CHEM_TOTAL_ANGULAR_MOMENTUM
+        | CHEM_LETTER
+        | CHEM_N_CARTESIAN
+        | CHEM_N_SPHERICAL
+        | CHEM_FROM_LETTER
+        | CHEM_GAUSSIAN_ELIMINATION
+        | CHEM_JACOBI_DIAGONALIZATION
+        | CHEM_TRANSPOSE
+        | CHEM_ORTHOGONALIZATION_MATRIX => "chemistry",
+        MED_TANIMOTO
+        | MED_STRUCTURAL_FINGERPRINT
+        | MED_ANALYZE_INTENSITY_GRID
+        | MED_ANALYZE_DIFFERENTIAL
+        | MED_SCREEN_COMPOUNDS => "medical",
+        ENG_CAUCHY_STRESS
+        | ENG_DRAG_FORCE
+        | ENG_REYNOLDS
+        | ENG_FATIGUE_CYCLES
+        | ENG_MINER_DAMAGE
+        | ENG_ANALYZE_CONDUCTION
+        | ENG_FEM_STATIC
+        | ENG_NATURAL_FREQUENCY_SDOF
+        | ENG_ANALYZE_HARMONIC_SDOF
+        | ENG_ANALYZE_EULER
+        | ENG_COMPUTE_RELIABILITY_INDEX => "engineering",
+        PHYS_WAVE_1D
+        | PHYS_HEAT_DIFFUSION_1D
+        | PHYS_ADVECTION_DIFFUSION_1D
+        | PHYS_HARMONIC_OSCILLATOR
+        | PHYS_PENDULUM
+        | PHYS_N_BODY
+        | PHYS_MOLECULAR_DYNAMICS
+        | PHYS_CFD_STEP
+        | PHYS_QUANTUM_STATES_1D
+        | PHYS_LOGISTIC_GROWTH
+        | PHYS_EMF_INTERFERENCE
+        | PHYS_EMF_ATTENUATION
+        | PHYS_DOPPLER_SHIFT
+        | PHYS_EMF_FIELD_GRID_3D
+        | PHYS_EMF_SAMPLE_AT_DEPTH
+        | PHYS_FIELD_SAMPLE
+        | PHYS_MATERIAL_QUERY
+        | PHYS_EVALUATE_INTERACTION => "physics",
+        SPECTRAL_EMF_TO_SPD | SPECTRAL_SPD_TO_XYZ | SPECTRAL_EMF_TO_RGB | SPECTRAL_BLEND
+        | SPECTRAL_GAMUT_MAP => "spectral",
+        CLIN_FRAMINGHAM
+        | CLIN_CHA2DS2
+        | CLIN_SCORE2
+        | CLIN_DRUG_INTERACTION
+        | CLIN_CONTRAINDICATION
+        | CLIN_FHIR_OBSERVATION
+        | CLIN_COMORBIDITY => "clinical",
+        MEDICAL_HU_WINDOW => "clinical",
+        BIOSIGNAL_DP_FILTER | BIOSIGNAL_DP_CONFIG => "biosignal",
+        FIN_BS | FIN_GBM_VAR => "econ",
+        ENG_KIN => "engineering",
+        ID_DID_Q42 => "governance",
+        CRYPTO_SHA256 | CRYPTO_SHA512 | CRYPTO_BLAKE3 | PRIVACY_GAUSSIAN_SIGMA => "crypto",
+        MANIFOLD_DISTANCE | MANIFOLD_AXES | MANIFOLD_PROJECT => "manifold",
+        DOC_INGEST => "docs",
+        SHEET_STATS | SHEET_SUM => "sheet",
+        CHAT_GRAPH_VALIDATE_FRAGMENT | CHAT_GRAPH_LINK_REPLY | CHAT_GRAPH_SESSION_SUMMARY => {
+            "chat_graph"
+        }
+        SOCIAL_LWW => "social",
+        NET_PEER
+        | NET_SONIC
+        | PULSE_PUBLISH
+        | PULSE_PUBLISH_GRAPH_MUTATION
+        | PULSE_PUBLISH_NOTIFICATION
+        | PULSE_PUBLISH_TELEMETRY
+        | PULSE_PUBLISH_AGENT_MESSAGE
+        | PULSE_PUBLISH_PRESENCE
+        | PULSE_PUBLISH_SYNC
+        | PULSE_OPEN_CHANNEL
+        | PULSE_CLOSE_CHANNEL
+        | PULSE_SET_TRANSPORT => "net",
+        FIN_PORTFOLIO => "econ",
+        RENDER_SCENE
+        | RENDER_CSS_ANIMATION
+        | RENDER_CSS_COLOR
+        | RENDER_CSS_TRANSFORM
+        | RENDER_ANIMATION_EVAL_CURVE
+        | RENDER_ANIMATION_SPRING_STEP
+        | RENDER_ANIMATION_SCLERP
+        | RENDER_ANIMATION_EVAL_PRESET
+        | RENDER_ANIMATION_SQUAD_STEP
+        | RENDER_ANIMATION_LIST_PRESETS
+        | RENDER_ANIMATION_COMPUTE_PASS
+        | ANIMATION_EVALUATE_PRESET
+        | ANIMATION_SPRING_STEP
+        | ANIMATION_SCLERP_STEP
+        | ANIMATION_SQUAD_STEP
+        | ANIMATION_BEZIER_EVAL
+        | ANIMATION_EASING
+        | ANIMATION_LIST_PRESETS
+        | RENDER_SVG_PATH
+        | RENDER_SVG_CIRCLE
+        | RENDER_SVG_RECT
+        | RENDER_SVG_LINE
+        | RENDER_SVG_BEZIER
+        | RENDER_SVG_FIELD
+        | GPU_ADAPTER_INFO
+        | GPU_INIT
+        | GPU_INIT_SURFACE
+        | GPU_RENDER_FRAME
+        | GPU_READ_PIXELS
+        | GPU_UPLOAD_MESH
+        | GPU_UPLOAD_TENSOR
+        | GPU_SET_CAMERA
+        | GPU_PICK
+        | GPU_POLL_PICK
+        | GPU_RESIZE
+        | GPU_SET_AMBIENT
+        | GPU_DESTROY
+        | GPU_COMPUTE_DISPATCH
+        | GPU_COMPUTE_READBACK
+        | GPU_VALIDATE_SHADER
+        | GPU_COMPILE_SHADER
+        | GPU_COMPILE_TO_GLSL
+        | GPU_BACKEND_INFO
+        | GPU_UPLOAD_MESH_COLORED
+        | GPU_SET_STANDPOINT
+        | GPU_OBSERVER_STANDPOINT
+        | GPU_CAMERA_STATE
+        | GPU_SURFACE_SIZE
+        | GPU_HAS_MESH
+        | GPU_HAS_TENSOR
+        | GPU_TENSOR_NODE_COUNT
+        | GPU_PARTICLE_COUNT
+        | GPU_SYNC_BLOOM
+        | GPU_SET_ARTEFACT_JOINT
+        | GPU_SET_ARTEFACT_WORLD
+        | GPU_ARTEFACT_REFUSED
+        | GPU_REQUIRED_RGBA8_BYTES
+        | EMF_UPLOAD_FIELD
+        | EMF_RENDER_SLICE
+        | EMF_FIELD_INFO => "render",
+        SAMPLER_CONFIGURE
+        | SAMPLER_CONSTRAIN_ENABLE
+        | SAMPLER_CONSTRAIN_DISABLE
+        | SAMPLER_CONSTRAIN_RESET
+        | SAMPLER_SAMPLE => "sampler",
+        ASSET_CREATE
+        | ASSET_ADD_TEMPORAL
+        | ASSET_ADD_TOPIC
+        | ASSET_SET_SPATIAL
+        | ASSET_COMPILE
+        | ASSET_TEMPORAL_SPAN
+        | ASSET_QUERY_ASPECTS
+        | ASSET_PERSIST
+        | ASSET_RESOLVE
+        | ASSET_RESOLVE_BY_SPATIAL
+        | ASSET_RESOLVE_BY_TOPIC
+        | ASSET_RESOLVE_BY_TEMPORAL
+        | ASSET_LIST
+        | ASSET_COUNT
+        | ASSET_PERSIST_CREATE
+        | ASSET_PERSIST_ADD_TEMPORAL
+        | ASSET_PERSIST_ADD_TOPIC
+        | ASSET_PERSIST_SET_SPATIAL
+        | ASSET_PERSIST_COMPILE
+        | ASSET_PERSIST_TEMPORAL_SPAN
+        | ASSET_PERSIST_QUERY_ASPECTS => "asset",
+        COSMIC_GEODETIC_TO_ECEF
+        | COSMIC_ECEF_TO_GEODETIC
+        | COSMIC_ECEF_TO_ENU
+        | COSMIC_ENU_TO_ECEF
+        | COSMIC_GEODETIC_DISTANCE
+        | COSMIC_BODY_PROFILE
+        | COSMIC_SURFACE_GRAVITY
+        | COSMIC_FLRW_DISTANCE
+        | COSMIC_FLRW_REDSHIFT
+        | COSMIC_FLRW_HUBBLE_VELOCITY
+        | COSMIC_STARDATE_TO_GREGORIAN
+        | COSMIC_WARP_VELOCITY
+        | COSMIC_COCHRANE_UNITS
+        | COSMIC_ATMOSPHERE_PRESSURE
+        | COSMIC_ATMOSPHERE_TEMPERATURE
+        | COSMIC_MAGNETOSPHERE_FIELD
+        | COSMIC_SCALE_FACTOR
+        | COSMIC_COMPTON_WAVELENGTH
+        | COSMIC_DE_BROGLIE
+        | COSMIC_USRI_PARSE
+        | COSMIC_WARP_FACTOR_C
+        | COSMIC_TYPICAL_LENGTH
+        | COSMIC_OBSERVE_REDSHIFT => "cosmic",
+        NLP_GAZETTEER_RUN | NLP_GAZETTEER_BUILD | NLP_TOKENIZE | NLP_SPLIT_SENTENCES => "nlp",
+        NLP_FST_LOOKUP
+        | NLP_COREF_RESOLVE
+        | NLP_FRAME_EXTRACT
+        | NLP_RELATION_EXTRACT
+        | NLP_SUBSTRATE_EXTRACT
+        | NLP_GRAPHRAG_QUERY => "nlp",
+        CONDITIONING_VALIDATE
+        | CONDITIONING_COMPILE
+        | CONDITIONING_INSPECT
+        | CONDITIONING_EVALUATE
+        | CONDITIONING_ACTIVATE
+        | CONDITIONING_ROLLBACK
+        | INFERENCE_EMBED
+        | INFERENCE_GROUNDING
+        | INFERENCE_VERIFY_TURN
+        | INFERENCE_DETECT_UNGROUNDED
+        | INFERENCE_LOAD_MODEL
+        | INFERENCE_UNLOAD_MODEL
+        | INFERENCE_RUN_TRANSFORMER
+        | INFERENCE_RUN_CLASSIFIER
+        | INFERENCE_RUN_RERANKER
+        | INFERENCE_VECTOR_SEARCH
+        | INFERENCE_CONSTRAINED_DECODE
+        | INFERENCE_RELU
+        | INFERENCE_SIGMOID
+        | INFERENCE_GELU
+        | INFERENCE_SOFTMAX
+        | INFERENCE_RMS_NORM => "inference",
+        FINANCE_CONVERT_CURRENCY
+        | FINANCE_MULTISIG_CHECK
+        | FINANCE_LEDGER_BALANCE
+        | ECON_CAPM_EXPECTED_RETURN
+        | ECON_CAPM_BETA
+        | ECON_GORDON_GROWTH
+        | ECON_MULTI_PERIOD_DDM
+        | ECON_CCAPM_EQUITY_PREMIUM
+        | ECON_CCAPM_SDF
+        | ECON_PROSPECT_VALUE
+        | ECON_PROBABILITY_WEIGHT
+        | ECON_HYPERBOLIC_DISCOUNT
+        | ECON_ENDOWMENT_EFFECT
+        | ECON_BLACK_SCHOLES
+        | ECON_PUT_CALL_PARITY
+        | ECON_BINOMIAL_OPTION
+        | ECON_MIXED_NASH_2X2
+        | ECON_COURNOT_DUOPOLY
+        | ECON_BERTRAND_DUOPOLY
+        | ECON_STACKELBERG_DUOPOLY
+        | ECON_SOLOW_STEADY_STATE
+        | ECON_RAMSEY_STEADY_STATE
+        | ECON_OLG_STEADY_STATE
+        | ECON_GINI
+        | ECON_ATKINSON
+        | ECON_HEADCOUNT_POVERTY
+        | ECON_POVERTY_GAP
+        | ECON_UTILITARIAN_WELFARE
+        | ECON_RAWLSIAN_WELFARE
+        | ECON_NASH_WELFARE
+        | ECON_NPV
+        | ECON_MEAN_RETURN
+        | ECON_SAMPLE_VARIANCE
+        | ECON_PORTFOLIO_MAX_DRAWDOWN
+        | ECON_HISTORICAL_VAR
+        | ECON_HISTORICAL_CVAR
+        | ECON_PARAMETRIC_VAR
+        | ECON_AUTOCORRELATION
+        | ECON_CROSS_CORRELATION
+        | ECON_INTERPOLATE_ZERO_RATE
+        | ECON_DISCOUNT_FACTOR
+        | ECON_FORWARD_RATE
+        | ECON_GRAVITY_FLOW
+        | ECON_MORANS_I
+        | ECON_TRANSFER_PAYMENT
+        | ECON_FISCAL_MULTIPLIER
+        | ECON_LAFFER_CURVE
+        | ECON_CHECK_IR
+        | ECON_CHECK_BUDGET_BALANCE
+        | ECON_VALIDATE_TRANSITION_MATRIX
+        | ECON_TRANSITION_PROBABILITY
+        | ECON_EXPECTED_HOLDING_TIME
+        | ECON_LABOR_SUPPLY
+        | ECON_EFFICIENCY_UNITS
+        | ECON_SOCIAL_COST_OF_CARBON
+        | ECON_OPTIMAL_POLLUTION
+        | ECON_OPTIMAL_ABATEMENT
+        | ECON_BELLMAN_UPDATE
+        | ECON_MALFEASANCE_DELTA
+        | ECON_OLS
+        | ECON_AGGREGATE_WEALTH
+        | ECON_TOTAL_TRANSPORT_COST
+        | ECON_LUCAS_ASSET_PRICE
+        | ECON_PRESENT_BIASED_UTILITY
+        | ECON_REFERENCE_DEPENDENT_UTILITY
+        | ECON_PURE_NASH_EQUILIBRIA
+        | ECON_REPEATED_GAME_PAYOFF
+        | ECON_BERTRAND_WITH_DEMAND
+        | ECON_RAMSEY_EULER_RESIDUAL
+        | ECON_NEW_KEYNESIAN_SOLVE
+        | ECON_LORENZ_CURVE
+        | ECON_DISTRIBUTIONAL_NPV
+        | ECON_PORTFOLIO_RETURNS
+        | ECON_COVARIANCE_MATRIX
+        | ECON_PORTFOLIO_VARIANCE
+        | ECON_SIMPLE_RETURNS
+        | ECON_LOG_RETURNS
+        | ECON_CUMULATIVE_WEALTH
+        | ECON_DRAWDOWN
+        | ECON_ROLLING_MEAN
+        | ECON_ROLLING_VARIANCE
+        | ECON_GBM_SIMULATE
+        | ECON_STRESS_SCENARIO
+        | ECON_BLOCK_BOOTSTRAP
+        | ECON_PAR_YIELD
+        | ECON_NEAREST_FACILITY
+        | ECON_PROGRESSIVE_TAX
+        | ECON_VCG_PAYMENT
+        | ECON_STRATEGY_PROOFNESS
+        | ECON_STATIONARY_DISTRIBUTION
+        | ECON_SIMULATE_CHAIN
+        | ECON_MEAN_FIRST_PASSAGE
+        | ECON_HOUSEHOLD_PRODUCTION_CES
+        | ECON_POLLUTION_DAMAGE
+        | ECON_MARGINAL_DAMAGE
+        | ECON_ABATEMENT_NET_BENEFIT
+        | ECON_WLS
+        | ECON_IV_2SLS
+        | ECON_LOGISTIC_MLE
+        | ECON_VALUE_ITERATION
+        | ECON_NARRATIVE_DIVERGENCE
+        | ECON_EIGENVECTOR_CENTRALITY
+        | ECON_DEGREE_CENTRALITY
+        | ECON_INTERBANK_CLEARING
+        | ECON_LEONTIEF_INVERSE
+        | ECON_OUTPUT_MULTIPLIERS
+        | ECON_AGENT_BASED_AGGREGATE_WEALTH
+        | ECON_VALIDATE_SCALAR_CONSTRAINT
+        | ECON_AGGREGATE_PAPER_FILLS => "econ",
+        CAPABILITY_GRANT
+        | CAPABILITY_REVOKE
+        | CAPABILITY_TEST_GATING
+        | CAPABILITY_AUDIT
+        | CAPABILITY_DECLARE
+        | SENTINEL_INSPECT
+        | SENTINEL_GATE
+        | AGENT_TRACE
+        | AGENT_VERIFY
+        | IDENTITY_CURRENT_USER => "governance",
+        AUDIO_SPECTRUM => "audio",
+        AUDIO_OSCILLATOR
+        | AUDIO_ENVELOPE
+        | AUDIO_FILTER
+        | AUDIO_LFO
+        | AUDIO_DELAY
+        | AUDIO_REVERB
+        | AUDIO_COMPRESSOR
+        | AUDIO_EQ
+        | AUDIO_MIDI_NOTE
+        | AUDIO_QUANTIZE
+        | AUDIO_TRANSPOSE
+        | AUDIO_TRANSPORT
+        | AUDIO_WAVEFORM_METER
+        | AUDIO_PHASE_METER
+        | AUDIO_LOUDNESS_METER
+        | AUDIO_EPISTEMIC_TEMPERATURE_FROM_Q
+        | AUDIO_EPISTEMIC_FM_INDEX
+        | AUDIO_SIGMA_DOMINANT_FREQUENCY
+        | AUDIO_PARAMETRIC_SAMPLE
+        | AUDIO_BIN_TO_FREQ_LINEAR
+        | AUDIO_BIN_TO_FREQ_LOG => "audio",
+        SCENE_ADD_LIGHT
+        | SCENE_LINK_SEMANTIC
+        | SCENE_DUPLICATE_NODE
+        | SCENE_SET_RENDER_BUDGET
+        | SCENE_IK_LOOK_AT
+        | SCENE_IK_CCD
+        | SCENE_SMOOTH_DAMP
+        | SCENE_SMOOTH_DAMP_VEC3
+        | SCENE_LERP_CAMERA
+        | SCENE_CAMERA_FRAME_NODE => "render",
+        SCENE_CREATE
+        | SCENE_ADD_NODE
+        | SCENE_SET_TRANSFORM
+        | SCENE_SET_MESH
+        | SCENE_ADD_CAMERA
+        | SCENE_RENDER
+        | SCENE_SET_VIEWPORT
+        | SCENE_SET_CLEAR_COLOUR
+        | SCENE_CAPTURE_FRAME => "render",
+        RESEARCH_NEW
+        | RESEARCH_SET_PURPOSE
+        | RESEARCH_DEFINE_SCOPE
+        | RESEARCH_ADD_CONSTRAINT
+        | RESEARCH_ADD_QUESTION
+        | RESEARCH_LINK_QUESTIONS
+        | RESEARCH_ADD_CORPUS_ITEM
+        | RESEARCH_IMPORT_LITERATURE
+        | RESEARCH_IMPORT_DATASET
+        | RESEARCH_SET_CORPUS_CONFIDENCE
+        | RESEARCH_EXTRACT_FROM_CORPUS
+        | RESEARCH_INFER_DARK_LINK
+        | RESEARCH_DETECT_PROVENANCE_GAPS
+        | RESEARCH_DETECT_CONCEALMENT
+        | RESEARCH_CONFIRM_DARK_LINK
+        | RESEARCH_REFUTE_DARK_LINK
+        | RESEARCH_MAKE_INFERENCE
+        | RESEARCH_CHAIN_INFERENCE
+        | RESEARCH_SET_INFERENCE_CONFIDENCE
+        | RESEARCH_VALIDATE_INFERENCE
+        | RESEARCH_NEW_INVESTIGATION
+        | RESEARCH_COLLECT_EVIDENCE
+        | RESEARCH_SET_RELIABILITY
+        | RESEARCH_PROPOSE_HYPOTHESIS
+        | RESEARCH_EVALUATE_EVIDENCE
+        | RESEARCH_CREATE_TIMELINE
+        | RESEARCH_ADD_LINK
+        | RESEARCH_FIND_PATH
+        | RESEARCH_CREATE_HYPOTHESIS_GRAPH
+        | RESEARCH_CONTRIBUTE_EVALUATION
+        | RESEARCH_BRIDGE_DARK_LINK
+        | RESEARCH_REFRAME_HYPOTHESIS
+        | RESEARCH_MERGE_HYPOTHESES
+        | RESEARCH_FLAG_GAP
+        | RESEARCH_CLOSE_GAP
+        | RESEARCH_CREATE_REVISION
+        | RESEARCH_DIFF_REVISIONS
+        | RESEARCH_SUBSCRIBE_UPDATES
+        | RESEARCH_CREATE_ASSESSMENT
+        | RESEARCH_SET_EPISTEMIC_MODE
+        | RESEARCH_SET_REALITY_CATEGORY
+        | RESEARCH_CLASSIFY_REALITY
+        | RESEARCH_DETECT_BLENDED
+        | RESEARCH_DETECT_DECEPTIVE_FICTION
+        | RESEARCH_TRACE_FICTION
+        | RESEARCH_ASSESS_SENTIMENT
+        | RESEARCH_DETECT_SENTIMENT_MANIPULATION
+        | RESEARCH_DETECT_PERFORMED_SENTIMENT
+        | RESEARCH_MAP_SENTIMENT_NETWORK
+        | RESEARCH_ANALYSE_SENTIMENT_TRENDS
+        | RESEARCH_REGISTER_PERSPECTIVE
+        | RESEARCH_ADD_BIAS
+        | RESEARCH_COMPARE_PERSPECTIVES
+        | RESEARCH_DETECT_PERSPECTIVE_CONFLICT
+        | RESEARCH_RECONCILE_PERSPECTIVES
+        | RESEARCH_ASSESS_INTENTIONALITY
+        | RESEARCH_CLASSIFY_MISTAKE
+        | RESEARCH_DEFINE_SOCIAL_DYNAMICS
+        | RESEARCH_DEFINE_ECONOMIC_DYNAMICS
+        | RESEARCH_DEFINE_SPATIOTEMPORAL_DYNAMICS
+        | RESEARCH_ANALYSE_SOCIAL_NETWORK
+        | RESEARCH_ANALYSE_INEQUALITY
+        | RESEARCH_ANALYSE_DIFFUSION
+        | RESEARCH_ASSESS_GROUNDING
+        | RESEARCH_VERIFY_GROUNDING
+        | RESEARCH_DETECT_UNGROUNDED_BEHAVIOUR
+        | RESEARCH_CREATE_UG_INSTANCE
+        | RESEARCH_SET_UG_CAUSE
+        | RESEARCH_SET_UG_CONSEQUENCE
+        | RESEARCH_SET_UG_DETECTION
+        | RESEARCH_SET_UG_MITIGATION
+        | RESEARCH_SET_UG_CALIBRATION
+        | RESEARCH_DETECT_UG_PATTERNS => "research",
+        IMAGE_NEW
+        | IMAGE_ADD_LAYER
+        | IMAGE_REMOVE_LAYER
+        | IMAGE_SET_PIXEL
+        | IMAGE_FILL
+        | IMAGE_BRUSH
+        | IMAGE_APPLY_FILTER
+        | IMAGE_SET_OPACITY
+        | IMAGE_SET_BLEND_MODE
+        | IMAGE_SET_VISIBLE
+        | IMAGE_SET_MASK
+        | IMAGE_CLEAR_MASK
+        | IMAGE_COMPOSITE
+        | IMAGE_ADD_SELECTION
+        | IMAGE_CLEAR_SELECTIONS
+        | VIDEO_NEW_PROJECT
+        | VIDEO_ADD_TRACK
+        | VIDEO_ADD_CLIP
+        | VIDEO_TRIM_CLIP
+        | VIDEO_SET_SPEED
+        | VIDEO_COLOUR_GRADE
+        | VIDEO_ADD_TRANSITION
+        | VIDEO_SET_RENDER_FORMAT
+        | VIDEO_SET_RENDER_BITRATE
+        | VIDEO_REMOVE_CLIP
+        | THREE_D_ADD_OBJECT
+        | THREE_D_SET_TRANSFORM
+        | THREE_D_SET_MATERIAL
+        | THREE_D_ADD_CAMERA
+        | THREE_D_ADD_LIGHT
+        | THREE_D_ADD_RIG
+        | THREE_D_ADD_ANIMATION
+        | THREE_D_SET_MESH
+        | HBBTV_NEW_APP
+        | HBBTV_ADD_PAGE
+        | HBBTV_NAVIGATE
+        | HBBTV_SET_STATE
+        | SECOND_SCREEN_SYNC
+        | INTERACTIVE_ADD_TRIGGER
+        | INTERACTIVE_ADD_SOCIAL_POST
+        | WORLD_NEW
+        | WORLD_ADD_OBJECT
+        | WORLD_ADD_PORTAL
+        | WORLD_ADD_AVATAR
+        | WORLD_SET_GRAVITY
+        | WORLD_OBJECT_APPLY_FORCE
+        | WORLD_OBJECT_STEP_PHYSICS
+        | PORTAL_SET_TARGET
+        | PORTAL_ACTIVATE
+        | PORTAL_DEACTIVATE
+        | AVATAR_MOVE
+        | AVATAR_SET_APPEARANCE
+        | DMX_NEW_UNIVERSE
+        | DMX_SET_CHANNEL
+        | DMX_ADD_FIXTURE
+        | DMX_FIXTURE_SET_COLOUR
+        | DMX_FIXTURE_SET_INTENSITY
+        | DMX_FIXTURE_SET_PAN_TILT
+        | DMX_NEW_CUE
+        | DMX_CUE_SET_CHANNEL
+        | DMX_CUE_SET_FADE
+        | DMX_NEW_CUE_STACK
+        | DMX_CUE_STACK_ADD
+        | DMX_CUE_STACK_GO
+        | DMX_CUE_STACK_GO_BACK
+        | DMX_CUE_STACK_RESET => "hypermedia",
+        POET_MANIFOLD_CREATE
+        | POET_CONTAINER_PLACE
+        | POET_NESTED_LINK
+        | POET_SUBJECT_DECLARE
+        | POET_PARTICIPANT_INVITE => "docs",
+        SOCIAL_GINI | SOCIAL_LORENZ | SOCIAL_DEGREE_CENTRALITY => "social",
+        FORENSIC_MALFEASANCE_DELTA | FORENSIC_NARRATIVE_DIVERGENCE => "social",
+        AGENT_PLAN | AGENT_EXECUTE | AGENT_EVALUATE => "agent",
+        CORPUS_LOAD | CORPUS_PARSE => "agent",
+        AGENCY_EVALUATE => "governance",
+        COOPERATIVE_DELEGATION_PERMITS | COOPERATIVE_WORK_BOARD_PROJECT => "cooperative",
+        HID_POLL
+        | HID_WAIT
+        | HID_CLEAR
+        | HID_POINTER_CAPTURE
+        | HID_POINTER_RELEASE
+        | HID_SET_CURSOR
+        | HID_GAMEPAD_POLL
+        | HID_GAMEPAD_VIBRATE
+        | HID_MIDI_SEND
+        | HID_MIDI_POLL
+        | HID_HAPTIC_PULSE
+        | HID_HAPTIC_PATTERN
+        | HID_SPATIAL_HEAD_POSE
+        | HID_SPATIAL_HAND_SKELETON
+        | HID_SPATIAL_GAZE_RAY
+        | HID_BIOSIGNAL_POLL => "hid",
+        _ => "unbound",
+    }
+}
+
+/// Every `CAPABILITY_DESCRIPTORS` family has at least one bound invoke id.
+pub fn family_bound(name: &str) -> bool {
+    ALL_BOUND.iter().any(|id| id.starts_with(name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_descriptor_family_has_an_invoke() {
+        for d in CAPABILITY_DESCRIPTORS {
+            assert!(
+                family_bound(d.name),
+                "family {} has no capability.invoke id — add invoke/<seam>/<family>.rs",
+                d.name
+            );
+        }
+    }
+
+    #[test]
+    fn seams_are_named_extract_targets() {
+        assert_eq!(seam_for(DEONTIC_EVAL), "logic");
+        assert_eq!(seam_for(PHYS_PROJECTILE), "science");
+        assert_eq!(seam_for(VISION_AHASH), "vision");
+        assert_eq!(seam_for(ML_OLS), "ml");
+        assert_eq!(seam_for(LA_DOT), "math");
+        assert_eq!(seam_for("DoesNotExist.nope"), "unbound");
+    }
+
+    #[test]
+    fn vibe_catalog_contains_every_bound_invoke_id() {
+        let catalog: std::collections::BTreeSet<&str> =
+            vibe::catalog::ALL_INVOKE_IDS.iter().copied().collect();
+        let missing: Vec<&str> = ALL_BOUND
+            .iter()
+            .copied()
+            .filter(|id| !catalog.contains(id))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "vibe catalog/ids.rs is missing host IDs (0.1 catalog, no version bump): {missing:?}"
+        );
+    }
+}

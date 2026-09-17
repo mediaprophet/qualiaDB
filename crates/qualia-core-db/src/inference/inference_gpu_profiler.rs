@@ -83,11 +83,11 @@ pub fn enabled() -> bool {
     if !(ENABLED.load(Ordering::Relaxed) || env_opt_in()) {
         return false;
     }
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     {
         crate::gpu_context::shared_gpu().timestamps_supported
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
     {
         false
     }

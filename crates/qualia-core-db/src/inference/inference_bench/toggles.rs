@@ -344,6 +344,71 @@ pub fn sampler_config() -> Option<crate::sampler::SamplerConfig> {
     SAMPLER_CONFIG.lock().ok().and_then(|g| *g)
 }
 
+// ── R9: DOMINO constrained-decoding toggle ────────────────────────────────────
+// Process-global DOMINO masker. When active, the decode loop applies the
+// grammar constraint mask before sampling. The masker owns a token trie
+// built from the vocabulary (cold path). Set per-request by the host layer
+// when VibeScript constrained generation is requested.
+static DOMINO_MASKER: Mutex<Option<crate::inference::DominoMasker>> = Mutex::new(None);
+
+/// Install a DOMINO masker for constrained decoding. The masker must be
+/// built from the tokenizer vocabulary. Pass `None` to disable.
+pub fn set_domino_masker(masker: Option<crate::inference::DominoMasker>) {
+    if let Ok(mut g) = DOMINO_MASKER.lock() {
+        *g = masker;
+    }
+}
+
+/// Whether DOMINO constrained decoding is active.
+pub fn domino_active() -> bool {
+    DOMINO_MASKER
+        .lock()
+        .ok()
+        .and_then(|g| g.as_ref().map(|m| m.is_active()))
+        .unwrap_or(false)
+}
+
+/// Apply the DOMINO mask to logits if a masker is installed and active.
+/// Returns the sampled token using `sample_constrained`, or `None` if no
+/// masker is installed (caller should use plain `sample`).
+pub fn domino_sample(
+    sampler: &mut crate::sampler::SamplerState,
+    logits: &mut [f32],
+    ctx: &[u32],
+) -> Option<u32> {
+    let mut g = DOMINO_MASKER.lock().ok()?;
+    let masker = g.as_mut()?;
+    if !masker.is_active() {
+        return None;
+    }
+    Some(sampler.sample_constrained(logits, ctx, masker))
+}
+
+/// Feed a decoded token's bytes back into the DOMINO grammar state machine
+/// so the grammar advances for the next token's mask. No-op when no masker
+/// is installed or it is inactive (T53/W11).
+///
+/// This MUST be called after every token selected under constrained decoding,
+/// otherwise the grammar state never advances and every token gets masked
+/// against the initial state.
+pub fn domino_feed_token(bytes: &[u8]) {
+    if let Ok(mut g) = DOMINO_MASKER.lock() {
+        if let Some(masker) = g.as_mut() {
+            masker.feed_token(bytes);
+        }
+    }
+}
+
+/// Reset the DOMINO grammar state to the initial state (e.g. for a new
+/// generation turn). No-op when no masker is installed (T53/W11).
+pub fn domino_reset() {
+    if let Ok(mut g) = DOMINO_MASKER.lock() {
+        if let Some(masker) = g.as_mut() {
+            masker.reset();
+        }
+    }
+}
+
 // ── Phase 3: FFN fusion toggle ────────────────────────────────────────────────
 // Default ON (native). Runs the whole pre-norm FFN — gate GEMM, up GEMM, GPU SiLU·mul,
 // down GEMM — in ONE command submit with intermediates kept in VRAM, so a layer costs ONE

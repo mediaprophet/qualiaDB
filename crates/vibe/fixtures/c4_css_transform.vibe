@@ -1,0 +1,19 @@
+module <https://qualiadb.org/modules/css_transform>;
+import "vibe:0.1/math" as m;
+
+present xform {
+    color: #88aacc
+}
+
+pure fn translate_x(tx: f64) -> f64 {
+    return tx;
+}
+pure fn scale_factor(s: f64) -> f64 {
+    return m.max(0.0, s);
+}
+pure fn rotate_degrees_to_radians(deg: f64) -> f64 {
+    return deg * 3.141592653589793 / 180.0;
+}
+pure fn skew_factor(ax: f64, ay: f64) -> f64 {
+    return m.abs(ax - ay);
+}

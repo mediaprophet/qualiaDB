@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/mol_weight>;
+import "vibe:0.1/math" as m;
+pure fn molecular_weight(atoms: f64, avg_mass: f64) -> f64 {
+    return m.max(0.0, atoms * avg_mass);
+}

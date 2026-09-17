@@ -5,6 +5,8 @@
 //! projected residual is read back. Keeping it isolated makes the queue/readback
 //! troubleshooting surface much smaller than the general attention module.
 
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+
 use crate::gguf_bridge::*;
 
 impl QTensorEngine {

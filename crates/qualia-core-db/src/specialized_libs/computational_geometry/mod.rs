@@ -198,6 +198,7 @@ pub use arrangement_3d::{
     build_arrangement_3d, radial_sort_around_edge, validate_arrangement, Arrangement3D,
     ArrangementError as Arrangement3DError, EdgeKey, Region, Shell,
 };
+pub use arrangements::{dual_point_to_line, dual_round_trip, Line2};
 pub use benchmark_corpus::{
     compute_p10_corpus_baseline_hash, run_p10_corpus, CorpusReport, CORPUS_VERSION,
 };
@@ -206,8 +207,9 @@ pub use bentley_ottmann::{
     red_blue_intersections, SweepSegment,
 };
 pub use boolean_2::{
-    boolean_difference_area, boolean_intersection_area, boolean_union_area, point_in_polygon,
-    polygon_area, polygon_signed_area, verify_area_conservation, BooleanError, BooleanOp,
+    boolean_difference_area, boolean_intersection_area, boolean_union_area, point_in_or_on_polygon,
+    point_in_polygon, polygon_area, polygon_signed_area, verify_area_conservation, BooleanError,
+    BooleanOp,
 };
 pub use boolean_3::{
     boolean_3, boolean_3_exact, boolean_3_with_kernel, required_triangles_3, required_vertices_3,
@@ -488,6 +490,11 @@ pub use spatial_order::{
     hilbert_encode_2d, morton_decode_2d, morton_encode_2d, morton_encode_3d, sort_by_hilbert_2d,
     sort_by_morton_2d, sort_by_morton_3d, SpatialOrderError, SpatialOrderHeader,
 };
+pub use statistical_manifold::{
+    fisher_distance, fisher_inner_product, kl_bregman_form, kl_divergence, neg_entropy,
+    neg_entropy_grad, simplex_project, simplex_project_idempotent, validate_probability,
+    StatManifoldError,
+};
 pub use surface_mesh::{
     build_surface_mesh_maps, BoundaryLoopWalker, FaceLoopCirculator, OneRingCirculator,
     SurfaceMeshError, SurfaceMeshView,
@@ -522,6 +529,10 @@ pub use triangulation_opt::{
 pub use voronoi_2::{
     circumcenter, nearest_site_brute_force, nearest_site_via_delaunay, verify_voronoi_vertices,
     voronoi_diagram_2, voronoi_hash, VoronoiEdge, VoronoiError, VoronoiVertex,
+};
+pub use voronoi_variants::{
+    dist_point_to_segment, dist_sq, dist_sq_point_to_segment, FarthestEdge, FarthestVertex,
+    FarthestVoronoi,
 };
 
 /// Versioned native geometry ABI. Increment only when public POD layouts or

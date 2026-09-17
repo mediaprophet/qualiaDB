@@ -1,0 +1,151 @@
+// Test higher-order numerical solvers & closure bridge (VibeScript 0.1)
+using Ode, Calculus, Optimization, VectorCalculus, IntegralTransforms;
+
+effect fn test_rk4() {
+    let r = Ode.rk4_integrate({
+        system: ["-0.5 * y"],
+        vars: ["y"],
+        t_span: [0.0, 1.0],
+        y0: [1.0],
+        dt: 0.05
+    });
+    return r.steps;
+}
+
+effect fn test_dopri5() {
+    let r = Ode.dopri5({
+        system: ["-1.0 * y"],
+        vars: ["y"],
+        t_span: [0.0, 1.0],
+        y0: [1.0]
+    });
+    return r.accepted_steps;
+}
+
+effect fn test_bdf() {
+    let r = Ode.bdf({
+        system: ["-2.0 * y"],
+        vars: ["y"],
+        t_span: [0.0, 1.0],
+        y0: [1.0],
+        dt: 0.1
+    });
+    return r.steps;
+}
+
+effect fn test_symplectic() {
+    let r = Ode.symplectic_step({
+        force: "-1.0 * q",
+        q: 1.0,
+        p: 0.0,
+        dt: 0.01,
+        method: "verlet",
+        steps: 10
+    });
+    return r.method;
+}
+
+effect fn test_simpson() {
+    let r = Calculus.adaptive_simpson({
+        expr: "x^2",
+        var: "x",
+        a: 0.0,
+        b: 3.0
+    });
+    return r.value;
+}
+
+effect fn test_derivative() {
+    let r = Calculus.adaptive_derivative({
+        expr: "x^3",
+        var: "x",
+        x: 2.0
+    });
+    return r.value;
+}
+
+effect fn test_jacobian() {
+    let r = Calculus.numerical_jacobian({
+        exprs: ["x + y", "x * y"],
+        vars: ["x", "y"],
+        point: [1.0, 2.0]
+    });
+    return r.rows;
+}
+
+effect fn test_hessian() {
+    let r = Calculus.numerical_hessian({
+        expr: "x^2 + y^2",
+        vars: ["x", "y"],
+        point: [1.0, 1.0]
+    });
+    return r.dim;
+}
+
+effect fn test_newton() {
+    let r = Calculus.newton_solve({
+        exprs: ["x^2 - 4"],
+        vars: ["x"],
+        guess: [1.0]
+    });
+    return r.converged;
+}
+
+effect fn test_opt_sa() {
+    let r = Optimization.simulated_annealing({
+        objective: "(x - 3)^2",
+        vars: ["x"],
+        bounds: [[0.0, 10.0]],
+        max_iter: 100,
+        seed: 42
+    });
+    return r.iterations;
+}
+
+effect fn test_opt_abc() {
+    let r = Optimization.artificial_bee_colony({
+        objective: "x^2",
+        vars: ["x"],
+        bounds: [[-5.0, 5.0]],
+        max_cycles: 20,
+        seed: 42
+    });
+    return r.cycles;
+}
+
+effect fn test_line_integral() {
+    let r = VectorCalculus.line_integral_scalar({
+        expr: "1.0",
+        curve: ["cos(t)", "sin(t)"],
+        t_span: [0.0, 3.14159265],
+        steps: 50
+    });
+    return r.steps;
+}
+
+effect fn test_surface_flux() {
+    let r = VectorCalculus.surface_flux({
+        field: ["0.0", "0.0", "1.0"],
+        surface: ["u", "v", "0.0"],
+        u_span: [0.0, 1.0],
+        v_span: [0.0, 1.0],
+        steps: 10
+    });
+    return r.steps;
+}
+
+effect fn test_laplace_numeric() {
+    let r = IntegralTransforms.laplace_numeric({
+        expr: "1.0",
+        s: 2.0,
+        t_max: 10.0
+    });
+    return r.s;
+}
+
+effect fn test_laplace_symbolic() {
+    let r = IntegralTransforms.laplace_symbolic({
+        expr: "t"
+    });
+    return r.transform;
+}

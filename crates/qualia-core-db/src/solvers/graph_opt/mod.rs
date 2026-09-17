@@ -2,7 +2,7 @@
 //!
 //! - [`hierarchical_path`] — fractal/hierarchical shortest-path decomposition into
 //!   independent intra-cluster subproblems (maps onto the fractal-swarm cells).
-//! - [`spreading_activation`] — associative relevance propagation for the 10D→5D
+//! - [`mod@spreading_activation`] — associative relevance propagation for the 10D→5D
 //!   NQuin relevance router.
 
 pub mod hierarchical_path;

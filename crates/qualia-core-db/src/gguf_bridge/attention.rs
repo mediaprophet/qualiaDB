@@ -2,9 +2,9 @@
 //! Split from gguf_bridge/mod.rs (structural refactor; no behaviour change).
 use super::*;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod fused_tail;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod preproject;
 
 impl QTensorEngine {
@@ -125,14 +125,34 @@ impl QTensorEngine {
                 readback_out,
             );
         }
+        #[cfg(any(target_arch = "wasm32", not(feature = "gpu-runtime")))]
+        return self.cpu_attention_pass(
+            hidden,
+            n_embd,
+            num_tokens_in_batch,
+            batch_start_token_idx,
+            layout,
+            layer,
+            h,
+            info,
+            raw_weights,
+            proj_kind,
+            norm_weight,
+            readback_out,
+        );
+
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         if !ggml_gpu_attention_shader_supported(info.ggml_type) {
             wlog(&format!(
                 "[attn_pass] GUARD unsupported quant kind={proj_kind}"
             ));
             return false;
         }
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         let batch = num_tokens_in_batch.max(1) as usize;
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         let hidden_elems = n_embd.checked_mul(batch).unwrap_or(0);
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         if hidden_elems > hidden.len()
             || hidden_elems > self.gemm_max_input_floats
             || raw_weights.len() > self.max_tensor_bytes
@@ -168,25 +188,7 @@ impl QTensorEngine {
             return false;
         }
 
-        // WASM: the browser cannot read GPU results synchronously, so run the CPU
-        // attention kernel (Phase 2A) instead of the dead GPU dispatch + map_async path.
-        #[cfg(target_arch = "wasm32")]
-        return self.cpu_attention_pass(
-            hidden,
-            n_embd,
-            num_tokens_in_batch,
-            batch_start_token_idx,
-            layout,
-            layer,
-            h,
-            info,
-            raw_weights,
-            proj_kind,
-            norm_weight,
-            readback_out,
-        );
-
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         {
             let (mask_words, mask_active, mask_word_count) =
                 Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
@@ -861,7 +863,7 @@ impl QTensorEngine {
             }
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         if crate::llm_bench::attention_preproject_enabled()
             && self.dispatch_attention_kv_preproject_fused(
                 hidden_input,
@@ -983,7 +985,7 @@ impl QTensorEngine {
             return None;
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         if crate::llm_bench::attention_o_fuse_enabled() {
             if let Some(out_info) = tensors.attn_output {
                 let (o_in, o_out) = Self::matmul_dims(&out_info);

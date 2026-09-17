@@ -12,7 +12,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// How pressing an identified assistance need is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -58,6 +60,10 @@ pub struct AssistanceNeed {
     #[serde(default)]
     pub urgency: Urgency,
     pub identified_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `identified_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub identified_at_instant: Option<InstantBridge>,
 }
 
 impl AssistanceNeed {
@@ -72,7 +78,15 @@ impl AssistanceNeed {
             description: description.into(),
             urgency: Urgency::default(),
             identified_at_unix,
+            identified_at_instant: Some(InstantBridge::from_coarse(identified_at_unix)),
         }
+    }
+
+    /// Resolve the identified-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn identified_at(&self) -> InstantBridge {
+        self.identified_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.identified_at_unix))
     }
 }
 
@@ -88,6 +102,10 @@ pub struct WelfareStream {
     #[serde(default)]
     pub status: StreamStatus,
     pub started_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `started_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub started_at_instant: Option<InstantBridge>,
 }
 
 impl WelfareStream {
@@ -98,7 +116,15 @@ impl WelfareStream {
             reference: None,
             status: StreamStatus::default(),
             started_at_unix,
+            started_at_instant: Some(InstantBridge::from_coarse(started_at_unix)),
         }
+    }
+
+    /// Resolve the started-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn started_at(&self) -> InstantBridge {
+        self.started_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.started_at_unix))
     }
 }
 
@@ -111,6 +137,10 @@ pub struct GovernmentLetter {
     pub sender: String,
     pub subject: String,
     pub received_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `received_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub received_at_instant: Option<InstantBridge>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attachment_blob_hash: Option<String>,
     #[serde(default)]
@@ -128,9 +158,17 @@ impl GovernmentLetter {
             sender: sender.into(),
             subject: subject.into(),
             received_at_unix,
+            received_at_instant: Some(InstantBridge::from_coarse(received_at_unix)),
             attachment_blob_hash: None,
             action_required: false,
         }
+    }
+
+    /// Resolve the received-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn received_at(&self) -> InstantBridge {
+        self.received_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.received_at_unix))
     }
 }
 
@@ -164,8 +202,11 @@ fn self_reported_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(valid_time_start_unix),
+        valid_time_start_instant: None,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash,
         tombstone: false,

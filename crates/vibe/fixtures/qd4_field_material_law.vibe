@@ -1,0 +1,12 @@
+field pressure_ambient: Pressure
+  unit: <qudt:KiloPascal>
+  support: region
+  representation: grid;
+material steel: Material
+  yield: 250.0;
+law crush
+  when pressure_ambient > steel.yield
+  => 1;
+fn main() {
+  return 0;
+}

@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/point_in_polygon>;
+import "vibe:0.1/math" as m;
+pure fn cross_2d(ox: f64, oy: f64, ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
+    return (ax - ox) * (by - oy) - (ay - oy) * (bx - ox);
+}
+pure fn is_left_turn(ox: f64, oy: f64, ax: f64, ay: f64, bx: f64, by: f64) -> bool {
+    return cross_2d(ox, oy, ax, ay, bx, by) > 0.0;
+}
+pure fn triangle_area(ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy: f64) -> f64 {
+    return m.abs(cross_2d(ax, ay, bx, by, cx, cy)) / 2.0;
+}

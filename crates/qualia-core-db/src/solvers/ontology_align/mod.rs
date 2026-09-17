@@ -5,7 +5,7 @@
 //! invariant, enforced by [`correspondence`]).
 //!
 //! - [`correspondence`] — result types + the guardrail.
-//! - [`align`] — alignment-as-optimization (greedy + hill-climbing).
+//! - [`mod@align`] — alignment-as-optimization (greedy + hill-climbing).
 
 pub mod align;
 pub mod correspondence;

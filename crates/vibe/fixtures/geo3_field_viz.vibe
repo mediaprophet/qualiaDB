@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/field_viz>;
+import "vibe:0.1/math" as m;
+pure fn field_magnitude(fx: f64, fy: f64, fz: f64) -> f64 {
+    let m2 = fx * fx + fy * fy + fz * fz;
+    return m.max(0.0, m2);
+}

@@ -806,10 +806,10 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
 /// CBOR-LD Serializer for SPARQL-Star
 ///
 /// Implements CBOR-LD tags 103-106 for embedded triples per the RDF-Star CBOR-LD spec:
-/// - Tag 103: Triple (<<s p o>>)
-/// - Tag 104: Subject (s of <<s p o>>)
-/// - Tag 105: Predicate (p of <<s p o>>)
-/// - Tag 106: Object (o of <<s p o>>)
+/// - Tag 103: Triple (`<<s p o>>`)
+/// - Tag 104: Subject (s of `<<s p o>>`)
+/// - Tag 105: Predicate (p of `<<s p o>>`)
+/// - Tag 106: Object (o of `<<s p o>>`)
 pub struct CborLdStarSerializer;
 
 impl CborLdStarSerializer {
@@ -919,7 +919,7 @@ mod cbor_serializer_tests {
 
 /// N-Triples-Star Serializer
 ///
-/// Serializes to N-Triples-Star format: <<<s p o>>> p o .
+/// Serializes to N-Triples-Star format: `<<<s p o>>> p o .`
 pub struct NTriplesStarSerializer;
 
 impl NTriplesStarSerializer {
@@ -983,7 +983,7 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
 
 /// N-Quads-Star Serializer
 ///
-/// Serializes to N-Quads-Star format: <<<s p o>>> p o <g> .
+/// Serializes to N-Quads-Star format: `<<<s p o>>> p o <g> .`
 pub struct NQuadsStarSerializer;
 
 impl NQuadsStarSerializer {

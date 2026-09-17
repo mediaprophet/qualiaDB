@@ -24,6 +24,7 @@ pub enum AdapterClass {
 }
 
 impl AdapterClass {
+    #[cfg(feature = "gpu-runtime")]
     fn from_wgpu(t: wgpu::DeviceType) -> Self {
         match t {
             wgpu::DeviceType::DiscreteGpu => Self::Discrete,
@@ -74,6 +75,7 @@ const DISCRETE_VRAM_FLOOR: u64 = 1_500 * 1024 * 1024; // ~1.5 GB for the display
 const UNIFIED_HOST_FLOOR_MAX: u64 = 6 * 1024 * 1024 * 1024; // cap the unified host reservation
 
 /// Rank backends so the same physical GPU (enumerated once per backend) collapses to the preferred one.
+#[cfg(feature = "gpu-runtime")]
 fn backend_rank(b: wgpu::Backend) -> u8 {
     match b {
         // Prefer the backend each OS actually runs the engine on.
@@ -85,14 +87,9 @@ fn backend_rank(b: wgpu::Backend) -> u8 {
     }
 }
 
-/// Probe the host: enumerate all adapters (deduped across backends), classify, size the floor.
-pub fn probe_host_topology() -> HostTopology {
-    use sysinfo::System;
-    let sys = System::new_all();
-    let host_ram_bytes = sys.total_memory(); // bytes (sysinfo ≥ 0.30)
-    let host_ram_available_bytes = sys.available_memory();
-    let cpu_cores = num_cpus::get();
-
+/// wgpu adapter enumeration. CPU topology (RAM / cores / OS floor) still runs without this.
+#[cfg(feature = "gpu-runtime")]
+fn probe_adapters() -> Vec<AdapterDesc> {
     // Enumerate every adapter across every backend, then dedup by physical (vendor, device).
     let instance = wgpu::Instance::default();
     let raw = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
@@ -131,6 +128,26 @@ pub fn probe_host_topology() -> HostTopology {
     adapters.retain(|a| a.device != 0 || !vendors_with_real_dev.contains(&a.vendor));
     // Discrete first, then integrated, then the rest — deterministic order for the planner.
     adapters.sort_by_key(|a| (a.class as u8, a.vendor, a.device));
+    adapters
+}
+
+#[cfg(not(feature = "gpu-runtime"))]
+fn probe_adapters() -> Vec<AdapterDesc> {
+    Vec::new()
+}
+
+/// Probe the host: enumerate all adapters (deduped across backends), classify, size the floor.
+pub fn probe_host_topology() -> HostTopology {
+    use sysinfo::System;
+    let sys = System::new_all();
+    let host_ram_bytes = sys.total_memory(); // bytes (sysinfo ≥ 0.30)
+    let host_ram_available_bytes = sys.available_memory();
+    let cpu_cores = num_cpus::get();
+
+    #[cfg(target_os = "windows")]
+    let mut adapters = probe_adapters();
+    #[cfg(not(target_os = "windows"))]
+    let adapters = probe_adapters();
 
     let has_discrete = adapters.iter().any(|a| a.class == AdapterClass::Discrete);
     let topology = if has_discrete {

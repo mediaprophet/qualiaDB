@@ -260,14 +260,14 @@ pub fn v2_sidecar_size(frame_count: usize, bin_count: usize, n_mel: usize, n_mfc
 ///
 /// Layout: the unchanged v1 header (`version = 2`, `bin_count = frame_size/2 + 1`,
 /// `_pad = SIDECAR_KIND_STFT`) + plane-0 (the one-sided STFT magnitude spectrum,
-/// `frame_count × bin_count` f32, from [`forward_stft`] + [`stft_magnitudes`]);
+/// `frame_count × bin_count` f32, from `forward_stft()` + `stft_magnitudes()`);
 /// then a [`SpectralV2SubHeader`]; then a mel plane (`frame_count × n_mel`) and an
 /// MFCC plane (`frame_count × n_mfcc`) computed per frame from the power spectrum
 /// (`|X|²`) via a triangular mel bank built once with
 /// [`build_mel_bank`](qualia_audio::features::mel::build_mel_bank)
 /// (`0 … sample_rate/2` Hz).
 ///
-/// A v1 reader reads plane-0 correctly and stops at [`payload_bytes`] — the
+/// A v1 reader reads plane-0 correctly and stops at `payload_bytes()` — the
 /// appended planes are invisible to it.
 ///
 /// Returns the number of bytes written into `out`. Native only.

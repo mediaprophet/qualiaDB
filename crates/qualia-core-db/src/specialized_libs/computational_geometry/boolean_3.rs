@@ -321,7 +321,7 @@ pub fn boolean_3_with_kernel<K: GeometryKernel>(
 /// decision (which triangles intersect) is identical (exact `orient_3d` signs).
 /// The intersection *construction* (split points) now uses
 /// [`tri_tri_intersect_3_exact`], which returns exact-rational
-/// [`ExactPoint3`] endpoints — no f64 rounding — so the split geometry is
+/// `ExactPoint3()` endpoints — no f64 rounding — so the split geometry is
 /// provably correct rather than approximate.
 ///
 /// The inside/outside classification uses the same proven ray-casting

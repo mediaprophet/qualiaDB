@@ -27,6 +27,8 @@ pub enum ShellAction {
     RevokeSessions,
     /// Open the shell command palette (Ctrl+K / Ctrl+P).
     OpenCommandPalette,
+    /// Presentation chrome only. Classic remains default.
+    SetShellKind(&'static str),
 }
 
 impl ShellAction {
@@ -48,6 +50,8 @@ impl ShellAction {
             "open_10d" => Some(Self::Navigate("10d-browser".to_string())),
             // Home is Talk (human-first). Legacy open_dashboard / tray "show" land on talk.
             "open_dashboard" | "open_talk" | "show" => Some(Self::Navigate("talk".to_string())),
+            "open_directory" | "open_contacts" => Some(Self::Navigate("directory".to_string())),
+            "open_mail" | "open_email" => Some(Self::Navigate("mail".to_string())),
             "open_qapp_studio" => Some(Self::Navigate("qapp-studio".to_string())),
             "open_qapp_manager" => Some(Self::Navigate("qapps".to_string())),
             "open_settings" | "settings" => Some(Self::Navigate("settings".to_string())),
@@ -70,6 +74,9 @@ impl ShellAction {
             "sync_inbox" => Some(Self::OpenSyncInbox),
             "revoke" => Some(Self::RevokeSessions),
             "open_command_palette" | "command_palette" => Some(Self::OpenCommandPalette),
+            "open_poet" => Some(Self::Navigate("poet".to_string())),
+            "shell_classic" => Some(Self::SetShellKind("classic")),
+            "shell_poet" => Some(Self::SetShellKind("poet")),
             _ => None,
         }
     }
@@ -92,6 +99,38 @@ mod tests {
         assert_eq!(
             ShellAction::from_id("open_talk"),
             Some(ShellAction::Navigate("talk".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_directory"),
+            Some(ShellAction::Navigate("directory".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_mail"),
+            Some(ShellAction::Navigate("mail".to_string()))
+        );
+        assert_ne!(
+            ShellAction::from_id("open_mail"),
+            ShellAction::from_id("open_poet")
+        );
+        assert_eq!(
+            ShellAction::from_id("open_poet"),
+            Some(ShellAction::Navigate("poet".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("shell_classic"),
+            Some(ShellAction::SetShellKind("classic"))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_settings"),
+            Some(ShellAction::Navigate("settings".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_library"),
+            Some(ShellAction::Navigate("library".to_string()))
+        );
+        assert_ne!(
+            ShellAction::from_id("open_library"),
+            ShellAction::from_id("open_talk")
         );
     }
 }

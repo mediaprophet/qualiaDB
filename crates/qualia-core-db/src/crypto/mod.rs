@@ -3,6 +3,7 @@
 #[cfg(feature = "zk-culling")]
 pub mod deontic_circuit;
 pub mod fiduciary_crypto;
+pub mod network;
 #[cfg(feature = "pq-kem")]
 pub mod pq_kem_shim;
 #[cfg(not(target_arch = "wasm32"))]

@@ -25,7 +25,7 @@
 //! [`AnisotropyField`] maps a position to a 3x3 symmetric **metric tensor**
 //! `M`; the metric length of an edge `e` is `sqrt(e^T M e)`, and a mesher aims
 //! for unit metric length. Field conformance
-//! ([`check_field_conformance`]) measures every element edge in the metric
+//! (`check_field_conformance`) measures every element edge in the metric
 //! and reports the min/max ratio to the target (1.0), so a mesh can be
 //! accepted or rejected against a declared tolerance.
 //!

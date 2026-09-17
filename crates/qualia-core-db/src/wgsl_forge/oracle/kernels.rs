@@ -16,7 +16,7 @@ use super::report::*;
 /// Differential-oracle evaluation of the radix-2 FFT (`out = forward DFT(in)`)
 /// against [`dft_cpu`]. One workgroup of `n = schedule.workgroup_size` threads
 /// (one complex element per thread; `n` must be a power of two), mirroring the
-/// single-workgroup dispatch of [`evaluate_topk`]: `element_count = n` with
+/// single-workgroup dispatch of `evaluate_topk()`: `element_count = n` with
 /// `workgroup_size = n` launches exactly one workgroup. The input/output buffers
 /// hold `2*n` interleaved f32.
 pub fn evaluate_fft(
@@ -561,7 +561,7 @@ pub fn evaluate_gemv(
 /// [`rayprobe_cpu`]. Requires a ray-query-capable adapter (RT cores).
 ///
 /// Intentionally concrete on [`WgpuComputeContext`] (not generic over
-/// [`OracleContext`]): it needs the wgpu-only acceleration-structure build
+/// `OracleContext()`): it needs the wgpu-only acceleration-structure build
 /// ([`WgpuComputeContext::build_triangle_scene`]) and the dedicated
 /// [`WgpuPipeline::dispatch_rayprobe`] binding path, which have no CUDA analogue —
 /// it is not a §7 cross-backend kernel.

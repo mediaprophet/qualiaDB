@@ -6,7 +6,7 @@
 //! Phase 2 lands the LLM-normalization building blocks: [`reduce`] (RMSNorm variance /
 //! softmax max+denominator) and [`broadcast`] (scale/bias fanout). They are lowered from
 //! `OpNode::Reduce` / `OpNode::Broadcast` by the WGSL graph lowerer. See
-//! [`docs/plans/dag-ir-forge.md`].
+//! `docs/plans/dag-ir-forge.md()`.
 
 pub mod broadcast;
 pub mod elementwise;

@@ -29,7 +29,19 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         id: "relations",
         label: "Relations",
         hint: "People, chat, offers",
-        keywords: "relations talk chat people agent social",
+        keywords: "relations talk chat people agent social mail email inbox",
+    },
+    PaletteDestination {
+        id: "mail",
+        label: "Mail",
+        hint: "Talk → purpose inboxes & landed mail",
+        keywords: "mail email inbox receiver smtp purpose",
+    },
+    PaletteDestination {
+        id: "directory",
+        label: "Directory",
+        hint: "Humans-first address book · Talk / People",
+        keywords: "dir directory contacts address book people humans rolodex addressbook",
     },
     PaletteDestination {
         id: "selfhood",
@@ -80,10 +92,16 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         keywords: "10d ten-d infosphere anatomy vision",
     },
     PaletteDestination {
+        id: "catalog",
+        label: "Catalog · Lexicon",
+        hint: "Open a lexicon pack · held / not yet",
+        keywords: "catalog lexicon pack living artifact machine held vibe poet",
+    },
+    PaletteDestination {
         id: "qapps",
         label: "QApps (Advanced)",
-        hint: "Catalog · Active/Beta default",
-        keywords: "qapps apps catalog advanced",
+        hint: "QApp catalog · Active/Beta default",
+        keywords: "qapps apps advanced",
     },
     PaletteDestination {
         id: "logs",
@@ -93,11 +111,30 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
     },
 ];
 
+/// Stash Talk sub-tab before routing so Mail/Directory survive iframe remount.
+pub fn prepare_palette_navigation(id: &str) {
+    match id {
+        "mail" | "email" => crate::components::relations::write_talk_handoff("mail", false),
+        "directory" | "dir" | "contacts" | "addressbook" | "address-book" => {
+            crate::components::relations::stash_directory_handoff();
+        }
+        _ => {}
+    }
+}
+
 /// Map a palette id to a studio [`Route`].
 pub fn route_for_palette_id(id: &str) -> Route {
     match id {
-        "memory" | "library" | "home" | "lived-memory" => Route::LibraryRoute {},
-        "relations" | "talk" | "chat" | "people" => Route::TalkRoute {},
+        "memory" | "library" | "lived-memory" => Route::LibraryRoute {},
+        "dir" | "directory" | "contacts" | "addressbook" | "address-book" => {
+            crate::components::relations::stash_directory_handoff();
+            Route::TalkDirectoryRoute {}
+        }
+        "mail" | "email" => {
+            crate::components::relations::write_talk_handoff("mail", false);
+            Route::TalkMailRoute {}
+        }
+        "relations" | "talk" | "chat" | "people" | "home" => Route::TalkRoute {},
         "selfhood" | "identity" => Route::IdentityRoute {},
         "care" | "wellfair" | "health" => Route::WellfairRoute {},
         "world" | "browser" | "reach" | "web" => Route::BrowserRoute {},
@@ -107,24 +144,54 @@ pub fn route_for_palette_id(id: &str) -> Route {
         "10d-browser" | "10d" | "infosphere" => Route::TenDBrowserRoute {},
         "settings" | "prefs" => Route::SettingsRoute {},
         "qapps" | "apps" => Route::QAppsRoute {},
+        "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
+        "semantic-instrument" | "semantic-instruments" | "instrument-pack" => {
+            Route::PoetInstrumentRoute {}
+        }
+        "poet" | "vibe" => Route::PoetRoute {},
         "logs" => Route::LogsRoute {},
-        _ => Route::LibraryRoute {},
+        _ => Route::TalkRoute {},
+    }
+}
+
+fn destination_rank(dest: &PaletteDestination, needle: &str) -> u8 {
+    let id = dest.id.to_ascii_lowercase();
+    let label = dest.label.to_ascii_lowercase();
+    if id == needle || label == needle {
+        0
+    } else if id.starts_with(needle) || label.starts_with(needle) {
+        1
+    } else if dest
+        .keywords
+        .split_whitespace()
+        .any(|word| word.eq_ignore_ascii_case(needle) || word.starts_with(needle))
+    {
+        2
+    } else {
+        3
     }
 }
 
 /// Filter destinations by free-text query (label, hint, keywords, id).
+/// Prefix / keyword-token hits rank first so `dir` opens Directory, not a
+/// accidental substring later in the list.
 pub fn filter_destinations(query: &str) -> Vec<&'static PaletteDestination> {
     let needle = query.trim().to_lowercase();
     if needle.is_empty() {
         return PALETTE_DESTINATIONS.iter().collect();
     }
-    PALETTE_DESTINATIONS
+    let mut hits: Vec<_> = PALETTE_DESTINATIONS
         .iter()
         .filter(|d| {
             let hay = format!("{} {} {} {}", d.id, d.label, d.hint, d.keywords).to_lowercase();
             hay.contains(&needle)
+                || d.keywords
+                    .split_whitespace()
+                    .any(|word| word.starts_with(&needle) || needle.starts_with(word))
         })
-        .collect()
+        .collect();
+    hits.sort_by_key(|d| destination_rank(d, &needle));
+    hits
 }
 
 /// Modal command palette overlay. Listens for Ctrl/Cmd+K and Ctrl/Cmd+P on wasm.
@@ -265,6 +332,7 @@ pub fn CommandPalette() -> Element {
                                 Key::Enter => {
                                     e.prevent_default();
                                     if let Some(dest) = items.get(idx) {
+                                        prepare_palette_navigation(dest.id);
                                         let route = route_for_palette_id(dest.id);
                                         open.set(false);
                                         query.set(String::new());
@@ -306,6 +374,7 @@ pub fn CommandPalette() -> Element {
                                                     background: {bg}; color: var(--qualia-text);",
                                             onmouseenter: move |_| active.set(i),
                                             onclick: move |_| {
+                                                prepare_palette_navigation(dest_id);
                                                 let route = route_for_palette_id(dest_id);
                                                 open.set(false);
                                                 query.set(String::new());
@@ -390,5 +459,77 @@ mod tests {
             route_for_palette_id("library"),
             Route::LibraryRoute {}
         ));
+        assert!(matches!(route_for_palette_id("home"), Route::TalkRoute {}));
+        assert_ne!(
+            route_for_palette_id("library"),
+            route_for_palette_id("talk")
+        );
+        assert!(matches!(
+            route_for_palette_id("catalog"),
+            Route::PoetCatalogRoute {}
+        ));
+        assert!(matches!(
+            route_for_palette_id("lexicon"),
+            Route::PoetCatalogRoute {}
+        ));
+        assert!(matches!(
+            route_for_palette_id("semantic-instrument"),
+            Route::PoetInstrumentRoute {}
+        ));
+    }
+
+    #[test]
+    fn mail_is_a_talk_destination() {
+        let hits = filter_destinations("mail");
+        assert!(hits.iter().any(|d| d.id == "mail"));
+        assert!(matches!(
+            route_for_palette_id("mail"),
+            Route::TalkMailRoute {}
+        ));
+        assert_ne!(route_for_palette_id("mail"), Route::PoetRoute {});
+        assert_eq!(Route::TalkMailRoute {}.to_string(), "/talk/mail");
+    }
+
+    #[test]
+    fn catalog_lexicon_is_discoverable() {
+        let hits = filter_destinations("lexicon");
+        assert!(hits.iter().any(|d| d.id == "catalog"));
+        assert_eq!(
+            hits.iter().find(|d| d.id == "catalog").unwrap().label,
+            "Catalog · Lexicon"
+        );
+    }
+
+    #[test]
+    fn directory_is_discoverable_from_palette() {
+        for needle in ["dir", "directory", "contacts", "address book", "humans"] {
+            let hits = filter_destinations(needle);
+            assert!(
+                hits.iter().any(|d| d.id == "directory"),
+                "palette must find Directory from {needle:?}"
+            );
+            assert_eq!(
+                hits.first().map(|d| d.id),
+                Some("directory"),
+                "Directory must rank first for {needle:?}"
+            );
+        }
+        assert!(matches!(
+            route_for_palette_id("directory"),
+            Route::TalkDirectoryRoute {}
+        ));
+        assert!(matches!(route_for_palette_id("dir"), Route::TalkDirectoryRoute {}));
+        assert_eq!(
+            filter_destinations("directory")
+                .iter()
+                .find(|d| d.id == "directory")
+                .unwrap()
+                .label,
+            "Directory"
+        );
+        assert_eq!(
+            Route::TalkDirectoryRoute {}.to_string(),
+            "/talk/directory"
+        );
     }
 }

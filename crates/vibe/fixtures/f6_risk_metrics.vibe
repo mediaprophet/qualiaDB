@@ -1,0 +1,44 @@
+module <https://qualiadb.org/modules/risk_metrics>;
+import "vibe:0.1/math" as m;
+pure fn sharpe_ratio(returns: List<f64>, risk_free: f64) -> f64 {
+    let mut sum: f64 = 0.0;
+    let mut n: f64 = 0.0;
+    for r in returns {
+        sum = sum + r;
+        n = n + 1.0;
+    }
+    if n == 0.0 {
+        return 0.0;
+    }
+    let mean = sum / n;
+    let mut var_sum: f64 = 0.0;
+    for r in returns {
+        let d = r - mean;
+        var_sum = var_sum + d * d;
+    }
+    let std_dev = m.sqrt(var_sum / n);
+    if std_dev == 0.0 {
+        return 0.0;
+    }
+    return (mean - risk_free) / std_dev;
+}
+pure fn max_drawdown(values: List<f64>) -> f64 {
+    let mut peak: f64 = 0.0;
+    let mut max_dd: f64 = 0.0;
+    let mut first: bool = true;
+    for v in values {
+        if first {
+            peak = v;
+            first = false;
+        } else {
+            if v > peak {
+                peak = v;
+            }
+            let dd = (peak - v) / peak;
+            if dd > max_dd {
+                max_dd = dd;
+            }
+        }
+    }
+    return max_dd;
+}

@@ -48,7 +48,7 @@ impl AedWeightBundle {
         }
     }
 
-    /// Serialize to disk (cold path). Layout: magic, ver, model_hash, weight[16], bias[4], class[4].
+    /// Serialize to disk (cold path). Layout: magic, ver, model_hash, weight\[16\], bias\[4\], class\[4\].
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut v = Vec::with_capacity(8 + 8 + 16 * 4 + 4 * 4 + 4 * 8);
         v.extend_from_slice(&AED_MAGIC.to_le_bytes());

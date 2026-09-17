@@ -128,20 +128,115 @@ impl From<reqwest::Error> for CcfError {
 
 /// Discover the reference-organ manifest **live** from the HRA SPARQL endpoint (blocking network I/O —
 /// call off the async runtime, e.g. via `spawn_blocking`). The query/parse are pure and unit-tested;
-/// this only adds the transport.
+/// this only adds the transport. If the live endpoint returns an HTTP error (e.g. 502 Bad Gateway)
+/// or times out, it gracefully falls back to the embedded CCF reference-organ manifest.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn discover_ref_organs(endpoint: &str) -> Result<Vec<RefOrgan>, CcfError> {
-    // SPARQL 1.1 Protocol: POST the query as the request body (content-type application/sparql-query).
-    let json = reqwest::blocking::Client::new()
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(12))
+        .build()
+        .unwrap_or_default();
+
+    let res = client
         .post(endpoint)
         .header(reqwest::header::USER_AGENT, HTTP_USER_AGENT)
         .header(reqwest::header::CONTENT_TYPE, "application/sparql-query")
         .header(reqwest::header::ACCEPT, "application/sparql-results+json")
         .body(ref_organ_glb_query())
-        .send()?
-        .error_for_status()?
-        .text()?;
-    Ok(parse_ref_organs(&json))
+        .send();
+
+    match res {
+        Ok(resp) if resp.status().is_success() => {
+            if let Ok(text) = resp.text() {
+                let organs = parse_ref_organs(&text);
+                if !organs.is_empty() {
+                    return Ok(organs);
+                }
+            }
+        }
+        Ok(resp) => {
+            eprintln!(
+                "Warning: HRA SPARQL endpoint '{endpoint}' returned status {}. Falling back to embedded CCF manifest.",
+                resp.status()
+            );
+            return Ok(fallback_ref_organs());
+        }
+        Err(e) => {
+            eprintln!(
+                "Warning: HRA SPARQL endpoint '{endpoint}' unreachable ({e}). Falling back to embedded CCF manifest."
+            );
+            return Ok(fallback_ref_organs());
+        }
+    }
+    Ok(fallback_ref_organs())
+}
+
+/// Embedded fallback list of canonical CCF/HRA reference organ GLBs on `cdn.humanatlas.io`.
+/// Used automatically when the live SPARQL endpoint is temporarily down (e.g. 502 Bad Gateway).
+pub fn fallback_ref_organs() -> Vec<RefOrgan> {
+    const FALLBACK_MANIFEST: &[(&str, &str, AnatomyModel)] = &[
+        // Male organs
+        ("3d-vh-m-brain.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/brain-male/v1.2/assets/3d-vh-m-brain.glb", AnatomyModel::Male),
+        ("3d-vh-m-heart.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/heart-male/v1.2/assets/3d-vh-m-heart.glb", AnatomyModel::Male),
+        ("3d-vh-m-lung-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/lung-male-left/v1.2/assets/3d-vh-m-lung-l.glb", AnatomyModel::Male),
+        ("3d-vh-m-lung-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/lung-male-right/v1.2/assets/3d-vh-m-lung-r.glb", AnatomyModel::Male),
+        ("3d-vh-m-liver.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/liver-male/v1.2/assets/3d-vh-m-liver.glb", AnatomyModel::Male),
+        ("3d-vh-m-kidney-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/kidney-male-left/v1.3/assets/3d-vh-m-kidney-l.glb", AnatomyModel::Male),
+        ("3d-vh-m-kidney-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/kidney-male-right/v1.3/assets/3d-vh-m-kidney-r.glb", AnatomyModel::Male),
+        ("3d-vh-m-spleen.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/spleen-male/v1.2/assets/3d-vh-m-spleen.glb", AnatomyModel::Male),
+        ("3d-vh-m-pancreas.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/pancreas-male/v1.2/assets/3d-vh-m-pancreas.glb", AnatomyModel::Male),
+        ("3d-vh-m-small-intestine.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/small-intestine-male/v1.2/assets/3d-vh-m-small-intestine.glb", AnatomyModel::Male),
+        ("3d-vh-m-large-intestine.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/large-intestine-male/v1.2/assets/3d-vh-m-large-intestine.glb", AnatomyModel::Male),
+        ("3d-vh-m-urinary-bladder.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/urinary-bladder-male/v1.2/assets/3d-vh-m-urinary-bladder.glb", AnatomyModel::Male),
+        ("3d-vh-m-prostate.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/prostate-male/v1.2/assets/3d-vh-m-prostate.glb", AnatomyModel::Male),
+        ("3d-vh-m-trachea.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/trachea-male/v1.2/assets/3d-vh-m-trachea.glb", AnatomyModel::Male),
+        ("3d-vh-m-larynx.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/larynx-male/v1.2/assets/3d-vh-m-larynx.glb", AnatomyModel::Male),
+        ("3d-vh-m-main-bronchus.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/main-bronchus-male/v1.2/assets/3d-vh-m-main-bronchus.glb", AnatomyModel::Male),
+        ("3d-vh-m-thymus.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/thymus-male/v1.2/assets/3d-vh-m-thymus.glb", AnatomyModel::Male),
+        ("3d-vh-m-eye-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/eye-male-left/v1.2/assets/3d-vh-m-eye-l.glb", AnatomyModel::Male),
+        ("3d-vh-m-eye-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/eye-male-right/v1.2/assets/3d-vh-m-eye-r.glb", AnatomyModel::Male),
+        ("3d-vh-m-pelvis.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/pelvis-male/v1.2/assets/3d-vh-m-pelvis.glb", AnatomyModel::Male),
+        ("3d-vh-m-skin.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/skin-male/v1.2/assets/3d-vh-m-skin.glb", AnatomyModel::Male),
+        ("3d-vh-m-blood-vasculature.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/blood-vasculature-male/v1.2/assets/3d-vh-m-blood-vasculature.glb", AnatomyModel::Male),
+
+        // Female organs
+        ("3d-vh-f-brain.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/brain-female/v1.2/assets/3d-vh-f-brain.glb", AnatomyModel::Female),
+        ("3d-vh-f-heart.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/heart-female/v1.2/assets/3d-vh-f-heart.glb", AnatomyModel::Female),
+        ("3d-vh-f-lung-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/lung-female-left/v1.2/assets/3d-vh-f-lung-l.glb", AnatomyModel::Female),
+        ("3d-vh-f-lung-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/lung-female-right/v1.2/assets/3d-vh-f-lung-r.glb", AnatomyModel::Female),
+        ("3d-vh-f-liver.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/liver-female/v1.2/assets/3d-vh-f-liver.glb", AnatomyModel::Female),
+        ("3d-vh-f-kidney-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/kidney-female-left/v1.3/assets/3d-vh-f-kidney-l.glb", AnatomyModel::Female),
+        ("3d-vh-f-kidney-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/kidney-female-right/v1.3/assets/3d-vh-f-kidney-r.glb", AnatomyModel::Female),
+        ("3d-vh-f-spleen.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/spleen-female/v1.2/assets/3d-vh-f-spleen.glb", AnatomyModel::Female),
+        ("3d-vh-f-pancreas.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/pancreas-female/v1.2/assets/3d-vh-f-pancreas.glb", AnatomyModel::Female),
+        ("3d-vh-f-small-intestine.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/small-intestine-female/v1.2/assets/3d-vh-f-small-intestine.glb", AnatomyModel::Female),
+        ("3d-vh-f-large-intestine.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/large-intestine-female/v1.2/assets/3d-vh-f-large-intestine.glb", AnatomyModel::Female),
+        ("3d-vh-f-urinary-bladder.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/urinary-bladder-female/v1.2/assets/3d-vh-f-urinary-bladder.glb", AnatomyModel::Female),
+        ("3d-vh-f-uterus.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/uterus-female/v1.2/assets/3d-vh-f-uterus.glb", AnatomyModel::Female),
+        ("3d-vh-f-ovary-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/ovary-female-left/v1.2/assets/3d-vh-f-ovary-l.glb", AnatomyModel::Female),
+        ("3d-vh-f-ovary-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/ovary-female-right/v1.2/assets/3d-vh-f-ovary-r.glb", AnatomyModel::Female),
+        ("3d-vh-f-fallopian-tube-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/fallopian-tube-female-left/v1.2/assets/3d-vh-f-fallopian-tube-l.glb", AnatomyModel::Female),
+        ("3d-vh-f-fallopian-tube-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/fallopian-tube-female-right/v1.2/assets/3d-vh-f-fallopian-tube-r.glb", AnatomyModel::Female),
+        ("3d-vh-f-vagina.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/vagina-female/v1.2/assets/3d-vh-f-vagina.glb", AnatomyModel::Female),
+        ("3d-vh-f-trachea.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/trachea-female/v1.2/assets/3d-vh-f-trachea.glb", AnatomyModel::Female),
+        ("3d-vh-f-larynx.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/larynx-female/v1.2/assets/3d-vh-f-larynx.glb", AnatomyModel::Female),
+        ("3d-vh-f-main-bronchus.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/main-bronchus-female/v1.2/assets/3d-vh-f-main-bronchus.glb", AnatomyModel::Female),
+        ("3d-vh-f-thymus.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/thymus-female/v1.2/assets/3d-vh-f-thymus.glb", AnatomyModel::Female),
+        ("3d-vh-f-eye-l.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/eye-female-left/v1.2/assets/3d-vh-f-eye-l.glb", AnatomyModel::Female),
+        ("3d-vh-f-eye-r.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/eye-female-right/v1.2/assets/3d-vh-f-eye-r.glb", AnatomyModel::Female),
+        ("3d-vh-f-pelvis.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/pelvis-female/v1.2/assets/3d-vh-f-pelvis.glb", AnatomyModel::Female),
+        ("3d-vh-f-skin.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/skin-female/v1.2/assets/3d-vh-f-skin.glb", AnatomyModel::Female),
+        ("3d-vh-f-blood-vasculature.glb", "https://cdn.humanatlas.io/digital-objects/ref-organ/blood-vasculature-female/v1.2/assets/3d-vh-f-blood-vasculature.glb", AnatomyModel::Female),
+    ];
+
+    FALLBACK_MANIFEST
+        .iter()
+        .map(|(filename, url, model)| RefOrgan {
+            filename: filename.to_string(),
+            glb_url: url.to_string(),
+            model: *model,
+        })
+        .collect()
 }
 
 /// Fetch one organ's GLB bytes from its CDN URL (blocking).

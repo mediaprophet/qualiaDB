@@ -397,3 +397,11 @@ instrument immediately (R4). Claiming a sorrier tone as “accountability” is 
 - Apology that **reassigns blame** to ambiguous instructions when the instruction was clear.
 - “I take full responsibility” **without** R3 completion and R5 record when required.
 - Performing §15.7.1 steps as a **checklist essay** while still not executing the fix (malicious compliance).
+
+## 16. No bylines in commits (PROJECT RULE — Timothy, 2026-08-19)
+
+**Do not add any tool/provider attribution line — "Generated with …",
+"Co-Authored-By: …", or any equivalent footer — to commit messages, PR
+descriptions, or any other artifact in this repository.** The commit author
+and the git history are the record; tool-provider attribution is noise that
+does not serve the principal and does not belong in his project.

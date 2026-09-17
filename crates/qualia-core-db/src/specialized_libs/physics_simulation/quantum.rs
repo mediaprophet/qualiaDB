@@ -5,6 +5,11 @@ impl PhysicsSimulationLibrary {
     /// `[-ħ²/(2m)·d²/dx² + V(x)]·ψ = E·ψ` discretised by second-order finite differences
     /// (Dirichlet walls). The resulting symmetric tridiagonal Hamiltonian is diagonalised
     /// by the tested `symmetric_eigen`; the lowest `num_levels` energies are returned.
+    ///
+    /// **Classical simulation** — no QPU required. This solves the Schrödinger equation
+    /// numerically on classical hardware (CPU). It does not use quantum processing
+    /// hardware. QPU offload is a separate path (`qpu_bridge` / `qpu_oracle`) reserved
+    /// for NP-hard tasks that cannot be approximated classically.
     pub fn run_quantum_stationary_states_1d(
         &self,
         potential: Vec<f64>,

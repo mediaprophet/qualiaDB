@@ -2,6 +2,7 @@
 members = [
     "crates/qualia-inference-kernel",
     "crates/qualia-core-db",
+    "crates/vibe",
     "crates/qualia-cli",
     "crates/qualia-solid-bridge",
     "crates/qualia-client-core",
@@ -20,6 +21,12 @@ members = [
     "crates/qualia-q-forge",
     "crates/qualia-vision",
     "crates/qualia-audio",
+    "crates/poet-cli",
+    "crates/work-graph",
+    "crates/vibe-lsp",
+    "crates/vibe-wasm",
+    "crates/poet",
+    "crates/qualia-peer",
 ]
 resolver = "2"
 
@@ -34,6 +41,20 @@ opt-level = "s"
 lto = true
 codegen-units = 1
 strip = "symbols"
+
+# Dioxus CLI (`dx build --web --release`) uses this named profile for webizen-studio.
+# Fat LTO / embed-bitcode on wasm32 fails at rust-lld with:
+#   failed to load bitcode of module "webizen_studio-*.rcgu.o"
+# Keep LTO off here. Do not reuse [profile.wasm-release] (LTO=true for mobile-harness).
+[profile.web-release]
+inherits = "release"
+lto = false
+codegen-units = 16
+opt-level = "s"
+incremental = false
+
+[profile.release.package.poet]
+opt-level = "s"
 
 # Vendored imap-proto 0.10.2 with the trailing-semicolon-in-macro future-incompat lint fixed
 # (upstream imap 2.4.1 pins imap-proto ^0.10.0; the fix hasn't been published to crates.io for

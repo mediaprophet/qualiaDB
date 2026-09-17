@@ -1,5 +1,5 @@
 //! Compute-graph IR (a typed DAG) — the backend-portable representation the forge lowers
-//! to every target in one pass. See [`docs/plans/dag-ir-forge.md`].
+//! to every target in one pass. See `docs/plans/dag-ir-forge.md()`.
 //!
 //! # Phase 1 (this slice)
 //!

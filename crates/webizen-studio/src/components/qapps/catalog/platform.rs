@@ -26,6 +26,29 @@ pub(super) fn apps() -> Vec<QApp> {
             cat: Cat::Platform,
         },
         QApp {
+            id: "directory",
+            name: "Directory",
+            tagline: "Humans-first address book",
+            desc: "Your humans, then organizations (legal-person who-kind), then tools. \
+                   Opens under Talk / People — no new top-level nav. Agreement slots stay held / empty until recorded.",
+            icon: "person-rolodex",
+            route: Some(AppRoute::TalkPeople),
+            stat: Stat::Active,
+            cat: Cat::Platform,
+        },
+        QApp {
+            id: "mail",
+            name: "Mail",
+            tagline: "Talk → purpose inboxes",
+            desc: "Daily inbox: purpose mailboxes and mail that has landed. \
+                   Opens Talk → Mail — not Poet Domain.info / Inalienable Domain Inboxes. \
+                   Receiver down stays held / not yet.",
+            icon: "envelope",
+            route: Some(AppRoute::TalkMail),
+            stat: Stat::Active,
+            cat: Cat::Platform,
+        },
+        QApp {
             id: "profile-identity",
             name: "Profile & Identity",
             tagline: "DID Management",

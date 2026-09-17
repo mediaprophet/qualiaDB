@@ -1,3 +1,7 @@
+//! Solid LDP export is a **projector** of Qualia volumes, not an IdP.
+//! G-SOLID-IDP stays parked: QualiaDB / Webizen / Poet remain the source of
+//! capability, identity, and storage. This module writes Turtle/ACL from `.q42`.
+
 use crate::{
     NQuin, PermissiveRoutingLane, QualiaSuperBlock, BLOCK_MULTIPLIER_SIZE, QUINS_PER_BLOCK,
 };
@@ -116,7 +120,10 @@ impl SolidExporter {
 pub struct SolidLdpFacade;
 impl SolidLdpFacade {
     pub fn serialize_to_rdf_star(quin: &NQuin) -> String {
-        format!("GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}", quin.context)
+        format!(
+            "GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}",
+            quin.context
+        )
     }
 }
 

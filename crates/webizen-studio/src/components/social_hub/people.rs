@@ -396,7 +396,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                     "SocialWebNet carries chat to accepted peers. Start the mesh so collaborators (and agent/service peers) can connect. Peers without a known endpoint connect when they reach you (roaming)."
                 }
                 div { style: "color:#a7f3d0;font-size:12px;margin-bottom:8px;white-space:pre-wrap;",
-                    if mesh_status_text().is_empty() { "Mesh status not loaded yet." } else { "{mesh_status_text}" }
+                    if mesh_status_text().is_empty() { "Mesh · held / not yet — refresh or start when you need another machine." } else { "{mesh_status_text}" }
                 }
                 button {
                     style: "{BTN}",

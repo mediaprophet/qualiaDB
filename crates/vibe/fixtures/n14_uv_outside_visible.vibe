@@ -1,0 +1,1 @@
+fn bad() { let wavelength = 100.0; return wavelength; }

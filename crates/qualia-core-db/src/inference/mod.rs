@@ -3,31 +3,28 @@
 // Inference-runtime components. These run model inference (a tensor program) — the underlying
 // mathematics now lives in `crate::solvers` (GEMM, activations, softmax, normalization, attention,
 // RoPE, FFN). The old `llm_*` names are kept as transitional aliases; "inference" is what these are.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod inference_agent;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference_agent as llm_agent; // transitional alias
 pub mod inference_awq;
 pub use inference_awq as llm_awq; // transitional alias
 #[cfg(not(target_arch = "wasm32"))]
 pub mod inference_bench;
-#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+#[cfg(target_arch = "wasm32")]
 pub mod inference_bench_wasm;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_capture;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod kv_dict;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_dict_runtime;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference_bench as llm_bench; // transitional alias
-#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+#[cfg(target_arch = "wasm32")]
 pub use inference_bench_wasm as llm_bench; // transitional alias
 pub mod inference_eval;
 pub use inference_eval as llm_eval; // transitional alias
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub mod inference_gpu_profiler;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(feature = "gpu-runtime")]
 pub use inference_gpu_profiler as llm_gpu_profiler; // transitional alias
 pub mod inference_kernel_parity;
 pub use inference_kernel_parity as llm_kernel_parity; // transitional alias
@@ -37,34 +34,26 @@ pub mod ambient_orchestration;
 pub mod compute_universe;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub mod domino_gbnf;
 pub mod ggml_quants;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_sharder;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod metal_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod neuro_symbolic_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod orchestrator;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod residency_planner;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod resident_model;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod safetensor;
 pub mod semantic_culler;
 pub mod spatial_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod tensor_roles;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ternary;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "gpu-runtime")]
 pub mod ternary_gpu;
 /// Stage-by-stage library probe tests for the inference optim toolkit.
 #[cfg(test)]
 pub mod toolkit_probe;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod topk;
 // W2: exact CPU sampling chain (pure, wasm-safe — no GPU, no `rand`, no file I/O).
 pub mod sampler;
@@ -136,13 +125,26 @@ pub use cuda_lane::{
 pub use cuda_lane_stub as cuda_lane;
 // W6a: prompt-lookup speculative decoding proposer (pure, wasm-safe).
 pub mod prompt_lookup;
+// A2: DOMINO speculative constrained decoding (prefix-trie token masking).
+pub mod speculative_decode;
+pub use speculative_decode::{
+    DominoMasker, GrammarState, GrammarStateMachine, TokenTrie, MAX_TRIE_DEPTH,
+};
+// A9: Semantic Skills — vectors, embeddings, scratchpads.
+pub mod semantic_skills;
+pub use semantic_skills::{
+    Scratchpad, ScratchpadEntry, ScratchpadError, SearchResult, StoredVector, TextEmbedder, Vector,
+    VectorStore, DEFAULT_SCRATCHPAD_TTL, EMBED_DIM, MAX_SCRATCHPAD_ENTRIES, MAX_VECTORS,
+};
+// N5: Cross-encoder reranker for candidate re-scoring.
+pub mod reranker;
 // Metal mega-pass orchestrator (Apple Silicon). Stub on non-macOS.
 pub mod metal_lane;
 // Paged KV cache: block-paged KV storage (vLLM-style). Re-exports `runtime::kv::paged`, so it
 // carries the same native-only gate as `runtime`.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod paged_kv;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "gpu-runtime")]
 pub mod topk_gpu;
 // OMP sparse KV-cache decomposition builds on `crate::solvers` (dense linear
 // algebra), which is itself native-or-`wasm-scientific`; mirror that gate.
@@ -157,3 +159,12 @@ pub mod thermal_wal;
 // optional `nvml` feature). The module's own inner cfg makes it empty on wasm32.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod thermal_telemetry;
+
+// Portable conditioning compiler (Prompt Precision P1C)
+pub mod conditioning;
+
+// Prompt precision evaluation and paired scoring (Prompt Precision P5)
+pub mod conditioning_eval;
+
+// Model mapping and precision optimization pipeline
+pub mod conditioning_opt;

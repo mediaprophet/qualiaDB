@@ -261,7 +261,7 @@ enum ParseResult {
     },
 }
 
-/// Parse Trig-Star into any [`QuinSink`].
+/// Parse Trig-Star into any `QuinSink()`.
 pub fn parse_trig_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,
     context_hash: u64,

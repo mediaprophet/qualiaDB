@@ -1,6 +1,6 @@
 //! MediaPipe Face Mesh layout adapters for pure-landmark PAD.
 //!
-//! Packs full-mesh flat buffers into the eight-slot [`LandmarkFrame`] used by
+//! Packs full-mesh flat buffers into the eight-slot `LandmarkFrame()` used by
 //! challenge-response PAD. **Never uses model Z** — only \(x,y\).
 //!
 //! No ONNX / MediaPipe runtime here (that is Track S2). Buffer → geometry only.

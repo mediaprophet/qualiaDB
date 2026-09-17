@@ -1,0 +1,11 @@
+[package]
+name = "poet-cli"
+version = "0.0.39"
+edition = "2021"
+
+[dependencies]
+vibe = { path = "../vibe" }
+
+[[bin]]
+name = "poet"
+path = "src/main.rs"

@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/doppler_shift>;
+import "vibe:0.1/math" as m;
+pure fn shifted_frequency(f0: f64, v_source: f64, v_wave: f64) -> f64 {
+    let ratio = v_wave / (v_wave - v_source);
+    return m.max(0.0, f0 * ratio);
+}

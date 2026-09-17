@@ -1,0 +1,93 @@
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix cml:    <https://ns.webcivics.net/cml/> .
+@prefix si:     <https://ns.webizen.org/semantic-instrument/> .
+
+# SI-01 positive fixture: digested icon plus a required ontology dependency.
+
+ex:water a si:SemanticInstrument ;
+    si:instrumentId "https://example.org/instruments/community-water-assessment" ;
+    si:name "Community water assessment (labelled fixture)" .
+
+ex:water-1-0-0 a si:InstrumentRelease ;
+    si:instrument ex:water ;
+    si:releaseId "https://example.org/instruments/community-water-assessment/releases/1.0.0" ;
+    si:version "1.0.0" ;
+    si:name "Community water assessment 1.0.0" ;
+    si:description "Evaluates declared water observations against a cited rule set." ;
+    si:purpose "training-and-field-screening" ;
+    si:contentCategory si:Demo ;
+    si:prohibitedInterpretation "sole-basis-for-regulatory-enforcement" ;
+    si:domain "https://example.org/concepts/water-quality" ;
+    si:ontologyReference "https://example.org/ontologies/water-observations" ;
+    si:framing si:MixedSplit ;
+    si:entryPoint ex:water-assess ;
+    si:dependency ex:water-obs-dep ;
+    si:citation "https://example.org/guidelines/water-assessment-2026" ;
+    si:applicability ex:water-appl ;
+    si:honestyPolicy ex:water-honesty ;
+    si:resourceLimits ex:water-limits ;
+    si:testManifest ex:water-tests ;
+    si:badgePresentation ex:water-badge ;
+    si:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000002" ;
+    si:authoredBy ex:water-author ;
+    si:publishedBy ex:water-publisher ;
+    si:licence "https://spdx.org/licenses/CC-BY-4.0.html" ;
+    si:hasPackage ex:water-pkg ;
+    si:publicationState si:Published ;
+    si:activationState si:Inactive .
+
+ex:water-pkg a si:InstrumentPackage ;
+    si:packageOf ex:water-1-0-0 ;
+    si:packageId "https://example.org/instruments/community-water-assessment/packages/1.0.0" ;
+    si:formatVersion "0.1" ;
+    si:packageDigest "sha256:0000000000000000000000000000000000000000000000000000000000000002" .
+
+ex:water-assess a si:EntryPoint ;
+    si:entryPointName "assess" ;
+    si:operationKind "evaluate" ;
+    si:inputShape "https://example.org/instruments/community-water-assessment/shapes/input" ;
+    si:outputShape "https://example.org/instruments/community-water-assessment/shapes/output" ;
+    si:resourceLimits ex:water-limits .
+
+ex:water-obs-dep a si:DependencyRequirement ;
+    si:dependencyId "https://example.org/ontologies/water-observations" ;
+    si:dependencyKind si:OntologyDependency ;
+    si:versionConstraint "2.1.0" ;
+    si:expectedDigest "sha256:00000000000000000000000000000000000000000000000000000000000000d2" ;
+    si:required "true" ;
+    si:dependencyPurpose "observation terms and units" ;
+    si:resolutionState si:Resolved .
+
+ex:water-honesty a si:HonestyPolicy ;
+    si:incompleteInputBehaviour si:Held ;
+    si:resultKind "screening-claim" ;
+    si:requiredNotice "This result requires contextual professional review." ;
+    si:signatureIsNotTruth "true" .
+
+ex:water-appl a si:Applicability ;
+    si:jurisdiction "example" ;
+    si:validFrom "2026-01-01" ;
+    si:unrestrictedDeclaration "false" .
+
+ex:water-limits a si:ResourceLimits ;
+    si:memoryBytes "1048576" ;
+    si:maxSteps "100000" ;
+    si:maxOutputQuins "128" .
+
+ex:water-tests a si:TestManifest ;
+    si:assetLocator "tests/tests.n3" .
+
+ex:water-badge a si:BadgePresentation ;
+    si:identifiesRelease ex:water-1-0-0 ;
+    si:badgeAsset ex:water-icon .
+
+ex:water-icon a si:BadgeAsset ;
+    si:assetLocator "assets/badge.svg" ;
+    si:mediaType "image/svg+xml" ;
+    si:byteLength "2048" ;
+    si:assetDigest "sha256:00000000000000000000000000000000000000000000000000000000000000b2" ;
+    si:assetPurpose "catalog" ;
+    si:accessibleText "Community water assessment instrument (labelled fixture)" .
+
+ex:water-author a values:NaturalPerson .
+ex:water-publisher a values:LegalPerson .

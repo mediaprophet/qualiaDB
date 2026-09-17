@@ -1,0 +1,25 @@
+module <https://qualiadb.org/modules/reactive_chain>;
+requires [ capability("graph.read") ];
+
+cell prev_sample := 0.0;
+
+pure fn derive_rate(prev: f64, curr: f64, dt: f64) -> f64 {
+    if dt == 0.0 {
+        return 0.0;
+    }
+    return (curr - prev) / dt;
+}
+pure fn accumulate_delta(values: List<f64>) -> f64 {
+    let mut prev: f64 = 0.0;
+    let mut delta: f64 = 0.0;
+    let mut first: bool = true;
+    for v in values {
+        if first {
+            first = false;
+        } else {
+            delta = delta + (v - prev);
+        }
+        prev = v;
+    }
+    return delta;
+}

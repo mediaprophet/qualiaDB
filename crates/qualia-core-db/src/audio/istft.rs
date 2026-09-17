@@ -3,7 +3,7 @@
 //!
 //! This is the cold-path inverse companion to the forward STFT: it reuses the
 //! already-built, caller-buffered WOLA resynthesiser in
-//! [`qualia_audio::features::framing::istft`] (weighted overlap-add normalised by
+//! [`qualia_audio::features::framing::istft()`] (weighted overlap-add normalised by
 //! the running Σ analysis·synthesis window product), so reconstruction is exact
 //! over the fully-overlapped interior regardless of whether the window+hop
 //! strictly satisfy COLA.
@@ -29,7 +29,7 @@ fn hann(i: usize, n: usize) -> f32 {
 /// [`crate::audio::stft::forward_stft`] back into a single time-domain signal.
 ///
 /// - `spec`: `num_frames` frames, each a length-`frame_size` two-sided spectrum
-///   of `[re, im]` bins (exactly the [`crate::audio::stft::forward_stft`] output).
+///   of \[re, im\] bins (exactly the [`crate::audio::stft::forward_stft`] output).
 /// - `frame_size`: `N`, a power of two; the analysis/synthesis frame length.
 /// - `hop`: sample advance between frames (`> 0`). A COLA Hann at `hop = N/2`
 ///   gives exact interior reconstruction.
@@ -37,7 +37,7 @@ fn hann(i: usize, n: usize) -> f32 {
 /// The frames are flattened into a `num_frames × 2·N` interleaved-complex buffer
 /// (`[re, im, …]`), a length-`N` Hann window is built for both the analysis and
 /// synthesis arguments, and the WOLA resynthesiser
-/// [`qualia_audio::features::framing::istft`] is invoked with caller-owned
+/// [`qualia_audio::features::framing::istft()`] is invoked with caller-owned
 /// scratch/norm/out buffers (`out_len = (num_frames − 1)·hop + N`).
 ///
 /// The core-db forward sign (`exp(-2πi·k·j/N)`, [`crate::audio::stft`]) matches

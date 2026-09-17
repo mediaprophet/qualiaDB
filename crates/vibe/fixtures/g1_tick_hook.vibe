@@ -1,0 +1,9 @@
+module <https://qualiadb.org/modules/tick_demo>;
+requires [ capability("pulse.publish", topic: "poet/tick") ];
+effect fn emit() {
+    effect pulse.publish("poet/tick", 1);
+    return null;
+}
+on tick() {
+    return emit();
+}

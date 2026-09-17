@@ -124,14 +124,23 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
         0
     };
 
+    #[cfg(feature = "gpu-runtime")]
     let shared_gpu = crate::gpu_context::shared_gpu();
+    #[cfg(feature = "gpu-runtime")]
+    let gpu = BenchGpuMeta::from_shared_context(shared_gpu);
+    #[cfg(feature = "gpu-runtime")]
+    let gpu_timestamp_supported = shared_gpu.timestamps_supported;
+    #[cfg(not(feature = "gpu-runtime"))]
+    let gpu = BenchGpuMeta::unavailable();
+    #[cfg(not(feature = "gpu-runtime"))]
+    let gpu_timestamp_supported = false;
 
     Ok(BenchResult {
         label: cfg.label.clone(),
         model_path: cfg.model_path.clone(),
         quantization: cfg.quantization.clone(),
         model: meta,
-        gpu: BenchGpuMeta::from_shared_context(shared_gpu),
+        gpu,
         prompt_tokens,
         output_tokens: last_warm.output_tokens,
         cold_ttft_ms: ms(cold.ttft),
@@ -146,7 +155,7 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
         // W2/D17: report the real device capability (TIMESTAMP_QUERY negotiation), not a hardcoded
         // false. Per-kernel µs come from the dedicated `w2_gpu_phase_profile` test (a profiled run
         // perturbs the headline tok/s, so the baseline run is left unprofiled).
-        gpu_timestamp_supported: shared_gpu.timestamps_supported,
+        gpu_timestamp_supported,
         note: String::new(),
     })
 }

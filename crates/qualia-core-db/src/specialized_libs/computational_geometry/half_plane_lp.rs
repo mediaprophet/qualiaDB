@@ -44,7 +44,7 @@
 //! ## Zero-heap contract
 //!
 //! The predicate path (membership test, line-line intersection sign) uses only
-//! filtered `f64` arithmetic via [`super::primitives::orientation_2`]. The
+//! filtered `f64` arithmetic via `super::primitives::orientation_2`. The
 //! public APIs return `Vec<Point2>` / typed enums — they allocate during
 //! construction (cold), matching the P11.1–P11.5 surface-module convention.
 //! No allocation occurs inside the LP inner loop's interval arithmetic.

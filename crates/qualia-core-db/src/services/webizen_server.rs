@@ -213,6 +213,9 @@ pub fn spawn_loopback_server(
             .map(|h| format!("{h}/.qualia"))
             .unwrap_or_else(|_| ".qualia".to_string())
     });
+    crate::services::poet_record_api::configure(
+        std::path::PathBuf::from(&storage_path).join("poet-cop-records.json"),
+    );
 
     let state = Arc::new(WebizenState {
         telemetry_tx: telemetry_tx.clone(),
@@ -308,6 +311,7 @@ pub fn spawn_loopback_server(
 
                     // REST
                     .route("/health", get(health_handler).options(preflight_handler))
+                    .route("/vibe/capabilities", get(vibe_capabilities_handler).options(preflight_handler))
                     .route(
                         "/tensor/slice",
                         get(tensor_slice_handler).options(preflight_handler),
@@ -317,11 +321,102 @@ pub fn spawn_loopback_server(
                         get(tensor_events_handler).options(preflight_handler),
                     )
                     .route(
+                        "/pulse/events",
+                        get(pulse_events_handler).options(preflight_handler),
+                    )
+                    .route(
                         "/tensor/dev-signing-key",
                         get(tensor_dev_signing_key_handler).options(preflight_handler),
                     )
                     .route("/query", post(query_handler).options(preflight_handler))
                     .route("/update", post(update_handler).options(preflight_handler))
+                    .route(
+                        "/eval",
+                        post(crate::services::poet_api::eval_handler).options(preflight_handler),
+                    )
+                    .route(
+                        "/invoke",
+                        post(crate::services::poet_api::invoke_handler).options(preflight_handler),
+                    )
+                    .route(
+                        "/gazetteer",
+                        post(crate::services::poet_api::gazetteer_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/intent",
+                        post(crate::services::poet_api::intent_handler).options(preflight_handler),
+                    )
+                    .route(
+                        "/render/preview",
+                        post(crate::services::poet_render_api::render_preview_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/library/stats",
+                        get(crate::services::poet_library_api::stats_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/library/query",
+                        post(crate::services::poet_library_api::query_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/library/ingest",
+                        post(crate::services::poet_library_api::ingest_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/llm/models",
+                        get(crate::services::poet_llm_api::models_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/llm/models/activate",
+                        post(crate::services::poet_llm_api::activate_model_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/llm/models/evict",
+                        post(crate::services::poet_llm_api::evict_model_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/llm/generate",
+                        post(crate::services::poet_llm_api::generate_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/llm/jobs/start",
+                        post(crate::services::poet_llm_jobs::start_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/llm/jobs/events",
+                        get(crate::services::poet_llm_jobs::events_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/llm/jobs/cancel",
+                        post(crate::services::poet_llm_jobs::cancel_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/records/query",
+                        post(crate::services::poet_record_api::query_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/records/upsert",
+                        post(crate::services::poet_record_api::upsert_handler)
+                            .options(preflight_handler),
+                    )
+                    .route(
+                        "/records/delete",
+                        post(crate::services::poet_record_api::delete_handler)
+                            .options(preflight_handler),
+                    )
                     .route("/cache", post(cache_handler))
                     .route("/proxy/fetch", get(proxy_fetch_handler).options(preflight_handler))
                     .route("/api/v1/system/storage/selfhood", get(storage_selfhood_handler))
@@ -629,6 +724,70 @@ async fn tensor_events_handler() -> Response {
         .unwrap()
 }
 
+/// SSE stream of `pulse.publish` events for live collaborative sync.
+///
+/// Each event is a JSON object with `seq`, `topic`, `payload_summary`, and
+/// `timestamp` fields. Subscribers connect via `GET /pulse/events` and receive
+/// a keepalive comment every 15 seconds.
+async fn pulse_events_handler() -> Response {
+    use std::convert::Infallible;
+    use std::time::Duration;
+
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let initial_seq = crate::pulse_transport::pulse_seq();
+
+    tokio::spawn(async move {
+        let _ = tx.send(format!(
+            "data: {{\"seq\":{initial_seq},\"topic\":\"\",\"payload_summary\":\"\",\"timestamp\":0}}\n\n"
+        ));
+        let mut sub = crate::pulse_transport::subscribe();
+        let mut keepalive = tokio::time::interval(Duration::from_secs(15));
+        keepalive.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
+        loop {
+            if tx.is_closed() {
+                break;
+            }
+            tokio::select! {
+                result = sub.recv() => {
+                    match result {
+                        Ok(event) => {
+                            let _ = tx.send(format!(
+                                "data: {{\"seq\":{},\"topic\":\"{}\",\"payload_summary\":\"{}\",\"timestamp\":{}}}\n\n",
+                                event.seq,
+                                event.topic.replace('"', "\\\""),
+                                event.payload_summary.replace('"', "\\\""),
+                                event.timestamp
+                            ));
+                        }
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            let current = crate::pulse_transport::pulse_seq();
+                            let _ = tx.send(format!(
+                                "data: {{\"seq\":{current},\"topic\":\"\",\"payload_summary\":\"lagged\",\"timestamp\":0}}\n\n"
+                            ));
+                        }
+                        Err(broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+                _ = keepalive.tick() => {
+                    let _ = tx.send(": keepalive\n\n".to_string());
+                }
+            }
+        }
+    });
+
+    let body_stream =
+        UnboundedReceiverStream::new(rx).map(|chunk| Ok::<Bytes, Infallible>(Bytes::from(chunk)));
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/event-stream")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .header(header::CONNECTION, "keep-alive")
+        .body(Body::from_stream(body_stream))
+        .unwrap()
+}
+
 async fn health_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResponse {
     (
         StatusCode::OK,
@@ -643,6 +802,46 @@ async fn health_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResp
             "execution_environment": crate::services::daemon::execution_environment_json(),
         })),
     )
+}
+
+/// Capability negotiation for local browser/WASM adapters. This describes the
+/// real daemon boundary; it does not execute a Vibe call over the synchronous
+/// `Host` trait. Clients must keep native invocation asynchronous and obtain a
+/// user-mediated pairing token before making stateful requests.
+async fn vibe_capabilities_handler(
+    State(state): State<Arc<WebizenState>>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if !state.dev && !bridge_probe_authorized(&state, &headers) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "missing or invalid x-qualia-token"})),
+        )
+            .into_response();
+    }
+    (
+        StatusCode::OK,
+        Json(crate::vibe_host::bridge::negotiation_document(true)),
+    )
+        .into_response()
+}
+
+fn bridge_probe_authorized(state: &WebizenState, headers: &HeaderMap) -> bool {
+    let Some(token) = headers
+        .get("x-qualia-token")
+        .and_then(|value| value.to_str().ok())
+    else {
+        return false;
+    };
+    if state.token.as_deref() == Some(token) {
+        return true;
+    }
+    state
+        .vault
+        .lock()
+        .ok()
+        .and_then(|vault| vault.verify_qapp_token(token, "localhost").ok())
+        .is_some()
 }
 
 async fn proxy_fetch_handler(

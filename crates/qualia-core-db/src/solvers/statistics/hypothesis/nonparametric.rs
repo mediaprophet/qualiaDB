@@ -164,7 +164,7 @@ pub fn mann_whitney_u(x: &[f64], y: &[f64]) -> Option<MannWhitneyResult> {
     })
 }
 
-/// Kolmogorov-Smirnov one-sample test vs uniform[0,1] for demo.
+/// Kolmogorov-Smirnov one-sample test vs uniform\[0,1\] for demo.
 /// Returns D statistic and rough p.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct KolmogorovSmirnovResult {

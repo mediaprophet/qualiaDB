@@ -1,0 +1,35 @@
+// VibeScript 0.1 — Capability / fiduciary fixture
+// Tests: Capability.declare, Capability.grant, Capability.revoke,
+//        Capability.test_gating, Capability.audit, Sentinel.inspect, Sentinel.gate,
+//        Identity.current_user
+
+Capability.declare({
+  scope: "read:assets",
+  reason: "Asset viewer needs read access",
+  module_iri: "q42:asset-viewer",
+});
+
+Capability.grant({
+  agent_did_hash: 12345,
+  root_did_hash: 67890,
+  metadata_timestamp: 1000000,
+  current_epoch: 1000001,
+  delegated: true,
+});
+
+Capability.test_gating({
+  module_iri: "q42:asset-viewer",
+  scope: "read:assets",
+});
+
+Capability.audit({});
+
+Sentinel.inspect({ agent_did: "did:q42:agent1" });
+Sentinel.gate({ module_iri: "q42:asset-viewer", scope: "read:assets" });
+
+Identity.current_user({});
+
+Capability.revoke({
+  agent_did_hash: 12345,
+  root_did_hash: 67890,
+});

@@ -1,0 +1,99 @@
+name: QDNF MSVC
+
+on:
+  push:
+    paths:
+      - crates/qualia-core-db/**
+      - crates/qualia-peer/**
+      - .github/workflows/qdnf-msvc.yml
+  pull_request:
+    paths:
+      - crates/qualia-core-db/**
+      - crates/qualia-peer/**
+      - .github/workflows/qdnf-msvc.yml
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows-msvc:
+    name: windows-msvc
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-qdnf-msvc-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-qdnf-msvc-
+
+      # Fresh GitHub-hosted runners have no vendor/. Do not use --offline.
+      # Skip identity:: — key_vault needs secret-service and is flaky on Windows.
+      - name: QDNF slice (qualia-core-db)
+        shell: bash
+        run: |
+          cargo test -p qualia-core-db --lib -- \
+            --test-threads=1 \
+            net::qdnf::harness::limitations \
+            net::qdnf::harness::ci_classes \
+            net::qdnf::cells \
+            net::qdnf::frame
+
+      - name: QDNF slice (qualia-peer)
+        shell: bash
+        run: cargo test -p qualia-peer --lib -- --test-threads=1
+
+  linux-gnu:
+    name: linux-gnu
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-qdnf-linux-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-qdnf-linux-
+
+      - name: Linux system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libssl-dev pkg-config
+
+      # Same QDNF slice as windows-msvc. Documented Linux native runner; no vendor/, so no --offline.
+      - name: QDNF slice (qualia-core-db)
+        run: |
+          cargo test -p qualia-core-db --lib -- \
+            --test-threads=1 \
+            net::qdnf::harness::limitations \
+            net::qdnf::harness::ci_classes \
+            net::qdnf::cells \
+            net::qdnf::frame
+
+      - name: QDNF slice (qualia-peer)
+        run: cargo test -p qualia-peer --lib -- --test-threads=1

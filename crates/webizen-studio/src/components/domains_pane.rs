@@ -14,16 +14,8 @@ use dioxus::prelude::*;
 use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
 
 #[cfg(target_arch = "wasm32")]
 async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
@@ -303,7 +295,7 @@ pub fn DomainsPane() -> Element {
             div { style: "max-width: 1100px; margin: 0 auto;",
                 h2 { style: "color: #a78bfa; margin: 0 0 4px; font-size: 24px;", "Domains & Mail" }
                 p { style: "color: #9ca3af; margin: 0 0 12px; font-size: 13px; line-height: 1.5;",
-                    "This is your mail product: register a domain, mint purpose inboxes (and catchall), start the local SMTP receiver, paste MX/SPF at your registrar (tunnel/public host if you want the internet to reach you). Messages land in the inbox below with semantic rules — you are not paying a half-stack to host nothing."
+                    "Domain and DNS admin. Daily reading lives under Talk → Mail — purpose inboxes and landed messages — without this setup scroll. Register a domain, mint purpose inboxes, paste MX/SPF when you want the public internet. The local receiver is started from Mail when it is held."
                 }
 
                 // ── Local inbox (the product) ─────────────────────────────

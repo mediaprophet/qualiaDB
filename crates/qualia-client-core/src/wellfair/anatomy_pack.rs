@@ -4,7 +4,7 @@
 //! bundle into a release. This builds a *curated* subset (a representative set of
 //! organs across body systems, tens of MB) into a single `.hmc` bundle (see
 //! [`qualia_core_db::bundle`]): each organ is a sealed `.10d` entry carrying an
-//! [`AnatomyOrganMeta`] (system + approximate position + neutral colour). The
+//! `AnatomyOrganMeta` (system + approximate position + neutral colour). The
 //! bundle is the artefact shipped in the desktop release resources and published
 //! for the web demo, so a fresh install / the online demo renders a real body
 //! with no per-user download.

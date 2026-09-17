@@ -12,7 +12,7 @@ use crate::types::AudioError;
 ///
 /// `features` is a row-major `n_frames × n_dims` matrix: frame `i` occupies
 /// `features[i*n_dims .. i*n_dims + n_dims]`. These frames are provided by the
-/// caller (e.g. from [`crate::features::mel::mfcc`] or chroma / tonal features)
+/// caller (e.g. from [`crate::features::mel::mfcc()`] or chroma / tonal features)
 /// — this function never recomputes features.
 ///
 /// The similarity is the cosine of the angle between two feature vectors,

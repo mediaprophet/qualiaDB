@@ -10,28 +10,30 @@
 
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use std::sync::OnceLock;
 
-// `caps` reports wgpu adapter capabilities, so it only compiles where the wgpu
-// dependency is present: native always, or wasm with the `gpu-runtime` feature.
-// Without this gate the module fails the `wasm-logic` build (no wgpu crate).
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+// `caps` reports wgpu adapter capabilities, so it only compiles when `gpu-runtime`
+// pulls in the wgpu crate. `portal` / `wasm-llm` already enable `gpu-runtime`;
+// qdnf-only does not, and must not `use wgpu` here.
+#[cfg(feature = "gpu-runtime")]
 mod caps;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "gpu-runtime", feature = "wgsl-forge"))]
 pub(crate) use caps::experimental_features_allowed;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+#[cfg(feature = "gpu-runtime")]
 pub(crate) use caps::requested_native_llm_features;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
 pub use caps::{
     qualia_backend_override, recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps,
     GpuLimitCaps,
 };
+#[cfg(all(feature = "gpu-runtime", target_arch = "wasm32"))]
+pub use caps::{recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
 
 /// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
 /// (e.g. the integrated GPU), not just the single process-wide primary (STELLAR H3 foundation).
-/// Native only; mirrors [`try_shared_gpu`] — never panics on a missing/failed device.
-#[cfg(not(target_arch = "wasm32"))]
+/// Native only; mirrors `try_shared_gpu` — never panics on a missing/failed device.
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub mod device_registry;
 
 /// Desktop / portal operational mode (thermal + VRAM driven).
@@ -653,7 +655,7 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 
 // ── Shared wgpu device (native: one device per process) ───────────────────────
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "gpu-runtime")]
 pub struct SharedGpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
@@ -672,7 +674,7 @@ pub struct SharedGpuContext {
     pub timestamp_period_ns: f32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "gpu-runtime")]
 impl SharedGpuContext {
     /// Logical queue lane for universe-tagged dispatch (B2.3).
     /// Single physical `wgpu::Queue` today; lane tags preserve driver scheduling intent.
@@ -688,8 +690,16 @@ impl SharedGpuContext {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 static SHARED_GPU: OnceLock<Option<SharedGpuContext>> = OnceLock::new();
+
+// WebGPU Device is !Send/!Sync (Rc internals). The browser is single-threaded,
+// so the shared context lives in a thread-local leaked slot rather than a Sync OnceLock.
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+std::thread_local! {
+    static WASM_SHARED_GPU: std::cell::Cell<Option<&'static SharedGpuContext>> =
+        const { std::cell::Cell::new(None) };
+}
 
 /// Choose the DX12 shader compiler. DX12's legacy FXC compiler cannot compile our flash-attention
 /// shader (`fused_attention.wgsl`, X4026) — DXC (the modern compiler) can. Resolution order:
@@ -697,7 +707,7 @@ static SHARED_GPU: OnceLock<Option<SharedGpuContext>> = OnceLock::new();
 ///   2. `dxcompiler.dll` beside the current executable (where `build.rs` copies the vendored
 ///      `vendor/dxc/` DLLs) → `DynamicDxc` at that path (turnkey — no env var needed).
 ///   3. Otherwise `Auto` (static-DXC → PATH-DXC → FXC) — graceful fallback (Vulkan stays default).
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
     if let Ok(p) = std::env::var("QUALIA_DXC_PATH") {
         if !p.trim().is_empty() {
@@ -722,7 +732,7 @@ fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
     wgpu::Dx12Compiler::Auto
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // Inference-pipeline (GPU backend) selection. Default = wgpu's own pick; `QUALIA_WGPU_BACKEND`
     // pins it (e.g. =vulkan for the vendor-neutral path). The capability checker then reports what
@@ -782,7 +792,7 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
 /// adapter then delegates here) and the per-circuit [`device_registry`]. Requests only
 /// adapter-advertised features, raises buffer-size limits to the adapter maximum, and negotiates
 /// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "gpu-runtime")]
 pub(crate) async fn init_shared_gpu_for_adapter(
     instance: wgpu::Instance,
     adapter: wgpu::Adapter,
@@ -879,7 +889,7 @@ pub(crate) async fn init_shared_gpu_for_adapter(
 /// Callers that can degrade to CPU MUST use this and fall back on `None`, rather than
 /// `shared_gpu()` which aborts the process. The `None` result is cached, so a GPU-less
 /// machine probes once. (Init is lazy and reused by QTensorEngine + render.)
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
     SHARED_GPU
         .get_or_init(|| {
@@ -895,15 +905,70 @@ pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
         .as_ref()
 }
 
+/// Fail-closed probe when `gpu-runtime` is off (qdnf-only / ontology lite).
+/// Returns `None` so CPU floors stay live. Never panics. Does not name wgpu.
+#[cfg(not(feature = "gpu-runtime"))]
+pub fn try_shared_gpu() -> Option<&'static ()> {
+    None
+}
+
+/// Install the process-wide WebGPU device (browser). Idempotent.
+/// Graph accel, the volumetric renderer, and LLM decode all reuse this device.
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub async fn ensure_shared_gpu() -> Result<(), String> {
+    if WASM_SHARED_GPU.with(|c| c.get().is_some()) {
+        return Ok(());
+    }
+    let ctx = init_shared_gpu_wasm().await?;
+    let leaked: &'static SharedGpuContext = Box::leak(Box::new(ctx));
+    WASM_SHARED_GPU.with(|c| c.set(Some(leaked)));
+    Ok(())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+    desc.backends = wgpu::Backends::BROWSER_WEBGPU;
+    let instance = wgpu::Instance::new(desc);
+    let adapter = match instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            ..Default::default()
+        })
+        .await
+    {
+        Ok(a) => a,
+        Err(high_err) => instance
+            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .await
+            .map_err(|e| {
+                format!(
+                    "Failed to find WebGPU adapter (high-performance: {high_err}; default: {e})"
+                )
+            })?,
+    };
+    init_shared_gpu_for_adapter(instance, adapter).await
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
+    WASM_SHARED_GPU.with(|c| c.get())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub fn shared_gpu() -> &'static SharedGpuContext {
+    try_shared_gpu().expect("shared wgpu init failed — call ensure_shared_gpu() first")
+}
+
 /// Process-wide wgpu device + queue (lazy init). **Panics** if no GPU is available —
 /// use only where a device is genuinely mandatory. Prefer [`try_shared_gpu`] on any
 /// path that can fall back to CPU.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn shared_gpu() -> &'static SharedGpuContext {
     try_shared_gpu().expect("shared wgpu init failed")
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod shared_gpu_robustness_tests {
     use super::*;
 
@@ -918,6 +983,16 @@ mod shared_gpu_robustness_tests {
     }
 }
 
+#[cfg(all(test, not(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))))]
+mod try_shared_gpu_fail_closed_tests {
+    use super::*;
+
+    #[test]
+    fn try_shared_gpu_is_none_without_gpu_runtime() {
+        assert!(try_shared_gpu().is_none());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -925,6 +1000,7 @@ mod tests {
     /// Reports which GPU backend the engine's shared device actually selected for inference on this
     /// machine (default, or pinned by `QUALIA_WGPU_BACKEND`). Run default vs `QUALIA_WGPU_BACKEND=vulkan`
     /// in separate processes to confirm the override drives the real device.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     #[test]
     #[serial_test::serial(gpu)]
     fn report_inference_backend() {

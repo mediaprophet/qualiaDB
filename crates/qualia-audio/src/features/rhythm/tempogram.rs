@@ -44,7 +44,7 @@ fn acf_at(acf: &[f32], lag: f32) -> f32 {
 ///
 /// `acf_scratch` receives the autocorrelation and must be long enough to reach
 /// the slowest tempo's lag: `len >= ceil(frame_rate_hz*60/bpm_min) + 2`. The
-/// autocorrelation is delegated to [`autocorrelation`] (no reimplementation);
+/// autocorrelation is delegated to [`autocorrelation()`] (no reimplementation);
 /// nothing here allocates.
 ///
 /// Returns the number of salience bins written (`= out_salience.len()`).

@@ -37,7 +37,7 @@
 pub mod adapter_manager;
 pub mod context_detector;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub mod webgpu_lora;
 
 pub use adapter_manager::{LoRAAdapter, LoRAAdapterManager, LoRAError, LoRAMetadata, LoRATensor};

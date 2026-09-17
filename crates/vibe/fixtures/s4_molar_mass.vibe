@@ -1,0 +1,21 @@
+module <https://qualiadb.org/modules/molar_mass>;
+import "vibe:0.1/math" as m;
+pure fn molar_mass(atoms: List<f64>) -> f64 {
+    let mut total: f64 = 0.0;
+    for a in atoms {
+        total = total + a;
+    }
+    return total;
+}
+pure fn moles_from_mass(mass: f64, molar_mass_val: f64) -> f64 {
+    if molar_mass_val == 0.0 {
+        return 0.0;
+    }
+    return mass / molar_mass_val;
+}
+pure fn mass_concentration(moles: f64, molar_mass_val: f64, volume_l: f64) -> f64 {
+    if volume_l == 0.0 {
+        return 0.0;
+    }
+    return (moles * molar_mass_val) / volume_l;
+}

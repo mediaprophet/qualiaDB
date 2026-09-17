@@ -1,6 +1,6 @@
 //! `mfcc` — Mel-Frequency Cepstral Coefficients: mel bank → log → DCT-II → first
-//! `n_coeffs`. This is the cepstral core reused by [`super::bfcc`] and
-//! [`super::gfcc`] with Bark / gammatone banks.
+//! `n_coeffs`. This is the cepstral core reused by [`super::bfcc()`] and
+//! [`super::gfcc()`] with Bark / gammatone banks.
 
 use crate::features::mel::dct::dct2;
 use crate::types::AudioError;

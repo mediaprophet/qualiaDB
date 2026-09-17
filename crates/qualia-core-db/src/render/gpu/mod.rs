@@ -109,6 +109,9 @@ pub struct PortalGpu {
     surface: Option<wgpu::Surface<'static>>,
     config: Option<wgpu::SurfaceConfiguration>,
     offscreen_texture: Option<wgpu::Texture>,
+    /// Cached view of the offscreen texture — avoids `create_view` per frame.
+    /// Invalidated (set to `None`) when the texture is recreated (resize).
+    offscreen_view: Option<wgpu::TextureView>,
     readback_buf: Option<wgpu::Buffer>,
     readback_bytes_per_row: u32,
     color_format: wgpu::TextureFormat,
@@ -161,6 +164,17 @@ pub struct PortalGpu {
     /// which sets this true because the particles then ARE the epistemic nodes. The mixer's "ambient"
     /// channel toggles it explicitly.
     ambient_enabled: bool,
+    /// WebGPU compute dispatch state: pipeline cache + pending readback slot
+    /// (plan §7.3 W6 — `Render.gpu_compute_dispatch` / `Render.gpu_compute_readback`).
+    compute: compute::ComputeState,
+    /// EMF 5D volumetric visualizer state (plan §7.3 W4).
+    emf: emf_pipeline::EmfState,
+    /// Pre-allocated uniform belt for zero-alloc buffer writes (VC3).
+    /// Replaces per-frame `queue.write_buffer` calls (which each allocate
+    /// a temporary staging buffer) with writes into a pre-mapped ring of
+    /// staging buffers. Pool size 3 ensures the oldest buffer's copy has
+    /// completed by the time we wrap around.
+    uniform_belt: uniform_belt::UniformBelt,
     width: u32,
     height: u32,
 }
@@ -183,6 +197,30 @@ impl PortalGpu {
             None,
             particle_cap,
         ))
+    }
+
+    /// Async offscreen WebGPU renderer on the process-wide shared device.
+    /// Logic/scientific/LLM WASM packages construct this without a canvas.
+    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+    pub async fn new_offscreen_async(
+        width: u32,
+        height: u32,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        crate::gpu_context::ensure_shared_gpu().await?;
+        let shared = crate::gpu_context::try_shared_gpu()
+            .ok_or_else(|| "shared WebGPU device missing after ensure_shared_gpu".to_string())?;
+        Self::from_device(
+            Arc::new(shared.device.clone()),
+            Arc::new(shared.queue.clone()),
+            width.max(1),
+            height.max(1),
+            wgpu::TextureFormat::Rgba8Unorm,
+            None,
+            None,
+            particle_cap,
+        )
+        .await
     }
 
     /// Build a native **surface** renderer that draws directly to a window's GPU swapchain.
@@ -396,6 +434,18 @@ impl PortalGpu {
         } else {
             None
         };
+        // Pre-create the offscreen texture view so the render loop doesn't
+        // call `create_view` every frame (VC3 zero-alloc).
+        let offscreen_view = offscreen_texture
+            .as_ref()
+            .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
+        // Uniform belt: pre-allocated pool of mapped staging buffers for
+        // zero-alloc uniform writes (VC3). 256 bytes covers all per-frame
+        // uniform structs (ambient ~16B, telemetry ~256B, camera ~96B,
+        // observer ~64B, model ~64B). Pool size 8 ensures we never wrap
+        // around within a single frame (5 writes per frame) — the oldest
+        // buffer's copy has completed by the time we wrap around.
+        let uniform_belt = uniform_belt::UniformBelt::new(&device, 256, 8);
         let readback_bytes_per_row = padded_bytes_per_row(width);
         let readback_buf = if surface.is_none() {
             Some(create_readback_buffer(
@@ -692,9 +742,10 @@ impl PortalGpu {
             cache: None,
         });
 
+        let pick_staging_size = padded_bytes_per_row(1) as u64;
         let pick_staging_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("portal-pick-staging"),
-            size: 4,
+            size: pick_staging_size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -819,12 +870,15 @@ impl PortalGpu {
         #[cfg(target_arch = "wasm32")]
         drop(error_scope);
 
+        let emf_state = emf_pipeline::EmfState::new(&device, format);
+
         Ok(Self {
             device,
             queue,
             surface,
             config,
             offscreen_texture,
+            offscreen_view,
             readback_buf,
             readback_bytes_per_row,
             color_format: format,
@@ -870,6 +924,9 @@ impl PortalGpu {
             tensor_node_count: 0,
             particle_count: particle_count as u32,
             ambient_enabled: false,
+            compute: compute::ComputeState::new(),
+            emf: emf_state,
+            uniform_belt,
             width,
             height,
         })
@@ -987,7 +1044,7 @@ impl PortalGpu {
 
     /// Resolve this frame's per-artefact model transform: the joint pose at `time`, gated through
     /// the admission policy (refuse out-of-world → hold the last admitted pose), then write it.
-    fn update_model(&mut self, time: f32) {
+    fn update_model(&mut self, encoder: &mut wgpu::CommandEncoder, time: f32) {
         let proposed = match self.artefact_joint {
             // Drive by *elapsed* time since the joint was engaged, not absolute sim-time, so a slide
             // always starts from rest when armed (the t0 is latched on this first post-arm frame).
@@ -1017,8 +1074,11 @@ impl PortalGpu {
             }
         };
         let model = motor_to_mat4_col(motor);
-        self.queue
-            .write_buffer(&self.model_buf, 0, bytemuck::cast_slice(&model));
+        // VC3: Use UniformBelt for zero-alloc buffer writes.
+        let bytes = bytemuck::cast_slice(&model);
+        self.uniform_belt.write_and_unmap(bytes);
+        self.uniform_belt.record_copy(encoder, &self.model_buf, 0);
+        self.uniform_belt.advance(&self.device);
     }
 
     pub fn has_tensor_buffer(&self) -> bool {
@@ -1117,6 +1177,39 @@ impl PortalGpu {
         (self.width, self.height)
     }
 
+    /// Access the shared GPU device (test/diagnostic helper).
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    /// Access the shared GPU queue (test/diagnostic helper).
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
+    // VC3 test helpers — expose uniform belt internals for allocation measurement.
+    #[cfg(test)]
+    pub(crate) fn uniform_belt_write_and_unmap(&mut self, data: &[u8]) {
+        self.uniform_belt.write_and_unmap(data);
+    }
+    #[cfg(test)]
+    pub(crate) fn uniform_belt_record_copy(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::Buffer,
+        offset: wgpu::BufferAddress,
+    ) {
+        self.uniform_belt.record_copy(encoder, target, offset);
+    }
+    #[cfg(test)]
+    pub(crate) fn uniform_belt_advance(&mut self) {
+        self.uniform_belt.advance(&self.device);
+    }
+    #[cfg(test)]
+    pub(crate) fn uniform_buf_test(&self) -> wgpu::Buffer {
+        self.uniform_buf.clone()
+    }
+
     pub fn resize(&mut self, width: u32, height: u32) {
         if width == 0 || height == 0 {
             return;
@@ -1134,6 +1227,11 @@ impl PortalGpu {
                 width,
                 height,
             ));
+            // Invalidate cached view — it belongs to the old texture.
+            self.offscreen_view = self
+                .offscreen_texture
+                .as_ref()
+                .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
             self.readback_bytes_per_row = padded_bytes_per_row(width);
             self.readback_buf = Some(create_readback_buffer(
                 &self.device,
@@ -1177,19 +1275,26 @@ impl PortalGpu {
         }
     }
 
-    fn write_camera_uniform(&self, time: f32) {
+    fn write_camera_uniform(&mut self, encoder: &mut wgpu::CommandEncoder, time: f32) {
         let aspect = self.width as f32 / self.height.max(1) as f32;
         let mut uniform = self
             .camera
             .to_uniform(aspect, self.tensor_raw_buf.is_some());
         uniform._padding[0] = time;
-        self.queue
-            .write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&uniform));
+        // VC3: Use UniformBelt for zero-alloc buffer writes.
+        let bytes = bytemuck::bytes_of(&uniform);
+        self.uniform_belt.write_and_unmap(bytes);
+        self.uniform_belt.record_copy(encoder, &self.camera_buf, 0);
+        self.uniform_belt.advance(&self.device);
     }
 
-    fn write_observer_uniform(&self) {
-        self.queue
-            .write_buffer(&self.observer_buf, 0, bytemuck::bytes_of(&self.observer));
+    fn write_observer_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
+        // VC3: Use UniformBelt for zero-alloc buffer writes.
+        let bytes = bytemuck::bytes_of(&self.observer);
+        self.uniform_belt.write_and_unmap(bytes);
+        self.uniform_belt
+            .record_copy(encoder, &self.observer_buf, 0);
+        self.uniform_belt.advance(&self.device);
     }
 
     pub fn queue_pick(&mut self, x: f32, y: f32) {
@@ -1292,7 +1397,7 @@ impl PortalGpu {
                 buffer: &self.pick_staging_buf,
                 layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(4),
+                    bytes_per_row: Some(padded_bytes_per_row(1)),
                     rows_per_image: Some(1),
                 },
             },
@@ -1306,19 +1411,46 @@ impl PortalGpu {
     }
 
     pub fn render(&mut self, time: f32, telemetry: &SystemTelemetry) -> Result<(), String> {
+        // Create the command encoder first — the uniform belt records copy
+        // commands into it, so it must exist before any uniform writes.
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("portal-viewport-encoder"),
+            });
+
+        // VC3: Write all per-frame uniforms through the pre-allocated
+        // uniform belt (zero-alloc after warmup). Each write:
+        // 1. Get mapped view from belt
+        // 2. Copy uniform data into it
+        // 3. Drop view (unmaps buffer)
+        // 4. Record copy command into encoder
+        // 5. Advance belt to next slot (re-maps oldest slot)
         let uniforms = AmbientUniforms {
             time,
             view_width: self.width as f32,
             view_height: self.height as f32,
             _padding: 0.0,
         };
-        self.queue
-            .write_buffer(&self.uniform_buf, 0, bytemuck::bytes_of(&uniforms));
-        self.queue
-            .write_buffer(&self.telemetry_buf, 0, bytemuck::bytes_of(telemetry));
-        self.write_camera_uniform(time);
-        self.write_observer_uniform();
-        self.update_model(time);
+        {
+            let bytes = bytemuck::bytes_of(&uniforms);
+            self.uniform_belt.write_and_unmap(bytes);
+        }
+        self.uniform_belt
+            .record_copy(&mut encoder, &self.uniform_buf, 0);
+        self.uniform_belt.advance(&self.device);
+
+        {
+            let bytes = bytemuck::bytes_of(telemetry);
+            self.uniform_belt.write_and_unmap(bytes);
+        }
+        self.uniform_belt
+            .record_copy(&mut encoder, &self.telemetry_buf, 0);
+        self.uniform_belt.advance(&self.device);
+
+        self.write_camera_uniform(&mut encoder, time);
+        self.write_observer_uniform(&mut encoder);
+        self.update_model(&mut encoder, time);
 
         // A browser target acquires a swapchain frame; a native/headless target keeps a reusable
         // COPY_SRC texture. The draw graph below is identical for both.
@@ -1355,26 +1487,31 @@ impl PortalGpu {
                 self.picking_texture = picking_texture;
                 self.picking_view = picking_view;
                 self.sync_bloom_targets();
-                self.write_camera_uniform(time);
+                self.write_camera_uniform(&mut encoder, time);
             }
         }
 
         let view = if let Some(frame) = surface_frame.as_ref() {
+            // Surface textures are acquired per-frame; we must create a view.
+            // (Offscreen views are cached — see below.)
             frame
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor::default())
         } else {
-            self.offscreen_texture
-                .as_ref()
+            // VC3: Use cached offscreen view instead of create_view per frame.
+            self.offscreen_view
+                .clone()
+                .or_else(|| {
+                    // Lazily create the view if it was invalidated (e.g. resize).
+                    let v = self
+                        .offscreen_texture
+                        .as_ref()?
+                        .create_view(&wgpu::TextureViewDescriptor::default());
+                    self.offscreen_view = Some(v.clone());
+                    Some(v)
+                })
                 .ok_or_else(|| "renderer has no output target".to_string())?
-                .create_view(&wgpu::TextureViewDescriptor::default())
         };
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("portal-viewport-encoder"),
-            });
 
         self.record_picking_pass(&mut encoder);
 
@@ -1504,7 +1641,12 @@ impl PortalGpu {
         }
 
         self.record_pick_copy(&mut encoder);
+
+        // VC3: Submit the command buffer. The uniform belt's copy commands
+        // are already recorded in the encoder. The belt's advance() calls
+        // have already re-mapped the oldest slots for the next frame.
         self.queue.submit(std::iter::once(encoder.finish()));
+
         if let Some(frame) = surface_frame {
             // wgpu 30: SurfaceTexture::present() removed → Queue::present(frame).
             self.queue.present(frame);
@@ -1592,6 +1734,11 @@ impl PortalGpu {
         Ok(need)
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn read_rgba8_into(&self, _out: &mut [u8]) -> Result<usize, String> {
+        Err("Synchronous RGBA8 readback is not supported on wasm32 targets".to_string())
+    }
+
     pub fn particle_count(&self) -> u32 {
         self.particle_count
     }
@@ -1599,9 +1746,15 @@ impl PortalGpu {
 
 // Phase 0.2a: render/gpu submodules (bloom post-pass, resource builders, particle field).
 mod bloom;
+mod compute;
+mod emf_pipeline;
 mod particles;
 mod resources;
+mod uniform_belt;
+
 use bloom::*;
+pub use compute::{ComputeBinding, ComputeBufferKind};
+pub use emf_pipeline::{EmfFieldCell, EmfSliceUniform};
 pub use particles::particle_cap_for_mode;
 use particles::*;
 use resources::*;

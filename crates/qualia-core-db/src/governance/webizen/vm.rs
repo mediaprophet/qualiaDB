@@ -787,67 +787,43 @@ pub fn execute_vm_frame(
                 );
             }
             // ── Biomedical ────────────────────────────────────────────────
-            #[cfg(not(target_arch = "wasm32"))]
-            SlgOpcode::NativeClinicalRisk(model_id) => match model_id {
-                0 => {
-                    let input = crate::clinical_engine::FraminghamInput {
-                        age: (frame.object_reg & 0xFF) as u8,
-                        sex_male: (frame.metadata_hint() & 1) != 0,
-                        total_cholesterol_mmol: 5.5,
-                        hdl_cholesterol_mmol: 1.2,
-                        systolic_bp: 130.0,
-                        bp_treated: false,
-                        current_smoker: false,
-                        diabetic: false,
-                    };
-                    let r = crate::clinical_engine::framingham_10yr_risk(&input);
-                    vm_log!(
-                        "[Webizen] Framingham 10yr risk: {:.1}% ({:?})",
-                        r.risk_10yr * 100.0,
-                        r.category
-                    );
+            SlgOpcode::NativeClinicalRisk(model_id) => {
+                let mut scratch = [NQuin::default(); 256];
+                let n = arena.collect_active_quins(&mut scratch);
+                let outcome = if n == 0 || frame.subject_reg == 0 {
+                    super::clinical_native::evaluate(model_id)
+                } else {
+                    super::clinical_native::evaluate_patient(
+                        model_id,
+                        frame.subject_reg,
+                        &scratch[..n],
+                    )
+                };
+                match outcome {
+                    super::clinical_native::NativeClinicalRiskOutcome::HeldIncomplete => {
+                        vm_log!(
+                            "[Webizen] NativeClinicalRisk: held — incomplete clinical inputs; missing is not a patient value (model {})",
+                            model_id
+                        );
+                    }
+                    super::clinical_native::NativeClinicalRiskOutcome::UnknownModel => {
+                        vm_log!("[Webizen] NativeClinicalRisk: unknown model {}", model_id);
+                    }
+                    super::clinical_native::NativeClinicalRiskOutcome::Calculated { value } => {
+                        vm_log!(
+                            "[Webizen] NativeClinicalRisk: model {} value={:.6} (not advice)",
+                            model_id,
+                            value
+                        );
+                        frame.object_reg = crate::frame_layout::pack_float_object(value as f32);
+                    }
                 }
-                1 => {
-                    let input = crate::clinical_engine::Cha2ds2VascInput {
-                        hypertension: (frame.object_reg & 0x01) != 0,
-                        diabetes: (frame.object_reg & 0x02) != 0,
-                        age_65_to_74: (frame.object_reg & 0x04) != 0,
-                        ..Default::default()
-                    };
-                    let r = crate::clinical_engine::cha2ds2_vasc_score(&input);
-                    vm_log!(
-                        "[Webizen] CHA₂DS₂-VASc: {} ({:.1}%/yr)",
-                        r.score,
-                        r.annual_stroke_risk_pct
-                    );
-                }
-                2 => {
-                    let input = crate::clinical_engine::Score2Input {
-                        age: (frame.object_reg & 0xFF) as u8,
-                        sex_male: true,
-                        systolic_bp: 130.0,
-                        total_cholesterol_mmol: 5.5,
-                        hdl_cholesterol_mmol: 1.3,
-                        current_smoker: false,
-                        risk_region: crate::clinical_engine::Score2Region::Moderate,
-                    };
-                    let r = crate::clinical_engine::score2_risk(&input);
-                    vm_log!(
-                        "[Webizen] SCORE2: {:.1}% ({:?})",
-                        r.risk_10yr_pct,
-                        r.category
-                    );
-                }
-                _ => vm_log!("[Webizen] NativeClinicalRisk: unknown model {}", model_id),
-            },
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeClinicalRisk(_) => {}
+            }
 
             SlgOpcode::NativeLongitudinalTrend(window_days) => {
                 vm_log!("[Webizen] NativeLongitudinalTrend: window={}d — awaiting time-series Quin stream", window_days);
             }
 
-            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeDrugInteraction => {
                 let meds = vec![frame.subject_reg, frame.object_reg];
                 let found = crate::clinical_engine::check_drug_interactions(&meds);
@@ -862,10 +838,7 @@ pub fn execute_vm_frame(
                     }
                 }
             }
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeDrugInteraction => {}
 
-            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeContraindication => {
                 let conds = vec![frame.object_reg];
                 let found =
@@ -878,10 +851,7 @@ pub fn execute_vm_frame(
                     return None;
                 }
             }
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeContraindication => {}
 
-            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeFhirObservation(loinc_hash) => {
                 let obs = crate::clinical_engine::FhirObservation {
                     loinc_code: format!("{:016x}", loinc_hash),
@@ -900,8 +870,6 @@ pub fn execute_vm_frame(
                     return None;
                 }
             }
-            #[cfg(target_arch = "wasm32")]
-            SlgOpcode::NativeFhirObservation(_) => {}
             // ── Organic chemistry ─────────────────────────────────────────
             SlgOpcode::NativeSmilesValidation => {
                 // In production the SMILES string is retrieved from the lexicon by object_reg hash.
@@ -1425,8 +1393,8 @@ pub fn execute_vm_frame(
                     step_size
                 );
 
-                // Create GPU integrator and attempt async execution
-                #[cfg(not(target_arch = "wasm32"))]
+                // GPU integrator is `gpu-runtime` only. CPU Simpson's remains on every path.
+                #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
                 {
                     use crate::modalities::calculus::gpu::{GpuIntegrator, PlatformGpuIntegrator};
                     use std::path::Path;
@@ -1530,11 +1498,9 @@ pub fn execute_vm_frame(
                     }
                 }
 
-                #[cfg(target_arch = "wasm32")]
+                #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
                 {
-                    vm_log!(
-                        "[Webizen] NativeCalcGpu: GPU not available on WASM, using CPU fallback"
-                    );
+                    vm_log!("[Webizen] NativeCalcGpu: GPU runtime unavailable, using CPU fallback");
                     let grid_data: Vec<u8> = vec![0u8; 1001 * 8];
                     let grid =
                         crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1001).unwrap();

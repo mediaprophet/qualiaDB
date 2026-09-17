@@ -1,0 +1,8 @@
+enum Shape {
+    Circle(f64),
+    Rect(f64, f64),
+}
+fn main() {
+    let s = Shape.Circle(3.0);
+    return 0;
+}

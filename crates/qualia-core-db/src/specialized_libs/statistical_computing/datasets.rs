@@ -388,7 +388,7 @@ impl StatisticalDataStorage {
 
     /// Returns a small built-in sample dataset (3 rows × 5 columns) useful for
     /// demos, tests, and as a fallback when no real dataset is registered. This
-    /// is backed by [`get_dataset_data_legacy`](Self::get_dataset_data_legacy).
+    /// is backed by `Self::get_dataset_data_legacy`.
     pub fn sample_dataset(&self) -> Result<Dataset, StatisticalError> {
         self.get_dataset_data_legacy("sample")
     }

@@ -224,7 +224,7 @@ enum ParseResult {
     },
 }
 
-/// Parse N-Triples-Star into any [`QuinSink`] (bounded collector or external sorter).
+/// Parse N-Triples-Star into any `QuinSink()` (bounded collector or external sorter).
 pub fn parse_ntriples_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,
     context_hash: u64,

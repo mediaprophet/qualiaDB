@@ -134,7 +134,7 @@ fn insert_slot(
 /// Build a half-edge graph from triangle indices without heap allocation.
 ///
 /// The output requires `3 * triangles.len()` entries. `slots` requires
-/// [`required_edge_slots(triangles.len())`] entries and is cleared by this
+/// `required_edge_slots(triangles.len())()` entries and is cleared by this
 /// function. Oppositely directed edges become twins; unmatched edges are the
 /// boundary. Duplicate directions and edges with more than two incident faces
 /// fail closed as non-manifold input.

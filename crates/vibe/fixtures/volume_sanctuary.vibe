@@ -1,0 +1,12 @@
+// Human dialect — live GraphDatabase.volume_open / volume_commit.
+// Sanctuary durable save is native-host; wasm/LocalHost stays fail-closed honesty.
+module <https://qualiadb.org/modules/volume_sanctuary>;
+using GraphDatabase;
+
+effect fn sanctuary_open(path: string) -> Record {
+    return GraphDatabase.volume_open({ path: path });
+}
+
+effect fn sanctuary_commit() -> Record {
+    return GraphDatabase.volume_commit({});
+}

@@ -1,0 +1,24 @@
+module <https://qualiadb.org/modules/options_greeks>;
+import "vibe:0.1/math" as m;
+pure fn delta_call(s: f64, k: f64) -> f64 {
+    if s > k {
+        return 1.0;
+    }
+    return s / k;
+}
+pure fn gamma(s: f64, k: f64, sigma: f64) -> f64 {
+    if sigma <= 0.0 || k <= 0.0 {
+        return 0.0;
+    }
+    let moneyness = (s - k) / (k * sigma);
+    return m.exp(-moneyness * moneyness / 2.0) / (k * sigma * 2.5066282746310002);
+}
+pure fn vega(s: f64, k: f64, sigma: f64) -> f64 {
+    if sigma <= 0.0 || k <= 0.0 {
+        return 0.0;
+    }
+    return s * sigma * 0.3989422804014327;
+}
+pure fn theta_daily(sigma: f64) -> f64 {
+    return -sigma / 16.0;
+}

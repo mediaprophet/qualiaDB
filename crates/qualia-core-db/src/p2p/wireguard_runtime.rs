@@ -109,6 +109,11 @@ impl WgTunnel {
         self.socket.local_addr().map_err(|e| e.to_string())
     }
 
+    /// Borrow the UDP socket (STUN observe on the same port the tunnel will use).
+    pub fn udp_socket(&self) -> &UdpSocket {
+        &self.socket
+    }
+
     /// The peer endpoint we currently send to, if known.
     pub fn peer_endpoint(&self) -> Option<SocketAddr> {
         self.peer_endpoint

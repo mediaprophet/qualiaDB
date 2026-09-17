@@ -7,7 +7,7 @@
 //!   series for the order-0 building blocks, the Wronskian for order 1, then the
 //!   standard recurrences.
 //! * [`airy`] — Airy `Ai`/`Bi` via their Maclaurin series.
-//! * [`zeta`] — Riemann ζ(s) for real `s > 1` via Euler–Maclaurin acceleration.
+//! * [`zeta()`] — Riemann ζ(s) for real `s > 1` via Euler–Maclaurin acceleration.
 //!
 //! Domain-restricted functions fail closed (`Option`/`None`) rather than return a
 //! fabricated value (e.g. `Y_n`/`K_n` require `x > 0`; ζ requires `s > 1`). The series

@@ -281,7 +281,7 @@ pub fn dequantize_blob(blob: &[u8], out: &mut [f32]) {
 }
 
 /// Rebake an on-disk base-3 [`ternary_blob`] (`[scale f32 LE][5-trits/byte]`) into the runtime
-/// **2-bit branchless** VRAM layout consumed by [`ternary_gemm_2bit.wgsl`] / [`ternary_gemm_cpu_2bit`].
+/// **2-bit branchless** VRAM layout consumed by `ternary_gemm_2bit.wgsl()` / [`ternary_gemm_cpu_2bit`].
 ///
 /// D1 (STELLAR §A, measured on A2000): base-3 is the *archive/distribution* layout (1.6 bit, densest)
 /// but on the GPU its `/3`,`%3` unpack makes it **0.85× — slower than F16**; the 2-bit branchless layout

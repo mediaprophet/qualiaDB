@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/harmonic_oscillator>;
+import "vibe:0.1/math" as m;
+pure fn energy_clamp(kinetic: f64, potential: f64) -> f64 {
+    let total = kinetic + potential;
+    return m.max(0.0, total);
+}

@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::knowledge_context::SubjectKnowledgeContext;
-use super::model::{normalize_organ_key, AnatomyModel, Karyotype};
+use super::model::{AnatomyModel, Karyotype, normalize_organ_key};
 use super::physiology::Trimester;
 
 /// Visible Human Male standing height used by the CCF / HRA male reference set.
@@ -202,9 +202,10 @@ impl BodyConstitution {
 
         let mut torso_scale_y = 1.0;
         let mut leg_scale_y = 1.0;
-        if let (Some(stature), Some(sit)) =
-            (self.measurements.stature_mm, self.measurements.sitting_height_mm)
-        {
+        if let (Some(stature), Some(sit)) = (
+            self.measurements.stature_mm,
+            self.measurements.sitting_height_mm,
+        ) {
             used.push("sitting_height_mm".into());
             let person_ratio = sit as f32 / stature as f32;
             torso_scale_y = (person_ratio / REF_SITTING_RATIO).clamp(0.7, 1.35);
@@ -228,8 +229,18 @@ impl BodyConstitution {
             1.0
         };
 
-        let chest_radial = ratio_or_one(self.measurements.chest_mm, girth.chest_mm, &mut used, "chest_mm");
-        let waist_radial = ratio_or_one(self.measurements.waist_mm, girth.waist_mm, &mut used, "waist_mm");
+        let chest_radial = ratio_or_one(
+            self.measurements.chest_mm,
+            girth.chest_mm,
+            &mut used,
+            "chest_mm",
+        );
+        let waist_radial = ratio_or_one(
+            self.measurements.waist_mm,
+            girth.waist_mm,
+            &mut used,
+            "waist_mm",
+        );
         let hip_radial = ratio_or_one(self.measurements.hip_mm, girth.hip_mm, &mut used, "hip_mm");
         let shoulder_scale_x = ratio_or_one(
             self.measurements.shoulder_width_mm,
@@ -293,7 +304,8 @@ impl BodyConstitution {
 
         notes.insert(
             0,
-            "Illustrative fit onto a Visible Human / CCF reference body — not a scan of you.".into(),
+            "Illustrative fit onto a Visible Human / CCF reference body — not a scan of you."
+                .into(),
         );
 
         BodyFit {
@@ -398,9 +410,9 @@ impl BodyFit {
     /// Whether `organ_key` should be omitted from the assembled body.
     pub fn hides(&self, organ_key: &str) -> bool {
         let norm = normalize_organ_key(organ_key);
-        self.hidden_keys.iter().any(|k| {
-            k == &norm || norm.contains(k.as_str()) || k.contains(norm.as_str())
-        })
+        self.hidden_keys
+            .iter()
+            .any(|k| k == &norm || norm.contains(k.as_str()) || k.contains(norm.as_str()))
     }
 
     /// Apply the fit to one vertex in the body's axis-aligned bounds.
@@ -423,13 +435,29 @@ impl BodyFit {
         y = gmin[1] + (y - gmin[1]) * y_seg;
 
         let radial = if y_norm < self.pelvis_y_norm {
-            lerp(1.0, self.hip_radial, smoothstep(0.20, self.pelvis_y_norm, y_norm))
+            lerp(
+                1.0,
+                self.hip_radial,
+                smoothstep(0.20, self.pelvis_y_norm, y_norm),
+            )
         } else if y_norm < self.waist_y_norm {
-            lerp(self.hip_radial, self.waist_radial, smoothstep(self.pelvis_y_norm, self.waist_y_norm, y_norm))
+            lerp(
+                self.hip_radial,
+                self.waist_radial,
+                smoothstep(self.pelvis_y_norm, self.waist_y_norm, y_norm),
+            )
         } else if y_norm < self.chest_y_norm {
-            lerp(self.waist_radial, self.chest_radial, smoothstep(self.waist_y_norm, self.chest_y_norm, y_norm))
+            lerp(
+                self.waist_radial,
+                self.chest_radial,
+                smoothstep(self.waist_y_norm, self.chest_y_norm, y_norm),
+            )
         } else {
-            lerp(self.chest_radial, self.shoulder_scale_x, smoothstep(self.chest_y_norm, self.shoulder_y_norm, y_norm))
+            lerp(
+                self.chest_radial,
+                self.shoulder_scale_x,
+                smoothstep(self.chest_y_norm, self.shoulder_y_norm, y_norm),
+            )
         };
         x *= radial * self.arm_span_scale_x;
         z *= radial;
@@ -468,11 +496,7 @@ fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 
 fn bump(x: f32, center: f32, width: f32) -> f32 {
     let t = ((x - center) / width).abs();
-    if t >= 1.0 {
-        0.0
-    } else {
-        1.0 - t * t
-    }
+    if t >= 1.0 { 0.0 } else { 1.0 - t * t }
 }
 
 #[cfg(test)]
@@ -541,7 +565,10 @@ mod tests {
         assert!(fit.pregnancy_abdomen > 0.3);
         let mid = fit.transform_point([0.0, 0.95, 0.0], [0.0, 0.0, 0.0], [0.4, 1.8, 0.3]);
         let crown = fit.transform_point([0.0, 1.8, 0.0], [0.0, 0.0, 0.0], [0.4, 1.8, 0.3]);
-        assert!(mid[2] > crown[2], "abdomen should come forward more than the crown");
+        assert!(
+            mid[2] > crown[2],
+            "abdomen should come forward more than the crown"
+        );
     }
 
     #[test]
@@ -565,10 +592,11 @@ mod tests {
         c.characteristics.age_months = Some(48);
         let fit = c.fit();
         assert!((fit.stature_scale - 1.0).abs() < f32::EPSILON);
-        assert!(fit
-            .honesty_notes
-            .iter()
-            .any(|n| n.contains("not guessed from age")));
+        assert!(
+            fit.honesty_notes
+                .iter()
+                .any(|n| n.contains("not guessed from age"))
+        );
     }
 
     #[test]
@@ -600,9 +628,10 @@ mod tests {
         assert!(fit.identity);
         assert_eq!(fit.stature_scale, empty.stature_scale);
         assert_eq!(fit.chest_radial, empty.chest_radial);
-        assert!(fit
-            .honesty_notes
-            .iter()
-            .any(|n| n.contains("Garment, footwear, helmet")));
+        assert!(
+            fit.honesty_notes
+                .iter()
+                .any(|n| n.contains("Garment, footwear, helmet"))
+        );
     }
 }

@@ -1,0 +1,183 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix cap:     <https://ns.webcivics.net/capability/> .
+@prefix si:      <https://ns.webizen.org/semantic-instrument/> .
+
+# ===========================================================================
+# Semantic instruments — capability / RPL profile (SI-01 draft).
+#
+# Reuses cap:Capability, cap:LearningClaim, cap:CapabilityRequirement, cap:Gap
+# and cml:recognitionBasis. Does NOT replace modalities/capability_gap.rs.
+# A capability credential about a learner/worker REFERENCES an assessment
+# instrument; it does not become the instrument.
+# ===========================================================================
+
+si:Capability a rdfs:Class ;
+    rdfs:subClassOf cap:Capability ;
+    rdfs:label "Instrument-scoped capability" ;
+    rdfs:comment "Optional profile of cap:Capability used inside an instrument's requirement graph. The skill concept remains cap:Capability." .
+
+si:CapabilityRequirement a rdfs:Class ;
+    rdfs:subClassOf cap:CapabilityRequirement ;
+    rdfs:label "Instrument capability requirement" ;
+    rdfs:comment "A capability and level required for a role, task or award. Recognition bases reuse cml:Formal / PriorLearning / Experiential / PeerAttested." .
+
+si:CapabilityEvidence a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Capability evidence" ;
+    rdfs:comment "Work, observation, assessment, testimonial or prior credential. Absence of accessible evidence is NOT proof of absence of capability." .
+
+si:CapabilityCredential a rdfs:Class ;
+    rdfs:subClassOf cap:LearningClaim ;
+    rdfs:label "Capability credential" ;
+    rdfs:comment "Issuer assertion that a subject demonstrated capabilities. Subject is the learner/worker. MUST reference, not become, the assessment instrument release." .
+
+si:GapReport a rdfs:Class ;
+    rdfs:label "Gap report" ;
+    rdfs:comment "Contextual comparison of requirements with recognised capabilities. Contains satisfied, equivalent, unresolved and unmet results. Distinct from cap:Gap (one unmet requirement)." .
+
+si:RecognitionBasisPolicy a rdfs:Class ;
+    rdfs:label "Recognition basis policy" ;
+    rdfs:comment "Which cml:RecognitionBasis values are acceptable for a requirement, including RPL." .
+
+si:EquivalenceMapping a rdfs:Class ;
+    rdfs:label "Equivalence mapping" ;
+    rdfs:comment "Authorised mapping from a held capability to a required one. Unauthorised closeMatch MUST NOT auto-satisfy. Kernel: capability_gap equivalences table." .
+
+# --- Requirement properties --------------------------------------------------
+
+si:requiredCapability a rdf:Property ;
+    rdfs:subPropertyOf cap:requiredCapability ;
+    rdfs:domain si:CapabilityRequirement ; rdfs:range cap:Capability .
+si:requiredLevel a rdf:Property ;
+    rdfs:domain si:CapabilityRequirement ;
+    rdfs:comment "Numeric or coded proficiency level. compared by capability_gap::meets_competency_level." .
+si:requirementObligation a rdf:Property ;
+    rdfs:comment "mandatory | elective | advisory." .
+si:prerequisite a rdf:Property ;
+    rdfs:subPropertyOf cap:dependsOn ;
+    rdfs:domain cap:Capability ; rdfs:range cap:Capability .
+si:acceptableBasis a rdf:Property ;
+    rdfs:domain si:CapabilityRequirement ; rdfs:range cml:RecognitionBasis .
+si:acceptableEvidence a rdf:Property ;
+    rdfs:domain si:CapabilityRequirement ; rdfs:range si:CapabilityEvidence .
+si:equivalencePolicy a rdf:Property ;
+    rdfs:domain si:CapabilityRequirement ; rdfs:range si:EquivalenceMapping .
+si:mappingAuthority a rdf:Property ;
+    rdfs:domain si:EquivalenceMapping ; rdfs:range values:Agent .
+si:mapsRequired a rdf:Property ;
+    rdfs:domain si:EquivalenceMapping ; rdfs:range cap:Capability .
+si:mapsHeld a rdf:Property ;
+    rdfs:domain si:EquivalenceMapping ; rdfs:range cap:Capability .
+
+# --- Evidence ----------------------------------------------------------------
+
+si:evidenceFor a rdf:Property ;
+    rdfs:domain si:CapabilityEvidence ; rdfs:range cap:Capability .
+si:evidenceHeldBy a rdf:Property ;
+    rdfs:domain si:CapabilityEvidence ; rdfs:range values:Agent .
+si:recognitionBasis a rdf:Property ;
+    rdfs:subPropertyOf cml:recognitionBasis .
+si:evidenceSensitivity a rdf:Property ;
+    rdfs:comment "Public credentials SHOULD reference private evidence through commitments, not embed it." .
+si:evidenceUnavailable a rdf:Property ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "When true, report si:unresolvedEvidence — do not conclude unmet capability." .
+
+# --- Award credential (learner/worker is the subject) ------------------------
+
+si:credentialSubjectAgent a rdf:Property ;
+    rdfs:subPropertyOf cap:heldBy ;
+    rdfs:domain si:CapabilityCredential ; rdfs:range values:Agent ;
+    rdfs:comment "The learner/worker. MUST NOT be the assessment instrument IRI." .
+si:awardedCapability a rdf:Property ;
+    rdfs:subPropertyOf cap:capability ;
+    rdfs:domain si:CapabilityCredential ; rdfs:range cap:Capability .
+si:assessmentInstrument a rdf:Property ;
+    rdfs:domain si:CapabilityCredential ; rdfs:range si:InstrumentRelease ;
+    rdfs:comment "The assessment instrument release used. The credential references it; the credential is not it." .
+si:assessmentReceipt a rdf:Property ;
+    rdfs:domain si:CapabilityCredential ; rdfs:range si:ExecutionReceipt .
+si:issuancePolicy a rdf:Property ;
+    rdfs:comment "Human review, organisational approval, multi-party consensus, or declared automatic issuance. A runner pass is not issuance." .
+
+# --- Gap report --------------------------------------------------------------
+
+si:gapTarget a rdf:Property ;
+    rdfs:domain si:GapReport ;
+    rdfs:comment "Target role, task, qualification or instrument release." .
+si:requirementSet a rdf:Property ;
+    rdfs:domain si:GapReport ; rdfs:range si:InstrumentRelease .
+si:satisfiedRequirement a rdf:Property ;
+    rdfs:domain si:GapReport ; rdfs:range si:CapabilityRequirement .
+si:recognisedEquivalent a rdf:Property ;
+    rdfs:domain si:GapReport ; rdfs:range si:EquivalenceMapping .
+si:unresolvedEvidence a rdf:Property ;
+    rdfs:domain si:GapReport ; rdfs:range si:CapabilityEvidence ;
+    rdfs:comment "Missing accessible evidence. NOT automatically a missing capability (programme rule 9)." .
+si:unmetRequirement a rdf:Property ;
+    rdfs:domain si:GapReport ; rdfs:range cap:Gap .
+si:learningPathCost a rdf:Property ;
+    rdfs:domain si:GapReport ;
+    rdfs:comment "Optional dependency-ordered path cost from capability_gap::learning_path_cost. Advisory." .
+si:gapReceipt a rdf:Property ;
+    rdfs:domain si:GapReport ; rdfs:range si:ExecutionReceipt .
+
+# --- Shapes ------------------------------------------------------------------
+
+si:CapabilityRequirementShape a sh:NodeShape ;
+    sh:targetClass si:CapabilityRequirement ;
+    sh:property si:CapabilityRequirement-cap ;
+    sh:property si:CapabilityRequirement-basis ;
+    sh:message "A capability requirement must name the capability concept and at least one acceptable recognition basis (RPL is first-class)." .
+
+si:CapabilityRequirement-cap a sh:PropertyShape ;
+    sh:path si:requiredCapability ; sh:minCount 1 ; sh:class cap:Capability .
+si:CapabilityRequirement-basis a sh:PropertyShape ;
+    sh:path si:acceptableBasis ; sh:minCount 1 ; sh:class cml:RecognitionBasis .
+
+si:CapabilityCredentialShape a sh:NodeShape ;
+    sh:targetClass si:CapabilityCredential ;
+    sh:property si:CapabilityCredential-subject ;
+    sh:property si:CapabilityCredential-capability ;
+    sh:property si:CapabilityCredential-instrument ;
+    sh:not si:CapabilityCredential-notAnInstrument ;
+    sh:not si:CapabilityCredential-notARelease ;
+    sh:message "A capability credential is about a learner/worker and must reference the assessment instrument without becoming it." .
+
+si:CapabilityCredential-subject a sh:PropertyShape ;
+    sh:path si:credentialSubjectAgent ; sh:minCount 1 ; sh:class values:Agent .
+si:CapabilityCredential-capability a sh:PropertyShape ;
+    sh:path si:awardedCapability ; sh:minCount 1 ; sh:class cap:Capability .
+si:CapabilityCredential-instrument a sh:PropertyShape ;
+    sh:path si:assessmentInstrument ; sh:minCount 1 ; sh:class si:InstrumentRelease .
+si:CapabilityCredential-notAnInstrument a sh:NodeShape ; sh:class si:SemanticInstrument ;
+    sh:message "A capability credential MUST NOT be typed as the instrument." .
+si:CapabilityCredential-notARelease a sh:NodeShape ; sh:class si:InstrumentRelease ;
+    sh:message "A capability credential MUST NOT be typed as the instrument release." .
+
+si:GapReportShape a sh:NodeShape ;
+    sh:targetClass si:GapReport ;
+    sh:property si:GapReport-target ;
+    sh:property si:GapReport-set ;
+    sh:message "A gap report names its target and requirement-set release. Unresolved evidence must not be coerced into unmet capability." .
+
+si:GapReport-target a sh:PropertyShape ; sh:path si:gapTarget ; sh:minCount 1 .
+si:GapReport-set a sh:PropertyShape ; sh:path si:requirementSet ; sh:minCount 1 .
+
+si:CapabilityEvidenceShape a sh:NodeShape ;
+    sh:targetClass si:CapabilityEvidence ;
+    sh:property si:CapabilityEvidence-for ;
+    sh:property si:CapabilityEvidence-holder .
+si:CapabilityEvidence-for a sh:PropertyShape ; sh:path si:evidenceFor ; sh:minCount 1 .
+si:CapabilityEvidence-holder a sh:PropertyShape ; sh:path si:evidenceHeldBy ; sh:minCount 1 .
+
+# Missing evidence is not absence: if evidenceUnavailable true, a GapReport
+# that records the same evidence as unmetRequirement (via cap:Gap) is flagged.
+{ ?e a si:CapabilityEvidence . ?e si:evidenceUnavailable true . ?g a si:GapReport . ?g si:unmetRequirement ?gap }
+  => { ?g values:flag si:MissingEvidenceTreatedAsAbsenceFlag } .

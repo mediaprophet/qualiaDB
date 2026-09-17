@@ -39,9 +39,9 @@ pub fn clear(storage_root: impl AsRef<Path>) -> Result<(), String> {
 /// A declared pregnant physiological state wins; otherwise the constitution's own hint is used.
 pub fn fit_for(constitution: &BodyConstitution, phys: &PhysiologicalState) -> BodyFit {
     let pregnancy = match phys {
-        PhysiologicalState::Reproductive(wellfare_core::anatomy::ReproductiveState::Pregnant(t)) => {
-            Some(*t)
-        }
+        PhysiologicalState::Reproductive(wellfare_core::anatomy::ReproductiveState::Pregnant(
+            t,
+        )) => Some(*t),
         _ => constitution.attributes.pregnancy,
     };
     constitution.fit_with_pregnancy(pregnancy)
@@ -59,9 +59,9 @@ mod tests {
         let mut c = BodyConstitution::default();
         c.measurements.stature_mm = Some(1720);
         c.characteristics.karyotype = Some(Karyotype::Xx);
-        c.knowledge.ethnicities.push(
-            wellfare_core::anatomy::EthnicityAffiliation::declared("Ashkenazi").unwrap(),
-        );
+        c.knowledge
+            .ethnicities
+            .push(wellfare_core::anatomy::EthnicityAffiliation::declared("Ashkenazi").unwrap());
         c.attributes.eye_colour = Some("brown".into());
         c.measurements.sleeve_mm = Some(610);
         c.measurements.foot_left_mm = Some(265);

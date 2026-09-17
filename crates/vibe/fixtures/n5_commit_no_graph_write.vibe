@@ -1,0 +1,1 @@
+effect fn bad() { graph.commit(); }

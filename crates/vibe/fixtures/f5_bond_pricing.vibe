@@ -1,0 +1,35 @@
+module <https://qualiadb.org/modules/bond_pricing>;
+import "vibe:0.1/math" as m;
+pure fn present_value(face: f64, coupon: f64, yield_rate: f64, periods: f64) budget(steps: 10000) -> f64 {
+    if yield_rate == 0.0 {
+        return face + coupon * periods;
+    }
+    let mut pv: f64 = 0.0;
+    let mut t: f64 = 1.0;
+    while t <= periods {
+        pv = pv + coupon / m.pow(1.0 + yield_rate, t);
+        t = t + 1.0;
+    }
+    pv = pv + face / m.pow(1.0 + yield_rate, periods);
+    return pv;
+}
+pure fn macaulay_duration(coupon: f64, face: f64, yield_rate: f64, periods: f64) budget(steps: 10000) -> f64 {
+    let price = present_value(face, coupon, yield_rate, periods);
+    if price == 0.0 {
+        return 0.0;
+    }
+    let mut weighted: f64 = 0.0;
+    let mut t: f64 = 1.0;
+    while t <= periods {
+        let cf = coupon + face;
+        if t < periods {
+            let pv = coupon / m.pow(1.0 + yield_rate, t);
+            weighted = weighted + t * pv;
+        } else {
+            let pv = cf / m.pow(1.0 + yield_rate, t);
+            weighted = weighted + t * pv;
+        }
+        t = t + 1.0;
+    }
+    return weighted / price;
+}

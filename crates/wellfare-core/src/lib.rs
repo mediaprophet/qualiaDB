@@ -1,5 +1,6 @@
 pub mod anatomy;
 pub mod assessment;
+pub mod asset_aspects;
 pub mod authority_attestation;
 pub mod clinical;
 pub mod companion_pairing;
@@ -28,6 +29,16 @@ pub mod wasm;
 pub mod webizen;
 pub mod welfare_support;
 
+/// Re-export the T71 bridge types so consumers can use them without
+/// qualifying through `record::`.
+pub use record::{DurationBridge, InstantBridge};
+
+/// Legacy coarse Unix timestamp (T71). To be replaced with
+/// `vibe::value::Instant` in a future migration. Until then,
+/// this is the bridge type. Do not add new uses — use Instant
+/// where possible.
+pub type AssertedTime = u32;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,6 +46,18 @@ mod tests {
     use chrono::Timelike;
     use parser::*;
     use rdf::*;
+
+    #[test]
+    fn asserted_time_type_alias_exists() {
+        // T71: AssertedTime is a type alias for u32, bridging to Instant.
+        let t: AssertedTime = 1700000000;
+        assert_eq!(t, 1700000000u32);
+        // Verify it's the same size as u32.
+        assert_eq!(
+            std::mem::size_of::<AssertedTime>(),
+            std::mem::size_of::<u32>()
+        );
+    }
 
     #[test]
     fn test_parse_time_offset_minutes() {

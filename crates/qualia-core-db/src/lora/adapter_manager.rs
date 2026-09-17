@@ -157,11 +157,17 @@ pub struct LoRAAdapter {
 impl LoRAAdapter {
     /// Apply the LoRA delta **additively** to `output`.
     ///
-    /// Implements `output += lora_b @ (lora_a @ input) * scaling`.
+    /// Implements `output += lora_b @ (lora_a @ input) * scaling` using caller-provided scratch.
     ///
-    /// - `input`  must have length `meta.n_in`
+    /// - `input` must have length `meta.n_in`
     /// - `output` must have length `meta.n_out` (values are preserved and incremented)
-    pub fn apply_cpu(&self, input: &[f32], output: &mut [f32]) -> Result<(), LoRAError> {
+    /// - `rank_scratch` must have length >= `meta.rank`
+    pub fn apply_cpu_buffered(
+        &self,
+        input: &[f32],
+        output: &mut [f32],
+        rank_scratch: &mut [f32],
+    ) -> Result<(), LoRAError> {
         let n_in = self.meta.n_in;
         let n_out = self.meta.n_out;
         let rank = self.meta.rank as usize;
@@ -172,23 +178,39 @@ impl LoRAAdapter {
                 lora_n_in: n_in,
             });
         }
+        if rank_scratch.len() < rank {
+            return Err(LoRAError::InferenceDimMismatch {
+                input_len: rank_scratch.len(),
+                lora_n_in: rank,
+            });
+        }
 
         // Phase 1 — down-projection: z[rank] = A @ input
-        let mut z = vec![0f32; rank];
-        self.lora_a.matvec_add(input, &mut z);
+        rank_scratch[..rank].fill(0f32);
+        self.lora_a.matvec_add(input, &mut rank_scratch[..rank]);
 
         // Phase 2 — up-projection + scaling: output += B @ z * scaling
         let scaling = self.meta.scaling();
         for i in 0..n_out {
             let row = &self.lora_b.data[i * rank..(i + 1) * rank];
             let mut acc = 0f32;
-            for (bval, zval) in row.iter().zip(z.iter()) {
+            for (bval, zval) in row.iter().zip(rank_scratch[..rank].iter()) {
                 acc += bval * zval;
             }
             output[i] += acc * scaling;
         }
 
         Ok(())
+    }
+
+    /// Implements `output += lora_b @ (lora_a @ input) * scaling`.
+    ///
+    /// - `input`  must have length `meta.n_in`
+    /// - `output` must have length `meta.n_out` (values are preserved and incremented)
+    pub fn apply_cpu(&self, input: &[f32], output: &mut [f32]) -> Result<(), LoRAError> {
+        let rank = self.meta.rank as usize;
+        let mut z = vec![0f32; rank];
+        self.apply_cpu_buffered(input, output, &mut z)
     }
 
     /// Compute the LoRA delta vector without applying it.

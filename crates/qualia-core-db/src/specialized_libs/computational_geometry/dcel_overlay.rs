@@ -39,8 +39,8 @@
 //! ## Robustness
 //!
 //! Edge-edge intersection detection reuses the exact orientation predicate
-//! ([`super::primitives::orientation_2`]) via
-//! [`super::segment_intersection_2::classify_segment_intersection_2`]. The
+//! (`super::primitives::orientation_2`) via
+//! `super::segment_intersection_2::classify_segment_intersection_2`. The
 //! constructed intersection point is the parametric intersection of the two
 //! supporting lines. On-segment tests use a bounded tolerance scaled to the
 //! edge length so that constructed points re-predicate as on-segment.

@@ -34,7 +34,7 @@ pub fn generate_60bit_token(bytes: &[u8]) -> u64 {
     hash & 0x0FFF_FFFF_FFFF_FFFF
 }
 
-/// Generates a Virtual ID for a SPARQL-Star embedded triple <<s p o>>.
+/// Generates a Virtual ID for a SPARQL-Star embedded triple `<<s p o>>`.
 ///
 /// This function serializes the three u64 component IDs into a 24-byte array
 /// and hashes them using FNV-1a, then tags the result with TAG_EMBEDDED.

@@ -5,7 +5,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use qualia_core_db::{
-    NQuin,
     llm_agent::{
         AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict,
     },
@@ -13,6 +12,7 @@ use qualia_core_db::{
     orchestrator::{ModelLifecycle, OrchestrationResult},
     q_hash,
     wal::WriteAheadLog,
+    NQuin,
 };
 use serde::{Deserialize, Serialize};
 
@@ -64,6 +64,32 @@ pub struct ChatInferenceResult {
     pub wal_suspended: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub suspended_agreement_id: Option<u64>,
+}
+
+impl Default for ChatInferenceResult {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            provenance_hashes: Vec::new(),
+            citations: Vec::new(),
+            retrieval_triple_count: 0,
+            tokens_generated: 0,
+            inference_duration_ms: 0,
+            committed: false,
+            block_reason: None,
+            sub_agent_of: None,
+            agent_did: None,
+            model_id: None,
+            agent_backend: None,
+            semantic_quin: None,
+            wal_committed: false,
+            sieve_token_count: 0,
+            shield_alert: false,
+            axiom_bounds_label: None,
+            wal_suspended: false,
+            suspended_agreement_id: None,
+        }
+    }
 }
 
 pub fn request_cancel_inference() {
@@ -270,7 +296,7 @@ pub fn run_chat_inference_full(
         &routing.ontology_ids,
     );
 
-    let packet = match build_augmented_packet(
+    let mut packet = match build_augmented_packet(
         Path::new(&storage),
         session_id,
         &env,
@@ -283,6 +309,31 @@ pub fn run_chat_inference_full(
     ) {
         Ok(p) => p,
         Err(e) => return empty(&e.to_string()),
+    };
+
+    let graph_mutation = options.graph_mutation || env.graph_mutation;
+    // Precision contracts are cold-path model configuration. They apply only
+    // to the direct native chat decode path, where both input and output caps
+    // can be enforced. Graph-mutation turns use the orchestrator-owned decode
+    // path and therefore remain unchanged until it accepts a DecodeControl.
+    let active_precision = if graph_mutation || use_ollama {
+        None
+    } else {
+        let Some(active) = crate::api::load_active_model_record_from_disk() else {
+            return empty("No active model record — activate in LLM Hub.");
+        };
+        match crate::conditioning::apply_active_model_precision(
+            &active.model_id,
+            &mut packet.augmented_prompt,
+            prompt,
+        ) {
+            Ok(precision) => precision,
+            Err(error) => {
+                return empty(&format!(
+                    "Conditioning contract rejected chat input: {error}"
+                ))
+            }
+        }
     };
 
     // ── Optional Ollama harness (retrieval + ontology routing still Qualia) ──
@@ -337,7 +388,6 @@ pub fn run_chat_inference_full(
     );
 
     let frame_hash = q_hash(&format!("purpose:ChatSession:{session_id}"));
-    let graph_mutation = options.graph_mutation || env.graph_mutation;
     let (intent_predicate, mcp_intent_frame_hash, output_mode) = if graph_mutation {
         (frame_hash, frame_hash, N3OutputMode::GraphMutation)
     } else {
@@ -389,15 +439,31 @@ pub fn run_chat_inference_full(
 
     let t0 = std::time::Instant::now();
     let output = if let Some(cb) = on_token {
-        let (text, mut prov, tokens, semantic_quin) = agent.infer_local_model_streaming(
-            &packet.augmented_prompt,
-            &packet.graph_context_json,
-            Some(move |delta: String| {
-                if !is_inference_cancelled() {
-                    cb(delta);
-                }
-            }),
-        );
+        let (text, mut prov, tokens, semantic_quin) =
+            if let Some(precision) = active_precision.as_ref() {
+                let control = qualia_core_db::llm_agent::DecodeControl::default();
+                control.set_token_budget(precision.output_budget_tokens);
+                agent.infer_local_model_controlled(
+                    &packet.augmented_prompt,
+                    &packet.graph_context_json,
+                    control,
+                    Some(move |delta: String| {
+                        if !is_inference_cancelled() {
+                            cb(delta);
+                        }
+                    }),
+                )
+            } else {
+                agent.infer_local_model_streaming(
+                    &packet.augmented_prompt,
+                    &packet.graph_context_json,
+                    Some(move |delta: String| {
+                        if !is_inference_cancelled() {
+                            cb(delta);
+                        }
+                    }),
+                )
+            };
         prov.extend(retrieval.provenance_hashes.iter().copied());
         prov.sort_unstable();
         prov.dedup();
@@ -410,7 +476,27 @@ pub fn run_chat_inference_full(
             peak_memory_bytes: 0,
         }
     } else {
-        match agent.infer(&packet.augmented_prompt, &packet.graph_context_json) {
+        match if let Some(precision) = active_precision.as_ref() {
+            let control = qualia_core_db::llm_agent::DecodeControl::default();
+            control.set_token_budget(precision.output_budget_tokens);
+            let (text, provenance_quins, tokens_generated, semantic_quin) = agent
+                .infer_local_model_controlled(
+                    &packet.augmented_prompt,
+                    &packet.graph_context_json,
+                    control,
+                    None::<fn(String)>,
+                );
+            Ok(AgentOutput {
+                text,
+                semantic_quin,
+                provenance_quins,
+                tokens_generated,
+                inference_duration_ms: t0.elapsed().as_millis() as u64,
+                peak_memory_bytes: 0,
+            })
+        } else {
+            agent.infer(&packet.augmented_prompt, &packet.graph_context_json)
+        } {
             Ok(mut o) => {
                 o.provenance_quins
                     .extend(retrieval.provenance_hashes.iter().copied());

@@ -15,6 +15,8 @@ fn qapp_route(qapp_id: &str) -> &str {
     match qapp_id {
         // Talk is home (studio root). Legacy "dashboard" aliases the same route.
         "talk" | "dashboard" | "home" => "/",
+        "directory" | "contacts" | "dir" => "/talk/directory",
+        "mail" | "email" => "/talk/mail",
         "wellfair" => "/wellfair",
         "chora" => "/chora",
         "browser" => "/browser",
@@ -30,6 +32,7 @@ fn qapp_route(qapp_id: &str) -> &str {
         "tools" => "/tools",
         "sanctuary" => "/sanctuary",
         "logs" => "/logs",
+        "poet" | "vibe" => "/poet",
         "gpu-viewport" => "/gpu-viewport",
         _ => "/",
     }
@@ -44,6 +47,19 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
             format!("desktop route dispatch failed for {qapp_id}: {err}"),
         );
         return;
+    }
+    // Settings: Classic shell. Studio shell-navigate sets pending_settings and
+    // AppLayout's use_effect does navigator.push (dioxus-owned stack). No
+    // Closure push, no synthetic popstate (those failed UAT on e6a53c4 / 08b8c93).
+    if qapp_id == "settings" {
+        let _ = app.emit("shell-kind-set", "classic");
+    }
+    if qapp_id == "library" || qapp_id == "memory" {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.eval(
+                "try { location.hash = '#/library'; } catch (e) { console.warn(e); }",
+            );
+        }
     }
     crate::desktop_log::record("info", format!("desktop route -> {qapp_id} ({route})"));
 }
@@ -246,6 +262,9 @@ pub fn build_app_menu(
         .text("zoom_in", "Zoom In")
         .text("zoom_out", "Zoom Out")
         .text("reset_zoom", "Actual Size")
+        .separator()
+        .text("shell_classic", "Shell: Classic")
+        .text("shell_poet", "Shell: Poet")
         .build()?;
 
     let wellfair = MenuItem::with_id(app, "open_wellfair", "WellFair", true, Some("Ctrl+1"))?;
@@ -254,6 +273,8 @@ pub fn build_app_menu(
     let ten_d = MenuItem::with_id(app, "open_10d", "10D Browser", true, Some("Ctrl+4"))?;
     // Home shortcut: Talk (not a legacy "Dashboard" product surface).
     let talk = MenuItem::with_id(app, "open_talk", "Talk", true, Some("Ctrl+0"))?;
+    let directory = MenuItem::with_id(app, "open_directory", "Directory", true, None::<&str>)?;
+    let mail = MenuItem::with_id(app, "open_mail", "Mail", true, None::<&str>)?;
     let qapp_studio =
         MenuItem::with_id(app, "open_qapp_studio", "QApp Studio", true, None::<&str>)?;
     let qapp_manager = MenuItem::with_id(
@@ -264,8 +285,19 @@ pub fn build_app_menu(
         None::<&str>,
     )?;
 
+    let library = MenuItem::with_id(
+        app,
+        "open_library",
+        "Hypermedia Library",
+        true,
+        Some("Ctrl+Shift+L"),
+    )?;
+
     let qapps_menu = SubmenuBuilder::new(app, "QApps")
         .item(&talk)
+        .item(&directory)
+        .item(&mail)
+        .item(&library)
         .item(&wellfair)
         .item(&chora)
         .item(&browser)
@@ -278,21 +310,15 @@ pub fn build_app_menu(
     let settings = MenuItem::with_id(app, "open_settings", "Settings...", true, Some("Ctrl+,"))?;
     let diagnostics =
         MenuItem::with_id(app, "open_diagnostics", "Diagnostics", true, None::<&str>)?;
-    let library = MenuItem::with_id(
-        app,
-        "open_library",
-        "Hypermedia Library",
-        true,
-        None::<&str>,
-    )?;
     let wallet = MenuItem::with_id(app, "open_wallet", "Wallet", true, None::<&str>)?;
+    let poet = MenuItem::with_id(app, "open_poet", "Poet Harness", true, None::<&str>)?;
 
     let tools_menu = SubmenuBuilder::new(app, "Tools")
         .item(&settings)
         .item(&diagnostics)
         .separator()
-        .item(&library)
         .item(&wallet)
+        .item(&poet)
         .separator()
         .text("import_samsung", "Import Samsung Health...")
         .text("sync_relay", "Sync with Relay")
@@ -481,6 +507,13 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
                 "if (window.__webizenOpenCommandPalette) window.__webizenOpenCommandPalette();",
             );
         }
+        ShellAction::SetShellKind(kind) => {
+            let _ = app.emit("shell-kind-set", kind);
+            crate::desktop_log::record("info", format!("shell kind -> {kind}"));
+            if kind == "poet" {
+                navigate_main_to(app, "poet");
+            }
+        }
     }
 }
 
@@ -500,6 +533,9 @@ mod tests {
             ("talk", "/"),
             ("dashboard", "/"), // legacy alias → same home route as Talk
             ("home", "/"),
+            ("directory", "/talk/directory"),
+            ("dir", "/talk/directory"),
+            ("mail", "/talk/mail"),
             ("wellfair", "/wellfair"),
             ("chora", "/chora"),
             ("browser", "/browser"),

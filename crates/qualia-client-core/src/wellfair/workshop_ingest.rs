@@ -87,9 +87,8 @@ pub fn build_workshop_pack(
             }
         }
 
-        let mesh_path = sibling_mesh(&sidecar_path).ok_or_else(|| {
-            format!("no .glb/.obj/.stl next to {}", sidecar_path.display())
-        });
+        let mesh_path = sibling_mesh(&sidecar_path)
+            .ok_or_else(|| format!("no .glb/.obj/.stl next to {}", sidecar_path.display()));
         let mesh_path = match mesh_path {
             Ok(p) => p,
             Err(e) => {

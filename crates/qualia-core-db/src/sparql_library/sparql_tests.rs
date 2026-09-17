@@ -652,16 +652,36 @@ mod sparql_tests {
 
     #[test]
     fn test_mm_ma_ont_constants() {
-        // Verify MA Ontology predicates are defined
-        assert_eq!(ma_ont::HAS_FRAGMENT, 0x123456789ABCDEF0);
-        assert_eq!(ma_ont::DURATION, 0x789ABCDEF0123456);
+        // Verify MA Ontology predicates match their q_hash canonical IRIs.
+        assert_eq!(
+            ma_ont::HAS_FRAGMENT,
+            crate::q_hash("http://www.w3.org/ns/ma-ont#hasFragment")
+        );
+        assert_eq!(
+            ma_ont::DURATION,
+            crate::q_hash("http://www.w3.org/ns/ma-ont#duration")
+        );
+        // Constants must be non-zero and distinct.
+        assert_ne!(ma_ont::HAS_FRAGMENT, 0);
+        assert_ne!(ma_ont::DURATION, 0);
+        assert_ne!(ma_ont::HAS_FRAGMENT, ma_ont::DURATION);
     }
 
     #[test]
     fn test_mm_c2pa_constants() {
-        // Verify C2PA predicates are defined
-        assert_eq!(c2pa::HAS_CREDENTIAL, 0x6789ABCDEF012345);
-        assert_eq!(c2pa::IS_VERIFIED, 0x3456789ABCDEF012);
+        // Verify C2PA predicates match their q_hash canonical IRIs.
+        assert_eq!(
+            c2pa::HAS_CREDENTIAL,
+            crate::q_hash("http://ns.c2pa.org/credentials/hasCredential")
+        );
+        assert_eq!(
+            c2pa::IS_VERIFIED,
+            crate::q_hash("http://ns.c2pa.org/validation/isVerified")
+        );
+        // Constants must be non-zero and distinct.
+        assert_ne!(c2pa::HAS_CREDENTIAL, 0);
+        assert_ne!(c2pa::IS_VERIFIED, 0);
+        assert_ne!(c2pa::HAS_CREDENTIAL, c2pa::IS_VERIFIED);
     }
 
     // ===== SPARQL-DID Tests =====

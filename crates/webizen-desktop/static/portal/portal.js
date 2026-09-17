@@ -30,11 +30,14 @@ function renderStatus(s) {
   $("origin-label").textContent = `127.0.0.1:${s.settings_port}`;
   $("st-settings").innerHTML = `<span class="ok">Running</span> on :${s.settings_port}`;
 
-  const daemonCls = s.graph_daemon_reachable ? "ok" : "bad";
+  const daemonCls = s.graph_daemon_reachable ? "ok" : "held";
   const ver = s.graph_engine_version ? ` - ${s.graph_engine_version}` : "";
+  const label = s.graph_daemon_label
+    || (s.graph_daemon_reachable
+      ? `Native Connected to 127.0.0.1:${s.graph_daemon_port}`
+      : `held / not yet — local daemon 127.0.0.1:${s.graph_daemon_port}`);
   $("st-daemon").innerHTML =
-    `<span class="${daemonCls}">${s.graph_daemon_reachable ? "Reachable" : "Unreachable"}</span> ` +
-    `127.0.0.1:${s.graph_daemon_port}${ver}`;
+    `<span class="${daemonCls}">${label}</span>${ver}`;
 
   $("st-qapps").textContent =
     s.qapps_protocol_port ? `http://127.0.0.1:${s.qapps_protocol_port}/` : "Not started";

@@ -3,9 +3,11 @@
 //! This module is intentionally diagnostic/policy-facing rather than hot-path code:
 //! it records what the selected adapter actually exposes so benchmark rows, logs,
 //! and future feature negotiation can agree on the same facts.
+//!
+//! Compiles only with `gpu-runtime` (the feature that pulls in the wgpu crate).
+#![cfg(feature = "gpu-runtime")]
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg(not(target_arch = "wasm32"))]
 pub struct GpuFeatureCaps {
     pub timestamp_query: bool,
     pub timestamp_query_inside_passes: bool,
@@ -19,7 +21,6 @@ pub struct GpuFeatureCaps {
     pub ray_query: bool,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl GpuFeatureCaps {
     pub fn from_features(features: wgpu::Features) -> Self {
         Self {
@@ -77,7 +78,6 @@ pub fn experimental_features_allowed() -> bool {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg(not(target_arch = "wasm32"))]
 pub struct GpuLimitCaps {
     pub max_buffer_size: u64,
     pub max_storage_buffer_binding_size: u64,
@@ -87,7 +87,6 @@ pub struct GpuLimitCaps {
     pub max_compute_workgroups_per_dimension: u32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl GpuLimitCaps {
     pub fn from_limits(limits: &wgpu::Limits) -> Self {
         Self {
@@ -102,7 +101,6 @@ impl GpuLimitCaps {
 }
 
 #[derive(Debug, Clone)]
-#[cfg(not(target_arch = "wasm32"))]
 pub struct GpuAdapterCaps {
     pub name: String,
     pub backend: wgpu::Backend,
@@ -118,7 +116,6 @@ pub struct GpuAdapterCaps {
     pub limits: GpuLimitCaps,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl GpuAdapterCaps {
     pub fn from_adapter(adapter: &wgpu::Adapter) -> Self {
         let info = adapter.get_info();
@@ -194,7 +191,6 @@ impl GpuAdapterCaps {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn push_flag(out: &mut String, label: &str, enabled: bool) {
     if !out.is_empty() {
         out.push(' ');
@@ -265,6 +261,15 @@ pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
             "dx12 — Windows-native; set QUALIA_WGPU_BACKEND=vulkan for the portable path"
         }
         wgpu::Backend::Gl => "gl — compatibility fallback, limited compute (last resort)",
+        wgpu::Backend::BrowserWebGpu => "browser-webgpu — WebGPU in the page",
         _ => "noop/unknown — no GPU compute path",
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
+    match caps.backend {
+        wgpu::Backend::BrowserWebGpu => "browser-webgpu — WebGPU in the page (recommended in WASM)",
+        _ => "browser-webgpu — request a WebGPU adapter (recommended in WASM)",
     }
 }

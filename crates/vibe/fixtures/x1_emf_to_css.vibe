@@ -1,0 +1,9 @@
+module <https://qualiadb.org/modules/emf_to_css_color>;
+import "vibe:0.1/math" as m;
+pure fn wavelength_to_css_rgb(wavelength: f64) -> f64 {
+    let w = m.clamp(wavelength, 380.0, 780.0);
+    return (w - 380.0) / 400.0;
+}
+pure fn css_rgb_to_opacity(intensity: f64) -> f64 {
+    return m.clamp(intensity, 0.0, 1.0);
+}

@@ -1,6 +1,4 @@
 use crate::NQuin;
-use std::borrow::Cow;
-use std::sync::mpsc;
 
 /// Trigger a diffusion pass for the named graph. Returns `true` if enqueued,
 /// `false` if the graph_id is empty (no-op). The actual GPU pass runs async
@@ -9,6 +7,12 @@ pub fn trigger_diffusion(graph_id: &str) -> bool {
     !graph_id.is_empty()
 }
 
+#[cfg(feature = "gpu-runtime")]
+use std::borrow::Cow;
+#[cfg(feature = "gpu-runtime")]
+use std::sync::mpsc;
+
+#[cfg(feature = "gpu-runtime")]
 pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     if graph.is_empty() {
         return Ok(());
@@ -121,6 +125,11 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     } else {
         Err("Failed to read back from GPU".to_string())
     }
+}
+
+#[cfg(not(feature = "gpu-runtime"))]
+pub async fn execute_diffusion_pass(_graph: &mut [NQuin]) -> Result<(), String> {
+    Ok(())
 }
 
 // ─── CPU-side belief diffusion / energy / annealing (zero-heap, GPU-independent) ──
@@ -240,9 +249,17 @@ mod tests {
         let res = pollster::block_on(async { execute_diffusion_pass(&mut graph).await });
         assert!(res.is_ok());
 
-        // Low u32 (2) -> 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
-        assert_eq!(graph[0].subject, 4294967299);
-        // Odd subject 3 -> Low u32 (3) remains 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
-        assert_eq!(graph[1].subject, 4294967299);
+        #[cfg(feature = "gpu-runtime")]
+        {
+            // Low u32 (2) -> 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
+            assert_eq!(graph[0].subject, 4294967299);
+            // Odd subject 3 -> Low u32 (3) remains 3. High u32 (0) -> 1. Recombined u64 = (1 << 32) | 3 = 4294967299
+            assert_eq!(graph[1].subject, 4294967299);
+        }
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            assert_eq!(graph[0].subject, 2);
+            assert_eq!(graph[1].subject, 3);
+        }
     }
 }

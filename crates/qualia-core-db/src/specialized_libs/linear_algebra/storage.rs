@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, Mutex};
 
 use super::core_types::*;
@@ -123,10 +124,17 @@ pub enum CachePolicy {
 }
 
 /// Storage backend abstraction
+#[cfg(not(target_arch = "wasm32"))]
 pub struct StorageBackend {
     pub backend_type: BackendType,
     pub zns_manager: Option<Arc<Mutex<crate::zns_storage::ZnsZoneManager>>>,
     pub csd_manager: Arc<Mutex<crate::csd_storage::CsdManager>>,
+    pub matrix_store: HashMap<String, Matrix>,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub struct StorageBackend {
+    pub backend_type: BackendType,
     pub matrix_store: HashMap<String, Matrix>,
 }
 
@@ -682,6 +690,7 @@ impl MatrixCache {
 }
 
 impl StorageBackend {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> Self {
         let zns_manager = crate::zns_storage::ZnsZoneManager::new("default_zone")
             .ok()
@@ -694,6 +703,14 @@ impl StorageBackend {
             },
             zns_manager,
             csd_manager: Arc::new(Mutex::new(crate::csd_storage::CsdManager::new())),
+            matrix_store: HashMap::new(),
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn new() -> Self {
+        Self {
+            backend_type: BackendType::CSD,
             matrix_store: HashMap::new(),
         }
     }

@@ -279,7 +279,7 @@ pub fn SemanticLibrary() -> Element {
                     if crate::endpoints::is_native_host() {
                         status_error.set(true);
                         status.set(format!(
-                            "The desktop library service is unavailable: {error}"
+                            "held / not yet — library shelf needs the desktop host ({error})"
                         ));
                     } else {
                         // Static previews demonstrate the information architecture;
@@ -346,12 +346,13 @@ pub fn SemanticLibrary() -> Element {
 
     rsx! {
         div {
-            style: "height:100%;min-height:0;display:grid;grid-template-columns:240px minmax(0,1fr) 310px;background:var(--qualia-bg);color:var(--qualia-text);",
+            "data-surface": "library",
+            style: "flex:1;min-height:28rem;display:grid;grid-template-columns:240px minmax(0,1fr) 310px;background:var(--qualia-bg);color:var(--qualia-text);",
             aside {
                 style: "min-height:0;overflow:auto;border-right:1px solid var(--qualia-border);padding:20px 14px;background:color-mix(in srgb,var(--qualia-surface) 86%,transparent);",
                 div { style: "padding:0 10px 18px;",
-                    div { style: "font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--qualia-accent);font-weight:800;", "Hypermedia" }
-                    h1 { style: "font-size:1.28rem;margin:5px 0 6px;letter-spacing:-.03em;", "Semantic Library" }
+                    div { style: "font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--qualia-accent);font-weight:800;", "Hypermedia Library" }
+                    h1 { style: "font-size:1.28rem;margin:5px 0 6px;letter-spacing:-.03em;", "Lived Memory" }
                     p { style: "font-size:.75rem;line-height:1.45;color:var(--qualia-text-muted);margin:0;", "Files become connected graph documents—not isolated uploads." }
                 }
                 nav { aria_label: "Library collections", style: "display:flex;flex-direction:column;gap:4px;",

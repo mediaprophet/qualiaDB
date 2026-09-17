@@ -1,6 +1,6 @@
 //! Respiratory rate proxy from vertical motion energy band (compat entry).
 //!
-//! Delegates to [`super::respiration_rate_from_motion_trace`] with default SNR gate.
+//! Delegates to [`super::respiration_rate_from_motion_trace()`] with default SNR gate.
 
 use super::respiration_rate_from_motion_trace::respiration_rate_from_motion_trace;
 use super::rr_estimate::RR_MIN_SNR_DEFAULT;

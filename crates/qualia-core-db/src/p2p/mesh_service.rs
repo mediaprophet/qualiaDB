@@ -414,13 +414,14 @@ mod tests {
     /// carry an inner IPv6 packet A→B — driven entirely through the async command/inbound channels.
     /// The acceptance test for "the mesh runs as a service".
     #[test]
+    #[serial_test::serial]
     fn two_services_peer_and_deliver_over_channels() {
         let a_keys = generate_keypair();
         let b_keys = generate_keypair();
         let a_pub = a_keys.public_hex();
         let b_pub = b_keys.public_hex();
 
-        let to = Some(Duration::from_millis(50));
+        let to = Some(Duration::from_millis(500));
         let ip = "127.0.0.1".parse().unwrap();
         let a = MeshService::spawn(SocialWebNet::new(a_keys, ip, to));
         let b = MeshService::spawn(SocialWebNet::new(b_keys, ip, to));

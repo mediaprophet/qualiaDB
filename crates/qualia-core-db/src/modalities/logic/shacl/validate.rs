@@ -2,7 +2,7 @@
 //!
 //! [`ShaclCompiler`](super::shacl_compiler) lowers a shape to `SlgOpcode`s for the
 //! firewall (LLM-rule gating). This module is the complementary **data validator**:
-//! it interprets the full [`ShaclConstraint`](super::shacl_types::ShaclConstraint)
+//! it interprets the full [`ShaclConstraint`]
 //! vocabulary against a graph of [`NQuin`]s and produces a real
 //! [`ValidationReport`] — the path a "validate this data against this shape"
 //! request (e.g. the docs playground, ingestion-time conformance) actually takes.
@@ -10,7 +10,7 @@
 //! ## Values are hashes — string constraints need a resolver
 //!
 //! Quin object fields hold either an **inline-typed literal** (numeric/boolean,
-//! decodable here via [`frame_layout`]) or the **`q_hash` of a lexical value**
+//! decodable here via `frame_layout()`) or the **`q_hash` of a lexical value**
 //! (IRIs and strings — one-way). Numeric/cardinality/value-type/structural
 //! constraints are therefore fully enforceable on the bare graph. String-shaped
 //! constraints (`sh:pattern`, `sh:minLength`/`maxLength`, `sh:languageIn`,

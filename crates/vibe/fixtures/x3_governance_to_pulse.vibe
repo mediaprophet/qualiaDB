@@ -1,0 +1,26 @@
+module <https://qualiadb.org/modules/governance_to_pulse>;
+prefix policy: <https://qualiadb.org/policy/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("pulse.publish", topic: "governance/alert")
+];
+pure fn severity_to_pulse_value(severity: i64) -> f64 {
+    if severity >= 3 {
+        return 1.0;
+    }
+    if severity >= 2 {
+        return 0.5;
+    }
+    if severity >= 1 {
+        return 0.1;
+    }
+    return 0.0;
+}
+effect fn emit_governance_alert(actor: Iri, severity: i64) {
+    let value = severity_to_pulse_value(severity);
+    effect pulse.publish("governance/alert", value);
+    let claim = <<( actor policy:alerted severity )>>;
+    graph.stage(claim);
+    return null;
+}

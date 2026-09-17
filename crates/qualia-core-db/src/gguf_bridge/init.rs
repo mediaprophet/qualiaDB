@@ -4,6 +4,7 @@ use super::*;
 
 impl QTensorEngine {
     /// Resolve the MC8 elementwise GPU pipeline for a given opcode.
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn elem_gpu_pipeline(&self, op: u32) -> Option<&wgpu::ComputePipeline> {
         use super::gpu_params::{ELEM_OP_ADD_RESIDUAL, ELEM_OP_RMS_NORM};
         match op {
@@ -12,6 +13,7 @@ impl QTensorEngine {
             _ => None,
         }
     }
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn gpu_device(&self) -> &wgpu::Device {
         #[cfg(target_arch = "wasm32")]
         {
@@ -24,6 +26,7 @@ impl QTensorEngine {
     }
 
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn gpu_queue(&self) -> &wgpu::Queue {
         #[cfg(target_arch = "wasm32")]
         {
@@ -37,16 +40,19 @@ impl QTensorEngine {
 
     /// Shared process-wide wgpu device (LLM + render coexistence).
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub fn device(&self) -> &wgpu::Device {
         self.gpu_device()
     }
 
     /// Shared process-wide wgpu queue.
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub fn queue(&self) -> &wgpu::Queue {
         self.gpu_queue()
     }
 
+    #[cfg(feature = "gpu-runtime")]
     pub async fn try_new() -> Result<Self, String> {
         #[cfg(not(target_arch = "wasm32"))]
         log::info!(
@@ -72,27 +78,12 @@ impl QTensorEngine {
 
         #[cfg(target_arch = "wasm32")]
         let (wasm_device, wasm_queue) = {
-            let instance = wgpu::Instance::default();
-            // Prefer the high-performance adapter on phones (Pixel / Android
-            // Chrome often expose a low-power fallback that stalls compute).
-            let adapter = match instance
-                .request_adapter(&wgpu::RequestAdapterOptions {
-                    power_preference: wgpu::PowerPreference::HighPerformance,
-                    ..Default::default()
-                })
-                .await
-            {
-                Ok(a) => a,
-                Err(high_err) => instance
-                    .request_adapter(&wgpu::RequestAdapterOptions::default())
-                    .await
-                    .map_err(|e| {
-                        format!(
-                            "Failed to find wgpu adapter (high-performance: {high_err}; default: {e})"
-                        )
-                    })?,
-            };
-            let info = adapter.get_info();
+            crate::gguf_bridge::wasm_yield::phase("Acquiring shared WebGPU device…").await;
+            crate::gpu_context::ensure_shared_gpu().await?;
+            let shared = crate::gpu_context::try_shared_gpu().ok_or_else(|| {
+                "shared WebGPU device missing after ensure_shared_gpu".to_string()
+            })?;
+            let info = shared.adapter.get_info();
             log::info!(
                 "LLM_LOAD|webgpu-adapter|0.20|name={} backend={:?} device={:?} vendor={:?}",
                 info.name,
@@ -100,50 +91,7 @@ impl QTensorEngine {
                 info.device,
                 info.vendor
             );
-            // Browser WebGPU exposes a smaller feature set than native backends.
-            // Intersecting with the adapter keeps device creation portable while
-            // still enabling f16/subgroup/timing acceleration where available.
-            let required_features =
-                crate::gpu_context::requested_native_llm_features(adapter.features());
-            let experimental_features =
-                if required_features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX) {
-                    // Safety: the feature is both explicitly opted into and advertised
-                    // by the browser adapter before this token is enabled.
-                    unsafe { wgpu::ExperimentalFeatures::enabled() }
-                } else {
-                    wgpu::ExperimentalFeatures::disabled()
-                };
-            // Raise buffer caps to the adapter's advertised maximum (same pattern as
-            // native shared_gpu). Default wgpu caps are too small for real weight
-            // tensors and can make requestDevice succeed then fail at buffer create.
-            let adapter_limits = adapter.limits();
-            let required_limits = wgpu::Limits {
-                max_buffer_size: adapter_limits.max_buffer_size,
-                max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
-                ..wgpu::Limits::default()
-            };
-
-            crate::gguf_bridge::wasm_yield::phase(&format!(
-                "Adapter '{}' — creating WebGPU device…",
-                info.name
-            ))
-            .await;
-            adapter
-                .request_device(&wgpu::DeviceDescriptor {
-                    label: Some("qualia-wasm-llm"),
-                    required_features,
-                    required_limits,
-                    experimental_features,
-                    ..Default::default()
-                })
-                .await
-                .map_err(|e| {
-                    format!(
-                        "WebGPU requestDevice failed on adapter '{}': {e}. \
-                         On phones use SmolLM2-360M only, close other tabs, and ensure Chrome WebGPU is enabled.",
-                        info.name
-                    )
-                })?
+            (shared.device.clone(), shared.queue.clone())
         };
         #[cfg(target_arch = "wasm32")]
         let device = &wasm_device;
@@ -1366,7 +1314,7 @@ impl QTensorEngine {
         Ok(engine)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn new() -> Self {
         let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
             let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap()));
@@ -1379,6 +1327,59 @@ impl QTensorEngine {
         })
     }
 
+    /// CPU-only engine: mmap + hyperparams + dequant/GEMM. No wgpu, no device.
+    #[cfg(not(feature = "gpu-runtime"))]
+    fn cpu_runtime() -> Self {
+        Self {
+            is_initialized: true,
+            #[cfg(target_os = "windows")]
+            dml: None,
+            gguf_mmap: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tokenizer: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tensor_index: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_token_embd: None,
+            #[cfg(target_arch = "wasm32")]
+            p64_resident: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            p64_index: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            tensor_index_cache: None,
+            tensor_data_offset: 0,
+            hyperparams: crate::gguf_sharder::GgufHyperparams::default(),
+            max_tensor_bytes: 0,
+            #[cfg(target_arch = "wasm32")]
+            mc8_weights_resident: false,
+            #[cfg(target_arch = "wasm32")]
+            mc8_weight_role_stride: [0u64; 7],
+            gemm_max_out_dim: MAX_STACK_GEMM_OUT as u32,
+            gemm_max_input_floats: 0,
+            kv_layout: None,
+            kv_cache_cpu: None,
+            mc8_logits_row_bytes: 0,
+            #[cfg(target_arch = "wasm32")]
+            mc8_norm_stride: 0,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+            cuda_decode_plan: super::cuda_decode_plan::CudaDecodePlanState::Unbuilt,
+        }
+    }
+
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub async fn try_new() -> Result<Self, String> {
+        log::info!(
+            "LLM_LOAD|engine-init|0.10|Initializing CPU-only GGUF runtime (gpu-runtime off)"
+        );
+        Ok(Self::cpu_runtime())
+    }
+
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub fn new() -> Self {
+        Self::cpu_runtime()
+    }
+
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
         let layout = match KvCacheLayout::from_hyperparams(h) {
             Some(l) => l,
@@ -1479,6 +1480,25 @@ impl QTensorEngine {
         );
     }
 
+    /// CPU-only KV arena: layout + host mirror. No wgpu buffers.
+    #[cfg(not(feature = "gpu-runtime"))]
+    pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
+        let layout = match KvCacheLayout::from_hyperparams(h) {
+            Some(l) => l,
+            None => return,
+        };
+        let total = layout.total_f32_elems;
+        let max_context = layout.max_context;
+        let cpu = vec![0f32; total].into_boxed_slice();
+        self.kv_layout = Some(layout);
+        self.kv_cache_cpu = Some(cpu);
+        log::info!(
+            "LLM_LOAD|kv-cache|0.86|Reserved {:.1} MiB CPU KV cache (context {})",
+            (total * std::mem::size_of::<f32>()) as f64 / (1024.0 * 1024.0),
+            max_context,
+        );
+    }
+
     /// Zero the static KV arena at the start of a new decode context (zero heap in decode).
     pub fn reset_kv_cache(&mut self) {
         let Some(layout) = self.kv_layout.as_ref() else {
@@ -1490,18 +1510,19 @@ impl QTensorEngine {
                 unsafe { core::ptr::write_volatile(v, 0.0) };
             }
         }
+        #[cfg(feature = "gpu-runtime")]
         if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
             self.gpu_queue()
                 .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
         }
         // W5b Phase 4b: the zero above wiped the atoms tail — re-seed it (dict mode only).
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         self.upload_dict_atoms();
     }
 
     /// W5b Phase 4b: write the installed dictionary atoms into the tail of each layer's arena slice
     /// (after that layer's code region). No-op unless dict mode is active and atoms are installed.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn upload_dict_atoms(&self) {
         let Some(layout) = self.kv_layout.as_ref() else {
             return;
@@ -1548,6 +1569,7 @@ impl QTensorEngine {
         if let Some(cpu) = self.kv_cache_cpu.as_mut() {
             cpu[..n].copy_from_slice(&data[..n]);
         }
+        #[cfg(feature = "gpu-runtime")]
         if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
             self.gpu_queue()
                 .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
@@ -1558,7 +1580,7 @@ impl QTensorEngine {
     /// not the decode hot path). The returned flat buffer is interpretable via `KvCacheLayout::
     /// k_index`/`v_index` **only when the layout is f32** (int8 KV disabled at load); with an int8
     /// layout the bytes are packed i8 lanes + scales and this returns `None`.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn read_kv_cache_gpu(&self) -> Option<Vec<f32>> {
         let gpu = self.kv_cache_gpu.as_ref()?;
         let layout = self.kv_layout.as_ref()?;
@@ -1607,7 +1629,7 @@ impl QTensorEngine {
     /// (capped at `max_per_layer` per layer per stream). The **GPU-readback** capture route for the
     /// sparse-KV-dictionary go/no-go — reads the real decode-path K/V straight from VRAM, no CPU
     /// reference forward. Returns `None` on an int8 layout or if readback fails.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn capture_kv_f32(
         &self,
         n_tokens: u32,
@@ -1659,6 +1681,7 @@ impl QTensorEngine {
         Some(crate::kv_capture::KvCapture { head_dim, k, v })
     }
 
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
         // existing argmax path is unaffected whether or not this succeeds).
@@ -1880,3 +1903,7 @@ impl QTensorEngine {
         self.max_tensor_bytes = max_weight_bytes;
     }
 }
+
+/// Compile-time proof that CPU constructors exist when wgpu is not linked.
+#[cfg(not(feature = "gpu-runtime"))]
+const _: fn() -> super::QTensorEngine = super::QTensorEngine::new;

@@ -45,7 +45,7 @@ pub fn write_sorted_quins_volume_with_author(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::q42_volume::{Q42Volume, Q42_MAGIC, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES};
+    use crate::q42_volume::{Q42Volume, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES, Q42_MAGIC};
 
     fn quin(object: u64) -> NQuin {
         let subject = 1;

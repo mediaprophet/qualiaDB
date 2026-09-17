@@ -1,0 +1,7 @@
+module <https://qualiadb.org/modules/portfolio_opt>;
+import "vibe:0.1/math" as m;
+pure fn weighted_return(r1: f64, w1: f64, r2: f64, w2: f64) -> f64 {
+    let total_w = w1 + w2;
+    let tw = m.max(0.001, total_w);
+    return (r1 * w1 + r2 * w2) / tw;
+}

@@ -112,6 +112,12 @@ fn collect_subject(
     Ok(())
 }
 
+/// Bounded stride sample of an in-memory Quin slice. Filesystem `.q42` sampling
+/// stays on [`mmap_sample_quins`]; WASM query paths use this over packed frames.
+pub fn sample_quins(quins: &[NQuin], max_quins: usize) -> Vec<NQuin> {
+    stride_sample(quins, max_quins)
+}
+
 fn stride_sample(quins: &[NQuin], max_quins: usize) -> Vec<NQuin> {
     if max_quins == 0 || quins.is_empty() {
         return Vec::new();

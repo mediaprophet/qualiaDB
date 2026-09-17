@@ -7,9 +7,9 @@
 //! operation. Both now route here.
 //!
 //! Two entry points, same modality:
-//! - [`symmetric_eigen_3x3`] — closed-form (Smith's algorithm) for the symmetric
+//! - `symmetric_eigen_3x3` — closed-form (Smith's algorithm) for the symmetric
 //!   3×3 case; zero-heap, no iteration, eigenvalues sorted descending.
-//! - [`symmetric_eigen`] — cyclic-Jacobi for general `n×n`; in-place on a
+//! - `symmetric_eigen` — cyclic-Jacobi for general `n×n`; in-place on a
 //!   caller-owned buffer, also yields eigenvectors. Zero-heap.
 
 use crate::solvers::SolversError;

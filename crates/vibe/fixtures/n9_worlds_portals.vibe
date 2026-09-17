@@ -1,0 +1,28 @@
+// VibeScript 0.1 — World / portals fixture
+// Tests: World.new, World.add_object, World.add_portal, World.add_avatar,
+//        World.set_gravity, World.object_apply_force, World.object_step_physics,
+//        Portal.set_target, Portal.activate, Avatar.move, Avatar.set_appearance
+
+let world = World.new({ id: "w1", name: "Virtual Gallery" });
+
+World.add_object({ id: "w1", name: "Sculpture" });
+
+World.add_portal({ id: "w1", target_world: "w2" });
+
+World.add_avatar({ id: "w1", user_did: "did:q42:alice" });
+
+World.set_gravity({ id: "w1", gravity: [0.0, -9.81, 0.0] });
+
+World.object_apply_force({
+  id: "w1",
+  force: [10.0, 0.0, 0.0],
+  delta_time: 0.016,
+});
+
+World.object_step_physics({ id: "w1", delta_time: 0.016 });
+
+Portal.set_target({ id: "p1", target_world: "w3" });
+Portal.activate({ id: "p1" });
+
+Avatar.move({ id: "a1", position: [10.0, 0.0, 5.0] });
+Avatar.set_appearance({ id: "a1", model_id: "model_a", height: 1.8, scale: 1.0 });

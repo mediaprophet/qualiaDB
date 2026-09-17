@@ -1,7 +1,7 @@
 //! SPARQL-MM (Multimedia) Support
 //!
 //! Implements SPARQL-MM for media fragments and time-series windowing.
-//! Supports Media Annotations Ontology (MA Ontology, http://www.w3.org/ns/ma-ont#).
+//! Supports Media Annotations Ontology (MA Ontology, <http://www.w3.org/ns/ma-ont#>).
 //!
 //! V6 repair: MA/C2PA constants use canonical `q_hash` (no placeholder collisions);
 //! caller-buffered region/time queries; real spatial intersection; honest C2PA status.

@@ -47,9 +47,9 @@ pub struct GgufHyperparams {
     pub shared_kv_layers: u32,
     /// Final logit softcapping (Gemma 2+); `0` → disabled.
     pub logit_softcap: f32,
-    /// [`ARCH_*`] id from `general.architecture` (and tensor-feature refinement).
+    /// `ARCH_*()` id from `general.architecture` (and tensor-feature refinement).
     pub architecture: u32,
-    /// [`ARCH_FLAG_*`] bitmask.
+    /// `ARCH_FLAG_*()` bitmask.
     pub arch_flags: u32,
 }
 
@@ -174,7 +174,7 @@ impl GgufHyperparams {
     }
 }
 
-/// Map `general.architecture` GGUF string → [`ARCH_*`].
+/// Map `general.architecture` GGUF string → `ARCH_*()`.
 pub fn parse_architecture_id(name: &str) -> u32 {
     let n = name.trim().to_ascii_lowercase();
     match n.as_str() {

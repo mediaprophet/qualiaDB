@@ -1,0 +1,5 @@
+[
+  {"from": "arrive", "to": "concept:arrive", "framing": "living-SHACL"},
+  {"from": "hold", "to": "concept:hold", "framing": "mixed"},
+  {"from": "leave", "to": "concept:leave", "framing": "artifact-OWL"}
+]

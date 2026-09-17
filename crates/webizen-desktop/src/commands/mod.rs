@@ -27,12 +27,13 @@ pub use wellfair::{
 };
 pub mod directory;
 pub mod ingest;
-pub mod q42;
 pub mod mail;
 pub mod personal_directory;
+pub mod q42;
 pub mod qapp_host;
 pub mod qapp_telemetry;
 pub mod semantic;
+pub mod semantic_instruments;
 pub mod social;
 pub mod wallet;
 pub use qapp_host::HostApiState;
@@ -43,9 +44,13 @@ pub use render::{
 };
 pub mod browser_10d;
 pub mod native_bindings;
+pub mod poet;
+pub mod poet_daemon;
+pub mod poet_render;
 pub mod semantic_logic;
 pub mod telemetry;
 pub mod updater;
+pub mod vibe_host;
 pub mod vision_audio;
 
 // ── Shared types & helpers ────────────────────────────────────────────────────
@@ -160,11 +165,14 @@ pub fn get_desktop_status(
             completed: 0,
             failed: 0,
         });
+    let probe = poet_daemon::probe_local_daemon();
     serde_json::json!({
         "settings_port": crate::settings_server::current_settings_port(),
-        "graph_daemon_port": qualia_client_core::api::get_active_daemon_port(),
-        "graph_daemon_reachable": daemon_running,
-        "graph_engine_version": serde_json::Value::Null,
+        "graph_daemon_port": probe.port,
+        "graph_daemon_reachable": probe.reachable,
+        "graph_daemon_label": probe.label,
+        "graph_daemon_honesty": probe.honesty,
+        "graph_engine_version": probe.version,
         "qapps_protocol_port": qualia_client_core::qapps_protocol::qualia_protocol_port(),
         "storage_path": config.storage_path,
         "inference_backend": config.inference_backend,
@@ -273,6 +281,27 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
     tauri::generate_handler![
         // ── Local (mod.rs) ──
         get_desktop_status,
+        poet::poet_eval,
+        poet::poet_lexicon_manifest,
+        poet::poet_volume_open,
+        poet::poet_volume_commit,
+        poet_daemon::poet_daemon_probe,
+        poet::poet_reset,
+        poet::poet_gazetteer,
+        poet::poet_capabilities,
+        poet::poet_recompute,
+        poet::poet_cells,
+        poet::poet_dispatch_hook,
+        poet::poet_store_program,
+        poet::poet_programs,
+        poet::poet_tick,
+        poet::poet_pulse_event,
+        poet_render::poet_render_preview,
+        vibe_host::vibe_host_info,
+        vibe_host::vibe_diagnose,
+        vibe_host::vibe_parse,
+        vibe_host::vibe_check,
+        vibe_host::vibe_capability_invoke,
         get_desktop_logs,
         set_desktop_debug_mode,
         get_supervisor_state,
@@ -588,6 +617,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         q42::verify_q42_volume,
         q42::magnet_q42_volume,
         q42::compact_q42_volume,
+        q42::open_q42_file_picker,
+        q42::save_q42_file_picker,
         // ── inference (in ingest.rs) ──
         ingest::discover_models,
         ingest::download_and_vectorize,
@@ -606,6 +637,18 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         semantic::update_solar_input,
         semantic::fetch_torrent_telemetry,
         semantic::fetch_remote_manifest,
+        semantic_instruments::si_list_demos,
+        semantic_instruments::si_list_references,
+        semantic_instruments::si_collect_demo,
+        semantic_instruments::si_activate_demo,
+        semantic_instruments::si_inspect_demo,
+        semantic_instruments::si_run_demo,
+        semantic_instruments::si_set_run_permitted,
+        semantic_instruments::si_list_receipts,
+        semantic_instruments::si_revoke_demo,
+        semantic_instruments::si_suspend_demo,
+        semantic_instruments::si_remove_demo,
+        semantic_instruments::si_cancel_run,
         // ── directory ──
         semantic::load_imported_accounts,
         semantic::save_imported_accounts,

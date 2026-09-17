@@ -24,10 +24,11 @@ $packageVersion = $Matches[1]
 
 Push-Location $CrateDir
 try {
-    # Slim viewport+acoustic bundle: qualia-shell.js / qualia-wasm-runtime.js load this on every spatial
-    # page, so it must stay under the wasm-size-check budget (2 MB raw / 800 KB gzip). +simd128 for the
-    # SIMD kernels. The browser LLM ships in the wasm-full *playground* bundle (docs/playground) — not the
-    # portal — which is where the 8 MB stack / 4 GB max-memory link-args belong.
+    # Full WASM-safe portal (logic + science + WebGPU viewport). GitHub Pages / release-wasm
+    # sanity cap is 16 MiB raw / 4 MiB gzip — not a slim viewport budget. +simd128 for the
+    # SIMD kernels. The browser LLM ships in the wasm-full *playground* bundle (docs/playground)
+    # — not the portal — which is where the 8 MB stack / 4 GB max-memory link-args belong.
+    # Ontology MCP stays the tight 640 KiB / 200 KiB product.
     $env:RUSTFLAGS = "-C target-feature=+simd128"
     cmd.exe /d /s /c "wasm-pack build --target web --out-dir pkg-qualia --release -- --no-default-features --features portal 2>&1"
     $wasmPackExitCode = $LASTEXITCODE
@@ -79,6 +80,17 @@ if (Test-Path $qualiaJs) {
     types = "qualia.d.ts"
     files = @("qualia.js", "qualia_bg.wasm", "qualia.d.ts", "qualia_bg.wasm.d.ts", "LICENSE")
 } | ConvertTo-Json | Set-Content (Join-Path $DocsPkg "package.json") -Encoding UTF8
+
+$wasmCheck = Join-Path $PSScriptRoot "..\docs\tests\wasm-size-check.mjs"
+$portalWasm = Join-Path $DocsPkg "qualia_bg.wasm"
+if (Get-Command node -ErrorAction SilentlyContinue) {
+    & node $wasmCheck $portalWasm 16777216 4194304
+    if ($LASTEXITCODE -ne 0) {
+        throw "portal WASM exceeded the GitHub Pages 16 MiB / 4 MiB sanity cap"
+    }
+} else {
+    Write-Host "node not found; skip wasm-size-check (CI still enforces the 16 MiB / 4 MiB cap)"
+}
 
 Write-Host "Qualia WASM portal v$packageVersion built from qualia-core-db -> $DocsPkg"
 

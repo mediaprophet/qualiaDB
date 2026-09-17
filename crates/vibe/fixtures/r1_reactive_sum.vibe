@@ -1,0 +1,13 @@
+module <https://qualiadb.org/modules/reactive_sum>;
+requires [ capability("graph.read") ];
+
+cell counted := 0;
+
+pure fn count_rows() -> Result<i64, string> {
+    let rows = graph.query(?s, ?p, ?o, take: 16)?;
+    let mut n: i64 = 0;
+    for row in rows {
+        n = n + 1;
+    }
+    return Ok(n);
+}

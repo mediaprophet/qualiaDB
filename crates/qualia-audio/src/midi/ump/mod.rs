@@ -2,13 +2,13 @@
 //!
 //! Re-exports only. UMP container/message-type/group fields live in [`packet`];
 //! word building and MIDI 1.0→2.0 translation in [`encode`]; word parsing and
-//! MIDI 2.0→1.0 translation in [`decode`]; the default resolution bit-scaling in
+//! MIDI 2.0→1.0 translation in [`decode()`]; the default resolution bit-scaling in
 //! [`scale`]; the MIDI-CI Discovery skeleton in [`midi_ci`].
 //!
 //! - [`UmpPacket`] / [`Midi2ChannelVoice`] / [`packet_word_count`] — packet model.
 //! - [`encode_midi1_channel_voice`] / [`encode_midi2_channel_voice`] — build words.
 //! - [`translate_midi1_to_midi2`] / [`translate_midi2_to_midi1`] — protocol xlate.
-//! - [`decode_midi1_channel_voice`] / [`decode_midi2_channel_voice`] / [`decode`] — parse.
+//! - [`decode_midi1_channel_voice`] / [`decode_midi2_channel_voice`] / [`mod@decode`] — parse.
 //! - [`scale_up`] / [`scale_down`] — 7↔16 / 14↔32 resolution scaling.
 //! - [`MidiCiDiscovery`] — MIDI-CI discovery message.
 

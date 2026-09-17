@@ -196,13 +196,17 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   }
 
   function createTab(qappId) {
-    // Default tab: Talk (human-first front door). Empty hash → studio `/` = TalkRoute.
+    // Default tab: Talk (human-first front door). Empty hash → studio `/` = Talk.
+    // Library is `/studio/#/library` — never recycle the empty hash.
     qappId = normalizeQappId(qappId);
     const path = studioPath(qappId);
     const url = '/studio/#/' + path;
     const title =
-      qappId === 'talk'
-        ? 'Talk'
+      qappId === 'talk' ? 'Talk'
+        : (qappId === 'directory' || qappId === 'dir' || qappId === 'contacts') ? 'Directory'
+        : (qappId === 'mail' || qappId === 'email') ? 'Mail'
+        : qappId === 'settings' ? 'Settings'
+        : qappId === 'library' || qappId === 'memory' ? 'Library'
         : qappId.charAt(0).toUpperCase() + qappId.slice(1);
 
     const tab = document.createElement('div');
@@ -234,6 +238,11 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   function studioPath(qappId) {
     qappId = normalizeQappId(qappId);
     if (qappId === 'talk') return '';
+    if (qappId === 'directory' || qappId === 'contacts' || qappId === 'addressbook'
+        || qappId === 'address-book' || qappId === 'dir' || qappId === 'rolodex') {
+      return 'talk/directory';
+    }
+    if (qappId === 'mail' || qappId === 'email') return 'talk/mail';
     if (qappId === 'keep') return 'keep';
     if (qappId === 'reach' || qappId === 'browser') return 'browser';
     return qappId;
@@ -282,9 +291,9 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
 
   function navigate(qappId) {
     qappId = normalizeQappId(qappId);
-    if (activeTabId === qappId) return;
     const tab = tabs.find(t => t.qappId === qappId);
     if (tab) {
+      // Always re-assert the iframe URL so Settings/Library cannot bounce to Talk home.
       switchToTab(tab.el, qappId);
     } else {
       createTab(qappId);
@@ -303,8 +312,19 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     } else if (url === '/' || url === '/studio/' || url === '/studio/#' || url === '/studio/#/') {
       // Empty / home studio paths → Talk (not a dashboard default).
       navigate('talk');
-    } else if (url.startsWith('/studio/')) {
-      contentIframe.src = window.location.origin + url;
+    } else if (url.startsWith('/studio/#')) {
+      // Keep Settings / Library / Talk hashes — never collapse to Talk home.
+      const hash = url.split('#')[1] || '';
+      const path = hash.replace(/^\/+/, '').replace(/\/+$/, '');
+      if (!path || path === '/' || path === 'talk' || path === 'home' || path === 'dashboard') {
+        navigate('talk');
+      } else if (path === 'settings' || path.startsWith('settings/')) {
+        navigate('settings');
+      } else if (path === 'library' || path === 'memory' || path.startsWith('library/')) {
+        navigate('library');
+      } else {
+        contentIframe.src = window.location.origin + url;
+      }
     } else if (url.startsWith('http')) {
       contentIframe.src = url;
     } else {
@@ -357,12 +377,15 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   // ── Command palette (U6-A) — ≥5 destinations, Ctrl+K / Ctrl+P ──────────
   const PALETTE_ITEMS = [
     { id: 'talk',        label: 'Talk',              icon: '💬', hint: 'Home · chat & people',   keys: 'talk chat agent home' },
+    { id: 'directory',   label: 'Directory',         icon: '📒', hint: 'Humans-first address book · Talk / People', keys: 'dir directory contacts address book people humans rolodex addressbook' },
+    { id: 'mail',        label: 'Mail',              icon: '✉',  hint: 'Talk → purpose inboxes & landed mail', keys: 'mail email inbox receiver smtp purpose' },
     { id: 'browser',     label: 'Browser (Reach)',    icon: '🌐', hint: 'Web browser',            keys: 'browser reach web' },
     { id: '10d-browser', label: '10D / Infosphere',   icon: '◈',  hint: 'Anatomy & vision .10d',  keys: '10d ten-d infosphere anatomy vision' },
     { id: 'settings',    label: 'Settings',           icon: '⚙',  hint: 'Backend & preferences',  keys: 'settings prefs config' },
     { id: 'library',     label: 'Library',            icon: '📚', hint: 'Hypermedia shelf',       keys: 'library hypermedia models' },
     { id: 'qapps',       label: 'QApps',              icon: '⬡',  hint: 'QApp catalog',           keys: 'qapps apps catalog' },
     { id: 'keep',        label: 'Keep',               icon: '🗄',  hint: 'Vault & places hub',     keys: 'keep vault' },
+    { id: 'poet',        label: 'Catalog · Lexicon',  icon: '📖', hint: 'Open a lexicon pack',    keys: 'catalog lexicon pack poet vibe held' },
     { id: 'logs',        label: 'Desktop logs',       icon: '📋', hint: 'Host log stream',        keys: 'logs log' },
   ];
 
@@ -427,8 +450,25 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     paletteInput.blur();
   }
 
+  function stashTalkHandoff(tab, openDirectory) {
+    try {
+      // localStorage is shared with the studio iframe; sessionStorage is not.
+      localStorage.setItem('webizen_talk_tab', tab);
+      sessionStorage.setItem('webizen_talk_tab', tab);
+      if (openDirectory) {
+        localStorage.setItem('webizen_open_directory', '1');
+        sessionStorage.setItem('webizen_open_directory', '1');
+      }
+    } catch (e) { /* storage may be blocked in some embeds */ }
+  }
+
   function runPaletteItem(id) {
     closeCommandPalette();
+    if (id === 'directory' || id === 'contacts' || id === 'addressbook' || id === 'dir') {
+      stashTalkHandoff('people', true);
+    } else if (id === 'mail' || id === 'email') {
+      stashTalkHandoff('mail', false);
+    }
     navigate(id);
   }
 

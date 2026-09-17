@@ -52,7 +52,7 @@ h2 { margin: 0 0 8px; font-size: 1rem; }
 .job-table { width: 100%; min-width: 660px; border-collapse: collapse; font-size: .78rem; }
 .job-table th, .job-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 .job-table th { color: var(--muted); background: #181b1e; }.job-table tr:last-child td { border-bottom: 0; }
-.status-completed, .ok { color: var(--green); }.status-running { color: #79a8ff; }.status-queued { color: var(--gold); }.status-failed, .status-cancelled, .bad { color: var(--red); }
+.status-completed, .ok { color: var(--green); }.status-running { color: #79a8ff; }.status-queued { color: var(--gold); }.held { color: var(--gold); }.status-failed, .status-cancelled, .bad { color: var(--red); }
 .job-table button { min-height: 27px; padding: 3px 7px; background: transparent; color: var(--muted); font-size: .72rem; }
 .advanced-panel { margin-top: 14px; overflow: hidden; }
 .advanced-panel > summary { padding: 14px 15px; cursor: pointer; color: var(--muted); font-size: .84rem; font-weight: 700; }

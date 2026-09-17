@@ -232,6 +232,38 @@ impl SlgArena {
         self.staged_rules.len()
     }
 
+    /// Reset the live pass working set (head + recent ring slots).
+    ///
+    /// Does not reallocate the 42 MiB backing and does not scan every slot.
+    /// Occupied recent-ring entries are zeroed so a subsequent pass cannot
+    /// observe prior facts through the lossy ring.
+    pub fn reset_pass(&mut self) {
+        let empty = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        let mut i = 0usize;
+        while i < RECENT_SLOT_RING {
+            let idx = self.recent_slots[i];
+            if idx < self.buffer.len() {
+                self.buffer[idx] = empty;
+            }
+            self.recent_slots[i] = 0;
+            i += 1;
+        }
+        self.head_pointer = 0;
+        self.recent_slot_head = 0;
+    }
+
+    #[inline]
+    pub fn pass_head(&self) -> usize {
+        self.head_pointer
+    }
+
     /// Collect recently written Quins with valid ECC parity (bounded scan, zero heap).
     pub fn collect_active_quins(&self, out: &mut [NQuin]) -> usize {
         let mut n = 0usize;

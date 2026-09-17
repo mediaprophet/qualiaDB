@@ -2,8 +2,8 @@
 //! [`GpuEvaluation`] evidence bundle, and the per-kernel evaluators that certify
 //! emitted shaders against those references.
 //!
-//! Split by concern into submodules ([`params`], [`report`], [`reference`],
-//! [`evaluate`], [`kernels`]); the full public surface is re-exported here so every
+//! Split by concern into submodules (`params`, `report`, `mod@reference`,
+//! `evaluate`, `kernels`); the full public surface is re-exported here so every
 //! existing `crate::wgsl_forge::oracle::<Item>` path resolves exactly as before.
 
 mod evaluate;

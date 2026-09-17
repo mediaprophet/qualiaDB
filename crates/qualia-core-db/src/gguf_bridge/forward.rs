@@ -351,7 +351,7 @@ impl QTensorEngine {
         }
         // W3: resident single-fence-per-chunk arena (toggle-gated, default OFF). Populates the KV
         // cache for the whole chunk in ONE submit; any ineligibility falls back to the legacy loop.
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         if crate::llm_bench::resident_prefill_enabled() {
             if self
                 .dispatch_prefill_chunk_resident(
@@ -817,7 +817,7 @@ impl QTensorEngine {
     }
 
     /// MC8: Q + o_proj + FFN tail (K/V already written for this token).
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     pub(crate) fn encode_attn_ffn_tail_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -1079,7 +1079,7 @@ impl QTensorEngine {
 
     /// MC8: encode one decode layer entirely on GPU (no map_async).
     /// Superseded by the Part 3w super-arena decode forward (kept for reference/fallback).
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     #[allow(dead_code)]
     pub(crate) fn encode_transformer_layer_gpu(
         &self,
@@ -1244,7 +1244,7 @@ impl QTensorEngine {
     /// (KV-visibility flush + layer-end), down from the legacy 13 flushes/layer.
     /// A single decode token at absolute position `token_idx` is a 1-row prefill chunk:
     /// dense causal Q (`mask_active=0`, `logical <= abs_pos`) is correct for decode.
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     pub async fn dispatch_transformer_forward_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -1519,7 +1519,7 @@ impl QTensorEngine {
 
     /// Fused forward + output norm + argmax in a single encoder/submit/readback.
     /// Eliminates 1 of 2 GPU round-trips per token vs the separate forward+argmax path.
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     pub async fn dispatch_forward_and_argmax_fused_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,

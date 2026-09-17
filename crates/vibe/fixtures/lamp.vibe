@@ -1,0 +1,29 @@
+module lamp;
+import "vibe:0.1/math" as math;
+using Animation, HID;
+
+field pressure_ambient: f64
+  unit: <qudt:KiloPascal>
+  support: region
+  representation: grid;
+material steel: Material
+  yield: 250.0;
+
+effect cell t := time.now();
+cell pose := Animation.orbit_spin(1.0);
+cell hue := 230.0 + 20.0 * math.sin(1.0);
+cell glow := oklch(0.72, 0.12, hue);
+
+present lamp {
+    color: glow
+    pose: pose
+    haptic: "heartbeat"
+}
+
+on HID.pointer() {
+    HID.set_cursor({ style: "crosshair" });
+}
+
+law overheat
+    when pressure_ambient > steel.yield
+    => forbid { HID.haptic_pulse({ duration_ms: 80.0, intensity: 1.0 }) };

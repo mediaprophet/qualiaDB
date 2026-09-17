@@ -1,0 +1,9 @@
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+fn main() {
+    let c = Color.Red;
+    return 0;
+}

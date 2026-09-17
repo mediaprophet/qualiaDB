@@ -2,7 +2,7 @@
 //!
 //! A [`Scene`] is a tree of [`Node`]s (transform + optional [`Mesh`] + style +
 //! children). [`Scene::render`] walks the tree, composes transforms, and drives
-//! any [`Renderer`](super::Renderer) backend (Canvas2D today, WebGPU next). This
+//! any [`Renderer`] backend (Canvas2D today, WebGPU next). This
 //! replaces the per-app hand-rolled draw loops (e.g. the physics surface) and the
 //! scene-graph role that three.js/Babylon used to play — but in pure Rust, with
 //! geometry that a future native backend can hand to QualiaDB's

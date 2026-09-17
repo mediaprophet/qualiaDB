@@ -1,0 +1,17 @@
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix si:     <https://ns.webizen.org/semantic-instrument/> .
+
+# Negative: living person collapsed into instrument/release identity.
+
+ex:collapsed-person a values:NaturalPerson ;
+    si:expectedViolation si:WhoToolClaimCollapse ;
+    si:name "Labelled fixture person" .
+
+ex:collapsed-person a si:InstrumentRelease ;
+    si:instrument ex:collapsed-person ;
+    si:releaseId "https://example.org/instruments/collapse/releases/1.0.0" .
+
+ex:collapsed-person owl:sameAs ex:collapsed-person .
+ex:collapsed-person a si:SemanticInstrument .
+ex:collapsed-person a si:ResultClaim .

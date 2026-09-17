@@ -139,6 +139,7 @@ mod tests {
             id: id.into(),
             kind: "medication".into(),
             asserted_time_unix: 0,
+            asserted_instant: wellfare_core::record::InstantBridge::default(),
             evidence_type: "SelfReported".into(),
             sensitivity: "Restricted".into(),
             blob_hash: None,

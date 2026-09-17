@@ -5,12 +5,11 @@
 //! applied with the shared Project/Filter/Limit kernel.
 
 use super::range_select_apply::{apply_select_wrappers, SelectWrapperState};
-use super::sparql_ast::{
-    BindingRow, ExpressionId, SparqlQueryContext, VariableId, MAX_VARIABLES,
-};
+use super::sparql_ast::{BindingRow, ExpressionId, SparqlQueryContext, VariableId, MAX_VARIABLES};
 use super::sparql_executor::{
-    execute_range_triple_page_into, execute_range_volume_set_triple_page_into, Q42RangeNestedLoopJoinPage,
-    Q42RangeSparqlCursor, Q42RangeTriplePattern, Q42RangeVolumeSetSparqlCursor,
+    execute_range_triple_page_into, execute_range_volume_set_triple_page_into,
+    Q42RangeNestedLoopJoinPage, Q42RangeSparqlCursor, Q42RangeTriplePattern,
+    Q42RangeVolumeSetSparqlCursor,
 };
 use super::sparql_filter::{EvalResult, ExpressionEvaluator};
 use super::sparql_planner::{ExecutionPlan, PhysicalOperatorType};
@@ -83,7 +82,9 @@ impl Q42RangeBindPlan {
                 }
                 PhysicalOperatorType::Filter { input, expression } => {
                     if filter_count == filters.len() {
-                        return Err("range BIND supports at most eight stacked FILTER operators".into());
+                        return Err(
+                            "range BIND supports at most eight stacked FILTER operators".into()
+                        );
                     }
                     filters[filter_count] = expression;
                     filter_count += 1;
@@ -134,7 +135,12 @@ fn triple_scan(plan: &ExecutionPlan, operator: u16) -> Result<Q42RangeTriplePatt
     }
 }
 
-pub fn apply_bind(ctx: &SparqlQueryContext, var: VariableId, expression: ExpressionId, row: &mut BindingRow) {
+pub fn apply_bind(
+    ctx: &SparqlQueryContext,
+    var: VariableId,
+    expression: ExpressionId,
+    row: &mut BindingRow,
+) {
     match ExpressionEvaluator::evaluate(expression, ctx, row) {
         Ok(EvalResult::Numeric(n)) | Ok(EvalResult::Iri(n)) | Ok(EvalResult::String(n)) => {
             row.set(var, n);

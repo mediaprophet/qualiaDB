@@ -1,0 +1,18 @@
+module <https://qualiadb.org/modules/gpu_portal>;
+using Render;
+
+effect fn portal_probe() -> Record {
+    let info = Render.gpu_adapter_info();
+    return info;
+}
+
+effect fn portal_camera(handle: u64, yaw: f64, pitch: f64, zoom: f64) -> Record {
+    Render.gpu_set_camera({ handle: handle, yaw: yaw, pitch: pitch, zoom: zoom });
+    return Render.gpu_camera_state({ handle: handle });
+}
+
+effect fn portal_resize(handle: u64, width: u64, height: u64) -> Record {
+    Render.gpu_resize({ handle: handle, width: width, height: height });
+    Render.gpu_sync_bloom({ handle: handle });
+    return Render.gpu_surface_size({ handle: handle });
+}

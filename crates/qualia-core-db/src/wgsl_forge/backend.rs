@@ -52,7 +52,7 @@ fn fallback_chain(preferred: TargetBackend) -> &'static [TargetBackend] {
 ///
 /// Policy (plan §2):
 /// - If `preferred` is available, use it unchanged: returns `(preferred, None)`.
-/// - Otherwise walk [`fallback_chain`] to the first available tier and return
+/// - Otherwise walk `fallback_chain` to the first available tier and return
 ///   `(chosen, Some(note))`, where `note` explains the downgrade.
 /// - `Wgsl` is **always** considered available — it is the universal fallback and
 ///   needs no native toolchain (naga compiles it in-process), so this function

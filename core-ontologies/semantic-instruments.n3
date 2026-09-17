@@ -1,0 +1,463 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix cap:     <https://ns.webcivics.net/capability/> .
+@prefix si:      <https://ns.webizen.org/semantic-instrument/> .
+
+# ===========================================================================
+# Semantic instruments — core vocabulary (SI-01 draft).
+#
+# Namespace `si:` = https://ns.webizen.org/semantic-instrument/ (owner 2026-09-15:
+# Web of Data / Webizen outputs). HTTPS is the frontdoor; identity is intended to
+# resolve also via did:webizen (IPFS / WebTorrent / local .q42). This file is not a
+# runtime, not a package carrier ABI, and not a claim that every instrument
+# already executes. Living/person subjects stay RDFS+SHACL; they are never
+# owl:Thing. Artifact/tool classes may be described without collapsing into who.
+#
+# Companion shapes: semantic-instrument-shapes.n3
+# Capability/RPL profile: semantic-instrument-capability-profile.n3
+# ===========================================================================
+
+# --- Abstract instrument, immutable release, package bytes, presentation ------
+
+si:SemanticInstrument a rdfs:Class ;
+    rdfs:label "Semantic instrument" ;
+    rdfs:comment "Version-independent identity of an expert-authored executable ontological model. Distinct from any one release, package bytes, badge, credential, receipt or result." .
+
+si:InstrumentRelease a rdfs:Class ;
+    rdfs:label "Instrument release" ;
+    rdfs:comment "An immutable version of an instrument definition. Identifiers of the abstract instrument, this release, the package bytes and the badge MUST differ." .
+
+si:InstrumentPackage a rdfs:Class ;
+    rdfs:label "Instrument package" ;
+    rdfs:comment "The collectable instrument object — credential-like, not a dataset volume. Owner direction 2026-09-15: a hypermedia collectable (HCF document and/or HMC archive) carrying a .10d/.d10 badge visual and a small .q42 semantic payload. Large Q42 volumes are associated dependencies, not this package." .
+
+si:EntryPoint a rdfs:Class ;
+    rdfs:label "Entry point" ;
+    rdfs:comment "A named, typed and bounded operation supplied by a release. Dispatch is by this name, never by a new per-instrument Host ID." .
+
+si:DependencyRequirement a rdfs:Class ;
+    rdfs:label "Dependency requirement" ;
+    rdfs:comment "Constraint on another ontology, lexicon pack, dataset, law package, sector profile, native/WASM module or semantic instrument." .
+
+si:BadgePresentation a rdfs:Class ;
+    rdfs:label "Badge presentation" ;
+    rdfs:comment "Human-facing rendering of an instrument or of a capability credential. Artwork is a handle, not proof." .
+
+si:BadgeAsset a rdfs:Class ;
+    rdfs:label "Badge or icon asset" ;
+    rdfs:comment "Human-facing depiction of a release. May be a static image or a .10d/.d10 living visual (time axis t, mesh/tensor) so the handle can animate or be inspected interactively. Artwork is not proof. Must be digested and covered by the release digest." .
+
+# --- Agents, professional capacity, runtime permission -----------------------
+# values:Agent / NaturalPerson / LegalPerson / ArtificialAgent are reused.
+# si:Agent is an alias label only so shapes can talk about "the acting agent"
+# without minting a parallel who-class.
+
+si:Agent a rdfs:Class ;
+    rdfs:subClassOf values:Agent ;
+    rdfs:label "Instrument agent" ;
+    rdfs:comment "Acting agent in an instrument lifecycle. Specialise with values:NaturalPerson, values:LegalPerson or values:ArtificialAgent. Not owl:Thing." .
+
+si:CapacityGrant a rdfs:Class ;
+    rdfs:label "Capacity grant" ;
+    rdfs:comment "Professional role, licence, mandate or delegation under which an agent acts. Time- and jurisdiction-bounded. NOT a skill (cap:Capability) and NOT runtime access (si:HostCapabilityGrant). Distinct from values:JuridicalCapacity (person-before-the-law)." .
+
+si:HostCapabilityGrant a rdfs:Class ;
+    rdfs:label "Host capability grant" ;
+    rdfs:comment "Runtime permission to data, files, network or host facilities. Least privilege. Possessing a skill does not grant this; receiving this does not confer competence." .
+
+si:Attestation a rdfs:Class ;
+    rdfs:label "Attestation" ;
+    rdfs:comment "A signed or otherwise evidenced assertion about a release. Envelope MAY be W3C VC, native quin VC or Open Badge; the envelope is not the instrument." .
+
+# --- Execution and honesty ---------------------------------------------------
+
+si:HonestyPolicy a rdfs:Class ;
+    rdfs:label "Honesty policy" ;
+    rdfs:comment "Fail-closed and interpretation requirements. Incomplete required inputs must not be replaced with patient-, taxpayer-, client- or learner-looking defaults." .
+
+si:Applicability a rdfs:Class ;
+    rdfs:label "Applicability" ;
+    rdfs:comment "Jurisdiction, population, period, units or an explicit unrestricted declaration." .
+
+si:ResourceLimits a rdfs:Class ;
+    rdfs:label "Resource limits" ;
+    rdfs:comment "Memory, steps/time, output and recursion/depth budgets for an entry point or release." .
+
+si:TestManifest a rdfs:Class ;
+    rdfs:label "Test manifest" ;
+    rdfs:comment "Fixture vectors and expected outcomes. Reference profiles must be labelled as such." .
+
+si:Citation a rdfs:Class ;
+    rdfs:label "Citation" ;
+    rdfs:comment "A source supporting the method or its provenance (literature, legislation, standard, professional guidance)." .
+
+si:ExecutionEvent a rdfs:Class ;
+    rdfs:label "Execution event" ;
+    rdfs:comment "Employment of one entry point against one bound input set. An activity, not a person and not the instrument." .
+
+si:ExecutionReceipt a rdfs:Class ;
+    rdfs:label "Execution receipt" ;
+    rdfs:comment "Durable record of execution identity, policy and outcome. Distinct from the LLM inference ExecutionReceipt struct." .
+
+si:ResultClaim a rdfs:Class ;
+    rdfs:label "Result claim" ;
+    rdfs:comment "A claim produced by an execution. Not automatically a fact, diagnosis, or authoritative decision." .
+
+si:SectorProfile a rdfs:Class ;
+    rdfs:label "Sector profile" ;
+    rdfs:comment "Additional constraints for a sector. Who may publish an endorsed profile is HELD (D9)." .
+
+# --- Lifecycle value vocabulary (multi-dimensional; do not collapse) ---------
+
+si:AuthoringState a rdfs:Class .
+si:Draft a si:AuthoringState .
+si:StructurallyValid a si:AuthoringState .
+si:TestValid a si:AuthoringState .
+si:ReviewReady a si:AuthoringState .
+
+si:PublicationState a rdfs:Class .
+si:Unpublished a si:PublicationState .
+si:Published a si:PublicationState .
+si:Withdrawn a si:PublicationState .
+si:Superseded a si:PublicationState .
+si:Revoked a si:PublicationState .
+
+si:ResolutionState a rdfs:Class .
+si:Unresolved a si:ResolutionState .
+si:PartiallyResolved a si:ResolutionState .
+si:Resolved a si:ResolutionState .
+si:IntegrityFailed a si:ResolutionState .
+
+si:InstallationState a rdfs:Class .
+si:NotCollected a si:InstallationState .
+si:Collected a si:InstallationState .
+si:Installed a si:InstallationState .
+
+si:TrustState a rdfs:Class .
+si:Unassessed a si:TrustState .
+si:SelfAsserted a si:TrustState .
+si:Reviewed a si:TrustState .
+si:Endorsed a si:TrustState .
+si:LocallyTrusted a si:TrustState .
+
+si:ActivationState a rdfs:Class .
+si:Inactive a si:ActivationState .
+si:Active a si:ActivationState .
+si:Suspended a si:ActivationState .
+si:PolicyRefused a si:ActivationState .
+
+si:IncompleteInputBehaviour a rdfs:Class .
+si:Held a si:IncompleteInputBehaviour .
+si:FailClosed a si:IncompleteInputBehaviour .
+
+si:Framing a rdfs:Class .
+si:LivingShacl a si:Framing .
+si:ArtifactOwl a si:Framing .
+si:MixedSplit a si:Framing .
+
+# --- Content category (demo seed vs operational) -----------------------------
+# Demo content populates an environment for demonstration and development.
+# It is first-class, not a hidden flag. It MUST remain labelled.
+
+si:ContentCategory a rdfs:Class ;
+    rdfs:label "Content category" ;
+    rdfs:comment "How a release may be presented in a populated environment." .
+
+si:Demo a si:ContentCategory ;
+    rdfs:label "Demo" ;
+    rdfs:comment "Demonstration and development seed. MUST be labelled as such. MUST NOT be presented as operational, clinical, legal, or professional advice. Used to populate a new environment so manufacture/collect/run paths have something to inspect." .
+
+si:Reference a si:ContentCategory ;
+    rdfs:label "Reference" ;
+    rdfs:comment "Conformance/test reference pack. Labelled. Not operational advice." .
+
+si:Operational a si:ContentCategory ;
+    rdfs:label "Operational" ;
+    rdfs:comment "Intended for real employment under its honesty, applicability and capacity grants. Never inferred from Demo or Reference." .
+
+si:contentCategory a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ; rdfs:range si:ContentCategory ;
+    rdfs:comment "Required on a collectable release. Demo/Reference fail closed if chrome hides the label." .
+
+si:DependencyKind a rdfs:Class .
+si:OntologyDependency a si:DependencyKind .
+si:LexiconPackDependency a si:DependencyKind .
+si:LawPackageDependency a si:DependencyKind .
+si:DatasetDependency a si:DependencyKind .
+si:NativeModuleDependency a si:DependencyKind .
+si:InstrumentDependency a si:DependencyKind .
+si:SectorProfileDependency a si:DependencyKind .
+
+# --- Identity and versioning -------------------------------------------------
+
+si:instrumentId a rdf:Property ;
+    rdfs:domain si:SemanticInstrument ;
+    rdfs:comment "Stable abstract instrument IRI or DID." .
+si:releaseId a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ;
+    rdfs:comment "Immutable release IRI. Must not be reused for different bytes." .
+si:packageId a rdf:Property ;
+    rdfs:domain si:InstrumentPackage .
+si:version a rdf:Property ;
+    rdfs:comment "Semantic version string of a release." .
+si:formatVersion a rdf:Property ;
+    rdfs:comment "Package format version. Provisional 0.1 for SI-01 fixtures." .
+si:instrument a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ; rdfs:range si:SemanticInstrument .
+si:hasPackage a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ; rdfs:range si:InstrumentPackage .
+si:packageOf a rdf:Property ;
+    rdfs:domain si:InstrumentPackage ; rdfs:range si:InstrumentRelease .
+si:contentDigest a rdf:Property ;
+    rdfs:comment "Digest of canonical package content excluding detached signatures. Algorithm HELD (D3)." .
+si:packageDigest a rdf:Property ;
+    rdfs:domain si:InstrumentPackage .
+
+# --- Purpose, domains, honesty, limits --------------------------------------
+
+si:name a rdf:Property .
+si:description a rdf:Property .
+si:purpose a rdf:Property .
+si:prohibitedInterpretation a rdf:Property ;
+    rdfs:comment "A use explicitly excluded by the publisher (e.g. sole-basis-for-diagnosis)." .
+si:domain a rdf:Property ;
+    rdfs:comment "Resolvable concept identifier; labels are not identifiers." .
+si:ontologyReference a rdf:Property ;
+    rdfs:comment "An ontology or vocabulary the release depends on conceptually." .
+si:framing a rdf:Property ; rdfs:range si:Framing .
+si:licence a rdf:Property .
+si:honestyPolicy a rdf:Property ; rdfs:range si:HonestyPolicy .
+si:applicability a rdf:Property ; rdfs:range si:Applicability .
+si:resourceLimits a rdf:Property ; rdfs:range si:ResourceLimits .
+si:testManifest a rdf:Property ; rdfs:range si:TestManifest .
+si:citation a rdf:Property .
+si:upliftFrom a rdf:Property ;
+    rdfs:comment "Prior release, native kernel id or external model being migrated. Not a new Host ID." .
+si:sectorProfile a rdf:Property ; rdfs:range si:SectorProfile .
+
+si:incompleteInputBehaviour a rdf:Property ; rdfs:range si:IncompleteInputBehaviour .
+si:resultKind a rdf:Property .
+si:requiredNotice a rdf:Property .
+si:signatureIsNotTruth a rdf:Property ; rdfs:range xsd:boolean .
+si:unrestrictedDeclaration a rdf:Property ; rdfs:range xsd:boolean .
+si:jurisdiction a rdf:Property .
+si:validFrom a rdf:Property .
+si:validUntil a rdf:Property .
+si:population a rdf:Property .
+si:memoryBytes a rdf:Property .
+si:maxSteps a rdf:Property .
+si:maxOutputQuins a rdf:Property .
+
+# --- Entry points ------------------------------------------------------------
+
+si:entryPoint a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ; rdfs:range si:EntryPoint .
+si:entryPointName a rdf:Property ; rdfs:domain si:EntryPoint .
+si:operationKind a rdf:Property ; rdfs:domain si:EntryPoint .
+si:inputShape a rdf:Property ; rdfs:domain si:EntryPoint .
+si:outputShape a rdf:Property ; rdfs:domain si:EntryPoint .
+si:logicApplication a rdf:Property ;
+    rdfs:domain si:EntryPoint ; rdfs:range cml:LogicApplication ;
+    rdfs:comment "Subject-matter-selected evaluator routing. Reuses cml.n3." .
+si:sideEffects a rdf:Property ; rdfs:domain si:EntryPoint .
+si:hostCapabilityRequest a rdf:Property ;
+    rdfs:domain si:EntryPoint ; rdfs:range si:HostCapabilityGrant .
+
+# --- Dependencies ------------------------------------------------------------
+
+si:dependency a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ; rdfs:range si:DependencyRequirement .
+si:dependencyId a rdf:Property ; rdfs:domain si:DependencyRequirement .
+si:dependencyKind a rdf:Property ; rdfs:range si:DependencyKind .
+si:versionConstraint a rdf:Property .
+si:expectedDigest a rdf:Property .
+si:required a rdf:Property ; rdfs:range xsd:boolean .
+si:dependencyPurpose a rdf:Property .
+si:resolutionState a rdf:Property ; rdfs:range si:ResolutionState .
+si:resolverHint a rdf:Property .
+
+# --- Badge / icon ------------------------------------------------------------
+
+si:badgePresentation a rdf:Property ;
+    rdfs:range si:BadgePresentation .
+si:badgeAsset a rdf:Property ;
+    rdfs:domain si:BadgePresentation ; rdfs:range si:BadgeAsset .
+si:identifiesRelease a rdf:Property ;
+    rdfs:domain si:BadgePresentation ; rdfs:range si:InstrumentRelease ;
+    rdfs:comment "A badge identifies an immutable release. Artwork is not that identification's proof." .
+si:assetLocator a rdf:Property ; rdfs:domain si:BadgeAsset .
+si:mediaType a rdf:Property ; rdfs:domain si:BadgeAsset .
+si:byteLength a rdf:Property ; rdfs:domain si:BadgeAsset .
+si:assetDigest a rdf:Property ; rdfs:domain si:BadgeAsset .
+si:assetPurpose a rdf:Property ; rdfs:domain si:BadgeAsset .
+si:accessibleText a rdf:Property ; rdfs:domain si:BadgeAsset .
+si:containsInstitutionalMark a rdf:Property ; rdfs:range xsd:boolean .
+
+# --- Attestation predicates (MUST remain independently expressible) ----------
+
+si:authoredBy a rdf:Property ; rdfs:range values:Agent .
+si:contributedBy a rdf:Property ; rdfs:range values:Agent .
+si:contributionRole a rdf:Property .
+si:technicallyReviewedBy a rdf:Property ; rdfs:range values:Agent .
+si:professionallyReviewedBy a rdf:Property ; rdfs:range values:Agent .
+si:communityAttestedBy a rdf:Property ; rdfs:range values:Agent .
+si:endorsedBy a rdf:Property ; rdfs:range values:Agent .
+si:accreditedBy a rdf:Property ; rdfs:range values:Agent .
+si:publishedBy a rdf:Property ; rdfs:range values:Agent .
+si:issuedBy a rdf:Property ;
+    rdfs:comment "Issuance of a credential. MUST NOT be inferred from authoredBy or publishedBy." .
+si:withdrawnBy a rdf:Property ; rdfs:range values:Agent .
+si:derivedFrom a rdf:Property ;
+    rdfs:comment "Derivation/fork. Aligns with prov:wasDerivedFrom; kept distinct from supersession." .
+si:supersedes a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ; rdfs:range si:InstrumentRelease .
+si:supersededBy a rdf:Property ;
+    rdfs:domain si:InstrumentRelease ; rdfs:range si:InstrumentRelease .
+si:inCapacity a rdf:Property ;
+    rdfs:range si:CapacityGrant ;
+    rdfs:comment "The professional capacity under which an attestation or execution occurred." .
+si:grantedTo a rdf:Property ;
+    rdfs:domain si:CapacityGrant ; rdfs:range values:Agent ;
+    rdfs:comment "Agent holding a professional capacity grant." .
+si:capacityRole a rdf:Property ;
+    rdfs:domain si:CapacityGrant ;
+    rdfs:comment "Role, licence or mandate name/IRI. Distinct from cap:Capability." .
+si:permissionKind a rdf:Property ;
+    rdfs:domain si:HostCapabilityGrant ;
+    rdfs:comment "Runtime permission kind (network, filesystem, personal-record, ...). Distinct from cap:Capability." .
+si:attestationSubject a rdf:Property ;
+    rdfs:domain si:Attestation ; rdfs:range si:InstrumentRelease .
+si:proofEnvelope a rdf:Property ;
+    rdfs:domain si:Attestation ;
+    rdfs:comment "W3C VC, native quin VC, Open Badge, or other registered envelope. Origin, not truth." .
+
+# --- Lifecycle properties ----------------------------------------------------
+
+si:authoringState a rdf:Property ; rdfs:range si:AuthoringState .
+si:publicationState a rdf:Property ; rdfs:range si:PublicationState .
+si:installationState a rdf:Property ; rdfs:range si:InstallationState .
+si:trustState a rdf:Property ; rdfs:range si:TrustState .
+si:activationState a rdf:Property ; rdfs:range si:ActivationState .
+si:presentedAsActive a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Client presentation claim. A revoked release MUST NOT be presented as active." .
+
+# --- Software-agent grounding (reuse agency.n3) ------------------------------
+
+si:principalChain a rdf:Property ;
+    rdfs:comment "Inspectable principal/delegation chain. Prefer values:actsFor / values:principal." .
+si:noHumanPrincipalAsserted a rdf:Property ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Explicit declaration that no human principal is asserted. Prefer values:hasNoPrincipal." .
+
+# --- Execution ---------------------------------------------------------------
+
+si:employsRelease a rdf:Property ;
+    rdfs:domain si:ExecutionEvent ; rdfs:range si:InstrumentRelease .
+si:employsEntryPoint a rdf:Property ;
+    rdfs:domain si:ExecutionEvent ; rdfs:range si:EntryPoint .
+si:invokedBy a rdf:Property ;
+    rdfs:domain si:ExecutionEvent ; rdfs:range values:Agent .
+si:recordsEvent a rdf:Property ;
+    rdfs:domain si:ExecutionReceipt ; rdfs:range si:ExecutionEvent .
+si:receiptOfRelease a rdf:Property ;
+    rdfs:domain si:ExecutionReceipt ; rdfs:range si:InstrumentRelease .
+si:dependencyLockDigest a rdf:Property ; rdfs:domain si:ExecutionReceipt .
+si:inputCommitment a rdf:Property ; rdfs:domain si:ExecutionReceipt .
+si:outputCommitment a rdf:Property ; rdfs:domain si:ExecutionReceipt .
+si:parentReceipt a rdf:Property ; rdfs:domain si:ExecutionReceipt ; rdfs:range si:ExecutionReceipt .
+si:producesResult a rdf:Property ;
+    rdfs:domain si:ExecutionEvent ; rdfs:range si:ResultClaim .
+
+# --- Flags (conduct / category-error; engine routes, does not adjudicate) ----
+
+si:WhoToolClaimCollapseFlag a rdfs:Class ;
+    rdfs:comment "Flag: a living/person identity was merged with an instrument, package, badge, credential or result identity." .
+si:CapabilityPermissionCollapseFlag a rdfs:Class ;
+    rdfs:comment "Flag: a cap:Capability was treated as a runtime permission (si:HostCapabilityGrant) or vice versa." .
+si:ArtworkAsProofFlag a rdfs:Class ;
+    rdfs:comment "Flag: badge artwork was treated as proof of origin, review or truth." .
+si:CredentialReplacesPackageFlag a rdfs:Class ;
+    rdfs:comment "Flag: an authorship or publication credential was used as if it were the instrument package." .
+si:AwardIsInstrumentFlag a rdfs:Class ;
+    rdfs:comment "Flag: a learner/worker capability credential was identified with the assessment instrument." .
+si:SignatureAsTruthFlag a rdfs:Class ;
+    rdfs:comment "Flag: a signature was treated as substantive truth." .
+si:UngroundedSoftwareAgentFlag a rdfs:Class ;
+    rdfs:comment "Flag: a software agent acted without a principal chain and without values:hasNoPrincipal / si:noHumanPrincipalAsserted." .
+si:MissingEvidenceTreatedAsAbsenceFlag a rdfs:Class ;
+    rdfs:comment "Flag: unavailable evidence was reported as proof that a capability is absent." .
+si:RevokedPresentedAsActiveFlag a rdfs:Class ;
+    rdfs:comment "Flag: a withdrawn, revoked or superseded release was presented as active for new employment." .
+si:UnresolvedRequiredDependencyFlag a rdfs:Class ;
+    rdfs:comment "Flag: a required dependency has no digest or remains unresolved while the release is treated as executable." .
+
+si:expectedViolation a rdf:Property ;
+    rdfs:comment "Fixture-only annotation naming the intended closed-world violation. Never used as production proof." .
+
+# ===========================================================================
+# N3 guards — fire through n3_parser → register_rule → fire_guard_rules.
+# Multi-triple premises use the same pattern as agent-accountability.n3.
+# ===========================================================================
+
+# (R1) Artwork is not proof: a badge asset MUST NOT be typed as an Attestation.
+{ ?x a si:BadgeAsset . ?x a si:Attestation }
+  => { ?x values:flag si:ArtworkAsProofFlag } .
+
+# (R2) A credential about an author does not replace the package.
+{ ?c a si:Attestation . ?c a si:InstrumentPackage }
+  => { ?c values:flag si:CredentialReplacesPackageFlag } .
+
+# (R3) A capability credential is not the assessment instrument.
+{ ?c a si:CapabilityCredential . ?c a si:SemanticInstrument }
+  => { ?c values:flag si:AwardIsInstrumentFlag } .
+{ ?c a si:CapabilityCredential . ?c a si:InstrumentRelease }
+  => { ?c values:flag si:AwardIsInstrumentFlag } .
+
+# (R4) Signature is origin/integrity, not truth — honesty policy must say so
+# when present; the shape file requires the property on HonestyPolicy.
+
+# (R6/R10) Who / tool / claim identity collapse.
+{ ?x a values:NaturalPerson . ?x a si:SemanticInstrument }
+  => { ?x values:flag si:WhoToolClaimCollapseFlag } .
+{ ?x a values:NaturalPerson . ?x a si:InstrumentRelease }
+  => { ?x values:flag si:WhoToolClaimCollapseFlag } .
+{ ?x a values:NaturalPerson . ?x a si:InstrumentPackage }
+  => { ?x values:flag si:WhoToolClaimCollapseFlag } .
+{ ?x a values:NaturalPerson . ?x a si:ResultClaim }
+  => { ?x values:flag si:WhoToolClaimCollapseFlag } .
+{ ?x a values:NaturalPerson . ?x owl:sameAs ?y . ?y a si:InstrumentRelease }
+  => { ?x values:flag si:WhoToolClaimCollapseFlag } .
+
+# (R7) Software agent must expose a principal or explicitly declare none.
+{ ?x a values:ArtificialAgent . ?x si:authoredBy ?r }
+  => { ?x values:requiresGuardianAssignment true } .
+
+# (R8) Capability is not runtime permission.
+{ ?x a cap:Capability . ?x a si:HostCapabilityGrant }
+  => { ?x values:flag si:CapabilityPermissionCollapseFlag } .
+{ ?x a si:CapacityGrant . ?x a si:HostCapabilityGrant }
+  => { ?x values:flag si:CapabilityPermissionCollapseFlag } .
+{ ?x a cap:Capability . ?x a si:CapacityGrant }
+  => { ?x values:flag si:CapabilityPermissionCollapseFlag } .
+
+# (R11) Revoked/withdrawn/superseded must not be presented as active.
+{ ?r a si:InstrumentRelease . ?r si:publicationState si:Revoked . ?r si:presentedAsActive true }
+  => { ?r values:flag si:RevokedPresentedAsActiveFlag } .
+{ ?r a si:InstrumentRelease . ?r si:publicationState si:Withdrawn . ?r si:presentedAsActive true }
+  => { ?r values:flag si:RevokedPresentedAsActiveFlag } .
+{ ?r a si:InstrumentRelease . ?r si:publicationState si:Superseded . ?r si:activationState si:Active }
+  => { ?r values:flag si:RevokedPresentedAsActiveFlag } .
+{ ?r a si:InstrumentRelease . ?r si:publicationState si:Revoked . ?r si:activationState si:Active }
+  => { ?r values:flag si:RevokedPresentedAsActiveFlag } .
+
+# Required dependency still unresolved while the employing release is treated as active.
+{ ?r a si:InstrumentRelease . ?r si:dependency ?d . ?d si:required true . ?d si:resolutionState si:Unresolved . ?r si:activationState si:Active }
+  => { ?d values:flag si:UnresolvedRequiredDependencyFlag } .

@@ -84,6 +84,7 @@ impl QTensorEngine {
     }
 
     /// A1a: create the persistent GPU top-k pipeline + small candidate/staging buffers (once).
+    #[cfg(feature = "gpu-runtime")]
     pub(crate) fn init_output_topk(&mut self) {
         let shader = self
             .gpu_device()
@@ -150,7 +151,7 @@ impl QTensorEngine {
     /// candidate readback after all vocab chunks have been submitted. This avoids the full
     /// chunk-logit readback in [`Self::dispatch_output_argmax_chunked`] and avoids heap allocation
     /// in the decode loop.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn dispatch_output_top1_chunked(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -592,7 +593,7 @@ impl QTensorEngine {
     /// 196 KB/token full-logit readback + CPU argmax in `dispatch_output_argmax_chunked`). Returns the
     /// merged global top-K, or `None` to signal the caller to fall back to the argmax path. v1: no
     /// sieve coupling (caller routes here only when no sieve mask is active).
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn dispatch_output_topk_chunked(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,

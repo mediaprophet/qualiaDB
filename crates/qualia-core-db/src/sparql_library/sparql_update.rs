@@ -19,13 +19,13 @@ pub enum UpdateOperation {
         insert_pattern: PatternId,
         where_pattern: PatternId,
     },
-    /// LOAD <uri> INTO GRAPH <graph>
+    /// LOAD \<uri\> INTO GRAPH \<graph\>
     Load { uri: u64, graph: u64 },
-    /// CLEAR GRAPH <graph>
+    /// CLEAR GRAPH \<graph\>
     Clear { graph: u64 },
-    /// CREATE GRAPH <graph>
+    /// CREATE GRAPH \<graph\>
     Create { graph: u64 },
-    /// DROP GRAPH <graph>
+    /// DROP GRAPH \<graph\>
     Drop { graph: u64 },
 }
 

@@ -199,11 +199,7 @@ pub fn validate_postings_section(bytes: &[u8], expected_blocks: usize) -> io::Re
     if bytes.len() < header_end {
         return Err(invalid("field postings offset table truncated"));
     }
-    let last = u32::from_le_bytes(
-        bytes[header_end - 4..header_end]
-            .try_into()
-            .unwrap(),
-    ) as usize;
+    let last = u32::from_le_bytes(bytes[header_end - 4..header_end].try_into().unwrap()) as usize;
     if bytes.len() != header_end + last {
         return Err(invalid("field postings payload length mismatch"));
     }
@@ -379,11 +375,7 @@ mod tests {
 
     #[test]
     fn exact_postings_have_no_false_positives() {
-        let quins = [
-            quin(10, 1, 100),
-            quin(20, 1, 101),
-            quin(10, 2, 102),
-        ];
+        let quins = [quin(10, 1, 100), quin(20, 1, 101), quin(10, 2, 102)];
         let postings = BlockFieldPostings::from_quins(&quins);
         let encoded = encode_block_postings(&postings);
         assert!(field_may_contain(&encoded, 0, 10).unwrap());

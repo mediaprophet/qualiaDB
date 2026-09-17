@@ -344,10 +344,10 @@ fn output_stem(root: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::super::{
         write_volume_root, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES, FLAG_OBJECT_SORTED,
     };
+    use super::*;
     use crate::q42_volume::write_unified_volume;
 
     fn quin(object: u64) -> NQuin {
@@ -468,7 +468,10 @@ mod tests {
         );
 
         let compacted = compact_volume_set(&root, out.path()).unwrap();
-        let objects: Vec<u64> = compacted_quins(&compacted).iter().map(|q| q.object).collect();
+        let objects: Vec<u64> = compacted_quins(&compacted)
+            .iter()
+            .map(|q| q.object)
+            .collect();
         assert_eq!(objects, vec![2, 4, 6, 8]);
         assert!(objects.windows(2).all(|pair| pair[0] <= pair[1]));
     }

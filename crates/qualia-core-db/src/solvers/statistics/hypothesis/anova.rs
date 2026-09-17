@@ -1,5 +1,5 @@
 //! One-way ANOVA — the F-test for equality of `k` group means, with a real F-tail
-//! p-value from [`fisher_f`](super::super::distributions::fisher_f).
+//! p-value from [`fisher_f`].
 
 use super::super::descriptive::mean;
 use super::super::distributions::fisher_f;

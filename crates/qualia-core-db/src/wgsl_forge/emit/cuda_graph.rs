@@ -14,10 +14,10 @@
 //! # Coverage (this phase)
 //!
 //! - **MatMul** — `tc=true` → the genuine NVIDIA tensor-core kernel
-//!   [`WMMA_GEMM_TILED_SRC`](super::cuda_c::WMMA_GEMM_TILED_SRC) (f16 in / f32 accumulate);
-//!   `tc=false` → the plain f32 [`GEMM_F32_SRC`](super::cuda_c::GEMM_F32_SRC). This is the
+//!   [`WMMA_GEMM_TILED_SRC`] (f16 in / f32 accumulate);
+//!   `tc=false` → the plain f32 [`GEMM_F32_SRC`]. This is the
 //!   `MatMul.tc → WMMA` headline, lowered from the IR with no host round-trip in the codegen.
-//! - **Gemv** — [`GEMV_F32_SRC`](super::cuda_c::GEMV_F32_SRC).
+//! - **Gemv** — [`GEMV_F32_SRC`].
 //! - **Elementwise / Reduce / Broadcast** — CUDA-C twins of the WGSL `graph_ops` kernels
 //!   (same binding ABI, same math), so the LLM activation/norm kit lowers to CUDA-C too.
 //!

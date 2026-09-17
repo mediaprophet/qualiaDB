@@ -103,6 +103,57 @@ pub enum Q42Action {
 }
 
 #[derive(Subcommand, Debug)]
+pub enum IngestJobAction {
+    /// Show checkpoint, run counts, and whether continue is possible.
+    Status {
+        dir: PathBuf,
+        /// Poll progress.json until the job completes or the process is gone.
+        #[arg(long)]
+        watch: bool,
+    },
+    /// Review a job directory, a legacy scratch tree, or a volume root.
+    Inspect { path: PathBuf },
+    /// Re-stream a file or URL and compare SHA-256 to a recorded attestation.
+    Compare {
+        attestation: PathBuf,
+        #[arg(long)]
+        against: String,
+    },
+    /// Continue an incomplete job (re-reads the source and skips accepted triples).
+    Continue {
+        dir: PathBuf,
+        /// Spawn a detached child (break away from a session job object) and return.
+        #[arg(long)]
+        detach: bool,
+    },
+    /// Merge already-hashed quin/lex runs into the job's `.q42` (no source re-read).
+    Publish {
+        dir: PathBuf,
+        #[arg(long)]
+        detach: bool,
+    },
+    /// Copy a pre-job scratch (chunk_*.tmp) into a new job directory.
+    AdoptScratch {
+        scratch: PathBuf,
+        #[arg(long)]
+        out_job: PathBuf,
+        #[arg(long)]
+        source: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+        #[arg(long)]
+        segment_mib: Option<u64>,
+    },
+    /// Ingest more RDF and graft segments onto an existing volume-set root.
+    Append {
+        root: PathBuf,
+        extra: Option<PathBuf>,
+        #[arg(long)]
+        url: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 pub enum MigrateAction {
     Meta {
         path: PathBuf,

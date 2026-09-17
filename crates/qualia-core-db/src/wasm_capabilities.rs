@@ -20,12 +20,37 @@ pub const ONTOLOGY_KERNEL: &[&str] = &[
 
 pub const PORTAL: &[&str] = &[
     "nquin-48-byte-abi",
+    "q-hash",
     "json-ingest",
     "cbor-ld-ingest",
     "tensor-10d",
     "spatial-encoding",
     "webgpu-viewport",
     "acoustic-plane",
+    "n3-parser",
+    "turtle-parser",
+    "rdf-serialization",
+    "ntriples-query",
+    "query-compiler",
+    "shacl-property-validation",
+    "deontic-logic",
+    "epistemic-logic",
+    "paraconsistent-routing",
+    "temporal-ltl",
+    "description-logic",
+    "answer-set-programming",
+    "linear-logic",
+    "interaction-governance",
+    "lww-crdt",
+    "bioinformatics",
+    "clinical-risk",
+    "organic-chemistry",
+    "economics",
+    "symbolic-logic",
+    "numerical-solvers",
+    "control-theory",
+    "geometric-algebra",
+    "quantum-dft",
 ];
 
 pub const LOGIC: &[&str] = &[
@@ -46,6 +71,15 @@ pub const LOGIC: &[&str] = &[
     "linear-logic",
     "interaction-governance",
     "lww-crdt",
+    "bioinformatics",
+    "clinical-risk",
+    "organic-chemistry",
+    "economics",
+    "symbolic-logic",
+    "numerical-solvers",
+    "control-theory",
+    "geometric-algebra",
+    "quantum-dft",
 ];
 
 pub const SCIENTIFIC: &[&str] = &[
@@ -184,18 +218,27 @@ pub const FULL: &[&str] = &[
 pub const fn compiled_profile() -> &'static str {
     if cfg!(feature = "wasm-full") {
         "full"
-    } else if cfg!(feature = "wasm-playground") {
-        "playground"
-    } else if cfg!(feature = "wasm-ontology") {
+    } else if cfg!(all(
+        feature = "wasm-ontology",
+        not(any(
+            feature = "portal",
+            feature = "wasm-logic",
+            feature = "wasm-scientific",
+            feature = "wasm-llm",
+            feature = "wasm-full"
+        ))
+    )) {
         "ontology-mcp-kernel"
+    } else if cfg!(feature = "portal") {
+        "portal"
     } else if cfg!(feature = "wasm-llm") {
         "llm"
+    } else if cfg!(feature = "wasm-playground") {
+        "playground"
     } else if cfg!(feature = "wasm-logic") {
         "logic"
     } else if cfg!(feature = "wasm-scientific") {
         "scientific"
-    } else if cfg!(feature = "portal") {
-        "portal"
     } else {
         "core"
     }
@@ -205,18 +248,27 @@ pub const fn compiled_profile() -> &'static str {
 pub const fn compiled_capabilities() -> &'static [&'static str] {
     if cfg!(feature = "wasm-full") {
         FULL
-    } else if cfg!(feature = "wasm-playground") {
-        PLAYGROUND
-    } else if cfg!(feature = "wasm-ontology") {
+    } else if cfg!(all(
+        feature = "wasm-ontology",
+        not(any(
+            feature = "portal",
+            feature = "wasm-logic",
+            feature = "wasm-scientific",
+            feature = "wasm-llm",
+            feature = "wasm-full"
+        ))
+    )) {
         ONTOLOGY_KERNEL
+    } else if cfg!(feature = "portal") {
+        PORTAL
     } else if cfg!(feature = "wasm-llm") {
         LLM
+    } else if cfg!(feature = "wasm-playground") {
+        PLAYGROUND
     } else if cfg!(feature = "wasm-logic") {
         LOGIC
     } else if cfg!(feature = "wasm-scientific") {
         SCIENTIFIC
-    } else if cfg!(feature = "portal") {
-        PORTAL
     } else {
         &[]
     }

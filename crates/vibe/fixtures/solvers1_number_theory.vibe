@@ -1,0 +1,52 @@
+# Number theory, special functions, interpolation, and fuzzy query
+
+# Number theory
+invoke NumberTheory.is_prime { n: 17 }
+invoke NumberTheory.next_prime { n: 20 }
+invoke NumberTheory.prime_factors { n: 360 }
+invoke NumberTheory.divisors { n: 60 }
+invoke NumberTheory.euler_totient { n: 36 }
+invoke NumberTheory.mobius { n: 30 }
+invoke NumberTheory.divisor_count { n: 60 }
+invoke NumberTheory.divisor_sum { n: 60 }
+invoke NumberTheory.gcd { a: 48, b: 36 }
+invoke NumberTheory.lcm { a: 4, b: 6 }
+invoke NumberTheory.mod_pow { base: 3, exp: 7, modulus: 13 }
+invoke NumberTheory.mod_inverse { a: 3, modulus: 11 }
+invoke NumberTheory.factorial { n: 10 }
+invoke NumberTheory.binomial { n: 10, k: 3 }
+invoke NumberTheory.partitions { n: 10 }
+invoke NumberTheory.catalan { n: 7 }
+invoke NumberTheory.stirling_second { n: 5, k: 2 }
+invoke NumberTheory.stirling_first { n: 5, k: 2 }
+
+# Special functions
+invoke SpecialFunctions.airy_ai { x: 0.5 }
+invoke SpecialFunctions.airy_bi { x: 0.5 }
+invoke SpecialFunctions.zeta { s: 2.0 }
+invoke SpecialFunctions.legendre { n: 3, x: 0.5 }
+invoke SpecialFunctions.chebyshev_t { n: 3, x: 0.5 }
+invoke SpecialFunctions.chebyshev_u { n: 3, x: 0.5 }
+invoke SpecialFunctions.hermite { n: 3, x: 0.5 }
+invoke SpecialFunctions.laguerre { n: 3, x: 0.5 }
+invoke SpecialFunctions.bessel_j { n: 2, x: 1.5 }
+invoke SpecialFunctions.bessel_i { n: 2, x: 1.5 }
+invoke SpecialFunctions.bessel_y { n: 2, x: 1.5 }
+invoke SpecialFunctions.bessel_k { n: 2, x: 1.5 }
+
+# Interpolation
+invoke Interpolation.linear_interp { xs: [0.0, 1.0, 2.0, 3.0], ys: [0.0, 2.0, 4.0, 6.0], x: 1.5 }
+invoke Interpolation.lagrange_eval { xs: [0.0, 1.0, 2.0], ys: [1.0, 3.0, 2.0], x: 1.5 }
+invoke Interpolation.newton_coefficients { xs: [0.0, 1.0, 2.0], ys: [1.0, 3.0, 2.0] }
+invoke Interpolation.newton_eval { xs: [0.0, 1.0, 2.0], coef: [1.0, 2.0, -1.5], x: 1.5 }
+invoke Interpolation.poly_fit { xs: [0.0, 1.0, 2.0, 3.0], ys: [1.0, 3.0, 7.0, 13.0], degree: 2 }
+invoke Interpolation.poly_eval { coef: [1.0, 2.0, 1.0], x: 2.0 }
+
+# Fuzzy query membership
+invoke FuzzyQuery.triangular { x: 2.5, a: 0.0, m: 2.0, b: 4.0 }
+invoke FuzzyQuery.trapezoidal { x: 2.5, a: 0.0, b: 1.0, c: 3.0, d: 4.0 }
+invoke FuzzyQuery.approximately { x: 5.1, target: 5.0, tol: 0.2 }
+invoke FuzzyQuery.ramp_up { x: 2.5, a: 0.0, b: 5.0 }
+invoke FuzzyQuery.ramp_down { x: 2.5, a: 0.0, b: 5.0 }
+invoke FuzzyQuery.much_greater_than { x: 10.0, reference: 5.0, spread: 2.0 }
+invoke FuzzyQuery.much_less_than { x: 1.0, reference: 5.0, spread: 2.0 }

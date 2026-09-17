@@ -32,7 +32,7 @@
 //! Any ineligibility (unsupported quant, missing resident logits, layer cap,
 //! sieve mask) falls back to the legacy per-layer path unchanged.
 
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 
 use super::*;
 

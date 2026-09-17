@@ -10,6 +10,8 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsValue;
@@ -84,16 +86,6 @@ struct BenchmarkReport {
     health_before: RuntimeLedgerHealth,
     health_after: RuntimeLedgerHealth,
     notes: Vec<String>,
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
 }
 
 #[cfg(target_arch = "wasm32")]

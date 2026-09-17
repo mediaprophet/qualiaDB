@@ -123,7 +123,7 @@ fn build_adjacency(triangles: &[Triangle]) -> Vec<AdjEdge> {
 /// Produces at most 4× the optimal number of convex pieces.
 /// O(n log n) for triangulation + O(n) for the merge phase.
 ///
-/// Returns a list of convex polygons (each a Vec<Point2> in CCW order).
+/// Returns a list of convex polygons (each a Vec\<Point2\> in CCW order).
 pub fn convex_decomposition_hm(vertices: &[Point2]) -> Vec<Vec<Point2>> {
     let poly = canonicalize_simple_polygon(vertices);
     if poly.len() < 3 {
@@ -321,7 +321,7 @@ fn try_merge(
 /// decomposition with at most n-2 pieces. This is the simplest approach
 /// but produces more pieces than Hertel-Mehlhorn.
 ///
-/// Returns a list of convex polygons (each a Vec<Point2> in CCW order).
+/// Returns a list of convex polygons (each a Vec\<Point2\> in CCW order).
 pub fn convex_decomposition_triangulation(vertices: &[Point2]) -> Vec<Vec<Point2>> {
     let poly = canonicalize_simple_polygon(vertices);
     if poly.len() < 3 {

@@ -12,7 +12,7 @@ use crate::specialized_libs::computer_vision::cv::error::CvError;
 /// Maximum particles reported from a single frame (stack-friendly bound for callers).
 pub const MAX_PARTICLES_PER_FRAME: usize = 512;
 
-/// 2D particle feature used by [`super::crocker_grier_link`].
+/// 2D particle feature used by [`super::crocker_grier_link()`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ParticleCentroid {
     /// Sub-pixel centroid X (image coords, origin top-left).

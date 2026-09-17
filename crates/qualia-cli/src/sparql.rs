@@ -28,7 +28,7 @@ pub struct RpcResponse {
 /// Execute a SPARQL (or SPARQL-Star) query string against a `.q42` vault.
 ///
 /// Range operators are tried first. Vaults larger than
-/// [`RESIDENT_QUERY_MAX_BYTES`] never call `read_q42_quins` / `read_all_quins`;
+/// `RESIDENT_QUERY_MAX_BYTES()` never call `read_q42_quins` / `read_all_quins`;
 /// they fail if no range plan applies. Smaller files may still use the
 /// resident executor.
 pub fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
@@ -526,8 +526,8 @@ fn run_range_union_query(
     };
     use qualia_core_db::sparql_ast::BindingRow;
     use qualia_core_db::{
-        execute_range_union_page_into, execute_range_volume_set_union_page_into, Q42RangeUnionState,
-        Q42RangeVolumeSetUnionState,
+        execute_range_union_page_into, execute_range_volume_set_union_page_into,
+        Q42RangeUnionState, Q42RangeVolumeSetUnionState,
     };
 
     const PAGE_ROWS: usize = 128;

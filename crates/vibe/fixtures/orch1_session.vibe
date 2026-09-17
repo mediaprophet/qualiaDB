@@ -1,0 +1,47 @@
+// N15 fixture: multi-agent orchestration session lifecycle.
+using Orchestration;
+// Tests: session_create → roster_register → session_plan → session_execute → session_status
+
+cell orch_session_id = "research-001";
+cell orch_task = "Research the impact of semantic web standards on digital preservation";
+
+// Step 1: Create the orchestration session.
+effect cell create_result := Orchestration.session_create({
+  id: orch_session_id,
+  task: orch_task,
+});
+
+// Step 2: Register a research agent with NLP capabilities.
+effect cell agent_reg := Orchestration.roster_register({
+  session_id: orch_session_id,
+  agent_id: "agent-researcher-1",
+  did: "did:q42:agent:researcher1",
+  name: "Research Agent 1",
+  role: "researcher",
+  capabilities: ["NLP.substrate_extract", "NLP.graphrag_query", "GraphReasoning"],
+});
+
+// Step 3: Register a verification agent.
+effect cell verify_reg := Orchestration.roster_register({
+  session_id: orch_session_id,
+  agent_id: "agent-verifier-1",
+  did: "did:q42:agent:verifier1",
+  name: "Verifier Agent 1",
+  role: "verifier",
+  capabilities: ["Inference.verify_turn", "Inference.grounding", "Sentinel.gate"],
+});
+
+// Step 4: Plan the session — planner produces a DAG from the task.
+effect cell plan_result := Orchestration.session_plan({
+  id: orch_session_id,
+});
+
+// Step 5: Execute the planned DAG through the real dag_executor.
+effect cell exec_result := Orchestration.session_execute({
+  id: orch_session_id,
+});
+
+// Step 6: Query the final status.
+effect cell status := Orchestration.session_status({
+  id: orch_session_id,
+});

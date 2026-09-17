@@ -5,10 +5,10 @@
 //! overlays* when they have hosts, not when they have an organ file.
 
 use super::model::{
-    overlay_host_systems, primary_organ_system_pairs, secondary_organ_system_pairs,
-    system_representation, SystemRepresentation,
+    SystemRepresentation, overlay_host_systems, primary_organ_system_pairs,
+    secondary_organ_system_pairs, system_representation,
 };
-use super::registry::{seed_tier, SystemTier};
+use super::registry::{SystemTier, seed_tier};
 use super::systems::{BODY_SYSTEMS, BodySystem};
 
 /// One row of the seed coverage matrix.

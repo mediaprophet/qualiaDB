@@ -1,0 +1,17 @@
+module <https://qualiadb.org/modules/multi_hook>;
+requires [
+    capability("pulse.publish", topic: "poet/events"),
+    capability("graph.read")
+];
+effect fn handle_pulse(topic: string, value: f64) {
+    if value > 50.0 {
+        effect pulse.publish("poet/events", value);
+    }
+    return null;
+}
+on tick() {
+    return null;
+}
+on pulse:message(topic: string, value: f64) {
+    return handle_pulse(topic, value);
+}

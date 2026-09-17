@@ -25,7 +25,7 @@ pub fn t_conorm_godel(a: f32, b: f32) -> f32 {
 }
 
 /// Read a proposition's fuzzy truth degree (canonical f32 in `metadata`, via the
-/// FrameLayout ABI), clamped to [0,1].
+/// FrameLayout ABI), clamped to \[0,1\].
 #[inline]
 pub fn degree(quin: &NQuin) -> f32 {
     crate::frame_layout::truth_degree(quin.metadata).clamp(0.0, 1.0)
@@ -85,7 +85,7 @@ pub fn t_conorm_drastic(a: f32, b: f32) -> f32 {
     }
 }
 
-/// Standard fuzzy negation (complement) — `1 - a`, clamped to [0,1].
+/// Standard fuzzy negation (complement) — `1 - a`, clamped to \[0,1\].
 #[inline]
 pub fn fuzzy_not(a: f32) -> f32 {
     (1.0 - a).clamp(0.0, 1.0)

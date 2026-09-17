@@ -9,8 +9,6 @@
 pub mod acoustic;
 /// Browser Anatomy render backends. Shared pack metadata remains in `anatomy_pack`.
 pub mod anatomy;
-/// Person-authored body fit applied to decoded organ vertices (CCF space).
-pub mod body_fit;
 /// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
 /// position / neutral colour). Platform-agnostic (native + WASM consumers).
 pub mod anatomy_pack;
@@ -34,6 +32,8 @@ pub mod authoring;
     feature = "wasm-full"
 ))]
 pub mod barrier;
+/// Person-authored body fit applied to decoded organ vertices (CCF space).
+pub mod body_fit;
 pub mod camera;
 /// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
 /// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
@@ -70,6 +70,8 @@ pub mod physics;
 pub mod place_time;
 /// Unified manifold projection — one `project()`, many views (Phase 1.4).
 pub mod projection;
+/// N7: Scene graph — node hierarchy, lights, semantic links, duplication, IK, smooth damp.
+pub mod scene_graph;
 /// Sense path — the input twin (Phase 4): microphone PCM → forward DSP → the `∫Ψ > τ → Fact`
 /// bridge, every capture under the deontic/standpoint consent gate (surveillance-refusal default).
 /// Gated like `place_time` (needs `crate::modalities`).
@@ -107,6 +109,12 @@ pub mod lod_chain;
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
 #[cfg(feature = "gpu-runtime")]
 pub mod gpu;
+/// Naga bridge: WGSL → naga IR → GLSL ES 300 compilation.
+#[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
+pub mod naga_bridge;
+/// Naga IR sanitizer for WebGL2 (GLSL ES 300) compatibility.
+#[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
+pub mod naga_sanitize;
 /// The `#[wasm_bindgen]` portal facade (`QualiaPortal`) driving the browser viewport.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal;

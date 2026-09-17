@@ -9,7 +9,7 @@ use crate::types::AudioError;
 /// above `threshold`, no two closer than `min_distance` bins (the weaker of a
 /// too-close pair is dropped). A pure tone yields ~1; a dense, noisy, or
 /// polyphonic spectrum yields many. Implemented over
-/// [`detect_peaks`](crate::features::peaks::detect_peaks).
+/// [`detect_peaks`].
 ///
 /// `scratch_pos` / `scratch_mag` are caller-supplied working buffers (they
 /// receive the peak positions and magnitudes as a side effect); their common

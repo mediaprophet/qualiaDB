@@ -474,7 +474,7 @@ impl FiduciaryCrypto {
 
     /// Sign message using the internal MlDsaSigner for the given key.
     ///
-    /// NOTE: The signing context uses timestamp=0 and nonce=[0] so that a matching
+    /// NOTE: The signing context uses timestamp=0 and nonce=\[0\] so that a matching
     /// `verify()` call (which reconstructs the same deterministic context) will succeed.
     /// A future upgrade to FIPS-204 ML-DSA should embed the context in the signature.
     pub fn sign(

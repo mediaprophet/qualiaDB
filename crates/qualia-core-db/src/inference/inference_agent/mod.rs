@@ -40,7 +40,9 @@ pub use crate::modalities::logic::n3_compiler::{
 mod sticky_infer;
 
 mod config;
+mod control;
 mod decode;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod decode_helpers;
 mod local_agent;
 mod runtime;
@@ -48,6 +50,7 @@ mod types;
 mod validation;
 
 pub use config::*;
+pub use control::*;
 pub use local_agent::*;
 pub use types::*;
 

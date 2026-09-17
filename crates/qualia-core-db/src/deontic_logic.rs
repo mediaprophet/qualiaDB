@@ -273,11 +273,11 @@ use crate::modalities::logic::n3_parser::RuleType;
 /// Compile an N3 rule into a norm Quin (or a defeater Quin if rule_type is Defeater).
 ///
 /// Mapping:
-///   premise.triples[0].subject  → party_did_hash  (who is bound)
-///   premise.triples[0].predicate → property_path_hash  (what action/property)
-///   premise.triples[0].object   → action_object_hash  (target entity)
+///   premise.triples\[0\].subject  → party_did_hash  (who is bound)
+///   premise.triples\[0\].predicate → property_path_hash  (what action/property)
+///   premise.triples\[0\].object   → action_object_hash  (target entity)
 ///   rule.rule_type              → opcode + is_defeater flag
-///   conclusion.triples[0].subject → contract context hash
+///   conclusion.triples\[0\].subject → contract context hash
 ///
 /// Returns None if the rule does not have the expected triple structure.
 pub fn compile_n3_rule_to_norm(

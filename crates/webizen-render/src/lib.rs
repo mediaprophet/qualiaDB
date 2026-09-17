@@ -13,12 +13,15 @@
 pub mod audio_contract;
 pub mod math;
 pub mod pipeline;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub mod poet_preview;
 pub mod scene_contract;
 pub mod shaders;
 pub mod telemetry;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub mod volumetric;
 pub mod wgpu_renderer;
+pub mod zero_copy_views;
 
 // Re-export main types for convenience
 pub use math::{AlignedBufferF32, Motor, MotorEncoder, RenderQuin};
@@ -36,6 +39,7 @@ pub use wgpu_renderer::{
     render_scene_png_with_time,
 };
 pub use wgpu_renderer::{Camera, ScreenPoint, Vec3, WgpuRenderer};
+pub use zero_copy_views::{CameraUniform, ModelUniform, Std140Field, Std140Type, TimeUniform};
 
 #[cfg(test)]
 mod tests {

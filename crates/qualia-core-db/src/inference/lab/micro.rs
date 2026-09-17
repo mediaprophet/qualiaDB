@@ -151,6 +151,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[serial_test::serial]
     fn micro_cpu_runs() {
         let r = run_q4k_soa_microbench(256, 4);
         assert!(r.cpu_ms > 0.0);

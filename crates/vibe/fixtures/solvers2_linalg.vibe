@@ -1,0 +1,19 @@
+# Linear algebra decompositions (LU, Cholesky, characteristic polynomial, general eigenvalues)
+
+# LU decomposition
+invoke LinearAlgebra.lu_decompose { a: [[4.0, 3.0], [6.0, 3.0]] }
+
+# LU solve
+invoke LinearAlgebra.lu_solve { a: [[4.0, 3.0], [6.0, 3.0]], b: [10.0, 12.0] }
+
+# Cholesky factor of an SPD matrix
+invoke LinearAlgebra.cholesky_factor { a: [[4.0, 2.0], [2.0, 3.0]] }
+
+# Cholesky determinant
+invoke LinearAlgebra.cholesky_determinant { l: [2.0, 0.0, 1.0, 1.4142135623730951], n: 2 }
+
+# Characteristic polynomial
+invoke LinearAlgebra.characteristic_polynomial { a: [[2.0, 1.0], [0.0, 3.0]] }
+
+# General eigenvalues (may be complex)
+invoke LinearAlgebra.eigenvalues_general { a: [[2.0, 1.0], [0.0, 3.0]] }

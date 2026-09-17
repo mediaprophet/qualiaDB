@@ -1,0 +1,13 @@
+module <https://qualiadb.org/modules/emf_field_grid>;
+import "vibe:0.1/math" as m;
+pure fn inverse_square(distance: f64, power: f64) -> f64 {
+    if distance <= 0.0 {
+        return 0.0;
+    }
+    return power / (4.0 * 3.141592653589793 * distance * distance);
+}
+pure fn free_space_path_loss(distance_m: f64, frequency_hz: f64) -> f64 {
+    let c = 299792458.0;
+    let wavelength = c / frequency_hz;
+    return 20.0 * m.log10(distance_m) + 20.0 * m.log10(frequency_hz) - 147.55;
+}

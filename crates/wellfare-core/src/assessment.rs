@@ -15,7 +15,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// One selectable response on an instrument's ordinal scale (e.g. `0 = "Not at all"`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -228,6 +230,19 @@ pub struct AssessmentResult {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub flags: Vec<String>,
     pub taken_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `taken_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub taken_at_instant: Option<InstantBridge>,
+}
+
+impl AssessmentResult {
+    /// Resolve the taken-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn taken_at(&self) -> InstantBridge {
+        self.taken_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.taken_at_unix))
+    }
 }
 
 /// Score a set of responses against an instrument. Fail-closed: wrong response count or an
@@ -284,6 +299,7 @@ pub fn score(
         interpretation: band.interpretation.to_string(),
         flags,
         taken_at_unix,
+        taken_at_instant: Some(InstantBridge::from_coarse(taken_at_unix)),
     })
 }
 
@@ -308,8 +324,11 @@ pub fn build_assessment_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(result.taken_at_unix),
+        valid_time_start_instant: result.taken_at_instant,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash: None,
         tombstone: false,

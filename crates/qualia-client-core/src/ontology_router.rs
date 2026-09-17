@@ -47,7 +47,9 @@ pub fn route_prompt_with_focus_and_allowlist(
 ) -> OntologyRoutingDecision {
     let allowed = |id: &str| {
         allowed_ontology_ids.is_empty()
-            || allowed_ontology_ids.iter().any(|configured| configured == id)
+            || allowed_ontology_ids
+                .iter()
+                .any(|configured| configured == id)
     };
     let in_scope: Vec<&OntologyScopeSummary> = env
         .ontology_summaries

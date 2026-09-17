@@ -71,7 +71,7 @@ pub struct LandmarkFrame {
     /// Milliseconds since challenge issue (localized session clock).
     pub t_ms: u32,
     pub points: [Landmark2; PadLandmarkId::COUNT],
-    /// Bit i set ⇒ points[i] is valid.
+    /// Bit i set ⇒ points`i` is valid.
     pub valid_mask: u8,
 }
 

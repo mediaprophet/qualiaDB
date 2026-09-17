@@ -27,11 +27,15 @@ fn verify_decoded_superblock(decoded: &[u8]) -> io::Result<()> {
     }
     let count = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
     if count > QUINS_PER_BLOCK {
-        return Err(invalid("decoded Q42 SuperBlock Quin count exceeds capacity"));
+        return Err(invalid(
+            "decoded Q42 SuperBlock Quin count exceeds capacity",
+        ));
     }
     let occupied = SUPERBLOCK_HEADER + count * QUIN_SIZE;
     if occupied > SUPERBLOCK_SIZE {
-        return Err(invalid("decoded Q42 SuperBlock Quin payload overruns the block"));
+        return Err(invalid(
+            "decoded Q42 SuperBlock Quin payload overruns the block",
+        ));
     }
     Ok(())
 }
@@ -923,9 +927,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         if block_index >= self.header.block_count as usize {
             return Err(invalid("Q42 field postings block index is out of bounds"));
         }
-        let table = offset
-            + super::postings::FIELD_POSTINGS_HEADER_BYTES as u64
-            + (block_index as u64) * 4;
+        let table =
+            offset + super::postings::FIELD_POSTINGS_HEADER_BYTES as u64 + (block_index as u64) * 4;
         let mut ends = [0u8; 8];
         self.read_section(table, 8, &mut ends)?;
         let start = u32::from_le_bytes(ends[0..4].try_into().unwrap());

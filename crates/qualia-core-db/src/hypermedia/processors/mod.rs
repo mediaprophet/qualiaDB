@@ -3,9 +3,9 @@
 //! descriptor facets (+ flags) that fold into its container, so the *original*
 //! becomes findable by meaning.
 //!
-//! The framework itself — the [`Processor`](super::Processor) trait,
-//! [`ProcessorOutput`](super::ProcessorOutput), and the model-free
-//! [`TextProcessor`](super::TextProcessor) — lives in the parent module. This
+//! The framework itself — the [`crate::hypermedia::Processor`] trait,
+//! [`crate::hypermedia::ProcessorOutput`], and the model-free
+//! [`crate::hypermedia::TextProcessor`] — lives in the parent module. This
 //! submodule holds the heavier, self-contained processors and the dispatcher
 //! that picks one by media type:
 //!

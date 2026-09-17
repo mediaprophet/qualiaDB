@@ -1,0 +1,17 @@
+module <https://qualiadb.org/modules/gamut_map>;
+import "vibe:0.1/math" as m;
+pure fn clamp_rgb_channel(channel: f64) -> f64 {
+    return m.clamp(channel, 0.0, 1.0);
+}
+pure fn srgb_to_linear(c: f64) -> f64 {
+    if c <= 0.04045 {
+        return c / 12.92;
+    }
+    return m.pow((c + 0.055) / 1.055, 2.4);
+}
+pure fn linear_to_srgb(c: f64) -> f64 {
+    if c <= 0.0031308 {
+        return 12.92 * c;
+    }
+    return 1.055 * m.pow(c, 1.0 / 2.4) - 0.055;
+}

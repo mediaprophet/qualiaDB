@@ -3,7 +3,7 @@
 //! The engine's canonical **dynamic** LU. The fixed-size [`super::StaticLuDecomposition`]
 //! handles only 4×4; this is the general `n×n` routine that the specialized libraries
 //! call (they keep only a thin error-mapping facade). Row-major, fails closed on a
-//! shape mismatch; a zero pivot is recorded in [`Lu::singular`] (not an error) so the
+//! shape mismatch; a zero pivot is recorded in `Lu::singular` (not an error) so the
 //! determinant correctly comes out 0.
 //!
 //! Doolittle elimination with partial pivoting — `O(n³)`, numerically robust.

@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/pulse_filter>;
+requires [ capability("pulse.publish", topic: "filtered/events") ];
+effect fn filter_event(topic: string, value: f64) {
+    if value > 0.0 {
+        effect pulse.publish("filtered/events", value);
+    }
+    return null;
+}
+on pulse:message(topic: string, value: f64) {
+    return filter_event(topic, value);
+}

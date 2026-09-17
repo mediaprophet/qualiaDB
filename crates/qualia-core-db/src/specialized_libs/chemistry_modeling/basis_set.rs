@@ -282,7 +282,7 @@ impl ShellType {
 /// `coefficients` has one row per entry.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContractedShell {
-    /// Angular momentum quantum number(s). For a simple shell, this is [l].
+    /// Angular momentum quantum number(s). For a simple shell, this is `l`.
     /// For a combined shell (e.g. STO-3G carbon SP), this is [0, 1].
     pub angular_momentum: Vec<AngularMomentum>,
     /// Shell type (Cartesian or spherical).
@@ -457,7 +457,7 @@ impl ContractedShell {
 /// and `coefficients[k]` = d_k.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EcpPotential {
-    /// Angular momentum for this potential. [0] = U_s, [1] = U_p, etc.
+    /// Angular momentum for this potential. \[0\] = U_s, \[1\] = U_p, etc.
     /// A special value [−1] (represented as AngularMomentum(255)) means the
     /// "ul" or "sum" potential (the base potential that all others reduce to).
     pub angular_momentum: Vec<AngularMomentum>,

@@ -1,0 +1,65 @@
+// VibeScript fixture: asset aspect sub-graph with multiple temporal assertions
+using Asset;
+// Tests Asset.create, Asset.add_temporal, Asset.add_topic, Asset.set_spatial,
+// Asset.compile, Asset.temporal_span, Asset.query_aspects
+
+let mut recording = Asset.create({
+  asset_id: "rec-carnegie-1959",
+  kind: "recording",
+  owner_did: "did:method:alice"
+});
+
+recording = Asset.add_temporal({
+  asset: recording,
+  kind: "production",
+  secs: -319728000,  // 1960-01-01
+  nanos: 0,
+  asserted_by: "did:method:alice",
+  confidence: 0.95
+});
+
+recording = Asset.add_temporal({
+  asset: recording,
+  kind: "publication",
+  secs: -283996800,  // 1961-01-01
+  nanos: 0,
+  asserted_by: "did:method:bob"
+});
+
+recording = Asset.add_temporal({
+  asset: recording,
+  kind: "event",
+  secs: -319728000,  // same as production (live recording)
+  nanos: 0,
+  duration_secs: 7200,
+  asserted_by: "did:method:alice"
+});
+
+recording = Asset.add_topic({
+  asset: recording,
+  topic: "classical music",
+  subject: "rec-carnegie-1959",
+  relation: "q42:isAbout"
+});
+
+recording = Asset.add_topic({
+  asset: recording,
+  topic: "Carnegie Hall",
+  subject: "rec-carnegie-1959",
+  relation: "q42:associatedWith"
+});
+
+recording = Asset.set_spatial({
+  asset: recording,
+  anchor_id: "carnegie-hall",
+  lat: 40.7484,
+  lon: -73.9857,
+  alt: 0.0
+});
+
+let compiled = Asset.compile({ asset: recording });
+let span = Asset.temporal_span({ asset: recording });
+let events = Asset.query_aspects({
+  asset: recording,
+  kind: "event"
+});

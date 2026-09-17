@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/smiles_validate>;
+import "vibe:0.1/math" as m;
+pure fn atom_count_valid(count: f64) -> f64 {
+    return m.clamp(count, 0.0, 1000.0);
+}

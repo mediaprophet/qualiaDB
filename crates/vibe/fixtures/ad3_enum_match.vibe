@@ -1,0 +1,13 @@
+enum Shape {
+    Point,
+    Circle(f64),
+    Rect(f64, f64),
+}
+fn main() {
+    let s = Shape.Rect(3.0, 4.0);
+    match s {
+        Shape.Point => 0,
+        Shape.Circle(r) => r,
+        Shape.Rect(w, h) => w * h,
+    }
+}

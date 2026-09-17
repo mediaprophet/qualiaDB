@@ -50,7 +50,13 @@ pub fn HostSnapshotProvider(children: Element) -> Element {
     });
 
     use_context_provider(|| snapshot);
-    rsx! { {children} }
+    rsx! {
+        div {
+            class: "host-snapshot-provider",
+            style: "flex:1;min-height:0;min-width:0;width:100%;height:100%;display:flex;flex-direction:column;",
+            {children}
+        }
+    }
 }
 
 pub fn use_host_snapshot() -> Signal<WellfairHostSnapshot> {
@@ -1311,8 +1317,8 @@ mod accountability;
 mod agency;
 mod anatomy_qapp;
 mod anatomy_render;
-mod constitution;
 mod clinical;
+mod constitution;
 mod decoy;
 mod disclosure;
 mod encryption;
@@ -1332,8 +1338,8 @@ pub use accountability::*;
 pub use agency::*;
 pub use anatomy_qapp::*;
 pub use anatomy_render::*;
-pub use constitution::*;
 pub use clinical::*;
+pub use constitution::*;
 pub use decoy::*;
 pub use disclosure::*;
 pub use encryption::*;

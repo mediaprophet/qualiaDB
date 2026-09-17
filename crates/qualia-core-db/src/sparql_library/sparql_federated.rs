@@ -304,8 +304,8 @@ impl FederatedQuery {
 ///
 /// Local services (`local:`/`qualia:`) are executed in-process via the standard
 /// SPARQL parser → planner → executor pipeline. Remote HTTP(S) services are executed
-/// over the **real SPARQL 1.1 Protocol** ([`fetch_remote_sparql`] +
-/// [`parse_sparql_results_json`]): a `application/sparql-query` POST, the
+/// over the **real SPARQL 1.1 Protocol** (`fetch_remote_sparql` +
+/// `parse_sparql_results_json`): a `application/sparql-query` POST, the
 /// `application/sparql-results+json` response parsed into binding rows + a resolvable
 /// lexicon. Remote execution is real network egress and runs only for endpoints the
 /// caller explicitly targets.

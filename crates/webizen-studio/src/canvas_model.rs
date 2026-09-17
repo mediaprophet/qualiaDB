@@ -1,4 +1,7 @@
-//! Shared workspace canvas types used by the studio editor and render panes.
+//! Shared workspace **manifold** types (work surfaces).
+//!
+//! A manifold is a page of panes — not an HTML `<canvas>` and not a wgpu surface.
+//! Those drawing surfaces stay named canvas.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -69,7 +72,8 @@ pub enum LayerBehavior {
     Docked,
     FloatingOverlay,
     ModalOverlay,
-    FullCanvas,
+    #[serde(alias = "FullCanvas")]
+    FullManifold,
 }
 
 impl Default for LayerBehavior {
@@ -106,6 +110,7 @@ pub struct PanePlacement {
     pub theme: ThemeBinding,
 }
 
+/// One work surface. Product name: manifold.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Page {
     pub url_path: String,
@@ -135,3 +140,6 @@ pub struct WebizenWorkspace {
     #[serde(default)]
     pub app_theme: ThemeBinding,
 }
+
+/// Product name for a work-surface page.
+pub type Manifold = Page;

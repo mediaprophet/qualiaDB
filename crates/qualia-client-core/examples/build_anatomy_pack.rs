@@ -47,7 +47,10 @@ fn main() {
             }
         }
         "systems" => {
-            print!("{}", wellfare_core::anatomy::seed_system_coverage_markdown());
+            print!(
+                "{}",
+                wellfare_core::anatomy::seed_system_coverage_markdown()
+            );
             println!(
                 "\nAuthority is Qualia (`wellfare_core::anatomy::seed_system_coverage`), not the workshop Python CLI."
             );
@@ -61,9 +64,10 @@ fn main() {
                 .get(3)
                 .cloned()
                 .unwrap_or_else(|| r"C:\Projects\anatomy\export".to_string());
-            let out = args.get(4).cloned().unwrap_or_else(|| {
-                format!("target/anatomy-pack/workshop-{}.hmc", model.as_str())
-            });
+            let out = args
+                .get(4)
+                .cloned()
+                .unwrap_or_else(|| format!("target/anatomy-pack/workshop-{}.hmc", model.as_str()));
             match qualia_client_core::wellfair::workshop_ingest::build_workshop_pack(
                 &dir, model, &out,
             ) {
@@ -107,9 +111,11 @@ fn main() {
                             println!("  not found   : {}", r.curated_not_found.join(", "));
                         }
                         if !r.failed.is_empty() {
-                            had_err = true;
                             for (k, e) in &r.failed {
                                 eprintln!("  FAILED {k}: {e}");
+                            }
+                            if r.organs_packed == 0 {
+                                had_err = true;
                             }
                         }
                     }

@@ -6,8 +6,6 @@
 use crate::q_hash;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
-#[cfg(unix)]
-use std::os::unix::io::AsRawFd;
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;

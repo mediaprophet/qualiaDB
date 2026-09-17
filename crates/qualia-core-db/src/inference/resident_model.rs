@@ -62,7 +62,6 @@ pub fn mount_resident_q42(
     path: &str,
     mlock: bool,
 ) -> Result<GgufLoadReport, String> {
-    clear_resident_model();
     let file = std::fs::File::open(path).map_err(|e| format!("open {path}: {e}"))?;
     let mmap_raw =
         unsafe { memmap2::MmapOptions::new().populate().map(&file) }.map_err(|e| e.to_string())?;
@@ -96,7 +95,6 @@ pub fn mount_resident_model(
     path: &str,
     mlock: bool,
 ) -> Result<GgufLoadReport, String> {
-    clear_resident_model();
     let mut engine = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())
     })?;

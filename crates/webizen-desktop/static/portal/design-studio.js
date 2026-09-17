@@ -33,8 +33,8 @@ async function probePortal() {
     daemonReachable = !!st.graph_daemon_reachable;
     daemonPort = st.graph_daemon_port || 4242;
     badge.textContent = daemonReachable
-      ? `Portal live · daemon :${daemonPort}`
-      : `Portal live · daemon offline`;
+      ? (st.graph_daemon_label || `Native Connected to 127.0.0.1:${daemonPort}`)
+      : (st.graph_daemon_label || `held / not yet — local daemon 127.0.0.1:${daemonPort}`);
     badge.className = "portal-badge live";
     await loadSparqlEndpoints();
   } catch {

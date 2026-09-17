@@ -1,0 +1,66 @@
+# Geometric algebra, Poisson solver, and approximate graph matching
+
+# Geometric product of two multivectors (e1 * e2 = e12)
+invoke GeometricAlgebra.geometric_product {
+  a: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  b: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+}
+
+# Outer product (wedge) of e1 and e2 = e12
+invoke GeometricAlgebra.outer_product {
+  a: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  b: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+}
+
+# Rotor from 90-degree rotation around z-axis
+invoke GeometricAlgebra.rotor_from_angle_axis { angle: 1.5707963267948966, axis: [0.0, 0.0, 1.0] }
+
+# Apply rotor to rotate e1 by 90 degrees around z -> should give e2
+invoke GeometricAlgebra.apply_rotor {
+  rotor: [0.7071067811865476, -0.7071067811865476, 0.0, 0.0],
+  vector: [1.0, 0.0, 0.0]
+}
+
+# Translator from displacement
+invoke GeometricAlgebra.translator_from_displacement { displacement: [1.0, 2.0, 3.0] }
+
+# Apply translator
+invoke GeometricAlgebra.apply_translator {
+  translator: [1.0, 0.5, 1.0, 1.5],
+  vector: [0.0, 0.0, 0.0]
+}
+
+# Check SIMD availability
+invoke GeometricAlgebra.is_simd_available {}
+
+# Poisson solver on a 4x4 grid with zero source and zero boundary
+invoke Calculus.solve_poisson_dirichlet {
+  width: 4,
+  height: 4,
+  spacing: 0.1,
+  source: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  boundary: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  tolerance: 0.0001,
+  max_iterations: 100
+}
+
+# Discrete maximum principle check
+invoke Calculus.discrete_maximum_principle_holds {
+  width: 4,
+  height: 4,
+  spacing: 0.1,
+  source: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  boundary: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  solution: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  tolerance: 0.0001
+}
+
+# Approximate graph match
+invoke GraphMatch.approximate_match {
+  pattern: [{ s: 0, p: 0, o: 1, degree: 1.0 }, { s: 1, p: 0, o: 0, degree: 1.0 }],
+  data: [{ s: 0, p: 0, o: 1, degree: 1.0 }, { s: 1, p: 0, o: 0, degree: 1.0 }],
+  n_pattern_nodes: 2,
+  n_data_nodes: 2,
+  restarts: 5,
+  seed: 42
+}

@@ -3,7 +3,7 @@
 //!
 //! A packed anatomy body is a `.hmc` bundle (see [`crate::bundle`]) whose
 //! entries are the per-organ sealed `.10d` meshes. Each entry's opaque `meta`
-//! holds one CBOR-encoded [`AnatomyOrganMeta`]: which body **system** the organ
+//! holds one CBOR-encoded `AnatomyOrganMeta`: which body **system** the organ
 //! belongs to, an **approximate** anatomical position for assembling the whole
 //! body, and a **neutral default colour** (the pack ships no personal data — a
 //! person's real burden colouring, from `AnatomyViewReport::paint_organs`,

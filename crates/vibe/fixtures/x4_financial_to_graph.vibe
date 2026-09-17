@@ -1,0 +1,25 @@
+module <https://qualiadb.org/modules/financial_to_graph>;
+prefix fin: <https://qualiadb.org/finance/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write")
+];
+pure fn classify_risk(sharpe: f64) -> i64 {
+    if sharpe > 2.0 {
+        return 0;
+    }
+    if sharpe > 1.0 {
+        return 1;
+    }
+    if sharpe > 0.0 {
+        return 2;
+    }
+    return 3;
+}
+effect fn record_risk_assessment(asset: Iri, sharpe: f64) {
+    let level = classify_risk(sharpe);
+    let claim = <<( asset fin:risk_level level )>>;
+    graph.stage(claim);
+    graph.commit()?;
+    return null;
+}

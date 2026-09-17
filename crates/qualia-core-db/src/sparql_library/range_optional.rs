@@ -8,8 +8,9 @@
 use super::range_select_apply::{apply_select_wrappers, SelectWrapperState};
 use super::sparql_ast::{BindingRow, ExpressionId, SparqlQueryContext, VariableId, MAX_VARIABLES};
 use super::sparql_executor::{
-    execute_range_triple_page_into, execute_range_volume_set_triple_page_into, Q42RangeNestedLoopJoinPage,
-    Q42RangeSparqlCursor, Q42RangeTriplePattern, Q42RangeVolumeSetSparqlCursor,
+    execute_range_triple_page_into, execute_range_volume_set_triple_page_into,
+    Q42RangeNestedLoopJoinPage, Q42RangeSparqlCursor, Q42RangeTriplePattern,
+    Q42RangeVolumeSetSparqlCursor,
 };
 use super::sparql_planner::{ExecutionPlan, PhysicalOperatorType};
 use crate::NQuin;
@@ -90,7 +91,9 @@ impl Q42RangeOptionalPlan {
                 }
                 PhysicalOperatorType::Filter { input, expression } => {
                     if filter_count == filters.len() {
-                        return Err("range OPTIONAL supports at most eight stacked FILTER operators".into());
+                        return Err(
+                            "range OPTIONAL supports at most eight stacked FILTER operators".into(),
+                        );
                     }
                     filters[filter_count] = expression;
                     filter_count += 1;
@@ -155,9 +158,7 @@ pub fn execute_range_optional_page_into<S: crate::q42_volume::Q42RangeSource>(
         || right_rows.len() < quin_scratch.len()
         || join_out.len() < quin_scratch.len()
     {
-        return Err(
-            "range OPTIONAL requires row buffers at least as large as Quin scratch".into(),
-        );
+        return Err("range OPTIONAL requires row buffers at least as large as Quin scratch".into());
     }
     let mut returned = 0usize;
     loop {
@@ -254,9 +255,7 @@ pub fn execute_range_volume_set_optional_page_into<S: crate::q42_volume::Q42Rang
         || right_rows.len() < quin_scratch.len()
         || join_out.len() < quin_scratch.len()
     {
-        return Err(
-            "range OPTIONAL requires row buffers at least as large as Quin scratch".into(),
-        );
+        return Err("range OPTIONAL requires row buffers at least as large as Quin scratch".into());
     }
     let mut returned = 0usize;
     loop {
@@ -374,12 +373,7 @@ where
                     done: true,
                 });
             }
-            let (count, next) = page_fn(
-                plan.left,
-                &BindingRow::default(),
-                *left_scan,
-                left_rows,
-            )?;
+            let (count, next) = page_fn(plan.left, &BindingRow::default(), *left_scan, left_rows)?;
             *left_count = count;
             *left_index = 0;
             *left_scan = next.unwrap_or_default();

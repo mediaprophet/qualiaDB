@@ -1,0 +1,17 @@
+// Human dialect — still / clip / scene on live Render.* (B-007 remap).
+module <https://qualiadb.org/modules/render_preview_handles>;
+using Render;
+
+effect fn still_frame(handle: u64) -> Record {
+    Render.gpu_render_frame({ handle: handle });
+    return Render.gpu_read_pixels({ handle: handle });
+}
+
+effect fn clip_eval(t: f64) -> Record {
+    return Render.animation_eval_preset({ family: "spatial_kinematics", preset: "orbit_spin", t: t });
+}
+
+effect fn scene_camera(handle: u64, yaw: f64, pitch: f64, zoom: f64) -> Record {
+    Render.gpu_set_camera({ handle: handle, yaw: yaw, pitch: pitch, zoom: zoom });
+    return Render.gpu_camera_state({ handle: handle });
+}

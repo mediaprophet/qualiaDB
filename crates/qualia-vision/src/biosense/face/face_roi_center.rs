@@ -25,7 +25,7 @@ pub fn face_roi_center(src: RgbView<'_>) -> FaceRoi {
     }
 }
 
-/// Mean RGB in ROI into `out` [r,g,b].
+/// Mean RGB in ROI into `out` \[r,g,b\].
 pub fn roi_mean_rgb(src: RgbView<'_>, roi: FaceRoi, out: &mut [f32; 3]) {
     let mut s = [0.0f32; 3];
     let mut n = 0.0f32;

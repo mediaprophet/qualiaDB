@@ -1,7 +1,9 @@
 pub mod accountability_ledger;
 pub mod accountability_store;
 pub mod activity_signals;
+pub mod agent_characteristics;
 pub mod agent_registry;
+pub mod agent_turn_handler;
 pub mod agreements;
 pub mod anatomy_context;
 pub mod api;
@@ -31,6 +33,7 @@ pub mod companion_bundle;
 pub mod connection_identifier;
 pub mod consent_credential;
 pub mod context_binding;
+pub mod conditioning;
 pub mod cookie_graph;
 pub mod dead_mans_switch;
 pub mod directory;
@@ -47,6 +50,7 @@ pub mod handshake;
 pub mod identity_plane;
 pub mod incapacity_switch;
 pub mod inference_backend;
+pub mod introduction;
 pub mod job_router;
 pub mod local_job_scheduler;
 pub mod magic_link;
@@ -62,6 +66,8 @@ pub mod node_identity;
 pub mod ollama_harness;
 pub mod ontology_router;
 pub mod ontology_workbench;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod poet_library_provider;
 pub mod prerequisites;
 pub mod project_collab;
 #[cfg(not(target_arch = "wasm32"))]

@@ -1,0 +1,6 @@
+fn main() {
+  let a = 3;
+  let b = 0.14;
+  let pi = a + b;
+  return pi;
+}

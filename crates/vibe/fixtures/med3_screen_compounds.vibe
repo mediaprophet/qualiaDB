@@ -1,0 +1,37 @@
+# Medical computing — compound screening with Lipinski/Veber filters
+invoke MedicalComputing.screen_compounds {
+  compounds: [
+    {
+      id: "aspirin",
+      name: "Acetylsalicylic acid",
+      smiles: "CC(=O)Oc1ccccc1C(=O)O",
+      molecular_weight: 180.16,
+      logp: 1.19,
+      solubility: 0.003,
+      acute_toxicity: 1.5,
+      chronic_toxicity: 0.5,
+      mutagenicity: false,
+      carcinogenicity: false
+    },
+    {
+      id: "ibuprofen",
+      name: "Ibuprofen",
+      smiles: "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
+      molecular_weight: 206.28,
+      logp: 3.97,
+      solubility: 0.0005,
+      acute_toxicity: 0.9,
+      chronic_toxicity: 0.3,
+      mutagenicity: false,
+      carcinogenicity: false
+    }
+  ],
+  target: {
+    id: "cox2",
+    name: "Cyclooxygenase-2",
+    target_type: "Enzyme",
+    biological_function: "inflammation",
+    disease_association: ["arthritis", "pain"]
+  },
+  query_smiles: "CC(=O)Oc1ccccc1C(=O)O"
+}

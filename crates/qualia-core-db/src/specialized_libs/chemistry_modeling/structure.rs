@@ -34,7 +34,7 @@ pub fn standard_atomic_weight(element: &str) -> Option<f64> {
 }
 
 /// Exact structural / mass properties of a molecule (see the methods on
-/// [`ChemistryModelingLibrary`]). Every field is computed from a closed-form
+/// `ChemistryModelingLibrary()`). Every field is computed from a closed-form
 /// definition over atomic data and geometry, not an approximation or fit.
 #[derive(Debug, Clone)]
 pub struct StructuralProperties {

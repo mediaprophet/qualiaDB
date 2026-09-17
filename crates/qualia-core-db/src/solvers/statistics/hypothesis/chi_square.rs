@@ -1,5 +1,5 @@
 //! χ² tests — goodness-of-fit and independence (contingency table), with a real
-//! upper-tail p-value from [`chi_squared`](super::super::distributions::chi_squared).
+//! upper-tail p-value from [`chi_squared`].
 
 use super::super::distributions::chi_squared;
 

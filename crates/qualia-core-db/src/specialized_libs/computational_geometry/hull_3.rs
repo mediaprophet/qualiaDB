@@ -120,7 +120,7 @@ pub fn convex_hull_3(points: &[Point3], out: &mut [[u32; 3]]) -> Result<usize, H
 /// Kernel-generic 3-D convex hull — the incremental algorithm runs unchanged
 /// over any [`GeometryKernel`] (filtered `f64` today, exact arithmetic via the
 /// same trait). This is the seam where the predicate kernel is swapped without
-/// touching the algorithm, mirroring [`super::hull`].
+/// touching the algorithm, mirroring `super::hull`.
 ///
 /// Output faces are outward-oriented (right-hand rule: the normal of `a→b→c`
 /// points away from the hull interior) and form a closed manifold surface.

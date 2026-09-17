@@ -1,5 +1,19 @@
 //! `q42` category (reorg).
 
+/// Portable application manifest v1 (APP-02).
+pub mod app_manifest;
+/// Installed-app registry and read-only inspection (WD-02).
+pub mod app_registry;
+/// Governed Q42 dataset asset envelope + licence policy (AST-01).
+pub mod asset_envelope;
+/// Bounded cold-construction asset import jobs (AST-02).
+pub mod asset_import;
+/// ChEBI record → Quin mapping (AST-04).
+pub mod chebi_map;
+/// ChEBI compounds.tsv local parser (AST-03).
+pub mod chebi_parse;
+/// ChEBI in-memory chemical knowledge queries (AST-05).
+pub mod chebi_query;
 pub mod design_encode;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
 pub mod execution_profile;
@@ -7,7 +21,6 @@ pub mod execution_profile;
 pub mod machine_gpu_profile;
 /// Canonical Q42 v3 model-metadata volume for converted `.p64` packages.
 pub mod model_helper;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod p64_weight;
 pub mod q42_kvp;
 #[cfg(not(target_arch = "wasm32"))]
@@ -16,4 +29,6 @@ pub mod q42_lexicon;
 pub mod q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_volume;
+/// Upstream source / connector catalogue without data bundling (AST-07).
+pub mod source_catalogue;
 pub mod yaml_ld_q42;

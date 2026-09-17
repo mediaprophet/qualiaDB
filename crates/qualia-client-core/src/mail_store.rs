@@ -67,8 +67,11 @@ fn new_id() -> String {
     format!("m-{n:x}-{r:08x}")
 }
 
+static STORE_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Append a delivered message. Returns the stored record.
 pub fn append(msg: StoredMail) -> Result<StoredMail, String> {
+    let _guard = STORE_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
     let mut all = load_all();
     all.insert(0, msg.clone()); // newest first
                                 // Soft cap — keep last 5_000 messages so the file stays bounded.
@@ -135,6 +138,7 @@ pub fn get(id: &str) -> Option<StoredMail> {
 }
 
 pub fn set_read(id: &str, read: bool) -> Result<StoredMail, String> {
+    let _guard = STORE_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
     let mut all = load_all();
     let msg = all
         .iter_mut()
@@ -147,6 +151,7 @@ pub fn set_read(id: &str, read: bool) -> Result<StoredMail, String> {
 }
 
 pub fn delete(id: &str) -> Result<(), String> {
+    let _guard = STORE_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
     let mut all = load_all();
     let before = all.len();
     all.retain(|m| m.id != id);

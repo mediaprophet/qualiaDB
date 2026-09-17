@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/x6_time_now>;
+effect fn main() {
+    let now = time.now();
+    let secs = instant.to_unix_secs(now);
+    return secs;
+}

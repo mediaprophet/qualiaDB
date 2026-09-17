@@ -2,7 +2,7 @@
 //!
 //! **Does not use model-inferred Z.** MediaPipe depth is a statistical prior
 //! and will pass flat-screen attacks. The real lock is
-//! [`profile_asymmetry_ratio`](crate::biosense::liveness::profile_asymmetry_ratio)
+//! [`crate::biosense::liveness::profile_asymmetry_ratio()`]
 //! — Profile Asymmetry Ratio on raw image \(x\) of landmarks 1 / 234 / 454.
 //!
 //! This module is a thin compatibility façade over PAR so existing call sites

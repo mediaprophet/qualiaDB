@@ -22,10 +22,10 @@
 //! | field | carries |
 //! |-------|---------|
 //! | `subject`  | the artefact id (shared with its mesh facts and any norm about it) |
-//! | `predicate`| [`P_SITUATED_AT`] semantic stamp |
-//! | `object`   | the artefact's `(x, y)` location, via [`pack_point`] (shared encoding with RCC-8) |
+//! | `predicate`| `P_SITUATED_AT` semantic stamp |
+//! | `object`   | the artefact's `(x, y)` location, via `pack_point` (shared encoding with RCC-8) |
 //! | `context`  | the jurisdiction / frame id |
-//! | `metadata` | the valid-time interval `[from, to]`, via [`pack_interval`] |
+//! | `metadata` | the valid-time interval `[from, to]`, via `pack_interval` |
 
 use crate::modalities::logic::deontic::{
     compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID,
@@ -56,7 +56,7 @@ pub fn pack_interval(start: i64, end: i64) -> u64 {
     (s << 32) | e
 }
 
-/// Inverse of [`pack_interval`] (sign-extends each 32-bit half back to `i64`).
+/// Inverse of `pack_interval` (sign-extends each 32-bit half back to `i64`).
 #[inline]
 pub fn unpack_interval(packed: u64) -> (i64, i64) {
     let s = (packed >> 32) as u32 as i32 as i64;

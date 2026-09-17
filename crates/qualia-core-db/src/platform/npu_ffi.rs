@@ -2,7 +2,7 @@
 //! Uses `wgpu` to execute cross-platform compute shaders (Vulkan/DirectML/Metal/WebGPU)
 //! that filter the 5th Vector of the NQuin parallel arrays.
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub mod gpu_sieve {
     use crate::NQuin;
     use wgpu::util::DeviceExt;

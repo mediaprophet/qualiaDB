@@ -259,7 +259,7 @@ enum ParseResult {
 }
 
 /// Stream all triples (and embedded-triple quins) from an N3/N3-Star reader
-/// into an [`ExternalSorter`]. Rules and formulae are skipped — only asserted
+/// into an `ExternalSorter()`. Rules and formulae are skipped — only asserted
 /// triples and embedded-triple assertions are stored as NQuins.
 pub fn parse_n3_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,

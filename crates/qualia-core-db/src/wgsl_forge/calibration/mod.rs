@@ -16,7 +16,7 @@
 //!   compress our engine's own tensors (GQA layout, RoPE convention, layer shapes are engine-specific).
 //! - **learn** — fit the artifact (AWQ scale fold reuses the existing AWQ pipeline; int8-KV scales =
 //!   W5a; dictionary/Top-K SAE = W5b).
-//! - **certify** ([`certify`]) — the ΔPPL ≤ gate via the existing [`perplexity_eval_blocking`] oracle.
+//! - **certify** (`mod@certify`) — the ΔPPL ≤ gate via the existing `mod@perplexity_eval_blocking` oracle.
 //! - **package** ([`package`]) — certified artifact + provenance (corpus hash, engine version, gate
 //!   numbers) as a CBOR-framed sidecar, so the engine can refuse uncertified artifacts.
 //!

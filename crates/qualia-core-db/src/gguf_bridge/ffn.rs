@@ -18,7 +18,7 @@ impl QTensorEngine {
         // 0.0.22: fused FFN now selects the cooperative GEMV entry point for its gate/up/down GEMMs
         // when enabled, so the FFN gets both wins: one readback per layer and the parallel row
         // reduction kernel.
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
         if crate::llm_bench::resident_weights_enabled() && crate::llm_bench::ffn_fusion_enabled() {
             if self.dispatch_ffn_fused_resident(index, hidden, emb_dim, tensors, scratch_a) {
                 return true;
@@ -116,7 +116,7 @@ impl QTensorEngine {
     /// blocking readback, with a CPU SiLU·mul between) with a single submit→wait round-trip per
     /// layer. Binds resident weight buffers (Phase 2), so it requires resident weights; returns
     /// `false` (→ caller falls back to the per-GEMM path) on any ineligibility or map failure.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn dispatch_ffn_fused_resident(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,

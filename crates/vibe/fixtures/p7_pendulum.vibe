@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/pendulum>;
+import "vibe:0.1/math" as m;
+pure fn period(length: f64, g: f64) -> f64 {
+    return 2.0 * 3.141592653589793 * m.sqrt(length / g);
+}
+pure fn angular_frequency(length: f64, g: f64) -> f64 {
+    return m.sqrt(g / length);
+}
+pure fn max_amplitude(theta0: f64) -> f64 {
+    return m.abs(theta0);
+}

@@ -138,7 +138,7 @@ impl AnatomyViewReport {
     }
 
     /// The distributed-overlay systems' percepts (ECS / ENS / glymphatic) — the systems that have no
-    /// standalone organ mesh and so are omitted by [`paint_organs`]. Each is rendered as a highlight
+    /// standalone organ mesh and so are omitted by `paint_organs()`. Each is rendered as a highlight
     /// over its host structures (see `host_systems`; empty = a whole-body cue). Together,
     /// `paint_organs` (discrete organs) + `overlay_percepts` (distributed networks) cover the whole
     /// body state — so nothing that carries burden is silently unrepresented.
@@ -409,6 +409,7 @@ mod tests {
             id: id.to_string(),
             kind: kind.to_string(),
             asserted_time_unix: 0,
+            asserted_instant: wellfare_core::record::InstantBridge::default(),
             evidence_type: "SelfReported".to_string(),
             sensitivity: "Restricted".to_string(),
             blob_hash: None,

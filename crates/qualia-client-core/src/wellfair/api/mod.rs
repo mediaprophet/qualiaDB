@@ -58,6 +58,7 @@ fn contribution_from_summary(
             .unwrap_or(1.0),
         privacy_level: Default::default(),
         occurred_at_unix,
+        occurred_at_instant: None,
         predecessor_id: None,
     })
 }
@@ -151,7 +152,7 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
-/// Parse a model string (`"male"` / `"female"`, case-insensitive) into an [`AnatomyModel`].
+/// Parse a model string (`"male"` / `"female"`, case-insensitive) into an `AnatomyModel()`.
 pub fn parse_anatomy_model(s: &str) -> Result<wellfare_core::anatomy::AnatomyModel, String> {
     match s.trim().to_ascii_lowercase().as_str() {
         "male" | "m" | "xy" => Ok(wellfare_core::anatomy::AnatomyModel::Male),

@@ -96,7 +96,7 @@ impl PolicyDecisionService {
     /// `is_proxy_action` marks a write made by an agent acting *on behalf of* the principal
     /// (the envelope carries a `proxy_did` distinct from the owner). Supported-agency
     /// accountability holds such a write in escrow for M-of-N guardian co-signature rather than
-    /// committing it silently — see [`super::guardianship`]. Non-proxy writes (the principal
+    /// committing it silently — see `super::guardianship()`. Non-proxy writes (the principal
     /// acting for themselves) are unaffected.
     pub fn evaluate_access(
         &self,

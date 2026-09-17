@@ -7,14 +7,14 @@
 //! the query language and not a second parser/registry. It contributes three
 //! things, each in its own single-purpose submodule (CLAUDE.md §11):
 //!
-//! - [`value`] — the typed function descriptor ([`ImmersiveFunctionDescriptor`]),
-//!   its [`ImmersiveValueKind`]/[`ExecutionClass`]/[`ExactnessClass`]
-//!   classification, and the stable [`QispError`] codes (plan §4.2–§4.4).
-//! - [`asset_registry`] — the bounded, generation-safe [`DenseAssetRegistry`] and
-//!   its fail-closed [`DenseAssetRef`] handle. A handle carries only numeric,
+//! - `value` — the typed function descriptor (`ImmersiveFunctionDescriptor`),
+//!   its `ImmersiveValueKind`/`ExecutionClass`/`ExactnessClass`
+//!   classification, and the stable `QispError` codes (plan §4.2–§4.4).
+//! - `asset_registry` — the bounded, generation-safe `DenseAssetRegistry` and
+//!   its fail-closed `DenseAssetRef` handle. A handle carries only numeric,
 //!   validated fields; **no Rust address is ever stored in an NQuin/RDF term**
 //!   (plan §3.4, §10.1 QISP-R03/R04).
-//! - [`profile`] — the fixed Tensor10D dimension order and honest classification,
+//! - `profile` — the fixed Tensor10D dimension order and honest classification,
 //!   plus inline-value validation (plan §3.5, §3.6).
 //!
 //! # Standards posture

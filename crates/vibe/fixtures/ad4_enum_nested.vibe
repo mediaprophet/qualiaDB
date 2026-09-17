@@ -1,0 +1,12 @@
+enum Outer {
+    Leaf,
+    Inner(InnerKind),
+}
+enum InnerKind {
+    A,
+    B,
+}
+fn main() {
+    let v = Outer.Inner(InnerKind.A);
+    return 0;
+}

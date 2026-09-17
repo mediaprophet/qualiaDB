@@ -2,7 +2,7 @@
 //! makes the §4.2 "no untyped `u64 -> u64` public function contract" real.
 //!
 //! Every QISP extension function (`qispf:`) is registered here with its typed
-//! [`ImmersiveFunctionDescriptor`]: argument kinds, result kind, execution class,
+//! `ImmersiveFunctionDescriptor()`: argument kinds, result kind, execution class,
 //! determinism, exactness, and I/O byte budgets. The SPARQL evaluator can look a
 //! function up by the `q_hash` of its IRI (the `Function::Custom(iri_hash)` path)
 //! and apply **admission control** — reject an inline `FILTER`/`BIND` use of an

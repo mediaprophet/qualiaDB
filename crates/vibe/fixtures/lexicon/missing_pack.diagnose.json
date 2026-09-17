@@ -1,0 +1,20 @@
+{
+  "valid": false,
+  "kind": "module",
+  "error_code": "E300",
+  "span": [0, 0],
+  "message": "lexicon pack not found (pin missing-core@0.0.0)",
+  "suggested_fix": "held / not yet — open lexicon pack",
+  "evidential": null,
+  "shacl_violations": [],
+  "errors": [
+    {
+      "error_code": "E300",
+      "span": [0, 0],
+      "message": "lexicon pack not found (pin missing-core@0.0.0)",
+      "suggested_fix": "held / not yet — open lexicon pack",
+      "evidential": null,
+      "shacl_violations": []
+    }
+  ]
+}

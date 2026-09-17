@@ -1,0 +1,17 @@
+module <https://qualiadb.org/modules/cfd_step>;
+import "vibe:0.1/math" as m;
+pure fn reynolds_number(velocity: f64, length: f64, nu: f64) -> f64 {
+    return m.abs(velocity) * length / nu;
+}
+pure fn is_turbulent(re: f64) -> bool {
+    return re > 4000.0;
+}
+pure fn is_laminar(re: f64) -> bool {
+    return re < 2300.0;
+}
+pure fn darcy_friction_factor(re: f64) -> f64 {
+    if re < 1.0 {
+        return 64.0 / 1.0;
+    }
+    return 64.0 / re;
+}

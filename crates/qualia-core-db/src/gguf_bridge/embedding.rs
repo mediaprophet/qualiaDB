@@ -5,7 +5,7 @@ use super::*;
 impl QTensorEngine {
     /// Upload raw quantized embedding bytes to the GPU and matmul without CPU dequant.
     /// Returns `None` when the GGML type has no WGSL kernel (caller uses CPU fallback).
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn dispatch_quantized_token_embedding(
         &self,
         raw_embd: &[u8],
@@ -175,7 +175,7 @@ impl QTensorEngine {
         Some(result)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub fn dispatch_fused_transformer_block(
         &self,
         tensor: &QTensor,

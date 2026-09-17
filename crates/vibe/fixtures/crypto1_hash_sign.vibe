@@ -1,0 +1,46 @@
+module <https://qualiadb.org/modules/crypto_demo>;
+import "crypto" as crypto;
+
+// SHA-256 hash of a string
+pure fn hash_text(text: String) -> Record {
+  return crypto.sha256(text);
+}
+
+// BLAKE3 hash of a string
+pure fn hash_blake3(text: String) -> Record {
+  return crypto.blake3(text);
+}
+
+// SHA-512 hash of a string
+pure fn hash_sha512(text: String) -> Record {
+  return crypto.sha512(text);
+}
+
+// Sign data with an Ed25519 key
+fn sign_data(key_id: String, data: String) -> Record {
+  return crypto.sign(key_id, data);
+}
+
+// Verify a signature
+fn verify_signature(key_id: String, data: String, sig_hex: String) -> Bool {
+  return crypto.verify(key_id, data, sig_hex);
+}
+
+// Generate a new Ed25519 key
+fn new_ed25519_key() -> String {
+  return crypto.generate_key("Ed25519");
+}
+
+// AEAD encrypt
+fn encrypt_data(algorithm: String, key_hex: String, nonce_hex: String, plaintext: String) -> Record {
+  return crypto.aead_encrypt(algorithm, key_hex, nonce_hex, plaintext, "");
+}
+
+// AEAD decrypt
+fn decrypt_data(algorithm: String, key_hex: String, nonce_hex: String, ct_hex: String, tag_hex: String) -> String {
+  return crypto.aead_decrypt(algorithm, key_hex, nonce_hex, ct_hex, tag_hex, "");
+}
+
+fn main() {
+  return 0;
+}

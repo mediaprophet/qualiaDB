@@ -47,6 +47,9 @@ pub struct FrontDoorRecord {
     pub wireguard_pubkey_hex: Option<String>,
     #[serde(default)]
     pub overlay_addr: Option<String>,
+    /// Optional Nym mixnet address (`<client_id>.<sphinx_key>@<gateway_id>`) for decentralized mixnet routing.
+    #[serde(default)]
+    pub nym_address: Option<String>,
     /// Optional pointer to the rich hosted profile (`/.well-known/QDP` or a Solid POD).
     #[serde(default)]
     pub profile_url: Option<String>,
@@ -112,6 +115,9 @@ impl FrontDoorRecord {
         if let Some(o) = &self.overlay_addr {
             parts.push(format!("qdp:overlay \"{o}\""));
         }
+        if let Some(n) = &self.nym_address {
+            parts.push(format!("qdp:nym \"{n}\""));
+        }
         if let Some(e) = ecash(self) {
             parts.push(format!("qdp:ecash \"{e}\""));
         }
@@ -133,6 +139,7 @@ impl FrontDoorRecord {
             identity_pubkey_hex: None,
             wireguard_pubkey_hex: None,
             overlay_addr: None,
+            nym_address: None,
             profile_url: None,
         };
         for clause in txt.split(';') {
@@ -153,6 +160,7 @@ impl FrontDoorRecord {
                 "qdp:identityKey" => rec.identity_pubkey_hex = Some(lit()),
                 "qdp:wireguard" => rec.wireguard_pubkey_hex = Some(lit()),
                 "qdp:overlay" => rec.overlay_addr = Some(lit()),
+                "qdp:nym" => rec.nym_address = Some(lit()),
                 "qdp:ecash" => rec.services.push(QdpService {
                     kind: "ecash".into(),
                     value: lit(),
@@ -187,6 +195,9 @@ impl FrontDoorRecord {
         }
         if let Some(n) = &self.name {
             let _ = writeln!(t, "    foaf:name \"{n}\" ;");
+        }
+        if let Some(nym) = &self.nym_address {
+            let _ = writeln!(t, "    QDP:nymAddress \"{nym}\" ;");
         }
         for s in &self.services {
             match s.kind.as_str() {
@@ -228,6 +239,9 @@ impl FrontDoorRecord {
         }
         if let Some(n) = &self.name {
             obj.insert("foaf:name".into(), json!(n));
+        }
+        if let Some(nym) = &self.nym_address {
+            obj.insert("QDP:nymAddress".into(), json!(nym));
         }
         if let Some(e) = ecash(self) {
             obj.insert("QDP:hasEcashAccount".into(), json!(e));
@@ -280,8 +294,26 @@ mod tests {
             identity_pubkey_hex: Some("aa".repeat(32)),
             wireguard_pubkey_hex: Some("bb".repeat(32)),
             overlay_addr: Some("fd00::1".into()),
+            nym_address: None,
             profile_url: Some("https://alice.example/.well-known/QDP".into()),
         }
+    }
+
+    #[test]
+    fn nym_address_roundtrips_dns_txt_and_jsonld() {
+        let mut rec = sample();
+        rec.nym_address = Some("alice_id.sphinx_key@gateway_id".into());
+        let txt = rec.to_dns_txt();
+        assert!(txt.contains("qdp:nym \"alice_id.sphinx_key@gateway_id\""));
+
+        let back = FrontDoorRecord::from_dns_txt("alice.example", &txt).unwrap();
+        assert_eq!(back.nym_address, Some("alice_id.sphinx_key@gateway_id".into()));
+
+        let turtle = rec.to_turtle();
+        assert!(turtle.contains("QDP:nymAddress \"alice_id.sphinx_key@gateway_id\""));
+
+        let jsonld = rec.to_json_ld();
+        assert_eq!(jsonld["QDP:nymAddress"], "alice_id.sphinx_key@gateway_id");
     }
 
     #[test]

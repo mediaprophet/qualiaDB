@@ -1,0 +1,59 @@
+// VibeScript 0.1 Fixture: Declarative UI Dock Trays & Presentation Tree
+// Defines a responsive, collapsible Aura Tray and Diagnostics Dock layout.
+
+let shacl_shapes = [
+    { type: "shacl_shape", shape: "soc:PeerShape", conformant: true, nodes: 42 },
+    { type: "shacl_shape", shape: "soc:AgreementShape", conformant: true, nodes: 8 },
+    { type: "shacl_shape", shape: "health:RecordShape", conformant: false, nodes: 15, violation: "missing `health:hasConsent` on 2 nodes" },
+    { type: "shacl_shape", shape: "rights:FiduciaryShape", conformant: true, nodes: 3 }
+];
+
+let ontology_metrics = [
+    { type: "metric", label: "q42:", value: "Qualia Core & did:q42 Topologies", color: "var(--accent-cyan)" },
+    { type: "metric", label: "soc:", value: "Social Agreements & Commons", color: "var(--accent-cyan)" },
+    { type: "metric", label: "health:", value: "Clinical & Biomedical Modalities", color: "var(--accent-cyan)" },
+    { type: "metric", label: "rights:", value: "Fiduciary Agency & Guardianship", color: "var(--accent-cyan)" },
+    { type: "metric", label: "vibe:", value: "VibeScript 0.1 AST & Effects", color: "var(--accent-cyan)" }
+];
+
+let sentinel_metrics = [
+    { type: "metric", label: "Certainty:", value: "96% (Epistemic Halo)", color: "var(--accent-emerald)" },
+    { type: "metric", label: "Hot Path:", value: "Zero-Heap · 48B Quin", color: "var(--accent-cyan)" },
+    { type: "button", label: "📦 Export .hcf", action: "export_hcf" }
+];
+
+let aura_tray_ui = {
+    type: "dock_panel",
+    id: "aura_tray",
+    title: "Aura Tray",
+    badge: "3/4 Valid",
+    collapsed: false,
+    children: [
+        {
+            type: "subtray",
+            id: "tray_shacl",
+            title: "SHACL Shapes",
+            badge: "3/4",
+            collapsed: false,
+            children: shacl_shapes
+        },
+        {
+            type: "subtray",
+            id: "tray_ontologies",
+            title: "Ontologies & Schemas",
+            badge: "5 Active",
+            collapsed: false,
+            children: ontology_metrics
+        },
+        {
+            type: "subtray",
+            id: "tray_sentinel",
+            title: "Super-Quin Sentinel",
+            badge: "42MB Cap",
+            collapsed: true,
+            children: sentinel_metrics
+        }
+    ]
+};
+
+return aura_tray_ui;

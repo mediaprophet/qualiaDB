@@ -305,7 +305,7 @@ pub fn normalised_graph_laplacian(
 }
 
 /// Verify Laplacian properties:
-/// - Symmetric: L[i,j] = L[j,i]
+/// - Symmetric: L\[i,j\] = L\[j,i\]
 /// - Row sums ≈ 0 (for unnormalised)
 /// Returns true if all properties hold.
 pub fn verify_laplacian(laplacian: &[f64], n: usize, tolerance: f64) -> bool {

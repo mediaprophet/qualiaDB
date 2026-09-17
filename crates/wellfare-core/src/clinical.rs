@@ -19,7 +19,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// Category of a manually-entered clinical document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -134,6 +136,10 @@ pub struct ClinicalReport {
     pub author_label: Option<String>,
     /// When the clinical event / observation occurred (unix seconds).
     pub observed_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `observed_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub observed_at_instant: Option<InstantBridge>,
     /// The document body as typed by the author. No parsing is performed on it.
     pub body: String,
     /// Optional content hash of the attached source document blob.
@@ -156,10 +162,18 @@ impl ClinicalReport {
             report_type,
             author_label: None,
             observed_at_unix,
+            observed_at_instant: Some(InstantBridge::from_coarse(observed_at_unix)),
             body: body.into(),
             attachment_blob_hash: None,
             claim_status: ClaimStatus::Draft,
         }
+    }
+
+    /// Resolve the observed-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn observed_at(&self) -> InstantBridge {
+        self.observed_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.observed_at_unix))
     }
 }
 
@@ -249,8 +263,11 @@ pub fn build_clinical_report_envelope(
         evidence_type: evidence_for_claim(report.claim_status),
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(report.observed_at_unix),
+        valid_time_start_instant: report.observed_at_instant,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash,
         tombstone: false,
@@ -275,8 +292,11 @@ pub fn build_clinical_attachment_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(asserted_unix),
+        valid_time_start_instant: None,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash: Some(meta.content_hash.clone()),
         tombstone: false,

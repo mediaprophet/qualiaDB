@@ -1,0 +1,14 @@
+module <https://qualiadb.org/modules/deontic_permit>;
+prefix policy: <https://qualiadb.org/policy/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("aura.validate")
+];
+effect fn permit_action(actor: Iri, action: Iri) {
+    let claim = <<( actor policy:permitted action )>>;
+    graph.stage(claim);
+    aura.validate(actor, policy:PermissionShape)?;
+    graph.commit()?;
+    return null;
+}

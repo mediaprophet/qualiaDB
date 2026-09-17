@@ -92,6 +92,8 @@ pub enum SlgOpcode {
 
     // ── Native: biomedical ────────────────────────────────────────────────────
     /// `qualia:computeRiskScore` — 0=Framingham, 1=CHA₂DS₂-VASc, 2=SCORE2.
+    /// Frame registers cannot carry a complete clinical input; the opcode holds
+    /// rather than inventing lipids, region, or omitted booleans.
     NativeClinicalRisk(u8),
     /// `qualia:evaluateLongitudinalTrend` — sliding window in days.
     NativeLongitudinalTrend(u32),
@@ -241,7 +243,7 @@ pub enum SlgOpcode {
     /// manifold states through the existing LTL evaluator.
     ///
     /// `mode`: 0=Globally, 1=Finally, 2=Next.
-    /// `dimension`: [`manifold::ManifoldDimension`] discriminant.
+    /// `dimension`: `manifold::ManifoldDimension()` discriminant.
     /// `threshold_bits`: IEEE-754 f32 threshold.
     /// `at_least`: true for >=, false for <=.
     NativeManifoldLtl {

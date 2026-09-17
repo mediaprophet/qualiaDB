@@ -1,0 +1,75 @@
+// VibeScript 0.1 — Research / epistemics fixture
+// Tests: Research.new_research, Research.set_purpose, Research.define_scope,
+//        Research.add_question, Research.add_corpus_item, Research.make_inference,
+//        Research.new_investigation, Research.collect_evidence,
+//        Research.register_perspective, Research.compare_perspectives,
+//        Research.assess_intentionality, Research.analyse_inequality,
+//        Research.assess_grounding, Research.detect_ungrounded_behaviour
+
+let research = Research.new_research({ id: "r1" });
+
+Research.set_purpose({ id: "r1", purpose: "Investigate supply chain opacity" });
+
+Research.define_scope({
+  id: "r1",
+  domains: ["economics", "trade"],
+  timeframe: "2020-2026",
+});
+
+Research.add_question({
+  id: "r1",
+  question: "What are the provenance gaps in the textile supply chain?",
+});
+
+Research.add_corpus_item({
+  id: "r1",
+  source: "report_2024.pdf",
+  content: "Supply chain data with evidence of gaps",
+  confidence: "high",
+});
+
+Research.make_inference({
+  id: "r1",
+  premise: "Multiple suppliers lack traceability",
+  conclusion: "Dark links exist in the supply chain",
+  confidence: 0.75,
+});
+
+Research.new_investigation({ id: "inv1" });
+
+Research.collect_evidence({
+  id: "inv1",
+  source: "audit_report",
+  description: "Financial discrepancies found",
+  reliability: "probable",
+});
+
+Research.register_perspective({
+  id: "p1",
+  agent_id: "agent_a",
+  viewpoint: "The supply chain has significant provenance gaps",
+});
+
+Research.compare_perspectives({
+  viewpoint_a: "The supply chain has significant provenance gaps",
+  viewpoint_b: "The supply chain is well documented",
+});
+
+Research.assess_intentionality({
+  knew_outcome: true,
+  could_prevent: true,
+  repeated_behavior: false,
+  benefited: true,
+});
+
+Research.analyse_inequality({
+  values: [100.0, 200.0, 300.0, 5000.0, 10000.0],
+});
+
+Research.assess_grounding({
+  content: "This claim is supported by evidence from multiple studies",
+});
+
+Research.detect_ungrounded_behaviour({
+  content: "Apparently the supplier allegedly met all standards",
+});

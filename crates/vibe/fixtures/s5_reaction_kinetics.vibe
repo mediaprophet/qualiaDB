@@ -1,0 +1,17 @@
+module <https://qualiadb.org/modules/reaction_kinetics>;
+import "vibe:0.1/math" as m;
+pure fn first_order_rate(k: f64, concentration: f64) -> f64 {
+    return k * concentration;
+}
+pure fn second_order_rate(k: f64, conc_a: f64, conc_b: f64) -> f64 {
+    return k * conc_a * conc_b;
+}
+pure fn half_life_first_order(k: f64) -> f64 {
+    if k <= 0.0 {
+        return 0.0;
+    }
+    return 0.6931471805599453 / k;
+}
+pure fn arrhenius_rate(a: f64, ea: f64, r: f64, t: f64) -> f64 {
+    return a * m.exp(-ea / (r * t));
+}

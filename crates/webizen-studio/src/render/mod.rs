@@ -1,7 +1,7 @@
 //! Backend-agnostic immediate-mode 3D line/point rendering.
 //!
 //! The browser demo currently renders 3D on the CPU into a Canvas 2D context
-//! ([`Canvas2dRenderer`]). The native runtime has real `wgpu` compute, and a
+//! (`Canvas2dRenderer()`). The native runtime has real `wgpu` compute, and a
 //! future `WgpuRenderer` (WebGPU/WebGL) can implement this same [`Renderer`]
 //! trait so call sites such as the physics surface stay backend-agnostic and the
 //! browser demo can eventually benchmark genuine GPU work.
@@ -18,6 +18,7 @@ pub mod qualia;
 pub mod scene;
 
 pub mod node_graph;
+pub mod q_viewport;
 pub mod spatial_bridge;
 pub mod tensor_buffer;
 

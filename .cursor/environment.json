@@ -1,0 +1,16 @@
+{
+  "name": "QualiaDB / Webizen",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "qualia-daemon",
+      "command": "bash .cursor/start-daemon.sh"
+    }
+  ],
+  "ports": [
+    {
+      "name": "qualia-daemon",
+      "port": 4242
+    }
+  ]
+}

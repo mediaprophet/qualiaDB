@@ -1,0 +1,28 @@
+# Statistics — descriptive and hypothesis tests
+invoke Statistics.mean { values: [1.0, 2.0, 3.0, 4.0, 5.0] }
+invoke Statistics.median { values: [1.0, 2.0, 3.0, 4.0, 5.0] }
+invoke Statistics.variance { values: [1.0, 2.0, 3.0, 4.0, 5.0], sample: true }
+invoke Statistics.std_dev { values: [1.0, 2.0, 3.0, 4.0, 5.0], sample: true }
+invoke Statistics.skewness { values: [1.0, 2.0, 3.0, 4.0, 5.0] }
+invoke Statistics.kurtosis { values: [1.0, 2.0, 3.0, 4.0, 5.0] }
+invoke Statistics.quantile { values: [1.0, 2.0, 3.0, 4.0, 5.0], q: 0.5 }
+invoke Statistics.covariance { x: [1.0, 2.0, 3.0], y: [2.0, 4.0, 6.0], sample: true }
+invoke Statistics.min { values: [3.0, 1.0, 4.0, 1.0, 5.0] }
+invoke Statistics.max { values: [3.0, 1.0, 4.0, 1.0, 5.0] }
+invoke Statistics.sum { values: [1.0, 2.0, 3.0, 4.0, 5.0] }
+invoke Statistics.spearman { x: [1.0, 2.0, 3.0, 4.0, 5.0], y: [2.0, 4.0, 6.0, 8.0, 10.0] }
+invoke Statistics.kendall { x: [1.0, 2.0, 3.0, 4.0, 5.0], y: [2.0, 4.0, 6.0, 8.0, 10.0] }
+invoke Statistics.one_sample_t { values: [1.0, 2.0, 3.0, 4.0, 5.0], mu: 3.0 }
+invoke Statistics.two_sample_t { a: [1.0, 2.0, 3.0], b: [4.0, 5.0, 6.0], equal_var: true }
+invoke Statistics.paired_t { a: [1.0, 2.0, 3.0], b: [4.0, 5.0, 6.0] }
+invoke Statistics.chi_square_gof { observed: [10.0, 20.0, 30.0], expected: [15.0, 20.0, 25.0] }
+invoke Statistics.one_way_anova { groups: [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]] }
+invoke Statistics.autocorrelation { values: [1.0, 2.0, 3.0, 4.0, 5.0], lag: 1 }
+invoke Statistics.moving_average { values: [1.0, 2.0, 3.0, 4.0, 5.0], window: 3 }
+invoke Statistics.exponential_smoothing { values: [1.0, 2.0, 3.0, 4.0, 5.0], alpha: 0.5 }
+invoke Statistics.trimmed_mean { values: [1.0, 2.0, 3.0, 4.0, 5.0], proportion: 0.2 }
+invoke Statistics.iqr { values: [1.0, 2.0, 3.0, 4.0, 5.0] }
+invoke Statistics.median_abs_deviation { values: [1.0, 2.0, 3.0, 4.0, 5.0], scaled: false }
+invoke Statistics.entropy { p: [0.25, 0.25, 0.25, 0.25] }
+invoke Statistics.kl_divergence { p: [0.5, 0.5], q: [0.25, 0.75] }
+invoke Statistics.z_score_outliers { values: [1.0, 2.0, 3.0, 100.0, 4.0], threshold: 2.0 }
