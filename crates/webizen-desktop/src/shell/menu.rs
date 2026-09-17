@@ -48,10 +48,10 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
         );
         return;
     }
-    // Settings: hash is the sole navigation authority. Do NOT also emit
-    // open-settings here — studio Closures used to navigator.push on that
-    // event and raced this hash write (dioxus-core RefCell / empty scope_stack).
-    // shell-navigate still fires above; studio handles settings/prefs hash-only.
+    // Settings: force Classic shell. Do NOT emit open-settings here (studio
+    // shell-navigate already deferred-pushes SettingsRoute; a second emit raced
+    // dioxus RefCell). Hash write is URL sync only — dioxus history listens to
+    // popstate, so Router paint comes from studio's spawn_local navigator.push.
     if qapp_id == "settings" {
         let _ = app.emit("shell-kind-set", "classic");
         if let Some(window) = app.get_webview_window("main") {

@@ -35,28 +35,14 @@ fn event_payload_string(event: &JsValue) -> Option<String> {
 }
 
 
-#[cfg(target_arch = "wasm32")]
-fn set_location_hash(hash: &str) {
-    if let Some(window) = web_sys::window() {
-        let loc = window.location();
-        if loc.hash().ok().as_deref() != Some(hash) {
-            let _ = loc.set_hash(hash);
-        }
-    }
-}
-
-/// Tools→Settings / Ctrl+, must not call `navigator.push` on the Tauri event
-/// stack: menu already forces `#/settings`, and a sync push re-enters dioxus
-/// while `scope_states`/`scope_stack` are borrowed → runtime.rs:223 unwrap /
-/// :280 RefCell already borrowed.
-#[cfg(target_arch = "wasm32")]
-fn open_settings_via_hash() {
-    components::shell_kind::persist_shell_kind(components::shell_kind::ShellKind::Classic);
-    set_location_hash("#/settings");
-}
-
 /// Defer router pushes off the Tauri Closure stack so dioxus can finish its
 /// current borrow before the route tree remounts.
+///
+/// Sync `navigator.push` inside a Tauri `listen` Closure re-enters dioxus while
+/// `scope_states`/`scope_stack` are borrowed → runtime.rs:223 unwrap / :280
+/// RefCell already borrowed. Hash-only (`location.set_hash`) is insufficient:
+/// dioxus-web 0.8 HashHistory/WebHistory only subscribe to `popstate`, not
+/// `hashchange`, so the Router never leaves Talk/Relations.
 ///
 /// Takes a push closure (not a named Navigator type) so we don't depend on
 /// `dioxus::router::Navigator` path quirks across dioxus 0.8 alphas.
@@ -65,6 +51,13 @@ fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
     wasm_bindgen_futures::spawn_local(async move {
         push(route);
     });
+}
+
+/// Classic shell + deferred Settings push (Tools→Settings / Ctrl+, / tray).
+#[cfg(target_arch = "wasm32")]
+fn open_settings_deferred(nav: impl FnOnce(Route) + 'static) {
+    components::shell_kind::persist_shell_kind(components::shell_kind::ShellKind::Classic);
+    defer_navigator_push(nav, Route::SettingsRoute {});
 }
 
 
@@ -1034,7 +1027,7 @@ fn AppLayout() -> Element {
     let native_menu_listener_started = use_signal(|| false);
     // Poet routes used to early-return before shell-navigate / open-settings listeners,
     // so Tools→Settings / Ctrl+, closed without painting Settings. Listeners always attach;
-    // Poet stays full-bleed via PoetHarness, and Tools→Settings forces `#/settings` + Classic.
+    // Poet stays full-bleed via PoetHarness; Tools→Settings forces Classic + deferred Settings push.
     let host_status = use_signal(DesktopStatus::default);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = navigator;
@@ -1099,11 +1092,12 @@ fn AppLayout() -> Element {
             let navigator = navigator;
 
             wasm_bindgen_futures::spawn_local(async move {
-                // Hash-only: Router owns the transition. Sync push here races
-                // menu.rs hash force + shell-navigate (dioxus RefCell / empty scope).
+                // Deferred push: sync push on this Closure panics (RefCell);
+                // hash-only never notifies dioxus (popstate-only history).
+                let settings_nav = navigator;
                 let settings_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        open_settings_via_hash();
+                        open_settings_deferred(move |r| { let _ = settings_nav.push(r); });
                     }));
 
                 match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
@@ -1130,9 +1124,11 @@ fn AppLayout() -> Element {
                             components::relations::stash_directory_handoff();
                         }
                         "settings" | "prefs" => {
-                            // Prefer hash; do not push on this stack (see open_settings_via_hash).
-                            open_settings_via_hash();
-                            return;
+                            // Force Classic before deferred push (Poet full-bleed
+                            // must yield Settings). Do not push on this stack.
+                            components::shell_kind::persist_shell_kind(
+                                components::shell_kind::ShellKind::Classic,
+                            );
                         }
                         _ => {}
                     }
