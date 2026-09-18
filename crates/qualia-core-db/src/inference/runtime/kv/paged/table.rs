@@ -78,6 +78,21 @@ impl SequenceBlockTable {
         &self.entries
     }
 
+    pub fn entries_mut(&mut self) -> &mut [u32] {
+        &mut self.entries
+    }
+
+    pub fn repoint_block(&mut self, from: u32, to: u32) -> usize {
+        let mut count = 0;
+        for entry in &mut self.entries {
+            if *entry == from {
+                *entry = to;
+                count += 1;
+            }
+        }
+        count
+    }
+
     pub fn get(&self, logical_page: u32) -> Option<u32> {
         self.entries
             .get(logical_page as usize)

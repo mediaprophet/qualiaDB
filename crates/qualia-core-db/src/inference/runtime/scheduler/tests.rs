@@ -200,3 +200,86 @@ fn decode_round_rejects_mismatched_outputs_before_mutating_requests() {
     scheduler.runnable_into(&mut views).unwrap();
     assert_eq!(views[0].token_count, 0);
 }
+
+#[test]
+fn scheduler_runs_with_multi_sequence_ragged_backend_and_bucketing() {
+    let mut pool = BlockPool::new(8);
+    let prefixes = PrefixKvStore::<1, 1>::new();
+    let mut scheduler = RequestScheduler::<4>::new(2);
+
+    for (id, token) in [(101, 5), (102, 15), (103, 25)] {
+        scheduler
+            .admit_with_prefix(id, None, &prefixes, &mut pool)
+            .unwrap();
+        scheduler.mark_prefill_complete(id).unwrap();
+        scheduler.seed_decode_token(id, token).unwrap();
+    }
+
+    let mut backend = MultiSequenceRaggedBackend::new(|_req, _slot, token, pos, _pages| {
+        token + pos + 1
+    });
+
+    let mut items = [RaggedBatchItem::default(); 4];
+    let mut tables = [0u32; 8];
+    let mut outputs = [RaggedBatchOutput::default(); 4];
+
+    let receipt = scheduler
+        .execute_decode_round(&mut backend, &mut items, &mut tables, &mut outputs)
+        .unwrap();
+
+    assert_eq!(receipt.batch_size, 3);
+    assert_eq!(receipt.backend_launches, 1);
+
+    // 3 items -> padded to bucket 4
+    assert_eq!(backend.stats().bucket_launches[2], 1);
+    assert_eq!(backend.stats().total_padded_rows, 1);
+
+    // Tokens were updated in scheduler slots
+    assert_eq!(outputs[0].next_token_id, 6);
+    assert_eq!(outputs[1].next_token_id, 16);
+    assert_eq!(outputs[2].next_token_id, 26);
+}
+
+#[test]
+fn scheduler_drain_lifecycle_prevents_admissions_and_reaches_quiesced() {
+    let mut pool = BlockPool::new(4);
+    let prefixes = PrefixKvStore::<1, 1>::new();
+    let mut scheduler = RequestScheduler::<2>::new(1);
+
+    scheduler
+        .admit_with_prefix(1, None, &prefixes, &mut pool)
+        .unwrap();
+
+    // Request drain
+    let state = scheduler
+        .request_drain(DrainReason::ModelEviction, 10)
+        .unwrap();
+    assert_eq!(state, DrainState::Draining);
+
+    // New admission must be rejected with Draining
+    let err = scheduler
+        .admit_with_prefix(2, None, &prefixes, &mut pool)
+        .unwrap_err();
+    assert_eq!(err, SchedulerError::Draining);
+
+    // Finish in-flight request
+    scheduler.finish(1, &mut pool).unwrap();
+
+    // Scheduler should now be Quiesced
+    assert_eq!(scheduler.drain().state(), DrainState::Quiesced);
+    assert_eq!(scheduler.active_count(), 0);
+
+    // Begin maintenance
+    scheduler.drain_mut().begin_maintenance().unwrap();
+    assert_eq!(scheduler.drain().state(), DrainState::Maintenance);
+
+    // Complete maintenance with new generation
+    scheduler.drain_mut().complete_maintenance(2).unwrap();
+    assert_eq!(scheduler.drain().state(), DrainState::Normal);
+    assert_eq!(scheduler.drain().active_generation(), 2);
+
+    // Now admissions are allowed again
+    assert!(scheduler
+        .admit_with_prefix(3, None, &prefixes, &mut pool)
+        .is_ok());
+}

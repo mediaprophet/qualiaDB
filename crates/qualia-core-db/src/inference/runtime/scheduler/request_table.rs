@@ -7,6 +7,7 @@ use crate::inference::runtime::kv::prefix::{PrefixKvError, PrefixKvStore};
 use super::batch::{
     RaggedBackendError, RaggedBatchItem, RaggedBatchOutput, RaggedBatchReceipt, RaggedDecodeBackend,
 };
+use super::drain::{DrainController, DrainError, DrainReason, DrainState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RequestState {
@@ -38,8 +39,16 @@ pub enum SchedulerError {
     Full,
     UnknownRequest,
     OutputTooSmall,
+    Draining,
+    Drain(DrainError),
     Prefix(PrefixKvError),
     Table(TableError),
+}
+
+impl From<DrainError> for SchedulerError {
+    fn from(value: DrainError) -> Self {
+        Self::Drain(value)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -114,6 +123,7 @@ impl RequestSlot {
 /// Fixed-request-capacity scheduler. `REQUESTS` is the hard concurrent request bound.
 pub struct RequestScheduler<const REQUESTS: usize> {
     slots: [RequestSlot; REQUESTS],
+    drain: DrainController,
 }
 
 impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
@@ -121,7 +131,32 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
     pub fn new(logical_pages: u32) -> Self {
         Self {
             slots: std::array::from_fn(|_| RequestSlot::new(logical_pages)),
+            drain: DrainController::new(0),
         }
+    }
+
+    pub fn with_generation(logical_pages: u32, initial_generation: u64) -> Self {
+        Self {
+            slots: std::array::from_fn(|_| RequestSlot::new(logical_pages)),
+            drain: DrainController::new(initial_generation),
+        }
+    }
+
+    pub fn drain(&self) -> &DrainController {
+        &self.drain
+    }
+
+    pub fn drain_mut(&mut self) -> &mut DrainController {
+        &mut self.drain
+    }
+
+    pub fn request_drain(
+        &mut self,
+        reason: DrainReason,
+        current_epoch: u64,
+    ) -> Result<DrainState, DrainError> {
+        self.drain
+            .request_drain(reason, self.active_count(), current_epoch)
     }
 
     pub fn active_count(&self) -> usize {
@@ -139,6 +174,9 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         prefixes: &PrefixKvStore<ENTRIES, PAGES>,
         pool: &mut BlockPool,
     ) -> Result<Admission, SchedulerError> {
+        if !self.drain.is_admission_allowed() {
+            return Err(SchedulerError::Draining);
+        }
         if self
             .slots
             .iter()
@@ -326,6 +364,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         let slot = self.find_mut(request_id)?;
         slot.blocks.release_all(pool)?;
         slot.clear();
+        self.drain.poll_drain_progress(self.active_count());
         Ok(())
     }
 
