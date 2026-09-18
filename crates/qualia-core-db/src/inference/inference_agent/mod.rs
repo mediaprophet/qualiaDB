@@ -37,7 +37,7 @@ pub use crate::modalities::logic::n3_compiler::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-mod sticky_infer;
+pub mod sticky_infer;
 
 mod config;
 mod control;

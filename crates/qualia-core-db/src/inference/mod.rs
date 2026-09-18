@@ -39,8 +39,10 @@ pub mod ggml_quants;
 pub mod gguf_sharder;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod metal_bridge;
+pub mod moe;
 pub mod neuro_symbolic_sieve;
 pub mod orchestrator;
+pub mod qwen;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod residency_planner;
 pub mod resident_model;
