@@ -1,0 +1,3 @@
+# Redirect legacy GitHub Pages repository subpaths to root
+/qualiaDB/*    /:splat    301
+/qualiaDB      /          301

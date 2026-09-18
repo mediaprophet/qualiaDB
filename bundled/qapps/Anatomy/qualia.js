@@ -25,6 +25,7 @@ const Qualia = (() => {
     const glueCandidates = [
       options.wasmGlueUrl,
       "./wasm/qualia_core_db.js",
+      "https://webizen.au/playground/qualia_core_db.js",
       "https://mediaprophet.github.io/qualiaDB/playground/qualia_core_db.js"
     ].filter(Boolean);
 

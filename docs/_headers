@@ -1,0 +1,63 @@
+# Global security & CORS headers
+/*
+  X-Content-Type-Options: nosniff
+  Access-Control-Allow-Origin: *
+
+# High-performance WASM & SharedArrayBuffer cross-origin isolation
+# Enables multi-threaded WASM inference and WebGPU without coi-serviceworker reload hacks
+/online-llm-demo.html
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin
+
+/playground/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin
+
+/benchmark.html
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin
+
+/llmdemo/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin
+
+# Explicit MIME types and caching policies
+/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+  Access-Control-Allow-Origin: *
+
+/pkg/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/playground/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Binary model and geometry packs
+/playground/*.hmc
+  Content-Type: application/octet-stream
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/playground/*.q42
+  Content-Type: application/octet-stream
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/data/**/*.q42
+  Content-Type: application/octet-stream
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Built Tailwind CSS & static assets
+/css/tailwind-built.css
+  Content-Type: text/css
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

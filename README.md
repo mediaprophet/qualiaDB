@@ -108,7 +108,7 @@ human-controlled applications.
 
 ## Get started
 
-**Live playground (no install):** [mediaprophet.github.io/qualiaDB/playground/](https://mediaprophet.github.io/qualiaDB/playground/index.html)
+**Live playground (no install):** [webizen.au/playground/](https://webizen.au/playground/index.html)
 
 **Desktop app (Webizen — Windows, macOS, Linux; Tauri + Dioxus, native GPU dispatch, signed installer/updater):** Download from [Releases](https://github.com/mediaprophet/qualiaDB/releases).
 
@@ -151,8 +151,8 @@ Recent verification of the implemented surfaces includes:
   worker, and the WASM LLM feature profile compile on their relevant targets.
 
 The browser LLM engine is pure Rust→WASM. Live demos:
-[`online-llm-demo.html`](https://mediaprophet.github.io/qualiaDB/online-llm-demo.html) ·
-[`llmdemo`](https://mediaprophet.github.io/qualiaDB/llmdemo/).
+[`online-llm-demo.html`](https://webizen.au/online-llm-demo.html) ·
+[`llmdemo`](https://webizen.au/llmdemo/).
 
 For the precise boundary between implemented functionality, intentionally gated external
 capabilities, and remaining pre-v0.1 work, see the
