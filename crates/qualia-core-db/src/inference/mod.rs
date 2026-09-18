@@ -45,6 +45,7 @@ pub mod orchestrator;
 pub mod residency_planner;
 pub mod resident_model;
 pub mod safetensor;
+pub mod safetensor_loader;
 pub mod semantic_culler;
 pub mod spatial_sieve;
 pub mod tensor_roles;

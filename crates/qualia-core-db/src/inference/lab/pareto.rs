@@ -275,6 +275,8 @@ mod tests {
     ) -> ExperimentResult {
         ExperimentResult {
             config_hash: rand::random(),
+            evaluation_mode: crate::inference::lab::experiment::EvaluationMode::SimulationFixture,
+            receipt: None,
             hypothesis_id: None,
             bench: Some(BenchResultSerde {
                 warm_total_ms,

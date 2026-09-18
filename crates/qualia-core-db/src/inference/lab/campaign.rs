@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use super::config_space::{Configuration, ConfigurationSpace, ParameterDef};
 use super::experiment::{
-    append_experiment_jsonl, load_experiment_log, ExperimentConfig, ExperimentResult,
+    append_experiment_jsonl, load_experiment_log, EvaluationMode, ExperimentConfig, ExperimentResult,
 };
 use super::hypothesis::{evaluate_verdict, BeliefGraph, Hypothesis};
 use super::pareto::{ApplicationProfileWeight, ParetoFrontier};
@@ -197,6 +197,7 @@ pub fn run_optimization_campaign(cfg: &CampaignConfig) -> CampaignReport {
             warm_repeats: cfg.warm_repeats,
             seed: 0,
             hypothesis_id: None,
+            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
         };
         let baseline_result = if cfg.with_quality {
             super::experiment::run_experiment_with_quality(&exp_cfg)
@@ -241,6 +242,7 @@ pub fn run_optimization_campaign(cfg: &CampaignConfig) -> CampaignReport {
             warm_repeats: cfg.warm_repeats,
             seed: trials_run as u64,
             hypothesis_id: None,
+            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
         };
 
         // Run the experiment.
@@ -414,6 +416,19 @@ pub fn default_toggle_space() -> ConfigurationSpace {
         .with("attention_preproject", ParameterDef::Bool)
         .with("attention_o_fuse", ParameterDef::Bool)
         .with("gpu_topk", ParameterDef::Bool)
+        .with("prefix_cache_enabled", ParameterDef::Bool)
+        .with("kv_pool_budget_mb", ParameterDef::Int { lo: 64, hi: 2048 })
+        .with("prefill_chunk_size", ParameterDef::Int { lo: 64, hi: 512 })
+        .with(
+            "prompt_precision_mode",
+            ParameterDef::Categorical {
+                choices: vec![
+                    "standard".into(),
+                    "compact".into(),
+                    "strict_evidence".into(),
+                ],
+            },
+        )
 }
 
 /// Save a campaign report to a JSON file.

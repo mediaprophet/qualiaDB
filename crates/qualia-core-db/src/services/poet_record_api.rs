@@ -873,8 +873,8 @@ fn validate_agent_fields(
     if family == "project_agent_run" {
         require_did(fields, "agent_did")?;
         let model_path = scalar_text(fields, "model_path")?.to_ascii_lowercase();
-        if !model_path.ends_with(".gguf") && !model_path.ends_with(".p64") {
-            return Err("agent run `model_path` must identify a GGUF or P64 model".into());
+        if !model_path.ends_with(".gguf") && !model_path.ends_with(".p64") && !model_path.ends_with(".safetensors") {
+            return Err("agent run `model_path` must identify a GGUF, P64, or Safetensors model".into());
         }
         let status = scalar_text(fields, "status")?;
         if !matches!(status, "completed" | "cancelled" | "failed") {
@@ -898,8 +898,8 @@ fn validate_agent_fields(
         require_did(fields, "owner_did")?;
         scalar_text(fields, "purpose")?;
         let model_path = scalar_text(fields, "model_path")?.to_ascii_lowercase();
-        if !model_path.ends_with(".gguf") && !model_path.ends_with(".p64") {
-            return Err("agent profile `model_path` must identify a GGUF or P64 model".into());
+        if !model_path.ends_with(".gguf") && !model_path.ends_with(".p64") && !model_path.ends_with(".safetensors") {
+            return Err("agent profile `model_path` must identify a GGUF, P64, or Safetensors model".into());
         }
         let scope = scalar_text(fields, "scope")?;
         if !matches!(scope, "none" | "all") && !scope.starts_with("project:") {
@@ -935,8 +935,8 @@ fn validate_agent_fields(
         return Err("agent turn `agent_did` must be a DID".into());
     }
     let model_path = scalar_text(fields, "model_path")?.to_ascii_lowercase();
-    if !model_path.ends_with(".gguf") && !model_path.ends_with(".p64") {
-        return Err("agent turn `model_path` must identify a GGUF or P64 model".into());
+    if !model_path.ends_with(".gguf") && !model_path.ends_with(".p64") && !model_path.ends_with(".safetensors") {
+        return Err("agent turn `model_path` must identify a GGUF, P64, or Safetensors model".into());
     }
     scalar_text(fields, "prompt")?;
     scalar_text(fields, "response")?;

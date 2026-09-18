@@ -74,10 +74,7 @@ impl LocalLlmAgent {
         control: Option<DecodeControl>,
         mut on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        let prov_hash = graph_context
-            .bytes()
-            .take(8)
-            .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
+        let prov_hash = crate::q_hash(graph_context);
         let use_sieve = self
             .use_sieve_output
             .load(std::sync::atomic::Ordering::Relaxed);
@@ -102,8 +99,8 @@ impl LocalLlmAgent {
             use crate::gguf_sharder::GgufTokenizer;
             use rtrb::RingBuffer;
 
-            let model_path = match &self.backend {
-                AgentBackend::Local { model_path, .. } => model_path.clone(),
+            let (model_path, model_instance_hash) = match &self.backend {
+                AgentBackend::Local { model_path, .. } => (model_path.clone(), crate::q_hash(model_path)),
                 _ => {
                     return (
                         String::from("[no local model configured]"),
@@ -278,20 +275,37 @@ impl LocalLlmAgent {
                     .unwrap_or(4096);
 
                 // Stack buffers — zero-heap path (512MB floor safe).
-                use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS};
-
                 const MAX_EMB_DIM: usize = 8192;
                 const MAX_FFN_DIM: usize = 10240;
                 let mut emb_buf = [0f32; MAX_EMB_DIM];
                 let mut scratch_a = [0f32; MAX_FFN_DIM];
                 let mut scratch_b = [0f32; MAX_FFN_DIM];
-                let mut prefill_chunk = [0f32; PREFILL_CHUNK_STACK_FLOATS];
+                let mut prefill_chunk = [0f32; crate::gguf_bridge::PREFILL_CHUNK_STACK_FLOATS];
                 let emb_dim = emb_dim.min(MAX_EMB_DIM);
+                let prompt_len = ctx.len();
+                let prefill_tokens = prompt_len.saturating_sub(1);
+                let (kv_floats, n_layers) = engine
+                    .kv_layout()
+                    .map(|l| (l.total_f32_elems, l.n_layer))
+                    .unwrap_or((0, 0));
+                let cache_key = super::prefix_cache::InferenceCacheKey::new(
+                    model_instance_hash,
+                    (tok.bos_token_id as u64) | ((tok.eos_token_id as u64) << 32),
+                    &ctx[..prefill_tokens],
+                    prov_hash,
+                    kv_floats,
+                    n_layers as usize,
+                );
+
                 let mut prefix_cached = false;
-                if prov_hash != 0 {
-                    if let Ok(cache) = get_prefix_cache().lock() {
-                        if let Some(cached_kv) = cache.get(&prov_hash) {
-                            engine.set_kv_cache_cpu(cached_kv);
+                if prefill_tokens > 0 && kv_floats > 0 {
+                    if let Ok(mut cache) = get_prefix_cache().lock() {
+                        if cache
+                            .restore_if_match(&cache_key, |cached_kv| {
+                                engine.set_kv_cache_cpu(cached_kv);
+                            })
+                            .is_some()
+                        {
                             prefix_cached = true;
                         }
                     }
@@ -306,7 +320,6 @@ impl LocalLlmAgent {
                 let t_prefill = std::time::Instant::now();
 
                 // Chunked prefill: populate KV for prompt tokens [0, prompt_len-1).
-                let prompt_len = ctx.len();
                 crate::tensor::kv_provenance::rebuild_prompt_provenance(
                     prompt_len as u32,
                     crate::tensor::resident_substrate::global_resident_substrate().node_count(),
@@ -314,58 +327,27 @@ impl LocalLlmAgent {
                 );
                 let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
                 if !prefix_cached {
-                    if prompt_len > 1 {
-                        if let Some(idx) = tensor_idx.as_ref() {
-                            let prefill_tokens = prompt_len - 1;
-                            let chunk_cap = (PREFILL_CHUNK_STACK_FLOATS / emb_dim)
-                                .min(PREFILL_CHUNK_SIZE)
-                                .max(1);
-                            let mut pos = 0usize;
-                            while pos < prefill_tokens {
-                                if control_thread
-                                    .as_ref()
-                                    .is_some_and(DecodeControl::is_cancelled)
-                                {
-                                    break;
-                                }
-                                let n = (prefill_tokens - pos).min(chunk_cap);
-                                let batch_elems = n * emb_dim;
-                                {
-                                    let mmap = match engine.gguf_mmap.as_deref() {
-                                        Some(m) => m,
-                                        None => break,
-                                    };
-                                    for t in 0..n {
-                                        let _ = idx.dequantize_token_embedding_into(
-                                            mmap,
-                                            ctx[pos + t],
-                                            &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
-                                        );
-                                    }
-                                }
-                                if !engine.dispatch_prefill_chunk(
-                                    idx,
-                                    &mut prefill_chunk[..batch_elems],
-                                    emb_dim,
-                                    n as u32,
-                                    pos as u32,
-                                    &mut scratch_a,
-                                    &mut scratch_b,
-                                    TEST_TRANSFORMER_LAYER_CAP,
-                                ) {
-                                    crate::gguf_bridge::wlog(&format!(
-                                        "[llm] PREFILL chunk FAILED pos={pos} n={n}"
-                                    ));
-                                }
-                                pos += n;
-                            }
-                        }
-                    }
+                    let prefill_outcome = super::prefill_executor::execute_chunked_prefill(
+                        engine,
+                        tensor_idx.as_ref(),
+                        &ctx,
+                        emb_dim,
+                        &mut prefill_chunk,
+                        &mut scratch_a,
+                        &mut scratch_b,
+                        control_thread.as_ref(),
+                        TEST_TRANSFORMER_LAYER_CAP,
+                    );
 
-                    if prov_hash != 0 {
+                    if prefill_outcome.is_completed() && kv_floats > 0 {
                         if let Some(cpu_kv) = engine.get_kv_cache_cpu() {
                             if let Ok(mut cache) = get_prefix_cache().lock() {
-                                cache.insert(prov_hash, cpu_kv.into());
+                                let _ = cache.insert(
+                                    cache_key,
+                                    cpu_kv.to_vec().into_boxed_slice(),
+                                    prefill_tokens as u32,
+                                    true,
+                                );
                             }
                         }
                     }

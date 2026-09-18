@@ -1,6 +1,6 @@
 //! Serializable cold-path evidence and fixed-size hot-path counters.
 
-mod execution;
+pub mod execution;
 mod manifest;
 mod source;
 

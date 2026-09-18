@@ -25,7 +25,7 @@ mod graph;
 mod hid_seam;
 mod hypermedia;
 pub mod ids;
-mod inference;
+pub mod inference;
 mod logic;
 mod manifold;
 mod math;

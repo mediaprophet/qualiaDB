@@ -3,6 +3,10 @@
 use super::*;
 
 impl QTensorEngine {
+    pub fn kv_layout(&self) -> Option<KvCacheLayout> {
+        self.kv_layout
+    }
+
     pub fn kv_cache_bytes(&self) -> u64 {
         self.kv_layout
             .as_ref()
@@ -121,9 +125,79 @@ impl QTensorEngine {
         );
         if crate::p64_weight::has_p64_magic(&mmap[..]) {
             self.adopt_resident_p64_mmap(mmap)
+        } else if crate::safetensor::detect_format(&mmap[..])
+            == crate::safetensor::SourceFormat::Safetensor
+        {
+            let config_json = std::path::Path::new(path)
+                .parent()
+                .map(|p| p.join("config.json"))
+                .and_then(|p| std::fs::read_to_string(p).ok());
+            self.adopt_resident_safetensor_mmap(mmap, config_json.as_deref())
         } else {
             self.adopt_resident_mmap(mmap)
         }
+    }
+
+    /// Boot directly from an already-mapped Safetensors model (including BF16).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn adopt_resident_safetensor_mmap(
+        &mut self,
+        mmap: Arc<memmap2::Mmap>,
+        config_json: Option<&str>,
+    ) -> Result<GgufLoadReport, String> {
+        let file_size = mmap.len();
+        if file_size == 0 {
+            return Err("Empty Safetensors mmap".to_string());
+        }
+        log::info!(
+            "LLM_LOAD|safetensor|0.75|Reusing resident Safetensors mapping ({:.2} GiB)",
+            bytes_to_gib(file_size as u64)
+        );
+        let index = crate::inference::safetensor_loader::parse_safetensor_to_index(
+            &mmap[..],
+            config_json,
+        )?;
+        if index.hyperparams.n_layer == 0 || index.hyperparams.n_embd == 0 {
+            return Err("Safetensor: missing hyperparameters".to_string());
+        }
+        self.tensor_data_offset = index.tensor_data_start;
+        self.hyperparams = index.hyperparams;
+        #[cfg(feature = "gpu-runtime")]
+        {
+            let staging = index
+                .max_layer_tensor_bytes
+                .max(4096)
+                .min(MAX_WGPU_WEIGHT_STAGING);
+            self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        }
+        self.ensure_kv_cache(&index.hyperparams);
+        self.gguf_mmap = Some(mmap);
+        self.p64_index = None;
+        self.tensor_index_cache = Some(index.clone());
+        #[cfg(feature = "gpu-runtime")]
+        if !self.mc8_upload_resident_logits(&index) {
+            log::info!("LLM_LOAD|safetensor-logits|0.70|skipped — per-token upload fallback");
+        }
+        let kv_cache_bytes = self.kv_cache_bytes();
+        Ok(GgufLoadReport {
+            mapped_bytes: file_size as u64,
+            tensor_data_offset: self.tensor_data_offset,
+            n_layer: self.hyperparams.n_layer,
+            n_head: self.hyperparams.n_head,
+            n_kv_head: self.hyperparams.effective_n_kv_head(),
+            max_tensor_bytes: index.max_tensor_bytes,
+            kv_cache_bytes,
+            directml_enabled: {
+                #[cfg(target_os = "windows")]
+                {
+                    self.dml.is_some()
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    false
+                }
+            },
+        })
     }
 
     /// Fail-soft wrapper retained for the agent decode path.

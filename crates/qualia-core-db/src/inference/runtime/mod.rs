@@ -5,11 +5,16 @@
 //! work. A prepared backend's decode step is the Tier-1 zero-heap data plane.
 
 pub mod artifacts;
+pub mod budget;
 pub mod graph_assist;
 pub mod kv;
 pub mod prepared;
 pub mod receipt;
 pub mod scheduler;
+
+pub use budget::{
+    BlockGeometry, BudgetError, MemoryPoolBudget, ModelMemoryProfile, RequestReservation,
+};
 
 pub use artifacts::{
     cleanup_stale_runs, ArtifactError, ArtifactFinish, ArtifactRetention, ArtifactStats,

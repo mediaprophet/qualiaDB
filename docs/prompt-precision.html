@@ -1,241 +1,354 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="release-038" class="release-039">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QualiaDB — Prompt Precision & Model Optimization Specification</title>
+  <meta name="description"
+    content="QualiaDB prompt precision: implemented foundations, required inference integration, and measured calibration gates.">
+  <title>QualiaDB — Prompt Precision &amp; Inference Integration</title>
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap"
+    rel="stylesheet">
   <script src="js/menu-loader.js"></script>
   <style>
-    .code-box {
-      background: rgba(8, 12, 20, 0.95);
-      border: 1px solid rgba(148, 180, 220, 0.2);
-      border-radius: 1rem;
-      padding: 1.25rem;
-      font-family: var(--q-mono);
-      font-size: 0.85rem;
-      line-height: 1.6;
-      color: #e2e8f0;
-      overflow-x: auto;
+    #desktop-nav .nav-group:last-child .nav-dropdown {
+      left: auto;
+      right: 0;
     }
-    .code-kw { color: #f472b6; }
-    .code-fn { color: #38bdf8; }
-    .code-str { color: #34d399; }
-    .code-cm { color: #94a3b8; font-style: italic; }
-    .code-ty { color: #fbbf24; }
+
+    .precision-section {
+      margin-bottom: 3rem;
+    }
+
+    .precision-section h2 {
+      margin-bottom: 1rem;
+    }
+
+    .precision-section p+p {
+      margin-top: 1rem;
+    }
+
+    .precision-section a {
+      color: #67e8f9;
+      text-decoration: underline;
+      text-underline-offset: .2em;
+    }
+
+    .precision-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .precision-card {
+      padding: 1.25rem;
+      border: 1px solid rgba(148, 180, 220, .25);
+      border-radius: 1rem;
+      background: rgba(8, 12, 20, .85);
+    }
+
+    .precision-card h3 {
+      font-weight: 600;
+      margin-bottom: .6rem;
+    }
+
+    .precision-card p {
+      color: #cbd5e1;
+      font-size: .9rem;
+      line-height: 1.6;
+    }
+
+    .precision-strategy {
+      color: #e2e8f0;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .precision-strategy strong,
+    .precision-strategy span {
+      display: block;
+    }
+
+    .precision-strategy strong {
+      margin-bottom: .5rem;
+    }
+
+    .precision-strategy span {
+      font-size: .85rem;
+      color: #cbd5e1;
+    }
+
+    .precision-strategy[aria-pressed="true"] {
+      border-color: #67e8f9;
+      background: rgba(8, 65, 80, .45);
+    }
+
+    .precision-strategy:focus-visible {
+      outline: 3px solid #a5b4fc;
+      outline-offset: 4px;
+    }
+
+    .precision-detail {
+      margin-top: 1rem;
+      padding: 1.25rem;
+      border-left: 3px solid #67e8f9;
+      background: rgba(8, 12, 20, .85);
+      min-height: 8rem;
+    }
+
+    .precision-flow {
+      line-height: 1.9;
+      padding: 1.25rem;
+      border: 1px solid rgba(148, 180, 220, .25);
+      border-radius: 1rem;
+      overflow-wrap: anywhere;
+    }
+
+    .precision-list {
+      list-style: decimal;
+      padding-left: 1.5rem;
+    }
+
+    .precision-list li {
+      padding-left: .3rem;
+      margin: .8rem 0;
+      line-height: 1.7;
+    }
+
+    .precision-code {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      padding: 1.25rem;
+      border-radius: 1rem;
+      background: rgba(8, 12, 20, .95);
+      color: #e2e8f0;
+      font: .9rem/1.7 var(--q-mono, monospace);
+    }
+
+    @media (max-width: 760px) {
+      .precision-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
+
 <body class="min-h-screen">
   <div class="q-mesh" aria-hidden="true"></div>
-  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+  <nav class="sticky top-0 z-50 border-b border-white/10"
+    style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
     <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
       <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
         <a href="index.html" class="flex items-center gap-3 shrink-0">
-          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center">
-            <span class="text-black font-bold text-xl">W</span>
-          </div>
-          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+          <div
+            class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span></div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span
+              class="text-violet-400 text-xl"> / QualiaDB</span></div>
         </a>
-        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+        <div id="dynamic-nav"
+          class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
       </div>
     </div>
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-layer-group"></i> Architecture Reference · Waves W0–W8 · Zero-Heap Hot Paths</div>
+    <div class="q-chip mb-6">Architecture reference · Updated 18 September 2026</div>
     <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] leading-[1.08] mb-5">
-      Prompt Precision &<br>
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-violet-300 to-emerald-300">Automated Model Optimization.</span>
+      Prompt Precision &amp;<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-violet-300 to-emerald-300">Inference
+        Integration.</span>
     </h1>
-    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8">
-      A deterministic, zero-allocation conditioning architecture designed to guarantee monotonic token budgets,
-      eliminate nondeterministic prompt degradation, and automatically calibrate compression strategies to target LLMs.
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8">Compile requirements, authorised evidence and resource
+      budgets into a request-scoped contract. Preserve that contract through model execution, cache reuse and output
+      validation. Quality and efficiency gains must be measured on the target model, not inferred from a strategy name.
     </p>
 
-    <!-- Strategy Selection Grid -->
-    <section class="mb-16">
-      <div class="mb-6">
-        <p class="q-kicker mb-1">Adaptive Strategy Matrix</p>
-        <h2 class="text-2xl sm:text-3xl font-semibold">Strategies B0 through B5</h2>
-        <p class="text-sm text-white/60">The automated optimizer evaluates candidate strategies on held-out task splits to select the pareto-optimal configuration.</p>
-      </div>
-
-      <div class="strategy-grid mb-6">
-        <div class="strategy-card" id="card-b0" onclick="selectStrategy('b0')">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-white/50">STRATEGY B0</span>
-            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-white/10 text-white/70">BASELINE</span>
-          </div>
-          <h3 class="text-base font-semibold text-white mb-1">Raw Uncompressed</h3>
-          <p class="text-xs text-white/60 mb-3">No structural compaction. Invariant contracts appended without prefix token tuning.</p>
-          <div class="text-xs text-cyan-300 font-mono">1.0x Ratio · Raw Memory</div>
-        </div>
-
-        <div class="strategy-card" id="card-b1" onclick="selectStrategy('b1')">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-cyan-400">STRATEGY B1</span>
-            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">LOW-FOOTPRINT</span>
-          </div>
-          <h3 class="text-base font-semibold text-white mb-1">Minimal Compact</h3>
-          <p class="text-xs text-white/60 mb-3">Whitespace normalized, blank lines stripped, semantic whitespace folded.</p>
-          <div class="text-xs text-cyan-300 font-mono">0.82x Ratio · Edge Safe</div>
-        </div>
-
-        <div class="strategy-card active" id="card-b2" onclick="selectStrategy('b2')">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-emerald-400">STRATEGY B2</span>
-            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">RECOMMENDED</span>
-          </div>
-          <h3 class="text-base font-semibold text-white mb-1">Structural Strict</h3>
-          <p class="text-xs text-white/60 mb-3">Grammar-enforced invariant contracts with strict delimiter preservation.</p>
-          <div class="text-xs text-emerald-300 font-mono">0.75x Ratio · High Fidelity</div>
-        </div>
-
-        <div class="strategy-card" id="card-b3" onclick="selectStrategy('b3')">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-violet-400">STRATEGY B3</span>
-            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">GUIDED</span>
-          </div>
-          <h3 class="text-base font-semibold text-white mb-1">Few-Shot Calibrated</h3>
-          <p class="text-xs text-white/60 mb-3">Dynamically selected exemplars from task registry, calibrated per model family.</p>
-          <div class="text-xs text-violet-300 font-mono">0.88x Ratio · Task Specific</div>
-        </div>
-
-        <div class="strategy-card" id="card-b4" onclick="selectStrategy('b4')">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-amber-400">STRATEGY B4</span>
-            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">ZERO-ALLOC</span>
-          </div>
-          <h3 class="text-base font-semibold text-white mb-1">Zero-Alloc Verified</h3>
-          <p class="text-xs text-white/60 mb-3">Pre-compiled binary token emitter layout with deterministic SHA-256 fingerprint.</p>
-          <div class="text-xs text-amber-300 font-mono">0.68x Ratio · Ultra Fast</div>
-        </div>
-
-        <div class="strategy-card" id="card-b5" onclick="selectStrategy('b5')">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-rose-400">STRATEGY B5</span>
-            <span class="text-[0.7rem] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">QUANTIZED</span>
-          </div>
-          <h3 class="text-base font-semibold text-white mb-1">Extreme Low-Bit</h3>
-          <p class="text-xs text-white/60 mb-3">Maximum token compaction for constrained edge and mobile devices (&le; 512 context).</p>
-          <div class="text-xs text-rose-300 font-mono">0.52x Ratio · Ultra Compact</div>
-        </div>
-      </div>
-
-      <!-- Live Code Example for Selected Strategy -->
-      <div class="code-box" id="strategy-code-box">
-        <span class="code-cm">// Compiling Prompt Strategy B2 (Structural Strict)</span><br>
-        <span class="code-kw">let</span> target = <span class="code-ty">ModelPrecisionTarget</span>::new(<span class="code-str">"llama-3-8b-instruct"</span>, <span class="code-ty">ModelFamily</span>::Llama3, <span class="code-fn">8_000_000_000</span>, <span class="code-fn">2048</span>);<br>
-        <span class="code-kw">let</span> optimizer = <span class="code-ty">ModelPrecisionOptimizer</span>::default();<br>
-        <span class="code-kw">let</span> receipt = optimizer.<span class="code-fn">optimize_model</span>(&amp;target, &amp;train_set, &amp;dev_set, &amp;test_set)?;<br>
-        <span class="code-cm">// Emits signed ModelOptimizationReceipt with cryptographic fingerprint</span><br>
-        <span class="code-fn">assert!</span>(receipt.validation_score &gt;= <span class="code-fn">0.85</span>);
+    <section class="precision-section" aria-labelledby="status-title">
+      <p class="q-kicker mb-2">Implementation boundary</p>
+      <h2 id="status-title" class="text-2xl sm:text-3xl font-semibold">Foundations exist. End-to-end proof is still
+        required.</h2>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>Implemented foundations</h3>
+          <p>Caller-buffered conditioning compilation, requirement outcomes, versioned profile contracts, a native
+            chat-lowering bridge, and bounded signed checkpoint-bound receipt storage exist in source.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Required integration</h3>
+          <p>Exact final-token budgeting, preservation of required instruction/evidence dependencies, complete
+            cache-state identity, and consistent native, HTTP and MCP enforcement remain release gates.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Not yet measured</h3>
+          <p>The current optimizer scores simulated answers derived from expected outcomes. This is fixture logic, not
+            model calibration. Signed receipts prove integrity and binding, not answer quality or speed.</p>
+        </article>
       </div>
     </section>
 
-    <!-- Mathematical Equation Section -->
-    <section class="q-card p-8 mb-16">
-      <p class="q-kicker mb-2">Token Budget Algebra</p>
-      <h2 class="text-2xl sm:text-3xl font-semibold mb-4">The 6-Zone Equation</h2>
-      <p class="text-sm text-white/70 mb-6">
-        Total prompt context is strictly budgeted according to the conservation law:
+    <section class="precision-section" aria-labelledby="strategy-title">
+      <p class="q-kicker mb-2">Candidate profiles, not performance claims</p>
+      <h2 id="strategy-title" class="text-2xl sm:text-3xl font-semibold">Strategies B0 through B5</h2>
+      <p class="text-white/70 mb-6">These labels match the current candidate generator. No fixed compression ratio or
+        universally best strategy has been established. Select a candidate to inspect its purpose and validation needs.
       </p>
-
-      <div class="p-6 rounded-2xl bg-black/40 border border-white/10 font-mono text-center text-lg sm:text-xl text-cyan-300 mb-6">
-        $$B_{total} = B_{prefix} + B_{invariant} + B_{fewshot} + B_{workspace} + B_{query} + B_{scratchpad} \le C_{max}$$
+      <div class="precision-grid" role="group" aria-label="Conditioning candidates">
+        <button type="button" class="precision-card precision-strategy" data-strategy="b0" aria-pressed="true"
+          aria-controls="strategy-detail"><strong>B0 · Baseline</strong><span>Minimal instruction without graph
+            conditioning.</span></button>
+        <button type="button" class="precision-card precision-strategy" data-strategy="b1" aria-pressed="false"
+          aria-controls="strategy-detail"><strong>B1 · Explicit text</strong><span>Readable rules and evidence
+            guidance.</span></button>
+        <button type="button" class="precision-card precision-strategy" data-strategy="b2" aria-pressed="false"
+          aria-controls="strategy-detail"><strong>B2 · Compiled graph</strong><span>Ontology-backed requirements and
+            validators.</span></button>
+        <button type="button" class="precision-card precision-strategy" data-strategy="b3" aria-pressed="false"
+          aria-controls="strategy-detail"><strong>B3 · Compressed</strong><span>Smaller input and output budget
+            candidate.</span></button>
+        <button type="button" class="precision-card precision-strategy" data-strategy="b4" aria-pressed="false"
+          aria-controls="strategy-detail"><strong>B4 · Prefix aligned</strong><span>Stable prefix layout for exact cache
+            reuse.</span></button>
+        <button type="button" class="precision-card precision-strategy" data-strategy="b5" aria-pressed="false"
+          aria-controls="strategy-detail"><strong>B5 · Model-tailored hybrid</strong><span>Domain requirements and role
+            separation.</span></button>
       </div>
+      <div id="strategy-detail" class="precision-detail" role="status" aria-live="polite" aria-atomic="true">
+        <p id="strategy-description">B0_baseline supplies minimal instruction without graph conditioning. Measure it
+          alongside the unchanged product route; neither baseline may bypass executable authority checks.</p>
+      </div>
+      <noscript>
+        <p>All six candidates are listed above. Interactive validation notes require JavaScript; the release
+          requirements below apply to every candidate.</p>
+      </noscript>
+    </section>
 
-      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs text-white/75">
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-          <strong class="text-violet-300 block mb-1">B_prefix (Model Prefix)</strong>
-          System prompt tokens, role identity, and model-specific formatting tokens.
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-          <strong class="text-cyan-300 block mb-1">B_invariant (Integrity & Safety)</strong>
-          Non-negotiable ethical constraints, human rights safeguards, and protocol rules.
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-          <strong class="text-emerald-300 block mb-1">B_fewshot (Exemplars)</strong>
-          Calibrated input/output demonstrations selected per model family.
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-          <strong class="text-amber-300 block mb-1">B_workspace (Retrieved Context)</strong>
-          SPARQL/Quin graph context, volumetric nodes, or retrieved RAG passages.
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-          <strong class="text-orange-300 block mb-1">B_query (User Intent)</strong>
-          Sanitized user input tokens with bounded length limits.
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-          <strong class="text-pink-300 block mb-1">B_scratchpad (Output Space)</strong>
-          Guaranteed tokens reserved for reasoning traces and model completion.
-        </div>
+    <section class="precision-section" aria-labelledby="pipeline-title">
+      <p class="q-kicker mb-2">Required runtime contract</p>
+      <h2 id="pipeline-title" class="text-2xl sm:text-3xl font-semibold">One contract, from authoring to validated
+        output</h2>
+      <p class="precision-flow">VibeScript profile → Conditioning ontology / Aura–SHACL → core compilation → typed roles
+        and evidence → model template and exact tokens → memory admission → prefill / decode → output validation and
+        receipt</p>
+      <ol class="precision-list text-white/70">
+        <li><strong>Compile and check authority.</strong> Reuse <code>conditioning::compile_into</code> and
+          caller-supplied buffers. Inspect every requirement outcome; a summary is not proof of runtime enforcement.
+          VibeScript and ontology tags cannot grant access.</li>
+        <li><strong>Prepare an immutable request.</strong> Snapshot profile ID/version/spec, model and template
+          identities, selected evidence and authority. Keep instructions, user content, history, tools and untrusted
+          evidence distinct until supported backend lowering.</li>
+        <li><strong>Budget the actual request.</strong> Include template delimiters, tool schemas, special tokens and
+          expanded multimodal input. Keep mandatory requirements and the complete user request; reject an impossible
+          budget instead of silently trimming them.</li>
+        <li><strong>Attach only compatible state.</strong> Match exact token prefixes plus checkpoint, tokenizer,
+          template, adapter, policy, access scope and state layout. Hybrid models need attention KV and
+          recurrent/convolution state at the same committed boundary. A stable header alone is not cache validity.</li>
+        <li><strong>Preserve controls during execution.</strong> Batching and offload keep each request's grammar,
+          sampler, output reserve, cancellation and Sentinel gates isolated. Streaming output remains provisional until
+          validation; inference success is not a graph-write authorisation.</li>
+        <li><strong>Report and roll back explicitly.</strong> Separate inference, validation, persistence, provenance
+          and usage status. A missing optional calibration profile uses the governed base route; an incompatible
+          required contract fails closed.</li>
+      </ol>
+      <pre class="precision-code" aria-label="Required admission invariants">actual_input_tokens ≤ profile.input_tokens
+actual_input_bytes ≤ profile.max_bytes
+actual_input_tokens + reserved_output_tokens ≤ supported_context_tokens
+planned KV + recurrent state + scratch + resident weights ≤ device budget
+host expert banks + pinned staging + other host state ≤ host budgets</pre>
+      <p class="text-white/70">These are implementation requirements, not guarantees supplied by the current byte-based
+        lowerer. The same final token IDs must be counted and executed. Tool and repair rounds share cumulative limits;
+        output reserve is not part of input-token usage.</p>
+    </section>
+
+    <section class="precision-section" aria-labelledby="hardware-title">
+      <p class="q-kicker mb-2">Required capability target · not yet demonstrated in QualiaDB</p>
+      <h2 id="hardware-title" class="text-2xl sm:text-3xl font-semibold">Qwen3.6-35B-A3B NVFP4 on RTX A2000 12 GB</h2>
+      <p class="text-white/70">The inference renewal requires full-model loading, prefill and generation on the user's
+        A2000, with measured reference-equivalent or better capability. It does not require all weights to reside in 12
+        GB of VRAM: compressed host expert banks, bounded GPU slots and transfer scheduling provide the necessary memory
+        hierarchy.</p>
+      <p class="text-white/70">The target needs Qwen's actual hybrid attention and recurrent state, expert routing,
+        shared experts, mixed quantisation formats and an Ampere-compatible dequantisation path. NVFP4 checkpoint
+        storage must not be confused with a requirement for native FP4 hardware. Prompt compaction can reduce input
+        work; it does not replace weight offload.</p>
+      <p class="text-white/70">Acceptance compares the same checkpoint, prompts, context, output reserve, modality and
+        concurrency. Record cold load, TTFT, prefill/decode throughput, tail latency, host/VRAM peaks and held-out
+        quality. Loading alone, shorter answers or a silently reduced context do not establish parity. Other model and
+        multimodal capabilities need their own explicit validation rows.</p>
+    </section>
+
+    <section class="precision-section" aria-labelledby="evaluation-title">
+      <p class="q-kicker mb-2">Measured promotion</p>
+      <h2 id="evaluation-title" class="text-2xl sm:text-3xl font-semibold">Evaluate real outputs before activating a
+        profile</h2>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>Isolate evaluation splits</h3>
+          <p>Search on train/dev tasks. Evaluate the selected profile and baseline on sealed held-out tasks with
+            independent validators. Expected answers never enter model input; simulated runs cannot authorise production
+            promotion.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Measure quality and resources</h3>
+          <p>Report task success, required constraints, evidence and tool correctness, actual tokens, cold/warm latency
+            and peak memory. Compare equal-budget and full-context conditions separately; cache benefits are distinct
+            from prompt-quality gains.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Bind and verify promotion</h3>
+          <p>Extend signed receipts to bind the complete checkpoint manifest, template, backend/hardware, corpus and
+            real measurements. Promote only after quality/resource gates pass; retain a verified rollback profile and
+            invalidate incompatible caches.</p>
+        </article>
       </div>
     </section>
 
-    <!-- Hot Path Zero Heap Contract -->
-    <section class="grid md:grid-cols-2 gap-6 mb-16">
-      <div class="q-card p-8">
-        <p class="q-kicker mb-2">Engine Rules</p>
-        <h3 class="text-xl font-semibold mb-3">Tier 1: Mandatory Zero Heap</h3>
-        <p class="text-sm text-white/70 mb-4">
-          All conditioning evaluators and token emitters operate inside QualiaDB's hot path.
-          No <code>Vec</code>, <code>String</code>, or <code>Box</code> allocations are permitted during prompt emission.
-        </p>
-        <div class="code-box text-xs">
-          <span class="code-kw">pub fn</span> <span class="code-fn">emit_conditioning_bytes</span>&lt;<span class="code-ty">'a</span>&gt;(<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;spec: &amp;<span class="code-ty">ConditioningSpec</span>,<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;out_buffer: &amp;<span class="code-ty">'a</span> <span class="code-kw">mut</span> [<span class="code-ty">u8</span>],<br>
-          ) -&gt; <span class="code-ty">Result</span>&lt;&amp;<span class="code-ty">'a</span> [<span class="code-ty">u8</span>], <span class="code-ty">ConditioningError</span>&gt; {<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-cm">// Zero-allocation byte slice writes</span><br>
-          }
-        </div>
-      </div>
-
-      <div class="q-card p-8">
-        <p class="q-kicker mb-2">LoRA Hot Path</p>
-        <h3 class="text-xl font-semibold mb-3">PP-090: Adapter Layout</h3>
-        <p class="text-sm text-white/70 mb-4">
-          Continuous prefix adaptors conform to flat <code>repr(C)</code> buffers directly mappable into GPU VRAM or CPU SIMD lanes.
-        </p>
-        <div class="code-box text-xs">
-          <span class="code-kw">pub struct</span> <span class="code-ty">LoraPrefixAdapter</span> {<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">pub</span> rank: <span class="code-ty">usize</span>,<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">pub</span> scaling_factor: <span class="code-ty">f32</span>,<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">pub</span> fixed_weights: [<span class="code-ty">f32</span>; <span class="code-fn">4096</span>],<br>
-          }<br>
-          <span class="code-cm">// Verified against 42MB Sentinel boundaries</span>
-        </div>
-      </div>
+    <section class="precision-section" aria-labelledby="constraints-title">
+      <h2 id="constraints-title" class="text-2xl sm:text-3xl font-semibold">Bounded execution, honest capability
+        reporting</h2>
+      <p class="text-white/70">Tier-1 evaluators and ABI-crossing buffers use caller-owned storage and must pass real
+        zero-allocation tests. Cold authoring and request assembly may use explicitly bounded construction. Preserve the
+        48-byte NQuin ABI and the 42 MiB Sentinel execution arena; model weights, KV, pinned host memory and VRAM
+        require separate governed budgets, not a claim that the whole model fits the Sentinel.</p>
+      <p class="text-white/70">Learned prompts, layer prefixes and LoRA remain separately gated experiments. They need
+        shape compatibility, measured application costs and held-out gains over the best text baseline. No
+        learned-adapter result or automatic calibration gain is asserted here.</p>
+      <p class="text-white/70">Read the <a href="design/prompt-precision/IMPLEMENTATION.md">implementation contract</a>,
+        <a href="design/prompt-precision/README.md">conditioning architecture</a> and <a
+          href="design/prompt-precision/CODEBASE-MAP.md">source evidence map</a>. Those design documents retain their
+        original phase history; the status boundary above reflects the 18 September source review.</p>
     </section>
 
-    <!-- Footer -->
     <footer class="text-center text-xs text-white/40 pt-8 border-t border-white/10">
-      <p>QualiaDB Architecture · Prompt Precision Specification 0.0.39 · Implemented in <code class="q-mono text-white/60">qualia-core-db::inference::conditioning</code></p>
+      <p>QualiaDB Architecture · 0.0.39 · Source-reviewed foundations and required integration gates · No benchmark
+        gains claimed</p>
     </footer>
   </main>
 
   <script>
-    const codeExamples = {
-      b0: `<span class="code-cm">// Compiling Prompt Strategy B0 (Raw Baseline)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::raw_baseline(input_prompt);<br><span class="code-cm">// Emits without structural reordering or compression</span>`,
-      b1: `<span class="code-cm">// Compiling Prompt Strategy B1 (Minimal Compact)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::minimal_compact(input_prompt);<br><span class="code-cm">// Normalizes whitespace, strips blank lines: 0.82x ratio</span>`,
-      b2: `<span class="code-cm">// Compiling Prompt Strategy B2 (Structural Strict)</span><br><span class="code-kw">let</span> target = <span class="code-ty">ModelPrecisionTarget</span>::new(<span class="code-str">"llama-3-8b-instruct"</span>, <span class="code-ty">ModelFamily</span>::Llama3, <span class="code-fn">8_000_000_000</span>, <span class="code-fn">2048</span>);<br><span class="code-kw">let</span> optimizer = <span class="code-ty">ModelPrecisionOptimizer</span>::default();<br><span class="code-kw">let</span> receipt = optimizer.<span class="code-fn">optimize_model</span>(&amp;target, &amp;train_set, &amp;dev_set, &amp;test_set)?;<br><span class="code-fn">assert!</span>(receipt.validation_score &gt;= <span class="code-fn">0.85</span>);`,
-      b3: `<span class="code-cm">// Compiling Prompt Strategy B3 (Few-Shot Calibrated)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::few_shot_calibrated(input_prompt, &amp;exemplars);<br><span class="code-cm">// Automatically injects calibrated exemplars within B_fewshot budget</span>`,
-      b4: `<span class="code-cm">// Compiling Prompt Strategy B4 (Zero-Alloc Verified)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::zero_alloc_verified(input_prompt, &amp;contract);<br><span class="code-cm">// Pre-computes fixed byte layouts with SHA-256 fingerprint</span>`,
-      b5: `<span class="code-cm">// Compiling Prompt Strategy B5 (Extreme Low-Bit)</span><br><span class="code-kw">let</span> spec = <span class="code-ty">ConditioningSpec</span>::extreme_low_bit(input_prompt, <span class="code-fn">512</span>);<br><span class="code-cm">// Aggressive dictionary encoding for tight edge envelopes: 0.52x ratio</span>`
+    const strategyDetails = {
+      b0: 'B0_baseline supplies minimal instruction without graph conditioning. Measure it alongside the unchanged product route; neither baseline may bypass executable authority checks.',
+      b1: 'B1_explicit_text adds readable accuracy and citation guidance. Verify actual evidence support and constraint satisfaction; a requested citation is not a verified citation.',
+      b2: 'B2_compiled_graph requests ontology-backed schema and provenance requirements. Admission and output validation must enforce required capabilities; compilation alone cannot prove that the backend did so.',
+      b3: 'B3_compressed currently reduces both input and output budgets. Test required-content preservation and answer completeness. Compare equal-budget controls so shorter output is not mistaken for a precision or throughput gain.',
+      b4: 'B4_prefix_aligned requests a stable prefix. Measure exact reused tokens only after full identity and state checks. Qwen reuse requires matching attention KV and recurrent/convolution snapshots, not just a repeated header.',
+      b5: 'B5_optimized_hybrid combines domain requirements and role-separation guidance. The label does not establish a measured winner and does not refer to CPU/GPU expert offload or low-bit token encoding.'
     };
-
-    function selectStrategy(id) {
-      document.querySelectorAll('.strategy-card').forEach(c => c.classList.remove('active'));
-      const activeCard = document.getElementById('card-' + id);
-      if (activeCard) activeCard.classList.add('active');
-      document.getElementById('strategy-code-box').innerHTML = codeExamples[id] || '';
-    }
+    const strategyButtons = document.querySelectorAll('[data-strategy]');
+    strategyButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        strategyButtons.forEach(candidate => candidate.setAttribute('aria-pressed', String(candidate === button)));
+        document.getElementById('strategy-description').textContent = strategyDetails[button.dataset.strategy];
+      });
+    });
   </script>
 </body>
+
 </html>

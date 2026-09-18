@@ -14,6 +14,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 use crate::gpu_context::global_vram_ledger;
+use crate::inference::runtime::receipt::execution::{
+    BackendKind, ExecutionReceipt, COUNTER_COMMITTED_PREFILL_TOKENS,
+    COUNTER_DECODE_STEPS, COUNTER_INTER_TOKEN_LATENCY_US, COUNTER_POOL_HIGH_WATER_BYTES,
+    COUNTER_SUBMITTED_PREFILL_TOKENS, COUNTER_TIME_TO_FIRST_TOKEN_US,
+};
 use crate::inference_bench::{
     run_bench, set_attention_o_fuse, set_attention_preproject, set_coop_gemv,
     set_decode_budget_override, set_ffn_fusion, set_gpu_topk, set_kv_dict, set_kv_int8,
@@ -24,6 +29,21 @@ use crate::post_turn_verify::{verify_and_heal_turn, VerifiedTurn};
 use crate::thermal_telemetry::{sample_gpu_thermal, GpuThermalSample};
 
 use super::config_space::{Configuration, ConfigurationSpace};
+
+/// Evaluation mode distinguishing live measurements from simulation fixtures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EvaluationMode {
+    /// Measured execution against a real backend and model weights.
+    MeasuredLiveBackend,
+    /// Synthetic or simulated test fixture (cannot be promoted to production lock-in).
+    SimulationFixture,
+}
+
+impl Default for EvaluationMode {
+    fn default() -> Self {
+        Self::MeasuredLiveBackend
+    }
+}
 
 /// Thermal reading before and after an experiment.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
@@ -104,6 +124,12 @@ impl From<&BenchResult> for BenchResultSerde {
 pub struct ExperimentResult {
     /// FNV-1a hash of the configuration CBOR (dedup key).
     pub config_hash: u64,
+    /// Execution mode (F14 gate: simulation cannot masquerade as measured promotion).
+    #[serde(default)]
+    pub evaluation_mode: EvaluationMode,
+    /// Schema 3 execution receipt (F8/F14).
+    #[serde(default)]
+    pub receipt: Option<ExecutionReceipt>,
     /// Links to the hypothesis backlog (if any).
     pub hypothesis_id: Option<String>,
     /// The benchmark result (latency, tok/s, phase split).
@@ -216,6 +242,8 @@ pub struct ExperimentConfig {
     pub seed: u64,
     /// Linked hypothesis ID.
     pub hypothesis_id: Option<String>,
+    /// Evaluation mode for this run (defaults to MeasuredLiveBackend).
+    pub evaluation_mode: EvaluationMode,
 }
 
 impl ExperimentConfig {
@@ -340,9 +368,37 @@ pub fn run_experiment(cfg: &ExperimentConfig) -> ExperimentResult {
         Err(e) => (None, Some(e)),
     };
 
+    let receipt = if let Some(ref br) = bench {
+        let mut rc = ExecutionReceipt::new(BackendKind::Unknown, BackendKind::Unknown, "", "");
+        rc.counters.decode_steps = br.output_tokens;
+        rc.mark_measured(COUNTER_DECODE_STEPS);
+        rc.counters.submitted_prefill_tokens = br.prompt_tokens;
+        rc.mark_measured(COUNTER_SUBMITTED_PREFILL_TOKENS);
+        rc.counters.committed_prefill_tokens = br.prompt_tokens;
+        rc.mark_measured(COUNTER_COMMITTED_PREFILL_TOKENS);
+        rc.counters.pool_high_water_bytes = vram_used;
+        rc.mark_measured(COUNTER_POOL_HIGH_WATER_BYTES);
+
+        let ttft_us = (br.cold_ttft_ms * 1000.0) as u64;
+        let itl_us = if br.output_tokens > 1 {
+            ((br.decode_ms / (br.output_tokens - 1) as f64) * 1000.0) as u64
+        } else {
+            0
+        };
+        rc.latency.time_to_first_token_us = ttft_us;
+        rc.mark_measured(COUNTER_TIME_TO_FIRST_TOKEN_US);
+        rc.latency.inter_token_latency_us = itl_us;
+        rc.mark_measured(COUNTER_INTER_TOKEN_LATENCY_US);
+        Some(rc)
+    } else {
+        None
+    };
+
     ExperimentResult {
         config_hash,
         hypothesis_id: cfg.hypothesis_id.clone(),
+        evaluation_mode: cfg.evaluation_mode,
+        receipt,
         bench,
         phase: phase_serde,
         quality,
@@ -421,9 +477,37 @@ pub fn run_experiment_with_quality(cfg: &ExperimentConfig) -> ExperimentResult {
 
     set_decode_budget_override(0);
 
+    let receipt = if let Some(ref br) = bench {
+        let mut rc = ExecutionReceipt::new(BackendKind::Unknown, BackendKind::Unknown, "", "");
+        rc.counters.decode_steps = br.output_tokens;
+        rc.mark_measured(COUNTER_DECODE_STEPS);
+        rc.counters.submitted_prefill_tokens = br.prompt_tokens;
+        rc.mark_measured(COUNTER_SUBMITTED_PREFILL_TOKENS);
+        rc.counters.committed_prefill_tokens = br.prompt_tokens;
+        rc.mark_measured(COUNTER_COMMITTED_PREFILL_TOKENS);
+        rc.counters.pool_high_water_bytes = vram_used;
+        rc.mark_measured(COUNTER_POOL_HIGH_WATER_BYTES);
+
+        let ttft_us = (br.warm_total_ms * 1000.0) as u64;
+        let itl_us = if br.output_tokens > 1 {
+            ((br.decode_ms / (br.output_tokens - 1) as f64) * 1000.0) as u64
+        } else {
+            0
+        };
+        rc.latency.time_to_first_token_us = ttft_us;
+        rc.mark_measured(COUNTER_TIME_TO_FIRST_TOKEN_US);
+        rc.latency.inter_token_latency_us = itl_us;
+        rc.mark_measured(COUNTER_INTER_TOKEN_LATENCY_US);
+        Some(rc)
+    } else {
+        None
+    };
+
     ExperimentResult {
         config_hash,
         hypothesis_id: cfg.hypothesis_id.clone(),
+        evaluation_mode: cfg.evaluation_mode,
+        receipt,
         bench,
         phase: phase_serde,
         quality,
@@ -546,6 +630,7 @@ mod tests {
             warm_repeats: 1,
             seed: 42,
             hypothesis_id: Some("H-001".into()),
+            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
         };
         let bc = ec.to_bench_config();
         assert_eq!(bc.quantization, "Q8_0");
@@ -560,6 +645,8 @@ mod tests {
         let result = ExperimentResult {
             config_hash: 42,
             hypothesis_id: Some("H-001".into()),
+            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
+            receipt: None,
             bench: None,
             phase: PhaseSnapshotSerde::default(),
             quality: QualityScore::default(),
@@ -576,5 +663,39 @@ mod tests {
         assert_eq!(loaded[0].config_hash, 42);
         assert_eq!(loaded[0].seed, 99);
         let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn experiment_result_schema3_receipt_roundtrip() {
+        let mut receipt = ExecutionReceipt::new(BackendKind::WgpuVulkan, BackendKind::WgpuVulkan, "mod-1", "plan-1");
+        receipt.counters.decode_steps = 32;
+        receipt.mark_measured(COUNTER_DECODE_STEPS);
+        receipt.latency.time_to_first_token_us = 45000;
+        receipt.mark_measured(COUNTER_TIME_TO_FIRST_TOKEN_US);
+
+        let result = ExperimentResult {
+            config_hash: 101,
+            hypothesis_id: Some("H-002".into()),
+            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
+            receipt: Some(receipt),
+            bench: None,
+            phase: PhaseSnapshotSerde::default(),
+            quality: QualityScore::default(),
+            thermal: ThermalSnapshot::default(),
+            vram_used: 1024 * 1024 * 512,
+            config_cbor: vec![],
+            timestamp_ms: 1000,
+            seed: 7,
+            error: None,
+        };
+
+        let json = serde_json::to_string(&result).unwrap();
+        let de: ExperimentResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(de.evaluation_mode, EvaluationMode::MeasuredLiveBackend);
+        let rc = de.receipt.expect("receipt preserved");
+        assert_eq!(rc.schema_version, 3);
+        assert!(rc.is_measured(COUNTER_DECODE_STEPS));
+        assert_eq!(rc.counters.decode_steps, 32);
+        assert_eq!(rc.latency.time_to_first_token_us, 45000);
     }
 }

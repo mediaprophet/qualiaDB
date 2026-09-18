@@ -45,6 +45,9 @@ mod decode;
 #[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod decode_helpers;
 mod local_agent;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod prefill_executor;
+pub mod prefix_cache;
 mod runtime;
 mod types;
 mod validation;

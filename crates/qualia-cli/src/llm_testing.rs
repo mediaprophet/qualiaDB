@@ -749,7 +749,7 @@ pub fn run_lab(
             Ok(())
         }
         "ablate" | "ablation" => {
-            let m = model.ok_or("ablate requires --model <path.p64>")?;
+            let m = model.ok_or("ablate requires --model <path.safetensors | path.p64 | path.gguf>")?;
             let t = if tokens == 0 { 8 } else { tokens };
             let csv =
                 out.or_else(|| Some(std::path::Path::new("experiments/inference-lab/runs.csv")));
@@ -762,7 +762,7 @@ pub fn run_lab(
         }
         "auto" | "auto-improve" | "lockin" | "self-improve" => {
             let m = model.ok_or(
-                "lab auto requires --model <path.p64> (e.g. smollm2 or Llama-3.2-3B .p64)",
+                "lab auto requires --model <path.safetensors | path.p64 | path.gguf> (e.g. smollm2, Qwen, or Llama-3.2)",
             )?;
             let t = if tokens == 0 { 16 } else { tokens };
             let hours = if hours <= 0.0 { 2.0 } else { hours };
@@ -822,11 +822,11 @@ pub fn run_lab(
             println!("  ablate --model P [--tokens T] [--out runs.csv]");
             println!("  auto --model P [--hours H] [--tokens T] [--out lockin-dir]");
             println!("       [--max-generations N] [--ollama-model TAG] [--no-ollama]");
-            println!("       multi-hour recursive search → lock-in package");
+            println!("       multi-hour recursive search → lock-in package (.safetensors/.p64/.gguf)");
             println!("  gpu-cap [--model P] [--tokens T] [--out dir]");
             println!("       native GPU tier probe + backend×mode decode matrix");
             println!("       → machine-gpu-profile.json + apply-machine-gpu.ps1");
-            println!("Plan: docs/plans/inference-superiority-lab-and-toolset-plan.md");
+            println!("Plan: docs/plans/inference-review-and-plan-2026-09-18.md (F14)");
             if action != "help" && !action.is_empty() && action != "_" {
                 return Err(format!("unknown lab action '{action}'"));
             }

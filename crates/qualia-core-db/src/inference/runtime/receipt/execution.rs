@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const RECEIPT_SCHEMA_VERSION: u16 = 2;
+pub const RECEIPT_SCHEMA_VERSION: u16 = 3;
 pub const COUNTER_DECODE_STEPS: u64 = 1 << 0;
 pub const COUNTER_GRAPH_LAUNCHES: u64 = 1 << 1;
 pub const COUNTER_COMPUTE_DISPATCHES: u64 = 1 << 2;
@@ -11,6 +11,40 @@ pub const COUNTER_FALLBACKS: u64 = 1 << 6;
 pub const COUNTER_HOT_ALLOCATIONS: u64 = 1 << 7;
 pub const COUNTER_COMPILE_CALLS: u64 = 1 << 8;
 pub const COUNTER_IMMUTABLE_UPLOAD_BYTES: u64 = 1 << 9;
+
+// Schema 3 coverage bits (Work Package F8)
+#[allow(dead_code)]
+pub const COUNTER_SUBMITTED_PREFILL_TOKENS: u64 = 1 << 10;
+#[allow(dead_code)]
+pub const COUNTER_COMMITTED_PREFILL_TOKENS: u64 = 1 << 11;
+#[allow(dead_code)]
+pub const COUNTER_CACHED_PREFILL_TOKENS: u64 = 1 << 12;
+#[allow(dead_code)]
+pub const COUNTER_QUEUED_REQUESTS: u64 = 1 << 13;
+#[allow(dead_code)]
+pub const COUNTER_ADMITTED_REQUESTS: u64 = 1 << 14;
+#[allow(dead_code)]
+pub const COUNTER_COW_COPIES: u64 = 1 << 15;
+#[allow(dead_code)]
+pub const COUNTER_EVICTIONS: u64 = 1 << 16;
+#[allow(dead_code)]
+pub const COUNTER_UNIQUE_FREED_PAGES: u64 = 1 << 17;
+#[allow(dead_code)]
+pub const COUNTER_POOL_HIGH_WATER_BYTES: u64 = 1 << 18;
+#[allow(dead_code)]
+pub const COUNTER_CANCELLATIONS: u64 = 1 << 19;
+#[allow(dead_code)]
+pub const COUNTER_GRAPH_BUCKET_TOKENS: u64 = 1 << 20;
+#[allow(dead_code)]
+pub const COUNTER_GRAPH_PADDING_TOKENS: u64 = 1 << 21;
+#[allow(dead_code)]
+pub const COUNTER_REBUILD_OUTCOMES: u64 = 1 << 22;
+#[allow(dead_code)]
+pub const COUNTER_QUEUE_DELAY_US: u64 = 1 << 23;
+#[allow(dead_code)]
+pub const COUNTER_TIME_TO_FIRST_TOKEN_US: u64 = 1 << 24;
+#[allow(dead_code)]
+pub const COUNTER_INTER_TOKEN_LATENCY_US: u64 = 1 << 25;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -37,6 +71,45 @@ pub struct ExecutionCounters {
     pub hot_path_allocations: u64,
     pub compile_calls: u64,
     pub immutable_upload_bytes: u64,
+
+    // Schema 3 extensions
+    #[serde(default)]
+    pub submitted_prefill_tokens: u64,
+    #[serde(default)]
+    pub committed_prefill_tokens: u64,
+    #[serde(default)]
+    pub cached_prefill_tokens: u64,
+    #[serde(default)]
+    pub queued_requests: u64,
+    #[serde(default)]
+    pub admitted_requests: u64,
+    #[serde(default)]
+    pub cow_copies: u64,
+    #[serde(default)]
+    pub evictions: u64,
+    #[serde(default)]
+    pub unique_freed_pages: u64,
+    #[serde(default)]
+    pub pool_high_water_bytes: u64,
+    #[serde(default)]
+    pub cancellations: u64,
+    #[serde(default)]
+    pub graph_bucket_tokens: u64,
+    #[serde(default)]
+    pub graph_padding_tokens: u64,
+    #[serde(default)]
+    pub rebuild_outcomes: u64,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RequestLatencyTelemetry {
+    #[serde(default)]
+    pub queue_delay_us: u64,
+    #[serde(default)]
+    pub time_to_first_token_us: u64,
+    #[serde(default)]
+    pub inter_token_latency_us: u64,
 }
 
 #[repr(C)]
@@ -64,6 +137,8 @@ pub struct ExecutionReceipt {
     /// An unset bit distinguishes "unknown" from a measured zero.
     pub counter_coverage: u64,
     pub counters: ExecutionCounters,
+    #[serde(default)]
+    pub latency: RequestLatencyTelemetry,
     pub artifacts: ArtifactCleanupCounters,
 }
 
@@ -85,8 +160,17 @@ impl ExecutionReceipt {
             stop_reason: String::new(),
             counter_coverage: 0,
             counters: ExecutionCounters::default(),
+            latency: RequestLatencyTelemetry::default(),
             artifacts: ArtifactCleanupCounters::default(),
         }
+    }
+
+    pub fn mark_measured(&mut self, flag: u64) {
+        self.counter_coverage |= flag;
+    }
+
+    pub fn is_measured(&self, flag: u64) -> bool {
+        (self.counter_coverage & flag) == flag
     }
 
     pub fn backend_matches_request(&self) -> bool {
@@ -127,5 +211,77 @@ mod tests {
         let decoded: ExecutionReceipt = serde_json::from_value(value).unwrap();
         assert_eq!(decoded.schema_version, 1);
         assert!(decoded.tuning_profile.is_empty());
+    }
+
+    #[test]
+    fn schema_3_coverage_and_latency_round_trips() {
+        let mut receipt =
+            ExecutionReceipt::new(BackendKind::Cuda, BackendKind::Cuda, "qwen3-35b", "plan-42");
+        receipt.counters.submitted_prefill_tokens = 512;
+        receipt.counters.committed_prefill_tokens = 512;
+        receipt.counters.cached_prefill_tokens = 256;
+        receipt.counters.admitted_requests = 1;
+        receipt.counters.pool_high_water_bytes = 1024 * 1024 * 128;
+        receipt.latency.queue_delay_us = 1500;
+        receipt.latency.time_to_first_token_us = 35000;
+        receipt.latency.inter_token_latency_us = 12000;
+
+        receipt.mark_measured(COUNTER_SUBMITTED_PREFILL_TOKENS);
+        receipt.mark_measured(COUNTER_COMMITTED_PREFILL_TOKENS);
+        receipt.mark_measured(COUNTER_CACHED_PREFILL_TOKENS);
+        receipt.mark_measured(COUNTER_ADMITTED_REQUESTS);
+        receipt.mark_measured(COUNTER_POOL_HIGH_WATER_BYTES);
+        receipt.mark_measured(COUNTER_TIME_TO_FIRST_TOKEN_US);
+
+        assert!(receipt.is_measured(COUNTER_SUBMITTED_PREFILL_TOKENS));
+        assert!(receipt.is_measured(COUNTER_TIME_TO_FIRST_TOKEN_US));
+        assert!(!receipt.is_measured(COUNTER_COW_COPIES));
+
+        let json = serde_json::to_string(&receipt).unwrap();
+        let decoded: ExecutionReceipt = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, receipt);
+        assert_eq!(decoded.schema_version, 3);
+        assert_eq!(decoded.latency.time_to_first_token_us, 35000);
+        assert_eq!(decoded.counters.cached_prefill_tokens, 256);
+    }
+
+    #[test]
+    fn schema_2_receipt_deserializes_cleanly() {
+        // Schema 2 JSON without Schema 3 counters or latency field
+        let json_schema_2 = r#"{
+            "schema_version": 2,
+            "requested_backend": "cuda",
+            "executed_backend": "cuda",
+            "model_instance_id": "model-legacy",
+            "prepared_plan_id": "plan-legacy",
+            "graph_hash": "",
+            "tuning_profile": "tuned-opt",
+            "stop_reason": "stop_token",
+            "counter_coverage": 1,
+            "counters": {
+                "decode_steps": 100,
+                "graph_launches": 10,
+                "compute_dispatches": 20,
+                "device_fences": 5,
+                "host_to_device_bytes": 1000,
+                "device_to_host_bytes": 500,
+                "fallback_count": 0,
+                "hot_path_allocations": 0,
+                "compile_calls": 1,
+                "immutable_upload_bytes": 4096
+            },
+            "artifacts": {
+                "temp_created_bytes": 0,
+                "temp_removed_bytes": 0,
+                "temp_retained_bytes": 0,
+                "temp_cleanup_failures": 0
+            }
+        }"#;
+
+        let decoded: ExecutionReceipt = serde_json::from_str(json_schema_2).unwrap();
+        assert_eq!(decoded.schema_version, 2);
+        assert_eq!(decoded.counters.decode_steps, 100);
+        assert_eq!(decoded.counters.submitted_prefill_tokens, 0);
+        assert_eq!(decoded.latency.time_to_first_token_us, 0);
     }
 }

@@ -144,8 +144,8 @@ fn validate_model_file(path: &str) -> Result<(), String> {
         .and_then(|value| value.to_str())
         .unwrap_or_default()
         .to_ascii_lowercase();
-    if !matches!(extension.as_str(), "gguf" | "p64") {
-        return Err("Select a local .gguf or .p64 model".into());
+    if !matches!(extension.as_str(), "gguf" | "p64" | "safetensors") {
+        return Err("Select a local .gguf, .p64, or .safetensors model".into());
     }
     if !path.is_file() {
         return Err("The selected local model file does not exist".into());

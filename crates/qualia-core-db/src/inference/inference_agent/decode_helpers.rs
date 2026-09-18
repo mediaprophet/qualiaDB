@@ -344,12 +344,13 @@ pub(super) fn build_sieve(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-static PREFIX_CACHE: std::sync::OnceLock<
-    std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>>,
+#[allow(dead_code)]
+pub(super) static PREFIX_CACHE: std::sync::OnceLock<
+    std::sync::Mutex<super::prefix_cache::BoundedInferenceCache>,
 > = std::sync::OnceLock::new();
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) fn get_prefix_cache(
-) -> &'static std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>> {
-    PREFIX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+) -> &'static std::sync::Mutex<super::prefix_cache::BoundedInferenceCache> {
+    super::prefix_cache::get_prefix_cache()
 }

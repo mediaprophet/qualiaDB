@@ -10,10 +10,12 @@ mod codec;
 mod compile;
 mod identity;
 pub mod inspector;
+pub mod prepared_request;
 mod receipt;
 pub mod registry;
 mod render;
 mod requirement;
+pub mod request_parts;
 mod select;
 mod spec;
 mod validate;
@@ -27,12 +29,14 @@ pub use codec::{decode_plan_cbor, encode_plan_cbor, CODEC_VERSION};
 pub use compile::{compile_into, CompileBuffers, CompiledPlanSummary};
 pub use identity::plan_identity;
 pub use inspector::{inspect_spec, RedactedInspectionTrace, RedactedRequirement};
+pub use prepared_request::PreparedConditioningSnapshot;
 pub use receipt::{RequirementDisposition, RequirementOutcome};
 pub use registry::{
     global_registry, ConditioningRegistry, ProfileLifecycleState, ProfileVersionEntry,
 };
 pub use render::{render_into, RenderTarget, RenderedRequestSummary};
 pub use requirement::{RequirementClass, RequirementRef};
+pub use request_parts::{select_prioritized_parts, RequestPart, RequestPartKind};
 pub use select::{select_evidence_into, EvidencePart};
 pub use spec::{ConditioningError, ConditioningSpec, OutputContractRef};
 pub use validate::validate_spec;

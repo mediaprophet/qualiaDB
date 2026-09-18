@@ -401,6 +401,16 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Agent-cooperation gate (Track M): decide whether a VERIFIED, TYPED, GROUNDED calling agent's request passes the deontic gate before execution. Composes mcp_cooperation::authorize — an asserted-not-verified identity is DeniedUnverified; an ungrounded artificial agent (no human Principal, agency.n3 G1') is DeniedUngrounded; else the request runs the Phase-6 policy gate. Trust is behaviourally derived, not self-asserted.",
             input_schema: r#"{"type":"object","required":["caller","verified"],"properties":{"caller":{"type":"string"},"role":{"type":"string"},"verified":{"type":"boolean"},"grounded":{"type":"boolean"},"requestStatus":{"type":"string"},"nonDerogable":{"type":"boolean"},"humanitarian":{"type":"boolean"},"ambiguous":{"type":"boolean"}}}"#,
         },
+        McpToolDescriptor {
+            name: "conditioning_compile",
+            description: "Compile a conditioning profile into an execution contract and budget plan.",
+            input_schema: r#"{"type":"object","properties":{"profile":{"type":"object"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "conditioning_validate",
+            description: "Validate a conditioning profile specification against schema and structural rules.",
+            input_schema: r#"{"type":"object","properties":{"profile":{"type":"object"}}}"#,
+        },
     ]
 }
 
@@ -586,6 +596,10 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         b"deontic_govern" => mcp_tool_impls::deontic_govern(payload.arguments_raw),
         b"mcp_cooperate" => mcp_tool_impls::mcp_cooperate(payload.arguments_raw),
         b"graph_resolve" => mcp_tool_impls::graph_resolve(payload.arguments_raw),
+
+        // ── Conditioning / Prompt Precision Tools ────────────────────────────────
+        b"conditioning_compile" => mcp_tool_impls::conditioning_compile(payload.arguments_raw),
+        b"conditioning_validate" => mcp_tool_impls::conditioning_validate(payload.arguments_raw),
 
         _ => Err(McpSystemError::ToolNotFound),
     }
