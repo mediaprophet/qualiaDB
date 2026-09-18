@@ -13,7 +13,7 @@ const TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 function pageBase() {
     if (typeof location !== 'undefined' && location.href) return location.href;
-    return 'https://mediaprophet.github.io/qualiaDB/';
+    return 'https://webizen.au/';
 }
 
 /** Resolve `url` and add `?v=` when the caller did not already pin one. */

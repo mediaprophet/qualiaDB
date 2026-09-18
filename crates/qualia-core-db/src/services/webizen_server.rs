@@ -22,7 +22,11 @@ use crate::{
     NQuin,
 };
 
-const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
+const OFFICIAL_WEB_HUB_ORIGINS: &[&str] = &[
+    "https://webizen.au",
+    "https://www.webizen.au",
+    "https://mediaprophet.github.io",
+];
 const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
 const PROXY_FETCH_MAX_BYTES: usize = 64 * 1024 * 1024;
 
@@ -246,8 +250,12 @@ pub fn spawn_loopback_server(
             let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
 
             rt.block_on(async move {
-                let allowed_origins: Vec<HeaderValue> = if server_state.dev {
-                    vec![
+                let mut allowed_origins: Vec<HeaderValue> = OFFICIAL_WEB_HUB_ORIGINS
+                    .iter()
+                    .map(|o| o.parse().unwrap())
+                    .collect();
+                if server_state.dev {
+                    allowed_origins.extend([
                         "http://localhost:8080".parse().unwrap(),
                         "http://127.0.0.1:8080".parse().unwrap(),
                         "http://localhost:8788".parse().unwrap(),
@@ -256,11 +264,8 @@ pub fn spawn_loopback_server(
                         "http://127.0.0.1:5173".parse().unwrap(),
                         "http://localhost:4173".parse().unwrap(),
                         "http://127.0.0.1:4173".parse().unwrap(),
-                        OFFICIAL_WEB_HUB_ORIGIN.parse().unwrap(),
-                    ]
-                } else {
-                    vec![OFFICIAL_WEB_HUB_ORIGIN.parse().unwrap()]
-                };
+                    ]);
+                }
 
                 let cors = if server_state.dev {
                     CorsLayer::permissive()
@@ -1521,7 +1526,7 @@ async fn mobile_qr_handler(
 
     let target = format!("http://{}:{}/mobile/app/index.html", local_ip, port);
     let url = format!(
-        "https://mediaprophet.github.io/qualiaDB/bootstrap_gateway/index.html?target={}",
+        "https://webizen.au/bootstrap_gateway/index.html?target={}",
         urlencoding::encode(&target)
     );
 
