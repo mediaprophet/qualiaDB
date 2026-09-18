@@ -385,7 +385,14 @@ let activeEventSource = null;
 function renderModels() {
     const el = document.getElementById('model-list');
     if (!models.length) {
-        el.innerHTML = `<div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">No local GGUF or P64 models were reported by the daemon. Configure <code>QUALIA_MODEL_PATHS</code> or mount a model, then reload.</div>`;
+        el.innerHTML = `<div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-200">
+            <div class="font-semibold mb-1"><i class="fas fa-triangle-exclamation mr-1.5 text-amber-400"></i>No local GGUF or P64 models reported by daemon</div>
+            <p class="text-white/60 mb-2">In Webizen Desktop: Menu → <strong>Tools → Load Model File (.gguf / .p64)</strong>, or open the <strong>Instruments</strong> tab to choose a model on your computer.</p>
+            <div class="flex items-center gap-2">
+                <button onclick="refreshLiveModels()" class="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 font-medium transition-colors">↻ Refresh Models</button>
+                <span class="text-white/40">or set <code class="text-cyan-300">QUALIA_MODEL_PATHS</code></span>
+            </div>
+        </div>`;
         return;
     }
     el.innerHTML = models.map(m => {
@@ -755,8 +762,9 @@ function setDaemonInferenceReadiness() {
         banner.style.background = 'rgba(245,158,11,0.08)';
         banner.style.borderColor = 'rgba(245,158,11,0.2)';
         banner.innerHTML = `<i class="fas fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0"></i>
-            <div><span class="font-semibold text-amber-300">Daemon active, but no local model is available</span>
-            <span class="text-white/60 ml-2">Configure <code class="text-cyan-300">QUALIA_MODEL_PATHS</code> or mount a GGUF/P64 model; demo mode remains available.</span></div>`;
+            <div class="flex-1"><span class="font-semibold text-amber-300">Daemon active, but no local model is available</span>
+            <span class="text-white/60 ml-2">Load a model in Webizen Desktop (Tools → Load Model File or Instruments tab); demo mode remains available.</span></div>
+            <button onclick="refreshLiveModels()" class="shrink-0 px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 text-xs font-semibold">↻ Refresh</button>`;
     }
 }
 

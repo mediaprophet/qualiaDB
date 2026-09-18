@@ -170,11 +170,7 @@ fn discover_local_models() -> Vec<serde_json::Value> {
     if let Some(configured) = std::env::var_os("QUALIA_MODEL_PATHS") {
         for path in std::env::split_paths(&configured).take(MAX_MODELS) {
             if path.is_dir() {
-                if let Ok(entries) = std::fs::read_dir(path) {
-                    for entry in entries.flatten().take(MAX_MODELS) {
-                        push_model_path(&mut candidates, &entry.path(), MAX_MODELS);
-                    }
-                }
+                scan_dir_for_models(&mut candidates, &path, 2, MAX_MODELS);
             } else {
                 push_model_path(&mut candidates, &path, MAX_MODELS);
             }
@@ -185,6 +181,35 @@ fn discover_local_models() -> Vec<serde_json::Value> {
     }
     for path in KNOWN_MODELS {
         push_model_path(&mut candidates, Path::new(path), MAX_MODELS);
+    }
+
+    // Common system model directories
+    let common_dirs = [
+        std::path::PathBuf::from(r"C:\LLM_Models"),
+        std::path::PathBuf::from(r"C:\models"),
+        std::path::PathBuf::from("storage/Models"),
+        std::path::PathBuf::from("storage/models"),
+    ];
+    for dir in &common_dirs {
+        scan_dir_for_models(&mut candidates, dir, 2, MAX_MODELS);
+    }
+
+    // User home directory model locations
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
+        let home_path = std::path::PathBuf::from(home);
+        let user_dirs = [
+            home_path.join("models"),
+            home_path.join(".cache").join("lm-studio").join("models"),
+            home_path.join(".qualia").join("models"),
+            home_path.join("AppData").join("Roaming").join("qualia").join("Models"),
+            home_path.join("AppData").join("Local").join("qualia").join("Models"),
+            home_path.join("Downloads"),
+        ];
+        for dir in &user_dirs {
+            // Shallow scan for Downloads (depth 1) to avoid heavy traversal
+            let depth = if dir.ends_with("Downloads") { 1 } else { 2 };
+            scan_dir_for_models(&mut candidates, dir, depth, MAX_MODELS);
+        }
     }
 
     candidates.sort();
@@ -213,6 +238,25 @@ fn discover_local_models() -> Vec<serde_json::Value> {
             })
         })
         .collect()
+}
+
+fn scan_dir_for_models(out: &mut Vec<std::path::PathBuf>, dir: &Path, depth: usize, limit: usize) {
+    if depth == 0 || out.len() >= limit || !dir.is_dir() {
+        return;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if out.len() >= limit {
+                break;
+            }
+            let p = entry.path();
+            if p.is_file() {
+                push_model_path(out, &p, limit);
+            } else if p.is_dir() && depth > 1 {
+                scan_dir_for_models(out, &p, depth - 1, limit);
+            }
+        }
+    }
 }
 
 fn push_model_path(out: &mut Vec<std::path::PathBuf>, path: &Path, limit: usize) {
@@ -399,4 +443,32 @@ fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> 
         "checks": checks,
         "semantic_quin": output.semantic_quin
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scan_dir_for_models_finds_gguf_and_p64() {
+        let temp_dir = tempfile::tempdir().expect("tempdir created");
+        let root = temp_dir.path();
+        let sub = root.join("nested");
+        std::fs::create_dir_all(&sub).expect("create nested");
+
+        let m1 = root.join("model_a.gguf");
+        let m2 = sub.join("model_b.p64");
+        let ignored = root.join("notes.txt");
+
+        std::fs::write(&m1, b"dummy gguf").expect("write m1");
+        std::fs::write(&m2, b"dummy p64").expect("write m2");
+        std::fs::write(&ignored, b"text").expect("write txt");
+
+        let mut results = Vec::new();
+        scan_dir_for_models(&mut results, root, 2, 10);
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().any(|p| p.ends_with("model_a.gguf")));
+        assert!(results.iter().any(|p| p.ends_with("model_b.p64")));
+    }
 }

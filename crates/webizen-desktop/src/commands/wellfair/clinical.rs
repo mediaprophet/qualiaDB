@@ -114,7 +114,7 @@ pub fn wellfair_export_attachment(
 /// directly; `simplified()` first normalises Windows UNC prefixes. If the variant is a URL
 /// that cannot be resolved to a filesystem path, fall back to its `Display` form so the
 /// caller still receives a usable string rather than an error.
-fn dialog_file_path_to_string(fp: tauri_plugin_dialog::FilePath) -> String {
+pub(crate) fn dialog_file_path_to_string(fp: tauri_plugin_dialog::FilePath) -> String {
     let display = fp.to_string();
     match fp.simplified().into_path() {
         Ok(path) => path.to_string_lossy().into_owned(),

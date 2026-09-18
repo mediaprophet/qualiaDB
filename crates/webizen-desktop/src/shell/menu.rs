@@ -34,11 +34,16 @@ fn qapp_route(qapp_id: &str) -> &str {
         "logs" => "/logs",
         "poet" | "vibe" => "/poet",
         "gpu-viewport" => "/gpu-viewport",
+        "models" | "model" | "settings/models" => "/settings",
         _ => "/",
     }
 }
 
 pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
+    if qapp_id == "poet" {
+        open_poet_window(app);
+        return;
+    }
     show_main_window(app);
     let route = qapp_route(qapp_id);
     if let Err(err) = app.emit("shell-navigate", qapp_id) {
@@ -51,7 +56,7 @@ pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
     // Settings: Classic shell. Studio shell-navigate sets pending_settings and
     // AppLayout's use_effect does navigator.push (dioxus-owned stack). No
     // Closure push, no synthetic popstate (those failed UAT on e6a53c4 / 08b8c93).
-    if qapp_id == "settings" {
+    if qapp_id == "settings" || qapp_id == "models" {
         let _ = app.emit("shell-kind-set", "classic");
     }
     if qapp_id == "library" || qapp_id == "memory" {
@@ -224,15 +229,85 @@ fn open_new_studio_window(app: &AppHandle) {
     }
 }
 
+pub fn open_poet_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("poet") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        return;
+    }
+    match WebviewWindowBuilder::new(app, "poet", tauri::WebviewUrl::App("index.html".into()))
+        .title("Poet Harness — Vibe HyperCanvas")
+        .inner_size(1280.0, 840.0)
+        .initialization_script("window.location.hash = '#/poet';")
+        .build()
+    {
+        Ok(window) => {
+            let _ = window.set_focus();
+            crate::desktop_log::record("info", "opened dedicated Poet Harness window");
+        }
+        Err(err) => {
+            crate::desktop_log::record("error", format!("failed to open Poet window: {err}"));
+            if let Err(e) = app.emit("shell-navigate", "poet") {
+                crate::desktop_log::record("error", format!("fallback navigate failed: {e}"));
+            }
+        }
+    }
+}
+
+pub fn load_model_file_dialog(app: &AppHandle) {
+    use tauri_plugin_dialog::DialogExt;
+    show_main_window(app);
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter("GGUF & P64 Models", &["gguf", "p64"])
+        .blocking_pick_file();
+
+    if let Some(file_path) = picked {
+        let path = crate::commands::wellfair::clinical::dialog_file_path_to_string(file_path);
+        let app_handle = app.clone();
+        tauri::async_runtime::spawn(async move {
+            crate::desktop_log::record("info", format!("loading local model: {path}"));
+            if let Some(parent) = std::path::Path::new(&path).parent() {
+                let parent_str = parent.to_string_lossy().to_string();
+                let existing = std::env::var("QUALIA_MODEL_PATHS").unwrap_or_default();
+                let updated = if existing.is_empty() {
+                    parent_str
+                } else if !existing.contains(&parent_str) {
+                    format!("{existing};{parent_str}")
+                } else {
+                    existing
+                };
+                std::env::set_var("QUALIA_MODEL_PATHS", &updated);
+            }
+            match qualia_client_core::api::set_active_model(path.clone()) {
+                Ok(()) => {
+                    let model_id = qualia_core_db::q_hash(&path);
+                    let _ = qualia_core_db::resident_model::mount_resident_model(model_id, &path, false);
+                    crate::desktop_log::record("info", format!("model activated successfully: {path}"));
+                    let _ = app_handle.emit("model-activated", &path);
+                }
+                Err(err) => {
+                    crate::desktop_log::record("error", format!("failed to activate model {path}: {err}"));
+                }
+            }
+        });
+    }
+}
+
 pub fn build_app_menu(
     app: &AppHandle,
 ) -> Result<tauri::menu::Menu<tauri::Wry>, Box<dyn std::error::Error>> {
     let new_window =
         MenuItem::with_id(app, "new_window", "New Window", true, Some("Ctrl+Shift+N"))?;
+    let new_poet_window =
+        MenuItem::with_id(app, "open_poet_window", "New Poet Window", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit_app", "Quit Webizen", true, Some("Ctrl+Q"))?;
 
     let file_menu = SubmenuBuilder::new(app, "File")
         .item(&new_window)
+        .item(&new_poet_window)
         .separator()
         .item(&quit)
         .build()?;
@@ -308,15 +383,19 @@ pub fn build_app_menu(
         .build()?;
 
     let settings = MenuItem::with_id(app, "open_settings", "Settings...", true, Some("Ctrl+,"))?;
+    let open_models = MenuItem::with_id(app, "open_models", "AI Models & Instruments...", true, None::<&str>)?;
+    let load_model = MenuItem::with_id(app, "load_model", "Load Model File (GGUF / P64)...", true, None::<&str>)?;
     let diagnostics =
         MenuItem::with_id(app, "open_diagnostics", "Diagnostics", true, None::<&str>)?;
     let wallet = MenuItem::with_id(app, "open_wallet", "Wallet", true, None::<&str>)?;
-    let poet = MenuItem::with_id(app, "open_poet", "Poet Harness", true, None::<&str>)?;
+    let poet = MenuItem::with_id(app, "open_poet_window", "Poet Harness (New Window)", true, None::<&str>)?;
 
     let tools_menu = SubmenuBuilder::new(app, "Tools")
         .item(&settings)
-        .item(&diagnostics)
+        .item(&open_models)
+        .item(&load_model)
         .separator()
+        .item(&diagnostics)
         .item(&wallet)
         .item(&poet)
         .separator()
@@ -507,11 +586,25 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
                 "if (window.__webizenOpenCommandPalette) window.__webizenOpenCommandPalette();",
             );
         }
+        ShellAction::OpenPoetWindow => {
+            open_poet_window(app);
+        }
+        ShellAction::LoadModelFile => {
+            load_model_file_dialog(app);
+        }
+        ShellAction::OpenModels => {
+            navigate_main_to(app, "settings");
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.eval(
+                    "try { location.hash = '#/settings/models'; } catch (e) { console.warn(e); }",
+                );
+            }
+        }
         ShellAction::SetShellKind(kind) => {
             let _ = app.emit("shell-kind-set", kind);
             crate::desktop_log::record("info", format!("shell kind -> {kind}"));
             if kind == "poet" {
-                navigate_main_to(app, "poet");
+                open_poet_window(app);
             }
         }
     }
@@ -541,6 +634,8 @@ mod tests {
             ("browser", "/browser"),
             ("10d-browser", "/10d-browser"),
             ("settings", "/settings"),
+            ("models", "/settings"),
+            ("model", "/settings"),
             ("library", "/library"),
             ("memory", "/library"),
             ("wallet", "/identity"),

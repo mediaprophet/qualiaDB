@@ -13,7 +13,7 @@
       "group": "Core"
     },
     {
-      "label": "POET Habitat (Live)",
+      "label": "POET WASM (Live)",
       "href": "poet-app/index.html",
       "icon": "fa-cube",
       "highlight": true,

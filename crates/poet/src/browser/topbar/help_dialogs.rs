@@ -249,7 +249,7 @@ pub(super) fn open_about_dialog(document: &Document) {
             "font-size: 14px; font-weight: 700; color: var(--accent-violet);",
         )
         .unwrap();
-    title.set_text_content(Some("\u{1F30C} About Webizen Poet"));
+    title.set_text_content(Some("\u{1F30C} About Webizen Poet WASM"));
     header.append_child(&title).unwrap();
 
     let close_btn = document.create_element("button").unwrap();
@@ -273,10 +273,9 @@ pub(super) fn open_about_dialog(document: &Document) {
     )
     .unwrap();
     desc.set_text_content(Some(
-        "Webizen Poet is a next-generation cyber-semantic hypermedia operating environment \
-         built on top of QualiaDB. It features zero-heap hot-path computation, 48-byte Super-Quin \
-         data representations, the 42MB Prolog Sentinel memory ceiling, pure Rust autodiff DFT, \
-         and multi-modal VibeScript coordination.",
+        "Webizen Poet WASM is the browser-native edition of the cyber-semantic hypermedia operating environment \
+         built on top of QualiaDB. It runs entirely client-side in the browser via WebAssembly, featuring zero-heap hot-path \
+         computation, 48-byte Super-Quin representations, the 42MB Prolog Sentinel memory ceiling, and client VibeScript coordination.",
     ));
     panel.append_child(&desc).unwrap();
 

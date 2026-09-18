@@ -342,6 +342,10 @@ fn main() {
 
             let tray_menu = MenuBuilder::new(app)
                 .text("show", "Open Webizen Studio")
+                .text("open_poet_window", "Open Poet Harness")
+                .separator()
+                .text("load_model", "Load Model File (GGUF / P64)...")
+                .text("open_models", "AI Models & Instruments")
                 .separator()
                 .item(&sanctuary_menu)
                 .item(&daemon_menu)
@@ -355,7 +359,7 @@ fn main() {
                 .separator()
                 .item(&help_menu)
                 .separator()
-                .text("quit", "Quit")
+                .text("quit", "Quit Webizen")
                 .build()?;
 
             let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png"))
@@ -695,10 +699,21 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| match event {
-            tauri::WindowEvent::CloseRequested { .. } => crate::desktop_log::record(
-                "info",
-                format!("window close requested: {}", window.label()),
-            ),
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                if window.label() == "main" {
+                    let _ = window.hide();
+                    api.prevent_close();
+                    crate::desktop_log::record(
+                        "info",
+                        "main window hidden to tray; background services and tray remain running",
+                    );
+                } else {
+                    crate::desktop_log::record(
+                        "info",
+                        format!("window close requested: {}", window.label()),
+                    );
+                }
+            }
             tauri::WindowEvent::Destroyed => crate::desktop_log::record(
                 "info",
                 format!("window destroyed: {}", window.label()),

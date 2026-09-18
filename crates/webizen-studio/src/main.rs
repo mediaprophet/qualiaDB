@@ -712,8 +712,35 @@ fn ToolsRoute() -> Element {
             style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             DomainRouteHeader {
                 domain: "Instruments",
-                title: "Tools & sync",
-                blurb: "Diagnostics, companion ingest, backup — instruments, not peers. Outputs can land in Lived Memory when you choose.",
+                title: "Tools & AI Instruments",
+                blurb: "Local models, diagnostics, companion ingest, backup — instruments under your control, never people.",
+            }
+            div {
+                style: "padding: 1.25rem; border: 1px solid var(--qualia-border); border-radius: 14px; background: color-mix(in srgb, var(--qualia-surface) 94%, transparent); display: flex; flex-direction: column; gap: 1rem;",
+                div {
+                    style: "display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;",
+                    div {
+                        h3 { style: "margin: 0; font-size: 1.15rem; color: var(--qualia-text);", "AI Instruments (GGUF & P64 Models)" }
+                        p { style: "margin: 0.25rem 0 0; color: var(--qualia-text-muted); font-size: 0.8rem;", "Local inference models reported by daemon on :4242 and used by Edge LLM." }
+                    }
+                    div { style: "display: flex; gap: 8px; flex-wrap: wrap;",
+                        Link {
+                            to: Route::SettingsRoute {},
+                            style: "display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--qualia-border); background: rgba(255,255,255,0.06); color: var(--qualia-text); text-decoration: none; font-size: 0.75rem; font-weight: 650;",
+                            sl-icon { "name": "gear" }
+                            "Open Model Manager (Settings)"
+                        }
+                        a {
+                            href: "https://webizen.au/edge-llm",
+                            target: "_blank",
+                            rel: "noopener noreferrer",
+                            style: "display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(0,210,255,0.3); background: rgba(0,210,255,0.12); color: #00d2ff; text-decoration: none; font-size: 0.75rem; font-weight: 700;",
+                            sl-icon { "name": "box-arrow-up-right" }
+                            "Open Edge LLM Hub"
+                        }
+                    }
+                }
+                components::settings::model_setup::ModelSetupPanel {}
             }
             components::wellfair::WellfairToolsPanel {}
             components::wellfair::WellfairSyncBackupPanel {}

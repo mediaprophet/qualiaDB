@@ -18,7 +18,7 @@ pub fn build_top_menubar(document: &Document) -> Element {
     brand.set_text_content(Some("\u{1F30C}"));
     let brand_text = document.create_element("span").unwrap();
     brand_text.set_class_name("brand-text");
-    brand_text.set_text_content(Some("Webizen Poet"));
+    brand_text.set_text_content(Some("Webizen Poet WASM"));
     brand.append_child(&brand_text).unwrap();
     left.append_child(&brand).unwrap();
 
@@ -292,7 +292,7 @@ pub fn build_top_menubar(document: &Document) -> Element {
             ("separator", "", "", ""),
             ("Keyboard Shortcuts", "help:shortcuts", "\u{2328}", ""),
             ("Honesty Standards", "help:honesty", "\u{1F4A1}", ""),
-            ("About Webizen Poet", "help:about", "\u{2139}", ""),
+            ("About Webizen Poet WASM", "help:about", "\u{2139}", ""),
             ("separator", "", "", ""),
             ("Report Issue to GitHub", "help:report", "\u{1F41B}", ""),
         ],

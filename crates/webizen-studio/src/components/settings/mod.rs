@@ -29,7 +29,29 @@ pub const FIELD: &str = "width:100%;box-sizing:border-box;border:1px solid var(-
 
 #[component]
 pub fn SettingsShell() -> Element {
-    let mut section = use_signal(SettingsSection::default);
+    let initial_section = {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Ok(hash) = window.location().hash() {
+                    if hash.to_ascii_lowercase().contains("model") {
+                        SettingsSection::Models
+                    } else {
+                        SettingsSection::default()
+                    }
+                } else {
+                    SettingsSection::default()
+                }
+            } else {
+                SettingsSection::default()
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            SettingsSection::default()
+        }
+    };
+    let mut section = use_signal(move || initial_section);
     let mut search = use_signal(String::new);
     let mut snapshot = use_signal(|| Option::<AgentQaSnapshot>::None);
     let mut loading = use_signal(|| true);

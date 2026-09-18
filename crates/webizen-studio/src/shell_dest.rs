@@ -38,7 +38,9 @@ pub fn route_from_shell_target(raw: &str) -> Route {
         | "talk/directory" | "talk/people" | "talk/dir" => Route::TalkDirectoryRoute {},
         "mail" | "email" | "talk/mail" | "talk/email" => Route::TalkMailRoute {},
         "library" | "memory" | "lived-memory" => Route::LibraryRoute {},
-        "settings" | "prefs" | "preferences" => Route::SettingsRoute {},
+        "settings" | "prefs" | "preferences" | "models" | "model" | "settings/models" => {
+            Route::SettingsRoute {}
+        }
         "keep" => Route::KeepRoute {},
         "wellfair" => Route::WellfairRoute {},
         "chora" => Route::ChoraRoute {},

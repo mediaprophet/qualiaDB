@@ -29,6 +29,12 @@ pub enum ShellAction {
     OpenCommandPalette,
     /// Presentation chrome only. Classic remains default.
     SetShellKind(&'static str),
+    /// Open dedicated Poet Harness window.
+    OpenPoetWindow,
+    /// Load a local GGUF/P64 model file via file picker.
+    LoadModelFile,
+    /// Open AI Models & Instruments view.
+    OpenModels,
 }
 
 impl ShellAction {
@@ -74,7 +80,10 @@ impl ShellAction {
             "sync_inbox" => Some(Self::OpenSyncInbox),
             "revoke" => Some(Self::RevokeSessions),
             "open_command_palette" | "command_palette" => Some(Self::OpenCommandPalette),
-            "open_poet" => Some(Self::Navigate("poet".to_string())),
+            "open_poet" => Some(Self::OpenPoetWindow),
+            "open_poet_window" | "poet_window" => Some(Self::OpenPoetWindow),
+            "load_model" | "load_model_file" => Some(Self::LoadModelFile),
+            "open_models" | "models" => Some(Self::OpenModels),
             "shell_classic" => Some(Self::SetShellKind("classic")),
             "shell_poet" => Some(Self::SetShellKind("poet")),
             _ => None,
@@ -114,7 +123,19 @@ mod tests {
         );
         assert_eq!(
             ShellAction::from_id("open_poet"),
-            Some(ShellAction::Navigate("poet".to_string()))
+            Some(ShellAction::OpenPoetWindow)
+        );
+        assert_eq!(
+            ShellAction::from_id("open_poet_window"),
+            Some(ShellAction::OpenPoetWindow)
+        );
+        assert_eq!(
+            ShellAction::from_id("load_model"),
+            Some(ShellAction::LoadModelFile)
+        );
+        assert_eq!(
+            ShellAction::from_id("open_models"),
+            Some(ShellAction::OpenModels)
         );
         assert_eq!(
             ShellAction::from_id("shell_classic"),

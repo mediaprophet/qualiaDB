@@ -89,6 +89,12 @@ pub fn PoetWorkbench() -> Element {
                             crate::components::shell_kind::ShellKind::Classic,
                         );
                         let _ = nav.push(crate::Route::SettingsRoute {});
+                    } else if key.eq_ignore_ascii_case("b") || key.eq_ignore_ascii_case("h") {
+                        // Alt+B or Alt+H — return to Webizen Studio Talk/Home.
+                        crate::components::shell_kind::persist_shell_kind(
+                            crate::components::shell_kind::ShellKind::Classic,
+                        );
+                        let _ = nav.push(crate::Route::TalkRoute {});
                     } else if let Ok(digit) = key.parse::<usize>() {
                         let idx = if digit == 0 { 9 } else { digit - 1 };
                         if let Some(id) = super::kinds::ManifoldId::ALL.get(idx) {

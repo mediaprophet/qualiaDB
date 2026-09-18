@@ -16,6 +16,21 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
             div { class: "menu-items-group",
                 span { class: "brand-icon", "🌌" }
                 span { style: "font-weight:700;font-size:13px;letter-spacing:0.04em;color:var(--accent-cyan);margin-right:8px;", "POET" }
+                button {
+                    class: "back-to-webizen-btn",
+                    style: "display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:var(--qualia-text);font-size:11px;font-weight:650;padding:2px 9px;border-radius:6px;cursor:pointer;margin-right:12px;transition:all 0.15s ease;",
+                    title: "Return to Webizen Studio (Talk / Home)",
+                    onclick: {
+                        let nav = nav;
+                        move |_| {
+                            crate::components::shell_kind::persist_shell_kind(
+                                crate::components::shell_kind::ShellKind::Classic,
+                            );
+                            let _ = nav.push(crate::Route::TalkRoute {});
+                        }
+                    },
+                    "← Back to Webizen Studio"
+                }
                 Menu { name: "file", label: "File", open, wb,
                     Item { left: "New Manifold Desk", right: "Ctrl+N" }
                     Item { left: "Open HyperDoc / Desk...", right: "Ctrl+O" }
@@ -71,7 +86,7 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                             let _ = nav.push(crate::Route::SettingsRoute {});
                         }
                     },
-                    "✨ Poet / ⚙️ Admin ⇄"
+                    "⚙️ Settings"
                 }
                 NativeDaemonChip {}
                 // Ambient Job Indicator
