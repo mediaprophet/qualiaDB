@@ -2,6 +2,7 @@
 
 pub mod execution;
 mod manifest;
+pub mod parity_runner;
 mod source;
 
 pub use execution::{
@@ -14,5 +15,9 @@ pub use execution::{
 pub use manifest::{
     sha256_file, sha256_token_ids, BenchmarkManifest, HardwareProfileManifest,
     OsrpBaselineManifest, ParityGateEvaluation, MANIFEST_SCHEMA_VERSION, RAW_GREEDY_DECODE_POLICY,
+};
+pub use parity_runner::{
+    evaluate_parity_release, ParityGateReport, LATENCY_TOLERANCE_MARGIN,
+    THROUGHPUT_PARITY_THRESHOLD,
 };
 pub use source::{capture_source_provenance, SourceProvenance};
