@@ -459,3 +459,37 @@ fn asp_arm_integrity_constraint_prunes() {
         "only {{permitted}} survives"
     );
 }
+
+#[test]
+fn test_conditioning_validate_and_compile() {
+    let profile = json!({
+        "schema_version": 1,
+        "profile_id": "urn:qualia:profile:test:v1",
+        "objective": "Test objective",
+        "domains": ["inference"],
+        "requirements": [{
+            "id": "R1",
+            "class": "enforced",
+            "rule": "Zero heap allocation in hot paths",
+            "validator": "zero-alloc-suite",
+            "required": true,
+            "priority": 100
+        }],
+        "budget": {
+            "input_tokens": 4096,
+            "output_tokens": 1024,
+            "tool_rounds": 4
+        }
+    });
+
+    let val_out = conditioning_validate(profile.to_string().as_bytes()).expect("validate ok");
+    let val_json: Value = serde_json::from_str(&val_out).expect("val json");
+    assert_eq!(val_json["valid"], true);
+    assert_eq!(val_json["profile_id"], "urn:qualia:profile:test:v1");
+
+    let comp_out = conditioning_compile(profile.to_string().as_bytes()).expect("compile ok");
+    let comp_json: Value = serde_json::from_str(&comp_out).expect("comp json");
+    assert_eq!(comp_json["profile_id"], "urn:qualia:profile:test:v1");
+    assert_eq!(comp_json["requirements_count"], 1);
+}
+
