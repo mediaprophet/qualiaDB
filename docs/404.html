@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Page Not Found · Webizen / QualiaDB</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen flex flex-col justify-between">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+                <a href="index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-xl mx-auto px-6 py-20 text-center flex-1 flex flex-col items-center justify-center">
+        <p class="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-2">404 · Not Found</p>
+        <h1 class="text-4xl sm:text-5xl font-semibold tracking-tight text-white mb-4">Page not found</h1>
+        <p class="text-white/60 text-lg mb-8">The requested path does not exist on this habitat node.</p>
+        <div class="flex flex-wrap items-center justify-center gap-4">
+            <a href="index.html" class="px-5 py-2.5 rounded-xl bg-cyan-500 text-black font-semibold hover:bg-cyan-400 transition-colors">
+                Return Home
+            </a>
+            <a href="playground/index.html" class="px-5 py-2.5 rounded-xl bg-white/10 text-white font-medium hover:bg-white/15 transition-colors">
+                Open Playground
+            </a>
+        </div>
+    </main>
+
+    <footer class="border-t border-white/10 py-6 text-center text-sm text-white/40">
+        <p>Webizen · QualiaDB 0.0.39</p>
+    </footer>
+</body>
+</html>
