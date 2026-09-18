@@ -152,6 +152,14 @@ impl ModelPrecisionRegistry {
         Ok(())
     }
 
+    /// Clear any active conditioning profile and contract from a model target.
+    pub fn clear_active_profile(&mut self, model_id: &str) -> Result<(), &'static str> {
+        let target = self.targets.get_mut(model_id).ok_or("model not found")?;
+        target.active_profile_id = None;
+        target.active_contract = None;
+        Ok(())
+    }
+
     /// Bind a contract to a target whose profile pointer has already been set.
     /// A later profile change clears this binding, preventing a stale contract
     /// from being applied to a new profile version.

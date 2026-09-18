@@ -12,7 +12,7 @@ pub use execution::{
     RECEIPT_SCHEMA_VERSION,
 };
 pub use manifest::{
-    sha256_file, sha256_token_ids, BenchmarkManifest, MANIFEST_SCHEMA_VERSION,
-    RAW_GREEDY_DECODE_POLICY,
+    sha256_file, sha256_token_ids, BenchmarkManifest, HardwareProfileManifest,
+    OsrpBaselineManifest, ParityGateEvaluation, MANIFEST_SCHEMA_VERSION, RAW_GREEDY_DECODE_POLICY,
 };
 pub use source::{capture_source_provenance, SourceProvenance};

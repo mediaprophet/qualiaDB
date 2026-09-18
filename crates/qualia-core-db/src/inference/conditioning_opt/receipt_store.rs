@@ -142,6 +142,25 @@ impl SignedModelOptimizationReceipt {
             .map_err(|_| ReceiptStoreError::RegistryConflict)
     }
 
+    /// Atomically roll back an active profile/contract if quality degrades or verification fails.
+    pub fn rollback(
+        &self,
+        models: &mut ModelPrecisionRegistry,
+        conditioning: &mut ConditioningRegistry,
+        fallback_profile_version: Option<u64>,
+    ) -> Result<(), ReceiptStoreError> {
+        if let Some(version) = fallback_profile_version {
+            conditioning
+                .activate(&self.contract.profile_id, version)
+                .map_err(|_| ReceiptStoreError::RegistryConflict)?;
+        } else {
+            models
+                .clear_active_profile(&self.receipt.model_id)
+                .map_err(|_| ReceiptStoreError::ModelNotRegistered)?;
+        }
+        Ok(())
+    }
+
     fn validate_binding(&self) -> Result<(), ReceiptStoreError> {
         if self.schema_version != MODEL_OPTIMIZATION_RECEIPT_SCHEMA_VERSION {
             return Err(ReceiptStoreError::InvalidReceipt(
@@ -421,6 +440,39 @@ mod tests {
         ));
         assert!(conditioning
             .get_active(&signed.contract.profile_id)
+            .is_none());
+    }
+
+    #[test]
+    fn rollback_clears_active_profile_and_contract() {
+        let (receipt, contract) = fixture();
+        let signed = SignedModelOptimizationReceipt::new_signed(
+            "a".repeat(64),
+            receipt,
+            contract,
+            &SigningKey::from_bytes(&[7; 32]),
+        )
+        .unwrap();
+
+        let mut models = ModelPrecisionRegistry::new();
+        models.register(ModelPrecisionTarget::native_gguf(
+            "qwen-test",
+            ModelFamily::Qwen,
+            8192,
+            "code",
+        ));
+        let mut conditioning = ConditioningRegistry::new();
+
+        signed
+            .apply_to_registries(&"a".repeat(64), &mut models, &mut conditioning)
+            .unwrap();
+        assert!(models
+            .resolve_active_contract("qwen-test", &conditioning)
+            .is_some());
+
+        signed.rollback(&mut models, &mut conditioning, None).unwrap();
+        assert!(models
+            .resolve_active_contract("qwen-test", &conditioning)
             .is_none());
     }
 }
