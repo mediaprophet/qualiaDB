@@ -76,6 +76,7 @@ jobs:
           node docs/tests/vibe-playground.test.mjs
           node docs/tests/vibe-dev-docs.test.mjs
           node docs/tests/qdnf-pages.test.mjs
+          node docs/tests/edge-llm-smoke.test.mjs
 
       - name: Install wasm-pack
         run: |
@@ -335,6 +336,9 @@ jobs:
 
   deploy:
     needs: build
+    # Only deploy to GitHub Pages from release/dev branches and version tags.
+    # Cloudflare builds and deploys from main to webizen.au.
+    if: github.ref != 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
