@@ -83,7 +83,7 @@
             <span class="font-semibold text-amber-300">Daemon not detected on localhost:4242</span>
             <span class="text-white/60 ml-2">— Demo mode active. Run </span>
             <code class="text-cyan-300 mx-1">qualia-cli daemon --dev</code>
-            <span class="text-white/60"> to enable live inference via the WebSocket bridge.</span>
+            <span class="text-white/60"> to discover locally available models.</span>
         </div>
     </div>
 
@@ -113,7 +113,7 @@
                     <div class="telem-bar"><div class="text-white/40 mb-1">Context</div><div id="t-ctx" class="font-mono font-bold text-blue-400">—</div></div>
                 </div>
                 <div class="mt-3 text-xs text-white/30 leading-relaxed">
-                    Live RAM feed from <code class="text-cyan-400/70">TelemetryPayload</code> on port 9090. Connect the daemon to see real data.
+                    Optional benchmark telemetry from <code class="text-cyan-400/70">TelemetryPayload</code> on port 9090. A normal daemon can infer without this separate service.
                 </div>
             </div>
         </div>
@@ -138,6 +138,7 @@
                         </div>
                         <span id="demo-label">Demo mode</span>
                     </label>
+                    <button id="cancel-btn" onclick="cancelLiveInference()" class="spinbtn red text-xs py-1 px-3" disabled><i class="fas fa-ban mr-1"></i>Cancel</button>
                     <button onclick="clearChat()" class="spinbtn red text-xs py-1 px-3"><i class="fas fa-trash mr-1"></i>Clear</button>
                 </div>
             </div>
@@ -169,68 +170,58 @@
         </div>
     </div>
 
-    <!-- ── WebSocket Protocol spec ────────────────────────────────── -->
+    <!-- ── Daemon protocol spec ───────────────────────────────────── -->
     <div class="glass-strong rounded-3xl p-6 mt-8">
         <button class="w-full flex items-center justify-between text-left" onclick="toggleAccordion('proto')">
             <div class="flex items-center gap-3">
                 <i class="fas fa-plug text-cyan-400"></i>
-                <h3 class="font-semibold">WebSocket Protocol — <code class="text-cyan-300 text-sm">ws://127.0.0.1:4242/qualia-bridge</code></h3>
+                <h3 class="font-semibold">Daemon API — <code class="text-cyan-300 text-sm">http://127.0.0.1:4242/llm</code></h3>
             </div>
             <i class="fas fa-chevron-down text-white/40 transition-transform" id="proto-chevron"></i>
         </button>
         <div id="proto-body" class="accordion-body mt-5">
-            <p class="text-white/60 text-sm mb-4">The <code class="text-cyan-400">qualia-bridge</code> WebSocket is the single persistent connection from any browser client to the native daemon. LLM inference multiplexes over the same socket using the <code class="text-amber-300">llm_*</code> frame family.</p>
+            <p class="text-white/60 text-sm mb-4">Live inference uses the daemon's HTTP job API: discover local models, start a bounded job, then receive tokens through a Server-Sent Events stream. The general-purpose <code class="text-cyan-400">qualia-bridge</code> WebSocket remains available for graph queries.</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                    <div class="text-white/50 font-semibold mb-2">Handshake (server → client)</div>
-                    <div class="code-block text-cyan-300">← { "type": "HANDSHAKE_SUCCESS",
-     "payload": { "mode": "NATIVE",
-                  "version": "0.0.33" } }</div>
+                    <div class="text-white/50 font-semibold mb-2">Discover local models</div>
+                    <div class="code-block text-cyan-300">GET /llm/models
+← { "ok": true, "data": { "models": [ … ] } }</div>
                 </div>
                 <div>
-                    <div class="text-white/50 font-semibold mb-2">Start inference (client → server)</div>
-                    <div class="code-block text-amber-300">→ { "type": "llm_infer",
-     "id": 1,
-     "model": "gemma-3-1b-it-q4_0",
+                    <div class="text-white/50 font-semibold mb-2">Start inference</div>
+                    <div class="code-block text-amber-300">POST /llm/jobs/start
+→ { "model_path": "C:\\Models\\model.gguf",
      "prompt": "Explain NQuin layout",
-     "max_tokens": 256,
-     "temperature": 0.7 }</div>
+     "max_tokens": 256 }
+← { "ok": true, "job_id": "llm-…" }</div>
                 </div>
                 <div>
-                    <div class="text-white/50 font-semibold mb-2">Streaming token (server → client)</div>
-                    <div class="code-block text-emerald-300">← { "type": "llm_token",
-     "id": 1,
-     "token": " Hello",
-     "tps": 14.2,
-     "rss_mb": 2841 }
-← { "type": "llm_token", "id": 1, "token": " world", … }</div>
+                    <div class="text-white/50 font-semibold mb-2">Streaming token</div>
+                    <div class="code-block text-emerald-300">GET /llm/jobs/events?job_id=llm-…
+data: { "kind": "token", "data": { "delta": " Hello" } }</div>
                 </div>
                 <div>
-                    <div class="text-white/50 font-semibold mb-2">Completion (server → client)</div>
-                    <div class="code-block text-violet-300">← { "type": "llm_done",
-     "id": 1,
-     "total_tokens": 128,
-     "elapsed_ms": 9043,
-     "tps": 14.1,
-     "stop_reason": "eos_token" }</div>
+                    <div class="text-white/50 font-semibold mb-2">Completion</div>
+                    <div class="code-block text-violet-300">data: { "kind": "done",
+  "data": { "tokens_generated": 128,
+             "inference_duration_ms": 9043 } }</div>
                 </div>
                 <div>
-                    <div class="text-white/50 font-semibold mb-2">Cancel (client → server)</div>
-                    <div class="code-block text-red-300">→ { "type": "llm_cancel", "id": 1 }</div>
+                    <div class="text-white/50 font-semibold mb-2">Cancel</div>
+                    <div class="code-block text-red-300">POST /llm/jobs/cancel
+→ { "job_id": "llm-…" }</div>
                 </div>
                 <div>
-                    <div class="text-white/50 font-semibold mb-2">Status query (client → server)</div>
-                    <div class="code-block text-blue-300">→ { "type": "llm_status" }
-← { "type": "llm_status_reply",
-     "loaded_model": "gemma-3-1b…",
-     "lifecycle": "Resident",
-     "rss_mb": 2841,
-     "thermal": "Normal" }</div>
+                    <div class="text-white/50 font-semibold mb-2">Model lifecycle</div>
+                    <div class="code-block text-blue-300">POST /llm/models/activate
+POST /llm/models/evict
+
+The page only runs models returned by discovery.</div>
                 </div>
             </div>
             <div class="mt-4 p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 text-xs text-amber-300/80">
                 <i class="fas fa-info-circle mr-2"></i>
-                The <code>llm_*</code> frame family is planned infrastructure. Today, send <code>llm_infer</code> and the daemon returns <code class="text-red-300">{ "code": "unknown_type" }</code> — use <code>qualia-cli llm eval</code> for actual inference.
+                A healthy daemon is not necessarily inference-ready. Live mode becomes available only after the daemon reports at least one local <code>.gguf</code> or <code>.p64</code> model.
             </div>
         </div>
     </div>
@@ -353,8 +344,10 @@ AgentBackend variants:
 </div><!-- /main -->
 
 <script>
-// ─── Model catalog (from resources/llms.yaml) ──────────────────────
-const MODELS = [
+// ─── Model catalog ─────────────────────────────────────────────────
+// The bundled entries exist only for the explicit demo mode. Live mode is
+// populated from the daemon so every inferred model is a verified local path.
+const DEMO_MODELS = [
     { id:'gemma-3-1b-it-q4_0',        name:'Gemma 3 1B Instruct',     provider:'Google',          sizeMb:957,   ramMb:1100,  quant:'Q4_0',  modality:'text',       tags:['multilingual','edge','tiny'], icon:'💎', ctx:8192 },
     { id:'smolvlm2-500m-video-q8',    name:'SmolVLM2 500M Video',     provider:'HuggingFaceTB',   sizeMb:420,   ramMb:1200,  quant:'Q8_0',  modality:'multimodal', tags:['vision','edge','tiny'],    icon:'🔬', ctx:8192 },
     { id:'qwen2.5-1.5b-instruct-q4km',name:'Qwen2.5 1.5B',            provider:'Alibaba',         sizeMb:1100,  ramMb:1400,  quant:'Q4_K_M',modality:'text',       tags:['coding','edge','tiny'],    icon:'💬', ctx:32768 },
@@ -376,28 +369,36 @@ const TAG_COLORS = {
     balanced:'bg-lime-500/15 text-lime-400',
 };
 
-let selectedModel = MODELS[0]; // Default: Gemma 3 1B Q4_0
+const DAEMON_BASE = 'http://127.0.0.1:4242';
+let models = DEMO_MODELS;
+let liveModels = [];
+let selectedModel = DEMO_MODELS[0];
 let demoMode = true;
-let ws = null;
 let generating = false;
-let streamBuffer = '';
 let streamMsgEl = null;
 let streamStart = 0;
 let streamTokenCount = 0;
+let activeJobId = null;
+let activeEventSource = null;
 
 // ─── Render model list ─────────────────────────────────────────────
 function renderModels() {
     const el = document.getElementById('model-list');
-    el.innerHTML = MODELS.map(m => {
+    if (!models.length) {
+        el.innerHTML = `<div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">No local GGUF or P64 models were reported by the daemon. Configure <code>QUALIA_MODEL_PATHS</code> or mount a model, then reload.</div>`;
+        return;
+    }
+    el.innerHTML = models.map(m => {
         const tags = m.tags.map(t => `<span class="tag ${TAG_COLORS[t]||'bg-slate-500/15 text-slate-300'}">${t}</span>`).join(' ');
-        const isSelected = m.id === selectedModel.id;
+        const isSelected = m.id === selectedModel?.id;
+        const memory = m.ramMb == null ? 'daemon managed' : `~${m.ramMb >= 1024 ? (m.ramMb/1024).toFixed(1)+'GB' : m.ramMb+'MB'} RAM`;
         return `<div class="model-card ${isSelected?'selected':''}" onclick="selectModel('${m.id}')">
             <div class="flex items-start justify-between gap-2 mb-2">
                 <div class="flex items-center gap-2">
                     <span class="text-lg">${m.icon}</span>
                     <div>
-                        <div class="font-semibold text-sm text-white/90">${m.name}</div>
-                        <div class="text-xs text-white/40">${m.provider}</div>
+                        <div class="font-semibold text-sm text-white/90">${escHtml(m.name)}</div>
+                        <div class="text-xs text-white/40">${escHtml(m.provider)}</div>
                     </div>
                 </div>
                 <button onclick="copyLoadCmd('${m.id}',event)" title="Copy CLI load command"
@@ -407,9 +408,9 @@ function renderModels() {
             </div>
             <div class="flex flex-wrap gap-1 mb-2">${tags}</div>
             <div class="flex gap-3 text-xs text-white/40">
-                <span><i class="fas fa-weight-hanging mr-1"></i>${(m.sizeMb/1024).toFixed(1)} GB</span>
-                <span><i class="fas fa-memory mr-1"></i>~${m.ramMb >= 1024 ? (m.ramMb/1024).toFixed(1)+'GB' : m.ramMb+'MB'} RAM</span>
-                <span><i class="fas fa-code mr-1"></i>${m.quant}</span>
+                <span><i class="fas fa-weight-hanging mr-1"></i>${formatModelSize(m.sizeMb)}</span>
+                <span><i class="fas fa-memory mr-1"></i>${memory}</span>
+                <span><i class="fas fa-code mr-1"></i>${escHtml(m.quant)}</span>
                 ${m.modality==='multimodal'?'<span class="text-purple-400"><i class="fas fa-eye mr-1"></i>vision</span>':''}
             </div>
         </div>`;
@@ -417,18 +418,24 @@ function renderModels() {
 }
 
 function selectModel(id) {
-    selectedModel = MODELS.find(m => m.id === id) || selectedModel;
+    selectedModel = models.find(m => m.id === id) || selectedModel;
+    if (!selectedModel) return;
     renderModels();
     const m = selectedModel;
     document.getElementById('chat-model-icon').textContent = m.icon;
     document.getElementById('chat-model-name').textContent = m.name;
     document.getElementById('chat-model-meta').textContent =
-        `${m.provider} · ${m.quant} · ~${m.ramMb >= 1024 ? (m.ramMb/1024).toFixed(1)+'GB' : m.ramMb+'MB'} RAM · ${(m.ctx/1024).toFixed(m.ctx>=1024?0:0)}k ctx`;
+        `${m.provider} · ${m.quant} · ${m.ramMb == null ? 'daemon managed' : `~${m.ramMb >= 1024 ? (m.ramMb/1024).toFixed(1)+'GB' : m.ramMb+'MB'} RAM`} · ${m.ctx ? `${(m.ctx/1024).toFixed(0)}k ctx` : 'local model'}`;
+}
+
+function formatModelSize(sizeMb) {
+    return sizeMb >= 1024 ? `${(sizeMb / 1024).toFixed(1)} GB` : `${Math.max(0, sizeMb).toFixed(0)} MB`;
 }
 
 function copyLoadCmd(id, e) {
     e.stopPropagation();
-    const cmd = `qualia-cli llm load ${id}`;
+    const model = models.find(m => m.id === id);
+    const cmd = model?.modelPath ? `qualia-cli llm load "${model.modelPath}"` : `qualia-cli llm load ${id}`;
     navigator.clipboard?.writeText(cmd).catch(()=>{});
     const btn = e.currentTarget;
     btn.innerHTML = '<i class="fas fa-check"></i>';
@@ -454,6 +461,15 @@ function toggleDemo() {
         thumb.style.transform = '';
         label.textContent = 'Live (daemon)';
     }
+    models = demoMode ? DEMO_MODELS : liveModels;
+    selectedModel = models[0] || null;
+    renderModels();
+    if (selectedModel) selectModel(selectedModel.id);
+    else {
+        document.getElementById('chat-model-icon').textContent = 'Q';
+        document.getElementById('chat-model-name').textContent = 'No local model';
+        document.getElementById('chat-model-meta').textContent = 'Configure the daemon model catalogue, then reload.';
+    }
 }
 
 window.toggleDemo = toggleDemo;
@@ -469,7 +485,7 @@ function appendMessage(role, content) {
     const div = document.createElement('div');
     div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} gap-2`;
     if (role === 'assistant') {
-        div.innerHTML = `<div class="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">${selectedModel.icon}</div>
+        div.innerHTML = `<div class="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">${selectedModel?.icon || 'Q'}</div>
             <div class="chat-bubble chat-assistant text-zinc-200"></div>`;
     } else {
         div.innerHTML = `<div class="chat-bubble chat-user text-zinc-100">${escHtml(content)}</div>`;
@@ -484,6 +500,10 @@ function escHtml(s) {
 }
 
 function clearChat() {
+    cancelLiveInference();
+    activeEventSource?.close();
+    activeEventSource = null;
+    activeJobId = null;
     document.getElementById('chat-messages').innerHTML = '';
     generating = false;
     streamMsgEl = null;
@@ -535,7 +555,7 @@ function runDemoInference(userMsg) {
     let i = 0;
     streamMsgEl.innerHTML = '<span class="token-cursor"></span>';
 
-    const RAM_BASE = selectedModel.ramMb;
+    const RAM_BASE = selectedModel?.ramMb || 0;
     const TPS_BASE = Math.round(12 + Math.random() * 8);
 
     const iv = setInterval(() => {
@@ -577,79 +597,118 @@ function updateStreamBar(visible) {
     if (!visible) { el.style.display = 'none'; }
 }
 
-// ─── Live inference (daemon WebSocket) ────────────────────────────
-function runLiveInference(prompt) {
-    generating = true;
-    document.getElementById('send-btn').disabled = true;
-    streamMsgEl = appendMessage('assistant', '');
-    streamMsgEl.innerHTML = '<span class="text-white/30 text-xs italic">Connecting to daemon…</span>';
+// ─── Live inference (daemon HTTP jobs + SSE) ──────────────────────
+function setLiveControls(running) {
+    document.getElementById('send-btn').disabled = running;
+    document.getElementById('cancel-btn').disabled = !running;
+}
 
-    ensureWs().then(socket => {
-        const id = Date.now();
+function updateLiveMetrics(tokens = streamTokenCount, durationMs = null) {
+    const elapsed = durationMs == null ? (performance.now() - streamStart) / 1000 : durationMs / 1000;
+    const tps = tokens / Math.max(elapsed, 0.001);
+    document.getElementById('sb-tokens').textContent = tokens;
+    document.getElementById('sb-tps').textContent = tps.toFixed(1);
+    document.getElementById('sb-elapsed').textContent = elapsed.toFixed(1) + 's';
+    document.getElementById('t-tps').textContent = tps.toFixed(1);
+    document.getElementById('t-ctx').textContent = tokens + ' tok';
+}
+
+function finishLiveInference() {
+    activeEventSource?.close();
+    activeEventSource = null;
+    activeJobId = null;
+    streamMsgEl?.querySelector('.token-cursor')?.remove();
+    generating = false;
+    setLiveControls(false);
+}
+
+function showLiveError(message) {
+    if (streamMsgEl) {
+        streamMsgEl.innerHTML = `<span class="text-red-400"><i class="fas fa-triangle-exclamation mr-1.5"></i>${escHtml(message)}</span>`;
+    }
+    finishLiveInference();
+}
+
+async function runLiveInference(prompt) {
+    if (!selectedModel?.modelPath) {
+        streamMsgEl = appendMessage('assistant', '');
+        streamMsgEl.innerHTML = '<span class="text-amber-300">Live mode requires a daemon-discovered local model. Configure a GGUF or P64 model, then reload.</span>';
+        return;
+    }
+
+    generating = true;
+    setLiveControls(true);
+    streamMsgEl = appendMessage('assistant', '');
+    streamMsgEl.innerHTML = '<span class="text-white/30 text-xs italic">Starting local inference…</span>';
+    try {
+        const response = await fetch(`${DAEMON_BASE}/llm/jobs/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model_path: selectedModel.modelPath,
+                prompt,
+                agent_did: 'did:qualia:edge-llm-hub',
+                max_tokens: 256,
+            }),
+        });
+        const started = await response.json();
+        if (!response.ok || !started.ok || !started.job_id || !started.events_path) {
+            throw new Error(started.diagnostic || started.code || `Daemon request failed (${response.status})`);
+        }
+
+        activeJobId = started.job_id;
         streamMsgEl.innerHTML = '<span class="token-cursor"></span>';
         streamStart = performance.now();
         streamTokenCount = 0;
-
-        socket.send(JSON.stringify({
-            type: 'llm_infer', id,
-            model: selectedModel.id,
-            prompt, max_tokens: 512, temperature: 0.7
-        }));
-
-        const originalOnMsg = socket.onmessage;
-        socket.onmessage = (evt) => {
-            try {
-                const frame = JSON.parse(evt.data);
-                if (frame.id !== id) { if (originalOnMsg) originalOnMsg(evt); return; }
-
-                if (frame.type === 'llm_token') {
-                    streamTokenCount++;
-                    const cursor = streamMsgEl.querySelector('.token-cursor');
-                    const text = document.createTextNode(frame.token);
-                    if (cursor) streamMsgEl.insertBefore(text, cursor);
-                    else streamMsgEl.appendChild(text);
-                    document.getElementById('chat-messages').scrollTop = 9999;
-                } else if (frame.type === 'llm_done') {
-                    const cursor = streamMsgEl.querySelector('.token-cursor');
-                    if (cursor) cursor.remove();
-                    generating = false;
-                    document.getElementById('send-btn').disabled = false;
-                    socket.onmessage = originalOnMsg;
-                } else if (frame.type === 'error') {
-                    streamMsgEl.querySelector('.token-cursor')?.remove();
-                    const code = frame.code || '';
-                    if (code === 'unknown_type') {
-                        streamMsgEl.innerHTML = `<span class="text-amber-300"><i class="fas fa-triangle-exclamation mr-1.5"></i>Daemon running but LLM inference bridge not available yet.</span>
-                        <div class="mt-2 text-xs text-white/50">Use <code class="text-cyan-300">qualia-cli llm eval "${escHtml(prompt)}"</code> in a terminal.</div>`;
-                    } else {
-                        streamMsgEl.innerHTML = `<span class="text-red-400">Daemon error: ${escHtml(frame.message || code)}</span>`;
-                    }
-                    generating = false;
-                    document.getElementById('send-btn').disabled = false;
-                    socket.onmessage = originalOnMsg;
-                }
-            } catch {}
+        document.getElementById('stream-bar').style.display = 'flex';
+        activeEventSource = new EventSource(`${DAEMON_BASE}${started.events_path}`);
+        activeEventSource.onmessage = (event) => {
+            let frame;
+            try { frame = JSON.parse(event.data); } catch { return; }
+            const data = frame.data || {};
+            if (frame.kind === 'token') {
+                const delta = data.delta || '';
+                const cursor = streamMsgEl.querySelector('.token-cursor');
+                if (cursor) streamMsgEl.insertBefore(document.createTextNode(delta), cursor);
+                streamTokenCount++;
+                updateLiveMetrics();
+                document.getElementById('chat-messages').scrollTop = 9999;
+            } else if (frame.kind === 'done') {
+                if (streamTokenCount === 0 && data.text) streamMsgEl.textContent = data.text;
+                streamTokenCount = data.tokens_generated ?? streamTokenCount;
+                updateLiveMetrics(streamTokenCount, data.inference_duration_ms);
+                finishLiveInference();
+            } else if (frame.kind === 'cancelled') {
+                streamMsgEl?.querySelector('.token-cursor')?.remove();
+                streamMsgEl?.append(document.createTextNode(' [cancelled]'));
+                finishLiveInference();
+            } else if (frame.kind === 'error') {
+                showLiveError(data.diagnostic || 'Local inference failed');
+            }
         };
-
-    }).catch(err => {
-        streamMsgEl.innerHTML = `<span class="text-red-400"><i class="fas fa-plug mr-1.5"></i>Cannot connect to daemon.</span>
-        <div class="mt-2 text-xs text-white/50">Start with <code class="text-cyan-300">qualia-cli daemon --dev</code>, then reload this page.</div>`;
-        generating = false;
-        document.getElementById('send-btn').disabled = false;
-    });
+        activeEventSource.onerror = () => {
+            if (generating) showLiveError('Lost the daemon event stream');
+        };
+    } catch (error) {
+        showLiveError(error.message || 'Cannot connect to the daemon');
+    }
 }
 
-function ensureWs() {
-    if (ws && ws.readyState === WebSocket.OPEN) return Promise.resolve(ws);
-    return new Promise((resolve, reject) => {
-        const sock = new WebSocket('ws://127.0.0.1:4242/qualia-bridge');
-        sock.onopen = () => { ws = sock; resolve(sock); };
-        sock.onerror = () => reject(new Error('WebSocket failed'));
-        sock.onclose = () => { ws = null; };
-        sock.onmessage = () => {};
-        setTimeout(() => reject(new Error('timeout')), 4000);
-    });
+async function cancelLiveInference() {
+    if (!activeJobId) return;
+    const jobId = activeJobId;
+    try {
+        await fetch(`${DAEMON_BASE}/llm/jobs/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: jobId }),
+        });
+    } catch {
+        // The stream callback still finalises the UI if the daemon is reachable.
+    }
 }
+
+window.cancelLiveInference = cancelLiveInference;
 
 // ─── Accordion ────────────────────────────────────────────────────
 function toggleAccordion(id) {
@@ -684,6 +743,58 @@ function connectTelemetry() {
     } catch {}
 }
 
+function setDaemonInferenceReadiness() {
+    const banner = document.getElementById('daemon-banner');
+    if (liveModels.length) {
+        banner.style.background = 'rgba(16,185,129,0.08)';
+        banner.style.borderColor = 'rgba(16,185,129,0.2)';
+        banner.innerHTML = `<i class="fas fa-circle-check text-emerald-400 mt-0.5 shrink-0"></i>
+            <div><span class="font-semibold text-emerald-300">Daemon inference ready</span>
+            <span class="text-white/60 ml-2">${liveModels.length} local model${liveModels.length === 1 ? '' : 's'} discovered. Switch to <strong>Live mode</strong> to run the selected model.</span></div>`;
+    } else {
+        banner.style.background = 'rgba(245,158,11,0.08)';
+        banner.style.borderColor = 'rgba(245,158,11,0.2)';
+        banner.innerHTML = `<i class="fas fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0"></i>
+            <div><span class="font-semibold text-amber-300">Daemon active, but no local model is available</span>
+            <span class="text-white/60 ml-2">Configure <code class="text-cyan-300">QUALIA_MODEL_PATHS</code> or mount a GGUF/P64 model; demo mode remains available.</span></div>`;
+    }
+}
+
+async function refreshLiveModels() {
+    try {
+        const response = await fetch(`${DAEMON_BASE}/llm/models`, { signal: AbortSignal.timeout(2000) });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok || !Array.isArray(payload.data?.models)) throw new Error('invalid model catalogue');
+        liveModels = payload.data.models.map(model => ({
+            id: model.id,
+            name: model.name || 'Local model',
+            provider: 'Local daemon',
+            sizeMb: (model.bytes || 0) / (1024 * 1024),
+            ramMb: null,
+            quant: (model.format || 'local').toUpperCase(),
+            modality: 'text',
+            tags: model.resident ? ['edge', 'resident'] : ['edge', 'local'],
+            icon: model.resident ? '⚡' : '🧠',
+            ctx: null,
+            modelPath: model.path,
+        }));
+        if (!demoMode) {
+            models = liveModels;
+            selectedModel = models[0] || null;
+            renderModels();
+            if (selectedModel) selectModel(selectedModel.id);
+        }
+        setDaemonInferenceReadiness();
+    } catch {
+        const banner = document.getElementById('daemon-banner');
+        banner.style.background = 'rgba(245,158,11,0.08)';
+        banner.style.borderColor = 'rgba(245,158,11,0.2)';
+        banner.innerHTML = `<i class="fas fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0"></i>
+            <div><span class="font-semibold text-amber-300">Daemon active, but its model catalogue is unavailable</span>
+            <span class="text-white/60 ml-2">Live inference requires a daemon with the <code class="text-cyan-300">/llm/models</code> API.</span></div>`;
+    }
+}
+
 // ─── Daemon health check ───────────────────────────────────────────
 async function checkDaemon() {
     try {
@@ -695,12 +806,7 @@ async function checkDaemon() {
             document.getElementById('daemon-badge').className =
                 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
 
-            const banner = document.getElementById('daemon-banner');
-            banner.style.background = 'rgba(16,185,129,0.08)';
-            banner.style.borderColor = 'rgba(16,185,129,0.2)';
-            banner.innerHTML = `<i class="fas fa-circle-check text-emerald-400 mt-0.5 shrink-0"></i>
-                <div><span class="font-semibold text-emerald-300">Daemon active — v${d.version || '?'}</span>
-                <span class="text-white/60 ml-2">Graph: ${(d.graph_quin_count||0).toLocaleString()} quins. Switch to <strong>Live mode</strong> to send inference requests.</span></div>`;
+            await refreshLiveModels();
         }
     } catch {}
 }
