@@ -91,9 +91,12 @@ impl PreparedConditioningSnapshot {
         kv_floats: usize,
         n_layers: usize,
     ) -> InferenceCacheKey {
-        InferenceCacheKey::new(
+        InferenceCacheKey::with_provenance(
             self.model_instance,
             self.tokenizer_revision,
+            self.adapter_hash,
+            self.access_scope,
+            self.spec_identity,
             &self.exact_tokens,
             self.access_scope,
             kv_floats,
@@ -145,6 +148,9 @@ mod tests {
 
         let key = snap.derive_cache_key(1024, 32);
         assert_eq!(key.model_instance, 0xABCD);
+        assert_eq!(key.adapter_hash, 0);
+        assert_eq!(key.tenant_scope, 0x42);
+        assert_eq!(key.profile_spec_hash, 0x101);
         assert_eq!(key.prompt_token_count, 5);
     }
 

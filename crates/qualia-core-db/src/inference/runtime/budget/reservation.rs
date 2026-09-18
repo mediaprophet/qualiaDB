@@ -30,11 +30,30 @@ impl MemoryPoolBudget {
     /// 3. COW transient headroom allocation
     /// 4. Global physical block limit
     /// 5. Global dynamic KV byte ceiling
+    /// Check whether a request can be admitted within the pool budget without active COW tracking.
     pub fn reserve(
         &self,
         input_tokens: u32,
         reserved_output_tokens: u32,
         cow_blocks: u32,
+        active_reserved_bytes: u64,
+    ) -> Result<RequestReservation, BudgetError> {
+        self.reserve_with_active_cow(
+            input_tokens,
+            reserved_output_tokens,
+            cow_blocks,
+            0,
+            active_reserved_bytes,
+        )
+    }
+
+    /// Check whether a request can be admitted within the pool budget with cumulative active COW headroom tracking.
+    pub fn reserve_with_active_cow(
+        &self,
+        input_tokens: u32,
+        reserved_output_tokens: u32,
+        cow_blocks: u32,
+        active_cow_blocks: u32,
         active_reserved_bytes: u64,
     ) -> Result<RequestReservation, BudgetError> {
         let total_tokens = input_tokens
@@ -54,9 +73,13 @@ impl MemoryPoolBudget {
             });
         }
 
-        if cow_blocks > self.max_cow_transient_blocks {
+        let total_cow = active_cow_blocks
+            .checked_add(cow_blocks)
+            .ok_or(BudgetError::IntegerOverflow)?;
+
+        if total_cow > self.max_cow_transient_blocks {
             return Err(BudgetError::InsufficientCowHeadroom {
-                requested_blocks: cow_blocks,
+                requested_blocks: total_cow,
                 max_cow_blocks: self.max_cow_transient_blocks,
             });
         }

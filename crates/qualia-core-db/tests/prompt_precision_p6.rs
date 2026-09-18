@@ -249,3 +249,30 @@ fn pp080_conditioning_evaluate_bounded_campaign() {
         other => panic!("expected record, got {other:?}"),
     }
 }
+
+#[test]
+fn pp080_conditioning_compile_rejects_oversized_requirements_without_panic() {
+    let mut snap = PoetSnapshot::default();
+    let span = Span { start: 0, end: 0 };
+
+    let mut rec = BTreeMap::new();
+    rec.insert("schema_version".into(), Value::U64(1));
+    rec.insert("profile_id".into(), Value::String("urn:qualia:profile:oversized".into()));
+    rec.insert("objective".into(), Value::String("Testing bounds".into()));
+
+    let mut reqs = Vec::new();
+    for i in 0..65 {
+        let mut r = BTreeMap::new();
+        r.insert("id".into(), Value::String(format!("R{}", i)));
+        r.insert("class".into(), Value::String("guidance".into()));
+        r.insert("rule".into(), Value::String("Keep within bounds".into()));
+        r.insert("required".into(), Value::Bool(false));
+        r.insert("priority".into(), Value::U64(10));
+        reqs.push(Value::Record(r));
+    }
+    rec.insert("requirements".into(), Value::List(reqs));
+
+    let res = dispatch(&mut snap, ids::CONDITIONING_COMPILE, &Value::Record(rec), span);
+    assert!(res.is_err(), "65 requirements must fail validation and return diagnostic");
+}
+

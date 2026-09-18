@@ -34,7 +34,17 @@ pub struct ParetoPoint {
 
 impl ParetoPoint {
     /// Extract a Pareto point from an experiment result.
+    /// Rejects simulation fixture results from entering the physical Pareto frontier.
     pub fn from_result(r: &ExperimentResult) -> Option<Self> {
+        Self::from_result_with_mode_check(r, true)
+    }
+
+    /// Extract a Pareto point, optionally enforcing physical backend execution.
+    pub fn from_result_with_mode_check(r: &ExperimentResult, require_live: bool) -> Option<Self> {
+        if require_live && r.evaluation_mode == super::experiment::EvaluationMode::SimulationFixture {
+            return None;
+        }
+
         let bench = r.bench.as_ref()?;
         if r.error.is_some() {
             return None;
@@ -275,7 +285,7 @@ mod tests {
     ) -> ExperimentResult {
         ExperimentResult {
             config_hash: rand::random(),
-            evaluation_mode: crate::inference::lab::experiment::EvaluationMode::SimulationFixture,
+            evaluation_mode: crate::inference::lab::experiment::EvaluationMode::MeasuredLiveBackend,
             receipt: None,
             hypothesis_id: None,
             bench: Some(BenchResultSerde {
@@ -369,5 +379,21 @@ mod tests {
         let json = frontier.to_json(&results);
         assert!(json.contains("config_hash"));
         assert!(json.contains("pareto"));
+    }
+
+    #[test]
+    fn test_pareto_rejects_simulation_fixture() {
+        let mut sim_res = make_result(100.0, 50.0, 1_000_000_000, 0.95, 10.0);
+        sim_res.evaluation_mode = crate::inference::lab::experiment::EvaluationMode::SimulationFixture;
+
+        // from_result returns None for simulation fixtures
+        assert!(ParetoPoint::from_result(&sim_res).is_none());
+
+        // from_result_with_mode_check allows simulation fixtures when require_live = false
+        assert!(ParetoPoint::from_result_with_mode_check(&sim_res, false).is_some());
+
+        // ParetoFrontier::compute excludes simulation fixtures from non_dominated
+        let frontier = ParetoFrontier::compute(&[sim_res]);
+        assert_eq!(frontier.frontier_size(), 0);
     }
 }

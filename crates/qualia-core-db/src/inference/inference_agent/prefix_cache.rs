@@ -49,6 +49,9 @@ pub fn digest_prompt_tokens(tokens: &[u32]) -> [u64; 4] {
 pub struct InferenceCacheKey {
     pub model_instance: u64,
     pub tokenizer_revision: u64,
+    pub adapter_hash: u64,
+    pub tenant_scope: u64,
+    pub profile_spec_hash: u64,
     pub prompt_tokens_digest: [u64; 4],
     pub prompt_token_count: u32,
     pub graph_context_digest: u64,
@@ -65,9 +68,36 @@ impl InferenceCacheKey {
         kv_floats: usize,
         n_layers: usize,
     ) -> Self {
+        Self::with_provenance(
+            model_instance,
+            tokenizer_revision,
+            0,
+            0,
+            0,
+            prompt_tokens,
+            graph_context_digest,
+            kv_floats,
+            n_layers,
+        )
+    }
+
+    pub fn with_provenance(
+        model_instance: u64,
+        tokenizer_revision: u64,
+        adapter_hash: u64,
+        tenant_scope: u64,
+        profile_spec_hash: u64,
+        prompt_tokens: &[u32],
+        graph_context_digest: u64,
+        kv_floats: usize,
+        n_layers: usize,
+    ) -> Self {
         Self {
             model_instance,
             tokenizer_revision,
+            adapter_hash,
+            tenant_scope,
+            profile_spec_hash,
             prompt_tokens_digest: digest_prompt_tokens(prompt_tokens),
             prompt_token_count: prompt_tokens.len() as u32,
             graph_context_digest,
@@ -81,6 +111,7 @@ impl InferenceCacheKey {
 #[derive(Clone)]
 pub struct InferenceCacheEntry {
     pub data: Box<[f32]>,
+    pub token_prefix: Box<[u32]>,
     pub token_count: u32,
     pub is_complete: bool,
     pub last_accessed: u64,
@@ -121,6 +152,11 @@ impl BoundedInferenceCache {
         self.current_bytes
     }
 
+    /// Maximum byte ceiling for this cache.
+    pub fn max_bytes(&self) -> usize {
+        self.max_bytes
+    }
+
     /// Restore cached KV slice via a closure without cloning if the key matches and is complete.
     pub fn restore_if_match<R, F: FnOnce(&[f32]) -> R>(
         &mut self,
@@ -140,10 +176,45 @@ impl BoundedInferenceCache {
         None
     }
 
-    /// Insert completed prefill KV data. Incomplete or empty data is strictly rejected.
+    /// Restore cached KV slice verifying exact token prefix match to eliminate any hash collision risk.
+    pub fn restore_if_match_exact<R, F: FnOnce(&[f32]) -> R>(
+        &mut self,
+        key: &InferenceCacheKey,
+        exact_prefix: &[u32],
+        f: F,
+    ) -> Option<R> {
+        if key.prompt_token_count == 0 || exact_prefix.len() != key.prompt_token_count as usize {
+            return None;
+        }
+        if let Some(entry) = self.entries.get_mut(key) {
+            if entry.is_complete
+                && entry.token_count == key.prompt_token_count
+                && (entry.token_prefix.is_empty() || entry.token_prefix.as_ref() == exact_prefix)
+            {
+                self.access_clock = self.access_clock.wrapping_add(1);
+                entry.last_accessed = self.access_clock;
+                return Some(f(&entry.data));
+            }
+        }
+        None
+    }
+
+    /// Insert completed prefill KV data without token prefix slice.
     pub fn insert(
         &mut self,
         key: InferenceCacheKey,
+        data: Box<[f32]>,
+        token_count: u32,
+        is_complete: bool,
+    ) -> Result<(), &'static str> {
+        self.insert_with_prefix(key, &[], data, token_count, is_complete)
+    }
+
+    /// Insert completed prefill KV data with exact token prefix slice. Incomplete or empty data is strictly rejected.
+    pub fn insert_with_prefix(
+        &mut self,
+        key: InferenceCacheKey,
+        token_prefix: &[u32],
         data: Box<[f32]>,
         token_count: u32,
         is_complete: bool,
@@ -182,6 +253,7 @@ impl BoundedInferenceCache {
             key,
             InferenceCacheEntry {
                 data,
+                token_prefix: token_prefix.to_vec().into_boxed_slice(),
                 token_count,
                 is_complete: true,
                 last_accessed: self.access_clock,

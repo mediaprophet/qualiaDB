@@ -509,3 +509,36 @@ pub fn phase_snapshot() -> LlmPhaseSnapshot {
         decode_output_ns: DECODE_OUTPUT_NS.load(Ordering::Relaxed),
     }
 }
+
+#[inline]
+pub fn set_prefix_cache_enabled(_on: bool) {}
+
+#[inline]
+pub fn prefix_cache_enabled() -> bool {
+    true
+}
+
+#[inline]
+pub fn set_kv_pool_budget_mb(_mb: u32) {}
+
+#[inline]
+pub fn kv_pool_budget_mb() -> u32 {
+    0
+}
+
+#[inline]
+pub fn set_prefill_chunk_size_override(_sz: u32) {}
+
+#[inline]
+pub fn prefill_chunk_size_override() -> u32 {
+    0
+}
+
+#[inline]
+pub fn set_prompt_precision_mode(_mode: &str) {}
+
+#[inline]
+pub fn prompt_precision_mode() -> String {
+    String::new()
+}
+

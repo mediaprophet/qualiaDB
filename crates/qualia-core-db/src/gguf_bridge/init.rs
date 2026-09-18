@@ -1558,22 +1558,24 @@ impl QTensorEngine {
         self.kv_cache_cpu.as_deref()
     }
 
-    pub fn set_kv_cache_cpu(&mut self, data: &[f32]) {
+    pub fn set_kv_cache_cpu(&mut self, data: &[f32]) -> bool {
         let Some(layout) = self.kv_layout.as_ref() else {
-            return;
+            return false;
         };
         let n = layout.total_f32_elems;
         if data.len() < n {
-            return;
+            return false;
         }
-        if let Some(cpu) = self.kv_cache_cpu.as_mut() {
-            cpu[..n].copy_from_slice(&data[..n]);
-        }
+        let Some(cpu) = self.kv_cache_cpu.as_mut() else {
+            return false;
+        };
+        cpu[..n].copy_from_slice(&data[..n]);
         #[cfg(feature = "gpu-runtime")]
         if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
             self.gpu_queue()
                 .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
         }
+        true
     }
 
     /// Read the entire GPU KV-cache arena back to host as `f32` (native, cold path — forge KV capture,

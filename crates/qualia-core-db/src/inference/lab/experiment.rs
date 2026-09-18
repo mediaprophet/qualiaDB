@@ -22,8 +22,9 @@ use crate::inference::runtime::receipt::execution::{
 use crate::inference_bench::{
     run_bench, set_attention_o_fuse, set_attention_preproject, set_coop_gemv,
     set_decode_budget_override, set_ffn_fusion, set_gpu_topk, set_kv_dict, set_kv_int8,
-    set_resident_decode, set_resident_prefill, set_resident_weights, set_spec_decode,
-    set_ternary_ffn, BenchConfig, BenchResult, LlmPhaseSnapshot,
+    set_kv_pool_budget_mb, set_prefill_chunk_size_override, set_prefix_cache_enabled,
+    set_prompt_precision_mode, set_resident_decode, set_resident_prefill, set_resident_weights,
+    set_spec_decode, set_ternary_ffn, BenchConfig, BenchResult, LlmPhaseSnapshot,
 };
 use crate::post_turn_verify::{verify_and_heal_turn, VerifiedTurn};
 use crate::thermal_telemetry::{sample_gpu_thermal, GpuThermalSample};
@@ -297,6 +298,18 @@ impl ExperimentConfig {
         }
         if let Some(v) = self.config.get_bool("resident_weights") {
             set_resident_weights(v);
+        }
+        if let Some(v) = self.config.get_bool("prefix_cache_enabled") {
+            set_prefix_cache_enabled(v);
+        }
+        if let Some(v) = self.config.get_int("kv_pool_budget_mb") {
+            set_kv_pool_budget_mb(v as u32);
+        }
+        if let Some(v) = self.config.get_int("prefill_chunk_size") {
+            set_prefill_chunk_size_override(v as u32);
+        }
+        if let Some(s) = self.config.get_string("prompt_precision_mode") {
+            set_prompt_precision_mode(s);
         }
     }
 }
@@ -697,5 +710,52 @@ mod tests {
         assert!(rc.is_measured(COUNTER_DECODE_STEPS));
         assert_eq!(rc.counters.decode_steps, 32);
         assert_eq!(rc.latency.time_to_first_token_us, 45000);
+    }
+
+    #[test]
+    fn test_experiment_apply_toggles_consumes_all_parameters() {
+        use super::super::config_space::ParameterValue;
+        use crate::inference_bench::{
+            kv_pool_budget_mb, prefill_chunk_size_override, prefix_cache_enabled,
+            prompt_precision_mode,
+        };
+
+        let mut values = std::collections::BTreeMap::new();
+        values.insert("prefix_cache_enabled".to_string(), ParameterValue::Bool(false));
+        values.insert("kv_pool_budget_mb".to_string(), ParameterValue::Int(512));
+        values.insert("prefill_chunk_size".to_string(), ParameterValue::Int(128));
+        values.insert(
+            "prompt_precision_mode".to_string(),
+            ParameterValue::String("strict_evidence".to_string()),
+        );
+
+        let cfg = ExperimentConfig {
+            space: ConfigurationSpace::new("test"),
+            config: Configuration {
+                space_name: "test".to_string(),
+                values,
+            },
+            model_path: "test".to_string(),
+            quantization: "F16".to_string(),
+            prompt: "hello".to_string(),
+            decode_tokens: 16,
+            warm_repeats: 0,
+            seed: 42,
+            hypothesis_id: None,
+            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
+        };
+
+        cfg.apply_toggles();
+
+        assert!(!prefix_cache_enabled());
+        assert_eq!(kv_pool_budget_mb(), 512);
+        assert_eq!(prefill_chunk_size_override(), 128);
+        assert_eq!(prompt_precision_mode(), "strict_evidence");
+
+        // Clean up / reset
+        crate::inference_bench::set_prefix_cache_enabled(true);
+        crate::inference_bench::set_kv_pool_budget_mb(0);
+        crate::inference_bench::set_prefill_chunk_size_override(0);
+        crate::inference_bench::set_prompt_precision_mode("");
     }
 }

@@ -240,6 +240,19 @@ impl LocalLlmAgent {
                     (p64_index.as_ref(), engine.gguf_mmap.as_ref())
                 {
                     GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
+                } else if model_path.ends_with(".safetensors") {
+                    let sibling_tok = std::path::Path::new(&model_path)
+                        .parent()
+                        .map(|p| p.join("tokenizer.json"))
+                        .and_then(|p| std::fs::read_to_string(p).ok())
+                        .and_then(|s| GgufTokenizer::from_hf_json(&s));
+                    sibling_tok.unwrap_or_else(|| {
+                        engine
+                            .gguf_mmap
+                            .as_ref()
+                            .map(|m| GgufTokenizer::from_gguf(m))
+                            .unwrap_or_default()
+                    })
                 } else {
                     engine
                         .gguf_mmap
@@ -298,13 +311,13 @@ impl LocalLlmAgent {
                 );
 
                 let mut prefix_cached = false;
-                if prefill_tokens > 0 && kv_floats > 0 {
+                if prefill_tokens > 0 && kv_floats > 0 && crate::llm_bench::prefix_cache_enabled() {
                     if let Ok(mut cache) = get_prefix_cache().lock() {
                         if cache
-                            .restore_if_match(&cache_key, |cached_kv| {
-                                engine.set_kv_cache_cpu(cached_kv);
+                            .restore_if_match_exact(&cache_key, &ctx[..prefill_tokens], |cached_kv| {
+                                engine.set_kv_cache_cpu(cached_kv)
                             })
-                            .is_some()
+                            .unwrap_or(false)
                         {
                             prefix_cached = true;
                         }
@@ -326,8 +339,8 @@ impl LocalLlmAgent {
                     0,
                 );
                 let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
-                if !prefix_cached {
-                    let prefill_outcome = super::prefill_executor::execute_chunked_prefill(
+                let prefill_outcome = if !prefix_cached {
+                    super::prefill_executor::execute_chunked_prefill(
                         engine,
                         tensor_idx.as_ref(),
                         &ctx,
@@ -337,20 +350,52 @@ impl LocalLlmAgent {
                         &mut scratch_b,
                         control_thread.as_ref(),
                         TEST_TRANSFORMER_LAYER_CAP,
-                    );
+                    )
+                } else {
+                    super::prefill_executor::PrefillOutcome::Completed {
+                        tokens_processed: prefill_tokens,
+                    }
+                };
 
-                    if prefill_outcome.is_completed() && kv_floats > 0 {
-                        if let Some(cpu_kv) = engine.get_kv_cache_cpu() {
-                            if let Ok(mut cache) = get_prefix_cache().lock() {
-                                let _ = cache.insert(
-                                    cache_key,
-                                    cpu_kv.to_vec().into_boxed_slice(),
-                                    prefill_tokens as u32,
-                                    true,
-                                );
+                match prefill_outcome {
+                    super::prefill_executor::PrefillOutcome::Cancelled { tokens_processed } => {
+                        let _ = lp.push(LlmMsg::Eos);
+                        crate::llm_bench::record_prefill(
+                            t_prefill.elapsed().as_nanos() as u64,
+                            tokens_processed as u64,
+                        );
+                        return (String::from("[cancelled]"), 0u32, None, false);
+                    }
+                    super::prefill_executor::PrefillOutcome::Failed { pos, tokens_processed } => {
+                        eprintln!(
+                            "[decode] Prefill failed at token pos {} (processed {})",
+                            pos, tokens_processed
+                        );
+                        let _ = lp.push(LlmMsg::Eos);
+                        crate::llm_bench::record_prefill(
+                            t_prefill.elapsed().as_nanos() as u64,
+                            tokens_processed as u64,
+                        );
+                        return (String::from("[prefill-failed]"), 0u32, None, false);
+                    }
+                    super::prefill_executor::PrefillOutcome::Completed { .. } => {
+                        if !prefix_cached && kv_floats > 0 && crate::llm_bench::prefix_cache_enabled() {
+                            if let Some(cpu_kv) = engine.get_kv_cache_cpu() {
+                                if let Ok(mut cache) = get_prefix_cache().lock() {
+                                    if cpu_kv.len() * std::mem::size_of::<f32>() <= cache.max_bytes() {
+                                        let _ = cache.insert_with_prefix(
+                                            cache_key,
+                                            &ctx[..prefill_tokens],
+                                            cpu_kv.to_vec().into_boxed_slice(),
+                                            prefill_tokens as u32,
+                                            true,
+                                        );
+                                    }
+                                }
                             }
                         }
                     }
+                    super::prefill_executor::PrefillOutcome::NoPrefillNeeded => {}
                 }
 
                 // Phase boundary: prefill done. Decode phase begins below.

@@ -78,10 +78,9 @@ impl BackendCapabilities {
                 SupportedArchitecture::Llama,
                 SupportedArchitecture::Qwen2,
                 SupportedArchitecture::Qwen3,
-                SupportedArchitecture::Qwen3_5MoE,
                 SupportedArchitecture::DenseTransformer,
             ],
-            supported_quants: &["F16", "Q8_0", "Q4_K_M", "NVFP4", "FP8"],
+            supported_quants: &["F16", "Q8_0", "Q4_K_M"],
             supported_kv_encodings: &[
                 KvEncoding::F16Dense,
                 KvEncoding::PagedF16,
@@ -120,11 +119,14 @@ mod tests {
     #[test]
     fn test_cuda_capabilities() {
         let caps = BackendCapabilities::cuda_reference();
-        assert!(caps.is_architecture_supported(SupportedArchitecture::Qwen3_5MoE));
-        assert!(caps.is_quant_supported("nvfp4"));
+        assert!(caps.is_architecture_supported(SupportedArchitecture::Llama));
+        assert!(caps.is_quant_supported("q4_k_m"));
         assert!(caps.is_kv_encoding_supported(KvEncoding::PagedQ8_0));
         assert!(caps.supports_cuda_graphs);
         assert_eq!(caps.max_batch_size, 16);
+        assert!(!caps.is_quant_supported("NVFP4"));
+        assert!(!caps.is_quant_supported("FP8"));
+        assert!(!caps.is_architecture_supported(SupportedArchitecture::Qwen3_5MoE));
     }
 }
 

@@ -170,6 +170,8 @@ pub fn conditioning_validate(args: &Value, _span: Span) -> Result<Value, Diagnos
 pub fn conditioning_compile(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let dto = extract_profile_dto(args)
         .map_err(|e| Diagnostic::new(DiagCode::E400, span, e))?;
+    dto.validate()
+        .map_err(|e| Diagnostic::new(DiagCode::E400, span, e))?;
 
     let req_refs: Vec<RequirementRef> = dto
         .requirements
@@ -223,8 +225,9 @@ pub fn conditioning_compile(args: &Value, span: Span) -> Result<Value, Diagnosti
         qualifier: None,
     }; 64];
 
+    let outcome_len = dto.requirements.len().min(64);
     let mut buffers = CompileBuffers {
-        outcomes: &mut outcome_buf[..dto.requirements.len()],
+        outcomes: &mut outcome_buf[..outcome_len],
         selected_evidence: &mut evidence_buf,
     };
 

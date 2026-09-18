@@ -610,3 +610,60 @@ pub fn cpu_attention_enabled() -> bool {
             Some("1") | Some("true")
         )
 }
+
+// ── Prefix cache enabled toggle ───────────────────────────────────────────────
+static PREFIX_CACHE_ENABLED: AtomicBool = AtomicBool::new(true);
+
+#[inline]
+pub fn set_prefix_cache_enabled(on: bool) {
+    PREFIX_CACHE_ENABLED.store(on, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn prefix_cache_enabled() -> bool {
+    PREFIX_CACHE_ENABLED.load(Ordering::Relaxed)
+}
+
+// ── KV pool budget override in MB (0 = default) ──────────────────────────────
+static KV_POOL_BUDGET_MB: AtomicU32 = AtomicU32::new(0);
+
+#[inline]
+pub fn set_kv_pool_budget_mb(mb: u32) {
+    KV_POOL_BUDGET_MB.store(mb, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn kv_pool_budget_mb() -> u32 {
+    KV_POOL_BUDGET_MB.load(Ordering::Relaxed)
+}
+
+// ── Prefill chunk size override (0 = default PREFILL_CHUNK_SIZE) ──────────────
+static PREFILL_CHUNK_SIZE_OVERRIDE: AtomicU32 = AtomicU32::new(0);
+
+#[inline]
+pub fn set_prefill_chunk_size_override(sz: u32) {
+    PREFILL_CHUNK_SIZE_OVERRIDE.store(sz, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn prefill_chunk_size_override() -> u32 {
+    PREFILL_CHUNK_SIZE_OVERRIDE.load(Ordering::Relaxed)
+}
+
+// ── Prompt precision mode setting ─────────────────────────────────────────────
+static PROMPT_PRECISION_MODE: Mutex<String> = Mutex::new(String::new());
+
+pub fn set_prompt_precision_mode(mode: &str) {
+    if let Ok(mut m) = PROMPT_PRECISION_MODE.lock() {
+        m.clear();
+        m.push_str(mode);
+    }
+}
+
+pub fn prompt_precision_mode() -> String {
+    PROMPT_PRECISION_MODE
+        .lock()
+        .map(|m| m.clone())
+        .unwrap_or_default()
+}
+

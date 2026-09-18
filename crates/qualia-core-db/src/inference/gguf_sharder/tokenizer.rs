@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 mod decode;
+pub mod hf_json;
 mod pretokenizer;
 pub use pretokenizer::{PretokenError, PretokenSpan};
 
@@ -213,9 +214,28 @@ impl GgufTokenizer {
         }
 
         let v = vocab?;
+        Some(Self::from_raw_components(
+            v,
+            merges_raw.as_deref(),
+            bos_id,
+            eos_id,
+            add_bos,
+            pre_type,
+        ))
+    }
+
+    /// Construct tokenizer from parsed vocabulary components.
+    pub fn from_raw_components(
+        vocab: Vec<String>,
+        merges_raw: Option<&[String]>,
+        bos_id: Option<u32>,
+        eos_id: Option<u32>,
+        add_bos: Option<bool>,
+        pre_type: Option<String>,
+    ) -> Self {
         let bos = bos_id.unwrap_or(1);
         let eos = eos_id.unwrap_or(2);
-        let mut t2id: Vec<(String, u32)> = v
+        let mut t2id: Vec<(String, u32)> = vocab
             .iter()
             .enumerate()
             .map(|(i, s)| (s.clone(), i as u32))
@@ -223,17 +243,17 @@ impl GgufTokenizer {
         t2id.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
         let token_to_id_map: HashMap<String, u32> =
             t2id.iter().map(|(s, id)| (s.clone(), *id)).collect();
-        let mut special_tokens: Vec<(String, u32)> = v
+        let mut special_tokens: Vec<(String, u32)> = vocab
             .iter()
             .enumerate()
             .filter(|(_, s)| s.starts_with('<') && s.ends_with('>'))
             .map(|(i, s)| (s.clone(), i as u32))
             .collect();
         special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
-        let merge_pairs = Self::parse_merge_pairs(merges_raw.as_deref());
+        let merge_pairs = Self::parse_merge_pairs(merges_raw);
         let (merge_rank_index, merge_rank_collision) = Self::build_merge_rank_index(&merge_pairs);
         let mut tok = Self {
-            vocab: v,
+            vocab,
             bos_token_id: bos,
             eos_token_id: eos,
             add_bos_token: add_bos.unwrap_or(true),
@@ -248,7 +268,12 @@ impl GgufTokenizer {
             stop_token_count: 0,
         };
         tok.rebuild_stop_token_ids();
-        Some(tok)
+        tok
+    }
+
+    /// Parse Hugging Face `tokenizer.json` format into a `GgufTokenizer`.
+    pub fn from_hf_json(json_str: &str) -> Option<Self> {
+        hf_json::parse_hf_tokenizer_json(json_str)
     }
 
     /// Phase 4 v3 / v2: serialize the tokenizer into a compact, contiguous P64 section (no page

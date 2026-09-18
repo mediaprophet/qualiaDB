@@ -67,11 +67,19 @@ pub fn execute_chunked_prefill(
                 return PrefillOutcome::Failed { pos, tokens_processed: pos };
             };
             for t in 0..n {
-                let _ = idx.dequantize_token_embedding_into(
+                let written = idx.dequantize_token_embedding_into(
                     mmap,
                     ctx[pos + t],
                     &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
                 );
+                if written != emb_dim {
+                    crate::gguf_bridge::wlog(&format!(
+                        "[llm] PREFILL token embedding dequant failed for token {} at pos={}",
+                        ctx[pos + t],
+                        pos + t
+                    ));
+                    return PrefillOutcome::Failed { pos: pos + t, tokens_processed: pos };
+                }
             }
         }
 
