@@ -1,1 +1,143 @@
-x
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Webizen Desktop</title>
+<link rel="stylesheet" href="shell.css"/>
+</head>
+<body>
+<a class="skip" href="#app-stage">Skip to stage</a>
+<div class="field" aria-hidden="true"></div>
+<div class="shell">
+  <div class="ribbon" role="navigation" aria-label="Continuity planes">
+    <span class="brand-slot">Webizen</span>
+    <div class="ribbon-inner">
+      <button type="button" aria-current="true">who</button><span class="sep" aria-hidden="true"></span>
+      <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+      <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+      <button type="button">tool</button>
+    </div>
+    <span class="status-slot" id="shell-status" role="status" aria-live="polite">Spatial shell · Live</span>
+  </div>
+  <nav class="halo" aria-label="Humans-first orbit">
+    <h2>People</h2>
+    <button type="button" class="fav human" data-app="talk" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">💬</span><span class="label">Talk</span></button>
+    <button type="button" class="fav human" data-app="mail" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">✉</span><span class="label">Mail</span></button>
+    <button type="button" class="fav human" data-app="directory" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">👥</span><span class="label">Directory</span></button>
+    <div class="sep" role="separator" aria-hidden="true"></div>
+    <h2>Tools</h2>
+    <button type="button" class="fav" data-app="browser" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">🌐</span><span class="label">Browser</span></button>
+    <button type="button" class="fav" data-app="keep" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">📁</span><span class="label">Keep</span></button>
+    <button type="button" class="fav" data-app="library" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">📚</span><span class="label">Library</span></button>
+    <button type="button" class="fav" data-app="instruments" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">🎛</span><span class="label">Instruments</span></button>
+    <button type="button" class="fav" data-app="wallet" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">⚡</span><span class="label">Wallet</span></button>
+    <button type="button" class="fav" data-app="settings" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">⚙</span><span class="label">Settings</span></button>
+    <button type="button" class="fav" data-app="admin" data-status="live" aria-pressed="false"><span class="orb" aria-hidden="true">🛠</span><span class="label">Admin</span></button>
+  </nav>
+  <div class="stage-wrap">
+    <section class="stage" aria-label="App volume" id="app-stage">
+      <div class="stage-empty" id="stage-empty">
+        <strong>Person waiting for a person</strong>
+        <span>Humans-first orbit. Soft-rise into Live volumes. No Classic / Relations chrome. QApps parked.</span>
+        <span>Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> to launch.</span>
+      </div>
+      <iframe id="app-frame" title="Active app volume" hidden></iframe>
+    </section>
+    <section id="gpu" role="region" aria-label="GPU viewport hook">
+      <h3>GPU viewport · WGPU</h3>
+      <p>Attach native renderer here. Status: <span class="pill planned">planned</span> — region present.</p>
+    </section>
+  </div>
+  <footer class="footer" role="contentinfo">
+    <span>Continuity · handle ≠ human · agent = tool</span>
+    <span class="grow"></span>
+    <button type="button" id="open-launcher" aria-haspopup="dialog" aria-controls="launcher">Launch…</button>
+    <span id="active-label">No volume open</span>
+  </footer>
+</div>
+<div id="launcher" role="dialog" aria-modal="true" aria-labelledby="launcher-title" hidden>
+  <div id="launcher-panel">
+    <h2 id="launcher-title">Constellation</h2>
+    <p class="sub">Live volumes open on stage. Planned stay labelled — no fake launch.</p>
+    <label class="sr-only" for="launcher-input">Filter apps</label>
+    <input id="launcher-input" type="search" placeholder="Filter…" autocomplete="off"/>
+    <ul id="launcher-list" role="listbox" aria-label="Apps"></ul>
+  </div>
+</div>
+<script>
+(function(){
+const APPS=[
+{id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/talk",human:true},
+{id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/talk/mail",human:true},
+{id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/talk/directory",human:true},
+{id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/browser"},
+{id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/keep"},
+{id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/library"},
+{id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/tools"},
+{id:"wallet",name:"Wallet",glyph:"⚡",blurb:"Lightning · Nym · XEC · tokens · human keys.",status:"live",route:"/wallet"},
+{id:"settings",name:"Settings",glyph:"⚙",blurb:"Settings for humans.",status:"live",route:"/settings"},
+{id:"admin",name:"Admin",glyph:"🛠",blurb:"Jobs · logs · ops.",status:"live",route:"/admin"},
+{id:"poet",name:"Poet",glyph:"🪶",blurb:"Migrate-in later.",status:"planned",route:null},
+];
+const frame=document.getElementById("app-frame"),empty=document.getElementById("stage-empty");
+const activeLabel=document.getElementById("active-label"),statusEl=document.getElementById("shell-status");
+const launcher=document.getElementById("launcher"),launcherInput=document.getElementById("launcher-input"),launcherList=document.getElementById("launcher-list");
+let selectedIdx=0,filtered=APPS.slice();
+function origin(){return typeof window.__WEBIZEN_SETTINGS_PORT==="number"?"http://127.0.0.1:"+window.__WEBIZEN_SETTINGS_PORT:window.location.origin}
+function setPressed(id){document.querySelectorAll(".fav[data-app]").forEach(b=>b.setAttribute("aria-pressed",b.getAttribute("data-app")===id?"true":"false"))}
+function openApp(app){
+  if(!app)return;
+  if(app.status!=="live"||!app.route){
+    statusEl.textContent=app.name+" · Planned — not launched";
+    activeLabel.textContent=app.name+" (planned)";
+    setPressed(null);return;
+  }
+  empty.hidden=true;frame.hidden=false;frame.src=origin()+app.route;
+  setPressed(app.id);activeLabel.textContent=app.name+" · Live";
+  statusEl.textContent="Volume · "+app.name;closeLauncher();
+}
+function appById(id){return APPS.find(a=>a.id===id)}
+document.querySelectorAll(".fav[data-app]").forEach(b=>b.addEventListener("click",()=>openApp(appById(b.getAttribute("data-app")))));
+function renderLauncher(){
+  const q=(launcherInput.value||"").trim().toLowerCase();
+  filtered=APPS.filter(a=>!q||a.name.toLowerCase().includes(q)||a.blurb.toLowerCase().includes(q));
+  selectedIdx=0;launcherList.innerHTML="";
+  filtered.forEach((app,i)=>{
+    const li=document.createElement("li");li.setAttribute("role","option");
+    const b=document.createElement("button");b.type="button";
+    b.setAttribute("aria-selected",i===0?"true":"false");
+    b.innerHTML='<span aria-hidden="true">'+app.glyph+'</span><span><div class="name">'+app.name+'</div><div class="blurb">'+app.blurb+'</div></span><span class="pill '+app.status+'">'+app.status+'</span>';
+    b.addEventListener("click",()=>openApp(app));li.appendChild(b);launcherList.appendChild(li);
+  });
+}
+function openLauncher(){launcher.hidden=false;launcher.classList.add("open");launcherInput.value="";renderLauncher();launcherInput.focus()}
+function closeLauncher(){launcher.classList.remove("open");launcher.hidden=true}
+function moveSelection(d){
+  if(!filtered.length)return;
+  selectedIdx=(selectedIdx+d+filtered.length)%filtered.length;
+  const buttons=launcherList.querySelectorAll("button");
+  buttons.forEach((b,i)=>b.setAttribute("aria-selected",i===selectedIdx?"true":"false"));
+  if(buttons[selectedIdx])buttons[selectedIdx].scrollIntoView({block:"nearest"});
+}
+document.getElementById("open-launcher").addEventListener("click",openLauncher);
+launcher.addEventListener("click",e=>{if(e.target===launcher)closeLauncher()});
+launcherInput.addEventListener("input",renderLauncher);
+launcherInput.addEventListener("keydown",e=>{
+  if(e.key==="ArrowDown"){e.preventDefault();moveSelection(1)}
+  else if(e.key==="ArrowUp"){e.preventDefault();moveSelection(-1)}
+  else if(e.key==="Enter"){e.preventDefault();if(filtered[selectedIdx])openApp(filtered[selectedIdx])}
+  else if(e.key==="Escape"){e.preventDefault();closeLauncher()}
+});
+document.addEventListener("keydown",e=>{
+  const metaK=(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k";
+  const slash=e.key==="/"&&!e.ctrlKey&&!e.metaKey&&!e.altKey;
+  const t=e.target;const typing=t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable);
+  if(metaK||(slash&&!typing&&!launcher.classList.contains("open"))){e.preventDefault();openLauncher()}
+  else if(e.key==="Escape"&&launcher.classList.contains("open"))closeLauncher();
+});
+window.__WEBIZEN_OS_SHELL__={openApp:id=>openApp(appById(id)),apps:APPS};
+})();
+</script>
+</body>
+</html>
