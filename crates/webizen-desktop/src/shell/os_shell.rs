@@ -37,3 +37,8 @@ pub const INSTRUMENTS_VOLUME_HTML: &str =
     include_str!("../../static/os-shell/volumes/instruments.html");
 pub const SETTINGS_VOLUME_HTML: &str =
     include_str!("../../static/os-shell/volumes/settings.html");
+pub const ADMIN_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/admin.html");
+pub const CONSOLE_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/console.html");
+pub const POET_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/poet.html");
+pub const WELLFAIR_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/wellfair.html");
+pub const PROJECTS_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/projects.html");
