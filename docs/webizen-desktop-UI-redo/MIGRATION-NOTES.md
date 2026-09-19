@@ -13,7 +13,7 @@
 - In-window and new-window launch paths.
 - Native renderer attachable to an app window (show the capability; don’t bury it).
 - Honest status only: **live** vs **planned** — never held/not-yet as the product surface.
-- Wire `--legacy-desktop` (name TBD by Neo) so the old shell still opens when needed.
+- Wired: default = new OS shell; legacy via `WEBIZEN_LEGACY_SHELL=1` and/or `--legacy-shell` (alias `--legacy-desktop`). Default orbit: Talk · Mail · Directory · Browser · Keep · Library · Instruments · Settings · Admin (Gate 1 spatial). QApps parked. See [`SHELL-LAUNCH.md`](SHELL-LAUNCH.md).
 
 ## Phase 2 — Poet migrates in
 

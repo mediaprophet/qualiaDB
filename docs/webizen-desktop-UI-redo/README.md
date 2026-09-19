@@ -42,6 +42,6 @@ Open [`mockups/index.html`](mockups/index.html) in a browser (no build step).
 
 ## Migration stub
 
-See [`MIGRATION-NOTES.md`](MIGRATION-NOTES.md). Inventory of hidden surfaces is Marvin’s lane; architecture (window manager + WASM host + legacy flag) is Neo’s.
+See [`SHELL-LAUNCH.md`](SHELL-LAUNCH.md) (new vs legacy) and [`MIGRATION-NOTES.md`](MIGRATION-NOTES.md). Inventory of hidden surfaces is Marvin’s lane; architecture (window manager + WASM host + legacy flag) is Neo’s.
 
 Also see [`HALF-BUILT-APPS.md`](HALF-BUILT-APPS.md) (Capt audit of half-built / buried Desktop surfaces).

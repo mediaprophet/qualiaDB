@@ -38,6 +38,8 @@ New Desktop = default. Legacy shell stays behind a flag until the new one is act
 
 ## Product priority (Timothy lock 2026-09-19)
 
+Default dock orbit matches Gate 1 spatial mockup (`mockups/spatial/01-spatial-shell.html`, monet tip `6fff620`): Talk · Mail · Directory, then Browser · Keep · Library · Instruments · Settings · Admin.
+
 **Park QApps** (catalog / academic flood / studio scaffolds) for now — they did not deliver useful human product. Revisit later if at all. Drop QApps from the default dock/favorites.
 
 **Ship first so humans can test and use (no agent required):**
