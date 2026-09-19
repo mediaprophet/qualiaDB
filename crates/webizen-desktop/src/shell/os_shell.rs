@@ -1,18 +1,37 @@
 //! New Webizen Desktop OS-shell HTML scaffolding (default launch path).
 //!
 //! Gate 0: spatial / 3D-capable chrome — not a classic dock+traffic-lights identity.
-//! Default orbit (Gate 1 spatial frame): Talk · Mail · Directory · Browser · Keep ·
-//! Library · Instruments · Wallet · Settings · Admin (QApps parked).
-//! Live vs Planned honesty only. Poet stays a tile (migrate-in later); not deleted.
-//! Continuity: handle ≠ human; chatbot = tool; Wallet keys human-owned (agent proposes, human signs).
+//! Elevated chrome (Continuity ribbon, humans-first halo): `static/os-shell/{index.html,shell.css}`
+//! (monet tip a516a0c / 4f86fd9). Soft-rise held until Capt re-UAT.
+//!
+//! Default orbit (Gate 1): Talk · Mail · Directory · Browser · Keep · Library ·
+//! Instruments · Wallet · Settings · Admin (QApps parked).
+//!
+//! **Timothy lock:** orbit stages are dedicated HTML under `/volumes/*` (+ `/wallet`,
+//! `/admin`) — **never** Studio SPA iframes. Legacy Studio stays on `/talk`, `/browser`,
+//! … for `WEBIZEN_LEGACY_SHELL` / `--legacy-shell` only.
+//!
+//! Continuity: handle ≠ human; chatbot = tool; Wallet keys human-owned.
 //!
 //! Served at `http://127.0.0.1:{settings_port}/os-shell` (and `/shell`).
-//! HTML body: `static/os-shell/index.html` (include_str).
-//! Wallet stage: `static/os-shell/wallet.html` → `/wallet`.
-//! See `docs/webizen-desktop-UI-redo/{DESIGN-CONSTRAINTS,SHELL-LAUNCH}.md`.
 
 /// Full-document HTML for the default OS shell.
 pub const OS_SHELL_HTML: &str = include_str!("../../static/os-shell/index.html");
 
-/// Multi-rail Wallet human-app stage (Lightning · Nym · XEC · tokens; no ETH) (orbit tile; not MCP-only).
+/// Elevated spatial shell stylesheet (Continuity ribbon + halo).
+pub const OS_SHELL_CSS: &str = include_str!("../../static/os-shell/shell.css");
+
+/// Multi-rail Wallet human-app stage (Lightning · Nym · XEC · tokens; no ETH).
 pub const WALLET_STAGE_HTML: &str = include_str!("../../static/os-shell/wallet.html");
+
+pub const TALK_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/talk.html");
+pub const MAIL_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/mail.html");
+pub const DIRECTORY_VOLUME_HTML: &str =
+    include_str!("../../static/os-shell/volumes/directory.html");
+pub const BROWSER_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/browser.html");
+pub const KEEP_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/keep.html");
+pub const LIBRARY_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/library.html");
+pub const INSTRUMENTS_VOLUME_HTML: &str =
+    include_str!("../../static/os-shell/volumes/instruments.html");
+pub const SETTINGS_VOLUME_HTML: &str =
+    include_str!("../../static/os-shell/volumes/settings.html");

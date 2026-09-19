@@ -369,7 +369,18 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/health", get(health_handler))
         .route("/shell", get(shell_handler))
         .route("/os-shell", get(os_shell_handler))
-        // Gate 1 orbit surfaces (iframe stage) — Studio SPA or honest ops pages.
+        .route("/shell.css", get(os_shell_css_handler))
+        .route("/os-shell/shell.css", get(os_shell_css_handler))
+        // Gate 1 bare volumes — dedicated HTML in static/os-shell/volumes (never Studio iframe).
+        .route("/volumes/talk", get(talk_volume_handler))
+        .route("/volumes/mail", get(mail_volume_handler))
+        .route("/volumes/directory", get(directory_volume_handler))
+        .route("/volumes/browser", get(browser_volume_handler))
+        .route("/volumes/keep", get(keep_volume_handler))
+        .route("/volumes/library", get(library_volume_handler))
+        .route("/volumes/instruments", get(instruments_volume_handler))
+        .route("/volumes/settings", get(settings_volume_handler))
+        // Legacy Studio SPA — WEBIZEN_LEGACY_SHELL / --legacy-shell only.
         .route("/talk", get(studio_index_handler))
         .route("/talk/mail", get(studio_index_handler))
         .route("/talk/directory", get(studio_index_handler))
@@ -892,8 +903,52 @@ a{color:#7ec8ff}h1{font-size:1.15rem;margin:0 0 .5rem}.muted{color:#9aa8b8}ul{pa
 }
 
 
+fn volume_html_response(html: &'static str) -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(html.to_string().into())
+        .unwrap()
+}
+
+async fn os_shell_css_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/css; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(crate::shell::OS_SHELL_CSS.to_string().into())
+        .unwrap()
+}
+
+async fn talk_volume_handler() -> Response {
+    volume_html_response(crate::shell::TALK_VOLUME_HTML)
+}
+async fn mail_volume_handler() -> Response {
+    volume_html_response(crate::shell::MAIL_VOLUME_HTML)
+}
+async fn directory_volume_handler() -> Response {
+    volume_html_response(crate::shell::DIRECTORY_VOLUME_HTML)
+}
+async fn browser_volume_handler() -> Response {
+    volume_html_response(crate::shell::BROWSER_VOLUME_HTML)
+}
+async fn keep_volume_handler() -> Response {
+    volume_html_response(crate::shell::KEEP_VOLUME_HTML)
+}
+async fn library_volume_handler() -> Response {
+    volume_html_response(crate::shell::LIBRARY_VOLUME_HTML)
+}
+async fn instruments_volume_handler() -> Response {
+    volume_html_response(crate::shell::INSTRUMENTS_VOLUME_HTML)
+}
+async fn settings_volume_handler() -> Response {
+    volume_html_response(crate::shell::SETTINGS_VOLUME_HTML)
+}
+
 /// Wallet orbit tile — Lightning · Nym · eCash · tokens (not MCP-only). No ETH target.
 async fn wallet_handler() -> Response {
+
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
@@ -1773,8 +1828,33 @@ mod ui_route_tests {
         let html = crate::shell::OS_SHELL_HTML;
         assert!(html.contains("data-app=\"wallet\""), "wallet fav tile");
         assert!(html.contains("route:\"/wallet\""), "wallet live route");
-        assert!(html.contains("route:\"/talk/mail\""), "mail stage route");
-        assert!(html.contains("route:\"/tools\""), "instruments=tools");
+        assert!(html.contains("route:\"/volumes/talk\""), "talk bare volume");
+        assert!(html.contains("route:\"/volumes/mail\""), "mail bare volume");
+        assert!(html.contains("route:\"/volumes/directory\""), "directory bare volume");
+        assert!(html.contains("route:\"/volumes/browser\""), "browser bare volume");
+        assert!(html.contains("route:\"/volumes/instruments\""), "instruments bare volume");
+        assert!(html.contains("route:\"/volumes/settings\""), "settings bare volume");
+        assert!(!html.contains("route:\"/talk\""), "must not iframe legacy /talk Studio");
+        assert!(!html.contains("route:\"/talk/mail"), "must not iframe Studio mail");
+        assert!(!html.contains("?embed="), "no Studio embed query");
+        assert!(html.contains("ribbon") || html.contains("Continuity") || html.contains("who"), "Continuity ribbon");
+        assert!(html.contains("halo") || html.contains("human"), "humans-first halo");
+        assert!(
+            html.contains("Soft-rise held") || html.contains("soft-rise held"),
+            "soft-rise held"
+        );
+        assert!(
+            crate::shell::TALK_VOLUME_HTML.contains("data-volume=\"talk\""),
+            "talk volume HTML present"
+        );
+        assert!(
+            !crate::shell::TALK_VOLUME_HTML.to_ascii_lowercase().contains("relations"),
+            "talk volume must not paint Relations chrome"
+        );
+        assert!(
+            crate::shell::OS_SHELL_CSS.contains("ribbon") || crate::shell::OS_SHELL_CSS.contains(".halo"),
+            "elevated shell.css present"
+        );
     }
 
     #[tokio::test]

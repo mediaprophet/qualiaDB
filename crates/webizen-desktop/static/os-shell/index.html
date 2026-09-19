@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Webizen Desktop</title>
-<link rel="stylesheet" href="shell.css"/>
+<link rel="stylesheet" href="/shell.css"/>
 </head>
 <body>
 <a class="skip" href="#app-stage">Skip to stage</a>
@@ -39,7 +39,7 @@
     <section class="stage" aria-label="App volume" id="app-stage">
       <div class="stage-empty" id="stage-empty">
         <strong>Person waiting for a person</strong>
-        <span>Humans-first orbit. Soft-rise into Live volumes. No Classic / Relations chrome. QApps parked.</span>
+        <span>Humans-first orbit. Bare volume pages (not Studio). Soft-rise held. No Classic / Relations chrome. QApps parked.</span>
         <span>Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> to launch.</span>
       </div>
       <iframe id="app-frame" title="Active app volume" hidden></iframe>
@@ -59,7 +59,7 @@
 <div id="launcher" role="dialog" aria-modal="true" aria-labelledby="launcher-title" hidden>
   <div id="launcher-panel">
     <h2 id="launcher-title">Constellation</h2>
-    <p class="sub">Live volumes open on stage. Planned stay labelled — no fake launch.</p>
+    <p class="sub">Live volumes = dedicated shell pages under /volumes/*. Never Studio iframe. Soft-rise held. Planned stay labelled.</p>
     <label class="sr-only" for="launcher-input">Filter apps</label>
     <input id="launcher-input" type="search" placeholder="Filter…" autocomplete="off"/>
     <ul id="launcher-list" role="listbox" aria-label="Apps"></ul>
@@ -67,16 +67,17 @@
 </div>
 <script>
 (function(){
+/* Bare Desktop volumes only — never Studio/Relations/Classic. Soft-rise held. Legacy: WEBIZEN_LEGACY_SHELL. */
 const APPS=[
-{id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/talk",human:true},
-{id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/talk/mail",human:true},
-{id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/talk/directory",human:true},
-{id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/browser"},
-{id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/keep"},
-{id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/library"},
-{id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/tools"},
+{id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/volumes/talk",human:true},
+{id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/volumes/mail",human:true},
+{id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/volumes/directory",human:true},
+{id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/volumes/browser"},
+{id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/volumes/keep"},
+{id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/volumes/library"},
+{id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/volumes/instruments"},
 {id:"wallet",name:"Wallet",glyph:"⚡",blurb:"Lightning · Nym · XEC · tokens · human keys.",status:"live",route:"/wallet"},
-{id:"settings",name:"Settings",glyph:"⚙",blurb:"Settings for humans.",status:"live",route:"/settings"},
+{id:"settings",name:"Settings",glyph:"⚙",blurb:"Settings for humans.",status:"live",route:"/volumes/settings"},
 {id:"admin",name:"Admin",glyph:"🛠",blurb:"Jobs · logs · ops.",status:"live",route:"/admin"},
 {id:"poet",name:"Poet",glyph:"🪶",blurb:"Migrate-in later.",status:"planned",route:null},
 ];
@@ -95,7 +96,7 @@ function openApp(app){
   }
   empty.hidden=true;frame.hidden=false;frame.src=origin()+app.route;
   setPressed(app.id);activeLabel.textContent=app.name+" · Live";
-  statusEl.textContent="Volume · "+app.name;closeLauncher();
+  statusEl.textContent="Volume · "+app.name+" · bare";closeLauncher();
 }
 function appById(id){return APPS.find(a=>a.id===id)}
 document.querySelectorAll(".fav[data-app]").forEach(b=>b.addEventListener("click",()=>openApp(appById(b.getAttribute("data-app")))));
