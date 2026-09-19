@@ -50,7 +50,7 @@ code{color:var(--accent)}
       <input id="url" value="webizen://home" style="flex:1;min-width:12rem"/>
       <button type="button" class="primary" id="btn-go">Go</button>
     </div>
-    <div class="note" style="margin-top:1rem"><strong>Viewport:</strong> native webview attach is Desktop-host Live; this volume is the chrome. Soft-rise held. <code>webizen://</code> and https when host binds.</div>
+    <div class="note" style="margin-top:1rem"><strong>Viewport:</strong> native webview attach is Desktop-host Live; this volume is the chrome. Live. <code>webizen://</code> and https when host binds.</div>
     <p id="status" role="status"></p>
   </div>
 </section>
@@ -62,7 +62,7 @@ code{color:var(--accent)}
     const u=document.getElementById("url").value.trim();
     status.textContent="Navigate request: "+u+" · host webview Planned attach from this volume chrome.";
   });
-  status.textContent="Browser volume · Soft-rise held.";
+  status.textContent="Browser volume.";
 })();
 </script>
 </body>
