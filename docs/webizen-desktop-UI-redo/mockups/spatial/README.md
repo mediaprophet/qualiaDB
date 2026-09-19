@@ -1,25 +1,25 @@
-# Spatial shell mock-ups
+# Spatial shell mock-ups (elevated bar)
 
-Not a classic OSX/Windows/Linux desktop.
+Timothy bar: continue until a human can use Desktop without life-domain chrome or HELD theatre — and until UI is good enough not to delete bots.
 
-- Spatial depth stage (WGPU / GPU viewport / 10D / Chora)
-- Humans-first orbit: Talk · Mail · Directory
-- Then: Browser · Keep · Library · Instruments/LLM · **Wallet** · Settings · Admin
-- Continuity: who · claim · handle · tool
+## Shell identity
+
+- **Not** OSX / Windows / Linux chrome
+- Depth field + manifold + floating volumes
+- Humans-first **halo** (Talk · Mail · Directory) then tools
+- Continuity ribbon: who · claim · handle · tool
 - Live / Planned only; QApps parked
 
-## Wallet chain policy (Timothy lock)
+## Wallet
 
-- **Prefer:** Nym, Lightning, eCash (XEC), tokens
-- **Do not target:** ETH
-- Live only where claims exist; else Planned — no amber theatre
+Prefer Lightning · Nym · eCash (XEC) · tokens. **No ETH.**
 
 ## Open
 
-- `01-spatial-shell.html` — primary shell
-- `02-responsive-a11y.html` — breakpoints + a11y checklist
-- `03-wallet-volume.html` — multi-rail Wallet human app
+- `01-spatial-shell.html` — elevated primary shell
+- `02-responsive-a11y.html` — breakpoints + a11y
+- `03-wallet-volume.html` — multi-rail Wallet
 
-## For Neo
+## For Neo / davinci
 
-Wire Wallet tile to this chain list. Drop any ETH Live claim from the prior tip.
+Wire real app volumes into the orbit (no Classic/Relations frame inside Talk·Mail·Directory·Browser). Chrome stamp against this tip.
