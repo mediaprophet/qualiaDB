@@ -6,7 +6,10 @@ pub mod shell_html;
 pub mod tabs;
 
 pub use action::ShellAction;
-pub use launch::{resolve_shell_mode, use_legacy_shell, ShellMode};
+pub use launch::{
+    apply_shell_launch, apply_shell_launch_at, resolve_shell_mode, schedule_shell_launch,
+    use_legacy_shell, ShellMode,
+};
 pub use os_shell::OS_SHELL_HTML;
 pub use tabs::{TabId, TabInfo, TabManager};
 
