@@ -7,7 +7,7 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReceiverState {
     Running { bind: String },
-    Held,
+    Planned,
 }
 
 /// A purpose (or relationship) mailbox shown in the inbox sidebar.
@@ -42,14 +42,14 @@ impl ReceiverState {
     }
 }
 
-/// Map `mail_receiver_status` JSON onto a held / running state.
+/// Map `mail_receiver_status` JSON onto a Planned / running state.
 pub fn receiver_from_status(value: &serde_json::Value) -> ReceiverState {
     let running = value
         .get("running")
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
     if !running {
-        return ReceiverState::Held;
+        return ReceiverState::Planned;
     }
     let bind = value
         .get("bind")
@@ -234,7 +234,7 @@ pub fn reply_subject(subject: &str) -> String {
     }
 }
 
-/// Outbound SMTP is optional. Empty/missing host → held, not a fake send.
+/// Outbound SMTP is optional. Empty/missing host → Planned, not a fake send.
 pub fn smtp_ready(transport: &serde_json::Value) -> bool {
     transport
         .get("smtp")
@@ -311,12 +311,12 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn receiver_held_when_not_running() {
+    fn receiver_planned_when_not_running() {
         assert_eq!(
             receiver_from_status(&json!({ "running": false })),
-            ReceiverState::Held
+            ReceiverState::Planned
         );
-        assert_eq!(receiver_from_status(&json!({})), ReceiverState::Held);
+        assert_eq!(receiver_from_status(&json!({})), ReceiverState::Planned);
     }
 
     #[test]
@@ -422,5 +422,28 @@ mod tests {
     fn unix_epoch_formats_utc() {
         assert_eq!(format_received_at(0), "");
         assert_eq!(format_received_at(1_704_067_200), "2024-01-01 00:00");
+    }
+
+    #[test]
+    fn mail_receiver_off_is_planned_not_held_theatre() {
+        assert_eq!(
+            receiver_from_status(&json!({ "running": false })),
+            ReceiverState::Planned
+        );
+        let name = format!("{:?}", ReceiverState::Planned);
+        assert_eq!(name, "Planned");
+        assert!(!name.to_ascii_lowercase().contains("held"));
+    }
+
+    #[test]
+    fn mail_rs_paint_has_no_held_theatre() {
+        let src = include_str!("mail.rs");
+        let folded = src.to_ascii_lowercase();
+        assert!(
+            !folded.contains("held / not yet"),
+            "MailInboxPane must not paint held / not yet (Capt orbit UAT)"
+        );
+        assert!(src.contains("Planned"), "Mail surface uses Planned honesty");
+        assert!(src.contains("Live"), "Mail surface uses Live honesty for reading");
     }
 }

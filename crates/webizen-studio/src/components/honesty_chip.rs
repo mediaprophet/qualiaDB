@@ -21,6 +21,8 @@ pub enum HonestyLevel {
     NeedsConsent,
     /// WASM profile, feature flag, or hardware missing.
     Unavailable,
+    /// Orbit / Mail Live·Planned honesty — capability not on yet (never "held theatre").
+    Planned,
 }
 
 impl HonestyLevel {
@@ -32,6 +34,7 @@ impl HonestyLevel {
             Self::NeedsModel => "held / not yet",
             Self::NeedsConsent => "Needs consent",
             Self::Unavailable => "held / not yet",
+            Self::Planned => "Planned",
         }
     }
 
@@ -43,6 +46,7 @@ impl HonestyLevel {
             Self::NeedsModel => ("#78350f", "#fde68a"),
             Self::NeedsConsent => ("#4c1d95", "#e9d5ff"),
             Self::Unavailable => ("#78350f", "#fde68a"),
+            Self::Planned => ("#334155", "#e2e8f0"),
         }
     }
 }
@@ -97,5 +101,11 @@ mod tests {
         assert!(!HonestyLevel::NeedsModel.label().to_ascii_lowercase().contains("needs model"));
         let (bg, _) = HonestyLevel::NeedsModel.bg_fg();
         assert_ne!(bg, "#450a0a", "held look is amber, not panic red");
+    }
+
+    #[test]
+    fn planned_chip_is_not_held_theatre() {
+        assert_eq!(HonestyLevel::Planned.label(), "Planned");
+        assert!(!HonestyLevel::Planned.label().to_ascii_lowercase().contains("held"));
     }
 }
