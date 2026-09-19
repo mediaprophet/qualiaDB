@@ -21,6 +21,8 @@ pub const OS_SHELL_HTML: &str = include_str!("../../static/os-shell/index.html")
 /// Elevated spatial shell stylesheet (Continuity ribbon + halo).
 pub const OS_SHELL_CSS: &str = include_str!("../../static/os-shell/shell.css");
 
+pub const VOLUMES_CSS: &str = include_str!("../../static/os-shell/volumes.css");
+
 /// Multi-rail Wallet human-app stage (Lightning · Nym · XEC · tokens; no ETH).
 pub const WALLET_STAGE_HTML: &str = include_str!("../../static/os-shell/wallet.html");
 
