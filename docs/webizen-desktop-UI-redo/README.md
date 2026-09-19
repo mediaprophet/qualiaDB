@@ -8,6 +8,12 @@
 2. **Migrate Webizen Desktop** into an OS-like shell first (dock, windows, launcher).
 3. **Then migrate Poet into it** as one launchable app (WASM is the host form, not a rival product).
 
+## Coexistence (locked)
+
+- The **new Desktop is the default**.
+- The **existing shell stays in the tree** and remains launchable via a **flag** (or equivalent switch) until the new shell is actually better.
+- **Nothing is deleted** on the way through. Retire the old path only after migration is honest and the new default wins on use.
+
 ## Hard-fails
 
 - Life-domain chrome (selfhood / relations / memory / care / world / practice) as top-level IA
@@ -36,4 +42,4 @@ Open [`mockups/index.html`](mockups/index.html) in a browser (no build step).
 
 ## Migration stub
 
-See [`MIGRATION-NOTES.md`](MIGRATION-NOTES.md). Inventory of hidden surfaces is Marvin’s lane; architecture (window manager + WASM host) is Neo’s.
+See [`MIGRATION-NOTES.md`](MIGRATION-NOTES.md). Inventory of hidden surfaces is Marvin’s lane; architecture (window manager + WASM host + legacy flag) is Neo’s.
