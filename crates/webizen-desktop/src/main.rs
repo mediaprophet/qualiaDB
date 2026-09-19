@@ -1,1 +1,1 @@
-PLACEHOLDER_LOAD_FROM_DISK
+file:///workspace/qualiaDB/crates/webizen-desktop/src/main.rs
