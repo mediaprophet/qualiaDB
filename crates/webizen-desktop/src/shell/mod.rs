@@ -7,6 +7,17 @@ pub mod tabs;
 
 pub use action::ShellAction;
 pub use launch::{resolve_shell_mode, use_legacy_shell, ShellMode};
-pub use menu::{build_app_menu, dispatch_shell_action};
 pub use os_shell::OS_SHELL_HTML;
 pub use tabs::{TabId, TabInfo, TabManager};
+
+use tauri::AppHandle;
+
+/// Build the native app menu and schedule default OS-shell navigation (Gate 1).
+pub fn build_app_menu(
+    app: &AppHandle,
+) -> Result<tauri::menu::Menu<tauri::Wry>, Box<dyn std::error::Error>> {
+    launch::schedule_shell_launch(app);
+    menu::build_app_menu(app)
+}
+
+pub use menu::dispatch_shell_action;
