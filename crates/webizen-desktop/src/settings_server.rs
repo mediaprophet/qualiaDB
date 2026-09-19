@@ -368,6 +368,18 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/health", get(health_or_studio_handler))
         .route("/api/health", get(health_handler))
         .route("/shell", get(shell_handler))
+        .route("/os-shell", get(os_shell_handler))
+        // Gate 1 orbit surfaces (iframe stage) — Studio SPA or honest ops pages.
+        .route("/talk", get(studio_index_handler))
+        .route("/talk/mail", get(studio_index_handler))
+        .route("/talk/directory", get(studio_index_handler))
+        .route("/talk/people", get(studio_index_handler))
+        .route("/mail", get(studio_index_handler))
+        .route("/directory", get(directory_redirect_handler))
+        .route("/browser", get(studio_index_handler))
+        .route("/keep", get(studio_index_handler))
+        .route("/admin", get(admin_handler))
+        .route("/jobs", get(studio_index_handler))
         .route("/logs", get(studio_index_handler))
         .route("/desktop-logs", get(logs_page_handler))
         .route("/api/logs", get(logs_json_handler))
@@ -820,11 +832,60 @@ async fn health_handler(State(state): State<SettingsServerState>) -> Json<Health
 }
 
 async fn shell_handler() -> Response {
+    gate1_shell_response()
+}
+
+async fn os_shell_handler() -> Response {
+    gate1_shell_response()
+}
+
+fn gate1_shell_response() -> Response {
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
         .header(header::CACHE_CONTROL, "no-cache")
         .body(crate::shell::shell_html::SHELL_HTML.to_string().into())
+        .unwrap()
+}
+
+/// `/directory` → Talk Directory (Studio route `/talk/directory`).
+async fn directory_redirect_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::TEMPORARY_REDIRECT)
+        .header(header::LOCATION, "/talk/directory")
+        .body(axum::body::Body::empty())
+        .unwrap()
+}
+
+/// Admin orbit tile — ops for humans (logs + jobs), not an agent-only surface.
+async fn admin_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(
+            r#"<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin · Webizen</title>
+<style>
+:root{color-scheme:dark}body{margin:0;font:14px/1.45 system-ui,sans-serif;background:#070b12;color:#eef4fa;padding:1.5rem}
+a{color:#7ec8ff}h1{font-size:1.15rem;margin:0 0 .5rem}.muted{color:#9aa8b8}ul{padding-left:1.2rem}
+.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:#34d399;color:#052e1c;font-weight:650}
+</style></head>
+<body>
+<h1>Admin <span class="pill">live</span></h1>
+<p class="muted">Ops for humans · handle ≠ human · chatbot = tool</p>
+<ul>
+<li><a href="/desktop-logs">Desktop logs</a></li>
+<li><a href="/logs">Studio logs</a></li>
+<li><a href="/jobs">Jobs</a></li>
+<li><a href="/api/status">API status (JSON)</a></li>
+<li><a href="/settings">Settings</a></li>
+</ul>
+</body></html>"#
+            .to_string()
+            .into(),
+        )
         .unwrap()
 }
 
