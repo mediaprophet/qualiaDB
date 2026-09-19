@@ -1,0 +1,189 @@
+eturn Err((StatusCode::BAD_REQUEST, "empty undo frame".to_string()));
+    }
+    let storage_path = state.app_state.config.lock().unwrap().storage_path.clone();
+    let stack_index = query.stack_index;
+    let frame_seq = qualia_client_core::studio_workspace_wal::append_undo_frame(
+        &storage_path,
+        stack_index,
+        &body,
+    )
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(Json(serde_json::json!({ "frame_seq": frame_seq })))
+}
+
+async fn get_manifest_undo_chain_handler(
+    State(state): State<SettingsServerState>,
+) -> impl IntoResponse {
+    let storage_path = state.app_state.config.lock().unwrap().storage_path.clone();
+    match qualia_client_core::studio_workspace_wal::recover_undo_chain_manifests(&storage_path) {
+        Ok(manifests) => {
+            let parsed: Vec<serde_json::Value> = manifests
+                .iter()
+                .filter_map(|m| serde_json::from_str(m).ok())
+                .collect();
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({ "manifests": parsed })),
+            )
+                .into_response()
+        }
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
+}
+
+async fn assets_enqueue_handler(
+    Json(body): Json<AssetsEnqueueRequest>,
+) -> Result<(StatusCode, Json<LocalJob>), (StatusCode, String)> {
+    let kind = match body.kind.as_str() {
+        "ontology_catalog_import" => {
+            let id = body
+                .ontology_id
+                .filter(|s| !s.trim().is_empty())
+                .ok_or((StatusCode::BAD_REQUEST, "ontology_id required".to_string()))?;
+            LocalJobKind::OntologyCatalogImport { ontology_id: id }
+        }
+        "bundled_ontology_seed" => LocalJobKind::BundledOntologySeed {
+            ontology_id: body.ontology_id,
+        },
+        other => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                format!("unsupported enqueue kind: {other}"),
+            ))
+        }
+    };
+    LocalJobScheduler::global()
+        .enqueue(kind)
+        .map(|job| (StatusCode::ACCEPTED, Json(job)))
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))
+}
+
+async fn companion_ws_route(
+    State(host_api): State<crate::companion_gateway::HostApiHandle>,
+    ws: axum::extract::ws::WebSocketUpgrade,
+) -> impl IntoResponse {
+    crate::companion_gateway::companion_ws_upgrade(State(host_api), ws).await
+}
+
+#[cfg(test)]
+mod ui_route_tests {
+    use super::*;
+
+    #[test]
+    fn browser_navigation_accepts_html_but_api_probes_do_not() {
+        let mut browser_headers = HeaderMap::new();
+        browser_headers.insert(
+            header::ACCEPT,
+            HeaderValue::from_static("text/html,application/xhtml+xml"),
+        );
+        assert!(accepts_html(&browser_headers));
+
+        let mut api_headers = HeaderMap::new();
+        api_headers.insert(header::ACCEPT, HeaderValue::from_static("application/json"));
+        assert!(!accepts_html(&api_headers));
+    }
+
+    #[test]
+    fn design_studio_support_tree_contains_boot_assets() {
+        let root = portal_support_dir();
+        for relative in [
+            "css/tailwind-built.css",
+            "css/site-nav.css",
+            "js/qualia-debug.js",
+            "pkg/qualia/qualia.js",
+            "pkg/qualia/qualia_bg.wasm",
+            "coi-serviceworker.js",
+        ] {
+            assert!(
+                root.join(relative).is_file(),
+                "missing Design Studio support asset: {relative}"
+            );
+        }
+    }
+
+    #[test]
+    fn design_studio_portal_contains_its_local_entry_assets() {
+        let root = static_portal_dir();
+        for relative in [
+            "design-studio.html",
+            "css/design-studio.css",
+            "js/design-studio-app.js",
+            "js/asset-recommendations.js",
+        ] {
+            assert!(
+                root.join(relative).is_file(),
+                "missing Design Studio portal asset: {relative}"
+            );
+        }
+    }
+
+    #[test]
+    fn wallet_stage_html_is_human_app_not_mcp_only() {
+        let html = crate::shell::WALLET_STAGE_HTML;
+        assert!(html.contains("Wallet"), "wallet stage title");
+        assert!(html.contains("human signs"), "continuity: human signs");
+        assert!(html.contains("handle"), "continuity: handle");
+        assert!(html.contains("Planned") || html.contains("planned"), "Planned honesty");
+        assert!(html.contains("/api/wallet/overview"), "overview fetch");
+        assert!(html.contains("Lightning"), "Lightning rail");
+        assert!(html.contains("Nym"), "Nym rail");
+        assert!(html.contains("XEC") || html.contains("eCash"), "eCash rail");
+        assert!(
+            !html.to_ascii_lowercase().contains("ethereum")
+                && !html.contains("\"ETH\"")
+                && !html.contains("ticker:\"ETH\""),
+            "ETH must not be a Live target"
+        );
+    }
+
+    #[test]
+    fn os_shell_orbit_includes_wallet_tile() {
+        let html = crate::shell::OS_SHELL_HTML;
+        assert!(html.contains("data-app=\"wallet\""), "wallet fav tile");
+        assert!(html.contains("route:\"/wallet\""), "wallet live route");
+        assert!(html.contains("route:\"/volumes/talk\""), "talk bare volume");
+        assert!(html.contains("route:\"/volumes/mail\""), "mail bare volume");
+        assert!(html.contains("route:\"/volumes/directory\""), "directory bare volume");
+        assert!(html.contains("route:\"/volumes/browser\""), "browser bare volume");
+        assert!(html.contains("route:\"/volumes/instruments\""), "instruments bare volume");
+        assert!(html.contains("route:\"/volumes/settings\""), "settings bare volume");
+        assert!(!html.contains("route:\"/talk\""), "must not iframe legacy /talk Studio");
+        assert!(!html.contains("route:\"/talk/mail"), "must not iframe Studio mail");
+        assert!(!html.contains("?embed="), "no Studio embed query");
+        assert!(html.contains("ribbon") || html.contains("Continuity") || html.contains("who"), "Continuity ribbon");
+        assert!(html.contains("halo") || html.contains("human"), "humans-first halo");
+        assert!(
+            html.contains("◉") || html.contains("command wheel") || html.contains("vol-chrome"),
+            "Poet command-wheel hub on volume chrome"
+        );
+        assert!(
+            !html.contains("Soft-rise held") && !html.contains("soft-rise held"),
+            "soft-rise held cleared — Capt stamped PASS"
+        );
+        assert!(
+            crate::shell::TALK_VOLUME_HTML.contains("data-volume=\"talk\""),
+            "talk volume HTML present"
+        );
+        assert!(
+            !crate::shell::TALK_VOLUME_HTML.to_ascii_lowercase().contains("relations"),
+            "talk volume must not paint Relations chrome"
+        );
+        assert!(
+            crate::shell::OS_SHELL_CSS.contains("ribbon") || crate::shell::OS_SHELL_CSS.contains(".halo"),
+            "elevated shell.css present"
+        );
+    }
+
+    #[tokio::test]
+    async fn spa_fallback_serves_pages_but_not_missing_assets() {
+        let page = studio_spa_fallback(OriginalUri("/talk".parse().unwrap())).await;
+        assert_eq!(page.status(), StatusCode::OK);
+
+        let asset = studio_spa_fallback(OriginalUri("/missing.js".parse().unwrap())).await;
+        assert_eq!(asset.status(), StatusCode::NOT_FOUND);
+    }
+}
