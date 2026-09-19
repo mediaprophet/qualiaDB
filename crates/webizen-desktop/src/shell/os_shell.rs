@@ -2,7 +2,7 @@
 //!
 //! Gate 0: spatial / 3D-capable chrome — not a classic dock+traffic-lights identity.
 //! Elevated chrome (Continuity ribbon, humans-first halo): `static/os-shell/{index.html,shell.css}`
-//! (monet tip a516a0c / 4f86fd9). Soft-rise held until Capt re-UAT.
+//! (monet tip a516a0c / 4f86fd9). Soft-rise CLEAR (Capt). Volume chrome: Poet hub ◉ + 8-sector wheel.
 //!
 //! Default orbit (Gate 1): Talk · Mail · Directory · Browser · Keep · Library ·
 //! Instruments · Wallet · Settings · Admin (QApps parked).

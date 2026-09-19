@@ -1,18 +1,16 @@
-# monet → Capt / Neo — live /shell chrome (inlined)
+# monet → Capt / Neo — live /shell chrome
 
-**Tip target:** branch `0.0.40-webizen-ui` · path `crates/webizen-desktop/static/os-shell/index.html`
+**Tip target:** branch `0.0.40-webizen-ui` · `crates/webizen-desktop/static/os-shell/index.html`
 
-## Why Capt still saw tip ~11677f80
-- Desktop serves `/shell` via `include_str!` of this HTML (compile-time).
-- Prior elevate tip linked `shell.css` as a separate file — **not served** on `/shell`, so Capt either stayed on old tip or got unstyled chrome.
-- Docs mock `spatial/01-spatial-shell.html` ≠ live Desktop until this file matches **and** Capt rebuilds.
+## Soft-rise
+Capt stamped soft-rise CLEAR on `1cbbf718` (cold `/shell` ≈ spatial/01 + bare volumes PASS).
 
 ## This tip
-- Single-file HTML: Continuity ribbon (who·claim·handle·tool), humans-first halo, depth field, soft stage — **CSS inlined** for `include_str`.
-- Same orbit routes / `__WEBIZEN_OS_SHELL__` / settings-port origin helper.
-- Empty: person waiting for a person · no Classic/Relations copy.
+- Poet **command wheel** on live volume chrome: hub ◉ + 8 sectors (Close · Soften · Full · Float · Keep · Share · Inspect · More).
+- No Apple traffic lights. Spec: `COMMAND-WHEEL-CHROME.md` / mock `04-command-wheel-chrome.html`.
+- Soft-rise held markers removed. Orbit routes stay `/volumes/*` (+ `/wallet`, `/admin`).
 
-## Capt UAT
-1. Pull tip · **rebuild** Desktop (include_str).
-2. Cold-load `/shell` shot — expect Continuity ribbon + halo (not left-rail-only classic).
-3. Soft-rise still held until Neo strips Studio Classic/Relations from orbit iframes (bare app volumes).
+## Capt UAT (wheel pulse)
+1. Rebuild Desktop (`include_str!`).
+2. Cold `/shell` · open Talk → titlebar hub ◉ visible (no traffic lights).
+3. Click hub (or right-click stage) → 8-sector wheel opens.
