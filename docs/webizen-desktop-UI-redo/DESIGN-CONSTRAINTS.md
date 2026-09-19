@@ -9,6 +9,15 @@ The new Webizen Desktop **must not** read as OSX, Windows, or Linux desktop chro
 - Avoid stock dock-at-bottom + flat icon strip + titlebar traffic-lights as the *identity* of the product (those can remain as temporary Gate 0 scaffolding only).
 - Prefer a **spatial / 3D-capable** shell that uses engine capabilities already Present (WGPU / GPU viewport / 10D / Chora / renderer attach-to-app-window) so the OS feel is native to Qualia, not a pastiche of 1990s–2010s GUIs.
 
+## Window / volume chrome (Timothy lock 2026-09-19)
+
+Do **not** use Apple-like red / yellow / green traffic lights as product identity.
+
+Use Poet’s **8-sector command wheel** (right-click / long-press / titlebar hub ◉) for Close · Soften · Full · Float · Keep · Share · Inspect · More.
+
+Mock: `mockups/spatial/04-command-wheel-chrome.html`. Detail: `COMMAND-WHEEL-CHROME.md`.
+Tauri decorations off (or equivalent) so OS traffic lights never paint the product.
+
 ## Creative direction (design team)
 
 @monet @davinci — evolve mock-ups beyond Gate 0 HTML placeholders:
