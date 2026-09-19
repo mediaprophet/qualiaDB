@@ -119,3 +119,33 @@ mod tests {
         );
     }
 }
+
+/// After settings port is known: inject port, then navigate to OS shell unless legacy.
+pub fn apply_shell_launch(window: &tauri::WebviewWindow, settings_port: u16, mode: ShellMode) {
+    let _ = window.eval(&format!(
+        "window.__WEBIZEN_SETTINGS_PORT = {}; window.dispatchEvent(new CustomEvent('webizen-settings-ready', {{ detail: {} }}));",
+        settings_port, settings_port
+    ));
+    match mode {
+        ShellMode::Legacy => {
+            crate::desktop_log::record(
+                "info",
+                format!(
+                    "Legacy Studio shell on main window; settings portal http://127.0.0.1:{settings_port}/"
+                ),
+            );
+        }
+        ShellMode::OsShell => {
+            let os_shell_url = format!("http://127.0.0.1:{settings_port}/os-shell");
+            let url_json = serde_json::to_string(&os_shell_url).expect("os-shell url is valid JSON string");
+            let _ = window.eval(&format!("window.location.replace({url_json});"));
+            crate::desktop_log::record(
+                "info",
+                format!(
+                    "Default OS shell scaffolding → {os_shell_url}; legacy: WEBIZEN_LEGACY_SHELL=1 or --legacy-shell"
+                ),
+            );
+        }
+    }
+    let _ = window.set_focus();
+}
