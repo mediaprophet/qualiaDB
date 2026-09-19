@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Wallet · Webizen</title>
+<style>
+:root{--void:#070b12;--panel:rgba(14,22,34,.78);--edge:rgba(126,200,255,.18);--text:#eef4fa;--muted:#9aa8b8;--accent:#7ec8ff;--teal:#3ecfbf;--live:#34d399;--planned:#94a3b8;--focus:#ffd166;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{font:14px/1.45 system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(42,110,160,.28),transparent 55%),linear-gradient(165deg,#132033,var(--void) 55%,#0c1420);padding:1.25rem}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+h1{font-size:1.15rem;margin:0 0 .35rem;font-weight:650}
+.lead{color:var(--muted);max-width:62ch;margin:0 0 1.1rem;font-size:13px}
+.stage{display:grid;grid-template-columns:1fr;gap:1rem;max-width:960px}
+@media(min-width:860px){.stage{grid-template-columns:1.1fr .9fr}}
+.vol{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--edge);border-radius:16px;box-shadow:0 24px 64px #0006;overflow:hidden}
+.vol:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.vh{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:rgba(0,0,0,.28);border-bottom:1px solid var(--edge);font-size:12px}
+.vh b{flex:1;font-size:13px}
+.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650}
+.pill.live{color:#052e1c;background:var(--live)}.pill.planned{color:#0f172a;background:var(--planned)}
+.vb{padding:1rem}
+.bal{font-size:1.75rem;font-weight:650;letter-spacing:-.02em;margin:0 0 .25rem}
+.sub{color:var(--muted);font-size:12px;margin:0 0 .9rem}
+.chains{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1rem}
+.chain{padding:.55rem .75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(255,255,255,.04);font-size:12px}
+.chain.on{border-color:rgba(62,207,191,.4);background:rgba(62,207,191,.1)}
+.chain .tag{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.9rem}
+button{appearance:none;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:var(--text);padding:.65rem .9rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
+button.primary{background:rgba(62,207,191,.2);border-color:rgba(62,207,191,.4);color:#b8fff4}
+button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:.5rem .4rem;border-bottom:1px solid var(--edge);color:var(--muted)}
+th{color:var(--text);font-weight:650}td.amt{color:var(--text);font-variant-numeric:tabular-nums}
+.note{margin-top:1rem;padding:.75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted)}
+.note strong{color:var(--accent)}
+ul.cont{margin:0;padding-left:1.2em;color:var(--muted);font-size:13px}
+ul.cont strong{color:var(--text)}
+#status{font-size:11px;color:var(--muted);margin:.75rem 0 0}
+code{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Wallet <span class="pill live">live</span></h1>
+  <p class="lead">Multi-chain human app · keys stay with the person · handle ≠ human · agent proposes, human signs. Not MCP-only. QApps parked.</p>
+</header>
+<div class="stage">
+  <section class="vol" aria-label="Wallet overview">
+    <div class="vh"><b>Portfolio</b><span class="pill live" id="portfolio-pill">Live</span></div>
+    <div class="vb">
+      <p class="bal" id="portfolio-bal">—</p>
+      <p class="sub" id="portfolio-sub">Loading chain honesty…</p>
+      <div class="chains" role="list" aria-label="Chains" id="chains"></div>
+      <div class="row">
+        <button type="button" class="primary" id="btn-send" disabled title="Human signs — signing surface Planned until KeyVault unlock">Send</button>
+        <button type="button" id="btn-recv" disabled title="Receive addresses when identity present">Receive</button>
+        <button type="button" disabled title="Planned">Swap</button>
+        <button type="button" disabled title="Planned">Add chain</button>
+      </div>
+      <table>
+        <thead><tr><th>Asset</th><th>Chain</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody id="assets"></tbody>
+      </table>
+      <p id="status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  <section class="vol" aria-label="Keys and Continuity">
+    <div class="vh"><b>Keys · Continuity</b><span class="pill planned">human signs</span></div>
+    <div class="vb">
+      <p class="sub" style="margin-top:0">Human unlocks via KeyVault / keyring. Seed and signing stay with the person. Agents request, never hold.</p>
+      <ul class="cont">
+        <li><strong>who</strong> — natural human owner</li>
+        <li><strong>claim</strong> — accounts / addresses as claims</li>
+        <li><strong>handle</strong> — wallet id ≠ person</li>
+        <li><strong>tool</strong> — Instruments/LLM may propose a tx; human signs</li>
+      </ul>
+      <div class="note"><strong>Orbit:</strong> after Talk · Mail · Directory — with Browser · Keep · Library · Instruments · Wallet · Settings · Admin. ETH/BTC surfaces are <strong>Live</strong> where identity/adapters exist; other chains stay <strong>Planned</strong> — no fake balances.</div>
+    </div>
+  </section>
+</div>
+<script>
+(function(){
+  const FALLBACK={
+    sync_status:"offline",
+    has_identity:false,
+    chains:[
+      {id:"ethereum",name:"Ethereum",ticker:"ETH",status:"live"},
+      {id:"bitcoin",name:"Bitcoin",ticker:"BTC",status:"live"},
+      {id:"solana",name:"Solana",ticker:"SOL",status:"planned"},
+      {id:"cosmos",name:"Cosmos",ticker:"ATOM",status:"planned"},
+      {id:"polkadot",name:"Polkadot",ticker:"DOT",status:"planned"}
+    ],
+    assets:[]
+  };
+  function paint(data){
+    const chainsEl=document.getElementById("chains");
+    const assetsEl=document.getElementById("assets");
+    const bal=document.getElementById("portfolio-bal");
+    const sub=document.getElementById("portfolio-sub");
+    const status=document.getElementById("status");
+    chainsEl.innerHTML="";
+    (data.chains||[]).forEach(c=>{
+      const d=document.createElement("div");
+      d.className="chain"+(c.status==="live"?" on":"");
+      d.setAttribute("role","listitem");
+      d.innerHTML=c.name+'<span class="tag">'+(c.status==="live"?"Live":"Planned")+"</span>";
+      chainsEl.appendChild(d);
+    });
+    assetsEl.innerHTML="";
+    const assets=data.assets||[];
+    if(!assets.length){
+      const tr=document.createElement("tr");
+      tr.innerHTML='<td colspan="4">No live balances yet — unlock identity / KeyVault. ETH &amp; BTC stay Live surfaces; Planned chains never invent amounts.</td>';
+      assetsEl.appendChild(tr);
+      bal.textContent="—";
+      sub.textContent=data.has_identity?"Identity present · adapters may still be offline":"Awaiting human identity · handle ≠ who";
+    }else{
+      let liveCount=0;
+      assets.forEach(a=>{
+        const tr=document.createElement("tr");
+        const st=a.status==="live"||a.status==="synced"?"live":(a.status||"planned");
+        if(st==="live"||st==="synced")liveCount++;
+        tr.innerHTML="<td>"+esc(a.ticker||a.coin||"?")+"</td><td>"+esc(a.network||a.chain||"")+"</td><td class=\"amt\">"+esc(a.balance_display!=null?String(a.balance_display):"—")+"</td><td><span class=\"pill "+(st==="live"||st==="synced"?"live":"planned")+"\">"+esc(st)+"</span></td>";
+        assetsEl.appendChild(tr);
+      });
+      bal.textContent=liveCount?liveCount+" live asset"+(liveCount===1?"":"s"):"—";
+      sub.textContent="sync: "+(data.sync_status||"unknown")+" · human-owned keys";
+    }
+    document.getElementById("btn-send").disabled=!data.has_identity;
+    document.getElementById("btn-recv").disabled=!data.has_identity;
+    status.textContent="Wallet stage · agent proposes, human signs · "+(data.sync_status||"ready");
+  }
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+  paint(FALLBACK);
+  fetch("/api/wallet/overview",{headers:{Accept:"application/json"}}).then(r=>{
+    if(!r.ok)throw new Error("overview "+r.status);
+    return r.json();
+  }).then(paint).catch(err=>{
+    document.getElementById("status").textContent="Overview offline ("+err.message+") — showing Live/Planned honesty without balances.";
+    paint(FALLBACK);
+  });
+  document.getElementById("btn-send").addEventListener("click",()=>{
+    document.getElementById("status").textContent="Send: human must sign — signing sheet Planned until KeyVault unlock. Agent cannot hold keys.";
+  });
+  document.getElementById("btn-recv").addEventListener("click",()=>{
+    document.getElementById("status").textContent="Receive: show claim addresses for Live chains only — never fabricate Planned-chain addresses.";
+  });
+})();
+</script>
+</body>
+</html>

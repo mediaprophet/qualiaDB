@@ -10,7 +10,7 @@ pub use launch::{
     apply_shell_launch, apply_shell_launch_at, resolve_shell_mode, schedule_shell_launch,
     use_legacy_shell, ShellMode,
 };
-pub use os_shell::OS_SHELL_HTML;
+pub use os_shell::{OS_SHELL_HTML, WALLET_STAGE_HTML};
 pub use tabs::{TabId, TabInfo, TabManager};
 
 use tauri::AppHandle;

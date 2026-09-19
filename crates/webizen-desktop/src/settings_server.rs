@@ -379,6 +379,8 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/browser", get(studio_index_handler))
         .route("/keep", get(studio_index_handler))
         .route("/admin", get(admin_handler))
+        .route("/wallet", get(wallet_handler))
+        .route("/api/wallet/overview", get(wallet_overview_handler))
         .route("/jobs", get(studio_index_handler))
         .route("/logs", get(studio_index_handler))
         .route("/desktop-logs", get(logs_page_handler))
@@ -887,6 +889,88 @@ a{color:#7ec8ff}h1{font-size:1.15rem;margin:0 0 .5rem}.muted{color:#9aa8b8}ul{pa
             .into(),
         )
         .unwrap()
+}
+
+
+/// Wallet orbit tile — multi-chain human app (not MCP-only). ETH/BTC Live where real; others Planned.
+async fn wallet_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(crate::shell::WALLET_STAGE_HTML.to_string().into())
+        .unwrap()
+}
+
+/// Honest wallet overview for the stage iframe: Live vs Planned chains + identity claims.
+/// Avoids Chronik network I/O so orbit open stays snappy; balances stay claim/address honest.
+async fn wallet_overview_handler() -> Json<serde_json::Value> {
+    let identity = qualia_client_core::api::read_identity();
+    let has_identity = identity.is_some();
+    let status = qualia_client_core::api::get_wallet_status();
+    let addr = |key: &str| -> String {
+        identity
+            .as_ref()
+            .and_then(|v| v.get(key))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
+    let eth_addr = addr("ethereum");
+    let btc_addr = addr("bitcoin_btc");
+    let xec_addr = addr("ecash_xec");
+
+    let mut assets = Vec::new();
+    if has_identity {
+        if !eth_addr.is_empty() {
+            assets.push(serde_json::json!({
+                "ticker": "ETH",
+                "coin": "Ethereum",
+                "network": "Ethereum",
+                "balance_display": "—",
+                "address": eth_addr,
+                "status": "live"
+            }));
+        }
+        if !btc_addr.is_empty() {
+            assets.push(serde_json::json!({
+                "ticker": "BTC",
+                "coin": "Bitcoin",
+                "network": "Bitcoin",
+                "balance_display": "—",
+                "address": btc_addr,
+                "status": "live"
+            }));
+        }
+        if !xec_addr.is_empty() {
+            assets.push(serde_json::json!({
+                "ticker": "XEC",
+                "coin": "eCash",
+                "network": "eCash",
+                "balance_display": "—",
+                "address": xec_addr,
+                "status": "live"
+            }));
+        }
+    }
+
+    Json(serde_json::json!({
+        "has_identity": has_identity,
+        "sync_status": status.sync_status,
+        "continuity": {
+            "handle_ne_human": true,
+            "agent_proposes_human_signs": true,
+            "keys_human_owned": true
+        },
+        "chains": [
+            {"id": "ethereum", "name": "Ethereum", "ticker": "ETH", "status": "live"},
+            {"id": "bitcoin", "name": "Bitcoin", "ticker": "BTC", "status": "live"},
+            {"id": "solana", "name": "Solana", "ticker": "SOL", "status": "planned"},
+            {"id": "cosmos", "name": "Cosmos", "ticker": "ATOM", "status": "planned"},
+            {"id": "polkadot", "name": "Polkadot", "ticker": "DOT", "status": "planned"}
+        ],
+        "assets": assets
+    }))
 }
 
 pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
@@ -1628,6 +1712,25 @@ mod ui_route_tests {
                 "missing Design Studio portal asset: {relative}"
             );
         }
+    }
+
+    #[test]
+    fn wallet_stage_html_is_human_app_not_mcp_only() {
+        let html = crate::shell::WALLET_STAGE_HTML;
+        assert!(html.contains("Wallet"), "wallet stage title");
+        assert!(html.contains("human signs"), "continuity: human signs");
+        assert!(html.contains("handle"), "continuity: handle");
+        assert!(html.contains("Planned") || html.contains("planned"), "Planned honesty");
+        assert!(html.contains("/api/wallet/overview"), "overview fetch");
+    }
+
+    #[test]
+    fn os_shell_orbit_includes_wallet_tile() {
+        let html = crate::shell::OS_SHELL_HTML;
+        assert!(html.contains("data-app=\"wallet\""), "wallet fav tile");
+        assert!(html.contains("route:\"/wallet\""), "wallet live route");
+        assert!(html.contains("route:\"/talk/mail\""), "mail stage route");
+        assert!(html.contains("route:\"/tools\""), "instruments=tools");
     }
 
     #[tokio::test]

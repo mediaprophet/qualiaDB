@@ -44,7 +44,7 @@
 <body>
 <div class="field" aria-hidden="true"></div>
 <div class="shell">
-<header class="topbar" role="banner"><div class="brand">Webizen</div><p class="hint">Spatial OS shell · handle ≠ human · chatbot = tool</p><div class="status" role="status" aria-live="polite"><span id="shell-status">OS shell · Live scaffolding</span></div></header>
+<header class="topbar" role="banner"><div class="brand">Webizen</div><p class="hint">Spatial OS shell · handle ≠ human · chatbot = tool · Wallet human-owned</p><div class="status" role="status" aria-live="polite"><span id="shell-status">OS shell · Live scaffolding</span></div></header>
 <nav class="favorites" aria-label="App orbit — humans first">
 <h2>People</h2>
 <button type="button" class="fav" data-app="talk" data-status="live" aria-pressed="false"><span class="glyph" aria-hidden="true">💬</span><span class="label">Talk</span></button>
@@ -56,12 +56,13 @@
 <button type="button" class="fav" data-app="keep" data-status="live" aria-pressed="false"><span class="glyph" aria-hidden="true">📁</span><span class="label">Keep</span></button>
 <button type="button" class="fav" data-app="library" data-status="live" aria-pressed="false"><span class="glyph" aria-hidden="true">📚</span><span class="label">Library</span></button>
 <button type="button" class="fav" data-app="instruments" data-status="live" aria-pressed="false"><span class="glyph" aria-hidden="true">🎛️</span><span class="label">Instruments</span></button>
+<button type="button" class="fav" data-app="wallet" data-status="live" aria-pressed="false"><span class="glyph" aria-hidden="true">💳</span><span class="label">Wallet</span></button>
 <button type="button" class="fav" data-app="settings" data-status="live" aria-pressed="false"><span class="glyph" aria-hidden="true">⚙️</span><span class="label">Settings</span></button>
 <button type="button" class="fav" data-app="admin" data-status="live" aria-pressed="false"><span class="glyph" aria-hidden="true">🛠️</span><span class="label">Admin</span></button>
 </nav>
 <div class="stage-wrap">
 <section class="stage" aria-label="App stage" id="app-stage">
-<div class="stage-empty" id="stage-empty"><strong>Stage ready</strong><span>Orbit: Talk · Mail · Directory · Browser · Keep · Library · Instruments · Settings · Admin. QApps parked. Gate 1 spatial frame.</span><span>Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> for launcher.</span></div>
+<div class="stage-empty" id="stage-empty"><strong>Stage ready</strong><span>Orbit: Talk · Mail · Directory · Browser · Keep · Library · Instruments · Wallet · Settings · Admin. QApps parked. Gate 1 spatial frame.</span><span>Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> for launcher.</span></div>
 <iframe id="app-frame" title="Active app" hidden></iframe>
 </section>
 <section id="gpu" role="region" aria-label="GPU viewport hook"><h3>GPU viewport</h3><p>Hook for WGPU / native renderer attach. Status: <span class="pill planned">planned</span> — region present.</p></section>
@@ -78,12 +79,13 @@
 (function(){
 const APPS=[
 {id:"talk",name:"Talk",glyph:"💬",blurb:"Human to human.",status:"live",route:"/talk"},
-{id:"mail",name:"Mail",glyph:"✉️",blurb:"Locator + messages.",status:"live",route:"/mail"},
-{id:"directory",name:"Directory",glyph:"👤",blurb:"People first; chatbot ≠ human.",status:"live",route:"/directory"},
+{id:"mail",name:"Mail",glyph:"✉️",blurb:"Locator + messages.",status:"live",route:"/talk/mail"},
+{id:"directory",name:"Directory",glyph:"👤",blurb:"People first; chatbot ≠ human.",status:"live",route:"/talk/directory"},
 {id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/browser"},
 {id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/keep"},
 {id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/library"},
-{id:"instruments",name:"Instruments",glyph:"🎛️",blurb:"Models · LLM · tools.",status:"live",route:"/tools"},
+{id:"instruments",name:"Instruments",glyph:"🎛️",blurb:"Models · LLM · tools (not people).",status:"live",route:"/tools"},
+{id:"wallet",name:"Wallet",glyph:"💳",blurb:"Multi-chain · human keys · agent proposes, human signs.",status:"live",route:"/wallet"},
 {id:"settings",name:"Settings",glyph:"⚙️",blurb:"Settings for humans.",status:"live",route:"/settings"},
 {id:"admin",name:"Admin",glyph:"🛠️",blurb:"Jobs · logs · ops.",status:"live",route:"/admin"},
 {id:"poet",name:"Poet",glyph:"🪶",blurb:"Migrate-in later.",status:"planned",route:null},
