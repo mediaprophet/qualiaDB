@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>04 — Command wheel chrome (no traffic lights)</title>
+<style>
+:root{
+  --void:#03060c; --ink:#eaf3fa; --mute:#7f95a8;
+  --teal:#2fe0c8; --cyan:#4db8ff; --violet:#8b7cff; --live:#3dffb0; --rose:#ef4444; --amber:#ffb834;
+  --line:rgba(255,255,255,.10); --glass:rgba(12,20,32,.72); --focus:#ffd27a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font:14px/1.4 system-ui,sans-serif;color:var(--ink);background:var(--void)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.banner{padding:.55rem 1rem;background:#0b1220;border-bottom:1px solid var(--line);font-size:12px;color:var(--mute)}
+.banner strong{color:var(--teal)}
+.stage{
+  position:relative;height:calc(100% - 2.5rem);padding:2.5rem;
+  background:
+    radial-gradient(900px 500px at 20% 15%, #143a4eaa 0%, transparent 55%),
+    radial-gradient(700px 480px at 85% 80%, #2a1f6688 0%, transparent 50%),
+    linear-gradient(180deg,#040810,#071018 45%,#050c14);
+}
+/* Volume — NO red/yellow/green traffic lights */
+.volume{
+  position:absolute;top:3.5rem;left:3rem;width:min(560px,88vw);
+  border-radius:18px;border:1px solid var(--line);background:var(--glass);
+  backdrop-filter:blur(16px);box-shadow:0 28px 70px #000a;
+  overflow:hidden;transform:perspective(1100px) rotateX(1.5deg);transform-origin:50% 100%;
+}
+@media (prefers-reduced-motion:reduce){.volume{transform:none}}
+.titlebar{
+  display:flex;align-items:center;gap:.65rem;padding:.55rem .85rem;
+  border-bottom:1px solid var(--line);user-select:none;cursor:default;
+}
+/* Single glyph hub — opens command wheel (replaces traffic lights) */
+.hub{
+  width:28px;height:28px;border-radius:50%;border:1px solid rgba(47,224,200,.45);
+  background:radial-gradient(circle at 35% 30%,#3a6578,#142030);
+  box-shadow:0 0 14px rgba(47,224,200,.35);color:var(--teal);
+  font:650 14px system-ui;display:grid;place-items:center;cursor:pointer;
+}
+.hub:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.hub[aria-expanded="true"]{background:rgba(47,224,200,.22)}
+.title{flex:1;font:650 13px system-ui}
+.hint{font-size:11px;color:var(--mute)}
+.body{padding:1.25rem 1.1rem 1.5rem;min-height:200px;color:var(--mute)}
+.body h2{margin:0 0 .4rem;font-size:1.05rem;color:var(--ink)}
+.tag{display:inline-block;margin-top:.85rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+  padding:3px 9px;border-radius:999px;background:rgba(61,255,176,.18);color:var(--live);font-weight:650}
+
+/* 8-sector command wheel — Poet radial pattern */
+#wheel{
+  display:none;position:fixed;z-index:50;width:240px;height:240px;
+  transform:translate(-50%,-50%);pointer-events:auto;
+}
+#wheel.open{display:block}
+#wheel svg{width:100%;height:100%;filter:drop-shadow(0 16px 40px #000c)}
+.sector{cursor:pointer;transition:opacity .12s}
+.sector:hover,.sector:focus{opacity:1}
+.sector{opacity:.92}
+.sector path{stroke:rgba(255,255,255,.12);stroke-width:1}
+.core{fill:rgba(6,10,18,.92);stroke:rgba(47,224,200,.4);stroke-width:2}
+.toast{
+  position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);
+  padding:.45rem .9rem;border-radius:999px;background:rgba(10,16,26,.92);
+  border:1px solid var(--line);color:var(--ink);font-size:12px;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.toast.show{opacity:1}
+.legend{position:absolute;right:2rem;bottom:2rem;max-width:280px;font-size:12px;color:var(--mute);
+  padding:1rem;border-radius:14px;border:1px solid var(--line);background:rgba(8,14,22,.75)}
+.legend strong{color:var(--ink);display:block;margin-bottom:.35rem}
+</style>
+</head>
+<body>
+<div class="banner"><strong>Lock</strong> — Poet 8-sector command wheel replaces Apple traffic lights. Right-click volume (or click hub ◉). Close / Soften / Full live on the wheel — not red·yellow·green dots. Spec: crates/poet radial_menu (POET-SPEC-011).</div>
+<div class="stage" id="desk">
+  <div class="volume" id="vol-talk" data-volume="Talk" role="region" aria-label="Talk volume">
+    <div class="titlebar">
+      <button type="button" class="hub" id="hub" aria-label="Volume commands" aria-expanded="false" aria-haspopup="true" title="Command wheel">◉</button>
+      <div class="title">Talk</div>
+      <div class="hint">right-click · or hub</div>
+    </div>
+    <div class="body">
+      <h2>Person waiting for a person</h2>
+      <p>No Classic / Relations chrome. Window controls live on the command wheel — not macOS traffic lights.</p>
+      <span class="tag">live</span>
+    </div>
+  </div>
+  <div class="legend">
+    <strong>Volume chrome</strong>
+    Hub ◉ or right-click opens the 8-sector wheel.<br/><br/>
+    Sectors: Close · Soften · Full · Float · Keep · Share · Inspect · More.<br/><br/>
+    Desktop shell stays undecorated (Tauri decorations off); OS traffic lights never paint product identity.
+  </div>
+</div>
+<div id="wheel" role="menu" aria-label="Volume command wheel" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+const SECTORS=[
+  {id:"close",label:"Close",glyph:"✕",color:"#ef4444"},
+  {id:"soften",label:"Soften",glyph:"—",color:"#ffb834"},
+  {id:"full",label:"Full",glyph:"▢",color:"#3dffb0"},
+  {id:"float",label:"Float",glyph:"◎",color:"#4db8ff"},
+  {id:"keep",label:"Keep",glyph:"📁",color:"#2fe0c8"},
+  {id:"share",label:"Share",glyph:"↗",color:"#8b7cff"},
+  {id:"inspect",label:"Inspect",glyph:"🔍",color:"#38bdf8"},
+  {id:"more",label:"More",glyph:"···",color:"#7f95a8"},
+];
+const wheel=document.getElementById("wheel");
+const hub=document.getElementById("hub");
+const toast=document.getElementById("toast");
+let open=false;
+
+function polar(cx,cy,r,a){return[cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+function sectorPath(i,n,inner,outer){
+  const a0=-Math.PI/2+i*(Math.PI*2/n);
+  const a1=a0+(Math.PI*2/n);
+  const[x0,y0]=polar(120,120,outer,a0);
+  const[x1,y1]=polar(120,120,outer,a1);
+  const[x2,y2]=polar(120,120,inner,a1);
+  const[x3,y3]=polar(120,120,inner,a0);
+  return `M${x0} ${y0} A${outer} ${outer} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${inner} ${inner} 0 0 0 ${x3} ${y3} Z`;
+}
+function paintWheel(cx,cy){
+  wheel.innerHTML="";
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 240 240");
+  svg.setAttribute("role","presentation");
+  SECTORS.forEach((s,i)=>{
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","sector");
+    g.setAttribute("tabindex","0");
+    g.setAttribute("role","menuitem");
+    g.setAttribute("aria-label",s.label);
+    const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d",sectorPath(i,8,42,108));
+    path.setAttribute("fill","rgba(10,16,26,.88)");
+    path.setAttribute("stroke",s.color);
+    const mid=-Math.PI/2+(i+0.5)*(Math.PI*2/8);
+    const[gx,gy]=polar(120,120,78,mid);
+    const[lx,ly]=polar(120,120,96,mid);
+    const glyph=document.createElementNS("http://www.w3.org/2000/svg","text");
+    glyph.setAttribute("x",gx);glyph.setAttribute("y",gy);
+    glyph.setAttribute("text-anchor","middle");glyph.setAttribute("dominant-baseline","middle");
+    glyph.setAttribute("fill",s.color);glyph.setAttribute("font-size","16");
+    glyph.textContent=s.glyph;
+    const lab=document.createElementNS("http://www.w3.org/2000/svg","text");
+    lab.setAttribute("x",lx);lab.setAttribute("y",ly+14);
+    lab.setAttribute("text-anchor","middle");lab.setAttribute("fill",s.color);
+    lab.setAttribute("font-size","9");lab.setAttribute("font-weight","650");
+    lab.textContent=s.label;
+    const act=()=>{run(s.id);closeWheel()};
+    g.addEventListener("click",act);
+    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act()}});
+    g.appendChild(path);g.appendChild(glyph);g.appendChild(lab);svg.appendChild(g);
+  });
+  const core=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  core.setAttribute("cx","120");core.setAttribute("cy","120");core.setAttribute("r","36");
+  core.setAttribute("class","core");
+  const ct=document.createElementNS("http://www.w3.org/2000/svg","text");
+  ct.setAttribute("x","120");ct.setAttribute("y","120");
+  ct.setAttribute("text-anchor","middle");ct.setAttribute("dominant-baseline","middle");
+  ct.setAttribute("fill","#2fe0c8");ct.setAttribute("font-size","11");ct.setAttribute("font-weight","650");
+  ct.textContent="Talk";
+  svg.appendChild(core);svg.appendChild(ct);
+  wheel.appendChild(svg);
+  wheel.style.left=cx+"px";wheel.style.top=cy+"px";
+}
+function openWheel(cx,cy){
+  paintWheel(cx,cy);wheel.hidden=false;wheel.removeAttribute("hidden");wheel.classList.add("open");open=true;
+  hub.setAttribute("aria-expanded","true");
+}
+function closeWheel(){
+  wheel.classList.remove("open");wheel.hidden=true;open=false;
+  hub.setAttribute("aria-expanded","false");
+}
+function run(id){
+  const labels={close:"Close volume",soften:"Soften (was minimize)",full:"Full stage",float:"Float volume",keep:"Send to Keep",share:"Share…",inspect:"Inspect continuity",more:"More…"};
+  toast.textContent=labels[id]||id;toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),1600);
+}
+hub.addEventListener("click",e=>{
+  e.stopPropagation();
+  if(open){closeWheel();return}
+  const r=hub.getBoundingClientRect();
+  openWheel(r.left+r.width/2,r.top+r.height/2+20);
+});
+document.getElementById("vol-talk").addEventListener("contextmenu",e=>{
+  e.preventDefault();openWheel(e.clientX,e.clientY);
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&open)closeWheel()});
+document.addEventListener("click",e=>{
+  if(!open)return;
+  if(wheel.contains(e.target)||hub.contains(e.target))return;
+  closeWheel();
+});
+})();
+</script>
+</body>
+</html>
