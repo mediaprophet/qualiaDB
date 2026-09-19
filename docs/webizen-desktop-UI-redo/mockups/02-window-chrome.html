@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>02 — Window chrome</title>
+<style>
+  :root { --desk:#15202b; --win:#1c2733; --bar:#243041; --text:#eef3f8; --muted:#9fb0c0; --accent:#7ec8ff; --line:#334155; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; font:14px/1.4 system-ui,sans-serif; color:var(--text); background:var(--desk); }
+  .banner { padding:.45rem .75rem; background:#0b1220; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
+  .banner strong { color:var(--accent); }
+  .stage { position:relative; height:calc(100vh - 2rem); padding:2rem; }
+  .window { position:absolute; width:min(520px, 90vw); background:var(--win); border:1px solid var(--line); border-radius:10px; box-shadow:0 18px 50px #0006; overflow:hidden; }
+  .window.a { top:3rem; left:2rem; }
+  .window.b { top:7rem; left:14rem; width:min(460px, 85vw); }
+  .titlebar { display:flex; align-items:center; gap:.5rem; padding:.45rem .65rem; background:var(--bar); border-bottom:1px solid var(--line); }
+  .traffic { display:flex; gap:6px; }
+  .traffic i { width:10px; height:10px; border-radius:50%; display:block; background:#64748b; }
+  .traffic .c { background:#f87171; } .traffic .m { background:#fbbf24; } .traffic .x { background:#34d399; }
+  .title { flex:1; font-size:13px; }
+  .actions { display:flex; gap:6px; }
+  .actions button { border:1px solid var(--line); background:#1a2330; color:var(--text); border-radius:6px; font-size:11px; padding:2px 8px; cursor:pointer; }
+  .body { padding:1rem; min-height:180px; color:var(--muted); }
+  .body h2 { margin:0 0 .5rem; font-size:1rem; color:var(--text); }
+  .tag { display:inline-block; margin-top:.75rem; font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--accent); }
+</style>
+</head>
+<body>
+  <div class="banner"><strong>Gate 0 mock-up</strong> — window chrome. Launch in this window or open a new window. Native renderer can attach to an app surface.</div>
+  <div class="stage">
+    <div class="window a">
+      <div class="titlebar">
+        <div class="traffic"><i class="c"></i><i class="m"></i><i class="x"></i></div>
+        <div class="title">Browser</div>
+        <div class="actions">
+          <button type="button">In window</button>
+          <button type="button">New window</button>
+        </div>
+      </div>
+      <div class="body">
+        <h2>Findable again</h2>
+        <p>Browser is an app on the Desktop — not lost behind life-domain chrome or MCP-only paths.</p>
+        <span class="tag">live</span>
+      </div>
+    </div>
+    <div class="window b">
+      <div class="titlebar">
+        <div class="traffic"><i class="c"></i><i class="m"></i><i class="x"></i></div>
+        <div class="title">Talk</div>
+        <div class="actions">
+          <button type="button">In window</button>
+          <button type="button">New window</button>
+        </div>
+      </div>
+      <div class="body">
+        <h2>Human ↔ human</h2>
+        <p>Compose sends to a person. Chatbots stay tools. Continuity stays on the surface.</p>
+        <span class="tag">live</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
