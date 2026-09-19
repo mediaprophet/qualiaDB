@@ -550,13 +550,21 @@ fn main() {
                     );
                 }
                 webizen_desktop::shell::ShellMode::OsShell => {
-                    // Server just spawned — may not accept yet. Re-schedule so cold start
-                    // cannot remain on Studio if the early build_app_menu schedule missed.
+                    // Immediate navigate (Studio frontendDist otherwise wins the first paint),
+                    // then health-gated retries via schedule_shell_launch.
+                    if let Some(window) = app.get_webview_window("main") {
+                        webizen_desktop::shell::apply_shell_launch_at(
+                            &window,
+                            settings_port,
+                            webizen_desktop::shell::ShellMode::OsShell,
+                            "/shell",
+                        );
+                    }
                     webizen_desktop::shell::schedule_shell_launch(app.handle());
                     desktop_log::record(
                         "info",
                         format!(
-                            "Default Gate 1 OS shell scheduled → http://127.0.0.1:{settings_port}/shell (or /os-shell)"
+                            "Default Gate 1 OS shell applied+scheduled → http://127.0.0.1:{settings_port}/shell (or /os-shell)"
                         ),
                     );
                 }

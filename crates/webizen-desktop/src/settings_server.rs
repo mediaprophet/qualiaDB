@@ -404,6 +404,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/admin", get(admin_handler))
         .route("/wallet", get(wallet_handler))
         .route("/api/wallet/overview", get(wallet_overview_handler))
+        .route("/api/wallet/nym", get(wallet_nym_status_handler).post(wallet_nym_handler))
         .route("/jobs", get(studio_index_handler))
         .route("/logs", get(studio_index_handler))
         .route("/desktop-logs", get(logs_page_handler))
@@ -996,7 +997,32 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
             a
         }
     };
-    let nym_addr = addr("nym");
+    // Live only when nym-sdk client is up AND a real address is claimed (no n1…).
+    let nym_live = qualia_client_core::api::nym_live_status_json();
+    let nym_client_live = nym_live.get("live").and_then(|v| v.as_bool()).unwrap_or(false);
+    let nym_addr = {
+        let from_client = nym_live
+            .get("address")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let raw = if !from_client.is_empty() {
+            from_client
+        } else {
+            let a = addr("nym");
+            if a.is_empty() {
+                addr("nym_mixnet")
+            } else {
+                a
+            }
+        };
+        if raw.starts_with("n1") || !nym_client_live {
+            String::new()
+        } else {
+            raw
+        }
+    };
+
     let xec_addr = addr("ecash_xec");
     let token_claim = identity
         .as_ref()
@@ -1076,6 +1102,45 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
         ],
         "assets": assets
     }))
+}
+
+
+#[derive(Debug, Deserialize)]
+struct WalletNymBody {
+    /// true = enable/connect; false = disable/disconnect
+    enable: bool,
+    /// "sandbox" (default) or "mainnet"
+    #[serde(default)]
+    network: Option<String>,
+}
+
+async fn wallet_nym_status_handler() -> Json<serde_json::Value> {
+    Json(qualia_client_core::api::nym_live_status_json())
+}
+
+async fn wallet_nym_handler(
+    Json(body): Json<WalletNymBody>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let result = if body.enable {
+        qualia_client_core::api::enable_nym_relay(body.network).await
+    } else {
+        qualia_client_core::api::disable_nym_relay().await
+    };
+    match result {
+        Ok(v) => Ok(Json(v)),
+        Err(e) => {
+            log::warn!("Nym enable/disable failed: {e}");
+            Err((
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({
+                    "live": false,
+                    "ok": false,
+                    "error": e,
+                    "client": "nym-sdk@1.21.6"
+                })),
+            ))
+        }
+    }
 }
 
 pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
@@ -1841,18 +1906,30 @@ mod ui_route_tests {
     #[test]
     fn os_shell_orbit_includes_wallet_tile() {
         let html = crate::shell::OS_SHELL_HTML;
-        assert!(html.contains("data-app=\"wallet\""), "wallet fav tile");
+        // Primary cold-shell orbit: Talk · Mail · Directory · Library · Settings
+        assert!(html.contains("data-app=\"talk\""), "talk fav tile");
+        assert!(html.contains("data-app=\"mail\""), "mail fav tile");
+        assert!(html.contains("data-app=\"directory\""), "directory fav tile");
+        assert!(html.contains("data-app=\"library\""), "library fav tile");
+        assert!(html.contains("data-app=\"settings\""), "settings fav tile");
+        assert!(!html.contains("aria-label=\"Continuity planes\""), "no Continuity ribbon strip");
+        assert!(!html.contains("ribbon-inner"), "no Continuity ribbon strip");
+        assert!(
+            html.contains("handle ≠ human") || html.contains("agent = tool"),
+            "Continuity language in footer OK"
+        );
+        // Soft-demoted volumes remain launchable (APPS), not primary halo chrome
         assert!(html.contains("route:\"/wallet\""), "wallet live route");
         assert!(html.contains("route:\"/volumes/talk\""), "talk bare volume");
         assert!(html.contains("route:\"/volumes/mail\""), "mail bare volume");
         assert!(html.contains("route:\"/volumes/directory\""), "directory bare volume");
-        assert!(html.contains("route:\"/volumes/browser\""), "browser bare volume");
-        assert!(html.contains("route:\"/volumes/instruments\""), "instruments bare volume");
+        assert!(html.contains("route:\"/volumes/library\""), "library bare volume");
         assert!(html.contains("route:\"/volumes/settings\""), "settings bare volume");
+        assert!(html.contains("route:\"/volumes/browser\""), "browser still in launcher APPS");
         assert!(!html.contains("route:\"/talk\""), "must not iframe legacy /talk Studio");
         assert!(!html.contains("route:\"/talk/mail"), "must not iframe Studio mail");
         assert!(!html.contains("?embed="), "no Studio embed query");
-        assert!(html.contains("ribbon") || html.contains("Continuity") || html.contains("who"), "Continuity ribbon");
+        assert!(!html.contains("data-app=\"console\""), "Console not on app ring");
         assert!(html.contains("halo") || html.contains("human"), "humans-first halo");
         assert!(
             html.contains("◉") || html.contains("command wheel") || html.contains("vol-chrome"),
@@ -1871,7 +1948,7 @@ mod ui_route_tests {
             "talk volume must not paint Relations chrome"
         );
         assert!(
-            crate::shell::OS_SHELL_CSS.contains("ribbon") || crate::shell::OS_SHELL_CSS.contains(".halo"),
+            crate::shell::OS_SHELL_CSS.contains(".halo"),
             "elevated shell.css present"
         );
     }

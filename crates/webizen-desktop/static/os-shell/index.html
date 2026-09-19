@@ -10,30 +10,14 @@
 <a class="skip" href="#app-stage">Skip to stage</a>
 <div class="field" aria-hidden="true"></div>
 <div class="shell">
-  <div class="ribbon" role="navigation" aria-label="Continuity planes">
-    <span class="brand-slot">Webizen</span>
-    <div class="ribbon-inner">
-      <button type="button" aria-current="true">who</button><span class="sep" aria-hidden="true"></span>
-      <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
-      <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
-      <button type="button">tool</button>
-    </div>
-    <span class="status-slot" id="shell-status" role="status" aria-live="polite">Spatial shell · Live</span>
-  </div>
   <nav class="halo" aria-label="Humans-first orbit">
-    <h2>People</h2>
+    <span class="brand-slot">Webizen</span>
     <button type="button" class="fav human" data-app="talk" aria-pressed="false"><span class="orb" aria-hidden="true">💬</span><span class="label">Talk</span></button>
     <button type="button" class="fav human" data-app="mail" aria-pressed="false"><span class="orb" aria-hidden="true">✉</span><span class="label">Mail</span></button>
     <button type="button" class="fav human" data-app="directory" aria-pressed="false"><span class="orb" aria-hidden="true">👥</span><span class="label">Directory</span></button>
     <div class="sep" role="separator" aria-hidden="true"></div>
-    <h2>Tools</h2>
-    <button type="button" class="fav" data-app="browser" aria-pressed="false"><span class="orb" aria-hidden="true">🌐</span><span class="label">Browser</span></button>
-    <button type="button" class="fav" data-app="keep" aria-pressed="false"><span class="orb" aria-hidden="true">📁</span><span class="label">Keep</span></button>
     <button type="button" class="fav" data-app="library" aria-pressed="false"><span class="orb" aria-hidden="true">📚</span><span class="label">Library</span></button>
-    <button type="button" class="fav" data-app="instruments" aria-pressed="false"><span class="orb" aria-hidden="true">🎛</span><span class="label">Instruments</span></button>
-    <button type="button" class="fav" data-app="wallet" aria-pressed="false"><span class="orb" aria-hidden="true">⚡</span><span class="label">Wallet</span></button>
     <button type="button" class="fav" data-app="settings" aria-pressed="false"><span class="orb" aria-hidden="true">⚙</span><span class="label">Settings</span></button>
-    <button type="button" class="fav" data-app="admin" aria-pressed="false"><span class="orb" aria-hidden="true">🛠</span><span class="label">Admin</span></button>
   </nav>
   <div class="stage-wrap">
     <section class="stage" aria-label="App volume" id="app-stage">
@@ -45,28 +29,23 @@
       </div>
       <div class="stage-body">
         <div class="stage-empty" id="stage-empty">
-          <div class="manifold" aria-label="Elevated spatial constellation">
+          <div class="manifold" aria-label="Working volumes">
             <div class="gpu-hook" aria-hidden="true"><strong>GPU stage · WGPU attach</strong>Volumes soft-rise as Live. Depth field. Reduced-motion flattens.</div>
             <button type="button" class="vol-float v-talk" data-open="talk" aria-label="Open Talk volume">
               <div class="cap"><span class="mark" aria-hidden="true"></span><b>Talk</b><span class="pill live">Live</span></div>
-              <div class="body"><h3>Person waiting for a person</h3><p>Human ↔ human. Chatbot is a tool on the Continuity ribbon — never the peer.</p></div>
+              <div class="body"><h3>Person waiting for a person</h3><p>Human ↔ human. Chatbot is a tool — never the peer.</p></div>
             </button>
             <button type="button" class="vol-float v-mail" data-open="mail" aria-label="Open Mail volume">
               <div class="cap"><span class="mark" aria-hidden="true"></span><b>Mail</b><span class="pill live">Live</span></div>
               <div class="body"><h3>Inbox that opens</h3><p>Soft-rise into Live. No Held copy. Compose that sends.</p></div>
             </button>
-            <button type="button" class="vol-float v-browse" data-open="browser" aria-label="Open Browser volume">
-              <div class="cap"><span class="mark" aria-hidden="true"></span><b>Browser</b><span class="pill live">Live</span></div>
-              <div class="body"><h3>webizen://home</h3><p>Findable. Native renderer attaches here. Not agent-only.</p></div>
-            </button>
             <aside class="constel" aria-hidden="true">
-              <strong>Constellation</strong>
-              First-class volumes. Library · Instruments · Wallet findable. Live / Planned honest.
+              <strong>Orbit</strong>
+              Talk · Mail · Directory · Library · Settings
               <ul>
                 <li><span>Directory</span><span class="pill live">Live</span></li>
-                <li><span>Keep</span><span class="pill live">Live</span></li>
                 <li><span>Library</span><span class="pill live">Live</span></li>
-                <li><span>Poet</span><span class="pill planned">Planned</span></li>
+                <li><span>Settings</span><span class="pill live">Live</span></li>
               </ul>
             </aside>
           </div>
@@ -80,8 +59,9 @@
     </section>
   </div>
   <footer class="footer" role="contentinfo">
-    <span>Continuity · handle ≠ human · agent = tool</span>
+    <span>handle ≠ human · agent = tool</span>
     <span class="grow"></span>
+    <span id="shell-status" role="status" aria-live="polite">Spatial shell · Live</span>
     <button type="button" id="open-launcher" aria-haspopup="dialog" aria-controls="launcher">Launch…</button>
     <span id="active-label">No volume open</span>
   </footer>
@@ -109,11 +89,10 @@ const APPS=[
 {id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/volumes/library"},
 {id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/volumes/instruments"},
 {id:"wallet",name:"Wallet",glyph:"⚡",blurb:"Lightning · Nym · XEC · tokens · human keys.",status:"live",route:"/wallet"},
-{id:"settings",name:"Settings",glyph:"⚙",blurb:"Settings for humans.",status:"live",route:"/volumes/settings"},
+{id:"settings",name:"Settings",glyph:"⚙",blurb:"Setup · prefs · config — not an app.",status:"live",route:"/volumes/settings"},
 {id:"wellfair",name:"WellFair",glyph:"💚",blurb:"Welfare · fairness.",status:"live",route:"/volumes/wellfair",human:true},
 {id:"projects",name:"Projects",glyph:"📋",blurb:"Work that serves humans.",status:"live",route:"/volumes/projects"},
 {id:"admin",name:"Admin",glyph:"🛠",blurb:"Jobs · logs · ops.",status:"live",route:"/volumes/admin"},
-{id:"console",name:"Console",glyph:"⌨",blurb:"Agent tool — never a peer.",status:"live",route:"/volumes/console"},
 {id:"poet",name:"Poet",glyph:"🪶",blurb:"Migrate-in later.",status:"planned",route:"/volumes/poet"}
 ];
 const SECTORS=[
@@ -284,7 +263,7 @@ function runSector(s){
   if(s.id==="close"||s.id==="soften"){ closeVolume(); return; }
   if(s.id==="full"){ statusEl.textContent="Volume · Full stage"; return; }
   if(s.id==="float"){ statusEl.textContent="Volume · Float"; return; }
-  if(s.id==="inspect"){ statusEl.textContent="Continuity · who · claim · handle · tool"; return; }
+  if(s.id==="inspect"){ statusEl.textContent="handle ≠ human · agent = tool"; return; }
 }
 hub.addEventListener("click", function(e){
   e.stopPropagation();

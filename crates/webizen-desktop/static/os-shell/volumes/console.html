@@ -1,2 +1,17 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Console · Webizen</title><link rel="stylesheet" href="/volumes.css"></head><body data-volume="console"><header><h1>Console <span class="pill live">Live</span></h1><p class="lead">Agent · tool console for the volume you’re in. Always a tool, never a peer wall.</p></header><main class="console-grid"><section class="panel"><h2>Context</h2><select id="ctx"><option>Talk</option><option>Mail</option><option>Directory</option><option>Library</option><option>Admin</option><option>Wallet</option></select><p id="blurb">Human ↔ human. Console tools stay off the peer seat.</p></section><section class="panel"><h2>Agent prefs</h2><label><input type="checkbox" checked> Allow tool suggestions in this volume</label><label><input type="checkbox"> Auto-run low-risk jobs</label><p>Model bind · Planned</p></section><section class="panel"><h2>Commands</h2><div id="commands"></div><button id="run">Run selected</button><button id="stop">Stop</button><p id="status" role="status"></p></section></main><script>(function(){const blurbs={Talk:'Human ↔ human. Console tools stay off the peer seat.',Mail:'Locator + messages. Tools triage; people receive.',Directory:'People first. No models in the people list.',Library:'Lived memory. Index jobs via Admin.',Admin:'Jobs · schedules · runner.',Wallet:'Lightning · Nym · XEC · tokens. Human signs.'};let ctx=document.getElementById('ctx'),blurb=document.getElementById('blurb'),commands=document.getElementById('commands'),status=document.getElementById('status');function paint(){blurb.textContent=blurbs[ctx.value]||'';commands.innerHTML='<button class="cmd">'+ctx.value.toLowerCase()+'.inspect · tool</button>';status.textContent='Console · context '+ctx.value+' · tool only'}ctx.onchange=paint;document.getElementById('run').onclick=()=>status.textContent='Ran selected tool · local Live · host bind Planned';document.getElementById('stop').onclick=()=>status.textContent='Stop · no running tool session';paint()})()</script></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta http-equiv="refresh" content="0;url=/volumes/settings?pane=agent"/>
+<title>Console → Settings</title>
+<link rel="stylesheet" href="/volumes.css"/>
+</head>
+<body data-volume="console">
+<header>
+  <h1>Console <span class="pill planned">Moved</span></h1>
+  <p class="lead">Agent prefs are <strong>configuration</strong>, not an app. Redirecting to Settings · Agent.</p>
+</header>
+<p><a href="/volumes/settings?pane=agent">Open Settings · Agent prefs</a></p>
+<script>location.replace("/volumes/settings?pane=agent");</script>
+</body>
+</html>
