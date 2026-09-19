@@ -12883,6 +12883,7 @@ dependencies = [
  "log",
  "lz4_flex",
  "native-tls",
+ "nym-crypto",
  "nym-network-defaults",
  "nym-sdk",
  "pdf-extract",

@@ -67,6 +67,8 @@ keyring = "4"
 # Official Nym mixnet client — Wallet/Settings enable → real claim+bind.
 nym-sdk = "1.21.6"
 nym-network-defaults = "1.22.0"
+# DerivationMaterial for KeyVault-held mixnet seed (keyRole ≠ session).
+nym-crypto = "1.22.0"
 
 [dev-dependencies]
 dhat = "0.3.3"

@@ -1109,6 +1109,25 @@ pub fn nym_live_status_json() -> serde_json::Value {
     }
 }
 
+/// Agent-facing keyRole request — purpose grant only, never seed material.
+pub fn agent_request_key_role(role: String) -> Result<serde_json::Value, String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let grant = crate::nym_live::agent_request_key_role(&role)?;
+        return serde_json::to_value(grant).map_err(|e| e.to_string());
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = role;
+        Err("keyRole request is native-only".into())
+    }
+}
+
+/// Agent-facing mixnet keyRole request (≠ session-authentication).
+pub fn agent_request_mixnet_key_role() -> Result<serde_json::Value, String> {
+    agent_request_key_role("mixnet".into())
+}
+
 pub async fn toggle_stark_prover() -> Result<bool, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let active = &state.stark_prover_active;

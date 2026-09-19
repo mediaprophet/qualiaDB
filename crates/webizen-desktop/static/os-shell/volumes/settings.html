@@ -501,7 +501,7 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     "wallet-setup":{title:"Wallet rails",pill:"Setup",html:
       '<p class="muted" style="margin-top:0">Configure which rails appear — Lightning · Nym · XEC · tokens. No ETH. Signing stays human.</p>'+
       '<div class="toggle"><div><div class="t-label">Lightning</div><div class="t-hint">Show rail in Wallet</div></div><button type="button" class="switch" data-k="ln" role="switch" aria-checked="true"><span></span></button></div>'+
-      '<div class="toggle"><div><div class="t-label">Nym</div><div class="t-hint">Enable → host /api/wallet/nym → nym-sdk connect+claim (sandbox default)</div></div><button type="button" class="switch" data-k="nym" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Nym</div><div class="t-hint">Enable → host /api/wallet/nym → KeyVault mixnet seed → nym-sdk connect+claim (sandbox)</div></div><button type="button" class="switch" data-k="nym" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">eCash XEC</div></div><button type="button" class="switch" data-k="xec" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="row"><button type="button" class="primary" id="open-wallet">Open Wallet volume</button></div>'},
     agent:{title:"Agent · Console prefs",pill:"Config",html:
@@ -553,7 +553,7 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<div class="toggle"><div><div class="t-label">Proxy-launder</div><div class="t-hint">Off by default</div></div><button type="button" class="switch" data-k="proxy-launder" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Conflict checks</div><div class="t-hint">Block conflicting purpose claims</div></div><button type="button" class="switch" data-k="conflict-chk" role="switch" aria-checked="true"><span></span></button></div>'+
       '</div>'+
-      '<div class="note"><strong>Honesty:</strong> empty vault = held / not yet — not a dead end. Revoke credential ≠ erase human / Keep. Unknown keyRole = held, not other-id / who. Wallet rails stay sibling under Setup. Nym rail must be usable for the network stack.</div>'
+      '<div class="note"><strong>Honesty:</strong> empty vault = held / not yet — not a dead end. Revoke credential ≠ erase human / Keep. Unknown keyRole = held, not other-id / who. Wallet rails stay sibling under Setup. Nym rail uses keyRole mixnet (KeyVault-held seed; agents request, never hold).</div>'
     },
     backup:{title:"Backup · sync",pill:"Config · Planned",html:
       '<p class="muted" style="margin-top:0">Import, backup, trusted relay. Host-bound sync stays Planned until Desktop claims — no fake “synced” theatre.</p>'+
@@ -634,7 +634,8 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
   const KEY_ROLES=[
     {id:"controller-signing",label:"controller-signing",hint:"root controller purpose"},
     {id:"route-update",label:"route-update",hint:"route claims"},
-    {id:"session-authentication",label:"session-authentication",hint:"session auth ≠ pack"},
+    {id:"session-authentication",label:"session-authentication",hint:"session auth ≠ pack · ≠ mixnet"},
+    {id:"mixnet",label:"mixnet",hint:"Nym mixnet identity seed · KeyVault-held · ≠ session"},
     {id:"transport-aead",label:"transport-aead",hint:"transport AEAD"},
     {id:"qlink-ephemeral-dh",label:"qlink-ephemeral-dh",hint:"qlink ephemeral DH"},
     {id:"capability-presentation",label:"capability-presentation",hint:"capability present"},

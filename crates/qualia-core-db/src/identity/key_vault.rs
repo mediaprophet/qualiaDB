@@ -18,6 +18,94 @@ fn keyring_entry_for(storage_dir: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new("qualia_db", &username).map_err(|e| format!("Keyring error: {e}"))
 }
 
+/// Closed v1 `idf:keyRole` values for purpose-separated vault material.
+///
+/// Unknown roles stay held / not-yet — never map to other-id / who.
+/// `Mixnet` is Nym client identity seed; it MUST NOT collapse into
+/// `SessionAuthentication` (or pack-publish / transport AEAD).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum KeyRole {
+    ControllerSigning,
+    RouteUpdate,
+    SessionAuthentication,
+    TransportAead,
+    QlinkEphemeralDh,
+    CapabilityPresentation,
+    DiscoveryPsk,
+    GroupDiscovery,
+    PackPublish,
+    /// Nym mixnet client identity — purpose-separated from session-authentication.
+    Mixnet,
+}
+
+impl KeyRole {
+    /// Wire / UI id (`mixnet`, `session-authentication`, …).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ControllerSigning => "controller-signing",
+            Self::RouteUpdate => "route-update",
+            Self::SessionAuthentication => "session-authentication",
+            Self::TransportAead => "transport-aead",
+            Self::QlinkEphemeralDh => "qlink-ephemeral-dh",
+            Self::CapabilityPresentation => "capability-presentation",
+            Self::DiscoveryPsk => "discovery-psk",
+            Self::GroupDiscovery => "group-discovery",
+            Self::PackPublish => "pack-publish",
+            Self::Mixnet => "mixnet",
+        }
+    }
+
+    /// Parse a closed-v1 role id. Unknown → None (held / not-yet).
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "controller-signing" => Some(Self::ControllerSigning),
+            "route-update" => Some(Self::RouteUpdate),
+            "session-authentication" => Some(Self::SessionAuthentication),
+            "transport-aead" => Some(Self::TransportAead),
+            "qlink-ephemeral-dh" => Some(Self::QlinkEphemeralDh),
+            "capability-presentation" => Some(Self::CapabilityPresentation),
+            "discovery-psk" => Some(Self::DiscoveryPsk),
+            "group-discovery" => Some(Self::GroupDiscovery),
+            "pack-publish" => Some(Self::PackPublish),
+            "mixnet" => Some(Self::Mixnet),
+            _ => None,
+        }
+    }
+
+    /// HKDF / derive_key context — stable, purpose-tagged, never shared across roles.
+    pub fn vault_context(self) -> &'static str {
+        match self {
+            Self::ControllerSigning => "idf:keyRole:controller-signing:v1",
+            Self::RouteUpdate => "idf:keyRole:route-update:v1",
+            Self::SessionAuthentication => "idf:keyRole:session-authentication:v1",
+            Self::TransportAead => "idf:keyRole:transport-aead:v1",
+            Self::QlinkEphemeralDh => "idf:keyRole:qlink-ephemeral-dh:v1",
+            Self::CapabilityPresentation => "idf:keyRole:capability-presentation:v1",
+            Self::DiscoveryPsk => "idf:keyRole:discovery-psk:v1",
+            Self::GroupDiscovery => "idf:keyRole:group-discovery:v1",
+            Self::PackPublish => "idf:keyRole:pack-publish:v1",
+            Self::Mixnet => "idf:keyRole:mixnet:v1",
+        }
+    }
+
+    /// Closed v1 inventory (inference namespace + mixnet + pack-publish).
+    pub fn closed_v1() -> &'static [KeyRole] {
+        &[
+            Self::ControllerSigning,
+            Self::RouteUpdate,
+            Self::SessionAuthentication,
+            Self::TransportAead,
+            Self::QlinkEphemeralDh,
+            Self::CapabilityPresentation,
+            Self::DiscoveryPsk,
+            Self::GroupDiscovery,
+            Self::PackPublish,
+            Self::Mixnet,
+        ]
+    }
+}
+
 /// High-level Key Management module for the Qualia Node.
 pub struct KeyVault {
     master_key: Option<SigningKey>,
@@ -161,6 +249,39 @@ impl KeyVault {
         let mut child_secret = [0u8; 32];
         child_secret.copy_from_slice(&result);
         SigningKey::from_bytes(&child_secret)
+    }
+
+    /// Purpose-separated child key for a closed `KeyRole`.
+    ///
+    /// Host paths request this (or [`Self::request_role_seed`]) at use-time.
+    /// Agents never hold the returned material — only the vault does.
+    pub fn derive_key_for_role(&self, role: KeyRole) -> SigningKey {
+        self.derive_key(role.vault_context())
+    }
+
+    /// Request 32-byte seed for `role` (host-only). Never log or put in Quins.
+    ///
+    /// Returns Err when the vault is locked. Callers must zeroize after use
+    /// when the seed is no longer needed for the active operation.
+    pub fn request_role_seed(&self, role: KeyRole) -> Result<[u8; 32], String> {
+        if self.is_locked() {
+            return Err(format!(
+                "KeyVault locked — cannot release keyRole {}",
+                role.as_str()
+            ));
+        }
+        Ok(self.derive_key_for_role(role).to_bytes())
+    }
+
+    /// Agent-facing grant: purpose metadata only — never key material.
+    pub fn agent_request_role(&self, role: KeyRole) -> KeyRoleGrant {
+        KeyRoleGrant {
+            role: role.as_str().to_string(),
+            holder: "keyvault".into(),
+            vault_locked: self.is_locked(),
+            purpose: role.vault_context().to_string(),
+            material_held_by_agent: false,
+        }
     }
 
     /// Computes an Ed25519 signature over a generic byte payload
@@ -382,6 +503,18 @@ impl KeyVault {
 
         Ok(payload)
     }
+}
+
+
+/// Agent-visible ticket for a keyRole request. Never carries secret bytes.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct KeyRoleGrant {
+    pub role: String,
+    pub holder: String,
+    pub vault_locked: bool,
+    pub purpose: String,
+    /// Always false — agents request, never hold.
+    pub material_held_by_agent: bool,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -733,5 +866,45 @@ mod subgraph_key_tests {
         let wrong_secret = [0xFFu8; 32];
         let result = vault.decapsulate(&encapsulated, &wrong_secret);
         assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod key_role_tests {
+    use super::*;
+
+    fn test_vault() -> KeyVault {
+        // Ephemeral vault — no OS keyring required in CI/box.
+        KeyVault::new()
+    }
+
+    #[test]
+    fn mixnet_seed_differs_from_session_authentication() {
+        let vault = test_vault();
+        let mix = vault.request_role_seed(KeyRole::Mixnet).expect("mixnet");
+        let sess = vault
+            .request_role_seed(KeyRole::SessionAuthentication)
+            .expect("session");
+        assert_ne!(mix, sess);
+        assert_ne!(
+            KeyRole::Mixnet.vault_context(),
+            KeyRole::SessionAuthentication.vault_context()
+        );
+    }
+
+    #[test]
+    fn agent_request_never_holds_material() {
+        let vault = test_vault();
+        let g = vault.agent_request_role(KeyRole::Mixnet);
+        assert_eq!(g.role, "mixnet");
+        assert_eq!(g.holder.as_str(), "keyvault");
+        assert!(!g.material_held_by_agent);
+        assert!(!g.vault_locked);
+    }
+
+    #[test]
+    fn unknown_role_parse_is_none() {
+        assert!(KeyRole::parse("other-id").is_none());
+        assert_eq!(KeyRole::parse("mixnet"), Some(KeyRole::Mixnet));
     }
 }
