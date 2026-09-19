@@ -127,11 +127,19 @@ fn os_shell_url_for_port(settings_port: u16, path: &str) -> String {
 }
 
 /// After settings port is known: inject port, then navigate to OS shell unless legacy.
+///
+/// Prefers `/shell` (always wired). Callers that already probed `/os-shell` may pass that path
+/// via [`apply_shell_launch_at`].
 pub fn apply_shell_launch(window: &tauri::WebviewWindow, settings_port: u16, mode: ShellMode) {
-    apply_shell_launch_at(window, settings_port, mode, "/os-shell");
+    apply_shell_launch_at(window, settings_port, mode, "/shell");
 }
 
-fn apply_shell_launch_at(
+/// Navigate the main webview with Tauri `navigate` (not `eval`/`location.replace`).
+///
+/// Cold-start UAT on tip `bc905736` showed Studio life-domain chrome winning because
+/// `window.eval("location.replace(...)")` does not reliably leave the bundled asset
+/// webview. Rust-side `WebviewWindow::navigate` does.
+pub fn apply_shell_launch_at(
     window: &tauri::WebviewWindow,
     settings_port: u16,
     mode: ShellMode,
@@ -152,9 +160,26 @@ fn apply_shell_launch_at(
         }
         ShellMode::OsShell => {
             let os_shell_url = os_shell_url_for_port(settings_port, path);
-            let url_json =
-                serde_json::to_string(&os_shell_url).expect("os-shell url is valid JSON string");
-            let _ = window.eval(&format!("window.location.replace({url_json});"));
+            match os_shell_url.parse::<tauri::Url>() {
+                Ok(url) => {
+                    if let Err(err) = window.navigate(url) {
+                        crate::desktop_log::record(
+                            "error",
+                            format!("OS shell navigate failed for {os_shell_url}: {err}"),
+                        );
+                        // Last-resort JS replace if navigate is unavailable on this runtime.
+                        let url_json = serde_json::to_string(&os_shell_url)
+                            .expect("os-shell url is valid JSON string");
+                        let _ = window.eval(&format!("window.location.replace({url_json});"));
+                    }
+                }
+                Err(err) => {
+                    crate::desktop_log::record(
+                        "error",
+                        format!("OS shell URL parse failed for {os_shell_url}: {err}"),
+                    );
+                }
+            }
             crate::desktop_log::record(
                 "info",
                 format!(
@@ -168,9 +193,9 @@ fn apply_shell_launch_at(
 
 /// Schedule default OS-shell navigation once the settings loopback accepts `/api/health`.
 ///
-/// Hooked from [`super::build_app_menu`] so cold start gets Gate 1 chrome even before
-/// `main.rs` is retipped to call [`apply_shell_launch`] directly. Prefers `/os-shell`,
-/// falls back to `/shell` (same Gate 1 body via `shell_html` re-export).
+/// Hooked from [`super::build_app_menu`] and again from `main.rs` after the settings port is
+/// known so cold start cannot stay on Studio when default (non-legacy) mode is selected.
+/// Prefers `/os-shell`, falls back to `/shell` (same Gate 1 body via `shell_html` re-export).
 pub fn schedule_shell_launch(app: &tauri::AppHandle) {
     let mode = resolve_shell_mode();
     let app = app.clone();
@@ -186,11 +211,17 @@ pub fn schedule_shell_launch(app: &tauri::AppHandle) {
         let port = wait_for_settings_loopback().await;
         let path = if http_ok(port, "/os-shell").await {
             "/os-shell"
+        } else if http_ok(port, "/shell").await {
+            "/shell"
         } else {
             "/shell"
         };
-        if let Some(window) = app.get_webview_window("main") {
-            apply_shell_launch_at(&window, port, mode, path);
+        match app.get_webview_window("main") {
+            Some(window) => apply_shell_launch_at(&window, port, mode, path),
+            None => crate::desktop_log::record(
+                "error",
+                "schedule_shell_launch: main webview missing — Gate 1 shell not applied",
+            ),
         }
     });
 }
