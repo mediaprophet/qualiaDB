@@ -42,7 +42,7 @@ pub(super) fn apps() -> Vec<QApp> {
             tagline: "Talk → purpose inboxes",
             desc: "Daily inbox: purpose mailboxes and mail that has landed. \
                    Opens Talk → Mail — not Poet Domain.info / Inalienable Domain Inboxes. \
-                   Receiver down stays held / not yet.",
+                   Receiver down stays Planned — reading landed mail stays Live.",
             icon: "envelope",
             route: Some(AppRoute::TalkMail),
             stat: Stat::Active,

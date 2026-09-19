@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Webizen Desktop</title>
+<link rel="stylesheet" href="/shell.css"/>
+</head>
+<body>
+<a class="skip" href="#app-stage">Skip to stage</a>
+<div class="field" aria-hidden="true"></div>
+<div class="shell">
+  <div class="ribbon" role="navigation" aria-label="Continuity planes">
+    <span class="brand-slot">Webizen</span>
+    <div class="ribbon-inner">
+      <button type="button" aria-current="true">who</button><span class="sep" aria-hidden="true"></span>
+      <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+      <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+      <button type="button">tool</button>
+    </div>
+    <span class="status-slot" id="shell-status" role="status" aria-live="polite">Spatial shell · Live</span>
+  </div>
+  <nav class="halo" aria-label="Humans-first orbit">
+    <h2>People</h2>
+    <button type="button" class="fav human" data-app="talk" aria-pressed="false"><span class="orb" aria-hidden="true">💬</span><span class="label">Talk</span></button>
+    <button type="button" class="fav human" data-app="mail" aria-pressed="false"><span class="orb" aria-hidden="true">✉</span><span class="label">Mail</span></button>
+    <button type="button" class="fav human" data-app="directory" aria-pressed="false"><span class="orb" aria-hidden="true">👥</span><span class="label">Directory</span></button>
+    <div class="sep" role="separator" aria-hidden="true"></div>
+    <h2>Tools</h2>
+    <button type="button" class="fav" data-app="browser" aria-pressed="false"><span class="orb" aria-hidden="true">🌐</span><span class="label">Browser</span></button>
+    <button type="button" class="fav" data-app="keep" aria-pressed="false"><span class="orb" aria-hidden="true">📁</span><span class="label">Keep</span></button>
+    <button type="button" class="fav" data-app="library" aria-pressed="false"><span class="orb" aria-hidden="true">📚</span><span class="label">Library</span></button>
+    <button type="button" class="fav" data-app="instruments" aria-pressed="false"><span class="orb" aria-hidden="true">🎛</span><span class="label">Instruments</span></button>
+    <button type="button" class="fav" data-app="wallet" aria-pressed="false"><span class="orb" aria-hidden="true">⚡</span><span class="label">Wallet</span></button>
+    <button type="button" class="fav" data-app="settings" aria-pressed="false"><span class="orb" aria-hidden="true">⚙</span><span class="label">Settings</span></button>
+    <button type="button" class="fav" data-app="admin" aria-pressed="false"><span class="orb" aria-hidden="true">🛠</span><span class="label">Admin</span></button>
+  </nav>
+  <div class="stage-wrap">
+    <section class="stage" aria-label="App volume" id="app-stage">
+      <div class="vol-chrome" id="vol-chrome" hidden>
+        <button type="button" class="hub" id="hub" aria-label="Open volume command wheel" aria-expanded="false" aria-haspopup="menu" title="Command wheel">◉</button>
+        <div class="vtitle" id="vol-title">Volume</div>
+        <span class="pill live">Live</span>
+        <span class="vhint">hub · right-click</span>
+      </div>
+      <div class="stage-body">
+        <div class="stage-empty" id="stage-empty">
+          <div class="manifold" aria-label="Elevated spatial constellation">
+            <div class="gpu-hook" aria-hidden="true"><strong>GPU stage · WGPU attach</strong>Volumes soft-rise as Live. Depth field. Reduced-motion flattens.</div>
+            <button type="button" class="vol-float v-talk" data-open="talk" aria-label="Open Talk volume">
+              <div class="cap"><span class="mark" aria-hidden="true"></span><b>Talk</b><span class="pill live">Live</span></div>
+              <div class="body"><h3>Person waiting for a person</h3><p>Human ↔ human. Chatbot is a tool on the Continuity ribbon — never the peer.</p></div>
+            </button>
+            <button type="button" class="vol-float v-mail" data-open="mail" aria-label="Open Mail volume">
+              <div class="cap"><span class="mark" aria-hidden="true"></span><b>Mail</b><span class="pill live">Live</span></div>
+              <div class="body"><h3>Inbox that opens</h3><p>Soft-rise into Live. No Held copy. Compose that sends.</p></div>
+            </button>
+            <button type="button" class="vol-float v-browse" data-open="browser" aria-label="Open Browser volume">
+              <div class="cap"><span class="mark" aria-hidden="true"></span><b>Browser</b><span class="pill live">Live</span></div>
+              <div class="body"><h3>webizen://home</h3><p>Findable. Native renderer attaches here. Not agent-only.</p></div>
+            </button>
+            <aside class="constel" aria-hidden="true">
+              <strong>Constellation</strong>
+              First-class volumes. Library · Instruments · Wallet findable. Live / Planned honest.
+              <ul>
+                <li><span>Directory</span><span class="pill live">Live</span></li>
+                <li><span>Keep</span><span class="pill live">Live</span></li>
+                <li><span>Library</span><span class="pill live">Live</span></li>
+                <li><span>Poet</span><span class="pill planned">Planned</span></li>
+              </ul>
+            </aside>
+          </div>
+        </div>
+        <iframe id="app-frame" title="Active app volume" hidden></iframe>
+      </div>
+    </section>
+    <section id="gpu" role="region" aria-label="GPU viewport hook">
+      <h3>GPU viewport · WGPU</h3>
+      <p>Attach native renderer here. Status: <span class="pill planned">planned</span> — region present.</p>
+    </section>
+  </div>
+  <footer class="footer" role="contentinfo">
+    <span>Continuity · handle ≠ human · agent = tool</span>
+    <span class="grow"></span>
+    <button type="button" id="open-launcher" aria-haspopup="dialog" aria-controls="launcher">Launch…</button>
+    <span id="active-label">No volume open</span>
+  </footer>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+<div class="wheel-root" id="wheel" role="menu" aria-label="Volume commands" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="launcher" role="dialog" aria-modal="true" aria-labelledby="launcher-title" hidden>
+  <div id="launcher-panel">
+    <h2 id="launcher-title">Constellation</h2>
+    <p class="sub">Live volumes open on stage. Planned stay labelled — no fake launch.</p>
+    <label class="sr-only" for="launcher-input">Filter apps</label>
+    <input id="launcher-input" type="search" placeholder="Filter…" autocomplete="off"/>
+    <ul id="launcher-list" role="listbox" aria-label="Apps"></ul>
+  </div>
+</div>
+<script>
+(function(){
+const APPS=[
+{id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/volumes/talk",human:true},
+{id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/volumes/mail",human:true},
+{id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/volumes/directory",human:true},
+{id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/volumes/browser"},
+{id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/volumes/keep"},
+{id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/volumes/library"},
+{id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/volumes/instruments"},
+{id:"wallet",name:"Wallet",glyph:"⚡",blurb:"Lightning · Nym · XEC · tokens · human keys.",status:"live",route:"/wallet"},
+{id:"settings",name:"Settings",glyph:"⚙",blurb:"Settings for humans.",status:"live",route:"/volumes/settings"},
+{id:"wellfair",name:"WellFair",glyph:"💚",blurb:"Welfare · fairness.",status:"live",route:"/volumes/wellfair",human:true},
+{id:"projects",name:"Projects",glyph:"📋",blurb:"Work that serves humans.",status:"live",route:"/volumes/projects"},
+{id:"admin",name:"Admin",glyph:"🛠",blurb:"Jobs · logs · ops.",status:"live",route:"/volumes/admin"},
+{id:"console",name:"Console",glyph:"⌨",blurb:"Agent tool — never a peer.",status:"live",route:"/volumes/console"},
+{id:"poet",name:"Poet",glyph:"🪶",blurb:"Migrate-in later.",status:"planned",route:"/volumes/poet"}
+];
+const SECTORS=[
+{id:"close",label:"Close",glyph:"✕",color:"#f87171",say:"Close volume"},
+{id:"soften",label:"Soften",glyph:"—",color:"#fbbf24",say:"Soften into orbit"},
+{id:"full",label:"Full",glyph:"▢",color:"#3dffb0",say:"Full stage"},
+{id:"float",label:"Float",glyph:"◎",color:"#4db8ff",say:"Float volume"},
+{id:"keep",label:"Keep",glyph:"📁",color:"#2fe0c8",say:"Send to Keep"},
+{id:"share",label:"Share",glyph:"↗",color:"#8b7cff",say:"Share…"},
+{id:"inspect",label:"Inspect",glyph:"🔍",color:"#38bdf8",say:"Inspect continuity"},
+{id:"more",label:"More",glyph:"···",color:"#94a3b8",say:"More…"}
+];
+const frame=document.getElementById("app-frame");
+const empty=document.getElementById("stage-empty");
+const activeLabel=document.getElementById("active-label");
+const statusEl=document.getElementById("shell-status");
+const launcher=document.getElementById("launcher");
+const launcherInput=document.getElementById("launcher-input");
+const launcherList=document.getElementById("launcher-list");
+const volChrome=document.getElementById("vol-chrome");
+const volTitle=document.getElementById("vol-title");
+const hub=document.getElementById("hub");
+const wheel=document.getElementById("wheel");
+const scrim=document.getElementById("scrim");
+const toast=document.getElementById("toast");
+const stage=document.getElementById("app-stage");
+let selectedIdx=0, filtered=APPS.slice(), activeApp=null, wheelOpen=false, wheelActive=0;
+
+function origin(){
+  return typeof window.__WEBIZEN_SETTINGS_PORT==="number"
+    ? ("http://127.0.0.1:"+window.__WEBIZEN_SETTINGS_PORT)
+    : window.location.origin;
+}
+function setPressed(id){
+  document.querySelectorAll(".fav[data-app]").forEach(function(b){
+    b.setAttribute("aria-pressed", b.getAttribute("data-app")===id ? "true" : "false");
+  });
+}
+function showToast(msg){
+  toast.textContent=msg;
+  toast.classList.add("show");
+  setTimeout(function(){ toast.classList.remove("show"); }, 1700);
+}
+function closeVolume(){
+  empty.hidden=false;
+  frame.hidden=true;
+  frame.removeAttribute("src");
+  volChrome.hidden=true;
+  volChrome.classList.remove("open");
+  activeApp=null;
+  setPressed(null);
+  activeLabel.textContent="No volume open";
+  statusEl.textContent="Spatial shell · Live";
+  closeWheel();
+}
+function openApp(app){
+  if(!app) return;
+  if(app.status!=="live" || !app.route){
+    statusEl.textContent=app.name+" · Planned — not launched";
+    activeLabel.textContent=app.name+" (planned)";
+    setPressed(null);
+    return;
+  }
+  activeApp=app;
+  empty.hidden=true;
+  frame.hidden=false;
+  frame.src=origin()+app.route;
+  volChrome.hidden=false;
+  volChrome.classList.add("open");
+  volTitle.textContent=app.name;
+  setPressed(app.id);
+  activeLabel.textContent=app.name+" · Live";
+  statusEl.textContent="Volume · "+app.name;
+  closeLauncher();
+}
+function appById(id){ return APPS.find(function(a){ return a.id===id; }); }
+
+document.querySelectorAll(".fav[data-app]").forEach(function(b){
+  b.addEventListener("click", function(){ openApp(appById(b.getAttribute("data-app"))); });
+});
+document.querySelectorAll(".vol-float[data-open]").forEach(function(b){
+  b.addEventListener("click", function(){ openApp(appById(b.getAttribute("data-open"))); });
+});
+
+function polar(cx,cy,r,a){ return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
+function sectorPath(i,n,inner,outer){
+  var a0=-Math.PI/2+(i*Math.PI*2)/n, a1=a0+(Math.PI*2)/n;
+  var o0=polar(134,134,outer,a0), o1=polar(134,134,outer,a1);
+  var i1=polar(134,134,inner,a1), i0=polar(134,134,inner,a0);
+  return "M"+o0[0]+" "+o0[1]+" A"+outer+" "+outer+" 0 0 1 "+o1[0]+" "+o1[1]+
+         " L"+i1[0]+" "+i1[1]+" A"+inner+" "+inner+" 0 0 0 "+i0[0]+" "+i0[1]+" Z";
+}
+function paintWheel(){
+  wheel.innerHTML="";
+  var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 268 268");
+  svg.setAttribute("role","presentation");
+  var defs=document.createElementNS("http://www.w3.org/2000/svg","defs");
+  defs.innerHTML='<radialGradient id="coreGrad" cx="40%" cy="35%" r="65%"><stop offset="0%" stop-color="#2fe0c8" stop-opacity=".35"/><stop offset="100%" stop-color="#0a1420" stop-opacity=".95"/></radialGradient>';
+  svg.appendChild(defs);
+  var ring=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  ring.setAttribute("cx","134"); ring.setAttribute("cy","134"); ring.setAttribute("r","122");
+  ring.setAttribute("fill","none"); ring.setAttribute("stroke","rgba(47,224,200,.18)"); ring.setAttribute("stroke-width","1.5");
+  svg.appendChild(ring);
+  SECTORS.forEach(function(s,i){
+    var g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","sector"); g.setAttribute("tabindex","0"); g.setAttribute("role","menuitem"); g.setAttribute("aria-label",s.label);
+    g.style.setProperty("--accent", s.color);
+    if(i===wheelActive) g.setAttribute("aria-current","true");
+    var path=document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d", sectorPath(i,8,46,116)); path.setAttribute("stroke", s.color);
+    var mid=-Math.PI/2+((i+0.5)*Math.PI*2)/8;
+    var gxy=polar(134,134,84,mid), lxy=polar(134,134,102,mid);
+    var glyph=document.createElementNS("http://www.w3.org/2000/svg","text");
+    glyph.setAttribute("class","glyph"); glyph.setAttribute("x",gxy[0]); glyph.setAttribute("y",gxy[1]);
+    glyph.setAttribute("text-anchor","middle"); glyph.setAttribute("dominant-baseline","middle");
+    glyph.setAttribute("fill",s.color); glyph.textContent=s.glyph;
+    var lab=document.createElementNS("http://www.w3.org/2000/svg","text");
+    lab.setAttribute("class","label"); lab.setAttribute("x",lxy[0]); lab.setAttribute("y",lxy[1]+12);
+    lab.setAttribute("text-anchor","middle"); lab.setAttribute("fill",s.color); lab.textContent=s.label;
+    function go(){ runSector(s); closeWheel(); }
+    g.addEventListener("click", go);
+    g.addEventListener("mouseenter", function(){ setWheelActive(i); });
+    g.addEventListener("focus", function(){ setWheelActive(i); });
+    g.addEventListener("keydown", function(e){
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); }
+      if(e.key==="ArrowRight"||e.key==="ArrowDown"){ e.preventDefault(); setWheelActive((i+1)%8, true); }
+      if(e.key==="ArrowLeft"||e.key==="ArrowUp"){ e.preventDefault(); setWheelActive((i+7)%8, true); }
+    });
+    g.appendChild(path); g.appendChild(glyph); g.appendChild(lab); svg.appendChild(g);
+  });
+  var core=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  core.setAttribute("class","core-glow"); core.setAttribute("cx","134"); core.setAttribute("cy","134"); core.setAttribute("r","40");
+  var coreStroke=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  coreStroke.setAttribute("class","core-ring"); coreStroke.setAttribute("cx","134"); coreStroke.setAttribute("cy","134"); coreStroke.setAttribute("r","40");
+  var ct=document.createElementNS("http://www.w3.org/2000/svg","text");
+  ct.setAttribute("class","core-text"); ct.setAttribute("x","134"); ct.setAttribute("y","134");
+  ct.setAttribute("text-anchor","middle"); ct.setAttribute("dominant-baseline","middle");
+  ct.textContent=activeApp ? activeApp.name : "Vol";
+  svg.appendChild(core); svg.appendChild(coreStroke); svg.appendChild(ct);
+  wheel.appendChild(svg);
+}
+function setWheelActive(i, focus){
+  wheelActive=i;
+  wheel.querySelectorAll(".sector").forEach(function(el, idx){
+    if(idx===i) el.setAttribute("aria-current","true"); else el.removeAttribute("aria-current");
+  });
+  if(focus){ var el=wheel.querySelectorAll(".sector")[i]; if(el) el.focus(); }
+}
+function openWheel(cx, cy){
+  if(volChrome.hidden) return;
+  paintWheel();
+  wheel.style.left=cx+"px"; wheel.style.top=cy+"px";
+  wheel.hidden=false; wheel.removeAttribute("hidden");
+  scrim.hidden=false; scrim.removeAttribute("hidden");
+  void wheel.offsetWidth;
+  wheel.classList.add("open"); scrim.classList.add("open");
+  wheelOpen=true; hub.setAttribute("aria-expanded","true"); wheelActive=0;
+  setTimeout(function(){ var first=wheel.querySelector(".sector"); if(first) first.focus(); }, 20);
+}
+function closeWheel(){
+  wheel.classList.remove("open"); scrim.classList.remove("open");
+  wheelOpen=false; hub.setAttribute("aria-expanded","false");
+  setTimeout(function(){ if(!wheelOpen){ wheel.hidden=true; scrim.hidden=true; } }, 160);
+}
+function runSector(s){
+  showToast(s.say);
+  if(s.id==="close"||s.id==="soften"){ closeVolume(); return; }
+  if(s.id==="full"){ statusEl.textContent="Volume · Full stage"; return; }
+  if(s.id==="float"){ statusEl.textContent="Volume · Float"; return; }
+  if(s.id==="inspect"){ statusEl.textContent="Continuity · who · claim · handle · tool"; return; }
+}
+hub.addEventListener("click", function(e){
+  e.stopPropagation();
+  if(wheelOpen){ closeWheel(); return; }
+  var r=hub.getBoundingClientRect();
+  openWheel(r.left+r.width/2, r.top+r.height/2+8);
+});
+stage.addEventListener("contextmenu", function(e){
+  if(volChrome.hidden) return;
+  e.preventDefault();
+  openWheel(e.clientX, e.clientY);
+});
+scrim.addEventListener("click", closeWheel);
+
+function renderLauncher(){
+  var q=(launcherInput.value||"").trim().toLowerCase();
+  filtered=APPS.filter(function(a){ return !q || a.name.toLowerCase().indexOf(q)>=0 || a.blurb.toLowerCase().indexOf(q)>=0; });
+  selectedIdx=0; launcherList.innerHTML="";
+  filtered.forEach(function(app, i){
+    var li=document.createElement("li"); li.setAttribute("role","option");
+    var b=document.createElement("button"); b.type="button";
+    b.setAttribute("aria-selected", i===0 ? "true" : "false");
+    b.innerHTML='<span aria-hidden="true">'+app.glyph+'</span><span><div class="name">'+app.name+'</div><div class="blurb">'+app.blurb+'</div></span><span class="pill '+app.status+'">'+app.status+'</span>';
+    b.addEventListener("click", function(){ openApp(app); });
+    li.appendChild(b); launcherList.appendChild(li);
+  });
+}
+function openLauncher(){ launcher.hidden=false; launcher.classList.add("open"); launcherInput.value=""; renderLauncher(); launcherInput.focus(); }
+function closeLauncher(){ launcher.classList.remove("open"); launcher.hidden=true; }
+function moveSelection(d){
+  if(!filtered.length) return;
+  selectedIdx=(selectedIdx+d+filtered.length)%filtered.length;
+  var buttons=launcherList.querySelectorAll("button");
+  buttons.forEach(function(b,i){ b.setAttribute("aria-selected", i===selectedIdx ? "true" : "false"); });
+  if(buttons[selectedIdx]) buttons[selectedIdx].scrollIntoView({block:"nearest"});
+}
+document.getElementById("open-launcher").addEventListener("click", openLauncher);
+launcher.addEventListener("click", function(e){ if(e.target===launcher) closeLauncher(); });
+launcherInput.addEventListener("input", renderLauncher);
+launcherInput.addEventListener("keydown", function(e){
+  if(e.key==="ArrowDown"){ e.preventDefault(); moveSelection(1); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); moveSelection(-1); }
+  else if(e.key==="Enter"){ e.preventDefault(); if(filtered[selectedIdx]) openApp(filtered[selectedIdx]); }
+  else if(e.key==="Escape"){ e.preventDefault(); closeLauncher(); }
+});
+document.addEventListener("keydown", function(e){
+  if(e.key==="Escape" && wheelOpen){ closeWheel(); return; }
+  var metaK=(e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="k";
+  var slash=e.key==="/" && !e.ctrlKey && !e.metaKey && !e.altKey;
+  var t=e.target; var typing=t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable);
+  if(metaK || (slash && !typing && !launcher.classList.contains("open"))){ e.preventDefault(); openLauncher(); }
+  else if(e.key==="Escape" && launcher.classList.contains("open")) closeLauncher();
+});
+window.__WEBIZEN_OS_SHELL__={ openApp: function(id){ openApp(appById(id)); }, apps: APPS, closeVolume: closeVolume };
+})();
+</script>
+</body>
+</html>

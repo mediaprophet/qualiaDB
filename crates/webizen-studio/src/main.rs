@@ -1426,7 +1426,7 @@ fn AppLayout() -> Element {
     } else if crate::components::talk_human_alone::instrument_is_missing(
         &host_snapshot.inference_backend,
     ) {
-        "held / not yet".to_string()
+        "Planned".to_string()
     } else {
         format!("{} · local", host_snapshot.inference_backend)
     };

@@ -528,19 +528,38 @@ fn main() {
                 "Settings + companion gateway ready at http://127.0.0.1:{settings_port}/ (LAN ws://<host>:{settings_port}/mobile/stream)"
             );
 
-            // Keep the main window on the bundled Tauri Studio app.
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval(&format!(
-                    "window.__WEBIZEN_SETTINGS_PORT = {}; window.dispatchEvent(new CustomEvent('webizen-settings-ready', {{ detail: {} }}));",
-                    settings_port, settings_port
-                ));
-                let _ = window.set_focus();
-                desktop_log::record(
-                    "info",
-                    format!(
-                        "Main window loaded bundled Tauri Studio; settings portal is http://127.0.0.1:{settings_port}/"
-                    ),
-                );
+            // Default cold start → Gate 1 OS shell (`/shell` or `/os-shell`).
+            // Legacy (`WEBIZEN_LEGACY_SHELL=1` / `--legacy-shell`) keeps bundled Studio.
+            // `build_app_menu` already scheduled a wait-for-health navigate; re-schedule here
+            // with the known port so Studio cannot win if the early schedule missed the window.
+            let shell_mode = webizen_desktop::shell::resolve_shell_mode();
+            match shell_mode {
+                webizen_desktop::shell::ShellMode::Legacy => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.eval(&format!(
+                            "window.__WEBIZEN_SETTINGS_PORT = {}; window.dispatchEvent(new CustomEvent('webizen-settings-ready', {{ detail: {} }}));",
+                            settings_port, settings_port
+                        ));
+                        let _ = window.set_focus();
+                    }
+                    desktop_log::record(
+                        "info",
+                        format!(
+                            "Legacy Studio shell on main; settings portal http://127.0.0.1:{settings_port}/"
+                        ),
+                    );
+                }
+                webizen_desktop::shell::ShellMode::OsShell => {
+                    // Server just spawned — may not accept yet. Re-schedule so cold start
+                    // cannot remain on Studio if the early build_app_menu schedule missed.
+                    webizen_desktop::shell::schedule_shell_launch(app.handle());
+                    desktop_log::record(
+                        "info",
+                        format!(
+                            "Default Gate 1 OS shell scheduled → http://127.0.0.1:{settings_port}/shell (or /os-shell)"
+                        ),
+                    );
+                }
             }
 
             // Cold-path essentials: seed bundled ontologies when the queue is idle.

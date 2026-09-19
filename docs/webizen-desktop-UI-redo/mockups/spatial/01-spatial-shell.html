@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Webizen Desktop — spatial shell (elevated)</title>
+<style>
+:root{
+  --void:#03060c; --fog:#0a1420; --ink:#eaf3fa; --mute:#7f95a8;
+  --teal:#2fe0c8; --cyan:#4db8ff; --violet:#8b7cff; --live:#3dffb0; --plan:#8a9aab;
+  --glass:rgba(12,20,32,.55); --line:rgba(255,255,255,.10); --focus:#ffd27a;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.4 system-ui,sans-serif;color:var(--ink);background:var(--void);overflow:hidden}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .manifold,.vol,.halo{transform:none!important}
+}
+.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:100;padding:10px 14px;background:var(--focus);color:#111;border-radius:8px}
+.field{
+  position:relative;height:100%;
+  background:
+    radial-gradient(1200px 700px at 12% 18%, #143a4ecc 0%, transparent 50%),
+    radial-gradient(900px 600px at 88% 78%, #2a1f66aa 0%, transparent 48%),
+    radial-gradient(700px 500px at 50% 110%, #0d3d3a88 0%, transparent 45%),
+    linear-gradient(180deg,#040810 0%,#071018 40%,#050c14 100%);
+  perspective:1600px; perspective-origin:50% 40%;
+}
+.field::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;
+  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.08) 1px, transparent 0);
+  background-size:28px 28px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 75%);
+}
+.ribbon{
+  position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:40;
+  display:flex;gap:4px;align-items:center;padding:5px 6px;border-radius:999px;
+  background:rgba(6,10,18,.7);border:1px solid var(--line);backdrop-filter:blur(18px);
+  box-shadow:0 12px 40px #0008;
+}
+.ribbon button{
+  appearance:none;border:0;background:transparent;color:var(--mute);font:600 11px system-ui;
+  padding:7px 14px;border-radius:999px;cursor:default;
+}
+.ribbon button[aria-current="true"]{background:rgba(47,224,200,.16);color:var(--teal)}
+.ribbon button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.ribbon .sep{width:1px;height:14px;background:var(--line);margin:0 2px}
+.manifold{
+  position:absolute;inset:9% 7% 20% 7%;
+  transform:rotateX(14deg) rotateY(-9deg);
+  transform-style:preserve-3d;border-radius:32px;
+  background:linear-gradient(145deg,rgba(47,224,200,.07),transparent 42%),linear-gradient(rgba(255,255,255,.025),rgba(255,255,255,.01));
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 50px 120px #000c, inset 0 0 100px rgba(47,224,200,.06);
+}
+.manifold::after{
+  content:"";position:absolute;inset:-3%;border-radius:36px;border:1px solid rgba(77,184,255,.12);
+  transform:translateZ(-48px);pointer-events:none;
+}
+.gpu{
+  position:absolute;left:6%;right:30%;top:8%;bottom:26%;
+  border-radius:22px;transform:translateZ(28px);
+  background:radial-gradient(ellipse at 30% 20%,rgba(77,184,255,.12),transparent 50%),linear-gradient(180deg,#07121cee,#0d1c2acc);
+  border:1px solid rgba(77,184,255,.22);
+  display:grid;place-items:center;text-align:center;padding:28px;color:var(--mute);
+  box-shadow:0 0 60px rgba(77,184,255,.08);
+}
+.gpu strong{display:block;color:var(--cyan);font-size:15px;margin-bottom:8px;letter-spacing:.02em}
+.vol{
+  position:absolute;transform-style:preserve-3d;
+  background:var(--glass);backdrop-filter:blur(20px) saturate(1.2);
+  border:1px solid var(--line);border-radius:20px;
+  box-shadow:0 30px 80px #000a;overflow:hidden;min-width:220px;
+}
+.vol:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.vol .cap{
+  display:flex;align-items:center;gap:10px;padding:11px 14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);
+  border-bottom:1px solid var(--line);font-size:12px;
+}
+.vol .cap .mark{width:10px;height:10px;border-radius:50%;background:var(--teal);box-shadow:0 0 12px var(--teal)}
+.vol .cap b{flex:1;font-weight:650}
+.pill{font-size:10px;padding:3px 9px;border-radius:999px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+.pill-live{background:rgba(61,255,176,.15);color:var(--live)}
+.pill-plan{background:rgba(138,154,171,.18);color:var(--plan)}
+.vol .body{padding:16px 16px 18px;color:var(--mute);font-size:13px}
+.vol .body h2{margin:0 0 8px;font-size:17px;color:var(--ink);font-weight:650}
+.vol input{width:100%;margin-top:12px;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--ink);font:13px system-ui}
+.vol input:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.v-talk{left:8%;top:18%;width:min(360px,42vw);transform:translateZ(90px) rotateY(5deg)}
+.v-mail{right:7%;top:14%;width:min(300px,34vw);transform:translateZ(40px) rotateY(-7deg)}
+.v-browse{left:26%;top:46%;width:min(380px,44vw);transform:translateZ(110px) rotateX(-2deg)}
+.constel{
+  position:absolute;right:5%;bottom:22%;width:min(300px,32vw);max-height:38vh;overflow:auto;z-index:30;
+  padding:14px;border-radius:18px;transform:translateZ(70px);
+  background:rgba(6,12,20,.82);border:1px solid var(--line);backdrop-filter:blur(16px);
+}
+.constel h2{margin:0 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.constel p{margin:0 0 10px;font-size:11px;color:var(--mute)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:12px;border:0;background:rgba(255,255,255,.035);color:var(--ink);font:600 12px system-ui;text-align:left;width:100%;cursor:default}
+.tile:focus-visible{outline:2px solid var(--focus)}
+.tile .st{font-size:10px;font-weight:650;color:var(--mute);letter-spacing:.04em;text-transform:uppercase}
+.tile .st.l{color:var(--live)}.tile .st.p{color:var(--plan)}
+.halo{
+  position:absolute;left:50%;bottom:5%;transform:translateX(-50%);z-index:50;
+  display:flex;align-items:flex-end;gap:10px;padding:12px 14px;border-radius:28px;
+  background:rgba(5,10,18,.78);border:1px solid var(--line);backdrop-filter:blur(20px);
+  box-shadow:0 20px 60px #000a;
+}
+.halo a{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:58px;padding:8px 6px;text-decoration:none;color:var(--ink);border-radius:16px;border:1px solid transparent}
+.halo a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.halo a.human{background:radial-gradient(circle at 50% 30%,rgba(47,224,200,.2),rgba(47,224,200,.05));border-color:rgba(47,224,200,.35)}
+.halo .orb{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:radial-gradient(circle at 35% 30%,#3a5570,#1a2838);box-shadow:0 8px 20px #0006}
+.halo a.human .orb{box-shadow:0 0 20px rgba(47,224,200,.35),0 8px 20px #0006}
+.halo .nm{font-size:10px;color:var(--mute);font-weight:650}
+.halo a.human .nm{color:var(--teal)}
+.halo .tools{display:flex;gap:6px;padding-left:10px;margin-left:4px;border-left:1px solid var(--line);flex-wrap:wrap;max-width:52vw}
+.badge{position:absolute;top:18px;right:18px;z-index:35;max-width:230px;padding:12px 14px;border-radius:14px;font-size:11px;color:var(--mute);line-height:1.45;background:rgba(0,0,0,.5);border:1px solid var(--line)}
+.badge strong{display:block;color:var(--cyan);margin-bottom:4px;font-size:12px}
+@media (max-width:780px){
+  .manifold{inset:6% 3% 28% 3%;transform:none}
+  .v-mail,.constel{display:none}
+  .v-talk,.v-browse{left:4%;right:4%;width:auto;transform:none}
+  .v-talk{top:14%}.v-browse{top:48%}
+  .gpu{left:4%;right:4%;top:6%;bottom:auto;height:14%;font-size:11px;padding:12px}
+  .halo{bottom:3%;max-width:96vw;justify-content:center}
+  .halo .tools{border:0;padding-left:0;margin:0;width:100%;justify-content:center}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main</a>
+<div class="field">
+  <nav class="ribbon" role="navigation" aria-label="Continuity planes">
+    <button type="button" aria-current="true">who</button><span class="sep" aria-hidden="true"></span>
+    <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+    <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+    <button type="button">tool</button>
+  </nav>
+  <p class="badge" aria-hidden="true"><strong>Elevated spatial shell</strong>Not OSX / Windows / Linux. Volumes on a depth field. Humans-first halo. Live / Planned only. QApps parked.</p>
+  <div class="manifold" aria-hidden="true">
+    <div class="gpu"><div><strong>GPU stage · WGPU attach</strong>Apps soft-rise as Live volumes. 10D / Chora depth. Reduced-motion flattens transforms.</div></div>
+  </div>
+  <main id="main" role="main">
+    <section class="vol v-talk" aria-label="Talk">
+      <div class="cap"><span class="mark" aria-hidden="true"></span><b>Talk</b><span class="pill pill-live">Live</span></div>
+      <div class="body">
+        <h2>A person, waiting for a person</h2>
+        Human ↔ human. Chatbot is a tool on the Continuity ribbon — never the peer.
+        <label for="msg" class="skip">Message a person</label>
+        <input id="msg" type="text" placeholder="Message a person…"/>
+      </div>
+    </section>
+    <section class="vol v-mail" aria-label="Mail">
+      <div class="cap"><span class="mark" aria-hidden="true"></span><b>Mail</b><span class="pill pill-live">Live</span></div>
+      <div class="body"><h2>Inbox that opens</h2>Soft-rise into Live. No Held copy. Compose that sends.</div>
+    </section>
+    <section class="vol v-browse" aria-label="Browser">
+      <div class="cap"><span class="mark" aria-hidden="true"></span><b>Browser</b><span class="pill pill-live">Live</span></div>
+      <div class="body"><h2><code style="color:var(--cyan)">webizen://home</code></h2>Findable. Native renderer attaches here. Not agent-only.</div>
+    </section>
+    <aside class="constel" aria-label="App constellation">
+      <h2>Constellation</h2>
+      <p>First-class volumes. Library · Instruments · Wallet findable. Live / Planned honest.</p>
+      <div class="tiles">
+        <button type="button" class="tile">Directory<span class="st l">Live</span></button>
+        <button type="button" class="tile">Keep<span class="st l">Live</span></button>
+        <button type="button" class="tile">Library<span class="st l">Live</span></button>
+        <button type="button" class="tile">Instruments<span class="st l">Live</span></button>
+        <button type="button" class="tile">Wallet<span class="st l">Live</span></button>
+        <button type="button" class="tile">Settings<span class="st l">Live</span></button>
+        <button type="button" class="tile">Admin<span class="st l">Live</span></button>
+        <button type="button" class="tile">Poet<span class="st p">Planned</span></button>
+      </div>
+    </aside>
+  </main>
+  <nav class="halo" role="navigation" aria-label="Humans-first favorites">
+    <a class="human" href="#talk"><span class="orb" aria-hidden="true">💬</span><span class="nm">Talk</span></a>
+    <a class="human" href="#mail"><span class="orb" aria-hidden="true">✉</span><span class="nm">Mail</span></a>
+    <a class="human" href="#dir"><span class="orb" aria-hidden="true">👥</span><span class="nm">Directory</span></a>
+    <div class="tools" aria-label="Tools">
+      <a href="#browser"><span class="orb" aria-hidden="true">🌐</span><span class="nm">Browser</span></a>
+      <a href="#library"><span class="orb" aria-hidden="true">📚</span><span class="nm">Library</span></a>
+      <a href="#instruments"><span class="orb" aria-hidden="true">🎛</span><span class="nm">Instruments</span></a>
+      <a href="#wallet"><span class="orb" aria-hidden="true">⚡</span><span class="nm">Wallet</span></a>
+      <a href="#settings"><span class="orb" aria-hidden="true">⚙</span><span class="nm">Settings</span></a>
+    </div>
+  </nav>
+</div>
+</body>
+</html>

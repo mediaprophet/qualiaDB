@@ -3,6 +3,11 @@
 //! Serves a browser-accessible control panel plus the HTTP surface that
 //! `webizen-studio` expects (`/manifest`, `/telemetry`).
 
+// Loopback settings portal on `127.0.0.1:8080` (tray "Open Settings").
+//
+// Serves a browser-accessible control panel plus the HTTP surface that
+// `webizen-studio` expects (`/manifest`, `/telemetry`).
+
 use axum::{
     extract::{OriginalUri, Path, Query, State},
     http::{header, HeaderMap, HeaderValue, Method, StatusCode},
@@ -368,6 +373,38 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/health", get(health_or_studio_handler))
         .route("/api/health", get(health_handler))
         .route("/shell", get(shell_handler))
+        .route("/os-shell", get(os_shell_handler))
+        .route("/shell.css", get(os_shell_css_handler))
+        .route("/volumes.css", get(volumes_css_handler))
+        .route("/os-shell/volumes.css", get(volumes_css_handler))
+        .route("/os-shell/shell.css", get(os_shell_css_handler))
+        // Gate 1 bare volumes — dedicated HTML in static/os-shell/volumes (never Studio iframe).
+        .route("/volumes/talk", get(talk_volume_handler))
+        .route("/volumes/mail", get(mail_volume_handler))
+        .route("/volumes/directory", get(directory_volume_handler))
+        .route("/volumes/browser", get(browser_volume_handler))
+        .route("/volumes/keep", get(keep_volume_handler))
+        .route("/volumes/library", get(library_volume_handler))
+        .route("/volumes/instruments", get(instruments_volume_handler))
+        .route("/volumes/settings", get(settings_volume_handler))
+        .route("/volumes/admin", get(admin_volume_handler))
+        .route("/volumes/console", get(console_volume_handler))
+        .route("/volumes/poet", get(poet_volume_handler))
+        .route("/volumes/wellfair", get(wellfair_volume_handler))
+        .route("/volumes/projects", get(projects_volume_handler))
+        // Legacy Studio SPA — WEBIZEN_LEGACY_SHELL / --legacy-shell only.
+        .route("/talk", get(studio_index_handler))
+        .route("/talk/mail", get(studio_index_handler))
+        .route("/talk/directory", get(studio_index_handler))
+        .route("/talk/people", get(studio_index_handler))
+        .route("/mail", get(studio_index_handler))
+        .route("/directory", get(directory_redirect_handler))
+        .route("/browser", get(studio_index_handler))
+        .route("/keep", get(studio_index_handler))
+        .route("/admin", get(admin_handler))
+        .route("/wallet", get(wallet_handler))
+        .route("/api/wallet/overview", get(wallet_overview_handler))
+        .route("/jobs", get(studio_index_handler))
         .route("/logs", get(studio_index_handler))
         .route("/desktop-logs", get(logs_page_handler))
         .route("/api/logs", get(logs_json_handler))
@@ -820,12 +857,225 @@ async fn health_handler(State(state): State<SettingsServerState>) -> Json<Health
 }
 
 async fn shell_handler() -> Response {
+    gate1_shell_response()
+}
+
+async fn os_shell_handler() -> Response {
+    gate1_shell_response()
+}
+
+fn gate1_shell_response() -> Response {
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
         .header(header::CACHE_CONTROL, "no-cache")
         .body(crate::shell::shell_html::SHELL_HTML.to_string().into())
         .unwrap()
+}
+
+/// `/directory` → Talk Directory (Studio route `/talk/directory`).
+async fn directory_redirect_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::TEMPORARY_REDIRECT)
+        .header(header::LOCATION, "/talk/directory")
+        .body(axum::body::Body::empty())
+        .unwrap()
+}
+
+/// Admin orbit tile — ops for humans (logs + jobs), not an agent-only surface.
+async fn admin_handler() -> Response {
+    volume_html_response(crate::shell::ADMIN_VOLUME_HTML)
+}
+
+
+fn volume_html_response(html: &'static str) -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(html.to_string().into())
+        .unwrap()
+}
+
+async fn os_shell_css_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/css; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(crate::shell::OS_SHELL_CSS.to_string().into())
+        .unwrap()
+}
+
+async fn volumes_css_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/css; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(crate::shell::VOLUMES_CSS.to_string().into())
+        .unwrap()
+}
+
+async fn talk_volume_handler() -> Response {
+    volume_html_response(crate::shell::TALK_VOLUME_HTML)
+}
+async fn mail_volume_handler() -> Response {
+    volume_html_response(crate::shell::MAIL_VOLUME_HTML)
+}
+async fn directory_volume_handler() -> Response {
+    volume_html_response(crate::shell::DIRECTORY_VOLUME_HTML)
+}
+async fn browser_volume_handler() -> Response {
+    volume_html_response(crate::shell::BROWSER_VOLUME_HTML)
+}
+async fn keep_volume_handler() -> Response {
+    volume_html_response(crate::shell::KEEP_VOLUME_HTML)
+}
+async fn library_volume_handler() -> Response {
+    volume_html_response(crate::shell::LIBRARY_VOLUME_HTML)
+}
+async fn instruments_volume_handler() -> Response {
+    volume_html_response(crate::shell::INSTRUMENTS_VOLUME_HTML)
+}
+async fn settings_volume_handler() -> Response {
+    volume_html_response(crate::shell::SETTINGS_VOLUME_HTML)
+}
+
+
+async fn admin_volume_handler() -> Response {
+    volume_html_response(crate::shell::ADMIN_VOLUME_HTML)
+}
+
+async fn console_volume_handler() -> Response {
+    volume_html_response(crate::shell::CONSOLE_VOLUME_HTML)
+}
+
+async fn poet_volume_handler() -> Response {
+    volume_html_response(crate::shell::POET_VOLUME_HTML)
+}
+
+async fn wellfair_volume_handler() -> Response {
+    volume_html_response(crate::shell::WELLFAIR_VOLUME_HTML)
+}
+
+async fn projects_volume_handler() -> Response {
+    volume_html_response(crate::shell::PROJECTS_VOLUME_HTML)
+}
+
+/// Wallet orbit tile — Lightning · Nym · eCash · tokens (not MCP-only). No ETH target.
+async fn wallet_handler() -> Response {
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(crate::shell::WALLET_STAGE_HTML.to_string().into())
+        .unwrap()
+}
+
+/// Honest wallet overview for the stage iframe: Live vs Planned rails + identity claims.
+/// Prefer Lightning · Nym · eCash (XEC) · tokens. ETH is not a target.
+/// Avoids Chronik network I/O so orbit open stays snappy; balances stay claim/address honest.
+async fn wallet_overview_handler() -> Json<serde_json::Value> {
+    let identity = qualia_client_core::api::read_identity();
+    let has_identity = identity.is_some();
+    let status = qualia_client_core::api::get_wallet_status();
+    let addr = |key: &str| -> String {
+        identity
+            .as_ref()
+            .and_then(|v| v.get(key))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
+    // Lightning claim may be present as bitcoin_btc / lightning keys; BTC rail maps to Lightning.
+    let ln_addr = {
+        let a = addr("lightning");
+        if a.is_empty() {
+            addr("bitcoin_btc")
+        } else {
+            a
+        }
+    };
+    let nym_addr = addr("nym");
+    let xec_addr = addr("ecash_xec");
+    let token_claim = identity
+        .as_ref()
+        .and_then(|v| v.get("tokens"))
+        .map(|v| !v.is_null() && v != &serde_json::json!([]))
+        .unwrap_or(false);
+
+    let mut assets = Vec::new();
+    if has_identity {
+        if !ln_addr.is_empty() {
+            assets.push(serde_json::json!({
+                "ticker": "sats",
+                "coin": "Lightning",
+                "network": "Lightning",
+                "chain": "Lightning",
+                "balance_display": "—",
+                "address": ln_addr,
+                "status": "live"
+            }));
+        }
+        if !nym_addr.is_empty() {
+            assets.push(serde_json::json!({
+                "ticker": "NYM",
+                "coin": "Nym",
+                "network": "Nym",
+                "chain": "Nym",
+                "balance_display": "—",
+                "address": nym_addr,
+                "status": "live"
+            }));
+        }
+        if !xec_addr.is_empty() {
+            assets.push(serde_json::json!({
+                "ticker": "XEC",
+                "coin": "eCash",
+                "network": "eCash",
+                "chain": "eCash",
+                "balance_display": "—",
+                "address": xec_addr,
+                "status": "live"
+            }));
+        }
+        if token_claim {
+            assets.push(serde_json::json!({
+                "ticker": "tokens",
+                "coin": "Tokens",
+                "network": "token rails",
+                "chain": "Tokens",
+                "balance_display": "—",
+                "status": "live"
+            }));
+        }
+    }
+
+    let ln_status = if !ln_addr.is_empty() { "live" } else { "planned" };
+    let nym_status = if !nym_addr.is_empty() { "live" } else { "planned" };
+    let xec_status = if !xec_addr.is_empty() { "live" } else { "planned" };
+    let tokens_status = if token_claim { "live" } else { "planned" };
+
+    Json(serde_json::json!({
+        "has_identity": has_identity,
+        "sync_status": status.sync_status,
+        "continuity": {
+            "handle_ne_human": true,
+            "agent_proposes_human_signs": true,
+            "keys_human_owned": true
+        },
+        "policy": {
+            "prefer": ["lightning", "nym", "ecash", "tokens"],
+            "not_targeted": ["ethereum", "ETH"]
+        },
+        "chains": [
+            {"id": "lightning", "name": "Lightning", "ticker": "sats", "status": ln_status},
+            {"id": "nym", "name": "Nym", "ticker": "NYM", "status": nym_status},
+            {"id": "ecash", "name": "eCash", "ticker": "XEC", "status": xec_status},
+            {"id": "tokens", "name": "Tokens", "ticker": "tokens", "status": tokens_status}
+        ],
+        "assets": assets
+    }))
 }
 
 pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
@@ -1567,6 +1817,63 @@ mod ui_route_tests {
                 "missing Design Studio portal asset: {relative}"
             );
         }
+    }
+
+    #[test]
+    fn wallet_stage_html_is_human_app_not_mcp_only() {
+        let html = crate::shell::WALLET_STAGE_HTML;
+        assert!(html.contains("Wallet"), "wallet stage title");
+        assert!(html.contains("human signs"), "continuity: human signs");
+        assert!(html.contains("handle"), "continuity: handle");
+        assert!(html.contains("Planned") || html.contains("planned"), "Planned honesty");
+        assert!(html.contains("/api/wallet/overview"), "overview fetch");
+        assert!(html.contains("Lightning"), "Lightning rail");
+        assert!(html.contains("Nym"), "Nym rail");
+        assert!(html.contains("XEC") || html.contains("eCash"), "eCash rail");
+        assert!(
+            !html.to_ascii_lowercase().contains("ethereum")
+                && !html.contains("\"ETH\"")
+                && !html.contains("ticker:\"ETH\""),
+            "ETH must not be a Live target"
+        );
+    }
+
+    #[test]
+    fn os_shell_orbit_includes_wallet_tile() {
+        let html = crate::shell::OS_SHELL_HTML;
+        assert!(html.contains("data-app=\"wallet\""), "wallet fav tile");
+        assert!(html.contains("route:\"/wallet\""), "wallet live route");
+        assert!(html.contains("route:\"/volumes/talk\""), "talk bare volume");
+        assert!(html.contains("route:\"/volumes/mail\""), "mail bare volume");
+        assert!(html.contains("route:\"/volumes/directory\""), "directory bare volume");
+        assert!(html.contains("route:\"/volumes/browser\""), "browser bare volume");
+        assert!(html.contains("route:\"/volumes/instruments\""), "instruments bare volume");
+        assert!(html.contains("route:\"/volumes/settings\""), "settings bare volume");
+        assert!(!html.contains("route:\"/talk\""), "must not iframe legacy /talk Studio");
+        assert!(!html.contains("route:\"/talk/mail"), "must not iframe Studio mail");
+        assert!(!html.contains("?embed="), "no Studio embed query");
+        assert!(html.contains("ribbon") || html.contains("Continuity") || html.contains("who"), "Continuity ribbon");
+        assert!(html.contains("halo") || html.contains("human"), "humans-first halo");
+        assert!(
+            html.contains("◉") || html.contains("command wheel") || html.contains("vol-chrome"),
+            "Poet command-wheel hub on volume chrome"
+        );
+        assert!(
+            !html.contains("Soft-rise held") && !html.contains("soft-rise held"),
+            "soft-rise held cleared — Capt stamped PASS"
+        );
+        assert!(
+            crate::shell::TALK_VOLUME_HTML.contains("data-volume=\"talk\""),
+            "talk volume HTML present"
+        );
+        assert!(
+            !crate::shell::TALK_VOLUME_HTML.to_ascii_lowercase().contains("relations"),
+            "talk volume must not paint Relations chrome"
+        );
+        assert!(
+            crate::shell::OS_SHELL_CSS.contains("ribbon") || crate::shell::OS_SHELL_CSS.contains(".halo"),
+            "elevated shell.css present"
+        );
     }
 
     #[tokio::test]

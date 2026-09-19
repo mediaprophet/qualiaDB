@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
+    glue_settings_server_parts();
     tauri_build::build();
 
     // Tauri/winres embeds a full application manifest (Common Controls v6, DPI,
@@ -117,4 +118,10 @@ fn path_as_gcc_b_prefix(dir: &Path) -> String {
         s.push('/');
     }
     s
+}
+
+
+fn glue_settings_server_parts() {
+    let _manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    // ss_parts emergency glue removed — settings_server.rs is monolithic again.
 }

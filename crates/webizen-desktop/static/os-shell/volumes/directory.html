@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Directory · Webizen</title>
+<style>/* elevated volumes inline fallback */
+/* Elevated volume chrome — monet SoT (matches os-shell spatial tokens) */
+:root{
+  --void:#03060c; --ink:#eaf3fa; --mute:#7f95a8;
+  --teal:#2fe0c8; --cyan:#4db8ff; --violet:#8b7cff;
+  --live:#3dffb0; --plan:#8a9aab; --focus:#ffd27a;
+  --glass:rgba(12,20,32,.72); --line:rgba(255,255,255,.10);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font:14px/1.45 system-ui,sans-serif;color:var(--ink);
+  background:
+    radial-gradient(1000px 600px at 10% 0%,#143a4e99 0%,transparent 50%),
+    radial-gradient(800px 500px at 90% 100%,#2a1f6688 0%,transparent 48%),
+    linear-gradient(180deg,#040810,#071018 50%,#050c14);
+  min-height:100%;padding:1rem 1.15rem 1.4rem;
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+a{color:var(--cyan)}
+h1{margin:0 0 .35rem;font:650 1.2rem/1.25 system-ui}
+.lead{margin:0 0 1rem;color:var(--mute);font-size:13px;max-width:62ch}
+.continuity{display:flex;flex-wrap:wrap;gap:.35rem .55rem;margin:0 0 1rem;font-size:11px;color:var(--mute)}
+.continuity span{padding:.2rem .55rem;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.28)}
+.continuity b{color:var(--teal);font-weight:650}
+.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650;letter-spacing:.03em}
+.pill.live{color:#052e1c;background:var(--live)}
+.pill.planned{color:#0f172a;background:var(--plan)}
+.layout{display:grid;gap:1rem;max-width:1100px}
+@media(min-width:880px){.layout.two{grid-template-columns:1.15fr .85fr}.layout.mail{grid-template-columns:minmax(220px,.9fr) 1.2fr}.layout.dir{grid-template-columns:1fr 1.1fr}}
+.panel{background:var(--glass);backdrop-filter:blur(16px) saturate(1.1);border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 70px #000a;overflow:hidden;min-height:0}
+.panel:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.ph{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);border-bottom:1px solid var(--line);font-size:12px}
+.ph b{flex:1;font-size:13px;font-weight:650}
+.pb{padding:1rem}
+.muted{color:var(--mute);font-size:12px}
+label.muted{display:block;margin:0 0 .35rem}
+input,textarea,select{
+  width:100%;padding:.65rem .75rem;border-radius:12px;border:1px solid var(--line);
+  background:rgba(0,0,0,.35);color:var(--ink);font:inherit
+}
+textarea{resize:vertical;min-height:5.5rem}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{
+  outline:2px solid var(--focus);outline-offset:2px
+}
+.row{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0}
+button{
+  appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.06);
+  color:var(--ink);padding:.55rem .85rem;border-radius:12px;font:650 12px system-ui;cursor:pointer
+}
+button.primary{background:rgba(47,224,200,.18);border-color:rgba(47,224,200,.45);color:#b8fff4}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:transparent}
+.list{list-style:none;margin:0;padding:0}
+.list li,.item{
+  display:block;width:100%;text-align:left;padding:.7rem .8rem;border:0;border-bottom:1px solid var(--line);
+  background:transparent;color:inherit;font:inherit;cursor:pointer;border-radius:0
+}
+.list li:last-child,.item:last-child{border-bottom:0}
+.list li:hover,.item:hover,.item[aria-selected="true"]{background:rgba(47,224,200,.12)}
+.item .who{font-weight:650;color:var(--ink)}
+.item .meta{display:block;font-size:11px;color:var(--mute);margin-top:.15rem}
+.empty{
+  padding:1.25rem 1rem;text-align:center;color:var(--mute);font-size:13px;
+  border:1px dashed rgba(77,184,255,.25);border-radius:14px;background:rgba(8,14,22,.35)
+}
+.empty strong{display:block;color:var(--cyan);margin-bottom:.35rem;font-size:14px}
+.note{margin-top:.9rem;padding:.75rem;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.28);font-size:12px;color:var(--mute)}
+.note strong{color:var(--cyan)}
+code{color:var(--cyan);font-size:12px}
+#status{font-size:11px;color:var(--mute);margin:.65rem 0 0;min-height:1.2em}
+.thread{display:flex;flex-direction:column;gap:.55rem;max-height:42vh;overflow:auto;margin:.5rem 0}
+.bubble{padding:.65rem .8rem;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.28);font-size:13px;max-width:85%}
+.bubble.me{align-self:flex-end;background:rgba(47,224,200,.12);border-color:rgba(47,224,200,.3)}
+.bubble .from{font-size:10px;color:var(--mute);margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.04em}
+.preview{padding:1rem;min-height:12rem}
+.preview h2{margin:0 0 .35rem;font-size:1rem}
+.chip-row{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
+</style>
+<link rel="stylesheet" href="/volumes.css"/>
+</head>
+<body data-volume="directory">
+
+<header>
+  <h1>Directory <span class="pill live">Live</span></h1>
+  <p class="lead">People first. A handle is not a human. Chatbots stay under Tools — never in the people list.</p>
+  <div class="continuity" aria-label="Continuity">
+    <span><b>who</b> · natural person</span>
+    <span><b>claim</b> · locator / invite</span>
+    <span><b>handle</b> · ≠ who</span>
+    <span><b>tool</b> · chatbot, not peer</span>
+  </div>
+</header>
+<div class="layout dir">
+  <section class="panel" aria-label="People">
+    <div class="ph"><b>People</b><span class="pill live">Live</span></div>
+    <div class="pb">
+      <label class="muted" for="q">Find a person</label>
+      <input id="q" type="search" placeholder="Name or locator…" autocomplete="off"/>
+      <ul class="list" id="people" role="listbox" aria-label="People" style="margin-top:.65rem"></ul>
+      <div class="row">
+        <button type="button" class="primary" id="btn-invite">Invite person</button>
+        <button type="button" id="btn-talk" disabled>Open Talk</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  <section class="panel" aria-label="Detail">
+    <div class="ph"><b>Person</b><span class="pill live" id="detail-pill">Live</span></div>
+    <div class="pb" id="detail">
+      <div class="empty" id="detail-empty">
+        <strong>Pick a person</strong>
+        Directory is for humans. Tools never appear here as peers.
+      </div>
+      <div id="detail-card" hidden>
+        <h2 id="d-name" style="margin:0 0 .25rem;font-size:1.05rem"></h2>
+        <p class="muted" id="d-meta" style="margin:0 0 .75rem"></p>
+        <div class="chip-row">
+          <span class="pill live">Human</span>
+          <span class="pill planned" id="d-claim">Claim Planned</span>
+        </div>
+        <p class="note" style="margin-top:.85rem"><strong>Continuity:</strong> handle on file is a locator — it is not who they are. Revoke handle ≠ erase person.</p>
+        <div class="row">
+          <button type="button" class="primary" id="btn-open-talk">Talk</button>
+          <button type="button" id="btn-open-mail">Mail</button>
+        </div>
+      </div>
+      <div class="note" style="margin-top:1rem"><strong>Tools (not people):</strong> Instruments · chatbot rails live on the tool shelf — never mixed into this list.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+
+(function(){
+  const seed=[
+    {id:"tim",name:"Timothy Holborn",handle:"@timothy",blurb:"Natural person · Continuity care",claim:"live"},
+    {id:"guest",name:"Invite pending",handle:"—",blurb:"Waiting on a person to accept",claim:"planned"}
+  ];
+  let people=seed.slice(), selected=null;
+  const list=document.getElementById("people");
+  const status=document.getElementById("status");
+  const q=document.getElementById("q");
+  const detailEmpty=document.getElementById("detail-empty");
+  const detailCard=document.getElementById("detail-card");
+  const btnTalk=document.getElementById("btn-talk");
+
+  function render(){
+    const term=(q.value||"").trim().toLowerCase();
+    const filtered=people.filter(p=>!term||p.name.toLowerCase().includes(term)||p.handle.toLowerCase().includes(term));
+    list.innerHTML="";
+    if(!filtered.length){
+      list.innerHTML='<li class="muted">No people match — try another locator, or invite a person.</li>';
+      return;
+    }
+    filtered.forEach(p=>{
+      const li=document.createElement("li");
+      li.setAttribute("role","option");
+      li.className="item";
+      li.setAttribute("aria-selected", selected&&selected.id===p.id ? "true":"false");
+      li.innerHTML='<span class="who">'+p.name+'</span><span class="meta">'+p.handle+' · '+p.blurb+'</span>';
+      li.addEventListener("click",()=>select(p));
+      list.appendChild(li);
+    });
+  }
+  function select(p){
+    selected=p;
+    detailEmpty.hidden=true;
+    detailCard.hidden=false;
+    document.getElementById("d-name").textContent=p.name;
+    document.getElementById("d-meta").textContent=p.handle+" · "+p.blurb;
+    const claim=document.getElementById("d-claim");
+    claim.textContent=p.claim==="live"?"Claim Live":"Claim Planned";
+    claim.className="pill "+(p.claim==="live"?"live":"planned");
+    btnTalk.disabled=false;
+    status.textContent="Selected · "+p.name+" · handle ≠ who";
+    render();
+  }
+  function openVolume(path){
+    if(!selected){status.textContent="Pick a person first.";return;}
+    status.textContent="Opening "+path+" for "+selected.name+"…";
+    try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:"webizen-open",route:path,peer:selected.id},"*"); }catch(e){}
+  }
+  q.addEventListener("input",render);
+  document.getElementById("btn-invite").addEventListener("click",()=>{
+    const name=prompt("Person's name?");
+    if(!name) return;
+    const p={id:"p"+Date.now(),name:name.trim(),handle:"pending",blurb:"Invited · claim Planned",claim:"planned"};
+    people.unshift(p); select(p); render();
+    status.textContent="Invite recorded locally · delivery Planned until locator binds.";
+  });
+  document.getElementById("btn-talk").addEventListener("click",()=>openVolume("/volumes/talk"));
+  document.getElementById("btn-open-talk").addEventListener("click",()=>openVolume("/volumes/talk"));
+  document.getElementById("btn-open-mail").addEventListener("click",()=>openVolume("/volumes/mail"));
+  render();
+  status.textContent="Directory · people first · tools stay tools.";
+})();
+
+</script>
+</body>
+</html>

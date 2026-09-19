@@ -1,0 +1,295 @@
+//! Loopback settings portal on `127.0.0.1:8080` (tray "Open Settings").
+//!
+//! Serves a browser-accessible control panel plus the HTTP surface that
+//! `webizen-studio` expects (`/manifest`, `/telemetry`).
+
+use axum::{
+    extract::{OriginalUri, Path, Query, State},
+    http::{header, HeaderMap, HeaderValue, Method, StatusCode},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Response,
+    },
+    routing::{get, post},
+    Json, Router,
+};
+use futures_util::stream::{self, Stream};
+use qualia_client_core::local_job_scheduler::{
+    EnqueueJobRequest, JobQueueSnapshot, LocalJob, LocalJobKind, LocalJobScheduler,
+};
+use qualia_client_core::state::{AgentConfig, AppState};
+use serde::{Deserialize, Serialize};
+use std::convert::Infallible;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tauri::Manager;
+use tower_http::{
+    cors::{AllowOrigin, CorsLayer},
+    services::{ServeDir, ServeFile},
+};
+use webizen_render::scene_contract::SystemTelemetry;
+
+pub const DEFAULT_SETTINGS_PORT: u16 = 8080;
+static CURRENT_SETTINGS_PORT: AtomicU16 = AtomicU16::new(DEFAULT_SETTINGS_PORT);
+
+const EMPTY_MANIFEST: &str =
+    r#"{"pages":[],"theme_tokens":{},"themes":[],"environment_theme":{},"app_theme":{}}"#;
+
+const WORKSPACE_MANIFEST_FILE: &str = "studio-workspace.json";
+
+fn workspace_manifest_path(storage_path: &str) -> PathBuf {
+    PathBuf::from(storage_path).join(WORKSPACE_MANIFEST_FILE)
+}
+
+fn load_persisted_manifest(storage_path: &str) -> String {
+    let path = workspace_manifest_path(storage_path);
+    match std::fs::read_to_string(&path) {
+        Ok(body) if body.trim().is_empty() => EMPTY_MANIFEST.to_string(),
+        Ok(body) => body,
+        Err(_) => EMPTY_MANIFEST.to_string(),
+    }
+}
+
+fn persist_manifest_to_disk(storage_path: &str, body: &str) -> Result<(), String> {
+    let path = workspace_manifest_path(storage_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, body.as_bytes()).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Clone)]
+pub struct SettingsServerState {
+    pub app_state: Arc<AppState>,
+    pub manifest: Arc<Mutex<String>>,
+    pub listen_port: Arc<Mutex<u16>>,
+    pub static_root: PathBuf,
+    pub host_api: crate::companion_gateway::HostApiHandle,
+}
+
+#[derive(Serialize)]
+struct HealthResponse {
+    status: &'static str,
+    service: &'static str,
+    port: u16,
+}
+
+#[derive(Serialize)]
+struct StatusResponse {
+    settings_port: u16,
+    companion_port: u16,
+    graph_daemon_port: u16,
+    graph_daemon_reachable: bool,
+    graph_daemon_label: String,
+    graph_daemon_honesty: String,
+    graph_engine_version: Option<String>,
+    qapps_protocol_port: u16,
+    storage_path: String,
+    inference_backend: String,
+    daemon_running_flag: bool,
+    job_queue: JobQueueCounts,
+    services: Vec<crate::supervisor::ServiceSnapshot>,
+    operations: Vec<crate::supervisor::OperationSnapshot>,
+}
+
+#[derive(Serialize)]
+struct JobQueueCounts {
+    queued: usize,
+    running: usize,
+    completed: usize,
+    failed: usize,
+}
+
+fn find_open_port(host: &str, start: u16) -> u16 {
+    for port in start..=start.saturating_add(20) {
+        if std::net::TcpListener::bind((host, port)).is_ok() {
+            return port;
+        }
+    }
+    start
+}
+
+fn static_portal_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("WEBIZEN_STATIC_PORTAL_DIR") {
+        let path = PathBuf::from(dir);
+        if path.is_dir() {
+            return path;
+        }
+        crate::desktop_log::record(
+            "warn",
+            format!(
+                "WEBIZEN_STATIC_PORTAL_DIR does not exist: {}",
+                path.display()
+            ),
+        );
+    }
+
+    let dev_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/portal");
+    let mut candidates = Vec::new();
+    if let Some(resource_dir) = APP_HANDLE
+        .get()
+        .and_then(|app| app.path().resource_dir().ok())
+    {
+        candidates.push(resource_dir.join("portal"));
+        candidates.push(resource_dir.join("static").join("portal"));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("portal"));
+            candidates.push(dir.join("static").join("portal"));
+            candidates.push(dir.join("portal-dist"));
+        }
+    }
+    candidates.push(dev_dir.clone());
+
+    candidates
+        .into_iter()
+        .find(|path| path.is_dir())
+        .unwrap_or(dev_dir)
+}
+
+fn studio_dist_dir() -> PathBuf {
+    if let Some(resource_dir) = APP_HANDLE
+        .get()
+        .and_then(|app| app.path().resource_dir().ok())
+    {
+        let bundled = resource_dir.join("studio-dist");
+        if bundled.is_dir() {
+            return bundled;
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let sidecar = dir.join("studio-dist");
+            if sidecar.is_dir() {
+                return sidecar;
+            }
+        }
+    }
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .map(|crates| crates.join("webizen-studio").join("dist"))
+        .unwrap_or_else(|| PathBuf::from("../webizen-studio/dist"))
+}
+
+/// Documentation assets shared by the desktop Design Studio and GitHub Pages.
+///
+/// Release bundles place this tree at `portal-support`; development builds
+/// read the checked-in `docs/` tree directly. This keeps the desktop page from
+/// silently losing a newly imported module or WASM package.
+fn portal_support_dir() -> PathBuf {
+    let mut candidates = Vec::new();
+    if let Some(resource_dir) = APP_HANDLE
+        .get()
+        .and_then(|app| app.path().resource_dir().ok())
+    {
+        candidates.push(resource_dir.join("portal-support"));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("portal-support"));
+        }
+    }
+    let docs_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|crates| crates.parent())
+        .map(|root| root.join("docs"))
+        .unwrap_or_else(|| PathBuf::from("../../docs"));
+    candidates.push(docs_dir.clone());
+
+    candidates
+        .into_iter()
+        .find(|path| path.is_dir())
+        .unwrap_or(docs_dir)
+}
+
+/// Directory where the Studio WASM build is served from.
+/// The `dx build --release` command outputs to `target/dx/webizen-studio/release/web/public/`.
+/// A build script or manual copy step places the assets in `static/studio-wasm/`.
+fn studio_wasm_dir() -> PathBuf {
+    // Check for a manual override first
+    if let Ok(dir) = std::env::var("QUALIA_STUDIO_WASM_DIR") {
+        return PathBuf::from(dir);
+    }
+    // Prefer the bundled Studio dist used by Tauri itself. The desktop app is
+    // now a first-class Tauri webview; /studio is kept for browser diagnostics
+    // and external preview links.
+    let dist_dir = studio_dist_dir();
+    if dist_dir.is_dir() {
+        return dist_dir;
+    }
+    // Development fallback: look for the Dioxus target directory.
+    let target_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent() // crates/
+        .and_then(|p| p.parent()) // project root
+        .map(|root| root.join("target/dx/webizen-studio/release/web/public"))
+        .unwrap_or_else(|| PathBuf::from("target/dx/webizen-studio/release/web/public"));
+    if target_dir.is_dir() {
+        return target_dir;
+    }
+    // Fallback: static/studio-wasm (populated by a build script)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/studio-wasm")
+}
+
+pub fn current_settings_port() -> u16 {
+    CURRENT_SETTINGS_PORT.load(Ordering::Relaxed)
+}
+
+pub fn spawn_settings_server(
+    app_state: Arc<AppState>,
+    host_api: crate::companion_gateway::HostApiHandle,
+) -> u16 {
+    // Use the user-configured port from AgentConfig, or auto-find if set to 0
+    let configured_port = app_state
+        .config
+        .lock()
+        .map(|config| config.settings_port)
+        .unwrap_or(DEFAULT_SETTINGS_PORT);
+    let port = if configured_port > 0 {
+        // Try the user-specified port; if it's taken, fall back to auto-find
+        if std::net::TcpListener::bind(("127.0.0.1", configured_port)).is_ok() {
+            configured_port
+        } else {
+            eprintln!(
+                "Settings port {} is in use, auto-finding an open port...",
+                configured_port
+            );
+            find_open_port("127.0.0.1", DEFAULT_SETTINGS_PORT)
+        }
+    } else {
+        find_open_port("127.0.0.1", DEFAULT_SETTINGS_PORT)
+    };
+    let storage_path = app_state
+        .config
+        .lock()
+        .map(|config| config.storage_path.clone())
+        .unwrap_or_else(|_| qualia_client_core::state::dirs_default_path());
+    CURRENT_SETTINGS_PORT.store(port, Ordering::Relaxed);
+    crate::desktop_log::record("info", format!("settings server selected port {port}"));
+    let initial_manifest = load_persisted_manifest(&storage_path);
+    let state = SettingsServerState {
+        app_state,
+        manifest: Arc::new(Mutex::new(initial_manifest)),
+        listen_port: Arc::new(Mutex::new(port)),
+        static_root: static_portal_dir(),
+        host_api: host_api.clone(),
+    };
+
+    let companion_port = find_open_port("0.0.0.0", port.saturating_add(1));
+    crate::companion_gateway::set_companion_listen_port(companion_port);
+
+    let companion_host_api = host_api;
+    tauri::async_runtime::spawn(async move {
+        if let Err(err) = run_settings_server(state, port).await {
+            if let Some(supervisor) = APP_HANDLE
+                .get()
+                .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
+            {
+                supervisor.service_failed("settings_ap"
+}
