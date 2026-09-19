@@ -1,1 +1,29 @@
-PLACEHOLDER
+/* EMERGENCY restore — replace with full REPAIR_css.json via CallDynamicTool */
+:root{--void:#03060c;--ink:#eaf3fa;--mute:#7f95a8;--teal:#2fe0c8;--cyan:#4db8ff;--violet:#8b7cff;--live:#3dffb0;--plan:#8a9aab;--focus:#ffd27a;--glass:rgba(12,20,32,.62);--line:rgba(255,255,255,.10);--panel:rgba(10,16,26,.78);color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{font:14px/1.45 system-ui,-apple-system,sans-serif;color:var(--ink);background:linear-gradient(180deg,#040810,#071018 42%,#050c14);padding:1.15rem 1.25rem 1.6rem}
+.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:100;padding:10px 14px;background:var(--focus);color:#111;border-radius:8px}
+.panel,.vol{background:var(--glass);border:1px solid var(--line);border-radius:18px;box-shadow:0 28px 70px #000a;overflow:hidden}
+.ph,.vh{display:flex;align-items:center;gap:.55rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:12px}
+.pb,.vb{padding:1rem 1.05rem 1.15rem}
+button{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);padding:.55rem .9rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
+button.primary{background:rgba(47,224,200,.18);border-color:rgba(47,224,200,.42);color:#b8fff4}
+.set-layout{display:grid;gap:1rem;max-width:1100px}
+@media(min-width:880px){.set-layout{grid-template-columns:12rem 1fr}}
+.set-nav{display:flex;flex-direction:column;gap:.25rem}
+.set-nav button{appearance:none;border:1px solid transparent;background:transparent;color:var(--mute);text-align:left;padding:.55rem .7rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
+.set-nav button[aria-current="true"]{background:rgba(47,224,200,.14);border-color:rgba(47,224,200,.35);color:var(--teal)}
+.muted{color:var(--mute);font-size:12px}
+
+/* Sanctuary · Vault · keyRoles */
+.key-inv{display:grid;gap:.45rem;margin:.75rem 0}
+.key-row{display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center;padding:.55rem .7rem;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03)}
+.key-row .who{font-family:ui-monospace,monospace;font-size:12px;color:var(--teal)}
+.key-row .meta{font-size:11px;color:var(--mute);margin-top:.15rem}
+.key-actions{display:flex;flex-wrap:wrap;gap:.35rem}
+.key-actions button{font-size:11px;padding:.3rem .55rem;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:inherit;cursor:pointer}
+.key-actions button:disabled{opacity:.4;cursor:not-allowed}
+.vault-status{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0 .85rem}
+.vault-status .pill{font-size:11px}
+.policy-block{margin-top:.85rem;padding-top:.65rem;border-top:1px solid var(--line)}
+.set-nav button .badge{font-size:9px;margin-left:.35rem;opacity:.7}
