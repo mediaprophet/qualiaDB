@@ -460,9 +460,15 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     <div class="group">Setup</div>
     <button type="button" data-pane="setup">First-run · host</button>
     <button type="button" data-pane="wallet-setup">Wallet rails</button>
+    <button type="button" data-pane="companion">Companion · phone</button>
+    <button type="button" data-pane="identity">Person · devices</button>
     <div class="group">Configuration</div>
     <button type="button" data-pane="agent">Agent · Console prefs</button>
     <button type="button" data-pane="instruments">Instruments binds</button>
+    <button type="button" data-pane="data">Data · memory</button>
+    <button type="button" data-pane="privacy">Privacy · sanctuary</button>
+    <button type="button" data-pane="backup">Backup · sync</button>
+    <button type="button" data-pane="services">Services · daemon</button>
     <button type="button" data-pane="advanced">Advanced</button>
   </nav>
   <section class="panel" aria-label="Settings pane">
@@ -509,10 +515,42 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<div class="toggle"><div><div class="t-label">Local model bind</div></div><button type="button" class="switch" data-k="localm" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Allowlisted tools only</div></div><button type="button" class="switch" data-k="allow" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="row"><button type="button" id="open-instr">Open Instruments volume</button></div>'},
+    companion:{title:"Companion · phone",pill:"Setup · Planned",html:
+      '<p class="muted" style="margin-top:0">Pair a phone companion — QR + LAN WS ingest. Companion is a <strong>tool / locator</strong>, never a NaturalAgent peer.</p>'+
+      '<div class="toggle"><div><div class="t-label">Allow companion gateway</div><div class="t-hint">Host WS bind Planned until Desktop claims</div></div><button type="button" class="switch" data-k="compgw" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Show pairing QR in setup</div><div class="t-hint">Local paint Live · secure-origin install Planned</div></div><button type="button" class="switch" data-k="pairqr" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="note"><strong>Source:</strong> <code>companion_gateway.rs</code> · WellFair pairing panel · live-share = consent, not Talk. Continuity: QR ≠ who.</div>'},
+    identity:{title:"Person · devices",pill:"Setup",html:
+      '<p class="muted" style="margin-top:0">Identity plane — actor DID / WebID as <strong>handle</strong>, not who-bag. Hardware probe is optional and separate from person.</p>'+
+      '<div class="toggle"><div><div class="t-label">Show identity plane cards</div><div class="t-hint">Local Live · host claims Planned</div></div><button type="button" class="switch" data-k="idplane" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Fleet / multi-apparatus</div><div class="t-hint">Signed peer jobs · Planned</div></div><button type="button" class="switch" data-k="fleet" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
+      '<div class="row"><button type="button" id="open-directory">Open Directory volume</button></div>'+
+      '<div class="note"><strong>Source:</strong> <code>settings/identity_plane.rs</code> · Device section · <code>/api/fleet/identity</code>. handle ≠ human.</div>'},
+    data:{title:"Data · memory",pill:"Config",html:
+      '<p class="muted" style="margin-top:0">Private records, library, social assets, commons — distinct strata under your data home. Path change ≠ migrate.</p>'+
+      '<div class="toggle"><div><div class="t-label">Show storage location</div><div class="t-hint">From host diagnostics when claimed</div></div><button type="button" class="switch" data-k="storloc" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Warn before path edits</div><div class="t-hint">Migration honesty</div></div><button type="button" class="switch" data-k="pathwarn" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="note"><strong>Source:</strong> Studio <code>SettingsSection::Data</code> · <code>DataAndMemory</code>. Low-level path field stays Advanced Technical.</div>'},
+    privacy:{title:"Privacy · sanctuary",pill:"Config",html:
+      '<p class="muted" style="margin-top:0">Sanctuary lock, vault volumes, consent grants. Volumes survive handle revoke — never person-deleted copy.</p>'+
+      '<div class="toggle"><div><div class="t-label">Sanctuary lock on sleep</div><div class="t-hint">Host command Planned until bind</div></div><button type="button" class="switch" data-k="sanlock" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Require consent for live-share</div></div><button type="button" class="switch" data-k="consent" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="row"><button type="button" id="open-keep">Open Keep volume</button></div>'+
+      '<div class="note"><strong>Source:</strong> <code>SettingsSection::Privacy</code> · WellfairSanctuary/Consent · Keep ≠ Files (Files Planned).</div>'},
+    backup:{title:"Backup · sync",pill:"Config · Planned",html:
+      '<p class="muted" style="margin-top:0">Import, backup, trusted relay. Host-bound sync stays Planned until Desktop claims — no fake “synced” theatre.</p>'+
+      '<div class="toggle"><div><div class="t-label">Local backup reminders</div></div><button type="button" class="switch" data-k="bakrem" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Trusted relay sync</div><div class="t-hint">Planned until host bind</div></div><button type="button" class="switch" data-k="relay" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
+      '<div class="note"><strong>Source:</strong> <code>WellfairSyncBackupPanel</code> · portal “Backup and sync”. Ops jobs for sync stay in Admin.</div>'},
+    services:{title:"Services · daemon",pill:"Config",html:
+      '<p class="muted" style="margin-top:0">Local control plane + graph daemon status. Ports and updates — configuration, not an ops queue.</p>'+
+      '<div class="toggle"><div><div class="t-label">Show daemon status strip</div><div class="t-hint">:4242 honesty from host</div></div><button type="button" class="switch" data-k="daemstat" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Auto-check updates</div><div class="t-hint">Updater path · Planned channel UI</div></div><button type="button" class="switch" data-k="updchk" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
+      '<div class="note"><strong>Source:</strong> <code>SettingsSection::Services</code> · portal graph daemon · <code>/api/status</code>. Jobs/logs → Admin volume.</div>'},
     advanced:{title:"Advanced",pill:"Config",html:
       '<div class="toggle"><div><div class="t-label">Legacy Studio shell</div><div class="t-hint">WEBIZEN_LEGACY_SHELL only — not product default</div></div><button type="button" class="switch" data-k="legacy" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Verbose volume logs</div></div><button type="button" class="switch" data-k="logs" role="switch" aria-checked="false"><span></span></button></div>'+
-      '<div class="note">Admin (jobs / scheduler) stays a separate <strong>ops</strong> volume — not Settings.</div>'}
+      '<div class="note">Admin (jobs / scheduler) stays a separate <strong>ops</strong> volume — not Settings. Maps Studio Technical + raw providers.</div>'}
   };
   const paneEl=document.getElementById("pane");
   const title=document.getElementById("pane-title");
@@ -536,6 +574,10 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     if(ow) ow.onclick=()=>{ try{parent.postMessage({type:"webizen-open",route:"/wallet"},"*");}catch(e){} };
     const oi=document.getElementById("open-instr");
     if(oi) oi.onclick=()=>{ try{parent.postMessage({type:"webizen-open",route:"/volumes/instruments"},"*");}catch(e){} };
+    const od=document.getElementById("open-directory");
+    if(od) od.onclick=()=>{ try{parent.postMessage({type:"webizen-open",route:"/volumes/directory"},"*");}catch(e){} };
+    const ok=document.getElementById("open-keep");
+    if(ok) ok.onclick=()=>{ try{parent.postMessage({type:"webizen-open",route:"/volumes/keep"},"*");}catch(e){} };
   }
   function show(id){
     const p=panes[id]||panes.appearance;
