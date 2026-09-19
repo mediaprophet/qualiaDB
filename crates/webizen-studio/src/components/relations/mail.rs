@@ -166,7 +166,7 @@ pub fn MailInboxPane() -> Element {
     let send_mail = move |_| {
         if !smtp_ready(&transport()) {
             status.set(
-                "Held / not yet — outbound SMTP is not configured. You can still read mail that has landed. Reception holds domain and transport setup.".into(),
+                "Planned — outbound SMTP is not configured. Reading landed mail stays Live. Reception holds domain and transport setup.".into(),
             );
             return;
         }
@@ -257,9 +257,9 @@ pub fn MailInboxPane() -> Element {
 
             if held {
                 div { style: "{WARNING_CARD} margin:12px 18px 0;flex-shrink:0;",
-                    strong { "Held / not yet" }
+                    strong { "Planned" }
                     p { style: "margin:6px 0 10px;font-size:.76rem;line-height:1.45;",
-                        "The mail receiver is not running. Mail already here stays readable. New messages will not land until you start it."
+                        "Receiver is Planned until started. Mail already here stays readable (Live). New messages will not land until you start it."
                     }
                     button {
                         style: "{PRIMARY_BUTTON}",
@@ -379,7 +379,7 @@ pub fn MailInboxPane() -> Element {
                             }
                             if !smtp_ready(&transport()) {
                                 p { style: "margin:0 0 8px;font-size:.72rem;color:#fde68a;line-height:1.45;",
-                                    "Held / not yet — sending needs outbound SMTP. Draft here; Reception holds transport setup. Reading does not wait on that."
+                                    "Planned — sending needs outbound SMTP. Draft here; Reception holds transport setup. Reading stays Live."
                                 }
                             }
                             label { style: "font-size:.68rem;color:#94a3b8;", "From" }

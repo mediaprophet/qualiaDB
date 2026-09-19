@@ -14,5 +14,5 @@
 /// Full-document HTML for the default OS shell.
 pub const OS_SHELL_HTML: &str = include_str!("../../static/os-shell/index.html");
 
-/// Multi-chain Wallet human-app stage (orbit tile; not MCP-only).
+/// Multi-rail Wallet human-app stage (Lightning · Nym · XEC · tokens; no ETH) (orbit tile; not MCP-only).
 pub const WALLET_STAGE_HTML: &str = include_str!("../../static/os-shell/wallet.html");

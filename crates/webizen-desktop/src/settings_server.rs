@@ -892,7 +892,7 @@ a{color:#7ec8ff}h1{font-size:1.15rem;margin:0 0 .5rem}.muted{color:#9aa8b8}ul{pa
 }
 
 
-/// Wallet orbit tile — multi-chain human app (not MCP-only). ETH/BTC Live where real; others Planned.
+/// Wallet orbit tile — Lightning · Nym · eCash · tokens (not MCP-only). No ETH target.
 async fn wallet_handler() -> Response {
     Response::builder()
         .status(StatusCode::OK)
@@ -902,7 +902,8 @@ async fn wallet_handler() -> Response {
         .unwrap()
 }
 
-/// Honest wallet overview for the stage iframe: Live vs Planned chains + identity claims.
+/// Honest wallet overview for the stage iframe: Live vs Planned rails + identity claims.
+/// Prefer Lightning · Nym · eCash (XEC) · tokens. ETH is not a target.
 /// Avoids Chronik network I/O so orbit open stays snappy; balances stay claim/address honest.
 async fn wallet_overview_handler() -> Json<serde_json::Value> {
     let identity = qualia_client_core::api::read_identity();
@@ -916,29 +917,44 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
             .unwrap_or("")
             .to_string()
     };
-    let eth_addr = addr("ethereum");
-    let btc_addr = addr("bitcoin_btc");
+    // Lightning claim may be present as bitcoin_btc / lightning keys; BTC rail maps to Lightning.
+    let ln_addr = {
+        let a = addr("lightning");
+        if a.is_empty() {
+            addr("bitcoin_btc")
+        } else {
+            a
+        }
+    };
+    let nym_addr = addr("nym");
     let xec_addr = addr("ecash_xec");
+    let token_claim = identity
+        .as_ref()
+        .and_then(|v| v.get("tokens"))
+        .map(|v| !v.is_null() && v != &serde_json::json!([]))
+        .unwrap_or(false);
 
     let mut assets = Vec::new();
     if has_identity {
-        if !eth_addr.is_empty() {
+        if !ln_addr.is_empty() {
             assets.push(serde_json::json!({
-                "ticker": "ETH",
-                "coin": "Ethereum",
-                "network": "Ethereum",
+                "ticker": "sats",
+                "coin": "Lightning",
+                "network": "Lightning",
+                "chain": "Lightning",
                 "balance_display": "—",
-                "address": eth_addr,
+                "address": ln_addr,
                 "status": "live"
             }));
         }
-        if !btc_addr.is_empty() {
+        if !nym_addr.is_empty() {
             assets.push(serde_json::json!({
-                "ticker": "BTC",
-                "coin": "Bitcoin",
-                "network": "Bitcoin",
+                "ticker": "NYM",
+                "coin": "Nym",
+                "network": "Nym",
+                "chain": "Nym",
                 "balance_display": "—",
-                "address": btc_addr,
+                "address": nym_addr,
                 "status": "live"
             }));
         }
@@ -947,12 +963,28 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
                 "ticker": "XEC",
                 "coin": "eCash",
                 "network": "eCash",
+                "chain": "eCash",
                 "balance_display": "—",
                 "address": xec_addr,
                 "status": "live"
             }));
         }
+        if token_claim {
+            assets.push(serde_json::json!({
+                "ticker": "tokens",
+                "coin": "Tokens",
+                "network": "token rails",
+                "chain": "Tokens",
+                "balance_display": "—",
+                "status": "live"
+            }));
+        }
     }
+
+    let ln_status = if !ln_addr.is_empty() { "live" } else { "planned" };
+    let nym_status = if !nym_addr.is_empty() { "live" } else { "planned" };
+    let xec_status = if !xec_addr.is_empty() { "live" } else { "planned" };
+    let tokens_status = if token_claim { "live" } else { "planned" };
 
     Json(serde_json::json!({
         "has_identity": has_identity,
@@ -962,12 +994,15 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
             "agent_proposes_human_signs": true,
             "keys_human_owned": true
         },
+        "policy": {
+            "prefer": ["lightning", "nym", "ecash", "tokens"],
+            "not_targeted": ["ethereum", "ETH"]
+        },
         "chains": [
-            {"id": "ethereum", "name": "Ethereum", "ticker": "ETH", "status": "live"},
-            {"id": "bitcoin", "name": "Bitcoin", "ticker": "BTC", "status": "live"},
-            {"id": "solana", "name": "Solana", "ticker": "SOL", "status": "planned"},
-            {"id": "cosmos", "name": "Cosmos", "ticker": "ATOM", "status": "planned"},
-            {"id": "polkadot", "name": "Polkadot", "ticker": "DOT", "status": "planned"}
+            {"id": "lightning", "name": "Lightning", "ticker": "sats", "status": ln_status},
+            {"id": "nym", "name": "Nym", "ticker": "NYM", "status": nym_status},
+            {"id": "ecash", "name": "eCash", "ticker": "XEC", "status": xec_status},
+            {"id": "tokens", "name": "Tokens", "ticker": "tokens", "status": tokens_status}
         ],
         "assets": assets
     }))
@@ -1722,6 +1757,15 @@ mod ui_route_tests {
         assert!(html.contains("handle"), "continuity: handle");
         assert!(html.contains("Planned") || html.contains("planned"), "Planned honesty");
         assert!(html.contains("/api/wallet/overview"), "overview fetch");
+        assert!(html.contains("Lightning"), "Lightning rail");
+        assert!(html.contains("Nym"), "Nym rail");
+        assert!(html.contains("XEC") || html.contains("eCash"), "eCash rail");
+        assert!(
+            !html.to_ascii_lowercase().contains("ethereum")
+                && !html.contains("\"ETH\"")
+                && !html.contains("ticker:\"ETH\""),
+            "ETH must not be a Live target"
+        );
     }
 
     #[test]

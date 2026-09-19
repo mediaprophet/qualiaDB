@@ -45,7 +45,7 @@ code{color:var(--accent)}
 <body>
 <header>
   <h1>Wallet <span class="pill live">live</span></h1>
-  <p class="lead">Multi-chain human app · keys stay with the person · handle ≠ human · agent proposes, human signs. Not MCP-only. QApps parked.</p>
+  <p class="lead">Nym · Lightning · eCash (XEC) · tokens · keys stay with the person · handle ≠ human · agent proposes, human signs. ETH is not a target. Not MCP-only. QApps parked.</p>
 </header>
 <div class="stage">
   <section class="vol" aria-label="Wallet overview">
@@ -61,7 +61,7 @@ code{color:var(--accent)}
         <button type="button" disabled title="Planned">Add chain</button>
       </div>
       <table>
-        <thead><tr><th>Asset</th><th>Chain</th><th>Amount</th><th>Status</th></tr></thead>
+        <thead><tr><th>Asset</th><th>Rail</th><th>Amount</th><th>Status</th></tr></thead>
         <tbody id="assets"></tbody>
       </table>
       <p id="status" role="status" aria-live="polite"></p>
@@ -77,7 +77,7 @@ code{color:var(--accent)}
         <li><strong>handle</strong> — wallet id ≠ person</li>
         <li><strong>tool</strong> — Instruments/LLM may propose a tx; human signs</li>
       </ul>
-      <div class="note"><strong>Orbit:</strong> after Talk · Mail · Directory — with Browser · Keep · Library · Instruments · Wallet · Settings · Admin. ETH/BTC surfaces are <strong>Live</strong> where identity/adapters exist; other chains stay <strong>Planned</strong> — no fake balances.</div>
+      <div class="note"><strong>Orbit:</strong> after Talk · Mail · Directory — with Browser · Keep · Library · Instruments · Wallet · Settings · Admin. Rails: Lightning · Nym · eCash (XEC) · tokens. <strong>Live</strong> only where claims exist; else <strong>Planned</strong> — no fake balances, no ETH.</div>
     </div>
   </section>
 </div>
@@ -87,11 +87,10 @@ code{color:var(--accent)}
     sync_status:"offline",
     has_identity:false,
     chains:[
-      {id:"ethereum",name:"Ethereum",ticker:"ETH",status:"live"},
-      {id:"bitcoin",name:"Bitcoin",ticker:"BTC",status:"live"},
-      {id:"solana",name:"Solana",ticker:"SOL",status:"planned"},
-      {id:"cosmos",name:"Cosmos",ticker:"ATOM",status:"planned"},
-      {id:"polkadot",name:"Polkadot",ticker:"DOT",status:"planned"}
+      {id:"lightning",name:"Lightning",ticker:"sats",status:"planned"},
+      {id:"nym",name:"Nym",ticker:"NYM",status:"planned"},
+      {id:"ecash",name:"eCash",ticker:"XEC",status:"planned"},
+      {id:"tokens",name:"Tokens",ticker:"tokens",status:"planned"}
     ],
     assets:[]
   };
@@ -113,7 +112,7 @@ code{color:var(--accent)}
     const assets=data.assets||[];
     if(!assets.length){
       const tr=document.createElement("tr");
-      tr.innerHTML='<td colspan="4">No live balances yet — unlock identity / KeyVault. ETH &amp; BTC stay Live surfaces; Planned chains never invent amounts.</td>';
+      tr.innerHTML='<td colspan="4">No live balances yet — unlock identity / KeyVault. Live only where claims exist (Lightning · Nym · XEC · tokens); Planned rails never invent amounts. No ETH.</td>';
       assetsEl.appendChild(tr);
       bal.textContent="—";
       sub.textContent=data.has_identity?"Identity present · adapters may still be offline":"Awaiting human identity · handle ≠ who";
