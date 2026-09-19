@@ -1,1 +1,1 @@
-@/tmp/settings_patched.rs
+file:///tmp/settings_patched.rs
