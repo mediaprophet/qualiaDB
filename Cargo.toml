@@ -62,3 +62,34 @@ opt-level = "s"
 # we upgrade to imap 3.x (which uses the imap-types ecosystem instead).
 [patch.crates-io]
 imap-proto = { path = "vendor/imap-proto" }
+# The 0.8.0-alpha.1 desktop renderer was not published to crates.io. Keep the
+# complete Dioxus package family on the signed upstream release commit; mixing
+# the Git renderer with registry packages creates incompatible VNode types.
+dioxus = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-asset-resolver = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-cli-config = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-config-macro = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-config-macros = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-core = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-core-macro = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-core-types = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-devtools = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-devtools-types = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-document = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-fullstack = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-fullstack-core = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-fullstack-macro = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-history = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-hooks = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-html = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-html-internal-macro = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-interpreter-js = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-logger = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-router = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-router-macro = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-rsx = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-signals = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-stores = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-stores-macro = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
+dioxus-web = { git = "https://github.com/DioxusLabs/dioxus.git", rev = "0dbfab5274abd3628b0558f909b5946e783dbc65" }
