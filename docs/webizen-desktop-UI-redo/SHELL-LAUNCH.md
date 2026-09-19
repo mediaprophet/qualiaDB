@@ -7,8 +7,8 @@
 
 Cold start loads the **spatial OS-shell scaffolding** (not the Studio life-domain chrome):
 
-- URL: `http://127.0.0.1:{settings_port}/os-shell`
-- Code: `crates/webizen-desktop/src/shell/os_shell.rs` (`OS_SHELL_HTML`)
+- URL: `http://127.0.0.1:{settings_port}/shell` (Gate 1 body; prefers `/os-shell` when that route is present)
+- Code: `crates/webizen-desktop/src/shell/os_shell.rs` (`OS_SHELL_HTML`); `/shell` re-exports via `shell_html.rs`
 - Mode resolve: `crates/webizen-desktop/src/shell/launch.rs`
 
 ### Default favorites (Live / findable — no agent required)
@@ -53,10 +53,10 @@ cargo run -p webizen-desktop -- --legacy-shell
 
 | Mode | Main window | How |
 |------|-------------|-----|
-| **Default / OS shell** | Spatial scaffolding at `/os-shell` | `window.location.replace` after settings port is known |
+| **Default / OS shell** | Spatial scaffolding at `/shell` (or `/os-shell`) | `schedule_shell_launch` from `build_app_menu` → `location.replace` after `/api/health` |
 | **Legacy** | Bundled Studio (`frontendDist` → `webizen-studio/dist`) | No replace; Studio stays on `main` |
 
-The tabbed `/shell` HTML (`shell_html.rs`) is unchanged — it is **not** the legacy flag target. Legacy = Studio life-domain chrome.
+`/shell` now serves the Gate 1 OS-shell body (`shell_html.rs` → `OS_SHELL_HTML`). It is **not** the legacy flag target. Legacy = Studio life-domain chrome. Cold start is scheduled from `shell::build_app_menu` so the tip works before `main.rs` calls `apply_shell_launch` directly.
 
 ## Continuity
 
@@ -69,3 +69,4 @@ The tabbed `/shell` HTML (`shell_html.rs`) is unchanged — it is **not** the le
 ## Gate 0 honesty
 
 This tip is **scaffolding**: chrome + launch switch + findable Live app stage. Full window manager and WGPU attach remain Planned — labelled as such in the shell.
+
