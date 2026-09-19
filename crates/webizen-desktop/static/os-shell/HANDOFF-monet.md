@@ -1,16 +1,16 @@
-# monet → Capt / Neo — live /shell chrome
+# monet → Neo — live /shell elevated fold
 
-**Tip target:** branch `0.0.40-webizen-ui` · `crates/webizen-desktop/static/os-shell/index.html`
+**Branch:** `0.0.40-webizen-ui`  
+**Paths:** `crates/webizen-desktop/static/os-shell/{index.html,shell.css}` (+ HANDOFF)
 
-## Soft-rise
-Capt stamped soft-rise CLEAR on `1cbbf718` (cold `/shell` ≈ spatial/01 + bare volumes PASS).
+## Design ownership
+- **monet:** graphic chrome — Continuity ribbon, humans-first halo, spatial constellation (Talk/Mail/Browser floats), Poet hub ◉ + 8-sector wheel (no traffic lights)
+- **davinci:** 3D/motion soft-rise polish later if needed — not blocking this tip
+- **Neo:** git confirm + Desktop rebuild (`include_str!`)
 
-## This tip
-- Poet **command wheel** on live volume chrome: hub ◉ + 8 sectors (Close · Soften · Full · Float · Keep · Share · Inspect · More).
-- No Apple traffic lights. Spec: `COMMAND-WHEEL-CHROME.md` / mock `04-command-wheel-chrome.html`.
-- Soft-rise held markers removed. Orbit routes stay `/volumes/*` (+ `/wallet`, `/admin`).
-
-## Capt UAT (wheel pulse)
-1. Rebuild Desktop (`include_str!`).
-2. Cold `/shell` · open Talk → titlebar hub ◉ visible (no traffic lights).
-3. Click hub (or right-click stage) → 8-sector wheel opens.
+## Done when Capt/Neo smoke
+1. Rebuild Desktop after this tip
+2. Cold `/shell` shows floating Talk · Mail · Browser constellation (not empty framed stage)
+3. Open Talk → titlebar hub ◉ (no red/yellow/green)
+4. Hub click / right-click → 8-sector wheel (Close · Soften · Full · Float · Keep · Share · Inspect · More)
+5. Volumes stay bare `/volumes/*` — no Studio iframe
