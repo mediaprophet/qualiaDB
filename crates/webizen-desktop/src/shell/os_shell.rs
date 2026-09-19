@@ -1,11 +1,11 @@
 //! New Webizen Desktop OS-shell HTML scaffolding (default launch path).
 //!
 //! Gate 0: spatial / 3D-capable chrome — not a classic dock+traffic-lights identity.
-//! Elevated chrome (Continuity ribbon, humans-first halo): `static/os-shell/{index.html,shell.css}`
-//! (monet tip a516a0c / 4f86fd9). Soft-rise CLEAR (Capt). Volume chrome: Poet hub ◉ + 8-sector wheel.
+//! Elevated chrome (humans-first halo; no Continuity ribbon theatre): `static/os-shell/{index.html,shell.css}`.
+//! Soft-rise CLEAR (Capt). Volume chrome: Poet hub ◉ + 8-sector wheel.
 //!
-//! Default orbit (Gate 1): Talk · Mail · Directory · Browser · Keep · Library ·
-//! Instruments · Wallet · Settings · Admin (QApps parked).
+//! Primary cold-shell orbit: Talk · Mail · Directory · Library · Settings.
+//! Soft-demoted (launcher APPS): Browser · Keep · Instruments · Wallet · Admin · …
 //!
 //! **Timothy lock:** orbit stages are dedicated HTML under `/volumes/*` (+ `/wallet`,
 //! `/admin`) — **never** Studio SPA iframes. Legacy Studio stays on `/talk`, `/browser`,
@@ -18,7 +18,7 @@
 /// Full-document HTML for the default OS shell.
 pub const OS_SHELL_HTML: &str = include_str!("../../static/os-shell/index.html");
 
-/// Elevated spatial shell stylesheet (Continuity ribbon + halo).
+/// Elevated spatial shell stylesheet (humans-first halo; no Continuity ribbon).
 pub const OS_SHELL_CSS: &str = include_str!("../../static/os-shell/shell.css");
 
 pub const VOLUMES_CSS: &str = include_str!("../../static/os-shell/volumes.css");

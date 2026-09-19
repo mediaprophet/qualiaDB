@@ -1841,18 +1841,30 @@ mod ui_route_tests {
     #[test]
     fn os_shell_orbit_includes_wallet_tile() {
         let html = crate::shell::OS_SHELL_HTML;
-        assert!(html.contains("data-app=\"wallet\""), "wallet fav tile");
+        // Primary cold-shell orbit: Talk · Mail · Directory · Library · Settings
+        assert!(html.contains("data-app=\"talk\""), "talk fav tile");
+        assert!(html.contains("data-app=\"mail\""), "mail fav tile");
+        assert!(html.contains("data-app=\"directory\""), "directory fav tile");
+        assert!(html.contains("data-app=\"library\""), "library fav tile");
+        assert!(html.contains("data-app=\"settings\""), "settings fav tile");
+        assert!(!html.contains("aria-label=\"Continuity planes\""), "no Continuity ribbon strip");
+        assert!(!html.contains("ribbon-inner"), "no Continuity ribbon strip");
+        assert!(
+            html.contains("handle ≠ human") || html.contains("agent = tool"),
+            "Continuity language in footer OK"
+        );
+        // Soft-demoted volumes remain launchable (APPS), not primary halo chrome
         assert!(html.contains("route:\"/wallet\""), "wallet live route");
         assert!(html.contains("route:\"/volumes/talk\""), "talk bare volume");
         assert!(html.contains("route:\"/volumes/mail\""), "mail bare volume");
         assert!(html.contains("route:\"/volumes/directory\""), "directory bare volume");
-        assert!(html.contains("route:\"/volumes/browser\""), "browser bare volume");
-        assert!(html.contains("route:\"/volumes/instruments\""), "instruments bare volume");
+        assert!(html.contains("route:\"/volumes/library\""), "library bare volume");
         assert!(html.contains("route:\"/volumes/settings\""), "settings bare volume");
+        assert!(html.contains("route:\"/volumes/browser\""), "browser still in launcher APPS");
         assert!(!html.contains("route:\"/talk\""), "must not iframe legacy /talk Studio");
         assert!(!html.contains("route:\"/talk/mail"), "must not iframe Studio mail");
         assert!(!html.contains("?embed="), "no Studio embed query");
-        assert!(html.contains("ribbon") || html.contains("Continuity") || html.contains("who"), "Continuity ribbon");
+        assert!(!html.contains("data-app=\"console\""), "Console not on app ring");
         assert!(html.contains("halo") || html.contains("human"), "humans-first halo");
         assert!(
             html.contains("◉") || html.contains("command wheel") || html.contains("vol-chrome"),
@@ -1871,7 +1883,7 @@ mod ui_route_tests {
             "talk volume must not paint Relations chrome"
         );
         assert!(
-            crate::shell::OS_SHELL_CSS.contains("ribbon") || crate::shell::OS_SHELL_CSS.contains(".halo"),
+            crate::shell::OS_SHELL_CSS.contains(".halo"),
             "elevated shell.css present"
         );
     }
