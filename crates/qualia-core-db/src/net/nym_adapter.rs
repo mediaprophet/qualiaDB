@@ -1,7 +1,14 @@
+//! Nym mixnet adapter surface for core-db.
+//!
+//! Historical demo/mock path removed. Live enable/bind lives in
+//! `qualia_client_core::nym_live` (official `nym-sdk`). This module keeps the
+//! config shape and fails closed unless a real client reports live.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NymConfig {
+    /// When true, prefer sandbox (default). Production uses mainnet + credentials.
     pub is_demo_mode: bool,
     pub mixnet_proxy_port: u16,
     pub active_network: String,
@@ -10,52 +17,29 @@ pub struct NymConfig {
 impl Default for NymConfig {
     fn default() -> Self {
         Self {
-            is_demo_mode: true,      // Safety-first default
-            mixnet_proxy_port: 1080, // Standard SOCKS5 port
-            active_network: "sandbox-testnet".to_string(),
+            is_demo_mode: true,
+            mixnet_proxy_port: 1080,
+            active_network: "sandbox".to_string(),
         }
     }
 }
 
-/// Initializes the Nym SOCKS5 Mixnet proxy.
-/// In Demo Mode, it connects to the Sandbox Testnet and seamlessly hits the faucet.
+/// Former mock initializer — no longer simulates a SOCKS5 bind.
+/// Callers must use `qualia_client_core::nym_live::enable_nym` for a real client.
 pub async fn initialize_nym_proxy(config: &NymConfig) -> Result<(), String> {
-    println!(
-        "Initializing Nym Mixnet Proxy on port {}",
-        config.mixnet_proxy_port
-    );
-
-    if config.is_demo_mode {
-        println!("Demo Mode active: Pointing Nym client to the Sandbox Testnet.");
-        request_testnet_faucet_funds().await?;
-    } else {
-        println!(
-            "Production Mode: Using real NYX tokens for zero-knowledge bandwidth credentials."
-        );
-    }
-
-    // Simulate binding the local proxy
-    println!("Nym SOCKS5 Proxy active. All Lightning/HTTP traffic is now anonymized.");
-    Ok(())
+    Err(format!(
+        "nym_adapter::initialize_nym_proxy is not a live bind (network={}). \
+         Use Wallet/Settings enable → qualia_client_core::nym_live (nym-sdk).",
+        config.active_network
+    ))
 }
 
-/// Seamlessly requests Nyx from the Sandbox Faucet so the user doesn't spend real money during testing.
-async fn request_testnet_faucet_funds() -> Result<(), String> {
-    println!("Contacting Nym Sandbox Faucet for bandwidth funding...");
-    // Mock network call
-    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
-    println!("Faucet Success: Received testnet NYX. Bandwidth credentials minted.");
-    Ok(())
-}
-
-/// Routes an outbound payload through the Mixnet using Sphinx packet encryption.
+/// Former mock Sphinx dispatch — fails closed. Real routing is a follow-up once
+/// the mixnet client is live and claimed.
 pub async fn route_through_mixnet(_payload: &[u8]) -> Result<Vec<u8>, String> {
-    // 1. Wrap payload in Sphinx encryption
-    // 2. Dispatch through 3 mix-nodes
-    // 3. Await SURB (Single Use Reply Block) response
-
-    println!("Dispatching Sphinx-encrypted payload through the 3-hop mixnet...");
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-
-    Ok(b"MIXNET_RESPONSE_OK".to_vec())
+    Err(
+        "nym_adapter::route_through_mixnet has no live path — \
+         mixnet client claim+bind required (no simulated MIXNET_RESPONSE_OK)"
+            .into(),
+    )
 }

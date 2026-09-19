@@ -63,6 +63,8 @@ pub mod mesh_channel;
 pub mod model_lifecycle;
 pub mod model_preferences;
 pub mod node_identity;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod nym_live;
 pub mod ollama_harness;
 pub mod ontology_router;
 pub mod ontology_workbench;

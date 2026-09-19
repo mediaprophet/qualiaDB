@@ -64,7 +64,11 @@ winreg = "0.56"
 # Provider bearer credentials are held by the operating-system keychain, never
 # serialized into the agent roster or inference settings files.
 keyring = "4"
+# Official Nym mixnet client — Wallet/Settings enable → real claim+bind.
+nym-sdk = "1.21.6"
+nym-network-defaults = "1.22.0"
 
 [dev-dependencies]
 dhat = "0.3.3"
 tempfile = "3.1"
+

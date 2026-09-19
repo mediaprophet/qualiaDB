@@ -404,6 +404,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/admin", get(admin_handler))
         .route("/wallet", get(wallet_handler))
         .route("/api/wallet/overview", get(wallet_overview_handler))
+        .route("/api/wallet/nym", get(wallet_nym_status_handler).post(wallet_nym_handler))
         .route("/jobs", get(studio_index_handler))
         .route("/logs", get(studio_index_handler))
         .route("/desktop-logs", get(logs_page_handler))
@@ -996,10 +997,18 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
             a
         }
     };
-    // Canonical claim key is `nym` (seed used to write `nym_mixnet` — migrate).
-    // Fabricated n1… stubs are not real locators: treat as unbound → Planned.
+    // Live only when nym-sdk client is up AND a real address is claimed (no n1…).
+    let nym_live = qualia_client_core::api::nym_live_status_json();
+    let nym_client_live = nym_live.get("live").and_then(|v| v.as_bool()).unwrap_or(false);
     let nym_addr = {
-        let raw = {
+        let from_client = nym_live
+            .get("address")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let raw = if !from_client.is_empty() {
+            from_client
+        } else {
             let a = addr("nym");
             if a.is_empty() {
                 addr("nym_mixnet")
@@ -1007,12 +1016,13 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
                 a
             }
         };
-        if raw.starts_with("n1") {
+        if raw.starts_with("n1") || !nym_client_live {
             String::new()
         } else {
             raw
         }
     };
+
     let xec_addr = addr("ecash_xec");
     let token_claim = identity
         .as_ref()
@@ -1092,6 +1102,45 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
         ],
         "assets": assets
     }))
+}
+
+
+#[derive(Debug, Deserialize)]
+struct WalletNymBody {
+    /// true = enable/connect; false = disable/disconnect
+    enable: bool,
+    /// "sandbox" (default) or "mainnet"
+    #[serde(default)]
+    network: Option<String>,
+}
+
+async fn wallet_nym_status_handler() -> Json<serde_json::Value> {
+    Json(qualia_client_core::api::nym_live_status_json())
+}
+
+async fn wallet_nym_handler(
+    Json(body): Json<WalletNymBody>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let result = if body.enable {
+        qualia_client_core::api::enable_nym_relay(body.network).await
+    } else {
+        qualia_client_core::api::disable_nym_relay().await
+    };
+    match result {
+        Ok(v) => Ok(Json(v)),
+        Err(e) => {
+            log::warn!("Nym enable/disable failed: {e}");
+            Err((
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({
+                    "live": false,
+                    "ok": false,
+                    "error": e,
+                    "client": "nym-sdk@1.21.6"
+                })),
+            ))
+        }
+    }
 }
 
 pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();

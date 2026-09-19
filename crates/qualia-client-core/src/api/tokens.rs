@@ -1056,45 +1056,57 @@ pub async fn import_external_seed(
 }
 
 pub async fn toggle_nym_relay() -> Result<bool, String> {
-    let state = crate::state::APP_STATE.get().unwrap();
-    let active = &state.nym_relay_active;
-    let currently_active = active.load(Ordering::Relaxed);
-    let new_state = !currently_active;
-    active.store(new_state, Ordering::Relaxed);
-
-    if new_state {
-        let active_clone = active.clone();
-
-        // Spawn asynchronous background daemon for packet routing
-        tokio::spawn(async move {
-            let mut packets_routed = 0;
-            let mut _packets_dropped = 0;
-
-            while active_clone.load(Ordering::Relaxed) {
-                // Simulate network fluctuations and calculate memory backpressure
-                // Enforcing a strict 50MB telemetry boundary cap internally
-                let packet_load_factor = 1.0 + (packets_routed % 5) as f64 * 0.2;
-                let buffer_memory_mb = 12.4 * packet_load_factor;
-                let is_congested = buffer_memory_mb > 45.0;
-
-                if is_congested {
-                    _packets_dropped += 15;
-                } else {
-                    packets_routed += 42;
-                }
-
-                // let _ = window_clone.emit("nym-telemetry", RelayTelemetry {
-                //     packets_routed,
-                //     packets_dropped,
-                //     buffer_memory_mb,
-                //     is_congested,
-                // });
-
-                sleep(Duration::from_millis(500)).await;
-            }
-        });
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        return crate::nym_live::toggle_nym_relay().await;
     }
-    Ok(new_state)
+    #[cfg(target_arch = "wasm32")]
+    {
+        Err("Nym client is native-only — no mock relay".into())
+    }
+}
+
+pub async fn enable_nym_relay(network: Option<String>) -> Result<serde_json::Value, String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let st = crate::nym_live::enable_nym(network).await?;
+        return Ok(serde_json::to_value(st).unwrap_or_default());
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = network;
+        Err("Nym client is native-only — no mock relay".into())
+    }
+}
+
+pub async fn disable_nym_relay() -> Result<serde_json::Value, String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let st = crate::nym_live::disable_nym().await?;
+        return Ok(serde_json::to_value(st).unwrap_or_default());
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        Err("Nym client is native-only — no mock relay".into())
+    }
+}
+
+pub fn nym_live_status_json() -> serde_json::Value {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        return serde_json::to_value(crate::nym_live::nym_live_status()).unwrap_or_default();
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        serde_json::json!({
+            "live": false,
+            "enabled_wanted": false,
+            "address": "",
+            "network": "",
+            "error": "native-only",
+            "client": "none"
+        })
+    }
 }
 
 pub async fn toggle_stark_prover() -> Result<bool, String> {

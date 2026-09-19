@@ -501,7 +501,7 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     "wallet-setup":{title:"Wallet rails",pill:"Setup",html:
       '<p class="muted" style="margin-top:0">Configure which rails appear — Lightning · Nym · XEC · tokens. No ETH. Signing stays human.</p>'+
       '<div class="toggle"><div><div class="t-label">Lightning</div><div class="t-hint">Show rail in Wallet</div></div><button type="button" class="switch" data-k="ln" role="switch" aria-checked="true"><span></span></button></div>'+
-      '<div class="toggle"><div><div class="t-label">Nym</div><div class="t-hint">Required for Nym network stack — enable here; host bind with Neo/Noddy</div></div><button type="button" class="switch" data-k="nym" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Nym</div><div class="t-hint">Enable → host /api/wallet/nym → nym-sdk connect+claim (sandbox default)</div></div><button type="button" class="switch" data-k="nym" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">eCash XEC</div></div><button type="button" class="switch" data-k="xec" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="row"><button type="button" class="primary" id="open-wallet">Open Wallet volume</button></div>'},
     agent:{title:"Agent · Console prefs",pill:"Config",html:
@@ -591,6 +591,31 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       btn.addEventListener("click",()=>{
         if(btn.disabled) return;
         const on=btn.getAttribute("aria-checked")!=="true";
+        if(k==="nym"){
+          status.textContent=(on?"Enabling":"Disabling")+" Nym via host…";
+          btn.disabled=true;
+          fetch("/api/wallet/nym",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({enable:on,network:"sandbox"})})
+            .then(async r=>{
+              const j=await r.json().catch(()=>({}));
+              if(!r.ok||j.live===false&&on){
+                btn.setAttribute("aria-checked","false");
+                store.nym=false; localStorage.setItem("webizen.settings.v1", JSON.stringify(store));
+                status.textContent="Nym failed: "+(j.error||("HTTP "+r.status))+" — not Live";
+                return;
+              }
+              btn.setAttribute("aria-checked", on&&j.live!==false?"true":"false");
+              store.nym=!!(on&&j.live!==false);
+              localStorage.setItem("webizen.settings.v1", JSON.stringify(store));
+              status.textContent=store.nym?("Nym Live · "+(j.address||j.network||"claimed")):"Nym off · claim cleared";
+            })
+            .catch(e=>{
+              btn.setAttribute("aria-checked","false");
+              store.nym=false; localStorage.setItem("webizen.settings.v1", JSON.stringify(store));
+              status.textContent="Nym host error: "+e.message;
+            })
+            .finally(()=>{ btn.disabled=false; });
+          return;
+        }
         btn.setAttribute("aria-checked", on?"true":"false");
         if(k){ store[k]=on; localStorage.setItem("webizen.settings.v1", JSON.stringify(store)); }
         status.textContent=(on?"On":"Off")+" · "+(k||"pref")+" · saved locally";
