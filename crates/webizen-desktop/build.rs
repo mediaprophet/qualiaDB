@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
+    glue_settings_server_parts();
     tauri_build::build();
 
     // Tauri/winres embeds a full application manifest (Common Controls v6, DPI,
@@ -117,4 +118,46 @@ fn path_as_gcc_b_prefix(dir: &Path) -> String {
         s.push('/');
     }
     s
+}
+
+
+fn glue_settings_server_parts() {
+    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let parts_dir = manifest.join("src/ss_parts");
+    if !parts_dir.is_dir() {
+        return;
+    }
+    let mut body = String::new();
+    let mut n = 0usize;
+    loop {
+        let p = parts_dir.join(format!("p{n}.txt"));
+        if !p.is_file() {
+            break;
+        }
+        body.push_str(
+            &fs::read_to_string(&p).unwrap_or_else(|e| panic!("read {}: {e}", p.display())),
+        );
+        println!("cargo:rerun-if-changed={}", p.display());
+        n += 1;
+    }
+    if n == 0 {
+        return;
+    }
+    // Downgrade inner module docs (`//!`) to plain comments so `include!` is valid
+    // inside settings_server.rs (which already owns the module docs).
+    let body = body
+        .lines()
+        .map(|line| {
+            if let Some(rest) = line.strip_prefix("//!") {
+                format!("//{rest}")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let body = if body.ends_with('\n') { body } else { body + "\n" };
+    let out = manifest.join("src/settings_server_glued.rs");
+    fs::write(&out, body).expect("write glued settings_server");
+    println!("cargo:rerun-if-changed=src/ss_parts");
 }
