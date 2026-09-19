@@ -216,12 +216,35 @@ pub fn schedule_shell_launch(app: &tauri::AppHandle) {
         } else {
             "/shell"
         };
-        match app.get_webview_window("main") {
-            Some(window) => apply_shell_launch_at(&window, port, mode, path),
-            None => crate::desktop_log::record(
-                "error",
-                "schedule_shell_launch: main webview missing — Gate 1 shell not applied",
-            ),
+        // Studio frontendDist boots first; Capt FAIL 964c2dc60 showed Classic reclaiming the
+        // webview after a single navigate. Re-apply until elevated /shell sticks.
+        const AT_MS: &[u64] = &[0, 100, 250, 500, 1000, 2000, 3500];
+        let mut elapsed = 0u64;
+        for (i, &target) in AT_MS.iter().enumerate() {
+            if target > elapsed {
+                tokio::time::sleep(std::time::Duration::from_millis(target - elapsed)).await;
+                elapsed = target;
+            }
+            match app.get_webview_window("main") {
+                Some(window) => {
+                    crate::desktop_log::record(
+                        "info",
+                        format!(
+                            "cold-start OS shell navigate attempt {} @{}ms → http://127.0.0.1:{port}{path}",
+                            i + 1,
+                            target
+                        ),
+                    );
+                    apply_shell_launch_at(&window, port, mode, path);
+                }
+                None => crate::desktop_log::record(
+                    "error",
+                    "schedule_shell_launch: main webview missing — Gate 1 shell not applied",
+                ),
+            }
+            if mode == ShellMode::Legacy {
+                break;
+            }
         }
     });
 }
