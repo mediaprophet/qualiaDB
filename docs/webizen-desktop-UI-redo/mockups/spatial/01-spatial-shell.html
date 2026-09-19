@@ -1,1 +1,93 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Webizen Desktop — Gate 1 spatial shell</title>
+<style>
+:root{--bg:#050a12;--teal:#3ecfbf;--cyan:#5ec8ff;--ink:#e8f2f8;--muted:#8aa0b4;--live:#34d399;--planned:#94a3b8;--glass:rgba(18,28,40,.55);--line:rgba(255,255,255,.12);--focus:#ffd166}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:14px/1.4 system-ui,sans-serif;color:var(--ink);background:var(--bg);overflow:hidden}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.stage{position:relative;height:100%;background:radial-gradient(900px 500px at 20% 30%,#1a4a5c66,transparent 55%),radial-gradient(700px 400px at 80% 70%,#0d3a4a55,transparent 50%),linear-gradient(160deg,#050a12,#0c1a28 50%,#102030);perspective:1400px}
+.manifold{position:absolute;inset:8% 6% 18% 6%;transform:rotateX(12deg) rotateY(-8deg);transform-style:preserve-3d;border-radius:28px;background:linear-gradient(135deg,rgba(62,207,191,.08),transparent 40%);border:1px solid var(--line);box-shadow:0 40px 120px #000a,inset 0 0 80px #3ecfbf14}
+.gpu{position:absolute;left:8%;right:28%;top:10%;bottom:28%;border-radius:18px;transform:translateZ(20px);background:linear-gradient(180deg,#0a1520ee,#122433cc);border:1px solid rgba(94,200,255,.25);display:grid;place-items:center;color:var(--muted);text-align:center;padding:20px;font-size:13px}
+.gpu strong{display:block;color:var(--cyan);font-size:15px;margin-bottom:6px}
+.continuity{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--line);font-size:12px}
+.continuity span{padding:4px 10px;border-radius:999px;color:var(--muted)}.continuity .on{background:#3ecfbf22;color:var(--teal);font-weight:600}
+.orbit{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);z-index:40;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;justify-content:center;max-width:96vw;padding:10px 12px;border-radius:20px;background:linear-gradient(180deg,rgba(20,32,48,.75),rgba(10,16,26,.85));border:1px solid var(--line);backdrop-filter:blur(16px)}
+.orbit a{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:56px;padding:8px 6px;border-radius:14px;color:var(--ink);text-decoration:none;border:1px solid transparent;font-size:11px}
+.orbit a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.orbit a.human{background:#3ecfbf18;border-color:#3ecfbf44}
+.orbit a .g{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(160deg,#2a4058,#1a2838);font-size:14px}
+.orbit a.human .n{color:var(--teal)}.orbit .n{color:var(--muted)}
+.orbit .tools{display:flex;gap:6px;flex-wrap:wrap;padding-left:8px;border-left:1px solid var(--line)}
+.vol{position:absolute;background:var(--glass);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 60px #0008;overflow:hidden;min-width:200px}
+.vol:focus-within{outline:2px solid var(--focus)}
+.vol .h{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,.25);border-bottom:1px solid var(--line);font-size:12px}
+.vol .h b{flex:1}.vol .b{padding:14px;font-size:13px;color:var(--muted)}
+.vol .b h2{margin:0 0 6px;font-size:16px;color:var(--ink)}
+.pill{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600}
+.live{background:#34d39933;color:var(--live)}.planned{background:#94a3b833;color:var(--planned)}
+.v1{left:10%;top:22%;width:min(320px,40vw);transform:translateZ(60px) rotateY(4deg)}
+.v2{right:8%;top:18%;width:min(260px,30vw);transform:translateZ(30px) rotateY(-6deg)}
+.v3{left:28%;top:48%;width:min(340px,42vw);transform:translateZ(80px)}
+.banner{position:absolute;top:52px;right:16px;z-index:25;max-width:220px;padding:10px 12px;border-radius:12px;font-size:11px;color:var(--muted);background:rgba(0,0,0,.45);border:1px solid var(--line)}
+.banner strong{color:var(--cyan);display:block;margin-bottom:4px}
+.constellation{position:absolute;right:4%;bottom:22%;width:min(300px,34vw);max-height:40vh;overflow:auto;z-index:35;padding:12px;border-radius:16px;background:rgba(8,14,22,.82);border:1px solid var(--line)}
+.constellation h2{margin:0 0 6px;font-size:13px}.constellation p{margin:0 0 8px;font-size:11px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tile{display:flex;align-items:center;gap:6px;padding:8px;border-radius:10px;background:rgba(255,255,255,.04);border:0;color:var(--ink);font-size:12px;text-align:left;width:100%;cursor:default}
+.tile:focus-visible{outline:2px solid var(--focus)}.tile .s{margin-left:auto}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;z-index:99;padding:8px 12px;background:var(--focus);color:#000}
+@media(max-width:720px){
+.manifold{inset:4% 3% 26% 3%;transform:none}.v2,.constellation{display:none}
+.v1,.v3{left:4%;right:4%;width:auto;transform:none}.v1{top:16%}.v3{top:50%}
+.gpu{left:4%;right:4%;top:8%;bottom:auto;height:11%;font-size:11px}
+.orbit .tools{border:none;padding-left:0;width:100%;justify-content:center}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main</a>
+<div class="stage">
+<header class="continuity" role="banner" aria-label="Continuity planes">
+<span class="on">who</span><span aria-hidden="true">·</span><span>claim</span><span aria-hidden="true">·</span><span>handle</span><span aria-hidden="true">·</span><span>tool</span>
+</header>
+<p class="banner" aria-hidden="true"><strong>Gate 1 — spatial</strong>Not OSX/Windows/Linux. Depth stage. Humans-first. Live/Planned only. QApps parked.</p>
+<div class="manifold" aria-hidden="true"><div class="gpu"><div><strong>GPU viewport · WGPU attach</strong>Apps soft-rise into Live volumes. 10D/Chora depth. Reduced-motion respected.</div></div></div>
+<main id="main" role="main">
+<section class="vol v1" aria-label="Talk"><div class="h"><b>Talk</b><span class="pill live">Live</span></div><div class="b"><h2>Person waiting for a person</h2>Human ↔ human. Chatbot is a tool, not the peer.<p style="margin:10px 0 0"><label for="m" class="skip">Message</label><input id="m" placeholder="Message a person…" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:#0a121c;color:var(--ink)"/></p></div></section>
+<section class="vol v2" aria-label="Mail"><div class="h"><b>Mail</b><span class="pill live">Live</span></div><div class="b">Resurface from inventory. Soft-rise into Live.</div></section>
+<section class="vol v3" aria-label="Browser"><div class="h"><b>Browser</b><span class="pill live">Live</span></div><div class="b"><code style="color:var(--cyan)">webizen://home</code><br/>Findable — native renderer attaches. Not agent-only.</div></section>
+<aside class="constellation" aria-label="App constellation">
+<h2>Constellation</h2>
+<p>First-class apps + Settings/admin. Library + Instruments findable. QApps parked.</p>
+<div class="grid">
+<button type="button" class="tile">Directory <span class="s pill live">Live</span></button>
+<button type="button" class="tile">Keep <span class="s pill live">Live</span></button>
+<button type="button" class="tile">Library <span class="s pill live">Live</span></button>
+<button type="button" class="tile">Instruments <span class="s pill live">Live</span></button>
+<button type="button" class="tile">Settings <span class="s pill live">Live</span></button>
+<button type="button" class="tile">Admin <span class="s pill live">Live</span></button>
+<button type="button" class="tile">Browser <span class="s pill live">Live</span></button>
+<button type="button" class="tile">Poet <span class="s pill planned">tile</span></button>
+</div>
+</aside>
+</main>
+<nav class="orbit" role="navigation" aria-label="Humans-first favorites">
+<a class="human" href="#talk"><span class="g" aria-hidden="true">💬</span><span class="n">Talk</span></a>
+<a class="human" href="#mail"><span class="g" aria-hidden="true">✉</span><span class="n">Mail</span></a>
+<a class="human" href="#dir"><span class="g" aria-hidden="true">👥</span><span class="n">Directory</span></a>
+<div class="tools" aria-label="Tools">
+<a href="#browser"><span class="g" aria-hidden="true">🌐</span><span class="n">Browser</span></a>
+<a href="#keep"><span class="g" aria-hidden="true">📒</span><span class="n">Keep</span></a>
+<a href="#library"><span class="g" aria-hidden="true">📚</span><span class="n">Library</span></a>
+<a href="#instruments"><span class="g" aria-hidden="true">🎛</span><span class="n">Instruments</span></a>
+<a href="#settings"><span class="g" aria-hidden="true">⚙</span><span class="n">Settings</span></a>
+<a href="#admin"><span class="g" aria-hidden="true">🛠</span><span class="n">Admin</span></a>
+</div>
+</nav>
+</div>
+</body>
+</html>
