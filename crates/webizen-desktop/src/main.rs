@@ -1,1 +1,1 @@
-file:///workspace/qualiaDB/crates/webizen-desktop/src/main.rs
+/workspace/qualiaDB/crates/webizen-desktop/src/main.rs
