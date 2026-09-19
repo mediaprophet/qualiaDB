@@ -143,6 +143,7 @@ html,body{height:100%;margin:0;overflow:hidden;font:14px/1.4 system-ui,sans-seri
   .stage{transform:none}
 }
 </style>
+<!-- Soft-rise held until Capt stamps bare volumes -->
 </head>
 <body>
 <a class="skip" href="#app-stage">Skip to stage</a>
@@ -211,15 +212,15 @@ html,body{height:100%;margin:0;overflow:hidden;font:14px/1.4 system-ui,sans-seri
 <script>
 (function(){
 const APPS=[
-{id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/talk",human:true},
-{id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/talk/mail",human:true},
-{id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/talk/directory",human:true},
-{id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/browser"},
-{id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/keep"},
-{id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/library"},
-{id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/tools"},
+{id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/volumes/talk",human:true},
+{id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/volumes/mail",human:true},
+{id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/volumes/directory",human:true},
+{id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/volumes/browser"},
+{id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/volumes/keep"},
+{id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/volumes/library"},
+{id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/volumes/instruments"},
 {id:"wallet",name:"Wallet",glyph:"⚡",blurb:"Lightning · Nym · XEC · tokens · human keys.",status:"live",route:"/wallet"},
-{id:"settings",name:"Settings",glyph:"⚙",blurb:"Settings for humans.",status:"live",route:"/settings"},
+{id:"settings",name:"Settings",glyph:"⚙",blurb:"Settings for humans.",status:"live",route:"/volumes/settings"},
 {id:"admin",name:"Admin",glyph:"🛠",blurb:"Jobs · logs · ops.",status:"live",route:"/admin"},
 {id:"poet",name:"Poet",glyph:"🪶",blurb:"Migrate-in later.",status:"planned",route:null},
 ];
