@@ -41,6 +41,9 @@ pub mod gguf_sharder;
 pub mod metal_bridge;
 pub mod moe;
 pub mod neuro_symbolic_sieve;
+pub mod operator_converter;
+pub mod operator_package;
+pub mod operator_runtime;
 pub mod orchestrator;
 pub mod qwen;
 #[cfg(not(target_arch = "wasm32"))]

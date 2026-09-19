@@ -26,7 +26,7 @@ pub struct GgufTensorIndex {
 
 /// True when `name` is a per-layer matmul weight consumed by `dispatch_transformer_layer`.
 fn is_layer_matmul_tensor_name(name: &[u8]) -> bool {
-    const SUFFIXES: [&[u8]; 7] = [
+    const SUFFIXES: [&[u8]; 14] = [
         b"attn_q.weight",
         b"attn_k.weight",
         b"attn_v.weight",
@@ -34,6 +34,13 @@ fn is_layer_matmul_tensor_name(name: &[u8]) -> bool {
         b"ffn_gate.weight",
         b"ffn_up.weight",
         b"ffn_down.weight",
+        b"ffn_gate_inp.weight",
+        b"ffn_gate_exps.weight",
+        b"ffn_up_exps.weight",
+        b"ffn_down_exps.weight",
+        b"ffn_gate_shexp.weight",
+        b"ffn_up_shexp.weight",
+        b"ffn_down_shexp.weight",
     ];
     if !name.starts_with(b"blk.") {
         return false;
@@ -460,6 +467,7 @@ impl GgufTensorIndex {
     /// Retrieve attention + FFN tensor metadata for one transformer block.
     pub fn get_layer_tensors(&self, layer_idx: u32) -> LayerTensors {
         LayerTensors {
+            layer_idx,
             attn_norm: self.find_layer_tensor(layer_idx, b"attn_norm.weight"),
             attn_q: self.find_layer_tensor(layer_idx, b"attn_q.weight"),
             attn_k: self.find_layer_tensor(layer_idx, b"attn_k.weight"),
@@ -469,6 +477,13 @@ impl GgufTensorIndex {
             ffn_gate: self.find_layer_tensor(layer_idx, b"ffn_gate.weight"),
             ffn_up: self.find_layer_tensor(layer_idx, b"ffn_up.weight"),
             ffn_down: self.find_layer_tensor(layer_idx, b"ffn_down.weight"),
+            moe_router: self.find_layer_tensor(layer_idx, b"ffn_gate_inp.weight"),
+            moe_gate_exps: self.find_layer_tensor(layer_idx, b"ffn_gate_exps.weight"),
+            moe_up_exps: self.find_layer_tensor(layer_idx, b"ffn_up_exps.weight"),
+            moe_down_exps: self.find_layer_tensor(layer_idx, b"ffn_down_exps.weight"),
+            moe_shared_gate: self.find_layer_tensor(layer_idx, b"ffn_gate_shexp.weight"),
+            moe_shared_up: self.find_layer_tensor(layer_idx, b"ffn_up_shexp.weight"),
+            moe_shared_down: self.find_layer_tensor(layer_idx, b"ffn_down_shexp.weight"),
         }
     }
 

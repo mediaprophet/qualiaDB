@@ -40,7 +40,20 @@ impl QTensorEngine {
             );
             let gate_info = match tensors.ffn_gate.as_ref() {
                 Some(i) => i,
-                None => return false,
+                None => {
+                    if tensors.moe_router.is_some() {
+                        let moe_ok = self.dispatch_moe_ffn(index, emb_dim, tensors, scratch_a, ffn_input);
+                        if moe_ok {
+                            add_residual_inplace(
+                                &mut hidden[..emb_dim],
+                                &scratch_a[..emb_dim],
+                                emb_dim,
+                            );
+                            return true;
+                        }
+                    }
+                    return false;
+                }
             };
             let up_info = match tensors.ffn_up.as_ref() {
                 Some(i) => i,

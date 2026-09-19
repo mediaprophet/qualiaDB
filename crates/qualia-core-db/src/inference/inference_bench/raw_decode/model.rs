@@ -26,7 +26,20 @@ impl RawModel {
             .clone()
             .ok_or_else(|| "model did not memory-map".to_string())?;
         let is_p64 = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
-        let (tokenizer, index) = if is_p64 {
+        let (tokenizer, index) = if let Some(ref pkg) = engine.ftw_package {
+            let path_obj = std::path::Path::new(model_path);
+            let dir = if path_obj.is_dir() { path_obj } else { path_obj.parent().unwrap_or(path_obj) };
+            let tok_path = dir.join("tokenizer.json");
+            let tok = if tok_path.is_file() {
+                std::fs::read_to_string(&tok_path)
+                    .ok()
+                    .and_then(|s| GgufTokenizer::from_hf_json(&s))
+                    .unwrap_or_default()
+            } else {
+                GgufTokenizer::default()
+            };
+            (tok, pkg.tensor_index.clone())
+        } else if is_p64 {
             let p64 = crate::p64_weight::P64TensorIndex::from_p64(&mmap)
                 .map_err(|e| format!("P64 index: {e}"))?;
             let tokenizer =

@@ -1513,7 +1513,14 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
-        let bind_layout = self.pipeline.get_bind_group_layout(0);
+        let use_mmv_q8_0 =
+            info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
+        let logits_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
+            &self.mmv_q8_0_pipeline
+        } else {
+            &self.pipeline
+        };
+        let bind_layout = logits_pipeline.get_bind_group_layout(0);
         let mut encoder = self
             .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -1559,9 +1566,13 @@ impl QTensorEngine {
                     label: None,
                     timestamp_writes: None,
                 });
-                cpass.set_pipeline(&self.pipeline);
+                cpass.set_pipeline(logits_pipeline);
                 cpass.set_bind_group(0, &bind_group, &[0]);
-                cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+                if use_mmv_q8_0 {
+                    cpass.dispatch_workgroups((chunk_rows as u32 + 3) / 4, 1, 1);
+                } else {
+                    cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+                }
             }
             if !self.encode_browser_top1_chunk(
                 &mut encoder,

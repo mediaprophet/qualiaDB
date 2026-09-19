@@ -440,7 +440,7 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         crate::llm_bench::add_decode_attn_ns(t_attn.elapsed().as_nanos() as u64);
 
-        if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() {
+        if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() && tensors.moe_router.is_none() {
             return false;
         }
 
@@ -1770,12 +1770,16 @@ impl QTensorEngine {
             return None;
         }
 
+        // Flush the transformer layers to the GPU now. This guarantees all layer
+        // GEMMs execute with their staged parameters, avoids uniform buffer overwrite
+        // hazards, and ensures the hidden state in batch_buf is fully computed.
+        self.mc8_flush(&mut enc);
+
         // === Output norm on GPU ===
         let output_norm_info = match index.output_norm_info() {
             Some(i) => i,
             None => {
                 // No output norm — just read hidden and fall back to CPU argmax
-                self.mc8_flush(&mut enc);
                 if !self.pipeline_read_hidden(emb_dim, hidden).await {
                     return None;
                 }
@@ -1787,7 +1791,6 @@ impl QTensorEngine {
         if dequant_norm_row_into(mmap, index.tensor_data_start, output_norm_info, &mut norm_w)
             < n_embd
         {
-            self.mc8_flush(&mut enc);
             return None;
         }
         self.gpu_queue()
@@ -1819,8 +1822,11 @@ impl QTensorEngine {
         // Copy normed hidden back to batch_buf for argmax GEMM input
         enc.encoder
             .copy_buffer_to_buffer(prefill_scratch, 0, batch_buf, 0, n_embd_bytes);
+        // Flush the output norm pass so batch_buf contains the normalized hidden state
+        // before the logits projection GEMM pass reads it.
+        self.mc8_flush(&mut enc);
 
-        // === Batched argmax in same encoder ===
+        // === Batched argmax in fresh encoder ===
         let resident_buf = self.mc8_logits_resident_buf.as_ref()?;
         let row_bytes = self.mc8_logits_row_bytes as u64;
         let output_buf = self.gemm_output_buf.as_ref().unwrap();

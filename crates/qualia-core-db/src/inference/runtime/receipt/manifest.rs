@@ -160,6 +160,21 @@ impl OsrpBaselineManifest {
             peak_vram_mb: 11200,
         }
     }
+
+    pub fn granite_4_0_h_tiny_q4km_reference() -> Self {
+        Self {
+            model_id: "granite-4.0-h-tiny-Q4_K_M".into(),
+            model_sha256: "064bea0136420b38d0b65697fa5e772e28b112eee1757aacc7f64eba6bf37810".into(),
+            launch_invocation: "qualia-cli.exe llm raw-decode-bench granite-4.0-h-tiny-Q4_K_M.gguf --quantization Q4_K_M".into(),
+            prompt_tokens: 8,
+            decode_tokens: 16,
+            prefill_tok_s: 15.0,
+            decode_tok_s: 0.15,
+            ttft_ms: 500.0,
+            p95_inter_token_ms: 7500.0,
+            peak_vram_mb: 4500,
+        }
+    }
 }
 
 /// Evaluation outcome across the 7 mandatory A2000 parity release gates.

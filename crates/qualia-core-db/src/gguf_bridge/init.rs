@@ -1196,6 +1196,8 @@ impl QTensorEngine {
             p64_index: None,
             #[cfg(not(target_arch = "wasm32"))]
             tensor_index_cache: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            ftw_package: None,
             tensor_data_offset: 0,
             hyperparams: crate::gguf_sharder::GgufHyperparams::default(),
             max_tensor_bytes: 0,
@@ -1347,6 +1349,8 @@ impl QTensorEngine {
             p64_index: None,
             #[cfg(not(target_arch = "wasm32"))]
             tensor_index_cache: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            ftw_package: None,
             tensor_data_offset: 0,
             hyperparams: crate::gguf_sharder::GgufHyperparams::default(),
             max_tensor_bytes: 0,

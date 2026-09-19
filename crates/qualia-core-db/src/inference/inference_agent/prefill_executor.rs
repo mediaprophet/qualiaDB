@@ -39,13 +39,44 @@ pub fn execute_chunked_prefill(
     control: Option<&DecodeControl>,
     layer_cap: u32,
 ) -> PrefillOutcome {
+    execute_chunked_prefill_with_offset(
+        engine,
+        tensor_idx,
+        ctx,
+        0,
+        emb_dim,
+        prefill_chunk,
+        scratch_a,
+        scratch_b,
+        control,
+        layer_cap,
+    )
+}
+
+/// Execute chunked prefill starting from `start_pos`.
+///
+/// When a graph-assisted prefix hit occurs, `start_pos` matches the shared prefix token length,
+/// completely skipping redundant prefill computation for tokens already held in the paged KV cache.
+#[allow(clippy::too_many_arguments)]
+pub fn execute_chunked_prefill_with_offset(
+    engine: &mut crate::gguf_bridge::QTensorEngine,
+    tensor_idx: Option<&crate::inference::gguf_sharder::GgufTensorIndex>,
+    ctx: &[u32],
+    start_pos: usize,
+    emb_dim: usize,
+    prefill_chunk: &mut [f32],
+    scratch_a: &mut [f32],
+    scratch_b: &mut [f32],
+    control: Option<&DecodeControl>,
+    layer_cap: u32,
+) -> PrefillOutcome {
     let prompt_len = ctx.len();
-    if prompt_len <= 1 {
+    if prompt_len <= 1 || start_pos >= prompt_len.saturating_sub(1) {
         return PrefillOutcome::NoPrefillNeeded;
     }
 
     let Some(idx) = tensor_idx else {
-        return PrefillOutcome::Failed { pos: 0, tokens_processed: 0 };
+        return PrefillOutcome::Failed { pos: start_pos, tokens_processed: start_pos };
     };
 
     let prefill_tokens = prompt_len - 1;
@@ -53,7 +84,7 @@ pub fn execute_chunked_prefill(
         .min(PREFILL_CHUNK_SIZE)
         .max(1);
 
-    let mut pos = 0usize;
+    let mut pos = start_pos;
     while pos < prefill_tokens {
         if control.is_some_and(DecodeControl::is_cancelled) {
             return PrefillOutcome::Cancelled { tokens_processed: pos };

@@ -13,8 +13,9 @@
 use crate::p64_weight::{
     P64_LAYER_GLOBAL, P64_ROLE_ATTN_K, P64_ROLE_ATTN_NORM, P64_ROLE_ATTN_OUTPUT, P64_ROLE_ATTN_Q,
     P64_ROLE_ATTN_SUBLN, P64_ROLE_ATTN_V, P64_ROLE_FFN_DOWN, P64_ROLE_FFN_GATE, P64_ROLE_FFN_NORM,
-    P64_ROLE_FFN_SUBLN, P64_ROLE_FFN_UP, P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM,
-    P64_ROLE_TOKEN_EMBD,
+    P64_ROLE_FFN_SUBLN, P64_ROLE_FFN_UP, P64_ROLE_MOE_DOWN_EXPS, P64_ROLE_MOE_GATE_EXPS,
+    P64_ROLE_MOE_ROUTER, P64_ROLE_MOE_SHARED_DOWN, P64_ROLE_MOE_SHARED_GATE, P64_ROLE_MOE_SHARED_UP,
+    P64_ROLE_MOE_UP_EXPS, P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM, P64_ROLE_TOKEN_EMBD,
 };
 
 /// A resolved tensor identity: an engine role + its layer (`P64_LAYER_GLOBAL` for non-layer tensors).
@@ -70,6 +71,20 @@ pub fn name_to_role(name: &str) -> Option<TensorRole> {
         P64_ROLE_ATTN_V
     } else if name.contains("attn_output") || name.contains("o_proj") {
         P64_ROLE_ATTN_OUTPUT
+    } else if name.contains("ffn_gate_inp") || name.contains("gate_inp") || (name.contains("mlp") && name.contains("gate") && !name.contains("gate_proj") && !name.contains("gate_exps")) {
+        P64_ROLE_MOE_ROUTER
+    } else if name.contains("ffn_gate_shexp") || name.contains("shared_expert.gate_proj") {
+        P64_ROLE_MOE_SHARED_GATE
+    } else if name.contains("ffn_up_shexp") || name.contains("shared_expert.up_proj") {
+        P64_ROLE_MOE_SHARED_UP
+    } else if name.contains("ffn_down_shexp") || name.contains("shared_expert.down_proj") {
+        P64_ROLE_MOE_SHARED_DOWN
+    } else if name.contains("ffn_gate_exps") || (name.contains("experts") && name.contains("gate_proj")) {
+        P64_ROLE_MOE_GATE_EXPS
+    } else if name.contains("ffn_up_exps") || (name.contains("experts") && name.contains("up_proj")) {
+        P64_ROLE_MOE_UP_EXPS
+    } else if name.contains("ffn_down_exps") || (name.contains("experts") && name.contains("down_proj")) {
+        P64_ROLE_MOE_DOWN_EXPS
     } else if name.contains("ffn_gate") || name.contains("gate_proj") {
         P64_ROLE_FFN_GATE
     } else if name.contains("ffn_up") || name.contains("up_proj") {
@@ -228,6 +243,45 @@ mod tests {
             Some(TensorRole {
                 role: P64_ROLE_OUTPUT_NORM,
                 layer: P64_LAYER_GLOBAL
+            })
+        );
+    }
+
+    #[test]
+    fn moe_names_map_to_roles() {
+        assert_eq!(
+            name_to_role("blk.0.ffn_gate_inp.weight"),
+            Some(TensorRole {
+                role: P64_ROLE_MOE_ROUTER,
+                layer: 0
+            })
+        );
+        assert_eq!(
+            name_to_role("model.layers.5.mlp.gate_inp.weight"),
+            Some(TensorRole {
+                role: P64_ROLE_MOE_ROUTER,
+                layer: 5
+            })
+        );
+        assert_eq!(
+            name_to_role("blk.2.ffn_gate_exps.weight"),
+            Some(TensorRole {
+                role: P64_ROLE_MOE_GATE_EXPS,
+                layer: 2
+            })
+        );
+        assert_eq!(
+            name_to_role("model.layers.1.mlp.experts.gate_proj.weight"),
+            Some(TensorRole {
+                role: P64_ROLE_MOE_GATE_EXPS,
+                layer: 1
+            })
+        );
+        assert_eq!(
+            name_to_role("blk.4.ffn_gate_shexp.weight"),
+            Some(TensorRole {
+                role: P64_ROLE_MOE_SHARED_GATE,
+                layer: 4
             })
         );
     }

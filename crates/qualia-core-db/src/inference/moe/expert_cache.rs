@@ -6,6 +6,59 @@
 /// Maximum number of active expert slots in GPU VRAM simultaneously.
 pub const DEFAULT_GPU_EXPERT_SLOTS: usize = 32;
 
+/// Device capability tier for personal computing local AI across Windows, Linux, and macOS.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PersonalHardwareTier {
+    /// Workstation / Unified Studio (>= 32 GiB): All 256 experts resident in VRAM / unified memory (zero PCIe paging).
+    WorkstationResident,
+    /// Personal Discrete GPU (8–24 GiB VRAM, e.g. RTX A2000, 3060/4060, Radeon on Vulkan/CUDA): Dynamic LRU staging ring.
+    PersonalGpuStaging,
+    /// Apple Silicon Unified Memory (macOS Metal 16–36 GiB): Zero-copy shared pool with direct compute shader dispatch.
+    AppleUnifiedMemory,
+    /// Constrained Edge (< 8 GiB VRAM or CPU-only): On-demand hybrid CPU/GPU streaming.
+    ConstrainedEdge,
+}
+
+/// Compute principled slot capacity given detected system memory and model footprint.
+///
+/// This principle-based calculation works across Vulkan/wgpu, CUDA, DirectML, and Apple Metal:
+/// - Determines the available accelerator headroom after subtracting backbone and KV cache budgets.
+/// - Slices headroom into slots of `bytes_per_expert`.
+/// - Selects the appropriate `PersonalHardwareTier` without hardcoding specific GPU models.
+pub fn compute_principled_slot_capacity(
+    available_accelerator_bytes: u64,
+    backbone_bytes: u64,
+    kv_cache_bytes: u64,
+    bytes_per_expert: usize,
+    total_experts: usize,
+    is_unified_memory: bool,
+) -> (usize, PersonalHardwareTier) {
+    if is_unified_memory {
+        let total_required = backbone_bytes
+            .saturating_add((total_experts * bytes_per_expert) as u64)
+            .saturating_add(kv_cache_bytes);
+        if available_accelerator_bytes >= total_required {
+            return (total_experts, PersonalHardwareTier::AppleUnifiedMemory);
+        }
+    }
+
+    let reserved = backbone_bytes.saturating_add(kv_cache_bytes);
+    let expert_headroom = available_accelerator_bytes.saturating_sub(reserved);
+    let computed_slots = if bytes_per_expert > 0 {
+        (expert_headroom / bytes_per_expert as u64) as usize
+    } else {
+        0
+    };
+
+    if computed_slots >= total_experts && total_experts > 0 {
+        (total_experts, PersonalHardwareTier::WorkstationResident)
+    } else if computed_slots >= 8 {
+        (computed_slots.min(total_experts), PersonalHardwareTier::PersonalGpuStaging)
+    } else {
+        (computed_slots.max(4).min(total_experts), PersonalHardwareTier::ConstrainedEdge)
+    }
+}
+
 /// Outcome of accessing an expert in the offload cache.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlotAccessOutcome {
@@ -196,5 +249,60 @@ mod tests {
         let res = manager.resolve_expert(99, true, 4);
         assert_eq!(res, SlotAccessOutcome::MissComputeCpu);
         assert_eq!(manager.telemetry.cpu_evaluations, 1);
+    }
+
+    #[test]
+    fn test_principled_hardware_tier_computation() {
+        let bytes_per_exp = 240 * 1024 * 1024; // 240 MiB per expert
+        let backbone = 2800 * 1024 * 1024; // 2.8 GiB
+        let kv = 1024 * 1024 * 1024; // 1 GiB
+
+        // 1. Personal GPU 12GB (e.g. RTX A2000, 3060)
+        let (slots_12g, tier_12g) = compute_principled_slot_capacity(
+            11_500 * 1024 * 1024,
+            backbone,
+            kv,
+            bytes_per_exp,
+            256,
+            false,
+        );
+        assert_eq!(tier_12g, PersonalHardwareTier::PersonalGpuStaging);
+        assert_eq!(slots_12g, 31);
+
+        // 2. Apple Silicon 64GB Unified Memory (Mac Studio)
+        let (slots_mac, tier_mac) = compute_principled_slot_capacity(
+            64 * 1024 * 1024 * 1024,
+            backbone,
+            kv,
+            bytes_per_exp,
+            256,
+            true,
+        );
+        assert_eq!(tier_mac, PersonalHardwareTier::AppleUnifiedMemory);
+        assert_eq!(slots_mac, 256);
+
+        // 3. Workstation 80GB VRAM (A100/H100)
+        let (slots_workstation, tier_workstation) = compute_principled_slot_capacity(
+            80 * 1024 * 1024 * 1024,
+            backbone,
+            kv,
+            bytes_per_exp,
+            256,
+            false,
+        );
+        assert_eq!(tier_workstation, PersonalHardwareTier::WorkstationResident);
+        assert_eq!(slots_workstation, 256);
+
+        // 4. Constrained Edge 5GB VRAM
+        let (slots_edge, tier_edge) = compute_principled_slot_capacity(
+            5 * 1024 * 1024 * 1024,
+            backbone,
+            kv,
+            bytes_per_exp,
+            256,
+            false,
+        );
+        assert_eq!(tier_edge, PersonalHardwareTier::ConstrainedEdge);
+        assert_eq!(slots_edge, 5);
     }
 }

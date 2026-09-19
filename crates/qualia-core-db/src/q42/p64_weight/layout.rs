@@ -85,6 +85,14 @@ pub const P64_ROLE_OUTPUT: u16 = 10;
 pub const P64_ROLE_OUTPUT_NORM: u16 = 11;
 pub const P64_ROLE_ATTN_SUBLN: u16 = 12;
 pub const P64_ROLE_FFN_SUBLN: u16 = 13;
+// MoE (Mixture of Experts) roles.
+pub const P64_ROLE_MOE_ROUTER: u16 = 0x20;
+pub const P64_ROLE_MOE_GATE_EXPS: u16 = 0x21;
+pub const P64_ROLE_MOE_UP_EXPS: u16 = 0x22;
+pub const P64_ROLE_MOE_DOWN_EXPS: u16 = 0x23;
+pub const P64_ROLE_MOE_SHARED_GATE: u16 = 0x24;
+pub const P64_ROLE_MOE_SHARED_UP: u16 = 0x25;
+pub const P64_ROLE_MOE_SHARED_DOWN: u16 = 0x26;
 /// A source GGUF tensor preserved byte-for-byte but not consumed by a known
 /// engine role. Its source offset and name hash remain in the entry so a
 /// validator can still prove complete model preservation.

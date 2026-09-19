@@ -15,6 +15,7 @@ pub struct GgufTensorInfo {
 /// Per-layer transformer weight metadata (all `Option` — absent tensors skipped).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct LayerTensors {
+    pub layer_idx: u32,
     pub attn_norm: Option<GgufTensorInfo>,
     pub attn_q: Option<GgufTensorInfo>,
     pub attn_k: Option<GgufTensorInfo>,
@@ -24,4 +25,12 @@ pub struct LayerTensors {
     pub ffn_gate: Option<GgufTensorInfo>,
     pub ffn_up: Option<GgufTensorInfo>,
     pub ffn_down: Option<GgufTensorInfo>,
+    // MoE (Mixture of Experts) extensions
+    pub moe_router: Option<GgufTensorInfo>,
+    pub moe_gate_exps: Option<GgufTensorInfo>,
+    pub moe_up_exps: Option<GgufTensorInfo>,
+    pub moe_down_exps: Option<GgufTensorInfo>,
+    pub moe_shared_gate: Option<GgufTensorInfo>,
+    pub moe_shared_up: Option<GgufTensorInfo>,
+    pub moe_shared_down: Option<GgufTensorInfo>,
 }

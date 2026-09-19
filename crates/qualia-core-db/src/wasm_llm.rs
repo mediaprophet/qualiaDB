@@ -229,8 +229,15 @@ async fn run_inference_async(
                 )
                 .await;
             let argmax = match argmax {
-                Some(r) => r,
-                None => {
+                Some(r)
+                    if (r.max_logit > f32::NEG_INFINITY)
+                        && !(step == 0
+                            && ((r.best_token_id as u32 % vlen) == eos
+                                || tok.is_stop_token(r.best_token_id as u32 % vlen))) =>
+                {
+                    r
+                }
+                _ => {
                     // Fallback: separate forward + CPU norm + argmax
                     let _layers = engine
                         .dispatch_transformer_forward_async(

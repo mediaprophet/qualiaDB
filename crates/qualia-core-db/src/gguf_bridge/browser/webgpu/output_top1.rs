@@ -85,10 +85,12 @@ impl QTensorEngine {
         }
         let mut slab = [0u8; PARAM_BYTES];
         for chunk in 0..plan.chunks() {
-            let bytes = crate::topk::topk_params_bytes(
+            let cand_offset = plan.candidate_offset(chunk) as u32;
+            let bytes = crate::topk::topk_params_bytes_with_base(
                 plan.rows(chunk) as u32,
                 1,
                 crate::topk::TOPK_BLOCK_SIZE as u32,
+                cand_offset,
             );
             let offset = chunk * PARAM_STRIDE;
             slab[offset..offset + bytes.len()].copy_from_slice(&bytes);
@@ -164,8 +166,8 @@ impl QTensorEngine {
         if index_offset + bytes > staging.size() {
             return false;
         }
-        encoder.copy_buffer_to_buffer(values, 0, staging, offset, bytes);
-        encoder.copy_buffer_to_buffer(indices, 0, staging, index_offset, bytes);
+        encoder.copy_buffer_to_buffer(values, offset, staging, offset, bytes);
+        encoder.copy_buffer_to_buffer(indices, offset, staging, index_offset, bytes);
         true
     }
 

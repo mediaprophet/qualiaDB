@@ -3,6 +3,7 @@
 //! Request-scoped, caller-buffered summaries. Cold construction may allocate
 //! within explicit bounds; Tier-1 decode paths remain elsewhere.
 
+pub mod asset_contract;
 mod authority;
 mod budget;
 mod capabilities;
@@ -22,6 +23,10 @@ mod validate;
 #[cfg(test)]
 mod tests;
 
+pub use asset_contract::{
+    AssetIdentity, ContractDisposition, ContractVerificationReceipt, FunctionalContract,
+    SceneState, FLAG_ACTIVE, FLAG_CONDITIONED, FLAG_DEGRADED, FLAG_SPECIALIST_BOUND,
+};
 pub use authority::AuthorityView;
 pub use budget::ConditioningBudget;
 pub use capabilities::{BackendCapabilities, SupportLevel};

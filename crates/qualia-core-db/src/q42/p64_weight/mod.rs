@@ -89,6 +89,13 @@ fn p64_role_suffix(role_id: u16) -> Option<&'static [u8]> {
         P64_ROLE_FFN_DOWN => Some(b"ffn_down.weight"),
         P64_ROLE_ATTN_NORM => Some(b"attn_norm.weight"),
         P64_ROLE_FFN_NORM => Some(b"ffn_norm.weight"),
+        P64_ROLE_MOE_ROUTER => Some(b"ffn_gate_inp.weight"),
+        P64_ROLE_MOE_GATE_EXPS => Some(b"ffn_gate_exps.weight"),
+        P64_ROLE_MOE_UP_EXPS => Some(b"ffn_up_exps.weight"),
+        P64_ROLE_MOE_DOWN_EXPS => Some(b"ffn_down_exps.weight"),
+        P64_ROLE_MOE_SHARED_GATE => Some(b"ffn_gate_shexp.weight"),
+        P64_ROLE_MOE_SHARED_UP => Some(b"ffn_up_shexp.weight"),
+        P64_ROLE_MOE_SHARED_DOWN => Some(b"ffn_down_shexp.weight"),
         _ => None,
     }
 }

@@ -19,7 +19,7 @@ use crate::p64_weight::{
 };
 
 /// Suffix byte slice corresponding to a P64 role id.
-fn role_suffix(role_id: u16) -> Option<&'static [u8]> {
+pub(crate) fn role_suffix(role_id: u16) -> Option<&'static [u8]> {
     match role_id {
         P64_ROLE_ATTN_NORM => Some(b"attn_norm.weight"),
         P64_ROLE_ATTN_Q => Some(b"attn_q.weight"),
@@ -32,6 +32,13 @@ fn role_suffix(role_id: u16) -> Option<&'static [u8]> {
         P64_ROLE_FFN_DOWN => Some(b"ffn_down.weight"),
         P64_ROLE_FFN_UP => Some(b"ffn_up.weight"),
         P64_ROLE_FFN_SUBLN => Some(b"ffn_sub_norm.weight"),
+        crate::p64_weight::P64_ROLE_MOE_ROUTER => Some(b"ffn_gate_inp.weight"),
+        crate::p64_weight::P64_ROLE_MOE_SHARED_GATE => Some(b"ffn_gate_shexp.weight"),
+        crate::p64_weight::P64_ROLE_MOE_SHARED_UP => Some(b"ffn_up_shexp.weight"),
+        crate::p64_weight::P64_ROLE_MOE_SHARED_DOWN => Some(b"ffn_down_shexp.weight"),
+        crate::p64_weight::P64_ROLE_MOE_GATE_EXPS => Some(b"ffn_gate_exps.weight"),
+        crate::p64_weight::P64_ROLE_MOE_UP_EXPS => Some(b"ffn_up_exps.weight"),
+        crate::p64_weight::P64_ROLE_MOE_DOWN_EXPS => Some(b"ffn_down_exps.weight"),
         _ => None,
     }
 }
@@ -46,16 +53,35 @@ pub struct ModelJsonConfig {
     pub head_dim: Option<u32>,
     pub rope_theta: Option<f32>,
     pub model_type: Option<String>,
+    pub moe_intermediate_size: Option<u32>,
+    pub num_experts: Option<u32>,
+    pub num_experts_per_tok: Option<u32>,
 }
 
 impl ModelJsonConfig {
-    /// Parse from a JSON string slice.
+    /// Parse from a JSON string slice, supporting top-level or nested `text_config`.
     pub fn from_json_str(s: &str) -> Option<Self> {
         let val: serde_json::Value = serde_json::from_str(s).ok()?;
         let obj = val.as_object()?;
-        let get_u32 = |k: &str| obj.get(k).and_then(|v| v.as_u64()).map(|v| v as u32);
-        let get_f32 = |k: &str| obj.get(k).and_then(|v| v.as_f64()).map(|v| v as f32);
-        let get_str = |k: &str| obj.get(k).and_then(|v| v.as_str()).map(|v| v.to_string());
+        let tc = obj.get("text_config").and_then(|v| v.as_object());
+        let get_u32 = |k: &str| {
+            obj.get(k)
+                .or_else(|| tc.and_then(|t| t.get(k)))
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32)
+        };
+        let get_f32 = |k: &str| {
+            obj.get(k)
+                .or_else(|| tc.and_then(|t| t.get(k)))
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+        };
+        let get_str = |k: &str| {
+            obj.get(k)
+                .or_else(|| tc.and_then(|t| t.get(k)))
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string())
+        };
 
         Some(Self {
             num_hidden_layers: get_u32("num_hidden_layers"),
@@ -65,6 +91,9 @@ impl ModelJsonConfig {
             head_dim: get_u32("head_dim"),
             rope_theta: get_f32("rope_theta"),
             model_type: get_str("model_type"),
+            moe_intermediate_size: get_u32("moe_intermediate_size"),
+            num_experts: get_u32("num_experts"),
+            num_experts_per_tok: get_u32("num_experts_per_tok"),
         })
     }
 }

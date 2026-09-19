@@ -40,13 +40,13 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
             vault_path,
             models,
             quantization,
-            verbose,
+            details,
         } => {
             llm_testing::run_test_models(
                 vault_path.clone(),
                 models.clone(),
                 quantization.clone(),
-                *verbose,
+                *details,
             )?;
         }
         LlmAction::Validate { vault_path, strict } => {
@@ -55,9 +55,9 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
         LlmAction::ComprehensiveTest {
             vault_path,
             model,
-            verbose,
+            details,
         } => {
-            llm_testing::run_comprehensive_llm_test(vault_path.clone(), model.clone(), *verbose)?;
+            llm_testing::run_comprehensive_llm_test(vault_path.clone(), model.clone(), *details)?;
         }
         LlmAction::Benchmark {
             vault_path,

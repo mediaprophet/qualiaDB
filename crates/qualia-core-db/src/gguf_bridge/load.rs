@@ -119,6 +119,19 @@ impl QTensorEngine {
     /// which rejects malformed or unsupported data.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_model_checked(&mut self, path: &str) -> Result<GgufLoadReport, String> {
+        let p = std::path::Path::new(path);
+        if p.is_dir() {
+            if p.join("freetoken_weight.json").exists() {
+                return self.adopt_ftw_package(p);
+            }
+        } else if path.ends_with("freetoken_weight.json") || path.ends_with(".ftw") {
+            if let Some(parent) = p.parent() {
+                if parent.join("freetoken_weight.json").exists() {
+                    return self.adopt_ftw_package(parent);
+                }
+            }
+        }
+
         let file = std::fs::File::open(path).map_err(|e| format!("open {path}: {e}"))?;
         let mmap = std::sync::Arc::new(
             unsafe { memmap2::MmapOptions::new().map(&file) }.map_err(|e| e.to_string())?,

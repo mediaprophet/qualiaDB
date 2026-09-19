@@ -4,7 +4,7 @@ use std::path::PathBuf;
 #[derive(Subcommand, Debug)]
 pub enum LlmAction {
     List {
-        #[arg(short, long)]
+        #[arg(long)]
         vault_path: Option<PathBuf>,
     },
     Duplicates {
@@ -13,7 +13,7 @@ pub enum LlmAction {
     },
     Load {
         model: String,
-        #[arg(short, long)]
+        #[arg(long)]
         vault_path: Option<PathBuf>,
     },
     Status,
@@ -30,30 +30,30 @@ pub enum LlmAction {
         model_id: String,
     },
     Test {
-        #[arg(short, long)]
+        #[arg(long)]
         vault_path: Option<PathBuf>,
         #[arg(long, value_delimiter = ',')]
         models: Option<Vec<String>>,
         #[arg(long)]
         quantization: Option<String>,
-        #[arg(long, id = "test_verbose")]
-        verbose: bool,
+        #[arg(long)]
+        details: bool,
     },
     Validate {
-        #[arg(short, long)]
+        #[arg(long)]
         vault_path: Option<PathBuf>,
         #[arg(long)]
         strict: bool,
     },
     ComprehensiveTest {
-        #[arg(short, long)]
+        #[arg(long)]
         vault_path: Option<PathBuf>,
         model: String,
-        #[arg(long, id = "comprehensive_verbose")]
-        verbose: bool,
+        #[arg(long)]
+        details: bool,
     },
     Benchmark {
-        #[arg(short, long)]
+        #[arg(long)]
         vault_path: Option<PathBuf>,
         #[arg(long, value_delimiter = ',')]
         models: Option<Vec<String>>,
@@ -63,7 +63,7 @@ pub enum LlmAction {
         warmup: Option<u32>,
     },
     Report {
-        #[arg(short, long)]
+        #[arg(long)]
         vault_path: Option<PathBuf>,
         #[arg(long)]
         output: Option<PathBuf>,

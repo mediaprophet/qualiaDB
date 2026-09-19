@@ -246,4 +246,55 @@ mod tests {
         assert!(!report.is_certified());
         assert!(!report.evaluation.gate7_same_or_better);
     }
+
+    #[test]
+    fn test_parity_release_with_real_granite_model_run() {
+        let mut receipt = ExecutionReceipt::new(
+            BackendKind::WgpuVulkan,
+            BackendKind::WgpuVulkan,
+            "064bea0136420b38d0b65697fa5e772e28b112eee1757aacc7f64eba6bf37810",
+            "resident-v1",
+        );
+        receipt.counters.decode_steps = 16;
+        receipt.counters.compute_dispatches = 16;
+        receipt.counters.device_fences = 16;
+        receipt.counters.hot_path_allocations = 0;
+        receipt.counters.pool_high_water_bytes = 4_200_000_000;
+        receipt.counters.fallback_count = 0;
+
+        let manifest = BenchmarkManifest {
+            schema_version: super::super::manifest::MANIFEST_SCHEMA_VERSION,
+            benchmark_kind: "raw-decode-resident".into(),
+            executable_commit: "69a310a48119ef7bf16876cfdb4fe9b3df185fc7".into(),
+            dirty_diff_hash: "0".repeat(64),
+            executable_sha256: "5d31c5892464924a3187a4862ddef4b65ed000e36fd69fa1e2bfc732d308cee6".into(),
+            model_path: "E:\\LLM_Models\\lmstudio-community\\granite-4.0-h-tiny-GGUF\\granite-4.0-h-tiny-Q4_K_M.gguf".into(),
+            model_sha256: "064bea0136420b38d0b65697fa5e772e28b112eee1757aacc7f64eba6bf37810".into(),
+            prompt_token_sha256: "9fe1246f05916cd46ec813b08c6c8010be08571c996ecf668d0c7bdde7fd25e3".into(),
+            prompt_tokens: 8,
+            context_window: 1024,
+            decode_policy: RAW_GREEDY_DECODE_POLICY.into(),
+            quantization: "Q4_K_M".into(),
+            decode_steps_requested: 16,
+            decode_steps_executed: 16,
+            warmup_runs: 1,
+            measured_runs: 5,
+            median_tok_s: 0.1577,
+            p95_ms_per_token: 7186.17,
+            receipt: receipt.clone(),
+        };
+
+        let baseline = OsrpBaselineManifest::granite_4_0_h_tiny_q4km_reference();
+        let hardware = HardwareProfileManifest::rtx_a2000_12gb();
+
+        let report = evaluate_parity_release(&manifest, &receipt, &baseline, &hardware);
+        assert!(report.is_certified());
+        assert!(report.evaluation.gate1_baseline_captured);
+        assert!(report.evaluation.gate2_identical_workload);
+        assert!(report.evaluation.gate3_real_generation);
+        assert!(report.evaluation.gate4_memory_bounded);
+        assert!(report.evaluation.gate5_quality_correct);
+        assert!(report.evaluation.gate6_performance_demonstrated);
+        assert!(report.evaluation.gate7_same_or_better);
+    }
 }

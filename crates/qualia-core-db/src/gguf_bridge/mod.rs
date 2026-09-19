@@ -637,6 +637,7 @@ mod cuda_decode_plan;
 pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
+mod moe_ffn;
 mod forward;
 mod gemm;
 mod init;
@@ -988,7 +989,9 @@ pub(crate) fn wlog(s: &str) {
 }
 #[cfg(not(target_arch = "wasm32"))]
 #[inline]
-pub(crate) fn wlog(_s: &str) {}
+pub(crate) fn wlog(s: &str) {
+    log::warn!("{s}");
+}
 
 /// Decode-profiler: count of GPU `submit → poll(Maintain::Wait)` round-trips. Incremented by
 /// `QTensorEngine::poll_wait` (every native blocking sync point routes through it); read/reset by
@@ -1188,6 +1191,9 @@ pub struct QTensorEngine {
     /// Cached synthetic GGUF index built from `p64_index` (or from GGUF parse).
     #[cfg(not(target_arch = "wasm32"))]
     pub tensor_index_cache: Option<crate::gguf_sharder::GgufTensorIndex>,
+    /// FTW multi-shard package for native MoE execution.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub ftw_package: Option<Arc<crate::inference::moe::ftw_loader::FtwModelPackage>>,
 
     /// Byte offset into the mmap where tensor data begins.
     pub tensor_data_offset: u64,

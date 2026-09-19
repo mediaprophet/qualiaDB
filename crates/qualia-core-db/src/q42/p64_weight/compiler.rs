@@ -105,6 +105,13 @@ pub fn compile_gguf_to_p64_with_layout(
         push_known(P64_ROLE_FFN_GATE, layer, tensors.ffn_gate);
         push_known(P64_ROLE_FFN_UP, layer, tensors.ffn_up);
         push_known(P64_ROLE_FFN_DOWN, layer, tensors.ffn_down);
+        push_known(P64_ROLE_MOE_ROUTER, layer, tensors.moe_router);
+        push_known(P64_ROLE_MOE_GATE_EXPS, layer, tensors.moe_gate_exps);
+        push_known(P64_ROLE_MOE_UP_EXPS, layer, tensors.moe_up_exps);
+        push_known(P64_ROLE_MOE_DOWN_EXPS, layer, tensors.moe_down_exps);
+        push_known(P64_ROLE_MOE_SHARED_GATE, layer, tensors.moe_shared_gate);
+        push_known(P64_ROLE_MOE_SHARED_UP, layer, tensors.moe_shared_up);
+        push_known(P64_ROLE_MOE_SHARED_DOWN, layer, tensors.moe_shared_down);
     }
     push_known(
         P64_ROLE_TOKEN_EMBD,

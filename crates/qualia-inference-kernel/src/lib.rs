@@ -5,4 +5,5 @@
 //! cryptography, or application crates. Kernel policies and scalar correctness oracles can
 //! therefore be tested without linking the complete QualiaDB product graph.
 
+pub mod operators;
 pub mod paged_attention;
