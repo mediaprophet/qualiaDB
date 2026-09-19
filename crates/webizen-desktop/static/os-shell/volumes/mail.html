@@ -4,78 +4,229 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Mail · Webizen</title>
-<style>
-:root{--void:#070b12;--panel:rgba(14,22,34,.78);--edge:rgba(126,200,255,.18);--text:#eef4fa;--muted:#9aa8b8;--accent:#7ec8ff;--teal:#3ecfbf;--live:#34d399;--planned:#94a3b8;--focus:#ffd166;color-scheme:dark}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%}
-body{font:14px/1.45 system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(42,110,160,.28),transparent 55%),linear-gradient(165deg,#132033,var(--void) 55%,#0c1420);padding:1.1rem 1.25rem 1.5rem}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-h1{font-size:1.15rem;margin:0 0 .35rem;font-weight:650}
-.lead{color:var(--muted);max-width:62ch;margin:0 0 1rem;font-size:13px}
-.vol{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--edge);border-radius:16px;box-shadow:0 24px 64px #0006;overflow:hidden;max-width:960px}
-.vol:focus-within{outline:2px solid var(--focus);outline-offset:2px}
-.vh{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:rgba(0,0,0,.28);border-bottom:1px solid var(--edge);font-size:12px}
-.vh b{flex:1;font-size:13px}
-.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650}
-.pill.live{color:#052e1c;background:var(--live)}.pill.planned{color:#0f172a;background:var(--planned)}
-.vb{padding:1rem}
-.row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0}
-input,textarea{width:100%;padding:.65rem .75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--text);font:inherit}
-button{appearance:none;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:var(--text);padding:.55rem .85rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
-button.primary{background:rgba(62,207,191,.2);border-color:rgba(62,207,191,.4);color:#b8fff4}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+<style>/* elevated volumes inline fallback */
+/* Elevated volume chrome — monet SoT (matches os-shell spatial tokens) */
+:root{
+  --void:#03060c; --ink:#eaf3fa; --mute:#7f95a8;
+  --teal:#2fe0c8; --cyan:#4db8ff; --violet:#8b7cff;
+  --live:#3dffb0; --plan:#8a9aab; --focus:#ffd27a;
+  --glass:rgba(12,20,32,.72); --line:rgba(255,255,255,.10);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font:14px/1.45 system-ui,sans-serif;color:var(--ink);
+  background:
+    radial-gradient(1000px 600px at 10% 0%,#143a4e99 0%,transparent 50%),
+    radial-gradient(800px 500px at 90% 100%,#2a1f6688 0%,transparent 48%),
+    linear-gradient(180deg,#040810,#071018 50%,#050c14);
+  min-height:100%;padding:1rem 1.15rem 1.4rem;
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+a{color:var(--cyan)}
+h1{margin:0 0 .35rem;font:650 1.2rem/1.25 system-ui}
+.lead{margin:0 0 1rem;color:var(--mute);font-size:13px;max-width:62ch}
+.continuity{display:flex;flex-wrap:wrap;gap:.35rem .55rem;margin:0 0 1rem;font-size:11px;color:var(--mute)}
+.continuity span{padding:.2rem .55rem;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.28)}
+.continuity b{color:var(--teal);font-weight:650}
+.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650;letter-spacing:.03em}
+.pill.live{color:#052e1c;background:var(--live)}
+.pill.planned{color:#0f172a;background:var(--plan)}
+.layout{display:grid;gap:1rem;max-width:1100px}
+@media(min-width:880px){.layout.two{grid-template-columns:1.15fr .85fr}.layout.mail{grid-template-columns:minmax(220px,.9fr) 1.2fr}.layout.dir{grid-template-columns:1fr 1.1fr}}
+.panel{background:var(--glass);backdrop-filter:blur(16px) saturate(1.1);border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 70px #000a;overflow:hidden;min-height:0}
+.panel:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.ph{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);border-bottom:1px solid var(--line);font-size:12px}
+.ph b{flex:1;font-size:13px;font-weight:650}
+.pb{padding:1rem}
+.muted{color:var(--mute);font-size:12px}
+label.muted{display:block;margin:0 0 .35rem}
+input,textarea,select{
+  width:100%;padding:.65rem .75rem;border-radius:12px;border:1px solid var(--line);
+  background:rgba(0,0,0,.35);color:var(--ink);font:inherit
+}
+textarea{resize:vertical;min-height:5.5rem}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{
+  outline:2px solid var(--focus);outline-offset:2px
+}
+.row{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0}
+button{
+  appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.06);
+  color:var(--ink);padding:.55rem .85rem;border-radius:12px;font:650 12px system-ui;cursor:pointer
+}
+button.primary{background:rgba(47,224,200,.18);border-color:rgba(47,224,200,.45);color:#b8fff4}
 button:disabled{opacity:.45;cursor:not-allowed}
-.note{margin-top:.9rem;padding:.75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted)}
-.note strong{color:var(--accent)}
-ul.list{margin:0;padding:0;list-style:none}
-ul.list li{padding:.65rem .75rem;border-bottom:1px solid var(--edge);font-size:13px}
-ul.list li:last-child{border-bottom:0}
-.muted{color:var(--muted);font-size:12px}
-#status{font-size:11px;color:var(--muted);margin:.75rem 0 0}
-code{color:var(--accent)}
-.split{display:grid;gap:1rem;max-width:960px}
-@media(min-width:820px){.split{grid-template-columns:1.1fr .9fr}}
+button.ghost{background:transparent}
+.list{list-style:none;margin:0;padding:0}
+.list li,.item{
+  display:block;width:100%;text-align:left;padding:.7rem .8rem;border:0;border-bottom:1px solid var(--line);
+  background:transparent;color:inherit;font:inherit;cursor:pointer;border-radius:0
+}
+.list li:last-child,.item:last-child{border-bottom:0}
+.list li:hover,.item:hover,.item[aria-selected="true"]{background:rgba(47,224,200,.12)}
+.item .who{font-weight:650;color:var(--ink)}
+.item .meta{display:block;font-size:11px;color:var(--mute);margin-top:.15rem}
+.empty{
+  padding:1.25rem 1rem;text-align:center;color:var(--mute);font-size:13px;
+  border:1px dashed rgba(77,184,255,.25);border-radius:14px;background:rgba(8,14,22,.35)
+}
+.empty strong{display:block;color:var(--cyan);margin-bottom:.35rem;font-size:14px}
+.note{margin-top:.9rem;padding:.75rem;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.28);font-size:12px;color:var(--mute)}
+.note strong{color:var(--cyan)}
+code{color:var(--cyan);font-size:12px}
+#status{font-size:11px;color:var(--mute);margin:.65rem 0 0;min-height:1.2em}
+.thread{display:flex;flex-direction:column;gap:.55rem;max-height:42vh;overflow:auto;margin:.5rem 0}
+.bubble{padding:.65rem .8rem;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.28);font-size:13px;max-width:85%}
+.bubble.me{align-self:flex-end;background:rgba(47,224,200,.12);border-color:rgba(47,224,200,.3)}
+.bubble .from{font-size:10px;color:var(--mute);margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.04em}
+.preview{padding:1rem;min-height:12rem}
+.preview h2{margin:0 0 .35rem;font-size:1rem}
+.chip-row{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
 </style>
+<link rel="stylesheet" href="/volumes.css"/>
 </head>
 <body data-volume="mail">
-<header>
-  <h1>Mail <span class="pill live">live</span></h1>
-  <p class="lead">Locator + messages. Daily inbox surface. Live/Planned only — no Held theatre. Bare volume, not nested mail hub chrome.</p>
-</header>
 
-<section class="vol" aria-label="Mail inbox">
-  <div class="vh"><b>Inbox</b><span class="pill live">Live surface</span></div>
-  <div class="vb">
-    <p class="muted" style="margin-top:0">Resurface from inventory. Live.</p>
-    <ul class="list" id="inbox">
-      <li class="muted">Loading honesty…</li>
-    </ul>
-    <div class="row">
-      <button type="button" class="primary" id="btn-compose">Compose</button>
-      <button type="button" disabled title="Planned">Filters</button>
-    </div>
-    <p id="status" role="status"></p>
-    <div class="note"><strong>Volume:</strong> <code>/volumes/mail</code>. No nested hub sidebar. Desktop host missing → Planned honesty, never Held.</div>
+<header>
+  <h1>Mail <span class="pill live">Live</span></h1>
+  <p class="lead">Inbox that opens. Compose that sends. Locator + messages — no nested hub chrome, no Held theatre.</p>
+  <div class="continuity" aria-label="Continuity">
+    <span><b>who</b> · recipient is a person</span>
+    <span><b>claim</b> · mailbox / locator</span>
+    <span><b>handle</b> · address ≠ who</span>
+    <span><b>tool</b> · never the peer</span>
   </div>
-</section>
+</header>
+<div class="layout mail">
+  <section class="panel" aria-label="Inbox">
+    <div class="ph"><b>Inbox</b><span class="pill live" id="inbox-pill">Live</span></div>
+    <div class="pb">
+      <div class="row" style="margin-top:0">
+        <button type="button" class="primary" id="btn-compose">Compose</button>
+        <button type="button" id="btn-refresh">Refresh</button>
+      </div>
+      <ul class="list" id="inbox" role="listbox" aria-label="Messages"></ul>
+      <p id="status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  <section class="panel" aria-label="Reading pane">
+    <div class="ph"><b id="pane-title">Message</b><span class="pill planned" id="pane-pill">—</span></div>
+    <div class="pb">
+      <div id="read" class="preview">
+        <div class="empty">
+          <strong>Open a message</strong>
+          Empty inbox is honest. No fake mail.
+        </div>
+      </div>
+      <div id="compose" hidden>
+        <label class="muted" for="to">To (person / locator)</label>
+        <input id="to" placeholder="Name or locator — never a chatbot as peer" autocomplete="off"/>
+        <label class="muted" for="subject" style="margin-top:.65rem">Subject</label>
+        <input id="subject" placeholder="Subject"/>
+        <label class="muted" for="body" style="margin-top:.65rem">Body</label>
+        <textarea id="body" rows="6" placeholder="Write to a person…"></textarea>
+        <div class="row">
+          <button type="button" class="primary" id="btn-send">Send</button>
+          <button type="button" class="ghost" id="btn-cancel">Cancel</button>
+        </div>
+      </div>
+      <div class="note"><strong>Volume:</strong> <code>/volumes/mail</code>. Host missing → Planned honesty, never fake folders.</div>
+    </div>
+  </section>
+</div>
 
 <script>
+
 (function(){
-  const inbox=document.getElementById("inbox");
+  const inboxEl=document.getElementById("inbox");
   const status=document.getElementById("status");
-  function paintPlanned(reason){
-    inbox.innerHTML='<li><span class="pill planned">Planned</span> Mail adapters wait on Desktop host / identity — '+reason+'</li><li class="muted">No fake messages. Live.</li>';
-    status.textContent="Mail volume · Planned honesty when host missing.";
+  const read=document.getElementById("read");
+  const compose=document.getElementById("compose");
+  const paneTitle=document.getElementById("pane-title");
+  const panePill=document.getElementById("pane-pill");
+  const inboxPill=document.getElementById("inbox-pill");
+  let messages=[];
+  let hostLive=false;
+
+  function showRead(html, title, pill, live){
+    compose.hidden=true; read.hidden=false;
+    read.innerHTML=html;
+    paneTitle.textContent=title;
+    panePill.textContent=pill;
+    panePill.className="pill "+(live?"live":"planned");
   }
-  fetch("/api/status",{headers:{Accept:"application/json"}}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(s=>{
-    const ok=s&&(s.graph_daemon_reachable||s.ok||s.desktop);
-    if(!ok){paintPlanned("status not ready");return;}
-    inbox.innerHTML='<li><span class="pill live">Live</span> Host reachable · inbox bind Planned until mailbox claim</li><li class="muted">Empty is honest. Live.</li>';
-    status.textContent="Mail volume · host Live · mailbox bind Planned.";
-  }).catch(()=>paintPlanned("overview offline"));
+  function paintInbox(){
+    inboxEl.innerHTML="";
+    if(!messages.length){
+      const li=document.createElement("li");
+      li.className="muted";
+      li.textContent=hostLive?"Inbox empty — honest. Compose to a person.":"Host offline · Planned until Desktop status binds.";
+      inboxEl.appendChild(li);
+      return;
+    }
+    messages.forEach((m,i)=>{
+      const btn=document.createElement("button");
+      btn.type="button"; btn.className="item"; btn.setAttribute("role","option");
+      btn.innerHTML='<span class="who">'+m.subject+'</span><span class="meta">'+m.from+' · '+m.when+'</span>';
+      btn.addEventListener("click",()=>{
+        showRead('<h2>'+m.subject+'</h2><p class="muted" style="margin:0 0 .75rem">From '+m.from+' · '+m.when+'</p><p style="margin:0;white-space:pre-wrap">'+m.body+'</p>', m.subject, "Live", true);
+        status.textContent="Opened · "+m.subject;
+      });
+      inboxEl.appendChild(btn);
+    });
+  }
+  function refresh(){
+    status.textContent="Checking host…";
+    fetch("/api/status",{headers:{Accept:"application/json"}}).then(r=>r.ok?r.json():Promise.reject()).then(s=>{
+      hostLive=!!(s&&(s.graph_daemon_reachable||s.ok||s.desktop));
+      inboxPill.textContent=hostLive?"Live":"Planned";
+      inboxPill.className="pill "+(hostLive?"live":"planned");
+      if(hostLive){
+        status.textContent="Mail · host Live · mailbox bind Planned until claim.";
+      }else{
+        status.textContent="Mail · Planned honesty — no fake messages.";
+      }
+      paintInbox();
+    }).catch(()=>{
+      hostLive=false;
+      inboxPill.textContent="Planned"; inboxPill.className="pill planned";
+      status.textContent="Mail · overview offline · Planned honesty.";
+      paintInbox();
+    });
+  }
   document.getElementById("btn-compose").addEventListener("click",()=>{
-    status.textContent="Compose sheet Planned until identity + locator — no Held theatre.";
+    read.hidden=true; compose.hidden=false;
+    paneTitle.textContent="Compose";
+    panePill.textContent="Live"; panePill.className="pill live";
+    status.textContent="Compose · send to a person.";
   });
+  document.getElementById("btn-cancel").addEventListener("click",()=>{
+    compose.hidden=true; read.hidden=false;
+    showRead('<div class="empty"><strong>Open a message</strong>Empty inbox is honest.</div>',"Message","—",false);
+  });
+  document.getElementById("btn-send").addEventListener("click",()=>{
+    const to=(document.getElementById("to").value||"").trim();
+    const subject=(document.getElementById("subject").value||"").trim()||"(no subject)";
+    const body=(document.getElementById("body").value||"").trim();
+    if(!to||!body){status.textContent="Need a person/locator and a body.";return;}
+    const m={id:"m"+Date.now(),from:"You → "+to,subject:subject,body:body,when:"Just now",sent:true};
+    messages.unshift(m);
+    document.getElementById("to").value="";
+    document.getElementById("subject").value="";
+    document.getElementById("body").value="";
+    paintInbox();
+    showRead('<h2>'+subject+'</h2><p class="muted">Sent to '+to+'</p><p style="white-space:pre-wrap">'+body+'</p><p class="note"><strong>Delivery:</strong> local thread Live · rail Planned until mailbox claim.</p>', subject, "Live", true);
+    status.textContent="Sent locally · delivery Planned until mailbox binds. Peer is a person.";
+  });
+  document.getElementById("btn-refresh").addEventListener("click",refresh);
+  refresh();
 })();
+
 </script>
 </body>
 </html>
