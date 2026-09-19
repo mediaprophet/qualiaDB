@@ -7,18 +7,19 @@ Not a classic OSX/Windows/Linux desktop.
 - Then: Browser · Keep · Library · Instruments/LLM · **Wallet** · Settings · Admin
 - Continuity: who · claim · handle · tool
 - Live / Planned only; QApps parked
-- Responsive + a11y (landmarks, focus, contrast, reduced-motion)
+
+## Wallet chain policy (Timothy lock)
+
+- **Prefer:** Nym, Lightning, eCash (XEC), tokens
+- **Do not target:** ETH
+- Live only where claims exist; else Planned — no amber theatre
 
 ## Open
 
 - `01-spatial-shell.html` — primary shell
 - `02-responsive-a11y.html` — breakpoints + a11y checklist
-- `03-wallet-volume.html` — multi-chain Wallet human app (not MCP-only)
-
-## Wallet
-
-Human-owned multi-chain balances, send/receive/swap. KeyVault unlock. Agent = tool that may propose; human signs. Orbit tile with other human apps.
+- `03-wallet-volume.html` — multi-rail Wallet human app
 
 ## For Neo
 
-New Desktop = default; legacy behind a flag. Poet = one tile. Wire Library, Instruments, and Wallet as first-class findable apps.
+Wire Wallet tile to this chain list. Drop any ETH Live claim from the prior tip.

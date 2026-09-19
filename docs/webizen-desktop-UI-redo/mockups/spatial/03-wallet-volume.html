@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Webizen — Wallet volume (multi-chain)</title>
+<title>Webizen — Wallet volume (Nym · Lightning · eCash · tokens)</title>
 <style>
 :root{--bg:#050a12;--teal:#3ecfbf;--cyan:#5ec8ff;--ink:#e8f2f8;--muted:#8aa0b4;--live:#34d399;--planned:#94a3b8;--glass:rgba(18,28,40,.72);--line:rgba(255,255,255,.12);--focus:#ffd166}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%}
 body{font:14px/1.45 system-ui,sans-serif;color:var(--ink);background:radial-gradient(800px 420px at 15% 20%,#1a4a5c55,transparent 55%),radial-gradient(600px 360px at 85% 75%,#2a1a4a44,transparent 50%),linear-gradient(165deg,#050a12,#0c1a28 55%,#101828);padding:28px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 h1{font-size:20px;margin:0 0 6px}
-.lead{color:var(--muted);max-width:62ch;margin:0 0 20px}
+.lead{color:var(--muted);max-width:64ch;margin:0 0 20px}
 .stage{display:grid;grid-template-columns:1fr;gap:16px;max-width:960px}
 @media(min-width:860px){.stage{grid-template-columns:1.1fr .9fr}}
 .vol{background:var(--glass);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 60px #0008;overflow:hidden}
@@ -20,7 +20,7 @@ h1{font-size:20px;margin:0 0 6px}
 .pill{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600}
 .live{background:#34d39933;color:var(--live)}.planned{background:#94a3b833;color:var(--planned)}
 .vb{padding:16px}
-.bal{font-size:28px;font-weight:650;letter-spacing:-.02em;margin:0 0 4px}
+.bal{font-size:26px;font-weight:650;letter-spacing:-.02em;margin:0 0 4px}
 .sub{color:var(--muted);font-size:12px;margin:0 0 14px}
 .chains{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
 .chain{padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:12px;color:var(--ink)}
@@ -36,55 +36,58 @@ th{color:var(--ink);font-weight:600}
 td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
 .note{margin-top:16px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted)}
 .note strong{color:var(--cyan)}
+.policy{margin:0 0 16px;padding:10px 12px;border-radius:12px;border:1px solid #fbbf2444;background:#fbbf2412;font-size:12px;color:var(--muted)}
+.policy strong{color:#fbbf24}
 .orbit-hint{font-size:12px;color:var(--muted);margin:20px 0 0}
 code{color:var(--cyan)}
 </style>
 </head>
 <body>
 <header>
-  <h1>Wallet — multi-chain human app</h1>
-  <p class="lead">Spatial volume for the Desktop orbit. Human-owned keys and balances across chains. Not MCP-only. Not QApps. Continuity: wallet handle ≠ who; agent may assist as a tool, never as the owner.</p>
+  <h1>Wallet — Nym · Lightning · eCash · tokens</h1>
+  <p class="lead">Spatial volume for the Desktop orbit. Human-owned keys. Not MCP-only. Not QApps. Continuity: wallet handle ≠ who; agent may propose as a tool; only a human signs. <strong style="color:var(--ink)">ETH is not a target.</strong></p>
 </header>
 <div class="stage">
   <section class="vol" aria-label="Wallet overview">
     <div class="vh"><b>Wallet</b><span class="pill live">Live sketch</span></div>
     <div class="vb">
-      <p class="bal">Ξ 2.418</p>
-      <p class="sub">Portfolio view · soft-rise into Live · Planned chains show as Planned, not held theatre</p>
-      <div class="chains" role="list" aria-label="Chains">
-        <div class="chain on" role="listitem">Ethereum<span class="tag">Live</span></div>
-        <div class="chain on" role="listitem">Bitcoin<span class="tag">Live</span></div>
-        <div class="chain" role="listitem">Solana<span class="tag">Planned</span></div>
-        <div class="chain" role="listitem">Cosmos<span class="tag">Planned</span></div>
-        <div class="chain" role="listitem">Polkadot<span class="tag">Planned</span></div>
+      <p class="policy"><strong>Chain policy:</strong> Prefer Nym, Lightning, eCash (XEC), and tokens. No ETH. Live only where claims exist; else Planned — no amber theatre.</p>
+      <p class="bal">⚡ 184,220 sats</p>
+      <p class="sub">Portfolio · soft-rise into Live · Planned rails stay Planned until wired</p>
+      <div class="chains" role="list" aria-label="Rails and chains">
+        <div class="chain on" role="listitem">Lightning<span class="tag">Live · preferred</span></div>
+        <div class="chain" role="listitem">Nym<span class="tag">Planned → Live when wired</span></div>
+        <div class="chain" role="listitem">eCash (XEC)<span class="tag">Planned → Live when wired</span></div>
+        <div class="chain" role="listitem">Tokens<span class="tag">Planned → Live when wired</span></div>
       </div>
       <div class="row">
         <button type="button" class="primary">Send</button>
         <button type="button">Receive</button>
         <button type="button">Swap</button>
-        <button type="button">Add chain</button>
+        <button type="button">Add rail</button>
       </div>
       <table>
-        <thead><tr><th>Asset</th><th>Chain</th><th>Amount</th></tr></thead>
+        <thead><tr><th>Asset</th><th>Rail</th><th>Amount</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>ETH</td><td>Ethereum</td><td class="amt">1.20</td></tr>
-          <tr><td>BTC</td><td>Bitcoin</td><td class="amt">0.084</td></tr>
-          <tr><td>USDC</td><td>Ethereum</td><td class="amt">420.00</td></tr>
+          <tr><td>sats</td><td>Lightning</td><td class="amt">184,220</td><td>Live</td></tr>
+          <tr><td>XEC</td><td>eCash</td><td class="amt">—</td><td>Planned</td></tr>
+          <tr><td>mix</td><td>Nym</td><td class="amt">—</td><td>Planned</td></tr>
+          <tr><td>tokens</td><td>token rails</td><td class="amt">—</td><td>Planned</td></tr>
         </tbody>
       </table>
     </div>
   </section>
   <section class="vol" aria-label="Keys and Continuity">
-    <div class="vh"><b>Keys · Continuity</b><span class="pill planned">Planned surfaces</span></div>
+    <div class="vh"><b>Keys · Continuity</b><span class="pill planned">Surfaces</span></div>
     <div class="vb">
-      <p class="sub" style="margin-top:0">Human unlocks via KeyVault / keyring. Seed and signing stay with the person. Agents request, never hold.</p>
+      <p class="sub" style="margin-top:0">Human unlocks via KeyVault / keyring. Seed and signing stay with the person. Agents request, never hold. No ETH Live claim in this product target.</p>
       <ul style="margin:0;padding-left:1.2em;color:var(--muted);font-size:13px">
         <li><strong style="color:var(--ink)">who</strong> — natural human owner</li>
-        <li><strong style="color:var(--ink)">claim</strong> — accounts / addresses as claims</li>
+        <li><strong style="color:var(--ink)">claim</strong> — invoices / notes / token accounts as claims</li>
         <li><strong style="color:var(--ink)">handle</strong> — wallet id ≠ person</li>
-        <li><strong style="color:var(--ink)">tool</strong> — Instruments/LLM may propose a tx; human signs</li>
+        <li><strong style="color:var(--ink)">tool</strong> — Instruments/LLM may propose; human signs</li>
       </ul>
-      <div class="note"><strong>Orbit tile:</strong> after Talk · Mail · Directory — with Browser · Keep · Library · Instruments · Wallet · Settings · Admin. Responsive: phone companion shows balances + send/receive first; wide shows chain grid + activity.</div>
+      <div class="note"><strong>Orbit tile:</strong> after Talk · Mail · Directory — with Browser · Keep · Library · Instruments · Wallet · Settings · Admin. Phone: balances + send/receive first. Wide: rail grid + activity.</div>
     </div>
   </section>
 </div>
