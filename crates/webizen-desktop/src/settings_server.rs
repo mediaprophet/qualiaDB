@@ -996,7 +996,23 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
             a
         }
     };
-    let nym_addr = addr("nym");
+    // Canonical claim key is `nym` (seed used to write `nym_mixnet` — migrate).
+    // Fabricated n1… stubs are not real locators: treat as unbound → Planned.
+    let nym_addr = {
+        let raw = {
+            let a = addr("nym");
+            if a.is_empty() {
+                addr("nym_mixnet")
+            } else {
+                a
+            }
+        };
+        if raw.starts_with("n1") {
+            String::new()
+        } else {
+            raw
+        }
+    };
     let xec_addr = addr("ecash_xec");
     let token_claim = identity
         .as_ref()

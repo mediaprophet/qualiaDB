@@ -620,10 +620,15 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
     ];
 
     if nym_mixnet_opted_in() {
+        // Canonical key `nym`; never showcase fabricated n1… stubs.
+        let nym_claim = {
+            let a = addr("nym");
+            if a.starts_with("n1") { String::new() } else { a }
+        };
         balances.push(CoinBalance {
             coin: "Nym".into(),
             ticker: "NYM".into(),
-            address: addr("nym_mixnet"),
+            address: nym_claim,
             balance: 0.0,
             balance_display: zero_display.into(),
             fiat_usd: 0.0,
@@ -834,11 +839,14 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
 
     let btc_addr = wallet.derive_address("BTC", "m/44'/0'/0'/0/0")?.address;
     let eth_addr = wallet.derive_address("ETH", "m/44'/60'/0'/0/0")?.address;
-    let nym_addr = wallet.derive_address("NYM", "m/44'/118'/0'/0/0")?.address;
     let xec_payload = wallet.derive_address("XEC", "m/44'/899'/0'/0/0")?;
     let xec_addr = xec_payload.address;
     let xec_hash160 = xec_payload.pubkey_hash;
 
+    // Nym is deliberately NOT derived here. A fabricated "n1…" hex stub is not
+    // a real Nym locator (client id / sphinx / gateway bind). Canonical claim
+    // key is `nym` (never `nym_mixnet`). Planned until claim+bind.
+    //
     // Monero is deliberately NOT derived here. It uses ed25519 (not the
     // secp256k1 BIP32 path above), Keccak-256 key derivation, and its own
     // base58 address format. Emitting a plausible-looking "4..." string with
@@ -851,7 +859,7 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
 
     Ok(serde_json::json!({
         "qualia_root": format!("did:qualia:0x{}", hex_seed),
-        "nym_mixnet": nym_addr,
+        "nym": "", // not derived — never fabricated n1… (see above)
         "ecash_xec": xec_addr,
         "ecash_hash160": xec_hash160,
         "ethereum": eth_addr,
@@ -1029,7 +1037,11 @@ pub async fn import_external_seed(
     let (net_code, path) = match network.as_str() {
         "eCash (XEC)" | "XEC" => ("XEC", "m/44'/899'/0'/0/0"),
         "Bitcoin (BTC)" | "BTC" => ("BTC", "m/44'/0'/0'/0/0"),
-        "Nym (NYM) - Nyx Chain" | "NYM" => ("NYM", "m/44'/118'/0'/0/0"),
+        "Nym (NYM) - Nyx Chain" | "NYM" => {
+            return Err(
+                "Nym locator not derived — Planned until real claim+bind (no fabricated n1…)".into(),
+            );
+        }
         "Ethereum (EVM)" | "ETH" => ("ETH", "m/44'/60'/0'/0/0"),
         "Monero (XMR)" | "XMR" => {
             // Monero uses ed25519, not secp256k1 — still mock for now

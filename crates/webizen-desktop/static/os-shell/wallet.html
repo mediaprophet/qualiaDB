@@ -1,2 +1,105 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wallet · Webizen</title><link rel="stylesheet" href="/volumes.css"></head><body data-volume="wallet"><header><h1>Wallet <span class="pill live">Live</span></h1><p class="lead">Lightning · Nym · eCash (XEC) · tokens · human keys. Agent may propose — human signs. No ETH.</p></header><main class="layout two"><section class="panel"><h2>Portfolio</h2><p class="bal">No claimed balances</p><p class="muted">Honest empty · rails Planned until claims bind</p><div class="rails"><button>Lightning <small>invoices · Live</small></button><button>Nym <small>privacy · Planned</small></button><button>eCash XEC <small>tokens · Live</small></button><button>Tokens <small>human keys · Planned</small></button></div><button>Send</button><button>Receive</button></section><section class="panel"><h2>Keys · Continuity</h2><p>Seed and signing stay with the person. Agents request, never hold keys.</p><ul><li>Lightning · Live when node claims</li><li>Nym · Planned until bind</li><li>eCash (XEC) · Live when claim</li><li>ETH · Not a target</li></ul></section></main></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wallet · Webizen</title><link rel="stylesheet" href="/volumes.css"></head>
+<body data-volume="wallet">
+<header>
+  <h1>Wallet <span class="pill live" id="hdr-pill">Live</span></h1>
+  <p class="lead">Lightning · Nym · eCash (XEC) · tokens · human keys. Agent may propose — human signs. ETH is not a target.</p>
+</header>
+<main class="layout two">
+  <section class="panel" aria-label="Wallet overview">
+    <h2>Portfolio</h2>
+    <p class="bal" id="portfolio-bal">—</p>
+    <p class="muted" id="portfolio-sub">Loading chain honesty…</p>
+    <div class="rails" id="rails" role="list" aria-label="Rails"></div>
+    <div class="row">
+      <button type="button" id="btn-send" disabled title="Human signs — signing surface Planned until KeyVault unlock">Send</button>
+      <button type="button" id="btn-recv" disabled title="Receive addresses when identity present">Receive</button>
+    </div>
+    <table>
+      <thead><tr><th>Asset</th><th>Rail</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody id="assets"></tbody>
+    </table>
+    <p id="status" class="muted" role="status" aria-live="polite"></p>
+  </section>
+  <section class="panel" aria-label="Keys">
+    <h2>Keys · human signs</h2>
+    <p>Seed and signing stay with the person. Agents request, never hold keys. handle ≠ who.</p>
+    <ul>
+      <li>Lightning · Live when node claims</li>
+      <li>Nym · Planned until claim+bind (no fabricated locators)</li>
+      <li>eCash (XEC) · Live when claim</li>
+      <li>ETH · not a target</li>
+    </ul>
+  </section>
+</main>
+<script>
+(function(){
+  const FALLBACK={
+    sync_status:"offline",
+    has_identity:false,
+    chains:[
+      {id:"lightning",name:"Lightning",ticker:"sats",status:"planned"},
+      {id:"nym",name:"Nym",ticker:"NYM",status:"planned"},
+      {id:"ecash",name:"eCash",ticker:"XEC",status:"planned"},
+      {id:"tokens",name:"Tokens",ticker:"tokens",status:"planned"}
+    ],
+    assets:[]
+  };
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+  function paint(data){
+    const rails=document.getElementById("rails");
+    const assetsEl=document.getElementById("assets");
+    const bal=document.getElementById("portfolio-bal");
+    const sub=document.getElementById("portfolio-sub");
+    const status=document.getElementById("status");
+    rails.innerHTML="";
+    (data.chains||[]).forEach(c=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.setAttribute("role","listitem");
+      const live=c.status==="live";
+      b.innerHTML=esc(c.name)+' <small>'+(live?"Live":"Planned")+"</small>";
+      rails.appendChild(b);
+    });
+    assetsEl.innerHTML="";
+    const assets=data.assets||[];
+    if(!assets.length){
+      const tr=document.createElement("tr");
+      tr.innerHTML='<td colspan="4">No claimed balances — Live only where claims bind (Lightning · Nym · XEC · tokens). Planned rails never invent amounts or locators. Not a target: ETH.</td>';
+      assetsEl.appendChild(tr);
+      bal.textContent="No claimed balances";
+      sub.textContent=data.has_identity?"Identity present · adapters may still be offline · rails Planned until claims bind":"Honest empty · rails Planned until claims bind";
+    }else{
+      let liveCount=0;
+      assets.forEach(a=>{
+        const tr=document.createElement("tr");
+        const st=a.status==="live"||a.status==="synced"?"live":(a.status||"planned");
+        if(st==="live"||st==="synced")liveCount++;
+        const addr=a.address&&!String(a.address).startsWith("n1")?String(a.address):"";
+        tr.innerHTML="<td>"+esc(a.ticker||a.coin||"?")+"</td><td>"+esc(a.network||a.chain||"")+(addr?" · <code>"+esc(addr)+"</code>":"")+"</td><td>"+esc(a.balance_display!=null?String(a.balance_display):"—")+"</td><td><span class=\"pill "+(st==="live"||st==="synced"?"live":"planned")+"\">"+esc(st)+"</span></td>";
+        assetsEl.appendChild(tr);
+      });
+      bal.textContent=liveCount?liveCount+" live asset"+(liveCount===1?"":"s"):"No claimed balances";
+      sub.textContent="sync: "+(data.sync_status||"unknown")+" · human-owned keys";
+    }
+    document.getElementById("btn-send").disabled=!data.has_identity;
+    document.getElementById("btn-recv").disabled=!data.has_identity;
+    status.textContent="Wallet · agent proposes, human signs · "+(data.sync_status||"ready");
+  }
+  paint(FALLBACK);
+  fetch("/api/wallet/overview",{headers:{Accept:"application/json"}}).then(r=>{
+    if(!r.ok)throw new Error("overview "+r.status);
+    return r.json();
+  }).then(paint).catch(err=>{
+    document.getElementById("status").textContent="Overview offline ("+err.message+") — Live/Planned honesty without balances.";
+    paint(FALLBACK);
+  });
+  document.getElementById("btn-send").addEventListener("click",()=>{
+    document.getElementById("status").textContent="Send: human must sign — signing sheet Planned until KeyVault unlock.";
+  });
+  document.getElementById("btn-recv").addEventListener("click",()=>{
+    document.getElementById("status").textContent="Receive: Live claim addresses only — never fabricate Planned-chain locators (no n1…).";
+  });
+})();
+</script>
+</body></html>

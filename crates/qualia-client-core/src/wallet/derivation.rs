@@ -38,7 +38,12 @@ impl HdWallet {
             "BTC" => Self::derive_btc_address(&public_key),
             "XEC" => Self::derive_xec_address(&public_key),
             "ETH" => Self::derive_eth_address(&public_key),
-            "NYM" => Self::derive_nym_address(&public_key),
+            // Nym: never emit fabricated n1… locators (Planned until real bind).
+            "NYM" => {
+                return Err(
+                    "Nym locator not derived — Planned until claim+bind (no fabricated n1…)".into(),
+                );
+            }
             _ => return Err(format!("Unsupported network: {}", network)),
         };
 
@@ -88,13 +93,6 @@ impl HdWallet {
         format!("0x{}", hex::encode(addr_bytes))
     }
 
-    fn derive_nym_address(pubkey: &XPub) -> String {
-        let pubkey_bytes = pubkey.to_bytes();
-        let sha256_hash = <Sha256 as sha2::Digest>::digest(&pubkey_bytes);
-        let ripemd160_hash = <Ripemd160 as ripemd::Digest>::digest(&sha256_hash);
-
-        format!("n1{}", hex::encode(&ripemd160_hash[0..16]))
-    }
 }
 
 #[cfg(test)]
@@ -119,8 +117,9 @@ mod tests {
         assert_eq!(xec.network, "XEC");
         assert!(xec.address.starts_with("ecash:"));
 
-        let nym = wallet.derive_address("NYM", "m/44'/118'/0'/0/0").unwrap();
-        assert_eq!(nym.network, "NYM");
-        assert!(nym.address.starts_with("n1"));
+        let nym_err = wallet.derive_address("NYM", "m/44'/118'/0'/0/0");
+        assert!(nym_err.is_err(), "NYM must not fabricate n1… locators");
+        let msg = nym_err.unwrap_err();
+        assert!(msg.contains("n1") || msg.contains("Planned"), "honest Planned error: {msg}");
     }
 }
