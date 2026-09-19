@@ -4,80 +4,95 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Talk · Webizen</title>
+<link rel="stylesheet" href="/volumes.css"/>
 <style>
-:root{--void:#070b12;--panel:rgba(14,22,34,.78);--edge:rgba(126,200,255,.18);--text:#eef4fa;--muted:#9aa8b8;--accent:#7ec8ff;--teal:#3ecfbf;--live:#34d399;--planned:#94a3b8;--focus:#ffd166;color-scheme:dark}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%}
-body{font:14px/1.45 system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(42,110,160,.28),transparent 55%),linear-gradient(165deg,#132033,var(--void) 55%,#0c1420);padding:1.1rem 1.25rem 1.5rem}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-h1{font-size:1.15rem;margin:0 0 .35rem;font-weight:650}
-.lead{color:var(--muted);max-width:62ch;margin:0 0 1rem;font-size:13px}
-.vol{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--edge);border-radius:16px;box-shadow:0 24px 64px #0006;overflow:hidden;max-width:960px}
-.vol:focus-within{outline:2px solid var(--focus);outline-offset:2px}
-.vh{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:rgba(0,0,0,.28);border-bottom:1px solid var(--edge);font-size:12px}
-.vh b{flex:1;font-size:13px}
-.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650}
-.pill.live{color:#052e1c;background:var(--live)}.pill.planned{color:#0f172a;background:var(--planned)}
-.vb{padding:1rem}
-.row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0}
-input,textarea{width:100%;padding:.65rem .75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--text);font:inherit}
-button{appearance:none;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:var(--text);padding:.55rem .85rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
-button.primary{background:rgba(62,207,191,.2);border-color:rgba(62,207,191,.4);color:#b8fff4}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-button:disabled{opacity:.45;cursor:not-allowed}
-.note{margin-top:.9rem;padding:.75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted)}
-.note strong{color:var(--accent)}
-ul.list{margin:0;padding:0;list-style:none}
-ul.list li{padding:.65rem .75rem;border-bottom:1px solid var(--edge);font-size:13px}
-ul.list li:last-child{border-bottom:0}
-.muted{color:var(--muted);font-size:12px}
-#status{font-size:11px;color:var(--muted);margin:.75rem 0 0}
-code{color:var(--accent)}
-.split{display:grid;gap:1rem;max-width:960px}
-@media(min-width:820px){.split{grid-template-columns:1.1fr .9fr}}
+html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,sans-serif}
 </style>
 </head>
 <body data-volume="talk">
-<header>
-  <h1>Talk <span class="pill live">live</span></h1>
-  <p class="lead">Human ↔ human. Chatbot is a tool, not the peer. Handle ≠ who. Bare Desktop volume — not Studio / Classic chrome.</p>
+<a class="skip" href="#thread-panel">Skip to conversation</a>
+<nav class="cont-strip" aria-label="Continuity">
+  <button type="button" aria-current="true">who</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">tool</button>
+  <span class="hint">handle ≠ human · chatbot ≠ peer</span>
+</nav>
+<header class="vol-head">
+  <h1><span class="glyph" aria-hidden="true">💬</span> Talk <span class="pill live">Live</span></h1>
+  <p class="lead">Person waiting for a person. Human ↔ human. Chatbot is a tool on Continuity — never the peer.</p>
 </header>
-
-<section class="vol" aria-label="Talk compose">
-  <div class="vh"><b>Conversation</b><span class="pill live">Live surface</span></div>
-  <div class="vb">
-    <p class="muted" style="margin-top:0">Person waiting for a person. Live volume.</p>
-    <label class="muted" for="peer">To (person / locator)</label>
-    <input id="peer" placeholder="Name or locator — never a chatbot as peer" autocomplete="off"/>
-    <label class="muted" for="msg" style="display:block;margin-top:.65rem">Message</label>
-    <textarea id="msg" rows="4" placeholder="Message a person…"></textarea>
-    <div class="row">
-      <button type="button" class="primary" id="btn-send">Send to person</button>
-      <button type="button" id="btn-ask" disabled title="Ask / instruments are tools — not the peer">Ask tool (Planned)</button>
+<div class="stage talk">
+  <section class="panel rise" aria-label="People nearby">
+    <div class="ph"><span class="mark" aria-hidden="true"></span><b>People</b><span class="pill live">Live</span></div>
+    <div class="pb">
+      <div class="stack" id="peers" role="listbox" aria-label="Peers"></div>
+      <div class="row">
+        <button type="button" class="primary" id="btn-dir">Open Directory</button>
+      </div>
+      <p class="muted" style="margin:.5rem 0 0">Pick a person. Tools stay out of this list.</p>
     </div>
-    <ul class="list" id="thread" aria-live="polite">
-      <li class="muted">No thread yet — open Directory to pick a person, or type a locator.</li>
-    </ul>
-    <p id="status" role="status"></p>
-    <div class="note"><strong>Volume:</strong> dedicated shell surface under <code>/volumes/talk</code>. Legacy Studio shell stays behind <code>WEBIZEN_LEGACY_SHELL</code> / <code>--legacy-shell</code> only.</div>
-  </div>
-</section>
-
+  </section>
+  <section class="panel rise" id="thread-panel" aria-label="Conversation">
+    <div class="ph"><span class="mark" aria-hidden="true"></span><b id="conv-title">Conversation</b><span class="pill live">Live surface</span></div>
+    <div class="pb">
+      <div id="empty-state" class="empty">
+        <strong>Person waiting for a person</strong>
+        <p>No thread yet. Choose someone from People, or type a locator below. Empty is honest.</p>
+      </div>
+      <div class="thread" id="thread" aria-live="polite" hidden></div>
+      <label class="lbl" for="peer">To (person / locator)</label>
+      <input id="peer" placeholder="Name or locator — never a chatbot as peer" autocomplete="off"/>
+      <label class="lbl" for="msg" style="margin-top:.55rem">Message</label>
+      <textarea id="msg" rows="3" placeholder="Message a person…"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-send">Send to person</button>
+        <button type="button" id="btn-ask" disabled title="Ask / instruments are tools — not the peer">Ask tool (Planned)</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <div class="note"><strong>Volume:</strong> <code>/volumes/talk</code>. Local thread Live; delivery rails Planned until peer session binds. Chatbot is not the peer.</div>
+    </div>
+  </section>
+</div>
 <script>
 (function(){
-  const status=document.getElementById("status");
+  const PEERS=[
+    {id:"",name:"(type a locator)",sub:"Compose without a Directory pick",placeholder:true},
+    {id:"local://self-note",name:"Self note",sub:"Local thread · Live"}
+  ];
+  const peersEl=document.getElementById("peers");
   const thread=document.getElementById("thread");
+  const empty=document.getElementById("empty-state");
+  const status=document.getElementById("status");
+  const peer=document.getElementById("peer");
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+  PEERS.forEach(p=>{
+    if(p.placeholder) return;
+    const b=document.createElement("button");
+    b.type="button";b.className="person-row";b.setAttribute("role","option");
+    b.innerHTML='<span class="orb" aria-hidden="true">👤</span><span><span class="name">'+esc(p.name)+'</span><span class="sub">'+esc(p.sub)+'</span></span><span class="pill live">Live</span>';
+    b.addEventListener("click",()=>{peer.value=p.id||p.name;status.textContent="Peer set · "+p.name;});
+    peersEl.appendChild(b);
+  });
   document.getElementById("btn-send").addEventListener("click",()=>{
-    const peer=(document.getElementById("peer").value||"").trim();
+    const to=(peer.value||"").trim();
     const msg=(document.getElementById("msg").value||"").trim();
-    if(!peer||!msg){status.textContent="Need a person/locator and a message.";return;}
-    const li=document.createElement("li");
-    li.innerHTML="<strong>You → "+peer.replace(/</g,"&lt;")+"</strong><br/>"+msg.replace(/</g,"&lt;");
-    if(thread.querySelector(".muted")) thread.innerHTML="";
-    thread.appendChild(li);
+    if(!to||!msg){status.textContent="Need a person/locator and a message.";return;}
+    empty.hidden=true;thread.hidden=false;
+    const bub=document.createElement("div");
+    bub.className="bubble me";
+    bub.innerHTML='<div class="who">You → '+esc(to)+'</div>'+esc(msg);
+    thread.appendChild(bub);
+    thread.scrollTop=thread.scrollHeight;
     document.getElementById("msg").value="";
+    document.getElementById("conv-title").textContent="With "+to;
     status.textContent="Local compose Live · delivery rails Planned until peer session binds. Chatbot is not the peer.";
   });
-  status.textContent="Talk volume · humans first.";
+  document.getElementById("btn-dir").addEventListener("click",()=>{
+    status.textContent="Opening Directory…";
+    try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:"webizen-open",route:"/volumes/directory"},"*"); }catch(e){}
+  });
+  status.textContent="Talk volume · humans first · person waiting for a person.";
 })();
 </script>
 </body>

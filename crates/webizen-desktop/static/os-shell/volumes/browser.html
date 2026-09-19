@@ -4,65 +4,78 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Browser · Webizen</title>
+<link rel="stylesheet" href="/volumes.css"/>
 <style>
-:root{--void:#070b12;--panel:rgba(14,22,34,.78);--edge:rgba(126,200,255,.18);--text:#eef4fa;--muted:#9aa8b8;--accent:#7ec8ff;--teal:#3ecfbf;--live:#34d399;--planned:#94a3b8;--focus:#ffd166;color-scheme:dark}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%}
-body{font:14px/1.45 system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(42,110,160,.28),transparent 55%),linear-gradient(165deg,#132033,var(--void) 55%,#0c1420);padding:1.1rem 1.25rem 1.5rem}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-h1{font-size:1.15rem;margin:0 0 .35rem;font-weight:650}
-.lead{color:var(--muted);max-width:62ch;margin:0 0 1rem;font-size:13px}
-.vol{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--edge);border-radius:16px;box-shadow:0 24px 64px #0006;overflow:hidden;max-width:960px}
-.vol:focus-within{outline:2px solid var(--focus);outline-offset:2px}
-.vh{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:rgba(0,0,0,.28);border-bottom:1px solid var(--edge);font-size:12px}
-.vh b{flex:1;font-size:13px}
-.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650}
-.pill.live{color:#052e1c;background:var(--live)}.pill.planned{color:#0f172a;background:var(--planned)}
-.vb{padding:1rem}
-.row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0}
-input,textarea{width:100%;padding:.65rem .75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--text);font:inherit}
-button{appearance:none;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:var(--text);padding:.55rem .85rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
-button.primary{background:rgba(62,207,191,.2);border-color:rgba(62,207,191,.4);color:#b8fff4}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-button:disabled{opacity:.45;cursor:not-allowed}
-.note{margin-top:.9rem;padding:.75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted)}
-.note strong{color:var(--accent)}
-ul.list{margin:0;padding:0;list-style:none}
-ul.list li{padding:.65rem .75rem;border-bottom:1px solid var(--edge);font-size:13px}
-ul.list li:last-child{border-bottom:0}
-.muted{color:var(--muted);font-size:12px}
-#status{font-size:11px;color:var(--muted);margin:.75rem 0 0}
-code{color:var(--accent)}
-.split{display:grid;gap:1rem;max-width:960px}
-@media(min-width:820px){.split{grid-template-columns:1.1fr .9fr}}
+html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,sans-serif}
 </style>
 </head>
 <body data-volume="browser">
-<header>
-  <h1>Browser <span class="pill live">live</span></h1>
-  <p class="lead">Reach / World. Findable — native renderer attaches in Desktop host. Not agent-only. Bare volume.</p>
+<a class="skip" href="#url">Skip to address bar</a>
+<nav class="cont-strip" aria-label="Continuity">
+  <button type="button">who</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+  <button type="button" aria-current="true">handle</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">tool</button>
+  <span class="hint">Reach / World</span>
+</nav>
+<header class="vol-head">
+  <h1><span class="glyph" aria-hidden="true">🌐</span> Browser <span class="pill live">Live</span></h1>
+  <p class="lead">webizen://home findable. URL bar Live. Native renderer attaches in Desktop host — not agent-only.</p>
 </header>
-
-<section class="vol" aria-label="Browser">
-  <div class="vh"><b>World</b><span class="pill live">Live surface</span></div>
-  <div class="vb">
-    <label class="muted" for="url">Address</label>
-    <div class="row" style="margin-top:.35rem">
-      <input id="url" value="webizen://home" style="flex:1;min-width:12rem"/>
+<section class="panel rise" aria-label="Browser" style="max-width:1080px">
+  <div class="ph"><span class="mark" aria-hidden="true"></span><b>World</b><span class="pill live">Live chrome</span></div>
+  <div class="pb">
+    <div class="url-bar">
+      <button type="button" id="btn-back" title="Back" aria-label="Back">←</button>
+      <button type="button" id="btn-fwd" title="Forward" aria-label="Forward">→</button>
+      <button type="button" id="btn-home" title="webizen://home">⌂</button>
+      <label class="sr-only" for="url">Address</label>
+      <input id="url" value="webizen://home" spellcheck="false" autocomplete="off"/>
       <button type="button" class="primary" id="btn-go">Go</button>
     </div>
-    <div class="note" style="margin-top:1rem"><strong>Viewport:</strong> native webview attach is Desktop-host Live; this volume is the chrome. Live. <code>webizen://</code> and https when host binds.</div>
-    <p id="status" role="status"></p>
+    <div class="row" style="margin-top:.65rem">
+      <button type="button" class="chip" data-go="webizen://home" aria-pressed="true">webizen://home</button>
+      <button type="button" class="chip" data-go="webizen://directory">Directory</button>
+      <button type="button" class="chip" data-go="https://">https://…</button>
+    </div>
+    <div class="viewport" id="viewport" role="region" aria-label="Page viewport">
+      <strong>webizen://home</strong>
+      Findable home. Native webview attach is Desktop-host Live; this volume is the chrome.
+      <span class="pill planned" style="margin-top:.65rem;display:inline-block">webview Planned attach</span>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <div class="note"><strong>Volume:</strong> <code>/volumes/browser</code>. <code>webizen://</code> and https when host binds. Native host chrome — bare volume.</div>
   </div>
 </section>
-
 <script>
 (function(){
+  const url=document.getElementById("url");
+  const vp=document.getElementById("viewport");
   const status=document.getElementById("status");
-  document.getElementById("btn-go").addEventListener("click",()=>{
-    const u=document.getElementById("url").value.trim();
-    status.textContent="Navigate request: "+u+" · host webview Planned attach from this volume chrome.";
-  });
-  status.textContent="Browser volume.";
+  const hist=["webizen://home"]; let idx=0;
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+  function nav(u,push){
+    u=(u||"").trim(); if(!u) return;
+    if(push!==false){ hist=hist.slice(0,idx+1); hist.push(u); idx=hist.length-1; }
+    url.value=u;
+    const home=u.startsWith("webizen://home")||u==="webizen://";
+    vp.innerHTML=home
+      ?'<strong>webizen://home</strong>Findable home. Constellation volumes soft-rise from here in the shell. Native renderer attaches when Desktop host binds.<span class="pill live" style="margin-top:.65rem;display:inline-block">chrome Live</span>'
+      :'<strong>'+esc(u)+'</strong>Navigate request recorded. Host webview Planned attach from this volume chrome.<span class="pill planned" style="margin-top:.65rem;display:inline-block">attach Planned</span>';
+    status.textContent="Navigate · "+u;
+    document.querySelectorAll("[data-go]").forEach(b=>b.setAttribute("aria-pressed", b.getAttribute("data-go")===u || (home && b.getAttribute("data-go")==="webizen://home") ?"true":"false"));
+  }
+  document.getElementById("btn-go").addEventListener("click",()=>nav(url.value,true));
+  url.addEventListener("keydown",e=>{if(e.key==="Enter")nav(url.value,true);});
+  document.getElementById("btn-home").addEventListener("click",()=>nav("webizen://home",true));
+  document.getElementById("btn-back").addEventListener("click",()=>{if(idx>0){idx--;nav(hist[idx],false);}});
+  document.getElementById("btn-fwd").addEventListener("click",()=>{if(idx<hist.length-1){idx++;nav(hist[idx],false);}});
+  document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{
+    let u=b.getAttribute("data-go");
+    if(u==="https://"){url.value="https://";url.focus();status.textContent="Type a URL · Go when ready.";return;}
+    nav(u,true);
+  }));
+  status.textContent="Browser volume · webizen://home findable.";
 })();
 </script>
 </body>

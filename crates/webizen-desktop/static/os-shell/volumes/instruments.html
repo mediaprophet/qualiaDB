@@ -4,57 +4,100 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Instruments · Webizen</title>
-<style>
-:root{--void:#070b12;--panel:rgba(14,22,34,.78);--edge:rgba(126,200,255,.18);--text:#eef4fa;--muted:#9aa8b8;--accent:#7ec8ff;--teal:#3ecfbf;--live:#34d399;--planned:#94a3b8;--focus:#ffd166;color-scheme:dark}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%}
-body{font:14px/1.45 system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(42,110,160,.28),transparent 55%),linear-gradient(165deg,#132033,var(--void) 55%,#0c1420);padding:1.1rem 1.25rem 1.5rem}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-h1{font-size:1.15rem;margin:0 0 .35rem;font-weight:650}
-.lead{color:var(--muted);max-width:62ch;margin:0 0 1rem;font-size:13px}
-.vol{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--edge);border-radius:16px;box-shadow:0 24px 64px #0006;overflow:hidden;max-width:960px}
-.vol:focus-within{outline:2px solid var(--focus);outline-offset:2px}
-.vh{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:rgba(0,0,0,.28);border-bottom:1px solid var(--edge);font-size:12px}
-.vh b{flex:1;font-size:13px}
-.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650}
-.pill.live{color:#052e1c;background:var(--live)}.pill.planned{color:#0f172a;background:var(--planned)}
-.vb{padding:1rem}
-.row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0}
-input,textarea{width:100%;padding:.65rem .75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--text);font:inherit}
-button{appearance:none;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:var(--text);padding:.55rem .85rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
-button.primary{background:rgba(62,207,191,.2);border-color:rgba(62,207,191,.4);color:#b8fff4}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-button:disabled{opacity:.45;cursor:not-allowed}
-.note{margin-top:.9rem;padding:.75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted)}
-.note strong{color:var(--accent)}
-ul.list{margin:0;padding:0;list-style:none}
-ul.list li{padding:.65rem .75rem;border-bottom:1px solid var(--edge);font-size:13px}
-ul.list li:last-child{border-bottom:0}
-.muted{color:var(--muted);font-size:12px}
-#status{font-size:11px;color:var(--muted);margin:.75rem 0 0}
-code{color:var(--accent)}
-.split{display:grid;gap:1rem;max-width:960px}
-@media(min-width:820px){.split{grid-template-columns:1.1fr .9fr}}
-</style>
+<link rel="stylesheet" href="/volumes.css"/>
+<style>html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,sans-serif}</style>
 </head>
 <body data-volume="instruments">
-<header>
-  <h1>Instruments <span class="pill live">live</span></h1>
-  <p class="lead">Models · LLM · tools — not people. Chatbot = tool. Bare volume.</p>
+<a class="skip" href="#tools">Skip to tools</a>
+<nav class="cont-strip" aria-label="Continuity">
+  <button type="button">who</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+  <button type="button" aria-current="true">tool</button>
+  <span class="hint">models · LLM · tools — not people</span>
+</nav>
+<header class="vol-head">
+  <h1><span class="glyph" aria-hidden="true">🎛</span> Instruments <span class="pill live">Live</span></h1>
+  <p class="lead">Models · LLM · tools — never people. Chatbot = tool. Continuity ribbon owns the tool plane.</p>
 </header>
-
-<section class="vol" aria-label="Instruments">
-  <div class="vh"><b>Tools</b><span class="pill live">Live surface</span></div>
-  <div class="vb">
-    <ul class="list">
-      <li><span class="pill planned">Planned</span> Local model bind</li>
-      <li><span class="pill planned">Planned</span> Allowlisted tools</li>
-      <li><span class="pill live">Live</span> Honesty: instruments ≠ peers</li>
-    </ul>
-    <p id="status" role="status" class="muted">Instruments volume · Live · QApps parked.</p>
-    <div class="note"><strong>Volume:</strong> <code>/volumes/instruments</code>. Never place a chatbot in Directory as human.</div>
-  </div>
-</section>
-
-
+<div class="stage inst">
+  <section class="panel rise" id="tools" aria-label="Tool rack">
+    <div class="ph"><span class="mark" aria-hidden="true"></span><b>Tool rack</b><span class="pill live">Live honesty</span></div>
+    <div class="pb">
+      <div class="tool-grid" id="rack" role="list"></div>
+      <div class="row" style="margin-top:.85rem">
+        <button type="button" class="primary" id="btn-load" disabled title="Planned">Load model file</button>
+        <button type="button" id="btn-allow" disabled title="Planned">Allowlist tool</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <div class="note"><strong>Volume:</strong> <code>/volumes/instruments</code>. Never place a chatbot in Directory as human.</div>
+    </div>
+  </section>
+  <section class="panel rise" aria-label="Selected instrument">
+    <div class="ph"><span class="mark" aria-hidden="true" style="background:var(--violet);box-shadow:0 0 10px var(--violet)"></span><b id="sel-title">Instrument</b><span class="pill planned" id="sel-pill">—</span></div>
+    <div class="pb">
+      <div id="sel-empty" class="empty">
+        <strong>Tools, not peers</strong>
+        <p>Pick a tile. Instruments propose; humans decide. Ask-tool from Talk stays on this plane.</p>
+      </div>
+      <div id="sel-body" hidden>
+        <p class="muted" id="sel-meta" style="margin:0 0 .65rem"></p>
+        <p id="sel-blurb" style="margin:0 0 .85rem;font-size:13px;color:var(--mute);line-height:1.5"></p>
+        <div class="row">
+          <button type="button" class="primary" id="btn-invoke" disabled title="Planned">Invoke (Planned)</button>
+          <button type="button" id="btn-to-talk">Return to Talk</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+(function(){
+  const TOOLS=[
+    {id:"honesty",name:"Honesty lock",status:"live",meta:"Live",blurb:"Instruments ≠ peers. This lock is Live in chrome so Directory and Talk stay humans-first."},
+    {id:"local-llm",name:"Local model",status:"planned",meta:"GGUF / P64 bind",blurb:"Local model bind Planned until a file claim lands via Load model."},
+    {id:"allowlist",name:"Allowlisted tools",status:"planned",meta:"Host policy",blurb:"Tool allowlist Planned until Desktop host policy binds."},
+    {id:"chatbot",name:"Chatbot adapter",status:"planned",meta:"Tool plane only",blurb:"Chatbot is a tool. Never a Directory person. Invoke from here or Ask tool in Talk."}
+  ];
+  const rack=document.getElementById("rack");
+  const status=document.getElementById("status");
+  let selected=null;
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+  function paint(){
+    rack.innerHTML="";
+    TOOLS.forEach(t=>{
+      const b=document.createElement("button");
+      b.type="button";b.className="tool-tile";b.setAttribute("role","listitem");
+      b.setAttribute("aria-pressed",selected===t.id?"true":"false");
+      b.innerHTML='<h3>'+esc(t.name)+'</h3><p>'+esc(t.meta)+'</p><p style="margin-top:.4rem"><span class="pill '+(t.status==="live"?"live":"planned")+'">'+(t.status==="live"?"Live":"Planned")+'</span></p>';
+      b.addEventListener("click",()=>select(t));
+      rack.appendChild(b);
+    });
+  }
+  function select(t){
+    selected=t.id; paint();
+    document.getElementById("sel-empty").hidden=true;
+    document.getElementById("sel-body").hidden=false;
+    document.getElementById("sel-title").textContent=t.name;
+    document.getElementById("sel-pill").className="pill "+(t.status==="live"?"live":"planned");
+    document.getElementById("sel-pill").textContent=t.status==="live"?"Live":"Planned";
+    document.getElementById("sel-meta").textContent=t.meta+" · tool plane";
+    document.getElementById("sel-blurb").textContent=t.blurb;
+    document.getElementById("btn-invoke").disabled=t.status!=="live";
+    status.textContent="Selected "+t.name+" · "+(t.status==="live"?"Live":"Planned");
+  }
+  document.getElementById("btn-invoke").addEventListener("click",()=>{
+    status.textContent="Honesty lock acknowledged · no model invoke without Planned bind.";
+  });
+  document.getElementById("btn-to-talk").addEventListener("click",()=>{
+    status.textContent="Return to Talk · parent routes /volumes/talk · tool stays tool.";
+  });
+  document.getElementById("btn-load").addEventListener("click",()=>{
+    status.textContent="Load model · Planned until host file picker binds.";
+  });
+  paint();
+  status.textContent="Instruments volume · tools not people.";
+})();
+</script>
 </body>
 </html>

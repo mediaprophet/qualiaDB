@@ -4,57 +4,117 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Keep · Webizen</title>
+<link rel="stylesheet" href="/volumes.css"/>
 <style>
-:root{--void:#070b12;--panel:rgba(14,22,34,.78);--edge:rgba(126,200,255,.18);--text:#eef4fa;--muted:#9aa8b8;--accent:#7ec8ff;--teal:#3ecfbf;--live:#34d399;--planned:#94a3b8;--focus:#ffd166;color-scheme:dark}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%}
-body{font:14px/1.45 system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(42,110,160,.28),transparent 55%),linear-gradient(165deg,#132033,var(--void) 55%,#0c1420);padding:1.1rem 1.25rem 1.5rem}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-h1{font-size:1.15rem;margin:0 0 .35rem;font-weight:650}
-.lead{color:var(--muted);max-width:62ch;margin:0 0 1rem;font-size:13px}
-.vol{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--edge);border-radius:16px;box-shadow:0 24px 64px #0006;overflow:hidden;max-width:960px}
-.vol:focus-within{outline:2px solid var(--focus);outline-offset:2px}
-.vh{display:flex;align-items:center;gap:.5rem;padding:.65rem .9rem;background:rgba(0,0,0,.28);border-bottom:1px solid var(--edge);font-size:12px}
-.vh b{flex:1;font-size:13px}
-.pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650}
-.pill.live{color:#052e1c;background:var(--live)}.pill.planned{color:#0f172a;background:var(--planned)}
-.vb{padding:1rem}
-.row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0}
-input,textarea{width:100%;padding:.65rem .75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--text);font:inherit}
-button{appearance:none;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:var(--text);padding:.55rem .85rem;border-radius:12px;font:650 12px system-ui;cursor:pointer}
-button.primary{background:rgba(62,207,191,.2);border-color:rgba(62,207,191,.4);color:#b8fff4}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-button:disabled{opacity:.45;cursor:not-allowed}
-.note{margin-top:.9rem;padding:.75rem;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted)}
-.note strong{color:var(--accent)}
-ul.list{margin:0;padding:0;list-style:none}
-ul.list li{padding:.65rem .75rem;border-bottom:1px solid var(--edge);font-size:13px}
-ul.list li:last-child{border-bottom:0}
-.muted{color:var(--muted);font-size:12px}
-#status{font-size:11px;color:var(--muted);margin:.75rem 0 0}
-code{color:var(--accent)}
-.split{display:grid;gap:1rem;max-width:960px}
-@media(min-width:820px){.split{grid-template-columns:1.1fr .9fr}}
+html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,sans-serif}
 </style>
 </head>
 <body data-volume="keep">
-<header>
-  <h1>Keep <span class="pill live">live</span></h1>
-  <p class="lead">Volumes as a tool. Personal records surface — bare volume, not nested keep hub chrome.</p>
+<a class="skip" href="#vault">Skip to vault</a>
+<nav class="cont-strip" aria-label="Continuity">
+  <button type="button">who</button><span class="sep" aria-hidden="true"></span>
+  <button type="button" aria-current="true">claim</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">tool</button>
+  <span class="hint">volumes as a tool</span>
+</nav>
+<header class="vol-head">
+  <h1><span class="glyph" aria-hidden="true">📁</span> Keep <span class="pill live">Live</span></h1>
+  <p class="lead">Volumes as a tool. Save / open loop. Personal records surface — bare volume.</p>
 </header>
-
-<section class="vol" aria-label="Keep">
-  <div class="vh"><b>Volumes</b><span class="pill live">Live surface</span></div>
-  <div class="vb">
-    <ul class="list">
-      <li><span class="pill live">Live</span> Local vault path claims</li>
-      <li><span class="pill planned">Planned</span> Body / library deep panes</li>
-      <li><span class="pill planned">Planned</span> Sync / share rails</li>
-    </ul>
-    <p id="status" role="status" class="muted">Keep volume · Live · QApps parked.</p>
-    <div class="note"><strong>Volume:</strong> <code>/volumes/keep</code>.</div>
-  </div>
-</section>
-
-
+<div class="stage two">
+  <section class="panel rise" id="vault" aria-label="Vault">
+    <div class="ph"><span class="mark" aria-hidden="true"></span><b>Vault</b><span class="pill live">Live</span></div>
+    <div class="pb">
+      <label class="lbl" for="kq">Find in Keep</label>
+      <input id="kq" type="search" placeholder="Files, notes, volume claims…" autocomplete="off"/>
+      <div id="files" class="stack" style="margin-top:.65rem" role="listbox" aria-label="Kept items"></div>
+      <div class="row">
+        <button type="button" class="primary" id="btn-save">Save current</button>
+        <button type="button" id="btn-new">New note</button>
+        <button type="button" disabled title="Planned">Share</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  <section class="panel rise" aria-label="Open / preview">
+    <div class="ph"><span class="mark" aria-hidden="true"></span><b id="prev-title">Preview</b><span class="pill planned" id="prev-pill">—</span></div>
+    <div class="pb">
+      <div id="prev-empty" class="empty">
+        <strong>Save / open loop</strong>
+        <p>Select a kept item or Save current volume claim. Sync / share rails Planned.</p>
+      </div>
+      <div id="prev-body" hidden>
+        <label class="lbl" for="prev-text">Content</label>
+        <textarea id="prev-text" rows="10"></textarea>
+        <div class="row">
+          <button type="button" class="primary" id="btn-write">Save changes</button>
+          <button type="button" id="btn-to-lib">Send to Library</button>
+        </div>
+      </div>
+      <div class="note"><strong>Volume:</strong> <code>/volumes/keep</code>. Local vault path claims Live · body/library deep panes Planned.</div>
+    </div>
+  </section>
+</div>
+<script>
+(function(){
+  let items=[
+    {id:"welcome",name:"welcome.txt",kind:"note",body:"Keep holds volume claims and personal records. Save/open is Live locally.",status:"live"},
+    {id:"paths",name:"vault-paths",kind:"claim",body:"Local vault path claims · Live on this device.",status:"live"},
+    {id:"sync",name:"sync-rail",kind:"meta",body:"Sync / share rails Planned — no fake remote inventory.",status:"planned"}
+  ];
+  let selected=null;
+  const files=document.getElementById("files");
+  const status=document.getElementById("status");
+  const kq=document.getElementById("kq");
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+  function paint(){
+    const term=(kq.value||"").trim().toLowerCase();
+    files.innerHTML="";
+    const rows=items.filter(it=>!term||(it.name+" "+it.body).toLowerCase().includes(term));
+    if(!rows.length){files.innerHTML='<div class="empty"><strong>Nothing kept yet</strong><p>Save current or New note.</p></div>';return;}
+    rows.forEach(it=>{
+      const b=document.createElement("button");
+      b.type="button";b.className="file-row";b.setAttribute("role","option");
+      b.setAttribute("aria-selected",selected===it.id?"true":"false");
+      b.innerHTML='<span aria-hidden="true">'+(it.kind==="note"?"📄":"📁")+'</span><span><span class="name" style="font-weight:650;font-size:13px">'+esc(it.name)+'</span><span class="sub" style="display:block;font-size:11px;color:var(--mute)">'+esc(it.kind)+'</span></span><span class="pill '+(it.status==="live"?"live":"planned")+'">'+(it.status==="live"?"Live":"Planned")+'</span>';
+      b.addEventListener("click",()=>openItem(it.id));
+      files.appendChild(b);
+    });
+  }
+  function openItem(id){
+    const it=items.find(x=>x.id===id); if(!it)return;
+    selected=id; paint();
+    document.getElementById("prev-empty").hidden=true;
+    document.getElementById("prev-body").hidden=false;
+    document.getElementById("prev-title").textContent=it.name;
+    document.getElementById("prev-pill").className="pill "+(it.status==="live"?"live":"planned");
+    document.getElementById("prev-pill").textContent=it.status==="live"?"Live":"Planned";
+    document.getElementById("prev-text").value=it.body;
+    status.textContent="Opened "+it.name+" · local Live.";
+  }
+  kq.addEventListener("input",paint);
+  document.getElementById("btn-new").addEventListener("click",()=>{
+    const id="note-"+Date.now();
+    items.unshift({id,name:"note-"+new Date().toISOString().slice(0,16)+".txt",kind:"note",body:"",status:"live"});
+    paint(); openItem(id); status.textContent="New note · save when ready.";
+  });
+  document.getElementById("btn-save").addEventListener("click",()=>{
+    const id="claim-"+Date.now();
+    items.unshift({id,name:"volume-claim",kind:"claim",body:"Saved current volume claim · "+new Date().toLocaleString(),status:"live"});
+    paint(); openItem(id); status.textContent="Current claim saved to Keep · Live.";
+  });
+  document.getElementById("btn-write").addEventListener("click",()=>{
+    const it=items.find(x=>x.id===selected); if(!it)return;
+    it.body=document.getElementById("prev-text").value;
+    status.textContent="Saved changes · "+it.name;
+  });
+  document.getElementById("btn-to-lib").addEventListener("click",()=>{
+    status.textContent="Send to Library · parent routes /volumes/library.";
+  });
+  paint();
+  status.textContent="Keep volume · save/open loop Live · sync Planned.";
+})();
+</script>
 </body>
 </html>
