@@ -35,3 +35,15 @@ First-class, not a late bolt-on:
 ## Coexistence (unchanged)
 
 New Desktop = default. Legacy shell stays behind a flag until the new one is actually better. Leave Poet; migrate Desktop first, then Poet in as one app.
+
+## Product priority (Timothy lock 2026-09-19)
+
+**Park QApps** (catalog / academic flood / studio scaffolds) for now — they did not deliver useful human product. Revisit later if at all. Drop QApps from the default dock/favorites.
+
+**Ship first so humans can test and use (no agent required):**
+
+1. Real apps from the inventory — Talk, Mail, Directory, Browser, Settings, Keep, Library, admin/Jobs/Logs as needed, Phone companion, GPU/renderer where Present
+2. Settings + administration panels as first-class, findable surfaces
+3. OS shell that launches those apps (new default; legacy behind a flag)
+
+**MCP-only or agent-only usefulness is a FAIL.** After months, a human must open Desktop and use something without an AI agent.
