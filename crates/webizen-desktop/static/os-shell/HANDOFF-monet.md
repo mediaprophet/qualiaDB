@@ -1,18 +1,20 @@
 # Live shell chrome handoff (monet → Neo)
 
-**Path:** `crates/webizen-desktop/static/os-shell/index.html`
+**Path:** `crates/webizen-desktop/static/os-shell/index.html` (this tip)
 
-## Visual target (elevated)
-- Depth field background (not flat void + classic side-dock identity)
+## What changed visually
+- Depth field background (not flat void + side dock identity)
 - Continuity ribbon: who · claim · handle · tool
-- Humans-first **halo** rail (round orbs): Talk · Mail · Directory before tools
-- Stage as soft volume; empty-state: person waiting for a person; no Classic/Relations language
-- Wallet ⚡; rails Lightning · Nym · XEC · tokens (no ETH)
+- Humans-first **halo** rail (round orbs) — Talk · Mail · Directory before tools
+- Stage as soft volume (light perspective; flattened under `prefers-reduced-motion`)
+- Empty-state copy: person waiting for a person; no Classic/Relations language
+- Wallet glyph ⚡; rails copy Lightning · Nym · XEC · tokens
 
-## Preserve
-- Same APPS routes (`/talk`, `/talk/mail`, `/talk/directory`, `/browser`, `/keep`, `/library`, `/tools`, `/wallet`, `/settings`, `/admin`)
+## Preserved for Neo
+- Same `APPS` routes (`/talk`, `/talk/mail`, `/talk/directory`, `/browser`, `/keep`, `/library`, `/tools`, `/wallet`, `/settings`, `/admin`)
 - iframe stage + launcher (`/` / Ctrl+K)
-- `window.__WEBIZEN_OS_SHELL__` and `__WEBIZEN_SETTINGS_PORT`
+- `window.__WEBIZEN_OS_SHELL__` API
+- `__WEBIZEN_SETTINGS_PORT` origin helper
 
-## Capt
-Next native Desktop launch should match the elevated concept, not the old topbar + left fav strip. Bare app volumes inside iframe still Neo (no Classic/Relations frames).
+## Capt expectation
+Next native Desktop launch should read as the elevated spatial concept, not the old topbar + left fav strip. Bare app volumes inside iframe still on Neo (no Classic/Relations frames).
