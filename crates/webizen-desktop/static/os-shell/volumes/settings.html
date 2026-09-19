@@ -457,6 +457,7 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     <button type="button" data-pane="appearance" aria-current="true">Appearance</button>
     <button type="button" data-pane="continuity">Continuity</button>
     <button type="button" data-pane="notifications">Notifications</button>
+    <button type="button" data-pane="accessibility">Accessibility</button>
     <div class="group">Setup</div>
     <button type="button" data-pane="setup">First-run · host</button>
     <button type="button" data-pane="wallet-setup">Wallet rails</button>
@@ -466,7 +467,7 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     <button type="button" data-pane="agent">Agent · Console prefs</button>
     <button type="button" data-pane="instruments">Instruments binds</button>
     <button type="button" data-pane="data">Data · memory</button>
-    <button type="button" data-pane="privacy">Privacy · sanctuary</button>
+    <button type="button" data-pane="privacy">Sanctuary & Vault</button>
     <button type="button" data-pane="backup">Backup · sync</button>
     <button type="button" data-pane="services">Services · daemon</button>
     <button type="button" data-pane="advanced">Advanced</button>
@@ -496,11 +497,11 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<p class="muted" style="margin-top:0">Cold-load setup — who present without state handles. Host bind Planned until Desktop claims.</p>'+
       '<div class="toggle"><div><div class="t-label">Complete first-run checklist</div><div class="t-hint">Local progress Live</div></div><button type="button" class="switch" data-k="firstrun" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Native host :4242</div><div class="t-hint">Planned until Neo host claim</div></div><button type="button" class="switch" data-k="host" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
-      '<div class="note"><strong>Setup ≠ app.</strong> Removed from constellation; lives under Settings.</div>'},
+      '<div class="note"><strong>Setup ≠ app.</strong> Removed from constellation. Loopback Settings portal and in-app Settings share <strong>this volume</strong> — one home.</div>'},
     "wallet-setup":{title:"Wallet rails",pill:"Setup",html:
       '<p class="muted" style="margin-top:0">Configure which rails appear — Lightning · Nym · XEC · tokens. No ETH. Signing stays human.</p>'+
       '<div class="toggle"><div><div class="t-label">Lightning</div><div class="t-hint">Show rail in Wallet</div></div><button type="button" class="switch" data-k="ln" role="switch" aria-checked="true"><span></span></button></div>'+
-      '<div class="toggle"><div><div class="t-label">Nym</div><div class="t-hint">Privacy rail · Planned bind</div></div><button type="button" class="switch" data-k="nym" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Nym</div><div class="t-hint">Required for Nym network stack — enable here; host bind with Neo/Noddy</div></div><button type="button" class="switch" data-k="nym" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">eCash XEC</div></div><button type="button" class="switch" data-k="xec" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="row"><button type="button" class="primary" id="open-wallet">Open Wallet volume</button></div>'},
     agent:{title:"Agent · Console prefs",pill:"Config",html:
@@ -525,18 +526,35 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<div class="toggle"><div><div class="t-label">Show identity plane cards</div><div class="t-hint">Local Live · host claims Planned</div></div><button type="button" class="switch" data-k="idplane" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Fleet / multi-apparatus</div><div class="t-hint">Signed peer jobs · Planned</div></div><button type="button" class="switch" data-k="fleet" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
       '<div class="row"><button type="button" id="open-directory">Open Directory volume</button></div>'+
-      '<div class="note"><strong>Source:</strong> <code>settings/identity_plane.rs</code> · Device section · <code>/api/fleet/identity</code>. handle ≠ human.</div>'},
+            '<div class="ph" style="margin-top:.75rem"><b>Consent grants</b><span class="pill live">local</span></div>'+
+      '<div class="toggle"><div><div class="t-label">Grant Directory presence</div><div class="t-hint">Who you choose to be findable as</div></div><button type="button" class="switch" data-k="grant-dir" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Grant Mail delivery</div></div><button type="button" class="switch" data-k="grant-mail" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Grant agent tool suggestions</div><div class="t-hint">Tools only · never peer</div></div><button type="button" class="switch" data-k="grant-agent" role="switch" aria-checked="true"><span></span></button></div>'+
+'<div class="note"><strong>Source:</strong> <code>settings/identity_plane.rs</code> · Device section · <code>/api/fleet/identity</code>. handle ≠ human.</div>'},
     data:{title:"Data · memory",pill:"Config",html:
       '<p class="muted" style="margin-top:0">Private records, library, social assets, commons — distinct strata under your data home. Path change ≠ migrate.</p>'+
       '<div class="toggle"><div><div class="t-label">Show storage location</div><div class="t-hint">From host diagnostics when claimed</div></div><button type="button" class="switch" data-k="storloc" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Warn before path edits</div><div class="t-hint">Migration honesty</div></div><button type="button" class="switch" data-k="pathwarn" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="note"><strong>Source:</strong> Studio <code>SettingsSection::Data</code> · <code>DataAndMemory</code>. Low-level path field stays Advanced Technical.</div>'},
-    privacy:{title:"Privacy · sanctuary",pill:"Config",html:
-      '<p class="muted" style="margin-top:0">Sanctuary lock, vault volumes, consent grants. Volumes survive handle revoke — never person-deleted copy.</p>'+
-      '<div class="toggle"><div><div class="t-label">Sanctuary lock on sleep</div><div class="t-hint">Host command Planned until bind</div></div><button type="button" class="switch" data-k="sanlock" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
-      '<div class="toggle"><div><div class="t-label">Require consent for live-share</div></div><button type="button" class="switch" data-k="consent" role="switch" aria-checked="true"><span></span></button></div>'+
-      '<div class="row"><button type="button" id="open-keep">Open Keep volume</button></div>'+
-      '<div class="note"><strong>Source:</strong> <code>SettingsSection::Privacy</code> · WellfairSanctuary/Consent · Keep ≠ Files (Files Planned).</div>'},
+    privacy:{title:"Sanctuary & Vault",pill:"Setup · Config",html:
+      '<p class="muted" style="margin-top:0">Sanctuary lock · KeyVault · purpose-separated keyRoles. Not an app — configuration only. No key material in UI, logs, or Quins.</p>'+
+      '<div class="vault-status" aria-label="KeyVault status">'+
+      '<span class="pill planned" id="vault-lock">vault · locked</span>'+
+      '<span class="pill planned" id="vault-hw">hardware · unknown</span>'+
+      '<span class="pill live" id="vault-last">last unlock · never (local)</span>'+
+      '</div>'+
+      '<div class="toggle"><div><div class="t-label">Sanctuary unlocked</div><div class="t-hint">Host cmds Live on /sanctuary · chrome here · bind Planned until Neo claim</div></div><button type="button" class="switch" data-k="san-unlock" role="switch" aria-checked="false" id="sw-san"><span></span></button></div>'+
+      '<div class="ph" style="margin-top:1rem"><b>keyRole inventory</b><span class="pill live">closed v1</span></div>'+
+      '<p class="muted">F1 §5.11 + pack-publish. Per-role create / rotate / revoke / confirm purpose — never one mega-key.</p>'+
+      '<div class="kr-inv" id="kr-inv" role="list"></div>'+
+      '<div class="policy-block">'+
+      '<div class="ph"><b>Anti-coercion</b><span class="pill live">defaults</span></div>'+
+      '<div class="toggle"><div><div class="t-label">Purpose-bind on sign</div><div class="t-hint">F1 §26 · required</div></div><button type="button" class="switch" data-k="purpose-bind" role="switch" aria-checked="true"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Proxy-launder</div><div class="t-hint">Off by default</div></div><button type="button" class="switch" data-k="proxy-launder" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Conflict checks</div><div class="t-hint">Block conflicting purpose claims</div></div><button type="button" class="switch" data-k="conflict-chk" role="switch" aria-checked="true"><span></span></button></div>'+
+      '</div>'+
+      '<div class="note"><strong>Honesty:</strong> empty vault = held / not yet — not a dead end. Revoke credential ≠ erase human / Keep. Unknown keyRole = held, not other-id / who. Wallet rails stay sibling under Setup. Nym rail must be usable for the network stack.</div>'
+    },
     backup:{title:"Backup · sync",pill:"Config · Planned",html:
       '<p class="muted" style="margin-top:0">Import, backup, trusted relay. Host-bound sync stays Planned until Desktop claims — no fake “synced” theatre.</p>'+
       '<div class="toggle"><div><div class="t-label">Local backup reminders</div></div><button type="button" class="switch" data-k="bakrem" role="switch" aria-checked="true"><span></span></button></div>'+
@@ -547,6 +565,14 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<div class="toggle"><div><div class="t-label">Show daemon status strip</div><div class="t-hint">:4242 honesty from host</div></div><button type="button" class="switch" data-k="daemstat" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Auto-check updates</div><div class="t-hint">Updater path · Planned channel UI</div></div><button type="button" class="switch" data-k="updchk" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
       '<div class="note"><strong>Source:</strong> <code>SettingsSection::Services</code> · portal graph daemon · <code>/api/status</code>. Jobs/logs → Admin volume.</div>'},
+    accessibility:{title:"Accessibility · physiology",pill:"Prefs",html:
+      '<p class="muted" style="margin-top:0">Accessibility · physiology prefs (WellFair host). Local paints Live; host physiology bind Planned.</p>'+
+      '<div class="toggle"><div><div class="t-label">Reduce motion</div><div class="t-hint">Flattens soft-rise · respects OS</div></div><button type="button" class="switch" data-k="motion" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Larger type</div><div class="t-hint">Volume chrome scale</div></div><button type="button" class="switch" data-k="a11y-type" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">High contrast</div></div><button type="button" class="switch" data-k="a11y-contrast" role="switch" aria-checked="false"><span></span></button></div>'+
+      '<div class="toggle"><div><div class="t-label">Physiology cues</div><div class="t-hint">WellFair host · Planned</div></div><button type="button" class="switch" data-k="physio" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
+      '<div class="note"><strong>Not an app.</strong> Prefs live here — loopback Settings portal and in-app Settings share this volume (one home).</div>'
+    },
     advanced:{title:"Advanced",pill:"Config",html:
       '<div class="toggle"><div><div class="t-label">Legacy Studio shell</div><div class="t-hint">WEBIZEN_LEGACY_SHELL only — not product default</div></div><button type="button" class="switch" data-k="legacy" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Verbose volume logs</div></div><button type="button" class="switch" data-k="logs" role="switch" aria-checked="false"><span></span></button></div>'+
@@ -579,6 +605,50 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     const ok=document.getElementById("open-keep");
     if(ok) ok.onclick=()=>{ try{parent.postMessage({type:"webizen-open",route:"/volumes/keep"},"*");}catch(e){} };
   }
+  
+  const KEY_ROLES=[
+    {id:"controller-signing",label:"controller-signing",hint:"root controller purpose"},
+    {id:"route-update",label:"route-update",hint:"route claims"},
+    {id:"session-authentication",label:"session-authentication",hint:"session auth ≠ pack"},
+    {id:"transport-aead",label:"transport-aead",hint:"transport AEAD"},
+    {id:"qlink-ephemeral-dh",label:"qlink-ephemeral-dh",hint:"qlink ephemeral DH"},
+    {id:"capability-presentation",label:"capability-presentation",hint:"capability present"},
+    {id:"discovery-psk",label:"discovery-psk",hint:"discovery PSK"},
+    {id:"group-discovery",label:"group-discovery",hint:"group discovery"},
+    {id:"pack-publish",label:"pack-publish",hint:"ExpertiseEval packs · ≠ session"}
+  ];
+  const krStore=JSON.parse(localStorage.getItem("webizen.keyroles.v1")||"{}");
+  function paintKeyRoles(){
+    const box=document.getElementById("kr-inv");
+    if(!box) return;
+    box.innerHTML="";
+    KEY_ROLES.forEach(r=>{
+      const st=krStore[r.id]||{state:"held"};
+      const row=document.createElement("div");
+      row.className="kr-row"; row.setAttribute("role","listitem");
+      row.innerHTML='<div><div class="who">'+r.label+'</div><div class="meta">'+r.hint+' · '+st.state+'</div></div>'+
+        '<div class="kr-actions">'+
+        '<button type="button" data-act="create" data-role="'+r.id+'">Create</button>'+
+        '<button type="button" data-act="rotate" data-role="'+r.id+'">Rotate</button>'+
+        '<button type="button" data-act="revoke" data-role="'+r.id+'">Revoke</button>'+
+        '<button type="button" data-act="confirm" data-role="'+r.id+'">Confirm purpose</button>'+
+        '</div>';
+      box.appendChild(row);
+    });
+    box.querySelectorAll("button[data-act]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const id=btn.getAttribute("data-role");
+        const act=btn.getAttribute("data-act");
+        const map={create:"present",rotate:"rotated",revoke:"revoked",confirm:"purpose-confirmed"};
+        krStore[id]={state:map[act]||act,at:Date.now()};
+        localStorage.setItem("webizen.keyroles.v1",JSON.stringify(krStore));
+        const status=document.getElementById("status");
+        if(status) status.textContent="keyRole · "+id+" · "+map[act]+" · local only (no key material)";
+        paintKeyRoles();
+      });
+    });
+  }
+
   function show(id){
     const p=panes[id]||panes.appearance;
     title.textContent=p.title;
@@ -589,6 +659,7 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       b.setAttribute("aria-current", b.getAttribute("data-pane")===id?"true":"false");
     });
     bindSwitches();
+    if(id==="privacy") paintKeyRoles();
     status.textContent="Settings · "+p.title+" · not an app";
     try{ history.replaceState(null,"","?pane="+id); }catch(e){}
   }
