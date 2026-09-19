@@ -4,4 +4,5 @@
 //! `webizen-studio` expects (`/manifest`, `/telemetry`).
 //!
 //! Body glued at build from `src/ss_parts` (emergency restore vehicle).
+//! ping: part-b inbound
 include!("settings_server_glued.rs");
