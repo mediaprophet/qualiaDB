@@ -45,7 +45,7 @@ code{color:var(--accent)}
 <section class="vol" aria-label="Mail inbox">
   <div class="vh"><b>Inbox</b><span class="pill live">Live surface</span></div>
   <div class="vb">
-    <p class="muted" style="margin-top:0">Resurface from inventory. Soft-rise held.</p>
+    <p class="muted" style="margin-top:0">Resurface from inventory. Live.</p>
     <ul class="list" id="inbox">
       <li class="muted">Loading honesty…</li>
     </ul>
@@ -63,13 +63,13 @@ code{color:var(--accent)}
   const inbox=document.getElementById("inbox");
   const status=document.getElementById("status");
   function paintPlanned(reason){
-    inbox.innerHTML='<li><span class="pill planned">Planned</span> Mail adapters wait on Desktop host / identity — '+reason+'</li><li class="muted">No fake messages. Soft-rise held.</li>';
+    inbox.innerHTML='<li><span class="pill planned">Planned</span> Mail adapters wait on Desktop host / identity — '+reason+'</li><li class="muted">No fake messages. Live.</li>';
     status.textContent="Mail volume · Planned honesty when host missing.";
   }
   fetch("/api/status",{headers:{Accept:"application/json"}}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(s=>{
     const ok=s&&(s.graph_daemon_reachable||s.ok||s.desktop);
     if(!ok){paintPlanned("status not ready");return;}
-    inbox.innerHTML='<li><span class="pill live">Live</span> Host reachable · inbox bind Planned until mailbox claim</li><li class="muted">Empty is honest. Soft-rise held.</li>';
+    inbox.innerHTML='<li><span class="pill live">Live</span> Host reachable · inbox bind Planned until mailbox claim</li><li class="muted">Empty is honest. Live.</li>';
     status.textContent="Mail volume · host Live · mailbox bind Planned.";
   }).catch(()=>paintPlanned("overview offline"));
   document.getElementById("btn-compose").addEventListener("click",()=>{
