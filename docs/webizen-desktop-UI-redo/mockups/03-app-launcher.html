@@ -3,53 +3,108 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>03 — App launcher (code-visible)</title>
+<title>03 — App launcher (65-row inventory)</title>
 <style>
-  :root { --bg:#0f1720; --panel:#182230; --text:#e8eef4; --muted:#9aa8b5; --accent:#6cb6ff; --line:#2a3542; --live:#34d399; --buried:#fbbf24; }
+  :root { --bg:#0f1720; --panel:#182230; --text:#e8eef4; --muted:#9aa8b5; --accent:#6cb6ff; --line:#2a3542;
+    --live:#34d399; --buried:#fbbf24; --hidden:#a78bfa; --partial:#fb923c; --planned:#94a3b8; --lost:#f87171; }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--text); }
   .banner { padding:.45rem .75rem; background:#0b1220; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
   .banner strong { color:var(--accent); }
-  main { max-width:860px; margin:1.5rem auto; padding:0 1rem 2rem; }
+  main { max-width:960px; margin:1.25rem auto; padding:0 1rem 2.5rem; }
   h1 { font-size:1.2rem; margin:0 0 .35rem; }
-  .sub { color:var(--muted); margin:0 0 1.25rem; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
-  .app { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem; min-height:120px; }
-  .app .glyph { font-size:1.5rem; margin-bottom:.35rem; }
-  .app .name { font-weight:600; margin-bottom:.25rem; }
-  .app .blurb { font-size:12px; color:var(--muted); min-height:2.8em; }
-  .pill { display:inline-block; margin-top:.55rem; font-size:10px; letter-spacing:.04em; text-transform:uppercase; padding:2px 7px; border-radius:999px; }
+  .sub { color:var(--muted); margin:0 0 1rem; }
+  .legend { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:1.25rem; font-size:11px; }
+  .legend span { padding:2px 8px; border-radius:999px; }
   .live { color:#052e1c; background:var(--live); }
   .buried { color:#1c1400; background:var(--buried); }
-  .note { font-size:12px; color:var(--muted); margin-top:1.5rem; padding:0.75rem 1rem; border:1px solid var(--line); border-radius:10px; }
+  .hidden { color:#1e1033; background:var(--hidden); }
+  .partial { color:#1c0a00; background:var(--partial); }
+  .planned { color:#0f172a; background:var(--planned); }
+  .lost { color:#1f0505; background:var(--lost); }
+  h2 { font-size:0.95rem; margin:1.5rem 0 .6rem; color:var(--muted); font-weight:600; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; }
+  .app { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:.85rem; min-height:108px; }
+  .app .glyph { font-size:1.35rem; margin-bottom:.3rem; }
+  .app .name { font-weight:600; margin-bottom:.2rem; font-size:13px; }
+  .app .blurb { font-size:11px; color:var(--muted); min-height:2.4em; }
+  .pill { display:inline-block; margin-top:.45rem; font-size:9px; letter-spacing:.03em; text-transform:uppercase; padding:2px 7px; border-radius:999px; }
 </style>
 </head>
 <body>
-  <div class="banner"><strong>Gate 0</strong> — launcher from code-visible Desktop/Studio surfaces. Present-but-hidden = inventory, not a write-off.</div>
+  <div class="banner"><strong>Gate 0</strong> — launcher matched to <code>HALF-BUILT-APPS.md</code> (65 surfaces). Soft-rise into Live; buried/hidden get findability. No held theatre.</div>
   <main>
     <h1>Launch</h1>
-    <p class="sub">Names from <code>webizen-desktop</code> commands + Studio hosts. Dock favorites above; full list here. Status: live (reachable path exists) or buried (built, hard to find).</p>
-    <div class="grid">
-      <div class="app"><div class="glyph">🌐</div><div class="name">Browser</div><div class="blurb">webizen-desktop browser + browser_10d.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">✉️</div><div class="name">Mail</div><div class="blurb">commands/mail.rs</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">💬</div><div class="name">Talk</div><div class="blurb">social / human↔human compose.</div><span class="pill live">live</span></div>
-      <div class="app"><div class="glyph">📁</div><div class="name">Keep</div><div class="blurb">keep_volume + files.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">📖</div><div class="name">Lexicon</div><div class="blurb">lexicon_catalog.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🖼️</div><div class="name">Renderer</div><div class="blurb">native_surface + render pipeline.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🕸️</div><div class="name">Mesh</div><div class="blurb">commands/mesh.rs</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">📦</div><div class="name">QApps</div><div class="blurb">qapp_host / export / telemetry.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🎨</div><div class="name">Studio</div><div class="blurb">canvas / panes / instruments.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">✨</div><div class="name">Vibe</div><div class="blurb">vibe-host parity on Desktop.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🪶</div><div class="name">Poet</div><div class="blurb">Leave alone; migrate in later.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">📇</div><div class="name">Directory</div><div class="blurb">directory + personal_directory.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🧲</div><div class="name">Ingest</div><div class="blurb">ingest + glb_ingest.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🧠</div><div class="name">Semantic</div><div class="blurb">semantic + instruments + logic.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🩺</div><div class="name">Med reminder</div><div class="blurb">med_reminder_notifier.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">🎙️</div><div class="name">Mic</div><div class="blurb">mic_capture.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">📡</div><div class="name">WebRTC</div><div class="blurb">webrtc_manager.</div><span class="pill buried">buried</span></div>
-      <div class="app"><div class="glyph">⚙️</div><div class="name">Settings</div><div class="blurb">settings_server / Your Webizen.</div><span class="pill live">live</span></div>
+    <p class="sub">Rows from Capt inventory on <code>0.0.40-webizen-ui</code>. Life-domain chrome is not the IA — apps are.</p>
+    <div class="legend">
+      <span class="live">Live</span>
+      <span class="buried">Live / buried</span>
+      <span class="hidden">Present / hidden</span>
+      <span class="partial">Partial</span>
+      <span class="planned">Planned</span>
+      <span class="lost">Lost</span>
     </div>
-    <p class="note">This is a Gate 0 launch set from code paths — not the full 65-row Capt inventory. When <code>HALF-BUILT-APPS.md</code> has real rows (not the stub header), dock + launcher will follow that list exactly.</p>
+
+    <h2>Resurface first (built, not findable)</h2>
+    <div class="grid">
+      <div class="app"><div class="glyph">💬</div><div class="name">Talk</div><div class="blurb">Home. Default route.</div><span class="pill live">Live</span></div>
+      <div class="app"><div class="glyph">✉️</div><div class="name">Mail</div><div class="blurb">Inbox under Talk — needs dock tile.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">👥</div><div class="name">Directory</div><div class="blurb">People address book.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🌐</div><div class="name">Browser</div><div class="blurb">Live on Desktop; gated off wasm.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🔟</div><div class="name">10D Browser</div><div class="blurb">.10d inspect UI.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🗄️</div><div class="name">Keep</div><div class="blurb">Vault hub — Advanced/legacy path.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">📚</div><div class="name">Library</div><div class="blurb">Lived Memory.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">📦</div><div class="name">QApps</div><div class="blurb">Catalog manager.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🎨</div><div class="name">QApp Studio</div><div class="blurb">Layout builder.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🕸️</div><div class="name">Nexus</div><div class="blurb">Knowledge / claims.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">📋</div><div class="name">Jobs</div><div class="blurb">Job centre.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">📜</div><div class="name">Logs</div><div class="blurb">Desktop logs.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">🖼️</div><div class="name">GPU viewport</div><div class="blurb">Native WGPU surface.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">📱</div><div class="name">Phone</div><div class="blurb">Companion pairing QR/WS.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">⚙️</div><div class="name">Settings</div><div class="blurb">In-app settings.</div><span class="pill live">Live</span></div>
+      <div class="app"><div class="glyph">🔧</div><div class="name">Settings portal</div><div class="blurb">Loopback portal — easy to miss.</div><span class="pill hidden">Present / hidden</span></div>
+    </div>
+
+    <h2>Also Present (shell tiles later)</h2>
+    <div class="grid">
+      <div class="app"><div class="glyph">🪪</div><div class="name">Identity</div><div class="blurb">Selfhood / consent.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">💚</div><div class="name">WellFair</div><div class="blurb">Care shell.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🛠️</div><div class="name">Work</div><div class="blurb">Practice / projects.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🔭</div><div class="name">Instruments</div><div class="blurb">Tools / models.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🌌</div><div class="name">Chora</div><div class="blurb">Universe panel.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🧩</div><div class="name">Context Studio</div><div class="blurb">Deep link only.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">❤️</div><div class="name">Health</div><div class="blurb">Health vault.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🦴</div><div class="name">Anatomy</div><div class="blurb">3D + panels.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">🏥</div><div class="name">Clinical</div><div class="blurb">Omnibox / hash only.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">🛡️</div><div class="name">Agency</div><div class="blurb">Guardianship panels.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">🔒</div><div class="name">Sanctuary</div><div class="blurb">Lock/unlock host.</div><span class="pill buried">Live / buried</span></div>
+      <div class="app"><div class="glyph">👁️</div><div class="name">Vision</div><div class="blurb">Vision workbench.</div><span class="pill partial">Partial</span></div>
+      <div class="app"><div class="glyph">🎧</div><div class="name">Listen</div><div class="blurb">Listen workbench.</div><span class="pill partial">Partial</span></div>
+      <div class="app"><div class="glyph">🔗</div><div class="name">Communications</div><div class="blurb">Live-share requests.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">🧪</div><div class="name">Agent QA</div><div class="blurb">Diagnostics.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">⚠️</div><div class="name">Supervisor</div><div class="blurb">Problems pane.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">ℹ️</div><div class="name">About</div><div class="blurb">Help → About.</div><span class="pill live">Live</span></div>
+      <div class="app"><div class="glyph">📊</div><div class="name">Dashboard</div><div class="blurb">Ops overview.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">🎬</div><div class="name">Render preview</div><div class="blurb">Deep link.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">🖱️</div><div class="name">Scene interaction</div><div class="blurb">Deep link only.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">✨</div><div class="name">Vibe</div><div class="blurb">Inside Poet; no tile yet.</div><span class="pill hidden">Present / buried</span></div>
+      <div class="app"><div class="glyph">🔌</div><div class="name">MCP</div><div class="blurb">Server live; inspector mock.</div><span class="pill partial">Partial</span></div>
+      <div class="app"><div class="glyph">📡</div><div class="name">Mesh / P2P</div><div class="blurb">Cmds Present.</div><span class="pill hidden">Present / hidden</span></div>
+      <div class="app"><div class="glyph">⬆️</div><div class="name">Updater</div><div class="blurb">Help → Check updates.</div><span class="pill live">Live</span></div>
+    </div>
+
+    <h2>Poet (leave alone this Gate)</h2>
+    <div class="grid">
+      <div class="app"><div class="glyph">🪶</div><div class="name">Poet</div><div class="blurb">One product later; dual forms today.</div><span class="pill buried">Live / dual</span></div>
+    </div>
+
+    <h2>Planned / Lost (honest)</h2>
+    <div class="grid">
+      <div class="app"><div class="glyph">📂</div><div class="name">Files</div><div class="blurb">Named in migration; Keep ≠ Files.</div><span class="pill planned">Planned</span></div>
+      <div class="app"><div class="glyph">💳</div><div class="name">Wallet</div><div class="blurb">Menu remaps to Identity.</div><span class="pill lost">Lost as app</span></div>
+      <div class="app"><div class="glyph">🖥️</div><div class="name">New OS shell</div><div class="blurb">These mock-ups — not default yet.</div><span class="pill planned">Planned</span></div>
+      <div class="app"><div class="glyph">🏳️</div><div class="name">--legacy-desktop</div><div class="blurb">Flag to keep old shell.</div><span class="pill planned">Planned</span></div>
+    </div>
   </main>
 </body>
 </html>

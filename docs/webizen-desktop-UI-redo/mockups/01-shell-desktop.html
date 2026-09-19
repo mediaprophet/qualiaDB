@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>01 — Shell desktop (inventory-aligned)</title>
+<title>01 — Shell desktop (HALF-BUILT-APPS dock)</title>
 <style>
   :root { --desk:#1b3a4b; --desk2:#0d2130; --panel:rgba(12,18,24,.72); --text:#f2f6fa; --muted:#b7c4d0; --dock:rgba(8,12,18,.78); --icon:#243040; --accent:#7ec8ff; }
   * { box-sizing:border-box; }
@@ -17,44 +17,45 @@
   .menubar .brand { font-weight:600; }
   .menubar .grow { flex:1; }
   .menubar .status { color:var(--muted); font-size:12px; }
-  .desktop { position:fixed; inset:calc(2rem + 28px) 0 88px 0; padding:1.25rem; display:flex; flex-wrap:wrap; gap:1rem; align-content:flex-start; }
-  .shortcut { width:88px; text-align:center; text-shadow:0 1px 2px #0008; font-size:12px; }
-  .shortcut .tile { width:52px; height:52px; margin:0 auto .35rem; border-radius:12px; background:var(--icon); border:1px solid #3a4a5c; display:grid; place-items:center; font-size:22px; }
-  .dock { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:8px; padding:10px 14px; flex-wrap:wrap; max-width:96vw; justify-content:center;
+  .desktop { position:fixed; inset:calc(2rem + 28px) 0 96px 0; padding:1.25rem; }
+  .hint { max-width:28rem; color:var(--muted); font-size:13px; text-shadow:0 1px 2px #0008; }
+  .dock { position:fixed; left:50%; bottom:12px; transform:translateX(-50%); display:flex; gap:6px; padding:10px 12px; flex-wrap:wrap; max-width:98vw; justify-content:center;
     background:var(--dock); border:1px solid rgba(255,255,255,.1); border-radius:18px; backdrop-filter:blur(14px); }
-  .dock button { width:52px; height:52px; border:0; border-radius:12px; background:#1e2a38; color:var(--text); cursor:pointer; font-size:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+  .dock button { width:54px; height:54px; border:0; border-radius:12px; background:#1e2a38; color:var(--text); cursor:pointer; font-size:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
   .dock button:hover { outline:2px solid var(--accent); }
   .dock button span { font-size:18px; line-height:1; }
-  .caption { font-size:9px; color:var(--muted); max-width:48px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .caption { font-size:9px; color:var(--muted); max-width:50px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 </style>
 </head>
 <body>
-  <div class="banner"><strong>Gate 0</strong> — dock retargeted to code-visible Desktop surfaces (commands + studio). <code>HALF-BUILT-APPS.md</code> on origin is still a stub header; full 65-row list will refine this when Capt pushes it.</div>
+  <div class="banner"><strong>Gate 0</strong> — dock favorites from <code>HALF-BUILT-APPS.md</code> tip <code>78b7494</code> / <code>f62f2d6</code>. Priority: resurface Live/buried + Present/hidden. Poet = one tile only (leave alone). Full list in launcher.</div>
   <div class="menubar">
     <div class="brand">Webizen</div>
     <div>File</div><div>View</div><div>Go</div>
     <div class="grow"></div>
-    <div class="status">New shell default · legacy via flag · live</div>
+    <div class="status">New shell default · legacy via flag · no life-domain chrome</div>
   </div>
   <div class="desktop">
-    <div class="shortcut"><div class="tile">🌐</div>Browser</div>
-    <div class="shortcut"><div class="tile">✉️</div>Mail</div>
-    <div class="shortcut"><div class="tile">💬</div>Talk</div>
+    <p class="hint">OS shell mock-up. Dock shows first-class app tiles people should reach without Relations/Care/Instruments literacy. Open launcher for all 65.</p>
   </div>
-  <nav class="dock" aria-label="App dock">
-    <button type="button"><span>🌐</span><div class="caption">Browser</div></button>
-    <button type="button"><span>✉️</span><div class="caption">Mail</div></button>
-    <button type="button"><span>💬</span><div class="caption">Talk</div></button>
-    <button type="button"><span>📁</span><div class="caption">Keep</div></button>
-    <button type="button"><span>📖</span><div class="caption">Lexicon</div></button>
-    <button type="button"><span>🖼️</span><div class="caption">Renderer</div></button>
-    <button type="button"><span>🕸️</span><div class="caption">Mesh</div></button>
-    <button type="button"><span>📦</span><div class="caption">QApps</div></button>
-    <button type="button"><span>🎨</span><div class="caption">Studio</div></button>
-    <button type="button"><span>✨</span><div class="caption">Vibe</div></button>
-    <button type="button"><span>🪶</span><div class="caption">Poet</div></button>
-    <button type="button"><span>📇</span><div class="caption">Directory</div></button>
-    <button type="button"><span>⚙️</span><div class="caption">Settings</div></button>
+  <nav class="dock" aria-label="App dock — inventory favorites">
+    <button type="button" title="Talk (home) — Live"><span>💬</span><div class="caption">Talk</div></button>
+    <button type="button" title="Mail — Live/buried"><span>✉️</span><div class="caption">Mail</div></button>
+    <button type="button" title="Directory / People — Live/buried"><span>👥</span><div class="caption">Directory</div></button>
+    <button type="button" title="Browser — Live desktop / Present-hidden wasm"><span>🌐</span><div class="caption">Browser</div></button>
+    <button type="button" title="10D Browser — Live/buried"><span>🔟</span><div class="caption">10D</div></button>
+    <button type="button" title="Keep — Live/buried"><span>🗄️</span><div class="caption">Keep</div></button>
+    <button type="button" title="Library / Lived Memory — Live/buried"><span>📚</span><div class="caption">Library</div></button>
+    <button type="button" title="QApps — Live/buried"><span>📦</span><div class="caption">QApps</div></button>
+    <button type="button" title="QApp Studio — Live/buried"><span>🎨</span><div class="caption">Studio</div></button>
+    <button type="button" title="Nexus — Present/hidden"><span>🕸️</span><div class="caption">Nexus</div></button>
+    <button type="button" title="Jobs — Present/hidden"><span>📋</span><div class="caption">Jobs</div></button>
+    <button type="button" title="Logs — Present/hidden"><span>📜</span><div class="caption">Logs</div></button>
+    <button type="button" title="GPU viewport — Present/hidden"><span>🖼️</span><div class="caption">GPU</div></button>
+    <button type="button" title="Phone companion — Live/buried"><span>📱</span><div class="caption">Phone</div></button>
+    <button type="button" title="Poet — leave alone; migrate in later"><span>🪶</span><div class="caption">Poet</div></button>
+    <button type="button" title="Settings — Live"><span>⚙️</span><div class="caption">Settings</div></button>
+    <button type="button" title="Open full launcher"><span>⬚</span><div class="caption">Launch</div></button>
   </nav>
 </body>
 </html>
