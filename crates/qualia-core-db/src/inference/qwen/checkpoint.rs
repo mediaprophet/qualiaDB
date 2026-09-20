@@ -95,10 +95,10 @@ impl QwenCheckpointRegistry {
         kv_hash: u64,
         recurrent_digest: &[u8; 32],
     ) -> Option<&QwenDualCheckpoint> {
-        self.checkpoints
-            .iter()
-            .rev()
-            .find(|cp| cp.token_index <= target_tokens && cp.can_resume(cp.token_index, kv_hash, recurrent_digest))
+        self.checkpoints.iter().rev().find(|cp| {
+            cp.token_index <= target_tokens
+                && cp.can_resume(cp.token_index, kv_hash, recurrent_digest)
+        })
     }
 
     /// Clear all registered checkpoints (e.g. on model swap or context reset).

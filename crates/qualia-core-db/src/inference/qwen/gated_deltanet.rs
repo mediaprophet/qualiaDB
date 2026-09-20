@@ -42,7 +42,10 @@ pub fn step_causal_conv1d(
     let channels = input.len();
     let history_len = (CAUSAL_CONV_KERNEL - 1) * channels;
 
-    if conv_state.len() < history_len || out.len() < channels || conv_weights.len() < CAUSAL_CONV_KERNEL * channels {
+    if conv_state.len() < history_len
+        || out.len() < channels
+        || conv_weights.len() < CAUSAL_CONV_KERNEL * channels
+    {
         return Err(QwenStateError::BufferTooSmall);
     }
 
@@ -99,7 +102,12 @@ pub fn step_gated_deltanet(
     out: &mut [f32],
 ) -> Result<(), QwenStateError> {
     let state_elements = d_state * d_head;
-    if state.len() < state_elements || q.len() < d_state || k.len() < d_state || v.len() < d_head || out.len() < d_head {
+    if state.len() < state_elements
+        || q.len() < d_state
+        || k.len() < d_state
+        || v.len() < d_head
+        || out.len() < d_head
+    {
         return Err(QwenStateError::BufferTooSmall);
     }
 

@@ -3,6 +3,9 @@ use crate::inference::runtime::kv::paged::{
     BlockPool, CopyOnWrite, SequenceBlockTable, TableError,
 };
 use crate::inference::runtime::kv::prefix::{PrefixKvError, PrefixKvStore};
+use crate::inference::runtime::memory_guard::{
+    HostMemorySample, MemoryPressureAction, MemoryPressureGuard,
+};
 
 use super::batch::{
     RaggedBackendError, RaggedBatchItem, RaggedBatchOutput, RaggedBatchReceipt, RaggedDecodeBackend,
@@ -40,6 +43,7 @@ pub enum SchedulerError {
     UnknownRequest,
     OutputTooSmall,
     Draining,
+    MemoryPressure,
     Drain(DrainError),
     Prefix(PrefixKvError),
     Table(TableError),
@@ -124,6 +128,7 @@ impl RequestSlot {
 pub struct RequestScheduler<const REQUESTS: usize> {
     slots: [RequestSlot; REQUESTS],
     drain: DrainController,
+    memory_admission_paused: bool,
 }
 
 impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
@@ -132,6 +137,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         Self {
             slots: std::array::from_fn(|_| RequestSlot::new(logical_pages)),
             drain: DrainController::new(0),
+            memory_admission_paused: false,
         }
     }
 
@@ -139,6 +145,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         Self {
             slots: std::array::from_fn(|_| RequestSlot::new(logical_pages)),
             drain: DrainController::new(initial_generation),
+            memory_admission_paused: false,
         }
     }
 
@@ -159,6 +166,38 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
             .request_drain(reason, self.active_count(), current_epoch)
     }
 
+    /// Apply a host-memory policy sample before a new scheduling round.
+    ///
+    /// At critical pressure this transitions the scheduler into its existing
+    /// drain state, so active requests finish only through normal token-boundary
+    /// lifecycle handling. The caller performs cache shedding/checkpointing for
+    /// the returned action; this hot path remains allocation-free.
+    pub fn apply_memory_pressure(
+        &mut self,
+        guard: &MemoryPressureGuard,
+        sample: HostMemorySample,
+        current_epoch: u64,
+    ) -> MemoryPressureAction {
+        let action = guard.evaluate(sample);
+        match action {
+            MemoryPressureAction::Continue => {
+                if self.drain.is_admission_allowed() {
+                    self.memory_admission_paused = false;
+                }
+            }
+            MemoryPressureAction::StopAdmissionAndShedCaches => {
+                self.memory_admission_paused = true;
+            }
+            MemoryPressureAction::DrainAndCheckpoint => {
+                self.memory_admission_paused = true;
+                if self.drain.is_admission_allowed() {
+                    let _ = self.request_drain(DrainReason::MemoryPressure, current_epoch);
+                }
+            }
+        }
+        action
+    }
+
     pub fn active_count(&self) -> usize {
         self.slots
             .iter()
@@ -176,6 +215,9 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
     ) -> Result<Admission, SchedulerError> {
         if !self.drain.is_admission_allowed() {
             return Err(SchedulerError::Draining);
+        }
+        if self.memory_admission_paused {
+            return Err(SchedulerError::MemoryPressure);
         }
         if self
             .slots

@@ -49,7 +49,9 @@ pub fn name_to_role(name: &str) -> Option<TensorRole> {
             layer: P64_LAYER_GLOBAL,
         });
     }
-    if name.contains("token_embd") || name.contains("embed_tokens") {
+    if (name.contains("token_embd") || name.contains("embed_tokens"))
+        && !name.contains("per_layer")
+    {
         return Some(TensorRole {
             role: P64_ROLE_TOKEN_EMBD,
             layer: P64_LAYER_GLOBAL,

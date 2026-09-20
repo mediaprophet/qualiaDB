@@ -20,6 +20,9 @@ pub const ARCH_DEEPSEEK_MOE: u32 = 9;
 pub const ARCH_QWEN35_MOE: u32 = 10;
 /// Granite hybrid SSM + attention architecture; requires recurrent state execution.
 pub const ARCH_GRANITE_HYBRID: u32 = 11;
+/// Qwen3.8 Flash Next (`qwen4exp`): hybrid GatedDeltaNet / QSA / MoE with a
+/// required hash-gathered PLE n-gram table.
+pub const ARCH_QWEN4EXP: u32 = 12;
 pub const ARCH_OTHER: u32 = 255;
 
 /// Feature flags on [`GgufHyperparams::arch_flags`].
@@ -144,6 +147,7 @@ impl GgufHyperparams {
             ARCH_DEEPSEEK_MOE => "deepseek_moe",
             ARCH_QWEN35_MOE => "qwen35moe",
             ARCH_GRANITE_HYBRID => "granitehybrid",
+            ARCH_QWEN4EXP => "qwen4exp",
             ARCH_OTHER => "other",
             _ => "unknown",
         }
@@ -162,6 +166,12 @@ impl GgufHyperparams {
         if self.architecture == ARCH_QWEN35_MOE {
             return Err(
                 "architecture 'qwen35moe' requires the hybrid SSM state update, fused QKV/gated-attention path, and GGUF expert-tensor execution; the native Llama-shaped forward must not attempt it."
+                    .into(),
+            );
+        }
+        if self.architecture == ARCH_QWEN4EXP {
+            return Err(
+                "architecture 'qwen4exp' requires the dedicated PLE n-gram gather, Qwen Sparse Attention, Hyper-Connection, GatedDeltaNet, and 512-expert execution graph; the generic Llama-shaped forward must not attempt it."
                     .into(),
             );
         }
@@ -210,6 +220,7 @@ pub fn parse_architecture_id(name: &str) -> u32 {
         "gemma3" => ARCH_GEMMA3,
         "gemma4" => ARCH_GEMMA4,
         "qwen35moe" | "qwen3.5moe" | "qwen3.6moe" => ARCH_QWEN35_MOE,
+        "qwen4exp" | "qwen4_exp" => ARCH_QWEN4EXP,
         "granitehybrid" | "granite-hybrid" | "granite_hybrid" => ARCH_GRANITE_HYBRID,
         "qwen2" | "qwen2vl" | "qwen3" | "qwen3.5" | "qwen3.6" => ARCH_QWEN2,
         "glm" | "glm4" | "glm4.7" | "chatglm" => ARCH_GLM4,

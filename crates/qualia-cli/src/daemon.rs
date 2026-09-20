@@ -163,7 +163,9 @@ pub async fn serve_foreground(opts: &DaemonOpts, wait_for_ctrl_c: bool) {
     if is_dev {
         println!("WARNING: Running in DEV MODE. Trusting localhost origins.");
     } else {
-        println!("Strict Origin Enforcement enabled: Trusting webizen.au and mediaprophet.github.io");
+        println!(
+            "Strict Origin Enforcement enabled: Trusting webizen.au and mediaprophet.github.io"
+        );
     }
 
     let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());

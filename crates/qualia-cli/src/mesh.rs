@@ -38,9 +38,7 @@ use sha2::{Digest, Sha256};
 use qualia_core_db::net::qdnf::frame::{encode_frame, FrameHeader, MAGIC};
 use qualia_core_db::net::qdnf::registries::{FrameType, NextProtocol};
 use qualia_core_db::p2p::mesh_datagram::{self, ports};
-use qualia_core_db::p2p::stun_observe::{
-    observe_mapping, recommend_role, ProbeRole, MappingClass,
-};
+use qualia_core_db::p2p::stun_observe::{observe_mapping, recommend_role, MappingClass, ProbeRole};
 use qualia_core_db::p2p::wireguard_runtime::{TunnelEvent, WgTunnel};
 use qualia_core_db::p2p::wireguard_userspace::WgKeypair;
 
@@ -276,7 +274,10 @@ fn run_connect(
         let transmitted = tunnel.send_packet(&packet)?;
         if transmitted {
             if qdnf {
-                println!("  → sent [{i}/{count}] QDNF DiscoveryBeacon on overlay {}", ports::QDNF);
+                println!(
+                    "  → sent [{i}/{count}] QDNF DiscoveryBeacon on overlay {}",
+                    ports::QDNF
+                );
             } else {
                 println!("  → sent [{i}/{count}]: \"{message}\"");
             }
@@ -301,9 +302,7 @@ fn resolve_ipv4(host: &str, port: u16) -> Result<SocketAddr, Box<dyn std::error:
     Ok(addr)
 }
 
-fn print_report(
-    report: &qualia_core_db::p2p::stun_observe::ObserveReport,
-) {
+fn print_report(report: &qualia_core_db::p2p::stun_observe::ObserveReport) {
     let role = recommend_role(report.class);
     println!("SOCIALWEBNET-INTERNET-OFFER v1");
     println!("  local_bind     : {}", report.local);
@@ -331,7 +330,10 @@ fn print_report(
 }
 
 fn print_stun_on_socket(sock: &UdpSocket) {
-    match (resolve_ipv4(STUN_A.0, STUN_A.1), resolve_ipv4(STUN_B.0, STUN_B.1)) {
+    match (
+        resolve_ipv4(STUN_A.0, STUN_A.1),
+        resolve_ipv4(STUN_B.0, STUN_B.1),
+    ) {
         (Ok(a), Ok(b)) => match observe_mapping(sock, a, b, Duration::from_secs(3)) {
             Ok(report) => print_report(&report),
             Err(e) => println!("  stun observe failed: {e}"),

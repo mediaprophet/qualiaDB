@@ -27,6 +27,8 @@ pub enum DrainReason {
     GraphRebuild,
     /// Thermal governor throttle or emergency cooling.
     ThermalThrottle,
+    /// Host commit/available-memory policy requires a safe inference drain.
+    MemoryPressure,
     /// Manual operator or administrative command.
     Administrative,
 }

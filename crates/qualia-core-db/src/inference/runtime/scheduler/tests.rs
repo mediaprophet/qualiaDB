@@ -215,9 +215,8 @@ fn scheduler_runs_with_multi_sequence_ragged_backend_and_bucketing() {
         scheduler.seed_decode_token(id, token).unwrap();
     }
 
-    let mut backend = MultiSequenceRaggedBackend::new(|_req, _slot, token, pos, _pages| {
-        token + pos + 1
-    });
+    let mut backend =
+        MultiSequenceRaggedBackend::new(|_req, _slot, token, pos, _pages| token + pos + 1);
 
     let mut items = [RaggedBatchItem::default(); 4];
     let mut tables = [0u32; 8];
@@ -282,4 +281,46 @@ fn scheduler_drain_lifecycle_prevents_admissions_and_reaches_quiesced() {
     assert!(scheduler
         .admit_with_prefix(3, None, &prefixes, &mut pool)
         .is_ok());
+}
+
+#[test]
+fn host_memory_pressure_blocks_admission_before_critical_drain() {
+    use crate::inference::runtime::memory_guard::{
+        HostMemorySample, MemoryPressureAction, MemoryPressureGuard, MemoryPressurePolicy,
+    };
+
+    let mut pool = BlockPool::new(2);
+    let prefixes = PrefixKvStore::<1, 1>::new();
+    let mut scheduler = RequestScheduler::<1>::new(1);
+    let guard = MemoryPressureGuard::new(MemoryPressurePolicy::new(8, 4, 100).unwrap());
+
+    let soft = scheduler.apply_memory_pressure(
+        &guard,
+        HostMemorySample {
+            available_host_bytes: 7,
+            inference_commit_bytes: 20,
+            active_requests: 0,
+        },
+        1,
+    );
+    assert_eq!(soft, MemoryPressureAction::StopAdmissionAndShedCaches);
+    assert_eq!(
+        scheduler.admit_with_prefix(1, None, &prefixes, &mut pool),
+        Err(SchedulerError::MemoryPressure)
+    );
+
+    let critical = scheduler.apply_memory_pressure(
+        &guard,
+        HostMemorySample {
+            available_host_bytes: 3,
+            inference_commit_bytes: 20,
+            active_requests: 0,
+        },
+        2,
+    );
+    assert_eq!(critical, MemoryPressureAction::DrainAndCheckpoint);
+    assert_eq!(
+        scheduler.drain().reason(),
+        Some(DrainReason::MemoryPressure)
+    );
 }

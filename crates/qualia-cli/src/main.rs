@@ -15,6 +15,7 @@ pub mod mcp;
 pub mod mesh;
 pub mod qpu;
 pub mod query;
+mod qwen_testing;
 pub mod resources;
 pub mod science;
 mod service;

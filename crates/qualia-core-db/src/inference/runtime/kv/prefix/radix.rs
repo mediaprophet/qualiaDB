@@ -130,7 +130,8 @@ impl<const MAX_NODES: usize> RadixPrefixIndex<MAX_NODES> {
 
         let matched_tokens = prompt_offset as u32;
         // OSRP rule: if full prompt matched, withhold final token for decode logits
-        let reusable_tokens = if matched_tokens == prompt_tokens.len() as u32 && matched_tokens > 0 {
+        let reusable_tokens = if matched_tokens == prompt_tokens.len() as u32 && matched_tokens > 0
+        {
             matched_tokens - 1
         } else {
             matched_tokens
@@ -189,7 +190,8 @@ impl<const MAX_NODES: usize> RadixPrefixIndex<MAX_NODES> {
         let mut min_epoch = u64::MAX;
 
         for (idx, node) in self.nodes.iter().enumerate() {
-            if node.is_occupied && node.first_child.is_none() && node.last_access_epoch < min_epoch {
+            if node.is_occupied && node.first_child.is_none() && node.last_access_epoch < min_epoch
+            {
                 min_epoch = node.last_access_epoch;
                 lru_leaf = Some(idx);
             }
@@ -273,7 +275,9 @@ mod tests {
 
         // Page 2: tokens 17..=32
         let p2_tokens: [u32; 16] = core::array::from_fn(|i| (i + 17) as u32);
-        index.insert_child_page(Some(n1), &p2_tokens, 200, 1).unwrap();
+        index
+            .insert_child_page(Some(n1), &p2_tokens, 200, 1)
+            .unwrap();
 
         let mut out_pages = [0u32; 4];
 
@@ -343,13 +347,9 @@ mod tests {
         t2.install_shared_prefix(&[p_dup], &mut pool).unwrap();
 
         let mut slice = [&mut t1, &mut t2];
-        let repointed = RadixPrefixIndex::<8>::repoint_page_references(
-            &mut slice,
-            p_dup,
-            p_canon,
-            &mut pool,
-        )
-        .unwrap();
+        let repointed =
+            RadixPrefixIndex::<8>::repoint_page_references(&mut slice, p_dup, p_canon, &mut pool)
+                .unwrap();
 
         assert_eq!(repointed, 2);
         assert_eq!(t1.get(0), Some(p_canon));

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::cli::LlmAction;
 use crate::llm_lifecycle;
 use crate::llm_testing;
+use crate::qwen_testing;
 
 pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>> {
     let vault = |opt: &Option<PathBuf>| {
@@ -86,6 +87,90 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
             layout,
         } => {
             llm_testing::run_convert_gguf_to_p64(input, out, *page_log2, layout)?;
+        }
+        LlmAction::PrepareQwen4Exp {
+            input,
+            out,
+            ple_out,
+        } => {
+            llm_testing::run_prepare_qwen4exp_native(input, out, ple_out)?;
+        }
+        LlmAction::VerifyQwen4Exp { package } => {
+            llm_testing::run_verify_qwen4exp_native(package)?;
+        }
+        LlmAction::ProbeQwen4ExpPle { package } => {
+            llm_testing::run_probe_qwen4exp_ple(package)?;
+        }
+        LlmAction::GatherQwen4ExpPle { package, token_ids } => {
+            llm_testing::run_gather_qwen4exp_ple(package, token_ids)?;
+        }
+        LlmAction::ProbeQwen4ExpPleBlock { package, token_id } => {
+            llm_testing::run_probe_qwen4exp_ple_block(package, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpHyper {
+            package,
+            layer,
+            ffn,
+            token_id,
+        } => {
+            llm_testing::run_probe_qwen4exp_hyper(package, *layer, *ffn, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpGdn {
+            package,
+            layer,
+            token_id,
+        } => {
+            llm_testing::run_probe_qwen4exp_gdn(package, *layer, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpQsa {
+            package,
+            layer,
+            token_id,
+        } => {
+            qwen_testing::run_probe_qwen4exp_qsa(package, *layer, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpLayer {
+            package,
+            layer,
+            token_id,
+        } => {
+            qwen_testing::run_probe_qwen4exp_gdn_moe_layer(package, *layer, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpTrunk { package, token_id } => {
+            llm_testing::run_probe_qwen4exp_trunk(package, *token_id)?;
+        }
+        LlmAction::ActivateQwen4Exp { package } => {
+            llm_testing::run_activate_qwen4exp_native(package)?;
+        }
+        LlmAction::ProbeQwen4ExpMoe {
+            package,
+            layer,
+            token_id,
+            tile,
+        } => {
+            llm_testing::run_probe_qwen4exp_moe(package, *layer, *token_id, tile.as_deref())?;
+        }
+        LlmAction::PromoteQwen4ExpExpert {
+            package,
+            layer,
+            expert,
+            cache_dir,
+            max_cache_gib,
+        } => {
+            llm_testing::run_promote_qwen4exp_expert(
+                package,
+                *layer,
+                *expert,
+                cache_dir,
+                *max_cache_gib,
+            )?;
+        }
+        LlmAction::ProbeQwen4ExpExpertTile {
+            package,
+            tile,
+            token_id,
+        } => {
+            llm_testing::run_probe_qwen4exp_expert_tile(package, tile, *token_id)?;
         }
         LlmAction::Optimize {
             input,

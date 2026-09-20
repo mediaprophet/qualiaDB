@@ -150,7 +150,9 @@ impl OsrpBaselineManifest {
         Self {
             model_id: "Qwen3.6-35B-A3B-NVFP4".into(),
             model_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
-            launch_invocation: "osrp --model Qwen3.6-35B-A3B-NVFP4 --kv-cache-paged --gpu-memory-utilization 0.92".into(),
+            launch_invocation:
+                "osrp --model Qwen3.6-35B-A3B-NVFP4 --kv-cache-paged --gpu-memory-utilization 0.92"
+                    .into(),
             prompt_tokens: 512,
             decode_tokens: 128,
             prefill_tok_s: 310.0,

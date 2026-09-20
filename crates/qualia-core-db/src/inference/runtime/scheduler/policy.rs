@@ -62,7 +62,8 @@ impl PrefillProgress {
     }
 
     pub fn remaining_tokens(&self) -> u32 {
-        self.total_input_tokens.saturating_sub(self.processed_tokens)
+        self.total_input_tokens
+            .saturating_sub(self.processed_tokens)
     }
 
     pub fn is_complete(&self) -> bool {

@@ -94,7 +94,9 @@ impl BackendCapabilities {
     }
 
     pub fn is_quant_supported(&self, quant: &str) -> bool {
-        self.supported_quants.iter().any(|&q| q.eq_ignore_ascii_case(quant))
+        self.supported_quants
+            .iter()
+            .any(|&q| q.eq_ignore_ascii_case(quant))
     }
 
     pub fn is_kv_encoding_supported(&self, enc: KvEncoding) -> bool {
@@ -129,4 +131,3 @@ mod tests {
         assert!(!caps.is_architecture_supported(SupportedArchitecture::Qwen3_5MoE));
     }
 }
-

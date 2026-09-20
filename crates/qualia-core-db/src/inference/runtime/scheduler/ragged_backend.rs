@@ -222,12 +222,11 @@ mod tests {
     fn test_multi_sequence_execution_and_padding_isolation() {
         let executed_ids = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let executed_ids_clone = executed_ids.clone();
-        let mut backend = MultiSequenceRaggedBackend::new(
-            move |req_id, slot, token_id, pos, page_slice| {
+        let mut backend =
+            MultiSequenceRaggedBackend::new(move |req_id, slot, token_id, pos, page_slice| {
                 executed_ids_clone.lock().unwrap().push(req_id);
                 token_id + pos + page_slice.len() as u32 + slot
-            },
-        );
+            });
 
         let items = [
             RaggedBatchItem {

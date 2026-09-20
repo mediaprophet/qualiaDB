@@ -83,7 +83,11 @@ impl<const CAP: usize> BoundedIntakeQueue<CAP> {
         if self.queue.len() >= CAP {
             return Err(IntakeError::QueueFull);
         }
-        if self.queue.iter().any(|r| r.request_id == request.request_id) {
+        if self
+            .queue
+            .iter()
+            .any(|r| r.request_id == request.request_id)
+        {
             return Err(IntakeError::DuplicateRequest);
         }
         self.queue.push_back(request);
@@ -109,7 +113,8 @@ impl<const CAP: usize> BoundedIntakeQueue<CAP> {
             .find(|r| r.request_id == request_id)
             .ok_or(IntakeError::NotFound)?;
 
-        if req.is_cancelled || matches!(req.state, IntakeState::Cancelled | IntakeState::Completed) {
+        if req.is_cancelled || matches!(req.state, IntakeState::Cancelled | IntakeState::Completed)
+        {
             return Err(IntakeError::AlreadyTerminal);
         }
 

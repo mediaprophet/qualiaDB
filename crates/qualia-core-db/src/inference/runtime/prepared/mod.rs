@@ -5,9 +5,7 @@ mod decode_plan;
 pub mod generation;
 mod lifecycle;
 
-pub use capability::{
-    BackendCapabilities, KvEncoding, SupportedArchitecture,
-};
+pub use capability::{BackendCapabilities, KvEncoding, SupportedArchitecture};
 pub use decode_plan::{
     DecodeStepError, DecodeStepInput, DecodeStepOutput, PreparedBackend, PreparedDecodePlan,
 };

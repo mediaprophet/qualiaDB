@@ -142,9 +142,10 @@ mod tests {
 
     #[test]
     fn routes_multiple_client_sessions_through_one_backend_round() {
-        let mut backend = MultiSequenceRaggedBackend::new(|request, slot, token, position, pages| {
-            request as u32 + slot + token + position + pages.len() as u32
-        });
+        let mut backend =
+            MultiSequenceRaggedBackend::new(|request, slot, token, position, pages| {
+                request as u32 + slot + token + position + pages.len() as u32
+            });
         let sessions = [
             SessionDecodeInput {
                 request_id: 7,

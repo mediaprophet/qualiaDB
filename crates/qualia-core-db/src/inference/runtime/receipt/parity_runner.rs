@@ -177,8 +177,18 @@ mod tests {
     use super::*;
     use crate::inference::runtime::receipt::execution::BackendKind;
 
-    fn test_fixtures() -> (BenchmarkManifest, ExecutionReceipt, OsrpBaselineManifest, HardwareProfileManifest) {
-        let mut receipt = ExecutionReceipt::new(BackendKind::Cuda, BackendKind::Cuda, "qwen3.6", "decode_plan");
+    fn test_fixtures() -> (
+        BenchmarkManifest,
+        ExecutionReceipt,
+        OsrpBaselineManifest,
+        HardwareProfileManifest,
+    ) {
+        let mut receipt = ExecutionReceipt::new(
+            BackendKind::Cuda,
+            BackendKind::Cuda,
+            "qwen3.6",
+            "decode_plan",
+        );
         receipt.counters.decode_steps = 128;
         receipt.counters.hot_path_allocations = 0;
         receipt.counters.pool_high_water_bytes = 10_000_000_000; // ~9.5 GB

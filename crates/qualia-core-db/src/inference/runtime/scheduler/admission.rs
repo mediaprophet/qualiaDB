@@ -12,10 +12,7 @@ use crate::inference::runtime::kv::paged::{BlockPool, PoolError};
 pub enum AdmissionError {
     Budget(BudgetError),
     Pool(PoolError),
-    InsufficientBlocks {
-        requested: u32,
-        available: usize,
-    },
+    InsufficientBlocks { requested: u32, available: usize },
 }
 
 impl From<BudgetError> for AdmissionError {
@@ -168,10 +165,12 @@ mod tests {
         let err = AdmittedCurrencies::reserve(&budget, &mut pool, 16, 16, 2, 3, 0);
         assert!(matches!(
             err,
-            Err(AdmissionError::Budget(BudgetError::InsufficientCowHeadroom {
-                requested_blocks: 5,
-                max_cow_blocks: 4
-            }))
+            Err(AdmissionError::Budget(
+                BudgetError::InsufficientCowHeadroom {
+                    requested_blocks: 5,
+                    max_cow_blocks: 4
+                }
+            ))
         ));
         assert_eq!(pool.free_count(), 20);
     }

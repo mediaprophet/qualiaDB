@@ -8,12 +8,24 @@ pub mod artifacts;
 pub mod budget;
 pub mod graph_assist;
 pub mod kv;
+pub mod memory_guard;
+#[cfg(target_os = "windows")]
+pub mod memory_windows;
 pub mod prepared;
 pub mod receipt;
 pub mod scheduler;
 
 pub use budget::{
     BlockGeometry, BudgetError, MemoryPoolBudget, ModelMemoryProfile, RequestReservation,
+};
+pub use memory_guard::{
+    HostMemorySample, MemoryPolicyError, MemoryPressureAction, MemoryPressureGuard,
+    MemoryPressurePolicy,
+};
+#[cfg(target_os = "windows")]
+pub use memory_windows::{
+    apply_windows_memory_pressure, sample_current_process, WindowsLowMemoryNotification,
+    WindowsMemoryError,
 };
 
 pub use artifacts::{

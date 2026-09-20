@@ -291,6 +291,14 @@ pub fn run_convert_gguf_to_p64(
         ));
     }
     let src_len = std::fs::metadata(input).map(|m| m.len()).unwrap_or(0);
+    if src_len > u32::MAX as u64 {
+        return Err(format!(
+            "{} is {} bytes, but P64 v4 has 32-bit blob offsets and cannot represent a single payload above 4 GiB. Do not create a monolithic P64. For Qwen3.8 Flash Next, place the GGUF on C: and run `qualia-cli llm prepare-qwen4exp \"{}\" --out <new>.hmc`; it preserves the PLE table as a verified NVMe range source.",
+            input.display(),
+            src_len,
+            input.display(),
+        ));
+    }
     // 12 GB class card default budget when auto-selecting f16 expand.
     const DEFAULT_VRAM_BUDGET: u64 = 12u64 * 1024 * 1024 * 1024;
     let layout = match layout.trim().to_ascii_lowercase().as_str() {
@@ -414,6 +422,858 @@ pub fn run_convert_gguf_to_p64(
     );
     println!();
     println!("Activate with a Local backend path pointing at the .p64 file.");
+    Ok(())
+}
+
+/// Extract the Qwen4Exp PLE table to NVMe and create its compact HMC contract.
+/// The source GGUF stays in place; only its row-addressable PLE span is copied.
+pub fn run_prepare_qwen4exp_native(
+    input: &Path,
+    output: &Path,
+    ple_output: &Path,
+) -> Result<(), String> {
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp native HMC preparation");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ Source trunk: {}", input.display());
+    println!("├─ PLE NVMe:     {}", ple_output.display());
+    println!("└─ HMC:          {}", output.display());
+    let prepared =
+        qualia_core_db::inference::qwen::prepare_qwen4exp_native_hmc(input, output, ple_output)
+            .map_err(|error| error.to_string())?;
+    println!("✅ HMC contract created");
+    println!("  └─ source bytes: {}", prepared.source.byte_len);
+    println!(
+        "  └─ PLE NVMe: {} bytes / {} rows × {}",
+        prepared.ple.storage_bytes, prepared.ple.rows, prepared.ple.row_width
+    );
+    println!(
+        "  └─ trunk GGUF bytes: {} (not monolithic P64)",
+        prepared.trunk_gguf_bytes
+    );
+    println!(
+        "  └─ graph: {} GatedDeltaNet layers, {} QSA layers, {} PLE layers",
+        prepared.gated_deltanet_layers, prepared.qsa_layers, prepared.ple_layers
+    );
+    println!("  └─ source SHA-256: pending explicit verify-qwen4exp audit");
+    Ok(())
+}
+
+/// Audit an existing Qwen4Exp HMC's external source before activation.
+pub fn run_verify_qwen4exp_native(package: &Path) -> Result<(), String> {
+    let descriptor = qualia_core_db::inference::qwen::load_qwen4exp_native_hmc(package)
+        .map_err(|error| error.to_string())?;
+    let source = descriptor
+        .source_beside(package)
+        .map_err(|error| error.to_string())?;
+    println!("Auditing {}", package.display());
+    println!("├─ External GGUF: {}", source.display());
+    descriptor
+        .verify_source_sha256(&source)
+        .map_err(|error| error.to_string())?;
+    println!("✅ HMC descriptor and external GGUF SHA-256 match");
+    println!(
+        "  └─ PLE: {} rows × {} values ({} storage bytes at file offset {})",
+        descriptor.ple.rows,
+        descriptor.ple.row_width,
+        descriptor.ple.storage_bytes,
+        descriptor.ple.absolute_offset
+    );
+    Ok(())
+}
+
+/// Exercise the actual C:-resident PLE reader without mapping the PLE table,
+/// opening the source GGUF, or allocating a row dynamically.
+pub fn run_probe_qwen4exp_ple(package: &Path) -> Result<(), String> {
+    const MAX_PLE_ROW_BYTES: usize = 65_536;
+    const MAX_PLE_ROW_WIDTH: usize = 4_096;
+
+    let descriptor = qualia_core_db::inference::qwen::load_qwen4exp_native_hmc(package)
+        .map_err(|error| error.to_string())?;
+    let mut reader =
+        qualia_core_db::inference::qwen::PleNvmeReader::open_from_native_descriptor(&descriptor)
+            .map_err(|error| format!("open NVMe PLE: {error:?}"))?;
+    if reader.raw_row_bytes() > MAX_PLE_ROW_BYTES || reader.row_width() > MAX_PLE_ROW_WIDTH {
+        return Err("PLE row exceeds fixed probe buffer contract".to_string());
+    }
+
+    let last = reader
+        .row_count()
+        .checked_sub(1)
+        .ok_or_else(|| "PLE has no rows".to_string())?;
+    let candidates = [0u64, reader.row_count() / 2, last];
+    let mut raw = [0u8; MAX_PLE_ROW_BYTES];
+    let mut values = [0.0f32; MAX_PLE_ROW_WIDTH];
+    let mut rows = 0u32;
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp NVMe PLE probe");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ HMC: {}", package.display());
+    println!("├─ PLE: {}", descriptor.ple_storage.file_path);
+    println!(
+        "├─ table: {} rows × {} values; {} bytes/row",
+        reader.row_count(),
+        reader.row_width(),
+        reader.raw_row_bytes()
+    );
+    for row in candidates {
+        if rows != 0 && row == candidates[(rows - 1) as usize] {
+            continue;
+        }
+        let n = reader
+            .read_row_into(row, &mut raw, &mut values)
+            .map_err(|error| format!("read PLE row {row}: {error:?}"))?;
+        if n != reader.row_width() || values[..n].iter().any(|value| !value.is_finite()) {
+            return Err(format!("invalid decoded PLE row {row}"));
+        }
+        for value in &values[..n] {
+            fingerprint ^= value.to_bits() as u64;
+            fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+        }
+        println!(
+            "├─ row {row}: {n} values decoded from {} bytes",
+            reader.raw_row_bytes()
+        );
+        rows += 1;
+    }
+    println!("└─ direct-NVMe probe passed; sampled_row_fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Compute the checkpoint's PLE n-gram row IDs from decode-order token IDs,
+/// then gather exactly those rows from the C:-resident table.  This is an
+/// execution seam, not a text-generation benchmark: it proves that runtime
+/// token history selects and consumes trained PLE rows without mapping the
+/// table or using a synthetic hash.
+pub fn run_gather_qwen4exp_ple(package: &Path, token_ids: &[u32]) -> Result<(), String> {
+    const MAX_PLE_ROWS: usize = 64;
+    const MAX_PLE_ROW_BYTES: usize = 65_536;
+    const MAX_PLE_VALUES: usize = 16_384;
+
+    if token_ids.is_empty() {
+        return Err("at least one token ID is required".to_string());
+    }
+    let descriptor = qualia_core_db::inference::qwen::load_qwen4exp_native_hmc(package)
+        .map_err(|error| error.to_string())?;
+    let mut reader =
+        qualia_core_db::inference::qwen::PleNvmeReader::open_from_native_descriptor(&descriptor)
+            .map_err(|error| format!("open NVMe PLE: {error:?}"))?;
+    let heads = descriptor
+        .ple_config
+        .ngram_size
+        .saturating_sub(1)
+        .saturating_mul(descriptor.ple_config.heads_per_ngram) as usize;
+    let needed = heads
+        .checked_mul(reader.row_width())
+        .ok_or_else(|| "PLE gather size overflow".to_string())?;
+    if heads == 0
+        || heads > MAX_PLE_ROWS
+        || reader.raw_row_bytes() > MAX_PLE_ROW_BYTES
+        || needed > MAX_PLE_VALUES
+    {
+        return Err("PLE gather exceeds this command's fixed buffer contract".to_string());
+    }
+
+    let mut history = qualia_core_db::inference::qwen::PleTokenHistory::default();
+    let mut rows = [0u64; MAX_PLE_ROWS];
+    let mut raw = [0u8; MAX_PLE_ROW_BYTES];
+    let mut values = [0.0f32; MAX_PLE_VALUES];
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp exact PLE n-gram gather");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ PLE: {}", descriptor.ple_storage.file_path);
+    println!(
+        "├─ contract: {}-gram × {} heads = {} rows/token",
+        descriptor.ple_config.ngram_size, descriptor.ple_config.heads_per_ngram, heads
+    );
+    for &token in token_ids {
+        let selected = history
+            .select_and_push(
+                &descriptor.ple_config,
+                token,
+                reader.row_count(),
+                &mut rows[..heads],
+            )
+            .map_err(|error| format!("select PLE rows for token {token}: {error}"))?;
+        let receipt = reader
+            .gather_rows_into(&rows[..selected], &mut raw, &mut values[..needed])
+            .map_err(|error| format!("gather PLE rows for token {token}: {error:?}"))?;
+        if values[..needed].iter().any(|value| !value.is_finite()) {
+            return Err(format!("non-finite PLE value for token {token}"));
+        }
+        for value in &values[..needed] {
+            fingerprint ^= value.to_bits() as u64;
+            fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+        }
+        println!(
+            "├─ token {token}: {selected} trained rows, {} NVMe bytes",
+            receipt.storage_bytes
+        );
+    }
+    println!("└─ exact PLE history/gather passed; fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Execute the complete trained PLE residual insertion for one token.  This
+/// is a physical C:/E: forward component check, not token generation: all
+/// later GDN/QSA, four-stream and MoE layers remain to be executed.
+pub fn run_probe_qwen4exp_ple_block(package: &Path, token_id: u32) -> Result<(), String> {
+    const HIDDEN: usize = 2_560;
+    const STREAMS: usize = 4;
+    const WIDE: usize = HIDDEN * STREAMS;
+    const HISTORY: usize = 9 * WIDE;
+    const RAW_PLE: usize = 1_024;
+    const RAW_TRUNK: usize = 65_536;
+
+    let mut runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    let embedding = *runtime
+        .index
+        .token_embd_info()
+        .ok_or_else(|| "Qwen4Exp source has no token embedding tensor".to_string())?;
+    if embedding.dims[0] as usize != HIDDEN || token_id as u64 >= embedding.dims[1] {
+        return Err(
+            "Qwen4Exp token embedding does not match the fixed PLE block contract".to_string(),
+        );
+    }
+    let layer_id = runtime.descriptor.ple_config.layers[0];
+    let layer = runtime.index.get_layer_tensors(layer_id);
+    let mut raw_ple = [0u8; RAW_PLE];
+    let mut raw_trunk = [0u8; RAW_TRUNK];
+    let mut embedding_values = [0.0f32; HIDDEN];
+    runtime
+        .trunk
+        .read_row_into(
+            &embedding,
+            token_id as usize,
+            &mut raw_trunk,
+            &mut embedding_values,
+        )
+        .map_err(|error| format!("read token embedding: {error}"))?;
+    let mut residual = [0.0f32; WIDE];
+    for stream in 0..STREAMS {
+        residual[stream * HIDDEN..(stream + 1) * HIDDEN].copy_from_slice(&embedding_values);
+    }
+    let mut history = [0.0f32; HISTORY];
+    let mut projection_row = [0.0f32; HIDDEN];
+    let mut ple_embedding = [0.0f32; HIDDEN];
+    let mut key = [0.0f32; WIDE];
+    let mut value = [0.0f32; HIDDEN];
+    let mut query_norm = [0.0f32; WIDE];
+    let mut gated = [0.0f32; WIDE];
+    let mut conv_norm = [0.0f32; WIDE];
+    let mut conv_weights = [0.0f32; WIDE * 4];
+    let mut norm_key = [0.0f32; WIDE];
+    let mut norm_query = [0.0f32; WIDE];
+    let mut norm_conv = [0.0f32; WIDE];
+    let mut buffers = qualia_core_db::inference::qwen::PleBlockBuffers {
+        raw_ple_row: &mut raw_ple,
+        raw_trunk_row: &mut raw_trunk,
+        projection_row: &mut projection_row,
+        embedding: &mut ple_embedding,
+        key: &mut key,
+        value: &mut value,
+        query_norm: &mut query_norm,
+        gated: &mut gated,
+        conv_norm: &mut conv_norm,
+        conv_weights: &mut conv_weights,
+        norm_key: &mut norm_key,
+        norm_query: &mut norm_query,
+        norm_conv: &mut norm_conv,
+    };
+    let mut token_history = qualia_core_db::inference::qwen::PleTokenHistory::default();
+    let start = std::time::Instant::now();
+    qualia_core_db::inference::qwen::execute_ple_block(
+        &runtime.descriptor.ple_config,
+        &layer,
+        token_id,
+        &mut token_history,
+        &mut runtime.ple,
+        &mut runtime.trunk,
+        &mut residual,
+        &mut history,
+        &mut buffers,
+    )
+    .map_err(|error| format!("execute trained PLE block: {error}"))?;
+    let elapsed = start.elapsed();
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+    for value in residual {
+        fingerprint ^= value.to_bits() as u64;
+        fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+    }
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp trained PLE residual block");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ layer {layer_id}, token {token_id}: 16 C: n-gram rows → 4 × {HIDDEN} residual");
+    println!("├─ PLE block time: {:.3}s", elapsed.as_secs_f64());
+    println!("└─ residual fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Execute one trained attention- or FFN-side Hyper-Connection mix using the
+/// source checkpoint's own weight rows. This is a forward component probe;
+/// it deliberately does not substitute an attention/GDN or MoE result.
+pub fn run_probe_qwen4exp_hyper(
+    package: &Path,
+    layer_id: u32,
+    ffn: bool,
+    token_id: u32,
+) -> Result<(), String> {
+    const HIDDEN: usize = 2_560;
+    const STREAMS: usize = 4;
+    const WIDE: usize = HIDDEN * STREAMS;
+    const MAX_RANK: usize = 1_024;
+    const RAW: usize = 65_536;
+    let mut runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    let embedding = *runtime
+        .index
+        .token_embd_info()
+        .ok_or_else(|| "Qwen4Exp source has no token embedding tensor".to_string())?;
+    if embedding.dims[0] as usize != HIDDEN || token_id as u64 >= embedding.dims[1] {
+        return Err(
+            "Qwen4Exp token embedding does not match the fixed Hyper-Connection contract"
+                .to_string(),
+        );
+    }
+    let layer = runtime.index.get_layer_tensors(layer_id);
+    let rank = if ffn {
+        layer.hc_ffn_down.as_ref()
+    } else {
+        layer.hc_attn_down.as_ref()
+    }
+    .map(|info| info.dims[1] as usize)
+    .ok_or_else(|| format!("layer {layer_id} has no requested Hyper-Connection down projection"))?;
+    if rank > MAX_RANK {
+        return Err("Hyper-Connection rank exceeds the fixed probe buffer".to_string());
+    }
+    let mut raw = [0u8; RAW];
+    let mut embedding_values = [0.0f32; HIDDEN];
+    runtime
+        .trunk
+        .read_row_into(
+            &embedding,
+            token_id as usize,
+            &mut raw,
+            &mut embedding_values,
+        )
+        .map_err(|error| format!("read token embedding: {error}"))?;
+    let mut residual = [0.0f32; WIDE];
+    for stream in 0..STREAMS {
+        residual[stream * HIDDEN..(stream + 1) * HIDDEN].copy_from_slice(&embedding_values);
+    }
+    let mut mixed = [0.0f32; HIDDEN];
+    let mut inject = [0.0f32; STREAMS];
+    let mut projection_row = [0.0f32; WIDE];
+    let mut norm_weight = [0.0f32; WIDE];
+    let mut normalized = [0.0f32; WIDE];
+    let mut low_rank = [0.0f32; MAX_RANK];
+    let mut gates = [0.0f32; WIDE];
+    let mut buffers = qualia_core_db::inference::qwen::StreamedHyperBuffers {
+        raw_row: &mut raw,
+        projection_row: &mut projection_row,
+        norm_weight: &mut norm_weight,
+        normalized: &mut normalized,
+        low_rank: &mut low_rank,
+        gates: &mut gates,
+    };
+    let start = std::time::Instant::now();
+    qualia_core_db::inference::qwen::execute_streamed_hyper_connection(
+        &mut runtime.trunk,
+        &layer,
+        ffn,
+        &residual,
+        &mut mixed,
+        Some(&mut inject),
+        &mut buffers,
+    )
+    .map_err(|error| format!("execute trained Hyper-Connection: {error}"))?;
+    let elapsed = start.elapsed();
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+    for value in mixed.into_iter().chain(inject) {
+        fingerprint ^= value.to_bits() as u64;
+        fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+    }
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp trained Hyper-Connection block");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "├─ layer {layer_id} {} path, rank {rank}",
+        if ffn { "FFN" } else { "token-mixer" }
+    );
+    println!("├─ Hyper block time: {:.3}s", elapsed.as_secs_f64());
+    println!("└─ mix/inject fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Execute the trained recurrent token mixer with its real learned state.
+/// The two state vectors are explicitly bounded and live only for this CLI
+/// invocation; no model payload is copied from E: or C: into them.
+pub fn run_probe_qwen4exp_gdn(package: &Path, layer_id: u32, token_id: u32) -> Result<(), String> {
+    const HIDDEN: usize = 2_560;
+    const HEADS: usize = 48;
+    const HEAD_DIM: usize = 128;
+    const INNER: usize = HEADS * HEAD_DIM;
+    const QKV: usize = 10_240;
+    const RAW: usize = 65_536;
+    let mut runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    let embedding = *runtime
+        .index
+        .token_embd_info()
+        .ok_or_else(|| "Qwen4Exp source has no token embedding tensor".to_string())?;
+    if embedding.dims[0] as usize != HIDDEN || token_id as u64 >= embedding.dims[1] {
+        return Err(
+            "Qwen4Exp token embedding does not match the GatedDeltaNet contract".to_string(),
+        );
+    }
+    let layer = runtime.index.get_layer_tensors(layer_id);
+    if !layer.is_hybrid_ssm_layer() {
+        return Err(format!(
+            "layer {layer_id} is not a complete Qwen4Exp GatedDeltaNet layer"
+        ));
+    }
+    let mut raw = [0u8; RAW];
+    let mut input = [0.0f32; HIDDEN];
+    runtime
+        .trunk
+        .read_row_into(&embedding, token_id as usize, &mut raw, &mut input)
+        .map_err(|error| format!("read token embedding: {error}"))?;
+    // Runtime-owned recurrence state: 10,240 × 3 convolution values and
+    // 48 × 128 × 128 delta values = 3,176,448 f32 (about 12.1 MiB).
+    let mut convolution = vec![0.0f32; QKV * 3];
+    let mut delta = vec![0.0f32; HEADS * HEAD_DIM * HEAD_DIM];
+    let mut out = [0.0f32; HIDDEN];
+    let mut projection_row = vec![0.0f32; INNER];
+    let mut qkv = vec![0.0f32; QKV];
+    let mut gate = vec![0.0f32; INNER];
+    let mut alpha = [0.0f32; HEADS];
+    let mut beta = [0.0f32; HEADS];
+    let mut convolved = vec![0.0f32; QKV];
+    let mut head_norm = [0.0f32; HEAD_DIM];
+    let mut head_vector = [0.0f32; HEAD_DIM];
+    let mut output_inner = vec![0.0f32; INNER];
+    let mut head_a = [0.0f32; HEADS];
+    let mut dt_bias = [0.0f32; HEADS];
+    let mut state = qualia_core_db::inference::qwen::GatedDeltaState {
+        convolution: &mut convolution,
+        delta: &mut delta,
+    };
+    let mut buffers = qualia_core_db::inference::qwen::GatedDeltaBuffers {
+        raw_row: &mut raw,
+        projection_row: &mut projection_row,
+        qkv: &mut qkv,
+        gate: &mut gate,
+        alpha: &mut alpha,
+        beta: &mut beta,
+        convolved: &mut convolved,
+        head_norm: &mut head_norm,
+        head_vector: &mut head_vector,
+        output_inner: &mut output_inner,
+        head_a: &mut head_a,
+        dt_bias: &mut dt_bias,
+    };
+    let start = std::time::Instant::now();
+    qualia_core_db::inference::qwen::execute_streamed_gated_delta(
+        &mut runtime.trunk,
+        &layer,
+        &input,
+        &mut state,
+        &mut out,
+        &mut buffers,
+    )
+    .map_err(|error| format!("execute trained GatedDeltaNet: {error}"))?;
+    let elapsed = start.elapsed();
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+    for value in out.into_iter().chain(delta.iter().copied().step_by(257)) {
+        fingerprint ^= value.to_bits() as u64;
+        fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+    }
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp trained GatedDeltaNet token mixer");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ layer {layer_id}, token {token_id}: 48 × 128 × 128 recurrent state");
+    println!("├─ GatedDeltaNet time: {:.3}s", elapsed.as_secs_f64());
+    println!("└─ branch/state fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Verify the external trunk reader against the exact source identified by an
+/// HMC. Only the bounded GGUF metadata prefix is read; the embedding row is
+/// consumed through `TrunkNvmeReader` from E:.
+pub fn run_probe_qwen4exp_trunk(package: &Path, token_id: u32) -> Result<(), String> {
+    const MAX_ROW_BYTES: usize = 65_536;
+    const MAX_ROW_WIDTH: usize = 4_096;
+
+    let descriptor = qualia_core_db::inference::qwen::load_qwen4exp_native_hmc(package)
+        .map_err(|error| error.to_string())?;
+    let source = descriptor
+        .source_beside(package)
+        .map_err(|error| error.to_string())?;
+    descriptor
+        .verify_source_metadata(&source)
+        .map_err(|error| error.to_string())?;
+    let index =
+        qualia_core_db::inference::gguf_sharder::GgufTensorIndex::from_gguf_header_file(&source)
+            .map_err(|error| format!("read bounded trunk header: {error}"))?;
+    let embedding = *index
+        .token_embd_info()
+        .ok_or_else(|| "Qwen4Exp source has no token embedding tensor".to_string())?;
+    if token_id as u64 >= embedding.dims[1] {
+        return Err(format!("token ID {token_id} exceeds vocabulary"));
+    }
+    let mut reader =
+        qualia_core_db::inference::qwen::TrunkNvmeReader::open(&source, index.tensor_data_start)
+            .map_err(|error| format!("open trunk row reader: {error}"))?;
+    let row_bytes = qualia_core_db::inference::ggml_quants::ggml_row_bytes(
+        embedding.ggml_type,
+        embedding.dims[0] as usize,
+    )
+    .ok_or_else(|| "unsupported token embedding quantization".to_string())?;
+    if row_bytes > MAX_ROW_BYTES || embedding.dims[0] as usize > MAX_ROW_WIDTH {
+        return Err("token embedding exceeds fixed trunk probe buffers".to_string());
+    }
+    let mut raw = [0u8; MAX_ROW_BYTES];
+    let mut values = [0f32; MAX_ROW_WIDTH];
+    let written = reader
+        .read_row_into(&embedding, token_id as usize, &mut raw, &mut values)
+        .map_err(|error| format!("read trunk embedding: {error}"))?;
+    if values[..written].iter().any(|value| !value.is_finite()) {
+        return Err("trunk embedding contains non-finite decoded values".to_string());
+    }
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+    for value in &values[..written] {
+        fingerprint ^= value.to_bits() as u64;
+        fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+    }
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp bounded trunk-row probe");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ source: {}", source.display());
+    println!("├─ token {token_id}: {written} values decoded from {row_bytes} bytes");
+    println!("└─ direct trunk row passed; fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Cold-activate the native C:/E: package layout.  This is deliberately
+/// separate from generation: it proves the model can be opened with a
+/// bounded metadata read before a decode runner is allowed to touch weights.
+pub fn run_activate_qwen4exp_native(package: &Path) -> Result<(), String> {
+    let runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp native bounded activation");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ PLE NVMe: {}", runtime.descriptor.ple_storage.file_path);
+    println!(
+        "├─ PLE rows: {} × {}",
+        runtime.ple.row_count(),
+        runtime.ple.row_width()
+    );
+    println!(
+        "├─ trunk metadata: {} bytes before tensor payload",
+        runtime.index.tensor_data_start
+    );
+    println!("├─ trunk: {}", runtime.descriptor.source.source_path);
+    println!("└─ active: no source GGUF mmap or full-model copy");
+    Ok(())
+}
+
+/// Execute one true Qwen4Exp routed-MoE operator.  This is an operator
+/// validation seam, not text generation: it uses a token embedding directly
+/// instead of a fully evolved preceding token-mixer state.
+pub fn run_probe_qwen4exp_moe(
+    package: &Path,
+    layer: u32,
+    token_id: u32,
+    tile: Option<&Path>,
+) -> Result<(), String> {
+    const MAX_HIDDEN: usize = 4_096;
+    const MAX_INTERMEDIATE: usize = 4_096;
+    const MAX_ROUTER: usize = 1_024;
+    const MAX_RAW_ROW: usize = 65_536;
+
+    let mut runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    let embedding = *runtime
+        .index
+        .token_embd_info()
+        .ok_or_else(|| "Qwen4Exp source has no token embedding tensor".to_string())?;
+    if token_id as u64 >= embedding.dims[1] || embedding.dims[0] as usize > MAX_HIDDEN {
+        return Err("token embedding exceeds fixed MoE probe buffers".to_string());
+    }
+    let tensors = runtime.index.get_layer_tensors(layer);
+    let intermediate = tensors
+        .moe_gate_exps
+        .as_ref()
+        .map(|info| info.dims[1] as usize)
+        .ok_or_else(|| format!("layer {layer} has no routed MoE gate tensor"))?;
+    if intermediate > MAX_INTERMEDIATE {
+        return Err("MoE intermediate width exceeds fixed probe buffers".to_string());
+    }
+
+    let describe =
+        |label: &str, tensor: Option<&qualia_core_db::inference::gguf_sharder::GgufTensorInfo>| {
+            tensor
+                .map(|info| {
+                    format!(
+                        "{label}={:?}/{}D/type{}",
+                        info.dims, info.n_dims, info.ggml_type
+                    )
+                })
+                .unwrap_or_else(|| format!("{label}=missing"))
+        };
+    println!(
+        "MoE tensor layout: {}, {}, {}, {}",
+        describe("router", tensors.moe_router.as_ref()),
+        describe("gate", tensors.moe_gate_exps.as_ref()),
+        describe("up", tensors.moe_up_exps.as_ref()),
+        describe("down", tensors.moe_down_exps.as_ref()),
+    );
+    println!(
+        "MoE shared layout: {}, {}, {}, {}",
+        describe("gate", tensors.moe_shared_gate.as_ref()),
+        describe("up", tensors.moe_shared_up.as_ref()),
+        describe("down", tensors.moe_shared_down.as_ref()),
+        describe("input", tensors.moe_shared_gate_input.as_ref()),
+    );
+
+    let hidden = embedding.dims[0] as usize;
+    let mut raw = [0u8; MAX_RAW_ROW];
+    let mut dequantized_row = [0.0f32; MAX_HIDDEN];
+    let mut input = [0.0f32; MAX_HIDDEN];
+    runtime
+        .trunk
+        .read_row_into(
+            &embedding,
+            token_id as usize,
+            &mut raw,
+            &mut input[..hidden],
+        )
+        .map_err(|error| format!("read input embedding: {error}"))?;
+    let mut output = [0.0f32; MAX_HIDDEN];
+    let mut expert_out = [0.0f32; MAX_HIDDEN];
+    let mut router = [0.0f32; MAX_ROUTER];
+    let mut top_indices = [0usize; qualia_core_db::inference::qwen::QWEN4EXP_TOP_EXPERTS];
+    let mut top_logits = [0.0f32; qualia_core_db::inference::qwen::QWEN4EXP_TOP_EXPERTS];
+    let mut top_weights = [0.0f32; qualia_core_db::inference::qwen::QWEN4EXP_TOP_EXPERTS];
+    let mut gate = [0.0f32; MAX_INTERMEDIATE];
+    let mut up = [0.0f32; MAX_INTERMEDIATE];
+    let mut activation = [0.0f32; MAX_INTERMEDIATE];
+    let tile_reader = tile
+        .map(qualia_core_db::inference::qwen::QwenExpertTileReader::open)
+        .transpose()
+        .map_err(|error| format!("open C: expert tile: {error}"))?;
+    let mut cached_tiles = [None; qualia_core_db::inference::qwen::QWEN4EXP_TOP_EXPERTS];
+    if let Some(reader) = tile_reader.as_ref() {
+        let router_info = tensors
+            .moe_router
+            .as_ref()
+            .ok_or_else(|| format!("layer {layer} has no routed MoE router tensor"))?;
+        runtime
+            .trunk
+            .gemv_rows_into(
+                router_info,
+                0,
+                qualia_core_db::inference::qwen::QWEN4EXP_EXPERT_COUNT,
+                &input[..hidden],
+                &mut router,
+                &mut raw,
+                &mut dequantized_row,
+            )
+            .map_err(|error| format!("pre-route C: expert tile: {error}"))?;
+        qualia_core_db::inference::qwen::select_top_experts(
+            &router[..qualia_core_db::inference::qwen::QWEN4EXP_EXPERT_COUNT],
+            &mut top_indices,
+            &mut top_logits,
+        )
+        .map_err(|error| format!("pre-route C: expert tile: {error}"))?;
+        let mut selected = false;
+        for route in 0..qualia_core_db::inference::qwen::QWEN4EXP_TOP_EXPERTS {
+            if reader.descriptor.layer == layer as u16
+                && reader.descriptor.expert == top_indices[route] as u16
+            {
+                cached_tiles[route] = Some(reader);
+                selected = true;
+            }
+        }
+        if !selected {
+            return Err(format!(
+                "C: expert tile layer {} expert {} is not selected for layer {layer}, token {token_id}; no source/cache mixing was performed",
+                reader.descriptor.layer, reader.descriptor.expert
+            ));
+        }
+    }
+    let start = std::time::Instant::now();
+    qualia_core_db::inference::qwen::execute_streamed_moe_with_tiles(
+        &mut runtime.trunk,
+        &tensors,
+        &input[..hidden],
+        &mut output[..hidden],
+        &mut router,
+        &mut top_indices,
+        &mut top_logits,
+        &mut top_weights,
+        &cached_tiles,
+        &mut gate[..intermediate],
+        &mut up[..intermediate],
+        &mut activation[..intermediate],
+        &mut expert_out[..hidden],
+        &mut raw,
+        &mut dequantized_row,
+    )
+    .map_err(|error| format!("streamed MoE: {error}"))?;
+    let elapsed = start.elapsed();
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+    for value in &output[..hidden] {
+        fingerprint ^= value.to_bits() as u64;
+        fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+    }
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp selected-expert MoE probe");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ layer {layer}, token {token_id}: {hidden} hidden × {intermediate} intermediate");
+    println!("├─ selected experts: {:?}", top_indices);
+    if let Some(reader) = tile_reader.as_ref() {
+        println!(
+            "├─ C: cached route: layer {} expert {}",
+            reader.descriptor.layer, reader.descriptor.expert
+        );
+    }
+    println!("├─ operator time: {:.3}s", elapsed.as_secs_f64());
+    println!("└─ routed/shared MoE output fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Explicit cold-path promotion of one selected expert.  This is deliberately
+/// not part of ordinary activation: the caller must name a C: cache directory
+/// and budget before any new artifact is made.
+pub fn run_promote_qwen4exp_expert(
+    package: &Path,
+    layer: u16,
+    expert: u16,
+    cache_dir: &Path,
+    max_cache_gib: u64,
+) -> Result<(), String> {
+    let runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    let tensors = runtime.index.get_layer_tensors(layer as u32);
+    let gate = tensors
+        .moe_gate_exps
+        .as_ref()
+        .ok_or_else(|| format!("layer {layer} has no routed MoE gate tensor"))?;
+    let up = tensors
+        .moe_up_exps
+        .as_ref()
+        .ok_or_else(|| format!("layer {layer} has no routed MoE up tensor"))?;
+    let down = tensors
+        .moe_down_exps
+        .as_ref()
+        .ok_or_else(|| format!("layer {layer} has no routed MoE down tensor"))?;
+    let limit = max_cache_gib
+        .checked_mul(1024 * 1024 * 1024)
+        .ok_or_else(|| "cache budget overflow".to_string())?;
+    let source = runtime
+        .descriptor
+        .source_beside(package)
+        .map_err(|error| error.to_string())?;
+    let (tile, admission) = qualia_core_db::inference::qwen::promote_expert_tile(
+        &source,
+        runtime.descriptor.source.byte_len,
+        runtime.index.tensor_data_start,
+        layer,
+        expert,
+        gate,
+        up,
+        down,
+        cache_dir,
+        limit,
+    )
+    .map_err(|error| error.to_string())?;
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp selected-expert C: promotion");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ layer {layer}, expert {expert}");
+    println!("├─ tile: {}", tile.display());
+    println!("├─ requested: {} bytes", admission.requested_bytes);
+    println!(
+        "└─ cache: {} / {} bytes before promotion",
+        admission.cache_used_bytes, admission.cache_limit_bytes
+    );
+    Ok(())
+}
+
+/// Exercise a promoted C: expert tile using a true E: token embedding. This
+/// is one cached gate-plane operator, not a complete MoE or text decode.
+pub fn run_probe_qwen4exp_expert_tile(
+    package: &Path,
+    tile: &Path,
+    token_id: u32,
+) -> Result<(), String> {
+    const MAX_HIDDEN: usize = 4_096;
+    const MAX_INTERMEDIATE: usize = 4_096;
+    const MAX_RAW_ROW: usize = 65_536;
+    let mut runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    let embedding = *runtime
+        .index
+        .token_embd_info()
+        .ok_or_else(|| "Qwen4Exp source has no token embedding tensor".to_string())?;
+    let hidden = embedding.dims[0] as usize;
+    if hidden > MAX_HIDDEN || token_id as u64 >= embedding.dims[1] {
+        return Err("token embedding exceeds fixed tile-probe buffers".to_string());
+    }
+    let reader = qualia_core_db::inference::qwen::QwenExpertTileReader::open(tile)
+        .map_err(|error| error.to_string())?;
+    let intermediate = reader.descriptor.gate.dims[1] as usize;
+    if reader.descriptor.gate.dims[0] as usize != hidden || intermediate > MAX_INTERMEDIATE {
+        return Err("tile gate shape does not match the source token embedding".to_string());
+    }
+    let mut raw = [0u8; MAX_RAW_ROW];
+    let mut input = [0.0f32; MAX_HIDDEN];
+    runtime
+        .trunk
+        .read_row_into(
+            &embedding,
+            token_id as usize,
+            &mut raw,
+            &mut input[..hidden],
+        )
+        .map_err(|error| format!("read input embedding: {error}"))?;
+    let mut output = [0.0f32; MAX_INTERMEDIATE];
+    let mut row = [0.0f32; MAX_HIDDEN];
+    let start = std::time::Instant::now();
+    reader
+        .gemv_into(
+            qualia_core_db::inference::qwen::QwenExpertTilePlaneKind::Gate,
+            &input[..hidden],
+            &mut output[..intermediate],
+            &mut row,
+        )
+        .map_err(|error| error.to_string())?;
+    let elapsed = start.elapsed();
+    let mut fingerprint = 0xcbf2_9ce4_8422_2325u64;
+    for value in &output[..intermediate] {
+        fingerprint ^= value.to_bits() as u64;
+        fingerprint = fingerprint.wrapping_mul(0x1000_0000_01b3);
+    }
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp C: expert-tile gate probe");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "├─ layer {}, expert {}; {} → {}",
+        reader.descriptor.layer, reader.descriptor.expert, hidden, intermediate
+    );
+    println!(
+        "├─ tile: {} bytes",
+        std::fs::metadata(tile).map(|m| m.len()).unwrap_or(0)
+    );
+    println!("├─ C: gate operator time: {:.3}s", elapsed.as_secs_f64());
+    println!("└─ gate output fingerprint={fingerprint:016x}");
     Ok(())
 }
 
@@ -749,7 +1609,8 @@ pub fn run_lab(
             Ok(())
         }
         "ablate" | "ablation" => {
-            let m = model.ok_or("ablate requires --model <path.safetensors | path.p64 | path.gguf>")?;
+            let m =
+                model.ok_or("ablate requires --model <path.safetensors | path.p64 | path.gguf>")?;
             let t = if tokens == 0 { 8 } else { tokens };
             let csv =
                 out.or_else(|| Some(std::path::Path::new("experiments/inference-lab/runs.csv")));
@@ -822,7 +1683,9 @@ pub fn run_lab(
             println!("  ablate --model P [--tokens T] [--out runs.csv]");
             println!("  auto --model P [--hours H] [--tokens T] [--out lockin-dir]");
             println!("       [--max-generations N] [--ollama-model TAG] [--no-ollama]");
-            println!("       multi-hour recursive search → lock-in package (.safetensors/.p64/.gguf)");
+            println!(
+                "       multi-hour recursive search → lock-in package (.safetensors/.p64/.gguf)"
+            );
             println!("  gpu-cap [--model P] [--tokens T] [--out dir]");
             println!("       native GPU tier probe + backend×mode decode matrix");
             println!("       → machine-gpu-profile.json + apply-machine-gpu.ps1");

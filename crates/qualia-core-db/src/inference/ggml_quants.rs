@@ -13,7 +13,19 @@ pub const GGML_TYPE_Q4_0: u32 = 2;
 pub const GGML_TYPE_Q5_0: u32 = 6;
 pub const GGML_TYPE_Q8_0: u32 = 8;
 pub const GGML_TYPE_Q4_K: u32 = 12;
+/// GGML's 256-value K-quant block with a fifth high-bit plane. Qwen3.8
+/// Flash Next stores its fused GatedDeltaNet QKV projection in this layout.
+pub const GGML_TYPE_Q5_K: u32 = 13;
 pub const GGML_TYPE_Q6_K: u32 = 14;
+/// GGML's 32-value non-linear 4-bit block. Qwen3.8 Flash Next uses this
+/// specifically for its 160-wide PLE rows, even in the IQ4_XS model variant.
+pub const GGML_TYPE_IQ4_NL: u32 = 20;
+/// Importance-aware, non-linear 4-bit quantization with per-32-value scales.
+///
+/// `IQ4_XS` is the layout used by the downloaded Qwen3.8 Flash Next IQ4_XS
+/// checkpoint, including its externally streamed PLE table.  It is a stock
+/// GGML type (enum value 23), not a Qualia container extension.
+pub const GGML_TYPE_IQ4_XS: u32 = 23;
 /// Brain float16 (1 sign / 8 exp / 7 mantissa) — used by Gemma-4 and other modern GGUFs
 /// for norms / residual scales alongside Q4_K weights (`ggml_type` enum value 30).
 pub const GGML_TYPE_BF16: u32 = 30;
@@ -70,6 +82,10 @@ pub fn ggml_block_layout(ggml_type: u32) -> Option<GgmlBlockLayout> {
             block_elems: 256,
             block_bytes: 144,
         }),
+        GGML_TYPE_Q5_K => Some(GgmlBlockLayout {
+            block_elems: 256,
+            block_bytes: 176,
+        }),
         GGML_TYPE_Q4_K_SOA => Some(GgmlBlockLayout {
             block_elems: BLOCK_Q4K_SOA_ELEMS,
             block_bytes: BLOCK_Q4K_SOA_BYTES,
@@ -77,6 +93,14 @@ pub fn ggml_block_layout(ggml_type: u32) -> Option<GgmlBlockLayout> {
         GGML_TYPE_Q6_K => Some(GgmlBlockLayout {
             block_elems: 256,
             block_bytes: 210,
+        }),
+        GGML_TYPE_IQ4_NL => Some(GgmlBlockLayout {
+            block_elems: 32,
+            block_bytes: 18,
+        }),
+        GGML_TYPE_IQ4_XS => Some(GgmlBlockLayout {
+            block_elems: 256,
+            block_bytes: 136,
         }),
         _ => None,
     }
@@ -261,8 +285,11 @@ pub fn dequantize_row_into(
         GGML_TYPE_Q5_0 => dequant_q5_0(raw, n_elems, out),
         GGML_TYPE_Q8_0 => dequant_q8_0(raw, n_elems, out),
         GGML_TYPE_Q4_K => dequant_q4_k(raw, n_elems, out),
+        GGML_TYPE_Q5_K => dequant_q5_k(raw, n_elems, out),
         GGML_TYPE_Q4_K_SOA => dequant_q4_k_soa(raw, n_elems, out),
         GGML_TYPE_Q6_K => dequant_q6_k(raw, n_elems, out),
+        GGML_TYPE_IQ4_NL => dequant_iq4_nl(raw, n_elems, out),
+        GGML_TYPE_IQ4_XS => dequant_iq4_xs(raw, n_elems, out),
         _ => Err(GgmlDequantError::UnsupportedType),
     }
 }
@@ -445,6 +472,87 @@ fn dequant_q4_0(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
     Ok(n_elems)
 }
 
+/// GGML `dequantize_row_iq4_nl`.
+///
+/// The Qwen3.8 PLE has 160 values per row, so it is five of these compact
+/// 18-byte blocks. Each block has one f16 scale and 16 packed codebook pairs.
+fn dequant_iq4_nl(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+    const BLOCK_ELEMS: usize = 32;
+    const BLOCK_BYTES: usize = 18;
+    const VALUES: [f32; 16] = [
+        -127.0, -104.0, -83.0, -65.0, -49.0, -35.0, -22.0, -10.0, 1.0, 13.0, 25.0, 38.0, 53.0,
+        69.0, 89.0, 113.0,
+    ];
+    let n_blocks = n_elems.div_ceil(BLOCK_ELEMS);
+    if raw.len() < n_blocks * BLOCK_BYTES {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    for block_index in 0..n_blocks {
+        let base = block_index * BLOCK_BYTES;
+        let scale = half::f16::from_le_bytes([raw[base], raw[base + 1]]).to_f32();
+        let block_start = block_index * BLOCK_ELEMS;
+        for lane in 0..16 {
+            let packed = raw[base + 2 + lane];
+            let lo = block_start + lane;
+            if lo < n_elems {
+                out[lo] = scale * VALUES[(packed & 0x0f) as usize];
+            }
+            let hi = lo + 16;
+            if hi < n_elems {
+                out[hi] = scale * VALUES[(packed >> 4) as usize];
+            }
+        }
+    }
+    Ok(n_elems)
+}
+
+/// GGML `dequantize_row_iq4_xs`.
+///
+/// One 136-byte superblock covers 256 values: an f16 master scale, eight
+/// packed 6-bit scales and 128 packed non-linear 4-bit codes.  The lane order
+/// deliberately mirrors ggml's CPU/CUDA reference: each 32-value group stores
+/// four low-nibble values followed by their four high-nibble partners.
+fn dequant_iq4_xs(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+    const BLOCK_ELEMS: usize = 256;
+    const BLOCK_BYTES: usize = 136;
+    const VALUES: [f32; 16] = [
+        -127.0, -104.0, -83.0, -65.0, -49.0, -35.0, -22.0, -10.0, 1.0, 13.0, 25.0, 38.0, 53.0,
+        69.0, 89.0, 113.0,
+    ];
+    let n_blocks = n_elems.div_ceil(BLOCK_ELEMS);
+    if raw.len() < n_blocks * BLOCK_BYTES {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    for block_index in 0..n_blocks {
+        let base = block_index * BLOCK_BYTES;
+        let block = &raw[base..base + BLOCK_BYTES];
+        let master = half::f16::from_le_bytes([block[0], block[1]]).to_f32();
+        let scales_h = u16::from_le_bytes([block[2], block[3]]);
+        let scales_l = &block[4..8];
+        let qs = &block[8..136];
+        let block_start = block_index * BLOCK_ELEMS;
+        for group in 0..8 {
+            let low = (scales_l[group / 2] >> (4 * (group % 2))) & 0x0f;
+            let high = ((scales_h >> (2 * group)) & 0x03) as u8;
+            let scale = master * (((low | (high << 4)) as i32 - 32) as f32);
+            let q_base = group * 16;
+            let y_base = block_start + group * 32;
+            for lane in 0..16 {
+                let packed = qs[q_base + lane];
+                let lo = y_base + lane;
+                if lo < n_elems {
+                    out[lo] = scale * VALUES[(packed & 0x0f) as usize];
+                }
+                let hi = lo + 16;
+                if hi < n_elems {
+                    out[hi] = scale * VALUES[(packed >> 4) as usize];
+                }
+            }
+        }
+    }
+    Ok(n_elems)
+}
+
 /// `dequantize_row_q5_0` from ggml-quants.c — 5-bit weights, 32 elems per 22-byte block.
 fn dequant_q5_0(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
     const BLOCK_ELEMS: usize = 32;
@@ -558,6 +666,64 @@ fn dequant_q4_k(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
         }
     }
     Ok(out_idx.min(n_elems))
+}
+
+/// GGML `dequantize_row_q5_K`.
+///
+/// `Q5_K` keeps Q4_K's eight scale/min pairs and adds a 32-byte bitplane.
+/// The bitplane is indexed as `[bit-plane][lane]`: each successive group of
+/// 32 unpacked values consumes the next bit of the same 32 source bytes.
+fn dequant_q5_k(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+    const BLOCK_ELEMS: usize = 256;
+    const BLOCK_BYTES: usize = 176;
+    let n_blocks = n_elems.div_ceil(BLOCK_ELEMS);
+    if raw.len() < n_blocks * BLOCK_BYTES {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    let mut out_idx = 0usize;
+    for block_index in 0..n_blocks {
+        let block = &raw[block_index * BLOCK_BYTES..(block_index + 1) * BLOCK_BYTES];
+        let d = half::f16::from_le_bytes([block[0], block[1]]).to_f32();
+        let dmin = half::f16::from_le_bytes([block[2], block[3]]).to_f32();
+        let scales: [u8; 12] = block[4..16].try_into().unwrap_or([0; 12]);
+        let qh = &block[16..48];
+        let qs = &block[48..176];
+        let block_elems = BLOCK_ELEMS.min(n_elems - block_index * BLOCK_ELEMS);
+        let mut q_off = 0usize;
+        let mut scale_index = 0usize;
+        let mut element = 0usize;
+        while element < block_elems {
+            let mut scale = 0u8;
+            let mut minimum = 0u8;
+            get_scale_min_k4(scale_index, &scales, &mut scale, &mut minimum);
+            let d0 = d * scale as f32;
+            let m0 = dmin * minimum as f32;
+            get_scale_min_k4(scale_index + 1, &scales, &mut scale, &mut minimum);
+            let d1 = d * scale as f32;
+            let m1 = dmin * minimum as f32;
+            for lane in 0..32 {
+                if element >= block_elems {
+                    break;
+                }
+                let high = ((qh[lane] >> (element / 32)) & 1) << 4;
+                out[out_idx] = d0 * ((qs[q_off + lane] & 0x0f) | high) as f32 - m0;
+                out_idx += 1;
+                element += 1;
+            }
+            for lane in 0..32 {
+                if element >= block_elems {
+                    break;
+                }
+                let high = ((qh[lane] >> (element / 32)) & 1) << 4;
+                out[out_idx] = d1 * ((qs[q_off + lane] >> 4) | high) as f32 - m1;
+                out_idx += 1;
+                element += 1;
+            }
+            q_off += 32;
+            scale_index += 2;
+        }
+    }
+    Ok(out_idx)
 }
 
 fn dequant_q6_k_block(block: &[u8; 210], out: &mut [f32]) {
@@ -993,6 +1159,25 @@ mod tests {
     }
 
     #[test]
+    fn q5_k_uses_its_high_bit_plane_and_scale_min_pairs() {
+        let mut raw = [0u8; 176];
+        raw[0..2].copy_from_slice(&half::f16::from_f32(1.0).to_le_bytes());
+        raw[2..4].copy_from_slice(&half::f16::from_f32(0.5).to_le_bytes());
+        // First low/high 32-value groups: scale=2/min=1 and scale=3/min=2.
+        raw[4] = 2;
+        raw[5] = 3;
+        raw[8] = 1;
+        raw[9] = 2;
+        raw[16] = 0b0000_0010; // lane zero high bit for the second 32 values.
+        raw[48] = 5 | (6 << 4);
+        let mut out = [0.0f32; 256];
+        assert_eq!(dequant_q5_k(&raw, 256, &mut out), Ok(256));
+        assert!((out[0] - 9.5).abs() < 1e-6); // 2*5 - 0.5*1
+        assert!((out[32] - 65.0).abs() < 1e-6); // 3*(6|16) - 0.5*2
+        assert_eq!(ggml_row_bytes(GGML_TYPE_Q5_K, 256), Some(176));
+    }
+
+    #[test]
     fn q6_k_row_bytes_stride() {
         // Gemma 4B token_embd: hidden_dim=2560 → (2560/256)*210 = 2100
         assert_eq!(ggml_row_bytes(GGML_TYPE_Q6_K, 2560), Some(2100));
@@ -1095,5 +1280,48 @@ mod tests {
         dequant_q8_0(&block, 32, &mut out).unwrap();
         assert!((out[0] - 1.0).abs() < 0.01);
         assert!((out[31] - 32.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn iq4_xs_block_layout_and_lane_order_match_ggml() {
+        assert_eq!(ggml_row_bytes(GGML_TYPE_IQ4_XS, 160), Some(136));
+        let info = GgufTensorInfo {
+            dims: [160, 2, 0, 0],
+            n_dims: 2,
+            ggml_type: GGML_TYPE_IQ4_XS,
+            byte_offset: 0,
+        };
+        assert_eq!(tensor_byte_len(&info), Some(272));
+
+        let mut block = [0x88u8; 136]; // nonlinear code 8 == +1
+        block[0..2].copy_from_slice(&half::f16::from_f32(1.0).to_le_bytes());
+        // group 0 scale code = 33: low four bits in scales_l, high two in scales_h.
+        block[2..4].copy_from_slice(&2u16.to_le_bytes());
+        block[4] = 1;
+        let mut out = [0.0f32; 256];
+        assert_eq!(
+            dequantize_row_into(&block, GGML_TYPE_IQ4_XS, 256, &mut out),
+            Ok(256)
+        );
+        assert!(out[..32]
+            .iter()
+            .all(|value| (*value - 1.0).abs() < f32::EPSILON));
+        // The next group has the default scale code 0, thus -32 times code 8.
+        assert!(out[32..64]
+            .iter()
+            .all(|value| (*value + 32.0).abs() < f32::EPSILON));
+    }
+
+    #[test]
+    fn iq4_nl_block_layout_and_lane_order_match_ggml() {
+        assert_eq!(ggml_row_bytes(GGML_TYPE_IQ4_NL, 160), Some(90));
+        let mut block = [0x88u8; 18]; // code 8 is +1 in the non-linear table.
+        block[0..2].copy_from_slice(&half::f16::from_f32(1.0).to_le_bytes());
+        let mut out = [0.0f32; 32];
+        assert_eq!(
+            dequantize_row_into(&block, GGML_TYPE_IQ4_NL, 32, &mut out),
+            Ok(32)
+        );
+        assert!(out.iter().all(|value| (*value - 1.0).abs() < f32::EPSILON));
     }
 }

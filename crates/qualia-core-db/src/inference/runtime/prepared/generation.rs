@@ -94,4 +94,3 @@ mod tests {
         assert!(!id1.is_compatible_with(&id3));
     }
 }
-
