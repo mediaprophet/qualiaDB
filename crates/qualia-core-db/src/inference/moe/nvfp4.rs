@@ -22,7 +22,9 @@ impl std::fmt::Display for Nvfp4Error {
         match self {
             Self::BufferTooSmall => write!(f, "NVFP4 output buffer is too small"),
             Self::DimensionMismatch => write!(f, "Dimension mismatch in NVFP4 matrix operation"),
-            Self::InvalidBlockAlignment => write!(f, "Data length is not aligned to NVFP4 16-element blocks"),
+            Self::InvalidBlockAlignment => {
+                write!(f, "Data length is not aligned to NVFP4 16-element blocks")
+            }
         }
     }
 }
@@ -31,22 +33,22 @@ impl std::error::Error for Nvfp4Error {}
 
 /// Standard E2M1 FP4 lookup table (16 entries: 1 sign, 2 exp, 1 mantissa).
 pub const E2M1_TABLE: [f32; 16] = [
-    0.0,   // 0000
-    0.5,   // 0001
-    1.0,   // 0010
-    1.5,   // 0011
-    2.0,   // 0100
-    3.0,   // 0101
-    4.0,   // 0110
-    6.0,   // 0111
-    -0.0,  // 1000
-    -0.5,  // 1001
-    -1.0,  // 1010
-    -1.5,  // 1011
-    -2.0,  // 1100
-    -3.0,  // 1101
-    -4.0,  // 1110
-    -6.0,  // 1111
+    0.0,  // 0000
+    0.5,  // 0001
+    1.0,  // 0010
+    1.5,  // 0011
+    2.0,  // 0100
+    3.0,  // 0101
+    4.0,  // 0110
+    6.0,  // 0111
+    -0.0, // 1000
+    -0.5, // 1001
+    -1.0, // 1010
+    -1.5, // 1011
+    -2.0, // 1100
+    -3.0, // 1101
+    -4.0, // 1110
+    -6.0, // 1111
 ];
 
 /// Convert an FP8 E4M3 byte to f32.
@@ -123,7 +125,12 @@ pub fn dequantize_nvfp4_row(
         block_in.copy_from_slice(&packed_row[in_offset..in_offset + NVFP4_BYTES_PER_BLOCK]);
 
         let mut block_out = [0.0f32; NVFP4_BLOCK_SIZE];
-        dequantize_nvfp4_block(&block_in, block_scales[block_idx], global_scale, &mut block_out);
+        dequantize_nvfp4_block(
+            &block_in,
+            block_scales[block_idx],
+            global_scale,
+            &mut block_out,
+        );
 
         out_row[out_offset..out_offset + NVFP4_BLOCK_SIZE].copy_from_slice(&block_out);
     }
@@ -171,7 +178,9 @@ pub fn nvfp4_gemv_zero_heap(
             let b_byte_start = row_bytes_start + b * NVFP4_BYTES_PER_BLOCK;
             let scale_byte = block_scales[row_scales_start + b];
 
-            block_bytes.copy_from_slice(&packed_matrix[b_byte_start..b_byte_start + NVFP4_BYTES_PER_BLOCK]);
+            block_bytes.copy_from_slice(
+                &packed_matrix[b_byte_start..b_byte_start + NVFP4_BYTES_PER_BLOCK],
+            );
             dequantize_nvfp4_block(&block_bytes, scale_byte, global_scale, &mut block_scratch);
 
             let in_offset = b * NVFP4_BLOCK_SIZE;

@@ -3,6 +3,8 @@
 //! Manages compressed host-resident expert weights and bounded GPU VRAM staging slots,
 //! with bandwidth-adaptive CPU/GPU hybrid partitioning for the RTX A2000 12GB budget.
 
+use super::placement::ExpertPlacementPolicy;
+
 /// Maximum number of active expert slots in GPU VRAM simultaneously.
 pub const DEFAULT_GPU_EXPERT_SLOTS: usize = 32;
 
@@ -17,6 +19,33 @@ pub enum PersonalHardwareTier {
     AppleUnifiedMemory,
     /// Constrained Edge (< 8 GiB VRAM or CPU-only): On-demand hybrid CPU/GPU streaming.
     ConstrainedEdge,
+}
+
+/// Cold-path memory observation bound to a model activation.
+///
+/// `available_accelerator_bytes` is the measured free budget after other processes and the
+/// runtime safety reserve; it is deliberately not a nominal adapter-VRAM claim.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ExpertResidencyProfile {
+    pub available_accelerator_bytes: u64,
+    pub backbone_bytes: u64,
+    pub kv_cache_bytes: u64,
+    pub bytes_per_expert: usize,
+    pub total_experts: usize,
+    pub is_unified_memory: bool,
+}
+
+impl ExpertResidencyProfile {
+    pub fn placement(self) -> (usize, PersonalHardwareTier) {
+        compute_principled_slot_capacity(
+            self.available_accelerator_bytes,
+            self.backbone_bytes,
+            self.kv_cache_bytes,
+            self.bytes_per_expert,
+            self.total_experts,
+            self.is_unified_memory,
+        )
+    }
 }
 
 /// Compute principled slot capacity given detected system memory and model footprint.
@@ -53,9 +82,15 @@ pub fn compute_principled_slot_capacity(
     if computed_slots >= total_experts && total_experts > 0 {
         (total_experts, PersonalHardwareTier::WorkstationResident)
     } else if computed_slots >= 8 {
-        (computed_slots.min(total_experts), PersonalHardwareTier::PersonalGpuStaging)
+        (
+            computed_slots.min(total_experts),
+            PersonalHardwareTier::PersonalGpuStaging,
+        )
     } else {
-        (computed_slots.max(4).min(total_experts), PersonalHardwareTier::ConstrainedEdge)
+        (
+            computed_slots.max(4).min(total_experts),
+            PersonalHardwareTier::ConstrainedEdge,
+        )
     }
 }
 
@@ -65,7 +100,10 @@ pub enum SlotAccessOutcome {
     /// Expert already resident in GPU slot `slot_id`.
     Hit { slot_id: usize },
     /// Expert missing from GPU; should evict `evict_slot_id` (resident: `evicted_expert_id`) to fetch `expert_id`.
-    MissFetch { evict_slot_id: usize, evicted_expert_id: Option<u16> },
+    MissFetch {
+        evict_slot_id: usize,
+        evicted_expert_id: Option<u16>,
+    },
     /// Expert missing and transfer latency exceeds compute; assigned to host CPU execution.
     MissComputeCpu,
 }
@@ -95,20 +133,36 @@ pub struct MoeOffloadManager {
     current_tick: u64,
     bytes_per_expert: usize,
     prefer_cpu_hybrid_threshold: f32,
+    placement_policy: ExpertPlacementPolicy,
     pub telemetry: ExpertCacheTelemetry,
 }
 
 impl MoeOffloadManager {
     /// Create a new offload manager with `num_gpu_slots` staging capacity.
     pub fn new(num_gpu_slots: usize, bytes_per_expert: usize) -> Self {
-        let capacity = if num_gpu_slots > 0 { num_gpu_slots } else { DEFAULT_GPU_EXPERT_SLOTS };
+        let capacity = if num_gpu_slots > 0 {
+            num_gpu_slots
+        } else {
+            DEFAULT_GPU_EXPERT_SLOTS
+        };
         Self {
             slots: vec![SlotEntry::default(); capacity],
             current_tick: 0,
             bytes_per_expert,
             prefer_cpu_hybrid_threshold: 0.5,
+            placement_policy: ExpertPlacementPolicy::default(),
             telemetry: ExpertCacheTelemetry::default(),
         }
+    }
+
+    /// Construct the staging cache directly from a measured activation memory profile.
+    ///
+    /// This is intentionally cold-path only: adapter memory probing and KV planning must finish
+    /// before any decode request is admitted.  The resulting fixed slot vector never grows in
+    /// the hot path.
+    pub fn from_residency_profile(profile: ExpertResidencyProfile) -> (Self, PersonalHardwareTier) {
+        let (slots, tier) = profile.placement();
+        (Self::new(slots, profile.bytes_per_expert), tier)
     }
 
     /// Access or schedule an expert for evaluation.
@@ -135,14 +189,25 @@ impl MoeOffloadManager {
 
         self.telemetry.misses += 1;
 
-        // 2. Calibrated CPU hybrid evaluation check
+        // 2. Prefer the frozen measured placement policy.  Keep the legacy queue-ratio
+        // fallback only until a profile has been calibrated for this host/model/shape.
+        if self.placement_policy.prefer_cpu(
+            self.bytes_per_expert,
+            estimated_pcie_queue_depth,
+            allow_cpu_hybrid,
+        ) {
+            self.telemetry.cpu_evaluations += 1;
+            return SlotAccessOutcome::MissComputeCpu;
+        }
+
+        // 3. Conservative pre-calibration fallback.
         let queue_ratio = estimated_pcie_queue_depth as f32 / self.slots.len().max(1) as f32;
         if allow_cpu_hybrid && queue_ratio >= self.prefer_cpu_hybrid_threshold {
             self.telemetry.cpu_evaluations += 1;
             return SlotAccessOutcome::MissComputeCpu;
         }
 
-        // 3. Find LRU slot to evict
+        // 4. Find LRU slot to evict
         let mut lru_slot_idx = 0;
         let mut min_tick = u64::MAX;
 
@@ -193,11 +258,21 @@ impl MoeOffloadManager {
     pub fn set_prefer_cpu_hybrid_threshold(&mut self, threshold: f32) {
         self.prefer_cpu_hybrid_threshold = threshold;
     }
+
+    /// Freeze the cold-path calibration for all subsequent cache-miss decisions in this run.
+    pub fn set_placement_policy(&mut self, policy: ExpertPlacementPolicy) {
+        self.placement_policy = policy;
+    }
+
+    pub fn placement_policy(&self) -> ExpertPlacementPolicy {
+        self.placement_policy
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::placement::ExpertPlacementCalibration;
 
     #[test]
     fn test_moe_offload_manager_lru_and_hits() {
@@ -249,6 +324,25 @@ mod tests {
         let res = manager.resolve_expert(99, true, 4);
         assert_eq!(res, SlotAccessOutcome::MissComputeCpu);
         assert_eq!(manager.telemetry.cpu_evaluations, 1);
+    }
+
+    #[test]
+    fn measured_placement_overrides_legacy_queue_ratio() {
+        let mut manager = MoeOffloadManager::new(8, 240 * 1024 * 1024);
+        manager.set_placement_policy(ExpertPlacementPolicy::from_calibration(
+            ExpertPlacementCalibration {
+                transfer_bytes_per_second: 1_000_000_000,
+                cpu_experts_per_second: 20.0,
+                gpu_experts_per_second: 1_000.0,
+                gpu_launch_overhead_ns: 100_000,
+                max_inflight_transfers: 4,
+            },
+            1,
+        ));
+        assert_eq!(
+            manager.resolve_expert(7, true, 0),
+            SlotAccessOutcome::MissComputeCpu
+        );
     }
 
     #[test]
@@ -304,5 +398,20 @@ mod tests {
         );
         assert_eq!(tier_edge, PersonalHardwareTier::ConstrainedEdge);
         assert_eq!(slots_edge, 5);
+    }
+
+    #[test]
+    fn profile_constructs_manager_at_measured_slot_capacity() {
+        let profile = ExpertResidencyProfile {
+            available_accelerator_bytes: 11_500 * 1024 * 1024,
+            backbone_bytes: 2_800 * 1024 * 1024,
+            kv_cache_bytes: 1_024 * 1024 * 1024,
+            bytes_per_expert: 240 * 1024 * 1024,
+            total_experts: 256,
+            is_unified_memory: false,
+        };
+        let (manager, tier) = MoeOffloadManager::from_residency_profile(profile);
+        assert_eq!(tier, PersonalHardwareTier::PersonalGpuStaging);
+        assert_eq!(manager.capacity(), 31);
     }
 }

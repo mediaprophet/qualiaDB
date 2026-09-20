@@ -8,9 +8,9 @@
 
 #[allow(unused_imports)]
 use qualia_inference_kernel::operators::{
-    apply_q4k_lookup, q4k_lookup_workspace_floats, validate_operator, AccumKind,
-    MatrixView, MatrixViewMut, OperatorDescriptor, OperatorError, OperatorKind,
-    OperatorWorkspace, PayloadView, ScaleLayout, Q4K_SUPERBLOCK_ELEMS,
+    apply_q4k_lookup, q4k_lookup_workspace_floats, validate_operator, AccumKind, MatrixView,
+    MatrixViewMut, OperatorDescriptor, OperatorError, OperatorKind, OperatorWorkspace, PayloadView,
+    ScaleLayout, Q4K_SUPERBLOCK_ELEMS,
 };
 
 /// SiLU (Swish) activation function: x * sigmoid(x).
@@ -33,7 +33,13 @@ impl LowRankDelta {
     pub fn new(in_dim: usize, out_dim: usize, rank: usize, a: Vec<f32>, b: Vec<f32>) -> Self {
         assert_eq!(a.len(), out_dim * rank);
         assert_eq!(b.len(), rank * in_dim);
-        Self { a, b, in_dim, out_dim, rank }
+        Self {
+            a,
+            b,
+            in_dim,
+            out_dim,
+            rank,
+        }
     }
 
     /// Apply delta_W * x into out: out[i] += sum_r A[i, r] * (sum_j B[r, j] * x[j]).
@@ -103,7 +109,14 @@ pub fn gemv_q4k(
         bytes: &mut byte_scratch,
     };
 
-    apply_q4k_lookup(&op_view, in_features, out_features, in_view, &mut out_view, ws)
+    apply_q4k_lookup(
+        &op_view,
+        in_features,
+        out_features,
+        in_view,
+        &mut out_view,
+        ws,
+    )
 }
 
 /// Independent SwiGLU expert weights (EOS-070).
@@ -130,18 +143,42 @@ impl<'a> IndependentExpertWeights<'a> {
         if input.len() < self.model_dim || out.len() < self.model_dim {
             return Err(OperatorError::WorkspaceTooSmall);
         }
-        if gate_buf.len() < self.hidden_dim || up_buf.len() < self.hidden_dim || hidden_buf.len() < self.hidden_dim {
+        if gate_buf.len() < self.hidden_dim
+            || up_buf.len() < self.hidden_dim
+            || hidden_buf.len() < self.hidden_dim
+        {
             return Err(OperatorError::WorkspaceTooSmall);
         }
 
-        gemv_q4k(self.gate_bytes, self.model_dim, self.hidden_dim, input, gate_buf, ws_gate_up)?;
-        gemv_q4k(self.up_bytes, self.model_dim, self.hidden_dim, input, up_buf, ws_gate_up)?;
+        gemv_q4k(
+            self.gate_bytes,
+            self.model_dim,
+            self.hidden_dim,
+            input,
+            gate_buf,
+            ws_gate_up,
+        )?;
+        gemv_q4k(
+            self.up_bytes,
+            self.model_dim,
+            self.hidden_dim,
+            input,
+            up_buf,
+            ws_gate_up,
+        )?;
 
         for i in 0..self.hidden_dim {
             hidden_buf[i] = silu(gate_buf[i]) * up_buf[i];
         }
 
-        gemv_q4k(self.down_bytes, self.hidden_dim, self.model_dim, hidden_buf, out, ws_down)?;
+        gemv_q4k(
+            self.down_bytes,
+            self.hidden_dim,
+            self.model_dim,
+            hidden_buf,
+            out,
+            ws_down,
+        )?;
         Ok(())
     }
 }
@@ -198,7 +235,10 @@ pub fn dispatch_clustered_moe_step(
         scratch.cluster_accum_hidden[..cluster.hidden_dim].fill(0.0);
 
         for routed in routed_experts {
-            let expert_pos = cluster.expert_ids.iter().position(|&id| id == routed.expert_id);
+            let expert_pos = cluster
+                .expert_ids
+                .iter()
+                .position(|&id| id == routed.expert_id);
             let local_idx = match expert_pos {
                 Some(idx) => idx,
                 None => continue, // Expert not in this cluster
@@ -216,7 +256,11 @@ pub fn dispatch_clustered_moe_step(
                 scratch.ws_gate_up,
             )?;
             if let Some(ref delta_g) = cluster.expert_gate_deltas[local_idx] {
-                delta_g.apply_add(input, scratch.rank_scratch, &mut scratch.gate_buf[..cluster.hidden_dim]);
+                delta_g.apply_add(
+                    input,
+                    scratch.rank_scratch,
+                    &mut scratch.gate_buf[..cluster.hidden_dim],
+                );
             }
 
             // 2. Up projection: U_e x = U_c x + delta_U_e x
@@ -229,7 +273,11 @@ pub fn dispatch_clustered_moe_step(
                 scratch.ws_gate_up,
             )?;
             if let Some(ref delta_u) = cluster.expert_up_deltas[local_idx] {
-                delta_u.apply_add(input, scratch.rank_scratch, &mut scratch.up_buf[..cluster.hidden_dim]);
+                delta_u.apply_add(
+                    input,
+                    scratch.rank_scratch,
+                    &mut scratch.up_buf[..cluster.hidden_dim],
+                );
             }
 
             // 3. Nonlinear activation: h_e = SiLU(G_e x) * (U_e x) — strictly expert-specific!
@@ -242,14 +290,18 @@ pub fn dispatch_clustered_moe_step(
 
             // 4. Down delta projection if present: add g_e * delta_D_e * h_e directly to output
             if let Some(ref delta_d) = cluster.expert_down_deltas[local_idx] {
-                let mut delta_down_buf = vec![0.0f32; cluster.model_dim];
+                // Reuse the caller-owned down buffer.  The shared down projection below
+                // overwrites it after all expert-specific deltas have been accumulated.
+                // Keeping this temporary in supplied scratch is essential: this function
+                // is called once per decode step and must never allocate.
+                scratch.cluster_down_out[..cluster.model_dim].fill(0.0);
                 delta_d.apply_add(
                     &scratch.hidden_buf[..cluster.hidden_dim],
                     scratch.rank_scratch,
-                    &mut delta_down_buf[..cluster.model_dim],
+                    &mut scratch.cluster_down_out[..cluster.model_dim],
                 );
                 for m in 0..cluster.model_dim {
-                    output[m] += routed.weight * delta_down_buf[m];
+                    output[m] += routed.weight * scratch.cluster_down_out[m];
                 }
             }
         }
@@ -340,7 +392,10 @@ mod tests {
             )
             .expect("expert eval");
 
-        assert!(out.iter().any(|&x| x.abs() > 1e-5), "expert produced non-zero output");
+        assert!(
+            out.iter().any(|&x| x.abs() > 1e-5),
+            "expert produced non-zero output"
+        );
     }
 
     #[test]
@@ -370,8 +425,14 @@ mod tests {
         }
 
         let routed = [
-            RoutedExpert { expert_id: 0, weight: 0.6 },
-            RoutedExpert { expert_id: 1, weight: 0.4 },
+            RoutedExpert {
+                expert_id: 0,
+                weight: 0.6,
+            },
+            RoutedExpert {
+                expert_id: 1,
+                weight: 0.4,
+            },
         ];
 
         // 1. Independent evaluation
@@ -390,7 +451,17 @@ mod tests {
         let mut ub = vec![0.0f32; hidden_dim];
         let mut hb = vec![0.0f32; hidden_dim];
         let mut single_out = vec![0.0f32; model_dim];
-        expert.evaluate(&input, &mut gb, &mut ub, &mut hb, &mut single_out, &mut ws_gate, &mut ws_down).unwrap();
+        expert
+            .evaluate(
+                &input,
+                &mut gb,
+                &mut ub,
+                &mut hb,
+                &mut single_out,
+                &mut ws_gate,
+                &mut ws_down,
+            )
+            .unwrap();
 
         let mut expected_out = vec![0.0f32; model_dim];
         for m in 0..model_dim {
@@ -420,7 +491,8 @@ mod tests {
             ws_down: &mut c_wsd,
         };
 
-        dispatch_clustered_moe_step(&[cluster], &routed, &input, &mut cluster_out, &mut scratch).unwrap();
+        dispatch_clustered_moe_step(&[cluster], &routed, &input, &mut cluster_out, &mut scratch)
+            .unwrap();
 
         for m in 0..model_dim {
             let diff = (expected_out[m] - cluster_out[m]).abs();
@@ -429,7 +501,8 @@ mod tests {
             assert!(
                 rel < 1e-4,
                 "clustered output element {m} mismatch: expected={} clustered={} rel={rel}",
-                expected_out[m], cluster_out[m]
+                expected_out[m],
+                cluster_out[m]
             );
         }
     }
@@ -443,12 +516,18 @@ mod tests {
         let base_down = make_synthetic_q4k_blocks((model_dim * hidden_dim) / 256, 33);
 
         let delta_gate = LowRankDelta::new(
-            model_dim, hidden_dim, 2,
-            vec![0.01f32; hidden_dim * 2], vec![0.02f32; 2 * model_dim],
+            model_dim,
+            hidden_dim,
+            2,
+            vec![0.01f32; hidden_dim * 2],
+            vec![0.02f32; 2 * model_dim],
         );
         let delta_down = LowRankDelta::new(
-            hidden_dim, model_dim, 2,
-            vec![0.005f32; model_dim * 2], vec![0.005f32; 2 * hidden_dim],
+            hidden_dim,
+            model_dim,
+            2,
+            vec![0.005f32; model_dim * 2],
+            vec![0.005f32; 2 * hidden_dim],
         );
 
         let cluster = ClusterAnchor {
@@ -465,7 +544,10 @@ mod tests {
         };
 
         let input = vec![0.1f32; model_dim];
-        let routed = [RoutedExpert { expert_id: 0, weight: 1.0 }];
+        let routed = [RoutedExpert {
+            expert_id: 0,
+            weight: 1.0,
+        }];
 
         let ws_gate_len = q4k_lookup_workspace_floats(model_dim).unwrap();
         let ws_down_len = q4k_lookup_workspace_floats(hidden_dim).unwrap();
@@ -491,6 +573,9 @@ mod tests {
         };
 
         dispatch_clustered_moe_step(&[cluster], &routed, &input, &mut out, &mut scratch).unwrap();
-        assert!(out.iter().any(|&v| v.abs() > 1e-5), "delta-augmented clustered MoE produced non-zero output");
+        assert!(
+            out.iter().any(|&v| v.abs() > 1e-5),
+            "delta-augmented clustered MoE produced non-zero output"
+        );
     }
 }

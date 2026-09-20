@@ -637,8 +637,11 @@ mod cuda_decode_plan;
 pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
-mod moe_ffn;
 mod forward;
+mod moe_ffn;
+mod moe_gguf;
+mod ssm_forward;
+pub(crate) use forward::PrefillDispatchFailure;
 mod gemm;
 mod init;
 mod load;
@@ -1387,6 +1390,12 @@ pub struct QTensorEngine {
     /// offsets change — those are passed at `set_bind_group` time, not baked into the BG.
     #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     mc8_bg_cache: std::sync::Mutex<std::collections::HashMap<u64, wgpu::BindGroup>>,
+    /// Flat recurrent-state arena for all hybrid SSM layers (Granite Hybrid / Qwen GatedDeltaNet).
+    ///
+    /// Allocated once by `ssm_forward::init_ssm_state` after model load; empty (len=0) for
+    /// pure-attention models.  During the hot decode loop the arena is accessed as a
+    /// `&mut [f32]` slice — no per-token Vec allocation (Tier-1 zero-heap).
+    pub(crate) ssm_recurrent_state: Box<[f32]>,
 }
 
 #[cfg(target_arch = "wasm32")]

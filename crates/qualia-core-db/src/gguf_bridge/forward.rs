@@ -3,6 +3,34 @@
 //! Split from gguf_bridge/mod.rs (structural refactor; no behaviour change).
 use super::*;
 
+/// Exact failure point for native chunked prefill.  Returning this to the
+/// caller keeps a failed model forward from being misreported as a zero-rate
+/// benchmark.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PrefillDispatchFailure {
+    EmptyInput,
+    Layer {
+        layer: u32,
+        stage: PrefillLayerStage,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PrefillLayerStage {
+    EmptyBatch,
+    MissingKvLayout,
+    MissingAttentionK,
+    MissingAttentionV,
+    MissingAttentionQ,
+    BatchHiddenTooSmall,
+    MissingModelMap,
+    FetchAttentionK,
+    FetchAttentionV,
+    DispatchAttentionK,
+    DispatchAttentionV,
+    DispatchQueryFfn,
+}
+
 impl QTensorEngine {
     /// One transformer layer for a batched prefill chunk: batched K/V then per-token Q+FFN.
     pub(crate) fn dispatch_prefill_layer_batch(
@@ -15,42 +43,29 @@ impl QTensorEngine {
         batch_start_token_idx: u32,
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
-    ) -> bool {
+    ) -> Result<(), PrefillLayerStage> {
         if n_tokens == 0 {
             wlog("[prefill_layer] FAILED n_tokens=0");
-            return false;
+            return Err(PrefillLayerStage::EmptyBatch);
         }
         let layout = match self.kv_layout {
             Some(l) => l,
             None => {
                 wlog("[prefill_layer] FAILED kv_layout is None");
-                return false;
+                return Err(PrefillLayerStage::MissingKvLayout);
             }
         };
         let tensors = index.get_layer_tensors(layer);
-        let k_info = match tensors.attn_k.as_ref() {
-            Some(i) => i,
-            None => {
-                wlog(&format!(
-                    "[prefill_layer] FAILED missing attn_k layer={layer}"
-                ));
-                return false;
-            }
-        };
-        let v_info = match tensors.attn_v.as_ref() {
-            Some(i) => i,
-            None => {
-                wlog(&format!(
-                    "[prefill_layer] FAILED missing attn_v layer={layer}"
-                ));
-                return false;
-            }
-        };
+        let k_info = tensors
+            .attn_k
+            .as_ref()
+            .ok_or(PrefillLayerStage::MissingAttentionK)?;
+        let v_info = tensors
+            .attn_v
+            .as_ref()
+            .ok_or(PrefillLayerStage::MissingAttentionV)?;
         if tensors.attn_q.is_none() {
-            wlog(&format!(
-                "[prefill_layer] FAILED missing attn_q layer={layer}"
-            ));
-            return false;
+            return Err(PrefillLayerStage::MissingAttentionQ);
         }
         let h = index.hyperparams;
         let n_kv = h.effective_n_kv_head();
@@ -61,13 +76,13 @@ impl QTensorEngine {
                 "[prefill_layer] FAILED batch_elems OOB elems={batch_elems} hidden={}",
                 batch_hidden.len()
             ));
-            return false;
+            return Err(PrefillLayerStage::BatchHiddenTooSmall);
         }
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,
             None => {
                 wlog("[prefill_layer] FAILED gguf_mmap is None");
-                return false;
+                return Err(PrefillLayerStage::MissingModelMap);
             }
         };
         let k_raw =
@@ -75,7 +90,7 @@ impl QTensorEngine {
                 Ok(s) => s,
                 Err(e) => {
                     wlog(&format!("[prefill_layer] FAILED fetch attn_k bytes: {e:?}"));
-                    return false;
+                    return Err(PrefillLayerStage::FetchAttentionK);
                 }
             };
         let v_raw =
@@ -83,7 +98,7 @@ impl QTensorEngine {
                 Ok(s) => s,
                 Err(e) => {
                     wlog(&format!("[prefill_layer] FAILED fetch attn_v bytes: {e:?}"));
-                    return false;
+                    return Err(PrefillLayerStage::FetchAttentionV);
                 }
             };
         let n_kv_wg = n_tokens.saturating_mul(n_kv);
@@ -116,7 +131,7 @@ impl QTensorEngine {
             None,
         ) {
             wlog(&format!("[prefill_layer] K pass FAILED layer={layer}"));
-            return false;
+            return Err(PrefillLayerStage::DispatchAttentionK);
         }
         if !self.dispatch_attention_pass(
             &batch_hidden[..batch_elems],
@@ -135,7 +150,7 @@ impl QTensorEngine {
             None,
         ) {
             wlog(&format!("[prefill_layer] V pass FAILED layer={layer}"));
-            return false;
+            return Err(PrefillLayerStage::DispatchAttentionV);
         }
         for t in 0..n_tokens {
             let abs = batch_start_token_idx + t;
@@ -153,10 +168,10 @@ impl QTensorEngine {
                 wlog(&format!(
                     "[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"
                 ));
-                return false;
+                return Err(PrefillLayerStage::DispatchQueryFfn);
             }
         }
-        true
+        Ok(())
     }
 
     /// Phase 2B: batched prefill layer via async GPU attention (K/V GPU; Q+FFN per token).
@@ -344,10 +359,10 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
         max_layers: u32,
-    ) -> bool {
+    ) -> Result<(), PrefillDispatchFailure> {
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || n_tokens == 0 {
-            return false;
+            return Err(PrefillDispatchFailure::EmptyInput);
         }
         // W3: resident single-fence-per-chunk arena (toggle-gated, default OFF). Populates the KV
         // cache for the whole chunk in ONE submit; any ineligibility falls back to the legacy loop.
@@ -365,7 +380,7 @@ impl QTensorEngine {
                 .is_some()
             {
                 crate::llm_bench::record_resident_prefill_hit();
-                return true;
+                return Ok(());
             }
             crate::llm_bench::record_resident_prefill_fallback();
         }
@@ -375,7 +390,7 @@ impl QTensorEngine {
             max_layers.min(n_layer)
         };
         for layer in 0..limit {
-            if !self.dispatch_prefill_layer_batch(
+            if let Err(stage) = self.dispatch_prefill_layer_batch(
                 index,
                 layer,
                 batch_hidden,
@@ -385,10 +400,10 @@ impl QTensorEngine {
                 scratch_a,
                 scratch_b,
             ) {
-                return false;
+                return Err(PrefillDispatchFailure::Layer { layer, stage });
             }
         }
-        true
+        Ok(())
     }
 
     /// One transformer block using real mmap tensor offsets (stack buffers only).
@@ -409,7 +424,13 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         let t_attn = std::time::Instant::now();
 
-        if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
+        if tensors.is_hybrid_ssm_layer() {
+            // Hybrid SSM path (Granite / Qwen GatedDeltaNet): replaces the attention block.
+            // The FFN block runs below as normal (SSM + FFN is the standard hybrid layer layout).
+            attn_ok = self.dispatch_hybrid_ssm_layer(
+                index, layer, hidden, emb_dim, &tensors, scratch_a, scratch_b,
+            );
+        } else if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
             if let Some(n) = self.dispatch_attention_layer(
                 index,
                 layer,
@@ -440,7 +461,12 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         crate::llm_bench::add_decode_attn_ns(t_attn.elapsed().as_nanos() as u64);
 
-        if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() && tensors.moe_router.is_none() {
+        if !attn_ok
+            && tensors.attn_output.is_none()
+            && tensors.ffn_gate.is_none()
+            && tensors.moe_router.is_none()
+            && !tensors.is_hybrid_ssm_layer()
+        {
             return false;
         }
 

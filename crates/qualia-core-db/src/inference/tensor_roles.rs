@@ -14,8 +14,9 @@ use crate::p64_weight::{
     P64_LAYER_GLOBAL, P64_ROLE_ATTN_K, P64_ROLE_ATTN_NORM, P64_ROLE_ATTN_OUTPUT, P64_ROLE_ATTN_Q,
     P64_ROLE_ATTN_SUBLN, P64_ROLE_ATTN_V, P64_ROLE_FFN_DOWN, P64_ROLE_FFN_GATE, P64_ROLE_FFN_NORM,
     P64_ROLE_FFN_SUBLN, P64_ROLE_FFN_UP, P64_ROLE_MOE_DOWN_EXPS, P64_ROLE_MOE_GATE_EXPS,
-    P64_ROLE_MOE_ROUTER, P64_ROLE_MOE_SHARED_DOWN, P64_ROLE_MOE_SHARED_GATE, P64_ROLE_MOE_SHARED_UP,
-    P64_ROLE_MOE_UP_EXPS, P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM, P64_ROLE_TOKEN_EMBD,
+    P64_ROLE_MOE_ROUTER, P64_ROLE_MOE_SHARED_DOWN, P64_ROLE_MOE_SHARED_GATE,
+    P64_ROLE_MOE_SHARED_UP, P64_ROLE_MOE_UP_EXPS, P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM,
+    P64_ROLE_TOKEN_EMBD,
 };
 
 /// A resolved tensor identity: an engine role + its layer (`P64_LAYER_GLOBAL` for non-layer tensors).
@@ -71,7 +72,13 @@ pub fn name_to_role(name: &str) -> Option<TensorRole> {
         P64_ROLE_ATTN_V
     } else if name.contains("attn_output") || name.contains("o_proj") {
         P64_ROLE_ATTN_OUTPUT
-    } else if name.contains("ffn_gate_inp") || name.contains("gate_inp") || (name.contains("mlp") && name.contains("gate") && !name.contains("gate_proj") && !name.contains("gate_exps")) {
+    } else if name.contains("ffn_gate_inp")
+        || name.contains("gate_inp")
+        || (name.contains("mlp")
+            && name.contains("gate")
+            && !name.contains("gate_proj")
+            && !name.contains("gate_exps"))
+    {
         P64_ROLE_MOE_ROUTER
     } else if name.contains("ffn_gate_shexp") || name.contains("shared_expert.gate_proj") {
         P64_ROLE_MOE_SHARED_GATE
@@ -79,11 +86,16 @@ pub fn name_to_role(name: &str) -> Option<TensorRole> {
         P64_ROLE_MOE_SHARED_UP
     } else if name.contains("ffn_down_shexp") || name.contains("shared_expert.down_proj") {
         P64_ROLE_MOE_SHARED_DOWN
-    } else if name.contains("ffn_gate_exps") || (name.contains("experts") && name.contains("gate_proj")) {
+    } else if name.contains("ffn_gate_exps")
+        || (name.contains("experts") && name.contains("gate_proj"))
+    {
         P64_ROLE_MOE_GATE_EXPS
-    } else if name.contains("ffn_up_exps") || (name.contains("experts") && name.contains("up_proj")) {
+    } else if name.contains("ffn_up_exps") || (name.contains("experts") && name.contains("up_proj"))
+    {
         P64_ROLE_MOE_UP_EXPS
-    } else if name.contains("ffn_down_exps") || (name.contains("experts") && name.contains("down_proj")) {
+    } else if name.contains("ffn_down_exps")
+        || (name.contains("experts") && name.contains("down_proj"))
+    {
         P64_ROLE_MOE_DOWN_EXPS
     } else if name.contains("ffn_gate") || name.contains("gate_proj") {
         P64_ROLE_FFN_GATE
@@ -103,6 +115,32 @@ pub fn name_to_role(name: &str) -> Option<TensorRole> {
         return None;
     };
     Some(TensorRole { role, layer })
+}
+
+/// Canonical GGUF suffix for a tensor role.  Loaders use this to normalize
+/// model-family names before the live prefill path resolves `LayerTensors`.
+pub(crate) fn canonical_suffix(role_id: u16) -> Option<&'static [u8]> {
+    match role_id {
+        P64_ROLE_ATTN_NORM => Some(b"attn_norm.weight"),
+        P64_ROLE_ATTN_Q => Some(b"attn_q.weight"),
+        P64_ROLE_ATTN_K => Some(b"attn_k.weight"),
+        P64_ROLE_ATTN_V => Some(b"attn_v.weight"),
+        P64_ROLE_ATTN_OUTPUT => Some(b"attn_output.weight"),
+        P64_ROLE_ATTN_SUBLN => Some(b"attn_sub_norm.weight"),
+        P64_ROLE_FFN_NORM => Some(b"ffn_norm.weight"),
+        P64_ROLE_FFN_GATE => Some(b"ffn_gate.weight"),
+        P64_ROLE_FFN_DOWN => Some(b"ffn_down.weight"),
+        P64_ROLE_FFN_UP => Some(b"ffn_up.weight"),
+        P64_ROLE_FFN_SUBLN => Some(b"ffn_sub_norm.weight"),
+        P64_ROLE_MOE_ROUTER => Some(b"ffn_gate_inp.weight"),
+        P64_ROLE_MOE_SHARED_GATE => Some(b"ffn_gate_shexp.weight"),
+        P64_ROLE_MOE_SHARED_UP => Some(b"ffn_up_shexp.weight"),
+        P64_ROLE_MOE_SHARED_DOWN => Some(b"ffn_down_shexp.weight"),
+        P64_ROLE_MOE_GATE_EXPS => Some(b"ffn_gate_exps.weight"),
+        P64_ROLE_MOE_UP_EXPS => Some(b"ffn_up_exps.weight"),
+        P64_ROLE_MOE_DOWN_EXPS => Some(b"ffn_down_exps.weight"),
+        _ => None,
+    }
 }
 
 /// The §A ternary **policy**: only the FFN projection weights (`gate` / `up` / `down`) are

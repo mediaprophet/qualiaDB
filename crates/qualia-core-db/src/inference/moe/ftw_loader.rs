@@ -3,11 +3,11 @@
 //! Loads `freetoken_weight.json` and memory-maps `.ftw` binary shards, providing
 //! zero-copy access to shared weights and MoE expert banks (256 experts per layer).
 
+use memmap2::Mmap;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
-use memmap2::Mmap;
-use serde::Deserialize;
 
 use crate::inference::gguf_sharder::{
     GgufHyperparams, GgufTensorIndex, GgufTensorInfo, ARCH_QWEN2, DEFAULT_ROPE_FREQ_BASE,
@@ -75,7 +75,11 @@ pub struct FtwExpertData<'a> {
 
 impl<'a> FtwExpertData<'a> {
     /// Convert zero-copy slice into typed `ExpertWeightView` for zero-heap SwiGLU computation.
-    pub fn to_view(&self, emb_dim: usize, intermediate_dim: usize) -> super::dispatch::ExpertWeightView<'a> {
+    pub fn to_view(
+        &self,
+        emb_dim: usize,
+        intermediate_dim: usize,
+    ) -> super::dispatch::ExpertWeightView<'a> {
         let gate_up_global = if self.gate_up_global.len() >= 4 {
             let mut b = [0u8; 4];
             b.copy_from_slice(&self.gate_up_global[..4]);
@@ -120,7 +124,10 @@ impl FtwModelPackage {
     pub fn open_from_dir(dir: &Path) -> Result<Self, String> {
         let manifest_path = dir.join("freetoken_weight.json");
         if !manifest_path.is_file() {
-            return Err(format!("FTW manifest not found at {}", manifest_path.display()));
+            return Err(format!(
+                "FTW manifest not found at {}",
+                manifest_path.display()
+            ));
         }
         let manifest_bytes = std::fs::read(&manifest_path)
             .map_err(|e| format!("Failed to read {}: {}", manifest_path.display(), e))?;
@@ -211,15 +218,18 @@ impl FtwModelPackage {
                                 inferred_embd = t.shape[1] as u32;
                             }
                             named_tensors.push((b"token_embd.weight".to_vec(), info));
-                            tensor_locations.insert("token_embd.weight".to_string(), (s_idx, local_off, len));
+                            tensor_locations
+                                .insert("token_embd.weight".to_string(), (s_idx, local_off, len));
                         }
                         crate::p64_weight::P64_ROLE_OUTPUT => {
                             named_tensors.push((b"output.weight".to_vec(), info));
-                            tensor_locations.insert("output.weight".to_string(), (s_idx, local_off, len));
+                            tensor_locations
+                                .insert("output.weight".to_string(), (s_idx, local_off, len));
                         }
                         crate::p64_weight::P64_ROLE_OUTPUT_NORM => {
                             named_tensors.push((b"output_norm.weight".to_vec(), info));
-                            tensor_locations.insert("output_norm.weight".to_string(), (s_idx, local_off, len));
+                            tensor_locations
+                                .insert("output_norm.weight".to_string(), (s_idx, local_off, len));
                         }
                         _ => {}
                     }
@@ -251,7 +261,10 @@ impl FtwModelPackage {
         }
 
         // Build expert bank slices per (layer, expert_id)
-        let num_layers = manifest.expert_bank_num_layers.unwrap_or(inferred_layers).max(1);
+        let num_layers = manifest
+            .expert_bank_num_layers
+            .unwrap_or(inferred_layers)
+            .max(1);
         let mut expert_slices = HashMap::new();
 
         for layer in 0..num_layers {
@@ -301,12 +314,27 @@ impl FtwModelPackage {
             }
         }
 
-        let n_layer = parsed_cfg.as_ref().and_then(|c| c.num_hidden_layers).unwrap_or(inferred_layers);
-        let n_embd = parsed_cfg.as_ref().and_then(|c| c.hidden_size).unwrap_or(inferred_embd);
+        let n_layer = parsed_cfg
+            .as_ref()
+            .and_then(|c| c.num_hidden_layers)
+            .unwrap_or(inferred_layers);
+        let n_embd = parsed_cfg
+            .as_ref()
+            .and_then(|c| c.hidden_size)
+            .unwrap_or(inferred_embd);
         let head_dim = parsed_cfg.as_ref().and_then(|c| c.head_dim).unwrap_or(64);
-        let n_head = parsed_cfg.as_ref().and_then(|c| c.num_attention_heads).unwrap_or(if head_dim > 0 { n_embd / head_dim } else { 16 });
-        let n_kv_head = parsed_cfg.as_ref().and_then(|c| c.num_key_value_heads).unwrap_or(n_head);
-        let rope_freq_base = parsed_cfg.as_ref().and_then(|c| c.rope_theta).unwrap_or(DEFAULT_ROPE_FREQ_BASE);
+        let n_head = parsed_cfg
+            .as_ref()
+            .and_then(|c| c.num_attention_heads)
+            .unwrap_or(if head_dim > 0 { n_embd / head_dim } else { 16 });
+        let n_kv_head = parsed_cfg
+            .as_ref()
+            .and_then(|c| c.num_key_value_heads)
+            .unwrap_or(n_head);
+        let rope_freq_base = parsed_cfg
+            .as_ref()
+            .and_then(|c| c.rope_theta)
+            .unwrap_or(DEFAULT_ROPE_FREQ_BASE);
 
         let hyperparams = GgufHyperparams {
             n_layer,
@@ -320,6 +348,12 @@ impl FtwModelPackage {
             sliding_window: 0,
             shared_kv_layers: 0,
             logit_softcap: 0.0,
+            ssm_conv_kernel: 0,
+            ssm_state_size: 0,
+            ssm_group_count: 0,
+            ssm_time_step_rank: 0,
+            ssm_inner_size: 0,
+            full_attention_interval: 0,
             architecture: ARCH_QWEN2,
             arch_flags: 0,
         };
@@ -353,12 +387,20 @@ impl FtwModelPackage {
         let shard = self.shards.get(slice.shard_idx)?;
 
         Some(FtwExpertData {
-            gate_up_packed: shard.get(slice.gate_up_packed_off..slice.gate_up_packed_off + slice.gate_up_packed_len)?,
-            gate_up_scale: shard.get(slice.gate_up_scale_off..slice.gate_up_scale_off + slice.gate_up_scale_len)?,
-            gate_up_global: shard.get(slice.gate_up_global_off..slice.gate_up_global_off + slice.gate_up_global_len)?,
-            down_packed: shard.get(slice.down_packed_off..slice.down_packed_off + slice.down_packed_len)?,
-            down_scale: shard.get(slice.down_scale_off..slice.down_scale_off + slice.down_scale_len)?,
-            down_global: shard.get(slice.down_global_off..slice.down_global_off + slice.down_global_len)?,
+            gate_up_packed: shard.get(
+                slice.gate_up_packed_off..slice.gate_up_packed_off + slice.gate_up_packed_len,
+            )?,
+            gate_up_scale: shard
+                .get(slice.gate_up_scale_off..slice.gate_up_scale_off + slice.gate_up_scale_len)?,
+            gate_up_global: shard.get(
+                slice.gate_up_global_off..slice.gate_up_global_off + slice.gate_up_global_len,
+            )?,
+            down_packed: shard
+                .get(slice.down_packed_off..slice.down_packed_off + slice.down_packed_len)?,
+            down_scale: shard
+                .get(slice.down_scale_off..slice.down_scale_off + slice.down_scale_len)?,
+            down_global: shard
+                .get(slice.down_global_off..slice.down_global_off + slice.down_global_len)?,
         })
     }
 }
@@ -424,6 +466,8 @@ mod tests {
         assert_eq!(pkg.tensor_index.hyperparams.n_head, 8);
         assert_eq!(pkg.tensor_index.hyperparams.n_kv_head, 2);
         assert!(pkg.fetch_tensor_bytes("token_embd.weight").is_some());
-        assert!(pkg.fetch_tensor_bytes("model.embed_tokens.weight").is_some());
+        assert!(pkg
+            .fetch_tensor_bytes("model.embed_tokens.weight")
+            .is_some());
     }
 }

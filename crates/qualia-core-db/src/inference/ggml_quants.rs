@@ -149,19 +149,29 @@ pub fn tensor_byte_len(tensor: &GgufTensorInfo) -> Option<usize> {
     // trits]` payload over ALL elements — NOT a per-row block format, so `ggml_row_bytes * dims[1]`
     // does not apply. Compute the whole-tensor packed length directly from the element count.
     if tensor.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {
-        let n_elems = if tensor.n_dims > 1 && tensor.dims[1] > 0 {
-            n0.checked_mul(tensor.dims[1] as usize)?
-        } else {
-            n0
-        };
+        let mut n_elems = n0;
+        for dim in tensor.dims.iter().take(tensor.n_dims as usize).skip(1) {
+            if *dim == 0 {
+                return None;
+            }
+            n_elems = n_elems.checked_mul(*dim as usize)?;
+        }
         return Some(crate::ternary::ternary_blob_len(n_elems));
     }
     let row = ggml_row_bytes(tensor.ggml_type, n0)?;
-    if tensor.n_dims <= 1 || tensor.dims[1] == 0 {
-        Some(row)
-    } else {
-        Some(row.checked_mul(tensor.dims[1] as usize)?)
+    let mut rows = 1usize;
+    // GGUF stores matrices with the logical row width in dims[0].  Higher
+    // dimensions are contiguous batches of those rows (for example
+    // [input, intermediate, expert] MoE tensors).  Treating only dims[1] as
+    // rows silently mapped one expert from a 3-D tensor and let live MoE
+    // dispatch omit the rest.
+    for dim in tensor.dims.iter().take(tensor.n_dims as usize).skip(1) {
+        if *dim == 0 {
+            return None;
+        }
+        rows = rows.checked_mul(*dim as usize)?;
     }
+    row.checked_mul(rows)
 }
 
 /// Zero-copy slice of an entire tensor payload from the mmap.
@@ -1050,6 +1060,27 @@ mod tests {
         let fake = vec![0u8; total];
         let chunk = fetch_tensor_row_range_bytes(&fake, 0, &info, 10, 8).unwrap();
         assert_eq!(chunk.len(), row * 8);
+    }
+
+    #[test]
+    fn tensor_byte_len_covers_all_expert_dimensions() {
+        let info = GgufTensorInfo {
+            dims: [32, 7, 11, 0],
+            n_dims: 3,
+            ggml_type: GGML_TYPE_F32,
+            byte_offset: 0,
+        };
+        // 11 experts × 7 rows/expert × 32 f32 values/row.
+        assert_eq!(tensor_byte_len(&info), Some(32 * 7 * 11 * 4));
+
+        let ternary = GgufTensorInfo {
+            ggml_type: crate::ternary::GGML_TYPE_TERNARY_158,
+            ..info
+        };
+        assert_eq!(
+            tensor_byte_len(&ternary),
+            Some(crate::ternary::ternary_blob_len(32 * 7 * 11))
+        );
     }
 
     #[test]

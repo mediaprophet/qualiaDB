@@ -7,6 +7,7 @@ pub mod dispatch;
 pub mod expert_cache;
 pub mod ftw_loader;
 pub mod nvfp4;
+pub mod placement;
 pub mod routing;
 
 pub use dispatch::{
@@ -14,7 +15,8 @@ pub use dispatch::{
     MAX_ROUTED_EXPERTS,
 };
 pub use expert_cache::{
-    ExpertCacheTelemetry, MoeOffloadManager, SlotAccessOutcome, DEFAULT_GPU_EXPERT_SLOTS,
+    compute_principled_slot_capacity, ExpertCacheTelemetry, ExpertResidencyProfile,
+    MoeOffloadManager, PersonalHardwareTier, SlotAccessOutcome, DEFAULT_GPU_EXPERT_SLOTS,
 };
 pub use ftw_loader::{
     FtwExpertBankSlice, FtwExpertData, FtwManifest, FtwModelPackage, FtwShardEntry, FtwTensorEntry,
@@ -23,6 +25,5 @@ pub use nvfp4::{
     dequantize_nvfp4_block, dequantize_nvfp4_row, fp8_e4m3_to_f32, nvfp4_gemv_zero_heap,
     Nvfp4Error, E2M1_TABLE, NVFP4_BLOCK_SIZE, NVFP4_BYTES_PER_BLOCK,
 };
-pub use routing::{
-    combine_expert_outputs, route_topk, MoeError, MoeRoutingConfig, MAX_MOE_TOPK,
-};
+pub use placement::{ExpertPlacementCalibration, ExpertPlacementPolicy};
+pub use routing::{combine_expert_outputs, route_topk, MoeError, MoeRoutingConfig, MAX_MOE_TOPK};

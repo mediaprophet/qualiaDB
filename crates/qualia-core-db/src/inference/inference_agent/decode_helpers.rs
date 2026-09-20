@@ -214,6 +214,7 @@ pub(super) fn try_accept_topology_draft(
     tok: &crate::gguf_sharder::GgufTokenizer,
     streamed_len: &mut usize,
     stream_tx: Option<&std::sync::mpsc::SyncSender<String>>,
+    output_cap: usize,
     mut on_token: Option<&mut dyn FnMut(String)>,
 ) -> TopologyDraftStep {
     let idx = match tensor_idx {
@@ -244,7 +245,11 @@ pub(super) fn try_accept_topology_draft(
         scratch_b,
         TEST_TRANSFORMER_LAYER_CAP,
         TEST_VOCAB_CHUNK_CAP,
-    );
+    )
+    // Speculative acceptance is a multi-token operation. Never let it bypass
+    // the caller's generation budget, which otherwise makes benchmark rows
+    // incomparable with scalar decode.
+    .min(output_cap.saturating_sub(out_ids.len()) as u32);
     crate::gpu_context::record_draft_acceptance(accepted, mapped.draft_len as u32);
 
     if accepted == 0 {

@@ -267,6 +267,12 @@ impl P64TensorIndex {
             sliding_window: self.hparams.sliding_window,
             shared_kv_layers: self.hparams.shared_kv_layers,
             logit_softcap: self.hparams.logit_softcap,
+            ssm_conv_kernel: 0,
+            ssm_state_size: 0,
+            ssm_group_count: 0,
+            ssm_time_step_rank: 0,
+            ssm_inner_size: 0,
+            full_attention_interval: 0,
             architecture: self.hparams.architecture,
             arch_flags: self.hparams.arch_flags,
         }

@@ -274,6 +274,18 @@ impl LocalLlmAgent {
                     }
                 });
 
+                // The fail-soft loader is still used by interactive callers;
+                // enforce compatibility at the execution boundary so an
+                // unsupported architecture cannot masquerade as a prefill
+                // throughput failure.
+                if let Some(idx) = tensor_idx.as_ref() {
+                    if let Err(reason) = idx.hyperparams.decode_supported() {
+                        eprintln!("[decode] Native model rejected: {reason}");
+                        let _ = lp.push(LlmMsg::Eos);
+                        return (String::from("[unsupported-model]"), 0u32, None, false);
+                    }
+                }
+
                 let mut ctx = tok.encode_chat_prompt(&prompt_owned);
                 // Keep `eos` for draft/topology APIs that still take a single id; decode
                 // termination uses the full stop set (eos + chat end-of-turn specials).
@@ -366,10 +378,14 @@ impl LocalLlmAgent {
                         );
                         return (String::from("[cancelled]"), 0u32, None, false);
                     }
-                    super::prefill_executor::PrefillOutcome::Failed { pos, tokens_processed } => {
+                    super::prefill_executor::PrefillOutcome::Failed {
+                        pos,
+                        tokens_processed,
+                        reason,
+                    } => {
                         eprintln!(
-                            "[decode] Prefill failed at token pos {} (processed {})",
-                            pos, tokens_processed
+                            "[decode] Prefill failed at token pos {} (processed {}): {:?}",
+                            pos, tokens_processed, reason
                         );
                         let _ = lp.push(LlmMsg::Eos);
                         crate::llm_bench::record_prefill(
@@ -633,8 +649,14 @@ impl LocalLlmAgent {
                         &tok,
                         &mut streamed_len,
                         stream_tx_thread.as_ref(),
+                        gen_budget,
                         None,
                     );
+                    // A draft batch can accept several tokens in one outer decode step. Enforce
+                    // the same output cap used by the scalar path before any continuation.
+                    if out_ids.len() >= gen_budget {
+                        break;
+                    }
                     match draft_step {
                         TopologyDraftStep::AcceptedFull => continue,
                         TopologyDraftStep::Stop {
@@ -1344,7 +1366,7 @@ impl LocalLlmAgent {
                                     );
                                 }
                             }
-                            if !engine.dispatch_prefill_chunk(
+                            if engine.dispatch_prefill_chunk(
                                 idx,
                                 &mut prefill_chunk[..batch_elems],
                                 emb_dim,
@@ -1353,7 +1375,7 @@ impl LocalLlmAgent {
                                 &mut scratch_a,
                                 &mut scratch_b,
                                 TEST_TRANSFORMER_LAYER_CAP,
-                            ) {
+                            ).is_err() {
                                 crate::gguf_bridge::wlog(&format!(
                                     "[llm] PREFILL chunk FAILED pos={pos} n={n}"
                                 ));

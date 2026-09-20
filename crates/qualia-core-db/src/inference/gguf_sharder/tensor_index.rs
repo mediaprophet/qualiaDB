@@ -26,10 +26,11 @@ pub struct GgufTensorIndex {
 
 /// True when `name` is a per-layer matmul weight consumed by `dispatch_transformer_layer`.
 fn is_layer_matmul_tensor_name(name: &[u8]) -> bool {
-    const SUFFIXES: [&[u8]; 14] = [
+    const SUFFIXES: [&[u8]; 16] = [
         b"attn_q.weight",
         b"attn_k.weight",
         b"attn_v.weight",
+        b"attn_qkv.weight",
         b"attn_output.weight",
         b"ffn_gate.weight",
         b"ffn_up.weight",
@@ -37,6 +38,7 @@ fn is_layer_matmul_tensor_name(name: &[u8]) -> bool {
         b"ffn_gate_inp.weight",
         b"ffn_gate_exps.weight",
         b"ffn_up_exps.weight",
+        b"ffn_gate_up_exps.weight",
         b"ffn_down_exps.weight",
         b"ffn_gate_shexp.weight",
         b"ffn_up_shexp.weight",
@@ -85,6 +87,72 @@ pub fn write_blk_tensor_name(layer: u32, suffix: &[u8], out: &mut [u8]) -> usize
     let copy = suffix.len().min(out.len() - n);
     out[n..n + copy].copy_from_slice(&suffix[..copy]);
     n + copy
+}
+
+/// Normalize a model-family tensor name into the canonical `blk.N.*` name
+/// consumed by `get_layer_tensors` and `dispatch_prefill_layer_batch`.
+///
+/// This runs once while building an index, never in a decode or prefill hot
+/// loop.  It makes the prefill path source-format independent for standard
+/// Q/K/V models (Granite/Gemma/Qwen2-style Safetensors and GGUF names).
+fn canonical_component_name(name: &[u8], out: &mut [u8; 128]) -> usize {
+    let Ok(name) = core::str::from_utf8(name) else {
+        return 0;
+    };
+    // Qwen hybrid checkpoints use one fused `[Q;K;V]` projection.  It has no P64 role
+    // equivalent to a single projection, so normalise it before the ordinary role mapper.
+    if name.contains("qkv_proj") || name.contains("attn_qkv") {
+        if let Some(layer) = tensor_layer_number(name) {
+            return write_blk_tensor_name(layer, b"attn_qkv.weight", out);
+        }
+    }
+    if name.contains("gate_up_exps") || name.contains("experts.gate_up_proj") {
+        if let Some(layer) = tensor_layer_number(name) {
+            return write_blk_tensor_name(layer, b"ffn_gate_up_exps.weight", out);
+        }
+    }
+    let Some(role) = crate::inference::tensor_roles::name_to_role(name) else {
+        return 0;
+    };
+    if role.layer == crate::p64_weight::P64_LAYER_GLOBAL {
+        let global = match role.role {
+            crate::p64_weight::P64_ROLE_TOKEN_EMBD => b"token_embd.weight".as_slice(),
+            crate::p64_weight::P64_ROLE_OUTPUT => b"output.weight".as_slice(),
+            crate::p64_weight::P64_ROLE_OUTPUT_NORM => b"output_norm.weight".as_slice(),
+            _ => return 0,
+        };
+        if global.len() > out.len() {
+            return 0;
+        }
+        out[..global.len()].copy_from_slice(global);
+        return global.len();
+    }
+    let Some(suffix) = crate::inference::tensor_roles::canonical_suffix(role.role) else {
+        return 0;
+    };
+    write_blk_tensor_name(role.layer as u32, suffix, out)
+}
+
+/// Extract a layer number from the two source naming families without allocating.
+fn tensor_layer_number(name: &str) -> Option<u32> {
+    for marker in ["blk.", "layers."] {
+        let Some(pos) = name.find(marker) else {
+            continue;
+        };
+        let mut value = 0u32;
+        let mut seen = false;
+        for byte in name.as_bytes()[pos + marker.len()..].iter().copied() {
+            if !byte.is_ascii_digit() {
+                break;
+            }
+            seen = true;
+            value = value.checked_mul(10)?.checked_add((byte - b'0') as u32)?;
+        }
+        if seen {
+            return Some(value);
+        }
+    }
+    None
 }
 
 impl GgufTensorIndex {
@@ -236,6 +304,18 @@ impl GgufTensorIndex {
             if v > 0 {
                 patch.arch_flags |= ARCH_FLAG_HAS_SHARED_KV;
             }
+        } else if key.ends_with("ssm.conv_kernel") {
+            patch.ssm_conv_kernel = v;
+        } else if key.ends_with("ssm.state_size") {
+            patch.ssm_state_size = v;
+        } else if key.ends_with("ssm.group_count") {
+            patch.ssm_group_count = v;
+        } else if key.ends_with("ssm.time_step_rank") {
+            patch.ssm_time_step_rank = v;
+        } else if key.ends_with("ssm.inner_size") {
+            patch.ssm_inner_size = v;
+        } else if key.ends_with("full_attention_interval") {
+            patch.full_attention_interval = v;
         }
         patch
     }
@@ -299,6 +379,24 @@ impl GgufTensorIndex {
             }
             if patch.logit_softcap > 0.0 {
                 hyperparams.logit_softcap = patch.logit_softcap;
+            }
+            if patch.ssm_conv_kernel != 0 {
+                hyperparams.ssm_conv_kernel = patch.ssm_conv_kernel;
+            }
+            if patch.ssm_state_size != 0 {
+                hyperparams.ssm_state_size = patch.ssm_state_size;
+            }
+            if patch.ssm_group_count != 0 {
+                hyperparams.ssm_group_count = patch.ssm_group_count;
+            }
+            if patch.ssm_time_step_rank != 0 {
+                hyperparams.ssm_time_step_rank = patch.ssm_time_step_rank;
+            }
+            if patch.ssm_inner_size != 0 {
+                hyperparams.ssm_inner_size = patch.ssm_inner_size;
+            }
+            if patch.full_attention_interval != 0 {
+                hyperparams.full_attention_interval = patch.full_attention_interval;
             }
             if patch.architecture != 0 {
                 hyperparams.architecture = patch.architecture;
@@ -397,6 +495,18 @@ impl GgufTensorIndex {
         if entries.iter().any(|(h, _)| *h == qk_norm_hash) {
             hyperparams.arch_flags |= ARCH_FLAG_HAS_QK_NORM;
         }
+        // Granite-H uses an SSM input/convolution block rather than normal Q/K/V.  Treat this
+        // concrete tensor signature as authoritative when older converters omit or rename the
+        // architecture metadata, so the attention-only runtime fails closed instead of skipping
+        // recurrent state updates.
+        let granite_ssm_in = gguf_name_hash(b"blk.0.ssm_in.weight");
+        let granite_ssm_conv = gguf_name_hash(b"blk.0.ssm_conv1d.weight");
+        if entries.iter().any(|(h, _)| *h == granite_ssm_in)
+            && entries.iter().any(|(h, _)| *h == granite_ssm_conv)
+            && (hyperparams.architecture == ARCH_UNKNOWN || hyperparams.architecture == ARCH_OTHER)
+        {
+            hyperparams.architecture = ARCH_GRANITE_HYBRID;
+        }
         Some(Self {
             entries,
             tensor_data_start,
@@ -423,13 +533,20 @@ impl GgufTensorIndex {
         let mut max_tensor_bytes = 0usize;
         let mut max_layer_tensor_bytes = 0usize;
         for (name, info) in named_tensors {
+            let mut canonical = [0u8; 128];
+            let canonical_len = canonical_component_name(name, &mut canonical);
+            let lookup_name = if canonical_len > 0 {
+                &canonical[..canonical_len]
+            } else {
+                name
+            };
             if let Some(tb) = crate::ggml_quants::tensor_byte_len(info) {
                 max_tensor_bytes = max_tensor_bytes.max(tb);
-                if is_layer_matmul_tensor_name(name) {
+                if is_layer_matmul_tensor_name(lookup_name) {
                     max_layer_tensor_bytes = max_layer_tensor_bytes.max(tb);
                 }
             }
-            entries.push((gguf_name_hash(name), *info));
+            entries.push((gguf_name_hash(lookup_name), *info));
         }
         let find_h = |h: u64| entries.iter().find(|(eh, _)| *eh == h).map(|(_, i)| *i);
         let token_embd = find_h(gguf_name_hash(b"token_embd.weight"));
@@ -472,6 +589,8 @@ impl GgufTensorIndex {
             attn_q: self.find_layer_tensor(layer_idx, b"attn_q.weight"),
             attn_k: self.find_layer_tensor(layer_idx, b"attn_k.weight"),
             attn_v: self.find_layer_tensor(layer_idx, b"attn_v.weight"),
+            attn_qkv: self.find_layer_tensor(layer_idx, b"attn_qkv.weight"),
+            attn_gate: self.find_layer_tensor(layer_idx, b"attn_gate.weight"),
             attn_output: self.find_layer_tensor(layer_idx, b"attn_output.weight"),
             ffn_norm: self.find_layer_tensor(layer_idx, b"ffn_norm.weight"),
             ffn_gate: self.find_layer_tensor(layer_idx, b"ffn_gate.weight"),
@@ -480,10 +599,20 @@ impl GgufTensorIndex {
             moe_router: self.find_layer_tensor(layer_idx, b"ffn_gate_inp.weight"),
             moe_gate_exps: self.find_layer_tensor(layer_idx, b"ffn_gate_exps.weight"),
             moe_up_exps: self.find_layer_tensor(layer_idx, b"ffn_up_exps.weight"),
+            moe_gate_up_exps: self.find_layer_tensor(layer_idx, b"ffn_gate_up_exps.weight"),
             moe_down_exps: self.find_layer_tensor(layer_idx, b"ffn_down_exps.weight"),
             moe_shared_gate: self.find_layer_tensor(layer_idx, b"ffn_gate_shexp.weight"),
             moe_shared_up: self.find_layer_tensor(layer_idx, b"ffn_up_shexp.weight"),
             moe_shared_down: self.find_layer_tensor(layer_idx, b"ffn_down_shexp.weight"),
+            moe_shared_gate_input: self.find_layer_tensor(layer_idx, b"ffn_gate_inp_shexp.weight"),
+            ssm_alpha: self.find_layer_tensor(layer_idx, b"ssm_alpha.weight"),
+            ssm_beta: self.find_layer_tensor(layer_idx, b"ssm_beta.weight"),
+            ssm_in: self.find_layer_tensor(layer_idx, b"ssm_in.weight"),
+            ssm_conv1d: self.find_layer_tensor(layer_idx, b"ssm_conv1d.weight"),
+            ssm_conv1d_bias: self.find_layer_tensor(layer_idx, b"ssm_conv1d.bias"),
+            ssm_dt_bias: self.find_layer_tensor(layer_idx, b"ssm_dt.bias"),
+            ssm_norm: self.find_layer_tensor(layer_idx, b"ssm_norm.weight"),
+            ssm_out: self.find_layer_tensor(layer_idx, b"ssm_out.weight"),
         }
     }
 

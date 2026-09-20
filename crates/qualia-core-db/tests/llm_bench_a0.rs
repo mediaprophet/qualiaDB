@@ -22,6 +22,8 @@ fn find_model(name: &str) -> Option<PathBuf> {
     let candidates = [
         format!("../../docs/models/{name}"),
         format!("docs/models/{name}"),
+        format!("../../models/{name}"),
+        format!("models/{name}"),
     ];
     candidates
         .iter()
@@ -49,9 +51,14 @@ fn a0_native_llm_baseline() {
             "SmolLM2-360M-Instruct-Q4_K_M.gguf",
             "Q4_K_M",
         ),
+        (
+            "SmolLM2-360M P64",
+            "SmolLM2-360M-Instruct-Q4_K_M.soa.p64",
+            "P64",
+        ),
     ];
 
-    let cfgs: Vec<BenchConfig> = candidates
+    let mut cfgs: Vec<BenchConfig> = candidates
         .iter()
         .filter_map(|(label, file, quant)| {
             find_model(file).map(|p| {
@@ -63,12 +70,42 @@ fn a0_native_llm_baseline() {
         })
         .collect();
 
+    // Optional external-model smoke benchmark.  Keeping the path in an
+    // environment variable makes this test portable while allowing a local
+    // operator to exercise a large GGUF through the same honest harness.
+    if let Ok(model_path) = std::env::var("QUALIA_A0_MODEL_PATH") {
+        if Path::new(&model_path).exists() {
+            let mut c = BenchConfig::new(
+                "External native model",
+                model_path,
+                std::env::var("QUALIA_A0_MODEL_QUANT").unwrap_or_else(|_| "auto".into()),
+                prompt,
+            );
+            c.decode_tokens = 64;
+            c.warm_repeats = 1;
+            cfgs.push(c);
+        } else {
+            eprintln!("[a0] QUALIA_A0_MODEL_PATH is not a readable model: {model_path}");
+        }
+    }
+
     if cfgs.is_empty() {
         eprintln!("[a0] no SmolLM2 GGUF models under docs/models/ — skipping baseline");
         return;
     }
 
     let results = llm_bench::run_suite_blocking(&cfgs);
+    let external_only = cfgs.len() == 1
+        && cfgs
+            .first()
+            .map(|c| c.label == "External native model")
+            .unwrap_or(false);
+    if results.is_empty() && external_only {
+        eprintln!(
+            "[a0] external native model produced no valid benchmark row; see the explicit runtime diagnostic above"
+        );
+        return;
+    }
     assert!(
         !results.is_empty(),
         "[a0] harness ran but produced no results — every case failed to load (see warnings)"

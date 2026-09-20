@@ -5,43 +5,17 @@
 //! Supports `BF16` (GGML 30), `F16` (GGML 1), and `F32` (GGML 0).
 
 use crate::inference::gguf_sharder::{
-    GgufHyperparams, GgufTensorIndex, GgufTensorInfo, ARCH_LLAMA, ARCH_QWEN2, DEFAULT_ROPE_FREQ_BASE,
+    GgufHyperparams, GgufTensorIndex, GgufTensorInfo, ARCH_LLAMA, ARCH_QWEN2,
+    DEFAULT_ROPE_FREQ_BASE,
 };
-use crate::inference::safetensor::{
-    parse_safetensor_header, safetensor_dtype_to_ggml,
-};
+use crate::inference::safetensor::{parse_safetensor_header, safetensor_dtype_to_ggml};
 use crate::inference::tensor_roles::name_to_role;
 use crate::p64_weight::{
-    P64_LAYER_GLOBAL, P64_ROLE_ATTN_K, P64_ROLE_ATTN_NORM, P64_ROLE_ATTN_OUTPUT, P64_ROLE_ATTN_Q,
-    P64_ROLE_ATTN_SUBLN, P64_ROLE_ATTN_V, P64_ROLE_FFN_DOWN, P64_ROLE_FFN_GATE, P64_ROLE_FFN_NORM,
-    P64_ROLE_FFN_SUBLN, P64_ROLE_FFN_UP, P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM,
+    P64_LAYER_GLOBAL, P64_ROLE_ATTN_K, P64_ROLE_ATTN_Q, P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM,
     P64_ROLE_TOKEN_EMBD,
 };
 
-/// Suffix byte slice corresponding to a P64 role id.
-pub(crate) fn role_suffix(role_id: u16) -> Option<&'static [u8]> {
-    match role_id {
-        P64_ROLE_ATTN_NORM => Some(b"attn_norm.weight"),
-        P64_ROLE_ATTN_Q => Some(b"attn_q.weight"),
-        P64_ROLE_ATTN_K => Some(b"attn_k.weight"),
-        P64_ROLE_ATTN_V => Some(b"attn_v.weight"),
-        P64_ROLE_ATTN_OUTPUT => Some(b"attn_output.weight"),
-        P64_ROLE_ATTN_SUBLN => Some(b"attn_sub_norm.weight"),
-        P64_ROLE_FFN_NORM => Some(b"ffn_norm.weight"),
-        P64_ROLE_FFN_GATE => Some(b"ffn_gate.weight"),
-        P64_ROLE_FFN_DOWN => Some(b"ffn_down.weight"),
-        P64_ROLE_FFN_UP => Some(b"ffn_up.weight"),
-        P64_ROLE_FFN_SUBLN => Some(b"ffn_sub_norm.weight"),
-        crate::p64_weight::P64_ROLE_MOE_ROUTER => Some(b"ffn_gate_inp.weight"),
-        crate::p64_weight::P64_ROLE_MOE_SHARED_GATE => Some(b"ffn_gate_shexp.weight"),
-        crate::p64_weight::P64_ROLE_MOE_SHARED_UP => Some(b"ffn_up_shexp.weight"),
-        crate::p64_weight::P64_ROLE_MOE_SHARED_DOWN => Some(b"ffn_down_shexp.weight"),
-        crate::p64_weight::P64_ROLE_MOE_GATE_EXPS => Some(b"ffn_gate_exps.weight"),
-        crate::p64_weight::P64_ROLE_MOE_UP_EXPS => Some(b"ffn_up_exps.weight"),
-        crate::p64_weight::P64_ROLE_MOE_DOWN_EXPS => Some(b"ffn_down_exps.weight"),
-        _ => None,
-    }
-}
+pub(crate) use crate::inference::tensor_roles::canonical_suffix as role_suffix;
 
 /// Optional JSON config fields from standard HuggingFace `config.json`.
 #[derive(Debug, Clone, Default)]
@@ -236,6 +210,12 @@ pub fn parse_safetensor_to_index(
         sliding_window: 0,
         shared_kv_layers: 0,
         logit_softcap: 0.0,
+        ssm_conv_kernel: 0,
+        ssm_state_size: 0,
+        ssm_group_count: 0,
+        ssm_time_step_rank: 0,
+        ssm_inner_size: 0,
+        full_attention_interval: 0,
         architecture,
         arch_flags: 0,
     };

@@ -4,6 +4,7 @@
 //! inputs. Tuning is therefore allowed to change work distribution without
 //! changing the mathematical operation being certified.
 
+pub mod attention;
 pub mod audio;
 pub mod backend;
 // W10: the forge's calibration/adaptation pipeline (corpus→capture→learn→certify→package). Native-
@@ -40,6 +41,10 @@ pub(crate) fn test_cuda_available() -> bool {
     *AVAILABLE.get_or_init(|| execute::CudaComputeContext::new(64 * 1024).is_ok())
 }
 
+pub use attention::{
+    causal_attention_oracle, synthesize_causal_attention, AttentionSchedule, AttentionShader,
+    AttentionShape,
+};
 pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;
 pub use dispatch::{

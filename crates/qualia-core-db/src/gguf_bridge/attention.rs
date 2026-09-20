@@ -804,11 +804,11 @@ impl QTensorEngine {
 
         let mmap = self.gguf_mmap.as_deref()?;
         let k_raw =
-            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &k_info).ok()?;
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info).ok()?;
         let v_raw =
-            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &v_info).ok()?;
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info).ok()?;
         let q_raw =
-            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &q_info).ok()?;
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
         let n_embd = h.n_embd as usize;
 
         // Pre-norm (attn_norm) on the residual stream before Q/K/V — REQUIRED on all targets.
@@ -1072,7 +1072,7 @@ impl QTensorEngine {
             None => return false,
         };
         let q_info = match tensors.attn_q.as_ref() {
-            Some(i) => i,
+            Some(info) => info,
             None => return false,
         };
         let h = index.hyperparams;

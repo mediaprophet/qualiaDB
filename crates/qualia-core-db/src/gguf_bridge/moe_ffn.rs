@@ -5,6 +5,12 @@ use crate::inference::moe::dispatch::MAX_ROUTED_EXPERTS;
 use crate::inference::moe::ftw_loader::FtwModelPackage;
 use std::sync::Arc;
 
+use super::moe_gguf::{
+    compute_router_logits_from_gguf, compute_router_logits_from_raw, dot,
+    evaluate_gguf_dense_swiglu, evaluate_gguf_swiglu_expert,
+    evaluate_gguf_swiglu_expert_fused_gate_up,
+};
+
 impl QTensorEngine {
     /// Adopt an FTW multi-shard model directory for native MoE execution.
     #[cfg(not(target_arch = "wasm32"))]
@@ -19,7 +25,11 @@ impl QTensorEngine {
         self.ftw_package = Some(pkg);
 
         Ok(GgufLoadReport {
-            mapped_bytes: self.ftw_package.as_ref().map(|p| p.manifest.total_bytes).unwrap_or(0),
+            mapped_bytes: self
+                .ftw_package
+                .as_ref()
+                .map(|p| p.manifest.total_bytes)
+                .unwrap_or(0),
             tensor_data_offset: self.tensor_data_offset,
             n_layer: self.hyperparams.n_layer,
             n_head: self.hyperparams.n_head,
@@ -33,7 +43,7 @@ impl QTensorEngine {
     /// Dispatch MoE layer step: pre-norm input -> router -> top-k SwiGLU experts into scratch_a.
     pub(crate) fn dispatch_moe_ffn(
         &mut self,
-        _index: &crate::gguf_sharder::GgufTensorIndex,
+        index: &crate::gguf_sharder::GgufTensorIndex,
         emb_dim: usize,
         tensors: &crate::gguf_sharder::LayerTensors,
         scratch_a: &mut [f32],
@@ -45,17 +55,21 @@ impl QTensorEngine {
         };
 
         let layer_idx = tensors.layer_idx as u16;
-        let num_experts = (router_info.dims[1] as usize).min(MAX_ROUTED_EXPERTS).max(1);
+        let num_experts = (router_info.dims[1] as usize)
+            .min(MAX_ROUTED_EXPERTS)
+            .max(1);
         let topk = 8usize.min(num_experts);
 
         let mut gate_logits = [0.0f32; MAX_ROUTED_EXPERTS];
+        let mut router_ready = false;
 
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(ref pkg) = self.ftw_package {
                 let router_name = format!("model.layers.{}.mlp.gate.weight", layer_idx);
                 let alt_router_name = format!("blk.{}.ffn_gate_inp.weight", layer_idx);
-                let router_bytes = pkg.fetch_tensor_bytes(&router_name)
+                let router_bytes = pkg
+                    .fetch_tensor_bytes(&router_name)
                     .or_else(|| pkg.fetch_tensor_bytes(&alt_router_name));
 
                 if let Some(raw) = router_bytes {
@@ -67,6 +81,7 @@ impl QTensorEngine {
                         num_experts,
                         &mut gate_logits[..num_experts],
                     );
+                    router_ready = true;
                 } else if let Some(ref mmap) = self.gguf_mmap {
                     let off = router_info.byte_offset as usize;
                     if off < mmap.len() {
@@ -78,20 +93,34 @@ impl QTensorEngine {
                             num_experts,
                             &mut gate_logits[..num_experts],
                         );
+                        router_ready = true;
                     }
                 }
-            } else if let Some(ref mmap) = self.gguf_mmap {
-                let off = router_info.byte_offset as usize;
-                if off < mmap.len() {
-                    compute_router_logits_from_raw(
-                        &mmap[off..],
-                        router_info.ggml_type,
-                        &ffn_input[..emb_dim],
-                        emb_dim,
-                        num_experts,
-                        &mut gate_logits[..num_experts],
-                    );
+            }
+        }
+
+        // Ordinary GGUF expert tensors are 3-D ([input, intermediate, expert]).
+        // Their rows must be addressed through the tensor-data base, not the
+        // raw `byte_offset` (which is relative to that base).  This also keeps
+        // Q4_K/Q6_K router rows on the canonical dequantization path.
+        if !router_ready {
+            let Some(mmap) = self.gguf_mmap.as_deref() else {
+                return false;
+            };
+            if let Ok(raw) =
+                crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, router_info)
+            {
+                if !compute_router_logits_from_gguf(
+                    raw,
+                    router_info,
+                    &ffn_input[..emb_dim],
+                    num_experts,
+                    &mut gate_logits[..num_experts],
+                ) {
+                    return false;
                 }
+            } else {
+                return false;
             }
         }
 
@@ -119,11 +148,18 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         let ftw_pkg = self.ftw_package.clone();
+        let mmap = self.gguf_mmap.clone();
+
+        let direct_gate = tensors.moe_gate_exps.as_ref();
+        let direct_up = tensors.moe_up_exps.as_ref();
+        let direct_gate_up = tensors.moe_gate_up_exps.as_ref();
+        let direct_down = tensors.moe_down_exps.as_ref();
 
         for i in 0..selected {
             let expert_id = expert_indices[i];
             let weight = expert_weights[i];
 
+            let mut evaluated = false;
             #[cfg(not(target_arch = "wasm32"))]
             if let Some(ref pkg) = ftw_pkg {
                 if let Some(data) = pkg.get_expert_data(layer_idx, expert_id) {
@@ -144,55 +180,114 @@ impl QTensorEngine {
                         &mut up_buf,
                         &mut swiglu_buf,
                         &mut expert_out[..emb_dim],
-                    ).is_ok() {
+                    )
+                    .is_ok()
+                    {
                         for d in 0..emb_dim {
                             scratch_a[d] += weight * expert_out[d];
                         }
+                        evaluated = true;
                     }
                 }
+            }
+            if !evaluated {
+                let Some(mmap) = mmap.as_deref() else {
+                    return false;
+                };
+                let direct_ok = match (direct_gate, direct_up, direct_gate_up, direct_down) {
+                    (Some(gate), Some(up), _, Some(down)) => evaluate_gguf_swiglu_expert(
+                        mmap,
+                        index.tensor_data_start,
+                        gate,
+                        up,
+                        down,
+                        expert_id as usize,
+                        &ffn_input[..emb_dim],
+                        &mut gate_buf,
+                        &mut up_buf,
+                        &mut swiglu_buf,
+                        &mut expert_out[..emb_dim],
+                    ),
+                    (_, _, Some(gate_up), Some(down)) => evaluate_gguf_swiglu_expert_fused_gate_up(
+                        mmap,
+                        index.tensor_data_start,
+                        gate_up,
+                        down,
+                        expert_id as usize,
+                        &ffn_input[..emb_dim],
+                        &mut gate_buf,
+                        &mut up_buf,
+                        &mut swiglu_buf,
+                        &mut expert_out[..emb_dim],
+                    ),
+                    _ => false,
+                };
+                if !direct_ok {
+                    return false;
+                }
+                for d in 0..emb_dim {
+                    scratch_a[d] += weight * expert_out[d];
+                }
+            }
+        }
+
+        // Qwen-style shared expert: an ordinary SwiGLU MLP whose output is
+        // scaled by sigmoid(W_shared_gate x).  It is mandatory whenever any
+        // of its tensors are present; partial tensor sets fail closed.
+        if tensors.moe_shared_gate.is_some()
+            || tensors.moe_shared_up.is_some()
+            || tensors.moe_shared_down.is_some()
+            || tensors.moe_shared_gate_input.is_some()
+        {
+            let (Some(gate), Some(up), Some(down), Some(gate_input), Some(mmap)) = (
+                tensors.moe_shared_gate.as_ref(),
+                tensors.moe_shared_up.as_ref(),
+                tensors.moe_shared_down.as_ref(),
+                tensors.moe_shared_gate_input.as_ref(),
+                mmap.as_deref(),
+            ) else {
+                return false;
+            };
+            if !evaluate_gguf_dense_swiglu(
+                mmap,
+                index.tensor_data_start,
+                gate,
+                up,
+                down,
+                &ffn_input[..emb_dim],
+                &mut gate_buf,
+                &mut up_buf,
+                &mut swiglu_buf,
+                &mut expert_out[..emb_dim],
+            ) {
+                return false;
+            }
+            let Ok(gate_raw) =
+                crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_input)
+            else {
+                return false;
+            };
+            let mut gate_row = [0.0f32; crate::inference::moe::dispatch::MAX_INTERMEDIATE_DIM];
+            if gate_input.n_dims != 1
+                || gate_input.dims[0] as usize != emb_dim
+                || emb_dim > gate_row.len()
+                || crate::ggml_quants::dequantize_row_into(
+                    gate_raw,
+                    gate_input.ggml_type,
+                    emb_dim,
+                    &mut gate_row[..emb_dim],
+                )
+                .is_err()
+            {
+                return false;
+            }
+            let gate_weight =
+                1.0 / (1.0 + (-dot(&ffn_input[..emb_dim], &gate_row[..emb_dim])).exp());
+            for d in 0..emb_dim {
+                scratch_a[d] += gate_weight * expert_out[d];
             }
         }
 
         true
-    }
-}
-
-/// Compute router logits directly from raw weights without allocating a full matrix:
-/// g_e = sum_i input[i] * W_router[e, i]
-fn compute_router_logits_from_raw(
-    raw: &[u8],
-    ggml_type: u32,
-    input: &[f32],
-    emb_dim: usize,
-    num_experts: usize,
-    out_logits: &mut [f32],
-) {
-    let mut row_buf = [0.0f32; 8192];
-    let row_len = emb_dim.min(row_buf.len());
-
-    for e in 0..num_experts {
-        let row_offset = match ggml_type {
-            crate::ggml_quants::GGML_TYPE_F32 => e * emb_dim * 4,
-            crate::ggml_quants::GGML_TYPE_F16 | crate::ggml_quants::GGML_TYPE_BF16 => e * emb_dim * 2,
-            crate::ggml_quants::GGML_TYPE_Q8_0 => e * (emb_dim / 32) * 34,
-            _ => e * emb_dim * 2,
-        };
-
-        if row_offset < raw.len() {
-            if crate::ggml_quants::dequantize_row_into(
-                &raw[row_offset..],
-                ggml_type,
-                row_len,
-                &mut row_buf[..row_len],
-            ).is_ok() {
-                let mut dot = 0.0f32;
-                for i in 0..row_len {
-                    dot += input[i] * row_buf[i];
-                }
-                out_logits[e] = dot;
-                continue;
-            }
-        }
-        out_logits[e] = 0.0;
     }
 }

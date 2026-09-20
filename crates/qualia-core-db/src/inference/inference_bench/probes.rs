@@ -30,7 +30,7 @@ pub fn compare_topk_decode(
             architecture: None,
         },
     );
-    set_decode_budget_override(decode_tokens);
+    let _benchmark_budget = benchmark_decode_budget_scope(decode_tokens);
     let model_id = crate::q_hash(model_path);
     let _ = crate::resident_model::mount_resident_gguf(model_id, model_path, false);
 
@@ -40,7 +40,6 @@ pub fn compare_topk_decode(
     let (on_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
 
     set_gpu_topk(false);
-    set_decode_budget_override(0);
     crate::resident_model::clear_resident_model();
     Ok((off_text, on_text))
 }
@@ -91,7 +90,7 @@ pub fn decode_with_metrics(
             architecture: None,
         },
     );
-    set_decode_budget_override(decode_tokens);
+    let _benchmark_budget = benchmark_decode_budget_scope(decode_tokens);
     let model_id = crate::q_hash(model_path);
     if is_q42 {
         crate::resident_model::mount_resident_q42(model_id, model_path, false)?;
@@ -102,7 +101,6 @@ pub fn decode_with_metrics(
     let (text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
     let snap = phase_snapshot();
     let decode_tok_s = tok_per_s(snap.decode_tokens, snap.decode_ns);
-    set_decode_budget_override(0);
     crate::resident_model::clear_resident_model();
     Ok((text, decode_tok_s))
 }

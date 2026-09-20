@@ -1304,6 +1304,7 @@ impl QTensorEngine {
             mc8_norm_stride: 0,
             #[cfg(target_arch = "wasm32")]
             mc8_bg_cache: std::sync::Mutex::new(std::collections::HashMap::new()),
+            ssm_recurrent_state: Box::new([]),
         };
         // Exercise the CPU elementwise oracle (ReLU) once at engine init so the fallback
         // path stays linked when GPU elem kernels are unavailable.

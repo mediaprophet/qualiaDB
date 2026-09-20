@@ -6,13 +6,25 @@ use super::control::DecodeControl;
 use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PrefillFailure {
+    MissingTensorIndex,
+    MissingModelMap,
+    EmbeddingDequantization { token_id: u32 },
+    EngineRejectedChunk { failure: crate::gguf_bridge::PrefillDispatchFailure },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PrefillOutcome {
     /// All prompt tokens were successfully processed through transformer layers.
     Completed { tokens_processed: usize },
     /// Prefill was aborted before finishing due to cancellation signal.
     Cancelled { tokens_processed: usize },
     /// Engine failed to dispatch a prefill chunk.
-    Failed { pos: usize, tokens_processed: usize },
+    Failed {
+        pos: usize,
+        tokens_processed: usize,
+        reason: PrefillFailure,
+    },
     /// Prompt had <= 1 token; no prefill needed.
     NoPrefillNeeded,
 }
@@ -76,7 +88,11 @@ pub fn execute_chunked_prefill_with_offset(
     }
 
     let Some(idx) = tensor_idx else {
-        return PrefillOutcome::Failed { pos: start_pos, tokens_processed: start_pos };
+        return PrefillOutcome::Failed {
+            pos: start_pos,
+            tokens_processed: start_pos,
+            reason: PrefillFailure::MissingTensorIndex,
+        };
     };
 
     let prefill_tokens = prompt_len - 1;
@@ -95,7 +111,11 @@ pub fn execute_chunked_prefill_with_offset(
 
         {
             let Some(mmap) = engine.gguf_mmap.as_deref() else {
-                return PrefillOutcome::Failed { pos, tokens_processed: pos };
+                return PrefillOutcome::Failed {
+                    pos,
+                    tokens_processed: pos,
+                    reason: PrefillFailure::MissingModelMap,
+                };
             };
             for t in 0..n {
                 let written = idx.dequantize_token_embedding_into(
@@ -109,12 +129,18 @@ pub fn execute_chunked_prefill_with_offset(
                         ctx[pos + t],
                         pos + t
                     ));
-                    return PrefillOutcome::Failed { pos: pos + t, tokens_processed: pos };
+                    return PrefillOutcome::Failed {
+                        pos: pos + t,
+                        tokens_processed: pos,
+                        reason: PrefillFailure::EmbeddingDequantization {
+                            token_id: ctx[pos + t],
+                        },
+                    };
                 }
             }
         }
 
-        if !engine.dispatch_prefill_chunk(
+        if let Err(failure) = engine.dispatch_prefill_chunk(
             idx,
             &mut prefill_chunk[..batch_elems],
             emb_dim,
@@ -127,7 +153,11 @@ pub fn execute_chunked_prefill_with_offset(
             crate::gguf_bridge::wlog(&format!(
                 "[llm] PREFILL chunk FAILED pos={pos} n={n}"
             ));
-            return PrefillOutcome::Failed { pos, tokens_processed: pos };
+            return PrefillOutcome::Failed {
+                pos,
+                tokens_processed: pos,
+                reason: PrefillFailure::EngineRejectedChunk { failure },
+            };
         }
 
         pos += n;
@@ -148,7 +178,13 @@ mod tests {
         let cancelled = PrefillOutcome::Cancelled { tokens_processed: 5 };
         assert!(!cancelled.is_completed());
 
-        let failed = PrefillOutcome::Failed { pos: 2, tokens_processed: 2 };
+        let failed = PrefillOutcome::Failed {
+            pos: 2,
+            tokens_processed: 2,
+            reason: PrefillFailure::EngineRejectedChunk {
+                failure: crate::gguf_bridge::PrefillDispatchFailure::EmptyInput,
+            },
+        };
         assert!(!failed.is_completed());
 
         let none_needed = PrefillOutcome::NoPrefillNeeded;

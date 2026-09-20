@@ -12,6 +12,37 @@ use std::sync::Mutex;
 
 static DECODE_BUDGET_OVERRIDE: AtomicU32 = AtomicU32::new(0);
 
+// Application-profile bootstrap is intentionally allowed to reset the normal
+// override to its production default.  A benchmark is different: it requires a
+// fixed, reproducible budget for its complete cold/warm scope.  Keep that
+// request separate so profile startup in the inference thread cannot silently
+// turn a requested 64-token measurement back into the 256-token UI default.
+static BENCHMARK_DECODE_BUDGET_OVERRIDE: AtomicU32 = AtomicU32::new(0);
+static BENCHMARK_DECODE_SCOPE: Mutex<()> = Mutex::new(());
+
+/// Serializes and installs a benchmark-only decode budget.
+///
+/// The returned guard restores the production behaviour when dropped.  This
+/// is process-global because the underlying inference toggles are global too;
+/// concurrent benchmarks are therefore deliberately serialized.
+pub struct BenchmarkDecodeBudgetGuard {
+    _scope: std::sync::MutexGuard<'static, ()>,
+}
+
+impl Drop for BenchmarkDecodeBudgetGuard {
+    fn drop(&mut self) {
+        BENCHMARK_DECODE_BUDGET_OVERRIDE.store(0, Ordering::Release);
+    }
+}
+
+pub fn benchmark_decode_budget_scope(n: u32) -> BenchmarkDecodeBudgetGuard {
+    let scope = BENCHMARK_DECODE_SCOPE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    BENCHMARK_DECODE_BUDGET_OVERRIDE.store(n, Ordering::Release);
+    BenchmarkDecodeBudgetGuard { _scope: scope }
+}
+
 /// Set a fixed decode-token budget for benchmarking (0 = production default).
 #[inline]
 pub fn set_decode_budget_override(n: u32) {
@@ -22,13 +53,18 @@ pub fn set_decode_budget_override(n: u32) {
 /// (prevents early-stop from inflating/deflating tok/s on short prompts).
 #[inline]
 pub fn decode_budget_fixed_tokens() -> bool {
-    DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed) > 0
+    decode_budget_override() > 0
 }
 
 /// Current decode-budget override (0 = none).
 #[inline]
 pub fn decode_budget_override() -> u32 {
-    DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed)
+    let benchmark = BENCHMARK_DECODE_BUDGET_OVERRIDE.load(Ordering::Acquire);
+    if benchmark > 0 {
+        benchmark
+    } else {
+        DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed)
+    }
 }
 
 // ── Wall-clock inference timeout override (batch / overnight jobs) ────────────

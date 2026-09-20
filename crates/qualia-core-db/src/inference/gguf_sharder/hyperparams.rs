@@ -16,6 +16,10 @@ pub const ARCH_QWEN2: u32 = 6;
 pub const ARCH_GLM4: u32 = 7;
 pub const ARCH_PHI4: u32 = 8;
 pub const ARCH_DEEPSEEK_MOE: u32 = 9;
+/// Qwen 3.5/3.6 MoE: hybrid SSM + periodic full attention, with fused QKV.
+pub const ARCH_QWEN35_MOE: u32 = 10;
+/// Granite hybrid SSM + attention architecture; requires recurrent state execution.
+pub const ARCH_GRANITE_HYBRID: u32 = 11;
 pub const ARCH_OTHER: u32 = 255;
 
 /// Feature flags on [`GgufHyperparams::arch_flags`].
@@ -47,6 +51,17 @@ pub struct GgufHyperparams {
     pub shared_kv_layers: u32,
     /// Final logit softcapping (Gemma 2+); `0` → disabled.
     pub logit_softcap: f32,
+    /// Qwen hybrid SSM causal-convolution kernel width.
+    pub ssm_conv_kernel: u32,
+    /// Qwen GatedDeltaNet recurrent state width.
+    pub ssm_state_size: u32,
+    /// Qwen SSM groups and timestep rank.
+    pub ssm_group_count: u32,
+    pub ssm_time_step_rank: u32,
+    /// Qwen SSM inner projection width.
+    pub ssm_inner_size: u32,
+    /// Full-attention cadence among hybrid SSM layers (`0` means unspecified).
+    pub full_attention_interval: u32,
     /// `ARCH_*()` id from `general.architecture` (and tensor-feature refinement).
     pub architecture: u32,
     /// `ARCH_FLAG_*()` bitmask.
@@ -127,6 +142,8 @@ impl GgufHyperparams {
             ARCH_GLM4 => "glm4",
             ARCH_PHI4 => "phi4",
             ARCH_DEEPSEEK_MOE => "deepseek_moe",
+            ARCH_QWEN35_MOE => "qwen35moe",
+            ARCH_GRANITE_HYBRID => "granitehybrid",
             ARCH_OTHER => "other",
             _ => "unknown",
         }
@@ -142,6 +159,15 @@ impl GgufHyperparams {
         if std::env::var_os("QUALIA_LLM_FORCE_UNSUPPORTED_ARCH").is_some() {
             return Ok(());
         }
+        if self.architecture == ARCH_QWEN35_MOE {
+            return Err(
+                "architecture 'qwen35moe' requires the hybrid SSM state update, fused QKV/gated-attention path, and GGUF expert-tensor execution; the native Llama-shaped forward must not attempt it."
+                    .into(),
+            );
+        }
+        // ARCH_GRANITE_HYBRID: SSM causal-conv + GatedDeltaNet path implemented in
+        // `gguf_bridge::ssm_forward`.  Full attention layers in the hybrid model still
+        // use the standard attention path.  No longer hard-rejected.
         if self.architecture == ARCH_GEMMA4
             || (self.arch_flags & ARCH_FLAG_HAS_PLE) != 0
             || (self.arch_flags & ARCH_FLAG_HAS_SHARED_KV) != 0
@@ -183,6 +209,8 @@ pub fn parse_architecture_id(name: &str) -> u32 {
         "gemma2" => ARCH_GEMMA2,
         "gemma3" => ARCH_GEMMA3,
         "gemma4" => ARCH_GEMMA4,
+        "qwen35moe" | "qwen3.5moe" | "qwen3.6moe" => ARCH_QWEN35_MOE,
+        "granitehybrid" | "granite-hybrid" | "granite_hybrid" => ARCH_GRANITE_HYBRID,
         "qwen2" | "qwen2vl" | "qwen3" | "qwen3.5" | "qwen3.6" => ARCH_QWEN2,
         "glm" | "glm4" | "glm4.7" | "chatglm" => ARCH_GLM4,
         "phi" | "phi3" | "phi4" => ARCH_PHI4,

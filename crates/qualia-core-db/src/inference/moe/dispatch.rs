@@ -67,8 +67,10 @@ pub fn evaluate_swiglu_expert_nvfp4(
         &mut gate_buf[..inter_dim],
     )?;
 
-    let up_packed = &weights.gate_up_packed[inter_dim * bytes_per_row..2 * inter_dim * bytes_per_row];
-    let up_scales = &weights.gate_up_scale[inter_dim * blocks_per_row..2 * inter_dim * blocks_per_row];
+    let up_packed =
+        &weights.gate_up_packed[inter_dim * bytes_per_row..2 * inter_dim * bytes_per_row];
+    let up_scales =
+        &weights.gate_up_scale[inter_dim * blocks_per_row..2 * inter_dim * blocks_per_row];
     nvfp4_gemv_zero_heap(
         input,
         up_packed,
@@ -143,7 +145,8 @@ where
         true,
         &mut expert_indices,
         &mut expert_weights,
-    ).map_err(|e| format!("route_topk failed: {}", e))?;
+    )
+    .map_err(|e| format!("route_topk failed: {}", e))?;
 
     // Clear accumulator
     for x in scratch_accum[..emb_dim].iter_mut() {
@@ -169,7 +172,8 @@ where
                 &mut up_buf,
                 &mut swiglu_buf,
                 &mut expert_out[..emb_dim],
-            ).map_err(|e| format!("evaluate_swiglu_expert failed: {}", e))?;
+            )
+            .map_err(|e| format!("evaluate_swiglu_expert failed: {}", e))?;
 
             for d in 0..emb_dim {
                 scratch_accum[d] += weight * expert_out[d];
@@ -186,7 +190,8 @@ where
             &mut up_buf,
             &mut swiglu_buf,
             &mut expert_out[..emb_dim],
-        ).map_err(|e| format!("evaluate shared expert failed: {}", e))?;
+        )
+        .map_err(|e| format!("evaluate shared expert failed: {}", e))?;
 
         for d in 0..emb_dim {
             scratch_accum[d] += shared_gate_weight * expert_out[d];

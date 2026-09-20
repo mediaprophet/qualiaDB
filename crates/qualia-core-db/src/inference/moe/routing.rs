@@ -169,7 +169,10 @@ pub fn combine_expert_outputs(
         if exp_out.len() < hidden_dim {
             return Err(MoeError::DimensionMismatch);
         }
-        for (out_elem, &exp_elem) in out_combined[..hidden_dim].iter_mut().zip(exp_out[..hidden_dim].iter()) {
+        for (out_elem, &exp_elem) in out_combined[..hidden_dim]
+            .iter_mut()
+            .zip(exp_out[..hidden_dim].iter())
+        {
             *out_elem += weight * exp_elem;
         }
     }

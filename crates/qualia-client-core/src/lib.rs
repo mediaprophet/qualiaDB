@@ -30,6 +30,8 @@ pub mod chora;
 pub mod cloudflare;
 pub mod cml_context;
 pub mod companion_bundle;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod continuous_batch;
 pub mod connection_identifier;
 pub mod consent_credential;
 pub mod context_binding;
