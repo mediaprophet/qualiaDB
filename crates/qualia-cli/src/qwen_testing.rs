@@ -223,6 +223,8 @@ pub fn run_probe_qwen4exp_qsa(package: &Path, layer_id: u32, token_id: u32) -> R
     let mut index_k_norm = [0.0f32; INDEX_KEY];
     let mut selected = [0usize; CACHE];
     let mut scores = [0.0f32; CACHE];
+    let mut block_selected = [0usize; CACHE];
+    let mut block_scores = [0.0f32; CACHE];
     let mut attention = [0.0f32; QUERY];
     let mut out = [0.0f32; HIDDEN];
     let mut state = qualia_core_db::inference::qwen::QsaState {
@@ -245,6 +247,8 @@ pub fn run_probe_qwen4exp_qsa(package: &Path, layer_id: u32, token_id: u32) -> R
         index_k_norm: &mut index_k_norm,
         selected: &mut selected,
         scores: &mut scores,
+        block_selected: &mut block_selected,
+        block_scores: &mut block_scores,
         attention: &mut attention,
     };
     let start = std::time::Instant::now();
@@ -270,5 +274,300 @@ pub fn run_probe_qwen4exp_qsa(package: &Path, layer_id: u32, token_id: u32) -> R
     println!("├─ layer {layer_id}, token {token_id}: raw index key → four-cell QSA → GQA");
     println!("├─ QSA component time: {:.3}s", elapsed.as_secs_f64());
     println!("└─ branch/cache fingerprint={fingerprint:016x}");
+    Ok(())
+}
+
+/// Real multi-token Qwen4Exp generation: prompt → token embedding → PLE →
+/// all 48 trained layers (HC → GDN|QSA → HC → MoE) → final HC mixer →
+/// streamed `output.weight` argmax → native tokenizer decode.  Every step
+/// streams rows from the C: PLE payload and E: trunk; no model residency.
+#[allow(clippy::too_many_arguments)]
+pub fn run_decode_qwen4exp(
+    package: &Path,
+    prompt: Option<&str>,
+    token_ids: &[u32],
+    max_tokens: usize,
+    context: usize,
+    chat: bool,
+    trunk_mmap: bool,
+) -> Result<(), String> {
+    use qualia_core_db::inference::qwen::{
+        decode_tokens, Qwen4ExpDecodeReceipt, Qwen4ExpDecodeScratch, Qwen4ExpSession,
+        Qwen4ExpTrunkResidency,
+    };
+
+    let residency = if trunk_mmap {
+        Qwen4ExpTrunkResidency::Mapped
+    } else {
+        Qwen4ExpTrunkResidency::Streamed
+    };
+    let mut runtime =
+        qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate_with_residency(
+            package, residency,
+        )
+        .map_err(|error| error.to_string())?;
+
+    // The tokenizer lives in the bounded GGUF header prefix (KV section
+    // ends before the tensor index); read exactly that many bytes.
+    let source = runtime
+        .descriptor
+        .source_beside(package)
+        .map_err(|error| error.to_string())?;
+    let header_len = runtime.index.tensor_data_start as usize;
+    let mut header = vec![0u8; header_len];
+    {
+        use std::io::Read;
+        let mut file = std::fs::File::open(&source)
+            .map_err(|error| format!("open source GGUF for tokenizer: {error}"))?;
+        file.read_exact(&mut header)
+            .map_err(|error| format!("read GGUF header for tokenizer: {error}"))?;
+    }
+    let tokenizer = qualia_core_db::gguf_sharder::GgufTokenizer::from_gguf(&header);
+
+    let prompt_tokens: Vec<u32> = if !token_ids.is_empty() {
+        token_ids.to_vec()
+    } else if let Some(text) = prompt {
+        if chat {
+            tokenizer.encode_chat_prompt(text)
+        } else {
+            tokenizer.encode_prompt(text)
+        }
+    } else {
+        return Err("decode-qwen4exp needs --prompt or --token-ids".to_string());
+    };
+    if prompt_tokens.is_empty() {
+        return Err("prompt produced no tokens".to_string());
+    }
+    if prompt_tokens.len() + max_tokens > context {
+        return Err(format!(
+            "prompt ({} tokens) + max_tokens ({max_tokens}) exceeds QSA cache capacity {context}",
+            prompt_tokens.len()
+        ));
+    }
+
+    let hidden = runtime.index.emb_dim();
+    let mut session = Qwen4ExpSession::new(&runtime.index, context)
+        .map_err(|error| error.to_string())?;
+    let mut scratch = Qwen4ExpDecodeScratch::new(hidden);
+    let stops: Vec<u32> = tokenizer.stop_tokens().to_vec();
+    let mut receipt = Qwen4ExpDecodeReceipt::default();
+    let mut trace = Vec::new();
+    decode_tokens(
+        &mut runtime,
+        &mut session,
+        &mut scratch,
+        &prompt_tokens,
+        max_tokens,
+        &|id| stops.contains(&id),
+        &mut receipt,
+        &mut trace,
+    )
+    .map_err(|error| format!("Qwen4Exp decode: {error}"))?;
+
+    let generated = receipt.generated_tokens.len();
+    let text = tokenizer.decode(&receipt.generated_tokens);
+    let secs = receipt.elapsed.as_secs_f64();
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp native multi-token decode (real execution)");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ prompt tokens: {}", receipt.prompt_tokens);
+    println!("├─ generated tokens: {generated}  ids={:?}", receipt.generated_tokens);
+    println!("├─ decoded text: {text}");
+    println!("├─ elapsed: {secs:.3}s  ({:.3} tokens/s generated)",
+        generated as f64 / secs.max(1e-9));
+    println!(
+        "├─ trunk {}: {} reads, {} rows, {:.2} MiB",
+        if trunk_mmap { "access (mmap)" } else { "I/O" },
+        receipt.trunk_reads,
+        receipt.trunk_rows,
+        receipt.trunk_bytes as f64 / (1024.0 * 1024.0)
+    );
+    println!(
+        "├─ PLE I/O: {} reads, {} rows, {:.2} MiB",
+        receipt.ple_reads,
+        receipt.ple_rows,
+        receipt.ple_bytes as f64 / (1024.0 * 1024.0)
+    );
+    println!(
+        "└─ resident state: {:.2} MiB persistent + {:.2} MiB scratch",
+        receipt.state_bytes as f64 / (1024.0 * 1024.0),
+        receipt.scratch_bytes as f64 / (1024.0 * 1024.0)
+    );
+    Ok(())
+}
+
+/// Lab instrument: trace one real token step end-to-end.  Every earlier
+/// prompt token runs through the full graph first so the traced step sees
+/// the same recurrent/cache state generation would; the traced step then
+/// reports a per-layer fingerprint/RMS/abs-max table plus the top-k
+/// vocabulary logits — this localizes which stage corrupts the forward
+/// signal instead of asserting aggregate correctness.
+pub fn run_probe_qwen4exp_trace(
+    package: &Path,
+    prompt: Option<&str>,
+    token_ids: &[u32],
+    chat: bool,
+    context: usize,
+    topk: usize,
+    rank_tokens: &[u32],
+    dump: Option<&Path>,
+) -> Result<(), String> {
+    use qualia_core_db::inference::qwen::{
+        decode_step, Qwen4ExpDecodeScratch, Qwen4ExpSession, StreamedArgmax,
+        QWEN4EXP_TRACE_META_LAYER,
+    };
+
+    let mut runtime = qualia_core_db::inference::qwen::Qwen4ExpNativeRuntime::activate(package)
+        .map_err(|error| error.to_string())?;
+    let source = runtime
+        .descriptor
+        .source_beside(package)
+        .map_err(|error| error.to_string())?;
+    let header_len = runtime.index.tensor_data_start as usize;
+    let mut header = vec![0u8; header_len];
+    {
+        use std::io::Read;
+        let mut file = std::fs::File::open(&source)
+            .map_err(|error| format!("open source GGUF for tokenizer: {error}"))?;
+        file.read_exact(&mut header)
+            .map_err(|error| format!("read GGUF header for tokenizer: {error}"))?;
+    }
+    let tokenizer = qualia_core_db::gguf_sharder::GgufTokenizer::from_gguf(&header);
+
+    let prompt_tokens: Vec<u32> = if !token_ids.is_empty() {
+        token_ids.to_vec()
+    } else if let Some(text) = prompt {
+        if chat {
+            tokenizer.encode_chat_prompt(text)
+        } else {
+            tokenizer.encode_prompt(text)
+        }
+    } else {
+        return Err("probe-qwen4exp-trace needs --prompt or --token-ids".to_string());
+    };
+    if prompt_tokens.is_empty() {
+        return Err("prompt produced no tokens".to_string());
+    }
+    if prompt_tokens.len() > context {
+        return Err(format!(
+            "prompt ({} tokens) exceeds QSA cache capacity {context}",
+            prompt_tokens.len()
+        ));
+    }
+
+    let hidden = runtime.index.emb_dim();
+    let mut session = Qwen4ExpSession::new(&runtime.index, context)
+        .map_err(|error| error.to_string())?;
+    let mut scratch = Qwen4ExpDecodeScratch::new(hidden);
+
+    let start = std::time::Instant::now();
+    let (&traced_token, prefix) = prompt_tokens.split_last().unwrap();
+    for &token in prefix {
+        decode_step(
+            &mut runtime,
+            &mut session,
+            &mut scratch,
+            token,
+            &mut Vec::new(),
+            false,
+        )
+        .map_err(|error| format!("prefix decode: {error}"))?;
+    }
+    let mut trace = Vec::new();
+    let winner = decode_step(
+        &mut runtime,
+        &mut session,
+        &mut scratch,
+        traced_token,
+        &mut trace,
+        dump.is_some(),
+    )
+    .map_err(|error| format!("traced decode: {error}"))?;
+
+    let logits = *runtime
+        .index
+        .logits_projection_info()
+        .ok_or("missing output.weight tensor")?;
+    let mut top = vec![
+        StreamedArgmax {
+            token_id: 0,
+            logit: f32::NEG_INFINITY,
+        };
+        topk.max(1)
+    ];
+    let mut raw = vec![0u8; 65_536];
+    let mut row = vec![0f32; hidden];
+    runtime
+        .trunk
+        .topk_rows(&logits, scratch.final_mixed(), &mut raw, &mut row, &mut top)
+        .map_err(|error| format!("top-k projection: {error}"))?;
+    let mut ranks = vec![(0.0f32, 0u64); rank_tokens.len()];
+    if !rank_tokens.is_empty() {
+        runtime
+            .trunk
+            .logits_and_ranks(
+                &logits,
+                scratch.final_mixed(),
+                rank_tokens,
+                &mut raw,
+                &mut row,
+                &mut ranks,
+            )
+            .map_err(|error| format!("rank projection: {error}"))?;
+    }
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Qwen4Exp per-stage trace (one real token step)");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ prompt tokens: {}  traced token: {traced_token}", prompt_tokens.len());
+    println!("├─ prompt ids: {:?}", prompt_tokens);
+    println!("├─ step wall time: {:.3}s", start.elapsed().as_secs_f64());
+    println!("├─ layer  stage           fingerprint          rms        abs_max");
+    for record in &trace {
+        let layer = if record.layer == QWEN4EXP_TRACE_META_LAYER {
+            " -- ".to_string()
+        } else {
+            format!("{:4}", record.layer)
+        };
+        println!(
+            "│  {}  {:<14} {:016x}  {:<10.4} {:<10.4}",
+            layer, record.stage, record.fingerprint, record.rms, record.abs_max
+        );
+    }
+    println!("├─ argmax: id={} logit={:.4}", winner.token_id, winner.logit);
+    for (rank, entry) in top.iter().enumerate() {
+        let text = tokenizer.decode(&[entry.token_id]);
+        println!(
+            "│  top{rank}: id={} logit={:.4} text={text:?}",
+            entry.token_id, entry.logit
+        );
+    }
+    for (index, (&token, &(logit, rank))) in rank_tokens.iter().zip(ranks.iter()).enumerate() {
+        let text = tokenizer.decode(&[token]);
+        println!("│  probe{index}: id={token} logit={logit:.4} rank={rank} text={text:?}");
+    }
+    if let Some(path) = dump {
+        // Stage dump: u32 layer, u32 stage-name len, name bytes, u32 value
+        // count, then little-endian f32 values.  Numpy parses it directly for
+        // per-stage comparison against a reference forward pass.
+        use std::io::Write;
+        let mut file = std::fs::File::create(path)
+            .map_err(|error| format!("create dump {}: {error}", path.display()))?;
+        for record in &trace {
+            file.write_all(&record.layer.to_le_bytes())
+                .and_then(|()| file.write_all(&(record.stage.len() as u32).to_le_bytes()))
+                .and_then(|()| file.write_all(record.stage.as_bytes()))
+                .and_then(|()| file.write_all(&(record.values.len() as u32).to_le_bytes()))
+                .and_then(|()| {
+                    for value in &record.values {
+                        file.write_all(&value.to_le_bytes())?;
+                    }
+                    Ok(())
+                })
+                .map_err(|error| format!("write dump {}: {error}", path.display()))?;
+        }
+        println!("├─ dumped {} stage vectors to {}", trace.len(), path.display());
+    }
+    println!("└─ done");
     Ok(())
 }

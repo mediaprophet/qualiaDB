@@ -1,9 +1,10 @@
 //! Activation for a Qwen4Exp package with an NVMe-resident PLE payload.
 //!
 //! Activation reads a bounded GGUF metadata header from the external trunk on
-//! E: and opens two ordinary file cursors: C: for PLE row gathers and E: for
-//! selected trunk projections.  It deliberately never creates a whole-model
-//! mmap or a swap-backed copy.
+//! E:, opens the C: PLE cursor for row gathers, and opens the trunk either as
+//! an ordinary file cursor (`Streamed`, default) or as a read-only mmap
+//! (`Mapped`) so the OS page cache keeps trunk weights in RAM.  It never
+//! creates a swap-backed decoded copy of the model either way.
 
 use std::path::Path;
 
@@ -72,8 +73,23 @@ impl From<TrunkNvmeError> for Qwen4ExpActivationError {
     }
 }
 
-/// A live package binding.  The file cursors retain no model data in memory;
-/// decoder state and all compute scratch remain caller owned.
+/// How the trunk weights are reached during decode.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Qwen4ExpTrunkResidency {
+    /// Seek+read each row span from disk; steady-state memory stays bounded.
+    #[default]
+    Streamed,
+    /// Read-only mmap of the source GGUF; the OS page cache holds the trunk
+    /// in RAM and row access is a pointer slice.  This deliberately trades
+    /// the bounded-memory guarantee for speed on machines whose RAM fits
+    /// the trunk (the intended deployment: trunk in RAM, PLE on NVMe).
+    Mapped,
+}
+
+/// A live package binding.  In `Streamed` residency the file cursors retain
+/// no model data in memory; in `Mapped` residency the trunk is a read-only
+/// page-cache view.  Decoder state and all compute scratch remain caller
+/// owned either way.
 pub struct Qwen4ExpNativeRuntime {
     pub descriptor: Qwen4ExpNativeDescriptor,
     pub index: GgufTensorIndex,
@@ -82,9 +98,18 @@ pub struct Qwen4ExpNativeRuntime {
 }
 
 impl Qwen4ExpNativeRuntime {
-    /// Fail-closed cold activation of an HMC package.  The only GGUF read is
-    /// its metadata prefix (bounded by `MAX_GGUF_HEADER_BYTES`).
+    /// Fail-closed cold activation of an HMC package with streamed trunk
+    /// reads.  The only GGUF read is its metadata prefix (bounded by
+    /// `MAX_GGUF_HEADER_BYTES`).
     pub fn activate(package: &Path) -> Result<Self, Qwen4ExpActivationError> {
+        Self::activate_with_residency(package, Qwen4ExpTrunkResidency::Streamed)
+    }
+
+    /// Activation with an explicit trunk residency mode.
+    pub fn activate_with_residency(
+        package: &Path,
+        residency: Qwen4ExpTrunkResidency,
+    ) -> Result<Self, Qwen4ExpActivationError> {
         let descriptor = load_qwen4exp_native_hmc(package)?;
         let source = descriptor.source_beside(package)?;
         descriptor.verify_source_metadata(&source)?;
@@ -101,7 +126,14 @@ impl Qwen4ExpNativeRuntime {
             return Err(Qwen4ExpActivationError::ContractChanged);
         }
         let ple = PleNvmeReader::open_from_native_descriptor(&descriptor)?;
-        let trunk = TrunkNvmeReader::open(&source, index.tensor_data_start)?;
+        let trunk = match residency {
+            Qwen4ExpTrunkResidency::Streamed => {
+                TrunkNvmeReader::open(&source, index.tensor_data_start)?
+            }
+            Qwen4ExpTrunkResidency::Mapped => {
+                TrunkNvmeReader::open_mapped(&source, index.tensor_data_start)?
+            }
+        };
         Ok(Self {
             descriptor,
             index,

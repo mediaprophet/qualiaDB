@@ -4,6 +4,8 @@
 //! and dual-state checkpointing for Qwen3.6 MoE on the RTX A2000.
 
 pub mod checkpoint;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod decode;
 pub mod expert_residency;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod expert_tile;
@@ -35,6 +37,11 @@ pub mod streamed_qsa;
 pub mod trunk_nvme;
 
 pub use checkpoint::{QwenCheckpointRegistry, QwenDualCheckpoint};
+#[cfg(not(target_arch = "wasm32"))]
+pub use decode::{
+    decode_step, decode_tokens, Qwen4ExpDecodeError, Qwen4ExpDecodeReceipt, Qwen4ExpDecodeScratch,
+    Qwen4ExpSession, Qwen4ExpTraceRecord, QWEN4EXP_TRACE_META_LAYER,
+};
 pub use expert_residency::{
     QwenExpertAccess, QwenExpertKey, QwenExpertResidency, MAX_QWEN_EXPERT_SLOTS,
 };
@@ -62,7 +69,9 @@ pub use native_asset::{
     Qwen4ExpNativeAssetError, Qwen4ExpNativeDescriptor, Qwen4ExpPleSpan, QWEN4EXP_NATIVE_FORMAT,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use native_runtime::{Qwen4ExpActivationError, Qwen4ExpNativeRuntime};
+pub use native_runtime::{
+    Qwen4ExpActivationError, Qwen4ExpNativeRuntime, Qwen4ExpTrunkResidency,
+};
 pub use numerics::{add_assign, add_into, rms_norm_into, QwenNumericError};
 #[cfg(not(target_arch = "wasm32"))]
 pub use ple_block::{
@@ -72,7 +81,7 @@ pub use ple_ngram::{
     select_rows as select_ple_rows, sort_dedup_rows, PleNgramError, PleTokenHistory,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use ple_nvme::{PleGatherReceipt, PleNvmeError, PleNvmeReader};
+pub use ple_nvme::{PleGatherReceipt, PleIoStats, PleNvmeError, PleNvmeReader};
 pub use storage_plan::{
     plan_qwen4exp_storage, Qwen4ExpStorageError, Qwen4ExpStoragePlan,
     DEFAULT_QWEN4EXP_HOST_OS_FLOOR,
@@ -101,8 +110,9 @@ pub use streamed_moe::{
 pub use streamed_qsa::{
     execute_streamed_qsa, QsaState, StreamedQsaBuffers, StreamedQsaError,
     QWEN4EXP_QSA_COMPRESS_RATIO, QWEN4EXP_QSA_HEAD_DIM, QWEN4EXP_QSA_INDEXER_HEADS,
-    QWEN4EXP_QSA_INDEXER_HEAD_DIM, QWEN4EXP_QSA_KV_HEADS, QWEN4EXP_QSA_QUERY_HEADS,
+    QWEN4EXP_QSA_INDEXER_HEAD_DIM, QWEN4EXP_QSA_KV_HEADS, QWEN4EXP_QSA_MAX_SELECTED,
+    QWEN4EXP_QSA_QUERY_HEADS, QWEN4EXP_QSA_ROTARY_DIM, QWEN4EXP_QSA_TOP_BLOCKS,
     QWEN4EXP_QSA_TOP_K,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use trunk_nvme::{StreamedArgmax, TrunkNvmeError, TrunkNvmeReader};
+pub use trunk_nvme::{StreamedArgmax, TrunkIoStats, TrunkNvmeError, TrunkNvmeReader};

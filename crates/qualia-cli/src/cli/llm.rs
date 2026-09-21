@@ -218,6 +218,63 @@ pub enum LlmAction {
         #[arg(long, default_value_t = 151644)]
         token_id: u32,
     },
+    /// Real multi-token Qwen4Exp generation through the native streamed path:
+    /// embedding → PLE → 48 layers (HC→GDN|QSA→HC→MoE) → final HC mixer → argmax → decode.
+    #[command(name = "decode-qwen4exp")]
+    DecodeQwen4Exp {
+        /// Existing `.hmc` package with C:-resident PLE and external trunk contract.
+        package: PathBuf,
+        /// Prompt text encoded by the model's own GGUF tokenizer.
+        #[arg(long)]
+        prompt: Option<String>,
+        /// Raw prompt token IDs (comma-separated); overrides --prompt.
+        #[arg(long, value_delimiter = ',', num_args = 1..)]
+        token_ids: Vec<u32>,
+        /// Wrap the prompt in the model's chat template (instruct models).
+        #[arg(long)]
+        chat: bool,
+        /// Maximum generated tokens.
+        #[arg(long, default_value_t = 16)]
+        max_tokens: usize,
+        /// Per-QSA-layer K/V + indexer cache capacity in tokens.
+        #[arg(long, default_value_t = 4096)]
+        context: usize,
+        /// Map the trunk GGUF read-only so the OS page cache keeps its
+        /// weights in RAM instead of streaming rows from disk each pass.
+        #[arg(long)]
+        trunk_mmap: bool,
+    },
+    /// Lab instrument: run the prompt prefix through the real 48-layer graph,
+    /// then trace the final token's step — per-layer fingerprint/RMS/abs-max
+    /// for every stage plus the top-k vocabulary logits.
+    #[command(name = "probe-qwen4exp-trace")]
+    ProbeQwen4ExpTrace {
+        /// Existing `.hmc` package with C:-resident PLE and external trunk contract.
+        package: PathBuf,
+        /// Prompt text encoded by the model's own GGUF tokenizer.
+        #[arg(long)]
+        prompt: Option<String>,
+        /// Raw prompt token IDs (comma-separated); overrides --prompt.
+        #[arg(long, value_delimiter = ',', num_args = 1..)]
+        token_ids: Vec<u32>,
+        /// Wrap the prompt in the model's chat template.
+        #[arg(long)]
+        chat: bool,
+        /// Per-QSA-layer K/V + indexer cache capacity in tokens.
+        #[arg(long, default_value_t = 4096)]
+        context: usize,
+        /// Number of vocabulary logits to print.
+        #[arg(long, default_value_t = 8)]
+        topk: usize,
+        /// Token IDs to rank against the whole vocabulary (comma-separated);
+        /// reports each token's logit and its rank (0 = argmax).
+        #[arg(long, value_delimiter = ',', num_args = 1..)]
+        rank_tokens: Vec<u32>,
+        /// Write every traced stage vector to this file (u32 layer, u32 name
+        /// len, name, u32 count, f32 values) for offline numeric comparison.
+        #[arg(long)]
+        dump: Option<PathBuf>,
+    },
     Optimize {
         input: PathBuf,
         #[arg(short, long)]

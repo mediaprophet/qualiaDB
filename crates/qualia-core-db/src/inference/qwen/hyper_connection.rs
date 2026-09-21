@@ -6,6 +6,9 @@
 use super::QwenNumericError;
 
 /// Normalize each Hyper-Connection stream independently with RMSNorm.
+/// The GGUF converter pre-folds the zero-centered `(1 + weight)` scale into
+/// the stored gamma, so the checkpoint bytes multiply directly — callers
+/// must not add a further bias (llama.cpp `build_hc_mix`).
 pub fn group_rms_norm_into(
     streams: &[f32],
     stream_count: usize,
@@ -32,14 +35,16 @@ pub fn group_rms_norm_into(
         }
         let inv_rms = 1.0 / (squared_sum / hidden.max(1) as f32 + epsilon).sqrt();
         for index in 0..hidden {
-            out[offset + index] = streams[offset + index] * inv_rms * weight[offset + index];
+            out[offset + index] =
+                streams[offset + index] * inv_rms * weight[offset + index];
         }
     }
     Ok(())
 }
 
 /// In-place variant for a transient stream buffer whose unnormalized values
-/// are not needed by the caller after the operation.
+/// are not needed by the caller after the operation.  Same pre-folded gamma
+/// semantics as `group_rms_norm_into`.
 pub fn group_rms_norm_in_place(
     values: &mut [f32],
     stream_count: usize,
@@ -124,6 +129,18 @@ pub fn inject_stream_update(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn group_rms_norm_applies_stored_weight() {
+        // The converter folds (1 + w) into the stored gamma: it multiplies as-is.
+        let streams = [3.0f32, 4.0];
+        let weight = [1.0f32, 2.0];
+        let mut out = [0.0f32; 2];
+        group_rms_norm_into(&streams, 1, 2, &weight, 1.0e-6, &mut out).unwrap();
+        let inv_rms = 1.0 / (25.0f32 / 2.0 + 1.0e-6).sqrt();
+        assert!((out[0] - 3.0 * inv_rms * 1.0).abs() < 1.0e-5);
+        assert!((out[1] - 4.0 * inv_rms * 2.0).abs() < 1.0e-5);
+    }
 
     #[test]
     fn mix_and_inject_preserve_all_streams() {

@@ -706,7 +706,7 @@ impl GgufTokenizer {
             }
             let segment = &remaining[..next_special];
             if !segment.is_empty() {
-                let count = pretokenizer::pretokenize_into(segment, &mut spans)
+                let count = pretokenizer::pretokenize_for(&self.pre_type, segment, &mut spans)
                     .expect("span workspace covers the segment byte length");
                 for span in &spans[..count] {
                     ids.extend(self.bpe_piece(span.get(segment).unwrap()));
@@ -844,6 +844,7 @@ impl GgufTokenizer {
             "gpt2"
                 | "smollm"
                 | "qwen2"
+                | "qwen35"
                 | "llama-bpe"
                 | "deepseek-llm"
                 | "deepseek-coder"

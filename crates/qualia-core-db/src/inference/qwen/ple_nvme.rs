@@ -32,6 +32,14 @@ pub struct PleGatherReceipt {
     pub expanded_f32_bytes: u64,
 }
 
+/// Cumulative physical I/O performed by a PLE reader.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct PleIoStats {
+    pub rows: u64,
+    pub reads: u64,
+    pub bytes: u64,
+}
+
 /// Read-only direct-row source for one embedded PLE tensor.
 ///
 /// It is intentionally not `Clone`: each active engine owns a single file
@@ -45,6 +53,7 @@ pub struct PleNvmeReader {
     row_bytes: usize,
     rows: u64,
     row_width: usize,
+    stats: PleIoStats,
 }
 
 impl PleNvmeReader {
@@ -104,7 +113,13 @@ impl PleNvmeReader {
             row_bytes,
             rows: info.dims[1],
             row_width,
+            stats: PleIoStats::default(),
         })
+    }
+
+    /// Cumulative physical I/O performed by this reader.
+    pub fn io_stats(&self) -> PleIoStats {
+        self.stats
     }
 
     pub fn row_width(&self) -> usize {
@@ -163,6 +178,9 @@ impl PleNvmeReader {
         self.file
             .read_exact(&mut raw_scratch[..bytes])
             .map_err(|_| PleNvmeError::Io)?;
+        self.stats.reads += 1;
+        self.stats.rows += 1;
+        self.stats.bytes += bytes as u64;
         crate::ggml_quants::dequantize_row_into(
             &raw_scratch[..bytes],
             self.info.ggml_type,

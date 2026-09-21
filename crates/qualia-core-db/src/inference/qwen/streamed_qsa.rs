@@ -18,7 +18,19 @@ pub const QWEN4EXP_QSA_KV_HEADS: usize = 2;
 pub const QWEN4EXP_QSA_INDEXER_HEAD_DIM: usize = 128;
 pub const QWEN4EXP_QSA_INDEXER_HEADS: usize = 4;
 pub const QWEN4EXP_QSA_COMPRESS_RATIO: usize = 4;
-pub const QWEN4EXP_QSA_TOP_K: usize = 512;
+/// Trained indexer budget in TOKENS (`qwen4exp.attention.indexer.top_k` =
+/// 2048): complete four-token blocks compete for `TOP_K / COMPRESS_RATIO`
+/// slots and the members of the still-open trailing group are always visible.
+pub const QWEN4EXP_QSA_TOP_K: usize = 2048;
+/// Complete blocks selectable per step (`index_budget // index_ratio`).
+pub const QWEN4EXP_QSA_TOP_BLOCKS: usize = QWEN4EXP_QSA_TOP_K / QWEN4EXP_QSA_COMPRESS_RATIO;
+/// Qwen4Exp rotates only the first 64 dims of each attention/indexer head
+/// (partial NeoX RoPE, `qwen4exp.rope.dimension_count`).
+pub const QWEN4EXP_QSA_ROTARY_DIM: usize = 64;
+/// Maximum tokens reachable per step: `token_topk` block members plus the
+/// open group's causal tail (`ratio - 1`), matching `select_width`.
+pub const QWEN4EXP_QSA_MAX_SELECTED: usize =
+    QWEN4EXP_QSA_TOP_K + QWEN4EXP_QSA_COMPRESS_RATIO - 1;
 const QUERY_WIDTH: usize = QWEN4EXP_QSA_QUERY_HEADS * QWEN4EXP_QSA_HEAD_DIM;
 const KV_WIDTH: usize = QWEN4EXP_QSA_KV_HEADS * QWEN4EXP_QSA_HEAD_DIM;
 const INDEX_QUERY_WIDTH: usize = QWEN4EXP_QSA_INDEXER_HEADS * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
@@ -84,8 +96,13 @@ pub struct StreamedQsaBuffers<'a> {
     pub k_norm: &'a mut [f32],
     pub index_q_norm: &'a mut [f32],
     pub index_k_norm: &'a mut [f32],
+    /// Expanded token list: all members of the selected four-token blocks.
+    /// Capacity bound is `QWEN4EXP_QSA_MAX_SELECTED` (8192), not the cache.
     pub selected: &'a mut [usize],
     pub scores: &'a mut [f32],
+    /// Block-level ranking scratch: `QWEN4EXP_QSA_TOP_K` entries each.
+    pub block_selected: &'a mut [usize],
+    pub block_scores: &'a mut [f32],
     pub attention: &'a mut [f32],
 }
 
@@ -111,34 +128,35 @@ fn rms_norm_heads(vector: &mut [f32], weights: &[f32], heads: usize, head_dim: u
             sum += value * value;
         }
         let scale = 1.0 / (sum / head_dim as f32 + 1.0e-6).sqrt();
+        // Qwen4Exp q/k/indexer norms are GemmaPlusOneRMSNorm in the source
+        // checkpoint, but the GGUF converter pre-folds the +1 into the stored
+        // gamma (llama.cpp build_norm): multiply the weight as-is.
         for index in 0..head_dim {
             part[index] *= scale * weights[index % weights.len()];
         }
     }
 }
 
-fn rope_head(vector: &mut [f32], position: usize, theta: f32, head_dim: usize) {
-    for pair in 0..head_dim / 2 {
-        let frequency = theta.powf(-(2.0 * pair as f32) / head_dim as f32);
+/// NeoX-style partial rotary: only the first `ROTARY_DIM` dims rotate, paired
+/// as `(i, i + ROTARY_DIM/2)` with `freq = theta^(-2i/ROTARY_DIM)`.  The rest of
+/// each head passes through unchanged, matching `freetoken.layers.rotary`.
+fn rope_head(vector: &mut [f32], position: usize, theta: f32) {
+    const HALF: usize = QWEN4EXP_QSA_ROTARY_DIM / 2;
+    for pair in 0..HALF {
+        let frequency = theta.powf(-(2.0 * pair as f32) / QWEN4EXP_QSA_ROTARY_DIM as f32);
         let angle = position as f32 * frequency;
         let (sin, cos) = angle.sin_cos();
-        let even = pair * 2;
-        let first = vector[even];
-        let second = vector[even + 1];
-        vector[even] = first * cos - second * sin;
-        vector[even + 1] = first * sin + second * cos;
+        let first = vector[pair];
+        let second = vector[pair + HALF];
+        vector[pair] = first * cos - second * sin;
+        vector[pair + HALF] = first * sin + second * cos;
     }
 }
 
 fn rope_heads(vector: &mut [f32], heads: usize, position: usize, theta: f32, head_dim: usize) {
     for head in 0..heads {
         let start = head * head_dim;
-        rope_head(
-            &mut vector[start..start + head_dim],
-            position,
-            theta,
-            head_dim,
-        );
+        rope_head(&mut vector[start..start + head_dim], position, theta);
     }
 }
 
@@ -178,7 +196,7 @@ fn insert_ranked(
 
 /// Execute one causal QSA decode step.  `rope_theta` is explicit so the
 /// bounded operator cannot silently invent a positional encoding policy; the
-/// Qwen4Exp runtime passes the GGUF model value (1,000,000 for this model).
+/// Qwen4Exp runtime passes the GGUF model value (10,000,000 for this model).
 #[allow(clippy::too_many_arguments)]
 pub fn execute_streamed_qsa(
     trunk: &mut TrunkNvmeReader,
@@ -226,7 +244,12 @@ pub fn execute_streamed_qsa(
         return Err(StreamedQsaError::CacheFull);
     }
     let visible = state.tokens + 1;
-    let select_limit = (QWEN4EXP_QSA_TOP_K + QWEN4EXP_QSA_COMPRESS_RATIO - 1).min(visible);
+    // Only CLOSED four-token groups are scored; the open trailing group's
+    // members ride the causal tail into every attention step.
+    let complete_blocks = visible / QWEN4EXP_QSA_COMPRESS_RATIO;
+    let tail_start = complete_blocks * QWEN4EXP_QSA_COMPRESS_RATIO;
+    let select_blocks = QWEN4EXP_QSA_TOP_BLOCKS.min(complete_blocks);
+    let select_limit = select_blocks * QWEN4EXP_QSA_COMPRESS_RATIO + (visible - tail_start);
     if out.len() < hidden
         || buffers.projection_row.len() < QUERY_WIDTH
         || buffers.q_full.len() < QUERY_WIDTH * 2
@@ -238,6 +261,8 @@ pub fn execute_streamed_qsa(
         || buffers.k_norm.len() < QWEN4EXP_QSA_HEAD_DIM
         || buffers.index_q_norm.len() < QWEN4EXP_QSA_INDEXER_HEAD_DIM
         || buffers.index_k_norm.len() < QWEN4EXP_QSA_INDEXER_HEAD_DIM
+        || buffers.block_selected.len() < select_blocks
+        || buffers.block_scores.len() < select_blocks
         || buffers.selected.len() < select_limit
         || buffers.scores.len() < select_limit
         || buffers.attention.len() < QUERY_WIDTH
@@ -320,12 +345,18 @@ pub fn execute_streamed_qsa(
     let idx_offset = position * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
     state.indexer_keys[idx_offset..idx_offset + QWEN4EXP_QSA_INDEXER_HEAD_DIM]
         .copy_from_slice(&buffers.index_key[..QWEN4EXP_QSA_INDEXER_HEAD_DIM]);
-    rms_norm_heads(
-        &mut buffers.q_full[..QUERY_WIDTH],
-        &buffers.q_norm[..QWEN4EXP_QSA_HEAD_DIM],
-        QWEN4EXP_QSA_QUERY_HEADS,
-        QWEN4EXP_QSA_HEAD_DIM,
-    );
+    // `attn_q.weight` emits per-head [query | gate] pairs: head h's query sits
+    // at q_full[h*512 .. h*512+256] and its gate at [h*512+256 .. h*512+512].
+    // Norm and RoPE touch only the query half of each pair.
+    for head in 0..QWEN4EXP_QSA_QUERY_HEADS {
+        let start = head * 2 * QWEN4EXP_QSA_HEAD_DIM;
+        rms_norm_heads(
+            &mut buffers.q_full[start..start + QWEN4EXP_QSA_HEAD_DIM],
+            &buffers.q_norm[..QWEN4EXP_QSA_HEAD_DIM],
+            1,
+            QWEN4EXP_QSA_HEAD_DIM,
+        );
+    }
     rms_norm_heads(
         &mut buffers.key[..KV_WIDTH],
         &buffers.k_norm[..QWEN4EXP_QSA_HEAD_DIM],
@@ -338,13 +369,14 @@ pub fn execute_streamed_qsa(
         QWEN4EXP_QSA_INDEXER_HEADS,
         QWEN4EXP_QSA_INDEXER_HEAD_DIM,
     );
-    rope_heads(
-        &mut buffers.q_full[..QUERY_WIDTH],
-        QWEN4EXP_QSA_QUERY_HEADS,
-        position,
-        rope_theta,
-        QWEN4EXP_QSA_HEAD_DIM,
-    );
+    for head in 0..QWEN4EXP_QSA_QUERY_HEADS {
+        let start = head * 2 * QWEN4EXP_QSA_HEAD_DIM;
+        rope_head(
+            &mut buffers.q_full[start..start + QWEN4EXP_QSA_HEAD_DIM],
+            position,
+            rope_theta,
+        );
+    }
     rope_heads(
         &mut buffers.key[..KV_WIDTH],
         QWEN4EXP_QSA_KV_HEADS,
@@ -363,19 +395,19 @@ pub fn execute_streamed_qsa(
     state.keys[kv_offset..kv_offset + KV_WIDTH].copy_from_slice(&buffers.key[..KV_WIDTH]);
     state.values[kv_offset..kv_offset + KV_WIDTH].copy_from_slice(&buffers.value[..KV_WIDTH]);
 
-    // Match the reference: pool raw keys, then normalise/rotate the block key;
-    // ReLU each indexer head dot product before summing across heads.
-    let mut chosen = 0usize;
-    let blocks = (visible + QWEN4EXP_QSA_COMPRESS_RATIO - 1) / QWEN4EXP_QSA_COMPRESS_RATIO;
-    for block in 0..blocks {
+    // Match the reference: pool each CLOSED group's raw keys, then
+    // normalise/rotate the block key at the group's first position; ReLU each
+    // indexer head dot product before summing across heads.  Every member
+    // token of a selected block becomes visible to GQA, and the open
+    // trailing group's tokens are appended unconditionally.
+    let mut chosen_blocks = 0usize;
+    for block in 0..complete_blocks {
         let mut pooled = [0.0f32; QWEN4EXP_QSA_INDEXER_HEAD_DIM];
         for member in 0..QWEN4EXP_QSA_COMPRESS_RATIO {
-            let token = block * QWEN4EXP_QSA_COMPRESS_RATIO + member;
-            if token < visible {
-                let offset = token * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
-                for dim in 0..QWEN4EXP_QSA_INDEXER_HEAD_DIM {
-                    pooled[dim] += state.indexer_keys[offset + dim];
-                }
+            let offset = (block * QWEN4EXP_QSA_COMPRESS_RATIO + member)
+                * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
+            for dim in 0..QWEN4EXP_QSA_INDEXER_HEAD_DIM {
+                pooled[dim] += state.indexer_keys[offset + dim];
             }
         }
         for dim in 0..QWEN4EXP_QSA_INDEXER_HEAD_DIM {
@@ -391,7 +423,6 @@ pub fn execute_streamed_qsa(
             &mut pooled,
             block * QWEN4EXP_QSA_COMPRESS_RATIO,
             rope_theta,
-            QWEN4EXP_QSA_INDEXER_HEAD_DIM,
         );
         let mut score = 0.0f32;
         for head in 0..QWEN4EXP_QSA_INDEXER_HEADS {
@@ -402,12 +433,25 @@ pub fn execute_streamed_qsa(
             }
             score += dot.max(0.0);
         }
+        insert_ranked(
+            block,
+            score / (QWEN4EXP_QSA_INDEXER_HEAD_DIM as f32).sqrt(),
+            buffers.block_selected,
+            buffers.block_scores,
+            &mut chosen_blocks,
+        );
+    }
+    let mut chosen = 0usize;
+    for rank in 0..chosen_blocks {
+        let block = buffers.block_selected[rank];
         for member in 0..QWEN4EXP_QSA_COMPRESS_RATIO {
-            let token = block * QWEN4EXP_QSA_COMPRESS_RATIO + member;
-            if token < visible {
-                insert_ranked(token, score, buffers.selected, buffers.scores, &mut chosen);
-            }
+            buffers.selected[chosen] = block * QWEN4EXP_QSA_COMPRESS_RATIO + member;
+            chosen += 1;
         }
+    }
+    for token in tail_start..visible {
+        buffers.selected[chosen] = token;
+        chosen += 1;
     }
     for value in &mut buffers.attention[..QUERY_WIDTH] {
         *value = 0.0;
@@ -416,6 +460,7 @@ pub fn execute_streamed_qsa(
     // stable ranking only governs ties and makes the sparse mask reproducible.
     for head in 0..QWEN4EXP_QSA_QUERY_HEADS {
         let q_offset = head * QWEN4EXP_QSA_HEAD_DIM;
+        let q_source = head * 2 * QWEN4EXP_QSA_HEAD_DIM;
         let kv_head = head / (QWEN4EXP_QSA_QUERY_HEADS / QWEN4EXP_QSA_KV_HEADS);
         let kv_head_offset = kv_head * QWEN4EXP_QSA_HEAD_DIM;
         let mut max_score = f32::NEG_INFINITY;
@@ -423,7 +468,7 @@ pub fn execute_streamed_qsa(
             let token_offset = buffers.selected[rank] * KV_WIDTH + kv_head_offset;
             let mut score = 0.0f32;
             for dim in 0..QWEN4EXP_QSA_HEAD_DIM {
-                score += buffers.q_full[q_offset + dim] * state.keys[token_offset + dim];
+                score += buffers.q_full[q_source + dim] * state.keys[token_offset + dim];
             }
             let scaled = score * (1.0 / (QWEN4EXP_QSA_HEAD_DIM as f32).sqrt());
             buffers.scores[rank] = scaled;
@@ -444,7 +489,7 @@ pub fn execute_streamed_qsa(
         }
         for dim in 0..QWEN4EXP_QSA_HEAD_DIM {
             buffers.attention[q_offset + dim] *=
-                sigmoid(buffers.q_full[QUERY_WIDTH + q_offset + dim]);
+                sigmoid(buffers.q_full[q_source + QWEN4EXP_QSA_HEAD_DIM + dim]);
         }
     }
     trunk.gemv_rows_into(
@@ -463,6 +508,32 @@ pub fn execute_streamed_qsa(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rope_is_neox_partial_64() {
+        // NeoX pairing: dims (i, i+32) rotate together; dims >= 64 untouched.
+        let mut v = [0.0f32; 128];
+        v[0] = 1.0;
+        v[32] = 2.0;
+        v[64] = 7.0;
+        rope_head(&mut v, 1, 10_000.0);
+        let (sin, cos) = 1.0f32.sin_cos();
+        assert!((v[0] - (cos - 2.0 * sin)).abs() < 1.0e-5);
+        assert!((v[32] - (sin + 2.0 * cos)).abs() < 1.0e-5);
+        assert_eq!(v[64], 7.0);
+        // Position zero is the identity.
+        let mut w = [3.0f32; 128];
+        rope_head(&mut w, 0, 10_000.0);
+        assert_eq!(w[0], 3.0);
+    }
+
+    #[test]
+    fn indexer_budget_is_token_level() {
+        // `attention.indexer.top_k = 2048` counts TOKENS: 512 complete
+        // four-token blocks plus the open group's causal tail.
+        assert_eq!(QWEN4EXP_QSA_TOP_BLOCKS, 512);
+        assert_eq!(QWEN4EXP_QSA_MAX_SELECTED, 2048 + 3);
+    }
 
     #[test]
     fn ranked_selection_keeps_lowest_index_on_ties() {

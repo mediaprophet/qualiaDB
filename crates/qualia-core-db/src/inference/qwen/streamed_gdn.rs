@@ -257,10 +257,12 @@ pub fn execute_streamed_gated_delta(
         )?;
         let history = channel * CONV_HISTORY;
         let raw = buffers.qkv[channel];
-        let value = buffers.head_vector[0] * raw
-            + buffers.head_vector[1] * state.convolution[history]
-            + buffers.head_vector[2] * state.convolution[history + 1]
-            + buffers.head_vector[3] * state.convolution[history + 2]
+        // HF causal-conv1d tap order: weight[0] multiplies the oldest retained
+        // input and weight[3] the current one. `convolution[0]` holds x[t-1].
+        let value = buffers.head_vector[0] * state.convolution[history + 2]
+            + buffers.head_vector[1] * state.convolution[history + 1]
+            + buffers.head_vector[2] * state.convolution[history]
+            + buffers.head_vector[3] * raw
             + buffers.convolved[channel];
         state.convolution[history + 2] = state.convolution[history + 1];
         state.convolution[history + 1] = state.convolution[history];
@@ -283,7 +285,9 @@ pub fn execute_streamed_gated_delta(
     }
 
     for value_head in 0..QWEN4EXP_GDN_HEADS {
-        let key_head = value_head % QWEN4EXP_GDN_KEY_HEADS;
+        // repeat_interleave GQA: consecutive groups of three value heads share
+        // one key/query head (48 v-heads over 16 k-heads).
+        let key_head = value_head / (QWEN4EXP_GDN_HEADS / QWEN4EXP_GDN_KEY_HEADS);
         let query_start = query_offset + key_head * QWEN4EXP_GDN_HEAD_DIM;
         let key_start = key_offset + key_head * QWEN4EXP_GDN_HEAD_DIM;
         let value_start = value_offset + value_head * QWEN4EXP_GDN_HEAD_DIM;
@@ -294,9 +298,13 @@ pub fn execute_streamed_gated_delta(
         let state_head = value_head * QWEN4EXP_GDN_HEAD_DIM * QWEN4EXP_GDN_HEAD_DIM;
         for column in 0..QWEN4EXP_GDN_HEAD_DIM {
             let column_state = state_head + column * QWEN4EXP_GDN_HEAD_DIM;
+            // HF torch_recurrent_gated_delta_rule decays the state BEFORE the
+            // kv_mem prediction: `state = state * g_t; kv_mem = S.k`.
             let mut prediction = 0.0f32;
             for row in 0..QWEN4EXP_GDN_HEAD_DIM {
-                prediction += state.delta[column_state + row] * buffers.convolved[key_start + row];
+                prediction += decay
+                    * state.delta[column_state + row]
+                    * buffers.convolved[key_start + row];
             }
             let change = (buffers.convolved[value_start + column] - prediction) * beta;
             let mut response = 0.0f32;

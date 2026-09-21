@@ -172,6 +172,46 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
         } => {
             llm_testing::run_probe_qwen4exp_expert_tile(package, tile, *token_id)?;
         }
+        LlmAction::DecodeQwen4Exp {
+            package,
+            prompt,
+            token_ids,
+            chat,
+            max_tokens,
+            context,
+            trunk_mmap,
+        } => {
+            qwen_testing::run_decode_qwen4exp(
+                package,
+                prompt.as_deref(),
+                token_ids,
+                *max_tokens,
+                *context,
+                *chat,
+                *trunk_mmap,
+            )?;
+        }
+        LlmAction::ProbeQwen4ExpTrace {
+            package,
+            prompt,
+            token_ids,
+            chat,
+            context,
+            topk,
+            rank_tokens,
+            dump,
+        } => {
+            qwen_testing::run_probe_qwen4exp_trace(
+                package,
+                prompt.as_deref(),
+                token_ids,
+                *chat,
+                *context,
+                *topk,
+                rank_tokens,
+                dump.as_deref(),
+            )?;
+        }
         LlmAction::Optimize {
             input,
             out,
