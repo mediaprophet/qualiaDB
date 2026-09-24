@@ -4,4 +4,4 @@ version = "0.0.39"
 edition = "2024"
 
 [dependencies]
-qualia-core-db = { path = "../qualia-core-db" }
+qualia-core-db = { workspace = true, default-features = true }

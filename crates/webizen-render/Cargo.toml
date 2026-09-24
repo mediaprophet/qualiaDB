@@ -6,10 +6,10 @@ publish = false
 
 [dependencies]
 # Must match qualia-core-db: native rendering and inference share one physical device.
-wgpu = "30"
-bytemuck = { version = "1.14", features = ["derive"] }
-log = "0.4"
-serde = { version = "1.0", features = ["derive"] }
+wgpu = { workspace = true }
+bytemuck = { workspace = true, features = ["derive"] }
+log = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dependencies.qualia-core-db]
 path = "../qualia-core-db"
@@ -39,4 +39,4 @@ qualia = ["qualia-core-db", "vibe"]
 cfg_aliases = "0.2"
 
 [dev-dependencies]
-serde_json = "1"
+serde_json = { workspace = true }

@@ -22,6 +22,6 @@ generation = []
 
 [dependencies]
 # Optional: host mic (desktop). Not for wasm32.
-cpal = { version = "0.15", optional = true }
+cpal = { workspace = true, optional = true }
 
 [dev-dependencies]

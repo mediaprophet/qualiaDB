@@ -4,55 +4,55 @@ version = "0.0.39"
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-ciborium = "0.2"
-serde_yaml = "0.9"
-sysinfo = "0.39.3"
-tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "stream", "blocking"] }
-qualia-core-db = { path = "../qualia-core-db", features = ["sanctuary-crypto", "libp2p-compat"] }
-vibe = { path = "../vibe" }
-qualia-vision = { path = "../qualia-vision" }
-qualia-audio = { path = "../qualia-audio" }
-qualia-solid-bridge = { path = "../qualia-solid-bridge" }
-wellfare-core = { path = "../wellfare-core" }
-webizen-render = { path = "../webizen-render" }
-qualia-cooperative-core = { path = "../qualia-cooperative-core" }
-futures-util = "0.3"
-bip39 = { version = "2.2.2", features = ["rand"] }
-rand = "0.10.1"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+ciborium = { workspace = true }
+serde_yaml = { workspace = true }
+sysinfo = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+reqwest = { workspace = true, default-features = false, features = ["rustls", "json", "stream", "blocking"] }
+qualia-core-db = { workspace = true, default-features = true, features = ["sanctuary-crypto", "libp2p-compat"] }
+vibe = { workspace = true }
+qualia-vision = { workspace = true }
+qualia-audio = { workspace = true }
+qualia-solid-bridge = { workspace = true }
+wellfare-core = { workspace = true }
+webizen-render = { workspace = true }
+qualia-cooperative-core = { workspace = true }
+futures-util = { workspace = true }
+bip39 = { workspace = true, features = ["rand"] }
+rand = { workspace = true }
 lazy_static = "1.4"
-log = "0.4"
-base64 = "0.22"
-hex = "0.4.3"
-sha2 = { version = "0.11", default-features = false }
-hmac = { version = "0.13", default-features = false }
-byteorder = "1.5.0"
-pdf-extract = "0.12"
-regex = "1"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
-sha1 = "0.11"
+log = { workspace = true }
+base64 = { workspace = true, default-features = true }
+hex = { workspace = true }
+sha2 = { workspace = true, default-features = false }
+hmac = { workspace = true, default-features = false }
+byteorder = { workspace = true }
+pdf-extract = { workspace = true }
+regex = { workspace = true }
+image = { workspace = true, default-features = false, features = ["png", "jpeg", "webp", "gif"] }
+sha1 = { workspace = true }
 url = "2.5"
-urlencoding = "2.1"
-ed25519-dalek = "3"
-rtrb = "0.3.4"
+urlencoding = { workspace = true }
+ed25519-dalek = { workspace = true, default-features = true }
+rtrb = { workspace = true }
 tiny_http = "0.12"
-bytemuck = "1.14"
-lz4_flex = "0.13"
-chrono = "0.4.45"
-uuid = { version = "1.23.3", features = ["v4"] }
+bytemuck = { workspace = true }
+lz4_flex = { workspace = true }
+chrono = { workspace = true, default-features = true }
+uuid = { workspace = true, features = ["v4"] }
 k256 = { version = "0.14", features = ["ecdsa"] }
 bip32 = { version = "0.5.1", features = ["secp256k1"] }
 ripemd = "0.2"
-sha3 = "0.12"
+sha3 = { workspace = true }
 bs58 = { version = "0.5.1", features = ["check"] }
 # Semantic mail client transport (native only; the client acts as a semantic mail client over SMTP/IMAP).
 lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "builder", "rustls-tls", "pool"] }
 imap = "2.4"
 native-tls = "0.2"
 bech32 = "0.12.0"
-scraper = "0.27.0"
+scraper = { workspace = true }
 x509-parser = { version = "0.16", features = ["verify"] }
 rustls-pemfile = "2"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
@@ -71,6 +71,6 @@ nym-network-defaults = "1.22.0"
 nym-crypto = "1.22.0"
 
 [dev-dependencies]
-dhat = "0.3.3"
-tempfile = "3.1"
+dhat = { workspace = true }
+tempfile = { workspace = true }
 

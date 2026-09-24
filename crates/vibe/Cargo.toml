@@ -16,7 +16,7 @@ name = "vibe"
 path = "src/bin/vibe.rs"
 
 [dependencies]
-bytemuck = { version = "1.21", features = ["derive"] }
+bytemuck = { workspace = true, features = ["derive"] }
 unicode-xid = "0.2.6"
 
 [dev-dependencies]

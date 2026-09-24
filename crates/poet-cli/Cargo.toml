@@ -4,7 +4,7 @@ version = "0.0.39"
 edition = "2021"
 
 [dependencies]
-vibe = { path = "../vibe" }
+vibe = { workspace = true }
 
 [[bin]]
 name = "poet"
