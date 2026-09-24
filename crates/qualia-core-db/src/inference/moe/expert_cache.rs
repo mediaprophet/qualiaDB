@@ -571,5 +571,57 @@ mod tests {
         assert!((status.hit_rate - 0.5).abs() < 1e-6);
         assert_eq!(status.hardware_tier, manager.hardware_tier());
     }
+
+    #[test]
+    fn exercise_staging_fallback_and_release_under_routed_workload() {
+        // Staging capacity = 4 slots (RTX A2000 constrained edge setup)
+        let mut manager = MoeOffloadManager::new(4, 240 * 1024 * 1024);
+
+        // Pin shared expert (ID 999) in slot 0: must never be evicted
+        manager.pin_expert(0, 999);
+
+        // Step 1: Experts 10 and 11 miss -> fetch into slots 1 and 2
+        let out_1a = manager.resolve_expert(10, false, 0);
+        assert!(matches!(out_1a, SlotAccessOutcome::MissFetch { evict_slot_id: 1, .. }));
+        let out_1b = manager.resolve_expert(11, false, 0);
+        assert!(matches!(out_1b, SlotAccessOutcome::MissFetch { evict_slot_id: 2, .. }));
+
+        // Step 2: Expert 10 hits in slot 1; Expert 12 misses -> fetches into slot 3
+        let out_2a = manager.resolve_expert(10, false, 0);
+        assert_eq!(out_2a, SlotAccessOutcome::Hit { slot_id: 1 });
+        let out_2b = manager.resolve_expert(12, false, 0);
+        assert!(matches!(out_2b, SlotAccessOutcome::MissFetch { evict_slot_id: 3, .. }));
+
+        // Step 3: Expert 11 hits in slot 2; Expert 13 misses -> evicts LRU (slot 1 or 3, NEVER slot 0)
+        let out_3a = manager.resolve_expert(11, false, 0);
+        assert_eq!(out_3a, SlotAccessOutcome::Hit { slot_id: 2 });
+        let out_3b = manager.resolve_expert(13, false, 0);
+        if let SlotAccessOutcome::MissFetch { evict_slot_id, .. } = out_3b {
+            assert_ne!(evict_slot_id, 0, "Pinned shared expert in slot 0 must NEVER be evicted");
+        } else {
+            panic!("Expected MissFetch");
+        }
+
+        // Step 4: Access pinned shared expert (always a hit in slot 0)
+        let out_4a = manager.resolve_expert(999, false, 0);
+        assert_eq!(out_4a, SlotAccessOutcome::Hit { slot_id: 0 });
+
+        // Step 5: High PCIe contention triggers hybrid CPU execution fallback
+        let out_5a = manager.resolve_expert(14, true, 8);
+        assert_eq!(out_5a, SlotAccessOutcome::MissComputeCpu);
+
+        // Step 6: Normal query without CPU hybrid falls back to fetching into GPU
+        let out_6a = manager.resolve_expert(14, false, 0);
+        assert!(matches!(out_6a, SlotAccessOutcome::MissFetch { .. }));
+
+        // Verify telemetry integrity
+        let telem = manager.telemetry;
+        assert!(telem.hits >= 3);
+        assert!(telem.misses >= 5);
+        assert!(telem.gpu_fetches >= 4);
+        assert_eq!(telem.cpu_evaluations, 1);
+        assert!(telem.bytes_transferred >= 4 * 240 * 1024 * 1024);
+    }
 }
+
 
