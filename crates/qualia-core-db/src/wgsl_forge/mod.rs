@@ -43,7 +43,7 @@ pub(crate) fn test_cuda_available() -> bool {
 
 pub use attention::{
     causal_attention_oracle, synthesize_causal_attention, AttentionSchedule, AttentionShader,
-    AttentionShape,
+    AttentionShaderParams, AttentionShape,
 };
 pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;

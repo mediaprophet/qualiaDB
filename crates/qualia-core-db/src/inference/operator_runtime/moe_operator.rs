@@ -184,6 +184,7 @@ impl<'a> IndependentExpertWeights<'a> {
 }
 
 /// A cluster anchor containing shared base weights and per-expert deltas (EOS-071).
+#[derive(Debug, Clone)]
 pub struct ClusterAnchor {
     pub cluster_id: usize,
     pub model_dim: usize,
@@ -197,6 +198,29 @@ pub struct ClusterAnchor {
     pub expert_up_deltas: Vec<Option<LowRankDelta>>,
     pub expert_down_deltas: Vec<Option<LowRankDelta>>,
 }
+
+/// Clustered MoE operator holding cluster anchors with shared base projections and per-expert deltas (EOS-071).
+#[derive(Debug, Clone)]
+pub struct ClusteredMoEOperator {
+    pub clusters: Vec<ClusterAnchor>,
+}
+
+impl ClusteredMoEOperator {
+    pub fn new(clusters: Vec<ClusterAnchor>) -> Self {
+        Self { clusters }
+    }
+
+    pub fn dispatch(
+        &self,
+        routed_experts: &[RoutedExpert],
+        input: &[f32],
+        output: &mut [f32],
+        scratch: &mut ClusteredMoeScratch<'_>,
+    ) -> Result<(), OperatorError> {
+        dispatch_clustered_moe_step(&self.clusters, routed_experts, input, output, scratch)
+    }
+}
+
 
 /// Routed expert execution item: (expert_index, gating_weight).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -578,4 +602,60 @@ mod tests {
             "delta-augmented clustered MoE produced non-zero output"
         );
     }
+
+    #[test]
+    fn test_clustered_moe_operator_wrapper() {
+        let model_dim = 256;
+        let hidden_dim = 256;
+        let base_gate = make_synthetic_q4k_blocks((hidden_dim * model_dim) / 256, 41);
+        let base_up = make_synthetic_q4k_blocks((hidden_dim * model_dim) / 256, 42);
+        let base_down = make_synthetic_q4k_blocks((model_dim * hidden_dim) / 256, 43);
+
+        let cluster = ClusterAnchor {
+            cluster_id: 0,
+            model_dim,
+            hidden_dim,
+            base_gate,
+            base_up,
+            base_down,
+            expert_ids: vec![0],
+            expert_gate_deltas: vec![None],
+            expert_up_deltas: vec![None],
+            expert_down_deltas: vec![None],
+        };
+
+        let op = ClusteredMoEOperator::new(vec![cluster]);
+        let input = vec![0.2f32; model_dim];
+        let routed = [RoutedExpert {
+            expert_id: 0,
+            weight: 0.8,
+        }];
+
+        let ws_gate_len = q4k_lookup_workspace_floats(model_dim).unwrap();
+        let ws_down_len = q4k_lookup_workspace_floats(hidden_dim).unwrap();
+        let mut out = vec![0.0f32; model_dim];
+        let mut gb = vec![0.0f32; hidden_dim];
+        let mut ub = vec![0.0f32; hidden_dim];
+        let mut hb = vec![0.0f32; hidden_dim];
+        let mut accum = vec![0.0f32; hidden_dim];
+        let mut c_down = vec![0.0f32; model_dim];
+        let mut rank_s = vec![0.0f32; 16];
+        let mut wsg = vec![0.0f32; ws_gate_len];
+        let mut wsd = vec![0.0f32; ws_down_len];
+
+        let mut scratch = ClusteredMoeScratch {
+            gate_buf: &mut gb,
+            up_buf: &mut ub,
+            hidden_buf: &mut hb,
+            cluster_accum_hidden: &mut accum,
+            cluster_down_out: &mut c_down,
+            rank_scratch: &mut rank_s,
+            ws_gate_up: &mut wsg,
+            ws_down: &mut wsd,
+        };
+
+        op.dispatch(&routed, &input, &mut out, &mut scratch).unwrap();
+        assert!(out.iter().any(|&v| v.abs() > 1e-5));
+    }
 }
+

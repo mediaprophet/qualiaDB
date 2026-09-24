@@ -94,6 +94,67 @@ pub fn compute_principled_slot_capacity(
     }
 }
 
+/// Telemetry and allocation status for dynamic VRAM tiering.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DynamicVramStatus {
+    pub available_bytes: u64,
+    pub hardware_tier: PersonalHardwareTier,
+    pub total_slots: usize,
+    pub pinned_slots: usize,
+    pub hits: u64,
+    pub misses: u64,
+    pub hit_rate: f64,
+}
+
+/// Query dynamic accelerator budget and memory architecture (discrete vs unified).
+///
+/// Reads environment overrides (`QUALIA_VRAM_OVERRIDE_BYTES`, `QUALIA_VRAM_OVERRIDE_MB`, `QUALIA_FORCE_UNIFIED_MEMORY`),
+/// falling back to platform defaults (e.g. Apple Silicon unified memory on macOS or RTX A2000 discrete budget on Windows/Linux).
+pub fn query_dynamic_accelerator_budget() -> (u64, bool) {
+    let is_unified = std::env::var("QUALIA_FORCE_UNIFIED_MEMORY")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or_else(|_| cfg!(target_os = "macos"));
+
+    if let Ok(bytes_str) = std::env::var("QUALIA_VRAM_OVERRIDE_BYTES") {
+        if let Ok(bytes) = bytes_str.trim().parse::<u64>() {
+            return (bytes, is_unified);
+        }
+    }
+
+    if let Ok(mb_str) = std::env::var("QUALIA_VRAM_OVERRIDE_MB") {
+        if let Ok(mb) = mb_str.trim().parse::<u64>() {
+            return (mb.saturating_mul(1024 * 1024), is_unified);
+        }
+    }
+
+    if is_unified {
+        // macOS Apple Silicon default: 16 GiB unified pool available for compute
+        (16 * 1024 * 1024 * 1024, true)
+    } else {
+        // Personal Discrete GPU default (e.g. RTX A2000 12GB with ~11.5 GiB usable VRAM headroom)
+        (11_500 * 1024 * 1024, false)
+    }
+}
+
+/// Query the current dynamic hardware tier given accelerator budget and workload requirements.
+pub fn query_dynamic_hardware_tier(
+    available_bytes: u64,
+    backbone_bytes: u64,
+    kv_cache_bytes: u64,
+    bytes_per_expert: usize,
+    total_experts: usize,
+    is_unified: bool,
+) -> (usize, PersonalHardwareTier) {
+    compute_principled_slot_capacity(
+        available_bytes,
+        backbone_bytes,
+        kv_cache_bytes,
+        bytes_per_expert,
+        total_experts,
+        is_unified,
+    )
+}
+
 /// Outcome of accessing an expert in the offload cache.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlotAccessOutcome {
@@ -134,12 +195,22 @@ pub struct MoeOffloadManager {
     bytes_per_expert: usize,
     prefer_cpu_hybrid_threshold: f32,
     placement_policy: ExpertPlacementPolicy,
+    hardware_tier: PersonalHardwareTier,
     pub telemetry: ExpertCacheTelemetry,
 }
 
 impl MoeOffloadManager {
     /// Create a new offload manager with `num_gpu_slots` staging capacity.
     pub fn new(num_gpu_slots: usize, bytes_per_expert: usize) -> Self {
+        Self::with_tier(num_gpu_slots, bytes_per_expert, PersonalHardwareTier::PersonalGpuStaging)
+    }
+
+    /// Create a new offload manager with explicit hardware tier and staging capacity.
+    pub fn with_tier(
+        num_gpu_slots: usize,
+        bytes_per_expert: usize,
+        hardware_tier: PersonalHardwareTier,
+    ) -> Self {
         let capacity = if num_gpu_slots > 0 {
             num_gpu_slots
         } else {
@@ -151,6 +222,7 @@ impl MoeOffloadManager {
             bytes_per_expert,
             prefer_cpu_hybrid_threshold: 0.5,
             placement_policy: ExpertPlacementPolicy::default(),
+            hardware_tier,
             telemetry: ExpertCacheTelemetry::default(),
         }
     }
@@ -162,7 +234,53 @@ impl MoeOffloadManager {
     /// the hot path.
     pub fn from_residency_profile(profile: ExpertResidencyProfile) -> (Self, PersonalHardwareTier) {
         let (slots, tier) = profile.placement();
-        (Self::new(slots, profile.bytes_per_expert), tier)
+        (Self::with_tier(slots, profile.bytes_per_expert, tier), tier)
+    }
+
+    /// Active hardware tier of this offload manager.
+    #[inline]
+    pub fn hardware_tier(&self) -> PersonalHardwareTier {
+        self.hardware_tier
+    }
+
+    /// Create an offload manager by dynamically querying the host accelerator budget.
+    pub fn from_dynamic_query(
+        backbone_bytes: u64,
+        kv_cache_bytes: u64,
+        bytes_per_expert: usize,
+        total_experts: usize,
+    ) -> Self {
+        let (available_bytes, is_unified) = query_dynamic_accelerator_budget();
+        let profile = ExpertResidencyProfile {
+            available_accelerator_bytes: available_bytes,
+            backbone_bytes,
+            kv_cache_bytes,
+            bytes_per_expert,
+            total_experts,
+            is_unified_memory: is_unified,
+        };
+        let (manager, _) = Self::from_residency_profile(profile);
+        manager
+    }
+
+    /// Query current dynamic VRAM status and cache efficiency.
+    pub fn query_vram_status(&self, available_accelerator_bytes: u64) -> DynamicVramStatus {
+        let pinned = self.slots.iter().filter(|s| s.is_pinned).count();
+        let total_requests = self.telemetry.hits + self.telemetry.misses;
+        let hit_rate = if total_requests > 0 {
+            self.telemetry.hits as f64 / total_requests as f64
+        } else {
+            0.0
+        };
+        DynamicVramStatus {
+            available_bytes: available_accelerator_bytes,
+            hardware_tier: self.hardware_tier,
+            total_slots: self.slots.len(),
+            pinned_slots: pinned,
+            hits: self.telemetry.hits,
+            misses: self.telemetry.misses,
+            hit_rate,
+        }
     }
 
     /// Access or schedule an expert for evaluation.
@@ -414,4 +532,44 @@ mod tests {
         assert_eq!(tier, PersonalHardwareTier::PersonalGpuStaging);
         assert_eq!(manager.capacity(), 31);
     }
+
+    #[test]
+    fn dynamic_query_and_vram_status_testing() {
+        let (budget, is_unified) = query_dynamic_accelerator_budget();
+        assert!(budget > 0);
+
+        let (slots, tier) = query_dynamic_hardware_tier(
+            budget,
+            2_800 * 1024 * 1024,
+            1_024 * 1024 * 1024,
+            240 * 1024 * 1024,
+            256,
+            is_unified,
+        );
+        assert!(slots >= 4);
+        assert_ne!(tier, PersonalHardwareTier::WorkstationResident);
+
+        let mut manager = MoeOffloadManager::from_dynamic_query(
+            2_800 * 1024 * 1024,
+            1_024 * 1024 * 1024,
+            240 * 1024 * 1024,
+            256,
+        );
+        assert_eq!(manager.capacity(), slots);
+
+        // Record some hits/misses to check telemetry in DynamicVramStatus
+        let outcome1 = manager.resolve_expert(10, false, 0);
+        assert!(matches!(outcome1, SlotAccessOutcome::MissFetch { .. }));
+
+        let outcome2 = manager.resolve_expert(10, false, 0);
+        assert!(matches!(outcome2, SlotAccessOutcome::Hit { slot_id: 0 }));
+
+        let status = manager.query_vram_status(budget);
+        assert_eq!(status.total_slots, slots);
+        assert_eq!(status.hits, 1);
+        assert_eq!(status.misses, 1);
+        assert!((status.hit_rate - 0.5).abs() < 1e-6);
+        assert_eq!(status.hardware_tier, manager.hardware_tier());
+    }
 }
+

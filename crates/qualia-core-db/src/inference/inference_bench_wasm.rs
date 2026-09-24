@@ -176,6 +176,14 @@ pub fn attention_o_fuse_enabled() -> bool {
 }
 
 #[inline]
+pub fn set_forge_attention(_on: bool) {}
+
+#[inline]
+pub fn forge_attention_enabled() -> bool {
+    false
+}
+
+#[inline]
 pub fn set_resident_weights(_on: bool) {}
 
 #[inline]

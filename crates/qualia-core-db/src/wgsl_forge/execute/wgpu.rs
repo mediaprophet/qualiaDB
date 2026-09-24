@@ -1184,6 +1184,40 @@ impl<'a> WgpuPipeline<'a> {
             .poll(wgpu::PollType::wait_indefinitely());
         Ok(started.elapsed().as_nanos().min(u64::MAX as u128) as u64)
     }
+
+    /// Dispatch an attention kernel, binding buffer views according to the Forge attention layout
+    /// and dispatching one workgroup per attention head.
+    pub fn dispatch_attention(
+        &self,
+        buffers: &[BufferView],
+        head_count: u32,
+    ) -> Result<u64, ForgeError> {
+        let bind_group = self
+            .context
+            .create_compute_bind_group(&self.pipeline, buffers);
+        let started = Instant::now();
+        let mut encoder =
+            self.context
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("forge-attention-dispatch"),
+                });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("forge-attention-pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &bind_group, &[]);
+            pass.dispatch_workgroups(head_count, 1, 1);
+        }
+        self.context.queue.submit(Some(encoder.finish()));
+        let _ = self
+            .context
+            .device
+            .poll(wgpu::PollType::wait_indefinitely());
+        Ok(started.elapsed().as_nanos().min(u64::MAX as u128) as u64)
+    }
 }
 
 impl<'a> QualiaCompute for WgpuPipeline<'a> {

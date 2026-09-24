@@ -1416,4 +1416,135 @@ impl QTensorEngine {
             o_out,
         )
     }
+
+    /// Certified Naga-validated WGSL Forge causal attention device dispatch during decode.
+    pub fn dispatch_forge_causal_attention(
+        &mut self,
+        query: &[f32],
+        keys: &[f32],
+        values: &[f32],
+        scale: f32,
+        shape: crate::wgsl_forge::AttentionShape,
+        out: &mut [f32],
+    ) -> Result<(), crate::wgsl_forge::ForgeError> {
+        let schedule = crate::wgsl_forge::AttentionSchedule::a2000_decode();
+        schedule.validate(shape)?;
+        let q_len = (shape.head_count * shape.head_dim) as usize;
+        let kv_len = (shape.head_count * shape.context_tokens * shape.head_dim) as usize;
+        if query.len() < q_len || keys.len() < kv_len || values.len() < kv_len || out.len() < q_len {
+            return Err(crate::wgsl_forge::ForgeError::InvalidKernel(
+                "dispatch_forge_causal_attention buffers smaller than required shape".into(),
+            ));
+        }
+
+        let shader = crate::wgsl_forge::synthesize_causal_attention(shape, schedule)?;
+        let module = self.device().create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("ForgeCausalAttentionShader"),
+            source: wgpu::ShaderSource::Wgsl(shader.source.into()),
+        });
+        let pipeline = self.device().create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("ForgeCausalAttentionPipeline"),
+            layout: None,
+            module: &module,
+            entry_point: Some("causal_attention"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+
+        use wgpu::util::DeviceExt;
+        let q_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("ForgeAttnQ"),
+            contents: bytemuck::cast_slice(&query[..q_len]),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+        let k_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("ForgeAttnK"),
+            contents: bytemuck::cast_slice(&keys[..kv_len]),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+        let v_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("ForgeAttnV"),
+            contents: bytemuck::cast_slice(&values[..kv_len]),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+        let out_bytes = (q_len * std::mem::size_of::<f32>()) as u64;
+        let out_buf = self.device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("ForgeAttnOut"),
+            size: out_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let params = crate::wgsl_forge::AttentionShaderParams {
+            context_tokens: shape.context_tokens,
+            head_dim: shape.head_dim,
+            head_count: shape.head_count,
+            _pad0: 0,
+            scale,
+            _pad1: 0,
+            _pad2: 0,
+            _pad3: 0,
+        };
+        let params_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("ForgeAttnParams"),
+            contents: bytemuck::bytes_of(&params),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+
+        let bind_group = self.device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("ForgeAttnBG"),
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: q_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: k_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: v_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: out_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 4, resource: params_buf.as_entire_binding() },
+            ],
+        });
+
+        let staging = self.device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("ForgeAttnStaging"),
+            size: out_bytes,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("ForgeAttnEncoder"),
+        });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("ForgeAttnPass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, &bind_group, &[]);
+            pass.dispatch_workgroups(shape.head_count, 1, 1);
+        }
+        encoder.copy_buffer_to_buffer(&out_buf, 0, &staging, 0, out_bytes);
+        self.gpu_queue().submit(Some(encoder.finish()));
+
+        let slice = staging.slice(..);
+        let (tx, rx) = futures_channel::oneshot::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            let _ = tx.send(r);
+        });
+        self.poll_wait();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
+                let data = slice
+                    .get_mapped_range()
+                    .expect("wgpu buffer map_range failed");
+                let floats: &[f32] = bytemuck::cast_slice(&data);
+                out[..q_len].copy_from_slice(&floats[..q_len]);
+                drop(data);
+                staging.unmap();
+                return Ok(());
+            }
+        }
+        staging.unmap();
+        crate::wgsl_forge::causal_attention_oracle(shape, query, keys, values, scale, out)
+    }
 }

@@ -775,6 +775,91 @@ impl ForgeRuntime {
         self.context.clear_transient_allocations();
         Ok(out)
     }
+
+    /// Real-data causal scaled dot-product attention using certified Naga-validated WGSL kernel.
+    ///
+    /// Wires GPU storage buffers matching [`synthesize_causal_attention`](super::synthesize_causal_attention):
+    /// - binding 0: `query` (StorageRead, `[head_count * head_dim]`)
+    /// - binding 1: `keys` (StorageRead, `[head_count * context_tokens * head_dim]`)
+    /// - binding 2: `values` (StorageRead, `[head_count * context_tokens * head_dim]`)
+    /// - binding 3: `output` (StorageReadWrite, `[head_count * head_dim]`)
+    /// - binding 4: [`AttentionShaderParams`](super::AttentionShaderParams) (Uniform)
+    pub fn causal_attention(
+        &mut self,
+        shape: super::AttentionShape,
+        query: &[f32],
+        keys: &[f32],
+        values: &[f32],
+        scale: f32,
+    ) -> Result<Vec<f32>, ForgeError> {
+        let schedule = super::AttentionSchedule::a2000_decode();
+        schedule.validate(shape)?;
+        let heads = shape.head_count as usize;
+        let dim = shape.head_dim as usize;
+        let context = shape.context_tokens as usize;
+
+        let q_len = heads * dim;
+        let kv_len = heads * context * dim;
+        if query.len() < q_len || keys.len() < kv_len || values.len() < kv_len {
+            return Err(ForgeError::GpuValidation(
+                "causal_attention input slices smaller than required shape".into(),
+            ));
+        }
+
+        let shader = super::synthesize_causal_attention(shape, schedule)?;
+        let view_q = self.context.allocate_and_write(
+            bytemuck::cast_slice(&query[..q_len]),
+            0,
+            0,
+            BindingUsage::StorageRead,
+        )?;
+        let view_k = self.context.allocate_and_write(
+            bytemuck::cast_slice(&keys[..kv_len]),
+            1,
+            0,
+            BindingUsage::StorageRead,
+        )?;
+        let view_v = self.context.allocate_and_write(
+            bytemuck::cast_slice(&values[..kv_len]),
+            2,
+            0,
+            BindingUsage::StorageRead,
+        )?;
+        let out_bytes = (q_len * size_of::<f32>()).max(4);
+        let view_out = self.context.allocate_transient(
+            out_bytes,
+            3,
+            0,
+            BindingUsage::StorageReadWrite,
+        )?;
+        let params = super::AttentionShaderParams {
+            context_tokens: shape.context_tokens,
+            head_dim: shape.head_dim,
+            head_count: shape.head_count,
+            _pad0: 0,
+            scale,
+            _pad1: 0,
+            _pad2: 0,
+            _pad3: 0,
+        };
+        let view_params = self.context.allocate_and_write(
+            bytemuck::bytes_of(&params),
+            4,
+            0,
+            BindingUsage::Uniform,
+        )?;
+
+        let buffers = vec![view_q, view_k, view_v, view_out, view_params];
+        let pipeline = WgpuPipeline::compile(&self.context, &shader.source, "causal_attention")?;
+        pipeline.dispatch_attention(&buffers, shape.head_count)?;
+
+        let mut out = self.context.read_buffer_f32(&view_out)?;
+        out.truncate(q_len);
+
+        drop(pipeline);
+        self.context.clear_transient_allocations();
+        Ok(out)
+    }
 }
 
 /// Resolve the forge shader backend from `QUALIA_FORGE_BACKEND` env var.
@@ -960,4 +1045,42 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    #[serial_test::serial(gpu)]
+    fn runtime_causal_attention_runs_real_data() {
+        let Some(mut rt) = gpu_runtime() else { return };
+        let shape = crate::wgsl_forge::AttentionShape {
+            head_dim: 64,
+            head_count: 2,
+            context_tokens: 4,
+            batch_tokens: 1,
+        };
+        let scale = 1.0 / (shape.head_dim as f32).sqrt();
+        let q_len = (shape.head_count * shape.head_dim) as usize;
+        let kv_len = (shape.head_count * shape.context_tokens * shape.head_dim) as usize;
+
+        let query = vec![0.5f32; q_len];
+        let keys = vec![0.25f32; kv_len];
+        let values = vec![1.5f32; kv_len];
+
+        let out = rt
+            .causal_attention(shape, &query, &keys, &values, scale)
+            .expect("causal_attention");
+        assert_eq!(out.len(), q_len);
+
+        let mut oracle_out = vec![0.0f32; q_len];
+        crate::wgsl_forge::causal_attention_oracle(shape, &query, &keys, &values, scale, &mut oracle_out)
+            .expect("causal_attention_oracle");
+
+        for i in 0..q_len {
+            assert!(
+                (out[i] - oracle_out[i]).abs() < 1e-4,
+                "mismatch at {i}: gpu={} oracle={}",
+                out[i],
+                oracle_out[i]
+            );
+        }
+    }
 }
+

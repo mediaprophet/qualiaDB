@@ -15,8 +15,10 @@ pub use dispatch::{
     MAX_ROUTED_EXPERTS,
 };
 pub use expert_cache::{
-    compute_principled_slot_capacity, ExpertCacheTelemetry, ExpertResidencyProfile,
-    MoeOffloadManager, PersonalHardwareTier, SlotAccessOutcome, DEFAULT_GPU_EXPERT_SLOTS,
+    compute_principled_slot_capacity, query_dynamic_accelerator_budget,
+    query_dynamic_hardware_tier, DynamicVramStatus, ExpertCacheTelemetry,
+    ExpertResidencyProfile, MoeOffloadManager, PersonalHardwareTier, SlotAccessOutcome,
+    DEFAULT_GPU_EXPERT_SLOTS,
 };
 pub use ftw_loader::{
     FtwExpertBankSlice, FtwExpertData, FtwManifest, FtwModelPackage, FtwShardEntry, FtwTensorEntry,

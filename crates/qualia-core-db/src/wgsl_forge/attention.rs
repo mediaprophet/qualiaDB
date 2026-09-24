@@ -17,6 +17,20 @@ pub struct AttentionShape {
     pub batch_tokens: u32,
 }
 
+/// Uniform parameter block matching `AttentionParams` in the generated attention shader.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct AttentionShaderParams {
+    pub context_tokens: u32,
+    pub head_dim: u32,
+    pub head_count: u32,
+    pub _pad0: u32,
+    pub scale: f32,
+    pub _pad1: u32,
+    pub _pad2: u32,
+    pub _pad3: u32,
+}
+
 /// A hardware-safe attention schedule.  The generated kernel uses one
 /// workgroup per attention head and an online tiled reduction over context.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,7 +121,9 @@ struct AttentionParams {{
     head_count: u32,
     _pad0: u32,
     scale: f32,
-    _pad1: vec3<u32>,
+    _pad1: u32,
+    _pad2: u32,
+    _pad3: u32,
 }}
 
 @group(0) @binding(0) var<storage, read> query: array<f32>;

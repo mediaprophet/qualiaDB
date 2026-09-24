@@ -118,6 +118,44 @@ pub fn write_blk_tensor_name(layer: u32, suffix: &[u8], out: &mut [u8]) -> usize
     n + copy
 }
 
+/// Write `model.layers.{layer}.{suffix}` into `out`; returns total bytes written.
+pub fn write_hf_layer_tensor_name(layer: u32, suffix: &[u8], out: &mut [u8]) -> usize {
+    let prefix = b"model.layers.";
+    if out.len() < prefix.len() + 1 + suffix.len() {
+        return 0;
+    }
+    out[..prefix.len()].copy_from_slice(prefix);
+    let mut n = prefix.len();
+    let mut v = layer;
+    let mut digits = [0u8; 10];
+    let mut d = 0usize;
+    if v == 0 {
+        digits[0] = b'0';
+        d = 1;
+    } else {
+        while v > 0 && d < digits.len() {
+            digits[d] = b'0' + (v % 10) as u8;
+            v /= 10;
+            d += 1;
+        }
+    }
+    for i in (0..d).rev() {
+        if n >= out.len() {
+            return n;
+        }
+        out[n] = digits[i];
+        n += 1;
+    }
+    if n >= out.len() {
+        return n;
+    }
+    out[n] = b'.';
+    n += 1;
+    let copy = suffix.len().min(out.len() - n);
+    out[n..n + copy].copy_from_slice(&suffix[..copy]);
+    n + copy
+}
+
 /// Normalize a model-family tensor name into the canonical `blk.N.*` name
 /// consumed by `get_layer_tensors` and `dispatch_prefill_layer_batch`.
 ///
@@ -635,6 +673,14 @@ impl GgufTensorIndex {
                 }
             }
             entries.push((name_hash, info));
+            let mut canonical = [0u8; 128];
+            let c_len = canonical_component_name(name, &mut canonical);
+            if c_len > 0 {
+                let c_hash = gguf_name_hash(&canonical[..c_len]);
+                if c_hash != name_hash {
+                    entries.push((c_hash, info));
+                }
+            }
         }
 
         let tensor_data_start = ((pos as u64 + 31) & !31) as u64;
@@ -767,10 +813,68 @@ impl GgufTensorIndex {
     fn find_layer_tensor(&self, layer: u32, suffix: &[u8]) -> Option<GgufTensorInfo> {
         let mut name = [0u8; 96];
         let n = write_blk_tensor_name(layer, suffix, &mut name);
-        if n == 0 {
-            return None;
+        if n > 0 {
+            if let Some(info) = self.find(&name[..n]) {
+                return Some(info);
+            }
         }
-        self.find(&name[..n])
+        // Architecture-specific aliases (e.g. HuggingFace safetensors or alternative GGUF prefixes)
+        let aliases: &[&[u8]] = match suffix {
+            b"attn_k.weight" => &[
+                b"self_attn.k_proj.weight",
+                b"k_proj.weight",
+            ],
+            b"attn_q.weight" => &[
+                b"self_attn.q_proj.weight",
+                b"q_proj.weight",
+            ],
+            b"attn_v.weight" => &[
+                b"self_attn.v_proj.weight",
+                b"v_proj.weight",
+            ],
+            b"attn_output.weight" => &[
+                b"self_attn.o_proj.weight",
+                b"o_proj.weight",
+            ],
+            b"attn_norm.weight" => &[
+                b"input_layernorm.weight",
+            ],
+            b"ffn_norm.weight" => &[
+                b"post_attention_layernorm.weight",
+            ],
+            b"ffn_gate.weight" => &[
+                b"mlp.gate_proj.weight",
+                b"gate_proj.weight",
+            ],
+            b"ffn_up.weight" => &[
+                b"mlp.up_proj.weight",
+                b"up_proj.weight",
+            ],
+            b"ffn_down.weight" => &[
+                b"mlp.down_proj.weight",
+                b"down_proj.weight",
+            ],
+            b"ffn_gate_inp.weight" => &[
+                b"mlp.gate.weight",
+            ],
+            _ => &[],
+        };
+        for alias in aliases {
+            let mut hf_name = [0u8; 96];
+            let len = write_hf_layer_tensor_name(layer, alias, &mut hf_name);
+            if len > 0 {
+                if let Some(info) = self.find(&hf_name[..len]) {
+                    return Some(info);
+                }
+            }
+            let blk_len = write_blk_tensor_name(layer, alias, &mut hf_name);
+            if blk_len > 0 {
+                if let Some(info) = self.find(&hf_name[..blk_len]) {
+                    return Some(info);
+                }
+            }
+        }
+        None
     }
 
     /// Retrieve attention + FFN tensor metadata for one transformer block.

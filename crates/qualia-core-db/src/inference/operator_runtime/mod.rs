@@ -11,8 +11,8 @@ pub use adapter::{PreparedOperator, PreparedOperatorError};
 pub use cpu_lookup::{execute_cpu_q4k_lookup, precompute_activation_luts, CpuScheduleConfig};
 pub use gpu_schedule::{GpuOccupancyDiagnostics, GpuOperatorSchedule, GpuScheduleKind};
 pub use moe_operator::{
-    dispatch_clustered_moe_step, ClusterAnchor, ClusteredMoeScratch, IndependentExpertWeights,
-    LowRankDelta, RoutedExpert,
+    dispatch_clustered_moe_step, ClusterAnchor, ClusteredMoeScratch, ClusteredMoEOperator,
+    IndependentExpertWeights, LowRankDelta, RoutedExpert,
 };
 
 #[cfg(test)]

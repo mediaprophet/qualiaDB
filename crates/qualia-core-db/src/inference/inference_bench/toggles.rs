@@ -193,6 +193,25 @@ pub fn attention_o_fuse_enabled() -> bool {
     }
 }
 
+// Certified Forge WGSL attention: dispatches Naga-validated Forge causal attention
+// directly on wgpu device during decode step.
+static FORGE_ATTENTION: AtomicBool = AtomicBool::new(false);
+
+#[inline]
+pub fn set_forge_attention(on: bool) {
+    FORGE_ATTENTION.store(on, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn forge_attention_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_FORGE_ATTENTION").ok().as_deref() {
+        Some("1") | Some("true") => true,
+        Some("0") | Some("false") => false,
+        _ => FORGE_ATTENTION.load(Ordering::Relaxed),
+    }
+}
+
+
 // ── Phase 2: resident weights toggle ──────────────────────────────────────────
 // Default ON (native). Each layer's q/k/v/o/gate/up/down weight is uploaded to its own resident
 // VRAM buffer once (keyed by the GGUF tensor byte_offset) and reused every token, instead of

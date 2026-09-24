@@ -290,4 +290,47 @@ impl QTensorEngine {
 
         true
     }
+
+    /// Dispatches MoE layer using the zero-heap `dispatch_moe_step` driver with expert fetcher (EOS-070).
+    pub fn dispatch_moe_step_routed<F>(
+        &mut self,
+        emb_dim: usize,
+        router_weights: &[f32],
+        num_experts: usize,
+        topk: usize,
+        expert_fetcher: F,
+        shared_expert: Option<&crate::inference::moe::dispatch::ExpertWeightView<'_>>,
+        shared_gate_weight: f32,
+        ffn_input: &[f32],
+        scratch_a: &mut [f32],
+    ) -> bool
+    where
+        F: FnMut(u16) -> Option<crate::inference::moe::dispatch::ExpertWeightView<'static>>,
+    {
+        crate::inference::moe::dispatch::dispatch_moe_step(
+            &ffn_input[..emb_dim],
+            emb_dim,
+            router_weights,
+            num_experts,
+            topk,
+            expert_fetcher,
+            shared_expert,
+            shared_gate_weight,
+            &mut scratch_a[..emb_dim],
+        )
+        .is_ok()
+    }
+
+    /// Dispatches MoE layer using the clustered shared-down MoE operator (EOS-071).
+    pub fn dispatch_clustered_moe_operator(
+        &mut self,
+        op: &crate::inference::operator_runtime::ClusteredMoEOperator,
+        routed_experts: &[crate::inference::operator_runtime::RoutedExpert],
+        ffn_input: &[f32],
+        output: &mut [f32],
+        scratch: &mut crate::inference::operator_runtime::ClusteredMoeScratch<'_>,
+    ) -> bool {
+        op.dispatch(routed_experts, ffn_input, output, scratch).is_ok()
+    }
 }
+
