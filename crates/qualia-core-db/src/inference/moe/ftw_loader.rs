@@ -470,4 +470,28 @@ mod tests {
             .fetch_tensor_bytes("model.embed_tokens.weight")
             .is_some());
     }
+
+    #[test]
+    fn test_ftw_physical_qwen_package_if_present() {
+        let p = Path::new(r#"E:\LLM_Models\Qwen3.6-35B-A3B-NVFP4"#);
+        if !p.exists() || !p.join("freetoken_weight.json").exists() {
+            return;
+        }
+
+        let pkg = FtwModelPackage::open_from_dir(p).expect("real package open");
+        assert_eq!(pkg.manifest.format, "freetoken_weight");
+        assert!(!pkg.shards.is_empty());
+        assert!(pkg.tensor_index.emb_dim() > 0);
+        
+        let exp_0_0 = pkg.get_expert_data(0, 0);
+        assert!(exp_0_0.is_some(), "layer 0 expert 0 data present");
+        let exp_data = exp_0_0.unwrap();
+        assert!(!exp_data.gate_up_packed.is_empty());
+        assert!(!exp_data.down_packed.is_empty());
+
+        let view = exp_data.to_view(pkg.tensor_index.emb_dim() as usize, 1024);
+        assert!(!view.gate_up_packed.is_empty());
+        assert!(!view.down_packed.is_empty());
+    }
 }
+
