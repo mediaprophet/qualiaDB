@@ -245,4 +245,18 @@ fn qtensor_engine_dispatches_clustered_moe_operator() {
     assert!(output.iter().any(|&v| v.abs() > 1e-5));
 }
 
+#[test]
+fn qtensor_engine_loads_physical_qwen_nvfp4_package_if_present() {
+    let p = std::path::Path::new(r#"E:\LLM_Models\Qwen3.6-35B-A3B-NVFP4"#);
+    if !p.exists() || !p.join("freetoken_weight.json").exists() {
+        return;
+    }
+    let mut engine = QTensorEngine::new();
+    let report = engine.load_model_checked(p.to_str().unwrap()).expect("physical qwen loaded");
+    assert_eq!(report.n_layer, 40);
+    assert!(report.mapped_bytes > 0);
+    assert!(engine.ftw_package.is_some());
+}
+
+
 
