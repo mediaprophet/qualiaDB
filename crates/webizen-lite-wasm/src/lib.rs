@@ -120,6 +120,7 @@ fn call_tool(name: &str, args: &Value) -> Result<Value, String> {
         // Session graph + query + deontic bridge (P2–P4)
         "load_graph" => session::load_graph(args),
         "load_q42" => session::load_q42(args),
+        "load_yaml_ld_q42" => session::load_yaml_ld_q42(args),
         "list_graphs" => session::list_graphs(args),
         "unload_graph" => session::unload_graph(args),
         "query_graph" => session::query_graph(args),
@@ -1424,15 +1425,28 @@ fn tool_catalog() -> Value {
                 "baseUrl": { "type": "string" }
             }
         })),
-        tool("load_graph", "Load N3, Quin JSON, or Q42L bytes into a session graph (no network).", json!({
+        tool("load_graph", "Load N3, Quin JSON, Q42L bytes, or yaml-ld-q42 into a session graph (no network).", json!({
             "type": "object",
             "properties": {
-                "format": { "type": "string", "enum": ["n3", "quins", "q42lite", "q42"] },
-                "source": { "type": "string", "description": "N3 text when format=n3" },
+                "format": { "type": "string", "enum": ["n3", "quins", "q42lite", "q42", "yaml-ld-q42"] },
+                "source": { "type": "string", "description": "N3 text when format=n3; YAML when format=yaml-ld-q42" },
                 "quins": quin_array_schema(),
                 "bytesBase64": { "type": "string", "description": "Q42L payload when format=q42lite" },
                 "graphId": { "type": "string" },
-                "label": { "type": "string" }
+                "label": { "type": "string" },
+                "namespace": u64_schema(),
+                "lamportClock": u64_schema()
+            }
+        })),
+        tool("load_yaml_ld_q42", "Compile yaml-ld-q42 (WebizenWorkspace pages/panes or HCF HypermediaDocument) into a session graph. Media type application/yaml-ld-q42.", json!({
+            "type": "object",
+            "required": ["source"],
+            "properties": {
+                "source": { "type": "string", "description": "yaml-ld-q42 YAML text (workspace or HCF)" },
+                "graphId": { "type": "string" },
+                "label": { "type": "string" },
+                "namespace": u64_schema(),
+                "lamportClock": u64_schema()
             }
         })),
         tool("load_q42", "Load Q42L (wasm-safe) volume bytes; native Q42 v3 is rejected with guidance.", json!({
@@ -1951,5 +1965,86 @@ mod tests {
         let _ = call("unload_graph", json!({ "graphId": "q42-dst" }));
         let _ = call("unload_graph", json!({ "graphId": "norms-1" }));
         let _ = call("unload_graph", json!({ "graphId": "norms-def" }));
+    }
+
+    #[test]
+    fn load_yaml_ld_q42_hcf_minimal_fixture() {
+        let yaml = r#"
+"@id": "doc:civics_au_writing"
+"@type": "HypermediaDocument"
+"title": "Civics.au Writing"
+"author": "Timothy Holborn"
+"tags": ["civics", "hcf"]
+"content":
+  - heading: "Lead"
+    blocks:
+      - text: "HCF HypermediaDocument is the source of truth."
+        markdown: "Optional **Markdown** projector."
+"#;
+        let loaded = call(
+            "load_yaml_ld_q42",
+            json!({
+                "source": yaml,
+                "graphId": "hcf-civics",
+                "label": "civics-writing",
+                "namespace": 7,
+                "lamportClock": 1
+            }),
+        );
+        assert_eq!(loaded["graphId"], "hcf-civics", "load: {loaded}");
+        assert_eq!(loaded["sourceFormat"], "yaml-ld-q42/hcf");
+        assert!(
+            loaded["quinCount"].as_u64().unwrap() >= 3,
+            "expected title/heading/text quins: {loaded}"
+        );
+        assert!(
+            loaded["lexiconCount"].as_u64().unwrap() >= 3,
+            "expected lexicon surfaces: {loaded}"
+        );
+
+        let hits = call(
+            "query_graph",
+            json!({
+                "graphId": "hcf-civics",
+                "objectContains": "source of truth",
+                "limit": 10
+            }),
+        );
+        assert!(
+            hits["matchCount"].as_u64().unwrap() >= 1,
+            "query_graph after HCF load: {hits}"
+        );
+
+        // Alias via load_graph format=
+        let aliased = call(
+            "load_graph",
+            json!({
+                "format": "yaml-ld-q42",
+                "source": yaml,
+                "graphId": "hcf-alias"
+            }),
+        );
+        assert_eq!(aliased["sourceFormat"], "yaml-ld-q42/hcf");
+
+        let _ = call("unload_graph", json!({ "graphId": "hcf-civics" }));
+        let _ = call("unload_graph", json!({ "graphId": "hcf-alias" }));
+    }
+
+    #[test]
+    fn tools_list_includes_load_yaml_ld_q42() {
+        let response: Value = serde_json::from_str(&mcp_jsonrpc(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+            })
+            .to_string(),
+        ))
+        .unwrap();
+        let tools = response["result"]["tools"].as_array().unwrap();
+        assert!(
+            tools.iter().any(|t| t["name"] == "load_yaml_ld_q42"),
+            "tools/list missing load_yaml_ld_q42"
+        );
     }
 }

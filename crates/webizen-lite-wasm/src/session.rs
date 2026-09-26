@@ -188,9 +188,13 @@ pub fn load_graph(args: &Value) -> Result<Value, String> {
                 return Err("unrecognised q42 payload (expected Q42L magic)".into());
             }
         }
+        "yaml-ld-q42" | "yaml_ld_q42" | "yamlld-q42" => {
+            // Delegate to dedicated loader (keeps source_format variant honest).
+            return load_yaml_ld_q42(args);
+        }
         other => {
             return Err(format!(
-                "unsupported load format '{other}' (use n3|quins|q42lite)"
+                "unsupported load format '{other}' (use n3|quins|q42lite|yaml-ld-q42)"
             ))
         }
     };
@@ -226,6 +230,55 @@ pub fn load_q42(args: &Value) -> Result<Value, String> {
         }
     }
     load_graph(&args)
+}
+
+/// Load a yaml-ld-q42 document (WebizenWorkspace pages/panes **or** HCF HypermediaDocument).
+///
+/// Arguments:
+/// - `source` (required): YAML text
+/// - optional `graphId`, `label`, `namespace` (u64), `lamportClock` (u64)
+///
+/// Uses [`qualia_core_db::yaml_ld_q42::compile_yaml_ld_q42_auto`]. Session
+/// `source_format` is `yaml-ld-q42/workspace`, `yaml-ld-q42/hcf`, or `yaml-ld-q42`.
+pub fn load_yaml_ld_q42(args: &Value) -> Result<Value, String> {
+    let source = required_str(args, "source")?;
+    let label = args
+        .get("label")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    let id_hint = args.get("graphId").and_then(Value::as_str);
+    let graph_id = allocate_id(id_hint);
+    let namespace = optional_u64(args, "namespace")?.unwrap_or(0);
+    let lamport = optional_u64(args, "lamportClock")?.unwrap_or(0);
+
+    let (quins, lexicon, variant) =
+        qualia_core_db::yaml_ld_q42::compile_yaml_ld_q42_auto(source.as_bytes(), namespace, lamport)
+            .map_err(|e| e.to_string())?;
+
+    let source_format = variant.to_string();
+    let graph = SessionGraph {
+        id: graph_id.clone(),
+        label,
+        source_format: source_format.clone(),
+        quins,
+        lexicon,
+    };
+    let stored = insert_graph(graph)?;
+    Ok(json!({
+        "graphId": stored.id,
+        "label": stored.label,
+        "sourceFormat": stored.source_format,
+        "quinCount": stored.quins.len(),
+        "lexiconCount": stored.lexicon.len(),
+        "queryMeta": {
+            "tool": "load_yaml_ld_q42",
+            "format": "yaml-ld-q42",
+            "variant": variant,
+            "mediaType": "application/yaml-ld-q42",
+            "note": "HCF HypermediaDocument is the SoT; Markdown is an optional projector. Workspace pages/panes compile via the existing bridge."
+        }
+    }))
 }
 
 /// Bounded graph query over a session graph (preferred over full SPARQL in lite).
