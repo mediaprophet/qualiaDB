@@ -1,7 +1,7 @@
 # civics.au — Capability Statement
 ### What the platform can do, what it cannot yet do, and where the evidence stands
 
-*Prepared September 2026 · QualiaDB v0.0.39 · For review by policy-makers, economists, demographers, and social-science researchers*
+*Prepared September 2026 · QualiaDB v0.0.40 · For review by policy-makers, economists, demographers, and social-science researchers*
 
 ---
 
@@ -234,4 +234,4 @@ The civics.au site itself identifies several open questions that are particularl
 
 ---
 
-*This document was prepared from a review of the civics.au website (dev.civics.au) and the QualiaDB source code (v0.0.39). It describes implemented capabilities as verified in the codebase, not marketing claims. Status designations (✅ Operational, Concept architecture, etc.) reflect the system's own capability matrix and self-reported status flags.*
+*This document was prepared from a review of the civics.au website (dev.civics.au) and the QualiaDB source code (v0.0.40). It describes implemented capabilities as verified in the codebase, not marketing claims. Status designations (✅ Operational, Concept architecture, etc.) reflect the system's own capability matrix and self-reported status flags.*

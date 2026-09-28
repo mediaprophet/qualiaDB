@@ -10,7 +10,7 @@
 - Changed files, public behavior and integration source state:
   - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/CSCP-07-quic-alpn.md` (new)
   - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-07.md` (this file)
-  - No `.rs`, `Cargo.toml`, honesty-flag, or runtime behavior change. Branch `0.0.38` at evaluation HEAD `b96304919f68d408cf067fab814fd4f01fc54255`.
+  - No `.rs`, `Cargo.toml`, honesty-flag, or runtime behavior change. Branch `0.0.40` at evaluation HEAD `b96304919f68d408cf067fab814fd4f01fc54255`.
 - Accepted predecessor/interface versions:
   - CSCP-05 local TLS WSS + QSession control plane (in-tree; not a QUIC carrier).
   - `draft-webcivics-cscp-00` transport binding: QUIC stream + ALPN `cscp/1` after Qualia peer session.

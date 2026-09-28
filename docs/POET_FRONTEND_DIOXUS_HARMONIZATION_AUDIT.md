@@ -1,7 +1,7 @@
 # POET Frontend Harmonization Audit & Implementation Tracker
 _Tracking Dioxus (`webizen-studio`) Features for Porting & Harmonization into Standalone POET (`crates/poet`)_
 
-**Branch:** `0.0.35-dev`  
+**Branch:** `0.0.40-dev`  
 **Authoritative Reference:** `crates/webizen-studio/src/components/poet/` vs `crates/poet/src/browser/`  
 **Status Reference:** `[done]`, `[wip]`, `[todo]`
 

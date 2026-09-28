@@ -1,7 +1,7 @@
 # CSCP-07 — QUIC engine and ALPN `cscp/1`
 
 - Decision ID, date, status and owner: **CSCP-07** / 2026-09-10 / **accepted: defer** / swarm-cscp-07
-- Affected parent/child tasks and source/profile baseline: CSCP-07.01 (engine choice), CSCP-07.02 (ALPN binding), CSCP-07.03 (`noq_transport_admitted()`). Source: branch `0.0.38` at `b96304919f68d408cf067fab814fd4f01fc54255`. Toolchain observed: rustc 1.98.1, cargo 1.98.1. Profile: Qualia CSCP control plane on local TLS WSS + loopback bound-UDP; greenfield Internet QUIC profile remains unspecified in code.
+- Affected parent/child tasks and source/profile baseline: CSCP-07.01 (engine choice), CSCP-07.02 (ALPN binding), CSCP-07.03 (`noq_transport_admitted()`). Source: branch `0.0.40` at `b96304919f68d408cf067fab814fd4f01fc54255`. Toolchain observed: rustc 1.98.1, cargo 1.98.1. Profile: Qualia CSCP control plane on local TLS WSS + loopback bound-UDP; greenfield Internet QUIC profile remains unspecified in code.
 - Semantic requirement or measured implementation problem: `draft-webcivics-cscp-00` §6 binds CSCP-over-QUIC to one bidirectional client-initiated stream with ALPN `cscp/1` **after** the Qualia peer session. That binding needs an admitted QUIC engine. Live source has no Qualia-owned QUIC engine, no ALPN glue, and no measured loopback QUIC admission.
 
 ## Options, including reuse of existing core primitives

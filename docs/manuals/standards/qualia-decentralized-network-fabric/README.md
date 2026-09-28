@@ -5,7 +5,7 @@
 **Date:** 2026-09-07
 **Scope:** A clean-slate decentralized network plus an isolated legacy-Internet gateway
 
-**Implementation review (2026-09-09):** See the [0.0.37 enhancement plan](qdnf-imp/0.0.37-enhancement-plan.md) for verified implementation gaps, qualification gates and detailed implementation assignments, including [sensitive medical/biometric operations](qdnf-imp/sensitive-operations-blueprint.md) and [advanced algorithm recipes](qdnf-imp/advanced-algorithm-recipes.md). Native modules exist; the review does not certify a completed or secure deployment.
+**Implementation review (2026-09-09):** See the [0.0.40 enhancement plan](qdnf-imp/0.0.40-enhancement-plan.md) for verified implementation gaps, qualification gates and detailed implementation assignments, including [sensitive medical/biometric operations](qdnf-imp/sensitive-operations-blueprint.md) and [advanced algorithm recipes](qdnf-imp/advanced-algorithm-recipes.md). Native modules exist; the review does not certify a completed or secure deployment.
 
 ## 1. Purpose
 

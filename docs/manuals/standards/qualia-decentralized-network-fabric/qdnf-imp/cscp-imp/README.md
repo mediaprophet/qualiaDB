@@ -4,7 +4,7 @@
 **Date:** 2026-09-10  
 **Normative spec:** [draft-webcivics-cscp-00.md](../../../../../standards/ietf/draft-webcivics-cscp-00.md)  
 **Swarm rules:** reuse [qdnf-imp swarm protocol](../swarm-protocol.md), briefs, handoffs, evidence manifests  
-**Branch:** `0.0.38`  
+**Branch:** `0.0.40`  
 **Integrator:** this session  
 
 CSCP is **not fully implemented**. Wave 0 is the kernel, `ConnectRequest` codec, loopback bound-UDP, and four experiments. That is a control-plane slice, not the complete protocol on interchangeable carriers.

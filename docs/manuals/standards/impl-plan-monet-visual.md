@@ -1,7 +1,7 @@
 # Impl plan — monet / visual · motion grammar (Poet)
 
 **Owner:** monet · **UX pair:** davinci · **Seam commits:** Neo · **Ontology:** Marvin · **Language triage:** Vibe
-**Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Branch:** `0.0.36-dev`
+**Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Branch:** `0.0.40-dev`
 **North star:** Graphic design and art as the visual backbone of Poet — human-first look and motion on every Layout · Stage · Timeline **aspect**; not a code UI. Not a credential digital twin.
 **Rules:** bind only to frozen four-ops + live `ALL_BOUND` / `vibe:InvokeId` · no Host invent · no dotted `qualia.*` · unbound = visually gated (never stub-broken) · no fake durable storage · named beats only (no free tweens) · gaps → @Vibe → `vibescript-sprint-deltas.md`
 

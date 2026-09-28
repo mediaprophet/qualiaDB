@@ -681,7 +681,7 @@ packages are the only destination architecture.
   223 tests. Final system-Chrome UAT remains open.
 - **2026-08-28:** Built and served the final WASM app on `127.0.0.1:8080`
   against the dev daemon on `127.0.0.1:4242`. System Chrome verified the
-  `0.0.35` UI, native connection (708 Quins), persisted Semantic Library, and
+  `0.0.40` UI, native connection (708 Quins), persisted Semantic Library, and
   Search keyboard shortcut. Chrome's automation guard then detected another
   extension popup; the retained POET tab is ready to resume after that popup is
   dismissed.
