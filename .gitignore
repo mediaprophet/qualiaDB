@@ -171,8 +171,8 @@ error.log
 clippy.json
 clippy_report.md
 
-# Machine-specific Cargo config (local CUDA/DXC toolchain paths — not portable)
-/.cargo/config.toml
+# Machine-specific Cargo config (local machine overrides)
+/.cargo/config.local.toml
 
 # QPU internal functionality (undocumented, private)
 

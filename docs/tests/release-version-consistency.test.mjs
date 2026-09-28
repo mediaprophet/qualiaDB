@@ -62,7 +62,6 @@ const liveReleaseSurfaces = [
   'docs/js/qualia-wasm-runtime.js',
   'docs/online-llm-demo.html',
   'docs/playground/anatomy.js',
-  'docs/progress-0.0.39.html',
   'docs/qdnf.html',
   'docs/qdnf-status.html',
   'docs/release-matrix.html',

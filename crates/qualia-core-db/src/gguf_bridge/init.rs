@@ -1368,6 +1368,7 @@ impl QTensorEngine {
             mc8_norm_stride: 0,
             #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
             cuda_decode_plan: super::cuda_decode_plan::CudaDecodePlanState::Unbuilt,
+            ssm_recurrent_state: Box::new([]),
         }
     }
 

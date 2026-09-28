@@ -39,11 +39,15 @@ jobs:
           restore-keys: wasm-check-cargo-
 
       - name: WASM smoke-check (portal)
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
 
       - name: WASM capability profile checks
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           cargo check -q --target wasm32-unknown-unknown -p webizen-lite-wasm
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
@@ -87,7 +91,7 @@ jobs:
 
       - name: Build Qualia portal WASM (full browser engine)
         env:
-          RUSTFLAGS: "-C target-feature=+simd128"
+          RUSTFLAGS: "-C target-feature=+simd128 --cfg getrandom_backend=\"wasm_js\""
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
@@ -183,7 +187,7 @@ jobs:
 
       - name: Build full playground WASM
         env:
-          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=\"wasm_js\""
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \

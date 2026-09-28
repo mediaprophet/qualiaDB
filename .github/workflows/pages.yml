@@ -97,11 +97,15 @@ jobs:
           wasm-pack --version
 
       - name: WASM smoke-check (portal)
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
 
       - name: WASM capability profile checks
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           cargo check -q --target wasm32-unknown-unknown -p webizen-lite-wasm
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
@@ -146,7 +150,7 @@ jobs:
         env:
           # Full WASM-safe engine (logic + science + WebGPU viewport). Ontology MCP stays
           # size-bounded separately. LLM remains the wasm-llm / wasm-full package.
-          RUSTFLAGS: "-C target-feature=+simd128"
+          RUSTFLAGS: "-C target-feature=+simd128 --cfg getrandom_backend=\"wasm_js\""
           PORTAL_FEATURES: "portal"
         run: |
           wasm-pack build crates/qualia-core-db \
@@ -194,7 +198,7 @@ jobs:
       - name: Build full WASM (playground / API explorer)
         env:
           # wasm-full includes wasm-llm → same 8 MB stack / 4 GB max-memory requirement as above.
-          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=\"wasm_js\""
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
