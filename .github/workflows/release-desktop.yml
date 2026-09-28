@@ -277,7 +277,7 @@ jobs:
         env:
           # Explicitly clear any host-cpu RUSTFLAGS for the wasm frontend.
           RUSTFLAGS: ""
-          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: ""
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
           # `dx build --release` invokes Rust's target-specific `rust-objcopy`

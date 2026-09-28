@@ -110,7 +110,7 @@ jobs:
 
       - name: Build Qualia WASM for comparative harness
         env:
-          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=\"wasm_js\""
         run: |
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
@@ -240,7 +240,7 @@ jobs:
 
       - name: Build Qualia WASM for Schema.org harness
         env:
-          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=\"wasm_js\""
         run: |
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
