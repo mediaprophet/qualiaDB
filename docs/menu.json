@@ -20,9 +20,16 @@
       "group": "Core"
     },
     {
-      "label": "0.0.39 Progress",
-      "href": "progress-0.0.39.html",
+      "label": "0.0.40 Progress",
+      "href": "progress-0.0.40.html",
       "icon": "fa-wand-magic-sparkles",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Semantic Instruments",
+      "href": "semantic-instruments.html",
+      "icon": "fa-toolbox",
       "highlight": true,
       "group": "Core"
     },
@@ -34,10 +41,9 @@
       "group": "Core"
     },
     {
-      "label": "Semantic Instruments",
-      "href": "semantic-instruments.html",
-      "icon": "fa-toolbox",
-      "highlight": true,
+      "label": "0.0.39 Progress",
+      "href": "progress-0.0.39.html",
+      "icon": "fa-clock-rotate-left",
       "group": "Core"
     },
     {
