@@ -646,6 +646,10 @@ export class VFS {
 
         // Probe: OPFS volume first (offline revisit), then HTTP Range.
         onProgress?.('Checking local cache…', 18);
+        const meta = await this._readCacheManifest();
+        if (meta?.totalBytes) this._totalBytes = meta.totalBytes;
+        if (meta?.complete) this._opfsCacheStatus.complete = true;
+
         preamble = await this._readOpfsVolumeRange(0, PREAMBLE_PROBE + 1);
         if (preamble?.length && !hasQ42V3Magic(preamble)) {
             console.warn('[VFS] Stale OPFS volume — clearing and re-fetching from network');
@@ -653,11 +657,9 @@ export class VFS {
             preamble = null;
         }
         if (preamble?.length) {
-            this._opfsCacheStatus.source = 'opfs';
+            this._opfsCacheStatus.source = meta?.complete ? 'opfs' : 'opfs-partial';
             try {
-                const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
-                this._totalBytes = (await fh.getFile()).size;
-                if (this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
+                if (this._opfsCacheStatus.complete && this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
                     const all = await this._readOpfsVolumeRange(0, this._totalBytes);
                     if (all?.length === this._totalBytes && hasQ42V3Magic(all)) {
                         this._fullVolume = all;
@@ -670,12 +672,11 @@ export class VFS {
         if (!preamble?.length) {
             onProgress?.('Downloading dataset header…', 28);
             preamble = await this._fetchVolumeBytes(0, PREAMBLE_PROBE + 1);
-            if (preamble?.length) {
-                if (preamble.length > PREAMBLE_PROBE + 1) {
-                    await this._writeOpfsVolume(preamble);
-                } else {
-                    await this._writeOpfsVolumeRange(0, preamble);
-                }
+            if (this._fullVolume && this._fullVolume.length >= HEADER_SIZE) {
+                preamble = this._fullVolume;
+                await this._writeOpfsVolume(this._fullVolume);
+            } else if (preamble?.length) {
+                await this._writeOpfsVolumeRange(0, preamble);
             }
         }
 
@@ -683,7 +684,10 @@ export class VFS {
         if (!this._fullVolume && this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
             onProgress?.('Downloading dataset…', 30);
             const all = await this._loadFullVolume();
-            if (all?.length >= HEADER_SIZE) preamble = all;
+            if (all?.length >= HEADER_SIZE) {
+                preamble = all;
+                await this._writeOpfsVolume(all);
+            }
         }
 
         if (!preamble || preamble.length < HEADER_SIZE) {
@@ -839,7 +843,7 @@ export class VFS {
 
         const magic = String.fromCharCode(raw[0], raw[1], raw[2], raw[3]);
         if (magic !== 'BIDX') {
-            console.warn('[VFS] BIDX magic mismatch — skipping');
+            console.warn('[VFS] BIDX magic mismatch — skipping, got:', JSON.stringify(magic), 'len:', raw.length, 'first bytes:', Array.from(raw.slice(0, 8)));
             return;
         }
 
@@ -859,11 +863,22 @@ export class VFS {
             console.warn('[VFS] BIDX size mismatch — skipping');
             return;
         }
-        this._blockRanges = new BigUint64Array(
-            raw.buffer,
-            raw.byteOffset + 16,
-            blockCount * 2
-        );
+        const bidxOffset = raw.byteOffset + 16;
+        if (bidxOffset % 8 === 0) {
+            this._blockRanges = new BigUint64Array(
+                raw.buffer,
+                bidxOffset,
+                blockCount * 2
+            );
+        } else {
+            // Buffer is unaligned: copy the bytes to guarantee 8-byte alignment
+            const copy = raw.slice(16, 16 + blockCount * 16);
+            this._blockRanges = new BigUint64Array(
+                copy.buffer,
+                copy.byteOffset,
+                blockCount * 2
+            );
+        }
         this._bidxLoaded = true;
         console.log(`[VFS] BIDX loaded: ${blockCount} block ranges`);
     }
@@ -1193,9 +1208,23 @@ export class VFS {
         return null;
     }
 
+    async _readCacheManifest() {
+        if (!this._opfsVault) return null;
+        try {
+            const fh = await this._opfsVault.getFileHandle(OPFS_CACHE_META);
+            const file = await fh.getFile();
+            const text = await file.text();
+            return JSON.parse(text);
+        } catch (_) {
+            return null;
+        }
+    }
+
     async _readOpfsVolumeRange(offset, size) {
         if (!this._opfsVault || !size) return null;
         try {
+            // Non-zero offset reads from OPFS are only safe if the volume is fully cached
+            if (offset > 0 && !this._opfsCacheStatus.complete) return null;
             const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
             const file = await fh.getFile();
             if (file.size < offset + size) return null;
@@ -1241,11 +1270,13 @@ export class VFS {
         const writable = await fh.createWritable();
         await writable.write(bytes);
         await writable.close();
+        this._totalBytes = bytes.byteLength;
         await this._writeCacheManifest({
             url: this._remoteUrl,
+            totalBytes: bytes.byteLength,
             size: bytes.byteLength,
             cachedAt: Date.now(),
-            complete: this._totalBytes ? bytes.byteLength === this._totalBytes : true,
+            complete: true,
         });
         await this._refreshOpfsCacheStatus();
     }
@@ -1253,6 +1284,21 @@ export class VFS {
     async _writeOpfsVolumeRange(offset, bytes) {
         if (!this._opfsVault) return;
         try {
+            if (offset === 0) {
+                const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE, { create: true });
+                const writable = await fh.createWritable();
+                await writable.write(bytes);
+                await writable.close();
+                await this._writeCacheManifest({
+                    url: this._remoteUrl,
+                    totalBytes: this._totalBytes || 0,
+                    size: bytes.byteLength,
+                    cachedAt: Date.now(),
+                    complete: Boolean(this._totalBytes && bytes.byteLength === this._totalBytes),
+                });
+                await this._refreshOpfsCacheStatus();
+                return;
+            }
             const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE, { create: true });
             if (typeof fh.createSyncAccessHandle === 'function') {
                 const access = await fh.createSyncAccessHandle({ mode: 'readwrite' });
@@ -1262,22 +1308,7 @@ export class VFS {
                 } finally {
                     access.close();
                 }
-            } else {
-                const existing = await this._readOpfsVolumeRange(0, Math.max(offset + bytes.length, this._totalBytes || 0));
-                const out = existing?.length
-                    ? existing
-                    : new Uint8Array(Math.max(offset + bytes.length, this._totalBytes || offset + bytes.length));
-                out.set(bytes, offset);
-                await this._writeOpfsVolume(out);
-                return;
             }
-            await this._writeCacheManifest({
-                url: this._remoteUrl,
-                size: this._totalBytes || offset + bytes.length,
-                cachedAt: Date.now(),
-                complete: false,
-            });
-            await this._refreshOpfsCacheStatus();
         } catch (e) {
             console.warn('[VFS] OPFS range write failed:', e.message);
         }
@@ -1294,13 +1325,15 @@ export class VFS {
     async _refreshOpfsCacheStatus() {
         if (!this._opfsVault) return;
         try {
+            const meta = await this._readCacheManifest();
             const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
             const file = await fh.getFile();
-            const complete = this._totalBytes > 0 && file.size === this._totalBytes;
+            const total = this._totalBytes || meta?.totalBytes || 0;
+            const complete = Boolean((meta?.complete) || (total > 0 && file.size === total));
             this._opfsCacheStatus = {
                 complete,
                 bytesCached: file.size,
-                totalBytes: this._totalBytes || file.size,
+                totalBytes: total || file.size,
                 prefetching: this._prefetching,
                 source: complete ? 'opfs' : (file.size > 0 ? 'opfs-partial' : 'network'),
             };
@@ -1420,33 +1453,78 @@ export class VFS {
 
         const entryCount    = buf.getBigUint64(8,  true);
         const stringsOffset = buf.getBigUint64(16, true);
-        const indexStart    = 32;
-
-        const stringsBase = Number(stringsOffset);
-        const strBlob = new Uint8Array(raw.buffer, raw.byteOffset + stringsBase, raw.length - stringsBase);
+        const formatVersion = raw.length >= 32 ? Number(buf.getBigUint64(24, true)) : 1;
         const td = new TextDecoder('utf-8');
 
-        for (let i = 0n; i < entryCount; i++) {
-            const base = indexStart + Number(i) * 16;
-            const hash   = buf.getBigUint64(base,     true);
-            const strOff = buf.getBigUint64(base + 8, true);
+        if (formatVersion === 2) {
+            // Paged Q42LEX v2: directory of pages followed by uncompressed pages
+            const pageCount = Number(buf.getBigUint64(32, true));
+            for (let p = 0; p < pageCount; p++) {
+                const dirOffset = 40 + p * 32;
+                if (dirOffset + 28 > raw.length) break;
+                const pageOffset = Number(buf.getBigUint64(dirOffset + 8, true));
+                const pageLength = Number(buf.getBigUint64(dirOffset + 16, true));
+                const count = buf.getUint32(dirOffset + 24, true);
 
-            const off = Number(strOff);
-            const tag = strBlob[off];
-            let len, strStart;
-            // v3 embedded lex uses a 1-byte type tag before u16 length.
-            if (tag === 0x01 || tag === 0x03) {
-                len = strBlob[off + 1] | (strBlob[off + 2] << 8);
-                strStart = off + 3;
-            } else if (tag === 0x02) {
-                continue; // embedded triple — no string label
-            } else {
-                // Legacy side-car: u16 length at offset, no tag byte.
-                len = strBlob[off] | (strBlob[off + 1] << 8);
-                strStart = off + 2;
+                if (pageOffset + 16 > raw.length) continue;
+                const blobOffset = Number(buf.getBigUint64(pageOffset + 8, true));
+                const indexStart = pageOffset + 16;
+
+                for (let e = 0; e < count; e++) {
+                    const idx = indexStart + e * 16;
+                    if (idx + 16 > raw.length) break;
+                    const hash = buf.getBigUint64(idx, true);
+                    const relOff = Number(buf.getBigUint64(idx + 8, true));
+                    const strStart = pageOffset + blobOffset + relOff;
+                    if (strStart >= raw.length) continue;
+
+                    const tag = raw[strStart];
+                    let len, textStart;
+                    if (tag === 0x01 || tag === 0x03) {
+                        len = raw[strStart + 1] | (raw[strStart + 2] << 8);
+                        textStart = strStart + 3;
+                    } else if (tag === 0x02) {
+                        continue;
+                    } else {
+                        len = raw[strStart] | (raw[strStart + 1] << 8);
+                        textStart = strStart + 2;
+                    }
+                    if (textStart + len <= raw.length) {
+                        const str = td.decode(raw.subarray(textStart, textStart + len));
+                        this._lexMap.set(hash, str);
+                    }
+                }
             }
-            const str = td.decode(strBlob.subarray(strStart, strStart + len));
-            this._lexMap.set(hash, str);
+        } else {
+            // Monolithic Q42LEX v1
+            const indexStart = 32;
+            const stringsBase = Number(stringsOffset);
+            const strBlob = new Uint8Array(raw.buffer, raw.byteOffset + stringsBase, raw.length - stringsBase);
+
+            for (let i = 0n; i < entryCount; i++) {
+                const base = indexStart + Number(i) * 16;
+                if (base + 16 > raw.length) break;
+                const hash   = buf.getBigUint64(base,     true);
+                const strOff = buf.getBigUint64(base + 8, true);
+
+                const off = Number(strOff);
+                if (off >= strBlob.length) continue;
+                const tag = strBlob[off];
+                let len, strStart;
+                if (tag === 0x01 || tag === 0x03) {
+                    len = strBlob[off + 1] | (strBlob[off + 2] << 8);
+                    strStart = off + 3;
+                } else if (tag === 0x02) {
+                    continue;
+                } else {
+                    len = strBlob[off] | (strBlob[off + 1] << 8);
+                    strStart = off + 2;
+                }
+                if (strStart + len <= strBlob.length) {
+                    const str = td.decode(strBlob.subarray(strStart, strStart + len));
+                    this._lexMap.set(hash, str);
+                }
+            }
         }
 
         this._lexLoaded = true;

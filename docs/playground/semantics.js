@@ -105,35 +105,35 @@ function updateUI() {
     if (!activeData) return;
 
     // Simulate the Context vector generation
-    const contextStr = \`year:\${currentYear} + loc:\${activeData.location} + lang:\${activeData.language}\`;
+    const contextStr = `year:${currentYear} + loc:${activeData.location} + lang:${activeData.language}`;
     const contextHash = "0x" + hashString(contextStr);
     const subjectHash = "0x" + hashString(activeData["@id"]);
 
-    const cardHTML = \`
+    const cardHTML = `
         <div class="meaning-card" id="active-card">
-            <h2>"\${activeData.term}"</h2>
-            <div class="definition">"\${activeData["skos:definition"]}"</div>
+            <h2>"${activeData.term}"</h2>
+            <div class="definition">"${activeData["skos:definition"]}"</div>
             
             <div class="metadata-grid">
                 <div class="meta-item">
                     <span>Geographic Boundary</span>
-                    <div class="meta-value">\${activeData.location}</div>
+                    <div class="meta-value">${activeData.location}</div>
                 </div>
                 <div class="meta-item">
                     <span>Language / Lexicon</span>
-                    <div class="meta-value">\${activeData.language}</div>
+                    <div class="meta-value">${activeData.language}</div>
                 </div>
                 <div class="meta-item">
                     <span>Subject Hash (Static Anchor)</span>
-                    <div class="meta-value" style="color: #fff;">\${subjectHash}</div>
+                    <div class="meta-value" style="color: #fff;">${subjectHash}</div>
                 </div>
                 <div class="meta-item">
                     <span>Active Context Vector (Time+Space)</span>
-                    <div class="context-hash">\${contextHash}</div>
+                    <div class="context-hash">${contextHash}</div>
                 </div>
             </div>
         </div>
-    \`;
+    `;
 
     container.innerHTML = cardHTML;
 }

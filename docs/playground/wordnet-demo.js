@@ -160,6 +160,7 @@ window.mountDataset = async function mountDataset() {
 
   try {
     activeVfs = await provider.mount(id, { loadLex: true });
+    window.activeVfs = activeVfs;
 
     if (ds.compressed) {
       // Compressed LZ4 block-stream: fetch + decompress once (no Range support).
