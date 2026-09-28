@@ -179,6 +179,20 @@
       "group": "Benchmarks"
     },
     {
+      "label": "VibeScript vs V8",
+      "href": "benchmark.html#vibescript",
+      "icon": "fa-bolt",
+      "highlight": true,
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Geometry & Renderer",
+      "href": "benchmark.html#geometry",
+      "icon": "fa-shapes",
+      "highlight": true,
+      "group": "Benchmarks"
+    },
+    {
       "label": "Browser LLM",
       "href": "benchmark.html#llm",
       "icon": "fa-robot",
