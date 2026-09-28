@@ -16,6 +16,7 @@ The compile-time source of truth is
 
 | Product | Cargo selection | Intended use | Included | Explicitly excluded |
 |---|---|---|---|---|
+| WebCivics | `qualia-core-db --no-default-features --features wasm-webcivics` | WebCivics Databox & Civics.au runtime | Logic, N3/Turtle, SPARQL subset, SHACL, deontic/epistemic/paraconsistent, LWW CRDT, HCF yaml-ld-q42 SoT ingest, Solid RDF interop | Heavy LLM weights / native daemon / GPU (unless portal enabled) |
 | Ontology MCP | `-p webizen-lite-wasm` | Read-only ontology sites such as `ns.webcivics.net` | MCP JSON-RPC, N3 inspection, bounded Quin query, SHACL property validation, deontic, epistemic, paraconsistent, LTL, DL, ASP/linear kernels, governance mapping | Portal, WebGPU, science, LLM, daemon, network, filesystem storage |
 | Portal | `qualia-core-db --no-default-features --features portal` | Full browser engine (GitHub Pages / QApp) | JSON/CBOR ingest, 10D tensor, spatial encoding, WebGPU viewport, AcousticPlane, N3/SHACL/modal logic, WASM-safe science (CAS, DFT, ODE, bio, chem) | Native daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF. LLM is the `wasm-llm` / `wasm-full` package |
 | Logic | `qualia-core-db --no-default-features --features wasm-logic` | RDF/rule demos and the browser reasoning API | N3/Turtle, RDF serialization, bytecode query, numeric SHACL, modal logic, LWW CRDT, WASM-safe science | Native daemon/filesystem/NVMe/BLE mesh; LLM |
@@ -79,6 +80,7 @@ allocation occurs only at the JSON/MCP boundary.
 
 ```powershell
 cargo check --target wasm32-unknown-unknown -p webizen-lite-wasm
+cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-webcivics
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features portal
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-logic
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-scientific

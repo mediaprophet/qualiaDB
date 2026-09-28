@@ -9,13 +9,13 @@
 // `webizen-studio` expects (`/manifest`, `/telemetry`).
 
 use axum::{
-    extract::{OriginalUri, Path, Query, State},
+    extract::{ConnectInfo, OriginalUri, Path, Query, State},
     http::{header, HeaderMap, HeaderValue, Method, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
         IntoResponse, Response,
     },
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 use futures_util::stream::{self, Stream};
@@ -76,6 +76,7 @@ pub struct SettingsServerState {
     pub listen_port: Arc<Mutex<u16>>,
     pub static_root: PathBuf,
     pub host_api: crate::companion_gateway::HostApiHandle,
+    pub saved_items: Arc<Mutex<crate::saved_items::SavedItemsStore>>,
 }
 
 #[derive(Serialize)]
@@ -284,6 +285,9 @@ pub fn spawn_settings_server(
         listen_port: Arc::new(Mutex::new(port)),
         static_root: static_portal_dir(),
         host_api: host_api.clone(),
+        saved_items: Arc::new(Mutex::new(crate::saved_items::SavedItemsStore::new(
+            &storage_path,
+        ))),
     };
 
     let companion_port = find_open_port("0.0.0.0", port.saturating_add(1));
@@ -375,6 +379,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/shell", get(shell_handler))
         .route("/os-shell", get(os_shell_handler))
         .route("/shell.css", get(os_shell_css_handler))
+        .route("/os-shell/i18n.js", get(os_shell_i18n_handler))
         .route("/volumes.css", get(volumes_css_handler))
         .route("/os-shell/volumes.css", get(volumes_css_handler))
         .route("/os-shell/shell.css", get(os_shell_css_handler))
@@ -391,6 +396,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/volumes/console", get(console_volume_handler))
         .route("/volumes/poet", get(poet_volume_handler))
         .route("/volumes/wellfair", get(wellfair_volume_handler))
+        .route("/volumes/health", get(health_volume_handler))
         .route("/volumes/projects", get(projects_volume_handler))
         // Legacy Studio SPA — WEBIZEN_LEGACY_SHELL / --legacy-shell only.
         .route("/talk", get(studio_index_handler))
@@ -404,13 +410,54 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/admin", get(admin_handler))
         .route("/wallet", get(wallet_handler))
         .route("/api/wallet/overview", get(wallet_overview_handler))
-        .route("/api/wallet/nym", get(wallet_nym_status_handler).post(wallet_nym_handler))
+        .route(
+            "/api/wallet/nym",
+            get(wallet_nym_status_handler).post(wallet_nym_handler),
+        )
         .route("/jobs", get(studio_index_handler))
         .route("/logs", get(studio_index_handler))
         .route("/desktop-logs", get(logs_page_handler))
         .route("/api/logs", get(logs_json_handler))
         .route("/api/logs/text", get(logs_text_handler))
         .route("/api/status", get(status_handler))
+        // Personal Saved Items remain local-only. They are not graph records,
+        // social posts, or a LAN-sharing surface.
+        .route(
+            "/api/saved-items",
+            get(saved_items_list_handler).post(saved_items_create_handler),
+        )
+        .route("/api/saved-items/{id}", put(saved_items_update_handler))
+        // Mail bodies and account selection are loopback-only. Sending can
+        // use a locally configured SMTP account without exposing its secret.
+        .route("/api/mail/messages", get(mail_messages_handler))
+        .route("/api/mail/messages/{id}/read", post(mail_mark_read_handler))
+        .route("/api/mail/send", post(mail_send_handler))
+        // Explicit local setup for the social network and domain-wide mail.
+        // These endpoints generate data or bind a loopback listener only; they
+        // never contact a peer or change public DNS on their own.
+        .route("/api/network/peers", get(network_peers_handler))
+        .route("/api/network/identifier", post(network_identifier_handler))
+        .route("/api/network/accept", post(network_accept_handler))
+        .route("/api/mail/domain", post(mail_domain_handler))
+        .route("/api/mail/receiver", get(mail_receiver_handler).post(mail_receiver_start_handler))
+        .route("/api/mail/domains", get(mail_domains_handler).post(mail_domain_register_handler))
+        .route("/api/mail/domains/{domain}/onboard", post(mail_domain_onboard_handler))
+        .route("/api/mail/domains/{domain}/front-door", get(mail_front_door_handler))
+        .route("/api/mail/aliases", post(mail_alias_handler))
+        .route("/api/mail/accounts", get(mail_accounts_handler).post(mail_account_save_handler))
+        .route("/api/mail/accounts/fetch", post(mail_accounts_fetch_handler))
+        .route("/api/talk/sessions", post(talk_session_create_handler))
+        .route("/api/talk/sessions/{id}", get(talk_session_load_handler))
+        .route("/api/talk/sessions/{id}/messages", post(talk_message_append_handler))
+        .route("/api/projects", get(projects_list_handler).post(projects_create_handler))
+        // Native model access for the local OS-shell Instruments volume. The
+        // handler itself requires a loopback peer; the broader control-plane
+        // listener also serves fleet endpoints on this host.
+        .route(
+            "/api/instruments/status",
+            get(instrument_status_handler),
+        )
+        .route("/api/instruments/infer", post(instrument_infer_handler))
         // Installable remote Surface Controller (phone PWA) + view session API
         .route("/remote-controller", get(remote_controller_index))
         .route("/remote-controller/", get(remote_controller_index))
@@ -517,9 +564,12 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         "info",
         format!("settings control plane listening on http://127.0.0.1:{port}/"),
     );
-    axum::serve(listener, app)
-        .await
-        .map_err(|e| format!("settings server: {e}"))
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .map_err(|e| format!("settings server: {e}"))
 }
 
 fn control_plane_cors(port: u16) -> CorsLayer {
@@ -888,7 +938,6 @@ async fn admin_handler() -> Response {
     volume_html_response(crate::shell::ADMIN_VOLUME_HTML)
 }
 
-
 fn volume_html_response(html: &'static str) -> Response {
     Response::builder()
         .status(StatusCode::OK)
@@ -904,6 +953,18 @@ async fn os_shell_css_handler() -> Response {
         .header(header::CONTENT_TYPE, "text/css; charset=utf-8")
         .header(header::CACHE_CONTROL, "no-cache")
         .body(crate::shell::OS_SHELL_CSS.to_string().into())
+        .unwrap()
+}
+
+async fn os_shell_i18n_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(
+            header::CONTENT_TYPE,
+            "application/javascript; charset=utf-8",
+        )
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(crate::shell::OS_SHELL_I18N_JS.to_string().into())
         .unwrap()
 }
 
@@ -941,7 +1002,6 @@ async fn settings_volume_handler() -> Response {
     volume_html_response(crate::shell::SETTINGS_VOLUME_HTML)
 }
 
-
 async fn admin_volume_handler() -> Response {
     volume_html_response(crate::shell::ADMIN_VOLUME_HTML)
 }
@@ -958,13 +1018,16 @@ async fn wellfair_volume_handler() -> Response {
     volume_html_response(crate::shell::WELLFAIR_VOLUME_HTML)
 }
 
+async fn health_volume_handler() -> Response {
+    volume_html_response(crate::shell::HEALTH_VOLUME_HTML)
+}
+
 async fn projects_volume_handler() -> Response {
     volume_html_response(crate::shell::PROJECTS_VOLUME_HTML)
 }
 
 /// Wallet orbit tile — Lightning · Nym · eCash · tokens (not MCP-only). No ETH target.
 async fn wallet_handler() -> Response {
-
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
@@ -999,7 +1062,10 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
     };
     // Live only when nym-sdk client is up AND a real address is claimed (no n1…).
     let nym_live = qualia_client_core::api::nym_live_status_json();
-    let nym_client_live = nym_live.get("live").and_then(|v| v.as_bool()).unwrap_or(false);
+    let nym_client_live = nym_live
+        .get("live")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let nym_addr = {
         let from_client = nym_live
             .get("address")
@@ -1077,9 +1143,21 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
         }
     }
 
-    let ln_status = if !ln_addr.is_empty() { "live" } else { "planned" };
-    let nym_status = if !nym_addr.is_empty() { "live" } else { "planned" };
-    let xec_status = if !xec_addr.is_empty() { "live" } else { "planned" };
+    let ln_status = if !ln_addr.is_empty() {
+        "live"
+    } else {
+        "planned"
+    };
+    let nym_status = if !nym_addr.is_empty() {
+        "live"
+    } else {
+        "planned"
+    };
+    let xec_status = if !xec_addr.is_empty() {
+        "live"
+    } else {
+        "planned"
+    };
     let tokens_status = if token_claim { "live" } else { "planned" };
 
     Json(serde_json::json!({
@@ -1103,7 +1181,6 @@ async fn wallet_overview_handler() -> Json<serde_json::Value> {
         "assets": assets
     }))
 }
-
 
 #[derive(Debug, Deserialize)]
 struct WalletNymBody {
@@ -1144,6 +1221,498 @@ async fn wallet_nym_handler(
 }
 
 pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
+
+#[derive(Deserialize)]
+struct InstrumentInferRequest {
+    prompt: String,
+}
+
+/// This endpoint is deliberately limited to requests that originate from the
+/// local machine. The settings control plane also has fleet routes, so merely
+/// being served by the same listener is not sufficient authority to consume a
+/// resident model or reveal its output.
+async fn instrument_infer_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(request): Json<InstrumentInferRequest>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({ "error": "local Instruments inference is loopback-only" })),
+        )
+            .into_response();
+    }
+
+    match crate::commands::agent_qa::instrument_infer(request.prompt).await {
+        Ok(result) => Json(result).into_response(),
+        Err(error) => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": error })),
+        )
+            .into_response(),
+    }
+}
+
+async fn instrument_status_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({ "error": "local Instruments status is loopback-only" })),
+        )
+            .into_response();
+    }
+    match crate::commands::agent_qa::instrument_status() {
+        Ok(result) => Json(result).into_response(),
+        Err(error) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({ "error": error })),
+        )
+            .into_response(),
+    }
+}
+
+/// Saved Items are ordinary local notes and saved pages. They deliberately do
+/// not cross the LAN listener, become graph facts, or inherit remote sharing.
+async fn saved_items_list_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(state): State<SettingsServerState>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_saved_items_response();
+    }
+    match state.saved_items.lock() {
+        Ok(store) => match store.list() {
+            Ok(items) => Json(serde_json::json!({ "items": items })).into_response(),
+            Err(error) => saved_items_error_response(StatusCode::INTERNAL_SERVER_ERROR, error),
+        },
+        Err(_) => saved_items_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Saved Items storage is unavailable.".to_string(),
+        ),
+    }
+}
+
+async fn saved_items_create_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(state): State<SettingsServerState>,
+    Json(item): Json<crate::saved_items::NewSavedItem>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_saved_items_response();
+    }
+    match state.saved_items.lock() {
+        Ok(store) => match store.create(item) {
+            Ok(saved) => (StatusCode::CREATED, Json(saved)).into_response(),
+            Err(error) => saved_items_error_response(StatusCode::BAD_REQUEST, error),
+        },
+        Err(_) => saved_items_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Saved Items storage is unavailable.".to_string(),
+        ),
+    }
+}
+
+async fn saved_items_update_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(state): State<SettingsServerState>,
+    Path(id): Path<String>,
+    Json(change): Json<crate::saved_items::SavedItemChange>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_saved_items_response();
+    }
+    match state.saved_items.lock() {
+        Ok(store) => match store.update(&id, change) {
+            Ok(saved) => Json(saved).into_response(),
+            Err(error) if error == "Saved item was not found." => {
+                saved_items_error_response(StatusCode::NOT_FOUND, error)
+            }
+            Err(error) => saved_items_error_response(StatusCode::BAD_REQUEST, error),
+        },
+        Err(_) => saved_items_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Saved Items storage is unavailable.".to_string(),
+        ),
+    }
+}
+
+fn local_only_saved_items_response() -> Response {
+    saved_items_error_response(
+        StatusCode::FORBIDDEN,
+        "Saved Items is available only on this device.".to_string(),
+    )
+}
+
+fn saved_items_error_response(status: StatusCode, error: String) -> Response {
+    (status, Json(serde_json::json!({ "error": error }))).into_response()
+}
+
+/// Return messages actually accepted into this device's product inbox. This
+/// remains loopback-only because message bodies may contain personal data.
+async fn mail_messages_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::mail_list(None, Some(true)) {
+        Ok(messages) => Json(messages).into_response(),
+        Err(error) => mail_error_response(StatusCode::INTERNAL_SERVER_ERROR, error),
+    }
+}
+
+/// Marking a message read is a local inbox state change, not a network action.
+async fn mail_mark_read_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Path(id): Path<String>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::mail_set_read(id, true) {
+        Ok(message) => Json(message).into_response(),
+        Err(error) if error.starts_with("unknown message") => {
+            mail_error_response(StatusCode::NOT_FOUND, "Message was not found.".to_string())
+        }
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+#[derive(Deserialize)]
+struct MailSendRequest {
+    account_id: String,
+    to: String,
+    subject: String,
+    body: String,
+}
+
+/// Submit mail only through an account the person previously configured on
+/// this device. The mail core returns delivery metadata, never SMTP secrets.
+async fn mail_send_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(request): Json<MailSendRequest>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::mail_send_account(
+        request.account_id,
+        request.to,
+        request.subject,
+        request.body,
+    ) {
+        Ok(result) => Json(result).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+fn local_only_mail_response() -> Response {
+    mail_error_response(
+        StatusCode::FORBIDDEN,
+        "Mail is available only on this device.".to_string(),
+    )
+}
+
+fn mail_error_response(status: StatusCode, error: String) -> Response {
+    (status, Json(serde_json::json!({ "error": error }))).into_response()
+}
+
+#[derive(Deserialize)]
+struct NetworkIdentifierRequest {
+    #[serde(default)]
+    front_door_did: String,
+    #[serde(default = "default_connection_relation")]
+    relation_type: String,
+    #[serde(default)]
+    domain: String,
+}
+
+fn default_connection_relation() -> String {
+    "collaborator".to_string()
+}
+
+#[derive(Deserialize)]
+struct MailDomainRequest {
+    domain: String,
+    #[serde(default)]
+    mx_host: String,
+}
+
+#[derive(Deserialize)]
+struct NetworkAcceptRequest { link: String }
+
+#[derive(Deserialize)]
+struct TalkSessionRequest { title: String }
+#[derive(Deserialize)]
+struct TalkMessageRequest { content: String }
+#[derive(Deserialize)]
+struct ProjectCreateRequest { name: String, #[serde(default)] description: String }
+
+#[derive(Deserialize)]
+struct MailDomainRegistrationRequest {
+    domain: String,
+    front_door_did: String,
+    #[serde(default)]
+    label: String,
+}
+
+#[derive(Deserialize)]
+struct MailAliasRequest {
+    domain: String,
+    local: String,
+    relationship_did: String,
+}
+
+async fn network_peers_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_network_response();
+    }
+    match qualia_client_core::api::list_social_peers() {
+        Ok(peers) => Json(peers).into_response(),
+        Err(error) => network_error_response(StatusCode::INTERNAL_SERVER_ERROR, error),
+    }
+}
+
+/// Generates a signed, seven-day connection identifier locally. It does not
+/// publish or transmit the resulting link; the person decides how to share it.
+async fn network_identifier_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(request): Json<NetworkIdentifierRequest>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_network_response();
+    }
+    let result = if request.domain.trim().is_empty() {
+        qualia_client_core::api::generate_connection_identifier(
+            request.front_door_did,
+            request.relation_type,
+        )
+    } else {
+        qualia_client_core::api::generate_magic_link(
+            request.front_door_did,
+            request.relation_type,
+            request.domain,
+        )
+    };
+    match result {
+        Ok(identifier) => Json(identifier).into_response(),
+        Err(error) => network_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+/// Accepting is an explicit relationship action. The signed identifier is
+/// verified locally before a peer record is created.
+async fn network_accept_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(request): Json<NetworkAcceptRequest>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_network_response(); }
+    match qualia_client_core::api::accept_connection(request.link) {
+        Ok(connection) => Json(connection).into_response(),
+        Err(error) => network_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+async fn talk_session_create_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>, Json(request): Json<TalkSessionRequest>) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_network_response(); }
+    match qualia_client_core::api::create_chat_session(Some(request.title)) {
+        Ok(id) => Json(serde_json::json!({"id": id})).into_response(),
+        Err(error) => network_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+async fn talk_session_load_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>, Path(id): Path<String>) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_network_response(); }
+    match qualia_client_core::api::load_chat_session(id) {
+        Ok(session) => Json(session).into_response(),
+        Err(error) => network_error_response(StatusCode::NOT_FOUND, error),
+    }
+}
+async fn talk_message_append_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>, Path(id): Path<String>, Json(request): Json<TalkMessageRequest>) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_network_response(); }
+    if request.content.trim().is_empty() { return network_error_response(StatusCode::BAD_REQUEST, "Message cannot be empty.".to_string()); }
+    match qualia_client_core::api::append_chat_message(id, "user".to_string(), request.content) {
+        Ok(lamport) => Json(serde_json::json!({"lamport": lamport})).into_response(),
+        Err(error) => network_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+async fn projects_list_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_network_response(); }
+    match qualia_client_core::api::list_coop_projects() { Ok(projects) => Json(projects).into_response(), Err(error) => network_error_response(StatusCode::INTERNAL_SERVER_ERROR,error) }
+}
+async fn projects_create_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>, Json(request): Json<ProjectCreateRequest>) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_network_response(); }
+    match qualia_client_core::api::create_coop_project(request.name,request.description) { Ok(project) => (StatusCode::CREATED,Json(project)).into_response(), Err(error) => network_error_response(StatusCode::BAD_REQUEST,error) }
+}
+
+async fn mail_domain_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(request): Json<MailDomainRequest>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    let domain = request.domain.trim();
+    if domain.is_empty() || domain.contains(char::is_whitespace) {
+        return mail_error_response(StatusCode::BAD_REQUEST, "Enter a domain name.".to_string());
+    }
+    match qualia_client_core::api::mail_dns_forms(
+        domain.to_string(),
+        (!request.mx_host.trim().is_empty()).then_some(request.mx_host),
+    ) {
+        Ok(forms) => Json(forms).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+async fn mail_receiver_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::mail_receiver_status() {
+        Ok(status) => Json(status).into_response(),
+        Err(error) => mail_error_response(StatusCode::INTERNAL_SERVER_ERROR, error),
+    }
+}
+
+/// Starts only the default loopback SMTP receiver. Publishing a public MX or
+/// tunnel remains an intentional administrator action outside this UI.
+async fn mail_receiver_start_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::mail_receiver_start(None) {
+        Ok(status) => Json(status).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+async fn mail_domains_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::list_mail_domains() {
+        Ok(domains) => Json(domains).into_response(),
+        Err(error) => mail_error_response(StatusCode::INTERNAL_SERVER_ERROR, error),
+    }
+}
+
+/// Registers a domain in the local address book. It neither purchases the
+/// domain nor changes public DNS; ownership and DNS remain a human action.
+async fn mail_domain_register_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(request): Json<MailDomainRegistrationRequest>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    let label = if request.label.trim().is_empty() {
+        request.domain.clone()
+    } else {
+        request.label
+    };
+    match qualia_client_core::api::add_mail_domain(
+        request.domain,
+        "person".to_string(),
+        request.front_door_did,
+        label,
+        None,
+    ) {
+        Ok(domains) => Json(domains).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+/// Creates the built-in purpose addresses and a quarantined catch-all for a
+/// previously registered domain. Starting the loopback receiver is part of
+/// this explicit onboarding action.
+async fn mail_domain_onboard_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Path(domain): Path<String>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::onboard_mail_domain(domain) {
+        Ok(result) => Json(result).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+/// DNS-assisted domain linking: `_qdp` is a self-describing front-door TXT
+/// record, separate from MX. It lets another Webizen verify the domain's
+/// advertised identifier before accepting a relationship invitation.
+async fn mail_front_door_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Path(domain): Path<String>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::front_door_forms(domain) {
+        Ok(forms) => Json(forms).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+/// Mints an exact pairwise address (for a relationship or site) before the
+/// catch-all rule gets a chance to receive it.
+async fn mail_alias_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(request): Json<MailAliasRequest>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) {
+        return local_only_mail_response();
+    }
+    match qualia_client_core::api::mint_relationship_address(
+        request.domain,
+        request.local,
+        request.relationship_did,
+    ) {
+        Ok(addresses) => Json(addresses).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+async fn mail_accounts_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_mail_response(); }
+    match qualia_client_core::api::mail_accounts() {
+        Ok(accounts) => Json(accounts).into_response(),
+        Err(error) => mail_error_response(StatusCode::INTERNAL_SERVER_ERROR, error),
+    }
+}
+
+async fn mail_account_save_handler(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(account): Json<qualia_client_core::mail_accounts::MailAccount>,
+) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_mail_response(); }
+    match qualia_client_core::api::save_mail_account(account) {
+        Ok(accounts) => Json(accounts).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+async fn mail_accounts_fetch_handler(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> Response {
+    if !is_local_instrument_peer(&peer) { return local_only_mail_response(); }
+    match qualia_client_core::api::mail_fetch_all_accounts() {
+        Ok(result) => Json(result).into_response(),
+        Err(error) => mail_error_response(StatusCode::BAD_REQUEST, error),
+    }
+}
+
+fn local_only_network_response() -> Response {
+    network_error_response(
+        StatusCode::FORBIDDEN,
+        "Social network setup is available only on this device.".to_string(),
+    )
+}
+
+fn network_error_response(status: StatusCode, error: String) -> Response {
+    (status, Json(serde_json::json!({ "error": error }))).into_response()
+}
+
+#[inline]
+fn is_local_instrument_peer(peer: &SocketAddr) -> bool {
+    peer.ip().is_loopback()
+}
 
 async fn status_handler(State(state): State<SettingsServerState>) -> Json<StatusResponse> {
     let config = state.app_state.config.lock().unwrap().clone();
@@ -1890,7 +2459,10 @@ mod ui_route_tests {
         assert!(html.contains("Wallet"), "wallet stage title");
         assert!(html.contains("human signs"), "continuity: human signs");
         assert!(html.contains("handle"), "continuity: handle");
-        assert!(html.contains("Planned") || html.contains("planned"), "Planned honesty");
+        assert!(
+            html.contains("Planned") || html.contains("planned"),
+            "Planned honesty"
+        );
         assert!(html.contains("/api/wallet/overview"), "overview fetch");
         assert!(html.contains("Lightning"), "Lightning rail");
         assert!(html.contains("Nym"), "Nym rail");
@@ -1909,10 +2481,16 @@ mod ui_route_tests {
         // Primary cold-shell orbit: Talk · Mail · Directory · Library · Settings
         assert!(html.contains("data-app=\"talk\""), "talk fav tile");
         assert!(html.contains("data-app=\"mail\""), "mail fav tile");
-        assert!(html.contains("data-app=\"directory\""), "directory fav tile");
+        assert!(
+            html.contains("data-app=\"directory\""),
+            "directory fav tile"
+        );
         assert!(html.contains("data-app=\"library\""), "library fav tile");
         assert!(html.contains("data-app=\"settings\""), "settings fav tile");
-        assert!(!html.contains("aria-label=\"Continuity planes\""), "no Continuity ribbon strip");
+        assert!(
+            !html.contains("aria-label=\"Continuity planes\""),
+            "no Continuity ribbon strip"
+        );
         assert!(!html.contains("ribbon-inner"), "no Continuity ribbon strip");
         assert!(
             html.contains("handle ≠ human") || html.contains("agent = tool"),
@@ -1922,15 +2500,39 @@ mod ui_route_tests {
         assert!(html.contains("route:\"/wallet\""), "wallet live route");
         assert!(html.contains("route:\"/volumes/talk\""), "talk bare volume");
         assert!(html.contains("route:\"/volumes/mail\""), "mail bare volume");
-        assert!(html.contains("route:\"/volumes/directory\""), "directory bare volume");
-        assert!(html.contains("route:\"/volumes/library\""), "library bare volume");
-        assert!(html.contains("route:\"/volumes/settings\""), "settings bare volume");
-        assert!(html.contains("route:\"/volumes/browser\""), "browser still in launcher APPS");
-        assert!(!html.contains("route:\"/talk\""), "must not iframe legacy /talk Studio");
-        assert!(!html.contains("route:\"/talk/mail"), "must not iframe Studio mail");
+        assert!(
+            html.contains("route:\"/volumes/directory\""),
+            "directory bare volume"
+        );
+        assert!(
+            html.contains("route:\"/volumes/library\""),
+            "library bare volume"
+        );
+        assert!(
+            html.contains("route:\"/volumes/settings\""),
+            "settings bare volume"
+        );
+        assert!(
+            html.contains("route:\"/volumes/browser\""),
+            "browser still in launcher APPS"
+        );
+        assert!(
+            !html.contains("route:\"/talk\""),
+            "must not iframe legacy /talk Studio"
+        );
+        assert!(
+            !html.contains("route:\"/talk/mail"),
+            "must not iframe Studio mail"
+        );
         assert!(!html.contains("?embed="), "no Studio embed query");
-        assert!(!html.contains("data-app=\"console\""), "Console not on app ring");
-        assert!(html.contains("halo") || html.contains("human"), "humans-first halo");
+        assert!(
+            !html.contains("data-app=\"console\""),
+            "Console not on app ring"
+        );
+        assert!(
+            html.contains("halo") || html.contains("human"),
+            "humans-first halo"
+        );
         assert!(
             html.contains("◉") || html.contains("command wheel") || html.contains("vol-chrome"),
             "Poet command-wheel hub on volume chrome"
@@ -1944,12 +2546,26 @@ mod ui_route_tests {
             "talk volume HTML present"
         );
         assert!(
-            !crate::shell::TALK_VOLUME_HTML.to_ascii_lowercase().contains("relations"),
+            !crate::shell::TALK_VOLUME_HTML
+                .to_ascii_lowercase()
+                .contains("relations"),
             "talk volume must not paint Relations chrome"
         );
         assert!(
             crate::shell::OS_SHELL_CSS.contains(".halo"),
             "elevated shell.css present"
+        );
+        assert!(
+            crate::shell::OS_SHELL_HTML.contains("Saved Items"),
+            "Saved Items is the people-facing name; /volumes/keep stays compatible"
+        );
+        assert!(
+            crate::shell::KEEP_VOLUME_HTML.contains("Saved Items"),
+            "saved-items volume copy is present"
+        );
+        assert!(
+            crate::shell::OS_SHELL_I18N_JS.contains("savedItems.title"),
+            "shell text uses stable translation keys"
         );
     }
 
@@ -1960,5 +2576,15 @@ mod ui_route_tests {
 
         let asset = studio_spa_fallback(OriginalUri("/missing.js".parse().unwrap())).await;
         assert_eq!(asset.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn instruments_inference_is_loopback_only() {
+        assert!(is_local_instrument_peer(&"127.0.0.1:8080".parse().unwrap()));
+        assert!(is_local_instrument_peer(&"[::1]:8080".parse().unwrap()));
+        assert!(!is_local_instrument_peer(
+            &"192.0.2.10:8080".parse().unwrap()
+        ));
+        assert!(crate::shell::INSTRUMENTS_VOLUME_HTML.contains("/api/instruments/infer"));
     }
 }

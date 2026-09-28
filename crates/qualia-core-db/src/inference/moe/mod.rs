@@ -5,6 +5,7 @@
 
 pub mod dispatch;
 pub mod expert_cache;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ftw_loader;
 pub mod nvfp4;
 pub mod placement;
@@ -18,6 +19,7 @@ pub use expert_cache::{
     compute_principled_slot_capacity, ExpertCacheTelemetry, ExpertResidencyProfile,
     MoeOffloadManager, PersonalHardwareTier, SlotAccessOutcome, DEFAULT_GPU_EXPERT_SLOTS,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use ftw_loader::{
     FtwExpertBankSlice, FtwExpertData, FtwManifest, FtwModelPackage, FtwShardEntry, FtwTensorEntry,
 };

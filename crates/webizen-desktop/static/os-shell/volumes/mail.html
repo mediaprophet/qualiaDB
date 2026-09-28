@@ -94,7 +94,7 @@ code{color:var(--cyan);font-size:12px}
 
 <header>
   <h1>Mail <span class="pill live">Live</span></h1>
-  <p class="lead">Inbox that opens. Compose that sends. Locator + messages — no nested hub chrome, no Held theatre.</p>
+  <p class="lead">Read mail accepted by this device. Delivery is available only after a mail transport is configured.</p>
   <div class="continuity" aria-label="Continuity">
     <span><b>who</b> · recipient is a person</span>
     <span><b>claim</b> · mailbox / locator</span>
@@ -107,7 +107,7 @@ code{color:var(--cyan);font-size:12px}
     <div class="ph"><b>Inbox</b><span class="pill live" id="inbox-pill">Live</span></div>
     <div class="pb">
       <div class="row" style="margin-top:0">
-        <button type="button" class="primary" id="btn-compose">Compose</button>
+        <button type="button" class="primary" id="btn-compose">Write</button>
         <button type="button" id="btn-refresh">Refresh</button>
       </div>
       <ul class="list" id="inbox" role="listbox" aria-label="Messages"></ul>
@@ -124,6 +124,9 @@ code{color:var(--cyan);font-size:12px}
         </div>
       </div>
       <div id="compose" hidden>
+        <label class="muted" for="from-account">Send from</label>
+        <select id="from-account" aria-describedby="account-help"></select>
+        <p class="muted" id="account-help">Only accounts with locally configured SMTP submission appear here.</p>
         <label class="muted" for="to">To (person / locator)</label>
         <input id="to" placeholder="Name or locator — never a chatbot as peer" autocomplete="off"/>
         <label class="muted" for="subject" style="margin-top:.65rem">Subject</label>
@@ -135,7 +138,7 @@ code{color:var(--cyan);font-size:12px}
           <button type="button" class="ghost" id="btn-cancel">Cancel</button>
         </div>
       </div>
-      <div class="note"><strong>Volume:</strong> <code>/volumes/mail</code>. Host missing → Planned honesty, never fake folders.</div>
+      <div class="note"><strong>Mail delivery:</strong> credentials remain in the local account configuration. Sending is available only from an SMTP account configured in Settings.</div>
     </div>
   </section>
 </div>
@@ -150,81 +153,116 @@ code{color:var(--cyan);font-size:12px}
   const paneTitle=document.getElementById("pane-title");
   const panePill=document.getElementById("pane-pill");
   const inboxPill=document.getElementById("inbox-pill");
+  const fromAccount=document.getElementById("from-account");
+  const requestedPeer=new URLSearchParams(window.location.search).get("peer")||"";
   let messages=[];
-  let hostLive=false;
 
-  function showRead(html, title, pill, live){
-    compose.hidden=true; read.hidden=false;
-    read.innerHTML=html;
-    paneTitle.textContent=title;
-    panePill.textContent=pill;
+  function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+  function node(tag, text, className){
+    const el=document.createElement(tag);
+    if(text!==undefined) el.textContent=text;
+    if(className) el.className=className;
+    return el;
+  }
+  function formatTime(seconds){
+    if(!seconds) return "Unknown time";
+    return new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeStyle:"short"}).format(new Date(seconds*1000));
+  }
+  function setPane(title, state, live){
+    paneTitle.textContent=title; panePill.textContent=state;
     panePill.className="pill "+(live?"live":"planned");
   }
-  function paintInbox(){
-    inboxEl.innerHTML="";
-    if(!messages.length){
-      const li=document.createElement("li");
-      li.className="muted";
-      li.textContent=hostLive?"Inbox empty — honest. Compose to a person.":"Host offline · Planned until Desktop status binds.";
-      inboxEl.appendChild(li);
-      return;
-    }
-    messages.forEach((m,i)=>{
-      const btn=document.createElement("button");
-      btn.type="button"; btn.className="item"; btn.setAttribute("role","option");
-      btn.innerHTML='<span class="who">'+m.subject+'</span><span class="meta">'+m.from+' · '+m.when+'</span>';
-      btn.addEventListener("click",()=>{
-        showRead('<h2>'+m.subject+'</h2><p class="muted" style="margin:0 0 .75rem">From '+m.from+' · '+m.when+'</p><p style="margin:0;white-space:pre-wrap">'+m.body+'</p>', m.subject, "Live", true);
-        status.textContent="Opened · "+m.subject;
-      });
-      inboxEl.appendChild(btn);
-    });
+  function showEmpty(){
+    compose.hidden=true; read.hidden=false; clear(read);
+    const empty=node("div",undefined,"empty");
+    empty.append(node("strong","Open a message"));
+    empty.append(document.createTextNode("Messages accepted by this device appear here."));
+    read.append(empty); setPane("Message","—",false);
   }
-  function refresh(){
-    status.textContent="Checking host…";
-    fetch("/api/status",{headers:{Accept:"application/json"}}).then(r=>r.ok?r.json():Promise.reject()).then(s=>{
-      hostLive=!!(s&&(s.graph_daemon_reachable||s.ok||s.desktop));
-      inboxPill.textContent=hostLive?"Live":"Planned";
-      inboxPill.className="pill "+(hostLive?"live":"planned");
-      if(hostLive){
-        status.textContent="Mail · host Live · mailbox bind Planned until claim.";
-      }else{
-        status.textContent="Mail · Planned honesty — no fake messages.";
+  async function loadSendingAccounts(){
+    clear(fromAccount);
+    try {
+      const response=await fetch("/api/mail/accounts",{headers:{Accept:"application/json"}});
+      const accounts=await response.json(); if(!response.ok) throw new Error(accounts.error||"Mail account list is unavailable.");
+      const sending=Array.isArray(accounts)?accounts.filter(account=>account.smtp_configured):[];
+      if(!sending.length){
+        const option=node("option","No SMTP account configured"); option.value=""; fromAccount.append(option);
+        document.getElementById("btn-send").disabled=true;
+        return false;
       }
-      paintInbox();
-    }).catch(()=>{
-      hostLive=false;
-      inboxPill.textContent="Planned"; inboxPill.className="pill planned";
-      status.textContent="Mail · overview offline · Planned honesty.";
-      paintInbox();
+      sending.forEach(account=>{ const option=node("option",(account.label||"Mail account")+" · "+(account.address||"")); option.value=account.id; fromAccount.append(option); });
+      document.getElementById("btn-send").disabled=false;
+      return true;
+    } catch(error) {
+      const option=node("option","Mail account list unavailable"); option.value=""; fromAccount.append(option);
+      document.getElementById("btn-send").disabled=true;
+      status.textContent=(error&&error.message)||"Mail account list is unavailable.";
+      return false;
+    }
+  }
+  async function openMessage(message){
+    compose.hidden=true; read.hidden=false; clear(read);
+    read.append(node("h2",message.subject||"(no subject)"));
+    read.append(node("p","From "+(message.from_address||"Unknown sender")+" · "+formatTime(message.received_at),"muted"));
+    const body=node("p",message.body||"",""); body.style.whiteSpace="pre-wrap"; body.style.margin=".75rem 0 0"; read.append(body);
+    if(message.quarantined) read.append(node("p","This message is quarantined. Review the sender and reasons before acting.","note"));
+    setPane(message.subject||"Message",message.quarantined?"Review":"Local",true);
+    status.textContent="Opened · "+(message.subject||"(no subject)");
+    if(!message.read){
+      try { await fetch("/api/mail/messages/"+encodeURIComponent(message.id)+"/read",{method:"POST",headers:{Accept:"application/json"}}); message.read=true; paintInbox(); }
+      catch(_){ status.textContent="Opened · unable to update read state."; }
+    }
+  }
+  function paintInbox(){
+    clear(inboxEl);
+    if(!messages.length){ inboxEl.append(node("li","Inbox empty. This device has not accepted any mail yet.","muted")); return; }
+    messages.forEach(message=>{
+      const button=node("button",undefined,"item"); button.type="button"; button.setAttribute("role","option");
+      button.append(node("span",message.subject||"(no subject)","who"));
+      const labels=(message.quarantined?"Review · ":"")+(message.read?"Read":"Unread");
+      const source=message.source_account?" · "+message.source_account:"";
+      button.append(node("span",(message.from_address||"Unknown sender")+" · "+formatTime(message.received_at)+source+" · "+labels,"meta"));
+      button.addEventListener("click",()=>openMessage(message)); inboxEl.append(button);
     });
   }
-  document.getElementById("btn-compose").addEventListener("click",()=>{
-    read.hidden=true; compose.hidden=false;
-    paneTitle.textContent="Compose";
-    panePill.textContent="Live"; panePill.className="pill live";
-    status.textContent="Compose · send to a person.";
-  });
-  document.getElementById("btn-cancel").addEventListener("click",()=>{
-    compose.hidden=true; read.hidden=false;
-    showRead('<div class="empty"><strong>Open a message</strong>Empty inbox is honest.</div>',"Message","—",false);
-  });
-  document.getElementById("btn-send").addEventListener("click",()=>{
-    const to=(document.getElementById("to").value||"").trim();
-    const subject=(document.getElementById("subject").value||"").trim()||"(no subject)";
-    const body=(document.getElementById("body").value||"").trim();
-    if(!to||!body){status.textContent="Need a person/locator and a body.";return;}
-    const m={id:"m"+Date.now(),from:"You → "+to,subject:subject,body:body,when:"Just now",sent:true};
-    messages.unshift(m);
-    document.getElementById("to").value="";
-    document.getElementById("subject").value="";
-    document.getElementById("body").value="";
-    paintInbox();
-    showRead('<h2>'+subject+'</h2><p class="muted">Sent to '+to+'</p><p style="white-space:pre-wrap">'+body+'</p><p class="note"><strong>Delivery:</strong> local thread Live · rail Planned until mailbox claim.</p>', subject, "Live", true);
-    status.textContent="Sent locally · delivery Planned until mailbox binds. Peer is a person.";
+  async function refresh(){
+    status.textContent="Loading local inbox…";
+    try {
+      const response=await fetch("/api/mail/messages",{headers:{Accept:"application/json"}});
+      const data=await response.json(); if(!response.ok) throw new Error(data.error||"Inbox is unavailable.");
+      messages=Array.isArray(data.messages)?data.messages:[];
+      const unread=data.counts&&Number.isFinite(data.counts.unread)?data.counts.unread:0;
+      inboxPill.textContent="Local"; inboxPill.className="pill live";
+      status.textContent=messages.length+" message"+(messages.length===1?"":"s")+" · "+unread+" unread · stored on this device.";
+      paintInbox();
+    } catch(error) {
+      messages=[]; inboxPill.textContent="Unavailable"; inboxPill.className="pill planned";
+      status.textContent=(error&&error.message)||"Local inbox is unavailable."; paintInbox();
+    }
+  }
+  async function showCompose(){
+    read.hidden=true; compose.hidden=false; setPane("Write","Delivery setup",false);
+    status.textContent="Loading SMTP accounts configured on this device…";
+    if(await loadSendingAccounts()) status.textContent="Write your message, select its sending account, then send.";
+  }
+  document.getElementById("btn-compose").addEventListener("click",showCompose);
+  document.getElementById("btn-cancel").addEventListener("click",showEmpty);
+  document.getElementById("btn-send").addEventListener("click",async()=>{
+    const account_id=fromAccount.value, to=document.getElementById("to").value.trim(), subject=document.getElementById("subject").value.trim(), body=document.getElementById("body").value.trim();
+    if(!account_id||!to||!subject||!body){ status.textContent="Choose a sending account and complete recipient, subject, and message."; return; }
+    const send=document.getElementById("btn-send"); send.disabled=true; status.textContent="Submitting through the selected SMTP account…";
+    try {
+      const response=await fetch("/api/mail/send",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({account_id,to,subject,body})});
+      const result=await response.json(); if(!response.ok) throw new Error(result.error||"SMTP delivery was not accepted.");
+      status.textContent="Sent from "+result.from+" to "+result.to+".";
+      document.getElementById("to").value=""; document.getElementById("subject").value=""; document.getElementById("body").value="";
+      setPane("Sent","SMTP accepted",true);
+    } catch(error) { status.textContent="Not sent: "+((error&&error.message)||"SMTP delivery failed."); }
+    finally { send.disabled=!fromAccount.value; }
   });
   document.getElementById("btn-refresh").addEventListener("click",refresh);
-  refresh();
+  showEmpty(); refresh();
+  if(requestedPeer){ document.getElementById("to").value=requestedPeer; showCompose(); }
 })();
 
 </script>

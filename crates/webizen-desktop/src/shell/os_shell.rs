@@ -5,7 +5,7 @@
 //! Soft-rise CLEAR (Capt). Volume chrome: Poet hub ◉ + 8-sector wheel.
 //!
 //! Primary cold-shell orbit: Talk · Mail · Directory · Library · Settings.
-//! Soft-demoted (launcher APPS): Browser · Keep · Instruments · Wallet · Admin · …
+//! Secondary launcher entries: Browser · Saved Items · Instruments · Wallet · Admin · …
 //!
 //! **Timothy lock:** orbit stages are dedicated HTML under `/volumes/*` (+ `/wallet`,
 //! `/admin`) — **never** Studio SPA iframes. Legacy Studio stays on `/talk`, `/browser`,
@@ -20,6 +20,10 @@ pub const OS_SHELL_HTML: &str = include_str!("../../static/os-shell/index.html")
 
 /// Elevated spatial shell stylesheet (humans-first halo; no Continuity ribbon).
 pub const OS_SHELL_CSS: &str = include_str!("../../static/os-shell/shell.css");
+
+/// Locale message lookup boundary shared by the shell and its child volumes.
+/// The browser falls back to English when a selected locale has no reviewed pack.
+pub const OS_SHELL_I18N_JS: &str = include_str!("../../static/os-shell/i18n.js");
 
 pub const VOLUMES_CSS: &str = include_str!("../../static/os-shell/volumes.css");
 
@@ -41,4 +45,5 @@ pub const ADMIN_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/
 pub const CONSOLE_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/console.html");
 pub const POET_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/poet.html");
 pub const WELLFAIR_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/wellfair.html");
+pub const HEALTH_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/health.html");
 pub const PROJECTS_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/projects.html");

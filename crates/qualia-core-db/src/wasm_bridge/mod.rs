@@ -32,6 +32,9 @@ pub use engine::*;
 mod meta;
 #[allow(unused_imports)]
 pub use meta::*;
+mod governance;
+#[allow(unused_imports)]
+pub use governance::*;
 #[cfg(feature = "wasm-scientific")]
 mod geometry;
 #[cfg(feature = "wasm-scientific")]

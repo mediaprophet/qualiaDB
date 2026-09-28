@@ -15,6 +15,15 @@ const WATER_N3: &str = include_str!(
 const RPL_N3: &str = include_str!(
     "../../../../core-ontologies/fixtures/semantic-instruments/positive-rpl-requirement.n3"
 );
+const NUTRITION_EVIDENCE_N3: &str = include_str!(
+    "../../../../core-ontologies/fixtures/semantic-instruments/demo-nutrition-evidence-review.n3"
+);
+const MEAL_CONSIDERATION_N3: &str = include_str!(
+    "../../../../core-ontologies/fixtures/semantic-instruments/demo-meal-consideration-review.n3"
+);
+const CLINICAL_MECHANISM_N3: &str = include_str!(
+    "../../../../core-ontologies/fixtures/semantic-instruments/demo-clinical-mechanism-review.n3"
+);
 
 /// One demo seed in the catalogue used to populate a development environment.
 #[derive(Debug, Clone, Copy)]
@@ -62,6 +71,36 @@ pub fn demo_catalog() -> &'static [DemoSeed] {
             entry_point: "recognise",
             definition_n3: RPL_N3,
         },
+        DemoSeed {
+            slug: "nutrition-evidence-review",
+            instrument_id: "https://ns.webizen.org/demo/nutrition-evidence-review",
+            release_id: "https://ns.webizen.org/demo/nutrition-evidence-review/releases/1.0.0",
+            name: "Nutrition evidence review template (demo)",
+            purpose: "expert-authored-template-and-demonstration",
+            domain: "https://ns.webizen.org/food-evidence/",
+            entry_point: "assess",
+            definition_n3: NUTRITION_EVIDENCE_N3,
+        },
+        DemoSeed {
+            slug: "meal-consideration-review",
+            instrument_id: "https://ns.webizen.org/demo/meal-consideration-review",
+            release_id: "https://ns.webizen.org/demo/meal-consideration-review/releases/1.0.0",
+            name: "Meal consideration review template (demo)",
+            purpose: "expert-authored-template-and-demonstration",
+            domain: "https://ns.webizen.org/meal-evidence/",
+            entry_point: "assess",
+            definition_n3: MEAL_CONSIDERATION_N3,
+        },
+        DemoSeed {
+            slug: "clinical-mechanism-review",
+            instrument_id: "https://ns.webizen.org/demo/clinical-mechanism-review",
+            release_id: "https://ns.webizen.org/demo/clinical-mechanism-review/releases/1.0.0",
+            name: "Clinical nutrition mechanism review template (demo)",
+            purpose: "expert-authored-template-and-demonstration",
+            domain: "https://ns.webizen.org/clinical-nutrition/",
+            entry_point: "assess",
+            definition_n3: CLINICAL_MECHANISM_N3,
+        },
     ]
 }
 
@@ -95,6 +134,23 @@ fn manifest_for(seed: &DemoSeed) -> InstrumentManifest {
             let mut extra = std::collections::BTreeMap::new();
             extra.insert("slug".into(), serde_json::json!(seed.slug));
             extra.insert("catalog".into(), serde_json::json!("si:Demo"));
+            if seed.slug == "nutrition-evidence-review"
+                || seed.slug == "meal-consideration-review"
+                || seed.slug == "clinical-mechanism-review"
+            {
+                extra.insert(
+                    "authoring_status".into(),
+                    serde_json::json!("template-awaiting-qualified-subject-matter-expert"),
+                );
+                extra.insert(
+                    "review_status".into(),
+                    serde_json::json!("awaiting-independent-review"),
+                );
+                extra.insert(
+                    "source_workbook".into(),
+                    serde_json::json!("food_organ_system_evidence_v2.xlsx"),
+                );
+            }
             extra
         },
     }
@@ -191,8 +247,8 @@ mod tests {
     use crate::semantic_instruments::package::open_collectable;
 
     #[test]
-    fn catalog_has_three_labelled_demos() {
-        assert_eq!(demo_catalog().len(), 3);
+    fn catalog_has_labelled_demos() {
+        assert_eq!(demo_catalog().len(), 6);
         for seed in demo_catalog() {
             assert!(seed.definition_n3.contains("si:Demo"));
         }
@@ -208,6 +264,32 @@ mod tests {
             assert!(opened.manifest.honesty_notice.to_ascii_lowercase().contains("demo"));
             #[cfg(not(target_arch = "wasm32"))]
             assert!(opened.small_q42.is_some(), "{}", seed.slug);
+        }
+    }
+
+    #[test]
+    fn nutrition_templates_require_expert_authoring_and_hold_incomplete_inputs() {
+        for slug in [
+            "nutrition-evidence-review",
+            "meal-consideration-review",
+            "clinical-mechanism-review",
+        ] {
+            let bytes = build_demo(slug).expect(slug);
+            let opened = open_collectable(&bytes).expect(slug);
+            assert_eq!(opened.manifest.entry_point, "assess");
+            assert_eq!(
+                opened.manifest.extra["authoring_status"],
+                "template-awaiting-qualified-subject-matter-expert"
+            );
+            assert_eq!(opened.manifest.extra["review_status"], "awaiting-independent-review");
+            let definition = std::str::from_utf8(&opened.definition_n3).expect("fixture is UTF-8");
+            assert!(definition.contains("holdsWhenMissing"));
+            assert!(definition.contains("prohibitedInterpretation"));
+            if slug == "clinical-mechanism-review" {
+                assert!(definition.contains("professional-view"));
+                assert!(definition.contains("mechanism-of-action"));
+                assert!(definition.contains("person-view"));
+            }
         }
     }
 

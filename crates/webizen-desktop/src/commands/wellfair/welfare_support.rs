@@ -55,6 +55,23 @@ pub fn wellfair_add_government_letter(
     })?
 }
 
+/// List the committed welfare records that the person can already see in the
+/// desktop host. This is a read-only projection; it never reaches a relay.
+#[command]
+pub fn wellfair_list_welfare_records(
+    app: AppHandle,
+    limit: Option<usize>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let records = host.list_welfare_records(limit.unwrap_or(64))?;
+        serde_json::to_string(&records).map_err(|e| e.to_string())
+    })?
+}
+
 #[command]
 pub fn wellfair_list_sync_inbox(app: AppHandle, limit: usize) -> Result<String, String> {
     let state = app.state::<HostApiState>();

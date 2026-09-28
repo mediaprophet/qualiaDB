@@ -1436,6 +1436,7 @@ impl LocalLlmAgent {
                         &tok,
                         &mut streamed_len,
                         None,
+                        gen_budget,
                         on_token_sink,
                     );
                     match draft_step {

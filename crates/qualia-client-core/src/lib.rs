@@ -57,6 +57,7 @@ pub mod job_router;
 pub mod local_job_scheduler;
 pub mod magic_link;
 pub mod mail_inbound;
+pub mod mail_accounts;
 pub mod mail_rules;
 pub mod mail_store;
 pub mod mail_transport;

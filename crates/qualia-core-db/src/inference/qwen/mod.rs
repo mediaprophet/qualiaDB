@@ -4,6 +4,7 @@
 //! and dual-state checkpointing for Qwen3.6 MoE on the RTX A2000.
 
 pub mod checkpoint;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod expert_residency;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod expert_tile;
@@ -35,6 +36,7 @@ pub mod streamed_qsa;
 pub mod trunk_nvme;
 
 pub use checkpoint::{QwenCheckpointRegistry, QwenDualCheckpoint};
+#[cfg(not(target_arch = "wasm32"))]
 pub use expert_residency::{
     QwenExpertAccess, QwenExpertKey, QwenExpertResidency, MAX_QWEN_EXPERT_SLOTS,
 };

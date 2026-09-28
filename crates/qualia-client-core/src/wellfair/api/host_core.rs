@@ -43,6 +43,32 @@ use wellfare_core::record::RecordEnvelope;
 use super::*;
 
 impl WebizenHostApi {
+    /// Preserve the just-checkpointed import batch as a separately addressable Q42 volume.
+    ///
+    /// The checkpoint is intentionally a working snapshot and can change after later writes.
+    /// An import artifact must not silently change with it, so a successful device/companion
+    /// batch receives a timestamped copy under the person's local WellFair storage root.
+    fn preserve_import_q42_artifact(&self, source: &str) -> Result<String, String> {
+        let source_file = self
+            .storage_root
+            .join(super::super::checkpoint_store::Q42_FILE);
+        if !source_file.is_file() {
+            return Err("Q42 checkpoint was not created for this import".to_string());
+        }
+        let artifact_dir = self.storage_root.join("wellfair/imports");
+        std::fs::create_dir_all(&artifact_dir)
+            .map_err(|err| format!("create Q42 import directory: {err}"))?;
+        let safe_source: String = source
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+            .collect();
+        let filename = format!("{}-{}.q42", safe_source, Self::now_unix());
+        let destination = artifact_dir.join(filename);
+        std::fs::copy(&source_file, &destination)
+            .map_err(|err| format!("write Q42 import artifact: {err}"))?;
+        Ok(destination.display().to_string())
+    }
+
     pub fn new(
         vault: VaultService,
         policy: PolicyDecisionService,
@@ -491,6 +517,10 @@ impl WebizenHostApi {
         if report.records_committed > 0 {
             if let Ok(hash) = self.finalize_batch() {
                 report.checkpoint_hash = Some(hash);
+                match self.preserve_import_q42_artifact("device-export") {
+                    Ok(path) => report.q42_artifact_path = Some(path),
+                    Err(err) => report.errors.push(err),
+                }
             }
         }
         report
@@ -507,6 +537,10 @@ impl WebizenHostApi {
         if report.records_committed > 0 {
             if let Ok(hash) = self.finalize_batch() {
                 report.checkpoint_hash = Some(hash);
+                match self.preserve_import_q42_artifact("phone-companion") {
+                    Ok(path) => report.q42_artifact_path = Some(path),
+                    Err(err) => report.errors.push(err),
+                }
             }
         }
         report

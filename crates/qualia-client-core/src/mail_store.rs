@@ -31,6 +31,10 @@ pub struct StoredMail {
     /// Size in bytes of the original body (for UI).
     #[serde(default)]
     pub size_bytes: usize,
+    /// Label of the configured account that imported this message. `None`
+    /// denotes direct local SMTP or mesh delivery.
+    #[serde(default)]
+    pub source_account: Option<String>,
 }
 
 fn messages_path() -> PathBuf {
@@ -110,8 +114,20 @@ pub fn store_delivery(
         read: false,
         reasons,
         size_bytes,
+        source_account: None,
     };
     append(msg)
+}
+
+/// Attach cold-path import provenance after a message has passed the same
+/// delivery rules as every other local message.
+pub fn set_source_account(id: &str, source_account: &str) -> Result<(), String> {
+    let _guard = STORE_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    let mut all = load_all();
+    let message = all.iter_mut().find(|message| message.id == id)
+        .ok_or_else(|| format!("unknown message '{id}'"))?;
+    message.source_account = Some(source_account.to_string());
+    save_all(&all)
 }
 
 /// List messages, newest first. `mailbox` filters by accepting mailbox when set.

@@ -142,6 +142,7 @@ button.chip[aria-pressed="true"]{background:rgba(47,224,200,.16);border-color:rg
 .note strong{color:var(--cyan)}
 code{color:var(--cyan);font-size:12px}
 #status,.status{font-size:11px;color:var(--mute);margin:.75rem 0 0;min-height:1.2em}
+.tool-output{margin:.75rem 0 0;padding:.85rem;max-height:18rem;overflow:auto;white-space:pre-wrap;word-break:break-word;border:1px solid rgba(77,184,255,.28);border-radius:12px;background:rgba(0,0,0,.3);color:var(--ink);font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
 
 .rise{animation:softRise .45s cubic-bezier(.2,.8,.2,1) both}
 @keyframes softRise{

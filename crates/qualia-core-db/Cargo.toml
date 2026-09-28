@@ -11,6 +11,7 @@ license-file = "LICENSE"
 default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"]
 
 # ── Qualia WASM build profiles (use with --no-default-features on wasm32) ──
+# WebCivics browser runtime:        --features wasm-webcivics (logic + Solid/CML + HCF yaml-ld-q42)
 # Ontology MCP kernel (exclusive):  --features wasm-ontology
 # Full browser engine:              --features portal  (logic + WASM-safe science + WebGPU)
 # Logic + WASM-safe science:        --features wasm-logic
@@ -32,6 +33,7 @@ nvml = ["dep:nvml-wrapper"]
 vision-onnx = ["dep:ort"]
 dxc = []
 portal = ["wasm_simd", "gpu-runtime", "wasm-logic", "wasm-scientific"]
+wasm-webcivics = ["wasm-logic"]
 wasm-ontology = []
 wasm-logic = ["wasm-scientific"]
 wasm-scientific = ["gpu-runtime"]

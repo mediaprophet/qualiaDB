@@ -1,17 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta http-equiv="refresh" content="0;url=/volumes/settings?pane=agent"/>
-<title>Console → Settings</title>
-<link rel="stylesheet" href="/volumes.css"/>
-</head>
-<body data-volume="console">
-<header>
-  <h1>Console <span class="pill planned">Moved</span></h1>
-  <p class="lead">Agent prefs are <strong>configuration</strong>, not an app. Redirecting to Settings · Agent.</p>
-</header>
-<p><a href="/volumes/settings?pane=agent">Open Settings · Agent prefs</a></p>
-<script>location.replace("/volumes/settings?pane=agent");</script>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Console · Webizen</title><link rel="stylesheet" href="/volumes.css"/><style>html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,sans-serif}.console-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem}.metric{padding:.8rem;border:1px solid rgba(255,255,255,.1);border-radius:.6rem;background:#07111e}.metric strong{display:block;font-size:1.2rem;margin-top:.2rem}.log{box-sizing:border-box;width:100%;min-height:24rem;max-height:55vh;overflow:auto;white-space:pre-wrap;background:#07111e;color:#dcecff;border:1px solid #38516d;border-radius:.6rem;padding:.8rem;font:12px/1.45 ui-monospace,Consolas,monospace}</style></head>
+<body data-volume="console"><header class="vol-head"><h1><span class="glyph" aria-hidden="true">⌘</span> Console <span class="pill live">Local diagnostics</span></h1><p class="lead">Read the desktop’s actual local status and logs. This is an operations tool, not a person or an agent identity.</p></header><main class="stage"><section class="panel"><div class="ph"><b>Desktop status</b><span class="pill live" id="state">Loading</span></div><div class="pb"><div class="console-grid" id="metrics"></div><div class="row"><button type="button" class="primary" id="refresh">Refresh</button><button type="button" id="settings">Open agent settings</button></div><p id="status" class="status" role="status" aria-live="polite"></p></div></section><section class="panel"><div class="ph"><b>Recent local logs</b><span class="pill live">Read only</span></div><div class="pb"><pre class="log" id="logs">Loading local logs…</pre></div></section></main>
+<script>
+(() => {const metrics=document.getElementById('metrics'),logs=document.getElementById('logs'),status=document.getElementById('status'),state=document.getElementById('state');const add=(label,value)=>{const card=document.createElement('div');card.className='metric';const small=document.createElement('span');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;card.append(small,strong);metrics.append(card);};async function refresh(){status.textContent='Refreshing local desktop status…';try{const [statusResponse,logsResponse]=await Promise.all([fetch('/api/status',{headers:{Accept:'application/json'}}),fetch('/api/logs',{headers:{Accept:'application/json'}})]);const info=await statusResponse.json(),logData=await logsResponse.json();if(!statusResponse.ok)throw new Error(info.error||'Desktop status unavailable.');metrics.replaceChildren();add('Graph daemon',info.graph_daemon_reachable?'reachable':'not reachable');add('Inference backend',info.inference_backend||'not configured');add('Jobs',(info.job_queue&&info.job_queue.running||0)+' running · '+(info.job_queue&&info.job_queue.queued||0)+' queued');add('Settings port',String(info.settings_port||'unknown'));add('Storage',info.storage_path||'not reported');state.textContent='Current';state.className='pill live';const entries=Array.isArray(logData.entries)?logData.entries:[];logs.textContent=entries.length?entries.map(entry=>typeof entry==='string'?entry:JSON.stringify(entry)).join('\n'):'No local log entries.';status.textContent='Updated from this desktop.';}catch(error){state.textContent='Unavailable';state.className='pill planned';metrics.replaceChildren();logs.textContent='Local diagnostics unavailable.';status.textContent=error.message;}}document.getElementById('refresh').addEventListener('click',refresh);document.getElementById('settings').addEventListener('click',()=>parent.postMessage({route:'/volumes/settings?pane=agent'},window.location.origin));refresh();})();
+</script></body></html>

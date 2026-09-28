@@ -209,6 +209,9 @@ provenance/
 /agent-tools/
 /agent-intents/
 fix_quotes.py
+tmp_*.py
+*.bak-*
+*.locked-*
 
 # Multi-agent coordination is local to each machine — do not publish on GitHub.
 # (Full /coordination/ dir; NOTICES.md is the live feed and must never be committed.)

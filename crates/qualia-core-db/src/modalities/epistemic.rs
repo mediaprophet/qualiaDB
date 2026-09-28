@@ -93,6 +93,21 @@ pub fn evaluate_epistemic_frame(
     Ok(count)
 }
 
+/// Returns whether an agent has an active knowledge claim for the supplied
+/// claim fingerprint. This is the scalar, zero-allocation form used by
+/// inference guards between token steps; callers that need every verdict use
+/// `evaluate_epistemic_frame` above.
+#[inline]
+pub fn agent_knows(quins: &[NQuin], agent_did_hash: u64, claim_fingerprint: u64) -> bool {
+    quins.iter().any(|q| {
+        let opcode = (q.predicate & 0xFF) as u8;
+        let certainty = ((q.predicate >> CERTAINTY_BIT_SHIFT) & 0xFF) as u8;
+        (agent_did_hash == 0 || q.subject == agent_did_hash)
+            && q.object == claim_fingerprint
+            && (opcode == OP_KNOWS || opcode == OP_COMMON_KNOWLEDGE || (opcode == OP_BELIEVES && certainty >= 128))
+    })
+}
+
 /// Checks if any nodes requested by an intent quin are locked by another agent.
 pub fn check_node_locks(
     intent_quins: &[NQuin],

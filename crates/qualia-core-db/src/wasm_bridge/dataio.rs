@@ -344,3 +344,47 @@ pub fn serialize_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         json_data: String::from_utf8(json_output).map_err(|e| JsValue::from_str(&e.to_string()))?,
     })?)
 }
+
+/// Parse and compile a yaml-ld-q42 document (workspace pages or HCF HypermediaDocument) into quins and lexicon.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_yaml_ld_q42_wasm(
+    source: &str,
+    namespace: Option<u64>,
+    lamport: Option<u64>,
+) -> Result<JsValue, JsValue> {
+    let (quins, lexicon, variant) = crate::yaml_ld_q42::compile_yaml_ld_q42_auto(
+        source.as_bytes(),
+        namespace.unwrap_or(0),
+        lamport.unwrap_or(0),
+    )
+    .map_err(|e| JsValue::from_str(&e))?;
+
+    #[derive(Serialize)]
+    struct YamlLdResult {
+        variant: String,
+        quin_count: usize,
+        lexicon_count: usize,
+        quins: Vec<[u64; 6]>,
+        lexicon: Vec<(String, String)>,
+    }
+
+    let quins_out: Vec<[u64; 6]> = quins
+        .iter()
+        .map(|q| [q.subject, q.predicate, q.object, q.context, q.metadata, q.parity])
+        .collect();
+
+    let lexicon_out: Vec<(String, String)> = lexicon
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+
+    Ok(serde_wasm_bindgen::to_value(&YamlLdResult {
+        variant: variant.to_string(),
+        quin_count: quins_out.len(),
+        lexicon_count: lexicon_out.len(),
+        quins: quins_out,
+        lexicon: lexicon_out,
+    })?)
+}
+

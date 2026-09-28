@@ -61,7 +61,7 @@
   <footer class="footer" role="contentinfo">
     <span>handle ≠ human · agent = tool</span>
     <span class="grow"></span>
-    <span id="shell-status" role="status" aria-live="polite">Spatial shell · Live</span>
+    <span id="shell-status" role="status" aria-live="polite">Desktop · Ready</span>
     <button type="button" id="open-launcher" aria-haspopup="dialog" aria-controls="launcher">Launch…</button>
     <span id="active-label">No volume open</span>
   </footer>
@@ -78,29 +78,33 @@
     <ul id="launcher-list" role="listbox" aria-label="Apps"></ul>
   </div>
 </div>
+<script src="/os-shell/i18n.js"></script>
 <script>
 (function(){
+const t=window.WebizenI18n ? window.WebizenI18n.t : function(key, fallback){ return fallback || key; };
 const APPS=[
 {id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/volumes/talk",human:true},
 {id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/volumes/mail",human:true},
 {id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/volumes/directory",human:true},
-{id:"browser",name:"Browser",glyph:"🌐",blurb:"Reach / World.",status:"live",route:"/volumes/browser"},
-{id:"keep",name:"Keep",glyph:"📁",blurb:"Volumes as a tool.",status:"live",route:"/volumes/keep"},
+{id:"browser",name:"Browser",glyph:"🌐",blurb:"Web pages and links.",status:"live",route:"/volumes/browser"},
+// The stable route id is an implementation detail. People see Saved Items.
+{id:"keep",name:t("savedItems.short","Saved"),title:t("savedItems.title","Saved Items"),glyph:"📁",blurb:t("savedItems.description","Notes, saved records, and files."),status:"live",route:"/volumes/keep"},
 {id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/volumes/library"},
 {id:"instruments",name:"Instruments",glyph:"🎛",blurb:"Models · LLM · tools (not people).",status:"live",route:"/volumes/instruments"},
 {id:"wallet",name:"Wallet",glyph:"⚡",blurb:"Lightning · Nym · XEC · tokens · human keys.",status:"live",route:"/wallet"},
 {id:"settings",name:"Settings",glyph:"⚙",blurb:"Setup · prefs · config — not an app.",status:"live",route:"/volumes/settings"},
-{id:"wellfair",name:"WellFair",glyph:"💚",blurb:"Welfare · fairness.",status:"live",route:"/volumes/wellfair",human:true},
+{id:"wellfair",name:"Welfare & fairness",glyph:"💚",blurb:"A manifold across life, care, and cooperation.",status:"live",route:"/volumes/wellfair",human:true},
+{id:"health",name:"Health & care",glyph:"⚕",blurb:"Clinical documents and reviewed records.",status:"live",route:"/volumes/health",human:true},
 {id:"projects",name:"Projects",glyph:"📋",blurb:"Work that serves humans.",status:"live",route:"/volumes/projects"},
 {id:"admin",name:"Admin",glyph:"🛠",blurb:"Jobs · logs · ops.",status:"live",route:"/volumes/admin"},
-{id:"poet",name:"Poet",glyph:"🪶",blurb:"Migrate-in later.",status:"planned",route:"/volumes/poet"}
+{id:"poet",name:"Poet",glyph:"🪶",blurb:"Local graph queries.",status:"live",route:"/volumes/poet"}
 ];
 const SECTORS=[
 {id:"close",label:"Close",glyph:"✕",color:"#f87171",say:"Close volume"},
-{id:"soften",label:"Soften",glyph:"—",color:"#fbbf24",say:"Soften into orbit"},
+{id:"soften",label:"Close",glyph:"—",color:"#fbbf24",say:"Close volume"},
 {id:"full",label:"Full",glyph:"▢",color:"#3dffb0",say:"Full stage"},
 {id:"float",label:"Float",glyph:"◎",color:"#4db8ff",say:"Float volume"},
-{id:"keep",label:"Keep",glyph:"📁",color:"#2fe0c8",say:"Send to Keep"},
+{id:"keep",label:t("savedItems.short","Saved"),glyph:"📁",color:"#2fe0c8",say:t("savedItems.save","Save to Saved Items")},
 {id:"share",label:"Share",glyph:"↗",color:"#8b7cff",say:"Share…"},
 {id:"inspect",label:"Inspect",glyph:"🔍",color:"#38bdf8",say:"Inspect continuity"},
 {id:"more",label:"More",glyph:"···",color:"#94a3b8",say:"More…"}
@@ -145,10 +149,10 @@ function closeVolume(){
   activeApp=null;
   setPressed(null);
   activeLabel.textContent="No volume open";
-  statusEl.textContent="Spatial shell · Live";
+  statusEl.textContent="Desktop · Ready";
   closeWheel();
 }
-function openApp(app){
+function openApp(app, requestedRoute){
   if(!app) return;
   if(app.status!=="live" || !app.route){
     statusEl.textContent=app.name+" · Planned — not launched";
@@ -159,7 +163,7 @@ function openApp(app){
   activeApp=app;
   empty.hidden=true;
   frame.hidden=false;
-  frame.src=origin()+app.route;
+  frame.src=origin()+(requestedRoute||app.route);
   volChrome.hidden=false;
   volChrome.classList.add("open");
   volTitle.textContent=app.name;
@@ -169,6 +173,18 @@ function openApp(app){
   closeLauncher();
 }
 function appById(id){ return APPS.find(function(a){ return a.id===id; }); }
+function appByRoute(route){ return APPS.find(function(a){ return a.route===route; }); }
+
+// Child volumes may request only a known shell route. Do not accept messages
+// from an embedded website or let a child choose an arbitrary URL.
+window.addEventListener("message", function(event){
+  if(event.source!==frame.contentWindow || event.origin!==origin()) return;
+  const data=event.data;
+  if(!data || data.type!=="webizen-open" || typeof data.route!=="string") return;
+  const path=data.route.split("?")[0];
+  const app=appByRoute(path);
+  if(app) openApp(app, data.route);
+});
 
 document.querySelectorAll(".fav[data-app]").forEach(function(b){
   b.addEventListener("click", function(){ openApp(appById(b.getAttribute("data-app"))); });

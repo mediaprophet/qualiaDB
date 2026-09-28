@@ -14,7 +14,8 @@ use web_sys::HtmlCanvasElement;
 
 pub use qualia_core_db::{
     export_tensor_buffer_wasm, geosparql_operation_wasm, parse_cbor_ld_wasm, parse_json_wasm,
-    parse_n3logic_wasm, parse_turtle_wasm, sample_browser_telemetry_wasm, spatial_encode_wasm,
+    parse_n3logic_wasm, parse_turtle_wasm, parse_yaml_ld_q42_wasm, sample_browser_telemetry_wasm,
+    spatial_encode_wasm,
 };
 pub use qualia_portal::QualiaPortal;
 

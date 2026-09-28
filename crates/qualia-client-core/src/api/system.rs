@@ -585,7 +585,15 @@ pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, Str
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
     let index_dir = PathBuf::from(&storage_path).join("Index");
-    let source_path = index_dir.join(&file_name);
+    // Desktop file pickers yield an absolute local path, while existing CLI
+    // callers pass a filename already staged in Index/. Support both without
+    // introducing a network fetch or widening the importer beyond local files.
+    let requested_path = PathBuf::from(&file_name);
+    let source_path = if requested_path.is_file() {
+        requested_path
+    } else {
+        index_dir.join(&file_name)
+    };
 
     if !source_path.is_file() {
         return Err(format!(

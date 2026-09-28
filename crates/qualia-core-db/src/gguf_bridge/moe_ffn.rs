@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::inference::moe::dispatch::MAX_ROUTED_EXPERTS;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::inference::moe::ftw_loader::FtwModelPackage;
 use std::sync::Arc;
 
