@@ -88,7 +88,7 @@ assert.match(read('.github/workflows/release-p64-models.yml'), new RegExp(`- ${r
 
 const releaseMatrix = read('docs/release-matrix.html');
 assert.match(releaseMatrix, /Qualia · Webizen · Poet/);
-assert.match(releaseMatrix, /What 0\.0\.39 is for/);
+assert.match(releaseMatrix, /What 0\.0\.40 is for/);
 assert.match(releaseMatrix, /vibe-wasm/);
 assert.match(releaseMatrix, /Published from GitHub Actions/);
 assert.match(releaseMatrix, /release-cli\.yml/);
