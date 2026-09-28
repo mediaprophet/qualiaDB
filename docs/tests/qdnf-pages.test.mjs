@@ -28,7 +28,7 @@ assert.match(css, /\.hex:hover/);
 
 const qdnf = read('qdnf.html');
 assert.match(qdnf, /data-theme="release-038"/);
-assert.match(qdnf, /0\.0\.39/);
+assert.match(qdnf, /0\.0\.40/);
 assert.match(qdnf, /Space\+Grotesk/);
 assert.match(qdnf, /family=Inter/);
 assert.match(qdnf, /JetBrains\+Mono/);
@@ -79,7 +79,7 @@ assert.doesNotMatch(qdnf, /public_relay_dialed\(\)\s*=\s*true/);
 assert.doesNotMatch(qdnf, /MASQUE evidence flags stay <strong>true/);
 
 const qdnfStatus = read('qdnf-status.html');
-assert.match(qdnfStatus, /QDNF \/ QPR · implementation status · 0\.0\.39/);
+assert.match(qdnfStatus, /QDNF \/ QPR · implementation status · 0\.0\.40/);
 assert.match(qdnfStatus, /Implemented in tree/);
 assert.match(qdnfStatus, /Implemented identity slice/);
 assert.match(qdnfStatus, /Nym mixnet framing/);
