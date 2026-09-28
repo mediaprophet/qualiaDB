@@ -103,6 +103,42 @@ export function hashToken(token) {
 }
 
 /**
+ * Strip outer URI (<...>) or literal ("...") delimiters from a token.
+ *
+ * @param {string} token
+ * @returns {string}
+ */
+export function stripDelimiters(token) {
+    if (!token) return '';
+    let t = token.trim();
+    if (t.startsWith('<') && t.endsWith('>')) {
+        return t.slice(1, -1);
+    }
+    if (t.startsWith('"')) {
+        const m = t.match(/^"((?:[^"\\]|\\.)*)"/);
+        if (m) return m[1];
+    }
+    return t;
+}
+
+/**
+ * Return both the verbatim token hash and the delimiter-stripped token hash.
+ * This guarantees interoperability across volumes ingested with delimiters
+ * preserved (e.g. Schema.org NT) and volumes ingested with delimiters stripped
+ * (e.g. Princeton WordNet RDF/XML via mini_parser).
+ *
+ * @param {string} token
+ * @returns {bigint[]}
+ */
+export function hashTokenVariants(token) {
+    if (!token) return [0n];
+    const raw = hashToken(token);
+    const stripped = hashToken(stripDelimiters(token));
+    if (raw === stripped) return [raw];
+    return [raw, stripped];
+}
+
+/**
  * Format a BigInt as a zero-padded 16-character lowercase hex string,
  * suitable for displaying a 64-bit hash value in the UI.
  *

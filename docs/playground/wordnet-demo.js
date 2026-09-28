@@ -1,4 +1,4 @@
-import { hashToken, parseBigDecimal, toHex16, hasMsb } from './hash.js';
+import { hashToken, parseBigDecimal, toHex16, hasMsb, stripDelimiters, hashTokenVariants } from './hash.js';
 import { VFSProvider, QUIN_SIZE, formatOpfsCacheLabel } from './vfs.js';
 import wasmInit, { execute_ntriples_query } from './qualia_core_db.js';
 import { fetchWasmBinary } from '../js/wasm-fetch.js';
@@ -349,17 +349,26 @@ async function streamingQuery(pattern, vfs, maxResults) {
     return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0, _bidxUsed: false };
   }
   const [sT, pT, oT] = tokens;
-  const sH = sT.startsWith('?') ? null : hashToken(sT);
-  const pH = pT.startsWith('?') ? null : hashToken(pT);
-  const oH = oT.startsWith('?') ? null : hashToken(oT);
+  const sHVars = sT.startsWith('?') ? null : hashTokenVariants(sT);
+  const pHVars = pT.startsWith('?') ? null : hashTokenVariants(pT);
+  const oHVars = oT.startsWith('?') ? null : hashTokenVariants(oT);
 
   // ── BIDX-guided lookup (O(log N)) ──────────────────────────────────────
-  // The BIDX is sorted by object hash.  Prefer oH for the lookup; fall back
-  // to sH (future: secondary subject index) or full scan.
+  // The BIDX is sorted by object hash. Query all hash variants (e.g. raw and
+  // delimiter-stripped) to cover both Schema.org and WordNet formats.
   let candidateBlocks = null;
-  if (oH !== null) candidateBlocks = vfs.lookupBlocks(oH);
-  // sH / pH lookups would need a separate subject/predicate-sorted BIDX;
-  // leave as full-scan for now.
+  if (oHVars !== null) {
+    const blockSet = new Set();
+    for (const h of oHVars) {
+      const blks = vfs.lookupBlocks(h);
+      if (blks && blks.length > 0) {
+        for (const b of blks) blockSet.add(b);
+      }
+    }
+    if (blockSet.size > 0) {
+      candidateBlocks = Array.from(blockSet).sort((a, b) => a - b);
+    }
+  }
 
   const bidxUsed  = candidateBlocks !== null;
   const blockList = candidateBlocks ?? Array.from({ length: vfs.blockCount }, (_, i) => i);
@@ -388,16 +397,16 @@ async function streamingQuery(pattern, vfs, maxResults) {
         if (s === 0n && p === 0n && o === 0n) continue; // zero-padding
 
         let ok = true;
-        if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
-        if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
-        if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+        if (sHVars !== null) { cycles++; hasMsb(s) ? dj++ : lx++; if (!sHVars.includes(s)) ok = false; }
+        if (ok && pHVars !== null) { cycles++; hasMsb(p) ? dj++ : lx++; if (!pHVars.includes(p)) ok = false; }
+        if (ok && oHVars !== null) { cycles++; hasMsb(o) ? dj++ : lx++; if (!oHVars.includes(o)) ok = false; }
         if (ok) matches.push({
           s: String(s), p: String(p), o: String(o), c: String(c), m: String(m),
         });
       }
     }
   }
-  return { matches, vm_cycles: cycles, direct_jump_ops: dj, lexicon_lookup_ops: lx, _bidxUsed: bidxUsed };
+  return { matches, vm_cycles: cycles, direct_jump_ops: dj, lexicon_lookup_ops: lx, _bidxUsed: bidxUsed, _tokens: tokens };
 }
 
 async function getDbBytes() {
@@ -414,9 +423,9 @@ function jsFallbackQuery(pattern, bytes, maxResults) {
   const tokens = pattern.trim().split(/\s+/).filter(t => t !== '.');
   if (tokens.length < 3) return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
   const [sT, pT, oT] = tokens;
-  const sH = sT.startsWith('?') ? null : hashToken(sT);
-  const pH = pT.startsWith('?') ? null : hashToken(pT);
-  const oH = oT.startsWith('?') ? null : hashToken(oT);
+  const sHVars = sT.startsWith('?') ? null : hashTokenVariants(sT);
+  const pHVars = pT.startsWith('?') ? null : hashTokenVariants(pT);
+  const oHVars = oT.startsWith('?') ? null : hashTokenVariants(oT);
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const quins = Math.floor(bytes.length / QUIN_SIZE);
@@ -429,12 +438,12 @@ function jsFallbackQuery(pattern, bytes, maxResults) {
           o = getU64(view, b+16),  c = getU64(view, b+24),
           m = getU64(view, b+32);
     let ok = true;
-    if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
-    if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
-    if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+    if (sHVars !== null) { cycles++; hasMsb(s) ? dj++ : lx++; if (!sHVars.includes(s)) ok = false; }
+    if (ok && pHVars !== null) { cycles++; hasMsb(p) ? dj++ : lx++; if (!pHVars.includes(p)) ok = false; }
+    if (ok && oHVars !== null) { cycles++; hasMsb(o) ? dj++ : lx++; if (!oHVars.includes(o)) ok = false; }
     if (ok) matches.push({ s: String(s), p: String(p), o: String(o), c: String(c), m: String(m) });
   }
-  return { matches, vm_cycles: cycles, direct_jump_ops: dj, lexicon_lookup_ops: lx };
+  return { matches, vm_cycles: cycles, direct_jump_ops: dj, lexicon_lookup_ops: lx, _tokens: tokens };
 }
 
 function getU64(view, off) {
@@ -444,6 +453,35 @@ function getU64(view, off) {
 // ---------------------------------------------------------------------------
 // Rendering helpers
 // ---------------------------------------------------------------------------
+
+const WELL_KNOWN_PREDICATES = new Map([
+  [0x795b93bc052fea4fn, 'rdfs:label'],
+  [0x88c5572e59c6cf62n, 'wn:lemma'],
+  [0x71ea6b8bfc3e094n,  'rdfs:comment'],
+  [0xa33ab9ebd0538b5n,  'rdf:type'],
+  [0xd62c0a0fc1fb196n,  'schema:name'],
+]);
+
+function formatResolvedTerm(h, role, vfs, tokens) {
+  if (vfs && vfs._lexMap && vfs._lexMap.has(h)) {
+    return esc(vfs.lookup(h));
+  }
+  if (role === 'p' && WELL_KNOWN_PREDICATES.has(h)) {
+    return `<span class="badge green" style="padding:1px 6px;font-size:0.75rem">${WELL_KNOWN_PREDICATES.get(h)}</span>`;
+  }
+  if (role === 'o' && tokens && tokens[2]) {
+    const rawVal = stripDelimiters(tokens[2]);
+    for (const v of hashTokenVariants(tokens[2])) {
+      if (v === h) return `"${esc(rawVal)}"`;
+    }
+  }
+  if (role === 's' && tokens && tokens[0]) {
+    for (const v of hashTokenVariants(tokens[0])) {
+      if (v === h) return esc(tokens[0]);
+    }
+  }
+  return toHex16(h);
+}
 
 function renderResults(result, totalQuins) {
   const vfs = activeVfs;
@@ -455,9 +493,9 @@ function renderResults(result, totalQuins) {
   } else {
     list.innerHTML = result.matches.map(q => {
       const sh = parseBigDecimal(q.s), ph = parseBigDecimal(q.p), oh = parseBigDecimal(q.o);
-      const sl = vfs ? esc(vfs.lookup(sh)) : toHex16(sh);
-      const pl = vfs ? esc(vfs.lookup(ph)) : toHex16(ph);
-      const ol = vfs ? esc(vfs.lookup(oh)) : toHex16(oh);
+      const sl = formatResolvedTerm(sh, 's', vfs, result._tokens);
+      const pl = formatResolvedTerm(ph, 'p', vfs, result._tokens);
+      const ol = formatResolvedTerm(oh, 'o', vfs, result._tokens);
       return `<div class="triple-row">
         <span class="triple-label">S</span><span class="triple-s">${sl}</span>&nbsp;
         <span class="triple-label">P</span><span class="triple-p">${pl}</span>&nbsp;

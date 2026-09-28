@@ -207,6 +207,7 @@
                     <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Dataset Profile</label>
                     <select id="graph-dataset" class="input-field" onchange="updateGraphDataset()">
                         <option value="schemaorg-30" selected>Schema.org 30.0 (NT + q42)</option>
+                        <option value="wordnet-31">Princeton WordNet 3.1 (q42)</option>
                         <option value="synthetic-10k">Synthetic 10K triples</option>
                         <option value="wikidata-sample">Wikidata Sample (100K)</option>
                     </select>
@@ -770,7 +771,7 @@ LIMIT 100</textarea>
         window.updateMetrics?.(0, 0, 0, 0);
     };
     window.updateGraphDataset = function () {
-        initializeGraphBenchmarkUi().catch((err) => {
+        return initializeGraphBenchmarkUi().catch((err) => {
             const meta = document.getElementById('graph-dataset-meta');
             if (meta) meta.textContent = `Dataset metadata unavailable: ${err.message}`;
         });
