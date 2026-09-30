@@ -375,6 +375,18 @@ title: VibeScript
       background: rgba(69, 10, 10, 0.25);
     }
     .vibe-present-card.is-fail .meter { color: #fca5a5; }
+    .vibe-present-card.is-rise {
+      animation: vibe-present-soft-rise 380ms ease-out both;
+    }
+    @keyframes vibe-present-soft-rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .vibe-present-card.is-rise {
+        animation: none;
+      }
+    }
     .vibe-present-foot {
       margin-top: 1rem;
       display: flex;
@@ -828,39 +840,25 @@ title: VibeScript
 </div>
 
 <script type="module">
-  import { runPresentJobs } from "{{ '/js/vibescript-present.js' | relative_url }}";
+  import { runPresentJobs, softRisePresentCards } from "{{ '/js/vibescript-present.js' | relative_url }}";
 
   const statusEl = document.getElementById('vibe-present-status');
   const btn = document.getElementById('vibe-present-rerun');
-
-  function paint(jobs) {
-    for (const job of jobs) {
-      const card = document.querySelector(`[data-job="${job.id}"]`);
-      if (!card) continue;
-      card.classList.remove('is-wait', 'is-fail');
-      if (!job.ok) card.classList.add('is-fail');
-      const meter = card.querySelector('.meter');
-      if (meter) {
-        meter.textContent = job.ok
-          ? `${job.ms.toFixed(2)} ms · ${job.detail}`
-          : (job.detail || 'failed');
-      }
-    }
-  }
+  const root = document.getElementById('vibe-present');
 
   async function run() {
     if (statusEl) statusEl.textContent = 'Running Present jobs…';
     if (btn) btn.disabled = true;
     try {
       const result = await runPresentJobs();
-      paint(result.jobs);
+      await softRisePresentCards(root, result.jobs);
       if (statusEl) {
         statusEl.textContent = `Live · ${result.jobs.length} jobs · ${result.note}`;
       }
     } catch (err) {
       document.querySelectorAll('.vibe-present-card').forEach((card) => {
         card.classList.add('is-fail');
-        card.classList.remove('is-wait');
+        card.classList.remove('is-wait', 'is-rise');
         const meter = card.querySelector('.meter');
         if (meter) meter.textContent = err.message || String(err);
       });

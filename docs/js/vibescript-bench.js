@@ -1,8 +1,9 @@
 /**
  * Browser VibeScript measurement harness.
  *
- * Soft-rise purpose clocks: checked cell, CompiledCell.compile, run() ×2 on
- * the same handle, and structural edit without a host rebuild.
+ * Soft-rise Present purpose clocks (hero): checked cell, CompiledCell.compile,
+ * run() ×2 on the same handle. Structural edit without host rebuild stays
+ * quiet in the harness until Present — not a soft-rise hero card.
  * CompiledCell.run also appears as a labelled binding footnote.
  */
 

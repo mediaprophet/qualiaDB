@@ -271,6 +271,18 @@
          TAB — VIBESCRIPT WASM API BROWSER MEASUREMENT
     ═══════════════════════════════════════════════════ -->
     <div id="tab-vibescript" class="tab-pane">
+        <style>
+          #vibescript-present-hero .vibe-present-soft.is-rise {
+            animation: vibe-present-soft-rise 380ms ease-out both;
+          }
+          @keyframes vibe-present-soft-rise {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: none; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            #vibescript-present-hero .vibe-present-soft.is-rise { animation: none; }
+          }
+        </style>
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <div class="flex items-center justify-between flex-wrap gap-4 mb-3">
                 <h3 class="text-xl font-semibold flex items-center gap-2">
@@ -282,7 +294,7 @@
                 </span>
             </div>
             <p class="text-white/60 text-sm mb-6">
-                Soft-rise Present clocks: <strong>checked cell</strong>, <strong>CompiledCell.compile</strong>, <strong>run() ×2</strong>, and <strong>edit without host rebuild</strong>.
+                Soft-rise Present clocks: <strong>checked cell</strong>, <strong>CompiledCell.compile</strong>, and <strong>run() ×2</strong> on the same handle.
             </p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -326,30 +338,29 @@
                 </button>
             </div>
 
-            <div class="code-block text-sm mb-4" id="vibescript-output">Ready to clock checked · compile · run ×2 · edit without host rebuild.</div>
+            <div class="code-block text-sm mb-4" id="vibescript-output">Ready to clock checked · compile · run ×2.</div>
 
-            <!-- Purpose demo scorecards (hero) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <div class="glass-panel rounded-2xl p-4 text-center">
+            <!-- Purpose demo scorecards (hero) — three Present jobs only -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="vibescript-present-hero">
+                <div class="glass-panel rounded-2xl p-4 text-center vibe-present-soft" data-job="checked">
                     <div class="text-xs text-amber-400 font-semibold mb-1 uppercase tracking-wider">Checked cell</div>
                     <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-check">—</div>
                     <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
                 </div>
-                <div class="glass-panel rounded-2xl p-4 text-center">
+                <div class="glass-panel rounded-2xl p-4 text-center vibe-present-soft" data-job="compile">
                     <div class="text-xs text-violet-300 font-semibold mb-1 uppercase tracking-wider">Compile once</div>
                     <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-compile">—</div>
                     <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
                 </div>
-                <div class="glass-panel rounded-2xl p-4 text-center">
+                <div class="glass-panel rounded-2xl p-4 text-center vibe-present-soft" data-job="run">
                     <div class="text-xs text-cyan-400 font-semibold mb-1 uppercase tracking-wider">Run ×2</div>
                     <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-run">—</div>
                     <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
                 </div>
-                <div class="glass-panel rounded-2xl p-4 text-center">
-                    <div class="text-xs text-emerald-400 font-semibold mb-1 uppercase tracking-wider">Edit without host rebuild</div>
-                    <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-edit">—</div>
-                    <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
-                </div>
+            </div>
+            <!-- Edit-without-host-rebuild clock stays quiet until Present — not a soft-rise hero card -->
+            <div hidden aria-hidden="true">
+                <span id="vibe-purpose-edit">—</span>
             </div>
 
             <!-- Binding footnote (not a language-speed crown) -->
@@ -1075,7 +1086,7 @@ LIMIT 100</textarea>
         const btn = document.getElementById('btn-vibescript-run');
         const output = document.getElementById('vibescript-output');
         if (btn) btn.disabled = true;
-        if (output) output.textContent = 'Clocking checked · compile · run ×2 · edit without host rebuild…';
+        if (output) output.textContent = 'Clocking checked · compile · run ×2…';
 
         try {
             const workload = document.getElementById('vibescript-workload')?.value || 'bytecode';
@@ -1088,10 +1099,27 @@ LIMIT 100</textarea>
 
             const fmt = (m) => (m == null ? '—' : `${m.p50.toFixed(3)} ms`);
             const setTxt = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
-            setTxt('vibe-purpose-check', fmt(res.purposes?.checked));
-            setTxt('vibe-purpose-compile', fmt(res.purposes?.compile));
-            setTxt('vibe-purpose-run', fmt(res.purposes?.run));
-            setTxt('vibe-purpose-edit', fmt(res.purposes?.edit));
+            const reduced = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } })();
+            const riseOrder = [
+                ['vibe-purpose-check', fmt(res.purposes?.checked), 'checked'],
+                ['vibe-purpose-compile', fmt(res.purposes?.compile), 'compile'],
+                ['vibe-purpose-run', fmt(res.purposes?.run), 'run'],
+            ];
+            const hero = document.getElementById('vibescript-present-hero');
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            for (let i = 0; i < riseOrder.length; i++) {
+                const [id, value, job] = riseOrder[i];
+                setTxt(id, value);
+                const card = hero?.querySelector(`[data-job="${job}"]`);
+                if (card && !reduced) {
+                    card.classList.remove('is-rise');
+                    void card.offsetWidth;
+                    card.classList.add('is-rise');
+                }
+                if (!reduced && i < riseOrder.length - 1) await sleep(180);
+            }
+            // Edit clock stays quiet — measured in harness, not a Present soft-rise hero card.
+            setTxt('vibe-purpose-edit', '—');
 
             const binding = res.binding?.run;
             if (binding) {
@@ -1115,7 +1143,6 @@ LIMIT 100</textarea>
 Checked cell:              ${fmt(res.purposes?.checked)} (p95 ${res.purposes?.checked?.p95?.toFixed(3) ?? '—'} ms)
 Compile once:              ${fmt(res.purposes?.compile)} (p95 ${res.purposes?.compile?.p95?.toFixed(3) ?? '—'} ms)
 Run ×2:                    ${fmt(res.purposes?.run)} (p95 ${res.purposes?.run?.p95?.toFixed(3) ?? '—'} ms)
-Edit without host rebuild: ${fmt(res.purposes?.edit)} (p95 ${res.purposes?.edit?.p95?.toFixed(3) ?? '—'} ms)
 
 Binding footnote:          ${res.workloadLabel}
 Footnote p50:              ${binding ? binding.p50.toFixed(6) + ' ms/call' : '—'}
@@ -1130,7 +1157,7 @@ ${res.note}`;
 
     window.resetVibeScriptBenchmark = function () {
         const output = document.getElementById('vibescript-output');
-        if (output) output.textContent = 'Ready to clock checked · compile · run ×2 · edit without host rebuild.';
+        if (output) output.textContent = 'Ready to clock checked · compile · run ×2.';
         ['vibe-purpose-check','vibe-purpose-compile','vibe-purpose-run','vibe-purpose-edit','vibe-metric-ops','vibe-metric-setup','v8-metric-heap'].forEach((id) => {
             const el = document.getElementById(id); if (el) el.textContent = '—';
         });
