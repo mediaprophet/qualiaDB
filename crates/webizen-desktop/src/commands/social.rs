@@ -334,6 +334,29 @@ pub fn mcp_ensure_safe_tool_allowlist(slug: String) -> Result<serde_json::Value,
     api::mcp_ensure_safe_tool_allowlist(slug)
 }
 
+// ── Prompt Precision: shared semantic conditioning profile ───────────────────
+
+/// Validate (by compiling) and activate a semantic conditioning profile for
+/// every inference route — native chat, orchestrated decode, Ollama and
+/// remote MCP. The document is the same JSON shape as the POET HTTP
+/// `conditioning` field.
+#[command]
+pub fn conditioning_profile_activate(profile_json: String) -> Result<serde_json::Value, String> {
+    api::conditioning_profile_activate(profile_json)
+}
+
+/// Deactivate the active semantic conditioning profile.
+#[command]
+pub fn conditioning_profile_deactivate() -> Result<serde_json::Value, String> {
+    api::conditioning_profile_deactivate()
+}
+
+/// Current semantic-profile activation state.
+#[command]
+pub fn conditioning_profile_status() -> Result<serde_json::Value, String> {
+    api::conditioning_profile_status()
+}
+
 /// Store a chat turn's inline CML context (#project/#topic/#task/[[concept]]) into the inforg (no-op if
 /// the message carries no tags). The next turn sharing those concepts reuses this context.
 #[command]

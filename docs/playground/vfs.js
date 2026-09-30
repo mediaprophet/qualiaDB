@@ -6,8 +6,8 @@
  * the WASM VM, avoiding SharedArrayBuffer / COOP+COEP headers that GitHub
  * Pages cannot serve.
  *
- * Q42 v3 unified volume (preferred):
- *   [0..256)       Q42VolumeHeader (magic "Q42\\0", version 3)
+ * Q42 v3/v4 unified volume (preferred):
+ *   [0..256)       Q42VolumeHeader (magic "Q42\\0", version 3 or 4)
  *   [lex_offset]   Q42LEX blob (structural vocabulary)
  *   [bidx_offset]  BIDX blob (object-range index)
  *   [reserved FIDX/PIDX]  optional field-range and postings (flags 0x0008 / 0x0010)
@@ -18,7 +18,7 @@
  * block directory).  Subsequent `readBlock(i)` issues targeted Range
  * requests for individual compressed SuperBlocks.
  *
- * All pre-release datasets use v3. Non-v3 files are rejected at mount time.
+ * Datasets are v3 or v4 (v4 = namespaced Q42LEX, ADR 0015). Other versions are rejected at mount time.
  *
  * Priority order for readBlock():
  *   1. OPFS local vault  — user-provided or previously cached data
@@ -189,6 +189,8 @@ const Q42_MAGIC2      = 0x34; // '4'
 const Q42_MAGIC3      = 0x32; // '2'
 const Q42_MAGIC4      = 0x00;
 const Q42_VERSION_V3  = 3;
+// v4 = namespaced paged Q42LEX (per-page namespace table + 0x04 entries).
+const Q42_VERSION_V4  = 4;
 const HEADER_SIZE     = 256;
 const DIR_ENTRY_SIZE  = 16;
 const FLAG_BLOCKS_LZ4 = 0x0001;
@@ -204,11 +206,11 @@ const PREAMBLE_PROBE  = 8191;
 const SMALL_VOLUME_MAX = 8 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
-// Q42 v3 volume header + block directory (embedded lex/bidx preamble)
+// Q42 v3/v4 volume header + block directory (embedded lex/bidx preamble)
 // ---------------------------------------------------------------------------
 
 /**
- * Parse the 256-byte Q42 v3 volume header.
+ * Parse the 256-byte Q42 v3/v4 volume header.
  * @param {DataView} dv — view over at least 256 bytes at offset 0
  * @returns {object|null}
  */
@@ -225,10 +227,10 @@ export function parseQ42Header(dv) {
         return null;
     }
     const version = dv.getUint16(4, true);
-    if (version !== Q42_VERSION_V3) return null;
+    if (version !== Q42_VERSION_V3 && version !== Q42_VERSION_V4) return null;
 
     const flags = dv.getUint16(6, true);
-    // Named v3 fields occupy 0..176; FIDX/PIDX live in _reserved[16..48] (file 192..224).
+    // Named v3/v4 fields occupy 0..176; FIDX/PIDX live in _reserved[16..48] (file 192..224).
     const reserved = 176;
     return {
         version,
@@ -277,7 +279,7 @@ function decodeFlagNames(flags) {
  * @returns {Array<{relOffset:number, compLen:number, uncompLen:number}>}
  */
 /**
- * Flatten a unified v3 volume already in memory into concatenated live Quin bytes.
+ * Flatten a unified v3/v4 volume already in memory into concatenated live Quin bytes.
  * Used by SPARQL/Pages loaders so a 1 MB ontology never depends on HTTP Range.
  */
 export function flattenUnifiedVolumeQuins(bytes) {
@@ -285,7 +287,7 @@ export function flattenUnifiedVolumeQuins(bytes) {
         throw new Error('Q42 volume is shorter than the 256-byte header');
     }
     const header = parseQ42Header(new DataView(bytes.buffer, bytes.byteOffset, HEADER_SIZE));
-    if (!header) throw new Error('not a Q42 v3 unified volume');
+    if (!header) throw new Error('not a Q42 v3/v4 unified volume');
     const dir = parseBlockDirectory(bytes, header);
     const chunks = [];
     let total = 0;
@@ -338,7 +340,7 @@ function parseBlockDirectory(buf, header) {
 }
 
 /**
- * Maps block indices to LZ4-compressed byte ranges in a v3 unified volume.
+ * Maps block indices to LZ4-compressed byte ranges in a v3/v4 unified volume.
  * The preamble (header + lex + bidx + block directory) is fetched once via
  * HTTP Range; subsequent reads target only the compressed SuperBlock payloads.
  */
@@ -522,14 +524,14 @@ export function decompressLz4Stream(raw) {
 
 export class VFS {
     /**
-     * @param {string}       remoteUrl    — URL of the hosted unified v3 .q42
+     * @param {string}       remoteUrl    — URL of the hosted unified v3/v4 .q42
      * @param {string}       [lexUrl]     — URL of the .q42-lex side-car
      * @param {boolean}      [compressed] — true when remoteUrl is an LZ4 block stream
      * @param {string|null}  [bidxUrl]    — URL of the .q42.bidx block-index side-car
      */
     constructor(remoteUrl, lexUrl = null, compressed = false, bidxUrl = null) {
         this._remoteUrl      = remoteUrl;
-        /** Side-car URLs — null means rely on embedded v3 preamble or skip. */
+        /** Side-car URLs — null means rely on embedded unified preamble or skip. */
         this._lexUrl         = lexUrl;
         this._bidxUrl        = bidxUrl;
         this._compressed     = compressed;
@@ -559,7 +561,7 @@ export class VFS {
         this._blockRanges    = null;
         this._bidxLoaded     = false;
         this._rangeWarned    = false;
-        /** True when lex+bidx were parsed from the embedded v3 preamble. */
+        /** True when lex+bidx were parsed from the embedded unified preamble. */
         this._embeddedPreamble = false;
         this._volumeV3       = false;
         this._volumeHeader   = null;
@@ -574,7 +576,7 @@ export class VFS {
      * Initialise the VFS.
      *
      * Boot sequence:
-     *   1. Preamble Range fetch (bytes=0-N) — v3: embedded lex+bidx+block_dir;
+     *   1. Preamble Range fetch (bytes=0-N) — v3/v4: embedded lex+bidx+block_dir;
      *      legacy: file-size probe only
      *   2. Side-car lex/bidx fetch — only when preamble did not embed them
      *
@@ -622,7 +624,7 @@ export class VFS {
     /** OPFS volume cache status for UI telemetry. */
     get opfsCache() { return { ...this._opfsCacheStatus }; }
 
-    /** True when this volume uses the v3 unified format (embedded lex/bidx). */
+    /** True when this volume uses the v3/v4 unified format (embedded lex/bidx). */
     get embeddedPreamble() { return this._embeddedPreamble; }
     get volumeV3() { return this._volumeV3; }
     get volumeHeader() { return this._volumeHeader; }
@@ -633,7 +635,7 @@ export class VFS {
     /**
      * Fetch the volume preamble and build routing tables.
      *
-     * v3 unified volumes pack lex, bidx, and the block directory at the
+     * v3/v4 unified volumes pack lex, bidx, and the block directory at the
      * front of the file.  A single Range request (`bytes=0-N`) gives the
      * client everything needed to route targeted SuperBlock fetches without
      * downloading the tensor payload.
@@ -692,7 +694,7 @@ export class VFS {
 
         if (!preamble || preamble.length < HEADER_SIZE) {
             throw new Error(
-                `[VFS] Could not read Q42 v3 header from ${this._remoteUrl} — ` +
+                `[VFS] Could not read Q42 v3/v4 header from ${this._remoteUrl} — ` +
                 'the dataset may be missing on the server or cached as a stale 404. ' +
                 'Hard-refresh (Ctrl+Shift+R) or clear site data for this origin, then retry.'
             );
@@ -703,11 +705,11 @@ export class VFS {
 
         if (!header) {
             throw new Error(
-                '[VFS] File is not a Q42 v3 unified volume — run qualia-cli ingest or q42 migrate meta'
+                '[VFS] File is not a Q42 v3/v4 unified volume — run qualia-cli ingest or q42 migrate meta'
             );
         }
 
-        // v3: extend preamble if the probe window was too small.
+        // v3/v4: extend preamble if the probe window was too small.
         const preambleEnd = header.dataOffset;
         if (preamble.length < preambleEnd) {
             onProgress?.('Downloading dataset index…', 38);
@@ -754,7 +756,7 @@ export class VFS {
         this._opfsCacheStatus.totalBytes = this._totalBytes;
         this._volumeHeader = header;
         console.log(
-            `[VFS] v3 preamble: lex=${header.lexLength} B, bidx=${header.bidxLength} B,` +
+            `[VFS] unified preamble: lex=${header.lexLength} B, bidx=${header.bidxLength} B,` +
             ` fidx=${header.fidxLength} B, pidx=${header.pidxLength} B,` +
             ` ${header.blockCount} blocks, flags=${header.flagNames.join('|') || 'none'},` +
             ` data@${header.dataOffset}` +
@@ -948,7 +950,7 @@ export class VFS {
         let bytes;
 
         if (!this._volumeV3 || !this._blockOffsetMap) {
-            throw new Error('[VFS] readBlock called before v3 volume mount');
+            throw new Error('[VFS] readBlock called before unified volume mount');
         }
         const { start, size, uncompLen } =
             this._blockOffsetMap.compressedRange(blockIndex);
@@ -1456,8 +1458,9 @@ export class VFS {
         const formatVersion = raw.length >= 32 ? Number(buf.getBigUint64(24, true)) : 1;
         const td = new TextDecoder('utf-8');
 
-        if (formatVersion === 2) {
-            // Paged Q42LEX v2: directory of pages followed by uncompressed pages
+        if (formatVersion === 2 || formatVersion === 4) {
+            // Paged Q42LEX v2/v4: directory of pages followed by uncompressed
+            // pages; v4 pages additionally carry a local namespace table.
             const pageCount = Number(buf.getBigUint64(32, true));
             for (let p = 0; p < pageCount; p++) {
                 const dirOffset = 40 + p * 32;
@@ -1469,6 +1472,23 @@ export class VFS {
                 if (pageOffset + 16 > raw.length) continue;
                 const blobOffset = Number(buf.getBigUint64(pageOffset + 8, true));
                 const indexStart = pageOffset + 16;
+                const pageEnd = pageOffset + pageLength;
+                // v4: page-local namespace table at the start of the blob region.
+                // Pages stay independently decodable — this is what preserves
+                // HTTP-Range lookups.
+                const nsTable = [];
+                if (formatVersion === 4) {
+                    let cursor = pageOffset + blobOffset;
+                    const nsCount = buf.getUint32(pageOffset + 4, true);
+                    // Namespace table entries are [u16 len][utf-8] — no tag byte.
+                    for (let n = 0; n < nsCount; n++) {
+                        if (cursor + 2 > pageEnd || cursor + 2 > raw.length) break;
+                        const nsLen = raw[cursor] | (raw[cursor + 1] << 8);
+                        if (cursor + 2 + nsLen > pageEnd) break;
+                        nsTable.push(td.decode(raw.subarray(cursor + 2, cursor + 2 + nsLen)));
+                        cursor += 2 + nsLen;
+                    }
+                }
 
                 for (let e = 0; e < count; e++) {
                     const idx = indexStart + e * 16;
@@ -1480,6 +1500,20 @@ export class VFS {
 
                     const tag = raw[strStart];
                     let len, textStart;
+                    if (tag === 0x04) {
+                        // v4 namespaced entry: [ns_id u16][local_len u16][local utf8]
+                        if (formatVersion !== 4 || strStart + 5 > pageEnd) continue;
+                        const nsId = raw[strStart + 1] | (raw[strStart + 2] << 8);
+                        const localLen = raw[strStart + 3] | (raw[strStart + 4] << 8);
+                        const ns = nsTable[nsId];
+                        if (ns === undefined) continue;
+                        const localStart = strStart + 5;
+                        if (localStart + localLen <= pageEnd) {
+                            const str = ns + td.decode(raw.subarray(localStart, localStart + localLen));
+                            this._lexMap.set(hash, str);
+                        }
+                        continue;
+                    }
                     if (tag === 0x01 || tag === 0x03) {
                         len = raw[strStart + 1] | (raw[strStart + 2] << 8);
                         textStart = strStart + 3;

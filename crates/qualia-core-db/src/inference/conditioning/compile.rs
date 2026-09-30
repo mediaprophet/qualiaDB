@@ -11,9 +11,15 @@ use super::spec::{ConditioningError, ConditioningSpec};
 use super::validate::validate_spec;
 
 /// Fixed scratch buffers provided by caller for zero-heap compilation.
-pub struct CompileBuffers<'a> {
-    pub outcomes: &'a mut [RequirementOutcome<'a>],
-    pub selected_evidence: &'a mut [EvidencePart<'a>],
+///
+/// `'a` is the data lifetime (profile/spec strings stored inside elements);
+/// `'s` is the caller's scratch-slice borrow. Keeping them separate lets the
+/// caller re-read the buffers after compilation — e.g. rendering the
+/// `selected_evidence` the compiler just filled — while the returned plan
+/// still borrows source data.
+pub struct CompileBuffers<'a, 's> {
+    pub outcomes: &'s mut [RequirementOutcome<'a>],
+    pub selected_evidence: &'s mut [EvidencePart<'a>],
 }
 
 /// Bounded summary of a compiled conditioning plan.
@@ -30,12 +36,12 @@ pub struct CompiledPlanSummary<'a> {
 
 /// Compile a conditioning spec and authority view into caller-supplied fixed buffers.
 /// Adheres to Tier-1 zero allocation in hot paths.
-pub fn compile_into<'a>(
+pub fn compile_into<'a, 's>(
     spec: &ConditioningSpec<'a>,
     authority: &AuthorityView<'a>,
     capabilities: &BackendCapabilities,
     available_evidence: &'a [EvidencePart<'a>],
-    buffers: &mut CompileBuffers<'a>,
+    buffers: &mut CompileBuffers<'a, 's>,
 ) -> Result<CompiledPlanSummary<'a>, ConditioningError> {
     // 1. Validate spec bounds, schema, references, and authority
     validate_spec(spec, authority)?;

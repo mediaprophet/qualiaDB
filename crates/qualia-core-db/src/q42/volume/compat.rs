@@ -192,7 +192,7 @@ fn lossless_monarch_class_lexicon_gate() {
     let mmap = Q42LexMmap::from_bytes(&bytes[lex_start..lex_end]).unwrap();
     for (hash, iri) in &lex {
         let resolved = mmap
-            .lookup_hash(*hash)
+            .lookup_owned(*hash)
             .unwrap_or_else(|| panic!("missing lexicon entry for {hash}"));
         assert_eq!(resolved, iri.as_str());
     }

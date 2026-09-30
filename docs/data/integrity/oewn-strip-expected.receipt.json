@@ -1,0 +1,8 @@
+{
+  "schema": "qualia.integrity.receipt/v1",
+  "pair": "OEWN omit / StripLiterals divergence",
+  "title": "Intentional profile divergence",
+  "status": "EXPECTED_DIVERGENCE",
+  "summary": "StripLiterals keeps hashed structure but empties lexicon; --omit-preset=comment-gloss drops annotation triples from both ingest and verify when applied symmetrically.",
+  "encoder": "import"
+}

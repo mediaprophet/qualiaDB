@@ -322,6 +322,57 @@ export function renderVolumetricSDF(ctx, width, height, time = 0) {
     ctx.putImageData(imgData, 0, 0);
 }
 
+/**
+ * Evaluate the same SDF field used by the Canvas preview without requiring a
+ * Canvas. This makes the browser renderer model available to worker runs.
+ */
+export function sampleVolumetricSDF(width = 192, height = 128, time = 0) {
+    let checksum = 0;
+    const scale = Math.min(width, height) * 0.4;
+    const cosT = Math.cos(time);
+    const sinT = Math.sin(time);
+    for (let y = 0; y < height; y++) {
+        const ny = (y - height / 2) / scale;
+        for (let x = 0; x < width; x++) {
+            const nx = (x - width / 2) / scale;
+            const rx = nx * cosT - ny * sinT;
+            const ry = nx * sinT + ny * cosT;
+            const dist = Math.sqrt(rx * rx + ry * ry) - 0.65;
+            const ripples = Math.sin(rx * 8.0 + time * 2) * Math.cos(ry * 8.0) * 0.08;
+            checksum += Math.abs(dist + ripples) - 0.04 < 0 ? 1 : 0;
+        }
+    }
+    return checksum;
+}
+
+function seededRandom(seed) {
+    let state = seed >>> 0;
+    return () => {
+        state += 0x6D2B79F5;
+        let value = state;
+        value = Math.imul(value ^ (value >>> 15), value | 1);
+        value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+        return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function makePointCloud(count, seed = 0x51442) {
+    const random = seededRandom(seed ^ count);
+    const points = [];
+    for (let i = 0; i < count; i++) {
+        // A stratified field reads as a dense scene without clumping all
+        // primitives in the centre of the viewport.
+        const band = i % 19;
+        points.push({
+            x: 0.04 + ((band + random()) / 19) * 0.92,
+            y: 0.06 + random() * 0.88,
+            z: random() - 0.5,
+            id: i,
+        });
+    }
+    return points;
+}
+
 // ── 6. Geometry Visualizer Canvas Component ────────────────────────────────
 export class GeometryViewer {
     constructor(canvas) {
@@ -329,6 +380,8 @@ export class GeometryViewer {
         this.ctx = canvas.getContext('2d');
         this.mode = 'delaunay'; // delaunay | hull | bvh | volumetric
         this.points = [];
+        this.scenePoints = [];
+        this.requestedCount = 60;
         this.triangles = [];
         this.hull = [];
         this.bvh = null;
@@ -340,20 +393,15 @@ export class GeometryViewer {
         this.render();
     }
 
-    generatePoints(count = 60) {
-        const pts = [];
-        for (let i = 0; i < count; i++) {
-            pts.push({
-                x: 0.15 + Math.random() * 0.7,
-                y: 0.15 + Math.random() * 0.7,
-                z: (Math.random() - 0.5) * 0.5,
-                id: i,
-            });
-        }
-        this.points = pts;
-        const res = computeDelaunay2D(pts);
+    generatePoints(count = 60, seed = 0x51442) {
+        this.requestedCount = Math.max(3, Math.min(count, 3000));
+        this.scenePoints = makePointCloud(this.requestedCount, seed);
+        // The preview renders every requested primitive. The browser-side
+        // Delaunay model stays bounded so an interactive canvas remains fast.
+        this.points = this.scenePoints.slice(0, Math.min(this.requestedCount, 220));
+        const res = computeDelaunay2D(this.points);
         this.triangles = res.triangles;
-        this.hull = computeConvexHull(pts);
+        this.hull = computeConvexHull(this.points);
 
         // Build 3D triangles for BVH
         const bvhTris = this.triangles.map(t => ({
@@ -362,6 +410,16 @@ export class GeometryViewer {
             v2: { x: t[2].x * 2 - 1, y: t[2].y * 2 - 1, z: t[2].z },
         }));
         this.bvh = new SimpleBVH(bvhTris);
+    }
+
+    sceneSummary() {
+        return {
+            requested: this.requestedCount,
+            displayed: this.scenePoints.length,
+            solverPoints: this.points.length,
+            triangles: this.triangles.length,
+            hullVertices: this.hull.length,
+        };
     }
 
     setMode(mode) {
@@ -394,6 +452,19 @@ export class GeometryViewer {
 
         ctx.fillStyle = '#0a0e17';
         ctx.fillRect(0, 0, w, h);
+
+        // Render the full requested field in one canvas path. This is visual
+        // evidence of the selected scene density, not a GPU performance claim.
+        if (this.scenePoints.length) {
+            ctx.fillStyle = 'rgba(45, 212, 191, 0.26)';
+            ctx.beginPath();
+            const radius = this.scenePoints.length > 1000 ? 1.05 : 1.7;
+            for (const p of this.scenePoints) {
+                ctx.moveTo(p.x * w + radius, p.y * h);
+                ctx.arc(p.x * w, p.y * h, radius, 0, Math.PI * 2);
+            }
+            ctx.fill();
+        }
 
         // Draw grid
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
@@ -455,7 +526,7 @@ export class GeometryViewer {
             const isHull = this.hull.some(hp => hp.id === p.id);
             ctx.fillStyle = isHull ? '#38bdf8' : '#34d399';
             ctx.beginPath();
-            ctx.arc(p.x * w, p.y * h, isHull ? 4.5 : 3, 0, Math.PI * 2);
+            ctx.arc(p.x * w, p.y * h, isHull ? 4.5 : 2.4, 0, Math.PI * 2);
             ctx.fill();
         }
     }
@@ -471,10 +542,7 @@ export async function runGeometryLive(algorithm = 'all', count = 1000) {
         summary: {},
     };
 
-    const pts = [];
-    for (let i = 0; i < count; i++) {
-        pts.push({ x: Math.random(), y: Math.random(), z: Math.random() - 0.5, id: i });
-    }
+    const pts = makePointCloud(count, 0xB3EC0);
 
     const t0 = performance.now();
     if (algorithm === 'delaunay' || algorithm === 'all') {
@@ -488,11 +556,12 @@ export async function runGeometryLive(algorithm = 'all', count = 1000) {
     }
     if (algorithm === 'bvh' || algorithm === 'all') {
         const tris = [];
-        for (let i = 0; i < 200; i++) {
+        for (let i = 0; i < Math.min(200, Math.floor(pts.length / 3)); i++) {
+            const base = i * 3;
             tris.push({
-                v0: { x: Math.random(), y: Math.random(), z: Math.random() },
-                v1: { x: Math.random(), y: Math.random(), z: Math.random() },
-                v2: { x: Math.random(), y: Math.random(), z: Math.random() },
+                v0: pts[base],
+                v1: pts[base + 1],
+                v2: pts[base + 2],
             });
         }
         const bvh = new SimpleBVH(tris);
@@ -501,6 +570,10 @@ export async function runGeometryLive(algorithm = 'all', count = 1000) {
             rayHits += bvh.intersectRay({ x: 0.5, y: 0.5, z: -1 }, { x: 0, y: 0, z: 1 });
         }
         results.summary.rayHits = rayHits;
+    }
+    if (algorithm === 'volumetric' || algorithm === 'all') {
+        results.summary.volumetricSamples = 192 * 128;
+        results.summary.volumetricSurfaceSamples = sampleVolumetricSDF(192, 128, 0.25);
     }
     const elapsed = Math.max(performance.now() - t0, 0.001);
     results.meanMs = +elapsed.toFixed(3);

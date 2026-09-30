@@ -102,11 +102,11 @@ pub fn ingest_ntriples(
         triples += 1;
     }
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: skipped,
         bidx_written: true,
@@ -205,11 +205,11 @@ pub fn ingest_rdf_xml(
         return Err(Box::new(e));
     }
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,
@@ -236,11 +236,11 @@ pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
     // .chk format does not use a lexicon currently
     let triples = qualia_core_db::parsers::chk_parser::parse_chk_stream(reader, 0, &mut sorter)?;
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,
@@ -267,11 +267,11 @@ pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn s
     let triples =
         qualia_core_db::parsers::cbor_parser::parse_cbor_ld_stream(&buffer, 0, &mut sorter)?;
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,
@@ -449,10 +449,10 @@ macro_rules! stream_ingest {
             let temp_dir = std::env::temp_dir().join($temp_suffix);
             let mut sorter = ExternalSorter::new(temp_dir);
             let triples = $parse_fn(reader, 0, &mut sorter)?;
-            let block_seq = sorter.merge(output)?;
+            let stats = sorter.merge(output)?;
             Ok(IngestStats {
                 triples_ingested: triples,
-                blocks_written: block_seq,
+                blocks_written: stats.blocks,
                 lex_entries: 0,
                 lines_skipped: 0,
                 bidx_written: true,
@@ -522,10 +522,10 @@ pub fn ingest_json_ld_star(
         &mut sorter,
         true,
     )?;
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,

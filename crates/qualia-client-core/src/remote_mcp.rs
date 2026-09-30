@@ -17,33 +17,51 @@ use std::time::Duration;
 /// Default MCP tool name to call for inference (the Webizen MCP surface exposes `llm_infer`).
 pub const DEFAULT_INFER_TOOL: &str = "llm_infer";
 
+/// Outcome of one remote inference call: the text plus the lowering receipt
+/// describing how the request reached the tool's schema.
+#[derive(Debug)]
+pub struct RemoteInferOutcome {
+    pub text: String,
+    pub lowering: crate::conditioning::McpLoweringReceipt,
+}
+
 /// Build the JSON-RPC `tools/call` request body for an inference call.
 ///
-/// The system prompt (if any) is prepended to the user prompt so the request works against any MCP
-/// inference tool that accepts a single `prompt` string argument; `model` is passed through when set.
+/// When the tool's schema supports a dedicated `system` argument the request
+/// keeps role separation (`supports_system_role == Some(true)`); otherwise the
+/// system text is flattened into `prompt` and the returned receipt records the
+/// degradation. `None` means the capability was not declared or discoverable —
+/// conservative flattening, reported as such.
 fn build_infer_request(
     infer_tool: &str,
     model: Option<&str>,
     system: Option<&str>,
     prompt: &str,
-) -> serde_json::Value {
-    let full = match system {
-        Some(sys) if !sys.trim().is_empty() => format!("{sys}\n\n{prompt}"),
-        _ => prompt.to_string(),
-    };
-    let mut args = serde_json::Map::new();
-    args.insert("prompt".into(), serde_json::json!(full));
+    supports_system_role: Option<bool>,
+) -> (serde_json::Value, crate::conditioning::McpLoweringReceipt) {
+    let (mut args, mut receipt) = crate::conditioning::lower_mcp_tool_arguments(
+        system,
+        prompt,
+        supports_system_role.unwrap_or(false),
+    );
+    if supports_system_role.is_none() && system.is_some() {
+        receipt.degradation_reason =
+            Some("system-role capability not declared or discoverable; flattened into prompt");
+    }
     if let Some(m) = model {
         if !m.is_empty() {
-            args.insert("model".into(), serde_json::json!(m));
+            args["model"] = serde_json::json!(m);
         }
     }
-    serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": { "name": infer_tool, "arguments": serde_json::Value::Object(args) }
-    })
+    (
+        serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": { "name": infer_tool, "arguments": args }
+        }),
+        receipt,
+    )
 }
 
 /// Extract the text output from an MCP `tools/call` JSON-RPC response, tolerant of shape variation.
@@ -90,19 +108,25 @@ fn parse_infer_response(resp: &serde_json::Value) -> Result<String, String> {
     Err("remote MCP response had no text content".to_string())
 }
 
-/// Run one inference over the configured MCP transport and return the completion text.
+/// Run one inference over the configured MCP transport and return the
+/// completion plus the role-lowering receipt.
 ///
-/// `infer_tool` defaults to [`DEFAULT_INFER_TOOL`] when `None`. This is a blocking call — the caller
-/// should run it off the UI thread (the desktop command wrapper uses `spawn_blocking`).
+/// `infer_tool` defaults to [`DEFAULT_INFER_TOOL`] when `None`.
+/// `supports_system_role` is the tool-schema capability: `Some` from the
+/// agent's declared configuration or [`remote_mcp_tool_supports_system_role`]
+/// discovery, `None` to flatten conservatively. This is a blocking call — the
+/// caller should run it off the UI thread (the desktop command wrapper uses
+/// `spawn_blocking`).
 pub fn remote_mcp_infer(
     transport: &McpTransport,
     infer_tool: Option<&str>,
     model: Option<&str>,
     system: Option<&str>,
     prompt: &str,
-) -> Result<String, String> {
+    supports_system_role: Option<bool>,
+) -> Result<RemoteInferOutcome, String> {
     let tool = infer_tool.unwrap_or(DEFAULT_INFER_TOOL);
-    let req = build_infer_request(tool, model, system, prompt);
+    let (req, lowering) = build_infer_request(tool, model, system, prompt, supports_system_role);
     let resp = match transport {
         McpTransport::Tcp { host, port } => call_tcp(host, *port, &req)?,
         McpTransport::Stdio { command, args } => call_stdio(command, args, &req)?,
@@ -110,7 +134,42 @@ pub fn remote_mcp_infer(
             call_http(url, credential_id.as_deref(), &req)?
         }
     };
-    parse_infer_response(&resp)
+    Ok(RemoteInferOutcome {
+        text: parse_infer_response(&resp)?,
+        lowering,
+    })
+}
+
+/// Discover whether the named inference tool's declared `inputSchema` accepts
+/// a dedicated `system` argument, via a `tools/list` round-trip.
+/// `None` = capability unknown (endpoint error or tool absent); callers fall
+/// back to flattened arguments.
+pub fn remote_mcp_tool_supports_system_role(
+    transport: &McpTransport,
+    tool_name: &str,
+) -> Option<bool> {
+    let req = serde_json::json!({
+        "jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}
+    });
+    let response = match transport {
+        McpTransport::Tcp { host, port } => call_tcp(host, *port, &req).ok()?,
+        McpTransport::Stdio { command, args } => call_stdio(command, args, &req).ok()?,
+        McpTransport::Http { url, credential_id } => {
+            call_http(url, credential_id.as_deref(), &req).ok()?
+        }
+    };
+    let tools = response
+        .get("result")
+        .and_then(|result| result.get("tools"))
+        .and_then(|tools| tools.as_array())?;
+    let tool = tools
+        .iter()
+        .find(|tool| tool.get("name").and_then(|n| n.as_str()) == Some(tool_name))?;
+    let properties = tool
+        .get("inputSchema")
+        .and_then(|schema| schema.get("properties"))
+        .and_then(|props| props.as_object())?;
+    Some(properties.contains_key("system"))
 }
 
 fn call_tcp(host: &str, port: u16, req: &serde_json::Value) -> Result<serde_json::Value, String> {
@@ -264,7 +323,8 @@ mod tests {
 
     #[test]
     fn request_is_valid_tools_call() {
-        let req = build_infer_request("llm_chat", Some("phi-3"), Some("Be terse."), "hi");
+        let (req, receipt) =
+            build_infer_request("llm_chat", Some("phi-3"), Some("Be terse."), "hi", None);
         assert_eq!(req["jsonrpc"], "2.0");
         assert_eq!(req["method"], "tools/call");
         assert_eq!(req["params"]["name"], "llm_chat");
@@ -272,13 +332,48 @@ mod tests {
         let prompt = req["params"]["arguments"]["prompt"].as_str().unwrap();
         assert!(prompt.starts_with("Be terse."));
         assert!(prompt.ends_with("hi"));
+        assert_eq!(receipt.mode, crate::conditioning::McpLoweringMode::Flattened);
+        assert!(receipt.role_degraded);
+        assert_eq!(
+            receipt.degradation_reason,
+            Some("system-role capability not declared or discoverable; flattened into prompt")
+        );
     }
 
     #[test]
     fn request_omits_empty_model_and_system() {
-        let req = build_infer_request(DEFAULT_INFER_TOOL, None, None, "just this");
+        let (req, receipt) =
+            build_infer_request(DEFAULT_INFER_TOOL, None, None, "just this", None);
         assert!(req["params"]["arguments"].get("model").is_none());
         assert_eq!(req["params"]["arguments"]["prompt"], "just this");
+        assert!(!receipt.role_degraded);
+    }
+
+    #[test]
+    fn structured_request_keeps_roles_when_schema_supports_system() {
+        let (req, receipt) =
+            build_infer_request("llm_chat", None, Some("Be terse."), "hi", Some(true));
+        assert_eq!(req["params"]["arguments"]["system"], "Be terse.");
+        assert_eq!(req["params"]["arguments"]["prompt"], "hi");
+        assert_eq!(receipt.mode, crate::conditioning::McpLoweringMode::Structured);
+        assert!(!receipt.role_degraded);
+        assert!(receipt.degradation_reason.is_none());
+    }
+
+    #[test]
+    fn declared_unsupported_schema_flattens_with_reason() {
+        let (req, receipt) =
+            build_infer_request("llm_chat", None, Some("Be terse."), "hi", Some(false));
+        assert!(req["params"]["arguments"].get("system").is_none());
+        assert!(req["params"]["arguments"]["prompt"]
+            .as_str()
+            .unwrap()
+            .starts_with("Be terse."));
+        assert!(receipt.role_degraded);
+        assert_eq!(
+            receipt.degradation_reason,
+            Some("MCP tool schema lacks dedicated system parameter; flattened into prompt")
+        );
     }
 
     #[test]

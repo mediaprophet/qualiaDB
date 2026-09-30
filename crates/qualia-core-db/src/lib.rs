@@ -323,6 +323,9 @@ pub use sparql_library::*;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex;
+/// Q42LEX v4 writer: paged lexicon with per-page namespace dictionaries.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod q42_lex_ns;
 #[cfg(target_arch = "wasm32")]
 pub mod q42_lex {
     pub struct Q42LexMmap<'a> {

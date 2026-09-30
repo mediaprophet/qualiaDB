@@ -97,11 +97,16 @@ pub enum AgentBackendSpec {
     ///   client pick its default.
     /// - `model` — the remote model identifier to request; `None` uses the
     ///   provider's default.
+    /// - `supports_system_role` — declared tool-schema capability: does the
+    ///   inference tool accept a dedicated `system` argument? `None` means
+    ///   undeclared — the client discovers it via `tools/list` or flattens.
     RemoteMcp {
         endpoint: String,
         transport: McpTransport,
         infer_tool: Option<String>,
         model: Option<String>,
+        #[serde(default)]
+        supports_system_role: Option<bool>,
     },
 }
 
@@ -696,6 +701,7 @@ mod tests {
                 transport,
                 infer_tool: Some("infer".to_string()),
                 model: Some("big-model".to_string()),
+                supports_system_role: None,
             },
             system_prompt: "persona".to_string(),
             allowed_mcp_tools: vec!["search".to_string()],
@@ -743,6 +749,7 @@ mod tests {
                 },
                 infer_tool: None,
                 model: None,
+                supports_system_role: None,
             },
             "persona",
         );

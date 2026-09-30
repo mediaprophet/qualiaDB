@@ -4,6 +4,7 @@
 pub mod agents;
 pub mod agreements;
 pub mod chat;
+pub mod conditioning;
 pub mod connect;
 pub mod daemon;
 pub mod dashboard;
@@ -27,6 +28,7 @@ pub mod windows;
 pub use agents::*;
 pub use agreements::*;
 pub use chat::*;
+pub use conditioning::*;
 pub use connect::*;
 pub use daemon::*;
 pub use dashboard::*;

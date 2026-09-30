@@ -84,6 +84,73 @@ fn pp005_job_cancel_parity_notes() {
 }
 
 #[test]
+fn pp005_shared_prepare_is_identical_for_http_and_route_agnostic_entry() {
+    // The POET HTTP request path and the route-agnostic entry point used by
+    // desktop chat / Ollama / remote MCP must produce the same plan for the
+    // same profile: one compiler, one prepared request, per-route lowering.
+    use qualia_core_db::services::poet_llm_api::PoetLlmRequest;
+    use qualia_core_db::services::poet_llm_conditioning::{
+        prepare_conditioned_prompt, prepare_prompt,
+    };
+
+    let conditioning = serde_json::json!({
+        "schema_version": 1,
+        "profile_id": "urn:qualia:profile:parity",
+        "requirements": [
+            {"id": "r1", "class": "enforced", "rule": "Cite only supplied evidence", "validator": "provenance", "required": true, "priority": 1},
+            {"id": "r2", "class": "guidance", "rule": "Prefer terse answers", "required": false, "priority": 5}
+        ],
+        "evidence": [
+            {"source_id": "doc:a", "content": "Evidence content A."}
+        ],
+        "budget": {"input_tokens": 512, "output_tokens": 96, "tool_rounds": 0, "max_bytes": 8192}
+    });
+    let request: PoetLlmRequest = serde_json::from_value(serde_json::json!({
+        "model_path": "C:/models/fixture.gguf",
+        "prompt": "Summarise the supplied evidence",
+        "conditioning": conditioning,
+        "graph_context": "{}",
+        "principal_did": "did:qualia:person",
+        "max_tokens": 128,
+        "library_projects": [],
+        "library_context_supplied": false
+    }))
+    .unwrap();
+
+    let via_request = prepare_prompt(&request).unwrap();
+    let via_shared = prepare_conditioned_prompt(
+        request.conditioning.as_ref().unwrap(),
+        &request.prompt,
+        &request.principal_did,
+        &request.graph_context,
+        request.max_tokens,
+    )
+    .unwrap();
+
+    assert_eq!(via_request.text, via_shared.text);
+    assert_eq!(via_request.plan_id, via_shared.plan_id);
+    assert_eq!(via_request.profile_id, via_shared.profile_id);
+    assert_eq!(via_request.selected_evidence, via_shared.selected_evidence);
+    assert_eq!(via_request.token_budget, via_shared.token_budget);
+    assert!(via_shared.plan_id.unwrap() != 0);
+    // The rendered request carries requirements and evidence, and preserves
+    // the request objective.
+    assert!(via_shared.text.contains("Cite only supplied evidence"));
+    assert!(via_shared.text.contains("Summarise the supplied evidence"));
+
+    // Legacy path: no conditioning → pass-through, no plan.
+    let legacy: PoetLlmRequest = serde_json::from_value(serde_json::json!({
+        "model_path": "C:/models/fixture.gguf",
+        "prompt": "plain request",
+        "max_tokens": 64
+    }))
+    .unwrap();
+    let legacy_prepared = prepare_prompt(&legacy).unwrap();
+    assert_eq!(legacy_prepared.text, "plain request");
+    assert_eq!(legacy_prepared.plan_id, None);
+}
+
+#[test]
 fn pp006_product_chat_reaches_legacy_prefix_cache_not_paged_kv() {
     let decode = include_str!("../src/inference/inference_agent/decode.rs");
     assert!(

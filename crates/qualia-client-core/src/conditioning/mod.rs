@@ -2,10 +2,16 @@
 
 pub mod auto_route;
 pub mod mcp;
+pub mod prepared;
 pub mod result;
 
 pub use auto_route::{apply_active_model_precision, apply_contract_to_prompt, AppliedPrecision};
 pub use mcp::{lower_mcp_tool_arguments, McpLoweringMode, McpLoweringReceipt};
+pub use prepared::{
+    activate_profile, active_profile_status, active_profile_path, deactivate_profile,
+    load_active_profile, prepare_active_semantic_request, prepare_semantic_request,
+    PreparedRouteReceipt, PreparedSemanticRequest,
+};
 pub use result::{MeasurementStatus, NormalizedInferenceResult};
 
 #[cfg(test)]

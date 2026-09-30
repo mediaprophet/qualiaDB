@@ -137,7 +137,7 @@ pub async fn handle(action: &WebizenAction) -> Result<(), Box<dyn std::error::Er
             println!("📦 Commencing K-Way External Merge Sort into BIDX format...");
 
             let out_q42 = repo.join("knowledge.q42");
-            let blocks = sorter.merge(&out_q42)?;
+            let blocks = sorter.merge(&out_q42)?.blocks;
 
             println!(
                 "✅ Perfectly sorted B-Tree dataset generated: {} SuperBlocks written.",

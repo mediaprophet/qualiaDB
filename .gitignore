@@ -26,6 +26,7 @@ target/
 *.n3
 !bundled/qapps/**/*.n3
 !tools/**/*.n3
+!crates/vibe/fixtures/**/*.n3
 
 # Princeton WordNet — full graph is a GitHub Release asset (see docs/data/wordnet/README.md)
 docs/data/wordnet/*.q42

@@ -226,7 +226,7 @@ Append dated entries here as phases complete.
 - `load_graph` (`n3` \| `quins` \| `q42lite`), `load_q42`, `list_graphs`, `unload_graph`, `export_q42lite`
 - `query_graph` (hashes + label/object CONTAINS via lexicon)
 - `query_sparql` SELECT-only subset (`?s ?p ?o` + optional FILTER CONTAINS on `?o`); fail closed otherwise
-- Q42L format (magic `Q42L` v1): wasm-safe; **native Q42 v3 rejected** with guidance
+- Q42L format (magic `Q42L` v1): wasm-safe; **native Q42 v3/v4 rejected** with guidance
 - `compile_deontic_norms` + `evaluate_deontic_session` (Active / Expired / Defeated tested)
 - Unit tests: **13 passed**
 

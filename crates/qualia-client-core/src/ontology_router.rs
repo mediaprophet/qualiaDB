@@ -10,9 +10,6 @@ use qualia_core_db::q_hash;
 
 use crate::chat_session::{ChatEnvironment, OntologyScopeSummary};
 
-const MAX_ROUTED_ONTOLOGIES: usize = 4;
-const MAX_CONTEXT_NAMESPACES: usize = 16;
-
 #[derive(Debug, Clone, Default)]
 pub struct OntologyRoutingDecision {
     pub ontology_ids: Vec<String>,
@@ -83,13 +80,7 @@ pub fn route_prompt_with_focus_and_allowlist(
     let mut seen_terms = HashSet::new();
 
     for (score, summary) in &scored {
-        if *score <= 0 && !ontology_ids.is_empty() {
-            break;
-        }
-        if *score <= 0 && ontology_ids.len() >= MAX_ROUTED_ONTOLOGIES {
-            break;
-        }
-        if ontology_ids.len() >= MAX_ROUTED_ONTOLOGIES {
+        if *score <= 0 {
             break;
         }
         ontology_ids.push(summary.id.clone());
@@ -102,7 +93,7 @@ pub fn route_prompt_with_focus_and_allowlist(
     }
 
     if ontology_ids.is_empty() {
-        for summary in in_scope.iter().take(MAX_ROUTED_ONTOLOGIES) {
+        for summary in &in_scope {
             ontology_ids.push(summary.id.clone());
             extend_namespaces(&mut context_namespaces, summary);
         }
@@ -113,7 +104,6 @@ pub fn route_prompt_with_focus_and_allowlist(
             .iter()
             .copied()
             .find(|o| o.id.contains("wordnet"))
-            .filter(|_| ontology_ids.len() < MAX_ROUTED_ONTOLOGIES)
         {
             ontology_ids.push(wordnet.id.clone());
             extend_namespaces(&mut context_namespaces, wordnet);
@@ -122,9 +112,6 @@ pub fn route_prompt_with_focus_and_allowlist(
 
     context_namespaces.sort_unstable();
     context_namespaces.dedup();
-    if context_namespaces.len() > MAX_CONTEXT_NAMESPACES {
-        context_namespaces.truncate(MAX_CONTEXT_NAMESPACES);
-    }
 
     let routing_brief = if ontology_ids.is_empty() {
         "[Ontology routing: no installed ontologies selected]".to_string()
@@ -348,5 +335,39 @@ mod tests {
         );
         assert_eq!(decision.ontology_ids, vec!["legal-commons".to_string()]);
         assert!(!decision.context_namespaces.contains(&q_hash("health")));
+    }
+
+    #[test]
+    fn routing_keeps_all_matching_ontologies_and_namespaces() {
+        let mut env = env();
+        for index in 0..5 {
+            env.ontology_summaries.push(OntologyScopeSummary {
+                id: format!("legal-{index}"),
+                name: format!("Legal Domain {index}"),
+                quin_count: 10,
+                q42_path: format!("legal-{index}.q42"),
+                domain: Some("legal".into()),
+                tags: Some(vec!["agreement".into()]),
+                source: None,
+            });
+        }
+
+        let decision = route_prompt_to_ontologies(&env, "Draft a legal agreement.");
+        for index in 0..5 {
+            assert!(decision.ontology_ids.contains(&format!("legal-{index}")));
+        }
+        assert!(decision.context_namespaces.len() > 16);
+    }
+
+    #[test]
+    fn routing_keeps_full_scope_when_no_ontology_matches() {
+        let mut env = env();
+        env.ontology_summaries.retain(|summary| !summary.id.contains("wordnet"));
+
+        let decision = route_prompt_to_ontologies(&env, "Investigate xylophones.");
+        assert_eq!(decision.ontology_ids.len(), env.ontology_summaries.len());
+        for summary in &env.ontology_summaries {
+            assert!(decision.ontology_ids.contains(&summary.id));
+        }
     }
 }

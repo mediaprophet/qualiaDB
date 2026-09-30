@@ -33,7 +33,13 @@ fn temp(name: &str) -> std::path::PathBuf {
 fn all_lexicon_strings(vol: &Q42Volume) -> Vec<String> {
     match vol.lex_view() {
         Ok(lex) => (0..lex.entry_count())
-            .filter_map(|i| lex.string_at(i).map(|s| s.to_string()))
+            .filter_map(|i| {
+                let (ns, local) = lex.string_parts_at(i)?;
+                let mut s = String::with_capacity(ns.len() + local.len());
+                s.push_str(ns);
+                s.push_str(local);
+                Some(s)
+            })
             .collect(),
         Err(_) => Vec::new(),
     }
@@ -97,7 +103,7 @@ fn complete_mode_recovers_uris_and_multilingual_literals() {
     let resolvable = quins
         .iter()
         .filter(|q| {
-            lex.lookup_hash(q.object).is_some() || lex.lookup_hash(q.object & MASK).is_some()
+            lex.contains(q.object) || lex.contains(q.object & MASK)
         })
         .count();
     assert_eq!(

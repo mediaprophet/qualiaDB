@@ -9,10 +9,10 @@ _Branch: `0.0.40` | Last updated: 2026-09-08_
 - **Super-Quin (NQuin)**: 48-byte struct — six `u64` fields: subject, predicate, object, context, metadata, parity. Replaces RDF triples. All semantic meaning is bit-packed; no pointers, no heap references.
 - **FrameLayout ABI** (`frame_layout.rs`): the single canonical registry for the NQuin's ~6 "computational" bytes — predicate opcode/path/defeater, object inline datatype tags, the role-keyed `metadata` overlay, and parity. Modalities read/write those bits only through it; no-collision invariants are test-enforced. See [ADR 0008](adr/0008-frame-layout-abi-and-inline-tags.md).
 - **Inline datatype tags** (`resolver.rs`, object field, MSB clear): `0b001` xsd:integer, `0b010` xsd:decimal, `0b011` xsd:boolean, **`0b101` xsd:float** (allocated 0.0.40 — formerly clashed with integer), `0b1000` Webizen WebID. Bits `[60..62]` select; `[0..59]` carry the value.
-- **SuperBlock**: 40,960-byte (10 sectors) physical I/O unit. 160-byte header + 850 × 48-byte Quins. New writes store each SuperBlock LZ4-compressed inside a unified v3 volume.
-- **`.q42`**: Native graph volume. **New writes are unified Q42 v3**: 256-byte `Q42\0` header, embedded Q42LEX + object-range BIDX, optional FIDX (S/P/C ranges) and PIDX (postings), block directory, LZ4 SuperBlock payloads. One file. See [q42-format-internal-draft.md](standards/q42-format-internal-draft.md).
-- **BIDX**: Embedded object-hash min/max per SuperBlock. Binary search decides which blocks to decompress. Not a sidecar on v3 writes.
-- **Q42LEX**: Embedded reverse hash→string dictionary. Same layout as the obsolete `.q42.lex` sidecar; now lives inside the volume.
+- **SuperBlock**: 40,960-byte (10 sectors) physical I/O unit. 160-byte header + 850 × 48-byte Quins. New writes store each SuperBlock LZ4-compressed inside a unified v4 volume.
+- **`.q42`**: Native graph volume. **New writes are unified Q42 v4** (v3 remains readable): 256-byte `Q42\0` header, embedded Q42LEX + object-range BIDX, optional FIDX (S/P/C ranges) and PIDX (postings), block directory, LZ4 SuperBlock payloads. One file. See [q42-format-internal-draft.md](standards/q42-format-internal-draft.md).
+- **BIDX**: Embedded object-hash min/max per SuperBlock. Binary search decides which blocks to decompress. Not a sidecar on v3/v4 writes.
+- **Q42LEX**: Embedded reverse hash→string dictionary. v4 pages carry a page-local namespace table (terms stored as namespace-ID + local suffix — ADR 0015); v2 pages store verbatim strings. Either way it lives inside the volume, superseding the obsolete `.q42.lex` sidecar.
 - **FIDX / PIDX**: Optional field-range and postings indexes (flags `0x0008` / `0x0010`). Supplement BIDX; they do not replace it.
 - **Five-field ECC**: `parity = subject ^ predicate ^ object ^ context ^ metadata`. Verify walks reject a Quin that fails this fold.
 - **`.q42.bidx` / `.q42.lex`**: Legacy v1 sidecars. Read-only fallbacks when opening pre-v3 trees. New ingest MUST NOT emit them.
@@ -142,7 +142,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **QCHK (`.qchk` binary)**: QualiaDB Capability Profile binary format. Identified by magic bytes `0x51 0x43 0x48 0x4B` ("QCHK") at offset 0. This is a *constraint binding* for agent sessions, not an ingest data source. Legacy `.chk` QCHK files remain readable during migration.
 - **Capability envelope migration**: CogAI Chunks keep the `.chk` extension. QCHK profiles move to `.qchk`. Always check the magic bytes at offset 0 when handling older profile files.
 - **CBOR-LD**: Compact binary Linked Data. Primary runtime format for protocol exchanges, mobile storage, and verifiable claims.
-- **`.q42`**: Native graph binary. Unified v3 volume (header + lex + BIDX + LZ4 SuperBlocks). Not a raw SuperBlock stream and not a whole-file LZ4 archive.
+- **`.q42`**: Native graph binary. Unified v4 volume (header + lex + BIDX + LZ4 SuperBlocks; v3 readable). Not a raw SuperBlock stream and not a whole-file LZ4 archive.
 - **q_hash()**: FNV-1a hash at compile time for all IRIs. Replaces runtime string allocation in the engine core.
 
 ---
@@ -157,7 +157,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 ## Ontology Workbench & Permissive Commons
 
 - **`.c.q42`**: Obsolete framed-LZ4 transport / copy alias. New ingest writes unified `.q42` only. Readers may still open a leftover file; nothing new MUST emit this extension.
-- **Workbench**: Ontology Hub pipeline — URI import into a unified v3 `.q42`, SHA-1 info hash, magnet URI generation (fail-closed for Sanctuary / unmarked personal volumes), and audience-scoped sharing policy.
+- **Workbench**: Ontology Hub pipeline — URI import into a unified v4 `.q42`, SHA-1 info hash, magnet URI generation (fail-closed for Sanctuary / unmarked personal volumes), and audience-scoped sharing policy.
 - **HTTP Web Seed**: BEP-19 style serving of unified `.q42` files via `GET /torrent/webseed/{info_hash}` on the Qualia daemon. Magnet URIs include `ws=` pointing at this endpoint. Unmarked or Sanctuary volumes MUST NOT receive a public magnet.
 - **Share Card**: Filtered ontology metadata (title, magnet, quin count) visible to a contact or session DID per torrent policy.
 

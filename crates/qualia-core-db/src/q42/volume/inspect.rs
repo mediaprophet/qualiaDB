@@ -7,7 +7,8 @@ use serde::Serialize;
 
 use super::super::{
     Q42Volume, Q42VolumeHeader, FLAG_BLOCKS_LZ4, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES,
-    FLAG_OBJECT_SORTED, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, FLAG_VOLUME_ROOT, HEADER_SIZE,
+    FLAG_OBJECT_SORTED, FLAG_PAYLOAD_CATALOGUE, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY,
+    FLAG_VOLUME_ROOT, HEADER_SIZE,
 };
 use super::publication::{classify_q42_volume, PublicationIntent, Q42PublicationVerdict};
 /// One named byte interval inside the file.
@@ -237,13 +238,17 @@ fn decode_flags(flags: u16) -> Vec<&'static str> {
     if flags & FLAG_SANCTUARY != 0 {
         names.push("sanctuary");
     }
+    if flags & FLAG_PAYLOAD_CATALOGUE != 0 {
+        names.push("payload-catalogue");
+    }
     let known = FLAG_BLOCKS_LZ4
         | FLAG_OBJECT_SORTED
         | FLAG_VOLUME_ROOT
         | FLAG_FIELD_RANGES
         | FLAG_FIELD_POSTINGS
         | FLAG_PERMISSIVE_COMMONS
-        | FLAG_SANCTUARY;
+        | FLAG_SANCTUARY
+        | FLAG_PAYLOAD_CATALOGUE;
     if flags & !known != 0 {
         names.push("unknown");
     }

@@ -63,7 +63,7 @@ mod tests {
     }
 
     #[test]
-    fn writes_unified_v3_with_indexes_and_round_trips() {
+    fn writes_unified_v4_with_indexes_and_round_trips() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("session.q42");
         let written = write_sorted_quins_volume(&path, &[quin(9), quin(1), quin(5)]).unwrap();
@@ -71,7 +71,7 @@ mod tests {
         let bytes = std::fs::read(&path).unwrap();
         assert!(bytes.starts_with(&Q42_MAGIC));
         let volume = Q42Volume::open(&path).unwrap();
-        assert_eq!({ volume.header().version }, 3);
+        assert_eq!({ volume.header().version }, 4);
         assert!(volume.header().flags & FLAG_FIELD_RANGES != 0);
         assert!(volume.header().flags & FLAG_FIELD_POSTINGS != 0);
         volume.verify_all_blocks().expect("ECC + BIDX");

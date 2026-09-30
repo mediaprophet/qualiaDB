@@ -25,6 +25,7 @@ use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict}
 use crate::modalities::logic::n3_compiler::N3OutputMode;
 
 use super::poet_llm_api::{decode_request, PoetLlmRequest};
+use super::poet_llm_conditioning::prepare_prompt;
 
 const MAX_JOBS: usize = 32;
 const MAX_EVENTS_PER_JOB: usize = 512;
@@ -259,7 +260,15 @@ pub async fn cancel_handler(body: Bytes) -> Response {
 }
 
 fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
-    job.control.set_token_budget(request.max_tokens);
+    let prepared = match prepare_prompt(&request) {
+        Ok(prepared) => prepared,
+        Err(message) => {
+            persist_run_receipt(&job_id, &request, "failed", 0, 0, &message);
+            finish_error(&job, &message);
+            return;
+        }
+    };
+    job.control.set_token_budget(prepared.token_budget);
     let agent = LocalLlmAgent::new(&request.agent_did, &request.model_path);
     let context_hash = crate::q_hash(&request.graph_context);
     let intent = AgentIntent {
@@ -294,7 +303,7 @@ fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
     let started = Instant::now();
     let event_job = Arc::clone(&job);
     let (text, provenance, tokens, semantic_quin) = agent.infer_local_model_controlled(
-        &request.prompt,
+        &prepared.text,
         &request.graph_context,
         job.control.clone(),
         Some(move |delta| event_job.emit("token", serde_json::json!({"delta": delta}))),
@@ -339,7 +348,7 @@ fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
         return;
     }
     let verified =
-        crate::inference::post_turn_verify::maybe_verify_turn(&request.prompt, &output.text);
+        crate::inference::post_turn_verify::maybe_verify_turn(&prepared.text, &output.text);
     let checks = verified
         .checks
         .iter()
@@ -366,7 +375,13 @@ fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
             "provenance_hashes": output.provenance_quins,
             "context_hash": context_hash,
             "context_supplied": !request.graph_context.is_empty(),
-            "token_budget": request.max_tokens,
+            "token_budget": prepared.token_budget,
+            "conditioning": {
+                "applied": prepared.plan_id.is_some(),
+                "plan_id": prepared.plan_id,
+                "profile_id": prepared.profile_id,
+                "selected_evidence": prepared.selected_evidence,
+            },
             "repaired": verified.repaired,
             "checks": checks,
             "semantic_quin": output.semantic_quin

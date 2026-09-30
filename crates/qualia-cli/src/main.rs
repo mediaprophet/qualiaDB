@@ -78,6 +78,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Q42 { action } => {
             handlers::misc::handle_q42(action)?;
         }
+        Commands::Hmc { action } => {
+            handlers::misc::handle_hmc(action)?;
+        }
         Commands::Dump { out_path } => {
             handlers::misc::handle_dump(out_path)?;
         }
@@ -110,8 +113,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             dataset,
             memory_mib,
             temp_gib,
+            encoder,
+            omit_predicates,
+            omit_preset,
+            require_isomorphism,
         } => {
-            handlers::misc::handle_verify_graph(input, dataset, *memory_mib, *temp_gib)?;
+            handlers::misc::handle_verify_graph(
+                input,
+                dataset,
+                *memory_mib,
+                *temp_gib,
+                encoder,
+                omit_predicates.as_deref(),
+                omit_preset.as_deref(),
+                *require_isomorphism,
+            )?;
         }
         Commands::Import {
             input,
@@ -122,10 +138,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             url,
             job_dir,
             resume,
+            omit_predicates,
+            omit_preset,
         } => {
             handlers::misc::handle_import(
                 input.as_ref(),
-                output,
+                output.as_ref(),
                 *strip_literals,
                 *segment_mib,
                 *progress,
@@ -133,6 +151,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 url.as_deref(),
                 job_dir.as_ref(),
                 *resume,
+                omit_predicates.as_deref(),
+                omit_preset.as_deref(),
             );
         }
         Commands::IngestJob { action } => {

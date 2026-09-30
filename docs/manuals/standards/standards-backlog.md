@@ -12,7 +12,9 @@ These items should be resolved before any serious external submission work.
 
 The repo previously exhibited multiple incompatible `.q42` interpretations. As of
 2026-06-11, **new ingest converges on unified v3 volumes**
-(`crates/qualia-core-db/src/q42_volume.rs`):
+(`crates/qualia-core-db/src/q42_volume.rs`) — *superseded 2026-09-30: new
+ingest now writes unified v4 (namespaced Q42LEX, ADR 0015); the v3 layout
+below otherwise still applies since the header and section layout are shared*:
 
 - single `.q42` file with magic `Q42\0`, version 3
 - embedded Q42LEX + BIDX + block-local LZ4 SuperBlocks

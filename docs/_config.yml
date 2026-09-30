@@ -41,7 +41,7 @@ include:
   - "resources/*.json"
   - "tests/**/*.js"
 
-# Exclude obsolete WordNet sidecars (unified v3 .q42 embeds lex + bidx + LZ4 SuperBlocks).
+# Exclude obsolete WordNet sidecars (unified v4 .q42 embeds lex + bidx + LZ4 SuperBlocks).
 exclude:
   - "playground/wordnet.c.q42"
   - "playground/wordnet.q42.lex"

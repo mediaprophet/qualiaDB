@@ -174,6 +174,7 @@ pub fn agent_roster_add_remote(
         transport,
         infer_tool: infer_tool.filter(|s| !s.trim().is_empty()),
         model: model.filter(|s| !s.trim().is_empty()),
+        supports_system_role: None,
     };
     let mut agent = crate::agent_registry::AgentDefinition::new(
         slug,
@@ -271,13 +272,19 @@ pub fn run_remote_agent_turn(
         crate::agent_registry::RemoteConsentPolicy::PerTurn
         | crate::agent_registry::RemoteConsentPolicy::Preapproved => {}
     }
-    let (transport, infer_tool, model) = match &agent.backend {
+    let (transport, infer_tool, model, declared_system_role) = match &agent.backend {
         AgentBackendSpec::RemoteMcp {
             transport,
             infer_tool,
             model,
+            supports_system_role,
             ..
-        } => (transport.clone(), infer_tool.clone(), model.clone()),
+        } => (
+            transport.clone(),
+            infer_tool.clone(),
+            model.clone(),
+            *supports_system_role,
+        ),
         AgentBackendSpec::LocalEngine { .. } => {
             return Err("agent is local — use the local inference path".to_string());
         }
@@ -308,31 +315,90 @@ pub fn run_remote_agent_turn(
         _ => {}
     }
 
-    let system = if agent.system_prompt.trim().is_empty() {
-        None
-    } else {
-        Some(agent.system_prompt.as_str())
+    // Prompt Precision: the same persisted profile that conditions local chat
+    // is compiled for this turn and carried as system text. Compile failures
+    // fail closed — enforced requirements are never silently dropped before a
+    // remote dispatch leaves the device.
+    let principal = crate::user_profile::load_profile().public_did;
+    let prepared = crate::conditioning::prepare_active_semantic_request(
+        Path::new(&storage),
+        &prompt,
+        &principal,
+        &format!("webizen:session:{session_id}"),
+        1024,
+    )?;
+
+    // System text = the agent's declared persona + the prepared request.
+    let system_owned = {
+        let mut parts: Vec<&str> = Vec::with_capacity(2);
+        if !agent.system_prompt.trim().is_empty() {
+            parts.push(agent.system_prompt.trim());
+        }
+        if let Some(request) = &prepared {
+            parts.push(request.text.as_str());
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join("\n\n"))
+        }
     };
-    let text = crate::remote_mcp::remote_mcp_infer(
+
+    // Capability precedence: roster-declared flag, then `tools/list`
+    // discovery; unknown capability flattens with a degradation receipt.
+    let supports_system_role = declared_system_role.or_else(|| {
+        let tool = infer_tool
+            .as_deref()
+            .unwrap_or(crate::remote_mcp::DEFAULT_INFER_TOOL);
+        crate::remote_mcp::remote_mcp_tool_supports_system_role(&transport, tool)
+    });
+
+    let started = std::time::Instant::now();
+    let outcome = crate::remote_mcp::remote_mcp_infer(
         &transport,
         infer_tool.as_deref(),
         model.as_deref(),
-        system,
+        system_owned.as_deref(),
         &prompt,
+        supports_system_role,
     )?;
-    if !text.trim().is_empty() {
-        let _ = append_chat_message(session_id, "agent".to_string(), text.clone());
-    }
+    let duration_ms = started.elapsed().as_millis() as u64;
+
+    // `committed` reports whether the reply was actually persisted to the
+    // session log — a remote response alone commits nothing to the graph.
+    let appended = if !outcome.text.trim().is_empty() {
+        append_chat_message(session_id, "agent".to_string(), outcome.text.clone()).is_ok()
+    } else {
+        false
+    };
+    let role_mode = match outcome.lowering.mode {
+        crate::conditioning::McpLoweringMode::Structured => "structured",
+        crate::conditioning::McpLoweringMode::Flattened => "flattened",
+    };
+    let conditioning = prepared.as_ref().map(|request| {
+        request.receipt(
+            "remote_mcp",
+            role_mode,
+            outcome.lowering.role_degraded,
+            outcome.lowering.degradation_reason.map(str::to_string),
+        )
+    });
     Ok(serde_json::json!({
-        "text": text,
-        "committed": true,
+        "text": outcome.text,
+        "committed": appended,
+        "session_appended": appended,
+        "wal_committed": false,
         "block_reason": serde_json::Value::Null,
         "agent_backend": "remote",
         "model_id": model,
         "provenance_hashes": [],
         "citations": [],
-        "tokens_generated": 0,
-        "inference_duration_ms": 0,
+        "tokens_generated": serde_json::Value::Null,
+        "token_measurement": "unknown",
+        "inference_duration_ms": duration_ms,
+        "latency_measurement": "measured",
+        "conditioning": conditioning,
+        "mcp_lowering": outcome.lowering,
     }))
 }
 

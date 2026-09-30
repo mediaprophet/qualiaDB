@@ -12,8 +12,12 @@ pub const LEX_MAGIC: [u8; 8] = *b"Q42LEX\0\0";
 const MAGIC: &[u8; 8] = &LEX_MAGIC;
 pub const LEX_HEADER_SIZE: usize = 32;
 const HEADER_SIZE: usize = LEX_HEADER_SIZE;
-const INDEX_ENTRY_SIZE: usize = 16;
+pub const INDEX_ENTRY_SIZE: usize = 16;
 pub const LEX_VERSION_PAGED: u64 = 2;
+/// Namespaced paged format: per-page namespace dictionaries plus `0x04`
+/// `(ns_id, local)` entries. The version word aligns with the Q42 volume
+/// generation that first ships it; there is no LEX v3 (ADR 0015).
+pub const LEX_VERSION_V4: u64 = 4;
 pub const PAGED_DIRECTORY_HEADER_SIZE: usize = 8;
 pub const PAGED_DIRECTORY_ENTRY_SIZE: usize = 32;
 pub const PAGED_PAGE_HEADER_SIZE: usize = 16;
@@ -23,9 +27,12 @@ pub const PAGED_PAGE_HEADER_SIZE: usize = 16;
 pub const DEFAULT_LEX_PAGE_ENTRIES: usize = 4_096;
 
 /// Type tags for lexicon entries (1-byte prefix in payload)
-const LEX_TAG_STRING: u8 = 0x01; // UTF-8 string
+pub const LEX_TAG_STRING: u8 = 0x01; // UTF-8 string
 const LEX_TAG_EMBEDDED: u8 = 0x02; // Embedded triple [u64; 3]
 const LEX_TAG_WEBIZEN: u8 = 0x03; // Authoritative Webizen identity
+/// v4 namespaced entry: [u16 ns_id][u16 local_len][utf-8 local]. Only legal
+/// inside a LEX_VERSION_V4 page with a namespace table.
+pub const LEX_TAG_NAMESPACED: u8 = 0x04;
 
 /// Serialize a hash → string map into the canonical `Q42LEX` byte layout that [`Q42LexMmap`] reads
 /// back (magic, sorted 16-byte index, tagged string blob). This is the **write** side of the lexicon:
@@ -214,7 +221,7 @@ impl<'a> Q42LexMmap<'a> {
             .ok_or(LexError::Truncated)?;
         let (page_count, flat) = match format_version {
             1 => (0, true),
-            LEX_VERSION_PAGED => {
+            LEX_VERSION_PAGED | LEX_VERSION_V4 => {
                 let page_count_end = strings_offset
                     .checked_add(PAGED_DIRECTORY_HEADER_SIZE)
                     .ok_or(LexError::Truncated)?;
@@ -258,6 +265,20 @@ impl<'a> Q42LexMmap<'a> {
         self.entry_count
     }
 
+    /// True for the paged layouts (v2 and the namespaced v4).
+    #[inline]
+    fn is_paged(&self) -> bool {
+        self.format_version == LEX_VERSION_PAGED || self.format_version == LEX_VERSION_V4
+    }
+
+    /// The Q42LEX format version word (1 flat, 2 paged, 4 namespaced paged).
+    /// Lets tooling gate migrations on the lexicon generation actually on
+    /// disk instead of guessing from the volume version.
+    #[inline]
+    pub fn lex_format_version(&self) -> u64 {
+        self.format_version
+    }
+
     /// Hash at sorted ordinal `i`, independent of whether the lexicon is the
     /// legacy flat layout or the paged v2 layout. Cold loaders use this rather
     /// than reaching into an on-disk index with v1 assumptions.
@@ -265,7 +286,7 @@ impl<'a> Q42LexMmap<'a> {
         if i >= self.entry_count {
             return None;
         }
-        if self.format_version == LEX_VERSION_PAGED {
+        if self.is_paged() {
             let mut base = 0usize;
             for page in 0..self.page_count {
                 let (_, offset, _, count) = self.page_directory_entry(page)?;
@@ -285,9 +306,13 @@ impl<'a> Q42LexMmap<'a> {
         ))
     }
 
-    /// Binary search for `hash` in the sorted index; returns the UTF-8 lexeme slice.
+    /// Binary search for `hash` in the sorted index; returns the UTF-8 lexeme
+    /// slice for **verbatim** (`0x01`) entries only. v4 namespaced entries
+    /// return `None` — their bytes are not contiguous — so prefer
+    /// [`Self::lookup_parts`], [`Self::lookup_owned`], or
+    /// [`Self::resolve_term_into`] when the lexicon may be v4.
     pub fn lookup_hash(&self, hash: u64) -> Option<&'a str> {
-        if self.format_version == LEX_VERSION_PAGED {
+        if self.is_paged() {
             return self.lookup_hash_paged(hash);
         }
         let mut lo = 0usize;
@@ -310,13 +335,14 @@ impl<'a> Q42LexMmap<'a> {
     }
 
     /// The lexeme string of the `i`-th index entry (`0..entry_count`), if it is a UTF-8 string entry
-    /// (not an embedded-triple / Webizen entry). Enables iterating ALL lexicon strings without knowing
+    /// (not an embedded-triple / Webizen entry). **Verbatim entries only** — v4 namespaced entries
+    /// return `None`; use [`Self::string_parts_at`]. Enables iterating ALL lexicon strings without knowing
     /// their hashes — e.g. to assemble a calibration corpus from a WordNet q42's gloss text.
     pub fn string_at(&self, i: usize) -> Option<&'a str> {
         if i >= self.entry_count {
             return None;
         }
-        if self.format_version == LEX_VERSION_PAGED {
+        if self.is_paged() {
             let mut base = 0usize;
             for page in 0..self.page_count {
                 let (_, offset, length, count) = self.page_directory_entry(page)?;
@@ -332,11 +358,77 @@ impl<'a> Q42LexMmap<'a> {
         Self::read_string_at(self.data, self.strings_offset, str_off)
     }
 
+    /// Resolve `hash` to its `(namespace, local)` parts without copying.
+    ///
+    /// Verbatim entries return `("", full_term)`; v4 namespaced entries
+    /// return the two borrowed slices from the page's namespace table and
+    /// entry payload. Reassemble with `format!("{ns}{local}")` or
+    /// [`Self::resolve_term_into`] — never assume either part is the whole
+    /// term.
+    pub fn lookup_parts(&self, hash: u64) -> Option<(&'a str, &'a str)> {
+        if !self.is_paged() {
+            return self.lookup_hash(hash).map(|s| ("", s));
+        }
+        let (offset, length, index) = self.paged_entry_slot(hash)?;
+        self.page_entry_parts(offset, length, index)
+    }
+
+    /// The `(namespace, local)` parts of the `i`-th index entry
+    /// (`0..entry_count`), mirroring [`Self::string_at`] for both verbatim
+    /// and namespaced entries.
+    pub fn string_parts_at(&self, i: usize) -> Option<(&'a str, &'a str)> {
+        if i >= self.entry_count {
+            return None;
+        }
+        if self.is_paged() {
+            let mut base = 0usize;
+            for page in 0..self.page_count {
+                let (_, offset, length, count) = self.page_directory_entry(page)?;
+                if i < base + count {
+                    return self.page_entry_parts(offset, length, i - base);
+                }
+                base += count;
+            }
+            return None;
+        }
+        let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
+        let str_off = u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
+        Self::read_string_at(self.data, self.strings_offset, str_off).map(|s| ("", s))
+    }
+
+    /// Cold-path convenience: the fully reassembled term for `hash`.
+    pub fn lookup_owned(&self, hash: u64) -> Option<String> {
+        let (ns, local) = self.lookup_parts(hash)?;
+        let mut out = String::with_capacity(ns.len() + local.len());
+        out.push_str(ns);
+        out.push_str(local);
+        Some(out)
+    }
+
+    /// Zero-new-allocation reassembly into a caller-owned `String`
+    /// (cleared first). Returns false when `hash` is absent.
+    pub fn resolve_term_into(&self, hash: u64, out: &mut String) -> bool {
+        match self.lookup_parts(hash) {
+            Some((ns, local)) => {
+                out.clear();
+                out.push_str(ns);
+                out.push_str(local);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Presence check that also proves the entry decodes (parts resolve).
+    pub fn contains(&self, hash: u64) -> bool {
+        self.lookup_parts(hash).is_some()
+    }
+
     /// Validate every index entry and its tagged payload while the full byte
     /// slice is available. This keeps corrupt lexicon sections from becoming
     /// deferred `None` values during query execution.
     fn validate_entries(&self) -> Result<(), LexError> {
-        if self.format_version == LEX_VERSION_PAGED {
+        if self.is_paged() {
             return self.validate_paged_entries();
         }
         let mut previous_hash = None;
@@ -412,7 +504,9 @@ impl<'a> Q42LexMmap<'a> {
         Some((first_hash, page_offset, page_length, count))
     }
 
-    fn lookup_hash_paged(&self, hash: u64) -> Option<&'a str> {
+    /// Binary-search the paged layouts for `hash`; returns the page byte
+    /// range and the entry ordinal inside that page.
+    fn paged_entry_slot(&self, hash: u64) -> Option<(usize, usize, usize)> {
         let mut lo = 0usize;
         let mut hi = self.page_count;
         while lo < hi {
@@ -434,10 +528,15 @@ impl<'a> Q42LexMmap<'a> {
             match entry_hash.cmp(&hash) {
                 std::cmp::Ordering::Less => left = mid + 1,
                 std::cmp::Ordering::Greater => right = mid,
-                std::cmp::Ordering::Equal => return self.page_string_at(offset, length, mid),
+                std::cmp::Ordering::Equal => return Some((offset, length, mid)),
             }
         }
         None
+    }
+
+    fn lookup_hash_paged(&self, hash: u64) -> Option<&'a str> {
+        let (offset, length, index) = self.paged_entry_slot(hash)?;
+        self.page_string_at(offset, length, index)
     }
 
     fn page_string_at(
@@ -482,6 +581,127 @@ impl<'a> Q42LexMmap<'a> {
         std::str::from_utf8(&self.data[start + 3..end]).ok()
     }
 
+    /// Namespace count declared in a v4 page header (the u32 slot v2
+    /// writers always zeroed, so v2 pages read back as 0).
+    fn page_ns_count(&self, page_offset: usize) -> Option<usize> {
+        let bytes = self.data.get(page_offset + 4..page_offset + 8)?;
+        Some(u32::from_le_bytes(bytes.try_into().ok()?) as usize)
+    }
+
+    /// Borrow the `ns_id`-th namespace string from a page's local table.
+    /// Only legal in LEX_VERSION_V4 pages — this is what fails v2 pages
+    /// closed on any `0x04` entry, because v2 `ns_count` slots are always 0.
+    fn page_ns_at(
+        &self,
+        page_offset: usize,
+        page_length: usize,
+        ns_id: usize,
+    ) -> Option<&'a str> {
+        if self.format_version != LEX_VERSION_V4 {
+            return None;
+        }
+        let ns_count = self.page_ns_count(page_offset)?;
+        if ns_id >= ns_count {
+            return None;
+        }
+        let page_end = page_offset.checked_add(page_length)?;
+        let blob_offset = usize::try_from(u64::from_le_bytes(
+            self.data.get(page_offset + 8..page_offset + 16)?.try_into().ok()?,
+        ))
+        .ok()?;
+        // Namespace table entries are [u16 len][utf-8] — no tag byte.
+        let mut cursor = page_offset.checked_add(blob_offset)?;
+        for _ in 0..ns_id {
+            let len =
+                u16::from_le_bytes(self.data.get(cursor..cursor + 2)?.try_into().ok()?) as usize;
+            let end = cursor.checked_add(2)?.checked_add(len)?;
+            if end > page_end {
+                return None;
+            }
+            cursor = end;
+        }
+        let len =
+            u16::from_le_bytes(self.data.get(cursor..cursor + 2)?.try_into().ok()?) as usize;
+        let start = cursor.checked_add(2)?;
+        let end = start.checked_add(len)?;
+        if end > page_end {
+            return None;
+        }
+        std::str::from_utf8(self.data.get(start..end)?).ok()
+    }
+
+    /// Decode one entry as `(namespace, local)` parts. Verbatim `0x01`
+    /// entries return `("", full_term)` — callers reassemble with
+    /// `ns + local`, which is a no-op concat for verbatim terms.
+    fn page_entry_parts(
+        &self,
+        page_offset: usize,
+        page_length: usize,
+        index: usize,
+    ) -> Option<(&'a str, &'a str)> {
+        let page_end = page_offset.checked_add(page_length)?;
+        let count = u32::from_le_bytes(
+            self.data
+                .get(page_offset..page_offset + 4)?
+                .try_into()
+                .ok()?,
+        ) as usize;
+        let blob_offset = usize::try_from(u64::from_le_bytes(
+            self.data
+                .get(page_offset + 8..page_offset + 16)?
+                .try_into()
+                .ok()?,
+        ))
+        .ok()?;
+        if index >= count {
+            return None;
+        }
+        let entry = page_offset + PAGED_PAGE_HEADER_SIZE + index * INDEX_ENTRY_SIZE;
+        let relative = usize::try_from(u64::from_le_bytes(
+            self.data.get(entry + 8..entry + 16)?.try_into().ok()?,
+        ))
+        .ok()?;
+        let start = page_offset
+            .checked_add(blob_offset)?
+            .checked_add(relative)?;
+        if start >= page_end {
+            return None;
+        }
+        match self.data[start] {
+            LEX_TAG_STRING => {
+                let len = u16::from_le_bytes(
+                    self.data.get(start + 1..start + 3)?.try_into().ok()?,
+                ) as usize;
+                let text_start = start + 3;
+                let end = text_start.checked_add(len)?;
+                if end > page_end {
+                    return None;
+                }
+                Some(("", std::str::from_utf8(self.data.get(text_start..end)?).ok()?))
+            }
+            LEX_TAG_NAMESPACED => {
+                if self.format_version != LEX_VERSION_V4 {
+                    return None;
+                }
+                let ns_id = u16::from_le_bytes(
+                    self.data.get(start + 1..start + 3)?.try_into().ok()?,
+                ) as usize;
+                let len = u16::from_le_bytes(
+                    self.data.get(start + 3..start + 5)?.try_into().ok()?,
+                ) as usize;
+                let text_start = start + 5;
+                let end = text_start.checked_add(len)?;
+                if end > page_end {
+                    return None;
+                }
+                let local = std::str::from_utf8(self.data.get(text_start..end)?).ok()?;
+                let ns = self.page_ns_at(page_offset, page_length, ns_id)?;
+                Some((ns, local))
+            }
+            _ => None,
+        }
+    }
+
     fn validate_paged_entries(&self) -> Result<(), LexError> {
         let mut total = 0usize;
         let mut previous = None;
@@ -521,7 +741,10 @@ impl<'a> Q42LexMmap<'a> {
                     return Err(LexError::BadIndex);
                 }
                 previous = Some(hash);
-                if self.page_string_at(offset, length, item).is_none() {
+                // Parts decoder validates both verbatim and v4 namespaced
+                // entries (ns_id bounds, UTF-8, page containment) and fails
+                // closed on `0x04` tags outside v4 pages.
+                if self.page_entry_parts(offset, length, item).is_none() {
                     return Err(LexError::BadEntry);
                 }
             }
@@ -556,7 +779,7 @@ impl<'a> Q42LexMmap<'a> {
     /// Used by SPARQL-Star Virtual ID resolution: a Virtual ID is the FNV-1a hash of an embedded
     /// triple, stored in the lexicon with tag `LEX_TAG_EMBEDDED` instead of `LEX_TAG_STRING`.
     pub fn lookup_embedded_triple(&self, hash: u64) -> Option<[u64; 3]> {
-        if self.format_version == LEX_VERSION_PAGED {
+        if self.is_paged() {
             return None;
         }
         let mut lo = 0usize;
@@ -581,7 +804,7 @@ impl<'a> Q42LexMmap<'a> {
 
     /// Binary search for `hash`; returns the authoritative Webizen identity string.
     pub fn lookup_webizen_identity(&self, hash: u64) -> Option<&'a str> {
-        if self.format_version == LEX_VERSION_PAGED {
+        if self.is_paged() {
             return None;
         }
         let mut lo = 0usize;
@@ -699,8 +922,11 @@ impl Q42Lexicon {
             let Some(hash) = view.hash_at(i) else {
                 break;
             };
-            if let Some(text) = view.lookup_hash(hash) {
-                entries.insert(hash, text.to_string());
+            if let Some((ns, local)) = view.string_parts_at(i) {
+                let mut text = String::with_capacity(ns.len() + local.len());
+                text.push_str(ns);
+                text.push_str(local);
+                entries.insert(hash, text);
             }
         }
         Ok(Self { entries })

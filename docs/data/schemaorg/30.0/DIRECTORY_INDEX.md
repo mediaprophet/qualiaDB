@@ -11,7 +11,7 @@ Comprehensive index of functionality for `30.0`. This document serves as the gro
 
 ## File & Subdirectory Manifest
 ### Files & Exported Functionality
-- 📄 `schemaorg-current-https.q42` — unified v3 volume (embedded Q42LEX + BIDX + PIDX)
+- 📄 `schemaorg-current-https.q42` — unified v4 volume (embedded namespaced Q42LEX + BIDX + PIDX)
 - 📄 `schemaorg-current-https.nt` — Schema.org 30.0 N-Triples source (Pages compare demo)
 
 ## Changelog

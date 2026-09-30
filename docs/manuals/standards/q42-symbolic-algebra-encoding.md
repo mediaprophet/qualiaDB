@@ -86,7 +86,7 @@ not load-bearing for decode):
 
 Node-kind tags are FNV-1a `q_hash` of the strings in the table. `parity` MUST be the
 five-field fold `subject ^ predicate ^ object ^ context ^ metadata`
-(`NQuin::calculate_parity`). Decode MAY ignore `parity`; a unified v3 volume verify
+(`NQuin::calculate_parity`). Decode MAY ignore `parity`; a unified v3/v4 volume verify
 MUST NOT. A four-field fold (metadata omitted) is a verify Fail.
 
 ### 3.1 Variable-name packing
@@ -181,6 +181,6 @@ Reference tests: `specialized_libs::symbolic_algebra::tests` and
 ## 8. References
 
 - [Q42 10D Tensor Standard](q42-10d-tensor-standard.md)
-- [Q42 unified volume (v3)](q42-format-internal-draft.md)
+- [Q42 unified volume (v4)](q42-format-internal-draft.md)
 - `ALGEBRA_MANIFOLD_PLAN.md` — implementation plan & status
 - `core-ontologies/PLAN.md` §19 — ontology-layer considerations

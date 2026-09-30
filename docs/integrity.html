@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q42 Integrity · Webizen</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+    :root {
+      --q-ink: #1a2332;
+      --q-paper: #e8eef4;
+      --q-sea: #2a6f8f;
+      --q-moss: #3d6b4f;
+      --q-warn: #8a5a2b;
+    }
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: var(--q-ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(42, 111, 143, 0.18), transparent 55%),
+        radial-gradient(900px 500px at 90% 0%, rgba(61, 107, 79, 0.14), transparent 50%),
+        linear-gradient(180deg, #d5e0ea 0%, var(--q-paper) 40%, #dce6ef 100%);
+      min-height: 100vh;
+    }
+    .font-display { font-family: "Instrument Serif", Georgia, serif; }
+    .hero {
+      min-height: calc(100vh - 4rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 4rem 1.5rem 3rem;
+      max-width: 52rem;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-size: clamp(2.75rem, 8vw, 4.5rem);
+      line-height: 1.05;
+      margin: 0 0 0.75rem;
+      letter-spacing: -0.02em;
+    }
+    .hero p.lead {
+      font-size: 1.125rem;
+      max-width: 36rem;
+      line-height: 1.55;
+      opacity: 0.92;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+    .cta {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.7rem 1.15rem;
+      border-radius: 2px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: transform 0.25s ease, background 0.25s ease;
+    }
+    .cta:hover { transform: translateY(-2px); }
+    .cta-primary { background: var(--q-sea); color: #f5fafc; }
+    .cta-ghost { background: transparent; color: var(--q-ink); border: 1px solid rgba(26,35,50,0.35); }
+    section.panel {
+      max-width: 52rem;
+      margin: 0 auto 3rem;
+      padding: 0 1.5rem;
+    }
+    section.panel h2 {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 1.85rem;
+      margin: 0 0 0.5rem;
+    }
+    section.panel > p { margin: 0 0 1.25rem; opacity: 0.9; max-width: 40rem; }
+    .receipt {
+      border-left: 3px solid var(--q-sea);
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.85rem;
+      background: rgba(255,255,255,0.45);
+      animation: rise 0.6s ease both;
+    }
+    .receipt:nth-child(2) { animation-delay: 0.08s; border-color: var(--q-moss); }
+    .receipt:nth-child(3) { animation-delay: 0.16s; border-color: var(--q-warn); }
+    .receipt:nth-child(4) { animation-delay: 0.24s; border-color: #6b4f6a; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 0.35rem;
+    }
+    .badge.pass { color: var(--q-moss); }
+    .badge.warn { color: var(--q-warn); }
+    .badge.fail { color: #8b3a3a; }
+    pre.cmd {
+      margin: 1rem 0 0;
+      padding: 0.85rem 1rem;
+      background: rgba(26,35,50,0.92);
+      color: #e8eef4;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      border-radius: 2px;
+    }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+      font-size: 0.9rem; margin: 1rem 0 2rem;
+    }
+    .flow span {
+      padding: 0.35rem 0.65rem;
+      background: rgba(255,255,255,0.55);
+      border: 1px solid rgba(26,35,50,0.12);
+    }
+    footer.note {
+      max-width: 52rem; margin: 0 auto 3rem; padding: 0 1.5rem;
+      font-size: 0.85rem; opacity: 0.75;
+    }
+  </style>
+</head>
+<body>
+  <div id="site-nav"></div>
+  <header class="hero">
+    <p class="badge pass" style="margin:0 0 0.5rem">Webizen · QualiaDB</p>
+    <h1 class="font-display">Q42 Integrity</h1>
+    <p class="lead">
+      Semantic equivalence, isomorphism, and cross-format validation for RDF sources
+      against unified Q42 volumes — proven with the same encoder as <code>import</code>.
+    </p>
+    <div class="cta-row">
+      <a class="cta cta-primary" href="#receipts">View receipts</a>
+      <a class="cta cta-ghost" href="manuals/standards/q42-implementation-divergence.md">Divergence log</a>
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2 class="font-display">Where heavy content lives</h2>
+    <p>Graph structure stays in <code>.q42</code>. Oversized prose may use a payload catalogue later. Media packs use transparent <code>.hmc</code> (no entry compression).</p>
+    <div class="flow" aria-hidden="true">
+      <span>RDF source</span>→
+      <span>import Complete</span>→
+      <span>.q42</span>→
+      <span>optional text catalogue</span>→
+      <span>optional .hmc pack</span>
+    </div>
+  </section>
+
+  <section class="panel" id="receipts">
+    <h2 class="font-display">Checked-in receipts</h2>
+    <p>
+      The Pages demo never downloads WordNet/OEWN. It shows small JSON receipts plus
+      the Schema.org twin already under <code>docs/data/schemaorg/</code> (~2&nbsp;MB NT).
+      Full OEWN 2025-plus (~227&nbsp;MB TTL) is an operator-local library proof only.
+    </p>
+    <div id="receipt-host"></div>
+    <pre class="cmd"># User-scale twin (~2 MB): download Schema.org 30.0 + import + verify
+.\scripts\verify_schemaorg_integrity.ps1
+
+# Operator-only: full OEWN if you already have the TTL on disk (no download)
+# Default path: C:\github\ontology\english-wordnet-2025-plus\...
+.\scripts\verify_oewn_2025_plus.ps1
+
+# Operator library matrix (sizes / support); does not fetch OEWN
+.\scripts\verify_ontology_datasources.ps1</pre>
+  </section>
+
+  <footer class="note">
+    <code>verify-integrity</code> is an XOR smoke check only.
+    Use <code>verify-graph --encoder=import</code> for encoded-set equivalence.
+    Do not compare OEWN 2025-plus to Princeton <code>princeton.q42</code> without
+    <code>--allow-cross-edition</code>. Princeton (~127&nbsp;MB <code>.q42</code>) is a
+    release asset for the WordNet demo — a different edition from OEWN.
+  </footer>
+  <script src="js/integrity-demo.js"></script>
+</body>
+</html>

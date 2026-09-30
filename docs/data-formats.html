@@ -50,7 +50,7 @@
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                 <div>
                     <h2 class="text-2xl font-semibold text-cyan-300 mb-2">The RDF → Q42 path</h2>
-                    <p class="text-white/70 max-w-3xl">The current RDF importer streams a source directly into a Q42 v3 volume. It can emit machine-readable progress, segment a large result, and use a durable job directory for attested restart and publication.</p>
+                    <p class="text-white/70 max-w-3xl">The current RDF importer streams a source directly into a Q42 v4 volume. It can emit machine-readable progress, segment a large result, and use a durable job directory for attested restart and publication.</p>
                 </div>
                 <a href="rdf-q42-vibe-demo.html" class="shrink-0 px-5 py-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/25 font-semibold">Open the end-to-end demo <i class="fas fa-arrow-right ml-2"></i></a>
             </div>
@@ -66,7 +66,7 @@ qualia-cli q42 verify ./data/example.q42 --level full</code></pre>
                 CSV Parsing
             </h2>
             
-            <p class="text-white/70 mb-6">Ingest writes a <strong>unified Q42 v3</strong> volume (<code>Q42\0</code> header, embedded Q42LEX / BIDX / FIDX / PIDX, LZ4 SuperBlocks). There is no sibling <code>.c.q42</code> or <code>.q42.lex</code> — compression and lexicon live inside the single <code>.q42</code>.</p>
+            <p class="text-white/70 mb-6">Ingest writes a <strong>unified Q42 v4</strong> volume (<code>Q42\0</code> header, embedded Q42LEX / BIDX / FIDX / PIDX, LZ4 SuperBlocks). There is no sibling <code>.c.q42</code> or <code>.q42.lex</code> — compression and lexicon live inside the single <code>.q42</code>.</p>
             <p class="text-white/70 mb-6">QualiaDB can ingest CSV files and convert them to semantic triples. Here's how to parse a CSV with person data:</p>
             
             <h3 class="text-lg font-medium mb-3">Input CSV (people.csv)</h3>
@@ -238,7 +238,7 @@ qualia-cli ingest-job continue ./jobs/catalog</code></pre>
             </h2>
             
             <p class="text-white/70 mb-4">An ingest result is useful only when it can be checked. Keep the input and output together, then use the bounded encoded-set proof rather than treating a size or a legacy XOR result as equivalence.</p>
-            <pre><code># inspect the physical Q42 v3 volume
+            <pre><code># inspect the physical Q42 v4 volume
 qualia-cli q42 inspect data.q42
 qualia-cli q42 verify data.q42 --level full
 

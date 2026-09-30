@@ -747,7 +747,7 @@ async function boot() {
         await lookupEntity(report);
     } catch (e) {
         console.error(e);
-        const hint = String(e.message || '').includes('Q42 v3 header')
+        const hint = String(e.message || '').includes('Q42 v3/v4 header')
             ? ' — try Ctrl+Shift+R or “Clear browser dataset cache” after the page loads a dataset picker.'
             : '';
         setStatus((e.message || 'Engine failed to load') + hint, false);

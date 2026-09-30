@@ -1,7 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::q42_volume::StreamingQ42VolumeWriter;
 use crate::NQuin;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::QUINS_PER_BLOCK;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -17,6 +16,20 @@ use std::path::{Path, PathBuf};
 const CHUNK_SIZE_LIMIT: usize = 1_000_000;
 /// Bound simultaneously open sorted runs and their reader buffers.
 pub(super) const MAX_MERGE_FAN_IN: usize = 32;
+
+/// Quins and SuperBlocks written by a final [`ExternalSorter::merge`].
+///
+/// Callers must read the field they mean: ingest accounting reports quins
+/// ("five triples in, five quins out"), block accounting reads `blocks`.
+/// Before this struct the native merge returned the block count while the
+/// WASM merge returned the quin count — a split-brain API.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MergeStats {
+    /// Super-Quins written into the final volume.
+    pub quins: u64,
+    /// SuperBlocks written into the final volume.
+    pub blocks: u64,
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 mod volume_publisher;
@@ -252,7 +265,7 @@ impl ExternalSorter {
 
     /// K-way merge sorted chunks into a unified v2 `.q42` volume.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
+    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<MergeStats> {
         // Flush any remaining quins
         self.flush_chunk()?;
 
@@ -280,7 +293,7 @@ impl ExternalSorter {
 
         if self.chunk_files.is_empty() {
             writer.finish(final_q42)?;
-            return Ok(0);
+            return Ok(MergeStats::default());
         }
 
         // Compact raw sorted runs hierarchically before the final Q42 merge.
@@ -332,9 +345,11 @@ impl ExternalSorter {
 
         let mut block_buffer = Vec::with_capacity(QUINS_PER_BLOCK);
         let mut block_seq = 0u64;
+        let mut quins_written = 0u64;
 
         while let Some(item) = heap.pop() {
             block_buffer.push(item.quin);
+            quins_written += 1;
 
             // Fetch next from the same reader
             let idx = item.reader_idx;
@@ -365,13 +380,16 @@ impl ExternalSorter {
             let _ = std::fs::remove_file(chunk_path);
         }
 
-        Ok(block_seq)
+        Ok(MergeStats {
+            quins: quins_written,
+            blocks: block_seq,
+        })
     }
 
     /// In-memory k-way merge of sorted Quin runs. Browser WASM has no spill
     /// files; fan-in stays bounded by [`MAX_MERGE_FAN_IN`].
     #[cfg(target_arch = "wasm32")]
-    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
+    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<MergeStats> {
         self.flush_chunk()?;
         let mut runs = std::mem::take(&mut self.memory_runs);
         let mut pass = 0usize;
@@ -390,6 +408,10 @@ impl ExternalSorter {
         }
         let merged = Self::merge_memory_runs(&runs);
         let count = merged.len() as u64;
+        let stats = MergeStats {
+            quins: count,
+            blocks: (count + QUINS_PER_BLOCK as u64 - 1) / QUINS_PER_BLOCK as u64,
+        };
         let fallback = self.temp_dir.join("merged.q42");
         let mut path = final_q42;
         let mut file = match File::create(path) {
@@ -406,7 +428,7 @@ impl ExternalSorter {
                                 | std::io::ErrorKind::PermissionDenied
                         ) =>
                     {
-                        return Ok(count);
+                        return Ok(stats);
                     }
                     Err(err) => return Err(err),
                 }
@@ -419,7 +441,7 @@ impl ExternalSorter {
             }
             writer.flush()?;
         }
-        Ok(count)
+        Ok(stats)
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -648,7 +670,12 @@ mod tests {
             .unwrap();
         sorter.push_lex(1, "urn:q42:catalog-subject");
         let out = dir.path().join("catalog.q42");
-        sorter.merge(&out).unwrap();
+        let stats = sorter.merge(&out).unwrap();
+        assert_eq!(
+            stats,
+            MergeStats { quins: 1, blocks: 1 },
+            "merge must report Super-Quins and SuperBlocks separately"
+        );
         let volume = Q42Volume::open(&out).unwrap();
         let flags = volume.header().flags;
         assert_ne!(

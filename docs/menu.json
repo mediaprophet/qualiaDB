@@ -34,6 +34,26 @@
       "group": "Core"
     },
     {
+      "label": "Agreement Instruments",
+      "href": "agreement-instruments.html",
+      "icon": "fa-handshake",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Agreement Ledger",
+      "href": "agreement-ledger.html",
+      "icon": "fa-book-open",
+      "group": "Core"
+    },
+    {
+      "label": "Human-Centric Authoring",
+      "href": "human-centric-authoring.html",
+      "icon": "fa-pen-ruler",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "Prompt Precision",
       "href": "prompt-precision.html",
       "icon": "fa-sliders",
@@ -414,6 +434,13 @@
       "label": "Ontology Demo",
       "href": "ontology.html",
       "icon": "fa-book-open",
+      "highlight": true,
+      "group": "Data"
+    },
+    {
+      "label": "Q42 Integrity",
+      "href": "integrity.html",
+      "icon": "fa-shield-halved",
       "highlight": true,
       "group": "Data"
     },

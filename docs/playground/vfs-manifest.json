@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "comment": "Qualia-DB VFS mount manifest. All datasets use Q42 v3 unified volumes (lex + bidx + LZ4 blocks embedded in file preamble).",
+  "comment": "Qualia-DB VFS mount manifest. Datasets use Q42 v3/v4 unified volumes (lex + bidx + LZ4 blocks embedded in file preamble); catalog volumes are v4 with namespaced paged lexicons.",
   "datasets": [
     {
       "id": "wordnet",

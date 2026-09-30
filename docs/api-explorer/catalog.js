@@ -1219,7 +1219,7 @@ curl "http://127.0.0.1:4242/chat/pull?session_id=grp-abc123&since_lamport=10"
         id: 'daemon.torrent_seed',
         category: 'Native Daemon',
         name: 'POST /torrent/seed',
-        summary: 'Register a unified v3 .q42 ontology for HTTP web-seeding on the Qualia daemon. Seeding runs in-process (seeder: qualia-daemon). Magnets include a ws= parameter pointing at /torrent/webseed/{hash}. Separate .c.q42 transport files are obsolete — LZ4 SuperBlocks live inside the .q42.',
+        summary: 'Register a unified v3/v4 .q42 ontology for HTTP web-seeding on the Qualia daemon. Seeding runs in-process (seeder: qualia-daemon). Magnets include a ws= parameter pointing at /torrent/webseed/{hash}. Separate .c.q42 transport files are obsolete — LZ4 SuperBlocks live inside the .q42.',
         params: [
             { name: 'info_hash', type: 'string', desc: 'SHA-1 info hash (40 hex chars)' },
             { name: 'file_path', type: 'string', desc: 'Absolute path to the unified .q42 volume' },
@@ -1402,7 +1402,7 @@ const id = await createGroupChatSession(
         id: 'workbench.import_uri',
         category: 'Ontology Workbench',
         name: 'workbenchImportOntologyUri()',
-        summary: 'Import an ontology from a remote URI into a unified v3 .q42, compute SHA-1 info hash, and build a magnet URI with ws= for Permissive Commons sharing.',
+        summary: 'Import an ontology from a remote URI into a unified v4 .q42, compute SHA-1 info hash, and build a magnet URI with ws= for Permissive Commons sharing.',
         params: [
             { name: 'uri', type: 'string', desc: 'Source ontology URL (Turtle, N-Triples, etc.)' },
             { name: 'ontologyId', type: 'string?', desc: 'Stable ID (auto-derived if omitted)' },
@@ -1434,7 +1434,7 @@ curl -X POST http://127.0.0.1:4242/torrent/seed -H "Content-Type: application/js
         id: 'workbench.set_seed',
         category: 'Ontology Workbench',
         name: 'setWorkbenchSeed()',
-        summary: 'Toggle active seeding for a workbench ontology. Registers the unified v3 .q42 with the Qualia daemon seeder and updates workbench.jsonl index.',
+        summary: 'Toggle active seeding for a workbench ontology. Registers the unified v3/v4 .q42 with the Qualia daemon seeder and updates workbench.jsonl index.',
         params: [
             { name: 'ontologyId', type: 'string', desc: 'Workbench ontology ID' },
             { name: 'active', type: 'bool', desc: 'true to seed, false to unseed' },
@@ -1502,21 +1502,21 @@ qualia-cli daemon --dev --net-mode metered --energy-mode strict
         id: 'cli.ingest',
         category: 'CLI',
         name: 'qualia-cli ingest',
-        summary: 'Ingest RDF into a unified Q42 v3 volume (Q42\\0 header, embedded Q42LEX, BIDX, FIDX, PIDX, LZ4 SuperBlocks). Sidecar .q42.lex / .q42.bidx files are not written.',
+        summary: 'Ingest RDF into a unified Q42 v4 volume (Q42\\0 header, embedded namespaced Q42LEX, BIDX, FIDX, PIDX, LZ4 SuperBlocks). Sidecar .q42.lex / .q42.bidx files are not written.',
         params: [
             { name: '--input',  type: 'path', desc: 'Path to .nt / .ttl / .rdf input' },
             { name: '--output', type: 'path', desc: 'Path for the unified .q42 volume' },
         ],
-        returns: 'one .q42 file (256-byte v3 header + embedded lexicon/indexes + LZ4 SuperBlocks)',
+        returns: 'one .q42 file (256-byte v4 header + embedded lexicon/indexes + LZ4 SuperBlocks)',
         snippets: [
             cli(`
-# Ingest N-Triples into a unified v3 volume
+# Ingest N-Triples into a unified v4 volume
 qualia-cli ingest --input data.nt --output data.q42
 qualia-cli q42 inspect data.q42
 qualia-cli q42 verify data.q42
 
 # Output is a single file:
-#   data.q42  — Q42\\0 v3 · Q42LEX + BIDX + FIDX + PIDX + LZ4 SuperBlocks
+#   data.q42  — Q42\\0 v4 · Q42LEX + BIDX + FIDX + PIDX + LZ4 SuperBlocks
 # Sidecar .q42.lex / .q42.bidx are obsolete.
 `),
             js(`
@@ -1534,16 +1534,16 @@ await fetch('http://127.0.0.1:4242/cache?filename=data.q42', {
         id: 'cli.dump',
         category: 'CLI',
         name: 'qualia-cli dump',
-        summary: 'Write a tiny unified v3 .q42 for tests. Not a flat 144-byte Quin dump — inspect/verify expect Q42\\0.',
+        summary: 'Write a tiny unified v4 .q42 for tests. Not a flat 144-byte Quin dump — inspect/verify expect Q42\\0.',
         params: [
             { name: 'out_path', type: 'path', desc: 'Output path for the .q42 test volume' },
         ],
-        returns: 'unified v3 .q42 (header + lexicon + one SuperBlock)',
+        returns: 'unified v4 .q42 (header + lexicon + one SuperBlock)',
         snippets: [
             cli(`
 qualia-cli dump test_block.q42
 qualia-cli q42 inspect test_block.q42
-# → unified v3 volume; use q42 verify, not a 144-byte size check.
+# → unified v4 volume; use q42 verify, not a 144-byte size check.
 `),
         ],
     },

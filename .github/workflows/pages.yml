@@ -78,6 +78,7 @@ jobs:
           node docs/tests/vibe-dev-docs.test.mjs
           node docs/tests/qdnf-pages.test.mjs
           node docs/tests/edge-llm-smoke.test.mjs
+          node docs/tests/lexicon-v4-namespaced.test.mjs
 
       - name: Install wasm-pack
         run: |

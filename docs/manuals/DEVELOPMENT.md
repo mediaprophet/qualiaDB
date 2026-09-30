@@ -158,11 +158,11 @@ qualia-cli verify-graph --input data.ttl --dataset output.q42 --memory-mib 32 --
 qualia-cli ingest csv people.csv --map people-shape.ttl
 qualia-cli ingest json people.json --map people-shape.ttl
 
-# ── Inspection & volume ops (unified v3) ───────────────────────────────
+# ── Inspection & volume ops (unified v4) ───────────────────────────────
 qualia-cli q42 inspect output.q42            # header, flags, lex, FIDX/PIDX
 qualia-cli q42 verify output.q42 --level full # layered SuperBlock / volume-set walk
 qualia-cli q42 magnet output.q42             # fail-closed public magnet
-qualia-cli q42 compact output.q42            # rewrite to current v3
+qualia-cli q42 compact output.q42            # rewrite to current v4
 qualia-cli inspect output.q42                # decode and display Quin fields
 qualia-cli dump output.q42                   # stream-dump raw Quins
 qualia-cli export-solid --input output.q42 --output ./solid-pod/ # W3C Solid LDP export
@@ -266,7 +266,7 @@ qualia-cli query sparql ./data/dbpedia.q42
 
 ```bash
 bash scripts/fetch_wordnet.sh --subset 100000
-# Outputs: one unified v3 wordnet.q42 (lex + bidx + LZ4 SuperBlocks inside)
+# Outputs: one unified v4 wordnet.q42 (lex + bidx + LZ4 SuperBlocks inside)
 ```
 
 Rebuild the WASM module after updating the dataset:
