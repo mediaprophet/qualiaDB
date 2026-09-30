@@ -115,15 +115,15 @@
             <span>WASM-only · Zero-Heap · v0.0.40</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Benchmark Hub</h1>
-        <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes. Not graph-only anymore — see <a href="comparative_benchmarks.html" class="text-cyan-400 hover:underline">comparative benchmarks</a> for multi-engine graph shoot-outs.</p>
+        <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes — VibeScript Present purpose clocks, graph, geometry/renderer as their own claim planes.</p>
     </div>
 
     <div class="flex flex-wrap gap-3 justify-center mb-8">
-        <a href="comparative_benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-chart-line mr-2 text-blue-400"></i>Comparative engines</a>
-        <a href="benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-cyan-400"></i>Browser LLM harness</a>
-        <a href="comparative_benchmarks.html?view=platform" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-amber-400"></i>Platform suite (CI)</a>
+        <a href="comparative_benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 text-white/60"><i class="fa-solid fa-chart-line mr-2"></i>Comparative (archive)</a>
+        <a href="benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 text-white/60"><i class="fa-solid fa-microchip mr-2"></i>Browser LLM harness</a>
+        <a href="comparative_benchmarks.html?view=platform" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-cyan-400"></i>Platform suite (CI)</a>
         <a href="playground/benchmark.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-code mr-2 text-emerald-400"></i>Transparent harness</a>
-        <a href="benchmark_visualizer.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-satellite-dish mr-2 text-violet-400"></i>Telemetry visualizer</a>
+        
     </div>
 
     <!-- Performance Metrics Dashboard — only filled by measured whole-job clocks -->
@@ -205,8 +205,8 @@
                 Graph Operation Benchmarks
             </h3>
             <p class="text-white/60 text-sm mb-4">Core semantic graph operations — point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
-            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">
-                <i class="fas fa-info-circle mr-1"></i> Live demo - RDF graph loaded from NT/q42 and queried in-browser via <code>execute_ntriples_query</code> + <code>compile_query_to_json</code> (timings measured here). For multi-engine graph comparisons use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
+            <div class="mb-6 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-100/90">
+                <i class="fas fa-circle-check mr-1"></i> Live · RDF graph from NT/q42 · <code>execute_ntriples_query</code> + <code>compile_query_to_json</code> timed in this tab. Multi-engine CI suite lives under the Platform tab.
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -274,15 +274,15 @@
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <div class="flex items-center justify-between flex-wrap gap-4 mb-3">
                 <h3 class="text-xl font-semibold flex items-center gap-2">
-                    <i class="fas fa-bolt text-amber-400"></i>
-                    VibeScript — does the binding run?
+                    <i class="fas fa-bolt text-emerald-400"></i>
+                    VibeScript Present — purpose clocks
                 </h3>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                    <i class="fas fa-microchip"></i> shipped WASM · purpose clocks
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                    <i class="fas fa-microchip"></i> checked · compile · run · host ask
                 </span>
             </div>
             <p class="text-white/60 text-sm mb-6">
-                Whole-job clocks for paths the browser binding can run today: <strong>checked cell</strong>, <strong>host ask</strong> (<code>graph?</code>), and <strong>edit without host rebuild</strong>. Native throughput, allocation counts, and “faster than JavaScript” claims stay off this page until a real native window measures them.
+                Whole-job clocks the browser binding runs today: <strong>checked cell</strong>, <strong>CompiledCell.compile</strong>, <strong>run() without re-decode</strong>, <strong>host ask</strong> (<code>graph?</code>), and <strong>edit without host rebuild</strong>. Soft-rise of what is Present.
             </p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -499,7 +499,7 @@
                 Scientific Computing Primitives
             </h3>
             <p class="text-white/60 text-sm mb-4">Native scientific primitives integrated with the semantic graph — thermodynamics, ODE solvers, bioinformatics, and clinical risk calculations.</p>
-            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">Browser microbench demo — models expected engine classes; run native CLI for audited scientific primitive timings.</div>
+            <div class="mb-6 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-100/90">Browser scientific probes on this tab. Native CLI carries the audited primitive timings.</div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>

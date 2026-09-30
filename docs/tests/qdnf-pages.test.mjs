@@ -83,7 +83,8 @@ assert.match(qdnfStatus, /QDNF \/ QPR · implementation status · 0\.0\.40/);
 assert.match(qdnfStatus, /Implemented in tree/);
 assert.match(qdnfStatus, /Implemented identity slice/);
 assert.match(qdnfStatus, /Nym mixnet framing/);
-assert.match(qdnfStatus, /Not established/);
+assert.match(qdnfStatus, /Building next/);
+assert.match(qdnfStatus, /Present/);
 assert.match(qdnfStatus, /public relay, Internet two-host, MASQUE, QUIC\/noq/i);
 assert.match(qdnfStatus, /do not become Native Independent merely by carrying a QFrame/);
 

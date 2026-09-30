@@ -78,7 +78,7 @@ title: VibeScript Showcase
 
   <h2>Interactive Demos</h2>
   <p>
-    Each demo runs live in your browser via the VibeScript WebAssembly module.
+    Present first: checked cell · CompiledCell.compile · run() without re-decode · host ask. Thin arithmetic stays interim.
     Click "Run" to execute the code and see the result.
   </p>
   <p style="padding:12px 16px;border:1px solid rgba(34,211,238,.25);border-radius:10px;background:rgba(8,47,73,.25);">
@@ -91,12 +91,36 @@ title: VibeScript Showcase
 </div>
 
 <script type="module">
-  import init, { eval_cell_src, eval_program_src } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
+  import init, { CompiledCell, check_cell_src, eval_cell_src, eval_program_src } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
 
   const demos = [
     {
+      icon: "✓",
+      title: "Checked cell",
+      badge: "Present",
+      code: "= 1 + 2 * 3 - 4",
+      mode: "check",
+      fn: null,
+    },
+    {
+      icon: "◎",
+      title: "Compile once · run again",
+      badge: "Present",
+      code: "= 1 + 2 * 3 - 4",
+      mode: "compiled",
+      fn: null,
+    },
+    {
+      icon: "?",
+      title: "Host ask (graph?)",
+      badge: "Present",
+      code: "= graph? { ?s ?p ?o }",
+      mode: "cell",
+      fn: null,
+    },
+    {
       icon: "🧮",
-      title: "Arithmetic",
+      title: "Arithmetic (interim)",
       badge: "cell",
       code: "= 1 + 2 * 3 - 4",
       mode: "cell",
@@ -364,7 +388,23 @@ effect fn main() -> Record {
         outputEl.innerHTML = '<span class="loading">Running...</span>';
         try {
           let result;
-          if (demo.mode === 'cell') {
+          if (demo.mode === 'check') {
+            result = check_cell_src(demo.code);
+            if (result && result.ok) {
+              result = { ok: true, value: result.ty ? `checked · ${result.ty}` : 'checked' };
+            }
+          } else if (demo.mode === 'compiled') {
+            const cell = CompiledCell.compile(demo.code);
+            const first = cell.run();
+            const second = cell.run();
+            result = {
+              ok: !!(first && first.ok && second && second.ok),
+              value: first?.ok
+                ? `compile ${cell.code_size}B · run ${first.value} · again ${second.value}`
+                : (first?.error || second?.error || 'compile/run failed'),
+              error: first?.ok ? undefined : (first?.error || second?.error),
+            };
+          } else if (demo.mode === 'cell') {
             result = eval_cell_src(demo.code);
           } else {
             result = eval_program_src(demo.code);

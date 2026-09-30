@@ -1,8 +1,8 @@
 {
-  "version": "0.0.40",
+  "version": "0.0.40.1",
   "brand": {
     "name": "Webizen",
-    "tagline": "Life-domain habitat \u00b7 QualiaDB engine",
+    "tagline": "Life-domain habitat · QualiaDB engine",
     "icon": "W"
   },
   "navigation": [
@@ -142,7 +142,7 @@
       "group": "Core"
     },
     {
-      "label": "VibeScript Overview",
+      "label": "VibeScript Present",
       "href": "vibe/index.html",
       "icon": "fa-code",
       "highlight": true,
@@ -162,7 +162,7 @@
       "group": "VibeScript"
     },
     {
-      "label": "RDF \u2192 Q42 \u2192 Vibe",
+      "label": "RDF → Q42 → Vibe",
       "href": "rdf-q42-vibe-demo.html",
       "icon": "fa-diagram-project",
       "highlight": true,
@@ -196,7 +196,8 @@
       "label": "Benchmark Hub",
       "href": "benchmark.html",
       "icon": "fa-gauge-high",
-      "group": "Benchmarks"
+      "group": "Benchmarks",
+      "highlight": true
     },
     {
       "label": "VibeScript vs V8",
@@ -216,18 +217,6 @@
       "label": "Browser LLM",
       "href": "benchmark.html#llm",
       "icon": "fa-robot",
-      "group": "Benchmarks"
-    },
-    {
-      "label": "Comparative",
-      "href": "comparative_benchmarks.html",
-      "icon": "fa-chart-line",
-      "group": "Benchmarks"
-    },
-    {
-      "label": "Visualizer",
-      "href": "benchmark_visualizer.html",
-      "icon": "fa-chart-area",
       "group": "Benchmarks"
     },
     {
@@ -280,13 +269,6 @@
       "group": "Sciences"
     },
     {
-      "label": "WGSL Forge",
-      "href": "forge-showcase.html",
-      "icon": "fa-hammer",
-      "highlight": true,
-      "group": "Sciences"
-    },
-    {
       "label": "Spatial / GeoSPARQL",
       "href": "spatial.html",
       "icon": "fa-cube",
@@ -298,13 +280,6 @@
       "icon": "fa-globe",
       "highlight": true,
       "group": "Sciences"
-    },
-    {
-      "label": "Design Studio",
-      "href": "design-studio.html",
-      "icon": "fa-pen-ruler",
-      "highlight": true,
-      "group": "Tools"
     },
     {
       "label": "Phone Console",
@@ -431,10 +406,9 @@
       "group": "Data"
     },
     {
-      "label": "Ontology Demo",
+      "label": "Ontology browse",
       "href": "ontology.html",
       "icon": "fa-book-open",
-      "highlight": true,
       "group": "Data"
     },
     {

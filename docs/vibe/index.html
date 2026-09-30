@@ -306,19 +306,100 @@ title: VibeScript
       font-size: 1.25rem;
       color: #38bdf8;
     }
+
+    .vibe-present {
+      margin: 0 0 3rem;
+      padding: 1.5rem;
+      border-radius: 14px;
+      background: linear-gradient(160deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.7));
+      border: 1px solid rgba(52, 211, 153, 0.28);
+    }
+    .vibe-present h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #ecfdf5;
+      margin: 0 0 0.4rem;
+      border: none;
+      padding: 0;
+    }
+    .vibe-present .lede {
+      color: #a7f3d0;
+      font-size: 0.95rem;
+      margin: 0 0 1.25rem;
+      line-height: 1.55;
+    }
+    .vibe-present-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .vibe-present-card {
+      padding: 1rem 1.1rem;
+      border-radius: 10px;
+      background: rgba(2, 44, 34, 0.35);
+      border: 1px solid rgba(52, 211, 153, 0.18);
+      min-height: 7.5rem;
+    }
+    .vibe-present-card .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #6ee7b7;
+      margin-bottom: 0.45rem;
+    }
+    .vibe-present-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f0fdf4;
+      margin: 0 0 0.35rem;
+    }
+    .vibe-present-card p {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin: 0;
+      line-height: 1.45;
+    }
+    .vibe-present-card .meter {
+      margin-top: 0.65rem;
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      color: #34d399;
+    }
+    .vibe-present-card.is-wait .meter { color: #94a3b8; }
+    .vibe-present-card.is-fail {
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(69, 10, 10, 0.25);
+    }
+    .vibe-present-card.is-fail .meter { color: #fca5a5; }
+    .vibe-present-foot {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .vibe-present-foot .status {
+      font-size: 0.82rem;
+      color: #6ee7b7;
+      font-family: ui-monospace, monospace;
+    }
   </style>
 
   <!-- Hero Section -->
   <div class="vibe-hero">
     <div class="vibe-pill">
-      <i class="fa-solid fa-bolt"></i> VibeScript 0.1 · Current dialect · Growing Host catalog
+      <i class="fa-solid fa-bolt"></i> VibeScript 0.1 · Present · checked · compile · run · host ask
     </div>
     <h1>The Human & Machine<br>Semantic Scripting Language</h1>
     <p class="tagline">
-      A capability-bounded, typed, deterministic scripting engine for reactive UI cells,
-      signed agent modules, and Host-family apps (<code>using Cosmic;</code>, <code>using LinearAlgebra;</code>).
-      vibe-0.1 is the current dialect and may grow when humans need a better form (versioned and documented). The Host catalog grows. Complements JavaScript for ordinary DOM work
-      while making semantic data, authority, and eligible deterministic execution explicit.
+      Capability-bounded cells that check, compile once, run again on the same handle, and ask the host —
+      <code>graph?</code>, Cosmic, LinearAlgebra — beside ordinary browser UI.
+      Dialect vibe-0.1 · Host catalog live · Present jobs run in this tab.
     </p>
     <div class="cta-row">
       <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-primary">
@@ -365,8 +446,59 @@ title: VibeScript
       <div class="label">Bytecode Opcodes</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">Four ops</div>
-      <div class="label">Parse · Check · Diagnose · Invoke</div>
+      <div class="num">4</div>
+      <div class="label">Present browser jobs</div>
+    </div>
+  </div>
+
+
+  <!-- Present: jobs the shipped binding runs -->
+  <div class="vibe-present" id="vibe-present">
+    <h2>Runs in this browser</h2>
+    <p class="lede">
+      Four jobs the vibe-wasm binding already carries: <strong>checked cell</strong>,
+      <strong>CompiledCell.compile</strong>, <strong>run() without re-decode</strong>, and
+      <strong>host ask</strong> (<code>graph?</code>). Soft-rise of what is Present — not a dress rehearsal.
+    </p>
+    <div class="vibe-present-grid">
+      <article class="vibe-present-card is-wait" data-job="checked">
+        <div class="chip">Present · live</div>
+        <h3>Checked cell</h3>
+        <p>Type-check a cell before it runs.</p>
+        <div class="meter">warming…</div>
+      </article>
+      <article class="vibe-present-card is-wait" data-job="compile">
+        <div class="chip">Present · live</div>
+        <h3>CompiledCell.compile</h3>
+        <p>Compile once · keep the handle.</p>
+        <div class="meter">warming…</div>
+      </article>
+      <article class="vibe-present-card is-wait" data-job="run">
+        <div class="chip">Present · live</div>
+        <h3>CompiledCell.run</h3>
+        <p>Run again without re-decode.</p>
+        <div class="meter">warming…</div>
+      </article>
+      <article class="vibe-present-card is-wait" data-job="hostAsk">
+        <div class="chip">Present · live</div>
+        <h3>Host ask</h3>
+        <p><code>graph?</code> through the binding.</p>
+        <div class="meter">warming…</div>
+      </article>
+    </div>
+    <div class="vibe-present-foot">
+      <span class="status" id="vibe-present-status">Loading vibe-wasm…</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="vibe-btn vibe-btn-primary" id="vibe-present-rerun" style="padding:8px 16px;font-size:0.85rem;cursor:pointer;border:none">
+          Run Present jobs
+        </button>
+        <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-secondary" style="padding:8px 16px;font-size:0.85rem">
+          Open playground
+        </a>
+        <a href="{{ '/benchmark.html' | relative_url }}#vibescript" class="vibe-btn vibe-btn-secondary" style="padding:8px 16px;font-size:0.85rem">
+          Purpose clocks
+        </a>
+      </div>
     </div>
   </div>
 
@@ -702,3 +834,51 @@ title: VibeScript
     </div>
   </div>
 </div>
+
+<script type="module">
+  import { runPresentJobs } from "{{ '/js/vibescript-present.js' | relative_url }}";
+
+  const statusEl = document.getElementById('vibe-present-status');
+  const btn = document.getElementById('vibe-present-rerun');
+
+  function paint(jobs) {
+    for (const job of jobs) {
+      const card = document.querySelector(`[data-job="${job.id}"]`);
+      if (!card) continue;
+      card.classList.remove('is-wait', 'is-fail');
+      if (!job.ok) card.classList.add('is-fail');
+      const meter = card.querySelector('.meter');
+      if (meter) {
+        meter.textContent = job.ok
+          ? `${job.ms.toFixed(2)} ms · ${job.detail}`
+          : (job.detail || 'failed');
+      }
+    }
+  }
+
+  async function run() {
+    if (statusEl) statusEl.textContent = 'Running Present jobs…';
+    if (btn) btn.disabled = true;
+    try {
+      const result = await runPresentJobs();
+      paint(result.jobs);
+      if (statusEl) {
+        statusEl.textContent = `Live · ${result.jobs.length} jobs · ${result.note}`;
+      }
+    } catch (err) {
+      document.querySelectorAll('.vibe-present-card').forEach((card) => {
+        card.classList.add('is-fail');
+        card.classList.remove('is-wait');
+        const meter = card.querySelector('.meter');
+        if (meter) meter.textContent = err.message || String(err);
+      });
+      if (statusEl) statusEl.textContent = `Present runner stopped · ${err.message || err}`;
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  if (btn) btn.addEventListener('click', run);
+  run();
+</script>
+
