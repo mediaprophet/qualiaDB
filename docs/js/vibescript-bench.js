@@ -36,7 +36,10 @@ function directJavaScript() {
 }
 
 function valueOf(result) {
-    if (!result || result.ok !== true || result.value !== EXPECTED_VALUE) {
+    if (!result || result.ok !== true) {
+        throw new Error(`VibeScript execution failed: ${result?.error || 'unknown error'}`);
+    }
+    if (Number(result.value) !== EXPECTED_VALUE) {
         throw new Error(`VibeScript result did not match the expected value ${EXPECTED_VALUE}.`);
     }
 }

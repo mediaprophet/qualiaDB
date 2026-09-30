@@ -12,7 +12,8 @@ on:
     branches:
       - main
       - "0.0.40"
-      - "0.0.40"
+      - "0.0.40.1"
+      - "0.0.40.1-dev"
     tags:
       - "v*"
   workflow_dispatch:

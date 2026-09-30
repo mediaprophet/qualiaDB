@@ -18,7 +18,10 @@ let wasmMemory;
 let runner;
 
 function assertValue(result) {
-    if (!result || result.ok !== true || result.value !== EXPECTED_VALUE) {
+    if (!result || result.ok !== true) {
+        throw new Error(`VibeScript worker execution failed: ${result?.error || 'unknown error'}`);
+    }
+    if (Number(result.value) !== EXPECTED_VALUE) {
         throw new Error('VibeScript worker returned an unexpected arithmetic result.');
     }
 }
