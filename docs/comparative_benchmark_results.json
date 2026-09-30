@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "dataset": "synthetic-ntriples-v1",
-  "last_updated": "2026-09-28T15:06:00.815753Z",
+  "last_updated": "2026-09-30T07:03:44.474581Z",
   "engines": {
     "qualia": {
       "engine": "qualia",
@@ -384,11 +384,84 @@
         "source_file_mb": 0.646,
         "source_file_bytes": 677780
       }
+    },
+    "qualia_nt": {
+      "dataset_file_bytes": 677780,
+      "dataset_file_mb": 0.646,
+      "dataset_file_path": "C:\\Users\\tim_h\\AppData\\Local\\Temp\\tmp3625ikw6.nt",
+      "dataset_format": "ntriples",
+      "engine": "qualia_nt",
+      "filter": {
+        "max": 0.0435,
+        "mean": 0.043223333333333364,
+        "min": 0.0429,
+        "p50": 0.0432,
+        "p95": 0.0435,
+        "p99": 0.0435,
+        "samples": 30,
+        "unit": "milliseconds",
+        "warmup_samples": 10
+      },
+      "ingestion_ms": 98.127,
+      "measurement_path": "in_process_ntriples_parse",
+      "n_triples": 10000,
+      "note": "Parses N-Triples text (same RDF source as Oxigraph/Comunica) into quins and queries an in-memory subject index.",
+      "peak_rss_mb": 18.23,
+      "point": {
+        "max": 9.999999999999999e-05,
+        "mean": 4.000000000000001e-05,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 9.999999999999999e-05,
+        "p99": 9.999999999999999e-05,
+        "samples": 30,
+        "unit": "milliseconds",
+        "warmup_samples": 10
+      },
+      "twohop": {
+        "max": 9.999999999999999e-05,
+        "mean": 6.000000000000002e-05,
+        "min": 0.0,
+        "p50": 9.999999999999999e-05,
+        "p95": 9.999999999999999e-05,
+        "p99": 9.999999999999999e-05,
+        "samples": 30,
+        "unit": "milliseconds",
+        "warmup_samples": 10
+      },
+      "schema_version": 2,
+      "dataset": "synthetic-ntriples-v1",
+      "dataset_profile": "synthetic-10k",
+      "dataset_label": "Synthetic 10K triples",
+      "timestamp": "2026-09-30T07:03:44.474581Z",
+      "meta": {
+        "label": "Qualia (N-Triples parse)",
+        "focus": "Same RDF .nt source as Oxigraph/Comunica \u2014 parse text into quins in-process",
+        "install": "cargo build --release -p qualia-cli (q42_comparative_bench --format ntriples)"
+      },
+      "dataset_info": {
+        "label": "Synthetic 10K triples",
+        "release": null,
+        "variant": null,
+        "source_format": "generated-ntriples",
+        "source_url": null,
+        "source_path": null,
+        "native_format": null,
+        "native_q42_base_path": null,
+        "native_q42_path": null,
+        "native_q42_available": false,
+        "compressed_q42_path": null,
+        "compressed_q42_available": false,
+        "n_triples": 10000,
+        "source_file_mb": 0.646,
+        "source_file_bytes": 677780
+      },
+      "engine_version": "0.0.40"
     }
   },
   "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds two Qualia format rows on the same ontology: N-Triples parse (qualia_nt) and native .q42 SuperBlocks (qualia_q42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
   "execution_environment": {
-    "runner": "github-actions-comparative-harness",
+    "runner": "python-comparative-harness",
     "engine_version": "0.0.40",
     "memory_ceiling_mb": 512,
     "measurement_path": "harness_isolated_subprocess",
@@ -402,25 +475,16 @@
     },
     "device_manifest": {
       "host_class": "X86_64_SERVER",
-      "cpu_arch": "x86_64",
-      "os": "Linux",
-      "cpu_logical_cores": 4,
-      "ram_reported_gb": 15.6,
+      "cpu_arch": "AMD64",
+      "os": "Windows",
+      "cpu_logical_cores": 8,
+      "ram_reported_gb": null,
       "has_simd_wasm": false,
       "has_npu": false
     },
-    "collected_at": "2026-09-28T15:06:00.827779Z",
+    "collected_at": "2026-09-30T07:03:44.597394Z",
     "qualia_daemon_topology": {
       "mode": "single_cell"
-    },
-    "ci_environment": {
-      "provider": "github-actions",
-      "runner_os": "Linux",
-      "runner_arch": "X64",
-      "runner_name": "GitHub Actions 1000004464",
-      "workflow": "Comparative Benchmarks",
-      "run_id": "36438499355",
-      "repository": "mediaprophet/qualiaDB"
     }
   },
   "dataset_profile": "synthetic-10k",

@@ -148,6 +148,13 @@ jobs:
         # Output written to docs/llm_benchmark_results.json by the CLI,
         # including runner CPU/RAM and the GPU probe above. This suite is CPU-native.
 
+      - name: Run Qualia NT benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine qualia_nt \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
+
       - name: Start Qualia daemon (background)
         run: |
           cargo run --release -p qualia-cli -- daemon --dev --port 4242 &
@@ -180,7 +187,7 @@ jobs:
         # Persist onto the branch that ran. Pages and the release line live on
         # 0.0.39; main still gets weekly/scheduled numbers. Do not push from
         # tags or arbitrary feature branches — that used to rebase them onto main.
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39' || github.ref == 'refs/heads/0.0.40'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39' || github.ref == 'refs/heads/0.0.40' || startsWith(github.ref, 'refs/heads/0.0.40.')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -283,7 +290,7 @@ jobs:
             --output docs/comparative_benchmark_results.schemaorg-30-current-https.json
 
       - name: Commit Schema.org benchmark results
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39' || github.ref == 'refs/heads/0.0.40'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39' || github.ref == 'refs/heads/0.0.40' || startsWith(github.ref, 'refs/heads/0.0.40.')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
