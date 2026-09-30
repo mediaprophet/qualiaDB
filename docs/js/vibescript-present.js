@@ -1,19 +1,17 @@
 /**
- * Present VibeScript jobs the browser binding already runs.
- * Checked cell · CompiledCell.compile · run() without re-decode · host ask.
- * Arithmetic `= 1 + 2 * 3 - 4` is an interim payload only — not the product claim.
+ * Soft-rise Present jobs the browser binding already runs.
+ * Checked cell · CompiledCell.compile · run() ×2 on the same handle.
+ * Arithmetic `= 1 + 2 * 3 - 4` is quiet interim payload for those jobs.
  */
 
 import initVibe, {
     CompiledCell,
     check_cell_src,
-    eval_cell_src,
 } from '../pkg/vibe/vibe_wasm.js';
 
-/** Interim cell payload — enough to exercise check / compile / run. */
+/** Quiet interim cell payload — exercises check / compile / run. */
 export const CELL_SOURCE = '= 1 + 2 * 3 - 4';
 export const EXPECTED_CELL_VALUE = 3;
-export const ASK_SOURCE = '= graph? { ?s ?p ?o }';
 
 let wasmReady;
 
@@ -35,11 +33,10 @@ function okResult(result, label) {
 }
 
 /**
- * Run the four Present jobs once. Returns proud working status rows.
+ * Run the three soft-rise Present jobs once.
  */
 export async function runPresentJobs(options = {}) {
     const cellSrc = options.cellSource || CELL_SOURCE;
-    const askSrc = options.askSource || ASK_SOURCE;
     await ensurePresentWasm();
 
     const jobs = [];
@@ -74,7 +71,7 @@ export async function runPresentJobs(options = {}) {
         });
     }
 
-    // 3. Run again without re-decode
+    // 3. Run twice without re-decode
     {
         const t0 = performance.now();
         const first = okResult(cell.run(), 'CompiledCell.run');
@@ -92,24 +89,9 @@ export async function runPresentJobs(options = {}) {
         });
     }
 
-    // 4. Host ask
-    {
-        const t0 = performance.now();
-        const ask = okResult(eval_cell_src(askSrc), 'host ask');
-        jobs.push({
-            id: 'hostAsk',
-            label: 'Host ask',
-            claim: 'graph? ask through the binding',
-            ok: true,
-            ms: performance.now() - t0,
-            detail: ask.value !== undefined ? `bindings · ${JSON.stringify(ask.value).slice(0, 72)}` : 'ask ok',
-            value: ask.value,
-        });
-    }
-
     return {
         live: true,
         jobs,
-        note: 'Present · these four jobs run on the shipped vibe-wasm binding.',
+        note: 'Present · check · compile · run ×2 on the shipped vibe-wasm binding.',
     };
 }

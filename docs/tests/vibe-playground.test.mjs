@@ -26,7 +26,8 @@ assert.match(showcase, /using Cosmic/);
 assert.match(showcase, /effect fn main\(\) -> Record/);
 assert.doesNotMatch(showcase, /return glow;/);
 
-assert.match(benches, /let mut a = 0/);
-assert.match(benches, /let mut s = 0/);
+assert.match(benches, /runPresentJobs|Present purpose clocks/);
+assert.match(benches, /CompiledCell\.compile|run\(\) ×2/);
+assert.doesNotMatch(benches, /data-job="hostAsk"/);
 
 console.log('Vibe playground contract tests passed.');

@@ -1,10 +1,9 @@
 /**
  * Browser VibeScript measurement harness.
  *
- * Purpose demos clock whole jobs that the shipped WASM binding can actually
- * run: checked cell, host ask (graph?), and structural edit without a host
- * rebuild. The compiled-cell handle times run() without re-decode as a
- * labelled binding footnote — not as a language-speed crown against bare JS.
+ * Soft-rise purpose clocks: checked cell, CompiledCell.compile, run() ×2 on
+ * the same handle, and structural edit without a host rebuild.
+ * CompiledCell.run also appears as a labelled binding footnote.
  */
 
 import initVibe, {
@@ -19,7 +18,6 @@ import initVibe, {
 
 const CELL_SOURCE = '= 1 + 2 * 3 - 4';
 const EXPECTED_VALUE = 3;
-const ASK_SOURCE = '= graph? { ?s ?p ?o }';
 const EDIT_SOURCE = 'fn main() -> i64 {\n  return 1;\n}\n';
 const EDIT_JSON = JSON.stringify({ op: 'rename_item', index: 0, new_name: 'entry' });
 const SAMPLE_COUNT = 11;
@@ -99,8 +97,15 @@ function purposeDemos() {
         assertOk(check_cell_src(CELL_SOURCE), 'checked cell');
     });
 
-    const hostAsk = measureWholeJob('host ask (graph?)', () => {
-        assertOk(eval_cell_src(ASK_SOURCE), 'host ask');
+    const compile = measureWholeJob('CompiledCell.compile', () => {
+        CompiledCell.compile(CELL_SOURCE);
+    });
+
+    const cell = CompiledCell.compile(CELL_SOURCE);
+    valueOf(cell.run());
+    const run = measureWholeJob('CompiledCell.run ×2', () => {
+        valueOf(cell.run());
+        valueOf(cell.run());
     });
 
     const edit = measureWholeJob('edit without host rebuild', () => {
@@ -113,7 +118,7 @@ function purposeDemos() {
         }
     });
 
-    return { checked, hostAsk, edit };
+    return { checked, compile, run, edit };
 }
 
 function compiledHandleFootnote(batchSize) {

@@ -44,10 +44,9 @@ title: VibeScript Benchmarks
   <div class="bench-section">
     <h2>Present purpose clocks</h2>
     <p>
-      Whole jobs the shipped browser binding runs today: <strong>checked cell</strong>,
-      <strong>CompiledCell.compile</strong>, <strong>run() without re-decode</strong>, and
-      <strong>host ask</strong>. Thin arithmetic is only the interim payload inside those jobs —
-      not a language-speed crown against bare JavaScript.
+      Soft-rise Present: <strong>checked cell</strong>,
+      <strong>CompiledCell.compile</strong>, and <strong>run() ×2</strong> on the same handle.
+      Thin arithmetic stays quiet interim inside those jobs.
     </p>
   </div>
 
@@ -60,8 +59,7 @@ title: VibeScript Benchmarks
   <div class="present-grid" id="bench-results">
     <article class="present-card" data-job="checked"><h3>Checked cell</h3><p>Type-check before run</p><div class="meter">—</div></article>
     <article class="present-card" data-job="compile"><h3>CompiledCell.compile</h3><p>Compile once · keep handle</p><div class="meter">—</div></article>
-    <article class="present-card" data-job="run"><h3>CompiledCell.run</h3><p>Run again · no re-decode</p><div class="meter">—</div></article>
-    <article class="present-card" data-job="hostAsk"><h3>Host ask</h3><p>graph? through the binding</p><div class="meter">—</div></article>
+    <article class="present-card" data-job="run"><h3>CompiledCell.run</h3><p>Run ×2 · no re-decode</p><div class="meter">—</div></article>
   </div>
 
   <div class="bench-note">
