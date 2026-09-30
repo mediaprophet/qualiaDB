@@ -2457,7 +2457,7 @@
         "kind": "fn",
         "doc": "Get the schema for a single host call id.",
         "file": "capability_schema.rs",
-        "line": 530,
+        "line": 582,
         "signature": "pub fn schema_for(id: &str) -> Option<SchemaEntry> {"
       },
       {
@@ -2465,7 +2465,7 @@
         "kind": "fn",
         "doc": "Get all schema ids.",
         "file": "capability_schema.rs",
-        "line": 535,
+        "line": 587,
         "signature": "pub fn all_ids() -> Vec<String> {"
       },
       {
@@ -2473,7 +2473,7 @@
         "kind": "fn",
         "doc": "Get the full schema as a Value::List of Value::Records.",
         "file": "capability_schema.rs",
-        "line": 540,
+        "line": 592,
         "signature": "pub fn schema_to_value() -> Value {"
       }
     ]
@@ -2649,7 +2649,7 @@
         "kind": "const",
         "doc": "",
         "file": "ids.rs",
-        "line": 1114,
+        "line": 1120,
         "signature": "pub const INVOKE_ID_COUNT: usize = ALL_INVOKE_IDS.len()"
       }
     ]
@@ -2822,6 +2822,125 @@
         "signature": "pub fn check_cell(expr: &Expr) -> Result<CheckResult, Diagnostic> {"
       }
     ]
+  },
+  {
+    "name": "conditioning",
+    "doc": "Vibe-facing conditioning profile DTO and graph projection (P1B).\nNo invented Host invoke IDs. Neutral statements only.",
+    "items": [
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 9,
+        "signature": "pub use profile::{"
+      },
+      {
+        "name": "CondStatement}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 13,
+        "signature": "pub use project::{project_profile, CondStatement};"
+      }
+    ]
+  },
+  {
+    "name": "conditioning::profile",
+    "doc": "Validated conditioning profile DTO (authoring-side).",
+    "items": [
+      {
+        "name": "SCHEMA_VERSION",
+        "kind": "const",
+        "doc": "",
+        "file": "profile.rs",
+        "line": 3,
+        "signature": "pub const SCHEMA_VERSION: u16 = 1"
+      },
+      {
+        "name": "COND_NS",
+        "kind": "const",
+        "doc": "",
+        "file": "profile.rs",
+        "line": 4,
+        "signature": "pub const COND_NS: &str = \"https://qualiadb.org/schema/conditioning#\""
+      },
+      {
+        "name": "RequirementClassDto",
+        "kind": "enum",
+        "doc": "",
+        "file": "profile.rs",
+        "line": 7,
+        "signature": "pub enum RequirementClassDto"
+      },
+      {
+        "name": "RequirementDto",
+        "kind": "struct",
+        "doc": "",
+        "file": "profile.rs",
+        "line": 14,
+        "signature": "pub struct RequirementDto"
+      },
+      {
+        "name": "ConditioningBudgetDto",
+        "kind": "struct",
+        "doc": "",
+        "file": "profile.rs",
+        "line": 24,
+        "signature": "pub struct ConditioningBudgetDto"
+      },
+      {
+        "name": "ConditioningProfileDto",
+        "kind": "struct",
+        "doc": "",
+        "file": "profile.rs",
+        "line": 31,
+        "signature": "pub struct ConditioningProfileDto"
+      },
+      {
+        "name": "validate",
+        "kind": "fn",
+        "doc": "",
+        "file": "profile.rs",
+        "line": 41,
+        "signature": "pub fn validate(&self) -> Result<(), String> {"
+      },
+      {
+        "name": "content_digest",
+        "kind": "fn",
+        "doc": "FNV-1a content digest over canonical fields (stable identity).",
+        "file": "profile.rs",
+        "line": 74,
+        "signature": "pub fn content_digest(&self) -> u64 {"
+      }
+    ]
+  },
+  {
+    "name": "conditioning::project",
+    "doc": "Profile DTO → Conditioning semantic statements.",
+    "items": [
+      {
+        "name": "CondStatement",
+        "kind": "struct",
+        "doc": "",
+        "file": "project.rs",
+        "line": 6,
+        "signature": "pub struct CondStatement"
+      },
+      {
+        "name": "project_profile",
+        "kind": "fn",
+        "doc": "",
+        "file": "project.rs",
+        "line": 16,
+        "signature": "pub fn project_profile(profile: &ConditioningProfileDto) -> Result<Vec<CondStatement>, String> {"
+      }
+    ]
+  },
+  {
+    "name": "conditioning::tests",
+    "doc": "",
+    "items": []
   },
   {
     "name": "cosmic",
@@ -7743,6 +7862,312 @@
     ]
   },
   {
+    "name": "metamodel",
+    "doc": "VibeScript metamodel registry and semantic projection (Prompt Precision P1A).\n\nEmits neutral RDF statements / Turtle — does **not** depend on `qualia-core-db`.",
+    "items": [
+      {
+        "name": "ExportBudget}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 12,
+        "signature": "pub use export::{export_rdfs_turtle, export_shacl_turtle, ExportBudget};"
+      },
+      {
+        "name": "FIELD_DESCRIPTORS}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 13,
+        "signature": "pub use fields::{property_iri, FieldDescriptor, FIELD_DESCRIPTORS};"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 14,
+        "signature": "pub use namespace::{"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 17,
+        "signature": "pub use node_kinds::{"
+      },
+      {
+        "name": "StatementKind}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 21,
+        "signature": "pub use project::{project_program_summary, SemanticStatement, StatementKind};"
+      },
+      {
+        "name": "CoverageStatus}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 22,
+        "signature": "pub use validate::{coverage_report, CoverageReport, CoverageStatus};"
+      }
+    ]
+  },
+  {
+    "name": "metamodel::export",
+    "doc": "Deterministic RDFS / SHACL Turtle exporters (cold, byte-budgeted).",
+    "items": [
+      {
+        "name": "ExportBudget",
+        "kind": "struct",
+        "doc": "Soft byte budget for generated artifacts (fail closed if exceeded).",
+        "file": "export.rs",
+        "line": 11,
+        "signature": "pub struct ExportBudget"
+      },
+      {
+        "name": "export_rdfs_turtle",
+        "kind": "fn",
+        "doc": "Write deterministic RDFS vocabulary Turtle.",
+        "file": "export.rs",
+        "line": 51,
+        "signature": "pub fn export_rdfs_turtle(w: &mut dyn Write, budget: ExportBudget) -> io::Result<usize> {"
+      },
+      {
+        "name": "export_shacl_turtle",
+        "kind": "fn",
+        "doc": "Write deterministic SHACL shapes Turtle.",
+        "file": "export.rs",
+        "line": 100,
+        "signature": "pub fn export_shacl_turtle(w: &mut dyn Write, budget: ExportBudget) -> io::Result<usize> {"
+      }
+    ]
+  },
+  {
+    "name": "metamodel::fields",
+    "doc": "Field / property descriptors for the Vibe metamodel.",
+    "items": [
+      {
+        "name": "FieldDescriptor",
+        "kind": "struct",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 6,
+        "signature": "pub struct FieldDescriptor"
+      },
+      {
+        "name": "FIELD_DESCRIPTORS",
+        "kind": "const",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 13,
+        "signature": "pub const FIELD_DESCRIPTORS: &[FieldDescriptor] = &["
+      },
+      {
+        "name": "property_iri",
+        "kind": "fn",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 106,
+        "signature": "pub fn property_iri(f: &FieldDescriptor) -> String {"
+      }
+    ]
+  },
+  {
+    "name": "metamodel::namespace",
+    "doc": "Stable Vibe IRIs and language-version identity.",
+    "items": [
+      {
+        "name": "VIBE_NS",
+        "kind": "const",
+        "doc": "Canonical VibeScript schema namespace (matches `poet_host/catalog_ttl.rs`).",
+        "file": "namespace.rs",
+        "line": 4,
+        "signature": "pub const VIBE_NS: &str = \"https://qualiadb.org/schema/vibe#\""
+      },
+      {
+        "name": "VIBE_SCHEMA_VERSION",
+        "kind": "const",
+        "doc": "Metamodel schema revision for exported RDFS/SHACL artifacts.",
+        "file": "namespace.rs",
+        "line": 7,
+        "signature": "pub const VIBE_SCHEMA_VERSION: &str = \"vibe-metamodel-1\""
+      },
+      {
+        "name": "LANGUAGE_VERSION_IRI",
+        "kind": "const",
+        "doc": "IRI for the current language version string (`vibe-0.1`).",
+        "file": "namespace.rs",
+        "line": 10,
+        "signature": "pub const LANGUAGE_VERSION_IRI: &str = \"https://qualiadb.org/schema/vibe#LanguageVersion-vibe-0.1\""
+      },
+      {
+        "name": "term",
+        "kind": "fn",
+        "doc": "",
+        "file": "namespace.rs",
+        "line": 13,
+        "signature": "pub fn term(local: &str) -> String {"
+      }
+    ]
+  },
+  {
+    "name": "metamodel::node_kinds",
+    "doc": "AST / effect / type / modality node-kind registry for projection and export.",
+    "items": [
+      {
+        "name": "NodeKindDescriptor",
+        "kind": "struct",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 6,
+        "signature": "pub struct NodeKindDescriptor"
+      },
+      {
+        "name": "ITEM_KINDS",
+        "kind": "const",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 24,
+        "signature": "pub const ITEM_KINDS: &[NodeKindDescriptor] = kinds!("
+      },
+      {
+        "name": "STMT_KINDS",
+        "kind": "const",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 38,
+        "signature": "pub const STMT_KINDS: &[NodeKindDescriptor] = kinds!("
+      },
+      {
+        "name": "PATTERN_KINDS",
+        "kind": "const",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 54,
+        "signature": "pub const PATTERN_KINDS: &[NodeKindDescriptor] = kinds!("
+      },
+      {
+        "name": "EXPR_KINDS",
+        "kind": "const",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 68,
+        "signature": "pub const EXPR_KINDS: &[NodeKindDescriptor] = kinds!("
+      },
+      {
+        "name": "MODAL_KINDS",
+        "kind": "const",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 94,
+        "signature": "pub const MODAL_KINDS: &[NodeKindDescriptor] = kinds!("
+      },
+      {
+        "name": "EFFECT_KINDS",
+        "kind": "const",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 108,
+        "signature": "pub const EFFECT_KINDS: &[NodeKindDescriptor] = kinds!("
+      },
+      {
+        "name": "TYPE_KINDS",
+        "kind": "const",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 116,
+        "signature": "pub const TYPE_KINDS: &[NodeKindDescriptor] = kinds!("
+      },
+      {
+        "name": "all_node_kinds",
+        "kind": "fn",
+        "doc": "All kind descriptors flattened for export.",
+        "file": "node_kinds.rs",
+        "line": 161,
+        "signature": "pub fn all_node_kinds() -> Vec<&'static NodeKindDescriptor> {"
+      },
+      {
+        "name": "kind_iri",
+        "kind": "fn",
+        "doc": "",
+        "file": "node_kinds.rs",
+        "line": 171,
+        "signature": "pub fn kind_iri(d: &NodeKindDescriptor) -> String {"
+      }
+    ]
+  },
+  {
+    "name": "metamodel::project",
+    "doc": "Typed AST → neutral semantic statements (no Quin / core-db).",
+    "items": [
+      {
+        "name": "StatementKind",
+        "kind": "enum",
+        "doc": "",
+        "file": "project.rs",
+        "line": 8,
+        "signature": "pub enum StatementKind"
+      },
+      {
+        "name": "SemanticStatement",
+        "kind": "struct",
+        "doc": "",
+        "file": "project.rs",
+        "line": 15,
+        "signature": "pub struct SemanticStatement"
+      },
+      {
+        "name": "project_program_summary",
+        "kind": "fn",
+        "doc": "Project a program into a bounded list of neutral RDF-like statements.",
+        "file": "project.rs",
+        "line": 23,
+        "signature": "pub fn project_program_summary(program: &Program, module_iri: &str) -> Vec<SemanticStatement> {"
+      }
+    ]
+  },
+  {
+    "name": "metamodel::validate",
+    "doc": "Coverage checks: metamodel registry vs AST / effects / types / catalog IDs.",
+    "items": [
+      {
+        "name": "CoverageStatus",
+        "kind": "enum",
+        "doc": "",
+        "file": "validate.rs",
+        "line": 10,
+        "signature": "pub enum CoverageStatus"
+      },
+      {
+        "name": "CoverageReport",
+        "kind": "struct",
+        "doc": "",
+        "file": "validate.rs",
+        "line": 16,
+        "signature": "pub struct CoverageReport"
+      },
+      {
+        "name": "coverage_report",
+        "kind": "fn",
+        "doc": "Report metamodel coverage against known AST category sizes.\n\nCounts are pinned to the vibe-0.1 enums at the time of P1A; if a variant is\nadded, extend `node_kinds.rs` in the same change.",
+        "file": "validate.rs",
+        "line": 41,
+        "signature": "pub fn coverage_report() -> CoverageReport {"
+      },
+      {
+        "name": "all_complete",
+        "kind": "fn",
+        "doc": "",
+        "file": "validate.rs",
+        "line": 55,
+        "signature": "pub fn all_complete(&self) -> bool {"
+      }
+    ]
+  },
+  {
     "name": "module_system",
     "doc": "Module system — `import <iri> as name` with a module graph (T63).\n\nNo npm. No `vibe.toml` dependency solver in 0.x. The catalog IS\nthe module graph — modules declare their IRI, exports, and\ndependencies, and the resolver walks the graph to find them.\n\n## Design\n\n- **ModuleId**: An IRI that uniquely identifies a module\n  (e.g. `https://qualiadb.org/modules/math`).\n- **ModuleEntry**: Metadata for a module — IRI, version, exports\n  (function names and types), dependencies (other module IRIs).\n- **ModuleCatalog**: The module graph — a collection of ModuleEntries\n  with dependency edges. Supports cycle detection.\n- **ModuleResolver**: Resolves an import IRI to a ModuleEntry,\n  checking the catalog first, then falling back to the host.\n\nThe catalog is built at host startup from the modules the host\nhas available. Scripts import modules by IRI; the resolver checks\nthe catalog and returns the entry (or an error if not found).\n\nReference: `docs/vibescript-full-impl-PLAN.md` §8.13 T63,\nexcellence-first §2.7, ecosystem §3.4.",
     "items": [
@@ -9999,11 +10424,19 @@
         "signature": "pub mod ast_merge;"
       },
       {
-        "name": "cosmic",
+        "name": "conditioning",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
         "line": 40,
+        "signature": "pub mod conditioning;"
+      },
+      {
+        "name": "cosmic",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 41,
         "signature": "pub mod cosmic;"
       },
       {
@@ -10011,7 +10444,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 41,
+        "line": 42,
         "signature": "pub mod crypto;"
       },
       {
@@ -10019,7 +10452,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 42,
+        "line": 43,
         "signature": "pub mod dag;"
       },
       {
@@ -10027,7 +10460,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 43,
+        "line": 44,
         "signature": "pub mod decompiler;"
       },
       {
@@ -10035,7 +10468,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 44,
+        "line": 45,
         "signature": "pub mod deontic_interrupt;"
       },
       {
@@ -10043,7 +10476,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 45,
+        "line": 46,
         "signature": "pub mod frame_morphism;"
       },
       {
@@ -10051,7 +10484,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 46,
+        "line": 47,
         "signature": "pub mod hid;"
       },
       {
@@ -10059,7 +10492,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 47,
+        "line": 48,
         "signature": "pub mod law_package;"
       },
       {
@@ -10067,15 +10500,23 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 48,
+        "line": 49,
         "signature": "pub mod locale;"
+      },
+      {
+        "name": "metamodel",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 50,
+        "signature": "pub mod metamodel;"
       },
       {
         "name": "module_system",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 49,
+        "line": 51,
         "signature": "pub mod module_system;"
       },
       {
@@ -10083,7 +10524,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 50,
+        "line": 52,
         "signature": "pub mod observer;"
       },
       {
@@ -10091,7 +10532,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 51,
+        "line": 53,
         "signature": "pub mod physics;"
       },
       {
@@ -10099,7 +10540,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 52,
+        "line": 54,
         "signature": "pub mod presentation;"
       },
       {
@@ -10107,7 +10548,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 53,
+        "line": 55,
         "signature": "pub mod pretty;"
       },
       {
@@ -10115,7 +10556,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 54,
+        "line": 56,
         "signature": "pub mod projectional;"
       },
       {
@@ -10123,7 +10564,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 55,
+        "line": 57,
         "signature": "pub mod quantity;"
       },
       {
@@ -10131,7 +10572,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 56,
+        "line": 58,
         "signature": "pub mod reactive_cell;"
       },
       {
@@ -10139,7 +10580,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 57,
+        "line": 59,
         "signature": "pub mod reflection;"
       },
       {
@@ -10147,7 +10588,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 58,
+        "line": 60,
         "signature": "pub mod replay_clock;"
       },
       {
@@ -10155,7 +10596,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 59,
+        "line": 61,
         "signature": "pub mod sheaf;"
       },
       {
@@ -10163,7 +10604,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 60,
+        "line": 62,
         "signature": "pub mod tick_policy;"
       },
       {
@@ -10171,7 +10612,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 61,
+        "line": 63,
         "signature": "pub mod translate;"
       },
       {
@@ -10179,7 +10620,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 62,
+        "line": 64,
         "signature": "pub mod trivia;"
       },
       {
@@ -10187,7 +10628,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 63,
+        "line": 65,
         "signature": "pub mod vocab;"
       },
       {
@@ -10195,7 +10636,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 65,
+        "line": 67,
         "signature": "pub use accel::{"
       },
       {
@@ -10203,7 +10644,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 68,
+        "line": 70,
         "signature": "pub use ast::{"
       },
       {
@@ -10211,7 +10652,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 75,
+        "line": 77,
         "signature": "pub use ast_query::{"
       },
       {
@@ -10219,7 +10660,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 79,
+        "line": 81,
         "signature": "pub use bind::{AccelerationTier, Host, HostEnvironment, LocalHost};"
       },
       {
@@ -10227,7 +10668,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 80,
+        "line": 82,
         "signature": "pub use budget::{Budget, SENTINEL_BYTES};"
       },
       {
@@ -10235,7 +10676,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 81,
+        "line": 83,
         "signature": "pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};"
       },
       {
@@ -10243,7 +10684,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 82,
+        "line": 84,
         "signature": "pub use check::{"
       },
       {
@@ -10251,7 +10692,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 86,
+        "line": 88,
         "signature": "pub use dag::{"
       },
       {
@@ -10259,7 +10700,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 91,
+        "line": 93,
         "signature": "pub use degrade::{gpu_missing, llm_missing};"
       },
       {
@@ -10267,7 +10708,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 92,
+        "line": 94,
         "signature": "pub use deontic_interrupt::{"
       },
       {
@@ -10275,7 +10716,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 96,
+        "line": 98,
         "signature": "pub use diagnose::{diagnose, DiagnoseReport};"
       },
       {
@@ -10283,7 +10724,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 97,
+        "line": 99,
         "signature": "pub use error::{DiagCode, Diagnostic};"
       },
       {
@@ -10291,7 +10732,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 98,
+        "line": 100,
         "signature": "pub use eval::{populate_import_aliases, Engine, Env};"
       },
       {
@@ -10299,7 +10740,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 99,
+        "line": 101,
         "signature": "pub use grammar::{DIAGNOSTIC_SCHEMA_JSON, EBNF, GBNF, SOURCE_SCHEMA_JSON};"
       },
       {
@@ -10307,7 +10748,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 100,
+        "line": 102,
         "signature": "pub use lexicon_pin::{"
       },
       {
@@ -10315,7 +10756,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 106,
+        "line": 108,
         "signature": "pub use parse::{parse_cell, parse_program};"
       },
       {
@@ -10323,7 +10764,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 107,
+        "line": 109,
         "signature": "pub use projectional::{"
       },
       {
@@ -10331,7 +10772,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 111,
+        "line": 113,
         "signature": "pub use reactive_cell::{ReactiveCell, ReactiveCellError, ReactiveCellGraph};"
       },
       {
@@ -10339,7 +10780,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 112,
+        "line": 114,
         "signature": "pub use reflection::{"
       },
       {
@@ -10347,7 +10788,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 115,
+        "line": 117,
         "signature": "pub use span::Span;"
       },
       {
@@ -10355,7 +10796,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 116,
+        "line": 118,
         "signature": "pub use unicode_ident::{"
       },
       {
@@ -10363,7 +10804,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 120,
+        "line": 122,
         "signature": "pub use value::{"
       },
       {
@@ -10371,7 +10812,7 @@
         "kind": "fn",
         "doc": "Parse, check, and evaluate a Pure cell (`= expr`).",
         "file": "lib.rs",
-        "line": 127,
+        "line": 129,
         "signature": "pub fn eval_cell<H: Host>(src: &str, host: &mut H, env: &mut Env) -> Result<Value, Diagnostic> {"
       },
       {
@@ -10379,7 +10820,7 @@
         "kind": "fn",
         "doc": "Parse and check a module. Does not run hooks.",
         "file": "lib.rs",
-        "line": 135,
+        "line": 137,
         "signature": "pub fn load_program(src: &str) -> Result<Program, Diagnostic> {"
       },
       {
@@ -10387,7 +10828,7 @@
         "kind": "fn",
         "doc": "Evaluate a named function from a checked program.\nImport aliases from the program are populated into `env` before evaluation.",
         "file": "lib.rs",
-        "line": 143,
+        "line": 145,
         "signature": "pub fn eval_function<H: Host>("
       },
       {
@@ -10395,7 +10836,7 @@
         "kind": "fn",
         "doc": "Dispatch a hook event on a checked program.\n\n`path` is the event path (e.g. `[\"pulse\", \"message\"]` for `on pulse:message(…)`\nor `[\"tick\"]` for `on tick(…)`). `args` are bound to the hook's parameters\nin declaration order. Returns `Ok(Value::Null)` if no matching hook exists.",
         "file": "lib.rs",
-        "line": 160,
+        "line": 162,
         "signature": "pub fn dispatch_hook<H: Host>("
       }
     ]
@@ -11929,7 +12370,7 @@
       {
         "name": "host_version",
         "kind": "fn",
-        "doc": "Current host ABI stamp (`vibe-host-0.1`). Outcome, not an `ALL_BOUND` freeze.",
+        "doc": "Frozen host ABI stamp (`vibe-host-0.1`).",
         "file": "lib.rs",
         "line": 111,
         "signature": "pub fn host_version() -> String {"
@@ -12007,11 +12448,83 @@
         "signature": "pub fn eval_program_src(src: &str) -> JsValue {"
       },
       {
+        "name": "CompiledCell",
+        "kind": "struct",
+        "doc": "Persistent compiled cell for the browser binding.\n\nKeeps the compiled [`bytecode::Chunk`] so timed / repeated runs can call\n[`CompiledCell::run`] without re-decoding VBC1 bytes. Prefer this over\n[`decode_and_run`] when the job is \"run what we already compiled.\"",
+        "file": "lib.rs",
+        "line": 326,
+        "signature": "pub struct CompiledCell"
+      },
+      {
+        "name": "compile",
+        "kind": "fn",
+        "doc": "Compile a cell expression (`= expr`) into a handle. Does not run it.",
+        "file": "lib.rs",
+        "line": 333,
+        "signature": "pub fn compile(src: &str) -> Result<CompiledCell, JsValue> {"
+      },
+      {
+        "name": "from_bytes",
+        "kind": "fn",
+        "doc": "Decode a VBC1 byte buffer once into a handle. Later [`Self::run`] calls\ndo not decode again.",
+        "file": "lib.rs",
+        "line": 345,
+        "signature": "pub fn from_bytes(bytes: &[u8]) -> Result<CompiledCell, JsValue> {"
+      },
+      {
+        "name": "run",
+        "kind": "fn",
+        "doc": "Run the held chunk on a fresh local VM. Does not decode.",
+        "file": "lib.rs",
+        "line": 353,
+        "signature": "pub fn run(&self) -> JsValue {"
+      },
+      {
+        "name": "code_size",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 373,
+        "signature": "pub fn code_size(&self) -> usize {"
+      },
+      {
+        "name": "constants",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 378,
+        "signature": "pub fn constants(&self) -> usize {"
+      },
+      {
+        "name": "functions",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 383,
+        "signature": "pub fn functions(&self) -> usize {"
+      },
+      {
+        "name": "top_locals",
+        "kind": "fn",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 388,
+        "signature": "pub fn top_locals(&self) -> u16 {"
+      },
+      {
+        "name": "disassembly",
+        "kind": "fn",
+        "doc": "Human-readable disassembly of the held chunk (inspect only).",
+        "file": "lib.rs",
+        "line": 393,
+        "signature": "pub fn disassembly(&self) -> String {"
+      },
+      {
         "name": "compile_cell_bytecode",
         "kind": "fn",
-        "doc": "Compile a cell expression to bytecode and return chunk metadata.",
+        "doc": "Compile a cell expression to bytecode and return chunk metadata.\n\nFor repeated execution without re-decode, use [`CompiledCell::compile`] and\n[`CompiledCell::run`] instead. This export stays for playground inspect /\nsize reporting.",
         "file": "lib.rs",
-        "line": 322,
+        "line": 404,
         "signature": "pub fn compile_cell_bytecode(src: &str) -> JsValue {"
       },
       {
@@ -12019,7 +12532,7 @@
         "kind": "fn",
         "doc": "Compile a cell to bytecode, run it on the VM, and return the result.",
         "file": "lib.rs",
-        "line": 376,
+        "line": 447,
         "signature": "pub fn run_cell_bytecode(src: &str) -> JsValue {"
       },
       {
@@ -12027,7 +12540,7 @@
         "kind": "fn",
         "doc": "Compile a program to bytecode, encode it to binary, decode it, and run\na named function.  Demonstrates the full bytecode round-trip.",
         "file": "lib.rs",
-        "line": 417,
+        "line": 488,
         "signature": "pub fn run_program_bytecode(src: &str, fn_name: &str, args: Vec<JsValue>) -> JsValue {"
       },
       {
@@ -12035,15 +12548,15 @@
         "kind": "fn",
         "doc": "Encode a cell's bytecode to a binary Uint8Array.",
         "file": "lib.rs",
-        "line": 507,
+        "line": 578,
         "signature": "pub fn encode_cell_bytecode(src: &str) -> JsValue {"
       },
       {
         "name": "decode_and_run",
         "kind": "fn",
-        "doc": "Decode a binary bytecode chunk and run it.",
+        "doc": "Decode a binary bytecode chunk and run it once.\n\nCompat wrapper: each call decodes again. Prefer [`CompiledCell::from_bytes`]\nthen [`CompiledCell::run`] when the same bytes will run more than once.",
         "file": "lib.rs",
-        "line": 530,
+        "line": 604,
         "signature": "pub fn decode_and_run(bytes: &[u8]) -> JsValue {"
       },
       {
@@ -12051,7 +12564,7 @@
         "kind": "fn",
         "doc": "Get the EBNF grammar string.",
         "file": "lib.rs",
-        "line": 561,
+        "line": 618,
         "signature": "pub fn ebnf_grammar() -> String {"
       },
       {
@@ -12059,7 +12572,7 @@
         "kind": "fn",
         "doc": "Get the GBNF grammar (for LLM constrained decoding).",
         "file": "lib.rs",
-        "line": 567,
+        "line": 624,
         "signature": "pub fn gbnf_grammar() -> String {"
       },
       {
@@ -12067,7 +12580,7 @@
         "kind": "fn",
         "doc": "Get the JSON schema for the AST.",
         "file": "lib.rs",
-        "line": 573,
+        "line": 630,
         "signature": "pub fn ast_schema_json() -> String {"
       },
       {
@@ -12075,7 +12588,7 @@
         "kind": "fn",
         "doc": "Get the JSON schema for diagnostics.",
         "file": "lib.rs",
-        "line": 579,
+        "line": 636,
         "signature": "pub fn diagnostic_schema_json() -> String {"
       },
       {
@@ -12083,7 +12596,7 @@
         "kind": "fn",
         "doc": "Project a VibeScript program source to canonical form.\nParses the source, then re-projects it from the AST.\nThis is the core of projectional authoring: structure → text.",
         "file": "lib.rs",
-        "line": 713,
+        "line": 770,
         "signature": "pub fn project_source(src: &str) -> JsValue {"
       },
       {
@@ -12091,7 +12604,7 @@
         "kind": "fn",
         "doc": "Apply a structural edit to a VibeScript program and project the result.\n\nThe edit is specified as a JSON object with an `op` field and\noperation-specific fields. This enables LLMs and browsers to\nedit program structure without text patching.\n\nSupported ops:\n- `add_field`: { op, name, ty, unit?, support?, representation? }\n- `add_material`: { op, name, properties: [{name, value}] }\n- `add_law`: { op, name, condition, consequence }\n- `remove_item`: { op, index }\n- `rename_item`: { op, index, new_name }\n- `set_field_unit`: { op, index, unit? }\n- `set_field_support`: { op, index, support }\n- `set_field_representation`: { op, index, representation }\n- `add_material_property`: { op, index, name, value }\n- `remove_material_property`: { op, index, name }\n- `add_prefix`: { op, prefix, iri }\n- `remove_prefix`: { op, prefix }",
         "file": "lib.rs",
-        "line": 751,
+        "line": 808,
         "signature": "pub fn apply_structural_edit(src: &str, edit_json: &str) -> JsValue {"
       },
       {
@@ -12099,7 +12612,7 @@
         "kind": "fn",
         "doc": "Apply multiple structural edits in sequence.\n`edits_json` is a JSON array of edit objects.",
         "file": "lib.rs",
-        "line": 783,
+        "line": 840,
         "signature": "pub fn apply_structural_edits(src: &str, edits_json: &str) -> JsValue {"
       }
     ]

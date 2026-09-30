@@ -1,6 +1,114 @@
 /* @ts-self-types="./vibe_wasm.d.ts" */
 
 /**
+ * Persistent compiled cell for the browser binding.
+ *
+ * Keeps the compiled [`bytecode::Chunk`] so timed / repeated runs can call
+ * [`CompiledCell::run`] without re-decoding VBC1 bytes. Prefer this over
+ * [`decode_and_run`] when the job is "run what we already compiled."
+ */
+export class CompiledCell {
+    static __wrap(ptr) {
+        const obj = Object.create(CompiledCell.prototype);
+        obj.__wbg_ptr = ptr;
+        CompiledCellFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        CompiledCellFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_compiledcell_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get code_size() {
+        const ret = wasm.compiledcell_code_size(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * Compile a cell expression (`= expr`) into a handle. Does not run it.
+     * @param {string} src
+     * @returns {CompiledCell}
+     */
+    static compile(src) {
+        const ptr0 = passStringToWasm0(src, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.compiledcell_compile(ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return CompiledCell.__wrap(ret[0]);
+    }
+    /**
+     * @returns {number}
+     */
+    get constants() {
+        const ret = wasm.compiledcell_constants(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * Human-readable disassembly of the held chunk (inspect only).
+     * @returns {string}
+     */
+    disassembly() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.compiledcell_disassembly(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Decode a VBC1 byte buffer once into a handle. Later [`Self::run`] calls
+     * do not decode again.
+     * @param {Uint8Array} bytes
+     * @returns {CompiledCell}
+     */
+    static from_bytes(bytes) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.compiledcell_from_bytes(ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return CompiledCell.__wrap(ret[0]);
+    }
+    /**
+     * @returns {number}
+     */
+    get functions() {
+        const ret = wasm.compiledcell_functions(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * Run the held chunk on a fresh local VM. Does not decode.
+     * @returns {any}
+     */
+    run() {
+        const ret = wasm.compiledcell_run(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    get top_locals() {
+        const ret = wasm.compiledcell_top_locals(this.__wbg_ptr);
+        return ret;
+    }
+}
+if (Symbol.dispose) CompiledCell.prototype[Symbol.dispose] = CompiledCell.prototype.free;
+
+/**
  * Apply a structural edit to a VibeScript program and project the result.
  *
  * The edit is specified as a JSON object with an `op` field and
@@ -108,6 +216,10 @@ export function check_program_src(src) {
 
 /**
  * Compile a cell expression to bytecode and return chunk metadata.
+ *
+ * For repeated execution without re-decode, use [`CompiledCell::compile`] and
+ * [`CompiledCell::run`] instead. This export stays for playground inspect /
+ * size reporting.
  * @param {string} src
  * @returns {any}
  */
@@ -119,7 +231,10 @@ export function compile_cell_bytecode(src) {
 }
 
 /**
- * Decode a binary bytecode chunk and run it.
+ * Decode a binary bytecode chunk and run it once.
+ *
+ * Compat wrapper: each call decodes again. Prefer [`CompiledCell::from_bytes`]
+ * then [`CompiledCell::run`] when the same bytes will run more than once.
  * @param {Uint8Array} bytes
  * @returns {any}
  */
@@ -190,7 +305,7 @@ export function encode_cell_bytecode(src) {
 
 /**
  * Evaluate a cell and return the result as a JSON-compatible JS value.
- * This is the main entry point for the playground.
+ * Playground Run uses `eval_program_src` (module + optional `main`), not this.
  * @param {string} src
  * @returns {any}
  */
@@ -426,6 +541,10 @@ function __wbg_get_imports() {
     };
 }
 
+const CompiledCellFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_compiledcell_free(ptr, 1));
+
 function addToExternrefTable0(obj) {
     const idx = wasm.__externref_table_alloc();
     wasm.__wbindgen_externrefs.set(idx, obj);
@@ -522,6 +641,12 @@ function passStringToWasm0(arg, malloc, realloc) {
 
     WASM_VECTOR_LEN = offset;
     return ptr;
+}
+
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_externrefs.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
 }
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });

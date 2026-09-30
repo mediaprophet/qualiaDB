@@ -8,23 +8,32 @@ const shared = readFileSync(new URL('../js/benchmark-shared.js', import.meta.url
 const geometry = readFileSync(new URL('../js/geometry-bench.js', import.meta.url), 'utf8');
 const geometryParallel = readFileSync(new URL('../js/geometry-parallel-bench.js', import.meta.url), 'utf8');
 const geometryWorker = readFileSync(new URL('../js/geometry-bench-worker.js', import.meta.url), 'utf8');
+const wasmDts = readFileSync(new URL('../pkg/vibe/vibe_wasm.d.ts', import.meta.url), 'utf8');
 
 assert.match(harness, /\.\.\/pkg\/vibe\/vibe_wasm\.js/);
-assert.match(harness, /decode_and_run/);
-assert.match(harness, /run_cell_bytecode/);
-assert.match(harness, /eval_cell_src/);
+assert.match(harness, /CompiledCell/);
+assert.match(harness, /check_cell_src/);
+assert.match(harness, /apply_structural_edit/);
+assert.match(harness, /purposeDemos|checked cell|host ask/);
 assert.match(harness, /vibescript-bench-worker\.js/);
-assert.match(worker, /vibe_wasm\.js/);
-assert.match(worker, /one WASM instance per worker|independent WASM instances/);
+assert.match(worker, /CompiledCell/);
+assert.match(worker, /independent WASM instances|one WASM instance per worker|Independent instances/);
 assert.doesNotMatch(harness, /class VibeScriptVM/);
 assert.doesNotMatch(harness, /BigInt64Array/);
+assert.doesNotMatch(harness, /directJavaScript|1 \+ 2 \* 3 - 4;\s*$/m);
 
-assert.match(page, /browser single thread/);
+assert.match(page, /purpose clocks|does the binding run/i);
+assert.match(page, /Checked cell/);
+assert.match(page, /Host ask/);
+assert.match(page, /Edit without host rebuild/);
+assert.match(page, /CompiledCell\.run/);
 assert.match(page, /independent WASM workers/);
 assert.match(page, /Native Verification Required/);
 assert.match(page, /Native Tensor Benchmark Required/);
-assert.match(page, /Browser result boundary/);
-assert.match(page, /cannot benchmark native Rust performance/);
+assert.doesNotMatch(page, /Browser result boundary/);
+assert.doesNotMatch(page, /vs JavaScript Baseline/);
+assert.doesNotMatch(page, /updateMetrics\([^)]*0,\s*24\)/);
+assert.doesNotMatch(page, /honesty-banner/);
 assert.match(shared, /GPU probe \/ use/);
 assert.match(shared, /accelerator_used_for_this_suite/);
 assert.match(page, /Dense Geometry Scene Preview/);
@@ -40,5 +49,9 @@ assert.match(geometryWorker, /runGeometryLive/);
 assert.match(geometry, /sampleVolumetricSDF/);
 assert.doesNotMatch(page, /Simulated results/);
 assert.doesNotMatch(page, /Simulate zero heap allocation/);
+
+assert.match(wasmDts, /export class CompiledCell/);
+assert.match(wasmDts, /run\(\): any/);
+assert.match(wasmDts, /static compile\(src: string\): CompiledCell/);
 
 console.log('VibeScript browser benchmark integrity tests passed.');

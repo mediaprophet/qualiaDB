@@ -126,22 +126,23 @@
         <a href="benchmark_visualizer.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-satellite-dish mr-2 text-violet-400"></i>Telemetry visualizer</a>
     </div>
 
-    <!-- Performance Metrics Dashboard -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <!-- Performance Metrics Dashboard — only filled by measured whole-job clocks -->
+    <div class="grid grid-cols-2 md:grid-cols-2 gap-4 mb-8">
         <div class="metric-card">
-            <div class="metric-value" id="metric-ops">0</div>
-            <div class="metric-label">Operations/sec</div>
+            <div class="metric-value" id="metric-ops">—</div>
+            <div class="metric-label">Measured calls/sec (when a connected probe reports one)</div>
         </div>
         <div class="metric-card">
-            <div class="metric-value" id="metric-latency">0ms</div>
-            <div class="metric-label">Avg Latency</div>
+            <div class="metric-value" id="metric-latency">—</div>
+            <div class="metric-label">Measured latency</div>
         </div>
-        <div class="metric-card">
-            <div class="metric-value" id="metric-heap">0</div>
+        <!-- Hidden: fake allocation / MB theatre removed until a real native window exists -->
+        <div class="metric-card" id="metric-heap-card" hidden>
+            <div class="metric-value" id="metric-heap">—</div>
             <div class="metric-label">Heap Allocations</div>
         </div>
-        <div class="metric-card">
-            <div class="metric-value" id="metric-memory">0MB</div>
+        <div class="metric-card" id="metric-memory-card" hidden>
+            <div class="metric-value" id="metric-memory">—</div>
             <div class="metric-label">Memory Usage</div>
         </div>
     </div>
@@ -274,124 +275,105 @@
             <div class="flex items-center justify-between flex-wrap gap-4 mb-3">
                 <h3 class="text-xl font-semibold flex items-center gap-2">
                     <i class="fas fa-bolt text-amber-400"></i>
-                    VibeScript WASM API vs JavaScript Baseline
+                    VibeScript — does the binding run?
                 </h3>
                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                    <i class="fas fa-microchip"></i> shipped WASM binding · browser single thread
+                    <i class="fas fa-microchip"></i> shipped WASM · purpose clocks
                 </span>
             </div>
-            <p class="text-white/60 text-sm mb-4">
-                This browser probe calls the shipped <strong>VibeScript WASM bindings</strong>, then compares a checked, semantically equivalent arithmetic result with direct JavaScript. It reports public API latency—not native throughput, multi-threaded execution, Super-Quin filtering, or allocation guarantees. Those require a dedicated native benchmark.
+            <p class="text-white/60 text-sm mb-6">
+                Whole-job clocks for paths the browser binding can run today: <strong>checked cell</strong>, <strong>host ask</strong> (<code>graph?</code>), and <strong>edit without host rebuild</strong>. Native throughput, allocation counts, and “faster than JavaScript” claims stay off this page until a real native window measures them.
             </p>
-            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100/90">
-                <i class="fas fa-triangle-exclamation mr-1 text-amber-300"></i>
-                <strong>Browser result boundary:</strong> this tab cannot benchmark native Rust performance and never updates CI benchmark records. Native figures come from <code>qualia-cli bench --suite full</code> in the <button class="underline text-amber-200 hover:text-white" onclick="switchTab('ci', document.getElementById('tab-ci-btn'))">CI Platform Suite</button>, where the exported result records CPU/RAM, runner topology, GPU probe status, and whether an accelerator was used.
-            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
-                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Workload Profile</label>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Binding footnote profile</label>
                     <select id="vibescript-workload" class="input-field">
-                        <option value="bytecode" selected>Encoded VBC1 Bytecode: Decode & Run</option>
-                        <option value="source">Source: Parse, Compile & Run</option>
-                        <option value="ast">Source: Parse, Check & AST Evaluate</option>
+                        <option value="bytecode" selected>CompiledCell.run (no re-decode)</option>
+                        <option value="source">Source: parse · compile · run</option>
+                        <option value="ast">Source: parse · check · AST eval</option>
+                        <option value="decode">Compat: decode_and_run</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Calls per timed sample</label>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Footnote sample size</label>
                     <select id="vibescript-iterations" class="input-field">
-                        <option value="200">200 iterations (Quick Probe)</option>
-                        <option value="1000" selected>1,000 iterations (Standard)</option>
-                        <option value="5000">5,000 iterations (Deep Stress)</option>
-                        <option value="10000">10,000 iterations (Heavy)</option>
+                        <option value="200">200 calls / sample</option>
+                        <option value="1000" selected>1,000 calls / sample</option>
+                        <option value="5000">5,000 calls / sample</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Instance topology</label>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Footnote topology</label>
                     <select id="vibescript-execution" class="input-field">
                         <option value="single" selected>1 WASM instance (main thread)</option>
                         <option value="workers-2">2 independent WASM workers</option>
                         <option value="workers-4">4 independent WASM workers</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Execution Environment</label>
-                    <div class="p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white/70 flex items-center justify-between">
-                        <span>Host Engine:</span>
-                        <span class="text-emerald-400 font-mono font-semibold" id="vibe-host-engine">WASM + JavaScript · single thread</span>
-                    </div>
-                </div>
+            </div>
+            <div class="mb-6 p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white/70 flex items-center justify-between">
+                <span>Host:</span>
+                <span class="text-emerald-400 font-mono font-semibold" id="vibe-host-engine">WASM · purpose demos</span>
             </div>
 
             <div class="flex gap-3 mb-6">
                 <button onclick="runVibeScriptBenchmark()" id="btn-vibescript-run" class="spinbtn">
-                    <i class="fas fa-play mr-2"></i>Run Benchmark
+                    <i class="fas fa-play mr-2"></i>Run purpose clocks
                 </button>
                 <button onclick="resetVibeScriptBenchmark()" class="spinbtn" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
                     <i class="fas fa-redo mr-2"></i>Reset
                 </button>
             </div>
 
-            <div class="code-block text-sm mb-4" id="vibescript-output">Ready to measure the shipped VibeScript WASM binding.</div>
+            <div class="code-block text-sm mb-4" id="vibescript-output">Ready to clock checked cell · host ask · edit without host rebuild.</div>
 
-            <!-- Scorecards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <!-- Purpose demo scorecards (hero) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div class="glass-panel rounded-2xl p-4 text-center">
-                    <div class="text-xs text-amber-400 font-semibold mb-1 uppercase tracking-wider">VibeScript WASM calls/sec</div>
-                    <div class="text-2xl font-bold text-white font-mono" id="vibe-metric-ops">-</div>
-                    <div class="text-[11px] text-white/40 mt-1" id="vibe-metric-p50">p50: - ms</div>
+                    <div class="text-xs text-amber-400 font-semibold mb-1 uppercase tracking-wider">Checked cell</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-check">—</div>
+                    <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
                 </div>
                 <div class="glass-panel rounded-2xl p-4 text-center">
-                    <div class="text-xs text-cyan-400 font-semibold mb-1 uppercase tracking-wider">JavaScript baseline calls/sec</div>
-                    <div class="text-2xl font-bold text-white font-mono" id="v8-metric-ops">-</div>
-                    <div class="text-[11px] text-white/40 mt-1" id="v8-metric-p50">p50: - ms</div>
+                    <div class="text-xs text-cyan-400 font-semibold mb-1 uppercase tracking-wider">Host ask (graph?)</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-ask">—</div>
+                    <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
                 </div>
                 <div class="glass-panel rounded-2xl p-4 text-center">
-                    <div class="text-xs text-emerald-400 font-semibold mb-1 uppercase tracking-wider">WASM linear memory</div>
-                    <div class="text-2xl font-bold text-emerald-400 font-mono" id="vibe-metric-heap">-</div>
-                    <div class="text-[11px] text-white/40 mt-1">Capacity, not an allocation count</div>
-                </div>
-                <div class="glass-panel rounded-2xl p-4 text-center">
-                    <div class="text-xs text-purple-400 font-semibold mb-1 uppercase tracking-wider">Browser timing spread</div>
-                    <div class="text-2xl font-bold text-purple-300 font-mono" id="v8-metric-heap">-</div>
-                    <div class="text-[11px] text-white/40 mt-1" id="v8-metric-jitter">Baseline p95 − p50: - ms</div>
+                    <div class="text-xs text-emerald-400 font-semibold mb-1 uppercase tracking-wider">Edit without host rebuild</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-edit">—</div>
+                    <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
                 </div>
             </div>
 
-            <!-- Charts -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="glass-panel rounded-2xl p-4">
-                    <h4 class="text-sm font-semibold mb-3 text-amber-400"><i class="fas fa-tachometer-alt mr-1.5"></i>Throughput (Ops/sec)</h4>
+            <!-- Binding footnote (not a language-speed crown) -->
+            <div class="glass-panel rounded-2xl p-4 mb-6 border border-white/10">
+                <h4 class="text-sm font-semibold mb-3 text-white/70"><i class="fas fa-link mr-1.5"></i>Binding footnote — CompiledCell.run</h4>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <div class="text-xs text-white/40 mb-1">run() p50</div>
+                        <div class="text-xl font-mono text-amber-300" id="vibe-metric-ops">—</div>
+                        <div class="text-[11px] text-white/35 mt-1" id="vibe-metric-p50">not a JS race</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-white/40 mb-1">compile setup</div>
+                        <div class="text-xl font-mono text-white/80" id="vibe-metric-setup">—</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-white/40 mb-1">samples</div>
+                        <div class="text-xl font-mono text-white/80" id="v8-metric-heap">—</div>
+                    </div>
+                </div>
+                <!-- retained ids for chart plumbing; not shown as memory-pressure theatre -->
+                <div hidden>
+                    <span id="v8-metric-ops"></span>
+                    <span id="v8-metric-p50"></span>
+                    <span id="vibe-metric-heap"></span>
+                    <span id="v8-metric-jitter"></span>
                     <canvas id="vibescript-throughput-chart"></canvas>
-                </div>
-                <div class="glass-panel rounded-2xl p-4">
-                    <h4 class="text-sm font-semibold mb-3 text-cyan-400"><i class="fas fa-wave-square mr-1.5"></i>Latency Percentiles (p50 vs p95)</h4>
                     <canvas id="vibescript-latency-chart"></canvas>
-                </div>
-                <div class="glass-panel rounded-2xl p-4">
-                    <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-memory mr-1.5"></i>Measured WASM Memory Capacity (Bytes)</h4>
                     <canvas id="vibescript-heap-chart"></canvas>
-                </div>
-            </div>
-
-            <!-- Architecture deep dive -->
-            <div class="glass-panel rounded-2xl p-5 border border-white/10">
-                <h4 class="text-sm font-semibold mb-3 text-amber-300 flex items-center gap-2">
-                    <i class="fas fa-layer-group"></i> What this browser measurement does—and does not—establish
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                    <div class="p-3 rounded-xl bg-black/40 border border-white/5">
-                        <div class="font-bold text-white mb-1 flex items-center gap-1.5"><i class="fas fa-check-double text-emerald-400"></i> Actual binding</div>
-                        <p class="text-white/60">The probe imports <code>pkg/vibe/vibe_wasm.js</code> and calls its exported VibeScript APIs. It verifies the returned value before timing; it does not emulate a VM in JavaScript.</p>
-                    </div>
-                    <div class="p-3 rounded-xl bg-black/40 border border-white/5">
-                        <div class="font-bold text-white mb-1 flex items-center gap-1.5"><i class="fas fa-stopwatch text-amber-400"></i> Honest scope</div>
-                        <p class="text-white/60">Choose one main-thread instance or independent worker-owned instances. Worker mode reports end-to-end aggregate throughput and does not imply shared-memory WASM threads, native SIMD, fuel-cycle, or GC-pause behaviour.</p>
-                    </div>
-                    <div class="p-3 rounded-xl bg-black/40 border border-white/5">
-                        <div class="font-bold text-white mb-1 flex items-center gap-1.5"><i class="fas fa-server text-cyan-400"></i> Native performance belongs elsewhere</div>
-                        <p class="text-white/60">Native parallelism, SIMD, Super-Quin kernels, and allocation behaviour require an audited native harness using the actual kernel and fixed data layout. They must not be inferred from this page.</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -869,7 +851,7 @@ LIMIT 100</textarea>
 
     <!-- Footer -->
     <div class="text-center text-white/50 text-sm mt-12">
-        <p>QualiaDB v0.0.40 • Zero-Heap Semantic Graph Engine • Built for the Edge</p>
+        <p data-release-line="0.0.40" data-tip-branch="0.0.40.1">QualiaDB 0.0.40 line · tip branch 0.0.40.1 · VibeScript CompiledCell binding</p>
     </div>
 </div>
 
@@ -1088,7 +1070,7 @@ LIMIT 100</textarea>
         const btn = document.getElementById('btn-vibescript-run');
         const output = document.getElementById('vibescript-output');
         if (btn) btn.disabled = true;
-        if (output) output.textContent = 'Loading and measuring the shipped VibeScript WASM binding…';
+        if (output) output.textContent = 'Clocking checked cell · host ask · edit without host rebuild…';
 
         try {
             const workload = document.getElementById('vibescript-workload')?.value || 'bytecode';
@@ -1099,58 +1081,40 @@ LIMIT 100</textarea>
             const hostEngine = document.getElementById('vibe-host-engine');
             if (hostEngine) hostEngine.textContent = res.executionMode;
 
-            // Update scorecards
-            const vOps = document.getElementById('vibe-metric-ops');
-            if (vOps) vOps.textContent = res.vibe.opsPerSec.toLocaleString();
-            const vP50 = document.getElementById('vibe-metric-p50');
-            if (vP50) vP50.textContent = `p50: ${res.vibe.p50.toFixed(3)} ms · p95: ${res.vibe.p95.toFixed(3)} ms`;
-            const v8Ops = document.getElementById('v8-metric-ops');
-            if (v8Ops) v8Ops.textContent = res.v8.opsPerSec.toLocaleString();
-            const v8P50 = document.getElementById('v8-metric-p50');
-            if (v8P50) v8P50.textContent = `p50: ${res.v8.p50.toFixed(3)} ms · p95: ${res.v8.p95.toFixed(3)} ms`;
-            const vHeap = document.getElementById('vibe-metric-heap');
-            if (vHeap) vHeap.textContent = res.wasmMemoryBytes == null ? 'unavailable' : `${res.wasmMemoryBytes.toLocaleString()} B`;
-            const v8Heap = document.getElementById('v8-metric-heap');
-            if (v8Heap) v8Heap.textContent = `${res.samples} samples`;
-            const v8Jitter = document.getElementById('v8-metric-jitter');
-            if (v8Jitter) v8Jitter.textContent = `Baseline p95 − p50: ${res.v8.gcJitterMs} ms`;
+            const fmt = (m) => (m == null ? '—' : `${m.p50.toFixed(3)} ms`);
+            const setTxt = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+            setTxt('vibe-purpose-check', fmt(res.purposes?.checked));
+            setTxt('vibe-purpose-ask', fmt(res.purposes?.hostAsk));
+            setTxt('vibe-purpose-edit', fmt(res.purposes?.edit));
 
-            if (window.updateMetrics) {
-                window.updateMetrics(res.vibe.opsPerSec, res.vibe.p50.toFixed(6), 0, 24);
+            const binding = res.binding?.run;
+            if (binding) {
+                setTxt('vibe-metric-ops', `${binding.p50.toFixed(4)} ms`);
+                setTxt('vibe-metric-p50', `p95 ${binding.p95.toFixed(4)} ms · labelled footnote only`);
+            } else {
+                setTxt('vibe-metric-ops', '—');
+                setTxt('vibe-metric-p50', 'not a JS race');
+            }
+            setTxt('vibe-metric-setup', `${Number(res.setupMs || 0).toFixed(3)} ms`);
+            setTxt('v8-metric-heap', `${res.samples} samples`);
+
+            // Header: whole-job clocks only — never fake 0 alloc / 24 MB.
+            const purposeP50 = res.purposes?.checked?.p50;
+            if (window.updateMetrics && purposeP50 != null) {
+                window.updateMetrics(null, purposeP50.toFixed(3), null, null);
             }
 
             output.textContent =
-`=== VibeScript WASM Browser API Measurement ===
-Workload:          ${res.workloadLabel}
-Calls/sample:      ${res.iterations.toLocaleString()} · Samples: ${res.samples}
-Execution mode:    ${res.executionMode}
-VibeScript WASM:   ${res.vibe.opsPerSec.toLocaleString()} calls/sec | p50: ${res.vibe.p50.toFixed(6)} ms | p95: ${res.vibe.p95.toFixed(6)} ms
-JavaScript:        ${res.v8.opsPerSec.toLocaleString()} calls/sec | p50: ${res.v8.p50.toFixed(6)} ms | p95: ${res.v8.p95.toFixed(6)} ms
-WASM instances:    ${res.workerCount} · memory capacity: ${res.wasmMemoryBytes == null ? 'unavailable' : `${res.wasmMemoryBytes.toLocaleString()} bytes`}
-Setup / encoding:  ${res.setupMs.toFixed(3)} ms (outside timed samples)
-WASM / JS ratio:   ${res.throughputRatio}x
-${res.kernel ? `Slowest worker:    p50 ${res.kernel.p50.toFixed(6)} ms/call | p95 ${res.kernel.p95.toFixed(6)} ms/call\n` : ''}Scope:             ${res.note}
-Boundary:          This page does not measure native multi-threading, SIMD, Super-Quin kernels, or allocation counts.`;
+`=== VibeScript purpose clocks ===
+Checked cell:              ${fmt(res.purposes?.checked)} (p95 ${res.purposes?.checked?.p95?.toFixed(3) ?? '—'} ms)
+Host ask (graph?):         ${fmt(res.purposes?.hostAsk)} (p95 ${res.purposes?.hostAsk?.p95?.toFixed(3) ?? '—'} ms)
+Edit without host rebuild: ${fmt(res.purposes?.edit)} (p95 ${res.purposes?.edit?.p95?.toFixed(3) ?? '—'} ms)
 
-            // Update charts
-            const ch = window.benchCharts;
-            if (ch?.vibescriptThroughput) {
-                ch.vibescriptThroughput.data.datasets[0].data = [res.vibe.opsPerSec, res.v8.opsPerSec];
-                ch.vibescriptThroughput.update();
-            }
-            if (ch?.vibescriptLatency) {
-                ch.vibescriptLatency.data.datasets[0].data = [
-                    res.vibe.p50,
-                    res.vibe.p95,
-                    res.v8.p50,
-                    res.v8.p95
-                ];
-                ch.vibescriptLatency.update();
-            }
-            if (ch?.vibescriptHeap) {
-                ch.vibescriptHeap.data.datasets[0].data = [res.wasmMemoryBytes || 0, 0];
-                ch.vibescriptHeap.update();
-            }
+Binding footnote:          ${res.workloadLabel}
+Footnote p50:              ${binding ? binding.p50.toFixed(6) + ' ms/call' : '—'}
+Compile / setup:           ${Number(res.setupMs || 0).toFixed(3)} ms (outside timed samples)
+Execution mode:            ${res.executionMode}
+${res.note}`;
         } catch (e) {
             if (output) output.textContent = 'Error: ' + (e?.message || e);
         }
@@ -1159,29 +1123,12 @@ Boundary:          This page does not measure native multi-threading, SIMD, Supe
 
     window.resetVibeScriptBenchmark = function () {
         const output = document.getElementById('vibescript-output');
-        if (output) output.textContent = 'Ready to measure the shipped VibeScript WASM binding.';
-        const vOps = document.getElementById('vibe-metric-ops'); if (vOps) vOps.textContent = '-';
-        const vP50 = document.getElementById('vibe-metric-p50'); if (vP50) vP50.textContent = 'p50: - ms';
-        const v8Ops = document.getElementById('v8-metric-ops'); if (v8Ops) v8Ops.textContent = '-';
-        const v8P50 = document.getElementById('v8-metric-p50'); if (v8P50) v8P50.textContent = 'p50: - ms';
-        const vHeap = document.getElementById('vibe-metric-heap'); if (vHeap) vHeap.textContent = '-';
-        const v8Heap = document.getElementById('v8-metric-heap'); if (v8Heap) v8Heap.textContent = '-';
-        const v8Jitter = document.getElementById('v8-metric-jitter'); if (v8Jitter) v8Jitter.textContent = 'Baseline p95 − p50: - ms';
-
-        const ch = window.benchCharts;
-        if (ch?.vibescriptThroughput) {
-            ch.vibescriptThroughput.data.datasets[0].data = [0, 0];
-            ch.vibescriptThroughput.update();
-        }
-        if (ch?.vibescriptLatency) {
-            ch.vibescriptLatency.data.datasets[0].data = [0, 0, 0, 0];
-            ch.vibescriptLatency.update();
-        }
-        if (ch?.vibescriptHeap) {
-            ch.vibescriptHeap.data.datasets[0].data = [0, 0];
-            ch.vibescriptHeap.update();
-        }
-        window.updateMetrics?.(0, 0, 0, 0);
+        if (output) output.textContent = 'Ready to clock checked cell · host ask · edit without host rebuild.';
+        ['vibe-purpose-check','vibe-purpose-ask','vibe-purpose-edit','vibe-metric-ops','vibe-metric-setup','v8-metric-heap'].forEach((id) => {
+            const el = document.getElementById(id); if (el) el.textContent = '—';
+        });
+        const vP50 = document.getElementById('vibe-metric-p50'); if (vP50) vP50.textContent = 'not a JS race';
+        window.updateMetrics?.(null, null, null, null);
     };
 
     // ── Computational Geometry & Renderer Controller ───────────────────────
@@ -1739,70 +1686,11 @@ ${extra}Boundary:    Browser Canvas model; not a native renderer, GPU, or zero-a
             options: chartOptions
         });
 
-        // Real VibeScript WASM binding vs direct JavaScript baseline charts.
-        const vThEl = document.getElementById('vibescript-throughput-chart');
-        if (vThEl) {
-            charts.vibescriptThroughput = new Chart(vThEl, {
-                type: 'bar',
-                data: {
-                    labels: ['VibeScript WASM', 'JavaScript baseline'],
-                    datasets: [{
-                        label: 'Ops/sec',
-                        data: [0, 0],
-                        backgroundColor: ['rgba(245, 158, 11, 0.6)', 'rgba(6, 182, 212, 0.6)'],
-                        borderColor: ['rgba(245, 158, 11, 1)', 'rgba(6, 182, 212, 1)'],
-                        borderWidth: 1
-                    }]
-                },
-                options: chartOptions
-            });
-        }
+        // VibeScript purpose clocks no longer crown unequal WASM-vs-JS ops/sec charts.
+        charts.vibescriptThroughput = null;
+        charts.vibescriptLatency = null;
+        charts.vibescriptHeap = null;
 
-        const vLatEl = document.getElementById('vibescript-latency-chart');
-        if (vLatEl) {
-            charts.vibescriptLatency = new Chart(vLatEl, {
-                type: 'bar',
-                data: {
-                    labels: ['WASM p50', 'WASM p95', 'JS p50', 'JS p95'],
-                    datasets: [{
-                        label: 'Latency (ms)',
-                        data: [0, 0, 0, 0],
-                        backgroundColor: [
-                            'rgba(245, 158, 11, 0.5)',
-                            'rgba(245, 158, 11, 0.85)',
-                            'rgba(6, 182, 212, 0.5)',
-                            'rgba(239, 68, 68, 0.7)'
-                        ],
-                        borderColor: [
-                            'rgba(245, 158, 11, 1)',
-                            'rgba(245, 158, 11, 1)',
-                            'rgba(6, 182, 212, 1)',
-                            'rgba(239, 68, 68, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: chartOptions
-            });
-        }
-
-        const vHeapEl = document.getElementById('vibescript-heap-chart');
-        if (vHeapEl) {
-            charts.vibescriptHeap = new Chart(vHeapEl, {
-                type: 'bar',
-                data: {
-                    labels: ['WASM linear memory', 'JS allocation metric unavailable'],
-                    datasets: [{
-                        label: 'Memory capacity (Bytes)',
-                        data: [0, 0],
-                        backgroundColor: ['rgba(52, 211, 153, 0.6)', 'rgba(168, 85, 247, 0.6)'],
-                        borderColor: ['rgba(52, 211, 153, 1)', 'rgba(168, 85, 247, 1)'],
-                        borderWidth: 1
-                    }]
-                },
-                options: chartOptions
-            });
-        }
 
         // Computational Geometry & Renderer charts
         const gThEl = document.getElementById('geometry-throughput-chart');
@@ -1845,10 +1733,12 @@ ${extra}Boundary:    Browser Canvas model; not a native renderer, GPU, or zero-a
 
     // Shared scorecards are fed only by connected, measured browser probes.
     function updateMetrics(ops, latency, heap, memory) {
-        document.getElementById('metric-ops').textContent = ops.toLocaleString();
-        document.getElementById('metric-latency').textContent = latency + 'ms';
-        document.getElementById('metric-heap').textContent = heap.toLocaleString();
-        document.getElementById('metric-memory').textContent = memory + 'MB';
+        const opsEl = document.getElementById('metric-ops');
+        const latEl = document.getElementById('metric-latency');
+        if (opsEl) opsEl.textContent = (ops == null || ops === '') ? '—' : Number(ops).toLocaleString();
+        if (latEl) latEl.textContent = (latency == null || latency === '') ? '—' : (String(latency).endsWith('ms') ? latency : latency + 'ms');
+        // Heap / MB cards stay hidden: browser probes must not invent allocation theatre.
+        void heap; void memory;
     }
 
     // Graph benchmark

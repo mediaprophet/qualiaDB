@@ -1,14 +1,16 @@
 /**
  * Browser VibeScript measurement harness.
  *
- * This module runs the shipped `vibe_wasm` binding. It deliberately does not
- * emulate VibeScript in JavaScript or claim browser threading, native SIMD,
- * Super-Quin throughput, or allocation guarantees that this harness cannot
- * measure. The JavaScript baseline is a semantically equivalent arithmetic
- * calculation; it is a reference point, not a claim of like-for-like engines.
+ * Purpose demos clock whole jobs that the shipped WASM binding can actually
+ * run: checked cell, host ask (graph?), and structural edit without a host
+ * rebuild. The compiled-cell handle times run() without re-decode as a
+ * labelled binding footnote — not as a language-speed crown against bare JS.
  */
 
 import initVibe, {
+    CompiledCell,
+    apply_structural_edit,
+    check_cell_src,
     decode_and_run,
     encode_cell_bytecode,
     eval_cell_src,
@@ -17,7 +19,10 @@ import initVibe, {
 
 const CELL_SOURCE = '= 1 + 2 * 3 - 4';
 const EXPECTED_VALUE = 3;
-const SAMPLE_COUNT = 15;
+const ASK_SOURCE = '= graph? { ?s ?p ?o }';
+const EDIT_SOURCE = 'fn main() -> i64 {\n  return 1;\n}\n';
+const EDIT_JSON = JSON.stringify({ op: 'rename_item', index: 0, new_name: 'entry' });
+const SAMPLE_COUNT = 11;
 let wasmReady;
 let wasmMemory;
 
@@ -31,10 +36,6 @@ async function ensureWasm() {
     return wasmReady;
 }
 
-function directJavaScript() {
-    return 1 + 2 * 3 - 4;
-}
-
 function valueOf(result) {
     if (!result || result.ok !== true) {
         throw new Error(`VibeScript execution failed: ${result?.error || 'unknown error'}`);
@@ -44,32 +45,18 @@ function valueOf(result) {
     }
 }
 
+function assertOk(result, label) {
+    if (!result || result.ok !== true) {
+        const detail = typeof result?.error === 'string'
+            ? result.error
+            : (result?.error?.message || JSON.stringify(result?.error) || 'unknown error');
+        throw new Error(`${label} failed: ${detail}`);
+    }
+    return result;
+}
+
 function percentile(sorted, fraction) {
     return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))];
-}
-
-function measureBatch(run, batchSize) {
-    const started = performance.now();
-    for (let i = 0; i < batchSize; i++) run();
-    return performance.now() - started;
-}
-
-function measure(label, run, batchSize) {
-    for (let i = 0; i < 32; i++) run();
-    const samples = [];
-    for (let i = 0; i < SAMPLE_COUNT; i++) {
-        samples.push(measureBatch(run, batchSize) / batchSize);
-    }
-    const sorted = [...samples].sort((a, b) => a - b);
-    const mean = sorted.reduce((sum, value) => sum + value, 0) / sorted.length;
-    return {
-        label,
-        times: samples,
-        mean,
-        p50: percentile(sorted, 0.5),
-        p95: percentile(sorted, 0.95),
-        opsPerSec: Math.round(1000 / Math.max(mean, Number.EPSILON)),
-    };
 }
 
 function summarizeSamples(label, samples) {
@@ -85,38 +72,61 @@ function summarizeSamples(label, samples) {
     };
 }
 
-function workloadFor(name) {
-    if (name === 'source') {
-        return {
-            label: 'parse + compile + bytecode run',
-            setupMs: 0,
-            vibe: () => valueOf(run_cell_bytecode(CELL_SOURCE)),
-            js: directJavaScript,
-            note: 'Measures the public source-to-bytecode API on every call; parsing and compilation are intentionally included.',
-        };
+function measureWholeJob(label, runOnce) {
+    for (let i = 0; i < 8; i++) runOnce();
+    const samples = [];
+    for (let i = 0; i < SAMPLE_COUNT; i++) {
+        const started = performance.now();
+        runOnce();
+        samples.push(performance.now() - started);
     }
-    if (name === 'ast') {
-        return {
-            label: 'parse + check + AST evaluation',
-            setupMs: 0,
-            vibe: () => valueOf(eval_cell_src(CELL_SOURCE)),
-            js: directJavaScript,
-            note: 'Measures the public AST evaluation API on every call; it is not a bytecode hot-loop benchmark.',
-        };
-    }
+    return summarizeSamples(label, samples);
+}
 
-    const setupStarted = performance.now();
-    const bytes = encode_cell_bytecode(CELL_SOURCE);
-    if (!(bytes instanceof Uint8Array)) {
-        throw new Error('VibeScript bytecode encoding did not produce a byte array.');
+function measureBatch(label, run, batchSize) {
+    for (let i = 0; i < 32; i++) run();
+    const samples = [];
+    for (let i = 0; i < SAMPLE_COUNT; i++) {
+        const started = performance.now();
+        for (let j = 0; j < batchSize; j++) run();
+        samples.push((performance.now() - started) / batchSize);
     }
+    return summarizeSamples(label, samples);
+}
+
+function purposeDemos() {
+    const checked = measureWholeJob('checked cell', () => {
+        assertOk(check_cell_src(CELL_SOURCE), 'checked cell');
+    });
+
+    const hostAsk = measureWholeJob('host ask (graph?)', () => {
+        assertOk(eval_cell_src(ASK_SOURCE), 'host ask');
+    });
+
+    const edit = measureWholeJob('edit without host rebuild', () => {
+        const result = assertOk(
+            apply_structural_edit(EDIT_SOURCE, EDIT_JSON),
+            'structural edit',
+        );
+        if (typeof result.source !== 'string' || !result.source.includes('entry')) {
+            throw new Error('structural edit did not project the renamed item.');
+        }
+    });
+
+    return { checked, hostAsk, edit };
+}
+
+function compiledHandleFootnote(batchSize) {
+    const setupStarted = performance.now();
+    const cell = CompiledCell.compile(CELL_SOURCE);
     const setupMs = performance.now() - setupStarted;
+    valueOf(cell.run());
+    const run = measureBatch('CompiledCell.run (no re-decode)', () => valueOf(cell.run()), batchSize);
     return {
-        label: 'encoded bytecode decode + run',
         setupMs,
-        vibe: () => valueOf(decode_and_run(bytes)),
-        js: directJavaScript,
-        note: 'Compilation is measured separately. Each timed VibeScript call decodes and runs the same shipped VBC1 bytecode because the current browser binding exposes decode-and-run, not a persistent VM handle.',
+        run,
+        codeSize: cell.code_size,
+        note: 'Binding footnote only: compile once, then run() without decode. Not a language-speed comparison to bare JavaScript.',
     };
 }
 
@@ -167,13 +177,13 @@ async function measureWorkerInstances(workloadName, batchSize, workerCount) {
         }
         const first = configured[0];
         return {
-            vibe: summarizeSamples(`VibeScript WASM (${workerCount} independent workers)`, perCallWallTimes),
+            vibe: summarizeSamples(`CompiledCell.run × ${workerCount} workers`, perCallWallTimes),
             kernel: summarizeSamples('slowest worker kernel time', perCallKernelTimes),
             setupMs: configured.reduce((sum, result) => sum + result.setupMs, 0),
             wasmMemoryBytes: configured.reduce((sum, result) => sum + (result.wasmMemoryBytes || 0), 0),
             workerCount,
             workloadLabel: first.workloadLabel,
-            note: `${first.note} Aggregate timing includes worker scheduling and message delivery; no shared-memory or WASM-thread claim is made.`,
+            note: `${first.note} Aggregate timing includes worker scheduling; no shared-memory WASM-thread claim.`,
         };
     } finally {
         workers.forEach((worker) => worker.terminate());
@@ -181,42 +191,89 @@ async function measureWorkerInstances(workloadName, batchSize, workerCount) {
 }
 
 /**
- * Run a reproducible browser comparison against the real WASM binding.
- * All browser modes are single-threaded by design in the current Vibe build.
+ * Run purpose demos (hero) plus an optional compiled-handle footnote.
+ * Does not crown bare JavaScript arithmetic against unequal WASM jobs.
  */
 export async function runVibeScriptVsV8Live(workloadName = 'bytecode', iterations = 1000, execution = 'single') {
     const batchSize = Math.max(1, Math.min(Number(iterations) || 1000, 10000));
     const workerCount = workerCountFor(execution);
-    let vibe, kernel = null, setupMs, wasmMemoryBytes, workloadLabel, note, js;
+    await ensureWasm();
+
+    const purposes = purposeDemos();
+    let binding = null;
+    let kernel = null;
+    let executionMode = 'single-threaded browser WASM';
+    let note = 'Purpose demos clock whole jobs on the shipped binding. Binding cost is a footnote after CompiledCell exists.';
+
     if (workerCount > 0) {
         const parallel = await measureWorkerInstances(workloadName, batchSize, workerCount);
-        ({ vibe, kernel, setupMs, wasmMemoryBytes, workloadLabel, note } = parallel);
-        js = directJavaScript;
+        binding = {
+            setupMs: parallel.setupMs,
+            run: parallel.vibe,
+            note: parallel.note,
+        };
+        kernel = parallel.kernel;
+        executionMode = `${workerCount} independent browser workers; one WASM instance per worker`;
+        note = parallel.note;
+    } else if (workloadName === 'source') {
+        const run = measureBatch(
+            'parse + compile + bytecode run',
+            () => valueOf(run_cell_bytecode(CELL_SOURCE)),
+            batchSize,
+        );
+        binding = {
+            setupMs: 0,
+            run,
+            note: 'Source path includes parse and compile on every call.',
+        };
+    } else if (workloadName === 'ast') {
+        const run = measureBatch(
+            'parse + check + AST evaluation',
+            () => valueOf(eval_cell_src(CELL_SOURCE)),
+            batchSize,
+        );
+        binding = {
+            setupMs: 0,
+            run,
+            note: 'AST evaluation path; not a bytecode hot loop.',
+        };
+    } else if (workloadName === 'decode') {
+        const setupStarted = performance.now();
+        const bytes = encode_cell_bytecode(CELL_SOURCE);
+        if (!(bytes instanceof Uint8Array)) {
+            throw new Error('VibeScript bytecode encoding did not produce a byte array.');
+        }
+        const setupMs = performance.now() - setupStarted;
+        const run = measureBatch(
+            'decode_and_run (compat; re-decodes)',
+            () => valueOf(decode_and_run(bytes)),
+            batchSize,
+        );
+        binding = {
+            setupMs,
+            run,
+            note: 'Compat path retained for decode_and_run. Prefer CompiledCell for repeated runs.',
+        };
     } else {
-        await ensureWasm();
-        const workload = workloadFor(workloadName);
-        vibe = measure('VibeScript WASM', workload.vibe, batchSize);
-        setupMs = workload.setupMs;
-        wasmMemoryBytes = wasmMemory?.buffer?.byteLength ?? null;
-        workloadLabel = workload.label;
-        note = workload.note;
-        js = workload.js;
+        binding = compiledHandleFootnote(batchSize);
     }
-    const v8 = measure('JavaScript baseline', js, batchSize);
 
     return {
         workload: workloadName,
-        workloadLabel,
+        workloadLabel: binding?.run?.label || 'purpose demos',
         iterations: batchSize,
         samples: SAMPLE_COUNT,
-        vibe: { ...vibe, fuel: null, heapBytes: null },
-        v8: { ...v8, heapBytes: null, gcJitterMs: +(v8.p95 - v8.p50).toFixed(6) },
-        setupMs,
-        wasmMemoryBytes,
-        throughputRatio: +(vibe.opsPerSec / Math.max(v8.opsPerSec, 1)).toFixed(4),
-        executionMode: workerCount > 0
-            ? `${workerCount} independent browser workers; one WASM instance per worker`
-            : 'single-threaded browser WASM',
+        purposes,
+        binding,
+        // Keep shape fields for older page controllers; do not treat as JS race.
+        vibe: binding?.run
+            ? { ...binding.run, fuel: null, heapBytes: null }
+            : null,
+        v8: null,
+        setupMs: binding?.setupMs ?? 0,
+        wasmMemoryBytes: wasmMemory?.buffer?.byteLength ?? null,
+        throughputRatio: null,
+        executionMode,
         workerCount: Math.max(workerCount, 1),
         kernel,
         note,
