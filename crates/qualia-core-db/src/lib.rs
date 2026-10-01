@@ -1911,6 +1911,7 @@ mod tests {
 #[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;
 
+pub mod domain_licence;
 pub mod domains;
 pub mod solvers;
 

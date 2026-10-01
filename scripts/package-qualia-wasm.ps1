@@ -29,7 +29,7 @@ try {
     # SIMD kernels. The browser LLM ships in the wasm-full *playground* bundle (docs/playground)
     # — not the portal — which is where the 8 MB stack / 4 GB max-memory link-args belong.
     # Ontology MCP stays the tight 640 KiB / 200 KiB product.
-    $env:RUSTFLAGS = "-C target-feature=+simd128"
+    $env:RUSTFLAGS = "-C target-feature=+simd128 --cfg getrandom_backend=""wasm_js"""
     cmd.exe /d /s /c "wasm-pack build --target web --out-dir pkg-qualia --release -- --no-default-features --features portal 2>&1"
     $wasmPackExitCode = $LASTEXITCODE
     if ($wasmPackExitCode -ne 0) {

@@ -13,15 +13,113 @@
       "group": "Core"
     },
     {
-      "label": "0.0.30 Progress",
-      "href": "progress-0.0.30.html",
-      "icon": "fa-heart-pulse",
+      "label": "POET WASM (Live)",
+      "href": "poet-app/index.html",
+      "icon": "fa-cube",
       "highlight": true,
       "group": "Core"
     },
     {
-      "label": "0.0.28 Archive",
-      "href": "progress-0.0.28.html",
+      "label": "0.0.40 Progress",
+      "href": "progress-0.0.40.html",
+      "icon": "fa-wand-magic-sparkles",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Semantic Instruments",
+      "href": "semantic-instruments.html",
+      "icon": "fa-toolbox",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Agreement Instruments",
+      "href": "agreement-instruments.html",
+      "icon": "fa-handshake",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Agreement Ledger",
+      "href": "agreement-ledger.html",
+      "icon": "fa-book-open",
+      "group": "Core"
+    },
+    {
+      "label": "Human-Centric Authoring",
+      "href": "human-centric-authoring.html",
+      "icon": "fa-pen-ruler",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Prompt Precision",
+      "href": "prompt-precision.html",
+      "icon": "fa-sliders",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "0.0.39 Progress",
+      "href": "progress-0.0.39.html",
+      "icon": "fa-clock-rotate-left",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.38 Progress",
+      "href": "progress-0.0.38.html",
+      "icon": "fa-heart-pulse",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.37 Progress",
+      "href": "progress-0.0.37.html",
+      "icon": "fa-clock-rotate-left",
+      "group": "Core"
+    },
+    {
+      "label": "WASM Engine",
+      "href": "wasm-engine.html",
+      "icon": "fa-microchip",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "QDNF",
+      "href": "qdnf.html",
+      "icon": "fa-circle-nodes",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "QDNF Status",
+      "href": "qdnf-status.html",
+      "icon": "fa-tower-broadcast",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Release Matrix",
+      "href": "release-matrix.html",
+      "icon": "fa-table-cells",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.37 Archive",
+      "href": "progress-0.0.37.html",
+      "icon": "fa-clock-rotate-left",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.33 Archive",
+      "href": "progress-0.0.33.html",
+      "icon": "fa-clock-rotate-left",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.30 Archive",
+      "href": "progress-0.0.30.html",
       "icon": "fa-clock-rotate-left",
       "group": "Core"
     },
@@ -44,9 +142,75 @@
       "group": "Core"
     },
     {
+      "label": "VibeScript Present",
+      "href": "vibe/index.html",
+      "icon": "fa-code",
+      "highlight": true,
+      "group": "VibeScript"
+    },
+    {
+      "label": "Playground",
+      "href": "vibe/playground.html",
+      "icon": "fa-play",
+      "highlight": true,
+      "group": "VibeScript"
+    },
+    {
+      "label": "Showcase & Demos",
+      "href": "vibe/showcase.html",
+      "icon": "fa-star",
+      "group": "VibeScript"
+    },
+    {
+      "label": "RDF → Q42 → Vibe",
+      "href": "rdf-q42-vibe-demo.html",
+      "icon": "fa-diagram-project",
+      "highlight": true,
+      "group": "VibeScript"
+    },
+    {
+      "label": "Execution Profiles",
+      "href": "vibe-host-native-bridge.html",
+      "icon": "fa-link",
+      "group": "VibeScript"
+    },
+    {
+      "label": "Specification",
+      "href": "vibe/spec.html",
+      "icon": "fa-book",
+      "group": "VibeScript"
+    },
+    {
+      "label": "Dev Docs (API)",
+      "href": "vibe/dev-docs.html",
+      "icon": "fa-code-branch",
+      "group": "VibeScript"
+    },
+    {
+      "label": "Benchmarks",
+      "href": "vibe/benchmarks.html",
+      "icon": "fa-gauge-high",
+      "group": "VibeScript"
+    },
+    {
       "label": "Benchmark Hub",
       "href": "benchmark.html",
       "icon": "fa-gauge-high",
+      "group": "Benchmarks",
+      "highlight": true
+    },
+    {
+      "label": "VibeScript vs V8",
+      "href": "benchmark.html#vibescript",
+      "icon": "fa-bolt",
+      "highlight": true,
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Geometry & Renderer",
+      "href": "benchmark.html#geometry",
+      "icon": "fa-shapes",
+      "highlight": true,
       "group": "Benchmarks"
     },
     {
@@ -56,15 +220,9 @@
       "group": "Benchmarks"
     },
     {
-      "label": "Comparative",
-      "href": "comparative_benchmarks.html",
-      "icon": "fa-chart-line",
-      "group": "Benchmarks"
-    },
-    {
-      "label": "Visualizer",
-      "href": "benchmark_visualizer.html",
-      "icon": "fa-chart-area",
+      "label": "WASM bench compare",
+      "href": "wasm-bench-compare.html",
+      "icon": "fa-code-compare",
       "group": "Benchmarks"
     },
     {
@@ -111,13 +269,6 @@
       "group": "Sciences"
     },
     {
-      "label": "WGSL Forge",
-      "href": "forge-showcase.html",
-      "icon": "fa-hammer",
-      "highlight": true,
-      "group": "Sciences"
-    },
-    {
       "label": "Spatial / GeoSPARQL",
       "href": "spatial.html",
       "icon": "fa-cube",
@@ -129,13 +280,6 @@
       "icon": "fa-globe",
       "highlight": true,
       "group": "Sciences"
-    },
-    {
-      "label": "Design Studio",
-      "href": "design-studio.html",
-      "icon": "fa-pen-ruler",
-      "highlight": true,
-      "group": "Tools"
     },
     {
       "label": "Phone Console",
@@ -180,6 +324,12 @@
       "group": "LLM"
     },
     {
+      "label": "WASM LLM test",
+      "href": "wasm-llm-test.html",
+      "icon": "fa-vial",
+      "group": "LLM"
+    },
+    {
       "label": "Modalities",
       "href": "modalities-showcase.html",
       "icon": "fa-atom",
@@ -203,6 +353,18 @@
       "label": "CML Studio",
       "href": "cml-studio.html",
       "icon": "fa-diagram-project",
+      "group": "Tools"
+    },
+    {
+      "label": "DocuQuin pipeline",
+      "href": "docuquin-pipeline.html",
+      "icon": "fa-file-lines",
+      "group": "Tools"
+    },
+    {
+      "label": "Utils",
+      "href": "utils.html",
+      "icon": "fa-wrench",
       "group": "Tools"
     },
     {
@@ -244,9 +406,15 @@
       "group": "Data"
     },
     {
-      "label": "Ontology Demo",
+      "label": "Ontology browse",
       "href": "ontology.html",
       "icon": "fa-book-open",
+      "group": "Data"
+    },
+    {
+      "label": "Q42 Integrity",
+      "href": "integrity.html",
+      "icon": "fa-shield-halved",
       "highlight": true,
       "group": "Data"
     },

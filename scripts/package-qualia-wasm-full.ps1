@@ -15,7 +15,7 @@ if (-not (Get-Command wasm-pack -ErrorAction SilentlyContinue)) {
 
 $previousRustFlags = $env:RUSTFLAGS
 try {
-    $env:RUSTFLAGS = "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+    $env:RUSTFLAGS = "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=""wasm_js"""
     Push-Location $CrateDir
     try {
         wasm-pack build `
