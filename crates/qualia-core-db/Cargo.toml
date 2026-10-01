@@ -34,7 +34,6 @@ nvml = ["dep:nvml-wrapper"]
 vision-onnx = ["dep:ort"]
 dxc = []
 portal = ["wasm_simd", "gpu-runtime", "wasm-logic", "wasm-scientific"]
-wasm-webcivics = ["wasm-logic"]
 wasm-ontology = []
 # Civics / decision-evidence package: semantic interchange + SHACL + modal logic +
 # SPARQL/q42 kernels + Civics-facing stats/econ receipts. Explicitly excludes

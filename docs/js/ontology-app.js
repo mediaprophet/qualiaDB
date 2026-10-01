@@ -540,7 +540,9 @@ window.lookupEntity = async function lookupEntity(progressReporter = null) {
 
         const entity = result.entities[0];
         resultDiv.classList.remove('hidden');
-        $('result-term').textContent = shortLabel(entity.iri) || term;
+        $('result-term').textContent = engine.profile === 'wordnet'
+            ? `${term} (${result.entities.length} synset${result.entities.length > 1 ? 's' : ''})`
+            : (shortLabel(entity.iri) || term);
         $('result-type').textContent = entity.pos;
         $('result-summary').textContent = entity.gloss || `${entity.edgeCount} relations in graph.`;
         $('result-relations').innerHTML = renderRelationTags(entity.relations);
@@ -745,6 +747,7 @@ async function boot() {
         $('entity-search').value = hints.defaultSearch;
         $('graph-term').value = hints.defaultSearch;
         await lookupEntity(report);
+        document.body.dataset.appReady = 'true';
     } catch (e) {
         console.error(e);
         const hint = String(e.message || '').includes('Q42 v3/v4 header')

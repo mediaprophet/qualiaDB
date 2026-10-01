@@ -94,6 +94,20 @@ export function hashToken(token) {
         if (ptr !== null) return ptr;
     }
 
+    if (t.startsWith('wn31:') || t.startsWith('synset:')) {
+        const payload = t.slice(t.indexOf(':') + 1);
+        if (/^(?:0x)?[0-9a-fA-F]+$/i.test(payload)) {
+            try { return BigInt(payload.startsWith('0x') ? payload : `0x${payload}`) & 0x0fff_ffff_ffff_ffffn; } catch (_) {}
+        }
+    }
+
+    if (/^0x[0-9a-fA-F]+$/i.test(t)) {
+        try { return BigInt(t) & 0x0fff_ffff_ffff_ffffn; } catch (_) {}
+    }
+    if (/^\d{15,}$/.test(t)) {
+        try { return BigInt(t) & 0x0fff_ffff_ffff_ffffn; } catch (_) {}
+    }
+
     // Canonicalize raw HTTP(S) URLs to <URL> if delimiters were omitted
     if ((t.startsWith('http://') || t.startsWith('https://') || t.startsWith('urn:')) && !t.startsWith('<')) {
         t = `<${t}>`;
@@ -132,10 +146,28 @@ export function stripDelimiters(token) {
  */
 export function hashTokenVariants(token) {
     if (!token) return [0n];
+    const t = token.trim();
+    const variants = new Set();
+
+    // Check if token represents a direct numeric hash (hex or decimal)
+    let numCandidate = t;
+    if (numCandidate.startsWith('wn31:') || numCandidate.startsWith('synset:')) {
+        numCandidate = numCandidate.slice(numCandidate.indexOf(':') + 1);
+    }
+    if (/^(?:0x[0-9a-fA-F]+|\d{15,})$/i.test(numCandidate)) {
+        try {
+            const b = BigInt(numCandidate);
+            variants.add(b);
+            variants.add(b & 0x0fff_ffff_ffff_ffffn);
+        } catch (_) {}
+    }
+
     const raw = hashToken(token);
+    variants.add(raw);
     const stripped = hashToken(stripDelimiters(token));
-    if (raw === stripped) return [raw];
-    return [raw, stripped];
+    variants.add(stripped);
+
+    return Array.from(variants);
 }
 
 /**

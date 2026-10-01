@@ -20,30 +20,6 @@ pub const ONTOLOGY_KERNEL: &[&str] = &[
     "hcf-ingest",
 ];
 
-pub const WEBCIVICS: &[&str] = &[
-    "nquin-48-byte-abi",
-    "q-hash",
-    "n3-parser",
-    "turtle-parser",
-    "rdf-serialization",
-    "ntriples-query",
-    "query-compiler",
-    "shacl-property-validation",
-    "deontic-logic",
-    "epistemic-logic",
-    "paraconsistent-routing",
-    "temporal-ltl",
-    "description-logic",
-    "answer-set-programming",
-    "linear-logic",
-    "interaction-governance",
-    "lww-crdt",
-    "yaml-ld-q42",
-    "hcf-ingest",
-    "cml-graph-model",
-    "solid-protocol-records",
-];
-
 pub const PORTAL: &[&str] = &[
     "nquin-48-byte-abi",
     "q-hash",

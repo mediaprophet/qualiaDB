@@ -169,6 +169,7 @@ pub fn prepare_conditioned_prompt(
         } else {
             input_budget.max_bytes.min(MAX_PROMPT_BYTES as u32)
         },
+        thinking_token_budget: None,
     };
     let mut requirements = Vec::with_capacity(profile.requirements.len());
     for requirement in &profile.requirements {
