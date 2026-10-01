@@ -12,8 +12,7 @@ use super::{
     TrunkNvmeReader,
 };
 
-pub const QWEN4EXP_EXPERT_COUNT: usize = 512;
-pub const QWEN4EXP_TOP_EXPERTS: usize = 10;
+pub use super::{QWEN4EXP_EXPERT_COUNT, QWEN4EXP_TOP_EXPERTS};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StreamedMoeError {

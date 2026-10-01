@@ -27,6 +27,7 @@ fn fixture_spec<'a>(requirements: &'a [RequirementRef<'a>]) -> ConditioningSpec<
             output_tokens: 256,
             tool_rounds: 2,
             max_bytes: 4096,
+            thinking_token_budget: None,
         },
     }
 }
@@ -161,6 +162,7 @@ fn test_conditioning_cbor_codec_roundtrip() {
             output_tokens: 128,
             tool_rounds: 1,
             max_bytes: 2048,
+            thinking_token_budget: None,
         },
     };
 

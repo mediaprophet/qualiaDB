@@ -14,6 +14,19 @@ impl QTensorEngine {
         max_chunks: u32,
         sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
     ) -> Option<StreamingArgmaxResult> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(ref pkg) = self.ftw_package {
+            if let (Some(packed), Some(scales), Some(globals)) = (
+                pkg.fetch_tensor_bytes("lm_head.weight"),
+                pkg.fetch_tensor_bytes("lm_head.weight_scale"),
+                pkg.fetch_tensor_bytes("lm_head.weight_global"),
+            ) {
+                return self.dispatch_output_argmax_ftw_nvfp4(
+                    packed, scales, globals, hidden, emb_dim, chunk_logits, max_chunks, sieve_mask,
+                );
+            }
+        }
+
         let info = index.logits_projection_info()?;
         let (n_in, vocab_size) = Self::matmul_dims(info);
         if n_in == 0 || vocab_size == 0 || n_in > emb_dim || n_in > hidden.len() {
@@ -53,6 +66,97 @@ impl QTensorEngine {
             ) {
                 return None;
             }
+            if let Some(mask) = sieve_mask {
+                update_streaming_argmax_sieved(
+                    &chunk_logits[..chunk_rows],
+                    chunk_rows,
+                    chunk_idx,
+                    Some(mask),
+                    &mut best_token_id,
+                    &mut max_logit,
+                );
+            } else {
+                update_streaming_argmax(
+                    &chunk_logits[..chunk_rows],
+                    chunk_rows,
+                    chunk_idx,
+                    &mut best_token_id,
+                    &mut max_logit,
+                );
+            }
+            scrub_f32_volatile(&mut chunk_logits[..chunk_rows], chunk_rows);
+        }
+
+        if max_logit == f32::NEG_INFINITY {
+            return None;
+        }
+        Some(StreamingArgmaxResult {
+            best_token_id,
+            max_logit,
+        })
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn dispatch_output_argmax_ftw_nvfp4(
+        &self,
+        packed: &[u8],
+        scales: &[u8],
+        globals: &[u8],
+        hidden: &[f32],
+        emb_dim: usize,
+        chunk_logits: &mut [f32],
+        max_chunks: u32,
+        sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
+    ) -> Option<StreamingArgmaxResult> {
+        let vocab_size = globals.len() / 2;
+        let row_bytes = emb_dim / 2;
+        let scale_bytes = emb_dim / 16;
+        if vocab_size == 0 || emb_dim == 0 || hidden.len() < emb_dim || chunk_logits.len() < VOCAB_CHUNK_ROWS {
+            return None;
+        }
+        if packed.len() < vocab_size * row_bytes || scales.len() < vocab_size * scale_bytes {
+            return None;
+        }
+
+        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
+        let n_chunks = if max_chunks == 0 {
+            full_chunks
+        } else {
+            (max_chunks as usize).min(full_chunks)
+        };
+        let mut best_token_id = 0u32;
+        let mut max_logit = f32::NEG_INFINITY;
+        let blocks_per_row = emb_dim / 16;
+
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+
+            for r_idx in 0..chunk_rows {
+                let token_id = row_start + r_idx;
+                let g_val = half::f16::from_le_bytes([globals[token_id * 2], globals[token_id * 2 + 1]]).to_f32();
+                let p_row = &packed[token_id * row_bytes..(token_id + 1) * row_bytes];
+                let s_row = &scales[token_id * scale_bytes..(token_id + 1) * scale_bytes];
+
+                let mut row_dot = 0.0f32;
+                for b in 0..blocks_per_row {
+                    let fp8_s = s_row[b];
+                    let eff_scale = crate::inference::moe::nvfp4::fp8_e4m3_to_f32(fp8_s) * g_val;
+                    let b_bytes = &p_row[b * 8..(b + 1) * 8];
+                    let in_offset = b * 16;
+                    let mut b_dot = 0.0f32;
+                    for i in 0..8 {
+                        let byte_val = b_bytes[i];
+                        let low = (byte_val & 0x0F) as usize;
+                        let high = ((byte_val >> 4) & 0x0F) as usize;
+                        b_dot += crate::inference::moe::nvfp4::E2M1_TABLE[low] * hidden[in_offset + i * 2]
+                               + crate::inference::moe::nvfp4::E2M1_TABLE[high] * hidden[in_offset + i * 2 + 1];
+                    }
+                    row_dot += b_dot * eff_scale;
+                }
+                chunk_logits[r_idx] = row_dot;
+            }
+
             if let Some(mask) = sieve_mask {
                 update_streaming_argmax_sieved(
                     &chunk_logits[..chunk_rows],
@@ -851,14 +955,17 @@ impl QTensorEngine {
             Some(i) => i,
             None => return true,
         };
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return false,
-        };
         let n_embd = index.hyperparams.n_embd as usize;
         let n = emb_dim.min(n_embd).min(hidden.len());
         let mut norm_w = [0f32; MAX_HIDDEN_DIM];
-        if dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut norm_w) < n {
+        let dequant_n = if let Some(raw) = self.fetch_tensor_raw_bytes(info) {
+            cpu_ops::dequant_norm_from_raw(raw, info, &mut norm_w)
+        } else if let Some(mmap) = self.gguf_mmap.as_deref() {
+            dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut norm_w)
+        } else {
+            0
+        };
+        if dequant_n < n {
             return false;
         }
         rms_norm_inplace(&mut hidden[..n], &norm_w[..n], RMS_NORM_EPS);

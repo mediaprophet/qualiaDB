@@ -641,6 +641,7 @@ mod forward;
 mod moe_ffn;
 mod moe_gguf;
 mod ssm_forward;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use forward::PrefillDispatchFailure;
 mod gemm;
 mod init;

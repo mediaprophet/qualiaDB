@@ -12799,6 +12799,7 @@ dependencies = [
  "futures-util",
  "getrandom 0.4.3",
  "git2",
+ "hex 0.4.3",
  "io-uring",
  "log",
  "lz4_flex",

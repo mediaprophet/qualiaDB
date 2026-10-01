@@ -7,6 +7,7 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
+use crate::components::poet::host;
 use dioxus::prelude::*;
 
 #[component]
@@ -15,6 +16,7 @@ pub fn AuraTray(
     #[props(default = 98)] certainty: u8,
     #[props(default = 48)] super_quins_count: usize,
 ) -> Element {
+    let mut exported = use_signal(|| false);
     let status_color = if conformant {
         "var(--accent-emerald, #00f2a9)"
     } else {
@@ -46,8 +48,21 @@ pub fn AuraTray(
                 span { style: "color:var(--text-muted);", "🧬 {super_quins_count} Quins" }
                 button {
                     r#type: "button",
+                    title: "Copy this document's conformance record (.hcf JSON) to the clipboard",
                     style: "padding:2px 6px;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:3px;color:var(--accent-cyan);font-size:9px;cursor:pointer;",
-                    "📦 Export .hcf"
+                    onclick: move |_| {
+                        let record = serde_json::to_string_pretty(&serde_json::json!({
+                            "format": "webizen.hcf/1",
+                            "kind": "doc-conformance",
+                            "shacl_conformant": conformant,
+                            "certainty_pct": certainty,
+                            "super_quins": super_quins_count,
+                        }))
+                        .unwrap_or_default();
+                        host::copy_to_clipboard(record);
+                        exported.set(true);
+                    },
+                    if exported() { "✓ Copied" } else { "📦 Export .hcf" }
                 }
             }
         }

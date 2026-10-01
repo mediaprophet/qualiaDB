@@ -249,6 +249,37 @@ impl ContainerKind {
         }
     }
 
+    /// Parse an `id()` string back into a kind — `.hcf` checkpoint restore.
+    pub fn from_id(id: &str) -> Option<Self> {
+        Some(match id {
+            "subcanvas" => Self::Subcanvas,
+            "social" => Self::Social,
+            "webrtc" => Self::WebRtc,
+            "health" => Self::Health,
+            "webview" => Self::Webview,
+            "map" => Self::Map,
+            "doc" => Self::Doc,
+            "ontology" => Self::Ontology,
+            "code" => Self::Code,
+            "sheet" => Self::Sheet,
+            "portal" => Self::Portal,
+            "media" => Self::Media,
+            "3d" => Self::Mesh3d,
+            "mail" => Self::Mail,
+            "chora" => Self::Chora,
+            "kanban" => Self::ErpKanban,
+            "git" => Self::GitForge,
+            "solid" => Self::SolidHub,
+            "economics" => Self::Economics,
+            "jobs" => Self::JobCenter,
+            "bookmarks" => Self::Bookmarks,
+            "shaders" => Self::Shaders,
+            "codecs" => Self::Codecs,
+            "domains" => Self::Domains,
+            _ => return None,
+        })
+    }
+
     pub fn title(self) -> &'static str {
         match self {
             Self::Subcanvas => "Sub-manifold",
@@ -431,6 +462,17 @@ impl Strata {
         }
     }
 
+    pub fn from_id(id: &str) -> Option<Self> {
+        Some(match id {
+            "environmental" => Self::Environmental,
+            "social" => Self::Social,
+            "legal" => Self::Legal,
+            "financial" => Self::Financial,
+            "technical" => Self::Technical,
+            _ => return None,
+        })
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Self::Environmental => "🌿 Env",
@@ -470,6 +512,17 @@ impl Epistemic {
             Self::Intersubjective => "intersubjective",
             Self::Normative => "normative",
         }
+    }
+
+    pub fn from_id(id: &str) -> Option<Self> {
+        Some(match id {
+            "all" => Self::All,
+            "objective" => Self::Objective,
+            "subjective" => Self::Subjective,
+            "intersubjective" => Self::Intersubjective,
+            "normative" => Self::Normative,
+            _ => return None,
+        })
     }
 
     pub fn icon(self) -> &'static str {

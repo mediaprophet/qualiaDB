@@ -276,3 +276,5 @@ tauri_updater.key.pub
 /experiments/inference-lab/auto-bench-browser.log
 /experiments/inference-lab/artifacts/debug-*/
 /experiments/inference-lab/artifacts/raw-*/
+
+crates/qualia-core-db/pkg-webcivics/

@@ -855,7 +855,28 @@ impl ExpressionEvaluator {
                         .to_string());
                 }
 
-                // 4. Unknown to all engines.
+                // 4. Qualia kernel scalars (UE-052): q42:mean / gini / …
+                if let Some(kfn) =
+                    crate::sparql_library::kernel_extensions::kernel_fn_for_hash(iri_hash)
+                {
+                    let mut vals = Vec::with_capacity(args_len as usize);
+                    for i in 0..args_len as usize {
+                        let v = Self::arg_f64(
+                            i,
+                            args_start,
+                            args_len,
+                            ctx,
+                            row,
+                            resolver,
+                            "q42:kernel",
+                        )?;
+                        vals.push(v);
+                    }
+                    let out = crate::sparql_library::kernel_extensions::eval_kernel_fn(kfn, &vals)?;
+                    return Ok(EvalResult::Float(out));
+                }
+
+                // 5. Unknown to all engines.
                 Err(format!(
                     "unknown extension function (hash {iri_hash:#018x})"
                 ))

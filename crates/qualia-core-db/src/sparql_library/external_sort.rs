@@ -250,9 +250,28 @@ impl ExternalSorter {
         Ok(())
     }
 
-    /// K-way merge sorted chunks into a unified v2 `.q42` volume.
+    /// K-way merge sorted chunks into a unified v3 `.q42` volume.
+    ///
+    /// Defaults to [`IngestAccessPolicy::Restricted`] (QW-10): never mints
+    /// `FLAG_PERMISSIVE_COMMONS` unless the caller uses
+    /// [`Self::merge_with_access_policy`] with `PublicRedistributable`.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
+    pub fn merge(self, final_q42: &Path) -> std::io::Result<u64> {
+        self.merge_with_access_policy(
+            final_q42,
+            crate::q42_volume::IngestAccessPolicy::Restricted,
+            None,
+        )
+    }
+
+    /// Merge with an explicit access policy and optional provenance companion (QW-10).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn merge_with_access_policy(
+        mut self,
+        final_q42: &Path,
+        policy: crate::q42_volume::IngestAccessPolicy,
+        provenance: Option<&crate::q42_volume::IngestProvenanceRecord>,
+    ) -> std::io::Result<u64> {
         // Flush any remaining quins
         self.flush_chunk()?;
 
@@ -274,12 +293,17 @@ impl ExternalSorter {
             }
         };
         let mut writer = StreamingQ42VolumeWriter::new(&lex_map)?;
-        // Catalog ontologies (Pages ingest), not personal records.
-        // Sanctuary bits on a Quin still win inside the writer.
-        writer.declare_permissive_commons();
+        // QW-10: never default to permissive-commons. Only an explicit
+        // PublicRedistributable decision may set the Commons header flag.
+        if policy.may_declare_permissive_commons() {
+            writer.declare_permissive_commons();
+        }
 
         if self.chunk_files.is_empty() {
             writer.finish(final_q42)?;
+            if let Some(prov) = provenance {
+                prov.write_beside_volume(final_q42)?;
+            }
             return Ok(0);
         }
 
@@ -359,12 +383,13 @@ impl ExternalSorter {
         }
 
         writer.finish(final_q42)?;
-
+        if let Some(prov) = provenance {
+            prov.write_beside_volume(final_q42)?;
+        }
         // Cleanup temp files
         for chunk_path in &chunk_files {
             let _ = std::fs::remove_file(chunk_path);
         }
-
         Ok(block_seq)
     }
 
@@ -631,8 +656,10 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn merge_declares_permissive_commons_for_catalog_ingest() {
-        use crate::q42_volume::{Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY};
+    fn merge_requires_explicit_public_redistributable_for_commons_flag() {
+        use crate::q42_volume::{
+            IngestAccessPolicy, Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY,
+        };
 
         let dir = TempDir::new().unwrap();
         let mut sorter = ExternalSorter::new(dir.path().join("sort"));
@@ -648,18 +675,37 @@ mod tests {
             .unwrap();
         sorter.push_lex(1, "urn:q42:catalog-subject");
         let out = dir.path().join("catalog.q42");
+        // Default merge is Restricted — must NOT mint Commons (QW-10).
         sorter.merge(&out).unwrap();
         let volume = Q42Volume::open(&out).unwrap();
-        let flags = volume.header().flags;
-        assert_ne!(
-            flags & FLAG_PERMISSIVE_COMMONS,
-            0,
-            "Pages catalog merge must set FLAG_PERMISSIVE_COMMONS"
-        );
         assert_eq!(
-            flags & FLAG_SANCTUARY,
+            volume.header().flags & FLAG_PERMISSIVE_COMMONS,
             0,
-            "unmarked catalog Quins must not flip Sanctuary"
+            "default merge must not set FLAG_PERMISSIVE_COMMONS"
         );
+
+        let mut sorter2 = ExternalSorter::new(dir.path().join("sort2"));
+        sorter2
+            .push(NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            })
+            .unwrap();
+        sorter2.push_lex(1, "urn:q42:catalog-subject");
+        let out2 = dir.path().join("catalog-public.q42");
+        sorter2
+            .merge_with_access_policy(&out2, IngestAccessPolicy::PublicRedistributable, None)
+            .unwrap();
+        let volume2 = Q42Volume::open(&out2).unwrap();
+        assert_ne!(
+            volume2.header().flags & FLAG_PERMISSIVE_COMMONS,
+            0,
+            "explicit PublicRedistributable must set FLAG_PERMISSIVE_COMMONS"
+        );
+        assert_eq!(volume2.header().flags & FLAG_SANCTUARY, 0);
     }
 }

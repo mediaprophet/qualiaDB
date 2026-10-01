@@ -244,6 +244,16 @@ pub(super) fn is_named_arg_key(s: &str) -> bool {
             | "workspace"
             | "output"
             | "tolerance"
+            // Civics / LocalHost stdlib kernels (Econ, Statistics, PhysicalUnits)
+            | "incomes"
+            | "utilities"
+            | "epsilon"
+            | "x"
+            | "y"
+            | "value"
+            | "from"
+            | "to"
+            | "poverty_line"
     )
 }
 

@@ -722,3 +722,27 @@ pub fn prompt_precision_mode() -> String {
         .unwrap_or_default()
 }
 
+
+// ── Lifecycle stage telemetry (inference-lifecycle.n3 `stage:*`) ─────────────
+// Per-turn StageTrace recording inside the live decode loop. Recording is a
+// fixed 16-slot stack structure coalesced per stage kind — no hot allocations.
+// Default ON; `QUALIA_STAGE_TELEMETRY=0` disables the instrumentation entirely.
+static STAGE_TELEMETRY: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable per-turn lifecycle stage telemetry (`QUALIA_STAGE_TELEMETRY`).
+#[inline]
+pub fn set_stage_telemetry(on: bool) {
+    STAGE_TELEMETRY.store(on, Ordering::Relaxed);
+}
+
+/// Whether lifecycle stage telemetry is active. The env var overrides the flag
+/// in BOTH directions (`0`/`false` → off, `1`/`true` → on); otherwise the
+/// process default (ON) applies.
+#[inline]
+pub fn stage_telemetry_enabled() -> bool {
+    match std::env::var("QUALIA_STAGE_TELEMETRY").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => STAGE_TELEMETRY.load(Ordering::Relaxed),
+    }
+}

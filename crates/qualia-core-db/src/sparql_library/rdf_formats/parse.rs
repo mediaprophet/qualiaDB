@@ -44,12 +44,16 @@ pub fn parse_rdf<R: Read>(
             )
             .map_err(map_sink_err)?
         }
-        RdfFormat::Turtle => crate::sparql_library::parsers::turtle_star::parse_turtle_star_into(
-            reader,
-            context_hash,
-            collector,
-        )
-        .map_err(map_sink_err)?,
+        RdfFormat::Turtle => {
+            // Document parser: `@prefix`, `;` / `,` lists, multi-line statements.
+            // (turtle_star is line-oriented and unsuitable for Solid RDF Sources.)
+            crate::sparql_library::parsers::turtle_doc::parse_turtle_doc_into(
+                reader,
+                context_hash,
+                collector,
+            )
+            .map_err(map_sink_err)?
+        }
         RdfFormat::NQuads => crate::sparql_library::parsers::nquads_star::parse_nquads_star_into(
             reader,
             context_hash,
@@ -62,12 +66,17 @@ pub fn parse_rdf<R: Read>(
             collector,
         )
         .map_err(map_sink_err)?,
-        RdfFormat::N3 => crate::sparql_library::parsers::n3_star::parse_n3_star_into(
-            reader,
-            context_hash,
-            collector,
-        )
-        .map_err(map_sink_err)?,
+        RdfFormat::N3 => {
+            // Solid `text/n3` RDF Sources use the Turtle-compatible N3 subset
+            // (`@prefix` + statements). Formulae/rules stay on `n3_parser` /
+            // `n3_star` entry points, not this MIME ingest path.
+            crate::sparql_library::parsers::turtle_doc::parse_turtle_doc_into(
+                reader,
+                context_hash,
+                collector,
+            )
+            .map_err(map_sink_err)?
+        }
         RdfFormat::JsonLd => crate::sparql_library::parsers::json_ld_stream::parse_json_ld_into(
             reader,
             context_hash,

@@ -235,10 +235,17 @@ pub fn lookup_unit(symbol: &str) -> Option<Unit> {
         "A" => Some(Unit::new("A", Dimension::current(), 1.0)),
         "K" => Some(Unit::new("K", Dimension::temperature(), 1.0)),
         "°C" | "degC" => Some(Unit::with_offset(
-            symbol,
+            "°C",
             Dimension::temperature(),
             1.0,
             273.15,
+        )),
+        // (°F + 459.67) × 5/9 = K
+        "°F" | "degF" => Some(Unit::with_offset(
+            "°F",
+            Dimension::temperature(),
+            5.0 / 9.0,
+            459.67,
         )),
         "N" => Some(Unit::new("N", Dimension::force(), 1.0)),
         "kN" => Some(Unit::new("kN", Dimension::force(), 1_000.0)),

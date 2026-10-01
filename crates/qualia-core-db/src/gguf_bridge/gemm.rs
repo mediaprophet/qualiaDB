@@ -552,14 +552,30 @@ impl QTensorEngine {
         if info.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {
             return self.dispatch_ternary_ffn(info, input, out, n_in, n_out);
         }
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return false,
+        #[cfg(not(target_arch = "wasm32"))]
+        let raw = match self.fetch_tensor_raw_bytes(info) {
+            Some(s) => s,
+            None => {
+                let mmap = match self.gguf_mmap.as_deref() {
+                    Some(m) => m,
+                    None => return false,
+                };
+                match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+                    Ok(s) => s,
+                    Err(_) => return false,
+                }
+            }
         };
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info)
-        {
-            Ok(s) => s,
-            Err(_) => return false,
+        #[cfg(target_arch = "wasm32")]
+        let raw = {
+            let mmap = match self.gguf_mmap.as_deref() {
+                Some(m) => m,
+                None => return false,
+            };
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            }
         };
         self.dispatch_gemm_raw_into(info, raw, input, out, n_in, n_out)
     }

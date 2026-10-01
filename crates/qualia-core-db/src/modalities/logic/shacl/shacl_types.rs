@@ -257,6 +257,22 @@ pub enum ShaclConstraint {
     EconWelfareAboveFloor {
         min_welfare: f64,
     },
+    /// Values / human-rights: consent on the focus path must be non-coerced.
+    ///
+    /// Numeric values are treated as relational-imbalance scores in `[0,1]`;
+    /// a value at/above `max_imbalance` (or the `CoercedConsentFlag` IRI/hash)
+    /// is a violation. Empty values conform (no coercion evidence).
+    ValuesConsentNonCoerced {
+        max_imbalance: f64,
+    },
+    /// Values / human-rights: observed harm metric must be strictly below `max_harm`.
+    ValuesHarmBelowCeiling {
+        max_harm: f64,
+    },
+    /// Fuzzy truth degree on the path must be ≥ `min_degree` (inline float/decimal or [0,1] numeric).
+    FuzzyMinDegree {
+        min_degree: f64,
+    },
     /// ASP constraint
     AspConstraint {
         stable_model_limit: u32,

@@ -279,6 +279,55 @@ pub fn classify_inline_literal(val: u64) -> Option<InlineLiteral> {
     }
 }
 
+/// Pack a lexical typed literal into the inline object encoding (inverse of
+/// [`classify_inline_literal`]). Returns `None` when the datatype/value pair is
+/// not an admitted inline form (caller should hash the lexical string instead).
+pub fn pack_typed_literal(value: &str, datatype_iri: &str) -> Option<u64> {
+    let dt = datatype_iri.trim();
+    let dt = dt
+        .strip_prefix('<')
+        .and_then(|s| s.strip_suffix('>'))
+        .unwrap_or(dt);
+    if dt == "http://www.w3.org/2001/XMLSchema#integer" || dt == "xsd:integer" {
+        let num = value.parse::<i64>().ok()?;
+        let max_val = (1i64 << 59) - 1;
+        let min_val = -(1i64 << 59);
+        if num < min_val || num > max_val {
+            return None;
+        }
+        let unsigned = (num as u64) & INLINE_VALUE_MASK;
+        return Some(INLINE_TAG_INTEGER | unsigned);
+    }
+    if dt == "http://www.w3.org/2001/XMLSchema#decimal" || dt == "xsd:decimal" {
+        let num = value.parse::<f64>().ok()?;
+        let scaled = num * 1_000_000.0;
+        let max_val = ((1i64 << 59) - 1) as f64;
+        let min_val = (-(1i64 << 59)) as f64;
+        if !(min_val..=max_val).contains(&scaled) {
+            return None;
+        }
+        let num_i64 = scaled.round() as i64;
+        let unsigned = (num_i64 as u64) & INLINE_VALUE_MASK;
+        return Some(INLINE_TAG_DECIMAL | unsigned);
+    }
+    if dt == "http://www.w3.org/2001/XMLSchema#boolean" || dt == "xsd:boolean" {
+        return match value {
+            "true" | "1" => Some(INLINE_TAG_BOOLEAN | 1),
+            "false" | "0" => Some(INLINE_TAG_BOOLEAN | 0),
+            _ => None,
+        };
+    }
+    if dt == "http://www.w3.org/2001/XMLSchema#float"
+        || dt == "http://www.w3.org/2001/XMLSchema#double"
+        || dt == "xsd:float"
+        || dt == "xsd:double"
+    {
+        let f = value.parse::<f32>().ok()?;
+        return Some(crate::frame_layout::pack_float_object(f));
+    }
+    None
+}
+
 /// Write an object term, applying inline-type detection on bits 60-62.
 ///
 /// Priority order (same lexicon-first reasoning as `write_iri_term`):

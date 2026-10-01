@@ -32,7 +32,8 @@ impl PreparedConditioningSnapshot {
     /// Fails closed with `ContextBudgetExceeded` if:
     /// - rendered tokens exceed `max_input_tokens`
     /// - rendered bytes exceed `max_bytes`
-    /// - total tokens (`actual_input_tokens + reserved_output_tokens`) exceed `supported_context_tokens`
+    /// - total tokens (`actual_input_tokens + reserved_output_tokens +
+    ///   thinking_token_budget`) exceed `supported_context_tokens`
     pub fn prepare(
         profile_id: impl Into<String>,
         profile_version: u32,
@@ -47,6 +48,7 @@ impl PreparedConditioningSnapshot {
         max_bytes: usize,
         max_input_tokens: u32,
         reserved_output_tokens: u32,
+        thinking_token_budget: Option<u32>,
         supported_context_tokens: u32,
     ) -> Result<Self, ConditioningError> {
         let actual_input_tokens = exact_tokens.len() as u32;
@@ -61,9 +63,16 @@ impl PreparedConditioningSnapshot {
             return Err(ConditioningError::ContextBudgetExceeded);
         }
 
+        // Deliberation reservation: thinking tokens occupy the same context
+        // envelope as visible output, so they are folded into the reserved
+        // output side before the envelope check.
+        let effective_output_tokens = reserved_output_tokens
+            .checked_add(thinking_token_budget.unwrap_or(0))
+            .ok_or(ConditioningError::ContextBudgetExceeded)?;
+
         // Total context envelope check (input + reserved output <= supported context)
         let total_tokens = actual_input_tokens
-            .checked_add(reserved_output_tokens)
+            .checked_add(effective_output_tokens)
             .ok_or(ConditioningError::ContextBudgetExceeded)?;
 
         if total_tokens > supported_context_tokens {
@@ -138,6 +147,7 @@ mod tests {
             100,  // max bytes
             10,   // max input tokens
             5,    // reserved output tokens
+            None, // no thinking reservation
             20,   // supported context tokens (5 + 5 <= 20)
         );
 
@@ -171,9 +181,54 @@ mod tests {
             1000,
             200,
             50, // 100 + 50 = 150 > 128 context
+            None,
             128,
         );
 
         assert_eq!(prep.err(), Some(ConditioningError::ContextBudgetExceeded));
+    }
+
+    #[test]
+    fn test_thinking_budget_counts_against_context_envelope() {
+        let tokens = vec![1; 100]; // 100 tokens
+        // 100 input + 20 output + 20 thinking = 140 > 128 context → fail closed.
+        let prep = PreparedConditioningSnapshot::prepare(
+            "thinking_v1",
+            1,
+            0x101,
+            1,
+            0x42,
+            0xABCD,
+            0,
+            1 | (2 << 32),
+            tokens.clone(),
+            500,
+            1000,
+            200,
+            20,
+            Some(20),
+            128,
+        );
+        assert_eq!(prep.err(), Some(ConditioningError::ContextBudgetExceeded));
+
+        // Same envelope without the thinking reservation admits (100 + 20 <= 128).
+        let prep_ok = PreparedConditioningSnapshot::prepare(
+            "thinking_v1",
+            1,
+            0x101,
+            1,
+            0x42,
+            0xABCD,
+            0,
+            1 | (2 << 32),
+            tokens,
+            500,
+            1000,
+            200,
+            20,
+            None,
+            128,
+        );
+        assert!(prep_ok.is_ok());
     }
 }

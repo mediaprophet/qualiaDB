@@ -1,2 +1,68 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Poet · Webizen</title><link rel="stylesheet" href="/volumes.css"></head><body data-volume="poet"><header><h1>Poet <span class="pill planned">Planned</span></h1><p class="lead">Studio migrate-in later. Honest Planned — no fake Live.</p></header><section class="planned-hero"><h2>Planned — not shipped as Live</h2><p>Poet lands as a first-class volume when migrate-in is ready.</p><button disabled>Notify when Live</button></section><p class="note"><strong>Volume:</strong> /volumes/poet.</p></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Poet · Webizen</title><link rel="stylesheet" href="/volumes.css">
+<style>
+  html,body{height:100%}
+  body{display:flex;flex-direction:column}
+  .poet-stage{flex:1;min-height:0;display:flex;flex-direction:column}
+  .poet-frame{flex:1;min-height:0;width:100%;border:0;border-radius:14px;background:#07090e}
+  .poet-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:.35rem 0 .8rem}
+  .poet-bar .spacer{flex:1}
+  .poet-status{font-size:11px;color:var(--mute,#8a9aab)}
+</style>
+</head><body data-volume="poet">
+<header>
+  <h1>Poet <span class="pill live" id="poet-pill">Live</span></h1>
+  <p class="lead">HyperCanvas workbench — the desktop Poet. <code>poet-wasm</code> is the separate build for remote machines.</p>
+</header>
+<div class="poet-bar">
+  <button type="button" class="primary" id="btn-stage">Open on stage</button>
+  <button type="button" id="btn-window">Dedicated window</button>
+  <span class="spacer"></span>
+  <span class="poet-status" id="poet-status" role="status" aria-live="polite"></span>
+</div>
+<div class="poet-stage" id="poet-stage">
+  <section class="panel" id="poet-intro">
+    <h2>Launch the workbench</h2>
+    <p>On stage embeds the workbench in this volume; dedicated window raises the Poet Harness webview.</p>
+  </section>
+</div>
+<p class="note"><strong>Volume:</strong> /volumes/poet · Desktop Poet = <code>components/poet</code> workbench. Remote machines use the poet-wasm build.</p>
+<script>
+(function(){
+  var stage=document.getElementById('poet-stage');
+  var status=document.getElementById('poet-status');
+  var pill=document.getElementById('poet-pill');
+  var WORKBENCH='/studio/index.html#/poet';
+  function say(m){ status.textContent=m; }
+  function embed(){
+    stage.innerHTML='';
+    var f=document.createElement('iframe');
+    f.className='poet-frame';
+    f.src=WORKBENCH;
+    f.title='Poet HyperCanvas workbench';
+    stage.appendChild(f);
+    say('Workbench on stage · '+WORKBENCH);
+  }
+  function blocked(){
+    stage.innerHTML='';
+    var s=document.createElement('section');
+    s.className='panel';
+    s.innerHTML='<h2>Workbench bundle not served</h2><p><code>/studio</code> did not answer — the Studio dist is missing. Build it (<code>scripts/build_frontend.ps1</code>) or try the dedicated window, which loads the bundled frontend directly.</p>';
+    stage.appendChild(s);
+    pill.textContent='Planned'; pill.className='pill planned';
+    say('Stage embed unavailable · bundle missing');
+  }
+  document.getElementById('btn-stage').addEventListener('click',function(){
+    fetch('/studio/index.html',{cache:'no-store'}).then(function(r){ r.ok?embed():blocked(); }).catch(blocked);
+  });
+  document.getElementById('btn-window').addEventListener('click',function(){
+    say('Raising dedicated window…');
+    fetch('/api/shell/open-poet',{method:'POST',headers:{Accept:'application/json'}}).then(function(r){return r.ok?r.json():Promise.reject(r.status)}).then(function(j){
+      say(j&&j.ok?'Poet Harness window raised.':'Window request refused — '+(j&&j.error||'host unavailable'));
+    }).catch(function(){ say('Window request failed · host endpoint unreachable'); });
+  });
+  // Auto-embed when the workbench bundle is already served.
+  fetch('/studio/index.html',{cache:'no-store'}).then(function(r){ if(r.ok){ embed(); } else { say('Bundle missing — use Dedicated window'); } }).catch(function(){ say('Bundle probe failed — use Dedicated window'); });
+})();
+</script>
+</body></html>

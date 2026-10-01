@@ -246,13 +246,25 @@ pub fn parse_ntriples_star_into<R: std::io::Read, S: crate::sparql_library::quin
                 object,
                 ..
             } => {
+                if let Some(t) = parser.last_line_terms() {
+                    sink.push_lex(subject, &t.subject);
+                    sink.push_lex(predicate, &t.predicate);
+                    sink.push_lex(object, &t.object);
+                }
+                let metadata = 0b10 << 61;
                 sink.push(NQuin {
                     subject,
                     predicate,
                     object,
                     context: context_hash,
-                    metadata: 0b10 << 61,
-                    parity: 0,
+                    metadata,
+                    parity: NQuin::calculate_parity(
+                        subject,
+                        predicate,
+                        object,
+                        context_hash,
+                        metadata,
+                    ),
                 })?;
                 count += 1;
             }
@@ -263,13 +275,28 @@ pub fn parse_ntriples_star_into<R: std::io::Read, S: crate::sparql_library::quin
                 outer_object,
                 ..
             } => {
+                if let Some(t) = parser.last_line_terms() {
+                    if !t.outer_predicate.is_empty() {
+                        sink.push_lex(outer_predicate, &t.outer_predicate);
+                    }
+                    if !t.outer_object.is_empty() {
+                        sink.push_lex(outer_object, &t.outer_object);
+                    }
+                }
+                let metadata = 0b10 << 61;
                 sink.push(NQuin {
                     subject: virtual_id,
                     predicate: outer_predicate,
                     object: outer_object,
                     context: context_hash,
-                    metadata: 0b10 << 61,
-                    parity: 0,
+                    metadata,
+                    parity: NQuin::calculate_parity(
+                        virtual_id,
+                        outer_predicate,
+                        outer_object,
+                        context_hash,
+                        metadata,
+                    ),
                 })?;
                 count += 1;
 
@@ -278,8 +305,14 @@ pub fn parse_ntriples_star_into<R: std::io::Read, S: crate::sparql_library::quin
                     predicate: components[1],
                     object: components[2],
                     context: context_hash,
-                    metadata: 0b10 << 61,
-                    parity: 0,
+                    metadata,
+                    parity: NQuin::calculate_parity(
+                        components[0],
+                        components[1],
+                        components[2],
+                        context_hash,
+                        metadata,
+                    ),
                 })?;
                 count += 1;
             }

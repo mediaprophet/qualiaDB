@@ -1418,6 +1418,8 @@ impl QTensorEngine {
     }
 
     /// Certified Naga-validated WGSL Forge causal attention device dispatch during decode.
+    /// Native + `wgsl-forge` only — wasm profiles do not compile the Forge module.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
     pub fn dispatch_forge_causal_attention(
         &mut self,
         query: &[f32],

@@ -52,43 +52,134 @@ fn parse_embedded_triple(
     Ok((virtual_id, [subject, predicate, object]))
 }
 
-/// Parse a CBOR value and return its hash
+/// Parse a CBOR value and return its term encoding (IRI hash or inline tag).
 fn parse_cbor_value(decoder: &mut Decoder) -> Result<u64, Box<dyn std::error::Error>> {
     let dt = decoder.datatype()?;
     match dt {
         minicbor::data::Type::String => Ok(hash_str(decoder.str()?)),
         minicbor::data::Type::Bytes => Ok(hash_bytes(decoder.bytes()?)),
+        minicbor::data::Type::Map => parse_jsonld_shaped_value(decoder),
+        minicbor::data::Type::Array => {
+            // JSON-LD often wraps a single value in an array — take the first element.
+            let len = decoder.array()?.unwrap_or(0);
+            if len == 0 {
+                return Ok(0);
+            }
+            let first = parse_cbor_value(decoder)?;
+            for _ in 1..len {
+                decoder.skip()?;
+            }
+            Ok(first)
+        }
         minicbor::data::Type::U8
         | minicbor::data::Type::U16
         | minicbor::data::Type::U32
         | minicbor::data::Type::U64 => {
+            // Bare unsigned integer → inline xsd:integer (lossless).
             let val = decoder.u64()?;
-            Ok(hash_bytes(&val.to_le_bytes()))
+            if val < (1u64 << 59) {
+                Ok(crate::resolver::INLINE_TAG_INTEGER | val)
+            } else {
+                Ok(hash_bytes(&val.to_le_bytes()))
+            }
         }
         minicbor::data::Type::I8
         | minicbor::data::Type::I16
         | minicbor::data::Type::I32
         | minicbor::data::Type::I64 => {
             let val = decoder.i64()?;
-            Ok(hash_bytes(&val.to_le_bytes()))
+            let max_val = (1i64 << 59) - 1;
+            let min_val = -(1i64 << 59);
+            if val >= min_val && val <= max_val {
+                let unsigned = (val as u64) & crate::resolver::INLINE_VALUE_MASK;
+                Ok(crate::resolver::INLINE_TAG_INTEGER | unsigned)
+            } else {
+                Ok(hash_bytes(&val.to_le_bytes()))
+            }
         }
         minicbor::data::Type::F32 => {
             let val = decoder.f32()?;
-            Ok(hash_bytes(&val.to_le_bytes()))
+            Ok(crate::frame_layout::pack_float_object(val))
         }
         minicbor::data::Type::F64 => {
-            let val = decoder.f64()?;
-            Ok(hash_bytes(&val.to_le_bytes()))
+            let val = decoder.f64()? as f32;
+            Ok(crate::frame_layout::pack_float_object(val))
         }
         minicbor::data::Type::Bool => {
             let val = decoder.bool()?;
-            Ok(hash_bytes(&[val as u8]))
+            Ok(crate::resolver::INLINE_TAG_BOOLEAN | u64::from(val))
         }
         _ => {
             decoder.skip()?;
             Ok(0)
         }
     }
+}
+
+/// Parse a JSON-LD value object map: `{"@id"}` or `{"@value","@type"}`.
+fn parse_jsonld_shaped_value(decoder: &mut Decoder) -> Result<u64, Box<dyn std::error::Error>> {
+    let map_len = decoder.map()?;
+    let mut id: Option<String> = None;
+    let mut value: Option<String> = None;
+    let mut dtype: Option<String> = None;
+
+    let iter_count = map_len.unwrap_or(u64::MAX);
+    let mut i = 0;
+    while i < iter_count {
+        if map_len.is_none() && decoder.datatype()? == minicbor::data::Type::Break {
+            decoder.skip()?;
+            break;
+        }
+        let key = decoder.str()?;
+        match key {
+            "@id" => {
+                id = Some(decoder.str()?.to_string());
+            }
+            "@value" => match decoder.datatype()? {
+                minicbor::data::Type::String => value = Some(decoder.str()?.to_string()),
+                minicbor::data::Type::Bool => {
+                    value = Some(if decoder.bool()? { "true" } else { "false" }.into());
+                }
+                minicbor::data::Type::U8
+                | minicbor::data::Type::U16
+                | minicbor::data::Type::U32
+                | minicbor::data::Type::U64 => {
+                    value = Some(decoder.u64()?.to_string());
+                }
+                minicbor::data::Type::I8
+                | minicbor::data::Type::I16
+                | minicbor::data::Type::I32
+                | minicbor::data::Type::I64 => {
+                    value = Some(decoder.i64()?.to_string());
+                }
+                minicbor::data::Type::F32 => value = Some(decoder.f32()?.to_string()),
+                minicbor::data::Type::F64 => value = Some(decoder.f64()?.to_string()),
+                _ => {
+                    decoder.skip()?;
+                }
+            },
+            "@type" => {
+                dtype = Some(decoder.str()?.to_string());
+            }
+            _ => {
+                decoder.skip()?;
+            }
+        }
+        i += 1;
+    }
+
+    if let Some(iri) = id {
+        return Ok(hash_str(&iri));
+    }
+    if let Some(v) = value {
+        if let Some(dt) = dtype.as_deref() {
+            if let Some(packed) = crate::resolver::pack_typed_literal(&v, dt) {
+                return Ok(packed);
+            }
+        }
+        return Ok(hash_str(&v));
+    }
+    Ok(0)
 }
 /// Byte-sequence term hash — unified with `generate_60bit_token` (see `hash_str`). Medium-
 /// agnostic: hashing canonical bytes is the SAME methodology for text, a byte-string, or any
@@ -155,42 +246,8 @@ fn parse_cbor_object<S: crate::sparql_library::quin_sink::QuinSink>(
         let is_id = key_str == "@id";
         let pred_hash = hash_str(key_str);
 
-        // Value
-        let dt = decoder.datatype()?;
-        let obj_hash = match dt {
-            minicbor::data::Type::String => hash_str(decoder.str()?),
-            minicbor::data::Type::Bytes => hash_bytes(decoder.bytes()?),
-            minicbor::data::Type::U8
-            | minicbor::data::Type::U16
-            | minicbor::data::Type::U32
-            | minicbor::data::Type::U64 => {
-                let val = decoder.u64()?;
-                hash_bytes(&val.to_le_bytes())
-            }
-            minicbor::data::Type::I8
-            | minicbor::data::Type::I16
-            | minicbor::data::Type::I32
-            | minicbor::data::Type::I64 => {
-                let val = decoder.i64()?;
-                hash_bytes(&val.to_le_bytes())
-            }
-            minicbor::data::Type::F32 => {
-                let val = decoder.f32()?;
-                hash_bytes(&val.to_le_bytes())
-            }
-            minicbor::data::Type::F64 => {
-                let val = decoder.f64()?;
-                hash_bytes(&val.to_le_bytes())
-            }
-            minicbor::data::Type::Bool => {
-                let val = decoder.bool()?;
-                hash_bytes(&[val as u8])
-            }
-            _ => {
-                decoder.skip()?;
-                0
-            }
-        };
+        // Value — JSON-LD shaped maps reconstruct INLINE_TAG_* for typed literals.
+        let obj_hash = parse_cbor_value(decoder)?;
 
         if is_id {
             subject_hash = obj_hash;

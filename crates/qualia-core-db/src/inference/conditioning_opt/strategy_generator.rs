@@ -64,6 +64,7 @@ impl StrategyGenerator {
                     output_tokens: base_output,
                     tool_rounds: 1,
                     max_bytes: 4096,
+                    thinking_token_budget: None,
                 },
                 requirements: vec![],
                 output_contract: OutputContractRef {
@@ -81,6 +82,7 @@ impl StrategyGenerator {
                     output_tokens: base_output,
                     tool_rounds: 2,
                     max_bytes: 8192,
+                    thinking_token_budget: None,
                 },
                 requirements: vec![
                     CandidateRequirement {
@@ -116,6 +118,7 @@ impl StrategyGenerator {
                     output_tokens: base_output,
                     tool_rounds: 3,
                     max_bytes: 16384,
+                    thinking_token_budget: None,
                 },
                 requirements: vec![
                     CandidateRequirement {
@@ -150,6 +153,7 @@ impl StrategyGenerator {
                     output_tokens: base_output / 2,
                     tool_rounds: 1,
                     max_bytes: 2048,
+                    thinking_token_budget: None,
                 },
                 requirements: vec![CandidateRequirement {
                     id: "req_concise_precision".into(),
@@ -174,6 +178,7 @@ impl StrategyGenerator {
                     output_tokens: base_output,
                     tool_rounds: 2,
                     max_bytes: 8192,
+                    thinking_token_budget: None,
                 },
                 requirements: vec![CandidateRequirement {
                     id: "req_canonical_prefix".into(),
@@ -201,6 +206,7 @@ impl StrategyGenerator {
                     output_tokens: base_output + 256,
                     tool_rounds: 2,
                     max_bytes: 8192,
+                    thinking_token_budget: None,
                 },
                 requirements: vec![
                     CandidateRequirement {

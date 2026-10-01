@@ -56,8 +56,9 @@ pub use postings::{
 };
 pub use publication::{
     classify_q42_path, classify_q42_volume, classify_q42_volume_set, deny_public_publication,
-    quin_requires_sanctuary, ClassificationCounts, PublicationIntent, Q42PublicationClass,
-    Q42PublicationVerdict, Q42Transport,
+    provenance_path_for, quin_requires_sanctuary, ClassificationCounts, IngestAccessPolicy,
+    IngestProvenanceRecord, PublicationIntent, Q42PublicationClass, Q42PublicationVerdict,
+    Q42Transport,
 };
 pub use publish::{append_segment_to_root, Q42RolloverPublisher, DEFAULT_SEGMENT_MAX_BYTES};
 pub use query_mode::{Q42QueryMode, RESIDENT_QUERY_MAX_BYTES};

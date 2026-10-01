@@ -338,3 +338,356 @@ pub fn solve_ode_exponential_decay_wasm(val: JsValue) -> Result<JsValue, JsValue
         final_y: y,
     })?)
 }
+
+// ─── Computational Economics & Distributional Metrics with Receipts (QW-07) ─
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct WelfareParams {
+    pub incomes: Vec<f64>,
+    pub epsilon: Option<f64>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Serialize)]
+pub struct CalculationReceipt {
+    pub engine_version: &'static str,
+    pub algorithm: String,
+    pub sample_size: usize,
+    pub seed: Option<u64>,
+    pub converged: bool,
+    pub tolerances: Option<f64>,
+    pub warnings: Vec<String>,
+    pub receipt_hash: String,
+}
+
+/// Evaluates distributional and welfare metrics (Gini, Atkinson index, Palma ratio,
+/// mean, median, P10, P90) and emits an auditable `CalculationReceipt`.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn calculate_welfare_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    let p: WelfareParams = serde_wasm_bindgen::from_value(val)
+        .map_err(|e| JsValue::from_str(&format!("invalid welfare params: {e}")))?;
+    if p.incomes.is_empty() {
+        return Err(JsValue::from_str("incomes must be non-empty"));
+    }
+
+    let gini = crate::specialized_libs::computational_economics::welfare::gini_coefficient(&p.incomes)
+        .map_err(|e| JsValue::from_str(&format!("gini calculation error: {e:?}")))?;
+
+    let eps = p.epsilon.unwrap_or(0.5);
+    let atkinson = crate::specialized_libs::computational_economics::welfare::atkinson_inequality(&p.incomes, eps).ok();
+
+    let mut sorted = p.incomes.clone();
+    sorted.sort_by(|a, b| a.total_cmp(b));
+    let n = sorted.len();
+    let sum: f64 = sorted.iter().sum();
+    let mean = sum / (n as f64);
+    let median = if n % 2 == 1 {
+        sorted[n / 2]
+    } else {
+        0.5 * (sorted[n / 2 - 1] + sorted[n / 2])
+    };
+    let p10 = sorted[((n as f64) * 0.10).floor() as usize];
+    let p90 = sorted[(((n as f64) * 0.90).floor() as usize).min(n - 1)];
+
+    let bottom_40_count = ((n as f64) * 0.40).ceil() as usize;
+    let top_10_start = ((n as f64) * 0.90).floor() as usize;
+    let bottom_40_sum: f64 = sorted[..bottom_40_count].iter().sum();
+    let top_10_sum: f64 = sorted[top_10_start..].iter().sum();
+    let palma_ratio = if bottom_40_sum > 0.0 {
+        Some(top_10_sum / bottom_40_sum)
+    } else {
+        None
+    };
+
+    let receipt_hash = format!("{:016x}", crate::q_hash(&format!("welfare:{n}:{gini}:{mean}")));
+
+    #[derive(Serialize)]
+    struct WelfareOut {
+        gini: f64,
+        atkinson: Option<f64>,
+        mean: f64,
+        median: f64,
+        p10: f64,
+        p90: f64,
+        palma_ratio: Option<f64>,
+        receipt: CalculationReceipt,
+    }
+
+    Ok(serde_wasm_bindgen::to_value(&WelfareOut {
+        gini,
+        atkinson,
+        mean,
+        median,
+        p10,
+        p90,
+        palma_ratio,
+        receipt: CalculationReceipt {
+            engine_version: "0.0.39",
+            algorithm: "Sen-Gini / Atkinson-CES".to_string(),
+            sample_size: n,
+            seed: None,
+            converged: true,
+            tolerances: Some(1e-9),
+            warnings: Vec::new(),
+            receipt_hash,
+        },
+    })?)
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct LeontiefParams {
+    pub technical_matrix: Vec<f64>,
+    pub sectors: usize,
+    pub final_demand: Vec<f64>,
+}
+
+/// Evaluates input-output multipliers and total requirements via the Leontief inverse (I - A)^(-1).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn calculate_leontief_multipliers_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    let p: LeontiefParams = serde_wasm_bindgen::from_value(val)
+        .map_err(|e| JsValue::from_str(&format!("invalid Leontief params: {e}")))?;
+    let n = p.sectors;
+    if n == 0 || n > 32 || p.technical_matrix.len() < n * n || p.final_demand.len() < n {
+        return Err(JsValue::from_str("invalid dimensions for Leontief input-output (max 32 sectors)"));
+    }
+
+    let mut inv = vec![0.0f64; n * n];
+    crate::specialized_libs::computational_economics::input_output::leontief_inverse_into(
+        &p.technical_matrix[..n * n],
+        n,
+        1000,
+        1e-12,
+        &mut inv,
+    )
+    .map_err(|e| JsValue::from_str(&format!("Leontief inverse error: {e:?}")))?;
+
+    let mut total_output = vec![0.0f64; n];
+    for i in 0..n {
+        let mut row_sum = 0.0f64;
+        for j in 0..n {
+            row_sum += inv[i * n + j] * p.final_demand[j];
+        }
+        total_output[i] = row_sum;
+    }
+
+    let mut output_multipliers = vec![0.0f64; n];
+    for j in 0..n {
+        let mut col_sum = 0.0f64;
+        for i in 0..n {
+            col_sum += inv[i * n + j];
+        }
+        output_multipliers[j] = col_sum;
+    }
+
+    let receipt_hash = format!("{:016x}", crate::q_hash(&format!("leontief:{n}:{}", total_output[0])));
+
+    #[derive(Serialize)]
+    struct LeontiefOut {
+        total_output: Vec<f64>,
+        output_multipliers: Vec<f64>,
+        leontief_inverse: Vec<f64>,
+        receipt: CalculationReceipt,
+    }
+
+    Ok(serde_wasm_bindgen::to_value(&LeontiefOut {
+        total_output,
+        output_multipliers,
+        leontief_inverse: inv,
+        receipt: CalculationReceipt {
+            engine_version: "0.0.39",
+            algorithm: "Leontief Neumann Series / Direct Inversion".to_string(),
+            sample_size: n,
+            seed: None,
+            converged: true,
+            tolerances: Some(1e-10),
+            warnings: Vec::new(),
+            receipt_hash,
+        },
+    })?)
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct OlsParams {
+    pub x: Vec<f64>,
+    pub y: Vec<f64>,
+}
+
+/// Evaluates ordinary least squares regression with complete diagnostics and receipt.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn compute_ols_diagnostics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    let p: OlsParams = serde_wasm_bindgen::from_value(val)
+        .map_err(|e| JsValue::from_str(&format!("invalid OLS params: {e}")))?;
+    if p.x.len() != p.y.len() {
+        return Err(JsValue::from_str("x and y must have equal length"));
+    }
+    if p.x.len() < 3 {
+        return Err(JsValue::from_str("OLS requires at least 3 observations"));
+    }
+
+    let r = crate::solvers::statistics::regression::simple_linear_regression(&p.x, &p.y)
+        .ok_or_else(|| JsValue::from_str("OLS regression error: non-finite or zero-variance predictor"))?;
+
+    let receipt_hash = format!("{:016x}", crate::q_hash(&format!("ols:{}:{}:{}", r.n, r.slope, r.r_squared)));
+
+    #[derive(Serialize)]
+    struct OlsOut {
+        slope: f64,
+        intercept: f64,
+        r_squared: f64,
+        residual_std_error: f64,
+        slope_std_error: f64,
+        slope_t: f64,
+        slope_p_value: f64,
+        intercept_std_error: f64,
+        intercept_p_value: f64,
+        n: usize,
+        receipt: CalculationReceipt,
+    }
+
+    Ok(serde_wasm_bindgen::to_value(&OlsOut {
+        slope: r.slope,
+        intercept: r.intercept,
+        r_squared: r.r_squared,
+        residual_std_error: r.residual_std_error,
+        slope_std_error: r.slope_std_error,
+        slope_t: r.slope_t,
+        slope_p_value: r.slope_p_value,
+        intercept_std_error: r.intercept_std_error,
+        intercept_p_value: r.intercept_p_value,
+        n: r.n,
+        receipt: CalculationReceipt {
+            engine_version: "0.0.39",
+            algorithm: "Ordinary Least Squares (Bessel-Corrected)".to_string(),
+            sample_size: r.n,
+            seed: None,
+            converged: true,
+            tolerances: Some(1e-12),
+            warnings: Vec::new(),
+            receipt_hash,
+        },
+    })?)
+}
+
+/// Multiple OLS + verification report with Civics calculation receipt.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn verify_regression_model_receipt_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    #[derive(Deserialize)]
+    struct In {
+        x: Vec<Vec<f64>>,
+        y: Vec<f64>,
+        #[serde(default = "default_alpha")]
+        alpha: f64,
+        #[serde(default)]
+        strict: bool,
+    }
+    fn default_alpha() -> f64 {
+        0.05
+    }
+    let p: In = serde_wasm_bindgen::from_value(val)
+        .map_err(|e| JsValue::from_str(&format!("invalid verify params: {e}")))?;
+    if p.x.is_empty() {
+        return Err(JsValue::from_str("x must be non-empty"));
+    }
+    let n = p.x.len();
+    let k = p.x[0].len();
+    let mut flat = Vec::with_capacity(n * k);
+    for row in &p.x {
+        if row.len() != k {
+            return Err(JsValue::from_str("x must be rectangular"));
+        }
+        flat.extend_from_slice(row);
+    }
+    if p.y.len() != n {
+        return Err(JsValue::from_str("y length must equal x rows"));
+    }
+    let m = crate::solvers::statistics::regression::multiple_ols(&flat, &p.y, n, k, true)
+        .ok_or_else(|| JsValue::from_str("OLS failed"))?;
+    let opts = crate::solvers::statistics::regression::VerifyOptions {
+        alpha: p.alpha,
+        strict: p.strict,
+        ..Default::default()
+    };
+    let report = crate::solvers::statistics::regression::verify_regression_model(
+        &m,
+        Some((&flat, k)),
+        Some(&p.y),
+        &opts,
+    );
+    let mut warnings: Vec<String> = report.flags.iter().map(|f| format!("{}: {}", f.code, f.message)).collect();
+    if !report.ok {
+        warnings.insert(0, "verification_failed".into());
+    }
+    let receipt_hash = format!(
+        "{:016x}",
+        crate::q_hash(&format!(
+            "regverify:{}:{}:{:.6}:{}",
+            m.n,
+            m.r_squared,
+            report.ok,
+            warnings.len()
+        ))
+    );
+    #[derive(Serialize)]
+    struct FlagOut {
+        code: String,
+        message: String,
+    }
+    #[derive(Serialize)]
+    struct Out {
+        ok: bool,
+        flags: Vec<FlagOut>,
+        coefficients: Vec<f64>,
+        residuals: Vec<f64>,
+        fitted: Vec<f64>,
+        r_squared: f64,
+        f_p_value: Option<f64>,
+        jarque_bera_p: Option<f64>,
+        breusch_pagan_p: Option<f64>,
+        durbin_watson: Option<f64>,
+        max_vif: Option<f64>,
+        ramsey_reset_p: Option<f64>,
+        spurious_warn: bool,
+        n: usize,
+        receipt: CalculationReceipt,
+    }
+    Ok(serde_wasm_bindgen::to_value(&Out {
+        ok: report.ok,
+        flags: report
+            .flags
+            .into_iter()
+            .map(|f| FlagOut {
+                code: f.code,
+                message: f.message,
+            })
+            .collect(),
+        coefficients: m.coefficients,
+        residuals: m.residuals,
+        fitted: m.fitted,
+        r_squared: m.r_squared,
+        f_p_value: report.f_p_value,
+        jarque_bera_p: report.jarque_bera_p,
+        breusch_pagan_p: report.breusch_pagan_p,
+        durbin_watson: report.durbin_watson,
+        max_vif: report.max_vif,
+        ramsey_reset_p: report.ramsey_reset_p,
+        spurious_warn: report.spurious_warn,
+        n: m.n,
+        receipt: CalculationReceipt {
+            engine_version: "0.0.39",
+            algorithm: "Multiple OLS + Ch.4 Verification Battery".to_string(),
+            sample_size: m.n,
+            seed: None,
+            converged: report.ok,
+            tolerances: Some(p.alpha),
+            warnings,
+            receipt_hash,
+        },
+    })?)
+}

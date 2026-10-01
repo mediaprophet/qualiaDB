@@ -22,6 +22,7 @@ mod graph;
 mod linalg;
 mod numerics;
 mod stats;
+mod stats_regression;
 mod transforms;
 mod units;
 
@@ -32,6 +33,7 @@ pub use graph::*;
 pub use linalg::*;
 pub use numerics::*;
 pub use stats::*;
+pub use stats_regression::*;
 pub use transforms::*;
 pub use units::*;
 

@@ -29,8 +29,8 @@ fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.into())
 }
 
-/// Catalog ontologies (Pages / Commons ingest). Sanctuary bits on a Quin
-/// still win inside the writer.
+/// Catalog ontologies (Pages / Commons ingest) — explicit PublicRedistributable
+/// only (QW-10). Sanctuary bits on a Quin still win inside the writer.
 fn new_catalog_writer(lex: &HashMap<u64, String>) -> io::Result<StreamingQ42VolumeWriter> {
     let mut writer = StreamingQ42VolumeWriter::new(lex)?;
     writer.declare_permissive_commons();

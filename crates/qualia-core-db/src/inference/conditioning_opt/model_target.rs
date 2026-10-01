@@ -252,6 +252,7 @@ mod tests {
                 output_tokens: 128,
                 tool_rounds: 2,
                 max_bytes: 4096,
+                thinking_token_budget: None,
             },
             PrefixConfiguration::CanonicalCacheAligned,
             CompressionStrategy::PreservePrefix,

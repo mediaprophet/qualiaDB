@@ -1132,6 +1132,33 @@ export function black_scholes_wasm(val) {
 }
 
 /**
+ * Evaluates input-output multipliers and total requirements via the Leontief inverse (I - A)^(-1).
+ * @param {any} val
+ * @returns {any}
+ */
+export function calculate_leontief_multipliers_wasm(val) {
+    const ret = wasm.calculate_leontief_multipliers_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluates distributional and welfare metrics (Gini, Atkinson index, Palma ratio,
+ * mean, median, P10, P90) and emits an auditable `CalculationReceipt`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function calculate_welfare_metrics_wasm(val) {
+    const ret = wasm.calculate_welfare_metrics_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Symbolic derivative. Input `{ expr, var }` (e.g. `{ "expr":"x^3 - 2*x^2 + 5",
  * "var":"x" }`) → `{ derivative }`. The result is simplified, then rendered with the
  * `Expr` `Display` (fully parenthesised). Errors on a parse failure.
@@ -1226,11 +1253,37 @@ export function cas_solve_quadratic_wasm(val) {
 }
 
 /**
+ * But-for / reachability causation (`causal::caused`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function causal_caused_wasm(val) {
+    const ret = wasm.causal_caused_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {any} val
  * @returns {any}
  */
 export function check_drug_interactions_wasm(val) {
     const ret = wasm.check_drug_interactions_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Description-logic subsumption check (`check_subsumption_quin`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function check_subsumption_wasm(val) {
+    const ret = wasm.check_subsumption_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -1314,6 +1367,21 @@ export function compile_query_to_json(query) {
 }
 
 /**
+ * Compile Turtle / N3 `sh:NodeShape` documents into ShapeSpec-compatible JSON (UE-050).
+ * @param {string} turtle
+ * @returns {any}
+ */
+export function compile_shacl_turtle_wasm(turtle) {
+    const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.compile_shacl_turtle_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {any} val
  * @returns {any}
  */
@@ -1331,6 +1399,19 @@ export function compute_framingham_risk_wasm(val) {
  */
 export function compute_molecular_descriptors_wasm(val) {
     const ret = wasm.compute_molecular_descriptors_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluates ordinary least squares regression with complete diagnostics and receipt.
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_ols_diagnostics_wasm(val) {
+    const ret = wasm.compute_ols_diagnostics_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -1523,6 +1604,19 @@ export function enforce_rights_ontology(subject_did) {
 }
 
 /**
+ * Enumerate ASP stable-model world contexts (`enumerate_stable_models`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function enumerate_stable_models_wasm(val) {
+    const ret = wasm.enumerate_stable_models_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Query the browser's storage quota and current OPFS usage (bytes).
  *
  * Returns `{ quota: number, usage: number, available: number }`.
@@ -1536,11 +1630,50 @@ export function estimate_browser_storage() {
 }
 
 /**
+ * Evaluate deontic norms in a quin frame (`evaluate_deontic_contract`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_deontic_wasm(val) {
+    const ret = wasm.evaluate_deontic_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate epistemic claims (`evaluate_epistemic_frame`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_epistemic_wasm(val) {
+    const ret = wasm.evaluate_epistemic_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {any} val
  * @returns {any}
  */
 export function evaluate_lipinski_wasm(val) {
     const ret = wasm.evaluate_lipinski_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate an LTL formula against a quin trace (`evaluate_ltl_trace`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_ltl_trace_wasm(val) {
+    const ret = wasm.evaluate_ltl_trace_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -1750,6 +1883,19 @@ export function export_tensor_slice_wasm(max_nodes) {
  */
 export function forward_chain_wasm(val) {
     const ret = wasm.forward_chain_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Fuzzy t-norm (Gödel min / Łukasiewicz / product).
+ * @param {any} val
+ * @returns {any}
+ */
+export function fuzzy_t_norm_wasm(val) {
+    const ret = wasm.fuzzy_t_norm_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -2029,6 +2175,15 @@ export function get_engine_version() {
     } finally {
         wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
     }
+}
+
+/**
+ * Machine-readable SHACL capability and constraint coverage manifest (QW-05).
+ * @returns {any}
+ */
+export function get_shacl_capability_manifest_wasm() {
+    const ret = wasm.get_shacl_capability_manifest_wasm();
+    return ret;
 }
 
 /**
@@ -2356,6 +2511,34 @@ export function is_opfs_block_cached(block_index) {
 }
 
 /**
+ * Return the pinned Qualia JSON-LD 1.1 context + SHA-256 digest (UE-012).
+ *
+ * Packages should embed `context` and record `digest` on receipts — do not
+ * fetch remote `@context` URLs at admission time.
+ * @returns {any}
+ */
+export function jsonld_context_digest_wasm() {
+    const ret = wasm.jsonld_context_digest_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Hohfeld correlative position for a jural opcode.
+ * @param {any} val
+ * @returns {any}
+ */
+export function jural_correlative_wasm(val) {
+    const ret = wasm.jural_correlative_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Determinant of a square matrix via LU (partial pivoting).
  * Input `{ rows, cols, data }` (rows==cols) → `{ determinant }`.
  * @param {any} val
@@ -2474,6 +2657,18 @@ export function la_transpose_wasm(val) {
  */
 export function list_capabilities_wasm() {
     const ret = wasm.list_capabilities_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Names that are intentionally native-only (UE-035/044/045) — never stubbed in browser.
+ * @returns {any}
+ */
+export function list_native_only_capabilities_wasm() {
+    const ret = wasm.list_native_only_capabilities_wasm();
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -2934,6 +3129,24 @@ export function pack_quins_into_superblock(seq_id, owner_did, raw_quin_bytes) {
 }
 
 /**
+ * Package exposure receipt: context + shapes + vibe AST digests (UE-053).
+ * @param {string} shapes_json
+ * @param {Uint8Array | null} [vibe_program_cbor]
+ * @returns {any}
+ */
+export function package_exposure_manifest_wasm(shapes_json, vibe_program_cbor) {
+    const ptr0 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(vibe_program_cbor) ? 0 : passArray8ToWasm0(vibe_program_cbor, wasm.__wbindgen_malloc);
+    var len1 = WASM_VECTOR_LEN;
+    const ret = wasm.package_exposure_manifest_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {Uint8Array} payload
  * @returns {any}
  */
@@ -2991,6 +3204,24 @@ export function parse_json_wasm(payload) {
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.parse_json_wasm(ptr0, len0);
     return ret;
+}
+
+/**
+ * Parse JSON-LD 1.1 text into packed quins (Civics primary semantic format).
+ *
+ * Profile: `application/ld+json`. Context must be embedded/pinned by the caller;
+ * this binding does not fetch remote contexts.
+ * @param {string} payload
+ * @returns {any}
+ */
+export function parse_jsonld_wasm(payload) {
+    const ptr0 = passStringToWasm0(payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_jsonld_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -3114,6 +3345,23 @@ export function q42FormatVersion() {
 }
 
 /**
+ * RDFC-1.0 graph hash — **honest fail-closed** until a conforming implementation ships (UE-013).
+ *
+ * Never returns a digest labelled as RDFC-1.0. Optionally includes a
+ * `provisional_spo_sha256` under profile `qualia:provisional-spo-sha256-v1`
+ * for scaffolding only.
+ * @param {any} val
+ * @returns {any}
+ */
+export function rdfc10_graph_hash_wasm(val) {
+    const ret = wasm.rdfc10_graph_hash_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Read a cached SuperBlock from the OPFS vault.
  *
  * Returns the raw 40 960 bytes as `Uint8Array`, or `null` if the block has not
@@ -3145,6 +3393,19 @@ export function releaseWebgpuEngine() {
  */
 export function resolve_lww_wasm(local_val, remote_val) {
     const ret = wasm.resolve_lww_wasm(local_val, remote_val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Route contradictions into an isolated context (`route_paraconsistent`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function route_paraconsistent_wasm(val) {
+    const ret = wasm.route_paraconsistent_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -3637,6 +3898,19 @@ export function steps_turtle_from_csv(content) {
 }
 
 /**
+ * STIT: did agent bring about content?
+ * @param {any} val
+ * @returns {any}
+ */
+export function stit_brought_about_wasm(val) {
+    const ret = wasm.stit_brought_about_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} input_json
  * @returns {string}
  */
@@ -3826,6 +4100,83 @@ export function validate_health_turtle(turtle) {
  */
 export function validate_shacl_constraint_wasm(val) {
     const ret = wasm.validate_shacl_constraint_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Validates raw packed 48-byte Quins against a list of JSON ShapeSpecs.
+ * @param {Uint8Array} db_bytes
+ * @param {string} shapes_json
+ * @returns {any}
+ */
+export function validate_shacl_graph_wasm(db_bytes, shapes_json) {
+    const ptr0 = passArray8ToWasm0(db_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.validate_shacl_graph_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Full graph SHACL validation from N3/N-Triples data and JSON ShapeSpecs.
+ * Returns the complete `ValidationReport` preserving conforms, focus node, path,
+ * severity, and constraint component.
+ * @param {string} data_n3
+ * @param {string} shapes_json
+ * @returns {any}
+ */
+export function validate_shacl_json_wasm(data_n3, shapes_json) {
+    const ptr0 = passStringToWasm0(data_n3, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.validate_shacl_json_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Values abuse-check (agency.n3 G1/G1' personhood guard) — WASM surface for Civics.
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_check_wasm(val) {
+    const ret = wasm.values_check_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Consent non-coerced guard (`capacity::detect_duress` inverted).
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_consent_non_coerced_wasm(val) {
+    const ret = wasm.values_consent_non_coerced_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Harm-below-ceiling guard (wasm-safe numeric; CAS marginal-harm stays native).
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_harm_below_ceiling_wasm(val) {
+    const ret = wasm.values_harm_below_ceiling_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -4605,7 +4956,7 @@ function __wbg_get_imports() {
             const ret = arg0.getProgramParameter(arg1, arg2 >>> 0);
             return ret;
         },
-        __wbg_getRandomValues_3f44b700395062e5: function() { return handleError(function (arg0, arg1) {
+        __wbg_getRandomValues_6f269dae5feacb57: function() { return handleError(function (arg0, arg1) {
             globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
         }, arguments); },
         __wbg_getRandomValues_cc7f052a444bb2ce: function() { return handleError(function (arg0, arg1) {
@@ -5874,27 +6225,27 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2873, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2959, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h8803f8c799f93ab4);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 482, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 564, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 482, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 564, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_2);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 482, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 564, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_3);
             return ret;
         },
         __wbindgen_cast_0000000000000005: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 404, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 486, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hdb3dd2da9b8d2ffa);
             return ret;
         },

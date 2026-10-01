@@ -154,6 +154,68 @@ export function register(runner) {
             runner.expect(typeof result.rdf_data).toBe('string');
             runner.expect(result.rdf_data.length).toBeGreaterThan(0);
         });
+
+        // ── Solid / LDP RDF media types ───────────────────────────────────
+
+        runner.it('serialize_rdf_wasm: Solid MIME text/turtle', () => {
+            if (!mod?.serialize_rdf_wasm) return;
+            const result = mod.serialize_rdf_wasm({
+                quins: [
+                    packQuin(q_hash('http://example.org/Alice'), q_hash('http://example.org/knows'), q_hash('http://example.org/Bob')),
+                ],
+                format: 'text/turtle',
+            });
+            runner.expect(result.content_type).toBe('text/turtle');
+            runner.expect(result.rdf_data).toContain('<');
+        });
+
+        runner.it('serialize_rdf_wasm: Solid MIME application/ld+json compact', () => {
+            if (!mod?.serialize_rdf_wasm) return;
+            const result = mod.serialize_rdf_wasm({
+                quins: [
+                    packQuin(q_hash('http://example.org/Alice'), q_hash('http://example.org/knows'), q_hash('http://example.org/Bob')),
+                ],
+                format: 'application/ld+json',
+                compact: true,
+            });
+            runner.expect(result.content_type).toBe('application/ld+json');
+            runner.expect(result.compact).toBe(true);
+            runner.expect(result.rdf_data).toContain('@context');
+            runner.expect(result.rdf_data).toContain('@graph');
+        });
+
+        runner.it('serialize_rdf_wasm: Solid MIME text/n3 with @prefix', () => {
+            if (!mod?.serialize_rdf_wasm) return;
+            const result = mod.serialize_rdf_wasm({
+                quins: [
+                    packQuin(q_hash('http://example.org/Alice'), q_hash('http://example.org/knows'), q_hash('http://example.org/Bob')),
+                ],
+                format: 'text/n3',
+            });
+            runner.expect(result.content_type).toBe('text/n3');
+            runner.expect(result.rdf_data).toContain('@prefix');
+        });
+
+        runner.it('parse_rdf_document_wasm: Turtle round-trip', () => {
+            if (!mod?.serialize_rdf_wasm || !mod?.parse_rdf_document_wasm) return;
+            const ser = mod.serialize_rdf_wasm({
+                quins: [
+                    packQuin(q_hash('http://example.org/Alice'), q_hash('http://example.org/knows'), q_hash('http://example.org/Bob')),
+                ],
+                format: 'text/turtle',
+            });
+            const parsed = mod.parse_rdf_document_wasm(ser.content_type, ser.rdf_data);
+            runner.expect(parsed.format).toBe('turtle');
+            runner.expect(Number(parsed.quin_count)).toBeGreaterThanOrEqual(1);
+        });
+
+        runner.it('solid_negotiate_accept_wasm: prefers JSON-LD when q higher', () => {
+            if (!mod?.solid_negotiate_accept_wasm) return;
+            const out = mod.solid_negotiate_accept_wasm('application/ld+json, text/turtle;q=0.8');
+            runner.expect(out.content_type).toBe('application/ld+json');
+            runner.expect(Array.isArray(out.supported)).toBe(true);
+            runner.expect(out.supported.length).toBeGreaterThanOrEqual(3);
+        });
     });
 }
 

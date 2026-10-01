@@ -20,6 +20,9 @@ pub struct AppliedPrecision {
     pub spec_identity: u64,
     pub input_budget_bytes: u32,
     pub output_budget_tokens: u32,
+    /// Reserved deliberation (`<think>`) tokens for thinking-model decode;
+    /// `None` when the contract makes no deliberation reservation.
+    pub thinking_budget_tokens: Option<u32>,
     pub prefix: PrefixConfiguration,
     pub compression: CompressionStrategy,
     pub original_prompt_bytes: usize,
@@ -115,6 +118,7 @@ pub fn apply_contract_to_prompt(
         spec_identity: contract.spec_identity,
         input_budget_bytes: contract.budget.max_bytes,
         output_budget_tokens: contract.budget.output_tokens,
+        thinking_budget_tokens: contract.budget.thinking_token_budget,
         prefix: contract.prefix,
         compression: contract.compression,
         original_prompt_bytes,
@@ -168,6 +172,7 @@ pub fn apply_contract_to_parts<'a>(
         spec_identity: contract.spec_identity,
         input_budget_bytes: contract.budget.max_bytes,
         output_budget_tokens: contract.budget.output_tokens,
+        thinking_budget_tokens: contract.budget.thinking_token_budget,
         prefix: contract.prefix,
         compression: contract.compression,
         original_prompt_bytes: original_bytes,
@@ -204,6 +209,7 @@ mod tests {
                 output_tokens: 96,
                 tool_rounds: 1,
                 max_bytes,
+                thinking_token_budget: None,
             },
             PrefixConfiguration::CanonicalCacheAligned,
             CompressionStrategy::CompactContext,

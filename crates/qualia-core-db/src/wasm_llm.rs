@@ -9,10 +9,16 @@ use crate::gguf_bridge::{
     StreamingArgmaxResult, PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS,
 };
 use crate::gguf_sharder::GgufTokenizer;
+use crate::inference::conditioning::{
+    select_prioritized_parts, RequestPart, RequestPartKind,
+};
 
 /// Autoregressive decode budget for browser harness.
 /// 32 was too short for chat replies and made truncated junk look like "garbage".
 const WASM_DECODE_TOKEN_BUDGET: usize = 128;
+/// Byte ceiling for the composed chat-graph-conditioned prompt on the browser
+/// path (prompt + injected DAG thread context).
+const WASM_CHAT_GRAPH_PROMPT_CAP: usize = 64 * 1024;
 const WASM_MAX_CONFIGURED_DECODE_TOKENS: usize = 512;
 /// `0` = all transformer layers.
 const WASM_LAYER_CAP: u32 = 0;
@@ -63,6 +69,7 @@ pub(super) struct WasmAsyncInferenceResult {
 async fn run_inference_async(
     prompt: &str,
     graph_context: &str,
+    chat_graph_context: Option<&str>,
     on_token: Option<Function>,
     decode_token_budget: usize,
 ) -> Result<WasmAsyncInferenceResult, String> {
@@ -70,7 +77,35 @@ async fn run_inference_async(
         return cpu::infer(prompt, graph_context, on_token, decode_token_budget).await;
     }
     let mut engine = take_engine()?;
-    let prompt_owned = prompt.to_string();
+    // Grounded chat-graph DAG context is admitted as a typed
+    // `RequestPart::chat_graph` (ChatGraphThread) — bounded by the fixed byte
+    // cap and dropped rather than displacing the mandatory user prompt when
+    // the composition would overflow.
+    let prompt_owned = match chat_graph_context.filter(|cg| !cg.trim().is_empty()) {
+        Some(cg) => {
+            let parts = [
+                RequestPart::user_prompt(prompt),
+                RequestPart::chat_graph(cg, None),
+            ];
+            let mut selected = [RequestPart::user_prompt(""); 2];
+            match select_prioritized_parts(&parts, WASM_CHAT_GRAPH_PROMPT_CAP, &mut selected) {
+                Ok(n)
+                    if selected[..n]
+                        .iter()
+                        .any(|part| part.kind == RequestPartKind::ChatGraphThread) =>
+                {
+                    let mut composed =
+                        String::with_capacity(cg.len() + prompt.len() + 2);
+                    composed.push_str(cg);
+                    composed.push_str("\n\n");
+                    composed.push_str(prompt);
+                    composed
+                }
+                _ => prompt.to_string(),
+            }
+        }
+        None => prompt.to_string(),
+    };
     if !graph_context.is_empty() {
         crate::gguf_bridge::wlog(&format!(
             "[inference] graph-context={:016x}",
@@ -134,7 +169,7 @@ async fn run_inference_async(
             })?
             .min(8192);
 
-        const MAX_FFN_DIM: usize = 10240;
+        const MAX_FFN_DIM: usize = 16384;
         let mut emb_buf = [0f32; 8192];
         let mut scratch_a = [0f32; MAX_FFN_DIM];
         let mut scratch_b = [0f32; MAX_FFN_DIM];
@@ -588,7 +623,7 @@ pub async fn infer_wasm_with_context(
     prompt: String,
     graph_context: String,
 ) -> Result<String, JsValue> {
-    run_inference_async(&prompt, &graph_context, None, WASM_DECODE_TOKEN_BUDGET)
+    run_inference_async(&prompt, &graph_context, None, None, WASM_DECODE_TOKEN_BUDGET)
         .await
         .map(|result| result.text)
         .map_err(|e| JsValue::from_str(&e))
@@ -610,6 +645,29 @@ pub async fn infer_wasm_streaming_with_context(
     run_inference_async(
         &prompt,
         &graph_context,
+        None,
+        Some(on_token),
+        WASM_DECODE_TOKEN_BUDGET,
+    )
+    .await
+    .map(|result| result.text)
+    .map_err(|e| JsValue::from_str(&e))
+}
+
+/// Streaming inference that additionally accepts grounded chat-graph thread
+/// context (e.g. from `format_thread_context_to`), injected as a typed
+/// `RequestPart::chat_graph` ahead of the user prompt.
+#[wasm_bindgen(js_name = inferWasmStreamingWithChatGraph)]
+pub async fn infer_wasm_streaming_with_chat_graph(
+    prompt: String,
+    graph_context: String,
+    chat_graph_context: Option<String>,
+    on_token: Function,
+) -> Result<String, JsValue> {
+    run_inference_async(
+        &prompt,
+        &graph_context,
+        chat_graph_context.as_deref(),
         Some(on_token),
         WASM_DECODE_TOKEN_BUDGET,
     )
@@ -622,7 +680,7 @@ pub async fn infer_wasm_streaming_with_context(
 /// Returns a JS `Promise`; use `await inferWasmAsync(...)` from module code.
 #[wasm_bindgen(js_name = inferWasmAsync)]
 pub async fn infer_wasm_async(prompt: String, on_token: Function) -> Result<String, JsValue> {
-    run_inference_async(&prompt, "", Some(on_token), WASM_DECODE_TOKEN_BUDGET)
+    run_inference_async(&prompt, "", None, Some(on_token), WASM_DECODE_TOKEN_BUDGET)
         .await
         .map(|result| result.text)
         .map_err(|e| JsValue::from_str(&e))
@@ -639,7 +697,7 @@ pub async fn infer_wasm_async_measured(
     on_token: Function,
 ) -> Result<JsValue, JsValue> {
     let budget = (max_tokens as usize).clamp(1, WASM_MAX_CONFIGURED_DECODE_TOKENS);
-    let result = run_inference_async(&prompt, "", Some(on_token), budget)
+    let result = run_inference_async(&prompt, "", None, Some(on_token), budget)
         .await
         .map_err(|e| JsValue::from_str(&e))?;
     serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))

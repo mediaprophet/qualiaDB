@@ -7,6 +7,7 @@ pub mod mcp_server;
 // only where modalities does (native or the logic-enabled wasm profiles).
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"

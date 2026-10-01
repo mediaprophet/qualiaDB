@@ -70,23 +70,20 @@ pub fn invoke_local(id: &str, args: &Value, span: Span) -> Result<Value, Diagnos
     if id.starts_with("Cosmic.") {
         return super::cosmic::invoke(id, args, span);
     }
+    if let Some(result) = super::stdlib::try_invoke(id, args, span) {
+        return result;
+    }
+    if let Some(result) = super::logic::try_invoke(id, args, span) {
+        return result;
+    }
+    if let Some(result) = super::specialized::try_invoke(id, args, span) {
+        return result;
+    }
     if id == "GraphDatabase.sparql" {
         return Ok(Value::List(Vec::new()));
     }
     if id.starts_with("HID.") {
         return Ok(hid_record(id, args));
-    }
-    if id == "DeonticLogic.evaluate"
-        || id == "EpistemicLogic.evaluate"
-        || id == "ParaconsistentLogic.route"
-        || id.starts_with("TemporalAndDescriptionLogic.")
-    {
-        let mut rec = BTreeMap::new();
-        rec.insert("id".into(), Value::String(id.into()));
-        rec.insert("honesty".into(), Value::String("local".into()));
-        rec.insert("evaluated".into(), Value::Bool(true));
-        rec.insert("args".into(), args.clone());
-        return Ok(Value::Record(rec));
     }
     if is_known(id) {
         let mut rec = BTreeMap::new();

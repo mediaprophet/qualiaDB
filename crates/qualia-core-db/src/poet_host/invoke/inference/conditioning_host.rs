@@ -205,6 +205,7 @@ pub fn conditioning_compile(args: &Value, span: Span) -> Result<Value, Diagnosti
             output_tokens: dto.budget.output_tokens,
             tool_rounds: dto.budget.tool_rounds,
             max_bytes: 65536,
+            thinking_token_budget: None,
         },
     };
 
@@ -314,6 +315,7 @@ pub fn conditioning_inspect(args: &Value, span: Span) -> Result<Value, Diagnosti
             output_tokens: dto.budget.output_tokens,
             tool_rounds: dto.budget.tool_rounds,
             max_bytes: 65536,
+            thinking_token_budget: None,
         },
     };
 

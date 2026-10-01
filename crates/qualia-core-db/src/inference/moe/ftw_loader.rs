@@ -192,6 +192,7 @@ impl FtwModelPackage {
                 "bfloat16" | "bf16" => crate::ggml_quants::GGML_TYPE_BF16,
                 "float16" | "f16" => crate::ggml_quants::GGML_TYPE_F16,
                 "float32" | "f32" => crate::ggml_quants::GGML_TYPE_F32,
+                "float8_e4m3fn" | "fp8_e4m3" => crate::ggml_quants::GGML_TYPE_FP8_E4M3,
                 "uint8" => crate::ggml_quants::GGML_TYPE_Q8_0,
                 _ => crate::ggml_quants::GGML_TYPE_Q8_0,
             };
@@ -379,6 +380,18 @@ impl FtwModelPackage {
         let &(shard_idx, off, len) = self.tensor_locations.get(name)?;
         let shard = self.shards.get(shard_idx)?;
         shard.get(off..off + len)
+    }
+
+    /// Read raw bytes for a tensor by global offset and length across shards.
+    pub fn fetch_by_global_offset(&self, global_off: u64, len: usize) -> Option<&[u8]> {
+        for (idx, s) in self.manifest.shards.iter().enumerate() {
+            if global_off >= s.global_off && (global_off + len as u64) <= (s.global_off + s.nbytes) {
+                let local_off = (global_off - s.global_off) as usize;
+                let shard = self.shards.get(idx)?;
+                return shard.get(local_off..local_off + len);
+            }
+        }
+        None
     }
 
     /// Get zero-copy byte slices for one expert in a given layer.

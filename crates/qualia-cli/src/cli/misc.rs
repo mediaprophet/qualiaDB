@@ -191,6 +191,17 @@ pub enum QueryDialect {
 pub enum IngestFormat {
     Semantic {
         file: PathBuf,
+        /// Mandatory publication / access policy (QW-10).
+        /// One of: restricted | project-internal | public-not-for-redistribution
+        /// (`public-redistributable` is refused on this path — use catalog publish).
+        #[arg(long = "access-policy")]
+        access_policy: String,
+        #[arg(long)]
+        mapping_version: Option<String>,
+        #[arg(long)]
+        context_digest: Option<String>,
+        #[arg(long)]
+        compiler_build_digest: Option<String>,
     },
     Csv {
         file: PathBuf,

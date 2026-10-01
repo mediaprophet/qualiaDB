@@ -90,6 +90,7 @@ pub fn decode_plan_cbor<'a>(input: &'a [u8]) -> Result<CompiledPlanSummary<'a>, 
             output_tokens: 0,
             tool_rounds: 0,
             max_bytes: 0,
+            thinking_token_budget: None,
         },
     })
 }

@@ -5,6 +5,12 @@ The WASM builds are separate products. Full browser packages (`portal`, `wasm-lo
 run in WebAssembly. The only exclusions are native-only facilities (daemon, filesystem
 volumes, NVMe/ZNS/CSD, BLE mesh, eBPF). The ontology MCP kernel (`wasm-ontology`) stays
 a size-bounded reasoning kernel and does not pull the poet/science host.
+**`wasm-webcivics`** is the Civics decision-evidence package: JSON-LD / SHACL / modal
+logic / SPARQL kernels **without** `gpu-runtime` (no WebGPU viewport, no GGUF/MoE/LLM).
+
+**Agent integration manual (APIs, Solid, device storage, recipes):**
+[`wasm-webcivics-agent-api.md`](wasm-webcivics-agent-api.md).
+Typed contracts: [`../contracts/qualia-engine-sdk.d.ts`](../contracts/qualia-engine-sdk.d.ts).
 
 This family is the **interop bridge**: a foreign host or agent loads a
 **proportionate** package plus CBOR-LD / Q42 data. It is not a reason to emit
@@ -17,8 +23,9 @@ The compile-time source of truth is
 | Product | Cargo selection | Intended use | Included | Explicitly excluded |
 |---|---|---|---|---|
 | Ontology MCP | `-p webizen-lite-wasm` | Read-only ontology sites such as `ns.webcivics.net` | MCP JSON-RPC, N3 inspection, bounded Quin query, SHACL property validation, deontic, epistemic, paraconsistent, LTL, DL, ASP/linear kernels, governance mapping | Portal, WebGPU, science, LLM, daemon, network, filesystem storage |
+| **WebCivics** | `qualia-core-db --no-default-features --features wasm-webcivics` | Civics.au / decision-evidence Node+browser | JSON-LD 1.1 (+ compact pinned `@context`), Turtle/N3 Solid MIME, **Solid leave/migrate** (sanctuary omit|reclassify choice) + **Solid→Qualia backup return**, OPFS device vault + backup-folder policy, RDFC status, vendor nquin-CBOR, SHACL ShapeSpec+Turtle compile, modal logic, values guard, SPARQL q42 kernels, package manifest, Civics stats/econ receipts, **multiple OLS + Ch.4 regression verification** (JB/BP/DW/VIF/RESET/Chow/influence/logit/LDA; flag outliers, never auto-delete) | **gpu-runtime**, WebGPU viewport, acoustic/10D demos, GGUF/LLM/MoE, heavy science (DFT/GA/full bio), in-crate `vibe_host` (use `vibe-wasm` LocalHost) |
 | Portal | `qualia-core-db --no-default-features --features portal` | Full browser engine (GitHub Pages / QApp) | JSON/CBOR ingest, 10D tensor, spatial encoding, WebGPU viewport, AcousticPlane, N3/SHACL/modal logic, WASM-safe science (CAS, DFT, ODE, bio, chem) | Native daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF. LLM is the `wasm-llm` / `wasm-full` package |
-| Logic | `qualia-core-db --no-default-features --features wasm-logic` | RDF/rule demos and the browser reasoning API | N3/Turtle, RDF serialization, bytecode query, numeric SHACL, modal logic, LWW CRDT, WASM-safe science | Native daemon/filesystem/NVMe/BLE mesh; LLM |
+| Logic | `qualia-core-db --no-default-features --features wasm-logic` | RDF/rule demos and the browser reasoning API | N3/Turtle, RDF serialization, bytecode query, numeric SHACL, modal logic, LWW CRDT, WASM-safe science | Native daemon/filesystem/NVMe/BLE mesh; LLM. **Note:** currently pulls `wasm-scientific` → `gpu-runtime`; prefer `wasm-webcivics` for Civics apps |
 | Scientific | `qualia-core-db --no-default-features --features wasm-scientific` | Browser scientific playground | Logic surface plus WASM-safe bioinformatics, clinical, chemistry, economics, symbolic/numerical solvers, control, GA and DFT | LLM |
 | LLM | `qualia-core-db --no-default-features --features wasm-llm` | Browser model runtime | Logic + scientific prerequisites, GGUF/Q42 model loading, WebGPU inference, streaming decode | Portal |
 | Full playground | `qualia-core-db --no-default-features --features wasm-full` | API explorer and local development | Portal + logic + scientific + LLM + playground exports | Native daemon/network/filesystem-only facilities |
@@ -79,6 +86,7 @@ allocation occurs only at the JSON/MCP boundary.
 
 ```powershell
 cargo check --target wasm32-unknown-unknown -p webizen-lite-wasm
+cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-webcivics
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features portal
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-logic
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features wasm-scientific
@@ -94,12 +102,15 @@ wasm-pack build crates/webizen-lite-wasm --target web --out-dir pkg --release
 
 The 2026-06-27 reference ontology build is 267,993 bytes raw and 94,971 bytes gzip.
 
-GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured 0.0.38:
+GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured **0.0.39** (2026-09-25):
 
-| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.38 |
+| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.39 |
 |---|---|---|---|
-| Ontology MCP | `-p webizen-lite-wasm` | 640 KiB / 200 KiB | ~529 KiB / ~162 KiB gzip |
-| Portal | `--features portal` | 16 MiB / 4 MiB | ~7.70 MiB / ~2.15 MiB gzip |
-| Playground | `--features wasm-full` | 16 MiB / 4 MiB | ~8.23 MiB / ~2.32 MiB gzip |
+| Ontology MCP | `-p webizen-lite-wasm` | 640 KiB / 200 KiB | ~529 KiB / ~162 KiB gzip (prior) |
+| **WebCivics** | `--features wasm-webcivics` | *(proposed)* 4 MiB / 1.5 MiB | **2.75 MiB / 0.95 MiB gzip** |
+| Portal | `--features portal` | 16 MiB / 4 MiB | **7.04 MiB / 2.31 MiB gzip** |
+| Playground | `--features wasm-full` | 16 MiB / 4 MiB | **7.61 MiB / 2.50 MiB gzip** |
 
-Portal and playground share a sanity cap for the full WASM-safe engine; they are not a slim viewport budget. Do not fold science or LLM into `wasm-ontology` to keep Pages green — that kernel stays the size-bounded MCP product.
+SHA-256 pins: [`docs/releases/0.0.39-wasm-digests.md`](../releases/0.0.39-wasm-digests.md).
+
+Prefer **`wasm-webcivics`** for Civics decision-evidence apps. Portal and playground share a sanity cap for the full WASM-safe engine; they are not a slim viewport budget. Do not fold science or LLM into `wasm-ontology` to keep Pages green — that kernel stays the size-bounded MCP product.

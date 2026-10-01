@@ -56,6 +56,28 @@ impl QTensorEngine {
             }
         };
         let tensors = index.get_layer_tensors(layer);
+        if tensors.is_hybrid_ssm_layer() {
+            let batch_elems = emb_dim * n_tokens as usize;
+            if batch_elems > batch_hidden.len() {
+                return Err(PrefillLayerStage::BatchHiddenTooSmall);
+            }
+            for t in 0..n_tokens {
+                let off = t as usize * emb_dim;
+                let t_hidden = &mut batch_hidden[off..off + emb_dim];
+                if !self.dispatch_hybrid_ssm_layer(
+                    index, layer, t_hidden, emb_dim, &tensors, scratch_a, scratch_b,
+                ) {
+                    return Err(PrefillLayerStage::DispatchQueryFfn);
+                }
+                if !self.dispatch_ffn_block_pre_norm(
+                    index, t_hidden, emb_dim, &tensors, scratch_a, scratch_b,
+                ) {
+                    return Err(PrefillLayerStage::DispatchQueryFfn);
+                }
+            }
+            return Ok(());
+        }
+
         let k_info = tensors
             .attn_k
             .as_ref()
@@ -443,6 +465,20 @@ impl QTensorEngine {
             ) {
                 add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n], n);
                 attn_ok = true;
+            }
+        } else if let Some(qkv_info) = tensors.attn_qkv {
+            let (n_in, n_out) = Self::matmul_dims(&qkv_info);
+            if n_in <= emb_dim && self.dispatch_gemm_into(index, &qkv_info, &hidden[..n_in], scratch_a, n_in, n_out) {
+                if let Some(out_info) = tensors.attn_output {
+                    let (out_in, out_out) = Self::matmul_dims(&out_info);
+                    if self.dispatch_gemm_into(index, &out_info, &scratch_a[..out_in.min(n_out)], scratch_b, out_in, out_out) {
+                        add_residual_inplace(&mut hidden[..emb_dim], &scratch_b[..out_out], emb_dim.min(out_out));
+                        attn_ok = true;
+                    }
+                } else {
+                    add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n_out], emb_dim.min(n_out));
+                    attn_ok = true;
+                }
             }
         } else if let Some(info) = tensors.attn_output {
             let (n_in, n_out) = Self::matmul_dims(&info);

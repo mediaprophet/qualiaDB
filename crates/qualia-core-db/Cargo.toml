@@ -12,6 +12,7 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "pr
 
 # ── Qualia WASM build profiles (use with --no-default-features on wasm32) ──
 # Ontology MCP kernel (exclusive):  --features wasm-ontology
+# WebCivics decision-evidence:      --features wasm-webcivics  (JSON-LD/SHACL/modal/SPARQL; NO GPU/LLM)
 # Full browser engine:              --features portal  (logic + WASM-safe science + WebGPU)
 # Logic + WASM-safe science:        --features wasm-logic
 # Science playground:               --features wasm-scientific
@@ -33,6 +34,11 @@ vision-onnx = ["dep:ort"]
 dxc = []
 portal = ["wasm_simd", "gpu-runtime", "wasm-logic", "wasm-scientific"]
 wasm-ontology = []
+# Civics / decision-evidence package: semantic interchange + SHACL + modal logic +
+# SPARQL/q42 kernels + Civics-facing stats/econ receipts. Explicitly excludes
+# gpu-runtime (no WebGPU viewport, no GGUF/MoE/LLM). Prefer this over wasm-logic
+# for Node/browser Civics apps — wasm-logic currently pulls scientific→GPU.
+wasm-webcivics = ["wasm_simd"]
 wasm-logic = ["wasm-scientific"]
 wasm-scientific = ["gpu-runtime"]
 wasm-llm = ["gpu-runtime", "wasm-logic", "wasm-scientific"]

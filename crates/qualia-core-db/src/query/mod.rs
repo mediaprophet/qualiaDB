@@ -20,6 +20,7 @@ pub mod ingest_report;
 pub mod ingest_resume;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -31,6 +32,7 @@ pub mod mini_parser;
 pub mod ontology_loader;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -43,6 +45,7 @@ pub mod resolver;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-ontology",
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"

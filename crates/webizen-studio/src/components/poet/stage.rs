@@ -28,6 +28,17 @@ enum Gesture {
         nw: f64,
         nh: f64,
     },
+    /// Dragging a wire out of a port: (sx, sy) client start, (ax, ay)
+    /// anchor port in stage coords, (x, y) live preview end in stage coords.
+    Wire {
+        from: String,
+        sx: f64,
+        sy: f64,
+        ax: f64,
+        ay: f64,
+        x: f64,
+        y: f64,
+    },
 }
 
 #[component]
@@ -38,21 +49,57 @@ pub fn CanvasStage(wb: Signal<Workbench>) -> Element {
     let mut gesture = use_signal(|| Gesture::Idle);
     let zoom = w.zoom;
     let dragging = !matches!(gesture(), Gesture::Idle | Gesture::Pan { .. });
+    // Live wire-drag preview — stage coords, drawn in the transformed layer.
+    let wire_preview = match gesture() {
+        Gesture::Wire { from, x, y, .. } => w.node(&from).map(|a| {
+            let x1 = a.x + a.width;
+            let y1 = a.y + a.height / 2.0;
+            let mx = (x1 + x) / 2.0;
+            (format!("M {x1} {y1} C {mx} {y1}, {mx} {y}, {x} {y}"), x, y)
+        }),
+        _ => None,
+    };
     rsx! {
         div {
             class: "canvas-viewport-container {mode}",
             id: "canvas-viewport",
             onmousedown: move |e| {
+                if e.data().trigger_button()
+                    != Some(dioxus::html::input_data::MouseButton::Primary)
+                {
+                    return;
+                }
                 let c = e.data().client_coordinates();
-                let s = wb();
+                let mut s = wb();
+                // Click on empty canvas: deselect and cancel an armed wire.
+                s.clear_selection();
+                s.wire_source = None;
+                let (px, py) = (s.pan_x, s.pan_y);
+                wb.set(s);
                 gesture.set(Gesture::Pan {
                     sx: c.x,
                     sy: c.y,
-                    px: s.pan_x,
-                    py: s.pan_y,
+                    px,
+                    py,
                 });
             },
-            onmousemove: move |e| apply_move(wb, gesture(), e.data().client_coordinates().x, e.data().client_coordinates().y, zoom),
+            onmousemove: move |e| {
+                let c = e.data().client_coordinates();
+                if let Gesture::Wire { from, sx, sy, ax, ay, .. } = gesture() {
+                    let z = zoom.max(0.05);
+                    gesture.set(Gesture::Wire {
+                        from,
+                        sx,
+                        sy,
+                        ax,
+                        ay,
+                        x: ax + (c.x - sx) / z,
+                        y: ay + (c.y - sy) / z,
+                    });
+                } else {
+                    apply_move(wb, gesture(), c.x, c.y, zoom);
+                }
+            },
             onmouseup: move |_| gesture.set(Gesture::Idle),
             onmouseleave: move |_| gesture.set(Gesture::Idle),
             onwheel: move |e| {
@@ -81,8 +128,24 @@ pub fn CanvasStage(wb: Signal<Workbench>) -> Element {
                 svg { class: "wires-svg-layer", id: "wires-layer",
                     for wire in w.wires.iter() {
                         if let (Some(a), Some(b)) = (w.node(&wire.from), w.node(&wire.to)) {
-                            WirePath { a: a.clone(), b: b.clone(), kind: wire.kind.clone(), label: wire.label.clone() }
+                            WirePath {
+                                wb,
+                                id: wire.id.clone(),
+                                a: a.clone(),
+                                b: b.clone(),
+                                kind: wire.kind.clone(),
+                                label: wire.label.clone(),
+                                selected: w.selected_wire.as_deref() == Some(wire.id.as_str()),
+                            }
                         }
+                    }
+                    if let Some((d, ex, ey)) = wire_preview {
+                        path {
+                            class: "wire-preview",
+                            d: "{d}",
+                            style: "fill:none;stroke:var(--accent-cyan,#38bdf8);stroke-width:2;stroke-dasharray:6 4;",
+                        }
+                        circle { cx: "{ex}", cy: "{ey}", r: "4", fill: "var(--accent-cyan, #38bdf8)" }
                     }
                 }
                 for node in w.nodes.iter() {
@@ -92,6 +155,7 @@ pub fn CanvasStage(wb: Signal<Workbench>) -> Element {
                         node: node.clone(),
                         selected: w.selected.as_deref() == Some(node.id.as_str()),
                         dimmed: w.dimmed(node),
+                        armed: w.wire_source.as_deref() == Some(node.id.as_str()),
                         dragging: match gesture() {
                             Gesture::Move { ref id, .. } | Gesture::Resize { ref id, .. } => id == &node.id,
                             _ => false,
@@ -138,25 +202,78 @@ fn apply_move(mut wb: Signal<Workbench>, g: Gesture, x: f64, y: f64, zoom: f64) 
             s.resize_node(&id, nw + (x - sx) / z, nh + (y - sy) / z);
             wb.set(s);
         }
+        // Wire drags update the preview point in the onmousemove closure —
+        // the gesture carries no workbench state.
+        Gesture::Wire { .. } => {}
     }
 }
 
 #[component]
-fn WirePath(a: CanvasNode, b: CanvasNode, kind: String, label: String) -> Element {
+fn WirePath(
+    wb: Signal<Workbench>,
+    id: String,
+    a: CanvasNode,
+    b: CanvasNode,
+    kind: String,
+    label: String,
+    selected: bool,
+) -> Element {
     let x1 = a.x + a.width;
     let y1 = a.y + a.height / 2.0;
     let x2 = b.x;
     let y2 = b.y + b.height / 2.0;
     let mx = (x1 + x2) / 2.0;
     let d = format!("M {x1} {y1} C {mx} {y1}, {mx} {y2}, {x2} {y2}");
-    let class = format!("connection-wire wire-{kind}");
+    let class = if selected {
+        format!("connection-wire wire-{kind} selected-wire")
+    } else {
+        format!("connection-wire wire-{kind}")
+    };
+    let label_sel = id.clone();
+    let label_edit = id.clone();
     rsx! {
         g { class: "wire-group",
+            // Fat invisible hit-target so wires are actually clickable.
+            path {
+                d: "{d}",
+                fill: "none",
+                stroke: "transparent",
+                "stroke-width": "12",
+                style: "cursor:pointer;",
+                onclick: move |e| {
+                    e.stop_propagation();
+                    let mut s = wb();
+                    s.select_wire(&id);
+                    wb.set(s);
+                },
+            }
             path { class: "{class}", d: "{d}" }
             circle { cx: "{x1}", cy: "{y1}", r: "4", class: "wire-port-out", fill: "var(--accent-cyan, #38bdf8)" }
             circle { cx: "{x2}", cy: "{y2}", r: "4", class: "wire-port-in", fill: "var(--accent-emerald, #34d399)" }
             circle { cx: "{mx}", cy: "{(y1 + y2) / 2.0}", r: "3", class: "wire-pulse-particle", fill: "#f8fafc" }
-            text { class: "wire-label-text", x: "{mx}", y: "{(y1 + y2) / 2.0 - 6.0}", "{label}" }
+            text {
+                class: "wire-label-text",
+                x: "{mx}",
+                y: "{(y1 + y2) / 2.0 - 6.0}",
+                style: "cursor:text;",
+                onclick: move |e| {
+                    e.stop_propagation();
+                    let mut s = wb();
+                    s.select_wire(&label_sel);
+                    wb.set(s);
+                },
+                ondoubleclick: move |e| {
+                    e.stop_propagation();
+                    if let Some(label) =
+                        super::host::prompt_text("Wire predicate (e.g. qualia:groundsObservation)")
+                    {
+                        let mut s = wb();
+                        s.rename_wire(&label_edit, label);
+                        wb.set(s);
+                    }
+                },
+                "{label}"
+            }
         }
     }
 }
@@ -169,11 +286,14 @@ fn ContainerNode(
     selected: bool,
     dimmed: bool,
     dragging: bool,
+    armed: bool,
 ) -> Element {
     let id = node.id.clone();
     let id_move = node.id.clone();
     let id_resize = node.id.clone();
     let id_close = node.id.clone();
+    let id_wire = node.id.clone();
+    let id_drop = node.id.clone();
     let nx = node.x;
     let ny = node.y;
     let nw = node.width;
@@ -197,16 +317,47 @@ fn ContainerNode(
     } else {
         String::new()
     };
+    let armed_style = if armed {
+        "box-shadow:0 0 0 2px var(--accent-gold, #F5A623);"
+    } else {
+        ""
+    };
     rsx! {
         div {
             class: "{class}",
             id: "{node.id}",
-            style: "left:{node.x}px;top:{node.y}px;width:{node.width}px;height:{node.height}px;{z_style}",
+            style: "left:{node.x}px;top:{node.y}px;width:{node.width}px;height:{node.height}px;{z_style}{armed_style}",
             onmousedown: move |e| {
                 e.stop_propagation();
                 let mut s = wb();
-                s.selected = Some(id.clone());
+                match s.wire_source.clone() {
+                    // Armed radial connect: clicking a different node completes it.
+                    Some(src) if src != id => {
+                        s.wire_source = None;
+                        if s.connect_wire(&src, &id).is_some() {
+                            s.note(format!("Wire connected → {id}"));
+                        }
+                    }
+                    _ => {
+                        s.wire_source = None;
+                        s.select_node(&id);
+                    }
+                }
                 wb.set(s);
+            },
+            onmouseup: move |e| {
+                // Drop target for a port-dragged wire.
+                if let Gesture::Wire { from, .. } = gesture() {
+                    e.stop_propagation();
+                    if from != id_drop {
+                        let mut s = wb();
+                        if s.connect_wire(&from, &id_drop).is_some() {
+                            s.note(format!("Wire connected → {id_drop}"));
+                        }
+                        wb.set(s);
+                    }
+                    gesture.set(Gesture::Idle);
+                }
             },
             div {
                 class: "container-header",
@@ -243,8 +394,28 @@ fn ContainerNode(
             div { class: "container-body",
                 NodeBody { kind: node.kind }
             }
-            div { class: "container-port port-in" }
-            div { class: "container-port port-out" }
+            div {
+                class: "container-port port-in",
+                title: "Wire input — drop a connection here",
+            }
+            div {
+                class: "container-port port-out",
+                title: "Drag to connect a wire",
+                style: "cursor:crosshair;",
+                onmousedown: move |e| {
+                    e.stop_propagation();
+                    let c = e.data().client_coordinates();
+                    gesture.set(Gesture::Wire {
+                        from: id_wire.clone(),
+                        sx: c.x,
+                        sy: c.y,
+                        ax: nx + nw,
+                        ay: ny + nh / 2.0,
+                        x: nx + nw,
+                        y: ny + nh / 2.0,
+                    });
+                },
+            }
             div {
                 class: "container-resizer",
                 title: "Resize",

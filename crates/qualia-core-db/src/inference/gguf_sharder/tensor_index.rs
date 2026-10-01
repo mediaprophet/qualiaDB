@@ -856,6 +856,38 @@ impl GgufTensorIndex {
             ],
             b"ffn_gate_inp.weight" => &[
                 b"mlp.gate.weight",
+                b"gate.weight",
+            ],
+            b"ssm_conv1d.weight" => &[
+                b"linear_attn.conv1d.weight",
+                b"conv1d.weight",
+            ],
+            b"ssm_a" => &[
+                b"linear_attn.A_log",
+                b"A_log",
+            ],
+            b"ssm_dt.bias" => &[
+                b"linear_attn.dt_bias",
+                b"dt_bias",
+            ],
+            b"ssm_alpha.weight" => &[
+                b"linear_attn.in_proj_ba.weight",
+                b"in_proj_ba.weight",
+            ],
+            b"ssm_beta.weight" => &[
+                b"linear_attn.in_proj_ba.weight",
+                b"in_proj_ba.weight",
+            ],
+            b"attn_qkv.weight" => &[
+                b"linear_attn.in_proj_qkvz.weight",
+                b"self_attn.qkv_proj.weight",
+                b"qkv_proj.weight",
+            ],
+            b"ssm_norm.weight" => &[
+                b"linear_attn.norm.weight",
+            ],
+            b"ssm_out.weight" => &[
+                b"linear_attn.out_proj.weight",
             ],
             _ => &[],
         };

@@ -90,35 +90,7 @@ pub fn pack_rio_quad(q: Quad<'_>) -> RawTriple {
 }
 
 fn pack_typed_literal(value: &str, dt: &str) -> Option<u64> {
-    if dt == "http://www.w3.org/2001/XMLSchema#integer" {
-        if let Ok(num) = value.parse::<i64>() {
-            let max_val = (1i64 << 59) - 1;
-            let min_val = -(1i64 << 59);
-            if num >= min_val && num <= max_val {
-                let unsigned = (num as u64) & crate::resolver::INLINE_VALUE_MASK;
-                return Some(crate::resolver::INLINE_TAG_INTEGER | unsigned);
-            }
-        }
-    } else if dt == "http://www.w3.org/2001/XMLSchema#decimal" {
-        if let Ok(num) = value.parse::<f64>() {
-            let scaled = num * 1_000_000.0;
-            let max_val = ((1i64 << 59) - 1) as f64;
-            let min_val = (-(1i64 << 59)) as f64;
-            if scaled >= min_val && scaled <= max_val {
-                let num_i64 = scaled.round() as i64;
-                let unsigned = (num_i64 as u64) & crate::resolver::INLINE_VALUE_MASK;
-                return Some(crate::resolver::INLINE_TAG_DECIMAL | unsigned);
-            }
-        }
-    } else if dt == "http://www.w3.org/2001/XMLSchema#boolean" {
-        if value == "true" || value == "1" {
-            return Some(crate::resolver::INLINE_TAG_BOOLEAN | 1);
-        }
-        if value == "false" || value == "0" {
-            return Some(crate::resolver::INLINE_TAG_BOOLEAN | 0);
-        }
-    }
-    None
+    crate::resolver::pack_typed_literal(value, dt)
 }
 
 pub fn parse_triples_format<R, F>(

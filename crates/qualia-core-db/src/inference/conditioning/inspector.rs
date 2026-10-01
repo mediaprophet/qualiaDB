@@ -98,6 +98,7 @@ mod tests {
                 output_tokens: 512,
                 tool_rounds: 2,
                 max_bytes: 8192,
+                thinking_token_budget: None,
             },
         };
 

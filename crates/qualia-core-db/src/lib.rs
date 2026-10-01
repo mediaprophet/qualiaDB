@@ -9,6 +9,7 @@ use zeroize::Zeroize;
     feature = "wasm-ontology",
     any(
         feature = "portal",
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-llm",
@@ -69,6 +70,7 @@ pub use query::ingest;
 pub use query::ingest_job;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -80,6 +82,7 @@ pub use query::mini_parser;
 pub use query::ontology_loader;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -92,6 +95,7 @@ pub use query::resolver;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-ontology",
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -354,12 +358,27 @@ pub mod q42_lex {
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 #[cfg(not(all(
     target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
+    any(
+        all(
+            feature = "wasm-ontology",
+            not(any(
+                feature = "wasm-webcivics",
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        ),
+        all(
+            feature = "wasm-webcivics",
+            not(any(
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        )
+    )
 )))]
 pub mod agent_runtime;
 pub mod clinical_engine;
@@ -377,15 +396,32 @@ pub mod hypermedia_authoring;
 pub mod nlp;
 // The ontology MCP binary deliberately contains only its explicit reasoning
 // kernel (`modalities_lite`); it has no VibeScript runtime. Other WASM
-// profiles retain the full browser capability host.
+// profiles retain the full browser capability host — except `wasm-webcivics`,
+// which is a slim decision-evidence package (typed wasm_bridge only; Vibe
+// LocalHost lives in the separate `vibe-wasm` crate).
 #[cfg(not(all(
     target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
+    any(
+        all(
+            feature = "wasm-ontology",
+            not(any(
+                feature = "wasm-webcivics",
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        ),
+        all(
+            feature = "wasm-webcivics",
+            not(any(
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        )
+    )
 )))]
 #[path = "poet_host/mod.rs"]
 pub mod vibe_host;
@@ -394,12 +430,27 @@ pub mod vibe_host;
 /// [`vibe_host`].
 #[cfg(not(all(
     target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
+    any(
+        all(
+            feature = "wasm-ontology",
+            not(any(
+                feature = "wasm-webcivics",
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        ),
+        all(
+            feature = "wasm-webcivics",
+            not(any(
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        )
+    )
 )))]
 pub use vibe_host as poet_host;
 pub mod qubo_compiler;
@@ -413,6 +464,7 @@ pub mod text_span;
 #[cfg(all(
     target_arch = "wasm32",
     any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
@@ -426,6 +478,7 @@ pub mod wasm_bridge;
     target_arch = "wasm32",
     feature = "portal",
     not(any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
@@ -447,6 +500,7 @@ pub use spatial_wasm::{
 #[cfg(all(
     target_arch = "wasm32",
     any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
@@ -458,6 +512,7 @@ pub use wasm_bridge::{parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, p
     target_arch = "wasm32",
     feature = "portal",
     not(any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
@@ -1509,6 +1564,7 @@ impl Drop for QualiaSuperBlock {
 pub mod deontic_logic;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -1551,6 +1607,7 @@ pub use gguf_bridge as inference_runtime;
 pub mod mcp;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"

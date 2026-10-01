@@ -14,6 +14,7 @@ pub mod memory_windows;
 pub mod prepared;
 pub mod receipt;
 pub mod scheduler;
+pub mod stage;
 
 pub use budget::{
     BlockGeometry, BudgetError, MemoryPoolBudget, ModelMemoryProfile, RequestReservation,
@@ -42,3 +43,8 @@ pub use receipt::{
     MANIFEST_SCHEMA_VERSION, RAW_GREEDY_DECODE_POLICY, RECEIPT_SCHEMA_VERSION,
 };
 pub use scheduler::{Admission, RequestScheduler, RequestState, RequestView, SchedulerError};
+pub use stage::{
+    last_stage_trace, set_last_stage_trace, take_last_stage_trace, InferenceStageKind,
+    StageStatus, StageTimingReceipt, StageTrace, ThinkingEvent, ThinkingTracker,
+    STAGE_TRACE_CAPACITY,
+};

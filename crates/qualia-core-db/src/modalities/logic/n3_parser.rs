@@ -533,6 +533,14 @@ impl<'a> N3Parser<'a> {
             }
 
             if c == '.' && brace_depth <= 0 {
+                // Do not treat a decimal point between two digits as a statement terminator (e.g. 0.85).
+                let prev_digit = i > stmt_start && bytes[i - 1].is_ascii_digit();
+                let next_digit = i + 1 < len && bytes[i + 1].is_ascii_digit();
+                if prev_digit && next_digit {
+                    i += 1;
+                    continue;
+                }
+
                 let stmt = self.text[stmt_start..=i].trim();
                 statements += 1;
                 if statements > MAX_PARSE_STATEMENTS {

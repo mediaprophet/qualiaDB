@@ -348,6 +348,91 @@ pub fn build_thread_context_block(
     Ok(lines.join("\n"))
 }
 
+/// Formats a thread context block with branch taxonomy and WordNet synset info.
+///
+/// Streaming counterpart of [`build_thread_context_block`]: walks the ancestor
+/// chain of `target_fragment_id` up to `max_depth`, then the target's direct
+/// replies, writing each entry directly into `writer` as
+/// `[Branch: <label> / WordNet: 0x<hash>] anchor="<text>" author="<did>"`.
+/// The caller owns the rendered output, so the function stays caller-buffered;
+/// only the cold Tier-2 graph/session load allocates internally.
+pub fn format_thread_context_to<W: std::fmt::Write>(
+    storage_root: &Path,
+    session_id: &str,
+    target_fragment_id: &str,
+    max_depth: usize,
+    writer: &mut W,
+) -> Result<(), ChatError> {
+    let graph = load_graph(storage_root, session_id)?;
+    let session = crate::chat_session::load_session(storage_root, session_id)?;
+
+    writeln!(writer, "[Chat graph thread context]")?;
+
+    // Ancestor chain: the edge with `child_fragment_id == current` carries the
+    // dialectical branch classification that produced this fragment.
+    let mut current = target_fragment_id.to_string();
+    let mut depth = 0usize;
+    while depth < max_depth {
+        let fragment = graph.fragments.iter().find(|f| f.fragment_id == current);
+        let Some(fragment) = fragment else { break };
+        let edge = graph
+            .edges
+            .iter()
+            .find(|e| e.child_fragment_id == fragment.fragment_id);
+        let (label, wordnet) = edge
+            .map(|e| {
+                (
+                    e.branch_label.as_deref().unwrap_or("Comment"),
+                    e.wordnet_grounding_hash.as_deref().unwrap_or("none"),
+                )
+            })
+            .unwrap_or(("Root", "none"));
+        let author = fragment.author_did.as_deref().unwrap_or("unknown");
+        writeln!(
+            writer,
+            "[Branch: {label} / WordNet: {wordnet}] anchor=\"{}\" author=\"{author}\"",
+            fragment.anchor_text,
+        )?;
+        match edge {
+            Some(e) => {
+                current = e.parent_fragment_id.clone();
+                depth += 1;
+            }
+            None => break,
+        }
+    }
+
+    let child_edges: Vec<_> = graph
+        .edges
+        .iter()
+        .filter(|e| e.parent_fragment_id == target_fragment_id)
+        .collect();
+    if !child_edges.is_empty() {
+        writeln!(writer, "direct_replies:")?;
+        for e in child_edges {
+            let label = e.branch_label.as_deref().unwrap_or("Comment");
+            let wordnet = e.wordnet_grounding_hash.as_deref().unwrap_or("none");
+            if let Some(reply_msg) = session
+                .messages
+                .iter()
+                .find(|m| m.lamport == e.reply_message_lamport)
+            {
+                let author = reply_msg.author_name.as_deref().unwrap_or(match reply_msg.role {
+                    Role::User => "user",
+                    Role::Agent => "agent",
+                });
+                writeln!(
+                    writer,
+                    "  -> [Branch: {label} / WordNet: {wordnet}] anchor=\"{}\" author=\"{author}\"",
+                    reply_msg.content,
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn append_message_with_reply(
     storage_root: &Path,
     session_id: &str,
@@ -363,4 +448,136 @@ pub fn append_message_with_reply(
         reply_to_fragment_id.map(|s| s.to_string()),
         None,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    fn temp_storage() -> PathBuf {
+        let mut dir = env::temp_dir();
+        dir.push(format!("qualia-chatgraph-test-{}", rand::random::<u32>()));
+        dir
+    }
+
+    #[test]
+    fn thread_context_formats_branch_taxonomy_and_replies() {
+        let storage = temp_storage();
+        let session_id =
+            crate::chat_session::create_session(&storage, Some("Graph".into()), None).unwrap();
+        let lamport = crate::chat_session::append_message(
+            &storage,
+            &session_id,
+            Role::User,
+            "we should adopt the plan",
+        )
+        .unwrap();
+        let reply_lamport = crate::chat_session::append_message(
+            &storage,
+            &session_id,
+            Role::Agent,
+            "I disagree with that step",
+        )
+        .unwrap();
+
+        let frag = create_fragment_from_selection(
+            &storage,
+            &session_id,
+            lamport,
+            "we should adopt the plan",
+            0,
+            9,
+        )
+        .unwrap();
+        let edge = link_reply_to_fragment(
+            &storage,
+            &session_id,
+            &frag.fragment_id,
+            reply_lamport,
+            None,
+            Some("adopt the plan"),
+            Some("I disagree with that step"),
+            Some("objection"),
+        )
+        .unwrap();
+        assert_eq!(edge.branch_label.as_deref(), Some("Objection"));
+
+        let mut out = String::new();
+        format_thread_context_to(&storage, &session_id, &frag.fragment_id, 6, &mut out).unwrap();
+        assert!(out.contains("[Chat graph thread context]"));
+        assert!(out.contains("[Branch: Root / WordNet: none] anchor=\"we should\""));
+        assert!(out.contains("direct_replies:"));
+        assert!(out.contains("[Branch: Objection / WordNet:"));
+        assert!(out.contains("I disagree with that step"));
+
+        let _ = std::fs::remove_dir_all(&storage);
+    }
+
+    #[test]
+    fn thread_context_walks_ancestors_to_max_depth() {
+        let storage = temp_storage();
+        let session_id =
+            crate::chat_session::create_session(&storage, Some("Graph".into()), None).unwrap();
+        let lamport_a = crate::chat_session::append_message(
+            &storage,
+            &session_id,
+            Role::User,
+            "first proposal text",
+        )
+        .unwrap();
+        let lamport_b = crate::chat_session::append_message(
+            &storage,
+            &session_id,
+            Role::User,
+            "a clarifying follow up",
+        )
+        .unwrap();
+
+        let frag_a = create_fragment_from_selection(
+            &storage,
+            &session_id,
+            lamport_a,
+            "first proposal text",
+            0,
+            5,
+        )
+        .unwrap();
+        let frag_b = create_fragment_from_selection(
+            &storage,
+            &session_id,
+            lamport_b,
+            "a clarifying follow up",
+            0,
+            12,
+        )
+        .unwrap();
+        link_reply_to_fragment(
+            &storage,
+            &session_id,
+            &frag_a.fragment_id,
+            lamport_b,
+            Some(&frag_b.fragment_id),
+            Some("proposal"),
+            Some("a clarifying follow up"),
+            Some("clarification"),
+        )
+        .unwrap();
+
+        let mut out = String::new();
+        format_thread_context_to(&storage, &session_id, &frag_b.fragment_id, 6, &mut out).unwrap();
+        // Child fragment annotated with the Clarification branch; ancestor follows.
+        assert!(out.contains("[Branch: Clarification / WordNet:"));
+        assert!(out.contains("anchor=\"a clarifying\""));
+        assert!(out.contains("anchor=\"first\""));
+
+        // Depth 1 shows only the target fragment, not the ancestor.
+        let mut shallow = String::new();
+        format_thread_context_to(&storage, &session_id, &frag_b.fragment_id, 1, &mut shallow)
+            .unwrap();
+        assert!(shallow.contains("a clarifying"));
+        assert!(!shallow.contains("anchor=\"first\""));
+
+        let _ = std::fs::remove_dir_all(&storage);
+    }
 }

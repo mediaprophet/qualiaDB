@@ -333,7 +333,7 @@ pub fn handle_export_solid(input: &PathBuf, output: &PathBuf) {
 
     match qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&in_path, &out_path) {
         Ok(_) => {
-            println!("✅ Export Complete! Your data is now fully portable to any Solid Pod.");
+            println!("Leave/migrate complete: RDF bundle written for Solid LDP import.");
         }
         Err(e) => {
             eprintln!("❌ Export Failed: {}", e);
@@ -691,15 +691,42 @@ pub fn handle_ingest_job(action: &IngestJobAction) -> Result<(), Box<dyn std::er
 
 pub fn handle_ingest(format: &IngestFormat) {
     match format {
-        IngestFormat::Semantic { file } => {
+        IngestFormat::Semantic {
+            file,
+            access_policy,
+            mapping_version,
+            context_digest,
+            compiler_build_digest,
+        } => {
             let out_path = file.with_extension("q42");
+            let policy = match qualia_core_db::q42_volume::IngestAccessPolicy::parse(access_policy)
+            {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("Ingest error: {e}");
+                    return;
+                }
+            };
             println!("Detecting format for: {}", file.display());
-            match crate::ingest::ingest_auto(&file, &out_path) {
+            match crate::ingest::ingest_auto_with_policy(
+                file,
+                &out_path,
+                policy,
+                mapping_version.as_deref(),
+                context_digest.as_deref(),
+                compiler_build_digest.as_deref(),
+            ) {
                 Ok((stats, fmt)) => {
                     println!("Format : {}", fmt.label());
+                    println!("Policy : {}", policy.as_str());
                     println!("Triples: {}", stats.triples_ingested);
+                    println!("Lex    : {}", stats.lex_entries);
                     println!("Blocks : {}", stats.blocks_written);
                     println!("Output : {}", out_path.display());
+                    println!(
+                        "Provenance: {}",
+                        qualia_core_db::q42_volume::provenance_path_for(&out_path).display()
+                    );
                     println!("Done.");
                 }
                 Err(e) => eprintln!("Ingest error: {e}"),

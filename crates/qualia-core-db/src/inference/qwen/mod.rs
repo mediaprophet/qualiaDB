@@ -3,6 +3,11 @@
 //! Implements GatedDeltaNet convolution, linear-attention recurrent updates,
 //! and dual-state checkpointing for Qwen3.6 MoE on the RTX A2000.
 
+/// Qwen4Exp MoE top-k width — shared by residency metadata (wasm-safe) and streamed MoE (native).
+pub const QWEN4EXP_TOP_EXPERTS: usize = 10;
+/// Qwen4Exp routed expert bank size (native streamed MoE geometry).
+pub const QWEN4EXP_EXPERT_COUNT: usize = 512;
+
 pub mod checkpoint;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod decode;
@@ -104,7 +109,7 @@ pub use streamed_layer::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use streamed_moe::{
     execute_streamed_moe, execute_streamed_moe_with_tiles, normalize_top_experts,
-    select_top_experts, StreamedMoeError, QWEN4EXP_EXPERT_COUNT, QWEN4EXP_TOP_EXPERTS,
+    select_top_experts, StreamedMoeError,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use streamed_qsa::{

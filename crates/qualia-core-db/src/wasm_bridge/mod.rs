@@ -16,22 +16,30 @@ pub use medical::*;
 mod semantic;
 #[allow(unused_imports)]
 pub use semantic::*;
+mod logic;
+#[allow(unused_imports)]
+pub use logic::*;
 mod dataio;
 #[allow(unused_imports)]
 pub use dataio::*;
-#[cfg(feature = "wasm-scientific")]
+/// Civics welfare / VaR / simulation receipts — available without GPU scientific stack.
+#[cfg(any(feature = "wasm-scientific", feature = "wasm-webcivics"))]
 mod compute;
-#[cfg(feature = "wasm-scientific")]
+#[cfg(any(feature = "wasm-scientific", feature = "wasm-webcivics"))]
 pub use compute::*;
 // Computational-engine exports (linear algebra, CAS, statistics, numerics, exact,
 // units, transforms, graph) — the solver/CAS math surfaced to the full-wasm bundle.
-#[cfg(feature = "wasm-scientific")]
+#[cfg(any(feature = "wasm-scientific", feature = "wasm-webcivics"))]
 mod engine;
-#[cfg(feature = "wasm-scientific")]
+#[cfg(any(feature = "wasm-scientific", feature = "wasm-webcivics"))]
 pub use engine::*;
 mod meta;
 #[allow(unused_imports)]
 pub use meta::*;
+/// Device OPFS vault + backup-folder policy (Civics / mobile installs).
+mod device_storage;
+#[allow(unused_imports)]
+pub use device_storage::*;
 #[cfg(feature = "wasm-scientific")]
 mod geometry;
 #[cfg(feature = "wasm-scientific")]

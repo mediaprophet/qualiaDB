@@ -29,6 +29,8 @@ pub const GGML_TYPE_IQ4_XS: u32 = 23;
 /// Brain float16 (1 sign / 8 exp / 7 mantissa) — used by Gemma-4 and other modern GGUFs
 /// for norms / residual scales alongside Q4_K weights (`ggml_type` enum value 30).
 pub const GGML_TYPE_BF16: u32 = 30;
+/// FP8 E4M3 (1 sign / 4 exp / 3 mantissa) — 1 byte per element.
+pub const GGML_TYPE_FP8_E4M3: u32 = 40;
 /// Qualia conversion-time **SoA Q4_K** (not a stock GGML type).
 ///
 /// Per 256-weight superblock (160 bytes, vs 144 AoS):
@@ -111,6 +113,7 @@ pub fn ggml_row_bytes(ggml_type: u32, n_elems: usize) -> Option<usize> {
     match ggml_type {
         GGML_TYPE_F32 => Some(n_elems.checked_mul(4)?),
         GGML_TYPE_F16 | GGML_TYPE_BF16 => Some(n_elems.checked_mul(2)?),
+        GGML_TYPE_FP8_E4M3 => Some(n_elems),
         _ => {
             let layout = ggml_block_layout(ggml_type)?;
             if n_elems == 0 {
@@ -290,6 +293,7 @@ pub fn dequantize_row_into(
         GGML_TYPE_Q6_K => dequant_q6_k(raw, n_elems, out),
         GGML_TYPE_IQ4_NL => dequant_iq4_nl(raw, n_elems, out),
         GGML_TYPE_IQ4_XS => dequant_iq4_xs(raw, n_elems, out),
+        GGML_TYPE_FP8_E4M3 => dequant_fp8_e4m3(raw, n_elems, out),
         _ => Err(GgmlDequantError::UnsupportedType),
     }
 }
@@ -440,6 +444,17 @@ fn dequant_bf16(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
     for i in 0..n_elems {
         let bits = u16::from_le_bytes(raw[i * 2..i * 2 + 2].try_into().unwrap_or([0; 2]));
         out[i] = f32::from_bits((bits as u32) << 16);
+    }
+    Ok(n_elems)
+}
+
+/// FP8 E4M3 → f32 using exact float arithmetic.
+fn dequant_fp8_e4m3(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+    if raw.len() < n_elems {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    for i in 0..n_elems {
+        out[i] = crate::inference::moe::nvfp4::fp8_e4m3_to_f32(raw[i]);
     }
     Ok(n_elems)
 }

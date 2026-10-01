@@ -1,0 +1,1 @@
+{"name":"qualia-webcivics","type":"module","version":"0.0.39","main":"qualia.js","types":"qualia.d.ts","description":"QualiaDB WebCivics decision-evidence WASM (Solid RDF + leave/migrate + device storage; no gpu-runtime)"}

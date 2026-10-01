@@ -793,6 +793,160 @@ export class QualiaPortal {
 }
 if (Symbol.dispose) QualiaPortal.prototype[Symbol.dispose] = QualiaPortal.prototype.free;
 
+export class QualiaStore {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        QualiaStoreFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_qualiastore_free(ptr, 0);
+    }
+    /**
+     * Clear all stored quints.
+     */
+    clear() {
+        wasm.qualiastore_clear(this.__wbg_ptr);
+    }
+    /**
+     * Parse a CBOR-LD byte array (CBOR array of 4 or 5 unsigned integers) and
+     * insert the resulting quin. Returns true on success, false on parse error.
+     *
+     * The qualiaDB binary gatekeeper (cbor_compiler.rs) requires this format:
+     *   CBOR array header (0x84 or 0x85) followed by 4–5 CBOR unsigned integers.
+     * All values are Lexicon-compressed u64 IDs assigned by the JS Lexicon.
+     * @param {Uint8Array} data
+     * @returns {boolean}
+     */
+    insert_from_cbor_ld(data) {
+        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiastore_insert_from_cbor_ld(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
+     * Insert a quint (s, p, o, c, m).  Returns true on success.
+     * @param {bigint} s
+     * @param {bigint} p
+     * @param {bigint} o
+     * @param {bigint} c
+     * @param {bigint} m
+     * @returns {boolean}
+     */
+    insert_quin(s, p, o, c, m) {
+        const ret = wasm.qualiastore_insert_quin(this.__wbg_ptr, s, p, o, c, m);
+        return ret !== 0;
+    }
+    /**
+     * Total number of quints stored.
+     * @returns {number}
+     */
+    len() {
+        const ret = wasm.qualiastore_len(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    constructor() {
+        const ret = wasm.qualiastore_new();
+        this.__wbg_ptr = ret;
+        QualiaStoreFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Return all quints in the given context as a flat Float64Array.
+     * @param {bigint} c
+     * @returns {Float64Array}
+     */
+    query_context(c) {
+        const ret = wasm.qualiastore_query_context(this.__wbg_ptr, c);
+        return ret;
+    }
+    /**
+     * Return all quints with the given predicate as a flat Float64Array.
+     * @param {bigint} p
+     * @returns {Float64Array}
+     */
+    query_predicate(p) {
+        const ret = wasm.qualiastore_query_predicate(this.__wbg_ptr, p);
+        return ret;
+    }
+    /**
+     * Return all quints with the given subject as a flat Float64Array
+     * (groups of 5: [s,p,o,c,m, s,p,o,c,m, ...]).
+     * @param {bigint} s
+     * @returns {Float64Array}
+     */
+    query_subject(s) {
+        const ret = wasm.qualiastore_query_subject(this.__wbg_ptr, s);
+        return ret;
+    }
+}
+if (Symbol.dispose) QualiaStore.prototype[Symbol.dispose] = QualiaStore.prototype.free;
+
+/**
+ * In-memory RDF store exposed to JS.  Load Turtle, run SPARQL SELECT/ASK/CONSTRUCT.
+ */
+export class WasmHealthStore {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmHealthStoreFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmhealthstore_free(ptr, 0);
+    }
+    /**
+     * Load a Turtle document into the store (appends — call on a fresh store to replace).
+     * @param {string} turtle
+     */
+    load_turtle(turtle) {
+        const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmhealthstore_load_turtle(this.__wbg_ptr, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    constructor() {
+        const ret = wasm.wasmhealthstore_new();
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        this.__wbg_ptr = ret[0];
+        WasmHealthStoreFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Execute a SPARQL query; returns JSON SPARQL results string.
+     * @param {string} sparql
+     * @returns {string}
+     */
+    query(sparql) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(sparql, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.wasmhealthstore_query(this.__wbg_ptr, ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+}
+if (Symbol.dispose) WasmHealthStore.prototype[Symbol.dispose] = WasmHealthStore.prototype.free;
+
 /**
  * WASM edge offload descriptor — distinct from governance [`crate::llm_agent::AgentIntent`].
  */
@@ -955,12 +1109,406 @@ export class WebEngine {
 if (Symbol.dispose) WebEngine.prototype[Symbol.dispose] = WebEngine.prototype.free;
 
 /**
+ * @param {any} val
+ * @returns {any}
+ */
+export function align_sequences_wasm(val) {
+    const ret = wasm.align_sequences_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Black-Scholes European option pricing with full Greeks.
+ * @param {any} val
+ * @returns {any}
+ */
+export function black_scholes_wasm(val) {
+    const ret = wasm.black_scholes_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluates input-output multipliers and total requirements via the Leontief inverse (I - A)^(-1).
+ * @param {any} val
+ * @returns {any}
+ */
+export function calculate_leontief_multipliers_wasm(val) {
+    const ret = wasm.calculate_leontief_multipliers_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluates distributional and welfare metrics (Gini, Atkinson index, Palma ratio,
+ * mean, median, P10, P90) and emits an auditable `CalculationReceipt`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function calculate_welfare_metrics_wasm(val) {
+    const ret = wasm.calculate_welfare_metrics_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Symbolic derivative. Input `{ expr, var }` (e.g. `{ "expr":"x^3 - 2*x^2 + 5",
+ * "var":"x" }`) → `{ derivative }`. The result is simplified, then rendered with the
+ * `Expr` `Display` (fully parenthesised). Errors on a parse failure.
+ * @param {any} val
+ * @returns {any}
+ */
+export function cas_differentiate_wasm(val) {
+    const ret = wasm.cas_differentiate_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Numerically evaluate an expression given variable bindings. Input
+ * `{ expr, bindings }` where `bindings` is an object of `name -> number`
+ * (e.g. `{ "expr":"x^2 + 3*x + 2", "bindings":{ "x":4 } }`) → `{ value }`.
+ * Errors if a referenced variable is unbound, or the result is non-finite
+ * (division by zero, √negative, ln of a non-positive value).
+ * @param {any} val
+ * @returns {any}
+ */
+export function cas_evaluate_wasm(val) {
+    const ret = wasm.cas_evaluate_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Distribute products over sums and expand small (≤ 8) positive integer powers, so the
+ * result has no product/power over an additive child. Value-preserving. Input
+ * `{ expr }` → `{ expanded }`. Errors on a parse failure.
+ * @param {any} val
+ * @returns {any}
+ */
+export function cas_expand_wasm(val) {
+    const ret = wasm.cas_expand_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Factor a real quadratic `a·x² + b·x + c` into `a·(x − r₁)·(x — r₂)` (roots snapped to
+ * integers/halves when numerically close). Input `{ a, b, c, var }` (`var` defaults to
+ * `"x"`) → `{ factored }`. Errors when `a = 0` or the discriminant is negative (no real
+ * factorisation).
+ * @param {any} val
+ * @returns {any}
+ */
+export function cas_factor_wasm(val) {
+    const ret = wasm.cas_factor_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Algebraic simplification (constant folding + identity elimination, to a bounded
+ * fixpoint). Input `{ expr }` → `{ simplified }`. Errors on a parse failure.
+ * @param {any} val
+ * @returns {any}
+ */
+export function cas_simplify_wasm(val) {
+    const ret = wasm.cas_simplify_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Symbolic roots of `a·x² + b·x + c = 0` as `(-b ± √(b²−4ac)) / (2a)` (simplified
+ * `Expr` strings), plus their numeric values when the discriminant is non-negative.
+ * Input `{ a, b, c }` → `{ roots:[{ expr, value }] }`. For `a = 0, b ≠ 0` returns the
+ * single linear root `-c/b`; for `a = 0, b = 0` returns an empty list. A complex /
+ * non-finite root value is reported as `null`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function cas_solve_quadratic_wasm(val) {
+    const ret = wasm.cas_solve_quadratic_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * But-for / reachability causation (`causal::caused`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function causal_caused_wasm(val) {
+    const ret = wasm.causal_caused_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function check_drug_interactions_wasm(val) {
+    const ret = wasm.check_drug_interactions_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Description-logic subsumption check (`check_subsumption_quin`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function check_subsumption_wasm(val) {
+    const ret = wasm.check_subsumption_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Compiles a query string (SPARQL WHERE-clause or N-Triples pattern) to a JSON
+ * description of the Webizen VM bytecode program.  Useful for playground inspection
+ * and benchmarking the compilation pipeline without supplying a database.
+ * @param {string} query
+ * @returns {string}
+ */
+export function compile_query_to_json(query) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(query, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.compile_query_to_json(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Compile Turtle / N3 `sh:NodeShape` documents into ShapeSpec-compatible JSON (UE-050).
+ * @param {string} turtle
+ * @returns {any}
+ */
+export function compile_shacl_turtle_wasm(turtle) {
+    const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.compile_shacl_turtle_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_framingham_risk_wasm(val) {
+    const ret = wasm.compute_framingham_risk_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_molecular_descriptors_wasm(val) {
+    const ret = wasm.compute_molecular_descriptors_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluates ordinary least squares regression with complete diagnostics and receipt.
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_ols_diagnostics_wasm(val) {
+    const ret = wasm.compute_ols_diagnostics_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Stateless PID controller step.
+ * Returns { output, new_error, new_integral } for chaining into the next step.
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_pid_step_wasm(val) {
+    const ret = wasm.compute_pid_step_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_reaction_metrics_wasm(val) {
+    const ret = wasm.compute_reaction_metrics_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_thermochemistry_wasm(val) {
+    const ret = wasm.compute_thermochemistry_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {number} width
  * @param {number} height
  * @returns {HTMLCanvasElement}
  */
 export function create_canvas(width, height) {
     const ret = wasm.create_canvas(width, height);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * AEAD decrypt + verify. Input `{ algorithm, key:{text|hex}, nonce:{text|hex},
+ * ciphertext:{text|hex}, aad?:{text|hex} }` → `{ algorithm, plaintext_hex,
+ * plaintext_utf8?, bytes }`. Fails closed on a bad tag / wrong key, nonce, or aad.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_aead_decrypt(val) {
+    const ret = wasm.crypto_aead_decrypt(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * AEAD encrypt. Input `{ algorithm, key:{text|hex}, nonce:{text|hex},
+ * plaintext:{text|hex}, aad?:{text|hex} }` → `{ algorithm, ciphertext_hex, bytes }`.
+ * `algorithm` ∈ aes256gcm | chacha20poly1305 | xchacha20poly1305. Key is 32 bytes;
+ * nonce 12 (24 for xchacha). The caller owns the nonce — NEVER reuse a (key, nonce).
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_aead_encrypt(val) {
+    const ret = wasm.crypto_aead_encrypt(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * BLAKE3 digest (256-bit).
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_blake3(val) {
+    const ret = wasm.crypto_blake3(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * HKDF-SHA256 key derivation (RFC 5869). Input
+ * `{ ikm:{text|hex}, salt?:{text|hex}, info?:{text|hex}, length }` →
+ * `{ algorithm, okm_hex, length }`. `length` is output bytes (1..=8160).
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_hkdf_sha256(val) {
+    const ret = wasm.crypto_hkdf_sha256(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * SHA-256 digest of `{ text } | { hex }` → `{ algorithm, hex, bytes }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_sha256(val) {
+    const ret = wasm.crypto_sha256(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * SHA3-256 (Keccak) digest.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_sha3_256(val) {
+    const ret = wasm.crypto_sha3_256(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * SHA-512 digest.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_sha512(val) {
+    const ret = wasm.crypto_sha512(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -982,6 +1530,18 @@ export function design_encode_wasm(json) {
 }
 
 /**
+ * @param {any} val
+ * @returns {any}
+ */
+export function detect_functional_groups_wasm(val) {
+    const ret = wasm.detect_functional_groups_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Enforces the rights ontology prior to transmission (e.g., checking DID constraints)
  * @param {bigint} subject_did
  * @returns {boolean}
@@ -989,6 +1549,19 @@ export function design_encode_wasm(json) {
 export function enforce_rights_ontology(subject_did) {
     const ret = wasm.enforce_rights_ontology(subject_did);
     return ret !== 0;
+}
+
+/**
+ * Enumerate ASP stable-model world contexts (`enumerate_stable_models`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function enumerate_stable_models_wasm(val) {
+    const ret = wasm.enumerate_stable_models_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1002,6 +1575,225 @@ export function enforce_rights_ontology(subject_did) {
 export function estimate_browser_storage() {
     const ret = wasm.estimate_browser_storage();
     return ret;
+}
+
+/**
+ * Evaluate deontic norms in a quin frame (`evaluate_deontic_contract`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_deontic_wasm(val) {
+    const ret = wasm.evaluate_deontic_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate epistemic claims (`evaluate_epistemic_frame`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_epistemic_wasm(val) {
+    const ret = wasm.evaluate_epistemic_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_lipinski_wasm(val) {
+    const ret = wasm.evaluate_lipinski_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate an LTL formula against a quin trace (`evaluate_ltl_trace`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_ltl_trace_wasm(val) {
+    const ret = wasm.evaluate_ltl_trace_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate all 7 N3 clinical rules against a Turtle document.
+ *
+ * Returns a JSON array of triggered patterns:
+ * `[{"pattern":"ChronicSleepDebt","confidence":"high","routingLane":2,"n3Source":"sleep_debt.n3"},...]`
+ *
+ * Empty array = no concerns found in the supplied health data.
+ * Routing lane 2 = BilateralMicroCommons (N3Logic implication rules requiring identity context).
+ * Routing lane 0 = PassthroughStandard (simple threshold flags).
+ * @param {string} turtle
+ * @returns {string}
+ */
+export function evaluate_n3_rules(turtle) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.evaluate_n3_rules(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Exact sum `a + b`. Input `{ a: String, b: String }` -> `{ result }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_bigint_add(val) {
+    const ret = wasm.exact_bigint_add(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Truncated division with remainder: `a = quotient*b + remainder`, remainder
+ * taking the sign of `a` (toward-zero truncation, matching Rust `/` and `%`).
+ * Input `{ a: String, b: String }` -> `{ quotient, remainder }`. Fails closed
+ * (`Err`) when `b` is zero.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_bigint_divmod(val) {
+    const ret = wasm.exact_bigint_divmod(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Factorial `n!` as an exact decimal string. Input `{ n: u32 }` ->
+ * `{ result }`. Computed from the wasm-clean `BigInt` primitives (the same
+ * `mul` loop the solver's `factorial_100_known_value` test uses), so e.g.
+ * `n = 100` returns the full 158-digit value with no overflow.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_bigint_factorial(val) {
+    const ret = wasm.exact_bigint_factorial(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Greatest common divisor `gcd(a, b)` (always non-negative; `gcd(0,0) = 0`).
+ * Input `{ a: String, b: String }` -> `{ result }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_bigint_gcd(val) {
+    const ret = wasm.exact_bigint_gcd(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Exact product `a * b`. Input `{ a: String, b: String }` -> `{ result }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_bigint_mul(val) {
+    const ret = wasm.exact_bigint_mul(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Exact integer power `base ^ exp`. Input `{ base: String, exp: u32 }` ->
+ * `{ result }`. `base` is an arbitrary-precision decimal string; e.g.
+ * `base = "2", exp = 100` returns `1267650600228229401496703205376`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_bigint_pow(val) {
+    const ret = wasm.exact_bigint_pow(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Exact rational sum `a + b`, returned reduced and sign-normalised as `"p/q"`
+ * (q > 0). Inputs are `"p/q"` strings (a bare `"p"` is read as `p/1`). Input
+ * `{ a: String, b: String }` -> `{ result }`. E.g. `"1/3" + "1/6" = "1/2"`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_rational_add(val) {
+    const ret = wasm.exact_rational_add(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Exact rational product `a * b`, returned reduced and sign-normalised as
+ * `"p/q"` (q > 0). Inputs are `"p/q"` strings (a bare `"p"` is read as `p/1`).
+ * Input `{ a: String, b: String }` -> `{ result }`. E.g. `"3/4" * "1/4" =
+ * "3/16"`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function exact_rational_mul(val) {
+    const ret = wasm.exact_rational_mul(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} query
+ * @param {Uint8Array} db_bytes
+ * @param {number} max_results
+ * @returns {string}
+ */
+export function execute_ntriples_query(query, db_bytes, max_results) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(query, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(db_bytes, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.execute_ntriples_query(ptr0, len0, ptr1, len1, max_results);
+        deferred3_0 = ret[0];
+        deferred3_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
 }
 
 /**
@@ -1031,6 +1823,167 @@ export function export_tensor_slice_wasm(max_nodes) {
 }
 
 /**
+ * Forward-chaining defeasible inference engine.
+ * Input: `{ facts: ["bird", "penguin"], rules: [{ head: "flies", body: ["bird"], defeaters: ["penguin"] }, ...] }`
+ * Output: `{ inferred: ["swims"] }`
+ * @param {any} val
+ * @returns {any}
+ */
+export function forward_chain_wasm(val) {
+    const ret = wasm.forward_chain_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Fuzzy t-norm (Gödel min / Łukasiewicz / product).
+ * @param {any} val
+ * @returns {any}
+ */
+export function fuzzy_t_norm_wasm(val) {
+    const ret = wasm.fuzzy_t_norm_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Compute the 2-D convex hull of a point set.
+ *
+ * `points` is a flat `[x0, y0, x1, y1, ...]` array.
+ * Returns `{ indices, vertex_count, hull_points }` where `hull_points`
+ * is a flat `[x0, y0, ...]` array of hull vertices in order.
+ *
+ * Over the 5-point fixture `[[0,0],[1,0],[0.5,0.5],[1,1],[0,1]]` this
+ * returns `indices = [0,1,3,4]`, `vertex_count = 4` — identical to the
+ * native `execute_geometry_tool_json` test.
+ * @param {any} val
+ * @returns {any}
+ */
+export function geometry_convex_hull_2(val) {
+    const ret = wasm.geometry_convex_hull_2(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Compute the Delaunay triangulation of a 2-D point set.
+ * @param {any} val
+ * @returns {any}
+ */
+export function geometry_delaunay_2(val) {
+    const ret = wasm.geometry_delaunay_2(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Execute any geometry tool via the JSON boundary — same function as
+ * `execute_geometry_tool_json` on native. This is the full op surface
+ * (`orientation_2`, `convex_hull_2`, `triangle_topology`, `mesh_topology`,
+ * `delaunay_2`, `voronoi_2`, `nearest_site`).
+ * @param {string} args
+ * @returns {string}
+ */
+export function geometry_execute_json(args) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(args, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.geometry_execute_json(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Find the nearest site to a query point (brute-force).
+ *
+ * Returns the index of the nearest site, or -1 if the point set is empty.
+ * @param {Float64Array} points
+ * @param {number} qx
+ * @param {number} qy
+ * @returns {number}
+ */
+export function geometry_nearest_site(points, qx, qy) {
+    const ptr0 = passArrayF64ToWasm0(points, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.geometry_nearest_site(ptr0, len0, qx, qy);
+    return ret;
+}
+
+/**
+ * Robust 2-D orientation predicate.
+ *
+ * Returns `"clockwise"`, `"collinear"`, or `"counter_clockwise"` —
+ * identical to the native `orientation_2` sign.
+ * @param {number} ax
+ * @param {number} ay
+ * @param {number} bx
+ * @param {number} by
+ * @param {number} cx
+ * @param {number} cy
+ * @returns {string}
+ */
+export function geometry_orientation_2(ax, ay, bx, by, cx, cy) {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.geometry_orientation_2(ax, ay, bx, by, cx, cy);
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
+ * Numeric orientation sign (-1, 0, 1) for machine consumption.
+ * @param {number} ax
+ * @param {number} ay
+ * @param {number} bx
+ * @param {number} by
+ * @param {number} cx
+ * @param {number} cy
+ * @returns {number}
+ */
+export function geometry_orientation_2_sign(ax, ay, bx, by, cx, cy) {
+    const ret = wasm.geometry_orientation_2_sign(ax, ay, bx, by, cx, cy);
+    return ret;
+}
+
+/**
+ * Compute the Voronoi diagram of a 2-D point set.
+ * @param {any} val
+ * @returns {any}
+ */
+export function geometry_voronoi_2(val) {
+    const ret = wasm.geometry_voronoi_2(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} json
  * @returns {any}
  */
@@ -1044,8 +1997,208 @@ export function geosparql_operation_wasm(json) {
     return takeFromExternrefTable0(ret[0]);
 }
 
+/**
+ * Structured engine metadata for browser UIs and diagnostics.
+ * @returns {any}
+ */
+export function get_engine_info() {
+    const ret = wasm.get_engine_info();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
+ * @returns {string}
+ */
+export function get_engine_version() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.get_engine_version();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
+ * Machine-readable SHACL capability and constraint coverage manifest (QW-05).
+ * @returns {any}
+ */
+export function get_shacl_capability_manifest_wasm() {
+    const ret = wasm.get_shacl_capability_manifest_wasm();
+    return ret;
+}
+
+/**
+ * Poll WebGPU engine init stage text (same surface as the LLM package).
+ * @returns {string}
+ */
+export function get_webgpu_init_status() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.get_webgpu_init_status();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
+ * Fuzzy RDF graph similarity (Ma, Li & Ma) — degree-aware Jaccard and Dice over two
+ * sets of weighted triples. Terms are interned term ids (non-negative integers);
+ * degrees are membership values in `[0,1]`. Two empty graphs are defined as 1.0.
+ *
+ * Input `{ g1:[[s,p,o,degree],..], g2:[[s,p,o,degree],..] }` ->
+ * `{ jaccard, dice }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function graph_fuzzy_similarity(val) {
+    const ret = wasm.graph_fuzzy_similarity(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Knowledge-graph link prediction: score a set of candidate tails for a fixed
+ * (head, relation) under TransE / DistMult / ComplEx / RotatE and rank them by
+ * plausibility (higher = better). Input
+ * `{ model, head:[f64], relation:[f64], candidates:[[f64],…], p?, top_k? }` →
+ * `{ model, rank, ranking:[{index, score}] }` sorted best-first.
+ * @param {any} val
+ * @returns {any}
+ */
+export function graph_kge_predict(val) {
+    const ret = wasm.graph_kge_predict(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Knowledge-graph embedding plausibility score for a single triple
+ * `(head, relation, tail)` under one of the four embedding families. Higher = more
+ * plausible (translational models return the negative distance). Vector layout by
+ * model (rank `k`):
+ * * `transe` / `distmult` — head, relation, tail are length `k`.
+ * * `complex` — all three length `2k` (`[re(0..k), im(k..2k)]`).
+ * * `rotate` — head/tail length `2k` (`[re, im]`); relation length `k` (phase angles).
+ *
+ * `k` is inferred from the vector lengths; mismatched lengths fail closed.
+ *
+ * Input `{ model, head:[f64], relation:[f64], tail:[f64], p? }` -> `{ score, model,
+ * rank }`. `p` (1 or 2) is the TransE norm order (default 2); ignored by other models.
+ * @param {any} val
+ * @returns {any}
+ */
+export function graph_kge_score(val) {
+    const ret = wasm.graph_kge_score(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Single-source single-target shortest path over a directed, non-negative weighted
+ * graph (Dijkstra, the engine's exact reference). The distance comes straight from
+ * `solvers::graph_opt::dijkstra`; the node sequence is reconstructed by backtracking
+ * on that distance field (`dist[u] + w == dist[v]`), so the math stays owned by the
+ * solver.
+ *
+ * Input `{ edges:[[u,v,w],..], source, target, n? }` ->
+ * `{ distance, reachable, path:[node,..] }` (path empty and reachable=false when
+ * `target` is unreachable; `distance` is then null).
+ * @param {any} val
+ * @returns {any}
+ */
+export function graph_shortest_path(val) {
+    const ret = wasm.graph_shortest_path(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Spreading activation (Kornai, *Vector Semantics*) — propagate activation from seed
+ * concepts through directed weighted edges, decaying each hop and pruning below a
+ * threshold. Returns per-node total activation and a top-k relevance ranking.
+ *
+ * Input `{ edges:[[u,v,w],..], seeds:[[node,activation],..], decay, threshold?,
+ * max_hops?, top_k?, n? }` -> `{ activation:[f64;n], ranking:[node,..] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function graph_spreading_activation(val) {
+    const ret = wasm.graph_spreading_activation(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} content
+ * @returns {string}
+ */
+export function heart_rate_turtle_from_csv(content) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.heart_rate_turtle_from_csv(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Construct the volumetric renderer on the shared WebGPU device (no canvas).
+ * @param {number} width
+ * @param {number} height
+ * @param {number} particle_cap
+ * @returns {Promise<void>}
+ */
+export function init_offscreen_renderer(width, height, particle_cap) {
+    const ret = wasm.init_offscreen_renderer(width, height, particle_cap);
+    return ret;
+}
+
 export function init_panic_hook() {
     wasm.init_panic_hook();
+}
+
+/**
+ * Create the process-wide WebGPU device used by graph accel, offscreen
+ * rendering, and LLM decode. Idempotent.
+ * @returns {Promise<void>}
+ */
+export function init_shared_webgpu() {
+    const ret = wasm.init_shared_webgpu();
+    return ret;
 }
 
 /**
@@ -1082,6 +2235,540 @@ export function is_opfs_block_cached(block_index) {
 }
 
 /**
+ * Return the pinned Qualia JSON-LD 1.1 context + SHA-256 digest (UE-012).
+ *
+ * Packages should embed `context` and record `digest` on receipts — do not
+ * fetch remote `@context` URLs at admission time.
+ * @returns {any}
+ */
+export function jsonld_context_digest_wasm() {
+    const ret = wasm.jsonld_context_digest_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Hohfeld correlative position for a jural opcode.
+ * @param {any} val
+ * @returns {any}
+ */
+export function jural_correlative_wasm(val) {
+    const ret = wasm.jural_correlative_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Determinant of a square matrix via LU (partial pivoting).
+ * Input `{ rows, cols, data }` (rows==cols) → `{ determinant }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_determinant_wasm(val) {
+    const ret = wasm.la_determinant_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Symmetric eigendecomposition (cyclic Jacobi). Input `{ rows, cols, data }`
+ * (square, symmetric) → `{ eigenvalues:[..], eigenvectors:{rows,cols,data} }`
+ * where eigenvector `j` is column `j` of the row-major `eigenvectors` matrix.
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_eigen_symmetric_wasm(val) {
+    const ret = wasm.la_eigen_symmetric_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * General (non-symmetric) eigenvalues via the characteristic polynomial.
+ * Input `{ rows, cols, data }` (square) → `{ eigenvalues:[{re,im}] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_eigenvalues_wasm(val) {
+    const ret = wasm.la_eigenvalues_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * `C = A · B`. Input `{ a:{rows,cols,data}, b:{rows,cols,data} }`,
+ * output `{ rows, cols, data }`. Errors on a shape mismatch (`a.cols != b.rows`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_matmul_wasm(val) {
+    const ret = wasm.la_matmul_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * All complex roots of a real polynomial (Durand–Kerner). Input
+ * `{ coeffs:[cₙ,…,c₁,c₀] }` (descending) → `{ degree, roots:[{re,im}] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_polynomial_roots_wasm(val) {
+    const ret = wasm.la_polynomial_roots_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Solve `A · x = b` for a square `A` via LU. Input `{ a:{rows,cols,data}, b:[..] }`
+ * (b length == a.rows) → `{ x:[..] }`. Errors if `A` is singular.
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_solve_wasm(val) {
+    const ret = wasm.la_solve_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Thin SVD `A = U·Σ·Vᵀ`. Input `{ rows, cols, data }` →
+ * `{ singular_values:[..], u:{rows,cols,data}, v:{rows,cols,data} }`
+ * (`u` is m×n, `v` is n×n; singular vectors are columns; values descending).
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_svd_wasm(val) {
+    const ret = wasm.la_svd_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Transpose. Input `{ rows, cols, data }` → output `{ rows:cols, cols:rows, data }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function la_transpose_wasm(val) {
+    const ret = wasm.la_transpose_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Capability names available in this WASM build.
+ * @returns {any}
+ */
+export function list_capabilities_wasm() {
+    const ret = wasm.list_capabilities_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Names that are intentionally native-only (UE-035/044/045) — never stubbed in browser.
+ * @returns {any}
+ */
+export function list_native_only_capabilities_wasm() {
+    const ret = wasm.list_native_only_capabilities_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Airy functions `Ai(x)` and `Bi(x)` (both, from one Maclaurin-series evaluation).
+ * Input `{ x }` -> `{ ai, bi }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_airy_wasm(val) {
+    const ret = wasm.num_airy_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Euler's totient `phi(n)`, the Mobius `mu(n)`, divisor count `d(n)` and divisor sum
+ * `sigma(n)` — the classic multiplicative arithmetic functions, all from the prime
+ * factorization. Input `{ n }` -> `{ totient, mobius, divisor_count, divisor_sum }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_arithmetic_functions_wasm(val) {
+    const ret = wasm.num_arithmetic_functions_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Modified Bessel function of the first kind `I_n(x)`, integer order. Defined for all
+ * real `x`. Input `{ n, x }` -> `{ value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_bessel_i_wasm(val) {
+    const ret = wasm.num_bessel_i_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Bessel function of the first kind `J_n(x)`, integer order (any sign), defined for all
+ * real `x`. Input `{ n, x }` -> `{ value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_bessel_j_wasm(val) {
+    const ret = wasm.num_bessel_j_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Modified Bessel function of the second kind `K_n(x)`, integer order `n >= 0`. Requires
+ * `x > 0`. Input `{ n, x }` -> `{ value }`; errors for `x <= 0`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_bessel_k_wasm(val) {
+    const ret = wasm.num_bessel_k_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Bessel function of the second kind `Y_n(x)`, integer order `n >= 0`. Requires `x > 0`
+ * (singular at the origin) and `J_0(x) != 0`. Input `{ n, x }` -> `{ value }`; errors
+ * for `x <= 0` or an ill-posed Wronskian solve.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_bessel_y_wasm(val) {
+    const ret = wasm.num_bessel_y_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Binomial coefficient `C(n, k)` (exact integer at every step). Result is returned as a
+ * decimal **string** since it may exceed `f64`/`u53` precision. Errors (fail closed) on
+ * `u128` overflow. Input `{ n, k }` -> `{ value }` (value is a string).
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_binomial_wasm(val) {
+    const ret = wasm.num_binomial_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * The `n`-th Catalan number, plus the Stirling numbers `S(n,k)` (second kind) and
+ * `c(n,k)` (unsigned first kind). All exact integers as decimal **strings**; errors
+ * (fail closed) on `u128` overflow. Input `{ n, k }` ->
+ * `{ catalan, stirling_second, stirling_first }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_combinatorics_wasm(val) {
+    const ret = wasm.num_combinatorics_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Natural cubic spline through `(xs, ys)` (xs strictly increasing), evaluated at each
+ * query in `queries`. Errors on insufficient data, unsorted/duplicate nodes, or a
+ * singular tridiagonal system. Input `{ xs:[..], ys:[..], queries:[..] }` ->
+ * `{ values:[..] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_cubic_spline_wasm(val) {
+    const ret = wasm.num_cubic_spline_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * All positive divisors of `n`, ascending. Input `{ n }` -> `{ divisors:[..] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_divisors_wasm(val) {
+    const ret = wasm.num_divisors_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Factorial `n!` as an exact integer (decimal **string**; `f64` cannot hold it).
+ * Errors (fail closed) for `n >= 35` (`35!` overflows `u128`).
+ * Input `{ n }` -> `{ value }` (value is a string).
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_factorial_wasm(val) {
+    const ret = wasm.num_factorial_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Greatest common divisor and least common multiple of `a` and `b`.
+ * Input `{ a, b }` -> `{ gcd, lcm }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_gcd_lcm_wasm(val) {
+    const ret = wasm.num_gcd_lcm_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Deterministic Miller-Rabin primality test (exact for all `u64`).
+ * Input `{ n }` -> `{ prime }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_is_prime_wasm(val) {
+    const ret = wasm.num_is_prime_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate the Lagrange interpolating polynomial through `(xs, ys)` at `x`. Errors on
+ * empty/mismatched data or duplicate nodes. Input `{ xs:[..], ys:[..], x }` -> `{ value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_lagrange_eval_wasm(val) {
+    const ret = wasm.num_lagrange_eval_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Piecewise-linear interpolation of `(xs, ys)` (xs strictly increasing) at `x` (clamped
+ * to the endpoints outside the range). Input `{ xs:[..], ys:[..], x }` -> `{ value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_linear_interp_wasm(val) {
+    const ret = wasm.num_linear_interp_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Minimize a built-in benchmark objective with the Nelder-Mead simplex method
+ * (derivative-free, deterministic, zero-allocation `[f64; 4]` simplex).
+ *
+ * `objective` is one of `"sphere" | "rosenbrock" | "booth" | "matyas" | "sum_abs"`.
+ * `start` is the initial 4-D point (missing components default to 0, extras ignored).
+ * `max_iterations` (optional, default 1000) and `tolerance` (optional, default 1e-6)
+ * configure the solver. Input
+ * `{ objective, start:[..], max_iterations?, tolerance? }` ->
+ * `{ best_point:[4], best_value, iterations, converged }`. Errors on an unknown objective.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_minimize_wasm(val) {
+    const ret = wasm.num_minimize_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Modular multiplicative inverse: the `x` with `a*x ≡ 1 (mod m)`. Errors (fail closed)
+ * when `gcd(a, m) != 1`. Input `{ a, m }` -> `{ inverse }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_mod_inverse_wasm(val) {
+    const ret = wasm.num_mod_inverse_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * `(base^exp) mod modulus` by repeated squaring (overflow-safe via `u128`).
+ * Input `{ base, exp, modulus }` -> `{ value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_mod_pow_wasm(val) {
+    const ret = wasm.num_mod_pow_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Newton divided-difference interpolation: build the coefficients from `(xs, ys)` and
+ * evaluate the interpolant at `x`. Input `{ xs:[..], ys:[..], x }` ->
+ * `{ value, coefficients:[..] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_newton_eval_wasm(val) {
+    const ret = wasm.num_newton_eval_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Smallest prime strictly greater than `n`. Input `{ n }` -> `{ next_prime }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_next_prime_wasm(val) {
+    const ret = wasm.num_next_prime_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Classical orthogonal polynomial `P_n(x)` by three-term recurrence. `kind` is one of
+ * `"legendre" | "chebyshev_t" | "chebyshev_u" | "hermite" | "laguerre"`.
+ * Input `{ kind, n, x }` -> `{ value }`; errors on an unknown kind.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_orthopoly_wasm(val) {
+    const ret = wasm.num_orthopoly_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Number of integer partitions `p(n)` (ways to write `n` as an unordered sum of positive
+ * integers). Input `{ n }` -> `{ value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_partitions_wasm(val) {
+    const ret = wasm.num_partitions_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Least-squares polynomial fit of degree `degree` to `(xs, ys)` (via the normal
+ * equations). Returns coefficients in **ascending** order `[c0, c1, ..., c_degree]` (so
+ * the polynomial is `sum c_k x^k`). Optionally evaluates the fit at each `queries` value.
+ * Errors on too few points, `degree + 1 > n`, or a singular system.
+ * Input `{ xs:[..], ys:[..], degree, queries?:[..] }` ->
+ * `{ coefficients:[..], values:[..] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_poly_fit_wasm(val) {
+    const ret = wasm.num_poly_fit_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Prime factorization (trial division then Pollard's rho), correct across all `u64`.
+ * Input `{ n }` -> `{ factors:[{ prime, exponent }] }`. Empty for `n < 2`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_prime_factorize_wasm(val) {
+    const ret = wasm.num_prime_factorize_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Riemann zeta function `zeta(s)` for real `s > 1` (Euler-Maclaurin). Input `{ s }` ->
+ * `{ value }`; errors for `s <= 1` (needs analytic continuation, out of this domain).
+ * @param {any} val
+ * @returns {any}
+ */
+export function num_zeta_wasm(val) {
+    const ret = wasm.num_zeta_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Pack raw NQuin field bytes into a fully-structured SuperBlock with correct ECC parity.
  *
  * `raw_quin_bytes` must be `N × 48` bytes where each 48-byte chunk contains the
@@ -1107,6 +2794,24 @@ export function pack_quins_into_superblock(seq_id, owner_did, raw_quin_bytes) {
 }
 
 /**
+ * Package exposure receipt: context + shapes + vibe AST digests (UE-053).
+ * @param {string} shapes_json
+ * @param {Uint8Array | null} [vibe_program_cbor]
+ * @returns {any}
+ */
+export function package_exposure_manifest_wasm(shapes_json, vibe_program_cbor) {
+    const ptr0 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(vibe_program_cbor) ? 0 : passArray8ToWasm0(vibe_program_cbor, wasm.__wbindgen_malloc);
+    var len1 = WASM_VECTOR_LEN;
+    const ret = wasm.package_exposure_manifest_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {Uint8Array} payload
  * @returns {any}
  */
@@ -1118,6 +2823,44 @@ export function parse_cbor_ld_wasm(payload) {
 }
 
 /**
+ * @param {any} val
+ * @returns {any}
+ */
+export function parse_csv_wasm(val) {
+    const ret = wasm.parse_csv_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} content
+ * @returns {any}
+ */
+export function parse_heart_rate_csv_json(content) {
+    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_heart_rate_csv_json(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function parse_json_mapping_wasm(val) {
+    const ret = wasm.parse_json_mapping_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} payload
  * @returns {any}
  */
@@ -1126,6 +2869,88 @@ export function parse_json_wasm(payload) {
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.parse_json_wasm(ptr0, len0);
     return ret;
+}
+
+/**
+ * Parse JSON-LD 1.1 text into packed quins (Civics primary semantic format).
+ *
+ * Profile: `application/ld+json`. Context must be embedded/pinned by the caller;
+ * this binding does not fetch remote contexts.
+ * @param {string} payload
+ * @returns {any}
+ */
+export function parse_jsonld_wasm(payload) {
+    const ptr0 = passStringToWasm0(payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_jsonld_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} payload
+ * @returns {any}
+ */
+export function parse_n3logic_wasm(payload) {
+    const ptr0 = passStringToWasm0(payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_n3logic_wasm(ptr0, len0);
+    return ret;
+}
+
+/**
+ * @param {string} content
+ * @returns {any}
+ */
+export function parse_sleep_csv_json(content) {
+    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_sleep_csv_json(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} content
+ * @returns {any}
+ */
+export function parse_steps_csv_json(content) {
+    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_steps_csv_json(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} payload
+ * @returns {any}
+ */
+export function parse_turtle_wasm(payload) {
+    const ptr0 = passStringToWasm0(payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_turtle_wasm(ptr0, len0);
+    return ret;
+}
+
+/**
+ * @param {string} content
+ * @returns {any}
+ */
+export function parse_weight_csv_json(content) {
+    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_weight_csv_json(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1158,6 +2983,14 @@ export function portal_init_webgpu(canvas) {
 }
 
 /**
+ * @returns {number}
+ */
+export function predict_receptor_binding_wasm() {
+    const ret = wasm.predict_receptor_binding_wasm();
+    return ret;
+}
+
+/**
  * Performs topological pruning and validates meshes prior to physics offloading
  * @param {bigint} mesh_id
  * @returns {boolean}
@@ -1165,6 +2998,23 @@ export function portal_init_webgpu(canvas) {
 export function prune_and_validate_mesh(mesh_id) {
     const ret = wasm.prune_and_validate_mesh(mesh_id);
     return ret !== 0;
+}
+
+/**
+ * RDFC-1.0 graph hash — **honest fail-closed** until a conforming implementation ships (UE-013).
+ *
+ * Never returns a digest labelled as RDFC-1.0. Optionally includes a
+ * `provisional_spo_sha256` under profile `qualia:provisional-spo-sha256-v1`
+ * for scaffolding only.
+ * @param {any} val
+ * @returns {any}
+ */
+export function rdfc10_graph_hash_wasm(val) {
+    const ret = wasm.rdfc10_graph_hash_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1182,10 +3032,81 @@ export function read_opfs_block(block_index) {
 }
 
 /**
+ * Resolves two conflicting NQuin entries using Last-Writer-Wins semantics.
+ * The Lamport clock is encoded in the metadata field; on ties, higher object wins.
+ * @param {any} local_val
+ * @param {any} remote_val
+ * @returns {any}
+ */
+export function resolve_lww_wasm(local_val, remote_val) {
+    const ret = wasm.resolve_lww_wasm(local_val, remote_val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Route contradictions into an isolated context (`route_paraconsistent`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function route_paraconsistent_wasm(val) {
+    const ret = wasm.route_paraconsistent_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function run_semantic_simulation(val) {
+    const ret = wasm.run_semantic_simulation(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @returns {any}
  */
 export function sample_browser_telemetry_wasm() {
     const ret = wasm.sample_browser_telemetry_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Bounded stride sample of packed 48-byte Quins. Browser graphs cannot mmap
+ * `.q42` files; this is the WASM-safe equivalent of `mmap_sample_quins`.
+ * @param {Uint8Array} db_bytes
+ * @param {number} max_quins
+ * @returns {Uint8Array}
+ */
+export function sample_packed_quins_wasm(db_bytes, max_quins) {
+    const ptr0 = passArray8ToWasm0(db_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.sample_packed_quins_wasm(ptr0, len0, max_quins);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function serialize_csv_wasm(val) {
+    const ret = wasm.serialize_csv_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -1217,6 +3138,97 @@ export function serialize_float_array(data) {
 }
 
 /**
+ * @param {any} val
+ * @returns {any}
+ */
+export function serialize_json_wasm(val) {
+    const ret = wasm.serialize_json_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function serialize_rdf_wasm(val) {
+    const ret = wasm.serialize_rdf_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Simulates a GBM price path and returns the full series together with
+ * min_price, max_price, and final_price.
+ * @param {any} val
+ * @returns {any}
+ */
+export function simulate_gbm_path_wasm(val) {
+    const ret = wasm.simulate_gbm_path_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} content
+ * @returns {string}
+ */
+export function sleep_turtle_from_csv(content) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.sleep_turtle_from_csv(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Solves dy/dt = -k·y via classical RK4, returning t_values, y_values, and final_y.
+ * @param {any} val
+ * @returns {any}
+ */
+export function solve_ode_exponential_decay_wasm(val) {
+    const ret = wasm.solve_ode_exponential_decay_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Bounded DPLL SAT solver.
+ * Input: `{ clauses: [[1, 2, -3], [-1, 3], ...] }` (signed literal convention).
+ * Output: `{ satisfiable: bool, assignment: { "1": true, "2": false, ... } }`
+ * @param {any} val
+ * @returns {any}
+ */
+export function solve_sat_wasm(val) {
+    const ret = wasm.solve_sat_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} json
  * @returns {any}
  */
@@ -1228,6 +3240,637 @@ export function spatial_encode_wasm(json) {
         throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * One-way ANOVA F-test for equality of `k` group means. Input
+ * `{ groups:[[..],[..],..] }` (≥ 2 groups, each non-empty, total > k) →
+ * `{ f_statistic, p_value, df_between, df_within, ss_between, ss_within,
+ * ms_between, ms_within }`. Errors on degenerate input.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_anova_wasm(val) {
+    const ret = wasm.stats_anova_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Pearson χ² goodness-of-fit test, `Σ(Oᵢ−Eᵢ)²/Eᵢ`, dof = k−1. Input
+ * `{ observed:[..], expected:[..] }` (equal length ≥ 2, all expected > 0) →
+ * `{ statistic, p_value, dof }`. Errors on length mismatch, len < 2, or a
+ * non-positive expected count.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_chi_square_gof_wasm(val) {
+    const ret = wasm.stats_chi_square_gof_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * χ² test of independence on an R×C contingency table of counts. Input
+ * `{ table:[[..],[..],..] }` (≥ 2 rows, ≥ 2 cols, rectangular, grand total > 0) →
+ * `{ statistic, p_value, dof }` with `dof = (R−1)(C−1)`. Errors on a ragged or
+ * undersized table.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_chi_square_independence_wasm(val) {
+    const ret = wasm.stats_chi_square_independence_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * χ² (chi-squared) distribution pdf/cdf at `x` with `k` degrees of freedom, plus
+ * the upper-tail p-value. Input `{ x:f64, k:f64, p?:f64 }` (`k` > 0, `x` ≥ 0) →
+ * `{ pdf, cdf, upper_p, quantile }`. `quantile` is the inverse-cdf at `p` when
+ * supplied (0<p<1), else `null`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_chi_squared_dist_wasm(val) {
+    const ret = wasm.stats_chi_squared_dist_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Pearson, Spearman, and Kendall correlation of two equal-length series, plus the
+ * two-sided p-value for the Pearson coefficient. Input `{ x:[..], y:[..] }` →
+ * `{ pearson, spearman, kendall, pearson_p_value }`. Each coefficient is `null`
+ * when undefined (lengths differ, or n < 2); `pearson_p_value` is `null` for n < 3.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_correlation_wasm(val) {
+    const ret = wasm.stats_correlation_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Full descriptive summary of a sample. Input `{ data:[..], sample?:bool }`
+ * (`sample` defaults to `true` → Bessel-corrected variance/std) →
+ * `{ n, sum, mean, variance, std_dev, min, max, median, q1, q3, skewness, kurtosis }`.
+ * `variance`/`std_dev` are `null` when n < 2 in sample mode (no residual dof);
+ * `skewness`/`kurtosis` are excess-kurtosis (Fisher) conventions.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_describe_wasm(val) {
+    const ret = wasm.stats_describe_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Fisher–Snedecor F-distribution: pdf and cdf at x with (d1, d2) degrees of
+ * freedom, plus the inverse-cdf quantile when an optional `p` is supplied.
+ * Input `{ x, d1, d2, p? }` → `{ pdf, cdf, quantile? }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_fisher_f_wasm(val) {
+    const ret = wasm.stats_fisher_f_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Friedman test for k treatments across n blocks (e.g. classifiers × datasets).
+ * Input `{ blocks:[[m1,…,mk], …] }` (each block length k, higher = better) →
+ * `{ chi_square, chi_p_value, df, iman_davenport_f, f_p_value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_friedman_wasm(val) {
+    const ret = wasm.stats_friedman_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Simple (one-predictor) OLS linear regression of `y` on `x`. Input
+ * `{ x:[..], y:[..] }` (equal length, n ≥ 3, x not constant) →
+ * `{ slope, intercept, r_squared, residual_std_error, slope_std_error, slope_t,
+ * slope_p_value, intercept_std_error, intercept_p_value, n }`. Errors on length
+ * mismatch, n < 3, or zero-variance `x`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_linear_regression_wasm(val) {
+    const ret = wasm.stats_linear_regression_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * McNemar's test for two paired binary classifiers. Input `{ b, c }` — the
+ * discordant counts (b = first right / second wrong, c = first wrong / second
+ * right) — → `{ statistic, p_value, dof }`. Continuity-corrected χ², dof 1.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_mcnemar_wasm(val) {
+    const ret = wasm.stats_mcnemar_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Normal (Gaussian) distribution pdf/cdf/quantile at one point. Input
+ * `{ x:f64, mu?:f64, sigma?:f64, p?:f64 }` (`mu` defaults 0, `sigma` defaults 1,
+ * must be > 0) → `{ pdf, cdf, quantile }`. `pdf`/`cdf` are evaluated at `x`;
+ * `quantile` is `Φ⁻¹(p)` when `p` is supplied (0<p<1), else `null`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_normal_wasm(val) {
+    const ret = wasm.stats_normal_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * One-sample t-test of the sample mean against `mu`. Input `{ data:[..], mu:f64 }`
+ * → `{ t_statistic, p_value, degrees_of_freedom, ci_lower, ci_upper }`
+ * (95% CI around the sample mean, t critical value). Errors if n < 2.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_one_sample_t_wasm(val) {
+    const ret = wasm.stats_one_sample_t_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Paired t-test (one-sample t-test of the paired differences against 0). Input
+ * `{ a:[..], b:[..] }` (equal length) → `{ t_statistic, p_value,
+ * degrees_of_freedom, ci_lower, ci_upper }`. Errors if lengths differ or n < 2.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_paired_t_wasm(val) {
+    const ret = wasm.stats_paired_t_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Linear-interpolated quantile (numpy "linear" / R type-7). Input
+ * `{ data:[..], q:0.0..1.0 }` → `{ quantile }`. `q` is clamped to `[0,1]`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_quantile_wasm(val) {
+    const ret = wasm.stats_quantile_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Student's t-distribution pdf/cdf at `t` with `nu` degrees of freedom, plus the
+ * two-sided p-value. Input `{ t:f64, nu:f64, p?:f64 }` (`nu` > 0) →
+ * `{ pdf, cdf, two_sided_p, quantile }`. `quantile` is the inverse-cdf at `p`
+ * when supplied (0<p<1), else `null`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_students_t_wasm(val) {
+    const ret = wasm.stats_students_t_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Two-sample t-test of `mean(a) − mean(b) = 0`. Input
+ * `{ a:[..], b:[..], equal_var?:bool }` (`equal_var` defaults to `false` → the
+ * Welch test; `true` → pooled Student) → `{ t_statistic, p_value,
+ * degrees_of_freedom, mean_difference, ci_lower, ci_upper }`. Errors if either
+ * sample has n < 2.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_two_sample_t_wasm(val) {
+    const ret = wasm.stats_two_sample_t_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {string} content
+ * @returns {string}
+ */
+export function steps_turtle_from_csv(content) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.steps_turtle_from_csv(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * STIT: did agent bring about content?
+ * @param {any} val
+ * @returns {any}
+ */
+export function stit_brought_about_wasm(val) {
+    const ret = wasm.stit_brought_about_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Look up a CODATA / SI-2019 physical constant by name, returning its value (in coherent
+ * SI base units) and its physical dimension as the 7-vector.
+ *
+ * Input `{ name }` → `{ name, symbol, description, value, dimension:{..} }`.
+ * Accepted names are those from `units_list_constants` (canonical name or symbol alias).
+ * @param {any} val
+ * @returns {any}
+ */
+export function units_constant(val) {
+    const ret = wasm.units_constant(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Convert a magnitude between two named units of the **same** physical dimension.
+ * Affine (Celsius/Fahrenheit) and linear scales are both handled. Fails closed if the
+ * units have different dimensions (e.g. `m` → `s`).
+ *
+ * Input `{ value, from, to }` → `{ value, from, to, dimension:{..} }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function units_convert(val) {
+    const ret = wasm.units_convert(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * List every CODATA constant available to `units_constant`, with value, symbol,
+ * description and dimension. Takes an empty object `{}`.
+ * Input `{}` → `{ constants:[{name,symbol,description,value,dimension}] }`.
+ * @param {any} _val
+ * @returns {any}
+ */
+export function units_list_constants(_val) {
+    const ret = wasm.units_list_constants(_val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * List every unit the engine can convert between, with a human label and its dimension
+ * 7-vector. Takes an empty object `{}`. Input `{}` → `{ units:[{symbol,label,dimension}] }`.
+ * @param {any} _val
+ * @returns {any}
+ */
+export function units_list_units(_val) {
+    const ret = wasm.units_list_units(_val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Multiply or divide two dimensioned quantities, composing their dimensions. Each
+ * quantity is `{ value, unit }`; the unit string is resolved to its SI factor so the
+ * result value is in coherent SI base units, and the result dimension is returned as the
+ * 7-vector. `divide` fails closed on a zero divisor.
+ *
+ * Input `{ a:{value,unit}, b:{value,unit}, op:"multiply"|"divide" }`
+ * → `{ value, dimension:{..} }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function units_quantity_op(val) {
+    const ret = wasm.units_quantity_op(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function validate_fasta_wasm(val) {
+    const ret = wasm.validate_fasta_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function validate_fhir_observation_wasm(val) {
+    const ret = wasm.validate_fhir_observation_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate a named policy constraint against a single quint (s,p,o,c,m).
+ *
+ * Supported constraint names:
+ *   "cooperative_obligation" — PermissiveCommons work obligation gate (lane 1)
+ *   "guardian_identity"      — BilateralMicroCommons guardian auth gate (lane 2)
+ *   "commercial_block"       — BilateralMicroCommons anti-commercial gate (lane 2)
+ *
+ * Returns JSON: `{"passed":bool,"routingLane":N}`
+ * @param {string} constraint
+ * @param {bigint} s
+ * @param {bigint} p
+ * @param {bigint} o
+ * @param {bigint} c
+ * @param {bigint} m
+ * @returns {string}
+ */
+export function validate_health_quin(constraint, s, p, o, c, m) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(constraint, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.validate_health_quin(ptr0, len0, s, p, o, c, m);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Validate a Turtle document against built-in health shapes (SPARQL ASK constraints).
+ * Returns a JSON string: `{"valid":bool,"checked":N,"violations":[{"shape":"...","message":"..."}]}`
+ * @param {string} turtle
+ * @returns {string}
+ */
+export function validate_health_turtle(turtle) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.validate_health_turtle(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function validate_shacl_constraint_wasm(val) {
+    const ret = wasm.validate_shacl_constraint_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Validates raw packed 48-byte Quins against a list of JSON ShapeSpecs.
+ * @param {Uint8Array} db_bytes
+ * @param {string} shapes_json
+ * @returns {any}
+ */
+export function validate_shacl_graph_wasm(db_bytes, shapes_json) {
+    const ptr0 = passArray8ToWasm0(db_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.validate_shacl_graph_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Full graph SHACL validation from N3/N-Triples data and JSON ShapeSpecs.
+ * Returns the complete `ValidationReport` preserving conforms, focus node, path,
+ * severity, and constraint component.
+ * @param {string} data_n3
+ * @param {string} shapes_json
+ * @returns {any}
+ */
+export function validate_shacl_json_wasm(data_n3, shapes_json) {
+    const ptr0 = passStringToWasm0(data_n3, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.validate_shacl_json_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Values abuse-check (agency.n3 G1/G1' personhood guard) — WASM surface for Civics.
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_check_wasm(val) {
+    const ret = wasm.values_check_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Consent non-coerced guard (`capacity::detect_duress` inverted).
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_consent_non_coerced_wasm(val) {
+    const ret = wasm.values_consent_non_coerced_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Harm-below-ceiling guard (wasm-safe numeric; CAS marginal-harm stays native).
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_harm_below_ceiling_wasm(val) {
+    const ret = wasm.values_harm_below_ceiling_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Serialize vault biometric records (JSON array from wf-biometrics IDB store) → Turtle.
+ * @param {string} json
+ * @returns {string}
+ */
+export function vault_biometrics_to_turtle(json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.vault_biometrics_to_turtle(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Serialize vault diet log entries (JSON array from wf-dl IDB store) → Turtle.
+ * @param {string} json
+ * @returns {string}
+ */
+export function vault_diet_to_turtle(json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.vault_diet_to_turtle(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Serialize vault medication records (JSON array from wf-meds IDB store) → Turtle.
+ * @param {string} json
+ * @returns {string}
+ */
+export function vault_meds_to_turtle(json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.vault_meds_to_turtle(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Verify a signed law package (JSON) against an Ed25519 public key.
+ * @param {string} json
+ * @param {Uint8Array} public_key
+ * @returns {boolean}
+ */
+export function verify_law_package_wasm(json, public_key) {
+    const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(public_key, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verify_law_package_wasm(ptr0, len0, ptr1, len1);
+    return ret !== 0;
 }
 
 /**
@@ -1251,6 +3894,34 @@ export function verify_superblock_ecc(block_bytes) {
     } finally {
         wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
+}
+
+/**
+ * @param {Float64Array} points_flat
+ * @returns {Uint32Array}
+ */
+export function wasm_convex_hull_2d(points_flat) {
+    const ptr0 = passArrayF64ToWasm0(points_flat, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.wasm_convex_hull_2d(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {Float64Array} points_flat
+ * @returns {Uint32Array}
+ */
+export function wasm_delaunay_triangulation_2d(points_flat) {
+    const ptr0 = passArrayF64ToWasm0(points_flat, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.wasm_delaunay_triangulation_2d(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1299,6 +3970,31 @@ export function webizen_sign_agreement(_agreement_id, _private_key_mock) {
 }
 
 /**
+ * @param {string} content
+ * @returns {string}
+ */
+export function weight_turtle_from_csv(content) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.weight_turtle_from_csv(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
  * Write a SuperBlock to the OPFS vault at `block_index`.
  *
  * `block_bytes` must be exactly `BLOCK_MULTIPLIER_SIZE` (40 960) bytes — use
@@ -1316,11 +4012,141 @@ export function write_opfs_block(block_index, block_bytes) {
     const ret = wasm.write_opfs_block(block_index, ptr0, len0);
     return ret;
 }
+
+/**
+ * Forward discrete Fourier transform `X[k] = Σ_n x[n] e^{-2πi kn/N}`
+ * (un-normalized, forward sign convention). f64-exact CPU reference path.
+ *
+ * Input `{ data:[..] }` (real signal) OR `{ re:[..], im:[..] }` (complex signal).
+ * Output `{ re:[..], im:[..], magnitude:[..], n }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function xform_dft(val) {
+    const ret = wasm.xform_dft(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Inverse discrete Fourier transform `x[n] = (1/N) Σ_k X[k] e^{+2πi kn/N}`.
+ * Round-trips `xform_dft` to ~1e-9.
+ *
+ * Input the spectrum as `{ re:[..], im:[..] }` (complex bins) OR `{ data:[..] }`
+ * (real bins → imaginary parts taken as 0).
+ * Output `{ re:[..], im:[..], magnitude:[..], n }` — the recovered samples.
+ * @param {any} val
+ * @returns {any}
+ */
+export function xform_idft(val) {
+    const ret = wasm.xform_idft(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Numerical Laplace transform `L{f}(s) = ∫₀^∞ e^{-st} f(t) dt` by Simpson
+ * quadrature, for a built-in time-function family (so a deterministic kernel
+ * crosses the JS boundary instead of an arbitrary closure):
+ * * `"one"`   → f(t)=1            (closed form 1/s)
+ * * `"t"`     → f(t)=t            (1/s²)
+ * * `"exp"`   → f(t)=e^{a·t}      (1/(s-a) for s>a)
+ * * `"poly"`  → f(t)=tⁿ           (n!/s^{n+1}); supply `n`
+ * * `"sin"`   → f(t)=sin(a·t)     (a/(s²+a²))
+ * * `"cos"`   → f(t)=cos(a·t)     (s/(s²+a²))
+ * `a` defaults to 1, `n` defaults to 1. Requires `s>0`, `t_max>0`, even `steps≥2`.
+ *
+ * Input `{ fn, s, t_max, steps, a?, n? }`. Output `{ value, s, t_max, steps }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function xform_laplace_numeric(val) {
+    const ret = wasm.xform_laplace_numeric(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Symbolic Laplace transform of a polynomial in `t` from the table the CAS can
+ * represent: a sum of `coeff · t^power` terms (constants are `power = 0`).
+ * Returns the resulting `Expr` in `s` as a pretty string and, when `s` is
+ * supplied, its numeric value `L{f}(s)`. Fails closed (`NotTransformable`) on
+ * anything outside constants / integer powers / their linear combinations.
+ *
+ * Input `{ terms:[{coeff, power}, ..], s? }`. Output `{ expr, value? }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function xform_laplace_table(val) {
+    const ret = wasm.xform_laplace_table(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Closed form of the geometric `aⁿ u[n]` Z-transform `X(z) = 1/(1 - a z^{-1})`
+ * (valid for `|z| > |a|`). Fails closed where the denominator vanishes / at `z = 0`.
+ *
+ * Input `{ a, z_re, z_im }`. Output `{ re, im, magnitude }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function xform_z_geometric(val) {
+    const ret = wasm.xform_z_geometric(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Z-transform of a finite causal sequence evaluated at a complex point `z`:
+ * `X(z) = Σ_{n=0}^{N-1} x[n] z^{-n}`. Fails closed at `z = 0`.
+ *
+ * Input `{ x:[..], z_re, z_im }`. Output `{ re, im, magnitude }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function xform_z_transform(val) {
+    const ret = wasm.xform_z_transform(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Closed form of the unit-step `u[n]` Z-transform `X(z) = z/(z-1)`
+ * (valid for `|z| > 1`). Fails closed at `z = 0` or `z = 1`.
+ *
+ * Input `{ z_re, z_im }`. Output `{ re, im, magnitude }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function xform_z_unit_step(val) {
+    const ret = wasm.xform_z_unit_step(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
         __wbg_Error_fdd633d4bb5dd76a: function(arg0, arg1) {
             const ret = Error(getStringFromWasm0(arg0, arg1));
+            return ret;
+        },
+        __wbg_Number_c4bdf66bb78f7977: function(arg0) {
+            const ret = Number(arg0);
             return ret;
         },
         __wbg_String_8564e559799eccda: function(arg0, arg1) {
@@ -1338,6 +4164,12 @@ function __wbg_get_imports() {
             const ret = arg0.WorkerGlobalScope;
             return ret;
         },
+        __wbg___wbindgen_bigint_get_as_i64_d9e915702856f831: function(arg0, arg1) {
+            const v = arg1;
+            const ret = typeof(v) === 'bigint' ? v : undefined;
+            getDataViewMemory0().setBigInt64(arg0 + 8 * 1, isLikeNone(ret) ? BigInt(0) : ret, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+        },
         __wbg___wbindgen_boolean_get_edaed31a367ce1bd: function(arg0) {
             const v = arg0;
             const ret = typeof(v) === 'boolean' ? v : undefined;
@@ -1349,6 +4181,14 @@ function __wbg_get_imports() {
             const len1 = WASM_VECTOR_LEN;
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbg___wbindgen_in_4990f46af709e33c: function(arg0, arg1) {
+            const ret = arg0 in arg1;
+            return ret;
+        },
+        __wbg___wbindgen_is_bigint_90b5ccfe67c78460: function(arg0) {
+            const ret = typeof(arg0) === 'bigint';
+            return ret;
         },
         __wbg___wbindgen_is_function_acc5528be2b923f2: function(arg0) {
             const ret = typeof(arg0) === 'function';
@@ -1369,6 +4209,10 @@ function __wbg_get_imports() {
         },
         __wbg___wbindgen_is_undefined_721f8decd50c87a3: function(arg0) {
             const ret = arg0 === undefined;
+            return ret;
+        },
+        __wbg___wbindgen_jsval_eq_4e8c38722cb8ff51: function(arg0, arg1) {
+            const ret = arg0 === arg1;
             return ret;
         },
         __wbg___wbindgen_jsval_loose_eq_4b9aba9e5b3c4582: function(arg0, arg1) {
@@ -1462,6 +4306,12 @@ function __wbg_get_imports() {
         __wbg_configure_0e4789c0f6b35c8e: function() { return handleError(function (arg0, arg1) {
             arg0.configure(arg1);
         }, arguments); },
+        __wbg_copyBufferToBuffer_5e2cd8f10ae78183: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            arg0.copyBufferToBuffer(arg1, arg2, arg3, arg4);
+        }, arguments); },
+        __wbg_copyBufferToBuffer_ca30deb8de65f5d5: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
+            arg0.copyBufferToBuffer(arg1, arg2, arg3, arg4, arg5);
+        }, arguments); },
         __wbg_copyTextureToBuffer_ed6e67a77ecb768d: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             arg0.copyTextureToBuffer(arg1, arg2, arg3);
         }, arguments); },
@@ -1536,6 +4386,13 @@ function __wbg_get_imports() {
         __wbg_depthFunc_31b183b5b8ee478e: function(arg0, arg1) {
             arg0.depthFunc(arg1 >>> 0);
         },
+        __wbg_description_02485704e69b1e7f: function(arg0, arg1) {
+            const ret = arg1.description;
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
         __wbg_document_2634180a4c694068: function(arg0) {
             const ret = arg0.document;
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -1581,6 +4438,10 @@ function __wbg_get_imports() {
             const ret = arg0.estimate();
             return ret;
         }, arguments); },
+        __wbg_features_2b07a28fe18ad0ce: function(arg0) {
+            const ret = arg0.features;
+            return ret;
+        },
         __wbg_fillRect_3c420f5077df8d3b: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.fillRect(arg1, arg2, arg3, arg4);
         },
@@ -1598,6 +4459,10 @@ function __wbg_get_imports() {
             const ret = arg0.finish();
             return ret;
         },
+        __wbg_fromCodePoint_93fb75ffd4cdf384: function() { return handleError(function (arg0) {
+            const ret = String.fromCodePoint(arg0 >>> 0);
+            return ret;
+        }, arguments); },
         __wbg_getContext_486aab500e1c34c9: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = arg0.getContext(getStringFromWasm0(arg1, arg2));
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -1657,6 +4522,9 @@ function __wbg_get_imports() {
             const ret = arg0.getProgramParameter(arg1, arg2 >>> 0);
             return ret;
         },
+        __wbg_getRandomValues_6f269dae5feacb57: function() { return handleError(function (arg0, arg1) {
+            globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
+        }, arguments); },
         __wbg_getRandomValues_cc7f052a444bb2ce: function() { return handleError(function (arg0, arg1) {
             globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
         }, arguments); },
@@ -1695,12 +4563,24 @@ function __wbg_get_imports() {
             const ret = arg0[arg1 >>> 0];
             return ret;
         },
+        __wbg_get_with_ref_key_6412cf3094599694: function(arg0, arg1) {
+            const ret = arg0[arg1];
+            return ret;
+        },
         __wbg_gpu_2ccc250735d24a2a: function(arg0) {
             const ret = arg0.gpu;
             return ret;
         },
+        __wbg_has_0c97053e877f47cc: function(arg0, arg1, arg2) {
+            const ret = arg0.has(getStringFromWasm0(arg1, arg2));
+            return ret;
+        },
         __wbg_height_a04613570d793df2: function(arg0) {
             const ret = arg0.height;
+            return ret;
+        },
+        __wbg_info_cf0d9a286850cd24: function(arg0) {
+            const ret = arg0.info;
             return ret;
         },
         __wbg_instanceof_ArrayBuffer_2a7bb09fee70c2da: function(arg0) {
@@ -1855,6 +4735,14 @@ function __wbg_get_imports() {
             const ret = arg0.isContextLost();
             return ret;
         },
+        __wbg_isFallbackAdapter_8ccb967428491dcb: function(arg0) {
+            const ret = arg0.isFallbackAdapter;
+            return ret;
+        },
+        __wbg_isSafeInteger_a3389a198582f5f6: function(arg0) {
+            const ret = Number.isSafeInteger(arg0);
+            return ret;
+        },
         __wbg_iterator_cc47ba25a2be735a: function() {
             const ret = Symbol.iterator;
             return ret;
@@ -1865,6 +4753,10 @@ function __wbg_get_imports() {
             const len1 = WASM_VECTOR_LEN;
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbg_length_4875795b8939c6b6: function(arg0) {
+            const ret = arg0.length;
+            return ret;
         },
         __wbg_length_589238bdcf171f0e: function(arg0) {
             const ret = arg0.length;
@@ -2100,12 +4992,20 @@ function __wbg_get_imports() {
             const ret = new Uint8Array(arg0 >>> 0);
             return ret;
         },
+        __wbg_new_with_length_ecf42de9ee25651c: function(arg0) {
+            const ret = new Uint32Array(arg0 >>> 0);
+            return ret;
+        },
         __wbg_next_0c4066e251d2eff9: function() { return handleError(function (arg0) {
             const ret = arg0.next();
             return ret;
         }, arguments); },
         __wbg_next_402fa10b59ab20c3: function(arg0) {
             const ret = arg0.next;
+            return ret;
+        },
+        __wbg_now_d2e0afbad4edbe82: function() {
+            const ret = Date.now();
             return ret;
         },
         __wbg_onSubmittedWorkDone_270d6b5a45520e79: function(arg0) {
@@ -2184,6 +5084,9 @@ function __wbg_get_imports() {
             const ret = Reflect.set(arg0, arg1, arg2);
             return ret;
         }, arguments); },
+        __wbg_set_652044250ad0332b: function(arg0, arg1, arg2) {
+            arg0.set(getArrayU32FromWasm0(arg1, arg2));
+        },
         __wbg_set_6be42768c690e380: function(arg0, arg1, arg2) {
             arg0[arg1] = arg2;
         },
@@ -2764,6 +5667,14 @@ function __wbg_get_imports() {
         __wbg_stroke_d0c2cfbe28711bcb: function(arg0) {
             arg0.stroke();
         },
+        __wbg_subgroupMaxSize_1527c5f7a8fe91bb: function(arg0) {
+            const ret = arg0.subgroupMaxSize;
+            return ret;
+        },
+        __wbg_subgroupMinSize_d6c5ad4bddc828e9: function(arg0) {
+            const ret = arg0.subgroupMinSize;
+            return ret;
+        },
         __wbg_submit_ce44115121cd166c: function(arg0, arg1, arg2) {
             arg0.submit(getArrayJsValueViewFromWasm0(arg1, arg2));
         },
@@ -2809,23 +5720,23 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 743, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2878, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h8803f8c799f93ab4);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 249, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 482, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 249, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_2);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 482, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_2);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 249, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_3);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 482, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_3);
             return ret;
         },
         __wbindgen_cast_0000000000000005: function(arg0) {
@@ -2886,22 +5797,22 @@ function wasm_bindgen__convert__closures_____invoke__h8803f8c799f93ab4(arg0, arg
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_2(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_2(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_2(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_2(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_3(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_3(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_3(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_3(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
@@ -3000,6 +5911,12 @@ const FederatedNodeManagerFinalization = (typeof FinalizationRegistry === 'undef
 const QualiaPortalFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_qualiaportal_free(ptr, 1));
+const QualiaStoreFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_qualiastore_free(ptr, 1));
+const WasmHealthStoreFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmhealthstore_free(ptr, 1));
 const WasmOffloadIntentFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmoffloadintent_free(ptr, 1));

@@ -142,6 +142,45 @@ pub fn RadialActionRing(wb: Signal<Workbench>, state: Signal<RadialState>) -> El
                                     let mut w = wb();
                                     match i {
                                         0 => { w.sidebar = !w.sidebar; }, // Inspect
+                                        1 => { // Connect Wire — arm source, or complete to selection
+                                            if w.selected.is_none() && w.wire_source.is_none() {
+                                                w.note("Connect Wire — select a container first");
+                                            } else if w.connect_wire_via_selection().is_some() {
+                                                w.note("Wire connected");
+                                            } else if w.wire_source.is_some() {
+                                                w.note("Wire armed — click a target container (Esc cancels)");
+                                            }
+                                        },
+                                        2 => { // Clip Tray — selected container → clipboard
+                                            match w.selected.clone().and_then(|id| w.node(&id).cloned()) {
+                                                Some(n) => {
+                                                    let clip = serde_json::to_string_pretty(&serde_json::json!({
+                                                        "format": "webizen.hcf/1",
+                                                        "clip": true,
+                                                        "node": {
+                                                            "id": n.id, "kind": n.kind.id(), "title": n.title,
+                                                            "x": n.x, "y": n.y, "width": n.width, "height": n.height,
+                                                            "z": n.z, "d": n.d,
+                                                            "strata": n.strata.id(), "epistemic": n.epistemic.id(),
+                                                        },
+                                                    })).unwrap_or_default();
+                                                    super::host::copy_to_clipboard(clip);
+                                                    w.note(format!("Clipped \"{}\" to tray (clipboard)", n.title));
+                                                }
+                                                None => w.note("Clip Tray — select a container first"),
+                                            }
+                                        },
+                                        3 => { // Export .hcf — whole desk JSON → clipboard
+                                            let (n, m) = (w.nodes.len(), w.wires.len());
+                                            super::host::copy_to_clipboard(w.to_hcf_json());
+                                            w.note(format!("Exported .hcf → clipboard ({n} containers, {m} wires)"));
+                                        },
+                                        4 => { // Duplicate
+                                            match w.duplicate_selected() {
+                                                Some(id) => w.note(format!("Duplicated → {id}")),
+                                                None => w.note("Duplicate — select a container first"),
+                                            }
+                                        },
                                         5 => { // Snap 8px
                                             if let Some(id) = w.selected.clone() {
                                                 if let Some(n) = w.node_mut(&id) {
@@ -151,9 +190,11 @@ pub fn RadialActionRing(wb: Signal<Workbench>, state: Signal<RadialState>) -> El
                                             }
                                         },
                                         6 => { w.place(ContainerKind::Code); }, // Vibe REPL
-                                        7 => { // Delete
-                                            if let Some(id) = w.selected.clone() {
-                                                w.close(&id);
+                                        7 => { // Delete — selected wire or container
+                                            if w.delete_selected() {
+                                                w.note("Deleted selection");
+                                            } else {
+                                                w.note("Nothing selected");
                                             }
                                         },
                                         _ => {}

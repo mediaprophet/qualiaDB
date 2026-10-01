@@ -3,6 +3,7 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use super::engine::{self, DaemonProbe};
+use super::host;
 use super::kinds::{DimMode, Epistemic, ManifoldId, Strata};
 use super::store::Workbench;
 use dioxus::prelude::*;
@@ -32,13 +33,33 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                     "← Back to Webizen Studio"
                 }
                 Menu { name: "file", label: "File", open, wb,
-                    Item { left: "New Manifold Desk", right: "Ctrl+N" }
-                    Item { left: "Open HyperDoc / Desk...", right: "Ctrl+O" }
-                    Item { left: "Import .hcf Container", right: "" }
+                    Item { left: "New Manifold Desk", right: "held", held: true }
+                    Item { left: "Open .hcf Desk (clipboard)", right: "Ctrl+O",
+                        action: move |_| host::open_hcf_from_clipboard(wb) }
+                    Item { left: "Import .hcf Container", right: "held", held: true }
                     Divider {}
-                    Item { left: "Save to Merkle DAG", right: "Ctrl+S" }
-                    Item { left: "Export RDF 1.2 Triples", right: "" }
-                    Item { left: "Export Solid Pod Turtle", right: "" }
+                    Item { left: "Save Desk Checkpoint (local)", right: "Ctrl+S",
+                        action: move |_| host::save_checkpoint(wb) }
+                    Item { left: "Load Desk Checkpoint", right: "",
+                        action: move |_| host::load_checkpoint(wb) }
+                    Item { left: "Export .hcf (clipboard)", right: "",
+                        action: move |_| {
+                            let mut s = wb();
+                            let (n, m) = (s.nodes.len(), s.wires.len());
+                            host::copy_to_clipboard(s.to_hcf_json());
+                            s.note(format!("Exported .hcf → clipboard ({n} containers, {m} wires)"));
+                            s.menu = None;
+                            wb.set(s);
+                        } }
+                    Item { left: "Export RDF 1.2 Triples (Turtle → clipboard)", right: "",
+                        action: move |_| {
+                            let mut s = wb();
+                            host::copy_to_clipboard(s.to_turtle());
+                            s.note("Exported desk as Turtle → clipboard");
+                            s.menu = None;
+                            wb.set(s);
+                        } }
+                    Item { left: "Export Solid Pod Turtle", right: "held", held: true }
                 }
                 Menu { name: "canvases", label: "Manifolds", open, wb,
                     CanvasItem { wb, id: ManifoldId::Research, hint: "Alt+1" }
@@ -131,9 +152,22 @@ fn Menu(
 }
 
 #[component]
-fn Item(left: &'static str, right: &'static str) -> Element {
+fn Item(
+    left: &'static str,
+    right: &'static str,
+    action: Option<EventHandler<MouseEvent>>,
+    #[props(default)] held: bool,
+) -> Element {
     rsx! {
-        div { class: "dropdown-item",
+        div {
+            class: "dropdown-item",
+            style: if held { "opacity:0.5;cursor:default;" } else { "" },
+            title: if held { "held / not yet" } else { "" },
+            onclick: move |e| {
+                if let Some(action) = action {
+                    action.call(e);
+                }
+            },
             span { "{left}" }
             if !right.is_empty() { span { class: "shortcut-hint", "{right}" } }
         }
@@ -166,6 +200,8 @@ fn set_dim(mut wb: Signal<Workbench>, dim: DimMode) {
 #[component]
 pub fn ControlBar(wb: Signal<Workbench>) -> Element {
     let w = wb();
+    let secs = (w.time_progress.clamp(0.0, 1.0) * 86399.0) as u64;
+    let active_clock = format!("{:02}:{:02}:{:02}", secs / 3600, (secs % 3600) / 60, secs % 60);
     rsx! {
         div { class: "canvas-control-bar",
             div { class: "virtual-desktop-pager",
@@ -185,7 +221,16 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
                         }
                     }
                 }
-                button { class: "pager-add-btn", title: "Create New Manifold Workspace", "+" }
+                button {
+                    class: "pager-add-btn",
+                    title: "Create New Manifold Workspace — held / not yet (manifolds are a fixed vocabulary)",
+                    onclick: move |_| {
+                        let mut s = wb();
+                        s.note("New manifold held — the 10-manifold vocabulary is fixed; extend ManifoldId to add one");
+                        wb.set(s);
+                    },
+                    "+"
+                }
                 button {
                     class: "pager-tidy-btn",
                     style: "background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:var(--accent-cyan);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;cursor:pointer;margin-left:4px;",
@@ -199,7 +244,16 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
                 }
             }
             div { class: "canvas-title-box",
-                input { class: "canvas-title-input", value: "{w.title}", readonly: true }
+                input {
+                    class: "canvas-title-input",
+                    value: "{w.title}",
+                    title: "Desk title — editable",
+                    oninput: move |e| {
+                        let mut s = wb();
+                        s.title = e.value();
+                        wb.set(s);
+                    },
+                }
                 span { class: "graph-address-badge", "{w.graph_iri}" }
             }
             div { class: "strata-deck-selector",
@@ -244,7 +298,33 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
                 span { class: "datetime-badge", "08-15 00:00" }
                 div { class: "time-slider-container",
                     button { class: "play-pause-btn",
-                        onclick: move |_| { let mut st = wb(); st.playing = !st.playing; wb.set(st); },
+                        onclick: move |_| {
+                            let mut st = wb();
+                            st.playing = !st.playing;
+                            st.play_epoch = st.play_epoch.wrapping_add(1);
+                            let epoch = st.play_epoch;
+                            let active = st.playing;
+                            wb.set(st);
+                            #[cfg(target_arch = "wasm32")]
+                            if active {
+                                spawn(async move {
+                                    loop {
+                                        gloo_timers::future::TimeoutFuture::new(100).await;
+                                        let mut s = wb();
+                                        if !s.playing || s.play_epoch != epoch {
+                                            break;
+                                        }
+                                        s.time_progress = (s.time_progress + 0.002).min(1.0);
+                                        if s.time_progress >= 1.0 {
+                                            s.playing = false;
+                                        }
+                                        wb.set(s);
+                                    }
+                                });
+                            }
+                            #[cfg(not(target_arch = "wasm32"))]
+                            let _ = (epoch, active);
+                        },
                         if w.playing { "⏸" } else { "▶" }
                     }
                     input {
@@ -258,7 +338,7 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
                             }
                         },
                     }
-                    span { class: "datetime-badge active-time", "14:40:00" }
+                    span { class: "datetime-badge active-time", "{active_clock}" }
                 }
                 span { class: "datetime-badge", "08-15 23:59" }
             }
@@ -348,6 +428,9 @@ pub fn StatusBar(wb: Signal<Workbench>) -> Element {
                 span { strong { "Active Node:" } " " span { style: "color:var(--accent-cyan);", "{node}" } }
                 span { strong { "Strata:" } " " span { style: "color:var(--accent-emerald);", "{strata}" } }
                 span { strong { "Epistemic Lens:" } " " span { style: "color:var(--modality-objective);", "{w.epistemic.id()}" } }
+                if let Some(note) = &w.status_note {
+                    span { style: "color:var(--accent-gold, #fbbf24);", "· {note}" }
+                }
             }
             div { style: "display:flex;gap:16px;",
                 span { strong { "Identity:" } " did:qualia:timothy_charles_holborn" }

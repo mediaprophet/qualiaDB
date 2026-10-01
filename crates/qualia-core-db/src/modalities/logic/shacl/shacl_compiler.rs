@@ -280,7 +280,10 @@ impl ShaclCompiler {
             | ShaclConstraint::EconConvergedModel
             | ShaclConstraint::EconPositivePrice
             | ShaclConstraint::EconRiskBelowThreshold { .. }
-            | ShaclConstraint::EconWelfareAboveFloor { .. } => {}
+            | ShaclConstraint::EconWelfareAboveFloor { .. }
+            | ShaclConstraint::ValuesConsentNonCoerced { .. }
+            | ShaclConstraint::ValuesHarmBelowCeiling { .. }
+            | ShaclConstraint::FuzzyMinDegree { .. } => {}
         }
     }
 

@@ -2,14 +2,17 @@
 
 use super::*;
 use crate::inference::moe::dispatch::MAX_ROUTED_EXPERTS;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::inference::moe::ftw_loader::FtwModelPackage;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
 use super::moe_gguf::{
-    compute_router_logits_from_gguf, compute_router_logits_from_raw, dot,
-    evaluate_gguf_dense_swiglu, evaluate_gguf_swiglu_expert,
+    compute_router_logits_from_gguf, dot, evaluate_gguf_dense_swiglu, evaluate_gguf_swiglu_expert,
     evaluate_gguf_swiglu_expert_fused_gate_up,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use super::moe_gguf::compute_router_logits_from_raw;
 
 impl QTensorEngine {
     /// Adopt an FTW multi-shard model directory for native MoE execution.
@@ -23,6 +26,8 @@ impl QTensorEngine {
         self.max_tensor_bytes = index.max_layer_tensor_bytes;
         self.gguf_mmap = pkg.shards.first().cloned();
         self.ftw_package = Some(pkg);
+        self.ensure_kv_cache(&index.hyperparams);
+        self.init_ssm_state(&index);
 
         Ok(GgufLoadReport {
             mapped_bytes: self
@@ -40,6 +45,37 @@ impl QTensorEngine {
         })
     }
 
+    /// Read raw bytes for a tensor from either the FTW package shards or the primary GGUF mmap.
+    pub fn fetch_tensor_raw_bytes<'a>(&'a self, info: &crate::gguf_sharder::GgufTensorInfo) -> Option<&'a [u8]> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let len = crate::ggml_quants::tensor_byte_len(info)?;
+            if let Some(ref pkg) = self.ftw_package {
+                if let Some(b) = pkg.fetch_by_global_offset(info.byte_offset, len) {
+                    return Some(b);
+                }
+            }
+        }
+        let mmap = self.gguf_mmap.as_deref()?;
+        crate::ggml_quants::fetch_tensor_bytes(mmap, self.tensor_data_offset, info).ok()
+    }
+
+    /// Dequantize norm weights from FTW shards or GGUF mmap into caller slice.
+    pub(crate) fn dequant_norm_tensor_into(
+        &self,
+        info: &crate::gguf_sharder::GgufTensorInfo,
+        out: &mut [f32],
+    ) -> usize {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(raw) = self.fetch_tensor_raw_bytes(info) {
+            return cpu_ops::dequant_norm_from_raw(raw, info, out);
+        }
+        if let Some(mmap) = self.gguf_mmap.as_deref() {
+            return cpu_ops::dequant_norm_row_into(mmap, self.tensor_data_offset, info, out);
+        }
+        0
+    }
+
     /// Dispatch MoE layer step: pre-norm input -> router -> top-k SwiGLU experts into scratch_a.
     pub(crate) fn dispatch_moe_ffn(
         &mut self,
@@ -54,6 +90,7 @@ impl QTensorEngine {
             None => return false,
         };
 
+        #[cfg_attr(target_arch = "wasm32", allow(unused_variables))]
         let layer_idx = tensors.layer_idx as u16;
         let num_experts = (router_info.dims[1] as usize)
             .min(MAX_ROUTED_EXPERTS)
@@ -61,6 +98,7 @@ impl QTensorEngine {
         let topk = 8usize.min(num_experts);
 
         let mut gate_logits = [0.0f32; MAX_ROUTED_EXPERTS];
+        #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut router_ready = false;
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -159,6 +197,7 @@ impl QTensorEngine {
             let expert_id = expert_indices[i];
             let weight = expert_weights[i];
 
+            #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
             let mut evaluated = false;
             #[cfg(not(target_arch = "wasm32"))]
             if let Some(ref pkg) = ftw_pkg {
@@ -231,13 +270,77 @@ impl QTensorEngine {
             }
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(ref pkg) = ftw_pkg {
+            let gup_name = format!("model.layers.{}.mlp.shared_expert.gate_up_proj.weight", layer_idx);
+            let gus_name = format!("model.layers.{}.mlp.shared_expert.gate_up_proj.weight_scale", layer_idx);
+            let gug_name = format!("model.layers.{}.mlp.shared_expert.gate_up_proj.weight_global", layer_idx);
+            let dnp_name = format!("model.layers.{}.mlp.shared_expert.down_proj.weight", layer_idx);
+            let dns_name = format!("model.layers.{}.mlp.shared_expert.down_proj.weight_scale", layer_idx);
+            let dng_name = format!("model.layers.{}.mlp.shared_expert.down_proj.weight_global", layer_idx);
+            let gate_name = format!("model.layers.{}.mlp.shared_expert_gate.weight", layer_idx);
+
+            if let (Some(gup), Some(gus), Some(gug), Some(dnp), Some(dns), Some(dng), Some(gate_raw)) = (
+                pkg.fetch_tensor_bytes(&gup_name),
+                pkg.fetch_tensor_bytes(&gus_name),
+                pkg.fetch_tensor_bytes(&gug_name),
+                pkg.fetch_tensor_bytes(&dnp_name),
+                pkg.fetch_tensor_bytes(&dns_name),
+                pkg.fetch_tensor_bytes(&dng_name),
+                pkg.fetch_tensor_bytes(&gate_name),
+            ) {
+                let shared_data = crate::inference::moe::ftw_loader::FtwExpertData {
+                    gate_up_packed: gup,
+                    gate_up_scale: gus,
+                    gate_up_global: gug,
+                    down_packed: dnp,
+                    down_scale: dns,
+                    down_global: dng,
+                };
+                let bytes_per_row = emb_dim / 2;
+                let inter_dim = if bytes_per_row > 0 {
+                    shared_data.gate_up_packed.len() / (2 * bytes_per_row)
+                } else {
+                    0
+                };
+                let view = shared_data.to_view(emb_dim, inter_dim);
+                if crate::inference::moe::dispatch::evaluate_swiglu_expert_nvfp4(
+                    &ffn_input[..emb_dim],
+                    &view,
+                    &mut gate_buf,
+                    &mut up_buf,
+                    &mut swiglu_buf,
+                    &mut expert_out[..emb_dim],
+                )
+                .is_ok()
+                {
+                    let mut gate_row = [0.0f32; 8192];
+                    let _ = crate::ggml_quants::dequantize_row_into(
+                        gate_raw,
+                        crate::ggml_quants::GGML_TYPE_BF16,
+                        emb_dim,
+                        &mut gate_row[..emb_dim],
+                    );
+                    let gate_val = 1.0 / (1.0 + (-dot(&ffn_input[..emb_dim], &gate_row[..emb_dim])).exp());
+                    for d in 0..emb_dim {
+                        scratch_a[d] += gate_val * expert_out[d];
+                    }
+                }
+            }
+        }
+
         // Qwen-style shared expert: an ordinary SwiGLU MLP whose output is
-        // scaled by sigmoid(W_shared_gate x).  It is mandatory whenever any
+        // scaled by sigmoid(W_shared_gate x). It is mandatory whenever any
         // of its tensors are present; partial tensor sets fail closed.
-        if tensors.moe_shared_gate.is_some()
+        #[cfg(target_arch = "wasm32")]
+        let has_ftw = false;
+        #[cfg(not(target_arch = "wasm32"))]
+        let has_ftw = ftw_pkg.is_some();
+
+        if !has_ftw && (tensors.moe_shared_gate.is_some()
             || tensors.moe_shared_up.is_some()
             || tensors.moe_shared_down.is_some()
-            || tensors.moe_shared_gate_input.is_some()
+            || tensors.moe_shared_gate_input.is_some())
         {
             let (Some(gate), Some(up), Some(down), Some(gate_input), Some(mmap)) = (
                 tensors.moe_shared_gate.as_ref(),

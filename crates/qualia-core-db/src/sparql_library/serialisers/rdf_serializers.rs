@@ -113,9 +113,16 @@ pub fn serialize_to_trig<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<()
 
 /// Serialize Quins to N3 format.
 ///
-/// N3's core triple syntax is Turtle-compatible; this emits the Turtle subset
-/// (subject with a `;`-separated predicate–object list) which is valid N3.
+/// Emits a Solid-friendly `text/n3` document: common `@prefix` declarations
+/// plus Turtle-compatible statements (valid N3). Full N3 formulae (`{…}`) are
+/// not synthesised from flat Quins — those come from the N3 rule parser path.
 pub fn serialize_to_n3<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<(), String> {
+    let err = |e: std::io::Error| format!("Failed to write N3: {e}");
+    writeln!(writer, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .").map_err(err)?;
+    writeln!(writer, "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .").map_err(err)?;
+    writeln!(writer, "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .").map_err(err)?;
+    writeln!(writer, "@prefix owl: <http://www.w3.org/2002/07/owl#> .").map_err(err)?;
+    writeln!(writer).map_err(err)?;
     for (subject, rows) in group_by(quins, |q| q.subject) {
         write_subject_block(writer, subject, &rows, "")
             .map_err(|e| format!("Failed to write N3: {e}"))?;
@@ -229,48 +236,100 @@ pub fn serialize_to_jsonld<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<
     Ok(())
 }
 
-/// Serialize Quins to CBOR-LD: a CBOR array of JSON-LD-shaped node maps
-/// (`{"@id": <subject>, <predicate>: <object>}`), one map per triple.
+/// Compact JSON-LD 1.1 document for Solid / LDP: pinned Qualia `@context` + `@graph`.
 ///
-/// One map per triple (rather than grouping a subject's predicates or using
-/// array values) is deliberate: the streaming CBOR-LD parser
-/// (`cbor_parser::parse_cbor_ld_stream`) reads exactly one value per map key
-/// and re-hashes term *strings* with the same `generate_60bit_token`, so this
-/// shape round-trips to identical term hashes. CBOR array values and duplicate
-/// keys are not re-hashable by that parser and would silently drop objects.
+/// The context bytes are exactly [`crate::sparql_library::rdf_formats::QUALIA_JSONLD_CONTEXT_V1`]
+/// so package receipts can pin `context_digest_sha256`. Nodes in `@graph` use the same
+/// expanded term shape as [`serialize_to_jsonld`] (full IRIs) — compaction of arbitrary
+/// vocabularies is not claimed; embedding the pinned context is what Solid clients need
+/// for offline resolution without remote `@context` fetches.
+pub fn serialize_to_jsonld_compact<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<(), String> {
+    use crate::sparql_library::rdf_formats::QUALIA_JSONLD_CONTEXT_V1;
+    let err = |e: std::io::Error| format!("Failed to write compact JSON-LD: {e}");
+
+    // QUALIA_JSONLD_CONTEXT_V1 is `{ "@context": {…}, "qualia:contextVersion": "1" }`.
+    // Prefer embedding the inner `@context` object when present.
+    let ctx_fragment = if let Some(start) = QUALIA_JSONLD_CONTEXT_V1.find("\"@context\"") {
+        let after = &QUALIA_JSONLD_CONTEXT_V1[start..];
+        if let Some(brace) = after.find('{') {
+            let rest = &after[brace..];
+            let mut depth = 0i32;
+            let mut end = None;
+            for (i, c) in rest.char_indices() {
+                match c {
+                    '{' => depth += 1,
+                    '}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            end = Some(i + 1);
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            end.map(|e| rest[..e].to_string())
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    let ctx_json = ctx_fragment.unwrap_or_else(|| QUALIA_JSONLD_CONTEXT_V1.to_string());
+
+    write!(writer, "{{\n  \"@context\": ").map_err(err)?;
+    write!(writer, "{ctx_json}").map_err(err)?;
+    write!(writer, ",\n  \"@graph\": ").map_err(err)?;
+    serialize_to_jsonld(writer, quins)?;
+    // serialize_to_jsonld ends with `]\n`; close the outer object.
+    write!(writer, "}}\n").map_err(err)?;
+    Ok(())
+}
+
+/// Serialize Quins to the Qualia vendor CBOR profile (`application/vnd.qualia.nquin-cbor`):
+/// a CBOR array of JSON-LD-shaped node maps, one map per triple.
 ///
-/// Fidelity boundary (honest, not a substitution): IRIs resolved through the
-/// lexicon round-trip to the identical hash. Inline-typed literals are written
-/// in their lexical form (e.g. `"42"`); their tag-encoded identity cannot be
-/// reconstructed through a string-hashing CBOR-LD reader. Terms that resolve to
-/// neither (unknown hashes) are written as their `quin:hash/…` /
-/// `did:q42:ptr/…` surface form.
+/// Object terms use JSON-LD value objects so **inline-typed literals round-trip
+/// losslessly** (`{"@value","@type"}` → `INLINE_TAG_*`). IRI objects use
+/// `{"@id": …}`. Bare string values remain accepted by the parser for legacy
+/// fixtures.
+///
+/// This is **not** W3C CBOR-LD 1.0 (Working Draft). Lexicon-resolved IRIs keep
+/// their hash; unknown hashes serialize as `quin:hash/…` surfaces.
 pub fn serialize_to_cborld<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<(), String> {
     use ciborium::value::Value;
 
-    let term_string = |h: u64| -> String {
+    let cbor_object_term = |h: u64| -> Value {
         match jsonld_term(h) {
-            JsonLdTerm::Iri(s) => s,
-            JsonLdTerm::Literal { value, .. } => value,
+            JsonLdTerm::Iri(s) => Value::Map(vec![(
+                Value::Text("@id".to_string()),
+                Value::Text(s),
+            )]),
+            JsonLdTerm::Literal { value, datatype } => Value::Map(vec![
+                (Value::Text("@value".to_string()), Value::Text(value)),
+                (Value::Text("@type".to_string()), Value::Text(datatype)),
+            ]),
         }
     };
 
     let mut arr: Vec<Value> = Vec::with_capacity(quins.len());
     for q in quins {
+        let subj = match jsonld_term(q.subject) {
+            JsonLdTerm::Iri(s) => s,
+            JsonLdTerm::Literal { value, .. } => value,
+        };
+        let pred = match jsonld_term(q.predicate) {
+            JsonLdTerm::Iri(s) => s,
+            JsonLdTerm::Literal { value, .. } => value,
+        };
         arr.push(Value::Map(vec![
-            (
-                Value::Text("@id".to_string()),
-                Value::Text(term_string(q.subject)),
-            ),
-            (
-                Value::Text(term_string(q.predicate)),
-                Value::Text(term_string(q.object)),
-            ),
+            (Value::Text("@id".to_string()), Value::Text(subj)),
+            (Value::Text(pred), cbor_object_term(q.object)),
         ]));
     }
 
     ciborium::ser::into_writer(&Value::Array(arr), writer)
-        .map_err(|e| format!("Failed to write CBOR-LD: {e}"))
+        .map_err(|e| format!("Failed to write vendor nquin-CBOR: {e}"))
 }
 
 #[cfg(test)]
@@ -384,8 +443,133 @@ mod tests {
                     ciborium::value::Value::Map(m) => assert_eq!(m.len(), 2, "@id + one predicate"),
                     other => panic!("expected map, got {other:?}"),
                 }
+                // Second triple's object must be a typed-literal map, not a bare string.
+                match &a[1] {
+                    ciborium::value::Value::Map(m) => {
+                        let obj = m
+                            .iter()
+                            .find(|(k, _)| !matches!(k, ciborium::value::Value::Text(t) if t == "@id"))
+                            .map(|(_, v)| v)
+                            .expect("predicate entry");
+                        match obj {
+                            ciborium::value::Value::Map(om) => {
+                                let keys: Vec<_> = om
+                                    .iter()
+                                    .filter_map(|(k, _)| match k {
+                                        ciborium::value::Value::Text(t) => Some(t.as_str()),
+                                        _ => None,
+                                    })
+                                    .collect();
+                                assert!(keys.contains(&"@value"), "{om:?}");
+                                assert!(keys.contains(&"@type"), "{om:?}");
+                            }
+                            other => panic!("typed literal must be a map, got {other:?}"),
+                        }
+                    }
+                    other => panic!("expected map, got {other:?}"),
+                }
             }
             other => panic!("expected array, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn cborld_inline_integer_round_trips_bit_exact() {
+        use crate::sparql_library::parsers::cbor_parser::parse_cbor_ld_into;
+        use crate::sparql_library::rdf_formats::QuinCollector;
+        use std::io::Cursor;
+
+        let quins = [quin(
+            MSB_FLAG | 0x11,
+            MSB_FLAG | 0x22,
+            INLINE_TAG_INTEGER | 42,
+        )];
+        let mut buf = Vec::new();
+        serialize_to_cborld(&mut buf, &quins).unwrap();
+        let mut out = QuinCollector::new();
+        let n = parse_cbor_ld_into(Cursor::new(&buf[..]), 0, &mut out).unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(out.as_slice()[0].object, INLINE_TAG_INTEGER | 42);
+    }
+
+    #[test]
+    fn cborld_inline_bool_decimal_float_round_trip_bit_exact() {
+        use crate::query::resolver::{INLINE_TAG_BOOLEAN, INLINE_TAG_DECIMAL};
+        use crate::sparql_library::parsers::cbor_parser::parse_cbor_ld_into;
+        use crate::sparql_library::rdf_formats::QuinCollector;
+        use std::io::Cursor;
+
+        let cases = [
+            INLINE_TAG_BOOLEAN | 1,
+            INLINE_TAG_DECIMAL | 3_500_000, // 3.5
+            crate::frame_layout::pack_float_object(0.5),
+        ];
+        for object in cases {
+            let quins = [quin(MSB_FLAG | 0x11, MSB_FLAG | 0x22, object)];
+            let mut buf = Vec::new();
+            serialize_to_cborld(&mut buf, &quins).unwrap();
+            let mut out = QuinCollector::new();
+            let n = parse_cbor_ld_into(Cursor::new(&buf[..]), 0, &mut out).unwrap();
+            assert_eq!(n, 1, "object={object:#x}");
+            assert_eq!(out.as_slice()[0].object, object, "object={object:#x}");
+        }
+    }
+
+    #[test]
+    fn solid_turtle_n3_jsonld_round_trip_preserve_triple_count() {
+        use crate::sparql_library::rdf_formats::{parse_rdf, QuinCollector, RdfFormat};
+        use std::io::Cursor;
+
+        let s1 = MSB_FLAG | 0xAB;
+        let quins = [
+            quin(s1, MSB_FLAG | 0x11, MSB_FLAG | 0x21),
+            quin(s1, MSB_FLAG | 0x12, INLINE_TAG_INTEGER | 7),
+        ];
+
+        assert_eq!(
+            RdfFormat::from_media_type("text/turtle; charset=utf-8"),
+            Some(RdfFormat::Turtle)
+        );
+        assert_eq!(
+            RdfFormat::from_media_type("application/ld+json"),
+            Some(RdfFormat::JsonLd)
+        );
+        assert_eq!(RdfFormat::from_media_type("text/n3"), Some(RdfFormat::N3));
+
+        let turtle = s(&quins, serialize_to_turtle);
+        let mut out = QuinCollector::new();
+        let n = parse_rdf(
+            RdfFormat::Turtle,
+            Cursor::new(turtle.as_bytes()),
+            0,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(n, 2, "turtle round-trip: {turtle}");
+
+        let n3 = s(&quins, serialize_to_n3);
+        assert!(n3.contains("@prefix"), "n3 emits prefixes: {n3}");
+        let mut out = QuinCollector::new();
+        let n = parse_rdf(RdfFormat::N3, Cursor::new(n3.as_bytes()), 0, &mut out).unwrap();
+        assert_eq!(n, 2, "n3 round-trip count={n}: {n3}");
+
+        let compact = s(&quins, serialize_to_jsonld_compact);
+        assert!(
+            compact.contains("\"@context\""),
+            "compact json-ld has @context: {compact}"
+        );
+        assert!(
+            compact.contains("\"@graph\""),
+            "compact json-ld has @graph: {compact}"
+        );
+        let mut out = QuinCollector::new();
+        let n = parse_rdf(
+            RdfFormat::JsonLd,
+            Cursor::new(compact.as_bytes()),
+            0,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(n, 2, "compact json-ld round-trip: {compact}");
     }
 }

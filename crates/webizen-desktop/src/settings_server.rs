@@ -411,6 +411,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/logs", get(logs_json_handler))
         .route("/api/logs/text", get(logs_text_handler))
         .route("/api/status", get(status_handler))
+        .route("/api/shell/open-poet", post(open_poet_window_handler))
         // Installable remote Surface Controller (phone PWA) + view session API
         .route("/remote-controller", get(remote_controller_index))
         .route("/remote-controller/", get(remote_controller_index))
@@ -952,6 +953,21 @@ async fn console_volume_handler() -> Response {
 
 async fn poet_volume_handler() -> Response {
     volume_html_response(crate::shell::POET_VOLUME_HTML)
+}
+
+/// `POST /api/shell/open-poet` — an os-shell volume asks the host to raise (or
+/// focus) the dedicated Poet Harness webview. Same path as File → New Poet Window.
+async fn open_poet_window_handler() -> Json<serde_json::Value> {
+    match APP_HANDLE.get() {
+        Some(app) => {
+            crate::shell::menu::open_poet_window(app);
+            Json(serde_json::json!({ "ok": true }))
+        }
+        None => Json(serde_json::json!({
+            "ok": false,
+            "error": "host app handle unavailable"
+        })),
+    }
 }
 
 async fn wellfair_volume_handler() -> Response {

@@ -1,4 +1,5 @@
 use crate::mini_parser::hash_token;
+use crate::query::resolver::{INLINE_TAG_BOOLEAN, INLINE_TAG_DECIMAL, INLINE_TAG_INTEGER};
 use crate::NQuin;
 use std::io::Read;
 
@@ -7,31 +8,61 @@ fn hash_str(s: &str) -> u64 {
     hash_token(s)
 }
 
+fn pack_typed_literal(lexical: &str, datatype: Option<&str>) -> u64 {
+    let dt = datatype.unwrap_or("");
+    let dt_l = dt.to_ascii_lowercase();
+    if dt_l.contains("integer") || dt_l.ends_with("#int") || dt_l.ends_with("#long") {
+        if let Ok(v) = lexical.parse::<i64>() {
+            return INLINE_TAG_INTEGER | ((v as u64) & 0x0FFF_FFFF_FFFF_FFFF);
+        }
+    }
+    if dt_l.contains("boolean") {
+        let bit = if lexical.eq_ignore_ascii_case("true") || lexical == "1" {
+            1u64
+        } else {
+            0u64
+        };
+        return INLINE_TAG_BOOLEAN | bit;
+    }
+    if dt_l.contains("decimal") || dt_l.contains("double") || dt_l.contains("float") {
+        if let Ok(v) = lexical.parse::<f64>() {
+            let scaled = (v * 1_000_000.0).round() as i64;
+            return INLINE_TAG_DECIMAL | ((scaled as u64) & 0x0FFF_FFFF_FFFF_FFFF);
+        }
+    }
+    hash_str(lexical)
+}
+
+/// Parse JSON-LD 1.1 text into quins.
+///
+/// Skips `@context` (object, array, or URL string) so compact Solid documents with a
+/// pinned embedded context do not emit context-map noise as triples. `@graph` arrays
+/// of nodes are ingested. Value objects `{ "@value", "@type" }` pack common XSD
+/// literals into inline tags.
 pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
     mut reader: R,
     context_hash: u64,
     sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
-    let mut count = 0;
+    let mut count = 0u64;
 
-    // We use a custom SAX-style stack machine to avoid `serde_json::Value` unbounded DOM
-    // Stack tracks: (Subject Hash, Current Key Hash)
-    let mut stack: Vec<(u64, u64)> = Vec::with_capacity(32);
+    // Stack: (parent_subject, parent_key, flags)
+    // flags bit0 = value-object (saw @value)
+    let mut stack: Vec<(u64, u64, u8)> = Vec::with_capacity(32);
 
     let mut buf = [0u8; 8192];
     let mut state = ParseState::Scan;
     let mut current_string = String::new();
-    let mut current_subject = 0;
-    let mut current_key = 0;
-
-    // We only need to track the first object's ID if we are doing single pass,
-    // but in a truly dynamic stream, we might see the properties before the @id.
-    // To strictly avoid buffering properties, we generate a blank node ID for the object
-    // immediately upon entering, and if we encounter @id later, we emit an equivalence quin
-    // or we just accept the blank node ID as the true ID for those properties.
-    // For simplicity, we just use a blank node ID and replace it if @id appears first.
-
+    let mut current_subject = 0u64;
+    let mut current_key = 0u64;
     let mut is_escaped = false;
+    let mut pending_context_skip = false;
+    let mut skip_depth: i32 = 0;
+    let mut skip_in_string = false;
+    let mut skip_escaped = false;
+    let mut value_lexical: Option<String> = None;
+    let mut value_datatype: Option<String> = None;
+    let mut is_value_object = false;
 
     loop {
         let n = reader.read(&mut buf)?;
@@ -42,24 +73,92 @@ pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink
         for &b in &buf[..n] {
             let ch = b as char;
 
+            if state == ParseState::SkipContext {
+                if skip_in_string {
+                    if skip_escaped {
+                        skip_escaped = false;
+                    } else if ch == '\\' {
+                        skip_escaped = true;
+                    } else if ch == '"' {
+                        skip_in_string = false;
+                        if skip_depth == 0 {
+                            // Skipped a string @context URL.
+                            state = ParseState::Scan;
+                            pending_context_skip = false;
+                        }
+                    }
+                    continue;
+                }
+                match ch {
+                    '"' => {
+                        skip_in_string = true;
+                        skip_escaped = false;
+                    }
+                    '{' | '[' => skip_depth += 1,
+                    '}' | ']' => {
+                        skip_depth -= 1;
+                        if skip_depth <= 0 {
+                            state = ParseState::Scan;
+                            pending_context_skip = false;
+                            skip_depth = 0;
+                        }
+                    }
+                    _ => {}
+                }
+                continue;
+            }
+
             match state {
                 ParseState::Scan => {
+                    if pending_context_skip && !ch.is_whitespace() {
+                        if ch == '"' {
+                            skip_in_string = true;
+                            skip_escaped = false;
+                            skip_depth = 0;
+                            state = ParseState::SkipContext;
+                        } else if ch == '{' || ch == '[' {
+                            skip_depth = 1;
+                            skip_in_string = false;
+                            state = ParseState::SkipContext;
+                        } else {
+                            // Bare token — shouldn't appear; resume scan.
+                            pending_context_skip = false;
+                        }
+                        continue;
+                    }
                     if ch == '{' {
-                        // Enter object
                         let new_subject = hash_str(&format!("blank_{}", count));
-                        stack.push((current_subject, current_key));
+                        stack.push((
+                            current_subject,
+                            current_key,
+                            if is_value_object { 1 } else { 0 },
+                        ));
                         current_subject = new_subject;
                         current_key = 0;
-                        state = ParseState::Scan;
+                        is_value_object = false;
+                        value_lexical = None;
+                        value_datatype = None;
                     } else if ch == '}' {
-                        // Leave object
-                        if let Some((prev_sub, prev_key)) = stack.pop() {
+                        let lexical = value_lexical.take();
+                        let datatype = value_datatype.take();
+                        let was_value = is_value_object;
+                        is_value_object = false;
+
+                        if let Some((prev_sub, prev_key, _)) = stack.pop() {
                             if prev_key != 0 && prev_sub != 0 {
-                                // We just finished an object that was a value to a property
+                                let object = if was_value {
+                                    if let Some(lex) = lexical.as_deref() {
+                                        pack_typed_literal(lex, datatype.as_deref())
+                                    } else {
+                                        current_subject
+                                    }
+                                } else {
+                                    current_subject
+                                };
                                 sink.push(NQuin {
                                     subject: prev_sub,
                                     predicate: prev_key,
-                                    object: current_subject,
+                                    object,
                                     context: context_hash,
                                     metadata: 0b10 << 61,
                                     parity: 0,
@@ -67,7 +166,7 @@ pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink
                                 count += 1;
                             }
                             current_subject = prev_sub;
-                            current_key = 0; // reset key for next property in parent
+                            current_key = 0;
                         }
                     } else if ch == '"' {
                         current_string.clear();
@@ -89,18 +188,27 @@ pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink
                 }
                 ParseState::AfterString => {
                     if ch == ':' {
-                        // The string was a key
                         if current_string == "@id" {
                             state = ParseState::ExpectIdValue;
-                        } else if current_string == "@context" || current_string == "@graph" {
+                        } else if current_string == "@context" {
+                            current_key = 0;
+                            pending_context_skip = true;
+                            state = ParseState::Scan;
+                        } else if current_string == "@graph" {
                             current_key = 0;
                             state = ParseState::Scan;
+                        } else if current_string == "@value" {
+                            current_key = 0;
+                            is_value_object = true;
+                            state = ParseState::ExpectValueLiteral;
+                        } else if current_string == "@type" {
+                            current_key = 0;
+                            state = ParseState::ExpectTypeLiteral;
                         } else {
                             current_key = hash_str(&current_string);
                             state = ParseState::Scan;
                         }
                     } else if ch == ',' || ch == '}' {
-                        // The string was a value
                         if current_key != 0 && current_subject != 0 {
                             sink.push(NQuin {
                                 subject: current_subject,
@@ -113,12 +221,25 @@ pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink
                             count += 1;
                         }
                         if ch == '}' {
-                            if let Some((prev_sub, prev_key)) = stack.pop() {
+                            let lexical = value_lexical.take();
+                            let datatype = value_datatype.take();
+                            let was_value = is_value_object;
+                            is_value_object = false;
+                            if let Some((prev_sub, prev_key, _)) = stack.pop() {
                                 if prev_key != 0 && prev_sub != 0 {
+                                    let object = if was_value {
+                                        if let Some(lex) = lexical.as_deref() {
+                                            pack_typed_literal(lex, datatype.as_deref())
+                                        } else {
+                                            current_subject
+                                        }
+                                    } else {
+                                        current_subject
+                                    };
                                     sink.push(NQuin {
                                         subject: prev_sub,
                                         predicate: prev_key,
-                                        object: current_subject,
+                                        object,
                                         context: context_hash,
                                         metadata: 0b10 << 61,
                                         parity: 0,
@@ -131,7 +252,7 @@ pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink
                         current_key = 0;
                         state = ParseState::Scan;
                     } else if ch.is_whitespace() {
-                        // wait for : or , or }
+                        // wait
                     } else {
                         state = ParseState::Scan;
                     }
@@ -150,13 +271,104 @@ pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink
                     } else if ch == '\\' {
                         is_escaped = true;
                     } else if ch == '"' {
-                        // We found the @id!
                         current_subject = hash_str(&current_string);
                         state = ParseState::Scan;
                     } else {
                         current_string.push(ch);
                     }
                 }
+                ParseState::ExpectValueLiteral => {
+                    if ch == '"' {
+                        current_string.clear();
+                        is_escaped = false;
+                        state = ParseState::InValueString;
+                    } else if ch.is_ascii_digit() || ch == '-' || ch == '+' {
+                        current_string.clear();
+                        current_string.push(ch);
+                        state = ParseState::InValueNumber;
+                    } else if ch == 't' || ch == 'f' {
+                        current_string.clear();
+                        current_string.push(ch);
+                        state = ParseState::InValueNumber; // bool as bareword
+                    }
+                }
+                ParseState::InValueString => {
+                    if is_escaped {
+                        current_string.push(ch);
+                        is_escaped = false;
+                    } else if ch == '\\' {
+                        is_escaped = true;
+                    } else if ch == '"' {
+                        value_lexical = Some(current_string.clone());
+                        is_value_object = true;
+                        state = ParseState::Scan;
+                    } else {
+                        current_string.push(ch);
+                    }
+                }
+                ParseState::InValueNumber => {
+                    if ch.is_ascii_alphanumeric() || ch == '.' || ch == '-' || ch == '+' {
+                        current_string.push(ch);
+                    } else {
+                        value_lexical = Some(current_string.clone());
+                        is_value_object = true;
+                        state = ParseState::Scan;
+                        // Re-process delimiter
+                        if ch == ',' || ch == '}' {
+                            // fall through by not consuming — simplest: push back via recursive handle
+                            // Instead finish object/comma here:
+                            if ch == '}' {
+                                let lexical = value_lexical.take();
+                                let datatype = value_datatype.take();
+                                is_value_object = false;
+                                if let Some((prev_sub, prev_key, _)) = stack.pop() {
+                                    if prev_key != 0 && prev_sub != 0 {
+                                        let object = if let Some(lex) = lexical.as_deref() {
+                                            pack_typed_literal(lex, datatype.as_deref())
+                                        } else {
+                                            current_subject
+                                        };
+                                        sink.push(NQuin {
+                                            subject: prev_sub,
+                                            predicate: prev_key,
+                                            object,
+                                            context: context_hash,
+                                            metadata: 0b10 << 61,
+                                            parity: 0,
+                                        })?;
+                                        count += 1;
+                                    }
+                                    current_subject = prev_sub;
+                                    current_key = 0;
+                                }
+                            } else {
+                                current_key = 0;
+                            }
+                        }
+                    }
+                }
+                ParseState::ExpectTypeLiteral => {
+                    if ch == '"' {
+                        current_string.clear();
+                        is_escaped = false;
+                        state = ParseState::InTypeString;
+                    }
+                }
+                ParseState::InTypeString => {
+                    if is_escaped {
+                        current_string.push(ch);
+                        is_escaped = false;
+                    } else if ch == '\\' {
+                        is_escaped = true;
+                    } else if ch == '"' {
+                        value_datatype = Some(current_string.clone());
+                        is_value_object = true;
+                        state = ParseState::Scan;
+                    } else {
+                        current_string.push(ch);
+                    }
+                }
+                ParseState::SkipContext => unreachable!(),
             }
         }
     }
@@ -204,7 +416,6 @@ pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::Q
                         stack.push((current_subject, current_key));
                         current_subject = new_subject;
                     } else if ch == '}' {
-                        // Emit embedded triple assertions if any
                         for (virtual_id, pred) in &embedded_triples {
                             sink.push(NQuin {
                                 subject: current_subject,
@@ -227,7 +438,6 @@ pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::Q
                         is_escaped = false;
                         state = ParseStateStar::InString;
                     } else if ch == '@' {
-                        // Check for @annotation
                         current_string.clear();
                         state = ParseStateStar::InAnnotationKey;
                     }
@@ -283,8 +493,6 @@ pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::Q
                     } else if ch == '\\' {
                         is_escaped = true;
                     } else if ch == '"' {
-                        // The annotation value is an embedded triple
-                        // For now, we'll generate a Virtual ID placeholder
                         let virtual_id = crate::lexicon::generate_embedded_triple_id(
                             current_subject,
                             current_key,
@@ -327,6 +535,12 @@ enum ParseState {
     AfterString,
     ExpectIdValue,
     InIdString,
+    ExpectValueLiteral,
+    InValueString,
+    InValueNumber,
+    ExpectTypeLiteral,
+    InTypeString,
+    SkipContext,
 }
 
 #[derive(PartialEq)]

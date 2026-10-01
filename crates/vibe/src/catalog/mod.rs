@@ -9,6 +9,9 @@ mod cosmic;
 mod cosmic_ext;
 mod ids;
 mod local;
+mod logic;
+mod specialized;
+mod stdlib;
 mod suggest;
 
 pub use ids::{ALL_INVOKE_IDS, INVOKE_ID_COUNT};
@@ -19,11 +22,23 @@ use crate::animation::presets::list_all_presets;
 use crate::animation::AnimationFamily;
 use crate::value::Value;
 
+pub fn is_known(path: &str) -> bool {
+    canonical_id(path).is_some()
+}
+
 /// Resolve a dotted path to a canonical invoke id.
 ///
 /// `Animation.evaluate_preset` is already canonical.
 /// `Animation.orbit_spin` is a preset alias of `Animation.evaluate_preset`.
+/// `Statistics.ols` aliases `Statistics.linear_regression`.
+/// `Econ.welfare` aliases `Econ.utilitarian_welfare`.
 pub fn canonical_id(path: &str) -> Option<&'static str> {
+    if path == "Statistics.ols" {
+        return Some("Statistics.linear_regression");
+    }
+    if path == "Econ.welfare" {
+        return Some("Econ.utilitarian_welfare");
+    }
     if let Some(id) = lookup_static(path) {
         return Some(id);
     }
@@ -31,10 +46,6 @@ pub fn canonical_id(path: &str) -> Option<&'static str> {
         return Some("Animation.evaluate_preset");
     }
     None
-}
-
-pub fn is_known(path: &str) -> bool {
-    canonical_id(path).is_some()
 }
 
 /// `Family` grant: `using Animation;` covers every `Animation.*` catalog id

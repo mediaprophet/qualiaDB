@@ -1,14 +1,19 @@
 # QualiaDB WebAssembly API & Integration Guide
 
-**Version:** 0.0.38 | **Branch:** `0.0.38`
-**Primary artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm` (`--features portal`)  
+**Version:** 0.0.39 | **Branch:** `0.0.39`  
+**Civics / agents (preferred):** [`wasm-webcivics-agent-api.md`](wasm-webcivics-agent-api.md) — Solid RDF, device storage/backup, SHACL, receipts  
+**Primary portal artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm` (`--features portal`)  
+**WebCivics artifact:** `docs/pkg/webcivics/qualia.js` + `qualia_webcivics_bg.wasm` (`--features wasm-webcivics`)  
 **Playground artifact:** `docs/playground/qualia_core_db.js` (`--features wasm-full`)  
 **Portal manual:** [`qualia-wasm-portal.md`](qualia-wasm-portal.md)
 
-The `qualia-core-db` crate compiles to `wasm32-unknown-unknown` with two feature profiles:
+The `qualia-core-db` crate compiles to `wasm32-unknown-unknown` with several feature profiles.
+For **Civics decision-evidence and agent adapters**, use **`wasm-webcivics`** and the
+agent API manual above — not the playground `wasm-full` bundle.
 
 | Profile | Features | Use case |
 |---------|----------|----------|
+| **WebCivics** | `wasm-webcivics` | Civics.au / agents — JSON-LD/Turtle/N3 Solid, SHACL, OPFS+backup, stats/econ; **no GPU/LLM** |
 | **Portal** | `portal` | GitHub Pages, spatial demo, QApp embed — full WASM-safe engine (logic + science + WebGPU). CI sanity cap 16 MiB raw / 4 MiB gzip |
 | **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM**. Same 16 MiB / 4 MiB sanity cap |
 

@@ -30,6 +30,100 @@ pub enum PublicationIntent {
     CommonsCatalog,
 }
 
+/// Mandatory ingest access / publication policy (QW-10).
+///
+/// Never inferred: writers must receive an explicit choice. Only
+/// [`IngestAccessPolicy::PublicRedistributable`] may set `FLAG_PERMISSIVE_COMMONS`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub enum IngestAccessPolicy {
+    /// Local / Sanctuary; no public magnet, web-seed, or cache.
+    Restricted,
+    /// Shared inside a project; still not public redistribution.
+    ProjectInternal,
+    /// May be shown publicly but licence / redistribution still under review.
+    PublicNotForRedistribution,
+    /// Explicit reviewed decision: Permissive Commons transport allowed.
+    PublicRedistributable,
+}
+
+impl IngestAccessPolicy {
+    pub fn parse(raw: &str) -> Result<Self, String> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "restricted" => Ok(Self::Restricted),
+            "project-internal" | "project_internal" | "internal" => Ok(Self::ProjectInternal),
+            "public-not-for-redistribution"
+            | "public_not_for_redistribution"
+            | "licence-review"
+            | "license-review"
+            | "review-required" => Ok(Self::PublicNotForRedistribution),
+            "public-redistributable" | "public_redistributable" | "permissive-commons" => {
+                Ok(Self::PublicRedistributable)
+            }
+            other => Err(format!(
+                "unknown access policy '{other}'; expected restricted | project-internal | public-not-for-redistribution | public-redistributable"
+            )),
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Restricted => "restricted",
+            Self::ProjectInternal => "project-internal",
+            Self::PublicNotForRedistribution => "public-not-for-redistribution",
+            Self::PublicRedistributable => "public-redistributable",
+        }
+    }
+
+    /// Only an explicit redistributable decision may mint the Commons header flag.
+    pub fn may_declare_permissive_commons(self) -> bool {
+        matches!(self, Self::PublicRedistributable)
+    }
+}
+
+/// Integrity-bound companion written beside a newly ingested `.q42` (QW-10).
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct IngestProvenanceRecord {
+    pub access_policy: String,
+    pub source_sha256: String,
+    pub mapping_version: String,
+    pub context_digest: String,
+    pub compiler_build_digest: String,
+    pub engine_version: String,
+}
+
+impl IngestProvenanceRecord {
+    pub fn new(
+        policy: IngestAccessPolicy,
+        source_sha256: impl Into<String>,
+        mapping_version: impl Into<String>,
+        context_digest: impl Into<String>,
+        compiler_build_digest: impl Into<String>,
+    ) -> Self {
+        Self {
+            access_policy: policy.as_str().to_string(),
+            source_sha256: source_sha256.into(),
+            mapping_version: mapping_version.into(),
+            context_digest: context_digest.into(),
+            compiler_build_digest: compiler_build_digest.into(),
+            engine_version: env!("CARGO_PKG_VERSION").to_string(),
+        }
+    }
+
+    pub fn write_beside_volume(&self, q42_path: &Path) -> io::Result<std::path::PathBuf> {
+        let path = provenance_path_for(q42_path);
+        let json = serde_json::to_vec_pretty(self).map_err(|e| {
+            io::Error::new(io::ErrorKind::InvalidData, format!("provenance json: {e}"))
+        })?;
+        std::fs::write(&path, json)?;
+        Ok(path)
+    }
+}
+
+pub fn provenance_path_for(q42_path: &Path) -> std::path::PathBuf {
+    std::path::PathBuf::from(format!("{}.provenance.json", q42_path.display()))
+}
+
+
 /// How this volume may move, if at all.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub enum Q42PublicationClass {

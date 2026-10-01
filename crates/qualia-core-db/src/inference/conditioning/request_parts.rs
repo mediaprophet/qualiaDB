@@ -14,12 +14,18 @@ pub enum RequestPartKind {
     RequiredInstruction = 0,
     /// User's core prompt / objective (never dropped, never truncated).
     UserPrompt = 1,
+    /// Grounded conversational DAG thread (anchored fragments, branch links).
+    ChatGraphThread = 2,
     /// Authorized tool definitions and schemas.
-    ToolSchema = 2,
+    ToolSchema = 3,
     /// Grounded evidence and citation context.
-    Evidence = 3,
-    /// Multi-turn conversation history.
-    HistoryMessage = 4,
+    Evidence = 4,
+    /// Model deliberation scratchpad guidance or prior reasoning trace.
+    ThinkingScratchpad = 5,
+    /// Multimodal sensory descriptors (vision/audio/spatial token anchors).
+    MultimodalContext = 6,
+    /// Multi-turn linear conversation history (fallback ungrounded).
+    HistoryMessage = 7,
 }
 
 /// A borrowed typed part of an inference request.
@@ -63,6 +69,43 @@ impl<'a> RequestPart<'a> {
         }
     }
 
+    /// Grounded conversational DAG thread. `source_id` carries the target
+    /// fragment the user is replying to, when one exists.
+    pub const fn chat_graph(
+        thread_content: &'a str,
+        target_fragment_id: Option<&'a str>,
+    ) -> Self {
+        Self {
+            kind: RequestPartKind::ChatGraphThread,
+            content: thread_content,
+            source_id: target_fragment_id,
+            qualifier: None,
+            is_mandatory: false,
+        }
+    }
+
+    /// Deliberation / reasoning scratchpad carried for thinking-model decode.
+    pub const fn thinking_scratchpad(scratchpad: &'a str) -> Self {
+        Self {
+            kind: RequestPartKind::ThinkingScratchpad,
+            content: scratchpad,
+            source_id: None,
+            qualifier: None,
+            is_mandatory: false,
+        }
+    }
+
+    /// Multimodal sensory descriptor (vision/audio/spatial token anchors).
+    pub const fn multimodal(modality_desc: &'a str, source: Option<&'a str>) -> Self {
+        Self {
+            kind: RequestPartKind::MultimodalContext,
+            content: modality_desc,
+            source_id: source,
+            qualifier: None,
+            is_mandatory: false,
+        }
+    }
+
     pub const fn evidence(source_id: &'a str, content: &'a str, qualifier: Option<&'a str>) -> Self {
         Self {
             kind: RequestPartKind::Evidence,
@@ -93,7 +136,10 @@ impl<'a> RequestPart<'a> {
 /// Guarantees:
 /// 1. All mandatory parts (RequiredInstruction, UserPrompt) MUST fit entirely;
 ///    if the byte ceiling cannot accommodate them, returns `Err(ConditioningError::ContextBudgetExceeded)`.
-/// 2. Optional parts are admitted in order of priority (ToolSchema > Evidence > History).
+/// 2. Optional parts are admitted in order of priority
+///    (ChatGraphThread > ToolSchema > Evidence > ThinkingScratchpad >
+///    MultimodalContext > HistoryMessage). Grounded DAG context is therefore
+///    preserved while ungrounded linear history is pruned first.
 /// 3. Quoted evidence/tool outputs are NEVER promoted to instructions.
 pub fn select_prioritized_parts<'a>(
     parts: &[RequestPart<'a>],
@@ -125,8 +171,11 @@ pub fn select_prioritized_parts<'a>(
 
     // Phase 3: Add optional parts by kind priority
     let optional_kinds = [
+        RequestPartKind::ChatGraphThread,
         RequestPartKind::ToolSchema,
         RequestPartKind::Evidence,
+        RequestPartKind::ThinkingScratchpad,
+        RequestPartKind::MultimodalContext,
         RequestPartKind::HistoryMessage,
     ];
 
@@ -183,6 +232,49 @@ mod tests {
         assert_eq!(count, 2);
         assert_eq!(out[0].kind, RequestPartKind::RequiredInstruction);
         assert_eq!(out[1].kind, RequestPartKind::UserPrompt);
+    }
+
+    #[test]
+    fn test_chat_graph_thread_outranks_ungrounded_history() {
+        let req = RequestPart::required_instruction("SYSTEM: rules.");
+        let user = RequestPart::user_prompt("USER: reply to the thread.");
+        let graph = RequestPart::chat_graph(
+            "[Chat graph thread context]\nfragment ab anchor=\"claim\"",
+            Some("ab"),
+        );
+        let hist = RequestPart::history("prior turn text that is ungrounded");
+
+        let parts = [req, user, graph, hist];
+        let mut out = [req; 8];
+
+        // Budget fits mandatory + chat-graph thread but not the flat history.
+        let cap = req.byte_len() + user.byte_len() + graph.byte_len();
+        let count = select_prioritized_parts(&parts, cap, &mut out).unwrap();
+        assert_eq!(count, 3);
+        assert_eq!(out[2].kind, RequestPartKind::ChatGraphThread);
+        assert_eq!(out[2].source_id, Some("ab"));
+        assert!(!out[..count]
+            .iter()
+            .any(|p| p.kind == RequestPartKind::HistoryMessage));
+    }
+
+    #[test]
+    fn test_thinking_and_multimodal_parts_admit_before_history() {
+        let req = RequestPart::required_instruction("S");
+        let user = RequestPart::user_prompt("U");
+        let think = RequestPart::thinking_scratchpad("prior <think> trace");
+        let mm = RequestPart::multimodal("image: 4x4 patch anchors", Some("img-1"));
+        let hist = RequestPart::history("older flat history");
+
+        let parts = [req, user, think, mm, hist];
+        let mut out = [req; 8];
+        let cap = req.byte_len() + user.byte_len() + think.byte_len() + mm.byte_len();
+        let count = select_prioritized_parts(&parts, cap, &mut out).unwrap();
+        assert_eq!(count, 4);
+        let kinds: Vec<RequestPartKind> = out[..count].iter().map(|p| p.kind).collect();
+        assert!(kinds.contains(&RequestPartKind::ThinkingScratchpad));
+        assert!(kinds.contains(&RequestPartKind::MultimodalContext));
+        assert!(!kinds.contains(&RequestPartKind::HistoryMessage));
     }
 
     #[test]

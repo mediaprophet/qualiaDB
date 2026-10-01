@@ -133,6 +133,19 @@ pub(crate) fn dequant_norm_row_into(
     crate::ggml_quants::dequantize_row_into(raw, info.ggml_type, n, &mut out[..n]).unwrap_or(0)
 }
 
+/// Dequantize a 1-D norm weight row directly from raw bytes into `out`.
+pub(crate) fn dequant_norm_from_raw(
+    raw: &[u8],
+    info: &GgufTensorInfo,
+    out: &mut [f32],
+) -> usize {
+    let n = info.dims[0] as usize;
+    if n == 0 || n > out.len() {
+        return 0;
+    }
+    crate::ggml_quants::dequantize_row_into(raw, info.ggml_type, n, &mut out[..n]).unwrap_or(0)
+}
+
 /// Pre-norm: copy `hidden` into `h_norm`, apply RMSNorm with `norm_info` weights; return slice to use.
 pub(crate) fn prepare_pre_norm_input<'a>(
     hidden: &'a [f32],

@@ -7,8 +7,8 @@
 //! `solvers::linear_algebra`) is the natural next module here; simple OLS is a
 //! complete capability on its own and is what the domain libs need first.
 
-use super::descriptive::{covariance, mean, variance};
-use super::distributions::students_t;
+use crate::solvers::statistics::descriptive::{covariance, mean, variance};
+use crate::solvers::statistics::distributions::students_t;
 
 /// Ordinary-least-squares fit of `y = intercept + slope·x`.
 #[derive(Debug, Clone, Copy, PartialEq)]

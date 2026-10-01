@@ -144,6 +144,32 @@ fn constraint_of(c: &ConstraintSpec) -> Option<ShaclConstraint> {
         "closed" => ShaclConstraint::Closed {
             ignored_properties: list(),
         },
+        "econVaRPositive" => ShaclConstraint::EconVaRPositive,
+        "econPositivePrice" => ShaclConstraint::EconPositivePrice,
+        "econConvergedModel" => ShaclConstraint::EconConvergedModel,
+        "econWelfareAboveFloor" => ShaclConstraint::EconWelfareAboveFloor { min_welfare: num },
+        "econRiskBelowThreshold" => ShaclConstraint::EconRiskBelowThreshold { max_risk: num },
+        "valuesConsentNonCoerced" => ShaclConstraint::ValuesConsentNonCoerced {
+            max_imbalance: if num.is_finite() && num > 0.0 { num } else { 0.5 },
+        },
+        "valuesHarmBelowCeiling" => ShaclConstraint::ValuesHarmBelowCeiling { max_harm: num },
+        "fuzzyMinDegree" => ShaclConstraint::FuzzyMinDegree {
+            min_degree: if num.is_finite() { num.clamp(0.0, 1.0) } else { 0.0 },
+        },
+        "deonticObligate" => ShaclConstraint::DeonticObligate,
+        "deonticPermit" => ShaclConstraint::DeonticPermit,
+        "deonticForbid" => ShaclConstraint::DeonticForbid,
+        "epistemicKnowledge" => ShaclConstraint::EpistemicKnowledge { min_certainty: u as u8 },
+        "epistemicBelief" => ShaclConstraint::EpistemicBelief { min_certainty: u as u8 },
+        "commonKnowledge" => ShaclConstraint::CommonKnowledge,
+        "ltlGlobally" | "ltlFinally" | "ltlNext" | "ltlUntil" | "ltlRelease" | "ltlConstraint" => {
+            ShaclConstraint::LtlConstraint { formula: text() }
+        }
+        "paraconsistentMaxContradiction" | "paraconsistentConstraint" => {
+            ShaclConstraint::ParaconsistentConstraint {
+                isolation_context: text(),
+            }
+        }
         _ => return None,
     })
 }
@@ -233,5 +259,45 @@ mod tests {
     #[test]
     fn invalid_json_is_reported() {
         assert!(validate_json(":a :b :c .", "{not json").is_err());
+    }
+
+    #[test]
+    fn values_consent_non_coerced_and_harm_ceiling() {
+        let ok = ":a a :Act . :a :imbalance 0.2 . :a :harm 3.0 .";
+        let bad = ":a a :Act . :a :imbalance 0.9 . :a :harm 12.0 .";
+        let shapes = r#"[
+            {"targetClass":":Act","path":":imbalance",
+             "constraints":[{"kind":"valuesConsentNonCoerced","num":0.5}]},
+            {"targetClass":":Act","path":":harm",
+             "constraints":[{"kind":"valuesHarmBelowCeiling","num":10.0}]}
+        ]"#;
+        let v_ok: serde_json::Value =
+            serde_json::from_str(&validate_json(ok, shapes).unwrap()).unwrap();
+        assert_eq!(v_ok["conforms"], true, "{v_ok}");
+        let v_bad: serde_json::Value =
+            serde_json::from_str(&validate_json(bad, shapes).unwrap()).unwrap();
+        assert_eq!(v_bad["conforms"], false, "{v_bad}");
+    }
+
+    #[test]
+    fn end_to_end_econ_welfare_and_var_constraints() {
+        let passing_data = ":p a :PolicyEvaluation .\n:p :welfare 0.85 .\n:p :var 1250000.0 .";
+        let failing_data = ":p a :PolicyEvaluation .\n:p :welfare 0.35 .\n:p :var -50000.0 .";
+        let shapes = r#"[
+            {"targetClass":":PolicyEvaluation","path":":welfare",
+             "constraints":[{"kind":"econWelfareAboveFloor","num":0.50}]},
+            {"targetClass":":PolicyEvaluation","path":":var",
+             "constraints":[{"kind":"econVaRPositive"}]}
+        ]"#;
+
+        let pass_out = validate_json(passing_data, shapes).unwrap();
+        let pass_val: serde_json::Value = serde_json::from_str(&pass_out).unwrap();
+        assert_eq!(pass_val["conforms"], true, "passing data failed with report: {pass_out}");
+
+        let fail_out = validate_json(failing_data, shapes).unwrap();
+        let fail_val: serde_json::Value = serde_json::from_str(&fail_out).unwrap();
+        assert_eq!(fail_val["conforms"], false, "failing data must violate welfare floor and positive var");
+        let results = fail_val["results"].as_array().unwrap();
+        assert_eq!(results.len(), 2, "must have 2 violations");
     }
 }

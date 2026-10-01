@@ -21,6 +21,10 @@ use super::decode_helpers::{
 use super::local_agent::LocalLlmAgent;
 #[cfg(not(target_arch = "wasm32"))]
 use super::sticky_infer;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::inference::runtime::stage::{
+    InferenceStageKind, StageStatus, StageTrace, ThinkingEvent, ThinkingTracker,
+};
 #[allow(unused_imports)]
 use super::types::AgentBackend;
 #[allow(unused_imports)]
@@ -165,8 +169,13 @@ impl LocalLlmAgent {
             let lora_for_thread = lora_active_adapter;
 
             // Sticky pool thread owns the engine (thread_local); caller runs Sentinel.
-            let (done_tx, done_rx) =
-                std::sync::mpsc::sync_channel::<(String, u32, Option<NQuin>, bool)>(1);
+            let (done_tx, done_rx) = std::sync::mpsc::sync_channel::<(
+                String,
+                u32,
+                Option<NQuin>,
+                bool,
+                StageTrace,
+            )>(1);
 
             // ── LLM engine job (sticky 1-thread pool) ────────────────────────
             sticky_infer::pool().spawn(move || {
@@ -240,19 +249,20 @@ impl LocalLlmAgent {
                     (p64_index.as_ref(), engine.gguf_mmap.as_ref())
                 {
                     GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
-                } else if model_path.ends_with(".safetensors") {
-                    let sibling_tok = std::path::Path::new(&model_path)
-                        .parent()
-                        .map(|p| p.join("tokenizer.json"))
-                        .and_then(|p| std::fs::read_to_string(p).ok())
-                        .and_then(|s| GgufTokenizer::from_hf_json(&s));
-                    sibling_tok.unwrap_or_else(|| {
-                        engine
-                            .gguf_mmap
-                            .as_ref()
-                            .map(|m| GgufTokenizer::from_gguf(m))
-                            .unwrap_or_default()
-                    })
+                } else if let Some(sibling_tok) = {
+                    let mp = std::path::Path::new(&model_path);
+                    let candidate = if mp.is_dir() {
+                        mp.join("tokenizer.json")
+                    } else {
+                        mp.parent().map(|p| p.join("tokenizer.json")).unwrap_or_default()
+                    };
+                    if candidate.exists() {
+                        std::fs::read_to_string(&candidate).ok().and_then(|s| GgufTokenizer::from_hf_json(&s))
+                    } else {
+                        None
+                    }
+                } {
+                    sibling_tok
                 } else {
                     engine
                         .gguf_mmap
@@ -274,6 +284,38 @@ impl LocalLlmAgent {
                     }
                 });
 
+                // Lifecycle stage telemetry (`stage:*` in
+                // core-ontologies/inference-lifecycle.n3): a fixed-capacity,
+                // zero-heap trace coalesced per stage kind. Presence of the
+                // model-native SSM / MoE stages is probed once per turn from
+                // the tensor index — cold work, not per-token.
+                let stage_telemetry = crate::llm_bench::stage_telemetry_enabled();
+                let mut stage_trace = StageTrace::new();
+                let thinking_budget = control_thread
+                    .as_ref()
+                    .map(DecodeControl::thinking_token_budget)
+                    .filter(|&budget| budget > 0);
+                let track_thinking = stage_telemetry || thinking_budget.is_some();
+                let mut think_tracker = ThinkingTracker::new();
+                let mut think_piece = [0u8; 64];
+                let (ssm_layer_count, moe_layer_count) = tensor_idx
+                    .as_ref()
+                    .map(|idx| {
+                        let mut ssm = 0u32;
+                        let mut moe = 0u32;
+                        for layer in 0..idx.hyperparams.n_layer.min(512) {
+                            let tensors = idx.get_layer_tensors(layer);
+                            if tensors.is_hybrid_ssm_layer() {
+                                ssm += 1;
+                            }
+                            if tensors.moe_router.is_some() {
+                                moe += 1;
+                            }
+                        }
+                        (ssm, moe)
+                    })
+                    .unwrap_or((0, 0));
+
                 // The fail-soft loader is still used by interactive callers;
                 // enforce compatibility at the execution boundary so an
                 // unsupported architecture cannot masquerade as a prefill
@@ -282,7 +324,7 @@ impl LocalLlmAgent {
                     if let Err(reason) = idx.hyperparams.decode_supported() {
                         eprintln!("[decode] Native model rejected: {reason}");
                         let _ = lp.push(LlmMsg::Eos);
-                        return (String::from("[unsupported-model]"), 0u32, None, false);
+                        return (String::from("[unsupported-model]"), 0u32, None, false, stage_trace);
                     }
                 }
 
@@ -301,7 +343,7 @@ impl LocalLlmAgent {
 
                 // Stack buffers — zero-heap path (512MB floor safe).
                 const MAX_EMB_DIM: usize = 8192;
-                const MAX_FFN_DIM: usize = 10240;
+                const MAX_FFN_DIM: usize = 16384;
                 let mut emb_buf = [0f32; MAX_EMB_DIM];
                 let mut scratch_a = [0f32; MAX_FFN_DIM];
                 let mut scratch_b = [0f32; MAX_FFN_DIM];
@@ -376,7 +418,7 @@ impl LocalLlmAgent {
                             t_prefill.elapsed().as_nanos() as u64,
                             tokens_processed as u64,
                         );
-                        return (String::from("[cancelled]"), 0u32, None, false);
+                        return (String::from("[cancelled]"), 0u32, None, false, stage_trace);
                     }
                     super::prefill_executor::PrefillOutcome::Failed {
                         pos,
@@ -392,7 +434,7 @@ impl LocalLlmAgent {
                             t_prefill.elapsed().as_nanos() as u64,
                             tokens_processed as u64,
                         );
-                        return (String::from("[prefill-failed]"), 0u32, None, false);
+                        return (String::from("[prefill-failed]"), 0u32, None, false, stage_trace);
                     }
                     super::prefill_executor::PrefillOutcome::Completed { .. } => {
                         if !prefix_cached && kv_floats > 0 && crate::llm_bench::prefix_cache_enabled() {
@@ -419,6 +461,18 @@ impl LocalLlmAgent {
                     t_prefill.elapsed().as_nanos() as u64,
                     prompt_len.saturating_sub(1) as u64,
                 );
+                if stage_telemetry {
+                    stage_trace.record(
+                        InferenceStageKind::ChunkedPrefill,
+                        if prefix_cached {
+                            StageStatus::Bypassed
+                        } else {
+                            StageStatus::Executed
+                        },
+                        u32::try_from(t_prefill.elapsed().as_micros()).unwrap_or(u32::MAX),
+                        prefill_tokens as u32,
+                    );
+                }
 
                 let mut out_ids: Vec<u32> = Vec::new();
                 let mut streamed_len = 0usize;
@@ -627,6 +681,26 @@ impl LocalLlmAgent {
                                     if stop {
                                         break;
                                     }
+                                    // The batched draft verification ran k+1 token
+                                    // forwards — count the SSM / MoE work per token.
+                                    if stage_telemetry {
+                                        if ssm_layer_count > 0 {
+                                            stage_trace.record(
+                                                InferenceStageKind::RecurrentStateUpdate,
+                                                StageStatus::Executed,
+                                                0,
+                                                ssm_layer_count.saturating_mul((k + 1) as u32),
+                                            );
+                                        }
+                                        if moe_layer_count > 0 {
+                                            stage_trace.record(
+                                                InferenceStageKind::MoEExpertDispatch,
+                                                StageStatus::Executed,
+                                                0,
+                                                moe_layer_count.saturating_mul((k + 1) as u32),
+                                            );
+                                        }
+                                    }
                                     continue; // skip the normal single-token path this step
                                 }
                             }
@@ -673,11 +747,13 @@ impl LocalLlmAgent {
                     drain_tensor_context_inject();
                     let _attention_mask = crate::compute_universe::attention_route_mask();
                     // FastVerify: skip ControlStream — no mid-decode DenyRollback tax.
-                    let mut rollback = if crate::inference_modes::sentinel_mid_decode_enabled() {
+                    let sentinel_rollback = if crate::inference_modes::sentinel_mid_decode_enabled()
+                    {
                         cc.pop().is_ok()
                     } else {
                         false
                     };
+                    let mut rollback = sentinel_rollback;
                     if matches!(draft_step, TopologyDraftStep::Denied) {
                         rollback = true;
                     }
@@ -1083,6 +1159,19 @@ impl LocalLlmAgent {
                             "LLM_DECODE|sentinel-deny-rollback|keeping argmax token {} (no cur+1)",
                             top_i
                         );
+                        if stage_telemetry {
+                            stage_trace.record(
+                                InferenceStageKind::SentinelMidDecodeGuard,
+                                StageStatus::RolledBack,
+                                0,
+                                1,
+                            );
+                        }
+                        // Sentinel DenyRollback: the denied token is discarded and
+                        // the turn ends — loop exit pushes `LlmMsg::Eos` below.
+                        if sentinel_rollback {
+                            break;
+                        }
                     }
                     let next = (top_i as u32) % vlen;
 
@@ -1112,6 +1201,73 @@ impl LocalLlmAgent {
                     } else {
                         out_ids.push(next);
                         ctx.push(next);
+                        // Lifecycle stages, model-native: every accepted token ran
+                        // one forward — SSM state steps and MoE dispatches inside it.
+                        if stage_telemetry {
+                            if ssm_layer_count > 0 {
+                                stage_trace.record(
+                                    InferenceStageKind::RecurrentStateUpdate,
+                                    StageStatus::Executed,
+                                    0,
+                                    ssm_layer_count,
+                                );
+                            }
+                            if moe_layer_count > 0 {
+                                stage_trace.record(
+                                    InferenceStageKind::MoEExpertDispatch,
+                                    StageStatus::Executed,
+                                    0,
+                                    moe_layer_count,
+                                );
+                            }
+                        }
+                        // Deliberation (`<think>…</think>`) tracking; enforced
+                        // against the contract-reserved thinking budget when set.
+                        if track_thinking {
+                            let piece_len = tok
+                                .decode_token_bytes_into(next, &mut think_piece)
+                                .unwrap_or(0);
+                            match think_tracker.feed_token(&think_piece[..piece_len]) {
+                                ThinkingEvent::Entered => {
+                                    if stage_telemetry {
+                                        stage_trace.record(
+                                            InferenceStageKind::ThinkingDeliberation,
+                                            StageStatus::Executed,
+                                            0,
+                                            0,
+                                        );
+                                    }
+                                }
+                                ThinkingEvent::Exited => {
+                                    if stage_telemetry {
+                                        stage_trace.record(
+                                            InferenceStageKind::ThinkingDeliberation,
+                                            StageStatus::Executed,
+                                            0,
+                                            think_tracker.thinking_tokens(),
+                                        );
+                                    }
+                                }
+                                ThinkingEvent::None => {}
+                            }
+                            if let Some(budget) = thinking_budget {
+                                if think_tracker.in_thinking()
+                                    && think_tracker.thinking_tokens() > budget
+                                {
+                                    // Deliberation exhausted its reservation —
+                                    // quarantine the trace and end the turn.
+                                    if stage_telemetry {
+                                        stage_trace.record(
+                                            InferenceStageKind::ThinkingDeliberation,
+                                            StageStatus::Quarantined,
+                                            0,
+                                            think_tracker.thinking_tokens(),
+                                        );
+                                    }
+                                    break;
+                                }
+                            }
+                        }
                         if let Some(ref tx) = stream_tx_thread {
                             let full = tok.decode(&out_ids);
                             if full.len() > streamed_len {
@@ -1137,6 +1293,30 @@ impl LocalLlmAgent {
                     out_ids.len() as u64,
                 );
 
+                if stage_telemetry {
+                    stage_trace.record(
+                        InferenceStageKind::AutoregressiveDecode,
+                        StageStatus::Executed,
+                        u32::try_from(t_decode.elapsed().as_micros()).unwrap_or(u32::MAX),
+                        out_ids.len() as u32,
+                    );
+                    if stage_trace
+                        .get(InferenceStageKind::SentinelMidDecodeGuard)
+                        .is_none()
+                    {
+                        stage_trace.record(
+                            InferenceStageKind::SentinelMidDecodeGuard,
+                            if crate::inference_modes::sentinel_mid_decode_enabled() {
+                                StageStatus::Executed
+                            } else {
+                                StageStatus::Bypassed
+                            },
+                            0,
+                            out_ids.len() as u32,
+                        );
+                    }
+                }
+
                 let _ = lp.push(LlmMsg::Eos);
                 let text = if semantic_quin.is_some() {
                     String::new()
@@ -1158,7 +1338,7 @@ impl LocalLlmAgent {
                             .text
                     }
                 };
-                (text, out_ids.len() as u32, semantic_quin, sieve_failed)
+                (text, out_ids.len() as u32, semantic_quin, sieve_failed, stage_trace)
                     }, // sticky_infer::with_engine f
                 ); // sticky_infer::with_engine
                 let _ = done_tx.send(result);
@@ -1191,9 +1371,12 @@ impl LocalLlmAgent {
 
             drain_tokens();
 
-            let (text, tokens, semantic_quin, sieve_failed) = done_rx
+            let (text, tokens, semantic_quin, sieve_failed, stage_trace) = done_rx
                 .recv()
-                .unwrap_or_else(|_| (String::new(), 0, None, false));
+                .unwrap_or_else(|_| (String::new(), 0, None, false, StageTrace::new()));
+            if !stage_trace.is_empty() {
+                crate::inference::runtime::stage::set_last_stage_trace(stage_trace);
+            }
             let mut prov = vec![prov_hash];
             if prov_hash == 0 {
                 prov.push(q_hash("qualia:grounded"));
@@ -1327,7 +1510,7 @@ impl LocalLlmAgent {
                 use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS};
 
                 const MAX_EMB_DIM: usize = 8192;
-                const MAX_FFN_DIM: usize = 10240;
+                const MAX_FFN_DIM: usize = 16384;
                 let mut emb_buf = [0f32; MAX_EMB_DIM];
                 let mut scratch_a = [0f32; MAX_FFN_DIM];
                 let mut scratch_b = [0f32; MAX_FFN_DIM];
@@ -1436,6 +1619,7 @@ impl LocalLlmAgent {
                         &tok,
                         &mut streamed_len,
                         None,
+                        gen_budget,
                         on_token_sink,
                     );
                     match draft_step {

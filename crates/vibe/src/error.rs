@@ -97,11 +97,23 @@ impl Diagnostic {
         self
     }
 
+    /// Civics surface code (UE-062).
+    ///
+    /// Vibe keeps internal `E300` (capability / lease). Civics docs and UI map
+    /// lease failures to **E0403**. Other codes pass through as their Vibe token.
+    pub fn civics_code(&self) -> &'static str {
+        match self.code {
+            DiagCode::E300 => "E0403",
+            other => other.as_str(),
+        }
+    }
+
     /// Object fields shared by a lone diagnostic and `DiagnoseReport.errors[]`.
     /// No surrounding braces; no trailing comma.
     pub(crate) fn json_body(&self) -> String {
         let mut s = String::new();
         push_kv(&mut s, "error_code", self.code.as_str());
+        push_kv(&mut s, "civics_code", self.civics_code());
         s.push_str(&format!(
             "\"span\":[{},{}],",
             self.span.start, self.span.end
@@ -216,6 +228,13 @@ mod tests {
         assert_eq!(diag.code.as_str(), "E800");
         assert!(diag.message.contains("graph.read.classified"));
         assert!(diag.message.contains("principal consent token missing"));
+    }
+
+    #[test]
+    fn e300_maps_to_civics_e0403() {
+        let diag = Diagnostic::new(DiagCode::E300, Span::point(0), "lease required");
+        assert_eq!(diag.civics_code(), "E0403");
+        assert_eq!(diag.code.as_str(), "E300");
     }
 
     #[test]

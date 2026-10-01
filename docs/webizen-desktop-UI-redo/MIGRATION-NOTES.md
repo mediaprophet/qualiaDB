@@ -19,6 +19,7 @@
 
 - Leave Poet alone until the shell is real.
 - One Poet product: Desktop launches it; WASM is the host form.
+- Wired: `/volumes/poet` is a live volume — embeds `/studio/index.html#/poet` on stage when the Studio dist is served, and `POST /api/shell/open-poet` raises the dedicated Poet Harness webview (`open_poet_window`). Naming per principal: **poet = desktop build** (`components/poet`), **poet-wasm** (`crates/poet`) serves remote machines.
 - Inventory marks a single canonical path and a fold/retire note for the duplicate half.
 
 ## Out of scope for Gate 0

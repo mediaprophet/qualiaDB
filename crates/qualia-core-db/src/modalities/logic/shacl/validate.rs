@@ -697,37 +697,380 @@ impl<'a> ShaclEngine<'a> {
                     "q42:ProbabilisticConstraintComponent",
                 );
             }
-            // The remaining native constraints are modality *computations* (deontic
-            // evaluation, LTL traces, ASP stable models, calculus, graph, diffusion,
-            // linear-resource, control feedback, interval/Allen, paraconsistent
-            // isolation, argumentation, dialectical synthesis). They are enforced by
-            // their modality engine through the compiled opcode path
-            // (`shacl_compiler` → `webizen` VM), not by per-value data validation, so
-            // there is nothing for the data validator to check here.
+            ShaclConstraint::EconVaRPositive => {
+                for &v in values {
+                    match object_as_f64(v) {
+                        Some(x) if x > 0.0 => {}
+                        Some(x) => violate(
+                            "q42:EconVaRPositiveConstraintComponent",
+                            Some(v),
+                            format!("Value-at-Risk {x} <= 0 (must be strictly positive)"),
+                        ),
+                        None => violate(
+                            "q42:EconVaRPositiveConstraintComponent",
+                            Some(v),
+                            "VaR observation is not numeric".into(),
+                        ),
+                    }
+                }
+            }
+            ShaclConstraint::EconPositivePrice => {
+                for &v in values {
+                    match object_as_f64(v) {
+                        Some(x) if x > 0.0 => {}
+                        Some(x) => violate(
+                            "q42:EconPositivePriceConstraintComponent",
+                            Some(v),
+                            format!("price {x} <= 0 (must be strictly positive)"),
+                        ),
+                        None => violate(
+                            "q42:EconPositivePriceConstraintComponent",
+                            Some(v),
+                            "price observation is not numeric".into(),
+                        ),
+                    }
+                }
+            }
+            ShaclConstraint::EconWelfareAboveFloor { min_welfare } => {
+                for &v in values {
+                    match object_as_f64(v) {
+                        Some(x) if x >= *min_welfare => {}
+                        Some(x) => violate(
+                            "q42:EconWelfareAboveFloorConstraintComponent",
+                            Some(v),
+                            format!("welfare index {x} < required floor {min_welfare}"),
+                        ),
+                        None => violate(
+                            "q42:EconWelfareAboveFloorConstraintComponent",
+                            Some(v),
+                            "welfare observation is not numeric".into(),
+                        ),
+                    }
+                }
+            }
+            ShaclConstraint::EconRiskBelowThreshold { max_risk } => {
+                for &v in values {
+                    match object_as_f64(v) {
+                        Some(x) if x <= *max_risk => {}
+                        Some(x) => violate(
+                            "q42:EconRiskBelowThresholdConstraintComponent",
+                            Some(v),
+                            format!("risk metric {x} > maximum allowed threshold {max_risk}"),
+                        ),
+                        None => violate(
+                            "q42:EconRiskBelowThresholdConstraintComponent",
+                            Some(v),
+                            "risk observation is not numeric".into(),
+                        ),
+                    }
+                }
+            }
+            ShaclConstraint::EconConvergedModel => {
+                for &v in values {
+                    let passed = match object_as_f64(v) {
+                        Some(x) => x > 0.0,
+                        None => resolve(v).map(|s| s == "true" || s == "converged" || s == "1").unwrap_or(false),
+                    };
+                    if !passed {
+                        violate(
+                            "q42:EconConvergedModelConstraintComponent",
+                            Some(v),
+                            "model did not report converged state".into(),
+                        );
+                    }
+                }
+            }
+            ShaclConstraint::ValuesConsentNonCoerced { max_imbalance } => {
+                // Coercion evidence: numeric imbalance ≥ threshold, or CoercedConsentFlag term.
+                let flag_hashes = [
+                    crate::q_hash("https://ns.webcivics.net/values/CoercedConsentFlag"),
+                    crate::q_hash("values:CoercedConsentFlag"),
+                    crate::q_hash("CoercedConsentFlag"),
+                ];
+                for &v in values {
+                    let coerced = if let Some(x) = object_as_f64(v) {
+                        crate::modalities::capacity::detect_duress(
+                            x as f32,
+                            false,
+                            *max_imbalance as f32,
+                        )
+                    } else {
+                        flag_hashes.contains(&v)
+                            || resolve(v).map(|s| {
+                                s.contains("CoercedConsentFlag")
+                                    || s.eq_ignore_ascii_case("coerced")
+                                    || s == "true"
+                                    || s == "1"
+                            })
+                            .unwrap_or(false)
+                    };
+                    if coerced {
+                        violate(
+                            "q42:ValuesConsentNonCoercedConstraintComponent",
+                            Some(v),
+                            format!(
+                                "consent appears coerced (imbalance/flag ≥ threshold {max_imbalance})"
+                            ),
+                        );
+                    }
+                }
+            }
+            ShaclConstraint::ValuesHarmBelowCeiling { max_harm } => {
+                for &v in values {
+                    match object_as_f64(v) {
+                        Some(x) if x < *max_harm => {}
+                        Some(x) => violate(
+                            "q42:ValuesHarmBelowCeilingConstraintComponent",
+                            Some(v),
+                            format!("harm metric {x} is not strictly below ceiling {max_harm}"),
+                        ),
+                        None => violate(
+                            "q42:ValuesHarmBelowCeilingConstraintComponent",
+                            Some(v),
+                            "harm observation is not numeric".into(),
+                        ),
+                    }
+                }
+            }
+            ShaclConstraint::FuzzyMinDegree { min_degree } => {
+                for &v in values {
+                    match object_as_f64(v) {
+                        Some(x) if x >= *min_degree => {}
+                        Some(x) => violate(
+                            "q42:FuzzyMinDegreeConstraintComponent",
+                            Some(v),
+                            format!("fuzzy degree {x} < required minimum {min_degree}"),
+                        ),
+                        None => violate(
+                            "q42:FuzzyMinDegreeConstraintComponent",
+                            Some(v),
+                            "fuzzy degree observation is not numeric".into(),
+                        ),
+                    }
+                }
+            }
+
+            // Modality constraints — graph-level admission (Civics / SHACL gate).
+            // Scan the bound quin graph; fail closed when required norms/claims are absent.
             ShaclConstraint::DeonticPolicy { .. }
             | ShaclConstraint::DeonticObligate
             | ShaclConstraint::DeonticPermit
-            | ShaclConstraint::DeonticForbid
-            | ShaclConstraint::DeonticNotExpired { .. }
-            | ShaclConstraint::EpistemicKnowledge { .. }
+            | ShaclConstraint::DeonticForbid => {
+                use crate::modalities::logic::deontic::{
+                    evaluate_deontic_contract, extract_deontic_opcode, DeonticStatus, OP_FORBID,
+                    OP_OBLIGATE, OP_PERMIT,
+                };
+                let want = match c {
+                    ShaclConstraint::DeonticObligate => Some(OP_OBLIGATE),
+                    ShaclConstraint::DeonticPermit => Some(OP_PERMIT),
+                    ShaclConstraint::DeonticForbid => Some(OP_FORBID),
+                    _ => None, // DeonticPolicy: any O/P/F
+                };
+                let mut buf = vec![
+                    crate::modalities::logic::deontic::DeonticVerdict::default();
+                    self.quins.len().max(1)
+                ];
+                let n = evaluate_deontic_contract(self.quins, 0, &mut buf).unwrap_or(0);
+                let ok = buf[..n].iter().any(|v| {
+                    if v.status != DeonticStatus::Active {
+                        return false;
+                    }
+                    let op = extract_deontic_opcode(v.norm.predicate);
+                    let op_ok = match want {
+                        Some(w) => op == w,
+                        None => op == OP_OBLIGATE || op == OP_PERMIT || op == OP_FORBID,
+                    };
+                    op_ok && (v.norm.subject == focus || values.contains(&v.norm.subject))
+                });
+                if !ok {
+                    let kind = match want {
+                        Some(OP_OBLIGATE) => "obligation",
+                        Some(OP_PERMIT) => "permission",
+                        Some(OP_FORBID) => "prohibition",
+                        None | Some(_) => "deontic policy",
+                    };
+                    violate(
+                        "q42:DeonticConstraintComponent",
+                        None,
+                        format!("no active {kind} norm for focus in graph"),
+                    );
+                }
+            }
+            ShaclConstraint::DeonticNotExpired { now_unix } => {
+                use crate::modalities::logic::deontic::{
+                    evaluate_deontic_contract, DeonticStatus,
+                };
+                let mut buf = vec![
+                    crate::modalities::logic::deontic::DeonticVerdict::default();
+                    self.quins.len().max(1)
+                ];
+                let n = evaluate_deontic_contract(self.quins, *now_unix, &mut buf).unwrap_or(0);
+                let expired = buf[..n].iter().any(|v| {
+                    v.status == DeonticStatus::Expired
+                        && (v.norm.subject == focus || values.contains(&v.norm.subject))
+                });
+                if expired {
+                    violate(
+                        "q42:DeonticNotExpiredConstraintComponent",
+                        None,
+                        format!("deontic norm expired at now_unix={now_unix}"),
+                    );
+                }
+            }
+            ShaclConstraint::EpistemicKnowledge { .. }
             | ShaclConstraint::EpistemicBelief { .. }
-            | ShaclConstraint::CommonKnowledge
-            | ShaclConstraint::LtlConstraint { .. }
-            | ShaclConstraint::ParaconsistentConstraint { .. }
-            | ShaclConstraint::CalculusConstraint { .. }
+            | ShaclConstraint::CommonKnowledge => {
+                use crate::modalities::epistemic::{
+                    evaluate_epistemic_frame, EpistemicStatus, EpistemicVerdict, OP_BELIEVES,
+                    OP_COMMON_KNOWLEDGE, OP_KNOWS,
+                };
+                let (want_op, min_c) = match c {
+                    ShaclConstraint::EpistemicKnowledge { min_certainty } => {
+                        (Some(OP_KNOWS), *min_certainty)
+                    }
+                    ShaclConstraint::EpistemicBelief { min_certainty } => {
+                        (Some(OP_BELIEVES), *min_certainty)
+                    }
+                    ShaclConstraint::CommonKnowledge => (Some(OP_COMMON_KNOWLEDGE), 255u8),
+                    _ => (None, 0u8),
+                };
+                let empty = EpistemicVerdict {
+                    claim: NQuin::default(),
+                    status: EpistemicStatus::Skipped,
+                    certainty: 0,
+                };
+                let mut buf = vec![empty; self.quins.len().max(1)];
+                let n = evaluate_epistemic_frame(self.quins, focus, 0, &mut buf).unwrap_or(0);
+                let ok = buf[..n].iter().any(|v| {
+                    if v.certainty < min_c {
+                        return false;
+                    }
+                    if !matches!(
+                        v.status,
+                        EpistemicStatus::Active | EpistemicStatus::Uncertain
+                    ) {
+                        return false;
+                    }
+                    if v.status == EpistemicStatus::Uncertain && want_op == Some(OP_KNOWS) {
+                        return false;
+                    }
+                    let op = (v.claim.predicate & 0xFF) as u8;
+                    match want_op {
+                        Some(w) => op == w,
+                        None => op == OP_KNOWS || op == OP_BELIEVES || op == OP_COMMON_KNOWLEDGE,
+                    }
+                });
+                if !ok {
+                    violate(
+                        "q42:EpistemicConstraintComponent",
+                        None,
+                        format!(
+                            "no qualifying epistemic claim for focus (minCertainty={min_c})"
+                        ),
+                    );
+                }
+            }
+            ShaclConstraint::ParaconsistentConstraint { isolation_context } => {
+                use crate::modalities::paraconsistent::route_paraconsistent;
+                let mut consistent = vec![NQuin::default(); self.quins.len().max(1)];
+                let mut isolated = vec![NQuin::default(); self.quins.len().max(1)];
+                let (_c_n, i_n) =
+                    route_paraconsistent(self.quins, &mut consistent, &mut isolated).unwrap_or((0, 0));
+                if isolation_context.is_empty() {
+                    // Admission rule: graph must not introduce isolations involving focus.
+                    let hit = isolated[..i_n].iter().any(|q| {
+                        q.subject == focus || values.contains(&q.subject) || values.contains(&q.object)
+                    });
+                    if hit {
+                        violate(
+                            "q42:ParaconsistentConstraintComponent",
+                            None,
+                            "contradiction isolated for focus (paraconsistent admission failed)"
+                                .into(),
+                        );
+                    }
+                } else {
+                    let want = q_hash(isolation_context);
+                    let ok = isolated[..i_n].iter().any(|q| q.context == want);
+                    if !ok {
+                        violate(
+                            "q42:ParaconsistentConstraintComponent",
+                            None,
+                            format!(
+                                "expected isolation context {isolation_context} not present"
+                            ),
+                        );
+                    }
+                }
+            }
+            ShaclConstraint::LtlConstraint { formula } => {
+                use crate::modalities::temporal_ltl::{evaluate_ltl_trace, LtlFormula};
+                let f = formula.trim();
+                if f.is_empty() {
+                    violate(
+                        "q42:TemporalLtlConstraintComponent",
+                        None,
+                        "ltl formula is empty".into(),
+                    );
+                } else {
+                    // Compact forms: "G:<u64>", "F:<u64>", "X:<u64>", "U:<ante>:<cons>"
+                    let parsed = if let Some(rest) = f.strip_prefix("G:") {
+                        rest.parse::<u64>().ok().map(LtlFormula::Globally)
+                    } else if let Some(rest) = f.strip_prefix("F:") {
+                        rest.parse::<u64>().ok().map(LtlFormula::Finally)
+                    } else if let Some(rest) = f.strip_prefix("X:") {
+                        rest.parse::<u64>().ok().map(LtlFormula::Next)
+                    } else if let Some(rest) = f.strip_prefix("U:") {
+                        let mut parts = rest.splitn(2, ':');
+                        match (parts.next(), parts.next()) {
+                            (Some(a), Some(b)) => match (a.parse::<u64>(), b.parse::<u64>()) {
+                                (Ok(ante), Ok(consequent)) => {
+                                    Some(LtlFormula::Until { ante, consequent })
+                                }
+                                _ => None,
+                            },
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    };
+                    match parsed {
+                        Some(ltl) => {
+                            if !evaluate_ltl_trace(self.quins, &ltl) {
+                                violate(
+                                    "q42:TemporalLtlConstraintComponent",
+                                    None,
+                                    format!("LTL formula not satisfied on graph trace: {f}"),
+                                );
+                            }
+                        }
+                        None => violate(
+                            "q42:TemporalLtlConstraintComponent",
+                            None,
+                            format!(
+                                "unsupported LTL formula encoding '{f}' (use G:|F:|X:|U: property hashes)"
+                            ),
+                        ),
+                    }
+                }
+            }
+            // Remaining modality computations still route via VM opcodes for now.
+            ShaclConstraint::CalculusConstraint { .. }
             | ShaclConstraint::GraphConstraint { .. }
             | ShaclConstraint::ArgumentationConstraint { .. }
             | ShaclConstraint::DialecticalConstraint { .. }
-            | ShaclConstraint::EconVaRPositive
-            | ShaclConstraint::EconConvergedModel
-            | ShaclConstraint::EconPositivePrice
-            | ShaclConstraint::EconRiskBelowThreshold { .. }
-            | ShaclConstraint::EconWelfareAboveFloor { .. }
             | ShaclConstraint::AspConstraint { .. }
             | ShaclConstraint::DiffusionConstraint { .. }
             | ShaclConstraint::LinearLogicConstraint { .. }
             | ShaclConstraint::ControlFeedbackConstraint { .. }
-            | ShaclConstraint::IntervalArithmeticConstraint { .. } => {}
+            | ShaclConstraint::IntervalArithmeticConstraint { .. } => {
+                violate(
+                    "q42:UnsupportedConstraintComponent",
+                    None,
+                    "unsupported modality constraint component in data validator (use VM path or extend validate.rs)"
+                        .into(),
+                );
+            }
         }
     }
 

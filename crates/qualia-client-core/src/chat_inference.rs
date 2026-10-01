@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use qualia_core_db::{
+    inference::conditioning::{select_prioritized_parts, RequestPart},
     llm_agent::{
         AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict,
     },
@@ -443,6 +444,9 @@ pub fn run_chat_inference_full(
             if let Some(precision) = active_precision.as_ref() {
                 let control = qualia_core_db::llm_agent::DecodeControl::default();
                 control.set_token_budget(precision.output_budget_tokens);
+                if let Some(thinking) = precision.thinking_budget_tokens {
+                    control.set_thinking_token_budget(thinking);
+                }
                 agent.infer_local_model_controlled(
                     &packet.augmented_prompt,
                     &packet.graph_context_json,
@@ -479,6 +483,9 @@ pub fn run_chat_inference_full(
         match if let Some(precision) = active_precision.as_ref() {
             let control = qualia_core_db::llm_agent::DecodeControl::default();
             control.set_token_budget(precision.output_budget_tokens);
+            if let Some(thinking) = precision.thinking_budget_tokens {
+                control.set_thinking_token_budget(thinking);
+            }
             let (text, provenance_quins, tokens_generated, semantic_quin) = agent
                 .infer_local_model_controlled(
                     &packet.augmented_prompt,
@@ -1080,32 +1087,58 @@ fn build_augmented_packet(
     packet.graph_context_json =
         serde_json::to_string(&enriched_context).unwrap_or(packet.graph_context_json);
 
-    if thread_block.is_empty() {
-        packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
-            env.capability_briefing,
-            semantic_block,
-            routing.routing_brief,
-            cooperative_block,
-            files_block,
-            retrieval.context_block,
-            inforg_block,
-            user_prompt
-        );
+    // Typed conditioning admission (Prompt Precision chat-graph stages): the
+    // grounded chat-graph thread is a `RequestPart::chat_graph` admitted ahead
+    // of evidence and ungrounded linear history, so a tight context window
+    // prunes the flat fallback blocks before the DAG thread. Blocks are
+    // reassembled in document order after selection — selection decides
+    // admission, not layout.
+    let user_tail = if thread_block.is_empty() {
+        format!("\n\n---\nUser: {user_prompt}\n---")
     } else {
-        packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
-            env.capability_briefing,
-            semantic_block,
-            routing.routing_brief,
-            cooperative_block,
-            thread_block,
-            files_block,
-            retrieval.context_block,
-            inforg_block,
-            user_prompt
-        );
+        format!("\n\n---\nUser (replying to graph fragment): {user_prompt}\n---")
+    };
+    // Byte approximation of the active context window (~4 bytes per token);
+    // 0 = unknown window → unbounded (pre-conditioning behaviour).
+    let byte_cap = if env.context_window == 0 {
+        usize::MAX
+    } else {
+        (env.context_window as usize).saturating_mul(4)
+    };
+
+    let blocks = [
+        RequestPart::required_instruction(&env.capability_briefing),
+        RequestPart::evidence("agent-profile", &semantic_block, None),
+        RequestPart::evidence("ontology-routing", &routing.routing_brief, None),
+        RequestPart::history(&cooperative_block),
+        RequestPart::chat_graph(&thread_block, reply_to_fragment_id),
+        RequestPart::evidence("chat-files", &files_block, None),
+        RequestPart::evidence("graph-retrieval", &retrieval.context_block, None),
+        RequestPart::history(&inforg_block),
+    ];
+    let mut parts = [RequestPart::required_instruction(""); 9];
+    parts[..8].copy_from_slice(&blocks);
+    parts[8] = RequestPart::user_prompt(&user_tail);
+
+    let mut selected = [RequestPart::required_instruction(""); 9];
+    let selected_count = select_prioritized_parts(&parts, byte_cap, &mut selected)
+        .map_err(|e| {
+            format!("conditioning could not retain mandatory chat request parts: {e:?}")
+        })?;
+    let admitted = &selected[..selected_count];
+
+    let mut augmented = String::new();
+    for part in &blocks {
+        if part.content.is_empty() || !admitted.contains(part) {
+            continue;
+        }
+        if !augmented.is_empty() {
+            augmented.push_str("\n\n");
+        }
+        augmented.push_str(part.content);
     }
+    augmented.push_str(&user_tail);
+    packet.augmented_prompt = augmented;
 
     Ok(packet)
 }

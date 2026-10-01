@@ -126,6 +126,7 @@ struct EngineInfo {
     target: &'static str,
     profile: &'static str,
     capabilities: Vec<&'static str>,
+    native_only: Vec<&'static str>,
 }
 
 /// Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
@@ -147,6 +148,7 @@ pub fn get_engine_info() -> Result<JsValue, JsValue> {
         target: "wasm32",
         profile: crate::wasm_capabilities::compiled_profile(),
         capabilities: crate::wasm_capabilities::compiled_capabilities().to_vec(),
+        native_only: crate::wasm_capabilities::native_only_capabilities().to_vec(),
     };
     serde_wasm_bindgen::to_value(&info).map_err(|e| JsValue::from_str(&e.to_string()))
 }
@@ -156,6 +158,14 @@ pub fn get_engine_info() -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub fn list_capabilities_wasm() -> Result<JsValue, JsValue> {
     serde_wasm_bindgen::to_value(crate::wasm_capabilities::compiled_capabilities())
+        .map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+/// Names that are intentionally native-only (UE-035/044/045) — never stubbed in browser.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn list_native_only_capabilities_wasm() -> Result<JsValue, JsValue> {
+    serde_wasm_bindgen::to_value(crate::wasm_capabilities::native_only_capabilities())
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 

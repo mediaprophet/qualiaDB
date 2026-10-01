@@ -98,24 +98,33 @@ impl NQuadsStarParser {
         }
     }
 
-    /// Parse a regular N-Quads quad
+    /// Parse a regular N-Quads line.
+    ///
+    /// Accepts standards-valid default-graph triples (`s p o .`) and named-graph
+    /// quads (`s p o g .`). A trailing `.` may be a separate token or omitted when
+    /// tools emit bare terms (rio-compatible).
     fn parse_quad_line(&mut self, line: &str) -> Result<ParseResult, RdfStarParseError> {
-        // Format: <subject> <predicate> <object> <graph> .
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() < 5 {
+        let parts = tokenize_nquads_terms(line)?;
+        if parts.is_empty() {
             return Err(RdfStarParseError::InvalidSyntax);
         }
+        let ends_dot = parts.last().copied() == Some(".");
+        let terms = if ends_dot {
+            &parts[..parts.len() - 1]
+        } else {
+            &parts[..]
+        };
+        // Triple in the default graph, or quad with an explicit graph IRI.
+        let (subject_str, predicate_str, object_str, graph_str) = match terms.len() {
+            3 => (terms[0], terms[1], terms[2], ""),
+            4 => (terms[0], terms[1], terms[2], terms[3]),
+            _ => return Err(RdfStarParseError::InvalidSyntax),
+        };
 
-        let subject_str = parts[0];
-        let predicate_str = parts[1];
-        let object_str = parts[2];
-        let graph_str = parts[3];
-
-        // Strip angle brackets
-        let subject = subject_str.trim_start_matches('<').trim_end_matches('>');
-        let predicate = predicate_str.trim_start_matches('<').trim_end_matches('>');
-        let object = object_str.trim_start_matches('<').trim_end_matches('>');
-        let graph = graph_str.trim_start_matches('<').trim_end_matches('>');
+        let subject = normalise_term(subject_str);
+        let predicate = normalise_term(predicate_str);
+        let object = normalise_term(object_str);
+        let graph = normalise_term(graph_str);
 
         let subject_hash = generate_60bit_token(subject.as_bytes());
         let predicate_hash = generate_60bit_token(predicate.as_bytes());
@@ -190,6 +199,96 @@ impl NQuadsStarParser {
             outer_graph: outer_graph_hash,
         })
     }
+}
+
+/// Return N-Quads terms without splitting the lexical form of a literal.
+///
+/// A literal can contain spaces and escaped quotes, and can be followed by a
+/// language tag or datatype IRI. Those components are one RDF term and must
+/// remain one Q42LEX entry.
+fn tokenize_nquads_terms(line: &str) -> Result<Vec<&str>, RdfStarParseError> {
+    let bytes = line.as_bytes();
+    let mut terms = Vec::new();
+    let mut cursor = 0;
+
+    while cursor < bytes.len() {
+        while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
+            cursor += 1;
+        }
+        if cursor >= bytes.len() || bytes[cursor] == b'#' {
+            break;
+        }
+
+        let start = cursor;
+        match bytes[cursor] {
+            b'"' => {
+                cursor += 1;
+                let mut escaped = false;
+                let mut closed = false;
+                while cursor < bytes.len() {
+                    let byte = bytes[cursor];
+                    cursor += 1;
+                    if escaped {
+                        escaped = false;
+                    } else if byte == b'\\' {
+                        escaped = true;
+                    } else if byte == b'"' {
+                        closed = true;
+                        break;
+                    }
+                }
+                if !closed {
+                    return Err(RdfStarParseError::InvalidSyntax);
+                }
+                if cursor < bytes.len() && bytes[cursor] == b'@' {
+                    cursor += 1;
+                    while cursor < bytes.len() && !bytes[cursor].is_ascii_whitespace() {
+                        cursor += 1;
+                    }
+                } else if cursor + 1 < bytes.len()
+                    && bytes[cursor] == b'^'
+                    && bytes[cursor + 1] == b'^'
+                {
+                    cursor += 2;
+                    if cursor >= bytes.len() || bytes[cursor] != b'<' {
+                        return Err(RdfStarParseError::InvalidSyntax);
+                    }
+                    cursor += 1;
+                    while cursor < bytes.len() && bytes[cursor] != b'>' {
+                        cursor += 1;
+                    }
+                    if cursor >= bytes.len() {
+                        return Err(RdfStarParseError::InvalidSyntax);
+                    }
+                    cursor += 1;
+                }
+            }
+            b'<' => {
+                cursor += 1;
+                while cursor < bytes.len() && bytes[cursor] != b'>' {
+                    cursor += 1;
+                }
+                if cursor >= bytes.len() {
+                    return Err(RdfStarParseError::InvalidSyntax);
+                }
+                cursor += 1;
+            }
+            _ => {
+                while cursor < bytes.len() && !bytes[cursor].is_ascii_whitespace() {
+                    cursor += 1;
+                }
+            }
+        }
+        terms.push(&line[start..cursor]);
+    }
+
+    Ok(terms)
+}
+
+fn normalise_term(term: &str) -> &str {
+    term.strip_prefix('<')
+        .and_then(|value| value.strip_suffix('>'))
+        .unwrap_or(term)
 }
 
 impl RdfStarParser for NQuadsStarParser {
@@ -286,10 +385,23 @@ pub fn parse_nquads_star_into<R: std::io::Read, S: crate::sparql_library::quin_s
     let mut parser = NQuadsStarParser::new(context_hash);
     let mut count = 0;
     let buf_reader = BufReader::new(reader);
+    let mut line_no: u32 = 0;
 
     for line in buf_reader.lines() {
         let line = line?;
-        match parser.parse_line(&line)? {
+        line_no = line_no.saturating_add(1);
+        let parsed = match parser.parse_line(&line) {
+            Ok(p) => p,
+            Err(RdfStarParseError::InvalidSyntax) => {
+                let snippet: String = line.chars().take(120).collect();
+                return Err(format!(
+                    "N-Quads InvalidSyntax at line {line_no}: expected `s p o .` (default graph) or `s p o g .` (named graph); got: {snippet}"
+                )
+                .into());
+            }
+            Err(e) => return Err(e.into()),
+        };
+        match parsed {
             ParseResult::Comment => continue,
             ParseResult::RegularQuad {
                 subject,
@@ -298,13 +410,22 @@ pub fn parse_nquads_star_into<R: std::io::Read, S: crate::sparql_library::quin_s
                 graph,
                 ..
             } => {
+                if let Some(t) = parser.last_line_terms() {
+                    sink.push_lex(subject, &t.subject);
+                    sink.push_lex(predicate, &t.predicate);
+                    sink.push_lex(object, &t.object);
+                    if !t.graph.is_empty() {
+                        sink.push_lex(graph, &t.graph);
+                    }
+                }
+                let metadata = 0b10 << 61;
                 sink.push(NQuin {
                     subject,
                     predicate,
                     object,
                     context: graph, // Use graph as context in NQuin
-                    metadata: 0b10 << 61,
-                    parity: 0,
+                    metadata,
+                    parity: NQuin::calculate_parity(subject, predicate, object, graph, metadata),
                 })?;
                 count += 1;
             }
@@ -316,13 +437,31 @@ pub fn parse_nquads_star_into<R: std::io::Read, S: crate::sparql_library::quin_s
                 outer_graph,
                 ..
             } => {
+                if let Some(t) = parser.last_line_terms() {
+                    if !t.outer_predicate.is_empty() {
+                        sink.push_lex(outer_predicate, &t.outer_predicate);
+                    }
+                    if !t.outer_object.is_empty() {
+                        sink.push_lex(outer_object, &t.outer_object);
+                    }
+                    if !t.outer_graph.is_empty() {
+                        sink.push_lex(outer_graph, &t.outer_graph);
+                    }
+                }
+                let metadata = 0b10 << 61;
                 sink.push(NQuin {
                     subject: virtual_id,
                     predicate: outer_predicate,
                     object: outer_object,
                     context: outer_graph,
-                    metadata: 0b10 << 61,
-                    parity: 0,
+                    metadata,
+                    parity: NQuin::calculate_parity(
+                        virtual_id,
+                        outer_predicate,
+                        outer_object,
+                        outer_graph,
+                        metadata,
+                    ),
                 })?;
                 count += 1;
 
@@ -331,8 +470,14 @@ pub fn parse_nquads_star_into<R: std::io::Read, S: crate::sparql_library::quin_s
                     predicate: components[1],
                     object: components[2],
                     context: outer_graph,
-                    metadata: 0b10 << 61,
-                    parity: 0,
+                    metadata,
+                    parity: NQuin::calculate_parity(
+                        components[0],
+                        components[1],
+                        components[2],
+                        outer_graph,
+                        metadata,
+                    ),
                 })?;
                 count += 1;
             }
@@ -375,6 +520,40 @@ mod tests {
         assert_ne!(p, 0);
         assert_ne!(o, 0);
         assert_ne!(g, 0);
+    }
+
+    #[test]
+    fn accepts_triple_only_default_graph_nquads() {
+        // RDF dataset interchange often ships default-graph triples inside .nq files.
+        let mut parser = NQuadsStarParser::new(0xABCDu64);
+        let input = b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
+        let (s, p, o, g) = parser.parse_quad(input).expect("triple-only N-Quads");
+        assert_ne!(s, 0);
+        assert_ne!(p, 0);
+        assert_ne!(o, 0);
+        assert_eq!(g, 0xABCDu64, "omitted graph uses session default");
+    }
+
+    #[test]
+    fn rejects_malformed_nquads_with_clear_failure() {
+        let mut parser = NQuadsStarParser::new(0);
+        assert!(parser
+            .parse_quad(b"<http://example.org/Alice> <http://example.org/knows> .")
+            .is_err());
+    }
+
+    #[test]
+    fn accepts_literals_with_spaces_language_and_datatype() {
+        let mut parser = NQuadsStarParser::new(0);
+        for input in [
+            b"<https://example.org/s> <https://example.org/p> \"A plain literal\" .".as_slice(),
+            b"<https://example.org/s> <https://example.org/p> \"Bonjour le monde\"@fr .".as_slice(),
+            b"<https://example.org/s> <https://example.org/p> \"2026\"^^<http://www.w3.org/2001/XMLSchema#integer> .".as_slice(),
+        ] {
+            let (_, _, object, _) = parser.parse_quad(input).expect("literal N-Quads");
+            assert_ne!(object, 0);
+            assert!(parser.last_line_terms().unwrap().object.starts_with('\"'));
+        }
     }
 
     #[test]

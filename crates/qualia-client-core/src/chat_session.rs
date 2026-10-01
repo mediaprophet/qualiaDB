@@ -25,6 +25,7 @@ pub enum ChatError {
     Io(std::io::Error),
     Json(serde_json::Error),
     Compact(String),
+    Render(String),
 }
 
 impl std::fmt::Display for ChatError {
@@ -36,6 +37,7 @@ impl std::fmt::Display for ChatError {
             ChatError::Io(e) => write!(f, "IO error: {e}"),
             ChatError::Json(e) => write!(f, "JSON error: {e}"),
             ChatError::Compact(msg) => write!(f, "Compaction error: {msg}"),
+            ChatError::Render(msg) => write!(f, "Render error: {msg}"),
         }
     }
 }
@@ -43,6 +45,12 @@ impl std::fmt::Display for ChatError {
 impl From<std::io::Error> for ChatError {
     fn from(e: std::io::Error) -> Self {
         ChatError::Io(e)
+    }
+}
+
+impl From<std::fmt::Error> for ChatError {
+    fn from(e: std::fmt::Error) -> Self {
+        ChatError::Render(format!("thread-context writer failed: {e}"))
     }
 }
 

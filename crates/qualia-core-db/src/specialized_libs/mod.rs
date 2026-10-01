@@ -27,6 +27,7 @@ pub mod financial_modeling;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "portal",
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific"
 ))]

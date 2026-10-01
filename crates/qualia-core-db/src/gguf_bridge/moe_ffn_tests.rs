@@ -256,6 +256,110 @@ fn qtensor_engine_loads_physical_qwen_nvfp4_package_if_present() {
     assert_eq!(report.n_layer, 40);
     assert!(report.mapped_bytes > 0);
     assert!(engine.ftw_package.is_some());
+
+    let index = engine.tensor_index_cache.clone().expect("cached index");
+    let mut emb = vec![0.0f32; index.emb_dim()];
+    let mmap = engine.gguf_mmap.as_deref().expect("shard 0 mmap");
+    let written = index.dequantize_token_embedding_into(mmap, 100, &mut emb);
+    assert_eq!(written, index.emb_dim());
+    assert!(emb.iter().any(|&v| v.abs() > 1e-5));
+
+    let layer0 = index.get_layer_tensors(0);
+    assert!(layer0.is_hybrid_ssm_layer(), "layer 0 should be recognized as hybrid SSM layer");
+    assert!(layer0.moe_router.is_some(), "layer 0 should have MoE router");
+    assert!(layer0.attn_norm.is_some(), "layer 0 should have input layernorm");
+    assert!(layer0.ffn_norm.is_some(), "layer 0 should have post-attention layernorm");
+
+    let mut hidden = vec![0.0f32; index.emb_dim()];
+    hidden.copy_from_slice(&emb);
+    let mut scratch_a = vec![0.0f32; 131072];
+    let mut scratch_b = vec![0.0f32; 131072];
+    let attn_ok = engine.dispatch_hybrid_ssm_layer(
+        &index, 0, &mut hidden, index.emb_dim(), &layer0, &mut scratch_a, &mut scratch_b,
+    );
+
+    let ffn_ok = engine.dispatch_ffn_block_pre_norm(
+        &index, &mut hidden, index.emb_dim(), &layer0, &mut scratch_a, &mut scratch_b,
+    );
+
+    assert!(attn_ok, "SSM layer 0 should execute successfully");
+    assert!(ffn_ok, "FFN layer 0 should execute successfully");
+    assert!(hidden.iter().any(|&v| v.abs() > 1e-5), "layer 0 output should be non-zero");
+
+    // Verify multi-layer forward: 3 hybrid SSM layers (0, 1, 2) + 1 full attention layer (3)
+    let layers_ran = engine.dispatch_transformer_forward(
+        &index,
+        &mut hidden,
+        index.emb_dim(),
+        &mut scratch_a,
+        &mut scratch_b,
+        0,
+        4,
+    );
+    assert_eq!(layers_ran, 4, "all 4 layers (3 SSM + 1 full attention) should execute successfully");
+    assert!(hidden.iter().all(|v| v.is_finite()), "hidden state must remain finite across layers");
+
+    // Verify output norm
+    let norm_ok = engine.apply_output_norm_inplace(&index, &mut hidden, index.emb_dim());
+    assert!(norm_ok, "apply_output_norm_inplace should succeed");
+    assert!(hidden.iter().all(|v| v.is_finite()), "hidden state must be finite post-norm");
+
+    // Verify NVFP4 LM head logit projection for token 100
+    if let Some(ref pkg) = engine.ftw_package {
+        if let (Some(packed), Some(scales), Some(globals)) = (
+            pkg.fetch_tensor_bytes("lm_head.weight"),
+            pkg.fetch_tensor_bytes("lm_head.weight_scale"),
+            pkg.fetch_tensor_bytes("lm_head.weight_global"),
+        ) {
+            let token_id = 100usize;
+            let row_bytes = index.emb_dim() / 2;
+            let scale_bytes = index.emb_dim() / 16;
+            let p_row = &packed[token_id * row_bytes..(token_id + 1) * row_bytes];
+            let s_row = &scales[token_id * scale_bytes..(token_id + 1) * scale_bytes];
+            let g_val = half::f16::from_le_bytes([globals[token_id * 2], globals[token_id * 2 + 1]]).to_f32();
+
+            let mut out_row = vec![0.0f32; index.emb_dim()];
+            crate::inference::moe::nvfp4::dequantize_nvfp4_row(p_row, s_row, g_val, &mut out_row).expect("nvfp4 row dequant");
+            let logit: f32 = hidden.iter().zip(out_row.iter()).map(|(h, w)| h * w).sum();
+            assert!(logit.is_finite(), "token logit must be finite");
+        }
+    }
+
+    let argmax_res = engine.dispatch_output_argmax_chunked(
+        &index,
+        &hidden,
+        index.emb_dim(),
+        &mut scratch_a,
+        2,
+        None,
+    );
+    assert!(argmax_res.is_some(), "FTW NVFP4 LM head argmax should succeed");
+    let res = argmax_res.unwrap();
+    assert!(res.max_logit.is_finite(), "argmax logit must be finite");
+}
+
+#[test]
+fn local_llm_agent_autoregressive_decode_physical_qwen_nvfp4() {
+    let p = std::path::Path::new(r#"E:\LLM_Models\Qwen3.6-35B-A3B-NVFP4"#);
+    if !p.exists() || !p.join("freetoken_weight.json").exists() {
+        return;
+    }
+    use crate::llm_agent::{DecodeControl, LocalLlmAgent};
+    let agent = LocalLlmAgent::new("did:git:a2000-parity-test", p.to_str().unwrap());
+
+    let control = DecodeControl::default();
+    control.set_token_budget(3);
+    let (text, provenance, tokens_gen, _quin) = agent.infer_local_model_controlled(
+        "What is 2+2?",
+        "test:graph:context",
+        control,
+        None::<fn(String)>,
+    );
+
+    println!("Generated text: {:?}", text);
+    println!("Tokens generated: {}", tokens_gen);
+    assert!(tokens_gen > 0, "should generate at least 1 token");
+    assert!(!provenance.is_empty(), "provenance hash should be recorded");
 }
 
 

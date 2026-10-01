@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::super::stage::{StageTimingReceipt, STAGE_TRACE_CAPACITY};
+
 pub const RECEIPT_SCHEMA_VERSION: u16 = 3;
 pub const COUNTER_DECODE_STEPS: u64 = 1 << 0;
 pub const COUNTER_GRAPH_LAUNCHES: u64 = 1 << 1;
@@ -139,6 +141,12 @@ pub struct ExecutionReceipt {
     pub counters: ExecutionCounters,
     #[serde(default)]
     pub latency: RequestLatencyTelemetry,
+    /// Per-turn lifecycle-stage timings (`stage:*` in
+    /// `core-ontologies/inference-lifecycle.n3`), recorded on the zero-heap
+    /// stack during decode and attached to the receipt at end-of-turn.
+    /// `None` slots are unused tail capacity.
+    #[serde(default)]
+    pub stage_receipts: [Option<StageTimingReceipt>; STAGE_TRACE_CAPACITY],
     pub artifacts: ArtifactCleanupCounters,
 }
 
@@ -161,7 +169,40 @@ impl ExecutionReceipt {
             counter_coverage: 0,
             counters: ExecutionCounters::default(),
             latency: RequestLatencyTelemetry::default(),
+            stage_receipts: [None; STAGE_TRACE_CAPACITY],
             artifacts: ArtifactCleanupCounters::default(),
+        }
+    }
+
+    /// Record a lifecycle-stage timing on the fixed-capacity receipt array.
+    /// Repeat records for the same stage kind coalesce (latest status,
+    /// saturating accumulation), matching [`super::super::stage::StageTrace`]
+    /// semantics. Returns `false` when all 16 slots are occupied by distinct
+    /// kinds.
+    pub fn record_stage(&mut self, receipt: StageTimingReceipt) -> bool {
+        if let Some(existing) = self
+            .stage_receipts
+            .iter_mut()
+            .flatten()
+            .find(|existing| existing.stage == receipt.stage)
+        {
+            existing.status = receipt.status;
+            existing.duration_us = existing.duration_us.saturating_add(receipt.duration_us);
+            existing.auxiliary_code =
+                existing.auxiliary_code.saturating_add(receipt.auxiliary_code);
+            return true;
+        }
+        if let Some(slot) = self.stage_receipts.iter_mut().find(|slot| slot.is_none()) {
+            *slot = Some(receipt);
+            return true;
+        }
+        false
+    }
+
+    /// Drain a [`super::super::stage::StageTrace`] into this receipt.
+    pub fn apply_stage_trace(&mut self, trace: &super::super::stage::StageTrace) {
+        for receipt in trace.iter() {
+            self.record_stage(receipt);
         }
     }
 
@@ -180,6 +221,7 @@ impl ExecutionReceipt {
 
 #[cfg(test)]
 mod tests {
+    use super::super::super::stage::{InferenceStageKind, StageStatus};
     use super::*;
 
     #[test]
@@ -283,5 +325,50 @@ mod tests {
         assert_eq!(decoded.counters.decode_steps, 100);
         assert_eq!(decoded.counters.submitted_prefill_tokens, 0);
         assert_eq!(decoded.latency.time_to_first_token_us, 0);
+    }
+
+    #[test]
+    fn stage_receipts_record_coalesce_and_round_trip() {
+        let mut receipt =
+            ExecutionReceipt::new(BackendKind::Cuda, BackendKind::Cuda, "model-1", "plan-1");
+        assert!(receipt.record_stage(StageTimingReceipt {
+            stage: InferenceStageKind::AutoregressiveDecode,
+            status: StageStatus::Executed,
+            duration_us: 10,
+            auxiliary_code: 32,
+        }));
+        // Same stage kind coalesces with saturating accumulation.
+        assert!(receipt.record_stage(StageTimingReceipt {
+            stage: InferenceStageKind::AutoregressiveDecode,
+            status: StageStatus::Executed,
+            duration_us: 5,
+            auxiliary_code: 32,
+        }));
+        assert!(receipt.record_stage(StageTimingReceipt {
+            stage: InferenceStageKind::SentinelMidDecodeGuard,
+            status: StageStatus::RolledBack,
+            duration_us: 2,
+            auxiliary_code: 1,
+        }));
+        assert_eq!(receipt.stage_receipts[0].unwrap().duration_us, 15);
+        assert_eq!(receipt.stage_receipts[0].unwrap().auxiliary_code, 64);
+        assert_eq!(
+            receipt.stage_receipts[1].unwrap().status,
+            StageStatus::RolledBack
+        );
+
+        let json = serde_json::to_string(&receipt).unwrap();
+        let decoded: ExecutionReceipt = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, receipt);
+
+        // Legacy JSON without stage_receipts still parses via serde(default).
+        let mut value = serde_json::to_value(&receipt).unwrap();
+        value
+            .as_object_mut()
+            .unwrap()
+            .remove("stage_receipts")
+            .unwrap();
+        let legacy: ExecutionReceipt = serde_json::from_value(value).unwrap();
+        assert!(legacy.stage_receipts.iter().all(|s| s.is_none()));
     }
 }

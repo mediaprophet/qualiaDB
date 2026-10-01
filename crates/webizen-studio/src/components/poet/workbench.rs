@@ -4,6 +4,8 @@
 
 use super::chest::ToolChest;
 use super::chrome::{ControlBar, Expose, StatusBar, TopMenubar};
+#[cfg(target_arch = "wasm32")]
+use super::host;
 use super::instrument_bay::InstrumentBay;
 use super::lexicon_bay::LexiconBay;
 use super::radial_menu::{RadialActionRing, RadialState};
@@ -40,11 +42,101 @@ fn CatalogStudioBay() -> Element {
     }
 }
 
+/// Document-level key handling — Delete/Backspace removes the selected
+/// wire or container, Escape unwinds menus/armed-wire/selection, and
+/// Ctrl+S/O/D drive checkpoint save, .hcf clipboard-open, and duplicate.
+/// The bubbling `onkeydown` on #app-root only fires while a focusable
+/// child holds focus, so canvas selection needs a real document listener.
+#[cfg(target_arch = "wasm32")]
+fn install_global_keys(mut wb: Signal<Workbench>, mut radial: Signal<RadialState>) {
+    use wasm_bindgen::prelude::*;
+    use wasm_bindgen::JsCast;
+    let handler = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+        let editing = web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.active_element())
+            .map(|el| {
+                matches!(el.tag_name().as_str(), "INPUT" | "TEXTAREA" | "SELECT")
+                    || el.get_attribute("contenteditable").as_deref() == Some("true")
+            })
+            .unwrap_or(false);
+
+        if event.ctrl_key() || event.meta_key() {
+            match event.key().as_str() {
+                "s" | "S" => {
+                    event.prevent_default();
+                    host::save_checkpoint(wb);
+                }
+                "o" | "O" => {
+                    event.prevent_default();
+                    host::open_hcf_from_clipboard(wb);
+                }
+                "d" | "D" if !editing => {
+                    event.prevent_default();
+                    let mut s = wb();
+                    match s.duplicate_selected() {
+                        Some(id) => s.note(format!("Duplicated → {id}")),
+                        None => s.note("Duplicate — select a container first"),
+                    }
+                    wb.set(s);
+                }
+                _ => {}
+            }
+            return;
+        }
+
+        match event.key().as_str() {
+            "Delete" | "Backspace" if !editing => {
+                event.prevent_default();
+                let mut s = wb();
+                if s.delete_selected() {
+                    s.note("Deleted selection");
+                }
+                wb.set(s);
+            }
+            "Escape" => {
+                let mut s = wb();
+                s.menu = None;
+                s.wire_source = None;
+                s.clear_selection();
+                s.expose = false;
+                wb.set(s);
+                let mut rd = radial();
+                rd.visible = false;
+                radial.set(rd);
+            }
+            _ => {}
+        }
+    }) as Box<dyn FnMut(_)>);
+    if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+        let _ = document.add_event_listener_with_callback(
+            "keydown",
+            handler.as_ref().unchecked_ref(),
+        );
+        handler.forget();
+    }
+}
+
 #[component]
 pub fn PoetWorkbench() -> Element {
     let nav = use_navigator();
     let mut wb = use_signal(Workbench::new);
     let mut radial = use_signal(RadialState::default);
+    #[allow(unused_mut)] // set() only happens under wasm32
+    let mut key_listener_started = use_signal(|| false);
+    use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if !key_listener_started() {
+                key_listener_started.set(true);
+                install_global_keys(wb, radial);
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = key_listener_started;
+        }
+    });
 
     rsx! {
         HyperCanvasStyles {}
@@ -113,17 +205,7 @@ pub fn PoetWorkbench() -> Element {
                     CanvasStage { wb }
                     aside {
                         class: if wb().sidebar { "tech-sidebar open" } else { "tech-sidebar" },
-                        div { style: "padding:14px;display:grid;gap:8px;",
-                            h3 { style: "margin:0;font-size:13px;color:var(--accent-cyan);", "Telemetry & Governance DAG" }
-                            p { style: "margin:0;color:var(--text-secondary);font-size:12px;line-height:1.45;",
-                                "Pulse bus · held / not yet — Pulse waits on the local daemon. Graph address: {wb().graph_iri}. Nodes on desk: {wb().nodes.len()}."
-                            }
-                            div { style: "margin-top:8px;padding:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:6px;font-size:11px;",
-                                div { style: "color:var(--accent-emerald);", "● 42MB Prolog Sentinel: ENFORCED" }
-                                div { style: "color:var(--text-muted);margin-top:4px;", "Zero-Heap Hot-Path: Active" }
-                                div { style: "color:var(--text-muted);margin-top:2px;", "Grid: 8px Snap Math" }
-                            }
-                        }
+                        super::inspector::InspectorPanel { wb }
                     }
                 }
                 section {

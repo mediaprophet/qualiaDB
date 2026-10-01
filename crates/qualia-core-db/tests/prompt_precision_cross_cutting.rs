@@ -66,6 +66,7 @@ fn test_cross_cutting_01_profile_requirements_survive_projections() {
             output_tokens: 1024,
             tool_rounds: 4,
             max_bytes: 8192,
+            thinking_token_budget: None,
         },
     };
 
@@ -179,6 +180,7 @@ fn test_cross_cutting_03_fail_closed_validation() {
             output_tokens: 512,
             tool_rounds: 1,
             max_bytes: 4096,
+            thinking_token_budget: None,
         },
     };
 
@@ -226,6 +228,7 @@ fn test_cross_cutting_04_budget_diagnostic_on_overflow() {
             output_tokens: 512,
             tool_rounds: 3,
             max_bytes: 4096,
+            thinking_token_budget: None,
         },
     };
 
@@ -336,6 +339,7 @@ fn test_cross_cutting_08_cache_invalidation_matrix() {
             output_tokens: 512,
             tool_rounds: 1,
             max_bytes: 4096,
+            thinking_token_budget: None,
         },
     };
 
@@ -404,6 +408,7 @@ fn test_cross_cutting_11_repair_shares_original_budget() {
         output_tokens: 512,
         tool_rounds: 3,
         max_bytes: 8192,
+        thinking_token_budget: None,
     };
 
     // Sub-operations subtract from original remaining quota
@@ -455,6 +460,7 @@ fn test_cross_cutting_13_zero_allocation_in_hot_compile() {
             output_tokens: 512,
             tool_rounds: 1,
             max_bytes: 4096,
+            thinking_token_budget: None,
         },
     };
 

@@ -5,6 +5,8 @@
 
 pub mod dispatch;
 pub mod expert_cache;
+/// FTW multi-shard loader is file/`memmap2`-backed — native hosts only.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ftw_loader;
 pub mod nvfp4;
 pub mod placement;
@@ -20,6 +22,7 @@ pub use expert_cache::{
     ExpertResidencyProfile, MoeOffloadManager, PersonalHardwareTier, SlotAccessOutcome,
     DEFAULT_GPU_EXPERT_SLOTS,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use ftw_loader::{
     FtwExpertBankSlice, FtwExpertData, FtwManifest, FtwModelPackage, FtwShardEntry, FtwTensorEntry,
 };
