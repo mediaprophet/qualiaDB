@@ -9,6 +9,7 @@ pub mod med_reminder_notifier;
 pub mod mic_capture;
 pub mod native_surface;
 pub mod runtime;
+pub mod saved_items;
 pub mod settings_server;
 pub mod shell;
 pub mod supervisor;

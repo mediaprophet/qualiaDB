@@ -1,14 +1,14 @@
 # Impl plan — Neo / G-A follow-on (seams · toolchest · Webizen prep)
 
 **Owner:** Neo · **Commits:** Neo · **Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8`
-**Branch:** `0.0.36-dev` · **Role:** Rust systems / crate seams / `ALL_BOUND` binds / team push lane
+**Branch:** `0.0.40-dev` · **Role:** Rust systems / crate seams / `ALL_BOUND` binds / team push lane
 **Rules:** no Host widen · no invented dotted `qualia.*` · seam only to live `Capability.method` · hot-edit scripts must not force host rebuild · gaps → Vibe → `vibescript-sprint-deltas.md` · gates → Capt.
 
 ## Done (do not reopen)
 - G-DOCS handover + sprint deltas intake
 - G-POET-TOOLCHEST first slice: inventory + `office:graph` / `graph:sparql_query` → `GraphDatabase.sparql` (split `registration.rs` modules)
 - G-B-001: `GraphDatabase.volume_open` / `volume_commit` in `ALL_BOUND` + `invoke/graph/volume.rs` (sanctuary fail-closed; wasm E300)
-- G-A four closes: `poet::vibe_host` facade · Host pin (invoke+diagnose) · native↔wasm diagnose `to_json` parity · crate stamp `0.0.36-dev` + EBNF ↔ `vibescript-core.md` §3
+- G-A four closes: `poet::vibe_host` facade · Host pin (invoke+diagnose) · native↔wasm diagnose `to_json` parity · crate stamp `0.0.40-dev` + EBNF ↔ `vibescript-core.md` §3
 - Marvin Volume shape folded: `docs/manuals/standards/q42-volume-shape-G-B-001.md`
 
 ## Stage 0 — Plan pack on remote (this push)
@@ -53,7 +53,7 @@
 **Accept:** parked; no mid-Poet commits unless Capt. unlocks.
 
 ## Stage 7 — Crate / catalog hygiene
-1. Keep stamps on `0.0.36-dev` until release cut; EBNF stays byte-sync with §3 when grammar changes (Vibe owns grammar intent; Neo lands file).
+1. Keep stamps on `0.0.40-dev` until release cut; EBNF stays byte-sync with §3 when grammar changes (Vibe owns grammar intent; Neo lands file).
 2. Reject mid-sprint Host trait growth; capability growth = `ids.rs` + handler + catalog_ttl only.
 **Accept:** CI/docs note; Capt. board stays honest.
 

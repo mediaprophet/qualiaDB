@@ -16,6 +16,32 @@ pub const ONTOLOGY_KERNEL: &[&str] = &[
     "answer-set-programming",
     "linear-logic",
     "interaction-governance",
+    "yaml-ld-q42",
+    "hcf-ingest",
+];
+
+pub const WEBCIVICS: &[&str] = &[
+    "nquin-48-byte-abi",
+    "q-hash",
+    "n3-parser",
+    "turtle-parser",
+    "rdf-serialization",
+    "ntriples-query",
+    "query-compiler",
+    "shacl-property-validation",
+    "deontic-logic",
+    "epistemic-logic",
+    "paraconsistent-routing",
+    "temporal-ltl",
+    "description-logic",
+    "answer-set-programming",
+    "linear-logic",
+    "interaction-governance",
+    "lww-crdt",
+    "yaml-ld-q42",
+    "hcf-ingest",
+    "cml-graph-model",
+    "solid-protocol-records",
 ];
 
 pub const PORTAL: &[&str] = &[
@@ -47,6 +73,8 @@ pub const PORTAL: &[&str] = &[
     "linear-logic",
     "interaction-governance",
     "lww-crdt",
+    "yaml-ld-q42",
+    "hcf-ingest",
     "bioinformatics",
     "clinical-risk",
     "organic-chemistry",
@@ -78,6 +106,8 @@ pub const LOGIC: &[&str] = &[
     "linear-logic",
     "interaction-governance",
     "lww-crdt",
+    "yaml-ld-q42",
+    "hcf-ingest",
     "bioinformatics",
     "clinical-risk",
     "organic-chemistry",
@@ -109,6 +139,8 @@ pub const SCIENTIFIC: &[&str] = &[
     "linear-logic",
     "interaction-governance",
     "lww-crdt",
+    "yaml-ld-q42",
+    "hcf-ingest",
     "bioinformatics",
     "clinical-risk",
     "organic-chemistry",
@@ -140,6 +172,8 @@ pub const LLM: &[&str] = &[
     "linear-logic",
     "interaction-governance",
     "lww-crdt",
+    "yaml-ld-q42",
+    "hcf-ingest",
     "bioinformatics",
     "clinical-risk",
     "organic-chemistry",
@@ -179,6 +213,8 @@ pub const PLAYGROUND: &[&str] = &[
     "linear-logic",
     "interaction-governance",
     "lww-crdt",
+    "yaml-ld-q42",
+    "hcf-ingest",
     "bioinformatics",
     "clinical-risk",
     "organic-chemistry",
@@ -222,6 +258,8 @@ pub const FULL: &[&str] = &[
     "linear-logic",
     "interaction-governance",
     "lww-crdt",
+    "yaml-ld-q42",
+    "hcf-ingest",
     "bioinformatics",
     "clinical-risk",
     "organic-chemistry",
@@ -320,6 +358,8 @@ pub const NATIVE_ONLY: &[&str] = &[
 pub const fn compiled_profile() -> &'static str {
     if cfg!(feature = "wasm-full") {
         "full"
+    } else if cfg!(feature = "wasm-webcivics") {
+        "webcivics"
     } else if cfg!(all(
         feature = "wasm-ontology",
         not(any(
@@ -328,7 +368,8 @@ pub const fn compiled_profile() -> &'static str {
             feature = "wasm-logic",
             feature = "wasm-scientific",
             feature = "wasm-llm",
-            feature = "wasm-full"
+            feature = "wasm-full",
+            feature = "wasm-webcivics"
         ))
     )) {
         "ontology-mcp-kernel"
@@ -353,6 +394,8 @@ pub const fn compiled_profile() -> &'static str {
 pub const fn compiled_capabilities() -> &'static [&'static str] {
     if cfg!(feature = "wasm-full") {
         FULL
+    } else if cfg!(feature = "wasm-webcivics") {
+        WEBCIVICS
     } else if cfg!(all(
         feature = "wasm-ontology",
         not(any(
@@ -361,7 +404,8 @@ pub const fn compiled_capabilities() -> &'static [&'static str] {
             feature = "wasm-logic",
             feature = "wasm-scientific",
             feature = "wasm-llm",
-            feature = "wasm-full"
+            feature = "wasm-full",
+            feature = "wasm-webcivics"
         ))
     )) {
         ONTOLOGY_KERNEL

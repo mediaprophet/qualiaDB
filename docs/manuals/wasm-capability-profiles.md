@@ -21,7 +21,6 @@ The compile-time source of truth is
 `crates/qualia-core-db/src/wasm_capabilities.rs`.
 
 | Product | Cargo selection | Intended use | Included | Explicitly excluded |
-|---|---|---|---|---|
 | Ontology MCP | `-p webizen-lite-wasm` | Read-only ontology sites such as `ns.webcivics.net` | MCP JSON-RPC, N3 inspection, bounded Quin query, SHACL property validation, deontic, epistemic, paraconsistent, LTL, DL, ASP/linear kernels, governance mapping | Portal, WebGPU, science, LLM, daemon, network, filesystem storage |
 | **WebCivics** | `qualia-core-db --no-default-features --features wasm-webcivics` | Civics.au / decision-evidence Node+browser | JSON-LD 1.1 (+ compact pinned `@context`), Turtle/N3 Solid MIME, **Solid leave/migrate** (sanctuary omit|reclassify choice) + **Solid→Qualia backup return**, OPFS device vault + backup-folder policy, RDFC status, vendor nquin-CBOR, SHACL ShapeSpec+Turtle compile, modal logic, values guard, SPARQL q42 kernels, package manifest, Civics stats/econ receipts, **multiple OLS + Ch.4 regression verification** (JB/BP/DW/VIF/RESET/Chow/influence/logit/LDA; flag outliers, never auto-delete) | **gpu-runtime**, WebGPU viewport, acoustic/10D demos, GGUF/LLM/MoE, heavy science (DFT/GA/full bio), in-crate `vibe_host` (use `vibe-wasm` LocalHost) |
 | Portal | `qualia-core-db --no-default-features --features portal` | Full browser engine (GitHub Pages / QApp) | JSON/CBOR ingest, 10D tensor, spatial encoding, WebGPU viewport, AcousticPlane, N3/SHACL/modal logic, WASM-safe science (CAS, DFT, ODE, bio, chem) | Native daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF. LLM is the `wasm-llm` / `wasm-full` package |
@@ -102,9 +101,9 @@ wasm-pack build crates/webizen-lite-wasm --target web --out-dir pkg --release
 
 The 2026-06-27 reference ontology build is 267,993 bytes raw and 94,971 bytes gzip.
 
-GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured **0.0.39** (2026-09-25):
+GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured 0.0.40:
 
-| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.39 |
+| Artifact | Cargo selection | CI gate (raw / gzip) | Measured 0.0.40 |
 |---|---|---|---|
 | Ontology MCP | `-p webizen-lite-wasm` | 640 KiB / 200 KiB | ~529 KiB / ~162 KiB gzip (prior) |
 | **WebCivics** | `--features wasm-webcivics` | *(proposed)* 4 MiB / 1.5 MiB | **2.75 MiB / 0.95 MiB gzip** |

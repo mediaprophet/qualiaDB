@@ -4,7 +4,7 @@
 
 **Status:** Detailed future implementation assignments, not implemented capabilities.
 
-**Parent:** [Enhancement plan](0.0.37-enhancement-plan.md). Also read the [sensitive-operations blueprint](sensitive-operations-blueprint.md).
+**Parent:** [Enhancement plan](0.0.40-enhancement-plan.md). Also read the [sensitive-operations blueprint](sensitive-operations-blueprint.md).
 
 This document turns the most complex work into bounded, reviewable steps. Reuse the existing protocol specifications as the semantic authority, particularly [QSR](../qualia-scoped-rendezvous.md), [post-quantum security](../post-quantum-security.md), [QSession](../qsession-and-services.md) and [finite project compensation](../finite-project-compensation.md). If an implementation recipe conflicts with those specifications, record an explicit owner-reviewed version change; do not silently choose whichever behaviour is easier.
 

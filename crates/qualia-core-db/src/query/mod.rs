@@ -7,6 +7,10 @@ pub mod graph_index;
 pub mod graph_proof;
 #[cfg(test)]
 mod graph_proof_tests;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod integrity_omit;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod source_audit;
 pub mod indexing;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;

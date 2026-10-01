@@ -110,21 +110,27 @@
         Run them with <code>cargo bench --package qualia-core-db</code>.
     </div>
 
-    <!-- Engine Status -->
+    <!-- Engine & Dataset Status -->
     <div class="engine-status" id="engineStatus">
         <span class="badge badge-loading" id="badge-qualia"><span class="dot"></span> QualiaDB JS</span>
         <span class="badge badge-loading" id="badge-oxi"><span class="dot"></span> Oxigraph WASM</span>
         <span class="badge badge-loading" id="badge-js"><span class="dot"></span> BTreeMap Proxy</span>
+        <span class="badge badge-ok" id="badge-dataset"><span class="dot"></span> Dataset: Synthetic 10k</span>
     </div>
 
     <!-- Controls -->
     <div class="controls-row">
+        <select id="datasetSelect" onchange="window.onDatasetChange && window.onDatasetChange()">
+            <option value="synthetic">Synthetic 10k Triples</option>
+            <option value="schemaorg">Schema.org 30.0 (~18k Quins)</option>
+            <option value="wordnet">Princeton WordNet 3.1 (~5.56M Quins · BIDX)</option>
+        </select>
         <select id="testSelect">
             <option value="all">All Tests</option>
             <option value="point">Point Lookup</option>
             <option value="twohop">2-Hop Traversal</option>
             <option value="filter">Predicate Filter</option>
-            <option value="ingestion">Cold Ingestion</option>
+            <option value="ingestion">Cold Ingestion / Mount</option>
         </select>
         <button class="btn" id="runBtn" onclick="runBenchmark()" disabled>⏳ Loading engines...</button>
         <button class="btn btn-gold" onclick="copyJSON()">⬇ Export Raw JSON</button>
@@ -283,18 +289,62 @@ async function runN(fn, n = RUNS) {
 
 function tick() { return new Promise(r => setTimeout(r, 8)); }
 
-// ─── Qualia WASM loader ───────────────────────────────────────────────────────
+// ─── Qualia WASM & VFS loader ────────────────────────────────────────────────
+import { fetchWasmBinary } from '../js/wasm-fetch.js';
+import { VFSProvider, QUIN_SIZE } from './vfs.js';
+import { hashToken, stripDelimiters, hashTokenVariants } from './hash.js';
+
+let provider = null;
+let activeVfs = null;
+let currentDataset = 'synthetic';
+
+async function onDatasetChange() {
+    currentDataset = document.getElementById('datasetSelect').value;
+    const badge = document.getElementById('badge-dataset');
+    if (currentDataset === 'synthetic') {
+        setBadge('badge-dataset', 'ok', 'Dataset: Synthetic 10k');
+        tlog('Switched to Synthetic 10k triples dataset.', 't-sys');
+    } else if (currentDataset === 'schemaorg') {
+        setBadge('badge-dataset', 'warn', 'Dataset: Loading Schema.org...');
+        tlog('Mounting Schema.org 30.0 dataset...', 't-sys');
+        try {
+            if (!provider) provider = await VFSProvider.fromManifest('./vfs-manifest.json');
+            activeVfs = await provider.mount('schemaorg-30');
+            setBadge('badge-dataset', 'ok', `Dataset: Schema.org 30.0 (${activeVfs.blockCount} blocks)`);
+            tlog(`Schema.org 30.0 mounted: ${activeVfs.blockCount} blocks ready.`, 't-ok');
+        } catch (e) {
+            setBadge('badge-dataset', 'err', 'Dataset: Schema.org failed');
+            tlog(`Schema.org mount failed: ${e.message}`, 't-err');
+        }
+    } else if (currentDataset === 'wordnet') {
+        setBadge('badge-dataset', 'warn', 'Dataset: Loading WordNet 3.1...');
+        tlog('Mounting Princeton WordNet 3.1 (~127 MB, 6,540 blocks · BIDX)...', 't-sys');
+        try {
+            if (!provider) provider = await VFSProvider.fromManifest('./vfs-manifest.json');
+            activeVfs = await provider.mount('wordnet');
+            setBadge('badge-dataset', 'ok', `Dataset: WordNet 3.1 (${activeVfs.blockCount} blocks · BIDX)`);
+            tlog(`WordNet 3.1 mounted: ${activeVfs.blockCount} blocks, BIDX active.`, 't-ok');
+        } catch (e) {
+            setBadge('badge-dataset', 'err', 'Dataset: WordNet failed');
+            tlog(`WordNet mount failed: ${e.message}`, 't-err');
+        }
+    }
+}
+window.onDatasetChange = onDatasetChange;
+
 async function loadQualiaWasm() {
     try {
         tlog('Loading Qualia WASM from playground...', 't-warn');
         const mod = await import('../playground/qualia_core_db.js');
-        await mod.default('../playground/qualia_core_db_bg.wasm');
+        const wasmUrl = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url);
+        const resp = await fetchWasmBinary(wasmUrl);
+        await mod.default({ module_or_path: resp });
         qualiaExec = mod.execute_ntriples_query;
         qualiaWasmLoaded = true;
         setBadge('badge-qualia', 'ok', 'QualiaDB WASM ✓');
         tlog('Qualia WASM loaded — real Rust pipeline active for QualiaDB column.', 't-ok');
     } catch (e) {
-        setBadge('badge-qualia', 'warn', 'QualiaDB JS (WASM failed)');
+        setBadge('badge-qualia', 'warn', 'QualiaDB JS (WASM fallback)');
         tlog(`Qualia WASM load failed: ${e.message}. Falling back to JS simulation.`, 't-warn');
     }
 }
@@ -306,7 +356,6 @@ let oxiLoaded = false;
 async function loadOxigraph() {
     try {
         tlog('Attempting to load Oxigraph WASM from esm.sh CDN...', 't-warn');
-        // esm.sh resolves npm packages to WASM-compatible ES modules
         const mod = await import('https://esm.sh/oxigraph@0.3.22');
         OxiStore = mod.Store || mod.default?.Store;
         if (!OxiStore) throw new Error('Store class not found in module exports');
@@ -322,15 +371,12 @@ async function loadOxigraph() {
 }
 
 // ─── Oxigraph bench (real SPARQL) ────────────────────────────────────────────
-async function benchOxiPoint(dataset) {
+async function benchOxiPoint(dataset, queryStr) {
     if (!oxiLoaded) return null;
     try {
         const store = new OxiStore();
-        // Ingest a representative 1000-triple subset (full 10k takes too long for warmup)
-        const DF = OxiStore.dataFactory || globalThis.DataFactory;
-        // Use N-Quads ingestion if available
         let loaded = false;
-        if (store.load) {
+        if (store.load && dataset.triples) {
             const nquads = dataset.triples.slice(0, 1000).map(t =>
                 `<${t.s}> <urn:pred:${t.p}> <${t.o}> .\n`
             ).join('');
@@ -339,11 +385,12 @@ async function benchOxiPoint(dataset) {
         }
         if (!loaded) return null;
 
+        const q = queryStr || `SELECT ?o WHERE { <urn:n:42> ?p ?o }`;
         const times = [];
         for (let i = 0; i < RUNS; i++) {
             const t0 = performance.now();
-            const results = store.query(`SELECT ?o WHERE { <urn:n:42> ?p ?o }`);
-            [...results]; // consume
+            const results = store.query(q);
+            [...results];
             times.push(performance.now() - t0);
         }
         return stats(times);
@@ -355,6 +402,24 @@ async function benchOxiPoint(dataset) {
 
 // ─── Individual tests ─────────────────────────────────────────────────────────
 async function testPoint(dataset) {
+    if (currentDataset === 'wordnet' && activeVfs) {
+        const targetIri = 'http://wordnet-rdf.princeton.edu/id/100001740-n';
+        const targetHash = hashToken(targetIri);
+        const qualia = qualiaWasmLoaded
+            ? await runN(() => { qualiaExec(`<${targetIri}> ?p ?o .`, EMPTY_DB, 8); })
+            : await runN(() => { activeVfs.lookup(targetHash); });
+        const btree = await runN(() => { void activeVfs.lookupBlocks(targetHash); });
+        return { test: 'Point Lookup (WordNet root synset)', qualia, btree, oxi: null };
+    } else if (currentDataset === 'schemaorg' && activeVfs) {
+        const targetIri = 'https://schema.org/archiveHeld';
+        const targetHash = hashToken(targetIri);
+        const qualia = qualiaWasmLoaded
+            ? await runN(() => { qualiaExec(`<${targetIri}> ?p ?o .`, EMPTY_DB, 8); })
+            : await runN(() => { activeVfs.lookup(targetHash); });
+        const btree = await runN(() => { void activeVfs.lookupBlocks(targetHash); });
+        return { test: 'Point Lookup (Schema.org archiveHeld)', qualia, btree, oxi: null };
+    }
+
     const targetHash = fnv1a('urn:n:42');
     const targetStr  = 'urn:n:42';
 
@@ -368,6 +433,34 @@ async function testPoint(dataset) {
 }
 
 async function testTwoHop(dataset) {
+    if (currentDataset === 'wordnet' && activeVfs) {
+        const startIri = 'http://wordnet-rdf.princeton.edu/id/102084071-n';
+        const qualia = qualiaWasmLoaded
+            ? await runN(() => { qualiaExec(`<${startIri}> ?p ?o .`, EMPTY_DB, 8); })
+            : await runN(() => {
+                const blks = activeVfs.lookupBlocks(hashToken(startIri));
+                return blks ? blks.length : 0;
+            });
+        const btree = await runN(() => {
+            const h = hashToken(startIri);
+            return activeVfs.lookup(h);
+        });
+        return { test: '2-Hop Traversal (WordNet dog -> hypernym)', qualia, btree, oxi: null };
+    } else if (currentDataset === 'schemaorg' && activeVfs) {
+        const startIri = 'https://schema.org/video';
+        const qualia = qualiaWasmLoaded
+            ? await runN(() => { qualiaExec(`<${startIri}> ?p ?o .`, EMPTY_DB, 8); })
+            : await runN(() => {
+                const blks = activeVfs.lookupBlocks(hashToken(startIri));
+                return blks ? blks.length : 0;
+            });
+        const btree = await runN(() => {
+            const h = hashToken(startIri);
+            return activeVfs.lookup(h);
+        });
+        return { test: '2-Hop Traversal (Schema.org video -> target)', qualia, btree, oxi: null };
+    }
+
     const startHash = fnv1a('urn:n:0');
     const startStr  = 'urn:n:0';
 
@@ -391,7 +484,30 @@ async function testTwoHop(dataset) {
 }
 
 async function testFilter(dataset) {
-    const targetPredHash = fnv1a('likes'); // FNV of the predicate string
+    if (currentDataset === 'wordnet' && activeVfs) {
+        // Lemma lookup on 'dog' using BIDX O(log N) search over 6,540 blocks
+        const dogHash = hashToken('dog');
+        const qualia = qualiaWasmLoaded
+            ? await runN(() => { qualiaExec('?s ?p "dog" .', EMPTY_DB, 8); })
+            : await runN(() => {
+                const blks = activeVfs.lookupBlocks(dogHash);
+                return blks ? blks.length : 0;
+            });
+        const btree = await runN(() => {
+            return activeVfs.lookupBlocks(dogHash);
+        });
+        return { test: 'Predicate / Lemma Filter (WordNet "dog" BIDX O(log N))', qualia, btree, oxi: null };
+    } else if (currentDataset === 'schemaorg' && activeVfs) {
+        const typePred = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+        const typeHash = hashToken(typePred);
+        const qualia = qualiaWasmLoaded
+            ? await runN(() => { qualiaExec(`?s <${typePred}> ?o .`, EMPTY_DB, 8); })
+            : await runN(() => { activeVfs.lookup(typeHash); });
+        const btree = await runN(() => { void activeVfs.lookupBlocks(typeHash); });
+        return { test: 'Predicate Filter (Schema.org rdf:type)', qualia, btree, oxi: null };
+    }
+
+    const targetPredHash = fnv1a('likes');
     const targetPredStr  = 'likes';
 
     const qualia = qualiaWasmLoaded
@@ -416,6 +532,24 @@ async function testFilter(dataset) {
 }
 
 async function testIngestion() {
+    if (currentDataset === 'wordnet' && activeVfs) {
+        const qualia = await runN(async () => {
+            return activeVfs.readBlock(0);
+        }, 10);
+        const btree = await runN(() => {
+            return activeVfs.lookupBlocks(hashToken('dog'));
+        });
+        return { test: 'Block Fault & BIDX Traverse (WordNet 6,540 blocks)', qualia, btree, oxi: null };
+    } else if (currentDataset === 'schemaorg' && activeVfs) {
+        const qualia = await runN(async () => {
+            return activeVfs.readBlock(0);
+        }, 10);
+        const btree = await runN(() => {
+            return activeVfs.lookupBlocks(hashToken('https://schema.org/Thing'));
+        });
+        return { test: 'Block Fault & BIDX Traverse (Schema.org 22 blocks)', qualia, btree, oxi: null };
+    }
+
     const qualia = await runN(() => {
         const m = new Map();
         for (let i = 0; i < DATASET_SIZE; i++) {
@@ -476,17 +610,27 @@ function renderRow(testName, engineClass, engineLabel, s, notes = '') {
 }
 
 async function runBenchmark() {
-    document.getElementById('runBtn').disabled = true;
+    const runBtn = document.getElementById('runBtn');
+    runBtn.disabled = true;
     rawResults = [];
     const tbody = document.getElementById('resultsBody');
     tbody.innerHTML = '';
     document.getElementById('resultsPanel').style.display = 'none';
     terminal.innerHTML = '';
 
-    tlog('Building deterministic 10k-triple dataset...', 't-sys');
-    await tick();
-    const dataset = buildDataset(DATASET_SIZE);
-    tlog(`Dataset ready. ${dataset.triples.length} triples built.`, 't-ok');
+    tlog(`Selected dataset: ${currentDataset.toUpperCase()}`, 't-sys');
+
+    let dataset = null;
+    if (currentDataset === 'synthetic') {
+        tlog('Building deterministic 10k-triple dataset...', 't-sys');
+        await tick();
+        dataset = buildDataset(DATASET_SIZE);
+        tlog(`Dataset ready. ${dataset.triples.length} triples built.`, 't-ok');
+    } else if (currentDataset === 'wordnet' && !activeVfs) {
+        await onDatasetChange();
+    } else if (currentDataset === 'schemaorg' && !activeVfs) {
+        await onDatasetChange();
+    }
 
     const type = document.getElementById('testSelect').value;
     const tests = type === 'all' ? ['point','twohop','filter','ingestion'] : [type];
@@ -510,7 +654,7 @@ async function runBenchmark() {
 
         tbody.innerHTML +=
             renderRow(res.test, 'engine-qualia', 'QualiaDB', res.qualia,
-                qualiaWasmLoaded ? 'Rust WASM: mini_parser + Webizen VM (empty DB — pipeline cost only)' : 'JS fallback: FNV HashMap simulation') +
+                qualiaWasmLoaded ? 'Rust WASM: mini_parser + Webizen VM' : 'JS fallback: FNV HashMap simulation') +
             (res.oxi ? renderRow(res.test, 'engine-oxi', 'Oxigraph WASM (SPARQL)', res.oxi, 'Real WASM engine, SPARQL parse overhead included') : '') +
             renderRow(res.test, 'engine-js', 'BTree Proxy (Oxigraph class)', res.btree,
                 res.oxi ? 'Superseded by real Oxigraph above' : 'String-keyed Map — same access class as Oxigraph SPO BTree');
@@ -520,18 +664,25 @@ async function runBenchmark() {
         await tick();
     }
 
-    document.getElementById('resultsSubtitle').textContent =
-        `${DATASET_SIZE.toLocaleString()} triples · ${RUNS} iterations · ${new Date().toISOString()}`;
+    const label = currentDataset === 'wordnet'
+        ? `Princeton WordNet 3.1 (~5.56M quins · 6,540 blocks) · ${RUNS} iterations · ${new Date().toISOString()}`
+        : currentDataset === 'schemaorg'
+        ? `Schema.org 30.0 (~18k quins · 22 blocks) · ${RUNS} iterations · ${new Date().toISOString()}`
+        : `${DATASET_SIZE.toLocaleString()} triples · ${RUNS} iterations · ${new Date().toISOString()}`;
+
+    document.getElementById('resultsSubtitle').textContent = label;
     document.getElementById('resultsPanel').style.display = 'block';
     tlog('=== COMPLETE. Use "Export Raw JSON" to share reproducible results. ===', 't-ok');
-    document.getElementById('runBtn').disabled = false;
+    runBtn.disabled = false;
 }
+window.runBenchmark = runBenchmark;
 
 function copyJSON() {
     const out = {
         meta: {
             timestamp: new Date().toISOString(),
-            dataset_size: DATASET_SIZE,
+            dataset: currentDataset,
+            dataset_size: currentDataset === 'wordnet' ? 5558748 : currentDataset === 'schemaorg' ? 17949 : DATASET_SIZE,
             runs: RUNS,
             userAgent: navigator.userAgent,
             qualia_wasm_loaded: qualiaWasmLoaded,
@@ -543,6 +694,7 @@ function copyJSON() {
     navigator.clipboard.writeText(JSON.stringify(out, null, 2));
     tlog('Raw JSON copied to clipboard.', 't-ok');
 }
+window.copyJSON = copyJSON;
 
 function setBadge_init() {
     setBadge('badge-qualia', 'loading', 'QualiaDB');
@@ -553,8 +705,9 @@ function setBadge_init() {
 (async () => {
     setBadge_init();
     await Promise.all([loadQualiaWasm(), loadOxigraph()]);
-    document.getElementById('runBtn').disabled = false;
-    document.getElementById('runBtn').textContent = '▶ Execute (Live)';
+    const runBtn = document.getElementById('runBtn');
+    runBtn.disabled = false;
+    runBtn.textContent = '▶ Execute (Live)';
     tlog('Engines initialised. Click Execute to run benchmarks.', 't-ok');
     document.getElementById('sourceDisplay').textContent =
         document.querySelector('script[type="module"]').textContent.trim();

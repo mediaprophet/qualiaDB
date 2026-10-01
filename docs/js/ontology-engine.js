@@ -2,8 +2,8 @@
  * Ontology browser engine — WASM + VFS over .q42 volumes listed in vfs-manifest.json.
  */
 
-import { parseBigDecimal, hashToken, toHex16, hasMsb } from '../playground/hash.js';
-import { VFS, QUIN_SIZE } from '../playground/vfs.js?v=0.0.33-vfs-fullget1';
+import { parseBigDecimal, hashTokenVariants, toHex16, hasMsb } from '../playground/hash.js';
+import { VFS, QUIN_SIZE } from '../playground/vfs.js?v=0.0.40-vfs-fullget1';
 import { fetchWasmBinary } from './wasm-fetch.js';
 
 const DOCS_ROOT = new URL('../', import.meta.url);
@@ -154,8 +154,10 @@ export class OntologyEngine {
     }
 
     /**
-     * Pages-hosted volumes we can boot without a 100+ MB download.
-     * WordNet is listed in the manifest but is not published on GitHub Pages.
+     * Prefer small Pages-hosted volumes for cold boot (avoid a ~127 MB WordNet
+     * download unless the URL explicitly requests `?dataset=wordnet`).
+     * WordNet is published when the release asset is present; Schema.org remains
+     * the default boot dataset.
      */
     pickBootDataset(datasets, requested) {
         const list = Array.isArray(datasets) ? datasets : [];
@@ -484,12 +486,25 @@ export class OntologyEngine {
             return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
         }
         const [sT, pT, oT] = tokens;
-        const sH = sT.startsWith('?') ? null : hashToken(sT);
-        const pH = pT.startsWith('?') ? null : hashToken(pT);
-        const oH = oT.startsWith('?') ? null : hashToken(oT);
+        // Try verbatim + delimiter-stripped hashes so Schema.org (quoted/IRI
+        // delimiters preserved) and WordNet (stripped at ingest) both hit.
+        const sHVars = sT.startsWith('?') ? null : hashTokenVariants(sT);
+        const pHVars = pT.startsWith('?') ? null : hashTokenVariants(pT);
+        const oHVars = oT.startsWith('?') ? null : hashTokenVariants(oT);
 
         let candidateBlocks = null;
-        if (oH !== null) candidateBlocks = vfs.lookupBlocks(oH);
+        if (oHVars !== null) {
+            const blockSet = new Set();
+            for (const h of oHVars) {
+                const blks = vfs.lookupBlocks(h);
+                if (blks && blks.length > 0) {
+                    for (const b of blks) blockSet.add(b);
+                }
+            }
+            if (blockSet.size > 0) {
+                candidateBlocks = Array.from(blockSet).sort((a, b) => a - b);
+            }
+        }
         const blockList = candidateBlocks ?? Array.from({ length: vfs.blockCount }, (_, i) => i);
 
         const matches = [];
@@ -523,9 +538,9 @@ export class OntologyEngine {
                     if (s === 0n && p === 0n && o === 0n) continue;
 
                     let ok = true;
-                    if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
-                    if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
-                    if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+                    if (sHVars !== null) { cycles++; hasMsb(s) ? dj++ : lx++; if (!sHVars.includes(s)) ok = false; }
+                    if (ok && pHVars !== null) { cycles++; hasMsb(p) ? dj++ : lx++; if (!pHVars.includes(p)) ok = false; }
+                    if (ok && oHVars !== null) { cycles++; hasMsb(o) ? dj++ : lx++; if (!oHVars.includes(o)) ok = false; }
                     if (ok) {
                         matches.push({
                             s: String(s), p: String(p), o: String(o),
@@ -550,9 +565,9 @@ export class OntologyEngine {
             return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
         }
         const [sT, pT, oT] = tokens;
-        const sH = sT.startsWith('?') ? null : hashToken(sT);
-        const pH = pT.startsWith('?') ? null : hashToken(pT);
-        const oH = oT.startsWith('?') ? null : hashToken(oT);
+        const sHVars = sT.startsWith('?') ? null : hashTokenVariants(sT);
+        const pHVars = pT.startsWith('?') ? null : hashTokenVariants(pT);
+        const oHVars = oT.startsWith('?') ? null : hashTokenVariants(oT);
 
         const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         const quins = Math.floor(bytes.length / QUIN_SIZE);
@@ -565,9 +580,9 @@ export class OntologyEngine {
             const p = getU64(view, b + 8);
             const o = getU64(view, b + 16);
             let ok = true;
-            if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
-            if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
-            if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+            if (sHVars !== null) { cycles++; hasMsb(s) ? dj++ : lx++; if (!sHVars.includes(s)) ok = false; }
+            if (ok && pHVars !== null) { cycles++; hasMsb(p) ? dj++ : lx++; if (!pHVars.includes(p)) ok = false; }
+            if (ok && oHVars !== null) { cycles++; hasMsb(o) ? dj++ : lx++; if (!oHVars.includes(o)) ok = false; }
             if (ok) {
                 matches.push({ s: String(s), p: String(p), o: String(o), c: '0', m: '0' });
             }

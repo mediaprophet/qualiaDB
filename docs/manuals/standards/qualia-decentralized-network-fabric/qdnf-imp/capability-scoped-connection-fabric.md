@@ -2,7 +2,7 @@
 
 Date: 2026-09-10. Status: **CSCP `-00` Internet-Draft plus in-tree supervisor**.
 Local loopback bound-UDP, CSCP ConnectRequest codec, and offline receipts are
-implemented on `0.0.38`. This is **not** an RFC, **not** IETF datatracker
+implemented on `0.0.40`. This is **not** an RFC, **not** IETF datatracker
 publication, **not** Internet MASQUE, **not** an admitted noq/QUIC engine,
 **not** a public relay, and **not** a deployment claim.
 

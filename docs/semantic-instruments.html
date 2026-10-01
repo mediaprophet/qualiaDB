@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Semantic Instruments — QualiaDB / Webizen 0.0.39</title>
-  <meta name="description" content="A public guide to QualiaDB Semantic Instruments: inspectable semantic packages, bounded execution, receipts, attestations, capability recognition, and their current limits.">
+  <title>Semantic Instruments — QualiaDB / Webizen 0.0.40</title>
+  <meta name="description" content="Semantic Instruments are labelled, sealed packages of knowledge you can inspect before you trust or run them — and every run leaves a receipt.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -15,6 +15,97 @@
   <style>
     .stage { min-height: 8.75rem; }
     .stage-number { font-variant-numeric: tabular-nums; }
+    /* Local gradient text: tailwind-built.css does not emit the from-/via-/to-
+       stop classes used elsewhere, so the hero keeps its own definition. */
+    .hero-grad {
+      background: linear-gradient(90deg, #c4b5fd, #67e8f9, #6ee7b7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .instrument-flow {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .flow-step {
+      position: relative;
+      min-height: 9.5rem;
+      padding: 1.25rem;
+      border: 1px solid rgba(148, 180, 220, 0.2);
+      border-radius: 1.25rem;
+      background: rgba(5, 10, 18, 0.58);
+    }
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: calc(100% + 0.25rem);
+      width: 0.5rem;
+      border-top: 1px solid rgba(103, 232, 249, 0.55);
+    }
+    .flow-step:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      z-index: 1;
+      top: calc(50% - 0.2rem);
+      left: calc(100% + 0.55rem);
+      width: 0.4rem;
+      height: 0.4rem;
+      border-top: 1px solid #67e8f9;
+      border-right: 1px solid #67e8f9;
+      transform: rotate(45deg);
+    }
+    .flow-icon {
+      width: 2.25rem;
+      height: 2.25rem;
+      display: grid;
+      place-items: center;
+      margin-bottom: 0.8rem;
+      border-radius: 0.75rem;
+      background: rgba(167, 139, 250, 0.14);
+      color: #c4b5fd;
+    }
+    .flow-step:nth-child(2) .flow-icon { background: rgba(34, 211, 238, 0.12); color: #67e8f9; }
+    .flow-step:nth-child(3) .flow-icon { background: rgba(52, 211, 153, 0.12); color: #6ee7b7; }
+    .flow-step:nth-child(4) .flow-icon { background: rgba(251, 191, 36, 0.12); color: #fcd34d; }
+    .package-diagram { overflow: hidden; }
+    .package-shell {
+      position: relative;
+      max-width: 52rem;
+      margin: 0 auto;
+      padding: 1.5rem;
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.13), rgba(6, 182, 212, 0.06) 52%, rgba(5, 10, 18, 0.75));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .package-label { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(148, 180, 220, 0.2); }
+    .package-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+    .package-item { min-height: 6rem; padding: 0.9rem; border: 1px solid rgba(148, 180, 220, 0.18); border-radius: 1rem; background: rgba(5, 10, 18, 0.64); }
+    .diagram-caption { max-width: 52rem; margin: 1rem auto 0; color: rgba(232, 238, 247, 0.58); font-size: 0.8rem; text-align: center; }
+    .playground-field label { display: block; margin-bottom: 0.45rem; font-size: 0.78rem; font-weight: 600; color: rgba(232, 238, 247, 0.82); }
+    .playground-field input, .playground-field select, .playground-field textarea {
+      width: 100%; padding: 0.7rem 0.8rem; border: 1px solid rgba(148, 180, 220, 0.24); border-radius: 0.75rem;
+      background: rgba(5, 10, 18, 0.72); color: #e8eef7; font: inherit;
+    }
+    .playground-field textarea { min-height: 5.5rem; resize: vertical; }
+    .playground-field input:focus, .playground-field select:focus, .playground-field textarea:focus { outline: 2px solid rgba(103, 232, 249, 0.55); outline-offset: 2px; }
+    .playground-preview { border: 1px solid rgba(103, 232, 249, 0.25); border-radius: 1rem; background: rgba(5, 16, 24, 0.72); }
+    .playground-preview dt { color: rgba(232, 238, 247, 0.48); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .playground-preview dd { margin-top: 0.15rem; color: rgba(232, 238, 247, 0.86); font-size: 0.86rem; }
+    .demo-receipt-held { border-color: rgba(251, 191, 36, 0.35); background: rgba(120, 83, 20, 0.12); }
+    .demo-receipt-ready { border-color: rgba(52, 211, 153, 0.35); background: rgba(20, 120, 87, 0.12); }
+    .ontology-map { width: 100%; height: auto; margin-top: 1.35rem; border: 1px solid rgba(148, 180, 220, 0.16); border-radius: 1rem; background: rgba(5, 10, 18, 0.42); }
+    @media (max-width: 767px) {
+      .instrument-flow { grid-template-columns: 1fr; }
+      .flow-step { min-height: auto; }
+      .flow-step:not(:last-child)::after { top: auto; bottom: -0.55rem; left: 50%; width: 0; height: 0.55rem; border-top: 0; border-left: 1px solid rgba(103, 232, 249, 0.55); }
+      .flow-step:not(:last-child)::before { top: auto; bottom: -0.6rem; left: calc(50% - 0.2rem); }
+      .package-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -34,39 +125,391 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-toolbox"></i> Semantic Instruments · 0.0.39 reference slice</div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-toolbox"></i> Semantic Instruments · 0.0.40 reference slice</div>
     <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
-      Knowledge that can be inspected<br>
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-cyan-300 to-emerald-300">before it is trusted or run.</span>
+      A labelled, sealed package of knowledge<br>
+      <span class="hero-grad">and you choose whose rules to run.</span>
     </h1>
-    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-5">
-      A Semantic Instrument is an inspectable, versioned semantic package: it declares its purpose, inputs, dependencies, limits, and the evidence behind a result. It is a tool, never a peer person or an authority by presentation alone.
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-4">
+      A Semantic Instrument is a well-labelled package of runnable knowledge, not a black box. Before you use it, you can inspect its purpose, author, requirements, limits, and prohibited uses. Each run then creates a receipt that records what was used and what happened.
     </p>
-    <div class="mb-12 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-100/90 max-w-4xl">
-      <strong class="text-amber-200">Honest release boundary.</strong> The 0.0.39 reference slice has package, validation, registry, resolution, receipt, attestation, RPL, and Studio workflows with scripted conformance coverage. It is not a claim that every sector workflow has completed live human UAT or that a demo runner is a clinical, legal, or employment decision service.
-    </div>
+    <p class="text-base sm:text-lg text-white/60 max-w-3xl mb-12">
+      No instrument is imposed on you. A purpose may have several instruments, published by different people and organisations; you decide which to collect, trust, install, and run. You can also compare how more than one instrument evaluates the same situation. Once you enable an instrument for a Webizen/QualiaDB-powered agent, its declared rules bind that agent. The person chooses the rules; the machine must follow them.
+    </p>
 
-    <section class="grid lg:grid-cols-2 gap-6 mb-16">
-      <article class="q-card p-8">
-        <p class="q-kicker mb-2">The package</p>
-        <h2 class="text-2xl font-semibold mb-3">A collectable has context, not just a badge</h2>
-        <p class="text-sm text-white/70 mb-5">The shipped collectable binds an HCF description, N3 definition graph, manifest, accessible <code>10d</code> visual, and—on native builds—an optional compact Q42 graph. Larger Q42 volumes are declared dependencies rather than silently becoming the instrument.</p>
-        <ul class="text-sm text-white/65 space-y-2">
-          <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Purpose, prohibited interpretations, category, and version are explicit.</li>
-          <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Inputs, outputs, source graph, visual, and content digest can be inspected.</li>
-          <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Demo and reference packs remain labelled; a visual does not create trust.</li>
-        </ul>
-      </article>
-      <article class="q-card p-8">
-        <p class="q-kicker mb-2">The boundary</p>
-        <h2 class="text-2xl font-semibold mb-3">Keep people, claims, and tools separate</h2>
-        <p class="text-sm text-white/70 mb-5">An author, reviewer, publisher, instrument, execution result, and capability credential are separate records. A signature or catalogue listing establishes provenance; it does not establish that a claim is true.</p>
-        <ul class="text-sm text-white/65 space-y-2">
-          <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Collection, installation, trust, and activation are distinct decisions.</li>
-          <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Required inputs or dependencies that are missing are held, not invented.</li>
-          <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Revocation prevents new reliance without erasing historic receipts.</li>
-        </ul>
-      </article>
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="lifecycle-title">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 mb-7">
+        <div>
+          <p class="q-kicker mb-2">One inspectable path</p>
+          <h2 id="lifecycle-title" class="text-2xl sm:text-3xl font-semibold">From a labelled rule to an accountable result</h2>
+        </div>
+        <p class="text-sm text-white/55 max-w-md">Every step stays separate: receiving a package is not trusting it, and trusting it is not running it.</p>
+      </div>
+      <div class="instrument-flow" role="img" aria-label="Lifecycle diagram: inspect a labelled instrument, preflight its requirements, run it locally within declared limits, then retain a receipt.">
+        <div class="flow-step"><div class="flow-icon"><i class="fa-solid fa-tags"></i></div><h3 class="font-semibold">1. Inspect the label</h3><p class="text-xs text-white/60 mt-2">Read the purpose, author, version, limits, and dependencies before deciding whether it belongs in your environment.</p></div>
+        <div class="flow-step"><div class="flow-icon"><i class="fa-solid fa-list-check"></i></div><h3 class="font-semibold">2. Preflight the package</h3><p class="text-xs text-white/60 mt-2">Check that required inputs, dependencies, and trust decisions are present. Missing pieces put the run on hold.</p></div>
+        <div class="flow-step"><div class="flow-icon"><i class="fa-solid fa-laptop-code"></i></div><h3 class="font-semibold">3. Run on your terms</h3><p class="text-xs text-white/60 mt-2">Apply the declared rules to your own information within the instrument's stated bounds.</p></div>
+        <div class="flow-step"><div class="flow-icon"><i class="fa-solid fa-receipt"></i></div><h3 class="font-semibold">4. Keep the receipt</h3><p class="text-xs text-white/60 mt-2">Retain a tamper-evident record linking the package, inputs, dependency lock, and outcome.</p></div>
+      </div>
+    </section>
+
+    <section class="q-card p-8 mb-16">
+      <p class="q-kicker mb-2">Who makes them, who uses them</p>
+      <h2 class="text-2xl font-semibold mb-4">People write the rules — so we can share and use expertise, with technology</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-4">
+        A doctor, teacher, accountant, lawyer, economist, or professional body can express a field rule as a Semantic Instrument: a precise, checkable definition of a judgement or calculation. Recipients can apply the same rule to their own information, in their own environment, and retain a receipt of the outcome. This is <span class="text-white/90 font-medium">expert decision support for human-centric AI</span>: the knowledge travels as a labelled tool while the data stays with the person using it.
+      </p>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">
+        Authorship itself is open. Anyone who can write down the rules of a domain — a professional, a community group, a hobbyist, an individual — can make an instrument. Credentials, not gatekeeping, are what distinguish whose rules you are choosing to run.
+      </p>
+      <div class="grid sm:grid-cols-3 gap-5 text-sm text-white/65">
+        <div class="flex gap-3">
+          <i class="fa-solid fa-user-pen text-violet-300 mt-1 shrink-0"></i>
+          <p><span class="text-white/85 font-medium">An author encodes.</span> A professional, an organisation, or anyone with rules worth sharing turns a real rule — a guideline, an eligibility test, a formula — into an instrument with a declared purpose, inputs, and limits.</p>
+        </div>
+        <div class="flex gap-3">
+          <i class="fa-solid fa-share-nodes text-cyan-300 mt-1 shrink-0"></i>
+          <p><span class="text-white/85 font-medium">You receive and check it.</span> Before running anything, you can read exactly what the instrument does, who authored it, and what it depends on — like reading a label before taking a product off the shelf.</p>
+        </div>
+        <div class="flex gap-3">
+          <i class="fa-solid fa-house-laptop text-emerald-300 mt-1 shrink-0"></i>
+          <p><span class="text-white/85 font-medium">It runs on your terms.</span> You apply it to your own information locally, inside declared limits, and the receipt records precisely which instrument and inputs produced the answer.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <p class="q-kicker mb-2">How QualiaDB makes instruments possible</p>
+      <h2 class="text-3xl font-semibold mb-4">Human-centric, symbolic AI</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-8">
+        Two capabilities inside QualiaDB do the heavy lifting: shared vocabularies that pin down what words mean, and built-in systems of logic that make the rules genuinely runnable — not just text describing them.
+      </p>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <article class="q-card p-8">
+          <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-book-open text-violet-300"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Ontologies: a shared dictionary of meaning</h3>
+          <p class="text-sm text-white/65 leading-relaxed mb-4">
+            An ontology is a field's agreed vocabulary, written down formally — what "a dose", "a credit hour", or "a taxable invoice" actually is, and how those things relate to each other. QualiaDB is a semantic knowledge engine, so an instrument's definitions are written in that shared language and every instrument declares which ontology it relies on. The result: a term means the same thing to the author who wrote the rule, the recipient who runs it, and the machine that evaluates it — no silent reinterpretation along the way.
+          </p>
+          <p class="text-sm text-white/65 leading-relaxed">
+            Ontologies are not exotic or new. Thousands have been published by organisations, governments, standards bodies, and public-interest projects — for medicine, law, education, finance, geography, and more — and most major websites already embed some level of ontology in their pages so that search engines and other machines can understand them. This machine-readable layer of meaning, sometimes called the <span class="text-white/85">Web of Data</span>, is the foundation of symbolic AI — the branch of AI built on explicit, inspectable knowledge — on which much of the rest of AI is built.
+          </p>
+          <svg class="ontology-map" viewBox="0 0 560 220" role="img" aria-labelledby="ontology-map-title ontology-map-desc">
+            <title id="ontology-map-title">Domain ontologies linked through shared logic</title>
+            <desc id="ontology-map-desc">Four domain vocabularies for health, learning, finance, and law connect to a shared semantic graph, which supplies clearly defined terms to an executable logic layer.</desc>
+            <defs>
+              <linearGradient id="ontology-flow" x1="0" x2="1">
+                <stop offset="0" stop-color="#a78bfa" stop-opacity=".72"/>
+                <stop offset="1" stop-color="#67e8f9" stop-opacity=".72"/>
+              </linearGradient>
+              <filter id="ontology-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <g fill="none" stroke="url(#ontology-flow)" stroke-width="1.4" opacity=".72">
+              <path d="M142 48 C190 48, 188 89, 243 103"/>
+              <path d="M142 92 C190 92, 194 98, 243 108"/>
+              <path d="M142 136 C190 136, 194 120, 243 114"/>
+              <path d="M142 180 C190 180, 188 130, 243 119"/>
+              <path d="M361 111 C395 111, 397 111, 425 111" stroke="#6ee7b7"/>
+            </g>
+            <g font-family="Inter, system-ui, sans-serif" font-size="11">
+              <g>
+                <rect x="20" y="30" width="122" height="36" rx="10" fill="#17102c" stroke="#8b5cf6" stroke-opacity=".55"/>
+                <circle cx="39" cy="48" r="6" fill="#c4b5fd"/><text x="52" y="52" fill="#e8eef7">Health ontology</text>
+                <rect x="20" y="74" width="122" height="36" rx="10" fill="#0b2130" stroke="#22d3ee" stroke-opacity=".55"/>
+                <circle cx="39" cy="92" r="6" fill="#67e8f9"/><text x="52" y="96" fill="#e8eef7">Learning ontology</text>
+                <rect x="20" y="118" width="122" height="36" rx="10" fill="#10251f" stroke="#34d399" stroke-opacity=".55"/>
+                <circle cx="39" cy="136" r="6" fill="#6ee7b7"/><text x="52" y="140" fill="#e8eef7">Finance ontology</text>
+                <rect x="20" y="162" width="122" height="36" rx="10" fill="#2a2110" stroke="#fbbf24" stroke-opacity=".55"/>
+                <circle cx="39" cy="180" r="6" fill="#fcd34d"/><text x="52" y="184" fill="#e8eef7">Law ontology</text>
+              </g>
+              <g filter="url(#ontology-glow)">
+                <circle cx="300" cy="111" r="61" fill="#101c31" stroke="#67e8f9" stroke-opacity=".7" stroke-width="1.5"/>
+                <circle cx="300" cy="111" r="42" fill="none" stroke="#a78bfa" stroke-opacity=".35"/>
+                <circle cx="278" cy="93" r="5" fill="#c4b5fd"/><circle cx="323" cy="91" r="5" fill="#67e8f9"/><circle cx="286" cy="130" r="5" fill="#6ee7b7"/><circle cx="326" cy="130" r="5" fill="#fcd34d"/>
+                <path d="M278 93 L323 91 L326 130 L286 130 Z M278 93 L286 130 M323 91 L286 130" stroke="#e8eef7" stroke-opacity=".35"/>
+              </g>
+              <text x="300" y="105" fill="#fff" text-anchor="middle" font-size="12" font-weight="600">Shared semantic</text>
+              <text x="300" y="121" fill="#fff" text-anchor="middle" font-size="12" font-weight="600">graph</text>
+              <text x="300" y="145" fill="#94a3b8" text-anchor="middle" font-size="9">terms · relations · meaning</text>
+              <g>
+                <rect x="425" y="78" width="112" height="66" rx="14" fill="#0d2826" stroke="#34d399" stroke-opacity=".7"/>
+                <path d="M447 97 h18 M447 106 h29 M447 115 h22" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round"/>
+                <text x="482" y="104" fill="#fff" font-size="11" font-weight="600">Declared</text>
+                <text x="482" y="119" fill="#fff" font-size="11" font-weight="600">logic</text>
+                <text x="482" y="133" fill="#94a3b8" font-size="8">runs bounded rules</text>
+              </g>
+            </g>
+          </svg>
+        </article>
+        <article class="q-card p-8">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-gears text-cyan-300"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Logic systems: the rules really run</h3>
+          <p class="text-sm text-white/65 leading-relaxed mb-4">
+            The rules inside an instrument are written in logics built into the engine itself — not comments, not prose. That includes rules that can be strict or defeasible (a stronger rule can legitimately override a weaker one), shapes that check whether data fits the required form, norms for what is obligatory, permitted, or forbidden, and logics for time and for what is known or believed — twenty-one modalities in all, compiled to execute inside the Webizen VM under declared bounds.
+          </p>
+          <div class="overflow-x-auto rounded-xl border border-white/10 mb-4">
+            <table class="w-full min-w-[28rem] text-left text-xs text-white/65">
+              <caption class="caption-top text-left px-3 pt-3 pb-2 text-xs font-semibold text-white/85">Selected logic and analysis capabilities</caption>
+              <thead class="border-y border-white/10 bg-white/[0.03] text-[0.68rem] uppercase tracking-wider text-cyan-200">
+                <tr><th scope="col" class="px-3 py-2 font-medium">Area</th><th scope="col" class="px-3 py-2 font-medium">High-level support</th></tr>
+              </thead>
+              <tbody class="divide-y divide-white/10">
+                <tr><th scope="row" class="px-3 py-2 font-medium text-violet-200">Rules &amp; shapes</th><td class="px-3 py-2">Strict and defeasible rules, plus SHACL validation for declared data requirements.</td></tr>
+                <tr><th scope="row" class="px-3 py-2 font-medium text-violet-200">Norms &amp; time</th><td class="px-3 py-2">Obligations, permissions, prohibitions, and bounded temporal trace evaluation.</td></tr>
+                <tr><th scope="row" class="px-3 py-2 font-medium text-violet-200">Knowledge &amp; context</th><td class="px-3 py-2">Epistemic, paraconsistent, and spatio-temporal reasoning for scoped claims.</td></tr>
+                <tr><th scope="row" class="px-3 py-2 font-medium text-emerald-200">Clinical &amp; life sciences</th><td class="px-3 py-2">Risk and safety checks, alignment, protein and sequence-oriented analysis.</td></tr>
+                <tr><th scope="row" class="px-3 py-2 font-medium text-emerald-200">Chemistry &amp; physics</th><td class="px-3 py-2">Molecular properties, reaction measures, thermodynamics, and bounded numerical models.</td></tr>
+                <tr><th scope="row" class="px-3 py-2 font-medium text-emerald-200">Economics</th><td class="px-3 py-2">Modelled indicators and bounded simulations such as Monte Carlo value-at-risk.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-white/45 mb-4">Available capability is not a claim that every instrument is suitable for a high-stakes decision; each package declares its own purpose, limits, and evidence.</p>
+          <div class="flex flex-wrap gap-3">
+            <a class="px-3 py-1.5 rounded-xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-xs" href="logic-showcase.html">Logic &amp; Shape showcase</a>
+            <a class="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white/70" href="modalities-showcase.html">Modalities Observatory</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <p class="q-kicker mb-2">In plain words</p>
+      <h2 class="text-3xl font-semibold mb-6">What it actually does</h2>
+      <div class="grid md:grid-cols-3 gap-5">
+        <article class="q-card p-7">
+          <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-box-open text-violet-300"></i>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">It declares itself</h3>
+          <p class="text-sm text-white/65">Every instrument carries a label you can read: its purpose, its author, its version, the inputs it needs, the things it depends on, and the uses that are explicitly off-limits. Nothing about what it claims to do is hidden inside the code.</p>
+        </article>
+        <article class="q-card p-7">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-magnifying-glass text-cyan-300"></i>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">It only runs complete</h3>
+          <p class="text-sm text-white/65">An instrument refuses to run until everything it declared it needs is actually present. If a required input or dependency is missing, it stops and says so — it never guesses, fills gaps silently, or invents a result.</p>
+        </article>
+        <article class="q-card p-7">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-receipt text-emerald-300"></i>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">It leaves a receipt</h3>
+          <p class="text-sm text-white/65">Each run produces a tamper-evident record binding the exact package, inputs, and outputs together. You can later prove what was run, on what, and what it produced — and a revoked instrument cannot quietly be used again.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <p class="q-kicker mb-2">Simple examples</p>
+      <h2 class="text-3xl font-semibold mb-4">The same pattern, many fields</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-8">
+        In each case an expert writes the rules once, and recipients run those rules against their own information — with the label inspectable beforehand and a receipt afterwards.
+      </p>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <article class="q-card p-6">
+          <div class="w-9 h-9 rounded-lg bg-violet-500/15 border border-violet-500/25 flex items-center justify-center mb-3">
+            <i class="fa-solid fa-user-doctor text-violet-300 text-sm"></i>
+          </div>
+          <h3 class="font-semibold mb-2">A clinical guideline</h3>
+          <p class="text-xs text-white/60 leading-relaxed">A medical college publishes an instrument encoding a screening guideline. A clinic runs it against its own patient records — which never leave the clinic — and the receipt shows exactly which guideline version was applied and to what.</p>
+        </article>
+        <article class="q-card p-6">
+          <div class="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-3">
+            <i class="fa-solid fa-graduation-cap text-cyan-300 text-sm"></i>
+          </div>
+          <h3 class="font-semibold mb-2">Prior learning, itemised</h3>
+          <p class="text-xs text-white/60 leading-relaxed">A training provider encodes how prior-learning evidence maps to a course unit's requirements. A learner submits their portfolio; the instrument reports each requirement as satisfied, equivalent, unresolved, or unmet — not an unexplained yes or no.</p>
+        </article>
+        <article class="q-card p-6">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mb-3">
+            <i class="fa-solid fa-calculator text-emerald-300 text-sm"></i>
+          </div>
+          <h3 class="font-semibold mb-2">A tax rule, applied to your books</h3>
+          <p class="text-xs text-white/60 leading-relaxed">An accounting body encodes a deduction rule set. A small business runs it against its own ledger in its own environment, and the receipt binds the outcome to the exact ruleset version — ready to show an auditor.</p>
+        </article>
+        <article class="q-card p-6">
+          <div class="w-9 h-9 rounded-lg bg-violet-500/15 border border-violet-500/25 flex items-center justify-center mb-3">
+            <i class="fa-solid fa-scale-balanced text-violet-300 text-sm"></i>
+          </div>
+          <h3 class="font-semibold mb-2">Eligibility, without a phone call</h3>
+          <p class="text-xs text-white/60 leading-relaxed">A legal aid organisation encodes the eligibility criteria for a service. A community worker checks a client's situation against it locally, sees precisely which criteria are met or unresolved, and can show how that answer was reached.</p>
+        </article>
+        <article class="q-card p-6">
+          <div class="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-3">
+            <i class="fa-solid fa-chart-line text-cyan-300 text-sm"></i>
+          </div>
+          <h3 class="font-semibold mb-2">A method others can reproduce</h3>
+          <p class="text-xs text-white/60 leading-relaxed">An economics institute encodes how an indicator is calculated. Other researchers run the identical method on their own datasets — same version, same definition — and can prove the figures were produced the declared way.</p>
+        </article>
+        <article class="q-card p-6">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mb-3">
+            <i class="fa-solid fa-chalkboard-user text-emerald-300 text-sm"></i>
+          </div>
+          <h3 class="font-semibold mb-2">Classroom marking criteria</h3>
+          <p class="text-xs text-white/60 leading-relaxed">A teacher encodes the rubric for an assessment task. Students and moderators can inspect the criteria, apply them consistently, and retain a record of how each mark was derived.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="playground-title">
+      <div class="max-w-3xl mb-7">
+        <p class="q-kicker mb-2">Try the idea</p>
+        <h2 id="playground-title" class="text-2xl sm:text-3xl font-semibold mb-3">Build a tiny Semantic Instrument label</h2>
+        <p class="text-sm sm:text-base text-white/65">Start with a familiar purpose, say what information it needs, and set a boundary. This is a learning playground: it creates a visual label and a mock receipt only. It does not save anything, inspect your data, or make a real-world decision.</p>
+      </div>
+      <div class="grid lg:grid-cols-[minmax(0,1.05fr)_minmax(19rem,.95fr)] gap-6">
+        <form id="instrument-playground" class="space-y-4" novalidate>
+          <div class="playground-field">
+            <label for="instrument-template">1. Choose a starting point</label>
+            <select id="instrument-template" name="template">
+              <option value="learning">Recognise prior learning</option>
+              <option value="community">Prepare a community-support referral</option>
+              <option value="finance">Organise business expenses</option>
+              <option value="clinical">Prepare a clinician review checklist</option>
+            </select>
+          </div>
+          <div class="playground-field">
+            <label for="instrument-purpose">2. What is this instrument for?</label>
+            <input id="instrument-purpose" name="purpose" maxlength="180" value="Check a learner's portfolio against a course unit's declared criteria.">
+          </div>
+          <div class="playground-field">
+            <label for="instrument-input">3. What information must be present?</label>
+            <select id="instrument-input" name="input">
+              <option value="Portfolio evidence and the course criteria">Portfolio evidence and the course criteria</option>
+              <option value="A completed referral form and service criteria">A completed referral form and service criteria</option>
+              <option value="Ledger entries and declared expense categories">Ledger entries and declared expense categories</option>
+              <option value="A clinician-approved checklist and relevant record fields">A clinician-approved checklist and relevant record fields</option>
+            </select>
+          </div>
+          <div class="playground-field">
+            <label for="instrument-boundary">4. Where must it stop?</label>
+            <textarea id="instrument-boundary" name="boundary" maxlength="240">Show satisfied, unresolved, and unmet criteria; do not award a qualification.</textarea>
+          </div>
+          <label class="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-sm text-white/70">
+            <input id="instrument-example-data" type="checkbox" class="mt-1 accent-cyan-400">
+            <span>I have supplied the complete <strong class="text-white/90">example</strong> record. (This is only a switch for demonstrating the held-run safeguard.)</span>
+          </label>
+          <div class="flex flex-wrap gap-3 pt-1">
+            <button type="button" id="preview-instrument" class="rounded-xl border border-cyan-500/30 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/25">Update the label</button>
+            <button type="button" id="run-instrument-demo" class="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25">Run the example</button>
+          </div>
+        </form>
+
+        <div class="space-y-4">
+          <section class="playground-preview p-5" aria-labelledby="preview-title" aria-live="polite">
+            <div class="flex items-center justify-between gap-3 mb-4"><h3 id="preview-title" class="font-semibold">Your instrument label</h3><span class="q-chip text-[0.68rem]"><i class="fa-solid fa-flask"></i> demo draft</span></div>
+            <dl class="grid gap-3">
+              <div><dt>Purpose</dt><dd id="preview-purpose">Check a learner's portfolio against a course unit's declared criteria.</dd></div>
+              <div><dt>Required information</dt><dd id="preview-input">Portfolio evidence and the course criteria</dd></div>
+              <div><dt>Boundary</dt><dd id="preview-boundary">Show satisfied, unresolved, and unmet criteria; do not award a qualification.</dd></div>
+              <div><dt>Identity</dt><dd id="preview-identity" class="font-mono text-xs">demo:learning · v0.1</dd></div>
+            </dl>
+          </section>
+          <section id="demo-receipt" class="playground-preview demo-receipt-held p-5" aria-labelledby="receipt-title" aria-live="polite">
+            <div class="flex items-center gap-2 mb-2"><i id="receipt-icon" class="fa-solid fa-pause-circle text-amber-300"></i><h3 id="receipt-title" class="font-semibold">Example run: held</h3></div>
+            <p id="receipt-copy" class="text-sm text-white/65">The package is labelled, but the example record is incomplete. A real instrument should hold the run here rather than inventing an answer.</p>
+            <p id="receipt-detail" class="mt-3 font-mono text-[0.7rem] text-white/40">receipt: demo-held · input commitment: missing</p>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="q-card p-8 mb-16 border border-violet-500/20" aria-labelledby="agreement-path-title">
+      <div class="grid lg:grid-cols-[1.15fr_.85fr] gap-8 items-center">
+        <div>
+          <p class="q-kicker mb-2">From agreement to instrument</p>
+          <h2 id="agreement-path-title" class="text-2xl sm:text-3xl font-semibold mb-4">A shared rule can begin with several honest understandings</h2>
+          <p class="text-sm sm:text-base text-white/70 mb-4">People making an agreement may bring different claims, references, responsibilities, and degrees of confidence. Instead of hiding those differences, an agreement ledger can preserve each party's position, identify what is shared, record what remains unresolved, and consolidate only the terms people have actually accepted.</p>
+          <p class="text-sm sm:text-base text-white/65">The consolidated agreement can then be packaged as a Semantic Instrument: an inspectable rule set with declared inputs, boundaries, parties, dependencies, and receipts. It is not a machine deciding what people meant; it is a tool for making the agreed meaning visible and runnable.</p>
+        </div>
+        <div class="grid gap-3">
+          <a href="agreement-instruments.html" class="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5 hover:bg-violet-500/15 transition">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-handshake text-violet-200"></i><div><h3 class="font-semibold">Agreements as instruments</h3><p class="text-xs text-white/55 mt-1">A plain-language walkthrough from claims to a shared, bounded rule.</p></div></div>
+          </a>
+          <a href="agreement-ledger.html" class="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5 hover:bg-cyan-500/15 transition">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-book-open text-cyan-200"></i><div><h3 class="font-semibold">Agreement ledger</h3><p class="text-xs text-white/55 mt-1">See how party perspectives, sources, dissent, and consent are recorded.</p></div></div>
+          </a>
+          <a href="human-centric-authoring.html" class="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 hover:bg-emerald-500/15 transition">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-pen-ruler text-emerald-200"></i><div><h3 class="font-semibold">Human-centric authoring</h3><p class="text-xs text-white/55 mt-1">A workspace for turning purpose, agreement, evidence, and limits into an accountable tool.</p></div></div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="q-card p-8 mb-16">
+      <p class="q-kicker mb-2">An open format with accountable authorship</p>
+      <h2 class="text-2xl font-semibold mb-4">Anyone can write one — credentials say who did</h2>
+      <div class="grid lg:grid-cols-2 gap-8">
+        <div>
+          <p class="text-sm text-white/70 mb-4">
+            Semantic Instruments are not a closed club. Anyone can author one: the format is open, the packaging is inspectable, and a homemade instrument works the same way as one from a national professional body. That openness is a safeguard, not just a courtesy — if only designated experts could define the rules, the power to define them would itself become a chokepoint worth capturing.
+          </p>
+          <p class="text-sm text-white/70">
+            What distinguishes authorship is proof, not permission. The ecosystem is designed to work with <span class="text-white/90 font-medium">W3C Verifiable Credentials</span> (and Open Badges-compatible exports), so an instrument — and the credentials it produces — can carry cryptographically verifiable statements about who authored it, who reviewed it, and under what authority.
+          </p>
+        </div>
+        <div>
+          <p class="text-sm text-white/70 mb-4">
+            That is the point: when an expert organisation or licensed professional publishes an instrument, recipients — and the semantic and AI systems built on top — can check <em>whose rules they are actually running</em>. The human expert stays visible and accountable inside the machine's chain of reasoning, rather than being laundered into anonymous "the system says so" output.
+          </p>
+          <p class="text-sm text-white/70">
+            Instruments designed this way are intended to keep the tools that AI and semantic systems rely upon <span class="text-white/90 font-medium">human-centric</span>: authored by identifiable people and bodies, bounded by declared limits, and auditable end to end.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="q-card package-diagram p-6 sm:p-8 mb-16" aria-labelledby="package-title">
+      <div class="max-w-3xl mb-7">
+        <p class="q-kicker mb-2">The package at a glance</p>
+        <h2 id="package-title" class="text-2xl sm:text-3xl font-semibold mb-3">A label around the rules, not a claim of automatic authority</h2>
+        <p class="text-sm sm:text-base text-white/65">The package makes the important facts visible together: what the instrument says it does, what it contains, what it requires, and how a later result can be checked.</p>
+      </div>
+      <div class="package-shell" role="img" aria-label="Diagram of a semantic instrument package showing its label, runnable rule graph, declared dependencies, use limits, and linked receipts.">
+        <div class="package-label">
+          <div class="flex items-center gap-3"><span class="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-400/30 flex items-center justify-center text-violet-200"><i class="fa-solid fa-box"></i></span><div><p class="text-xs text-violet-200 uppercase tracking-widest">Semantic Instrument</p><p class="text-sm text-white/60">Inspectable before execution</p></div></div>
+          <span class="q-chip text-[0.7rem]"><i class="fa-solid fa-fingerprint"></i> version + digest</span>
+        </div>
+        <div class="package-grid">
+          <div class="package-item"><i class="fa-solid fa-tag text-violet-300"></i><h3 class="text-sm font-semibold mt-2">Label</h3><p class="text-xs text-white/55 mt-1">Purpose, author, category, and version.</p></div>
+          <div class="package-item"><i class="fa-solid fa-diagram-project text-cyan-300"></i><h3 class="text-sm font-semibold mt-2">Rule graph</h3><p class="text-xs text-white/55 mt-1">Definitions and executable logic in a shared vocabulary.</p></div>
+          <div class="package-item"><i class="fa-solid fa-link text-cyan-300"></i><h3 class="text-sm font-semibold mt-2">Requirements</h3><p class="text-xs text-white/55 mt-1">Declared inputs and dependencies, resolved before use.</p></div>
+          <div class="package-item"><i class="fa-solid fa-ban text-amber-300"></i><h3 class="text-sm font-semibold mt-2">Limits</h3><p class="text-xs text-white/55 mt-1">Prohibited uses and execution bounds remain explicit.</p></div>
+          <div class="package-item"><i class="fa-solid fa-user-shield text-emerald-300"></i><h3 class="text-sm font-semibold mt-2">Credentials</h3><p class="text-xs text-white/55 mt-1">Evidence of authorship or review — not permission by itself.</p></div>
+          <div class="package-item"><i class="fa-solid fa-receipt text-emerald-300"></i><h3 class="text-sm font-semibold mt-2">Receipts</h3><p class="text-xs text-white/55 mt-1">Run records that link the package, commitments, and result.</p></div>
+        </div>
+      </div>
+      <p class="diagram-caption">You still decide whether to collect, install, trust, or activate an instrument. Those are deliberately separate choices.</p>
+    </section>
+
+    <section class="mb-16">
+      <p class="q-kicker mb-2">Why it is built this way</p>
+      <h2 class="text-3xl font-semibold mb-6">Tools stay tools; trust stays earned</h2>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <article class="q-card p-8">
+          <h3 class="text-xl font-semibold mb-3">A package, not a personality</h3>
+          <p class="text-sm text-white/70 mb-5">An instrument is a labelled tool, never a peer person or an authority merely because it looks official. A signature or catalogue listing can show where it came from; it does not prove every claim is true. Collecting, installing, trusting, and running remain four deliberate decisions.</p>
+          <ul class="text-sm text-white/65 space-y-2">
+            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Purpose, prohibited uses, category, and version are written on the label.</li>
+            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Contents, dependencies, and a content digest can all be inspected.</li>
+            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Demo and reference packs stay labelled — a polished visual does not create trust.</li>
+          </ul>
+        </article>
+        <article class="q-card p-8">
+          <h3 class="text-xl font-semibold mb-3">Missing pieces are held, not invented</h3>
+          <p class="text-sm text-white/70 mb-5">Author, reviewer, publisher, instrument, result, and capability credential are separate records. If a required input or dependency is absent, the run is held rather than fabricated. Revocation blocks new reliance without erasing receipts for past runs.</p>
+          <ul class="text-sm text-white/65 space-y-2">
+            <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Collection, installation, trust, and activation are distinct decisions.</li>
+            <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Required inputs or dependencies that are missing are held, not invented.</li>
+            <li><i class="fa-solid fa-shield-heart text-violet-300 mr-2"></i>Revocation prevents new reliance without erasing historic receipts.</li>
+          </ul>
+        </article>
+      </div>
     </section>
 
     <section class="mb-16">
@@ -84,27 +527,31 @@
       </div>
     </section>
 
-    <section class="grid lg:grid-cols-3 gap-5 mb-16">
-      <article class="q-card p-7">
-        <p class="q-kicker mb-2">Validate &amp; resolve</p>
-        <h2 class="text-xl font-semibold mb-3">Dependencies are visible</h2>
-        <p class="text-sm text-white/65">SHACL shapes and package inspection reject incomplete material. Resolution creates a dependency lock, distinguishes optional from required dependencies, detects revoked entries, and supports a closed offline install when its declared dependencies are available locally.</p>
-      </article>
-      <article class="q-card p-7">
-        <p class="q-kicker mb-2">Execute &amp; record</p>
-        <h2 class="text-xl font-semibold mb-3">A receipt binds the run</h2>
-        <p class="text-sm text-white/65">Preflight requires a closed installation. Each outcome binds release, package digest, dependency-lock digest, entry point, input/output commitments, and optional parent receipt. Empty required input produces a held receipt rather than a fabricated result.</p>
-      </article>
-      <article class="q-card p-7">
-        <p class="q-kicker mb-2">Recognise &amp; attest</p>
-        <h2 class="text-xl font-semibold mb-3">Credentials retain their context</h2>
-        <p class="text-sm text-white/65">Native, W3C VC, and Open Badges-compatible exports are supported as envelopes. Capability recognition can compare formal or prior-learning evidence against requirements and report satisfied, equivalent, unresolved, or unmet elements.</p>
-      </article>
+    <section class="mb-16">
+      <p class="q-kicker mb-2">Under the hood</p>
+      <h2 class="text-3xl font-semibold mb-6">For technical readers</h2>
+      <div class="grid lg:grid-cols-3 gap-5">
+        <article class="q-card p-7">
+          <h3 class="text-xl font-semibold mb-3">The collectable: a Hyper Media Container</h3>
+          <p class="text-sm text-white/65">Each instrument ships as a Webizen/Qualia <span class="text-white/85">Hyper Media Container</span> (HMC): one archive that can bundle its HCF description, N3 definition graph, manifest, accessible <code>10d</code> visual, and — on native builds — an optional compact Q42 graph. Supporting material, including vocabulary ontologies, can be included directly. Assets too large to bundle, such as substantial Q42 volumes, appear as declared dependencies on the label rather than being silently assumed.</p>
+        </article>
+        <article class="q-card p-7">
+          <h3 class="text-xl font-semibold mb-3">Validate, resolve, preflight</h3>
+          <p class="text-sm text-white/65">SHACL shapes and package inspection reject incomplete material. Resolution creates a dependency lock, distinguishes optional from required dependencies, detects revoked entries, and supports a closed offline install. Preflight requires a closed installation before dispatch.</p>
+        </article>
+        <article class="q-card p-7">
+          <h3 class="text-xl font-semibold mb-3">Receipts &amp; attestation</h3>
+          <p class="text-sm text-white/65">Each outcome binds release, package digest, dependency-lock digest, entry point, input/output commitments, and optional parent receipt. Native, W3C VC, and Open Badges-compatible exports are supported as credential envelopes.</p>
+        </article>
+      </div>
     </section>
 
-    <section class="q-card p-8 mb-16">
-      <p class="q-kicker mb-2">What is executable today</p>
-      <h2 class="text-2xl font-semibold mb-4">Reference runner, not a disguised sector decision engine</h2>
+    <section class="q-card p-8 mb-16 border border-amber-500/20">
+      <p class="q-kicker mb-2">Honest release boundary</p>
+      <h2 class="text-2xl font-semibold mb-4">Reference runner, not a deployed decision service</h2>
+      <p class="text-sm text-white/65 max-w-4xl mb-6">
+        The 0.0.40 reference slice has package, validation, registry, resolution, receipt, attestation, RPL, and Studio workflows with scripted conformance coverage. The boundaries below are stated plainly so a demo is never mistaken for a deployed decision service.
+      </p>
       <div class="grid md:grid-cols-2 gap-6 text-sm text-white/65">
         <div>
           <h3 class="text-white font-semibold mb-2">Current reference behaviour</h3>
@@ -112,6 +559,7 @@
             <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Only the labelled <code>assess</code> and <code>recognise</code> demo entry points are dispatched.</li>
             <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>The reference transform is deliberately simple, making its input and output commitments inspectable.</li>
             <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Cancellation, resource limits, unknown entries, and unclosed installs are refused.</li>
+            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Empty required input produces a held receipt rather than a fabricated result.</li>
           </ul>
         </div>
         <div>
@@ -119,7 +567,7 @@
           <ul class="space-y-2">
             <li><i class="fa-solid fa-triangle-exclamation text-amber-300 mr-2"></i>No generic Host-ID dispatch and no production clinical, legal, or employment determination is implied.</li>
             <li><i class="fa-solid fa-triangle-exclamation text-amber-300 mr-2"></i>Native Q42 content may be held in WASM with an explicit degradation notice.</li>
-            <li><i class="fa-solid fa-triangle-exclamation text-amber-300 mr-2"></i>SI-12’s live security, accessibility, and human-UAT matrix is not represented as complete.</li>
+            <li><i class="fa-solid fa-triangle-exclamation text-amber-300 mr-2"></i>SI-12's live security, accessibility, and human-UAT matrix is not represented as complete.</li>
           </ul>
         </div>
       </div>
@@ -127,19 +575,105 @@
 
     <section class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-t border-white/10 pt-8">
       <div>
-        <h2 class="text-xl font-semibold">Follow the 0.0.39 record</h2>
+        <h2 class="text-xl font-semibold">Follow the 0.0.40 record</h2>
         <p class="text-sm text-white/55 mt-1">The release page gives the wider milestone; the source tree and conformance suite remain the technical authority.</p>
       </div>
       <div class="flex flex-wrap gap-3">
-        <a class="px-4 py-2 rounded-2xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-sm" href="progress-0.0.39.html">0.0.39 Progress</a>
-        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="https://github.com/mediaprophet/qualiaDB/tree/v0.0.39/crates/qualia-core-db/src/semantic_instruments">Runtime source</a>
-        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="https://github.com/mediaprophet/qualiaDB/blob/v0.0.39/crates/qualia-core-db/tests/semantic_instruments_conformance.rs">Conformance suite</a>
+        <a class="px-4 py-2 rounded-2xl bg-cyan-500/15 text-cyan-200 border border-cyan-500/25 text-sm" href="progress-0.0.40.html">0.0.40 Progress</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="https://github.com/mediaprophet/qualiaDB/tree/v0.0.40/crates/qualia-core-db/src/semantic_instruments">Runtime source</a>
+        <a class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-sm" href="https://github.com/mediaprophet/qualiaDB/blob/v0.0.40/crates/qualia-core-db/tests/semantic_instruments_conformance.rs">Conformance suite</a>
       </div>
     </section>
   </main>
 
   <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
-    QualiaDB / Webizen 0.0.39 · Semantic Instruments reference slice · Inspect before trust or execution
+    QualiaDB / Webizen 0.0.40 · Semantic Instruments reference slice · Inspect before trust or execution
   </footer>
+  <script>
+    (() => {
+      const templates = {
+        learning: {
+          purpose: "Check a learner's portfolio against a course unit's declared criteria.",
+          input: "Portfolio evidence and the course criteria",
+          boundary: "Show satisfied, unresolved, and unmet criteria; do not award a qualification.",
+          outcome: "Example outcome: two criteria are evidenced; one needs a human review."
+        },
+        community: {
+          purpose: "Prepare the information needed for a community-support referral.",
+          input: "A completed referral form and service criteria",
+          boundary: "Identify missing information; do not decide service eligibility or replace a community worker.",
+          outcome: "Example outcome: the referral has the required details and is ready for a worker to review."
+        },
+        finance: {
+          purpose: "Organise business expenses against declared categories.",
+          input: "Ledger entries and declared expense categories",
+          boundary: "Classify supplied entries only; do not provide tax advice or determine a tax liability.",
+          outcome: "Example outcome: three entries match a declared category; one needs a supporting record."
+        },
+        clinical: {
+          purpose: "Prepare a clinician review checklist from approved record fields.",
+          input: "A clinician-approved checklist and relevant record fields",
+          boundary: "Surface checklist items for clinical review; do not diagnose, prescribe, or make a treatment decision.",
+          outcome: "Example outcome: two checklist items are highlighted for a clinician to review."
+        }
+      };
+
+      const form = document.getElementById("instrument-playground");
+      if (!form) return;
+      const template = document.getElementById("instrument-template");
+      const purpose = document.getElementById("instrument-purpose");
+      const input = document.getElementById("instrument-input");
+      const boundary = document.getElementById("instrument-boundary");
+      const exampleData = document.getElementById("instrument-example-data");
+      const preview = document.getElementById("preview-instrument");
+      const run = document.getElementById("run-instrument-demo");
+      const receipt = document.getElementById("demo-receipt");
+      const receiptIcon = document.getElementById("receipt-icon");
+      const receiptTitle = document.getElementById("receipt-title");
+      const receiptCopy = document.getElementById("receipt-copy");
+      const receiptDetail = document.getElementById("receipt-detail");
+
+      function updatePreview() {
+        document.getElementById("preview-purpose").textContent = purpose.value.trim() || "Purpose still needs to be declared.";
+        document.getElementById("preview-input").textContent = input.value;
+        document.getElementById("preview-boundary").textContent = boundary.value.trim() || "Boundary still needs to be declared.";
+        document.getElementById("preview-identity").textContent = `demo:${template.value} · v0.1`;
+      }
+
+      function chooseTemplate() {
+        const selected = templates[template.value];
+        purpose.value = selected.purpose;
+        input.value = selected.input;
+        boundary.value = selected.boundary;
+        exampleData.checked = false;
+        updatePreview();
+      }
+
+      function showReceipt() {
+        const selected = templates[template.value];
+        if (!exampleData.checked) {
+          receipt.classList.remove("demo-receipt-ready");
+          receipt.classList.add("demo-receipt-held");
+          receiptIcon.className = "fa-solid fa-pause-circle text-amber-300";
+          receiptTitle.textContent = "Example run: held";
+          receiptCopy.textContent = "The package is labelled, but the example record is incomplete. A real instrument should hold the run here rather than inventing an answer.";
+          receiptDetail.textContent = "receipt: demo-held · input commitment: missing";
+          return;
+        }
+        receipt.classList.remove("demo-receipt-held");
+        receipt.classList.add("demo-receipt-ready");
+        receiptIcon.className = "fa-solid fa-circle-check text-emerald-300";
+        receiptTitle.textContent = "Example run: recorded";
+        receiptCopy.textContent = `${selected.outcome} This illustrative result is not advice or a real-world determination.`;
+        receiptDetail.textContent = `receipt: demo-${template.value}-v01 · input commitment: present · outcome: illustrative`;
+      }
+
+      template.addEventListener("change", chooseTemplate);
+      preview.addEventListener("click", updatePreview);
+      run.addEventListener("click", () => { updatePreview(); showReceipt(); });
+      form.addEventListener("submit", (event) => event.preventDefault());
+      updatePreview();
+    })();
+  </script>
 </body>
 </html>

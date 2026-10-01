@@ -52,6 +52,19 @@
 <div class="row" style="width:100%">
   <textarea id="prompt" rows="2">What is the capital of France? Answer in one short sentence.</textarea>
 </div>
+<div class="row" style="width:100%">
+  <label>Graph guard
+    <select id="guard-scenario">
+      <option value="allow">Allow — grounded claim is known</option>
+      <option value="deontic">Deny — non-derogable disclosure prohibition</option>
+      <option value="epistemic">Steer — source claim is not known</option>
+      <option value="temporal">Deny — continuous safety invariant failed</option>
+      <option value="contradiction">Steer — contradictory graph fact is isolated</option>
+    </select>
+  </label>
+  <span class="stat" id="guardstat">guard: allow / none</span>
+</div>
+<div class="dim" id="guard-explainer">The guard runs in WASM over graph quins before inference. A deny prevents token generation; a steer adds a graph-grounded corrective instruction.</div>
 <div class="row">
   <button id="run" disabled>Run inference</button>
   <button id="probe" disabled>Verify quant kernel</button>
@@ -64,11 +77,12 @@
 <div id="log"></div>
 
 <script type="module">
-import init, {
+import init, * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.40-graph-guard1';
+const {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
   releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToP64, p64FormatVersion,
-  verifyFirstLayerQuant,
-} from './playground/qualia_core_db.js?v=0.0.39-safe-decode1';
+  verifyFirstLayerQuant, evaluate_inference_guard_wasm,
+} = QualiaWasm;
 import { loadGgufCached, loadOrCompileP64, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
@@ -81,6 +95,56 @@ const logEl = $('log');
 function log(msg, cls='') { const t = new Date().toISOString().slice(11,23); logEl.innerHTML += `<span class="${cls}">[${t}] ${msg}</span>\n`; logEl.scrollTop = logEl.scrollHeight; }
 
 let loaded = false;
+const GUARD_SCENARIOS = {
+  allow: {
+    actor: 'did:demo:assistant', requiredClaim: 'q42:source:verified',
+    epistemic: [{ subject: 'did:demo:assistant', kind: 'knows', claim: 'q42:source:verified', context: 'q42:world:demo' }],
+  },
+  deontic: {
+    actor: 'did:demo:assistant', nonDerogable: true,
+    norms: [{ subject: 'did:demo:assistant', kind: 'forbid', action: 'q42:record:private', context: 'q42:policy:privacy' }],
+    facts: [{ subject: 'did:demo:assistant', predicate: 'q42:performed', object: 'q42:record:private', context: 'q42:policy:privacy' }],
+  },
+  epistemic: {
+    actor: 'did:demo:assistant', requiredClaim: 'q42:source:verified',
+    epistemic: [{ subject: 'did:demo:assistant', kind: 'believes', certainty: 80, claim: 'q42:source:verified', context: 'q42:world:demo' }],
+  },
+  temporal: {
+    temporalInvariant: 'q42:safety:checked',
+    trace: [
+      { subject: 'q42:run:1', predicate: 'q42:safety:checked', object: 'q42:true', context: 'q42:trace:demo' },
+      { subject: 'q42:run:2', predicate: 'q42:safety:missing', object: 'q42:true', context: 'q42:trace:demo' },
+    ],
+  },
+  contradiction: {
+    facts: [
+      { subject: 'q42:record:7', predicate: 'q42:status', object: 'q42:approved', context: 'q42:case:7' },
+      { subject: 'q42:record:7', predicate: 'q42:status', object: 'q42:revoked', context: 'q42:case:7' },
+    ],
+  },
+};
+const GUARD_COPY = {
+  deonticViolation: 'A graph prohibition was violated. Do not disclose or continue this action.',
+  temporalViolation: 'A required safety invariant failed in the trace. Do not continue.',
+  missingKnowledge: 'The required claim is not known in the graph. State the uncertainty and request a verified source; do not present the claim as fact.',
+  contradictoryGraph: 'The graph contains an isolated contradiction. Describe the conflict without choosing either value as fact and request reconciliation.',
+  graphCapacityExceeded: 'The graph slice exceeds this browser guard capacity. Request a bounded subgraph before answering.',
+};
+
+function runGraphGuard() {
+  if (typeof evaluate_inference_guard_wasm !== 'function') {
+    throw new Error('The loaded WASM bundle does not contain evaluate_inference_guard_wasm');
+  }
+  const scenario = $('guard-scenario').value;
+  const verdict = evaluate_inference_guard_wasm(GUARD_SCENARIOS[scenario]);
+  $('guardstat').textContent = `guard: ${verdict.action} / ${verdict.reason}${verdict.isolatedCount ? ` (${verdict.isolatedCount} isolated)` : ''}`;
+  return verdict;
+}
+
+$('guard-scenario').onchange = () => {
+  try { runGraphGuard(); }
+  catch (e) { $('guardstat').textContent = 'guard: unavailable — rebuild the WASM bundle'; }
+};
 // Agent/debug hook: deterministic GPU↔CPU differential probe. Kept off the
 // ordinary UI, but callable from browser automation and DevTools.
 window.__qualiaVerifyFirstLayerQuant = verifyFirstLayerQuant;
@@ -95,7 +159,7 @@ window.__qualiaVerifyFirstLayerQuant = verifyFirstLayerQuant;
     $('gpu').textContent = 'WebGPU: ' + (a ? 'adapter ok' : 'NONE');
   } catch (e) { $('gpu').textContent = 'WebGPU: err ' + e; }
   try {
-    await init(new URL('./playground/qualia_core_db_bg.wasm?v=0.0.39-safe-decode1', location.href));
+    await init(new URL('./playground/qualia_core_db_bg.wasm?v=0.0.40-graph-guard1', location.href));
     try { init_panic_hook(); log('panic hook installed', 'dim'); } catch {}
     $('engine-ver').textContent = 'engine: v' + (getEngineVersion?.() ?? '?');
     log('WASM module initialised', 'ok');
@@ -222,7 +286,31 @@ $('run').onclick = async () => {
   if (!loaded) return;
   $('run').disabled = true;
   const tmpl = $('model').selectedOptions[0].dataset.tmpl;
-  const raw = $('prompt').value.trim();
+  let raw = $('prompt').value.trim();
+  let verdict;
+  try {
+    verdict = runGraphGuard();
+  } catch (e) {
+    log('GRAPH GUARD ERROR: ' + (e?.message ?? e), 'err');
+    $('out').textContent = 'Graph guard unavailable. Rebuild the WASM bundle before using guarded inference.';
+    $('out').className = 'err'; $('run').disabled = false;
+    return;
+  }
+  if (verdict.action === 'deny') {
+    const message = GUARD_COPY[verdict.reason] ?? 'Inference denied by the graph guard.';
+    $('out').textContent = `DENIED BEFORE INFERENCE\n${message}`;
+    $('out').className = 'err';
+    log(`DENY: ${verdict.reason}; no model tokens requested`, 'err');
+    $('run').disabled = false;
+    return;
+  }
+  if (verdict.action === 'steer') {
+    const correction = GUARD_COPY[verdict.reason] ?? 'Use only graph-grounded claims.';
+    raw = `${correction}\n\nUser request: ${raw}`;
+    log(`STEER: ${verdict.reason}; corrective graph instruction prepended`, 'warn');
+  } else {
+    log('ALLOW: graph guard found no blocking or steering condition', 'ok');
+  }
   const prompt = $('naked').checked ? raw : buildPrompt(tmpl, raw);
   log('prompt mode: ' + ($('naked').checked ? 'naked' : tmpl), 'dim');
   $('out').textContent = ''; $('out').className = '';

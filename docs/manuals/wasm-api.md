@@ -1,9 +1,9 @@
 # QualiaDB WebAssembly API & Integration Guide
 
-**Version:** 0.0.39 | **Branch:** `0.0.39`  
+**Version:** 0.0.40.5 | **Branch:** `0.0.40.5`  
 **Civics / agents (preferred):** [`wasm-webcivics-agent-api.md`](wasm-webcivics-agent-api.md) — Solid RDF, device storage/backup, SHACL, receipts  
 **Primary portal artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm` (`--features portal`)  
-**WebCivics artifact:** `docs/pkg/webcivics/qualia.js` + `qualia_webcivics_bg.wasm` (`--features wasm-webcivics`)  
+**WebCivics artifact:** `docs/pkg/webcivics/qualia.js` + `qualia_webcivics_bg.wasm` (`--features wasm-webcivics`)
 **Playground artifact:** `docs/playground/qualia_core_db.js` (`--features wasm-full`)  
 **Portal manual:** [`qualia-wasm-portal.md`](qualia-wasm-portal.md)
 

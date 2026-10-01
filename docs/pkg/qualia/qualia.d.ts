@@ -364,17 +364,6 @@ export function align_sequences_wasm(val: any): any;
 export function black_scholes_wasm(val: any): any;
 
 /**
- * Evaluates input-output multipliers and total requirements via the Leontief inverse (I - A)^(-1).
- */
-export function calculate_leontief_multipliers_wasm(val: any): any;
-
-/**
- * Evaluates distributional and welfare metrics (Gini, Atkinson index, Palma ratio,
- * mean, median, P10, P90) and emits an auditable `CalculationReceipt`.
- */
-export function calculate_welfare_metrics_wasm(val: any): any;
-
-/**
  * Symbolic derivative. Input `{ expr, var }` (e.g. `{ "expr":"x^3 - 2*x^2 + 5",
  * "var":"x" }`) → `{ derivative }`. The result is simplified, then rendered with the
  * `Expr` `Display` (fully parenthesised). Errors on a parse failure.
@@ -420,17 +409,7 @@ export function cas_simplify_wasm(val: any): any;
  */
 export function cas_solve_quadratic_wasm(val: any): any;
 
-/**
- * But-for / reachability causation (`causal::caused`).
- */
-export function causal_caused_wasm(val: any): any;
-
 export function check_drug_interactions_wasm(val: any): any;
-
-/**
- * Description-logic subsumption check (`check_subsumption_quin`).
- */
-export function check_subsumption_wasm(val: any): any;
 
 /**
  * Compiles a query string (SPARQL WHERE-clause or N-Triples pattern) to a JSON
@@ -439,19 +418,9 @@ export function check_subsumption_wasm(val: any): any;
  */
 export function compile_query_to_json(query: string): string;
 
-/**
- * Compile Turtle / N3 `sh:NodeShape` documents into ShapeSpec-compatible JSON (UE-050).
- */
-export function compile_shacl_turtle_wasm(turtle: string): any;
-
 export function compute_framingham_risk_wasm(val: any): any;
 
 export function compute_molecular_descriptors_wasm(val: any): any;
-
-/**
- * Evaluates ordinary least squares regression with complete diagnostics and receipt.
- */
-export function compute_ols_diagnostics_wasm(val: any): any;
 
 /**
  * Stateless PID controller step.
@@ -517,11 +486,6 @@ export function detect_functional_groups_wasm(val: any): any;
 export function enforce_rights_ontology(subject_did: bigint): boolean;
 
 /**
- * Enumerate ASP stable-model world contexts (`enumerate_stable_models`).
- */
-export function enumerate_stable_models_wasm(val: any): any;
-
-/**
  * Query the browser's storage quota and current OPFS usage (bytes).
  *
  * Returns `{ quota: number, usage: number, available: number }`.
@@ -530,22 +494,9 @@ export function enumerate_stable_models_wasm(val: any): any;
  */
 export function estimate_browser_storage(): Promise<any>;
 
-/**
- * Evaluate deontic norms in a quin frame (`evaluate_deontic_contract`).
- */
-export function evaluate_deontic_wasm(val: any): any;
-
-/**
- * Evaluate epistemic claims (`evaluate_epistemic_frame`).
- */
-export function evaluate_epistemic_wasm(val: any): any;
+export function evaluate_inference_guard_wasm(value: any): any;
 
 export function evaluate_lipinski_wasm(val: any): any;
-
-/**
- * Evaluate an LTL formula against a quin trace (`evaluate_ltl_trace`).
- */
-export function evaluate_ltl_trace_wasm(val: any): any;
 
 /**
  * Evaluate all 7 N3 clinical rules against a Turtle document.
@@ -627,11 +578,6 @@ export function export_tensor_slice_wasm(max_nodes: number): any;
 export function forward_chain_wasm(val: any): any;
 
 /**
- * Fuzzy t-norm (Gödel min / Łukasiewicz / product).
- */
-export function fuzzy_t_norm_wasm(val: any): any;
-
-/**
  * Compute the 2-D convex hull of a point set.
  *
  * `points` is a flat `[x0, y0, x1, y1, ...]` array.
@@ -693,11 +639,6 @@ export function get_engine_info(): any;
  * Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
  */
 export function get_engine_version(): string;
-
-/**
- * Machine-readable SHACL capability and constraint coverage manifest (QW-05).
- */
-export function get_shacl_capability_manifest_wasm(): any;
 
 /**
  * Poll WebGPU engine init stage text (same surface as the LLM package).
@@ -791,19 +732,6 @@ export function intercept_pharmacogenomics_intent(smiles: string): WasmOffloadIn
 export function is_opfs_block_cached(block_index: number): Promise<boolean>;
 
 /**
- * Return the pinned Qualia JSON-LD 1.1 context + SHA-256 digest (UE-012).
- *
- * Packages should embed `context` and record `digest` on receipts — do not
- * fetch remote `@context` URLs at admission time.
- */
-export function jsonld_context_digest_wasm(): any;
-
-/**
- * Hohfeld correlative position for a jural opcode.
- */
-export function jural_correlative_wasm(val: any): any;
-
-/**
  * Determinant of a square matrix via LU (partial pivoting).
  * Input `{ rows, cols, data }` (rows==cols) → `{ determinant }`.
  */
@@ -856,11 +784,6 @@ export function la_transpose_wasm(val: any): any;
  * Capability names available in this WASM build.
  */
 export function list_capabilities_wasm(): any;
-
-/**
- * Names that are intentionally native-only (UE-035/044/045) — never stubbed in browser.
- */
-export function list_native_only_capabilities_wasm(): any;
 
 /**
  * Airy functions `Ai(x)` and `Bi(x)` (both, from one Maclaurin-series evaluation).
@@ -1044,11 +967,6 @@ export function num_zeta_wasm(val: any): any;
  */
 export function pack_quins_into_superblock(seq_id: bigint, owner_did: bigint, raw_quin_bytes: Uint8Array): Uint8Array;
 
-/**
- * Package exposure receipt: context + shapes + vibe AST digests (UE-053).
- */
-export function package_exposure_manifest_wasm(shapes_json: string, vibe_program_cbor?: Uint8Array | null): any;
-
 export function parse_cbor_ld_wasm(payload: Uint8Array): any;
 
 export function parse_csv_wasm(val: any): any;
@@ -1059,14 +977,6 @@ export function parse_json_mapping_wasm(val: any): any;
 
 export function parse_json_wasm(payload: string): any;
 
-/**
- * Parse JSON-LD 1.1 text into packed quins (Civics primary semantic format).
- *
- * Profile: `application/ld+json`. Context must be embedded/pinned by the caller;
- * this binding does not fetch remote contexts.
- */
-export function parse_jsonld_wasm(payload: string): any;
-
 export function parse_n3logic_wasm(payload: string): any;
 
 export function parse_sleep_csv_json(content: string): any;
@@ -1076,6 +986,11 @@ export function parse_steps_csv_json(content: string): any;
 export function parse_turtle_wasm(payload: string): any;
 
 export function parse_weight_csv_json(content: string): any;
+
+/**
+ * Parse and compile a yaml-ld-q42 document (workspace pages or HCF HypermediaDocument) into quins and lexicon.
+ */
+export function parse_yaml_ld_q42_wasm(source: string, namespace?: bigint | null, lamport?: bigint | null): any;
 
 /**
  * Bind a hardware WebGL2 Anatomy renderer before `QualiaPortal` construction.
@@ -1101,15 +1016,6 @@ export function predict_receptor_binding_wasm(): number;
 export function prune_and_validate_mesh(mesh_id: bigint): boolean;
 
 /**
- * RDFC-1.0 graph hash — **honest fail-closed** until a conforming implementation ships (UE-013).
- *
- * Never returns a digest labelled as RDFC-1.0. Optionally includes a
- * `provisional_spo_sha256` under profile `qualia:provisional-spo-sha256-v1`
- * for scaffolding only.
- */
-export function rdfc10_graph_hash_wasm(val: any): any;
-
-/**
  * Read a cached SuperBlock from the OPFS vault.
  *
  * Returns the raw 40 960 bytes as `Uint8Array`, or `null` if the block has not
@@ -1123,11 +1029,6 @@ export function read_opfs_block(block_index: number): Promise<any>;
  * The Lamport clock is encoded in the metadata field; on ties, higher object wins.
  */
 export function resolve_lww_wasm(local_val: any, remote_val: any): any;
-
-/**
- * Route contradictions into an isolated context (`route_paraconsistent`).
- */
-export function route_paraconsistent_wasm(val: any): any;
 
 export function run_semantic_simulation(val: any): any;
 
@@ -1304,11 +1205,6 @@ export function stats_two_sample_t_wasm(val: any): any;
 export function steps_turtle_from_csv(content: string): string;
 
 /**
- * STIT: did agent bring about content?
- */
-export function stit_brought_about_wasm(val: any): any;
-
-/**
  * Look up a CODATA / SI-2019 physical constant by name, returning its value (in coherent
  * SI base units) and its physical dimension as the 7-vector.
  *
@@ -1373,33 +1269,6 @@ export function validate_health_quin(constraint: string, s: bigint, p: bigint, o
 export function validate_health_turtle(turtle: string): string;
 
 export function validate_shacl_constraint_wasm(val: any): any;
-
-/**
- * Validates raw packed 48-byte Quins against a list of JSON ShapeSpecs.
- */
-export function validate_shacl_graph_wasm(db_bytes: Uint8Array, shapes_json: string): any;
-
-/**
- * Full graph SHACL validation from N3/N-Triples data and JSON ShapeSpecs.
- * Returns the complete `ValidationReport` preserving conforms, focus node, path,
- * severity, and constraint component.
- */
-export function validate_shacl_json_wasm(data_n3: string, shapes_json: string): any;
-
-/**
- * Values abuse-check (agency.n3 G1/G1' personhood guard) — WASM surface for Civics.
- */
-export function values_check_wasm(val: any): any;
-
-/**
- * Consent non-coerced guard (`capacity::detect_duress` inverted).
- */
-export function values_consent_non_coerced_wasm(val: any): any;
-
-/**
- * Harm-below-ceiling guard (wasm-safe numeric; CAS marginal-harm stays native).
- */
-export function values_harm_below_ceiling_wasm(val: any): any;
 
 /**
  * Serialize vault biometric records (JSON array from wf-biometrics IDB store) → Turtle.
@@ -1535,38 +1404,18 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly geometry_convex_hull_2: (a: any) => [number, number, number];
-    readonly geometry_delaunay_2: (a: any) => [number, number, number];
-    readonly geometry_execute_json: (a: number, b: number) => [number, number, number, number];
-    readonly geometry_nearest_site: (a: number, b: number, c: number, d: number) => number;
-    readonly geometry_orientation_2: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
-    readonly geometry_orientation_2_sign: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly geometry_voronoi_2: (a: any) => [number, number, number];
-    readonly stats_anova_wasm: (a: any) => [number, number, number];
-    readonly stats_chi_square_gof_wasm: (a: any) => [number, number, number];
-    readonly stats_chi_square_independence_wasm: (a: any) => [number, number, number];
-    readonly stats_chi_squared_dist_wasm: (a: any) => [number, number, number];
-    readonly stats_correlation_wasm: (a: any) => [number, number, number];
-    readonly stats_describe_wasm: (a: any) => [number, number, number];
-    readonly stats_fisher_f_wasm: (a: any) => [number, number, number];
-    readonly stats_friedman_wasm: (a: any) => [number, number, number];
-    readonly stats_linear_regression_wasm: (a: any) => [number, number, number];
-    readonly stats_mcnemar_wasm: (a: any) => [number, number, number];
-    readonly stats_normal_wasm: (a: any) => [number, number, number];
-    readonly stats_one_sample_t_wasm: (a: any) => [number, number, number];
-    readonly stats_paired_t_wasm: (a: any) => [number, number, number];
-    readonly stats_quantile_wasm: (a: any) => [number, number, number];
-    readonly stats_students_t_wasm: (a: any) => [number, number, number];
-    readonly stats_two_sample_t_wasm: (a: any) => [number, number, number];
-    readonly wasm_convex_hull_2d: (a: number, b: number) => [number, number, number];
-    readonly wasm_delaunay_triangulation_2d: (a: number, b: number) => [number, number, number];
-    readonly xform_dft: (a: any) => [number, number, number];
-    readonly xform_idft: (a: any) => [number, number, number];
-    readonly xform_laplace_numeric: (a: any) => [number, number, number];
-    readonly xform_laplace_table: (a: any) => [number, number, number];
-    readonly xform_z_geometric: (a: any) => [number, number, number];
-    readonly xform_z_transform: (a: any) => [number, number, number];
-    readonly xform_z_unit_step: (a: any) => [number, number, number];
+    readonly cas_differentiate_wasm: (a: any) => [number, number, number];
+    readonly cas_evaluate_wasm: (a: any) => [number, number, number];
+    readonly cas_expand_wasm: (a: any) => [number, number, number];
+    readonly cas_factor_wasm: (a: any) => [number, number, number];
+    readonly cas_simplify_wasm: (a: any) => [number, number, number];
+    readonly cas_solve_quadratic_wasm: (a: any) => [number, number, number];
+    readonly compute_molecular_descriptors_wasm: (a: any) => [number, number, number];
+    readonly compute_reaction_metrics_wasm: (a: any) => [number, number, number];
+    readonly compute_thermochemistry_wasm: (a: any) => [number, number, number];
+    readonly detect_functional_groups_wasm: (a: any) => [number, number, number];
+    readonly evaluate_inference_guard_wasm: (a: any) => [number, number, number];
+    readonly evaluate_lipinski_wasm: (a: any) => [number, number, number];
     readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
     readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
     readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
@@ -1577,23 +1426,32 @@ export interface InitOutput {
     readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
     readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
     readonly __wbg_webengine_free: (a: number, b: number) => void;
-    readonly black_scholes_wasm: (a: any) => [number, number, number];
-    readonly calculate_leontief_multipliers_wasm: (a: any) => [number, number, number];
-    readonly calculate_welfare_metrics_wasm: (a: any) => [number, number, number];
-    readonly compute_molecular_descriptors_wasm: (a: any) => [number, number, number];
-    readonly compute_ols_diagnostics_wasm: (a: any) => [number, number, number];
-    readonly compute_pid_step_wasm: (a: any) => [number, number, number];
-    readonly compute_reaction_metrics_wasm: (a: any) => [number, number, number];
-    readonly compute_thermochemistry_wasm: (a: any) => [number, number, number];
+    readonly check_drug_interactions_wasm: (a: any) => [number, number, number];
+    readonly compile_query_to_json: (a: number, b: number) => [number, number];
+    readonly compute_framingham_risk_wasm: (a: any) => [number, number, number];
     readonly create_canvas: (a: number, b: number) => [number, number, number];
-    readonly detect_functional_groups_wasm: (a: any) => [number, number, number];
     readonly enforce_rights_ontology: (a: bigint) => number;
-    readonly evaluate_lipinski_wasm: (a: any) => [number, number, number];
+    readonly execute_ntriples_query: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly federatednodemanager_discover_capabilities: (a: number) => number;
     readonly federatednodemanager_new: () => number;
     readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
+    readonly forward_chain_wasm: (a: any) => [number, number, number];
+    readonly geometry_convex_hull_2: (a: any) => [number, number, number];
+    readonly geometry_delaunay_2: (a: any) => [number, number, number];
+    readonly geometry_execute_json: (a: number, b: number) => [number, number, number, number];
+    readonly geometry_nearest_site: (a: number, b: number, c: number, d: number) => number;
+    readonly geometry_orientation_2: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly geometry_orientation_2_sign: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly geometry_voronoi_2: (a: any) => [number, number, number];
     readonly intercept_computational_opcode: (a: number, b: number) => number;
     readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_csv_wasm: (a: any) => [number, number, number];
+    readonly parse_json_mapping_wasm: (a: any) => [number, number, number];
+    readonly parse_json_wasm: (a: number, b: number) => any;
+    readonly parse_n3logic_wasm: (a: number, b: number) => any;
+    readonly parse_turtle_wasm: (a: number, b: number) => any;
+    readonly parse_yaml_ld_q42_wasm: (a: number, b: number, c: number, d: bigint, e: number, f: bigint) => [number, number, number];
     readonly portal_init_webgl2: (a: any) => [number, number, number];
     readonly portal_init_webgpu: (a: any) => any;
     readonly qualiaportal_acoustic_enabled: (a: number) => number;
@@ -1659,12 +1517,16 @@ export interface InitOutput {
     readonly qualiaportal_tier: (a: number) => number;
     readonly qualiaportal_upload_mesh_asset: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_upload_tensor_buffer: (a: number, b: number, c: number) => [number, number];
-    readonly run_semantic_simulation: (a: any) => [number, number, number];
+    readonly sample_packed_quins_wasm: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly serialize_csv_wasm: (a: any) => [number, number, number];
     readonly serialize_float64_array: (a: number, b: number) => any;
     readonly serialize_float_array: (a: number, b: number) => any;
-    readonly simulate_gbm_path_wasm: (a: any) => [number, number, number];
-    readonly solve_ode_exponential_decay_wasm: (a: any) => [number, number, number];
-    readonly solve_sat_wasm: (a: any) => [number, number, number];
+    readonly serialize_json_wasm: (a: any) => [number, number, number];
+    readonly serialize_rdf_wasm: (a: any) => [number, number, number];
+    readonly validate_fhir_observation_wasm: (a: any) => [number, number, number];
+    readonly validate_shacl_constraint_wasm: (a: any) => [number, number, number];
+    readonly wasm_convex_hull_2d: (a: number, b: number) => [number, number, number];
+    readonly wasm_delaunay_triangulation_2d: (a: number, b: number) => [number, number, number];
     readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
     readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
     readonly webengine_last_parsed: (a: number) => any;
@@ -1679,57 +1541,6 @@ export interface InitOutput {
     readonly qualiaportal_selected_node_index: (a: number) => number;
     readonly init_panic_hook: () => void;
     readonly prune_and_validate_mesh: (a: bigint) => number;
-    readonly check_drug_interactions_wasm: (a: any) => [number, number, number];
-    readonly compute_framingham_risk_wasm: (a: any) => [number, number, number];
-    readonly exact_bigint_add: (a: any) => [number, number, number];
-    readonly exact_bigint_divmod: (a: any) => [number, number, number];
-    readonly exact_bigint_factorial: (a: any) => [number, number, number];
-    readonly exact_bigint_gcd: (a: any) => [number, number, number];
-    readonly exact_bigint_mul: (a: any) => [number, number, number];
-    readonly exact_bigint_pow: (a: any) => [number, number, number];
-    readonly exact_rational_add: (a: any) => [number, number, number];
-    readonly exact_rational_mul: (a: any) => [number, number, number];
-    readonly validate_fhir_observation_wasm: (a: any) => [number, number, number];
-    readonly cas_differentiate_wasm: (a: any) => [number, number, number];
-    readonly cas_evaluate_wasm: (a: any) => [number, number, number];
-    readonly cas_expand_wasm: (a: any) => [number, number, number];
-    readonly cas_factor_wasm: (a: any) => [number, number, number];
-    readonly cas_simplify_wasm: (a: any) => [number, number, number];
-    readonly cas_solve_quadratic_wasm: (a: any) => [number, number, number];
-    readonly compile_query_to_json: (a: number, b: number) => [number, number];
-    readonly compile_shacl_turtle_wasm: (a: number, b: number) => [number, number, number];
-    readonly execute_ntriples_query: (a: number, b: number, c: number, d: number, e: number) => [number, number];
-    readonly forward_chain_wasm: (a: any) => [number, number, number];
-    readonly get_engine_info: () => [number, number, number];
-    readonly get_engine_version: () => [number, number];
-    readonly get_shacl_capability_manifest_wasm: () => any;
-    readonly get_webgpu_init_status: () => [number, number];
-    readonly init_offscreen_renderer: (a: number, b: number, c: number) => any;
-    readonly init_shared_webgpu: () => any;
-    readonly jsonld_context_digest_wasm: () => [number, number, number];
-    readonly list_capabilities_wasm: () => [number, number, number];
-    readonly list_native_only_capabilities_wasm: () => [number, number, number];
-    readonly package_exposure_manifest_wasm: (a: number, b: number, c: number, d: number) => [number, number, number];
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_csv_wasm: (a: any) => [number, number, number];
-    readonly parse_json_mapping_wasm: (a: any) => [number, number, number];
-    readonly parse_json_wasm: (a: number, b: number) => any;
-    readonly parse_jsonld_wasm: (a: number, b: number) => [number, number, number];
-    readonly parse_n3logic_wasm: (a: number, b: number) => any;
-    readonly parse_turtle_wasm: (a: number, b: number) => any;
-    readonly rdfc10_graph_hash_wasm: (a: any) => [number, number, number];
-    readonly resolve_lww_wasm: (a: any, b: any) => [number, number, number];
-    readonly sample_packed_quins_wasm: (a: number, b: number, c: number) => [number, number, number, number];
-    readonly serialize_csv_wasm: (a: any) => [number, number, number];
-    readonly serialize_json_wasm: (a: any) => [number, number, number];
-    readonly serialize_rdf_wasm: (a: any) => [number, number, number];
-    readonly validate_shacl_constraint_wasm: (a: any) => [number, number, number];
-    readonly validate_shacl_graph_wasm: (a: number, b: number, c: number, d: number) => [number, number, number];
-    readonly validate_shacl_json_wasm: (a: number, b: number, c: number, d: number) => [number, number, number];
-    readonly verify_law_package_wasm: (a: number, b: number, c: number, d: number) => number;
-    readonly align_sequences_wasm: (a: any) => [number, number, number];
-    readonly causal_caused_wasm: (a: any) => [number, number, number];
-    readonly check_subsumption_wasm: (a: any) => [number, number, number];
     readonly crypto_aead_decrypt: (a: any) => [number, number, number];
     readonly crypto_aead_encrypt: (a: any) => [number, number, number];
     readonly crypto_blake3: (a: any) => [number, number, number];
@@ -1737,41 +1548,12 @@ export interface InitOutput {
     readonly crypto_sha256: (a: any) => [number, number, number];
     readonly crypto_sha3_256: (a: any) => [number, number, number];
     readonly crypto_sha512: (a: any) => [number, number, number];
-    readonly enumerate_stable_models_wasm: (a: any) => [number, number, number];
-    readonly evaluate_deontic_wasm: (a: any) => [number, number, number];
-    readonly evaluate_epistemic_wasm: (a: any) => [number, number, number];
-    readonly evaluate_ltl_trace_wasm: (a: any) => [number, number, number];
-    readonly fuzzy_t_norm_wasm: (a: any) => [number, number, number];
     readonly graph_fuzzy_similarity: (a: any) => [number, number, number];
     readonly graph_kge_predict: (a: any) => [number, number, number];
     readonly graph_kge_score: (a: any) => [number, number, number];
     readonly graph_shortest_path: (a: any) => [number, number, number];
     readonly graph_spreading_activation: (a: any) => [number, number, number];
-    readonly jural_correlative_wasm: (a: any) => [number, number, number];
-    readonly route_paraconsistent_wasm: (a: any) => [number, number, number];
-    readonly stit_brought_about_wasm: (a: any) => [number, number, number];
-    readonly validate_fasta_wasm: (a: any) => [number, number, number];
-    readonly values_check_wasm: (a: any) => [number, number, number];
-    readonly values_consent_non_coerced_wasm: (a: any) => [number, number, number];
-    readonly values_harm_below_ceiling_wasm: (a: any) => [number, number, number];
-    readonly predict_receptor_binding_wasm: () => number;
-    readonly estimate_browser_storage: () => any;
-    readonly is_opfs_block_cached: (a: number) => any;
-    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
-    readonly read_opfs_block: (a: number) => any;
-    readonly units_constant: (a: any) => [number, number, number];
-    readonly units_convert: (a: any) => [number, number, number];
-    readonly units_list_constants: (a: any) => [number, number, number];
-    readonly units_list_units: (a: any) => [number, number, number];
-    readonly units_quantity_op: (a: any) => [number, number, number];
-    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
-    readonly write_opfs_block: (a: number, b: number, c: number) => any;
-    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
-    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
-    readonly sample_browser_telemetry_wasm: () => [number, number, number];
-    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly align_sequences_wasm: (a: any) => [number, number, number];
     readonly la_determinant_wasm: (a: any) => [number, number, number];
     readonly la_eigen_symmetric_wasm: (a: any) => [number, number, number];
     readonly la_eigenvalues_wasm: (a: any) => [number, number, number];
@@ -1805,7 +1587,78 @@ export interface InitOutput {
     readonly num_poly_fit_wasm: (a: any) => [number, number, number];
     readonly num_prime_factorize_wasm: (a: any) => [number, number, number];
     readonly num_zeta_wasm: (a: any) => [number, number, number];
+    readonly validate_fasta_wasm: (a: any) => [number, number, number];
+    readonly xform_dft: (a: any) => [number, number, number];
+    readonly xform_idft: (a: any) => [number, number, number];
+    readonly xform_laplace_numeric: (a: any) => [number, number, number];
+    readonly xform_laplace_table: (a: any) => [number, number, number];
+    readonly xform_z_geometric: (a: any) => [number, number, number];
+    readonly xform_z_transform: (a: any) => [number, number, number];
+    readonly xform_z_unit_step: (a: any) => [number, number, number];
+    readonly predict_receptor_binding_wasm: () => number;
+    readonly exact_bigint_add: (a: any) => [number, number, number];
+    readonly exact_bigint_divmod: (a: any) => [number, number, number];
+    readonly exact_bigint_factorial: (a: any) => [number, number, number];
+    readonly exact_bigint_gcd: (a: any) => [number, number, number];
+    readonly exact_bigint_mul: (a: any) => [number, number, number];
+    readonly exact_bigint_pow: (a: any) => [number, number, number];
+    readonly exact_rational_add: (a: any) => [number, number, number];
+    readonly exact_rational_mul: (a: any) => [number, number, number];
+    readonly black_scholes_wasm: (a: any) => [number, number, number];
+    readonly compute_pid_step_wasm: (a: any) => [number, number, number];
+    readonly estimate_browser_storage: () => any;
+    readonly get_engine_info: () => [number, number, number];
+    readonly get_engine_version: () => [number, number];
+    readonly get_webgpu_init_status: () => [number, number];
+    readonly init_offscreen_renderer: (a: number, b: number, c: number) => any;
+    readonly init_shared_webgpu: () => any;
+    readonly is_opfs_block_cached: (a: number) => any;
+    readonly list_capabilities_wasm: () => [number, number, number];
+    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
+    readonly read_opfs_block: (a: number) => any;
+    readonly resolve_lww_wasm: (a: any, b: any) => [number, number, number];
+    readonly run_semantic_simulation: (a: any) => [number, number, number];
+    readonly simulate_gbm_path_wasm: (a: any) => [number, number, number];
+    readonly solve_ode_exponential_decay_wasm: (a: any) => [number, number, number];
+    readonly solve_sat_wasm: (a: any) => [number, number, number];
+    readonly stats_anova_wasm: (a: any) => [number, number, number];
+    readonly stats_chi_square_gof_wasm: (a: any) => [number, number, number];
+    readonly stats_chi_square_independence_wasm: (a: any) => [number, number, number];
+    readonly stats_chi_squared_dist_wasm: (a: any) => [number, number, number];
+    readonly stats_correlation_wasm: (a: any) => [number, number, number];
+    readonly stats_describe_wasm: (a: any) => [number, number, number];
+    readonly stats_fisher_f_wasm: (a: any) => [number, number, number];
+    readonly stats_friedman_wasm: (a: any) => [number, number, number];
+    readonly stats_linear_regression_wasm: (a: any) => [number, number, number];
+    readonly stats_mcnemar_wasm: (a: any) => [number, number, number];
+    readonly stats_normal_wasm: (a: any) => [number, number, number];
+    readonly stats_one_sample_t_wasm: (a: any) => [number, number, number];
+    readonly stats_paired_t_wasm: (a: any) => [number, number, number];
+    readonly stats_quantile_wasm: (a: any) => [number, number, number];
+    readonly stats_students_t_wasm: (a: any) => [number, number, number];
+    readonly stats_two_sample_t_wasm: (a: any) => [number, number, number];
+    readonly verify_law_package_wasm: (a: number, b: number, c: number, d: number) => number;
+    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
+    readonly write_opfs_block: (a: number, b: number, c: number) => any;
+    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
+    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
+    readonly sample_browser_telemetry_wasm: () => [number, number, number];
+    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly units_constant: (a: any) => [number, number, number];
+    readonly units_convert: (a: any) => [number, number, number];
+    readonly units_list_constants: (a: any) => [number, number, number];
+    readonly units_list_units: (a: any) => [number, number, number];
+    readonly units_quantity_op: (a: any) => [number, number, number];
     readonly __wbg_qualiastore_free: (a: number, b: number) => void;
+    readonly __wbg_wasmhealthstore_free: (a: number, b: number) => void;
+    readonly evaluate_n3_rules: (a: number, b: number) => [number, number];
+    readonly heart_rate_turtle_from_csv: (a: number, b: number) => [number, number, number, number];
+    readonly parse_heart_rate_csv_json: (a: number, b: number) => [number, number, number];
+    readonly parse_sleep_csv_json: (a: number, b: number) => [number, number, number];
+    readonly parse_steps_csv_json: (a: number, b: number) => [number, number, number];
+    readonly parse_weight_csv_json: (a: number, b: number) => [number, number, number];
     readonly qualiastore_clear: (a: number) => void;
     readonly qualiastore_insert_from_cbor_ld: (a: number, b: number, c: number) => number;
     readonly qualiastore_insert_quin: (a: number, b: bigint, c: bigint, d: bigint, e: bigint, f: bigint) => number;
@@ -1814,13 +1667,6 @@ export interface InitOutput {
     readonly qualiastore_query_context: (a: number, b: bigint) => any;
     readonly qualiastore_query_predicate: (a: number, b: bigint) => any;
     readonly qualiastore_query_subject: (a: number, b: bigint) => any;
-    readonly __wbg_wasmhealthstore_free: (a: number, b: number) => void;
-    readonly evaluate_n3_rules: (a: number, b: number) => [number, number];
-    readonly heart_rate_turtle_from_csv: (a: number, b: number) => [number, number, number, number];
-    readonly parse_heart_rate_csv_json: (a: number, b: number) => [number, number, number];
-    readonly parse_sleep_csv_json: (a: number, b: number) => [number, number, number];
-    readonly parse_steps_csv_json: (a: number, b: number) => [number, number, number];
-    readonly parse_weight_csv_json: (a: number, b: number) => [number, number, number];
     readonly sleep_turtle_from_csv: (a: number, b: number) => [number, number, number, number];
     readonly steps_turtle_from_csv: (a: number, b: number) => [number, number, number, number];
     readonly validate_health_quin: (a: number, b: number, c: bigint, d: bigint, e: bigint, f: bigint, g: bigint) => [number, number];
@@ -1832,11 +1678,11 @@ export interface InitOutput {
     readonly wasmhealthstore_new: () => [number, number, number];
     readonly wasmhealthstore_query: (a: number, b: number, c: number) => [number, number, number, number];
     readonly weight_turtle_from_csv: (a: number, b: number) => [number, number, number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h8803f8c799f93ab4: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_2: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h040d78aefb789e25_3: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h243b5e59773a58aa: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___JsValue__core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__2: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__3: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___js_sys_5dbe7a4fa836c268___Function_fn_wasm_bindgen_7f3b42ef428552b8___JsValue_____wasm_bindgen_7f3b42ef428552b8___sys__Undefined___js_sys_5dbe7a4fa836c268___Function_fn_wasm_bindgen_7f3b42ef428552b8___JsValue_____wasm_bindgen_7f3b42ef428552b8___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

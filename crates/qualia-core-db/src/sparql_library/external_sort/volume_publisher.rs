@@ -20,6 +20,8 @@ pub const DEFAULT_Q42_SEGMENT_MAX_BYTES: u64 = 512 * 1024 * 1024;
 /// Outcome of publishing one logical root and its immutable child segments.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Q42VolumePublishStats {
+    /// Super-Quins written across all child segments.
+    pub quins_written: u64,
     pub blocks_written: u64,
     pub segments_written: u64,
     pub root_bytes: u64,
@@ -112,6 +114,7 @@ impl ExternalSorter {
             ));
         }
         Ok(Q42VolumePublishStats {
+            quins_written: self.quin_total(),
             blocks_written,
             segments_written: manifest.segments.len() as u64,
             root_bytes,
@@ -618,7 +621,7 @@ mod tests {
             root_volume.header().flags & crate::q42_volume::FLAG_PERMISSIVE_COMMONS,
             0
         );
-        assert_eq!(set.lookup_hash(7), Some("urn:q42:shared-term"));
+        assert_eq!(set.lookup_owned(7), Some("urn:q42:shared-term".to_string()));
         assert_eq!(
             crate::q42_lex::Q42Lexicon::load_for_q42(&root)
                 .unwrap()
@@ -649,7 +652,7 @@ mod tests {
             .expect("open first lexicon shard");
         let hash = view.hash_at(0).expect("first lexicon entry");
         let term = set
-            .lookup_hash(hash)
+            .lookup_owned(hash)
             .expect("volume-set lookup through shard");
         assert!(!term.is_empty(), "resolved monarch term must be non-empty");
         println!("monarch lookup ok: {term}");

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "comment": "Qualia-DB VFS mount manifest. All datasets use Q42 v3 unified volumes (lex + bidx + LZ4 blocks embedded in file preamble).",
+  "comment": "Qualia-DB VFS mount manifest. Datasets use Q42 v3/v4 unified volumes (lex + bidx + LZ4 blocks embedded in file preamble); catalog volumes are v4 with namespaced paged lexicons.",
   "datasets": [
     {
       "id": "wordnet",
       "profile": "wordnet",
       "label": "Princeton WordNet 3.1",
       "icon": "\ud83d\udcda",
-      "description": "Princeton WordNet 3.1 RDF \u00b7 5,558,748 triples \u00b7 ~127 MB unified v3 .q42. Not published on GitHub Pages \u2014 ingest locally (`scripts/ingest_princeton_wordnet.ps1`) or upload .nt into the browser vault. Pages boots Schema.org by default.",
-      "hosted": false,
+      "description": "Princeton WordNet 3.1 RDF \u00b7 5,558,748 triples \u00b7 ~127 MB unified v3 .q42. Served from Pages when present on the release; Schema.org remains the default boot dataset.",
+      "hosted": true,
       "url": "data/wordnet/princeton.q42",
       "fallbackUrls": [
         "playground/wordnet.q42",

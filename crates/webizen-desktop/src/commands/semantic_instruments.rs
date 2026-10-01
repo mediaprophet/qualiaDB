@@ -159,7 +159,11 @@ pub fn si_set_run_permitted(permitted: bool) -> Result<bool, String> {
 }
 
 #[command]
-pub fn si_run_demo(slug: String, entry_point: String, input: String) -> Result<serde_json::Value, String> {
+pub fn si_run_demo(
+    slug: String,
+    entry_point: String,
+    input: String,
+) -> Result<serde_json::Value, String> {
     if entry_point.contains("Host.") {
         return Err("unknown entry point (not a Host ID)".into());
     }
@@ -167,9 +171,7 @@ pub fn si_run_demo(slug: String, entry_point: String, input: String) -> Result<s
     let mut guard = host();
     let state = guard.get_or_insert_with(HostState::new);
     if !state.run_permitted {
-        return Err(
-            "held / not yet — permission denial is usable; grant was refused".into(),
-        );
+        return Err("held / not yet — permission denial is usable; grant was refused".into());
     }
     if state.revoked.contains(seed.release_id) {
         return Err("held / not yet — revoked version cannot start a new run".into());
@@ -321,7 +323,7 @@ mod tests {
     #[test]
     fn list_demos_is_labelled() {
         let cards = si_list_demos();
-        assert_eq!(cards.len(), 3);
+        assert_eq!(cards.len(), 6);
         assert!(cards.iter().all(|c| c.category == "demo"));
         let refs = si_list_references();
         assert_eq!(refs.len(), 3);
@@ -461,7 +463,9 @@ mod tests {
         let cards = si_list_demos();
         for seed in demo_catalog() {
             assert!(
-                cards.iter().any(|c| c.slug == seed.slug && c.entry_point == seed.entry_point),
+                cards
+                    .iter()
+                    .any(|c| c.slug == seed.slug && c.entry_point == seed.entry_point),
                 "missing {}",
                 seed.slug
             );

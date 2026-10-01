@@ -1,13 +1,17 @@
 # q42 Format Internal Draft
 
-**Status:** Internal draft (implementation converged on v3 unified volume, 2026-06-11; indexes, publication gates, and five-field ECC recorded 2026-08-15)  
+**Status:** Internal draft (implementation converged on v3 unified volume, 2026-06-11; indexes, publication gates, and five-field ECC recorded 2026-08-15; v4 namespaced-lexicon generation recorded 2026-09-30 — ADR 0015)  
 **Date:** 2026-06-09 (revised 2026-09-06 — networking modality and byte-layout clarification)
 **Purpose:** Freeze the current implementation reality of the `q42` container
 family before any external standardization work begins.
 
+**Implementation divergence log:** [`q42-implementation-divergence.md`](q42-implementation-divergence.md)  
+**Payload catalogue (oversized prose, not media):** [ADR 0014](../adr/0014-q42-payload-catalogue.md)
+
 This revision **does not relax** the 48-byte NQuin, 40,960-byte SuperBlock,
-256-byte header, v3-only new writes, or 42 MB SlgArena ceiling. It records
-indexes, ECC, and publication rules that the writer already enforces.
+256-byte header, or 42 MB SlgArena ceiling. New writes are **v4** (v3
+remains readable). It records indexes, ECC, and publication rules that the
+writer already enforces.
 
 ## Draft Headings
 
@@ -54,12 +58,14 @@ The storage model is:
 4. Compression, when used, is **block-local** (per SuperBlock), not
    whole-file stream-based.
 
-### 1.3 Index placement (v3 — implemented 2026-06-11)
+### 1.3 Index placement (v3/v4 — v3 implemented 2026-06-11; v4 2026-09-29)
 
-As of 2026-06-11, **new ingest writes a single unified v3 `.q42` volume**:
+As of 2026-09-29, **new ingest writes a single unified v4 `.q42` volume**
+(header layout identical to v3; the version marks the writer generation —
+v4 carries the namespaced paged Q42LEX, ADR 0015; readers accept v3 and v4):
 
-- 256-byte file header (`Q42\0`, version 3)
-- embedded Q42LEX blob (uncompressed)
+- 256-byte file header (`Q42\0`, version 3 or 4)
+- embedded Q42LEX blob (uncompressed; v2 pages or v4 namespaced pages)
 - embedded BIDX blob (uncompressed)
 - optional FIDX (per-block subject/predicate/context ranges; flag `0x0008`)
 - optional PIDX (compact S/P/C postings or measured Bloom; flag `0x0010`)
@@ -126,7 +132,7 @@ identifier be Qualia-specific.
 
 This draft covers the Layer 0 data artifacts currently exposed by QualiaDB:
 
-- unified v3 `.q42` volumes (canonical for new ingest)
+- unified v4 `.q42` volumes (canonical for new ingest; v3 read support)
 - legacy v1 raw SuperBlock `.q42` streams (read compatibility)
 - legacy `.q42.lex` and `.q42.bidx` sidecars (read compatibility)
 - leftover `.c.q42` framed LZ4 profile (read-only; do not emit)
@@ -146,8 +152,10 @@ This draft does not define:
 
 This draft adopts the following model as of 2026-06-11:
 
-1. **Unified v3 `.q42`** is the canonical on-disk container for new datasets.
-   v2 volumes must be migrated via `migrate_v2_to_v3()` before use.
+1. **Unified v4 `.q42`** is the canonical on-disk container for new datasets
+   (header identical to v3; stamps the namespaced Q42LEX writer — ADR 0015).
+   v3 volumes remain readable; v2 volumes must be migrated via
+   `migrate_v2_to_v3()` before use.
 2. **Embedded Q42LEX and BIDX** replace sidecars for new writes.
 3. **Block-local LZ4** compresses each SuperBlock inside the volume; there is
    no separate mandatory compressed transport file.
@@ -166,10 +174,10 @@ The repo now converges on one primary write path and several read fallbacks:
 
 | Path | Role | Module |
 |------|------|--------|
-| v3 unified volume write | canonical ingest output | `q42/q42_volume.rs`, `q42/volume/stream_writer.rs`, `write_quins.rs` |
-| v3 unified volume read | mmap open, lex view, BIDX/FIDX/PIDX, block decompress | `Q42Volume`, `docs/playground/vfs.js` |
+| v4 unified volume write | canonical ingest output | `q42/q42_volume.rs`, `q42/volume/stream_writer.rs`, `write_quins.rs` |
+| v3/v4 unified volume read | mmap open, lex view, BIDX/FIDX/PIDX, block decompress | `Q42Volume`, `docs/playground/vfs.js` |
 | inspect / verify / magnet | CLI + Studio Volume Manager | `q42/volume/{inspect,verify,publication,magnet}.rs` |
-| v2 → v3 migration | one-pass header upgrade | `q42_volume::migrate_v2_to_v3()` / `qualia q42 compact` |
+| v2 → v4 migration | one-pass header upgrade | `q42_volume::migrate_v2_to_v3()` / `qualia q42 compact` |
 | v1 sidecar lex read | legacy WordNet / Index trees | `Q42Lexicon::load`, `load_for_q42` |
 | v1 raw SuperBlock read | legacy aligned streams | `storage.rs` |
 | framed LZ4 transport read | leftover `.c.q42` only | `q42_reader.rs` |
@@ -221,9 +229,10 @@ The canonical physical storage page is `QualiaSuperBlock`.
 - Alignment: 4,096 bytes (logical page; v2 stores LZ4-compressed payloads)
 - Structure: 160-byte header + 40,800-byte quin ledger (850 × 48 bytes)
 
-### Unified v3 volume
+### Unified v3/v4 volume
 
-- Single `.q42` file with file magic `Q42\0`, version `3`
+- Single `.q42` file with file magic `Q42\0`, version `3` (legacy) or `4`
+  (current; differs only in carrying the namespaced Q42LEX v4 — ADR 0015)
 - Flags (u16):
   - `0x0001` `FLAG_BLOCKS_LZ4` — SuperBlocks are LZ4-compressed
   - `0x0002` `FLAG_OBJECT_SORTED` — ingest sorted by object hash
@@ -237,9 +246,10 @@ The canonical physical storage page is `QualiaSuperBlock`.
   Merkle-DAG history section, optional natural-person / software-agent DID
   offsets, FIDX/PIDX pointers in `_reserved`
 
-### Embedded sections (v3)
+### Embedded sections (v3/v4)
 
-- **Q42LEX**: same binary layout as the obsolete `.q42.lex` sidecar
+- **Q42LEX**: v2 paged layout (v3 volumes) or v4 namespaced paged layout
+  (v4 volumes); superset of the obsolete `.q42.lex` sidecar layout
 - **BIDX**: same binary layout as the obsolete `.q42.bidx` sidecar
 - **FIDX**: `FIDX` magic, 16-byte header, 48-byte per-block S/P/C range entries
 - **PIDX**: compact postings / Bloom for S/P/C; optional, flag-gated
@@ -256,7 +266,7 @@ The canonical physical storage page is `QualiaSuperBlock`.
 ### Vault manifest
 
 - `.qualia`: high-level vault or collection descriptor
-- expected to reference one or more unified v3 `.q42` artifacts
+- expected to reference one or more unified v3/v4 `.q42` artifacts
 
 ## 7. Canonical Physical Layout
 
@@ -310,7 +320,7 @@ Properties:
   compiler will either wire this field to a versioned analysis-mesh sidecar or supersede it with
   an explicit Q42 relationship that can address multiple meshes and fidelity tiers.
 
-### Unified v3 volume layout
+### Unified v3/v4 volume layout
 
 ```text
 [0..256)                  Q42VolumeHeader
@@ -325,11 +335,11 @@ BlockDirectoryEntry:
   [12..16] uncomp_len   u32 LE   — always 40960 for current ingest
 ```
 
-Header fields (little-endian, v3 — 256 bytes total):
+Header fields (little-endian, v3/v4 — 256 bytes total):
 
 ```text
 [0..4]    magic                  "Q42\0"
-[4..6]    version                u16 = 3   (v2 hard-rejected; use migrate_v2_to_v3())
+[4..6]    version                u16 = 4   (v3 accepted; v2 hard-rejected — use migrate_v2_to_v3())
 [6..8]    flags                  u16
 [8..16]   lex_offset             u64
 [16..24]  lex_length             u64
@@ -358,18 +368,18 @@ Header fields (little-endian, v3 — 256 bytes total):
 ```
 
 Detection: `is_v2_volume()` checks magic `Q42\0` at offset 0. `verify_version()` rejects
-anything other than version 3; to open a v2 file call `migrate_v2_to_v3()` first.
+anything other than version 3 or 4; to open a v2 file call `migrate_v2_to_v3()` first.
 
 Ingest sorts all quins by **object hash** before chunking so BIDX ranges are
 ascending and binary-searchable.
 
 ## 8. Canonical Artifact Set
 
-### Unified v3 `.q42` (canonical)
+### Unified v4 `.q42` (canonical)
 
 Recommended meaning for all new datasets:
 
-- single self-contained file, version 3
+- single self-contained file, version 4 (v3 remains readable)
 - embedded lexicon and block index
 - LZ4-compressed SuperBlocks
 - optional temporal index section (bi-temporal PROV-O quins)
@@ -442,9 +452,10 @@ Matches `crates/qualia-core-db/src/q42/p64_weight.rs` (`P64WeightHeader`, `P64Te
 > magic `"Q42W"`) preceded this container; it is **superseded** by `.p64` and retained only as migration
 > test fixtures (`q42::p64_weight` tests).
 
-### Embedded Q42LEX layout
+### Embedded Q42LEX layout (legacy flat v1 — read-only)
 
-Same as legacy `.q42.lex`:
+Same as legacy `.q42.lex` (also carries `0x02` embedded-triple and `0x03`
+Webizen-identity entries; still written by `encode_lex_with_entries`):
 
 ```text
 Header (32 bytes)
@@ -461,9 +472,55 @@ String blob
   repeated: u16 LE length + UTF-8 bytes
 ```
 
-### Embedded BIDX layout
+### Embedded Q42LEX layout (v4 — current writer; ADR 0015)
 
-Same as legacy `.q42.bidx`:
+The current writer emits the **namespaced paged** layout (format version 4).
+Pages are independently decodable — the namespace dictionary is page-local,
+so an HTTP-Range reader resolves any hash with header + directory + one page:
+
+```text
+Header (32 bytes)
+  [0..8]   magic          "Q42LEX\0\0"
+  [8..16]  entry_count    u64 LE
+  [16..24] strings_offset u64 LE = 32
+  [24..32] version        u64 LE = 4
+
+Page directory (8-byte count + page_count × 32 bytes)
+  [0..8]   first_hash     u64 LE
+  [8..16]  page_offset    u64 LE
+  [16..24] page_length    u64 LE
+  [24..28] entry_count    u32 LE
+
+Page (page_length bytes)
+  [0..4]   entry_count    u32 LE
+  [4..8]   ns_count       u32 LE   (slot v2 writers zeroed)
+  [8..16]  blob_offset    u64 LE = 16 + entry_count × 16
+  index:   entry_count × [u64 hash][u64 relative-from-blob-start]
+  blob:    ns table: ns_count × [u16 len][utf-8 namespace]
+           entries:
+             0x01 [u16 len][utf-8]                    — verbatim
+             0x04 [u16 ns_id][u16 local_len][utf-8]   — namespaced
+```
+
+Namespace extraction splits at the final `/`, `#`, or `:` (separator stays
+with the namespace), which uniformly covers `http(s)` IRIs, `did:` methods,
+`urn:`, and other schemes. A term is encoded namespaced only when that
+strictly shrinks the page (`m·(n−2) > n+2` for a namespace of `n` bytes with
+`m` page members) — v4 never grows a lexicon. Pages stay uncompressed by
+design: that preserves zero-copy `lookup_parts` borrows and single-page
+Range decode; namespace dedup is the compression mechanism.
+
+Implementation: writer `crates/qualia-core-db/src/q42_lex_ns.rs`; reader
+`Q42LexMmap` in `q42_lex.rs` (`lookup_parts` / `lookup_owned` /
+`resolve_term_into`; `lookup_hash`/`string_at` are verbatim-only); HTTP-Range
+resolver `volume/range_volume.rs::lookup_lexicon_hash_into`; browser
+`docs/playground/vfs.js::_parseLexiconBytes`.
+
+### Legacy Q42LEX layouts (v1 flat, v2 paged — read-only)
+
+v2 paged is identical to the v4 page layout minus the namespace table
+(`ns_count` slots are 0; entries are verbatim only — `0x04` fails closed).
+The flat v1 layout is documented in the preceding section.
 
 ```text
 Header (16 bytes)
@@ -493,7 +550,7 @@ Requires separate `.q42.lex` and `.q42.bidx` sidecars for full retrieval.
 
 ### Legacy `.c.q42` transport (do not emit)
 
-Historical framed profile. Browser Pages now demand-page **unified v3** volumes
+Historical framed profile. Browser Pages now demand-page **unified v3/v4** volumes
 (`vfs.js`). A leftover `.c.q42` may still decode through `q42_reader.rs`.
 
 ```text
@@ -506,7 +563,7 @@ Per chunk:
 
 ### `.qualia`
 
-Vault or collection manifest — references `.q42` data files. For v3 volumes,
+Vault or collection manifest — references `.q42` data files. For v3/v4 volumes,
 lexicon and block index are embedded; manifest sidecar pointers are optional
 legacy hints only.
 
@@ -554,8 +611,9 @@ read a v3 file with `dag_root_length == 0` simply have no DAG history yet.
 ### 10.4 Resolved: browser VFS (2026-08-15)
 
 `docs/playground/vfs.js` reads unified v3 (`parseQ42Header`, FIDX/PIDX flags,
-block directory, LZ4 SuperBlocks). Pages boot Schema.org 30.0; WordNet is
-optional (~127 MB Release asset), not a required sidecar pair.
+block directory, LZ4 SuperBlocks; v4 + namespaced Q42LEX added 2026-09-30 —
+ADR 0015). Pages boot Schema.org 30.0; WordNet is optional (~127 MB Release
+asset), not a required sidecar pair.
 
 ### 10.5 Remaining: BIDX dimension prose drift
 
@@ -575,7 +633,9 @@ doc sweeps.
 
 ## 11. Proposed Canonical Rules
 
-1. **New writes** produce unified v3 `.q42` only (magic `Q42\0`, version 3). v2 files must be migrated with `migrate_v2_to_v3()` before opening.
+1. **New writes** produce unified v4 `.q42` only (magic `Q42\0`, version 4 —
+   namespaced paged Q42LEX, ADR 0015; readers accept v3). v2 files must be
+   migrated with `migrate_v2_to_v3()` before opening.
 2. Q42LEX and BIDX blobs inside a v2 volume use the same layouts as legacy
    sidecars.
 3. SuperBlocks inside v2 are LZ4-compressed individually; uncompressed size is
@@ -585,7 +645,7 @@ doc sweeps.
 6. `.q42.lex` and `.q42.bidx` sidecars are legacy; readers must fall back to
    them when opening non-v2 files.
 7. `.c.q42` MUST NOT be emitted. When a leftover file is present it is legacy
-   framed transport only — never a required twin of a v3 volume.
+   framed transport only — never a required twin of a v3/v4 volume.
 8. `q42_reader.rs` is legacy transport only — not a canonical v3 reader.
 8a. Public magnets fail closed unless `FLAG_PERMISSIVE_COMMONS` is set and
     `FLAG_SANCTUARY` is clear. Unmarked personal volumes do not become
@@ -600,10 +660,10 @@ doc sweeps.
 ## 12. Open Questions
 
 1. Should `validation_checksum` remain a real field if `parity` already exists?
-2. Should BIDX move to subject-hash ranges in a future v4, or stay
-   object-indexed permanently? (v3 retains object-hash BIDX; this remains open for v4.)
-3. Should v3 receive an explicit media type (e.g.
-   `application/vnd.qualia.q42+v3`) before IETF submission?
+2. Should BIDX move to subject-hash ranges in a future v5, or stay
+   object-indexed permanently? (v3/v4 retain object-hash BIDX; this remains open.)
+3. Should v4 receive an explicit media type (e.g.
+   `application/vnd.qualia.q42+v4`) before IETF submission?
 4. *(Resolved 2026-08-15.)* Playground VFS reads v3 natively. No framed-transport
    translation step.
 5. Which public media type should be chosen for `.qchk`?
@@ -620,15 +680,18 @@ doc sweeps.
 5. [x] Update WASM playground VFS for unified v3 volumes (`vfs.js`).
 6. [ ] Rename QCHK public references from `.chk` to `.qchk`.
 7. [ ] Add canonical test vectors:
-   - one single-block v3 `.q42` with FIDX/PIDX and five-field ECC
-   - one multi-block v3 `.q42` with lex entries
+   - one single-block v4 `.q42` with FIDX/PIDX and five-field ECC
+   - one multi-block v4 `.q42` with lex entries
    - one Commons-flagged volume that may mint a magnet
    - one Sanctuary volume that MUST fail-closed
    - one `.qchk`
-8. [ ] Propose media types for IETF drafting (`application/vnd.qualia.q42+v3`).
-9. [ ] Finalize minimal `.qualia` manifest schema for v3 (sidecar terms
+8. [ ] Propose media types for IETF drafting (`application/vnd.qualia.q42+v4`).
+9. [ ] Finalize minimal `.qualia` manifest schema for v4 (sidecar terms
    omitted).
-10. [x] Stay on v3 (R10). Lex LZ4 inside the same file; no v4 fork.
+10. [x] ~~Stay on v3 (R10). Lex LZ4 inside the same file; no v4 fork.~~
+    **Superseded 2026-09-30 by ADR 0015** — v4 adopted the namespaced paged
+    Q42LEX; pages remain uncompressed (not whole-file LZ4) to preserve
+    per-page HTTP-Range decodability.
 11. [ ] Reconcile four-field FrameLayout parity helpers with five-field persistence semantics;
     classify legacy/internal fixtures rather than silently accepting two checksum definitions.
 12. [ ] Freeze the networking semantic profile and its exact-evidence storage guarantees with P15.
@@ -647,7 +710,7 @@ must bind exact content without claiming the old root is a PQ signature. Any req
 artifact encoding is versioned within its owning core profile and tested for exact byte recovery.
 
 [QNF](./qnf-network-container-draft.md) explores a purpose-specific sibling container for network
-evidence and views under core publication. Its illustrative layout does not revise Q42 v3 or the
+evidence and views under core publication. Its illustrative layout does not revise Q42 v4 or the
 Quin ABI. Semantic requirements lead format selection; exact vectors remain future freeze work.
 
 A literal 42-byte payload plus six parity bytes would be a separate record-format proposal with

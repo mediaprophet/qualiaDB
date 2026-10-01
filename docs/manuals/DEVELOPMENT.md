@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.38` | Last updated: 2026-09-08_
+_Branch: `0.0.40` | Last updated: 2026-09-08_
 
 ---
 
@@ -123,8 +123,8 @@ GitHub Actions (`.github/workflows/release.yml`) builds on tag push:
 - Flutter desktop bundles — `.dmg` (macOS), AppImage + `.deb` (Linux), `.exe` + `.msi` (Windows)
 
 ```bash
-git tag v0.0.38
-git push origin v0.0.38
+git tag v0.0.40
+git push origin v0.0.40
 ```
 
 ### Cross-compiling the CLI locally (Windows → Linux)
@@ -158,11 +158,11 @@ qualia-cli verify-graph --input data.ttl --dataset output.q42 --memory-mib 32 --
 qualia-cli ingest csv people.csv --map people-shape.ttl
 qualia-cli ingest json people.json --map people-shape.ttl
 
-# ── Inspection & volume ops (unified v3) ───────────────────────────────
+# ── Inspection & volume ops (unified v4) ───────────────────────────────
 qualia-cli q42 inspect output.q42            # header, flags, lex, FIDX/PIDX
 qualia-cli q42 verify output.q42 --level full # layered SuperBlock / volume-set walk
 qualia-cli q42 magnet output.q42             # fail-closed public magnet
-qualia-cli q42 compact output.q42            # rewrite to current v3
+qualia-cli q42 compact output.q42            # rewrite to current v4
 qualia-cli inspect output.q42                # decode and display Quin fields
 qualia-cli dump output.q42                   # stream-dump raw Quins
 qualia-cli export-solid --input output.q42 --output ./solid-pod/ # W3C Solid LDP export
@@ -266,7 +266,7 @@ qualia-cli query sparql ./data/dbpedia.q42
 
 ```bash
 bash scripts/fetch_wordnet.sh --subset 100000
-# Outputs: one unified v3 wordnet.q42 (lex + bidx + LZ4 SuperBlocks inside)
+# Outputs: one unified v4 wordnet.q42 (lex + bidx + LZ4 SuperBlocks inside)
 ```
 
 Rebuild the WASM module after updating the dataset:
@@ -370,7 +370,7 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 
 ## Releases & Versioning
 
-- **Current branch:** `0.0.38`
+- **Current branch:** `0.0.40`
 - **Release config:** `release.toml` (cargo-release)
 - **Release notes:** [CHANGELOG.md](../../CHANGELOG.md)
 - **CI:** `.github/workflows/release.yml` — builds on tag push (Windows, macOS, Linux)
@@ -378,8 +378,8 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 To cut a release:
 
 ```bash
-git tag v0.0.38
-git push origin v0.0.38
+git tag v0.0.40
+git push origin v0.0.40
 ```
 
 ADRs (Architectural Decision Records): [`docs/manuals/adr/`](adr/)

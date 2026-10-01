@@ -1,0 +1,38 @@
+{
+  "id": "wordnet-31",
+  "label": "Princeton WordNet 3.1",
+  "n_triples": 5558748,
+  "queries": {
+    "point_subject": "http://wordnet-rdf.princeton.edu/id/100001740-n",
+    "twohop_start": "http://wordnet-rdf.princeton.edu/id/102084071-n",
+    "twohop_second": "http://wordnet-rdf.princeton.edu/id/102086723-n",
+    "filter_predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+    "point": "SELECT * WHERE { <http://wordnet-rdf.princeton.edu/id/100001740-n> ?p ?o } LIMIT 100",
+    "twohop": "SELECT * WHERE {\n    <http://wordnet-rdf.princeton.edu/id/102084071-n> ?p1 ?b .\n    ?b ?p2 ?o .\n} LIMIT 1",
+    "filter": "SELECT * WHERE { ?s <http://www.w3.org/2000/01/rdf-schema#label> ?o } LIMIT 100",
+    "lemma": "SELECT * WHERE { ?s ?p \"dog\" } LIMIT 100"
+  },
+  "paths": {
+    "q42": "../data/wordnet/princeton.q42",
+    "playground_q42": "../playground/wordnet.q42"
+  },
+  "dataset_info": {
+    "label": "Princeton WordNet 3.1",
+    "release": "3.1",
+    "variant": "rdf",
+    "source_format": "rdf-xml",
+    "source_url": "https://wordnet.princeton.edu",
+    "native_format": "q42",
+    "native_q42_path": "../data/wordnet/princeton.q42",
+    "native_q42_available": true,
+    "compressed_q42_path": null,
+    "compressed_q42_available": false,
+    "n_triples": 5558748,
+    "source_file_mb": 126.85,
+    "source_file_bytes": 133012839,
+    "native_q42_file_mb": 126.85,
+    "native_q42_file_bytes": 133012839,
+    "block_count": 6540,
+    "bidx_available": true
+  }
+}

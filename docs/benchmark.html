@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB • Benchmark Hub v0.0.39</title>
+    <title>Qualia-DB • Benchmark Hub v0.0.40</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -56,7 +56,7 @@
     <div class="text-center">
         <div class="loading-spinner mx-auto mb-4"></div>
         <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
-        <div class="text-white/50 text-sm mt-2" id="loading-status">Initializing benchmark suite v0.0.39</div>
+        <div class="text-white/50 text-sm mt-2" id="loading-status">Initializing benchmark suite v0.0.40</div>
     </div>
 </div>
 
@@ -112,36 +112,37 @@
     <div class="text-center mb-10">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
             <i class="fas fa-tachometer-alt"></i>
-            <span>WASM-only · Zero-Heap · v0.0.39</span>
+            <span>WASM-only · Zero-Heap · v0.0.40</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Benchmark Hub</h1>
-        <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes. Not graph-only anymore — see <a href="comparative_benchmarks.html" class="text-cyan-400 hover:underline">comparative benchmarks</a> for multi-engine graph shoot-outs.</p>
+        <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes — VibeScript Present purpose clocks, graph, geometry/renderer as their own claim planes.</p>
     </div>
 
     <div class="flex flex-wrap gap-3 justify-center mb-8">
-        <a href="comparative_benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-chart-line mr-2 text-blue-400"></i>Comparative engines</a>
-        <a href="benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-cyan-400"></i>Browser LLM harness</a>
-        <a href="comparative_benchmarks.html?view=platform" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-amber-400"></i>Platform suite (CI)</a>
+        <a href="comparative_benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 text-white/60"><i class="fa-solid fa-chart-line mr-2"></i>Comparative (archive)</a>
+        <a href="benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 text-white/60"><i class="fa-solid fa-microchip mr-2"></i>Browser LLM harness</a>
+        <a href="comparative_benchmarks.html?view=platform" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-cyan-400"></i>Platform suite (CI)</a>
         <a href="playground/benchmark.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-code mr-2 text-emerald-400"></i>Transparent harness</a>
-        <a href="benchmark_visualizer.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-satellite-dish mr-2 text-violet-400"></i>Telemetry visualizer</a>
+        
     </div>
 
-    <!-- Performance Metrics Dashboard -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <!-- Performance Metrics Dashboard — only filled by measured whole-job clocks -->
+    <div class="grid grid-cols-2 md:grid-cols-2 gap-4 mb-8">
         <div class="metric-card">
-            <div class="metric-value" id="metric-ops">0</div>
-            <div class="metric-label">Operations/sec</div>
+            <div class="metric-value" id="metric-ops">—</div>
+            <div class="metric-label">Measured calls/sec (when a connected probe reports one)</div>
         </div>
         <div class="metric-card">
-            <div class="metric-value" id="metric-latency">0ms</div>
-            <div class="metric-label">Avg Latency</div>
+            <div class="metric-value" id="metric-latency">—</div>
+            <div class="metric-label">Measured latency</div>
         </div>
-        <div class="metric-card">
-            <div class="metric-value" id="metric-heap">0</div>
+        <!-- Hidden: fake allocation / MB theatre removed until a real native window exists -->
+        <div class="metric-card" id="metric-heap-card" hidden>
+            <div class="metric-value" id="metric-heap">—</div>
             <div class="metric-label">Heap Allocations</div>
         </div>
-        <div class="metric-card">
-            <div class="metric-value" id="metric-memory">0MB</div>
+        <div class="metric-card" id="metric-memory-card" hidden>
+            <div class="metric-value" id="metric-memory">—</div>
             <div class="metric-label">Memory Usage</div>
         </div>
     </div>
@@ -153,6 +154,12 @@
         </button>
         <button class="tab-btn" data-tab="graph" onclick="switchTab('graph',this)" id="tab-graph-btn">
             <i class="fas fa-project-diagram mr-1.5"></i>Graph Operations
+        </button>
+        <button class="tab-btn" data-tab="vibescript" onclick="switchTab('vibescript',this)" id="tab-vibescript-btn">
+            <i class="fas fa-bolt mr-1.5 text-amber-400"></i>VibeScript WASM
+        </button>
+        <button class="tab-btn" data-tab="geometry" onclick="switchTab('geometry',this)" id="tab-geometry-btn">
+            <i class="fas fa-shapes mr-1.5 text-cyan-400"></i>Geometry & Renderer
         </button>
         <button class="tab-btn" data-tab="scientific" onclick="switchTab('scientific',this)" id="tab-scientific-btn">
             <i class="fas fa-flask mr-1.5"></i>Scientific Computing
@@ -167,7 +174,7 @@
             <i class="fas fa-database mr-1.5"></i>SPARQL Queries
         </button>
         <button class="tab-btn" data-tab="zeroheap" onclick="switchTab('zeroheap',this)" id="tab-zeroheap-btn">
-            <i class="fas fa-memory mr-1.5"></i>Zero-Heap Demo
+            <i class="fas fa-memory mr-1.5"></i>Zero-Heap Verification
         </button>
         <button class="tab-btn" data-tab="llm" onclick="switchTab('llm',this)" id="tab-llm-btn">
             <i class="fas fa-robot mr-1.5"></i>Browser LLM
@@ -198,8 +205,8 @@
                 Graph Operation Benchmarks
             </h3>
             <p class="text-white/60 text-sm mb-4">Core semantic graph operations — point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
-            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">
-                <i class="fas fa-info-circle mr-1"></i> Live demo - RDF graph loaded from NT/q42 and queried in-browser via <code>execute_ntriples_query</code> + <code>compile_query_to_json</code> (timings measured here). For multi-engine graph comparisons use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
+            <div class="mb-6 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-100/90">
+                <i class="fas fa-circle-check mr-1"></i> Live · RDF graph from NT/q42 · <code>execute_ntriples_query</code> + <code>compile_query_to_json</code> timed in this tab. Multi-engine CI suite lives under the Platform tab.
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -207,6 +214,7 @@
                     <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Dataset Profile</label>
                     <select id="graph-dataset" class="input-field" onchange="updateGraphDataset()">
                         <option value="schemaorg-30" selected>Schema.org 30.0 (NT + q42)</option>
+                        <option value="wordnet-31">Princeton WordNet 3.1 (q42)</option>
                         <option value="synthetic-10k">Synthetic 10K triples</option>
                         <option value="wikidata-sample">Wikidata Sample (100K)</option>
                     </select>
@@ -260,6 +268,244 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════
+         TAB — VIBESCRIPT WASM API BROWSER MEASUREMENT
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-vibescript" class="tab-pane">
+        <style>
+          #vibescript-present-hero .vibe-present-soft.is-rise {
+            animation: vibe-present-soft-rise 380ms ease-out both;
+          }
+          @keyframes vibe-present-soft-rise {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: none; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            #vibescript-present-hero .vibe-present-soft.is-rise { animation: none; }
+          }
+        </style>
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex items-center justify-between flex-wrap gap-4 mb-3">
+                <h3 class="text-xl font-semibold flex items-center gap-2">
+                    <i class="fas fa-bolt text-emerald-400"></i>
+                    VibeScript Present — purpose clocks
+                </h3>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                    <i class="fas fa-microchip"></i> checked · compile · run ×2
+                </span>
+            </div>
+            <p class="text-white/60 text-sm mb-6">
+                Soft-rise Present clocks: <strong>checked cell</strong>, <strong>CompiledCell.compile</strong>, and <strong>run() ×2</strong> on the same handle.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Binding footnote profile</label>
+                    <select id="vibescript-workload" class="input-field">
+                        <option value="bytecode" selected>CompiledCell.run (no re-decode)</option>
+                        <option value="source">Source: parse · compile · run</option>
+                        <option value="ast">Source: parse · check · AST eval</option>
+                        <option value="decode">Compat: decode_and_run</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Footnote sample size</label>
+                    <select id="vibescript-iterations" class="input-field">
+                        <option value="200">200 calls / sample</option>
+                        <option value="1000" selected>1,000 calls / sample</option>
+                        <option value="5000">5,000 calls / sample</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Footnote topology</label>
+                    <select id="vibescript-execution" class="input-field">
+                        <option value="single" selected>1 WASM instance (main thread)</option>
+                        <option value="workers-2">2 independent WASM workers</option>
+                        <option value="workers-4">4 independent WASM workers</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-6 p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white/70 flex items-center justify-between">
+                <span>Host:</span>
+                <span class="text-emerald-400 font-mono font-semibold" id="vibe-host-engine">WASM · purpose demos</span>
+            </div>
+
+            <div class="flex gap-3 mb-6">
+                <button onclick="runVibeScriptBenchmark()" id="btn-vibescript-run" class="spinbtn">
+                    <i class="fas fa-play mr-2"></i>Run purpose clocks
+                </button>
+                <button onclick="resetVibeScriptBenchmark()" class="spinbtn" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
+                    <i class="fas fa-redo mr-2"></i>Reset
+                </button>
+            </div>
+
+            <div class="code-block text-sm mb-4" id="vibescript-output">Ready to clock checked · compile · run ×2.</div>
+
+            <!-- Purpose demo scorecards (hero) — three Present jobs only -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="vibescript-present-hero">
+                <div class="glass-panel rounded-2xl p-4 text-center vibe-present-soft" data-job="checked">
+                    <div class="text-xs text-amber-400 font-semibold mb-1 uppercase tracking-wider">Checked cell</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-check">—</div>
+                    <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
+                </div>
+                <div class="glass-panel rounded-2xl p-4 text-center vibe-present-soft" data-job="compile">
+                    <div class="text-xs text-violet-300 font-semibold mb-1 uppercase tracking-wider">Compile once</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-compile">—</div>
+                    <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
+                </div>
+                <div class="glass-panel rounded-2xl p-4 text-center vibe-present-soft" data-job="run">
+                    <div class="text-xs text-cyan-400 font-semibold mb-1 uppercase tracking-wider">Run ×2</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="vibe-purpose-run">—</div>
+                    <div class="text-[11px] text-white/40 mt-1">whole-job p50</div>
+                </div>
+            </div>
+            <!-- Edit-without-host-rebuild clock stays quiet until Present — not a soft-rise hero card -->
+            <div hidden aria-hidden="true">
+                <span id="vibe-purpose-edit">—</span>
+            </div>
+
+            <!-- Binding footnote (not a language-speed crown) -->
+            <div class="glass-panel rounded-2xl p-4 mb-6 border border-white/10">
+                <h4 class="text-sm font-semibold mb-3 text-white/70"><i class="fas fa-link mr-1.5"></i>Binding footnote — CompiledCell.run</h4>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <div class="text-xs text-white/40 mb-1">run() p50</div>
+                        <div class="text-xl font-mono text-amber-300" id="vibe-metric-ops">—</div>
+                        <div class="text-[11px] text-white/35 mt-1" id="vibe-metric-p50">not a JS race</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-white/40 mb-1">compile setup</div>
+                        <div class="text-xl font-mono text-white/80" id="vibe-metric-setup">—</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-white/40 mb-1">samples</div>
+                        <div class="text-xl font-mono text-white/80" id="v8-metric-heap">—</div>
+                    </div>
+                </div>
+                <!-- retained ids for chart plumbing; not shown as memory-pressure theatre -->
+                <div hidden>
+                    <span id="v8-metric-ops"></span>
+                    <span id="v8-metric-p50"></span>
+                    <span id="vibe-metric-heap"></span>
+                    <span id="v8-metric-jitter"></span>
+                    <canvas id="vibescript-throughput-chart"></canvas>
+                    <canvas id="vibescript-latency-chart"></canvas>
+                    <canvas id="vibescript-heap-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TAB — COMPUTATIONAL GEOMETRY & VOLUMETRIC RENDERER
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-geometry" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex items-center justify-between flex-wrap gap-4 mb-3">
+                <h3 class="text-xl font-semibold flex items-center gap-2">
+                    <i class="fas fa-shapes text-cyan-400"></i>
+                    Computational Geometry & Renderer Scene Lab
+                </h3>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                    <i class="fas fa-cube"></i> Bowyer-Watson · Monotone Chain · BVH · Webizen SDF
+                </span>
+            </div>
+            <p class="text-white/60 text-sm mb-4">
+                Render a dense, deterministic scene first, then inspect the corresponding browser geometry model. The canvas draws every selected primitive (up to 3,000); its interactive Delaunay preview deliberately uses a bounded subset so it remains responsive. This is a browser Canvas scene preview, not evidence of native GPU performance.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Algorithm / Kernel</label>
+                    <select id="geometry-algorithm" class="input-field" onchange="switchGeometryModeFromSelect()">
+                        <option value="all" selected>All Geometry & Ray Kernels</option>
+                        <option value="delaunay">2D Delaunay Triangulation (Bowyer-Watson)</option>
+                        <option value="hull">2D Convex Hull (Monotone Chain)</option>
+                        <option value="bvh">BVH Ray Tracer (Longest-Axis Split + Möller-Trumbore)</option>
+                        <option value="volumetric">Webizen 10D Manifold Volumetric SDF</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Vertices / Point Cloud Size</label>
+                    <select id="geometry-count" class="input-field">
+                        <option value="100">100 points (Interactive Realtime)</option>
+                        <option value="300" selected>300 points (Medium)</option>
+                        <option value="1000">1,000 points (Heavy Mesh)</option>
+                        <option value="3000">3,000 points (Stress Test)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Model Topology</label>
+                    <select id="geometry-topology" class="input-field">
+                        <option value="single" selected>1 browser main-thread model</option>
+                        <option value="workers-2">2 independent geometry workers</option>
+                        <option value="workers-4">4 independent geometry workers</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Interactive Mode</label>
+                    <div class="flex gap-1.5 pt-0.5">
+                        <button type="button" class="spinbtn text-xs px-2.5 py-1.5" onclick="switchGeometryMode('delaunay')">Delaunay</button>
+                        <button type="button" class="spinbtn text-xs px-2.5 py-1.5" onclick="switchGeometryMode('hull')">Hull</button>
+                        <button type="button" class="spinbtn text-xs px-2.5 py-1.5" onclick="switchGeometryMode('bvh')">BVH</button>
+                        <button type="button" class="spinbtn text-xs px-2.5 py-1.5" onclick="switchGeometryMode('volumetric')">SDF 10D</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mb-6">
+                <button onclick="runGeometryBenchmark()" id="btn-geometry-run" class="spinbtn">
+                    <i class="fas fa-play mr-2"></i>Render Scene & Measure Model
+                </button>
+                <button onclick="reseedGeometryPoints()" class="spinbtn" style="background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.3); color: #60a5fa;">
+                    <i class="fas fa-wand-magic-sparkles mr-2"></i>Render Selected Scene
+                </button>
+                <button onclick="resetGeometryBenchmark()" class="spinbtn" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
+                    <i class="fas fa-redo mr-2"></i>Reset
+                </button>
+            </div>
+
+            <div class="code-block text-sm mb-4" id="geometry-output">Ready to render a selected geometry scene. The viewport is the primary output; model timing is secondary.</div>
+
+            <div class="mb-5 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-4 py-3 text-xs text-cyan-100/90">
+                <i class="fas fa-code-branch mr-1 text-cyan-300"></i>
+                <strong>Parallel-model boundary:</strong> worker mode runs separate deterministic browser geometry models concurrently and reports aggregate wall time plus the slowest worker time. The visible Canvas scene remains on the main thread; this is not a native renderer or GPU benchmark.
+            </div>
+
+            <!-- Live Interactive Geometry Canvas -->
+            <div class="glass-panel rounded-2xl p-4 mb-6">
+                <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                    <h4 class="text-sm font-semibold text-cyan-400 flex items-center gap-2">
+                        <i class="fas fa-draw-polygon"></i>
+                        <span>Dense Geometry Scene Preview</span>
+                        <span class="text-xs text-white/40 font-normal ml-2">Every selected primitive is drawn · click to add a solver point</span>
+                    </h4>
+                    <div class="text-xs text-white/50 font-mono" id="geom-canvas-stats">Mode: Delaunay 2D · Triangles: 0</div>
+                </div>
+                <canvas id="geometry-viz-canvas" style="width:100%;height:380px;max-height:400px;display:block;border-radius:12px;background:#0a0e17;border:1px solid rgba(255,255,255,0.08);"></canvas>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 text-center">
+                <div class="glass-panel rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-slate-500">Primitives drawn</div><div id="geom-scene-primitives" class="font-mono text-lg text-cyan-300">—</div></div>
+                <div class="glass-panel rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-slate-500">Solver vertices</div><div id="geom-scene-solver" class="font-mono text-lg text-emerald-300">—</div></div>
+                <div class="glass-panel rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-slate-500">Triangles shown</div><div id="geom-scene-triangles" class="font-mono text-lg text-amber-300">—</div></div>
+                <div class="glass-panel rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-slate-500">Renderer</div><div id="geom-scene-renderer" class="font-mono text-lg text-purple-300">Canvas 2D</div></div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="glass-panel rounded-2xl p-4">
+                    <h4 class="text-sm font-semibold mb-3 text-cyan-400"><i class="fas fa-chart-bar mr-1.5"></i>Measured Browser Model Throughput</h4>
+                    <canvas id="geometry-throughput-chart"></canvas>
+                </div>
+                <div class="glass-panel rounded-2xl p-4">
+                    <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-chart-line mr-1.5"></i>Cross-Size Measurements</h4>
+                    <canvas id="geometry-scaling-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
          TAB 2 — SCIENTIFIC COMPUTING
     ═══════════════════════════════════════════════════ -->
     <div id="tab-scientific" class="tab-pane">
@@ -269,7 +515,7 @@
                 Scientific Computing Primitives
             </h3>
             <p class="text-white/60 text-sm mb-4">Native scientific primitives integrated with the semantic graph — thermodynamics, ODE solvers, bioinformatics, and clinical risk calculations.</p>
-            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">Browser microbench demo — models expected engine classes; run native CLI for audited scientific primitive timings.</div>
+            <div class="mb-6 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-100/90">Browser scientific probes on this tab. Native CLI carries the audited primitive timings.</div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -402,9 +648,9 @@
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-th text-emerald-400"></i>
-                Q42 10D Tensor Benchmarking
+                Q42 10D Tensor Verification Boundary
             </h3>
-            <p class="text-white/60 text-sm mb-6">High-dimensional tensor operations using the QualiaQuin 48-byte structure — benchmarking 10D tensor performance with zero-heap compliance.</p>
+            <p class="text-white/60 text-sm mb-6">This browser page has no binding to the native 10D tensor kernels. It therefore does not invent throughput, latency, heap, or 48-byte compliance results. Select a proposed workload to record what a native benchmark must execute and verify.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -432,22 +678,22 @@
 
             <div class="flex gap-3 mb-6">
                 <button onclick="runTensorBenchmark()" id="btn-tensor-run" class="spinbtn">
-                    <i class="fas fa-play mr-2"></i>Run Benchmark
+                    <i class="fas fa-list-check mr-2"></i>Show Native Benchmark Scope
                 </button>
                 <button onclick="resetTensorBenchmark()" class="spinbtn" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
                     <i class="fas fa-redo mr-2"></i>Reset
                 </button>
             </div>
 
-            <div class="code-block text-sm mb-4" id="tensor-output">Ready to run tensor benchmark...</div>
+            <div class="code-block text-sm mb-4" id="tensor-output">No browser tensor benchmark is connected. Select a workload to view the required native evidence.</div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="glass-panel rounded-2xl p-4">
-                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Tensor Operation Performance</h4>
+                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Native Throughput Evidence</h4>
                     <canvas id="tensor-performance-chart"></canvas>
                 </div>
                 <div class="glass-panel rounded-2xl p-4">
-                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Dimension vs Performance</h4>
+                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Dimension Evidence</h4>
                     <canvas id="tensor-dimension-chart"></canvas>
                 </div>
             </div>
@@ -532,15 +778,15 @@ LIMIT 100</textarea>
     </div>
 
     <!-- ═══════════════════════════════════════════════════
-         TAB 6 — ZERO-HEAP DEMO
+         TAB 6 — ZERO-HEAP VERIFICATION BOUNDARY
     ═══════════════════════════════════════════════════ -->
     <div id="tab-zeroheap" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-memory text-emerald-400"></i>
-                Zero-Heap Compliance Demonstration
+                Zero-Heap Model & Native Verification Boundary
             </h3>
-            <p class="text-white/60 text-sm mb-6">Demonstrating QualiaDB's zero-heap compliance — all operations use fixed-size buffers and stack allocation, no dynamic memory allocation in hot paths.</p>
+            <p class="text-white/60 text-sm mb-6">The zero-heap contract applies to declared Tier-1 Rust hot paths, not to this browser page. A browser cannot inspect the native allocator, prove stack-only execution, or certify the Sentinel budget. Use this panel to inspect the selected verification scope; use the native zero-allocation tests for evidence.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -553,59 +799,55 @@ LIMIT 100</textarea>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Iterations</label>
-                    <input type="number" id="zeroheap-iterations" class="input-field" value="100000" min="1000" max="10000000">
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Verification Tier</label>
+                    <div class="p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white/70">Tier 1: caller-buffered hot path</div>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Buffer Size</label>
-                    <select id="zeroheap-buffer" class="input-field">
-                        <option value="small">Small (1KB)</option>
-                        <option value="medium">Medium (10KB)</option>
-                        <option value="large">Large (100KB)</option>
-                    </select>
+                    <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Evidence Source</label>
+                    <div class="p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white/70">Native <code>zero_heap_tests</code></div>
                 </div>
             </div>
 
             <div class="flex gap-3 mb-6">
                 <button onclick="runZeroHeapBenchmark()" id="btn-zeroheap-run" class="spinbtn">
-                    <i class="fas fa-play mr-2"></i>Run Benchmark
+                    <i class="fas fa-list-check mr-2"></i>Show Verification Scope
                 </button>
                 <button onclick="resetZeroHeapBenchmark()" class="spinbtn" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
                     <i class="fas fa-redo mr-2"></i>Reset
                 </button>
             </div>
 
-            <div class="code-block text-sm mb-4" id="zeroheap-output">Ready to run zero-heap benchmark...</div>
+            <div class="code-block text-sm mb-4" id="zeroheap-output">Select an operation to view its verification boundary. No browser allocation benchmark is available.</div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="glass-panel rounded-2xl p-4">
-                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Heap Allocation Tracking</h4>
+                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Browser Allocation Evidence</h4>
                     <canvas id="zeroheap-allocation-chart"></canvas>
                 </div>
                 <div class="glass-panel rounded-2xl p-4">
-                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Performance Comparison</h4>
+                    <h4 class="text-sm font-semibold mb-3 text-emerald-400">Verification Scope</h4>
                     <canvas id="zeroheap-performance-chart"></canvas>
                 </div>
             </div>
 
             <div class="glass-panel rounded-2xl p-4 mt-6">
-                <h4 class="text-sm font-semibold mb-3 text-emerald-400">Zero-Heap Compliance Status</h4>
+                <h4 class="text-sm font-semibold mb-3 text-emerald-400">What must be verified natively</h4>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-alloc">✓</div>
-                        <div class="text-xs text-white/60">No Dynamic Alloc</div>
+                        <div class="text-2xl font-bold text-amber-300" id="zeroheap-status-alloc">—</div>
+                        <div class="text-xs text-white/60">Allocation counter</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-stack">✓</div>
-                        <div class="text-xs text-white/60">Stack-Only Buffers</div>
+                        <div class="text-2xl font-bold text-amber-300" id="zeroheap-status-stack">—</div>
+                        <div class="text-xs text-white/60">Caller-buffered path</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-arena">✓</div>
-                        <div class="text-xs text-white/60">Arena Allocation</div>
+                        <div class="text-2xl font-bold text-amber-300" id="zeroheap-status-arena">—</div>
+                        <div class="text-xs text-white/60">Cold-builder boundary</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-42mb">✓</div>
-                        <div class="text-xs text-white/60">&lt;42MB Sentinel</div>
+                        <div class="text-2xl font-bold text-amber-300" id="zeroheap-status-42mb">—</div>
+                        <div class="text-xs text-white/60">42 MB Sentinel budget</div>
                     </div>
                 </div>
             </div>
@@ -625,21 +867,25 @@ LIMIT 100</textarea>
 
     <!-- Footer -->
     <div class="text-center text-white/50 text-sm mt-12">
-        <p>QualiaDB v0.0.39 • Zero-Heap Semantic Graph Engine • Built for the Edge</p>
+        <p data-release-line="0.0.40" data-tip-branch="0.0.40.1">QualiaDB 0.0.40 line · tip branch 0.0.40.1 · VibeScript CompiledCell binding</p>
     </div>
 </div>
 
 <script type="module">
     import { fetchJson, renderPlatformSuite } from './js/benchmark-shared.js';
     import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive, runSparqlLive, runSciLive, initializeGraphBenchmarkUi } from './js/benchmark-live.js';
-    import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.39-wasm-retry1';
+    import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.40-wasm-retry1';
+    import { runVibeScriptVsV8Live } from './js/vibescript-bench.js';
+    import { runGeometryLive, GeometryViewer } from './js/geometry-bench.js';
+    import { runGeometryWithTopology } from './js/geometry-parallel-bench.js';
 
     // ── Live (real-WASM) Spatial & Graph tabs + interactive viewers ──
-    let obj3d = null, graphViz = null, sparqlGraphViz = null;
+    let obj3d = null, graphViz = null, sparqlGraphViz = null, geomViewer = null;
     function ensureViewers() {
         if (!obj3d) { const c = document.getElementById('spatial-3d-canvas'); if (c) obj3d = new Object3DViewer(c); }
         if (!graphViz) { const c = document.getElementById('graph-viz-canvas'); if (c) graphViz = new GraphViewer(c); }
         if (!sparqlGraphViz) { const c = document.getElementById('sparql-graph-canvas'); if (c) sparqlGraphViz = new GraphViewer(c); }
+        ensureGeometryViewer();
     }
     ensureViewers();
     const shapeSel = document.getElementById('spatial-shape');
@@ -770,7 +1016,7 @@ LIMIT 100</textarea>
         window.updateMetrics?.(0, 0, 0, 0);
     };
     window.updateGraphDataset = function () {
-        initializeGraphBenchmarkUi().catch((err) => {
+        return initializeGraphBenchmarkUi().catch((err) => {
             const meta = document.getElementById('graph-dataset-meta');
             if (meta) meta.textContent = `Dataset metadata unavailable: ${err.message}`;
         });
@@ -832,6 +1078,248 @@ LIMIT 100</textarea>
         sparqlGraphViz?.setData({ nodes: [], edges: [] });
         const inspector = document.getElementById('sparql-node-viewer');
         if (inspector) inspector.innerHTML = '<div class="text-sm text-white/45">Run a SPARQL benchmark to inspect the measured query graph.</div>';
+        window.updateMetrics?.(0, 0, 0, 0);
+    };
+
+    // ── VibeScript WASM browser measurement controller ───────────────────
+    window.runVibeScriptBenchmark = async function () {
+        const btn = document.getElementById('btn-vibescript-run');
+        const output = document.getElementById('vibescript-output');
+        if (btn) btn.disabled = true;
+        if (output) output.textContent = 'Clocking checked · compile · run ×2…';
+
+        try {
+            const workload = document.getElementById('vibescript-workload')?.value || 'bytecode';
+            const iterations = parseInt(document.getElementById('vibescript-iterations')?.value, 10) || 1000;
+            const execution = document.getElementById('vibescript-execution')?.value || 'single';
+
+            const res = await runVibeScriptVsV8Live(workload, iterations, execution);
+            const hostEngine = document.getElementById('vibe-host-engine');
+            if (hostEngine) hostEngine.textContent = res.executionMode;
+
+            const fmt = (m) => (m == null ? '—' : `${m.p50.toFixed(3)} ms`);
+            const setTxt = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+            const reduced = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } })();
+            const riseOrder = [
+                ['vibe-purpose-check', fmt(res.purposes?.checked), 'checked'],
+                ['vibe-purpose-compile', fmt(res.purposes?.compile), 'compile'],
+                ['vibe-purpose-run', fmt(res.purposes?.run), 'run'],
+            ];
+            const hero = document.getElementById('vibescript-present-hero');
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            for (let i = 0; i < riseOrder.length; i++) {
+                const [id, value, job] = riseOrder[i];
+                setTxt(id, value);
+                const card = hero?.querySelector(`[data-job="${job}"]`);
+                if (card && !reduced) {
+                    card.classList.remove('is-rise');
+                    void card.offsetWidth;
+                    card.classList.add('is-rise');
+                }
+                if (!reduced && i < riseOrder.length - 1) await sleep(180);
+            }
+            // Edit clock stays quiet — measured in harness, not a Present soft-rise hero card.
+            setTxt('vibe-purpose-edit', '—');
+
+            const binding = res.binding?.run;
+            if (binding) {
+                setTxt('vibe-metric-ops', `${binding.p50.toFixed(4)} ms`);
+                setTxt('vibe-metric-p50', `p95 ${binding.p95.toFixed(4)} ms · labelled footnote only`);
+            } else {
+                setTxt('vibe-metric-ops', '—');
+                setTxt('vibe-metric-p50', 'not a JS race');
+            }
+            setTxt('vibe-metric-setup', `${Number(res.setupMs || 0).toFixed(3)} ms`);
+            setTxt('v8-metric-heap', `${res.samples} samples`);
+
+            // Header: whole-job clocks only — never fake 0 alloc / 24 MB.
+            const purposeP50 = res.purposes?.checked?.p50;
+            if (window.updateMetrics && purposeP50 != null) {
+                window.updateMetrics(null, purposeP50.toFixed(3), null, null);
+            }
+
+            output.textContent =
+`=== VibeScript purpose clocks ===
+Checked cell:              ${fmt(res.purposes?.checked)} (p95 ${res.purposes?.checked?.p95?.toFixed(3) ?? '—'} ms)
+Compile once:              ${fmt(res.purposes?.compile)} (p95 ${res.purposes?.compile?.p95?.toFixed(3) ?? '—'} ms)
+Run ×2:                    ${fmt(res.purposes?.run)} (p95 ${res.purposes?.run?.p95?.toFixed(3) ?? '—'} ms)
+
+Binding footnote:          ${res.workloadLabel}
+Footnote p50:              ${binding ? binding.p50.toFixed(6) + ' ms/call' : '—'}
+Compile / setup:           ${Number(res.setupMs || 0).toFixed(3)} ms (outside timed samples)
+Execution mode:            ${res.executionMode}
+${res.note}`;
+        } catch (e) {
+            if (output) output.textContent = 'Error: ' + (e?.message || e);
+        }
+        if (btn) btn.disabled = false;
+    };
+
+    window.resetVibeScriptBenchmark = function () {
+        const output = document.getElementById('vibescript-output');
+        if (output) output.textContent = 'Ready to clock checked · compile · run ×2.';
+        ['vibe-purpose-check','vibe-purpose-compile','vibe-purpose-run','vibe-purpose-edit','vibe-metric-ops','vibe-metric-setup','v8-metric-heap'].forEach((id) => {
+            const el = document.getElementById(id); if (el) el.textContent = '—';
+        });
+        const vP50 = document.getElementById('vibe-metric-p50'); if (vP50) vP50.textContent = 'not a JS race';
+        window.updateMetrics?.(null, null, null, null);
+    };
+
+    // ── Computational Geometry & Renderer Controller ───────────────────────
+    function ensureGeometryViewer() {
+        if (!geomViewer) {
+            const c = document.getElementById('geometry-viz-canvas');
+            if (c) {
+                c.width = c.clientWidth || 800;
+                c.height = 380;
+                geomViewer = new GeometryViewer(c);
+                updateGeomCanvasStats();
+            }
+        }
+    }
+
+    function updateGeomCanvasStats() {
+        const statsEl = document.getElementById('geom-canvas-stats');
+        if (statsEl && geomViewer) {
+            const scene = geomViewer.sceneSummary();
+            statsEl.textContent = `Mode: ${geomViewer.mode.toUpperCase()} · Drawn: ${scene.displayed.toLocaleString()} · Solver: ${scene.solverPoints} · Triangles: ${scene.triangles}`;
+            const primitives = document.getElementById('geom-scene-primitives');
+            const solver = document.getElementById('geom-scene-solver');
+            const triangles = document.getElementById('geom-scene-triangles');
+            const renderer = document.getElementById('geom-scene-renderer');
+            if (primitives) primitives.textContent = scene.displayed.toLocaleString();
+            if (solver) solver.textContent = scene.solverPoints.toLocaleString();
+            if (triangles) triangles.textContent = scene.triangles.toLocaleString();
+            if (renderer) renderer.textContent = geomViewer.mode === 'volumetric' ? 'SDF Canvas' : 'Canvas 2D';
+        }
+    }
+
+    let geomAnimId = null;
+    function runGeomAnimationLoop() {
+        if (geomViewer && geomViewer.mode === 'volumetric') {
+            geomViewer.time += 0.04;
+            geomViewer.render();
+            geomAnimId = requestAnimationFrame(runGeomAnimationLoop);
+        } else {
+            if (geomAnimId) {
+                cancelAnimationFrame(geomAnimId);
+                geomAnimId = null;
+            }
+        }
+    }
+
+    window.switchGeometryMode = function (mode) {
+        ensureGeometryViewer();
+        if (geomViewer) {
+            geomViewer.setMode(mode);
+            updateGeomCanvasStats();
+            if (mode === 'volumetric') {
+                if (!geomAnimId) geomAnimId = requestAnimationFrame(runGeomAnimationLoop);
+            } else {
+                if (geomAnimId) {
+                    cancelAnimationFrame(geomAnimId);
+                    geomAnimId = null;
+                }
+                geomViewer.render();
+            }
+        }
+        const sel = document.getElementById('geometry-algorithm');
+        if (sel && ['delaunay', 'hull', 'bvh', 'volumetric'].includes(mode)) {
+            sel.value = mode;
+        }
+    };
+
+    window.switchGeometryModeFromSelect = function () {
+        const sel = document.getElementById('geometry-algorithm');
+        if (!sel) return;
+        const val = sel.value;
+        if (['delaunay', 'hull', 'bvh', 'volumetric'].includes(val)) {
+            window.switchGeometryMode(val);
+        }
+    };
+
+    window.reseedGeometryPoints = function () {
+        ensureGeometryViewer();
+        if (geomViewer) {
+            const count = parseInt(document.getElementById('geometry-count')?.value, 10) || 100;
+            geomViewer.generatePoints(count);
+            geomViewer.render();
+            updateGeomCanvasStats();
+        }
+    };
+
+    window.runGeometryBenchmark = async function () {
+        ensureGeometryViewer();
+        const btn = document.getElementById('btn-geometry-run');
+        const output = document.getElementById('geometry-output');
+        if (btn) btn.disabled = true;
+        if (output) output.textContent = 'Executing Computational Geometry & Renderer benchmark...';
+
+        try {
+            const algorithm = document.getElementById('geometry-algorithm')?.value || 'all';
+            const count = parseInt(document.getElementById('geometry-count')?.value, 10) || 300;
+            const topology = document.getElementById('geometry-topology')?.value || 'single';
+
+            if (geomViewer) {
+                geomViewer.generatePoints(count);
+                if (algorithm !== 'all') geomViewer.setMode(algorithm);
+                geomViewer.render();
+                updateGeomCanvasStats();
+            }
+
+            const res = await runGeometryWithTopology(algorithm, count, topology);
+
+            let extra = '';
+            if (res.summary.triangles !== undefined) extra += `Triangles Generated: ${res.summary.triangles.toLocaleString()}\n`;
+            if (res.summary.hullVertices !== undefined) extra += `Convex Hull Vertices: ${res.summary.hullVertices.toLocaleString()}\n`;
+            if (res.summary.rayHits !== undefined) extra += `BVH Ray Hits: ${res.summary.rayHits.toLocaleString()} / 5,000 rays\n`;
+            if (res.summary.volumetricSamples !== undefined) extra += `SDF Field: ${res.summary.volumetricSamples.toLocaleString()} samples · ${res.summary.volumetricSurfaceSamples.toLocaleString()} surface hits\n`;
+
+            output.textContent =
+`=== Browser Geometry Scene + Model Measurement ===
+Algorithm:   ${algorithm.toUpperCase()}
+Scene:       ${geomViewer?.sceneSummary().displayed.toLocaleString() || count.toLocaleString()} rendered primitives
+Solver set:  ${geomViewer?.sceneSummary().solverPoints.toLocaleString() || '—'} bounded vertices for interactive Delaunay preview
+Topology:    ${res.executionMode}
+Throughput:  ${res.opsPerSec.toLocaleString()} model-items/sec
+Mean Time:   ${res.meanMs.toFixed(3)} ms${res.aggregate ? ` aggregate wall p50: ${res.aggregate.wall.p50.toFixed(3)} ms | p95: ${res.aggregate.wall.p95.toFixed(3)} ms\nSlowest:     worker kernel p50: ${res.aggregate.slowestWorkerKernel.p50.toFixed(3)} ms | setup: ${res.aggregate.setupMs.toFixed(3)} ms` : ''}
+${extra}Boundary:    Browser Canvas model; not a native renderer, GPU, or zero-allocation result.`;
+
+            if (window.updateMetrics) {
+                window.updateMetrics(res.opsPerSec, res.meanMs.toFixed(3), 0, 32);
+            }
+
+            const ch = window.benchCharts;
+            if (ch?.geometryThroughput) {
+                ch.geometryThroughput.data.labels = [algorithm.toUpperCase()];
+                ch.geometryThroughput.data.datasets[0].label = 'Measured browser model ops/sec';
+                ch.geometryThroughput.data.datasets[0].data = [res.opsPerSec];
+                ch.geometryThroughput.update();
+            }
+            if (ch?.geometryScaling) {
+                ch.geometryScaling.data.labels = [];
+                ch.geometryScaling.data.datasets[0].label = 'No cross-size measurement in this run';
+                ch.geometryScaling.data.datasets[0].data = [];
+                ch.geometryScaling.update();
+            }
+        } catch (e) {
+            if (output) output.textContent = 'Error: ' + (e?.message || e);
+        }
+        if (btn) btn.disabled = false;
+    };
+
+    window.resetGeometryBenchmark = function () {
+        const output = document.getElementById('geometry-output');
+        if (output) output.textContent = 'Ready to execute Computational Geometry & Renderer benchmark...';
+        const ch = window.benchCharts;
+        if (ch?.geometryThroughput) {
+            ch.geometryThroughput.data.datasets[0].data = [0, 0, 0, 0];
+            ch.geometryThroughput.update();
+        }
+        if (ch?.geometryScaling) {
+            ch.geometryScaling.data.datasets[0].data = [0, 0, 0, 0, 0];
+            ch.geometryScaling.update();
+        }
         window.updateMetrics?.(0, 0, 0, 0);
     };
 
@@ -995,6 +1483,9 @@ LIMIT 100</textarea>
     // Browser LLM tab: lazy-load the embedded benchmark only when first opened, so the LLM WASM
     // engine + comparison CDNs (WebLLM / Transformers.js) stay out of the hub's initial load.
     window.addEventListener('benchtab', (e) => {
+        if (e.detail?.tabId === 'geometry') {
+            window.switchGeometryMode?.(document.getElementById('geometry-algorithm')?.value || 'delaunay');
+        }
         if (e.detail?.tabId === 'llm') {
             const f = document.getElementById('llm-bench-frame');
             if (f && !f.getAttribute('src')) f.setAttribute('src', 'benchmarks.html');
@@ -1138,7 +1629,7 @@ LIMIT 100</textarea>
             data: {
                 labels: ['Multiply', 'Contract', 'Decompose', 'Transform'],
                 datasets: [{
-                    label: 'Ops/sec',
+                    label: 'No browser measurement',
                     data: [0, 0, 0, 0],
                     backgroundColor: 'rgba(52, 211, 153, 0.5)',
                     borderColor: 'rgba(52, 211, 153, 1)',
@@ -1153,7 +1644,7 @@ LIMIT 100</textarea>
             data: {
                 labels: ['2D', '4D', '6D', '8D', '10D'],
                 datasets: [{
-                    label: 'Time (ms)',
+                    label: 'No browser measurement',
                     data: [0, 0, 0, 0, 0],
                     borderColor: 'rgba(59, 130, 246, 1)',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -1196,13 +1687,14 @@ LIMIT 100</textarea>
             options: chartOptions
         });
 
-        // Zero-Heap charts
+        // Zero-Heap verification-boundary charts. These are deliberately not
+        // allocation or performance measurements from the browser runtime.
         charts.zeroheapAllocation = new Chart(document.getElementById('zeroheap-allocation-chart'), {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Heap Bytes',
+                    label: 'No browser allocation metric',
                     data: [],
                     borderColor: 'rgba(239, 68, 68, 1)',
                     backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -1216,9 +1708,9 @@ LIMIT 100</textarea>
         charts.zeroheapPerformance = new Chart(document.getElementById('zeroheap-performance-chart'), {
             type: 'bar',
             data: {
-                labels: ['Quin Pack', 'Hash', 'Bit Extract', 'Arena'],
+                labels: ['Hot-path counter', 'Caller buffers', 'Cold-builder boundary', 'Sentinel budget'],
                 datasets: [{
-                    label: 'Ops/sec',
+                    label: 'Native verification required',
                     data: [0, 0, 0, 0],
                     backgroundColor: 'rgba(52, 211, 153, 0.5)',
                     borderColor: 'rgba(52, 211, 153, 1)',
@@ -1227,14 +1719,60 @@ LIMIT 100</textarea>
             },
             options: chartOptions
         });
+
+        // VibeScript purpose clocks no longer crown unequal WASM-vs-JS ops/sec charts.
+        charts.vibescriptThroughput = null;
+        charts.vibescriptLatency = null;
+        charts.vibescriptHeap = null;
+
+
+        // Computational Geometry & Renderer charts
+        const gThEl = document.getElementById('geometry-throughput-chart');
+        if (gThEl) {
+            charts.geometryThroughput = new Chart(gThEl, {
+                type: 'bar',
+                data: {
+                    labels: ['Delaunay 2D', 'Convex Hull', 'BVH Ray Trace', 'Volumetric SDF'],
+                    datasets: [{
+                        label: 'Ops/sec',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: 'rgba(6, 182, 212, 0.5)',
+                        borderColor: 'rgba(6, 182, 212, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: chartOptions
+            });
+        }
+
+        const gScEl = document.getElementById('geometry-scaling-chart');
+        if (gScEl) {
+            charts.geometryScaling = new Chart(gScEl, {
+                type: 'line',
+                data: {
+                    labels: ['50 pts', '100 pts', '300 pts', '500 pts', '1000 pts'],
+                    datasets: [{
+                        label: 'Execution Time (ms)',
+                        data: [0, 0, 0, 0, 0],
+                        borderColor: 'rgba(52, 211, 153, 1)',
+                        backgroundColor: 'rgba(52, 211, 153, 0.12)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: chartOptions
+            });
+        }
     }
 
-    // Simulated benchmark functions (in production, these would call actual WASM functions)
+    // Shared scorecards are fed only by connected, measured browser probes.
     function updateMetrics(ops, latency, heap, memory) {
-        document.getElementById('metric-ops').textContent = ops.toLocaleString();
-        document.getElementById('metric-latency').textContent = latency + 'ms';
-        document.getElementById('metric-heap').textContent = heap.toLocaleString();
-        document.getElementById('metric-memory').textContent = memory + 'MB';
+        const opsEl = document.getElementById('metric-ops');
+        const latEl = document.getElementById('metric-latency');
+        if (opsEl) opsEl.textContent = (ops == null || ops === '') ? '—' : Number(ops).toLocaleString();
+        if (latEl) latEl.textContent = (latency == null || latency === '') ? '—' : (String(latency).endsWith('ms') ? latency : latency + 'ms');
+        // Heap / MB cards stay hidden: browser probes must not invent allocation theatre.
+        void heap; void memory;
     }
 
     // Graph benchmark
@@ -1257,57 +1795,22 @@ LIMIT 100</textarea>
     // (geometric_algebra_operation) and defined in the module script above via
     // js/benchmark-live.js. The previous simulated (hardcoded) versions were removed.
 
-    // Tensor benchmark
+    // Tensor verification scope. Native tensor kernels are not bound into this
+    // page, so no browser-generated number is presented as a benchmark.
     function runTensorBenchmark() {
-        const btn = document.getElementById('btn-tensor-run');
         const output = document.getElementById('tensor-output');
-        btn.disabled = true;
-        output.textContent = 'Running tensor benchmark...';
-
-        setTimeout(() => {
-            const operation = document.getElementById('tensor-operation').value;
-            const size = document.getElementById('tensor-size').value;
-            const dims = parseInt(document.getElementById('tensor-dims').value);
-
-            // Simulated results
-            const results = {
-                multiply: { ops: 4500000, time: 0.22 },
-                contract: { ops: 3800000, time: 0.26 },
-                decompose: { ops: 2100000, time: 0.48 },
-                transform: { ops: 5200000, time: 0.19 }
-            };
-
-            const result = results[operation];
-            const sizeMultiplier = size === 'small' ? 1.0 : size === 'medium' ? 0.1 : 0.01;
-            const adjustedOps = Math.floor(result.ops * sizeMultiplier);
-            const dimMultiplier = dims / 10;
-            const adjustedTime = result.time * dimMultiplier;
-
-            updateMetrics(adjustedOps, adjustedTime, 0, 40);
-
-            // Update charts
-            charts.tensorPerformance.data.datasets[0].data = [
-                results.multiply.ops,
-                results.contract.ops,
-                results.decompose.ops,
-                results.transform.ops
-            ];
-            charts.tensorPerformance.update();
-
-            const dimData = [];
-            for (let i = 2; i <= 10; i += 2) {
-                dimData.push(result.time * (i / 10));
-            }
-            charts.tensorDimension.data.datasets[0].data = dimData;
-            charts.tensorDimension.update();
-
-            output.textContent = `✓ ${operation.toUpperCase()} benchmark complete\nSize: ${size.toUpperCase()}\nDimensions: ${dims}D\nOps/sec: ${adjustedOps.toLocaleString()}\nTime: ${adjustedTime.toFixed(2)}ms\nHeap allocations: 0\n48-byte Quin compliance: ✓`;
-            btn.disabled = false;
-        }, 2500);
+        const operation = document.getElementById('tensor-operation').value;
+        const size = document.getElementById('tensor-size').value;
+        const dims = parseInt(document.getElementById('tensor-dims').value, 10);
+        output.textContent = `=== Native Tensor Benchmark Required ===\nOperation:         ${operation}\nRequested profile: ${size} · ${dims} dimensions\n\nA valid run must bind and execute the corresponding native tensor kernel, publish input shape and seed, record repetitions and percentile timing, and verify output against its oracle.\n\nThis page ran no tensor kernel and reports no throughput, allocation, or 48-byte-compliance figure.`;
+        charts.tensorPerformance.data.datasets[0].data = [0, 0, 0, 0];
+        charts.tensorPerformance.update();
+        charts.tensorDimension.data.datasets[0].data = [0, 0, 0, 0, 0];
+        charts.tensorDimension.update();
     }
 
     function resetTensorBenchmark() {
-        document.getElementById('tensor-output').textContent = 'Ready to run tensor benchmark...';
+        document.getElementById('tensor-output').textContent = 'No browser tensor benchmark is connected. Select a workload to view the required native evidence.';
         charts.tensorPerformance.data.datasets[0].data = [0, 0, 0, 0];
         charts.tensorPerformance.update();
         charts.tensorDimension.data.datasets[0].data = [0, 0, 0, 0, 0];
@@ -1368,57 +1871,28 @@ LIMIT 100</textarea>
         updateMetrics(0, 0, 0, 0);
     }
 
-    // Zero-Heap benchmark
+    // Zero-Heap verification scope. It makes no measurement claim: browser
+    // allocations cannot establish the Rust hot-path allocation contract.
     function runZeroHeapBenchmark() {
-        const btn = document.getElementById('btn-zeroheap-run');
         const output = document.getElementById('zeroheap-output');
-        btn.disabled = true;
-        output.textContent = 'Running zero-heap benchmark...';
+        const operation = document.getElementById('zeroheap-operation').value;
+        const details = {
+            'quin-packing': 'A 48-byte NQuin construction path must be checked with the native allocation counter and caller-buffered output contract.',
+            'hash-computation': 'URI hashing must be checked in the native hot path: compile-time q_hash use and no runtime string allocation.',
+            'bit-extraction': 'Bit-field extraction must be checked in the native hot path with the allocation counter enabled.',
+            'arena-allocation': 'Arena-backed construction is Tier 2: bounded cold allocation is permitted, but the public output remains caller-buffered and within the Sentinel budget.'
+        };
+        output.textContent = `=== Native Verification Required ===\nSelected scope:    ${operation}\n${details[operation]}\n\nThis browser page did not run an allocation or throughput benchmark.\nBrowser JavaScript/WASM memory behaviour is not evidence for Rust allocator behaviour.\nRun the native zero-allocation tests and the relevant kernel benchmark to produce an auditable result.`;
 
-        setTimeout(() => {
-            const operation = document.getElementById('zeroheap-operation').value;
-            const iterations = parseInt(document.getElementById('zeroheap-iterations').value);
-            const buffer = document.getElementById('zeroheap-buffer').value;
-
-            // Simulated results
-            const results = {
-                'quin-packing': { ops: 25000000, time: 0.04 },
-                'hash-computation': { ops: 18000000, time: 0.055 },
-                'bit-extraction': { ops: 32000000, time: 0.031 },
-                'arena-allocation': { ops: 15000000, time: 0.067 }
-            };
-
-            const result = results[operation];
-            const adjustedOps = Math.floor(result.ops * (iterations / 100000));
-            updateMetrics(adjustedOps, result.time, 0, 12);
-
-            // Update charts
-            charts.zeroheapPerformance.data.datasets[0].data = [
-                results['quin-packing'].ops,
-                results['hash-computation'].ops,
-                results['bit-extraction'].ops,
-                results['arena-allocation'].ops
-            ];
-            charts.zeroheapPerformance.update();
-
-            // Simulate zero heap allocation over time
-            const heapData = [];
-            const labels = [];
-            for (let i = 0; i < 20; i++) {
-                labels.push(i * 0.5 + 's');
-                heapData.push(0); // Always zero for zero-heap compliance
-            }
-            charts.zeroheapAllocation.data.labels = labels;
-            charts.zeroheapAllocation.data.datasets[0].data = heapData;
-            charts.zeroheapAllocation.update();
-
-            output.textContent = `✓ ${operation.toUpperCase()} benchmark complete\nIterations: ${iterations.toLocaleString()}\nBuffer: ${buffer.toUpperCase()}\nOps/sec: ${adjustedOps.toLocaleString()}\nTime: ${result.time}ms\nHeap allocations: 0 ✓\nStack buffers: ✓\nArena allocation: ✓\n42MB sentinel: ✓`;
-            btn.disabled = false;
-        }, 2200);
+        charts.zeroheapPerformance.data.datasets[0].data = [0, 0, 0, 0];
+        charts.zeroheapPerformance.update();
+        charts.zeroheapAllocation.data.labels = [];
+        charts.zeroheapAllocation.data.datasets[0].data = [];
+        charts.zeroheapAllocation.update();
     }
 
     function resetZeroHeapBenchmark() {
-        document.getElementById('zeroheap-output').textContent = 'Ready to run zero-heap benchmark...';
+        document.getElementById('zeroheap-output').textContent = 'Select an operation to view its verification boundary. No browser allocation benchmark is available.';
         charts.zeroheapPerformance.data.datasets[0].data = [0, 0, 0, 0];
         charts.zeroheapPerformance.update();
         charts.zeroheapAllocation.data.labels = [];

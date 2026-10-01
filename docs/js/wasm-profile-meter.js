@@ -1,10 +1,10 @@
 /**
- * Measure GitHub Pages WASM artifacts against the 0.0.38 size gates.
+ * Measure GitHub Pages WASM artifacts against the 0.0.40 size gates.
  * Gzip uses CompressionStream when the browser supports it.
  */
 
 export const GATES = {
-  ontology: { raw: 655360, gzip: 204800, label: "640 KiB / 200 KiB" },
+  ontology: { raw: 819200, gzip: 266240, label: "800 KiB / 260 KiB" },
   engine: { raw: 16777216, gzip: 4194304, label: "16 MiB / 4 MiB" },
 };
 

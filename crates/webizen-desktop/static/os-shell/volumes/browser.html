@@ -6,76 +6,35 @@
 <title>Browser · Webizen</title>
 <link rel="stylesheet" href="/volumes.css"/>
 <style>
-html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,sans-serif}
+html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,sans-serif}.browser-controls{display:grid;grid-template-columns:auto auto auto minmax(12rem,1fr) auto auto;gap:.5rem;align-items:center}.address{min-width:0;width:100%}.page-frame{width:100%;height:min(68vh,54rem);border:1px solid #334155;border-radius:.65rem;background:#fff}.browser-home{min-height:min(55vh,38rem);padding:clamp(1rem,4vw,3rem);border:1px solid #334155;border-radius:.65rem;background:#0b1322}.quick-links{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:1.25rem}.browser-note{margin:.85rem 0 0;color:#9fb0c2;font-size:.9rem}@media(max-width:45rem){.browser-controls{grid-template-columns:auto auto auto 1fr}.browser-controls button:last-child,.browser-controls button:nth-last-child(2){grid-column:span 2}}
 </style>
 </head>
 <body data-volume="browser">
-<a class="skip" href="#url">Skip to address bar</a>
-<nav class="cont-strip" aria-label="Continuity">
-  <button type="button">who</button><span class="sep" aria-hidden="true"></span>
-  <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
-  <button type="button" aria-current="true">handle</button><span class="sep" aria-hidden="true"></span>
-  <button type="button">tool</button>
-  <span class="hint">Reach / World</span>
-</nav>
-<header class="vol-head">
-  <h1><span class="glyph" aria-hidden="true">🌐</span> Browser <span class="pill live">Live</span></h1>
-  <p class="lead">webizen://home findable. URL bar Live. Native renderer attaches in Desktop host — not agent-only.</p>
-</header>
-<section class="panel rise" aria-label="Browser" style="max-width:1080px">
-  <div class="ph"><span class="mark" aria-hidden="true"></span><b>World</b><span class="pill live">Live chrome</span></div>
-  <div class="pb">
-    <div class="url-bar">
-      <button type="button" id="btn-back" title="Back" aria-label="Back">←</button>
-      <button type="button" id="btn-fwd" title="Forward" aria-label="Forward">→</button>
-      <button type="button" id="btn-home" title="webizen://home">⌂</button>
-      <label class="sr-only" for="url">Address</label>
-      <input id="url" value="webizen://home" spellcheck="false" autocomplete="off"/>
-      <button type="button" class="primary" id="btn-go">Go</button>
-    </div>
-    <div class="row" style="margin-top:.65rem">
-      <button type="button" class="chip" data-go="webizen://home" aria-pressed="true">webizen://home</button>
-      <button type="button" class="chip" data-go="webizen://directory">Directory</button>
-      <button type="button" class="chip" data-go="https://">https://…</button>
-    </div>
-    <div class="viewport" id="viewport" role="region" aria-label="Page viewport">
-      <strong>webizen://home</strong>
-      Findable home. Native webview attach is Desktop-host Live; this volume is the chrome.
-      <span class="pill planned" style="margin-top:.65rem;display:inline-block">webview Planned attach</span>
-    </div>
-    <p id="status" class="status" role="status" aria-live="polite"></p>
-    <div class="note"><strong>Volume:</strong> <code>/volumes/browser</code>. <code>webizen://</code> and https when host binds. Native host chrome — bare volume.</div>
-  </div>
-</section>
+<a class="skip" href="#address">Skip to address bar</a>
+<nav class="cont-strip" aria-label="Continuity"><button type="button">who</button><span class="sep" aria-hidden="true"></span><button type="button">claim</button><span class="sep" aria-hidden="true"></span><button type="button" aria-current="true">handle</button><span class="sep" aria-hidden="true"></span><button type="button">tool</button><span class="hint">Reach / World</span></nav>
+<header class="vol-head"><h1><span class="glyph" aria-hidden="true">🌐</span> Browser <span class="pill live">Live</span></h1><p class="lead">Private, direct browsing from the desktop shell.</p></header>
+<section class="panel rise" aria-label="Browser" style="max-width:1080px"><div class="ph"><span class="mark" aria-hidden="true"></span><b>World</b><span class="pill live" id="status">Ready</span></div><div class="pb">
+  <div class="browser-controls"><button type="button" id="back" aria-label="Back">←</button><button type="button" id="forward" aria-label="Forward">→</button><button type="button" id="reload" aria-label="Reload">↻</button><input class="address" id="address" type="text" inputmode="url" autocomplete="url" spellcheck="false" aria-label="Website address" placeholder="https://example.org"/><button class="primary" id="go" type="button">Go</button><button type="button" id="external">Open externally</button></div>
+  <p class="browser-note" id="notice">Only HTTPS sites are opened here. A site that refuses embedded viewing can still be opened in your normal browser.</p>
+  <div class="row" style="margin:.65rem 0"><button type="button" class="chip" data-site="https://webizen.au/edge-llm">Webizen Edge LLM</button><button type="button" class="chip" data-route="/volumes/directory">Directory</button><button type="button" class="chip" data-route="/volumes/settings?pane=network">Network settings</button></div>
+  <div class="browser-home" id="home"><p class="eyebrow">Local-first navigation</p><h2>Open a site, or begin in Webizen.</h2><p>This window embeds compatible HTTPS pages. Your address is not sent to an intermediary service by this interface.</p></div>
+  <iframe class="page-frame" id="page-frame" title="Embedded web page" referrerpolicy="no-referrer" hidden></iframe>
+</div></section>
 <script>
-(function(){
-  const url=document.getElementById("url");
-  const vp=document.getElementById("viewport");
-  const status=document.getElementById("status");
-  const hist=["webizen://home"]; let idx=0;
-  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
-  function nav(u,push){
-    u=(u||"").trim(); if(!u) return;
-    if(push!==false){ hist=hist.slice(0,idx+1); hist.push(u); idx=hist.length-1; }
-    url.value=u;
-    const home=u.startsWith("webizen://home")||u==="webizen://";
-    vp.innerHTML=home
-      ?'<strong>webizen://home</strong>Findable home. Constellation volumes soft-rise from here in the shell. Native renderer attaches when Desktop host binds.<span class="pill live" style="margin-top:.65rem;display:inline-block">chrome Live</span>'
-      :'<strong>'+esc(u)+'</strong>Navigate request recorded. Host webview Planned attach from this volume chrome.<span class="pill planned" style="margin-top:.65rem;display:inline-block">attach Planned</span>';
-    status.textContent="Navigate · "+u;
-    document.querySelectorAll("[data-go]").forEach(b=>b.setAttribute("aria-pressed", b.getAttribute("data-go")===u || (home && b.getAttribute("data-go")==="webizen://home") ?"true":"false"));
-  }
-  document.getElementById("btn-go").addEventListener("click",()=>nav(url.value,true));
-  url.addEventListener("keydown",e=>{if(e.key==="Enter")nav(url.value,true);});
-  document.getElementById("btn-home").addEventListener("click",()=>nav("webizen://home",true));
-  document.getElementById("btn-back").addEventListener("click",()=>{if(idx>0){idx--;nav(hist[idx],false);}});
-  document.getElementById("btn-fwd").addEventListener("click",()=>{if(idx<hist.length-1){idx++;nav(hist[idx],false);}});
-  document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{
-    let u=b.getAttribute("data-go");
-    if(u==="https://"){url.value="https://";url.focus();status.textContent="Type a URL · Go when ready.";return;}
-    nav(u,true);
-  }));
-  status.textContent="Browser volume · webizen://home findable.";
+(() => {
+  const address=document.getElementById('address'),status=document.getElementById('status'),notice=document.getElementById('notice'),home=document.getElementById('home'),frame=document.getElementById('page-frame');
+  const entries=[];let position=-1;
+  const report=(label,detail)=>{status.textContent=label;notice.textContent=detail;};
+  function normalise(value){let candidate=value.trim();if(!candidate)return null;if(!/^[a-z][a-z0-9+.-]*:/i.test(candidate))candidate=`https://${candidate}`;try{const parsed=new URL(candidate);return parsed.protocol==='https:'?parsed.href:null;}catch(_){return null;}}
+  function controls(){document.getElementById('back').disabled=position<=0;document.getElementById('forward').disabled=position>=entries.length-1;document.getElementById('external').disabled=position<0;}
+  function display(url,record){if(record){entries.splice(position+1);entries.push(url);position=entries.length-1;}address.value=url;home.hidden=true;frame.hidden=false;frame.src=url;report('Loading','Loading directly from the website. If it appears blank or blocked, choose Open externally.');controls();}
+  function navigate(value){const url=normalise(value);if(!url){report('Address needed','Enter a valid HTTPS address. Local files, scripts, data links, and unencrypted HTTP are not opened by this browser.');return;}display(url,true);}
+  document.getElementById('go').addEventListener('click',()=>navigate(address.value));address.addEventListener('keydown',event=>{if(event.key==='Enter')navigate(address.value);});
+  document.getElementById('back').addEventListener('click',()=>{if(position>0){position-=1;display(entries[position],false);}});document.getElementById('forward').addEventListener('click',()=>{if(position<entries.length-1){position+=1;display(entries[position],false);}});document.getElementById('reload').addEventListener('click',()=>{if(position>=0)display(entries[position],false);});
+  document.getElementById('external').addEventListener('click',()=>{if(position<0)return;window.open(entries[position],'_blank','noopener,noreferrer');report('External browser requested','The page was sent to your system browser.');});
+  frame.addEventListener('load',()=>{if(position>=0)report('Loaded','The page is embedded directly. Some websites prevent embedding; use Open externally if this page is unavailable.');});
+  document.querySelectorAll('[data-site]').forEach(button=>button.addEventListener('click',()=>navigate(button.dataset.site)));document.querySelectorAll('[data-route]').forEach(button=>button.addEventListener('click',()=>parent.postMessage({route:button.dataset.route},window.location.origin)));
+  controls();
 })();
 </script>
 </body>

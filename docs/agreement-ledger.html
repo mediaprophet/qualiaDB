@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agreement Ledger — QualiaDB / Webizen</title>
+  <meta name="description" content="A plain-language view of how claims, sources, party perspectives, consent, and dissent become a consolidated agreement ledger.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .hero-grad { background: linear-gradient(90deg, #67e8f9, #c4b5fd, #6ee7b7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .ledger-line { position: relative; padding-left: 1.35rem; }
+    .ledger-line::before { content: ""; position: absolute; left: .26rem; top: .55rem; bottom: -.9rem; border-left: 1px solid rgba(103,232,249,.36); }
+    .ledger-line:last-child::before { display: none; }
+    .ledger-dot { position: absolute; left: 0; top: .3rem; width: .55rem; height: .55rem; border-radius: 50%; background: #67e8f9; box-shadow: 0 0 0 4px rgba(34,211,238,.12); }
+    .ledger-card { border: 1px solid rgba(148,180,220,.18); border-radius: 1rem; background: rgba(5,10,18,.56); }
+    .status { display: inline-flex; align-items: center; gap: .35rem; padding: .22rem .5rem; border-radius: 999px; font-size: .68rem; font-weight: 600; }
+    .status-accepted { color: #bbf7d0; background: rgba(52,211,153,.13); border: 1px solid rgba(52,211,153,.25); }
+    .status-qualified { color: #fde68a; background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.25); }
+    .status-open { color: #bae6fd; background: rgba(34,211,238,.11); border: 1px solid rgba(34,211,238,.25); }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,.78);backdrop-filter:blur(32px)"><div class="max-w-screen-2xl mx-auto px-4 sm:px-8"><div class="flex items-center justify-between gap-3 min-h-[4rem] py-2"><a href="index.html" class="flex items-center gap-3 shrink-0"><div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">W</span></div><div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div></a><div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div></div></div></nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-book-open"></i> Agreements · Ledger</div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-.04em] leading-[1.05] mb-5">Keep the path to agreement<br><span class="hero-grad">as visible as the agreement itself.</span></h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-12">An agreement ledger is a structured history of the material people used to reach an agreement: propositions, sources, questions, party positions, consent conditions, and revisions. It makes room for different understandings without treating difference as failure.</p>
+
+    <section class="grid lg:grid-cols-[.9fr_1.1fr] gap-6 mb-16" aria-labelledby="ledger-means-title">
+      <article class="q-card p-8"><p class="q-kicker mb-2">What the ledger means</p><h2 id="ledger-means-title" class="text-2xl font-semibold mb-4">A claim is recorded with its status, not promoted by default.</h2><p class="text-sm text-white/65 mb-5">The ledger can say whether an item is a claim, a reference, an assumption, a condition, an accepted term, or an unresolved question. This distinction matters: it prevents an assertion from quietly becoming a fact merely because it has been entered into a system.</p><p class="text-sm text-white/65">Each party can attach their own relationship to an item: accepted, qualified, contested, not-yet-understood, or out of scope. The shared agreement is then built from declared consent rather than guessed consensus.</p></article>
+      <article class="q-card p-8"><p class="q-kicker mb-2">What it holds</p><div class="space-y-5 mt-5">
+        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Material</h3><p class="text-sm text-white/60 mt-1">Claims, references, evidence, definitions, assumptions, and relevant versions.</p></div>
+        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Perspectives</h3><p class="text-sm text-white/60 mt-1">What each party understands, accepts, qualifies, questions, or declines.</p></div>
+        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Consolidation</h3><p class="text-sm text-white/60 mt-1">The terms that reached the stated threshold of consent, plus dissent and open items.</p></div>
+        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Receipts</h3><p class="text-sm text-white/60 mt-1">The version of the agreement and instrument used for a particular bounded run.</p></div>
+      </div></article>
+    </section>
+
+    <section class="mb-16" aria-labelledby="example-ledger-title">
+      <p class="q-kicker mb-2">Illustrative ledger</p><h2 id="example-ledger-title" class="text-3xl font-semibold mb-4">A small agreement, shown without hiding its differences</h2>
+      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-7">Three parties are defining a shared procedure for a local referral tool. The entries below are examples, not a real policy or decision service.</p>
+      <div class="grid lg:grid-cols-3 gap-5">
+        <article class="ledger-card p-6"><div class="flex items-center justify-between gap-2"><h3 class="font-semibold">01 · Referral information</h3><span class="status status-accepted"><i class="fa-solid fa-check"></i> accepted</span></div><p class="text-xs text-white/50 mt-2">Claim / service criteria v3</p><p class="text-sm text-white/65 mt-4">A referral should contain declared contact and consent fields before it can be reviewed.</p><div class="mt-5 text-xs text-white/55 space-y-2"><p><span class="text-violet-200">Resident group:</span> accepted if missing fields are explained plainly.</p><p><span class="text-cyan-200">Service:</span> accepted.</p><p><span class="text-emerald-200">Worker:</span> accepted.</p></div></article>
+        <article class="ledger-card p-6"><div class="flex items-center justify-between gap-2"><h3 class="font-semibold">02 · Sensitive situations</h3><span class="status status-qualified"><i class="fa-solid fa-circle-exclamation"></i> qualified</span></div><p class="text-xs text-white/50 mt-2">Condition / consent guidance</p><p class="text-sm text-white/65 mt-4">Some situations need person-to-person review rather than a prepared referral alone.</p><div class="mt-5 text-xs text-white/55 space-y-2"><p><span class="text-violet-200">Resident group:</span> accepts, asks for clear escalation.</p><p><span class="text-cyan-200">Service:</span> accepts, names review pathway.</p><p><span class="text-emerald-200">Worker:</span> accepts with professional discretion.</p></div></article>
+        <article class="ledger-card p-6"><div class="flex items-center justify-between gap-2"><h3 class="font-semibold">03 · Eligibility language</h3><span class="status status-open"><i class="fa-solid fa-clock"></i> open</span></div><p class="text-xs text-white/50 mt-2">Scope question / no shared term yet</p><p class="text-sm text-white/65 mt-4">Should the tool state whether someone is eligible for a service?</p><div class="mt-5 text-xs text-white/55 space-y-2"><p><span class="text-violet-200">Resident group:</span> prefers no automated eligibility label.</p><p><span class="text-cyan-200">Service:</span> wants the matter reviewed later.</p><p><span class="text-emerald-200">Worker:</span> says eligibility needs human assessment.</p></div></article>
+      </div>
+    </section>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="consolidated-title">
+      <p class="q-kicker mb-2">Consolidated agreement</p><h2 id="consolidated-title" class="text-2xl sm:text-3xl font-semibold mb-6">Only accepted terms become the shared procedure</h2>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-6"><h3 class="font-semibold text-emerald-100 mb-4"><i class="fa-solid fa-handshake mr-2"></i>Terms ready to package</h3><ul class="space-y-3 text-sm text-white/65"><li>Check whether the declared referral information is present.</li><li>Explain missing information in clear language and hold the record until it is supplied.</li><li>Route sensitive situations to a named human-review path.</li><li>Record the policy version and the outcome of the bounded preparation step.</li></ul></div>
+        <div class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-6"><h3 class="font-semibold text-amber-100 mb-4"><i class="fa-solid fa-bookmark mr-2"></i>Items retained, not erased</h3><ul class="space-y-3 text-sm text-white/65"><li>The open question about automated eligibility language.</li><li>The resident group's request for plain-language explanations.</li><li>The worker's qualification that sensitive cases need professional discretion.</li><li>The source versions and each party's recorded position.</li></ul></div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-6 mb-16">
+      <article class="q-card p-7"><p class="q-kicker mb-2">The semantic instrument</p><h2 class="text-xl font-semibold mb-3">Makes the consolidated procedure runnable</h2><p class="text-sm text-white/65">The resulting instrument can accept a declared referral record, check only the shared conditions, return <span class="text-white/85">ready</span>, <span class="text-white/85">held</span>, or <span class="text-white/85">needs human review</span>, and write a receipt. It cannot expand its own authority beyond the agreement label.</p></article>
+      <article class="q-card p-7"><p class="q-kicker mb-2">The agreement ledger</p><h2 class="text-xl font-semibold mb-3">Keeps the instrument accountable to its origin</h2><p class="text-sm text-white/65">A later reader can see which version, parties, sources, consent threshold, qualifications, and open questions shaped the instrument. A new agreement creates a new version; it does not rewrite the context that produced an earlier run.</p></article>
+    </section>
+
+    <section class="q-card p-8 border border-violet-500/20"><p class="q-kicker mb-2">Continue</p><h2 class="text-2xl font-semibold mb-3">Explore the agreement-to-instrument model</h2><p class="text-sm text-white/65 mb-5">Read the broader explanation of how a multi-party agreement becomes a declared, bounded Semantic Instrument — then return to the instrument playground to try defining one.</p><div class="flex flex-wrap gap-3"><a href="agreement-instruments.html" class="px-4 py-2 rounded-xl bg-violet-500/15 border border-violet-500/25 text-sm text-violet-100">Agreements as instruments</a><a href="semantic-instruments.html" class="px-4 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/25 text-sm text-cyan-100">Semantic Instruments guide</a></div></section>
+  </main>
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">QualiaDB / Webizen 0.0.40 · Preserve claims, perspectives, consent, and limits before automating a shared procedure</footer>
+</body>
+</html>

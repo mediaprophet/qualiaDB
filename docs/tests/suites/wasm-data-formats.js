@@ -1,6 +1,6 @@
 // Data format parser/serializer tests for WASM
 // Tests the new CSV, JSON, and RDF parsing/serialization capabilities
-// added in version 0.0.33
+// added in version 0.0.40
 
 import { loadWasm } from '../wasm-loader.js';
 import { q_hash } from './primitives.js';

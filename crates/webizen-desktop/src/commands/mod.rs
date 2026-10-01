@@ -395,6 +395,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         // ── agent QA / structured diagnostics ──
         agent_qa::agent_qa_snapshot,
         agent_qa::agent_qa_test_active_model,
+        agent_qa::instrument_status,
+        agent_qa::instrument_infer,
         // ── wellfair ──
         wellfair::health::wellfair_host_snapshot,
         wellfair::health::wellfair_list_health_records,
@@ -558,6 +560,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair::welfare_support::wellfair_add_assistance_need,
         wellfair::welfare_support::wellfair_add_welfare_stream,
         wellfair::welfare_support::wellfair_add_government_letter,
+        wellfair::welfare_support::wellfair_list_welfare_records,
         wellfair::welfare_support::wellfair_list_sync_inbox,
         wellfair::sanctuary_vault::wellfair_sanctuary_vault_configured,
         wellfair::sanctuary_vault::wellfair_setup_sanctuary_vault,
@@ -689,6 +692,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         social::mcp_call_tool_gated,
         social::agent_set_allowed_mcp_tools,
         social::mcp_ensure_safe_tool_allowlist,
+        social::conditioning_profile_activate,
+        social::conditioning_profile_deactivate,
+        social::conditioning_profile_status,
         social::ingest_chat_cml,
         social::schedule_agent_job,
         social::list_local_jobs,

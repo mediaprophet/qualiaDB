@@ -6,7 +6,7 @@ use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
 use crate::gguf_bridge::{
-    StreamingArgmaxResult, PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS,
+    PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS,
 };
 use crate::gguf_sharder::GgufTokenizer;
 use crate::inference::conditioning::{
@@ -251,56 +251,31 @@ async fn run_inference_async(
                 .as_ref()
                 .ok_or_else(|| "tensor index missing mid-decode".to_string())?;
             let token_idx = ctx.len().saturating_sub(1) as u32;
-            // Fused path: forward + output norm + argmax in one GPU submit/readback
-            let argmax: Option<StreamingArgmaxResult> = engine
-                .dispatch_forward_and_argmax_fused_async(
+            let _layers = engine
+                .dispatch_transformer_forward_async(
                     idx,
                     &mut emb_buf[..emb_dim],
                     emb_dim,
+                    &mut scratch_a,
+                    &mut scratch_b,
                     token_idx,
                     WASM_LAYER_CAP,
-                    &mut chunk_logits,
-                    WASM_VOCAB_CHUNK_CAP,
                 )
                 .await;
-            let argmax = match argmax {
-                Some(r)
-                    if (r.max_logit > f32::NEG_INFINITY)
-                        && !(step == 0
-                            && ((r.best_token_id as u32 % vlen) == eos
-                                || tok.is_stop_token(r.best_token_id as u32 % vlen))) =>
-                {
-                    r
-                }
-                _ => {
-                    // Fallback: separate forward + CPU norm + argmax
-                    let _layers = engine
-                        .dispatch_transformer_forward_async(
-                            idx,
-                            &mut emb_buf[..emb_dim],
-                            emb_dim,
-                            &mut scratch_a,
-                            &mut scratch_b,
-                            token_idx,
-                            WASM_LAYER_CAP,
-                        )
-                        .await;
-                    let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
-                    engine
-                        .dispatch_output_argmax_chunked_async(
-                            idx,
-                            &emb_buf[..emb_dim],
-                            emb_dim,
-                            &mut chunk_logits,
-                            WASM_VOCAB_CHUNK_CAP,
-                            None,
-                        )
-                        .await
-                        .ok_or_else(|| {
-                            format!("output argmax failed at step {step} (WebGPU logits path unavailable)")
-                        })?
-                }
-            };
+            let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
+            let argmax = engine
+                .dispatch_output_argmax_chunked_async(
+                    idx,
+                    &emb_buf[..emb_dim],
+                    emb_dim,
+                    &mut chunk_logits,
+                    WASM_VOCAB_CHUNK_CAP,
+                    None,
+                )
+                .await
+                .ok_or_else(|| {
+                    format!("output argmax failed at step {step} (WebGPU logits path unavailable)")
+                })?;
             if !(argmax.max_logit > f32::NEG_INFINITY) {
                 return Err(format!(
                     "output argmax produced no finite logit at step {step} (weights/dequant likely broken)"

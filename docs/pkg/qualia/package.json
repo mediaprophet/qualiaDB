@@ -1,1 +1,14 @@
-{"name":"qualia-portal","type":"module","version":"0.0.39","main":"qualia.js","types":"qualia.d.ts"}
+﻿{
+    "version":  "0.0.40",
+    "name":  "qualia-portal",
+    "types":  "qualia.d.ts",
+    "files":  [
+                  "qualia.js",
+                  "qualia_bg.wasm",
+                  "qualia.d.ts",
+                  "qualia_bg.wasm.d.ts",
+                  "LICENSE"
+              ],
+    "type":  "module",
+    "main":  "qualia.js"
+}

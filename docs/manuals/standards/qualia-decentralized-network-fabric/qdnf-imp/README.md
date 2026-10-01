@@ -7,7 +7,7 @@ Webizen Sentinel, semantic authority, bounded cells and recoverable services.
 
 ## 1. Entry point
 
-For the implemented `0.0.37` baseline, start with the [implementation review and enhancement plan](0.0.37-enhancement-plan.md), the [sensitive-operations blueprint](sensitive-operations-blueprint.md) and the [advanced algorithm recipes](advanced-algorithm-recipes.md). These add evidence-based priorities, junior-developer assignments, hostile-environment medical/biometric profiles and mandatory response-marking inheritance. They do not mark the original packages complete.
+For the implemented `0.0.40` baseline, start with the [implementation review and enhancement plan](0.0.40-enhancement-plan.md), the [sensitive-operations blueprint](sensitive-operations-blueprint.md) and the [advanced algorithm recipes](advanced-algorithm-recipes.md). These add evidence-based priorities, junior-developer assignments, hostile-environment medical/biometric profiles and mandatory response-marking inheritance. They do not mark the original packages complete.
 
 This package expands [P0–P21](../implementation-conformance.md) into 30 claimable task packages
 with 490 individually numbered child checks across eight workstreams. Read the [design suite](../README.md) and
@@ -22,7 +22,7 @@ implement networking, certify cryptography or change memory constants.
 | [Task register](./task-registry.json) | Canonical dependencies, ownership roles and implementation status |
 | [Validation matrix](./validation-matrix.md) | Required test evidence, platform matrix and completion standard |
 | [Progress log](./progress-log.md) | Dated outcomes, measurements, limitations and next actions |
-| [Internet peer connectivity architecture](./internet-peer-connectivity-architecture.md) | Incremental SocialWebNet: retain WireGuard; A–E. Local production path on `0.0.38`; not Internet. |
+| [Internet peer connectivity architecture](./internet-peer-connectivity-architecture.md) | Incremental SocialWebNet: retain WireGuard; A–E. Local production path on `0.0.40`; not Internet. |
 | [QUIC-native connectivity research](./quic-native-connectivity-research-2026.md) | 32-source report: published vs experimental vs proposed; DCUtR/Pkarr/Holepunch corrections |
 | [Capability-scoped connection fabric](./capability-scoped-connection-fabric.md) | Architecture note for CSCP. Local supervisor in-tree; not MASQUE/noq/Internet/RFC. |
 | [draft-webcivics-cscp-00](../../../../standards/ietf/draft-webcivics-cscp-00.md) | Proposed IETF Internet-Draft: purpose-bound connect, exclude-then-rank, leases, evidence, receipts. Canonical copy under `docs/standards/ietf/`. Working document, not an RFC. |

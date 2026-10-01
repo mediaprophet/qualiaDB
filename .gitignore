@@ -26,6 +26,7 @@ target/
 *.n3
 !bundled/qapps/**/*.n3
 !tools/**/*.n3
+!crates/vibe/fixtures/**/*.n3
 
 # Princeton WordNet — full graph is a GitHub Release asset (see docs/data/wordnet/README.md)
 docs/data/wordnet/*.q42
@@ -171,8 +172,8 @@ error.log
 clippy.json
 clippy_report.md
 
-# Machine-specific Cargo config (local CUDA/DXC toolchain paths — not portable)
-/.cargo/config.toml
+# Machine-specific Cargo config (local machine overrides)
+/.cargo/config.local.toml
 
 # QPU internal functionality (undocumented, private)
 
@@ -209,6 +210,9 @@ provenance/
 /agent-tools/
 /agent-intents/
 fix_quotes.py
+tmp_*.py
+*.bak-*
+*.locked-*
 
 # Multi-agent coordination is local to each machine — do not publish on GitHub.
 # (Full /coordination/ dir; NOTICES.md is the live feed and must never be committed.)

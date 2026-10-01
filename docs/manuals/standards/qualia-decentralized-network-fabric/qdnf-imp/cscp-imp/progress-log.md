@@ -1,6 +1,6 @@
 # CSCP implementation progress
 
-## 2026-09-10 — Programme opened; Wave 0 already on 0.0.38
+## 2026-09-10 — Programme opened; Wave 0 already on 0.0.40
 
 - Step: principal asked whether CSCP is fully implemented and to plan a swarm. Status: **not fully implemented; programme created; Wave 1 launched**.
 - Built: this directory (README, workstream, registry). Wave 0 remains the recorded kernel/UDP/ConnectRequest slice.
@@ -74,8 +74,8 @@
 
 ## 2026-09-10 — Swarm CSCP-09.02 + DID-QI spec/impl (integrating)
 
-- Step: three implementers returned; integrator wiring on `0.0.38`. Status: **in review**.
-- Built: HTTP/2 Extended CONNECT + capsules (`cscp_h2.rs`, `h2_capsule.rs`); `did-qi-method.md`; `did_qi/` CRUD. `pub mod did_qi` at crate root (not `identity::`). `pub mod cscp_h2` / `h2_capsule` under connectivity. Native `h2`/`http`/`tokio-rustls`. CSCP-08/12 still blocked. Worker commits on side branches had Co-authored-by footers; landing commits on `0.0.38` omit those.
+- Step: three implementers returned; integrator wiring on `0.0.40`. Status: **in review**.
+- Built: HTTP/2 Extended CONNECT + capsules (`cscp_h2.rs`, `h2_capsule.rs`); `did-qi-method.md`; `did_qi/` CRUD. `pub mod did_qi` at crate root (not `identity::`). `pub mod cscp_h2` / `h2_capsule` under connectivity. Native `h2`/`http`/`tokio-rustls`. CSCP-08/12 still blocked. Worker commits on side branches had Co-authored-by footers; landing commits on `0.0.40` omit those.
 - Measured: pending cargo tests this step.
 - Human input needed: still CSCP-08 URL and CSCP-12 datatracker.
 - Next: run tests, independent review, fix gaps.

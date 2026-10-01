@@ -181,7 +181,7 @@ Performance and safety gains require implementation evidence.
 ## 7. PQ proofs and Q42 integrity are different layers
 
 [QPR's PQ profile](./qualia-decentralized-network-fabric/post-quantum-security.md) carries larger keys,
-dual signatures and typed SHA-384 commitments outside individual Quin payloads. Q42 v3's existing
+dual signatures and typed SHA-384 commitments outside individual Quin payloads. Q42 v3/v4's existing
 32-byte header root remains its own field/algorithm. Do not write a 48-byte digest into that slot or
 silently relabel SHA-256 as SHA-384. Store a signed PQ manifest with full commitments over the exact
 required artifacts/sections through a versioned evidence profile. Only if a future physical header

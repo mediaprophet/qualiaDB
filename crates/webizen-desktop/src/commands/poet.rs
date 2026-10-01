@@ -675,7 +675,10 @@ mod tests {
             .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
             .expect_err("missing pack stays held");
         let json = err.to_json();
-        assert!(json.contains("held / not yet — open lexicon pack"), "{json}");
+        assert!(
+            json.contains("held / not yet — open lexicon pack"),
+            "{json}"
+        );
         assert!(!json.to_ascii_lowercase().contains("broken"));
     }
 
@@ -688,10 +691,7 @@ mod tests {
             .canonicalize()
             .expect("en-core fixture");
         let mut rec = BTreeMap::new();
-        rec.insert(
-            "path".into(),
-            Value::String(fixture.display().to_string()),
-        );
+        rec.insert("path".into(), Value::String(fixture.display().to_string()));
         let value = snap
             .invoke_id("GraphDatabase.lexicon_manifest", Value::Record(rec))
             .expect("real pack opens on live bind");
@@ -703,7 +703,10 @@ mod tests {
         match outcome {
             webizen_studio::lexicon_catalog::ManifestOutcome::Open(card) => {
                 assert_eq!(card.pack_semver, "0.1.0");
-                assert_eq!(card.framing, webizen_studio::lexicon_catalog::Framing::Mixed);
+                assert_eq!(
+                    card.framing,
+                    webizen_studio::lexicon_catalog::Framing::Mixed
+                );
             }
             other => panic!("expected open pack card, got {other:?}"),
         }

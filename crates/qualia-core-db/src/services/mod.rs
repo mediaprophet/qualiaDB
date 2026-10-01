@@ -21,6 +21,8 @@ pub mod poet_library_api;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod poet_llm_api;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod poet_llm_conditioning;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod poet_llm_jobs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod poet_record_api;

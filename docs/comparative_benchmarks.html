@@ -208,6 +208,7 @@
                     <select id="dataset-profile-select" class="rounded-2xl border border-slate-700 bg-[#111f31] px-4 py-2 text-sm text-slate-200 focus:outline-none">
                         <option value="synthetic-10k">Synthetic 10K</option>
                         <option value="schemaorg-30-current-https">Schema.org 30.0 (NT + q42)</option>
+                        <option value="wordnet-31">Princeton WordNet 3.1 (q42)</option>
                     </select>
                 </div>
                 <div id="last-updated" class="font-mono text-xs text-slate-500 px-1">
@@ -396,6 +397,12 @@
                 resultsPath: './comparative_benchmark_results.schemaorg-30-current-https.json',
                 runCommand: 'python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https.json',
                 prepCommand: 'powershell -ExecutionPolicy Bypass -File scripts/prepare_schemaorg_benchmark.ps1 -Release 30.0 -Variant current-https -Compress',
+            },
+            'wordnet-31': {
+                label: 'Princeton WordNet 3.1 (q42)',
+                resultsPath: './comparative_benchmark_results.wordnet-31.json',
+                runCommand: 'python benchmarks/harness.py --all --dataset-profile wordnet-31 --output docs/comparative_benchmark_results.wordnet-31.json',
+                prepCommand: 'powershell -ExecutionPolicy Bypass -File scripts/fetch_wordnet_release.ps1',
             },
         };
 

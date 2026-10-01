@@ -1,6 +1,6 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.39"
+version = "0.0.40"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 description = "QualiaDB semantic graph, inference, ontology, spatial, and browser-WASM runtime"
@@ -11,6 +11,7 @@ license-file = "LICENSE"
 default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"]
 
 # ── Qualia WASM build profiles (use with --no-default-features on wasm32) ──
+# WebCivics browser runtime:        --features wasm-webcivics (logic + Solid/CML + HCF yaml-ld-q42)
 # Ontology MCP kernel (exclusive):  --features wasm-ontology
 # WebCivics decision-evidence:      --features wasm-webcivics  (JSON-LD/SHACL/modal/SPARQL; NO GPU/LLM)
 # Full browser engine:              --features portal  (logic + WASM-safe science + WebGPU)
@@ -33,6 +34,7 @@ nvml = ["dep:nvml-wrapper"]
 vision-onnx = ["dep:ort"]
 dxc = []
 portal = ["wasm_simd", "gpu-runtime", "wasm-logic", "wasm-scientific"]
+wasm-webcivics = ["wasm-logic"]
 wasm-ontology = []
 # Civics / decision-evidence package: semantic interchange + SHACL + modal logic +
 # SPARQL/q42 kernels + Civics-facing stats/econ receipts. Explicitly excludes

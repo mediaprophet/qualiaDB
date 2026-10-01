@@ -395,7 +395,7 @@ mod tests {
         let lex = vol.lex_view().unwrap();
         let vals: Vec<String> = quins
             .iter()
-            .filter_map(|q| lex.lookup_hash(q.object).map(str::to_string))
+            .filter_map(|q| lex.lookup_owned(q.object))
             .collect();
         // Provenance: the licence and the real CDN source URL are in the graph.
         assert!(

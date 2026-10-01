@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description"
-    content="QualiaDB prompt precision: implemented foundations, required inference integration, and measured calibration gates.">
-  <title>QualiaDB — Prompt Precision &amp; Inference Integration</title>
+    content="Prompt Precision associates a human request with ontologies, graph information and structured requirements before inference.">
+  <title>QualiaDB — Prompt Precision: Graph-Informed Inference Requests</title>
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -64,37 +64,6 @@
       line-height: 1.6;
     }
 
-    .precision-strategy {
-      color: #e2e8f0;
-      text-align: left;
-      cursor: pointer;
-      font: inherit;
-    }
-
-    .precision-strategy strong,
-    .precision-strategy span {
-      display: block;
-    }
-
-    .precision-strategy strong {
-      margin-bottom: .5rem;
-    }
-
-    .precision-strategy span {
-      font-size: .85rem;
-      color: #cbd5e1;
-    }
-
-    .precision-strategy[aria-pressed="true"] {
-      border-color: #67e8f9;
-      background: rgba(8, 65, 80, .45);
-    }
-
-    .precision-strategy:focus-visible {
-      outline: 3px solid #a5b4fc;
-      outline-offset: 4px;
-    }
-
     .precision-detail {
       margin-top: 1rem;
       padding: 1.25rem;
@@ -132,6 +101,16 @@
       font: .9rem/1.7 var(--q-mono, monospace);
     }
 
+    .precision-illustration {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin-top: 1.5rem;
+      border: 1px solid rgba(148, 180, 220, .25);
+      border-radius: 1rem;
+      background: #0f172a;
+    }
+
     @media (max-width: 760px) {
       .precision-grid {
         grid-template-columns: 1fr;
@@ -160,120 +139,180 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6">Architecture reference · Updated 18 September 2026</div>
+    <div class="q-chip mb-6">Plain-language architecture guide · Updated 18 September 2026</div>
     <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] leading-[1.08] mb-5">
-      Prompt Precision &amp;<br>
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-violet-300 to-emerald-300">Inference
-        Integration.</span>
+      Objective Purpose: Turn a human request into a more precise AI request.
     </h1>
-    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8">Compile requirements, authorised evidence and resource
-      budgets into a request-scoped contract. Preserve that contract through model execution, cache reuse and output
-      validation. Quality and efficiency gains must be measured on the target model, not inferred from a strategy name.
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8">Prompt Precision takes an ordinary-language request,
+      associates it with relevant ontologies, graph material and structured requirements, then prepares a better-grounded
+      request for an inference model. Instead of asking a model to guess what “help with this agreement” means, the system
+      can supply the relevant concepts, selected records, requested output shape and limits alongside the person’s words.
     </p>
-
-    <section class="precision-section" aria-labelledby="status-title">
-      <p class="q-kicker mb-2">Implementation boundary</p>
-      <h2 id="status-title" class="text-2xl sm:text-3xl font-semibold">Foundations exist. End-to-end proof is still
-        required.</h2>
+    <p class="text-lg text-white/70 max-w-3xl mb-8">Its practical objective is to avoid spending model time, energy and
+      memory on irrelevant or repeatedly reconstructed context, while improving the usefulness of the response for the
+      task at hand. If measured and validated, that can make capable local inference practical on more personal machines
+      and improve AI economics across an ecosystem: less waste per request, more useful work from the available hardware,
+      and clearer grounds for deciding when a more expensive model or service is actually warranted.</p>
+    <section class="precision-section" aria-labelledby="core-idea-title">
+      <p class="q-kicker mb-2">The core idea</p>
+      <h2 id="core-idea-title" class="text-2xl sm:text-3xl font-semibold">Language in; structured meaning and relevant context out.</h2>
       <div class="precision-grid">
         <article class="precision-card">
-          <h3>Implemented foundations</h3>
-          <p>Caller-buffered conditioning compilation, requirement outcomes, versioned profile contracts, a native
-            chat-lowering bridge, and bounded signed checkpoint-bound receipt storage exist in source.</p>
+          <h3>1 · Interpret the request</h3>
+          <p>The routing component reads the request and any declared domain focus, then retains every matching in-scope ontology, its stable context namespaces, and a routing brief for inference. If no ontology matches, it retains the full in-scope set rather than imposing an arbitrary shortlist.</p>
         </article>
         <article class="precision-card">
-          <h3>Required integration</h3>
-          <p>Exact final-token budgeting, preservation of required instruction/evidence dependencies, complete
-            cache-state identity, and consistent native, HTTP and MCP enforcement remain release gates.</p>
+          <h3>2 · Associate graph material</h3>
+          <p>The chat route combines the routing result with available retrieval, files, session context, semantic profiles and graph information. The conditioning compiler can further select evidence by declared graph scope and sensitivity ceiling.</p>
         </article>
         <article class="precision-card">
-          <h3>Not yet measured</h3>
-          <p>The current optimizer scores simulated answers derived from expected outcomes. This is fixture logic, not
-            model calibration. Signed receipts prove integrity and binding, not answer quality or speed.</p>
+          <h3>3 · Render the inference request</h3>
+          <p>A structured profile can specify an objective, requirements, output contract and budget. The compiler renders those with selected evidence as a native ChatML request, plain request, or MCP envelope for the model to process.</p>
+        </article>
+      </div>
+      <p class="precision-detail text-white/70"><strong>Current precision boundary:</strong> ontology routing presently uses request keywords, ontology names/tags and a few domain hints. It is useful routing, not a claim that the software fully understands natural language or has solved semantic interpretation. The time, energy, local-machine and economic benefits above are objectives to be measured against real tasks and hardware, not results asserted by this page.</p>
+    </section>
+    <section class="precision-section" aria-labelledby="logic-title">
+      <p class="q-kicker mb-2">Logic and Guardian layers</p>
+      <h2 id="logic-title" class="text-2xl sm:text-3xl font-semibold">The prepared request can be connected to rules the model does not get to invent.</h2>
+      <p class="text-white/70 mb-6">Prompt Precision prepares meaning and context for inference. QualiaDB’s logic systems then provide ways to represent and evaluate defined conditions around that work. They are not claims that an LLM has proved something merely by producing prose.</p>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>Rules, duties and permissions</h3>
+          <p>Deontic logic represents obligations, permissions and prohibitions. N3 rules can be compiled into these norms, including rules that defeat a weaker permission. This allows an agreement or workflow to state what may, must, or must not happen as structured data.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Time, knowledge and disagreement</h3>
+          <p>Temporal logic can express conditions across a sequence of events. Epistemic logic distinguishes knowledge and belief. Paraconsistent routing can isolate conflicting statements instead of treating a contradiction as permission to infer anything at all.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Guardian and deterministic gates</h3>
+          <p>A Guardian is a human-authorised co-signature path for a defined agreement or protected action—not an autonomous AI supervisor. A proposed transaction can remain suspended until the required consent token arrives, or be denied. For graph-writing turns, the sieve and N3/SHACL gates can reject output that does not meet the required structure.</p>
+        </article>
+      </div>
+      <p class="precision-detail text-white/70"><strong>How this connects:</strong> a prepared request may select the relevant ontology, graph facts, agreement terms and output structure. The applicable logic or Guardian rule then evaluates the defined operation or graph action. It is not correct to say that all of these systems automatically run on every chat message; a workflow must explicitly select and wire the rule it needs.</p>
+    </section>
+    <section class="precision-section" aria-labelledby="sentinel-evaluation-title">
+      <p class="q-kicker mb-2">Guard, evaluate, improve</p>
+      <h2 id="sentinel-evaluation-title" class="text-2xl sm:text-3xl font-semibold">Prompt Precision is useful only when the response can be checked against the prepared request.</h2>
+      <p class="precision-flow">Prepare semantic context and expectations → Sentinel checks the permitted inference/action path → model generates → evaluate the response against the expected result and requirements → retain, revise, or reject the profile</p>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>Webizen Sentinel: enforce the route</h3>
+          <p>Before inference, the runtime validates the requested intent. For graph-writing turns it enables the structured-output sieve and restricts the requested predicate scopes. During verified decoding, logit summaries can pass to the Sentinel over a wait-free control path; an anomaly can issue <code>DenyRollback</code> before the next token step. In FastVerify mode, the same mid-decode intervention is skipped and graph/CML verification runs before the turn is finalised.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Response evaluation: test usefulness</h3>
+          <p>A Prompt Precision task manifest can state an expected outcome and whether citations and constraints are required. The evaluator records accuracy, citation fidelity and constraint satisfaction, then compares a prepared profile with a baseline on train/dev work and a separate held-out set. This is how the system can learn whether additional semantic context made the result more useful—not simply longer or more technical.</p>
+        </article>
+        <article class="precision-card">
+          <h3>What the current evaluator does—and does not—decide</h3>
+          <p>The current generic scorer checks exact or contained expected text plus declared citation/constraint flags. It is a reusable evaluation seam, not a universal judge of truth or social usefulness. Real domains need their own task evaluator and human review; the present optimiser’s model-output scoring is still simulated, so it must not be presented as live performance evidence.</p>
+        </article>
+      </div>
+      <p class="precision-detail text-white/70"><strong>Concrete graph-output gate:</strong> before a generated result may be committed to the semantic graph, the current runtime rejects an output with no provenance Quin or one that exceeds the configured token limit. Those are enforceable admission conditions; they are not proof that every generated claim is correct. The expected-usefulness evaluation is the complementary process that tests whether a prepared request achieved its intended result.</p>
+    </section>
+    <aside class="precision-card mb-10 border-cyan-400/40" aria-label="Human authority rule">
+      <h2 class="text-xl font-semibold">Make every party’s role explicit.</h2>
+      <p>The person making a request—or the people acting under a stated, legitimate mandate—sets the purpose and limits
+        of their work. The service provider also has legitimate interests: people to pay, infrastructure to run, prices,
+        capacity limits, safety obligations and service terms. Those terms belong in the agreement and must be visible
+        before use. They are not an undisclosed mandate to replace the requester’s purpose, alter the evidence, or change
+        who is accountable for the resulting decision.</p>
+    </aside>
+
+    <section class="precision-section" aria-labelledby="meaning-title">
+      <p class="q-kicker mb-2">What this is about</p>
+      <h2 id="meaning-title" class="text-2xl sm:text-3xl font-semibold">From “write something” to a useful, reviewable job brief.</h2>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>Say what is wanted</h3>
+          <p>Start with the outcome: compare options, prepare a first draft, explain a record, or find gaps in a plan. State what a good result looks like and what the AI must not decide on its own.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Bring the relevant material</h3>
+          <p>Attach or select the plans, notes, records, shared concepts and prior work that matter. The system can assemble those materials as working context instead of asking people to re-explain the same project every time.</p>
+        </article>
+        <article class="precision-card">
+          <h3>Check before relying on it</h3>
+          <p>Make uncertainty visible, distinguish observations from suggestions, and keep the final decision with accountable people. Reusable profiles can make this kind of job brief consistent without pretending that the AI is an authority.</p>
+        </article>
+      </div>
+      <svg class="precision-illustration" viewBox="0 0 1200 300" role="img" aria-labelledby="flow-title flow-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="flow-title">Prompt Precision inference preparation</title><desc id="flow-desc">A person’s natural-language request is routed to relevant ontologies and graph context, rendered as a structured inference request, and passed to a language model.</desc>
+        <rect width="1200" height="300" rx="28" fill="#101827"/><g font-family="Inter,Arial,sans-serif"><text x="48" y="54" fill="#e2e8f0" font-size="27" font-weight="700">Prompt Precision prepares a graph-informed request for inference</text><text x="48" y="82" fill="#94a3b8" font-size="16">Natural language → ontology and graph associations → structured model context → inference</text></g>
+        <g font-family="Inter,Arial,sans-serif" font-size="18" font-weight="700"><g transform="translate(48 125)"><rect width="225" height="120" rx="16" fill="#172554" stroke="#60a5fa"/><text x="20" y="43" fill="#dbeafe">1 · Human request</text><text x="20" y="78" fill="#bfdbfe" font-size="14" font-weight="400">“Draft a guardianship</text><text x="20" y="100" fill="#bfdbfe" font-size="14" font-weight="400">consent agreement”</text></g><g transform="translate(337 125)"><rect width="225" height="120" rx="16" fill="#12303a" stroke="#2dd4bf"/><text x="20" y="43" fill="#ccfbf1">2 · Semantic routing</text><text x="20" y="78" fill="#99f6e4" font-size="14" font-weight="400">Relevant ontology, terms</text><text x="20" y="100" fill="#99f6e4" font-size="14" font-weight="400">and graph namespaces</text></g><g transform="translate(626 125)"><rect width="225" height="120" rx="16" fill="#312e5f" stroke="#a78bfa"/><text x="20" y="43" fill="#ede9fe">3 · Prepared context</text><text x="20" y="78" fill="#ddd6fe" font-size="14" font-weight="400">Requirements, selected</text><text x="20" y="100" fill="#ddd6fe" font-size="14" font-weight="400">evidence and budget</text></g><g transform="translate(915 125)"><rect width="237" height="120" rx="16" fill="#3a2716" stroke="#fbbf24"/><text x="20" y="43" fill="#fef3c7">4 · Model inference</text><text x="20" y="78" fill="#fde68a" font-size="14" font-weight="400">A more specific prompt</text><text x="20" y="100" fill="#fde68a" font-size="14" font-weight="400">for the selected model</text></g></g>
+        <g stroke="#67e8f9" stroke-width="4"><path d="M283 185h40"/><path d="M572 185h40"/><path d="M861 185h40"/></g><g fill="#67e8f9"><path d="M323 179l12 6-12 6z"/><path d="M612 179l12 6-12 6z"/><path d="M901 179l12 6-12 6z"/></g>
+      </svg>
+    </section>
+
+    <section class="precision-section" aria-labelledby="status-title">
+      <p class="q-kicker mb-2">Why this matters</p>
+      <h2 id="status-title" class="text-2xl sm:text-3xl font-semibold">The point is to make useful work easier to repeat, improve and explain.</h2>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>For communities and organisations</h3>
+          <p>Use the same agreed brief when work is repeated: what a planning summary should cover, how an incident timeline separates facts from hypotheses, or what a policy draft must leave for human approval. This reduces rework without replacing responsibility.</p>
+        </article>
+        <article class="precision-card">
+          <h3>For policy and governance</h3>
+          <p>Make the purpose, source material, assumptions and review point visible. This gives people something concrete to question and change, instead of leaving consequential instructions hidden in an improvised conversation.</p>
+        </article>
+        <article class="precision-card">
+          <h3>For technical teams</h3>
+          <p>Represent the job brief as structured, versioned data where that helps: shared concepts, rules, source links, output checks and resource limits. That enables a team to test whether a profile helps rather than relying on the confidence of its prose.</p>
         </article>
       </div>
     </section>
 
     <section class="precision-section" aria-labelledby="strategy-title">
-      <p class="q-kicker mb-2">Candidate profiles, not performance claims</p>
-      <h2 id="strategy-title" class="text-2xl sm:text-3xl font-semibold">Strategies B0 through B5</h2>
-      <p class="text-white/70 mb-6">These labels match the current candidate generator. No fixed compression ratio or
-        universally best strategy has been established. Select a candidate to inspect its purpose and validation needs.
-      </p>
-      <div class="precision-grid" role="group" aria-label="Conditioning candidates">
-        <button type="button" class="precision-card precision-strategy" data-strategy="b0" aria-pressed="true"
-          aria-controls="strategy-detail"><strong>B0 · Baseline</strong><span>Minimal instruction without graph
-            conditioning.</span></button>
-        <button type="button" class="precision-card precision-strategy" data-strategy="b1" aria-pressed="false"
-          aria-controls="strategy-detail"><strong>B1 · Explicit text</strong><span>Readable rules and evidence
-            guidance.</span></button>
-        <button type="button" class="precision-card precision-strategy" data-strategy="b2" aria-pressed="false"
-          aria-controls="strategy-detail"><strong>B2 · Compiled graph</strong><span>Ontology-backed requirements and
-            validators.</span></button>
-        <button type="button" class="precision-card precision-strategy" data-strategy="b3" aria-pressed="false"
-          aria-controls="strategy-detail"><strong>B3 · Compressed</strong><span>Smaller input and output budget
-            candidate.</span></button>
-        <button type="button" class="precision-card precision-strategy" data-strategy="b4" aria-pressed="false"
-          aria-controls="strategy-detail"><strong>B4 · Prefix aligned</strong><span>Stable prefix layout for exact cache
-            reuse.</span></button>
-        <button type="button" class="precision-card precision-strategy" data-strategy="b5" aria-pressed="false"
-          aria-controls="strategy-detail"><strong>B5 · Model-tailored hybrid</strong><span>Domain requirements and role
-            separation.</span></button>
+      <p class="q-kicker mb-2">What has been implemented</p>
+      <h2 id="strategy-title" class="text-2xl sm:text-3xl font-semibold">A reusable way to prepare an AI request, rather than starting from scratch each time.</h2>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>1 · A structured job brief</h3>
+          <p>The core compiler accepts a profile with an objective, requirements, an output shape, a budget and available evidence. Each requirement is labelled as an executable rule, an evidence obligation, or guidance—so the system does not pretend every instruction is enforced in the same way.</p>
+        </article>
+        <article class="precision-card">
+          <h3>2 · Select what can fit</h3>
+          <p>Typed request parts rank mandatory instructions and the person’s request above optional tool definitions, evidence and history. If the mandatory material cannot fit, the compiler rejects the request. It does not silently cut the actual request in half.</p>
+        </article>
+        <article class="precision-card">
+          <h3>3 · Keep versions honest</h3>
+          <p>A model-specific contract is bound to a profile ID, version and specification identity. If those no longer agree, it is not applied. A profile can be promoted, replaced or rolled back, so a team can stop using a version that proved unhelpful.</p>
+        </article>
       </div>
-      <div id="strategy-detail" class="precision-detail" role="status" aria-live="polite" aria-atomic="true">
-        <p id="strategy-description">B0_baseline supplies minimal instruction without graph conditioning. Measure it
-          alongside the unchanged product route; neither baseline may bypass executable authority checks.</p>
-      </div>
-      <noscript>
-        <p>All six candidates are listed above. Interactive validation notes require JavaScript; the release
-          requirements below apply to every candidate.</p>
-      </noscript>
+      <p class="precision-detail text-white/70"><strong>What runs now, and what remains:</strong> a conditioning profile submitted to the local POET API is compiled, filtered by its declared disclosure scope, rendered as the request used for both ordinary and streamed local inference, and returned with a plan receipt. Direct desktop chat currently uses a simpler integration: it preserves the final user request, adds the active profile marker, and reduces earlier assembled context to fit a byte cap. The full typed compiler is not yet carried through every desktop, HTTP, Ollama and MCP route.</p>
     </section>
 
     <section class="precision-section" aria-labelledby="pipeline-title">
-      <p class="q-kicker mb-2">Required runtime contract</p>
-      <h2 id="pipeline-title" class="text-2xl sm:text-3xl font-semibold">One contract, from authoring to validated
-        output</h2>
-      <p class="precision-flow">VibeScript profile → Conditioning ontology / Aura–SHACL → core compilation → typed roles
-        and evidence → model template and exact tokens → memory admission → prefill / decode → output validation and
-        receipt</p>
+      <p class="q-kicker mb-2">How it works in practice</p>
+      <h2 id="pipeline-title" class="text-2xl sm:text-3xl font-semibold">A simple discipline for getting better results over time.</h2>
+      <p class="precision-flow">Purpose → relevant material → a clear task → AI-assisted draft or analysis → human review → a reusable, improved job brief</p>
       <ol class="precision-list text-white/70">
-        <li><strong>Compile and check authority.</strong> Reuse <code>conditioning::compile_into</code> and
-          caller-supplied buffers. Inspect every requirement outcome; a summary is not proof of runtime enforcement.
-          VibeScript and ontology tags cannot grant access.</li>
-        <li><strong>Prepare an immutable request.</strong> Snapshot profile ID/version/spec, model and template
-          identities, selected evidence and authority. Keep instructions, user content, history, tools and untrusted
-          evidence distinct until supported backend lowering.</li>
-        <li><strong>Budget the actual request.</strong> Include template delimiters, tool schemas, special tokens and
-          expanded multimodal input. Keep mandatory requirements and the complete user request; reject an impossible
-          budget instead of silently trimming them.</li>
-        <li><strong>Attach only compatible state.</strong> Match exact token prefixes plus checkpoint, tokenizer,
-          template, adapter, policy, access scope and state layout. Hybrid models need attention KV and
-          recurrent/convolution state at the same committed boundary. A stable header alone is not cache validity.</li>
-        <li><strong>Preserve controls during execution.</strong> Batching and offload keep each request's grammar,
-          sampler, output reserve, cancellation and Sentinel gates isolated. Streaming output remains provisional until
-          validation; inference success is not a graph-write authorisation.</li>
-        <li><strong>Report and roll back explicitly.</strong> Separate inference, validation, persistence, provenance
-          and usage status. A missing optional calibration profile uses the governed base route; an incompatible
-          required contract fails closed.</li>
+        <li><strong>Make the purpose visible.</strong> “Help with our project” is not enough. Say whether the work is to compare options, produce a draft, find contradictions, or explain an existing record. A good brief tells the AI where it can help and tells people what remains their responsibility.</li>
+        <li><strong>Use the right material, not all material.</strong> Bring in the documents, concepts and earlier decisions needed to understand the work. This is both an efficiency question and a quality question: irrelevant context can make an answer slower, costlier and less useful.</li>
+        <li><strong>Specify the shape of a useful result.</strong> Ask for a comparison, timeline, checklist, draft or explanation. Require uncertainties and disagreements to be shown rather than quietly smoothed over. That gives a reviewer something concrete to check.</li>
+        <li><strong>Keep the relevant people in charge of consequential action.</strong> An AI can assist with research and drafting. The requester, or people acting under an explicit mandate, decide whether to publish, approve, spend, commit, or change a real-world arrangement. The platform operator and the model are not a substitute principal.</li>
+        <li><strong>Learn from the result.</strong> If the brief caused omissions, confusion or unnecessary cost, improve it and retain the useful version. Over time, a team can develop reusable job briefs for recurring work rather than relying on whoever happens to write the cleverest prompt.</li>
       </ol>
-      <pre class="precision-code" aria-label="Required admission invariants">actual_input_tokens ≤ profile.input_tokens
+      <details class="precision-card mt-5">
+        <summary class="cursor-pointer font-semibold">For implementers: what needs to be enforced in software</summary>
+        <p class="mt-3">The authoring idea becomes dependable only where the runtime enforces its resource and output limits. These are engineering requirements, not policy language.</p>
+        <pre class="precision-code mt-3" aria-label="Required admission invariants">actual_input_tokens ≤ profile.input_tokens
 actual_input_bytes ≤ profile.max_bytes
 actual_input_tokens + reserved_output_tokens ≤ supported_context_tokens
 planned KV + recurrent state + scratch + resident weights ≤ device budget
 host expert banks + pinned staging + other host state ≤ host budgets</pre>
-      <p class="text-white/70">These are implementation requirements, not guarantees supplied by the current byte-based
-        lowerer. The same final token IDs must be counted and executed. Tool and repair rounds share cumulative limits;
-        output reserve is not part of input-token usage.</p>
+        <p class="text-white/70 mt-3">The same final token IDs must be counted and executed. Tool and repair rounds share cumulative limits; output reserve is not part of input-token usage. The current direct-chat lowerer has only part of this job, so its limits should not be misrepresented as a complete control system.</p>
+      </details>
     </section>
 
     <section class="precision-section" aria-labelledby="hardware-title">
-      <p class="q-kicker mb-2">Required capability target · not yet demonstrated in QualiaDB</p>
-      <h2 id="hardware-title" class="text-2xl sm:text-3xl font-semibold">Qwen3.6-35B-A3B NVFP4 on RTX A2000 12 GB</h2>
-      <p class="text-white/70">The inference renewal requires full-model loading, prefill and generation on the user's
-        A2000, with measured reference-equivalent or better capability. It does not require all weights to reside in 12
-        GB of VRAM: compressed host expert banks, bounded GPU slots and transfer scheduling provide the necessary memory
-        hierarchy.</p>
+      <p class="q-kicker mb-2">Affordable personal-computer target · not yet demonstrated</p>
+      <h2 id="hardware-title" class="text-2xl sm:text-3xl font-semibold">Useful local AI should not require a data-centre.</h2>
+      <p class="text-white/70">The practical aim is for people and small organisations to run useful AI workflows on affordable personal computers, with a modest graphics card where available and a clear CPU-only path where it is not. One proposed reference target is Qwen3.6-35B-A3B NVFP4 on an RTX A2000 12 GB. That is a test case—not a requirement that every person own that card.</p>
+      <p class="text-white/70">A workable design can use system memory, bounded graphics-memory slots and scheduled transfers rather than assuming every model weight permanently fits in graphics memory. It must still state its actual hardware conditions, resource use and response quality honestly; “local” is not a substitute for evidence.</p>
       <p class="text-white/70">The target needs Qwen's actual hybrid attention and recurrent state, expert routing,
         shared experts, mixed quantisation formats and an Ampere-compatible dequantisation path. NVFP4 checkpoint
         storage must not be confused with a requirement for native FP4 hardware. Prompt compaction can reduce input
@@ -282,73 +321,68 @@ host expert banks + pinned staging + other host state ≤ host budgets</pre>
         concurrency. Record cold load, TTFT, prefill/decode throughput, tail latency, host/VRAM peaks and held-out
         quality. Loading alone, shorter answers or a silently reduced context do not establish parity. Other model and
         multimodal capabilities need their own explicit validation rows.</p>
+      <svg class="precision-illustration" viewBox="0 0 1200 300" role="img" aria-labelledby="local-title local-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="local-title">Local AI on an affordable personal computer</title><desc id="local-desc">A personal computer with system memory, optional graphics hardware and a CPU-only fallback runs a local model, followed by human review.</desc>
+        <rect width="1200" height="300" rx="28" fill="#101827"/><g font-family="Inter,Arial,sans-serif"><text x="48" y="54" fill="#e2e8f0" font-size="27" font-weight="700">Useful local AI should not require a data-centre</text><text x="48" y="82" fill="#94a3b8" font-size="16">A modest graphics card can help; CPU-only routes and honest resource reporting still matter.</text></g>
+        <g font-family="Inter,Arial,sans-serif"><g transform="translate(70 125)"><rect width="390" height="125" rx="18" fill="#111f34" stroke="#38bdf8"/><rect x="28" y="28" width="125" height="69" rx="7" fill="#12303a"/><path d="M90 98v18m-42 0h84" stroke="#94a3b8" stroke-width="5"/><text x="180" y="46" fill="#e0f2fe" font-size="20" font-weight="700">Personal computer</text><text x="180" y="76" fill="#bae6fd" font-size="15">System memory · optional GPU</text><text x="180" y="101" fill="#bae6fd" font-size="15">CPU-only fallback</text></g><g transform="translate(536 125)"><rect width="235" height="125" rx="18" fill="#312e5f" stroke="#a78bfa"/><text x="118" y="47" text-anchor="middle" fill="#ede9fe" font-size="20" font-weight="700">Local model</text><text x="118" y="77" text-anchor="middle" fill="#ddd6fe" font-size="15">Bounded memory</text><text x="118" y="101" text-anchor="middle" fill="#ddd6fe" font-size="15">Chosen evidence</text></g><g transform="translate(847 125)"><rect width="235" height="125" rx="18" fill="#3a2716" stroke="#fbbf24"/><text x="118" y="47" text-anchor="middle" fill="#fef3c7" font-size="20" font-weight="700">Person reviews</text><text x="118" y="77" text-anchor="middle" fill="#fde68a" font-size="15">Checks and corrects</text><text x="118" y="101" text-anchor="middle" fill="#fde68a" font-size="15">Makes the decision</text></g></g>
+        <g stroke="#67e8f9" stroke-width="4"><path d="M470 187h54"/><path d="M781 187h54"/></g><g fill="#67e8f9"><path d="M524 181l12 6-12 6z"/><path d="M835 181l12 6-12 6z"/></g>
+      </svg>
+    </section>
+
+    <section class="precision-section" aria-labelledby="examples-title">
+      <p class="q-kicker mb-2">Worked examples</p>
+      <h2 id="examples-title" class="text-2xl sm:text-3xl font-semibold">What this component does with an actual request.</h2>
+      <p class="text-white/70 mb-6">These examples match the implemented conditioning code. They show request preparation and control; they do not claim that a model’s answer has been independently validated.</p>
+      <div class="precision-grid">
+        <article class="precision-card">
+          <h3>“Draft a guardianship consent agreement”</h3>
+          <p><strong>Association:</strong> the routing tests select the installed Legal Commons ontology for terms such as “guardianship”, “consent” and “agreement”. <strong>Prepared context:</strong> the inference packet receives the routing brief and legal namespace hashes, alongside selected retrieval and session material. The LLM receives more than the bare sentence.</p>
+        </article>
+        <article class="precision-card">
+          <h3>“What does this patient fever indicate?”</h3>
+          <p><strong>Association:</strong> the routing tests select the installed clinical/SNOMED ontology from terms such as “patient” and “fever”. <strong>Prepared context:</strong> the selected ontology supplies domain context and namespaces; graph retrieval can contribute relevant records. It is a routing aid—not a diagnosis, and not a substitute for clinical judgement.</p>
+        </article>
+        <article class="precision-card">
+          <h3>A repeatable technical review</h3>
+          <p><strong>Association:</strong> a structured profile states the objective, requirements and output contract; selected evidence is copied only when it fits the declared scope. <strong>Prepared context:</strong> the compiler renders these as an explicit system/objective/requirements/evidence envelope for native ChatML, plain inference, or MCP. That gives the model a consistent, inspectable request shape.</p>
+        </article>
+      </div>
+      <svg class="precision-illustration" viewBox="0 0 1200 320" role="img" aria-labelledby="examples-title-svg examples-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="examples-title-svg">Three implemented prompt-precision functions</title><desc id="examples-desc">The conditioning code selects bounded context, chooses evidence within authority scope, and applies compatible model-specific request contracts.</desc>
+        <rect width="1200" height="320" rx="28" fill="#101827"/><g font-family="Inter,Arial,sans-serif"><text x="48" y="54" fill="#e2e8f0" font-size="27" font-weight="700">Three useful controls in the implemented conditioning component</text><text x="48" y="82" fill="#94a3b8" font-size="16">Keep the required request · select authorised evidence · apply only a compatible model contract</text></g>
+        <g font-family="Inter,Arial,sans-serif"><g transform="translate(48 122)"><rect width="340" height="150" rx="18" fill="#172554" stroke="#60a5fa"/><text x="22" y="40" fill="#dbeafe" font-size="20" font-weight="700">Bounded context</text><text x="22" y="72" fill="#bfdbfe" font-size="15">Instruction + question always stay</text><text x="22" y="101" fill="#bfdbfe" font-size="15">Optional context fits if possible</text><text x="22" y="130" fill="#bfdbfe" font-size="15">Otherwise it is left out</text></g><g transform="translate(430 122)"><rect width="340" height="150" rx="18" fill="#12303a" stroke="#2dd4bf"/><text x="22" y="40" fill="#ccfbf1" font-size="20" font-weight="700">Scoped evidence</text><text x="22" y="72" fill="#99f6e4" font-size="15">Check graph scope and ceiling</text><text x="22" y="101" fill="#99f6e4" font-size="15">Copy authorised evidence only</text><text x="22" y="130" fill="#99f6e4" font-size="15">Record missing requirements</text></g><g transform="translate(812 122)"><rect width="340" height="150" rx="18" fill="#312e5f" stroke="#a78bfa"/><text x="22" y="40" fill="#ede9fe" font-size="20" font-weight="700">Compatible contract</text><text x="22" y="72" fill="#ddd6fe" font-size="15">Match profile, version and spec</text><text x="22" y="101" fill="#ddd6fe" font-size="15">Bound context and output</text><text x="22" y="130" fill="#ddd6fe" font-size="15">Reject stale configuration</text></g></g>
+      </svg>
     </section>
 
     <section class="precision-section" aria-labelledby="evaluation-title">
-      <p class="q-kicker mb-2">Measured promotion</p>
-      <h2 id="evaluation-title" class="text-2xl sm:text-3xl font-semibold">Evaluate real outputs before activating a
-        profile</h2>
+      <p class="q-kicker mb-2">Before any profile is adopted</p>
+      <h2 id="evaluation-title" class="text-2xl sm:text-3xl font-semibold">Promote a contract only after testing it against the unmodified route</h2>
       <div class="precision-grid">
         <article class="precision-card">
-          <h3>Isolate evaluation splits</h3>
-          <p>Search on train/dev tasks. Evaluate the selected profile and baseline on sealed held-out tasks with
-            independent validators. Expected answers never enter model input; simulated runs cannot authorise production
-            promotion.</p>
+          <h3>Compare the same task</h3>
+          <p>Run the ordinary assembled prompt and the contract-lowered prompt against the same held-out task set. Preserve the same model, chat template, evidence, output allowance and concurrency. Otherwise a smaller answer can be mistaken for an improvement.</p>
         </article>
         <article class="precision-card">
-          <h3>Measure quality and resources</h3>
-          <p>Report task success, required constraints, evidence and tool correctness, actual tokens, cold/warm latency
-            and peak memory. Compare equal-budget and full-context conditions separately; cache benefits are distinct
-            from prompt-quality gains.</p>
+          <h3>Measure the route actually used</h3>
+          <p>Record whether the local/native, Ollama, HTTP, or remote MCP route ran; its model/template identity; rendered bytes and actual token counts where available; latency; memory; output checks; and task quality. Unknown measurements must remain unknown.</p>
         </article>
         <article class="precision-card">
-          <h3>Bind and verify promotion</h3>
-          <p>Extend signed receipts to bind the complete checkpoint manifest, template, backend/hardware, corpus and
-            real measurements. Promote only after quality/resource gates pass; retain a verified rollback profile and
-            invalidate incompatible caches.</p>
+          <h3>Make activation reversible</h3>
+          <p>The model-precision registry can bind an active profile/contract to a model and clear it on rollback. Promotion should retain the model, profile version, test set and measurement record so a later regression has a clear comparison point.</p>
         </article>
       </div>
     </section>
 
     <section class="precision-section" aria-labelledby="constraints-title">
-      <h2 id="constraints-title" class="text-2xl sm:text-3xl font-semibold">Bounded execution, honest capability
-        reporting</h2>
-      <p class="text-white/70">Tier-1 evaluators and ABI-crossing buffers use caller-owned storage and must pass real
-        zero-allocation tests. Cold authoring and request assembly may use explicitly bounded construction. Preserve the
-        48-byte NQuin ABI and the 42 MiB Sentinel execution arena; model weights, KV, pinned host memory and VRAM
-        require separate governed budgets, not a claim that the whole model fits the Sentinel.</p>
-      <p class="text-white/70">Learned prompts, layer prefixes and LoRA remain separately gated experiments. They need
-        shape compatibility, measured application costs and held-out gains over the best text baseline. No
-        learned-adapter result or automatic calibration gain is asserted here.</p>
-      <p class="text-white/70">Read the <a href="design/prompt-precision/IMPLEMENTATION.md">implementation contract</a>,
-        <a href="design/prompt-precision/README.md">conditioning architecture</a> and <a
-          href="design/prompt-precision/CODEBASE-MAP.md">source evidence map</a>. Those design documents retain their
-        original phase history; the status boundary above reflects the 18 September source review.</p>
+      <h2 id="constraints-title" class="text-2xl sm:text-3xl font-semibold">What remains to be connected</h2>
+      <p class="text-white/70">The code-level account is in <a href="design/prompt-precision/CODEBASE-MAP.md">the source evidence map</a>. The target shared design is in the <a href="design/prompt-precision/README.md">conditioning architecture</a> and <a href="design/prompt-precision/IMPLEMENTATION.md">implementation contract</a>.</p>
     </section>
 
     <footer class="text-center text-xs text-white/40 pt-8 border-t border-white/10">
-      <p>QualiaDB Architecture · 0.0.39 · Source-reviewed foundations and required integration gates · No benchmark
-        gains claimed</p>
+      <p>QualiaDB Architecture · 0.0.40 · Current-code explanation, not a confidentiality or performance claim</p>
     </footer>
   </main>
 
-  <script>
-    const strategyDetails = {
-      b0: 'B0_baseline supplies minimal instruction without graph conditioning. Measure it alongside the unchanged product route; neither baseline may bypass executable authority checks.',
-      b1: 'B1_explicit_text adds readable accuracy and citation guidance. Verify actual evidence support and constraint satisfaction; a requested citation is not a verified citation.',
-      b2: 'B2_compiled_graph requests ontology-backed schema and provenance requirements. Admission and output validation must enforce required capabilities; compilation alone cannot prove that the backend did so.',
-      b3: 'B3_compressed currently reduces both input and output budgets. Test required-content preservation and answer completeness. Compare equal-budget controls so shorter output is not mistaken for a precision or throughput gain.',
-      b4: 'B4_prefix_aligned requests a stable prefix. Measure exact reused tokens only after full identity and state checks. Qwen reuse requires matching attention KV and recurrent/convolution snapshots, not just a repeated header.',
-      b5: 'B5_optimized_hybrid combines domain requirements and role-separation guidance. The label does not establish a measured winner and does not refer to CPU/GPU expert offload or low-bit token encoding.'
-    };
-    const strategyButtons = document.querySelectorAll('[data-strategy]');
-    strategyButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        strategyButtons.forEach(candidate => candidate.setAttribute('aria-pressed', String(candidate === button)));
-        document.getElementById('strategy-description').textContent = strategyDetails[button.dataset.strategy];
-      });
-    });
-  </script>
 </body>
 
 </html>

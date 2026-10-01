@@ -460,6 +460,9 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     <button type="button" data-pane="accessibility">Accessibility</button>
     <div class="group">Setup</div>
     <button type="button" data-pane="setup">First-run · host</button>
+    <button type="button" data-pane="network">Network · connections</button>
+    <button type="button" data-pane="mail-domain">Mail · domain receiving</button>
+    <button type="button" data-pane="mail-accounts">Mail · connected accounts</button>
     <button type="button" data-pane="wallet-setup">Wallet rails</button>
     <button type="button" data-pane="companion">Companion · phone</button>
     <button type="button" data-pane="identity">Person · devices</button>
@@ -498,6 +501,35 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<div class="toggle"><div><div class="t-label">Complete first-run checklist</div><div class="t-hint">Local progress Live</div></div><button type="button" class="switch" data-k="firstrun" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Native host :4242</div><div class="t-hint">Planned until Neo host claim</div></div><button type="button" class="switch" data-k="host" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
       '<div class="note"><strong>Setup ≠ app.</strong> Removed from constellation. Loopback Settings portal and in-app Settings share <strong>this volume</strong> — one home.</div>'},
+    network:{title:"Network · connections",pill:"Local setup",html:
+      '<p class="muted" style="margin-top:0">Create a signed connection identifier for another person to accept. Generating it does not contact, add, or publish to anyone.</p>'+ 
+      '<label class="muted" for="network-did">Front-door DID (optional when a domain is configured)</label><input id="network-did" placeholder="did:web:example.org" autocomplete="off">'+
+      '<label class="muted" for="network-domain" style="margin-top:.65rem">Domain for a web and email connection link (optional)</label><input id="network-domain" placeholder="example.org" autocomplete="off">'+
+      '<label class="muted" for="network-relation" style="margin-top:.65rem">Connection context</label><select id="network-relation"><option value="invitation-known">Invitation — people already know one another</option><option value="introduction">Introduction — a new connection</option><option value="collaborator">Collaboration</option></select>'+
+      '<div class="row"><button type="button" class="primary" id="network-generate">Generate connection link</button><button type="button" id="network-refresh">Refresh accepted connections</button></div>'+ 
+      '<label class="muted" for="network-incoming" style="margin-top:.75rem">Received connection link</label><textarea id="network-incoming" rows="3" placeholder="Paste a web+qualia link, HTTPS link, or qcx1 identifier"></textarea><div class="row"><button type="button" id="network-accept">Verify and accept connection</button></div>'+ 
+      '<pre class="note" id="network-output" style="white-space:pre-wrap;overflow:auto">No connection identifier generated.</pre>'},
+    "mail-domain":{title:"Mail · domain receiving",pill:"Local setup",html:
+      '<p class="muted" style="margin-top:0">A catch-all mailbox can receive <strong>any-address@your-domain</strong>. Generate the DNS records here, then deliberately set MX/DNS and a public tunnel or host outside the desktop app.</p>'+ 
+      '<label class="muted" for="mail-domain-name">Domain</label><input id="mail-domain-name" placeholder="example.org" autocomplete="off">'+
+      '<label class="muted" for="mail-frontdoor-did" style="margin-top:.65rem">Front-door DID</label><input id="mail-frontdoor-did" placeholder="did:web:example.org" autocomplete="off">'+
+      '<label class="muted" for="mail-mx-host" style="margin-top:.65rem">MX host (optional)</label><input id="mail-mx-host" placeholder="mail.example.org" autocomplete="off">'+
+      '<div class="row"><button type="button" class="primary" id="mail-register">Register domain locally</button><button type="button" id="mail-onboard">Create purpose aliases + catch-all</button><button type="button" id="mail-dns">Generate MX/SPF records</button><button type="button" id="mail-front-door">Generate _qdp link record</button><button type="button" id="mail-receiver">Start local receiver</button><button type="button" id="mail-receiver-status">Refresh receiver status</button></div>'+ 
+      '<div class="ph" style="margin-top:.75rem"><b>Relationship or site alias</b><span class="pill live">exact route</span></div>'+
+      '<label class="muted" for="mail-alias-local" style="margin-top:.65rem">Alias</label><input id="mail-alias-local" placeholder="neighbourhood" autocomplete="off">'+
+      '<label class="muted" for="mail-relationship-did" style="margin-top:.65rem">Relationship or site DID</label><input id="mail-relationship-did" placeholder="did:web:neighbourhood.example" autocomplete="off">'+
+      '<div class="row"><button type="button" id="mail-alias">Create exact alias</button></div>'+
+      '<pre class="note" id="mail-domain-output" style="white-space:pre-wrap;overflow:auto">The local receiver is not queried yet.</pre>'},
+    "mail-accounts":{title:"Mail · connected accounts",pill:"Local setup",html:
+      '<p class="muted" style="margin-top:0">Add more than one traditional account. Each is fetched through its selected protocol into the local inbox, while its account label remains visible as provenance.</p>'+ 
+      '<label class="muted" for="account-label">Account label</label><input id="account-label" placeholder="Work mail" autocomplete="off">'+
+      '<label class="muted" for="account-address" style="margin-top:.65rem">Mailbox address</label><input id="account-address" placeholder="you@example.org" autocomplete="email">'+
+      '<label class="muted" for="account-protocol" style="margin-top:.65rem">Protocol</label><select id="account-protocol"><option value="imap">IMAP (recommended)</option><option value="pop3">POP3S (legacy provider)</option><option value="smtp">SMTP (outgoing only)</option></select>'+
+      '<label class="muted" for="account-host" style="margin-top:.65rem">Server</label><input id="account-host" placeholder="imap.example.org" autocomplete="off">'+
+      '<label class="muted" for="account-port" style="margin-top:.65rem">Port</label><input id="account-port" type="number" value="993" min="1" max="65535">'+
+      '<label class="muted" for="account-user" style="margin-top:.65rem">Username</label><input id="account-user" placeholder="you@example.org" autocomplete="username">'+
+      '<label class="muted" for="account-password" style="margin-top:.65rem">Password or app password</label><input id="account-password" type="password" autocomplete="current-password">'+
+      '<div class="row"><button type="button" class="primary" id="account-save">Save account locally</button><button type="button" id="account-fetch">Fetch all accounts</button><button type="button" id="account-refresh">Refresh accounts</button></div><pre class="note" id="account-output" style="white-space:pre-wrap;overflow:auto">No accounts configured.</pre>'},
     "wallet-setup":{title:"Wallet rails",pill:"Setup",html:
       '<p class="muted" style="margin-top:0">Configure which rails appear — Lightning · Nym · XEC · tokens. No ETH. Signing stays human.</p>'+
       '<div class="toggle"><div><div class="t-label">Lightning</div><div class="t-hint">Show rail in Wallet</div></div><button type="button" class="switch" data-k="ln" role="switch" aria-checked="true"><span></span></button></div>'+
@@ -509,13 +541,13 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<div class="toggle"><div><div class="t-label">Allow tool suggestions in volumes</div></div><button type="button" class="switch" data-k="suggest" role="switch" aria-checked="true"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Auto-run low-risk jobs</div><div class="t-hint">Still goes through Admin runner</div></div><button type="button" class="switch" data-k="autorun" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Show spend / limits</div></div><button type="button" class="switch" data-k="spend" role="switch" aria-checked="true"><span></span></button></div>'+
-      '<label class="muted" for="model">Preferred instrument</label><select id="model" disabled title="Planned until Instruments bind"><option>Local model (Planned)</option><option>Allowlisted remote (Planned)</option></select>'+
+      '<div class="note" id="agent-model-status">Checking local model status…</div>'+ 
       '<div class="note"><strong>Console demoted</strong> from app ring → Settings · Configuration. Deep link <code>/volumes/settings?pane=agent</code>.</div>'},
-    instruments:{title:"Instruments binds",pill:"Config · Planned",html:
-      '<p class="muted" style="margin-top:0">Model / LLM / tool allowlists — configuration, not a people surface.</p>'+
-      '<div class="toggle"><div><div class="t-label">Local model bind</div></div><button type="button" class="switch" data-k="localm" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
-      '<div class="toggle"><div><div class="t-label">Allowlisted tools only</div></div><button type="button" class="switch" data-k="allow" role="switch" aria-checked="true"><span></span></button></div>'+
-      '<div class="row"><button type="button" id="open-instr">Open Instruments volume</button></div>'},
+    instruments:{title:"Instruments",pill:"Config",html:
+      '<p class="muted" style="margin-top:0">Model / LLM / tool allowlists — configuration, not a people surface.</p>'+ 
+      '<div class="note" id="instrument-model-status">Checking local model status…</div>'+ 
+      '<div class="toggle"><div><div class="t-label">Allowlisted tools only</div></div><button type="button" class="switch" data-k="allow" role="switch" aria-checked="true"><span></span></button></div>'+ 
+      '<div class="row"><button type="button" id="refresh-instrument-status">Refresh status</button><button type="button" id="open-instr">Open Instruments volume</button></div>'},
     companion:{title:"Companion · phone",pill:"Setup · Planned",html:
       '<p class="muted" style="margin-top:0">Pair a phone companion — QR + LAN WS ingest. Companion is a <strong>tool / locator</strong>, never a NaturalAgent peer.</p>'+
       '<div class="toggle"><div><div class="t-label">Allow companion gateway</div><div class="t-hint">Host WS bind Planned until Desktop claims</div></div><button type="button" class="switch" data-k="compgw" role="switch" aria-checked="false" disabled title="Planned"><span></span></button></div>'+
@@ -553,7 +585,7 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       '<div class="toggle"><div><div class="t-label">Proxy-launder</div><div class="t-hint">Off by default</div></div><button type="button" class="switch" data-k="proxy-launder" role="switch" aria-checked="false"><span></span></button></div>'+
       '<div class="toggle"><div><div class="t-label">Conflict checks</div><div class="t-hint">Block conflicting purpose claims</div></div><button type="button" class="switch" data-k="conflict-chk" role="switch" aria-checked="true"><span></span></button></div>'+
       '</div>'+
-      '<div class="note"><strong>Honesty:</strong> empty vault = held / not yet — not a dead end. Revoke credential ≠ erase human / Keep. Unknown keyRole = held, not other-id / who. Wallet rails stay sibling under Setup. Nym rail uses keyRole mixnet (KeyVault-held seed; agents request, never hold).</div>'
+      '<div class="note"><strong>Honesty:</strong> an empty vault is held / not yet — not a dead end. Revoking a credential does not erase a person or their saved items. Unknown keyRole = held, not another identity. Wallet rails stay under Setup. Nym uses a KeyVault-held mixnet seed; agents request access but never hold it.</div>'
     },
     backup:{title:"Backup · sync",pill:"Config · Planned",html:
       '<p class="muted" style="margin-top:0">Import, backup, trusted relay. Host-bound sync stays Planned until Desktop claims — no fake “synced” theatre.</p>'+
@@ -629,6 +661,106 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
     if(od) od.onclick=()=>{ try{parent.postMessage({type:"webizen-open",route:"/volumes/directory"},"*");}catch(e){} };
     const ok=document.getElementById("open-keep");
     if(ok) ok.onclick=()=>{ try{parent.postMessage({type:"webizen-open",route:"/volumes/keep"},"*");}catch(e){} };
+    bindNetworkSetup();
+    bindMailDomainSetup();
+    bindMailAccounts();
+  }
+
+  function bindMailAccounts(){
+    const save=document.getElementById("account-save"), refresh=document.getElementById("account-refresh"), fetchAll=document.getElementById("account-fetch"), output=document.getElementById("account-output");
+    const protocol=document.getElementById("account-protocol"), port=document.getElementById("account-port");
+    if(protocol) protocol.onchange=()=>{ port.value=protocol.value==="pop3"?"995":protocol.value==="smtp"?"587":"993"; };
+    const show=async()=>{const accounts=await jsonRequest("/api/mail/accounts",{headers:{Accept:"application/json"}}); output.textContent=JSON.stringify(accounts,null,2); return accounts;};
+    if(refresh) refresh.onclick=async()=>{try{const accounts=await show(); status.textContent=(Array.isArray(accounts)?accounts.length:0)+" mail account(s) configured locally.";}catch(error){status.textContent="Account list unavailable: "+error.message;}};
+    if(fetchAll) fetchAll.onclick=async()=>{fetchAll.disabled=true; status.textContent="Fetching configured mail accounts…"; try{const result=await jsonRequest("/api/mail/accounts/fetch",{method:"POST",headers:{Accept:"application/json"}}); output.textContent=JSON.stringify(result,null,2); status.textContent="Account fetch finished. Open Mail to read the unified local inbox.";}catch(error){status.textContent="Account fetch unavailable: "+error.message;}finally{fetchAll.disabled=false;}};
+    if(save) save.onclick=async()=>{
+      const protocol=document.getElementById("account-protocol").value, host=document.getElementById("account-host").value.trim(), port=Number(document.getElementById("account-port").value), username=document.getElementById("account-user").value.trim(), password=document.getElementById("account-password").value;
+      const account={id:"mail-"+Date.now(),label:document.getElementById("account-label").value.trim(),address:document.getElementById("account-address").value.trim(),smtp:null,imap:null,pop3:null};
+      const config={host,port,username,password}; account[protocol]=config;
+      save.disabled=true; status.textContent="Saving mail account locally…";
+      try{const accounts=await jsonRequest("/api/mail/accounts",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(account)}); output.textContent=JSON.stringify(accounts,null,2); document.getElementById("account-password").value=""; status.textContent="Account saved locally. It has not connected or fetched mail yet.";}
+      catch(error){status.textContent="Account could not be saved: "+error.message;}finally{save.disabled=false;}
+    };
+  }
+
+  async function jsonRequest(path, options){
+    const response=await fetch(path,options);
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data.error||("HTTP "+response.status));
+    return data;
+  }
+  function bindNetworkSetup(){
+    const generate=document.getElementById("network-generate"), refresh=document.getElementById("network-refresh"), accept=document.getElementById("network-accept"), output=document.getElementById("network-output");
+    if(generate) generate.onclick=async()=>{
+      generate.disabled=true; status.textContent="Generating a signed connection identifier locally…";
+      try{
+        const value=await jsonRequest("/api/network/identifier",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({front_door_did:document.getElementById("network-did").value.trim(),domain:document.getElementById("network-domain").value.trim(),relation_type:document.getElementById("network-relation").value.trim()||"collaborator"})});
+        output.textContent=JSON.stringify(value,null,2); status.textContent="Connection identifier created locally. Choose how to share it.";
+      }catch(error){ status.textContent="Connection identifier unavailable: "+error.message; }
+      finally{generate.disabled=false;}
+    };
+    if(refresh) refresh.onclick=async()=>{
+      refresh.disabled=true; status.textContent="Reading accepted connections…";
+      try{ const peers=await jsonRequest("/api/network/peers",{headers:{Accept:"application/json"}}); output.textContent=JSON.stringify(peers,null,2); status.textContent=(Array.isArray(peers)?peers.length:0)+" accepted connection(s) on this device."; }
+      catch(error){status.textContent="Connections unavailable: "+error.message;}
+      finally{refresh.disabled=false;}
+    };
+    if(accept) accept.onclick=async()=>{
+      accept.disabled=true; status.textContent="Verifying the received connection identifier…";
+      try{const value=await jsonRequest("/api/network/accept",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({link:document.getElementById("network-incoming").value.trim()})}); output.textContent=JSON.stringify(value,null,2); status.textContent="Connection verified and accepted on this device.";}
+      catch(error){status.textContent="Connection was not accepted: "+error.message;} finally{accept.disabled=false;}
+    };
+  }
+  function bindMailDomainSetup(){
+    const dns=document.getElementById("mail-dns"), frontDoor=document.getElementById("mail-front-door"), start=document.getElementById("mail-receiver"), check=document.getElementById("mail-receiver-status"), register=document.getElementById("mail-register"), onboard=document.getElementById("mail-onboard"), alias=document.getElementById("mail-alias"), output=document.getElementById("mail-domain-output");
+    const domain=()=>document.getElementById("mail-domain-name").value.trim();
+    if(register) register.onclick=async()=>{
+      register.disabled=true; status.textContent="Registering the domain locally…";
+      try{const value=await jsonRequest("/api/mail/domains",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({domain:domain(),front_door_did:document.getElementById("mail-frontdoor-did").value.trim()})}); output.textContent=JSON.stringify(value,null,2); status.textContent="Domain registered locally. DNS has not been changed.";}
+      catch(error){status.textContent="Domain registration unavailable: "+error.message;} finally{register.disabled=false;}
+    };
+    if(onboard) onboard.onclick=async()=>{
+      onboard.disabled=true; status.textContent="Creating domain aliases and catch-all…";
+      try{const value=await jsonRequest("/api/mail/domains/"+encodeURIComponent(domain())+"/onboard",{method:"POST",headers:{Accept:"application/json"}}); output.textContent=JSON.stringify(value,null,2); status.textContent="Purpose aliases and a quarantined catch-all are ready locally.";}
+      catch(error){status.textContent="Domain onboarding unavailable: "+error.message;} finally{onboard.disabled=false;}
+    };
+    if(alias) alias.onclick=async()=>{
+      alias.disabled=true; status.textContent="Creating an exact relationship alias…";
+      try{const value=await jsonRequest("/api/mail/aliases",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({domain:domain(),local:document.getElementById("mail-alias-local").value.trim(),relationship_did:document.getElementById("mail-relationship-did").value.trim()})}); output.textContent=JSON.stringify(value,null,2); status.textContent="Exact alias created locally. It routes before the domain catch-all.";}
+      catch(error){status.textContent="Alias creation unavailable: "+error.message;} finally{alias.disabled=false;}
+    };
+    if(frontDoor) frontDoor.onclick=async()=>{
+      frontDoor.disabled=true; status.textContent="Generating the DNS-assisted connection record…";
+      try{const value=await jsonRequest("/api/mail/domains/"+encodeURIComponent(domain())+"/front-door",{headers:{Accept:"application/json"}}); output.textContent="TXT  "+(value.dns_name||"_qdp")+"\n"+(value.dns_txt||"")+"\n\nThis verifies the domain front door. It is separate from MX mail routing.\n\n"+JSON.stringify(value,null,2); status.textContent="_qdp record generated. Publish it at your DNS provider when ready.";}
+      catch(error){status.textContent="Front-door record unavailable: "+error.message;} finally{frontDoor.disabled=false;}
+    };
+    if(dns) dns.onclick=async()=>{
+      dns.disabled=true; status.textContent="Generating DNS records…";
+      try{const value=await jsonRequest("/api/mail/domain",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({domain:document.getElementById("mail-domain-name").value.trim(),mx_host:document.getElementById("mail-mx-host").value.trim()})}); output.textContent=value.plaintext_block||JSON.stringify(value,null,2); status.textContent="DNS records generated. They have not been published.";}
+      catch(error){status.textContent="DNS records unavailable: "+error.message;}
+      finally{dns.disabled=false;}
+    };
+    async function receiver(method){
+      status.textContent=method==="POST"?"Starting loopback mail receiver…":"Reading mail receiver status…";
+      try{const value=await jsonRequest("/api/mail/receiver",{method,headers:{Accept:"application/json"}}); output.textContent=JSON.stringify(value,null,2); status.textContent=value.running?"Local receiver is running. Public MX and tunnelling are still separate setup steps.":"Local receiver is stopped.";}
+      catch(error){status.textContent="Mail receiver unavailable: "+error.message;}
+    }
+    if(start) start.onclick=()=>receiver("POST"); if(check) check.onclick=()=>receiver("GET");
+  }
+
+  function refreshInstrumentStatus(){
+    const targets=[document.getElementById("agent-model-status"),document.getElementById("instrument-model-status")].filter(Boolean);
+    if(!targets.length) return;
+    targets.forEach(el=>{el.textContent="Checking local model status…";});
+    fetch("/api/instruments/status").then(async response=>{
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(data.error||("HTTP "+response.status));
+      const model=data.active_model||data.activeModel;
+      const text=data.ready&&model?"Local model ready: "+model:"No local model is active. Use Desktop menu → Tools → Load Model File (GGUF / P64).";
+      targets.forEach(el=>{el.textContent=text;});
+    }).catch(error=>{
+      targets.forEach(el=>{el.textContent="Local model status unavailable: "+error.message;});
+    });
   }
   
   const KEY_ROLES=[
@@ -685,6 +817,9 @@ table.assets td.amt{color:var(--ink);font-variant-numeric:tabular-nums}
       b.setAttribute("aria-current", b.getAttribute("data-pane")===id?"true":"false");
     });
     bindSwitches();
+    const refresh=document.getElementById("refresh-instrument-status");
+    if(refresh) refresh.onclick=refreshInstrumentStatus;
+    if(id==="agent"||id==="instruments") refreshInstrumentStatus();
     if(id==="privacy") paintKeyRoles();
     status.textContent="Settings · "+p.title+" · not an app";
     try{ history.replaceState(null,"","?pane="+id); }catch(e){}

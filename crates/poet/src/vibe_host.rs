@@ -12,8 +12,8 @@ pub use vibe::{
 /// Host ABI stamp for the frozen four-op surface.
 pub const HOST_VERSION: &str = "vibe-host-0.1";
 
-/// Crate / branch stamp aligned with `0.0.39`.
-pub const CRATE_STAMP: &str = "0.0.39";
+/// Crate / branch stamp aligned with `0.0.40`.
+pub const CRATE_STAMP: &str = "0.0.40";
 
 /// Pin: invoke by id only. Does not expose the wide [`vibe::Host`] trait.
 ///

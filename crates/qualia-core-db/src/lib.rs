@@ -14,7 +14,8 @@ use zeroize::Zeroize;
         feature = "wasm-scientific",
         feature = "wasm-llm",
         feature = "wasm-playground",
-        feature = "wasm-full"
+        feature = "wasm-full",
+        feature = "wasm-webcivics"
     )
 ))]
 compile_error!(
@@ -326,6 +327,9 @@ pub use sparql_library::*;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex;
+/// Q42LEX v4 writer: paged lexicon with per-page namespace dictionaries.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod q42_lex_ns;
 #[cfg(target_arch = "wasm32")]
 pub mod q42_lex {
     pub struct Q42LexMmap<'a> {
@@ -468,7 +472,8 @@ pub mod text_span;
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     )
 ))]
 pub mod wasm_bridge;
@@ -482,7 +487,8 @@ pub mod wasm_bridge;
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     ))
 ))]
 pub mod wasm_bridge_core;
@@ -504,10 +510,14 @@ pub use spatial_wasm::{
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     )
 ))]
-pub use wasm_bridge::{parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm};
+pub use wasm_bridge::{
+    parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm,
+    parse_yaml_ld_q42_wasm,
+};
 #[cfg(all(
     target_arch = "wasm32",
     feature = "portal",
@@ -516,7 +526,8 @@ pub use wasm_bridge::{parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, p
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     ))
 ))]
 pub use wasm_bridge_core::{parse_cbor_ld_wasm, parse_json_wasm};
@@ -1957,6 +1968,7 @@ mod tests {
 #[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;
 
+pub mod domain_licence;
 pub mod domains;
 pub mod solvers;
 

@@ -20,27 +20,39 @@ fn observe_named_local_augmented_surface(
     )
 }
 
-/// Documented MCP flatten (mirrors `remote_mcp::build_infer_request`).
+/// Documented MCP flatten — delegates to the real production lowering adapter.
 fn observe_mcp_flat_prompt(system: Option<&str>, prompt: &str) -> String {
-    match system {
-        Some(sys) if !sys.trim().is_empty() => format!("{sys}\n\n{prompt}"),
-        _ => prompt.to_string(),
-    }
+    let (args, _receipt) = qualia_client_core::conditioning::lower_mcp_tool_arguments(
+        system, prompt, false,
+    );
+    args["prompt"].as_str().unwrap().to_string()
 }
 
 /// Documented remote-turn success JSON shape from `api::agents::run_remote_agent_turn`
-/// (no network — static contract fixture).
+/// (no network — static contract fixture). Unknown usage is reported as
+/// `null` + `"unknown"`, never as measured zeros; the session append and the
+/// graph commit are reported separately.
 fn observe_remote_success_envelope(text: &str, model: Option<&str>) -> serde_json::Value {
     serde_json::json!({
         "text": text,
         "committed": true,
+        "session_appended": true,
+        "wal_committed": false,
         "block_reason": serde_json::Value::Null,
         "agent_backend": "remote",
         "model_id": model,
         "provenance_hashes": [],
         "citations": [],
-        "tokens_generated": 0,
-        "inference_duration_ms": 0,
+        "tokens_generated": serde_json::Value::Null,
+        "token_measurement": "unknown",
+        "inference_duration_ms": 42,
+        "latency_measurement": "measured",
+        "conditioning": serde_json::Value::Null,
+        "mcp_lowering": {
+            "mode": "flattened",
+            "role_degraded": false,
+            "degradation_reason": serde_json::Value::Null
+        },
     })
 }
 
@@ -123,6 +135,14 @@ fn pp003_run_chat_inference_for_agent_passes_semantic_not_system_prompt() {
 
 #[test]
 fn pp004_mcp_flattens_system_and_user_into_single_prompt_argument() {
+    // Production request building goes through the shared lowering adapter.
+    let src = include_str!("../src/remote_mcp.rs");
+    assert!(
+        src.contains("lower_mcp_tool_arguments"),
+        "remote MCP must lower via the shared adapter with a degradation receipt"
+    );
+
+    // Unknown/absent system-role capability → flattened single argument.
     let flat = observe_mcp_flat_prompt(Some("Be terse."), "hi");
     assert_eq!(flat, "Be terse.\n\nhi");
     let wire = serde_json::json!({
@@ -137,19 +157,45 @@ fn pp004_mcp_flattens_system_and_user_into_single_prompt_argument() {
     assert_eq!(wire["method"], "tools/call");
     assert!(wire["params"]["arguments"].get("system").is_none());
     assert_eq!(wire["params"]["arguments"]["prompt"], "Be terse.\n\nhi");
+
+    // Declared system-role capability → structured arguments, no degradation.
+    let (args, receipt) = qualia_client_core::conditioning::lower_mcp_tool_arguments(
+        Some("Be terse."), "hi", true,
+    );
+    assert_eq!(args["system"], "Be terse.");
+    assert_eq!(args["prompt"], "hi");
+    assert_eq!(
+        receipt.mode,
+        qualia_client_core::conditioning::McpLoweringMode::Structured
+    );
+    assert!(!receipt.role_degraded);
 }
 
 #[test]
-fn pp004_remote_result_committed_true_with_zero_usage_is_not_measured_zero() {
+fn pp004_remote_result_reports_unknown_usage_and_real_latency() {
+    // Static fixture of the remote-turn envelope: unknown usage stays unknown
+    // (null + "unknown"), measured latency is real, and session append is
+    // reported separately from any graph commit.
     let env = observe_remote_success_envelope("hello", Some("phi-3"));
     assert_eq!(env["committed"], true);
+    assert_eq!(env["wal_committed"], false);
     assert!(env["citations"].as_array().unwrap().is_empty());
-    assert_eq!(env["tokens_generated"], 0);
-    assert_eq!(env["inference_duration_ms"], 0);
-    // Honesty: these zeros are unset/unknown coverage, not proven measured usage.
-    const USAGE_COVERAGE_KNOWN: bool = false;
+    assert_eq!(env["tokens_generated"], serde_json::Value::Null);
+    assert_eq!(env["token_measurement"], "unknown");
+    assert_eq!(env["latency_measurement"], "measured");
+    assert_eq!(env["inference_duration_ms"], 42);
+
+    // Production source must not fabricate zero usage or blanket commit.
+    let src = include_str!("../src/api/agents.rs");
+    let turn_fn = src
+        .split("pub fn run_remote_agent_turn")
+        .nth(1)
+        .expect("run_remote_agent_turn");
     assert!(
-        !USAGE_COVERAGE_KNOWN,
-        "remote path does not label usage coverage; treat 0 as unknown, not measured zero"
+        !turn_fn.contains("\"tokens_generated\": 0"),
+        "remote turn must not report unmeasured token usage as zero"
     );
+    assert!(turn_fn.contains("\"token_measurement\": \"unknown\""));
+    assert!(turn_fn.contains("\"mcp_lowering\""));
+    assert!(turn_fn.contains("prepare_active_semantic_request"));
 }

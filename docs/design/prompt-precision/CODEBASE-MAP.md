@@ -1,6 +1,6 @@
 # Prompt precision — repository evidence and reuse map
 
-Inspected: 2026-09-15. Branch `0.0.38`; HEAD `994f417c8`; working tree contains substantial pre-existing edits. Findings refer to inspected working-tree source, not a clean release or executed test result. Existing changes were preserved.
+Inspected: 2026-09-15. Branch `0.0.40`; HEAD `994f417c8`; working tree contains substantial pre-existing edits. Findings refer to inspected working-tree source, not a clean release or executed test result. Existing changes were preserved.
 
 ## 1. Product call paths
 

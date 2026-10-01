@@ -57,6 +57,11 @@ pub use volume::{write_sorted_quins_volume, write_sorted_quins_volume_with_autho
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V3: u16 = 3;
+/// Current write generation. v4 volumes carry the namespaced paged Q42LEX
+/// (`q42_lex_ns`, ADR 0015) from `encode_lex`; the header layout itself is
+/// unchanged from v3. Readers accept v3 and v4 — existing pre-release data
+/// stays loadable until regenerated.
+pub const Q42_VERSION_V4: u16 = 4;
 pub const HEADER_SIZE: usize = 256;
 pub const SUPERBLOCK_SIZE: usize = 40_960;
 /// Conservative caller-buffer bound for an LZ4 `prepend_size` encoding of one
@@ -80,6 +85,9 @@ pub const FLAG_PERMISSIVE_COMMONS: u16 = 0x0020;
 /// Writers also set this when any Quin is restricted, classified, medical,
 /// legal, fiduciary, or bilateral.
 pub const FLAG_SANCTUARY: u16 = 0x0040;
+/// Reserved: optional payload catalogue for oversized lexical / prose blobs
+/// (hash-keyed; not for media — use `.hmc`). Stub only until ADR writer lands.
+pub const FLAG_PAYLOAD_CATALOGUE: u16 = 0x0080;
 pub const FIELD_RANGE_INDEX_MAGIC: [u8; 4] = *b"FIDX";
 pub const FIELD_RANGE_INDEX_HEADER_BYTES: usize = 16;
 pub const FIELD_RANGE_INDEX_ENTRY_BYTES: usize = 48;
@@ -139,8 +147,10 @@ impl Q42VolumeHeader {
         if magic != Q42_MAGIC {
             return Err(format!("bad magic {magic:?}"));
         }
-        if version != Q42_VERSION_V3 {
-            return Err(format!("Q42 file is version {version}; strict v3 required"));
+        if version != Q42_VERSION_V3 && version != Q42_VERSION_V4 {
+            return Err(format!(
+                "Q42 file is version {version}; v3/v4 required (run q42 migrate meta for v2)"
+            ));
         }
         Ok(())
     }
@@ -178,8 +188,8 @@ impl Q42VolumeHeader {
         ))
     }
 
-    /// Build a minimal valid v3 header with all extension fields zeroed.
-    pub fn new_v3(
+    /// Build a minimal valid v4 header with all extension fields zeroed.
+    pub fn new_v4(
         lex_offset: u64,
         lex_length: u64,
         bidx_offset: u64,
@@ -198,7 +208,7 @@ impl Q42VolumeHeader {
             .unwrap_or(0);
         Self {
             magic: Q42_MAGIC,
-            version: Q42_VERSION_V3,
+            version: Q42_VERSION_V4,
             flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
             lex_offset,
             lex_length,
@@ -266,10 +276,10 @@ pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
     }
     let version = u16::from_le_bytes([header[4], header[5]]);
     if version >= Q42_VERSION_V3 as u16 {
-        return Ok(()); // already v3
+        return Ok(()); // v3/v4 headers already share the unified layout
     }
-    // Bump version to 3.
-    header[4..6].copy_from_slice(&(Q42_VERSION_V3 as u16).to_le_bytes());
+    // Bump version to the current generation.
+    header[4..6].copy_from_slice(&(Q42_VERSION_V4 as u16).to_le_bytes());
     // v2 only knew LZ4 + object-sorted. Later flags (root, FIDX, PIDX) must not
     // survive a header bump with their reserved offsets zeroed.
     let flags = u16::from_le_bytes([header[6], header[7]]) & (FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED);
@@ -289,13 +299,14 @@ pub fn is_unified_volume(path: &Path) -> io::Result<bool> {
     Ok(magic == Q42_MAGIC)
 }
 
-/// Encode Q42LEX bytes from a hash → string map.
+/// Encode Q42LEX bytes from a hash → string map (namespaced paged **v4**:
+/// each page carries its own namespace dictionary and qualifying terms are
+/// stored as `(ns_id, local)` references — see `q42_lex_ns` and ADR 0015).
 pub fn encode_lex(lex: &HashMap<u64, String>) -> Result<Vec<u8>, LexError> {
-    // Single source of truth for the Q42LEX write format. `serialize_string_lexicon` is UTF-8 and
-    // truncates over-long literals at a CHARACTER boundary (never mid-codepoint), so multilingual
-    // literals round-trip byte-intact — a plain `b.len().min(65535)` byte cut could split a codepoint
-    // and produce invalid UTF-8 that the reader then drops.
-    crate::q42_lex::serialize_paged_string_lexicon(lex, crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES)
+    crate::q42_lex_ns::serialize_namespaced_paged_lexicon(
+        lex,
+        crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES,
+    )
 }
 
 /// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).
@@ -470,10 +481,10 @@ fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
         ));
     }
     let version = u16::from_le_bytes(buf[4..6].try_into().unwrap());
-    if version != Q42_VERSION_V3 {
+    if version != Q42_VERSION_V3 && version != Q42_VERSION_V4 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("Q42 file is version {version}; strict v3 required"),
+            format!("Q42 file is version {version}; v3/v4 required"),
         ));
     }
     Ok(Q42VolumeHeader {
@@ -885,7 +896,7 @@ impl UnifiedVolumeBuilder {
         }
         let header = Q42VolumeHeader {
             magic: Q42_MAGIC,
-            version: Q42_VERSION_V3,
+            version: Q42_VERSION_V4,
             flags,
             lex_offset,
             lex_length: self.lex_bytes.len() as u64,
@@ -1311,7 +1322,7 @@ mod tests {
 
         let vol = Q42Volume::open(tmp.path()).unwrap();
         assert_eq!(vol.block_count(), 2);
-        assert!(vol.lex_view().unwrap().lookup_hash(q1.object).is_some());
+        assert!(vol.lex_view().unwrap().contains(q1.object));
 
         let hits = vol.bidx_blocks_for_hash(q1.object);
         assert!(!hits.is_empty(), "bidx miss for object hash {}", q1.object);
@@ -1574,15 +1585,18 @@ doc:article-1 a values:Undertaking ;
         // The verbatim literal is recoverable from the .q42 alone — the CML prerequisite.
         let lit = "Each Member undertakes to suppress forced labour.";
         assert_eq!(
-            lex.lookup_hash(generate_60bit_token(lit.as_bytes())),
-            Some(lit)
+            lex.lookup_owned(generate_60bit_token(lit.as_bytes())),
+            Some(lit.to_string())
         );
         // Expanded IRIs are recoverable too (queries become human-readable).
+        // The undertaking IRI is stored namespaced (v4 lexicon): prove both the
+        // full reassembly and the (namespace, local) split.
         let undertaking = "https://ns.webcivics.net/values/Undertaking";
-        assert_eq!(
-            lex.lookup_hash(generate_60bit_token(undertaking.as_bytes())),
-            Some(undertaking)
-        );
+        let token = generate_60bit_token(undertaking.as_bytes());
+        assert_eq!(lex.lookup_owned(token), Some(undertaking.to_string()));
+        let (ns, local) = lex.lookup_parts(token).expect("namespaced IRI parts");
+        assert_eq!(ns, "https://ns.webcivics.net/values/");
+        assert_eq!(local, "Undertaking");
     }
 
     /// `finish_to_bytes` must yield the same recoverable volume as `finish` writes to disk —
@@ -1610,11 +1624,11 @@ doc:article-1 a values:Undertaking ;
         let quins = vol.read_all_quins().unwrap();
         assert_eq!(quins.len(), 2);
         let lexv = vol.lex_view().unwrap();
-        let vals: Vec<&str> = quins
+        let vals: Vec<String> = quins
             .iter()
-            .filter_map(|q| lexv.lookup_hash(q.object))
+            .filter_map(|q| lexv.lookup_owned(q.object))
             .collect();
-        assert!(vals.contains(&"circulatory") && vals.contains(&"respiratory"));
+        assert!(vals.iter().any(|v| v == "circulatory") && vals.iter().any(|v| v == "respiratory"));
     }
 
     #[test]
@@ -1649,7 +1663,7 @@ impl StreamingVolumeAppender {
 
         let header = Q42VolumeHeader {
             magic: Q42_MAGIC,
-            version: Q42_VERSION_V3,
+            version: Q42_VERSION_V4,
             flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
             lex_offset: HEADER_SIZE as u64,
             lex_length: 0,

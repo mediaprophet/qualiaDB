@@ -9,7 +9,7 @@
  *     from './js/qualia-wasm-runtime.js';
  *
  *   const mod = await initQualiaWasm();
- *   console.log(getEngineVersion(mod)); // "0.0.39"
+ *   console.log(getEngineVersion(mod)); // "0.0.40"
  */
 
 import { fetchWasmBinary } from './wasm-fetch.js';

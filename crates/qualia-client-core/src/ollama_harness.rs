@@ -298,16 +298,31 @@ impl OllamaHarness {
 
     /// POST `/api/generate` — single-shot completion (blocking; chat/ETL cold path).
     pub fn generate(&self, system: &str, prompt: &str) -> Result<OllamaGenerateResult, String> {
+        self.generate_with_options(system, prompt, None)
+    }
+
+    /// `/api/generate` with an optional output-token cap (`num_predict`) so a
+    /// prepared semantic request can carry its output budget to the backend.
+    pub fn generate_with_options(
+        &self,
+        system: &str,
+        prompt: &str,
+        max_output_tokens: Option<u32>,
+    ) -> Result<OllamaGenerateResult, String> {
         let client = self.blocking_client()?;
+        let mut options = serde_json::json!({
+            "temperature": self.temperature,
+            "num_ctx": self.num_ctx,
+        });
+        if let Some(tokens) = max_output_tokens {
+            options["num_predict"] = serde_json::json!(tokens.max(1));
+        }
         let body = serde_json::json!({
             "model": self.gen_model,
             "system": system,
             "prompt": prompt,
             "stream": false,
-            "options": {
-                "temperature": self.temperature,
-                "num_ctx": self.num_ctx,
-            }
+            "options": options,
         });
         let req = self.apply_auth(client.post(self.url("/api/generate")).json(&body));
         let resp = req.send().map_err(|e| format!("ollama generate: {e}"))?;

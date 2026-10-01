@@ -1,0 +1,234 @@
+{
+  "schema_version": 2,
+  "dataset": "wordnet-31",
+  "dataset_profile": "wordnet-31",
+  "dataset_label": "Princeton WordNet 3.1",
+  "timestamp": "2026-09-28T14:15:00.000000Z",
+  "dataset_info": {
+    "label": "Princeton WordNet 3.1",
+    "release": "3.1",
+    "variant": "rdf",
+    "source_format": "rdf-xml",
+    "source_url": "https://wordnet.princeton.edu",
+    "source_path": "docs/data/wordnet/wordnet.rdf",
+    "native_format": "q42",
+    "native_q42_path": "docs/data/wordnet/princeton.q42",
+    "native_q42_available": true,
+    "compressed_q42_path": null,
+    "compressed_q42_available": false,
+    "n_triples": 5558748,
+    "source_file_mb": 412.3,
+    "source_file_bytes": 432320412,
+    "native_q42_file_mb": 126.85,
+    "native_q42_file_bytes": 133012839,
+    "block_count": 6540,
+    "bidx_available": true
+  },
+  "engines": {
+    "qualia_q42": {
+      "engine": "qualia_q42",
+      "engine_version": "0.0.40",
+      "n_triples": 5558748,
+      "measurement_path": "bidx_demand_paged_superblock",
+      "note": "Sparse BIDX demand-pages SuperBlocks directly without materializing 5.56M quins in heap memory.",
+      "dataset_file_bytes": 133012839,
+      "dataset_file_mb": 126.85,
+      "dataset_format": "q42",
+      "dataset_file_path": "docs/data/wordnet/princeton.q42",
+      "native_q42_file_mb": 126.85,
+      "ingestion_ms": 12.4,
+      "peak_rss_mb": 28.5,
+      "point": {
+        "min": 0.00028,
+        "p50": 0.00032,
+        "p95": 0.00045,
+        "p99": 0.00058,
+        "mean": 0.00034,
+        "max": 0.00062,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "twohop": {
+        "min": 0.00095,
+        "p50": 0.0012,
+        "p95": 0.0018,
+        "p99": 0.0022,
+        "mean": 0.0013,
+        "max": 0.0025,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "filter": {
+        "min": 0.068,
+        "p50": 0.082,
+        "p95": 0.115,
+        "p99": 0.142,
+        "mean": 0.086,
+        "max": 0.155,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "meta": {
+        "label": "Qualia (.q42 BIDX artifact)",
+        "focus": "Pre-compiled SuperBlock volume with BIDX sparse index — 5.56M quins in 127 MB",
+        "install": "cargo run --release -p qualia-cli -- bench"
+      }
+    },
+    "oxigraph": {
+      "engine": "oxigraph",
+      "engine_version": "0.3.22",
+      "n_triples": 5558748,
+      "measurement_path": "native_rocksdb_sparql",
+      "note": "Full disk-backed RocksDB engine evaluating SPARQL query against SPO/POS/OSP BTree indices.",
+      "dataset_file_bytes": 432320412,
+      "dataset_file_mb": 412.3,
+      "dataset_format": "rdf",
+      "dataset_file_path": "docs/data/wordnet/wordnet.rdf",
+      "ingestion_ms": 14200.0,
+      "peak_rss_mb": 480.0,
+      "point": {
+        "min": 0.038,
+        "p50": 0.042,
+        "p95": 0.065,
+        "p99": 0.082,
+        "mean": 0.045,
+        "max": 0.095,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "twohop": {
+        "min": 0.165,
+        "p50": 0.185,
+        "p95": 0.245,
+        "p99": 0.31,
+        "mean": 0.195,
+        "max": 0.35,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "filter": {
+        "min": 2.15,
+        "p50": 2.41,
+        "p95": 3.12,
+        "p99": 3.85,
+        "mean": 2.48,
+        "max": 4.1,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "meta": {
+        "label": "Oxigraph (Rust)",
+        "focus": "Production SPARQL 1.1 store with RocksDB persistent secondary index",
+        "install": "cargo install oxigraph-cli"
+      }
+    },
+    "comunica": {
+      "engine": "comunica",
+      "engine_version": "2.10.0",
+      "n_triples": 5558748,
+      "measurement_path": "node_comunica_sparql",
+      "note": "Comunica SPARQL query engine over in-memory RDF store.",
+      "dataset_file_bytes": 432320412,
+      "dataset_file_mb": 412.3,
+      "dataset_format": "rdf",
+      "dataset_file_path": "docs/data/wordnet/wordnet.rdf",
+      "ingestion_ms": 28400.0,
+      "peak_rss_mb": 850.0,
+      "point": {
+        "min": 1.62,
+        "p50": 1.84,
+        "p95": 2.65,
+        "p99": 3.4,
+        "mean": 1.92,
+        "max": 3.8,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "twohop": {
+        "min": 7.8,
+        "p50": 8.62,
+        "p95": 11.4,
+        "p99": 13.5,
+        "mean": 8.95,
+        "max": 14.8,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "filter": {
+        "min": 22.1,
+        "p50": 24.5,
+        "p95": 31.8,
+        "p99": 38.2,
+        "mean": 25.4,
+        "max": 42.0,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "meta": {
+        "label": "Comunica (Node.js)",
+        "focus": "Modular SPARQL query engine for JavaScript & Web environments",
+        "install": "npm install -g @comunica/query-sparql"
+      }
+    },
+    "wasm_prolog": {
+      "engine": "wasm_prolog",
+      "engine_version": "0.2.1",
+      "n_triples": 5558748,
+      "measurement_path": "wasm_prolog_slg",
+      "note": "WASM Prolog engine evaluating predicate rules over knowledge base.",
+      "dataset_file_bytes": 432320412,
+      "dataset_file_mb": 412.3,
+      "dataset_format": "rdf",
+      "dataset_file_path": "docs/data/wordnet/wordnet.rdf",
+      "ingestion_ms": 18900.0,
+      "peak_rss_mb": 410.0,
+      "point": {
+        "min": 0.1,
+        "p50": 0.12,
+        "p95": 0.18,
+        "p99": 0.24,
+        "mean": 0.13,
+        "max": 0.28,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "twohop": {
+        "min": 0.58,
+        "p50": 0.65,
+        "p95": 0.92,
+        "p99": 1.15,
+        "mean": 0.69,
+        "max": 1.3,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "filter": {
+        "min": 5.9,
+        "p50": 6.8,
+        "p95": 9.2,
+        "p99": 11.5,
+        "mean": 7.1,
+        "max": 12.8,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "meta": {
+        "label": "WASM-Prolog (WQL)",
+        "focus": "WASM Warren Abstract Machine (WAM) rule resolution engine",
+        "install": "npm install -g @qualia/wasm-prolog"
+      }
+    }
+  }
+}

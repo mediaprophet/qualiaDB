@@ -39,6 +39,11 @@ pub struct SamsungImportReport {
     pub errors: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checkpoint_hash: Option<String>,
+    /// A durable, source-batch Q42 artifact written by the host after a successful import.
+    /// The historical type name remains for compatibility; the same report is used by the
+    /// vendor-neutral companion bundle path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub q42_artifact_path: Option<String>,
 }
 
 fn content_hash_hex(payload: &str) -> String {
@@ -289,6 +294,7 @@ pub fn ingest_companion_health_bundle(
         records_skipped: 0,
         errors: Vec::new(),
         checkpoint_hash: None,
+        q42_artifact_path: None,
     };
 
     if let Err(e) = bundle.validate() {
@@ -330,6 +336,7 @@ pub fn import_samsung_folder(
         records_skipped: 0,
         errors: Vec::new(),
         checkpoint_hash: None,
+        q42_artifact_path: None,
     };
 
     if !folder.is_dir() {

@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.0.40] — 2026-09-28
+
+### Added
+
+- **Semantic Instruments Integration**: Clinical mechanism, meal consideration, and nutrition evidence reviews with execution fixtures.
+- **Desktop Health Volume & OS Shell Workflows**: Health volume, saved items, i18n support, and polished volume experiences across mail, settings, keep, talk, and wellfair.
+- **Mail Services & Transport**: Account management, store, and transport integrations for `qualia-client-core`.
+- **Food Evidence Pipeline**: Added `food_sources_to_q42` ETL CLI binary tool.
+- **Inference Guard & WASM Governance**: Zero-heap inference guard modality and WebAssembly governance bridge in `qualia-core-db`.
+
+### Changed
+
+- Workspace release line bumped to `0.0.40` across all 27 crates, `Cargo.lock`, Tauri manifest, release workflows, and portal metadata.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version updated to `0.0.40`.
+
 ## [0.0.39] — 2026-09-16
 
 ### Added

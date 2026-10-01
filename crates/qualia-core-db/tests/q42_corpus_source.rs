@@ -69,11 +69,11 @@ fn extracts_corpus_text_from_in_repo_q42() {
         println!("[q42diag] {} quins in {}", quins.len(), vol.display());
         const MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF; // clear the upper 4-bit modality/type tag
         let r = |h: u64| {
-            lex.lookup_hash(h)
+            lex.lookup_owned(h)
                 .map(|s| s.chars().take(50).collect::<String>())
         };
         let rm = |h: u64| {
-            lex.lookup_hash(h & MASK)
+            lex.lookup_owned(h & MASK)
                 .map(|s| s.chars().take(50).collect::<String>())
         };
         for (i, q) in quins.iter().take(12).enumerate() {
@@ -84,11 +84,11 @@ fn extracts_corpus_text_from_in_repo_q42() {
         }
         let obj_raw = quins
             .iter()
-            .filter(|q| lex.lookup_hash(q.object).is_some())
+            .filter(|q| lex.contains(q.object))
             .count();
         let obj_masked = quins
             .iter()
-            .filter(|q| lex.lookup_hash(q.object & MASK).is_some())
+            .filter(|q| lex.contains(q.object & MASK))
             .count();
         println!(
             "[q42diag] resolvable objects: raw {}/{}, masked {}/{}",

@@ -1,7 +1,7 @@
 # ADR 0009: Adopt ShEx (scoped) alongside SHACL — describe vs enforce
 
 ## Status
-Accepted (2026-06-22, 0.0.33) — directed by Timothy. Scoped adoption; supersedes the earlier
+Accepted (2026-06-22, 0.0.40) — directed by Timothy. Scoped adoption; supersedes the earlier
 "considered/deferred" stance recorded in project memory `project-shex-vs-shacl-decision`.
 
 ## Context

@@ -11,7 +11,7 @@ const UI_PROFILES = {
         title: 'Princeton WordNet',
         subtitle: 'Princeton WordNet 3.1 — ~5.56M triples, lemmas and synset relations',
         searchLabel: 'Search Word',
-        searchPlaceholder: 'e.g., qualia, happy, run',
+        searchPlaceholder: 'e.g., dog, happy, run',
         searchButton: 'Lookup Word',
         stat1: 'Lexicon Entries',
         stat2: 'Est. Synsets',
@@ -24,7 +24,7 @@ const UI_PROFILES = {
             { id: 'adjective', label: 'Adjectives', icon: 'fa-palette', color: 'purple' },
             { id: 'adverb', label: 'Adverbs', icon: 'fa-wand-magic-sparkles', color: 'amber' },
         ],
-        quickExamples: ['qualia', 'happy', 'run', 'beautiful', 'computer'],
+        quickExamples: ['dog', 'happy', 'run', 'beautiful', 'computer'],
         graphPlaceholder: 'Enter word to visualize',
         graphToggles: [
             { id: 'show-hypernyms', label: 'Hypernyms', key: 'hypernyms', color: '#3b82f6', default: true },
@@ -45,7 +45,7 @@ const UI_PROFILES = {
             { id: 'hyponyms', label: 'Hyponym pattern', icon: 'emerald' },
             { id: 'wildcard', label: 'Wildcard scan', icon: 'amber' },
         ],
-        defaultSearch: 'qualia',
+        defaultSearch: 'dog',
         ingestNote: 'powershell scripts/fetch_wordnet_release.ps1  (or ingest_princeton_wordnet.ps1 to build)',
     },
     schemaorg: {
@@ -136,7 +136,7 @@ const SPARQL_TEMPLATES = {
     wordnet: {
         lemma: `PREFIX wn: <https://en-wordnet.oed.com/schema/>
 SELECT ?s ?p WHERE {
-  ?s ?p "qualia"
+  ?s ?p "dog"
 }`,
         hypernyms: `PREFIX wn: <https://en-wordnet.oed.com/schema/>
 SELECT ?parent WHERE {
@@ -747,7 +747,7 @@ async function boot() {
         await lookupEntity(report);
     } catch (e) {
         console.error(e);
-        const hint = String(e.message || '').includes('Q42 v3 header')
+        const hint = String(e.message || '').includes('Q42 v3/v4 header')
             ? ' — try Ctrl+Shift+R or “Clear browser dataset cache” after the page loads a dataset picker.'
             : '';
         setStatus((e.message || 'Engine failed to load') + hint, false);

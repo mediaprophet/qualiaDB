@@ -101,6 +101,11 @@ pub mod interaction_governance;
 pub use interaction_governance::{
     govern_verdict, map_policy, permits_execution, policy_action, Governance, PolicyMode,
 };
+pub mod inference_guard;
+pub use inference_guard::{
+    evaluate_inference_guard, InferenceGuardAction, InferenceGuardReason, InferenceGuardVerdict,
+    MAX_GUARD_GRAPH_QUINS,
+};
 pub mod causal;
 pub use causal::{but_for_cause, caused, dependents_voided, is_overdetermined, is_voided_by};
 pub mod responsibility;

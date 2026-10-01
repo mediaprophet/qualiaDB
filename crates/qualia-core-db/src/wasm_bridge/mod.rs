@@ -40,6 +40,9 @@ pub use meta::*;
 mod device_storage;
 #[allow(unused_imports)]
 pub use device_storage::*;
+mod governance;
+#[allow(unused_imports)]
+pub use governance::*;
 #[cfg(feature = "wasm-scientific")]
 mod geometry;
 #[cfg(feature = "wasm-scientific")]

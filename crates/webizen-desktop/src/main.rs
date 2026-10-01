@@ -530,8 +530,10 @@ fn main() {
 
             // Default cold start → Gate 1 OS shell (`/shell` or `/os-shell`).
             // Legacy (`WEBIZEN_LEGACY_SHELL=1` / `--legacy-shell`) keeps bundled Studio.
-            // `build_app_menu` already scheduled a wait-for-health navigate; re-schedule here
-            // with the known port so Studio cannot win if the early schedule missed the window.
+            // `build_app_menu` already scheduled the one health-gated navigator. Keep that
+            // task single-flight: starting a second retry loop here made competing main-webview
+            // navigations (each loop retries several times), which could leave the new shell
+            // looking locked or repeatedly reclaimed during cold start.
             let shell_mode = webizen_desktop::shell::resolve_shell_mode();
             match shell_mode {
                 webizen_desktop::shell::ShellMode::Legacy => {
@@ -550,8 +552,9 @@ fn main() {
                     );
                 }
                 webizen_desktop::shell::ShellMode::OsShell => {
-                    // Immediate navigate (Studio frontendDist otherwise wins the first paint),
-                    // then health-gated retries via schedule_shell_launch.
+                    // Immediate navigate (Studio frontendDist otherwise wins the first paint).
+                    // The single health-gated launch task scheduled with the menu will confirm
+                    // the loopback shell once the server is accepting requests.
                     if let Some(window) = app.get_webview_window("main") {
                         webizen_desktop::shell::apply_shell_launch_at(
                             &window,
@@ -560,11 +563,10 @@ fn main() {
                             "/shell",
                         );
                     }
-                    webizen_desktop::shell::schedule_shell_launch(app.handle());
                     desktop_log::record(
                         "info",
                         format!(
-                            "Default Gate 1 OS shell applied+scheduled → http://127.0.0.1:{settings_port}/shell (or /os-shell)"
+                            "Default Gate 1 OS shell applied → http://127.0.0.1:{settings_port}/shell (health-gated navigator already scheduled)"
                         ),
                     );
                 }

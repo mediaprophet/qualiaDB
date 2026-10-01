@@ -1,13 +1,16 @@
 //! MCP lowering adapter with explicit role degradation reporting.
 
+use serde::Serialize;
 use serde_json::{json, Value};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum McpLoweringMode {
     Structured,
     Flattened,
 }
 
+#[derive(Debug, Clone, Serialize)]
 pub struct McpLoweringReceipt {
     pub mode: McpLoweringMode,
     pub role_degraded: bool,

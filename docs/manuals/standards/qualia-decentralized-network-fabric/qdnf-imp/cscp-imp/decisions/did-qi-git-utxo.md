@@ -3,7 +3,7 @@
 - Decision ID: **DID-QI-01**
 - Date: 2026-09-10
 - Status: **recorded naming and backing split; method not specified; not implemented; not registered**
-- Owner: integrator on `0.0.38` after principal questions (git protocol, then `qualia:` / `qi` / multi-chain UTXO, then HCAI vs human-centered collision)
+- Owner: integrator on `0.0.40` after principal questions (git protocol, then `qualia:` / `qi` / multi-chain UTXO, then HCAI vs human-centered collision)
 - Does not unblock: CSCP-08 (live relay), CSCP-12 (datatracker), Internet honesty flags
 
 This is not a W3C DID Method specification. It freezes collisions and the ledger/hostname split so a later spec does not mint a stub or fold human identity into QRC.

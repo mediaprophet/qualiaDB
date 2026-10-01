@@ -1,6 +1,6 @@
 # QDNF Internet peer connectivity — architecture decision proposal
 
-Date: 2026-09-10. Status: local production path verified on `0.0.38`; no Internet
+Date: 2026-09-10. Status: local production path verified on `0.0.40`; no Internet
 or deployment certification.
 
 Related notes: [nat-traversal-expert-brief.md](./nat-traversal-expert-brief.md),
@@ -22,7 +22,7 @@ in-tree work overstated TLS, framing, QSession admission, ICE/TURN, and durable
 recovery. Those five items now have local proofs. They are still not an Internet
 trial.
 
-Reviewed local baseline: `0.0.37`, `79231d7d98bee8bce1b02e93f3253d198582d3d2`.
+Reviewed local baseline: `0.0.40`, `79231d7d98bee8bce1b02e93f3253d198582d3d2`.
 Reviewed selected remote sources: `cursor/qdnf-enhancement-e00-e01-cb60`,
 `16ed59e7fe514f39d39f3e9473ae3649a743055f`, including Cursor's brief introduced in `38112131`.
 

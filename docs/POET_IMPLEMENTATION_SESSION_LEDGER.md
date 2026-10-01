@@ -316,7 +316,7 @@ Unrelated failures preserved: None; working tree clean.
 Recommended next packet: `HLT-07`
 
 Packet: `HLT-R1`
-Baseline git status: `0.0.36-dev` tip `37ec26c9` (overnight UAT seam closed). Feature branch `cursor/poet-grok-handover-ac52`.
+Baseline git status: `0.0.40-dev` tip `37ec26c9` (overnight UAT seam closed). Feature branch `cursor/poet-grok-handover-ac52`.
 User job delivered: Independent review of HLT-03 consent contract. Principal/scope digest immutability, fail-closed expiry, principal-only revoke, and absence of private keys on the grant struct already held. Repaired unused replay detection (`ConsentLedger`, 32 slots), omit-receipt reactivation, unknown scope labels, Poet projection fail-open ("All categories" / missing expiry → Active), and grantable `clinical_notes` UI flag outside `ConsentScope`. Share projection extracted to `share_projection.rs`.
 Files changed: `crates/qualia-core-db/src/governance/consent_contract.rs`; `crates/poet/src/browser/health_views/share_projection.rs`; `crates/poet/src/browser/health_views/model.rs`; `crates/poet/src/browser/health_views/disclosure_model.rs`; `crates/poet/src/browser/health_views/disclosure_list.rs`; `crates/poet/src/browser/health_views/mod.rs`; WIP register/plan; this ledger.
 Tests and exact results: `cargo +stable test -p qualia-core-db --lib consent_contract` (12 passed); `cargo +stable test -p poet --lib health_views` (27 passed). rustc 1.98.1.
@@ -435,7 +435,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: `PFT-03` (owner) or `command_palette/commands.rs` (1,231). Do not close Gate A. Do not start `AST-*`.
 
 Packet: `GATE-A`
-Baseline git status: `0.0.36-dev` at `9909c1b4` (PR #75 merged + cloud-env cherry-pick). Pre-existing uncommitted QDNF docs WIP preserved and excluded from this commit.
+Baseline git status: `0.0.40-dev` at `9909c1b4` (PR #75 merged + cloud-env cherry-pick). Pre-existing uncommitted QDNF docs WIP preserved and excluded from this commit.
 User job delivered: Closed Review Gate A under explicit project-owner D5 instruction. Recorded accepted evidence (HLT-R1/07/07b/08), documented residuals (ConsentLedger persist wiring; live-daemon browser UAT), unparked clinical Tool Chest engines in the tracker, and unlocked post-gate programmes (`AST-*`, `PFT-03`).
 Files changed: `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`; register/plan/reconciliation/HLT evidence docs; `docs/manuals/standards/poet-toolchest-implementation-tracker.md`; this ledger.
 Tests and exact results: Evidence suite from PR #75 tip retained (consent_contract, invoke::clinical, health_uat_pack, product integrity). Close session did not re-run the full suite before documentation land.
@@ -446,7 +446,7 @@ Unrelated failures preserved: Yes (QDNF WIP untouched).
 Recommended next packet: `PFT-03` (owner chain selection) or `AST-01` (governed Q42 envelope).
 
 Packet: `PFT-04`
-Baseline git status: `0.0.36-dev` after Gate A `019f10c8`; large uncommitted Tool Chest swarm WIP preserved.
+Baseline git status: `0.0.40-dev` after Gate A `019f10c8`; large uncommitted Tool Chest swarm WIP preserved.
 User job delivered: Continued Poet after Gate A — deepened live registry dual-path for epistemic frame scan, ungrounded/verify-turn inference, and image histogram; Live dispatch honesty via `tool_dual_path`.
 Files changed: `chain_actions.rs`, `tool_actions.rs`, `tool_copy.rs`, `register_ai_toolbox.rs`, `register_epistemic_toolbox.rs`, `spec_tools/dispatch.rs`, `live_args.rs`, `epistemics.rs`; WIP register/swarm/tracker/ledger.
 Tests and exact results: `cargo test -p poet --lib -- tool_actions live_args chain_actions` → 13 passed; registration → 3 passed; product_integrity → 10 passed.
@@ -457,7 +457,7 @@ Unrelated failures preserved: Yes (QDNF WIP untouched).
 Recommended next packet: `AST-01` or further inventory live binds (`Statistics.*` / logic) — no Host widen.
 
 Packet: `AST-01`
-Baseline git status: `0.0.36-dev` with uncommitted Tool Chest swarm + PFT-04 WIP preserved.
+Baseline git status: `0.0.40-dev` with uncommitted Tool Chest swarm + PFT-04 WIP preserved.
 User job delivered: Governed Q42 asset envelope and licence policy schema in `qualia-core-db` (not poet UI). Deterministic encode/decode, SHA-256 digests, unknown-licence fail-closed, obligation union for derived assets, 42 MiB chunk budget.
 Files changed: `crates/qualia-core-db/src/q42/asset_envelope/`; `q42/mod.rs`; register/ledger.
 Tests and exact results: `cargo test -p qualia-core-db --lib asset_envelope` → 11 passed.
@@ -490,7 +490,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: owner choice — live chebi_query seam once asset path is ready, or next open AST/PFT.
 
 Packet: Residual swarm (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`)
-Baseline git status: `0.0.36-dev`; large prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; large prior WIP preserved; not committed.
 User job delivered: Four-lane residual clear — ConsentLedger session persist before COP upsert; fixture-backed ChEBI explorer bind; portable-app ADR; app_manifest v1.
 Files changed: `health_views/consent_persist.rs` + disclosure grant/revoke wiring; chemical_explorer bind; ADR 0013; `q42/app_manifest/`; register/swarm/ledger.
 Tests and exact results (parent): consent_persist **5**; health_views **58**; consent_contract **12**; chemical **20**; app_manifest **14**; product_integrity **11**.
@@ -501,7 +501,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: `APP-03` or WD programme toward Review Gate B.
 
 Packet: Gate B swarm (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Crate→seam incorporation inventory (client-core / cooperative-core / vision); APP-03 projection adapters; WD-01 control-plane IA map; WD-02 bounded installed-app registry.
 Files changed: gap script + `CRATE_SURFACE_INCORPORATION_2026-09-06.md`; `app_manifest/project.rs`; `WD_01_CONTROL_PLANE_IA_2026-09-06.md`; `q42/app_registry/`; register/swarm/ledger.
 Tests and exact results (parent): app_registry **11**; app_manifest **21**; gap ALL_BOUND **892**/892 modules **1481**.
@@ -511,7 +511,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: `APP-04` / `WD-03` / Poet CV+Econ consume toward Review Gate B.
 
 Packet: Vibescript-first swarm (`VIBE-CV` / `VIBE-ECON` / `VIBE-COOP` / `VIBE-CHAT`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Constraint correction (Host widen in scope); exhaustive backlog methodology; Poet Live for remaining CV + more Econ; new Host families CooperativeDelegation/CooperativeWork and ChatGraph; Poet dual-path cites.
 Files changed: image/econ/cooperative/chat_graph invoke + Poet registration/chain; wellfare-core cycle break; backlog script + methodology docs.
 Tests and exact results (parent): catalog **1**; chat_graph **8**; cooperative **7**; poet econ **16**; product_integrity **11**.
@@ -521,7 +521,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: Q1/Q2 waves from `vibe_incorporation_backlog.py`.
 
 Packet: Q1/Q2 incorporation wave (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live consume for Econ (+8), Statistics (+11), MachineLearning (+11); Host-widen LinearAlgebra QR/Cholesky-solve/BLAS-1 (+7) with paired vibe catalog.
 Files changed: `econ_chain_actions` / `stats_chain_actions` / `ml_chain_actions`; sheet/econ/ai toolbox registration; `poet_host/invoke/math/qr_vector.rs` + ids; swarm/register/ledger.
 Tests and exact results (parent): poet econ **25**; stats **12**; sheet extended assert **1**; ai_ml_chain **1**; product_integrity **11**; vibe catalog **1**; qr_vector **6**.
@@ -531,7 +531,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: next curated Q1/Q2 wave or `APP-04` / `WD-03`.
 
 Packet: Q1/Q2 incorporation wave 2 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+8), Statistics (+9), MachineLearning (+8); Host-widen LinearAlgebra vector assign/scale + SymbolicAlgebra.simplify_trig + PolynomialAlgebra (div_rem/derivative/monic/resultant).
 Files changed: econ/stats/ml chain + toolboxes; `math/qr_vector`, `math/symbolic`, `math/poly_algebra`; paired catalogs; wave2 swarm/register/ledger.
 Tests and exact results (parent): econ **34**; stats **21**; ai_ml **2**; product_integrity **11**; vibe catalog **1**; poly_algebra **5**; add_assign_hadamard_assign_scale **1**; simplify_trig **2**.
@@ -541,7 +541,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: next curated Q1/Q2 wave or `APP-04` / `WD-03`.
 
 Packet: Q1/Q2 incorporation wave 3 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen LinearAlgebra.matvec (CPU floor), PolynomialAlgebra add/sub/mul, SymbolicAlgebra integrate/taylor/limit.
 Files changed: econ/stats/ml chain + toolboxes; math qr_vector/poly_algebra/symbolic; paired catalogs; wave3 swarm/register/ledger.
 Tests and exact results (parent): econ **45**; stats **29**; ai_ml **3**; product_integrity **11**; vibe catalog **1**; qr_vector **9** · poly **6** · symbolic **7**.
@@ -551,7 +551,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 4 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 4 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen SymbolicAlgebra definite/∞-limit/roots, SymbolicODE×3, PolynomialAlgebra degree/leading.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_ext.rs`; poly_algebra; paired catalogs; wave4 swarm/register/ledger.
 Tests and exact results (parent): econ **56**; stats **36**; ai_ml **4**; product_integrity **11**; vibe catalog **1**; cas_ext **8**; poly_algebra **8**.
@@ -561,7 +561,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 5 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 5 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+11), Statistics (+8), MachineLearning (+8); Host-widen SymbolicODE separable/PDE, SymbolicAlgebra roots/assumptions/hash, LinearAlgebra.solve_linear_system, PolynomialAlgebra.is_zero.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave5.rs`; poly_algebra; paired catalogs; wave5 swarm/register/ledger.
 Tests and exact results (parent): econ **67**; stats **43**; ai_ml **5**; product_integrity **11**; vibe catalog **1**; cas_wave5 **10**; wave5_poly_is_zero **1**.
@@ -571,7 +571,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 6 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 6 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+10); Host-widen SymbolicAlgebra partial/jacobian/hessian/gradient_at/hessian_at + Constructibility×3.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave6.rs`; paired catalogs; wave6 swarm/register/ledger.
 Tests and exact results (parent): econ **78**; stats **51**; ai_ml **6**; product_integrity **11**; vibe catalog **1**; wave6_* **8**.
@@ -581,7 +581,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 7 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 7 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+10); Host-widen Constructibility helpers + SymbolicAlgebra quadratic solve/factor.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave7.rs`; paired catalogs; wave7 swarm/register/ledger.
 Tests and exact results (parent): econ **89**; stats **59**; ai_ml **7**; product_integrity **11**; vibe catalog **1**; wave7_* **7**.
@@ -591,7 +591,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 8 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 8 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen SymbolicAlgebra pow/neg/sqrt/exp/ln/sin/cos/tan.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave8.rs`; paired catalogs; wave8 swarm/register/ledger.
 Tests and exact results (parent): econ **100**; stats **67**; ai_ml **8**; product_integrity **11**; vibe catalog **1**; wave8_* **5**.
@@ -601,7 +601,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 9 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 9 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+9), MachineLearning (+10, remaining `al_*`); Host-widen SymbolicAlgebra c/var/add/sub/mul/div + PolynomialAlgebra gcd/scale.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave9.rs`; poly_algebra; paired catalogs; wave9 swarm/register/ledger.
 Tests and exact results (parent): econ **111**; stats **76**; ai_ml **9**; product_integrity **11**; vibe catalog **1**; wave9_* **6**.
@@ -611,7 +611,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 10 (Econ/Stats Live + SymbolicAlgebra Live pivot + Host).
 
 Packet: Q1/Q2 incorporation wave 10 (`Q2-ECON` / `Q2-STATS` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+6, remaining eligible exhausted), Statistics (+10), SymbolicAlgebra CAS (+8); Host-widen poly eval/zero/constant, CAS parse, Statistics manifold helpers×4.
 Files changed: econ/stats/logic chain + toolboxes; `math/cas_wave10.rs`; poly_algebra; stats manifold; paired catalogs; wave10 swarm/register/ledger.
 Tests and exact results (parent): econ **116**; stats **86**; product_integrity **11**; vibe catalog **1**; wave10_* **9**.
@@ -621,7 +621,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 11 (LinearAlgebra Live pivot + Stats/CAS + Host).
 
 Packet: Q1/Q2 incorporation wave 11 (`Q2-LINALG` / `Q2-STATS` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live LinearAlgebra (+10), Statistics (+8 remaining), SymbolicAlgebra constructors (+8); Host-widen statistical_manifold remainder×6.
 Files changed: `linalg_chain_actions.rs`; scientific/sheet/code toolboxes; stats manifold; paired catalogs; wave11 swarm/register/ledger.
 Tests and exact results (parent): stats **94**; product_integrity **11**; vibe catalog **1**; wave11_* **6**; Live asserts **3**.
@@ -631,7 +631,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 12 (LinAlg + PolynomialAlgebra Live pivot + CAS + Host).
 
 Packet: Q1/Q2 incorporation wave 12 (`Q2-LINALG` / `Q2-POLY` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live LinearAlgebra decompositions (+8), PolynomialAlgebra (+12), SymbolicAlgebra trig/log/parse (+8); Host-widen Chemistry integrals×5, LinAlg symmetric_eigen_3x3, SymbolicAlgebra to/from_quins.
 Files changed: linalg/poly/logic chains + toolboxes; `chemistry/integrals_host.rs`; `math/cas_wave12.rs`; `qr_vector.rs`; paired catalogs; wave12 swarm/register/ledger.
 Tests and exact results (parent): Live asserts **3**; product_integrity **11**; vibe catalog **1**; wave12_* **6**.
@@ -641,7 +641,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 13 (finish LinAlg + Stats/poly remainder + CAS + Host).
 
 Packet: Q1/Q2 incorporation wave 13 (`Q2-LINALG` / `Q2-SHEET` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live remaining LinearAlgebra (+9), Sheet poly monic/div_rem/resultant + stats manifold (+9), SymbolicAlgebra series/roots/jacobian (+8); Host-widen Chemistry ERI/angular×6, LinearAlgebra.gemm (pure CPU Host — no forge/`caps()`), PolynomialAlgebra.coeffs.
 Files changed: linalg/poly/stats/logic chains + toolboxes; `chemistry/wave13_host.rs`; `math/gemm_host.rs`; poly coeffs; paired catalogs; wave13 swarm/register/ledger; parent finished Host after stalled Lane D.
 Tests and exact results (parent): Live asserts **3**; product_integrity **11**; Host wave13_* **6**; backlog `ALL_BOUND=998` `PoetLive=405` `Q2=593`.
@@ -651,7 +651,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 14 (Chemistry Live + CAS remainder + Physics Live + Host).
 
 Packet: Q1/Q2 incorporation wave 14 (`Q2-CHEM` / `Q2-CAS` / `Q2-PHYSICS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Chemistry integrals/angular (+11), remaining SymbolicAlgebra (+9, Q2 exhausted), Physics (+10); Host-widen Calculus hermite/BDF/invariant/parity/f32-pack + GraphReasoning.top_k (+8). Parent finished Chem+Host after lane stalls; CAS/Physics agents delivered Live.
 Files changed: `chem_chain_actions.rs`, `physics_chain_actions.rs`, logic/CAS register, scientific chem+physics chains; `math/wave14_host.rs`; paired catalogs; wave14 swarm/register/ledger.
 Tests and exact results (parent): Live asserts **3**; product_integrity **11**; Host wave14_* **6**.

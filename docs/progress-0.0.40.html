@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038" class="release-040">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen 0.0.40 — Semantic Instruments, Desktop Volumes & Streaming Inference</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .hero-num { font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+    .code-snippet {
+      background: rgba(5, 7, 12, 0.92);
+      border: 1px solid rgba(148, 180, 220, 0.16);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      font-family: var(--q-mono);
+      font-size: 0.85rem;
+      overflow-x: auto;
+    }
+    .orbit-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      transition: all 0.2s ease;
+    }
+    .orbit-badge:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .instrument-card {
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, box-shadow 0.2s;
+    }
+    .instrument-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">W</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+        <div class="flex items-center gap-3 shrink-0">
+          <a href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.40" target="_blank"
+             class="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs font-semibold hover:bg-cyan-500/20 transition">
+            <i class="fa-solid fa-download"></i> v0.0.40 Releases
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <!-- Announcement Banner -->
+    <div class="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <strong class="text-emerald-200">0.0.40 Release Milestone:</strong>
+        Semantic Instruments Studio Bay · Desktop Habitat Volume Workflows · Native Streaming Qwen &amp; MoE Inference · Governance WASM Bridge.
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="semantic-instruments.html" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-violet-500/20 text-violet-200 border border-violet-500/30 text-xs font-semibold hover:bg-violet-500/30 transition shrink-0">
+          Semantic Instruments <i class="fa-solid fa-arrow-right"></i>
+        </a>
+        <a href="release-matrix.html" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold hover:bg-cyan-500/30 transition shrink-0">
+          Release Matrix <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> Zero-heap hot paths · Desktop Habitat · Branch <code class="q-mono">0.0.40</code></div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
+      Living Instruments.<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">Dignity, sovereign memory, and bounded computation.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-4">
+      0.0.40 completes the sovereign foundation: inspectable Semantic Instruments in Webizen Studio, the 5-station Desktop Habitat orbit (Talk · Mail · Directory · Library · Settings), local streaming Qwen &amp; MoE expert tiling, and the Civics.au YAML-LD governance bridge in Webizen-Lite WASM.
+    </p>
+    <p class="text-sm text-white/45 mb-12">
+      Navigation: <a class="q-link" href="semantic-instruments.html">Semantic Instruments</a> ·
+      <a class="q-link" href="prompt-precision.html">Prompt Precision Specs</a> ·
+      <a class="q-link" href="progress-0.0.39.html">0.0.39 Progress (Archive)</a> ·
+      <a class="q-link" href="progress-0.0.38.html">0.0.38 Human Surface</a> ·
+      <a class="q-link" href="qdnf.html">QDNF Fabric</a> ·
+      <a class="q-link" href="release-matrix.html">Release Matrix</a>
+    </p>
+
+    <!-- Key Metrics Grid -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Crates Synchronized</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-emerald-300">27 / 27</div>
+        <div class="text-xs text-white/55 mt-1">Full workspace stamped at v0.0.40</div>
+      </div>
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Universal Quin Layout</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-cyan-300">48 B</div>
+        <div class="text-xs text-white/55 mt-1">Flat CRDT datum — no pointer chasing</div>
+      </div>
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Sentinel Memory Ceiling</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-violet-300">42 MB</div>
+        <div class="text-xs text-white/55 mt-1">SlgArena hard fail-closed boundary</div>
+      </div>
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Primary Orbit Stations</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-amber-300">5</div>
+        <div class="text-xs text-white/55 mt-1">Talk · Mail · Directory · Library · Settings</div>
+      </div>
+    </section>
+
+    <!-- Pillar 1: Semantic Instruments in Webizen Studio -->
+    <section class="q-card p-8 mb-16">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-1">Pillar I · Webizen Studio</p>
+          <h2 class="text-2xl sm:text-3xl font-semibold">Semantic Instruments Studio Bay</h2>
+          <p class="text-sm text-white/60">Inspectable collectables, visible dependencies, bounded reference execution, and cryptographically auditable receipts.</p>
+        </div>
+        <a href="semantic-instruments.html" class="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 transition">
+          Interactive Specs <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-5 mb-8">
+        <div class="instrument-card rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">SI-01</span>
+            <i class="fa-solid fa-heart-pulse text-cyan-400"></i>
+          </div>
+          <h3 class="font-semibold text-lg text-white mb-2">Health &amp; Clinical Invariants</h3>
+          <p class="text-sm text-white/70 mb-4">Framingham, CHA₂DS₂-VASc, drug contraindications, and FHIR LOINC mapping with zero-heap execution receipts.</p>
+          <div class="text-xs text-cyan-300/80 font-mono">Bound: Reference only · Not decision-service</div>
+        </div>
+
+        <div class="instrument-card rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">SI-06</span>
+            <i class="fa-solid fa-scale-balanced text-emerald-400"></i>
+          </div>
+          <h3 class="font-semibold text-lg text-white mb-2">Civics Rights &amp; Deontic Norms</h3>
+          <p class="text-sm text-white/70 mb-4">Three-valued deontic norms (Permit, Obligate, Forbid) with Defeater rule override and paraconsistent conflict quarantine.</p>
+          <div class="text-xs text-emerald-300/80 font-mono">Bound: Bilateral Commons · OHCHR-attested</div>
+        </div>
+
+        <div class="instrument-card rounded-2xl border border-violet-500/30 bg-violet-950/20 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">SI-12</span>
+            <i class="fa-solid fa-cube text-violet-400"></i>
+          </div>
+          <h3 class="font-semibold text-lg text-white mb-2">Physical Sciences &amp; Chemistry</h3>
+          <p class="text-sm text-white/70 mb-4">MCMC thermodynamics, RK4 integration, SMILES/InChI descriptors, and Lipinski rule-of-five evaluation via fixed arenas.</p>
+          <div class="text-xs text-violet-300/80 font-mono">Bound: 42MB Sentinel · Deterministic reduction</div>
+        </div>
+      </div>
+
+      <div class="code-snippet">
+        <span class="text-cyan-300">// 0.0.40 Zero-Heap Semantic Instrument Dispatch Signature</span><br>
+        <span class="text-violet-400">pub fn</span> <span class="text-emerald-300">evaluate_instrument_envelope</span>&lt;<span class="text-amber-300">'a</span>&gt;(<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;descriptor: &amp;<span class="text-cyan-200">InstrumentDescriptor</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;input_tokens: &amp;[<span class="text-cyan-200">NQuin</span>],<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;out_verdicts: &amp;<span class="text-violet-400">mut</span> [<span class="text-cyan-200">SemanticVerdict</span>],<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;receipt: &amp;<span class="text-violet-400">mut</span> <span class="text-cyan-200">InstrumentReceipt</span>,<br>
+        ) -&gt; <span class="text-cyan-200">Result</span>&lt;<span class="text-amber-300">usize</span>, <span class="text-cyan-200">InstrumentError</span>&gt;;
+      </div>
+    </section>
+
+    <!-- Pillar 2: Desktop Habitat & Volume Orbit -->
+    <section class="q-card p-8 mb-16">
+      <p class="q-kicker mb-1">Pillar II · Native Desktop Habitat</p>
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-3">Webizen 5-Station Habitat Orbit</h2>
+      <p class="text-sm text-white/70 max-w-3xl mb-6">
+        Webizen Desktop moves beyond conventional browser-tab chaos into a unified life-domain operating shell.
+        Primary navigation centers on the five human-first orbits:
+      </p>
+
+      <div class="flex flex-wrap gap-3 mb-8">
+        <span class="orbit-badge text-emerald-300 border-emerald-500/30"><i class="fa-solid fa-comments"></i> 1. Talk (Person-to-Person)</span>
+        <span class="orbit-badge text-cyan-300 border-cyan-500/30"><i class="fa-solid fa-envelope"></i> 2. Mail (CscpMailbox &amp; QCDE-1)</span>
+        <span class="orbit-badge text-violet-300 border-violet-500/30"><i class="fa-solid fa-address-book"></i> 3. Directory (Humans First)</span>
+        <span class="orbit-badge text-amber-300 border-amber-500/30"><i class="fa-solid fa-book"></i> 4. Library (Lived Memory &amp; Volumes)</span>
+        <span class="orbit-badge text-rose-300 border-rose-500/30"><i class="fa-solid fa-sliders"></i> 5. Settings (KeyVault &amp; Privacy)</span>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-black/40 border border-white/10 rounded-2xl p-6">
+          <h3 class="font-semibold text-lg text-white mb-2"><i class="fa-solid fa-shield-halved text-cyan-400 mr-2"></i>KeyVault &amp; Nym Mixnet</h3>
+          <p class="text-sm text-white/70 mb-3">
+            Seeds are held exclusively within the hardware-backed KeyVault; session tokens never masquerade as identity keys.
+            Nym mixnet packets frame traffic so surveillance capitalism cannot inspect communication graphs.
+          </p>
+          <ul class="text-xs text-white/60 space-y-1.5">
+            <li><i class="fa-solid fa-check text-cyan-400 mr-1.5"></i>Sanctuary &amp; Vault keyRoles isolated in memory</li>
+            <li><i class="fa-solid fa-check text-cyan-400 mr-1.5"></i>Handle revocation ≠ human identity erasure</li>
+            <li><i class="fa-solid fa-check text-cyan-400 mr-1.5"></i>Honest ledger: no fake MASQUE or Internet ticks without physical peer evidence</li>
+          </ul>
+        </div>
+
+        <div class="bg-black/40 border border-white/10 rounded-2xl p-6">
+          <h3 class="font-semibold text-lg text-white mb-2"><i class="fa-solid fa-folder-tree text-emerald-400 mr-2"></i>Monolithic Settings &amp; Volumes Server</h3>
+          <p class="text-sm text-white/70 mb-3">
+            The unified settings server coordinates local volume stores: WellFair, Personal Health, Knowledge Archives, and Project spaces.
+            Offline-first architecture ensures full local autonomy.
+          </p>
+          <ul class="text-xs text-white/60 space-y-1.5">
+            <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i>Local daemon on <code>:4242</code> serves graph, not cloud relays</li>
+            <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i>Phone functions as an installable remote control, not a vault dump</li>
+            <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i>Zero unencrypted disk spills; encrypted-at-rest volume partitions</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pillar 3: Native Streaming Inference & MoE Tiling -->
+    <section class="q-card p-8 mb-16">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-1">Pillar III · Machine Learning Engine</p>
+          <h2 class="text-2xl sm:text-3xl font-semibold">Streaming Qwen Runtime &amp; MoE Tiling</h2>
+          <p class="text-sm text-white/60">Continuous-batch client boundary, hybrid SSM forward pass, MoE calibration, and WGSL attention kernels.</p>
+        </div>
+        <span class="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">WASM + Native wgpu 30</span>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">Streaming Decode</div>
+          <div class="font-semibold text-lg text-cyan-300">Phase 8 Autoregressive</div>
+          <p class="text-xs text-white/60 mt-1">Argmax logits with real SPSC ring buffer &amp; Sentinel DenyRollback validation.</p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">MoE Sparse Tiling</div>
+          <div class="font-semibold text-lg text-emerald-300">NVMe PLE Tiling</div>
+          <p class="text-xs text-white/60 mt-1">High-order expert weights paged dynamically from NVMe disk without RAM bloat.</p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">Scheduler Memory</div>
+          <div class="font-semibold text-lg text-violet-300">42MB Ceiling Gate</div>
+          <p class="text-xs text-white/60 mt-1">Fail-closed allocations prevent out-of-memory crashes on resource-constrained devices.</p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">WGSL Forge</div>
+          <div class="font-semibold text-lg text-amber-300">Certified Kernels</div>
+          <p class="text-xs text-white/60 mt-1">Naga-certified SPIR-V and WGSL compute shaders with deterministic CPU oracle matching.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pillar 4: Governance WASM Bridge & Logic Engines -->
+    <section class="q-card p-8 mb-16">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-1">Pillar IV · Semantic Governance</p>
+          <h2 class="text-2xl sm:text-3xl font-semibold">Webizen-Lite WASM &amp; Civics.au Writing</h2>
+          <p class="text-sm text-white/60">Deterministic parsing, paraconsistent contradiction quarantine, and linear-temporal logic verification.</p>
+        </div>
+        <span class="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">800K Raw / 260K Gzip Budget</span>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-5">
+        <div class="bg-black/40 border border-white/10 rounded-xl p-5">
+          <div class="text-emerald-400 font-semibold mb-2"><i class="fa-solid fa-code-merge mr-2"></i>Paraconsistent Routing</div>
+          <p class="text-xs text-white/70 leading-relaxed">
+            Contradictory assertions in the same graph do not explode into unbounded deduction. The second-arriving conflicting Quin is isolated into a quarantine sub-context <code>ISOLATED_CONTEXT_PREFIX ^ original_context</code>.
+          </p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-5">
+          <div class="text-cyan-400 font-semibold mb-2"><i class="fa-solid fa-clock mr-2"></i>Temporal LTL Traces</div>
+          <p class="text-xs text-white/70 leading-relaxed">
+            Evaluates Linear Temporal Logic (Globally, Finally, Next, Until, Release) strictly over slices of sequential Quin state vectors. No unbounded recursion, guaranteed termination in linear time.
+          </p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-5">
+          <div class="text-violet-400 font-semibold mb-2"><i class="fa-solid fa-feather-pointed mr-2"></i>YAML-LD-Q42 Ingest</div>
+          <p class="text-xs text-white/70 leading-relaxed">
+            Exposes full human-friendly civics document parsing directly into zero-copy 48-byte Quins, enabling instant in-browser drafting and verifiable signing for Civics.au Writing.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pillar 5: Verified Release Artifacts Table -->
+    <section class="q-card p-8 mb-16">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-1">Official Distributions</p>
+          <h2 class="text-2xl sm:text-3xl font-semibold">Live v0.0.40 Release Artifacts</h2>
+          <p class="text-sm text-white/60">Built, certified, and published from GitHub Actions on tag <code>v0.0.40</code>.</p>
+        </div>
+        <a href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.40" target="_blank"
+           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-violet-600 hover:bg-violet-500 font-semibold text-sm transition shrink-0">
+          <i class="fa-brands fa-github"></i> View on GitHub Releases
+        </a>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-white/70 border-collapse">
+          <thead>
+            <tr class="border-b border-white/10 text-white/40 text-xs uppercase tracking-wider">
+              <th class="py-3 px-4">Artifact</th>
+              <th class="py-3 px-4">Platform</th>
+              <th class="py-3 px-4">Type</th>
+              <th class="py-3 px-4 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 font-mono font-medium text-white flex items-center gap-2">
+                <i class="fa-brands fa-windows text-cyan-400"></i> Webizen_0.0.40_x64-setup.exe
+              </td>
+              <td class="py-3 px-4">Windows x64</td>
+              <td class="py-3 px-4">Signed NSIS Installer &amp; Updater</td>
+              <td class="py-3 px-4 text-right">
+                <a href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/Webizen_0.0.40_x64-setup.exe"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold hover:bg-cyan-500/30 transition">
+                  <i class="fa-solid fa-download"></i> Download
+                </a>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 font-mono font-medium text-white flex items-center gap-2">
+                <i class="fa-brands fa-apple text-emerald-400"></i> Webizen_0.0.40_aarch64.dmg
+              </td>
+              <td class="py-3 px-4">macOS Apple Silicon</td>
+              <td class="py-3 px-4">Metal-accelerated Disk Image</td>
+              <td class="py-3 px-4 text-right">
+                <a href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/Webizen_0.0.40_aarch64.dmg"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition">
+                  <i class="fa-solid fa-download"></i> Download
+                </a>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 font-mono font-medium text-white flex items-center gap-2">
+                <i class="fa-solid fa-terminal text-violet-400"></i> qualia-cli-windows-x86_64.exe
+              </td>
+              <td class="py-3 px-4">Windows x64</td>
+              <td class="py-3 px-4">Native Command Line Tool</td>
+              <td class="py-3 px-4 text-right">
+                <a href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-cli-windows-x86_64.exe"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-semibold hover:bg-violet-500/30 transition">
+                  <i class="fa-solid fa-download"></i> Download
+                </a>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 font-mono font-medium text-white flex items-center gap-2">
+                <i class="fa-solid fa-terminal text-amber-400"></i> qualia-cli-linux-x86_64
+              </td>
+              <td class="py-3 px-4">Linux x86_64</td>
+              <td class="py-3 px-4">Native Standalone Binary</td>
+              <td class="py-3 px-4 text-right">
+                <a href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-cli-linux-x86_64"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold hover:bg-amber-500/30 transition">
+                  <i class="fa-solid fa-download"></i> Download
+                </a>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 font-mono font-medium text-white flex items-center gap-2">
+                <i class="fa-solid fa-globe text-cyan-300"></i> qualia-core-wasm.tar.gz
+              </td>
+              <td class="py-3 px-4">Browser &amp; Edge WASM</td>
+              <td class="py-3 px-4">Zero-heap Database &amp; Query Core</td>
+              <td class="py-3 px-4 text-right">
+                <a href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-core-wasm.tar.gz"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 text-white/80 border border-white/20 text-xs font-semibold hover:bg-white/20 transition">
+                  <i class="fa-solid fa-download"></i> Package
+                </a>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 font-mono font-medium text-white flex items-center gap-2">
+                <i class="fa-solid fa-cubes text-emerald-300"></i> anatomy-*.hmc (Male/Female/3D)
+              </td>
+              <td class="py-3 px-4">Cross-Platform Asset</td>
+              <td class="py-3 px-4">HuBMAP/CCF 3D Biological Models</td>
+              <td class="py-3 px-4 text-right">
+                <a href="playground/anatomy.html"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition">
+                  <i class="fa-solid fa-eye"></i> View 3D
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Architectural Guarantees & Non-Adversarial Conduct -->
+    <section class="border-t border-white/10 pt-10">
+      <div class="grid md:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-xl font-semibold mb-2">Non-Adversarial System Integrity</h3>
+          <p class="text-sm text-white/70 leading-relaxed mb-3">
+            QualiaDB is engineered in strict accordance with the OHCHR Core International Human Rights Instruments.
+            All agency interactions are bound to author-scoped Merkle roots, verifiable DIDs, and immutable audit logs.
+            Natural persons are never identity assets; instruments are never treated as artificial peers.
+          </p>
+          <a class="text-cyan-300 hover:underline text-sm font-semibold" href="https://www.ohchr.org/en/instruments-listings" target="_blank">
+            OHCHR Instruments Reference <i class="fa-solid fa-arrow-up-right-from-square text-xs ml-1"></i>
+          </a>
+        </div>
+        <div>
+          <h3 class="text-xl font-semibold mb-2">42MB Prolog Sentinel Enforcement</h3>
+          <p class="text-sm text-white/70 leading-relaxed mb-3">
+            Every evaluation pass operates within exactly 42 × 1024 × 1024 bytes of memory, structurally enforced by <code>SlgArena</code>.
+            Zero heap allocations are permitted inside hot-path query execution, making QualiaDB uniquely suited for ultra-low latency edge devices, WASM runtimes, and GPU zero-copy upload.
+          </p>
+          <a class="text-violet-300 hover:underline text-sm font-semibold" href="zero-heap-compliance.html">
+            Zero-Heap Compliance Ledger →
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-white/10 py-10 text-center text-white/40 text-xs">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>QualiaDB &amp; Webizen 0.0.40 · Built for dignity, designed for the edge, powered by human agency.</div>
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="hover:text-white transition">Home</a>
+        <a href="release-matrix.html" class="hover:text-white transition">Release Matrix</a>
+        <a href="semantic-instruments.html" class="hover:text-white transition">Instruments</a>
+        <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition">GitHub</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

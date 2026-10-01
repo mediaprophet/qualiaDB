@@ -1319,23 +1319,7 @@ impl QTensorEngine {
         max_chunks: u32,
         sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
     ) -> Option<StreamingArgmaxResult> {
-        // Fast path: batched single-submit when resident logits are available
-        if self.mc8_logits_resident_buf.is_some() {
-            if let Some(result) = self
-                .dispatch_output_argmax_batched_async(
-                    index,
-                    hidden,
-                    emb_dim,
-                    chunk_logits,
-                    max_chunks,
-                    sieve_mask,
-                )
-                .await
-            {
-                return Some(result);
-            }
-        }
-        // Fallback: per-chunk submit + readback
+        // Robust per-chunk submit + readback with exact CPU argmax
         self.dispatch_output_argmax_chunked_async_mc8_fused(
             index,
             hidden,

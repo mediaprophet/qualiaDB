@@ -127,7 +127,7 @@ Grammar/Parsing: Leverage an existing, resilient parsing library (like oxigraph/
 
 How are you currently handling your string-to-ID mappings (dictionary) inside your engine? If you are using a global key-value store or an in-memory trie, we can look at how to structure the virtual IDs for embedded triples without causing lock contention during bulk writes.
 
-Here are the direct answers to your architectural questions regarding the implementation of SPARQL-Star within the current QualiaDB 0.0.33-dev codebase.
+Here are the direct answers to your architectural questions regarding the implementation of SPARQL-Star within the current QualiaDB 0.0.40-dev codebase.
 
 1. Internal Format Mapping
 You must use Virtual Node IDs. Do not attempt to pack the triple components into the existing NQuin. A single field in the 48-byte NQuin is exactly 8 bytes (u64). An embedded triple requires 24 bytes (three u64 IDs).
@@ -158,8 +158,9 @@ Embedded triples do not need a new file format.
 The assertions about the triple (e.g., <<s p o>> :certainty 0.9) are stored as standard 48-byte NQuins inside your existing .q42 superblocks.
 
 The reverse lookup mapping (Virtual ID -> [s, p, o]) is appended into the
-**embedded Q42LEX** of the unified v3 `.q42` volume (same layout as the obsolete
-`.q42.lex` sidecar), exactly like a string literal.
+**embedded Q42LEX** of the unified v4 `.q42` volume (v2 pages share the layout
+of the obsolete `.q42.lex` sidecar; v4 pages add a namespace table), exactly
+like a string literal.
 
 8. Performance Constraints
 To adhere to the 42MB SlgArena and zero-allocation mandate:
@@ -239,7 +240,7 @@ The file `crates/qualia-cli/src/parsers/turtle_star.rs` is a **minimal placehold
 
 ---
 
-# SPARQL-Star Implementation Status - QualiaDB 0.0.33-dev
+# SPARQL-Star Implementation Status - QualiaDB 0.0.40-dev
 
 **Date:** 2025-01-XX  
 **Status:** ✅ 100% Complete (38/38 tasks)

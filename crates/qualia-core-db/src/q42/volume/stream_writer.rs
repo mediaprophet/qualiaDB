@@ -10,7 +10,7 @@ use tempfile::TempDir;
 use super::super::{
     encode_lex, encode_superblock, header_to_bytes, BlockDirectoryEntry, Q42VolumeHeader,
     FLAG_BLOCKS_LZ4, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES, FLAG_OBJECT_SORTED,
-    FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, HEADER_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK,
+    FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, HEADER_SIZE, Q42_VERSION_V4, QUINS_PER_BLOCK,
     SUPERBLOCK_SIZE,
 };
 use super::postings::{encode_block_postings, BlockFieldPostings, FIELD_POSTINGS_MAGIC};
@@ -272,7 +272,7 @@ impl StreamingQ42VolumeWriter {
         }
         let header = Q42VolumeHeader {
             magic: super::super::Q42_MAGIC,
-            version: Q42_VERSION_V3,
+            version: Q42_VERSION_V4,
             flags,
             lex_offset,
             lex_length: self.lex_bytes.len() as u64,

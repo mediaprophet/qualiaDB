@@ -13,6 +13,8 @@ use serde::Deserialize;
 use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict};
 use crate::modalities::logic::n3_compiler::N3OutputMode;
 
+use super::poet_llm_conditioning::prepare_prompt;
+
 pub const LLM_REQUEST_LIMIT_BYTES: usize = 128 * 1024;
 const MAX_PROMPT_BYTES: usize = 32 * 1024;
 const MAX_CONTEXT_BYTES: usize = 64 * 1024;
@@ -201,8 +203,16 @@ fn discover_local_models() -> Vec<serde_json::Value> {
             home_path.join("models"),
             home_path.join(".cache").join("lm-studio").join("models"),
             home_path.join(".qualia").join("models"),
-            home_path.join("AppData").join("Roaming").join("qualia").join("Models"),
-            home_path.join("AppData").join("Local").join("qualia").join("Models"),
+            home_path
+                .join("AppData")
+                .join("Roaming")
+                .join("qualia")
+                .join("Models"),
+            home_path
+                .join("AppData")
+                .join("Local")
+                .join("qualia")
+                .join("Models"),
             home_path.join("Downloads"),
         ];
         for dir in &user_dirs {
@@ -381,6 +391,7 @@ pub async fn generate_handler(body: Bytes) -> Response {
 }
 
 fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> {
+    let prepared = prepare_prompt(&request)?;
     let agent = LocalLlmAgent::new(&request.agent_did, &request.model_path);
     let context_hash = crate::q_hash(&request.graph_context);
     let intent = AgentIntent {
@@ -406,14 +417,14 @@ fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> 
     }
 
     let output = agent
-        .infer(&request.prompt, &request.graph_context)
+        .infer(&prepared.text, &request.graph_context)
         .map_err(|error| format!("{error:?}"))?;
     match agent.validate_output(&output) {
         WebizenVerdict::Permit | WebizenVerdict::Sanitised { .. } => {}
         verdict => return Err(format!("Webizen rejected the model output: {verdict:?}")),
     }
     let verified =
-        crate::inference::post_turn_verify::maybe_verify_turn(&request.prompt, &output.text);
+        crate::inference::post_turn_verify::maybe_verify_turn(&prepared.text, &output.text);
     let checks = verified
         .checks
         .iter()
@@ -439,6 +450,13 @@ fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> 
         "provenance_hashes": output.provenance_quins,
         "context_hash": context_hash,
         "context_supplied": !request.graph_context.is_empty(),
+        "conditioning": {
+            "applied": prepared.plan_id.is_some(),
+            "plan_id": prepared.plan_id,
+            "profile_id": prepared.profile_id,
+            "selected_evidence": prepared.selected_evidence,
+            "token_budget": prepared.token_budget,
+        },
         "repaired": verified.repaired,
         "checks": checks,
         "semantic_quin": output.semantic_quin
@@ -448,6 +466,76 @@ fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn request_with_conditioning(conditioning: serde_json::Value) -> PoetLlmRequest {
+        PoetLlmRequest {
+            model_path: "test.gguf".into(),
+            prompt: "Summarise the agreement.".into(),
+            conditioning: Some(conditioning),
+            graph_context: String::new(),
+            agent_did: "did:qualia:test-agent".into(),
+            principal_did: "did:qualia:test-principal".into(),
+            max_tokens: 128,
+            library_projects: Vec::new(),
+            library_context_supplied: false,
+        }
+    }
+
+    #[test]
+    fn conditioning_is_compiled_into_the_prompt_used_for_inference() {
+        let request = request_with_conditioning(serde_json::json!({
+            "profile_id": "urn:qualia:profile:agreement-summary",
+            "objective": "Summarise the agreement for its signatories.",
+            "requirements": [{
+                "id": "plain-language",
+                "class": "guidance",
+                "rule": "Use clear language and name any unresolved terms.",
+                "priority": 20
+            }],
+            "evidence": [{
+                "source_id": "agreement-v3",
+                "content": "The parties agreed to publish a quarterly report.",
+                "sensitivity": 0
+            }],
+            "budget": {"input_tokens": 512, "output_tokens": 48, "tool_rounds": 0}
+        }));
+
+        let prepared = prepare_prompt(&request).expect("profile compiles");
+        assert!(prepared.plan_id.is_some());
+        assert_eq!(
+            prepared.profile_id.as_deref(),
+            Some("urn:qualia:profile:agreement-summary")
+        );
+        assert_eq!(prepared.token_budget, 48);
+        assert_eq!(prepared.selected_evidence, 1);
+        assert!(prepared.text.contains("Objective: Summarise the agreement"));
+        assert!(prepared.text.contains("Use clear language"));
+        assert!(prepared.text.contains("publish a quarterly report"));
+    }
+
+    #[test]
+    fn conditioning_rejects_evidence_above_the_disclosure_ceiling() {
+        let request = request_with_conditioning(serde_json::json!({
+            "profile_id": "urn:qualia:profile:restricted",
+            "requirements": [{
+                "id": "source-needed",
+                "class": "evidence_obligation",
+                "rule": "Ground the answer in the authorised record.",
+                "required": true
+            }],
+            "evidence": [{
+                "source_id": "restricted-record",
+                "content": "Not disclosed.",
+                "sensitivity": 2
+            }],
+            "disclosure_ceiling": 0,
+            "budget": {"input_tokens": 512, "output_tokens": 48, "tool_rounds": 0}
+        }));
+
+        let prepared = prepare_prompt(&request).expect("plan records rejected evidence");
+        assert_eq!(prepared.selected_evidence, 0);
+        assert!(!prepared.text.contains("Not disclosed."));
+    }
 
     #[test]
     fn test_scan_dir_for_models_finds_gguf_and_p64() {

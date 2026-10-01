@@ -110,7 +110,7 @@ code{color:var(--cyan);font-size:12px}
       <input id="q" type="search" placeholder="Name or locator…" autocomplete="off"/>
       <ul class="list" id="people" role="listbox" aria-label="People" style="margin-top:.65rem"></ul>
       <div class="row">
-        <button type="button" class="primary" id="btn-invite">Invite person</button>
+        <button type="button" class="primary" id="btn-invite">Connection setup</button>
         <button type="button" id="btn-talk" disabled>Open Talk</button>
       </div>
       <p id="status" role="status" aria-live="polite"></p>
@@ -144,11 +144,7 @@ code{color:var(--cyan);font-size:12px}
 <script>
 
 (function(){
-  const seed=[
-    {id:"tim",name:"Timothy Holborn",handle:"@timothy",blurb:"Natural person · Continuity care",claim:"live"},
-    {id:"guest",name:"Invite pending",handle:"—",blurb:"Waiting on a person to accept",claim:"planned"}
-  ];
-  let people=seed.slice(), selected=null;
+  let people=[], selected=null;
   const list=document.getElementById("people");
   const status=document.getElementById("status");
   const q=document.getElementById("q");
@@ -161,7 +157,7 @@ code{color:var(--cyan);font-size:12px}
     const filtered=people.filter(p=>!term||p.name.toLowerCase().includes(term)||p.handle.toLowerCase().includes(term));
     list.innerHTML="";
     if(!filtered.length){
-      list.innerHTML='<li class="muted">No people match — try another locator, or invite a person.</li>';
+      list.innerHTML='<li class="muted">No accepted connections yet. Use Connection setup to create or accept one.</li>';
       return;
     }
     filtered.forEach(p=>{
@@ -169,7 +165,9 @@ code{color:var(--cyan);font-size:12px}
       li.setAttribute("role","option");
       li.className="item";
       li.setAttribute("aria-selected", selected&&selected.id===p.id ? "true":"false");
-      li.innerHTML='<span class="who">'+p.name+'</span><span class="meta">'+p.handle+' · '+p.blurb+'</span>';
+      const who=document.createElement("span"); who.className="who"; who.textContent=p.name;
+      const meta=document.createElement("span"); meta.className="meta"; meta.textContent=p.handle+" · "+p.blurb;
+      li.append(who,meta);
       li.addEventListener("click",()=>select(p));
       list.appendChild(li);
     });
@@ -181,7 +179,7 @@ code{color:var(--cyan);font-size:12px}
     document.getElementById("d-name").textContent=p.name;
     document.getElementById("d-meta").textContent=p.handle+" · "+p.blurb;
     const claim=document.getElementById("d-claim");
-    claim.textContent=p.claim==="live"?"Claim Live":"Claim Planned";
+    claim.textContent=p.claim==="live"?"Connection active":"Connection paused";
     claim.className="pill "+(p.claim==="live"?"live":"planned");
     btnTalk.disabled=false;
     status.textContent="Selected · "+p.name+" · handle ≠ who";
@@ -189,22 +187,31 @@ code{color:var(--cyan);font-size:12px}
   }
   function openVolume(path){
     if(!selected){status.textContent="Pick a person first.";return;}
+    const locator=selected.handle||selected.id;
+    const route=path+"?peer="+encodeURIComponent(locator);
     status.textContent="Opening "+path+" for "+selected.name+"…";
-    try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:"webizen-open",route:path,peer:selected.id},"*"); }catch(e){}
+    try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:"webizen-open",route:route},window.location.origin); }catch(e){}
   }
   q.addEventListener("input",render);
+  async function loadPeople(){
+    status.textContent="Loading accepted connections…";
+    try{
+      const response=await fetch("/api/network/peers",{headers:{Accept:"application/json"}});
+      const peers=await response.json(); if(!response.ok) throw new Error(peers.error||"Directory unavailable.");
+      people=(Array.isArray(peers)?peers:[]).map(peer=>({id:peer.did,name:peer.display_name||"Unnamed connection",handle:peer.did||"No identifier",blurb:(peer.relation_type||"connection")+(peer.endpoint?" · "+peer.endpoint:""),claim:peer.active?"live":"paused"}));
+      if(selected) selected=people.find(person=>person.id===selected.id)||null;
+      render(); status.textContent=people.length+" accepted connection(s) on this device.";
+    }catch(error){ people=[]; render(); status.textContent="Directory unavailable: "+error.message; }
+  }
   document.getElementById("btn-invite").addEventListener("click",()=>{
-    const name=prompt("Person's name?");
-    if(!name) return;
-    const p={id:"p"+Date.now(),name:name.trim(),handle:"pending",blurb:"Invited · claim Planned",claim:"planned"};
-    people.unshift(p); select(p); render();
-    status.textContent="Invite recorded locally · delivery Planned until locator binds.";
+    status.textContent="Opening connection setup…";
+    try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:"webizen-open",route:"/volumes/settings?pane=network"},"*"); }catch(e){}
   });
   document.getElementById("btn-talk").addEventListener("click",()=>openVolume("/volumes/talk"));
   document.getElementById("btn-open-talk").addEventListener("click",()=>openVolume("/volumes/talk"));
   document.getElementById("btn-open-mail").addEventListener("click",()=>openVolume("/volumes/mail"));
   render();
-  status.textContent="Directory · people first · tools stay tools.";
+  loadPeople();
 })();
 
 </script>

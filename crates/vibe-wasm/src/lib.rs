@@ -366,42 +366,47 @@ pub fn eval_program_src(src: &str) -> JsValue {
     }
 }
 
-/// Compile a cell expression to bytecode and return chunk metadata.
+/// Persistent compiled cell for the browser binding.
+///
+/// Keeps the compiled [`bytecode::Chunk`] so timed / repeated runs can call
+/// [`CompiledCell::run`] without re-decoding VBC1 bytes. Prefer this over
+/// [`decode_and_run`] when the job is "run what we already compiled."
 #[wasm_bindgen]
-pub fn compile_cell_bytecode(src: &str) -> JsValue {
-    match parse_cell(src) {
-        Ok(expr) => match compile_expr(&expr) {
-            Ok(chunk) => {
+pub struct CompiledCell {
+    chunk: bytecode::Chunk,
+}
+
+#[wasm_bindgen]
+impl CompiledCell {
+    /// Compile a cell expression (`= expr`) into a handle. Does not run it.
+    pub fn compile(src: &str) -> Result<CompiledCell, JsValue> {
+        match parse_cell(src) {
+            Ok(expr) => match compile_expr(&expr) {
+                Ok(chunk) => Ok(CompiledCell { chunk }),
+                Err(e) => Err(JsValue::from_str(&format!("{:?}", e))),
+            },
+            Err(d) => Err(diag_to_js(&d)),
+        }
+    }
+
+    /// Decode a VBC1 byte buffer once into a handle. Later [`Self::run`] calls
+    /// do not decode again.
+    pub fn from_bytes(bytes: &[u8]) -> Result<CompiledCell, JsValue> {
+        match decode_chunk(bytes) {
+            Ok(chunk) => Ok(CompiledCell { chunk }),
+            Err(e) => Err(JsValue::from_str(&format!("{:?}", e))),
+        }
+    }
+
+    /// Run the held chunk on a fresh local VM. Does not decode.
+    pub fn run(&self) -> JsValue {
+        let mut host = LocalHost::default();
+        let mut vm = Vm::new(&self.chunk, &mut host, Budget::default());
+        match vm.run() {
+            Ok(v) => {
                 let o = Object::new();
                 Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
-                Reflect::set(
-                    &o,
-                    &"code_size".into(),
-                    &JsValue::from_f64(chunk.code.len() as f64),
-                )
-                .ok();
-                Reflect::set(
-                    &o,
-                    &"constants".into(),
-                    &JsValue::from_f64(chunk.constants.len() as f64),
-                )
-                .ok();
-                Reflect::set(
-                    &o,
-                    &"functions".into(),
-                    &JsValue::from_f64(chunk.functions.len() as f64),
-                )
-                .ok();
-                Reflect::set(
-                    &o,
-                    &"top_locals".into(),
-                    &JsValue::from_f64(chunk.top_locals as f64),
-                )
-                .ok();
-
-                // Disassemble the code into a human-readable string.
-                let disasm = disassemble(&chunk);
-                Reflect::set(&o, &"disassembly".into(), &JsValue::from_str(&disasm)).ok();
+                Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
                 o.into()
             }
             Err(e) => {
@@ -410,11 +415,77 @@ pub fn compile_cell_bytecode(src: &str) -> JsValue {
                 Reflect::set(&o, &"error".into(), &JsValue::from_str(&format!("{:?}", e))).ok();
                 o.into()
             }
-        },
-        Err(d) => {
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn code_size(&self) -> usize {
+        self.chunk.code.len()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn constants(&self) -> usize {
+        self.chunk.constants.len()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn functions(&self) -> usize {
+        self.chunk.functions.len()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn top_locals(&self) -> u16 {
+        self.chunk.top_locals
+    }
+
+    /// Human-readable disassembly of the held chunk (inspect only).
+    pub fn disassembly(&self) -> String {
+        disassemble(&self.chunk)
+    }
+}
+
+/// Compile a cell expression to bytecode and return chunk metadata.
+///
+/// For repeated execution without re-decode, use [`CompiledCell::compile`] and
+/// [`CompiledCell::run`] instead. This export stays for playground inspect /
+/// size reporting.
+#[wasm_bindgen]
+pub fn compile_cell_bytecode(src: &str) -> JsValue {
+    match CompiledCell::compile(src) {
+        Ok(cell) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+            Reflect::set(
+                &o,
+                &"code_size".into(),
+                &JsValue::from_f64(cell.code_size() as f64),
+            )
+            .ok();
+            Reflect::set(
+                &o,
+                &"constants".into(),
+                &JsValue::from_f64(cell.constants() as f64),
+            )
+            .ok();
+            Reflect::set(
+                &o,
+                &"functions".into(),
+                &JsValue::from_f64(cell.functions() as f64),
+            )
+            .ok();
+            Reflect::set(
+                &o,
+                &"top_locals".into(),
+                &JsValue::from_f64(cell.top_locals() as f64),
+            )
+            .ok();
+            Reflect::set(&o, &"disassembly".into(), &JsValue::from_str(&cell.disassembly())).ok();
+            o.into()
+        }
+        Err(err) => {
             let o = Object::new();
             Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
-            Reflect::set(&o, &"error".into(), &diag_to_js(&d)).ok();
+            Reflect::set(&o, &"error".into(), &err).ok();
             o.into()
         }
     }
@@ -574,32 +645,18 @@ pub fn encode_cell_bytecode(src: &str) -> JsValue {
     }
 }
 
-/// Decode a binary bytecode chunk and run it.
+/// Decode a binary bytecode chunk and run it once.
+///
+/// Compat wrapper: each call decodes again. Prefer [`CompiledCell::from_bytes`]
+/// then [`CompiledCell::run`] when the same bytes will run more than once.
 #[wasm_bindgen]
 pub fn decode_and_run(bytes: &[u8]) -> JsValue {
-    match decode_chunk(bytes) {
-        Ok(chunk) => {
-            let mut host = LocalHost::default();
-            let mut vm = Vm::new(&chunk, &mut host, Budget::default());
-            match vm.run() {
-                Ok(v) => {
-                    let o = Object::new();
-                    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
-                    Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
-                    o.into()
-                }
-                Err(e) => {
-                    let o = Object::new();
-                    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
-                    Reflect::set(&o, &"error".into(), &JsValue::from_str(&format!("{:?}", e))).ok();
-                    o.into()
-                }
-            }
-        }
-        Err(e) => {
+    match CompiledCell::from_bytes(bytes) {
+        Ok(cell) => cell.run(),
+        Err(err) => {
             let o = Object::new();
             Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
-            Reflect::set(&o, &"error".into(), &JsValue::from_str(&format!("{:?}", e))).ok();
+            Reflect::set(&o, &"error".into(), &err).ok();
             o.into()
         }
     }

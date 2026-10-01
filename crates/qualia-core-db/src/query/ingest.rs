@@ -306,7 +306,7 @@ pub fn streaming_import_rdf_with_report(
     max_segment_bytes: Option<u64>,
     report: IngestReport,
 ) -> std::io::Result<u64> {
-    streaming_import_rdf_with_mode_inner(in_path, out_path, mode, max_segment_bytes, report, None)
+    streaming_import_rdf_with_mode_inner(in_path, out_path, mode, max_segment_bytes, report, None, &[])
 }
 
 /// Resume or run a durable job directory (`job.json` + `runs/`).
@@ -327,6 +327,28 @@ pub fn streaming_import_rdf_with_job(job_dir: &Path, report: IngestReport) -> st
         segment,
         report,
         Some(job.dir.clone()),
+        &[],
+    )
+}
+
+/// Same as [`streaming_import_rdf_with_report`], with omit-predicate hashes
+/// applied before hashing (must match `verify-graph --omit-predicates`).
+pub fn streaming_import_rdf_with_report_filtered(
+    in_path: &str,
+    out_path: &str,
+    mode: IngestMode,
+    max_segment_bytes: Option<u64>,
+    report: IngestReport,
+    omit_predicate_hashes: &[u64],
+) -> std::io::Result<u64> {
+    streaming_import_rdf_with_mode_inner(
+        in_path,
+        out_path,
+        mode,
+        max_segment_bytes,
+        report,
+        None,
+        omit_predicate_hashes,
     )
 }
 
@@ -337,6 +359,7 @@ fn streaming_import_rdf_with_mode_inner(
     max_segment_bytes: Option<u64>,
     mut report: IngestReport,
     job_dir: Option<std::path::PathBuf>,
+    omit_predicate_hashes: &[u64],
 ) -> std::io::Result<u64> {
     let start_time = Instant::now();
     let parse_started = Instant::now();
@@ -575,8 +598,12 @@ fn streaming_import_rdf_with_mode_inner(
 
     let triples_read = std::sync::atomic::AtomicU64::new(0);
     let skip_left = std::sync::atomic::AtomicU64::new(skip_triples);
+    let omit: HashSet<u64> = omit_predicate_hashes.iter().copied().collect();
     let mut accept_raw = |raw: RawTriple| {
         use std::sync::atomic::Ordering::Relaxed;
+        if omit.contains(&q_hash(&raw.predicate)) {
+            return;
+        }
         let skip = skip_left.load(Relaxed);
         let seen = triples_read.load(Relaxed);
         if seen < skip {
@@ -812,13 +839,18 @@ fn streaming_import_rdf_with_mode_inner(
         None,
     );
     let publish_started = Instant::now();
-    let total_written = match max_segment_bytes {
+    // `total_written` is the Super-Quin count ("five triples in, five quins
+    // out"); `total_superblocks` is the SuperBlock count. The two were
+    // conflated before MergeStats existed (native merge returned blocks).
+    let (total_written, total_superblocks) = match max_segment_bytes {
         Some(cap) => {
-            sorter
-                .merge_volume_set(std::path::Path::new(out_path), cap)?
-                .blocks_written
+            let stats = sorter.merge_volume_set(std::path::Path::new(out_path), cap)?;
+            (stats.quins_written, stats.blocks_written)
         }
-        None => sorter.merge(std::path::Path::new(out_path))?,
+        None => {
+            let stats = sorter.merge(std::path::Path::new(out_path))?;
+            (stats.quins, stats.blocks)
+        }
     };
     report.set_publish_ms(publish_started.elapsed().as_millis() as u64);
 
@@ -897,8 +929,6 @@ fn streaming_import_rdf_with_mode_inner(
         let _ = crate::query::ingest_job::write_json_atomic(&sidecar, &att);
         let _ = j.set_phase(crate::query::ingest_job::IngestJobPhase::Complete);
     }
-    let total_superblocks =
-        (total_written + (crate::QUINS_PER_BLOCK as u64) - 1) / crate::QUINS_PER_BLOCK as u64;
     log::info!(
         "Ontology Ingest: Completed {} SuperBlocks ({} quins, mode {:?}) in {:?}",
         total_superblocks,

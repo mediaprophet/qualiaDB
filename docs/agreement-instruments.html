@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agreements as Semantic Instruments — QualiaDB / Webizen</title>
+  <meta name="description" content="A plain-language guide to turning a multi-party agreement into an inspectable, bounded Semantic Instrument.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .hero-grad { background: linear-gradient(90deg, #c4b5fd, #67e8f9, #6ee7b7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .agreement-rail { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+    .agreement-step { position: relative; min-height: 12rem; padding: 1.25rem; border: 1px solid rgba(148,180,220,.2); border-radius: 1.25rem; background: rgba(5,10,18,.58); }
+    .agreement-step:not(:last-child)::after { content: ""; position: absolute; top: 50%; left: calc(100% + .25rem); width: .5rem; border-top: 1px solid rgba(103,232,249,.6); }
+    .agreement-step:not(:last-child)::before { content: ""; position: absolute; top: calc(50% - .2rem); left: calc(100% + .55rem); width: .4rem; height: .4rem; border-top: 1px solid #67e8f9; border-right: 1px solid #67e8f9; transform: rotate(45deg); }
+    .agreement-icon { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; margin-bottom: .9rem; border-radius: .8rem; color: #c4b5fd; background: rgba(167,139,250,.14); }
+    .agreement-step:nth-child(2) .agreement-icon { color: #67e8f9; background: rgba(34,211,238,.12); }
+    .agreement-step:nth-child(3) .agreement-icon { color: #fcd34d; background: rgba(251,191,36,.12); }
+    .agreement-step:nth-child(4) .agreement-icon { color: #6ee7b7; background: rgba(52,211,153,.12); }
+    .agreement-table th, .agreement-table td { padding: .75rem; vertical-align: top; }
+    .agreement-table th { color: rgba(232,238,247,.86); font-weight: 600; }
+    @media (max-width: 767px) { .agreement-rail { grid-template-columns: 1fr; } .agreement-step { min-height: auto; } .agreement-step:not(:last-child)::after { top: auto; bottom: -.55rem; left: 50%; width: 0; height: .55rem; border-top: 0; border-left: 1px solid rgba(103,232,249,.6); } .agreement-step:not(:last-child)::before { top: auto; bottom: -.6rem; left: calc(50% - .2rem); } }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,.78);backdrop-filter:blur(32px)"><div class="max-w-screen-2xl mx-auto px-4 sm:px-8"><div class="flex items-center justify-between gap-3 min-h-[4rem] py-2"><a href="index.html" class="flex items-center gap-3 shrink-0"><div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">W</span></div><div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div></a><div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div></div></div></nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-handshake"></i> Agreements · Semantic Instruments</div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-.04em] leading-[1.05] mb-5">An agreement can become<br><span class="hero-grad">a shared, inspectable instrument.</span></h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-4">An agreement is more than a signature. It can include claims, references, responsibilities, conditions, and different understandings of the people involved. An agreement ledger gives those parts a visible home before anyone asks software to act on them.</p>
+    <p class="text-base sm:text-lg text-white/60 max-w-3xl mb-12">The result is not a system that decides what people “really meant”. It is a record of what each person put forward, what they accepted, what remains open, and the exact rule set they jointly authorise for a defined purpose.</p>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="path-title">
+      <p class="q-kicker mb-2">A four-part path</p>
+      <h2 id="path-title" class="text-2xl sm:text-3xl font-semibold mb-7">From individual understanding to a bounded shared tool</h2>
+      <div class="agreement-rail" role="img" aria-label="Agreement lifecycle: record material, capture each party's position, consolidate accepted terms, then package the agreement as a semantic instrument.">
+        <div class="agreement-step"><div class="agreement-icon"><i class="fa-solid fa-folder-open"></i></div><h3 class="font-semibold">1. Record the material</h3><p class="text-xs text-white/60 mt-2">Keep propositions, references, assumptions, and conditions distinct. A recorded claim is not automatically treated as an established fact.</p></div>
+        <div class="agreement-step"><div class="agreement-icon"><i class="fa-solid fa-people-group"></i></div><h3 class="font-semibold">2. Capture positions</h3><p class="text-xs text-white/60 mt-2">Each party can state what they accept, question, qualify, or reject — including the scope and confidence of their understanding.</p></div>
+        <div class="agreement-step"><div class="agreement-icon"><i class="fa-solid fa-scale-balanced"></i></div><h3 class="font-semibold">3. Consolidate consent</h3><p class="text-xs text-white/60 mt-2">The shared agreement contains only accepted terms. Dissent, exceptions, and unresolved points remain visible instead of being silently flattened.</p></div>
+        <div class="agreement-step"><div class="agreement-icon"><i class="fa-solid fa-toolbox"></i></div><h3 class="font-semibold">4. Package the rule</h3><p class="text-xs text-white/60 mt-2">The agreed terms become a Semantic Instrument with declared inputs, limits, version, parties, and receipts for later runs.</p></div>
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <p class="q-kicker mb-2">Different understandings are data</p>
+      <h2 class="text-3xl font-semibold mb-6">Agreement does not require pretending everyone began in the same place</h2>
+      <div class="grid lg:grid-cols-3 gap-5">
+        <article class="q-card p-7"><i class="fa-solid fa-quote-left text-violet-300"></i><h3 class="text-xl font-semibold mt-4 mb-3">Claims and references</h3><p class="text-sm text-white/65">A party may rely on a policy, a lived experience, a professional standard, a dataset, or a community account. The ledger records the source and its intended role instead of calling every input “fact”.</p></article>
+        <article class="q-card p-7"><i class="fa-solid fa-user-check text-cyan-300"></i><h3 class="text-xl font-semibold mt-4 mb-3">Scope and confidence</h3><p class="text-sm text-white/65">A person can say “I accept this for this situation”, “I need more evidence”, or “I agree only with this exception”. These qualifiers help prevent a broad rule being inferred from narrow consent.</p></article>
+        <article class="q-card p-7"><i class="fa-solid fa-comments text-emerald-300"></i><h3 class="text-xl font-semibold mt-4 mb-3">Dissent and revision</h3><p class="text-sm text-white/65">A disagreement is not a broken record. It can be retained with the agreement, revisited when conditions change, and reflected in a later version without rewriting history.</p></article>
+      </div>
+    </section>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="example-title">
+      <p class="q-kicker mb-2">Illustrative example</p>
+      <h2 id="example-title" class="text-2xl sm:text-3xl font-semibold mb-4">A community referral agreement</h2>
+      <p class="text-sm text-white/65 max-w-4xl mb-6">A resident group, a local service, and a community worker want a consistent way to prepare referrals. They do not hand authority to the software; they write a narrow shared procedure for handling a referral package.</p>
+      <div class="overflow-x-auto border border-white/10 rounded-2xl">
+        <table class="agreement-table w-full min-w-[42rem] text-left text-sm text-white/65">
+          <thead class="bg-white/[.03] border-b border-white/10 text-xs uppercase tracking-wider text-cyan-200"><tr><th>Recorded material</th><th>Party perspectives</th><th>Consolidated term</th></tr></thead>
+          <tbody class="divide-y divide-white/10">
+            <tr><td><span class="text-white/85 font-medium">Claim:</span> referrals need enough information to be reviewed.</td><td>Service: identity and contact fields are needed. Resident group: people must be told what is missing.</td><td>Require the declared referral fields; return a clear missing-information status.</td></tr>
+            <tr><td><span class="text-white/85 font-medium">Reference:</span> local service criteria and the group's consent guidance.</td><td>Worker: a person must review sensitive cases. Service: criteria can change by version.</td><td>Include the criteria version and route sensitive or uncertain cases to human review.</td></tr>
+            <tr><td><span class="text-white/85 font-medium">Boundary:</span> a prepared referral is not a decision on eligibility.</td><td>All parties accept this limit.</td><td>Never output “eligible”; use ready, held, or needs-human-review.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mb-16" aria-labelledby="effect-title">
+      <p class="q-kicker mb-2">When an agreement takes effect</p>
+      <h2 id="effect-title" class="text-3xl font-semibold mb-4">An instrument receives authority only from a current, declared agreement</h2>
+      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-7">Writing a rule is not the same as authorising it. The agreement lifecycle makes that distinction visible: a software agent may use an instrument only while the relevant human agreement is current, within scope, and supplied with the declared information.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <article class="q-card p-5"><div class="text-violet-300 font-mono text-xs mb-2">01 · PROPOSED</div><h3 class="font-semibold">Record</h3><p class="text-xs text-white/60 mt-2">Claims, references, terms, and party positions are visible. No agent authority exists yet.</p></article>
+        <article class="q-card p-5"><div class="text-cyan-300 font-mono text-xs mb-2">02 · RATIFIED</div><h3 class="font-semibold">Consent</h3><p class="text-xs text-white/60 mt-2">The named parties meet the declared consent condition and approve the specific version.</p></article>
+        <article class="q-card p-5"><div class="text-emerald-300 font-mono text-xs mb-2">03 · ACTIVE</div><h3 class="font-semibold">Use</h3><p class="text-xs text-white/60 mt-2">The bounded instrument can follow the ratified procedure and retain a receipt.</p></article>
+        <article class="q-card p-5"><div class="text-amber-300 font-mono text-xs mb-2">04 · HELD</div><h3 class="font-semibold">Pause</h3><p class="text-xs text-white/60 mt-2">Missing inputs, an unmet condition, or an unresolved exception hold the run rather than invent an outcome.</p></article>
+        <article class="q-card p-5"><div class="text-rose-300 font-mono text-xs mb-2">05 · SUPERSEDED</div><h3 class="font-semibold">Review</h3><p class="text-xs text-white/60 mt-2">A revised or withdrawn agreement stops new reliance; earlier receipts retain their context.</p></article>
+      </div>
+    </section>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="temporal-title">
+      <p class="q-kicker mb-2">Temporal provenance and review</p>
+      <h2 id="temporal-title" class="text-2xl sm:text-3xl font-semibold mb-4">A decision can be reasonable when made and still require relief when the circumstances change</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">A human-centric instrument records the evidence, assumptions, authority, and limits that were available <em>at the time of a decision</em>. Later evidence does not rewrite that original context. It creates a new, time-linked record that can trigger review, revision, pause, relief, or remedy for ongoing negative effects.</p>
+      <div class="grid lg:grid-cols-4 gap-4">
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5"><div class="font-mono text-xs text-violet-200 mb-2">T₀ · DECIDE</div><h3 class="font-semibold">Record the basis</h3><p class="text-xs text-white/60 mt-2">Capture the versioned evidence, known uncertainties, mandate, and reason the decision was made.</p></article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5"><div class="font-mono text-xs text-cyan-200 mb-2">T₁ · LEARN</div><h3 class="font-semibold">Add later evidence</h3><p class="text-xs text-white/60 mt-2">Link new material, changed conditions, affected parties, and the date it became available without overwriting T₀.</p></article>
+        <article class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-5"><div class="font-mono text-xs text-amber-200 mb-2">T₂ · REVIEW</div><h3 class="font-semibold">Reassess effect</h3><p class="text-xs text-white/60 mt-2">Apply the declared review trigger: confirm, qualify, hold, revise, or stop further reliance on the earlier rule.</p></article>
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5"><div class="font-mono text-xs text-emerald-200 mb-2">T₃ · REMEDY</div><h3 class="font-semibold">Act on continuing harm</h3><p class="text-xs text-white/60 mt-2">Record relief, correction, escalation, or a revised agreement—and retain the full chain for later review.</p></article>
+      </div>
+      <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-6 mt-6">
+        <div>
+          <h3 class="text-xl font-semibold mb-3">What the temporal rule requires</h3>
+          <ul class="space-y-3 text-sm text-white/65"><li><span class="text-white/85 font-medium">As-of evidence:</span> an agent must be able to distinguish material available when a decision was made from material learned later.</li><li><span class="text-white/85 font-medium">Material-change triggers:</span> agreements declare which new facts, impacts, expiry dates, or challenges require reconsideration.</li><li><span class="text-white/85 font-medium">No silent carry-forward:</span> a prior decision cannot be treated as permanently current when its time, scope, or evidence conditions have expired or changed.</li><li><span class="text-white/85 font-medium">Relief path:</span> affected people need a named route to seek correction, review, pause, replacement, or remedy.</li></ul>
+        </div>
+        <aside class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-6"><h3 class="font-semibold text-amber-100 mb-3"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Liability and insurance boundary</h3><p class="text-sm text-white/65 mb-3">Continuing to rely on an outdated decision can create serious legal, operational, and human consequences. The applicable duties, liability, available remedies, and insurance coverage depend on the jurisdiction, contract, facts, and policy terms.</p><p class="text-sm text-white/65">The instrument does not decide those questions. It makes the temporal record and the review/remedy path available so people cannot plausibly lose the basis, timing, or ongoing impact from view.</p><a class="inline-block mt-4 text-xs text-amber-100 hover:text-white underline" href="https://www.w3.org/TR/prov-o/">W3C PROV temporal properties</a></aside>
+      </div>
+      <div class="mt-6 rounded-2xl border border-white/10 bg-white/[.025] p-6">
+        <div class="flex flex-col lg:flex-row lg:items-start gap-5"><div class="w-10 h-10 shrink-0 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center"><i class="fa-solid fa-link text-violet-300"></i></div><div class="flex-1"><p class="q-kicker mb-2">Optional integrity anchoring</p><h3 class="text-xl font-semibold mb-3">Link the record without making public disclosure compulsory</h3><p class="text-sm text-white/65 mb-4">An agreement, provenance record, review event, or receipt may remain in the relevant local or controlled environment. When the parties choose, it can also carry an integrity commitment: a content digest, a Merkle-tree inclusion proof, or a reference pinned to a distributed ledger (DLT). Later records can link to the earlier commitment and to the revised version.</p><div class="grid md:grid-cols-3 gap-3 text-xs text-white/60"><div class="rounded-xl border border-white/10 p-3"><span class="text-white/85 font-medium">Local only</span><br>Keep the record private with its own version and receipt chain.</div><div class="rounded-xl border border-white/10 p-3"><span class="text-white/85 font-medium">Merkle-linked</span><br>Commit a collection of records to one root while proving inclusion only when needed.</div><div class="rounded-xl border border-white/10 p-3"><span class="text-white/85 font-medium">DLT-pinned</span><br>Anchor a chosen digest or reference to an external, shared chronology when that is appropriate.</div></div><p class="text-xs text-white/45 mt-4">An anchor can help show that a particular commitment existed and has not changed relative to that chain. It does not itself prove the underlying statement is true, that a person consented, or that a record has a particular legal effect. Sensitive material and unnecessary personal references should not be placed in a public ledger.</p></div></div>
+      </div>
+    </section>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="zk-title">
+      <p class="q-kicker mb-2">Zero-knowledge proof support</p>
+      <h2 id="zk-title" class="text-2xl sm:text-3xl font-semibold mb-4">Prove a declared condition without disclosing all of the underlying evidence</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">Where a suitable proof circuit exists, QualiaDB/Webizen can use zero-knowledge proofs to show that a defined predicate or policy condition has been satisfied without exposing the private witness material. This lets an agreement or instrument ask the narrow question it needs answered while retaining privacy over supporting records.</p>
+      <div class="grid lg:grid-cols-3 gap-5">
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5"><i class="fa-solid fa-user-shield text-violet-200"></i><h3 class="font-semibold mt-3 mb-2">Selective evidence</h3><p class="text-xs text-white/60">Prove a threshold, range, authorised condition, or other supported predicate without disclosing the private value, source record, or full credential.</p></article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5"><i class="fa-solid fa-circle-check text-cyan-200"></i><h3 class="font-semibold mt-3 mb-2">Bounded verification</h3><p class="text-xs text-white/60">The verifier checks the specific circuit, public inputs, and proof. The result says only that the declared condition was satisfied for that circuit.</p></article>
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5"><i class="fa-solid fa-receipt text-emerald-200"></i><h3 class="font-semibold mt-3 mb-2">Accountable receipt</h3><p class="text-xs text-white/60">A receipt can record the proof type, policy or circuit version, verification result, permitted purpose, and time—without publishing the private witness.</p></article>
+      </div>
+      <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-6 mt-6">
+        <div>
+          <h3 class="text-xl font-semibold mb-3">How this supports agreements and provenance</h3>
+          <ul class="space-y-3 text-sm text-white/65"><li><span class="text-white/85 font-medium">Eligibility without excess disclosure:</span> establish that a required condition is met without exposing unrelated personal or organisational evidence.</li><li><span class="text-white/85 font-medium">Private rights conditions:</span> demonstrate that a licence, role, permission, or agreed policy condition has been satisfied without disclosing the entire protected agreement.</li><li><span class="text-white/85 font-medium">Integrity of bounded computation:</span> where a supported circuit exists, verify a defined computation or policy gate without revealing its private inputs.</li><li><span class="text-white/85 font-medium">Public anchoring with private substance:</span> combine a proof with an optional Merkle or DLT commitment while keeping sensitive evidence outside the public record.</li></ul>
+        </div>
+        <aside class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-6"><h3 class="font-semibold text-amber-100 mb-3"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Proof boundary</h3><p class="text-sm text-white/65 mb-3">A valid zero-knowledge proof establishes only the statement encoded by its circuit and public inputs. It does not prove every related fact, the fairness of a policy, the authority of a recipient beyond the declared scope, or legal effect.</p><p class="text-sm text-white/65">Proof support is circuit-specific. It should fail closed when the required circuit, verification material, policy version, or temporal condition is unavailable or invalid.</p><a class="inline-block mt-4 text-xs text-amber-100 hover:text-white underline" href="https://github.com/mediaprophet/qualiaDB/tree/v0.0.40/crates/qualia-core-db/src/crypto">Inspect cryptographic source</a></aside>
+      </div>
+      <div class="mt-7 rounded-2xl border border-white/10 bg-white/[.025] p-5 sm:p-6">
+        <p class="q-kicker mb-2">Disclosure is not binary</p>
+        <h3 class="text-xl font-semibold mb-3">A proof may be broadly checkable while the protected evidence remains available only through a separate authorised process</h3>
+        <p class="text-sm text-white/65 max-w-4xl mb-5">Zero knowledge means that verifying the proof does not reveal its private witness. It does <em>not</em> mean that the underlying record is metaphysically unknowable to every other person or system. A protected-person, witness-protection, safeguarding, or similar instrument may deliberately separate a public or routine proof from controlled custody of the supporting evidence. An authorised court or other accountable decision-maker may be able to request or receive the necessary material under the applicable process, without making it available to routine verifiers, software agents, or the public.</p>
+        <div class="grid md:grid-cols-3 gap-4 text-sm">
+          <article class="rounded-xl border border-violet-500/25 bg-violet-500/[.06] p-4"><h4 class="font-semibold text-violet-100 mb-2">1 · Routine verifier</h4><p class="text-white/60">Receives the declared statement, public inputs, proof, and a scoped verification receipt. It need not receive names, locations, source records, or other witness material.</p></article>
+          <article class="rounded-xl border border-cyan-500/25 bg-cyan-500/[.06] p-4"><h4 class="font-semibold text-cyan-100 mb-2">2 · Protected custody</h4><p class="text-white/60">Holds the sealed underlying material under a declared custody and access policy. Holding encrypted material does not itself confer permission to inspect, copy, or disclose it.</p></article>
+          <article class="rounded-xl border border-emerald-500/25 bg-emerald-500/[.06] p-4"><h4 class="font-semibold text-emerald-100 mb-2">3 · Authorised review</h4><p class="text-white/60">May receive the least material necessary only when an accountable human authority, stated purpose, time limit, and applicable procedure permit it—for example, a court acting through the relevant legal process.</p></article>
+        </div>
+        <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-5 mt-5">
+          <div><h4 class="font-semibold mb-3">What the accompanying disclosure instrument must state</h4><ul class="space-y-2 text-sm text-white/65"><li><span class="text-white/85 font-medium">Protected scope:</span> which material or references are protected, at an appropriate level of detail.</li><li><span class="text-white/85 font-medium">Permitted recipients and purpose:</span> which roles may seek disclosure, for which defined purpose, and what they may receive.</li><li><span class="text-white/85 font-medium">Procedure and human authority:</span> the accountable people, mandate, threshold or order required before release; an AI agent cannot self-authorise disclosure.</li><li><span class="text-white/85 font-medium">Minimisation, time, and remedy:</span> the least disclosure necessary, expiry/revocation conditions, receipt chain, review, and challenge path.</li></ul></div>
+          <aside class="rounded-xl border border-amber-500/25 bg-amber-500/[.06] p-4"><h4 class="font-semibold text-amber-100 mb-2">Implementation boundary</h4><p class="text-sm text-white/65">A ZKP alone cannot escrow, recover, or release its witness. Those are distinct custody and disclosure functions. QualiaDB’s current proof circuits verify defined statements; a complete protected-disclosure workflow additionally needs recipient-, purpose-, procedure-, and time-scoped policy enforcement with auditable release receipts. Until that workflow is implemented end to end, systems should not imply that a proof subsystem by itself provides court disclosure or witness-protection custody.</p></aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="evidence-title">
+      <p class="q-kicker mb-2">Identifiers and evidentiary basis</p>
+      <h2 id="evidence-title" class="text-2xl sm:text-3xl font-semibold mb-4">References help establish what a record is about; evidence establishes what may be relied upon</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">An instrument may contain one or more scoped identifiers connected with a person, organisation, licence, qualification, role, device, or permission. For example, it may refer to a professional licence, a board-approved role, a course credential, or a device permission such as an API key. These references make the relevant records linkable and checkable; they do not define a human being or create authority on their own.</p>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-6">
+          <h3 class="font-semibold text-cyan-100 mb-4"><i class="fa-solid fa-link mr-2"></i>What an instrument can record</h3>
+          <ul class="space-y-3 text-sm text-white/65"><li><span class="text-white/85 font-medium">Reference:</span> which person, role, credential, organisation, device, or resource a statement concerns.</li><li><span class="text-white/85 font-medium">Provenance:</span> who issued a statement, when, under what agreement, and from which source material.</li><li><span class="text-white/85 font-medium">Scope:</span> the purpose, time, jurisdiction, system, or conditions under which it may be used.</li><li><span class="text-white/85 font-medium">Verification:</span> whether the declared evidence and permissions can be checked against the relevant record.</li></ul>
+        </div>
+        <div class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-6">
+          <h3 class="font-semibold text-emerald-100 mb-4"><i class="fa-solid fa-scale-balanced mr-2"></i>What makes it an evidentiary basis</h3>
+          <ul class="space-y-3 text-sm text-white/65"><li>It preserves the statement together with its source, version, conditions, and any qualification or challenge.</li><li>It can establish an <span class="text-white/85">operative fact</span> within the stated agreement—for example, that a licence was verified against a named issuer on a particular date.</li><li>Authorised people or bounded software can use that record as input to a declared procedure.</li><li>It does not turn a record into universal truth, erase context, or replace human judgement where that judgement is required.</li></ul>
+        </div>
+      </div>
+      <p class="text-xs text-white/45 mt-5">This is why instruments can support advanced software and AI systems: they provide structured, attributable material for a limited task while preserving the basis on which the task was performed.</p>
+    </section>
+
+    <section class="mb-16" aria-labelledby="agency-title">
+      <p class="q-kicker mb-2">Structural rule · who acted, and in what capacity</p>
+      <h2 id="agency-title" class="text-3xl font-semibold mb-4">Human accountability must remain traceable when an entity or agent acts</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-7">This is a required property of a human-centric system, not an optional provenance feature. Where an agreement or instrument involves an incorporated entity, it must preserve the accountable human decision-makers or authorised representatives, the role in which they acted, and the scope of that authority. The point is accountable provenance, not indiscriminate disclosure of personal information.</p>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <article class="q-card p-7">
+          <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center mb-4"><i class="fa-solid fa-building-user text-violet-300"></i></div>
+          <h3 class="text-xl font-semibold mb-3">When an incorporated entity acts</h3>
+          <p class="text-sm text-white/65 mb-4">The instrument must distinguish the incorporated entity from the people who made or authorised the relevant decision. Its provenance records:</p>
+          <ul class="space-y-2 text-sm text-white/65"><li><i class="fa-solid fa-check text-violet-300 mr-2"></i>the entity and the particular agreement or decision;</li><li><i class="fa-solid fa-check text-violet-300 mr-2"></i>the authorised human role or decision-making body;</li><li><i class="fa-solid fa-check text-violet-300 mr-2"></i>the mandate, scope, time, and version under which it acted; and</li><li><i class="fa-solid fa-check text-violet-300 mr-2"></i>the review or challenge path if the decision is disputed.</li></ul>
+        </article>
+        <article class="q-card p-7">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-4"><i class="fa-solid fa-robot text-cyan-300"></i></div>
+          <h3 class="text-xl font-semibold mb-3">When an AI agent acts</h3>
+          <p class="text-sm text-white/65 mb-4">An AI agent may carry out a bounded task for a natural person acting personally, or for a natural person exercising an authorised role for an incorporated entity. It is never the source of authority itself. The receipt must record:</p>
+          <ul class="space-y-2 text-sm text-white/65"><li><i class="fa-solid fa-check text-cyan-300 mr-2"></i>the human principal and, where relevant, the authorised role;</li><li><i class="fa-solid fa-check text-cyan-300 mr-2"></i>the specific instrument, mandate, and limits it was allowed to follow;</li><li><i class="fa-solid fa-check text-cyan-300 mr-2"></i>the inputs, outcome, and any held or escalated condition; and</li><li><i class="fa-solid fa-check text-cyan-300 mr-2"></i>who can review, challenge, revise, or stop further use.</li></ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="provenance-title">
+      <p class="q-kicker mb-2">Provenance as a Semantic Instrument</p>
+      <h2 id="provenance-title" class="text-2xl sm:text-3xl font-semibold mb-4">The account of how something came to exist can itself be inspectable, attributable, and reusable</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">A provenance instrument is a bounded package that records the origin and development of a work, decision, dataset, agreement, or technical artefact. Other Semantic Instruments can refer to it as evidence: not merely that a record exists, but how it was made, who contributed, which authority applied, and what terms governed its use.</p>
+      <div class="grid lg:grid-cols-3 gap-5 mb-6">
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5"><i class="fa-solid fa-sitemap text-violet-200"></i><h3 class="font-semibold mt-3 mb-2">Creation trail</h3><p class="text-xs text-white/60">Versions, source material, technical artefacts, dates, contribution events, reviews, and the relationship between them.</p></article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5"><i class="fa-solid fa-people-group text-cyan-200"></i><h3 class="font-semibold mt-3 mb-2">Human contribution</h3><p class="text-xs text-white/60">The people and roles involved in creation, approval, assignment, stewardship, or later authorised use—within an appropriate privacy scope.</p></article>
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5"><i class="fa-solid fa-file-signature text-emerald-200"></i><h3 class="font-semibold mt-3 mb-2">Rights context</h3><p class="text-xs text-white/60">Applicable agreements, licences, assignments, confidentiality conditions, and the limits on what an agent or recipient may do.</p></article>
+      </div>
+      <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-6">
+        <div>
+          <h3 class="text-xl font-semibold mb-3">Protectable-IP use cases, including patents</h3>
+          <ul class="space-y-3 text-sm text-white/65"><li><span class="text-white/85 font-medium">Invention disclosure:</span> preserve an attributed chronology of a technical idea, its versions, contributors, supporting artefacts, and relevant decisions before or alongside a formal filing process.</li><li><span class="text-white/85 font-medium">Rights and authority:</span> relate a work to its assignment, licence, employer or organisational authority, named application or registration references, and the scope of permitted use.</li><li><span class="text-white/85 font-medium">Controlled evidence:</span> keep sensitive material under declared access conditions, or preserve a commitment/digest and provenance record where full disclosure would be inappropriate.</li><li><span class="text-white/85 font-medium">AI-use boundary:</span> allow an advanced system to use a work only under the stated licence, purpose, attribution, confidentiality, and human-review conditions.</li></ul>
+        </div>
+        <aside class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-6">
+          <h3 class="font-semibold text-amber-100 mb-3"><i class="fa-solid fa-scale-balanced mr-2"></i>Legal boundary</h3>
+          <p class="text-sm text-white/65 mb-4">A provenance instrument can provide a strong, structured evidentiary basis. It does not itself decide inventorship, ownership, patentability, infringement, validity, or legal admissibility.</p>
+          <p class="text-sm text-white/65">Those questions depend on the relevant jurisdiction, formal agreements, applicable office processes, and—where necessary—legal advice or a court. Patent ownership, assignment, and licensing have formal consequences that are not replaced by a software record.</p>
+          <div class="flex flex-wrap gap-3 mt-5"><a class="text-xs text-amber-100 hover:text-white underline" href="https://www.wipo.int/en/web/patents/faq_patents">WIPO patent basics</a><a class="text-xs text-amber-100 hover:text-white underline" href="https://www.uspto.gov/patents/basics/manage">USPTO assignments &amp; licences</a></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="mb-16" aria-labelledby="coe-title">
+      <p class="q-kicker mb-2">Community of Experts · proposed instrument profile</p>
+      <h2 id="coe-title" class="text-3xl font-semibold mb-4">Research artefacts can travel with the community context that makes their use accountable</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-7">Advanced research in a field may produce models, datasets, methods, findings, visualisations, and supporting source material. A Community of Experts (COE) Semantic Instrument can record the field-specific community’s scope of review and the conditions under which those artefacts may be relied upon. It is a credential about a defined community process—not a claim that a model is universally correct or that an expert community replaces human responsibility.</p>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <article class="q-card p-7">
+          <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center mb-4"><i class="fa-solid fa-box-archive text-violet-300"></i></div>
+          <h3 class="text-xl font-semibold mb-3">HMC: the research package</h3>
+          <p class="text-sm text-white/65 mb-4">The Hyper Media Container carries the inspectable material: a description, definition graph, manifest, artefacts, model documentation, references, and integrity information. It can include compact semantic payloads while declaring larger models or data volumes as dependencies.</p>
+          <p class="text-xs text-white/45">An HMC is transparent and integrity-checkable. Confidentiality or restricted access requires separate, declared protection and access conditions; it is not implied simply by putting material in a container.</p>
+        </article>
+        <article class="q-card p-7">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-4"><i class="fa-solid fa-users-gear text-cyan-300"></i></div>
+          <h3 class="text-xl font-semibold mb-3">COE instrument: the accountable use context</h3>
+          <p class="text-sm text-white/65 mb-4">The companion Semantic Instrument states what the expert community reviewed, the applicable field and purpose, the people and roles authorised to attest, the evidence and dissent considered, and the limits of permitted reliance by people or software agents.</p>
+          <p class="text-xs text-white/45">Its receipt can bind a later use to the research-package version, review status, rights conditions, declared model limits, and the human review or escalation path.</p>
+        </article>
+      </div>
+      <div class="overflow-x-auto border border-white/10 rounded-2xl mt-6">
+        <table class="w-full min-w-[40rem] text-left text-sm text-white/65">
+          <thead class="border-b border-white/10 bg-white/[.03] text-xs uppercase tracking-wider text-cyan-200"><tr><th class="px-4 py-3">COE record</th><th class="px-4 py-3">What it establishes within scope</th><th class="px-4 py-3">What it does not establish</th></tr></thead>
+          <tbody class="divide-y divide-white/10"><tr><th scope="row" class="px-4 py-3 text-white/85">Research package</th><td class="px-4 py-3">Which artefacts, versions, sources, and model dependencies were supplied.</td><td class="px-4 py-3">That every result is correct, safe, or suitable for every purpose.</td></tr><tr><th scope="row" class="px-4 py-3 text-white/85">Community attestation</th><td class="px-4 py-3">Which defined review, contribution, or approval process occurred and under what terms.</td><td class="px-4 py-3">That the community has unlimited authority or that its view is beyond challenge.</td></tr><tr><th scope="row" class="px-4 py-3 text-white/85">Use contract</th><td class="px-4 py-3">The authorised task, licence conditions, declared limits, and review route for a person or AI agent.</td><td class="px-4 py-3">Permission for an agent to extend its task, disclose protected material, or substitute for required human judgement.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <p class="q-kicker mb-2">When it becomes an instrument</p>
+      <h2 class="text-3xl font-semibold mb-6">The agreement gets a readable label and a runnable boundary</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <article class="q-card p-7"><h3 class="text-xl font-semibold mb-4">The label says</h3><ul class="space-y-3 text-sm text-white/65"><li><i class="fa-solid fa-tag text-violet-300 mr-2"></i>what the shared procedure is for and who agreed to it;</li><li><i class="fa-solid fa-link text-violet-300 mr-2"></i>which references, versions, and inputs it relies on;</li><li><i class="fa-solid fa-ban text-violet-300 mr-2"></i>what it must not decide or imply; and</li><li><i class="fa-solid fa-code-branch text-violet-300 mr-2"></i>how it can be revised or superseded.</li></ul></article>
+        <article class="q-card p-7"><h3 class="text-xl font-semibold mb-4">The run records</h3><ul class="space-y-3 text-sm text-white/65"><li><i class="fa-solid fa-receipt text-emerald-300 mr-2"></i>the agreement and instrument version used;</li><li><i class="fa-solid fa-people-group text-emerald-300 mr-2"></i>the parties and consensus condition that authorised it;</li><li><i class="fa-solid fa-list-check text-emerald-300 mr-2"></i>the supplied commitments and any held condition; and</li><li><i class="fa-solid fa-clock-rotate-left text-emerald-300 mr-2"></i>the outcome, without erasing the original agreement record.</li></ul></article>
+      </div>
+    </section>
+
+    <section class="q-card p-8 border border-amber-500/20">
+      <p class="q-kicker mb-2">Important boundary</p><h2 class="text-2xl font-semibold mb-3">An agreement instrument supports coordination; it does not replace consent or professional judgement.</h2>
+      <p class="text-sm text-white/65 max-w-4xl">People remain responsible for deciding whether to adopt an agreement, whether its sources are appropriate, and when it should be reviewed. For a closer look at the records that make this possible, continue to the agreement ledger.</p>
+      <a href="agreement-ledger.html" class="inline-flex mt-5 items-center gap-2 text-sm font-semibold text-cyan-200 hover:text-white">Explore the agreement ledger <i class="fa-solid fa-arrow-right"></i></a>
+    </section>
+  </main>
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">QualiaDB / Webizen 0.0.40 · Agreements become inspectable tools only through declared, bounded consent</footer>
+</body>
+</html>

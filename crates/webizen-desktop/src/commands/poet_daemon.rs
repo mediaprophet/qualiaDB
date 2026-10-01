@@ -74,10 +74,7 @@ pub fn candidate_ports() -> Vec<u16> {
 }
 
 fn parse_health_json(v: &JsonValue) -> Option<(Option<String>, Option<String>, Option<usize>)> {
-    let engine = v
-        .get("engine")
-        .and_then(|x| x.as_str())
-        .map(str::to_string);
+    let engine = v.get("engine").and_then(|x| x.as_str()).map(str::to_string);
     if engine.is_none() && v.get("engine_version").is_none() {
         return None;
     }
@@ -86,7 +83,10 @@ fn parse_health_json(v: &JsonValue) -> Option<(Option<String>, Option<String>, O
         .or_else(|| v.get("engine_version"))
         .and_then(|x| x.as_str())
         .map(str::to_string);
-    let quins = v.get("graph_quin_count").and_then(|x| x.as_u64()).map(|n| n as usize);
+    let quins = v
+        .get("graph_quin_count")
+        .and_then(|x| x.as_u64())
+        .map(|n| n as usize);
     Some((engine, version, quins))
 }
 
@@ -197,7 +197,12 @@ mod tests {
 
     #[test]
     fn live_probe_says_native_connected() {
-        let p = DaemonProbe::live(4242, Some("qualia-core-db".into()), Some("0.0.38".into()), Some(12));
+        let p = DaemonProbe::live(
+            4242,
+            Some("qualia-core-db".into()),
+            Some("0.0.38".into()),
+            Some(12),
+        );
         assert!(p.reachable);
         assert_eq!(p.label, "Native Connected to 127.0.0.1:4242");
         assert_eq!(p.honesty, "live");
@@ -227,7 +232,10 @@ mod tests {
 
     #[test]
     fn loopback_stub_connected_opens_en_core_via_http_invoke() {
-        use axum::{routing::{get, post}, Json, Router};
+        use axum::{
+            routing::{get, post},
+            Json, Router,
+        };
         use qualia_core_db::poet_host::{format_value, PoetSnapshot};
         use std::sync::Arc;
         use vibe::Value;
@@ -307,7 +315,9 @@ mod tests {
             let _ = fixture_for_server;
             axum::serve(listener, app).await.ok();
         });
-        ready_rx.recv_timeout(std::time::Duration::from_secs(2)).expect("stub ready");
+        ready_rx
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("stub ready");
 
         let probe = probe_local_daemon();
         assert!(probe.reachable, "{probe:?}");

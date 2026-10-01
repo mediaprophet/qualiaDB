@@ -875,12 +875,13 @@ impl Q42VolumeSet {
         &self.lexicon_segments
     }
 
-    /// Resolve a term through the root dictionary or its front-manifested
-    /// physical lexicon shards.  Construction owns the maps/mappings; lookup
-    /// borrows directly from the selected Q42LEX page.
-    pub fn lookup_hash(&self, hash: u64) -> Option<&str> {
+    /// Resolve a term's `(namespace, local)` parts through the root
+    /// dictionary or its front-manifested physical lexicon shards.
+    /// Construction owns the maps/mappings; lookup borrows directly from the
+    /// selected Q42LEX page. Works for verbatim and v4 namespaced entries.
+    pub fn lookup_parts(&self, hash: u64) -> Option<(&str, &str)> {
         if let Ok(root) = self.root.lex_view() {
-            if let Some(value) = root.lookup_hash(hash) {
+            if let Some(value) = root.lookup_parts(hash) {
                 return Some(value);
             }
         }
@@ -903,7 +904,28 @@ impl Q42VolumeSet {
             .get(index)?
             .lex_view()
             .ok()?
-            .lookup_hash(hash)
+            .lookup_parts(hash)
+    }
+
+    /// Cold-path convenience: the fully reassembled term for `hash`.
+    pub fn lookup_owned(&self, hash: u64) -> Option<String> {
+        let (ns, local) = self.lookup_parts(hash)?;
+        let mut out = String::with_capacity(ns.len() + local.len());
+        out.push_str(ns);
+        out.push_str(local);
+        Some(out)
+    }
+
+    /// Resolve a term through the root dictionary or its front-manifested
+    /// physical lexicon shards.  Construction owns the maps/mappings; lookup
+    /// borrows directly from the selected Q42LEX page. **Verbatim entries
+    /// only** — v4 namespaced entries return `None` (their bytes are not
+    /// contiguous); use [`Self::lookup_parts`] / [`Self::lookup_owned`].
+    pub fn lookup_hash(&self, hash: u64) -> Option<&str> {
+        match self.lookup_parts(hash) {
+            Some(("", verbatim)) => Some(verbatim),
+            _ => None,
+        }
     }
 
     pub fn verify_segment_hashes(&self, root_path: &Path) -> io::Result<()> {

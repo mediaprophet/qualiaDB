@@ -4,8 +4,8 @@ use std::io;
 
 use super::super::{
     header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, BIDX_MAGIC, FIELD_RANGE_INDEX_MAGIC,
-    FLAG_BLOCKS_LZ4, HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK,
-    QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
+    FLAG_BLOCKS_LZ4, HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3,
+    Q42_VERSION_V4, QUINS_PER_BLOCK, QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
 };
 use super::index::{BidxBlockRange, BidxMatchPage};
 use super::range::{Q42ByteRange, Q42RangeSource};
@@ -140,7 +140,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         let flags = header.flags;
         let block_size = header.block_size;
         let quins_per_block = header.quins_per_block;
-        if version != Q42_VERSION_V3
+        if (version != Q42_VERSION_V3 && version != Q42_VERSION_V4)
             || flags & FLAG_BLOCKS_LZ4 == 0
             || block_size != SUPERBLOCK_SIZE as u32
             || quins_per_block != QUINS_PER_BLOCK as u32
@@ -354,8 +354,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         out: &mut [u8],
     ) -> io::Result<Option<usize>> {
         use crate::q42_lex::{
-            LEX_HEADER_SIZE, LEX_MAGIC, LEX_VERSION_PAGED, PAGED_DIRECTORY_ENTRY_SIZE,
-            PAGED_DIRECTORY_HEADER_SIZE, PAGED_PAGE_HEADER_SIZE,
+            LEX_HEADER_SIZE, LEX_MAGIC, LEX_TAG_NAMESPACED, LEX_VERSION_PAGED, LEX_VERSION_V4,
+            PAGED_DIRECTORY_ENTRY_SIZE, PAGED_DIRECTORY_HEADER_SIZE, PAGED_PAGE_HEADER_SIZE,
         };
         if self.header.lex_length < (LEX_HEADER_SIZE + PAGED_DIRECTORY_HEADER_SIZE) as u64 {
             return Err(invalid("Q42 lexicon is too short for paged lookup"));
@@ -368,12 +368,12 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             },
             &mut header,
         )?;
-        if header[0..8] != LEX_MAGIC
-            || u64::from_le_bytes(header[24..32].try_into().unwrap()) != LEX_VERSION_PAGED
+        let lex_version = u64::from_le_bytes(header[24..32].try_into().unwrap());
+        if header[0..8] != LEX_MAGIC || (lex_version != LEX_VERSION_PAGED && lex_version != LEX_VERSION_V4)
         {
             return Err(io::Error::new(
                 io::ErrorKind::Unsupported,
-                "Q42 range lexicon is not paged Q42LEX v2",
+                "Q42 range lexicon is not paged Q42LEX v2/v4",
             ));
         }
         let directory_offset = u64::from_le_bytes(header[16..24].try_into().unwrap());
@@ -478,27 +478,95 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             let start = blob_offset
                 .checked_add(relative)
                 .ok_or_else(|| invalid("Q42 lexicon string offset overflow"))?;
-            if start + 3 > page.len() || page[start] != 1 {
+            if start + 3 > page.len() {
                 return Err(invalid("Q42 lexicon string entry is malformed"));
             }
-            let length =
-                u16::from_le_bytes(page[start + 1..start + 3].try_into().unwrap()) as usize;
-            let end = start
-                .checked_add(3 + length)
-                .ok_or_else(|| invalid("Q42 lexicon string length overflow"))?;
-            if end > page.len() {
-                return Err(invalid("Q42 lexicon string extends beyond page"));
+            let tag = page[start];
+            if tag == 1 {
+                let length =
+                    u16::from_le_bytes(page[start + 1..start + 3].try_into().unwrap()) as usize;
+                let end = start
+                    .checked_add(3 + length)
+                    .ok_or_else(|| invalid("Q42 lexicon string length overflow"))?;
+                if end > page.len() {
+                    return Err(invalid("Q42 lexicon string extends beyond page"));
+                }
+                if length > out.len() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::WriteZero,
+                        "Q42 lexicon output buffer is too small",
+                    ));
+                }
+                std::str::from_utf8(&page[start + 3..end])
+                    .map_err(|_| invalid("Q42 lexicon string is not UTF-8"))?;
+                out[..length].copy_from_slice(&page[start + 3..end]);
+                return Ok(Some(length));
             }
-            if length > out.len() {
-                return Err(io::Error::new(
-                    io::ErrorKind::WriteZero,
-                    "Q42 lexicon output buffer is too small",
-                ));
+            if tag == LEX_TAG_NAMESPACED && lex_version == LEX_VERSION_V4 {
+                if start + 5 > page.len() {
+                    return Err(invalid("Q42 lexicon namespaced entry is malformed"));
+                }
+                let ns_id =
+                    u16::from_le_bytes(page[start + 1..start + 3].try_into().unwrap()) as usize;
+                let local_len =
+                    u16::from_le_bytes(page[start + 3..start + 5].try_into().unwrap()) as usize;
+                let local_start = start + 5;
+                let local_end = local_start
+                    .checked_add(local_len)
+                    .ok_or_else(|| invalid("Q42 lexicon local name length overflow"))?;
+                if local_end > page.len() {
+                    return Err(invalid("Q42 lexicon local name extends beyond page"));
+                }
+                // Resolve the namespace from this page's local table. The
+                // walk is bounds-checked at every entry so a corrupt ns_id
+                // fails closed instead of slicing past the page.
+                let ns_count =
+                    u32::from_le_bytes(page[4..8].try_into().unwrap()) as usize;
+                if ns_id >= ns_count {
+                    return Err(invalid("Q42 lexicon namespace id is out of range"));
+                }
+                // Namespace table entries are [u16 len][utf-8] — no tag byte.
+                let mut cursor = blob_offset;
+                for _ in 0..ns_id {
+                    if cursor + 2 > page.len() {
+                        return Err(invalid("Q42 lexicon namespace table is malformed"));
+                    }
+                    let len = u16::from_le_bytes(
+                        page[cursor..cursor + 2].try_into().unwrap(),
+                    ) as usize;
+                    cursor = cursor
+                        .checked_add(2 + len)
+                        .ok_or_else(|| invalid("Q42 lexicon namespace table overflow"))?;
+                }
+                if cursor + 2 > page.len() {
+                    return Err(invalid("Q42 lexicon namespace table is malformed"));
+                }
+                let ns_len = u16::from_le_bytes(
+                    page[cursor..cursor + 2].try_into().unwrap(),
+                ) as usize;
+                let ns_start = cursor + 2;
+                let ns_end = ns_start
+                    .checked_add(ns_len)
+                    .ok_or_else(|| invalid("Q42 lexicon namespace length overflow"))?;
+                if ns_end > page.len() {
+                    return Err(invalid("Q42 lexicon namespace extends beyond page"));
+                }
+                let total = ns_len + local_len;
+                if total > out.len() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::WriteZero,
+                        "Q42 lexicon output buffer is too small",
+                    ));
+                }
+                std::str::from_utf8(&page[ns_start..ns_end])
+                    .map_err(|_| invalid("Q42 lexicon namespace is not UTF-8"))?;
+                std::str::from_utf8(&page[local_start..local_end])
+                    .map_err(|_| invalid("Q42 lexicon local name is not UTF-8"))?;
+                out[..ns_len].copy_from_slice(&page[ns_start..ns_end]);
+                out[ns_len..total].copy_from_slice(&page[local_start..local_end]);
+                return Ok(Some(total));
             }
-            std::str::from_utf8(&page[start + 3..end])
-                .map_err(|_| invalid("Q42 lexicon string is not UTF-8"))?;
-            out[..length].copy_from_slice(&page[start + 3..end]);
-            return Ok(Some(length));
+            return Err(invalid("Q42 lexicon string entry is malformed"));
         }
         Ok(None)
     }

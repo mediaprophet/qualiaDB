@@ -301,8 +301,11 @@ fn merge_lexicon(volume: &Q42Volume, dest: &mut HashMap<u64, String>) -> io::Res
         let Some(hash) = view.hash_at(i) else {
             continue;
         };
-        if let Some(text) = view.string_at(i) {
-            dest.entry(hash).or_insert_with(|| text.to_owned());
+        if let Some((ns, local)) = view.string_parts_at(i) {
+            let mut text = String::with_capacity(ns.len() + local.len());
+            text.push_str(ns);
+            text.push_str(local);
+            dest.entry(hash).or_insert(text);
         }
     }
     Ok(())

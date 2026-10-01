@@ -26,7 +26,7 @@ Comprehensive index of functionality for standards. This document serves as the 
 - 📄 p64-weight-container-standard.md — P64 v3 byte layout, roles, manifold records, tokenizer, alignment, and validation
 - 📄 q42-10d-tensor-standard.md
 - 📄 q42-acoustic-plane-draft.md
-- 📄 q42-format-internal-draft.md — Q42 v3 volume/SuperBlock layout (48-byte NQuin, 40,960-byte SuperBlock, 256-byte header, FIDX/PIDX, five-field ECC, fail-closed publication).
+- 📄 q42-format-internal-draft.md — Q42 v3/v4 volume/SuperBlock layout (48-byte NQuin, 40,960-byte SuperBlock, 256-byte header, FIDX/PIDX, five-field ECC, fail-closed publication).
 - 📄 q42-symbolic-algebra-encoding.md
 - 📄 qualia-qapp-loopback-protocol.md
 - 📄 qualia-sync-protocol.md

@@ -172,7 +172,7 @@ fn main() {
                             let lex = vol.lex_view().ok()?;
                             let lic = quins
                                 .iter()
-                                .filter(|q| lex.lookup_hash(q.object) == Some("CC-BY-4.0"))
+                                .filter(|q| lex.lookup_owned(q.object).as_deref() == Some("CC-BY-4.0"))
                                 .count();
                             Some((quins.len(), lic))
                         });

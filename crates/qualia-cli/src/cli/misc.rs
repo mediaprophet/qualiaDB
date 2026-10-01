@@ -100,6 +100,35 @@ pub enum Q42Action {
         #[arg(long)]
         commons: bool,
     },
+    /// Pre-ingest RDF scan: triples, oversize terms, top predicates.
+    AuditSource {
+        /// Single RDF/OWL/TTL/NT file.
+        path: Option<PathBuf>,
+        /// Walk an ontology library root (chebi.owl, OEWN dir, datasources/).
+        #[arg(long)]
+        source_root: Option<PathBuf>,
+        /// How many predicates to list in the histogram.
+        #[arg(long, default_value_t = 20)]
+        top: usize,
+        /// Write JSON to this path (library matrix or single-file report).
+        #[arg(long)]
+        json_out: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum HmcAction {
+    /// List HMC (QBDL) entries and header flags.
+    Inspect { path: PathBuf },
+    /// Verify whole-file CRC-32C and per-entry SHA-256 digests.
+    Verify {
+        path: PathBuf,
+        /// Also run import-aligned verify-graph on an embedded `.q42` entry key.
+        #[arg(long)]
+        q42_entry: Option<String>,
+        #[arg(long)]
+        rdf_source: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand, Debug)]

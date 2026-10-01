@@ -26,7 +26,14 @@ assert.match(showcase, /using Cosmic/);
 assert.match(showcase, /effect fn main\(\) -> Record/);
 assert.doesNotMatch(showcase, /return glow;/);
 
-assert.match(benches, /let mut a = 0/);
-assert.match(benches, /let mut s = 0/);
+assert.match(benches, /runPresentJobs|Present purpose clocks/);
+assert.match(benches, /CompiledCell\.compile|run\(\) ×2/);
+assert.doesNotMatch(benches, /data-job="hostAsk"/);
+
+const present = readFileSync(new URL('../js/vibescript-present.js', import.meta.url), 'utf8');
+assert.match(present, /softRisePresentCards/);
+assert.match(present, /PRESENT_STAGGER_MS\s*=\s*180/);
+assert.match(present, /prefersReducedMotion|prefers-reduced-motion/);
+assert.doesNotMatch(present, /hostAsk|ASK_SOURCE/);
 
 console.log('Vibe playground contract tests passed.');

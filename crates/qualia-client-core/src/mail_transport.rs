@@ -43,6 +43,28 @@ pub struct ImapConfig {
     pub password: String,
 }
 
+/// Connection + credentials for a legacy POP3S service. POP3 is retrieval
+/// only; SMTP remains the outbound transport. Implicit TLS is required so the
+/// account password is never sent on a plaintext POP3 connection.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pop3Config {
+    /// The POP3 server hostname (for example `pop.example.org`).
+    pub host: String,
+    /// POP3S is commonly served on port 995.
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+}
+
+/// A message fetched through POP3S before semantic delivery rules decide its
+/// final local mailbox and quarantine state.
+#[derive(Debug, Clone)]
+pub struct Pop3FetchedMessage {
+    pub uid: String,
+    pub inbound: crate::mail_rules::InboundMessage,
+    pub body: String,
+}
+
 /// A message to be sent via [`send`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingMail {
@@ -242,6 +264,73 @@ pub fn fetch_unseen(
     let _ = session.logout();
 
     result
+}
+
+/// Retrieve messages from a traditional POP3S mailbox. POP3 has no portable
+/// `UNSEEN` flag, so this returns the mailbox contents; the caller is expected
+/// to persist accepted UIDLs before the next poll. Only implicit TLS is
+/// supported—plaintext POP3 would expose the account password.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn fetch_pop3(cfg: &Pop3Config, mailbox: &str) -> Result<Vec<Pop3FetchedMessage>, String> {
+    use std::io::{BufRead, BufReader, Write};
+    use std::net::TcpStream;
+
+    fn response_line<S: std::io::Read>(reader: &mut BufReader<S>) -> Result<String, String> {
+        let mut line = String::new();
+        reader.read_line(&mut line).map_err(|e| format!("POP3 read failed: {e}"))?;
+        if !line.starts_with("+OK") { return Err(format!("POP3 rejected command: {}", line.trim())); }
+        Ok(line)
+    }
+    fn command<S: std::io::Read + Write>(reader: &mut BufReader<S>, command: &str) -> Result<(), String> {
+        reader.get_mut().write_all(command.as_bytes()).map_err(|e| format!("POP3 write failed: {e}"))?;
+        reader.get_mut().flush().map_err(|e| format!("POP3 flush failed: {e}"))?;
+        response_line(reader).map(|_| ())
+    }
+    fn multiline<S: std::io::Read>(reader: &mut BufReader<S>) -> Result<Vec<String>, String> {
+        let mut lines = Vec::new();
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).map_err(|e| format!("POP3 read failed: {e}"))?;
+            let line = line.trim_end_matches(['\r', '\n']).to_string();
+            if line == "." { break; }
+            lines.push(line.strip_prefix("..").unwrap_or(&line).to_string());
+        }
+        Ok(lines)
+    }
+    fn headers_and_body(lines: &[String]) -> (String, String, String, String) {
+        let mut from = String::new(); let mut to = String::new(); let mut subject = String::new(); let mut body_at = lines.len();
+        for (index, line) in lines.iter().enumerate() {
+            if line.is_empty() { body_at = index + 1; break; }
+            if let Some(value) = line.strip_prefix("From:").or_else(|| line.strip_prefix("from:")) { from = value.trim().to_string(); }
+            if let Some(value) = line.strip_prefix("To:").or_else(|| line.strip_prefix("to:")) { to = value.trim().to_string(); }
+            if let Some(value) = line.strip_prefix("Subject:").or_else(|| line.strip_prefix("subject:")) { subject = value.trim().to_string(); }
+        }
+        (from, to, subject, lines[body_at..].join("\n"))
+    }
+
+    let tcp = TcpStream::connect((cfg.host.as_str(), cfg.port)).map_err(|e| format!("POP3S connect to {}:{} failed: {e}", cfg.host, cfg.port))?;
+    let tls = native_tls::TlsConnector::builder().build().map_err(|e| format!("POP3S TLS setup failed: {e}"))?;
+    let stream = tls.connect(&cfg.host, tcp).map_err(|e| format!("POP3S TLS connect failed: {e}"))?;
+    let mut reader = BufReader::new(stream);
+    response_line(&mut reader)?;
+    command(&mut reader, &format!("USER {}\r\n", cfg.username))?;
+    command(&mut reader, &format!("PASS {}\r\n", cfg.password))?;
+    command(&mut reader, "UIDL\r\n")?;
+    let uids = multiline(&mut reader)?;
+    let mut messages = Vec::new();
+    for entry in uids {
+        let mut parts = entry.split_whitespace();
+        let Some(number) = parts.next() else { continue; };
+        let Some(uid) = parts.next() else { continue; };
+        command(&mut reader, &format!("RETR {number}\r\n"))?;
+        let lines = multiline(&mut reader)?;
+        let (from, mut to, subject, body) = headers_and_body(&lines);
+        if !to.contains('@') { to = mailbox.to_string(); }
+        let inbound = build_inbound(&from, &to, &subject, body.len(), false, None);
+        messages.push(Pop3FetchedMessage { uid: uid.to_string(), inbound, body });
+    }
+    let _ = command(&mut reader, "QUIT\r\n");
+    Ok(messages)
 }
 
 #[cfg(test)]

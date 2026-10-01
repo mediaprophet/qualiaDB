@@ -344,9 +344,10 @@ fn fill_mask_from_lex(
     tok: &crate::gguf_sharder::GgufTokenizer,
     hashes: &[u64],
 ) {
+    let mut term = String::new();
     for &hash in hashes {
-        if let Some(text) = lex.lookup_hash(hash) {
-            let ids = tok.encode(text);
+        if lex.resolve_term_into(hash, &mut term) {
+            let ids = tok.encode(&term);
             if let Some(&id) = ids.first() {
                 mask.push(id, hash);
             }

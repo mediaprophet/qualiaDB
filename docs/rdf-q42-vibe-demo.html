@@ -115,7 +115,7 @@ fn find_protocols() -&gt; Record {
       browserOutput.textContent = 'Loading the committed Schema.org Q42 volume and the query WASM module…';
       browserMetrics.textContent = 'Loading locally…';
       try {
-        const { ensureSparqlLive } = await import('./js/sparql-live.js?v=0.0.33-vfs-fullget2');
+        const { ensureSparqlLive } = await import('./js/sparql-live.js?v=0.0.40-vfs-fullget2');
         const session = await ensureSparqlLive('schemaorg-30');
         const result = session.run(document.getElementById('browser-query').value, 12);
         browserOutput.textContent = JSON.stringify(result.result, null, 2);

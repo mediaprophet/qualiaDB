@@ -104,12 +104,22 @@ export function renderPlatformSuite(target, data) {
 
     if (env) {
         const when = data.last_updated || data.timestamp || env.collected_at;
+        const device = env.device_manifest || {};
+        const gpu = device.gpu || {};
+        const topology = env.topology || {};
+        const gpuStatus = gpu.availability || 'not recorded';
+        const gpuDetails = gpu.details || 'No GPU probe was exported with this result.';
+        const coreCount = device.cpu_logical_cores ?? '—';
+        const physicalCores = device.cpu_physical_cores;
         html += `
-        <div class="glass-strong rounded-3xl border border-slate-700 p-6 mb-8 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+        <div class="glass-strong rounded-3xl border border-slate-700 p-6 mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div><div class="text-xs text-slate-500 uppercase mb-1">Runner</div><div class="font-mono">${env.runner || '—'}</div></div>
             <div><div class="text-xs text-slate-500 uppercase mb-1">Qualia engine</div><div class="font-mono text-amber-300">${env.engine_version ? `v${env.engine_version}` : 'not recorded'}</div><div class="text-[10px] text-slate-500 mt-1">Version that produced these numbers</div></div>
             <div><div class="text-xs text-slate-500 uppercase mb-1">Recorded</div><div class="font-mono">${when ? String(when).slice(0, 19).replace('T', ' ') : '—'}</div></div>
             <div><div class="text-xs text-slate-500 uppercase mb-1">Memory ceiling</div><div class="font-mono">${data.memory_limit_enforced || (env?.memory_ceiling_mb ? `${env.memory_ceiling_mb} MB` : '—')}</div></div>
+            <div><div class="text-xs text-slate-500 uppercase mb-1">CPU / RAM</div><div class="font-mono">${device.cpu_arch || '—'} · ${coreCount} logical${physicalCores ? ` / ${physicalCores} physical` : ''} · ${device.ram_reported_gb ?? '—'} GB</div><div class="text-[10px] text-slate-500 mt-1">${device.os || 'OS not recorded'}${device.ci?.github_actions ? ' · GitHub Actions' : ''}</div></div>
+            <div><div class="text-xs text-slate-500 uppercase mb-1">GPU probe / use</div><div class="font-mono">${gpuStatus} · ${gpu.accelerator_used_for_this_suite === true ? 'used' : 'not used'}</div><div class="text-[10px] text-slate-500 mt-1">${gpuDetails}</div></div>
+            <div><div class="text-xs text-slate-500 uppercase mb-1">Execution topology</div><div class="font-mono">${topology.mode || '—'} · ${topology.scheduling || '—'}</div><div class="text-[10px] text-slate-500 mt-1">${topology.worker_cells_active_during_run ?? '—'} active worker cell(s)</div></div>
         </div>`;
     }
 
