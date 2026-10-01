@@ -6,7 +6,7 @@
 (() => {
  const menu=document.getElementById('menu'),pane=document.getElementById('pane'),title=document.getElementById('title'),status=document.getElementById('status'),hostState=document.getElementById('host-state'),paneState=document.getElementById('pane-state');let active='overview';
  const invoke=(name,args={})=>{const fn=window.__TAURI__&&((window.__TAURI__.core&&window.__TAURI__.core.invoke)||window.__TAURI__.invoke);return fn?fn(name,args):Promise.reject(new Error('The WellFair desktop host is unavailable in this view.'));};
- const route=path=>parent.postMessage({route:path},window.location.origin);
+ const route=path=>{ try{ parent.postMessage({type:'webizen-open',route:path},window.location.origin); }catch(_){} };
  const text=(tag,value)=>{const node=document.createElement(tag);node.textContent=value;return node;};
  function setStatus(value,error=false){status.textContent=value;paneState.textContent=error?'Unavailable':'Local';paneState.className='pill '+(error?'planned':'live');}
  function formField(label,id,type='text'){const wrap=document.createElement('label');wrap.htmlFor=id;wrap.append(text('span',label));const input=document.createElement(type==='textarea'?'textarea':'input');input.id=id;if(type!=='textarea')input.type=type;wrap.append(input);return wrap;}

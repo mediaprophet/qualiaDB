@@ -33,7 +33,7 @@ html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,san
   document.getElementById('back').addEventListener('click',()=>{if(position>0){position-=1;display(entries[position],false);}});document.getElementById('forward').addEventListener('click',()=>{if(position<entries.length-1){position+=1;display(entries[position],false);}});document.getElementById('reload').addEventListener('click',()=>{if(position>=0)display(entries[position],false);});
   document.getElementById('external').addEventListener('click',()=>{if(position<0)return;window.open(entries[position],'_blank','noopener,noreferrer');report('External browser requested','The page was sent to your system browser.');});
   frame.addEventListener('load',()=>{if(position>=0)report('Loaded','The page is embedded directly. Some websites prevent embedding; use Open externally if this page is unavailable.');});
-  document.querySelectorAll('[data-site]').forEach(button=>button.addEventListener('click',()=>navigate(button.dataset.site)));document.querySelectorAll('[data-route]').forEach(button=>button.addEventListener('click',()=>parent.postMessage({route:button.dataset.route},window.location.origin)));
+  document.querySelectorAll('[data-site]').forEach(button=>button.addEventListener('click',()=>navigate(button.dataset.site)));document.querySelectorAll('[data-route]').forEach(button=>button.addEventListener('click',()=>{ try{ parent.postMessage({type:'webizen-open',route:button.dataset.route},window.location.origin); }catch(_){} }));
   controls();
 })();
 </script>

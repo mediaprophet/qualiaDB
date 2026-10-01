@@ -1008,7 +1008,11 @@ async fn admin_volume_handler() -> Response {
 }
 
 async fn console_volume_handler() -> Response {
-    volume_html_response(crate::shell::CONSOLE_VOLUME_HTML)
+    Response::builder()
+        .status(StatusCode::TEMPORARY_REDIRECT)
+        .header(header::LOCATION, "/volumes/settings?pane=agent")
+        .body(axum::body::Body::empty())
+        .unwrap()
 }
 
 async fn poet_volume_handler() -> Response {
@@ -2582,6 +2586,28 @@ mod ui_route_tests {
         assert!(
             crate::shell::OS_SHELL_I18N_JS.contains("savedItems.title"),
             "shell text uses stable translation keys"
+        );
+        assert!(
+            html.contains("label:\"Soften\""),
+            "soften label on 8-sector wheel"
+        );
+        assert!(
+            html.contains("label:\"Full\"") && html.contains("label:\"Float\""),
+            "full and float on 8-sector wheel"
+        );
+    }
+
+    #[tokio::test]
+    async fn console_volume_redirects_to_settings_agent() {
+        let resp = console_volume_handler().await;
+        assert_eq!(resp.status(), StatusCode::TEMPORARY_REDIRECT);
+        assert_eq!(
+            resp.headers()
+                .get(header::LOCATION)
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            "/volumes/settings?pane=agent"
         );
     }
 

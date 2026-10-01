@@ -106,7 +106,7 @@ const APPS=[
 ];
 const SECTORS=[
 {id:"close",label:"Close",glyph:"✕",color:"#f87171",say:"Close volume"},
-{id:"soften",label:"Close",glyph:"—",color:"#fbbf24",say:"Close volume"},
+{id:"soften",label:"Soften",glyph:"—",color:"#fbbf24",say:"Soften volume"},
 {id:"full",label:"Full",glyph:"▢",color:"#3dffb0",say:"Full stage"},
 {id:"float",label:"Float",glyph:"◎",color:"#4db8ff",say:"Float volume"},
 {id:"keep",label:t("savedItems.short","Saved"),glyph:"📁",color:"#2fe0c8",say:t("savedItems.save","Save to Saved Items")},
@@ -151,6 +151,7 @@ function closeVolume(){
   frame.removeAttribute("src");
   volChrome.hidden=true;
   volChrome.classList.remove("open");
+  stage.classList.remove("full", "float-mode");
   activeApp=null;
   setPressed(null);
   activeLabel.textContent="No volume open";
@@ -185,7 +186,7 @@ function appByRoute(route){ return APPS.find(function(a){ return a.route===route
 window.addEventListener("message", function(event){
   if(event.source!==frame.contentWindow || event.origin!==origin()) return;
   const data=event.data;
-  if(!data || data.type!=="webizen-open" || typeof data.route!=="string") return;
+  if(!data || typeof data.route!=="string" || (data.type && data.type!=="webizen-open")) return;
   const path=data.route.split("?")[0];
   const app=appByRoute(path);
   if(app) openApp(app, data.route);
@@ -282,9 +283,64 @@ function closeWheel(){
 function runSector(s){
   showToast(s.say);
   if(s.id==="close"||s.id==="soften"){ closeVolume(); return; }
-  if(s.id==="full"){ statusEl.textContent="Volume · Full stage"; return; }
-  if(s.id==="float"){ statusEl.textContent="Volume · Float"; return; }
-  if(s.id==="inspect"){ statusEl.textContent="handle ≠ human · agent = tool"; return; }
+  if(s.id==="full"){
+    stage.classList.toggle("full");
+    statusEl.textContent="Volume · "+(stage.classList.contains("full")?"Full stage":"Normal stage");
+    return;
+  }
+  if(s.id==="float"){
+    stage.classList.toggle("float-mode");
+    statusEl.textContent="Volume · "+(stage.classList.contains("float-mode")?"Float":"Normal");
+    return;
+  }
+  if(s.id==="keep"){
+    if(activeApp){
+      fetch("/api/saved-items",{
+        method:"POST",
+        headers:{"Content-Type":"application/json",Accept:"application/json"},
+        body:JSON.stringify({
+          kind:"page",
+          name:activeApp.name+" ("+new Date().toLocaleTimeString()+")",
+          body:"Saved from "+activeApp.name+" · "+activeApp.route
+        })
+      }).then(function(r){
+        if(r.ok) showToast("Saved to Saved Items");
+        else showToast("Could not save to Saved Items");
+      }).catch(function(){ showToast("Saved Items unavailable"); });
+    } else {
+      showToast("No active volume to save");
+    }
+    return;
+  }
+  if(s.id==="share"){
+    if(activeApp){
+      var shareUrl=origin()+activeApp.route;
+      try{
+        if(frame.contentWindow&&frame.contentWindow.location.pathname){
+          shareUrl=origin()+frame.contentWindow.location.pathname+frame.contentWindow.location.search;
+        }
+      }catch(_){}
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(shareUrl).then(function(){
+          showToast("Copied link to "+activeApp.name);
+        }).catch(function(){
+          showToast("Share: "+shareUrl);
+        });
+      } else {
+        showToast("Share: "+shareUrl);
+      }
+    }
+    return;
+  }
+  if(s.id==="inspect"){
+    statusEl.textContent="handle ≠ human · agent = tool";
+    showToast("Continuity: handle ≠ human · agent = tool");
+    return;
+  }
+  if(s.id==="more"){
+    openLauncher();
+    return;
+  }
 }
 hub.addEventListener("click", function(e){
   e.stopPropagation();

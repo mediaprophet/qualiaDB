@@ -2487,7 +2487,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 14,
+        "line": 17,
         "signature": "pub use ids::{ALL_INVOKE_IDS, INVOKE_ID_COUNT};"
       },
       {
@@ -2495,7 +2495,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 15,
+        "line": 18,
         "signature": "pub use local::{invoke_local, payload_from_args, sample_to_value};"
       },
       {
@@ -2503,31 +2503,31 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 16,
+        "line": 19,
         "signature": "pub use suggest::did_you_mean;"
-      },
-      {
-        "name": "canonical_id",
-        "kind": "fn",
-        "doc": "Resolve a dotted path to a canonical invoke id.\n\n`Animation.evaluate_preset` is already canonical.\n`Animation.orbit_spin` is a preset alias of `Animation.evaluate_preset`.",
-        "file": "mod.rs",
-        "line": 26,
-        "signature": "pub fn canonical_id(path: &str) -> Option<&'static str> {"
       },
       {
         "name": "is_known",
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 36,
+        "line": 25,
         "signature": "pub fn is_known(path: &str) -> bool {"
+      },
+      {
+        "name": "canonical_id",
+        "kind": "fn",
+        "doc": "Resolve a dotted path to a canonical invoke id.\n\n`Animation.evaluate_preset` is already canonical.\n`Animation.orbit_spin` is a preset alias of `Animation.evaluate_preset`.\n`Statistics.ols` aliases `Statistics.linear_regression`.\n`Econ.welfare` aliases `Econ.utilitarian_welfare`.",
+        "file": "mod.rs",
+        "line": 35,
+        "signature": "pub fn canonical_id(path: &str) -> Option<&'static str> {"
       },
       {
         "name": "family_of",
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 46,
+        "line": 57,
         "signature": "pub fn family_of(path: &str) -> Option<&str> {"
       },
       {
@@ -2535,7 +2535,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 51,
+        "line": 62,
         "signature": "pub fn granted_covers(granted: &[&str], path: &str) -> bool {"
       },
       {
@@ -2543,7 +2543,7 @@
         "kind": "fn",
         "doc": "Known catalog family + dotted method, e.g. `HID.poll`.\nUser enums such as `Shape.Circle` are **not** catalog paths.",
         "file": "mod.rs",
-        "line": 76,
+        "line": 87,
         "signature": "pub fn looks_like_catalog_path(path: &str) -> bool {"
       },
       {
@@ -2551,7 +2551,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 87,
+        "line": 98,
         "signature": "pub fn animation_preset(path: &str) -> Option<(&'static str, &'static str)> {"
       },
       {
@@ -2559,7 +2559,7 @@
         "kind": "fn",
         "doc": "When `Animation.orbit_spin(t)` lowers to `Animation.evaluate_preset`,\nfill `family`/`preset` on the payload so every Host sees the alias.\nNamed fields already present win.",
         "file": "mod.rs",
-        "line": 100,
+        "line": 111,
         "signature": "pub fn apply_preset_alias(path: &str, payload: &mut Value) {"
       },
       {
@@ -2567,7 +2567,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 113,
+        "line": 124,
         "signature": "pub fn parse_family_from_preset(family: &str) -> Option<AnimationFamily> {"
       },
       {
@@ -2575,7 +2575,7 @@
         "kind": "fn",
         "doc": "Expand `using Animation;` into the family grant id.",
         "file": "mod.rs",
-        "line": 122,
+        "line": 133,
         "signature": "pub fn family_grant(family: &str) -> String {"
       },
       {
@@ -2583,7 +2583,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 126,
+        "line": 137,
         "signature": "pub fn methods_for_family(family: &str) -> Vec<&'static str> {"
       },
       {
@@ -2591,7 +2591,7 @@
         "kind": "fn",
         "doc": "Unique catalog family names, in catalog order.",
         "file": "mod.rs",
-        "line": 136,
+        "line": 147,
         "signature": "pub fn families() -> Vec<&'static str> {"
       },
       {
@@ -2599,7 +2599,7 @@
         "kind": "fn",
         "doc": "One-line hover text for a catalog path or identifier.",
         "file": "mod.rs",
-        "line": 149,
+        "line": 160,
         "signature": "pub fn describe(path: &str) -> String {"
       }
     ]
@@ -2649,7 +2649,7 @@
         "kind": "const",
         "doc": "",
         "file": "ids.rs",
-        "line": 1120,
+        "line": 1123,
         "signature": "pub const INVOKE_ID_COUNT: usize = ALL_INVOKE_IDS.len()"
       }
     ]
@@ -2671,7 +2671,7 @@
         "kind": "fn",
         "doc": "",
         "file": "local.rs",
-        "line": 101,
+        "line": 98,
         "signature": "pub fn sample_to_value(s: AnimationSample) -> Value {"
       },
       {
@@ -2679,8 +2679,50 @@
         "kind": "fn",
         "doc": "",
         "file": "local.rs",
-        "line": 117,
+        "line": 114,
         "signature": "pub fn payload_from_args(pos: &[Value], named: &[(String, Value)]) -> Value {"
+      }
+    ]
+  },
+  {
+    "name": "catalog::logic",
+    "doc": "LocalHost modal-logic kernels (UE-060).\n\nPure quin-array evaluators so Civics / vibe-wasm can exercise deontic,\nepistemic, paraconsistent, LTL, and DL subsumption without Poet. Layout\nmatches `qualia-core-db` modality opcodes (AGENTS.md). Workshop terms\n(`obligate { … }`) compile to a single Active norm when no graph is supplied.",
+    "items": [
+      {
+        "name": "try_invoke",
+        "kind": "fn",
+        "doc": "Attempt a modal-logic LocalHost invoke. `None` when `id` is not handled here.",
+        "file": "logic.rs",
+        "line": 54,
+        "signature": "pub fn try_invoke(id: &str, args: &Value, span: Span) -> Option<Result<Value, Diagnostic>> {"
+      }
+    ]
+  },
+  {
+    "name": "catalog::specialized",
+    "doc": "Specialized LocalHost kernels (UE-040…043): econ extras, geometry, clinical/chem honesty.",
+    "items": [
+      {
+        "name": "try_invoke",
+        "kind": "fn",
+        "doc": "Attempt a specialized LocalHost invoke. `None` when not handled here.",
+        "file": "specialized.rs",
+        "line": 10,
+        "signature": "pub fn try_invoke(id: &str, args: &Value, span: Span) -> Option<Result<Value, Diagnostic>> {"
+      }
+    ]
+  },
+  {
+    "name": "catalog::stdlib",
+    "doc": "Deterministic stdlib kernels for LocalHost / vibe-wasm.\n\nPoet overrides `Host::capability_invoke` to reach the engine. When Vibe\nruns under `LocalHost` (CLI fixtures, WASM interpreter, Node CI), these\npure kernels supply the Civics-facing subset: welfare, OLS, and units.\nFormulas match `qualia-core-db` welfare / simple OLS / quantity convert.",
+    "items": [
+      {
+        "name": "try_invoke",
+        "kind": "fn",
+        "doc": "Attempt a local stdlib invoke. Returns `None` when `id` is not handled here.",
+        "file": "stdlib.rs",
+        "line": 16,
+        "signature": "pub fn try_invoke(id: &str, args: &Value, span: Span) -> Option<Result<Value, Diagnostic>> {"
       }
     ]
   },
@@ -6558,11 +6600,19 @@
         "signature": "pub fn with_evidential(mut self, mu: f32, lambda: f32) -> Self {"
       },
       {
+        "name": "civics_code",
+        "kind": "fn",
+        "doc": "Civics surface code (UE-062).\n\nVibe keeps internal `E300` (capability / lease). Civics docs and UI map\nlease failures to **E0403**. Other codes pass through as their Vibe token.",
+        "file": "error.rs",
+        "line": 104,
+        "signature": "pub fn civics_code(&self) -> &'static str {"
+      },
+      {
         "name": "to_json",
         "kind": "fn",
         "doc": "Agent-facing JSON (no serde). Always includes `valid: false`.",
         "file": "error.rs",
-        "line": 123,
+        "line": 135,
         "signature": "pub fn to_json(&self) -> String {"
       }
     ]
@@ -8788,7 +8838,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 479,
+        "line": 489,
         "signature": "pub fn parse_program(src: &str) -> Result<Program, Diagnostic> {"
       },
       {
@@ -8796,7 +8846,7 @@
         "kind": "fn",
         "doc": "",
         "file": "mod.rs",
-        "line": 483,
+        "line": 493,
         "signature": "pub fn parse_cell(src: &str) -> Result<Expr, Diagnostic> {"
       }
     ]
@@ -9948,7 +9998,7 @@
         "kind": "struct",
         "doc": "Canonical unit identifier used at check time (T73 / UnitId).",
         "file": "quantity.rs",
-        "line": 269,
+        "line": 276,
         "signature": "pub struct UnitId"
       },
       {
@@ -9956,7 +10006,7 @@
         "kind": "fn",
         "doc": "",
         "file": "quantity.rs",
-        "line": 274,
+        "line": 281,
         "signature": "pub fn new(symbol: impl Into<String>) -> Self {"
       },
       {
@@ -9964,7 +10014,7 @@
         "kind": "fn",
         "doc": "",
         "file": "quantity.rs",
-        "line": 280,
+        "line": 287,
         "signature": "pub fn compatible(&self, other: &Self) -> bool {"
       },
       {
@@ -9972,7 +10022,7 @@
         "kind": "fn",
         "doc": "Linear tween of two same-unit scalars. `t` is clamped to `[0, 1]`.",
         "file": "quantity.rs",
-        "line": 289,
+        "line": 296,
         "signature": "pub fn tween(a: f64, a_unit: &str, b: f64, b_unit: &str, t: f64) -> Result<f64, String> {"
       }
     ]
@@ -12364,7 +12414,7 @@
         "kind": "fn",
         "doc": "Get the VibeScript language version string.",
         "file": "lib.rs",
-        "line": 105,
+        "line": 106,
         "signature": "pub fn language_version() -> String {"
       },
       {
@@ -12372,23 +12422,23 @@
         "kind": "fn",
         "doc": "Frozen host ABI stamp (`vibe-host-0.1`).",
         "file": "lib.rs",
-        "line": 111,
+        "line": 112,
         "signature": "pub fn host_version() -> String {"
       },
       {
         "name": "capability_invoke",
         "kind": "fn",
-        "doc": "Capability invoke pin — default fail-closed E300 (parity with Host::capability_invoke).\nArgs are accepted as a JSON string for the JS boundary.",
+        "doc": "Capability invoke — routes through `LocalHost` so Civics/stdlib kernels\n(`Econ.*`, `Statistics.ols`, `PhysicalUnits.convert`, …) work under WASM.\nUngranted / unknown ids still fail closed with E300 / E100.",
         "file": "lib.rs",
-        "line": 118,
-        "signature": "pub fn capability_invoke(id: &str, _args_json: &str) -> JsValue {"
+        "line": 120,
+        "signature": "pub fn capability_invoke(id: &str, args_json: &str) -> JsValue {"
       },
       {
         "name": "parse_cell_src",
         "kind": "fn",
         "doc": "Parse a cell expression (`= expr`).\nReturns `{ ok: true, ast: ... }` or `{ ok: false, error: ... }`.",
         "file": "lib.rs",
-        "line": 133,
+        "line": 182,
         "signature": "pub fn parse_cell_src(src: &str) -> JsValue {"
       },
       {
@@ -12396,7 +12446,7 @@
         "kind": "fn",
         "doc": "Check a cell expression.",
         "file": "lib.rs",
-        "line": 157,
+        "line": 206,
         "signature": "pub fn check_cell_src(src: &str) -> JsValue {"
       },
       {
@@ -12404,7 +12454,7 @@
         "kind": "fn",
         "doc": "Evaluate a cell expression (`= expr`) with the in-process local host.",
         "file": "lib.rs",
-        "line": 183,
+        "line": 232,
         "signature": "pub fn eval_cell_src(src: &str) -> JsValue {"
       },
       {
@@ -12412,7 +12462,7 @@
         "kind": "fn",
         "doc": "Parse a full VibeScript program (module).",
         "file": "lib.rs",
-        "line": 204,
+        "line": 253,
         "signature": "pub fn parse_program_src(src: &str) -> JsValue {"
       },
       {
@@ -12420,7 +12470,7 @@
         "kind": "fn",
         "doc": "Check a full program.",
         "file": "lib.rs",
-        "line": 235,
+        "line": 284,
         "signature": "pub fn check_program_src(src: &str) -> JsValue {"
       },
       {
@@ -12428,7 +12478,7 @@
         "kind": "fn",
         "doc": "Evaluate a cell and return the result as a JSON-compatible JS value.\nPlayground Run uses `eval_program_src` (module + optional `main`), not this.",
         "file": "lib.rs",
-        "line": 261,
+        "line": 310,
         "signature": "pub fn eval_cell_json(src: &str) -> JsValue {"
       },
       {
@@ -12436,7 +12486,7 @@
         "kind": "fn",
         "doc": "Parse + check a module; collect up to eight diagnostics.",
         "file": "lib.rs",
-        "line": 267,
+        "line": 316,
         "signature": "pub fn diagnose_src(src: &str) -> JsValue {"
       },
       {
@@ -12444,7 +12494,7 @@
         "kind": "fn",
         "doc": "Evaluate a full program on LocalHost (workshop dialect).\n\nRuns preamble items, then `main` when present — same as `vibe eval FILE main`.",
         "file": "lib.rs",
-        "line": 277,
+        "line": 326,
         "signature": "pub fn eval_program_src(src: &str) -> JsValue {"
       },
       {
@@ -12452,7 +12502,7 @@
         "kind": "struct",
         "doc": "Persistent compiled cell for the browser binding.\n\nKeeps the compiled [`bytecode::Chunk`] so timed / repeated runs can call\n[`CompiledCell::run`] without re-decoding VBC1 bytes. Prefer this over\n[`decode_and_run`] when the job is \"run what we already compiled.\"",
         "file": "lib.rs",
-        "line": 326,
+        "line": 375,
         "signature": "pub struct CompiledCell"
       },
       {
@@ -12460,7 +12510,7 @@
         "kind": "fn",
         "doc": "Compile a cell expression (`= expr`) into a handle. Does not run it.",
         "file": "lib.rs",
-        "line": 333,
+        "line": 382,
         "signature": "pub fn compile(src: &str) -> Result<CompiledCell, JsValue> {"
       },
       {
@@ -12468,7 +12518,7 @@
         "kind": "fn",
         "doc": "Decode a VBC1 byte buffer once into a handle. Later [`Self::run`] calls\ndo not decode again.",
         "file": "lib.rs",
-        "line": 345,
+        "line": 394,
         "signature": "pub fn from_bytes(bytes: &[u8]) -> Result<CompiledCell, JsValue> {"
       },
       {
@@ -12476,7 +12526,7 @@
         "kind": "fn",
         "doc": "Run the held chunk on a fresh local VM. Does not decode.",
         "file": "lib.rs",
-        "line": 353,
+        "line": 402,
         "signature": "pub fn run(&self) -> JsValue {"
       },
       {
@@ -12484,7 +12534,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lib.rs",
-        "line": 373,
+        "line": 422,
         "signature": "pub fn code_size(&self) -> usize {"
       },
       {
@@ -12492,7 +12542,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lib.rs",
-        "line": 378,
+        "line": 427,
         "signature": "pub fn constants(&self) -> usize {"
       },
       {
@@ -12500,7 +12550,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lib.rs",
-        "line": 383,
+        "line": 432,
         "signature": "pub fn functions(&self) -> usize {"
       },
       {
@@ -12508,7 +12558,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lib.rs",
-        "line": 388,
+        "line": 437,
         "signature": "pub fn top_locals(&self) -> u16 {"
       },
       {
@@ -12516,7 +12566,7 @@
         "kind": "fn",
         "doc": "Human-readable disassembly of the held chunk (inspect only).",
         "file": "lib.rs",
-        "line": 393,
+        "line": 442,
         "signature": "pub fn disassembly(&self) -> String {"
       },
       {
@@ -12524,7 +12574,7 @@
         "kind": "fn",
         "doc": "Compile a cell expression to bytecode and return chunk metadata.\n\nFor repeated execution without re-decode, use [`CompiledCell::compile`] and\n[`CompiledCell::run`] instead. This export stays for playground inspect /\nsize reporting.",
         "file": "lib.rs",
-        "line": 404,
+        "line": 453,
         "signature": "pub fn compile_cell_bytecode(src: &str) -> JsValue {"
       },
       {
@@ -12532,7 +12582,7 @@
         "kind": "fn",
         "doc": "Compile a cell to bytecode, run it on the VM, and return the result.",
         "file": "lib.rs",
-        "line": 447,
+        "line": 496,
         "signature": "pub fn run_cell_bytecode(src: &str) -> JsValue {"
       },
       {
@@ -12540,7 +12590,7 @@
         "kind": "fn",
         "doc": "Compile a program to bytecode, encode it to binary, decode it, and run\na named function.  Demonstrates the full bytecode round-trip.",
         "file": "lib.rs",
-        "line": 488,
+        "line": 537,
         "signature": "pub fn run_program_bytecode(src: &str, fn_name: &str, args: Vec<JsValue>) -> JsValue {"
       },
       {
@@ -12548,7 +12598,7 @@
         "kind": "fn",
         "doc": "Encode a cell's bytecode to a binary Uint8Array.",
         "file": "lib.rs",
-        "line": 578,
+        "line": 627,
         "signature": "pub fn encode_cell_bytecode(src: &str) -> JsValue {"
       },
       {
@@ -12556,7 +12606,7 @@
         "kind": "fn",
         "doc": "Decode a binary bytecode chunk and run it once.\n\nCompat wrapper: each call decodes again. Prefer [`CompiledCell::from_bytes`]\nthen [`CompiledCell::run`] when the same bytes will run more than once.",
         "file": "lib.rs",
-        "line": 604,
+        "line": 653,
         "signature": "pub fn decode_and_run(bytes: &[u8]) -> JsValue {"
       },
       {
@@ -12564,7 +12614,7 @@
         "kind": "fn",
         "doc": "Get the EBNF grammar string.",
         "file": "lib.rs",
-        "line": 618,
+        "line": 667,
         "signature": "pub fn ebnf_grammar() -> String {"
       },
       {
@@ -12572,7 +12622,7 @@
         "kind": "fn",
         "doc": "Get the GBNF grammar (for LLM constrained decoding).",
         "file": "lib.rs",
-        "line": 624,
+        "line": 673,
         "signature": "pub fn gbnf_grammar() -> String {"
       },
       {
@@ -12580,7 +12630,7 @@
         "kind": "fn",
         "doc": "Get the JSON schema for the AST.",
         "file": "lib.rs",
-        "line": 630,
+        "line": 679,
         "signature": "pub fn ast_schema_json() -> String {"
       },
       {
@@ -12588,7 +12638,7 @@
         "kind": "fn",
         "doc": "Get the JSON schema for diagnostics.",
         "file": "lib.rs",
-        "line": 636,
+        "line": 685,
         "signature": "pub fn diagnostic_schema_json() -> String {"
       },
       {
@@ -12596,7 +12646,7 @@
         "kind": "fn",
         "doc": "Project a VibeScript program source to canonical form.\nParses the source, then re-projects it from the AST.\nThis is the core of projectional authoring: structure → text.",
         "file": "lib.rs",
-        "line": 770,
+        "line": 819,
         "signature": "pub fn project_source(src: &str) -> JsValue {"
       },
       {
@@ -12604,7 +12654,7 @@
         "kind": "fn",
         "doc": "Apply a structural edit to a VibeScript program and project the result.\n\nThe edit is specified as a JSON object with an `op` field and\noperation-specific fields. This enables LLMs and browsers to\nedit program structure without text patching.\n\nSupported ops:\n- `add_field`: { op, name, ty, unit?, support?, representation? }\n- `add_material`: { op, name, properties: [{name, value}] }\n- `add_law`: { op, name, condition, consequence }\n- `remove_item`: { op, index }\n- `rename_item`: { op, index, new_name }\n- `set_field_unit`: { op, index, unit? }\n- `set_field_support`: { op, index, support }\n- `set_field_representation`: { op, index, representation }\n- `add_material_property`: { op, index, name, value }\n- `remove_material_property`: { op, index, name }\n- `add_prefix`: { op, prefix, iri }\n- `remove_prefix`: { op, prefix }",
         "file": "lib.rs",
-        "line": 808,
+        "line": 857,
         "signature": "pub fn apply_structural_edit(src: &str, edit_json: &str) -> JsValue {"
       },
       {
@@ -12612,8 +12662,40 @@
         "kind": "fn",
         "doc": "Apply multiple structural edits in sequence.\n`edits_json` is a JSON array of edit objects.",
         "file": "lib.rs",
-        "line": 840,
+        "line": 889,
         "signature": "pub fn apply_structural_edits(src: &str, edits_json: &str) -> JsValue {"
+      },
+      {
+        "name": "VIBE_CBOR_LD_PROFILE",
+        "kind": "const",
+        "doc": "Tagged CBOR-LD profile identifier for VibeScript programs.",
+        "file": "lib.rs",
+        "line": 1161,
+        "signature": "pub const VIBE_CBOR_LD_PROFILE: &str = \"application/vnd.vibe.ast+cbor; version=0.1\""
+      },
+      {
+        "name": "encode_program_cborld_wasm",
+        "kind": "fn",
+        "doc": "Encodes a VibeScript source program into tagged CBOR-LD AST bytes (Tag 4200).\nValidates syntax and type consistency before serializing.",
+        "file": "lib.rs",
+        "line": 1175,
+        "signature": "pub fn encode_program_cborld_wasm(src: &str) -> Result<Uint8Array, JsValue> {"
+      },
+      {
+        "name": "decode_program_cborld_wasm",
+        "kind": "fn",
+        "doc": "Decodes tagged CBOR-LD AST bytes (Tag 4200) into a canonical representation,\nreturning the reconstructed source code, AST hash, and provenance metadata.",
+        "file": "lib.rs",
+        "line": 1185,
+        "signature": "pub fn decode_program_cborld_wasm(bytes: &[u8]) -> Result<JsValue, JsValue> {"
+      },
+      {
+        "name": "eval_program_with_receipt_wasm",
+        "kind": "fn",
+        "doc": "Evaluates a Vibe program and returns the evaluated value together with a signed,\nreproducible execution receipt (containing source hash, AST hash, and engine metadata).",
+        "file": "lib.rs",
+        "line": 1206,
+        "signature": "pub fn eval_program_with_receipt_wasm(src: &str) -> JsValue {"
       }
     ]
   }

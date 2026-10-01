@@ -35,7 +35,9 @@ html,body{height:100%;margin:0;overflow:hidden;font:14px/1.4 system-ui,sans-seri
 .fav.human .label{color:var(--teal)}
 .halo .sep{width:60%;height:1px;background:var(--line);margin:.25rem 0}
 .stage-wrap{padding:.65rem .85rem .85rem;display:grid;grid-template-rows:1fr auto;gap:.65rem;min-height:0}
-.stage{border-radius:22px;border:1px solid var(--line);overflow:hidden;min-height:0;position:relative;background:rgba(6,12,20,.55);backdrop-filter:blur(16px);box-shadow:0 30px 80px #000a,inset 0 0 80px rgba(47,224,200,.04);transform:perspective(1200px) rotateX(2deg);transform-origin:50% 100%;display:flex;flex-direction:column}
+.stage{border-radius:22px;border:1px solid var(--line);overflow:hidden;min-height:0;position:relative;background:rgba(6,12,20,.55);backdrop-filter:blur(16px);box-shadow:0 30px 80px #000a,inset 0 0 80px rgba(47,224,200,.04);transform:perspective(1200px) rotateX(2deg);transform-origin:50% 100%;display:flex;flex-direction:column;transition:transform .24s cubic-bezier(.2,.8,.2,1),box-shadow .24s,border-radius .24s}
+.stage.full{transform:none!important;border-radius:10px;box-shadow:0 10px 40px #000c}
+.stage.float-mode{transform:perspective(1000px) rotateX(4.5deg) translateY(-8px)!important;box-shadow:0 40px 100px #000e,inset 0 0 100px rgba(47,224,200,.08)}
 .vol-chrome{display:none;flex-shrink:0;align-items:center;gap:.7rem;padding:.55rem .85rem;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);border-bottom:1px solid var(--line);user-select:none}
 .vol-chrome.open{display:flex}
 .hub{width:30px;height:30px;border-radius:50%;border:1px solid rgba(47,224,200,.5);background:radial-gradient(circle at 35% 28%,#4a7a8e,#152636);box-shadow:0 0 16px rgba(47,224,200,.4),0 4px 12px #0006;color:var(--teal);font:700 13px system-ui;letter-spacing:-.02em;display:grid;place-items:center;cursor:pointer;padding:0;transition:box-shadow .15s,transform .15s,background .15s}

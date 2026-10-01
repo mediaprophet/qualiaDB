@@ -128,7 +128,8 @@ html,body{background:#03060c;color:#eaf3fa;margin:0;font:14px/1.45 system-ui,san
     }catch(error){status.textContent="Could not save changes: "+error.message;}
   });
   document.getElementById("btn-to-lib").addEventListener("click",()=>{
-    status.textContent="Send to Library · parent routes /volumes/library.";
+    try{ if(window.parent&&window.parent!==window) window.parent.postMessage({type:"webizen-open",route:"/volumes/library"},window.location.origin); }catch(e){}
+    status.textContent="Opened Library.";
   });
   loadItems();
 })();
