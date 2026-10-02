@@ -6,7 +6,7 @@
 //!
 //! Conforms to QualiaDB Rule 0-A (zero-heap in hot paths) and Rule 0-B.
 
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 use crate::{q_hash, NQuin, PermissiveRoutingLane};
 use super::cache_ring::DnsCacheRing;

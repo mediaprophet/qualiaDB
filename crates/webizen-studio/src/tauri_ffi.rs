@@ -1,29 +1,42 @@
-//! Single-owner Tauri wasm-bindgen imports for the studio crate.
+//! Single-owner Tauri FFI for the studio crate.
 //!
-//! `dx build --web` links `libwebizen_studio.rlib` into the bin. Every
-//! `#[wasm_bindgen] extern` for the same JS `invoke` / `listen` path emits the
-//! same `__wbindgen_describe___wbg_*` symbol. Compiling those externs in both
-//! the rlib (spatial_bridge) and the bin (main/components) makes rust-lld fail
-//! with duplicate symbols even when `cargo check` is green.
-//!
-//! Own the imports exactly once here. Call sites use `invoke` / `listen`
-//! (re-exported) and must not declare their own extern blocks.
+//! Call sites use `invoke` / `listen` (re-exported) and must not declare
+//! their own extern blocks. Uses dynamic dispatch via `window.__TAURI__`
+//! to ensure zero duplicate wasm-bindgen describe symbols and 100% reliable
+//! adapter-free linking across dual lib/bin compilation under Dioxus CLI.
 
 #![cfg(target_arch = "wasm32")]
 
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    pub async fn invoke(
-        cmd: &str,
-        args: JsValue,
-    ) -> Result<JsValue, JsValue>;
+pub async fn invoke(
+    cmd: &str,
+    args: JsValue,
+) -> Result<JsValue, JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("window unavailable"))?;
+    let tauri = js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?;
+    let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+    let invoke_fn = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+    let func = invoke_fn.dyn_into::<js_sys::Function>()?;
+    let cmd_val = JsValue::from_str(cmd);
+    let promise_val = func.call2(&core, &cmd_val, &args)?;
+    let promise = promise_val.dyn_into::<js_sys::Promise>()?;
+    wasm_bindgen_futures::JsFuture::from(promise).await
+}
 
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
-    pub async fn listen(
-        event: &str,
-        handler: &js_sys::Function,
-    ) -> Result<js_sys::Function, JsValue>;
+pub async fn listen(
+    event: &str,
+    handler: &js_sys::Function,
+) -> Result<js_sys::Function, JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("window unavailable"))?;
+    let tauri = js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?;
+    let event_mod = js_sys::Reflect::get(&tauri, &JsValue::from_str("event"))?;
+    let listen_fn = js_sys::Reflect::get(&event_mod, &JsValue::from_str("listen"))?;
+    let func = listen_fn.dyn_into::<js_sys::Function>()?;
+    let event_val = JsValue::from_str(event);
+    let promise_val = func.call2(&event_mod, &event_val, handler)?;
+    let promise = promise_val.dyn_into::<js_sys::Promise>()?;
+    let unlisten = wasm_bindgen_futures::JsFuture::from(promise).await?;
+    unlisten.dyn_into::<js_sys::Function>()
 }

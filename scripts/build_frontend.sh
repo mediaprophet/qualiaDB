@@ -43,6 +43,9 @@ fi
 # Prefer cargo-installed tools over any host/Homebrew wasm-bindgen.
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
+# Dioxus otherwise ignores the verified PATH binary and attempts to
+# redownload a managed wasm-bindgen on every invocation.
+export NO_DOWNLOADS=1
 # Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.
 # Also disable wasm fat-LTO / bitcode: rust-lld fails with
 # rust-lld 1.98 still rejects duplicate wasm-bindgen describe symbols for the

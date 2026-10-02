@@ -40,7 +40,10 @@ use crate::render::telemetry::{
     STANDPOINT_VAULT,
 };
 use crate::sonic_token::SonicToken;
-use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, write_tensor_q_at};
+use crate::tensor::buffer_export::{
+    read_tensor_at, tensor_node_count, write_tensor_buffer, write_tensor_q_at,
+    TENSOR_HEADER_BYTES,
+};
 use crate::{
     export_tensor_buffer_wasm, parse_cbor_ld_wasm, parse_json_wasm, sample_browser_telemetry_wasm,
     spatial_encode_wasm,
@@ -84,163 +87,8 @@ struct ProjectedNode {
     epistemic_ring: bool,
 }
 
-/// Accumulates decoded organ meshes for the whole-body anatomy path.
-/// Keeps decoding entirely in Rust so phone browsers never hold N organ copies in JS.
-struct BodyMeshAccum {
-    positions: Vec<[f32; 3]>,
-    colors: Vec<[f32; 4]>,
-    indices: Vec<u32>,
-    gmin: [f32; 3],
-    gmax: [f32; 3],
-    organs_loaded: u32,
-    organs_refused: u32,
-    total_triangles: u32,
-}
-
-impl BodyMeshAccum {
-    fn new() -> Self {
-        Self {
-            positions: Vec::new(),
-            colors: Vec::new(),
-            indices: Vec::new(),
-            gmin: [f32::INFINITY; 3],
-            gmax: [f32::NEG_INFINITY; 3],
-            organs_loaded: 0,
-            organs_refused: 0,
-            total_triangles: 0,
-        }
-    }
-
-    /// Decode one sealed `.10d` organ. One owned buffer for CRC verify only —
-    /// no JS heap intermediate, no second clone after `to_vec`.
-    fn append_organ_10d(&mut self, organ_bytes: &[u8], rgba: [f32; 4]) {
-        use crate::container_10d::{
-            self,
-            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
-        };
-
-        let mut bytes = organ_bytes.to_vec();
-        let header = match Container10dHeader::parse(&bytes) {
-            Ok(h) => h,
-            Err(_) => return,
-        };
-        if container_10d::verify_whole_file_crc32c(&mut bytes).is_err() {
-            return;
-        }
-        let descs = match container_10d::parse_section_table(&bytes, &header) {
-            Ok(d) => d,
-            Err(_) => return,
-        };
-
-        let mut mesh = None;
-        let mut has_attestation = false;
-        for desc in descs.iter() {
-            let st = match container_10d::SectionType::from_u8(desc.section_type) {
-                Some(st) => st,
-                None => continue,
-            };
-            let off = desc.byte_offset as usize;
-            let len = desc.byte_length as usize;
-            if off.saturating_add(len) > bytes.len() {
-                continue;
-            }
-            let payload = &bytes[off..off + len];
-            match st {
-                container_10d::SectionType::QuantizedMesh => {
-                    if let Ok(m) = container_10d::decode_mesh_section(payload) {
-                        mesh = Some(m);
-                    }
-                }
-                container_10d::SectionType::ProvenanceSidecar => {
-                    if let Ok(view) =
-                        container_10d::provenance_section::decode_provenance_section(payload)
-                    {
-                        if container_10d::provenance_section::validate_provenance(&view).is_ok() {
-                            has_attestation = true;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let Some(mesh) = mesh else {
-            return;
-        };
-        let governance_refused =
-            (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
-        if governance_refused {
-            self.organs_refused += 1;
-            return;
-        }
-
-        for k in 0..3 {
-            if mesh.min[k] < self.gmin[k] {
-                self.gmin[k] = mesh.min[k];
-            }
-            if mesh.max[k] > self.gmax[k] {
-                self.gmax[k] = mesh.max[k];
-            }
-        }
-        let base = self.positions.len() as u32;
-        let [r, g, b, a] = rgba;
-        for p in mesh.positions.iter() {
-            self.positions.push([p[0], p[1], p[2]]);
-            self.colors.push([r, g, b, a]);
-        }
-        for t in mesh.triangles.iter() {
-            self.indices.push(base + t[0]);
-            self.indices.push(base + t[1]);
-            self.indices.push(base + t[2]);
-        }
-        self.total_triangles += mesh.triangles.len() as u32;
-        self.organs_loaded += 1;
-    }
-
-    /// Apply a person-authored fit, then recompute bounds so orbit framing stays honest.
-    fn apply_body_fit(&mut self, fit: &crate::render::body_fit::AnatomyBodyFit) {
-        if fit.identity || self.positions.is_empty() {
-            return;
-        }
-        fit.apply_in_place(&mut self.positions, self.gmin, self.gmax);
-        let mut gmin = [f32::INFINITY; 3];
-        let mut gmax = [f32::NEG_INFINITY; 3];
-        for p in &self.positions {
-            for k in 0..3 {
-                if p[k] < gmin[k] {
-                    gmin[k] = p[k];
-                }
-                if p[k] > gmax[k] {
-                    gmax[k] = p[k];
-                }
-            }
-        }
-        self.gmin = gmin;
-        self.gmax = gmax;
-    }
-
-    /// One global centre + scale so the body fits ~1.7 of the orbit frame.
-    fn normalise_to_orbit_frame(&mut self) {
-        if self.organs_loaded == 0 {
-            return;
-        }
-        let gc = [
-            (self.gmin[0] + self.gmax[0]) * 0.5,
-            (self.gmin[1] + self.gmax[1]) * 0.5,
-            (self.gmin[2] + self.gmax[2]) * 0.5,
-        ];
-        let gspan = (self.gmax[0] - self.gmin[0])
-            .max(self.gmax[1] - self.gmin[1])
-            .max(self.gmax[2] - self.gmin[2])
-            .max(1e-6);
-        let s = 1.7 / gspan;
-        for p in self.positions.iter_mut() {
-            p[0] = (p[0] - gc[0]) * s;
-            p[1] = (p[1] - gc[1]) * s;
-            p[2] = (p[2] - gc[2]) * s;
-        }
-    }
-}
+mod body_scene;
+use body_scene::BodyMeshAccum;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum BodyRendererBackend {
@@ -1250,6 +1098,20 @@ impl QualiaPortal {
         self.body_vertex_count = accum.positions.len().min(u32::MAX as usize) as u32;
         self.body_index_count = accum.indices.len().min(u32::MAX as usize) as u32;
         self.body_frames_presented = 0;
+
+        // Semantic nodes embedded in the organs' `Tensor10DNodes` sections become
+        // the pick/projection substrate — already normalised into the same orbit
+        // frame as the uploaded mesh, so hits land on drawn geometry.
+        let semantic_node_count = accum.nodes.len();
+        if !accum.nodes.is_empty() {
+            let need = TENSOR_HEADER_BYTES
+                + accum.nodes.len() * crate::container_10d::node_section::TENSOR10D_SIZE;
+            let mut buf = vec![0u8; need];
+            if write_tensor_buffer(&accum.nodes, &mut buf).is_ok() {
+                let _ = self.upload_tensor_buffer(&buf);
+            }
+        }
+
         self.description = format!(
             "{} organs · {} triangles · {} refused · coloured · {}",
             accum.organs_loaded,
@@ -1282,6 +1144,11 @@ impl QualiaPortal {
             &result,
             &JsValue::from_str("renderer"),
             &JsValue::from_str(renderer.as_str()),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("semantic_nodes"),
+            &JsValue::from_f64(semantic_node_count as f64),
         )?;
         Reflect::set(&result, &JsValue::from_str("uploaded"), &JsValue::TRUE)?;
         Ok(result.into())
