@@ -421,6 +421,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/logs/text", get(logs_text_handler))
         .route("/api/status", get(status_handler))
         .route("/api/shell/open-poet", post(open_poet_window_handler))
+        .route("/api/shell/open-browser", post(open_browser_window_handler))
         // Personal Saved Items remain local-only. They are not graph records,
         // social posts, or a LAN-sharing surface.
         .route(
@@ -534,6 +535,10 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .nest_service(
             "/pkg/qualia",
             ServeDir::new(portal_support_root.join("pkg").join("qualia")),
+        )
+        .nest_service(
+            "/pkg/vibe",
+            ServeDir::new(portal_support_root.join("pkg").join("vibe")),
         )
         // Studio WASM build — browser-accessible Studio UI at /studio/
         .nest_service("/assets", ServeDir::new(studio_root.join("assets")))
@@ -1026,6 +1031,41 @@ async fn open_poet_window_handler() -> Json<serde_json::Value> {
         Some(app) => {
             crate::shell::menu::open_poet_window(app);
             Json(serde_json::json!({ "ok": true }))
+        }
+        None => Json(serde_json::json!({
+            "ok": false,
+            "error": "host app handle unavailable"
+        })),
+    }
+}
+
+#[derive(serde::Deserialize, Default)]
+struct OpenBrowserRequest {
+    url: Option<String>,
+}
+
+/// `POST /api/shell/open-browser` — an os-shell volume asks the host to raise (or
+/// focus) the dedicated native Webizen Browser window (Chora universe or specified URL).
+async fn open_browser_window_handler(
+    payload: Option<Json<OpenBrowserRequest>>,
+) -> Json<serde_json::Value> {
+    match APP_HANDLE.get() {
+        Some(app) => {
+            let target_url = payload
+                .and_then(|Json(p)| p.url)
+                .unwrap_or_else(|| crate::browser::DEFAULT_HOME.to_string());
+            let app_clone = app.clone();
+            let res = tauri::async_runtime::spawn_blocking(move || {
+                crate::browser::open_browser_shell(&app_clone, &target_url)
+            })
+            .await;
+            match res {
+                Ok(Ok(opened)) => Json(serde_json::json!({ "ok": true, "url": opened })),
+                Ok(Err(err)) => Json(serde_json::json!({ "ok": false, "error": err })),
+                Err(join_err) => {
+                    Json(serde_json::json!({ "ok": false, "error": join_err.to_string() }))
+                }
+            }
         }
         None => Json(serde_json::json!({
             "ok": false,

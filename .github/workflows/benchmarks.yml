@@ -66,6 +66,10 @@ jobs:
       - name: RAM Footprint Validator (512 MB ceiling gate)
         run: cargo bench --package qualia-core-db --bench ram_usage
 
+      # ── Native Zero-Heap DNS & Network Benchmarks ───────────────────────────
+      - name: Native Zero-Heap DNS & Network Benchmarks
+        run: cargo bench --package qualia-core-db --bench network_benchmark -- --test
+
       # ── Oxigraph ─────────────────────────────────────────────────────────────
       - name: Run Oxigraph benchmark (10 k triples)
         run: |
@@ -163,6 +167,7 @@ jobs:
             curl -sf http://127.0.0.1:4242/health && echo "Daemon ready." && break
             sleep 2
           done
+          curl -sf http://127.0.0.1:4242/health || { echo "Daemon failed to start on port 4242!"; exit 1; }
 
       - name: Ingest benchmark dataset into Qualia
         run: |

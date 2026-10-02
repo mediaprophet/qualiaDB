@@ -44,9 +44,11 @@ const PALERMO_PROTOCOL_ANNOTATED_GRAPH: u64 =
     q_hash("urn:qualia:ontology:palermo_protocol_annotated");
 const COMMONWEALTH_CHARTER_ANNOTATED_GRAPH: u64 =
     q_hash("urn:qualia:ontology:commonwealth_charter_annotated");
+const DNS_RECORD_TYPES_GRAPH: u64 = q_hash("urn:qualia:ontology:dns");
 
 /// Files to load at startup, as `(filename, named_graph_context)` pairs.
 const STARTUP_ONTOLOGIES: &[(&str, u64)] = &[
+    ("dns_record_types.ttl", DNS_RECORD_TYPES_GRAPH),
     ("rights_ontology.ttl", RIGHTS_GRAPH),
     ("cogai_shapes.ttl", COGAI_GRAPH),
     ("epistemic_shapes.ttl", EPISTEMIC_GRAPH),

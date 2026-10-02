@@ -1,5 +1,6 @@
 //! `net` category (reorg).
 
+pub mod dns;
 pub mod peer;
 pub mod qdnf;
 

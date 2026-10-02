@@ -569,7 +569,7 @@ impl ProofEngine {
         };
 
         let (pk, _vk) = Self::deontic_crs()?;
-        let mut rng = ark_std::rand::rngs::OsRng;
+        let mut rng = crate::zk_proofs::zk_secure_rng();
         let proof = Groth16::<Bls12_381>::prove(pk, circuit, &mut rng)
             .map_err(|e| CryptographicError::ProofError(e.to_string()))?;
 

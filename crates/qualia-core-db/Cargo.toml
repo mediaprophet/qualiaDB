@@ -290,9 +290,7 @@ h2 = "0.4.15"
 http = "1"
 bytes = "1"
 tokio-rustls = "0.26.4"
-# DNSSEC and WireGuard dependencies for SocialWebNet bootstrapping
-trust-dns-resolver = { version = "0.23.2", features = ["dnssec-ring", "dns-over-rustls"] }
-# wireguard-rs = "0.1.1" # Currently unavailable - commented out
+# Native zero-heap DNS & SDN stack resides in crate::net::dns (zero 3rd-party dependencies)
 base64 = "0.22"
 getrandom = { version = "0.4", features = ["wasm_js"] }
 serde-wasm-bindgen = "0.6.5"
@@ -326,4 +324,8 @@ harness = false
 
 [[bench]]
 name = "ram_usage"
+harness = false
+
+[[bench]]
+name = "network_benchmark"
 harness = false

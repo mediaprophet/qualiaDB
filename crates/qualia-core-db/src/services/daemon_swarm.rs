@@ -1272,56 +1272,99 @@ pub mod swarm {
                 }
             }
 
-            // Perform live DNSSEC-validated TXT lookup via trust-dns-resolver
-            use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
-            use trust_dns_resolver::Resolver;
+            // Perform live DNS TXT lookup via native Qualia zero-heap DNS stack
+            let qname = format!("_q42peer._tcp.{}", domain.trim_end_matches('.'));
+            let resolver = crate::net::dns::QualiaDnsResolver::new(crate::net::dns::ResolverConfig::default());
+            let socket = std::net::UdpSocket::bind("0.0.0.0:0").map_err(|_| "socket bind failed")?;
+            socket
+                .set_read_timeout(Some(std::time::Duration::from_millis(resolver.config.timeout_ms)))
+                .map_err(|_| "timeout failed")?;
 
-            let mut opts = ResolverOpts::default();
-            opts.validate = true; // require DNSSEC validation
-            opts.use_hosts_file = false;
+            let mut tx_buf = [0u8; 512];
+            let tx_len = crate::net::dns::wire::build_query_packet(
+                0x4250,
+                &qname,
+                crate::net::dns::wire::DnsType::TXT,
+                true,
+                &mut tx_buf,
+            )
+            .map_err(|_| "failed to build query")?;
 
-            let resolver = Resolver::new(ResolverConfig::default(), opts)
-                .map_err(|_| "DNS resolver init failed")?;
+            socket
+                .send_to(&tx_buf[..tx_len], resolver.config.nameserver)
+                .map_err(|_| "DNS send failed")?;
 
-            // Canonical record name for Qualia peer discovery
-            let qname = format!("_q42peer._tcp.{}.", domain);
-            let lookup = resolver
-                .txt_lookup(qname.as_str())
-                .map_err(|_| "DNS TXT lookup failed")?;
+            let mut rx_buf = [0u8; 4096];
+            let (rx_len, _) = socket.recv_from(&mut rx_buf).map_err(|_| "DNS recv failed")?;
 
-            for txt in lookup.iter() {
-                for part in txt.txt_data() {
-                    if part.len() >= 51 {
-                        let mut wg_pubkey = [0u8; 32];
-                        wg_pubkey.copy_from_slice(&part[..32]);
+            let mut found_payload = None;
+            let header = crate::net::dns::wire::DnsHeader::decode(&rx_buf[..rx_len])
+                .map_err(|_| "invalid DNS header")?;
 
-                        // Safety: lengths checked above
-                        let did_q42 = u64::from_le_bytes(part[32..40].try_into().unwrap());
-                        let routing_mask = part[40] as u64;
-                        let peer_capabilities =
-                            u16::from_le_bytes(part[41..43].try_into().unwrap());
-                        let semantic_context = u64::from_le_bytes(part[43..51].try_into().unwrap());
+            if header.rcode() == 0 {
+                let mut offset = crate::net::dns::wire::DnsHeader::SIZE;
+                let mut dummy = [0u8; 256];
+                for _ in 0..header.qdcount {
+                    let (new_off, _) =
+                        crate::net::dns::wire::decode_domain_name(&rx_buf[..rx_len], offset, &mut dummy)
+                            .map_err(|_| "invalid qname")?;
+                    offset = new_off + 4;
+                }
 
-                        let payload = DnssecSemanticPayload {
-                            wireguard_pubkey: wg_pubkey,
-                            did_q42,
-                            routing_mask,
-                            semantic_handshake: "Legacy Proof".to_string(),
-                            peer_capabilities,
-                            semantic_context,
-                        };
-
-                        // Populate cell-local cache
-                        if let Ok(mut cells) = self.active_cells.lock() {
-                            for cell in cells.iter_mut() {
-                                if let Some(ref mut r) = cell.dnssec_resolver {
-                                    r.cache.insert(domain.to_string(), payload.clone());
+                let _ = crate::net::dns::wire::parse_records(
+                    &rx_buf[..rx_len],
+                    offset,
+                    header.ancount as usize,
+                    |_name, rec| {
+                        if rec.rtype == crate::net::dns::wire::DnsType::TXT && found_payload.is_none() {
+                            let mut cursor = 0;
+                            while cursor < rec.rdata.len() {
+                                let seg_len = rec.rdata[cursor] as usize;
+                                cursor += 1;
+                                if cursor + seg_len > rec.rdata.len() {
                                     break;
                                 }
+                                let part = &rec.rdata[cursor..cursor + seg_len];
+                                if part.len() >= 51 {
+                                    let mut wg_pubkey = [0u8; 32];
+                                    wg_pubkey.copy_from_slice(&part[..32]);
+
+                                    let did_q42 = u64::from_le_bytes(part[32..40].try_into().unwrap());
+                                    let routing_mask = part[40] as u64;
+                                    let peer_capabilities =
+                                        u16::from_le_bytes(part[41..43].try_into().unwrap());
+                                    let semantic_context =
+                                        u64::from_le_bytes(part[43..51].try_into().unwrap());
+
+                                    found_payload = Some(DnssecSemanticPayload {
+                                        wireguard_pubkey: wg_pubkey,
+                                        did_q42,
+                                        routing_mask,
+                                        semantic_handshake: "Legacy Proof".to_string(),
+                                        peer_capabilities,
+                                        semantic_context,
+                                    });
+                                    break;
+                                }
+                                cursor += seg_len;
                             }
+                        }
+                        Ok(())
+                    },
+                );
+            }
+
+            if let Some(payload) = found_payload {
+                // Populate cell-local cache
+                if let Ok(mut cells) = self.active_cells.lock() {
+                    for cell in cells.iter_mut() {
+                        if let Some(ref mut r) = cell.dnssec_resolver {
+                            r.cache.insert(domain.to_string(), payload.clone());
+                            break;
                         }
                     }
                 }
+                return Ok(payload);
             }
 
             Err("No valid Qualia semantic payload in DNS TXT records")

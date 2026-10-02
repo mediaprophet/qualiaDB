@@ -156,10 +156,10 @@ impl KeyVault {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
         let vault_path = Path::new(storage_dir).join("keystore.bin");
-        let entry = keyring_entry_for(storage_dir)?;
+        let entry = keyring_entry_for(storage_dir).ok();
 
-        let master_key = match entry.get_password() {
-            Ok(secret_hex) => {
+        let master_key = match entry.as_ref().and_then(|e| e.get_password().ok()) {
+            Some(secret_hex) => {
                 let bytes =
                     hex::decode(secret_hex).map_err(|e| format!("Invalid hex in keyring: {e}"))?;
                 if bytes.len() != 32 {
@@ -169,7 +169,7 @@ impl KeyVault {
                 secret.copy_from_slice(&bytes[0..32]);
                 SigningKey::from_bytes(&secret)
             }
-            Err(_) => {
+            None => {
                 if vault_path.exists() {
                     let bytes = fs::read(&vault_path)
                         .map_err(|e| format!("Failed to read keystore: {e}"))?;
@@ -177,7 +177,9 @@ impl KeyVault {
                         return Err("Corrupted master key length".into());
                     }
                     let secret_hex = hex::encode(&bytes[0..32]);
-                    let _ = entry.set_password(&secret_hex);
+                    if let Some(ref entry) = entry {
+                        let _ = entry.set_password(&secret_hex);
+                    }
                     let mut secret = [0u8; 32];
                     secret.copy_from_slice(&bytes[0..32]);
                     SigningKey::from_bytes(&secret)
@@ -185,10 +187,14 @@ impl KeyVault {
                     let secret = generate_master_secret()?;
                     let new_key = SigningKey::from_bytes(&secret);
                     let secret_hex = hex::encode(secret);
-                    let _ = entry.set_password(&secret_hex);
+                    if let Some(ref entry) = entry {
+                        let _ = entry.set_password(&secret_hex);
+                    }
                     if let Some(parent) = vault_path.parent() {
-                        fs::create_dir_all(parent)
-                            .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+                        if !parent.as_os_str().is_empty() {
+                            fs::create_dir_all(parent)
+                                .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+                        }
                     }
                     fs::write(&vault_path, secret)
                         .map_err(|e| format!("Failed to write keystore: {e}"))?;
@@ -844,6 +850,27 @@ mod subgraph_key_tests {
         vault.unlock().expect("unlock");
         assert!(!vault.is_locked());
         assert_eq!(vault.get_master_key_bytes(), before);
+    }
+
+    #[test]
+    fn keystore_file_fallback_roundtrip() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let path = tmp.path().to_str().unwrap();
+        let key_1 = {
+            let vault = KeyVault::load_or_generate(path).expect("vault");
+            vault.get_master_key_bytes()
+        };
+        // Verify keystore.bin was created on disk
+        let keystore_file = tmp.path().join("keystore.bin");
+        assert!(keystore_file.exists());
+        assert_eq!(fs::read(&keystore_file).unwrap().len(), 32);
+
+        // Load again from same directory and verify same master key
+        let key_2 = {
+            let vault = KeyVault::load_or_generate(path).expect("vault reloaded");
+            vault.get_master_key_bytes()
+        };
+        assert_eq!(key_1, key_2);
     }
 
     #[test]

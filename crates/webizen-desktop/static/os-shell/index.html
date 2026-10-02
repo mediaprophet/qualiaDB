@@ -43,14 +43,19 @@
               <div class="cap"><span class="mark" aria-hidden="true"></span><b>Poet</b><span class="pill live">Live</span></div>
               <div class="body"><h3>HyperCanvas workbench</h3><p>Desktop Poet on stage or in its own window.</p></div>
             </button>
+            <button type="button" class="vol-float v-browser" data-open="browser" aria-label="Open Chora Browser volume">
+              <div class="cap"><span class="mark" aria-hidden="true"></span><b>Chora · Browser</b><span class="pill live">Live</span></div>
+              <div class="body"><h3>Spatio-temporal commons</h3><p>Celestial universe canvas &amp; private web browser.</p></div>
+            </button>
             <aside class="constel" aria-hidden="true">
               <strong>Orbit</strong>
-              Talk · Mail · Directory · Library · Settings
+              Talk · Mail · Directory · Library · Settings · Chora
               <ul>
                 <li><span>Directory</span><span class="pill live">Live</span></li>
                 <li><span>Library</span><span class="pill live">Live</span></li>
                 <li><span>Settings</span><span class="pill live">Live</span></li>
                 <li><span>Poet</span><span class="pill live">Live</span></li>
+                <li><span>Browser · Chora</span><span class="pill live">Live</span></li>
               </ul>
             </aside>
           </div>
@@ -91,7 +96,7 @@ const APPS=[
 {id:"talk",name:"Talk",glyph:"💬",blurb:"Human ↔ human.",status:"live",route:"/volumes/talk",human:true},
 {id:"mail",name:"Mail",glyph:"✉",blurb:"Locator + messages.",status:"live",route:"/volumes/mail",human:true},
 {id:"directory",name:"Directory",glyph:"👥",blurb:"People first; chatbot ≠ human.",status:"live",route:"/volumes/directory",human:true},
-{id:"browser",name:"Browser",glyph:"🌐",blurb:"Web pages and links.",status:"live",route:"/volumes/browser"},
+{id:"browser",name:"Browser · Chora",title:"Browser · Chora Universe",glyph:"🌐",blurb:"Chora spatio-temporal universe & web browser.",status:"live",route:"/volumes/browser"},
 // The stable route id is an implementation detail. People see Saved Items.
 {id:"keep",name:t("savedItems.short","Saved"),title:t("savedItems.title","Saved Items"),glyph:"📁",blurb:t("savedItems.description","Notes, saved records, and files."),status:"live",route:"/volumes/keep"},
 {id:"library",name:"Library",glyph:"📚",blurb:"Hypermedia / lived memory.",status:"live",route:"/volumes/library"},

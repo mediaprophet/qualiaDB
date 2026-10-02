@@ -35,14 +35,12 @@
 //! Q42 zone cache and only touching the network to bootstrap into it.
 
 use qualia_core_db::identifier::parse_did_q42;
+use qualia_core_db::net::dns::sdn::parse_ns_encoded_did;
+#[cfg(not(target_arch = "wasm32"))]
+use qualia_core_db::net::dns::{QualiaDnsResolver, ResolverConfig};
 use reqwest::Client;
 use serde::Deserialize;
 
-/// Webizen NS-encoding namespace.  Payloads encoded in NS records are served
-/// under this suffix so the daemon can identify them unambiguously.
-const WEBIZEN_NS_SUFFIX: &str = ".webizen.network";
-/// Prefix stripped before the payload in NS labels (either `ns1.` or `ns2.`).
-const NS_LABEL_PREFIXES: &[&str] = &["ns1.", "ns2.", "ns3.", "ns4."];
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -194,41 +192,20 @@ async fn resolve_via_ns_encoding(domain: &str) -> Result<Option<ResolvedIdentity
             continue;
         }
         let ns = record.data.trim_end_matches('.');
-        if !ns.ends_with(WEBIZEN_NS_SUFFIX) {
-            continue;
+        if let Some((payload, q42_pointer)) = parse_ns_encoded_did(ns) {
+            let did = if payload.starts_with("did:") {
+                payload.to_string()
+            } else {
+                format!("did:q42:{}", payload)
+            };
+
+            return Ok(Some(ResolvedIdentity {
+                did,
+                q42_pointer,
+                webid: None,
+                source: ResolutionSource::NsEncoding,
+            }));
         }
-
-        // Strip the suffix, then strip any `ns{N}.` prefix
-        let without_suffix = &ns[..ns.len() - WEBIZEN_NS_SUFFIX.len()];
-        let payload = NS_LABEL_PREFIXES
-            .iter()
-            .find_map(|prefix| without_suffix.strip_prefix(prefix))
-            .unwrap_or(without_suffix);
-
-        if payload.is_empty() {
-            continue;
-        }
-
-        // Reconstruct the DID.  Payloads that already start with `did:` are
-        // passed through; otherwise they are wrapped as `did:q42:{payload}`.
-        let did = if payload.starts_with("did:") {
-            payload.to_string()
-        } else {
-            format!("did:q42:{}", payload)
-        };
-
-        let q42_pointer = if did.starts_with("did:q42:") {
-            parse_did_q42(did.as_bytes()).ok()
-        } else {
-            None
-        };
-
-        return Ok(Some(ResolvedIdentity {
-            did,
-            q42_pointer,
-            webid: None,
-            source: ResolutionSource::NsEncoding,
-        }));
     }
 
     Ok(None)
@@ -326,8 +303,21 @@ fn parse_qdp_body(domain: &str, body: &str) -> QdpProfile {
 // ── Tier 3: DNS TXT verification ─────────────────────────────────────────────
 
 /// Verify a domain's Front Door DID via `_qdp.<domain>` DNS TXT record.
-/// Uses Cloudflare DoH — no platform DNS library needed.
+/// Prioritises the native zero-heap QualiaDB DNS resolver, falling back to DoH.
 pub async fn verify_front_door_did_via_dns(domain: &str) -> Result<String, String> {
+    // ── Tier 3a: Native Zero-Heap QualiaDB DNS Resolver ──────────────────────
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let resolver = QualiaDnsResolver::new(ResolverConfig::default());
+        let mut txt_storage = [0u8; 512];
+        if let Ok(view) = resolver.resolve_sdn_front_door(domain, &mut txt_storage) {
+            if !view.front_door_did.is_empty() {
+                return Ok(view.front_door_did.to_string());
+            }
+        }
+    }
+
+    // ── Tier 3b: Fallback DoH request ────────────────────────────────────────
     #[derive(Deserialize)]
     struct DohResponse {
         #[serde(rename = "Answer")]
