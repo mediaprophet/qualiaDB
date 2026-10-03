@@ -359,6 +359,20 @@ impl<S: Read + Write + Seek> Q42Journal<S> {
         })
     }
 
+    /// Open and validate an existing journal from storage with any base digest.
+    pub fn open_any(mut storage: S) -> Result<Self, JournalError> {
+        storage.seek(SeekFrom::Start(0))?;
+        let mut header_buf = [0u8; Q42J_HEADER_SIZE];
+        storage.read_exact(&mut header_buf)?;
+        let header = JournalHeader::from_bytes(&header_buf)?;
+
+        Ok(Self {
+            storage,
+            header,
+            sequence_counter: 0,
+        })
+    }
+
     /// Atomically appends a complete transaction to the journal.
     pub fn append_transaction(&mut self, tx: &JournalTransaction) -> Result<(), JournalError> {
         self.storage.seek(SeekFrom::End(0))?;
@@ -655,6 +669,29 @@ impl<S: Read + Write + Seek> MutableQ42Session<S> {
     /// Checkpoint the active state into a new sealed generation.
     pub fn checkpoint(&mut self, new_base_digest: [u8; 32], new_generation: u64) -> Result<(), JournalError> {
         self.journal.reset_to_generation(new_base_digest, new_generation)
+    }
+
+    /// Replay active state from baseline snapshot up to a specific tick target.
+    pub fn rewind_to_tick(&mut self, baseline_quins: &[NQuin], target_tick: u64) -> Result<(), JournalError> {
+        self.active_state.clear();
+        for q in baseline_quins {
+            self.active_state.insert(*q);
+        }
+        let committed_txs = self.journal.recover_transactions()?;
+        for tx in committed_txs {
+            if tx.tick <= target_tick {
+                for rem in tx.removes {
+                    self.active_state.remove(&rem);
+                }
+                for add in tx.adds {
+                    self.active_state.insert(add);
+                }
+            }
+        }
+        self.current_tick = target_tick;
+        self.staged_adds.clear();
+        self.staged_removes.clear();
+        Ok(())
     }
 }
 

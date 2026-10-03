@@ -283,6 +283,15 @@ impl<const MAX_AGENTS: usize, const MAX_QUEUE: usize> FixedTickWorld<MAX_AGENTS,
                     state_delta_hash: cmd.arg0 as u64,
                 }
             }
+            0x03 => {
+                self.agents[idx].pos_x_mm = cmd.arg0;
+                self.agents[idx].pos_y_mm = cmd.arg1;
+                CommandReceipt::Accepted {
+                    tick: self.current_tick,
+                    command_hash: cmd_hash,
+                    state_delta_hash: (cmd.arg0 as u64) ^ (cmd.arg1 as u64),
+                }
+            }
             _ => CommandReceipt::Rejected {
                 tick: self.current_tick,
                 command_hash: cmd_hash,
@@ -301,6 +310,55 @@ impl<const MAX_AGENTS: usize, const MAX_QUEUE: usize> FixedTickWorld<MAX_AGENTS,
             h ^= self.agents[a].resource_tally.wrapping_mul(0x100000001b3);
         }
         h
+    }
+
+    /// Lookup current coordinates of an agent (in millimeters).
+    pub fn get_agent_position(&self, entity_id: u64) -> Option<(i64, i64)> {
+        for a in 0..self.agent_count {
+            if self.agents[a].entity_id == entity_id {
+                return Some((self.agents[a].pos_x_mm, self.agents[a].pos_y_mm));
+            }
+        }
+        None
+    }
+
+    /// Set position directly for an agent.
+    pub fn set_agent_position(&mut self, entity_id: u64, x_mm: i64, y_mm: i64) -> bool {
+        for a in 0..self.agent_count {
+            if self.agents[a].entity_id == entity_id {
+                self.agents[a].pos_x_mm = x_mm;
+                self.agents[a].pos_y_mm = y_mm;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Spatial box selection / range query (Zero Heap Tier 1 hot path).
+    ///
+    /// Writes matching `entity_id` values into `out_entity_ids` and returns the count.
+    pub fn query_agents_in_bounds(
+        &self,
+        min_x_mm: i64,
+        min_y_mm: i64,
+        max_x_mm: i64,
+        max_y_mm: i64,
+        out_entity_ids: &mut [u64],
+    ) -> usize {
+        let mut count = 0;
+        for a in 0..self.agent_count {
+            let px = self.agents[a].pos_x_mm;
+            let py = self.agents[a].pos_y_mm;
+            if px >= min_x_mm && px <= max_x_mm && py >= min_y_mm && py <= max_y_mm {
+                if count < out_entity_ids.len() {
+                    out_entity_ids[count] = self.agents[a].entity_id;
+                    count += 1;
+                } else {
+                    break;
+                }
+            }
+        }
+        count
     }
 }
 
@@ -405,6 +463,23 @@ mod tests {
 
         assert_eq!(sim.agents[0].resource_tally, 250);
         assert!(matches!(receipts[0], CommandReceipt::Accepted { .. }));
+    }
+
+    #[test]
+    fn test_spatial_query_and_position() {
+        let mut sim = FixedTickWorld::<8, 16>::new(42);
+        sim.register_agent(101, 1000, 2000);
+        sim.register_agent(102, 5000, 5000);
+        sim.register_agent(103, 1200, 2100);
+
+        assert_eq!(sim.get_agent_position(101), Some((1000, 2000)));
+        assert_eq!(sim.get_agent_position(999), None);
+
+        let mut out_ids = [0u64; 4];
+        let count = sim.query_agents_in_bounds(500, 1500, 2000, 2500, &mut out_ids);
+        assert_eq!(count, 2);
+        assert!(out_ids[..count].contains(&101));
+        assert!(out_ids[..count].contains(&103));
     }
 }
 

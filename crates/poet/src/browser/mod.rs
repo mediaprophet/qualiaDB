@@ -644,7 +644,8 @@ pub fn open_construct(construct_id: &str, manifold_id: Option<&str>) {
 /// fallback; the guard makes the second call a no-op.
 static START_CALLED: AtomicBool = AtomicBool::new(false);
 
-/// WASM entry point — called from main() in the binary target.
+/// WASM entry point — called from main() or automatically on wasm_bindgen init.
+#[wasm_bindgen(start)]
 pub fn start() {
     if START_CALLED.swap(true, Ordering::SeqCst) {
         return;
@@ -658,6 +659,12 @@ pub fn start() {
         console_error(&format!("[qualia-ui] FATAL: {}", msg));
         show_fatal_error(&document, &msg);
     }
+}
+
+/// Explicit callable entry point for JS bindings.
+#[wasm_bindgen]
+pub fn run_poet() {
+    start();
 }
 
 /// Show a visible error message in the DOM (replaces loading indicator).

@@ -14,6 +14,7 @@ pub mod tool_chest {
 }
 
 pub mod browser;
+pub use browser::{run_poet, start};
 
 /// Frozen `vibe-host-0.1` four-op surface (G-A).
 pub mod vibe_host;

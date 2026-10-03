@@ -178,6 +178,7 @@ pub struct PortalGpu {
     uniform_belt: uniform_belt::UniformBelt,
     width: u32,
     height: u32,
+    clear_color: [f64; 4],
 }
 
 impl PortalGpu {
@@ -931,6 +932,7 @@ impl PortalGpu {
             uniform_belt,
             width,
             height,
+            clear_color: [0.03, 0.05, 0.08, 1.0],
         })
     }
 
@@ -1157,9 +1159,99 @@ impl PortalGpu {
     }
 
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
-        self.camera = CameraState { yaw, pitch, zoom }.clamped();
+        let current_target = self.camera.target;
+        let sun_dir = self.camera.sun_dir;
+        let sun_intensity = self.camera.sun_intensity;
+        let ambient_intensity = self.camera.ambient_intensity;
+        self.camera = CameraState {
+            yaw,
+            pitch,
+            zoom,
+            target: current_target,
+            sun_dir,
+            sun_intensity,
+            ambient_intensity,
+        }
+        .clamped();
     }
 
+    pub fn set_camera_pan(&mut self, target_x: f32, target_y: f32, target_z: f32) {
+        self.camera.target = [target_x, target_y, target_z];
+    }
+
+    pub fn set_camera_target(
+        &mut self,
+        yaw: f32,
+        pitch: f32,
+        zoom: f32,
+        target_x: f32,
+        target_y: f32,
+        target_z: f32,
+    ) {
+        let sun_dir = self.camera.sun_dir;
+        let sun_intensity = self.camera.sun_intensity;
+        let ambient_intensity = self.camera.ambient_intensity;
+        self.camera = CameraState {
+            yaw,
+            pitch,
+            zoom,
+            target: [target_x, target_y, target_z],
+            sun_dir,
+            sun_intensity,
+            ambient_intensity,
+        }
+        .clamped();
+    }
+
+    pub fn set_clear_color(&mut self, r: f64, g: f64, b: f64, a: f64) {
+        self.clear_color = [r, g, b, a];
+    }
+
+    pub fn clear_color(&self) -> [f64; 4] {
+        self.clear_color
+    }
+
+    pub fn set_lighting(
+        &mut self,
+        sun_x: f32,
+        sun_y: f32,
+        sun_z: f32,
+        sun_intensity: f32,
+        ambient_intensity: f32,
+    ) {
+        self.camera.sun_dir = [sun_x, sun_y, sun_z];
+        self.camera.sun_intensity = sun_intensity;
+        self.camera.ambient_intensity = ambient_intensity;
+    }
+
+    pub fn set_sky_preset(&mut self, preset: u32) {
+        match preset {
+            1 => {
+                self.clear_color = [0.45, 0.68, 0.92, 1.0];
+                self.camera.sun_dir = [0.45, 0.85, 0.35];
+                self.camera.sun_intensity = 1.25;
+                self.camera.ambient_intensity = 0.40;
+            }
+            2 => {
+                self.clear_color = [0.85, 0.48, 0.28, 1.0];
+                self.camera.sun_dir = [0.85, 0.25, 0.45];
+                self.camera.sun_intensity = 1.15;
+                self.camera.ambient_intensity = 0.35;
+            }
+            3 => {
+                self.clear_color = [0.015, 0.025, 0.05, 1.0];
+                self.camera.sun_dir = [-0.3, 0.9, -0.2];
+                self.camera.sun_intensity = 0.45;
+                self.camera.ambient_intensity = 0.12;
+            }
+            _ => {
+                self.clear_color = [0.03, 0.05, 0.08, 1.0];
+                self.camera.sun_dir = [0.45, 0.8, 0.55];
+                self.camera.sun_intensity = 1.0;
+                self.camera.ambient_intensity = 0.25;
+            }
+        }
+    }
     pub fn set_standpoint(&mut self, observer: ObserverStandpoint) {
         self.observer = observer;
     }
@@ -1556,7 +1648,12 @@ impl PortalGpu {
                         depth_slice: None,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: self.clear_color[0],
+                                g: self.clear_color[1],
+                                b: self.clear_color[2],
+                                a: self.clear_color[3],
+                            }),
                             store: wgpu::StoreOp::Store,
                         },
                     })],
@@ -1612,10 +1709,13 @@ impl PortalGpu {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.03,
-                            g: 0.05,
-                            b: 0.08,
-                            a: 1.0,
+                            r: self.clear_color[0],
+                            g: self.clear_color[1],
+                            b: self.clear_color[2],
+                            a: self.clear_color[3],
+
+
+
                         }),
                         store: wgpu::StoreOp::Store,
                     },

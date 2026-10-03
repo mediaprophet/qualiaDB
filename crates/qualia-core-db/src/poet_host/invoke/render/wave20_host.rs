@@ -18,7 +18,10 @@ fn read_camera(
     let yaw = args::rec_f64(rec, "yaw").unwrap_or(0.0) as f32;
     let pitch = args::rec_f64(rec, "pitch").unwrap_or(0.0) as f32;
     let zoom = args::rec_f64(rec, "zoom").unwrap_or(3.5) as f32;
-    Ok(CameraState { yaw, pitch, zoom })
+    let tx = args::rec_f64(rec, "target_x").unwrap_or(0.0) as f32;
+    let ty = args::rec_f64(rec, "target_y").unwrap_or(0.0) as f32;
+    let tz = args::rec_f64(rec, "target_z").unwrap_or(0.0) as f32;
+    Ok(CameraState::new(yaw, pitch, zoom).with_target([tx, ty, tz]))
 }
 
 fn camera_record(cam: CameraState) -> Value {
@@ -26,6 +29,9 @@ fn camera_record(cam: CameraState) -> Value {
         ("yaw", Value::F64(cam.yaw as f64)),
         ("pitch", Value::F64(cam.pitch as f64)),
         ("zoom", Value::F64(cam.zoom as f64)),
+        ("target_x", Value::F64(cam.target[0] as f64)),
+        ("target_y", Value::F64(cam.target[1] as f64)),
+        ("target_z", Value::F64(cam.target[2] as f64)),
     ])
 }
 

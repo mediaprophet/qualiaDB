@@ -428,6 +428,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/shell/open-browser", post(open_browser_window_handler))
         .route("/api/shell/open-window", post(open_window_handler))
         .route("/api/clinical/framingham", post(clinical_framingham_handler))
+        .route("/api/vibe/eval", post(vibe_eval_handler))
         // Personal Saved Items remain local-only. They are not graph records,
         // social posts, or a LAN-sharing surface.
         .route(
@@ -545,6 +546,10 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .nest_service(
             "/pkg/vibe",
             ServeDir::new(portal_support_root.join("pkg").join("vibe")),
+        )
+        .nest_service(
+            "/poet-app",
+            ServeDir::new(portal_support_root.join("poet-app")).append_index_html_on_directories(true),
         )
         // Studio WASM build — browser-accessible Studio UI at /studio/
         .nest_service("/assets", ServeDir::new(studio_root.join("assets")))
@@ -1028,6 +1033,55 @@ async fn console_volume_handler() -> Response {
 
 async fn poet_volume_handler() -> Response {
     volume_html_response(crate::shell::POET_VOLUME_HTML)
+}
+
+#[derive(serde::Deserialize)]
+struct VibeEvalRequest {
+    source: String,
+    #[serde(default)]
+    as_cell: Option<bool>,
+}
+
+async fn vibe_eval_handler(
+    Json(payload): Json<VibeEvalRequest>,
+) -> Json<serde_json::Value> {
+    let mut host = vibe::LocalHost::default();
+    let mut env = vibe::Env::default();
+    let raw = payload.source.trim();
+    let as_cell = payload.as_cell.unwrap_or_else(|| raw.starts_with('='));
+    let src = if as_cell && !raw.starts_with('=') {
+        format!("= {raw}")
+    } else {
+        raw.to_string()
+    };
+
+    if as_cell || src.starts_with('=') {
+        match vibe::eval_cell(&src, &mut host, &mut env) {
+            Ok(val) => Json(serde_json::json!({
+                "ok": true,
+                "value": format!("{val:?}"),
+                "diagnostic": null
+            })),
+            Err(diag) => Json(serde_json::json!({
+                "ok": false,
+                "value": null,
+                "diagnostic": diag.message
+            })),
+        }
+    } else {
+        match vibe::load_program(&src) {
+            Ok(prog) => Json(serde_json::json!({
+                "ok": true,
+                "value": format!("Program parsed: {} items", prog.items.len()),
+                "diagnostic": null
+            })),
+            Err(diag) => Json(serde_json::json!({
+                "ok": false,
+                "value": null,
+                "diagnostic": diag.message
+            })),
+        }
+    }
 }
 
 /// `POST /api/shell/open-poet` — an os-shell volume asks the host to raise (or
@@ -2784,11 +2838,13 @@ mod ui_route_tests {
         assert_eq!(nexus_volume_handler().await.status(), StatusCode::OK);
         assert_eq!(clinical_volume_handler().await.status(), StatusCode::OK);
         assert_eq!(sanctuary_volume_handler().await.status(), StatusCode::OK);
+        assert_eq!(poet_volume_handler().await.status(), StatusCode::OK);
 
         assert!(crate::shell::TEN_D_VOLUME_HTML.contains("10D Manifold"));
         assert!(crate::shell::NEXUS_VOLUME_HTML.contains("Knowledge Nexus"));
         assert!(crate::shell::CLINICAL_VOLUME_HTML.contains("Clinical Decision"));
         assert!(crate::shell::SANCTUARY_VOLUME_HTML.contains("Sanctuary Vault"));
+        assert!(crate::shell::POET_VOLUME_HTML.contains("Poet HyperCanvas"));
     }
 
     #[tokio::test]
@@ -2806,6 +2862,17 @@ mod ui_route_tests {
         assert!(val.get("category").is_some());
         let risk = val["risk_percent"].as_f64().unwrap();
         assert!(risk > 0.0 && risk <= 100.0);
+    }
+
+    #[tokio::test]
+    async fn vibe_eval_handler_evaluates_pure_expression() {
+        let req = VibeEvalRequest {
+            source: "= 42 * 1024".into(),
+            as_cell: Some(true),
+        };
+        let Json(val) = vibe_eval_handler(Json(req)).await;
+        assert_eq!(val["ok"], true);
+        assert!(val["value"].as_str().unwrap().contains("43008"));
     }
 
     #[tokio::test]

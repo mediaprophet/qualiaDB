@@ -53,7 +53,7 @@ pub fn camera_frame_node(node: [f32; 3]) -> CameraState {
     let yaw = x.atan2(z);
     let pitch = (y / dist).clamp(-1.0, 1.0).asin();
     let zoom = (dist * 1.75).clamp(0.35, 48.0);
-    CameraState { yaw, pitch, zoom }.clamped()
+    CameraState::new(yaw, pitch, zoom).with_target([0.0, 0.0, 0.0]).clamped()
 }
 
 #[inline]
@@ -62,6 +62,18 @@ pub fn lerp_camera(a: CameraState, b: CameraState, t: f32) -> CameraState {
         yaw: a.yaw + (b.yaw - a.yaw) * t,
         pitch: a.pitch + (b.pitch - a.pitch) * t,
         zoom: a.zoom + (b.zoom - a.zoom) * t,
+        target: [
+            a.target[0] + (b.target[0] - a.target[0]) * t,
+            a.target[1] + (b.target[1] - a.target[1]) * t,
+            a.target[2] + (b.target[2] - a.target[2]) * t,
+        ],
+        sun_dir: [
+            a.sun_dir[0] + (b.sun_dir[0] - a.sun_dir[0]) * t,
+            a.sun_dir[1] + (b.sun_dir[1] - a.sun_dir[1]) * t,
+            a.sun_dir[2] + (b.sun_dir[2] - a.sun_dir[2]) * t,
+        ],
+        sun_intensity: a.sun_intensity + (b.sun_intensity - a.sun_intensity) * t,
+        ambient_intensity: a.ambient_intensity + (b.ambient_intensity - a.ambient_intensity) * t,
     }
     .clamped()
 }

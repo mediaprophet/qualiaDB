@@ -40,12 +40,25 @@ fn vertex_main(
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     // Flat per-face normal from the derivative of world position across the triangle.
     let n = normalize(cross(dpdx(input.world_pos), dpdy(input.world_pos)));
-    let key = normalize(vec3<f32>(0.45, 0.8, 0.55));
-    let diffuse = clamp(dot(n, key), 0.0, 1.0);
-    // Cheap rim term so silhouettes read against the dark field.
+
+    // Configurable directional key/sun light:
+    // _padding1.w = sun_dir_x, _padding2.x = sun_dir_y, _padding2.y = sun_dir_z
+    var sun_dir = vec3<f32>(camera._padding1.w, camera._padding2.x, camera._padding2.y);
+    if (dot(sun_dir, sun_dir) < 0.01) {
+        sun_dir = vec3<f32>(0.45, 0.8, 0.55);
+    }
+    let key = normalize(sun_dir);
+
+    // _padding2.z = sun_intensity (defaults to 1.0), _padding2.w = ambient_intensity (defaults to 0.25)
+    let sun_int = select(1.0, camera._padding2.z, camera._padding2.z > 0.0);
+    let amb_int = select(0.25, camera._padding2.w, camera._padding2.w > 0.0);
+
+    let diffuse = clamp(dot(n, key), 0.0, 1.0) * sun_int;
+
+    // Rim / fresnel term so silhouettes read cleanly
     let facing = clamp(abs(n.z), 0.0, 1.0);
     let rim = pow(1.0 - facing, 2.0);
     let base = input.color.rgb;
-    let col = base * (0.22 + 0.78 * diffuse) + vec3<f32>(0.10, 0.14, 0.22) * rim;
+    let col = base * (amb_int + diffuse) + vec3<f32>(0.10, 0.14, 0.22) * rim;
     return vec4<f32>(col, input.color.a);
 }

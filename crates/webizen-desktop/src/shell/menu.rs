@@ -236,15 +236,25 @@ pub fn open_poet_window(app: &AppHandle) {
         let _ = window.set_focus();
         return;
     }
-    match WebviewWindowBuilder::new(app, "poet", tauri::WebviewUrl::App("index.html".into()))
-        .title("Poet Harness — Vibe HyperCanvas")
-        .inner_size(1280.0, 840.0)
-        .initialization_script("window.location.hash = '#/poet';")
+    let port = crate::settings_server::current_settings_port();
+    let url = if port > 0 {
+        if let Ok(parsed) = format!("http://127.0.0.1:{port}/volumes/poet").parse() {
+            tauri::WebviewUrl::External(parsed)
+        } else {
+            tauri::WebviewUrl::App("volumes/poet.html".into())
+        }
+    } else {
+        tauri::WebviewUrl::App("volumes/poet.html".into())
+    };
+
+    match WebviewWindowBuilder::new(app, "poet", url)
+        .title("Poet HyperCanvas — Spatial Hypermedia Workspace")
+        .inner_size(1400.0, 900.0)
         .build()
     {
         Ok(window) => {
             let _ = window.set_focus();
-            crate::desktop_log::record("info", "opened dedicated Poet Harness window");
+            crate::desktop_log::record("info", "opened dedicated Poet HyperCanvas window");
         }
         Err(err) => {
             crate::desktop_log::record("error", format!("failed to open Poet window: {err}"));

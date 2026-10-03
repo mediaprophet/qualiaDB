@@ -488,7 +488,17 @@ impl QualiaPortal {
 
     /// Orbit camera IPC from the UI shell (yaw/pitch in radians, zoom = eye distance).
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) -> Result<(), JsValue> {
-        self.camera = CameraState { yaw, pitch, zoom }.clamped();
+        let current_target = self.camera.target;
+        self.camera = CameraState {
+            yaw,
+            pitch,
+            zoom,
+            target: current_target,
+            sun_dir: self.camera.sun_dir,
+            sun_intensity: self.camera.sun_intensity,
+            ambient_intensity: self.camera.ambient_intensity,
+        }
+        .clamped();
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
             gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
@@ -506,6 +516,123 @@ impl QualiaPortal {
 
     pub fn camera_zoom(&self) -> f32 {
         self.camera.zoom
+    }
+
+    /// RTS camera pan IPC (moves look-at center point in world space).
+    pub fn set_camera_pan(&mut self, target_x: f32, target_y: f32, target_z: f32) -> Result<(), JsValue> {
+        self.camera.target = [target_x, target_y, target_z];
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_camera_pan(target_x, target_y, target_z);
+        }
+        Ok(())
+    }
+
+    /// Full camera placement (yaw, pitch, zoom, and world-space target center).
+    pub fn set_camera_target(
+        &mut self,
+        yaw: f32,
+        pitch: f32,
+        zoom: f32,
+        target_x: f32,
+        target_y: f32,
+        target_z: f32,
+    ) -> Result<(), JsValue> {
+        self.camera = CameraState {
+            yaw,
+            pitch,
+            zoom,
+            target: [target_x, target_y, target_z],
+            sun_dir: self.camera.sun_dir,
+            sun_intensity: self.camera.sun_intensity,
+            ambient_intensity: self.camera.ambient_intensity,
+        }
+        .clamped();
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_camera_target(yaw, pitch, zoom, target_x, target_y, target_z);
+        }
+        Ok(())
+    }
+
+    pub fn camera_target_x(&self) -> f32 {
+        self.camera.target[0]
+    }
+
+    pub fn camera_target_y(&self) -> f32 {
+        self.camera.target[1]
+    }
+
+    pub fn camera_target_z(&self) -> f32 {
+        self.camera.target[2]
+    }
+
+    /// Configure viewport background / sky clear color (r, g, b, a in 0.0..1.0).
+    pub fn set_clear_color(&mut self, r: f64, g: f64, b: f64, a: f64) {
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_clear_color(r, g, b, a);
+        }
+    }
+
+    /// Configure directional sun lighting (direction vector, sun intensity, and ambient intensity).
+    pub fn set_lighting(
+        &mut self,
+        sun_x: f32,
+        sun_y: f32,
+        sun_z: f32,
+        sun_intensity: f32,
+        ambient_intensity: f32,
+    ) {
+        self.camera.sun_dir = [sun_x, sun_y, sun_z];
+        self.camera.sun_intensity = sun_intensity;
+        self.camera.ambient_intensity = ambient_intensity;
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_lighting(sun_x, sun_y, sun_z, sun_intensity, ambient_intensity);
+        }
+    }
+
+    /// Apply an authored atmospheric sky preset:
+    /// - 0: Cyber-Dark / Deep Void
+    /// - 1: Daylight (clear sky, high warm sun, balanced ambient)
+    /// - 2: Sunset / Golden Hour (warm orange sky, low golden sun)
+    /// - 3: Night / Moonlight (dark indigo sky, cold moonlight)
+    pub fn set_sky_preset(&mut self, preset: u32) {
+        match preset {
+            1 => {
+                self.camera.sun_dir = [0.45, 0.85, 0.35];
+                self.camera.sun_intensity = 1.25;
+                self.camera.ambient_intensity = 0.40;
+            }
+            2 => {
+                self.camera.sun_dir = [0.85, 0.25, 0.45];
+                self.camera.sun_intensity = 1.15;
+                self.camera.ambient_intensity = 0.35;
+            }
+            3 => {
+                self.camera.sun_dir = [-0.3, 0.9, -0.2];
+                self.camera.sun_intensity = 0.45;
+                self.camera.ambient_intensity = 0.12;
+            }
+            _ => {
+                self.camera.sun_dir = [0.45, 0.8, 0.55];
+                self.camera.sun_intensity = 1.0;
+                self.camera.ambient_intensity = 0.25;
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_sky_preset(preset);
+        }
+    }
+
+    pub fn sun_intensity(&self) -> f32 {
+        self.camera.sun_intensity
+    }
+
+    pub fn ambient_intensity(&self) -> f32 {
+        self.camera.ambient_intensity
     }
 
     /// Human-Centric observer standpoint IPC (independent of camera lens).

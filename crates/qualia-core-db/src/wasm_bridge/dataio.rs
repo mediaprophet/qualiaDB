@@ -431,6 +431,31 @@ pub fn read_hmc_bundle_entry_wasm(bundle_bytes: &[u8], key: &str) -> Result<Vec<
     Ok(slice.to_vec())
 }
 
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn list_hmc_bundle_entries_wasm(bundle_bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let reader = crate::bundle::BundleReader::parse(bundle_bytes)
+        .map_err(|e| JsValue::from_str(&format!("HMC parse error: {e}")))?;
+    #[derive(Serialize)]
+    struct EntryInfo {
+        key: String,
+        kind: String,
+        length: u64,
+        offset: u64,
+    }
+    let list: Vec<EntryInfo> = reader
+        .entries()
+        .iter()
+        .map(|e| EntryInfo {
+            key: e.key.clone(),
+            kind: e.kind.clone(),
+            length: e.length,
+            offset: e.offset,
+        })
+        .collect();
+    Ok(serde_wasm_bindgen::to_value(&list)?)
+}
+
 // ─── Mutable Q42 Session WASM Bridge (QG-15) ────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
@@ -463,6 +488,27 @@ impl WasmQ42Session {
         Ok(WasmQ42Session { inner: session })
     }
 
+    /// Load an existing durable Q42 session from journal bytes and optional base Quin snapshot bytes.
+    pub fn load_from_bytes(
+        journal_bytes: &[u8],
+        base_quins_bytes: &[u8],
+    ) -> Result<WasmQ42Session, JsValue> {
+        let mut base_quins = Vec::new();
+        if !base_quins_bytes.is_empty() {
+            for chunk in base_quins_bytes.chunks_exact(48) {
+                let q = crate::q42::journal::quin_from_bytes(chunk)
+                    .map_err(|e| JsValue::from_str(&format!("Invalid base quin: {e}")))?;
+                base_quins.push(q);
+            }
+        }
+        let storage = std::io::Cursor::new(journal_bytes.to_vec());
+        let journal = crate::q42::journal::Q42Journal::open_any(storage)
+            .map_err(|e| JsValue::from_str(&format!("Failed to open journal: {e}")))?;
+        let session = crate::q42::journal::MutableQ42Session::open(journal, &base_quins)
+            .map_err(|e| JsValue::from_str(&format!("Failed to open session: {e}")))?;
+        Ok(WasmQ42Session { inner: session })
+    }
+
     pub fn stage_add_quin(&mut self, s: u64, p: u64, o: u64, c: u64, m: u64) {
         let parity = s ^ p ^ o ^ c ^ m;
         self.inner.stage_add(crate::NQuin {
@@ -473,6 +519,22 @@ impl WasmQ42Session {
             metadata: m,
             parity,
         });
+    }
+
+    pub fn stage_remove_quin(&mut self, s: u64, p: u64, o: u64, c: u64, m: u64) {
+        let parity = s ^ p ^ o ^ c ^ m;
+        self.inner.stage_remove(crate::NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: c,
+            metadata: m,
+            parity,
+        });
+    }
+
+    pub fn rollback_staged(&mut self) {
+        self.inner.rollback_staged();
     }
 
     pub fn commit_transaction(&mut self, command_hash: u64, actor_did: u64) -> Result<u32, JsValue> {
@@ -487,6 +549,61 @@ impl WasmQ42Session {
 
     pub fn export_journal_bytes(&self) -> Vec<u8> {
         self.inner.journal.storage.get_ref().clone()
+    }
+
+    /// Export all currently active Quins as a flat contiguous 48-byte buffer.
+    pub fn export_active_quins_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.inner.active_state.len() * 48);
+        for q in &self.inner.active_state {
+            bytes.extend_from_slice(&crate::q42::journal::quin_to_bytes(q));
+        }
+        bytes
+    }
+
+    /// Check if a Quin matching the given pattern exists in the active session (0 = wildcard).
+    pub fn query_has_quin(&self, s: u64, p: u64, o: u64) -> bool {
+        for q in &self.inner.active_state {
+            if (s == 0 || q.subject == s)
+                && (p == 0 || q.predicate == p)
+                && (o == 0 || q.object == o)
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Query the object value for a given (subject, predicate) pair.
+    pub fn query_object_for_predicate(&self, s: u64, p: u64) -> Option<u64> {
+        for q in &self.inner.active_state {
+            if q.subject == s && q.predicate == p {
+                return Some(q.object);
+            }
+        }
+        None
+    }
+
+    /// Rewind session state to a specific simulation/historical tick.
+    pub fn rewind_to_tick(&mut self, base_quins_bytes: &[u8], target_tick: u64) -> Result<(), JsValue> {
+        let mut base_quins = Vec::new();
+        if !base_quins_bytes.is_empty() {
+            for chunk in base_quins_bytes.chunks_exact(48) {
+                let q = crate::q42::journal::quin_from_bytes(chunk)
+                    .map_err(|e| JsValue::from_str(&format!("Invalid base quin: {e}")))?;
+                base_quins.push(q);
+            }
+        }
+        self.inner
+            .rewind_to_tick(&base_quins, target_tick)
+            .map_err(|e| JsValue::from_str(&format!("Rewind error: {e}")))
+    }
+
+    pub fn current_tick(&self) -> u64 {
+        self.inner.current_tick()
+    }
+
+    pub fn advance_tick(&mut self, tick: u64) {
+        self.inner.advance_tick(tick);
     }
 }
 
@@ -551,6 +668,93 @@ impl WasmSimulationWorld {
 
     pub fn current_tick(&self) -> u64 {
         self.inner.current_tick
+    }
+
+    pub fn get_agent_pos_x_mm(&self, entity_id: u64) -> Option<i64> {
+        self.inner.get_agent_position(entity_id).map(|(x, _)| x)
+    }
+
+    pub fn get_agent_pos_y_mm(&self, entity_id: u64) -> Option<i64> {
+        self.inner.get_agent_position(entity_id).map(|(_, y)| y)
+    }
+
+    /// Spatial box query returning matching entity IDs as strings (for u64 JS precision).
+    pub fn query_agents_in_bounds(
+        &self,
+        min_x_mm: i64,
+        min_y_mm: i64,
+        max_x_mm: i64,
+        max_y_mm: i64,
+    ) -> Vec<String> {
+        let mut out_ids = [0u64; 64];
+        let count = self.inner.query_agents_in_bounds(
+            min_x_mm,
+            min_y_mm,
+            max_x_mm,
+            max_y_mm,
+            &mut out_ids,
+        );
+        out_ids[..count].iter().map(|id| id.to_string()).collect()
+    }
+
+    /// Deterministic 2D grid pathfinder (QG-11).
+    /// Returns interleaved waypoint coordinates: [x0, y0, x1, y1, ...].
+    pub fn find_path_grid(
+        &self,
+        start_x: i32,
+        start_y: i32,
+        target_x: i32,
+        target_y: i32,
+        obstacles: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Vec<i32> {
+        let mut nav = crate::simulation::navigation::NavigationGrid::<128, 128>::new();
+        nav.width = width.min(128);
+        nav.height = height.min(128);
+        let copy_len = obstacles.len().min(nav.width * nav.height);
+        nav.cells[..copy_len].copy_from_slice(&obstacles[..copy_len]);
+
+        let mut out_path = [(0i32, 0i32); 128];
+        let len = nav.find_path((start_x, start_y), (target_x, target_y), &mut out_path);
+        let mut flat = Vec::with_capacity(len * 2);
+        for i in 0..len {
+            flat.push(out_path[i].0);
+            flat.push(out_path[i].1);
+        }
+        flat
+    }
+
+    /// Compute group formation destinations for `count` agents (QG-11).
+    /// Returns interleaved destination coordinates: [x0, y0, x1, y1, ...].
+    pub fn compute_group_formation(
+        &self,
+        target_x: i32,
+        target_y: i32,
+        count: usize,
+        obstacles: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Vec<i32> {
+        let mut nav = crate::simulation::navigation::NavigationGrid::<128, 128>::new();
+        nav.width = width.min(128);
+        nav.height = height.min(128);
+        let copy_len = obstacles.len().min(nav.width * nav.height);
+        nav.cells[..copy_len].copy_from_slice(&obstacles[..copy_len]);
+
+        let mut out_dests = [(0i32, 0i32); 64];
+        let written = nav.compute_group_formation_destinations(
+            target_x,
+            target_y,
+            count.min(64),
+            &mut out_dests,
+        );
+        let mut flat = Vec::with_capacity(written * 2);
+        for i in 0..written {
+            flat.push(out_dests[i].0);
+            flat.push(out_dests[i].1);
+        }
+        flat
     }
 }
 

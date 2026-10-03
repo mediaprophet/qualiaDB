@@ -2,12 +2,16 @@
 
 use crate::render::telemetry::CameraUniform;
 
-/// Interactive orbit state driven from JS (`set_camera`).
+/// Interactive orbit state driven from JS (`set_camera`, `set_camera_pan`, `set_camera_target`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CameraState {
     pub yaw: f32,
     pub pitch: f32,
     pub zoom: f32,
+    pub target: [f32; 3],
+    pub sun_dir: [f32; 3],
+    pub sun_intensity: f32,
+    pub ambient_intensity: f32,
 }
 
 impl Default for CameraState {
@@ -16,11 +20,47 @@ impl Default for CameraState {
             yaw: 0.0,
             pitch: 0.25,
             zoom: 3.5,
+            target: [0.0, 0.0, 0.0],
+            sun_dir: [0.45, 0.8, 0.55],
+            sun_intensity: 1.0,
+            ambient_intensity: 0.25,
         }
     }
 }
 
 impl CameraState {
+    #[inline]
+    pub fn new(yaw: f32, pitch: f32, zoom: f32) -> Self {
+        Self {
+            yaw,
+            pitch,
+            zoom,
+            target: [0.0, 0.0, 0.0],
+            sun_dir: [0.45, 0.8, 0.55],
+            sun_intensity: 1.0,
+            ambient_intensity: 0.25,
+        }
+    }
+
+    #[inline]
+    pub fn with_target(mut self, target: [f32; 3]) -> Self {
+        self.target = target;
+        self
+    }
+
+    #[inline]
+    pub fn with_lighting(
+        mut self,
+        sun_dir: [f32; 3],
+        sun_intensity: f32,
+        ambient_intensity: f32,
+    ) -> Self {
+        self.sun_dir = sun_dir;
+        self.sun_intensity = sun_intensity;
+        self.ambient_intensity = ambient_intensity;
+        self
+    }
+
     #[inline]
     pub fn clamped(mut self) -> Self {
         const PITCH_LIMIT: f32 = 1.45;
@@ -32,13 +72,27 @@ impl CameraState {
     /// Build GPU uniform block (128 B) including pre-multiplied view×projection.
     pub fn to_uniform(&self, aspect: f32, tensor_mode: bool) -> CameraUniform {
         let state = self.clamped();
-        let eye = orbit_eye_position(state.yaw, state.pitch, state.zoom);
+        let eye = orbit_eye_position_target(state.yaw, state.pitch, state.zoom, state.target);
         let mut padding = [0.0_f32; 12];
         padding[1] = eye[0];
         padding[2] = eye[1];
         padding[3] = eye[2];
+        padding[4] = state.target[0];
+        padding[5] = state.target[1];
+        padding[6] = state.target[2];
+        padding[7] = state.sun_dir[0];
+        padding[8] = state.sun_dir[1];
+        padding[9] = state.sun_dir[2];
+        padding[10] = state.sun_intensity;
+        padding[11] = state.ambient_intensity;
         CameraUniform {
-            view_projection: orbit_view_projection(state.yaw, state.pitch, state.zoom, aspect),
+            view_projection: orbit_view_projection_target(
+                state.yaw,
+                state.pitch,
+                state.zoom,
+                state.target,
+                aspect,
+            ),
             yaw: state.yaw,
             pitch: state.pitch,
             zoom: state.zoom,
@@ -51,18 +105,38 @@ impl CameraState {
 /// Orbit camera eye position — matches the `look_at` used in [`orbit_view_projection`].
 #[inline]
 pub fn orbit_eye_position(yaw: f32, pitch: f32, zoom: f32) -> [f32; 3] {
+    orbit_eye_position_target(yaw, pitch, zoom, [0.0, 0.0, 0.0])
+}
+
+/// Orbit camera eye position with pan target center point.
+#[inline]
+pub fn orbit_eye_position_target(yaw: f32, pitch: f32, zoom: f32, target: [f32; 3]) -> [f32; 3] {
     let pitch = pitch.clamp(-1.45, 1.45);
     let dist = zoom.clamp(0.35, 48.0);
     let cy = yaw.cos();
     let sy = yaw.sin();
     let cp = pitch.cos();
     let sp = pitch.sin();
-    [dist * cp * sy, dist * sp, dist * cp * cy]
+    [
+        target[0] + dist * cp * sy,
+        target[1] + dist * sp,
+        target[2] + dist * cp * cy,
+    ]
 }
 
-/// Column-major view×projection (WGSL `mat4x4<f32>` compatible).
+/// Column-major view×projection (WGSL `mat4x4<f32>` compatible) centered at world origin.
 pub fn orbit_view_projection(yaw: f32, pitch: f32, zoom: f32, aspect: f32) -> [[f32; 4]; 4] {
-    let yaw = yaw;
+    orbit_view_projection_target(yaw, pitch, zoom, [0.0, 0.0, 0.0], aspect)
+}
+
+/// Column-major view×projection centered at arbitrary world-space target center.
+pub fn orbit_view_projection_target(
+    yaw: f32,
+    pitch: f32,
+    zoom: f32,
+    target: [f32; 3],
+    aspect: f32,
+) -> [[f32; 4]; 4] {
     let pitch = pitch.clamp(-1.45, 1.45);
     let dist = zoom.clamp(0.35, 48.0);
     let aspect = aspect.max(0.05);
@@ -72,11 +146,11 @@ pub fn orbit_view_projection(yaw: f32, pitch: f32, zoom: f32, aspect: f32) -> [[
     let cp = pitch.cos();
     let sp = pitch.sin();
 
-    let eye_x = dist * cp * sy;
-    let eye_y = dist * sp;
-    let eye_z = dist * cp * cy;
+    let eye_x = target[0] + dist * cp * sy;
+    let eye_y = target[1] + dist * sp;
+    let eye_z = target[2] + dist * cp * cy;
 
-    let view = look_at_rh([eye_x, eye_y, eye_z], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
+    let view = look_at_rh([eye_x, eye_y, eye_z], target, [0.0, 1.0, 0.0]);
     let proj = perspective_rh_gl(45.0_f32.to_radians(), aspect, 0.05, 200.0);
     mat4_mul(proj, view)
 }
@@ -172,11 +246,40 @@ mod tests {
             yaw: 0.5,
             pitch: 0.25,
             zoom: 4.0,
+            target: [0.0, 0.0, 0.0],
+            sun_dir: [0.45, 0.8, 0.55],
+            sun_intensity: 1.0,
+            ambient_intensity: 0.25,
         };
         let u = state.to_uniform(16.0 / 9.0, true);
         let eye = orbit_eye_position(state.yaw, state.pitch, state.zoom);
         assert!((u._padding[1] - eye[0]).abs() < 1e-5);
         assert!((u._padding[2] - eye[1]).abs() < 1e-5);
         assert!((u._padding[3] - eye[2]).abs() < 1e-5);
+    }
+
+    #[test]
+    fn camera_pan_shifts_target_and_eye() {
+        let state = CameraState::new(0.0, 0.0, 10.0).with_target([100.0, 50.0, -25.0]);
+        let eye = orbit_eye_position_target(state.yaw, state.pitch, state.zoom, state.target);
+        assert!((eye[0] - 100.0).abs() < 1e-5);
+        assert!((eye[1] - 50.0).abs() < 1e-5);
+        assert!((eye[2] - (-15.0)).abs() < 1e-5);
+
+        let u = state.to_uniform(1.0, false);
+        assert!((u._padding[4] - 100.0).abs() < 1e-5);
+        assert!((u._padding[5] - 50.0).abs() < 1e-5);
+        assert!((u._padding[6] - (-25.0)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn camera_lighting_uniform_carrying() {
+        let state = CameraState::new(0.0, 0.25, 3.5).with_lighting([0.5, 0.8, 0.2], 1.5, 0.4);
+        let u = state.to_uniform(1.0, false);
+        assert!((u._padding[7] - 0.5).abs() < 1e-5);
+        assert!((u._padding[8] - 0.8).abs() < 1e-5);
+        assert!((u._padding[9] - 0.2).abs() < 1e-5);
+        assert!((u._padding[10] - 1.5).abs() < 1e-5);
+        assert!((u._padding[11] - 0.4).abs() < 1e-5);
     }
 }

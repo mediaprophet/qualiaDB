@@ -104,3 +104,8 @@ $sync = Join-Path $PSScriptRoot "sync-portal-design-kit.ps1"
 if (Test-Path $sync) {
     & $sync
 }
+
+$poetSync = Join-Path $PSScriptRoot "package-poet-wasm.ps1"
+if (Test-Path $poetSync) {
+    & $poetSync
+}
