@@ -415,60 +415,121 @@ pub fn creator_field_sample(args_v: &Value, _span: Span) -> Result<Value, Diagno
 }
 
 /// `Physics.material_query` — Returns faceted signature traits for a physical material.
-pub fn creator_material_query(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    use vibe::physics::MaterialSignature;
+///
+/// Game water forms are refused: they are not [`vibe::physics::MaterialSignature::liquid_water`].
+/// Optical and acoustic are readings of one EMF spectrum axis, not a baked texture.
+pub fn creator_material_query(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    use vibe::physics::{MaterialSignature, PartBindError, SignatureFacet};
 
     let mat_id = args::rec_str(args_v, "material").unwrap_or("sugar_cube");
-    let sig = match mat_id {
-        "water" | "liquid_water" => MaterialSignature::liquid_water(),
-        "oil" | "mineral_oil" => MaterialSignature::mineral_oil(),
-        _ => MaterialSignature::sugar_cube(),
+    let sig = match MaterialSignature::lookup(mat_id) {
+        Ok(sig) => sig,
+        Err(PartBindError::WaterFormNotSignature) => {
+            return Err(args::bad(span, PartBindError::WaterFormNotSignature.message()));
+        }
+        Err(PartBindError::LivingKingdomNotMaterial) => {
+            return Err(args::bad(
+                span,
+                PartBindError::LivingKingdomNotMaterial.message(),
+            ));
+        }
+        Err(PartBindError::UnknownSignature) => MaterialSignature::sugar_cube(),
+        Err(other) => return Err(args::bad(span, other.message())),
     };
 
     let mut map = std::collections::BTreeMap::new();
-    map.insert("id".to_string(), Value::String(sig.id));
-    map.insert("name".to_string(), Value::String(sig.name));
-
-    if let Some(m) = sig.mechanical {
-        let mut mech_map = std::collections::BTreeMap::new();
-        mech_map.insert("yield_kpa".to_string(), Value::F64(m.yield_kpa));
-        mech_map.insert(
-            "youngs_modulus_gpa".to_string(),
-            Value::F64(m.youngs_modulus_gpa),
-        );
-        mech_map.insert("density_kg_m3".to_string(), Value::F64(m.density_kg_m3));
-        mech_map.insert("poisson_ratio".to_string(), Value::F64(m.poisson_ratio));
-        map.insert("mechanical".to_string(), Value::Record(mech_map));
-    }
-
-    if let Some(o) = sig.optical {
-        let mut opt_map = std::collections::BTreeMap::new();
-        opt_map.insert("albedo".to_string(), Value::F64(o.albedo));
-        opt_map.insert("ior".to_string(), Value::F64(o.ior));
-        opt_map.insert("absorption".to_string(), Value::F64(o.absorption));
-        map.insert("optical".to_string(), Value::Record(opt_map));
-    }
-
-    if let Some(c) = sig.chemical {
-        let mut chem_map = std::collections::BTreeMap::new();
-        if let Some(s) = c.soluble_in {
-            chem_map.insert("soluble_in".to_string(), Value::String(s));
+    map.insert("id".to_string(), Value::String(sig.id.clone()));
+    map.insert("name".to_string(), Value::String(sig.name.clone()));
+    map.insert("writes_spatial".to_string(), Value::Bool(false));
+    map.insert("baked_frame".to_string(), Value::Bool(false));
+    for facet in [
+        SignatureFacet::Mechanical,
+        SignatureFacet::Optical,
+        SignatureFacet::Acoustic,
+        SignatureFacet::Chemical,
+        SignatureFacet::Thermal,
+    ] {
+        let fields = sig.facet_fields(facet);
+        if fields.is_empty() {
+            continue;
         }
-        chem_map.insert(
-            "dissolve_rate_per_s".to_string(),
-            Value::F64(c.dissolve_rate_per_s),
-        );
-        if let Some(p) = c.dissolve_products {
-            chem_map.insert("dissolve_products".to_string(), Value::String(p));
+        let mut facet_map = std::collections::BTreeMap::new();
+        for (key, field) in fields {
+            facet_map.insert(key.to_string(), facet_field_to_value(field));
         }
-        chem_map.insert(
-            "immiscible_with".to_string(),
-            Value::List(c.immiscible_with.into_iter().map(Value::String).collect()),
-        );
-        map.insert("chemical".to_string(), Value::Record(chem_map));
+        map.insert(facet.as_str().to_string(), Value::Record(facet_map));
     }
-
     Ok(Value::Record(map))
+}
+
+fn facet_field_to_value(field: vibe::physics::FacetField) -> Value {
+    match field {
+        vibe::physics::FacetField::Num(n) => Value::F64(n),
+        vibe::physics::FacetField::Text(s) => Value::String(s),
+        vibe::physics::FacetField::Texts(xs) => {
+            Value::List(xs.into_iter().map(Value::String).collect())
+        }
+    }
+}
+
+/// `Physics.part_signature` — bind a part continuant to a material signature.
+///
+/// Shared words for Poet and every Qualia app: `part`, `signature`, and either
+/// `facet` or `reading`. `reading` is `colour` or `sound` — two readings of one
+/// EMF spectrum axis, not one facet that hides which, and not a town or game
+/// dialect. The part is its own continuant. `liquid_water` is not a water
+/// condition. Flora, fauna, and funga are not sugar, water, or oil records.
+/// Stress changes the spectrum reading; it does not swap a baked texture or
+/// write spatial coordinates. The result is an editable construct (cells +
+/// records), not a baked frame.
+///
+/// Optional `stress` in [0, 1] shifts the spectrum reading before the facet is read.
+pub fn creator_part_signature(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    use vibe::physics::PartContinuant;
+
+    let part = args::rec_str(args_v, "part").ok_or_else(|| {
+        args::bad(
+            span,
+            "part_signature needs { part, signature, facet or reading }",
+        )
+    })?;
+    let signature = args::rec_str(args_v, "signature").ok_or_else(|| {
+        args::bad(
+            span,
+            "part_signature needs { part, signature, facet or reading }",
+        )
+    })?;
+    let facet = args::rec_str(args_v, "facet");
+    let reading = args::rec_str(args_v, "reading");
+    let mut bound = PartContinuant::bind_with(part, signature, facet, reading)
+        .map_err(|e| args::bad(span, e.message()))?;
+    if let Some(stress) = args::rec_f64(args_v, "stress") {
+        bound = bound.with_stress(stress);
+    }
+    Ok(bound.to_record())
+}
+
+/// `Physics.tick_spectrum_reading` — one tick draws the named colour or sound reading.
+///
+/// Same physics stack as `part_signature`. No GPU adapter check: a missing
+/// adapter does not stop the tick. The record is what Poet imports; it is not
+/// a baked frame and it does not write spatial coordinates.
+pub fn creator_tick_spectrum_reading(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let reading = args::rec_str(args_v, "reading").ok_or_else(|| {
+        args::bad(
+            span,
+            "tick_spectrum_reading needs { part, signature, reading: colour|sound }",
+        )
+    })?;
+    if !matches!(reading, "colour" | "color" | "sound") {
+        return Err(args::bad(span, "reading must be colour or sound"));
+    }
+    let mut drawn = creator_part_signature(args_v, span)?;
+    if let Value::Record(rec) = &mut drawn {
+        rec.insert("tick".to_string(), Value::Bool(true));
+        rec.insert("adapter_required".to_string(), Value::Bool(false));
+    }
+    Ok(drawn)
 }
 
 /// `Physics.evaluate_interaction` — Applies interaction laws to continuants and ambient fields.
@@ -865,6 +926,110 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn invoke_part_signature_names_part_facet_and_refuses_water_forms() {
+        let args = rec(&[
+            (
+                "part",
+                Value::String("did:q42:part:water-tank-shell".into()),
+            ),
+            ("signature", Value::String("hdpe_tank_shell".into())),
+            ("facet", Value::String("mechanical".into())),
+        ]);
+        let res = creator_part_signature(&args, Span::new(0, 0)).expect("part_signature");
+        match res {
+            Value::Record(m) => {
+                assert_eq!(
+                    m.get("part").and_then(|v| match v {
+                        Value::String(s) => Some(s.as_str()),
+                        _ => None,
+                    }),
+                    Some("did:q42:part:water-tank-shell")
+                );
+                assert_eq!(
+                    m.get("signature").and_then(|v| match v {
+                        Value::String(s) => Some(s.as_str()),
+                        _ => None,
+                    }),
+                    Some("did:q42:material:hdpe-tank-shell-v1")
+                );
+                assert_eq!(m.get("subsumes_whole"), Some(&Value::Bool(false)));
+                assert_eq!(m.get("baked_frame"), Some(&Value::Bool(false)));
+                assert_eq!(
+                    m.get("reads_emf_spectrum"),
+                    Some(&Value::Bool(false))
+                );
+                assert!(m.get("reading").is_none());
+                match m.get("fields") {
+                    Some(Value::Record(r)) => {
+                        let y = r.get("yield_kpa").and_then(args::as_f64).unwrap();
+                        assert!((y - 25_000.0).abs() < 1e-6);
+                    }
+                    other => panic!("{other:?}"),
+                }
+            }
+            other => panic!("{other:?}"),
+        }
+
+        let grey = rec(&[
+            ("part", Value::String("did:q42:part:x".into())),
+            ("signature", Value::String("grey".into())),
+            ("facet", Value::String("chemical".into())),
+        ]);
+        let err = creator_part_signature(&grey, Span::new(0, 0)).unwrap_err();
+        assert!(err.to_string().contains("liquid_water"), "{err}");
+
+        let calm = rec(&[
+            (
+                "part",
+                Value::String("did:q42:part:water-tank-shell".into()),
+            ),
+            ("signature", Value::String("hdpe_tank_shell".into())),
+            ("facet", Value::String("optical".into())),
+        ]);
+        let stressed = rec(&[
+            (
+                "part",
+                Value::String("did:q42:part:water-tank-shell".into()),
+            ),
+            ("signature", Value::String("hdpe_tank_shell".into())),
+            ("facet", Value::String("optical".into())),
+            ("stress", Value::F64(1.0)),
+        ]);
+        let calm_v = creator_part_signature(&calm, Span::new(0, 0)).unwrap();
+        let hot_v = creator_part_signature(&stressed, Span::new(0, 0)).unwrap();
+        let albedo = |v: &Value| match v {
+            Value::Record(m) => match m.get("fields") {
+                Some(Value::Record(r)) => r.get("albedo").and_then(args::as_f64).unwrap(),
+                other => panic!("{other:?}"),
+            },
+            other => panic!("{other:?}"),
+        };
+        assert!(albedo(&hot_v) < albedo(&calm_v));
+        match &hot_v {
+            Value::Record(m) => {
+                assert_eq!(
+                    m.get("spectrum_axis"),
+                    Some(&Value::String("emf".into()))
+                );
+                assert_eq!(m.get("writes_spatial"), Some(&Value::Bool(false)));
+                assert_eq!(
+                    m.get("reading"),
+                    Some(&Value::String("colour".into()))
+                );
+            }
+            other => panic!("{other:?}"),
+        }
+
+        let flora = rec(&[
+            ("part", Value::String("did:q42:part:organism".into())),
+            ("signature", Value::String("fauna".into())),
+            ("reading", Value::String("sound".into())),
+        ]);
+        let err = creator_part_signature(&flora, Span::new(0, 0)).unwrap_err();
+        assert!(err.to_string().contains("fauna"), "{err}");
     }
 
     #[test]

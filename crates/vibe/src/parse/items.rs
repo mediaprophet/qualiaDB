@@ -382,6 +382,18 @@ impl<'a> Parser<'a> {
     ///   yield: 50.0 <qudt:KiloPascal>
     ///   density: 1580.0;
     /// ```
+    ///
+    /// Shared words for Poet and every Qualia app (not a town or game dialect):
+    /// **part**, **signature**, and either **facet** or **reading**.
+    /// `reading` is `colour` or `sound` — two readings of one EMF spectrum axis.
+    /// They are property names, not new reserved keywords.
+    ///
+    /// ```vibe
+    /// material shell: Material
+    ///   part: "did:q42:part:polymer-shell",
+    ///   signature: "hdpe_tank_shell",
+    ///   reading: "colour";
+    /// ```
     pub(crate) fn parse_material(&mut self) -> Result<MaterialDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // 'material'

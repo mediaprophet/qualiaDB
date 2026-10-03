@@ -52,6 +52,13 @@ impl<'a, H: Host> Engine<'a, H> {
                         let v = self.eval_expr(&prop.value, env)?;
                         rec.insert(prop.name.clone(), v);
                     }
+                    // Words a cell uses: part, signature, facet. One physics stack.
+                    if rec.contains_key("part")
+                        || rec.contains_key("signature")
+                        || rec.contains_key("facet")
+                    {
+                        attach_part_signature(&mut rec, m.span)?;
+                    }
                     env.materials.insert(m.name.clone(), Value::Record(rec));
                 }
                 Item::Present(p) => {
@@ -286,4 +293,74 @@ fn assign_path(env: &mut Env, target: &Expr, value: Value) -> Result<(), Diagnos
             "bind target must be an identifier or record.field",
         )),
     }
+}
+
+/// Resolve `part` + `signature` plus a facet and/or a colour|sound reading.
+///
+/// Shared words for Poet and every Qualia app, not a town or game dialect.
+/// A part is its own continuant. Water conditions are not `liquid_water`.
+/// Flora, fauna, and funga are not sugar, water, or oil records. Colour and
+/// sound are two readings of one EMF spectrum axis. They do not write spatial
+/// coordinates or bake a frame.
+fn attach_part_signature(
+    rec: &mut std::collections::BTreeMap<String, Value>,
+    span: crate::span::Span,
+) -> Result<(), Diagnostic> {
+    use crate::physics::PartContinuant;
+
+    let part = match rec.get("part") {
+        Some(Value::String(s)) => s.clone(),
+        _ => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "part must name a continuant id",
+            ))
+        }
+    };
+    let signature = match rec.get("signature") {
+        Some(Value::String(s)) => s.clone(),
+        _ => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "signature must name a material signature on this physics stack",
+            ))
+        }
+    };
+    let facet = match rec.get("facet") {
+        Some(Value::String(s)) => Some(s.clone()),
+        Some(_) => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "facet must be mechanical, thermal, optical, acoustic, or chemical",
+            ))
+        }
+        None => None,
+    };
+    let reading = match rec.get("reading") {
+        Some(Value::String(s)) => Some(s.clone()),
+        Some(_) => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "reading must be colour or sound",
+            ))
+        }
+        None => None,
+    };
+    let bound = PartContinuant::bind_with(
+        &part,
+        &signature,
+        facet.as_deref(),
+        reading.as_deref(),
+    )
+    .map_err(|e| Diagnostic::new(DiagCode::E600, span, e.message()))?;
+    if let Value::Record(extra) = bound.to_record() {
+        for (k, v) in extra {
+            rec.insert(k, v);
+        }
+    }
+    Ok(())
 }

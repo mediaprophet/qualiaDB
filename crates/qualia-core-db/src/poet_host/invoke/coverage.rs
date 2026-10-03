@@ -385,6 +385,22 @@ pub const SCHEMAS: &[MachineSchema] = &[
         return_shape: r#"{"type":"record"}"#,
     },
     MachineSchema {
+        id: ids::PHYS_TICK_SPECTRUM_READING,
+        family: "physics",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"part":{"type":"string"},"signature":{"type":"string"},"reading":{"type":"string"}}}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::PHYS_PART_SIGNATURE,
+        family: "physics",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"part":{"type":"string"},"signature":{"type":"string"},"facet":{"type":"string"}}}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
         id: ids::PHYS_EVALUATE_INTERACTION,
         family: "physics",
         honesty: "certified",

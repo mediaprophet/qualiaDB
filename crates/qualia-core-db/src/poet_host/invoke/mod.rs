@@ -641,6 +641,8 @@ pub fn dispatch(
         ids::PHYS_EMF_SAMPLE_AT_DEPTH => science::emf_sample_at_depth(args, span),
         ids::PHYS_FIELD_SAMPLE => science::creator_field_sample(args, span),
         ids::PHYS_MATERIAL_QUERY => science::creator_material_query(args, span),
+        ids::PHYS_PART_SIGNATURE => science::creator_part_signature(args, span),
+        ids::PHYS_TICK_SPECTRUM_READING => science::creator_tick_spectrum_reading(args, span),
         ids::PHYS_EVALUATE_INTERACTION => science::creator_evaluate_interaction(args, span),
         ids::BIO_ALIGN => science::align(args, span),
         ids::BIO_WORKBENCH => science::bio_compute(args, span),

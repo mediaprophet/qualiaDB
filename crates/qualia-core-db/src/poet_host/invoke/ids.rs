@@ -487,6 +487,8 @@ pub const PHYS_EMF_FIELD_GRID_3D: &str = "Physics.emf_field_grid_3d";
 pub const PHYS_EMF_SAMPLE_AT_DEPTH: &str = "Physics.emf_sample_at_depth";
 pub const PHYS_FIELD_SAMPLE: &str = "Physics.field_sample";
 pub const PHYS_MATERIAL_QUERY: &str = "Physics.material_query";
+pub const PHYS_PART_SIGNATURE: &str = "Physics.part_signature";
+pub const PHYS_TICK_SPECTRUM_READING: &str = "Physics.tick_spectrum_reading";
 pub const PHYS_EVALUATE_INTERACTION: &str = "Physics.evaluate_interaction";
 
 // ── Spectral/EMF wrappers (wrap render::spectral_kernel + spectral_blend) ──
@@ -1935,6 +1937,8 @@ pub const ALL_BOUND: &[&str] = &[
     PHYS_EMF_SAMPLE_AT_DEPTH,
     PHYS_FIELD_SAMPLE,
     PHYS_MATERIAL_QUERY,
+    PHYS_PART_SIGNATURE,
+    PHYS_TICK_SPECTRUM_READING,
     PHYS_EVALUATE_INTERACTION,
     SPECTRAL_EMF_TO_SPD,
     SPECTRAL_SPD_TO_XYZ,
@@ -2933,6 +2937,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | PHYS_EMF_SAMPLE_AT_DEPTH
         | PHYS_FIELD_SAMPLE
         | PHYS_MATERIAL_QUERY
+        | PHYS_PART_SIGNATURE
+        | PHYS_TICK_SPECTRUM_READING
         | PHYS_EVALUATE_INTERACTION => "physics",
         SPECTRAL_EMF_TO_SPD | SPECTRAL_SPD_TO_XYZ | SPECTRAL_EMF_TO_RGB | SPECTRAL_BLEND
         | SPECTRAL_GAMUT_MAP => "spectral",

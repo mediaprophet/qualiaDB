@@ -457,6 +457,8 @@ pub const ALL_INVOKE_IDS: &[&str] = &[
     "Physics.emf_sample_at_depth",
     "Physics.field_sample",
     "Physics.material_query",
+    "Physics.part_signature",
+    "Physics.tick_spectrum_reading",
     "Physics.evaluate_interaction",
     "Spectral.emf_to_spd",
     "Spectral.spd_to_xyz",

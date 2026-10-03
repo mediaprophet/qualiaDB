@@ -1220,7 +1220,91 @@ mod tests {
 
     // â”€â”€ T30: LawDecl tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+        #[test]
+    fn t29_part_signature_facet_resolves_on_one_stack() {
+        let src = r#"
+            material tank_shell: Material
+                part: "did:q42:part:polymer-shell",
+                signature: "hdpe_tank_shell",
+                reading: "colour";
+            fn main() {
+                return tank_shell;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        match result {
+            Value::Record(r) => {
+                assert_eq!(
+                    r.get("part"),
+                    Some(&Value::String("did:q42:part:polymer-shell".into()))
+                );
+                assert_eq!(
+                    r.get("signature"),
+                    Some(&Value::String(
+                        "did:q42:material:hdpe-tank-shell-v1".into()
+                    ))
+                );
+                assert_eq!(r.get("facet"), Some(&Value::String("optical".into())));
+                assert_eq!(r.get("reading"), Some(&Value::String("colour".into())));
+                assert_eq!(
+                    r.get("spectrum_axis"),
+                    Some(&Value::String("emf".into()))
+                );
+                assert_eq!(r.get("writes_spatial"), Some(&Value::Bool(false)));
+                assert_eq!(r.get("baked_frame"), Some(&Value::Bool(false)));
+                assert_eq!(r.get("subsumes_whole"), Some(&Value::Bool(false)));
+                assert_eq!(
+                    r.get("construct"),
+                    Some(&Value::String("editable".into()))
+                );
+                match r.get("fields") {
+                    Some(Value::Record(fields)) => {
+                        assert!(fields.contains_key("albedo"));
+                    }
+                    other => panic!("fields {other:?}"),
+                }
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
     #[test]
+    fn t29_water_form_is_not_liquid_water_signature() {
+        let src = r#"
+            material bad: Material
+                part: "did:q42:part:someone",
+                signature: "grey",
+                facet: "chemical";
+            fn main() {
+                return bad;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("liquid_water") || msg.contains("water form"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn t29_flora_is_not_a_material_signature() {
+        let src = r#"
+            material kind: Material
+                part: "did:q42:part:organism",
+                signature: "flora",
+                reading: "colour";
+            fn main() {
+                return kind;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("flora"), "{msg}");
+        assert!(!msg.contains("Sucrose"));
+    }
+
+#[test]
     fn t30_law_decl_parses_and_evaluates() {
         let src = r#"
             field pressure_ambient: Pressure
