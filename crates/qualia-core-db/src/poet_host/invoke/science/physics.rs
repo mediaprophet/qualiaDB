@@ -533,6 +533,10 @@ pub fn creator_tick_spectrum_reading(args_v: &Value, span: Span) -> Result<Value
 }
 
 /// `Physics.evaluate_interaction` — Applies interaction laws to continuants and ambient fields.
+///
+/// Fail closed. An omitted, blank, or unknown material is an error, never
+/// [`vibe::physics::MaterialSignature::sugar_cube`]. Same catalog lookup as
+/// `material_query`.
 pub fn creator_evaluate_interaction(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     use vibe::physics::{
         evaluate_field_interactions, ContinuantState, FieldDeclaration, InteractionEvent,
@@ -541,12 +545,12 @@ pub fn creator_evaluate_interaction(args_v: &Value, span: Span) -> Result<Value,
     use vibe::Pose;
 
     let id = args::rec_str(args_v, "id").unwrap_or("body_01").to_string();
-    let mat_id = args::rec_str(args_v, "material").unwrap_or("sugar_cube");
+    // Missing and blank names take the same path as an unknown name.
+    let mat_id = args::rec_str(args_v, "material").unwrap_or("");
     let mass_kg = args::rec_f64(args_v, "mass_kg").unwrap_or(0.01);
     let pos_list = args::rec_f64_list(args_v, "position").unwrap_or_else(|| vec![0.0, 0.0, 0.0]);
     let pressure_kpa = args::rec_f64(args_v, "ambient_pressure_kpa");
 
-    // Omitted material stays the sucrose sample. A named unknown does not.
     let mat = MaterialSignature::lookup(mat_id).map_err(|e| args::bad(span, e.message()))?;
 
     let mut continuant = ContinuantState {
@@ -1089,6 +1093,25 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("not a material record"), "{msg}");
         assert!(!msg.to_ascii_lowercase().contains("sucrose"), "{msg}");
+    }
+
+    #[test]
+    fn evaluate_interaction_omitted_material_does_not_become_sugar() {
+        let omitted = rec(&[("id", Value::String("body".into()))]);
+        let err = creator_evaluate_interaction(&omitted, Span::new(0, 0)).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("not a material record"), "{msg}");
+        assert!(!msg.to_ascii_lowercase().contains("sucrose"), "{msg}");
+        assert!(!msg.to_ascii_lowercase().contains("sugar"), "{msg}");
+
+        let blank = rec(&[
+            ("id", Value::String("body".into())),
+            ("material", Value::String("   ".into())),
+        ]);
+        let blank_err = creator_evaluate_interaction(&blank, Span::new(0, 0)).unwrap_err();
+        let blank_msg = blank_err.to_string();
+        assert!(blank_msg.contains("not a material record"), "{blank_msg}");
+        assert!(!blank_msg.to_ascii_lowercase().contains("sucrose"), "{blank_msg}");
     }
 
     #[test]

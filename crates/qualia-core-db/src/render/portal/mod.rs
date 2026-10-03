@@ -93,6 +93,9 @@ use body_scene::BodyMeshAccum;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum BodyRendererBackend {
     None,
+    /// Canvas2d projection of the loaded mesh. Used when no WebGPU/WebGL2
+    /// adapter is bound, so a tick still draws the part.
+    CpuCanvas,
     WebGpu,
     WebGl2,
 }
@@ -101,6 +104,7 @@ impl BodyRendererBackend {
     fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
+            Self::CpuCanvas => "canvas2d",
             Self::WebGpu => "webgpu",
             Self::WebGl2 => "webgl2",
         }
@@ -144,6 +148,8 @@ pub struct QualiaPortal {
     /// When true, uploaded meshes keep authored coordinates (town / world)
     /// instead of being recentred into the orbit frame.
     preserve_authored_frame: bool,
+    /// Decimated mesh for the canvas2d tick. Empty when a GPU backend owns the draw.
+    cpu_body: Option<CpuBodyMesh>,
 }
 
 #[wasm_bindgen]
@@ -186,6 +192,7 @@ impl QualiaPortal {
             acoustic_sidecar_frame: 0,
             body_fit: crate::render::body_fit::AnatomyBodyFit::default(),
             preserve_authored_frame: false,
+            cpu_body: None,
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -1234,7 +1241,13 @@ impl QualiaPortal {
             renderer = BodyRendererBackend::WebGl2;
         }
         if renderer == BodyRendererBackend::None {
-            return Err(JsValue::from_str("anatomy_renderer_unsupported"));
+            // No adapter is not an empty scene. Keep a decimated copy and let
+            // the canvas2d tick draw it with the same orbit camera.
+            self.cpu_body = Some(CpuBodyMesh::decimate(&accum.positions, &accum.colors, &accum.indices));
+            renderer = BodyRendererBackend::CpuCanvas;
+            self.tier = 0;
+        } else {
+            self.cpu_body = None;
         }
 
         self.body_renderer = renderer;
@@ -1772,6 +1785,13 @@ impl QualiaPortal {
 
         paint_background(&ctx, w, h, self.telemetry.spectral_shift);
         paint_ambient_field(&ctx, w, h, self.time, particle_cap, &self.telemetry);
+        if let Some(mesh) = &self.cpu_body {
+            let aspect = if h > 1.0 { (w / h) as f32 } else { 1.0 };
+            paint_cpu_body(&ctx, w, h, mesh, &self.camera, aspect);
+            if self.body_renderer == BodyRendererBackend::CpuCanvas && self.body_index_count > 0 {
+                self.body_frames_presented = self.body_frames_presented.saturating_add(1);
+            }
+        }
 
         if let Some(ref tensor) = self.last_tensor {
             paint_tensor_projection(
@@ -1810,12 +1830,65 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
         return Ok(false);
     }
     let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
-    match PortalGpu::try_new_async(&canvas, cap).await {
-        Ok(gpu) => {
-            PENDING_GPU.with(|p| *p.borrow_mut() = Some(gpu));
-            Ok(true)
+    // A missing or stuck adapter must not hold the page, and must not bind the
+    // canvas before it has answered — otherwise the 2d tick can never draw.
+    let outcome = race_init(async move {
+        if !PortalGpu::adapter_responds().await {
+            return "no-adapter".to_string();
         }
-        Err(e) => Err(JsValue::from_str(&format!("portal_init_webgpu: {e}"))),
+        if GPU_INIT_ABORTED.with(|c| c.get()) {
+            return "aborted".to_string();
+        }
+        match PortalGpu::try_new_async(&canvas, cap).await {
+            Ok(gpu) => {
+                if GPU_INIT_ABORTED.with(|c| c.get()) {
+                    return "aborted".to_string();
+                }
+                PENDING_GPU.with(|p| *p.borrow_mut() = Some(gpu));
+                "ok".to_string()
+            }
+            Err(e) => format!("err:{e}"),
+        }
+    })
+    .await;
+    match outcome.as_str() {
+        "ok" => Ok(true),
+        "timeout" | "no-adapter" | "aborted" => Ok(false),
+        other => Err(JsValue::from_str(&format!("portal_init_webgpu: {other}"))),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    static GPU_INIT_ABORTED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn race_init<F>(work: F) -> String
+where
+    F: std::future::Future<Output = String> + 'static,
+{
+    let work_promise = wasm_bindgen_futures::future_to_promise(async move {
+        Ok(JsValue::from_str(&work.await))
+    });
+    let timeout = js_sys::Promise::new(&mut |resolve, _reject| {
+        let resolve = resolve.clone();
+        let closure = wasm_bindgen::closure::Closure::once(move || {
+            GPU_INIT_ABORTED.with(|c| c.set(true));
+            let _ = resolve.call1(&JsValue::NULL, &JsValue::from_str("timeout"));
+        });
+        if let Some(window) = web_sys::window() {
+            let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+                closure.as_ref().unchecked_ref(),
+                2500,
+            );
+        }
+        closure.forget();
+    });
+    let racers = js_sys::Array::of2(&work_promise, &timeout);
+    match wasm_bindgen_futures::JsFuture::from(js_sys::Promise::race(&racers)).await {
+        Ok(value) => value.as_string().unwrap_or_else(|| "timeout".into()),
+        Err(_) => "timeout".into(),
     }
 }
 
@@ -1852,3 +1925,33 @@ fn has_webgpu() -> bool {
 // Phase 0.2a: canvas2d fallback painters.
 mod paint;
 use paint::*;
+
+/// Triangle soup the canvas2d tick can draw without a GPU adapter.
+struct CpuBodyMesh {
+    positions: Vec<[f32; 3]>,
+    colors: Vec<[f32; 4]>,
+    indices: Vec<u32>,
+}
+
+impl CpuBodyMesh {
+    fn decimate(positions: &[[f32; 3]], colors: &[[f32; 4]], indices: &[u32]) -> Self {
+        let tris = indices.len() / 3;
+        let cap = 2800usize;
+        let step = (tris / cap).max(1);
+        let mut out_i = Vec::with_capacity((tris / step).saturating_mul(3).min(indices.len()));
+        let mut t = 0usize;
+        while t < tris {
+            let b = t * 3;
+            if b + 2 < indices.len() {
+                out_i.extend_from_slice(&indices[b..b + 3]);
+            }
+            t += step;
+        }
+        Self {
+            positions: positions.to_vec(),
+            colors: colors.to_vec(),
+            indices: out_i,
+        }
+    }
+}
+

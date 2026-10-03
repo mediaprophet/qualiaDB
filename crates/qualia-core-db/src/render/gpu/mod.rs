@@ -337,6 +337,22 @@ impl PortalGpu {
     /// Async WebGPU init — awaits `request_adapter` / `request_device` (the browser main thread
     /// cannot block). Native callers use the `try_new` wrapper above.
     #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    /// True when a browser adapter answers. Does not bind a canvas, so a hang
+    /// or a miss leaves the 2d tick free to draw.
+    pub async fn adapter_responds() -> bool {
+        let mut instance_desc = wgpu::InstanceDescriptor::new_without_display_handle();
+        instance_desc.backends = wgpu::Backends::BROWSER_WEBGPU;
+        let instance = wgpu::Instance::new(instance_desc);
+        instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::LowPower,
+                compatible_surface: None,
+                ..Default::default()
+            })
+            .await
+            .is_ok()
+    }
+
     pub async fn try_new_async(
         canvas: &web_sys::HtmlCanvasElement,
         particle_cap: usize,
