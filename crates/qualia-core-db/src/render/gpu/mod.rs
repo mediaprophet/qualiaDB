@@ -22,6 +22,39 @@ use crate::tensor::buffer_export::{
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+thread_local! {
+    static PORTAL_GPU_INIT_ABORTED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+    static PORTAL_GPU_CANVAS_CLAIMED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub(crate) fn reset_portal_gpu_init_flags() {
+    PORTAL_GPU_INIT_ABORTED.with(|c| c.set(false));
+    PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(false));
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub(crate) fn abort_portal_gpu_init() {
+    PORTAL_GPU_INIT_ABORTED.with(|c| c.set(true));
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub(crate) fn portal_gpu_init_aborted() -> bool {
+    PORTAL_GPU_INIT_ABORTED.with(|c| c.get())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub(crate) fn portal_gpu_canvas_claimed() -> bool {
+    PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.get())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+fn mark_portal_gpu_canvas_claimed() {
+    PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(true));
+}
+
 /// Static ambient SSBO capacity — draw count is throttled per `VramLedger` mode.
 const MAX_AMBIENT_INSTANCES: usize = 50_000;
 const HDR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
@@ -353,6 +386,7 @@ impl PortalGpu {
             .is_ok()
     }
 
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
     pub async fn try_new_async(
         canvas: &web_sys::HtmlCanvasElement,
         particle_cap: usize,
@@ -364,21 +398,30 @@ impl PortalGpu {
         instance_desc.backends = wgpu::Backends::BROWSER_WEBGPU;
         let instance = wgpu::Instance::new(instance_desc);
 
+        // Probe already ran without a canvas. Claim only when we are about
+        // to present, and only with an adapter that can target this surface.
+        if portal_gpu_init_aborted() {
+            return Err("aborted".into());
+        }
+        mark_portal_gpu_canvas_claimed();
         let surface = instance
             .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
             .map_err(|e| format!("surface: {e}"))?;
-
+        if portal_gpu_init_aborted() {
+            return Err("aborted".into());
+        }
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::LowPower,
                 compatible_surface: Some(&surface),
-                // `..Default::default()` covers force_fallback_adapter (false) and
-                // wgpu 30's apply_limit_buckets, and stays robust to future fields.
                 ..Default::default()
             })
             .await
             .map_err(|e| format!("no WebGPU adapter: {e}"))?;
 
+        if portal_gpu_init_aborted() {
+            return Err("aborted".into());
+        }
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("qualia-portal-gpu"),
@@ -395,7 +438,14 @@ impl PortalGpu {
             .await
             .map_err(|e| format!("device: {e}"))?;
 
+        if portal_gpu_init_aborted() {
+            return Err("aborted".into());
+        }
+
         let caps = surface.get_capabilities(&adapter);
+        if caps.formats.is_empty() {
+            return Err("surface has no presentable format".into());
+        }
         let format = caps
             .formats
             .iter()

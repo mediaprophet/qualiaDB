@@ -129,6 +129,20 @@ pub fn orbit_view_projection(yaw: f32, pitch: f32, zoom: f32, aspect: f32) -> [[
     orbit_view_projection_target(yaw, pitch, zoom, [0.0, 0.0, 0.0], aspect)
 }
 
+/// Far-to-near index order for a proof canvas tick.
+///
+/// Larger mean clip-w is farther and is drawn first. This is painter order
+/// only: it is not a depth buffer, not occlusion, and not the lit look.
+pub fn painter_order_far_to_near(mean_clip_w: &[f32]) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..mean_clip_w.len()).collect();
+    order.sort_by(|&a, &b| {
+        mean_clip_w[b]
+            .partial_cmp(&mean_clip_w[a])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    order
+}
+
 /// Column-major view×projection centered at arbitrary world-space target center.
 pub fn orbit_view_projection_target(
     yaw: f32,
@@ -281,5 +295,16 @@ mod tests {
         assert!((u._padding[9] - 0.2).abs() < 1e-5);
         assert!((u._padding[10] - 1.5).abs() < 1e-5);
         assert!((u._padding[11] - 0.4).abs() < 1e-5);
+    }
+
+    #[test]
+    fn painter_order_is_far_before_near_and_not_a_depth_buffer() {
+        // Contract for the proof tick only. A later index must not be treated
+        // as occlusion; callers still fill solid colour in this order.
+        let order = painter_order_far_to_near(&[0.2, 4.0, 1.0, f32::NAN]);
+        assert_eq!(order.first().copied(), Some(1));
+        assert_eq!(order[1], 2);
+        assert_eq!(order[2], 0);
+        assert_eq!(order.len(), 4);
     }
 }

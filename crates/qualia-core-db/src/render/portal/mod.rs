@@ -52,7 +52,10 @@ use crate::{
 #[cfg(target_arch = "wasm32")]
 use crate::render::anatomy::webgl2::AnatomyWebGl2;
 #[cfg(target_arch = "wasm32")]
-use crate::render::gpu::{particle_cap_for_mode, PortalGpu};
+use crate::render::gpu::{
+    abort_portal_gpu_init, particle_cap_for_mode, portal_gpu_canvas_claimed,
+    portal_gpu_init_aborted, reset_portal_gpu_init_flags, PortalGpu,
+};
 
 /// Viewport display mode (geometry projection style).
 #[repr(u8)]
@@ -148,8 +151,11 @@ pub struct QualiaPortal {
     /// When true, uploaded meshes keep authored coordinates (town / world)
     /// instead of being recentred into the orbit frame.
     preserve_authored_frame: bool,
-    /// Decimated mesh for the canvas2d tick. Empty when a GPU backend owns the draw.
+    /// Decimated mesh for the proof canvas tick. Kept even when WebGPU owns
+    /// the draw, so a failed present can still paint. Not the lit look.
     cpu_body: Option<CpuBodyMesh>,
+    /// Last `set_sky_preset` value, applied when a GPU is adopted later.
+    sky_preset: Option<u32>,
 }
 
 #[wasm_bindgen]
@@ -193,6 +199,7 @@ impl QualiaPortal {
             body_fit: crate::render::body_fit::AnatomyBodyFit::default(),
             preserve_authored_frame: false,
             cpu_body: None,
+            sky_preset: None,
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -617,6 +624,7 @@ impl QualiaPortal {
     }
 
     pub fn set_sky_preset(&mut self, preset: u32) {
+        self.sky_preset = Some(preset);
         match preset {
             1 => {
                 self.camera.sun_dir = [0.45, 0.85, 0.35];
@@ -1240,14 +1248,17 @@ impl QualiaPortal {
             self.tier = 1;
             renderer = BodyRendererBackend::WebGl2;
         }
+        // Proof copy stays resident. WebGPU presents the lit mesh; this soup
+        // is only drawn if that present does not happen. Solid fill is not
+        // occlusion and is not stamped as the lit look.
+        self.cpu_body = Some(CpuBodyMesh::decimate(
+            &accum.positions,
+            &accum.colors,
+            &accum.indices,
+        ));
         if renderer == BodyRendererBackend::None {
-            // No adapter is not an empty scene. Keep a decimated copy and let
-            // the canvas2d tick draw it with the same orbit camera.
-            self.cpu_body = Some(CpuBodyMesh::decimate(&accum.positions, &accum.colors, &accum.indices));
             renderer = BodyRendererBackend::CpuCanvas;
             self.tier = 0;
-        } else {
-            self.cpu_body = None;
         }
 
         self.body_renderer = renderer;
@@ -1690,7 +1701,24 @@ impl QualiaPortal {
             // created asynchronously off the loop because the browser main thread cannot `block_on`.
             if self.gpu.is_none() && !self.gpu_init_failed {
                 if let Some(mut gpu) = PENDING_GPU.with(|p| p.borrow_mut().take()) {
-                    gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
+                    gpu.set_camera_target(
+                        self.camera.yaw,
+                        self.camera.pitch,
+                        self.camera.zoom,
+                        self.camera.target[0],
+                        self.camera.target[1],
+                        self.camera.target[2],
+                    );
+                    gpu.set_lighting(
+                        self.camera.sun_dir[0],
+                        self.camera.sun_dir[1],
+                        self.camera.sun_dir[2],
+                        self.camera.sun_intensity,
+                        self.camera.ambient_intensity,
+                    );
+                    if let Some(preset) = self.sky_preset {
+                        gpu.set_sky_preset(preset);
+                    }
                     gpu.set_standpoint(self.standpoint);
                     if let Some(ref tensor) = self.last_tensor {
                         if gpu.upload_tensor_buffer(tensor).ok().unwrap_or(0) > 0 {
@@ -1705,7 +1733,12 @@ impl QualiaPortal {
                 }
             }
 
-            if let Some(ref mut gpu) = self.gpu {
+            enum Present {
+                Lit,
+                Absent,
+                Failed,
+            }
+            let present = if let Some(ref mut gpu) = self.gpu {
                 // The WebGPU swapchain texture tracks the canvas backing store, but the depth
                 // texture is only re-created on `resize()`. If the canvas was resized after init
                 // (layout settle, DPR, window resize) without a `resize()` call, color and depth
@@ -1730,20 +1763,30 @@ impl QualiaPortal {
                                 self.pending_gpu_pick = false;
                             }
                         }
-                        return Ok(());
+                        Present::Lit
                     }
-                    Err(error) if self.body_renderer == BodyRendererBackend::WebGpu => {
-                        return Err(JsValue::from_str(&format!(
-                            "anatomy_webgpu_render_failed: {error}"
-                        )));
+                    Err(_) => Present::Failed,
+                }
+            } else {
+                Present::Absent
+            };
+            match present {
+                Present::Lit => return Ok(()),
+                Present::Failed => {
+                    // A present that does not land must not stick black.
+                    // Drop the device, replace the claimed canvas, and paint
+                    // the proof tick. Solid fill is not the lit look.
+                    self.gpu = None;
+                    self.gpu_init_failed = true;
+                    self.tier = 0;
+                    if self.body_renderer == BodyRendererBackend::WebGpu {
+                        self.body_renderer = BodyRendererBackend::CpuCanvas;
                     }
-                    Err(_) => {
-                        // This canvas already owns the WebGPU surface. A 2d
-                        // context here throws, and that makes every later tick
-                        // unreachable — including the frame after the mesh loads.
-                        return Ok(());
+                    if let Ok(fresh) = release_claimed_canvas(canvas) {
+                        return self.paint_cpu_proof(&fresh, mode);
                     }
                 }
+                Present::Absent => {}
             }
 
             if self.anatomy_webgl2.is_none() {
@@ -1767,6 +1810,16 @@ impl QualiaPortal {
             }
         }
 
+        self.paint_cpu_proof(canvas, mode)
+    }
+
+    /// Canvas proof tick. Same orbit camera as the lit path, no depth buffer.
+    /// Solid fills are not occlusion and must not be read as the lit look.
+    fn paint_cpu_proof(
+        &mut self,
+        canvas: &HtmlCanvasElement,
+        mode: crate::gpu_context::OperationalMode,
+    ) -> Result<(), JsValue> {
         let ctx = canvas
             .get_context("2d")?
             .ok_or_else(|| JsValue::from_str("no 2d context"))?
@@ -1829,38 +1882,57 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
     if !has_webgpu() {
         return Ok(false);
     }
+    reset_portal_gpu_init_flags();
     let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
     // A missing or stuck adapter must not hold the page, and must not bind the
-    // canvas before it has answered — otherwise the 2d tick can never draw.
+    // canvas before a device exists — otherwise the 2d tick can never draw.
     let outcome = race_init(async move {
         if !PortalGpu::adapter_responds().await {
             return "no-adapter".to_string();
         }
-        if GPU_INIT_ABORTED.with(|c| c.get()) {
+        if portal_gpu_init_aborted() {
             return "aborted".to_string();
         }
         match PortalGpu::try_new_async(&canvas, cap).await {
             Ok(gpu) => {
-                if GPU_INIT_ABORTED.with(|c| c.get()) {
+                if portal_gpu_init_aborted() {
                     return "aborted".to_string();
                 }
                 PENDING_GPU.with(|p| *p.borrow_mut() = Some(gpu));
                 "ok".to_string()
             }
+            Err(e) if e == "aborted" => "aborted".to_string(),
             Err(e) => format!("err:{e}"),
         }
     })
     .await;
     match outcome.as_str() {
         "ok" => Ok(true),
-        "timeout" | "no-adapter" | "aborted" => Ok(false),
+        "timeout" | "no-adapter" | "aborted" => {
+            // A late device must not be adopted after the page has given up.
+            PENDING_GPU.with(|p| *p.borrow_mut() = None);
+            Ok(false)
+        }
         other => Err(JsValue::from_str(&format!("portal_init_webgpu: {other}"))),
     }
 }
 
+/// Page-side timeout. Stops a late surface from being adopted. If the canvas
+/// was already claimed, [`portal_webgpu_canvas_claimed`] is true and the page
+/// must replace that element before the proof tick.
 #[cfg(target_arch = "wasm32")]
-thread_local! {
-    static GPU_INIT_ABORTED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+#[wasm_bindgen]
+pub fn portal_abort_webgpu() {
+    abort_portal_gpu_init();
+    PENDING_GPU.with(|p| *p.borrow_mut() = None);
+}
+
+/// True once WebGPU has called `getContext("webgpu")` on the init canvas.
+/// A 2d tick on that same element cannot paint; replace it.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn portal_webgpu_canvas_claimed() -> bool {
+    portal_gpu_canvas_claimed()
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1874,7 +1946,7 @@ where
     let timeout = js_sys::Promise::new(&mut |resolve, _reject| {
         let resolve = resolve.clone();
         let closure = wasm_bindgen::closure::Closure::once(move || {
-            GPU_INIT_ABORTED.with(|c| c.set(true));
+            abort_portal_gpu_init();
             let _ = resolve.call1(&JsValue::NULL, &JsValue::from_str("timeout"));
         });
         if let Some(window) = web_sys::window() {
@@ -1901,6 +1973,24 @@ pub fn portal_init_webgl2(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
     let renderer = AnatomyWebGl2::try_new(&canvas)?;
     PENDING_WEBGL2.with(|p| *p.borrow_mut() = Some(renderer));
     Ok(true)
+}
+
+fn release_claimed_canvas(canvas: &HtmlCanvasElement) -> Result<HtmlCanvasElement, JsValue> {
+    let doc = canvas
+        .owner_document()
+        .ok_or_else(|| JsValue::from_str("no document"))?;
+    let fresh: HtmlCanvasElement = doc
+        .create_element("canvas")?
+        .dyn_into()
+        .map_err(|_| JsValue::from_str("canvas element"))?;
+    fresh.set_id(&canvas.id());
+    fresh.set_width(canvas.width());
+    fresh.set_height(canvas.height());
+    if let Some(label) = canvas.get_attribute("aria-label") {
+        let _ = fresh.set_attribute("aria-label", &label);
+    }
+    canvas.replace_with_with_node_1(&fresh)?;
+    Ok(fresh)
 }
 
 fn detect_tier() -> u8 {
