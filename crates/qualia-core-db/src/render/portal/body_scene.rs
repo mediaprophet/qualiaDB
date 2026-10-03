@@ -129,9 +129,29 @@ impl BodyMeshAccum {
         let base = self.positions.len() as u32;
         let index_start = self.indices.len();
         let [r, g, b, a] = rgba;
-        for p in mesh.positions.iter() {
+        let mut surface = None;
+        for desc in descs.iter() {
+            if desc.typ() != Some(container_10d::SectionType::SurfaceReading) {
+                continue;
+            }
+            let off = desc.byte_offset as usize;
+            let len = desc.byte_length as usize;
+            if off.saturating_add(len) > bytes.len() {
+                continue;
+            }
+            surface = container_10d::surface_reading::decode_surface_reading(&bytes[off..off + len]);
+        }
+        let use_reading = surface
+            .as_ref()
+            .map(|s| s.len() == mesh.positions.len())
+            .unwrap_or(false);
+        for (i, p) in mesh.positions.iter().enumerate() {
             self.positions.push([p[0], p[1], p[2]]);
-            self.colors.push([r, g, b, a]);
+            if use_reading {
+                self.colors.push(surface.as_ref().unwrap()[i]);
+            } else {
+                self.colors.push([r, g, b, a]);
+            }
         }
         for t in mesh.triangles.iter() {
             self.indices.push(base + t[0]);

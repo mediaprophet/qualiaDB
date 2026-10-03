@@ -120,7 +120,17 @@ impl GpuAdapterCaps {
     pub fn from_adapter(adapter: &wgpu::Adapter) -> Self {
         let info = adapter.get_info();
         let features = adapter.features();
-        let limits = adapter.limits();
+        let limits = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                let _ = adapter;
+                super::webgpu_minimum_limits()
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                adapter.limits()
+            }
+        };
         Self {
             name: info.name,
             backend: info.backend,

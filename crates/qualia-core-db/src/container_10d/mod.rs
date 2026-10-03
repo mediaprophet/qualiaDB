@@ -52,6 +52,7 @@ pub mod metric_check;
 pub mod node_section;
 pub mod provenance_section;
 pub mod section;
+pub mod surface_reading;
 // `topology_section` and `spatial_index_section` depend on
 // `crate::specialized_libs::computational_geometry`, which is itself gated
 // `#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]` at

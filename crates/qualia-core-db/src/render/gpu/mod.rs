@@ -453,7 +453,7 @@ impl PortalGpu {
                 // validation. `adapter.limits()` never over-requests and still preserves
                 // the non-zero storage-buffer limits the portal pipelines need (unlike
                 // `downlevel_webgl2_defaults`, which zeroes them and blacks out the view).
-                required_limits: adapter.limits(),
+                required_limits: crate::gpu_context::webgpu_minimum_limits(),
                 ..Default::default()
             })
             .await

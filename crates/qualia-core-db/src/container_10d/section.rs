@@ -79,6 +79,10 @@ pub enum SectionType {
     /// Spatial-index section — BVH + kd-tree node arrays for scan-free
     /// spatial queries (P3.7).
     SpatialIndex = 11,
+    /// Per-vertex surface colour reading. Not a texture, not a normal, and
+    /// not an albedo for the whole part. One RGBA8 sample per mesh vertex,
+    /// same order as the quantized mesh. See `surface_reading`.
+    SurfaceReading = 12,
 }
 
 impl SectionType {
@@ -97,6 +101,7 @@ impl SectionType {
             9 => Some(SectionType::SpecReservedCorrespondenceMap),
             10 => Some(SectionType::Topology),
             11 => Some(SectionType::SpatialIndex),
+            12 => Some(SectionType::SurfaceReading),
             _ => None,
         }
     }
@@ -113,6 +118,7 @@ impl SectionType {
                 | SectionType::ProvenanceSidecar
                 | SectionType::Topology
                 | SectionType::SpatialIndex
+                | SectionType::SurfaceReading
         )
     }
 }

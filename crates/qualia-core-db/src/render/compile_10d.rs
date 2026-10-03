@@ -140,7 +140,7 @@ pub fn compile_mesh_to_10d_with_nodes_and_provenance(
     nodes: &[Tensor10D],
     provenance: Option<&ProvenanceSidecar>,
 ) -> Result<Vec<u8>, Compile10dError> {
-    compile_mesh_to_10d_with_extras(mesh, nodes, provenance, Compile10dExtras::default())
+    compile_mesh_to_10d_with_extras(mesh, nodes, provenance, Compile10dExtras::default(), None)
 }
 
 /// Vision recon seal: mesh + nodes + Topology + SpatialIndex when CG is linked (C3).
@@ -151,7 +151,7 @@ pub fn compile_mesh_to_10d_vision(
     mesh: &Mesh,
     nodes: &[Tensor10D],
 ) -> Result<Vec<u8>, Compile10dError> {
-    compile_mesh_to_10d_with_extras(mesh, nodes, None, Compile10dExtras::VISION)
+    compile_mesh_to_10d_with_extras(mesh, nodes, None, Compile10dExtras::VISION, None)
 }
 
 /// Vision recon seal + in-envelope provenance (D4).
@@ -160,7 +160,24 @@ pub fn compile_mesh_to_10d_vision_with_provenance(
     nodes: &[Tensor10D],
     provenance: &ProvenanceSidecar,
 ) -> Result<Vec<u8>, Compile10dError> {
-    compile_mesh_to_10d_with_extras(mesh, nodes, Some(provenance), Compile10dExtras::VISION)
+    compile_mesh_to_10d_with_extras(mesh, nodes, Some(provenance), Compile10dExtras::VISION, None)
+}
+
+/// Seal mesh + provenance + a per-vertex surface colour reading.
+/// The reading length must equal the vertex count. One organ albedo is not
+/// a substitute: callers that have no reading use the provenance-only seal.
+pub fn compile_mesh_to_10d_with_surface_reading(
+    mesh: &Mesh,
+    provenance: Option<&ProvenanceSidecar>,
+    reading: &[[f32; 4]],
+) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_extras(
+        mesh,
+        &[],
+        provenance,
+        Compile10dExtras::default(),
+        Some(reading),
+    )
 }
 
 /// Full seal with explicit extras (topology / spatial index).
@@ -169,6 +186,7 @@ pub fn compile_mesh_to_10d_with_extras(
     nodes: &[Tensor10D],
     provenance: Option<&ProvenanceSidecar>,
     extras: Compile10dExtras,
+    surface_reading: Option<&[[f32; 4]]>,
 ) -> Result<Vec<u8>, Compile10dError> {
     // 1. Encode the QuantizedMesh section payload.
     let mut payload = vec![0u8; encoded_len(mesh.vertex_count(), mesh.triangle_count())];
@@ -206,6 +224,14 @@ pub fn compile_mesh_to_10d_with_extras(
         encode_spatial_index_for_mesh(mesh)?
     } else {
         None
+    };
+
+    let surface_payload = match surface_reading {
+        Some(reading) if reading.len() == mesh.vertex_count() && !reading.is_empty() => {
+            Some(crate::container_10d::surface_reading::encode_surface_reading(reading))
+        }
+        Some(_) => return Err(Compile10dError::ExtraSection { kind: "surface reading length" }),
+        None => None,
     };
 
     // 2. Assemble the container. Writer canonical-orders by section type.
@@ -253,6 +279,15 @@ pub fn compile_mesh_to_10d_with_extras(
             stride: 0,
             element_count: 0,
             payload: sp,
+        });
+    }
+    if let Some(sr) = &surface_payload {
+        inputs.push(SectionInput {
+            section_type: SectionType::SurfaceReading,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: sr,
         });
     }
     // Dry-run against an empty buffer to size the output exactly.

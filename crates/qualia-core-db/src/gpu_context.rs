@@ -793,6 +793,48 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
 /// adapter-advertised features, raises buffer-size limits to the adapter maximum, and negotiates
 /// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
 #[cfg(feature = "gpu-runtime")]
+
+/// WebGPU minimum limits from the spec. On wasm, `Adapter::limits` reads
+/// `GPUAdapter.limits`. A null adapter throws `TypeError` there and the
+/// canvas stays empty. These minimums never touch that getter. Native code
+/// still asks the adapter.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn webgpu_minimum_limits() -> wgpu::Limits {
+    wgpu::Limits {
+        max_texture_dimension_1d: 8192,
+        max_texture_dimension_2d: 8192,
+        max_texture_dimension_3d: 2048,
+        max_texture_array_layers: 256,
+        max_bind_groups: 4,
+        max_bindings_per_bind_group: 1000,
+        max_dynamic_uniform_buffers_per_pipeline_layout: 8,
+        max_dynamic_storage_buffers_per_pipeline_layout: 4,
+        max_sampled_textures_per_shader_stage: 16,
+        max_samplers_per_shader_stage: 16,
+        max_storage_buffers_per_shader_stage: 8,
+        max_storage_textures_per_shader_stage: 4,
+        max_uniform_buffers_per_shader_stage: 12,
+        max_uniform_buffer_binding_size: 64 << 10,
+        max_storage_buffer_binding_size: 128 << 20,
+        max_vertex_buffers: 8,
+        max_buffer_size: 256 << 20,
+        max_vertex_attributes: 16,
+        max_vertex_buffer_array_stride: 2048,
+        min_uniform_buffer_offset_alignment: 256,
+        min_storage_buffer_offset_alignment: 256,
+        max_inter_stage_shader_variables: 16,
+        max_color_attachments: 8,
+        max_color_attachment_bytes_per_sample: 32,
+        max_compute_workgroup_storage_size: 16384,
+        max_compute_invocations_per_workgroup: 256,
+        max_compute_workgroup_size_x: 256,
+        max_compute_workgroup_size_y: 256,
+        max_compute_workgroup_size_z: 64,
+        max_compute_workgroups_per_dimension: 65535,
+        ..wgpu::Limits::downlevel_defaults()
+    }
+}
+
 pub(crate) async fn init_shared_gpu_for_adapter(
     instance: wgpu::Instance,
     adapter: wgpu::Adapter,
@@ -839,7 +881,17 @@ pub(crate) async fn init_shared_gpu_for_adapter(
     // reported maximum — always valid for request_device, so this never fails on weaker GPUs (they
     // simply get their own, smaller, max). Vendor-neutral: pure wgpu limits, no CUDA / no extra
     // device feature. Other limits stay at the conservative defaults.
-    let adapter_limits = adapter.limits();
+    let adapter_limits = {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = &adapter;
+            webgpu_minimum_limits()
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            adapter.limits()
+        }
+    };
     let required_limits = wgpu::Limits {
         max_buffer_size: adapter_limits.max_buffer_size,
         max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
