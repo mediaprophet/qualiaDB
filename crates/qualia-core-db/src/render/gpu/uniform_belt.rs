@@ -121,7 +121,8 @@ impl UniformBelt {
                     .slice(..)
                     .get_mapped_range_mut()
                     .expect("uniform belt buffer must be mapped");
-                range[..data.len()].copy_from_slice(data);
+                // wgpu 30 BufferViewMut is write-only; it does not index as [u8].
+                range.slice(0..data.len()).copy_from_slice(data);
                 drop(range);
                 buffer.unmap();
             }
@@ -250,7 +251,7 @@ mod tests {
         };
         let device = &ctx.device;
         let queue = &ctx.queue;
-        let mut belt = UniformBelt::new(device, queue.clone(), 256, 8);
+        let mut belt = UniformBelt::new(device, Arc::new(queue.clone()), 256, 8);
         let target = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("uniform-belt-test-target"),
             size: 256,
