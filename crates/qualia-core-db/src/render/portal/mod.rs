@@ -156,6 +156,9 @@ pub struct QualiaPortal {
     cpu_body: Option<CpuBodyMesh>,
     /// Last `set_sky_preset` value, applied when a GPU is adopted later.
     sky_preset: Option<u32>,
+    /// Failed presents since the mesh was uploaded. A few misses are not
+    /// adapter death; proof is only the failover after they stick.
+    present_misses: u8,
 }
 
 #[wasm_bindgen]
@@ -200,6 +203,7 @@ impl QualiaPortal {
             preserve_authored_frame: false,
             cpu_body: None,
             sky_preset: None,
+            present_misses: 0,
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -1066,8 +1070,10 @@ impl QualiaPortal {
     /// per-organ JS `Uint8Array` copy (critical on phones).
     pub fn load_body_organs_colored(&mut self, organs: &Array) -> Result<JsValue, JsValue> {
         let mut accum = BodyMeshAccum::new();
+        let spans = Array::new();
         for i in 0..organs.length() {
             let organ = organs.get(i);
+            let before = accum.positions.len() as u32;
             let bytes_val = Reflect::get(&organ, &JsValue::from_str("bytes"))
                 .map_err(|_| JsValue::from_str("organ.bytes missing"))?;
             // One JS→Rust copy only (no secondary clone for CRC).
@@ -1089,8 +1095,23 @@ impl QualiaPortal {
                 .and_then(|v| v.as_f64())
                 .unwrap_or(1.0) as f32;
             accum.append_organ_10d(&bytes, [r, g, b, a]);
+            let count = accum.positions.len() as u32 - before;
+            if count > 0 {
+                let id = Reflect::get(&organ, &JsValue::from_str("id"))
+                    .ok()
+                    .and_then(|v| v.as_string())
+                    .unwrap_or_default();
+                let span = js_sys::Object::new();
+                Reflect::set(&span, &JsValue::from_str("id"), &JsValue::from_str(&id))?;
+                Reflect::set(&span, &JsValue::from_str("vertex_start"), &JsValue::from_f64(before as f64))?;
+                Reflect::set(&span, &JsValue::from_str("vertex_count"), &JsValue::from_f64(count as f64))?;
+                spans.push(&span);
+            }
         }
-        self.finish_body_mesh_upload(accum)
+        let result = self.finish_body_mesh_upload(accum)?;
+        Reflect::set(&result, &JsValue::from_str("parts"), &spans)?;
+        self.present_misses = 0;
+        Ok(result)
     }
 
     /// S5.8 (web) — load the whole body directly from a `.hmc` **anatomy pack**
@@ -1255,6 +1276,7 @@ impl QualiaPortal {
             &accum.positions,
             &accum.colors,
             &accum.indices,
+            &accum.index_spans,
         ));
         if renderer == BodyRendererBackend::None {
             renderer = BodyRendererBackend::CpuCanvas;
@@ -1691,6 +1713,43 @@ impl QualiaPortal {
         }
     }
 
+    /// Write posed positions into one vertex span of the resident body mesh.
+    /// Generic: any app can move a part over time without a full re-upload.
+    pub fn write_part_vertices(&mut self, start: u32, xyz: &[f32]) {
+        let n = xyz.len() / 3;
+        if n == 0 {
+            return;
+        }
+        if let Some(body) = self.cpu_body.as_mut() {
+            for i in 0..n {
+                let vi = start as usize + i;
+                if vi >= body.positions.len() {
+                    break;
+                }
+                let o = i * 3;
+                body.positions[vi] = [xyz[o], xyz[o + 1], xyz[o + 2]];
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(gpu) = self.gpu.as_mut() {
+            let mut pos = Vec::with_capacity(n);
+            for i in 0..n {
+                let o = i * 3;
+                pos.push([xyz[o], xyz[o + 1], xyz[o + 2]]);
+            }
+            gpu.write_mesh_vertices(start, &pos);
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(gl) = self.anatomy_webgl2.as_mut() {
+            let mut pos = Vec::with_capacity(n);
+            for i in 0..n {
+                let o = i * 3;
+                pos.push([xyz[o], xyz[o + 1], xyz[o + 2]]);
+            }
+            gl.write_vertices(start, &pos);
+        }
+    }
+
     pub(crate) fn paint_frame(&mut self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
         let mode = global_vram_ledger().mode();
 
@@ -1771,11 +1830,19 @@ impl QualiaPortal {
                 Present::Absent
             };
             match present {
-                Present::Lit => return Ok(()),
+                Present::Lit => {
+                    self.present_misses = 0;
+                    self.tier = 2;
+                    return Ok(());
+                }
                 Present::Failed => {
-                    // A present that does not land must not stick black.
-                    // Drop the device, replace the claimed canvas, and paint
-                    // the proof tick. Solid fill is not the lit look.
+                    // No mesh yet, or a transient surface miss: keep the device.
+                    // Proof is the failover after presents keep failing, and it
+                    // is not stamped as the lit look.
+                    if self.body_index_count == 0 || self.present_misses < 30 {
+                        self.present_misses = self.present_misses.saturating_add(1);
+                        return Ok(());
+                    }
                     self.gpu = None;
                     self.gpu_init_failed = true;
                     self.tier = 0;
@@ -1800,6 +1867,10 @@ impl QualiaPortal {
                     self.camera.yaw,
                     self.camera.pitch,
                     self.camera.zoom,
+                    self.camera.target,
+                    self.camera.sun_dir,
+                    self.camera.sun_intensity,
+                    self.camera.ambient_intensity,
                     canvas.width(),
                     canvas.height(),
                 )?;
@@ -1810,7 +1881,26 @@ impl QualiaPortal {
             }
         }
 
+        // Authored world: the lit mesh or nothing. Flat proof triangles are a
+        // different picture, and a phone must not wear them as the build.
+        if self.preserve_authored_frame {
+            return self.paint_quiet(canvas);
+        }
         self.paint_cpu_proof(canvas, mode)
+    }
+
+    /// Dark frame. Used when the lit present has not arrived yet. Not a model
+    /// and not a badge.
+    fn paint_quiet(&self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
+        let ctx = canvas
+            .get_context("2d")?
+            .ok_or_else(|| JsValue::from_str("no 2d context"))?
+            .dyn_into::<CanvasRenderingContext2d>()?;
+        let w = canvas.width() as f64;
+        let h = canvas.height() as f64;
+        ctx.set_fill_style_str("#05070b");
+        ctx.fill_rect(0.0, 0.0, w, h);
+        Ok(())
     }
 
     /// Canvas proof tick. Same orbit camera as the lit path, no depth buffer.
@@ -1837,7 +1927,14 @@ impl QualiaPortal {
         let particle_cap = ambient_draw_instances(resident) as usize;
 
         paint_background(&ctx, w, h, self.telemetry.spectral_shift);
-        paint_ambient_field(&ctx, w, h, self.time, particle_cap, &self.telemetry);
+        // An authored world is the picture. The particle field, the tensor
+        // wire, and the engine HUD are the lab reel — they stay for a portal
+        // that has not loaded a mesh, and they stay off the game once the
+        // page has asked to keep the authored frame.
+        let world = self.cpu_body.is_some() && self.preserve_authored_frame;
+        if !world {
+            paint_ambient_field(&ctx, w, h, self.time, particle_cap, &self.telemetry);
+        }
         if let Some(mesh) = &self.cpu_body {
             let aspect = if h > 1.0 { (w / h) as f32 } else { 1.0 };
             paint_cpu_body(&ctx, w, h, mesh, &self.camera, aspect);
@@ -1846,20 +1943,21 @@ impl QualiaPortal {
             }
         }
 
-        if let Some(ref tensor) = self.last_tensor {
-            paint_tensor_projection(
-                &ctx,
-                w,
-                h,
-                tensor,
-                mode,
-                self.display_mode,
-                self.camera.yaw,
-                &self.standpoint,
-            );
+        if !world {
+            if let Some(ref tensor) = self.last_tensor {
+                paint_tensor_projection(
+                    &ctx,
+                    w,
+                    h,
+                    tensor,
+                    mode,
+                    self.display_mode,
+                    self.camera.yaw,
+                    &self.standpoint,
+                );
+            }
+            paint_hud(&ctx, self, mode);
         }
-
-        paint_hud(&ctx, self, mode);
         Ok(())
     }
 }
@@ -1884,12 +1982,9 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
     }
     reset_portal_gpu_init_flags();
     let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
-    // A missing or stuck adapter must not hold the page, and must not bind the
-    // canvas before a device exists — otherwise the 2d tick can never draw.
+    // One adapter request inside try_new_async. A second probe doubles the
+    // wait on a phone and is what used to trip the short timeout.
     let outcome = race_init(async move {
-        if !PortalGpu::adapter_responds().await {
-            return "no-adapter".to_string();
-        }
         if portal_gpu_init_aborted() {
             return "aborted".to_string();
         }
@@ -1952,7 +2047,7 @@ where
         if let Some(window) = web_sys::window() {
             let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
                 closure.as_ref().unchecked_ref(),
-                2500,
+                20000,
             );
         }
         closure.forget();
@@ -2024,18 +2119,38 @@ struct CpuBodyMesh {
 }
 
 impl CpuBodyMesh {
-    fn decimate(positions: &[[f32; 3]], colors: &[[f32; 4]], indices: &[u32]) -> Self {
-        let tris = indices.len() / 3;
-        let cap = 2800usize;
-        let step = (tris / cap).max(1);
-        let mut out_i = Vec::with_capacity((tris / step).saturating_mul(3).min(indices.len()));
-        let mut t = 0usize;
-        while t < tris {
-            let b = t * 3;
-            if b + 2 < indices.len() {
-                out_i.extend_from_slice(&indices[b..b + 3]);
+    fn decimate(
+        positions: &[[f32; 3]],
+        colors: &[[f32; 4]],
+        indices: &[u32],
+        spans: &[(usize, usize)],
+    ) -> Self {
+        // Keep each organ's own outline. A single stride across the whole
+        // scene turns a car, a person, and a shelter into the same confetti.
+        const PER_ORGAN: usize = 220;
+        let mut out_i = Vec::new();
+        let ranges: Vec<(usize, usize)> = if spans.is_empty() {
+            vec![(0, indices.len())]
+        } else {
+            spans.to_vec()
+        };
+        for (start, end) in ranges {
+            if end > indices.len() || start >= end {
+                continue;
             }
-            t += step;
+            let tris = (end - start) / 3;
+            let keep = tris.min(PER_ORGAN).max(1);
+            let step = (tris / keep).max(1);
+            let mut t = 0usize;
+            let mut kept = 0usize;
+            while t < tris && kept < PER_ORGAN {
+                let b = start + t * 3;
+                if b + 2 < end {
+                    out_i.extend_from_slice(&indices[b..b + 3]);
+                    kept += 1;
+                }
+                t += step;
+            }
         }
         Self {
             positions: positions.to_vec(),

@@ -134,6 +134,7 @@ struct MeshGpu {
     color_buf: wgpu::Buffer,
     index_buf: wgpu::Buffer,
     index_count: u32,
+    vertex_count: u32,
 }
 
 pub struct PortalGpu {
@@ -410,14 +411,34 @@ impl PortalGpu {
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
         }
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::LowPower,
-                compatible_surface: Some(&surface),
-                ..Default::default()
-            })
-            .await
-            .map_err(|e| format!("no WebGPU adapter: {e}"))?;
+        // Phones often refuse low-power or the first preference and then
+        // answer the next. One miss must not drop the lit frame.
+        let mut adapter = None;
+        let mut last_err = String::from("no WebGPU adapter");
+        for pref in [
+            wgpu::PowerPreference::None,
+            wgpu::PowerPreference::LowPower,
+            wgpu::PowerPreference::HighPerformance,
+        ] {
+            if portal_gpu_init_aborted() {
+                return Err("aborted".into());
+            }
+            match instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: pref,
+                    compatible_surface: Some(&surface),
+                    ..Default::default()
+                })
+                .await
+            {
+                Ok(found) => {
+                    adapter = Some(found);
+                    break;
+                }
+                Err(e) => last_err = format!("no WebGPU adapter: {e}"),
+            }
+        }
+        let adapter = adapter.ok_or(last_err)?;
 
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
@@ -1212,11 +1233,27 @@ impl PortalGpu {
             color_buf,
             index_buf,
             index_count,
+            vertex_count: positions.len() as u32,
         });
         self.mesh_base_aabb = Aabb::from_points(positions); // for Phase 2 admission
         self.last_admitted = Motor::identity();
         self.last_refused = false;
         index_count / 3
+    }
+
+    /// Replace a span of mesh positions. The buffer is `COPY_DST`. Used so a
+    /// part can change over time without uploading the whole scene again.
+    pub fn write_mesh_vertices(&mut self, start: u32, positions: &[[f32; 3]]) {
+        let Some(mesh) = self.mesh.as_ref() else { return };
+        let start_us = start as usize;
+        if positions.is_empty() || start_us + positions.len() > mesh.vertex_count as usize {
+            return;
+        }
+        self.queue.write_buffer(
+            &mesh.vertex_buf,
+            (start_us * 12) as u64,
+            bytemuck::cast_slice(positions),
+        );
     }
 
     /// Whether a mesh surface is resident.

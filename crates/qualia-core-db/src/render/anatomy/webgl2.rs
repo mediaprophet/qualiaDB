@@ -11,26 +11,47 @@ use web_sys::{
     WebGlUniformLocation, WebGlVertexArrayObject,
 };
 
-use crate::render::camera::orbit_view_projection;
+use crate::render::camera::orbit_view_projection_target;
 
 const VERTEX_SHADER: &str = r#"#version 300 es
 precision highp float;
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec4 a_color;
 uniform mat4 u_view_projection;
+out vec3 v_world;
 out vec4 v_color;
 void main() {
-    gl_Position = u_view_projection * vec4(a_position, 1.0);
+    v_world = a_position;
     v_color = a_color;
+    gl_Position = u_view_projection * vec4(a_position, 1.0);
 }
 "#;
 
+// Same flat shade as the WebGPU mesh shader (mesh.wgsl): face normal from
+// screen derivatives, one sun, ambient, a thin rim. Depth test is on, so
+// this is the lit frame, not a painter of flat facets.
 const FRAGMENT_SHADER: &str = r#"#version 300 es
 precision highp float;
+in vec3 v_world;
 in vec4 v_color;
+uniform vec3 u_sun_dir;
+uniform float u_sun_int;
+uniform float u_amb;
 out vec4 out_color;
 void main() {
-    out_color = vec4(v_color.rgb, max(v_color.a, 0.08));
+    vec3 n = normalize(cross(dFdx(v_world), dFdy(v_world)));
+    vec3 sun = u_sun_dir;
+    if (dot(sun, sun) < 0.01) {
+        sun = vec3(0.45, 0.8, 0.55);
+    }
+    vec3 key = normalize(sun);
+    float sun_int = u_sun_int > 0.0 ? u_sun_int : 1.0;
+    float amb = u_amb > 0.0 ? u_amb : 0.25;
+    float diffuse = clamp(dot(n, key), 0.0, 1.0) * sun_int;
+    float facing = clamp(abs(n.z), 0.0, 1.0);
+    float rim = pow(1.0 - facing, 2.0);
+    vec3 col = v_color.rgb * (amb + diffuse) + vec3(0.10, 0.14, 0.22) * rim;
+    out_color = vec4(col, v_color.a);
 }
 "#;
 
@@ -42,6 +63,9 @@ pub struct AnatomyWebGl2 {
     color_buffer: WebGlBuffer,
     index_buffer: WebGlBuffer,
     view_projection: WebGlUniformLocation,
+    sun_dir: WebGlUniformLocation,
+    sun_int: WebGlUniformLocation,
+    amb: WebGlUniformLocation,
     index_count: i32,
     frame_count: u32,
 }
@@ -84,14 +108,19 @@ impl AnatomyWebGl2 {
         let view_projection = gl
             .get_uniform_location(&program, "u_view_projection")
             .ok_or_else(|| JsValue::from_str("webgl2_view_projection_uniform_missing"))?;
+        let sun_dir = gl
+            .get_uniform_location(&program, "u_sun_dir")
+            .ok_or_else(|| JsValue::from_str("webgl2_sun_uniform_missing"))?;
+        let sun_int = gl
+            .get_uniform_location(&program, "u_sun_int")
+            .ok_or_else(|| JsValue::from_str("webgl2_sun_int_uniform_missing"))?;
+        let amb = gl
+            .get_uniform_location(&program, "u_amb")
+            .ok_or_else(|| JsValue::from_str("webgl2_amb_uniform_missing"))?;
 
         gl.enable(WebGl2RenderingContext::DEPTH_TEST);
         gl.depth_func(WebGl2RenderingContext::LEQUAL);
-        gl.enable(WebGl2RenderingContext::BLEND);
-        gl.blend_func(
-            WebGl2RenderingContext::SRC_ALPHA,
-            WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA,
-        );
+        gl.disable(WebGl2RenderingContext::BLEND);
 
         Ok(Self {
             gl,
@@ -101,6 +130,9 @@ impl AnatomyWebGl2 {
             color_buffer,
             index_buffer,
             view_projection,
+            sun_dir,
+            sun_int,
+            amb,
             index_count: 0,
             frame_count: 0,
         })
@@ -174,6 +206,10 @@ impl AnatomyWebGl2 {
         yaw: f32,
         pitch: f32,
         zoom: f32,
+        target: [f32; 3],
+        sun_dir: [f32; 3],
+        sun_intensity: f32,
+        ambient: f32,
         width: u32,
         height: u32,
     ) -> Result<(), JsValue> {
@@ -192,12 +228,21 @@ impl AnatomyWebGl2 {
             return Ok(());
         }
 
-        let matrix = orbit_view_projection(yaw, pitch, zoom, width as f32 / height as f32);
+        let matrix = orbit_view_projection_target(
+            yaw,
+            pitch,
+            zoom,
+            target,
+            width as f32 / height as f32,
+        );
         let flat: &[f32] = bytemuck::cast_slice(&matrix);
         self.gl.use_program(Some(&self.program));
         self.gl.bind_vertex_array(Some(&self.vao));
         self.gl
             .uniform_matrix4fv_with_f32_array(Some(&self.view_projection), false, flat);
+        self.gl.uniform3f(Some(&self.sun_dir), sun_dir[0], sun_dir[1], sun_dir[2]);
+        self.gl.uniform1f(Some(&self.sun_int), sun_intensity);
+        self.gl.uniform1f(Some(&self.amb), ambient);
         self.gl.draw_elements_with_i32(
             WebGl2RenderingContext::TRIANGLES,
             self.index_count,
@@ -216,6 +261,26 @@ impl AnatomyWebGl2 {
 
     pub fn frame_count(&self) -> u32 {
         self.frame_count
+    }
+
+    /// Same span write the WebGPU mesh uses, so a walk on this path moves
+    /// the person instead of leaving a frozen upload.
+    pub fn write_vertices(&mut self, start: u32, positions: &[[f32; 3]]) {
+        if positions.is_empty() {
+            return;
+        }
+        self.gl.bind_buffer(
+            WebGl2RenderingContext::ARRAY_BUFFER,
+            Some(&self.position_buffer),
+        );
+        unsafe {
+            let values = Float32Array::view(bytemuck::cast_slice(positions));
+            self.gl.buffer_sub_data_with_i32_and_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                (start as i32).saturating_mul(12),
+                &values,
+            );
+        }
     }
 }
 

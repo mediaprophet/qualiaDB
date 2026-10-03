@@ -28,6 +28,10 @@ pub(crate) struct BodyMeshAccum {
     pub(crate) organs_loaded: u32,
     pub(crate) organs_refused: u32,
     pub(crate) total_triangles: u32,
+    /// Inclusive-exclusive ranges into `indices`, one per loaded organ.
+    /// Proof decimation keeps a silhouette of each range instead of
+    /// striding the whole soup into stray triangles.
+    pub(crate) index_spans: Vec<(usize, usize)>,
     gmin: [f32; 3],
     gmax: [f32; 3],
 }
@@ -42,6 +46,7 @@ impl BodyMeshAccum {
             organs_loaded: 0,
             organs_refused: 0,
             total_triangles: 0,
+            index_spans: Vec::new(),
             gmin: [f32::INFINITY; 3],
             gmax: [f32::NEG_INFINITY; 3],
         }
@@ -122,6 +127,7 @@ impl BodyMeshAccum {
             }
         }
         let base = self.positions.len() as u32;
+        let index_start = self.indices.len();
         let [r, g, b, a] = rgba;
         for p in mesh.positions.iter() {
             self.positions.push([p[0], p[1], p[2]]);
@@ -132,6 +138,7 @@ impl BodyMeshAccum {
             self.indices.push(base + t[1]);
             self.indices.push(base + t[2]);
         }
+        self.index_spans.push((index_start, self.indices.len()));
         self.nodes.extend(nodes);
         self.total_triangles += mesh.triangles.len() as u32;
         self.organs_loaded += 1;
