@@ -141,6 +141,9 @@ pub struct QualiaPortal {
     acoustic_sidecar_frame: u32,
     /// Person-authored body fit (JSON-compatible with wellfare `BodyFit`).
     body_fit: crate::render::body_fit::AnatomyBodyFit,
+    /// When true, uploaded meshes keep authored coordinates (town / world)
+    /// instead of being recentred into the orbit frame.
+    preserve_authored_frame: bool,
 }
 
 #[wasm_bindgen]
@@ -182,6 +185,7 @@ impl QualiaPortal {
             acoustic_sidecar: None,
             acoustic_sidecar_frame: 0,
             body_fit: crate::render::body_fit::AnatomyBodyFit::default(),
+            preserve_authored_frame: false,
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -598,6 +602,13 @@ impl QualiaPortal {
     /// - 1: Daylight (clear sky, high warm sun, balanced ambient)
     /// - 2: Sunset / Golden Hour (warm orange sky, low golden sun)
     /// - 3: Night / Moonlight (dark indigo sky, cold moonlight)
+    /// Keep the next `load_body_*` upload in authored coordinates.
+    /// Anatomy stays false (orbit frame). A town scene sets this so the
+    /// camera and the mesh share one frame.
+    pub fn set_preserve_authored_frame(&mut self, on: bool) {
+        self.preserve_authored_frame = on;
+    }
+
     pub fn set_sky_preset(&mut self, preset: u32) {
         match preset {
             1 => {
@@ -1205,7 +1216,9 @@ impl QualiaPortal {
 
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
         accum.apply_body_fit(&self.body_fit);
-        accum.normalise_to_orbit_frame();
+        if !self.preserve_authored_frame {
+            accum.normalise_to_orbit_frame();
+        }
         if accum.positions.is_empty() || accum.indices.is_empty() {
             return Err(JsValue::from_str("anatomy_body_mesh_empty"));
         }
@@ -1711,7 +1724,12 @@ impl QualiaPortal {
                             "anatomy_webgpu_render_failed: {error}"
                         )));
                     }
-                    Err(_) => {}
+                    Err(_) => {
+                        // This canvas already owns the WebGPU surface. A 2d
+                        // context here throws, and that makes every later tick
+                        // unreachable — including the frame after the mesh loads.
+                        return Ok(());
+                    }
                 }
             }
 
