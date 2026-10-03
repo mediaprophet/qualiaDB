@@ -535,7 +535,7 @@ impl PortalGpu {
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("portal-projector-camera-layout"),
                 entries: &[
-                    uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX),
+                    uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX_FRAGMENT),
                     uniform_128_bind_entry(1, wgpu::ShaderStages::VERTEX_FRAGMENT),
                 ],
             });
@@ -820,7 +820,7 @@ impl PortalGpu {
                         module: &mesh_shader,
                         entry_point: Some("fragment_main"),
                         compilation_options: Default::default(),
-                        targets: &[Some(hdr_color_target_state())],
+                        targets: &[Some(color_target_state(HDR_FORMAT))],
                     }),
                     primitive: wgpu::PrimitiveState {
                         topology: wgpu::PrimitiveTopology::TriangleList,
@@ -1344,7 +1344,18 @@ impl PortalGpu {
 
     /// Reconcile HDR bloom textures with current `VramLedger` operational mode.
     pub fn sync_bloom_targets(&mut self) {
-        if portal_bloom_enabled() && probe_hdr_format(&self.device) {
+        let bloom_wanted = portal_bloom_enabled() && probe_hdr_format(&self.device);
+        if bloom_wanted {
+            if let Some(ref bloom) = self.bloom {
+                if bloom.hdr_extent() == (self.width, self.height) {
+                    return;
+                }
+            }
+        } else if self.bloom.is_none() {
+            return;
+        }
+
+        if bloom_wanted {
             let bloom =
                 create_bloom_chain(&self.device, self.width, self.height, self.color_format);
             if let Some(ref chain) = bloom {
@@ -1699,7 +1710,7 @@ impl PortalGpu {
                 }
             }
 
-            run_bloom_passes(&mut encoder, bloom, &self.queue, &self.device, &view);
+            run_bloom_passes(&mut encoder, bloom, &self.queue, &self.device, &view, self.clear_color);
         } else {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("portal-phenomenal-pass"),
@@ -1937,6 +1948,67 @@ mod tests {
             rgba.chunks_exact(4)
                 .any(|px| px != [8, 13, 20, 255] && px[3] != 0),
             "expected projected tensor, mesh, or ambient pixels over the clear colour"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial(gpu)]
+    fn native_offscreen_mesh_occlusion_and_non_additive_blend() {
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
+        let mut renderer =
+            PortalGpu::new_offscreen(64, 64, 0).expect("native offscreen renderer");
+
+        // Two overlapping triangles:
+        // Far triangle: z = -0.5, blue [0.0, 0.0, 1.0, 1.0]
+        // Near triangle: z = 0.5, red [1.0, 0.0, 0.0, 1.0]
+        let positions = [
+            [-0.5, -0.5, -0.5],
+            [0.5, -0.5, -0.5],
+            [0.0, 0.5, -0.5],
+            [-0.5, -0.5, 0.5],
+            [0.5, -0.5, 0.5],
+            [0.0, 0.5, 0.5],
+        ];
+        let colors = [
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 0.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0, 1.0],
+        ];
+        let indices = [0, 1, 2, 3, 4, 5];
+
+        assert_eq!(
+            renderer.upload_mesh_colored(&positions, &colors, &indices),
+            2
+        );
+
+        renderer
+            .render(0.0, &SystemTelemetry::default())
+            .expect("offscreen draw");
+
+        let mut rgba = vec![0u8; renderer.required_rgba8_bytes()];
+        assert_eq!(
+            renderer.read_rgba8_into(&mut rgba).expect("readback"),
+            rgba.len()
+        );
+
+        // Center pixel should be red (near triangle occludes far blue triangle).
+        // It must NOT be additive magenta (R > 100, B > 100).
+        let center_idx = (32 * 64 + 32) * 4;
+        let r = rgba[center_idx];
+        let _g = rgba[center_idx + 1];
+        let b = rgba[center_idx + 2];
+        let a = rgba[center_idx + 3];
+
+        assert_eq!(a, 255);
+        assert!(r > 50, "near red surface should be visible, got r={r}");
+        assert!(
+            r > b * 2,
+            "red should dominate blue (no additive bleed), got r={r}, b={b}"
         );
     }
 }

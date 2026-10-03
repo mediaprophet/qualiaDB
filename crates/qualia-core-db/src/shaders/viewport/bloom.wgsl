@@ -15,11 +15,15 @@ struct CompositeParams {
     _pad1: f32,
 };
 
+struct BloomUniformBlock {
+    bloom: BloomParams,
+    composite: CompositeParams,
+};
+
 @group(0) @binding(0) var samp: sampler;
 @group(0) @binding(1) var tex_a: texture_2d<f32>;
 @group(0) @binding(2) var tex_b: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> bloom_params: BloomParams;
-@group(0) @binding(4) var<uniform> composite_params: CompositeParams;
+@group(0) @binding(3) var<uniform> uniforms: BloomUniformBlock;
 
 fn fullscreen_pos(vi: u32) -> vec4<f32> {
     let pos = array<vec2<f32>, 3>(
@@ -53,10 +57,10 @@ fn extract_fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     // Render target is half-res — scale UV to sample full HDR scene.
     let uv = pos.xy / (full * 0.5);
     let c = textureSample(tex_a, samp, uv);
-    let bright = max(c.rgb - vec3<f32>(bloom_params.threshold), vec3<f32>(0.0));
+    let bright = max(c.rgb - vec3<f32>(uniforms.bloom.threshold), vec3<f32>(0.0));
     let w = luminance(bright);
-    let bloom = bright * smoothstep(bloom_params.threshold, bloom_params.threshold + 0.25, w);
-    return vec4<f32>(bloom * bloom_params.intensity, 1.0);
+    let bloom = bright * smoothstep(uniforms.bloom.threshold, uniforms.bloom.threshold + 0.25, w);
+    return vec4<f32>(bloom * uniforms.bloom.intensity, 1.0);
 }
 
 @vertex
@@ -69,7 +73,7 @@ fn kawase_fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     let dims = textureDimensions(tex_a);
     let uv = uv_from_pos(pos, dims);
     let texel = 1.0 / vec2<f32>(dims);
-    let o = bloom_params.offset * texel;
+    let o = uniforms.bloom.offset * texel;
     var sum = textureSample(tex_a, samp, uv) * 4.0;
     sum += textureSample(tex_a, samp, uv + vec2<f32>(o.x, o.y));
     sum += textureSample(tex_a, samp, uv + vec2<f32>(-o.x, o.y));
@@ -89,7 +93,7 @@ fn composite_fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     let uv = uv_from_pos(pos, dims);
     let hdr = textureSample(tex_a, samp, uv).rgb;
     let bloom = textureSample(tex_b, samp, uv).rgb;
-    let combined = (hdr + bloom * composite_params.bloom_strength) * composite_params.exposure;
+    let combined = (hdr + bloom * uniforms.composite.bloom_strength) * uniforms.composite.exposure;
     let mapped = reinhard(combined);
     return vec4<f32>(mapped, 1.0);
 }

@@ -116,16 +116,6 @@ pub(super) fn bloom_bind_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout 
                 },
                 count: None,
             },
-            wgpu::BindGroupLayoutEntry {
-                binding: 4,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(32),
-                },
-                count: None,
-            },
         ],
     })
 }
@@ -156,10 +146,6 @@ pub(super) fn make_bloom_bind_group(
             },
             wgpu::BindGroupEntry {
                 binding: 3,
-                resource: uniform_buf.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
                 resource: uniform_buf.as_entire_binding(),
             },
         ],
@@ -347,6 +333,7 @@ pub(super) fn run_bloom_passes(
     queue: &wgpu::Queue,
     device: &wgpu::Device,
     surface_view: &wgpu::TextureView,
+    clear_color: [f64; 4],
 ) {
     let (blur_w, blur_h) = bloom.blur_extent();
     let _ = bloom.texture_handles();
@@ -439,10 +426,10 @@ pub(super) fn run_bloom_passes(
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.03,
-                        g: 0.05,
-                        b: 0.08,
-                        a: 1.0,
+                        r: clear_color[0],
+                        g: clear_color[1],
+                        b: clear_color[2],
+                        a: clear_color[3],
                     }),
                     store: wgpu::StoreOp::Store,
                 },

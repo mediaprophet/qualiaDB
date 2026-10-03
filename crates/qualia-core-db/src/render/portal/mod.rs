@@ -1690,7 +1690,6 @@ impl QualiaPortal {
                 if cw > 0 && ch > 0 && gpu.surface_size() != (cw, ch) {
                     gpu.resize(cw, ch);
                 }
-                gpu.sync_bloom_targets();
                 match gpu.render(self.time as f32, &self.telemetry) {
                     Ok(()) => {
                         if self.body_renderer == BodyRendererBackend::WebGpu

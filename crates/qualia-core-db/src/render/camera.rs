@@ -151,7 +151,7 @@ pub fn orbit_view_projection_target(
     let eye_z = target[2] + dist * cp * cy;
 
     let view = look_at_rh([eye_x, eye_y, eye_z], target, [0.0, 1.0, 0.0]);
-    let proj = perspective_rh_gl(45.0_f32.to_radians(), aspect, 0.05, 200.0);
+    let proj = perspective_rh_zo(45.0_f32.to_radians(), aspect, 0.05, 200.0);
     mat4_mul(proj, view)
 }
 
@@ -170,14 +170,14 @@ fn look_at_rh(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [[f32; 4]; 4] {
 }
 
 #[inline]
-fn perspective_rh_gl(fov_y: f32, aspect: f32, near: f32, far: f32) -> [[f32; 4]; 4] {
+fn perspective_rh_zo(fov_y: f32, aspect: f32, near: f32, far: f32) -> [[f32; 4]; 4] {
     let f = 1.0 / (fov_y * 0.5).tan();
     let nf = 1.0 / (near - far);
     [
         [f / aspect, 0.0, 0.0, 0.0],
         [0.0, f, 0.0, 0.0],
-        [0.0, 0.0, (far + near) * nf, -1.0],
-        [0.0, 0.0, 2.0 * far * near * nf, 0.0],
+        [0.0, 0.0, far * nf, -1.0],
+        [0.0, 0.0, far * near * nf, 0.0],
     ]
 }
 
