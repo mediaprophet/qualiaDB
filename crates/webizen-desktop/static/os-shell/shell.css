@@ -45,6 +45,8 @@ html,body{height:100%;margin:0;overflow:hidden;font:14px/1.4 system-ui,sans-seri
 .hub:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .hub[aria-expanded="true"]{background:radial-gradient(circle at 35% 28%,rgba(47,224,200,.35),#1a3038);box-shadow:0 0 24px rgba(47,224,200,.6)}
 .vol-chrome .vtitle{flex:1;font:650 13px system-ui}
+.btn-win{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--cyan);font:600 11px system-ui;padding:.25rem .55rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.btn-win:hover{background:rgba(77,184,255,.15);border-color:var(--cyan)}
 .vol-chrome .vhint{font-size:11px;color:var(--mute)}
 .pill{display:inline-block;font-size:10px;text-transform:uppercase;padding:2px 7px;border-radius:999px;font-weight:650}
 .pill.live{color:#052e1c;background:var(--live)}

@@ -49,10 +49,10 @@ fn suppress_mingw_default_manifest() -> Result<(), String> {
     let override_dir = out_dir.join("mingw_manifest_override");
     fs::create_dir_all(&override_dir).map_err(|e| format!("create override dir: {e}"))?;
 
-    let empty_o = override_dir.join("default-manifest.o");
+    let manifest_o = override_dir.join("default-manifest.o");
     // Rebuild only when missing so incremental builds stay cheap.
-    if !empty_o.is_file() {
-        write_empty_coff_object(&override_dir, &empty_o)?;
+    if !manifest_o.is_file() {
+        write_manifest_coff_object(&override_dir, &manifest_o)?;
     }
 
     // gcc `-B` prepends this directory when resolving `default-manifest.o%s`.
@@ -60,47 +60,65 @@ fn suppress_mingw_default_manifest() -> Result<(), String> {
     let b_path = path_as_gcc_b_prefix(&override_dir);
     println!("cargo:rustc-link-arg=-B{b_path}");
     // Re-run build.rs if the stub is deleted out-of-band.
-    println!("cargo:rerun-if-changed={}", empty_o.display());
+    println!("cargo:rerun-if-changed={}", manifest_o.display());
     Ok(())
 }
 
-/// Produce a COFF object with **no** `.rsrc` section, named for gcc's endfile hook.
-fn write_empty_coff_object(override_dir: &Path, empty_o: &Path) -> Result<(), String> {
-    // Prefer compiling a one-line C file with the same host gcc rustc will use
-    // as the linker driver — that guarantees a matching object format.
-    let empty_c = override_dir.join("empty_default_manifest.c");
-    fs::write(
-        &empty_c,
-        b"/* Intentionally empty: shadows MinGW-w64 default-manifest.o so the\n\
-           * application keeps a single RT_MANIFEST (from Tauri/winres).\n\
-           */\n",
-    )
-    .map_err(|e| format!("write empty.c: {e}"))?;
+/// Produce a COFF object containing Common-Controls v6 RT_MANIFEST, named for gcc's endfile hook.
+/// This ensures both test executables and application binaries bind comctl32.dll 6.0
+/// (required for TaskDialogIndirect and modern dialog APIs on Windows).
+fn write_manifest_coff_object(override_dir: &Path, out_o: &Path) -> Result<(), String> {
+    let manifest_xml = override_dir.join("app.manifest");
+    let rc_file = override_dir.join("default_manifest.rc");
 
-    let gcc = find_host_gcc();
-    let status = Command::new(&gcc)
-        .arg("-c")
-        .arg(&empty_c)
+    fs::write(
+        &manifest_xml,
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+        type="win32"
+        name="Microsoft.Windows.Common-Controls"
+        version="6.0.0.0"
+        processorArchitecture="*"
+        publicKeyToken="6595b64144ccf1df"
+        language="*"
+      />
+    </dependentAssembly>
+  </dependency>
+</assembly>"#,
+    )
+    .map_err(|e| format!("write app.manifest: {e}"))?;
+
+    let manifest_path_escaped = manifest_xml.display().to_string().replace('\\', "/");
+    fs::write(&rc_file, format!("1 24 \"{manifest_path_escaped}\"\n"))
+        .map_err(|e| format!("write default_manifest.rc: {e}"))?;
+
+    let windres = find_host_windres();
+    let status = Command::new(&windres)
+        .arg(&rc_file)
+        .arg("-O")
+        .arg("coff")
         .arg("-o")
-        .arg(empty_o)
+        .arg(out_o)
         .status()
-        .map_err(|e| format!("spawn {gcc}: {e}"))?;
+        .map_err(|e| format!("spawn {windres}: {e}"))?;
 
     if !status.success() {
-        return Err(format!("{gcc} -c failed with {status}"));
+        return Err(format!("{windres} failed with {status}"));
     }
-    if !empty_o.is_file() {
-        return Err(format!("{} was not produced", empty_o.display()));
+    if !out_o.is_file() {
+        return Err(format!("{} was not produced", out_o.display()));
     }
     Ok(())
 }
 
-fn find_host_gcc() -> String {
-    // Prefer the exact triple rustc uses on this host, then plain `gcc`.
-    const CANDIDATES: &[&str] = &["x86_64-w64-mingw32-gcc", "gcc", "cc"];
+fn find_host_windres() -> String {
+    const CANDIDATES: &[&str] = &["x86_64-w64-mingw32-windres", "windres"];
     for name in CANDIDATES {
         if Command::new(name)
-            .arg("-dumpversion")
+            .arg("--version")
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -108,8 +126,7 @@ fn find_host_gcc() -> String {
             return (*name).to_string();
         }
     }
-    // Fall through to `gcc` and let the spawn error surface.
-    "gcc".to_string()
+    "windres".to_string()
 }
 
 fn path_as_gcc_b_prefix(dir: &Path) -> String {

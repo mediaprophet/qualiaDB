@@ -388,6 +388,9 @@ impl QualiaPortal {
         canvas_w: u32,
         canvas_h: u32,
     ) -> Result<(), JsValue> {
+        // A new pick must not expose the preceding result while GPU readback
+        // is pending or after a miss.
+        self.selected_node = None;
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
             if gpu.has_tensor_buffer() {

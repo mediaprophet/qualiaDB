@@ -47,3 +47,7 @@ pub const POET_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/p
 pub const WELLFAIR_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/wellfair.html");
 pub const HEALTH_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/health.html");
 pub const PROJECTS_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/projects.html");
+pub const TEN_D_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/ten_d.html");
+pub const NEXUS_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/nexus.html");
+pub const CLINICAL_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/clinical.html");
+pub const SANCTUARY_VOLUME_HTML: &str = include_str!("../../static/os-shell/volumes/sanctuary.html");

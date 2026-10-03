@@ -72,6 +72,9 @@ pub mod place_time;
 pub mod projection;
 /// N7: Scene graph — node hierarchy, lights, semantic links, duplication, IK, smooth damp.
 pub mod scene_graph;
+/// Bounded cold-path primitive assembly for authored interactive scenes.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific", feature = "wasm-full"))]
+pub mod scene_primitives;
 /// Sense path — the input twin (Phase 4): microphone PCM → forward DSP → the `∫Ψ > τ → Fact`
 /// bridge, every capture under the deontic/standpoint consent gate (surveillance-refusal default).
 /// Gated like `place_time` (needs `crate::modalities`).

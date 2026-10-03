@@ -21,6 +21,7 @@ pub mod execution_profile;
 pub mod machine_gpu_profile;
 /// Canonical Q42 v3 model-metadata volume for converted `.p64` packages.
 pub mod model_helper;
+pub mod journal;
 pub mod p64_weight;
 pub mod q42_kvp;
 #[cfg(not(target_arch = "wasm32"))]

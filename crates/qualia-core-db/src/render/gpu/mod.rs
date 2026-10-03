@@ -123,6 +123,7 @@ pub struct PortalGpu {
     pick_staging_buf: wgpu::Buffer,
     pending_pick: Option<(u32, u32)>,
     pick_copy_submitted: bool,
+    pick_map_rx: Option<std::sync::mpsc::Receiver<bool>>,
     pick_result: Option<u32>,
     ambient_pipeline: wgpu::RenderPipeline,
     projector_pipeline: wgpu::RenderPipeline,
@@ -890,6 +891,7 @@ impl PortalGpu {
             pick_staging_buf,
             pending_pick: None,
             pick_copy_submitted: false,
+            pick_map_rx: None,
             pick_result: None,
             ambient_pipeline,
             projector_pipeline,
@@ -1298,6 +1300,11 @@ impl PortalGpu {
     }
 
     pub fn queue_pick(&mut self, x: f32, y: f32) {
+        // The staging buffer cannot be copied into while an earlier map is
+        // unresolved. A later click can be queued after the next readback.
+        if self.pick_map_rx.is_some() {
+            return;
+        }
         let px = x.round().max(0.0) as u32;
         let py = y.round().max(0.0) as u32;
         self.pending_pick = Some((
@@ -1315,15 +1322,29 @@ impl PortalGpu {
         if !self.pick_copy_submitted {
             return None;
         }
-        let slice = self.pick_staging_buf.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
+        if self.pick_map_rx.is_none() {
+            let slice = self.pick_staging_buf.slice(..);
+            let (tx, rx) = std::sync::mpsc::channel();
+            slice.map_async(wgpu::MapMode::Read, move |result| {
+                let _ = tx.send(result.is_ok());
+            });
+            self.pick_map_rx = Some(rx);
+        }
+        // Browser WebGPU mapAsync resolves on a later event-loop turn. A
+        // blocking poll on that same thread cannot deliver its callback.
+        #[cfg(not(target_arch = "wasm32"))]
         let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
-        if !matches!(rx.try_recv(), Ok(Ok(()))) {
+        let mapped_ok = match self.pick_map_rx.as_ref().unwrap().try_recv() {
+            Ok(ok) => ok,
+            Err(std::sync::mpsc::TryRecvError::Empty) => return None,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => false,
+        };
+        self.pick_map_rx = None;
+        if !mapped_ok {
+            self.pick_copy_submitted = false;
             return None;
         }
+        let slice = self.pick_staging_buf.slice(..);
         let mapped = slice
             .get_mapped_range()
             .expect("wgpu buffer map_range failed");
@@ -1385,7 +1406,8 @@ impl PortalGpu {
         let Some((px, py)) = self.pending_pick.take() else {
             return;
         };
-        let py = self.height.saturating_sub(1) - py;
+        // Canvas pointer pixels and WebGPU texture-copy origins are both
+        // top-left based. Flipping here samples the opposite side of the view.
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
                 texture: &self.picking_texture,

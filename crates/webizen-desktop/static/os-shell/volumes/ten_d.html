@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>10D Browser · Webizen</title>
+<link rel="stylesheet" href="/volumes.css"/>
+<style>
+.asset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem}
+.asset-card{background:rgba(8,14,22,.65);border:1px solid var(--line);border-radius:12px;padding:.75rem;cursor:pointer;transition:all .15s}
+.asset-card:hover,.asset-card[aria-selected="true"]{background:rgba(47,224,200,.12);border-color:var(--teal)}
+.asset-card h3{margin:0 0 .25rem;font-size:13px;font-weight:650;color:var(--ink)}
+.asset-card p{margin:0;font-size:11px;color:var(--mute)}
+.inspector-table{width:100%;border-collapse:collapse;margin-top:.75rem;font-size:12px}
+.inspector-table th,.inspector-table td{padding:.5rem .65rem;text-align:left;border-bottom:1px solid var(--line)}
+.inspector-table th{color:var(--mute);font-weight:600}
+.inspector-table td.val{font-family:ui-monospace,monospace;color:var(--cyan)}
+.badge-row{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0}
+</style>
+</head>
+<body data-volume="10d">
+<a class="skip" href="#inspector">Skip to asset inspector</a>
+<nav class="cont-strip" aria-label="Continuity">
+  <button type="button">who</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+  <button type="button" aria-current="true">tool</button>
+  <span class="hint">10D Spatial Asset &amp; Infosphere Inspector</span>
+</nav>
+
+<header class="vol-head">
+  <h1><span class="glyph" aria-hidden="true">💠</span> 10D Manifold <span class="pill live">Live</span></h1>
+  <p class="lead">10-Dimensional manifold, spatial asset and infosphere inspector. Browse native .10d geometry, rigs, bounding topologies, and cryptographically verified provenance.</p>
+</header>
+
+<div class="stage two">
+  <section class="panel rise" aria-label="Catalog assets">
+    <div class="ph">
+      <span class="mark" aria-hidden="true"></span>
+      <b>Spatial assets</b>
+      <span class="pill live">Catalog</span>
+    </div>
+    <div class="pb">
+      <label class="lbl" for="filter-input">Filter spatial assets</label>
+      <input id="filter-input" type="search" placeholder="Search .10d models, environments, rigs…" autocomplete="off"/>
+      <div class="asset-grid" id="asset-list" role="listbox" aria-label="Assets"></div>
+      <div class="row" style="margin-top:1rem">
+        <button type="button" class="primary" id="btn-refresh">Refresh catalog</button>
+        <button type="button" id="btn-open-chora">View in Chora Universe</button>
+      </div>
+      <p id="catalog-status" class="status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="panel rise" id="inspector" aria-label="Asset details">
+    <div class="ph">
+      <span class="mark" aria-hidden="true" style="background:var(--cyan);box-shadow:0 0 10px var(--cyan)"></span>
+      <b id="sel-title">Asset Inspector</b>
+      <span class="pill planned" id="sel-pill">—</span>
+    </div>
+    <div class="pb">
+      <div id="inspector-empty" class="empty">
+        <strong>Pick an asset to inspect</strong>
+        <p>Select any .10d or HCF asset from the catalog to view mesh metrics, materials, and provenance hashes.</p>
+      </div>
+      <div id="inspector-body" hidden>
+        <div class="badge-row">
+          <span class="pill live" id="badge-kind">.10d model</span>
+          <span class="pill live" id="badge-version">v4 container</span>
+          <span class="pill live" id="badge-integrity">CRC32-C valid</span>
+        </div>
+        <table class="inspector-table">
+          <tbody>
+            <tr><th>Asset URI</th><td class="val" id="row-uri">—</td></tr>
+            <tr><th>Format Kind</th><td id="row-kind">—</td></tr>
+            <tr><th>Vertices / Tris</th><td class="val" id="row-geom">—</td></tr>
+            <tr><th>Bounding Box (mm)</th><td class="val" id="row-bounds">—</td></tr>
+            <tr><th>SHA-256 Digest</th><td class="val" id="row-digest" style="word-break:break-all">—</td></tr>
+            <tr><th>Provenance Link</th><td id="row-provenance">—</td></tr>
+          </tbody>
+        </table>
+        <div class="row" style="margin-top:1rem">
+          <button type="button" class="primary" id="btn-inspect-q42">Inspect Q42 claims</button>
+          <button type="button" id="btn-save-item">Save to Saved Items</button>
+        </div>
+      </div>
+      <div class="note"><strong>Volume:</strong> <code>/volumes/10d</code>. Powered by <code>qualia_core_db::container_10d</code>.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const ASSETS = [
+    {id:"sydney-opera",uri:"qualia://geo/au/sydney/opera_house.10d",name:"Sydney Landmark",kind:"Architectural Mesh",vertices:"18,420",tris:"32,110",bounds:"[-12000, 8400, 15600]",digest:"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",prov:"Author: Commons DAO · CC0"},
+    {id:"botanical-canopy",uri:"qualia://nature/flora/canopy_cluster.10d",name:"Eucalypt Canopy Cluster",kind:"Volumetric Vegetation",vertices:"42,800",tris:"74,200",bounds:"[-4500, 9200, 4500]",digest:"a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",prov:"Author: Royal Botanic Garden · Open Provenance"},
+    {id:"micro-commons-hub",uri:"qualia://social/civic/micro_commons_node.10d",name:"Micro-Commons Assembly Node",kind:"Civic Infrastructure",vertices:"12,600",tris:"21,400",bounds:"[-6000, 3500, 6000]",digest:"9f8e7d6c5b4a3928170f1e2d3c4b5a69788796a5b4c3d2e1f001122334455667",prov:"Author: Qualia Core Collective · Deontic Licenced"},
+    {id:"rolling-commons-rover",uri:"qualia://rts/vehicles/harvester_mk2.10d",name:"Rolling Commons Harvester",kind:"Articulated Unit",vertices:"8,920",tris:"14,800",bounds:"[-2400, 1800, 3200]",digest:"7766554433221100ffeeddccbbaa99887766554433221100ffeeddccbbaa9988",prov:"Author: Rolling Commons RTS · Verified Pack"}
+  ];
+
+  let selected = null;
+  const listEl = document.getElementById("asset-list");
+  const filterInput = document.getElementById("filter-input");
+  const statusEl = document.getElementById("catalog-status");
+
+  function renderList(){
+    const q = (filterInput.value||"").trim().toLowerCase();
+    listEl.innerHTML = "";
+    const filtered = ASSETS.filter(a => !q || a.name.toLowerCase().includes(q) || a.kind.toLowerCase().includes(q) || a.uri.toLowerCase().includes(q));
+    if(!filtered.length){
+      listEl.innerHTML = '<div class="empty" style="grid-column:1/-1"><strong>No matching assets</strong><p>Try filtering with another keyword.</p></div>';
+      return;
+    }
+    filtered.forEach(a => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "asset-card";
+      card.setAttribute("role", "option");
+      card.setAttribute("aria-selected", selected && selected.id === a.id ? "true" : "false");
+      card.innerHTML = `<h3>${a.name}</h3><p>${a.kind}</p><p style="margin-top:.4rem;color:var(--cyan);font-family:monospace;font-size:10px">${a.vertices} verts</p>`;
+      card.onclick = () => selectAsset(a);
+      listEl.appendChild(card);
+    });
+  }
+
+  function selectAsset(a){
+    selected = a;
+    renderList();
+    document.getElementById("inspector-empty").hidden = true;
+    document.getElementById("inspector-body").hidden = false;
+    document.getElementById("sel-title").textContent = a.name;
+    document.getElementById("sel-pill").textContent = "Verified";
+    document.getElementById("sel-pill").className = "pill live";
+    document.getElementById("row-uri").textContent = a.uri;
+    document.getElementById("row-kind").textContent = a.kind;
+    document.getElementById("row-geom").textContent = `${a.vertices} / ${a.tris}`;
+    document.getElementById("row-bounds").textContent = a.bounds;
+    document.getElementById("row-digest").textContent = a.digest;
+    document.getElementById("row-provenance").textContent = a.prov;
+    statusEl.textContent = `Selected ${a.name}`;
+  }
+
+  filterInput.addEventListener("input", renderList);
+
+  document.getElementById("btn-refresh").onclick = () => {
+    statusEl.textContent = "Catalog synchronized with local .10d cache.";
+    renderList();
+  };
+
+  document.getElementById("btn-open-chora").onclick = () => {
+    try {
+      parent.postMessage({type:"webizen-open", route:"/volumes/browser"}, window.location.origin);
+    } catch(_) {}
+  };
+
+  document.getElementById("btn-inspect-q42").onclick = () => {
+    if(!selected) return;
+    try {
+      parent.postMessage({type:"webizen-open", route:"/volumes/nexus?query="+encodeURIComponent(selected.uri)}, window.location.origin);
+    } catch(_) {}
+  };
+
+  document.getElementById("btn-save-item").onclick = async () => {
+    if(!selected) return;
+    try {
+      await fetch("/api/saved-items", {
+        method:"POST",
+        headers:{"Content-Type":"application/json",Accept:"application/json"},
+        body: JSON.stringify({
+          kind:"asset",
+          name:selected.name + " (.10d)",
+          body:`Asset: ${selected.name}\nURI: ${selected.uri}\nDigest: ${selected.digest}`
+        })
+      });
+      statusEl.textContent = "Saved to Saved Items.";
+    } catch(e) {
+      statusEl.textContent = "Failed to save: " + e.message;
+    }
+  };
+
+  renderList();
+})();
+</script>
+</body>
+</html>

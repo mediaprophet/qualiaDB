@@ -398,6 +398,10 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/volumes/wellfair", get(wellfair_volume_handler))
         .route("/volumes/health", get(health_volume_handler))
         .route("/volumes/projects", get(projects_volume_handler))
+        .route("/volumes/10d", get(ten_d_volume_handler))
+        .route("/volumes/nexus", get(nexus_volume_handler))
+        .route("/volumes/clinical", get(clinical_volume_handler))
+        .route("/volumes/sanctuary", get(sanctuary_volume_handler))
         // Legacy Studio SPA — WEBIZEN_LEGACY_SHELL / --legacy-shell only.
         .route("/talk", get(studio_index_handler))
         .route("/talk/mail", get(studio_index_handler))
@@ -422,6 +426,8 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/status", get(status_handler))
         .route("/api/shell/open-poet", post(open_poet_window_handler))
         .route("/api/shell/open-browser", post(open_browser_window_handler))
+        .route("/api/shell/open-window", post(open_window_handler))
+        .route("/api/clinical/framingham", post(clinical_framingham_handler))
         // Personal Saved Items remain local-only. They are not graph records,
         // social posts, or a LAN-sharing surface.
         .route(
@@ -1074,6 +1080,100 @@ async fn open_browser_window_handler(
     }
 }
 
+#[derive(serde::Deserialize)]
+struct OpenWindowRequest {
+    url: String,
+    title: Option<String>,
+    width: Option<f64>,
+    height: Option<f64>,
+}
+
+async fn open_window_handler(Json(req): Json<OpenWindowRequest>) -> Json<serde_json::Value> {
+    match APP_HANDLE.get() {
+        Some(app) => {
+            let title = req.title.unwrap_or_else(|| "Webizen Volume".to_string());
+            let width = req.width.unwrap_or(1100.0);
+            let height = req.height.unwrap_or(750.0);
+            let label = format!("vol_{:x}", qualia_core_db::q_hash(&req.url) & 0x7fff_ffff);
+
+            if let Some(existing) = app.get_webview_window(&label) {
+                let _ = existing.show();
+                let _ = existing.unminimize();
+                let _ = existing.set_focus();
+                return Json(serde_json::json!({ "ok": true, "window": label }));
+            }
+
+            let full_url = if req.url.starts_with("http://") || req.url.starts_with("https://") {
+                req.url
+            } else {
+                let port = CURRENT_SETTINGS_PORT.load(std::sync::atomic::Ordering::Relaxed);
+                let path = if req.url.starts_with('/') {
+                    req.url.as_str()
+                } else {
+                    ""
+                };
+                if path.is_empty() {
+                    format!("http://127.0.0.1:{}/{}", port, req.url)
+                } else {
+                    format!("http://127.0.0.1:{}{}", port, path)
+                }
+            };
+
+            let parsed: Result<tauri::Url, _> = full_url.parse();
+            match parsed {
+                Ok(url) => {
+                    let webview_url = tauri::WebviewUrl::External(url);
+                    match tauri::WebviewWindowBuilder::new(app, &label, webview_url)
+                        .title(&title)
+                        .inner_size(width, height)
+                        .build()
+                    {
+                        Ok(win) => {
+                            let _ = win.set_focus();
+                            Json(serde_json::json!({ "ok": true, "window": label }))
+                        }
+                        Err(e) => Json(serde_json::json!({ "ok": false, "error": e.to_string() })),
+                    }
+                }
+                Err(e) => Json(serde_json::json!({ "ok": false, "error": format!("invalid URL: {e}") })),
+            }
+        }
+        None => Json(serde_json::json!({ "ok": false, "error": "host app handle unavailable" })),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct FraminghamApiRequest {
+    age: u8,
+    sys_bp: f64,
+    tot_chol: f64,
+    hdl_chol: f64,
+    smoker: bool,
+    #[serde(default = "default_male_sex")]
+    sex_male: bool,
+}
+fn default_male_sex() -> bool {
+    true
+}
+
+async fn clinical_framingham_handler(Json(req): Json<FraminghamApiRequest>) -> Json<serde_json::Value> {
+    let input = qualia_core_db::clinical_engine::FraminghamInput {
+        sex_male: req.sex_male,
+        age: req.age,
+        total_cholesterol_mmol: req.tot_chol,
+        hdl_cholesterol_mmol: req.hdl_chol,
+        systolic_bp: req.sys_bp,
+        bp_treated: false,
+        current_smoker: req.smoker,
+        diabetic: false,
+    };
+    let result = qualia_core_db::clinical_engine::framingham_10yr_risk(&input);
+    Json(serde_json::json!({
+        "risk_percent": result.risk_10yr,
+        "category": format!("{:?}", result.category),
+    }))
+}
+
 async fn wellfair_volume_handler() -> Response {
     volume_html_response(crate::shell::WELLFAIR_VOLUME_HTML)
 }
@@ -1084,6 +1184,22 @@ async fn health_volume_handler() -> Response {
 
 async fn projects_volume_handler() -> Response {
     volume_html_response(crate::shell::PROJECTS_VOLUME_HTML)
+}
+
+async fn ten_d_volume_handler() -> Response {
+    volume_html_response(crate::shell::TEN_D_VOLUME_HTML)
+}
+
+async fn nexus_volume_handler() -> Response {
+    volume_html_response(crate::shell::NEXUS_VOLUME_HTML)
+}
+
+async fn clinical_volume_handler() -> Response {
+    volume_html_response(crate::shell::CLINICAL_VOLUME_HTML)
+}
+
+async fn sanctuary_volume_handler() -> Response {
+    volume_html_response(crate::shell::SANCTUARY_VOLUME_HTML)
 }
 
 /// Wallet orbit tile — Lightning · Nym · eCash · tokens (not MCP-only). No ETH target.
@@ -2635,6 +2751,61 @@ mod ui_route_tests {
             html.contains("label:\"Full\"") && html.contains("label:\"Float\""),
             "full and float on 8-sector wheel"
         );
+        // First-class elevated volumes
+        assert!(
+            html.contains("route:\"/volumes/10d\""),
+            "10D manifold volume route"
+        );
+        assert!(
+            html.contains("route:\"/volumes/nexus\""),
+            "knowledge nexus volume route"
+        );
+        assert!(
+            html.contains("route:\"/volumes/clinical\""),
+            "clinical decision volume route"
+        );
+        assert!(
+            html.contains("route:\"/volumes/sanctuary\""),
+            "sanctuary vault volume route"
+        );
+        assert!(
+            html.contains("id=\"btn-win\"") || html.contains("class=\"btn-win\""),
+            "dedicated window button on volume chrome"
+        );
+        assert!(
+            crate::shell::OS_SHELL_CSS.contains(".btn-win"),
+            "dedicated window button style in shell.css"
+        );
+    }
+
+    #[tokio::test]
+    async fn first_class_volume_handlers_serve_200_ok() {
+        assert_eq!(ten_d_volume_handler().await.status(), StatusCode::OK);
+        assert_eq!(nexus_volume_handler().await.status(), StatusCode::OK);
+        assert_eq!(clinical_volume_handler().await.status(), StatusCode::OK);
+        assert_eq!(sanctuary_volume_handler().await.status(), StatusCode::OK);
+
+        assert!(crate::shell::TEN_D_VOLUME_HTML.contains("10D Manifold"));
+        assert!(crate::shell::NEXUS_VOLUME_HTML.contains("Knowledge Nexus"));
+        assert!(crate::shell::CLINICAL_VOLUME_HTML.contains("Clinical Decision"));
+        assert!(crate::shell::SANCTUARY_VOLUME_HTML.contains("Sanctuary Vault"));
+    }
+
+    #[tokio::test]
+    async fn clinical_framingham_handler_computes_valid_risk() {
+        let req = FraminghamApiRequest {
+            age: 55,
+            sys_bp: 140.0,
+            tot_chol: 5.5,
+            hdl_chol: 1.2,
+            smoker: true,
+            sex_male: true,
+        };
+        let Json(val) = clinical_framingham_handler(Json(req)).await;
+        assert!(val.get("risk_percent").is_some());
+        assert!(val.get("category").is_some());
+        let risk = val["risk_percent"].as_f64().unwrap();
+        assert!(risk > 0.0 && risk <= 100.0);
     }
 
     #[tokio::test]

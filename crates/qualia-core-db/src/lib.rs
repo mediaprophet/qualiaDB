@@ -251,6 +251,8 @@ pub use q42::q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_volume;
 pub use q42::yaml_ld_q42;
+pub use q42::journal;
+pub use q42::journal::{JournalHeader, JournalTransaction, MutableQ42Session, Q42Journal};
 // --- extensions/ category (reorg) ---
 pub mod extensions;
 pub use extensions::extension_bus;
@@ -297,6 +299,9 @@ pub mod audio;
 /// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
 /// both native and WASM builds (native adds the zero-copy `BundleMmap`).
 pub mod bundle;
+/// Deterministic fixed-tick simulation engine (QG-09).
+pub mod simulation;
+pub use simulation::fixed_tick;
 /// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
 pub mod semantic_instruments;
 /// `.10d` living-container v1 — normative header, axis-role taxonomy, and
@@ -1139,6 +1144,7 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
     Copy,
     PartialEq,
     Eq,
+    Hash,
     PartialOrd,
     Ord,
     Zeroize,

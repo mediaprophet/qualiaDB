@@ -75,4 +75,20 @@ mod tests {
         let r = BundleReader::parse(&bytes).unwrap();
         assert!(r.entries().is_empty());
     }
+
+    #[test]
+    fn tampered_bundle_fails_verification() {
+        let mut w = BundleWriter::new();
+        w.add_file("asset.10d", "10d", b"valid asset bytes".to_vec(), None).unwrap();
+        let mut bytes = w.build().unwrap();
+
+        // Tamper with one byte in the payload
+        let r = BundleReader::parse(&bytes).unwrap();
+        let offset = r.entry("asset.10d").unwrap().offset as usize;
+        bytes[offset] ^= 0xFF;
+
+        // Bundle parse must reject with CRC mismatch
+        let res = BundleReader::parse(&bytes);
+        assert!(matches!(res, Err(BundleError::CrcMismatch { .. })));
+    }
 }

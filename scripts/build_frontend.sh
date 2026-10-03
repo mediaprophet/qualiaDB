@@ -43,6 +43,50 @@ fi
 # Prefer cargo-installed tools over any host/Homebrew wasm-bindgen.
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
+
+# NO_DOWNLOADS requires esbuild and wasm-opt already on PATH.
+ESBUILD_VERSION="${ESBUILD_VERSION:-0.27.3}"
+esbuild_ok=0
+if command -v esbuild >/dev/null 2>&1; then
+  if esbuild --version 2>/dev/null | grep -Eq "${ESBUILD_VERSION}"; then
+    esbuild_ok=1
+  fi
+fi
+if [[ "$esbuild_ok" -eq 0 ]]; then
+  if command -v npm >/dev/null 2>&1; then
+    echo "Installing esbuild ${ESBUILD_VERSION}..."
+    npm install --global "esbuild@${ESBUILD_VERSION}" || true
+  fi
+fi
+
+# Ensure wasm-opt exists on PATH
+if ! command -v wasm-opt >/dev/null 2>&1; then
+  BINARYEN_VERSION="${BINARYEN_VERSION:-123}"
+  dx_tools="$HOME/.dx/tools"
+  binaryen_home="$dx_tools/binaryen-version_$BINARYEN_VERSION"
+  if [[ ! -x "$binaryen_home/bin/wasm-opt" ]]; then
+    mkdir -p "$dx_tools"
+    arch="x86_64"
+    if [[ "$(uname -m)" == "arm64" || "$(uname -m)" == "aarch64" ]]; then
+      arch="arm64"
+    fi
+    os_tag="linux"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      os_tag="macos"
+    fi
+    asset="binaryen-version_${BINARYEN_VERSION}-${arch}-${os_tag}.tar.gz"
+    url="https://github.com/WebAssembly/binaryen/releases/download/version_${BINARYEN_VERSION}/${asset}"
+    echo "Downloading wasm-opt from $url..."
+    if curl -sSL -o "$dx_tools/$asset" "$url"; then
+      tar -xzf "$dx_tools/$asset" -C "$dx_tools" || true
+      rm -f "$dx_tools/$asset"
+    fi
+  fi
+  if [[ -x "$binaryen_home/bin/wasm-opt" ]]; then
+    export PATH="$binaryen_home/bin:$PATH"
+  fi
+fi
+
 # Dioxus otherwise ignores the verified PATH binary and attempts to
 # redownload a managed wasm-bindgen on every invocation.
 export NO_DOWNLOADS=1

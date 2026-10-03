@@ -150,6 +150,12 @@ incremental = false
 [profile.release.package.poet]
 opt-level = "s"
 
+# Limit debuginfo to line-tables (1) for test profile. On Windows x86_64, linking
+# webizen-desktop with debug=2 exceeds the 2GB PE limit (producing a 2.33GB binary
+# that the OS loader rejects with error 193 'not a valid Win32 application').
+[profile.test]
+debug = 1
+
 # Vendored imap-proto 0.10.2 with the trailing-semicolon-in-macro future-incompat lint fixed
 # (upstream imap 2.4.1 pins imap-proto ^0.10.0; the fix hasn't been published to crates.io for
 # the 0.10.x line, so we vendor + patch locally). Remove when imap publishes a 0.10.x fix or when

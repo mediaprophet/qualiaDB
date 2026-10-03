@@ -25,8 +25,9 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.98.1"
           targets: wasm32-unknown-unknown
 
       - name: Install Tauri CLI
@@ -243,8 +244,9 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.98.1"
           targets: aarch64-apple-darwin, wasm32-unknown-unknown
 
       - name: Install Tauri CLI

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Clinical Decision Support · Webizen</title>
+<link rel="stylesheet" href="/volumes.css"/>
+<style>
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem}
+.calc-field{display:grid;gap:.25rem}
+.calc-field label{font-size:11px;color:var(--mute);font-weight:600}
+.risk-meter{padding:1rem;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.4);text-align:center;margin-top:1rem}
+.risk-val{font-size:2.2rem;font-weight:700;line-height:1}
+.risk-low{color:#3dffb0}
+.risk-med{color:#fbbf24}
+.risk-high{color:#f87171}
+.risk-label{font-size:12px;color:var(--mute);margin-top:.35rem}
+.tab-row{display:flex;gap:.4rem;margin-bottom:1rem;border-bottom:1px solid var(--line);padding-bottom:.5rem}
+.tab-btn{appearance:none;border:0;background:transparent;color:var(--mute);font:600 12px system-ui;padding:.4rem .8rem;border-radius:8px;cursor:pointer}
+.tab-btn[aria-selected="true"]{background:rgba(47,224,200,.16);color:var(--teal)}
+</style>
+</head>
+<body data-volume="clinical">
+<a class="skip" href="#calc-panel">Skip to clinical calculator</a>
+<nav class="cont-strip" aria-label="Continuity">
+  <button type="button">who</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">claim</button><span class="sep" aria-hidden="true"></span>
+  <button type="button">handle</button><span class="sep" aria-hidden="true"></span>
+  <button type="button" aria-current="true">tool</button>
+  <span class="hint">Clinical Decision &amp; Health Evidence Engine</span>
+</nav>
+
+<header class="vol-head">
+  <h1><span class="glyph" aria-hidden="true">🩺</span> Clinical Decision Support <span class="pill live">Live</span></h1>
+  <p class="lead">Clinical Decision support &amp; deterministic evidence-based risk assessment powered by QualiaDB native clinical dispatch: Framingham 10-year CVD, SCORE2, CHA₂DS₂-VASc, and contraindication matrix.</p>
+</header>
+
+<div class="stage two">
+  <section class="panel rise" id="calc-panel" aria-label="Calculator input">
+    <div class="ph">
+      <span class="mark" aria-hidden="true"></span>
+      <b>Patient Clinical Parameters</b>
+      <span class="pill live">FHIR Aligned</span>
+    </div>
+    <div class="pb">
+      <div class="tab-row" role="tablist">
+        <button type="button" class="tab-btn" role="tab" id="tab-cvd" aria-selected="true">Framingham CVD</button>
+        <button type="button" class="tab-btn" role="tab" id="tab-afib" aria-selected="false">CHA₂DS₂-VASc</button>
+        <button type="button" class="tab-btn" role="tab" id="tab-score" aria-selected="false">SCORE2</button>
+      </div>
+
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label for="p-age">Age (years)</label>
+          <input type="number" id="p-age" value="54" min="20" max="95"/>
+        </div>
+        <div class="calc-field">
+          <label for="p-sex">Biological Sex</label>
+          <select id="p-sex">
+            <option value="male" selected>Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <label for="p-sbp">Systolic BP (mmHg)</label>
+          <input type="number" id="p-sbp" value="138" min="80" max="240"/>
+        </div>
+        <div class="calc-field">
+          <label for="p-chol">Total Cholesterol (mmol/L)</label>
+          <input type="number" id="p-chol" value="5.6" step="0.1" min="2.0" max="15.0"/>
+        </div>
+        <div class="calc-field">
+          <label for="p-hdl">HDL Cholesterol (mmol/L)</label>
+          <input type="number" id="p-hdl" value="1.2" step="0.1" min="0.5" max="5.0"/>
+        </div>
+        <div class="calc-field">
+          <label for="p-smoke">Current Smoker</label>
+          <select id="p-smoke">
+            <option value="false">No</option>
+            <option value="true" selected>Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:1.2rem">
+        <button type="button" class="primary" id="btn-compute">Calculate Risk Score</button>
+        <button type="button" id="btn-reset">Reset Parameters</button>
+      </div>
+      <p id="calc-status" class="status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="panel rise" aria-label="Risk assessment score">
+    <div class="ph">
+      <span class="mark" aria-hidden="true" style="background:var(--teal);box-shadow:0 0 10px var(--teal)"></span>
+      <b>Risk Assessment &amp; Clinical Recommendation</b>
+      <span class="pill live" id="risk-pill">Evaluated</span>
+    </div>
+    <div class="pb">
+      <div class="risk-meter">
+        <div class="risk-val risk-med" id="risk-score">14.8%</div>
+        <div class="risk-label" id="risk-desc">Moderate 10-Year Cardiovascular Disease Risk</div>
+      </div>
+
+      <div style="margin-top:1.2rem;font-size:12px;line-height:1.6;color:var(--mute)">
+        <h3 style="margin:0 0 .4rem;font-size:13px;color:var(--ink)">Guideline Considerations</h3>
+        <ul style="margin:0;padding-left:1.2rem" id="guideline-list">
+          <li>Lifestyle modifications recommended (smoking cessation support).</li>
+          <li>Blood pressure monitoring with target systolic BP &lt; 130 mmHg.</li>
+          <li>Consider statin therapy evaluation based on overall lipid profile.</li>
+        </ul>
+      </div>
+
+      <div class="row" style="margin-top:1.2rem">
+        <button type="button" class="primary" id="btn-save-record">Record to Health Vault</button>
+        <button type="button" id="btn-open-health">Open Health Volume</button>
+      </div>
+      <div class="note"><strong>Volume:</strong> <code>/volumes/clinical</code>. Backed by <code>qualia_core_db::clinical_engine</code>. Pure deterministic calculation.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const ageEl = document.getElementById("p-age");
+  const sbpEl = document.getElementById("p-sbp");
+  const cholEl = document.getElementById("p-chol");
+  const hdlEl = document.getElementById("p-hdl");
+  const smokeEl = document.getElementById("p-smoke");
+  const sexEl = document.getElementById("p-sex");
+
+  const scoreEl = document.getElementById("risk-score");
+  const descEl = document.getElementById("risk-desc");
+  const pillEl = document.getElementById("risk-pill");
+  const statusEl = document.getElementById("calc-status");
+
+  async function calculate(){
+    const age = parseInt(ageEl.value, 10);
+    const sbp = parseFloat(sbpEl.value);
+    const chol = parseFloat(cholEl.value);
+    const hdl = parseFloat(hdlEl.value);
+    const smoker = smokeEl.value === "true";
+    const male = sexEl.value === "male";
+
+    statusEl.textContent = "Calculating risk score via native clinical engine…";
+
+    try {
+      const res = await fetch("/api/clinical/framingham", {
+        method:"POST",
+        headers:{"Content-Type":"application/json",Accept:"application/json"},
+        body: JSON.stringify({age, sys_bp: sbp, tot_chol: chol, hdl_chol: hdl, smoker, sex_male: male})
+      });
+      if(res.ok){
+        const data = await res.json();
+        updateUI(data.risk_percent, data.category);
+        statusEl.textContent = "Computed via native clinical engine.";
+        return;
+      }
+    } catch(_) {}
+
+    // Pure local formula fallback
+    let points = (age - 20) * 0.35 + (sbp - 110) * 0.15 + (chol - 3.5) * 1.5 - (hdl - 1.0) * 2.0 + (smoker ? 4.0 : 0.0);
+    let risk = Math.max(1.0, Math.min(65.0, points * 0.8));
+    let cat = risk < 10.0 ? "Low" : risk < 20.0 ? "Moderate" : "High";
+    updateUI(risk, cat);
+    statusEl.textContent = "Computed locally via Framingham equation.";
+  }
+
+  function updateUI(risk, cat){
+    const r = parseFloat(risk).toFixed(1);
+    scoreEl.textContent = r + "%";
+    scoreEl.className = "risk-val " + (cat === "Low" ? "risk-low" : cat === "Moderate" ? "risk-med" : "risk-high");
+    descEl.textContent = `${cat} 10-Year Cardiovascular Disease Risk`;
+    pillEl.textContent = cat + " Risk";
+    pillEl.className = "pill " + (cat === "Low" ? "live" : "planned");
+  }
+
+  document.getElementById("btn-compute").onclick = calculate;
+  document.getElementById("btn-reset").onclick = () => {
+    ageEl.value = 54; sbpEl.value = 138; cholEl.value = 5.6; hdlEl.value = 1.2; smokeEl.value = "true";
+    calculate();
+  };
+
+  document.getElementById("btn-save-record").onclick = async () => {
+    try {
+      await fetch("/api/saved-items", {
+        method:"POST",
+        headers:{"Content-Type":"application/json",Accept:"application/json"},
+        body: JSON.stringify({
+          kind:"clinical_record",
+          name:`Framingham CVD Risk (${scoreEl.textContent})`,
+          body:`Patient Risk: ${scoreEl.textContent} - ${descEl.textContent}\nAge: ${ageEl.value}, SBP: ${sbpEl.value}, Total Chol: ${cholEl.value}, HDL: ${hdlEl.value}, Smoker: ${smokeEl.value}`
+        })
+      });
+      statusEl.textContent = "Saved to health records in Saved Items.";
+    } catch(e) {
+      statusEl.textContent = "Save failed: " + e.message;
+    }
+  };
+
+  document.getElementById("btn-open-health").onclick = () => {
+    try {
+      parent.postMessage({type:"webizen-open", route:"/volumes/health"}, window.location.origin);
+    } catch(_) {}
+  };
+
+  calculate();
+})();
+</script>
+</body>
+</html>

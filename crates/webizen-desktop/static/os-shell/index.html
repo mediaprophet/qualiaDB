@@ -24,6 +24,7 @@
       <div class="vol-chrome" id="vol-chrome" hidden>
         <button type="button" class="hub" id="hub" aria-label="Open volume command wheel" aria-expanded="false" aria-haspopup="menu" title="Command wheel">◉</button>
         <div class="vtitle" id="vol-title">Volume</div>
+        <button type="button" class="btn-win" id="btn-win" title="Open in dedicated window"><span>⧉</span> Window</button>
         <span class="pill live">Live</span>
         <span class="vhint">hub · right-click</span>
       </div>
@@ -56,6 +57,10 @@
                 <li><span>Settings</span><span class="pill live">Live</span></li>
                 <li><span>Poet</span><span class="pill live">Live</span></li>
                 <li><span>Browser · Chora</span><span class="pill live">Live</span></li>
+                <li><span>10D Manifold</span><span class="pill live">Live</span></li>
+                <li><span>Nexus</span><span class="pill live">Live</span></li>
+                <li><span>Clinical</span><span class="pill live">Live</span></li>
+                <li><span>Sanctuary</span><span class="pill live">Live</span></li>
               </ul>
             </aside>
           </div>
@@ -107,7 +112,11 @@ const APPS=[
 {id:"health",name:"Health & care",glyph:"⚕",blurb:"Clinical documents and reviewed records.",status:"live",route:"/volumes/health",human:true},
 {id:"projects",name:"Projects",glyph:"📋",blurb:"Work that serves humans.",status:"live",route:"/volumes/projects"},
 {id:"admin",name:"Admin",glyph:"🛠",blurb:"Jobs · logs · ops.",status:"live",route:"/volumes/admin"},
-{id:"poet",name:"Poet",glyph:"🪶",blurb:"HyperCanvas workbench — desktop build.",status:"live",route:"/volumes/poet"}
+{id:"poet",name:"Poet",glyph:"🪶",blurb:"HyperCanvas workbench — desktop build.",status:"live",route:"/volumes/poet"},
+{id:"10d",name:"10D Manifold",glyph:"💠",blurb:"10-Dimensional manifold, meshes, and WebizenVM state.",status:"live",route:"/volumes/10d"},
+{id:"nexus",name:"Knowledge Nexus",glyph:"🧠",blurb:"SPARQL engine, epistemic logic, and SHACL shapes.",status:"live",route:"/volumes/nexus"},
+{id:"clinical",name:"Clinical Decision",glyph:"🩺",blurb:"Cardiovascular risk (Framingham/SCORE2) and health records.",status:"live",route:"/volumes/clinical",human:true},
+{id:"sanctuary",name:"Sanctuary Vault",glyph:"🛡️",blurb:"Anti-coercion dual-lane defense and KeyVault status.",status:"live",route:"/volumes/sanctuary"}
 ];
 const SECTORS=[
 {id:"close",label:"Close",glyph:"✕",color:"#f87171",say:"Close volume"},
@@ -346,6 +355,27 @@ function runSector(s){
     openLauncher();
     return;
   }
+}
+const btnWin=document.getElementById("btn-win");
+if(btnWin){
+  btnWin.addEventListener("click", function(){
+    if(!activeApp) return;
+    fetch("/api/shell/open-window", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: activeApp.route,
+        title: activeApp.name + " · Webizen",
+        width: 1100,
+        height: 750
+      })
+    }).then(function(r){ return r.json(); })
+      .then(function(res){
+        if(res.ok) showToast("Opened " + activeApp.name + " in window");
+        else showToast("Failed to open window: " + (res.error||"unknown"));
+      })
+      .catch(function(e){ showToast("Error: " + e.message); });
+  });
 }
 hub.addEventListener("click", function(e){
   e.stopPropagation();
