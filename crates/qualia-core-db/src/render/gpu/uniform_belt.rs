@@ -1,217 +1,239 @@
-//! Pre-allocated ring of mapped staging buffers for zero-alloc uniform writes.
+//! Per-frame uniform upload for the portal viewport.
 //!
-//! The wgpu `Queue::write_buffer` API allocates a temporary staging buffer on
-//! every call. `StagingBelt` reuses buffers but its async re-mapping doesn't
-//! complete reliably between frames in a single-threaded render loop.
+//! Native keeps a mapped staging ring (`MAP_WRITE | COPY_SRC`). That ring
+//! depends on `map_async` completing inside `device.poll`.
 //!
-//! `UniformBelt` takes a different approach: it pre-allocates a fixed pool of
-//! `MAP_WRITE | COPY_SRC` buffers at construction time. Each frame, the caller
-//! picks the next buffer in the ring, writes data into its mapped range, unmaps
-//! it, records a `copy_buffer_to_buffer` command, and moves to the next slot.
-//! After the command buffer is submitted and the GPU finishes the copy, the
-//! buffer is re-mapped for the next cycle.
-//!
-//! The pool size (default 3) ensures that by the time we wrap around, the
-//! oldest buffer's copy has completed and it can be safely re-mapped.
-//!
-//! This is a Tier-1 zero-heap solution: no allocation in the per-frame hot
-//! path. All allocation happens at construction time.
+//! On wasm the browser does not deliver `mapAsync` from a blocking poll, so
+//! the ring falls through to a fresh `mappedAtCreation` buffer every wrap.
+//! SwiftShader (and some other adapters) then reject that buffer:
+//! `createBuffer failed, size (256) is too large ... mappedAtCreation == true`.
+//! wgpu unwraps the rejection and the tick aborts with `unreachable`, so a
+//! live adapter never presents the mesh. The wasm path uses
+//! `queue.write_buffer` instead, which does not map at creation.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc;
+use std::sync::Arc;
 use wgpu::Buffer;
 
-/// A slot in the uniform belt ring.
+/// A slot in the native uniform belt ring.
+#[cfg(not(target_arch = "wasm32"))]
 struct Slot {
-    /// The staging buffer. `MAP_WRITE | COPY_SRC`.
-    /// `None` while the buffer is being re-mapped (owned by the map callback).
     buffer: Option<Buffer>,
-    /// Whether the buffer is currently mapped (ready to write).
     mapped: bool,
-    /// Whether the buffer has been written and unmapped (copy pending).
     pending: bool,
-    /// Number of bytes written in the current cycle (for copy sizing).
     written: u64,
 }
 
-/// Pre-allocated ring of mapped staging buffers for zero-alloc uniform writes.
-///
-/// Usage:
-/// 1. Call [`Self::write`] to get a `&mut [u8]` view into the current slot's
-///    mapped memory. Write your uniform data into it.
-/// 2. Drop the `&mut [u8]` (this unmaps the buffer).
-/// 3. Call [`Self::record_copy`] to record a `copy_buffer_to_buffer` command
-///    into the encoder.
-/// 4. After submitting the encoder, call [`Self::advance`] to move to the
-///    next slot and re-map the oldest slot.
+enum BeltInner {
+    #[cfg(not(target_arch = "wasm32"))]
+    Mapped {
+        slots: Vec<Slot>,
+        current: usize,
+        rx: mpsc::Receiver<(usize, Buffer)>,
+        tx: mpsc::Sender<(usize, Buffer)>,
+        size: u64,
+    },
+    #[cfg(target_arch = "wasm32")]
+    Direct {
+        queue: Arc<wgpu::Queue>,
+        scratch: Vec<u8>,
+    },
+}
+
 pub(crate) struct UniformBelt {
-    slots: Vec<Slot>,
-    current: usize,
-    /// Channel for receiving re-map completion callbacks.
-    rx: mpsc::Receiver<(usize, Buffer)>,
-    tx: mpsc::Sender<(usize, Buffer)>,
-    /// Size of each slot in bytes.
-    size: u64,
+    inner: BeltInner,
 }
 
 impl UniformBelt {
-    /// Create a new uniform belt with `pool_size` pre-allocated buffers, each
-    /// `slot_size` bytes. All buffers are mapped at creation.
-    pub(crate) fn new(device: &wgpu::Device, slot_size: u64, pool_size: usize) -> Self {
-        let (tx, rx) = mpsc::channel();
-        let mut slots = Vec::with_capacity(pool_size);
-        for _ in 0..pool_size {
-            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("uniform-belt-slot"),
-                size: slot_size,
-                usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
-                mapped_at_creation: true,
-            });
-            slots.push(Slot {
-                buffer: Some(buffer),
-                mapped: true,
-                pending: false,
-                written: 0,
-            });
+    /// `slot_size` is the largest uniform written in one call (256 covers
+    /// telemetry). `pool_size` is the native ring length; wasm ignores it.
+    pub(crate) fn new(
+        device: &wgpu::Device,
+        queue: Arc<wgpu::Queue>,
+        slot_size: u64,
+        pool_size: usize,
+    ) -> Self {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (device, pool_size);
+            let mut scratch = Vec::new();
+            scratch.reserve(slot_size as usize);
+            return Self {
+                inner: BeltInner::Direct { queue, scratch },
+            };
         }
-        Self {
-            slots,
-            current: 0,
-            rx,
-            tx,
-            size: slot_size,
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = queue;
+            let (tx, rx) = mpsc::channel();
+            let mut slots = Vec::with_capacity(pool_size);
+            for _ in 0..pool_size {
+                let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("uniform-belt-slot"),
+                    size: slot_size,
+                    usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
+                    mapped_at_creation: true,
+                });
+                slots.push(Slot {
+                    buffer: Some(buffer),
+                    mapped: true,
+                    pending: false,
+                    written: 0,
+                });
+            }
+            Self {
+                inner: BeltInner::Mapped {
+                    slots,
+                    current: 0,
+                    rx,
+                    tx,
+                    size: slot_size,
+                },
+            }
         }
     }
 
-    /// Write data into the current slot's mapped memory and unmap it.
-    /// This is a single-call API that ensures the buffer is unmapped
-    /// before the method returns, avoiding "buffer is still mapped" errors
-    /// at submit time.
+    /// Stage `data` for the next [`Self::record_copy`].
     pub(crate) fn write_and_unmap(&mut self, data: &[u8]) {
-        let slot = &mut self.slots[self.current];
-        debug_assert!(slot.mapped, "uniform belt slot must be mapped before write");
-        debug_assert!(
-            slot.buffer.is_some(),
-            "uniform belt slot must have a buffer"
-        );
-        debug_assert!(
-            data.len() as u64 <= self.size,
-            "uniform belt write exceeds slot size"
-        );
-        slot.mapped = false;
-        slot.written = data.len() as u64;
-        let buffer = slot.buffer.as_ref().unwrap();
-        // Get mapped range, write data, drop the view, then unmap.
-        let mut range = buffer
-            .slice(..)
-            .get_mapped_range_mut()
-            .expect("uniform belt buffer must be mapped");
-        range.slice(..data.len()).copy_from_slice(data);
-        drop(range);
-        buffer.unmap();
+        match &mut self.inner {
+            #[cfg(not(target_arch = "wasm32"))]
+            BeltInner::Mapped {
+                slots,
+                current,
+                size,
+                ..
+            } => {
+                let slot = &mut slots[*current];
+                debug_assert!(slot.mapped, "uniform belt slot must be mapped before write");
+                debug_assert!(
+                    slot.buffer.is_some(),
+                    "uniform belt slot must have a buffer"
+                );
+                debug_assert!(
+                    data.len() as u64 <= *size,
+                    "uniform belt write exceeds slot size"
+                );
+                slot.mapped = false;
+                slot.written = data.len() as u64;
+                let buffer = slot.buffer.as_ref().unwrap();
+                let mut range = buffer
+                    .slice(..)
+                    .get_mapped_range_mut()
+                    .expect("uniform belt buffer must be mapped");
+                range[..data.len()].copy_from_slice(data);
+                drop(range);
+                buffer.unmap();
+            }
+            #[cfg(target_arch = "wasm32")]
+            BeltInner::Direct { scratch, .. } => {
+                scratch.clear();
+                scratch.extend_from_slice(data);
+                while scratch.len() % 4 != 0 {
+                    scratch.push(0);
+                }
+            }
+        }
     }
 
-    /// Record a copy from the current slot into `target` at `offset`.
-    /// Copies only the bytes written in the current cycle.
-    /// Must be called after `write` and after the `MappedView` has been dropped.
+    /// Copy the staged bytes into `target` at `offset`.
     pub(crate) fn record_copy(
         &self,
         encoder: &mut wgpu::CommandEncoder,
         target: &Buffer,
         offset: wgpu::BufferAddress,
     ) {
-        let slot = &self.slots[self.current];
-        debug_assert!(
-            !slot.mapped,
-            "uniform belt slot must be unmapped before copy"
-        );
-        let buffer = slot
-            .buffer
-            .as_ref()
-            .expect("uniform belt slot must have a buffer");
-        // wgpu copy_buffer_to_buffer requires size to be a multiple of 4.
-        let copy_size = (slot.written + 3) & !3;
-        if copy_size > 0 {
-            encoder.copy_buffer_to_buffer(buffer, 0, target, offset, copy_size);
+        match &self.inner {
+            #[cfg(not(target_arch = "wasm32"))]
+            BeltInner::Mapped { slots, current, .. } => {
+                let slot = &slots[*current];
+                debug_assert!(
+                    !slot.mapped,
+                    "uniform belt slot must be unmapped before copy"
+                );
+                let buffer = slot
+                    .buffer
+                    .as_ref()
+                    .expect("uniform belt slot must have a buffer");
+                let copy_size = (slot.written + 3) & !3;
+                if copy_size > 0 {
+                    encoder.copy_buffer_to_buffer(buffer, 0, target, offset, copy_size);
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
+            BeltInner::Direct { queue, scratch } => {
+                let _ = encoder;
+                if !scratch.is_empty() {
+                    queue.write_buffer(target, offset, scratch);
+                }
+            }
         }
     }
 
-    /// Advance to the next slot and re-map the oldest slot.
-    /// Must be called after the encoder containing the copy has been submitted.
-    /// Polls the device to complete pending copies, then re-maps.
+    /// Advance the native ring. No-op on the wasm direct path.
     pub(crate) fn advance(&mut self, device: &wgpu::Device) {
-        // Mark current slot as pending (copy submitted).
-        self.slots[self.current].pending = true;
-
-        // Receive any completed re-maps from previous frames.
-        while let Ok((idx, buffer)) = self.rx.try_recv() {
-            self.slots[idx].buffer = Some(buffer);
-            self.slots[idx].mapped = true;
-            self.slots[idx].pending = false;
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = device;
+            return;
         }
-
-        // Move to the next slot.
-        self.current = (self.current + 1) % self.slots.len();
-
-        // If the next slot is pending (copy submitted but not yet re-mapped),
-        // poll the device to complete the copy, then re-map it.
-        if self.slots[self.current].pending {
-            let _ = device.poll(wgpu::PollType::wait_indefinitely());
-            // Receive any completed re-maps.
-            while let Ok((idx, buffer)) = self.rx.try_recv() {
-                self.slots[idx].buffer = Some(buffer);
-                self.slots[idx].mapped = true;
-                self.slots[idx].pending = false;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let BeltInner::Mapped {
+                slots,
+                current,
+                rx,
+                tx,
+                size,
+            } = &mut self.inner;
+            slots[*current].pending = true;
+            while let Ok((idx, buffer)) = rx.try_recv() {
+                slots[idx].buffer = Some(buffer);
+                slots[idx].mapped = true;
+                slots[idx].pending = false;
             }
-        }
-
-        // If the next slot is still pending (copy not complete), re-map it
-        // synchronously by polling until the copy completes.
-        let needs_remap = self.slots[self.current].pending;
-        if needs_remap {
-            let idx = self.current;
-            // Take the buffer out of the slot. Clone it for the closure
-            // (wgpu buffers are Arc-backed, so clone is cheap).
-            let buffer = self.slots[idx]
-                .buffer
-                .take()
-                .expect("pending slot must have buffer");
-            let buffer_for_closure = buffer.clone();
-            let tx = self.tx.clone();
-            // Start the async re-map. The cloned buffer is moved into the
-            // closure and returned via the channel when the map completes.
-            buffer
-                .slice(..)
-                .map_async(wgpu::MapMode::Write, move |result| {
-                    if result.is_ok() {
-                        let _ = tx.send((idx, buffer_for_closure));
-                    }
+            *current = (*current + 1) % slots.len();
+            if slots[*current].pending {
+                let _ = device.poll(wgpu::PollType::wait_indefinitely());
+                while let Ok((idx, buffer)) = rx.try_recv() {
+                    slots[idx].buffer = Some(buffer);
+                    slots[idx].mapped = true;
+                    slots[idx].pending = false;
+                }
+            }
+            if slots[*current].pending {
+                let idx = *current;
+                let buffer = slots[idx]
+                    .buffer
+                    .take()
+                    .expect("pending slot must have buffer");
+                let buffer_for_closure = buffer.clone();
+                let tx = tx.clone();
+                buffer
+                    .slice(..)
+                    .map_async(wgpu::MapMode::Write, move |result| {
+                        if result.is_ok() {
+                            let _ = tx.send((idx, buffer_for_closure));
+                        }
+                    });
+                let _ = device.poll(wgpu::PollType::wait_indefinitely());
+                while let Ok((ridx, rbuffer)) = rx.try_recv() {
+                    slots[ridx].buffer = Some(rbuffer);
+                    slots[ridx].mapped = true;
+                    slots[ridx].pending = false;
+                }
+            }
+            if !slots[*current].mapped || slots[*current].buffer.is_none() {
+                let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("uniform-belt-slot-fallback"),
+                    size: *size,
+                    usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
+                    mapped_at_creation: true,
                 });
-            // Poll until the re-map completes.
-            let _ = device.poll(wgpu::PollType::wait_indefinitely());
-            // Receive the re-mapped buffer(s).
-            let rx = &self.rx;
-            while let Ok((ridx, rbuffer)) = rx.try_recv() {
-                self.slots[ridx].buffer = Some(rbuffer);
-                self.slots[ridx].mapped = true;
-                self.slots[ridx].pending = false;
+                slots[*current].buffer = Some(buffer);
+                slots[*current].mapped = true;
+                slots[*current].pending = false;
             }
-        }
-
-        // If the re-map didn't complete (callback didn't fire during poll),
-        // create a new mapped buffer as a fallback. This is a cold path —
-        // it only happens when the GPU is under heavy load from other
-        // operations and the map callback is delayed. The new buffer is
-        // mapped at creation, so it's ready to write.
-        if !self.slots[self.current].mapped || self.slots[self.current].buffer.is_none() {
-            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("uniform-belt-slot-fallback"),
-                size: self.size,
-                usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
-                mapped_at_creation: true,
-            });
-            self.slots[self.current].buffer = Some(buffer);
-            self.slots[self.current].mapped = true;
-            self.slots[self.current].pending = false;
         }
     }
 }
@@ -228,8 +250,7 @@ mod tests {
         };
         let device = &ctx.device;
         let queue = &ctx.queue;
-        // 256 bytes is enough for all our uniform structs.
-        let mut belt = UniformBelt::new(device, 256, 8);
+        let mut belt = UniformBelt::new(device, queue.clone(), 256, 8);
         let target = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("uniform-belt-test-target"),
             size: 256,
@@ -237,7 +258,6 @@ mod tests {
             mapped_at_creation: false,
         });
 
-        // Warmup: cycle through all slots once.
         for _ in 0..8 {
             belt.write_and_unmap(&[0u8; 256]);
             let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -248,16 +268,6 @@ mod tests {
             belt.advance(device);
         }
 
-        // Measure: the uniform belt itself does not allocate (no new buffers,
-        // no Vec growth, no String). However, wgpu's map_async + poll API
-        // allocates internally (~13-26 allocs per re-map cycle) for callback
-        // dispatch and internal state tracking. This is an upstream wgpu
-        // issue that can only be resolved with a custom GPU backend.
-        //
-        // We verify that the belt's own data structures don't grow:
-        // - No new buffers are created (pool size stays at 8)
-        // - No Vec/String allocations from our code
-        // The remaining allocs are all wgpu internals.
         let guard = allocation_counter::AllocGuard::begin("uniform_belt_steady_state", true);
         belt.write_and_unmap(&[1u8; 256]);
         let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -275,9 +285,6 @@ mod tests {
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(999),
         };
-        eprintln!("uniform_belt_steady_state: {count} heap allocs (wgpu map_async+poll internals)");
-        // The belt eliminates our code's allocations. The remaining allocs
-        // are wgpu's map_async callback dispatch — upstream issue.
         assert!(
             count < 50,
             "uniform belt + wgpu map_async should be < 50 allocs, got {count}"

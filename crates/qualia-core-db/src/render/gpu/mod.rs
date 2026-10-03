@@ -447,7 +447,7 @@ impl PortalGpu {
         // observer ~64B, model ~64B). Pool size 8 ensures we never wrap
         // around within a single frame (5 writes per frame) — the oldest
         // buffer's copy has completed by the time we wrap around.
-        let uniform_belt = uniform_belt::UniformBelt::new(&device, 256, 8);
+        let uniform_belt = uniform_belt::UniformBelt::new(&device, queue.clone(), 256, 8);
         let readback_bytes_per_row = padded_bytes_per_row(width);
         let readback_buf = if surface.is_none() {
             Some(create_readback_buffer(
@@ -1710,7 +1710,14 @@ impl PortalGpu {
                 }
             }
 
-            run_bloom_passes(&mut encoder, bloom, &self.queue, &self.device, &view, self.clear_color);
+            run_bloom_passes(
+                &mut encoder,
+                bloom,
+                &self.queue,
+                &self.device,
+                &view,
+                self.clear_color,
+            );
         } else {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("portal-phenomenal-pass"),
@@ -1724,9 +1731,6 @@ impl PortalGpu {
                             g: self.clear_color[1],
                             b: self.clear_color[2],
                             a: self.clear_color[3],
-
-
-
                         }),
                         store: wgpu::StoreOp::Store,
                     },
@@ -1957,8 +1961,7 @@ mod tests {
         if !crate::wgsl_forge::test_gpu_available() {
             return;
         }
-        let mut renderer =
-            PortalGpu::new_offscreen(64, 64, 0).expect("native offscreen renderer");
+        let mut renderer = PortalGpu::new_offscreen(64, 64, 0).expect("native offscreen renderer");
 
         // Two overlapping triangles:
         // Far triangle: z = -0.5, blue [0.0, 0.0, 1.0, 1.0]
