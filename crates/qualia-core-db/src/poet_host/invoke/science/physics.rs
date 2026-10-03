@@ -416,26 +416,21 @@ pub fn creator_field_sample(args_v: &Value, _span: Span) -> Result<Value, Diagno
 
 /// `Physics.material_query` — Returns faceted signature traits for a physical material.
 ///
-/// Game water forms are refused: they are not [`vibe::physics::MaterialSignature::liquid_water`].
-/// Optical and acoustic are readings of one EMF spectrum axis, not a baked texture.
+/// Fail closed. A missing or unknown name is an error, never
+/// [`vibe::physics::MaterialSignature::sugar_cube`]. Game water forms are
+/// refused: they are not [`vibe::physics::MaterialSignature::liquid_water`].
+/// Optical and acoustic are readings of one EMF spectrum axis, not a baked
+/// texture. Same words for Poet and every other Qualia app.
 pub fn creator_material_query(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    use vibe::physics::{MaterialSignature, PartBindError, SignatureFacet};
+    use vibe::physics::{MaterialSignature, SignatureFacet};
 
-    let mat_id = args::rec_str(args_v, "material").unwrap_or("sugar_cube");
-    let sig = match MaterialSignature::lookup(mat_id) {
-        Ok(sig) => sig,
-        Err(PartBindError::WaterFormNotSignature) => {
-            return Err(args::bad(span, PartBindError::WaterFormNotSignature.message()));
-        }
-        Err(PartBindError::LivingKingdomNotMaterial) => {
-            return Err(args::bad(
-                span,
-                PartBindError::LivingKingdomNotMaterial.message(),
-            ));
-        }
-        Err(PartBindError::UnknownSignature) => MaterialSignature::sugar_cube(),
-        Err(other) => return Err(args::bad(span, other.message())),
-    };
+    let mat_id = args::rec_str(args_v, "material").filter(|s| !s.trim().is_empty()).ok_or_else(|| {
+        args::bad(
+            span,
+            "material_query needs a known material signature; an unknown name does not fall back to sugar_cube",
+        )
+    })?;
+    let sig = MaterialSignature::lookup(mat_id).map_err(|e| args::bad(span, e.message()))?;
 
     let mut map = std::collections::BTreeMap::new();
     map.insert("id".to_string(), Value::String(sig.id.clone()));
@@ -509,31 +504,36 @@ pub fn creator_part_signature(args_v: &Value, span: Span) -> Result<Value, Diagn
     Ok(bound.to_record())
 }
 
-/// `Physics.tick_spectrum_reading` — one tick draws the named colour or sound reading.
+/// `Physics.tick_spectrum_reading` — record query for a colour or sound reading.
 ///
-/// Same physics stack as `part_signature`. No GPU adapter check: a missing
-/// adapter does not stop the tick. The record is what Poet imports; it is not
-/// a baked frame and it does not write spatial coordinates.
+/// Not a present and not a painted frame. Soft-rise still waits on a render
+/// tick that actually draws. This returns the same editable construct as
+/// `part_signature` (part, signature, and which reading — colour or sound on
+/// one EMF spectrum axis). `painted_frame` is always false. A missing GPU
+/// adapter does not make this a draw, and it does not write spatial coordinates.
+/// Generic for Poet and every other Qualia app.
 pub fn creator_tick_spectrum_reading(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let reading = args::rec_str(args_v, "reading").ok_or_else(|| {
         args::bad(
             span,
-            "tick_spectrum_reading needs { part, signature, reading: colour|sound }",
+            "tick_spectrum_reading is a record query and needs { part, signature, reading: colour|sound }",
         )
     })?;
     if !matches!(reading, "colour" | "color" | "sound") {
         return Err(args::bad(span, "reading must be colour or sound"));
     }
-    let mut drawn = creator_part_signature(args_v, span)?;
-    if let Value::Record(rec) = &mut drawn {
-        rec.insert("tick".to_string(), Value::Bool(true));
+    let mut queried = creator_part_signature(args_v, span)?;
+    if let Value::Record(rec) = &mut queried {
+        rec.insert("record_query".to_string(), Value::Bool(true));
+        rec.insert("painted_frame".to_string(), Value::Bool(false));
+        rec.insert("presents_frame".to_string(), Value::Bool(false));
         rec.insert("adapter_required".to_string(), Value::Bool(false));
     }
-    Ok(drawn)
+    Ok(queried)
 }
 
 /// `Physics.evaluate_interaction` — Applies interaction laws to continuants and ambient fields.
-pub fn creator_evaluate_interaction(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
+pub fn creator_evaluate_interaction(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     use vibe::physics::{
         evaluate_field_interactions, ContinuantState, FieldDeclaration, InteractionEvent,
         MaterialSignature,
@@ -546,11 +546,8 @@ pub fn creator_evaluate_interaction(args_v: &Value, _span: Span) -> Result<Value
     let pos_list = args::rec_f64_list(args_v, "position").unwrap_or_else(|| vec![0.0, 0.0, 0.0]);
     let pressure_kpa = args::rec_f64(args_v, "ambient_pressure_kpa");
 
-    let mat = match mat_id {
-        "water" | "liquid_water" => MaterialSignature::liquid_water(),
-        "oil" | "mineral_oil" => MaterialSignature::mineral_oil(),
-        _ => MaterialSignature::sugar_cube(),
-    };
+    // Omitted material stays the sucrose sample. A named unknown does not.
+    let mat = MaterialSignature::lookup(mat_id).map_err(|e| args::bad(span, e.message()))?;
 
     let mut continuant = ContinuantState {
         id: id.clone(),
@@ -957,10 +954,7 @@ mod tests {
                 );
                 assert_eq!(m.get("subsumes_whole"), Some(&Value::Bool(false)));
                 assert_eq!(m.get("baked_frame"), Some(&Value::Bool(false)));
-                assert_eq!(
-                    m.get("reads_emf_spectrum"),
-                    Some(&Value::Bool(false))
-                );
+                assert_eq!(m.get("reads_emf_spectrum"), Some(&Value::Bool(false)));
                 assert!(m.get("reading").is_none());
                 match m.get("fields") {
                     Some(Value::Record(r)) => {
@@ -1010,15 +1004,9 @@ mod tests {
         assert!(albedo(&hot_v) < albedo(&calm_v));
         match &hot_v {
             Value::Record(m) => {
-                assert_eq!(
-                    m.get("spectrum_axis"),
-                    Some(&Value::String("emf".into()))
-                );
+                assert_eq!(m.get("spectrum_axis"), Some(&Value::String("emf".into())));
                 assert_eq!(m.get("writes_spatial"), Some(&Value::Bool(false)));
-                assert_eq!(
-                    m.get("reading"),
-                    Some(&Value::String("colour".into()))
-                );
+                assert_eq!(m.get("reading"), Some(&Value::String("colour".into())));
             }
             other => panic!("{other:?}"),
         }
@@ -1040,9 +1028,67 @@ mod tests {
             Value::Record(m) => {
                 assert!(m.contains_key("mechanical"));
                 assert!(m.contains_key("chemical"));
+                assert_eq!(m.get("name").and_then(args::as_str), Some("Sucrose Cube"));
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn material_query_unknown_does_not_resolve_to_sugar() {
+        let unknown = rec(&[("material", Value::String("not_a_material".into()))]);
+        let err = creator_material_query(&unknown, Span::new(0, 0)).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("not a material record"),
+            "unknown must fail closed: {msg}"
+        );
+        assert!(
+            !msg.to_ascii_lowercase().contains("sucrose"),
+            "error must not name the sugar cube: {msg}"
+        );
+
+        let blank = rec(&[("material", Value::String("  ".into()))]);
+        assert!(creator_material_query(&blank, Span::new(0, 0)).is_err());
+        assert!(creator_material_query(&rec(&[]), Span::new(0, 0)).is_err());
+
+        let oil = rec(&[("material", Value::String("mineral_oil".into()))]);
+        match creator_material_query(&oil, Span::new(0, 0)).unwrap() {
+            Value::Record(m) => {
+                assert_ne!(m.get("name").and_then(args::as_str), Some("Sucrose Cube"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn tick_spectrum_reading_is_a_record_query_not_a_frame() {
+        let args = rec(&[
+            ("part", Value::String("did:q42:part:sample".into())),
+            ("signature", Value::String("hdpe_tank_shell".into())),
+            ("reading", Value::String("colour".into())),
+        ]);
+        match creator_tick_spectrum_reading(&args, Span::new(0, 0)).unwrap() {
+            Value::Record(m) => {
+                assert_eq!(m.get("record_query"), Some(&Value::Bool(true)));
+                assert_eq!(m.get("painted_frame"), Some(&Value::Bool(false)));
+                assert_eq!(m.get("presents_frame"), Some(&Value::Bool(false)));
+                assert_eq!(m.get("writes_spatial"), Some(&Value::Bool(false)));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn evaluate_interaction_unknown_material_does_not_become_sugar() {
+        let args = rec(&[
+            ("id", Value::String("body".into())),
+            ("material", Value::String("not_a_material".into())),
+        ]);
+        let err = creator_evaluate_interaction(&args, Span::new(0, 0)).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("not a material record"), "{msg}");
+        assert!(!msg.to_ascii_lowercase().contains("sucrose"), "{msg}");
     }
 
     #[test]
