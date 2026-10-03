@@ -431,30 +431,6 @@ pub fn read_hmc_bundle_entry_wasm(bundle_bytes: &[u8], key: &str) -> Result<Vec<
     Ok(slice.to_vec())
 }
 
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn list_hmc_bundle_entries_wasm(bundle_bytes: &[u8]) -> Result<JsValue, JsValue> {
-    let reader = crate::bundle::BundleReader::parse(bundle_bytes)
-        .map_err(|e| JsValue::from_str(&format!("HMC parse error: {e}")))?;
-    #[derive(Serialize)]
-    struct EntryInfo {
-        key: String,
-        kind: String,
-        length: u64,
-        offset: u64,
-    }
-    let list: Vec<EntryInfo> = reader
-        .entries()
-        .iter()
-        .map(|e| EntryInfo {
-            key: e.key.clone(),
-            kind: e.kind.clone(),
-            length: e.length,
-            offset: e.offset,
-        })
-        .collect();
-    Ok(serde_wasm_bindgen::to_value(&list)?)
-}
 
 // ─── Mutable Q42 Session WASM Bridge (QG-15) ────────────────────────────────
 
