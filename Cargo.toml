@@ -11,7 +11,6 @@ members = [
     "crates/webizen-render",
     "crates/webizen-studio",
     "crates/webizen-runtime",
-    "crates/webizen-desktop",
     "crates/webizen-web",
     "crates/qualia-mobile-harness",
     "crates/wellfare-core",
@@ -41,7 +40,6 @@ webizen-component-harvester = { path = "crates/webizen-component-harvester" }
 webizen-render = { path = "crates/webizen-render" }
 webizen-studio = { path = "crates/webizen-studio" }
 webizen-runtime = { path = "crates/webizen-runtime" }
-webizen-desktop = { path = "crates/webizen-desktop" }
 qualia-wasm = { path = "crates/webizen-web" }
 qualia-mobile-harness = { path = "crates/qualia-mobile-harness" }
 wellfare-core = { path = "crates/wellfare-core" }
