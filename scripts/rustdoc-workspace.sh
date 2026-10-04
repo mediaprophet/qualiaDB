@@ -8,7 +8,6 @@ cd "$(dirname "$0")/.."
 # webizen-component-harvester: one-shot bin.
 # webizen-studio: huge Dioxus app — still a lib; include it so UI types are findable.
 cargo doc --no-deps --workspace \
-  --exclude webizen-desktop \
   --exclude webizen-component-harvester
 
 echo "rustdoc crates written under target/doc/"

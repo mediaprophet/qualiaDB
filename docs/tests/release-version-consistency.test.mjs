@@ -11,7 +11,7 @@ const workspaceMembers = [...rootManifest.matchAll(/^\s*"([^"]+)",?\s*$/gm)]
   .map((match) => match[1])
   .filter((member) => member.startsWith('crates/'));
 
-assert.equal(workspaceMembers.length, 27, 'expected all 27 workspace crates');
+assert.equal(workspaceMembers.length, 24, 'expected all 24 workspace crates');
 
 const workspacePackageNames = [];
 for (const member of workspaceMembers) {
@@ -33,8 +33,6 @@ for (const name of workspacePackageNames) {
 }
 
 const versionedJson = [
-  'crates/webizen-desktop/tauri.conf.json',
-  'crates/webizen-desktop/static/portal/menu.json',
   'docs/data/knowledge-universe-manifest.json',
   'docs/menu.json',
   'docs/pkg/qualia/package.json',
@@ -53,7 +51,6 @@ const liveReleaseSurfaces = [
   '.github/workflows/release-desktop.yml',
   '.github/workflows/release-p64-models.yml',
   '.github/workflows/release-wasm.yml',
-  'crates/webizen-desktop/static/portal/js/qualia-wasm-runtime.js',
   'docs/api-explorer/index.html',
   'docs/api.html',
   'docs/benchmark.html',
