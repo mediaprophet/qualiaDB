@@ -20,7 +20,7 @@ env:
 jobs:
   build-desktop-windows:
     name: Desktop (Windows Webizen)
-    if: hashFiles('crates/webizen-desktop/Cargo.toml') != ''
+    if: false # Decoupled to standalone repository webizen-desktop
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -233,7 +233,7 @@ jobs:
 
   build-desktop-macos-metal:
     name: Desktop (macOS Apple Silicon / Metal)
-    if: hashFiles('crates/webizen-desktop/Cargo.toml') != ''
+    if: false # Decoupled to standalone repository webizen-desktop
     runs-on: macos-14
     env:
       WGPU_BACKEND: metal
