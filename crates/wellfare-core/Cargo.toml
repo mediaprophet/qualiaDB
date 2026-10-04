@@ -14,9 +14,6 @@ serde_json = { workspace = true }
 sha2 = { workspace = true, default-features = true }
 hex = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde", "js"] }
-# oxigraph: in-memory RDF store + SPARQL 1.1 engine (W4/W5)
-# js feature: uses js-sys for random/time in WASM; compiles natively without it
-oxigraph = { version = "0.5", default-features = false, features = ["js"] }
 # vibe: InstantBridge / SpatialAnchorLite conversions (feature `qualia`)
 vibe = { workspace = true, optional = true }
 

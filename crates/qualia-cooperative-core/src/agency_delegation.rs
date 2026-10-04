@@ -15,7 +15,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 use crate::agency_domain::is_consequential;
 use crate::authority_type::AuthorityProfile;

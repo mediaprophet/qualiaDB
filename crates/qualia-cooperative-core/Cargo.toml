@@ -7,6 +7,10 @@ edition = "2021"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde", "js"] }
-# Shared record envelope / q_hash base (re-used, not duplicated). A later refactor may move
-# the record base + projects/finance down into this crate per the cooperative plan §8.1.
-wellfare-core = { workspace = true }
+chrono = { workspace = true, default-features = true, features = ["serde"] }
+sha2 = { workspace = true, default-features = true }
+hex = { workspace = true }
+
+[features]
+default = []
+qualia = []

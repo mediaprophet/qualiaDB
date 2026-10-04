@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 /// The kind of work item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
