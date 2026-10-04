@@ -156,6 +156,8 @@ pub struct QualiaPortal {
     cpu_body: Option<CpuBodyMesh>,
     /// Last `set_sky_preset` value, applied when a GPU is adopted later.
     sky_preset: Option<u32>,
+    /// Clear colour shared by WebGPU and WebGL2. Daylight, not a black sky.
+    sky_clear: [f32; 4],
     /// Failed presents since the mesh was uploaded. A few misses are not
     /// adapter death; proof is only the failover after they stick.
     present_misses: u8,
@@ -203,6 +205,7 @@ impl QualiaPortal {
             preserve_authored_frame: false,
             cpu_body: None,
             sky_preset: None,
+            sky_clear: [0.55, 0.74, 0.92, 1.0],
             present_misses: 0,
         };
         portal.paint_frame(&canvas)?;
@@ -629,31 +632,40 @@ impl QualiaPortal {
 
     pub fn set_sky_preset(&mut self, preset: u32) {
         self.sky_preset = Some(preset);
-        match preset {
+        let clear = match preset {
             1 => {
                 self.camera.sun_dir = [0.45, 0.85, 0.35];
                 self.camera.sun_intensity = 1.25;
                 self.camera.ambient_intensity = 0.40;
+                [0.45, 0.68, 0.92, 1.0]
             }
             2 => {
                 self.camera.sun_dir = [0.85, 0.25, 0.45];
                 self.camera.sun_intensity = 1.15;
                 self.camera.ambient_intensity = 0.35;
+                [0.93, 0.62, 0.38, 1.0]
             }
             3 => {
                 self.camera.sun_dir = [-0.3, 0.9, -0.2];
                 self.camera.sun_intensity = 0.45;
                 self.camera.ambient_intensity = 0.12;
+                [0.06, 0.08, 0.16, 1.0]
             }
             _ => {
                 self.camera.sun_dir = [0.45, 0.8, 0.55];
                 self.camera.sun_intensity = 1.0;
                 self.camera.ambient_intensity = 0.25;
+                [0.55, 0.74, 0.92, 1.0]
             }
-        }
+        };
+        self.sky_clear = clear;
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
             gpu.set_sky_preset(preset);
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+            webgl2.set_clear(clear);
         }
     }
 
@@ -1863,6 +1875,7 @@ impl QualiaPortal {
                 }
             }
             if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                webgl2.set_clear(self.sky_clear);
                 webgl2.render(
                     self.camera.yaw,
                     self.camera.pitch,

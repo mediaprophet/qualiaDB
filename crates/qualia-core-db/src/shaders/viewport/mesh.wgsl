@@ -59,6 +59,6 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let facing = clamp(abs(n.z), 0.0, 1.0);
     let rim = pow(1.0 - facing, 2.0);
     let base = input.color.rgb;
-    let col = base * (amb_int + diffuse) + vec3<f32>(0.10, 0.14, 0.22) * rim;
+    let col = base * (amb_int + diffuse) + vec3<f32>(0.20, 0.13, 0.06) * rim;
     return vec4<f32>(col, input.color.a);
 }
