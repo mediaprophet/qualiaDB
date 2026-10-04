@@ -50,7 +50,7 @@ void main() {
     float diffuse = clamp(dot(n, key), 0.0, 1.0) * sun_int;
     float facing = clamp(abs(n.z), 0.0, 1.0);
     float rim = pow(1.0 - facing, 2.0);
-    vec3 col = v_color.rgb * (amb + diffuse) + vec3(0.10, 0.14, 0.22) * rim;
+    vec3 col = v_color.rgb * (amb + diffuse) + vec3(0.20, 0.13, 0.06) * rim;
     out_color = vec4(col, v_color.a);
 }
 "#;
@@ -68,6 +68,8 @@ pub struct AnatomyWebGl2 {
     amb: WebGlUniformLocation,
     index_count: i32,
     frame_count: u32,
+    /// Sky clear. Daylight by default so a missed preset is not a black frame.
+    clear: [f32; 4],
 }
 
 impl AnatomyWebGl2 {
@@ -135,7 +137,14 @@ impl AnatomyWebGl2 {
             amb,
             index_count: 0,
             frame_count: 0,
+            clear: [0.55, 0.74, 0.92, 1.0],
         })
+    }
+
+    /// Clear colour for this painter. The portal sky preset owns it.
+    /// A stuck adapter must not fall through to a black sky.
+    pub fn set_clear(&mut self, rgba: [f32; 4]) {
+        self.clear = rgba;
     }
 
     pub fn upload_mesh(
@@ -219,7 +228,7 @@ impl AnatomyWebGl2 {
         let width = width.max(1);
         let height = height.max(1);
         self.gl.viewport(0, 0, width as i32, height as i32);
-        self.gl.clear_color(0.008, 0.012, 0.025, 1.0);
+        self.gl.clear_color(self.clear[0], self.clear[1], self.clear[2], self.clear[3]);
         self.gl.clear_depth(1.0);
         self.gl.clear(
             WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT,
