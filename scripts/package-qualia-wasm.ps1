@@ -2,7 +2,7 @@
 param(
     [string]$CrateDir = "$PSScriptRoot\..\crates\qualia-core-db",
     [string]$DocsPkg = "$PSScriptRoot\..\docs\pkg\qualia",
-    [string]$DesktopPortalPkg = "$PSScriptRoot\..\crates\webizen-desktop\static\portal\pkg\qualia"
+    [string]$DesktopPortalPkg = ""
 )
 
 $ErrorActionPreference = "Stop"
