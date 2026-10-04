@@ -787,18 +787,11 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     init_shared_gpu_for_adapter(instance, adapter).await
 }
 
-/// Build a [`SharedGpuContext`] from a GIVEN instance + adapter — the reusable core shared by the
-/// process-wide primary device ([`init_shared_gpu_async`], which requests its own HighPerformance
-/// adapter then delegates here) and the per-circuit [`device_registry`]. Requests only
-/// adapter-advertised features, raises buffer-size limits to the adapter maximum, and negotiates
-/// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
-#[cfg(feature = "gpu-runtime")]
-
 /// WebGPU minimum limits from the spec. On wasm, `Adapter::limits` reads
 /// `GPUAdapter.limits`. A null adapter throws `TypeError` there and the
 /// canvas stays empty. These minimums never touch that getter. Native code
 /// still asks the adapter.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub(crate) fn webgpu_minimum_limits() -> wgpu::Limits {
     wgpu::Limits {
         max_texture_dimension_1d: 8192,
@@ -835,6 +828,12 @@ pub(crate) fn webgpu_minimum_limits() -> wgpu::Limits {
     }
 }
 
+/// Build a [`SharedGpuContext`] from a GIVEN instance + adapter — the reusable core shared by the
+/// process-wide primary device ([`init_shared_gpu_async`], which requests its own HighPerformance
+/// adapter then delegates here) and the per-circuit [`device_registry`]. Requests only
+/// adapter-advertised features, raises buffer-size limits to the adapter maximum, and negotiates
+/// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
+#[cfg(feature = "gpu-runtime")]
 pub(crate) async fn init_shared_gpu_for_adapter(
     instance: wgpu::Instance,
     adapter: wgpu::Adapter,
