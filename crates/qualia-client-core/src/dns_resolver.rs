@@ -398,6 +398,8 @@ pub fn encode_did_for_ns(did: &str) -> Option<String> {
     }
 }
 
+pub const WEBIZEN_NS_SUFFIX: &str = ".webizen.network";
+
 /// Build the full NS record pair for a given `did:q42:` DID.
 ///
 /// Returns `("ns1.{payload}.webizen.network", "ns2.{payload}.webizen.network")`
@@ -405,8 +407,8 @@ pub fn encode_did_for_ns(did: &str) -> Option<String> {
 pub fn ns_records_for_did(did: &str) -> Option<(String, String)> {
     let payload = encode_did_for_ns(did)?;
     Some((
-        format!("ns1.{}.webizen.network", payload),
-        format!("ns2.{}.webizen.network", payload),
+        format!("ns1.{payload}{WEBIZEN_NS_SUFFIX}"),
+        format!("ns2.{payload}{WEBIZEN_NS_SUFFIX}"),
     ))
 }
 

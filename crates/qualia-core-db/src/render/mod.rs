@@ -45,6 +45,9 @@ pub mod derivation;
 pub mod gamut;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
 pub mod gpu_colour_kernel;
+/// Generic, canvas-backed interactive HUD surface for browser render clients.
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub mod hud;
 /// P7.1 — Metamers as the affine fibre of the colour-matching projection.
 pub mod metamer;
 /// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded

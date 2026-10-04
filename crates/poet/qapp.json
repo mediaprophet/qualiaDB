@@ -1,0 +1,31 @@
+{
+  "name": "Poet",
+  "version": "0.1.0",
+  "required_shapes": [
+    "schema:CreativeWork",
+    "schema:DigitalDocument"
+  ],
+  "x_qualia": {
+    "app_id": "org.webizen.poet",
+    "display_name": "Poet Studio",
+    "category": "studio",
+    "launch_modes": [
+      "standalone-desktop",
+      "wasm-browser"
+    ],
+    "preferred_launch_mode": "standalone-desktop",
+    "supports_offline": true,
+    "entrypoints": {
+      "native": "bin/poet.exe",
+      "web": "index.html"
+    },
+    "export_targets": [
+      "embedded",
+      "wasm-mobile",
+      "tauri-desktop"
+    ],
+    "notes": [
+      "Deterministic semantic writing and 10D interactive authoring canvas."
+    ]
+  }
+}

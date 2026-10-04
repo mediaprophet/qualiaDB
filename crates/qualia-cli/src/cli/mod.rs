@@ -1,3 +1,4 @@
+mod app;
 mod evaluate;
 mod llm;
 mod misc;
@@ -7,6 +8,7 @@ mod solid;
 mod solve;
 mod webizen;
 
+pub use app::AppAction;
 pub use evaluate::EvaluateModality;
 pub use llm::LlmAction;
 pub use misc::*;
@@ -54,6 +56,11 @@ pub enum ImportProgressFormat {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Manage, install, inspect, and uninstall QApp application packages (.qpkg)
+    App {
+        #[command(subcommand)]
+        action: AppAction,
+    },
     Extension {
         #[command(subcommand)]
         action: ExtensionAction,

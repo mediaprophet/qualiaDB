@@ -599,6 +599,37 @@ pub fn reconcile_registry_with_disk(
     Ok(registry)
 }
 
+/// Uninstall an installed package and remove its directory and registry entry.
+pub fn uninstall_package(
+    storage: &Path,
+    package_id: &str,
+    purge_data: bool,
+) -> Result<(), QappInstallError> {
+    validate_package_id(package_id)?;
+    let mut registry = load_install_registry(storage)?;
+    if !registry.packages.contains_key(package_id) {
+        return Err(QappInstallError::StagingFailed(format!(
+            "package '{package_id}' is not installed in registry"
+        )));
+    }
+    registry.packages.remove(package_id);
+    save_install_registry(storage, &registry)?;
+
+    let pkg_dir = active_package_dir(storage, package_id);
+    if pkg_dir.exists() {
+        fs::remove_dir_all(&pkg_dir)?;
+    }
+
+    if purge_data {
+        let data_dir = qapps_dir(storage).join(".data").join(package_id);
+        if data_dir.exists() {
+            fs::remove_dir_all(&data_dir)?;
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -695,6 +726,23 @@ mod tests {
         );
         let registry = reconcile_registry_with_disk(&storage).unwrap();
         assert!(registry.packages.contains_key("LegacyApp"));
+        let _ = fs::remove_dir_all(&storage);
+    }
+
+    #[test]
+    fn uninstall_package_removes_entry_and_files() {
+        let storage = temp_storage();
+        let source = storage.join("source");
+        write_minimal_package(&source, "TestApp", "0.0.1");
+
+        install_package_atomic(&storage, &source, InstallPolicy::Development, None).unwrap();
+        assert!(active_package_dir(&storage, "TestApp").is_dir());
+
+        uninstall_package(&storage, "TestApp", false).unwrap();
+        assert!(!active_package_dir(&storage, "TestApp").exists());
+
+        let registry = load_install_registry(&storage).unwrap();
+        assert!(!registry.packages.contains_key("TestApp"));
         let _ = fs::remove_dir_all(&storage);
     }
 }

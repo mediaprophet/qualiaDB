@@ -1,3 +1,4 @@
+pub mod app;
 pub mod bench;
 pub mod evaluate;
 pub mod llm;

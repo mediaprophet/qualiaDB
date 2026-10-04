@@ -48,6 +48,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match &cli.command {
+        Commands::App { action } => {
+            handlers::app::handle(action)?;
+        }
         Commands::Llm { action } => {
             handlers::llm::handle(action).await?;
         }
