@@ -21,11 +21,9 @@ members = [
     "crates/qualia-q-forge",
     "crates/qualia-vision",
     "crates/qualia-audio",
-    "crates/poet-cli",
     "crates/work-graph",
     "crates/vibe-lsp",
     "crates/vibe-wasm",
-    "crates/poet",
     "crates/qualia-peer",
 ]
 resolver = "2"
@@ -53,11 +51,9 @@ webizen-lite-wasm = { path = "crates/webizen-lite-wasm" }
 qualia-q-forge = { path = "crates/qualia-q-forge" }
 qualia-vision = { path = "crates/qualia-vision" }
 qualia-audio = { path = "crates/qualia-audio" }
-poet-cli = { path = "crates/poet-cli" }
 work-graph = { path = "crates/work-graph" }
 vibe-lsp = { path = "crates/vibe-lsp" }
 vibe-wasm = { path = "crates/vibe-wasm" }
-poet = { path = "crates/poet" }
 qualia-peer = { path = "crates/qualia-peer" }
 
 # External crates harmonised across the workspace
@@ -146,9 +142,6 @@ lto = false
 codegen-units = 16
 opt-level = "s"
 incremental = false
-
-[profile.release.package.poet]
-opt-level = "s"
 
 # Limit debuginfo to line-tables (1) for test profile. On Windows x86_64, linking
 # webizen-desktop with debug=2 exceeds the 2GB PE limit (producing a 2.33GB binary
