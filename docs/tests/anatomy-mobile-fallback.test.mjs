@@ -36,7 +36,7 @@ assert.match(shell, /portal_init_webgl2/);
 assert.match(shell, /requireBodyRenderer/);
 assert.match(shell, /renderer: armedRenderer/);
 
-assert.match(portal, /anatomy_renderer_unsupported/);
+assert.match(portal, /BodyRendererBackend::CpuCanvas/);
 assert.match(portal, /BodyRendererBackend::WebGl2/);
 assert.match(portal, /body_frames_presented > 0/);
 assert.match(webgl2, /draw_elements_with_i32/);
