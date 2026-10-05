@@ -41,7 +41,7 @@ impl WebizenHostApi {
         let summary = agency_delegation_full_json(delegation);
         self.submit_record_with_summary(
             QAPP_COOPERATIVE,
-            envelope,
+            coop_envelope_to_wellfare(envelope),
             SOURCE_COOPERATIVE,
             Some(summary),
         )?;

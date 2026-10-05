@@ -163,6 +163,81 @@ pub fn parse_anatomy_model(s: &str) -> Result<wellfare_core::anatomy::AnatomyMod
     }
 }
 
+/// Bridge decoupled `qualia_cooperative_core::RecordEnvelope` to `wellfare_core::record::RecordEnvelope`.
+pub(crate) fn coop_envelope_to_wellfare(
+    env: qualia_cooperative_core::RecordEnvelope,
+) -> wellfare_core::record::RecordEnvelope {
+    wellfare_core::record::RecordEnvelope {
+        id: env.id,
+        owner_did: env.owner_did,
+        author_did: env.author_did,
+        proxy_did: env.proxy_did,
+        epistemic_status: match env.epistemic_status {
+            qualia_cooperative_core::record::EpistemicStatus::Asserted => {
+                wellfare_core::record::EpistemicStatus::Asserted
+            }
+            qualia_cooperative_core::record::EpistemicStatus::Hypothesis => {
+                wellfare_core::record::EpistemicStatus::Hypothesis
+            }
+            qualia_cooperative_core::record::EpistemicStatus::Disputed => {
+                wellfare_core::record::EpistemicStatus::Disputed
+            }
+            qualia_cooperative_core::record::EpistemicStatus::Refuted => {
+                wellfare_core::record::EpistemicStatus::Refuted
+            }
+        },
+        evidence_type: match env.evidence_type {
+            qualia_cooperative_core::record::EvidenceType::SelfReported => {
+                wellfare_core::record::EvidenceType::SelfReported
+            }
+            qualia_cooperative_core::record::EvidenceType::DeviceMeasured => {
+                wellfare_core::record::EvidenceType::DeviceMeasured
+            }
+            qualia_cooperative_core::record::EvidenceType::ClinicianObserved => {
+                wellfare_core::record::EvidenceType::ClinicianObserved
+            }
+            qualia_cooperative_core::record::EvidenceType::Inferred => {
+                wellfare_core::record::EvidenceType::Inferred
+            }
+        },
+        sensitivity: match env.sensitivity {
+            qualia_cooperative_core::record::SensitivityClass::Public => {
+                wellfare_core::record::SensitivityClass::Public
+            }
+            qualia_cooperative_core::record::SensitivityClass::Restricted => {
+                wellfare_core::record::SensitivityClass::Restricted
+            }
+            qualia_cooperative_core::record::SensitivityClass::Classified => {
+                wellfare_core::record::SensitivityClass::Classified
+            }
+        },
+        asserted_time_unix: env.asserted_time_unix,
+        asserted_instant: env
+            .asserted_instant
+            .map(|i| wellfare_core::record::InstantBridge {
+                secs: i.secs,
+                nanos: i.nanos,
+            }),
+        valid_time_start_unix: env.valid_time_start_unix,
+        valid_time_start_instant: env
+            .valid_time_start_instant
+            .map(|i| wellfare_core::record::InstantBridge {
+                secs: i.secs,
+                nanos: i.nanos,
+            }),
+        valid_time_end_unix: env.valid_time_end_unix,
+        valid_time_end_instant: env
+            .valid_time_end_instant
+            .map(|i| wellfare_core::record::InstantBridge {
+                secs: i.secs,
+                nanos: i.nanos,
+            }),
+        predecessor_id: env.predecessor_id,
+        blob_hash: env.blob_hash,
+        tombstone: env.tombstone,
+    }
+}
+
 /// Transport-neutral Host API exported for UI and qApps.
 pub struct WebizenHostApi {
     vault: VaultService,
