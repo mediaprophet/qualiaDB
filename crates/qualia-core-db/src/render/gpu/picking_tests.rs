@@ -81,4 +81,17 @@ fn gpu_pick_readback_matches_cpu_oracle_for_overlap_rejection_and_miss() {
             "GPU/CPU pick mismatch at ({pointer_x}, {pointer_y})"
         );
     }
+
+    // Tensor index zero is a valid hit, even though the cleared R32Uint target also reads zero.
+    // The GPU encoding biases hits by one so the clear value remains an unambiguous miss.
+    let only_zero = [Tensor10D::default()];
+    let only_zero_bytes = tensor_bytes(&only_zero);
+    renderer
+        .upload_tensor_buffer(&only_zero_bytes)
+        .expect("upload index-zero pick fixture");
+    renderer.queue_pick(400.5, 300.5);
+    renderer
+        .render(0.0, &SystemTelemetry::default())
+        .expect("render index-zero picking pass");
+    assert_eq!(renderer.poll_pick_readback(), Some(0));
 }

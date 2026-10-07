@@ -1,7 +1,8 @@
 //! Bounded native/WASM GPU material binding and transparent ordering for versioned submeshes.
 //!
-//! Material factors and resident texture maps bind through one uniform group and one per-material
-//! fixed texture group. Blended draws use cold-computed bounds and in-place back-to-front sorting.
+//! Material factors and resident texture maps share one per-material bind group, keeping mesh
+//! pipelines portable on four-group WebGPU adapters. Blended draws use cold-computed bounds and
+//! in-place back-to-front sorting.
 
 use super::material_draws::build_material_draws;
 pub(super) use super::material_draws::{update_draw_bounds, MaterialDraw};
@@ -14,6 +15,27 @@ use wgpu::util::DeviceExt;
 
 pub(super) const MATERIAL_UNIFORM_STRIDE: u64 = 512;
 pub(super) const MAX_MATERIAL_DRAWS: usize = super::MAX_GPU_MATERIAL_DRAWS;
+
+/// One per-material group contains the dynamic factors and all fixed texture/sampler slots. This
+/// saves a pipeline group on WebGPU implementations that expose only the four-group baseline.
+pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+    let mut entries = Vec::with_capacity(13);
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 0,
+        visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+        ty: wgpu::BindingType::Buffer {
+            ty: wgpu::BufferBindingType::Uniform,
+            has_dynamic_offset: true,
+            min_binding_size: NonZeroU64::new(MATERIAL_UNIFORM_STRIDE),
+        },
+        count: None,
+    });
+    entries.extend(super::material_textures::layout_entries(1));
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("portal-mesh-material-textures-layout"),
+        entries: &entries,
+    })
+}
 
 /// WGSL consumes the factors and UV transforms; padding provides WebGPU's portable 256-byte
 /// dynamic-uniform offset alignment.
@@ -143,8 +165,7 @@ impl From<&MaterialRecord> for MaterialUniform {
 
 pub(super) struct MaterialGpu {
     pub _uniform_buffer: wgpu::Buffer,
-    pub bind_group: wgpu::BindGroup,
-    pub texture_bind_groups: Vec<wgpu::BindGroup>,
+    pub material_bind_groups: Vec<wgpu::BindGroup>,
     pub draws: Vec<MaterialDraw>,
     /// Draw indices sorted in place each frame; capacity is fixed at mesh upload.
     pub transparent_draw_order: Vec<usize>,
@@ -154,7 +175,7 @@ pub(super) struct MaterialGpu {
 pub(super) fn create_material_gpu(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
-    texture_layout: &wgpu::BindGroupLayout,
+    _texture_layout: &wgpu::BindGroupLayout,
     texture_defaults: &super::material_textures::MaterialTextureDefaults,
     resident_textures: &super::texture_residency::ResidentTextureMap,
     materials: &[MaterialRecord],
@@ -183,19 +204,7 @@ pub(super) fn create_material_gpu(
         contents: bytemuck::cast_slice(&uniforms),
         usage: wgpu::BufferUsages::UNIFORM,
     });
-    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("portal-mesh-material-bind"),
-        layout,
-        entries: &[wgpu::BindGroupEntry {
-            binding: 0,
-            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                buffer: &uniform_buffer,
-                offset: 0,
-                size: NonZeroU64::new(MATERIAL_UNIFORM_STRIDE),
-            }),
-        }],
-    });
-    let texture_bind_groups = materials
+    let material_bind_groups = materials
         .iter()
         .enumerate()
         .map(|(material_index, material)| {
@@ -263,33 +272,40 @@ pub(super) fn create_material_gpu(
                 .iter()
                 .enumerate()
                 .map(|(slot, sampler)| wgpu::BindGroupEntry {
-                    binding: 6 + slot as u32,
+                    binding: 7 + slot as u32,
                     resource: wgpu::BindingResource::Sampler(
                         texture_defaults.filtering_sampler(*sampler),
                     ),
                 })
                 .collect::<Vec<_>>();
-            let mut entries = Vec::with_capacity(12);
+            let mut entries = Vec::with_capacity(13);
+            entries.push(wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &uniform_buffer,
+                    offset: 0,
+                    size: NonZeroU64::new(MATERIAL_UNIFORM_STRIDE),
+                }),
+            });
             entries.extend([
-                texture_entry(0, base),
-                texture_entry(1, normal),
-                texture_entry(2, metallic_roughness),
-                texture_entry(3, occlusion),
-                texture_entry(4, emissive),
-                texture_entry(5, stylized),
+                texture_entry(1, base),
+                texture_entry(2, normal),
+                texture_entry(3, metallic_roughness),
+                texture_entry(4, occlusion),
+                texture_entry(5, emissive),
+                texture_entry(6, stylized),
             ]);
             entries.extend(sampler_entries);
             Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("portal-mesh-material-textures"),
-                layout: texture_layout,
+                label: Some("portal-mesh-material-textures-and-factors"),
+                layout,
                 entries: &entries,
             }))
         })
         .collect::<Result<Vec<_>, String>>()?;
     Ok(MaterialGpu {
         _uniform_buffer: uniform_buffer,
-        bind_group,
-        texture_bind_groups,
+        material_bind_groups,
         draws,
         transparent_draw_order,
     })

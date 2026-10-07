@@ -102,9 +102,7 @@ fn inspect_decode_requirements(
                 },
             );
             decoder.set_transformations(png::Transformations::normalize_to_color8());
-            let reader = decoder
-                .read_info()
-                .map_err(|_| TextureDecodeError::InvalidImage)?;
+            let reader = decoder.read_info().map_err(map_png_error)?;
             let width = reader.info().width;
             let height = reader.info().height;
             let rgba8_bytes = required_rgba_bytes(width, height, limits, usize::MAX)?;
@@ -179,9 +177,7 @@ fn decode_png_rgba8(
         },
     );
     decoder.set_transformations(png::Transformations::normalize_to_color8());
-    let mut reader = decoder
-        .read_info()
-        .map_err(|_| TextureDecodeError::InvalidImage)?;
+    let mut reader = decoder.read_info().map_err(map_png_error)?;
     let width = reader.info().width;
     let height = reader.info().height;
     let rgba_bytes = required_rgba_bytes(width, height, limits, output.len())?;
@@ -192,9 +188,7 @@ fn decode_png_rgba8(
     if scratch.len() < required_scratch {
         return Err(TextureDecodeError::ScratchBufferTooSmall);
     }
-    let info = reader
-        .next_frame(scratch)
-        .map_err(|_| TextureDecodeError::InvalidImage)?;
+    let info = reader.next_frame(scratch).map_err(map_png_error)?;
     if info.width != width || info.height != height {
         return Err(TextureDecodeError::InvalidImage);
     }
@@ -243,6 +237,13 @@ fn decode_png_rgba8(
         height,
         rgba8_bytes: rgba_bytes,
     })
+}
+
+fn map_png_error(error: png::DecodingError) -> TextureDecodeError {
+    match error {
+        png::DecodingError::LimitsExceeded => TextureDecodeError::DecodedImageExceedsLimit,
+        _ => TextureDecodeError::InvalidImage,
+    }
 }
 
 fn decode_jpeg_rgba8(
@@ -364,6 +365,10 @@ mod tests {
         };
         assert_eq!(
             decode_hmc_texture_rgba8_into(&image, limits, &mut [0; 8], &mut [0; 32]),
+            Err(TextureDecodeError::DecodedImageExceedsLimit)
+        );
+        assert_eq!(
+            decode_hmc_texture_rgba8(&image, limits),
             Err(TextureDecodeError::DecodedImageExceedsLimit)
         );
     }

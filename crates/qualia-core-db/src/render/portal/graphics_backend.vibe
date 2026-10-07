@@ -29,3 +29,30 @@ fn select_recovery_backend(webgpu_retry_allowed: bool, webgl2_allowed: bool) -> 
         }
     }
 }
+
+// Shared initial quality-tier policy. API/device probing remains in native/WASM hosts; the
+// script receives normalized facts and owns the portable policy decision. Untrusted or partial
+// probes always choose the presentation-safe Conservative tier (index 0).
+fn select_quality_tier(probe_complete: bool, tier_hint: string) -> string {
+    if !probe_complete {
+        return "conservative";
+    } else {
+        if tier_hint == "ultra" {
+            return "ultra";
+        } else {
+            if tier_hint == "high" {
+                return "high";
+            } else {
+                if tier_hint == "balanced" {
+                    return "balanced";
+                } else {
+                    if tier_hint == "low" {
+                        return "low";
+                    } else {
+                        return "conservative";
+                    }
+                }
+            }
+        }
+    }
+}

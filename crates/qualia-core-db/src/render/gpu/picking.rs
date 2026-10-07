@@ -9,6 +9,7 @@ use crate::render::instance_culling::GpuInstanceRecord;
 pub(super) const MESH_PICK_FLAG: u32 = 1 << 31;
 pub(super) const MESH_PICK_SLOT_MASK: u32 = !MESH_PICK_FLAG;
 
+#[cfg(test)]
 pub(super) fn encode_mesh_slot(slot: u32) -> Option<u32> {
     (slot < MESH_PICK_FLAG).then_some(MESH_PICK_FLAG | slot)
 }
@@ -17,7 +18,10 @@ pub(super) fn decode_mesh_slot(encoded: u32) -> Option<usize> {
     (encoded & MESH_PICK_FLAG != 0).then_some((encoded & MESH_PICK_SLOT_MASK) as usize)
 }
 
-pub(super) fn snapshot_semantic_ids(source: &[GpuInstanceRecord], out: &mut [u64]) -> Option<usize> {
+pub(super) fn snapshot_semantic_ids(
+    source: &[GpuInstanceRecord],
+    out: &mut [u64],
+) -> Option<usize> {
     if source.len() > out.len() || source.len() >= MESH_PICK_FLAG as usize {
         return None;
     }

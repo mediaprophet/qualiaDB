@@ -29,7 +29,6 @@ use crate::gpu_context::{
 };
 use crate::render::atmosphere::AtmospherePreset;
 use crate::render::camera::CameraState;
-use crate::render::navigation::PICK_SENTINEL;
 use crate::render::pga::{motor_to_mat4_col, Motor};
 use crate::render::physics::{Aabb, Admission, Joint};
 use crate::render::standpoint::spectator_default;
@@ -78,6 +77,183 @@ fn mark_portal_gpu_canvas_claimed() {
 
 /// Static ambient SSBO capacity — draw count is throttled per `VramLedger` mode.
 const MAX_AMBIENT_INSTANCES: usize = 50_000;
+
+fn create_ao_prepass_camera_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("qualia-ao-prepass-camera-layout"),
+        entries: &[
+            uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX_FRAGMENT),
+            uniform_128_bind_entry(1, wgpu::ShaderStages::VERTEX_FRAGMENT),
+            wgpu::BindGroupLayoutEntry {
+                binding: 2,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: std::num::NonZeroU64::new(
+                        std::mem::size_of::<ao::AoUniform>() as u64,
+                    ),
+                },
+                count: None,
+            },
+        ],
+    })
+}
+
+fn create_ao_prepass_camera_bind(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    camera: &wgpu::Buffer,
+    observer: &wgpu::Buffer,
+    ao: &wgpu::Buffer,
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("qualia-ao-prepass-camera-and-uniform"),
+        layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: observer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: ao.as_entire_binding(),
+            },
+        ],
+    })
+}
+
+fn create_mesh_frame_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+    let uniform_entry = |binding, visibility, size| wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility,
+        ty: wgpu::BindingType::Buffer {
+            ty: wgpu::BufferBindingType::Uniform,
+            has_dynamic_offset: false,
+            min_binding_size: std::num::NonZeroU64::new(size),
+        },
+        count: None,
+    };
+    let depth_texture_entry = |binding| wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Texture {
+            sample_type: wgpu::TextureSampleType::Depth,
+            view_dimension: wgpu::TextureViewDimension::D2,
+            multisampled: false,
+        },
+        count: None,
+    };
+    let float_texture_entry = |binding| wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Texture {
+            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+            view_dimension: wgpu::TextureViewDimension::D2,
+            multisampled: false,
+        },
+        count: None,
+    };
+    let entries = [
+        uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX_FRAGMENT),
+        uniform_128_bind_entry(1, wgpu::ShaderStages::VERTEX_FRAGMENT),
+        depth_texture_entry(2),
+        depth_texture_entry(3),
+        wgpu::BindGroupLayoutEntry {
+            binding: 4,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
+            count: None,
+        },
+        uniform_entry(
+            5,
+            wgpu::ShaderStages::VERTEX_FRAGMENT,
+            std::mem::size_of::<shadows::ShadowUniform>() as u64,
+        ),
+        float_texture_entry(6),
+        float_texture_entry(7),
+        uniform_entry(
+            8,
+            wgpu::ShaderStages::FRAGMENT,
+            std::mem::size_of::<ao::AoUniform>() as u64,
+        ),
+        uniform_entry(
+            9,
+            wgpu::ShaderStages::FRAGMENT,
+            std::mem::size_of::<atmosphere::AtmosphereUniform>() as u64,
+        ),
+    ];
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("portal-mesh-frame-lighting-layout"),
+        entries: &entries,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_mesh_frame_bind(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    camera: &wgpu::Buffer,
+    observer: &wgpu::Buffer,
+    shadow_views: [&wgpu::TextureView; 2],
+    shadow_sampler: &wgpu::Sampler,
+    shadow_uniform: &wgpu::Buffer,
+    ao_view: &wgpu::TextureView,
+    ao_surface_view: &wgpu::TextureView,
+    ao_uniform: &wgpu::Buffer,
+    atmosphere_uniform: &wgpu::Buffer,
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("portal-mesh-frame-lighting-bind"),
+        layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: observer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: wgpu::BindingResource::TextureView(shadow_views[0]),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: wgpu::BindingResource::TextureView(shadow_views[1]),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: wgpu::BindingResource::Sampler(shadow_sampler),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: shadow_uniform.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: wgpu::BindingResource::TextureView(ao_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 7,
+                resource: wgpu::BindingResource::TextureView(ao_surface_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 8,
+                resource: ao_uniform.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 9,
+                resource: atmosphere_uniform.as_entire_binding(),
+            },
+        ],
+    })
+}
 
 fn portal_fixed_buffer_bytes() -> Option<u64> {
     [
@@ -249,15 +425,18 @@ pub struct PortalGpu {
     mesh_pipeline_hdr_blend: Option<wgpu::RenderPipeline>,
     mesh_material_layout: wgpu::BindGroupLayout,
     mesh_texture_layout: wgpu::BindGroupLayout,
+    mesh_frame_layout: wgpu::BindGroupLayout,
+    mesh_frame_bind: wgpu::BindGroup,
+    ao_prepass_camera_layout: wgpu::BindGroupLayout,
+    ao_prepass_camera_bind: wgpu::BindGroup,
     shadow_target: Option<shadows::ShadowTarget>,
     shadow_enabled: bool,
     shadow_map_dirty: bool,
     shadow_uniform_buf: wgpu::Buffer,
     shadow_uniform_bind: wgpu::BindGroup,
+    shadow_sampler: wgpu::Sampler,
     shadow_uniform_cpu: shadows::ShadowUniform,
-    shadow_sample_bind: wgpu::BindGroup,
     shadow_pipelines: [wgpu::RenderPipeline; shadows::SHADOW_CASCADE_COUNT],
-    projector_camera_layout: wgpu::BindGroupLayout,
     mesh_model_layout: wgpu::BindGroupLayout,
     mesh_instance_layout: wgpu::BindGroupLayout,
     /// Complete source stream retained for shadow-caster correctness.
@@ -272,9 +451,6 @@ pub struct PortalGpu {
     last_visibility_key: Option<([[f32; 4]; 4], [[f32; 4]; 4])>,
     ao_targets: Option<ao::AoTargets>,
     ao_uniform_buf: wgpu::Buffer,
-    ao_sample_layout: wgpu::BindGroupLayout,
-    ao_sample_bind: wgpu::BindGroup,
-    atmosphere_bind: wgpu::BindGroup,
     atmosphere_uniform_buf: wgpu::Buffer,
     ao_enabled: bool,
     ao_radius: f32,
@@ -994,7 +1170,6 @@ impl PortalGpu {
                 |error| format!("visible mesh instance stream initialization failed: {error:?}"),
             )?;
 
-        let shadow_sample_layout = shadows::sample_layout(&device);
         let shadow_sampler = shadows::compare_sampler(&device);
         let shadow_matrix_layout = shadows::matrix_layout(&device);
         let shadow_initial = shadows::ShadowUniform {
@@ -1014,17 +1189,6 @@ impl PortalGpu {
                 resource: shadow_uniform_buf.as_entire_binding(),
             }],
         });
-        let shadow_views = shadow_target
-            .as_ref()
-            .map(|target| [&target.views[0], &target.views[1]])
-            .unwrap_or([&depth_view, &depth_view]);
-        let shadow_sample_bind = shadows::sample_bind_group(
-            &device,
-            &shadow_sample_layout,
-            shadow_views,
-            &shadow_sampler,
-            &shadow_uniform_buf,
-        );
         let ao_uniform_initial = ao::make_uniform(
             width,
             height,
@@ -1052,56 +1216,23 @@ impl PortalGpu {
             contents: bytemuck::bytes_of(&atmosphere_uniform),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-        let atmosphere_bind_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("portal-atmosphere-layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<
-                            atmosphere::AtmosphereUniform,
-                        >()
-                            as u64),
-                    },
-                    count: None,
-                }],
-            });
-        let atmosphere_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("portal-atmosphere-bind"),
-            layout: &atmosphere_bind_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: atmosphere_uniform_buf.as_entire_binding(),
-            }],
-        });
-        let ao_sample_layout = ao::AoTargets::sample_layout(&device);
-        let mesh_material_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("portal-mesh-material-layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: true,
-                        min_binding_size: std::num::NonZeroU64::new(
-                            materials::MATERIAL_UNIFORM_STRIDE,
-                        ),
-                    },
-                    count: None,
-                }],
-            });
+        let mesh_material_layout = materials::create_layout(&device);
         let mesh_texture_layout = material_textures::create_layout(&device);
+        let ao_prepass_camera_layout = create_ao_prepass_camera_layout(&device);
+        let ao_prepass_camera_bind = create_ao_prepass_camera_bind(
+            &device,
+            &ao_prepass_camera_layout,
+            &camera_buf,
+            &observer_buf,
+            &ao_uniform_buf,
+        );
         let material_texture_defaults = material_textures::create_defaults(&device, &queue)?;
         let mip_generator = texture_mips::MipGenerator::new(&device);
         let ao_targets = ao::AoTargets::try_new(
             &device,
             width,
             height,
-            &projector_camera_layout,
+            &ao_prepass_camera_layout,
             &mesh_model_layout,
             &mesh_instance_layout,
             &mesh_material_layout,
@@ -1115,28 +1246,36 @@ impl PortalGpu {
                 material_texture_defaults.view(3),
                 material_texture_defaults.view(1),
             ));
-        let ao_sample_bind = ao::AoTargets::sample_bind_group(
+        let mesh_frame_layout = create_mesh_frame_layout(&device);
+        let shadow_views = shadow_target
+            .as_ref()
+            .map(|target| [&target.views[0], &target.views[1]])
+            .unwrap_or([&depth_view, &depth_view]);
+        let mesh_frame_bind = create_mesh_frame_bind(
             &device,
-            &ao_sample_layout,
+            &mesh_frame_layout,
+            &camera_buf,
+            &observer_buf,
+            shadow_views,
+            &shadow_sampler,
+            &shadow_uniform_buf,
             ao_view,
             ao_packed_surface_view,
             &ao_uniform_buf,
+            &atmosphere_uniform_buf,
         );
 
-        // Triangle-mesh pipeline (Phase 1.2). Reuses the projector camera bind layout (mesh shader
-        // declares only camera@0, a valid subset); position, colour and generated normal streams
-        // are separate so the normal ABI can later accept authored tangent-space material data.
+        // The mesh frame consolidates camera, shadow, AO and atmosphere resources into group 0;
+        // factors and fixed texture slots share group 2. This keeps the whole mesh family within
+        // WebGPU's portable four-group baseline without dropping any material or lighting path.
+        // Position, colour and generated normal streams remain separate for future authored data.
         // Culling remains disabled until import winding has an explicit canonical contract.
         let mesh_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("portal-mesh-pipeline-layout"),
             bind_group_layouts: &[
-                Some(&projector_camera_layout),
+                Some(&mesh_frame_layout),
                 Some(&mesh_model_layout),
                 Some(&mesh_material_layout),
-                Some(&mesh_texture_layout),
-                Some(&shadow_sample_layout),
-                Some(&ao_sample_layout),
-                Some(&atmosphere_bind_layout),
                 Some(&mesh_instance_layout),
             ],
             immediate_size: 0,
@@ -1157,7 +1296,6 @@ impl PortalGpu {
                     Some(&shadow_matrix_layout),
                     Some(&mesh_model_layout),
                     Some(&mesh_material_layout),
-                    Some(&mesh_texture_layout),
                     Some(&mesh_instance_layout),
                 ],
                 immediate_size: 0,
@@ -1351,37 +1489,38 @@ impl PortalGpu {
             multiview_mask: None,
             cache: None,
         });
-        let mesh_picking_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("portal-mesh-semantic-picking-pipeline"),
-            layout: Some(&mesh_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &mesh_shader,
-                entry_point: Some("vertex_main"),
-                compilation_options: Default::default(),
-                buffers: &[
-                    Some(mesh_vertex_layout.clone()),
-                    Some(mesh_color_layout.clone()),
-                    Some(mesh_normal_layout.clone()),
-                    Some(mesh_tangent_layout.clone()),
-                    Some(mesh_uv_layout.clone()),
-                ],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &mesh_shader,
-                entry_point: Some("picking_fragment_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(picking_color_target_state())],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                cull_mode: None,
-                ..Default::default()
-            },
-            depth_stencil: Some(depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
+        let mesh_picking_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("portal-mesh-semantic-picking-pipeline"),
+                layout: Some(&mesh_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &mesh_shader,
+                    entry_point: Some("vertex_main"),
+                    compilation_options: Default::default(),
+                    buffers: &[
+                        Some(mesh_vertex_layout.clone()),
+                        Some(mesh_color_layout.clone()),
+                        Some(mesh_normal_layout.clone()),
+                        Some(mesh_tangent_layout.clone()),
+                        Some(mesh_uv_layout.clone()),
+                    ],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &mesh_shader,
+                    entry_point: Some("picking_fragment_main"),
+                    compilation_options: Default::default(),
+                    targets: &[Some(picking_color_target_state())],
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    cull_mode: None,
+                    ..Default::default()
+                },
+                depth_stencil: Some(depth_state.clone()),
+                multisample: wgpu::MultisampleState::default(),
+                multiview_mask: None,
+                cache: None,
+            });
 
         let pick_staging_size =
             u64::from(checked_padded_bytes_per_row(1).expect("one-pixel pick row always fits"));
@@ -1638,15 +1777,18 @@ impl PortalGpu {
             mesh_pipeline_hdr_blend,
             mesh_material_layout,
             mesh_texture_layout,
+            mesh_frame_layout,
+            mesh_frame_bind,
+            ao_prepass_camera_layout,
+            ao_prepass_camera_bind,
             shadow_target,
             shadow_enabled: true,
             shadow_map_dirty: true,
             shadow_uniform_buf,
             shadow_uniform_bind,
+            shadow_sampler,
             shadow_uniform_cpu: shadow_initial,
-            shadow_sample_bind,
             shadow_pipelines,
-            projector_camera_layout: projector_camera_layout.clone(),
             mesh_model_layout: mesh_model_layout.clone(),
             mesh_instance_layout,
             mesh_instances,
@@ -1657,9 +1799,6 @@ impl PortalGpu {
             last_visibility_key: None,
             ao_targets,
             ao_uniform_buf,
-            ao_sample_layout,
-            ao_sample_bind,
-            atmosphere_bind,
             atmosphere_uniform_buf,
             ao_enabled: true,
             ao_radius: 0.45,
@@ -2084,7 +2223,7 @@ impl PortalGpu {
             pass.set_pipeline(&self.shadow_pipelines[cascade]);
             pass.set_bind_group(0, &self.shadow_uniform_bind, &[]);
             pass.set_bind_group(1, &self.mesh_model_bind, &[]);
-            pass.set_bind_group(4, self.mesh_instances.bind_group(), &[]);
+            pass.set_bind_group(3, self.mesh_instances.bind_group(), &[]);
             pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
             pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
             pass.set_vertex_buffer(2, mesh.uv_buf.slice(..));
@@ -2102,11 +2241,10 @@ impl PortalGpu {
                 {
                     continue;
                 }
-                pass.set_bind_group(2, &mesh.material_gpu.bind_group, &[draw.material_offset]);
                 pass.set_bind_group(
-                    3,
-                    &mesh.material_gpu.texture_bind_groups[draw.material_index],
-                    &[],
+                    2,
+                    &mesh.material_gpu.material_bind_groups[draw.material_index],
+                    &[draw.material_offset],
                 );
                 pass.draw_indexed(
                     draw.first_index..draw.first_index + draw.index_count,
@@ -2475,7 +2613,7 @@ impl PortalGpu {
             &self.device,
             self.width,
             self.height,
-            &self.projector_camera_layout,
+            &self.ao_prepass_camera_layout,
             &self.mesh_model_layout,
             &self.mesh_instance_layout,
             &self.mesh_material_layout,
@@ -2489,12 +2627,23 @@ impl PortalGpu {
                 self.material_texture_defaults.view(3),
                 self.material_texture_defaults.view(1),
             ));
-        self.ao_sample_bind = ao::AoTargets::sample_bind_group(
+        let shadow_views = self
+            .shadow_target
+            .as_ref()
+            .map(|target| [&target.views[0], &target.views[1]])
+            .unwrap_or([&self.depth_view, &self.depth_view]);
+        self.mesh_frame_bind = create_mesh_frame_bind(
             &self.device,
-            &self.ao_sample_layout,
+            &self.mesh_frame_layout,
+            &self.camera_buf,
+            &self.observer_buf,
+            shadow_views,
+            &self.shadow_sampler,
+            &self.shadow_uniform_buf,
             ao_view,
             packed_surface_view,
             &self.ao_uniform_buf,
+            &self.atmosphere_uniform_buf,
         );
         self.ao_targets = targets;
     }
@@ -2528,7 +2677,7 @@ impl PortalGpu {
                 targets.record(
                     encoder,
                     mesh,
-                    &self.projector_camera_bind,
+                    &self.ao_prepass_camera_bind,
                     &self.mesh_model_bind,
                     self.visible_mesh_instances.bind_group(),
                     self.visible_mesh_instances.count(),
@@ -2606,14 +2755,16 @@ impl PortalGpu {
         drop(mapped);
         self.pick_staging_buf.unmap();
         self.pick_copy_submitted = false;
-        let raw = raw.filter(|&id| id != PICK_SENTINEL)?;
+        // Zero is the portable R32Uint clear value and is reserved for "no hit". Tensor IDs
+        // are biased by one in WGSL so tensor index zero remains distinguishable from a clear.
+        let raw = raw.filter(|&id| id != 0)?;
         if let Some(slot) = picking::decode_mesh_slot(raw) {
             if slot < self.pick_semantic_count {
                 self.pick_semantic_result = Some(self.pick_instance_semantics[slot]);
             }
             None
         } else {
-            Some(raw)
+            Some(raw - 1)
         }
     }
 
@@ -2654,12 +2805,7 @@ impl PortalGpu {
                 depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: PICK_SENTINEL as f64,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 1.0,
-                    }),
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                     store: wgpu::StoreOp::Store,
                 },
             })],
@@ -2686,8 +2832,9 @@ impl PortalGpu {
 
         if let Some(mesh) = self.mesh.as_ref().filter(|_| mesh_count > 0) {
             pass.set_pipeline(&self.mesh_picking_pipeline);
-            pass.set_bind_group(0, &self.projector_camera_bind, &[]);
+            pass.set_bind_group(0, &self.mesh_frame_bind, &[]);
             pass.set_bind_group(1, &self.mesh_model_bind, &[]);
+            pass.set_bind_group(3, self.visible_mesh_instances.bind_group(), &[]);
             pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
             pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
             pass.set_vertex_buffer(2, mesh.normal_buf.slice(..));
@@ -2695,16 +2842,11 @@ impl PortalGpu {
             pass.set_vertex_buffer(4, mesh.uv_buf.slice(..));
             pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
             for draw in &mesh.material_gpu.draws {
-                pass.set_bind_group(2, &mesh.material_gpu.bind_group, &[draw.material_offset]);
                 pass.set_bind_group(
-                    3,
-                    &mesh.material_gpu.texture_bind_groups[draw.material_index],
-                    &[],
+                    2,
+                    &mesh.material_gpu.material_bind_groups[draw.material_index],
+                    &[draw.material_offset],
                 );
-                pass.set_bind_group(4, &self.shadow_sample_bind, &[]);
-                pass.set_bind_group(5, &self.ao_sample_bind, &[]);
-                pass.set_bind_group(6, &self.atmosphere_bind, &[]);
-                pass.set_bind_group(7, self.visible_mesh_instances.bind_group(), &[]);
                 pass.draw_indexed(
                     draw.first_index..draw.first_index + draw.index_count,
                     0,
@@ -2925,8 +3067,9 @@ impl PortalGpu {
 
                 if let (Some(mesh), Some(mesh_pipe)) = (self.mesh.as_ref(), mesh_hdr) {
                     pass.set_pipeline(mesh_pipe);
-                    pass.set_bind_group(0, &self.projector_camera_bind, &[]);
+                    pass.set_bind_group(0, &self.mesh_frame_bind, &[]);
                     pass.set_bind_group(1, &self.mesh_model_bind, &[]);
+                    pass.set_bind_group(3, self.visible_mesh_instances.bind_group(), &[]);
                     pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
                     pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
                     pass.set_vertex_buffer(2, mesh.normal_buf.slice(..));
@@ -2939,18 +3082,9 @@ impl PortalGpu {
                         }
                         pass.set_bind_group(
                             2,
-                            &mesh.material_gpu.bind_group,
+                            &mesh.material_gpu.material_bind_groups[draw.material_index],
                             &[draw.material_offset],
                         );
-                        pass.set_bind_group(
-                            3,
-                            &mesh.material_gpu.texture_bind_groups[draw.material_index],
-                            &[],
-                        );
-                        pass.set_bind_group(4, &self.shadow_sample_bind, &[]);
-                        pass.set_bind_group(5, &self.ao_sample_bind, &[]);
-                        pass.set_bind_group(6, &self.atmosphere_bind, &[]);
-                        pass.set_bind_group(7, self.visible_mesh_instances.bind_group(), &[]);
                         pass.draw_indexed(
                             draw.first_index..draw.first_index + draw.index_count,
                             0,
@@ -2963,18 +3097,9 @@ impl PortalGpu {
                             let draw = &mesh.material_gpu.draws[draw_index];
                             pass.set_bind_group(
                                 2,
-                                &mesh.material_gpu.bind_group,
+                                &mesh.material_gpu.material_bind_groups[draw.material_index],
                                 &[draw.material_offset],
                             );
-                            pass.set_bind_group(
-                                3,
-                                &mesh.material_gpu.texture_bind_groups[draw.material_index],
-                                &[],
-                            );
-                            pass.set_bind_group(4, &self.shadow_sample_bind, &[]);
-                            pass.set_bind_group(5, &self.ao_sample_bind, &[]);
-                            pass.set_bind_group(6, &self.atmosphere_bind, &[]);
-                            pass.set_bind_group(7, self.visible_mesh_instances.bind_group(), &[]);
                             pass.draw_indexed(
                                 draw.first_index..draw.first_index + draw.index_count,
                                 0,
@@ -3060,8 +3185,9 @@ impl PortalGpu {
 
             if let Some(mesh) = self.mesh.as_ref() {
                 pass.set_pipeline(&self.mesh_pipeline);
-                pass.set_bind_group(0, &self.projector_camera_bind, &[]);
+                pass.set_bind_group(0, &self.mesh_frame_bind, &[]);
                 pass.set_bind_group(1, &self.mesh_model_bind, &[]);
+                pass.set_bind_group(3, self.visible_mesh_instances.bind_group(), &[]);
                 pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
                 pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
                 pass.set_vertex_buffer(2, mesh.normal_buf.slice(..));
@@ -3072,16 +3198,11 @@ impl PortalGpu {
                     if draw.opacity_mode == crate::container_10d::OpacityMode::Blend {
                         continue;
                     }
-                    pass.set_bind_group(2, &mesh.material_gpu.bind_group, &[draw.material_offset]);
                     pass.set_bind_group(
-                        3,
-                        &mesh.material_gpu.texture_bind_groups[draw.material_index],
-                        &[],
+                        2,
+                        &mesh.material_gpu.material_bind_groups[draw.material_index],
+                        &[draw.material_offset],
                     );
-                    pass.set_bind_group(4, &self.shadow_sample_bind, &[]);
-                    pass.set_bind_group(5, &self.ao_sample_bind, &[]);
-                    pass.set_bind_group(6, &self.atmosphere_bind, &[]);
-                    pass.set_bind_group(7, self.visible_mesh_instances.bind_group(), &[]);
                     pass.draw_indexed(
                         draw.first_index..draw.first_index + draw.index_count,
                         0,
@@ -3094,18 +3215,9 @@ impl PortalGpu {
                         let draw = &mesh.material_gpu.draws[draw_index];
                         pass.set_bind_group(
                             2,
-                            &mesh.material_gpu.bind_group,
+                            &mesh.material_gpu.material_bind_groups[draw.material_index],
                             &[draw.material_offset],
                         );
-                        pass.set_bind_group(
-                            3,
-                            &mesh.material_gpu.texture_bind_groups[draw.material_index],
-                            &[],
-                        );
-                        pass.set_bind_group(4, &self.shadow_sample_bind, &[]);
-                        pass.set_bind_group(5, &self.ao_sample_bind, &[]);
-                        pass.set_bind_group(6, &self.atmosphere_bind, &[]);
-                        pass.set_bind_group(7, self.visible_mesh_instances.bind_group(), &[]);
                         pass.draw_indexed(
                             draw.first_index..draw.first_index + draw.index_count,
                             0,
@@ -3274,7 +3386,7 @@ mod tests {
 
     #[test]
     fn portal_fixed_buffer_residency_covers_all_persistent_uniforms() {
-        assert_eq!(portal_fixed_buffer_bytes(), Some(672));
+        assert_eq!(portal_fixed_buffer_bytes(), Some(640));
     }
 
     #[test]

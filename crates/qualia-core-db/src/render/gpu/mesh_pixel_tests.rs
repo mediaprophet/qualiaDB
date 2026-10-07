@@ -393,12 +393,11 @@ fn native_base_color_texture_uses_uv_and_srgb_residency() {
     let offset = ((32 * 64 + 32) * 4) as usize;
     let pixel = &rgba[offset..offset + 4];
 
-    // A 128 sRGB texel decodes to ~0.216 linear. This shader's diagnostic ambient term is
-    // base * intensity (without a Lambertian 1/π factor), so the red channel should land near
-    // 55/255; allow backend rounding while staying well below a linear 128/255 interpretation.
+    // A 128 sRGB texel decodes to ~0.216 linear, and the offscreen output pass encodes the
+    // resulting scene value back to sRGB. The captured result should therefore remain near 128.
     assert!(
-        (35..=70).contains(&pixel[0]),
-        "sRGB decode + base-colour sampling expected red near 55, got {pixel:?}"
+        (120..=136).contains(&pixel[0]),
+        "sRGB decode + output encode expected red near 128, got {pixel:?}"
     );
     assert!(
         pixel[1] <= 2 && pixel[2] <= 2,

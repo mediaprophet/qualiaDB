@@ -10,11 +10,12 @@ pub const PROJECTOR_GROUP1_BINDINGS: &[u32] = &[0];
 /// Rust ambient layout — binding 4 is reserved for `ObserverStandpoint` (not yet in WGSL).
 pub const AMBIENT_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4];
 pub const BLOOM_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4];
-pub const MESH_GROUP3_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6];
-pub const MESH_GROUP4_BINDINGS: &[u32] = &[0, 1, 2];
-pub const MESH_GROUP5_BINDINGS: &[u32] = &[0, 1, 2];
-pub const MESH_GROUP6_BINDINGS: &[u32] = &[0];
-pub const MESH_GROUP7_BINDINGS: &[u32] = &[0];
+/// Mesh frame group: camera/observer plus shadow, AO and atmosphere bindings.
+pub const MESH_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+pub const MESH_GROUP1_BINDINGS: &[u32] = &[0];
+/// Dynamic material factors followed by six textures and six samplers.
+pub const MESH_GROUP2_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+pub const MESH_GROUP3_BINDINGS: &[u32] = &[0];
 
 /// Parse `@group(G) @binding(B)` declarations from WGSL source lines.
 pub fn parse_wgsl_bindings(source: &str) -> Vec<(u32, u32)> {
@@ -145,16 +146,32 @@ mod tests {
             .expect("projector group1");
         assert_wgsl_bindings_covered(BLOOM_WGSL, 0, BLOOM_GROUP0_BINDINGS).expect("bloom");
         assert_wgsl_bindings_covered(OUTPUT_WGSL, 0, &[0, 1, 2]).expect("SDR output");
+        assert_wgsl_bindings_covered(MESH_WGSL, 0, MESH_GROUP0_BINDINGS)
+            .expect("mesh frame, shadow, AO and atmosphere");
+        assert_wgsl_bindings_covered(MESH_WGSL, 1, MESH_GROUP1_BINDINGS).expect("mesh model");
+        assert_wgsl_bindings_covered(MESH_WGSL, 2, MESH_GROUP2_BINDINGS)
+            .expect("combined material factors and textures");
         assert_wgsl_bindings_covered(MESH_WGSL, 3, MESH_GROUP3_BINDINGS)
-            .expect("material textures");
-        assert_wgsl_bindings_covered(MESH_WGSL, 4, MESH_GROUP4_BINDINGS)
-            .expect("sun shadow receiver");
-        assert_wgsl_bindings_covered(MESH_WGSL, 5, MESH_GROUP5_BINDINGS)
-            .expect("screen-space AO reconstruction");
-        assert_wgsl_bindings_covered(MESH_WGSL, 6, MESH_GROUP6_BINDINGS)
-            .expect("shared atmosphere profile");
-        assert_wgsl_bindings_covered(MESH_WGSL, 7, MESH_GROUP7_BINDINGS)
             .expect("instanced mesh storage");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 0, &[0]).expect("shadow matrix");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 1, &[0]).expect("shadow model");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 2, MESH_GROUP2_BINDINGS)
+            .expect("shadow material and alpha-mask texture");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 3, &[0]).expect("shadow instances");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 0, &[0, 1, 2])
+            .expect("AO camera and uniform");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 1, &[0]).expect("AO model");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 2, MESH_GROUP2_BINDINGS)
+            .expect("AO material and alpha-mask texture");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 3, &[0]).expect("AO instances");
+        for shader in [MESH_WGSL, SUN_SHADOW_WGSL, AO_PREPASS_WGSL] {
+            assert!(
+                parse_wgsl_bindings(shader)
+                    .iter()
+                    .all(|(group, _)| *group <= 3),
+                "mesh-related shaders must fit the four-group WebGPU baseline"
+            );
+        }
     }
 
     #[test]

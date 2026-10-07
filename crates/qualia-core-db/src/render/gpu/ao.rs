@@ -34,7 +34,6 @@ pub(super) struct AoTargets {
     ao_view: wgpu::TextureView,
     _reservation: VramReservation<'static>,
     depth_prepass: wgpu::RenderPipeline,
-    depth_prepass_uniform_bind: wgpu::BindGroup,
     ao_pipeline: wgpu::RenderPipeline,
     ao_generate_bind: wgpu::BindGroup,
     width: u32,
@@ -50,7 +49,7 @@ impl AoTargets {
         model_layout: &wgpu::BindGroupLayout,
         instance_layout: &wgpu::BindGroupLayout,
         material_layout: &wgpu::BindGroupLayout,
-        texture_layout: &wgpu::BindGroupLayout,
+        _texture_layout: &wgpu::BindGroupLayout,
         uniform_buf: &wgpu::Buffer,
     ) -> Option<Self> {
         let bytes = math::target_bytes(width, height)?; // Depth32Float + packed RGBA8 surface + R8 AO.
@@ -112,41 +111,15 @@ impl AoTargets {
         });
         let ao_view = ao_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let depth_prepass_uniform_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("qualia-ao-prepass-uniform-layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: std::num::NonZeroU64::new(
-                            std::mem::size_of::<AoUniform>() as u64,
-                        ),
-                    },
-                    count: None,
-                }],
-            });
         let depth_prepass_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("qualia-ao-depth-normal-pipeline-layout"),
             bind_group_layouts: &[
                 Some(camera_layout),
                 Some(model_layout),
-                Some(&depth_prepass_uniform_layout),
                 Some(material_layout),
-                Some(texture_layout),
                 Some(instance_layout),
             ],
             immediate_size: 0,
-        });
-        let depth_prepass_uniform_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("qualia-ao-prepass-uniform"),
-            layout: &depth_prepass_uniform_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: uniform_buf.as_entire_binding(),
-            }],
         });
         let prepass_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("qualia-ao-depth-normal-wgsl"),
@@ -316,78 +289,10 @@ impl AoTargets {
             ao_view,
             _reservation: reservation,
             depth_prepass,
-            depth_prepass_uniform_bind,
             ao_pipeline,
             ao_generate_bind,
             width,
             height,
-        })
-    }
-
-    pub fn sample_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("qualia-ao-reconstruction-layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: std::num::NonZeroU64::new(
-                            std::mem::size_of::<AoUniform>() as u64,
-                        ),
-                    },
-                    count: None,
-                },
-            ],
-        })
-    }
-
-    pub fn sample_bind_group(
-        device: &wgpu::Device,
-        layout: &wgpu::BindGroupLayout,
-        ao_view: &wgpu::TextureView,
-        packed_surface_view: &wgpu::TextureView,
-        uniform_buf: &wgpu::Buffer,
-    ) -> wgpu::BindGroup {
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("qualia-ao-reconstruction-inputs"),
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(ao_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(packed_surface_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: uniform_buf.as_entire_binding(),
-                },
-            ],
         })
     }
 
@@ -431,8 +336,7 @@ impl AoTargets {
         prepass.set_pipeline(&self.depth_prepass);
         prepass.set_bind_group(0, camera_bind, &[]);
         prepass.set_bind_group(1, model_bind, &[]);
-        prepass.set_bind_group(2, &self.depth_prepass_uniform_bind, &[]);
-        prepass.set_bind_group(5, instance_bind, &[]);
+        prepass.set_bind_group(3, instance_bind, &[]);
         prepass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
         prepass.set_vertex_buffer(1, mesh.normal_buf.slice(..));
         prepass.set_vertex_buffer(2, mesh.color_buf.slice(..));
@@ -442,11 +346,10 @@ impl AoTargets {
             if draw.opacity_mode == crate::container_10d::OpacityMode::Blend {
                 continue;
             }
-            prepass.set_bind_group(3, &mesh.material_gpu.bind_group, &[draw.material_offset]);
             prepass.set_bind_group(
-                4,
-                &mesh.material_gpu.texture_bind_groups[draw.material_index],
-                &[],
+                2,
+                &mesh.material_gpu.material_bind_groups[draw.material_index],
+                &[draw.material_offset],
             );
             prepass.draw_indexed(
                 draw.first_index..draw.first_index + draw.index_count,

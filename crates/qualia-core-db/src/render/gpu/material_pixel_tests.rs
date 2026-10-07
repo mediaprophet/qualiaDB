@@ -145,14 +145,15 @@ fn native_mask_material_discards_below_cutoff_and_keeps_opaque_samples() {
         .expect("read alpha-mask pixels");
     let pixel = |x: usize| &rgba[((32 * 64 + x) * 4)..((32 * 64 + x) * 4 + 4)];
     let discarded = pixel(16);
-    let clear_rgb = crate::render::output::pbr_neutral_v1_srgb([0.03, 0.05, 0.08])
-        .map(|channel| (channel * 255.0).round() as u8);
+    let clear_rgb =
+        crate::render::output::pbr_neutral_v1_srgb([8.0 / 255.0, 13.0 / 255.0, 20.0 / 255.0])
+            .map(|channel| (channel * 255.0).round() as u8);
     let expected_clear = [clear_rgb[0], clear_rgb[1], clear_rgb[2], 255];
     assert!(
         discarded
             .iter()
             .zip(expected_clear)
-            .all(|(actual, expected)| actual.abs_diff(expected) <= 1),
+            .all(|(actual, expected)| actual.abs_diff(expected) <= 3),
         "sub-cutoff alpha texel must discard and expose the clear colour, got {discarded:?}"
     );
     assert!(

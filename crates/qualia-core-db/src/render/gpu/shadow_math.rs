@@ -211,6 +211,7 @@ fn transform_point(matrix: [[f32; 4]; 4], point: [f32; 4]) -> [f32; 4] {
 /// Build a right-handed, zero-to-one depth projection for a bounded scene sphere. The light-view
 /// centre is snapped to shadow texels, preventing sub-texel motion from making the entire shadow
 /// edge shimmer. All work is fixed-size and allocation-free.
+#[cfg(test)]
 pub fn stabilized_sun_view_projection(
     sun_direction: [f32; 3],
     bounds_center: [f32; 3],

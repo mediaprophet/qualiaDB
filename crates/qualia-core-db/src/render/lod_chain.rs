@@ -30,12 +30,12 @@
 //! exists, the existing `Collapsed2D` fallback applies.
 
 use crate::container_10d::mesh_section::{
-    MeshSectionError, decode_mesh_section, encode_mesh_section, encoded_len,
+    decode_mesh_section, encode_mesh_section, encoded_len, MeshSectionError,
 };
 use crate::gpu_context::OperationalMode;
 use crate::render::assets::Mesh;
 use crate::specialized_libs::computational_geometry::{
-    DecimateError, DecimateOptions, DecimateReport, Point3, decimate_qem,
+    decimate_qem, DecimateError, DecimateOptions, DecimateReport, Point3,
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -576,7 +576,7 @@ pub fn plan_view_with_lod(
     now_unix: u32,
     lod_level_count: usize,
 ) -> LodViewDisposition {
-    use crate::render::authoring::{Sensitivity, ViewKind, has_attestation};
+    use crate::render::authoring::{has_attestation, Sensitivity, ViewKind};
 
     // 1) Attestation gate.
     if view.requires_attestation && !has_attestation(view, attestations) {
@@ -639,8 +639,8 @@ mod tests {
     use super::*;
     use crate::q_hash;
     use crate::render::authoring::{
-        QappView, RenderStandpoint, Sensitivity, ViewDisposition, ViewKind, attestation_quin,
-        plan_view,
+        attestation_quin, plan_view, QappView, RenderStandpoint, Sensitivity, ViewDisposition,
+        ViewKind,
     };
 
     fn unit_cube_mesh() -> Mesh {

@@ -85,6 +85,8 @@ pub mod place_time;
 pub mod projection;
 /// Deterministic native/WASM render-quality admission and graceful-degradation budgets.
 pub mod quality_profiles;
+/// Fixed-memory adaptation policy with sustained-load hysteresis and bounded decision receipts.
+pub mod quality_runtime;
 /// N7: Scene graph — node hierarchy, lights, semantic links, duplication, IK, smooth damp.
 pub mod scene_graph;
 /// Bounded cold-path primitive assembly for authored interactive scenes.
@@ -119,6 +121,8 @@ pub mod standpoint;
 pub mod telemetry;
 /// Bounded, caller-buffered PNG/JPEG decode from verified external texture resources.
 pub mod texture_decode;
+/// Deterministic caller-buffered texture mip residency planning and budget admission.
+pub mod texture_stream_policy;
 
 /// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
 /// renderer parses each level → `plan_view` selects the expected LOD. Gated

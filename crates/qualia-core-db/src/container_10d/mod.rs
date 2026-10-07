@@ -47,9 +47,17 @@ pub mod crc32c;
 pub mod field_section;
 pub mod header;
 pub mod integrity;
+/// Bounded integration of the v2 identity manifest with the versioned section envelope.
+pub mod manifold_identity_container;
 pub mod material_container;
 pub mod material_section;
 mod material_section_codec;
+pub use manifold_identity_container::{
+    decode_container_manifold_identity, encode_container_with_manifold_identity,
+    ManifoldContainerError,
+};
+/// Version-2 manifold identity and typed scientific/presentation field manifest.
+pub mod manifold_identity_v2;
 pub mod mesh_section;
 pub mod metric_check;
 pub mod node_section;
@@ -82,6 +90,15 @@ pub use header::{
 };
 pub use integrity::{
     compute_whole_file_crc32c, seal_whole_file_crc32c, verify_whole_file_crc32c, IntegrityError,
+};
+pub use manifold_identity_v2::{
+    decode_manifold_identity_v2, encode_manifold_identity_v2,
+    encoded_len as manifold_identity_v2_encoded_len, IntegrityIndexDigest, ManifestV2Error,
+    ManifoldIdentityV2, StableEntityId, TypedFieldRecord, BUILTIN_FIELD_KINDS,
+    FIELD_KIND_ELECTROMAGNETIC, FIELD_KIND_SCALAR, FIELD_KIND_SPECTRAL, FIELD_KIND_TENSOR,
+    FIELD_KIND_VECTOR, MANIFOLD_IDENTITY_V2_AXIS_ORDER, MANIFOLD_IDENTITY_V2_FIELD_RECORD_SIZE,
+    MANIFOLD_IDENTITY_V2_HEADER_SIZE, MANIFOLD_IDENTITY_V2_MAGIC, MANIFOLD_IDENTITY_V2_MAX_BYTES,
+    MANIFOLD_IDENTITY_V2_MAX_FIELDS, MANIFOLD_IDENTITY_V2_VERSION,
 };
 pub use material_container::{
     attach_material_section, material_container_counts, read_material_section_into,

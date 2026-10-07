@@ -68,52 +68,6 @@ impl ShadowTarget {
     }
 }
 
-pub(super) fn sample_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("qualia-sun-shadow-sample-layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Depth,
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Depth,
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 3,
-                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(
-                        std::mem::size_of::<ShadowUniform>() as u64,
-                    ),
-                },
-                count: None,
-            },
-        ],
-    })
-}
-
 pub(super) fn compare_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("qualia-sun-shadow-compare"),
@@ -125,37 +79,6 @@ pub(super) fn compare_sampler(device: &wgpu::Device) -> wgpu::Sampler {
         mipmap_filter: wgpu::MipmapFilterMode::Nearest,
         compare: Some(wgpu::CompareFunction::LessEqual),
         ..Default::default()
-    })
-}
-
-pub(super) fn sample_bind_group(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    views: [&wgpu::TextureView; SHADOW_CASCADE_COUNT],
-    sampler: &wgpu::Sampler,
-    uniform: &wgpu::Buffer,
-) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("qualia-sun-shadow-sample"),
-        layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(views[0]),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: wgpu::BindingResource::TextureView(views[1]),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: wgpu::BindingResource::Sampler(sampler),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: uniform.as_entire_binding(),
-            },
-        ],
     })
 }
 

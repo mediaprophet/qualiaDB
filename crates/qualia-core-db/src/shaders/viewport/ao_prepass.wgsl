@@ -12,7 +12,7 @@ struct MeshInstance {
     orientation_sign: f32,
     _padding: u32,
 };
-@group(5) @binding(0) var<storage, read> mesh_instances: array<MeshInstance>;
+@group(3) @binding(0) var<storage, read> mesh_instances: array<MeshInstance>;
 struct AoUniform {
     viewport: vec4<f32>,
     eye: vec4<f32>,
@@ -22,7 +22,7 @@ struct AoUniform {
     params: vec4<f32>,
     depth: vec4<f32>,
 };
-@group(2) @binding(0) var<uniform> ao: AoUniform;
+@group(0) @binding(2) var<uniform> ao: AoUniform;
 struct Material {
     base_color: vec4<f32>,
     emissive: vec4<f32>,
@@ -34,14 +34,14 @@ struct Material {
     sampler_modes: vec4<u32>,
     uv_transform: array<vec4<f32>, 12>,
 };
-@group(3) @binding(0) var<uniform> material: Material;
-@group(4) @binding(0) var base_color_map: texture_2d<f32>;
-@group(4) @binding(6) var base_color_sampler: sampler;
-@group(4) @binding(7) var normal_sampler: sampler;
-@group(4) @binding(8) var metallic_roughness_sampler: sampler;
-@group(4) @binding(9) var occlusion_sampler: sampler;
-@group(4) @binding(10) var emissive_sampler: sampler;
-@group(4) @binding(11) var stylized_ramp_sampler: sampler;
+@group(2) @binding(0) var<uniform> material: Material;
+@group(2) @binding(1) var base_color_map: texture_2d<f32>;
+@group(2) @binding(7) var base_color_sampler: sampler;
+@group(2) @binding(8) var normal_sampler: sampler;
+@group(2) @binding(9) var metallic_roughness_sampler: sampler;
+@group(2) @binding(10) var occlusion_sampler: sampler;
+@group(2) @binding(11) var emissive_sampler: sampler;
+@group(2) @binding(12) var stylized_ramp_sampler: sampler;
 
 fn material_uv(uv: vec2<f32>, role: u32) -> vec2<f32> {
     let offset_scale = material.uv_transform[role * 2u];

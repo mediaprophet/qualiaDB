@@ -125,7 +125,9 @@ pub(super) fn bloom_bind_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout 
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(32),
+                    min_binding_size: std::num::NonZeroU64::new(
+                        std::mem::size_of::<BloomUniformBlock>() as u64,
+                    ),
                 },
                 count: None,
             },
@@ -478,8 +480,8 @@ mod tests {
 
     #[test]
     fn bloom_budget_counts_hdr_ping_pong_dummy_and_uniform_buffer() {
-        assert_eq!(bloom_vram_bytes(1920, 1080), Some(24_883_240));
-        assert_eq!(bloom_vram_bytes(1, 1), Some(64));
+        assert_eq!(bloom_vram_bytes(1920, 1080), Some(24_883_256));
+        assert_eq!(bloom_vram_bytes(1, 1), Some(80));
     }
 
     #[test]

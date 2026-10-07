@@ -70,14 +70,12 @@ pub struct RenderQualityProfile {
     pub volume_projection_enabled: bool,
 }
 
-/// Select a deterministic profile. Partial or failed probes always use Conservative; optional
-/// effects are still admitted independently when their support was positively confirmed.
+/// Select a deterministic profile. The shared VibeScript policy selects the tier from normalized
+/// probe facts; partial/failed probes or script errors choose Conservative. Optional effects are
+/// still admitted independently when their support was positively confirmed. This is a cold
+/// profile-construction API, not a per-frame call.
 pub fn select_quality_profile(snapshot: GraphicsCapabilitySnapshot) -> RenderQualityProfile {
-    let tier = if snapshot.probe_complete {
-        snapshot.tier_hint.unwrap_or(QualityTier::Conservative)
-    } else {
-        QualityTier::Conservative
-    };
+    let tier = select_quality_tier_via_vibe(snapshot);
     let (scale, shadow_dim, cascades, ao_scale, bloom_levels, resident_share_bps, resident_cap) =
         match tier {
             QualityTier::Conservative => (5_000, 0, 0, 0, 0, 1_000, 64 * MIB),
@@ -126,6 +124,42 @@ pub fn select_quality_profile(snapshot: GraphicsCapabilitySnapshot) -> RenderQua
     }
 }
 
+fn select_quality_tier_via_vibe(snapshot: GraphicsCapabilitySnapshot) -> QualityTier {
+    use vibe::{eval_function, load_program, Env, LocalHost, Value};
+
+    let hint = match snapshot.tier_hint {
+        Some(QualityTier::Conservative) | None => "conservative",
+        Some(QualityTier::Low) => "low",
+        Some(QualityTier::Balanced) => "balanced",
+        Some(QualityTier::High) => "high",
+        Some(QualityTier::Ultra) => "ultra",
+    };
+    let Ok(program) = load_program(include_str!("portal/graphics_backend.vibe")) else {
+        return QualityTier::Conservative;
+    };
+    let mut host = LocalHost::default();
+    let mut env = Env::default();
+    let Ok(Value::String(result)) = eval_function(
+        &program,
+        "select_quality_tier",
+        vec![
+            Value::Bool(snapshot.probe_complete),
+            Value::String(hint.to_owned()),
+        ],
+        &mut host,
+        &mut env,
+    ) else {
+        return QualityTier::Conservative;
+    };
+    match result.as_str() {
+        "low" => QualityTier::Low,
+        "balanced" => QualityTier::Balanced,
+        "high" => QualityTier::High,
+        "ultra" => QualityTier::Ultra,
+        _ => QualityTier::Conservative,
+    }
+}
+
 const MIB: u64 = 1_048_576;
 
 #[inline]
@@ -135,7 +169,10 @@ fn has(mask: u32, bit: u32) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{feature, select_quality_profile, GraphicsCapabilitySnapshot, QualityTier};
+    use super::{
+        feature, select_quality_profile, select_quality_tier_via_vibe, GraphicsCapabilitySnapshot,
+        QualityTier,
+    };
 
     fn capable(tier: QualityTier) -> GraphicsCapabilitySnapshot {
         GraphicsCapabilitySnapshot {
@@ -212,5 +249,18 @@ mod tests {
         assert_eq!(profile.tier, QualityTier::Conservative);
         assert!(!profile.shadows_enabled);
         assert!(!profile.bloom_enabled);
+    }
+
+    #[test]
+    fn vibescript_selects_shared_tiers_and_fails_partial_probes_conservative() {
+        let mut snapshot = capable(QualityTier::High);
+        assert_eq!(select_quality_tier_via_vibe(snapshot), QualityTier::High);
+        snapshot.tier_hint = Some(QualityTier::Ultra);
+        assert_eq!(select_quality_tier_via_vibe(snapshot), QualityTier::Ultra);
+        snapshot.probe_complete = false;
+        assert_eq!(
+            select_quality_tier_via_vibe(snapshot),
+            QualityTier::Conservative
+        );
     }
 }

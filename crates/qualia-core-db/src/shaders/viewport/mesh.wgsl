@@ -23,7 +23,7 @@ struct MeshInstance {
     orientation_sign: f32,
     _padding: u32,
 };
-@group(7) @binding(0) var<storage, read> mesh_instances: array<MeshInstance>;
+@group(3) @binding(0) var<storage, read> mesh_instances: array<MeshInstance>;
 
 struct Material {
     base_color: vec4<f32>,
@@ -37,26 +37,26 @@ struct Material {
     uv_transform: array<vec4<f32>, 12>,
 };
 @group(2) @binding(0) var<uniform> material: Material;
-@group(3) @binding(0) var base_color_map: texture_2d<f32>;
-@group(3) @binding(1) var normal_map: texture_2d<f32>;
-@group(3) @binding(2) var metallic_roughness_map: texture_2d<f32>;
-@group(3) @binding(3) var occlusion_map: texture_2d<f32>;
-@group(3) @binding(4) var emissive_map: texture_2d<f32>;
-@group(3) @binding(5) var stylized_ramp_map: texture_2d<f32>;
-@group(3) @binding(6) var base_color_sampler: sampler;
-@group(3) @binding(7) var normal_sampler: sampler;
-@group(3) @binding(8) var metallic_roughness_sampler: sampler;
-@group(3) @binding(9) var occlusion_sampler: sampler;
-@group(3) @binding(10) var emissive_sampler: sampler;
-@group(3) @binding(11) var stylized_ramp_sampler: sampler;
+@group(2) @binding(1) var base_color_map: texture_2d<f32>;
+@group(2) @binding(2) var normal_map: texture_2d<f32>;
+@group(2) @binding(3) var metallic_roughness_map: texture_2d<f32>;
+@group(2) @binding(4) var occlusion_map: texture_2d<f32>;
+@group(2) @binding(5) var emissive_map: texture_2d<f32>;
+@group(2) @binding(6) var stylized_ramp_map: texture_2d<f32>;
+@group(2) @binding(7) var base_color_sampler: sampler;
+@group(2) @binding(8) var normal_sampler: sampler;
+@group(2) @binding(9) var metallic_roughness_sampler: sampler;
+@group(2) @binding(10) var occlusion_sampler: sampler;
+@group(2) @binding(11) var emissive_sampler: sampler;
+@group(2) @binding(12) var stylized_ramp_sampler: sampler;
 struct ShadowUniform {
     light_view_projection: array<mat4x4<f32>, 2>,
     params: vec4<f32>, // enabled, inverse size, receiver bias, cascade split depth
 };
-@group(4) @binding(0) var sun_shadow_near: texture_depth_2d;
-@group(4) @binding(1) var sun_shadow_far: texture_depth_2d;
-@group(4) @binding(2) var sun_shadow_sampler: sampler_comparison;
-@group(4) @binding(3) var<uniform> sun_shadow: ShadowUniform;
+@group(0) @binding(2) var sun_shadow_near: texture_depth_2d;
+@group(0) @binding(3) var sun_shadow_far: texture_depth_2d;
+@group(0) @binding(4) var sun_shadow_sampler: sampler_comparison;
+@group(0) @binding(5) var<uniform> sun_shadow: ShadowUniform;
 
 struct AoUniform {
     viewport: vec4<f32>,
@@ -67,15 +67,15 @@ struct AoUniform {
     params: vec4<f32>,
     depth: vec4<f32>,
 };
-@group(5) @binding(0) var dynamic_ao_map: texture_2d<f32>;
-@group(5) @binding(1) var dynamic_ao_surface: texture_2d<f32>;
-@group(5) @binding(2) var<uniform> dynamic_ao: AoUniform;
+@group(0) @binding(6) var dynamic_ao_map: texture_2d<f32>;
+@group(0) @binding(7) var dynamic_ao_surface: texture_2d<f32>;
+@group(0) @binding(8) var<uniform> dynamic_ao: AoUniform;
 
 struct AtmosphereUniform {
     fog_color_density: vec4<f32>, // linear RGB + extinction density
     height: vec4<f32>, // base height, falloff, maximum opacity, enabled
 };
-@group(6) @binding(0) var<uniform> atmosphere: AtmosphereUniform;
+@group(0) @binding(9) var<uniform> atmosphere: AtmosphereUniform;
 
 fn material_uv(uv: vec2<f32>, role: u32) -> vec2<f32> {
     let offset_scale = material.uv_transform[role * 2u];

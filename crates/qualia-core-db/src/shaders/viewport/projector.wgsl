@@ -358,7 +358,8 @@ fn picking_fragment_main(input: VertexOutput) -> @location(0) u32 {
     if (dist > 1.0) {
         discard;
     }
-    return input.pick_id;
+    // R32Uint zero is the portable clear/no-hit value; bias valid tensor indices by one.
+    return input.pick_id + 1u;
 }
 
 @fragment
