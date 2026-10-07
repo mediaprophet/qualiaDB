@@ -125,6 +125,8 @@ pub mod standpoint;
 pub mod telemetry;
 /// Bounded, caller-buffered PNG/JPEG decode from verified external texture resources.
 pub mod texture_decode;
+/// Allocation-free KTX2 container metadata and level-range parser (native + WASM).
+pub mod texture_ktx2;
 /// Deterministic caller-buffered texture mip residency planning and budget admission.
 pub mod texture_stream_policy;
 

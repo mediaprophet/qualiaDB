@@ -19,15 +19,28 @@ fn coarse_texture_level_reduces_cpu_base_to_requested_physical_extent() {
 }
 
 #[test]
-fn coarse_alpha_mask_is_deferred_until_coverage_aware_cpu_filter_exists() {
-    assert!(coarse_texture_level(
-        &[255; 4 * 4 * 4],
+fn coarse_alpha_mask_preserves_authored_coverage() {
+    let mut source = [255u8; 4 * 4 * 4];
+    for pixel in 8..16 {
+        source[pixel * 4 + 3] = 0;
+    }
+    let (coarse, width, height) = coarse_texture_level(
+        &source,
         4,
         4,
         1,
         TextureMipSemantic::alpha_mask(0.5).unwrap(),
     )
-    .is_err());
+    .unwrap();
+    assert_eq!((width, height), (2, 2));
+    let covered = coarse
+        .chunks_exact(4)
+        .filter(|pixel| pixel[3] >= 128)
+        .count();
+    assert_eq!(
+        covered, 2,
+        "coarse alpha coverage should match 8/16 base pixels"
+    );
 }
 
 #[test]

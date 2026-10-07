@@ -57,19 +57,54 @@ fn coarse_texture_level(
     semantic: TextureMipSemantic,
 ) -> Result<(Vec<u8>, u32, u32), String> {
     use qualia_core_db::render::cpu_texture_mips::{
-        downsample_rgba8_level_into, CpuTextureMipSemantic,
+        downsample_alpha_mask_level_into, downsample_rgba8_level_into, CpuTextureMipSemantic,
     };
 
-    let cpu_semantic = match semantic {
-        TextureMipSemantic::Color => CpuTextureMipSemantic::Color,
-        TextureMipSemantic::LinearData => CpuTextureMipSemantic::LinearData,
-        TextureMipSemantic::Normal => CpuTextureMipSemantic::Normal,
-        TextureMipSemantic::AlphaMask { .. } => {
-            return Err(
-                "coarse alpha-mask mip requires coverage-correcting CPU support".to_string(),
-            )
-        }
-    };
+    fn reduce_level(
+        authored_base: &[u8],
+        base_width: u32,
+        base_height: u32,
+        source: &[u8],
+        width: u32,
+        height: u32,
+        semantic: TextureMipSemantic,
+        out: &mut [u8],
+    ) -> Result<(u32, u32), String> {
+        let reduced = match semantic {
+            TextureMipSemantic::AlphaMask { cutoff_bits } => downsample_alpha_mask_level_into(
+                authored_base,
+                base_width,
+                base_height,
+                source,
+                width,
+                height,
+                f32::from_bits(cutoff_bits),
+                out,
+            ),
+            TextureMipSemantic::Color => downsample_rgba8_level_into(
+                source,
+                width,
+                height,
+                CpuTextureMipSemantic::Color,
+                out,
+            ),
+            TextureMipSemantic::LinearData => downsample_rgba8_level_into(
+                source,
+                width,
+                height,
+                CpuTextureMipSemantic::LinearData,
+                out,
+            ),
+            TextureMipSemantic::Normal => downsample_rgba8_level_into(
+                source,
+                width,
+                height,
+                CpuTextureMipSemantic::Normal,
+                out,
+            ),
+        };
+        reduced.map_err(|error| format!("coarse texture reduction: {error:?}"))
+    }
     let mut width = source_width;
     let mut height = source_height;
     for _ in 0..first_mip {
@@ -103,11 +138,14 @@ fn coarse_texture_level(
         let next_width = (previous_width / 2).max(1);
         let next_height = (previous_height / 2).max(1);
         let result = if level == 0 {
-            downsample_rgba8_level_into(
+            reduce_level(
+                source,
+                source_width,
+                source_height,
                 source,
                 previous_width,
                 previous_height,
-                cpu_semantic,
+                semantic,
                 &mut level_a,
             )
         } else if level % 2 == 1 {
@@ -115,11 +153,14 @@ fn coarse_texture_level(
                 .checked_mul(previous_height as usize)
                 .and_then(|pixels| pixels.checked_mul(4))
                 .ok_or_else(|| "coarse texture level size overflow".to_string())?;
-            downsample_rgba8_level_into(
+            reduce_level(
+                source,
+                source_width,
+                source_height,
                 &level_a[..previous_bytes],
                 previous_width,
                 previous_height,
-                cpu_semantic,
+                semantic,
                 &mut level_b,
             )
         } else {
@@ -127,15 +168,17 @@ fn coarse_texture_level(
                 .checked_mul(previous_height as usize)
                 .and_then(|pixels| pixels.checked_mul(4))
                 .ok_or_else(|| "coarse texture level size overflow".to_string())?;
-            downsample_rgba8_level_into(
+            reduce_level(
+                source,
+                source_width,
+                source_height,
                 &level_b[..previous_bytes],
                 previous_width,
                 previous_height,
-                cpu_semantic,
+                semantic,
                 &mut level_a,
             )
-        }
-        .map_err(|error| format!("coarse texture reduction: {error:?}"))?;
+        }?;
         if result != (next_width, next_height) {
             return Err("coarse texture reducer returned inconsistent dimensions".to_string());
         }
@@ -483,23 +526,6 @@ impl VolumetricRenderer {
                 )
                 .map_err(|error| format!("HMC texture decode: {error}"))?;
                 for (entry, first_mip, mip_bytes, mip_count) in selected {
-                    // Coverage-preserving alpha mips are currently generated from the authored
-                    // full-resolution mask. Defer a coarse-only alpha request until a
-                    // caller-buffered coverage-correcting CPU reducer is available.
-                    if matches!(
-                        entry.texture_use.mip_semantic,
-                        TextureMipSemantic::AlphaMask { .. }
-                    ) && first_mip != 0
-                    {
-                        report.admitted_mips = report.admitted_mips.saturating_sub(mip_count);
-                        report.deferred_mips += mip_count;
-                        report.admitted_upload_bytes =
-                            report.admitted_upload_bytes.saturating_sub(mip_bytes);
-                        report.deferred_upload_bytes =
-                            report.deferred_upload_bytes.saturating_add(mip_bytes);
-                        report.deferred_interpretations += 1;
-                        continue;
-                    }
                     let upload = if first_mip == 0 {
                         self.inner.upload_resident_texture_rgba8_with_mips(
                             entry.digest,
