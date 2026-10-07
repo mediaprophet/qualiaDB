@@ -7,15 +7,15 @@ use crate::canvas_model::Page;
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
+use crate::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
+use crate::tauri_ffi::listen as tauri_listen;
+#[cfg(target_arch = "wasm32")]
 use serde::de::DeserializeOwned;
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
-use crate::tauri_ffi::invoke as tauri_invoke;
-#[cfg(target_arch = "wasm32")]
-use crate::tauri_ffi::listen as tauri_listen;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 

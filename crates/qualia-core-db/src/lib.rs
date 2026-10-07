@@ -238,6 +238,8 @@ pub mod lora;
 pub mod q42;
 pub use q42::design_encode;
 pub use q42::execution_profile;
+pub use q42::journal;
+pub use q42::journal::{JournalHeader, JournalTransaction, MutableQ42Session, Q42Journal};
 pub use q42::machine_gpu_profile;
 pub use q42::model_helper;
 pub use q42::p64_weight;
@@ -251,8 +253,6 @@ pub use q42::q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_volume;
 pub use q42::yaml_ld_q42;
-pub use q42::journal;
-pub use q42::journal::{JournalHeader, JournalTransaction, MutableQ42Session, Q42Journal};
 // --- extensions/ category (reorg) ---
 pub mod extensions;
 pub use extensions::extension_bus;
@@ -302,13 +302,13 @@ pub mod bundle;
 /// Deterministic fixed-tick simulation engine (QG-09).
 pub mod simulation;
 pub use simulation::fixed_tick;
-/// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
-pub mod semantic_instruments;
 /// `.10d` living-container v1 — normative header, axis-role taxonomy, and
 /// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
 /// task. Available to browser/WASM builds (P0.8 parity target). See
 /// `docs/plans/native-computational-geometry-EXECUTION.md` P0.1.
 pub mod container_10d;
+/// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
+pub mod semantic_instruments;
 pub mod tensor;
 // geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
 // re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the

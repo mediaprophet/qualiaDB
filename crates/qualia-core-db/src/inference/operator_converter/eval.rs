@@ -5,10 +5,10 @@
 //! - Computes activation-weighted output deviation on untouched validation tokens.
 //! - Enforces that no production promotion occurs without verified receipts.
 
-use std::time::Instant;
-use serde::{Deserialize, Serialize};
 use super::activation_stats::ConverterError;
 use super::hybrid_fit::{fit_hybrid_decomposition, HybridDecomposition, HybridFitConfig};
+use serde::{Deserialize, Serialize};
+use std::time::Instant;
 
 /// Comprehensive receipt capturing conversion cost and held-out validation metrics.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -70,14 +70,8 @@ pub fn evaluate_conversion(
     }
 
     // 2. Fit hybrid decomposition
-    let hybrid = fit_hybrid_decomposition(
-        rows,
-        cols,
-        w_source,
-        base_q,
-        Some(&act_weights),
-        config,
-    )?;
+    let hybrid =
+        fit_hybrid_decomposition(rows, cols, w_source, base_q, Some(&act_weights), config)?;
 
     let duration_micros = start_time.elapsed().as_micros() as u64;
 
@@ -167,7 +161,8 @@ pub fn evaluate_conversion(
     let passed_quality_gate = relative_gain_frobenius >= min_required_gain
         && (total_held_out_elems == 0 || relative_gain_held_out >= min_required_gain);
 
-    let peak_scratch_bytes = (rows * cols * 4) * 3 + (rows * config.rank * 4) + (config.rank * cols * 4);
+    let peak_scratch_bytes =
+        (rows * cols * 4) * 3 + (rows * config.rank * 4) + (config.rank * cols * 4);
 
     let receipt = ConversionReceipt {
         rows,

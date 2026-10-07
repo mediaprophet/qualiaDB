@@ -7,12 +7,12 @@ use crate::inference::moe::ftw_loader::FtwModelPackage;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
+#[cfg(not(target_arch = "wasm32"))]
+use super::moe_gguf::compute_router_logits_from_raw;
 use super::moe_gguf::{
     compute_router_logits_from_gguf, dot, evaluate_gguf_dense_swiglu, evaluate_gguf_swiglu_expert,
     evaluate_gguf_swiglu_expert_fused_gate_up,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use super::moe_gguf::compute_router_logits_from_raw;
 
 impl QTensorEngine {
     /// Adopt an FTW multi-shard model directory for native MoE execution.
@@ -46,7 +46,10 @@ impl QTensorEngine {
     }
 
     /// Read raw bytes for a tensor from either the FTW package shards or the primary GGUF mmap.
-    pub fn fetch_tensor_raw_bytes<'a>(&'a self, info: &crate::gguf_sharder::GgufTensorInfo) -> Option<&'a [u8]> {
+    pub fn fetch_tensor_raw_bytes<'a>(
+        &'a self,
+        info: &crate::gguf_sharder::GgufTensorInfo,
+    ) -> Option<&'a [u8]> {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let len = crate::ggml_quants::tensor_byte_len(info)?;
@@ -272,15 +275,41 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(ref pkg) = ftw_pkg {
-            let gup_name = format!("model.layers.{}.mlp.shared_expert.gate_up_proj.weight", layer_idx);
-            let gus_name = format!("model.layers.{}.mlp.shared_expert.gate_up_proj.weight_scale", layer_idx);
-            let gug_name = format!("model.layers.{}.mlp.shared_expert.gate_up_proj.weight_global", layer_idx);
-            let dnp_name = format!("model.layers.{}.mlp.shared_expert.down_proj.weight", layer_idx);
-            let dns_name = format!("model.layers.{}.mlp.shared_expert.down_proj.weight_scale", layer_idx);
-            let dng_name = format!("model.layers.{}.mlp.shared_expert.down_proj.weight_global", layer_idx);
+            let gup_name = format!(
+                "model.layers.{}.mlp.shared_expert.gate_up_proj.weight",
+                layer_idx
+            );
+            let gus_name = format!(
+                "model.layers.{}.mlp.shared_expert.gate_up_proj.weight_scale",
+                layer_idx
+            );
+            let gug_name = format!(
+                "model.layers.{}.mlp.shared_expert.gate_up_proj.weight_global",
+                layer_idx
+            );
+            let dnp_name = format!(
+                "model.layers.{}.mlp.shared_expert.down_proj.weight",
+                layer_idx
+            );
+            let dns_name = format!(
+                "model.layers.{}.mlp.shared_expert.down_proj.weight_scale",
+                layer_idx
+            );
+            let dng_name = format!(
+                "model.layers.{}.mlp.shared_expert.down_proj.weight_global",
+                layer_idx
+            );
             let gate_name = format!("model.layers.{}.mlp.shared_expert_gate.weight", layer_idx);
 
-            if let (Some(gup), Some(gus), Some(gug), Some(dnp), Some(dns), Some(dng), Some(gate_raw)) = (
+            if let (
+                Some(gup),
+                Some(gus),
+                Some(gug),
+                Some(dnp),
+                Some(dns),
+                Some(dng),
+                Some(gate_raw),
+            ) = (
                 pkg.fetch_tensor_bytes(&gup_name),
                 pkg.fetch_tensor_bytes(&gus_name),
                 pkg.fetch_tensor_bytes(&gug_name),
@@ -321,7 +350,8 @@ impl QTensorEngine {
                         emb_dim,
                         &mut gate_row[..emb_dim],
                     );
-                    let gate_val = 1.0 / (1.0 + (-dot(&ffn_input[..emb_dim], &gate_row[..emb_dim])).exp());
+                    let gate_val =
+                        1.0 / (1.0 + (-dot(&ffn_input[..emb_dim], &gate_row[..emb_dim])).exp());
                     for d in 0..emb_dim {
                         scratch_a[d] += gate_val * expert_out[d];
                     }
@@ -337,10 +367,11 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         let has_ftw = ftw_pkg.is_some();
 
-        if !has_ftw && (tensors.moe_shared_gate.is_some()
-            || tensors.moe_shared_up.is_some()
-            || tensors.moe_shared_down.is_some()
-            || tensors.moe_shared_gate_input.is_some())
+        if !has_ftw
+            && (tensors.moe_shared_gate.is_some()
+                || tensors.moe_shared_up.is_some()
+                || tensors.moe_shared_down.is_some()
+                || tensors.moe_shared_gate_input.is_some())
         {
             let (Some(gate), Some(up), Some(down), Some(gate_input), Some(mmap)) = (
                 tensors.moe_shared_gate.as_ref(),
@@ -433,7 +464,7 @@ impl QTensorEngine {
         output: &mut [f32],
         scratch: &mut crate::inference::operator_runtime::ClusteredMoeScratch<'_>,
     ) -> bool {
-        op.dispatch(routed_experts, ffn_input, output, scratch).is_ok()
+        op.dispatch(routed_experts, ffn_input, output, scratch)
+            .is_ok()
     }
 }
-

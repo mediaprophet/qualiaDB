@@ -239,7 +239,9 @@ impl ModelHelper {
             if lex.resolve_term_into(object, &mut term) {
                 Ok(term)
             } else {
-                Err(format!("Q42 helper has unresolved lexicon hash {object:#018x}"))
+                Err(format!(
+                    "Q42 helper has unresolved lexicon hash {object:#018x}"
+                ))
             }
         };
         let integer = |object: u64| -> Result<u64, String> {

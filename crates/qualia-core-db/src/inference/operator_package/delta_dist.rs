@@ -12,28 +12,54 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DistributionError {
     MissingBaseAnchor(u64),
-    DependencyDepthExceeded { found: u32, max: u32 },
+    DependencyDepthExceeded {
+        found: u32,
+        max: u32,
+    },
     CyclicDependencyDetected(u64),
-    MemoryCeilingExceeded { required_bytes: usize, budget_bytes: usize },
-    DigestMismatch { expected: u64, found: u64 },
+    MemoryCeilingExceeded {
+        required_bytes: usize,
+        budget_bytes: usize,
+    },
+    DigestMismatch {
+        expected: u64,
+        found: u64,
+    },
     ProvisionalExecutionRejected,
 }
 
 impl fmt::Display for DistributionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MissingBaseAnchor(hash) => write!(f, "required base anchor {:#x} not found", hash),
+            Self::MissingBaseAnchor(hash) => {
+                write!(f, "required base anchor {:#x} not found", hash)
+            }
             Self::DependencyDepthExceeded { found, max } => {
-                write!(f, "dependency depth {} exceeds declared limit {}", found, max)
+                write!(
+                    f,
+                    "dependency depth {} exceeds declared limit {}",
+                    found, max
+                )
             }
             Self::CyclicDependencyDetected(hash) => {
                 write!(f, "cyclic delta dependency detected at anchor {:#x}", hash)
             }
-            Self::MemoryCeilingExceeded { required_bytes, budget_bytes } => {
-                write!(f, "delta distribution memory {} exceeds budget {}", required_bytes, budget_bytes)
+            Self::MemoryCeilingExceeded {
+                required_bytes,
+                budget_bytes,
+            } => {
+                write!(
+                    f,
+                    "delta distribution memory {} exceeds budget {}",
+                    required_bytes, budget_bytes
+                )
             }
             Self::DigestMismatch { expected, found } => {
-                write!(f, "digest mismatch: expected {:#x}, found {:#x}", expected, found)
+                write!(
+                    f,
+                    "digest mismatch: expected {:#x}, found {:#x}",
+                    expected, found
+                )
             }
             Self::ProvisionalExecutionRejected => {
                 write!(f, "provisional execution rejected: intermediate profile divergence triggered rollback")
@@ -110,7 +136,10 @@ impl DistributionResolver {
     }
 
     /// Register a verified content-addressed anchor.
-    pub fn register_anchor(&mut self, anchor: ContentAddressedAnchor) -> Result<(), DistributionError> {
+    pub fn register_anchor(
+        &mut self,
+        anchor: ContentAddressedAnchor,
+    ) -> Result<(), DistributionError> {
         let current_bytes: usize = self.anchors.values().map(|a| a.payload.len()).sum();
         if current_bytes + anchor.payload.len() > self.budget_bytes {
             return Err(DistributionError::MemoryCeilingExceeded {
@@ -145,7 +174,10 @@ impl DistributionResolver {
                 .get(&delta.base_anchor_hash)
                 .ok_or(DistributionError::MissingBaseAnchor(delta.base_anchor_hash))?;
 
-            if !active_anchors.iter().any(|a: &ContentAddressedAnchor| a.content_hash == anchor.content_hash) {
+            if !active_anchors
+                .iter()
+                .any(|a: &ContentAddressedAnchor| a.content_hash == anchor.content_hash)
+            {
                 active_anchors.push(anchor.clone());
                 total_bytes += anchor.payload.len();
             }
@@ -171,7 +203,10 @@ impl DistributionResolver {
     /// Trigger atomic KV cache invalidation and state restoration upon profile divergence.
     pub fn rollback_kv_cache(&mut self, reason: &str) -> DistributionReceipt {
         self.kv_invalidations += 1;
-        println!("DISTRIBUTION_KV_ROLLBACK: profile divergence: {} (invalidation count: {})", reason, self.kv_invalidations);
+        println!(
+            "DISTRIBUTION_KV_ROLLBACK: profile divergence: {} (invalidation count: {})",
+            reason, self.kv_invalidations
+        );
         DistributionReceipt {
             specialist_scope: "rollback".to_string(),
             transferred_bytes: 0,
@@ -216,7 +251,9 @@ mod tests {
             transferred_bytes: 10,
         };
 
-        let resolved = resolver.resolve(&manifest, &[delta], 1).expect("resolve specialist");
+        let resolved = resolver
+            .resolve(&manifest, &[delta], 1)
+            .expect("resolve specialist");
         assert_eq!(resolved.specialist_scope, "medical.cardiology");
         assert_eq!(resolved.active_anchors.len(), 1);
         assert_eq!(resolved.active_deltas.len(), 1);
@@ -272,7 +309,10 @@ mod tests {
             payload: vec![0u8; 15],
         };
         let err = resolver.register_anchor(anchor);
-        assert!(matches!(err, Err(DistributionError::MemoryCeilingExceeded { .. })));
+        assert!(matches!(
+            err,
+            Err(DistributionError::MemoryCeilingExceeded { .. })
+        ));
     }
 
     #[test]

@@ -10,10 +10,10 @@ pub mod canvas_model;
 pub mod endpoints;
 pub mod keep_volume;
 pub mod lexicon_catalog;
+pub mod render;
 pub mod semantic_instruments;
 #[cfg(target_arch = "wasm32")]
 pub mod tauri_ffi;
-pub mod render;
 pub mod theme_engine;
 
 pub use render::render_stack_revision;

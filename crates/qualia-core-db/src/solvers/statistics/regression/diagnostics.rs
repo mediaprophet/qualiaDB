@@ -43,7 +43,12 @@ pub struct BreuschPaganResult {
 
 /// `design` is row-major `n × k` (same as MultipleOls.design). Uses all columns
 /// of `design` as regressors for e² (including intercept). LM = n·R² ~ χ²(k−1).
-pub fn breusch_pagan(residuals: &[f64], design: &[f64], n: usize, k: usize) -> Option<BreuschPaganResult> {
+pub fn breusch_pagan(
+    residuals: &[f64],
+    design: &[f64],
+    n: usize,
+    k: usize,
+) -> Option<BreuschPaganResult> {
     if residuals.len() != n || design.len() != n * k || k < 2 || n <= k {
         return None;
     }
@@ -222,16 +227,8 @@ pub fn ramsey_reset(
         }
     }
     let unrestricted = multiple_ols(&x2, y, n, p2, true)?;
-    let sse_r = restricted
-        .residuals
-        .iter()
-        .map(|e| e * e)
-        .sum::<f64>();
-    let sse_u = unrestricted
-        .residuals
-        .iter()
-        .map(|e| e * e)
-        .sum::<f64>();
+    let sse_r = restricted.residuals.iter().map(|e| e * e).sum::<f64>();
+    let sse_u = unrestricted.residuals.iter().map(|e| e * e).sum::<f64>();
     let df_num = extra as f64;
     let df_den = unrestricted.df_residual as f64;
     if df_den <= 0.0 || sse_u <= 0.0 {
@@ -406,13 +403,11 @@ mod tests {
 
     #[test]
     fn dw_near_two_for_white_noise() {
-        let r = [0.1, 0.05, -0.02, 0.08, -0.04, 0.01, -0.06, 0.03, -0.01, 0.02];
+        let r = [
+            0.1, 0.05, -0.02, 0.08, -0.04, 0.01, -0.06, 0.03, -0.01, 0.02,
+        ];
         let dw = durbin_watson(&r).unwrap();
-        assert!(
-            (dw.statistic - 2.0).abs() < 1.2,
-            "dw={}",
-            dw.statistic
-        );
+        assert!((dw.statistic - 2.0).abs() < 1.2, "dw={}", dw.statistic);
     }
 
     #[test]

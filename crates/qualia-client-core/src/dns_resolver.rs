@@ -41,7 +41,6 @@ use qualia_core_db::net::dns::{QualiaDnsResolver, ResolverConfig};
 use reqwest::Client;
 use serde::Deserialize;
 
-
 // ── Public types ──────────────────────────────────────────────────────────────
 
 /// Fully resolved identity from any resolution tier.

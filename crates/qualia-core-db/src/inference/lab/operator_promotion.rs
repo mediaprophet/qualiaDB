@@ -6,9 +6,9 @@
 //! - Rejects promotion if validation gates failed or if unmeasured speed numbers are present.
 //! - Adheres strictly to repository honesty and zero-heap verification guidelines.
 
-use std::fmt;
-use serde::{Deserialize, Serialize};
 use crate::inference::operator_package::FidelityContract;
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Support maturity classification for operator capabilities.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -43,7 +43,8 @@ impl CapabilityMatrix {
                 CapabilityEntry {
                     feature: "GGML Q4_K Superblock Format (144 B / 256 weights, AoS)".to_string(),
                     level: SupportLevel::Supported,
-                    reason: "W1/W2/W3 verified bit-exact source preservation and reconstruction".to_string(),
+                    reason: "W1/W2/W3 verified bit-exact source preservation and reconstruction"
+                        .to_string(),
                 },
                 CapabilityEntry {
                     feature: "Scalar Q4_K Activation Lookup Engine (Q4KBitPlane)".to_string(),
@@ -56,14 +57,17 @@ impl CapabilityMatrix {
                     reason: "W2 verified safe borrowing views and RAII cleanup".to_string(),
                 },
                 CapabilityEntry {
-                    feature: "Bounded Activation Statistics (Diagonal & Block-Diagonal)".to_string(),
+                    feature: "Bounded Activation Statistics (Diagonal & Block-Diagonal)"
+                        .to_string(),
                     level: SupportLevel::Supported,
-                    reason: "W5 verified covariance sketching within Sentinel 42 MiB budget".to_string(),
+                    reason: "W5 verified covariance sketching within Sentinel 42 MiB budget"
+                        .to_string(),
                 },
                 CapabilityEntry {
                     feature: "Hybrid Q + AB + S Decomposition Fitting".to_string(),
                     level: SupportLevel::Experimental,
-                    reason: "W5 verified error reduction; requires per-model calibration receipts".to_string(),
+                    reason: "W5 verified error reduction; requires per-model calibration receipts"
+                        .to_string(),
                 },
                 CapabilityEntry {
                     feature: "Forge GPU Decode & Prefill Dual-Path Schedules".to_string(),
@@ -73,17 +77,20 @@ impl CapabilityMatrix {
                 CapabilityEntry {
                     feature: "Multi-Batch Scaling across [1, 2, 4, 8]".to_string(),
                     level: SupportLevel::Experimental,
-                    reason: "W4 verified conformance; latency profiles vary by platform".to_string(),
+                    reason: "W4 verified conformance; latency profiles vary by platform"
+                        .to_string(),
                 },
                 CapabilityEntry {
                     feature: "Converter Transcoding to SOA Layout in v1 Package".to_string(),
                     level: SupportLevel::Unsupported,
-                    reason: "Frozen decision D2: SOA transcoding deferred to EO-06 schedules".to_string(),
+                    reason: "Frozen decision D2: SOA transcoding deferred to EO-06 schedules"
+                        .to_string(),
                 },
                 CapabilityEntry {
                     feature: "Shared MoE Clustered Operators without Live Generation".to_string(),
                     level: SupportLevel::Unsupported,
-                    reason: "Wave 7 blocked on live committed M1/M2 generation baseline".to_string(),
+                    reason: "Wave 7 blocked on live committed M1/M2 generation baseline"
+                        .to_string(),
                 },
             ],
         }
@@ -93,7 +100,11 @@ impl CapabilityMatrix {
     pub fn query_level(&self, feature_query: &str) -> Option<SupportLevel> {
         self.entries
             .iter()
-            .find(|e| e.feature.to_lowercase().contains(&feature_query.to_lowercase()))
+            .find(|e| {
+                e.feature
+                    .to_lowercase()
+                    .contains(&feature_query.to_lowercase())
+            })
             .map(|e| e.level)
     }
 }
@@ -122,9 +133,15 @@ impl fmt::Display for PromotionError {
             Self::UnmeasuredSpeedNumbersForbidden => {
                 write!(f, "Promotion rejected: unmeasured or invented speed numbers are strictly forbidden")
             }
-            Self::MissingSignature => write!(f, "Promotion rejected: missing authorized signer identity or signature"),
+            Self::MissingSignature => write!(
+                f,
+                "Promotion rejected: missing authorized signer identity or signature"
+            ),
             Self::DigestMismatch { expected, actual } => {
-                write!(f, "Digest mismatch: expected {expected:#x}, got {actual:#x}")
+                write!(
+                    f,
+                    "Digest mismatch: expected {expected:#x}, got {actual:#x}"
+                )
             }
         }
     }
@@ -271,7 +288,9 @@ mod tests {
         .expect("Valid receipt must sign cleanly");
 
         assert_eq!(receipt.status, PromotionStatus::Promoted);
-        receipt.validate().expect("Valid receipt must pass validation");
+        receipt
+            .validate()
+            .expect("Valid receipt must pass validation");
     }
 
     #[test]
@@ -287,7 +306,10 @@ mod tests {
             "did:qualia:validator:swarm-0.0.40".to_string(),
         );
 
-        assert_eq!(res.err(), Some(PromotionError::UnmeasuredSpeedNumbersForbidden));
+        assert_eq!(
+            res.err(),
+            Some(PromotionError::UnmeasuredSpeedNumbersForbidden)
+        );
     }
 
     #[test]
@@ -303,6 +325,9 @@ mod tests {
             "did:qualia:validator:swarm-0.0.40".to_string(),
         );
 
-        assert!(matches!(res.err(), Some(PromotionError::ValidationGateFailed(_))));
+        assert!(matches!(
+            res.err(),
+            Some(PromotionError::ValidationGateFailed(_))
+        ));
     }
 }

@@ -1,8 +1,18 @@
 //! Bloom post-pass (Kawase) — HDR extract → blur → composite for the portal viewport.
 use super::*;
+use crate::gpu_context::{global_vram_ledger, VramResourceClass};
 pub(super) fn portal_bloom_enabled() -> bool {
     let ledger = global_vram_ledger();
     universe_orchestrator().bloom_enabled(ComputeUniverse::Viewport, ledger.mode())
+}
+
+fn hdr_composite_available(
+    has_bloom_targets: bool,
+    has_ambient_pipeline: bool,
+    has_projector_pipeline: bool,
+    bloom_policy_enabled: bool,
+) -> bool {
+    has_bloom_targets && has_ambient_pipeline && has_projector_pipeline && bloom_policy_enabled
 }
 
 pub(super) fn probe_hdr_format(device: &wgpu::Device) -> bool {
@@ -43,13 +53,16 @@ pub(super) fn hdr_color_target_state() -> wgpu::ColorTargetState {
     }
 }
 
-pub(super) fn bloom_vram_bytes(width: u32, height: u32) -> u64 {
+pub(super) fn bloom_vram_bytes(width: u32, height: u32) -> Option<u64> {
     let w = width.max(1) as u64;
     let h = height.max(1) as u64;
-    let hdr = w * h * 8;
+    let hdr = w.checked_mul(h)?.checked_mul(8)?;
     let half_w = (w / 2).max(1);
     let half_h = (h / 2).max(1);
-    hdr + half_w * half_h * 8 * 2
+    let half = half_w.checked_mul(half_h)?.checked_mul(8)?.checked_mul(2)?;
+    hdr.checked_add(half)?
+        .checked_add(8)? // one 1x1 dummy target
+        .checked_add(std::mem::size_of::<BloomUniformBlock>() as u64)
 }
 
 pub(super) fn create_float_target(
@@ -157,10 +170,19 @@ pub(super) fn create_bloom_chain(
     width: u32,
     height: u32,
     surface_format: wgpu::TextureFormat,
+    exposure_ev: f32,
 ) -> Option<BloomChain> {
     if !portal_bloom_enabled() {
         return None;
     }
+
+    // Admit all persistent colour targets before creating any texture. During
+    // resize the old BloomChain remains alive, so this reservation represents
+    // the true old+new peak until the replacement is committed.
+    let vram_bytes = bloom_vram_bytes(width, height)?;
+    let frame_target_reservation = global_vram_ledger()
+        .try_reserve_graphics(VramResourceClass::FrameTarget, vram_bytes)
+        .ok()?;
 
     let half_width = (width / 2).max(1);
     let half_height = (height / 2).max(1);
@@ -190,8 +212,10 @@ pub(super) fn create_bloom_chain(
             composite: CompositeParamsGpu {
                 exposure: BLOOM_EXPOSURE,
                 bloom_strength: BLOOM_STRENGTH,
-                _pad0: 0.0,
+                surface_is_srgb: if surface_format.is_srgb() { 1.0 } else { 0.0 },
                 _pad1: 0.0,
+                white_balance_gains: crate::render::output::DEFAULT_WHITE_BALANCE_GAINS,
+                _pad2: 0.0,
             },
         }),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
@@ -305,11 +329,21 @@ pub(super) fn create_bloom_chain(
         composite_pipeline,
         half_width,
         half_height,
-        vram_bytes: bloom_vram_bytes(width, height),
+        exposure_scale: crate::render::output::exposure_scale_from_ev(exposure_ev)?,
+        surface_is_srgb: surface_format.is_srgb(),
+        white_balance_gains: crate::render::output::DEFAULT_WHITE_BALANCE_GAINS,
+        _frame_target_reservation: frame_target_reservation,
     })
 }
 
-pub(super) fn write_bloom_uniform(queue: &wgpu::Queue, buf: &wgpu::Buffer, offset: f32) {
+pub(super) fn write_bloom_uniform(
+    queue: &wgpu::Queue,
+    buf: &wgpu::Buffer,
+    offset: f32,
+    exposure_scale: f32,
+    surface_is_srgb: bool,
+    white_balance_gains: [f32; 3],
+) {
     let block = BloomUniformBlock {
         bloom: BloomParamsGpu {
             threshold: BLOOM_THRESHOLD,
@@ -318,13 +352,140 @@ pub(super) fn write_bloom_uniform(queue: &wgpu::Queue, buf: &wgpu::Buffer, offse
             _pad: 0.0,
         },
         composite: CompositeParamsGpu {
-            exposure: BLOOM_EXPOSURE,
+            exposure: exposure_scale,
             bloom_strength: BLOOM_STRENGTH,
-            _pad0: 0.0,
+            surface_is_srgb: if surface_is_srgb { 1.0 } else { 0.0 },
             _pad1: 0.0,
+            white_balance_gains,
+            _pad2: 0.0,
         },
     };
     queue.write_buffer(buf, 0, bytemuck::bytes_of(&block));
+}
+
+impl PortalGpu {
+    /// Set bounded manual HDR exposure compensation in stops (EV).
+    /// The value remains configured and is applied by whichever scene-output path is active.
+    pub fn set_exposure_compensation(&mut self, compensation_ev: f32) -> bool {
+        if !compensation_ev.is_finite() {
+            return false;
+        }
+        let Some(exposure_scale) = crate::render::output::exposure_scale_from_ev(compensation_ev)
+        else {
+            return false;
+        };
+        let compensation_ev = compensation_ev.clamp(
+            crate::render::output::MIN_HDR_EXPOSURE_EV,
+            crate::render::output::MAX_HDR_EXPOSURE_EV,
+        );
+        if portal_bloom_enabled() != self.bloom_policy_snapshot {
+            self.sync_bloom_targets();
+        }
+        self.hdr_exposure_ev = compensation_ev;
+        if let Some(bloom) = self.bloom.as_mut() {
+            bloom.exposure_scale = exposure_scale;
+        }
+        let output_available = self
+            .output_chain
+            .as_mut()
+            .map(|output| output.set_exposure(&self.queue, compensation_ev))
+            .unwrap_or(false);
+        self.hdr_exposure_available() || output_available
+    }
+
+    /// Compatibility alias for the original HDR-specific API name.
+    pub fn set_hdr_exposure_compensation(&mut self, compensation_ev: f32) -> bool {
+        self.set_exposure_compensation(compensation_ev)
+    }
+
+    /// Set bounded pre-tone-map white balance, retaining controls across target rebuilds.
+    pub fn set_white_balance(&mut self, temperature_ev: f32, tint_ev: f32) -> bool {
+        let Some(gains) =
+            crate::render::output::white_balance_gains_from_stops(temperature_ev, tint_ev)
+        else {
+            return false;
+        };
+        self.white_balance_gains = gains;
+        if let Some(bloom) = self.bloom.as_mut() {
+            bloom.white_balance_gains = gains;
+        }
+        let output_available = if let Some(output) = self.output_chain.as_mut() {
+            output.set_white_balance(&self.queue, gains);
+            true
+        } else {
+            false
+        };
+        self.hdr_exposure_available() || output_available
+    }
+
+    pub fn hdr_exposure_compensation(&self) -> f32 {
+        self.hdr_exposure_ev
+    }
+
+    pub fn hdr_exposure_available(&self) -> bool {
+        hdr_composite_available(
+            self.bloom.is_some(),
+            self.ambient_pipeline_hdr.is_some(),
+            self.projector_pipeline_hdr.is_some(),
+            portal_bloom_enabled(),
+        )
+    }
+
+    /// Whether the active HDR or SDR scene-to-display path applies manual exposure.
+    pub fn exposure_transform_available(&self) -> bool {
+        if portal_bloom_enabled() != self.bloom_policy_snapshot {
+            return false;
+        }
+        self.hdr_exposure_available() || self.output_chain.is_some()
+    }
+
+    /// Whether the current WebGPU scene path retains values above SDR white before output mapping.
+    pub fn hdr_scene_available(&self) -> bool {
+        if portal_bloom_enabled() != self.bloom_policy_snapshot {
+            return false;
+        }
+        let hdr_pipelines = self.ambient_pipeline_hdr.is_some()
+            && self.projector_pipeline_hdr.is_some()
+            && self.sky_pipeline_hdr.is_some()
+            && self.mesh_pipeline_hdr.is_some();
+        hdr_pipelines
+            && (self.hdr_exposure_available()
+                || self
+                    .output_chain
+                    .as_ref()
+                    .is_some_and(|o| o.uses_hdr_scene()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{bloom_vram_bytes, hdr_composite_available, BloomUniformBlock, CompositeParamsGpu};
+
+    #[test]
+    fn bloom_output_uniform_includes_white_balance_gains_with_wgsl_alignment() {
+        assert_eq!(std::mem::size_of::<CompositeParamsGpu>(), 32);
+        assert_eq!(std::mem::size_of::<BloomUniformBlock>(), 48);
+    }
+
+    #[test]
+    fn exposure_capability_requires_the_active_composite_path() {
+        assert!(hdr_composite_available(true, true, true, true));
+        assert!(!hdr_composite_available(false, true, true, true));
+        assert!(!hdr_composite_available(true, false, true, true));
+        assert!(!hdr_composite_available(true, true, false, true));
+        assert!(!hdr_composite_available(true, true, true, false));
+    }
+
+    #[test]
+    fn bloom_budget_counts_hdr_ping_pong_dummy_and_uniform_buffer() {
+        assert_eq!(bloom_vram_bytes(1920, 1080), Some(24_883_240));
+        assert_eq!(bloom_vram_bytes(1, 1), Some(64));
+    }
+
+    #[test]
+    fn bloom_target_budget_rejects_size_overflow() {
+        assert_eq!(bloom_vram_bytes(u32::MAX, u32::MAX), None);
+    }
 }
 
 pub(super) fn run_bloom_passes(
@@ -340,7 +501,14 @@ pub(super) fn run_bloom_passes(
     debug_assert_eq!(blur_w, bloom.blur_a.width());
     debug_assert_eq!(blur_h, bloom.blur_b.height());
 
-    write_bloom_uniform(queue, &bloom.uniform_buf, 1.0);
+    write_bloom_uniform(
+        queue,
+        &bloom.uniform_buf,
+        1.0,
+        bloom.exposure_scale,
+        bloom.surface_is_srgb,
+        bloom.white_balance_gains,
+    );
     let extract_bind = make_bloom_bind_group(
         device,
         &bloom.bind_layout,
@@ -374,7 +542,14 @@ pub(super) fn run_bloom_passes(
     let mut read = &bloom.blur_a_view;
     let mut write = &bloom.blur_b_view;
     for &offset in &KAWASE_OFFSETS {
-        write_bloom_uniform(queue, &bloom.uniform_buf, offset);
+        write_bloom_uniform(
+            queue,
+            &bloom.uniform_buf,
+            offset,
+            bloom.exposure_scale,
+            bloom.surface_is_srgb,
+            bloom.white_balance_gains,
+        );
         let kawase_bind = make_bloom_bind_group(
             device,
             &bloom.bind_layout,
@@ -408,7 +583,14 @@ pub(super) fn run_bloom_passes(
     }
     let bloom_result = read;
 
-    write_bloom_uniform(queue, &bloom.uniform_buf, 1.0);
+    write_bloom_uniform(
+        queue,
+        &bloom.uniform_buf,
+        1.0,
+        bloom.exposure_scale,
+        bloom.surface_is_srgb,
+        bloom.white_balance_gains,
+    );
     let composite_bind = make_bloom_bind_group(
         device,
         &bloom.bind_layout,

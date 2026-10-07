@@ -67,7 +67,10 @@ impl ConditioningRegistry {
         profile_id: &str,
         version: u64,
     ) -> Result<(Option<u64>, u64), &'static str> {
-        let state = self.profiles.get_mut(profile_id).ok_or("profile not found")?;
+        let state = self
+            .profiles
+            .get_mut(profile_id)
+            .ok_or("profile not found")?;
         if !state.versions.contains_key(&version) {
             return Err("version not found in registry");
         }
@@ -83,8 +86,13 @@ impl ConditioningRegistry {
         profile_id: &str,
         target_version: Option<u64>,
     ) -> Result<(u64, u64), &'static str> {
-        let state = self.profiles.get_mut(profile_id).ok_or("profile not found")?;
-        let current = state.active_version.ok_or("no active version to rollback from")?;
+        let state = self
+            .profiles
+            .get_mut(profile_id)
+            .ok_or("profile not found")?;
+        let current = state
+            .active_version
+            .ok_or("no active version to rollback from")?;
         let target = match target_version {
             Some(t) => {
                 if !state.versions.contains_key(&t) {
@@ -114,7 +122,9 @@ impl ConditioningRegistry {
 
     /// Query entry details for a registered version.
     pub fn get_version(&self, profile_id: &str, version: u64) -> Option<&ProfileVersionEntry> {
-        self.profiles.get(profile_id).and_then(|s| s.versions.get(&version))
+        self.profiles
+            .get(profile_id)
+            .and_then(|s| s.versions.get(&version))
     }
 
     /// List all registered versions for a profile.

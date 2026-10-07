@@ -102,9 +102,7 @@ fn complete_mode_recovers_uris_and_multilingual_literals() {
     let lex = vol.lex_view().expect("lex");
     let resolvable = quins
         .iter()
-        .filter(|q| {
-            lex.contains(q.object) || lex.contains(q.object & MASK)
-        })
+        .filter(|q| lex.contains(q.object) || lex.contains(q.object & MASK))
         .count();
     assert_eq!(
         resolvable, 5,

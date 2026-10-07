@@ -591,12 +591,7 @@ impl<'a> Q42LexMmap<'a> {
     /// Borrow the `ns_id`-th namespace string from a page's local table.
     /// Only legal in LEX_VERSION_V4 pages — this is what fails v2 pages
     /// closed on any `0x04` entry, because v2 `ns_count` slots are always 0.
-    fn page_ns_at(
-        &self,
-        page_offset: usize,
-        page_length: usize,
-        ns_id: usize,
-    ) -> Option<&'a str> {
+    fn page_ns_at(&self, page_offset: usize, page_length: usize, ns_id: usize) -> Option<&'a str> {
         if self.format_version != LEX_VERSION_V4 {
             return None;
         }
@@ -606,7 +601,10 @@ impl<'a> Q42LexMmap<'a> {
         }
         let page_end = page_offset.checked_add(page_length)?;
         let blob_offset = usize::try_from(u64::from_le_bytes(
-            self.data.get(page_offset + 8..page_offset + 16)?.try_into().ok()?,
+            self.data
+                .get(page_offset + 8..page_offset + 16)?
+                .try_into()
+                .ok()?,
         ))
         .ok()?;
         // Namespace table entries are [u16 len][utf-8] — no tag byte.
@@ -620,8 +618,7 @@ impl<'a> Q42LexMmap<'a> {
             }
             cursor = end;
         }
-        let len =
-            u16::from_le_bytes(self.data.get(cursor..cursor + 2)?.try_into().ok()?) as usize;
+        let len = u16::from_le_bytes(self.data.get(cursor..cursor + 2)?.try_into().ok()?) as usize;
         let start = cursor.checked_add(2)?;
         let end = start.checked_add(len)?;
         if end > page_end {
@@ -669,26 +666,27 @@ impl<'a> Q42LexMmap<'a> {
         }
         match self.data[start] {
             LEX_TAG_STRING => {
-                let len = u16::from_le_bytes(
-                    self.data.get(start + 1..start + 3)?.try_into().ok()?,
-                ) as usize;
+                let len = u16::from_le_bytes(self.data.get(start + 1..start + 3)?.try_into().ok()?)
+                    as usize;
                 let text_start = start + 3;
                 let end = text_start.checked_add(len)?;
                 if end > page_end {
                     return None;
                 }
-                Some(("", std::str::from_utf8(self.data.get(text_start..end)?).ok()?))
+                Some((
+                    "",
+                    std::str::from_utf8(self.data.get(text_start..end)?).ok()?,
+                ))
             }
             LEX_TAG_NAMESPACED => {
                 if self.format_version != LEX_VERSION_V4 {
                     return None;
                 }
-                let ns_id = u16::from_le_bytes(
-                    self.data.get(start + 1..start + 3)?.try_into().ok()?,
-                ) as usize;
-                let len = u16::from_le_bytes(
-                    self.data.get(start + 3..start + 5)?.try_into().ok()?,
-                ) as usize;
+                let ns_id =
+                    u16::from_le_bytes(self.data.get(start + 1..start + 3)?.try_into().ok()?)
+                        as usize;
+                let len = u16::from_le_bytes(self.data.get(start + 3..start + 5)?.try_into().ok()?)
+                    as usize;
                 let text_start = start + 5;
                 let end = text_start.checked_add(len)?;
                 if end > page_end {

@@ -48,7 +48,9 @@ pub fn inspect_for_publish(bytes: &[u8]) -> Result<PublishInspection, Instrument
 
 pub fn assert_can_publish(inspection: &PublishInspection) -> Result<(), InstrumentError> {
     if !inspection.has_source_n3 {
-        return Err(InstrumentError::MissingField("graphs/instrument-definition.n3"));
+        return Err(InstrumentError::MissingField(
+            "graphs/instrument-definition.n3",
+        ));
     }
     if inspection.category.requires_seed_label() && !inspection.labelled {
         return Err(InstrumentError::DemoUnlabelled);

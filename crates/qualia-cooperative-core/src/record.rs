@@ -361,12 +361,20 @@ impl InstantBridge {
 
     /// The earlier of two instants.
     pub fn min(self, other: InstantBridge) -> InstantBridge {
-        if self.is_before(&other) { self } else { other }
+        if self.is_before(&other) {
+            self
+        } else {
+            other
+        }
     }
 
     /// The later of two instants.
     pub fn max(self, other: InstantBridge) -> InstantBridge {
-        if self.is_after(&other) { self } else { other }
+        if self.is_after(&other) {
+            self
+        } else {
+            other
+        }
     }
 }
 
@@ -448,7 +456,11 @@ impl DurationBridge {
     /// Absolute value of this duration.
     pub fn abs(self) -> Self {
         let n = self.total_nanos();
-        if n < 0 { Self::from_nanos(-n) } else { self }
+        if n < 0 {
+            Self::from_nanos(-n)
+        } else {
+            self
+        }
     }
 }
 

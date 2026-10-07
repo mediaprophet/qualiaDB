@@ -69,9 +69,8 @@ fn econ_atkinson(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let incomes = f64_list(args, "incomes").ok_or_else(|| {
         Diagnostic::new(DiagCode::E100, span, "Econ.atkinson needs incomes: [f64]")
     })?;
-    let epsilon = f64_field(args, "epsilon").ok_or_else(|| {
-        Diagnostic::new(DiagCode::E100, span, "Econ.atkinson needs epsilon: f64")
-    })?;
+    let epsilon = f64_field(args, "epsilon")
+        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "Econ.atkinson needs epsilon: f64"))?;
     let a = atkinson_inequality(&incomes, epsilon)
         .map_err(|e| Diagnostic::new(DiagCode::E100, span, e))?;
     Ok(record([("atkinson", Value::F64(a))]))
@@ -128,15 +127,10 @@ fn units_convert(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         )
     })?;
     let from = resolve_unit(from_name).ok_or_else(|| {
-        Diagnostic::new(
-            DiagCode::E100,
-            span,
-            format!("unknown unit: {from_name}"),
-        )
+        Diagnostic::new(DiagCode::E100, span, format!("unknown unit: {from_name}"))
     })?;
-    let to = resolve_unit(to_name).ok_or_else(|| {
-        Diagnostic::new(DiagCode::E100, span, format!("unknown unit: {to_name}"))
-    })?;
+    let to = resolve_unit(to_name)
+        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, format!("unknown unit: {to_name}")))?;
     let converted = from
         .convert(value, &to)
         .map_err(|e| Diagnostic::new(DiagCode::E100, span, e))?;
@@ -150,22 +144,39 @@ fn units_convert(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 fn stats_mean(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let xs = f64_list(args, "values")
         .or_else(|| f64_list(args, "x"))
-        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "Statistics.mean needs values: [f64]"))?;
+        .ok_or_else(|| {
+            Diagnostic::new(DiagCode::E100, span, "Statistics.mean needs values: [f64]")
+        })?;
     if xs.is_empty() {
-        return Err(Diagnostic::new(DiagCode::E100, span, "Statistics.mean: empty"));
+        return Err(Diagnostic::new(
+            DiagCode::E100,
+            span,
+            "Statistics.mean: empty",
+        ));
     }
     let m = xs.iter().sum::<f64>() / xs.len() as f64;
-    Ok(record([("mean", Value::F64(m)), ("n", Value::U64(xs.len() as u64))]))
+    Ok(record([
+        ("mean", Value::F64(m)),
+        ("n", Value::U64(xs.len() as u64)),
+    ]))
 }
 
 fn stats_median(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mut xs = f64_list(args, "values")
         .or_else(|| f64_list(args, "x"))
         .ok_or_else(|| {
-            Diagnostic::new(DiagCode::E100, span, "Statistics.median needs values: [f64]")
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "Statistics.median needs values: [f64]",
+            )
         })?;
     if xs.is_empty() {
-        return Err(Diagnostic::new(DiagCode::E100, span, "Statistics.median: empty"));
+        return Err(Diagnostic::new(
+            DiagCode::E100,
+            span,
+            "Statistics.median: empty",
+        ));
     }
     xs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let n = xs.len();
@@ -174,14 +185,21 @@ fn stats_median(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     } else {
         (xs[n / 2 - 1] + xs[n / 2]) / 2.0
     };
-    Ok(record([("median", Value::F64(med)), ("n", Value::U64(n as u64))]))
+    Ok(record([
+        ("median", Value::F64(med)),
+        ("n", Value::U64(n as u64)),
+    ]))
 }
 
 fn stats_variance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let xs = f64_list(args, "values")
         .or_else(|| f64_list(args, "x"))
         .ok_or_else(|| {
-            Diagnostic::new(DiagCode::E100, span, "Statistics.variance needs values: [f64]")
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "Statistics.variance needs values: [f64]",
+            )
         })?;
     if xs.len() < 2 {
         return Err(Diagnostic::new(
@@ -214,10 +232,12 @@ fn stats_std_dev(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 fn stats_pearson(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let x = f64_list(args, "x")
-        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "Statistics.pearson needs x: [f64]"))?;
-    let y = f64_list(args, "y")
-        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "Statistics.pearson needs y: [f64]"))?;
+    let x = f64_list(args, "x").ok_or_else(|| {
+        Diagnostic::new(DiagCode::E100, span, "Statistics.pearson needs x: [f64]")
+    })?;
+    let y = f64_list(args, "y").ok_or_else(|| {
+        Diagnostic::new(DiagCode::E100, span, "Statistics.pearson needs y: [f64]")
+    })?;
     if x.len() != y.len() || x.len() < 2 {
         return Err(Diagnostic::new(
             DiagCode::E100,
@@ -313,11 +333,7 @@ fn dpll_sat(clauses: &[Vec<i32>]) -> (bool, BTreeMap<i32, bool>) {
             vars.insert(lit.unsigned_abs() as i32, ());
         }
     }
-    fn sat(
-        clauses: &[Vec<i32>],
-        vars: &[i32],
-        assignment: &mut BTreeMap<i32, bool>,
-    ) -> bool {
+    fn sat(clauses: &[Vec<i32>], vars: &[i32], assignment: &mut BTreeMap<i32, bool>) -> bool {
         // Unit / conflict check
         for c in clauses {
             let mut unresolved = 0;
@@ -540,7 +556,10 @@ mod tests {
 
     #[test]
     fn gini_two_person_split_is_half() {
-        let args = record([("incomes", Value::List(vec![Value::F64(0.0), Value::F64(1.0)]))]);
+        let args = record([(
+            "incomes",
+            Value::List(vec![Value::F64(0.0), Value::F64(1.0)]),
+        )]);
         let v = econ_gini(&args, empty_span()).unwrap();
         match v {
             Value::Record(m) => {
@@ -585,18 +604,22 @@ mod tests {
         let v = stats_ols(&args, empty_span()).unwrap();
         match v {
             Value::Record(m) => {
-                assert!((match m.get("slope") {
-                    Some(Value::F64(s)) => *s,
-                    _ => panic!(),
-                } - 2.0)
-                    .abs()
-                    < 1e-12);
-                assert!((match m.get("r_squared") {
-                    Some(Value::F64(r)) => *r,
-                    _ => panic!(),
-                } - 1.0)
-                    .abs()
-                    < 1e-12);
+                assert!(
+                    (match m.get("slope") {
+                        Some(Value::F64(s)) => *s,
+                        _ => panic!(),
+                    } - 2.0)
+                        .abs()
+                        < 1e-12
+                );
+                assert!(
+                    (match m.get("r_squared") {
+                        Some(Value::F64(r)) => *r,
+                        _ => panic!(),
+                    } - 1.0)
+                        .abs()
+                        < 1e-12
+                );
             }
             _ => panic!("expected record"),
         }

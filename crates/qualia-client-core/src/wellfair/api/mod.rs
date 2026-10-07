@@ -219,19 +219,19 @@ pub(crate) fn coop_envelope_to_wellfare(
                 nanos: i.nanos,
             }),
         valid_time_start_unix: env.valid_time_start_unix,
-        valid_time_start_instant: env
-            .valid_time_start_instant
-            .map(|i| wellfare_core::record::InstantBridge {
+        valid_time_start_instant: env.valid_time_start_instant.map(|i| {
+            wellfare_core::record::InstantBridge {
                 secs: i.secs,
                 nanos: i.nanos,
-            }),
+            }
+        }),
         valid_time_end_unix: env.valid_time_end_unix,
-        valid_time_end_instant: env
-            .valid_time_end_instant
-            .map(|i| wellfare_core::record::InstantBridge {
+        valid_time_end_instant: env.valid_time_end_instant.map(|i| {
+            wellfare_core::record::InstantBridge {
                 secs: i.secs,
                 nanos: i.nanos,
-            }),
+            }
+        }),
         predecessor_id: env.predecessor_id,
         blob_hash: env.blob_hash,
         tombstone: env.tombstone,

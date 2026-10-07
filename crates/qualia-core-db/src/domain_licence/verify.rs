@@ -93,7 +93,9 @@ pub fn normalize_domain(name: &str) -> String {
 
 /// True when `domain` is a strict subdomain of `parent`.
 fn is_subdomain(domain: &str, parent: &str) -> bool {
-    domain.len() > parent.len() && domain.ends_with(parent) && domain.as_bytes()[domain.len() - parent.len() - 1] == b'.'
+    domain.len() > parent.len()
+        && domain.ends_with(parent)
+        && domain.as_bytes()[domain.len() - parent.len() - 1] == b'.'
 }
 
 fn decode_pubkey(hex_str: &str) -> Result<VerifyingKey, LicenceError> {
@@ -169,11 +171,7 @@ fn domain_covered(
     effective_members: Option<&[String]>,
 ) -> bool {
     let d = normalize_domain(domain);
-    if lic
-        .subject_domains
-        .iter()
-        .any(|s| normalize_domain(s) == d)
-    {
+    if lic.subject_domains.iter().any(|s| normalize_domain(s) == d) {
         return true;
     }
     if !class.permits_delegation() {
@@ -270,10 +268,7 @@ pub fn issue_amendment(
 }
 
 /// Verify an amendment against its base licence (id match + issuer signature).
-pub fn verify_amendment(
-    amend: &LicenceAmendment,
-    lic: &DomainLicence,
-) -> Result<(), LicenceError> {
+pub fn verify_amendment(amend: &LicenceAmendment, lic: &DomainLicence) -> Result<(), LicenceError> {
     if amend.licence_id != lic.licence_id {
         return Err(LicenceError::LicenceIdMismatch);
     }
@@ -349,12 +344,7 @@ pub fn verify(
     if !domain_covered(lic, class, serving_domain, Some(&members)) {
         return Err(LicenceError::DomainNotCovered);
     }
-    if !required_scope.is_empty()
-        && !lic
-            .capability_scope
-            .iter()
-            .any(|s| s == required_scope)
-    {
+    if !required_scope.is_empty() && !lic.capability_scope.iter().any(|s| s == required_scope) {
         return Err(LicenceError::ScopeNotCovered);
     }
     Ok(())
@@ -399,8 +389,14 @@ pub fn licence_status(
         expires_unix: lic.expires_unix,
         reason: String::new(),
     };
-    match verify(lic, now_unix, serving_domain, required_scope, pinned_issuer_pubkey_hex, amendments)
-    {
+    match verify(
+        lic,
+        now_unix,
+        serving_domain,
+        required_scope,
+        pinned_issuer_pubkey_hex,
+        amendments,
+    ) {
         Ok(()) => LicenceStatus {
             licensed: true,
             reason: "ok".into(),

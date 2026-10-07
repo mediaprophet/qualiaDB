@@ -632,4 +632,3 @@ pub fn ingest_auto_with_policy(
     prov.write_beside_volume(output)?;
     Ok((stats, fmt))
 }
-

@@ -221,15 +221,9 @@ mod tests {
 
         let other = variant_same_release(&bytes);
         assert_ne!(sha256_prefixed(&other), first.content_digest);
-        assert_eq!(
-            cat.publish(other),
-            Err(InstrumentError::AlreadyPublished)
-        );
+        assert_eq!(cat.publish(other), Err(InstrumentError::AlreadyPublished));
         assert_eq!(cat.discover().len(), 1);
-        assert_eq!(
-            cat.download(&first.release_id).unwrap(),
-            bytes.as_slice()
-        );
+        assert_eq!(cat.download(&first.release_id).unwrap(), bytes.as_slice());
     }
 
     #[test]

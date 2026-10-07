@@ -79,7 +79,8 @@ mod tests {
     #[test]
     fn tampered_bundle_fails_verification() {
         let mut w = BundleWriter::new();
-        w.add_file("asset.10d", "10d", b"valid asset bytes".to_vec(), None).unwrap();
+        w.add_file("asset.10d", "10d", b"valid asset bytes".to_vec(), None)
+            .unwrap();
         let mut bytes = w.build().unwrap();
 
         // Tamper with one byte in the payload

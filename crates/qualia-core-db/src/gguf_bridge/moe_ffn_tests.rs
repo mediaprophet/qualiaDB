@@ -122,22 +122,23 @@ fn qtensor_engine_dispatches_moe_step_routed_with_shared_expert() {
     let input = vec![1.0f32; emb_dim];
     let mut scratch_a = vec![0.0f32; emb_dim];
 
-    let expert_fetcher = |_id: u16| -> Option<crate::inference::moe::dispatch::ExpertWeightView<'static>> {
-        let gu_p: &'static mut [u8] = Box::leak(vec![0x42u8; 2 * 16 * 8].into_boxed_slice());
-        let gu_s: &'static mut [u8] = Box::leak(vec![0x38u8; 2 * 16 * 1].into_boxed_slice());
-        let d_p: &'static mut [u8] = Box::leak(vec![0x42u8; 16 * 8].into_boxed_slice());
-        let d_s: &'static mut [u8] = Box::leak(vec![0x38u8; 16 * 1].into_boxed_slice());
-        Some(crate::inference::moe::dispatch::ExpertWeightView {
-            gate_up_packed: gu_p,
-            gate_up_scale: gu_s,
-            gate_up_global: 1.0,
-            down_packed: d_p,
-            down_scale: d_s,
-            down_global: 1.0,
-            intermediate_dim: 16,
-            emb_dim: 16,
-        })
-    };
+    let expert_fetcher =
+        |_id: u16| -> Option<crate::inference::moe::dispatch::ExpertWeightView<'static>> {
+            let gu_p: &'static mut [u8] = Box::leak(vec![0x42u8; 2 * 16 * 8].into_boxed_slice());
+            let gu_s: &'static mut [u8] = Box::leak(vec![0x38u8; 2 * 16 * 1].into_boxed_slice());
+            let d_p: &'static mut [u8] = Box::leak(vec![0x42u8; 16 * 8].into_boxed_slice());
+            let d_s: &'static mut [u8] = Box::leak(vec![0x38u8; 16 * 1].into_boxed_slice());
+            Some(crate::inference::moe::dispatch::ExpertWeightView {
+                gate_up_packed: gu_p,
+                gate_up_scale: gu_s,
+                gate_up_global: 1.0,
+                down_packed: d_p,
+                down_scale: d_s,
+                down_global: 1.0,
+                intermediate_dim: 16,
+                emb_dim: 16,
+            })
+        };
 
     let ok = engine.dispatch_moe_step_routed(
         emb_dim,
@@ -200,18 +201,18 @@ fn qtensor_engine_dispatches_clustered_moe_operator() {
 
     let op = crate::inference::operator_runtime::ClusteredMoEOperator::new(vec![anchor]);
 
-    let routed = [
-        crate::inference::operator_runtime::RoutedExpert {
-            expert_id: 0,
-            weight: 1.0,
-        },
-    ];
+    let routed = [crate::inference::operator_runtime::RoutedExpert {
+        expert_id: 0,
+        weight: 1.0,
+    }];
 
     let input = vec![0.1f32; model_dim];
     let mut output = vec![0.0f32; model_dim];
 
-    let ws_gate_len = qualia_inference_kernel::operators::q4k_lookup_workspace_floats(model_dim).unwrap();
-    let ws_down_len = qualia_inference_kernel::operators::q4k_lookup_workspace_floats(hidden_dim).unwrap();
+    let ws_gate_len =
+        qualia_inference_kernel::operators::q4k_lookup_workspace_floats(model_dim).unwrap();
+    let ws_down_len =
+        qualia_inference_kernel::operators::q4k_lookup_workspace_floats(hidden_dim).unwrap();
 
     let mut gb = vec![0.0f32; hidden_dim];
     let mut ub = vec![0.0f32; hidden_dim];
@@ -233,13 +234,8 @@ fn qtensor_engine_dispatches_clustered_moe_operator() {
         ws_down: &mut ws_down,
     };
 
-    let ok = engine.dispatch_clustered_moe_operator(
-        &op,
-        &routed,
-        &input,
-        &mut output,
-        &mut scratch,
-    );
+    let ok =
+        engine.dispatch_clustered_moe_operator(&op, &routed, &input, &mut output, &mut scratch);
 
     assert!(ok);
     assert!(output.iter().any(|&v| v.abs() > 1e-5));
@@ -252,7 +248,9 @@ fn qtensor_engine_loads_physical_qwen_nvfp4_package_if_present() {
         return;
     }
     let mut engine = QTensorEngine::new();
-    let report = engine.load_model_checked(p.to_str().unwrap()).expect("physical qwen loaded");
+    let report = engine
+        .load_model_checked(p.to_str().unwrap())
+        .expect("physical qwen loaded");
     assert_eq!(report.n_layer, 40);
     assert!(report.mapped_bytes > 0);
     assert!(engine.ftw_package.is_some());
@@ -265,26 +263,52 @@ fn qtensor_engine_loads_physical_qwen_nvfp4_package_if_present() {
     assert!(emb.iter().any(|&v| v.abs() > 1e-5));
 
     let layer0 = index.get_layer_tensors(0);
-    assert!(layer0.is_hybrid_ssm_layer(), "layer 0 should be recognized as hybrid SSM layer");
-    assert!(layer0.moe_router.is_some(), "layer 0 should have MoE router");
-    assert!(layer0.attn_norm.is_some(), "layer 0 should have input layernorm");
-    assert!(layer0.ffn_norm.is_some(), "layer 0 should have post-attention layernorm");
+    assert!(
+        layer0.is_hybrid_ssm_layer(),
+        "layer 0 should be recognized as hybrid SSM layer"
+    );
+    assert!(
+        layer0.moe_router.is_some(),
+        "layer 0 should have MoE router"
+    );
+    assert!(
+        layer0.attn_norm.is_some(),
+        "layer 0 should have input layernorm"
+    );
+    assert!(
+        layer0.ffn_norm.is_some(),
+        "layer 0 should have post-attention layernorm"
+    );
 
     let mut hidden = vec![0.0f32; index.emb_dim()];
     hidden.copy_from_slice(&emb);
     let mut scratch_a = vec![0.0f32; 131072];
     let mut scratch_b = vec![0.0f32; 131072];
     let attn_ok = engine.dispatch_hybrid_ssm_layer(
-        &index, 0, &mut hidden, index.emb_dim(), &layer0, &mut scratch_a, &mut scratch_b,
+        &index,
+        0,
+        &mut hidden,
+        index.emb_dim(),
+        &layer0,
+        &mut scratch_a,
+        &mut scratch_b,
     );
 
     let ffn_ok = engine.dispatch_ffn_block_pre_norm(
-        &index, &mut hidden, index.emb_dim(), &layer0, &mut scratch_a, &mut scratch_b,
+        &index,
+        &mut hidden,
+        index.emb_dim(),
+        &layer0,
+        &mut scratch_a,
+        &mut scratch_b,
     );
 
     assert!(attn_ok, "SSM layer 0 should execute successfully");
     assert!(ffn_ok, "FFN layer 0 should execute successfully");
-    assert!(hidden.iter().any(|&v| v.abs() > 1e-5), "layer 0 output should be non-zero");
+    assert!(
+        hidden.iter().any(|&v| v.abs() > 1e-5),
+        "layer 0 output should be non-zero"
+    );
 
     // Verify multi-layer forward: 3 hybrid SSM layers (0, 1, 2) + 1 full attention layer (3)
     let layers_ran = engine.dispatch_transformer_forward(
@@ -296,13 +320,22 @@ fn qtensor_engine_loads_physical_qwen_nvfp4_package_if_present() {
         0,
         4,
     );
-    assert_eq!(layers_ran, 4, "all 4 layers (3 SSM + 1 full attention) should execute successfully");
-    assert!(hidden.iter().all(|v| v.is_finite()), "hidden state must remain finite across layers");
+    assert_eq!(
+        layers_ran, 4,
+        "all 4 layers (3 SSM + 1 full attention) should execute successfully"
+    );
+    assert!(
+        hidden.iter().all(|v| v.is_finite()),
+        "hidden state must remain finite across layers"
+    );
 
     // Verify output norm
     let norm_ok = engine.apply_output_norm_inplace(&index, &mut hidden, index.emb_dim());
     assert!(norm_ok, "apply_output_norm_inplace should succeed");
-    assert!(hidden.iter().all(|v| v.is_finite()), "hidden state must be finite post-norm");
+    assert!(
+        hidden.iter().all(|v| v.is_finite()),
+        "hidden state must be finite post-norm"
+    );
 
     // Verify NVFP4 LM head logit projection for token 100
     if let Some(ref pkg) = engine.ftw_package {
@@ -316,10 +349,13 @@ fn qtensor_engine_loads_physical_qwen_nvfp4_package_if_present() {
             let scale_bytes = index.emb_dim() / 16;
             let p_row = &packed[token_id * row_bytes..(token_id + 1) * row_bytes];
             let s_row = &scales[token_id * scale_bytes..(token_id + 1) * scale_bytes];
-            let g_val = half::f16::from_le_bytes([globals[token_id * 2], globals[token_id * 2 + 1]]).to_f32();
+            let g_val =
+                half::f16::from_le_bytes([globals[token_id * 2], globals[token_id * 2 + 1]])
+                    .to_f32();
 
             let mut out_row = vec![0.0f32; index.emb_dim()];
-            crate::inference::moe::nvfp4::dequantize_nvfp4_row(p_row, s_row, g_val, &mut out_row).expect("nvfp4 row dequant");
+            crate::inference::moe::nvfp4::dequantize_nvfp4_row(p_row, s_row, g_val, &mut out_row)
+                .expect("nvfp4 row dequant");
             let logit: f32 = hidden.iter().zip(out_row.iter()).map(|(h, w)| h * w).sum();
             assert!(logit.is_finite(), "token logit must be finite");
         }
@@ -333,7 +369,10 @@ fn qtensor_engine_loads_physical_qwen_nvfp4_package_if_present() {
         2,
         None,
     );
-    assert!(argmax_res.is_some(), "FTW NVFP4 LM head argmax should succeed");
+    assert!(
+        argmax_res.is_some(),
+        "FTW NVFP4 LM head argmax should succeed"
+    );
     let res = argmax_res.unwrap();
     assert!(res.max_logit.is_finite(), "argmax logit must be finite");
 }
@@ -361,6 +400,3 @@ fn local_llm_agent_autoregressive_decode_physical_qwen_nvfp4() {
     assert!(tokens_gen > 0, "should generate at least 1 token");
     assert!(!provenance.is_empty(), "provenance hash should be recorded");
 }
-
-
-

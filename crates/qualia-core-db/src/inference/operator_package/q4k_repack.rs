@@ -10,8 +10,8 @@
 //! - Exact quantization metadata preserved (no lossy re-quantization).
 //! - Deterministic representation digests.
 
-use std::fmt;
 use qualia_inference_kernel::operators::{Q4K_SUPERBLOCK_BYTES, Q4K_SUPERBLOCK_ELEMS};
+use std::fmt;
 pub const Q4K_SCALE_PLANE_BYTES_PER_BLOCK: usize = 16;
 pub const Q4K_BITPLANE_BYTES_PER_BLOCK: usize = 128;
 
@@ -30,13 +30,22 @@ impl fmt::Display for RepackError {
             Self::EmptyInput => write!(f, "empty input data for Q4_K repack"),
             Self::ZeroElements => write!(f, "zero elements specified for Q4_K repack"),
             Self::TruncatedSource { expected, actual } => {
-                write!(f, "truncated source: expected at least {expected} bytes, got {actual}")
+                write!(
+                    f,
+                    "truncated source: expected at least {expected} bytes, got {actual}"
+                )
             }
             Self::InvalidBufferLength { expected, actual } => {
-                write!(f, "buffer length mismatch: expected {expected} bytes, got {actual}")
+                write!(
+                    f,
+                    "buffer length mismatch: expected {expected} bytes, got {actual}"
+                )
             }
             Self::ReconstructionMismatch => {
-                write!(f, "reconstructed source bytes did not match original source")
+                write!(
+                    f,
+                    "reconstructed source bytes did not match original source"
+                )
             }
         }
     }
@@ -62,7 +71,10 @@ pub struct RepackedQ4KTensor {
 }
 
 /// Repack a GGML Q4_K tensor into independent scale and bit-plane streams.
-pub fn repack_q4k_tensor(raw_source: &[u8], n_elems: usize) -> Result<RepackedQ4KTensor, RepackError> {
+pub fn repack_q4k_tensor(
+    raw_source: &[u8],
+    n_elems: usize,
+) -> Result<RepackedQ4KTensor, RepackError> {
     if n_elems == 0 {
         return Err(RepackError::ZeroElements);
     }

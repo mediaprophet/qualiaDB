@@ -109,10 +109,8 @@ fn install_global_keys(mut wb: Signal<Workbench>, mut radial: Signal<RadialState
         }
     }) as Box<dyn FnMut(_)>);
     if let Some(document) = web_sys::window().and_then(|w| w.document()) {
-        let _ = document.add_event_listener_with_callback(
-            "keydown",
-            handler.as_ref().unchecked_ref(),
-        );
+        let _ =
+            document.add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref());
         handler.forget();
     }
 }

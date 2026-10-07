@@ -32,17 +32,17 @@ fn mock_profile_value(pid: &str, valid: bool) -> Value {
         Value::String("Zero heap allocation in hot paths".into()),
     );
     if valid {
-        req1.insert(
-            "validator".into(),
-            Value::String("zero-alloc-suite".into()),
-        );
+        req1.insert("validator".into(), Value::String("zero-alloc-suite".into()));
     } else {
         // Enforced requirement missing validator must fail validation
     }
     req1.insert("required".into(), Value::Bool(true));
     req1.insert("priority".into(), Value::U64(255));
 
-    rec.insert("requirements".into(), Value::List(vec![Value::Record(req1)]));
+    rec.insert(
+        "requirements".into(),
+        Value::List(vec![Value::Record(req1)]),
+    );
 
     let mut budget = BTreeMap::new();
     budget.insert("input_tokens".into(), Value::U64(4096));
@@ -257,7 +257,10 @@ fn pp080_conditioning_compile_rejects_oversized_requirements_without_panic() {
 
     let mut rec = BTreeMap::new();
     rec.insert("schema_version".into(), Value::U64(1));
-    rec.insert("profile_id".into(), Value::String("urn:qualia:profile:oversized".into()));
+    rec.insert(
+        "profile_id".into(),
+        Value::String("urn:qualia:profile:oversized".into()),
+    );
     rec.insert("objective".into(), Value::String("Testing bounds".into()));
 
     let mut reqs = Vec::new();
@@ -272,7 +275,14 @@ fn pp080_conditioning_compile_rejects_oversized_requirements_without_panic() {
     }
     rec.insert("requirements".into(), Value::List(reqs));
 
-    let res = dispatch(&mut snap, ids::CONDITIONING_COMPILE, &Value::Record(rec), span);
-    assert!(res.is_err(), "65 requirements must fail validation and return diagnostic");
+    let res = dispatch(
+        &mut snap,
+        ids::CONDITIONING_COMPILE,
+        &Value::Record(rec),
+        span,
+    );
+    assert!(
+        res.is_err(),
+        "65 requirements must fail validation and return diagnostic"
+    );
 }
-

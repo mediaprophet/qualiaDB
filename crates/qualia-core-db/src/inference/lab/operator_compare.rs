@@ -6,15 +6,15 @@
 //! - EOS-042: Multi-batch scaling across batch sizes [1, 2, 4, 8].
 //! - Strict compliance: Missing checkpoints are explicitly recorded as `not measured`, never as pass.
 
-use std::time::Instant;
-use serde::{Deserialize, Serialize};
+use super::operator_metrics::{OperatorExperimentReceipt, OperatorMemoryBreakdown};
+use crate::inference::operator_package::FidelityContract;
 use qualia_inference_kernel::operators::{
     apply_q4k_lookup, q4k_lookup_workspace_floats, reconstruct_q4k_into, validate_operator,
     AccumKind, MatrixView, MatrixViewMut, OperatorDescriptor, OperatorKind, OperatorWorkspace,
     PayloadView, ScaleLayout, Q4K_SUPERBLOCK_BYTES, Q4K_SUPERBLOCK_ELEMS,
 };
-use crate::inference::operator_package::FidelityContract;
-use super::operator_metrics::{OperatorExperimentReceipt, OperatorMemoryBreakdown};
+use serde::{Deserialize, Serialize};
+use std::time::Instant;
 
 /// Batch scaling measurement row for EOS-042.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -132,7 +132,13 @@ pub fn execute_ffn_existing(ffn: &FfnBlockWeights, input: &[f32], output: &mut [
     let mut gate = vec![0.0f32; ffn.hidden_dim];
     let mut up = vec![0.0f32; ffn.hidden_dim];
 
-    gemv_existing_q4k(&ffn.gate_bytes, ffn.model_dim, ffn.hidden_dim, input, &mut gate);
+    gemv_existing_q4k(
+        &ffn.gate_bytes,
+        ffn.model_dim,
+        ffn.hidden_dim,
+        input,
+        &mut gate,
+    );
     gemv_existing_q4k(&ffn.up_bytes, ffn.model_dim, ffn.hidden_dim, input, &mut up);
 
     let mut hidden = vec![0.0f32; ffn.hidden_dim];
@@ -141,7 +147,13 @@ pub fn execute_ffn_existing(ffn: &FfnBlockWeights, input: &[f32], output: &mut [
         hidden[i] = silu * up[i];
     }
 
-    gemv_existing_q4k(&ffn.down_bytes, ffn.hidden_dim, ffn.model_dim, &hidden, output);
+    gemv_existing_q4k(
+        &ffn.down_bytes,
+        ffn.hidden_dim,
+        ffn.model_dim,
+        &hidden,
+        output,
+    );
 }
 
 /// Execute a full SwiGLU FFN block using the new executable operator lookup runtime.
@@ -155,8 +167,22 @@ pub fn execute_ffn_lookup(
     let mut gate = vec![0.0f32; ffn.hidden_dim];
     let mut up = vec![0.0f32; ffn.hidden_dim];
 
-    gemv_operator_lookup(&ffn.gate_bytes, ffn.model_dim, ffn.hidden_dim, input, &mut gate, ws_gate_up);
-    gemv_operator_lookup(&ffn.up_bytes, ffn.model_dim, ffn.hidden_dim, input, &mut up, ws_gate_up);
+    gemv_operator_lookup(
+        &ffn.gate_bytes,
+        ffn.model_dim,
+        ffn.hidden_dim,
+        input,
+        &mut gate,
+        ws_gate_up,
+    );
+    gemv_operator_lookup(
+        &ffn.up_bytes,
+        ffn.model_dim,
+        ffn.hidden_dim,
+        input,
+        &mut up,
+        ws_gate_up,
+    );
 
     let mut hidden = vec![0.0f32; ffn.hidden_dim];
     for i in 0..ffn.hidden_dim {
@@ -164,7 +190,14 @@ pub fn execute_ffn_lookup(
         hidden[i] = silu * up[i];
     }
 
-    gemv_operator_lookup(&ffn.down_bytes, ffn.hidden_dim, ffn.model_dim, &hidden, output, ws_down);
+    gemv_operator_lookup(
+        &ffn.down_bytes,
+        ffn.hidden_dim,
+        ffn.model_dim,
+        &hidden,
+        output,
+        ws_down,
+    );
 }
 
 /// Run single tensor comparison and return an experiment receipt (EOS-041).
@@ -176,7 +209,13 @@ pub fn compare_single_tensor(
 ) -> OperatorExperimentReceipt {
     let mut existing_out = vec![0.0f32; out_features];
     let t0 = Instant::now();
-    gemv_existing_q4k(raw_weights, in_features, out_features, input, &mut existing_out);
+    gemv_existing_q4k(
+        raw_weights,
+        in_features,
+        out_features,
+        input,
+        &mut existing_out,
+    );
     let existing_ns = t0.elapsed().as_nanos() as u64;
 
     let ws_len = q4k_lookup_workspace_floats(in_features).unwrap();
@@ -184,7 +223,14 @@ pub fn compare_single_tensor(
     let mut lookup_out = vec![0.0f32; out_features];
 
     let t1 = Instant::now();
-    gemv_operator_lookup(raw_weights, in_features, out_features, input, &mut lookup_out, &mut ws);
+    gemv_operator_lookup(
+        raw_weights,
+        in_features,
+        out_features,
+        input,
+        &mut lookup_out,
+        &mut ws,
+    );
     let lookup_ns = t1.elapsed().as_nanos() as u64;
 
     let mut max_err = 0.0f32;
@@ -405,20 +451,29 @@ mod tests {
         let file = match std::fs::File::open(&path_str) {
             Ok(f) => f,
             Err(e) => {
-                println!("CARGO_TEST_STATUS: not measured: failed to open {}: {}", path_str, e);
+                println!(
+                    "CARGO_TEST_STATUS: not measured: failed to open {}: {}",
+                    path_str, e
+                );
                 return;
             }
         };
         let mmap = match unsafe { memmap2::MmapOptions::new().map(&file) } {
             Ok(m) => m,
             Err(e) => {
-                println!("CARGO_TEST_STATUS: not measured: failed to mmap {}: {}", path_str, e);
+                println!(
+                    "CARGO_TEST_STATUS: not measured: failed to mmap {}: {}",
+                    path_str, e
+                );
                 return;
             }
         };
         let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
         if index.entries.is_empty() {
-            println!("CARGO_TEST_STATUS: not measured: empty tensor index for {}", path_str);
+            println!(
+                "CARGO_TEST_STATUS: not measured: empty tensor index for {}",
+                path_str
+            );
             return;
         }
 
@@ -439,17 +494,27 @@ mod tests {
         let target_info = match target_info {
             Some(info) => info,
             None => {
-                println!("CARGO_TEST_STATUS: not measured: no 2D Q4_K tensor found in {}", path_str);
+                println!(
+                    "CARGO_TEST_STATUS: not measured: no 2D Q4_K tensor found in {}",
+                    path_str
+                );
                 return;
             }
         };
 
         let in_features = target_info.dims[0] as usize;
         let out_features = target_info.dims[1] as usize;
-        let raw_bytes = match crate::ggml_quants::fetch_tensor_bytes(&mmap, index.tensor_data_start, &target_info) {
+        let raw_bytes = match crate::ggml_quants::fetch_tensor_bytes(
+            &mmap,
+            index.tensor_data_start,
+            &target_info,
+        ) {
             Ok(b) => b,
             Err(e) => {
-                println!("CARGO_TEST_STATUS: not measured: failed to fetch tensor bytes: {:?}", e);
+                println!(
+                    "CARGO_TEST_STATUS: not measured: failed to fetch tensor bytes: {:?}",
+                    e
+                );
                 return;
             }
         };
@@ -464,7 +529,13 @@ mod tests {
             "CARGO_TEST_STATUS: real tensor compare [in={}, out={}]: max_err={:e}, mean_err={:e}, existing_ns={}, lookup_ns={}",
             in_features, out_features, receipt.numerical_max_error, receipt.numerical_mean_error, receipt.lut_setup_ns, receipt.warm_latency_ns
         );
-        assert!(receipt.fidelity_satisfied, "real tensor fidelity must be satisfied");
-        assert!(receipt.numerical_max_error < 1e-3, "real tensor max error < 1e-3");
+        assert!(
+            receipt.fidelity_satisfied,
+            "real tensor fidelity must be satisfied"
+        );
+        assert!(
+            receipt.numerical_max_error < 1e-3,
+            "real tensor max error < 1e-3"
+        );
     }
 }

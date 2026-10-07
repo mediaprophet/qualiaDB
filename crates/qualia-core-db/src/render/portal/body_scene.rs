@@ -139,7 +139,8 @@ impl BodyMeshAccum {
             if off.saturating_add(len) > bytes.len() {
                 continue;
             }
-            surface = container_10d::surface_reading::decode_surface_reading(&bytes[off..off + len]);
+            surface =
+                container_10d::surface_reading::decode_surface_reading(&bytes[off..off + len]);
         }
         let use_reading = surface
             .as_ref()
@@ -172,8 +173,7 @@ impl BodyMeshAccum {
         }
         fit.apply_in_place(&mut self.positions, self.gmin, self.gmax);
         if !self.nodes.is_empty() {
-            let mut pts: Vec<[f32; 3]> =
-                self.nodes.iter().map(|n| [n.x, n.y, n.z]).collect();
+            let mut pts: Vec<[f32; 3]> = self.nodes.iter().map(|n| [n.x, n.y, n.z]).collect();
             fit.apply_in_place(&mut pts, self.gmin, self.gmax);
             for (n, p) in self.nodes.iter_mut().zip(pts.iter()) {
                 n.x = p[0];

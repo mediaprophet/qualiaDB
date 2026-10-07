@@ -210,12 +210,7 @@ mod tests {
             [0.3, 0.3, 0.4],
             [0.8, 0.2, 0.0],
         ];
-        let tokens_v = [
-            [2.0, 4.0],
-            [1.5, 3.0],
-            [0.5, 2.5],
-            [3.0, 1.0],
-        ];
+        let tokens_v = [[2.0, 4.0], [1.5, 3.0], [0.5, 2.5], [3.0, 1.0]];
         let alphas = [0.9f32, 0.85, 0.95, 0.8];
         let betas = [0.5f32, 0.6, 0.4, 0.7];
 
@@ -229,8 +224,10 @@ mod tests {
             let beta = [betas[t]];
 
             // 1. Run actual step_gated_deltanet
-            step_gated_deltanet(&mut state, q, k, v, &alpha, &beta, d_state, d_head, &mut out)
-                .unwrap();
+            step_gated_deltanet(
+                &mut state, q, k, v, &alpha, &beta, d_state, d_head, &mut out,
+            )
+            .unwrap();
 
             // 2. Run explicit mathematical oracle:
             // a) v_pred[h] = sum_s S_{t-1}[s, h] * k[s]
@@ -294,13 +291,7 @@ mod tests {
             0.5, 0.6, 0.7, 0.8, // channel 1
         ];
 
-        let inputs = [
-            [1.0, 2.0],
-            [3.0, 4.0],
-            [5.0, 6.0],
-            [7.0, 8.0],
-            [9.0, 10.0],
-        ];
+        let inputs = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0], [9.0, 10.0]];
 
         // Track full history for oracle verification: history[c] = Vec<f32>
         let mut full_history = vec![vec![0.0f32; 3]; channels];

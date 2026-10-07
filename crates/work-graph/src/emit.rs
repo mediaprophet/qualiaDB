@@ -11,7 +11,10 @@ pub const RDF_TYPE: &str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 pub const NQ_NAME: &str = "impl-graph.nq";
 pub const JSON_NAME: &str = "impl-graph.json";
 
-pub fn write_emit(graph: &WorkGraph, out_dir: &Path) -> io::Result<(std::path::PathBuf, std::path::PathBuf)> {
+pub fn write_emit(
+    graph: &WorkGraph,
+    out_dir: &Path,
+) -> io::Result<(std::path::PathBuf, std::path::PathBuf)> {
     fs::create_dir_all(out_dir)?;
     let nq_path = out_dir.join(NQ_NAME);
     let json_path = out_dir.join(JSON_NAME);
@@ -27,16 +30,31 @@ pub fn to_nquads(graph: &WorkGraph) -> String {
     lit(&mut out, &project, &pred("root"), &graph.project.root);
     lit(&mut out, &project, &pred("tipSha"), &graph.project.tip_sha);
     lit(&mut out, &project, &pred("branch"), &graph.project.branch);
-    lit(&mut out, &project, &pred("dirty"), if graph.project.dirty { "true" } else { "false" });
+    lit(
+        &mut out,
+        &project,
+        &pred("dirty"),
+        if graph.project.dirty { "true" } else { "false" },
+    );
     lit(
         &mut out,
         &project,
         &pred("indexedAt"),
         &graph.project.indexed_at_unix.to_string(),
     );
-    lit(&mut out, &project, &pred("emitHonesty"), graph.honesty.this_emit);
+    lit(
+        &mut out,
+        &project,
+        &pred("emitHonesty"),
+        graph.honesty.this_emit,
+    );
     lit(&mut out, &project, &pred("customerName"), "Work graph");
-    lit(&mut out, &project, &pred("allBoundSource"), &graph.sources.all_bound);
+    lit(
+        &mut out,
+        &project,
+        &pred("allBoundSource"),
+        &graph.sources.all_bound,
+    );
     if let Some(cat) = &graph.sources.catalog {
         lit(&mut out, &project, &pred("catalogSource"), cat);
     }
@@ -67,7 +85,12 @@ pub fn to_nquads(graph: &WorkGraph) -> String {
         if let Some(fam) = crate::extract::family_of(id) {
             triple(&mut out, &s, &pred("inFamily"), &family_iri(fam));
         }
-        triple(&mut out, &s, &pred("inFile"), &file_iri(&graph.sources.all_bound));
+        triple(
+            &mut out,
+            &s,
+            &pred("inFile"),
+            &file_iri(&graph.sources.all_bound),
+        );
         if catalog.contains(id.as_str()) {
             triple(&mut out, &s, &pred("catalogMember"), &iri("vibeCatalog"));
         }
@@ -78,7 +101,12 @@ pub fn to_nquads(graph: &WorkGraph) -> String {
         let s = family_iri(&fam.name);
         triple(&mut out, &s, RDF_TYPE, &iri("Family"));
         lit(&mut out, &s, &pred("name"), &fam.name);
-        lit(&mut out, &s, &pred("memberCount"), &fam.member_count.to_string());
+        lit(
+            &mut out,
+            &s,
+            &pred("memberCount"),
+            &fam.member_count.to_string(),
+        );
         triple(&mut out, &s, &pred("inProject"), &project);
     }
 
@@ -115,23 +143,30 @@ fn write_json(w: &mut Vec<u8>, graph: &WorkGraph) -> io::Result<()> {
     write!(w, "  \"workingId\": \"implementation-graph\",\n")?;
     write!(w, "  \"noHostInvent\": true,\n")?;
     write!(w, "  \"honesty\": {{\n")?;
-    write!(w, "    \"vocabulary\": [\"Present\", \"Live\", \"Planned\"],\n")?;
-    write!(w, "    \"thisEmit\": \"Present\",\n")?;
     write!(
         w,
-        "    \"note\": {}\n",
-        json_str(graph.honesty.note)
+        "    \"vocabulary\": [\"Present\", \"Live\", \"Planned\"],\n"
     )?;
+    write!(w, "    \"thisEmit\": \"Present\",\n")?;
+    write!(w, "    \"note\": {}\n", json_str(graph.honesty.note))?;
     write!(w, "  }},\n")?;
     write!(w, "  \"project\": {{\n")?;
     write!(w, "    \"root\": {},\n", json_str(&graph.project.root))?;
     write!(w, "    \"tipSha\": {},\n", json_str(&graph.project.tip_sha))?;
     write!(w, "    \"branch\": {},\n", json_str(&graph.project.branch))?;
     write!(w, "    \"dirty\": {},\n", graph.project.dirty)?;
-    write!(w, "    \"indexedAtUnix\": {}\n", graph.project.indexed_at_unix)?;
+    write!(
+        w,
+        "    \"indexedAtUnix\": {}\n",
+        graph.project.indexed_at_unix
+    )?;
     write!(w, "  }},\n")?;
     write!(w, "  \"sources\": {{\n")?;
-    write!(w, "    \"allBound\": {},\n", json_str(&graph.sources.all_bound))?;
+    write!(
+        w,
+        "    \"allBound\": {},\n",
+        json_str(&graph.sources.all_bound)
+    )?;
     match &graph.sources.catalog {
         Some(c) => write!(w, "    \"catalog\": {}\n", json_str(c))?,
         None => write!(w, "    \"catalog\": null\n")?,

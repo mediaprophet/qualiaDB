@@ -101,8 +101,7 @@ impl StageTrace {
                 if receipt.stage == stage {
                     receipt.status = status;
                     receipt.duration_us = receipt.duration_us.saturating_add(duration_us);
-                    receipt.auxiliary_code =
-                        receipt.auxiliary_code.saturating_add(auxiliary_code);
+                    receipt.auxiliary_code = receipt.auxiliary_code.saturating_add(auxiliary_code);
                     return true;
                 }
             }
@@ -122,10 +121,7 @@ impl StageTrace {
 
     /// Iterate the recorded receipts in first-seen stage order.
     pub fn iter(&self) -> impl Iterator<Item = StageTimingReceipt> + '_ {
-        self.receipts[..self.len as usize]
-            .iter()
-            .flatten()
-            .copied()
+        self.receipts[..self.len as usize].iter().flatten().copied()
     }
 
     /// Fetch the coalesced receipt for a stage kind, if recorded.
@@ -280,9 +276,7 @@ mod tests {
             3,
         ));
         assert_eq!(trace.len, 1);
-        let receipt = trace
-            .get(InferenceStageKind::RecurrentStateUpdate)
-            .unwrap();
+        let receipt = trace.get(InferenceStageKind::RecurrentStateUpdate).unwrap();
         assert_eq!(receipt.duration_us, 70);
         assert_eq!(receipt.auxiliary_code, 6);
         assert_eq!(receipt.status, StageStatus::Executed);

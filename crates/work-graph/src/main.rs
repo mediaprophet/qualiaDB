@@ -56,7 +56,10 @@ fn run_index(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let graph = index_root(&root)?;
     let (nq, json) = emit::write_emit(&graph, &out)?;
     println!("Work graph Present emit");
-    println!("  tip     {} ({})", graph.project.tip_sha, graph.project.branch);
+    println!(
+        "  tip     {} ({})",
+        graph.project.tip_sha, graph.project.branch
+    );
     println!("  dirty   {}", graph.project.dirty);
     println!(
         "  files   {}  crates {}  invokeIds {}  families {}  docCites {}",

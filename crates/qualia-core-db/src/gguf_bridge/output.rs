@@ -22,7 +22,14 @@ impl QTensorEngine {
                 pkg.fetch_tensor_bytes("lm_head.weight_global"),
             ) {
                 return self.dispatch_output_argmax_ftw_nvfp4(
-                    packed, scales, globals, hidden, emb_dim, chunk_logits, max_chunks, sieve_mask,
+                    packed,
+                    scales,
+                    globals,
+                    hidden,
+                    emb_dim,
+                    chunk_logits,
+                    max_chunks,
+                    sieve_mask,
                 );
             }
         }
@@ -111,7 +118,11 @@ impl QTensorEngine {
         let vocab_size = globals.len() / 2;
         let row_bytes = emb_dim / 2;
         let scale_bytes = emb_dim / 16;
-        if vocab_size == 0 || emb_dim == 0 || hidden.len() < emb_dim || chunk_logits.len() < VOCAB_CHUNK_ROWS {
+        if vocab_size == 0
+            || emb_dim == 0
+            || hidden.len() < emb_dim
+            || chunk_logits.len() < VOCAB_CHUNK_ROWS
+        {
             return None;
         }
         if packed.len() < vocab_size * row_bytes || scales.len() < vocab_size * scale_bytes {
@@ -134,7 +145,9 @@ impl QTensorEngine {
 
             for r_idx in 0..chunk_rows {
                 let token_id = row_start + r_idx;
-                let g_val = half::f16::from_le_bytes([globals[token_id * 2], globals[token_id * 2 + 1]]).to_f32();
+                let g_val =
+                    half::f16::from_le_bytes([globals[token_id * 2], globals[token_id * 2 + 1]])
+                        .to_f32();
                 let p_row = &packed[token_id * row_bytes..(token_id + 1) * row_bytes];
                 let s_row = &scales[token_id * scale_bytes..(token_id + 1) * scale_bytes];
 
@@ -149,8 +162,10 @@ impl QTensorEngine {
                         let byte_val = b_bytes[i];
                         let low = (byte_val & 0x0F) as usize;
                         let high = ((byte_val >> 4) & 0x0F) as usize;
-                        b_dot += crate::inference::moe::nvfp4::E2M1_TABLE[low] * hidden[in_offset + i * 2]
-                               + crate::inference::moe::nvfp4::E2M1_TABLE[high] * hidden[in_offset + i * 2 + 1];
+                        b_dot += crate::inference::moe::nvfp4::E2M1_TABLE[low]
+                            * hidden[in_offset + i * 2]
+                            + crate::inference::moe::nvfp4::E2M1_TABLE[high]
+                                * hidden[in_offset + i * 2 + 1];
                     }
                     row_dot += b_dot * eff_scale;
                 }

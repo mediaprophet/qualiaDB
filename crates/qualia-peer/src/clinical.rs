@@ -147,13 +147,7 @@ impl ClinicalSession {
         patient_contact: ContactState,
         clinician_contact: ContactState,
     ) -> Result<(), QdnfError> {
-        release_queued(
-            &self.offline,
-            slot,
-            now,
-            patient_contact,
-            clinician_contact,
-        )
+        release_queued(&self.offline, slot, now, patient_contact, clinician_contact)
     }
 }
 
@@ -316,7 +310,7 @@ mod tests {
                 b"sealed-ct",
                 ContactState::Active,
                 ContactState::Active,
-                10
+                10,
             )
             .unwrap();
         assert_eq!(env.recipient_count(), 2);
@@ -391,7 +385,10 @@ mod tests {
             mapping_digest: digest(9),
             retains_full_label: false,
         };
-        assert_eq!(export_interchange(&stored, &adapter), Err(QdnfError::Denied));
+        assert_eq!(
+            export_interchange(&stored, &adapter),
+            Err(QdnfError::Denied)
+        );
         assert_eq!(
             patient_record_associated(patient, digest(4), digest(9)),
             Err(QdnfError::Denied)
@@ -399,8 +396,8 @@ mod tests {
         let pages = digest(5);
         let mut page = [0u8; STREAM_PAGE_BYTES as usize];
         let imaging = [7u8; 64];
-        let expected = qualia_core_db::net::qdnf::clinical::digest_attachment_pages(&imaging)
-            .unwrap();
+        let expected =
+            qualia_core_db::net::qdnf::clinical::digest_attachment_pages(&imaging).unwrap();
         stream_attachment(&imaging, imaging.len() as u32, expected, &mut page).unwrap();
         let _ = pages;
     }

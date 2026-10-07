@@ -28,8 +28,7 @@ pub fn conditioning_profile_activate(profile_json: String) -> Result<serde_json:
     let storage = conditioning_storage()?;
     let profile: serde_json::Value =
         serde_json::from_str(&profile_json).map_err(|e| format!("invalid profile JSON: {e}"))?;
-    let receipt =
-        crate::conditioning::activate_profile(Path::new(&storage), &profile)?;
+    let receipt = crate::conditioning::activate_profile(Path::new(&storage), &profile)?;
     serde_json::to_value(serde_json::json!({
         "active": true,
         "profile_id": receipt.profile_id,
@@ -50,5 +49,7 @@ pub fn conditioning_profile_deactivate() -> Result<serde_json::Value, String> {
 /// Current activation state (`active`, `profile_id`, store path).
 pub fn conditioning_profile_status() -> Result<serde_json::Value, String> {
     let storage = conditioning_storage()?;
-    Ok(crate::conditioning::active_profile_status(Path::new(&storage)))
+    Ok(crate::conditioning::active_profile_status(Path::new(
+        &storage,
+    )))
 }

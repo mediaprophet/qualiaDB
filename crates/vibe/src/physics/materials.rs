@@ -78,7 +78,6 @@ pub struct ThermalFacet {
     pub boil_point_k: Option<f64>,
 }
 
-
 /// Which facet of a [`MaterialSignature`] a cell is using.
 ///
 /// The words are `mechanical`, `thermal`, `optical`, `acoustic`, and
@@ -148,14 +147,7 @@ pub enum FacetField {
 /// Shared physics vocabulary for Poet and every Qualia app — not a town or
 /// game dialect. These names are not [`MaterialSignature`] records.
 /// `liquid_water` is species H2O only and does not subsume them.
-pub const GAME_WATER_FORMS: &[&str] = &[
-    "natural",
-    "collected",
-    "potable",
-    "salt",
-    "grey",
-    "black",
-];
+pub const GAME_WATER_FORMS: &[&str] = &["natural", "collected", "potable", "salt", "grey", "black"];
 
 /// True when `name` names a game water form rather than the H2O species signature.
 pub fn is_game_water_form(name: &str) -> bool {
@@ -615,11 +607,16 @@ impl MaterialSignature {
         }
         let n = name.trim().to_ascii_lowercase();
         Ok(match n.as_str() {
-            "sugar" | "sugar_cube" | "sucrose" | "sucrose_cube"
+            "sugar"
+            | "sugar_cube"
+            | "sucrose"
+            | "sucrose_cube"
             | "did:q42:material:sucrose-cube-v1" => Self::sugar_cube(),
             "water" | "liquid_water" | "h2o" | "did:q42:species:h2o" => Self::liquid_water(),
             "oil" | "mineral_oil" | "did:q42:material:mineral-oil-v1" => Self::mineral_oil(),
-            "hdpe_tank_shell" | "water_tank_shell" | "tank_shell"
+            "hdpe_tank_shell"
+            | "water_tank_shell"
+            | "tank_shell"
             | "did:q42:material:hdpe-tank-shell-v1" => Self::water_tank_shell(),
             _ => return Err(PartBindError::UnknownSignature),
         })
@@ -695,7 +692,10 @@ impl MaterialSignature {
                 };
                 let mut fields = vec![
                     ("conductivity_w_mk", FacetField::Num(t.conductivity_w_mk)),
-                    ("specific_heat_j_kgk", FacetField::Num(t.specific_heat_j_kgk)),
+                    (
+                        "specific_heat_j_kgk",
+                        FacetField::Num(t.specific_heat_j_kgk),
+                    ),
                 ];
                 if let Some(m) = t.melt_point_k {
                     fields.push(("melt_point_k", FacetField::Num(m)));

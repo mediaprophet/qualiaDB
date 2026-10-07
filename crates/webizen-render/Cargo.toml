@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 # Must match qualia-core-db: native rendering and inference share one physical device.
-wgpu = { workspace = true }
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"] }
 bytemuck = { workspace = true, features = ["derive"] }
 log = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -14,6 +14,8 @@ serde = { workspace = true, features = ["derive"] }
 [dependencies.qualia-core-db]
 path = "../qualia-core-db"
 optional = true
+default-features = false
+features = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-portable", "wgsl-forge", "privacy-he"]
 
 [dependencies.vibe]
 path = "../vibe"
@@ -30,6 +32,15 @@ pollster = "1"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 wasm-bindgen = "0.2"
+
+# The engine's browser bridge modules are feature-gated for WASM and are not
+# part of the native SDK profile. Resolver v2 keeps this target-only feature
+# set out of native builds.
+[target.'cfg(target_arch = "wasm32")'.dependencies.qualia-core-db]
+path = "../qualia-core-db"
+optional = true
+default-features = false
+features = ["portal"]
 
 [features]
 default = ["qualia"]

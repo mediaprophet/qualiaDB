@@ -1,15 +1,15 @@
 //! Integration tests for companion operator package (W2: EOS-023).
 
-use tempfile::tempdir;
-use qualia_inference_kernel::operators::{
-    AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout, Q4K_SUPERBLOCK_BYTES,
-    Q4K_SUPERBLOCK_ELEMS,
-};
-use crate::q42::p64_weight::{P64_FLAG_Q4K_SOA, P64_MAGIC, P64_VERSION};
 use super::manifest::{FidelityContract, OperatorRecord, PackageError};
 use super::q4k_repack::{reconstruct_source_q4k, repack_q4k_tensor};
 use super::segment::{SegmentError, SegmentKind};
 use super::{load_package_from_file, OperatorPackage, PackageBuilder};
+use crate::q42::p64_weight::{P64_FLAG_Q4K_SOA, P64_MAGIC, P64_VERSION};
+use qualia_inference_kernel::operators::{
+    AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout, Q4K_SUPERBLOCK_BYTES,
+    Q4K_SUPERBLOCK_ELEMS,
+};
+use tempfile::tempdir;
 
 fn make_synthetic_q4k_tensor(n_blocks: usize) -> Vec<u8> {
     let mut raw = Vec::with_capacity(n_blocks * Q4K_SUPERBLOCK_BYTES);
@@ -51,7 +51,11 @@ fn companion_package_round_trip_and_source_preservation() {
         .add_segment_payload(2, SegmentKind::ScaleMinPlane, repacked.scale_plane.clone())
         .expect("add scale segment");
     builder
-        .add_segment_payload(3, SegmentKind::BitPlaneTiles, repacked.bitplane_tiles.clone())
+        .add_segment_payload(
+            3,
+            SegmentKind::BitPlaneTiles,
+            repacked.bitplane_tiles.clone(),
+        )
         .expect("add bitplane segment");
 
     let desc = OperatorDescriptor {
@@ -83,8 +87,14 @@ fn companion_package_round_trip_and_source_preservation() {
     assert_eq!(pkg.manifest().magic, *b"QOP1");
     assert_eq!(pkg.manifest().version, 1);
     assert_eq!(pkg.manifest().source_digest, repacked.source_digest);
-    assert_eq!(pkg.manifest().representation_digest, repacked.representation_digest);
-    assert_eq!(pkg.manifest().fidelity_contract, FidelityContract::SourceBytePreserving);
+    assert_eq!(
+        pkg.manifest().representation_digest,
+        repacked.representation_digest
+    );
+    assert_eq!(
+        pkg.manifest().fidelity_contract,
+        FidelityContract::SourceBytePreserving
+    );
 
     // Verify Segment 1 (retained source) matches bit-for-bit
     let src_view = pkg.get_segment_view(1).expect("source view");
@@ -103,7 +113,10 @@ fn companion_package_round_trip_and_source_preservation() {
     )
     .expect("reconstruct source");
 
-    assert_eq!(reconstructed, raw_source, "source-byte preservation contract violated");
+    assert_eq!(
+        reconstructed, raw_source,
+        "source-byte preservation contract violated"
+    );
 }
 
 #[test]
@@ -132,7 +145,10 @@ fn raii_tempfile_package_lifecycle_and_cleanup() {
     let path_copy = file_path.clone();
     drop(dir); // RAII cleanup
 
-    assert!(!path_copy.exists(), "temp file must be cleaned up on tempdir drop");
+    assert!(
+        !path_copy.exists(),
+        "temp file must be cleaned up on tempdir drop"
+    );
 }
 
 #[test]

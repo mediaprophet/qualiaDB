@@ -37,8 +37,7 @@ fn membership_hash(ids: &[String]) -> String {
 #[test]
 fn checksums_sha256_matches_every_gold_file() {
     let root = datasets_root();
-    let list = std::fs::read_to_string(root.join("checksums.sha256"))
-        .expect("checksums.sha256");
+    let list = std::fs::read_to_string(root.join("checksums.sha256")).expect("checksums.sha256");
     let mut listed = std::collections::BTreeMap::<String, String>::new();
     for line in list.lines() {
         let line = line.trim();
@@ -48,7 +47,10 @@ fn checksums_sha256_matches_every_gold_file() {
         let (hash, path) = line
             .split_once(char::is_whitespace)
             .unwrap_or_else(|| panic!("bad checksums line: {line}"));
-        listed.insert(path.trim().replace('\\', "/"), hash.trim().to_ascii_lowercase());
+        listed.insert(
+            path.trim().replace('\\', "/"),
+            hash.trim().to_ascii_lowercase(),
+        );
     }
 
     let mut on_disk = Vec::new();
@@ -58,9 +60,12 @@ fn checksums_sha256_matches_every_gold_file() {
                 "{corpus}/gold/{}",
                 path.file_name().and_then(|s| s.to_str()).unwrap()
             );
-            let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            let bytes =
+                std::fs::read(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
             let got = sha256_hex(&bytes);
-            let expect = listed.get(&rel).unwrap_or_else(|| panic!("checksums.sha256 missing {rel}"));
+            let expect = listed
+                .get(&rel)
+                .unwrap_or_else(|| panic!("checksums.sha256 missing {rel}"));
             assert_eq!(
                 expect, &got,
                 "{rel} SHA-256 mismatch (file changed without updating checksums.sha256)"
@@ -71,7 +76,10 @@ fn checksums_sha256_matches_every_gold_file() {
     on_disk.sort();
     let mut keys: Vec<_> = listed.keys().cloned().collect();
     keys.sort();
-    assert_eq!(keys, on_disk, "checksums.sha256 must list exactly the gold files");
+    assert_eq!(
+        keys, on_disk,
+        "checksums.sha256 must list exactly the gold files"
+    );
 }
 
 #[test]
@@ -81,7 +89,8 @@ fn split_manifest_hashes_match_gold_bytes() {
         let manifest_path = root.join(corpus).join("splits").join("manifest.json");
         let raw = std::fs::read_to_string(&manifest_path)
             .unwrap_or_else(|e| panic!("read {}: {e}", manifest_path.display()));
-        let v = parse_json(&raw).unwrap_or_else(|e| panic!("parse {}: {e}", manifest_path.display()));
+        let v =
+            parse_json(&raw).unwrap_or_else(|e| panic!("parse {}: {e}", manifest_path.display()));
         let files = v.field("files").expect("files");
         let split_hashes = v.field("split_hashes").expect("split_hashes");
         for split in ["train", "dev", "test"] {
@@ -110,7 +119,10 @@ fn split_manifest_hashes_match_gold_bytes() {
                 pairs.push((id.clone(), got));
                 ids.push(id);
             }
-            let refs: Vec<(&str, &str)> = pairs.iter().map(|(i, h)| (i.as_str(), h.as_str())).collect();
+            let refs: Vec<(&str, &str)> = pairs
+                .iter()
+                .map(|(i, h)| (i.as_str(), h.as_str()))
+                .collect();
             let computed = split_hash_for(&refs);
             let listed = split_hashes
                 .field(split)
@@ -123,7 +135,9 @@ fn split_manifest_hashes_match_gold_bytes() {
             );
 
             let split_txt = std::fs::read_to_string(
-                root.join(corpus).join("splits").join(format!("{split}.txt")),
+                root.join(corpus)
+                    .join("splits")
+                    .join(format!("{split}.txt")),
             )
             .unwrap();
             let txt_ids: Vec<String> = split_txt

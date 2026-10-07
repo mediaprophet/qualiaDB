@@ -52,8 +52,7 @@ ex:tax-honesty a si:HonestyPolicy ;\n\
 ex:tax-rate a si:DeclaredPercentage ;\n\
     si:exampleRate \"0.10\" .\n";
 
-const NOTICE_UNITS: &str =
-    "Reference pack. Units conformance fixture. Not operational.";
+const NOTICE_UNITS: &str = "Reference pack. Units conformance fixture. Not operational.";
 const NOTICE_WELLBEING: &str =
     "Reference pack. Training/demo only. Not diagnosis, not a ClinicalRisk kernel, not operational advice.";
 const NOTICE_TAX: &str =

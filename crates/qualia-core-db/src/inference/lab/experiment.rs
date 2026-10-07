@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::gpu_context::global_vram_ledger;
 use crate::inference::runtime::receipt::execution::{
-    BackendKind, ExecutionReceipt, COUNTER_COMMITTED_PREFILL_TOKENS,
-    COUNTER_DECODE_STEPS, COUNTER_INTER_TOKEN_LATENCY_US, COUNTER_POOL_HIGH_WATER_BYTES,
+    BackendKind, ExecutionReceipt, COUNTER_COMMITTED_PREFILL_TOKENS, COUNTER_DECODE_STEPS,
+    COUNTER_INTER_TOKEN_LATENCY_US, COUNTER_POOL_HIGH_WATER_BYTES,
     COUNTER_SUBMITTED_PREFILL_TOKENS, COUNTER_TIME_TO_FIRST_TOKEN_US,
 };
 use crate::inference_bench::{
@@ -680,7 +680,12 @@ mod tests {
 
     #[test]
     fn experiment_result_schema3_receipt_roundtrip() {
-        let mut receipt = ExecutionReceipt::new(BackendKind::WgpuVulkan, BackendKind::WgpuVulkan, "mod-1", "plan-1");
+        let mut receipt = ExecutionReceipt::new(
+            BackendKind::WgpuVulkan,
+            BackendKind::WgpuVulkan,
+            "mod-1",
+            "plan-1",
+        );
         receipt.counters.decode_steps = 32;
         receipt.mark_measured(COUNTER_DECODE_STEPS);
         receipt.latency.time_to_first_token_us = 45000;
@@ -721,7 +726,10 @@ mod tests {
         };
 
         let mut values = std::collections::BTreeMap::new();
-        values.insert("prefix_cache_enabled".to_string(), ParameterValue::Bool(false));
+        values.insert(
+            "prefix_cache_enabled".to_string(),
+            ParameterValue::Bool(false),
+        );
         values.insert("kv_pool_budget_mb".to_string(), ParameterValue::Int(512));
         values.insert("prefill_chunk_size".to_string(), ParameterValue::Int(128));
         values.insert(

@@ -5,7 +5,9 @@
 // survives across jobs; same-path multi-turn / multi-prompt reuses the engine.
 use crate::gguf_bridge::QTensorEngine;
 use crate::inference::runtime::prepared::generation::ResidencyGenerationTracker;
-use crate::inference::runtime::scheduler::queue::{BoundedIntakeQueue, IntakeError, IntakeRequest, IntakeState};
+use crate::inference::runtime::scheduler::queue::{
+    BoundedIntakeQueue, IntakeError, IntakeRequest, IntakeState,
+};
 use std::cell::RefCell;
 use std::sync::{Mutex, OnceLock};
 

@@ -1,4 +1,4 @@
-//! `.10d` living-container v1 — the normative header, axis-role taxonomy, and
+//! `.10d` living-container v2 — the normative header, axis-role taxonomy, and
 //! metric-completeness descriptor that serialize the 10-D tensor runtime.
 //!
 //! This is the **P0.1 barrier task**: the surface every later P0 task (section
@@ -47,12 +47,18 @@ pub mod crc32c;
 pub mod field_section;
 pub mod header;
 pub mod integrity;
+pub mod material_container;
+pub mod material_section;
+mod material_section_codec;
 pub mod mesh_section;
 pub mod metric_check;
 pub mod node_section;
+pub mod normal_section;
 pub mod provenance_section;
 pub mod section;
 pub mod surface_reading;
+pub mod texture_coordinate_container;
+pub mod texture_coordinate_section;
 // `topology_section` and `spatial_index_section` depend on
 // `crate::specialized_libs::computational_geometry`, which is itself gated
 // `#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]` at
@@ -72,10 +78,23 @@ pub use axis_role::{
 pub use crc32c::{crc32c, crc32c_update};
 pub use header::{
     Container10dHeader, HeaderParseError, FLAG_DEFAULT_DISPOSITION_REFUSE, HEADER_BYTE_SIZE,
-    HEADER_VERSION, MAGIC_10D, MAX_SECTION_COUNT,
+    HEADER_VERSION, LEGACY_HEADER_VERSION, MAGIC_10D, MAX_SECTION_COUNT, SUPPORTED_HEADER_VERSIONS,
 };
 pub use integrity::{
     compute_whole_file_crc32c, seal_whole_file_crc32c, verify_whole_file_crc32c, IntegrityError,
+};
+pub use material_container::{
+    attach_material_section, material_container_counts, read_material_section_into,
+    MaterialContainerError,
+};
+pub use material_section::{
+    decode_material_section_into, encode_material_section,
+    encoded_len as material_section_encoded_len, material_section_counts,
+    validate_material_bindings, MaterialRecord, MaterialSectionError, OpacityMode, ShadingModel,
+    SubmeshRange, TextureAddressMode, TextureFilterMode, TextureMinFilter, TextureSampler,
+    TextureTransform, MATERIAL_RECORD_SIZE, MATERIAL_SECTION_HEADER_SIZE, MATERIAL_SECTION_VERSION,
+    MATERIAL_V1_RECORD_SIZE, MAX_MATERIALS, MAX_SUBMESH_RANGES, SUBMESH_RANGE_SIZE,
+    TEXTURE_SAMPLER_RECORD_SIZE,
 };
 pub use mesh_section::{
     decode_mesh_section, encode_mesh_section, parse_mesh_header, MeshMiniHeader, MeshSectionError,
@@ -91,6 +110,11 @@ pub use node_section::{
     transpose_aos_to_soa, transpose_soa_to_aos, write_node_q_at, write_node_section_aos,
     write_node_section_soa, NodeMiniHeader, NodeSectionError, AXIS_COUNT, LAYOUT_AOS, LAYOUT_SOA,
     MAX_NODE_COUNT, NODE_MINI_HEADER_SIZE, TENSOR10D_SIZE,
+};
+pub use normal_section::{
+    decode_mesh_frames, decode_normals, decode_tangents, encode_mesh_frames, encode_normals,
+    frame_encoded_len, is_normal_section, MeshFrameStreams, NormalSectionError, MAX_NORMAL_COUNT,
+    NORMAL_SECTION_HEADER_SIZE, NORMAL_SECTION_VERSION,
 };
 pub use provenance_section::{
     decode_provenance_section, encode_provenance_section, encoded_len as provenance_encoded_len,
@@ -111,6 +135,15 @@ pub use section::{
 pub use spatial_index_section::{
     decode_spatial_index_section, encode_spatial_index_section, DecodedSpatialIndex,
     SpatialIndexMiniHeader, SpatialIndexSectionError, SPATIAL_INDEX_MINI_HEADER_SIZE,
+};
+pub use texture_coordinate_container::{
+    attach_texture_coordinate_section, read_texture_coordinate_section_into,
+    TextureCoordinateContainerError,
+};
+pub use texture_coordinate_section::{
+    decode_texture_coordinates_into, encode_texture_coordinate_section,
+    texture_coordinate_section_count, TextureCoordinateSectionError,
+    TEXTURE_COORDINATE_SECTION_HEADER_SIZE, TEXTURE_COORDINATE_SECTION_VERSION,
 };
 #[cfg(any(
     not(target_arch = "wasm32"),

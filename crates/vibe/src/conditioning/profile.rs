@@ -40,7 +40,10 @@ pub struct ConditioningProfileDto {
 impl ConditioningProfileDto {
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != SCHEMA_VERSION {
-            return Err(format!("unsupported schema_version {}", self.schema_version));
+            return Err(format!(
+                "unsupported schema_version {}",
+                self.schema_version
+            ));
         }
         if self.profile_id.trim().is_empty() {
             return Err("profile_id must be non-empty".into());

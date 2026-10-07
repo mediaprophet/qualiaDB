@@ -294,7 +294,11 @@ impl ChatContinuousBatchCoordinator {
 
     /// Mark a session as cancelled/inactive.
     pub fn cancel_session(&mut self, request_id: u64) {
-        if let Some(session) = self.sessions.iter_mut().find(|s| s.request_id == request_id) {
+        if let Some(session) = self
+            .sessions
+            .iter_mut()
+            .find(|s| s.request_id == request_id)
+        {
             session.is_active = false;
         }
     }
@@ -382,14 +386,13 @@ mod tests {
 
     #[test]
     fn coordinator_advances_multiple_active_chat_sessions_to_completion() {
-        let mut backend =
-            MultiSequenceRaggedBackend::new(|_req, _slot, token, _pos, _pages| {
-                if token >= 10 {
-                    99 // EOS
-                } else {
-                    token + 1
-                }
-            });
+        let mut backend = MultiSequenceRaggedBackend::new(|_req, _slot, token, _pos, _pages| {
+            if token >= 10 {
+                99 // EOS
+            } else {
+                token + 1
+            }
+        });
 
         let mut coord = ChatContinuousBatchCoordinator::new();
         coord
@@ -426,4 +429,3 @@ mod tests {
         assert_eq!(coord.get_session_tokens(102), Some(&[10, 99][..]));
     }
 }
-

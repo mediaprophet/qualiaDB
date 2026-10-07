@@ -85,7 +85,10 @@ mod tests {
     fn mail_deep_link_opens_daily_inbox_not_domains_admin() {
         assert_eq!(section_from_talk_tab("mail", false), RelationsSection::Mail);
         assert_eq!(section_from_talk_tab("email", true), RelationsSection::Mail);
-        assert_eq!(section_from_talk_tab("dir", false), RelationsSection::People);
+        assert_eq!(
+            section_from_talk_tab("dir", false),
+            RelationsSection::People
+        );
         assert_eq!(
             section_from_talk_tab("directory", false),
             RelationsSection::People

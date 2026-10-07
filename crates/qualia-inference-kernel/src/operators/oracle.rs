@@ -86,9 +86,7 @@ fn read_f32_le(bytes: &[u8], elem: usize) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operators::descriptor::{
-        AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout,
-    };
+    use crate::operators::descriptor::{AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout};
     use crate::operators::view::{validate_operator, PayloadView};
 
     fn pack_row_major(vals: &[f32], out: &mut [u8]) {
@@ -246,6 +244,7 @@ mod tests {
                 numeric: &mut n_ok,
                 bytes: &mut b,
             },
-        ).is_ok());
+        )
+        .is_ok());
     }
 }

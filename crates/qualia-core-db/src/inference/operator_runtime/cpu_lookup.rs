@@ -21,9 +21,7 @@ pub struct CpuScheduleConfig {
 
 impl Default for CpuScheduleConfig {
     fn default() -> Self {
-        Self {
-            row_block_size: 32,
-        }
+        Self { row_block_size: 32 }
     }
 }
 
@@ -186,8 +184,12 @@ mod tests {
         let mut dense_w = vec![0.0f32; out_features * in_features];
         for r in 0..out_features {
             let sb_bytes = &q4k_data[r * Q4K_SUPERBLOCK_BYTES..(r + 1) * Q4K_SUPERBLOCK_BYTES];
-            reconstruct_q4k_into(sb_bytes, in_features, &mut dense_w[r * in_features..(r + 1) * in_features])
-                .unwrap();
+            reconstruct_q4k_into(
+                sb_bytes,
+                in_features,
+                &mut dense_w[r * in_features..(r + 1) * in_features],
+            )
+            .unwrap();
         }
 
         let mut output_oracle = [0.0f32; 4];

@@ -701,7 +701,10 @@ mod tests {
         let stats = sorter.merge(&out).unwrap();
         assert_eq!(
             stats,
-            MergeStats { quins: 1, blocks: 1 },
+            MergeStats {
+                quins: 1,
+                blocks: 1
+            },
             "merge must report Super-Quins and SuperBlocks separately"
         );
         let volume = Q42Volume::open(&out).unwrap();

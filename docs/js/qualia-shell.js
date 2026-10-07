@@ -9,6 +9,7 @@ import { fetchWasmBinary } from './wasm-fetch.js';
 let portal = null;
 let portalModule = null;
 let rafId = null;
+let portalRecoveryPolicy = null;
 
 export const DAEMON_DEFAULT_PORT = 4242;
 export const DAEMON_BASE = `http://127.0.0.1:${DAEMON_DEFAULT_PORT}`;
@@ -183,17 +184,36 @@ export async function loadQualiaPortal(canvas, options = {}) {
         }
         portalModule = mod;
         ensureCanvasBackingStore(canvas);
+        // Compiled WASM features do not imply that this browser can initialize
+        // a compatible GPU device. Probe APIs/adapters on detached resources
+        // before claiming the presentation canvas.
+        let capabilityReport = null;
+        if (typeof mod.probe_portal_graphics === 'function') {
+            try {
+                capabilityReport = await mod.probe_portal_graphics();
+                window.__qualiaGraphicsCapabilities = capabilityReport;
+            } catch (e) {
+                debugWarn('portal graphics capability probe failed', e);
+            }
+        }
         // Arm the WebGPU 3D path (PortalGpu) BEFORE constructing the portal: QualiaPortal::new()
         // paints one frame, and that initial canvas2d paint grabs a 2d context on the canvas, which
         // makes the WebGPU surface fail to bind ("canvas already in use"). Init first → new()'s first
         // paint adopts the stashed GPU instead. (The limits-shim strips the removed
         // maxInterStageShaderComponents limit so requestDevice succeeds on current Chrome.) Retry a
         // few frames since the freshly-shown canvas may not be paint-ready immediately.
-        const preferredRenderer = options.anatomyBackend || (navigator.gpu ? 'webgpu' : 'none');
-        const allowWebGl2 = options.allowWebGl2 === true;
+        const browserGpuApi = typeof navigator !== 'undefined' && !!navigator.gpu;
+        const preferredRenderer = options.anatomyBackend
+            || capabilityReport?.recommended_backend
+            || (browserGpuApi ? 'webgpu' : 'none');
+        const allowWebGl2 = preferredRenderer !== 'none' && preferredRenderer !== 'canvas2d'
+            && (options.allowWebGl2 === true
+                || (options.allowWebGl2 !== false && capabilityReport?.webgl2_context_created === true));
         let armedRenderer = null;
         let rendererError = null;
-        if (preferredRenderer === 'webgpu' && typeof mod.portal_init_webgpu === 'function' && navigator.gpu) {
+        let webgpuAttempted = false;
+        if (preferredRenderer === 'webgpu' && typeof mod.portal_init_webgpu === 'function' && browserGpuApi) {
+            webgpuAttempted = true;
             const raf2 = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
             for (let attempt = 0; attempt < 10; attempt++) {
                 let ok = false, err = null;
@@ -209,22 +229,51 @@ export async function loadQualiaPortal(canvas, options = {}) {
                 await raf2();
             }
         } else {
-            window.__qualiaGpuInit = { skipped: true, hasFn: typeof mod.portal_init_webgpu, hasGpu: !!navigator.gpu };
+            window.__qualiaGpuInit = {
+                skipped: true,
+                hasFn: typeof mod.portal_init_webgpu,
+                hasGpu: browserGpuApi,
+                recommendation: preferredRenderer,
+            };
+        }
+        // WebGPU and WebGL2/Canvas2D contexts are mutually exclusive on one
+        // canvas. A failed WebGPU surface may already have claimed it, so give
+        // the next fallback a fresh element with the same DOM attributes.
+        if (!armedRenderer && webgpuAttempted) {
+            const replacement = canvas.cloneNode(false);
+            canvas.replaceWith(replacement);
+            canvas = replacement;
+            ensureCanvasBackingStore(canvas);
         }
         if (!armedRenderer && allowWebGl2 && typeof mod.portal_init_webgl2 === 'function') {
+            let webgl2CanvasClaimed = false;
             try {
                 if (mod.portal_init_webgl2(canvas)) {
                     armedRenderer = 'webgl2';
                     debugLog('portal_init_webgl2 ok');
+                } else {
+                    webgl2CanvasClaimed = true;
                 }
             } catch (e) {
+                webgl2CanvasClaimed = true;
                 rendererError = String((e && e.message) || e).slice(0, 400);
+            }
+            if (!armedRenderer && webgl2CanvasClaimed) {
+                const replacement = canvas.cloneNode(false);
+                canvas.replaceWith(replacement);
+                canvas = replacement;
+                ensureCanvasBackingStore(canvas);
             }
         }
         window.__qualiaAnatomyInit = {
             preferredRenderer,
             renderer: armedRenderer,
             error: rendererError,
+        };
+        portalRecoveryPolicy = {
+            initialRenderer: armedRenderer,
+            allowWebGl2,
+            webgl2Available: capabilityReport?.webgl2_context_created === true,
         };
         if (options.requireBodyRenderer === true && !armedRenderer) {
             throw new Error(rendererError || 'No WebGPU or WebGL2 Anatomy renderer is available');
@@ -233,7 +282,7 @@ export async function loadQualiaPortal(canvas, options = {}) {
         const tier = portal.tier?.() ?? -1;
         debugLog('QualiaPortal ready', { source: 'qualia-portal', tier, renderer: armedRenderer });
         t.end({ source: 'qualia-portal', tier, renderer: armedRenderer });
-        return { portal, mod, source: 'qualia-portal', renderer: armedRenderer, portalError: null };
+        return { portal, mod, source: 'qualia-portal', renderer: armedRenderer, canvas, portalError: null };
     } catch (e) {
         portalError = e;
         debugWarn('portal pkg failed, falling back to playground wasm-full', e);
@@ -256,17 +305,97 @@ export async function loadQualiaPortal(canvas, options = {}) {
     }
 }
 
-export function startPortalLoop(canvas, onFrame) {
+export function startPortalLoop(canvas, onFrame, onCanvasReplaced) {
     if (!portal) return;
     let last = performance.now();
+    let recoveryInFlight = false;
+    let recoveryCount = 0;
+    const replaceCanvas = () => {
+        const oldCanvas = canvas;
+        const nextCanvas = oldCanvas.cloneNode(false);
+        oldCanvas.replaceWith(nextCanvas);
+        canvas = nextCanvas;
+        ensureCanvasBackingStore(canvas);
+        onCanvasReplaced?.(canvas, oldCanvas);
+        return canvas;
+    };
+    const recoverGraphics = async () => {
+        if (recoveryInFlight || !portal?.graphics_recovery_requested?.()) return;
+        recoveryInFlight = true;
+        recoveryCount += 1;
+        let backend = 'canvas2d';
+        let currentCanvas = replaceCanvas();
+        const mod = portalModule;
+        const canvasOnly = portal?.graphics_recovery_canvas_only?.() === true;
+        const webgpuRetryAllowed = !canvasOnly && recoveryCount <= 2
+            && portalRecoveryPolicy?.initialRenderer === 'webgpu'
+            && typeof mod?.portal_init_webgpu === 'function';
+        const webgl2Allowed = !canvasOnly && portalRecoveryPolicy?.allowWebGl2 === true
+            && portalRecoveryPolicy?.webgl2Available === true
+            && typeof mod?.portal_init_webgl2 === 'function';
+        const chooseRecoveryBackend = (retryWebGpu) => mod?.recommend_graphics_recovery?.(
+            retryWebGpu,
+            webgl2Allowed,
+        ) || (retryWebGpu ? 'webgpu' : (webgl2Allowed ? 'webgl2' : 'canvas2d'));
+        try {
+            if (chooseRecoveryBackend(webgpuRetryAllowed) === 'webgpu'
+                && await mod.portal_init_webgpu(currentCanvas)) {
+                backend = 'webgpu';
+            } else if (backend !== 'webgpu') {
+                if (mod?.portal_webgpu_canvas_claimed?.()) currentCanvas = replaceCanvas();
+                if (chooseRecoveryBackend(false) === 'webgl2') {
+                    let webgl2CanvasClaimed = false;
+                    try {
+                        if (mod.portal_init_webgl2(currentCanvas)) backend = 'webgl2';
+                        else webgl2CanvasClaimed = true;
+                    } catch (error) {
+                        webgl2CanvasClaimed = true;
+                        debugWarn('WebGL2 graphics recovery failed', error);
+                    }
+                    if (backend === 'canvas2d' && webgl2CanvasClaimed) {
+                        currentCanvas = replaceCanvas();
+                    }
+                }
+                if (backend === 'canvas2d' && mod?.portal_webgpu_canvas_claimed?.()) {
+                    currentCanvas = replaceCanvas();
+                }
+            }
+        } catch (error) {
+            debugWarn('WebGPU graphics recovery failed', error);
+            if (mod?.portal_webgpu_canvas_claimed?.()) currentCanvas = replaceCanvas();
+            if (chooseRecoveryBackend(false) === 'webgl2') {
+                let webgl2CanvasClaimed = false;
+                try {
+                    if (mod.portal_init_webgl2(currentCanvas)) backend = 'webgl2';
+                    else webgl2CanvasClaimed = true;
+                } catch (webglError) {
+                    webgl2CanvasClaimed = true;
+                    debugWarn('WebGL2 graphics recovery failed', webglError);
+                }
+                if (backend === 'canvas2d' && webgl2CanvasClaimed) {
+                    currentCanvas = replaceCanvas();
+                }
+            }
+            if (backend === 'canvas2d' && mod?.portal_webgpu_canvas_claimed?.()) {
+                currentCanvas = replaceCanvas();
+            }
+        } finally {
+            portal?.complete_graphics_recovery?.(backend);
+            window.__qualiaGraphicsRecovery = { backend, attempt: recoveryCount };
+            recoveryInFlight = false;
+        }
+    };
     const loop = (now) => {
         const dt = Math.min(now - last, 50);
         last = now;
-        try {
-            portal.tick(canvas, dt);
-            onFrame?.(portal.tier(), dt);
-        } catch (e) {
-            console.error('QualiaPortal tick', e);
+        if (!recoveryInFlight) {
+            try {
+                portal.tick(canvas, dt);
+                onFrame?.(portal.tier(), dt);
+            } catch (e) {
+                console.error('QualiaPortal tick', e);
+            }
+            if (portal.graphics_recovery_requested?.()) void recoverGraphics();
         }
         rafId = requestAnimationFrame(loop);
     };

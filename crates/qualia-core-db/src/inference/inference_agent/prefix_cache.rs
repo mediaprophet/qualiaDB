@@ -318,8 +318,10 @@ mod tests {
         let tokens_a = [101, 2054, 2003, 1037, 3899];
         let tokens_b = [101, 2054, 2003, 1037, 7072]; // different last token
 
-        let key_a = InferenceCacheKey::new(model, tok_rev, &tokens_a, ctx_hash, kv_floats, n_layers);
-        let key_b = InferenceCacheKey::new(model, tok_rev, &tokens_b, ctx_hash, kv_floats, n_layers);
+        let key_a =
+            InferenceCacheKey::new(model, tok_rev, &tokens_a, ctx_hash, kv_floats, n_layers);
+        let key_b =
+            InferenceCacheKey::new(model, tok_rev, &tokens_b, ctx_hash, kv_floats, n_layers);
 
         assert_ne!(key_a, key_b);
         assert_ne!(key_a.prompt_tokens_digest, key_b.prompt_tokens_digest);

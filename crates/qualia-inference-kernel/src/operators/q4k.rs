@@ -36,7 +36,8 @@ pub fn reconstruct_q4k_into(
         ];
         let qs = &block[16..144];
 
-        let block_elems = (Q4K_SUPERBLOCK_ELEMS as usize).min(n_elems - b * Q4K_SUPERBLOCK_ELEMS as usize);
+        let block_elems =
+            (Q4K_SUPERBLOCK_ELEMS as usize).min(n_elems - b * Q4K_SUPERBLOCK_ELEMS as usize);
         let mut q_off = 0usize;
         let mut is = 0usize;
         let mut j = 0usize;

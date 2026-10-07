@@ -18,9 +18,8 @@ pub use dispatch::{
 };
 pub use expert_cache::{
     compute_principled_slot_capacity, query_dynamic_accelerator_budget,
-    query_dynamic_hardware_tier, DynamicVramStatus, ExpertCacheTelemetry,
-    ExpertResidencyProfile, MoeOffloadManager, PersonalHardwareTier, SlotAccessOutcome,
-    DEFAULT_GPU_EXPERT_SLOTS,
+    query_dynamic_hardware_tier, DynamicVramStatus, ExpertCacheTelemetry, ExpertResidencyProfile,
+    MoeOffloadManager, PersonalHardwareTier, SlotAccessOutcome, DEFAULT_GPU_EXPERT_SLOTS,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use ftw_loader::{

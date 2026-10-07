@@ -1,8 +1,8 @@
 //! Compose OLS verification flags for Civics admission (Welc Ch.4.11).
 
 use super::diagnostics::{
-    arch_lm, box_pearce_ac, breusch_pagan, durbin_watson, jarque_bera, ramsey_reset,
-    residual_runs, residual_symmetry, vif_columns,
+    arch_lm, box_pearce_ac, breusch_pagan, durbin_watson, jarque_bera, ramsey_reset, residual_runs,
+    residual_symmetry, vif_columns,
 };
 use super::multiple::MultipleOls;
 use super::spurious::spurious_regression_guard;
@@ -91,25 +91,26 @@ pub fn verify_regression_model(
         r.p_value
     });
 
-    let bp_p = breusch_pagan(&model.residuals, &model.design, model.n, model.n_params).map(
-        |r| {
-            if r.p_value < opts.alpha {
-                flags.push(VerificationFlag {
-                    code: "heteroscedasticity".into(),
-                    message: format!("Breusch–Pagan p={:.4}", r.p_value),
-                });
-                hard = true;
-            }
-            r.p_value
-        },
-    );
+    let bp_p = breusch_pagan(&model.residuals, &model.design, model.n, model.n_params).map(|r| {
+        if r.p_value < opts.alpha {
+            flags.push(VerificationFlag {
+                code: "heteroscedasticity".into(),
+                message: format!("Breusch–Pagan p={:.4}", r.p_value),
+            });
+            hard = true;
+        }
+        r.p_value
+    });
 
     let dw = durbin_watson(&model.residuals).map(|r| {
         // Classical rule of thumb: DW far from 2 indicates residual AC.
         if r.statistic < 1.5 || r.statistic > 2.5 {
             flags.push(VerificationFlag {
                 code: "autocorrelation".into(),
-                message: format!("Durbin–Watson={:.3} (approx p={:.4})", r.statistic, r.approx_p_value),
+                message: format!(
+                    "Durbin–Watson={:.3} (approx p={:.4})",
+                    r.statistic, r.approx_p_value
+                ),
             });
             hard = true;
         }
@@ -213,11 +214,7 @@ pub fn verify_regression_model(
         r.p_value
     });
 
-    let ok = if opts.strict {
-        !hard && !soft
-    } else {
-        !hard
-    };
+    let ok = if opts.strict { !hard && !soft } else { !hard };
 
     VerificationReport {
         ok,

@@ -132,7 +132,7 @@ function pulseTelemetry(metric, amount = 0.85) {
 }
 
 async function initQualiaLayer() {
-    const canvas = document.getElementById('ambient-canvas');
+    let canvas = document.getElementById('ambient-canvas');
     if (!canvas) {
         debugWarn('initQualiaLayer: #ambient-canvas missing');
         return;
@@ -140,7 +140,9 @@ async function initQualiaLayer() {
 
     const t = debugTime('initQualiaLayer');
     ensureCanvasBackingStore(canvas);
-    const { portal, mod, source } = await loadQualiaPortal(canvas);
+    const loaded = await loadQualiaPortal(canvas);
+    const { portal, mod, source } = loaded;
+    canvas = loaded.canvas || canvas;
     debugLog('initQualiaLayer', { source, hasPortal: !!portal });
     wasm = mod;
     wasmSource = source;
@@ -151,7 +153,10 @@ async function initQualiaLayer() {
             portal.resize(canvas, canvas.clientWidth, canvas.clientHeight);
         });
         ro.observe(canvas.parentElement || canvas);
-        startPortalLoop(canvas, syncTelemetryFromWasm);
+        startPortalLoop(canvas, syncTelemetryFromWasm, (nextCanvas) => {
+            canvas = nextCanvas;
+            bindPortalNavigation(portal, canvas);
+        });
         bindTelemetrySliders(document.getElementById('telemetry-sliders'), {
             setTelemetry: (partial) => {
                 portal.set_telemetry(telemetryToFloats(partial));

@@ -20,7 +20,7 @@ use crate::net::disclosure::NetworkDisclosureRegistry;
 
 pub use astrometry_adapter::AstrometryAdapter;
 pub use ckan_adapter::CkanAdapter;
-pub use dem_adapter::DemAdapter;
+pub use dem_adapter::{DemAdapter, DemHeightfield, DemTerrainAsset};
 pub use gbif_adapter::GbifAdapter;
 pub use ivoa_tap_adapter::IvoaTapAdapter;
 pub use ogc_3d_tiles::Ogc3dTilesAdapter;
@@ -93,6 +93,33 @@ fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, Str
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+fn execute_http_request_bytes(request: &AdapterHttpRequest) -> Result<Vec<u8>, String> {
+    let client = reqwest::blocking::Client::new();
+    let mut builder = match request.method {
+        AdapterHttpMethod::Get => client.get(&request.url),
+        AdapterHttpMethod::Post => client.post(&request.url),
+    };
+    if let Some(content_type) = request.content_type {
+        builder = builder.header("Content-Type", content_type);
+    }
+    if let Some(body) = &request.body {
+        builder = builder.body(body.clone());
+    }
+    let response = builder.send().map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "{} API returned error: {}",
+            request.service_label,
+            response.status()
+        ));
+    }
+    response
+        .bytes()
+        .map(|bytes| bytes.to_vec())
+        .map_err(|error| error.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn execute_http_request_status(request: &AdapterHttpRequest) -> Result<(), String> {
     execute_http_request_text(request).map(|_| ())
 }
@@ -123,6 +150,34 @@ async fn execute_http_request_text_async(request: &AdapterHttpRequest) -> Result
 }
 
 #[cfg(target_arch = "wasm32")]
+async fn execute_http_request_bytes_async(request: &AdapterHttpRequest) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::new();
+    let mut builder = match request.method {
+        AdapterHttpMethod::Get => client.get(&request.url),
+        AdapterHttpMethod::Post => client.post(&request.url),
+    };
+    if let Some(content_type) = request.content_type {
+        builder = builder.header("Content-Type", content_type);
+    }
+    if let Some(body) = &request.body {
+        builder = builder.body(body.clone());
+    }
+    let response = builder.send().await.map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "{} API returned error: {}",
+            request.service_label,
+            response.status()
+        ));
+    }
+    response
+        .bytes()
+        .await
+        .map(|bytes| bytes.to_vec())
+        .map_err(|error| error.to_string())
+}
+
+#[cfg(target_arch = "wasm32")]
 fn execute_http_request_status(_request: &AdapterHttpRequest) -> Result<(), String> {
     Err(
         "Synchronous geospatial HTTP is unavailable on wasm32; call fetch_region_async instead"
@@ -145,6 +200,12 @@ pub async fn fetch_region_async(
     time_range: (u64, u64),
     registry: &NetworkDisclosureRegistry,
 ) -> Result<(), String> {
+    if adapter.requires_specialized_fetch_path() {
+        return Err(
+            "this adapter consumes binary or multi-request data; use its typed async fetch API"
+                .into(),
+        );
+    }
     let request = adapter.build_fetch_request(bbox, time_range, registry)?;
     if adapter.needs_fetch_body() {
         let body = execute_http_request_text_async(&request).await?;
@@ -152,6 +213,27 @@ pub async fn fetch_region_async(
     } else {
         execute_http_request_text_async(&request).await.map(|_| ())
     }
+}
+
+/// Browser-safe fetch path that returns parsed graph features instead of
+/// dropping the response after validating it. Adapters which render typed
+/// geometry may additionally expose adapter-specific parsed outputs.
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_region_features_async(
+    adapter: &dyn DataAdapter,
+    bbox: (f64, f64, f64, f64),
+    time_range: (u64, u64),
+    registry: &NetworkDisclosureRegistry,
+) -> Result<Vec<crate::NQuin>, String> {
+    if adapter.requires_specialized_fetch_path() {
+        return Err(
+            "this adapter consumes binary or multi-request data; use its typed async fetch API"
+                .into(),
+        );
+    }
+    let request = adapter.build_fetch_request(bbox, time_range, registry)?;
+    let body = execute_http_request_text_async(&request).await?;
+    adapter.parse_response(&body)
 }
 
 pub trait DataAdapter {
@@ -188,6 +270,12 @@ pub trait DataAdapter {
     /// Whether the adapter consumes the response body instead of only checking
     /// that the endpoint accepted the request.
     fn needs_fetch_body(&self) -> bool {
+        false
+    }
+
+    /// Whether this adapter needs its typed fetch method for correct handling.
+    /// This prevents generic text transports from truncating tiled or binary data.
+    fn requires_specialized_fetch_path(&self) -> bool {
         false
     }
 
@@ -231,7 +319,7 @@ pub trait DataAdapter {
 
 impl DataAdapter for DemAdapter {
     fn adapter_id(&self) -> &'static str {
-        "dem_adapter"
+        self.id
     }
 
     fn build_fetch_request(
@@ -243,12 +331,66 @@ impl DataAdapter for DemAdapter {
         DemAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
+    fn needs_fetch_body(&self) -> bool {
+        true
+    }
+
+    fn requires_specialized_fetch_path(&self) -> bool {
+        true
+    }
+
+    fn handle_fetch_body(&self, _body: &str) -> Result<(), String> {
+        Err(
+            "Terrarium responses are binary PNG; call fetch_region_dem or fetch_region_dem_async"
+                .into(),
+        )
+    }
+
+    fn fetch_region(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        _time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<(), String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.fetch_region_dem(bbox, registry).map(|_| ())
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (bbox, registry);
+            Err("use fetch_region_dem_async on wasm32 to fetch and compile terrain".into())
+        }
+    }
+
+    fn fetch_region_features(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        _time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<Vec<crate::NQuin>, String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.fetch_region_dem(bbox, registry)
+                .map(|asset| asset.to_quins())
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (bbox, registry);
+            Err("use fetch_region_dem_async on wasm32 to receive the compiled terrain asset".into())
+        }
+    }
+
+    fn parse_response(&self, _body: &str) -> Result<Vec<crate::NQuin>, String> {
+        Err("Terrarium responses are binary PNG; call the typed DEM fetch method".into())
+    }
+
     fn primary_endpoint(&self) -> &str {
-        &self.endpoint
+        self.endpoint.split("{z}").next().unwrap_or(&self.endpoint)
     }
 
     fn estimate_tile_count(&self, bbox: (f64, f64, f64, f64)) -> u32 {
-        estimate_raster_tiles(bbox, 14)
+        DemAdapter::estimate_tile_count(self, bbox)
     }
 }
 
@@ -264,6 +406,18 @@ impl DataAdapter for OsmAdapter {
         registry: &NetworkDisclosureRegistry,
     ) -> Result<AdapterHttpRequest, String> {
         OsmAdapter::build_fetch_request(self, bbox, time_range, registry)
+    }
+
+    fn needs_fetch_body(&self) -> bool {
+        true
+    }
+
+    fn handle_fetch_body(&self, body: &str) -> Result<(), String> {
+        self.parse_vector_features(body).map(|_| ())
+    }
+
+    fn parse_response(&self, body: &str) -> Result<Vec<crate::NQuin>, String> {
+        self.parse_features(body)
     }
 
     fn primary_endpoint(&self) -> &str {

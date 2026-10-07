@@ -93,10 +93,7 @@ mod tests {
 
     #[test]
     fn hash_lookup_stable() {
-        assert_eq!(
-            kernel_fn_for_hash(q_hash("q42:mean")),
-            Some(KernelFn::Mean)
-        );
+        assert_eq!(kernel_fn_for_hash(q_hash("q42:mean")), Some(KernelFn::Mean));
         assert_eq!(kernel_fn_for_hash(q_hash("q42:nope")), None);
     }
 }

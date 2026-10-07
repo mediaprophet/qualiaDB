@@ -30,12 +30,12 @@ pub mod chora;
 pub mod cloudflare;
 pub mod cml_context;
 pub mod companion_bundle;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod continuous_batch;
+pub mod conditioning;
 pub mod connection_identifier;
 pub mod consent_credential;
 pub mod context_binding;
-pub mod conditioning;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod continuous_batch;
 pub mod cookie_graph;
 pub mod dead_mans_switch;
 pub mod directory;
@@ -56,8 +56,8 @@ pub mod introduction;
 pub mod job_router;
 pub mod local_job_scheduler;
 pub mod magic_link;
-pub mod mail_inbound;
 pub mod mail_accounts;
+pub mod mail_inbound;
 pub mod mail_rules;
 pub mod mail_store;
 pub mod mail_transport;

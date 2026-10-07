@@ -118,8 +118,16 @@ pub fn serialize_to_trig<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<()
 /// not synthesised from flat Quins — those come from the N3 rule parser path.
 pub fn serialize_to_n3<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<(), String> {
     let err = |e: std::io::Error| format!("Failed to write N3: {e}");
-    writeln!(writer, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .").map_err(err)?;
-    writeln!(writer, "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .").map_err(err)?;
+    writeln!(
+        writer,
+        "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ."
+    )
+    .map_err(err)?;
+    writeln!(
+        writer,
+        "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> ."
+    )
+    .map_err(err)?;
     writeln!(writer, "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .").map_err(err)?;
     writeln!(writer, "@prefix owl: <http://www.w3.org/2002/07/owl#> .").map_err(err)?;
     writeln!(writer).map_err(err)?;
@@ -243,7 +251,10 @@ pub fn serialize_to_jsonld<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<
 /// expanded term shape as [`serialize_to_jsonld`] (full IRIs) — compaction of arbitrary
 /// vocabularies is not claimed; embedding the pinned context is what Solid clients need
 /// for offline resolution without remote `@context` fetches.
-pub fn serialize_to_jsonld_compact<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<(), String> {
+pub fn serialize_to_jsonld_compact<W: Write>(
+    writer: &mut W,
+    quins: &[NQuin],
+) -> Result<(), String> {
     use crate::sparql_library::rdf_formats::QUALIA_JSONLD_CONTEXT_V1;
     let err = |e: std::io::Error| format!("Failed to write compact JSON-LD: {e}");
 
@@ -301,10 +312,9 @@ pub fn serialize_to_cborld<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<
 
     let cbor_object_term = |h: u64| -> Value {
         match jsonld_term(h) {
-            JsonLdTerm::Iri(s) => Value::Map(vec![(
-                Value::Text("@id".to_string()),
-                Value::Text(s),
-            )]),
+            JsonLdTerm::Iri(s) => {
+                Value::Map(vec![(Value::Text("@id".to_string()), Value::Text(s))])
+            }
             JsonLdTerm::Literal { value, datatype } => Value::Map(vec![
                 (Value::Text("@value".to_string()), Value::Text(value)),
                 (Value::Text("@type".to_string()), Value::Text(datatype)),

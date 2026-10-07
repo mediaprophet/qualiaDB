@@ -188,8 +188,9 @@ impl ExecutionReceipt {
         {
             existing.status = receipt.status;
             existing.duration_us = existing.duration_us.saturating_add(receipt.duration_us);
-            existing.auxiliary_code =
-                existing.auxiliary_code.saturating_add(receipt.auxiliary_code);
+            existing.auxiliary_code = existing
+                .auxiliary_code
+                .saturating_add(receipt.auxiliary_code);
             return true;
         }
         if let Some(slot) = self.stage_receipts.iter_mut().find(|slot| slot.is_none()) {

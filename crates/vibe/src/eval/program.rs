@@ -350,13 +350,8 @@ fn attach_part_signature(
         }
         None => None,
     };
-    let bound = PartContinuant::bind_with(
-        &part,
-        &signature,
-        facet.as_deref(),
-        reading.as_deref(),
-    )
-    .map_err(|e| Diagnostic::new(DiagCode::E600, span, e.message()))?;
+    let bound = PartContinuant::bind_with(&part, &signature, facet.as_deref(), reading.as_deref())
+        .map_err(|e| Diagnostic::new(DiagCode::E600, span, e.message()))?;
     if let Value::Record(extra) = bound.to_record() {
         for (k, v) in extra {
             rec.insert(k, v);

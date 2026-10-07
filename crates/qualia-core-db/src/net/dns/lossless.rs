@@ -11,8 +11,8 @@
 
 #![allow(dead_code)]
 
-use crate::{q_hash, NQuin, PermissiveRoutingLane};
 use super::wire::DnsType;
+use crate::{q_hash, NQuin, PermissiveRoutingLane};
 
 /// Modality opcode for lossless payload chunk in predicate bits [0..7].
 pub const OP_DNS_CHUNK: u8 = 0x62;
@@ -100,7 +100,8 @@ pub fn decode_lossless_rdata_chunks(
         return Ok(0);
     }
 
-    let expected_pred_base = q_hash("qualia:dns:lossless_chunk") ^ (u16::from(expected_rtype) as u64);
+    let expected_pred_base =
+        q_hash("qualia:dns:lossless_chunk") ^ (u16::from(expected_rtype) as u64);
     let expected_predicate = (expected_pred_base << 8) | (OP_DNS_CHUNK as u64);
 
     let first = &chunk_quins[0];
@@ -161,15 +162,49 @@ pub enum LosslessDnsRecord<'a> {
     Cname(&'a str),
     Ns(&'a str),
     Ptr(&'a str),
-    Mx { preference: u16, exchange: &'a str },
-    Srv { priority: u16, weight: u16, port: u16, target: &'a str },
+    Mx {
+        preference: u16,
+        exchange: &'a str,
+    },
+    Srv {
+        priority: u16,
+        weight: u16,
+        port: u16,
+        target: &'a str,
+    },
     Txt(&'a [u8]),
-    Caa { flags: u8, tag: &'a str, value: &'a [u8] },
-    Tlsa { usage: u8, selector: u8, matching_type: u8, cert_data: &'a [u8] },
-    Https { priority: u16, target: &'a str, params: &'a [u8] },
-    Dnskey { flags: u16, protocol: u8, algorithm: u8, public_key: &'a [u8] },
-    Ds { key_tag: u16, algorithm: u8, digest_type: u8, digest: &'a [u8] },
-    Raw { rtype: DnsType, rdata: &'a [u8] },
+    Caa {
+        flags: u8,
+        tag: &'a str,
+        value: &'a [u8],
+    },
+    Tlsa {
+        usage: u8,
+        selector: u8,
+        matching_type: u8,
+        cert_data: &'a [u8],
+    },
+    Https {
+        priority: u16,
+        target: &'a str,
+        params: &'a [u8],
+    },
+    Dnskey {
+        flags: u16,
+        protocol: u8,
+        algorithm: u8,
+        public_key: &'a [u8],
+    },
+    Ds {
+        key_tag: u16,
+        algorithm: u8,
+        digest_type: u8,
+        digest: &'a [u8],
+    },
+    Raw {
+        rtype: DnsType,
+        rdata: &'a [u8],
+    },
 }
 
 #[cfg(test)]
@@ -190,20 +225,22 @@ mod tests {
             sample_payload,
             PermissiveRoutingLane::EnforceBilateralMicroCommons,
             &mut quins,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(num_chunks, 3);
         for q in &quins[..num_chunks] {
             assert!(q.verify_ecc_parity());
-            assert_eq!(q.identify_routing_lane(), PermissiveRoutingLane::EnforceBilateralMicroCommons);
+            assert_eq!(
+                q.identify_routing_lane(),
+                PermissiveRoutingLane::EnforceBilateralMicroCommons
+            );
         }
 
         let mut reassembled = [0u8; 128];
-        let bytes_out = decode_lossless_rdata_chunks(
-            &quins[..num_chunks],
-            DnsType::DNSKEY,
-            &mut reassembled,
-        ).unwrap();
+        let bytes_out =
+            decode_lossless_rdata_chunks(&quins[..num_chunks], DnsType::DNSKEY, &mut reassembled)
+                .unwrap();
 
         assert_eq!(bytes_out, sample_payload.len());
         assert_eq!(&reassembled[..bytes_out], sample_payload);
@@ -221,7 +258,8 @@ mod tests {
             &sample_payload,
             PermissiveRoutingLane::PassthroughStandard,
             &mut quins,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(num_chunks, 1);
         let mut out = [0u8; 32];
@@ -234,7 +272,15 @@ mod tests {
     fn lossless_chunking_parity_tamper_detected() {
         let sample = b"unaltered-data";
         let mut quins = [NQuin::default(); 2];
-        let n = encode_lossless_rdata_chunks("tamper.test", DnsType::TXT, 300, sample, PermissiveRoutingLane::PassthroughStandard, &mut quins).unwrap();
+        let n = encode_lossless_rdata_chunks(
+            "tamper.test",
+            DnsType::TXT,
+            300,
+            sample,
+            PermissiveRoutingLane::PassthroughStandard,
+            &mut quins,
+        )
+        .unwrap();
 
         // Tamper with object byte
         quins[0].object ^= 0x01;

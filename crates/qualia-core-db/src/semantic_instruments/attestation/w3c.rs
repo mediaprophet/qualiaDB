@@ -113,8 +113,7 @@ mod tests {
             assessment_release_id: String::new(),
         };
         if kind == AttestationKind::CapabilityAward {
-            attestation.release_id =
-                "https://ns.webizen.org/demo/award/releases/1.0.0".into();
+            attestation.release_id = "https://ns.webizen.org/demo/award/releases/1.0.0".into();
             attestation.award_subject = "did:webizen:person:learner".into();
             attestation.assessment_release_id =
                 "https://ns.webizen.org/demo/unit-convert/releases/1.0.0".into();
@@ -131,13 +130,14 @@ mod tests {
     #[test]
     fn issue_verify_roundtrip() {
         let runtime = signed_runtime();
-        let issued = issue_w3c(&runtime, Some("default"), sample(AttestationKind::Authorship))
-            .expect("issue");
+        let issued = issue_w3c(
+            &runtime,
+            Some("default"),
+            sample(AttestationKind::Authorship),
+        )
+        .expect("issue");
         assert!(issued.credential.proof.is_some());
-        assert_eq!(
-            issued.credential.context,
-            vec![VC_CONTEXT_V1.to_string()]
-        );
+        assert_eq!(issued.credential.context, vec![VC_CONTEXT_V1.to_string()]);
         assert_eq!(
             issued.credential.types,
             vec![TYPE_VC.to_string(), TYPE_INSTRUMENT.to_string()]
@@ -149,11 +149,19 @@ mod tests {
             issued.attestation.issued_at.to_string()
         );
         assert_eq!(
-            issued.credential.credential_subject.get("id").map(String::as_str),
+            issued
+                .credential
+                .credential_subject
+                .get("id")
+                .map(String::as_str),
             Some(issued.attestation.release_id.as_str())
         );
         assert_eq!(
-            issued.credential.credential_subject.get("kind").map(String::as_str),
+            issued
+                .credential
+                .credential_subject
+                .get("kind")
+                .map(String::as_str),
             Some(AttestationKind::Authorship.as_iri())
         );
         assert_eq!(
@@ -170,8 +178,12 @@ mod tests {
     #[test]
     fn tampered_issuer_fails_closed() {
         let runtime = signed_runtime();
-        let mut issued =
-            issue_w3c(&runtime, Some("default"), sample(AttestationKind::Authorship)).unwrap();
+        let mut issued = issue_w3c(
+            &runtime,
+            Some("default"),
+            sample(AttestationKind::Authorship),
+        )
+        .unwrap();
         issued.credential.issuer = "https://hacker.com".to_string();
         assert_eq!(
             verify_w3c(&runtime, &issued),
@@ -204,7 +216,10 @@ mod tests {
         let issued = issue_w3c(&runtime, Some("default"), attestation).expect("issue award");
         let subject = &issued.credential.credential_subject;
         assert_eq!(subject.get("id").map(String::as_str), Some(holder.as_str()));
-        assert_ne!(subject.get("id").map(String::as_str), Some(instrument.as_str()));
+        assert_ne!(
+            subject.get("id").map(String::as_str),
+            Some(instrument.as_str())
+        );
         assert_eq!(
             subject.get("awardSubject").map(String::as_str),
             Some(holder.as_str())

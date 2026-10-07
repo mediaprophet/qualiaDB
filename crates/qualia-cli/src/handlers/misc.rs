@@ -239,11 +239,10 @@ pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> 
                     println!("{json}");
                 }
             } else {
-                let path = path.as_ref().ok_or(
-                    "q42 audit-source requires PATH or --source-root",
-                )?;
-                let report =
-                    qualia_core_db::query::source_audit::audit_rdf_source(path, *top)?;
+                let path = path
+                    .as_ref()
+                    .ok_or("q42 audit-source requires PATH or --source-root")?;
+                let report = qualia_core_db::query::source_audit::audit_rdf_source(path, *top)?;
                 let json = serde_json::to_string_pretty(&report)?;
                 if let Some(out) = json_out {
                     std::fs::write(out, &json)?;
@@ -297,10 +296,8 @@ pub fn handle_hmc(action: &crate::cli::HmcAction) -> Result<(), Box<dyn std::err
                 let Some(bytes) = reader.get(key) else {
                     return Err(format!("missing HMC entry {key}").into());
                 };
-                let tmp_path = std::env::temp_dir().join(format!(
-                    "qualia-hmc-embed-{}.q42",
-                    std::process::id()
-                ));
+                let tmp_path = std::env::temp_dir()
+                    .join(format!("qualia-hmc-embed-{}.q42", std::process::id()));
                 std::fs::write(&tmp_path, bytes)?;
                 let result = (|| -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(rdf) = rdf_source {
@@ -497,10 +494,8 @@ pub fn handle_verify_graph(
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .collect();
-    let omit = qualia_core_db::query::integrity_omit::resolve_omit_predicate_hashes(
-        &iris,
-        omit_preset,
-    )?;
+    let omit =
+        qualia_core_db::query::integrity_omit::resolve_omit_predicate_hashes(&iris, omit_preset)?;
 
     println!("============================================================");
     println!("QualiaDB bounded encoded-graph proof");
@@ -545,10 +540,9 @@ pub fn handle_verify_graph(
             qualia_core_db::graph_proof::prove_import_rdf_q42_equivalence(input, dataset, opts)?
         }
         other => {
-            return Err(format!(
-                "unknown --encoder '{other}' (use import | legacy-semantic)"
-            )
-            .into());
+            return Err(
+                format!("unknown --encoder '{other}' (use import | legacy-semantic)").into(),
+            );
         }
     };
 
@@ -595,9 +589,7 @@ pub fn handle_verify_graph(
         qualia_core_db::graph_proof::RdfIsomorphismStatus::BlankNodeCanonicalizationRequired => {
             // Encode-fidelity (label-faithful hashed-set match) already succeeded above.
             // RDF isomorphism under blank relabeling is a stronger claim (RDFC-1.0 / Skolem).
-            println!(
-                "PASS: label-faithful encoded-set equivalence (import encoder)."
-            );
+            println!("PASS: label-faithful encoded-set equivalence (import encoder).");
             eprintln!(
                 "NOTICE: source contains blank nodes (often Turtle [] expanded by the parser to _: ids). \
 Structural RDF isomorphism / RDFC-1.0 is NOT proven — only that this serialization's labels hashed identically into Q42. \

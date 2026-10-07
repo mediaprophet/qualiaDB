@@ -388,8 +388,7 @@ pub fn run_chat_inference_full(
     // precision byte cap cannot truncate declared enforced requirements; the
     // envelope itself is already bounded by the profile's own max_bytes.
     if let Some(request) = &prepared {
-        packet.augmented_prompt =
-            format!("{}\n\n{}", request.text, packet.augmented_prompt);
+        packet.augmented_prompt = format!("{}\n\n{}", request.text, packet.augmented_prompt);
     }
 
     let active = match crate::api::load_active_model_record_from_disk() {
@@ -488,34 +487,36 @@ pub fn run_chat_inference_full(
 
     let t0 = std::time::Instant::now();
     let output = if let Some(cb) = on_token {
-        let (text, mut prov, tokens, semantic_quin) =
-            if let Some(budget) = decode_output_budget {
-                let control = qualia_core_db::llm_agent::DecodeControl::default();
-                control.set_token_budget(budget);
-                if let Some(thinking) = active_precision.as_ref().and_then(|p| p.thinking_budget_tokens) {
-                    control.set_thinking_token_budget(thinking);
-                }
-                agent.infer_local_model_controlled(
-                    &packet.augmented_prompt,
-                    &packet.graph_context_json,
-                    control,
-                    Some(move |delta: String| {
-                        if !is_inference_cancelled() {
-                            cb(delta);
-                        }
-                    }),
-                )
-            } else {
-                agent.infer_local_model_streaming(
-                    &packet.augmented_prompt,
-                    &packet.graph_context_json,
-                    Some(move |delta: String| {
-                        if !is_inference_cancelled() {
-                            cb(delta);
-                        }
-                    }),
-                )
-            };
+        let (text, mut prov, tokens, semantic_quin) = if let Some(budget) = decode_output_budget {
+            let control = qualia_core_db::llm_agent::DecodeControl::default();
+            control.set_token_budget(budget);
+            if let Some(thinking) = active_precision
+                .as_ref()
+                .and_then(|p| p.thinking_budget_tokens)
+            {
+                control.set_thinking_token_budget(thinking);
+            }
+            agent.infer_local_model_controlled(
+                &packet.augmented_prompt,
+                &packet.graph_context_json,
+                control,
+                Some(move |delta: String| {
+                    if !is_inference_cancelled() {
+                        cb(delta);
+                    }
+                }),
+            )
+        } else {
+            agent.infer_local_model_streaming(
+                &packet.augmented_prompt,
+                &packet.graph_context_json,
+                Some(move |delta: String| {
+                    if !is_inference_cancelled() {
+                        cb(delta);
+                    }
+                }),
+            )
+        };
         prov.extend(retrieval.provenance_hashes.iter().copied());
         prov.sort_unstable();
         prov.dedup();
@@ -531,7 +532,10 @@ pub fn run_chat_inference_full(
         match if let Some(budget) = decode_output_budget {
             let control = qualia_core_db::llm_agent::DecodeControl::default();
             control.set_token_budget(budget);
-            if let Some(thinking) = active_precision.as_ref().and_then(|p| p.thinking_budget_tokens) {
+            if let Some(thinking) = active_precision
+                .as_ref()
+                .and_then(|p| p.thinking_budget_tokens)
+            {
                 control.set_thinking_token_budget(thinking);
             }
             let (text, provenance_quins, tokens_generated, semantic_quin) = agent
@@ -688,8 +692,7 @@ fn run_ollama_chat_turn(
         finalize_success_result(output, retrieval, started, agent_cfg, false, 0, false, None);
     result.model_id = Some(generation.model);
     result.agent_backend = Some("ollama".into());
-    result.conditioning = prepared
-        .map(|request| request.receipt("ollama", "system", false, None));
+    result.conditioning = prepared.map(|request| request.receipt("ollama", "system", false, None));
     result
 }
 
@@ -1208,8 +1211,8 @@ fn build_augmented_packet(
     parts[8] = RequestPart::user_prompt(&user_tail);
 
     let mut selected = [RequestPart::required_instruction(""); 9];
-    let selected_count = select_prioritized_parts(&parts, byte_cap, &mut selected)
-        .map_err(|e| {
+    let selected_count =
+        select_prioritized_parts(&parts, byte_cap, &mut selected).map_err(|e| {
             format!("conditioning could not retain mandatory chat request parts: {e:?}")
         })?;
     let admitted = &selected[..selected_count];

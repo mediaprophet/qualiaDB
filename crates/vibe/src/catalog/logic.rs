@@ -193,9 +193,14 @@ fn ltl_evaluate(id: &str, args: &Value, _span: Span) -> Result<Value, Diagnostic
         .or_else(|| u64_field(args, "predicate"))
         .unwrap_or(0);
     let holds = if id.ends_with("globally") {
-        !quins.is_empty() && quins.iter().all(|q| (q.predicate & 0xFF) as u8 == prop as u8 || q.predicate == prop)
+        !quins.is_empty()
+            && quins
+                .iter()
+                .all(|q| (q.predicate & 0xFF) as u8 == prop as u8 || q.predicate == prop)
     } else if id.ends_with("finally") {
-        quins.iter().any(|q| q.predicate == prop || (q.predicate & 0xFF) as u8 == prop as u8)
+        quins
+            .iter()
+            .any(|q| q.predicate == prop || (q.predicate & 0xFF) as u8 == prop as u8)
     } else {
         // evaluate: G/F/X/U compact formula string or property + op
         let formula = string_field(args, "formula").unwrap_or("");
@@ -339,7 +344,11 @@ const MAX_CAUSAL_NODES: usize = 256;
 fn causal_caused(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let edges = parse_quins(args).unwrap_or_default();
     let effect = u64_field(args, "effect").ok_or_else(|| {
-        Diagnostic::new(DiagCode::E100, span, "CausalFuzzyAndControl.caused needs effect: u64")
+        Diagnostic::new(
+            DiagCode::E100,
+            span,
+            "CausalFuzzyAndControl.caused needs effect: u64",
+        )
     })?;
     let roots = u64_list(args, "roots").unwrap_or_default();
     if roots.is_empty() {
@@ -401,12 +410,24 @@ fn caused_bfs(edges: &[Quin], roots: &[u64], target: u64, pred: u64) -> bool {
 }
 
 fn fuzzy_t_norm(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let a = f64_field(args, "a").or_else(|| f64_field(args, "x")).ok_or_else(|| {
-        Diagnostic::new(DiagCode::E100, span, "CausalFuzzyAndControl.t_norm needs a: f64")
-    })?;
-    let b = f64_field(args, "b").or_else(|| f64_field(args, "y")).ok_or_else(|| {
-        Diagnostic::new(DiagCode::E100, span, "CausalFuzzyAndControl.t_norm needs b: f64")
-    })?;
+    let a = f64_field(args, "a")
+        .or_else(|| f64_field(args, "x"))
+        .ok_or_else(|| {
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "CausalFuzzyAndControl.t_norm needs a: f64",
+            )
+        })?;
+    let b = f64_field(args, "b")
+        .or_else(|| f64_field(args, "y"))
+        .ok_or_else(|| {
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "CausalFuzzyAndControl.t_norm needs b: f64",
+            )
+        })?;
     let family = string_field(args, "family").unwrap_or("godel");
     let out = match family {
         "lukasiewicz" | "Łukasiewicz" => (a + b - 1.0).max(0.0),

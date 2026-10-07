@@ -171,7 +171,7 @@ fn forge(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
                     "fft samples must be 2..=64 finite power-of-two reals",
                 ));
             }
-            #[cfg(feature = "wgsl-forge")]
+            #[cfg(all(feature = "wgsl-forge", not(target_arch = "wasm32")))]
             {
                 let interleaved: Vec<f32> = samples
                     .iter()
@@ -187,7 +187,7 @@ fn forge(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
                     ),
                 ]));
             }
-            #[cfg(not(feature = "wgsl-forge"))]
+            #[cfg(not(all(feature = "wgsl-forge", not(target_arch = "wasm32"))))]
             Err(args::bad(
                 span,
                 "FFT requires the native WGSL Forge CPU/GPU floor",

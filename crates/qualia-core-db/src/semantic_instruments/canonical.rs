@@ -46,7 +46,8 @@ mod tests {
             ontology_reference: "https://ns.webizen.org/semantic-instrument/".into(),
             entry_point: "assess".into(),
             citation: "https://ns.webizen.org/demo/citations/si-units".into(),
-            honesty_notice: "Demo instrument for demonstration and development. Not operational.".into(),
+            honesty_notice: "Demo instrument for demonstration and development. Not operational."
+                .into(),
             incomplete_input: "held".into(),
             result_kind: "demo-claim".into(),
             licence: "https://spdx.org/licenses/CC-BY-4.0.html".into(),
@@ -74,6 +75,9 @@ mod tests {
             .insert("note".into(), serde_json::Value::String("keep".into()));
         let bytes = canonical_manifest_bytes(&m).unwrap();
         let back: InstrumentManifest = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(back.extra.get("note").and_then(|v| v.as_str()), Some("keep"));
+        assert_eq!(
+            back.extra.get("note").and_then(|v| v.as_str()),
+            Some("keep")
+        );
     }
 }

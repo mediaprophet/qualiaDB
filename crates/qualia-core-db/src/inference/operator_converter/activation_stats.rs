@@ -11,8 +11,14 @@ use std::fmt;
 /// Error returned by activation statistics capture and fitting.
 #[derive(Debug, PartialEq)]
 pub enum ConverterError {
-    DimensionMismatch { expected: usize, got: usize },
-    BudgetExceeded { required_bytes: usize, budget_bytes: usize },
+    DimensionMismatch {
+        expected: usize,
+        got: usize,
+    },
+    BudgetExceeded {
+        required_bytes: usize,
+        budget_bytes: usize,
+    },
     InvalidConfig(&'static str),
     NumericalError(&'static str),
 }
@@ -23,11 +29,17 @@ impl fmt::Display for ConverterError {
             Self::DimensionMismatch { expected, got } => {
                 write!(f, "Dimension mismatch: expected {expected}, got {got}")
             }
-            Self::BudgetExceeded { required_bytes, budget_bytes } => {
+            Self::BudgetExceeded {
+                required_bytes,
+                budget_bytes,
+            } => {
                 write!(f, "Memory budget exceeded: required {required_bytes} bytes, limit is {budget_bytes} bytes")
             }
             Self::InvalidConfig(msg) => write!(f, "Invalid configuration: {msg}"),
-            Self::NumericalError(msg) => write!(f, "Numerical error during regularized solve or decomposition: {msg}"),
+            Self::NumericalError(msg) => write!(
+                f,
+                "Numerical error during regularized solve or decomposition: {msg}"
+            ),
         }
     }
 }
@@ -93,7 +105,9 @@ impl ActivationStats {
         budget_bytes: usize,
     ) -> Result<Self, ConverterError> {
         if dim == 0 || block_size == 0 {
-            return Err(ConverterError::InvalidConfig("Dim and block_size must be > 0"));
+            return Err(ConverterError::InvalidConfig(
+                "Dim and block_size must be > 0",
+            ));
         }
         if dim % block_size != 0 {
             return Err(ConverterError::InvalidConfig(
@@ -207,10 +221,7 @@ impl ActivationStats {
     /// Compute the block-diagonal square-root factor $L$ where $H \approx L L^T$.
     /// For diagonal mode, returns a diagonal vector.
     /// For block-diagonal mode, returns the Cholesky factor $L$ per block (row-major $B \times B$).
-    pub fn compute_block_cholesky(
-        &self,
-        damping: f32,
-    ) -> Result<Vec<f32>, ConverterError> {
+    pub fn compute_block_cholesky(&self, damping: f32) -> Result<Vec<f32>, ConverterError> {
         if self.sample_count == 0 {
             return Err(ConverterError::InvalidConfig("No samples accumulated"));
         }

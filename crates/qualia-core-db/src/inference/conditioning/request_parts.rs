@@ -71,10 +71,7 @@ impl<'a> RequestPart<'a> {
 
     /// Grounded conversational DAG thread. `source_id` carries the target
     /// fragment the user is replying to, when one exists.
-    pub const fn chat_graph(
-        thread_content: &'a str,
-        target_fragment_id: Option<&'a str>,
-    ) -> Self {
+    pub const fn chat_graph(thread_content: &'a str, target_fragment_id: Option<&'a str>) -> Self {
         Self {
             kind: RequestPartKind::ChatGraphThread,
             content: thread_content,
@@ -106,7 +103,11 @@ impl<'a> RequestPart<'a> {
         }
     }
 
-    pub const fn evidence(source_id: &'a str, content: &'a str, qualifier: Option<&'a str>) -> Self {
+    pub const fn evidence(
+        source_id: &'a str,
+        content: &'a str,
+        qualifier: Option<&'a str>,
+    ) -> Self {
         Self {
             kind: RequestPartKind::Evidence,
             content,

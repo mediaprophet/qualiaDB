@@ -10,10 +10,7 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-pub async fn invoke(
-    cmd: &str,
-    args: JsValue,
-) -> Result<JsValue, JsValue> {
+pub async fn invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("window unavailable"))?;
     let tauri = js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?;
     let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
@@ -25,10 +22,7 @@ pub async fn invoke(
     wasm_bindgen_futures::JsFuture::from(promise).await
 }
 
-pub async fn listen(
-    event: &str,
-    handler: &js_sys::Function,
-) -> Result<js_sys::Function, JsValue> {
+pub async fn listen(event: &str, handler: &js_sys::Function) -> Result<js_sys::Function, JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("window unavailable"))?;
     let tauri = js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?;
     let event_mod = js_sys::Reflect::get(&tauri, &JsValue::from_str("event"))?;

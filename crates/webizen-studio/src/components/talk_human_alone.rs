@@ -33,8 +33,7 @@ impl TalkHoldLevel {
 pub const DEFAULT_CONVERSATION_TITLE: &str = "Conversation";
 
 /// Composer placeholder — always a person-to-person write box.
-pub const COMPOSER_PLACEHOLDER: &str =
-    "Write a message… (Enter to send, Shift+Enter for a line)";
+pub const COMPOSER_PLACEHOLDER: &str = "Write a message… (Enter to send, Shift+Enter for a line)";
 
 /// Brief status after a human message is persisted.
 pub const SENT_SAYABLE: &str = "Sent.";
@@ -244,12 +243,7 @@ mod tests {
             "missing model stays held — no inference"
         );
         let defaulted = classify_talk_send("summarise this", true, "", &[]);
-        assert_eq!(
-            defaulted,
-            TalkSendKind::AskInstrument {
-                slugs: vec![None]
-            }
-        );
+        assert_eq!(defaulted, TalkSendKind::AskInstrument { slugs: vec![None] });
     }
 
     #[test]
@@ -258,7 +252,9 @@ mod tests {
         let mentioned = mentioned_instrument_slugs("hi @alice and @helper please", &roster);
         assert_eq!(mentioned, vec!["helper".to_string()]);
         let kind = classify_talk_send("hi @alice and @helper please", false, "", &mentioned);
-        assert!(matches!(kind, TalkSendKind::AskInstrument { slugs } if slugs == vec![Some("helper".into())]));
+        assert!(
+            matches!(kind, TalkSendKind::AskInstrument { slugs } if slugs == vec![Some("helper".into())])
+        );
         let none = mentioned_instrument_slugs("hi @alice", &roster);
         assert!(none.is_empty());
         assert_eq!(
@@ -278,7 +274,10 @@ mod tests {
             assert_eq!(level, TalkHoldLevel::Held);
             assert_eq!(level.label(), "held / not yet");
             assert_eq!(chip, INSTRUMENT_HELD_CHIP);
-            assert!(talk_copy_is_human_alone(&detail), "banned voice in {detail}");
+            assert!(
+                talk_copy_is_human_alone(&detail),
+                "banned voice in {detail}"
+            );
             assert!(talk_copy_is_human_alone(&chip), "banned voice in {chip}");
             assert!(!chip.to_ascii_lowercase().contains("none"));
             assert!(!detail.to_ascii_lowercase().contains("needs model"));

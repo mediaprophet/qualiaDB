@@ -12,8 +12,12 @@ pub mod anatomy;
 /// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
 /// position / neutral colour). Platform-agnostic (native + WASM consumers).
 pub mod anatomy_pack;
+/// HMC packaging and digest-verified resolution for compiled render assets.
+pub mod asset_package;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
+/// Shared authored sky, lighting and analytic-atmosphere presets.
+pub mod atmosphere;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
 /// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
 /// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
@@ -48,6 +52,10 @@ pub mod gpu_colour_kernel;
 /// Generic, canvas-backed interactive HUD surface for browser render clients.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod hud;
+/// Caller-buffered CPU frustum visibility lists with stable source-index indirection.
+pub mod instance_culling;
+/// Material-section compilation and readback helpers for versioned `.10d` assets.
+pub mod material_compile;
 /// P7.1 — Metamers as the affine fibre of the colour-matching projection.
 pub mod metamer;
 /// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded
@@ -56,6 +64,8 @@ pub mod metamer;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod model_substrate;
 pub mod navigation;
+/// Scene-linear display output and manual exposure controls.
+pub mod output;
 pub mod pga;
 /// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
 pub mod physics;
@@ -73,10 +83,16 @@ pub mod physics;
 pub mod place_time;
 /// Unified manifold projection — one `project()`, many views (Phase 1.4).
 pub mod projection;
+/// Deterministic native/WASM render-quality admission and graceful-degradation budgets.
+pub mod quality_profiles;
 /// N7: Scene graph — node hierarchy, lights, semantic links, duplication, IK, smooth damp.
 pub mod scene_graph;
 /// Bounded cold-path primitive assembly for authored interactive scenes.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific", feature = "wasm-full"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod scene_primitives;
 /// Sense path — the input twin (Phase 4): microphone PCM → forward DSP → the `∫Ψ > τ → Fact`
 /// bridge, every capture under the deontic/standpoint consent gate (surveillance-refusal default).
@@ -101,6 +117,8 @@ pub mod spectral_operator;
 pub mod spectral_oracle;
 pub mod standpoint;
 pub mod telemetry;
+/// Bounded, caller-buffered PNG/JPEG decode from verified external texture resources.
+pub mod texture_decode;
 
 /// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
 /// renderer parses each level → `plan_view` selects the expected LOD. Gated

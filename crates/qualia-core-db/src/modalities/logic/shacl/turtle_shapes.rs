@@ -83,7 +83,10 @@ fn constraint_from_property(
             push_constraint_by_hash(q.predicate, q.object, resolve, &mut out);
             continue;
         };
-        let local = pname.rsplit(['#', ':', '/']).next().unwrap_or(pname.as_str());
+        let local = pname
+            .rsplit(['#', ':', '/'])
+            .next()
+            .unwrap_or(pname.as_str());
         push_constraint(local, q.object, resolve, &mut out);
     }
     out
@@ -243,7 +246,10 @@ pub fn shapes_from_turtle(turtle: &str) -> Result<Vec<CompiledShape>, String> {
 }
 
 /// Validate N3/N-Triples `data` against shapes compiled from Turtle `shapes_ttl`.
-pub fn validate_turtle_shapes(data: &str, shapes_ttl: &str) -> Result<super::shacl_types::ValidationReport, String> {
+pub fn validate_turtle_shapes(
+    data: &str,
+    shapes_ttl: &str,
+) -> Result<super::shacl_types::ValidationReport, String> {
     let shapes = shapes_from_turtle(shapes_ttl)?;
     let (quins, resolver) = build_graph(data);
     let engine = super::validate::ShaclEngine::new(&quins, &shapes);

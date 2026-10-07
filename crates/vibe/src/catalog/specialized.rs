@@ -111,11 +111,9 @@ fn headcount(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 fn npv(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let benefits = f64_list(args, "benefits").ok_or_else(|| {
-        Diagnostic::new(DiagCode::E100, span, "Econ.npv needs benefits: [f64]")
-    })?;
-    let costs = f64_list(args, "costs")
-        .unwrap_or_else(|| vec![0.0; benefits.len()]);
+    let benefits = f64_list(args, "benefits")
+        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "Econ.npv needs benefits: [f64]"))?;
+    let costs = f64_list(args, "costs").unwrap_or_else(|| vec![0.0; benefits.len()]);
     let rate = f64_field(args, "rate").unwrap_or(0.0);
     if benefits.len() != costs.len() || benefits.is_empty() {
         return Err(Diagnostic::new(

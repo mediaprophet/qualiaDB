@@ -18,7 +18,8 @@ use serde::{Deserialize, Serialize};
 
 use super::config_space::{Configuration, ConfigurationSpace, ParameterDef};
 use super::experiment::{
-    append_experiment_jsonl, load_experiment_log, EvaluationMode, ExperimentConfig, ExperimentResult,
+    append_experiment_jsonl, load_experiment_log, EvaluationMode, ExperimentConfig,
+    ExperimentResult,
 };
 use super::hypothesis::{evaluate_verdict, BeliefGraph, Hypothesis};
 use super::pareto::{ApplicationProfileWeight, ParetoFrontier};

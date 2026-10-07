@@ -13,6 +13,9 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use std::sync::OnceLock;
 
+mod reservation;
+pub use reservation::{GraphicsReservationError, VramReservation, VramResourceClass};
+
 // `caps` reports wgpu adapter capabilities, so it only compiles when `gpu-runtime`
 // pulls in the wgpu crate. `portal` / `wasm-llm` already enable `gpu-runtime`;
 // qdnf-only does not, and must not `use wgpu` here.
@@ -356,6 +359,9 @@ pub struct VramLedger {
     kv_cache_bytes: AtomicU64,
     render_bytes: AtomicU64,
     llm_weight_staging_bytes: AtomicU64,
+    /// Live, owned allocations admitted through `try_reserve_graphics`.
+    reserved_graphics_bytes: AtomicU64,
+    graphics_reservations: [AtomicU64; 6],
     mode: AtomicU32,
 }
 
@@ -408,11 +414,16 @@ impl VramLedger {
 
     #[inline]
     pub fn universe_used_bytes(&self, universe: ComputeUniverse) -> u64 {
-        universe
+        let recorded = universe
             .ledger_slots()
             .iter()
             .map(|s| self.load_slot(*s))
-            .sum()
+            .fold(0u64, u64::saturating_add);
+        if universe == ComputeUniverse::Viewport {
+            recorded.saturating_add(self.reserved_graphics_bytes.load(Ordering::Acquire))
+        } else {
+            recorded
+        }
     }
 
     #[inline]
@@ -517,10 +528,17 @@ impl VramLedger {
 
     #[inline]
     pub fn used_bytes(&self) -> u64 {
-        self.tensor_bytes.load(Ordering::Relaxed)
-            + self.kv_cache_bytes.load(Ordering::Relaxed)
-            + self.render_bytes.load(Ordering::Relaxed)
-            + self.llm_weight_staging_bytes.load(Ordering::Relaxed)
+        self.recorded_used_bytes()
+            .saturating_add(self.reserved_graphics_bytes.load(Ordering::Acquire))
+    }
+
+    #[inline]
+    fn recorded_used_bytes(&self) -> u64 {
+        self.tensor_bytes
+            .load(Ordering::Relaxed)
+            .saturating_add(self.kv_cache_bytes.load(Ordering::Relaxed))
+            .saturating_add(self.render_bytes.load(Ordering::Relaxed))
+            .saturating_add(self.llm_weight_staging_bytes.load(Ordering::Relaxed))
     }
 
     #[inline]
@@ -550,7 +568,9 @@ impl VramLedger {
     #[inline]
     pub fn can_allocate(&self, extra_bytes: u64) -> bool {
         let budget = self.budget_bytes.load(Ordering::Relaxed);
-        self.used_bytes() + extra_bytes <= budget
+        self.used_bytes()
+            .checked_add(extra_bytes)
+            .is_some_and(|required| required <= budget)
     }
 }
 
@@ -707,7 +727,11 @@ std::thread_local! {
 ///   2. `dxcompiler.dll` beside the current executable (where `build.rs` copies the vendored
 ///      `vendor/dxc/` DLLs) → `DynamicDxc` at that path (turnkey — no env var needed).
 ///   3. Otherwise `Auto` (static-DXC → PATH-DXC → FXC) — graceful fallback (Vulkan stays default).
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "gpu-runtime",
+    feature = "gpu-native-dx12"
+))]
 fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
     if let Ok(p) = std::env::var("QUALIA_DXC_PATH") {
         if !p.trim().is_empty() {
@@ -745,21 +769,35 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // is discoverable. `QUALIA_DXC_PATH` points wgpu straight at a `dxcompiler.dll` (with `dxil.dll`
     // alongside it, for DXIL signing) so DX12 uses DXC without needing it on PATH. Absent the var we
     // keep `Auto` (Vulkan stays the working default backend regardless).
-    let dx12_compiler = resolve_dx12_compiler();
     let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-    desc.backend_options.dx12.shader_compiler = dx12_compiler;
+    #[cfg(feature = "gpu-native-dx12")]
+    {
+        let dx12_compiler = resolve_dx12_compiler();
+        desc.backend_options.dx12.shader_compiler = dx12_compiler;
+    }
     if let Some(backends) = caps::qualia_backend_override() {
         log::info!("shared_gpu|backend_override|QUALIA_WGPU_BACKEND={backends:?}");
         desc.backends = backends;
     } else if cfg!(target_os = "windows") {
-        // Windows default = DX12. It is the verified-reliable native path: the DXC compiler fix
-        // builds the fused-attention shader, and DX12 decodes Q4_K_M / large models (e.g.
-        // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
-        // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
-        desc.backends = wgpu::Backends::DX12;
-        log::info!(
+        #[cfg(feature = "gpu-native-dx12")]
+        {
+            // Windows default = DX12. It is the verified-reliable native path: the DXC compiler fix
+            // builds the fused-attention shader, and DX12 decodes Q4_K_M / large models (e.g.
+            // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
+            // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
+            desc.backends = wgpu::Backends::DX12;
+            log::info!(
             "shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
         );
+        }
+        #[cfg(not(feature = "gpu-native-dx12"))]
+        {
+            // Portable builds are intended for browser/viewport use. Keep the
+            // shared inference device on GLES rather than silently selecting
+            // the Vulkan path with its tracked native inference hang.
+            desc.backends = wgpu::Backends::GL;
+            log::info!("shared_gpu|backend_default|windows->gles_portable_build");
+        }
     }
     let instance = wgpu::Instance::new(desc);
     let adapter = instance

@@ -202,7 +202,11 @@ pub struct MoeOffloadManager {
 impl MoeOffloadManager {
     /// Create a new offload manager with `num_gpu_slots` staging capacity.
     pub fn new(num_gpu_slots: usize, bytes_per_expert: usize) -> Self {
-        Self::with_tier(num_gpu_slots, bytes_per_expert, PersonalHardwareTier::PersonalGpuStaging)
+        Self::with_tier(
+            num_gpu_slots,
+            bytes_per_expert,
+            PersonalHardwareTier::PersonalGpuStaging,
+        )
     }
 
     /// Create a new offload manager with explicit hardware tier and staging capacity.
@@ -389,8 +393,8 @@ impl MoeOffloadManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::placement::ExpertPlacementCalibration;
+    use super::*;
 
     #[test]
     fn test_moe_offload_manager_lru_and_hits() {
@@ -582,22 +586,43 @@ mod tests {
 
         // Step 1: Experts 10 and 11 miss -> fetch into slots 1 and 2
         let out_1a = manager.resolve_expert(10, false, 0);
-        assert!(matches!(out_1a, SlotAccessOutcome::MissFetch { evict_slot_id: 1, .. }));
+        assert!(matches!(
+            out_1a,
+            SlotAccessOutcome::MissFetch {
+                evict_slot_id: 1,
+                ..
+            }
+        ));
         let out_1b = manager.resolve_expert(11, false, 0);
-        assert!(matches!(out_1b, SlotAccessOutcome::MissFetch { evict_slot_id: 2, .. }));
+        assert!(matches!(
+            out_1b,
+            SlotAccessOutcome::MissFetch {
+                evict_slot_id: 2,
+                ..
+            }
+        ));
 
         // Step 2: Expert 10 hits in slot 1; Expert 12 misses -> fetches into slot 3
         let out_2a = manager.resolve_expert(10, false, 0);
         assert_eq!(out_2a, SlotAccessOutcome::Hit { slot_id: 1 });
         let out_2b = manager.resolve_expert(12, false, 0);
-        assert!(matches!(out_2b, SlotAccessOutcome::MissFetch { evict_slot_id: 3, .. }));
+        assert!(matches!(
+            out_2b,
+            SlotAccessOutcome::MissFetch {
+                evict_slot_id: 3,
+                ..
+            }
+        ));
 
         // Step 3: Expert 11 hits in slot 2; Expert 13 misses -> evicts LRU (slot 1 or 3, NEVER slot 0)
         let out_3a = manager.resolve_expert(11, false, 0);
         assert_eq!(out_3a, SlotAccessOutcome::Hit { slot_id: 2 });
         let out_3b = manager.resolve_expert(13, false, 0);
         if let SlotAccessOutcome::MissFetch { evict_slot_id, .. } = out_3b {
-            assert_ne!(evict_slot_id, 0, "Pinned shared expert in slot 0 must NEVER be evicted");
+            assert_ne!(
+                evict_slot_id, 0,
+                "Pinned shared expert in slot 0 must NEVER be evicted"
+            );
         } else {
             panic!("Expected MissFetch");
         }
@@ -623,5 +648,3 @@ mod tests {
         assert!(telem.bytes_transferred >= 4 * 240 * 1024 * 1024);
     }
 }
-
-

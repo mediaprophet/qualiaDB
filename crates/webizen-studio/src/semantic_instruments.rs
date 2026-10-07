@@ -66,14 +66,10 @@ pub fn catalog_chips() -> &'static [&'static str] {
 
 pub fn sanitize_held_why(raw: &str) -> String {
     let folded = raw.to_ascii_lowercase();
-    if folded.contains("broken")
-        || raw.trim().is_empty()
-        || folded.contains("unavailable")
-    {
+    if folded.contains("broken") || raw.trim().is_empty() || folded.contains("unavailable") {
         return HELD_WHY.to_string();
     }
-    if folded.contains("held") || folded.contains("open a pack") || folded.contains("seed demo")
-    {
+    if folded.contains("held") || folded.contains("open a pack") || folded.contains("seed demo") {
         raw.trim().to_string()
     } else {
         HELD_WHY.to_string()

@@ -9,17 +9,19 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 fn resolve_storage_path(custom: Option<PathBuf>) -> PathBuf {
-    custom.unwrap_or_else(|| {
-        PathBuf::from(qualia_client_core::state::dirs_default_path())
-    })
+    custom.unwrap_or_else(|| PathBuf::from(qualia_client_core::state::dirs_default_path()))
 }
 
 pub fn handle(action: &AppAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         AppAction::List { storage } => {
             let storage = resolve_storage_path(storage.clone());
-            let registry = load_install_registry(&storage)
-                .map_err(|e| format!("Failed to read QApp registry from {}: {e}", storage.display()))?;
+            let registry = load_install_registry(&storage).map_err(|e| {
+                format!(
+                    "Failed to read QApp registry from {}: {e}",
+                    storage.display()
+                )
+            })?;
             let qdir = qapps_dir(&storage);
 
             if registry.packages.is_empty() {
@@ -28,7 +30,10 @@ pub fn handle(action: &AppAction) -> Result<(), Box<dyn std::error::Error>> {
             }
 
             println!("Installed QApps in {}:", qdir.display());
-            println!("{:<32} {:<12} {:<24} {:<8}", "PACKAGE ID", "VERSION", "INSTALLED AT", "REVOKED");
+            println!(
+                "{:<32} {:<12} {:<24} {:<8}",
+                "PACKAGE ID", "VERSION", "INSTALLED AT", "REVOKED"
+            );
             println!("{:-<78}", "");
 
             for (id, entry) in &registry.packages {
@@ -41,11 +46,18 @@ pub fn handle(action: &AppAction) -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 let revoked_str = if entry.revoked { "YES" } else { "no" };
-                println!("{:<32} {:<12} {:<24} {:<8}", id, entry.active_version, date_str, revoked_str);
+                println!(
+                    "{:<32} {:<12} {:<24} {:<8}",
+                    id, entry.active_version, date_str, revoked_str
+                );
             }
             Ok(())
         }
-        AppAction::Install { source, storage, production } => {
+        AppAction::Install {
+            source,
+            storage,
+            production,
+        } => {
             let storage = resolve_storage_path(storage.clone());
             let policy = if *production {
                 InstallPolicy::Production
@@ -66,10 +78,17 @@ pub fn handle(action: &AppAction) -> Result<(), Box<dyn std::error::Error>> {
                 "Successfully installed '{}' v{} (content hash: {})",
                 entry.package_id, entry.active_version, entry.content_hash
             );
-            println!("Active directory: {}", resolve_active_package_dir(&storage, &entry.package_id).display());
+            println!(
+                "Active directory: {}",
+                resolve_active_package_dir(&storage, &entry.package_id).display()
+            );
             Ok(())
         }
-        AppAction::Uninstall { package_id, storage, purge_data } => {
+        AppAction::Uninstall {
+            package_id,
+            storage,
+            purge_data,
+        } => {
             let storage = resolve_storage_path(storage.clone());
             println!("Uninstalling QApp '{}'...", package_id);
 
@@ -115,7 +134,14 @@ pub fn handle(action: &AppAction) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ext) = manifest.x_qualia {
                 println!("  App ID: {}", ext.app_id);
                 println!("  Display Name: {}", ext.display_name);
-                println!("  Category: {}", if ext.category.is_empty() { "standard" } else { &ext.category });
+                println!(
+                    "  Category: {}",
+                    if ext.category.is_empty() {
+                        "standard"
+                    } else {
+                        &ext.category
+                    }
+                );
                 if !ext.launch_modes.is_empty() {
                     println!("  Launch Modes: {}", ext.launch_modes.join(", "));
                 }

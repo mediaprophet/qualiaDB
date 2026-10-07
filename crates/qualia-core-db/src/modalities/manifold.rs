@@ -207,7 +207,10 @@ impl ManifoldDimension {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ManifoldState10D {
-    /// Unique state identifier (for example `tensor_hash ^ logical_clock`).
+    /// Stable reference for this encoded state. This is an identity handle,
+    /// not the state itself: the 10D coordinate and its typed domain/profile
+    /// provide the structured identity. A digest may index or verify that
+    /// identity, but must not replace the coordinate, shape, or behavior data.
     pub state_id: u64,
     pub timestamp: u64,
     pub coordinate: ManifoldCoordinate10D,

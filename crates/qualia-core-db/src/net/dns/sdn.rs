@@ -8,9 +8,9 @@
 
 #![allow(dead_code)]
 
+use super::quin_records::encode_sdn_front_door;
 use crate::identifier::parse_did_q42;
 use crate::{q_hash, NQuin, PermissiveRoutingLane};
-use super::quin_records::encode_sdn_front_door;
 
 /// Suffix for Webizen bare-registrar NS record encoding.
 pub const WEBIZEN_NS_SUFFIX: &str = ".webizen.network";
@@ -61,7 +61,8 @@ impl<'a> SdnFrontDoorView<'a> {
     pub fn to_quin(&self, ttl: u32, is_bilateral_friend: bool) -> Option<NQuin> {
         let pointer = self.did_topological_pointer.unwrap_or_else(|| {
             if self.front_door_did.starts_with("did:q42:") {
-                parse_did_q42(self.front_door_did.as_bytes()).unwrap_or_else(|_| q_hash(self.front_door_did))
+                parse_did_q42(self.front_door_did.as_bytes())
+                    .unwrap_or_else(|_| q_hash(self.front_door_did))
             } else {
                 q_hash(self.front_door_did)
             }
@@ -74,7 +75,10 @@ impl<'a> SdnFrontDoorView<'a> {
 /// Zero-allocation parser for `_qdp.<domain>` TXT payload clauses.
 ///
 /// Clauses are separated by `;` and structured as `qdp:<key> <val>` or `qdp:<key> "<val>"`.
-pub fn parse_front_door_txt<'a>(domain: &'a str, txt: &'a str) -> Result<SdnFrontDoorView<'a>, &'static str> {
+pub fn parse_front_door_txt<'a>(
+    domain: &'a str,
+    txt: &'a str,
+) -> Result<SdnFrontDoorView<'a>, &'static str> {
     let mut view = SdnFrontDoorView::empty(domain);
 
     for clause in txt.split(';') {
@@ -199,7 +203,10 @@ mod tests {
 
         let quin = view.to_quin(300, true).unwrap();
         assert!(quin.verify_ecc_parity());
-        assert_eq!(quin.identify_routing_lane(), PermissiveRoutingLane::EnforceBilateralMicroCommons);
+        assert_eq!(
+            quin.identify_routing_lane(),
+            PermissiveRoutingLane::EnforceBilateralMicroCommons
+        );
     }
 
     #[test]

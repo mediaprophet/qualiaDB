@@ -261,7 +261,11 @@ mod tests {
             let opened = open_collectable(&bytes).expect(seed.slug);
             assert_eq!(opened.manifest.content_category, ContentCategory::Demo);
             assert_eq!(opened.manifest.instrument_id, seed.instrument_id);
-            assert!(opened.manifest.honesty_notice.to_ascii_lowercase().contains("demo"));
+            assert!(opened
+                .manifest
+                .honesty_notice
+                .to_ascii_lowercase()
+                .contains("demo"));
             #[cfg(not(target_arch = "wasm32"))]
             assert!(opened.small_q42.is_some(), "{}", seed.slug);
         }
@@ -281,7 +285,10 @@ mod tests {
                 opened.manifest.extra["authoring_status"],
                 "template-awaiting-qualified-subject-matter-expert"
             );
-            assert_eq!(opened.manifest.extra["review_status"], "awaiting-independent-review");
+            assert_eq!(
+                opened.manifest.extra["review_status"],
+                "awaiting-independent-review"
+            );
             let definition = std::str::from_utf8(&opened.definition_n3).expect("fixture is UTF-8");
             assert!(definition.contains("holdsWhenMissing"));
             assert!(definition.contains("prohibitedInterpretation"));

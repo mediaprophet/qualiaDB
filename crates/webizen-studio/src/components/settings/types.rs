@@ -123,7 +123,8 @@ mod tests {
     #[test]
     fn settings_labels_never_say_unavailable() {
         for section in ALL_SECTIONS {
-            let hay = format!("{} {}", section.label(), section.search_terms()).to_ascii_lowercase();
+            let hay =
+                format!("{} {}", section.label(), section.search_terms()).to_ascii_lowercase();
             assert!(
                 !hay.contains("unavailable"),
                 "{} must not say unavailable",

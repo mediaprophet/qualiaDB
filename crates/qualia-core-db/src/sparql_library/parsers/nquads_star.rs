@@ -526,7 +526,8 @@ mod tests {
     fn accepts_triple_only_default_graph_nquads() {
         // RDF dataset interchange often ships default-graph triples inside .nq files.
         let mut parser = NQuadsStarParser::new(0xABCDu64);
-        let input = b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
+        let input =
+            b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
         let (s, p, o, g) = parser.parse_quad(input).expect("triple-only N-Quads");
         assert_ne!(s, 0);
         assert_ne!(p, 0);

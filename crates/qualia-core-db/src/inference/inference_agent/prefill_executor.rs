@@ -9,9 +9,15 @@ use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS};
 pub enum PrefillFailure {
     MissingTensorIndex,
     MissingModelMap,
-    EmbeddingDequantization { token_id: u32 },
-    MissingKvProjection { layer: u32 },
-    EngineRejectedChunk { failure: crate::gguf_bridge::PrefillDispatchFailure },
+    EmbeddingDequantization {
+        token_id: u32,
+    },
+    MissingKvProjection {
+        layer: u32,
+    },
+    EngineRejectedChunk {
+        failure: crate::gguf_bridge::PrefillDispatchFailure,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -86,7 +92,11 @@ pub fn inspect_layer_kv_projections(
     let has_q = tensors.attn_q.is_some();
     let naming = if has_k && has_v && has_q {
         let mut blk_k = [0u8; 96];
-        let blk_len = crate::inference::gguf_sharder::write_blk_tensor_name(layer, b"attn_k.weight", &mut blk_k);
+        let blk_len = crate::inference::gguf_sharder::write_blk_tensor_name(
+            layer,
+            b"attn_k.weight",
+            &mut blk_k,
+        );
         if blk_len > 0 && idx.tensor_info(&blk_k[..blk_len]).is_some() {
             Some(KvProjectionNaming::GgufStandard)
         } else {
@@ -191,9 +201,7 @@ pub fn execute_chunked_prefill_with_offset(
     };
 
     if let Err(reason) = validate_prefill_kv_projections(idx, layer_cap) {
-        crate::gguf_bridge::wlog(&format!(
-            "[llm] PREFILL validation failed: {reason:?}"
-        ));
+        crate::gguf_bridge::wlog(&format!("[llm] PREFILL validation failed: {reason:?}"));
         return PrefillOutcome::Failed {
             pos: start_pos,
             tokens_processed: start_pos,
@@ -209,7 +217,9 @@ pub fn execute_chunked_prefill_with_offset(
     let mut pos = start_pos;
     while pos < prefill_tokens {
         if control.is_some_and(DecodeControl::is_cancelled) {
-            return PrefillOutcome::Cancelled { tokens_processed: pos };
+            return PrefillOutcome::Cancelled {
+                tokens_processed: pos,
+            };
         }
 
         let n = (prefill_tokens - pos).min(chunk_cap);
@@ -256,9 +266,7 @@ pub fn execute_chunked_prefill_with_offset(
             scratch_b,
             layer_cap,
         ) {
-            crate::gguf_bridge::wlog(&format!(
-                "[llm] PREFILL chunk FAILED pos={pos} n={n}"
-            ));
+            crate::gguf_bridge::wlog(&format!("[llm] PREFILL chunk FAILED pos={pos} n={n}"));
             return PrefillOutcome::Failed {
                 pos,
                 tokens_processed: pos,
@@ -269,7 +277,9 @@ pub fn execute_chunked_prefill_with_offset(
         pos += n;
     }
 
-    PrefillOutcome::Completed { tokens_processed: pos }
+    PrefillOutcome::Completed {
+        tokens_processed: pos,
+    }
 }
 
 #[cfg(test)]
@@ -279,10 +289,14 @@ mod tests {
 
     #[test]
     fn test_prefill_outcome_states() {
-        let completed = PrefillOutcome::Completed { tokens_processed: 10 };
+        let completed = PrefillOutcome::Completed {
+            tokens_processed: 10,
+        };
         assert!(completed.is_completed());
 
-        let cancelled = PrefillOutcome::Cancelled { tokens_processed: 5 };
+        let cancelled = PrefillOutcome::Cancelled {
+            tokens_processed: 5,
+        };
         assert!(!cancelled.is_completed());
 
         let failed = PrefillOutcome::Failed {

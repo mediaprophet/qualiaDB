@@ -17,9 +17,7 @@ pub use jsonld_context::{
     context_digest_hex, digest_hex, pinned_context_bytes, QUALIA_JSONLD_CONTEXT_ID,
     QUALIA_JSONLD_CONTEXT_V1,
 };
-pub use package_manifest::{
-    package_exposure_manifest, PackageExposureManifest, VIBE_AST_TAG,
-};
+pub use package_manifest::{package_exposure_manifest, PackageExposureManifest, VIBE_AST_TAG};
 pub use parse::{parse_rdf, RdfParseError};
 pub use rdfc::{
     provisional_spo_digest_hex, rdfc10_available, rdfc10_hash_hex, RdfcError,

@@ -46,7 +46,14 @@ fn term(lex: &mut HashMap<u64, String>, value: &str) -> Result<u64, String> {
     }
 }
 
-fn push(lex: &mut HashMap<u64, String>, out: &mut Vec<NQuin>, s: &str, p: &str, o: &str, c: &str) -> Result<(), String> {
+fn push(
+    lex: &mut HashMap<u64, String>,
+    out: &mut Vec<NQuin>,
+    s: &str,
+    p: &str,
+    o: &str,
+    c: &str,
+) -> Result<(), String> {
     let subject = term(lex, s)?;
     let predicate = term(lex, p)?;
     let object = term(lex, o)?;
@@ -90,10 +97,19 @@ fn import_csv(input: &PathBuf) -> Result<(Vec<NQuin>, HashMap<u64, String>, usiz
             continue;
         }
         if id.is_empty() || name.is_empty() {
-            return Err(format!("source row {imported} is missing Source ID or Source / rule"));
+            return Err(format!(
+                "source row {imported} is missing Source ID or Source / rule"
+            ));
         }
         let subject = format!("urn:qualia:food-evidence-source:{id}");
-        push(&mut lex, &mut quins, &subject, RDF_TYPE, EVIDENCE_SOURCE, DATASET)?;
+        push(
+            &mut lex,
+            &mut quins,
+            &subject,
+            RDF_TYPE,
+            EVIDENCE_SOURCE,
+            DATASET,
+        )?;
         push(&mut lex, &mut quins, &subject, SOURCE_ID, id, DATASET)?;
         push(&mut lex, &mut quins, &subject, SOURCE_NAME, name, DATASET)?;
         for (predicate, field) in [

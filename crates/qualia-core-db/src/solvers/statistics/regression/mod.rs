@@ -16,14 +16,12 @@ mod simple;
 mod spurious;
 mod verify;
 
-pub use design::{
-    design_dummies, seasonal_dummies, transform_series, DummyDesign, TransformKind,
-};
+pub use design::{design_dummies, seasonal_dummies, transform_series, DummyDesign, TransformKind};
 pub use diagnostics::{
-    arch_lm, box_pearce_ac, breusch_pagan, chow_test, durbin_watson, jarque_bera,
-    ramsey_reset, residual_runs, residual_symmetry, vif_columns, ArchLmResult,
-    BoxPearceResult, BreuschPaganResult, ChowResult, DurbinWatsonResult, JarqueBeraResult,
-    RamseyResetResult, RunsResult, SymmetryResult, VifResult,
+    arch_lm, box_pearce_ac, breusch_pagan, chow_test, durbin_watson, jarque_bera, ramsey_reset,
+    residual_runs, residual_symmetry, vif_columns, ArchLmResult, BoxPearceResult,
+    BreuschPaganResult, ChowResult, DurbinWatsonResult, JarqueBeraResult, RamseyResetResult,
+    RunsResult, SymmetryResult, VifResult,
 };
 pub use discrete::{fit_lda_2class, fit_logit, LdaFitSummary, LogitFitSummary};
 pub use influence::{influence_measures, InfluenceMeasures, InfluenceRow};

@@ -314,7 +314,12 @@ fn vertex_main(
     let temporal_delta = abs(tensor.t - observer.t_slice);
     let ramp_width = observer.t_window * 0.2; // 20% fade on the edges
     let time_dist_to_edge = observer.t_window - temporal_delta;
-    let alpha_fade = smoothstep(0.0, ramp_width, time_dist_to_edge);
+    // smoothstep with equal edges is undefined. A zero-width slice is an exact
+    // temporal cut: values strictly inside are visible; the boundary is hidden.
+    var alpha_fade = select(0.0, 1.0, time_dist_to_edge > 0.0);
+    if (ramp_width > 0.0) {
+        alpha_fade = smoothstep(0.0, ramp_width, time_dist_to_edge);
+    }
     let outside_time = alpha_fade <= 0.0;
 
     let local = vec3<f32>(tensor.x, tensor.y, tensor.z);

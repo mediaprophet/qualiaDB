@@ -769,7 +769,9 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     let passed = match object_as_f64(v) {
                         Some(x) => x > 0.0,
-                        None => resolve(v).map(|s| s == "true" || s == "converged" || s == "1").unwrap_or(false),
+                        None => resolve(v)
+                            .map(|s| s == "true" || s == "converged" || s == "1")
+                            .unwrap_or(false),
                     };
                     if !passed {
                         violate(
@@ -796,13 +798,14 @@ impl<'a> ShaclEngine<'a> {
                         )
                     } else {
                         flag_hashes.contains(&v)
-                            || resolve(v).map(|s| {
-                                s.contains("CoercedConsentFlag")
-                                    || s.eq_ignore_ascii_case("coerced")
-                                    || s == "true"
-                                    || s == "1"
-                            })
-                            .unwrap_or(false)
+                            || resolve(v)
+                                .map(|s| {
+                                    s.contains("CoercedConsentFlag")
+                                        || s.eq_ignore_ascii_case("coerced")
+                                        || s == "true"
+                                        || s == "1"
+                                })
+                                .unwrap_or(false)
                     };
                     if coerced {
                         violate(
@@ -897,9 +900,7 @@ impl<'a> ShaclEngine<'a> {
                 }
             }
             ShaclConstraint::DeonticNotExpired { now_unix } => {
-                use crate::modalities::logic::deontic::{
-                    evaluate_deontic_contract, DeonticStatus,
-                };
+                use crate::modalities::logic::deontic::{evaluate_deontic_contract, DeonticStatus};
                 let mut buf = vec![
                     crate::modalities::logic::deontic::DeonticVerdict::default();
                     self.quins.len().max(1)
@@ -964,9 +965,7 @@ impl<'a> ShaclEngine<'a> {
                     violate(
                         "q42:EpistemicConstraintComponent",
                         None,
-                        format!(
-                            "no qualifying epistemic claim for focus (minCertainty={min_c})"
-                        ),
+                        format!("no qualifying epistemic claim for focus (minCertainty={min_c})"),
                     );
                 }
             }
@@ -974,12 +973,14 @@ impl<'a> ShaclEngine<'a> {
                 use crate::modalities::paraconsistent::route_paraconsistent;
                 let mut consistent = vec![NQuin::default(); self.quins.len().max(1)];
                 let mut isolated = vec![NQuin::default(); self.quins.len().max(1)];
-                let (_c_n, i_n) =
-                    route_paraconsistent(self.quins, &mut consistent, &mut isolated).unwrap_or((0, 0));
+                let (_c_n, i_n) = route_paraconsistent(self.quins, &mut consistent, &mut isolated)
+                    .unwrap_or((0, 0));
                 if isolation_context.is_empty() {
                     // Admission rule: graph must not introduce isolations involving focus.
                     let hit = isolated[..i_n].iter().any(|q| {
-                        q.subject == focus || values.contains(&q.subject) || values.contains(&q.object)
+                        q.subject == focus
+                            || values.contains(&q.subject)
+                            || values.contains(&q.object)
                     });
                     if hit {
                         violate(
@@ -996,9 +997,7 @@ impl<'a> ShaclEngine<'a> {
                         violate(
                             "q42:ParaconsistentConstraintComponent",
                             None,
-                            format!(
-                                "expected isolation context {isolation_context} not present"
-                            ),
+                            format!("expected isolation context {isolation_context} not present"),
                         );
                     }
                 }

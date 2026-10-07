@@ -18,11 +18,11 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
-use webizen_studio::tauri_ffi::listen as tauri_listen;
-#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{EventSource, MessageEvent};
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::listen as tauri_listen;
 
 #[cfg(target_arch = "wasm32")]
 #[derive(Deserialize)]

@@ -529,7 +529,10 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::Always,
             "Record",
         )
-        .with_arg(SchemaArg::new("profile", "Record", true).with_description("Conditioning profile or spec record"))
+        .with_arg(
+            SchemaArg::new("profile", "Record", true)
+                .with_description("Conditioning profile or spec record"),
+        )
         .with_description("Validate one profile and return structured violations"),
         SchemaEntry::new(
             "Conditioning.compile",
@@ -537,9 +540,17 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::Always,
             "Record",
         )
-        .with_arg(SchemaArg::new("spec", "Record", true).with_description("Conditioning specification"))
-        .with_arg(SchemaArg::new("capabilities", "Record", false).with_description("Target backend capabilities"))
-        .with_arg(SchemaArg::new("authority", "Record", false).with_description("Authority view and graph scopes"))
+        .with_arg(
+            SchemaArg::new("spec", "Record", true).with_description("Conditioning specification"),
+        )
+        .with_arg(
+            SchemaArg::new("capabilities", "Record", false)
+                .with_description("Target backend capabilities"),
+        )
+        .with_arg(
+            SchemaArg::new("authority", "Record", false)
+                .with_description("Authority view and graph scopes"),
+        )
         .with_description("Compile conditioning contract against capabilities and authority"),
         SchemaEntry::new(
             "Conditioning.inspect",
@@ -547,7 +558,10 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::Always,
             "Record",
         )
-        .with_arg(SchemaArg::new("spec", "Record", true).with_description("Conditioning spec or plan summary"))
+        .with_arg(
+            SchemaArg::new("spec", "Record", true)
+                .with_description("Conditioning spec or plan summary"),
+        )
         .with_description("Return a redacted requirement, token, and evidence trace"),
         SchemaEntry::new(
             "Conditioning.evaluate",
@@ -555,7 +569,10 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::CapabilityLease,
             "Record",
         )
-        .with_arg(SchemaArg::new("split", "string", true).with_description("Evaluation split: search, dev, test"))
+        .with_arg(
+            SchemaArg::new("split", "string", true)
+                .with_description("Evaluation split: search, dev, test"),
+        )
         .with_description("Start a bounded evaluation campaign"),
         SchemaEntry::new(
             "Conditioning.activate",
@@ -563,8 +580,13 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::CapabilityLease,
             "Record",
         )
-        .with_arg(SchemaArg::new("profile_id", "string", true).with_description("Profile URN to activate"))
-        .with_arg(SchemaArg::new("version", "u64", true).with_description("Version number to activate"))
+        .with_arg(
+            SchemaArg::new("profile_id", "string", true)
+                .with_description("Profile URN to activate"),
+        )
+        .with_arg(
+            SchemaArg::new("version", "u64", true).with_description("Version number to activate"),
+        )
         .with_description("Move active registry pointer after approval gates"),
         SchemaEntry::new(
             "Conditioning.rollback",
@@ -572,8 +594,14 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::CapabilityLease,
             "Record",
         )
-        .with_arg(SchemaArg::new("profile_id", "string", true).with_description("Profile URN to rollback"))
-        .with_arg(SchemaArg::new("target_version", "u64", false).with_description("Target version or previous active if omitted"))
+        .with_arg(
+            SchemaArg::new("profile_id", "string", true)
+                .with_description("Profile URN to rollback"),
+        )
+        .with_arg(
+            SchemaArg::new("target_version", "u64", false)
+                .with_description("Target version or previous active if omitted"),
+        )
         .with_description("Restore a prior approved version"),
     ]
 }

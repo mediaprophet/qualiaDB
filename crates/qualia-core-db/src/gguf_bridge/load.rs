@@ -166,10 +166,8 @@ impl QTensorEngine {
             "LLM_LOAD|safetensor|0.75|Reusing resident Safetensors mapping ({:.2} GiB)",
             bytes_to_gib(file_size as u64)
         );
-        let index = crate::inference::safetensor_loader::parse_safetensor_to_index(
-            &mmap[..],
-            config_json,
-        )?;
+        let index =
+            crate::inference::safetensor_loader::parse_safetensor_to_index(&mmap[..], config_json)?;
         if index.hyperparams.n_layer == 0 || index.hyperparams.n_embd == 0 {
             return Err("Safetensor: missing hyperparameters".to_string());
         }

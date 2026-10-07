@@ -94,7 +94,9 @@ pub fn evaluate_deontic_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn evaluate_epistemic_wasm(val: JsValue) -> Result<JsValue, JsValue> {
-    use crate::modalities::epistemic::{evaluate_epistemic_frame, EpistemicStatus, EpistemicVerdict};
+    use crate::modalities::epistemic::{
+        evaluate_epistemic_frame, EpistemicStatus, EpistemicVerdict,
+    };
 
     let p: QuinListParams = serde_wasm_bindgen::from_value(val)
         .map_err(|e| JsValue::from_str(&format!("invalid epistemic params: {e}")))?;
@@ -269,8 +271,7 @@ pub fn check_subsumption_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: SubParams = serde_wasm_bindgen::from_value(val)
         .map_err(|e| JsValue::from_str(&format!("invalid subsumption params: {e}")))?;
     let tbox: Vec<_> = p.tbox.iter().map(quin_from_arr).collect();
-    let holds =
-        crate::modalities::dl::check_subsumption_quin(p.sub_class, p.super_class, &tbox);
+    let holds = crate::modalities::dl::check_subsumption_quin(p.sub_class, p.super_class, &tbox);
 
     #[derive(Serialize)]
     struct SubOut {
@@ -372,11 +373,8 @@ pub fn values_consent_non_coerced_wasm(val: JsValue) -> Result<JsValue, JsValue>
     }
     let p: Params = serde_wasm_bindgen::from_value(val)
         .map_err(|e| JsValue::from_str(&format!("invalid consent params: {e}")))?;
-    let coerced = crate::modalities::capacity::detect_duress(
-        p.imbalance,
-        p.explicit_threat,
-        p.threshold,
-    );
+    let coerced =
+        crate::modalities::capacity::detect_duress(p.imbalance, p.explicit_threat, p.threshold);
 
     #[derive(Serialize)]
     struct Out {

@@ -11,8 +11,10 @@ struct BloomParams {
 struct CompositeParams {
     exposure: f32,
     bloom_strength: f32,
-    _pad0: f32,
+    surface_is_srgb: f32,
     _pad1: f32,
+    white_balance_gains: vec3<f32>,
+    _pad2: f32,
 };
 
 struct BloomUniformBlock {
@@ -40,10 +42,6 @@ fn uv_from_pos(pos: vec4<f32>, dims: vec2<u32>) -> vec2<f32> {
 
 fn luminance(c: vec3<f32>) -> f32 {
     return dot(c, vec3<f32>(0.2126, 0.7152, 0.0722));
-}
-
-fn reinhard(c: vec3<f32>) -> vec3<f32> {
-    return c / (vec3<f32>(1.0) + c);
 }
 
 @vertex
@@ -93,7 +91,13 @@ fn composite_fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     let uv = uv_from_pos(pos, dims);
     let hdr = textureSample(tex_a, samp, uv).rgb;
     let bloom = textureSample(tex_b, samp, uv).rgb;
-    let combined = (hdr + bloom * uniforms.composite.bloom_strength) * uniforms.composite.exposure;
-    let mapped = reinhard(combined);
-    return vec4<f32>(mapped, 1.0);
+    // Exposure is owned by qualia_sdr_output; keep bloom/scene energy here scene-linear.
+    let combined = hdr + bloom * uniforms.composite.bloom_strength;
+    let output = qualia_sdr_output(
+        combined,
+        uniforms.composite.exposure,
+        uniforms.composite.white_balance_gains,
+        uniforms.composite.surface_is_srgb
+    );
+    return vec4<f32>(output, 1.0);
 }

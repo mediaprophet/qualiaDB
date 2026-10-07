@@ -231,27 +231,30 @@ mod wasm_views {
     ///
     /// # Safety
     ///
-    /// The caller must ensure the Rust source slice remains valid (not moved,
-    /// not dropped) for the lifetime of the returned `Float32Array`. In
-    /// practice this means the slice should be a reference to a stack-local
-    /// or static buffer that is consumed by a WebGL2 `bufferData` call
-    /// before the function returns.
-    pub fn view_f32(data: &[f32]) -> Float32Array {
-        Float32Array::view(data)
+    /// The caller must consume the view before the Rust slice is moved or
+    /// dropped, and must not grow WASM memory while the JS view is retained.
+    pub unsafe fn view_f32(data: &[f32]) -> Float32Array {
+        unsafe { Float32Array::view(data) }
     }
 
     /// Create a zero-copy `Uint32Array` view over a Rust `&[u32]` slice.
     ///
-    /// See [`view_f32`] for safety notes.
-    pub fn view_u32(data: &[u32]) -> Uint32Array {
-        Uint32Array::view(data)
+    /// # Safety
+    ///
+    /// The caller must consume the view before the Rust slice is moved or
+    /// dropped, and must not grow WASM memory while the JS view is retained.
+    pub unsafe fn view_u32(data: &[u32]) -> Uint32Array {
+        unsafe { Uint32Array::view(data) }
     }
 
     /// Create a zero-copy `Uint8Array` view over a Rust `&[u8]` slice.
     ///
-    /// See [`view_f32`] for safety notes.
-    pub fn view_u8(data: &[u8]) -> Uint8Array {
-        Uint8Array::view(data)
+    /// # Safety
+    ///
+    /// The caller must consume the view before the Rust slice is moved or
+    /// dropped, and must not grow WASM memory while the JS view is retained.
+    pub unsafe fn view_u8(data: &[u8]) -> Uint8Array {
+        unsafe { Uint8Array::view(data) }
     }
 
     /// Create a zero-copy `Float32Array` view over the bytes of any
@@ -260,14 +263,17 @@ mod wasm_views {
     /// This is the primary uniform-upload path: pack a std140 struct on the
     /// Rust stack, then view its bytes as a `Float32Array` for
     /// `gl.bufferData()` without an intermediate copy.
-    pub fn view_uniform_bytes(bytes: &[u8]) -> Float32Array {
-        // Reinterpret bytes as f32 slice — safe because std140 structs are
-        // align(16) and Pod, so the byte slice is 4-byte aligned and its
-        // length is a multiple of 4.
+    ///
+    /// # Safety
+    ///
+    /// `bytes` must be 4-byte aligned and its length must be a multiple of 4.
+    /// The caller must consume the view before the bytes are moved or dropped
+    /// and must not grow WASM memory while the JS view is retained.
+    pub unsafe fn view_uniform_bytes(bytes: &[u8]) -> Float32Array {
         let f32_len = bytes.len() / 4;
         let ptr = bytes.as_ptr() as *const f32;
         let slice = unsafe { std::slice::from_raw_parts(ptr, f32_len) };
-        Float32Array::view(slice)
+        unsafe { Float32Array::view(slice) }
     }
 }
 

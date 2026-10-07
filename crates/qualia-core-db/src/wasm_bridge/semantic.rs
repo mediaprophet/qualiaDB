@@ -58,8 +58,9 @@ pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn validate_shacl_json_wasm(data_n3: &str, shapes_json: &str) -> Result<JsValue, JsValue> {
-    let report_json = crate::modalities::logic::shacl::text_input::validate_json(data_n3, shapes_json)
-        .map_err(|e| JsValue::from_str(&e))?;
+    let report_json =
+        crate::modalities::logic::shacl::text_input::validate_json(data_n3, shapes_json)
+            .map_err(|e| JsValue::from_str(&e))?;
     let val: serde_json::Value = serde_json::from_str(&report_json)
         .map_err(|e| JsValue::from_str(&format!("failed to parse report json: {e}")))?;
     Ok(serde_wasm_bindgen::to_value(&val)?)
@@ -70,7 +71,9 @@ pub fn validate_shacl_json_wasm(data_n3: &str, shapes_json: &str) -> Result<JsVa
 #[wasm_bindgen]
 pub fn validate_shacl_graph_wasm(db_bytes: &[u8], shapes_json: &str) -> Result<JsValue, JsValue> {
     if db_bytes.len() % 48 != 0 {
-        return Err(JsValue::from_str("db_bytes length must be a multiple of 48"));
+        return Err(JsValue::from_str(
+            "db_bytes length must be a multiple of 48",
+        ));
     }
     let quins = unsafe {
         std::slice::from_raw_parts(
@@ -79,9 +82,12 @@ pub fn validate_shacl_graph_wasm(db_bytes: &[u8], shapes_json: &str) -> Result<J
         )
     };
     let specs: Vec<crate::modalities::logic::shacl::text_input::ShapeSpec> =
-        serde_json::from_str(shapes_json).map_err(|e| JsValue::from_str(&format!("invalid shapes JSON: {e}")))?;
-    let shapes: Vec<crate::modalities::logic::shacl::CompiledShape> =
-        specs.iter().map(crate::modalities::logic::shacl::text_input::shape_from_spec).collect();
+        serde_json::from_str(shapes_json)
+            .map_err(|e| JsValue::from_str(&format!("invalid shapes JSON: {e}")))?;
+    let shapes: Vec<crate::modalities::logic::shacl::CompiledShape> = specs
+        .iter()
+        .map(crate::modalities::logic::shacl::text_input::shape_from_spec)
+        .collect();
     let engine = crate::modalities::logic::shacl::ShaclEngine::new(quins, &shapes);
     let report = engine.validate(&|_h| None);
     Ok(serde_wasm_bindgen::to_value(&report)?)
@@ -102,22 +108,58 @@ pub fn get_shacl_capability_manifest_wasm() -> JsValue {
     }
     let m = ShaclManifest {
         standard_core: vec![
-            "minInclusive", "maxInclusive", "minExclusive", "maxExclusive",
-            "minCount", "maxCount", "minLength", "maxLength", "pattern",
-            "class", "datatype", "nodeKind", "in", "hasValue", "equals",
-            "lessThan", "lessThanOrEquals", "greaterThan", "greaterThanOrEquals",
-            "node", "not", "and", "or", "xone", "closed", "languageIn", "uniqueLang",
+            "minInclusive",
+            "maxInclusive",
+            "minExclusive",
+            "maxExclusive",
+            "minCount",
+            "maxCount",
+            "minLength",
+            "maxLength",
+            "pattern",
+            "class",
+            "datatype",
+            "nodeKind",
+            "in",
+            "hasValue",
+            "equals",
+            "lessThan",
+            "lessThanOrEquals",
+            "greaterThan",
+            "greaterThanOrEquals",
+            "node",
+            "not",
+            "and",
+            "or",
+            "xone",
+            "closed",
+            "languageIn",
+            "uniqueLang",
         ],
         extended_modalities: vec![
-            "deonticObligate", "deonticPermit", "deonticForbid", "deonticNotExpired",
-            "epistemicKnowledge", "epistemicBelief", "commonKnowledge",
-            "ltlConstraint", "paraconsistentConstraint", "calculusConstraint",
-            "graphConstraint", "argumentationConstraint", "dialecticalConstraint",
-            "valuesConsentNonCoerced", "valuesHarmBelowCeiling", "fuzzyMinDegree",
+            "deonticObligate",
+            "deonticPermit",
+            "deonticForbid",
+            "deonticNotExpired",
+            "epistemicKnowledge",
+            "epistemicBelief",
+            "commonKnowledge",
+            "ltlConstraint",
+            "paraconsistentConstraint",
+            "calculusConstraint",
+            "graphConstraint",
+            "argumentationConstraint",
+            "dialecticalConstraint",
+            "valuesConsentNonCoerced",
+            "valuesHarmBelowCeiling",
+            "fuzzyMinDegree",
         ],
         computational_economics: vec![
-            "econVaRPositive", "econWelfareAboveFloor", "econRiskBelowThreshold",
-            "econPositivePrice", "econConvergedModel",
+            "econVaRPositive",
+            "econWelfareAboveFloor",
+            "econRiskBelowThreshold",
+            "econPositivePrice",
+            "econConvergedModel",
         ],
         turtle_nodeshape: true,
         profile: "qualia-shacl-0.0.39-full",
@@ -423,7 +465,8 @@ pub fn parse_cbor_ld_wasm(payload: &[u8]) -> JsValue {
 #[wasm_bindgen]
 pub fn jsonld_context_digest_wasm() -> Result<JsValue, JsValue> {
     use crate::sparql_library::rdf_formats::{
-        context_digest_hex, pinned_context_bytes, QUALIA_JSONLD_CONTEXT_ID, QUALIA_JSONLD_CONTEXT_V1,
+        context_digest_hex, pinned_context_bytes, QUALIA_JSONLD_CONTEXT_ID,
+        QUALIA_JSONLD_CONTEXT_V1,
     };
 
     #[derive(Serialize)]
@@ -488,8 +531,8 @@ pub fn package_exposure_manifest_wasm(
 #[wasm_bindgen]
 pub fn rdfc10_graph_hash_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     use crate::sparql_library::rdf_formats::{
-        provisional_spo_digest_hex, rdfc10_available, rdfc10_hash_hex, PROVISIONAL_SPO_DIGEST_PROFILE,
-        RDFC10_PROFILE,
+        provisional_spo_digest_hex, rdfc10_available, rdfc10_hash_hex,
+        PROVISIONAL_SPO_DIGEST_PROFILE, RDFC10_PROFILE,
     };
     use crate::NQuin;
 
@@ -854,11 +897,11 @@ fn write_rdf_document(
     quins: &[crate::NQuin],
     out: &mut Vec<u8>,
 ) -> Result<&'static str, String> {
+    use crate::sparql_library::rdf_formats::RdfFormat;
     use crate::sparql_library::serialisers::rdf_serializers::{
         serialize_to_jsonld, serialize_to_jsonld_compact, serialize_to_n3, serialize_to_nquads,
         serialize_to_ntriples, serialize_to_trig, serialize_to_turtle,
     };
-    use crate::sparql_library::rdf_formats::RdfFormat;
     match format {
         RdfFormat::NTriples => serialize_to_ntriples(out, quins)?,
         RdfFormat::Turtle => serialize_to_turtle(out, quins)?,
@@ -933,13 +976,8 @@ pub fn parse_rdf_document_wasm(content_type: &str, payload: &str) -> Result<JsVa
     }
 
     let mut collector = QuinCollector::new();
-    let count = parse_rdf(
-        format,
-        Cursor::new(payload.as_bytes()),
-        0,
-        &mut collector,
-    )
-    .map_err(|e| JsValue::from_str(&format!("RDF parse error: {e}")))?;
+    let count = parse_rdf(format, Cursor::new(payload.as_bytes()), 0, &mut collector)
+        .map_err(|e| JsValue::from_str(&format!("RDF parse error: {e}")))?;
 
     let quins: Vec<[String; 6]> = collector
         .as_slice()

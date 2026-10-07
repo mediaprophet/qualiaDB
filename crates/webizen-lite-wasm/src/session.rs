@@ -252,9 +252,12 @@ pub fn load_yaml_ld_q42(args: &Value) -> Result<Value, String> {
     let namespace = optional_u64(args, "namespace")?.unwrap_or(0);
     let lamport = optional_u64(args, "lamportClock")?.unwrap_or(0);
 
-    let (quins, lexicon, variant) =
-        qualia_core_db::yaml_ld_q42::compile_yaml_ld_q42_auto(source.as_bytes(), namespace, lamport)
-            .map_err(|e| e.to_string())?;
+    let (quins, lexicon, variant) = qualia_core_db::yaml_ld_q42::compile_yaml_ld_q42_auto(
+        source.as_bytes(),
+        namespace,
+        lamport,
+    )
+    .map_err(|e| e.to_string())?;
 
     let source_format = variant.to_string();
     let graph = SessionGraph {

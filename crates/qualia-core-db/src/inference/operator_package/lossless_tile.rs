@@ -53,10 +53,15 @@ impl fmt::Display for TileCodecError {
         match self {
             Self::BufferTooSmall => write!(f, "destination buffer too small for decoded tile"),
             Self::MalformedHeader => write!(f, "tile header malformed or unrecognized codec kind"),
-            Self::AnchorMissing => write!(f, "anchor tile required for delta/reference decode was missing"),
+            Self::AnchorMissing => write!(
+                f,
+                "anchor tile required for delta/reference decode was missing"
+            ),
             Self::AnchorMismatch => write!(f, "anchor tile dimensions or length mismatch"),
             Self::TruncatedPayload => write!(f, "encoded payload was truncated"),
-            Self::InvalidAlignment => write!(f, "payload tile size not aligned to float element width"),
+            Self::InvalidAlignment => {
+                write!(f, "payload tile size not aligned to float element width")
+            }
         }
     }
 }
@@ -126,7 +131,11 @@ pub fn encode_tile_shared(anchor_index: u16, original_len: usize) -> (TileHeader
 
 /// Encode a tile as a bitwise XOR delta against an anchor tile.
 pub fn encode_tile_xor(data: &[u8], anchor: &[u8], anchor_index: u16) -> (TileHeader, Vec<u8>) {
-    assert_eq!(data.len(), anchor.len(), "data and anchor must have identical size");
+    assert_eq!(
+        data.len(),
+        anchor.len(),
+        "data and anchor must have identical size"
+    );
     let mut delta = Vec::with_capacity(data.len());
     for i in 0..data.len() {
         delta.push(data[i] ^ anchor[i]);
@@ -293,7 +302,11 @@ mod tests {
         let mut out = [0u8; 32];
         let n = decode_tile_into(&hdr, &enc, None, &mut out).expect("decode split");
         assert_eq!(n, f16_bytes.len());
-        assert_eq!(&out[..n], &f16_bytes[..], "bit-exact float byte reconstruction");
+        assert_eq!(
+            &out[..n],
+            &f16_bytes[..],
+            "bit-exact float byte reconstruction"
+        );
     }
 
     #[test]

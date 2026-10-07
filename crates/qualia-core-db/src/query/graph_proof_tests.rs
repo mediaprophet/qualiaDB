@@ -149,11 +149,9 @@ fn import_aligned_omit_predicates_diverges_from_full_volume() {
     )
     .unwrap();
 
-    let omit = crate::query::integrity_omit::resolve_omit_predicate_hashes(
-        &[],
-        Some("comment-gloss"),
-    )
-    .unwrap();
+    let omit =
+        crate::query::integrity_omit::resolve_omit_predicate_hashes(&[], Some("comment-gloss"))
+            .unwrap();
     let mut opts = ImportProofOptions::from_graph_options(options());
     opts.omit_predicate_hashes = omit;
     let report = prove_import_rdf_q42_equivalence(&source, &q42, opts).unwrap();

@@ -43,32 +43,50 @@ enum BeltInner {
 
 pub(crate) struct UniformBelt {
     inner: BeltInner,
+    _staging_reservation: crate::gpu_context::VramReservation<'static>,
 }
 
 impl UniformBelt {
     /// `slot_size` is the largest uniform written in one call (256 covers
-    /// telemetry). `pool_size` is the native ring length; wasm ignores it.
+    /// telemetry). `pool_size` is the native ring length and the bounded
+    /// in-flight staging horizon reserved for WASM queue writes.
     pub(crate) fn new(
         device: &wgpu::Device,
         queue: Arc<wgpu::Queue>,
         slot_size: u64,
         pool_size: usize,
-    ) -> Self {
+    ) -> Result<Self, String> {
+        let mut admitted_slots = pool_size.max(1);
+        let staging_reservation = loop {
+            let bytes = slot_size
+                .checked_mul(admitted_slots as u64)
+                .ok_or_else(|| "uniform staging budget size overflow".to_string())?;
+            match crate::gpu_context::global_vram_ledger()
+                .try_reserve_graphics(crate::gpu_context::VramResourceClass::UploadStaging, bytes)
+            {
+                Ok(reservation) => break reservation,
+                Err(_) if admitted_slots > 1 => admitted_slots = admitted_slots.div_ceil(2),
+                Err(error) => {
+                    return Err(format!("uniform staging reservation failed: {error}"));
+                }
+            }
+        };
         #[cfg(target_arch = "wasm32")]
         {
-            let _ = (device, pool_size);
+            let _ = (device, pool_size, admitted_slots);
             let mut scratch = Vec::new();
             scratch.reserve(slot_size as usize);
-            return Self {
+            return Ok(Self {
                 inner: BeltInner::Direct { queue, scratch },
-            };
+                _staging_reservation: staging_reservation,
+            });
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
             let _ = queue;
             let (tx, rx) = mpsc::channel();
-            let mut slots = Vec::with_capacity(pool_size);
-            for _ in 0..pool_size {
+            let mut slots = Vec::with_capacity(admitted_slots);
+            for _ in 0..admitted_slots {
                 let buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("uniform-belt-slot"),
                     size: slot_size,
@@ -82,7 +100,7 @@ impl UniformBelt {
                     written: 0,
                 });
             }
-            Self {
+            Ok(Self {
                 inner: BeltInner::Mapped {
                     slots,
                     current: 0,
@@ -90,7 +108,8 @@ impl UniformBelt {
                     tx,
                     size: slot_size,
                 },
-            }
+                _staging_reservation: staging_reservation,
+            })
         }
     }
 
@@ -251,7 +270,8 @@ mod tests {
         };
         let device = &ctx.device;
         let queue = &ctx.queue;
-        let mut belt = UniformBelt::new(device, Arc::new(queue.clone()), 256, 8);
+        let mut belt = UniformBelt::new(device, Arc::new(queue.clone()), 256, 8)
+            .expect("uniform staging reservation");
         let target = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("uniform-belt-test-target"),
             size: 256,

@@ -511,7 +511,6 @@ impl KeyVault {
     }
 }
 
-
 /// Agent-visible ticket for a keyRole request. Never carries secret bytes.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct KeyRoleGrant {

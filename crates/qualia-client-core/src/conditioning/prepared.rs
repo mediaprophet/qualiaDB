@@ -23,7 +23,9 @@ pub const ACTIVE_PROFILE_DIR: &str = "conditioning";
 pub const ACTIVE_PROFILE_FILENAME: &str = "active-profile.json";
 
 pub fn active_profile_path(storage: &Path) -> PathBuf {
-    storage.join(ACTIVE_PROFILE_DIR).join(ACTIVE_PROFILE_FILENAME)
+    storage
+        .join(ACTIVE_PROFILE_DIR)
+        .join(ACTIVE_PROFILE_FILENAME)
 }
 
 /// One compiled semantic request — route-neutral plan receipt plus the
@@ -239,8 +241,8 @@ mod tests {
     #[test]
     fn invalid_profile_fails_closed() {
         let dir = tempfile::tempdir().unwrap();
-        let err = activate_profile(dir.path(), &serde_json::json!({"requirements": 42}))
-            .unwrap_err();
+        let err =
+            activate_profile(dir.path(), &serde_json::json!({"requirements": 42})).unwrap_err();
         assert!(err.contains("Invalid conditioning profile"));
         assert!(load_active_profile(dir.path()).is_none());
     }
@@ -248,8 +250,10 @@ mod tests {
     #[test]
     fn no_profile_is_ok_none() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(prepare_active_semantic_request(dir.path(), "p", "d", "g", 64)
-            .unwrap()
-            .is_none());
+        assert!(
+            prepare_active_semantic_request(dir.path(), "p", "d", "g", 64)
+                .unwrap()
+                .is_none()
+        );
     }
 }

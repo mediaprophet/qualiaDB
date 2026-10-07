@@ -45,7 +45,12 @@ pub struct MahalanobisOutliers {
 }
 
 /// Sample Mahalanobis outliers for row-major `n × d` matrix `x`.
-pub fn mahalanobis_outliers(x: &[f64], n: usize, d: usize, alpha: f64) -> Option<MahalanobisOutliers> {
+pub fn mahalanobis_outliers(
+    x: &[f64],
+    n: usize,
+    d: usize,
+    alpha: f64,
+) -> Option<MahalanobisOutliers> {
     if d == 0 || n <= d + 1 || x.len() != n * d || !(0.0 < alpha && alpha < 1.0) {
         return None;
     }
@@ -127,7 +132,8 @@ mod tests {
         let n = 13;
         let r = mahalanobis_outliers(&x, n, 2, 0.05).unwrap();
         assert!(
-            r.flagged_indices.contains(&(n - 1)) || r.distances_sq[n - 1] == r.distances_sq.iter().cloned().fold(0.0_f64, f64::max),
+            r.flagged_indices.contains(&(n - 1))
+                || r.distances_sq[n - 1] == r.distances_sq.iter().cloned().fold(0.0_f64, f64::max),
             "flags={:?} d2={:?}",
             r.flagged_indices,
             r.distances_sq

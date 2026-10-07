@@ -221,7 +221,6 @@ impl ClusteredMoEOperator {
     }
 }
 
-
 /// Routed expert execution item: (expert_index, gating_weight).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoutedExpert {
@@ -654,8 +653,8 @@ mod tests {
             ws_down: &mut wsd,
         };
 
-        op.dispatch(&routed, &input, &mut out, &mut scratch).unwrap();
+        op.dispatch(&routed, &input, &mut out, &mut scratch)
+            .unwrap();
         assert!(out.iter().any(|&v| v.abs() > 1e-5));
     }
 }
-

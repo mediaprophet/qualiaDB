@@ -449,7 +449,11 @@ fn dequant_bf16(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
 }
 
 /// FP8 E4M3 → f32 using exact float arithmetic.
-fn dequant_fp8_e4m3(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+fn dequant_fp8_e4m3(
+    raw: &[u8],
+    n_elems: usize,
+    out: &mut [f32],
+) -> Result<usize, GgmlDequantError> {
     if raw.len() < n_elems {
         return Err(GgmlDequantError::TruncatedInput);
     }

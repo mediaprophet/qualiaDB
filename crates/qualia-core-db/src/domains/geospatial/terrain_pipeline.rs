@@ -55,6 +55,7 @@ use crate::container_10d::mesh_section::{encode_mesh_section, encoded_len};
 use crate::container_10d::provenance_section::{encode_provenance_section, ProvenanceSidecar};
 use crate::container_10d::section::{encode_container, AlignmentTier, SectionInput, SectionType};
 use crate::render::assets::Mesh;
+use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Compiles a DEM heightfield into a native `.10d` QuantizedMesh tensor file,
@@ -68,6 +69,31 @@ pub fn compile_and_encode_10d_tile(
     licence: String,
     cbor_ld_metadata: Vec<u8>,
 ) -> Result<Vec<u8>, String> {
+    compile_and_encode_10d_tile_with_media_type(
+        heightfield,
+        width,
+        height,
+        cell_size_m,
+        source_bytes,
+        "application/octet-stream".into(),
+        licence,
+        cbor_ld_metadata,
+    )
+}
+
+/// Compile and encode a georeferenced heightfield with an explicit source media type.
+pub fn compile_and_encode_10d_tile_with_media_type(
+    heightfield: &[f32],
+    width: usize,
+    height: usize,
+    cell_size_m: f64,
+    source_bytes: Vec<u8>,
+    source_media_type: String,
+    licence: String,
+    cbor_ld_metadata: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    validate_heightfield(heightfield, width, height, cell_size_m)?;
+
     // 1. Generate standard TerrainMesh
     let terrain = generate_terrain_mesh(heightfield, width, height, cell_size_m);
 
@@ -110,12 +136,13 @@ pub fn compile_and_encode_10d_tile(
     // 4. Build Provenance Sidecar
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .map_err(|error| format!("system clock predates Unix epoch: {error}"))?
         .as_secs();
-    let mut sidecar = ProvenanceSidecar::new(source_bytes, "application/octet-stream", licence);
+    let version_hash: [u8; 32] = Sha256::digest(&source_bytes).into();
+    let mut sidecar = ProvenanceSidecar::new(source_bytes, source_media_type, licence);
     sidecar.semantic_metadata = cbor_ld_metadata;
     sidecar.timestamp_epoch_s = now;
-    sidecar.version_hash = [0x42; 32];
+    sidecar.version_hash = version_hash;
 
     let sidecar_need = sidecar.source_bytes.len()
         + sidecar.source_media_type.len()
@@ -155,6 +182,30 @@ pub fn compile_and_encode_10d_tile(
     seal_whole_file_crc32c(&mut out);
 
     Ok(out)
+}
+
+fn validate_heightfield(
+    heightfield: &[f32],
+    width: usize,
+    height: usize,
+    cell_size_m: f64,
+) -> Result<(), String> {
+    let expected = width
+        .checked_mul(height)
+        .ok_or_else(|| "heightfield dimensions overflow".to_string())?;
+    if width < 2 || height < 2 || heightfield.len() != expected {
+        return Err(format!(
+            "heightfield needs at least 2x2 samples and exactly width*height values (got {} values for {width}x{height})",
+            heightfield.len()
+        ));
+    }
+    if !cell_size_m.is_finite() || cell_size_m <= 0.0 {
+        return Err("terrain cell size must be finite and greater than zero".into());
+    }
+    if heightfield.iter().any(|elevation| !elevation.is_finite()) {
+        return Err("heightfield contains a non-finite elevation sample".into());
+    }
+    Ok(())
 }
 
 #[cfg(test)]

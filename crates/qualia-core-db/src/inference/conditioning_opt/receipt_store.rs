@@ -471,7 +471,9 @@ mod tests {
             .resolve_active_contract("qwen-test", &conditioning)
             .is_some());
 
-        signed.rollback(&mut models, &mut conditioning, None).unwrap();
+        signed
+            .rollback(&mut models, &mut conditioning, None)
+            .unwrap();
         assert!(models
             .resolve_active_contract("qwen-test", &conditioning)
             .is_none());

@@ -150,17 +150,29 @@ fn constraint_of(c: &ConstraintSpec) -> Option<ShaclConstraint> {
         "econWelfareAboveFloor" => ShaclConstraint::EconWelfareAboveFloor { min_welfare: num },
         "econRiskBelowThreshold" => ShaclConstraint::EconRiskBelowThreshold { max_risk: num },
         "valuesConsentNonCoerced" => ShaclConstraint::ValuesConsentNonCoerced {
-            max_imbalance: if num.is_finite() && num > 0.0 { num } else { 0.5 },
+            max_imbalance: if num.is_finite() && num > 0.0 {
+                num
+            } else {
+                0.5
+            },
         },
         "valuesHarmBelowCeiling" => ShaclConstraint::ValuesHarmBelowCeiling { max_harm: num },
         "fuzzyMinDegree" => ShaclConstraint::FuzzyMinDegree {
-            min_degree: if num.is_finite() { num.clamp(0.0, 1.0) } else { 0.0 },
+            min_degree: if num.is_finite() {
+                num.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
         },
         "deonticObligate" => ShaclConstraint::DeonticObligate,
         "deonticPermit" => ShaclConstraint::DeonticPermit,
         "deonticForbid" => ShaclConstraint::DeonticForbid,
-        "epistemicKnowledge" => ShaclConstraint::EpistemicKnowledge { min_certainty: u as u8 },
-        "epistemicBelief" => ShaclConstraint::EpistemicBelief { min_certainty: u as u8 },
+        "epistemicKnowledge" => ShaclConstraint::EpistemicKnowledge {
+            min_certainty: u as u8,
+        },
+        "epistemicBelief" => ShaclConstraint::EpistemicBelief {
+            min_certainty: u as u8,
+        },
         "commonKnowledge" => ShaclConstraint::CommonKnowledge,
         "ltlGlobally" | "ltlFinally" | "ltlNext" | "ltlUntil" | "ltlRelease" | "ltlConstraint" => {
             ShaclConstraint::LtlConstraint { formula: text() }
@@ -292,11 +304,17 @@ mod tests {
 
         let pass_out = validate_json(passing_data, shapes).unwrap();
         let pass_val: serde_json::Value = serde_json::from_str(&pass_out).unwrap();
-        assert_eq!(pass_val["conforms"], true, "passing data failed with report: {pass_out}");
+        assert_eq!(
+            pass_val["conforms"], true,
+            "passing data failed with report: {pass_out}"
+        );
 
         let fail_out = validate_json(failing_data, shapes).unwrap();
         let fail_val: serde_json::Value = serde_json::from_str(&fail_out).unwrap();
-        assert_eq!(fail_val["conforms"], false, "failing data must violate welfare floor and positive var");
+        assert_eq!(
+            fail_val["conforms"], false,
+            "failing data must violate welfare floor and positive var"
+        );
         let results = fail_val["results"].as_array().unwrap();
         assert_eq!(results.len(), 2, "must have 2 violations");
     }

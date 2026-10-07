@@ -95,11 +95,7 @@ impl PreparedConditioningSnapshot {
     }
 
     /// Derive the Tier-1 prefix cache key for this prepared request.
-    pub fn derive_cache_key(
-        &self,
-        kv_floats: usize,
-        n_layers: usize,
-    ) -> InferenceCacheKey {
+    pub fn derive_cache_key(&self, kv_floats: usize, n_layers: usize) -> InferenceCacheKey {
         InferenceCacheKey::with_provenance(
             self.model_instance,
             self.tokenizer_revision,
@@ -191,7 +187,7 @@ mod tests {
     #[test]
     fn test_thinking_budget_counts_against_context_envelope() {
         let tokens = vec![1; 100]; // 100 tokens
-        // 100 input + 20 output + 20 thinking = 140 > 128 context → fail closed.
+                                   // 100 input + 20 output + 20 thinking = 140 > 128 context → fail closed.
         let prep = PreparedConditioningSnapshot::prepare(
             "thinking_v1",
             1,

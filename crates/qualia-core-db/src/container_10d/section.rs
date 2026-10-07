@@ -69,7 +69,9 @@ pub enum SectionType {
     /// bundled in-envelope so context is byte-inseparable (P1; see
     /// [`super::provenance_section`]). No longer spec-reserved.
     ProvenanceSidecar = 7,
-    SpecReservedFieldSidecar = 8,
+    /// Optional geometry/scientific field data. The payload is self-describing;
+    /// currently includes the versioned per-vertex normal field codec.
+    FieldSidecar = 8,
     SpecReservedCorrespondenceMap = 9,
     /// Topology section — half-edge graph + CSR adjacency + connectivity
     /// summary (P2.8). Contains a TopologyMiniHeader followed by the
@@ -83,6 +85,10 @@ pub enum SectionType {
     /// not an albedo for the whole part. One RGBA8 sample per mesh vertex,
     /// same order as the quantized mesh. See `surface_reading`.
     SurfaceReading = 12,
+    /// Versioned physically-based/stylized material records and contiguous submesh ranges.
+    Materials = 13,
+    /// Vertex-aligned glTF TEXCOORD_0 values used by material texture sampling.
+    TextureCoordinates = 14,
 }
 
 impl SectionType {
@@ -97,11 +103,13 @@ impl SectionType {
             5 => Some(SectionType::SpecReservedTemporalIndex),
             6 => Some(SectionType::SpecReservedManifoldHeadTable),
             7 => Some(SectionType::ProvenanceSidecar),
-            8 => Some(SectionType::SpecReservedFieldSidecar),
+            8 => Some(SectionType::FieldSidecar),
             9 => Some(SectionType::SpecReservedCorrespondenceMap),
             10 => Some(SectionType::Topology),
             11 => Some(SectionType::SpatialIndex),
             12 => Some(SectionType::SurfaceReading),
+            13 => Some(SectionType::Materials),
+            14 => Some(SectionType::TextureCoordinates),
             _ => None,
         }
     }
@@ -119,6 +127,9 @@ impl SectionType {
                 | SectionType::Topology
                 | SectionType::SpatialIndex
                 | SectionType::SurfaceReading
+                | SectionType::FieldSidecar
+                | SectionType::Materials
+                | SectionType::TextureCoordinates
         )
     }
 }

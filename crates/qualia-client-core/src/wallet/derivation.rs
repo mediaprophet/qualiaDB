@@ -92,7 +92,6 @@ impl HdWallet {
 
         format!("0x{}", hex::encode(addr_bytes))
     }
-
 }
 
 #[cfg(test)]
@@ -120,6 +119,9 @@ mod tests {
         let nym_err = wallet.derive_address("NYM", "m/44'/118'/0'/0/0");
         assert!(nym_err.is_err(), "NYM must not fabricate n1… locators");
         let msg = nym_err.unwrap_err();
-        assert!(msg.contains("n1") || msg.contains("Planned"), "honest Planned error: {msg}");
+        assert!(
+            msg.contains("n1") || msg.contains("Planned"),
+            "honest Planned error: {msg}"
+        );
     }
 }

@@ -18,7 +18,12 @@ pub struct AssetIdentity {
 }
 
 impl AssetIdentity {
-    pub fn new(asset_id: impl Into<String>, content_digest: u64, semantic_tag: u32, byte_size: usize) -> Self {
+    pub fn new(
+        asset_id: impl Into<String>,
+        content_digest: u64,
+        semantic_tag: u32,
+        byte_size: usize,
+    ) -> Self {
         Self {
             asset_id: asset_id.into(),
             content_digest,
@@ -81,19 +86,39 @@ impl fmt::Display for ContractDisposition {
         match self {
             Self::Satisfied => write!(f, "contract satisfied"),
             Self::DivergenceExceeded { found, max } => {
-                write!(f, "feature divergence {}e-4 exceeded limit {}e-4", found, max)
+                write!(
+                    f,
+                    "feature divergence {}e-4 exceeded limit {}e-4",
+                    found, max
+                )
             }
             Self::VolumeExpansionExceeded { found, max } => {
-                write!(f, "volume expansion ratio {}e-4 exceeded limit {}e-4", found, max)
+                write!(
+                    f,
+                    "volume expansion ratio {}e-4 exceeded limit {}e-4",
+                    found, max
+                )
             }
             Self::RequiredFlagMissing { expected, found } => {
-                write!(f, "required flags {:#x} missing from state flags {:#x}", expected, found)
+                write!(
+                    f,
+                    "required flags {:#x} missing from state flags {:#x}",
+                    expected, found
+                )
             }
             Self::ForbiddenFlagPresent { forbidden, found } => {
-                write!(f, "forbidden flags {:#x} found in state flags {:#x}", forbidden, found)
+                write!(
+                    f,
+                    "forbidden flags {:#x} found in state flags {:#x}",
+                    forbidden, found
+                )
             }
             Self::AssetMismatch { expected, found } => {
-                write!(f, "asset digest mismatch: expected {:#x}, found {:#x}", expected, found)
+                write!(
+                    f,
+                    "asset digest mismatch: expected {:#x}, found {:#x}",
+                    expected, found
+                )
             }
         }
     }
@@ -283,7 +308,12 @@ mod tests {
     use super::*;
 
     fn test_asset() -> AssetIdentity {
-        AssetIdentity::new("did:q42:asset:geometry:terrain_quad_042", 0x4242_CAFE_BEEF, 1, 4096)
+        AssetIdentity::new(
+            "did:q42:asset:geometry:terrain_quad_042",
+            0x4242_CAFE_BEEF,
+            1,
+            4096,
+        )
     }
 
     fn test_scene_state_a() -> SceneState {
@@ -291,10 +321,7 @@ mod tests {
             state_id: "state_a_rest".to_string(),
             epoch: 100,
             transform: [
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
             ],
             feature_vector: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
             bounding_box_min: [-10.0, -10.0, 0.0],
@@ -308,10 +335,7 @@ mod tests {
             state_id: "state_b_active".to_string(),
             epoch: 101,
             transform: [
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
             ],
             // Slightly perturbed feature vector within epsilon
             feature_vector: [0.11, 0.21, 0.30, 0.42, 0.50, 0.59, 0.71, 0.80],

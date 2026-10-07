@@ -1497,8 +1497,7 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
-        let use_mmv_q8_0 =
-            info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
+        let use_mmv_q8_0 = info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
         let logits_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
             &self.mmv_q8_0_pipeline
         } else {

@@ -88,6 +88,7 @@ mod tests {
     /// End-to-end headless render: build an offscreen renderer, clear to red,
     /// and read the pixels back. Skips gracefully when no GPU adapter is present
     /// (e.g. a headless CI box without a software fallback).
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn offscreen_clear_reads_back_solid_color() {
         let renderer = match pollster::block_on(WgpuRenderer::new_offscreen(64, 64)) {
@@ -126,6 +127,7 @@ mod tests {
     /// Locks in the linear (non-sRGB) offscreen target: a mid-tone CSS color must
     /// read back byte-for-byte. An sRGB target would re-encode 128 (~0.50) up to
     /// ~188, so this test fails if the format regresses to `Rgba8UnormSrgb`.
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn offscreen_midtone_passthrough_is_linear() {
         let renderer = match pollster::block_on(WgpuRenderer::new_offscreen(64, 64)) {

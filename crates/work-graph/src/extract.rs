@@ -195,9 +195,10 @@ fn slice_body<'a>(src: &'a str, const_name: &str) -> Option<&'a str> {
     let needle = format!("pub const {const_name}");
     let start = src.find(&needle)?;
     let after = &src[start + needle.len()..];
-    let open = after.find("=[")
+    let open = after
+        .find("=[")
         .or_else(|| after.find("= ["))
-        .or_else(|| after.find("= &[") )?;
+        .or_else(|| after.find("= &["))?;
     let after_eq = &after[open..];
     let bracket = after_eq.find('[')?;
     let inner_start = start + needle.len() + open + bracket + 1;
@@ -320,7 +321,9 @@ pub const FOO: &str = "A.b";
 pub const ALL_BOUND: &[&str] = &[FOO, MISSING];
 "#;
         match extract_all_bound(src) {
-            Err(ExtractError::Unresolved { names }) => assert_eq!(names, vec!["MISSING".to_string()]),
+            Err(ExtractError::Unresolved { names }) => {
+                assert_eq!(names, vec!["MISSING".to_string()])
+            }
             other => panic!("expected unresolved, got {other:?}"),
         }
     }
@@ -342,7 +345,13 @@ pub const ALL_BOUND: &[&str] = &[FOO, MISSING];
         ];
         let fams = families_from_ids(&ids);
         assert_eq!(fams.len(), 2);
-        assert_eq!(fams.iter().find(|f| f.name == "Statistics").unwrap().member_count, 2);
+        assert_eq!(
+            fams.iter()
+                .find(|f| f.name == "Statistics")
+                .unwrap()
+                .member_count,
+            2
+        );
     }
 
     #[test]
@@ -350,8 +359,14 @@ pub const ALL_BOUND: &[&str] = &[FOO, MISSING];
         let text = "See ClinicalRisk.framingham and also Statistics in passing.";
         let ids = vec!["ClinicalRisk.framingham".into()];
         let fams = vec!["ClinicalRisk".into(), "Statistics".into()];
-        assert_eq!(cited_invoke_ids(text, &ids), vec!["ClinicalRisk.framingham".to_string()]);
-        assert_eq!(cited_families(text, &fams), vec!["ClinicalRisk".to_string()]);
+        assert_eq!(
+            cited_invoke_ids(text, &ids),
+            vec!["ClinicalRisk.framingham".to_string()]
+        );
+        assert_eq!(
+            cited_families(text, &fams),
+            vec!["ClinicalRisk".to_string()]
+        );
     }
 
     #[test]

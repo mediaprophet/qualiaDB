@@ -7,10 +7,6 @@ pub mod graph_index;
 pub mod graph_proof;
 #[cfg(test)]
 mod graph_proof_tests;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod integrity_omit;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod source_audit;
 pub mod indexing;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
@@ -30,6 +26,8 @@ pub mod ingest_resume;
     feature = "wasm-full"
 ))]
 pub mod ingestion;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod integrity_omit;
 pub mod lexicon;
 pub mod mini_parser;
 #[cfg(not(target_arch = "wasm32"))]
@@ -55,6 +53,8 @@ pub mod resolver;
     feature = "wasm-full"
 ))]
 pub mod shacl_compiler;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod source_audit;
 pub mod spawn_decay;
 pub mod temporal_graph;
 pub mod temporal_scrub;

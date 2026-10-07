@@ -182,8 +182,7 @@ impl TrunkNvmeReader {
             .ok_or(TrunkNvmeError::OffsetOverflow)?;
         let mapped = match self.map.as_ref() {
             Some(map) => {
-                let start = usize::try_from(offset)
-                    .map_err(|_| TrunkNvmeError::OffsetOverflow)?;
+                let start = usize::try_from(offset).map_err(|_| TrunkNvmeError::OffsetOverflow)?;
                 let end = start
                     .checked_add(row_bytes)
                     .ok_or(TrunkNvmeError::OffsetOverflow)?;
@@ -250,9 +249,7 @@ impl TrunkNvmeReader {
             let start = usize::try_from(
                 self.tensor_data_start
                     .checked_add(info.byte_offset)
-                    .and_then(|base| {
-                        base.checked_add((first_row as u64) * row_bytes as u64)
-                    })
+                    .and_then(|base| base.checked_add((first_row as u64) * row_bytes as u64))
                     .ok_or(TrunkNvmeError::OffsetOverflow)?,
             )
             .map_err(|_| TrunkNvmeError::OffsetOverflow)?;
@@ -260,7 +257,12 @@ impl TrunkNvmeReader {
                 .checked_mul(row_bytes)
                 .ok_or(TrunkNvmeError::OffsetOverflow)?;
             let bytes = map
-                .get(start..start.checked_add(span).ok_or(TrunkNvmeError::OffsetOverflow)?)
+                .get(
+                    start
+                        ..start
+                            .checked_add(span)
+                            .ok_or(TrunkNvmeError::OffsetOverflow)?,
+                )
                 .ok_or(TrunkNvmeError::Io)?;
             self.stats.rows += rows as u64;
             self.stats.bytes += span as u64;
@@ -354,9 +356,7 @@ impl TrunkNvmeReader {
             let start = usize::try_from(
                 self.tensor_data_start
                     .checked_add(info.byte_offset)
-                    .and_then(|base| {
-                        base.checked_add((first_row as u64) * row_bytes as u64)
-                    })
+                    .and_then(|base| base.checked_add((first_row as u64) * row_bytes as u64))
                     .ok_or(TrunkNvmeError::OffsetOverflow)?,
             )
             .map_err(|_| TrunkNvmeError::OffsetOverflow)?;
@@ -364,7 +364,12 @@ impl TrunkNvmeReader {
                 .checked_mul(row_bytes)
                 .ok_or(TrunkNvmeError::OffsetOverflow)?;
             let bytes = map
-                .get(start..start.checked_add(span).ok_or(TrunkNvmeError::OffsetOverflow)?)
+                .get(
+                    start
+                        ..start
+                            .checked_add(span)
+                            .ok_or(TrunkNvmeError::OffsetOverflow)?,
+                )
                 .ok_or(TrunkNvmeError::Io)?;
             self.stats.rows += rows as u64;
             self.stats.bytes += span as u64;
@@ -395,10 +400,17 @@ impl TrunkNvmeReader {
                 .collect::<Result<(), TrunkNvmeError>>()?;
             return Ok(());
         }
-        self.read_row_run(info, first_row, rows, raw_scratch, row_scratch, |row, row_values| {
-            output[row - first_row] = dot_f32(row_values, input);
-            Ok(())
-        })
+        self.read_row_run(
+            info,
+            first_row,
+            rows,
+            raw_scratch,
+            row_scratch,
+            |row, row_values| {
+                output[row - first_row] = dot_f32(row_values, input);
+                Ok(())
+            },
+        )
     }
 
     /// Execute one selected plane of a `[in, out, expert]` GGUF tensor.
@@ -501,7 +513,12 @@ impl TrunkNvmeReader {
                 .checked_mul(row_bytes)
                 .ok_or(TrunkNvmeError::OffsetOverflow)?;
             let bytes = map
-                .get(start..start.checked_add(span).ok_or(TrunkNvmeError::OffsetOverflow)?)
+                .get(
+                    start
+                        ..start
+                            .checked_add(span)
+                            .ok_or(TrunkNvmeError::OffsetOverflow)?,
+                )
                 .ok_or(TrunkNvmeError::Io)?;
             self.stats.rows += rows as u64;
             self.stats.bytes += span as u64;
@@ -514,14 +531,13 @@ impl TrunkNvmeReader {
                 .map_init(
                     || vec![0.0f32; width],
                     |scratch, chunk| {
-                        let mut local =
-                            vec![
-                                StreamedArgmax {
-                                    token_id: 0,
-                                    logit: f32::NEG_INFINITY,
-                                };
-                                k
-                            ];
+                        let mut local = vec![
+                            StreamedArgmax {
+                                token_id: 0,
+                                logit: f32::NEG_INFINITY,
+                            };
+                            k
+                        ];
                         let row_end = ((chunk + 1) * ROWS_PER_CHUNK).min(rows);
                         for row in chunk * ROWS_PER_CHUNK..row_end {
                             let row_start = row * row_bytes;
@@ -569,24 +585,31 @@ impl TrunkNvmeReader {
             out[..keep].copy_from_slice(&merged[..keep]);
             return Ok(());
         }
-        self.read_row_run(info, 0, rows, raw_scratch, row_scratch, |row, row_values| {
-            let logit = dot_f32(row_values, input);
-            if logit <= out[out.len() - 1].logit {
-                return Ok(());
-            }
-            let mut slot = out.len();
-            while slot > 0 && logit > out[slot - 1].logit {
-                slot -= 1;
-            }
-            for index in (slot + 1..out.len()).rev() {
-                out[index] = out[index - 1];
-            }
-            out[slot] = StreamedArgmax {
-                token_id: row as u32,
-                logit,
-            };
-            Ok(())
-        })?;
+        self.read_row_run(
+            info,
+            0,
+            rows,
+            raw_scratch,
+            row_scratch,
+            |row, row_values| {
+                let logit = dot_f32(row_values, input);
+                if logit <= out[out.len() - 1].logit {
+                    return Ok(());
+                }
+                let mut slot = out.len();
+                while slot > 0 && logit > out[slot - 1].logit {
+                    slot -= 1;
+                }
+                for index in (slot + 1..out.len()).rev() {
+                    out[index] = out[index - 1];
+                }
+                out[slot] = StreamedArgmax {
+                    token_id: row as u32,
+                    logit,
+                };
+                Ok(())
+            },
+        )?;
         Ok(())
     }
 
@@ -617,15 +640,22 @@ impl TrunkNvmeReader {
             let logit = dot_f32(&row_scratch[..width], input);
             out[slot] = (logit, 0);
         }
-        self.read_row_run(info, 0, rows, raw_scratch, row_scratch, |_row, row_values| {
-            let logit = dot_f32(row_values, input);
-            for slot in out.iter_mut() {
-                if logit > slot.0 {
-                    slot.1 += 1;
+        self.read_row_run(
+            info,
+            0,
+            rows,
+            raw_scratch,
+            row_scratch,
+            |_row, row_values| {
+                let logit = dot_f32(row_values, input);
+                for slot in out.iter_mut() {
+                    if logit > slot.0 {
+                        slot.1 += 1;
+                    }
                 }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
     }
 }
 
@@ -755,7 +785,15 @@ mod tests {
         let mut gemv_streamed = [0f32; 5000];
         let mut gemv_mapped = [0f32; 5000];
         streamed
-            .gemv_rows_into(&info, 0, rows, &input, &mut gemv_streamed, &mut raw, &mut row)
+            .gemv_rows_into(
+                &info,
+                0,
+                rows,
+                &input,
+                &mut gemv_streamed,
+                &mut raw,
+                &mut row,
+            )
             .unwrap();
         mapped
             .gemv_rows_into(&info, 0, rows, &input, &mut gemv_mapped, &mut raw, &mut row)

@@ -492,4 +492,3 @@ fn test_conditioning_validate_and_compile() {
     assert_eq!(comp_json["profile_id"], "urn:qualia:profile:test:v1");
     assert_eq!(comp_json["requirements_count"], 1);
 }
-

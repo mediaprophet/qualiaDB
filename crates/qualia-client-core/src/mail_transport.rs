@@ -277,40 +277,83 @@ pub fn fetch_pop3(cfg: &Pop3Config, mailbox: &str) -> Result<Vec<Pop3FetchedMess
 
     fn response_line<S: std::io::Read>(reader: &mut BufReader<S>) -> Result<String, String> {
         let mut line = String::new();
-        reader.read_line(&mut line).map_err(|e| format!("POP3 read failed: {e}"))?;
-        if !line.starts_with("+OK") { return Err(format!("POP3 rejected command: {}", line.trim())); }
+        reader
+            .read_line(&mut line)
+            .map_err(|e| format!("POP3 read failed: {e}"))?;
+        if !line.starts_with("+OK") {
+            return Err(format!("POP3 rejected command: {}", line.trim()));
+        }
         Ok(line)
     }
-    fn command<S: std::io::Read + Write>(reader: &mut BufReader<S>, command: &str) -> Result<(), String> {
-        reader.get_mut().write_all(command.as_bytes()).map_err(|e| format!("POP3 write failed: {e}"))?;
-        reader.get_mut().flush().map_err(|e| format!("POP3 flush failed: {e}"))?;
+    fn command<S: std::io::Read + Write>(
+        reader: &mut BufReader<S>,
+        command: &str,
+    ) -> Result<(), String> {
+        reader
+            .get_mut()
+            .write_all(command.as_bytes())
+            .map_err(|e| format!("POP3 write failed: {e}"))?;
+        reader
+            .get_mut()
+            .flush()
+            .map_err(|e| format!("POP3 flush failed: {e}"))?;
         response_line(reader).map(|_| ())
     }
     fn multiline<S: std::io::Read>(reader: &mut BufReader<S>) -> Result<Vec<String>, String> {
         let mut lines = Vec::new();
         loop {
             let mut line = String::new();
-            reader.read_line(&mut line).map_err(|e| format!("POP3 read failed: {e}"))?;
+            reader
+                .read_line(&mut line)
+                .map_err(|e| format!("POP3 read failed: {e}"))?;
             let line = line.trim_end_matches(['\r', '\n']).to_string();
-            if line == "." { break; }
+            if line == "." {
+                break;
+            }
             lines.push(line.strip_prefix("..").unwrap_or(&line).to_string());
         }
         Ok(lines)
     }
     fn headers_and_body(lines: &[String]) -> (String, String, String, String) {
-        let mut from = String::new(); let mut to = String::new(); let mut subject = String::new(); let mut body_at = lines.len();
+        let mut from = String::new();
+        let mut to = String::new();
+        let mut subject = String::new();
+        let mut body_at = lines.len();
         for (index, line) in lines.iter().enumerate() {
-            if line.is_empty() { body_at = index + 1; break; }
-            if let Some(value) = line.strip_prefix("From:").or_else(|| line.strip_prefix("from:")) { from = value.trim().to_string(); }
-            if let Some(value) = line.strip_prefix("To:").or_else(|| line.strip_prefix("to:")) { to = value.trim().to_string(); }
-            if let Some(value) = line.strip_prefix("Subject:").or_else(|| line.strip_prefix("subject:")) { subject = value.trim().to_string(); }
+            if line.is_empty() {
+                body_at = index + 1;
+                break;
+            }
+            if let Some(value) = line
+                .strip_prefix("From:")
+                .or_else(|| line.strip_prefix("from:"))
+            {
+                from = value.trim().to_string();
+            }
+            if let Some(value) = line
+                .strip_prefix("To:")
+                .or_else(|| line.strip_prefix("to:"))
+            {
+                to = value.trim().to_string();
+            }
+            if let Some(value) = line
+                .strip_prefix("Subject:")
+                .or_else(|| line.strip_prefix("subject:"))
+            {
+                subject = value.trim().to_string();
+            }
         }
         (from, to, subject, lines[body_at..].join("\n"))
     }
 
-    let tcp = TcpStream::connect((cfg.host.as_str(), cfg.port)).map_err(|e| format!("POP3S connect to {}:{} failed: {e}", cfg.host, cfg.port))?;
-    let tls = native_tls::TlsConnector::builder().build().map_err(|e| format!("POP3S TLS setup failed: {e}"))?;
-    let stream = tls.connect(&cfg.host, tcp).map_err(|e| format!("POP3S TLS connect failed: {e}"))?;
+    let tcp = TcpStream::connect((cfg.host.as_str(), cfg.port))
+        .map_err(|e| format!("POP3S connect to {}:{} failed: {e}", cfg.host, cfg.port))?;
+    let tls = native_tls::TlsConnector::builder()
+        .build()
+        .map_err(|e| format!("POP3S TLS setup failed: {e}"))?;
+    let stream = tls
+        .connect(&cfg.host, tcp)
+        .map_err(|e| format!("POP3S TLS connect failed: {e}"))?;
     let mut reader = BufReader::new(stream);
     response_line(&mut reader)?;
     command(&mut reader, &format!("USER {}\r\n", cfg.username))?;
@@ -320,14 +363,24 @@ pub fn fetch_pop3(cfg: &Pop3Config, mailbox: &str) -> Result<Vec<Pop3FetchedMess
     let mut messages = Vec::new();
     for entry in uids {
         let mut parts = entry.split_whitespace();
-        let Some(number) = parts.next() else { continue; };
-        let Some(uid) = parts.next() else { continue; };
+        let Some(number) = parts.next() else {
+            continue;
+        };
+        let Some(uid) = parts.next() else {
+            continue;
+        };
         command(&mut reader, &format!("RETR {number}\r\n"))?;
         let lines = multiline(&mut reader)?;
         let (from, mut to, subject, body) = headers_and_body(&lines);
-        if !to.contains('@') { to = mailbox.to_string(); }
+        if !to.contains('@') {
+            to = mailbox.to_string();
+        }
         let inbound = build_inbound(&from, &to, &subject, body.len(), false, None);
-        messages.push(Pop3FetchedMessage { uid: uid.to_string(), inbound, body });
+        messages.push(Pop3FetchedMessage {
+            uid: uid.to_string(),
+            inbound,
+            body,
+        });
     }
     let _ = command(&mut reader, "QUIT\r\n");
     Ok(messages)

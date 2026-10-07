@@ -6,9 +6,16 @@
 
 use crate::scene_contract::{RenderScene, ScenePoint};
 use qualia_core_db::render::gpu::PortalGpu;
+use qualia_core_db::render::gpu::{TextureColorSpace, TextureMipSemantic};
 use qualia_core_db::render::telemetry::SystemTelemetry as CoreTelemetry;
 use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
 use qualia_core_db::tensor::Tensor10D;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct TextureUse {
+    color_space: TextureColorSpace,
+    mip_semantic: TextureMipSemantic,
+}
 
 /// Cross-platform volumetric renderer SDK. Native instances render offscreen on the same physical
 /// wgpu device as QualiaDB inference and expose caller-buffered RGBA8 readback.
@@ -44,6 +51,216 @@ impl VolumetricRenderer {
         self.inner.upload_tensor_buffer(bytes)
     }
 
+    /// Load one `.10d` scene asset and its digest-verified HMC texture dependencies.
+    /// Texture decode and GPU residency remain cold, bounded asset-boundary work.
+    pub fn load_hmc_asset(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+    ) -> Result<(u32, u32, f32), String> {
+        use std::collections::{BTreeMap, BTreeSet};
+
+        let bundle = qualia_core_db::bundle::BundleReader::parse(hmc_bytes)
+            .map_err(|error| format!("HMC bundle: {error}"))?;
+        let asset_bytes = bundle
+            .get(asset_key)
+            .ok_or_else(|| format!("HMC asset is missing: {asset_key}"))?;
+        if !bundle.verify_entry(asset_key) {
+            return Err(format!("HMC asset digest check failed: {asset_key}"));
+        }
+        let entry = bundle
+            .entry(asset_key)
+            .ok_or_else(|| format!("HMC asset index entry is missing: {asset_key}"))?;
+        if entry.kind != "10d" {
+            return Err(format!(
+                "HMC asset {asset_key} has kind {:?}, expected 10d",
+                entry.kind
+            ));
+        }
+
+        let header = qualia_core_db::container_10d::Container10dHeader::parse(asset_bytes)
+            .map_err(|error| format!("10d header: {error}"))?;
+        if qualia_core_db::container_10d::compute_whole_file_crc32c(asset_bytes)
+            != header.header_crc32c
+        {
+            return Err("10d whole-file integrity check failed".to_string());
+        }
+        let descs = qualia_core_db::container_10d::parse_section_table(asset_bytes, &header)
+            .map_err(|error| format!("10d section table: {error}"))?;
+        let mut material_payload = None;
+        for descriptor in descs {
+            if descriptor.typ() == Some(qualia_core_db::container_10d::SectionType::Materials) {
+                let start = descriptor.byte_offset as usize;
+                let end = start
+                    .checked_add(descriptor.byte_length as usize)
+                    .filter(|&end| end <= asset_bytes.len())
+                    .ok_or_else(|| "10d MAT1 section is outside asset bytes".to_string())?;
+                material_payload = Some(&asset_bytes[start..end]);
+                break;
+            }
+        }
+        let mut texture_uses = BTreeMap::<[u8; 32], BTreeSet<TextureUse>>::new();
+        if let Some(payload) = material_payload {
+            use qualia_core_db::container_10d::{MaterialRecord, OpacityMode};
+            let (material_count, range_count) =
+                qualia_core_db::container_10d::material_section_counts(payload)
+                    .map_err(|error| format!("10d MAT1 header: {error}"))?;
+            let mut materials = vec![MaterialRecord::legacy_default(); material_count];
+            let first_material_id = materials
+                .first()
+                .ok_or_else(|| "10d MAT1 section has no materials".to_string())?
+                .id;
+            let mut ranges = vec![
+                qualia_core_db::container_10d::SubmeshRange {
+                    first_index: 0,
+                    index_count: 3,
+                    material_id: first_material_id,
+                    semantic_id: 0,
+                };
+                range_count
+            ];
+            let mesh_index_count = descs
+                .iter()
+                .find(|descriptor| {
+                    descriptor.typ()
+                        == Some(qualia_core_db::container_10d::SectionType::QuantizedMesh)
+                })
+                .map(|descriptor| {
+                    let start = descriptor.byte_offset as usize;
+                    let end = start + descriptor.byte_length as usize;
+                    qualia_core_db::container_10d::decode_mesh_section(&asset_bytes[start..end])
+                        .map(|mesh| mesh.triangles.len().saturating_mul(3) as u32)
+                        .map_err(|error| format!("10d mesh decode: {error}"))
+                })
+                .transpose()?
+                .ok_or_else(|| "10d asset has no QuantizedMesh section".to_string())?;
+            qualia_core_db::container_10d::decode_material_section_into(
+                payload,
+                mesh_index_count,
+                &mut materials,
+                &mut ranges,
+            )
+            .map_err(|error| format!("10d MAT1 decode: {error}"))?;
+            for material in &materials {
+                if material.base_color_texture != [0; 32] {
+                    texture_uses
+                        .entry(material.base_color_texture)
+                        .or_default()
+                        .insert(TextureUse {
+                            color_space: TextureColorSpace::Srgb,
+                            mip_semantic: if material.opacity_mode == OpacityMode::Mask {
+                                TextureMipSemantic::alpha_mask(material.alpha_cutoff)
+                                    .unwrap_or(TextureMipSemantic::Color)
+                            } else {
+                                TextureMipSemantic::Color
+                            },
+                        });
+                }
+                if material.emissive_texture != [0; 32] {
+                    texture_uses
+                        .entry(material.emissive_texture)
+                        .or_default()
+                        .insert(TextureUse {
+                            color_space: TextureColorSpace::Srgb,
+                            mip_semantic: TextureMipSemantic::Color,
+                        });
+                }
+                if material.normal_texture != [0; 32] {
+                    texture_uses
+                        .entry(material.normal_texture)
+                        .or_default()
+                        .insert(TextureUse {
+                            color_space: TextureColorSpace::Linear,
+                            mip_semantic: TextureMipSemantic::Normal,
+                        });
+                }
+                for digest in [
+                    &material.metallic_roughness_texture,
+                    &material.occlusion_texture,
+                ] {
+                    if *digest != [0; 32] {
+                        texture_uses.entry(*digest).or_default().insert(TextureUse {
+                            color_space: TextureColorSpace::Linear,
+                            mip_semantic: TextureMipSemantic::LinearData,
+                        });
+                    }
+                }
+                if material.stylized_ramp_texture != [0; 32] {
+                    texture_uses
+                        .entry(material.stylized_ramp_texture)
+                        .or_default()
+                        .insert(TextureUse {
+                            color_space: TextureColorSpace::Srgb,
+                            mip_semantic: TextureMipSemantic::Color,
+                        });
+                }
+            }
+        }
+
+        let mut newly_resident = Vec::new();
+        let upload_result = (|| -> Result<(), String> {
+            for (digest, uses) in texture_uses {
+                let resource = qualia_core_db::render::asset_package::resolve_hmc_texture_resource(
+                    &bundle, &digest,
+                )
+                .map_err(|error| format!("HMC texture resolution: {error}"))?;
+                let (rgba8, info) =
+                    qualia_core_db::render::texture_decode::decode_hmc_texture_rgba8(
+                        &resource,
+                        qualia_core_db::render::texture_decode::TextureDecodeLimits::default(),
+                    )
+                    .map_err(|error| format!("HMC texture decode: {error}"))?;
+                for texture_use in uses {
+                    let was_resident = self
+                        .inner
+                        .resident_texture_binding_with_mips(
+                            &digest,
+                            texture_use.color_space,
+                            texture_use.mip_semantic,
+                        )
+                        .is_some();
+                    self.inner
+                        .upload_resident_texture_rgba8_with_mips(
+                            digest,
+                            texture_use.color_space,
+                            texture_use.mip_semantic,
+                            info.width,
+                            info.height,
+                            &rgba8,
+                        )
+                        .map_err(|error| format!("HMC texture upload: {error}"))?;
+                    if !was_resident {
+                        newly_resident.push((digest, texture_use));
+                    }
+                }
+            }
+            Ok(())
+        })();
+        if let Err(error) = upload_result {
+            for (digest, texture_use) in newly_resident {
+                self.inner.evict_resident_texture_with_mips(
+                    &digest,
+                    texture_use.color_space,
+                    texture_use.mip_semantic,
+                );
+            }
+            return Err(error);
+        }
+        match self.load_10d_asset(asset_bytes) {
+            Ok(result) => Ok(result),
+            Err(error) => {
+                for (digest, texture_use) in newly_resident {
+                    self.inner.evict_resident_texture_with_mips(
+                        &digest,
+                        texture_use.color_space,
+                        texture_use.mip_semantic,
+                    );
+                }
+                Err(error)
+            }
+        }
+    }
+
     pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
         self.inner.upload_mesh(positions, indices)
     }
@@ -77,6 +294,38 @@ impl VolumetricRenderer {
         self.inner.set_camera(yaw, pitch, zoom);
     }
 
+    /// Toggle the bounded portable directional shadow pass. When its VRAM reservation is refused,
+    /// the renderer keeps the unshadowed material path available.
+    pub fn set_sun_shadows_enabled(&mut self, enabled: bool) {
+        self.inner.set_shadows_enabled(enabled);
+    }
+
+    pub fn sun_shadow_resolution(&self) -> Option<u32> {
+        self.inner.shadow_resolution()
+    }
+
+    /// Enable the optional half-resolution depth/normal ambient-visibility pass when budget permits.
+    pub fn set_screen_space_ao_enabled(&mut self, enabled: bool) {
+        self.inner.set_screen_space_ao_enabled(enabled);
+    }
+
+    /// Set the world-space AO radius, indirect visibility strength, and normal-offset bias.
+    pub fn set_screen_space_ao(&mut self, radius: f32, strength: f32, bias: f32) {
+        self.inner.set_screen_space_ao(radius, strength, bias);
+    }
+
+    pub fn set_screen_space_ao_sample_count(&mut self, samples: u32) {
+        self.inner.set_screen_space_ao_sample_count(samples);
+    }
+
+    pub fn screen_space_ao_available(&self) -> bool {
+        self.inner.screen_space_ao_available()
+    }
+
+    pub fn screen_space_ao_resolution(&self) -> Option<(u32, u32)> {
+        self.inner.screen_space_ao_resolution()
+    }
+
     pub fn render(
         &mut self,
         time_seconds: f32,
@@ -94,7 +343,9 @@ impl VolumetricRenderer {
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
-        self.inner.resize(width, height);
+        if let Err(error) = self.inner.resize(width, height) {
+            log::warn!("volumetric renderer resize retained previous targets: {error}");
+        }
     }
 
     /// P9.3 — Queue an integer pick at pixel `(x, y)`. The result is available
@@ -109,10 +360,9 @@ impl VolumetricRenderer {
         self.inner.poll_pick_readback()
     }
 
-    /// P9.3 — CPU picking oracle: returns the nearest projected tensor node
-    /// index at canvas pixel `(pick_x, pick_y)`, or `None` if no node is within
-    /// hit radius. This is the deterministic fallback / differential oracle for
-    /// the GPU picking pass.
+    /// Legacy planar CPU picker retained for callers using the Canvas2D
+    /// projection. The camera-aware WebGPU-equivalent oracle is exposed by
+    /// [`Self::cpu_pick_node_at_camera`].
     pub fn cpu_pick_node_at(
         tensor: &[u8],
         canvas_w: f64,
@@ -124,6 +374,24 @@ impl VolumetricRenderer {
     ) -> Option<u32> {
         qualia_core_db::render::navigation::cpu_pick_node_at(
             tensor, canvas_w, canvas_h, pick_x, pick_y, yaw, standpoint,
+        )
+    }
+
+    /// CPU oracle for the Tensor10D WebGPU picking pass. Uses the same camera,
+    /// frame time, observer/PGA transform, clip range, pixel footprint and
+    /// depth ordering as the GPU projector.
+    pub fn cpu_pick_node_at_camera(
+        tensor: &[u8],
+        canvas_w: u32,
+        canvas_h: u32,
+        pick_x: f64,
+        pick_y: f64,
+        frame_time: f32,
+        camera: qualia_core_db::render::camera::CameraState,
+        standpoint: &qualia_core_db::render::telemetry::ObserverStandpoint,
+    ) -> Option<u32> {
+        qualia_core_db::render::navigation::cpu_pick_node_at_camera(
+            tensor, canvas_w, canvas_h, pick_x, pick_y, frame_time, camera, standpoint,
         )
     }
 
@@ -149,6 +417,8 @@ impl VolumetricRenderer {
             .map_err(|e| format!("10d section table: {e}"))?;
 
         let mut mesh = None;
+        let mut material_payload = None;
+        let mut texture_coordinates_payload = None;
         let mut provenance_mu: f32 = 0.0;
         let mut nodes: Vec<Tensor10D> = Vec::new();
 
@@ -182,6 +452,12 @@ impl VolumetricRenderer {
                         nodes.push(t);
                     }
                 }
+                container_10d::SectionType::Materials => {
+                    material_payload = Some(payload);
+                }
+                container_10d::SectionType::TextureCoordinates => {
+                    texture_coordinates_payload = Some(payload);
+                }
                 _ => {}
             }
         }
@@ -189,18 +465,33 @@ impl VolumetricRenderer {
         let mesh = mesh.ok_or_else(|| "10d: no mesh section".to_string())?;
         let tri_count = mesh.triangles.len() as u32;
         let vert_count = mesh.positions.len() as u32;
+        let texture_coordinates_0 = if let Some(payload) = texture_coordinates_payload {
+            let mut coordinates = vec![[0.0f32; 2]; mesh.positions.len()];
+            let count = container_10d::decode_texture_coordinates_into(
+                payload,
+                mesh.positions.len(),
+                &mut coordinates,
+            )
+            .map_err(|error| format!("10d UV01 decode: {error}"))?;
+            if count != mesh.positions.len() {
+                return Err("10d UV01 vertex count does not match mesh".to_string());
+            }
+            Some(coordinates)
+        } else {
+            None
+        };
 
         let mut indices = Vec::with_capacity(mesh.triangles.len() * 3);
         for triangle in &mesh.triangles {
             indices.extend_from_slice(triangle);
         }
 
-        if nodes.is_empty() {
-            self.inner.upload_mesh(&mesh.positions, &indices);
+        let colors: Vec<[f32; 4]> = if nodes.is_empty() {
+            Vec::new()
         } else {
-            // Colour vertices by nearest node σ (spectral paint).
-            let colors: Vec<[f32; 4]> = mesh
-                .positions
+            // Colour vertices by nearest node σ as an explicit observer projection. MAT1's
+            // multiplyVertexColor flag controls whether that projection tints the surface.
+            mesh.positions
                 .iter()
                 .map(|p| {
                     let mut best = 0usize;
@@ -218,7 +509,71 @@ impl VolumetricRenderer {
                     let (r, g, b) = sigma_to_display_rgb(nodes[best].sigma);
                     [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0]
                 })
-                .collect();
+                .collect()
+        };
+
+        if let Some(payload) = material_payload {
+            let (material_count, range_count) = container_10d::material_section_counts(payload)
+                .map_err(|error| format!("10d MAT1 header: {error}"))?;
+            if range_count > qualia_core_db::render::gpu::MAX_GPU_MATERIAL_DRAWS {
+                return Err("10d MAT1 draw count exceeds the active renderer cap".to_string());
+            }
+            let mut materials =
+                vec![container_10d::MaterialRecord::legacy_default(); material_count];
+            let mut ranges = vec![
+                container_10d::SubmeshRange {
+                    first_index: 0,
+                    index_count: 3,
+                    material_id: materials.first().map(|material| material.id).unwrap_or(1),
+                    semantic_id: 0,
+                };
+                range_count
+            ];
+            let index_count = u32::try_from(indices.len())
+                .map_err(|_| "10d mesh index count exceeds u32".to_string())?;
+            container_10d::decode_material_section_into(
+                payload,
+                index_count,
+                &mut materials,
+                &mut ranges,
+            )
+            .map_err(|error| format!("10d MAT1 decode: {error}"))?;
+            self.inner
+                .upload_mesh_colored_with_frames_and_materials_and_uv0(
+                    &mesh.positions,
+                    &colors,
+                    None,
+                    None,
+                    texture_coordinates_0.as_deref(),
+                    &indices,
+                    &materials,
+                    &ranges,
+                )
+                .map_err(|error| format!("10d MAT1 GPU upload: {error}"))?;
+        } else if let Some(coordinates) = texture_coordinates_0.as_deref() {
+            let material = container_10d::MaterialRecord::legacy_default();
+            let range = container_10d::SubmeshRange {
+                first_index: 0,
+                index_count: u32::try_from(indices.len())
+                    .map_err(|_| "10d mesh index count exceeds u32".to_string())?,
+                material_id: material.id,
+                semantic_id: 0,
+            };
+            self.inner
+                .upload_mesh_colored_with_frames_and_materials_and_uv0(
+                    &mesh.positions,
+                    &colors,
+                    None,
+                    None,
+                    Some(coordinates),
+                    &indices,
+                    &[material],
+                    &[range],
+                )
+                .map_err(|error| format!("10d UV0 GPU upload: {error}"))?;
+        } else if colors.is_empty() {
+            self.inner.upload_mesh(&mesh.positions, &indices);
+        } else {
             self.inner
                 .upload_mesh_colored(&mesh.positions, &colors, &indices);
         }

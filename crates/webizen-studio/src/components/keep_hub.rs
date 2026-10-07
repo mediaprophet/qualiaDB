@@ -7,8 +7,7 @@
 use dioxus::prelude::*;
 use webizen_studio::keep_volume::{
     held_outcome, interpret_commit, interpret_open, merge_browse_list, remember_recent,
-    sayable_name, KeepOutcome, RecentVolume, VaultVolume, VolumeLook, COMMIT_ID, HELD_WHY,
-    OPEN_ID,
+    sayable_name, KeepOutcome, RecentVolume, VaultVolume, VolumeLook, COMMIT_ID, HELD_WHY, OPEN_ID,
 };
 #[cfg(target_arch = "wasm32")]
 use webizen_studio::keep_volume::{parse_recents_json, recents_json, RECENT_STORAGE_KEY};
@@ -345,7 +344,11 @@ fn persist_recents(items: &[RecentVolume]) {
     }
 }
 
-fn remember_path(path: &str, recents: &mut Signal<Vec<RecentVolume>>, browse: &mut Signal<Vec<RecentVolume>>) {
+fn remember_path(
+    path: &str,
+    recents: &mut Signal<Vec<RecentVolume>>,
+    browse: &mut Signal<Vec<RecentVolume>>,
+) {
     let next = remember_recent(&recents(), path);
     persist_recents(&next);
     recents.set(next.clone());

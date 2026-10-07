@@ -5,13 +5,9 @@ mod cpu;
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
-use crate::gguf_bridge::{
-    PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS,
-};
+use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS};
 use crate::gguf_sharder::GgufTokenizer;
-use crate::inference::conditioning::{
-    select_prioritized_parts, RequestPart, RequestPartKind,
-};
+use crate::inference::conditioning::{select_prioritized_parts, RequestPart, RequestPartKind};
 
 /// Autoregressive decode budget for browser harness.
 /// 32 was too short for chat replies and made truncated junk look like "garbage".
@@ -94,8 +90,7 @@ async fn run_inference_async(
                         .iter()
                         .any(|part| part.kind == RequestPartKind::ChatGraphThread) =>
                 {
-                    let mut composed =
-                        String::with_capacity(cg.len() + prompt.len() + 2);
+                    let mut composed = String::with_capacity(cg.len() + prompt.len() + 2);
                     composed.push_str(cg);
                     composed.push_str("\n\n");
                     composed.push_str(prompt);
@@ -598,10 +593,16 @@ pub async fn infer_wasm_with_context(
     prompt: String,
     graph_context: String,
 ) -> Result<String, JsValue> {
-    run_inference_async(&prompt, &graph_context, None, None, WASM_DECODE_TOKEN_BUDGET)
-        .await
-        .map(|result| result.text)
-        .map_err(|e| JsValue::from_str(&e))
+    run_inference_async(
+        &prompt,
+        &graph_context,
+        None,
+        None,
+        WASM_DECODE_TOKEN_BUDGET,
+    )
+    .await
+    .map(|result| result.text)
+    .map_err(|e| JsValue::from_str(&e))
 }
 
 /// Stream token deltas to `on_token` (UTF-8 string chunks) while decoding.

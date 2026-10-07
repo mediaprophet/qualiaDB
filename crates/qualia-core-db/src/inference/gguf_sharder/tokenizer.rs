@@ -622,7 +622,6 @@ impl GgufTokenizer {
         self.encode_prompt(&templated)
     }
 
-
     /// Format token IDs for diagnostic logging (MC3f).
     pub fn format_ids_for_log(ids: &[u32]) -> String {
         let mut s = String::from("[");

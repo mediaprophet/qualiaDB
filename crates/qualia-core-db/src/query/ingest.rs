@@ -306,7 +306,15 @@ pub fn streaming_import_rdf_with_report(
     max_segment_bytes: Option<u64>,
     report: IngestReport,
 ) -> std::io::Result<u64> {
-    streaming_import_rdf_with_mode_inner(in_path, out_path, mode, max_segment_bytes, report, None, &[])
+    streaming_import_rdf_with_mode_inner(
+        in_path,
+        out_path,
+        mode,
+        max_segment_bytes,
+        report,
+        None,
+        &[],
+    )
 }
 
 /// Resume or run a durable job directory (`job.json` + `runs/`).

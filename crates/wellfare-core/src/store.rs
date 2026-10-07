@@ -25,7 +25,11 @@ impl HealthStore {
         let mut current_subj = String::new();
         for line in turtle.lines() {
             let trimmed = line.trim();
-            if trimmed.is_empty() || trimmed.starts_with('@') || trimmed.starts_with("PREFIX") || trimmed.starts_with('#') {
+            if trimmed.is_empty()
+                || trimmed.starts_with('@')
+                || trimmed.starts_with("PREFIX")
+                || trimmed.starts_with('#')
+            {
                 continue;
             }
 
@@ -44,14 +48,12 @@ impl HealthStore {
 
             while idx + 1 < tokens.len() {
                 let pred = tokens[idx].trim_matches(|c| c == '<' || c == '>');
-                let obj = tokens[idx + 1].trim_matches(|c| c == '<' || c == '>' || c == ';' || c == '.');
-                
+                let obj =
+                    tokens[idx + 1].trim_matches(|c| c == '<' || c == '>' || c == ';' || c == '.');
+
                 if !current_subj.is_empty() && !pred.is_empty() {
-                    self.triples.push((
-                        current_subj.clone(),
-                        pred.to_string(),
-                        obj.to_string(),
-                    ));
+                    self.triples
+                        .push((current_subj.clone(), pred.to_string(), obj.to_string()));
                 }
                 idx += 2;
                 if idx < tokens.len() && tokens[idx] == ";" {
@@ -80,7 +82,9 @@ impl HealthStore {
                     "{{\"head\":{{\"vars\":[\"avg\"]}},\"results\":{{\"bindings\":[{{\"avg\":{{\"type\":\"typed-literal\",\"datatype\":\"http://www.w3.org/2001/XMLSchema#double\",\"value\":\"{:.2}\"}}}}]}}}}",
                     val
                 )),
-                None => Ok("{\"head\":{\"vars\":[\"avg\"]},\"results\":{\"bindings\":[]}}".to_string()),
+                None => {
+                    Ok("{\"head\":{\"vars\":[\"avg\"]},\"results\":{\"bindings\":[]}}".to_string())
+                }
             };
         }
 
@@ -140,7 +144,9 @@ impl HealthStore {
                 }
             }
             // Check Observation.valueQuantity
-            if query.contains("Observation.valueQuantity") && trimmed.contains("Observation.valueQuantity") {
+            if query.contains("Observation.valueQuantity")
+                && trimmed.contains("Observation.valueQuantity")
+            {
                 if let Some(val) = extract_num_after(trimmed, "Observation.valueQuantity") {
                     if query.contains("364075005") {
                         // Heart rate range 20-300
@@ -258,7 +264,13 @@ fn extract_num_after(line: &str, key: &str) -> Option<f64> {
         // Clean remainder of punctuation
         let clean: String = remainder
             .chars()
-            .map(|c| if c.is_ascii_digit() || c == '.' || c == '-' { c } else { ' ' })
+            .map(|c| {
+                if c.is_ascii_digit() || c == '.' || c == '-' {
+                    c
+                } else {
+                    ' '
+                }
+            })
             .collect();
         for word in clean.split_whitespace() {
             if let Ok(num) = word.parse::<f64>() {

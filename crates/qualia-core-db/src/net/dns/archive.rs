@@ -44,10 +44,16 @@ impl DnsArchiveHeader {
 
     pub fn validate(&self) -> io::Result<()> {
         if self.magic != QDNS_MAGIC {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid QDNS archive magic"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "invalid QDNS archive magic",
+            ));
         }
         if self.version != 1 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "unsupported QDNS archive version"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unsupported QDNS archive version",
+            ));
         }
         Ok(())
     }
@@ -85,9 +91,8 @@ pub fn read_dns_archive<R: io::Read>(
     let mut header_buf = [0u8; DnsArchiveHeader::SIZE];
     reader.read_exact(&mut header_buf)?;
 
-    let header: DnsArchiveHeader = unsafe {
-        std::ptr::read_unaligned(header_buf.as_ptr() as *const DnsArchiveHeader)
-    };
+    let header: DnsArchiveHeader =
+        unsafe { std::ptr::read_unaligned(header_buf.as_ptr() as *const DnsArchiveHeader) };
     header.validate()?;
 
     let to_read = core::cmp::min(header.record_count as usize, out_quins.len());
@@ -111,7 +116,10 @@ impl DnsArchiveMmap {
         let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
 
         if mmap.len() < DnsArchiveHeader::SIZE {
-            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "file too small for QDNS header"));
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "file too small for QDNS header",
+            ));
         }
 
         let archive = Self { mmap };
@@ -129,9 +137,7 @@ impl DnsArchiveMmap {
         let payload = &self.mmap[DnsArchiveHeader::SIZE..];
         let record_size = std::mem::size_of::<NQuin>();
         let count = payload.len() / record_size;
-        unsafe {
-            std::slice::from_raw_parts(payload.as_ptr() as *const NQuin, count)
-        }
+        unsafe { std::slice::from_raw_parts(payload.as_ptr() as *const NQuin, count) }
     }
 }
 
@@ -149,8 +155,18 @@ mod tests {
 
     #[test]
     fn archive_roundtrip_stream() {
-        let q1 = encode_a_record("arch1.lan", [192, 168, 1, 10], 3600, PermissiveRoutingLane::PassthroughStandard);
-        let q2 = encode_aaaa_record("arch2.lan", [0x20; 16], 7200, PermissiveRoutingLane::EnforcePermissiveCommons);
+        let q1 = encode_a_record(
+            "arch1.lan",
+            [192, 168, 1, 10],
+            3600,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
+        let q2 = encode_aaaa_record(
+            "arch2.lan",
+            [0x20; 16],
+            7200,
+            PermissiveRoutingLane::EnforcePermissiveCommons,
+        );
         let quins = [q1, q2];
 
         let mut buf = Vec::new();
@@ -178,7 +194,12 @@ mod tests {
     fn archive_mmap_file_roundtrip() {
         use tempfile::NamedTempFile;
 
-        let q1 = encode_a_record("file.lan", [1, 2, 3, 4], 300, PermissiveRoutingLane::PassthroughStandard);
+        let q1 = encode_a_record(
+            "file.lan",
+            [1, 2, 3, 4],
+            300,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
         let quins = [q1];
 
         let mut temp_file = NamedTempFile::new().unwrap();

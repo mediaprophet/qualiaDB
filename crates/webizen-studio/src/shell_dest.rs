@@ -101,7 +101,10 @@ mod tests {
     #[test]
     fn settings_is_in_shell_not_home() {
         assert_eq!(route_from_shell_target("settings"), Route::SettingsRoute {});
-        assert_eq!(route_from_shell_target("/settings"), Route::SettingsRoute {});
+        assert_eq!(
+            route_from_shell_target("/settings"),
+            Route::SettingsRoute {}
+        );
         assert_eq!(route_from_shell_target("prefs"), Route::SettingsRoute {});
         assert_ne!(route_from_shell_target("settings"), Route::TalkRoute {});
     }

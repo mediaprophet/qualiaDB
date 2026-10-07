@@ -29,8 +29,7 @@ pub const QWEN4EXP_QSA_TOP_BLOCKS: usize = QWEN4EXP_QSA_TOP_K / QWEN4EXP_QSA_COM
 pub const QWEN4EXP_QSA_ROTARY_DIM: usize = 64;
 /// Maximum tokens reachable per step: `token_topk` block members plus the
 /// open group's causal tail (`ratio - 1`), matching `select_width`.
-pub const QWEN4EXP_QSA_MAX_SELECTED: usize =
-    QWEN4EXP_QSA_TOP_K + QWEN4EXP_QSA_COMPRESS_RATIO - 1;
+pub const QWEN4EXP_QSA_MAX_SELECTED: usize = QWEN4EXP_QSA_TOP_K + QWEN4EXP_QSA_COMPRESS_RATIO - 1;
 const QUERY_WIDTH: usize = QWEN4EXP_QSA_QUERY_HEADS * QWEN4EXP_QSA_HEAD_DIM;
 const KV_WIDTH: usize = QWEN4EXP_QSA_KV_HEADS * QWEN4EXP_QSA_HEAD_DIM;
 const INDEX_QUERY_WIDTH: usize = QWEN4EXP_QSA_INDEXER_HEADS * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
@@ -404,8 +403,8 @@ pub fn execute_streamed_qsa(
     for block in 0..complete_blocks {
         let mut pooled = [0.0f32; QWEN4EXP_QSA_INDEXER_HEAD_DIM];
         for member in 0..QWEN4EXP_QSA_COMPRESS_RATIO {
-            let offset = (block * QWEN4EXP_QSA_COMPRESS_RATIO + member)
-                * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
+            let offset =
+                (block * QWEN4EXP_QSA_COMPRESS_RATIO + member) * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
             for dim in 0..QWEN4EXP_QSA_INDEXER_HEAD_DIM {
                 pooled[dim] += state.indexer_keys[offset + dim];
             }
@@ -419,11 +418,7 @@ pub fn execute_streamed_qsa(
             1,
             QWEN4EXP_QSA_INDEXER_HEAD_DIM,
         );
-        rope_head(
-            &mut pooled,
-            block * QWEN4EXP_QSA_COMPRESS_RATIO,
-            rope_theta,
-        );
+        rope_head(&mut pooled, block * QWEN4EXP_QSA_COMPRESS_RATIO, rope_theta);
         let mut score = 0.0f32;
         for head in 0..QWEN4EXP_QSA_INDEXER_HEADS {
             let mut dot = 0.0f32;

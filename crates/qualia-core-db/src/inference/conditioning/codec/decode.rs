@@ -38,8 +38,8 @@ pub fn decode_plan_cbor<'a>(input: &'a [u8]) -> Result<CompiledPlanSummary<'a>, 
     if idx + p_len > input.len() {
         return Err(ConditioningError::CodecError);
     }
-    let profile_id = std::str::from_utf8(&input[idx..idx + p_len])
-        .map_err(|_| ConditioningError::CodecError)?;
+    let profile_id =
+        std::str::from_utf8(&input[idx..idx + p_len]).map_err(|_| ConditioningError::CodecError)?;
     idx += p_len;
 
     // Field 3: Objective
@@ -51,16 +51,16 @@ pub fn decode_plan_cbor<'a>(input: &'a [u8]) -> Result<CompiledPlanSummary<'a>, 
     if idx + o_len > input.len() {
         return Err(ConditioningError::CodecError);
     }
-    let objective = std::str::from_utf8(&input[idx..idx + o_len])
-        .map_err(|_| ConditioningError::CodecError)?;
+    let objective =
+        std::str::from_utf8(&input[idx..idx + o_len]).map_err(|_| ConditioningError::CodecError)?;
     idx += o_len;
 
     // Field 4: Requirements count
     if idx + 4 > input.len() {
         return Err(ConditioningError::CodecError);
     }
-    let req_count = u32::from_be_bytes([input[idx], input[idx + 1], input[idx + 2], input[idx + 3]])
-        as usize;
+    let req_count =
+        u32::from_be_bytes([input[idx], input[idx + 1], input[idx + 2], input[idx + 3]]) as usize;
     idx += 4;
 
     // Field 5: Outcomes count

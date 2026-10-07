@@ -1,22 +1,24 @@
-//! EMF 5D volumetric visualizer pipeline (plan §7.3 W4).
+//! EMF field-family volumetric visualizer pipeline (plan §7.3 W4).
 //!
 //! Extends [`PortalGpu`] with a render pipeline that draws 2D slices of the
-//! 4D EMF field grid (x×y×z×t) with 10D manifold tags mapped to color.
+//! 4D EMF field grid (x×y×z×t) with the full 10D manifold record preserved.
+//! This renderer is one field-family view over the shared scientific manifold;
+//! it does not define or replace astrophysics, wave, diffusion, or other fields.
 //!
 //! The field data is uploaded as a storage buffer of `EmfFieldCell` structs
-//! (48 bytes each: amplitude + phase + frequency + 10D manifold coordinate).
+//! (52 bytes each: amplitude + phase + frequency + 10D manifold coordinate).
 //! A full-screen quad fragment shader samples the grid bilinearly and maps:
 //! - amplitude → brightness (HDR)
-//! - phase → hue (via σ → CIE XYZ → linear sRGB)
-//! - manifold.scale → saturation
-//! - manifold.manifold_curvature → rim glow
+//! - phase → hue as a derived display projection (via σ → CIE XYZ → linear sRGB)
+//! - manifold.scale → display saturation
+//! - manifold.manifold_curvature → display rim glow
 
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
 
 /// Per-cell field data uploaded to the GPU storage buffer.
 ///
-/// Layout matches the WGSL `EmfFieldCell` struct (48 bytes = 3 f32 + 10 f32 + 1 pad).
+/// Layout matches the WGSL `EmfFieldCell` struct (52 bytes = 3 field f32 + 10 manifold f32).
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable, Default)]
 pub struct EmfFieldCell {
@@ -37,6 +39,17 @@ pub struct EmfFieldCell {
 }
 
 const _: [(); 52] = [(); std::mem::size_of::<EmfFieldCell>()];
+
+fn checked_grid_cell_count(nx: u32, ny: u32, nz: u32, nt: u32) -> Option<u64> {
+    u64::from(nx)
+        .checked_mul(u64::from(ny))?
+        .checked_mul(u64::from(nz))?
+        .checked_mul(u64::from(nt))
+}
+
+fn checked_field_bytes(cells: u64) -> Option<u64> {
+    cells.checked_mul(std::mem::size_of::<EmfFieldCell>() as u64)
+}
 
 /// Slice parameter uniform (64 bytes, std140-aligned).
 #[repr(C, align(16))]
@@ -66,6 +79,7 @@ const _: [(); 64] = [(); std::mem::size_of::<EmfSliceUniform>()];
 pub(crate) struct EmfState {
     /// Uploaded field cells (storage buffer).
     field_buf: Option<wgpu::Buffer>,
+    _field_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     /// Number of cells in the field buffer.
     cell_count: u32,
     /// Grid dimensions.
@@ -75,6 +89,7 @@ pub(crate) struct EmfState {
     nt: u32,
     /// Slice parameter uniform buffer.
     param_buf: wgpu::Buffer,
+    _param_buffer_reservation: crate::gpu_context::VramReservation<'static>,
     /// Params bind group (group 0). Created once; references param_buf.
     params_bind_group: wgpu::BindGroup,
     /// Field bind group (group 1). Rebuilt when field buffer changes.
@@ -85,7 +100,17 @@ pub(crate) struct EmfState {
 
 impl EmfState {
     /// Construct the EMF pipeline state on the given device.
-    pub(crate) fn new(device: &wgpu::Device, color_format: wgpu::TextureFormat) -> Self {
+    pub(crate) fn new(
+        device: &wgpu::Device,
+        color_format: wgpu::TextureFormat,
+    ) -> Result<Self, String> {
+        let param_bytes = std::mem::size_of::<EmfSliceUniform>() as u64;
+        let param_buffer_reservation = crate::gpu_context::global_vram_ledger()
+            .try_reserve_graphics(
+                crate::gpu_context::VramResourceClass::FrameTarget,
+                param_bytes,
+            )
+            .map_err(|e| format!("EMF parameter buffer reservation failed: {e}"))?;
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("emf-volumetric-shader"),
             source: wgpu::ShaderSource::Wgsl(crate::shaders::viewport::EMF_VOLUMETRIC_WGSL.into()),
@@ -177,18 +202,20 @@ impl EmfState {
             }],
         });
 
-        Self {
+        Ok(Self {
             field_buf: None,
+            _field_reservation: None,
             cell_count: 0,
             nx: 0,
             ny: 0,
             nz: 0,
             nt: 0,
             param_buf,
+            _param_buffer_reservation: param_buffer_reservation,
             params_bind_group,
             field_bind_group: None,
             pipeline,
-        }
+        })
     }
 
     /// Whether a field has been uploaded.
@@ -216,13 +243,35 @@ impl super::PortalGpu {
         nt: u32,
         bounds: [f32; 6],
     ) -> Result<(), String> {
-        let expected = (nx as u64) * (ny as u64) * (nz as u64) * (nt as u64);
+        let expected = checked_grid_cell_count(nx, ny, nz, nt)
+            .ok_or_else(|| "emf_upload_field: grid cell count overflow".to_string())?;
         if cells.len() as u64 != expected {
             return Err(format!(
                 "emf_upload_field: expected {expected} cells for {nx}×{ny}×{nz}×{nt}, got {}",
                 cells.len()
             ));
         }
+        if expected == 0 {
+            return Err("emf_upload_field: all grid dimensions must be non-zero".into());
+        }
+        if expected > u64::from(u32::MAX) {
+            return Err("emf_upload_field: cell count exceeds the renderer ABI".into());
+        }
+        let field_bytes = checked_field_bytes(expected)
+            .ok_or_else(|| "emf_upload_field: field byte size overflow".to_string())?;
+        let max_binding_bytes = u64::from(self.device.limits().max_storage_buffer_binding_size);
+        let max_buffer_bytes = self.device.limits().max_buffer_size;
+        if field_bytes > max_binding_bytes || field_bytes > max_buffer_bytes {
+            return Err(format!(
+                "emf_upload_field: {field_bytes} bytes exceed this device's storage-buffer limit ({max_binding_bytes})"
+            ));
+        }
+        let field_reservation = crate::gpu_context::global_vram_ledger()
+            .try_reserve_graphics(
+                crate::gpu_context::VramResourceClass::FieldResidency,
+                field_bytes,
+            )
+            .map_err(|e| format!("emf_upload_field: field residency refused: {e}"))?;
 
         let field_buf = self
             .device
@@ -232,7 +281,19 @@ impl super::PortalGpu {
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             });
 
+        // Build all replacement handles before swapping out the old field. If
+        // admission or allocation fails, the currently displayed field remains valid.
+        let field_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("emf-field-bind"),
+            layout: &self.emf.pipeline.get_bind_group_layout(1),
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: field_buf.as_entire_binding(),
+            }],
+        });
+        self.emf.field_bind_group = Some(field_bind_group);
         self.emf.field_buf = Some(field_buf);
+        self.emf._field_reservation = Some(field_reservation);
         self.emf.cell_count = cells.len() as u32;
         self.emf.nx = nx;
         self.emf.ny = ny;
@@ -241,18 +302,6 @@ impl super::PortalGpu {
 
         // Update the slice parameter uniform with default slice (z=0, t=0).
         self.emf_update_slice_params(0, 0, bounds, 1.0, 0.0, 1.0);
-
-        // Rebuild the field bind group (group 1) with the new field buffer.
-        let field_buf = self.emf.field_buf.as_ref().unwrap();
-        self.emf.field_bind_group =
-            Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("emf-field-bind"),
-                layout: &self.emf.pipeline.get_bind_group_layout(1),
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: field_buf.as_entire_binding(),
-                }],
-            }));
 
         Ok(())
     }
@@ -370,6 +419,18 @@ mod tests {
     fn emf_field_cell_size() {
         // 3 f32 (amp/phase/freq) + 10 f32 (manifold) = 13 f32 = 52 bytes
         assert_eq!(std::mem::size_of::<EmfFieldCell>(), 52);
+    }
+
+    #[test]
+    fn emf_grid_and_residency_sizing_is_checked() {
+        assert_eq!(checked_grid_cell_count(4, 4, 1, 1), Some(16));
+        assert_eq!(
+            checked_grid_cell_count(u32::MAX, u32::MAX, u32::MAX, 2),
+            None
+        );
+        assert_eq!(checked_grid_cell_count(0, 4, 1, 1), Some(0));
+        assert_eq!(checked_field_bytes(16), Some(832));
+        assert_eq!(checked_field_bytes(u64::MAX), None);
     }
 
     #[test]

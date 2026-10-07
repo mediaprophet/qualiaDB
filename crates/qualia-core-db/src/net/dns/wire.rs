@@ -320,8 +320,19 @@ where
         let rdata = &packet[offset..offset + rdlength];
         offset += rdlength;
 
-        let name_str = std::str::from_utf8(&name_buf[..name_len]).map_err(|_| "invalid UTF-8 in DNS name")?;
-        callback(name_str, DnsRecordView { rtype, rclass, ttl, rdata, rdata_offset, packet })?;
+        let name_str =
+            std::str::from_utf8(&name_buf[..name_len]).map_err(|_| "invalid UTF-8 in DNS name")?;
+        callback(
+            name_str,
+            DnsRecordView {
+                rtype,
+                rclass,
+                ttl,
+                rdata,
+                rdata_offset,
+                packet,
+            },
+        )?;
     }
     Ok(offset)
 }
@@ -362,7 +373,10 @@ mod tests {
         assert_eq!(n, 12);
         let decoded = DnsHeader::decode(&buf).unwrap();
         assert_eq!(decoded.id, 0x1234);
-        assert_eq!(decoded.flags & FLAG_RD_RECURSION_DESIRED, FLAG_RD_RECURSION_DESIRED);
+        assert_eq!(
+            decoded.flags & FLAG_RD_RECURSION_DESIRED,
+            FLAG_RD_RECURSION_DESIRED
+        );
         assert_eq!(decoded.qdcount, 1);
     }
 

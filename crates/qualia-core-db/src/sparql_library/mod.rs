@@ -37,11 +37,11 @@ pub use range_union::{
 };
 pub mod external_sort;
 pub mod geosparql;
-pub mod kernel_extensions;
 /// Immersive SPARQL (QISP) profile — Phase 2 typed values, dense-asset registry,
 /// and (integrated here) the typed function descriptor registry. See
 /// `docs/plans/immersive-sparql-hypermedia-profile.md`.
 pub mod immersive;
+pub mod kernel_extensions;
 pub mod parsers;
 pub mod quin_sink;
 pub mod rdf_formats;

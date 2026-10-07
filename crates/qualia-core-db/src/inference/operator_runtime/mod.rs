@@ -11,26 +11,23 @@ pub use adapter::{PreparedOperator, PreparedOperatorError};
 pub use cpu_lookup::{execute_cpu_q4k_lookup, precompute_activation_luts, CpuScheduleConfig};
 pub use gpu_schedule::{GpuOccupancyDiagnostics, GpuOperatorSchedule, GpuScheduleKind};
 pub use moe_operator::{
-    dispatch_clustered_moe_step, ClusterAnchor, ClusteredMoeScratch, ClusteredMoEOperator,
+    dispatch_clustered_moe_step, ClusterAnchor, ClusteredMoEOperator, ClusteredMoeScratch,
     IndependentExpertWeights, LowRankDelta, RoutedExpert,
 };
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use qualia_inference_kernel::operators::{
-        AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout,
-    };
     use crate::inference::operator_package::{
         FidelityContract, OperatorPackage, OperatorRecord, PackageBuilder, SegmentKind,
     };
+    use qualia_inference_kernel::operators::{
+        AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout,
+    };
 
     fn make_dense_package() -> OperatorPackage {
-        let mut builder = PackageBuilder::new(
-            0x1111,
-            0x2222,
-            FidelityContract::SourceBytePreserving,
-        );
+        let mut builder =
+            PackageBuilder::new(0x1111, 0x2222, FidelityContract::SourceBytePreserving);
         // 2x3 matrix: [[1, 2, 3], [4, 5, 6]]
         let weights: [f32; 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let mut wbytes = Vec::new();
@@ -38,25 +35,29 @@ mod tests {
             wbytes.extend_from_slice(&w.to_le_bytes());
         }
 
-        builder.add_segment_payload(1, SegmentKind::BitPlaneTiles, wbytes).unwrap();
-        builder.add_operator(OperatorRecord {
-            tensor_role: 1,
-            name: "test.dense".to_string(),
-            descriptor: OperatorDescriptor {
-                kind: OperatorKind::DenseF32,
-                in_features: 3,
-                out_features: 2,
-                batch_hint: 1,
-                tile_elems: 3,
-                scale_layout: ScaleLayout::None,
-                accum: AccumKind::F32,
-                max_workspace_bytes: 0,
-                representation_digest: 0x2222,
-            },
-            source_segment_id: 1,
-            primary_segment_id: 1,
-            scale_segment_id: 0,
-        }).unwrap();
+        builder
+            .add_segment_payload(1, SegmentKind::BitPlaneTiles, wbytes)
+            .unwrap();
+        builder
+            .add_operator(OperatorRecord {
+                tensor_role: 1,
+                name: "test.dense".to_string(),
+                descriptor: OperatorDescriptor {
+                    kind: OperatorKind::DenseF32,
+                    in_features: 3,
+                    out_features: 2,
+                    batch_hint: 1,
+                    tile_elems: 3,
+                    scale_layout: ScaleLayout::None,
+                    accum: AccumKind::F32,
+                    max_workspace_bytes: 0,
+                    representation_digest: 0x2222,
+                },
+                source_segment_id: 1,
+                primary_segment_id: 1,
+                scale_segment_id: 0,
+            })
+            .unwrap();
 
         let bytes = builder.build().unwrap();
         OperatorPackage::from_bytes(bytes).unwrap()
@@ -77,7 +78,8 @@ mod tests {
         let mut ws = [];
 
         // Correct generation succeeds
-        prep.execute(&input, &mut output, &mut ws, 42).expect("execute succeeds");
+        prep.execute(&input, &mut output, &mut ws, 42)
+            .expect("execute succeeds");
         // [1*1 + 2*2 + 3*3 = 14, 4*1 + 5*2 + 6*3 = 32]
         assert_eq!(output, [14.0, 32.0]);
 
@@ -104,28 +106,35 @@ mod tests {
         for &w in &weights {
             wbytes.extend_from_slice(&w.to_le_bytes());
         }
-        builder.add_segment_payload(1, SegmentKind::BitPlaneTiles, wbytes).unwrap();
-        builder.add_operator(OperatorRecord {
-            tensor_role: 1,
-            name: "test.tampered".to_string(),
-            descriptor: OperatorDescriptor {
-                kind: OperatorKind::DenseF32,
-                in_features: 3,
-                out_features: 1,
-                batch_hint: 1,
-                tile_elems: 3,
-                scale_layout: ScaleLayout::None,
-                accum: AccumKind::F32,
-                max_workspace_bytes: 0,
-                representation_digest: 0x9999, // tampered digest
-            },
-            source_segment_id: 1,
-            primary_segment_id: 1,
-            scale_segment_id: 0,
-        }).unwrap();
+        builder
+            .add_segment_payload(1, SegmentKind::BitPlaneTiles, wbytes)
+            .unwrap();
+        builder
+            .add_operator(OperatorRecord {
+                tensor_role: 1,
+                name: "test.tampered".to_string(),
+                descriptor: OperatorDescriptor {
+                    kind: OperatorKind::DenseF32,
+                    in_features: 3,
+                    out_features: 1,
+                    batch_hint: 1,
+                    tile_elems: 3,
+                    scale_layout: ScaleLayout::None,
+                    accum: AccumKind::F32,
+                    max_workspace_bytes: 0,
+                    representation_digest: 0x9999, // tampered digest
+                },
+                source_segment_id: 1,
+                primary_segment_id: 1,
+                scale_segment_id: 0,
+            })
+            .unwrap();
 
         let pkg = OperatorPackage::from_bytes(builder.build().unwrap()).unwrap();
         let res = PreparedOperator::prepare(&pkg, "test.tampered", 1);
-        assert!(matches!(res, Err(PreparedOperatorError::DigestMismatch { .. })));
+        assert!(matches!(
+            res,
+            Err(PreparedOperatorError::DigestMismatch { .. })
+        ));
     }
 }

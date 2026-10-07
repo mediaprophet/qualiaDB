@@ -118,9 +118,7 @@ fn write_file(path: impl AsRef<Path>, bytes: &[u8]) -> io::Result<()> {
     f.sync_all()
 }
 
-fn load_q42_quins_and_lex(
-    path: &Path,
-) -> io::Result<(Vec<NQuin>, Option<HashMap<u64, String>>)> {
+fn load_q42_quins_and_lex(path: &Path) -> io::Result<(Vec<NQuin>, Option<HashMap<u64, String>>)> {
     let quins = crate::q42_reader::read_q42_quins(path)?;
     let lex_map = Q42Volume::open(path)
         .ok()
@@ -132,8 +130,8 @@ fn load_q42_quins_and_lex(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::q_hash;
     use crate::q42_volume::UnifiedVolumeBuilder;
+    use crate::q_hash;
     use tempfile::tempdir;
 
     #[test]
@@ -204,11 +202,8 @@ mod tests {
         builder.push_block(0, &[quin]).unwrap();
         builder.finish(&q42).unwrap();
 
-        let err = SolidExporter::export_to_solid_pod(
-            q42.to_str().unwrap(),
-            out.to_str().unwrap(),
-        )
-        .unwrap_err();
+        let err = SolidExporter::export_to_solid_pod(q42.to_str().unwrap(), out.to_str().unwrap())
+            .unwrap_err();
         assert!(
             err.to_string().contains("SANCTUARY_CHOICE_REQUIRED"),
             "{err}"

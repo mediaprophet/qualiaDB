@@ -332,7 +332,10 @@ mod tests {
         let prompt = req["params"]["arguments"]["prompt"].as_str().unwrap();
         assert!(prompt.starts_with("Be terse."));
         assert!(prompt.ends_with("hi"));
-        assert_eq!(receipt.mode, crate::conditioning::McpLoweringMode::Flattened);
+        assert_eq!(
+            receipt.mode,
+            crate::conditioning::McpLoweringMode::Flattened
+        );
         assert!(receipt.role_degraded);
         assert_eq!(
             receipt.degradation_reason,
@@ -342,8 +345,7 @@ mod tests {
 
     #[test]
     fn request_omits_empty_model_and_system() {
-        let (req, receipt) =
-            build_infer_request(DEFAULT_INFER_TOOL, None, None, "just this", None);
+        let (req, receipt) = build_infer_request(DEFAULT_INFER_TOOL, None, None, "just this", None);
         assert!(req["params"]["arguments"].get("model").is_none());
         assert_eq!(req["params"]["arguments"]["prompt"], "just this");
         assert!(!receipt.role_degraded);
@@ -355,7 +357,10 @@ mod tests {
             build_infer_request("llm_chat", None, Some("Be terse."), "hi", Some(true));
         assert_eq!(req["params"]["arguments"]["system"], "Be terse.");
         assert_eq!(req["params"]["arguments"]["prompt"], "hi");
-        assert_eq!(receipt.mode, crate::conditioning::McpLoweringMode::Structured);
+        assert_eq!(
+            receipt.mode,
+            crate::conditioning::McpLoweringMode::Structured
+        );
         assert!(!receipt.role_degraded);
         assert!(receipt.degradation_reason.is_none());
     }

@@ -46,12 +46,7 @@ pub struct LdaFitSummary {
 }
 
 /// Two-or-more class LDA; `y` are integer class labels.
-pub fn fit_lda_2class(
-    x: &[f64],
-    y: &[usize],
-    n: usize,
-    p: usize,
-) -> Option<LdaFitSummary> {
+pub fn fit_lda_2class(x: &[f64], y: &[usize], n: usize, p: usize) -> Option<LdaFitSummary> {
     let m = LdaModel::fit(x, y, n, p).ok()?;
     let predictions = m.predict(x, n);
     Some(LdaFitSummary {

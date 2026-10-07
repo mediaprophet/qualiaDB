@@ -3,12 +3,12 @@
 //! Declarative operator metadata, source provenance, fidelity contract,
 //! and 64-bit segment references.
 
-use std::fmt;
-use serde::{Deserialize, Serialize};
+use super::segment::{SegmentDescriptor, SegmentKind};
 use qualia_inference_kernel::operators::{
     AccumKind, OperatorDescriptor, OperatorError, OperatorKind, ScaleLayout,
 };
-use super::segment::{SegmentDescriptor, SegmentKind};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 pub const OPERATOR_PACKAGE_MAGIC: [u8; 4] = *b"QOP1";
 pub const OPERATOR_PACKAGE_VERSION: u32 = 1;
@@ -120,7 +120,11 @@ impl OperatorPackageManifest {
     }
 
     pub fn add_segment(&mut self, segment: SegmentDescriptor) -> Result<(), PackageError> {
-        if self.segments.iter().any(|s| s.segment_id == segment.segment_id) {
+        if self
+            .segments
+            .iter()
+            .any(|s| s.segment_id == segment.segment_id)
+        {
             return Err(PackageError::DuplicateSegmentId(segment.segment_id));
         }
         self.segments.push(segment);
@@ -263,7 +267,8 @@ impl OperatorPackageManifest {
                 1 => AccumKind::F32,
                 other => return Err(PackageError::UnsupportedAccum(other)),
             };
-            let max_workspace_bytes = u32::from_le_bytes(bytes[pos + 19..pos + 23].try_into().unwrap());
+            let max_workspace_bytes =
+                u32::from_le_bytes(bytes[pos + 19..pos + 23].try_into().unwrap());
             let op_rep_digest = u64::from_le_bytes(bytes[pos + 23..pos + 31].try_into().unwrap());
 
             let descriptor = OperatorDescriptor {
@@ -281,9 +286,12 @@ impl OperatorPackageManifest {
                 .check_shape()
                 .map_err(PackageError::MalformedDescriptor)?;
 
-            let source_segment_id = u32::from_le_bytes(bytes[pos + 31..pos + 35].try_into().unwrap());
-            let primary_segment_id = u32::from_le_bytes(bytes[pos + 35..pos + 39].try_into().unwrap());
-            let scale_segment_id = u32::from_le_bytes(bytes[pos + 39..pos + 43].try_into().unwrap());
+            let source_segment_id =
+                u32::from_le_bytes(bytes[pos + 31..pos + 35].try_into().unwrap());
+            let primary_segment_id =
+                u32::from_le_bytes(bytes[pos + 35..pos + 39].try_into().unwrap());
+            let scale_segment_id =
+                u32::from_le_bytes(bytes[pos + 39..pos + 43].try_into().unwrap());
             pos += 43;
 
             operators.push(OperatorRecord {
@@ -352,8 +360,22 @@ mod tests {
             0xfeed_face_cafe_beef,
             FidelityContract::SourceBytePreserving,
         );
-        m.add_segment(SegmentDescriptor::new(1, SegmentKind::SourcePayload, 64, 144, 0x1111)).unwrap();
-        m.add_segment(SegmentDescriptor::new(2, SegmentKind::BitPlaneTiles, 208, 128, 0x2222)).unwrap();
+        m.add_segment(SegmentDescriptor::new(
+            1,
+            SegmentKind::SourcePayload,
+            64,
+            144,
+            0x1111,
+        ))
+        .unwrap();
+        m.add_segment(SegmentDescriptor::new(
+            2,
+            SegmentKind::BitPlaneTiles,
+            208,
+            128,
+            0x2222,
+        ))
+        .unwrap();
         m.add_operator(OperatorRecord {
             tensor_role: 1,
             name: "layer.0.attn_q".to_string(),
@@ -371,7 +393,8 @@ mod tests {
             source_segment_id: 1,
             primary_segment_id: 2,
             scale_segment_id: 0,
-        }).unwrap();
+        })
+        .unwrap();
         m
     }
 

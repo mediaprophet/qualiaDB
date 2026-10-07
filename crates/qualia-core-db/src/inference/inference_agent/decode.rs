@@ -21,12 +21,12 @@ use super::decode_helpers::{
 use super::local_agent::LocalLlmAgent;
 #[cfg(not(target_arch = "wasm32"))]
 use super::sticky_infer;
+#[allow(unused_imports)]
+use super::types::AgentBackend;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::inference::runtime::stage::{
     InferenceStageKind, StageStatus, StageTrace, ThinkingEvent, ThinkingTracker,
 };
-#[allow(unused_imports)]
-use super::types::AgentBackend;
 #[allow(unused_imports)]
 use crate::{q_hash, NQuin};
 
@@ -104,7 +104,9 @@ impl LocalLlmAgent {
             use rtrb::RingBuffer;
 
             let (model_path, model_instance_hash) = match &self.backend {
-                AgentBackend::Local { model_path, .. } => (model_path.clone(), crate::q_hash(model_path)),
+                AgentBackend::Local { model_path, .. } => {
+                    (model_path.clone(), crate::q_hash(model_path))
+                }
                 _ => {
                     return (
                         String::from("[no local model configured]"),
@@ -169,13 +171,8 @@ impl LocalLlmAgent {
             let lora_for_thread = lora_active_adapter;
 
             // Sticky pool thread owns the engine (thread_local); caller runs Sentinel.
-            let (done_tx, done_rx) = std::sync::mpsc::sync_channel::<(
-                String,
-                u32,
-                Option<NQuin>,
-                bool,
-                StageTrace,
-            )>(1);
+            let (done_tx, done_rx) =
+                std::sync::mpsc::sync_channel::<(String, u32, Option<NQuin>, bool, StageTrace)>(1);
 
             // ── LLM engine job (sticky 1-thread pool) ────────────────────────
             sticky_infer::pool().spawn(move || {
@@ -1549,16 +1546,19 @@ impl LocalLlmAgent {
                                     );
                                 }
                             }
-                            if engine.dispatch_prefill_chunk(
-                                idx,
-                                &mut prefill_chunk[..batch_elems],
-                                emb_dim,
-                                n as u32,
-                                pos as u32,
-                                &mut scratch_a,
-                                &mut scratch_b,
-                                TEST_TRANSFORMER_LAYER_CAP,
-                            ).is_err() {
+                            if engine
+                                .dispatch_prefill_chunk(
+                                    idx,
+                                    &mut prefill_chunk[..batch_elems],
+                                    emb_dim,
+                                    n as u32,
+                                    pos as u32,
+                                    &mut scratch_a,
+                                    &mut scratch_b,
+                                    TEST_TRANSFORMER_LAYER_CAP,
+                                )
+                                .is_err()
+                            {
                                 crate::gguf_bridge::wlog(&format!(
                                     "[llm] PREFILL chunk FAILED pos={pos} n={n}"
                                 ));

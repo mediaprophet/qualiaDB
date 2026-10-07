@@ -283,9 +283,16 @@ mod tests {
         let outputs = output_constraints("assess");
         let rail = rail_for_flow_label("input shape");
         assert_eq!(rail, Rail::InputShape);
-        assert_eq!(filter_constraints(rail, inputs.len(), outputs.len()), (true, false));
         assert_eq!(
-            filter_constraints(rail_for_flow_label("output shape"), inputs.len(), outputs.len()),
+            filter_constraints(rail, inputs.len(), outputs.len()),
+            (true, false)
+        );
+        assert_eq!(
+            filter_constraints(
+                rail_for_flow_label("output shape"),
+                inputs.len(),
+                outputs.len()
+            ),
             (false, true)
         );
         assert_eq!(

@@ -6,9 +6,9 @@
 
 #![recursion_limit = "256"]
 
-pub mod record;
 pub mod finance;
 pub mod projects;
+pub mod record;
 
 pub mod agency_delegation;
 pub mod agency_domain;
@@ -19,6 +19,9 @@ pub mod taxonomy;
 pub mod trigger;
 pub mod work_item;
 
-pub use record::{DurationBridge, InstantBridge, NQuin, RecordEnvelope, SensitivityClass, EpistemicStatus, EvidenceType};
 pub use finance::*;
 pub use projects::*;
+pub use record::{
+    DurationBridge, EpistemicStatus, EvidenceType, InstantBridge, NQuin, RecordEnvelope,
+    SensitivityClass,
+};

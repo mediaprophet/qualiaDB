@@ -64,6 +64,8 @@ mod tests {
     fn demo_lex_resolves_knows() {
         let mut buf = Vec::new();
         write_iri(q_hash("knows"), None, &mut buf).unwrap();
-        assert!(std::str::from_utf8(&buf).unwrap().contains("schema.org/knows"));
+        assert!(std::str::from_utf8(&buf)
+            .unwrap()
+            .contains("schema.org/knows"));
     }
 }

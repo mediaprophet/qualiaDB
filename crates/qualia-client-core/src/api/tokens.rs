@@ -623,7 +623,11 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
         // Canonical key `nym`; never showcase fabricated n1… stubs.
         let nym_claim = {
             let a = addr("nym");
-            if a.starts_with("n1") { String::new() } else { a }
+            if a.starts_with("n1") {
+                String::new()
+            } else {
+                a
+            }
         };
         balances.push(CoinBalance {
             coin: "Nym".into(),
@@ -1039,7 +1043,8 @@ pub async fn import_external_seed(
         "Bitcoin (BTC)" | "BTC" => ("BTC", "m/44'/0'/0'/0/0"),
         "Nym (NYM) - Nyx Chain" | "NYM" => {
             return Err(
-                "Nym locator not derived — Planned until real claim+bind (no fabricated n1…)".into(),
+                "Nym locator not derived — Planned until real claim+bind (no fabricated n1…)"
+                    .into(),
             );
         }
         "Ethereum (EVM)" | "ETH" => ("ETH", "m/44'/60'/0'/0/0"),

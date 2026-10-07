@@ -97,9 +97,7 @@ mod tests {
         let buf = [0u8; 16];
         let payloads = [PayloadView { bytes: &buf }];
         assert!(validate_operator(&desc, &payloads).is_ok());
-        let short = [PayloadView {
-            bytes: &buf[..12],
-        }];
+        let short = [PayloadView { bytes: &buf[..12] }];
         assert_eq!(
             validate_operator(&desc, &short).err(),
             Some(OperatorError::InvalidPayload)

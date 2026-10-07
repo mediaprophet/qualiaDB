@@ -37,9 +37,7 @@ pub async fn initialize_nym_proxy(config: &NymConfig) -> Result<(), String> {
 /// Former mock Sphinx dispatch — fails closed. Real routing is a follow-up once
 /// the mixnet client is live and claimed.
 pub async fn route_through_mixnet(_payload: &[u8]) -> Result<Vec<u8>, String> {
-    Err(
-        "nym_adapter::route_through_mixnet has no live path — \
+    Err("nym_adapter::route_through_mixnet has no live path — \
          mixnet client claim+bind required (no simulated MIXNET_RESPONSE_OK)"
-            .into(),
-    )
+        .into())
 }

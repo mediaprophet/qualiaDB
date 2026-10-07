@@ -302,9 +302,8 @@ pub fn execute_streamed_gated_delta(
             // kv_mem prediction: `state = state * g_t; kv_mem = S.k`.
             let mut prediction = 0.0f32;
             for row in 0..QWEN4EXP_GDN_HEAD_DIM {
-                prediction += decay
-                    * state.delta[column_state + row]
-                    * buffers.convolved[key_start + row];
+                prediction +=
+                    decay * state.delta[column_state + row] * buffers.convolved[key_start + row];
             }
             let change = (buffers.convolved[value_start + column] - prediction) * beta;
             let mut response = 0.0f32;

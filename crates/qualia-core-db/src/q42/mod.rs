@@ -17,11 +17,11 @@ pub mod chebi_query;
 pub mod design_encode;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
 pub mod execution_profile;
+pub mod journal;
 /// Host GPU native capability profile (CUDA / DX12 / Vulkan / Metal tiers over WGSL floor).
 pub mod machine_gpu_profile;
 /// Canonical Q42 v3 model-metadata volume for converted `.p64` packages.
 pub mod model_helper;
-pub mod journal;
 pub mod p64_weight;
 pub mod q42_kvp;
 #[cfg(not(target_arch = "wasm32"))]

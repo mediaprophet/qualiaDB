@@ -76,9 +76,18 @@ pub struct VaultVolume {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum KeepOutcome {
-    Held { why: String },
-    Open { path: String, sayable: String },
-    Committed { path: String, sayable: String, written: u64 },
+    Held {
+        why: String,
+    },
+    Open {
+        path: String,
+        sayable: String,
+    },
+    Committed {
+        path: String,
+        sayable: String,
+        written: u64,
+    },
 }
 
 impl KeepOutcome {
@@ -96,11 +105,7 @@ impl KeepOutcome {
 }
 
 pub fn sayable_name(path: &str) -> String {
-    let file = path
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or(path)
-        .trim();
+    let file = path.rsplit(['/', '\\']).next().unwrap_or(path).trim();
     let stem = file
         .strip_suffix(".q42")
         .or_else(|| file.strip_suffix(".Q42"))
@@ -158,10 +163,7 @@ pub fn parse_u64_field(src: &str, key: &str) -> u64 {
     for pat in patterns {
         if let Some(start) = src.find(&pat) {
             let rest = src[start + pat.len()..].trim_start();
-            let digits: String = rest
-                .chars()
-                .take_while(|c| c.is_ascii_digit())
-                .collect();
+            let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
             if let Ok(n) = digits.parse::<u64>() {
                 return n;
             }
@@ -181,7 +183,12 @@ pub fn interpret_open(ok: bool, value: &str, diagnostic: Option<&str>, path: &st
     held_outcome(HELD_WHY)
 }
 
-pub fn interpret_commit(ok: bool, value: &str, diagnostic: Option<&str>, path: &str) -> KeepOutcome {
+pub fn interpret_commit(
+    ok: bool,
+    value: &str,
+    diagnostic: Option<&str>,
+    path: &str,
+) -> KeepOutcome {
     let written = parse_u64_field(value, "written");
     if celebrate_commit(ok, written) {
         return KeepOutcome::Committed {
@@ -315,8 +322,12 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
-        match interpret_commit(true, r#"{path: "/tmp/keep.q42", written: 0}"#, None, "/tmp/x.q42")
-        {
+        match interpret_commit(
+            true,
+            r#"{path: "/tmp/keep.q42", written: 0}"#,
+            None,
+            "/tmp/x.q42",
+        ) {
             KeepOutcome::Held { why } => {
                 assert_eq!(why, HELD_WHY);
                 assert!(copy_avoids_unavailable(&why));
@@ -346,10 +357,7 @@ mod tests {
 
     #[test]
     fn recent_and_vault_merge_prefers_sayable_reopen() {
-        let recents = remember_recent(
-            &[],
-            "/workspace/qualia-data/uat-sanctuary.q42",
-        );
+        let recents = remember_recent(&[], "/workspace/qualia-data/uat-sanctuary.q42");
         assert_eq!(recents[0].sayable, "uat sanctuary");
         let vault = [VaultVolume {
             path: "/vault/session.q42".into(),

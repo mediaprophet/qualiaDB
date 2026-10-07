@@ -820,75 +820,28 @@ impl GgufTensorIndex {
         }
         // Architecture-specific aliases (e.g. HuggingFace safetensors or alternative GGUF prefixes)
         let aliases: &[&[u8]] = match suffix {
-            b"attn_k.weight" => &[
-                b"self_attn.k_proj.weight",
-                b"k_proj.weight",
-            ],
-            b"attn_q.weight" => &[
-                b"self_attn.q_proj.weight",
-                b"q_proj.weight",
-            ],
-            b"attn_v.weight" => &[
-                b"self_attn.v_proj.weight",
-                b"v_proj.weight",
-            ],
-            b"attn_output.weight" => &[
-                b"self_attn.o_proj.weight",
-                b"o_proj.weight",
-            ],
-            b"attn_norm.weight" => &[
-                b"input_layernorm.weight",
-            ],
-            b"ffn_norm.weight" => &[
-                b"post_attention_layernorm.weight",
-            ],
-            b"ffn_gate.weight" => &[
-                b"mlp.gate_proj.weight",
-                b"gate_proj.weight",
-            ],
-            b"ffn_up.weight" => &[
-                b"mlp.up_proj.weight",
-                b"up_proj.weight",
-            ],
-            b"ffn_down.weight" => &[
-                b"mlp.down_proj.weight",
-                b"down_proj.weight",
-            ],
-            b"ffn_gate_inp.weight" => &[
-                b"mlp.gate.weight",
-                b"gate.weight",
-            ],
-            b"ssm_conv1d.weight" => &[
-                b"linear_attn.conv1d.weight",
-                b"conv1d.weight",
-            ],
-            b"ssm_a" => &[
-                b"linear_attn.A_log",
-                b"A_log",
-            ],
-            b"ssm_dt.bias" => &[
-                b"linear_attn.dt_bias",
-                b"dt_bias",
-            ],
-            b"ssm_alpha.weight" => &[
-                b"linear_attn.in_proj_ba.weight",
-                b"in_proj_ba.weight",
-            ],
-            b"ssm_beta.weight" => &[
-                b"linear_attn.in_proj_ba.weight",
-                b"in_proj_ba.weight",
-            ],
+            b"attn_k.weight" => &[b"self_attn.k_proj.weight", b"k_proj.weight"],
+            b"attn_q.weight" => &[b"self_attn.q_proj.weight", b"q_proj.weight"],
+            b"attn_v.weight" => &[b"self_attn.v_proj.weight", b"v_proj.weight"],
+            b"attn_output.weight" => &[b"self_attn.o_proj.weight", b"o_proj.weight"],
+            b"attn_norm.weight" => &[b"input_layernorm.weight"],
+            b"ffn_norm.weight" => &[b"post_attention_layernorm.weight"],
+            b"ffn_gate.weight" => &[b"mlp.gate_proj.weight", b"gate_proj.weight"],
+            b"ffn_up.weight" => &[b"mlp.up_proj.weight", b"up_proj.weight"],
+            b"ffn_down.weight" => &[b"mlp.down_proj.weight", b"down_proj.weight"],
+            b"ffn_gate_inp.weight" => &[b"mlp.gate.weight", b"gate.weight"],
+            b"ssm_conv1d.weight" => &[b"linear_attn.conv1d.weight", b"conv1d.weight"],
+            b"ssm_a" => &[b"linear_attn.A_log", b"A_log"],
+            b"ssm_dt.bias" => &[b"linear_attn.dt_bias", b"dt_bias"],
+            b"ssm_alpha.weight" => &[b"linear_attn.in_proj_ba.weight", b"in_proj_ba.weight"],
+            b"ssm_beta.weight" => &[b"linear_attn.in_proj_ba.weight", b"in_proj_ba.weight"],
             b"attn_qkv.weight" => &[
                 b"linear_attn.in_proj_qkvz.weight",
                 b"self_attn.qkv_proj.weight",
                 b"qkv_proj.weight",
             ],
-            b"ssm_norm.weight" => &[
-                b"linear_attn.norm.weight",
-            ],
-            b"ssm_out.weight" => &[
-                b"linear_attn.out_proj.weight",
-            ],
+            b"ssm_norm.weight" => &[b"linear_attn.norm.weight"],
+            b"ssm_out.weight" => &[b"linear_attn.out_proj.weight"],
             _ => &[],
         };
         for alias in aliases {

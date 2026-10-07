@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 use crate::mini_parser::hash_token;
-use crate::q_hash;
 use crate::q42_volume::{Q42Volume, QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE};
+use crate::q_hash;
 use crate::query::ingest_formats::{
     format_from_path, object_iri_hash, parse_triples_format, RawTriple, OBJECT_IRI_MASK,
 };

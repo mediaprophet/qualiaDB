@@ -235,21 +235,22 @@ pub(super) fn try_accept_topology_draft(
         return TopologyDraftStep::Denied;
     }
 
-    let accepted = engine.verify_topology_draft_batch(
-        idx,
-        ctx,
-        &mapped,
-        emb_dim,
-        &mut emb_buf[..emb_dim],
-        scratch_a,
-        scratch_b,
-        TEST_TRANSFORMER_LAYER_CAP,
-        TEST_VOCAB_CHUNK_CAP,
-    )
-    // Speculative acceptance is a multi-token operation. Never let it bypass
-    // the caller's generation budget, which otherwise makes benchmark rows
-    // incomparable with scalar decode.
-    .min(output_cap.saturating_sub(out_ids.len()) as u32);
+    let accepted = engine
+        .verify_topology_draft_batch(
+            idx,
+            ctx,
+            &mapped,
+            emb_dim,
+            &mut emb_buf[..emb_dim],
+            scratch_a,
+            scratch_b,
+            TEST_TRANSFORMER_LAYER_CAP,
+            TEST_VOCAB_CHUNK_CAP,
+        )
+        // Speculative acceptance is a multi-token operation. Never let it bypass
+        // the caller's generation budget, which otherwise makes benchmark rows
+        // incomparable with scalar decode.
+        .min(output_cap.saturating_sub(out_ids.len()) as u32);
     crate::gpu_context::record_draft_acceptance(accepted, mapped.draft_len as u32);
 
     if accepted == 0 {

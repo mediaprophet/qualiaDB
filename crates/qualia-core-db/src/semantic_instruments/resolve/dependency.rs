@@ -76,7 +76,11 @@ pub fn version_matches(constraint: &str, version: &str) -> bool {
     if c == version {
         return true;
     }
-    let c = c.trim_start_matches('^').trim_start_matches('~').trim_end_matches('*').trim_end_matches('.');
+    let c = c
+        .trim_start_matches('^')
+        .trim_start_matches('~')
+        .trim_end_matches('*')
+        .trim_end_matches('.');
     version == c || version.starts_with(&format!("{c}."))
 }
 

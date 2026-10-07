@@ -43,11 +43,7 @@ pub struct GpuOperatorSchedule {
 
 impl GpuOperatorSchedule {
     /// Create an optimized GPU schedule for given dimensions and batch size.
-    pub fn plan(
-        in_features: usize,
-        out_features: usize,
-        batch_size: usize,
-    ) -> Self {
+    pub fn plan(in_features: usize, out_features: usize, batch_size: usize) -> Self {
         if batch_size <= 1 {
             // Decode schedule: 128 threads/workgroup, tile_m = 1, tile_k = 256 (one Q4_K block)
             let threads_per_workgroup = 128u32;

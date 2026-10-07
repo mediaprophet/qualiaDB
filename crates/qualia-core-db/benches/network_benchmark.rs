@@ -29,7 +29,8 @@ fn bench_wire_query_builder(c: &mut Criterion) {
                 black_box(DnsType::A),
                 black_box(true),
                 black_box(&mut buf),
-            ).unwrap();
+            )
+            .unwrap();
             black_box(len);
         })
     });
@@ -42,7 +43,8 @@ fn bench_wire_query_builder(c: &mut Criterion) {
                 black_box(DnsType::AAAA),
                 black_box(true),
                 black_box(&mut buf),
-            ).unwrap();
+            )
+            .unwrap();
             black_box(len);
         })
     });
@@ -55,7 +57,8 @@ fn bench_wire_query_builder(c: &mut Criterion) {
                 black_box(DnsType::HTTPS),
                 black_box(true),
                 black_box(&mut buf),
-            ).unwrap();
+            )
+            .unwrap();
             black_box(len);
         })
     });
@@ -66,7 +69,8 @@ fn bench_wire_query_builder(c: &mut Criterion) {
 // ─── 2. Wire Response Packet Parser ─────────────────────────────────────────
 fn build_synthetic_multi_record_packet() -> ([u8; 512], usize) {
     let mut packet = [0u8; 512];
-    let qlen = build_query_packet(0x1337, "gateway.webizen.net", DnsType::A, true, &mut packet).unwrap();
+    let qlen =
+        build_query_packet(0x1337, "gateway.webizen.net", DnsType::A, true, &mut packet).unwrap();
 
     let mut resp_header = DnsHeader::new_query(0x1337, true);
     resp_header.flags |= wire::FLAG_QR_RESPONSE | wire::FLAG_AA_AUTHORITATIVE;
@@ -94,7 +98,9 @@ fn build_synthetic_multi_record_packet() -> ([u8; 512], usize) {
     packet[offset + 2..offset + 4].copy_from_slice(&1u16.to_be_bytes());
     packet[offset + 4..offset + 8].copy_from_slice(&600u32.to_be_bytes());
     packet[offset + 8..offset + 10].copy_from_slice(&16u16.to_be_bytes());
-    let v6: [u8; 16] = [0x26, 0x06, 0x47, 0x00, 0x47, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0x11, 0x11];
+    let v6: [u8; 16] = [
+        0x26, 0x06, 0x47, 0x00, 0x47, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0x11, 0x11,
+    ];
     packet[offset + 10..offset + 26].copy_from_slice(&v6);
     offset += 26;
 
@@ -208,7 +214,12 @@ fn bench_dns_cache_ring(c: &mut Criterion) {
     group.throughput(Throughput::Elements(1));
 
     let mut ring: DnsCacheRing<256> = DnsCacheRing::new();
-    let sample_quin = encode_a_record("bench.qualia.net", [127, 0, 0, 1], 300, PermissiveRoutingLane::PassthroughStandard);
+    let sample_quin = encode_a_record(
+        "bench.qualia.net",
+        [127, 0, 0, 1],
+        300,
+        PermissiveRoutingLane::PassthroughStandard,
+    );
 
     // Warm up the ring
     for i in 0..256 {
@@ -251,10 +262,8 @@ fn bench_sdn_front_door_parser(c: &mut Criterion) {
 
     group.bench_function("parse_front_door_txt_zero_heap", |b| {
         b.iter(|| {
-            let view = parse_front_door_txt(
-                black_box("agent.alice.net"),
-                black_box(sample_txt),
-            ).unwrap();
+            let view =
+                parse_front_door_txt(black_box("agent.alice.net"), black_box(sample_txt)).unwrap();
             black_box(view);
         })
     });
@@ -309,7 +318,8 @@ fn bench_lossless_chunking(c: &mut Criterion) {
                 black_box(&dnskey_64b),
                 black_box(PermissiveRoutingLane::EnforceBilateralMicroCommons),
                 black_box(&mut quins),
-            ).unwrap();
+            )
+            .unwrap();
             black_box(n);
         })
     });
@@ -321,7 +331,8 @@ fn bench_lossless_chunking(c: &mut Criterion) {
         &dnskey_64b,
         PermissiveRoutingLane::EnforceBilateralMicroCommons,
         &mut quins,
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut out_payload = [0u8; 64];
     group.bench_function("decode_64b_dnskey_from_4_quins", |b| {
@@ -330,7 +341,8 @@ fn bench_lossless_chunking(c: &mut Criterion) {
                 black_box(&quins[..num_chunks]),
                 black_box(DnsType::DNSKEY),
                 black_box(&mut out_payload),
-            ).unwrap();
+            )
+            .unwrap();
             black_box(n);
         })
     });

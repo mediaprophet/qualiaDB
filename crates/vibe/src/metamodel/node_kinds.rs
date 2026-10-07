@@ -161,7 +161,13 @@ pub const TYPE_KINDS: &[NodeKindDescriptor] = kinds!(
 pub fn all_node_kinds() -> Vec<&'static NodeKindDescriptor> {
     let mut out = Vec::new();
     for slice in [
-        ITEM_KINDS, STMT_KINDS, PATTERN_KINDS, EXPR_KINDS, MODAL_KINDS, EFFECT_KINDS, TYPE_KINDS,
+        ITEM_KINDS,
+        STMT_KINDS,
+        PATTERN_KINDS,
+        EXPR_KINDS,
+        MODAL_KINDS,
+        EFFECT_KINDS,
+        TYPE_KINDS,
     ] {
         out.extend(slice.iter());
     }

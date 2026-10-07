@@ -30,8 +30,7 @@ fn pp002_chatml_family_preserves_system_and_user_markers() {
     // GgufTokenizer::default is byte-level; force family by inserting known tokens when API allows.
     let _ = &mut tok;
     // Contract golden for ChatML when family is ChatMl (from tokenizer.rs):
-    let expected_user_only =
-        "<|im_start|>user\nUSER_TASK<|im_end|>\n<|im_start|>assistant\n";
+    let expected_user_only = "<|im_start|>user\nUSER_TASK<|im_end|>\n<|im_start|>assistant\n";
     let expected_with_sys = "<|im_start|>system\nSYS<|im_end|>\n<|im_start|>user\nUSER_TASK<|im_end|>\n<|im_start|>assistant\n";
     assert!(expected_user_only.contains("<|im_start|>user"));
     assert!(expected_with_sys.contains("<|im_start|>system"));

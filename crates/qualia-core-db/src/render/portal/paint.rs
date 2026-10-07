@@ -324,13 +324,8 @@ pub(super) fn paint_cpu_body(
     if mesh.indices.len() < 3 || mesh.positions.is_empty() || w < 2.0 || h < 2.0 {
         return;
     }
-    let vp = orbit_view_projection_target(
-        camera.yaw,
-        camera.pitch,
-        camera.zoom,
-        camera.target,
-        aspect,
-    );
+    let vp =
+        orbit_view_projection_target(camera.yaw, camera.pitch, camera.zoom, camera.target, aspect);
     let project = |p: [f32; 3]| -> Option<(f64, f64, f32)> {
         let x = vp[0][0] * p[0] + vp[1][0] * p[1] + vp[2][0] * p[2] + vp[3][0];
         let y = vp[0][1] * p[0] + vp[1][1] * p[1] + vp[2][1] * p[2] + vp[3][1];
@@ -369,7 +364,11 @@ pub(super) fn paint_cpu_body(
         ) else {
             continue;
         };
-        let col = mesh.colors.get(i0).copied().unwrap_or([0.7, 0.7, 0.65, 1.0]);
+        let col = mesh
+            .colors
+            .get(i0)
+            .copied()
+            .unwrap_or([0.7, 0.7, 0.65, 1.0]);
         batch.push(ProofTri {
             depth: (a.2 + b.2 + c.2) / 3.0,
             p0: (a.0, a.1),

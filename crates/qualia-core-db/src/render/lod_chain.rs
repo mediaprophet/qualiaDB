@@ -30,12 +30,12 @@
 //! exists, the existing `Collapsed2D` fallback applies.
 
 use crate::container_10d::mesh_section::{
-    decode_mesh_section, encode_mesh_section, encoded_len, MeshSectionError,
+    MeshSectionError, decode_mesh_section, encode_mesh_section, encoded_len,
 };
 use crate::gpu_context::OperationalMode;
 use crate::render::assets::Mesh;
 use crate::specialized_libs::computational_geometry::{
-    decimate_qem, DecimateError, DecimateOptions, DecimateReport, Point3,
+    DecimateError, DecimateOptions, DecimateReport, Point3, decimate_qem,
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -355,6 +355,152 @@ pub fn select_lod(mode: OperationalMode, level_count: usize) -> usize {
     preferred.min(level_count - 1)
 }
 
+/// Runtime description of one renderable whose LOD state is retained by the
+/// caller between frames. `semantic_id` is the stable content identity while
+/// `source_index` addresses the caller's source array; selection never
+/// compacts or renumbers either identity.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LodRuntimeInstance {
+    pub semantic_id: u64,
+    pub source_index: u32,
+    pub world_center: [f32; 3],
+    pub world_radius: f32,
+    pub last_lod: u8,
+}
+
+/// Per-frame choice for one input instance. Entries are written in source
+/// order, making the result deterministic and directly indexable by the caller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SelectedLod {
+    pub semantic_id: u64,
+    pub source_index: u32,
+    pub level: u8,
+}
+
+/// Camera parameters used to convert geometric error into pixel error.
+#[derive(Debug, Clone, Copy)]
+pub struct LodCamera {
+    pub position: [f32; 3],
+    /// Vertical field of view in radians.
+    pub vertical_fov_radians: f32,
+    pub viewport_height_pixels: u32,
+    /// Lower bound for the projected-distance denominator, in world units.
+    pub near_distance: f32,
+}
+
+/// Screen-space LOD policy. A coarser level is admitted below
+/// `max_pixel_error * (1 - hysteresis)`; an existing coarse level is retained
+/// until it exceeds `max_pixel_error * (1 + hysteresis)`. This dead band
+/// prevents threshold chatter as the camera moves around a boundary.
+#[derive(Debug, Clone, Copy)]
+pub struct ScreenSpaceLodPolicy {
+    pub max_pixel_error: f32,
+    /// Fraction in `[0, 0.5)`, e.g. `0.1` gives a 10% dead band.
+    pub hysteresis: f32,
+}
+
+/// Errors detected before writing runtime LOD output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LodSelectionError {
+    InvalidLevelErrors,
+    InvalidCamera,
+    InvalidPolicy,
+    OutputTooSmall { needed: usize, have: usize },
+}
+
+/// Select a level for every instance using projected geometric error.
+///
+/// `geometric_errors` is indexed by LOD and must be finite, nonnegative, and
+/// monotonically nondecreasing (LOD 0 is normally zero). The selector uses a
+/// perspective camera approximation, clamps near-plane distance, and retains
+/// each instance's previous level through a configurable hysteresis band.
+/// Invalid per-instance bounds fail open to LOD 0; malformed shared inputs
+/// return an error before any output or state is modified. This is a hot-path
+/// routine: it allocates no memory and preserves both identities verbatim.
+pub fn select_lods_screen_space(
+    instances: &mut [LodRuntimeInstance],
+    geometric_errors: &[f32],
+    camera: LodCamera,
+    policy: ScreenSpaceLodPolicy,
+    out: &mut [SelectedLod],
+) -> Result<usize, LodSelectionError> {
+    if geometric_errors.is_empty()
+        || geometric_errors.len() > MAX_LOD_LEVELS
+        || geometric_errors.iter().any(|e| !e.is_finite() || *e < 0.0)
+        || geometric_errors.windows(2).any(|pair| pair[1] < pair[0])
+    {
+        return Err(LodSelectionError::InvalidLevelErrors);
+    }
+    if camera.position.iter().any(|v| !v.is_finite())
+        || !camera.vertical_fov_radians.is_finite()
+        || camera.vertical_fov_radians <= 0.0
+        || camera.vertical_fov_radians >= core::f32::consts::PI
+        || camera.viewport_height_pixels == 0
+        || !camera.near_distance.is_finite()
+        || camera.near_distance <= 0.0
+    {
+        return Err(LodSelectionError::InvalidCamera);
+    }
+    if !policy.max_pixel_error.is_finite()
+        || policy.max_pixel_error <= 0.0
+        || !policy.hysteresis.is_finite()
+        || !(0.0..0.5).contains(&policy.hysteresis)
+    {
+        return Err(LodSelectionError::InvalidPolicy);
+    }
+    if out.len() < instances.len() {
+        return Err(LodSelectionError::OutputTooSmall {
+            needed: instances.len(),
+            have: out.len(),
+        });
+    }
+
+    let focal_pixels =
+        camera.viewport_height_pixels as f32 / (2.0 * (camera.vertical_fov_radians * 0.5).tan());
+    let coarsen_limit = policy.max_pixel_error * (1.0 - policy.hysteresis);
+    let refine_limit = policy.max_pixel_error * (1.0 + policy.hysteresis);
+
+    for (slot, instance) in instances.iter_mut().enumerate() {
+        let level_count = geometric_errors.len();
+        let mut level = (instance.last_lod as usize).min(level_count - 1);
+        let valid_bounds = instance.world_center.iter().all(|v| v.is_finite())
+            && instance.world_radius.is_finite()
+            && instance.world_radius >= 0.0;
+        if valid_bounds {
+            let dx = instance.world_center[0] - camera.position[0];
+            let dy = instance.world_center[1] - camera.position[1];
+            let dz = instance.world_center[2] - camera.position[2];
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = (distance - instance.world_radius).max(camera.near_distance);
+            let projected_scale = focal_pixels / distance;
+            if projected_scale.is_finite() {
+                // Refine while the currently selected level exceeds the upper
+                // edge of the dead band.
+                while level > 0 && geometric_errors[level] * projected_scale > refine_limit {
+                    level -= 1;
+                }
+                // Coarsen while each next level stays below the lower edge.
+                while level + 1 < level_count
+                    && geometric_errors[level + 1] * projected_scale <= coarsen_limit
+                {
+                    level += 1;
+                }
+            } else {
+                level = 0;
+            }
+        } else {
+            level = 0;
+        }
+        instance.last_lod = level as u8;
+        out[slot] = SelectedLod {
+            semantic_id: instance.semantic_id,
+            source_index: instance.source_index,
+            level: level as u8,
+        };
+    }
+    Ok(instances.len())
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 //  LOD section parsing
 // ───────────────────────────────────────────────────────────────────────────
@@ -430,7 +576,7 @@ pub fn plan_view_with_lod(
     now_unix: u32,
     lod_level_count: usize,
 ) -> LodViewDisposition {
-    use crate::render::authoring::{has_attestation, Sensitivity, ViewKind};
+    use crate::render::authoring::{Sensitivity, ViewKind, has_attestation};
 
     // 1) Attestation gate.
     if view.requires_attestation && !has_attestation(view, attestations) {
@@ -493,8 +639,8 @@ mod tests {
     use super::*;
     use crate::q_hash;
     use crate::render::authoring::{
-        attestation_quin, plan_view, QappView, RenderStandpoint, Sensitivity, ViewDisposition,
-        ViewKind,
+        QappView, RenderStandpoint, Sensitivity, ViewDisposition, ViewKind, attestation_quin,
+        plan_view,
     };
 
     fn unit_cube_mesh() -> Mesh {
@@ -705,6 +851,134 @@ mod tests {
         assert_eq!(select_lod(OperationalMode::Reserve, 2), 1);
         // If only 1 level, all modes → LOD 0.
         assert_eq!(select_lod(OperationalMode::Reserve, 1), 0);
+    }
+
+    #[test]
+    fn runtime_lod_uses_projected_error_and_preserves_identity() {
+        let mut instances = [LodRuntimeInstance {
+            semantic_id: 0xfeed_beef_1234_5678,
+            source_index: 37,
+            world_center: [0.0, 0.0, 50.0],
+            world_radius: 0.0,
+            last_lod: 0,
+        }];
+        let errors = [0.0, 0.1, 0.5];
+        let camera = LodCamera {
+            position: [0.0; 3],
+            vertical_fov_radians: core::f32::consts::FRAC_PI_2,
+            viewport_height_pixels: 1000,
+            near_distance: 0.1,
+        };
+        let policy = ScreenSpaceLodPolicy {
+            max_pixel_error: 2.0,
+            hysteresis: 0.1,
+        };
+        let mut out = [SelectedLod {
+            semantic_id: 0,
+            source_index: 0,
+            level: 0,
+        }];
+
+        assert_eq!(
+            select_lods_screen_space(&mut instances, &errors, camera, policy, &mut out),
+            Ok(1)
+        );
+        assert_eq!(out[0].level, 1); // LOD 2 is still above the pixel-error budget.
+        assert_eq!(out[0].semantic_id, 0xfeed_beef_1234_5678);
+        assert_eq!(out[0].source_index, 37);
+
+        // The current level remains selected inside the 10% hysteresis band.
+        instances[0].world_center[2] = 40.0;
+        select_lods_screen_space(&mut instances, &errors, camera, policy, &mut out).unwrap();
+        assert_eq!(out[0].level, 1);
+
+        // At close range, its projected error exceeds the upper edge and it refines.
+        instances[0].world_center[2] = 20.0;
+        select_lods_screen_space(&mut instances, &errors, camera, policy, &mut out).unwrap();
+        assert_eq!(out[0].level, 0);
+        assert_eq!(instances[0].last_lod, 0);
+    }
+
+    #[test]
+    fn runtime_lod_preflights_output_and_fails_open_bad_bounds() {
+        let mut instances = [
+            LodRuntimeInstance {
+                semantic_id: 11,
+                source_index: 5,
+                world_center: [f32::NAN, 0.0, 10.0],
+                world_radius: 1.0,
+                last_lod: 2,
+            },
+            LodRuntimeInstance {
+                semantic_id: 22,
+                source_index: 9,
+                world_center: [0.0, 0.0, 10.0],
+                world_radius: 1.0,
+                last_lod: 0,
+            },
+        ];
+        let errors = [0.0, 0.1, 0.5];
+        let camera = LodCamera {
+            position: [0.0; 3],
+            vertical_fov_radians: core::f32::consts::FRAC_PI_2,
+            viewport_height_pixels: 720,
+            near_distance: 0.1,
+        };
+        let policy = ScreenSpaceLodPolicy {
+            max_pixel_error: 2.0,
+            hysteresis: 0.1,
+        };
+        let mut too_small = [SelectedLod {
+            semantic_id: 99,
+            source_index: 99,
+            level: 99,
+        }];
+        assert_eq!(
+            select_lods_screen_space(&mut instances, &errors, camera, policy, &mut too_small),
+            Err(LodSelectionError::OutputTooSmall { needed: 2, have: 1 })
+        );
+        assert_eq!(instances[0].last_lod, 2); // Preflight does not mutate state.
+
+        let mut out = [too_small[0]; 2];
+        select_lods_screen_space(&mut instances, &errors, camera, policy, &mut out).unwrap();
+        assert_eq!(out[0].level, 0); // Invalid bounds render at highest detail.
+        assert_eq!(out[0].semantic_id, 11);
+        assert_eq!(out[0].source_index, 5);
+        assert_eq!(out[1].semantic_id, 22);
+        assert_eq!(out[1].source_index, 9);
+    }
+
+    #[test]
+    fn runtime_lod_rejects_invalid_shared_configuration_without_partial_output() {
+        let mut instances = [LodRuntimeInstance {
+            semantic_id: 1,
+            source_index: 0,
+            world_center: [0.0, 0.0, 1.0],
+            world_radius: 0.0,
+            last_lod: 1,
+        }];
+        let mut out = [SelectedLod {
+            semantic_id: 77,
+            source_index: 77,
+            level: 77,
+        }];
+        let invalid_errors = [0.2, 0.1];
+        let camera = LodCamera {
+            position: [0.0; 3],
+            vertical_fov_radians: core::f32::consts::FRAC_PI_2,
+            viewport_height_pixels: 720,
+            near_distance: 0.1,
+        };
+        let policy = ScreenSpaceLodPolicy {
+            max_pixel_error: 2.0,
+            hysteresis: 0.1,
+        };
+        assert_eq!(
+            select_lods_screen_space(&mut instances, &invalid_errors, camera, policy, &mut out),
+            Err(LodSelectionError::InvalidLevelErrors)
+        );
+        assert_eq!(out[0].semantic_id, 77);
+        assert_eq!(instances[0].last_lod, 1);
     }
 
     #[test]

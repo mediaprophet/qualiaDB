@@ -469,10 +469,7 @@ pub fn stats_spurious_guard_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         x: Option<Vec<f64>>,
     }
     let p: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
-    let r = crate::solvers::statistics::regression::spurious_regression_guard(
-        &p.y,
-        p.x.as_deref(),
-    )
-    .ok_or_else(|| JsValue::from_str("spurious guard needs n>=8"))?;
+    let r = crate::solvers::statistics::regression::spurious_regression_guard(&p.y, p.x.as_deref())
+        .ok_or_else(|| JsValue::from_str("spurious guard needs n>=8"))?;
     Ok(serde_wasm_bindgen::to_value(&r)?)
 }

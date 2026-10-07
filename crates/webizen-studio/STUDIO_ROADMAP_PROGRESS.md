@@ -160,3 +160,32 @@ Use this file as the **session reminder**: what is done, what is next, and where
 - LLM `/generate_pane`: `studio_pane_llm.rs` orchestrator path + JSON parse + keyword fallback.
 - Live graph: `mmap_sample_quins` + spatial `fetch_local_neighborhood` no longer mock-only when graph.q42 exists.
 - Playwright GUI E2E: `scripts/studio-gui-e2e/portal.spec.ts`.
+
+### 2026-10-06 — 10D manifold / field-rendering integration audit
+
+- Preserve and extend the existing high-dimensional physics programme. EMF is one field family,
+  not the definition of the renderer: current engine work also includes astrophysics N-body gravity,
+  scalar wave and heat/diffusion solvers, depth-aware field sampling, and `ManifoldCoordinate10D`
+  tags carried alongside sampled field data.
+- The canonical spectral payload is EMF `[α, μ, σ]`. Its full value is data; a bounded wavelength,
+  colour, audio, or other sensor mapping is an observer-specific projection. Display colour must not
+  replace the field, clamp stored σ, or become the only field representation.
+- Fixed `render/tensor_buffer.rs` to read the engine's versioned `Q42*` buffer (32-byte header,
+  40-byte packed `10×f32` records), validate version/stride/count before reading, and use record-area-
+  relative offsets. Kept read compatibility for Studio's older unheadered `10×f64` records. The
+  preview digest now reads the tensor directly and retains EMF values without a colour conversion.
+- Wiring status: Studio's `<q-viewport>` already uses VibeScript for the GPU handle/frame lifecycle;
+  VibeScript also exposes physics field generation and `Render.emf_*` APIs. Studio still lacks the
+  data bridge that passes simulation grids and their axis/manifold metadata into a live viewport.
+  The general native `SpatialBridgeCanvas` PNG path is a pane-layout preview; its Live path uses the
+  Qualia Portal. Neither should be described as the complete multidomain field-renderer integration.
+- Next implementation: define a bounded, typed field payload/axis contract shared by the native
+  and browser paths; expose simulation-output → renderer uploads through VibeScript; keep spatial,
+  temporal/depth, topology/domain, epistemic and EMF coordinates available to projection and picking;
+  add field-family adapters for astrophysics, waves/diffusion and EMF; preserve CPU/Canvas fallback and
+  full-fidelity source data under independent graphics/asset budgets. On WASM, test with
+  `wasm-scientific` enabled; ontology-only stubs are expected when it is disabled.
+- Validation note: focused Studio tests are added for canonical/legacy buffer parsing and EMF
+  preservation. Native test execution currently fails before project compilation because the local
+  Windows GNU toolchain cannot execute `gcc.exe`/`dlltool.exe` (Access denied); rerun in a working
+  toolchain before treating the tests as green.

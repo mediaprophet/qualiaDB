@@ -104,7 +104,9 @@ pub fn agent_knows(quins: &[NQuin], agent_did_hash: u64, claim_fingerprint: u64)
         let certainty = ((q.predicate >> CERTAINTY_BIT_SHIFT) & 0xFF) as u8;
         (agent_did_hash == 0 || q.subject == agent_did_hash)
             && q.object == claim_fingerprint
-            && (opcode == OP_KNOWS || opcode == OP_COMMON_KNOWLEDGE || (opcode == OP_BELIEVES && certainty >= 128))
+            && (opcode == OP_KNOWS
+                || opcode == OP_COMMON_KNOWLEDGE
+                || (opcode == OP_BELIEVES && certainty >= 128))
     })
 }
 

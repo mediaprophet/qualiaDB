@@ -8,8 +8,8 @@ fn gpu_manifest() -> serde_json::Value {
     // A benchmark must not infer accelerator availability from its build
     // features. CI records the outcome of its hardware probe in these vars;
     // local runs remain explicitly unprobed unless a caller supplies one.
-    let availability = std::env::var("QUALIA_BENCH_GPU_STATUS")
-        .unwrap_or_else(|_| "not_probed".to_owned());
+    let availability =
+        std::env::var("QUALIA_BENCH_GPU_STATUS").unwrap_or_else(|_| "not_probed".to_owned());
     let has_gpu = match availability.as_str() {
         "available" => Some(true),
         "not_detected" => Some(false),

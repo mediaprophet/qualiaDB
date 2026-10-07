@@ -42,7 +42,8 @@ impl QTensorEngine {
                 Some(i) => i,
                 None => {
                     if tensors.moe_router.is_some() {
-                        let moe_ok = self.dispatch_moe_ffn(index, emb_dim, tensors, scratch_a, ffn_input);
+                        let moe_ok =
+                            self.dispatch_moe_ffn(index, emb_dim, tensors, scratch_a, ffn_input);
                         if moe_ok {
                             add_residual_inplace(
                                 &mut hidden[..emb_dim],

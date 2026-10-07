@@ -53,17 +53,17 @@ impl OperatorPackage {
 
         // Validate all segments against the payload size and platform constraints
         for seg in &manifest.segments {
-            seg.check_bounds(bytes.len() as u64)
-                .map_err(|e| match e {
-                    SegmentError::OutOfBounds { .. } => PackageError::TruncatedInput,
-                    _ => PackageError::MalformedDescriptor(
-                        qualia_inference_kernel::operators::OperatorError::InvalidPayload,
-                    ),
-                })?;
-            seg.check_platform_fit()
-                .map_err(|_| PackageError::MalformedDescriptor(
+            seg.check_bounds(bytes.len() as u64).map_err(|e| match e {
+                SegmentError::OutOfBounds { .. } => PackageError::TruncatedInput,
+                _ => PackageError::MalformedDescriptor(
                     qualia_inference_kernel::operators::OperatorError::InvalidPayload,
-                ))?;
+                ),
+            })?;
+            seg.check_platform_fit().map_err(|_| {
+                PackageError::MalformedDescriptor(
+                    qualia_inference_kernel::operators::OperatorError::InvalidPayload,
+                )
+            })?;
         }
 
         Ok(Self {
@@ -126,7 +126,11 @@ impl PackageBuilder {
         kind: SegmentKind,
         payload: Vec<u8>,
     ) -> Result<(), PackageError> {
-        if self.segments_payload.iter().any(|(id, _, _)| *id == segment_id) {
+        if self
+            .segments_payload
+            .iter()
+            .any(|(id, _, _)| *id == segment_id)
+        {
             return Err(PackageError::DuplicateSegmentId(segment_id));
         }
         self.segments_payload.push((segment_id, kind, payload));
@@ -172,7 +176,10 @@ impl PackageBuilder {
         }
 
         let final_manifest = self.manifest.encode();
-        assert!(final_manifest.len() <= payload_start, "manifest length drift");
+        assert!(
+            final_manifest.len() <= payload_start,
+            "manifest length drift"
+        );
 
         let total_size = current_offset as usize;
         let mut out = vec![0u8; total_size];
@@ -181,7 +188,8 @@ impl PackageBuilder {
         out[..final_manifest.len()].copy_from_slice(&final_manifest);
 
         // Write segments
-        for (seg_desc, (_, _, payload)) in self.manifest.segments.iter().zip(&self.segments_payload) {
+        for (seg_desc, (_, _, payload)) in self.manifest.segments.iter().zip(&self.segments_payload)
+        {
             let start = seg_desc.offset as usize;
             let end = start + payload.len();
             out[start..end].copy_from_slice(payload);
@@ -192,7 +200,9 @@ impl PackageBuilder {
 
     /// Build and write package directly to a file.
     pub fn write_to_file(self, path: &Path) -> io::Result<()> {
-        let bytes = self.build().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let bytes = self
+            .build()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         let mut f = File::create(path)?;
         f.write_all(&bytes)?;
         f.flush()?;
@@ -205,6 +215,5 @@ pub fn load_package_from_file(path: &Path) -> io::Result<OperatorPackage> {
     let mut f = File::open(path)?;
     let mut data = Vec::new();
     f.read_to_end(&mut data)?;
-    OperatorPackage::from_bytes(data)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    OperatorPackage::from_bytes(data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }

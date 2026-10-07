@@ -6,12 +6,12 @@
 //! - Zero heap allocation during execution hot path.
 //! - Strictly no dependencies on or modifications to `gguf_bridge` or `decode.rs`.
 
-use std::fmt;
+use crate::inference::operator_package::{OperatorPackage, PackageError, SegmentError};
 use qualia_inference_kernel::operators::{
     apply_into, validate_operator, MatrixView, MatrixViewMut, OperatorDescriptor, OperatorError,
     OperatorWorkspace, PayloadView,
 };
-use crate::inference::operator_package::{OperatorPackage, PackageError, SegmentError};
+use std::fmt;
 
 /// Errors occurring during operator preparation or execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,7 +29,9 @@ pub enum PreparedOperatorError {
 impl fmt::Display for PreparedOperatorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::OperatorNotFound(name) => write!(f, "operator '{name}' not found in package manifest"),
+            Self::OperatorNotFound(name) => {
+                write!(f, "operator '{name}' not found in package manifest")
+            }
             Self::DigestMismatch { expected, actual } => {
                 write!(f, "representation digest mismatch: expected {expected:#018x}, actual {actual:#018x}")
             }
@@ -37,9 +39,15 @@ impl fmt::Display for PreparedOperatorError {
                 write!(f, "residency generation mismatch: plan prepared with gen {expected}, current is {actual}")
             }
             Self::WorkspaceTooSmall { need, actual } => {
-                write!(f, "workspace too small: need {need} floats, provided {actual}")
+                write!(
+                    f,
+                    "workspace too small: need {need} floats, provided {actual}"
+                )
             }
-            Self::InvalidShape => write!(f, "input or output buffer length mismatch with operator dimensions"),
+            Self::InvalidShape => write!(
+                f,
+                "input or output buffer length mismatch with operator dimensions"
+            ),
             Self::KernelError(ke) => write!(f, "kernel error during operator execution: {ke:?}"),
             Self::PackageError(pe) => write!(f, "package error: {pe}"),
             Self::SegmentError(se) => write!(f, "segment error: {se}"),

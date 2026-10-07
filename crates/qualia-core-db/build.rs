@@ -30,8 +30,16 @@ fn main() {
             build_info("Apple: Metal + Accelerate + CoreML + Security linked");
         }
         "windows" => {
-            println!("cargo:rustc-link-lib=dylib=d3d12");
-            println!("cargo:rustc-link-lib=dylib=dxgi");
+            // The portable native renderer profile intentionally omits DX12 and
+            // DirectML. Do not force Windows SDK import libraries into its link
+            // step: MinGW environments can still build/run the GLES renderer.
+            // The default profile enables gpu-native-dx12 and keeps the existing
+            // inference/DirectML link behavior.
+            let dx12_enabled = env::var_os("CARGO_FEATURE_GPU_NATIVE_DX12").is_some();
+            if dx12_enabled {
+                println!("cargo:rustc-link-lib=dylib=d3d12");
+                println!("cargo:rustc-link-lib=dylib=dxgi");
+            }
 
             let manifest = env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
             let vendor_dml = PathBuf::from(&manifest)
@@ -41,9 +49,13 @@ fn main() {
                 .join("directml")
                 .join("bin")
                 .join("x64-win");
-            let env_path = env::var("DIRECTML_LIB_PATH").ok().map(PathBuf::from);
+            let env_path = if dx12_enabled {
+                env::var("DIRECTML_LIB_PATH").ok().map(PathBuf::from)
+            } else {
+                None
+            };
 
-            let lib_dir = if vendor_dml.join("DirectML.lib").exists() {
+            let lib_dir = if dx12_enabled && vendor_dml.join("DirectML.lib").exists() {
                 Some(vendor_dml)
             } else {
                 env_path.filter(|p| p.join("DirectML.lib").exists())
@@ -62,12 +74,14 @@ fn main() {
                     "DirectML linked + DLL staged from {}",
                     dir.display()
                 ));
-            } else {
+            } else if dx12_enabled {
                 // Real problem only — keep as cargo warning.
                 println!(
                     "cargo:warning=Qualia-DB: vendor/directml not found and DIRECTML_LIB_PATH unset. \
                      GPU inference will fall back to wgpu-only path."
                 );
+            } else {
+                build_info("Windows portable native profile: DX12 and DirectML links disabled");
             }
 
             // DXC — runtime load by wgpu for WGSL→DXIL on DX12 (FXC cannot compile attention).

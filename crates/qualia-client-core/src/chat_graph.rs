@@ -417,10 +417,13 @@ pub fn format_thread_context_to<W: std::fmt::Write>(
                 .iter()
                 .find(|m| m.lamport == e.reply_message_lamport)
             {
-                let author = reply_msg.author_name.as_deref().unwrap_or(match reply_msg.role {
-                    Role::User => "user",
-                    Role::Agent => "agent",
-                });
+                let author = reply_msg
+                    .author_name
+                    .as_deref()
+                    .unwrap_or(match reply_msg.role {
+                        Role::User => "user",
+                        Role::Agent => "agent",
+                    });
                 writeln!(
                     writer,
                     "  -> [Branch: {label} / WordNet: {wordnet}] anchor=\"{}\" author=\"{author}\"",

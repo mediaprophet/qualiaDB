@@ -11,9 +11,9 @@ pub mod telemetry;
 // Shared modules live in the lib rlib once. Re-export so `crate::…` in the bin
 // uses the same types (Page, motion, endpoints) and spatial_bridge Tauri FFI
 // is not compiled a second time into the wasm link.
-pub use webizen_studio::{canvas_graph, canvas_model, endpoints, render, theme_engine};
 #[cfg(target_arch = "wasm32")]
 pub use webizen_studio::tauri_ffi;
+pub use webizen_studio::{canvas_graph, canvas_model, endpoints, render, theme_engine};
 
 use dioxus::prelude::*;
 use serde::Deserialize;
@@ -26,14 +26,12 @@ use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use webizen_studio::tauri_ffi::listen as tauri_listen;
 
-
 #[cfg(target_arch = "wasm32")]
 fn event_payload_string(event: &JsValue) -> Option<String> {
     js_sys::Reflect::get(event, &JsValue::from_str("payload"))
         .ok()
         .and_then(|payload| payload.as_string())
 }
-
 
 /// Defer non-settings router pushes off the Tauri Closure stack (RefCell).
 #[cfg(target_arch = "wasm32")]
@@ -42,8 +40,6 @@ fn defer_navigator_push(push: impl FnOnce(Route) + 'static, route: Route) {
         push(route);
     });
 }
-
-
 
 #[cfg(target_arch = "wasm32")]
 fn reflected_string(value: &JsValue, property: &str) -> Option<String> {
@@ -399,7 +395,6 @@ fn DomainRouteHeader(domain: &'static str, title: &'static str, blurb: &'static 
         }
     }
 }
-
 
 /// Map omnibox text to a destination. Prefer honest routing over fake multi-product promises.
 fn route_from_omnibox(query: &str) -> Route {
@@ -1150,7 +1145,12 @@ fn AppLayout() -> Element {
                         }
                         _ => {}
                     }
-                    defer_navigator_push(move |r| { let _ = menu_nav.push(r); }, shell_dest::route_from_shell_target(&target));
+                    defer_navigator_push(
+                        move |r| {
+                            let _ = menu_nav.push(r);
+                        },
+                        shell_dest::route_from_shell_target(&target),
+                    );
                 }));
 
                 let mut kind_signal = shell_kind;
@@ -1190,7 +1190,12 @@ fn AppLayout() -> Element {
                 let diagnostics_nav = navigator;
                 let diagnostics_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        defer_navigator_push(move |r| { let _ = diagnostics_nav.push(r); }, Route::ToolsRoute {});
+                        defer_navigator_push(
+                            move |r| {
+                                let _ = diagnostics_nav.push(r);
+                            },
+                            Route::ToolsRoute {},
+                        );
                     }));
 
                 match tauri_listen(
@@ -1211,7 +1216,12 @@ fn AppLayout() -> Element {
 
                 let health_nav = navigator;
                 let med_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    defer_navigator_push(move |r| { let _ = health_nav.push(r); }, Route::HealthRoute {});
+                    defer_navigator_push(
+                        move |r| {
+                            let _ = health_nav.push(r);
+                        },
+                        Route::HealthRoute {},
+                    );
                 }));
 
                 match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref())
@@ -1230,7 +1240,12 @@ fn AppLayout() -> Element {
                 let sanctuary_nav = navigator;
                 let sanctuary_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        defer_navigator_push(move |r| { let _ = sanctuary_nav.push(r); }, Route::SanctuaryRoute {});
+                        defer_navigator_push(
+                            move |r| {
+                                let _ = sanctuary_nav.push(r);
+                            },
+                            Route::SanctuaryRoute {},
+                        );
                     }));
 
                 match tauri_listen(
@@ -1252,7 +1267,12 @@ fn AppLayout() -> Element {
                 let backup_nav = navigator;
                 let backup_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        defer_navigator_push(move |r| { let _ = backup_nav.push(r); }, Route::ToolsRoute {});
+                        defer_navigator_push(
+                            move |r| {
+                                let _ = backup_nav.push(r);
+                            },
+                            Route::ToolsRoute {},
+                        );
                     }));
 
                 match tauri_listen("open-backup", backup_callback.as_ref().unchecked_ref()).await {
@@ -1268,7 +1288,12 @@ fn AppLayout() -> Element {
 
                 let sync_nav = navigator;
                 let sync_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    defer_navigator_push(move |r| { let _ = sync_nav.push(r); }, Route::ToolsRoute {});
+                    defer_navigator_push(
+                        move |r| {
+                            let _ = sync_nav.push(r);
+                        },
+                        Route::ToolsRoute {},
+                    );
                 }));
 
                 match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await
@@ -1286,7 +1311,12 @@ fn AppLayout() -> Element {
                 let import_nav = navigator;
                 let import_callback =
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                        defer_navigator_push(move |r| { let _ = import_nav.push(r); }, Route::ToolsRoute {});
+                        defer_navigator_push(
+                            move |r| {
+                                let _ = import_nav.push(r);
+                            },
+                            Route::ToolsRoute {},
+                        );
                     }));
 
                 match tauri_listen(
@@ -2024,6 +2054,9 @@ mod route_identity_tests {
         assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
         assert_eq!(Route::LibraryRoute {}.to_string(), "/library");
         assert_eq!(Route::SettingsRoute {}.to_string(), "/settings");
-        assert_ne!(Route::TalkMailRoute {}.to_string(), Route::PoetRoute {}.to_string());
+        assert_ne!(
+            Route::TalkMailRoute {}.to_string(),
+            Route::PoetRoute {}.to_string()
+        );
     }
 }

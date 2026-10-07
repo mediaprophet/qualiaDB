@@ -22,9 +22,8 @@ fn observe_named_local_augmented_surface(
 
 /// Documented MCP flatten — delegates to the real production lowering adapter.
 fn observe_mcp_flat_prompt(system: Option<&str>, prompt: &str) -> String {
-    let (args, _receipt) = qualia_client_core::conditioning::lower_mcp_tool_arguments(
-        system, prompt, false,
-    );
+    let (args, _receipt) =
+        qualia_client_core::conditioning::lower_mcp_tool_arguments(system, prompt, false);
     args["prompt"].as_str().unwrap().to_string()
 }
 
@@ -126,7 +125,10 @@ fn pp003_run_chat_inference_for_agent_passes_semantic_not_system_prompt() {
         .split("pub fn run_chat_inference_for_agent")
         .nth(1)
         .expect("run_chat_inference_for_agent");
-    let agent_fn = agent_fn.split("pub fn run_chat_inference_full").next().unwrap();
+    let agent_fn = agent_fn
+        .split("pub fn run_chat_inference_full")
+        .next()
+        .unwrap();
     assert!(
         !agent_fn.contains("system_prompt"),
         "run_chat_inference_for_agent must not reference system_prompt (omission fixture)"
@@ -159,9 +161,8 @@ fn pp004_mcp_flattens_system_and_user_into_single_prompt_argument() {
     assert_eq!(wire["params"]["arguments"]["prompt"], "Be terse.\n\nhi");
 
     // Declared system-role capability → structured arguments, no degradation.
-    let (args, receipt) = qualia_client_core::conditioning::lower_mcp_tool_arguments(
-        Some("Be terse."), "hi", true,
-    );
+    let (args, receipt) =
+        qualia_client_core::conditioning::lower_mcp_tool_arguments(Some("Be terse."), "hi", true);
     assert_eq!(args["system"], "Be terse.");
     assert_eq!(args["prompt"], "hi");
     assert_eq!(

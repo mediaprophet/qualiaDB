@@ -98,7 +98,10 @@ mod tests {
     #[test]
     fn needs_model_voice_is_held_not_yet() {
         assert_eq!(HonestyLevel::NeedsModel.label(), "held / not yet");
-        assert!(!HonestyLevel::NeedsModel.label().to_ascii_lowercase().contains("needs model"));
+        assert!(!HonestyLevel::NeedsModel
+            .label()
+            .to_ascii_lowercase()
+            .contains("needs model"));
         let (bg, _) = HonestyLevel::NeedsModel.bg_fg();
         assert_ne!(bg, "#450a0a", "held look is amber, not panic red");
     }
@@ -106,6 +109,9 @@ mod tests {
     #[test]
     fn planned_chip_is_not_held_theatre() {
         assert_eq!(HonestyLevel::Planned.label(), "Planned");
-        assert!(!HonestyLevel::Planned.label().to_ascii_lowercase().contains("held"));
+        assert!(!HonestyLevel::Planned
+            .label()
+            .to_ascii_lowercase()
+            .contains("held"));
     }
 }

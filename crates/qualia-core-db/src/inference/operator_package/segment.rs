@@ -44,7 +44,11 @@ pub enum SegmentError {
     /// Offset + length arithmetic caused a 64-bit integer overflow.
     OffsetOverflow,
     /// Segment exceeds the total enclosing package size.
-    OutOfBounds { offset: u64, length: u64, total: u64 },
+    OutOfBounds {
+        offset: u64,
+        length: u64,
+        total: u64,
+    },
     /// Segment address exceeds the target platform's pointer width (e.g. > 4GB on WASM32).
     AddressExceedsPlatformLimits { offset: u64, length: u64 },
     /// Segment checksum mismatch.
@@ -59,14 +63,29 @@ impl fmt::Display for SegmentError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::OffsetOverflow => write!(f, "segment offset + length caused integer overflow"),
-            Self::OutOfBounds { offset, length, total } => {
-                write!(f, "segment [{offset}..{}) exceeds total package size {total}", offset + length)
+            Self::OutOfBounds {
+                offset,
+                length,
+                total,
+            } => {
+                write!(
+                    f,
+                    "segment [{offset}..{}) exceeds total package size {total}",
+                    offset + length
+                )
             }
             Self::AddressExceedsPlatformLimits { offset, length } => {
-                write!(f, "segment [{offset}..{}) exceeds platform pointer addressability", offset + length)
+                write!(
+                    f,
+                    "segment [{offset}..{}) exceeds platform pointer addressability",
+                    offset + length
+                )
             }
             Self::ChecksumMismatch { expected, actual } => {
-                write!(f, "segment checksum mismatch: expected {expected:#010x}, actual {actual:#010x}")
+                write!(
+                    f,
+                    "segment checksum mismatch: expected {expected:#010x}, actual {actual:#010x}"
+                )
             }
             Self::UnsupportedKind(k) => write!(f, "unsupported segment kind id: {k}"),
             Self::SubsliceOutOfBounds => write!(f, "subslice range exceeds segment length"),
@@ -87,7 +106,13 @@ pub struct SegmentDescriptor {
 }
 
 impl SegmentDescriptor {
-    pub fn new(segment_id: u32, kind: SegmentKind, offset: u64, length: u64, checksum: u32) -> Self {
+    pub fn new(
+        segment_id: u32,
+        kind: SegmentKind,
+        offset: u64,
+        length: u64,
+        checksum: u32,
+    ) -> Self {
         Self {
             segment_id,
             kind,
@@ -197,7 +222,9 @@ impl<'a> SegmentView<'a> {
 
     /// Safely subslice this segment with offset and length.
     pub fn subslice(&self, offset: usize, len: usize) -> Result<&'a [u8], SegmentError> {
-        let end = offset.checked_add(len).ok_or(SegmentError::SubsliceOutOfBounds)?;
+        let end = offset
+            .checked_add(len)
+            .ok_or(SegmentError::SubsliceOutOfBounds)?;
         if end > self.data.len() {
             return Err(SegmentError::SubsliceOutOfBounds);
         }
@@ -213,7 +240,13 @@ mod tests {
     fn segment_bounds_and_checksum_ok() {
         let payload = b"hello operator segment data";
         let checksum = compute_segment_checksum(payload);
-        let desc = SegmentDescriptor::new(1, SegmentKind::SourcePayload, 0, payload.len() as u64, checksum);
+        let desc = SegmentDescriptor::new(
+            1,
+            SegmentKind::SourcePayload,
+            0,
+            payload.len() as u64,
+            checksum,
+        );
 
         assert_eq!(desc.end_offset().unwrap(), payload.len() as u64);
         assert!(desc.check_bounds(payload.len() as u64).is_ok());
@@ -247,7 +280,13 @@ mod tests {
     #[test]
     fn segment_checksum_mismatch_rejected() {
         let payload = b"test payload";
-        let desc = SegmentDescriptor::new(1, SegmentKind::ScaleMinPlane, 0, payload.len() as u64, 0x1234_5678);
+        let desc = SegmentDescriptor::new(
+            1,
+            SegmentKind::ScaleMinPlane,
+            0,
+            payload.len() as u64,
+            0x1234_5678,
+        );
         match SegmentView::try_new(desc, payload, true) {
             Err(SegmentError::ChecksumMismatch { expected, actual }) => {
                 assert_eq!(expected, 0x1234_5678);

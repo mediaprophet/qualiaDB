@@ -107,9 +107,7 @@ impl MatrixViewMut<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operators::descriptor::{
-        AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout,
-    };
+    use crate::operators::descriptor::{AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout};
     use crate::operators::view::{validate_operator, PayloadView};
 
     #[test]

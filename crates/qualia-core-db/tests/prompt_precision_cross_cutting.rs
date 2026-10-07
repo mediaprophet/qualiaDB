@@ -4,16 +4,18 @@
 //! `docs/design/prompt-precision/IMPLEMENTATION.md` §14.
 
 use qualia_core_db::inference::conditioning::{
-    decode_plan_cbor, plan_identity, select_evidence_into, validate_spec,
-    AuthorityView, BackendCapabilities, CompileBuffers, ConditioningBudget, ConditioningError,
-    ConditioningSpec, EvidencePart, OutputContractRef, RequirementClass, RequirementOutcome,
-    RequirementRef, SupportLevel,
+    decode_plan_cbor, plan_identity, select_evidence_into, validate_spec, AuthorityView,
+    BackendCapabilities, CompileBuffers, ConditioningBudget, ConditioningError, ConditioningSpec,
+    EvidencePart, OutputContractRef, RequirementClass, RequirementOutcome, RequirementRef,
+    SupportLevel,
 };
 use qualia_core_db::lora::adapter_manager::{LoRAAdapter, LoRAMetadata, LoRATensor};
 use qualia_core_db::poet_host::invoke::{dispatch, ids};
 use qualia_core_db::poet_host::PoetSnapshot;
 use std::collections::BTreeMap;
-use vibe::conditioning::{project_profile, ConditioningProfileDto, RequirementClassDto, RequirementDto};
+use vibe::conditioning::{
+    project_profile, ConditioningProfileDto, RequirementClassDto, RequirementDto,
+};
 use vibe::{Span, Value};
 
 #[test]
@@ -130,8 +132,8 @@ fn test_cross_cutting_02_evidence_role_like_text_cannot_forge_instruction() {
     }; 1];
 
     let evidence_slice = [adversarial_evidence];
-    let selected = select_evidence_into(&evidence_slice, &authority, &mut out)
-        .expect("selection completes");
+    let selected =
+        select_evidence_into(&evidence_slice, &authority, &mut out).expect("selection completes");
     assert_eq!(selected, 1);
     // Preserved strictly as evidence content, never promoted to instruction role
     assert_eq!(out[0].source_id, "urn:fact:untrusted");
@@ -299,7 +301,10 @@ fn test_cross_cutting_06_permission_rejection_before_disclosure() {
 
     let classified_slice = [classified_part];
     let count = select_evidence_into(&classified_slice, &authority, &mut out).unwrap();
-    assert_eq!(count, 0, "classified fact must be rejected prior to retrieval disclosure");
+    assert_eq!(
+        count, 0,
+        "classified fact must be rejected prior to retrieval disclosure"
+    );
 }
 
 #[test]
@@ -348,12 +353,18 @@ fn test_cross_cutting_08_cache_invalidation_matrix() {
     // Any semantic change alters the identity
     spec1.objective = "Task B";
     let id2 = plan_identity(&spec1, &[], "target-v1");
-    assert_ne!(id1, id2, "cache identity must invalidate on semantic changes");
+    assert_ne!(
+        id1, id2,
+        "cache identity must invalidate on semantic changes"
+    );
 
     // Target change alters the identity
     spec1.objective = "Task A";
     let id3 = plan_identity(&spec1, &[], "target-v2");
-    assert_ne!(id1, id3, "cache identity must invalidate across different targets");
+    assert_ne!(
+        id1, id3,
+        "cache identity must invalidate across different targets"
+    );
 }
 
 #[test]
@@ -365,16 +376,30 @@ fn test_cross_cutting_09_concurrent_request_isolation() {
     let mut arg1 = BTreeMap::new();
     arg1.insert("profile_id".into(), Value::String("urn:pA".into()));
     arg1.insert("version".into(), Value::U64(1));
-    let _ = dispatch(&mut snap, ids::CONDITIONING_ACTIVATE, &Value::Record(arg1), span).unwrap();
+    let _ = dispatch(
+        &mut snap,
+        ids::CONDITIONING_ACTIVATE,
+        &Value::Record(arg1),
+        span,
+    )
+    .unwrap();
 
     // Request 2: profile B
     let mut arg2 = BTreeMap::new();
     arg2.insert("profile_id".into(), Value::String("urn:pB".into()));
     arg2.insert("version".into(), Value::U64(5));
-    let _ = dispatch(&mut snap, ids::CONDITIONING_ACTIVATE, &Value::Record(arg2), span).unwrap();
+    let _ = dispatch(
+        &mut snap,
+        ids::CONDITIONING_ACTIVATE,
+        &Value::Record(arg2),
+        span,
+    )
+    .unwrap();
 
     // Verify isolation: pA active is 1, pB active is 5
-    let reg = qualia_core_db::inference::conditioning::global_registry().read().unwrap();
+    let reg = qualia_core_db::inference::conditioning::global_registry()
+        .read()
+        .unwrap();
     assert_eq!(reg.active_version("urn:pA"), Some(1));
     assert_eq!(reg.active_version("urn:pB"), Some(5));
 }

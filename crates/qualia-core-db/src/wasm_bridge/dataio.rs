@@ -371,7 +371,16 @@ pub fn parse_yaml_ld_q42_wasm(
 
     let quins_out: Vec<[u64; 6]> = quins
         .iter()
-        .map(|q| [q.subject, q.predicate, q.object, q.context, q.metadata, q.parity])
+        .map(|q| {
+            [
+                q.subject,
+                q.predicate,
+                q.object,
+                q.context,
+                q.metadata,
+                q.parity,
+            ]
+        })
         .collect();
 
     let lexicon_out: Vec<(String, String)> = lexicon
@@ -426,11 +435,12 @@ pub fn read_hmc_bundle_entry_wasm(bundle_bytes: &[u8], key: &str) -> Result<Vec<
         .get(key)
         .ok_or_else(|| JsValue::from_str(&format!("HMC entry not found: {key}")))?;
     if !reader.verify_entry(key) {
-        return Err(JsValue::from_str(&format!("HMC entry checksum mismatch: {key}")));
+        return Err(JsValue::from_str(&format!(
+            "HMC entry checksum mismatch: {key}"
+        )));
     }
     Ok(slice.to_vec())
 }
-
 
 // ─── Mutable Q42 Session WASM Bridge (QG-15) ────────────────────────────────
 
@@ -513,7 +523,11 @@ impl WasmQ42Session {
         self.inner.rollback_staged();
     }
 
-    pub fn commit_transaction(&mut self, command_hash: u64, actor_did: u64) -> Result<u32, JsValue> {
+    pub fn commit_transaction(
+        &mut self,
+        command_hash: u64,
+        actor_did: u64,
+    ) -> Result<u32, JsValue> {
         self.inner
             .commit_transaction(command_hash, actor_did)
             .map_err(|e| JsValue::from_str(&format!("Commit error: {e}")))
@@ -560,7 +574,11 @@ impl WasmQ42Session {
     }
 
     /// Rewind session state to a specific simulation/historical tick.
-    pub fn rewind_to_tick(&mut self, base_quins_bytes: &[u8], target_tick: u64) -> Result<(), JsValue> {
+    pub fn rewind_to_tick(
+        &mut self,
+        base_quins_bytes: &[u8],
+        target_tick: u64,
+    ) -> Result<(), JsValue> {
         let mut base_quins = Vec::new();
         if !base_quins_bytes.is_empty() {
             for chunk in base_quins_bytes.chunks_exact(48) {
@@ -663,13 +681,9 @@ impl WasmSimulationWorld {
         max_y_mm: i64,
     ) -> Vec<String> {
         let mut out_ids = [0u64; 64];
-        let count = self.inner.query_agents_in_bounds(
-            min_x_mm,
-            min_y_mm,
-            max_x_mm,
-            max_y_mm,
-            &mut out_ids,
-        );
+        let count =
+            self.inner
+                .query_agents_in_bounds(min_x_mm, min_y_mm, max_x_mm, max_y_mm, &mut out_ids);
         out_ids[..count].iter().map(|id| id.to_string()).collect()
     }
 
@@ -733,5 +747,3 @@ impl WasmSimulationWorld {
         flat
     }
 }
-
-

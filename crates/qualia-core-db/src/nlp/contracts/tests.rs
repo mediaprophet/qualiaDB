@@ -246,13 +246,7 @@ fn overflow_leaves_caller_buffer_untouched() {
 fn v1_emits_only_complete() {
     let summary = analyze_document_into(
         "",
-        &mut stack_buffers(
-            &mut [],
-            &mut [],
-            &mut [],
-            &mut [],
-            &mut [],
-        ),
+        &mut stack_buffers(&mut [], &mut [], &mut [], &mut [], &mut []),
     )
     .expect("empty");
     assert_eq!(summary.state, AnalysisState::Complete);

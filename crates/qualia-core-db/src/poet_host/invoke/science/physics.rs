@@ -1111,7 +1111,10 @@ mod tests {
         let blank_err = creator_evaluate_interaction(&blank, Span::new(0, 0)).unwrap_err();
         let blank_msg = blank_err.to_string();
         assert!(blank_msg.contains("not a material record"), "{blank_msg}");
-        assert!(!blank_msg.to_ascii_lowercase().contains("sucrose"), "{blank_msg}");
+        assert!(
+            !blank_msg.to_ascii_lowercase().contains("sucrose"),
+            "{blank_msg}"
+        );
     }
 
     #[test]

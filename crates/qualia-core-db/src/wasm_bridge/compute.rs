@@ -372,11 +372,15 @@ pub fn calculate_welfare_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> 
         return Err(JsValue::from_str("incomes must be non-empty"));
     }
 
-    let gini = crate::specialized_libs::computational_economics::welfare::gini_coefficient(&p.incomes)
-        .map_err(|e| JsValue::from_str(&format!("gini calculation error: {e:?}")))?;
+    let gini =
+        crate::specialized_libs::computational_economics::welfare::gini_coefficient(&p.incomes)
+            .map_err(|e| JsValue::from_str(&format!("gini calculation error: {e:?}")))?;
 
     let eps = p.epsilon.unwrap_or(0.5);
-    let atkinson = crate::specialized_libs::computational_economics::welfare::atkinson_inequality(&p.incomes, eps).ok();
+    let atkinson = crate::specialized_libs::computational_economics::welfare::atkinson_inequality(
+        &p.incomes, eps,
+    )
+    .ok();
 
     let mut sorted = p.incomes.clone();
     sorted.sort_by(|a, b| a.total_cmp(b));
@@ -401,7 +405,10 @@ pub fn calculate_welfare_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> 
         None
     };
 
-    let receipt_hash = format!("{:016x}", crate::q_hash(&format!("welfare:{n}:{gini}:{mean}")));
+    let receipt_hash = format!(
+        "{:016x}",
+        crate::q_hash(&format!("welfare:{n}:{gini}:{mean}"))
+    );
 
     #[derive(Serialize)]
     struct WelfareOut {
@@ -452,7 +459,9 @@ pub fn calculate_leontief_multipliers_wasm(val: JsValue) -> Result<JsValue, JsVa
         .map_err(|e| JsValue::from_str(&format!("invalid Leontief params: {e}")))?;
     let n = p.sectors;
     if n == 0 || n > 32 || p.technical_matrix.len() < n * n || p.final_demand.len() < n {
-        return Err(JsValue::from_str("invalid dimensions for Leontief input-output (max 32 sectors)"));
+        return Err(JsValue::from_str(
+            "invalid dimensions for Leontief input-output (max 32 sectors)",
+        ));
     }
 
     let mut inv = vec![0.0f64; n * n];
@@ -483,7 +492,10 @@ pub fn calculate_leontief_multipliers_wasm(val: JsValue) -> Result<JsValue, JsVa
         output_multipliers[j] = col_sum;
     }
 
-    let receipt_hash = format!("{:016x}", crate::q_hash(&format!("leontief:{n}:{}", total_output[0])));
+    let receipt_hash = format!(
+        "{:016x}",
+        crate::q_hash(&format!("leontief:{n}:{}", total_output[0]))
+    );
 
     #[derive(Serialize)]
     struct LeontiefOut {
@@ -531,9 +543,14 @@ pub fn compute_ols_diagnostics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     }
 
     let r = crate::solvers::statistics::regression::simple_linear_regression(&p.x, &p.y)
-        .ok_or_else(|| JsValue::from_str("OLS regression error: non-finite or zero-variance predictor"))?;
+        .ok_or_else(|| {
+            JsValue::from_str("OLS regression error: non-finite or zero-variance predictor")
+        })?;
 
-    let receipt_hash = format!("{:016x}", crate::q_hash(&format!("ols:{}:{}:{}", r.n, r.slope, r.r_squared)));
+    let receipt_hash = format!(
+        "{:016x}",
+        crate::q_hash(&format!("ols:{}:{}:{}", r.n, r.slope, r.r_squared))
+    );
 
     #[derive(Serialize)]
     struct OlsOut {
@@ -620,7 +637,11 @@ pub fn verify_regression_model_receipt_wasm(val: JsValue) -> Result<JsValue, JsV
         Some(&p.y),
         &opts,
     );
-    let mut warnings: Vec<String> = report.flags.iter().map(|f| format!("{}: {}", f.code, f.message)).collect();
+    let mut warnings: Vec<String> = report
+        .flags
+        .iter()
+        .map(|f| format!("{}: {}", f.code, f.message))
+        .collect();
     if !report.ok {
         warnings.insert(0, "verification_failed".into());
     }

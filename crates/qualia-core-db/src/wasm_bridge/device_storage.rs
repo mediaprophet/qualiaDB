@@ -197,12 +197,7 @@ pub fn verify_backup_manifest(m: &BackupManifest, payload_sha256_hex: &str) -> B
     if m.schema != "webcivics.vault-backup.v1" {
         errors.push("schema_mismatch");
     }
-    if m.content_sha256.len() != 64
-        || !m
-            .content_sha256
-            .chars()
-            .all(|c| c.is_ascii_hexdigit())
-    {
+    if m.content_sha256.len() != 64 || !m.content_sha256.chars().all(|c| c.is_ascii_hexdigit()) {
         errors.push("content_hash_malformed");
     }
     if !payload_sha256_hex.eq_ignore_ascii_case(&m.content_sha256) {

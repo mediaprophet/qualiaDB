@@ -2,6 +2,11 @@
 
 use crate::render::telemetry::CameraUniform;
 
+pub const CAMERA_NEAR_PLANE: f32 = 0.05;
+pub const CAMERA_FAR_PLANE: f32 = 200.0;
+/// Tangent of the vertical half-FOV used by both projection and AO reconstruction.
+pub const CAMERA_TAN_HALF_FOV: f32 = 0.414_213_57;
+
 /// Interactive orbit state driven from JS (`set_camera`, `set_camera_pan`, `set_camera_target`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CameraState {
@@ -124,6 +129,14 @@ pub fn orbit_eye_position_target(yaw: f32, pitch: f32, zoom: f32, target: [f32; 
     ]
 }
 
+/// Unit world-space direction from the orbit eye toward its target.
+#[inline]
+pub fn orbit_forward(yaw: f32, pitch: f32) -> [f32; 3] {
+    let pitch = pitch.clamp(-1.45, 1.45);
+    let cp = pitch.cos();
+    [-cp * yaw.sin(), -pitch.sin(), -cp * yaw.cos()]
+}
+
 /// Column-major view×projection (WGSL `mat4x4<f32>` compatible) centered at world origin.
 pub fn orbit_view_projection(yaw: f32, pitch: f32, zoom: f32, aspect: f32) -> [[f32; 4]; 4] {
     orbit_view_projection_target(yaw, pitch, zoom, [0.0, 0.0, 0.0], aspect)
@@ -165,7 +178,12 @@ pub fn orbit_view_projection_target(
     let eye_z = target[2] + dist * cp * cy;
 
     let view = look_at_rh([eye_x, eye_y, eye_z], target, [0.0, 1.0, 0.0]);
-    let proj = perspective_rh_zo(45.0_f32.to_radians(), aspect, 0.05, 200.0);
+    let proj = perspective_rh_zo(
+        CAMERA_TAN_HALF_FOV,
+        aspect,
+        CAMERA_NEAR_PLANE,
+        CAMERA_FAR_PLANE,
+    );
     mat4_mul(proj, view)
 }
 
@@ -184,8 +202,8 @@ fn look_at_rh(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [[f32; 4]; 4] {
 }
 
 #[inline]
-fn perspective_rh_zo(fov_y: f32, aspect: f32, near: f32, far: f32) -> [[f32; 4]; 4] {
-    let f = 1.0 / (fov_y * 0.5).tan();
+fn perspective_rh_zo(tan_half_fov: f32, aspect: f32, near: f32, far: f32) -> [[f32; 4]; 4] {
+    let f = 1.0 / tan_half_fov;
     let nf = 1.0 / (near - far);
     [
         [f / aspect, 0.0, 0.0, 0.0],
@@ -244,6 +262,24 @@ mod tests {
         let m = orbit_view_projection(0.0, 0.25, 3.5, 16.0 / 9.0);
         assert!(m[0][0].is_finite());
         assert!(m[3][2].is_finite());
+    }
+
+    #[test]
+    fn projection_row_norms_recover_fov_and_aspect_under_orbit_rotation() {
+        let aspect = 65.0 / 31.0;
+        for (yaw, pitch) in [(0.0, 0.0), (0.73, -0.42), (-2.1, 1.3)] {
+            let matrix = orbit_view_projection_target(yaw, pitch, 8.0, [3.0, -1.0, 2.0], aspect);
+            let horizontal = (0..3)
+                .map(|column| matrix[column][0] * matrix[column][0])
+                .sum::<f32>()
+                .sqrt();
+            let vertical = (0..3)
+                .map(|column| matrix[column][1] * matrix[column][1])
+                .sum::<f32>()
+                .sqrt();
+            assert!((vertical / horizontal - aspect).abs() < 2e-5);
+            assert!((vertical.recip() - CAMERA_TAN_HALF_FOV).abs() < 2e-5);
+        }
     }
 
     #[test]

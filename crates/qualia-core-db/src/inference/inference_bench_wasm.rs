@@ -549,4 +549,3 @@ pub fn set_prompt_precision_mode(_mode: &str) {}
 pub fn prompt_precision_mode() -> String {
     String::new()
 }
-

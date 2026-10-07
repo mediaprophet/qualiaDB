@@ -131,7 +131,8 @@ pub fn negotiate_solid_accept(accept: &str) -> &'static str {
         if media_l == "*/*" || media_l == "text/*" || media_l == "application/*" {
             let cand = SOLID_DEFAULT_CONTENT_TYPE;
             let pref = 0usize;
-            if best.map(|(_, bq, bp)| q > bq || (q == bq && pref < bp))
+            if best
+                .map(|(_, bq, bp)| q > bq || (q == bq && pref < bp))
                 .unwrap_or(true)
             {
                 best = Some((cand, q, pref));

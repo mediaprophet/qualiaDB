@@ -12,8 +12,8 @@
 //! CONSTRUCT results are `NQuin` slices on both paths. Prefer the serializer
 //! for any egress that must preserve typed literals bit-exactly.
 
-use crate::NQuin;
 use crate::sparql_library::serialisers::rdf_serializers::serialize_to_jsonld;
+use crate::NQuin;
 
 /// Build the RDF-shaped JSON-LD document a Node/WASM adapter should emit for
 /// CONSTRUCT / graph results (not the daemon quin-decimal `@graph`).
@@ -68,11 +68,7 @@ mod tests {
 
     #[test]
     fn construct_adapter_emits_rdf_shaped_value_objects() {
-        let quins = [quin(
-            MSB_FLAG | 1,
-            MSB_FLAG | 2,
-            INLINE_TAG_INTEGER | 42,
-        )];
+        let quins = [quin(MSB_FLAG | 1, MSB_FLAG | 2, INLINE_TAG_INTEGER | 42)];
         let out = construct_results_as_ld_json(&quins).unwrap();
         assert!(out.contains("\"@value\""), "{out}");
         assert!(out.contains("\"@type\""), "{out}");

@@ -123,7 +123,6 @@ pub fn provenance_path_for(q42_path: &Path) -> std::path::PathBuf {
     std::path::PathBuf::from(format!("{}.provenance.json", q42_path.display()))
 }
 
-
 /// How this volume may move, if at all.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub enum Q42PublicationClass {

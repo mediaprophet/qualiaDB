@@ -15,13 +15,13 @@ pub mod prepared_request;
 mod receipt;
 pub mod registry;
 mod render;
-mod requirement;
 pub mod request_parts;
+mod requirement;
 mod select;
 mod spec;
-mod validate;
 #[cfg(test)]
 mod tests;
+mod validate;
 
 pub use asset_contract::{
     AssetIdentity, ContractDisposition, ContractVerificationReceipt, FunctionalContract,
@@ -40,8 +40,8 @@ pub use registry::{
     global_registry, ConditioningRegistry, ProfileLifecycleState, ProfileVersionEntry,
 };
 pub use render::{render_into, RenderTarget, RenderedRequestSummary};
-pub use requirement::{RequirementClass, RequirementRef};
 pub use request_parts::{select_prioritized_parts, RequestPart, RequestPartKind};
+pub use requirement::{RequirementClass, RequirementRef};
 pub use select::{select_evidence_into, EvidencePart};
 pub use spec::{ConditioningError, ConditioningSpec, OutputContractRef};
 pub use validate::validate_spec;

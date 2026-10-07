@@ -206,6 +206,110 @@ struct ProjectorVertex {
     color: [f32; 4],
 }
 
+#[cfg(feature = "qualia")]
+type GraphicsReservation = qualia_core_db::gpu_context::VramReservation<'static>;
+#[cfg(not(feature = "qualia"))]
+type GraphicsReservation = ();
+#[cfg(feature = "qualia")]
+type GraphicsClass = qualia_core_db::gpu_context::VramResourceClass;
+#[cfg(not(feature = "qualia"))]
+#[derive(Clone, Copy)]
+enum GraphicsClass {
+    Geometry,
+    FrameTarget,
+    UploadStaging,
+}
+
+#[derive(Default)]
+struct RendererReservations {
+    frame_target: Option<GraphicsReservation>,
+    geometry: Option<GraphicsReservation>,
+}
+
+#[cfg(feature = "qualia")]
+fn reserve_graphics_bytes(
+    class: GraphicsClass,
+    bytes: u64,
+    label: &str,
+) -> Result<GraphicsReservation, String> {
+    qualia_core_db::gpu_context::global_vram_ledger()
+        .try_reserve_graphics(class, bytes)
+        .map_err(|e| format!("webizen-render {label} admission failed: {e}"))
+}
+
+#[cfg(not(feature = "qualia"))]
+fn reserve_graphics_bytes(
+    _class: GraphicsClass,
+    _bytes: u64,
+    _label: &str,
+) -> Result<GraphicsReservation, String> {
+    Ok(())
+}
+
+fn vertex_buffer_residency_bytes(max_vertices: usize) -> Option<u64> {
+    (max_vertices as u64)
+        .checked_mul(std::mem::size_of::<ScreenVertex>() as u64)?
+        .checked_add(
+            (max_vertices as u64).checked_mul(std::mem::size_of::<ProjectorVertex>() as u64)?,
+        )
+}
+
+fn offscreen_rgba8_bytes(width: u32, height: u32) -> Option<u64> {
+    u64::from(width.max(1))
+        .checked_mul(u64::from(height.max(1)))?
+        .checked_mul(4)
+}
+
+fn readback_layout(width: u32, height: u32) -> Option<(u32, u32, u64, usize)> {
+    let row_bytes = u64::from(width).checked_mul(4)?;
+    let align = u64::from(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+    let padded_row_bytes = row_bytes.checked_add(align - 1)? / align * align;
+    let bytes_per_row = u32::try_from(padded_row_bytes).ok()?;
+    let readback_bytes = padded_row_bytes.checked_mul(u64::from(height))?;
+    let output_bytes = usize::try_from(row_bytes.checked_mul(u64::from(height))?).ok()?;
+    Some((
+        bytes_per_row,
+        u32::try_from(row_bytes).ok()?,
+        readback_bytes,
+        output_bytes,
+    ))
+}
+
+fn reserve_vertex_buffer_residency() -> Result<GraphicsReservation, String> {
+    let bytes = vertex_buffer_residency_bytes(10_000)
+        .ok_or_else(|| "webizen-render vertex-buffer size overflow".to_string())?;
+    reserve_graphics_bytes(GraphicsClass::Geometry, bytes, "vertex buffer")
+}
+
+fn reserve_offscreen_extent(
+    requested_width: u32,
+    requested_height: u32,
+) -> Result<(u32, u32, GraphicsReservation), String> {
+    let (mut width, mut height) = (requested_width.max(1), requested_height.max(1));
+    #[cfg(feature = "qualia")]
+    {
+        for _ in 0..33 {
+            let bytes = offscreen_rgba8_bytes(width, height)
+                .ok_or_else(|| "webizen-render target size overflow".to_string())?;
+            match reserve_graphics_bytes(GraphicsClass::FrameTarget, bytes, "offscreen target") {
+                Ok(reservation) => return Ok((width, height, reservation)),
+                Err(_) if width > 1 || height > 1 => {
+                    width = width.div_ceil(2);
+                    height = height.div_ceil(2);
+                }
+                Err(error) => return Err(error),
+            }
+        }
+        return Err("webizen-render could not admit a minimum offscreen target".into());
+    }
+    #[cfg(not(feature = "qualia"))]
+    {
+        let _ = offscreen_rgba8_bytes(width, height)
+            .ok_or_else(|| "webizen-render target size overflow".to_string())?;
+        Ok((width, height, ()))
+    }
+}
+
 /// Where the renderer draws each frame.
 enum RenderTarget<'a> {
     /// Windowed swapchain.
@@ -304,6 +408,7 @@ pub struct WgpuRenderer<'a> {
     #[allow(dead_code)]
     projector_vertex_buffer: wgpu::Buffer,
     max_vertices: usize,
+    reservations: RendererReservations,
     // Track node positions for epistemic anchor coordination (zero-heap: binary indices)
     node_positions: Vec<(usize, ScreenPoint, f64)>, // (index, position, radius)
     // Legacy ambient particle layer (standalone wgpu path without qualia volumetric).
@@ -327,6 +432,8 @@ impl<'a> WgpuRenderer<'a> {
         let instance = wgpu::Instance::default();
 
         let (device, queue, adapter) = Self::request_device(&instance, Some(&surface)).await?;
+        let mut reservations = RendererReservations::default();
+        reservations.geometry = Some(reserve_vertex_buffer_residency()?);
 
         let surface_caps = surface.get_capabilities(&adapter);
         let surface_format = surface_caps
@@ -380,6 +487,7 @@ impl<'a> WgpuRenderer<'a> {
             vertex_buffer,
             projector_vertex_buffer,
             max_vertices,
+            reservations,
             node_positions: Vec::new(),
             #[cfg(not(feature = "qualia"))]
             ambient_config,
@@ -407,6 +515,11 @@ impl<'a> WgpuRenderer<'a> {
             let shared = qualia_core_db::gpu_context::shared_gpu();
             (shared.device.clone(), shared.queue.clone())
         };
+
+        let (width, height, frame_target_reservation) = reserve_offscreen_extent(width, height)?;
+        let mut reservations = RendererReservations::default();
+        reservations.frame_target = Some(frame_target_reservation);
+        reservations.geometry = Some(reserve_vertex_buffer_residency()?);
         #[cfg(not(feature = "qualia"))]
         let (device, queue) = {
             let instance = wgpu::Instance::default();
@@ -454,6 +567,7 @@ impl<'a> WgpuRenderer<'a> {
             vertex_buffer,
             projector_vertex_buffer,
             max_vertices,
+            reservations,
             node_positions: Vec::new(),
             #[cfg(not(feature = "qualia"))]
             ambient_config,
@@ -974,13 +1088,23 @@ impl<'a> WgpuRenderer<'a> {
             RenderTarget::Surface { .. } => return None,
         };
 
-        let unpadded_bytes_per_row = width * 4;
-        let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-        let padded_bytes_per_row = unpadded_bytes_per_row.div_ceil(align) * align;
+        let (padded_bytes_per_row, unpadded_bytes_per_row, readback_bytes, output_bytes) =
+            readback_layout(width, height)?;
+        let _staging_reservation = match reserve_graphics_bytes(
+            GraphicsClass::UploadStaging,
+            readback_bytes,
+            "readback",
+        ) {
+            Ok(reservation) => reservation,
+            Err(error) => {
+                log::warn!("webizen-render pixel readback refused: {error}");
+                return None;
+            }
+        };
 
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("webizen-readback-buffer"),
-            size: (padded_bytes_per_row * height) as u64,
+            size: readback_bytes,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -1024,9 +1148,9 @@ impl<'a> WgpuRenderer<'a> {
         let mapped = slice
             .get_mapped_range()
             .expect("wgpu buffer map_range failed");
-        let mut out = Vec::with_capacity((unpadded_bytes_per_row * height) as usize);
+        let mut out = Vec::with_capacity(output_bytes);
         for row in 0..height {
-            let start = (row * padded_bytes_per_row) as usize;
+            let start = row as usize * padded_bytes_per_row as usize;
             let end = start + unpadded_bytes_per_row as usize;
             out.extend_from_slice(&mapped[start..end]);
         }
@@ -1129,21 +1253,36 @@ impl<'a> WgpuRenderer<'a> {
 
     /// Resize the render target
     pub fn resize(&mut self, width: u32, height: u32) {
+        if let Err(error) = self.try_resize(width, height) {
+            log::warn!("webizen-render resize retained previous target: {error}");
+        }
+    }
+
+    /// Resize while retaining the old target if the shared graphics budget
+    /// cannot admit the replacement. Offscreen targets may degrade by powers
+    /// of two and return their effective dimensions.
+    pub fn try_resize(&mut self, width: u32, height: u32) -> Result<(u32, u32), String> {
+        let (width, height) = (width.max(1), height.max(1));
         match &mut self.target {
             RenderTarget::Surface { surface, config } => {
                 config.width = width;
                 config.height = height;
                 surface.configure(&self.device, config);
+                self.viewport_size = (width as f64, height as f64);
+                Ok((width, height))
             }
             RenderTarget::Offscreen {
                 texture,
                 format,
-                width: w,
-                height: h,
+                width: current_width,
+                height: current_height,
             } => {
-                *w = width;
-                *h = height;
-                *texture = self.device.create_texture(&wgpu::TextureDescriptor {
+                let (width, height, reservation) = reserve_offscreen_extent(width, height)?;
+                if (*current_width, *current_height) == (width, height) {
+                    drop(reservation);
+                    return Ok((width, height));
+                }
+                let replacement = self.device.create_texture(&wgpu::TextureDescriptor {
                     label: Some("webizen-offscreen-target"),
                     size: wgpu::Extent3d {
                         width,
@@ -1157,9 +1296,36 @@ impl<'a> WgpuRenderer<'a> {
                     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
                     view_formats: &[],
                 });
+                let retired_texture = std::mem::replace(texture, replacement);
+                *current_width = width;
+                *current_height = height;
+                let retired_reservation = self.reservations.frame_target.replace(reservation);
+                self.viewport_size = (width as f64, height as f64);
+                // Resize is a cold path. Keep the previous texture reservation
+                // alive until submitted work has retired from the device queue.
+                let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+                drop(retired_texture);
+                drop(retired_reservation);
+                Ok((width, height))
             }
         }
-        self.viewport_size = (width as f64, height as f64);
+    }
+}
+
+#[cfg(test)]
+mod allocation_tests {
+    use super::*;
+
+    #[test]
+    fn renderer_residency_sizes_are_checked_and_include_row_padding() {
+        assert_eq!(vertex_buffer_residency_bytes(10_000), Some(520_000));
+        assert_eq!(offscreen_rgba8_bytes(1920, 1080), Some(8_294_400));
+        assert_eq!(
+            readback_layout(1920, 1080),
+            Some((7680, 7680, 8_294_400, 8_294_400))
+        );
+        assert_eq!(readback_layout(1, 1), Some((256, 4, 256, 4)));
+        assert_eq!(readback_layout(u32::MAX, 1), None);
     }
 }
 
@@ -1507,6 +1673,7 @@ pub fn render_scene_png(
 
 /// Render scene with time parameter for animation effects.
 /// Time is in seconds, used for pulsing/glowing animations.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn render_scene_png_with_time(
     scene: &crate::scene_contract::RenderScene,
     width: u32,
@@ -1525,6 +1692,7 @@ pub fn render_scene_png_with_time(
 /// Render scene with time parameter and telemetry for ambient visualization.
 /// Time is in seconds, used for pulsing/glowing animations.
 /// Telemetry drives the ambient particle visualization effects.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn render_scene_png_with_time_and_telemetry(
     scene: &crate::scene_contract::RenderScene,
     width: u32,

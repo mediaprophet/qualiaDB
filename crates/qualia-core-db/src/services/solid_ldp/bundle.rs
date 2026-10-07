@@ -12,9 +12,7 @@ use crate::sparql_library::serialisers::rdf_serializers::{
 };
 use crate::NQuin;
 
-use super::consent::{
-    export_outcome_summary, require_sanctuary_choice, SanctuaryExportChoice,
-};
+use super::consent::{export_outcome_summary, require_sanctuary_choice, SanctuaryExportChoice};
 use super::filter::{filter_for_egress, EgressStats, SolidEgressPolicy};
 use super::terms::{write_iri, write_object};
 
@@ -108,9 +106,7 @@ pub fn build_migration_bundle(
     };
     let acl = if opts.formats.acl {
         Some(render_acl(
-            opts.owner_webid
-                .as_deref()
-                .unwrap_or("urn:qualia:owner"),
+            opts.owner_webid.as_deref().unwrap_or("urn:qualia:owner"),
             opts.grant_public_read,
         ))
     } else {
@@ -139,11 +135,8 @@ fn serialize_turtle_lex(
     lex: Option<&HashMap<u64, String>>,
 ) -> Result<String, String> {
     let mut out = Vec::new();
-    writeln!(
-        &mut out,
-        "@prefix acl: <http://www.w3.org/ns/auth/acl#> ."
-    )
-    .map_err(|e| e.to_string())?;
+    writeln!(&mut out, "@prefix acl: <http://www.w3.org/ns/auth/acl#> .")
+        .map_err(|e| e.to_string())?;
     writeln!(&mut out, "@prefix foaf: <http://xmlns.com/foaf/0.1/> .")
         .map_err(|e| e.to_string())?;
     writeln!(

@@ -181,7 +181,11 @@ fn emit(spec: &Spec) -> String {
             s.span.start_utf8,
             s.span.end_utf8,
             json_escape(&spec.source[s.span.as_range()]),
-            if i + 1 == sentences.len() { "\n" } else { ",\n" }
+            if i + 1 == sentences.len() {
+                "\n"
+            } else {
+                ",\n"
+            }
         ));
     }
     out.push_str("  ]\n}\n");
@@ -204,7 +208,8 @@ fn write_adversarial_v0_gold() {
             .join(spec.corpus)
             .join("documents")
             .join(format!("{}.txt", spec.doc_id));
-        std::fs::write(&gold, json.as_bytes()).unwrap_or_else(|e| panic!("write {}: {e}", gold.display()));
+        std::fs::write(&gold, json.as_bytes())
+            .unwrap_or_else(|e| panic!("write {}: {e}", gold.display()));
         std::fs::write(&txt, spec.source.as_bytes())
             .unwrap_or_else(|e| panic!("write {}: {e}", txt.display()));
     }
@@ -240,7 +245,10 @@ fn gold_hash(root: &std::path::Path, corpus: &str, id: &str) -> String {
 }
 
 fn write_split_txt(root: &std::path::Path, corpus: &str, split: &str, ids: &[&str]) {
-    let path = root.join(corpus).join("splits").join(format!("{split}.txt"));
+    let path = root
+        .join(corpus)
+        .join("splits")
+        .join(format!("{split}.txt"));
     let mut body = String::new();
     for id in ids {
         body.push_str(id);

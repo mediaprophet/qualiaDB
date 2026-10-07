@@ -28,14 +28,22 @@ pub struct MailAccount {
     pub pop3: Option<Pop3Config>,
 }
 
-fn path() -> std::path::PathBuf { app_meta_dir().join(ACCOUNTS_FILE) }
+fn path() -> std::path::PathBuf {
+    app_meta_dir().join(ACCOUNTS_FILE)
+}
 
 pub fn list() -> Vec<MailAccount> {
-    fs::read_to_string(path()).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+    fs::read_to_string(path())
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default()
 }
 
 pub fn save(account: MailAccount) -> Result<Vec<MailAccount>, String> {
-    if account.id.trim().is_empty() || account.label.trim().is_empty() || !account.address.contains('@') {
+    if account.id.trim().is_empty()
+        || account.label.trim().is_empty()
+        || !account.address.contains('@')
+    {
         return Err("Each account needs an id, a label, and a mailbox address.".to_string());
     }
     if account.imap.is_none() && account.pop3.is_none() && account.smtp.is_none() {
@@ -45,20 +53,35 @@ pub fn save(account: MailAccount) -> Result<Vec<MailAccount>, String> {
     if let Some(existing) = accounts.iter_mut().find(|item| item.id == account.id) {
         *existing = account;
     } else {
-        if accounts.len() >= MAX_ACCOUNTS { return Err("The local account limit has been reached.".to_string()); }
+        if accounts.len() >= MAX_ACCOUNTS {
+            return Err("The local account limit has been reached.".to_string());
+        }
         accounts.push(account);
     }
-    if let Some(parent) = path().parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
-    fs::write(path(), serde_json::to_string_pretty(&accounts).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    if let Some(parent) = path().parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(
+        path(),
+        serde_json::to_string_pretty(&accounts).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     Ok(accounts)
 }
 
-pub fn find(id: &str) -> Option<MailAccount> { list().into_iter().find(|account| account.id == id) }
+pub fn find(id: &str) -> Option<MailAccount> {
+    list().into_iter().find(|account| account.id == id)
+}
 
-fn pop3_receipts_path() -> std::path::PathBuf { app_meta_dir().join(POP3_RECEIPTS_FILE) }
+fn pop3_receipts_path() -> std::path::PathBuf {
+    app_meta_dir().join(POP3_RECEIPTS_FILE)
+}
 
 fn pop3_receipts() -> BTreeSet<String> {
-    fs::read_to_string(pop3_receipts_path()).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+    fs::read_to_string(pop3_receipts_path())
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default()
 }
 
 /// POP3 has no standard unseen state. A UIDL receipt is therefore recorded
@@ -71,9 +94,17 @@ pub fn record_pop3_receipt(account_id: &str, uid: &str) -> Result<(), String> {
     let mut receipts = pop3_receipts();
     receipts.insert(format!("{account_id}:{uid}"));
     while receipts.len() > MAX_POP3_RECEIPTS {
-        let Some(oldest) = receipts.iter().next().cloned() else { break; };
+        let Some(oldest) = receipts.iter().next().cloned() else {
+            break;
+        };
         receipts.remove(&oldest);
     }
-    if let Some(parent) = pop3_receipts_path().parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
-    fs::write(pop3_receipts_path(), serde_json::to_string(&receipts).map_err(|e| e.to_string())?).map_err(|e| e.to_string())
+    if let Some(parent) = pop3_receipts_path().parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(
+        pop3_receipts_path(),
+        serde_json::to_string(&receipts).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())
 }

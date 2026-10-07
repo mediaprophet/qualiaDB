@@ -9,9 +9,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::q_hash;
-use crate::query::ingest_formats::{
-    format_from_path, parse_triples_format, RawTriple,
-};
+use crate::query::ingest_formats::{format_from_path, parse_triples_format, RawTriple};
 use crate::query::ingest_job::IngestRdfFormat;
 use crate::query::integrity_omit::MAX_LEX_TERM_BYTES;
 
@@ -79,14 +77,15 @@ fn support_for_path(path: &Path) -> (SourceSupport, String) {
     }
     let lower = path.to_string_lossy().to_ascii_lowercase();
     match format_from_path(&lower) {
-        IngestRdfFormat::Auto if !(lower.ends_with(".owl")
-            || lower.ends_with(".rdf")
-            || lower.ends_with(".ttl")
-            || lower.ends_with(".nt")
-            || lower.ends_with(".nq")
-            || lower.ends_with(".trig")
-            || lower.ends_with(".jsonld")
-            || lower.ends_with(".json-ld")) =>
+        IngestRdfFormat::Auto
+            if !(lower.ends_with(".owl")
+                || lower.ends_with(".rdf")
+                || lower.ends_with(".ttl")
+                || lower.ends_with(".nt")
+                || lower.ends_with(".nq")
+                || lower.ends_with(".trig")
+                || lower.ends_with(".jsonld")
+                || lower.ends_with(".json-ld")) =>
         {
             (SourceSupport::UnsupportedOther, "unknown".into())
         }
@@ -126,10 +125,11 @@ pub fn audit_rdf_source(path: &Path, top_n: usize) -> io::Result<SourceAuditRepo
     let mut oversize_literal_count = 0u64;
     let mut first_oversize_preview = None;
     let mut blank_node_triples = 0u64;
-    let gloss: std::collections::HashSet<u64> = crate::query::integrity_omit::COMMENT_GLOSS_PREDICATE_IRIS
-        .iter()
-        .map(|iri| q_hash(iri))
-        .collect();
+    let gloss: std::collections::HashSet<u64> =
+        crate::query::integrity_omit::COMMENT_GLOSS_PREDICATE_IRIS
+            .iter()
+            .map(|iri| q_hash(iri))
+            .collect();
     let mut comment_gloss_predicate_hits = 0u64;
 
     let mut on_triple = |raw: RawTriple| {
@@ -147,11 +147,7 @@ pub fn audit_rdf_source(path: &Path, top_n: usize) -> io::Result<SourceAuditRepo
                 oversize_literal_count += 1;
                 if first_oversize_preview.is_none() {
                     let preview: String = part.chars().take(120).collect();
-                    first_oversize_preview = Some(format!(
-                        "{}… ({} bytes)",
-                        preview,
-                        part.len()
-                    ));
+                    first_oversize_preview = Some(format!("{}… ({} bytes)", preview, part.len()));
                 }
             }
         }
@@ -205,7 +201,10 @@ pub fn audit_source_root(root: &Path) -> io::Result<LibraryAuditMatrix> {
         for ent in std::fs::read_dir(&oewn)? {
             let ent = ent?;
             let p = ent.path();
-            if p.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("ttl")) == Some(true)
+            if p.extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.eq_ignore_ascii_case("ttl"))
+                == Some(true)
             {
                 push_file(&mut entries, &p)?;
             }

@@ -12,26 +12,23 @@ use std::time::Instant;
 use crate::gguf_sharder::GgufTensorIndex;
 
 use super::{
-    execute_ple_block, execute_streamed_final_hyper_connection,
-    execute_streamed_gdn_moe_layer, execute_streamed_qsa_moe_layer, GatedDeltaBuffers,
-    GatedDeltaError, GatedDeltaState, PleBlockBuffers, PleBlockError, PleTokenHistory, QsaState,
-    Qwen4ExpNativeRuntime, StreamedArgmax, StreamedGdnMoeLayerBuffers, StreamedHyperBuffers,
-    StreamedHyperError, StreamedLayerError, StreamedMoeBuffers, StreamedQsaBuffers,
-    StreamedQsaMoeLayerBuffers, TrunkNvmeError, QWEN4EXP_GDN_HEAD_DIM, QWEN4EXP_GDN_HEADS,
-    QWEN4EXP_GDN_KEY_HEADS, QWEN4EXP_HYPER_STREAMS, QWEN4EXP_PLE_HISTORY,
-    QWEN4EXP_QSA_HEAD_DIM, QWEN4EXP_QSA_INDEXER_HEAD_DIM, QWEN4EXP_QSA_INDEXER_HEADS,
-    QWEN4EXP_QSA_KV_HEADS, QWEN4EXP_QSA_MAX_SELECTED, QWEN4EXP_QSA_QUERY_HEADS,
-    QWEN4EXP_QSA_TOP_BLOCKS,
+    execute_ple_block, execute_streamed_final_hyper_connection, execute_streamed_gdn_moe_layer,
+    execute_streamed_qsa_moe_layer, GatedDeltaBuffers, GatedDeltaError, GatedDeltaState,
+    PleBlockBuffers, PleBlockError, PleTokenHistory, QsaState, Qwen4ExpNativeRuntime,
+    StreamedArgmax, StreamedGdnMoeLayerBuffers, StreamedHyperBuffers, StreamedHyperError,
+    StreamedLayerError, StreamedMoeBuffers, StreamedQsaBuffers, StreamedQsaMoeLayerBuffers,
+    TrunkNvmeError, QWEN4EXP_GDN_HEADS, QWEN4EXP_GDN_HEAD_DIM, QWEN4EXP_GDN_KEY_HEADS,
+    QWEN4EXP_HYPER_STREAMS, QWEN4EXP_PLE_HISTORY, QWEN4EXP_QSA_HEAD_DIM,
+    QWEN4EXP_QSA_INDEXER_HEADS, QWEN4EXP_QSA_INDEXER_HEAD_DIM, QWEN4EXP_QSA_KV_HEADS,
+    QWEN4EXP_QSA_MAX_SELECTED, QWEN4EXP_QSA_QUERY_HEADS, QWEN4EXP_QSA_TOP_BLOCKS,
 };
 
 const GDN_CONV_WIDTH: usize =
     QWEN4EXP_GDN_KEY_HEADS * QWEN4EXP_GDN_HEAD_DIM * 2 + QWEN4EXP_GDN_HEADS * QWEN4EXP_GDN_HEAD_DIM;
 const GDN_CONV_HISTORY: usize = 3;
-const GDN_DELTA_WIDTH: usize =
-    QWEN4EXP_GDN_HEADS * QWEN4EXP_GDN_HEAD_DIM * QWEN4EXP_GDN_HEAD_DIM;
+const GDN_DELTA_WIDTH: usize = QWEN4EXP_GDN_HEADS * QWEN4EXP_GDN_HEAD_DIM * QWEN4EXP_GDN_HEAD_DIM;
 const QSA_KV_WIDTH: usize = QWEN4EXP_QSA_KV_HEADS * QWEN4EXP_QSA_HEAD_DIM;
-const QSA_INDEX_QUERY_WIDTH: usize =
-    QWEN4EXP_QSA_INDEXER_HEADS * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
+const QSA_INDEX_QUERY_WIDTH: usize = QWEN4EXP_QSA_INDEXER_HEADS * QWEN4EXP_QSA_INDEXER_HEAD_DIM;
 const HYPER_LOW_RANK: usize = 320;
 const MOE_INTERMEDIATE: usize = 640;
 const ROUTER_EXPERTS: usize = 512;
@@ -134,10 +131,7 @@ impl Qwen4ExpSession {
             qsa_values: Vec::with_capacity(n_layers),
             qsa_indexer_keys: Vec::with_capacity(n_layers),
             qsa_tokens: Vec::with_capacity(n_layers),
-            ple_conv_history: vec![
-                0.0;
-                QWEN4EXP_PLE_HISTORY * QWEN4EXP_HYPER_STREAMS * hidden
-            ],
+            ple_conv_history: vec![0.0; QWEN4EXP_PLE_HISTORY * QWEN4EXP_HYPER_STREAMS * hidden],
             ple_tokens: PleTokenHistory::default(),
             ple_layer,
             position: 0,
@@ -154,7 +148,9 @@ impl Qwen4ExpSession {
                 session.gdn_delta.push(Vec::new());
             }
             if layer.has_qwen_sparse_attention() {
-                session.qsa_keys.push(vec![0.0; qsa_capacity * QSA_KV_WIDTH]);
+                session
+                    .qsa_keys
+                    .push(vec![0.0; qsa_capacity * QSA_KV_WIDTH]);
                 session
                     .qsa_values
                     .push(vec![0.0; qsa_capacity * QSA_KV_WIDTH]);
@@ -486,8 +482,7 @@ pub fn decode_step(
     )?;
     for stream in 0..QWEN4EXP_HYPER_STREAMS {
         let start = stream * hidden;
-        session.residual[start..start + hidden]
-            .copy_from_slice(&scratch.embedding[..hidden]);
+        session.residual[start..start + hidden].copy_from_slice(&scratch.embedding[..hidden]);
     }
     let step = session.position;
     push_trace(
@@ -531,7 +526,14 @@ pub fn decode_step(
                 &mut session.ple_conv_history,
                 &mut ple_buffers,
             )?;
-            push_trace(trace, step, layer_idx, "post_ple", &session.residual, capture);
+            push_trace(
+                trace,
+                step,
+                layer_idx,
+                "post_ple",
+                &session.residual,
+                capture,
+            );
         }
         if layer.is_hybrid_ssm_layer() {
             let mut state = GatedDeltaState {
@@ -671,7 +673,14 @@ pub fn decode_step(
         }
         // The fused layer call leaves every intermediate in scratch, so the
         // trace sees each stage without the operators knowing about it.
-        push_trace(trace, step, layer_idx, "attn_in", &scratch.attn_mixed, capture);
+        push_trace(
+            trace,
+            step,
+            layer_idx,
+            "attn_in",
+            &scratch.attn_mixed,
+            capture,
+        );
         push_trace(
             trace,
             step,
@@ -680,11 +689,46 @@ pub fn decode_step(
             &scratch.token_mixer_branch,
             capture,
         );
-        push_trace(trace, step, layer_idx, "attn_inject", &scratch.attn_inject, capture);
-        push_trace(trace, step, layer_idx, "ffn_in", &scratch.ffn_mixed, capture);
-        push_trace(trace, step, layer_idx, "moe_out", &scratch.moe_branch, capture);
-        push_trace(trace, step, layer_idx, "ffn_inject", &scratch.ffn_inject, capture);
-        push_trace(trace, step, layer_idx, "post_layer", &session.residual, capture);
+        push_trace(
+            trace,
+            step,
+            layer_idx,
+            "attn_inject",
+            &scratch.attn_inject,
+            capture,
+        );
+        push_trace(
+            trace,
+            step,
+            layer_idx,
+            "ffn_in",
+            &scratch.ffn_mixed,
+            capture,
+        );
+        push_trace(
+            trace,
+            step,
+            layer_idx,
+            "moe_out",
+            &scratch.moe_branch,
+            capture,
+        );
+        push_trace(
+            trace,
+            step,
+            layer_idx,
+            "ffn_inject",
+            &scratch.ffn_inject,
+            capture,
+        );
+        push_trace(
+            trace,
+            step,
+            layer_idx,
+            "post_layer",
+            &session.residual,
+            capture,
+        );
     }
 
     execute_streamed_final_hyper_connection(

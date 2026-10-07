@@ -201,7 +201,12 @@ fn set_dim(mut wb: Signal<Workbench>, dim: DimMode) {
 pub fn ControlBar(wb: Signal<Workbench>) -> Element {
     let w = wb();
     let secs = (w.time_progress.clamp(0.0, 1.0) * 86399.0) as u64;
-    let active_clock = format!("{:02}:{:02}:{:02}", secs / 3600, (secs % 3600) / 60, secs % 60);
+    let active_clock = format!(
+        "{:02}:{:02}:{:02}",
+        secs / 3600,
+        (secs % 3600) / 60,
+        secs % 60
+    );
     rsx! {
         div { class: "canvas-control-bar",
             div { class: "virtual-desktop-pager",

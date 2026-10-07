@@ -1274,10 +1274,14 @@ pub mod swarm {
 
             // Perform live DNS TXT lookup via native Qualia zero-heap DNS stack
             let qname = format!("_q42peer._tcp.{}", domain.trim_end_matches('.'));
-            let resolver = crate::net::dns::QualiaDnsResolver::new(crate::net::dns::ResolverConfig::default());
-            let socket = std::net::UdpSocket::bind("0.0.0.0:0").map_err(|_| "socket bind failed")?;
+            let resolver =
+                crate::net::dns::QualiaDnsResolver::new(crate::net::dns::ResolverConfig::default());
+            let socket =
+                std::net::UdpSocket::bind("0.0.0.0:0").map_err(|_| "socket bind failed")?;
             socket
-                .set_read_timeout(Some(std::time::Duration::from_millis(resolver.config.timeout_ms)))
+                .set_read_timeout(Some(std::time::Duration::from_millis(
+                    resolver.config.timeout_ms,
+                )))
                 .map_err(|_| "timeout failed")?;
 
             let mut tx_buf = [0u8; 512];
@@ -1295,7 +1299,9 @@ pub mod swarm {
                 .map_err(|_| "DNS send failed")?;
 
             let mut rx_buf = [0u8; 4096];
-            let (rx_len, _) = socket.recv_from(&mut rx_buf).map_err(|_| "DNS recv failed")?;
+            let (rx_len, _) = socket
+                .recv_from(&mut rx_buf)
+                .map_err(|_| "DNS recv failed")?;
 
             let mut found_payload = None;
             let header = crate::net::dns::wire::DnsHeader::decode(&rx_buf[..rx_len])
@@ -1305,9 +1311,12 @@ pub mod swarm {
                 let mut offset = crate::net::dns::wire::DnsHeader::SIZE;
                 let mut dummy = [0u8; 256];
                 for _ in 0..header.qdcount {
-                    let (new_off, _) =
-                        crate::net::dns::wire::decode_domain_name(&rx_buf[..rx_len], offset, &mut dummy)
-                            .map_err(|_| "invalid qname")?;
+                    let (new_off, _) = crate::net::dns::wire::decode_domain_name(
+                        &rx_buf[..rx_len],
+                        offset,
+                        &mut dummy,
+                    )
+                    .map_err(|_| "invalid qname")?;
                     offset = new_off + 4;
                 }
 
@@ -1316,7 +1325,9 @@ pub mod swarm {
                     offset,
                     header.ancount as usize,
                     |_name, rec| {
-                        if rec.rtype == crate::net::dns::wire::DnsType::TXT && found_payload.is_none() {
+                        if rec.rtype == crate::net::dns::wire::DnsType::TXT
+                            && found_payload.is_none()
+                        {
                             let mut cursor = 0;
                             while cursor < rec.rdata.len() {
                                 let seg_len = rec.rdata[cursor] as usize;
@@ -1329,7 +1340,8 @@ pub mod swarm {
                                     let mut wg_pubkey = [0u8; 32];
                                     wg_pubkey.copy_from_slice(&part[..32]);
 
-                                    let did_q42 = u64::from_le_bytes(part[32..40].try_into().unwrap());
+                                    let did_q42 =
+                                        u64::from_le_bytes(part[32..40].try_into().unwrap());
                                     let routing_mask = part[40] as u64;
                                     let peer_capabilities =
                                         u16::from_le_bytes(part[41..43].try_into().unwrap());

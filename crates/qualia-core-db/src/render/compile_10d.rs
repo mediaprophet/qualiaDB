@@ -21,6 +21,7 @@ use crate::container_10d::mesh_section::{
 use crate::container_10d::node_section::{
     parse_node_header, read_node, write_node_section_aos, NodeMiniHeader, NodeSectionError,
 };
+use crate::container_10d::normal_section::NormalSectionError;
 use crate::container_10d::provenance_section::{
     encode_provenance_section, encoded_len as provenance_encoded_len, ProvenanceSectionError,
     ProvenanceSidecar,
@@ -29,8 +30,9 @@ use crate::container_10d::section::{
     encode_container, parse_section_table, AlignmentTier, SectionInput, SectionTableError,
     SectionType,
 };
+use crate::container_10d::{attach_material_section, MaterialContainerError};
 use crate::render::assets::{
-    import_asset, mesh_to_nquins_with_dev, mesh_to_nquins_with_meta, AssetError, Mesh,
+    import_asset_with_normals, mesh_to_nquins_with_dev, mesh_to_nquins_with_meta, AssetError, Mesh,
 };
 use crate::tensor::Tensor10D;
 use crate::NQuin;
@@ -63,12 +65,22 @@ pub enum Compile10dError {
     Import(AssetError),
     /// The QuantizedMesh section encode/decode failed.
     Mesh(MeshSectionError),
+    /// The optional vertex-normal field sidecar failed validation or encoding.
+    Normals(NormalSectionError),
     /// The container section table encode/decode failed.
     Section(SectionTableError),
     /// Encoding the provenance sidecar section failed.
     Provenance(ProvenanceSectionError),
     /// Encoding or reading the Tensor10DNodes section failed.
     Nodes(NodeSectionError),
+    /// The optional MAT1 material/submesh section failed validation or encoding.
+    Materials(MaterialContainerError),
+    /// The optional UV01 texture-coordinate section failed validation or encoding.
+    TextureCoordinates(crate::container_10d::TextureCoordinateContainerError),
+    /// Stable material identities collided while scoping imported materials to an asset.
+    MaterialIdentityCollision,
+    /// A normal sidecar does not match the mesh vertex count.
+    NormalVertexCountMismatch { expected: usize, got: usize },
     /// Topology / spatial-index extra section failed (C3).
     ExtraSection { kind: &'static str },
     /// The container parsed but held no `QuantizedMesh` section.
@@ -86,9 +98,21 @@ impl std::fmt::Display for Compile10dError {
         match self {
             Self::Import(e) => write!(f, ".10d compile: source import: {e}"),
             Self::Mesh(e) => write!(f, ".10d compile: mesh section: {e}"),
+            Self::Normals(e) => write!(f, ".10d compile: normal field: {e}"),
             Self::Section(e) => write!(f, ".10d compile: section table: {e:?}"),
             Self::Provenance(e) => write!(f, ".10d compile: provenance section: {e}"),
             Self::Nodes(e) => write!(f, ".10d compile: Tensor10DNodes section: {e}"),
+            Self::Materials(e) => write!(f, ".10d compile: MAT1 material section: {e:?}"),
+            Self::TextureCoordinates(e) => {
+                write!(f, ".10d compile: UV01 texture coordinates: {e:?}")
+            }
+            Self::MaterialIdentityCollision => {
+                write!(f, ".10d compile: stable asset material identity collision")
+            }
+            Self::NormalVertexCountMismatch { expected, got } => write!(
+                f,
+                ".10d normal field: vertex count {got} does not match mesh count {expected}"
+            ),
             Self::ExtraSection { kind } => write!(f, ".10d compile: extra section {kind} failed"),
             Self::NoMeshSection => write!(f, ".10d: no QuantizedMesh section in container"),
             Self::NoNodesSection => write!(f, ".10d: no Tensor10DNodes section in container"),
@@ -160,7 +184,13 @@ pub fn compile_mesh_to_10d_vision_with_provenance(
     nodes: &[Tensor10D],
     provenance: &ProvenanceSidecar,
 ) -> Result<Vec<u8>, Compile10dError> {
-    compile_mesh_to_10d_with_extras(mesh, nodes, Some(provenance), Compile10dExtras::VISION, None)
+    compile_mesh_to_10d_with_extras(
+        mesh,
+        nodes,
+        Some(provenance),
+        Compile10dExtras::VISION,
+        None,
+    )
 }
 
 /// Seal mesh + provenance + a per-vertex surface colour reading.
@@ -187,6 +217,61 @@ pub fn compile_mesh_to_10d_with_extras(
     provenance: Option<&ProvenanceSidecar>,
     extras: Compile10dExtras,
     surface_reading: Option<&[[f32; 4]]>,
+) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_extras_and_frames(
+        mesh,
+        nodes,
+        provenance,
+        extras,
+        surface_reading,
+        None,
+        None,
+    )
+}
+
+/// Compile a mesh and preserve a vertex-aligned authored normal stream in an optional `.10d`
+/// FieldSidecar. The existing QuantizedMesh payload remains unchanged.
+pub fn compile_mesh_to_10d_with_normals(
+    mesh: &Mesh,
+    normals: &[[f32; 3]],
+) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_extras_and_frames(
+        mesh,
+        &[],
+        None,
+        Compile10dExtras::default(),
+        None,
+        Some(normals),
+        None,
+    )
+}
+
+/// Compile authored vertex normals and tangent handedness in an optional FieldSidecar.
+pub fn compile_mesh_to_10d_with_frames(
+    mesh: &Mesh,
+    normals: Option<&[[f32; 3]]>,
+    tangents: Option<&[[f32; 4]]>,
+) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_extras_and_frames(
+        mesh,
+        &[],
+        None,
+        Compile10dExtras::default(),
+        None,
+        normals,
+        tangents,
+    )
+}
+
+/// Full seal with optional color reading and vertex frame fields plus topology/spatial extras.
+pub fn compile_mesh_to_10d_with_extras_and_frames(
+    mesh: &Mesh,
+    nodes: &[Tensor10D],
+    provenance: Option<&ProvenanceSidecar>,
+    extras: Compile10dExtras,
+    surface_reading: Option<&[[f32; 4]]>,
+    normals: Option<&[[f32; 3]]>,
+    tangents: Option<&[[f32; 4]]>,
 ) -> Result<Vec<u8>, Compile10dError> {
     // 1. Encode the QuantizedMesh section payload.
     let mut payload = vec![0u8; encoded_len(mesh.vertex_count(), mesh.triangle_count())];
@@ -230,8 +315,46 @@ pub fn compile_mesh_to_10d_with_extras(
         Some(reading) if reading.len() == mesh.vertex_count() && !reading.is_empty() => {
             Some(crate::container_10d::surface_reading::encode_surface_reading(reading))
         }
-        Some(_) => return Err(Compile10dError::ExtraSection { kind: "surface reading length" }),
+        Some(_) => {
+            return Err(Compile10dError::ExtraSection {
+                kind: "surface reading length",
+            });
+        }
         None => None,
+    };
+
+    let frame_payload = match (normals, tangents) {
+        (None, None) => None,
+        (Some(values), _) if values.len() != mesh.vertex_count() => {
+            return Err(Compile10dError::ExtraSection {
+                kind: "normal field length",
+            });
+        }
+        (_, Some(values)) if values.len() != mesh.vertex_count() => {
+            return Err(Compile10dError::ExtraSection {
+                kind: "tangent field length",
+            });
+        }
+        _ => {
+            let count = mesh.vertex_count();
+            let needed = crate::container_10d::normal_section::frame_encoded_len(
+                count,
+                normals.is_some(),
+                tangents.is_some(),
+            )
+            .ok_or(Compile10dError::ExtraSection {
+                kind: "mesh frame field size",
+            })?;
+            let mut payload = vec![0u8; needed];
+            let written = crate::container_10d::normal_section::encode_mesh_frames(
+                normals,
+                tangents,
+                &mut payload,
+            )
+            .map_err(Compile10dError::Normals)?;
+            payload.truncate(written);
+            Some(payload)
+        }
     };
 
     // 2. Assemble the container. Writer canonical-orders by section type.
@@ -261,6 +384,15 @@ pub fn compile_mesh_to_10d_with_extras(
             stride: 0,
             element_count: 0,
             payload: pp,
+        });
+    }
+    if let Some(np) = &frame_payload {
+        inputs.push(SectionInput {
+            section_type: SectionType::FieldSidecar,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: np,
         });
     }
     if let Some(tp) = &topo_payload {
@@ -457,6 +589,88 @@ pub fn decode_10d_mesh(container_10d: &[u8]) -> Result<Mesh, Compile10dError> {
     Err(Compile10dError::NoMeshSection)
 }
 
+/// Read an optional vertex-aligned normal sidecar from a `.10d` container. Missing sidecars
+/// return `Ok(None)` so existing mesh-only assets retain their established generated-normal path.
+pub fn decode_10d_normals(
+    container_10d: &[u8],
+    expected_vertex_count: usize,
+) -> Result<Option<Vec<[f32; 3]>>, Compile10dError> {
+    Ok(decode_10d_mesh_frames(container_10d, expected_vertex_count)?.and_then(|f| f.normals))
+}
+
+/// Read an optional vertex-aligned tangent frame stream from a `.10d` container.
+pub fn decode_10d_tangents(
+    container_10d: &[u8],
+    expected_vertex_count: usize,
+) -> Result<Option<Vec<[f32; 4]>>, Compile10dError> {
+    Ok(decode_10d_mesh_frames(container_10d, expected_vertex_count)?.and_then(|f| f.tangents))
+}
+
+/// Read an optional vertex-aligned UV0 stream into caller-owned storage.
+pub fn decode_10d_texture_coordinates_into(
+    container_10d: &[u8],
+    expected_vertex_count: usize,
+    out: &mut [[f32; 2]],
+) -> Result<Option<usize>, Compile10dError> {
+    let header =
+        Container10dHeader::parse(container_10d).map_err(|_| Compile10dError::BadHeader)?;
+    let descriptors =
+        parse_section_table(container_10d, &header).map_err(Compile10dError::Section)?;
+    if !descriptors
+        .iter()
+        .any(|descriptor| descriptor.typ() == Some(SectionType::TextureCoordinates))
+    {
+        return Ok(None);
+    }
+    let count = crate::container_10d::read_texture_coordinate_section_into(
+        container_10d,
+        expected_vertex_count,
+        out,
+    )
+    .map_err(Compile10dError::TextureCoordinates)?;
+    Ok(Some(count))
+}
+
+/// Decode supported normal/tangent field data from the optional mesh FieldSidecar.
+pub fn decode_10d_mesh_frames(
+    container_10d: &[u8],
+    expected_vertex_count: usize,
+) -> Result<Option<crate::container_10d::MeshFrameStreams>, Compile10dError> {
+    let header =
+        Container10dHeader::parse(container_10d).map_err(|_| Compile10dError::BadHeader)?;
+    let descs = parse_section_table(container_10d, &header).map_err(Compile10dError::Section)?;
+    for desc in descs {
+        if desc.typ() == Some(SectionType::FieldSidecar) {
+            let start = desc.byte_offset as usize;
+            let end = start
+                .checked_add(desc.byte_length as usize)
+                .ok_or(Compile10dError::SectionOutOfBounds)?;
+            let payload = container_10d
+                .get(start..end)
+                .ok_or(Compile10dError::SectionOutOfBounds)?;
+            if !crate::container_10d::normal_section::is_normal_section(payload) {
+                continue;
+            }
+            let frames = crate::container_10d::normal_section::decode_mesh_frames(payload)
+                .map_err(Compile10dError::Normals)?;
+            let count = frames
+                .normals
+                .as_ref()
+                .map(Vec::len)
+                .or_else(|| frames.tangents.as_ref().map(Vec::len))
+                .unwrap_or(0);
+            if count != expected_vertex_count {
+                return Err(Compile10dError::NormalVertexCountMismatch {
+                    expected: expected_vertex_count,
+                    got: count,
+                });
+            }
+            return Ok(Some(frames));
+        }
+    }
+    Ok(None)
+}
+
 /// Read Tensor10D nodes from a sealed `.10d` (first Tensor10DNodes section).
 ///
 /// Returns the node count written into `out` (caller buffer; truncated to
@@ -501,6 +715,9 @@ pub struct CompiledAsset {
     pub mesh: Mesh,
     /// The sealed `.10d` container (dense compiled geometry).
     pub container_10d: Vec<u8>,
+    /// Content-addressed source images referenced by MAT1, ready for separate HMC packaging;
+    /// asset bytes are intentionally not placed in the Sentinel arena.
+    pub texture_dependencies: Vec<crate::render::assets::TextureDependency>,
     /// Whole-file CRC-32C of `container_10d` — the manifest's `compiledDigest`.
     pub compiled_digest: u32,
     /// CRC-32C of the immutable source bytes — the manifest's `sourceDigest`.
@@ -554,11 +771,41 @@ pub fn compile_organ_asset(
     anatomy_model: Option<&str>,
     provenance: Option<&ProvenanceSidecar>,
 ) -> Result<CompiledAsset, Compile10dError> {
-    let mesh = import_asset(source_bytes, hint).map_err(Compile10dError::Import)?;
+    let imported =
+        import_asset_with_normals(source_bytes, hint).map_err(Compile10dError::Import)?;
+    let mesh = imported.mesh;
+    let texture_dependencies = imported.texture_dependencies;
+    let texture_coordinates_0 = imported.texture_coordinates_0;
     // When provenance is supplied it is sealed into the `.10d` as a ProvenanceSidecar section, so the
     // asset is attested (the renderer's fail-closed governance gate treats an unattested asset with the
     // default-refuse disposition as REFUSE).
-    let container_10d = compile_mesh_to_10d_with_provenance(&mesh, provenance)?;
+    let mut container_10d = compile_mesh_to_10d_with_extras_and_frames(
+        &mesh,
+        &[],
+        provenance,
+        Compile10dExtras::default(),
+        None,
+        imported.normals.as_deref(),
+        imported.tangents.as_deref(),
+    )?;
+    if let Some(coordinates) = texture_coordinates_0.as_deref() {
+        container_10d =
+            crate::container_10d::attach_texture_coordinate_section(&container_10d, coordinates)
+                .map_err(Compile10dError::TextureCoordinates)?;
+    }
+    if !imported.submeshes.is_empty() {
+        let (materials, ranges) = crate::render::material_compile::scope_material_bindings(
+            asset_uri,
+            &imported.materials,
+            &imported.submeshes,
+        )
+        .map_err(|_| Compile10dError::MaterialIdentityCollision)?;
+        let mesh_index_count = u32::try_from(mesh.triangle_count().saturating_mul(3))
+            .map_err(|_| Compile10dError::MaterialIdentityCollision)?;
+        container_10d =
+            attach_material_section(&container_10d, &materials, &ranges, mesh_index_count)
+                .map_err(Compile10dError::Materials)?;
+    }
     let compiled = compiled_digest(&container_10d);
     let source = crc32c(source_bytes);
     let (quins, lexicon) = mesh_to_nquins_with_meta(
@@ -573,6 +820,7 @@ pub fn compile_organ_asset(
     Ok(CompiledAsset {
         mesh,
         container_10d,
+        texture_dependencies,
         compiled_digest: compiled,
         source_digest: source,
         quins,
@@ -592,8 +840,38 @@ pub fn compile_developmental_asset(
     gestational_age_days: u16,
     carnegie_stage: u8,
 ) -> Result<CompiledAsset, Compile10dError> {
-    let mesh = import_asset(source_bytes, hint).map_err(Compile10dError::Import)?;
-    let container_10d = compile_mesh_to_10d(&mesh)?;
+    let imported =
+        import_asset_with_normals(source_bytes, hint).map_err(Compile10dError::Import)?;
+    let mesh = imported.mesh;
+    let texture_dependencies = imported.texture_dependencies;
+    let texture_coordinates_0 = imported.texture_coordinates_0;
+    let mut container_10d = compile_mesh_to_10d_with_extras_and_frames(
+        &mesh,
+        &[],
+        None,
+        Compile10dExtras::default(),
+        None,
+        imported.normals.as_deref(),
+        imported.tangents.as_deref(),
+    )?;
+    if let Some(coordinates) = texture_coordinates_0.as_deref() {
+        container_10d =
+            crate::container_10d::attach_texture_coordinate_section(&container_10d, coordinates)
+                .map_err(Compile10dError::TextureCoordinates)?;
+    }
+    if !imported.submeshes.is_empty() {
+        let (materials, ranges) = crate::render::material_compile::scope_material_bindings(
+            asset_uri,
+            &imported.materials,
+            &imported.submeshes,
+        )
+        .map_err(|_| Compile10dError::MaterialIdentityCollision)?;
+        let mesh_index_count = u32::try_from(mesh.triangle_count().saturating_mul(3))
+            .map_err(|_| Compile10dError::MaterialIdentityCollision)?;
+        container_10d =
+            attach_material_section(&container_10d, &materials, &ranges, mesh_index_count)
+                .map_err(Compile10dError::Materials)?;
+    }
     let compiled = compiled_digest(&container_10d);
     let source = crc32c(source_bytes);
     let (quins, lexicon) = mesh_to_nquins_with_dev(
@@ -608,6 +886,7 @@ pub fn compile_developmental_asset(
     Ok(CompiledAsset {
         mesh,
         container_10d,
+        texture_dependencies,
         compiled_digest: compiled,
         source_digest: source,
         quins,
@@ -661,6 +940,70 @@ mod tests {
         );
         // The seal verifies (whole-file CRC matches the header) — proves it's well-formed.
         verify_whole_file_crc32c(&mut bytes).expect(".10d whole-file CRC must verify");
+    }
+
+    #[test]
+    fn optional_normal_field_round_trips_with_mesh_without_changing_mesh_payload() {
+        let mesh = cube();
+        let normals = vec![[0.0, 0.0, 1.0]; mesh.vertex_count()];
+        let bytes = compile_mesh_to_10d_with_normals(&mesh, &normals).unwrap();
+        assert_eq!(
+            decode_10d_mesh(&bytes).unwrap().triangle_count(),
+            mesh.triangle_count()
+        );
+        let decoded = decode_10d_normals(&bytes, mesh.vertex_count())
+            .unwrap()
+            .unwrap();
+        assert_eq!(decoded.len(), normals.len());
+        assert!(decoded.iter().all(|normal| normal[2] > 0.9999));
+        assert_eq!(
+            decode_10d_normals(&compile_mesh_to_10d(&mesh).unwrap(), mesh.vertex_count()).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn optional_normal_field_requires_vertex_alignment() {
+        let mesh = cube();
+        assert!(matches!(
+            compile_mesh_to_10d_with_normals(&mesh, &[[0.0, 0.0, 1.0]]),
+            Err(Compile10dError::ExtraSection {
+                kind: "normal field length"
+            })
+        ));
+    }
+
+    #[test]
+    fn optional_tangent_frames_round_trip_through_the_field_sidecar() {
+        let mesh = cube();
+        let normals = vec![[0.0, 0.0, 1.0]; mesh.vertex_count()];
+        let tangents = vec![[1.0, 0.0, 0.0, -1.0]; mesh.vertex_count()];
+        let bytes =
+            compile_mesh_to_10d_with_frames(&mesh, Some(&normals), Some(&tangents)).unwrap();
+        assert_eq!(
+            decode_10d_normals(&bytes, mesh.vertex_count())
+                .unwrap()
+                .unwrap(),
+            normals
+        );
+        assert_eq!(
+            decode_10d_tangents(&bytes, mesh.vertex_count())
+                .unwrap()
+                .unwrap(),
+            tangents
+        );
+
+        let tangent_only = compile_mesh_to_10d_with_frames(&mesh, None, Some(&tangents)).unwrap();
+        assert_eq!(
+            decode_10d_normals(&tangent_only, mesh.vertex_count()).unwrap(),
+            None
+        );
+        assert_eq!(
+            decode_10d_tangents(&tangent_only, mesh.vertex_count())
+                .unwrap()
+                .unwrap(),
+            tangents
+        );
     }
 
     #[test]

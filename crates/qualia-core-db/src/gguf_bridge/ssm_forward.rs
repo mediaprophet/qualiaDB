@@ -56,7 +56,13 @@ impl SsmLayerStateLayout {
         let delta_len = d_state * d_head * n_heads;
         let delta_offset = conv_len;
         let stride = conv_len + delta_len;
-        Self { stride, conv_offset: 0, conv_len, delta_offset, delta_len }
+        Self {
+            stride,
+            conv_offset: 0,
+            conv_len,
+            delta_offset,
+            delta_len,
+        }
     }
 }
 
@@ -76,24 +82,52 @@ pub(crate) fn ssm_layout_for(
         }
     } else if let Some(info) = tensors.ssm_in.as_ref().or(tensors.attn_qkv.as_ref()) {
         let (n_in, n_out) = crate::gguf_bridge::QTensorEngine::matmul_dims(info);
-        if tensors.attn_qkv.is_some() { n_out.min(MAX_SSM_INNER) } else { n_in }
+        if tensors.attn_qkv.is_some() {
+            n_out.min(MAX_SSM_INNER)
+        } else {
+            n_in
+        }
     } else {
         n_embd * 2
     };
     let inner_dim = inner_dim.min(MAX_SSM_INNER).max(1);
 
-    let d_state = if h.ssm_state_size > 0 { h.ssm_state_size as usize } else { 128 }
-        .min(MAX_SSM_STATE).max(1);
+    let d_state = if h.ssm_state_size > 0 {
+        h.ssm_state_size as usize
+    } else {
+        128
+    }
+    .min(MAX_SSM_STATE)
+    .max(1);
 
-    let d_head = if h.head_dim() > 0 { h.head_dim() as usize } else { d_state }
-        .min(MAX_SSM_HEAD).max(1);
+    let d_head = if h.head_dim() > 0 {
+        h.head_dim() as usize
+    } else {
+        d_state
+    }
+    .min(MAX_SSM_HEAD)
+    .max(1);
 
     let n_heads = if h.ssm_group_count > 0 {
         h.ssm_group_count as usize
     } else {
-        let alpha_dim = tensors.ssm_alpha.map(|i| if i.dims[1] > 0 { i.dims[1] as usize } else { i.dims[0] as usize }).unwrap_or(0);
-        if d_head > 0 && alpha_dim > 0 { alpha_dim / d_head } else { 16 }
-    }.max(1);
+        let alpha_dim = tensors
+            .ssm_alpha
+            .map(|i| {
+                if i.dims[1] > 0 {
+                    i.dims[1] as usize
+                } else {
+                    i.dims[0] as usize
+                }
+            })
+            .unwrap_or(0);
+        if d_head > 0 && alpha_dim > 0 {
+            alpha_dim / d_head
+        } else {
+            16
+        }
+    }
+    .max(1);
 
     SsmLayerStateLayout::new(inner_dim, d_state, d_head, n_heads)
 }
@@ -156,9 +190,27 @@ impl super::QTensorEngine {
         }
         let state_offset = self.ssm_state_offset_for_layer(index, layer);
         if tensors.ssm_in.is_some() {
-            self.dispatch_granite_ssm_layer(index, layer, hidden, emb_dim, tensors, scratch_a, scratch_b, state_offset)
+            self.dispatch_granite_ssm_layer(
+                index,
+                layer,
+                hidden,
+                emb_dim,
+                tensors,
+                scratch_a,
+                scratch_b,
+                state_offset,
+            )
         } else if tensors.attn_qkv.is_some() && tensors.ssm_alpha.is_some() {
-            self.dispatch_qwen_ssm_layer(index, layer, hidden, emb_dim, tensors, scratch_a, scratch_b, state_offset)
+            self.dispatch_qwen_ssm_layer(
+                index,
+                layer,
+                hidden,
+                emb_dim,
+                tensors,
+                scratch_a,
+                scratch_b,
+                state_offset,
+            )
         } else {
             super::wlog(&format!("[ssm] layer={layer} unrecognised SSM flavour"));
             false
@@ -185,12 +237,23 @@ impl super::QTensorEngine {
         let n_embd = h.n_embd as usize;
         let tds = index.tensor_data_start;
 
-        let ssm_in_info = match tensors.ssm_in.as_ref() { Some(i) => *i, None => return false };
-        let ssm_conv1d_info = match tensors.ssm_conv1d.as_ref() { Some(i) => *i, None => return false };
-        let ssm_out_info = match tensors.ssm_out.as_ref() { Some(i) => *i, None => return false };
+        let ssm_in_info = match tensors.ssm_in.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
+        let ssm_conv1d_info = match tensors.ssm_conv1d.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
+        let ssm_out_info = match tensors.ssm_out.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
 
         let (inner_dim, proj_in) = Self::matmul_dims(&ssm_in_info);
-        if proj_in == 0 || inner_dim == 0 || inner_dim > MAX_SSM_INNER { return false; }
+        if proj_in == 0 || inner_dim == 0 || inner_dim > MAX_SSM_INNER {
+            return false;
+        }
 
         // 1. Pre-norm: inline mmap access; borrow released after block.
         let ssm_input_is_norm = {
@@ -202,8 +265,12 @@ impl super::QTensorEngine {
                     scratch_b[..n_embd].copy_from_slice(&hidden[..n_embd]);
                     rms_norm_inplace(&mut scratch_b[..n_embd], &norm_w[..n_embd], RMS_NORM_EPS);
                     true
-                } else { false }
-            } else { false }
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
         };
         // scratch_b[..n_embd] holds the normalised input if ssm_input_is_norm.
 
@@ -215,7 +282,14 @@ impl super::QTensorEngine {
                 buf[..n_embd].copy_from_slice(&scratch_b[..n_embd]);
                 buf
             };
-            if !self.dispatch_gemm_into(index, &ssm_in_info, &snap_in[..proj_in], scratch_a, proj_in, inner_dim) {
+            if !self.dispatch_gemm_into(
+                index,
+                &ssm_in_info,
+                &snap_in[..proj_in],
+                scratch_a,
+                proj_in,
+                inner_dim,
+            ) {
                 super::wlog(&format!("[granite_ssm] layer={layer} ssm_in GEMM fail"));
                 return false;
             }
@@ -225,7 +299,14 @@ impl super::QTensorEngine {
                 buf[..n_embd.min(proj_in)].copy_from_slice(&hidden[..n_embd.min(proj_in)]);
                 buf
             };
-            if !self.dispatch_gemm_into(index, &ssm_in_info, &snap_in[..proj_in], scratch_a, proj_in, inner_dim) {
+            if !self.dispatch_gemm_into(
+                index,
+                &ssm_in_info,
+                &snap_in[..proj_in],
+                scratch_a,
+                proj_in,
+                inner_dim,
+            ) {
                 super::wlog(&format!("[granite_ssm] layer={layer} ssm_in GEMM fail"));
                 return false;
             }
@@ -238,23 +319,38 @@ impl super::QTensorEngine {
         {
             let layout = SsmLayerStateLayout::new(inner_dim, MAX_SSM_STATE, MAX_SSM_HEAD, 1);
             let avail = self.ssm_recurrent_state.len().saturating_sub(state_offset);
-            if avail < layout.stride { return false; }
+            if avail < layout.stride {
+                return false;
+            }
             let mut conv_w = [0f32; MAX_SSM_INNER * 4];
             {
                 let mmap = self.gguf_mmap.as_deref().unwrap();
-                let conv_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, tds, &ssm_conv1d_info) {
-                    Ok(s) => s,
-                    Err(_) => { super::wlog(&format!("[granite_ssm] layer={layer} conv fetch fail")); return false; }
-                };
+                let conv_raw =
+                    match crate::ggml_quants::fetch_tensor_bytes(mmap, tds, &ssm_conv1d_info) {
+                        Ok(s) => s,
+                        Err(_) => {
+                            super::wlog(&format!("[granite_ssm] layer={layer} conv fetch fail"));
+                            return false;
+                        }
+                    };
                 let _ = crate::ggml_quants::dequantize_row_into(
-                    conv_raw, ssm_conv1d_info.ggml_type, inner_dim * 4, &mut conv_w[..inner_dim * 4],
+                    conv_raw,
+                    ssm_conv1d_info.ggml_type,
+                    inner_dim * 4,
+                    &mut conv_w[..inner_dim * 4],
                 );
             } // mmap and conv_raw dropped here
             let mut conv_inp = [0f32; MAX_SSM_INNER];
             conv_inp[..inner_dim].copy_from_slice(&scratch_a[..inner_dim]);
-            let layer_state = &mut self.ssm_recurrent_state[state_offset..state_offset + layout.stride];
+            let layer_state =
+                &mut self.ssm_recurrent_state[state_offset..state_offset + layout.stride];
             let (conv_region, _) = layer_state.split_at_mut(layout.conv_len);
-            let _ = step_causal_conv1d(conv_region, &conv_w[..inner_dim * 4], &conv_inp[..inner_dim], &mut scratch_b[..inner_dim]);
+            let _ = step_causal_conv1d(
+                conv_region,
+                &conv_w[..inner_dim * 4],
+                &conv_inp[..inner_dim],
+                &mut scratch_b[..inner_dim],
+            );
         }
 
         // 4. dt_bias softplus gate.
@@ -264,7 +360,11 @@ impl super::QTensorEngine {
             let dt_n = dequant_norm_row_into(mmap, tds, dt_info, &mut dt_w);
             for i in 0..dt_n.min(inner_dim) {
                 let v = scratch_b[i] + dt_w[i];
-                scratch_b[i] = if v >= 20.0 { v } else { (1.0f32 + v.exp()).ln() };
+                scratch_b[i] = if v >= 20.0 {
+                    v
+                } else {
+                    (1.0f32 + v.exp()).ln()
+                };
             }
         }
 
@@ -274,24 +374,41 @@ impl super::QTensorEngine {
             let mut ssm_norm_w = [0f32; MAX_SSM_INNER];
             let n = dequant_norm_row_into(mmap, tds, norm_info, &mut ssm_norm_w);
             if n >= inner_dim {
-                rms_norm_inplace(&mut scratch_b[..inner_dim], &ssm_norm_w[..inner_dim], RMS_NORM_EPS);
+                rms_norm_inplace(
+                    &mut scratch_b[..inner_dim],
+                    &ssm_norm_w[..inner_dim],
+                    RMS_NORM_EPS,
+                );
             }
         }
 
         // 6. Output projection (snap scratch_b to avoid conflict with dispatch_gemm_into).
         let (out_in, out_out) = Self::matmul_dims(&ssm_out_info);
-        if out_in > inner_dim || out_out == 0 { return false; }
+        if out_in > inner_dim || out_out == 0 {
+            return false;
+        }
         let snap_b: [f32; MAX_SSM_INNER] = {
             let mut buf = [0f32; MAX_SSM_INNER];
             buf[..out_in].copy_from_slice(&scratch_b[..out_in]);
             buf
         };
-        if !self.dispatch_gemm_into(index, &ssm_out_info, &snap_b[..out_in], scratch_a, out_in, out_out) {
+        if !self.dispatch_gemm_into(
+            index,
+            &ssm_out_info,
+            &snap_b[..out_in],
+            scratch_a,
+            out_in,
+            out_out,
+        ) {
             return false;
         }
 
         // 7. Residual add.
-        add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..out_out], emb_dim.min(out_out));
+        add_residual_inplace(
+            &mut hidden[..emb_dim],
+            &scratch_a[..out_out],
+            emb_dim.min(out_out),
+        );
         true
     }
 
@@ -315,15 +432,39 @@ impl super::QTensorEngine {
         let n_embd = h.n_embd as usize;
         let _tds = index.tensor_data_start;
 
-        let qkv_info = match tensors.attn_qkv.as_ref() { Some(i) => *i, None => return false };
-        let alpha_info = match tensors.ssm_alpha.as_ref() { Some(i) => *i, None => return false };
-        let beta_info = match tensors.ssm_beta.as_ref() { Some(i) => *i, None => return false };
-        let conv_info = match tensors.ssm_conv1d.as_ref() { Some(i) => *i, None => return false };
-        let out_info = match tensors.ssm_out.as_ref() { Some(i) => *i, None => return false };
+        let qkv_info = match tensors.attn_qkv.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
+        let alpha_info = match tensors.ssm_alpha.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
+        let beta_info = match tensors.ssm_beta.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
+        let conv_info = match tensors.ssm_conv1d.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
+        let out_info = match tensors.ssm_out.as_ref() {
+            Some(i) => *i,
+            None => return false,
+        };
 
         let alpha_dim = alpha_info.dims[0] as usize;
-        let d_head_ssm = if h.head_dim() > 0 { h.head_dim() as usize } else { MAX_SSM_HEAD };
-        let n_heads_ssm = (if d_head_ssm > 0 { alpha_dim / d_head_ssm } else { 1 }).max(1);
+        let d_head_ssm = if h.head_dim() > 0 {
+            h.head_dim() as usize
+        } else {
+            MAX_SSM_HEAD
+        };
+        let n_heads_ssm = (if d_head_ssm > 0 {
+            alpha_dim / d_head_ssm
+        } else {
+            1
+        })
+        .max(1);
 
         let (qkv_in, qkv_out) = Self::matmul_dims(&qkv_info);
         let inner_dim = if let Some(ci) = tensors.ssm_conv1d.as_ref() {
@@ -359,7 +500,14 @@ impl super::QTensorEngine {
         };
 
         // 2. Fused QKV projection → scratch_a[0..qkv_out].
-        if !self.dispatch_gemm_into(index, &qkv_info, &qkv_input_snap[..qkv_in.min(n_embd)], scratch_a, qkv_in, qkv_out) {
+        if !self.dispatch_gemm_into(
+            index,
+            &qkv_info,
+            &qkv_input_snap[..qkv_in.min(n_embd)],
+            scratch_a,
+            qkv_in,
+            qkv_out,
+        ) {
             super::wlog(&format!("[qwen_ssm] layer={layer} QKV GEMM fail"));
             return false;
         }
@@ -370,27 +518,46 @@ impl super::QTensorEngine {
         {
             let conv_raw = match self.fetch_tensor_raw_bytes(&conv_info) {
                 Some(s) => s,
-                None => { return false; }
+                None => {
+                    return false;
+                }
             };
             let _ = crate::ggml_quants::dequantize_row_into(
-                conv_raw, conv_info.ggml_type, conv_elems, &mut conv_w[..conv_elems],
+                conv_raw,
+                conv_info.ggml_type,
+                conv_elems,
+                &mut conv_w[..conv_elems],
             );
         } // mmap borrow released
         {
             let layout = SsmLayerStateLayout::new(inner_dim, d_head_ssm, d_head_ssm, n_heads_ssm);
             let avail = self.ssm_recurrent_state.len().saturating_sub(state_offset);
-            if avail < layout.stride { return false; }
-            let layer_state = &mut self.ssm_recurrent_state[state_offset..state_offset + layout.stride];
+            if avail < layout.stride {
+                return false;
+            }
+            let layer_state =
+                &mut self.ssm_recurrent_state[state_offset..state_offset + layout.stride];
             let (conv_region, _) = layer_state.split_at_mut(layout.conv_len);
-            let _ = step_causal_conv1d(conv_region, &conv_w[..conv_elems], &scratch_a[..inner_dim], &mut scratch_b[..inner_dim]);
+            let _ = step_causal_conv1d(
+                conv_region,
+                &conv_w[..conv_elems],
+                &scratch_a[..inner_dim],
+                &mut scratch_b[..inner_dim],
+            );
         }
 
         // 4. Alpha / beta gates.
         let mut alpha_buf = [1.0f32; MAX_SSM_HEAD];
         let mut beta_buf = [1.0f32; MAX_SSM_HEAD];
         {
-            let _ = self.dequant_norm_tensor_into(&alpha_info, &mut alpha_buf[..d_head_ssm.min(MAX_SSM_HEAD)]);
-            let _ = self.dequant_norm_tensor_into(&beta_info, &mut beta_buf[..d_head_ssm.min(MAX_SSM_HEAD)]);
+            let _ = self.dequant_norm_tensor_into(
+                &alpha_info,
+                &mut alpha_buf[..d_head_ssm.min(MAX_SSM_HEAD)],
+            );
+            let _ = self.dequant_norm_tensor_into(
+                &beta_info,
+                &mut beta_buf[..d_head_ssm.min(MAX_SSM_HEAD)],
+            );
         }
 
         // 5. GatedDeltaNet recurrence: scoped state borrow.
@@ -398,8 +565,10 @@ impl super::QTensorEngine {
         let ssm_len = n_heads_ssm * d_head_ssm;
         {
             let layout2 = SsmLayerStateLayout::new(inner_dim, d_head_ssm, d_head_ssm, n_heads_ssm);
-            let layer_state2 = &mut self.ssm_recurrent_state[state_offset..state_offset + layout2.stride];
-            let delta_state = &mut layer_state2[layout2.delta_offset..layout2.delta_offset + layout2.delta_len];
+            let layer_state2 =
+                &mut self.ssm_recurrent_state[state_offset..state_offset + layout2.stride];
+            let delta_state =
+                &mut layer_state2[layout2.delta_offset..layout2.delta_offset + layout2.delta_len];
             let d_state = d_head_ssm;
             for head in 0..n_heads_ssm {
                 let hs = head * d_head_ssm;
@@ -408,7 +577,9 @@ impl super::QTensorEngine {
                 let ve = 2 * inner_dim + he;
                 let ss = head * d_state * d_head_ssm;
                 let se = ss + d_state * d_head_ssm;
-                if ve > scratch_a.len() || se > delta_state.len() { break; }
+                if ve > scratch_a.len() || se > delta_state.len() {
+                    break;
+                }
                 let _ = step_gated_deltanet(
                     &mut delta_state[ss..se],
                     &scratch_a[hs..he],
@@ -434,12 +605,23 @@ impl super::QTensorEngine {
         if out_in > ssm_out_buf.len() || out_out == 0 {
             return false;
         }
-        if !self.dispatch_gemm_into(index, &out_info, &ssm_out_buf[..out_in], scratch_a, out_in, out_out) {
+        if !self.dispatch_gemm_into(
+            index,
+            &out_info,
+            &ssm_out_buf[..out_in],
+            scratch_a,
+            out_in,
+            out_out,
+        ) {
             return false;
         }
 
         // 8. Residual add.
-        add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..out_out], emb_dim.min(out_out));
+        add_residual_inplace(
+            &mut hidden[..emb_dim],
+            &scratch_a[..out_out],
+            emb_dim.min(out_out),
+        );
         true
     }
 
@@ -501,6 +683,9 @@ mod tests {
         let layout = SsmLayerStateLayout::new(4096, 128, 64, 1);
         let bytes = layout.stride * 96 * 4;
         // 96 * 20480 * 4 = 7,864,320 < 8 MB
-        assert!(bytes < 8 * 1024 * 1024, "SSM state exceeds 8 MB sentinel: {bytes} bytes");
+        assert!(
+            bytes < 8 * 1024 * 1024,
+            "SSM state exceeds 8 MB sentinel: {bytes} bytes"
+        );
     }
 }

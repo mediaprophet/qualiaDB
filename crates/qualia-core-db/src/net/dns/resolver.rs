@@ -8,11 +8,13 @@
 
 #![allow(dead_code, unused_imports)]
 
-use crate::{q_hash, NQuin, PermissiveRoutingLane};
 use super::cache_ring::DnsCacheRing;
-use super::quin_records::{decode_a_record, decode_aaaa_record, decode_cname_record, wire_record_view_to_quin};
+use super::quin_records::{
+    decode_a_record, decode_aaaa_record, decode_cname_record, wire_record_view_to_quin,
+};
 use super::sdn::{parse_front_door_txt, SdnFrontDoorView};
 use super::wire::{build_query_packet, parse_records, DnsHeader, DnsType};
+use crate::{q_hash, NQuin, PermissiveRoutingLane};
 
 /// Standard well-known recursive resolvers (IPv4).
 pub const RESOLVER_CLOUDFLARE: &str = "1.1.1.1:53";
@@ -46,7 +48,10 @@ impl<'a> Default for ResolverConfig<'a> {
 
 /// Helper to bind a UDP socket appropriate for IPv4 or IPv6 nameservers.
 #[cfg(not(target_arch = "wasm32"))]
-fn bind_socket_for_nameserver(nameserver: &str, timeout_ms: u64) -> Result<std::net::UdpSocket, &'static str> {
+fn bind_socket_for_nameserver(
+    nameserver: &str,
+    timeout_ms: u64,
+) -> Result<std::net::UdpSocket, &'static str> {
     use std::net::UdpSocket;
     use std::time::Duration;
 
@@ -55,7 +60,8 @@ fn bind_socket_for_nameserver(nameserver: &str, timeout_ms: u64) -> Result<std::
         UdpSocket::bind("[::]:0").or_else(|_| UdpSocket::bind("0.0.0.0:0"))
     } else {
         UdpSocket::bind("0.0.0.0:0")
-    }.map_err(|_| "failed to bind local UDP socket")?;
+    }
+    .map_err(|_| "failed to bind local UDP socket")?;
 
     socket
         .set_read_timeout(Some(Duration::from_millis(timeout_ms)))
@@ -143,20 +149,15 @@ impl<'a> QualiaDnsResolver<'a> {
         let lane = self.config.routing_lane;
 
         // Parse answers with compression-aware view mapper
-        parse_records(
-            packet,
-            offset,
-            header.ancount as usize,
-            |name, rec| {
-                if quin_count < out_quins.len() {
-                    if let Some(q) = wire_record_view_to_quin(name, &rec, lane) {
-                        out_quins[quin_count] = q;
-                        quin_count += 1;
-                    }
+        parse_records(packet, offset, header.ancount as usize, |name, rec| {
+            if quin_count < out_quins.len() {
+                if let Some(q) = wire_record_view_to_quin(name, &rec, lane) {
+                    out_quins[quin_count] = q;
+                    quin_count += 1;
                 }
-                Ok(())
-            },
-        )?;
+            }
+            Ok(())
+        })?;
 
         Ok(quin_count)
     }
@@ -264,7 +265,8 @@ impl<'a> QualiaDnsResolver<'a> {
         let mut offset = DnsHeader::SIZE;
         let mut dummy = [0u8; 256];
         for _ in 0..header.qdcount {
-            let (new_off, _) = super::wire::decode_domain_name(&rx_buf[..rx_len], offset, &mut dummy)?;
+            let (new_off, _) =
+                super::wire::decode_domain_name(&rx_buf[..rx_len], offset, &mut dummy)?;
             offset = new_off + 4;
         }
 
@@ -283,7 +285,8 @@ impl<'a> QualiaDnsResolver<'a> {
                             break;
                         }
                         let cp = core::cmp::min(seg_len, txt_storage.len() - txt_len);
-                        txt_storage[txt_len..txt_len + cp].copy_from_slice(&rec.rdata[cursor..cursor + cp]);
+                        txt_storage[txt_len..txt_len + cp]
+                            .copy_from_slice(&rec.rdata[cursor..cursor + cp]);
                         txt_len += cp;
                         cursor += seg_len;
                     }
@@ -296,7 +299,8 @@ impl<'a> QualiaDnsResolver<'a> {
             return Err("empty front-door TXT rdata");
         }
 
-        let txt_str = std::str::from_utf8(&txt_storage[..txt_len]).map_err(|_| "invalid UTF-8 in TXT")?;
+        let txt_str =
+            std::str::from_utf8(&txt_storage[..txt_len]).map_err(|_| "invalid UTF-8 in TXT")?;
         parse_front_door_txt(domain, txt_str)
     }
 }
@@ -312,7 +316,8 @@ mod tests {
         let qlen = build_query_packet(0x1337, "test.local", DnsType::A, true, &mut packet).unwrap();
 
         let mut resp_header = DnsHeader::new_query(0x1337, true);
-        resp_header.flags |= super::super::wire::FLAG_QR_RESPONSE | super::super::wire::FLAG_AA_AUTHORITATIVE;
+        resp_header.flags |=
+            super::super::wire::FLAG_QR_RESPONSE | super::super::wire::FLAG_AA_AUTHORITATIVE;
         resp_header.ancount = 1;
         resp_header.encode(&mut packet[0..12]).unwrap();
 
@@ -345,10 +350,12 @@ mod tests {
     fn parse_response_synthetic_aaaa() {
         // Build a query, then craft a synthetic IPv6 response
         let mut packet = [0u8; 512];
-        let qlen = build_query_packet(0x2442, "v6.test.local", DnsType::AAAA, true, &mut packet).unwrap();
+        let qlen =
+            build_query_packet(0x2442, "v6.test.local", DnsType::AAAA, true, &mut packet).unwrap();
 
         let mut resp_header = DnsHeader::new_query(0x2442, true);
-        resp_header.flags |= super::super::wire::FLAG_QR_RESPONSE | super::super::wire::FLAG_AA_AUTHORITATIVE;
+        resp_header.flags |=
+            super::super::wire::FLAG_QR_RESPONSE | super::super::wire::FLAG_AA_AUTHORITATIVE;
         resp_header.ancount = 1;
         resp_header.encode(&mut packet[0..12]).unwrap();
 
@@ -362,8 +369,8 @@ mod tests {
         packet[offset + 4..offset + 8].copy_from_slice(&7200u32.to_be_bytes());
         packet[offset + 8..offset + 10].copy_from_slice(&16u16.to_be_bytes());
         let expected_ip: [u8; 16] = [
-            0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00,
-            0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
+            0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70,
+            0x73, 0x34,
         ];
         packet[offset + 10..offset + 26].copy_from_slice(&expected_ip);
         offset += 26;

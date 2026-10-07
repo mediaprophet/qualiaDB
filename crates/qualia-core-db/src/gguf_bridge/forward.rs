@@ -468,15 +468,39 @@ impl QTensorEngine {
             }
         } else if let Some(qkv_info) = tensors.attn_qkv {
             let (n_in, n_out) = Self::matmul_dims(&qkv_info);
-            if n_in <= emb_dim && self.dispatch_gemm_into(index, &qkv_info, &hidden[..n_in], scratch_a, n_in, n_out) {
+            if n_in <= emb_dim
+                && self.dispatch_gemm_into(
+                    index,
+                    &qkv_info,
+                    &hidden[..n_in],
+                    scratch_a,
+                    n_in,
+                    n_out,
+                )
+            {
                 if let Some(out_info) = tensors.attn_output {
                     let (out_in, out_out) = Self::matmul_dims(&out_info);
-                    if self.dispatch_gemm_into(index, &out_info, &scratch_a[..out_in.min(n_out)], scratch_b, out_in, out_out) {
-                        add_residual_inplace(&mut hidden[..emb_dim], &scratch_b[..out_out], emb_dim.min(out_out));
+                    if self.dispatch_gemm_into(
+                        index,
+                        &out_info,
+                        &scratch_a[..out_in.min(n_out)],
+                        scratch_b,
+                        out_in,
+                        out_out,
+                    ) {
+                        add_residual_inplace(
+                            &mut hidden[..emb_dim],
+                            &scratch_b[..out_out],
+                            emb_dim.min(out_out),
+                        );
                         attn_ok = true;
                     }
                 } else {
-                    add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n_out], emb_dim.min(n_out));
+                    add_residual_inplace(
+                        &mut hidden[..emb_dim],
+                        &scratch_a[..n_out],
+                        emb_dim.min(n_out),
+                    );
                     attn_ok = true;
                 }
             }

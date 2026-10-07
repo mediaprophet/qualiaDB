@@ -100,11 +100,7 @@ pub fn route_prompt_with_focus_and_allowlist(
     }
 
     if ontology_ids.iter().all(|id| !id.contains("wordnet")) {
-        if let Some(wordnet) = in_scope
-            .iter()
-            .copied()
-            .find(|o| o.id.contains("wordnet"))
-        {
+        if let Some(wordnet) = in_scope.iter().copied().find(|o| o.id.contains("wordnet")) {
             ontology_ids.push(wordnet.id.clone());
             extend_namespaces(&mut context_namespaces, wordnet);
         }
@@ -362,7 +358,8 @@ mod tests {
     #[test]
     fn routing_keeps_full_scope_when_no_ontology_matches() {
         let mut env = env();
-        env.ontology_summaries.retain(|summary| !summary.id.contains("wordnet"));
+        env.ontology_summaries
+            .retain(|summary| !summary.id.contains("wordnet"));
 
         let decision = route_prompt_to_ontologies(&env, "Investigate xylophones.");
         assert_eq!(decision.ontology_ids.len(), env.ontology_summaries.len());

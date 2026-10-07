@@ -211,7 +211,6 @@ pub fn forge_attention_enabled() -> bool {
     }
 }
 
-
 // ── Phase 2: resident weights toggle ──────────────────────────────────────────
 // Default ON (native). Each layer's q/k/v/o/gate/up/down weight is uploaded to its own resident
 // VRAM buffer once (keyed by the GGUF tensor byte_offset) and reused every token, instead of
@@ -721,7 +720,6 @@ pub fn prompt_precision_mode() -> String {
         .map(|m| m.clone())
         .unwrap_or_default()
 }
-
 
 // ── Lifecycle stage telemetry (inference-lifecycle.n3 `stage:*`) ─────────────
 // Per-turn StageTrace recording inside the live decode loop. Recording is a

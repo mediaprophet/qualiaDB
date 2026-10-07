@@ -151,10 +151,7 @@ mod tests {
             run_step(RunPhase::Idle, "Host.assess", "ok", true),
             RunPhase::Held
         );
-        assert_eq!(
-            run_step(RunPhase::Idle, "assess", "", true),
-            RunPhase::Held
-        );
+        assert_eq!(run_step(RunPhase::Idle, "assess", "", true), RunPhase::Held);
         assert_eq!(
             run_step(RunPhase::Idle, "assess", "   ", true),
             RunPhase::Held

@@ -37,6 +37,8 @@ impl TaskManifest {
     }
 
     pub fn held_out_tasks(&self) -> impl Iterator<Item = &TaskItem> {
-        self.tasks.iter().filter(|t| t.split == SplitType::HeldOutTest)
+        self.tasks
+            .iter()
+            .filter(|t| t.split == SplitType::HeldOutTest)
     }
 }

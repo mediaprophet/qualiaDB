@@ -826,12 +826,9 @@ impl ForgeRuntime {
             BindingUsage::StorageRead,
         )?;
         let out_bytes = (q_len * size_of::<f32>()).max(4);
-        let view_out = self.context.allocate_transient(
-            out_bytes,
-            3,
-            0,
-            BindingUsage::StorageReadWrite,
-        )?;
+        let view_out =
+            self.context
+                .allocate_transient(out_bytes, 3, 0, BindingUsage::StorageReadWrite)?;
         let params = super::AttentionShaderParams {
             context_tokens: shape.context_tokens,
             head_dim: shape.head_dim,
@@ -1070,8 +1067,15 @@ mod tests {
         assert_eq!(out.len(), q_len);
 
         let mut oracle_out = vec![0.0f32; q_len];
-        crate::wgsl_forge::causal_attention_oracle(shape, &query, &keys, &values, scale, &mut oracle_out)
-            .expect("causal_attention_oracle");
+        crate::wgsl_forge::causal_attention_oracle(
+            shape,
+            &query,
+            &keys,
+            &values,
+            scale,
+            &mut oracle_out,
+        )
+        .expect("causal_attention_oracle");
 
         for i in 0..q_len {
             assert!(
@@ -1083,4 +1087,3 @@ mod tests {
         }
     }
 }
-

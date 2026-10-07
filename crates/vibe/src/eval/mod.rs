@@ -1220,7 +1220,7 @@ mod tests {
 
     // â”€â”€ T30: LawDecl tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-        #[test]
+    #[test]
     fn t29_part_signature_facet_resolves_on_one_stack() {
         let src = r#"
             material tank_shell: Material
@@ -1240,23 +1240,15 @@ mod tests {
                 );
                 assert_eq!(
                     r.get("signature"),
-                    Some(&Value::String(
-                        "did:q42:material:hdpe-tank-shell-v1".into()
-                    ))
+                    Some(&Value::String("did:q42:material:hdpe-tank-shell-v1".into()))
                 );
                 assert_eq!(r.get("facet"), Some(&Value::String("optical".into())));
                 assert_eq!(r.get("reading"), Some(&Value::String("colour".into())));
-                assert_eq!(
-                    r.get("spectrum_axis"),
-                    Some(&Value::String("emf".into()))
-                );
+                assert_eq!(r.get("spectrum_axis"), Some(&Value::String("emf".into())));
                 assert_eq!(r.get("writes_spatial"), Some(&Value::Bool(false)));
                 assert_eq!(r.get("baked_frame"), Some(&Value::Bool(false)));
                 assert_eq!(r.get("subsumes_whole"), Some(&Value::Bool(false)));
-                assert_eq!(
-                    r.get("construct"),
-                    Some(&Value::String("editable".into()))
-                );
+                assert_eq!(r.get("construct"), Some(&Value::String("editable".into())));
                 match r.get("fields") {
                     Some(Value::Record(fields)) => {
                         assert!(fields.contains_key("albedo"));
@@ -1304,7 +1296,7 @@ mod tests {
         assert!(!msg.contains("Sucrose"));
     }
 
-#[test]
+    #[test]
     fn t30_law_decl_parses_and_evaluates() {
         let src = r#"
             field pressure_ambient: Pressure

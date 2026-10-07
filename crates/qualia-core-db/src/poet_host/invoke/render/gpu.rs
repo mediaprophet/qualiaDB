@@ -456,12 +456,15 @@ pub fn gpu_resize(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         let width = args::rec_u64(args, "width").unwrap_or(800) as u32;
         let height = args::rec_u64(args, "height").unwrap_or(600) as u32;
 
-        slot_with(handle, |portal| {
-            portal.resize(width, height);
-        })
-        .ok_or_else(|| args::bad(span, "gpu_resize: invalid handle"))?;
+        let (actual_width, actual_height) =
+            slot_with(handle, |portal| portal.resize(width, height))
+                .ok_or_else(|| args::bad(span, "gpu_resize: invalid handle"))?
+                .map_err(|error| args::bad(span, format!("gpu_resize: {error}")))?;
 
-        Ok(Value::Record(BTreeMap::new()))
+        Ok(args::record([
+            ("width", Value::U64(actual_width as u64)),
+            ("height", Value::U64(actual_height as u64)),
+        ]))
     }
     #[cfg(target_arch = "wasm32")]
     {

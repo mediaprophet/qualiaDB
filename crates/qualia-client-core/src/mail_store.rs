@@ -124,7 +124,9 @@ pub fn store_delivery(
 pub fn set_source_account(id: &str, source_account: &str) -> Result<(), String> {
     let _guard = STORE_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
     let mut all = load_all();
-    let message = all.iter_mut().find(|message| message.id == id)
+    let message = all
+        .iter_mut()
+        .find(|message| message.id == id)
         .ok_or_else(|| format!("unknown message '{id}'"))?;
     message.source_account = Some(source_account.to_string());
     save_all(&all)

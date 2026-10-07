@@ -3,8 +3,8 @@
 //! Reconstructs a full BPE/ByteLevel `GgufTokenizer` from sibling `tokenizer.json` files,
 //! preventing fallback to 256-byte dummy tokenizers when loading Safetensors models.
 
-use serde_json::Value;
 use super::GgufTokenizer;
+use serde_json::Value;
 
 /// Parse Hugging Face `tokenizer.json` into a `GgufTokenizer`.
 pub fn parse_hf_tokenizer_json(json_str: &str) -> Option<GgufTokenizer> {
@@ -51,7 +51,8 @@ pub fn parse_hf_tokenizer_json(json_str: &str) -> Option<GgufTokenizer> {
                     "<s>" | "<bos>" | "<|im_start|>" | "<|begin_of_text|>" | "[BOS]" => {
                         special_bos = Some(id as u32);
                     }
-                    "</s>" | "<eos>" | "<|im_end|>" | "<|endoftext|>" | "<|eot_id|>" | "<end_of_turn>" | "[EOS]" => {
+                    "</s>" | "<eos>" | "<|im_end|>" | "<|endoftext|>" | "<|eot_id|>"
+                    | "<end_of_turn>" | "[EOS]" => {
                         special_eos = Some(id as u32);
                     }
                     _ => {}

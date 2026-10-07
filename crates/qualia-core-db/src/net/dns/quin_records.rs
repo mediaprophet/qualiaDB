@@ -8,8 +8,8 @@
 
 #![allow(dead_code)]
 
-use crate::{q_hash, NQuin, PermissiveRoutingLane};
 use super::wire::{DnsRecordView, DnsType};
+use crate::{q_hash, NQuin, PermissiveRoutingLane};
 
 /// Modality opcodes for DNS in predicate bits [0..7] (Rule 0: all new modalities >= 0x10).
 pub const OP_DNS_A: u8 = 0x50;
@@ -40,7 +40,12 @@ pub const DID_Q42_FLAG: u64 = 1u64 << 63;
 pub const DNS_CONTEXT_HASH: u64 = q_hash("qualia:dns:zone");
 
 /// Encode an IPv4 `A` record as an `NQuin`.
-pub fn encode_a_record(domain: &str, ipv4_octets: [u8; 4], ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_a_record(
+    domain: &str,
+    ipv4_octets: [u8; 4],
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:a");
     let predicate = (pred_hash << 8) | (OP_DNS_A as u64);
@@ -49,7 +54,14 @@ pub fn encode_a_record(domain: &str, ipv4_octets: [u8; 4], ttl: u32, lane: Permi
     let context = DNS_CONTEXT_HASH;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode an `NQuin` into an IPv4 address if it represents an `A` record.
@@ -73,7 +85,12 @@ pub fn decode_a_record(quin: &NQuin) -> Option<([u8; 4], u32, PermissiveRoutingL
 /// Losslessly packs all 128 bits:
 /// - `object`: upper 64 bits of IPv6
 /// - `context`: lower 64 bits of IPv6
-pub fn encode_aaaa_record(domain: &str, ipv6_octets: [u8; 16], ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_aaaa_record(
+    domain: &str,
+    ipv6_octets: [u8; 16],
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:aaaa");
     let predicate = (pred_hash << 8) | (OP_DNS_AAAA as u64);
@@ -85,7 +102,14 @@ pub fn encode_aaaa_record(domain: &str, ipv6_octets: [u8; 16], ttl: u32, lane: P
     let context = u64::from_be_bytes(lo);
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode an `NQuin` into an IPv6 address if it represents an `AAAA` record.
@@ -102,7 +126,12 @@ pub fn decode_aaaa_record(quin: &NQuin) -> Option<([u8; 16], u32, PermissiveRout
 }
 
 /// Encode a `CNAME` record as an `NQuin`.
-pub fn encode_cname_record(domain: &str, target: &str, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_cname_record(
+    domain: &str,
+    target: &str,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:cname");
     let predicate = (pred_hash << 8) | (OP_DNS_CNAME as u64);
@@ -110,7 +139,14 @@ pub fn encode_cname_record(domain: &str, target: &str, ttl: u32, lane: Permissiv
     let context = DNS_CONTEXT_HASH;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode a `CNAME` record `(target_hash, ttl, lane)` from an `NQuin`.
@@ -118,7 +154,11 @@ pub fn decode_cname_record(quin: &NQuin) -> Option<(u64, u32, PermissiveRoutingL
     if !quin.verify_ecc_parity() || (quin.predicate & 0xFF) as u8 != OP_DNS_CNAME {
         return None;
     }
-    Some((quin.object, (quin.metadata & 0xFFFF_FFFF) as u32, quin.identify_routing_lane()))
+    Some((
+        quin.object,
+        (quin.metadata & 0xFFFF_FFFF) as u32,
+        quin.identify_routing_lane(),
+    ))
 }
 
 /// Encode an `NS` record as an `NQuin`.
@@ -130,7 +170,14 @@ pub fn encode_ns_record(domain: &str, ns: &str, ttl: u32, lane: PermissiveRoutin
     let context = DNS_CONTEXT_HASH;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode an `NS` record `(ns_hash, ttl, lane)` from an `NQuin`.
@@ -138,11 +185,20 @@ pub fn decode_ns_record(quin: &NQuin) -> Option<(u64, u32, PermissiveRoutingLane
     if !quin.verify_ecc_parity() || (quin.predicate & 0xFF) as u8 != OP_DNS_NS {
         return None;
     }
-    Some((quin.object, (quin.metadata & 0xFFFF_FFFF) as u32, quin.identify_routing_lane()))
+    Some((
+        quin.object,
+        (quin.metadata & 0xFFFF_FFFF) as u32,
+        quin.identify_routing_lane(),
+    ))
 }
 
 /// Encode a `PTR` record as an `NQuin`.
-pub fn encode_ptr_record(rev_domain: &str, target: &str, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_ptr_record(
+    rev_domain: &str,
+    target: &str,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(rev_domain);
     let pred_hash = q_hash("qualia:dns:ptr");
     let predicate = (pred_hash << 8) | (OP_DNS_PTR as u64);
@@ -150,7 +206,14 @@ pub fn encode_ptr_record(rev_domain: &str, target: &str, ttl: u32, lane: Permiss
     let context = DNS_CONTEXT_HASH;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode a `PTR` record `(target_hash, ttl, lane)` from an `NQuin`.
@@ -158,12 +221,22 @@ pub fn decode_ptr_record(quin: &NQuin) -> Option<(u64, u32, PermissiveRoutingLan
     if !quin.verify_ecc_parity() || (quin.predicate & 0xFF) as u8 != OP_DNS_PTR {
         return None;
     }
-    Some((quin.object, (quin.metadata & 0xFFFF_FFFF) as u32, quin.identify_routing_lane()))
+    Some((
+        quin.object,
+        (quin.metadata & 0xFFFF_FFFF) as u32,
+        quin.identify_routing_lane(),
+    ))
 }
 
 /// Encode an `MX` record as an `NQuin`.
 /// `object` packs `(preference << 48) | (exchange_hash & 0x0000_FFFF_FFFF_FFFF)`.
-pub fn encode_mx_record(domain: &str, preference: u16, exchange: &str, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_mx_record(
+    domain: &str,
+    preference: u16,
+    exchange: &str,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:mx");
     let predicate = (pred_hash << 8) | (OP_DNS_MX as u64);
@@ -171,7 +244,14 @@ pub fn encode_mx_record(domain: &str, preference: u16, exchange: &str, ttl: u32,
     let context = DNS_CONTEXT_HASH;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode an `MX` record `(preference, exchange_hash, ttl, lane)` from an `NQuin`.
@@ -181,11 +261,23 @@ pub fn decode_mx_record(quin: &NQuin) -> Option<(u16, u64, u32, PermissiveRoutin
     }
     let preference = (quin.object >> 48) as u16;
     let exchange_hash = quin.object & 0x0000_FFFF_FFFF_FFFF;
-    Some((preference, exchange_hash, (quin.metadata & 0xFFFF_FFFF) as u32, quin.identify_routing_lane()))
+    Some((
+        preference,
+        exchange_hash,
+        (quin.metadata & 0xFFFF_FFFF) as u32,
+        quin.identify_routing_lane(),
+    ))
 }
 
 /// Encode a `SOA` record as an `NQuin`.
-pub fn encode_soa_record(domain: &str, mname: &str, rname: &str, serial: u32, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_soa_record(
+    domain: &str,
+    mname: &str,
+    rname: &str,
+    serial: u32,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:soa");
     let predicate = (pred_hash << 8) | (OP_DNS_SOA as u64);
@@ -193,7 +285,14 @@ pub fn encode_soa_record(domain: &str, mname: &str, rname: &str, serial: u32, tt
     let context = q_hash(rname);
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode a `SOA` record `(serial, mname_hash, rname_hash, ttl, lane)` from an `NQuin`.
@@ -204,11 +303,25 @@ pub fn decode_soa_record(quin: &NQuin) -> Option<(u32, u64, u64, u32, Permissive
     let serial = (quin.object >> 32) as u32;
     let mname_hash = quin.object & 0xFFFF_FFFF;
     let rname_hash = quin.context;
-    Some((serial, mname_hash, rname_hash, (quin.metadata & 0xFFFF_FFFF) as u32, quin.identify_routing_lane()))
+    Some((
+        serial,
+        mname_hash,
+        rname_hash,
+        (quin.metadata & 0xFFFF_FFFF) as u32,
+        quin.identify_routing_lane(),
+    ))
 }
 
 /// Encode an `SRV` record as an `NQuin`.
-pub fn encode_srv_record(domain: &str, priority: u16, weight: u16, port: u16, target: &str, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_srv_record(
+    domain: &str,
+    priority: u16,
+    weight: u16,
+    port: u16,
+    target: &str,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:srv");
     let predicate = (pred_hash << 8) | (OP_DNS_SRV as u64);
@@ -216,7 +329,14 @@ pub fn encode_srv_record(domain: &str, priority: u16, weight: u16, port: u16, ta
     let context = q_hash(target);
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Decode an `SRV` record `(priority, weight, port, target_hash, ttl, lane)` from an `NQuin`.
@@ -228,11 +348,25 @@ pub fn decode_srv_record(quin: &NQuin) -> Option<(u16, u16, u16, u64, u32, Permi
     let weight = (quin.object >> 16) as u16;
     let port = (quin.object & 0xFFFF) as u16;
     let target_hash = quin.context;
-    Some((priority, weight, port, target_hash, (quin.metadata & 0xFFFF_FFFF) as u32, quin.identify_routing_lane()))
+    Some((
+        priority,
+        weight,
+        port,
+        target_hash,
+        (quin.metadata & 0xFFFF_FFFF) as u32,
+        quin.identify_routing_lane(),
+    ))
 }
 
 /// Encode a `CAA` record as an `NQuin`.
-pub fn encode_caa_record(domain: &str, flags: u8, tag: &str, value: &str, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_caa_record(
+    domain: &str,
+    flags: u8,
+    tag: &str,
+    value: &str,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:caa");
     let predicate = (pred_hash << 8) | (OP_DNS_CAA as u64);
@@ -240,23 +374,55 @@ pub fn encode_caa_record(domain: &str, flags: u8, tag: &str, value: &str, ttl: u
     let context = q_hash(value);
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Encode a `TLSA` record as an `NQuin`.
-pub fn encode_tlsa_record(domain: &str, usage: u8, selector: u8, matching_type: u8, cert_hash: u64, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_tlsa_record(
+    domain: &str,
+    usage: u8,
+    selector: u8,
+    matching_type: u8,
+    cert_hash: u64,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:tlsa");
     let predicate = (pred_hash << 8) | (OP_DNS_TLSA as u64);
-    let object = ((usage as u64) << 56) | ((selector as u64) << 48) | ((matching_type as u64) << 40) | (cert_hash & 0x0000_00FF_FFFF_FFFF);
+    let object = ((usage as u64) << 56)
+        | ((selector as u64) << 48)
+        | ((matching_type as u64) << 40)
+        | (cert_hash & 0x0000_00FF_FFFF_FFFF);
     let context = cert_hash;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Encode an `HTTPS` / `SVCB` record as an `NQuin`.
-pub fn encode_https_record(domain: &str, priority: u16, target: &str, params_hash: u64, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_https_record(
+    domain: &str,
+    priority: u16,
+    target: &str,
+    params_hash: u64,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:https");
     let predicate = (pred_hash << 8) | (OP_DNS_HTTPS as u64);
@@ -264,31 +430,74 @@ pub fn encode_https_record(domain: &str, priority: u16, target: &str, params_has
     let context = params_hash;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Encode a `DNSKEY` record as an `NQuin`.
-pub fn encode_dnskey_record(domain: &str, flags: u16, protocol: u8, algorithm: u8, key_hash: u64, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_dnskey_record(
+    domain: &str,
+    flags: u16,
+    protocol: u8,
+    algorithm: u8,
+    key_hash: u64,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:dnskey");
     let predicate = (pred_hash << 8) | (OP_DNS_DNSKEY as u64);
-    let object = ((flags as u64) << 48) | ((protocol as u64) << 40) | ((algorithm as u64) << 32) | (key_hash & 0xFFFF_FFFF);
+    let object = ((flags as u64) << 48)
+        | ((protocol as u64) << 40)
+        | ((algorithm as u64) << 32)
+        | (key_hash & 0xFFFF_FFFF);
     let context = key_hash;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Encode a `DS` record as an `NQuin`.
-pub fn encode_ds_record(domain: &str, key_tag: u16, algorithm: u8, digest_type: u8, digest_hash: u64, ttl: u32, lane: PermissiveRoutingLane) -> NQuin {
+pub fn encode_ds_record(
+    domain: &str,
+    key_tag: u16,
+    algorithm: u8,
+    digest_type: u8,
+    digest_hash: u64,
+    ttl: u32,
+    lane: PermissiveRoutingLane,
+) -> NQuin {
     let subject = q_hash(domain);
     let pred_hash = q_hash("qualia:dns:ds");
     let predicate = (pred_hash << 8) | (OP_DNS_DS as u64);
-    let object = ((key_tag as u64) << 48) | ((algorithm as u64) << 40) | ((digest_type as u64) << 32) | (digest_hash & 0xFFFF_FFFF);
+    let object = ((key_tag as u64) << 48)
+        | ((algorithm as u64) << 40)
+        | ((digest_type as u64) << 32)
+        | (digest_hash & 0xFFFF_FFFF);
     let context = digest_hash;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Encode a generic DNS TXT or Front-Door entry into an `NQuin`.
@@ -300,7 +509,14 @@ pub fn encode_txt_record(domain: &str, text: &str, ttl: u32, lane: PermissiveRou
     let context = DNS_CONTEXT_HASH;
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Encode a Qualia Socially Defined Network (SDN) Front-Door entry into an `NQuin`.
@@ -317,7 +533,14 @@ pub fn encode_sdn_front_door(
     let context = q_hash("qualia:sdn:overlay");
     let metadata = ((lane as u64) << 61) | (ttl as u64 & 0xFFFF_FFFF);
     let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-    NQuin { subject, predicate, object, context, metadata, parity }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 /// Map a wire record view into an `NQuin`, resolving compressed domain names when present.
@@ -345,19 +568,22 @@ pub fn wire_record_view_to_quin(
         }
         DnsType::CNAME => {
             let mut buf = [0u8; 256];
-            let (_, len) = super::wire::decode_domain_name(rec.packet, rec.rdata_offset, &mut buf).ok()?;
+            let (_, len) =
+                super::wire::decode_domain_name(rec.packet, rec.rdata_offset, &mut buf).ok()?;
             let target = std::str::from_utf8(&buf[..len]).ok()?;
             Some(encode_cname_record(name, target, rec.ttl, lane))
         }
         DnsType::NS => {
             let mut buf = [0u8; 256];
-            let (_, len) = super::wire::decode_domain_name(rec.packet, rec.rdata_offset, &mut buf).ok()?;
+            let (_, len) =
+                super::wire::decode_domain_name(rec.packet, rec.rdata_offset, &mut buf).ok()?;
             let target = std::str::from_utf8(&buf[..len]).ok()?;
             Some(encode_ns_record(name, target, rec.ttl, lane))
         }
         DnsType::PTR => {
             let mut buf = [0u8; 256];
-            let (_, len) = super::wire::decode_domain_name(rec.packet, rec.rdata_offset, &mut buf).ok()?;
+            let (_, len) =
+                super::wire::decode_domain_name(rec.packet, rec.rdata_offset, &mut buf).ok()?;
             let target = std::str::from_utf8(&buf[..len]).ok()?;
             Some(encode_ptr_record(name, target, rec.ttl, lane))
         }
@@ -367,7 +593,8 @@ pub fn wire_record_view_to_quin(
             }
             let preference = u16::from_be_bytes([rec.rdata[0], rec.rdata[1]]);
             let mut buf = [0u8; 256];
-            let (_, len) = super::wire::decode_domain_name(rec.packet, rec.rdata_offset + 2, &mut buf).ok()?;
+            let (_, len) =
+                super::wire::decode_domain_name(rec.packet, rec.rdata_offset + 2, &mut buf).ok()?;
             let exchange = std::str::from_utf8(&buf[..len]).ok()?;
             Some(encode_mx_record(name, preference, exchange, rec.ttl, lane))
         }
@@ -379,9 +606,12 @@ pub fn wire_record_view_to_quin(
             let weight = u16::from_be_bytes([rec.rdata[2], rec.rdata[3]]);
             let port = u16::from_be_bytes([rec.rdata[4], rec.rdata[5]]);
             let mut buf = [0u8; 256];
-            let (_, len) = super::wire::decode_domain_name(rec.packet, rec.rdata_offset + 6, &mut buf).ok()?;
+            let (_, len) =
+                super::wire::decode_domain_name(rec.packet, rec.rdata_offset + 6, &mut buf).ok()?;
             let target = std::str::from_utf8(&buf[..len]).ok()?;
-            Some(encode_srv_record(name, priority, weight, port, target, rec.ttl, lane))
+            Some(encode_srv_record(
+                name, priority, weight, port, target, rec.ttl, lane,
+            ))
         }
         DnsType::CAA => {
             if rec.rdata.len() < 2 {
@@ -410,7 +640,9 @@ pub fn wire_record_view_to_quin(
             } else {
                 0
             };
-            Some(encode_tlsa_record(name, usage, selector, mtype, cert_hash, rec.ttl, lane))
+            Some(encode_tlsa_record(
+                name, usage, selector, mtype, cert_hash, rec.ttl, lane,
+            ))
         }
         DnsType::HTTPS | DnsType::SVCB => {
             if rec.rdata.len() < 2 {
@@ -418,19 +650,28 @@ pub fn wire_record_view_to_quin(
             }
             let priority = u16::from_be_bytes([rec.rdata[0], rec.rdata[1]]);
             let mut buf = [0u8; 256];
-            let (next_off, len) = super::wire::decode_domain_name(rec.packet, rec.rdata_offset + 2, &mut buf).ok()?;
+            let (next_off, len) =
+                super::wire::decode_domain_name(rec.packet, rec.rdata_offset + 2, &mut buf).ok()?;
             let target = std::str::from_utf8(&buf[..len]).ok()?;
-            let params_hash = if next_off < rec.packet.len() && next_off < rec.rdata_offset + rec.rdata.len() {
-                let params = &rec.packet[next_off..rec.rdata_offset + rec.rdata.len()];
-                let mut h = 0xcbf29ce484222325u64;
-                for b in params {
-                    h = (h ^ (*b as u64)).wrapping_mul(0x100000001b3);
-                }
-                h
-            } else {
-                0
-            };
-            Some(encode_https_record(name, priority, target, params_hash, rec.ttl, lane))
+            let params_hash =
+                if next_off < rec.packet.len() && next_off < rec.rdata_offset + rec.rdata.len() {
+                    let params = &rec.packet[next_off..rec.rdata_offset + rec.rdata.len()];
+                    let mut h = 0xcbf29ce484222325u64;
+                    for b in params {
+                        h = (h ^ (*b as u64)).wrapping_mul(0x100000001b3);
+                    }
+                    h
+                } else {
+                    0
+                };
+            Some(encode_https_record(
+                name,
+                priority,
+                target,
+                params_hash,
+                rec.ttl,
+                lane,
+            ))
         }
         DnsType::DNSKEY => {
             if rec.rdata.len() < 4 {
@@ -443,7 +684,9 @@ pub fn wire_record_view_to_quin(
             for b in &rec.rdata[4..] {
                 h = (h ^ (*b as u64)).wrapping_mul(0x100000001b3);
             }
-            Some(encode_dnskey_record(name, flags, protocol, algorithm, h, rec.ttl, lane))
+            Some(encode_dnskey_record(
+                name, flags, protocol, algorithm, h, rec.ttl, lane,
+            ))
         }
         DnsType::DS => {
             if rec.rdata.len() < 4 {
@@ -456,7 +699,15 @@ pub fn wire_record_view_to_quin(
             for b in &rec.rdata[4..] {
                 h = (h ^ (*b as u64)).wrapping_mul(0x100000001b3);
             }
-            Some(encode_ds_record(name, key_tag, algorithm, digest_type, h, rec.ttl, lane))
+            Some(encode_ds_record(
+                name,
+                key_tag,
+                algorithm,
+                digest_type,
+                h,
+                rec.ttl,
+                lane,
+            ))
         }
         DnsType::TXT => {
             let mut text_buf = [0u8; 256];
@@ -469,7 +720,8 @@ pub fn wire_record_view_to_quin(
                     break;
                 }
                 let copy_len = core::cmp::min(segment_len, text_buf.len() - out_len);
-                text_buf[out_len..out_len + copy_len].copy_from_slice(&rec.rdata[cursor..cursor + copy_len]);
+                text_buf[out_len..out_len + copy_len]
+                    .copy_from_slice(&rec.rdata[cursor..cursor + copy_len]);
                 out_len += copy_len;
                 cursor += segment_len;
             }
@@ -509,9 +761,17 @@ mod tests {
 
     #[test]
     fn a_record_roundtrip() {
-        let quin = encode_a_record("node1.qualia.net", [192, 168, 1, 42], 300, PermissiveRoutingLane::EnforceBilateralMicroCommons);
+        let quin = encode_a_record(
+            "node1.qualia.net",
+            [192, 168, 1, 42],
+            300,
+            PermissiveRoutingLane::EnforceBilateralMicroCommons,
+        );
         assert!(quin.verify_ecc_parity());
-        assert_eq!(quin.identify_routing_lane(), PermissiveRoutingLane::EnforceBilateralMicroCommons);
+        assert_eq!(
+            quin.identify_routing_lane(),
+            PermissiveRoutingLane::EnforceBilateralMicroCommons
+        );
 
         let (ip, ttl, lane) = decode_a_record(&quin).unwrap();
         assert_eq!(ip, [192, 168, 1, 42]);
@@ -522,10 +782,15 @@ mod tests {
     #[test]
     fn aaaa_record_lossless_roundtrip() {
         let ip_v6: [u8; 16] = [
-            0x26, 0x06, 0x47, 0x00, 0x47, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11,
+            0x26, 0x06, 0x47, 0x00, 0x47, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x11, 0x11,
         ];
-        let quin = encode_aaaa_record("cloudflare-dns.com", ip_v6, 3600, PermissiveRoutingLane::PassthroughStandard);
+        let quin = encode_aaaa_record(
+            "cloudflare-dns.com",
+            ip_v6,
+            3600,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
         assert!(quin.verify_ecc_parity());
 
         let (decoded_ip, ttl, lane) = decode_aaaa_record(&quin).unwrap();
@@ -536,7 +801,13 @@ mod tests {
 
     #[test]
     fn mx_record_roundtrip() {
-        let quin = encode_mx_record("qualia.net", 10, "mail.qualia.net", 600, PermissiveRoutingLane::PassthroughStandard);
+        let quin = encode_mx_record(
+            "qualia.net",
+            10,
+            "mail.qualia.net",
+            600,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
         assert!(quin.verify_ecc_parity());
         let (pref, exch_hash, ttl, _) = decode_mx_record(&quin).unwrap();
         assert_eq!(pref, 10);
@@ -546,7 +817,15 @@ mod tests {
 
     #[test]
     fn srv_record_roundtrip() {
-        let quin = encode_srv_record("_imaps._tcp.qualia.net", 5, 0, 993, "mail.qualia.net", 1800, PermissiveRoutingLane::EnforceBilateralMicroCommons);
+        let quin = encode_srv_record(
+            "_imaps._tcp.qualia.net",
+            5,
+            0,
+            993,
+            "mail.qualia.net",
+            1800,
+            PermissiveRoutingLane::EnforceBilateralMicroCommons,
+        );
         assert!(quin.verify_ecc_parity());
         let (prio, weight, port, target_hash, ttl, _) = decode_srv_record(&quin).unwrap();
         assert_eq!(prio, 5);
@@ -559,9 +838,17 @@ mod tests {
     #[test]
     fn sdn_front_door_encoding() {
         let did_ptr = DID_Q42_FLAG | 0x1234_5678_9ABC;
-        let quin = encode_sdn_front_door("alice.webizen.net", did_ptr, 600, PermissiveRoutingLane::EnforcePermissiveCommons);
+        let quin = encode_sdn_front_door(
+            "alice.webizen.net",
+            did_ptr,
+            600,
+            PermissiveRoutingLane::EnforcePermissiveCommons,
+        );
         assert!(quin.verify_ecc_parity());
         assert_eq!(quin.object & DID_Q42_FLAG, DID_Q42_FLAG);
-        assert_eq!(quin.identify_routing_lane(), PermissiveRoutingLane::EnforcePermissiveCommons);
+        assert_eq!(
+            quin.identify_routing_lane(),
+            PermissiveRoutingLane::EnforcePermissiveCommons
+        );
     }
 }

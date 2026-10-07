@@ -132,7 +132,10 @@ mod tests {
     fn expiry_without_revoke_is_expired() {
         let attestation = sample(AttestationKind::Endorsement, 100);
         let registry = StatusRegistry::new();
-        assert_eq!(registry.status(&attestation, 101), AttestationStatus::Expired);
+        assert_eq!(
+            registry.status(&attestation, 101),
+            AttestationStatus::Expired
+        );
         assert_eq!(
             registry.assert_rely(&attestation, 101),
             Err(InstrumentError::Expired)

@@ -27,9 +27,8 @@ pub use emf::{
 pub use physics::{
     advection_diffusion_1d, cfd_step, creator_evaluate_interaction, creator_field_sample,
     creator_material_query, creator_part_signature, creator_tick_spectrum_reading,
-    harmonic_oscillator, heat_diffusion_1d,
-    logistic_growth,
-    molecular_dynamics, n_body, pendulum, projectile, quantum_states_1d, wave_1d,
+    harmonic_oscillator, heat_diffusion_1d, logistic_growth, molecular_dynamics, n_body, pendulum,
+    projectile, quantum_states_1d, wave_1d,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use physics_workbench::compute as physics_compute;

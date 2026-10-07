@@ -19,7 +19,8 @@ const WIRE_KINDS: &[&str] = &[
     "wire-objective",
 ];
 
-const LABEL: &str = "font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;";
+const LABEL: &str =
+    "font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;";
 const INPUT: &str = "width:100%;background:#131822;border:1px solid #1a2230;color:#e8eef7;border-radius:6px;padding:6px 8px;font-size:.78rem;box-sizing:border-box;";
 const CHIP: &str = "border:1px solid #334155;background:#131822;color:#e8eef7;border-radius:4px;padding:2px 7px;font-size:.68rem;cursor:pointer;";
 const CHIP_ACTIVE: &str = "border:1px solid var(--accent-cyan);background:rgba(56,189,248,0.15);color:var(--accent-cyan);border-radius:4px;padding:2px 7px;font-size:.68rem;cursor:pointer;font-weight:600;";
@@ -67,7 +68,12 @@ fn StrataChip(wb: Signal<Workbench>, node_id: String, strata: Strata, active: bo
 }
 
 #[component]
-fn EpistemicChip(wb: Signal<Workbench>, node_id: String, epistemic: Epistemic, active: bool) -> Element {
+fn EpistemicChip(
+    wb: Signal<Workbench>,
+    node_id: String,
+    epistemic: Epistemic,
+    active: bool,
+) -> Element {
     rsx! {
         button {
             r#type: "button",
@@ -178,7 +184,12 @@ fn NodeInspector(wb: Signal<Workbench>, id: String) -> Element {
 }
 
 #[component]
-fn WireKindChip(wb: Signal<Workbench>, wire_id: String, kind: &'static str, active: bool) -> Element {
+fn WireKindChip(
+    wb: Signal<Workbench>,
+    wire_id: String,
+    kind: &'static str,
+    active: bool,
+) -> Element {
     rsx! {
         button {
             r#type: "button",

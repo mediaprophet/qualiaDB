@@ -26,6 +26,11 @@ use serde::{Deserialize, Serialize};
 ///
 /// Zero-heap compatible, stack-allocated structure for hot path operations.
 /// Uses fixed-size f32 values for GPU/SIMD compatibility and quantization.
+/// In the `.10d` v2 identity model, this is the structured manifold address
+/// component, interpreted with its declared domain/profile and typed parts
+/// that describe shape and behavior. It is not a digest or a globally unique
+/// identifier by itself; hashes may index or verify the identity but do not
+/// replace these coordinates or their declared semantics.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable, Serialize, Deserialize)]
 pub struct Tensor10D {

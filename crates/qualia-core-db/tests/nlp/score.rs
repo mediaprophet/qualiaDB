@@ -71,9 +71,7 @@ pub fn score_doc(doc: &GoldDoc) -> SpanScore {
     let sent_matched = sentences
         .iter()
         .zip(&doc.sentences)
-        .filter(|(live, gold)| {
-            live.span.start_utf8 == gold.start && live.span.end_utf8 == gold.end
-        })
+        .filter(|(live, gold)| live.span.start_utf8 == gold.start && live.span.end_utf8 == gold.end)
         .count();
     let hits = Gazetteer::default().find(&doc.source);
     let gaz_matched = hits

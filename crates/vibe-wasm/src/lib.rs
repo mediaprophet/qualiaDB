@@ -333,9 +333,10 @@ pub fn eval_program_src(src: &str) -> JsValue {
                     let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
                     engine.eval_program(&prog, &mut env)?;
                 }
-                let has_main = prog.items.iter().any(|item| {
-                    matches!(item, Item::Function(f) if f.name == "main")
-                });
+                let has_main = prog
+                    .items
+                    .iter()
+                    .any(|item| matches!(item, Item::Function(f) if f.name == "main"));
                 if has_main {
                     eval_function(&prog, "main", Vec::new(), &mut host, &mut env)
                 } else {
@@ -479,7 +480,12 @@ pub fn compile_cell_bytecode(src: &str) -> JsValue {
                 &JsValue::from_f64(cell.top_locals() as f64),
             )
             .ok();
-            Reflect::set(&o, &"disassembly".into(), &JsValue::from_str(&cell.disassembly())).ok();
+            Reflect::set(
+                &o,
+                &"disassembly".into(),
+                &JsValue::from_str(&cell.disassembly()),
+            )
+            .ok();
             o.into()
         }
         Err(err) => {
@@ -1191,12 +1197,37 @@ pub fn decode_program_cborld_wasm(bytes: &[u8]) -> Result<JsValue, JsValue> {
     let o = Object::new();
     Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
     Reflect::set(&o, &"tag".into(), &JsValue::from_f64(TAG_VIBE_AST as f64)).ok();
-    Reflect::set(&o, &"canonicalSource".into(), &JsValue::from_str(&canonical_source)).ok();
-    Reflect::set(&o, &"astHash".into(), &JsValue::from_str(&format!("{:016x}", ast_hash))).ok();
-    Reflect::set(&o, &"itemsCount".into(), &JsValue::from_f64(prog.items.len() as f64)).ok();
-    Reflect::set(&o, &"languageVersion".into(), &JsValue::from_str(LANGUAGE_VERSION)).ok();
+    Reflect::set(
+        &o,
+        &"canonicalSource".into(),
+        &JsValue::from_str(&canonical_source),
+    )
+    .ok();
+    Reflect::set(
+        &o,
+        &"astHash".into(),
+        &JsValue::from_str(&format!("{:016x}", ast_hash)),
+    )
+    .ok();
+    Reflect::set(
+        &o,
+        &"itemsCount".into(),
+        &JsValue::from_f64(prog.items.len() as f64),
+    )
+    .ok();
+    Reflect::set(
+        &o,
+        &"languageVersion".into(),
+        &JsValue::from_str(LANGUAGE_VERSION),
+    )
+    .ok();
     Reflect::set(&o, &"hostVersion".into(), &JsValue::from_str(HOST_VERSION)).ok();
-    Reflect::set(&o, &"profile".into(), &JsValue::from_str(VIBE_CBOR_LD_PROFILE)).ok();
+    Reflect::set(
+        &o,
+        &"profile".into(),
+        &JsValue::from_str(VIBE_CBOR_LD_PROFILE),
+    )
+    .ok();
     Ok(o.into())
 }
 
@@ -1243,11 +1274,36 @@ pub fn eval_program_with_receipt_wasm(src: &str) -> JsValue {
             Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
 
             let receipt = Object::new();
-            Reflect::set(&receipt, &"sourceHash".into(), &JsValue::from_str(&format!("{:016x}", src_hash))).ok();
-            Reflect::set(&receipt, &"astHash".into(), &JsValue::from_str(&format!("{:016x}", ast_hash))).ok();
-            Reflect::set(&receipt, &"languageVersion".into(), &JsValue::from_str(LANGUAGE_VERSION)).ok();
-            Reflect::set(&receipt, &"hostVersion".into(), &JsValue::from_str(HOST_VERSION)).ok();
-            Reflect::set(&receipt, &"profile".into(), &JsValue::from_str(VIBE_CBOR_LD_PROFILE)).ok();
+            Reflect::set(
+                &receipt,
+                &"sourceHash".into(),
+                &JsValue::from_str(&format!("{:016x}", src_hash)),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"astHash".into(),
+                &JsValue::from_str(&format!("{:016x}", ast_hash)),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"languageVersion".into(),
+                &JsValue::from_str(LANGUAGE_VERSION),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"hostVersion".into(),
+                &JsValue::from_str(HOST_VERSION),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"profile".into(),
+                &JsValue::from_str(VIBE_CBOR_LD_PROFILE),
+            )
+            .ok();
             Reflect::set(&receipt, &"status".into(), &JsValue::from_str("success")).ok();
 
             Reflect::set(&o, &"receipt".into(), &receipt).ok();

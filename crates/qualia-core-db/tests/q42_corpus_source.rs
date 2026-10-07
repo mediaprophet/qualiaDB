@@ -82,10 +82,7 @@ fn extracts_corpus_text_from_in_repo_q42() {
                 q.object, q.predicate, r(q.subject), r(q.predicate), r(q.object), rm(q.object), rm(q.predicate)
             );
         }
-        let obj_raw = quins
-            .iter()
-            .filter(|q| lex.contains(q.object))
-            .count();
+        let obj_raw = quins.iter().filter(|q| lex.contains(q.object)).count();
         let obj_masked = quins
             .iter()
             .filter(|q| lex.contains(q.object & MASK))

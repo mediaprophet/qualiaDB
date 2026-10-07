@@ -444,6 +444,9 @@ mod tests {
             "MailInboxPane must not paint held / not yet (Capt orbit UAT)"
         );
         assert!(src.contains("Planned"), "Mail surface uses Planned honesty");
-        assert!(src.contains("Live"), "Mail surface uses Live honesty for reading");
+        assert!(
+            src.contains("Live"),
+            "Mail surface uses Live honesty for reading"
+        );
     }
 }

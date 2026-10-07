@@ -134,10 +134,22 @@ struct FlowNode {
 }
 
 const ASSESS: &[FlowNode] = &[
-    FlowNode { kind: FlowKind::Entry, label: "assess" },
-    FlowNode { kind: FlowKind::InputShape, label: "input shape" },
-    FlowNode { kind: FlowKind::Logic, label: "N3/CML logic" },
-    FlowNode { kind: FlowKind::OutputShape, label: "output shape" },
+    FlowNode {
+        kind: FlowKind::Entry,
+        label: "assess",
+    },
+    FlowNode {
+        kind: FlowKind::InputShape,
+        label: "input shape",
+    },
+    FlowNode {
+        kind: FlowKind::Logic,
+        label: "N3/CML logic",
+    },
+    FlowNode {
+        kind: FlowKind::OutputShape,
+        label: "output shape",
+    },
 ];
 
 fn nodes_for(entry: &str) -> &'static [FlowNode] {
@@ -359,13 +371,18 @@ mod tests {
     #[test]
     fn flow_layout_round_trips_and_rejects_host() {
         let encoded = encode_positions(&RAIL);
-        assert_eq!(encoded, "50.00,56.00;170.00,56.00;290.00,56.00;410.00,56.00");
+        assert_eq!(
+            encoded,
+            "50.00,56.00;170.00,56.00;290.00,56.00;410.00,56.00"
+        );
         let back = layout_for_count(&encoded, 4).expect("count match");
         assert_eq!(back, RAIL);
         assert!(layout_for_count(&encoded, 3).is_none());
         assert!(layout_for_count("10.00,20.00;Host.1,2.00", 2).is_none());
-        assert!(decode_positions("10.00,20.00;Host.1,2.00;30.00,40.00")
-            == vec![(10.00, 20.00), (30.00, 40.00)]);
+        assert!(
+            decode_positions("10.00,20.00;Host.1,2.00;30.00,40.00")
+                == vec![(10.00, 20.00), (30.00, 40.00)]
+        );
         assert!(!LAYOUT_ATTR.contains("Host"));
         assert_eq!(LAYOUT_ATTR, "data-si-flow-layout");
         let clamped = layout_for_count("10.00,0.00;170.00,56.00;290.00,56.00;500.00,200.00", 4)

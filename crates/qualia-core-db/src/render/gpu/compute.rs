@@ -99,6 +99,7 @@ struct PooledBuffer {
     buffer: wgpu::Buffer,
     capacity: u64,
     usage: wgpu::BufferUsages,
+    _reservation: crate::gpu_context::VramReservation<'static>,
 }
 
 /// A pooled bind group, reused when all binding buffer sizes match.
@@ -178,8 +179,8 @@ impl ComputeState {
 
 /// Round `n` up to the next multiple of 4 (wgpu `copy_buffer_to_buffer` size
 /// must be a multiple of 4).
-fn align4(n: usize) -> usize {
-    (n + 3) & !3
+fn align4(n: usize) -> Option<usize> {
+    n.checked_add(3).map(|aligned| aligned & !3)
 }
 
 /// Hash a key tuple into a `u64` cache key.
@@ -221,6 +222,22 @@ impl super::PortalGpu {
         if workgroups[0] == 0 || workgroups[1] == 0 || workgroups[2] == 0 {
             return Err("compute_dispatch: workgroups must be >= 1 in every dimension".into());
         }
+        if let Some(binding) = readback_binding {
+            if readback_bytes > 0 && !bindings.iter().any(|b| b.binding == binding) {
+                return Err(format!(
+                    "compute_dispatch: readback_binding {binding} not in bindings"
+                ));
+            }
+        }
+        let want_readback = readback_binding.is_some() && readback_bytes > 0;
+        let requested_copy_size = if want_readback {
+            Some(
+                align4(readback_bytes)
+                    .ok_or_else(|| "compute_dispatch: readback size overflow".to_string())?,
+            )
+        } else {
+            None
+        };
 
         let key = cache_key(wgsl, entry_point, bindings);
         if !self.compute.cache.contains_key(&key) {
@@ -313,6 +330,12 @@ impl super::PortalGpu {
                 .get(&pool_key)
                 .map_or(true, |pb| pb.capacity < size as u64 || pb.usage != usage);
             if need_new {
+                let reservation = crate::gpu_context::global_vram_ledger()
+                    .try_reserve_graphics(
+                        crate::gpu_context::VramResourceClass::FrameTarget,
+                        size as u64,
+                    )
+                    .map_err(|e| format!("compute_dispatch: binding {} refused: {e}", b.binding))?;
                 let buf = if b.data.is_empty() {
                     self.device.create_buffer(&wgpu::BufferDescriptor {
                         label: Some("portal-compute-buf"),
@@ -334,6 +357,7 @@ impl super::PortalGpu {
                         buffer: buf.clone(),
                         capacity: size as u64,
                         usage,
+                        _reservation: reservation,
                     },
                 );
                 binding_buffers.push((b.binding, buf));
@@ -385,9 +409,8 @@ impl super::PortalGpu {
         };
 
         // VC3: Reuse staging buffer if capacity >= needed, otherwise create.
-        let want_readback = readback_binding.is_some() && readback_bytes > 0;
         let (staging, copy_size) = if want_readback {
-            let copy_size = align4(readback_bytes);
+            let copy_size = requested_copy_size.expect("readback size validated above");
             let need_new_staging = self
                 .compute
                 .pool
@@ -395,6 +418,12 @@ impl super::PortalGpu {
                 .as_ref()
                 .map_or(true, |ps| ps.capacity < copy_size as u64);
             if need_new_staging {
+                let reservation = crate::gpu_context::global_vram_ledger()
+                    .try_reserve_graphics(
+                        crate::gpu_context::VramResourceClass::UploadStaging,
+                        copy_size as u64,
+                    )
+                    .map_err(|e| format!("compute_dispatch: readback staging refused: {e}"))?;
                 let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("portal-compute-staging"),
                     size: copy_size as u64,
@@ -405,6 +434,7 @@ impl super::PortalGpu {
                     buffer: staging.clone(),
                     capacity: copy_size as u64,
                     usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                    _reservation: reservation,
                 });
                 (Some(staging), copy_size)
             } else {
@@ -436,9 +466,7 @@ impl super::PortalGpu {
                 .iter()
                 .find(|(b, _)| *b == rb)
                 .map(|(_, buf)| buf)
-                .ok_or_else(|| {
-                    format!("compute_dispatch: readback_binding {rb} not in bindings")
-                })?;
+                .expect("readback binding validated before resource allocation");
             encoder.copy_buffer_to_buffer(src, 0, staging, 0, copy_size as u64);
         }
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -555,6 +583,13 @@ impl super::PortalGpu {
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compute_readback_alignment_checks_overflow() {
+        assert_eq!(align4(1), Some(4));
+        assert_eq!(align4(4), Some(4));
+        assert_eq!(align4(usize::MAX), None);
+    }
 
     const VECTOR_ADD_WGSL: &str = r#"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
@@ -761,9 +796,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(999),
         };
-        eprintln!("vc3_render_frame_steady_state: {count} heap allocs (baseline: {baseline}, belt_only: {belt_only})");
+        eprintln!(
+            "vc3_render_frame_steady_state: {count} heap allocs (baseline: {baseline}, belt_only: {belt_only})"
+        );
         let pass_overhead = count.saturating_sub(belt_only);
-        eprintln!("vc3 render_pass_overhead: {pass_overhead} heap allocs (wgpu command recording internals)");
+        eprintln!(
+            "vc3 render_pass_overhead: {pass_overhead} heap allocs (wgpu command recording internals)"
+        );
 
         // The uniform belt eliminates our code's buffer-write allocations.
         // The remaining allocations are all wgpu API internals:
@@ -838,7 +877,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(999),
         };
-        eprintln!("vc3_compute_dispatch_pooled: {count} heap allocs (wgpu internals: encoder + compute pass + submit)");
+        eprintln!(
+            "vc3_compute_dispatch_pooled: {count} heap allocs (wgpu internals: encoder + compute pass + submit)"
+        );
         // The pool eliminates our code's allocations. wgpu's internal
         // command recording allocations remain (encoder creation, compute
         // pass begin, set_pipeline, set_bind_group, dispatch, submit).

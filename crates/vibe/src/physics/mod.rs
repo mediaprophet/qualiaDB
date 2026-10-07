@@ -14,9 +14,9 @@ pub use laws::{
     evaluate_field_interactions, evaluate_pairwise_interactions, ContinuantState, InteractionEvent,
 };
 pub use materials::{
-    AcousticFacet, ChemicalFacet, FacetField, MaterialSignature, MechanicalFacet, OpticalFacet,
-    PartBindError, PartContinuant, SignatureFacet, SpectrumReading, ThermalFacet, GAME_WATER_FORMS,
-    is_game_water_form, is_living_kingdom,
+    is_game_water_form, is_living_kingdom, AcousticFacet, ChemicalFacet, FacetField,
+    MaterialSignature, MechanicalFacet, OpticalFacet, PartBindError, PartContinuant,
+    SignatureFacet, SpectrumReading, ThermalFacet, GAME_WATER_FORMS,
 };
 pub use morphism::{transform_frame, GalileanMorphism, LorentzMorphism};
 pub use trajectory::{Waypoint, WorldLineTrajectory};

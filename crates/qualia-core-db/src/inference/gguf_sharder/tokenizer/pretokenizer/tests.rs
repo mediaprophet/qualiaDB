@@ -56,10 +56,14 @@ fn qwen35_scanner_matches_llamacpp_regex() {
                 let next_first = raw[idx + 1].chars().next().unwrap();
                 let attaches = next_first.is_alphabetic()
                     || is_mark(next_first)
-                    || (tail == " " && !next_first.is_whitespace() && !next_first.is_alphanumeric());
+                    || (tail == " "
+                        && !next_first.is_whitespace()
+                        && !next_first.is_alphanumeric());
                 if attaches {
-                    merged.push(&text[start + span.len() - tail_len
-                        ..start + span.len() + raw[idx + 1].len()]);
+                    merged.push(
+                        &text[start + span.len() - tail_len
+                            ..start + span.len() + raw[idx + 1].len()],
+                    );
                     idx += 2;
                 } else {
                     merged.push(tail);

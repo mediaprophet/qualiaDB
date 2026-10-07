@@ -518,7 +518,10 @@ mod tests {
             route_for_palette_id("directory"),
             Route::TalkDirectoryRoute {}
         ));
-        assert!(matches!(route_for_palette_id("dir"), Route::TalkDirectoryRoute {}));
+        assert!(matches!(
+            route_for_palette_id("dir"),
+            Route::TalkDirectoryRoute {}
+        ));
         assert_eq!(
             filter_destinations("directory")
                 .iter()
@@ -527,9 +530,6 @@ mod tests {
                 .label,
             "Directory"
         );
-        assert_eq!(
-            Route::TalkDirectoryRoute {}.to_string(),
-            "/talk/directory"
-        );
+        assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
     }
 }

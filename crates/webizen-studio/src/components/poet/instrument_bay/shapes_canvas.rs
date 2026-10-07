@@ -106,11 +106,7 @@ pub fn canvas_nodes(entry: &str) -> Vec<&'static str> {
 #[cfg(test)]
 fn canvas_nodes_for_rail(entry: &str, rail: &str) -> Vec<&'static str> {
     let (inputs, outputs) = visible_rows(entry, rail);
-    inputs
-        .into_iter()
-        .chain(outputs)
-        .map(|c| c.path)
-        .collect()
+    inputs.into_iter().chain(outputs).map(|c| c.path).collect()
 }
 
 fn step_focus(i: usize, len: usize, key: &str) -> usize {

@@ -6,8 +6,8 @@
 //! - Accurate tracking of stored, mapped, resident, and scratch memory domains.
 //! - Explicit fidelity contract evaluation (no fake numbers or unmeasured claims).
 
-use serde::{Deserialize, Serialize};
 use crate::inference::operator_package::FidelityContract;
+use serde::{Deserialize, Serialize};
 
 /// Memory footprint breakdown across separate memory domains.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,7 +23,12 @@ pub struct OperatorMemoryBreakdown {
 }
 
 impl OperatorMemoryBreakdown {
-    pub fn new(stored_bytes: u64, mapped_bytes: u64, resident_bytes: u64, workspace_bytes: usize) -> Self {
+    pub fn new(
+        stored_bytes: u64,
+        mapped_bytes: u64,
+        resident_bytes: u64,
+        workspace_bytes: usize,
+    ) -> Self {
         Self {
             stored_bytes,
             mapped_bytes,
@@ -135,8 +140,7 @@ mod tests {
 
         assert_eq!(receipt, deserialized);
         assert_ne!(
-            receipt.transfer_bandwidth_gbps,
-            receipt.local_bandwidth_gbps,
+            receipt.transfer_bandwidth_gbps, receipt.local_bandwidth_gbps,
             "transfer and local bandwidth must remain distinct"
         );
     }
@@ -167,7 +171,10 @@ mod tests {
         );
         receipt.numerical_max_error = 0.0001;
         receipt.evaluate_fidelity(0.01);
-        assert!(!receipt.fidelity_satisfied, "source byte preservation fails on non-zero error");
+        assert!(
+            !receipt.fidelity_satisfied,
+            "source byte preservation fails on non-zero error"
+        );
 
         receipt.numerical_max_error = 0.0;
         receipt.evaluate_fidelity(0.01);

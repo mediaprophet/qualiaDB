@@ -3,9 +3,7 @@
 //! Pins the Civics package receipt fields: JSON-LD context digest, engine
 //! version, shapes JSON hash, and Vibe AST tag identity (Tag 4200).
 
-use crate::sparql_library::rdf_formats::{
-    context_digest_hex, QUALIA_JSONLD_CONTEXT_ID,
-};
+use crate::sparql_library::rdf_formats::{context_digest_hex, QUALIA_JSONLD_CONTEXT_ID};
 
 /// Vibe homoiconic CBOR AST tag — kept in lockstep with `vibe::cbor_ast::TAG_VIBE_AST`.
 pub const VIBE_AST_TAG: u64 = 4200;

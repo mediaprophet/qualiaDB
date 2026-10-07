@@ -41,8 +41,8 @@ mod tests {
         );
 
         let mut b = QuinCollector::new();
-        let n2 = parse_rdf(RdfFormat::JsonLd, Cursor::new(&buf[..]), 0, &mut b)
-            .expect("reparse jsonld");
+        let n2 =
+            parse_rdf(RdfFormat::JsonLd, Cursor::new(&buf[..]), 0, &mut b).expect("reparse jsonld");
         assert!(n2 >= 1, "reparsed graph must be non-empty");
     }
 
@@ -108,9 +108,9 @@ mod tests {
     fn vendor_nquin_cbor_lossless_on_inline_integer() {
         use crate::frame_layout::INLINE_TAG_INTEGER;
         use crate::lexicon::generate_60bit_token;
+        use crate::resolver::classify_inline_literal;
         use crate::sparql_library::parsers::cbor_parser::parse_cbor_ld_into;
         use crate::sparql_library::serialisers::rdf_serializers::serialize_to_cborld;
-        use crate::resolver::classify_inline_literal;
 
         let s = generate_60bit_token(b"ex:alice");
         let p = generate_60bit_token(b"ex:age");
@@ -129,7 +129,8 @@ mod tests {
         let n = parse_cbor_ld_into(Cursor::new(&buf[..]), 0, &mut out).expect("decode");
         assert_eq!(n, 1);
         assert_eq!(
-            out.as_slice()[0].object, o,
+            out.as_slice()[0].object,
+            o,
             "inline integer must survive vendor CBOR round-trip bit-exactly"
         );
         assert!(matches!(

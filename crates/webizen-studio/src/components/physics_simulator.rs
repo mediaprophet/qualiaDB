@@ -12,12 +12,12 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
-use webizen_studio::tauri_ffi::invoke as tauri_invoke;
-#[cfg(target_arch = "wasm32")]
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
 
 // 3D math, camera, projection, and the Canvas 2D draw backend now live in the
 // shared, backend-agnostic `render` module so a future GPU (WebGPU) backend can

@@ -1,0 +1,31 @@
+// Renderer preference policy. Capability probing stays in the host; backend
+// ordering belongs to VibeScript and can be reused by native hosts.
+fn select_backend(webgpu: bool, webgl2: bool, canvas2d: bool) -> string {
+    if webgpu {
+        return "webgpu";
+    } else {
+        if webgl2 {
+            return "webgl2";
+        } else {
+            if canvas2d {
+                return "canvas2d";
+            } else {
+                return "unavailable";
+            }
+        }
+    }
+}
+
+// A lost device is retried only when the host permits it. If that fails, keep
+// the hardware fallback before settling for the Canvas2D proof path.
+fn select_recovery_backend(webgpu_retry_allowed: bool, webgl2_allowed: bool) -> string {
+    if webgpu_retry_allowed {
+        return "webgpu";
+    } else {
+        if webgl2_allowed {
+            return "webgl2";
+        } else {
+            return "canvas2d";
+        }
+    }
+}

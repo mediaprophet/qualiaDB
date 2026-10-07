@@ -207,12 +207,11 @@ pub fn prepare_conditioned_prompt(
         })
         .collect();
     let fallback_scope = crate::q_hash(graph_context);
-    let allowed_scopes =
-        if profile.allowed_graph_scopes.is_empty() && !graph_context.is_empty() {
-            std::slice::from_ref(&fallback_scope)
-        } else {
-            profile.allowed_graph_scopes.as_slice()
-        };
+    let allowed_scopes = if profile.allowed_graph_scopes.is_empty() && !graph_context.is_empty() {
+        std::slice::from_ref(&fallback_scope)
+    } else {
+        profile.allowed_graph_scopes.as_slice()
+    };
     let authority = crate::inference::conditioning::AuthorityView {
         principal_did_hash: crate::q_hash(principal_did),
         disclosure_ceiling: profile.disclosure_ceiling,

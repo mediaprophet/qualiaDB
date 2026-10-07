@@ -385,7 +385,8 @@ impl FtwModelPackage {
     /// Read raw bytes for a tensor by global offset and length across shards.
     pub fn fetch_by_global_offset(&self, global_off: u64, len: usize) -> Option<&[u8]> {
         for (idx, s) in self.manifest.shards.iter().enumerate() {
-            if global_off >= s.global_off && (global_off + len as u64) <= (s.global_off + s.nbytes) {
+            if global_off >= s.global_off && (global_off + len as u64) <= (s.global_off + s.nbytes)
+            {
                 let local_off = (global_off - s.global_off) as usize;
                 let shard = self.shards.get(idx)?;
                 return shard.get(local_off..local_off + len);
@@ -495,7 +496,7 @@ mod tests {
         assert_eq!(pkg.manifest.format, "freetoken_weight");
         assert!(!pkg.shards.is_empty());
         assert!(pkg.tensor_index.emb_dim() > 0);
-        
+
         let exp_0_0 = pkg.get_expert_data(0, 0);
         assert!(exp_0_0.is_some(), "layer 0 expert 0 data present");
         let exp_data = exp_0_0.unwrap();
@@ -507,4 +508,3 @@ mod tests {
         assert!(!view.down_packed.is_empty());
     }
 }
-

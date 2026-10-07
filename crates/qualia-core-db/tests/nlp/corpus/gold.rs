@@ -69,7 +69,8 @@ pub(crate) struct TokenAnn {
 }
 
 pub(crate) fn load_gold_file(path: &std::path::Path) -> GoldDoc {
-    let raw = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let raw =
+        std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let v = parse_json(&raw).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()));
     load_gold_value(&v)
 }
@@ -239,10 +240,24 @@ pub(crate) fn assert_matches_live_kernels(doc: &GoldDoc) {
     let tokens = tokenize(&doc.source);
     assert_eq!(tokens.len(), doc.tokens.len(), "{} token count", doc.doc_id);
     for (live, gold) in tokens.iter().zip(&doc.tokens) {
-        assert_eq!(live.span.start_utf8, gold.start, "{} token start", doc.doc_id);
+        assert_eq!(
+            live.span.start_utf8, gold.start,
+            "{} token start",
+            doc.doc_id
+        );
         assert_eq!(live.span.end_utf8, gold.end, "{} token end", doc.doc_id);
-        assert_eq!(live.text, gold.surface.as_str(), "{} token surface", doc.doc_id);
-        assert_eq!(kind_name(live.kind), gold.kind.as_str(), "{} token kind", doc.doc_id);
+        assert_eq!(
+            live.text,
+            gold.surface.as_str(),
+            "{} token surface",
+            doc.doc_id
+        );
+        assert_eq!(
+            kind_name(live.kind),
+            gold.kind.as_str(),
+            "{} token kind",
+            doc.doc_id
+        );
     }
 
     let sentences = split_sentences(&doc.source);
@@ -253,7 +268,11 @@ pub(crate) fn assert_matches_live_kernels(doc: &GoldDoc) {
         doc.doc_id
     );
     for (live, gold) in sentences.iter().zip(&doc.sentences) {
-        assert_eq!(live.span.start_utf8, gold.start, "{} sentence start", doc.doc_id);
+        assert_eq!(
+            live.span.start_utf8, gold.start,
+            "{} sentence start",
+            doc.doc_id
+        );
         assert_eq!(live.span.end_utf8, gold.end, "{} sentence end", doc.doc_id);
         assert_eq!(
             &doc.source[live.span.as_range()],
@@ -264,7 +283,12 @@ pub(crate) fn assert_matches_live_kernels(doc: &GoldDoc) {
     }
 
     let hits = Gazetteer::default().find(&doc.source);
-    assert_eq!(hits.len(), doc.gazetteer.len(), "{} gazetteer count", doc.doc_id);
+    assert_eq!(
+        hits.len(),
+        doc.gazetteer.len(),
+        "{} gazetteer count",
+        doc.doc_id
+    );
     for (live, gold) in hits.iter().zip(&doc.gazetteer) {
         assert_eq!(live.span.start_utf8, gold.start);
         assert_eq!(live.span.end_utf8, gold.end);
@@ -284,7 +308,12 @@ pub(crate) fn assert_matches_live_kernels(doc: &GoldDoc) {
             _ => None,
         })
         .collect();
-    assert_eq!(live_dates.len(), doc.dates.len(), "{} date count", doc.doc_id);
+    assert_eq!(
+        live_dates.len(),
+        doc.dates.len(),
+        "{} date count",
+        doc.doc_id
+    );
     for (live, gold) in live_dates.iter().zip(&doc.dates) {
         assert_eq!(live.0, gold.start);
         assert_eq!(live.1, gold.end);
@@ -337,7 +366,8 @@ fn check_corpus(corpus: &str) -> Vec<GoldDoc> {
             .join(corpus)
             .join("documents")
             .join(format!("{}.txt", doc.doc_id));
-        let disk = std::fs::read_to_string(&txt).unwrap_or_else(|e| panic!("read {}: {e}", txt.display()));
+        let disk =
+            std::fs::read_to_string(&txt).unwrap_or_else(|e| panic!("read {}: {e}", txt.display()));
         assert_eq!(disk, doc.source, "{} source != documents txt", doc.doc_id);
         docs.push(doc);
     }
@@ -359,7 +389,10 @@ fn catchment_gold_spans_match_source_and_kernels() {
         .iter()
         .any(|h| h.surface == "North Spring"
             && h.iri == "https://qualiadb.org/catchment/NorthSpring"));
-    assert!(fixture.quantities.iter().any(|q| q.unit == "mm" && (q.value - 12.5).abs() < 1e-9));
+    assert!(fixture
+        .quantities
+        .iter()
+        .any(|q| q.unit == "mm" && (q.value - 12.5).abs() < 1e-9));
     assert!(fixture.dates.iter().any(|d| d.yyyy_mm_dd == "2026-08-15"));
 
     for doc in &docs {

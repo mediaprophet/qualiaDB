@@ -35,8 +35,7 @@ pub fn group_rms_norm_into(
         }
         let inv_rms = 1.0 / (squared_sum / hidden.max(1) as f32 + epsilon).sqrt();
         for index in 0..hidden {
-            out[offset + index] =
-                streams[offset + index] * inv_rms * weight[offset + index];
+            out[offset + index] = streams[offset + index] * inv_rms * weight[offset + index];
         }
     }
     Ok(())

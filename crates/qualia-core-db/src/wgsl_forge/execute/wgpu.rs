@@ -25,8 +25,10 @@ fn create_instance() -> wgpu::Instance {
     let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
     if let Some(backends) = crate::gpu_context::qualia_backend_override() {
         desc.backends = backends;
-    } else if cfg!(target_os = "windows") {
+    } else if cfg!(all(target_os = "windows", feature = "gpu-native-dx12")) {
         desc.backends = wgpu::Backends::DX12;
+    } else if cfg!(all(target_os = "windows", not(feature = "gpu-native-dx12"))) {
+        desc.backends = wgpu::Backends::GL;
     }
     wgpu::Instance::new(desc)
 }

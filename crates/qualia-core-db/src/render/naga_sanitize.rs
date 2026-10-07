@@ -42,14 +42,20 @@ impl std::fmt::Display for SanitizeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnsupportedF64 => write!(f, "f64 is not available in GLSL ES 300"),
-            Self::UniformBlockTooLarge { binding, size_bytes } => write!(
+            Self::UniformBlockTooLarge {
+                binding,
+                size_bytes,
+            } => write!(
                 f,
                 "uniform block at binding={binding} is {size_bytes} bytes, exceeds {MAX_UNIFORM_BLOCK_SIZE}"
             ),
             Self::UnsupportedStage(s) => write!(f, "unsupported shader stage: {s}"),
             Self::ValidationFailed(s) => write!(f, "naga validation failed: {s}"),
             Self::WorkgroupInVertexOrFragment => {
-                write!(f, "workgroup variables are not allowed in vertex/fragment shaders")
+                write!(
+                    f,
+                    "workgroup variables are not allowed in vertex/fragment shaders"
+                )
             }
         }
     }

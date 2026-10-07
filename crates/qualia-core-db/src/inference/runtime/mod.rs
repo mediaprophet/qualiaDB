@@ -44,7 +44,6 @@ pub use receipt::{
 };
 pub use scheduler::{Admission, RequestScheduler, RequestState, RequestView, SchedulerError};
 pub use stage::{
-    last_stage_trace, set_last_stage_trace, take_last_stage_trace, InferenceStageKind,
-    StageStatus, StageTimingReceipt, StageTrace, ThinkingEvent, ThinkingTracker,
-    STAGE_TRACE_CAPACITY,
+    last_stage_trace, set_last_stage_trace, take_last_stage_trace, InferenceStageKind, StageStatus,
+    StageTimingReceipt, StageTrace, ThinkingEvent, ThinkingTracker, STAGE_TRACE_CAPACITY,
 };

@@ -4,8 +4,8 @@ use std::io;
 
 use super::super::{
     header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, BIDX_MAGIC, FIELD_RANGE_INDEX_MAGIC,
-    FLAG_BLOCKS_LZ4, HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3,
-    Q42_VERSION_V4, QUINS_PER_BLOCK, QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
+    FLAG_BLOCKS_LZ4, HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, Q42_VERSION_V4,
+    QUINS_PER_BLOCK, QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
 };
 use super::index::{BidxBlockRange, BidxMatchPage};
 use super::range::{Q42ByteRange, Q42RangeSource};
@@ -369,7 +369,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             &mut header,
         )?;
         let lex_version = u64::from_le_bytes(header[24..32].try_into().unwrap());
-        if header[0..8] != LEX_MAGIC || (lex_version != LEX_VERSION_PAGED && lex_version != LEX_VERSION_V4)
+        if header[0..8] != LEX_MAGIC
+            || (lex_version != LEX_VERSION_PAGED && lex_version != LEX_VERSION_V4)
         {
             return Err(io::Error::new(
                 io::ErrorKind::Unsupported,
@@ -520,8 +521,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
                 // Resolve the namespace from this page's local table. The
                 // walk is bounds-checked at every entry so a corrupt ns_id
                 // fails closed instead of slicing past the page.
-                let ns_count =
-                    u32::from_le_bytes(page[4..8].try_into().unwrap()) as usize;
+                let ns_count = u32::from_le_bytes(page[4..8].try_into().unwrap()) as usize;
                 if ns_id >= ns_count {
                     return Err(invalid("Q42 lexicon namespace id is out of range"));
                 }
@@ -531,9 +531,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
                     if cursor + 2 > page.len() {
                         return Err(invalid("Q42 lexicon namespace table is malformed"));
                     }
-                    let len = u16::from_le_bytes(
-                        page[cursor..cursor + 2].try_into().unwrap(),
-                    ) as usize;
+                    let len =
+                        u16::from_le_bytes(page[cursor..cursor + 2].try_into().unwrap()) as usize;
                     cursor = cursor
                         .checked_add(2 + len)
                         .ok_or_else(|| invalid("Q42 lexicon namespace table overflow"))?;
@@ -541,9 +540,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
                 if cursor + 2 > page.len() {
                     return Err(invalid("Q42 lexicon namespace table is malformed"));
                 }
-                let ns_len = u16::from_le_bytes(
-                    page[cursor..cursor + 2].try_into().unwrap(),
-                ) as usize;
+                let ns_len =
+                    u16::from_le_bytes(page[cursor..cursor + 2].try_into().unwrap()) as usize;
                 let ns_start = cursor + 2;
                 let ns_end = ns_start
                     .checked_add(ns_len)

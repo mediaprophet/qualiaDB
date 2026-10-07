@@ -26,7 +26,11 @@ pub struct DeterministicPrng {
 impl DeterministicPrng {
     pub fn new(seed: u64) -> Self {
         // Ensure non-zero initial state
-        let s = if seed == 0 { 0x5EED_5EED_CAFE_BABE } else { seed };
+        let s = if seed == 0 {
+            0x5EED_5EED_CAFE_BABE
+        } else {
+            seed
+        };
         Self { state: s }
     }
 
@@ -191,10 +195,7 @@ impl<const MAX_AGENTS: usize, const MAX_QUEUE: usize> FixedTickWorld<MAX_AGENTS,
 
     /// Step the simulation by exactly one fixed tick (Zero Heap Tier 1 loop).
     /// Writes output receipts into the caller-supplied slice.
-    pub fn step_tick(
-        &mut self,
-        out_receipts: &mut [CommandReceipt],
-    ) -> usize {
+    pub fn step_tick(&mut self, out_receipts: &mut [CommandReceipt]) -> usize {
         self.current_tick += 1;
         let mut receipt_idx = 0;
 
@@ -276,7 +277,9 @@ impl<const MAX_AGENTS: usize, const MAX_QUEUE: usize> FixedTickWorld<MAX_AGENTS,
                         reason: RejectionReason::InsufficientResources,
                     };
                 }
-                self.agents[idx].resource_tally = self.agents[idx].resource_tally.saturating_add(cmd.arg0 as u64);
+                self.agents[idx].resource_tally = self.agents[idx]
+                    .resource_tally
+                    .saturating_add(cmd.arg0 as u64);
                 CommandReceipt::Accepted {
                     tick: self.current_tick,
                     command_hash: cmd_hash,
@@ -390,8 +393,16 @@ mod tests {
         sim1.submit_command(cmd).unwrap();
         sim2.submit_command(cmd).unwrap();
 
-        let mut receipts1 = [CommandReceipt::Rejected { tick: 0, command_hash: 0, reason: RejectionReason::InvalidTick }; 8];
-        let mut receipts2 = [CommandReceipt::Rejected { tick: 0, command_hash: 0, reason: RejectionReason::InvalidTick }; 8];
+        let mut receipts1 = [CommandReceipt::Rejected {
+            tick: 0,
+            command_hash: 0,
+            reason: RejectionReason::InvalidTick,
+        }; 8];
+        let mut receipts2 = [CommandReceipt::Rejected {
+            tick: 0,
+            command_hash: 0,
+            reason: RejectionReason::InvalidTick,
+        }; 8];
 
         for _ in 0..100 {
             sim1.step_tick(&mut receipts1);
@@ -421,25 +432,39 @@ mod tests {
         };
         sim.submit_command(bad_cmd).unwrap();
 
-        let mut receipts = [CommandReceipt::Rejected { tick: 0, command_hash: 0, reason: RejectionReason::InvalidTick }; 4];
+        let mut receipts = [CommandReceipt::Rejected {
+            tick: 0,
+            command_hash: 0,
+            reason: RejectionReason::InvalidTick,
+        }; 4];
         let n = sim.step_tick(&mut receipts);
         assert_eq!(n, 1);
 
-        assert!(matches!(receipts[0], CommandReceipt::Rejected {
-            reason: RejectionReason::EntityNotFound,
-            ..
-        }));
+        assert!(matches!(
+            receipts[0],
+            CommandReceipt::Rejected {
+                reason: RejectionReason::EntityNotFound,
+                ..
+            }
+        ));
 
         // State matches a world that advanced 1 tick with no mutations
         let mut baseline_sim = FixedTickWorld::<8, 16>::new(42);
         baseline_sim.register_agent(500, 0, 0);
-        let mut baseline_receipts = [CommandReceipt::Rejected { tick: 0, command_hash: 0, reason: RejectionReason::InvalidTick }; 4];
+        let mut baseline_receipts = [CommandReceipt::Rejected {
+            tick: 0,
+            command_hash: 0,
+            reason: RejectionReason::InvalidTick,
+        }; 4];
         baseline_sim.step_tick(&mut baseline_receipts);
 
         assert_eq!(sim.compute_state_hash(), baseline_sim.compute_state_hash());
         assert_eq!(sim.agents[0].pos_x_mm, baseline_sim.agents[0].pos_x_mm);
         assert_eq!(sim.agents[0].pos_y_mm, baseline_sim.agents[0].pos_y_mm);
-        assert_eq!(sim.agents[0].resource_tally, baseline_sim.agents[0].resource_tally);
+        assert_eq!(
+            sim.agents[0].resource_tally,
+            baseline_sim.agents[0].resource_tally
+        );
     }
 
     #[test]
@@ -458,7 +483,11 @@ mod tests {
         };
         sim.submit_command(harvest_cmd).unwrap();
 
-        let mut receipts = [CommandReceipt::Rejected { tick: 0, command_hash: 0, reason: RejectionReason::InvalidTick }; 4];
+        let mut receipts = [CommandReceipt::Rejected {
+            tick: 0,
+            command_hash: 0,
+            reason: RejectionReason::InvalidTick,
+        }; 4];
         sim.step_tick(&mut receipts);
 
         assert_eq!(sim.agents[0].resource_tally, 250);
@@ -482,4 +511,3 @@ mod tests {
         assert!(out_ids[..count].contains(&103));
     }
 }
-

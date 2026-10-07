@@ -113,14 +113,24 @@ pub fn apply_q4k_lookup(
 
         for b in 0..blocks_per_row {
             let b_idx = row_block_offset + b;
-            let raw_block = &weights[b_idx * Q4K_SUPERBLOCK_BYTES..(b_idx + 1) * Q4K_SUPERBLOCK_BYTES];
+            let raw_block =
+                &weights[b_idx * Q4K_SUPERBLOCK_BYTES..(b_idx + 1) * Q4K_SUPERBLOCK_BYTES];
 
             let d = f16_from_le([raw_block[0], raw_block[1]]);
             let dmin = f16_from_le([raw_block[2], raw_block[3]]);
             let scales: [u8; 12] = [
-                raw_block[4], raw_block[5], raw_block[6], raw_block[7],
-                raw_block[8], raw_block[9], raw_block[10], raw_block[11],
-                raw_block[12], raw_block[13], raw_block[14], raw_block[15],
+                raw_block[4],
+                raw_block[5],
+                raw_block[6],
+                raw_block[7],
+                raw_block[8],
+                raw_block[9],
+                raw_block[10],
+                raw_block[11],
+                raw_block[12],
+                raw_block[13],
+                raw_block[14],
+                raw_block[15],
             ];
             let qs = &raw_block[16..144];
 
@@ -200,7 +210,11 @@ fn f16_from_le(bytes: [u8; 2]) -> f32 {
     }
     if exp == 31 {
         return if frac == 0 {
-            if sign == 0 { f32::INFINITY } else { f32::NEG_INFINITY }
+            if sign == 0 {
+                f32::INFINITY
+            } else {
+                f32::NEG_INFINITY
+            }
         } else {
             f32::NAN
         };
@@ -213,9 +227,7 @@ fn f16_from_le(bytes: [u8; 2]) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operators::descriptor::{
-        AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout,
-    };
+    use crate::operators::descriptor::{AccumKind, OperatorDescriptor, OperatorKind, ScaleLayout};
     use crate::operators::q4k::reconstruct_q4k_into;
     use crate::operators::view::{validate_operator, PayloadView};
 
@@ -275,7 +287,9 @@ mod tests {
             max_workspace_bytes: 0,
             representation_digest: 1,
         };
-        let payloads = [PayloadView { bytes: &weights_raw }];
+        let payloads = [PayloadView {
+            bytes: &weights_raw,
+        }];
         let op_view = validate_operator(&desc, &payloads).expect("validate op");
 
         let mut lookup_output = vec![0.0f32; out_features];
@@ -290,8 +304,16 @@ mod tests {
             &op_view,
             in_features,
             out_features,
-            MatrixView { data: &input_vec, rows: 1, cols: in_features },
-            &mut MatrixViewMut { data: &mut lookup_output, rows: 1, cols: out_features },
+            MatrixView {
+                data: &input_vec,
+                rows: 1,
+                cols: in_features,
+            },
+            &mut MatrixViewMut {
+                data: &mut lookup_output,
+                rows: 1,
+                cols: out_features,
+            },
             ws,
         )
         .expect("lookup apply must succeed");

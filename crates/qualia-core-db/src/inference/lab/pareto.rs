@@ -41,7 +41,8 @@ impl ParetoPoint {
 
     /// Extract a Pareto point, optionally enforcing physical backend execution.
     pub fn from_result_with_mode_check(r: &ExperimentResult, require_live: bool) -> Option<Self> {
-        if require_live && r.evaluation_mode == super::experiment::EvaluationMode::SimulationFixture {
+        if require_live && r.evaluation_mode == super::experiment::EvaluationMode::SimulationFixture
+        {
             return None;
         }
 
@@ -384,7 +385,8 @@ mod tests {
     #[test]
     fn test_pareto_rejects_simulation_fixture() {
         let mut sim_res = make_result(100.0, 50.0, 1_000_000_000, 0.95, 10.0);
-        sim_res.evaluation_mode = crate::inference::lab::experiment::EvaluationMode::SimulationFixture;
+        sim_res.evaluation_mode =
+            crate::inference::lab::experiment::EvaluationMode::SimulationFixture;
 
         // from_result returns None for simulation fixtures
         assert!(ParetoPoint::from_result(&sim_res).is_none());

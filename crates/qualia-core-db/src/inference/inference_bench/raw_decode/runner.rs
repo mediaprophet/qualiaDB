@@ -192,16 +192,16 @@ fn run_on_worker_engine(config: RawDecodeConfig) -> Result<RawDecodeResult, Stri
                 #[cfg(feature = "gpu-runtime")]
                 {
                     model.load_embedding(token_id)?;
-                    let res = model
-                        .engine
-                        .dispatch_token_forward_resident(
-                            &model.index,
-                            &model.emb[..model.index.emb_dim()],
-                            position,
-                        );
+                    let res = model.engine.dispatch_token_forward_resident(
+                        &model.index,
+                        &model.emb[..model.index.emb_dim()],
+                        position,
+                    );
                     if let Some(outcome) = res {
                         outcome.best_token_id
-                    } else if model.engine.ftw_package.is_some() || model.index.get_layer_tensors(0).moe_router.is_some() {
+                    } else if model.engine.ftw_package.is_some()
+                        || model.index.get_layer_tensors(0).moe_router.is_some()
+                    {
                         let emb_dim = model.index.emb_dim();
                         model.engine.dispatch_transformer_forward(
                             &model.index,
@@ -217,14 +217,18 @@ fn run_on_worker_engine(config: RawDecodeConfig) -> Result<RawDecodeResult, Stri
                             &mut model.emb[..emb_dim],
                             emb_dim,
                         );
-                        model.engine.dispatch_output_argmax_chunked(
-                            &model.index,
-                            &model.emb[..emb_dim],
-                            emb_dim,
-                            &mut model.scratch_a,
-                            0,
-                            None,
-                        ).map(|r| r.best_token_id).unwrap_or(0)
+                        model
+                            .engine
+                            .dispatch_output_argmax_chunked(
+                                &model.index,
+                                &model.emb[..emb_dim],
+                                emb_dim,
+                                &mut model.scratch_a,
+                                0,
+                                None,
+                            )
+                            .map(|r| r.best_token_id)
+                            .unwrap_or(0)
                     } else {
                         return Err(
                             "resident raw decode became ineligible; no fallback is allowed"
@@ -291,15 +295,19 @@ fn run_on_worker_engine(config: RawDecodeConfig) -> Result<RawDecodeResult, Stri
             // is ineligible and returns None for dispatch metrics. Synthesise
             // conservative telemetry (1 logical dispatch per token) so the
             // receipt can still be generated.
-            let dispatches = model
-                .engine
-                .resident_dispatches_per_token()
-                .unwrap_or(1) as u64;
+            let dispatches = model.engine.resident_dispatches_per_token().unwrap_or(1) as u64;
             let readback = model
                 .engine
                 .resident_readback_bytes_per_token()
                 .unwrap_or((model.index.vocab_dim() * 4) as u32) as u64;
-            (dispatches, 0u64, readback, None, "", crate::gguf_bridge::MAX_CONTEXT_WINDOW)
+            (
+                dispatches,
+                0u64,
+                readback,
+                None::<u64>,
+                "",
+                crate::gguf_bridge::MAX_CONTEXT_WINDOW,
+            )
         }
 
         #[cfg(not(feature = "gpu-runtime"))]

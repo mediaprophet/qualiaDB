@@ -55,9 +55,9 @@
 use std::collections::HashMap;
 
 use crate::q42_lex::{
-    LexError, PAGED_DIRECTORY_ENTRY_SIZE, PAGED_DIRECTORY_HEADER_SIZE, PAGED_PAGE_HEADER_SIZE,
-    INDEX_ENTRY_SIZE, LEX_HEADER_SIZE, LEX_MAGIC, LEX_TAG_NAMESPACED, LEX_TAG_STRING,
-    LEX_VERSION_V4,
+    LexError, INDEX_ENTRY_SIZE, LEX_HEADER_SIZE, LEX_MAGIC, LEX_TAG_NAMESPACED, LEX_TAG_STRING,
+    LEX_VERSION_V4, PAGED_DIRECTORY_ENTRY_SIZE, PAGED_DIRECTORY_HEADER_SIZE,
+    PAGED_PAGE_HEADER_SIZE,
 };
 
 /// Split a term into `(namespace, local)` at the final `/`, `#`, or `:`.
@@ -178,14 +178,12 @@ pub fn serialize_namespaced_paged_lexicon(
         out[page_start + 8..page_start + 16].copy_from_slice(&(blob_offset as u64).to_le_bytes());
 
         let page_length = (out.len() - page_start) as u64;
-        let directory = LEX_HEADER_SIZE
-            + PAGED_DIRECTORY_HEADER_SIZE
-            + page_index * PAGED_DIRECTORY_ENTRY_SIZE;
+        let directory =
+            LEX_HEADER_SIZE + PAGED_DIRECTORY_HEADER_SIZE + page_index * PAGED_DIRECTORY_ENTRY_SIZE;
         out[directory..directory + 8].copy_from_slice(&chunk[0].0.to_le_bytes());
         out[directory + 8..directory + 16].copy_from_slice(&(page_offset as u64).to_le_bytes());
         out[directory + 16..directory + 24].copy_from_slice(&page_length.to_le_bytes());
-        out[directory + 24..directory + 28]
-            .copy_from_slice(&(chunk.len() as u32).to_le_bytes());
+        out[directory + 24..directory + 28].copy_from_slice(&(chunk.len() as u32).to_le_bytes());
     }
     Ok(out)
 }
@@ -230,7 +228,10 @@ mod tests {
             map.insert(crate::q_hash(name), format!("https://schema.org/{name}"));
         }
         for name in ["label", "comment", "isDefinedBy", "seeAlso", "domain"] {
-            map.insert(crate::q_hash(name), format!("http://www.w3.org/2000/01/rdf-schema#{name}"));
+            map.insert(
+                crate::q_hash(name),
+                format!("http://www.w3.org/2000/01/rdf-schema#{name}"),
+            );
         }
         for n in 0..6u32 {
             map.insert(
@@ -238,7 +239,10 @@ mod tests {
                 format!("did:q42:z6MkTopic{n}"),
             );
         }
-        map.insert(crate::q_hash("bare"), "bare-literal-no-separator".to_string());
+        map.insert(
+            crate::q_hash("bare"),
+            "bare-literal-no-separator".to_string(),
+        );
 
         let bytes = serialize_namespaced_paged_lexicon(&map, 3).unwrap();
         assert_eq!(
@@ -276,12 +280,14 @@ mod tests {
         assert_eq!(page_count, 10);
         for page in 0..page_count {
             let dir = 40 + page * PAGED_DIRECTORY_ENTRY_SIZE;
-            let page_offset =
-                usize::try_from(u64::from_le_bytes(bytes[dir + 8..dir + 16].try_into().unwrap()))
-                    .unwrap();
-            let page_length =
-                usize::try_from(u64::from_le_bytes(bytes[dir + 16..dir + 24].try_into().unwrap()))
-                    .unwrap();
+            let page_offset = usize::try_from(u64::from_le_bytes(
+                bytes[dir + 8..dir + 16].try_into().unwrap(),
+            ))
+            .unwrap();
+            let page_length = usize::try_from(u64::from_le_bytes(
+                bytes[dir + 16..dir + 24].try_into().unwrap(),
+            ))
+            .unwrap();
             let count = u32::from_le_bytes(bytes[dir + 24..dir + 28].try_into().unwrap()) as usize;
             // The slice a range reader would hold for this page alone.
             let page_bytes = &bytes[page_offset..page_offset + page_length];
@@ -290,9 +296,9 @@ mod tests {
             for item in 0..count {
                 let entry = 16 + item * INDEX_ENTRY_SIZE;
                 let hash = u64::from_le_bytes(page_bytes[entry..entry + 8].try_into().unwrap());
-                let relative = u64::from_le_bytes(
-                    page_bytes[entry + 8..entry + 16].try_into().unwrap(),
-                ) as usize;
+                let relative =
+                    u64::from_le_bytes(page_bytes[entry + 8..entry + 16].try_into().unwrap())
+                        as usize;
                 let blob_offset =
                     u64::from_le_bytes(page_bytes[8..16].try_into().unwrap()) as usize;
                 let start = blob_offset + relative;
@@ -306,9 +312,8 @@ mod tests {
                 let mut cursor = blob_offset;
                 let mut ns = "";
                 for _ in 0..=ns_id {
-                    let len = u16::from_le_bytes(
-                        page_bytes[cursor..cursor + 2].try_into().unwrap(),
-                    ) as usize;
+                    let len = u16::from_le_bytes(page_bytes[cursor..cursor + 2].try_into().unwrap())
+                        as usize;
                     ns = std::str::from_utf8(&page_bytes[cursor + 2..cursor + 2 + len]).unwrap();
                     cursor += 2 + len;
                 }
@@ -349,7 +354,10 @@ mod tests {
         // back to verbatim entries plus empty ns tables.
         let mut map = HashMap::new();
         for i in 0..64u32 {
-            map.insert(crate::q_hash(&format!("u{i}")), format!("urn:u{i}:only-one"));
+            map.insert(
+                crate::q_hash(&format!("u{i}")),
+                format!("urn:u{i}:only-one"),
+            );
         }
         let v2 = crate::q42_lex::serialize_paged_string_lexicon(&map, 4096).unwrap();
         let v4 = serialize_namespaced_paged_lexicon(&map, 4096).unwrap();
@@ -368,17 +376,22 @@ mod tests {
         // decode, even if the bytes otherwise look plausible.
         let mut map = HashMap::new();
         for i in 0..4u32 {
-            map.insert(crate::q_hash(&format!("t{i}")), format!("https://ex.org/t{i}"));
+            map.insert(
+                crate::q_hash(&format!("t{i}")),
+                format!("https://ex.org/t{i}"),
+            );
         }
         let mut bytes = crate::q42_lex::serialize_paged_string_lexicon(&map, 4).unwrap();
         bytes[24..32].copy_from_slice(&LEX_VERSION_PAGED.to_le_bytes());
         // Flip the first entry tag from 0x01 (verbatim) to 0x04.
         let dir = 40;
-        let page_offset =
-            usize::try_from(u64::from_le_bytes(bytes[dir + 8..dir + 16].try_into().unwrap()))
-                .unwrap();
+        let page_offset = usize::try_from(u64::from_le_bytes(
+            bytes[dir + 8..dir + 16].try_into().unwrap(),
+        ))
+        .unwrap();
         let blob_offset =
-            u64::from_le_bytes(bytes[page_offset + 8..page_offset + 16].try_into().unwrap()) as usize;
+            u64::from_le_bytes(bytes[page_offset + 8..page_offset + 16].try_into().unwrap())
+                as usize;
         bytes[page_offset + blob_offset] = 0x04;
         assert!(Q42LexMmap::from_bytes(&bytes).is_err());
     }
@@ -455,11 +468,8 @@ mod tests {
             crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES,
         )
         .unwrap();
-        let v4 = serialize_namespaced_paged_lexicon(
-            &map,
-            crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES,
-        )
-        .unwrap();
+        let v4 = serialize_namespaced_paged_lexicon(&map, crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES)
+            .unwrap();
         let saved = v2.len().saturating_sub(v4.len());
         println!(
             "[lex-v4] {} — {entries} terms; same lexicon under v2 layout = {} B vs v4 = {} B, saved {saved} B ({:.1}%)",

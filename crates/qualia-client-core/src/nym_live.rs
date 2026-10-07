@@ -137,9 +137,7 @@ fn request_mixnet_derivation() -> Result<DerivationMaterial, String> {
 
 /// Agent-facing: request mixnet keyRole purpose — never returns seed.
 pub fn agent_request_mixnet_key_role() -> Result<KeyRoleGrant, String> {
-    let state = APP_STATE
-        .get()
-        .ok_or("APP_STATE not initialized")?;
+    let state = APP_STATE.get().ok_or("APP_STATE not initialized")?;
     let vault = state
         .key_vault
         .lock()
@@ -152,9 +150,7 @@ pub fn agent_request_key_role(role: &str) -> Result<KeyRoleGrant, String> {
     let role = KeyRole::parse(role).ok_or_else(|| {
         format!("keyRole '{role}' held / not-yet — unknown roles are not other-id")
     })?;
-    let state = APP_STATE
-        .get()
-        .ok_or("APP_STATE not initialized")?;
+    let state = APP_STATE.get().ok_or("APP_STATE not initialized")?;
     let vault = state
         .key_vault
         .lock()
@@ -192,7 +188,8 @@ pub async fn enable_nym(network: Option<String>) -> Result<NymLiveStatus, String
 
     let dir = client_dir(&net_name);
     std::fs::create_dir_all(&dir).map_err(|e| format!("nym client dir: {e}"))?;
-    let storage_paths = StoragePaths::new_from_dir(&dir).map_err(|e| format!("nym storage: {e}"))?;
+    let storage_paths =
+        StoragePaths::new_from_dir(&dir).map_err(|e| format!("nym storage: {e}"))?;
 
     log::info!(
         "Nym: connecting via nym-sdk ({net_name}) keyRole=mixnet seed_holder=keyvault storage={}",
@@ -210,9 +207,7 @@ pub async fn enable_nym(network: Option<String>) -> Result<NymLiveStatus, String
         builder = builder.enable_credentials_mode();
     }
 
-    let disconnected = builder
-        .build()
-        .map_err(|e| format!("nym build: {e}"))?;
+    let disconnected = builder.build().map_err(|e| format!("nym build: {e}"))?;
 
     let client = disconnected
         .connect_to_mixnet()

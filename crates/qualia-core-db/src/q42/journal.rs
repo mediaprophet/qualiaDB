@@ -13,9 +13,9 @@
 //! - Default privacy: `PrivacyClass::Sanctuary` (restricted; prevents accidental
 //!   public magnet routing).
 
+use crate::NQuin;
 use std::collections::HashSet;
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use crate::NQuin;
 
 /// Magic bytes for a Q42 Journal: `Q42J`.
 pub const Q42J_MAGIC: [u8; 4] = *b"Q42J";
@@ -249,7 +249,8 @@ impl FrameHeader {
         let mut reserved = [0u8; 3];
         reserved.copy_from_slice(&b[1..4]);
         let payload_len = u32::from_le_bytes([b[4], b[5], b[6], b[7]]);
-        let sequence_num = u64::from_le_bytes([b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]]);
+        let sequence_num =
+            u64::from_le_bytes([b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]]);
         let tick = u64::from_le_bytes([b[16], b[17], b[18], b[19], b[20], b[21], b[22], b[23]]);
         let tx_id = u32::from_le_bytes([b[24], b[25], b[26], b[27]]);
         let crc32c = u32::from_le_bytes([b[28], b[29], b[30], b[31]]);
@@ -389,7 +390,12 @@ impl<S: Read + Write + Seek> Q42Journal<S> {
             let mut lex_payload = Vec::with_capacity(8 + iri_bytes.len());
             lex_payload.extend_from_slice(&token.to_le_bytes());
             lex_payload.extend_from_slice(iri_bytes);
-            self.write_frame(JournalFrameType::LexiconBind, tx.tx_id, tx.tick, &lex_payload)?;
+            self.write_frame(
+                JournalFrameType::LexiconBind,
+                tx.tx_id,
+                tx.tick,
+                &lex_payload,
+            )?;
         }
 
         // 3. Quin Add Frames
@@ -406,12 +412,22 @@ impl<S: Read + Write + Seek> Q42Journal<S> {
 
         // 5. Output Receipt Frame (if non-zero)
         if tx.receipt_digest != [0u8; 32] {
-            self.write_frame(JournalFrameType::Receipt, tx.tx_id, tx.tick, &tx.receipt_digest)?;
+            self.write_frame(
+                JournalFrameType::Receipt,
+                tx.tx_id,
+                tx.tick,
+                &tx.receipt_digest,
+            )?;
         }
 
         // 6. Terminal Commit Frame
         let commit_payload = [0xAAu8; 4];
-        self.write_frame(JournalFrameType::TxCommit, tx.tx_id, tx.tick, &commit_payload)?;
+        self.write_frame(
+            JournalFrameType::TxCommit,
+            tx.tx_id,
+            tx.tick,
+            &commit_payload,
+        )?;
 
         self.storage.flush()?;
         Ok(())
@@ -443,7 +459,8 @@ impl<S: Read + Write + Seek> Q42Journal<S> {
     /// Replays the journal and recovers all committed transactions.
     /// Safely ignores torn uncommitted transactions at the tail.
     pub fn recover_transactions(&mut self) -> Result<Vec<JournalTransaction>, JournalError> {
-        self.storage.seek(SeekFrom::Start(Q42J_HEADER_SIZE as u64))?;
+        self.storage
+            .seek(SeekFrom::Start(Q42J_HEADER_SIZE as u64))?;
 
         let mut transactions = Vec::new();
         let mut current_tx: Option<JournalTransaction> = None;
@@ -667,12 +684,21 @@ impl<S: Read + Write + Seek> MutableQ42Session<S> {
     }
 
     /// Checkpoint the active state into a new sealed generation.
-    pub fn checkpoint(&mut self, new_base_digest: [u8; 32], new_generation: u64) -> Result<(), JournalError> {
-        self.journal.reset_to_generation(new_base_digest, new_generation)
+    pub fn checkpoint(
+        &mut self,
+        new_base_digest: [u8; 32],
+        new_generation: u64,
+    ) -> Result<(), JournalError> {
+        self.journal
+            .reset_to_generation(new_base_digest, new_generation)
     }
 
     /// Replay active state from baseline snapshot up to a specific tick target.
-    pub fn rewind_to_tick(&mut self, baseline_quins: &[NQuin], target_tick: u64) -> Result<(), JournalError> {
+    pub fn rewind_to_tick(
+        &mut self,
+        baseline_quins: &[NQuin],
+        target_tick: u64,
+    ) -> Result<(), JournalError> {
         self.active_state.clear();
         for q in baseline_quins {
             self.active_state.insert(*q);
@@ -761,7 +787,9 @@ impl std::fmt::Display for JournalError {
             Self::Io(e) => write!(f, "IO error: {}", e),
             Self::InvalidMagic => write!(f, "Invalid Q42J magic bytes"),
             Self::UnsupportedVersion(v) => write!(f, "Unsupported Q42J version {}", v),
-            Self::UnknownApplicationProfile(p) => write!(f, "Unknown application profile 0x{:04X}", p),
+            Self::UnknownApplicationProfile(p) => {
+                write!(f, "Unknown application profile 0x{:04X}", p)
+            }
             Self::InvalidHeader(msg) => write!(f, "Invalid Q42J header: {}", msg),
             Self::BaseDigestMismatch => write!(f, "Base .q42 digest does not match journal header"),
             Self::UnknownFrameType(t) => write!(f, "Unknown journal frame type 0x{:02X}", t),
@@ -794,18 +822,31 @@ mod tests {
     #[test]
     fn test_q42j_header_roundtrip() {
         let digest = [0x42u8; 32];
-        let h = JournalHeader::new(JournalApplicationProfile::PoetWorkspace, 0x1234_5678, digest, 7);
+        let h = JournalHeader::new(
+            JournalApplicationProfile::PoetWorkspace,
+            0x1234_5678,
+            digest,
+            7,
+        );
         let bytes = h.to_bytes();
         let parsed = JournalHeader::from_bytes(&bytes).unwrap();
         assert_eq!(h, parsed);
-        assert_eq!(parsed.profile, JournalApplicationProfile::PoetWorkspace as u16);
+        assert_eq!(
+            parsed.profile,
+            JournalApplicationProfile::PoetWorkspace as u16
+        );
         assert_eq!(parsed.privacy, JournalPrivacyClass::Sanctuary as u8);
     }
 
     #[test]
     fn test_q42j_single_transaction_commit_and_recover() {
         let digest = [0x55u8; 32];
-        let h = JournalHeader::new(JournalApplicationProfile::SimulationWorld, 0x9999, digest, 1);
+        let h = JournalHeader::new(
+            JournalApplicationProfile::SimulationWorld,
+            0x9999,
+            digest,
+            1,
+        );
         let storage = Cursor::new(Vec::new());
         let mut journal = Q42Journal::create(storage, h).unwrap();
 
@@ -830,7 +871,12 @@ mod tests {
     #[test]
     fn test_q42j_torn_transaction_tail_discard() {
         let digest = [0x55u8; 32];
-        let h = JournalHeader::new(JournalApplicationProfile::SimulationWorld, 0x9999, digest, 1);
+        let h = JournalHeader::new(
+            JournalApplicationProfile::SimulationWorld,
+            0x9999,
+            digest,
+            1,
+        );
         let storage = Cursor::new(Vec::new());
         let mut journal = Q42Journal::create(storage, h).unwrap();
 
@@ -862,7 +908,12 @@ mod tests {
     #[test]
     fn test_q42j_corrupted_frame_fails_closed() {
         let digest = [0x55u8; 32];
-        let h = JournalHeader::new(JournalApplicationProfile::GenericSemantic, 0x9999, digest, 1);
+        let h = JournalHeader::new(
+            JournalApplicationProfile::GenericSemantic,
+            0x9999,
+            digest,
+            1,
+        );
         let storage = Cursor::new(Vec::new());
         let mut journal = Q42Journal::create(storage, h).unwrap();
 
@@ -876,18 +927,29 @@ mod tests {
         let last_idx = buf.len() - 2;
         buf[last_idx] ^= 0xFF;
 
-        assert!(matches!(journal.recover_transactions(), Err(JournalError::CorruptedFrame(_))));
+        assert!(matches!(
+            journal.recover_transactions(),
+            Err(JournalError::CorruptedFrame(_))
+        ));
     }
 
     #[test]
     fn test_q42j_base_digest_mismatch() {
         let digest = [0x55u8; 32];
-        let h = JournalHeader::new(JournalApplicationProfile::GenericSemantic, 0x9999, digest, 1);
+        let h = JournalHeader::new(
+            JournalApplicationProfile::GenericSemantic,
+            0x9999,
+            digest,
+            1,
+        );
         let mut storage = Cursor::new(Vec::new());
         Q42Journal::create(&mut storage, h).unwrap();
 
         let wrong_digest = [0x77u8; 32];
-        assert!(matches!(Q42Journal::open(storage, &wrong_digest), Err(JournalError::BaseDigestMismatch)));
+        assert!(matches!(
+            Q42Journal::open(storage, &wrong_digest),
+            Err(JournalError::BaseDigestMismatch)
+        ));
     }
 
     #[test]
@@ -913,4 +975,3 @@ mod tests {
         assert!(!session.active_state.contains(&base_quin));
     }
 }
-

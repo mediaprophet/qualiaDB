@@ -8,8 +8,8 @@ use std::io::Write;
 use qualia_core_db::external_sort::ExternalSorter;
 use qualia_core_db::parsers::nquads_star::parse_nquads_star_stream;
 use qualia_core_db::q42_volume::{
-    classify_q42_path, IngestAccessPolicy, IngestProvenanceRecord, PublicationIntent, Q42Volume,
-    Q42PublicationClass, VerifyLevel, FLAG_PERMISSIVE_COMMONS,
+    classify_q42_path, IngestAccessPolicy, IngestProvenanceRecord, PublicationIntent,
+    Q42PublicationClass, Q42Volume, VerifyLevel, FLAG_PERMISSIVE_COMMONS,
 };
 use tempfile::TempDir;
 
@@ -78,11 +78,8 @@ fn qw10_triple_only_nquads_lex_verify_and_transport_refusal() {
         lex.entry_count()
     );
 
-    let receipt = qualia_core_db::q42_volume::Q42VerifyReceipt::from_volume(
-        &out,
-        &volume,
-        VerifyLevel::Full,
-    );
+    let receipt =
+        qualia_core_db::q42_volume::Q42VerifyReceipt::from_volume(&out, &volume, VerifyLevel::Full);
     assert!(
         !matches!(
             receipt.overall,
@@ -95,9 +92,7 @@ fn qw10_triple_only_nquads_lex_verify_and_transport_refusal() {
 
     let verdict = classify_q42_path(&out, PublicationIntent::Default).unwrap();
     assert!(
-        !verdict.may_emit_public_magnet
-            && !verdict.may_http_webseed
-            && !verdict.may_ipfs_pin,
+        !verdict.may_emit_public_magnet && !verdict.may_http_webseed && !verdict.may_ipfs_pin,
         "review-gated volume must refuse public transport: {:?}",
         verdict
     );

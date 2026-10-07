@@ -24,9 +24,7 @@ pub use model::{
     AgentKind, ChainAnchor, Delegation, DomainLicence, LicenceAmendment, LicenceClass,
     PaymentEvidence,
 };
-pub use registry::{
-    LicenceRegistry, RegistryEntry, RegistrySource, COMPILED_IN_LICENSED_DOMAINS,
-};
+pub use registry::{LicenceRegistry, RegistryEntry, RegistrySource, COMPILED_IN_LICENSED_DOMAINS};
 pub use verify::{
     delegated_members, issue, issue_amendment, licence_status, normalize_domain, verify,
     verify_amendment, IssueParams, LicenceError, LicenceStatus,
@@ -60,9 +58,25 @@ mod tests {
     fn issued_licence_verifies_for_subject_domain() {
         let lic = issue(base_params(), &key()).unwrap();
         assert!(lic.licence_id.starts_with("did:q42:licence:"));
-        assert!(verify(&lic, 100, "example.org", "wasm-ontology", Some(&pinned(&lic)), &[]).is_ok());
+        assert!(verify(
+            &lic,
+            100,
+            "example.org",
+            "wasm-ontology",
+            Some(&pinned(&lic)),
+            &[]
+        )
+        .is_ok());
         // Case-insensitive, trailing dot tolerated.
-        assert!(verify(&lic, 100, "EXAMPLE.org.", "wasm-ontology", Some(&pinned(&lic)), &[]).is_ok());
+        assert!(verify(
+            &lic,
+            100,
+            "EXAMPLE.org.",
+            "wasm-ontology",
+            Some(&pinned(&lic)),
+            &[]
+        )
+        .is_ok());
     }
 
     #[test]
@@ -70,7 +84,14 @@ mod tests {
         let mut lic = issue(base_params(), &key()).unwrap();
         lic.licensee_label = "forged".into();
         assert_eq!(
-            verify(&lic, 100, "example.org", "wasm-ontology", Some(&pinned(&lic)), &[]),
+            verify(
+                &lic,
+                100,
+                "example.org",
+                "wasm-ontology",
+                Some(&pinned(&lic)),
+                &[]
+            ),
             Err(LicenceError::BadSignature)
         );
     }
@@ -79,7 +100,14 @@ mod tests {
     fn wrong_domain_denies() {
         let lic = issue(base_params(), &key()).unwrap();
         assert_eq!(
-            verify(&lic, 100, "other.org", "wasm-ontology", Some(&pinned(&lic)), &[]),
+            verify(
+                &lic,
+                100,
+                "other.org",
+                "wasm-ontology",
+                Some(&pinned(&lic)),
+                &[]
+            ),
             Err(LicenceError::DomainNotCovered)
         );
     }
@@ -140,7 +168,10 @@ mod tests {
     fn commercial_requires_payment_evidence_at_issue() {
         let mut p = base_params();
         p.licence_class = LicenceClass::Commercial;
-        assert_eq!(issue(p.clone(), &key()), Err(LicenceError::PaymentEvidenceMissing));
+        assert_eq!(
+            issue(p.clone(), &key()),
+            Err(LicenceError::PaymentEvidenceMissing)
+        );
         p.payment_evidence = Some(PaymentEvidence {
             rail: "xec".into(),
             txid: "ab".repeat(32),
@@ -158,13 +189,31 @@ mod tests {
             steward_agreement: String::new(),
         });
         // community does not permit delegation — refuse to issue.
-        assert_eq!(issue(p.clone(), &key()), Err(LicenceError::DelegationNotPermitted));
+        assert_eq!(
+            issue(p.clone(), &key()),
+            Err(LicenceError::DelegationNotPermitted)
+        );
         p.licence_class = LicenceClass::CommunitySteward;
         let lic = issue(p, &key()).unwrap();
         // member subdomain covered; non-member denied.
-        assert!(verify(&lic, 100, "bakery.example.org", "", Some(&pinned(&lic)), &[]).is_ok());
+        assert!(verify(
+            &lic,
+            100,
+            "bakery.example.org",
+            "",
+            Some(&pinned(&lic)),
+            &[]
+        )
+        .is_ok());
         assert_eq!(
-            verify(&lic, 100, "grocer.example.org", "", Some(&pinned(&lic)), &[]),
+            verify(
+                &lic,
+                100,
+                "grocer.example.org",
+                "",
+                Some(&pinned(&lic)),
+                &[]
+            ),
             Err(LicenceError::DomainNotCovered)
         );
     }
@@ -179,7 +228,15 @@ mod tests {
             steward_agreement: String::new(),
         });
         let lic = issue(p, &key()).unwrap();
-        assert!(verify(&lic, 100, "anything.example.org", "", Some(&pinned(&lic)), &[]).is_ok());
+        assert!(verify(
+            &lic,
+            100,
+            "anything.example.org",
+            "",
+            Some(&pinned(&lic)),
+            &[]
+        )
+        .is_ok());
         // The parent itself and unrelated domains stay denied.
         assert!(verify(&lic, 100, "example.org", "", Some(&pinned(&lic)), &[]).is_ok());
         assert_eq!(
@@ -209,7 +266,15 @@ mod tests {
         .unwrap();
         let members = delegated_members(&lic, &[add.clone()]).unwrap();
         assert!(members.contains(&"grocer.example.org".to_string()));
-        assert!(verify(&lic, 100, "grocer.example.org", "", Some(&pinned(&lic)), &[add.clone()]).is_ok());
+        assert!(verify(
+            &lic,
+            100,
+            "grocer.example.org",
+            "",
+            Some(&pinned(&lic)),
+            &[add.clone()]
+        )
+        .is_ok());
         let remove = issue_amendment(
             &lic.licence_id,
             2,
@@ -222,7 +287,14 @@ mod tests {
         let members = delegated_members(&lic, &[add.clone(), remove.clone()]).unwrap();
         assert!(!members.contains(&"bakery.example.org".to_string()));
         assert_eq!(
-            verify(&lic, 100, "bakery.example.org", "", Some(&pinned(&lic)), &[add, remove]),
+            verify(
+                &lic,
+                100,
+                "bakery.example.org",
+                "",
+                Some(&pinned(&lic)),
+                &[add, remove]
+            ),
             Err(LicenceError::DomainNotCovered)
         );
     }
@@ -285,9 +357,15 @@ mod tests {
         assert!(!s.licensed);
         assert_eq!(s.reason, "no licence");
         let lic = issue(base_params(), &key()).unwrap();
-        let s = licence_status(Some(&lic), 100, "evil.example", "", Some(&pinned(&lic)), &[]);
+        let s = licence_status(
+            Some(&lic),
+            100,
+            "evil.example",
+            "",
+            Some(&pinned(&lic)),
+            &[],
+        );
         assert!(!s.licensed);
         assert_eq!(s.reason, "domain is not covered by this licence");
     }
 }
-

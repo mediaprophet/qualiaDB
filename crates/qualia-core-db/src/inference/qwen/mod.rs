@@ -74,9 +74,7 @@ pub use native_asset::{
     Qwen4ExpNativeAssetError, Qwen4ExpNativeDescriptor, Qwen4ExpPleSpan, QWEN4EXP_NATIVE_FORMAT,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use native_runtime::{
-    Qwen4ExpActivationError, Qwen4ExpNativeRuntime, Qwen4ExpTrunkResidency,
-};
+pub use native_runtime::{Qwen4ExpActivationError, Qwen4ExpNativeRuntime, Qwen4ExpTrunkResidency};
 pub use numerics::{add_assign, add_into, rms_norm_into, QwenNumericError};
 #[cfg(not(target_arch = "wasm32"))]
 pub use ple_block::{
@@ -116,8 +114,7 @@ pub use streamed_qsa::{
     execute_streamed_qsa, QsaState, StreamedQsaBuffers, StreamedQsaError,
     QWEN4EXP_QSA_COMPRESS_RATIO, QWEN4EXP_QSA_HEAD_DIM, QWEN4EXP_QSA_INDEXER_HEADS,
     QWEN4EXP_QSA_INDEXER_HEAD_DIM, QWEN4EXP_QSA_KV_HEADS, QWEN4EXP_QSA_MAX_SELECTED,
-    QWEN4EXP_QSA_QUERY_HEADS, QWEN4EXP_QSA_ROTARY_DIM, QWEN4EXP_QSA_TOP_BLOCKS,
-    QWEN4EXP_QSA_TOP_K,
+    QWEN4EXP_QSA_QUERY_HEADS, QWEN4EXP_QSA_ROTARY_DIM, QWEN4EXP_QSA_TOP_BLOCKS, QWEN4EXP_QSA_TOP_K,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use trunk_nvme::{StreamedArgmax, TrunkIoStats, TrunkNvmeError, TrunkNvmeReader};

@@ -13,7 +13,10 @@ fn repo_root() -> PathBuf {
             break;
         }
     }
-    panic!("QualiaDB ALL_BOUND SoT not found above {}", env!("CARGO_MANIFEST_DIR"));
+    panic!(
+        "QualiaDB ALL_BOUND SoT not found above {}",
+        env!("CARGO_MANIFEST_DIR")
+    );
 }
 
 #[test]
@@ -22,7 +25,8 @@ fn indexes_qualiadb_tip_bound_files_and_doc_cites() {
     let graph = index_root(&root).expect("index QualiaDB checkout");
 
     assert!(
-        graph.project.tip_sha.chars().all(|c| c.is_ascii_hexdigit()) && graph.project.tip_sha.len() >= 7,
+        graph.project.tip_sha.chars().all(|c| c.is_ascii_hexdigit())
+            && graph.project.tip_sha.len() >= 7,
         "tip sha: {}",
         graph.project.tip_sha
     );

@@ -134,11 +134,7 @@ pub(crate) fn dequant_norm_row_into(
 }
 
 /// Dequantize a 1-D norm weight row directly from raw bytes into `out`.
-pub(crate) fn dequant_norm_from_raw(
-    raw: &[u8],
-    info: &GgufTensorInfo,
-    out: &mut [f32],
-) -> usize {
+pub(crate) fn dequant_norm_from_raw(raw: &[u8], info: &GgufTensorInfo, out: &mut [f32]) -> usize {
     let n = info.dims[0] as usize;
     if n == 0 || n > out.len() {
         return 0;

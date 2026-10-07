@@ -346,8 +346,8 @@ pub fn run_decode_qwen4exp(
     }
 
     let hidden = runtime.index.emb_dim();
-    let mut session = Qwen4ExpSession::new(&runtime.index, context)
-        .map_err(|error| error.to_string())?;
+    let mut session =
+        Qwen4ExpSession::new(&runtime.index, context).map_err(|error| error.to_string())?;
     let mut scratch = Qwen4ExpDecodeScratch::new(hidden);
     let stops: Vec<u32> = tokenizer.stop_tokens().to_vec();
     let mut receipt = Qwen4ExpDecodeReceipt::default();
@@ -371,10 +371,15 @@ pub fn run_decode_qwen4exp(
     println!("Qwen4Exp native multi-token decode (real execution)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("├─ prompt tokens: {}", receipt.prompt_tokens);
-    println!("├─ generated tokens: {generated}  ids={:?}", receipt.generated_tokens);
+    println!(
+        "├─ generated tokens: {generated}  ids={:?}",
+        receipt.generated_tokens
+    );
     println!("├─ decoded text: {text}");
-    println!("├─ elapsed: {secs:.3}s  ({:.3} tokens/s generated)",
-        generated as f64 / secs.max(1e-9));
+    println!(
+        "├─ elapsed: {secs:.3}s  ({:.3} tokens/s generated)",
+        generated as f64 / secs.max(1e-9)
+    );
     println!(
         "├─ trunk {}: {} reads, {} rows, {:.2} MiB",
         if trunk_mmap { "access (mmap)" } else { "I/O" },
@@ -456,8 +461,8 @@ pub fn run_probe_qwen4exp_trace(
     }
 
     let hidden = runtime.index.emb_dim();
-    let mut session = Qwen4ExpSession::new(&runtime.index, context)
-        .map_err(|error| error.to_string())?;
+    let mut session =
+        Qwen4ExpSession::new(&runtime.index, context).map_err(|error| error.to_string())?;
     let mut scratch = Qwen4ExpDecodeScratch::new(hidden);
 
     let start = std::time::Instant::now();
@@ -519,7 +524,10 @@ pub fn run_probe_qwen4exp_trace(
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Qwen4Exp per-stage trace (one real token step)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("├─ prompt tokens: {}  traced token: {traced_token}", prompt_tokens.len());
+    println!(
+        "├─ prompt tokens: {}  traced token: {traced_token}",
+        prompt_tokens.len()
+    );
     println!("├─ prompt ids: {:?}", prompt_tokens);
     println!("├─ step wall time: {:.3}s", start.elapsed().as_secs_f64());
     println!("├─ layer  stage           fingerprint          rms        abs_max");
@@ -534,7 +542,10 @@ pub fn run_probe_qwen4exp_trace(
             layer, record.stage, record.fingerprint, record.rms, record.abs_max
         );
     }
-    println!("├─ argmax: id={} logit={:.4}", winner.token_id, winner.logit);
+    println!(
+        "├─ argmax: id={} logit={:.4}",
+        winner.token_id, winner.logit
+    );
     for (rank, entry) in top.iter().enumerate() {
         let text = tokenizer.decode(&[entry.token_id]);
         println!(
@@ -566,7 +577,11 @@ pub fn run_probe_qwen4exp_trace(
                 })
                 .map_err(|error| format!("write dump {}: {error}", path.display()))?;
         }
-        println!("├─ dumped {} stage vectors to {}", trace.len(), path.display());
+        println!(
+            "├─ dumped {} stage vectors to {}",
+            trace.len(),
+            path.display()
+        );
     }
     println!("└─ done");
     Ok(())

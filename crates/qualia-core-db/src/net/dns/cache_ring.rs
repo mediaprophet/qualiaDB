@@ -229,11 +229,7 @@ impl<const N: usize> DnsCacheRing<N> {
     /// Archive records inserted before `cutoff_clock` into `archive_sink` and remove them.
     ///
     /// Returns the count of archived records written into `archive_sink`. Zero heap allocation.
-    pub fn archive_older_than(
-        &mut self,
-        cutoff_clock: u32,
-        archive_sink: &mut [NQuin],
-    ) -> usize {
+    pub fn archive_older_than(&mut self, cutoff_clock: u32, archive_sink: &mut [NQuin]) -> usize {
         let mut archived = 0;
         let mut retained_count = 0;
         let active = self.count;
@@ -284,8 +280,18 @@ mod tests {
         let mut ring = DnsCacheRing::<16>::new();
         assert!(ring.is_empty());
 
-        let q1 = encode_a_record("host1.lan", [10, 0, 0, 1], 60, PermissiveRoutingLane::PassthroughStandard);
-        let q2 = encode_a_record("host2.lan", [10, 0, 0, 2], 60, PermissiveRoutingLane::PassthroughStandard);
+        let q1 = encode_a_record(
+            "host1.lan",
+            [10, 0, 0, 1],
+            60,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
+        let q2 = encode_a_record(
+            "host2.lan",
+            [10, 0, 0, 2],
+            60,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
 
         ring.insert(q1, 100);
         ring.insert(q2, 101);
@@ -301,7 +307,12 @@ mod tests {
     #[test]
     fn ring_lookup_valid_ttl_expiration() {
         let mut ring = DnsCacheRing::<16>::new();
-        let q1 = encode_a_record("expiring.lan", [192, 168, 1, 1], 10, PermissiveRoutingLane::PassthroughStandard);
+        let q1 = encode_a_record(
+            "expiring.lan",
+            [192, 168, 1, 1],
+            10,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
         ring.insert(q1, 100); // inserted at clock 100 with TTL 10 -> valid until < 110
 
         // At clock 105: still valid
@@ -314,11 +325,21 @@ mod tests {
     #[test]
     fn ring_prune_expired() {
         let mut ring = DnsCacheRing::<16>::new();
-        let q_short = encode_a_record("short.lan", [1, 1, 1, 1], 5, PermissiveRoutingLane::PassthroughStandard);
-        let q_long = encode_a_record("long.lan", [2, 2, 2, 2], 100, PermissiveRoutingLane::PassthroughStandard);
+        let q_short = encode_a_record(
+            "short.lan",
+            [1, 1, 1, 1],
+            5,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
+        let q_long = encode_a_record(
+            "long.lan",
+            [2, 2, 2, 2],
+            100,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
 
         ring.insert(q_short, 50); // expires at 55
-        ring.insert(q_long, 50);  // expires at 150
+        ring.insert(q_long, 50); // expires at 150
         assert_eq!(ring.len(), 2);
 
         // At clock 60, q_short has expired
@@ -333,13 +354,28 @@ mod tests {
     #[test]
     fn ring_archive_expired_into() {
         let mut ring = DnsCacheRing::<16>::new();
-        let q_expired1 = encode_a_record("exp1.lan", [10, 0, 0, 1], 10, PermissiveRoutingLane::PassthroughStandard);
-        let q_expired2 = encode_a_record("exp2.lan", [10, 0, 0, 2], 15, PermissiveRoutingLane::PassthroughStandard);
-        let q_alive = encode_a_record("alive.lan", [10, 0, 0, 3], 300, PermissiveRoutingLane::PassthroughStandard);
+        let q_expired1 = encode_a_record(
+            "exp1.lan",
+            [10, 0, 0, 1],
+            10,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
+        let q_expired2 = encode_a_record(
+            "exp2.lan",
+            [10, 0, 0, 2],
+            15,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
+        let q_alive = encode_a_record(
+            "alive.lan",
+            [10, 0, 0, 3],
+            300,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
 
         ring.insert(q_expired1, 100); // expires at 110
         ring.insert(q_expired2, 100); // expires at 115
-        ring.insert(q_alive, 100);    // expires at 400
+        ring.insert(q_alive, 100); // expires at 400
 
         let mut archive = [NQuin::default(); 4];
         let count = ring.archive_expired_into(120, &mut archive);
@@ -355,19 +391,54 @@ mod tests {
     fn ring_wrap_eviction() {
         let mut ring = DnsCacheRing::<4>::new();
         for i in 0..6 {
-            let q = encode_a_record("wrap.lan", [10, 0, 0, i as u8], 60, PermissiveRoutingLane::PassthroughStandard);
+            let q = encode_a_record(
+                "wrap.lan",
+                [10, 0, 0, i as u8],
+                60,
+                PermissiveRoutingLane::PassthroughStandard,
+            );
             ring.insert(q, i as u32);
         }
         assert_eq!(ring.len(), 4);
-        let found = ring.lookup(encode_a_record("wrap.lan", [0, 0, 0, 0], 60, PermissiveRoutingLane::PassthroughStandard).subject, OP_DNS_A).unwrap();
-        assert_eq!(found.object, encode_a_record("wrap.lan", [10, 0, 0, 5], 60, PermissiveRoutingLane::PassthroughStandard).object);
+        let found = ring
+            .lookup(
+                encode_a_record(
+                    "wrap.lan",
+                    [0, 0, 0, 0],
+                    60,
+                    PermissiveRoutingLane::PassthroughStandard,
+                )
+                .subject,
+                OP_DNS_A,
+            )
+            .unwrap();
+        assert_eq!(
+            found.object,
+            encode_a_record(
+                "wrap.lan",
+                [10, 0, 0, 5],
+                60,
+                PermissiveRoutingLane::PassthroughStandard
+            )
+            .object
+        );
     }
 
     #[test]
     fn lookup_all_zero_heap() {
         let mut ring = DnsCacheRing::<16>::new();
-        let q1 = encode_a_record("multi.lan", [1, 2, 3, 4], 60, PermissiveRoutingLane::PassthroughStandard);
-        let q2 = encode_txt_record("multi.lan", "v=spf1", 60, PermissiveRoutingLane::PassthroughStandard);
+        let q1 = encode_a_record(
+            "multi.lan",
+            [1, 2, 3, 4],
+            60,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
+        let q2 = encode_txt_record(
+            "multi.lan",
+            "v=spf1",
+            60,
+            PermissiveRoutingLane::PassthroughStandard,
+        );
 
         ring.insert(q1, 1);
         ring.insert(q2, 2);

@@ -398,7 +398,10 @@ mod tests {
         assert!(json_str.contains("alice_client.sphinx@gateway_1"));
 
         let deserialized: ConnectInvitePayload = serde_json::from_str(&json_str).unwrap();
-        assert_eq!(deserialized.nym_address, Some("alice_client.sphinx@gateway_1".into()));
+        assert_eq!(
+            deserialized.nym_address,
+            Some("alice_client.sphinx@gateway_1".into())
+        );
 
         // Also test backward compatibility when nym_address is missing in json
         let legacy_json = serde_json::json!({

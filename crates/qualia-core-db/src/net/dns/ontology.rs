@@ -57,7 +57,10 @@ pub struct DnsRecordTypeDescriptor {
 
 impl DnsRecordTypeDescriptor {
     pub const fn is_lossless_inline(&self) -> bool {
-        matches!(self.storage_strategy, QualiaStorageStrategy::InlineSuperQuin)
+        matches!(
+            self.storage_strategy,
+            QualiaStorageStrategy::InlineSuperQuin
+        )
     }
 }
 
@@ -431,7 +434,10 @@ pub fn lookup_by_code(code: u16) -> Option<&'static DnsRecordTypeDescriptor> {
 pub fn lookup_by_name(name: &str) -> Option<&'static DnsRecordTypeDescriptor> {
     let mut i = 0;
     while i < DNS_ONTOLOGY_REGISTRY.len() {
-        if DNS_ONTOLOGY_REGISTRY[i].type_name.eq_ignore_ascii_case(name) {
+        if DNS_ONTOLOGY_REGISTRY[i]
+            .type_name
+            .eq_ignore_ascii_case(name)
+        {
             return Some(&DNS_ONTOLOGY_REGISTRY[i]);
         }
         i += 1;
@@ -461,7 +467,10 @@ mod tests {
 
         let https_desc = lookup_by_dns_type(DnsType::HTTPS).unwrap();
         assert_eq!(https_desc.type_code, 65);
-        assert_eq!(https_desc.storage_strategy, QualiaStorageStrategy::LosslessQuinChunkChain);
+        assert_eq!(
+            https_desc.storage_strategy,
+            QualiaStorageStrategy::LosslessQuinChunkChain
+        );
 
         assert!(lookup_by_code(9999).is_none());
         assert!(lookup_by_name("NONEXISTENT").is_none());

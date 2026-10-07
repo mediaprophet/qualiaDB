@@ -1,6 +1,106 @@
 //! GPU resource builders — depth/picking textures, bind-group layouts/groups, target states.
 use super::*;
 
+/// Logical residency estimate for the portal's persistent depth and picking
+/// targets, plus its RGBA8 offscreen target when present. Surface swapchain
+/// colour storage is driver-owned and is not included here.
+pub(super) fn frame_target_vram_bytes(width: u32, height: u32, offscreen: bool) -> Option<u64> {
+    let pixels = u64::from(width.max(1)).checked_mul(u64::from(height.max(1)))?;
+    pixels.checked_mul(if offscreen { 12 } else { 8 })
+}
+
+pub(super) fn reserve_view_resources(
+    width: u32,
+    height: u32,
+    offscreen: bool,
+) -> Result<
+    (
+        u32,
+        u32,
+        crate::gpu_context::VramReservation<'static>,
+        Option<crate::gpu_context::VramReservation<'static>>,
+    ),
+    String,
+> {
+    let (mut width, mut height) = (width.max(1), height.max(1));
+    let requested = (width, height);
+    for _ in 0..33 {
+        if let Some(bytes) = frame_target_vram_bytes(width, height, offscreen) {
+            if let Ok(reservation) = crate::gpu_context::global_vram_ledger()
+                .try_reserve_graphics(crate::gpu_context::VramResourceClass::FrameTarget, bytes)
+            {
+                let readback_reservation = if offscreen {
+                    let Some(readback_bytes) = readback_buffer_bytes(width, height) else {
+                        if width == 1 && height == 1 {
+                            break;
+                        }
+                        width = width.div_ceil(2);
+                        height = height.div_ceil(2);
+                        continue;
+                    };
+                    let Ok(staging) = crate::gpu_context::global_vram_ledger()
+                        .try_reserve_graphics(
+                            crate::gpu_context::VramResourceClass::UploadStaging,
+                            readback_bytes,
+                        )
+                    else {
+                        if width == 1 && height == 1 {
+                            break;
+                        }
+                        width = width.div_ceil(2);
+                        height = height.div_ceil(2);
+                        continue;
+                    };
+                    Some(staging)
+                } else {
+                    None
+                };
+                return Ok((width, height, reservation, readback_reservation));
+            }
+        }
+        if !offscreen || (width == 1 && height == 1) {
+            break;
+        }
+        width = width.div_ceil(2);
+        height = height.div_ceil(2);
+    }
+    Err(format!(
+        "frame targets refused by graphics budget for requested extent {}x{}",
+        requested.0, requested.1
+    ))
+}
+
+pub(super) fn checked_padded_bytes_per_row(width: u32) -> Option<u32> {
+    let tight = width.max(1).checked_mul(4)?;
+    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    tight
+        .checked_add(align - 1)
+        .map(|value| value / align * align)
+}
+
+pub(super) fn readback_buffer_bytes(width: u32, height: u32) -> Option<u64> {
+    u64::from(checked_padded_bytes_per_row(width)?).checked_mul(u64::from(height.max(1)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{checked_padded_bytes_per_row, frame_target_vram_bytes, readback_buffer_bytes};
+
+    #[test]
+    fn portal_target_estimate_counts_depth_picking_and_offscreen_color() {
+        assert_eq!(frame_target_vram_bytes(1920, 1080, false), Some(16_588_800));
+        assert_eq!(frame_target_vram_bytes(1920, 1080, true), Some(24_883_200));
+        assert_eq!(frame_target_vram_bytes(u32::MAX, u32::MAX, true), None);
+    }
+
+    #[test]
+    fn readback_staging_size_uses_checked_row_pitch_and_height() {
+        assert_eq!(checked_padded_bytes_per_row(1), Some(256));
+        assert_eq!(readback_buffer_bytes(1920, 1080), Some(8_294_400));
+        assert_eq!(readback_buffer_bytes(u32::MAX, u32::MAX), None);
+    }
+}
+
 pub(super) fn create_offscreen_texture(
     device: &wgpu::Device,
     format: wgpu::TextureFormat,
@@ -24,9 +124,8 @@ pub(super) fn create_offscreen_texture(
 }
 
 pub(super) fn padded_bytes_per_row(width: u32) -> u32 {
-    let tight = width.max(1).saturating_mul(4);
-    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    tight.div_ceil(align) * align
+    checked_padded_bytes_per_row(width)
+        .unwrap_or(u32::MAX & !(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT - 1))
 }
 
 pub(super) fn create_readback_buffer(
@@ -89,7 +188,7 @@ pub(super) fn create_depth_texture(
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format: wgpu::TextureFormat::Depth32Float,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
         view_formats: &[],
     });
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());

@@ -1433,42 +1433,53 @@ impl QTensorEngine {
         schedule.validate(shape)?;
         let q_len = (shape.head_count * shape.head_dim) as usize;
         let kv_len = (shape.head_count * shape.context_tokens * shape.head_dim) as usize;
-        if query.len() < q_len || keys.len() < kv_len || values.len() < kv_len || out.len() < q_len {
+        if query.len() < q_len || keys.len() < kv_len || values.len() < kv_len || out.len() < q_len
+        {
             return Err(crate::wgsl_forge::ForgeError::InvalidKernel(
                 "dispatch_forge_causal_attention buffers smaller than required shape".into(),
             ));
         }
 
         let shader = crate::wgsl_forge::synthesize_causal_attention(shape, schedule)?;
-        let module = self.device().create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("ForgeCausalAttentionShader"),
-            source: wgpu::ShaderSource::Wgsl(shader.source.into()),
-        });
-        let pipeline = self.device().create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("ForgeCausalAttentionPipeline"),
-            layout: None,
-            module: &module,
-            entry_point: Some("causal_attention"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let module = self
+            .device()
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("ForgeCausalAttentionShader"),
+                source: wgpu::ShaderSource::Wgsl(shader.source.into()),
+            });
+        let pipeline = self
+            .device()
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("ForgeCausalAttentionPipeline"),
+                layout: None,
+                module: &module,
+                entry_point: Some("causal_attention"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
 
         use wgpu::util::DeviceExt;
-        let q_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("ForgeAttnQ"),
-            contents: bytemuck::cast_slice(&query[..q_len]),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-        let k_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("ForgeAttnK"),
-            contents: bytemuck::cast_slice(&keys[..kv_len]),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-        let v_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("ForgeAttnV"),
-            contents: bytemuck::cast_slice(&values[..kv_len]),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
+        let q_buf = self
+            .device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("ForgeAttnQ"),
+                contents: bytemuck::cast_slice(&query[..q_len]),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+        let k_buf = self
+            .device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("ForgeAttnK"),
+                contents: bytemuck::cast_slice(&keys[..kv_len]),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+        let v_buf = self
+            .device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("ForgeAttnV"),
+                contents: bytemuck::cast_slice(&values[..kv_len]),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
         let out_bytes = (q_len * std::mem::size_of::<f32>()) as u64;
         let out_buf = self.device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("ForgeAttnOut"),
@@ -1486,21 +1497,38 @@ impl QTensorEngine {
             _pad2: 0,
             _pad3: 0,
         };
-        let params_buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("ForgeAttnParams"),
-            contents: bytemuck::bytes_of(&params),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
+        let params_buf = self
+            .device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("ForgeAttnParams"),
+                contents: bytemuck::bytes_of(&params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
 
         let bind_group = self.device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("ForgeAttnBG"),
             layout: &pipeline.get_bind_group_layout(0),
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: q_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: k_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: v_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: out_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: params_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: q_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: k_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: v_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: params_buf.as_entire_binding(),
+                },
             ],
         });
 
@@ -1511,9 +1539,11 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
 
-        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("ForgeAttnEncoder"),
-        });
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("ForgeAttnEncoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("ForgeAttnPass"),

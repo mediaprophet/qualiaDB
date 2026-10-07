@@ -17,9 +17,9 @@
 
 use std::collections::HashMap;
 
+use crate::container_10d::{MaterialRecord, SubmeshRange};
 use crate::frame_layout::pack_float_object;
 use crate::{q_hash, NQuin};
-use serde_json::Value;
 
 // ── Named-graph context + predicate / class hashes (one identity space; `q_hash`) ──────────────
 pub const GEOMETRY_CONTEXT: u64 = q_hash("urn:qualia:context:geometry");
@@ -82,6 +82,38 @@ pub struct Mesh {
     pub max: [f32; 3],
 }
 
+/// Mesh plus optional normal and tangent streams. Tangents may be authored or generated from
+/// TEXCOORD_0; importers without the required data leave a stream empty for renderer fallback.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImportedMesh {
+    pub mesh: Mesh,
+    pub normals: Option<Vec<[f32; 3]>>,
+    /// Authored glTF tangent direction and handedness, or MikkTSpace-generated frames when UV0 is
+    /// available. A missing UV0 leaves the stream absent for the renderer's capability fallback.
+    pub tangents: Option<Vec<[f32; 4]>>,
+    /// Vertex-aligned glTF TEXCOORD_0 pairs, including any vertices split to preserve tangent seams.
+    pub texture_coordinates_0: Option<Vec<[f32; 2]>>,
+    /// Imported glTF materials. Their IDs are source-local (`index + 1`) until the asset
+    /// compiler scopes them to a stable asset identity.
+    pub materials: Vec<MaterialRecord>,
+    /// Content-addressed image payloads referenced by imported material records. Payload bytes
+    /// remain intact for HMC/resource packaging; they are not copied into the 10D semantic arena.
+    pub texture_dependencies: Vec<TextureDependency>,
+    /// Contiguous index ranges in the same order as the flattened primitive index stream.
+    pub submeshes: Vec<SubmeshRange>,
+}
+
+/// Immutable image asset discovered while importing an embedded glTF image.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextureDependency {
+    /// SHA-256 of `bytes`, matching the corresponding MAT2/MAT1 resource references.
+    pub digest: [u8; 32],
+    /// Source MIME type (for example `image/png`, `image/jpeg`, or `image/ktx2`).
+    pub mime_type: String,
+    /// Original encoded image bytes, retained for external HMC/Webizen processing.
+    pub bytes: Vec<u8>,
+}
+
 impl Mesh {
     /// Number of vertices.
     #[inline]
@@ -141,20 +173,65 @@ impl Mesh {
 /// Import a mesh, sniffing the format from the bytes (or trusting an explicit lowercase
 /// extension hint like `"obj"` / `"stl"`).
 pub fn import_asset(bytes: &[u8], hint: Option<&str>) -> Result<Mesh, AssetError> {
+    import_asset_with_normals(bytes, hint).map(|imported| imported.mesh)
+}
+
+/// Import a mesh and preserve authored normals when the source format provides them. Missing
+/// normals in individual primitives are generated from the primitive's triangle geometry.
+pub fn import_asset_with_normals(
+    bytes: &[u8],
+    hint: Option<&str>,
+) -> Result<ImportedMesh, AssetError> {
     match hint {
-        Some(h) if h.eq_ignore_ascii_case("obj") => return import_obj(bytes),
-        Some(h) if h.eq_ignore_ascii_case("stl") => return import_stl(bytes),
+        Some(h) if h.eq_ignore_ascii_case("obj") => {
+            return import_obj(bytes).map(|mesh| ImportedMesh {
+                mesh,
+                normals: None,
+                tangents: None,
+                texture_coordinates_0: None,
+                materials: Vec::new(),
+                texture_dependencies: Vec::new(),
+                submeshes: Vec::new(),
+            });
+        }
+        Some(h) if h.eq_ignore_ascii_case("stl") => {
+            return import_stl(bytes).map(|mesh| ImportedMesh {
+                mesh,
+                normals: None,
+                tangents: None,
+                texture_coordinates_0: None,
+                materials: Vec::new(),
+                texture_dependencies: Vec::new(),
+                submeshes: Vec::new(),
+            });
+        }
         Some(h) if h.eq_ignore_ascii_case("glb") || h.eq_ignore_ascii_case("gltf") => {
-            return import_glb(bytes)
+            return import_glb_with_normals(bytes);
         }
         _ => {}
     }
     if looks_like_glb(bytes) {
-        import_glb(bytes) // unambiguous "glTF" magic — check first
+        import_glb_with_normals(bytes) // unambiguous "glTF" magic — check first
     } else if looks_like_binary_stl(bytes) || looks_like_ascii_stl(bytes) {
-        import_stl(bytes)
+        import_stl(bytes).map(|mesh| ImportedMesh {
+            mesh,
+            normals: None,
+            tangents: None,
+            texture_coordinates_0: None,
+            materials: Vec::new(),
+            texture_dependencies: Vec::new(),
+            submeshes: Vec::new(),
+        })
     } else if looks_like_obj(bytes) {
-        import_obj(bytes)
+        import_obj(bytes).map(|mesh| ImportedMesh {
+            mesh,
+            normals: None,
+            tangents: None,
+            texture_coordinates_0: None,
+            materials: Vec::new(),
+            texture_dependencies: Vec::new(),
+            submeshes: Vec::new(),
+        })
     } else {
         Err(AssetError::UnknownFormat)
     }
@@ -234,7 +311,7 @@ pub fn import_obj(bytes: &[u8]) -> Result<Mesh, AssetError> {
                             return Err(AssetError::Parse(format!(
                                 "OBJ line {}: bad face index {t:?}",
                                 lineno + 1
-                            )))
+                            )));
                         }
                     };
                     let zero_based = if idx > 0 {
@@ -336,206 +413,20 @@ fn import_stl_ascii(bytes: &[u8]) -> Result<Mesh, AssetError> {
     Mesh::build(positions, triangles)
 }
 
-// ── glTF Binary (GLB) ─────────────────────────────────────────────────────────────────────────
-
 const GLB_MAGIC: u32 = 0x4654_6C67; // "glTF" little-endian
 const CHUNK_JSON: u32 = 0x4E4F_534A; // "JSON"
-const CHUNK_BIN: u32 = 0x004E_4942; // "BIN\0"
+const CHUNK_BIN: u32 = 0x004E_4942; // "BIN\\0"
 
-fn looks_like_glb(bytes: &[u8]) -> bool {
-    bytes.len() >= 12 && u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) == GLB_MAGIC
-}
-
-/// Parse a binary glTF (`.glb`): the 12-byte header, JSON chunk, and BIN chunk, then walk
-/// `meshes[].primitives[]`, reading each `POSITION` accessor (FLOAT VEC3) and the optional index
-/// accessor (u8/u16/u32 SCALAR) out of the BIN buffer. Triangle primitives only (mode 4); other
-/// modes are skipped (a faithful first cut). Embedded/external-URI buffers are not handled here —
-/// self-contained GLB binary only.
-pub fn import_glb(bytes: &[u8]) -> Result<Mesh, AssetError> {
-    if bytes.len() < 12 {
-        return Err(AssetError::Parse("GLB shorter than 12-byte header".into()));
-    }
-    if u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) != GLB_MAGIC {
-        return Err(AssetError::UnknownFormat);
-    }
-    // bytes[4..8] = version, bytes[8..12] = total length (not re-validated).
-
-    let mut json: Option<&[u8]> = None;
-    let mut bin: Option<&[u8]> = None;
-    let mut off = 12usize;
-    while off + 8 <= bytes.len() {
-        let clen = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]])
-            as usize;
-        let ctype = u32::from_le_bytes([
-            bytes[off + 4],
-            bytes[off + 5],
-            bytes[off + 6],
-            bytes[off + 7],
-        ]);
-        let dstart = off + 8;
-        let dend = dstart
-            .checked_add(clen)
-            .ok_or_else(|| AssetError::Parse("GLB chunk length overflow".into()))?;
-        if dend > bytes.len() {
-            return Err(AssetError::Parse("GLB chunk exceeds file".into()));
-        }
-        match ctype {
-            CHUNK_JSON => json = Some(&bytes[dstart..dend]),
-            CHUNK_BIN => bin = Some(&bytes[dstart..dend]),
-            _ => {}
-        }
-        off = dend;
-    }
-
-    let json = json.ok_or_else(|| AssetError::Parse("GLB has no JSON chunk".into()))?;
-    let gltf: Value =
-        serde_json::from_slice(json).map_err(|e| AssetError::Parse(format!("glTF JSON: {e}")))?;
-    let bin = bin.unwrap_or(&[]);
-
-    let empty: Vec<Value> = Vec::new();
-    let accessors = gltf["accessors"].as_array().unwrap_or(&empty);
-    let buffer_views = gltf["bufferViews"].as_array().unwrap_or(&empty);
-    let meshes = gltf["meshes"].as_array().unwrap_or(&empty);
-
-    let mut positions: Vec<[f32; 3]> = Vec::new();
-    let mut triangles: Vec<[u32; 3]> = Vec::new();
-
-    for mesh in meshes {
-        for prim in mesh["primitives"].as_array().into_iter().flatten() {
-            if prim["mode"].as_u64().unwrap_or(4) != 4 {
-                continue; // not TRIANGLES
-            }
-            let pos_idx = prim["attributes"]["POSITION"]
-                .as_u64()
-                .ok_or_else(|| AssetError::Parse("primitive has no POSITION".into()))?
-                as usize;
-            let pos_acc = accessors
-                .get(pos_idx)
-                .ok_or_else(|| AssetError::Parse("POSITION accessor index out of range".into()))?;
-            let base = positions.len() as u32;
-            let prim_pos = read_positions(pos_acc, buffer_views, bin)?;
-            let vcount = prim_pos.len() as u32;
-            positions.extend_from_slice(&prim_pos);
-
-            match prim["indices"].as_u64() {
-                Some(idx_i) => {
-                    let idx_acc = accessors
-                        .get(idx_i as usize)
-                        .ok_or_else(|| AssetError::Parse("index accessor out of range".into()))?;
-                    let idx = read_indices(idx_acc, buffer_views, bin)?;
-                    for c in idx.chunks_exact(3) {
-                        triangles.push([base + c[0], base + c[1], base + c[2]]);
-                    }
-                }
-                None => {
-                    let mut i = 0u32;
-                    while i + 3 <= vcount {
-                        triangles.push([base + i, base + i + 1, base + i + 2]);
-                        i += 3;
-                    }
-                }
-            }
-        }
-    }
-
-    Mesh::build(positions, triangles)
-}
-
-/// Read a FLOAT VEC3 accessor (e.g. `POSITION`) out of the GLB binary buffer.
-fn read_positions(
-    accessor: &Value,
-    bvs: &[Value],
-    bin: &[u8],
-) -> Result<Vec<[f32; 3]>, AssetError> {
-    if accessor["componentType"].as_u64() != Some(5126) {
-        return Err(AssetError::Parse(
-            "POSITION componentType must be FLOAT (5126)".into(),
-        ));
-    }
-    if accessor["type"].as_str() != Some("VEC3") {
-        return Err(AssetError::Parse(
-            "POSITION accessor type must be VEC3".into(),
-        ));
-    }
-    let count = accessor["count"]
-        .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))?
-        as usize;
-    let acc_off = accessor["byteOffset"].as_u64().unwrap_or(0) as usize;
-    let bv_idx = accessor["bufferView"]
-        .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.bufferView missing".into()))?
-        as usize;
-    let bv = bvs
-        .get(bv_idx)
-        .ok_or_else(|| AssetError::Parse("bufferView index out of range".into()))?;
-    let bv_off = bv["byteOffset"].as_u64().unwrap_or(0) as usize;
-    let stride = match bv["byteStride"].as_u64().unwrap_or(0) {
-        0 => 12, // tightly packed VEC3 f32
-        s => s as usize,
-    };
-    let start = bv_off + acc_off;
-    let mut out = Vec::with_capacity(count);
-    for i in 0..count {
-        let o = start + i * stride;
-        if o + 12 > bin.len() {
-            return Err(AssetError::Parse("POSITION read past end of BIN".into()));
-        }
-        let rd = |k: usize| {
-            f32::from_le_bytes([bin[o + k], bin[o + k + 1], bin[o + k + 2], bin[o + k + 3]])
-        };
-        out.push([rd(0), rd(4), rd(8)]);
-    }
-    Ok(out)
-}
-
-/// Read a SCALAR index accessor (u8/u16/u32) out of the GLB binary buffer, widened to `u32`.
-fn read_indices(accessor: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<u32>, AssetError> {
-    if accessor["type"].as_str() != Some("SCALAR") {
-        return Err(AssetError::Parse(
-            "index accessor type must be SCALAR".into(),
-        ));
-    }
-    let comp = match accessor["componentType"].as_u64() {
-        Some(5121) => 1usize,
-        Some(5123) => 2,
-        Some(5125) => 4,
-        _ => {
-            return Err(AssetError::Parse(
-                "index componentType must be u8/u16/u32".into(),
-            ))
-        }
-    };
-    let count = accessor["count"]
-        .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))?
-        as usize;
-    let acc_off = accessor["byteOffset"].as_u64().unwrap_or(0) as usize;
-    let bv_idx = accessor["bufferView"]
-        .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.bufferView missing".into()))?
-        as usize;
-    let bv = bvs
-        .get(bv_idx)
-        .ok_or_else(|| AssetError::Parse("bufferView index out of range".into()))?;
-    let bv_off = bv["byteOffset"].as_u64().unwrap_or(0) as usize;
-    let start = bv_off + acc_off;
-    let mut out = Vec::with_capacity(count);
-    for i in 0..count {
-        let o = start + i * comp;
-        if o + comp > bin.len() {
-            return Err(AssetError::Parse("index read past end of BIN".into()));
-        }
-        let v = match comp {
-            1 => bin[o] as u32,
-            2 => u16::from_le_bytes([bin[o], bin[o + 1]]) as u32,
-            _ => u32::from_le_bytes([bin[o], bin[o + 1], bin[o + 2], bin[o + 3]]),
-        };
-        out.push(v);
-    }
-    Ok(out)
-}
-
+#[path = "glb.rs"]
+mod glb;
+#[path = "glb_materials.rs"]
+mod glb_materials;
+#[path = "glb_texture_transform.rs"]
+mod glb_texture_transform;
+#[path = "tangents.rs"]
+mod tangents;
+use glb::looks_like_glb;
+pub use glb::{import_glb, import_glb_with_normals};
 // ── Semantic layer: Mesh → NQuins ─────────────────────────────────────────────────────────────
 
 /// Emit the **semantic** quins for a mesh asset (the asset is *known*, not just drawn): its type,
@@ -726,6 +617,7 @@ fn fnv_hash(bytes: &[u8]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::{glb::read_texcoords_0, tangents::generate_mikktspace_tangents};
     use crate::frame_layout::unpack_float_object;
 
     const TRI_OBJ: &str = "# a single triangle\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
@@ -840,10 +732,20 @@ mod tests {
     }
 
     fn build_test_glb() -> Vec<u8> {
-        // BIN: 3 positions (VEC3 f32, 36 B) then 3 indices (u16, 6 B), padded to 4 -> 44 B.
+        // BIN: positions (36 B), normals (36 B), tangents (48 B), indices (6 B), padded -> 128 B.
         let mut bin = Vec::new();
         for v in [[0f32, 0., 0.], [2., 0., 0.], [0., 4., 0.]] {
             for c in v {
+                bin.extend_from_slice(&c.to_le_bytes());
+            }
+        }
+        for _ in 0..3 {
+            for c in [0f32, 0., 2.] {
+                bin.extend_from_slice(&c.to_le_bytes());
+            }
+        }
+        for _ in 0..3 {
+            for c in [2f32, 0., 0.5, 1.] {
                 bin.extend_from_slice(&c.to_le_bytes());
             }
         }
@@ -853,7 +755,7 @@ mod tests {
         while bin.len() % 4 != 0 {
             bin.push(0);
         }
-        let json = r#"{"asset":{"version":"2.0"},"buffers":[{"byteLength":44}],"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},{"buffer":0,"byteOffset":36,"byteLength":6}],"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":1,"componentType":5123,"count":3,"type":"SCALAR"}],"meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}]}"#;
+        let json = r#"{"asset":{"version":"2.0"},"buffers":[{"byteLength":128}],"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},{"buffer":0,"byteOffset":36,"byteLength":36},{"buffer":0,"byteOffset":72,"byteLength":48},{"buffer":0,"byteOffset":120,"byteLength":6}],"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},{"bufferView":3,"componentType":5123,"count":3,"type":"SCALAR"}],"meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2},"indices":3}]}]}"#;
         let mut jb = json.as_bytes().to_vec();
         while jb.len() % 4 != 0 {
             jb.push(b' ');
@@ -872,6 +774,48 @@ mod tests {
         glb
     }
 
+    fn build_test_glb_without_tangents_with_uv0() -> Vec<u8> {
+        let mut bin = Vec::new();
+        for position in [[0.0f32, 0.0, 0.0], [2.0, 0.0, 0.0], [0.0, 4.0, 0.0]] {
+            for component in position {
+                bin.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+        for _ in 0..3 {
+            for component in [0.0f32, 0.0, 1.0] {
+                bin.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+        for uv in [[0.0f32, 0.0], [1.0, 0.0], [0.0, 1.0]] {
+            for component in uv {
+                bin.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+        for index in [0u16, 1, 2] {
+            bin.extend_from_slice(&index.to_le_bytes());
+        }
+        while bin.len() % 4 != 0 {
+            bin.push(0);
+        }
+        let json = r#"{"asset":{"version":"2.0"},"buffers":[{"byteLength":104}],"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},{"buffer":0,"byteOffset":36,"byteLength":36},{"buffer":0,"byteOffset":72,"byteLength":24},{"buffer":0,"byteOffset":96,"byteLength":6}],"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":3,"type":"VEC2"},{"bufferView":3,"componentType":5123,"count":3,"type":"SCALAR"}],"meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2},"indices":3}]}]}"#;
+        let mut json_bytes = json.as_bytes().to_vec();
+        while json_bytes.len() % 4 != 0 {
+            json_bytes.push(b' ');
+        }
+        let total = 12 + 8 + json_bytes.len() + 8 + bin.len();
+        let mut glb = Vec::new();
+        glb.extend_from_slice(&GLB_MAGIC.to_le_bytes());
+        glb.extend_from_slice(&2u32.to_le_bytes());
+        glb.extend_from_slice(&(total as u32).to_le_bytes());
+        glb.extend_from_slice(&(json_bytes.len() as u32).to_le_bytes());
+        glb.extend_from_slice(&CHUNK_JSON.to_le_bytes());
+        glb.extend_from_slice(&json_bytes);
+        glb.extend_from_slice(&(bin.len() as u32).to_le_bytes());
+        glb.extend_from_slice(&CHUNK_BIN.to_le_bytes());
+        glb.extend_from_slice(&bin);
+        glb
+    }
+
     #[test]
     fn glb_single_triangle() {
         let glb = build_test_glb();
@@ -881,9 +825,183 @@ mod tests {
         assert_eq!(m.triangle_count(), 1);
         assert_eq!(m.max, [2.0, 4.0, 0.0]);
         assert_eq!(m.triangles[0], [0, 1, 2]);
+        let imported = import_glb_with_normals(&glb).unwrap();
+        assert_eq!(imported.normals.unwrap(), vec![[0.0, 0.0, 1.0]; 3]);
+        let imported = import_glb_with_normals(&glb).unwrap();
+        assert_eq!(imported.tangents.unwrap(), vec![[1.0, 0.0, 0.0, 1.0]; 3]);
         // dispatch via the "glTF" magic
         assert_eq!(import_asset(&glb, None).unwrap().triangle_count(), 1);
         assert_eq!(import_asset(&glb, Some("glb")).unwrap().vertex_count(), 3);
+        let compiled = crate::render::compile_10d::compile_asset(
+            &glb,
+            Some("glb"),
+            "urn:test:authored-normal-triangle",
+            "glb",
+        )
+        .unwrap();
+        let compiled_normals = crate::render::compile_10d::decode_10d_normals(
+            &compiled.container_10d,
+            compiled.mesh.vertex_count(),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(compiled_normals, vec![[0.0, 0.0, 1.0]; 3]);
+        let compiled_tangents = crate::render::compile_10d::decode_10d_tangents(
+            &compiled.container_10d,
+            compiled.mesh.vertex_count(),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(compiled_tangents, vec![[1.0, 0.0, 0.0, 1.0]; 3]);
+    }
+
+    #[test]
+    fn glb_rejects_zero_length_authored_normal() {
+        let mut glb = build_test_glb();
+        // The second view is the authored NORMAL stream, beginning at byte 36 in BIN.
+        let bin_chunk = glb
+            .windows(4)
+            .position(|w| w == CHUNK_BIN.to_le_bytes())
+            .unwrap()
+            + 4;
+        for byte in &mut glb[bin_chunk + 36..bin_chunk + 72] {
+            *byte = 0;
+        }
+        assert!(matches!(
+            import_glb_with_normals(&glb),
+            Err(AssetError::Parse(_))
+        ));
+    }
+
+    #[test]
+    fn glb_rejects_invalid_tangent_handedness() {
+        let mut glb = build_test_glb();
+        // The third view is TANGENT VEC4 at byte 72; w is the fourth f32.
+        let bin_chunk = glb
+            .windows(4)
+            .position(|w| w == CHUNK_BIN.to_le_bytes())
+            .unwrap()
+            + 4;
+        glb[bin_chunk + 84..bin_chunk + 88].copy_from_slice(&0.0f32.to_le_bytes());
+        assert!(matches!(
+            import_glb_with_normals(&glb),
+            Err(AssetError::Parse(_))
+        ));
+    }
+
+    #[test]
+    fn mikktspace_generation_tracks_uv_orientation_and_corner_splits() {
+        let positions = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let normals = [[0.0, 0.0, 1.0]; 3];
+        let indices = [0, 1, 2];
+        let standard = generate_mikktspace_tangents(
+            &positions,
+            &normals,
+            &[[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+            &indices,
+        )
+        .unwrap();
+        assert_eq!(standard.source_vertices, vec![0, 1, 2]);
+        assert_eq!(standard.indices, vec![0, 1, 2]);
+        for tangent in standard.tangents {
+            assert!((tangent[0] - 1.0).abs() < 1e-5);
+            assert!(tangent[1].abs() < 1e-5 && tangent[2].abs() < 1e-5);
+            assert_eq!(tangent[3], 1.0);
+        }
+
+        let mirrored = generate_mikktspace_tangents(
+            &positions,
+            &normals,
+            &[[0.0, 0.0], [1.0, 0.0], [0.0, -1.0]],
+            &indices,
+        )
+        .unwrap();
+        assert!(mirrored.tangents.iter().all(|tangent| tangent[3] == -1.0));
+
+        let quad_positions = [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ];
+        let quad_normals = [[0.0, 0.0, 1.0]; 4];
+        let quad_uv = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 0.0]];
+        let split = generate_mikktspace_tangents(
+            &quad_positions,
+            &quad_normals,
+            &quad_uv,
+            &[0, 1, 2, 0, 2, 3],
+        )
+        .unwrap();
+        assert_eq!(split.indices.len(), 6);
+        assert!(split.source_vertices.len() > quad_positions.len());
+        let signs_for_shared_vertex: std::collections::HashSet<_> = split
+            .source_vertices
+            .iter()
+            .enumerate()
+            .filter(|(_, source)| **source == 0)
+            .map(|(output, _)| split.tangents[output][3].is_sign_negative())
+            .collect();
+        assert_eq!(signs_for_shared_vertex.len(), 2);
+    }
+
+    #[test]
+    fn mikktspace_degenerate_uvs_produce_finite_fallback_frames() {
+        let positions = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let normals = [[0.0, 0.0, 1.0]; 3];
+        let generated =
+            generate_mikktspace_tangents(&positions, &normals, &[[0.0, 0.0]; 3], &[0, 1, 2])
+                .unwrap();
+
+        assert_eq!(generated.indices, vec![0, 1, 2]);
+        assert!(generated.tangents.iter().all(|tangent| {
+            tangent.iter().all(|component| component.is_finite())
+                && (tangent[3].abs() - 1.0).abs() < f32::EPSILON
+        }));
+    }
+
+    #[test]
+    fn glb_uv_tangents_survive_asset_compilation_and_10d_decode() {
+        let glb = build_test_glb_without_tangents_with_uv0();
+        let imported = import_glb_with_normals(&glb).unwrap();
+        assert_eq!(imported.tangents.unwrap(), vec![[1.0, 0.0, 0.0, 1.0]; 3]);
+
+        let compiled = crate::render::compile_10d::compile_asset(
+            &glb,
+            Some("glb"),
+            "urn:test:uv-tangent-triangle",
+            "glb",
+        )
+        .unwrap();
+        let decoded = crate::render::compile_10d::decode_10d_tangents(
+            &compiled.container_10d,
+            compiled.mesh.vertex_count(),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(decoded, vec![[1.0, 0.0, 0.0, 1.0]; 3]);
+    }
+
+    #[test]
+    fn texcoord_reader_decodes_normalized_unsigned_bytes_and_checks_view_bounds() {
+        let accessor = serde_json::json!({
+            "componentType": 5121,
+            "normalized": true,
+            "count": 2,
+            "type": "VEC2",
+            "bufferView": 0
+        });
+        let view = serde_json::json!({ "byteOffset": 0, "byteLength": 4 });
+        assert_eq!(
+            read_texcoords_0(&accessor, &[view.clone()], &[0, 255, 127, 64]).unwrap(),
+            vec![[0.0, 1.0], [127.0 / 255.0, 64.0 / 255.0]]
+        );
+
+        let short_view = serde_json::json!({ "byteOffset": 0, "byteLength": 3 });
+        assert!(matches!(
+            read_texcoords_0(&accessor, &[short_view], &[0, 255, 127, 64]),
+            Err(AssetError::Parse(_))
+        ));
     }
 
     #[test]

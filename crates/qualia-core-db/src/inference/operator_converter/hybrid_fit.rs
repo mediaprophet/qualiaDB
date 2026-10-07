@@ -128,7 +128,8 @@ impl HybridDecomposition {
                 for j in 0..self.cols {
                     let mut dot = 0.0f32;
                     for r in 0..self.rank {
-                        dot += self.low_rank_a[i * self.rank + r] * self.low_rank_b[r * self.cols + j];
+                        dot +=
+                            self.low_rank_a[i * self.rank + r] * self.low_rank_b[r * self.cols + j];
                     }
                     w_hat[i * self.cols + j] += dot;
                 }
@@ -193,7 +194,8 @@ pub fn fit_hybrid_decomposition(
         });
     }
 
-    let total_scratch_bytes = (rows * cols * 4) * 3 + (rows * config.rank * 4) + (config.rank * cols * 4);
+    let total_scratch_bytes =
+        (rows * cols * 4) * 3 + (rows * config.rank * 4) + (config.rank * cols * 4);
     if total_scratch_bytes > config.max_budget_bytes {
         return Err(ConverterError::BudgetExceeded {
             required_bytes: total_scratch_bytes,
@@ -405,7 +407,8 @@ mod tests {
             max_budget_bytes: 42 * 1024 * 1024,
         };
 
-        let hybrid = fit_hybrid_decomposition(rows, cols, &w_source, &base_q, None, &config).unwrap();
+        let hybrid =
+            fit_hybrid_decomposition(rows, cols, &w_source, &base_q, None, &config).unwrap();
         let w_hat = hybrid.reconstruct_dense();
 
         let hybrid_error: f32 = w_source

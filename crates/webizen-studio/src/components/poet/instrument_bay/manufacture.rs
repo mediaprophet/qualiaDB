@@ -196,11 +196,7 @@ mod tests {
         assert_eq!(Layer::Source.as_str(), "source");
         assert_eq!(Layer::Graph.as_str(), "graph");
         assert_eq!(Layer::Executable.as_str(), "executable");
-        let names: [&str; 3] = [
-            LAYERS[0].as_str(),
-            LAYERS[1].as_str(),
-            LAYERS[2].as_str(),
-        ];
+        let names: [&str; 3] = [LAYERS[0].as_str(), LAYERS[1].as_str(), LAYERS[2].as_str()];
         assert_ne!(names[0], names[1]);
         assert_ne!(names[1], names[2]);
         assert_ne!(names[0], names[2]);

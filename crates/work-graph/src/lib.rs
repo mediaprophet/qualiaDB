@@ -59,9 +59,12 @@ impl From<extract::ExtractError> for IndexError {
 
 /// Index a QualiaDB (or QualiaDB-shaped) checkout into a presence graph.
 pub fn index_root(root: &Path) -> Result<WorkGraph, IndexError> {
-    let root = root
-        .canonicalize()
-        .map_err(|e| IndexError::Io(io::Error::new(e.kind(), format!("root {}: {e}", root.display()))))?;
+    let root = root.canonicalize().map_err(|e| {
+        IndexError::Io(io::Error::new(
+            e.kind(),
+            format!("root {}: {e}", root.display()),
+        ))
+    })?;
 
     let tip = git::read_tip(&root)?;
     let files = walk::list_project_files(&root)?;
@@ -160,5 +163,8 @@ fn unix_now() -> u64 {
 
 /// Small helper used by tests: family member counts stay aligned with invoke ids.
 pub fn family_count(families: &[FamilyNode], name: &str) -> Option<u32> {
-    families.iter().find(|f| f.name == name).map(|f| f.member_count)
+    families
+        .iter()
+        .find(|f| f.name == name)
+        .map(|f| f.member_count)
 }

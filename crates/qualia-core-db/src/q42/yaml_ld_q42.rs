@@ -159,8 +159,8 @@ pub fn compile_yaml_ld_to_quins(
     Ok(quins)
 }
 
-use std::collections::HashMap;
 use serde_yaml::Value as YamlValue;
+use std::collections::HashMap;
 
 /// Result of compiling an HCF (HypermediaDocument) yaml-ld-q42 authoring document.
 pub type HcfCompileResult = (Vec<NQuin>, HashMap<u64, String>);
@@ -488,8 +488,8 @@ pub fn compile_yaml_ld_q42_auto(
         .map_err(|e| format!("Failed to parse yaml-ld-q42: {e}"))?;
 
     if yaml_has_workspace_pages(&root) {
-        let quins = compile_yaml_ld_to_quins(yaml_bytes, namespace, lamport)
-            .map_err(|e| e.to_string())?;
+        let quins =
+            compile_yaml_ld_to_quins(yaml_bytes, namespace, lamport).map_err(|e| e.to_string())?;
         // Minimal lexicon: page/pane surface labels from the typed compile path are hashed
         // only; keep lexicon empty/minimal as documented for workspace shape.
         Ok((quins, HashMap::new(), "yaml-ld-q42/workspace"))
@@ -545,7 +545,11 @@ pages:
     #[test]
     fn compile_workspace_pages_emits_page_and_pane_quins() {
         let quins = compile_yaml_ld_to_quins(WORKSPACE_YAML.as_bytes(), 42, 7).unwrap();
-        assert!(quins.len() >= 2, "expected page + pane quins, got {}", quins.len());
+        assert!(
+            quins.len() >= 2,
+            "expected page + pane quins, got {}",
+            quins.len()
+        );
         let pred_page = q_hash("q42:SystemPageDef");
         let pred_pane = q_hash("q42:SystemPaneState");
         assert!(quins.iter().any(|q| q.predicate == pred_page));
@@ -555,8 +559,7 @@ pages:
 
     #[test]
     fn compile_hcf_emits_title_heading_text_and_lexicon() {
-        let (quins, lexicon) =
-            compile_hcf_yaml_ld_to_quins(HCF_YAML.as_bytes(), 1, 9).unwrap();
+        let (quins, lexicon) = compile_hcf_yaml_ld_to_quins(HCF_YAML.as_bytes(), 1, 9).unwrap();
         assert!(!quins.is_empty());
         assert!(lexicon.values().any(|s| s == "Civics Writing Sample"));
         assert!(lexicon.values().any(|s| s == "Introduction"));
@@ -578,14 +581,12 @@ pages:
 
     #[test]
     fn auto_dispatches_workspace_and_hcf() {
-        let (wq, wlex, wfmt) =
-            compile_yaml_ld_q42_auto(WORKSPACE_YAML.as_bytes(), 0, 1).unwrap();
+        let (wq, wlex, wfmt) = compile_yaml_ld_q42_auto(WORKSPACE_YAML.as_bytes(), 0, 1).unwrap();
         assert_eq!(wfmt, "yaml-ld-q42/workspace");
         assert!(wq.len() >= 2);
         assert!(wlex.is_empty());
 
-        let (hq, hlex, hfmt) =
-            compile_yaml_ld_q42_auto(HCF_YAML.as_bytes(), 0, 1).unwrap();
+        let (hq, hlex, hfmt) = compile_yaml_ld_q42_auto(HCF_YAML.as_bytes(), 0, 1).unwrap();
         assert_eq!(hfmt, "yaml-ld-q42/hcf");
         assert!(!hq.is_empty());
         assert!(!hlex.is_empty());
@@ -609,8 +610,7 @@ pages:
     blocks:
       - text: "hello"
 "#;
-        let (quins, lexicon) =
-            compile_hcf_yaml_ld_to_quins(yaml.as_bytes(), 0, 0).unwrap();
+        let (quins, lexicon) = compile_hcf_yaml_ld_to_quins(yaml.as_bytes(), 0, 0).unwrap();
         assert!(!quins.is_empty());
         assert!(lexicon.values().any(|s| s == "Only section"));
         assert!(lexicon.values().any(|s| s == "hello"));
