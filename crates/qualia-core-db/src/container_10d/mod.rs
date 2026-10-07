@@ -54,7 +54,7 @@ pub mod material_section;
 mod material_section_codec;
 pub use manifold_identity_container::{
     decode_container_manifold_identity, encode_container_with_manifold_identity,
-    ManifoldContainerError,
+    encode_container_with_manifold_identity_extensions, ManifoldContainerError,
 };
 /// Version-2 manifold identity and typed scientific/presentation field manifest.
 pub mod manifold_identity_v2;
@@ -93,12 +93,13 @@ pub use integrity::{
 };
 pub use manifold_identity_v2::{
     decode_manifold_identity_v2, encode_manifold_identity_v2,
-    encoded_len as manifold_identity_v2_encoded_len, IntegrityIndexDigest, ManifestV2Error,
-    ManifoldIdentityV2, StableEntityId, TypedFieldRecord, BUILTIN_FIELD_KINDS,
-    FIELD_KIND_ELECTROMAGNETIC, FIELD_KIND_SCALAR, FIELD_KIND_SPECTRAL, FIELD_KIND_TENSOR,
-    FIELD_KIND_VECTOR, MANIFOLD_IDENTITY_V2_AXIS_ORDER, MANIFOLD_IDENTITY_V2_FIELD_RECORD_SIZE,
-    MANIFOLD_IDENTITY_V2_HEADER_SIZE, MANIFOLD_IDENTITY_V2_MAGIC, MANIFOLD_IDENTITY_V2_MAX_BYTES,
-    MANIFOLD_IDENTITY_V2_MAX_FIELDS, MANIFOLD_IDENTITY_V2_VERSION,
+    encode_manifold_identity_v2_with_extensions, encoded_len as manifold_identity_v2_encoded_len,
+    IntegrityIndexDigest, ManifestV2Error, ManifoldIdentityV2, StableEntityId, TypedFieldRecord,
+    BUILTIN_FIELD_KINDS, FIELD_KIND_ELECTROMAGNETIC, FIELD_KIND_SCALAR, FIELD_KIND_SPECTRAL,
+    FIELD_KIND_TENSOR, FIELD_KIND_VECTOR, MANIFOLD_IDENTITY_V2_AXIS_ORDER,
+    MANIFOLD_IDENTITY_V2_FIELD_RECORD_SIZE, MANIFOLD_IDENTITY_V2_HEADER_SIZE,
+    MANIFOLD_IDENTITY_V2_MAGIC, MANIFOLD_IDENTITY_V2_MAX_BYTES, MANIFOLD_IDENTITY_V2_MAX_FIELDS,
+    MANIFOLD_IDENTITY_V2_VERSION,
 };
 pub use material_container::{
     attach_material_section, material_container_counts, read_material_section_into,

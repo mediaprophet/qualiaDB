@@ -1,15 +1,15 @@
-//! Standalone `.10d` v2 manifold identity and typed-field manifest codec.
+//! `.10d` v2 manifold identity and typed-field manifest codec.
 //!
-//! This file defines a versioned section model only. It is deliberately not
-//! registered in `container_10d::mod` and does not claim canonical-container
-//! writer integration. The future outer `.10d` envelope will carry this
-//! section alongside independently versioned mesh, node, topology, and field
-//! payload sections; valid v1 handling remains untouched.
+//! The `MID2` section is integrated with the v2 outer `.10d` section table and
+//! sits beside independently versioned mesh, node, topology, material, and
+//! field payloads. Existing v1 containers remain readable and are never
+//! rewritten unless a caller explicitly opts into the v2 section.
 //!
 //! The identity record keeps three concepts distinct:
 //!
-//! - `StableEntityId` is an opaque continuity handle supplied by the authoring
-//!   or Q42 identity layer. The codec never derives or changes it.
+//! - `StableEntityId` is an opaque continuity handle supplied by a trusted,
+//!   global identity authority. The authority MUST guarantee global uniqueness
+//!   and collision-check issuance; this codec never derives it from content.
 //! - Tensor10D coordinates are explicit identity-bearing address/state under
 //!   the declared profile, domain, and coordinate convention. Their fixed
 //!   order is `[q, v, w, x, y, z, t, α, μ, σ]`, matching `Tensor10D`.
@@ -19,8 +19,10 @@
 //!
 //! Field records are typed references into other sections of the enclosing
 //! container. Built-in field kinds include electromagnetic field (EMF) as one
-//! peer among scalar, vector, tensor, and spectral fields. Extensions are
-//! admitted by an explicit reader allow-list; unknown kinds fail closed.
+//! peer among scalar, vector, tensor, and spectral fields. Extension encoding
+//! and decoding both require an explicit allow-list; unknown kinds fail closed.
+//! The owning field schema validates kind-specific payload semantics after
+//! this envelope layer checks section identity and byte ranges.
 //! Encoding is little-endian, deterministic, caller-buffered, allocation-free,
 //! and requires field records in ascending stable `field_id` order.
 
@@ -53,8 +55,8 @@ pub const BUILTIN_FIELD_KINDS: [u16; 5] = [
     FIELD_KIND_ELECTROMAGNETIC,
 ];
 
-/// Opaque stable continuity identity. Its bytes are supplied by the identity
-/// authority and are never interpreted as a digest by this codec.
+/// Opaque stable continuity identity, globally unique under the trusted
+/// issuing authority's contract. Its bytes are never interpreted as a digest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StableEntityId(pub [u8; 16]);
 
@@ -89,8 +91,8 @@ impl ManifoldIdentityV2 {
     }
 
     /// Compare the declared manifold address/state independently of entity
-    /// continuity or digest. Exact f32 bits are compared so serialization,
-    /// replay, and address matching use the same representation.
+    /// continuity or digest. Coordinates use canonical numeric equality;
+    /// the codec normalizes either signed zero to positive zero.
     pub fn has_same_manifold_address(&self, other: &Self) -> bool {
         self.profile_id == other.profile_id
             && self.domain_id == other.domain_id
@@ -99,7 +101,7 @@ impl ManifoldIdentityV2 {
                 .coordinates
                 .iter()
                 .zip(other.coordinates.iter())
-                .all(|(left, right)| left.to_bits() == right.to_bits())
+                .all(|(left, right)| left == right)
     }
 }
 
@@ -151,6 +153,7 @@ pub enum ManifestV2Error {
     ZeroEntityId,
     ZeroDeclarationId { field: &'static str },
     NonFiniteCoordinate { axis: usize },
+    NonCanonicalCoordinate { axis: usize },
     OutputTooSmall { needed: usize, have: usize },
     InvalidFieldId,
     InvalidFieldKind,
@@ -163,16 +166,25 @@ pub enum ManifestV2Error {
     LengthOverflow,
 }
 
-/// Encode a v2 identity/field manifest into a caller-owned buffer.
-///
-/// Extension kinds may be encoded by an authoring pipeline, but readers must
-/// explicitly allow-list them with `supported_extension_kinds`. Inputs must
-/// already use canonical ascending `field_id` order; sorting is intentionally
-/// not performed because this hot boundary must not allocate or rewrite caller
-/// ownership. Validation and size checks finish before output is modified.
+/// Encode built-in field kinds into a caller-owned buffer. Extension kinds
+/// require the explicit allow-list form so successful writes are readable by
+/// the same registered schema.
 pub fn encode_manifold_identity_v2(
     identity: &ManifoldIdentityV2,
     fields: &[TypedFieldRecord],
+    out: &mut [u8],
+) -> Result<usize, ManifestV2Error> {
+    encode_manifold_identity_v2_with_extensions(identity, fields, &[], out)
+}
+
+/// Encode with an explicit extension-kind allow-list. Inputs must already use
+/// canonical ascending `field_id` order; sorting is intentionally not
+/// performed because this boundary must not allocate or rewrite caller data.
+/// Validation and size checks finish before output is modified.
+pub fn encode_manifold_identity_v2_with_extensions(
+    identity: &ManifoldIdentityV2,
+    fields: &[TypedFieldRecord],
+    supported_extension_kinds: &[u16],
     out: &mut [u8],
 ) -> Result<usize, ManifestV2Error> {
     validate_identity(identity)?;
@@ -183,7 +195,7 @@ pub fn encode_manifold_identity_v2(
             have: out.len(),
         });
     }
-    validate_fields(fields)?;
+    validate_fields(fields, supported_extension_kinds)?;
 
     let mut header = [0u8; MANIFOLD_IDENTITY_V2_HEADER_SIZE];
     header[0..4].copy_from_slice(&MANIFOLD_IDENTITY_V2_MAGIC);
@@ -201,7 +213,11 @@ pub fn encode_manifold_identity_v2(
     put_u64(&mut header, 40, identity.domain_id);
     put_u64(&mut header, 48, identity.coordinate_convention_id);
     for (index, value) in identity.coordinates.iter().enumerate() {
-        put_u32(&mut header, 56 + index * 4, value.to_bits());
+        put_u32(
+            &mut header,
+            56 + index * 4,
+            if *value == 0.0 { 0 } else { value.to_bits() },
+        );
     }
     out[..MANIFOLD_IDENTITY_V2_HEADER_SIZE].copy_from_slice(&header);
 
@@ -273,6 +289,9 @@ pub fn decode_manifold_identity_v2(
     let mut coordinates = [0.0f32; 10];
     for (index, coordinate) in coordinates.iter_mut().enumerate() {
         *coordinate = f32::from_bits(get_u32(bytes, 56 + index * 4));
+        if *coordinate == 0.0 && coordinate.to_bits() != 0 {
+            return Err(ManifestV2Error::NonCanonicalCoordinate { axis: index });
+        }
     }
     let identity = ManifoldIdentityV2 {
         entity_id: StableEntityId(entity_bytes),
@@ -339,7 +358,10 @@ fn validate_identity(identity: &ManifoldIdentityV2) -> Result<(), ManifestV2Erro
     Ok(())
 }
 
-fn validate_fields(fields: &[TypedFieldRecord]) -> Result<(), ManifestV2Error> {
+fn validate_fields(
+    fields: &[TypedFieldRecord],
+    supported_extension_kinds: &[u16],
+) -> Result<(), ManifestV2Error> {
     if fields.len() > MANIFOLD_IDENTITY_V2_MAX_FIELDS {
         return Err(ManifestV2Error::TooManyFields {
             got: fields.len(),
@@ -357,6 +379,9 @@ fn validate_fields(fields: &[TypedFieldRecord]) -> Result<(), ManifestV2Error> {
         previous = field.field_id;
         if field.kind == 0 {
             return Err(ManifestV2Error::InvalidFieldKind);
+        }
+        if !is_known_kind(field.kind, supported_extension_kinds) {
+            return Err(ManifestV2Error::UnsupportedFieldKind(field.kind));
         }
         if field.flags != 0 {
             return Err(ManifestV2Error::InvalidFieldFlags(field.flags));

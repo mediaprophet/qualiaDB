@@ -42,6 +42,8 @@ pub mod camera;
 /// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
 /// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
 pub mod compile_10d;
+/// Attach the opt-in v2 identity manifest to an existing sealed `.10d` container.
+pub mod compile_10d_manifest;
 pub mod contract;
 pub mod control;
 pub mod derivation;

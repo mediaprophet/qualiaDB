@@ -6,8 +6,8 @@
 
 use super::header::Container10dHeader;
 use super::manifold_identity_v2::{
-    decode_manifold_identity_v2, encode_manifold_identity_v2, ManifestV2Error, ManifoldIdentityV2,
-    TypedFieldRecord,
+    decode_manifold_identity_v2, encode_manifold_identity_v2_with_extensions, ManifestV2Error,
+    ManifoldIdentityV2, TypedFieldRecord,
 };
 use super::section::{
     encode_container, parse_section_table, AlignmentTier, SectionDescriptor, SectionInput,
@@ -19,6 +19,7 @@ pub enum ManifoldContainerError {
     Manifest(ManifestV2Error),
     Sections(SectionTableError),
     MissingIdentityManifest,
+    HeaderMismatch,
     ScratchCapacity {
         needed: usize,
         capacity: usize,
@@ -60,6 +61,29 @@ pub fn encode_container_with_manifold_identity<'a>(
     section_scratch: &mut [SectionInput<'a>],
     out: &mut [u8],
 ) -> Result<usize, ManifoldContainerError> {
+    encode_container_with_manifold_identity_extensions(
+        header,
+        other_sections,
+        identity,
+        fields,
+        &[],
+        manifest_scratch,
+        section_scratch,
+        out,
+    )
+}
+
+/// Encode the manifest with explicitly registered extension kinds.
+pub fn encode_container_with_manifold_identity_extensions<'a>(
+    header: &Container10dHeader,
+    other_sections: &[SectionInput<'a>],
+    identity: &ManifoldIdentityV2,
+    fields: &[TypedFieldRecord],
+    supported_extension_kinds: &[u16],
+    manifest_scratch: &'a mut [u8],
+    section_scratch: &mut [SectionInput<'a>],
+    out: &mut [u8],
+) -> Result<usize, ManifoldContainerError> {
     if other_sections
         .iter()
         .any(|section| section.section_type == SectionType::ManifoldIdentityV2)
@@ -84,7 +108,12 @@ pub fn encode_container_with_manifold_identity<'a>(
             capacity: section_scratch.len(),
         });
     }
-    let manifest_len = encode_manifold_identity_v2(identity, fields, manifest_scratch)?;
+    let manifest_len = encode_manifold_identity_v2_with_extensions(
+        identity,
+        fields,
+        supported_extension_kinds,
+        manifest_scratch,
+    )?;
     validate_input_ranges(fields, other_sections)?;
     section_scratch[..other_sections.len()].copy_from_slice(other_sections);
     section_scratch[other_sections.len()] = SectionInput {
@@ -112,7 +141,12 @@ pub fn decode_container_manifold_identity(
     field_scratch: &mut [TypedFieldRecord],
     out_fields: &mut [TypedFieldRecord],
 ) -> Result<(ManifoldIdentityV2, usize), ManifoldContainerError> {
-    let descriptors = parse_section_table(data, header)?;
+    let parsed_header =
+        Container10dHeader::parse(data).map_err(|_| ManifoldContainerError::HeaderMismatch)?;
+    if &parsed_header != header {
+        return Err(ManifoldContainerError::HeaderMismatch);
+    }
+    let descriptors = parse_section_table(data, &parsed_header)?;
     let descriptor = descriptors
         .iter()
         .find(|item| item.typ() == Some(SectionType::ManifoldIdentityV2))
@@ -275,6 +309,17 @@ mod tests {
         assert_eq!(decoded, identity());
         assert_eq!(count, 1);
         assert_eq!(out_fields[0], fields[0]);
+
+        assert_eq!(
+            decode_container_manifold_identity(
+                &bytes[..used],
+                &Container10dHeader::legacy_v1(),
+                &[],
+                &mut field_scratch,
+                &mut out_fields,
+            ),
+            Err(ManifoldContainerError::HeaderMismatch)
+        );
     }
 
     #[test]

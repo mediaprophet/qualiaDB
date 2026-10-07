@@ -118,7 +118,19 @@ fn emf_is_one_typed_field_and_registered_extensions_are_supported() {
         },
     ];
     let mut bytes = [0u8; MANIFOLD_IDENTITY_V2_MAX_BYTES];
-    let written = encode_manifold_identity_v2(&identity, &fields, &mut bytes).unwrap();
+    assert_eq!(
+        encode_manifold_identity_v2(&identity, &fields, &mut bytes),
+        Err(ManifestV2Error::UnsupportedFieldKind(
+            FIELD_KIND_CUSTOM_SPECTRAL
+        ))
+    );
+    let written = encode_manifold_identity_v2_with_extensions(
+        &identity,
+        &fields,
+        &[FIELD_KIND_CUSTOM_SPECTRAL],
+        &mut bytes,
+    )
+    .unwrap();
     let mut decoded = [TypedFieldRecord::default(); 2];
     assert_eq!(
         decode_manifold_identity_v2(&bytes[..written], &[], &mut decoded),
@@ -191,4 +203,26 @@ fn bounds_and_invalid_input_do_not_modify_output() {
         Err(ManifestV2Error::NonFiniteCoordinate { axis: 8 })
     );
     assert!(output.iter().all(|byte| *byte == 0x5A));
+}
+
+#[test]
+fn signed_zero_has_one_canonical_address_encoding() {
+    let mut identity = sample_identity();
+    identity.coordinates[4] = -0.0;
+    let mut bytes = [0u8; MANIFOLD_IDENTITY_V2_MAX_BYTES];
+    let written = encode_manifold_identity_v2(&identity, &[], &mut bytes).unwrap();
+    assert_eq!(&bytes[56 + 4 * 4..56 + 5 * 4], &0u32.to_le_bytes());
+
+    let mut decoded_fields = [];
+    let (decoded, _) =
+        decode_manifold_identity_v2(&bytes[..written], &[], &mut decoded_fields).unwrap();
+    assert_eq!(decoded.coordinates[4].to_bits(), 0);
+    assert!(identity.has_same_manifold_address(&decoded));
+
+    let mut noncanonical = bytes;
+    noncanonical[56 + 4 * 4..56 + 5 * 4].copy_from_slice(&(-0.0f32).to_bits().to_le_bytes());
+    assert_eq!(
+        decode_manifold_identity_v2(&noncanonical[..written], &[], &mut decoded_fields),
+        Err(ManifestV2Error::NonCanonicalCoordinate { axis: 4 })
+    );
 }
