@@ -127,6 +127,8 @@ pub mod telemetry;
 pub mod texture_decode;
 /// Allocation-free KTX2 container metadata and level-range parser (native + WASM).
 pub mod texture_ktx2;
+/// Allocation-free decoder for uncompressed single-face RGBA8 KTX2 base levels.
+pub mod texture_ktx2_rgba8;
 /// Deterministic caller-buffered texture mip residency planning and budget admission.
 pub mod texture_stream_policy;
 

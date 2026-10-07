@@ -40,6 +40,8 @@ pub enum TextureDecodeError {
     OutputBufferTooSmall,
     ScratchBufferTooSmall,
     UnsupportedMime,
+    UnsupportedImageFormat,
+    UnsupportedSupercompression,
 }
 
 impl std::fmt::Display for TextureDecodeError {
@@ -54,8 +56,9 @@ impl std::error::Error for TextureDecodeError {}
 ///
 /// `output` and `scratch` are caller-owned. The function never grows either buffer, and fails
 /// before decoding when encoded, dimension, decoded-byte, or caller-buffer limits are exceeded.
-/// PNG and JPEG are supported on native and WASM. KTX2/Basis and WebP remain preserved source
-/// resources; they require the later GPU-format transcode integration.
+/// PNG and JPEG are supported on native and WASM. KTX2 supports only uncompressed 2D RGBA8
+/// UNORM/SRGB base levels. Basis, Zstd/ZLIB supercompression, other KTX2 formats, and WebP remain
+/// preserved source resources pending bounded decode/transcode support.
 pub fn decode_hmc_texture_rgba8_into(
     resource: &HmcTextureResource<'_>,
     limits: TextureDecodeLimits,
@@ -65,10 +68,16 @@ pub fn decode_hmc_texture_rgba8_into(
     if resource.bytes.len() > limits.max_encoded_bytes {
         return Err(TextureDecodeError::EncodedInputTooLarge);
     }
-    match resource.mime_type {
-        "image/png" => decode_png_rgba8(resource.bytes, limits, output, scratch),
-        "image/jpeg" | "image/jpg" => decode_jpeg_rgba8(resource.bytes, limits, output),
-        _ => Err(TextureDecodeError::UnsupportedMime),
+    if mime_matches(resource.mime_type, "image/png") {
+        decode_png_rgba8(resource.bytes, limits, output, scratch)
+    } else if mime_matches(resource.mime_type, "image/jpeg")
+        || mime_matches(resource.mime_type, "image/jpg")
+    {
+        decode_jpeg_rgba8(resource.bytes, limits, output)
+    } else if mime_matches(resource.mime_type, "image/ktx2") {
+        decode_ktx2_rgba8(resource.bytes, limits, output)
+    } else {
+        Err(TextureDecodeError::UnsupportedMime)
     }
 }
 
@@ -96,52 +105,129 @@ pub fn inspect_hmc_texture_requirements(
     if resource.bytes.len() > limits.max_encoded_bytes {
         return Err(TextureDecodeError::EncodedInputTooLarge);
     }
-    match resource.mime_type {
-        "image/png" => {
-            let mut decoder = png::Decoder::new_with_limits(
-                resource.bytes,
-                png::Limits {
-                    bytes: limits.max_decoded_bytes,
-                },
-            );
-            decoder.set_transformations(png::Transformations::normalize_to_color8());
-            let reader = decoder.read_info().map_err(map_png_error)?;
-            let width = reader.info().width;
-            let height = reader.info().height;
-            let rgba8_bytes = required_rgba_bytes(width, height, limits, usize::MAX)?;
-            let scratch_len = reader.output_buffer_size();
-            if scratch_len > limits.max_decoded_bytes {
-                return Err(TextureDecodeError::DecodedImageExceedsLimit);
-            }
-            Ok((
-                DecodedTextureInfo {
-                    width,
-                    height,
-                    rgba8_bytes,
-                },
-                scratch_len,
-            ))
+    if mime_matches(resource.mime_type, "image/png") {
+        let mut decoder = png::Decoder::new_with_limits(
+            resource.bytes,
+            png::Limits {
+                bytes: limits.max_decoded_bytes,
+            },
+        );
+        decoder.set_transformations(png::Transformations::normalize_to_color8());
+        let reader = decoder.read_info().map_err(map_png_error)?;
+        let width = reader.info().width;
+        let height = reader.info().height;
+        let rgba8_bytes = required_rgba_bytes(width, height, limits, usize::MAX)?;
+        let scratch_len = reader.output_buffer_size();
+        if scratch_len > limits.max_decoded_bytes {
+            return Err(TextureDecodeError::DecodedImageExceedsLimit);
         }
-        "image/jpeg" | "image/jpg" => {
-            let mut decoder = jpeg_decoder::Decoder::new(resource.bytes);
-            decoder.set_max_decoding_buffer_size(limits.max_decoded_bytes);
-            decoder
-                .read_info()
-                .map_err(|_| TextureDecodeError::InvalidImage)?;
-            let dimensions = decoder.info().ok_or(TextureDecodeError::InvalidImage)?;
-            let width = u32::from(dimensions.width);
-            let height = u32::from(dimensions.height);
-            let rgba8_bytes = required_rgba_bytes(width, height, limits, usize::MAX)?;
-            Ok((
-                DecodedTextureInfo {
-                    width,
-                    height,
-                    rgba8_bytes,
-                },
-                0,
-            ))
+        Ok((
+            DecodedTextureInfo {
+                width,
+                height,
+                rgba8_bytes,
+            },
+            scratch_len,
+        ))
+    } else if mime_matches(resource.mime_type, "image/jpeg")
+        || mime_matches(resource.mime_type, "image/jpg")
+    {
+        let mut decoder = jpeg_decoder::Decoder::new(resource.bytes);
+        decoder.set_max_decoding_buffer_size(limits.max_decoded_bytes);
+        decoder
+            .read_info()
+            .map_err(|_| TextureDecodeError::InvalidImage)?;
+        let dimensions = decoder.info().ok_or(TextureDecodeError::InvalidImage)?;
+        let width = u32::from(dimensions.width);
+        let height = u32::from(dimensions.height);
+        let rgba8_bytes = required_rgba_bytes(width, height, limits, usize::MAX)?;
+        Ok((
+            DecodedTextureInfo {
+                width,
+                height,
+                rgba8_bytes,
+            },
+            0,
+        ))
+    } else if mime_matches(resource.mime_type, "image/ktx2") {
+        inspect_ktx2_rgba8(resource.bytes, limits)
+    } else {
+        Err(TextureDecodeError::UnsupportedMime)
+    }
+}
+
+fn mime_matches(actual: &str, expected: &str) -> bool {
+    actual
+        .split(';')
+        .next()
+        .map(str::trim)
+        .is_some_and(|mime| mime.eq_ignore_ascii_case(expected))
+}
+
+fn inspect_ktx2_rgba8(
+    bytes: &[u8],
+    limits: TextureDecodeLimits,
+) -> Result<(DecodedTextureInfo, usize), TextureDecodeError> {
+    use super::texture_ktx2::Ktx2Document;
+    use super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level;
+
+    let document = Ktx2Document::parse(bytes).map_err(|_| TextureDecodeError::InvalidImage)?;
+    let image = inspect_ktx2_rgba8_base_level(&document).map_err(map_ktx2_rgba8_error)?;
+    let rgba8_bytes = required_rgba_bytes(image.width, image.height, limits, usize::MAX)?;
+    if rgba8_bytes != image.byte_len {
+        return Err(TextureDecodeError::InvalidImage);
+    }
+    Ok((
+        DecodedTextureInfo {
+            width: image.width,
+            height: image.height,
+            rgba8_bytes,
+        },
+        0,
+    ))
+}
+
+fn decode_ktx2_rgba8(
+    bytes: &[u8],
+    limits: TextureDecodeLimits,
+    output: &mut [u8],
+) -> Result<DecodedTextureInfo, TextureDecodeError> {
+    use super::texture_ktx2::Ktx2Document;
+    use super::texture_ktx2_rgba8::{decode_ktx2_rgba8_base_level, Rgba8Ktx2Error};
+
+    let document = Ktx2Document::parse(bytes).map_err(|_| TextureDecodeError::InvalidImage)?;
+    let image = super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level(&document)
+        .map_err(map_ktx2_rgba8_error)?;
+    let rgba8_bytes = required_rgba_bytes(image.width, image.height, limits, output.len())?;
+    decode_ktx2_rgba8_base_level(&document, &mut output[..rgba8_bytes]).map_err(
+        |error| match error {
+            Rgba8Ktx2Error::OutputTooSmall => TextureDecodeError::OutputBufferTooSmall,
+            other => map_ktx2_rgba8_error(other),
+        },
+    )?;
+    Ok(DecodedTextureInfo {
+        width: image.width,
+        height: image.height,
+        rgba8_bytes,
+    })
+}
+
+fn map_ktx2_rgba8_error(error: super::texture_ktx2_rgba8::Rgba8Ktx2Error) -> TextureDecodeError {
+    use super::texture_ktx2_rgba8::Rgba8Ktx2Error;
+    match error {
+        Rgba8Ktx2Error::UnsupportedFormat | Rgba8Ktx2Error::UnsupportedTypeSize => {
+            TextureDecodeError::UnsupportedImageFormat
         }
-        _ => Err(TextureDecodeError::UnsupportedMime),
+        Rgba8Ktx2Error::UnsupportedSupercompression => {
+            TextureDecodeError::UnsupportedSupercompression
+        }
+        Rgba8Ktx2Error::OutputTooSmall => TextureDecodeError::OutputBufferTooSmall,
+        Rgba8Ktx2Error::InvalidDimensions => TextureDecodeError::DecodedImageExceedsLimit,
+        Rgba8Ktx2Error::UnsupportedDimensions
+        | Rgba8Ktx2Error::UnsupportedArray
+        | Rgba8Ktx2Error::UnsupportedFaceCount
+        | Rgba8Ktx2Error::MissingBaseLevel
+        | Rgba8Ktx2Error::InvalidBaseLevelLength => TextureDecodeError::InvalidImage,
     }
 }
 
@@ -305,94 +391,5 @@ fn decode_jpeg_rgba8(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn png_fixture() -> Vec<u8> {
-        let mut bytes = Vec::new();
-        {
-            let mut encoder = png::Encoder::new(&mut bytes, 2, 1);
-            encoder.set_color(png::ColorType::Rgba);
-            encoder.set_depth(png::BitDepth::Eight);
-            let mut writer = encoder.write_header().unwrap();
-            writer
-                .write_image_data(&[10, 20, 30, 40, 50, 60, 70, 80])
-                .unwrap();
-        }
-        bytes
-    }
-
-    fn resource<'a>(bytes: &'a [u8], mime_type: &'a str) -> HmcTextureResource<'a> {
-        HmcTextureResource {
-            digest: [0; 32],
-            mime_type,
-            bytes,
-        }
-    }
-
-    #[test]
-    fn png_decodes_to_caller_buffer_and_preserves_alpha() {
-        let bytes = png_fixture();
-        let image = resource(&bytes, "image/png");
-        let requirements =
-            inspect_hmc_texture_requirements(&image, TextureDecodeLimits::default()).unwrap();
-        assert_eq!(requirements.0.width, 2);
-        assert_eq!(requirements.0.height, 1);
-        assert_eq!(requirements.0.rgba8_bytes, 8);
-        let mut output = [0; 8];
-        let mut scratch = [0; 32];
-        let info = decode_hmc_texture_rgba8_into(
-            &image,
-            TextureDecodeLimits::default(),
-            &mut output,
-            &mut scratch,
-        )
-        .unwrap();
-        assert_eq!((info.width, info.height), (2, 1));
-        assert_eq!(requirements.0, info);
-        assert_eq!(&output, &[10, 20, 30, 40, 50, 60, 70, 80]);
-    }
-
-    #[test]
-    fn png_decode_fails_before_writing_when_output_or_limits_are_small() {
-        let bytes = png_fixture();
-        let image = resource(&bytes, "image/png");
-        let mut output = [0; 7];
-        let mut scratch = [0; 32];
-        assert_eq!(
-            decode_hmc_texture_rgba8_into(
-                &image,
-                TextureDecodeLimits::default(),
-                &mut output,
-                &mut scratch,
-            ),
-            Err(TextureDecodeError::OutputBufferTooSmall)
-        );
-        let limits = TextureDecodeLimits {
-            max_decoded_bytes: 7,
-            ..TextureDecodeLimits::default()
-        };
-        assert_eq!(
-            decode_hmc_texture_rgba8_into(&image, limits, &mut [0; 8], &mut [0; 32]),
-            Err(TextureDecodeError::DecodedImageExceedsLimit)
-        );
-        assert_eq!(
-            decode_hmc_texture_rgba8(&image, limits),
-            Err(TextureDecodeError::DecodedImageExceedsLimit)
-        );
-    }
-
-    #[test]
-    fn compressed_texture_mime_is_preserved_but_not_claimed_as_decoded() {
-        let image = resource(&[1, 2, 3], "image/ktx2");
-        assert_eq!(
-            decode_hmc_texture_rgba8_into(
-                &image,
-                TextureDecodeLimits::default(),
-                &mut [0; 16],
-                &mut [0; 16],
-            ),
-            Err(TextureDecodeError::UnsupportedMime)
-        );
-    }
-}
+#[path = "texture_decode_tests.rs"]
+mod tests;

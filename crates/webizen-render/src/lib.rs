@@ -20,6 +20,8 @@ pub mod shaders;
 pub mod telemetry;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub mod volumetric;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+mod volumetric_texture;
 pub mod wgpu_renderer;
 pub mod zero_copy_views;
 
