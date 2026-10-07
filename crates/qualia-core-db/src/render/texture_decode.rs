@@ -79,14 +79,17 @@ pub fn decode_hmc_texture_rgba8(
     resource: &HmcTextureResource<'_>,
     limits: TextureDecodeLimits,
 ) -> Result<(Vec<u8>, DecodedTextureInfo), TextureDecodeError> {
-    let (info, scratch_len) = inspect_decode_requirements(resource, limits)?;
+    let (info, scratch_len) = inspect_hmc_texture_requirements(resource, limits)?;
     let mut output = vec![0; info.rgba8_bytes];
     let mut scratch = vec![0; scratch_len];
     let decoded = decode_hmc_texture_rgba8_into(resource, limits, &mut output, &mut scratch)?;
     Ok((output, decoded))
 }
 
-fn inspect_decode_requirements(
+/// Validate codec metadata and report exact RGBA8 output and decoder scratch requirements without
+/// allocating or decoding the image. Asset admission can use this to plan texture residency
+/// before materializing pixel buffers.
+pub fn inspect_hmc_texture_requirements(
     resource: &HmcTextureResource<'_>,
     limits: TextureDecodeLimits,
 ) -> Result<(DecodedTextureInfo, usize), TextureDecodeError> {
@@ -331,6 +334,11 @@ mod tests {
     fn png_decodes_to_caller_buffer_and_preserves_alpha() {
         let bytes = png_fixture();
         let image = resource(&bytes, "image/png");
+        let requirements =
+            inspect_hmc_texture_requirements(&image, TextureDecodeLimits::default()).unwrap();
+        assert_eq!(requirements.0.width, 2);
+        assert_eq!(requirements.0.height, 1);
+        assert_eq!(requirements.0.rgba8_bytes, 8);
         let mut output = [0; 8];
         let mut scratch = [0; 32];
         let info = decode_hmc_texture_rgba8_into(
@@ -341,6 +349,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!((info.width, info.height), (2, 1));
+        assert_eq!(requirements.0, info);
         assert_eq!(&output, &[10, 20, 30, 40, 50, 60, 70, 80]);
     }
 

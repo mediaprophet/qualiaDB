@@ -8,6 +8,10 @@ use crate::scene_contract::{RenderScene, ScenePoint};
 use qualia_core_db::render::gpu::PortalGpu;
 use qualia_core_db::render::gpu::{TextureColorSpace, TextureMipSemantic};
 use qualia_core_db::render::telemetry::SystemTelemetry as CoreTelemetry;
+use qualia_core_db::render::texture_stream_policy::{
+    plan_texture_residency_partial, TextureStreamAction, TextureStreamActionKind,
+    TextureStreamBudget, TextureStreamDemand,
+};
 use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
 use qualia_core_db::tensor::Tensor10D;
 
@@ -17,10 +21,135 @@ struct TextureUse {
     mip_semantic: TextureMipSemantic,
 }
 
+#[derive(Clone, Copy)]
+struct HmcTexturePlanEntry {
+    semantic_id: u64,
+    digest: [u8; 32],
+    texture_use: TextureUse,
+    width: u32,
+    height: u32,
+}
+
+/// Result of best-effort HMC texture admission. Missing or budget-deferred interpretations bind
+/// the renderer's typed fallback texture; they do not prevent the `.10d` mesh from loading.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct HmcTextureAdmissionReport {
+    pub requested_interpretations: usize,
+    pub resident_interpretations: usize,
+    pub deferred_interpretations: usize,
+    pub admitted_mips: usize,
+    pub deferred_mips: usize,
+    pub admitted_upload_bytes: u64,
+    pub deferred_upload_bytes: u64,
+}
+
 /// Cross-platform volumetric renderer SDK. Native instances render offscreen on the same physical
 /// wgpu device as QualiaDB inference and expose caller-buffered RGBA8 readback.
 pub struct VolumetricRenderer {
     inner: PortalGpu,
+}
+
+fn coarse_texture_level(
+    source: &[u8],
+    source_width: u32,
+    source_height: u32,
+    first_mip: u8,
+    semantic: TextureMipSemantic,
+) -> Result<(Vec<u8>, u32, u32), String> {
+    use qualia_core_db::render::cpu_texture_mips::{
+        downsample_rgba8_level_into, CpuTextureMipSemantic,
+    };
+
+    let cpu_semantic = match semantic {
+        TextureMipSemantic::Color => CpuTextureMipSemantic::Color,
+        TextureMipSemantic::LinearData => CpuTextureMipSemantic::LinearData,
+        TextureMipSemantic::Normal => CpuTextureMipSemantic::Normal,
+        TextureMipSemantic::AlphaMask { .. } => {
+            return Err(
+                "coarse alpha-mask mip requires coverage-correcting CPU support".to_string(),
+            )
+        }
+    };
+    let mut width = source_width;
+    let mut height = source_height;
+    for _ in 0..first_mip {
+        width = (width / 2).max(1);
+        height = (height / 2).max(1);
+    }
+    let coarse_bytes = (width as usize)
+        .checked_mul(height as usize)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| "coarse texture size overflow".to_string())?;
+    let first_width = (source_width / 2).max(1);
+    let first_height = (source_height / 2).max(1);
+    let first_bytes = (first_width as usize)
+        .checked_mul(first_height as usize)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| "coarse texture scratch size overflow".to_string())?;
+    let mut level_a = Vec::new();
+    let mut level_b = Vec::new();
+    level_a
+        .try_reserve_exact(first_bytes)
+        .map_err(|_| "coarse texture scratch allocation failed".to_string())?;
+    level_b
+        .try_reserve_exact(first_bytes)
+        .map_err(|_| "coarse texture scratch allocation failed".to_string())?;
+    level_a.resize(first_bytes, 0);
+    level_b.resize(first_bytes, 0);
+
+    let mut previous_width = source_width;
+    let mut previous_height = source_height;
+    for level in 0..first_mip {
+        let next_width = (previous_width / 2).max(1);
+        let next_height = (previous_height / 2).max(1);
+        let result = if level == 0 {
+            downsample_rgba8_level_into(
+                source,
+                previous_width,
+                previous_height,
+                cpu_semantic,
+                &mut level_a,
+            )
+        } else if level % 2 == 1 {
+            let previous_bytes = (previous_width as usize)
+                .checked_mul(previous_height as usize)
+                .and_then(|pixels| pixels.checked_mul(4))
+                .ok_or_else(|| "coarse texture level size overflow".to_string())?;
+            downsample_rgba8_level_into(
+                &level_a[..previous_bytes],
+                previous_width,
+                previous_height,
+                cpu_semantic,
+                &mut level_b,
+            )
+        } else {
+            let previous_bytes = (previous_width as usize)
+                .checked_mul(previous_height as usize)
+                .and_then(|pixels| pixels.checked_mul(4))
+                .ok_or_else(|| "coarse texture level size overflow".to_string())?;
+            downsample_rgba8_level_into(
+                &level_b[..previous_bytes],
+                previous_width,
+                previous_height,
+                cpu_semantic,
+                &mut level_a,
+            )
+        }
+        .map_err(|error| format!("coarse texture reduction: {error:?}"))?;
+        if result != (next_width, next_height) {
+            return Err("coarse texture reducer returned inconsistent dimensions".to_string());
+        }
+        previous_width = next_width;
+        previous_height = next_height;
+    }
+    let coarse = if first_mip % 2 == 1 {
+        level_a.truncate(coarse_bytes);
+        level_a
+    } else {
+        level_b.truncate(coarse_bytes);
+        level_b
+    };
+    Ok((coarse, width, height))
 }
 
 impl VolumetricRenderer {
@@ -58,6 +187,31 @@ impl VolumetricRenderer {
         hmc_bytes: &[u8],
         asset_key: &str,
     ) -> Result<(u32, u32, f32), String> {
+        let (loaded, _) = self.load_hmc_asset_with_texture_budget(
+            hmc_bytes,
+            asset_key,
+            TextureStreamBudget {
+                max_resident_bytes: u64::MAX,
+                max_upload_bytes: u64::MAX,
+            },
+        )?;
+        Ok(loaded)
+    }
+
+    /// Load an HMC `.10d` asset while admitting only the highest-priority coarse-to-fine texture
+    /// mip prefix that fits the supplied per-load budgets. A texture admitted at mip `m` is
+    /// physically allocated from that mip's dimensions, with its remaining coarser chain generated
+    /// on the GPU. Deferred interpretations use typed fallback maps for this scene load.
+    ///
+    /// These budgets govern incremental HMC residency; they are separate from the 42 MiB semantic
+    /// Sentinel and from graphics reservations owned by earlier scene loads. This API does not
+    /// evict or refine textures already bound into existing material groups.
+    pub fn load_hmc_asset_with_texture_budget(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+        budget: TextureStreamBudget,
+    ) -> Result<((u32, u32, f32), HmcTextureAdmissionReport), String> {
         use std::collections::{BTreeMap, BTreeSet};
 
         let bundle = qualia_core_db::bundle::BundleReader::parse(hmc_bytes)
@@ -197,40 +351,205 @@ impl VolumetricRenderer {
             }
         }
 
+        let mut plan_entries = Vec::new();
+        let mut demands = Vec::new();
+        let mut next_semantic_id = 1u64;
+        let mut report = HmcTextureAdmissionReport::default();
+        for (digest, uses) in &texture_uses {
+            let resource = qualia_core_db::render::asset_package::resolve_hmc_texture_resource(
+                &bundle, digest,
+            )
+            .map_err(|error| format!("HMC texture resolution: {error}"))?;
+            let (info, _) =
+                qualia_core_db::render::texture_decode::inspect_hmc_texture_requirements(
+                    &resource,
+                    qualia_core_db::render::texture_decode::TextureDecodeLimits::default(),
+                )
+                .map_err(|error| format!("HMC texture preflight: {error}"))?;
+            let max_dimension = info.width.max(info.height);
+            let mip_count = (u32::BITS - max_dimension.leading_zeros()) as u8;
+            for texture_use in uses {
+                report.requested_interpretations += 1;
+                if self
+                    .inner
+                    .resident_texture_binding_with_mips(
+                        digest,
+                        texture_use.color_space,
+                        texture_use.mip_semantic,
+                    )
+                    .is_some()
+                {
+                    report.resident_interpretations += 1;
+                    continue;
+                }
+                let semantic_id = next_semantic_id;
+                next_semantic_id = next_semantic_id
+                    .checked_add(1)
+                    .ok_or_else(|| "HMC texture request count overflow".to_string())?;
+                let importance = match texture_use.mip_semantic {
+                    TextureMipSemantic::AlphaMask { .. } => u16::MAX,
+                    TextureMipSemantic::Color => 500,
+                    TextureMipSemantic::Normal => 400,
+                    TextureMipSemantic::LinearData => 300,
+                };
+                demands.push(TextureStreamDemand {
+                    semantic_id,
+                    width: info.width,
+                    height: info.height,
+                    mip_count,
+                    block_width: 1,
+                    block_height: 1,
+                    bytes_per_block: 4,
+                    desired_finest_mip: 0,
+                    resident_finest_mip: None,
+                    resident_bytes: 0,
+                    requested: true,
+                    pinned: false,
+                    visible: true,
+                    importance,
+                    distance_key: 0,
+                    last_used_frame: 0,
+                });
+                plan_entries.push(HmcTexturePlanEntry {
+                    semantic_id,
+                    digest: *digest,
+                    texture_use: *texture_use,
+                    width: info.width,
+                    height: info.height,
+                });
+            }
+        }
+
+        let action_capacity = demands.iter().try_fold(0usize, |total, demand| {
+            total
+                .checked_add(demand.mip_count as usize)
+                .ok_or_else(|| "HMC texture action count overflow".to_string())
+        })?;
+        let mut actions = Vec::new();
+        actions
+            .try_reserve_exact(action_capacity)
+            .map_err(|_| "HMC texture plan workspace allocation failed".to_string())?;
+        actions.resize(
+            action_capacity,
+            TextureStreamAction {
+                semantic_id: 0,
+                kind: TextureStreamActionKind::RequestMip,
+                mip_level: 0,
+                bytes: 0,
+            },
+        );
+        let plan = plan_texture_residency_partial(&demands, budget, &mut actions)
+            .map_err(|error| format!("HMC texture budget plan: {error:?}"))?;
+        report.admitted_mips = plan.admitted_mip_count;
+        report.deferred_mips = plan.deferred_mip_count;
+        report.admitted_upload_bytes = plan.admitted_upload_bytes;
+        report.deferred_upload_bytes = plan.deferred_upload_bytes;
+        let actions = &actions[..plan.action_count];
+
         let mut newly_resident = Vec::new();
         let upload_result = (|| -> Result<(), String> {
-            for (digest, uses) in texture_uses {
+            for digest in texture_uses.keys() {
+                let mut selected = Vec::new();
+                for entry in plan_entries.iter().filter(|entry| entry.digest == *digest) {
+                    let mut first_mip = None;
+                    let mut mip_bytes = 0u64;
+                    let mut mip_count = 0usize;
+                    for action in actions.iter().filter(|action| {
+                        action.semantic_id == entry.semantic_id
+                            && action.kind == TextureStreamActionKind::RequestMip
+                    }) {
+                        first_mip = Some(first_mip.map_or(action.mip_level, |current: u8| {
+                            current.min(action.mip_level)
+                        }));
+                        mip_bytes = mip_bytes.saturating_add(action.bytes);
+                        mip_count += 1;
+                    }
+                    if let Some(first_mip) = first_mip {
+                        selected.push((*entry, first_mip, mip_bytes, mip_count));
+                    } else {
+                        report.deferred_interpretations += 1;
+                    }
+                }
+                if selected.is_empty() {
+                    continue;
+                }
                 let resource = qualia_core_db::render::asset_package::resolve_hmc_texture_resource(
-                    &bundle, &digest,
+                    &bundle, digest,
                 )
                 .map_err(|error| format!("HMC texture resolution: {error}"))?;
-                let (rgba8, info) =
-                    qualia_core_db::render::texture_decode::decode_hmc_texture_rgba8(
-                        &resource,
-                        qualia_core_db::render::texture_decode::TextureDecodeLimits::default(),
-                    )
-                    .map_err(|error| format!("HMC texture decode: {error}"))?;
-                for texture_use in uses {
-                    let was_resident = self
-                        .inner
-                        .resident_texture_binding_with_mips(
-                            &digest,
-                            texture_use.color_space,
-                            texture_use.mip_semantic,
-                        )
-                        .is_some();
-                    self.inner
-                        .upload_resident_texture_rgba8_with_mips(
-                            digest,
-                            texture_use.color_space,
-                            texture_use.mip_semantic,
-                            info.width,
-                            info.height,
+                let (rgba8, _) = qualia_core_db::render::texture_decode::decode_hmc_texture_rgba8(
+                    &resource,
+                    qualia_core_db::render::texture_decode::TextureDecodeLimits::default(),
+                )
+                .map_err(|error| format!("HMC texture decode: {error}"))?;
+                for (entry, first_mip, mip_bytes, mip_count) in selected {
+                    // Coverage-preserving alpha mips are currently generated from the authored
+                    // full-resolution mask. Defer a coarse-only alpha request until a
+                    // caller-buffered coverage-correcting CPU reducer is available.
+                    if matches!(
+                        entry.texture_use.mip_semantic,
+                        TextureMipSemantic::AlphaMask { .. }
+                    ) && first_mip != 0
+                    {
+                        report.admitted_mips = report.admitted_mips.saturating_sub(mip_count);
+                        report.deferred_mips += mip_count;
+                        report.admitted_upload_bytes =
+                            report.admitted_upload_bytes.saturating_sub(mip_bytes);
+                        report.deferred_upload_bytes =
+                            report.deferred_upload_bytes.saturating_add(mip_bytes);
+                        report.deferred_interpretations += 1;
+                        continue;
+                    }
+                    let upload = if first_mip == 0 {
+                        self.inner.upload_resident_texture_rgba8_with_mips(
+                            entry.digest,
+                            entry.texture_use.color_space,
+                            entry.texture_use.mip_semantic,
+                            entry.width,
+                            entry.height,
                             &rgba8,
                         )
-                        .map_err(|error| format!("HMC texture upload: {error}"))?;
-                    if !was_resident {
-                        newly_resident.push((digest, texture_use));
+                    } else {
+                        let (coarse, coarse_width, coarse_height) = coarse_texture_level(
+                            &rgba8,
+                            entry.width,
+                            entry.height,
+                            first_mip,
+                            entry.texture_use.mip_semantic,
+                        )?;
+                        if coarse_width == 0 || coarse_height == 0 {
+                            return Err("HMC coarse texture dimensions are invalid".to_string());
+                        }
+                        self.inner
+                            .upload_resident_texture_rgba8_at_mip_with_mips(
+                                entry.digest,
+                                entry.texture_use.color_space,
+                                entry.texture_use.mip_semantic,
+                                entry.width,
+                                entry.height,
+                                u32::from(first_mip),
+                                &coarse,
+                            )
+                            .map(|_| ())
+                    };
+                    match upload {
+                        Ok(_) => {
+                            newly_resident.push((entry.digest, entry.texture_use));
+                            report.resident_interpretations += 1;
+                        }
+                        Err(qualia_core_db::render::gpu::TextureUploadError::GpuBudgetRefused)
+                        | Err(
+                            qualia_core_db::render::gpu::TextureUploadError::UploadBudgetRefused,
+                        ) => {
+                            report.admitted_mips = report.admitted_mips.saturating_sub(mip_count);
+                            report.deferred_mips += mip_count;
+                            report.admitted_upload_bytes =
+                                report.admitted_upload_bytes.saturating_sub(mip_bytes);
+                            report.deferred_upload_bytes =
+                                report.deferred_upload_bytes.saturating_add(mip_bytes);
+                            report.deferred_interpretations += 1;
+                        }
+                        Err(error) => return Err(format!("HMC texture upload: {error}")),
                     }
                 }
             }
@@ -247,7 +566,7 @@ impl VolumetricRenderer {
             return Err(error);
         }
         match self.load_10d_asset(asset_bytes) {
-            Ok(result) => Ok(result),
+            Ok(result) => Ok((result, report)),
             Err(error) => {
                 for (digest, texture_use) in newly_resident {
                     self.inner.evict_resident_texture_with_mips(
@@ -841,174 +1160,5 @@ fn core_telemetry(value: &crate::telemetry::SystemTelemetry) -> CoreTelemetry {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::scene_contract::{SceneEdge, SceneFace};
-
-    #[test]
-    fn scene_mesh_preserves_css_color_and_alpha() {
-        let mut scene = RenderScene::new();
-        scene.add_face(SceneFace {
-            vertices: vec![
-                ScenePoint {
-                    x: 0.1,
-                    y: 0.1,
-                    z: 0.0,
-                },
-                ScenePoint {
-                    x: 0.9,
-                    y: 0.1,
-                    z: 0.0,
-                },
-                ScenePoint {
-                    x: 0.5,
-                    y: 0.9,
-                    z: 0.0,
-                },
-            ],
-            color: "#ff0000".to_string(),
-            alpha: 0.5,
-        });
-        scene.add_edge(SceneEdge {
-            from: ScenePoint {
-                x: 0.0,
-                y: 0.0,
-                z: 0.1,
-            },
-            to: ScenePoint {
-                x: 1.0,
-                y: 1.0,
-                z: 0.1,
-            },
-            color: "#00ff00".to_string(),
-            width: 2.0,
-            alpha: 0.75,
-        });
-
-        let (positions, colors, indices) = scene_mesh(&scene, 100, 100);
-        assert_eq!(positions.len(), 7);
-        assert_eq!(colors.len(), positions.len());
-        assert_eq!(indices.len(), 9);
-        assert_eq!(colors[0], [1.0, 0.0, 0.0, 0.5]);
-        assert_eq!(colors[3], [0.0, 1.0, 0.0, 0.75]);
-    }
-
-    // ── P9.3 tests ────────────────────────────────────────────────────────
-
-    #[test]
-    fn colour_by_field_is_deterministic() {
-        let a = VolumetricRenderer::colour_by_field(0.5, 0.0, 1.0);
-        let b = VolumetricRenderer::colour_by_field(0.5, 0.0, 1.0);
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn colour_by_field_endpoints() {
-        let blue = VolumetricRenderer::colour_by_field(0.0, 0.0, 1.0);
-        assert_eq!(blue, [0.0, 0.0, 1.0]);
-        let red = VolumetricRenderer::colour_by_field(1.0, 0.0, 1.0);
-        assert_eq!(red, [1.0, 0.0, 0.0]);
-    }
-
-    #[test]
-    fn colour_by_field_midpoint_is_green() {
-        let green = VolumetricRenderer::colour_by_field(0.5, 0.0, 1.0);
-        assert!((green[0] - 0.0).abs() < 1e-6);
-        assert!((green[1] - 1.0).abs() < 1e-6);
-        assert!((green[2] - 0.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn colour_by_field_degenerate_range() {
-        let c = VolumetricRenderer::colour_by_field(42.0, 42.0, 42.0);
-        // Degenerate range → t=0.5 → green
-        assert!((c[1] - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn temporal_scrub_returns_in_window_nodes() {
-        use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
-        use qualia_core_db::tensor::Tensor10D;
-
-        let tensors = [
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0, 0.0, 0.0),
-        ];
-        let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut buf).unwrap();
-
-        // Window around t=0.5 with width 0.6 → [0.2, 0.8] → only node 1 (t=0.5)
-        let result = VolumetricRenderer::temporal_scrub(&buf, 0.5, 0.6).unwrap();
-        assert_eq!(result, vec![1]);
-    }
-
-    #[test]
-    fn temporal_scrub_empty_window() {
-        use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
-        use qualia_core_db::tensor::Tensor10D;
-
-        let tensors = [
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 1.0, 0.0, 0.0),
-        ];
-        let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut buf).unwrap();
-
-        let result = VolumetricRenderer::temporal_scrub(&buf, 5.0, 0.0).unwrap();
-        assert!(
-            result.is_empty(),
-            "zero-width window at t=5 should match no nodes"
-        );
-    }
-
-    #[test]
-    fn temporal_scrub_matches_linear_scan_oracle() {
-        use qualia_core_db::tensor::buffer_export::{
-            read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader,
-        };
-        use qualia_core_db::tensor::Tensor10D;
-
-        let tensors: Vec<Tensor10D> = (0..20)
-            .map(|i| {
-                Tensor10D::new(
-                    0.0,
-                    0.0,
-                    0.0,
-                    i as f32 * 0.1,
-                    0.0,
-                    0.0,
-                    i as f32 * 0.3,
-                    1.0,
-                    0.0,
-                    0.0,
-                )
-            })
-            .collect();
-        let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut buf).unwrap();
-
-        let t_slice = 3.0f32;
-        let t_window = 2.0f32;
-        let half = t_window * 0.5;
-        let lo = t_slice - half;
-        let hi = t_slice + half;
-
-        // Linear-scan oracle
-        let count = tensor_node_count(&buf).unwrap();
-        let mut oracle = Vec::new();
-        for i in 0..count {
-            let t = read_tensor_at(&buf, i).unwrap();
-            if t.t >= lo && t.t <= hi {
-                oracle.push(i as u32);
-            }
-        }
-
-        let result = VolumetricRenderer::temporal_scrub(&buf, t_slice, t_window).unwrap();
-        assert_eq!(
-            result, oracle,
-            "temporal_scrub must match linear-scan oracle"
-        );
-    }
-}
+#[path = "volumetric_tests.rs"]
+mod tests;

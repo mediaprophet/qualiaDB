@@ -67,6 +67,22 @@ pub struct TextureStreamAction {
     pub bytes: u64,
 }
 
+/// Accounting for an additive, best-effort residency plan.
+///
+/// The admitted requests are a single global priority prefix. Deferred requests retain their
+/// place in that order and can be retried with the next frame's budget. Evictions are reported
+/// first in least-protected-first order, followed by the admitted mip uploads in request order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TextureStreamPartialPlan {
+    pub action_count: usize,
+    pub admitted_mip_count: usize,
+    pub deferred_mip_count: usize,
+    pub admitted_upload_bytes: u64,
+    pub deferred_upload_bytes: u64,
+    /// Resident bytes after the listed evictions and admitted uploads.
+    pub projected_resident_bytes: u64,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextureStreamPlanError {
     InvalidDimensions,
@@ -196,6 +212,198 @@ pub fn plan_texture_residency(
     Ok(written)
 }
 
+/// Plan the highest-priority mip-request prefix that fits both budgets.
+///
+/// Unlike [`plan_texture_residency`], this API defers lower-priority requests instead of failing
+/// when upload or incremental residency capacity is exhausted. The input is validated in full;
+/// invalid input, arithmetic overflow, an impossible baseline resident budget, or insufficient
+/// output capacity leaves `out` untouched. Existing, eligible evictions are selected in the
+/// planner's normal least-protected-first order. A request that cannot fit causes it and every
+/// lower-priority request to be deferred, even if a later smaller request could fit.
+pub fn plan_texture_residency_partial(
+    demands: &[TextureStreamDemand],
+    budget: TextureStreamBudget,
+    out: &mut [TextureStreamAction],
+) -> Result<TextureStreamPartialPlan, TextureStreamPlanError> {
+    validate_demands(demands)?;
+
+    let mut resident_total = 0u64;
+    let mut requested_bytes = 0u64;
+    let mut requested_count = 0usize;
+    for demand in demands {
+        resident_total = resident_total
+            .checked_add(demand.resident_bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        if !demand.requested {
+            continue;
+        }
+        let stop = demand.resident_finest_mip.unwrap_or(demand.mip_count);
+        for mip in (demand.desired_finest_mip..stop).rev() {
+            requested_bytes = requested_bytes
+                .checked_add(mip_level_bytes(demand, mip)?)
+                .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+            requested_count = requested_count
+                .checked_add(1)
+                .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        }
+    }
+
+    // First make the retained baseline fit. If protected resources alone exceed the budget,
+    // there is no valid plan and the caller's output remains untouched.
+    let mut projected_resident = resident_total;
+    let mut eviction_count = 0usize;
+    let mut previous_eviction = None;
+    while projected_resident > budget.max_resident_bytes {
+        let Some(index) = find_next_eviction(demands, previous_eviction)? else {
+            return Err(TextureStreamPlanError::ResidentBudgetExceeded {
+                required: projected_resident,
+                budget: budget.max_resident_bytes,
+            });
+        };
+        projected_resident = projected_resident
+            .checked_sub(demands[index].resident_bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        previous_eviction = Some(index);
+        eviction_count = eviction_count
+            .checked_add(1)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+    }
+
+    let mut admitted_mip_count = 0usize;
+    let mut admitted_upload_bytes = 0u64;
+    let mut previous_request: Option<(usize, u8)> = None;
+    loop {
+        let Some((index, mip)) = find_next_request(demands, previous_request) else {
+            break;
+        };
+        let demand = &demands[index];
+        let bytes = mip_level_bytes(demand, mip)?;
+        let Some(next_upload) = admitted_upload_bytes.checked_add(bytes) else {
+            return Err(TextureStreamPlanError::ArithmeticOverflow);
+        };
+        if next_upload > budget.max_upload_bytes {
+            break;
+        }
+
+        // Try the required evictions speculatively. Commit them only if this request can then be
+        // admitted, so a deferred request never causes a needless eviction.
+        let mut trial_resident = projected_resident;
+        let mut trial_evictions = eviction_count;
+        let mut trial_previous = previous_eviction;
+        while trial_resident
+            .checked_add(bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?
+            > budget.max_resident_bytes
+        {
+            let Some(eviction_index) = find_next_eviction(demands, trial_previous)? else {
+                break;
+            };
+            trial_resident = trial_resident
+                .checked_sub(demands[eviction_index].resident_bytes)
+                .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+            trial_previous = Some(eviction_index);
+            trial_evictions = trial_evictions
+                .checked_add(1)
+                .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        }
+        if trial_resident
+            .checked_add(bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?
+            > budget.max_resident_bytes
+        {
+            break;
+        }
+        projected_resident = trial_resident
+            .checked_add(bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        eviction_count = trial_evictions;
+        previous_eviction = trial_previous;
+        admitted_upload_bytes = next_upload;
+        admitted_mip_count = admitted_mip_count
+            .checked_add(1)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        previous_request = Some((index, mip));
+    }
+
+    let action_count = eviction_count
+        .checked_add(admitted_mip_count)
+        .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+    if action_count > out.len() {
+        return Err(TextureStreamPlanError::OutputCapacity {
+            required: action_count,
+            capacity: out.len(),
+        });
+    }
+
+    // All possible errors have been checked; output mutation begins only here.
+    let mut written = 0usize;
+    previous_eviction = None;
+    for _ in 0..eviction_count {
+        let index = find_next_eviction(demands, previous_eviction)
+            .expect("preflight selected the same eviction set")
+            .expect("preflight proved sufficient evictions");
+        out[written] = TextureStreamAction {
+            semantic_id: demands[index].semantic_id,
+            kind: TextureStreamActionKind::EvictTexture,
+            mip_level: 0,
+            bytes: 0,
+        };
+        written += 1;
+        previous_eviction = Some(index);
+    }
+    let mut previous_request = None;
+    for _ in 0..admitted_mip_count {
+        let (index, mip) = find_next_request(demands, previous_request)
+            .expect("preflight selected the same request prefix");
+        let demand = &demands[index];
+        let bytes = mip_level_bytes(demand, mip).expect("preflight checked every request size");
+        out[written] = TextureStreamAction {
+            semantic_id: demand.semantic_id,
+            kind: TextureStreamActionKind::RequestMip,
+            mip_level: mip,
+            bytes,
+        };
+        written += 1;
+        previous_request = Some((index, mip));
+    }
+
+    Ok(TextureStreamPartialPlan {
+        action_count,
+        admitted_mip_count,
+        deferred_mip_count: requested_count - admitted_mip_count,
+        admitted_upload_bytes,
+        deferred_upload_bytes: requested_bytes - admitted_upload_bytes,
+        projected_resident_bytes: projected_resident,
+    })
+}
+
+fn find_next_request(
+    demands: &[TextureStreamDemand],
+    previous: Option<(usize, u8)>,
+) -> Option<(usize, u8)> {
+    let mut selected: Option<(usize, u8)> = None;
+    for (index, demand) in demands.iter().enumerate() {
+        if !demand.requested {
+            continue;
+        }
+        let stop = demand.resident_finest_mip.unwrap_or(demand.mip_count);
+        for mip in (demand.desired_finest_mip..stop).rev() {
+            if previous.is_some_and(|previous| {
+                request_candidate_order(demand, mip, &demands[previous.0], previous.1)
+                    != core::cmp::Ordering::Greater
+            }) {
+                continue;
+            }
+            if selected.is_none_or(|(selected_index, selected_mip)| {
+                request_candidate_order(demand, mip, &demands[selected_index], selected_mip).is_lt()
+            }) {
+                selected = Some((index, mip));
+            }
+        }
+    }
+    selected
+}
+
 fn validate_demands(demands: &[TextureStreamDemand]) -> Result<(), TextureStreamPlanError> {
     for (index, demand) in demands.iter().enumerate() {
         if demand.width == 0 || demand.height == 0 {
@@ -307,15 +515,23 @@ fn request_order(
         .iter()
         .find(|demand| demand.semantic_id == b.semantic_id)
         .expect("every request references a validated demand");
-    b_demand
-        .pinned
-        .cmp(&a_demand.pinned)
-        .then_with(|| b_demand.visible.cmp(&a_demand.visible))
-        .then_with(|| b_demand.importance.cmp(&a_demand.importance))
-        .then_with(|| a_demand.distance_key.cmp(&b_demand.distance_key))
-        .then_with(|| b_demand.last_used_frame.cmp(&a_demand.last_used_frame))
+    request_candidate_order(a_demand, a.mip_level, b_demand, b.mip_level)
+}
+
+fn request_candidate_order(
+    a: &TextureStreamDemand,
+    a_mip: u8,
+    b: &TextureStreamDemand,
+    b_mip: u8,
+) -> core::cmp::Ordering {
+    b.pinned
+        .cmp(&a.pinned)
+        .then_with(|| b.visible.cmp(&a.visible))
+        .then_with(|| b.importance.cmp(&a.importance))
+        .then_with(|| a.distance_key.cmp(&b.distance_key))
+        .then_with(|| b.last_used_frame.cmp(&a.last_used_frame))
         .then_with(|| a.semantic_id.cmp(&b.semantic_id))
-        .then_with(|| b.mip_level.cmp(&a.mip_level))
+        .then_with(|| b_mip.cmp(&a_mip))
 }
 
 fn eviction_order(
@@ -592,5 +808,197 @@ mod tests {
         );
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].semantic_id, 2);
+    }
+
+    #[test]
+    fn partial_plan_admits_only_global_priority_prefix_under_upload_budget() {
+        let mut high = demand(2);
+        high.importance = 10;
+        let mut low = demand(1);
+        low.importance = 1;
+        let mut out = [TextureStreamAction {
+            semantic_id: 0,
+            kind: TextureStreamActionKind::RequestMip,
+            mip_level: 0,
+            bytes: 0,
+        }; 8];
+        let plan = plan_texture_residency_partial(
+            &[low, high],
+            TextureStreamBudget {
+                max_resident_bytes: 1024,
+                max_upload_bytes: 16,
+            },
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(plan.admitted_mip_count, 1);
+        assert_eq!(plan.deferred_mip_count, 3);
+        assert_eq!(plan.admitted_upload_bytes, 16);
+        assert_eq!(plan.deferred_upload_bytes, 144);
+        assert_eq!(out[0].semantic_id, 2);
+        assert_eq!(out[0].mip_level, 2);
+    }
+
+    #[test]
+    fn partial_plan_is_deterministic_for_ties_and_input_permutations() {
+        let demands = [demand(9), demand(3)];
+        let mut reversed = demands;
+        reversed.reverse();
+        let budget = TextureStreamBudget {
+            max_resident_bytes: 1024,
+            max_upload_bytes: 16,
+        };
+        let sentinel = TextureStreamAction {
+            semantic_id: 0,
+            kind: TextureStreamActionKind::RequestMip,
+            mip_level: 0,
+            bytes: 0,
+        };
+        let mut first = [sentinel; 4];
+        let mut second = [sentinel; 4];
+        let a = plan_texture_residency_partial(&demands, budget, &mut first).unwrap();
+        let b = plan_texture_residency_partial(&reversed, budget, &mut second).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(&first[..a.action_count], &second[..b.action_count]);
+        assert_eq!(first[0].semantic_id, 3);
+    }
+
+    #[test]
+    fn partial_plan_pinned_then_visible_requests_win_constrained_budget() {
+        let mut ordinary = demand(1);
+        ordinary.importance = u16::MAX;
+        ordinary.distance_key = 0;
+        let mut visible = demand(2);
+        visible.visible = true;
+        let mut pinned = demand(3);
+        pinned.pinned = true;
+        pinned.desired_finest_mip = 2;
+        let mut out = [TextureStreamAction {
+            semantic_id: 0,
+            kind: TextureStreamActionKind::RequestMip,
+            mip_level: 0,
+            bytes: 0,
+        }; 8];
+        let plan = plan_texture_residency_partial(
+            &[ordinary, visible, pinned],
+            TextureStreamBudget {
+                max_resident_bytes: 1024,
+                max_upload_bytes: 32,
+            },
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(plan.admitted_mip_count, 2);
+        assert_eq!(plan.deferred_mip_count, 3);
+        assert_eq!(out[0].semantic_id, 3);
+        assert_eq!(out[1].semantic_id, 2);
+    }
+
+    #[test]
+    fn partial_plan_resident_budget_defers_after_admitting_fitting_prefix() {
+        let mut high = demand(2);
+        high.importance = 10;
+        let mut low = demand(1);
+        low.importance = 1;
+        let mut out = [TextureStreamAction {
+            semantic_id: 0,
+            kind: TextureStreamActionKind::RequestMip,
+            mip_level: 0,
+            bytes: 0,
+        }; 8];
+        let plan = plan_texture_residency_partial(
+            &[low, high],
+            TextureStreamBudget {
+                max_resident_bytes: 48,
+                max_upload_bytes: 4096,
+            },
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(plan.admitted_mip_count, 1);
+        assert_eq!(plan.deferred_mip_count, 3);
+        assert_eq!(plan.projected_resident_bytes, 48);
+        assert_eq!(out[0].semantic_id, 2);
+        assert_eq!(out[0].mip_level, 2);
+    }
+
+    #[test]
+    fn partial_plan_evicts_unrequested_residency_only_as_needed() {
+        let mut stale = demand(9);
+        stale.requested = false;
+        stale.resident_finest_mip = Some(1);
+        stale.desired_finest_mip = 1;
+        stale.resident_bytes = 64;
+        stale.importance = 0;
+        let mut wanted = demand(1);
+        wanted.resident_bytes = 16;
+        let mut out = [TextureStreamAction {
+            semantic_id: 0,
+            kind: TextureStreamActionKind::RequestMip,
+            mip_level: 0,
+            bytes: 0,
+        }; 8];
+        let plan = plan_texture_residency_partial(
+            &[wanted, stale],
+            TextureStreamBudget {
+                max_resident_bytes: 32,
+                max_upload_bytes: 16,
+            },
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(out[0].kind, TextureStreamActionKind::EvictTexture);
+        assert_eq!(out[0].semantic_id, 9);
+        assert_eq!(plan.admitted_mip_count, 1);
+        assert_eq!(plan.projected_resident_bytes, 32);
+    }
+
+    #[test]
+    fn partial_plan_errors_leave_output_unchanged() {
+        let sentinel = TextureStreamAction {
+            semantic_id: 77,
+            kind: TextureStreamActionKind::EvictTexture,
+            mip_level: 5,
+            bytes: 99,
+        };
+        let mut too_small = [sentinel; 1];
+        assert_eq!(
+            plan_texture_residency_partial(
+                &[demand(1)],
+                TextureStreamBudget {
+                    max_resident_bytes: 1024,
+                    max_upload_bytes: 4096,
+                },
+                &mut too_small,
+            ),
+            Err(TextureStreamPlanError::OutputCapacity {
+                required: 2,
+                capacity: 1,
+            })
+        );
+        assert_eq!(too_small, [sentinel]);
+
+        let mut protected = demand(2);
+        protected.pinned = true;
+        protected.requested = false;
+        protected.resident_finest_mip = Some(1);
+        protected.desired_finest_mip = 1;
+        protected.resident_bytes = 64;
+        let mut impossible = [sentinel; 8];
+        assert_eq!(
+            plan_texture_residency_partial(
+                &[protected],
+                TextureStreamBudget {
+                    max_resident_bytes: 32,
+                    max_upload_bytes: 0,
+                },
+                &mut impossible,
+            ),
+            Err(TextureStreamPlanError::ResidentBudgetExceeded {
+                required: 64,
+                budget: 32,
+            })
+        );
+        assert!(impossible.iter().all(|action| *action == sentinel));
     }
 }

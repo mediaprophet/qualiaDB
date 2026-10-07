@@ -46,6 +46,8 @@ pub mod compile_10d;
 pub mod compile_10d_manifest;
 pub mod contract;
 pub mod control;
+/// Caller-buffered CPU RGBA8 mip reducer and format-specific reference filtering.
+pub mod cpu_texture_mips;
 pub mod derivation;
 /// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
 pub mod gamut;

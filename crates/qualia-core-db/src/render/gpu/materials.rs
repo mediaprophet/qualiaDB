@@ -317,14 +317,22 @@ fn resolve_map<'a>(
     color_space: super::texture_residency::TextureColorSpace,
     mip_semantic: super::texture_mips::TextureMipSemantic,
     fallback: &'a wgpu::TextureView,
-    material_index: usize,
-    slot: &str,
+    _material_index: usize,
+    _slot: &str,
 ) -> Result<&'a wgpu::TextureView, String> {
     if digest == &[0; 32] {
         return Ok(fallback);
     }
-    super::texture_residency::resident_view(resident_textures, digest, color_space, mip_semantic)
-        .ok_or_else(|| format!("MAT1 material {material_index} {slot} texture is not resident"))
+    // A digest may be deliberately deferred by a constrained profile, or an optional image
+    // decoder may not support its source format yet. Bind the slot's typed neutral texture so the
+    // rest of the material and scene can still render. The HMC admission report exposes deferrals.
+    Ok(super::texture_residency::resident_view(
+        resident_textures,
+        digest,
+        color_space,
+        mip_semantic,
+    )
+    .unwrap_or(fallback))
 }
 
 fn texture_entry(binding: u32, view: &wgpu::TextureView) -> wgpu::BindGroupEntry<'_> {

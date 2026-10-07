@@ -31,7 +31,8 @@ pub use shaders::{EPISTEMIC_WGSL, PROJECTOR_WGSL};
 pub use telemetry::SystemTelemetry;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub use volumetric::{
-    render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into, VolumetricRenderer,
+    render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into,
+    HmcTextureAdmissionReport, VolumetricRenderer,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use wgpu_renderer::{
