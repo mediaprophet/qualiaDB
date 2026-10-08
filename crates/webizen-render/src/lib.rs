@@ -21,12 +21,16 @@ pub mod telemetry;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub mod volumetric;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub mod volumetric_hmc;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 mod volumetric_texture;
 pub mod wgpu_renderer;
 pub mod zero_copy_views;
 
 // Re-export main types for convenience
 pub use math::{AlignedBufferF32, Motor, MotorEncoder, RenderQuin};
+#[cfg(feature = "qualia")]
+pub use pipeline::WebizenFrameScheduler;
 pub use pipeline::{BindGroupManager, RenderBindGroups};
 pub use scene_contract::{RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint};
 pub use shaders::{EPISTEMIC_WGSL, PROJECTOR_WGSL};
@@ -34,7 +38,7 @@ pub use telemetry::SystemTelemetry;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub use volumetric::{
     render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into,
-    HmcTextureAdmissionReport, VolumetricRenderer,
+    HmcTextureAdmissionReport, HmcTextureStreamRequest, VolumetricRenderer,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use wgpu_renderer::{

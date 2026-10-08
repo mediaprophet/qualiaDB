@@ -290,3 +290,107 @@ Checkpoint recorded **2026-10-08** from the last successful workspace session; r
 - Updated native HMC asset loading to treat a digest-verified resource's unsupported image codec/format or decode refusal as a per-resource deferred interpretation: the mesh and other textures continue, and the affected material map uses its typed neutral fallback. Package/resource resolution and digest verification failures remain fatal. A dedicated end-to-end HMC test for unsupported KTX2 fallback has not been added; current evidence is the decoder/preflight fixture tests plus code-path review and the existing renderer suite.
 - Exact KTX2 limits: the existing parser performs structural header, section, level-index, bounds, alignment, padding, and DFD-envelope framing checks. The RGBA8 path only copies the uncompressed base level for vkFormat 37/43. It does not validate DFD sample semantics, decode remaining mip levels, upload GPU block-compressed data, transcode Basis, or support BasisLZ, Zstd, ZLIB, other compression, or other `vkFormat` values. Those require separate bounded format/transcoder and device-capability work; do not describe this as general KTX2/Basis support.
 - Focused decoder tests cover UNORM/SRGB, inspector-only byte requirements, MIME-parameter routing, unsupported format/container modes, exact-length rejection, and caller-buffer atomicity. Latest batched validation already reported by the coordinator: MSVC core renderer tests **510/510**, native `webizen-render` **63/63**, and the WASM target check passed. Formatting and `git diff --check` were run for this documentation update; no Cargo tests were rerun for this checkpoint. There is no HMC end-to-end fallback test or browser GPU/pixel validation in this evidence.
+### 10-G — Streaming budget contract and mip-path follow-up
+
+The 42 MiB Prolog Sentinel is an execution-memory boundary for Sentinel-governed inference, query, and evaluator passes. It is not a package-size cap for game assets, decoded texture caches, scene resources, GPU-resident textures, or upload queues. Keep graphics memory policy in separately configurable, capability-derived budgets for decoded CPU cache, GPU residency, upload staging/in-flight bytes, and per-frame transfer. Bound transient decode scratch under the asset pipeline's own limits. Under pressure, select a coarser available mip or lower-resolution representation, defer or evict resources deterministically, and report per-resource degradation without rejecting unrelated scene content.
+
+KTX2 follow-up should consume the container's indexed mip levels for progressive streaming and choose a mip from projected screen size, device capabilities, and current budgets. The KTX2 specification supports indexed, independently addressable mip levels and progressive delivery; WebGPU texture-compression families are optional device features, so native and WASM paths must negotiate capabilities and retain an uncompressed fallback. The existing MIME/HMC pipeline remains base-level-only; newly added indexed-level helpers are not yet integrated or verified. Compressed formats/transcoding and end-to-end HMC degradation coverage remain open.
+
+References: [Khronos KTX 2.0 specification](https://registry.khronos.org/KTX/specs/2.0/ktxspec.v2.html), [WebGPU specification — optional texture-compression features](https://gpuweb.github.io/gpuweb/).
+
+### 10-H — Acceptance criteria for the next texture-streaming slice
+
+1. Preserve the existing base-level decode API and add level-indexed inspection/decode. Compute each level's 2D dimensions as `max(1, base_dimension >> level)`, validate level index and checked byte ranges before output mutation, and require exact expected bytes for the currently supported RGBA8 formats.
+2. Expose mip availability and selected-level metadata to the HMC texture planner. Select a resident level from projected texel footprint, available KTX2 levels, device limits, and current CPU/GPU/upload budgets; start with the coarsest useful available level when prioritizing first-visible rendering, then refine as budget permits. Keep selection deterministic for the same view/budget inputs.
+3. Make transfers incremental and bounded: enforce per-resource maximum dimensions/decoded bytes, per-frame upload bytes, and total staging bytes; reject arithmetic overflow and malformed offsets before copying; report deferred, unsupported, malformed, and resident outcomes distinctly. A failure in one texture must not invalidate independent scene resources.
+4. Add tests for multiple mip levels, 1×1 clamping, invalid level/range/length, untouched output on preflight failure, selection under a constrained budget, and a complete HMC asset whose unsupported texture is deferred while mesh/material data still loads. Run focused MSVC renderer and webizen-render tests plus the browser WASM check after integration.
+5. Keep compressed-format work as a separate capability-gated slice: negotiate the adapter/device feature set before selecting BC/ETC2/ASTC targets, retain RGBA8 fallback, and only advertise a transcode path after native and WASM builds prove the chosen decoder is bounded and validated. No format family is universally available across those targets.
+
+This is implementation guidance, not evidence that these acceptance criteria have passed. At this update, the existing MIME/HMC path still uses uncompressed RGBA8 base-level decode; mip-aware selection, progressive upload, and compressed-format transcode remain pending in that integrated path.
+
+### 10-I — Budget-aware mip selector added; integration pending
+
+Added `render::texture_streaming_plan::select_texture_mip`, a borrowed-slice, allocation-free selector using its distinct `TextureMipBudget` type to avoid collision with the pre-existing texture policy budget API. It admits a mip only when decoded CPU cache, GPU residency, upload staging, and per-frame upload budgets all fit. It selects the least-area level that meets both projected dimensions; when none are adequate, it prefers the candidate with the best balanced projected coverage among affordable levels. Ties have stable field-based ordering independent of slice order; no affordable candidate returns `None` for caller-side deferral. `reserve_texture_mip` atomically debits all four budgets, so deterministic caller ordering cannot overcommit one texture's frame after another. Focused unit tests cover adequate selection, budget-driven degradation, each independent budget, input-order independence, aspect-ratio-aware fallback, duplicate-level ties, invalid dimensions, and atomic reservation.
+
+Budget snapshots model available credits: refresh the per-frame upload credit each frame, replenish transient staging credit when its in-flight transfer completes, and return decoded CPU/GPU residency credit when the matching resource is evicted.
+
+Follow-up review removed an API-name collision by using `TextureMipBudget` rather than the existing `TextureStreamBudget`, retained UNORM/SRGB identity in the candidate/result, and added a maximum mip-count bound plus explicit physical-tail/staging cost semantics. These changes are still unverified source edits; the HMC integration must map material color-space intent against `is_srgb` and account actual backend allocations.
+
+Added `rgba8_ktx2_mip_candidate` to adapt an indexed parsed KTX2 level into the planner's metadata. It validates RGBA8 UNORM/SRGB format, 2D single-layer/single-face shape, no supercompression, valid mip-count bounds, clamped mip dimensions, and exact compressed/uncompressed byte lengths before returning. It preserves UNORM versus SRGB in the selected record; backend GPU/staging costs are explicit inputs rather than guessed from texel count and must include backend allocation/alignment and any resident mip tail.
+
+Added `decode_rgba8_ktx2_mip_into` for direct caller-buffered copying of an indexed mip after the same validation. It performs preflight before writing, leaves output unchanged when capacity is insufficient, writes only the selected level, and returns dimensions/bytes written without allocating.
+
+Status: source edit only, **not compiled, formatted, or test-verified** because the local command runner still fails before process startup. The selector, KTX2 metadata adapter, and level-copy API are not yet wired into the existing `texture_decode`/HMC resource admission path. Adapter and decode tests against parsed fixtures are pending. Next: integrate selected-level decode and per-resource fallback reporting, add fixture tests, then run focused MSVC renderer tests, native `webizen-render` tests, and the browser WASM check before claiming delivery.
+### 10-J — HMC integration seam and compatibility requirements
+
+The previous renderer audit found an existing `VolumetricRenderer::load_hmc_asset_with_texture_budget` flow in `crates/webizen-render/src/volumetric.rs`: it resolves HMC texture resources, preflights dimensions through `texture_decode::inspect_hmc_texture_requirements`, plans mip residency with `plan_texture_residency_partial`, and decodes/uploads each selected digest. Revalidate this call graph before editing when shell access returns.
+
+Integrate the new selector by replacing or adapting the existing demand/action admission step; do not run both planners and debit the same budget twice. Preserve the existing `TextureStreamBudget { max_resident_bytes, max_upload_bytes }` API for callers through a compatibility conversion or a single coordinated budget type. The current HMC entry point lacks projected width/height, so add a new request-bearing API for view footprint/device limits while retaining a documented default through the old entry point. For KTX2 coarse requests, decode the selected authored source mip directly into caller-owned memory rather than decoding the largest image and CPU-downsampling; continue using the established path for formats without direct mip support. Recover from unsupported or malformed per-texture input by deferring that use and continuing unrelated asset loading. Validate `TextureUse::color_space` against the candidate's preserved UNORM/SRGB identity.
+
+Required integration evidence: an HMC fixture with a multi-level RGBA8 KTX2 resource selects and decodes a coarse level; a constrained combined texture set consumes its shared budgets in deterministic priority order without double admission; an unsupported/malformed texture is reported deferred while mesh/material loading succeeds; native and WASM builds exercise the same pure selector and decoder contract. These are pending and the API details above are from the prior audit, not rechecked against the unavailable current checkout.
+
+### 10-K — Texture-streaming planner delivery and HMC integration checkpoint (2026-10-08)
+
+- **Pure Mip Selector & KTX2 Mip Decoder (`qualia-core-db`):**
+  - Added `render::texture_streaming_plan` with `TextureMipBudget`, `TextureMipCandidate`, `TextureMipBackendCost`, and `TextureMipSelection`.
+  - `select_texture_mip` provides allocation-free, borrowed-slice mip selection matching projected 2D sampling footprints with balanced aspect-ratio fallback when budgets constrain fidelity.
+  - `reserve_texture_mip` performs atomic debit across decoded CPU cache, GPU residency, upload staging, and per-frame upload budgets, preventing overcommit.
+  - Added `rgba8_ktx2_mip_candidate` for preflight validation of indexed KTX2 levels (VK formats 37 UNORM and 43 SRGB, single-layer/single-face, uncompressed).
+  - Added `decode_rgba8_ktx2_mip_into` for zero-allocation, caller-buffered decoding of a selected KTX2 mip directly from container bytes, bypassing level-zero decompression and CPU downsampling.
+  - Unit tests split into `texture_streaming_plan_tests.rs` (296 lines); verified **11 passed, 0 failed** on MSVC target `x86_64-pc-windows-msvc`.
+
+- **Renderer Decomposition & HMC Stream Request API (`webizen-render`):**
+  - Decomposed `volumetric.rs` (reduced from 1,070 lines to 704 lines, well within architectural threshold).
+  - Created directory-backed module `volumetric_hmc.rs` (471 lines, strictly respecting the <500 lines rule) owning HMC texture residency admission and streaming.
+  - Introduced `HmcTextureStreamRequest` exposing `projected_width`, `projected_height`, and `TextureStreamBudget`.
+  - Added `VolumetricRenderer::load_hmc_asset_with_texture_request`; updated `load_hmc_asset_with_texture_budget` to delegate to it with `HmcTextureStreamRequest::default()`.
+  - For KTX2 resources, decodes only the planner-admitted mip directly into caller-owned scratch for GPU upload; falls back to CPU downsampling for legacy PNG/JPEG or missing mips.
+  - Graceful degradation: validates UNORM vs SRGB against `TextureUse::color_space`, reports budget refusals and corrupt image payloads as deferred interpretations while admitting mesh geometry and unaffected materials.
+
+- **Production Texture Ingestion & Strict Signature Validation (`qualia-core-db`):**
+  - Added `render::texture_ingestion` with `validate_image_signature`, `parse_data_uri`, and `ingest_texture_payload`.
+  - Enforces strict binary signature/magic byte checks for PNG (`\x89PNG\r\n\x1a\n`), JPEG (`\xFF\xD8\xFF`), KTX2 (`KTX2_IDENTIFIER`), and WebP (`RIFF....WEBP`), preventing format mismatches and payload spoofing.
+  - Implemented `parse_data_uri` supporting base64 and percent-encoded data URIs (`data:[mediatype][;base64],<data>`) with strict encoded size bounds.
+  - Updated glTF material parsing (`render::assets::glb_materials`) to natively ingest `data:` URI images into the content-addressed dependency set alongside binary `bufferView` payloads.
+  - Wired strict signature preflight into `decode_hmc_texture_rgba8_into` and `inspect_hmc_texture_requirements`.
+  - Unit tests added in `texture_ingestion_tests.rs` (142 lines) and `texture_decode_tests.rs`.
+
+- **Test Evidence & Targets Verified:**
+  - Added 4 end-to-end HMC integration tests in `volumetric_tests.rs`:
+    1. `hmc_multilevel_ktx2_selects_and_decodes_coarse_level`: verifies selection and direct decode of mip 1 for a 2×2 projected footprint from a 4×4 multi-level KTX2 asset.
+    2. `hmc_constrained_budget_defers_texture_while_mesh_loads`: verifies zero upload budget defers texture interpretation while loading mesh triangles.
+    3. `hmc_color_space_mismatch_is_deferred_while_mesh_loads`: verifies normal map SRGB mismatch is deferred gracefully.
+    4. `hmc_corrupted_texture_is_deferred_while_mesh_loads`: verifies malformed/corrupted texture bytes defer without failing the container load.
+  - Core DB render suite (`cargo test --lib --offline --target x86_64-pc-windows-msvc -p qualia-core-db render:: -- --test-threads=1`): **533 passed, 0 failed**.
+  - Native Windows MSVC suite (`cargo test --lib --offline --target x86_64-pc-windows-msvc -p webizen-render --features qualia -- --test-threads=1`): **67 passed, 0 failed**.
+  - Browser target check (`cargo check --offline --target wasm32-unknown-unknown -p webizen-render --no-default-features --features qualia`): **completed successfully** (exit code 0).
+
+### 10-L — Lane D Delivery: Cinematic Lighting, AO Quality, and Frame Graph (2026-10-08)
+
+- **Deterministic Frame Graph & Resource Scheduler (`qualia-core-db`):**
+  - Added `render::frame_graph` (384 lines, strictly < 500 lines) with `FrameGraphBuilder`, `PassNode`, `ResourceDesc`, `ResourceFormat`, `FrameResourceId`, and `CompiledSchedule`.
+  - Implements Kahn's topological DAG sort over fixed stack buffers (`[Option<PassId>; 16]`), pruning disabled passes and unused transient targets.
+  - Automatically derives execution schedules from `RenderQualityProfile` and viewport dimensions (e.g. omitting `AoCompute` and `DepthPrepass` when AO is disabled; omitting `BloomExtract`/`BloomComposite` when HDR is disabled and selecting `SdrOutputComposite`).
+  - Estimates whole-frame and peak transient resource byte sizes, failing closed under budget limits (`FrameGraphError::BudgetExceeded`).
+  - Unit tests in `render::frame_graph_tests` (162 lines) covering empty schedules, topological ordering, cycle detection, disabled pass pruning, balanced profile configuration, conservative no-AO/no-HDR fallback, and budget refusals.
+
+- **Physically-Based & Stylized Cinematic Lighting Engine (`qualia-core-db`):**
+  - Added `render::lighting` (278 lines, strictly < 500 lines) with `DirectionalLight` (lux), `PointLight` (lumens), `SpotLight` (lumens), `SurfaceParameters`, and `StylizedLightingParams`.
+  - Implements smooth windowed distance attenuation `(1 - (d/r)^4)^2 / (d^2 + 1)` and smoothstep cone angle attenuation for spot lights.
+  - Full microfacet Cook-Torrance BRDF: Trowbridge-Reitz GGX distribution `D`, Smith joint visibility `V`, and Schlick Fresnel `F` in linear color space.
+  - Shadow attenuation and bias math: normal-offset bias `position + normal * (1 - N.L) * texel_size` and 3x3 Percentage-Closer Filtering (PCF) kernel.
+  - First-class stylized lighting: discrete quantized tone bands (2-band, 3-band, 4-band cel shading) with smoothstep transitions, Fresnel rim/contour lighting `(1 - N.V)^exponent * intensity * tint` with directional light masking, and quantized specular highlights.
+  - Zero-heap hot-path evaluation: `evaluate_fragment_radiance` evaluates physical or stylized radiance without allocations.
+  - Unit tests in `render::lighting_tests` (115 lines) verifying distance falloff, spot cone limits, PCF weight averaging, stylized diffuse quantization, rim angle response, and energy conservation.
+
+- **Screen-Space AO Quality Profiles & Bilateral Filtering (`qualia-core-db`):**
+  - Added `render::ao_quality` (199 lines, strictly < 500 lines) with `AoQualityTier` (`Disabled`, `Low`, `Medium`, `High`, `Ultra`) and `AoQualitySettings`.
+  - Generates deterministic Fibonacci spiral sampling taps in the unit disk for arbitrary tap counts (up to 16 taps) on the stack without allocation.
+  - Bilateral depth-and-normal edge-preserving filter: rejects samples across depth silhouettes and normal creases to eliminate haloing artifacts.
+  - Bilateral 2x2 reconstruction filter: computes edge-aware weights for upsampling lower-resolution AO passes without bleeding across geometry edges.
+  - Unit tests in `render::ao_quality_tests` (89 lines) verifying quality profile derivation, spiral disk distribution, depth edge rejection, opposing normal rejection, and normalized quad reconstruction weights.
+
+- **Webizen Renderer Integration (`webizen-render`):**
+  - Added `pipeline::frame_schedule::WebizenFrameScheduler` wrapping frame graph compilation and quality profiles.
+  - Re-exported in `webizen-render::lib`.
+  - Added integration tests in `volumetric_tests.rs`: `frame_graph_scheduler_integration_and_pass_sequence` and `lighting_and_ao_quality_evaluation_integration`.

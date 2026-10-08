@@ -5,31 +5,13 @@
 //! `qualia-core-db`; this crate only adapts the serde scene contract.
 
 use crate::scene_contract::{RenderScene, ScenePoint};
-use crate::volumetric_texture::coarse_texture_level;
 use qualia_core_db::render::gpu::PortalGpu;
-use qualia_core_db::render::gpu::{TextureColorSpace, TextureMipSemantic};
 use qualia_core_db::render::telemetry::SystemTelemetry as CoreTelemetry;
-use qualia_core_db::render::texture_stream_policy::{
-    plan_texture_residency_partial, TextureStreamAction, TextureStreamActionKind,
-    TextureStreamBudget, TextureStreamDemand,
-};
+use qualia_core_db::render::texture_stream_policy::TextureStreamBudget;
 use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
 use qualia_core_db::tensor::Tensor10D;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct TextureUse {
-    color_space: TextureColorSpace,
-    mip_semantic: TextureMipSemantic,
-}
-
-#[derive(Clone, Copy)]
-struct HmcTexturePlanEntry {
-    semantic_id: u64,
-    digest: [u8; 32],
-    texture_use: TextureUse,
-    width: u32,
-    height: u32,
-}
+pub use crate::volumetric_hmc::HmcTextureStreamRequest;
 
 /// Result of best-effort HMC texture admission. Missing or budget-deferred interpretations bind
 /// the renderer's typed fallback texture; they do not prevent the `.10d` mesh from loading.
@@ -47,7 +29,7 @@ pub struct HmcTextureAdmissionReport {
 /// Cross-platform volumetric renderer SDK. Native instances render offscreen on the same physical
 /// wgpu device as QualiaDB inference and expose caller-buffered RGBA8 readback.
 pub struct VolumetricRenderer {
-    inner: PortalGpu,
+    pub(crate) inner: PortalGpu,
 }
 
 impl VolumetricRenderer {
@@ -96,6 +78,20 @@ impl VolumetricRenderer {
         Ok(loaded)
     }
 
+    /// Load an HMC `.10d` asset while admitting texture mips according to view footprint
+    /// and streaming budgets. For KTX2 resources with stored coarse levels, the authored
+    /// mip is decoded directly without decompressing level zero or performing CPU filtering.
+    pub fn load_hmc_asset_with_texture_request(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+        request: HmcTextureStreamRequest,
+    ) -> Result<((u32, u32, f32), HmcTextureAdmissionReport), String> {
+        crate::volumetric_hmc::load_hmc_asset_with_texture_request(
+            self, hmc_bytes, asset_key, request,
+        )
+    }
+
     /// Load an HMC `.10d` asset while admitting only the highest-priority coarse-to-fine texture
     /// mip prefix that fits the supplied per-load budgets. A texture admitted at mip `m` is
     /// physically allocated from that mip's dimensions, with its remaining coarser chain generated
@@ -110,379 +106,15 @@ impl VolumetricRenderer {
         asset_key: &str,
         budget: TextureStreamBudget,
     ) -> Result<((u32, u32, f32), HmcTextureAdmissionReport), String> {
-        use std::collections::{BTreeMap, BTreeSet};
-
-        let bundle = qualia_core_db::bundle::BundleReader::parse(hmc_bytes)
-            .map_err(|error| format!("HMC bundle: {error}"))?;
-        let asset_bytes = bundle
-            .get(asset_key)
-            .ok_or_else(|| format!("HMC asset is missing: {asset_key}"))?;
-        if !bundle.verify_entry(asset_key) {
-            return Err(format!("HMC asset digest check failed: {asset_key}"));
-        }
-        let entry = bundle
-            .entry(asset_key)
-            .ok_or_else(|| format!("HMC asset index entry is missing: {asset_key}"))?;
-        if entry.kind != "10d" {
-            return Err(format!(
-                "HMC asset {asset_key} has kind {:?}, expected 10d",
-                entry.kind
-            ));
-        }
-
-        let header = qualia_core_db::container_10d::Container10dHeader::parse(asset_bytes)
-            .map_err(|error| format!("10d header: {error}"))?;
-        if qualia_core_db::container_10d::compute_whole_file_crc32c(asset_bytes)
-            != header.header_crc32c
-        {
-            return Err("10d whole-file integrity check failed".to_string());
-        }
-        let descs = qualia_core_db::container_10d::parse_section_table(asset_bytes, &header)
-            .map_err(|error| format!("10d section table: {error}"))?;
-        let mut material_payload = None;
-        for descriptor in descs {
-            if descriptor.typ() == Some(qualia_core_db::container_10d::SectionType::Materials) {
-                let start = descriptor.byte_offset as usize;
-                let end = start
-                    .checked_add(descriptor.byte_length as usize)
-                    .filter(|&end| end <= asset_bytes.len())
-                    .ok_or_else(|| "10d MAT1 section is outside asset bytes".to_string())?;
-                material_payload = Some(&asset_bytes[start..end]);
-                break;
-            }
-        }
-        let mut texture_uses = BTreeMap::<[u8; 32], BTreeSet<TextureUse>>::new();
-        if let Some(payload) = material_payload {
-            use qualia_core_db::container_10d::{MaterialRecord, OpacityMode};
-            let (material_count, range_count) =
-                qualia_core_db::container_10d::material_section_counts(payload)
-                    .map_err(|error| format!("10d MAT1 header: {error}"))?;
-            let mut materials = vec![MaterialRecord::legacy_default(); material_count];
-            let first_material_id = materials
-                .first()
-                .ok_or_else(|| "10d MAT1 section has no materials".to_string())?
-                .id;
-            let mut ranges = vec![
-                qualia_core_db::container_10d::SubmeshRange {
-                    first_index: 0,
-                    index_count: 3,
-                    material_id: first_material_id,
-                    semantic_id: 0,
-                };
-                range_count
-            ];
-            let mesh_index_count = descs
-                .iter()
-                .find(|descriptor| {
-                    descriptor.typ()
-                        == Some(qualia_core_db::container_10d::SectionType::QuantizedMesh)
-                })
-                .map(|descriptor| {
-                    let start = descriptor.byte_offset as usize;
-                    let end = start + descriptor.byte_length as usize;
-                    qualia_core_db::container_10d::decode_mesh_section(&asset_bytes[start..end])
-                        .map(|mesh| mesh.triangles.len().saturating_mul(3) as u32)
-                        .map_err(|error| format!("10d mesh decode: {error}"))
-                })
-                .transpose()?
-                .ok_or_else(|| "10d asset has no QuantizedMesh section".to_string())?;
-            qualia_core_db::container_10d::decode_material_section_into(
-                payload,
-                mesh_index_count,
-                &mut materials,
-                &mut ranges,
-            )
-            .map_err(|error| format!("10d MAT1 decode: {error}"))?;
-            for material in &materials {
-                if material.base_color_texture != [0; 32] {
-                    texture_uses
-                        .entry(material.base_color_texture)
-                        .or_default()
-                        .insert(TextureUse {
-                            color_space: TextureColorSpace::Srgb,
-                            mip_semantic: if material.opacity_mode == OpacityMode::Mask {
-                                TextureMipSemantic::alpha_mask(material.alpha_cutoff)
-                                    .unwrap_or(TextureMipSemantic::Color)
-                            } else {
-                                TextureMipSemantic::Color
-                            },
-                        });
-                }
-                if material.emissive_texture != [0; 32] {
-                    texture_uses
-                        .entry(material.emissive_texture)
-                        .or_default()
-                        .insert(TextureUse {
-                            color_space: TextureColorSpace::Srgb,
-                            mip_semantic: TextureMipSemantic::Color,
-                        });
-                }
-                if material.normal_texture != [0; 32] {
-                    texture_uses
-                        .entry(material.normal_texture)
-                        .or_default()
-                        .insert(TextureUse {
-                            color_space: TextureColorSpace::Linear,
-                            mip_semantic: TextureMipSemantic::Normal,
-                        });
-                }
-                for digest in [
-                    &material.metallic_roughness_texture,
-                    &material.occlusion_texture,
-                ] {
-                    if *digest != [0; 32] {
-                        texture_uses.entry(*digest).or_default().insert(TextureUse {
-                            color_space: TextureColorSpace::Linear,
-                            mip_semantic: TextureMipSemantic::LinearData,
-                        });
-                    }
-                }
-                if material.stylized_ramp_texture != [0; 32] {
-                    texture_uses
-                        .entry(material.stylized_ramp_texture)
-                        .or_default()
-                        .insert(TextureUse {
-                            color_space: TextureColorSpace::Srgb,
-                            mip_semantic: TextureMipSemantic::Color,
-                        });
-                }
-            }
-        }
-
-        let mut plan_entries = Vec::new();
-        let mut demands = Vec::new();
-        let mut next_semantic_id = 1u64;
-        let mut report = HmcTextureAdmissionReport::default();
-        for (digest, uses) in &texture_uses {
-            let resource = qualia_core_db::render::asset_package::resolve_hmc_texture_resource(
-                &bundle, digest,
-            )
-            .map_err(|error| format!("HMC texture resolution: {error}"))?;
-            let (info, _) =
-                match qualia_core_db::render::texture_decode::inspect_hmc_texture_requirements(
-                    &resource,
-                    qualia_core_db::render::texture_decode::TextureDecodeLimits::default(),
-                ) {
-                    Ok(requirements) => requirements,
-                    Err(_) => {
-                        // The bundle and digest are verified, but this renderer may not support the
-                        // image codec/format on this build. Keep the mesh usable with typed fallback.
-                        report.requested_interpretations += uses.len();
-                        report.deferred_interpretations += uses.len();
-                        continue;
-                    }
-                };
-            let max_dimension = info.width.max(info.height);
-            let mip_count = (u32::BITS - max_dimension.leading_zeros()) as u8;
-            for texture_use in uses {
-                report.requested_interpretations += 1;
-                if self
-                    .inner
-                    .resident_texture_binding_with_mips(
-                        digest,
-                        texture_use.color_space,
-                        texture_use.mip_semantic,
-                    )
-                    .is_some()
-                {
-                    report.resident_interpretations += 1;
-                    continue;
-                }
-                let semantic_id = next_semantic_id;
-                next_semantic_id = next_semantic_id
-                    .checked_add(1)
-                    .ok_or_else(|| "HMC texture request count overflow".to_string())?;
-                let importance = match texture_use.mip_semantic {
-                    TextureMipSemantic::AlphaMask { .. } => u16::MAX,
-                    TextureMipSemantic::Color => 500,
-                    TextureMipSemantic::Normal => 400,
-                    TextureMipSemantic::LinearData => 300,
-                };
-                demands.push(TextureStreamDemand {
-                    semantic_id,
-                    width: info.width,
-                    height: info.height,
-                    mip_count,
-                    block_width: 1,
-                    block_height: 1,
-                    bytes_per_block: 4,
-                    desired_finest_mip: 0,
-                    resident_finest_mip: None,
-                    resident_bytes: 0,
-                    requested: true,
-                    pinned: false,
-                    visible: true,
-                    importance,
-                    distance_key: 0,
-                    last_used_frame: 0,
-                });
-                plan_entries.push(HmcTexturePlanEntry {
-                    semantic_id,
-                    digest: *digest,
-                    texture_use: *texture_use,
-                    width: info.width,
-                    height: info.height,
-                });
-            }
-        }
-
-        let action_capacity = demands.iter().try_fold(0usize, |total, demand| {
-            total
-                .checked_add(demand.mip_count as usize)
-                .ok_or_else(|| "HMC texture action count overflow".to_string())
-        })?;
-        let mut actions = Vec::new();
-        actions
-            .try_reserve_exact(action_capacity)
-            .map_err(|_| "HMC texture plan workspace allocation failed".to_string())?;
-        actions.resize(
-            action_capacity,
-            TextureStreamAction {
-                semantic_id: 0,
-                kind: TextureStreamActionKind::RequestMip,
-                mip_level: 0,
-                bytes: 0,
+        self.load_hmc_asset_with_texture_request(
+            hmc_bytes,
+            asset_key,
+            HmcTextureStreamRequest {
+                budget,
+                projected_width: 0,
+                projected_height: 0,
             },
-        );
-        let plan = plan_texture_residency_partial(&demands, budget, &mut actions)
-            .map_err(|error| format!("HMC texture budget plan: {error:?}"))?;
-        report.admitted_mips = plan.admitted_mip_count;
-        report.deferred_mips = plan.deferred_mip_count;
-        report.admitted_upload_bytes = plan.admitted_upload_bytes;
-        report.deferred_upload_bytes = plan.deferred_upload_bytes;
-        let actions = &actions[..plan.action_count];
-
-        let mut newly_resident = Vec::new();
-        let upload_result = (|| -> Result<(), String> {
-            for digest in texture_uses.keys() {
-                let mut selected = Vec::new();
-                for entry in plan_entries.iter().filter(|entry| entry.digest == *digest) {
-                    let mut first_mip = None;
-                    let mut mip_bytes = 0u64;
-                    let mut mip_count = 0usize;
-                    for action in actions.iter().filter(|action| {
-                        action.semantic_id == entry.semantic_id
-                            && action.kind == TextureStreamActionKind::RequestMip
-                    }) {
-                        first_mip = Some(first_mip.map_or(action.mip_level, |current: u8| {
-                            current.min(action.mip_level)
-                        }));
-                        mip_bytes = mip_bytes.saturating_add(action.bytes);
-                        mip_count += 1;
-                    }
-                    if let Some(first_mip) = first_mip {
-                        selected.push((*entry, first_mip, mip_bytes, mip_count));
-                    } else {
-                        report.deferred_interpretations += 1;
-                    }
-                }
-                if selected.is_empty() {
-                    continue;
-                }
-                let resource = qualia_core_db::render::asset_package::resolve_hmc_texture_resource(
-                    &bundle, digest,
-                )
-                .map_err(|error| format!("HMC texture resolution: {error}"))?;
-                let (rgba8, _) =
-                    match qualia_core_db::render::texture_decode::decode_hmc_texture_rgba8(
-                        &resource,
-                        qualia_core_db::render::texture_decode::TextureDecodeLimits::default(),
-                    ) {
-                        Ok(decoded) => decoded,
-                        Err(_) => {
-                            // Per-resource decode refusal degrades only these maps. Digest/index
-                            // verification above remains fatal; no unrelated scene or map is lost.
-                            for (_, _, mip_bytes, mip_count) in &selected {
-                                report.admitted_mips =
-                                    report.admitted_mips.saturating_sub(*mip_count);
-                                report.deferred_mips += *mip_count;
-                                report.admitted_upload_bytes =
-                                    report.admitted_upload_bytes.saturating_sub(*mip_bytes);
-                                report.deferred_upload_bytes += *mip_bytes;
-                                report.deferred_interpretations += 1;
-                            }
-                            continue;
-                        }
-                    };
-                for (entry, first_mip, mip_bytes, mip_count) in selected {
-                    let upload = if first_mip == 0 {
-                        self.inner.upload_resident_texture_rgba8_with_mips(
-                            entry.digest,
-                            entry.texture_use.color_space,
-                            entry.texture_use.mip_semantic,
-                            entry.width,
-                            entry.height,
-                            &rgba8,
-                        )
-                    } else {
-                        let (coarse, coarse_width, coarse_height) = coarse_texture_level(
-                            &rgba8,
-                            entry.width,
-                            entry.height,
-                            first_mip,
-                            entry.texture_use.mip_semantic,
-                        )?;
-                        if coarse_width == 0 || coarse_height == 0 {
-                            return Err("HMC coarse texture dimensions are invalid".to_string());
-                        }
-                        self.inner
-                            .upload_resident_texture_rgba8_at_mip_with_mips(
-                                entry.digest,
-                                entry.texture_use.color_space,
-                                entry.texture_use.mip_semantic,
-                                entry.width,
-                                entry.height,
-                                u32::from(first_mip),
-                                &coarse,
-                            )
-                            .map(|_| ())
-                    };
-                    match upload {
-                        Ok(_) => {
-                            newly_resident.push((entry.digest, entry.texture_use));
-                            report.resident_interpretations += 1;
-                        }
-                        Err(qualia_core_db::render::gpu::TextureUploadError::GpuBudgetRefused)
-                        | Err(
-                            qualia_core_db::render::gpu::TextureUploadError::UploadBudgetRefused,
-                        ) => {
-                            report.admitted_mips = report.admitted_mips.saturating_sub(mip_count);
-                            report.deferred_mips += mip_count;
-                            report.admitted_upload_bytes =
-                                report.admitted_upload_bytes.saturating_sub(mip_bytes);
-                            report.deferred_upload_bytes =
-                                report.deferred_upload_bytes.saturating_add(mip_bytes);
-                            report.deferred_interpretations += 1;
-                        }
-                        Err(error) => return Err(format!("HMC texture upload: {error}")),
-                    }
-                }
-            }
-            Ok(())
-        })();
-        if let Err(error) = upload_result {
-            for (digest, texture_use) in newly_resident {
-                self.inner.evict_resident_texture_with_mips(
-                    &digest,
-                    texture_use.color_space,
-                    texture_use.mip_semantic,
-                );
-            }
-            return Err(error);
-        }
-        match self.load_10d_asset(asset_bytes) {
-            Ok(result) => Ok((result, report)),
-            Err(error) => {
-                for (digest, texture_use) in newly_resident {
-                    self.inner.evict_resident_texture_with_mips(
-                        &digest,
-                        texture_use.color_space,
-                        texture_use.mip_semantic,
-                    );
-                }
-                Err(error)
-            }
-        }
+        )
     }
 
     pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {

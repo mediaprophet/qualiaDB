@@ -1,5 +1,7 @@
 use super::*;
 use crate::scene_contract::{SceneEdge, SceneFace};
+use crate::volumetric_texture::coarse_texture_level;
+use qualia_core_db::render::gpu::TextureMipSemantic;
 
 #[test]
 fn coarse_texture_level_reduces_cpu_base_to_requested_physical_extent() {
@@ -208,4 +210,302 @@ fn temporal_scrub_matches_linear_scan_oracle() {
         result, oracle,
         "temporal_scrub must match linear-scan oracle"
     );
+}
+
+// ── HMC Texture Streaming & Mip Selection tests ──────────────────────────
+
+fn ktx2_fixture(vk_format: u32, base_w: u32, base_h: u32, levels: &[&[u8]]) -> Vec<u8> {
+    use qualia_core_db::render::texture_ktx2::KTX2_IDENTIFIER;
+    let level_count = levels.len();
+    let index_bytes = level_count * 24;
+    let dfd_offset = 80 + index_bytes;
+    let dfd_len = 28usize;
+    let metadata_end = dfd_offset + dfd_len;
+
+    let mut current_offset = metadata_end;
+    let mut level_ranges = Vec::new();
+    for payload in levels {
+        let start = current_offset;
+        let end = start + payload.len();
+        level_ranges.push((start, payload.len()));
+        current_offset = end;
+    }
+
+    let mut bytes = vec![0u8; current_offset];
+    bytes[..12].copy_from_slice(&KTX2_IDENTIFIER);
+    bytes[12..16].copy_from_slice(&vk_format.to_le_bytes());
+    bytes[16..20].copy_from_slice(&1u32.to_le_bytes()); // type_size
+    bytes[20..24].copy_from_slice(&base_w.to_le_bytes());
+    bytes[24..28].copy_from_slice(&base_h.to_le_bytes());
+    bytes[28..32].copy_from_slice(&0u32.to_le_bytes()); // depth
+    bytes[32..36].copy_from_slice(&0u32.to_le_bytes()); // layer_count
+    bytes[36..40].copy_from_slice(&1u32.to_le_bytes()); // face_count
+    bytes[40..44].copy_from_slice(&(level_count as u32).to_le_bytes());
+    bytes[44..48].copy_from_slice(&0u32.to_le_bytes()); // supercompression
+    bytes[48..52].copy_from_slice(&(dfd_offset as u32).to_le_bytes());
+    bytes[52..56].copy_from_slice(&(dfd_len as u32).to_le_bytes());
+
+    bytes[dfd_offset..dfd_offset + 4].copy_from_slice(&28u32.to_le_bytes());
+    bytes[dfd_offset + 8..dfd_offset + 12].copy_from_slice(&((24u32 << 16) | 2).to_le_bytes());
+
+    for (i, &(offset, len)) in level_ranges.iter().enumerate() {
+        let entry_offset = 80 + i * 24;
+        bytes[entry_offset..entry_offset + 8].copy_from_slice(&(offset as u64).to_le_bytes());
+        bytes[entry_offset + 8..entry_offset + 16].copy_from_slice(&(len as u64).to_le_bytes());
+        bytes[entry_offset + 16..entry_offset + 24].copy_from_slice(&(len as u64).to_le_bytes());
+        bytes[offset..offset + len].copy_from_slice(levels[i]);
+    }
+    bytes
+}
+
+fn build_test_hmc_bundle(
+    texture_bytes: &[u8],
+    texture_mime: &str,
+    is_normal: bool,
+) -> (Vec<u8>, [u8; 32]) {
+    use qualia_core_db::bundle::BundleWriter;
+    use qualia_core_db::container_10d::{attach_material_section, MaterialRecord, SubmeshRange};
+    use qualia_core_db::render::asset_package::texture_hmc_key;
+
+    let digest = qualia_core_db::q42::asset_envelope::sha256_of(texture_bytes);
+
+    let asset = qualia_core_db::render::compile_10d::compile_asset(
+        b"v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+        Some("obj"),
+        "urn:test:hmc-stream",
+        "obj",
+    )
+    .unwrap();
+
+    let mut mat = MaterialRecord::legacy_default();
+    mat.id = 1;
+    if is_normal {
+        mat.normal_texture = digest;
+    } else {
+        mat.base_color_texture = digest;
+    }
+
+    let range = SubmeshRange {
+        first_index: 0,
+        index_count: 3,
+        material_id: 1,
+        semantic_id: 42,
+    };
+
+    let container_with_mat =
+        attach_material_section(&asset.container_10d, &[mat], &[range], 3).unwrap();
+
+    let mut writer = BundleWriter::new();
+    writer
+        .add_file("asset.10d", "10d", container_with_mat, None)
+        .unwrap();
+    writer
+        .add_file(
+            &texture_hmc_key(&digest),
+            texture_mime,
+            texture_bytes.to_vec(),
+            None,
+        )
+        .unwrap();
+
+    (writer.build().unwrap(), digest)
+}
+
+#[test]
+fn hmc_multilevel_ktx2_selects_and_decodes_coarse_level() {
+    let mut renderer = match VolumetricRenderer::new_offscreen(64, 64, 64) {
+        Ok(r) => r,
+        Err(_) => return, // Headless environment without adapter
+    };
+
+    // 4x4 (64B), 2x2 (16B), 1x1 (4B)
+    let lvl0 = [0xAAu8; 64];
+    let lvl1 = [0xBBu8; 16];
+    let lvl2 = [0xCCu8; 4];
+    let ktx2 = ktx2_fixture(43, 4, 4, &[&lvl0, &lvl1, &lvl2]); // SRGB
+
+    let (hmc_bytes, _) = build_test_hmc_bundle(&ktx2, "image/ktx2", false);
+
+    // Request with projected footprint 2x2: should select mip 1
+    let request = HmcTextureStreamRequest {
+        budget: TextureStreamBudget {
+            max_resident_bytes: 1_000_000,
+            max_upload_bytes: 1_000_000,
+        },
+        projected_width: 2,
+        projected_height: 2,
+    };
+
+    let (loaded, report) = renderer
+        .load_hmc_asset_with_texture_request(&hmc_bytes, "asset.10d", request)
+        .unwrap();
+
+    assert_eq!(loaded.1, 1); // triangle count
+    assert_eq!(report.requested_interpretations, 1);
+    assert_eq!(report.resident_interpretations, 1);
+    assert_eq!(report.deferred_interpretations, 0);
+    assert!(report.admitted_mips > 0);
+}
+
+#[test]
+fn hmc_constrained_budget_defers_texture_while_mesh_loads() {
+    let mut renderer = match VolumetricRenderer::new_offscreen(64, 64, 64) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    let lvl0 = [0xAAu8; 64];
+    let ktx2 = ktx2_fixture(43, 4, 4, &[&lvl0]);
+
+    let (hmc_bytes, _) = build_test_hmc_bundle(&ktx2, "image/ktx2", false);
+
+    // Constrained budget: 0 upload bytes allowed
+    let request = HmcTextureStreamRequest {
+        budget: TextureStreamBudget {
+            max_resident_bytes: 0,
+            max_upload_bytes: 0,
+        },
+        projected_width: 0,
+        projected_height: 0,
+    };
+
+    let (loaded, report) = renderer
+        .load_hmc_asset_with_texture_request(&hmc_bytes, "asset.10d", request)
+        .unwrap();
+
+    assert_eq!(loaded.1, 1);
+    assert_eq!(report.requested_interpretations, 1);
+    assert_eq!(report.resident_interpretations, 0);
+    assert_eq!(report.deferred_interpretations, 1);
+}
+
+#[test]
+fn hmc_color_space_mismatch_is_deferred_while_mesh_loads() {
+    let mut renderer = match VolumetricRenderer::new_offscreen(64, 64, 64) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    let lvl0 = [0x80u8; 16];
+    // Normal map requires UNORM, but fixture specifies SRGB (43)
+    let ktx2 = ktx2_fixture(43, 2, 2, &[&lvl0]);
+
+    let (hmc_bytes, _) = build_test_hmc_bundle(&ktx2, "image/ktx2", true);
+
+    let request = HmcTextureStreamRequest::default();
+    let (loaded, report) = renderer
+        .load_hmc_asset_with_texture_request(&hmc_bytes, "asset.10d", request)
+        .unwrap();
+
+    assert_eq!(loaded.1, 1);
+    assert_eq!(report.requested_interpretations, 1);
+    assert_eq!(report.resident_interpretations, 0);
+    assert_eq!(report.deferred_interpretations, 1);
+}
+
+#[test]
+fn hmc_corrupted_texture_is_deferred_while_mesh_loads() {
+    let mut renderer = match VolumetricRenderer::new_offscreen(64, 64, 64) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    // Corrupted payload that cannot be parsed as KTX2
+    let corrupted = [0xFFu8; 32];
+    let (hmc_bytes, _) = build_test_hmc_bundle(&corrupted, "image/ktx2", false);
+
+    let request = HmcTextureStreamRequest::default();
+    let (loaded, report) = renderer
+        .load_hmc_asset_with_texture_request(&hmc_bytes, "asset.10d", request)
+        .unwrap();
+
+    assert_eq!(loaded.1, 1);
+    assert_eq!(report.requested_interpretations, 1);
+    assert_eq!(report.resident_interpretations, 0);
+    assert_eq!(report.deferred_interpretations, 1);
+}
+
+#[test]
+fn frame_graph_scheduler_integration_and_pass_sequence() {
+    use crate::pipeline::WebizenFrameScheduler;
+    use qualia_core_db::render::frame_graph::PassId;
+    use qualia_core_db::render::quality_profiles::{QualityTier, RenderQualityProfile};
+
+    let mut scheduler = WebizenFrameScheduler::new();
+    let profile = RenderQualityProfile {
+        tier: QualityTier::High,
+        render_scale_bps: 10_000,
+        shadows_enabled: true,
+        shadow_map_dimension: 2048,
+        shadow_cascade_count: 2,
+        ambient_occlusion_enabled: true,
+        ao_scale_bps: 5_000,
+        bloom_enabled: true,
+        bloom_levels: 3,
+        texture_residency_bytes: 1024 * 1024 * 1024,
+        hdr_enabled: true,
+        volume_projection_enabled: false,
+    };
+
+    let schedule = scheduler
+        .plan_frame(&profile, 1920, 1080, None)
+        .expect("plan frame");
+
+    assert!(schedule.pass_count >= 5);
+    let passes = &schedule.passes[..schedule.pass_count];
+    assert!(passes.iter().any(|&p| p == Some(PassId::ForwardLighting)));
+    assert!(passes.iter().any(|&p| p == Some(PassId::DepthPrepass)));
+    assert!(passes.iter().any(|&p| p == Some(PassId::AoCompute)));
+}
+
+#[test]
+fn lighting_and_ao_quality_evaluation_integration() {
+    use qualia_core_db::render::ao_quality::*;
+    use qualia_core_db::render::lighting::*;
+
+    let surface = SurfaceParameters {
+        base_color: [0.8, 0.8, 0.8],
+        metallic: 0.0,
+        roughness: 0.2,
+        reflectance_f0: 0.04,
+        emissive: [0.0; 3],
+        ambient_occlusion: 0.9,
+    };
+    let sun = DirectionalLight {
+        direction: [0.0, -1.0, 0.0],
+        illuminance_lux: 100.0,
+        color_linear: [1.0, 1.0, 1.0],
+        cast_shadows: true,
+    };
+    let stylized = StylizedLightingParams {
+        diffuse_bands: 2,
+        band_softness: 0.05,
+        rim_exponent: 3.0,
+        rim_intensity: 1.0,
+        rim_tint: [1.0, 1.0, 1.0],
+        ..Default::default()
+    };
+
+    let color = evaluate_fragment_radiance(
+        &surface,
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 1.0],
+        Some(&sun),
+        1.0,
+        [0.1, 0.1, 0.1],
+        Some(&stylized),
+    );
+    assert!(color[0] > 0.0);
+
+    let weights = bilateral_upsample_quad_weights(
+        10.0,
+        [0.0, 1.0, 0.0],
+        [10.0, 10.01, 9.99, 10.02],
+        [[0.0, 1.0, 0.0]; 4],
+        [0.25; 4],
+        0.1,
+        4.0,
+    );
+    let sum: f32 = weights.iter().sum();
+    assert!((sum - 1.0).abs() < 1e-4);
 }

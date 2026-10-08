@@ -12,6 +12,8 @@ pub mod anatomy;
 /// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
 /// position / neutral colour). Platform-agnostic (native + WASM consumers).
 pub mod anatomy_pack;
+/// Bounded screen-space ambient occlusion quality profiles and bilateral reconstruction.
+pub mod ao_quality;
 /// HMC packaging and digest-verified resolution for compiled render assets.
 pub mod asset_package;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
@@ -49,6 +51,8 @@ pub mod control;
 /// Caller-buffered CPU RGBA8 mip reducer and format-specific reference filtering.
 pub mod cpu_texture_mips;
 pub mod derivation;
+/// Allocation-free frame graph resource and pass dependency model.
+pub mod frame_graph;
 /// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
 pub mod gamut;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
@@ -58,6 +62,8 @@ pub mod gpu_colour_kernel;
 pub mod hud;
 /// Caller-buffered CPU frustum visibility lists with stable source-index indirection.
 pub mod instance_culling;
+/// Physically-based and stylized cinematic lighting evaluation.
+pub mod lighting;
 /// Material-section compilation and readback helpers for versioned `.10d` assets.
 pub mod material_compile;
 /// P7.1 — Metamers as the affine fibre of the colour-matching projection.
@@ -125,12 +131,14 @@ pub mod standpoint;
 pub mod telemetry;
 /// Bounded, caller-buffered PNG/JPEG decode from verified external texture resources.
 pub mod texture_decode;
+pub mod texture_ingestion;
 /// Allocation-free KTX2 container metadata and level-range parser (native + WASM).
 pub mod texture_ktx2;
 /// Allocation-free decoder for uncompressed single-face RGBA8 KTX2 base levels.
 pub mod texture_ktx2_rgba8;
 /// Deterministic caller-buffered texture mip residency planning and budget admission.
 pub mod texture_stream_policy;
+pub mod texture_streaming_plan;
 
 /// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
 /// renderer parses each level → `plan_view` selects the expected LOD. Gated

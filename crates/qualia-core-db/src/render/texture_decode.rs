@@ -68,6 +68,13 @@ pub fn decode_hmc_texture_rgba8_into(
     if resource.bytes.len() > limits.max_encoded_bytes {
         return Err(TextureDecodeError::EncodedInputTooLarge);
     }
+    super::texture_ingestion::validate_image_signature(resource.mime_type, resource.bytes)
+        .map_err(|e| match e {
+            super::texture_ingestion::TextureIngestionError::UnsupportedMime => {
+                TextureDecodeError::UnsupportedMime
+            }
+            _ => TextureDecodeError::InvalidImage,
+        })?;
     if mime_matches(resource.mime_type, "image/png") {
         decode_png_rgba8(resource.bytes, limits, output, scratch)
     } else if mime_matches(resource.mime_type, "image/jpeg")
@@ -105,6 +112,13 @@ pub fn inspect_hmc_texture_requirements(
     if resource.bytes.len() > limits.max_encoded_bytes {
         return Err(TextureDecodeError::EncodedInputTooLarge);
     }
+    super::texture_ingestion::validate_image_signature(resource.mime_type, resource.bytes)
+        .map_err(|e| match e {
+            super::texture_ingestion::TextureIngestionError::UnsupportedMime => {
+                TextureDecodeError::UnsupportedMime
+            }
+            _ => TextureDecodeError::InvalidImage,
+        })?;
     if mime_matches(resource.mime_type, "image/png") {
         let mut decoder = png::Decoder::new_with_limits(
             resource.bytes,

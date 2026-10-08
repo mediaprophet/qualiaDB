@@ -128,3 +128,29 @@ fn unsupported_ktx2_format_is_not_claimed_as_decoded() {
         Err(TextureDecodeError::UnsupportedImageFormat)
     );
 }
+
+#[test]
+fn mismatched_signature_is_rejected_as_invalid_image() {
+    let bad_png = [1, 2, 3, 4, 5, 6, 7, 8];
+    let image = resource(&bad_png, "image/png");
+    assert_eq!(
+        inspect_hmc_texture_requirements(&image, TextureDecodeLimits::default()),
+        Err(TextureDecodeError::InvalidImage)
+    );
+    assert_eq!(
+        decode_hmc_texture_rgba8_into(
+            &image,
+            TextureDecodeLimits::default(),
+            &mut [0; 16],
+            &mut [0; 16],
+        ),
+        Err(TextureDecodeError::InvalidImage)
+    );
+
+    let bad_jpeg = [0xFF, 0x00, 0x00];
+    let image_jpeg = resource(&bad_jpeg, "image/jpeg");
+    assert_eq!(
+        inspect_hmc_texture_requirements(&image_jpeg, TextureDecodeLimits::default()),
+        Err(TextureDecodeError::InvalidImage)
+    );
+}

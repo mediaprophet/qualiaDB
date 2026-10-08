@@ -284,39 +284,58 @@ fn texture_digest(
     let image = images
         .get(image_index as usize)
         .ok_or_else(|| AssetError::Parse(format!("{semantic} image index out of range")))?;
-    let mime_type = image["mimeType"].as_str().ok_or_else(|| {
-        AssetError::Parse(format!("{semantic} embedded image must declare mimeType"))
-    })?;
-    if !matches!(
-        mime_type,
-        "image/png" | "image/jpeg" | "image/webp" | "image/ktx2"
-    ) {
+    let (bytes, mime_type) = if let Some(view_index) = image["bufferView"].as_u64() {
+        let view_index = view_index as usize;
+        let mime_type = image["mimeType"].as_str().ok_or_else(|| {
+            AssetError::Parse(format!("{semantic} embedded image must declare mimeType"))
+        })?;
+        if !matches!(
+            mime_type,
+            "image/png" | "image/jpeg" | "image/webp" | "image/ktx2"
+        ) {
+            return Err(AssetError::Parse(format!(
+                "{semantic} embedded image MIME type {mime_type:?} is unsupported"
+            )));
+        }
+        let view = buffer_views.get(view_index).ok_or_else(|| {
+            AssetError::Parse(format!("{semantic} image bufferView out of range"))
+        })?;
+        let start = view["byteOffset"].as_u64().unwrap_or(0) as usize;
+        let length = view["byteLength"]
+            .as_u64()
+            .ok_or_else(|| AssetError::Parse(format!("{semantic} image byteLength missing")))?
+            as usize;
+        let end = start
+            .checked_add(length)
+            .ok_or_else(|| AssetError::Parse(format!("{semantic} image byte range overflow")))?;
+        let raw = bin
+            .get(start..end)
+            .ok_or_else(|| AssetError::Parse(format!("{semantic} image exceeds GLB BIN")))?;
+        (raw.to_vec(), mime_type.to_string())
+    } else if let Some(uri) = image["uri"].as_str() {
+        if uri.starts_with("data:") {
+            let (mime, decoded) = crate::render::texture_ingestion::parse_data_uri(
+                uri,
+                crate::render::texture_decode::TextureDecodeLimits::default().max_encoded_bytes,
+            )
+            .map_err(|e| {
+                AssetError::Parse(format!("{semantic} data URI image decode error: {e:?}"))
+            })?;
+            (decoded, mime)
+        } else {
+            return Err(AssetError::Parse(format!(
+                "{semantic} external URI image ({uri}) requires an external resource resolver"
+            )));
+        }
+    } else {
         return Err(AssetError::Parse(format!(
-            "{semantic} embedded image MIME type {mime_type:?} is unsupported"
+            "{semantic} image has neither bufferView nor uri"
         )));
-    }
-    let view_index = image["bufferView"].as_u64().ok_or_else(|| {
-        AssetError::Parse(format!(
-            "{semantic} image must be embedded in GLB BIN (URI images are not supported yet)"
-        ))
-    })? as usize;
-    let view = buffer_views
-        .get(view_index)
-        .ok_or_else(|| AssetError::Parse(format!("{semantic} image bufferView out of range")))?;
-    let start = view["byteOffset"].as_u64().unwrap_or(0) as usize;
-    let length = view["byteLength"]
-        .as_u64()
-        .ok_or_else(|| AssetError::Parse(format!("{semantic} image byteLength missing")))?
-        as usize;
-    let end = start
-        .checked_add(length)
-        .ok_or_else(|| AssetError::Parse(format!("{semantic} image byte range overflow")))?;
-    let bytes = bin
-        .get(start..end)
-        .ok_or_else(|| AssetError::Parse(format!("{semantic} image exceeds GLB BIN")))?;
-    let digest: [u8; 32] = Sha256::digest(bytes).into();
+    };
+
+    let digest: [u8; 32] = Sha256::digest(&bytes).into();
     if let Some(existing) = dependencies.get(&digest) {
-        if existing.bytes.as_slice() != bytes || existing.mime_type != mime_type {
+        if existing.bytes.as_slice() != bytes.as_slice() || existing.mime_type != mime_type {
             return Err(AssetError::Parse(format!(
                 "{semantic} image digest collision has inconsistent payload metadata"
             )));
@@ -325,8 +344,7 @@ fn texture_digest(
         let new_total = dependency_bytes
             .checked_add(bytes.len())
             .ok_or_else(|| AssetError::Parse("texture dependency byte count overflow".into()))?;
-        // Extraction must not amplify the source GLB's binary payload through overlapping views.
-        if new_total > bin.len() {
+        if !image["bufferView"].is_null() && new_total > bin.len() {
             return Err(AssetError::Parse(
                 "unique texture dependencies exceed the source GLB BIN byte budget".into(),
             ));
@@ -336,8 +354,8 @@ fn texture_digest(
             digest,
             TextureDependency {
                 digest,
-                mime_type: mime_type.to_owned(),
-                bytes: bytes.to_vec(),
+                mime_type,
+                bytes,
             },
         );
     }
@@ -689,5 +707,36 @@ mod material_import_tests {
         )
         .unwrap();
         assert_eq!(decoded_materials[0].base_color_texture, digest);
+    }
+
+    #[test]
+    fn data_uri_texture_survives_gltf_import() {
+        use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+        use base64::Engine;
+        let mut png = crate::render::texture_ingestion::PNG_SIGNATURE.to_vec();
+        png.extend_from_slice(&[0, 0, 0, 13, b'I', b'H', b'D', b'R']);
+        let b64 = BASE64_STANDARD.encode(&png);
+        let data_uri = format!("data:image/png;base64,{b64}");
+
+        let gltf = serde_json::json!({
+            "textures": [{"source": 0}],
+            "images": [{"uri": data_uri}]
+        });
+        let mut dependencies = BTreeMap::new();
+        let mut dependency_bytes = 0;
+        let digest = texture_digest(
+            &gltf,
+            &serde_json::json!({"index": 0}),
+            &[],
+            &[],
+            "baseColorTexture",
+            &mut dependencies,
+            &mut dependency_bytes,
+        )
+        .unwrap();
+
+        assert_eq!(dependencies.len(), 1);
+        assert_eq!(dependencies[&digest].mime_type, "image/png");
+        assert_eq!(dependencies[&digest].bytes, png);
     }
 }
