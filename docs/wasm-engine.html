@@ -68,13 +68,17 @@
       <pre id="eng-exports" class="q-mono text-xs text-white/55 whitespace-pre-wrap bg-black/30 rounded-2xl p-4 border border-white/5 min-h-[5rem]">waiting…</pre>
     </section>
 
-    <section class="grid md:grid-cols-2 gap-5">
+    <section class="grid md:grid-cols-2 gap-5 mb-10">
       <div class="q-card p-7">
         <h2 class="text-xl font-semibold mb-3">In the browser packages</h2>
         <ul class="text-sm text-white/75 space-y-2">
           <li>JSON / CBOR ingest, N3 / SHACL, modal logic</li>
           <li>WASM-safe CAS, DFT, ODE, bio, chem</li>
           <li>WebGPU viewport + AcousticPlane (portal / full)</li>
+          <li><strong>0.0.40.8 AAA Graphics:</strong> Temporal AA (Rg16F velocity &amp; R8 reactive masks)</li>
+          <li><strong>Lighting &amp; Materials:</strong> Dual IBL environment probes &amp; split-sum specular</li>
+          <li><strong>Textures:</strong> KTX2 block transcoding (BC1/BC3/BC7, ETC2, ASTC) + Zstd stream</li>
+          <li><strong>Dynamic Worlds:</strong> Vegetation blade deflection &amp; procedural shoreline foam</li>
           <li>Browser LLM only in <code class="q-mono">wasm-full</code></li>
         </ul>
       </div>
@@ -88,6 +92,16 @@
         </ul>
       </div>
     </section>
+
+    <div class="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <h3 class="text-base font-semibold text-white">Experience AAA Graphics &amp; WebGPU Pipeline</h3>
+        <p class="text-xs text-white/70 mt-1">Interactive capability breakdowns, zero-heap frame signatures, and real-time client WebGPU hardware probe.</p>
+      </div>
+      <a href="graphics.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition shrink-0">
+        Launch Graphics Showcase <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
   </main>
 
   <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">

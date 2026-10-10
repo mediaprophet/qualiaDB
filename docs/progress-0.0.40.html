@@ -73,10 +73,13 @@
     <!-- Announcement Banner -->
     <div class="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <strong class="text-emerald-200">0.0.40 Release Milestone:</strong>
-        Semantic Instruments Studio Bay · Desktop Habitat Volume Workflows · Native Streaming Qwen &amp; MoE Inference · Governance WASM Bridge.
+        <strong class="text-emerald-200">0.0.40.8 AAA Graphics &amp; Engine Milestone:</strong>
+        Zero-Heap AAA Graphics (Temporal AA, IBL Probes, KTX2 Transcoder, Shoreline Foam, Vegetation Deflection) · Semantic Instruments · Desktop Volumes · Streaming Inference.
       </div>
       <div class="flex flex-wrap gap-2">
+        <a href="graphics.html" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition shrink-0">
+          AAA Graphics &amp; WebGPU <i class="fa-solid fa-arrow-right"></i>
+        </a>
         <a href="semantic-instruments.html" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-violet-500/20 text-violet-200 border border-violet-500/30 text-xs font-semibold hover:bg-violet-500/30 transition shrink-0">
           Semantic Instruments <i class="fa-solid fa-arrow-right"></i>
         </a>
@@ -86,7 +89,7 @@
       </div>
     </div>
 
-    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> Zero-heap hot paths · Desktop Habitat · Branch <code class="q-mono">0.0.40</code></div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> Zero-heap hot paths · Desktop Habitat · Branch <code class="q-mono">0.0.40.8</code></div>
     <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
       Living Instruments.<br>
       <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">Dignity, sovereign memory, and bounded computation.</span>
@@ -95,7 +98,8 @@
       0.0.40 completes the sovereign foundation: inspectable Semantic Instruments in Webizen Studio, the 5-station Desktop Habitat orbit (Talk · Mail · Directory · Library · Settings), local streaming Qwen &amp; MoE expert tiling, and the Civics.au YAML-LD governance bridge in Webizen-Lite WASM.
     </p>
     <p class="text-sm text-white/45 mb-12">
-      Navigation: <a class="q-link" href="semantic-instruments.html">Semantic Instruments</a> ·
+      Navigation: <a class="q-link" href="graphics.html">AAA Graphics &amp; WebGPU</a> ·
+      <a class="q-link" href="semantic-instruments.html">Semantic Instruments</a> ·
       <a class="q-link" href="prompt-precision.html">Prompt Precision Specs</a> ·
       <a class="q-link" href="progress-0.0.39.html">0.0.39 Progress (Archive)</a> ·
       <a class="q-link" href="progress-0.0.38.html">0.0.38 Human Surface</a> ·
@@ -297,7 +301,44 @@
       </div>
     </section>
 
-    <!-- Pillar 5: Verified Release Artifacts Table -->
+    <!-- Pillar 5: AAA Graphics Engine & WebGPU Pipeline (v0.0.40.8) -->
+    <section class="q-card p-8 mb-16">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-1">Pillar V · AAA Visuals &amp; WebGPU (v0.0.40.8)</p>
+          <h2 class="text-2xl sm:text-3xl font-semibold">Cinema-Grade Rendering &amp; Zero-Heap Frame Passes</h2>
+          <p class="text-sm text-white/60">Strict caller-buffered frame execution across native Vulkan/DX12/Metal and browser WebGPU runtimes.</p>
+        </div>
+        <a href="graphics.html" class="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition shrink-0">
+          Visual Showcase &amp; Live Probe <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">AG-21 Temporal AA</div>
+          <div class="font-semibold text-lg text-cyan-300">Rg16Float + R8Unorm</div>
+          <p class="text-xs text-white/60 mt-1">Screen-space velocity vectors and reactive masks for sub-pixel jitter reconstruction.</p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">AG-22 Lighting Probes</div>
+          <div class="font-semibold text-lg text-amber-300">Dual IBL Shaders</div>
+          <p class="text-xs text-white/60 mt-1">Cubemap irradiance and split-sum specular integration with adaptive blend weights.</p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">AG-03 KTX2 Transcode</div>
+          <div class="font-semibold text-lg text-violet-300">5 Compressed Formats</div>
+          <p class="text-xs text-white/60 mt-1">BC1/BC3/BC7, ETC2, and ASTC decoding with streaming Zstandard supercompression.</p>
+        </div>
+        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div class="text-xs text-white/40 mb-1">AG-10 &amp; AG-12 Worlds</div>
+          <div class="font-semibold text-lg text-emerald-300">Foam &amp; Vegetation</div>
+          <p class="text-xs text-white/60 mt-1">Procedural shoreline foam falloff and dynamic cylinder-collider blade deflection.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Official Distributions Table -->
     <section class="q-card p-8 mb-16">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>

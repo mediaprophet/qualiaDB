@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-040">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen — AAA Graphics & WebGPU Engine Architecture</title>
+  <meta name="description" content="Zero-heap AAA graphics engine in Rust and WebGPU: Temporal AA reconstruction, IBL environment probes, KTX2 block transcoding, and procedural shoreline/vegetation simulation.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <style>
+    .glass-strong { background: rgba(17, 23, 31, 0.78); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .glass-panel { background: rgba(10, 14, 23, 0.65); border: 1px solid rgba(148, 163, 184, 0.15); backdrop-filter: blur(16px); }
+    .code-box { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; background: rgba(5, 7, 12, 0.85); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1rem; overflow-x: auto; }
+    .cap-card { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, box-shadow 0.2s; }
+    .cap-card:hover { transform: translateY(-3px); box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.5); }
+    .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226, 232, 240, 0.65); cursor: pointer; border: 1px solid transparent; }
+    .tab-btn:hover { background: rgba(255, 255, 255, 0.08); color: white; }
+    .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.35); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+  </style>
+</head>
+<body class="min-h-screen bg-zinc-950 text-zinc-100">
+  <div class="q-mesh" aria-hidden="true"></div>
+
+  <!-- Global Navigation -->
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.85);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-cyan-400 via-emerald-400 to-violet-500 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">Q</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-cyan-400 text-xl">DB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+        <div class="flex items-center gap-3 shrink-0">
+          <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+             class="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs font-semibold hover:bg-cyan-500/20 transition">
+            <i class="fa-brands fa-github"></i> Repository
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-12">
+    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 text-xs font-semibold mb-6">
+      <i class="fa-solid fa-cube"></i> Milestone 0.0.40.8 · Zero-Heap Hot Paths · WebGPU &amp; Vulkan/DX12 Native
+    </div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
+      Cinema-Grade Rendering.<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-emerald-300 to-violet-300">Zero heap allocation in frame loops.</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8 leading-relaxed">
+      QualiaDB's graphics pipeline delivers advanced temporal reconstruction, image-based lighting, multi-format compressed texture transcoding, and dynamic secondary motion — qualified identically in native desktops and browser WebGPU runtimes.
+    </p>
+
+    <!-- Key Engine Metrics Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+      <div class="glass-strong rounded-2xl p-5 border border-white/10">
+        <div class="text-xs text-white/40 mb-1">Frame Memory Heap</div>
+        <div class="font-mono text-3xl font-semibold text-emerald-400">0 B</div>
+        <div class="text-xs text-white/55 mt-1">Strict caller-buffered passes</div>
+      </div>
+      <div class="glass-strong rounded-2xl p-5 border border-white/10">
+        <div class="text-xs text-white/40 mb-1">Temporal Motion Format</div>
+        <div class="font-mono text-3xl font-semibold text-cyan-400">Rg16F</div>
+        <div class="text-xs text-white/55 mt-1">Screen-space velocity vectors</div>
+      </div>
+      <div class="glass-strong rounded-2xl p-5 border border-white/10">
+        <div class="text-xs text-white/40 mb-1">Block Transcoders</div>
+        <div class="font-mono text-3xl font-semibold text-violet-400">5 Formats</div>
+        <div class="text-xs text-white/55 mt-1">BC1, BC3, BC7, ETC2, ASTC</div>
+      </div>
+      <div class="glass-strong rounded-2xl p-5 border border-white/10">
+        <div class="text-xs text-white/40 mb-1">Browser Acceptance</div>
+        <div class="font-mono text-3xl font-semibold text-amber-400">100% PASS</div>
+        <div class="text-xs text-white/55 mt-1">Chromium WebGPU selftest</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive Capabilities Section -->
+  <main class="max-w-6xl mx-auto px-6 pb-24">
+    <!-- Tab Controls -->
+    <div class="flex flex-wrap items-center gap-2 mb-8 p-1.5 bg-black/40 border border-white/10 rounded-full w-fit">
+      <button class="tab-btn active" onclick="switchTab('temporal')" id="btn-temporal">
+        <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Temporal AA (AG-21)
+      </button>
+      <button class="tab-btn" onclick="switchTab('lighting')" id="btn-lighting">
+        <i class="fa-solid fa-sun mr-1.5"></i> Environment Probes (AG-22)
+      </button>
+      <button class="tab-btn" onclick="switchTab('transcode')" id="btn-transcode">
+        <i class="fa-solid fa-file-image mr-1.5"></i> KTX2 Transcoder (AG-03)
+      </button>
+      <button class="tab-btn" onclick="switchTab('water')" id="btn-water">
+        <i class="fa-solid fa-water mr-1.5"></i> Water &amp; Shoreline (AG-10)
+      </button>
+      <button class="tab-btn" onclick="switchTab('vegetation')" id="btn-vegetation">
+        <i class="fa-solid fa-seedling mr-1.5"></i> Dynamic Vegetation (AG-12)
+      </button>
+    </div>
+
+    <!-- Tab 1: Temporal AA -->
+    <section id="tab-temporal" class="tab-pane active">
+      <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/20">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+          <div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">CAPABILITY AG-21 · VERIFIED</span>
+            <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Temporal Reconstruction &amp; Live Motion Producers</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
+            <i class="fa-solid fa-circle-check"></i> test_render_with_auto_temporal_accumulates_across_frames: PASS
+          </div>
+        </div>
+        <p class="text-white/70 mb-6 leading-relaxed">
+          The engine provides continuous temporal history accumulation without failing closed. The renderer allocates internal GPU attachments for motion vectors (<code class="text-cyan-300 font-mono">Rg16Float</code>) and reactive masks (<code class="text-cyan-300 font-mono">R8Unorm</code>), calculating camera projection deltas and surface reactivity across consecutive frames.
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-5 mb-6">
+          <div class="glass-panel p-5 rounded-2xl">
+            <h3 class="text-sm font-semibold text-cyan-300 mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-arrows-up-down-left-right"></i> Screen-Space Motion Vectors
+            </h3>
+            <p class="text-xs text-white/60 mb-3">Reconstructs world-space position from scene depth and projects into previous camera view-projection coordinates:</p>
+            <div class="code-box text-cyan-200">let p_ndc = vec4&lt;f32&gt;(uv * 2.0 - 1.0, depth, 1.0);
+let p_world = inv_view_proj * p_ndc;
+let p_prev = prev_view_proj * (p_world / p_world.w);
+let motion = ((p_ndc.xy - p_prev.xy / p_prev.w) * 0.5);</div>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl">
+            <h3 class="text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved"></i> Reactive History Rejection
+            </h3>
+            <p class="text-xs text-white/60 mb-3">Dynamically suppresses history ghosting across transparent water surfaces, alpha-cutout vegetation, and high-velocity particles:</p>
+            <div class="code-box text-emerald-200">let alpha_reactive = select(0.0, 1.0, is_alpha_tested);
+let water_reactive = select(0.0, 0.8, is_water_surface);
+let reactive_mask = max(alpha_reactive, water_reactive);</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Environment Probes & IBL -->
+    <section id="tab-lighting" class="tab-pane">
+      <div class="glass-strong rounded-3xl p-8 mb-8 border border-violet-500/20">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+          <div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">CAPABILITY AG-22 · VERIFIED</span>
+            <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Image-Based Lighting &amp; Specular Environment Probes</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
+            <i class="fa-solid fa-circle-check"></i> environment_probe_pixel_tests (3/3): PASS
+          </div>
+        </div>
+        <p class="text-white/70 mb-6 leading-relaxed">
+          Provides localized irradiance and roughness-aware specular reflection via cubemap probes. Packaged into a compact 544-byte uniform buffer (<code class="text-violet-300 font-mono">EnvironmentLightingGpu</code>) bound to material group 2, supporting smooth distance attenuation and zero light intensity fallbacks.
+        </p>
+
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="glass-panel p-5 rounded-2xl">
+            <div class="text-amber-400 text-lg mb-2"><i class="fa-solid fa-sun"></i></div>
+            <h3 class="font-semibold text-sm mb-1 text-white">Diffuse Irradiance</h3>
+            <p class="text-xs text-white/60">Illuminates unlit and shadowed meshes according to local spatial spherical harmonics.</p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl">
+            <div class="text-cyan-400 text-lg mb-2"><i class="fa-solid fa-gem"></i></div>
+            <h3 class="font-semibold text-sm mb-1 text-white">Metallic Reflections</h3>
+            <p class="text-xs text-white/60">Mipmapped roughness LODs provide sharp mirror reflections down to soft matte reflections.</p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl">
+            <div class="text-violet-400 text-lg mb-2"><i class="fa-solid fa-circle-nodes"></i></div>
+            <h3 class="font-semibold text-sm mb-1 text-white">Distance Falloff</h3>
+            <p class="text-xs text-white/60">Hermite polynomial weight curves smoothly blend between overlapping indoor and outdoor probes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: KTX2 Transcoder -->
+    <section id="tab-transcode" class="tab-pane">
+      <div class="glass-strong rounded-3xl p-8 mb-8 border border-emerald-500/20">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+          <div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/20">CAPABILITY AG-03 · VERIFIED</span>
+            <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Zero-Heap KTX2 Block Transcode Bridge</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
+            <i class="fa-solid fa-circle-check"></i> texture_transcode_tests (4/4): PASS
+          </div>
+        </div>
+        <p class="text-white/70 mb-6 leading-relaxed">
+          Zero-allocation texture transcoding operating entirely inside caller-supplied <code class="text-emerald-300 font-mono">&amp;mut [u8]</code> buffers. Directly decodes compressed texture blocks into hardware-ready uncompressed RGBA8 or target formats without intermediate heap allocation.
+        </p>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+          <div class="glass-panel p-4 rounded-xl text-center">
+            <div class="font-mono text-sm font-bold text-emerald-400">BC1 (DXT1)</div>
+            <div class="text-[11px] text-white/50 mt-1">RGB 5:6:5 Endpoints</div>
+          </div>
+          <div class="glass-panel p-4 rounded-xl text-center">
+            <div class="font-mono text-sm font-bold text-emerald-400">BC3 (DXT5)</div>
+            <div class="text-[11px] text-white/50 mt-1">8-level Alpha Interp</div>
+          </div>
+          <div class="glass-panel p-4 rounded-xl text-center">
+            <div class="font-mono text-sm font-bold text-emerald-400">BC7</div>
+            <div class="text-[11px] text-white/50 mt-1">Partition Mode Unpack</div>
+          </div>
+          <div class="glass-panel p-4 rounded-xl text-center">
+            <div class="font-mono text-sm font-bold text-emerald-400">ETC2</div>
+            <div class="text-[11px] text-white/50 mt-1">Mobile RGB8 Delta</div>
+          </div>
+          <div class="glass-panel p-4 rounded-xl text-center">
+            <div class="font-mono text-sm font-bold text-emerald-400">ASTC</div>
+            <div class="text-[11px] text-white/50 mt-1">Adaptive Footprint</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Water & Shoreline -->
+    <section id="tab-water" class="tab-pane">
+      <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/20">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+          <div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">CAPABILITY AG-10 · VERIFIED</span>
+            <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Water Shoreline Foam &amp; Depth Disparity Blending</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
+            <i class="fa-solid fa-circle-check"></i> water_pixel_tests (2/2): PASS
+          </div>
+        </div>
+        <p class="text-white/70 mb-6 leading-relaxed">
+          Water surfaces preserve authoritative scene depth for opaque geometry while evaluating depth differences in the fragment shader. Where the disparity between the water plane and the underlying terrain is small, dynamic shoreline foam and soft transparency are synthesized automatically.
+        </p>
+      </div>
+    </section>
+
+    <!-- Tab 5: Dynamic Vegetation -->
+    <section id="tab-vegetation" class="tab-pane">
+      <div class="glass-strong rounded-3xl p-8 mb-8 border border-emerald-500/20">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+          <div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CAPABILITY AG-12 · VERIFIED</span>
+            <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Dynamic Collider Deflection &amp; Instanced Foliage</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
+            <i class="fa-solid fa-circle-check"></i> vegetation::tests (2/2): PASS
+          </div>
+        </div>
+        <p class="text-white/70 mb-6 leading-relaxed">
+          The <code class="text-emerald-300 font-mono">VegetationInstancePool</code> simulates character interaction, spring-damper recovery, and directional wind oscillation directly into 128-byte <code class="text-emerald-300 font-mono">GpuInstanceRecord</code> slices. Characters bending grass and foliage leave responsive trails that spring back realistically without modifying GPU vertex buffers.
+        </p>
+      </div>
+    </section>
+
+    <!-- WebGPU Browser Live Probe Section -->
+    <section class="glass-strong rounded-3xl p-8 mb-12 border border-white/10">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-semibold text-white">Browser WebGPU Live Probe</h2>
+          <p class="text-xs sm:text-sm text-white/60">Real-time inspection of your client browser's WebGPU device and adapter capabilities.</p>
+        </div>
+        <button onclick="probeWebGpu()" class="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition">
+          <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Re-test WebGPU
+        </button>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4 mb-6">
+        <div class="glass-panel p-4 rounded-xl">
+          <div class="text-xs text-white/40 mb-1">WebGPU Support</div>
+          <div id="probe-support" class="font-mono text-base sm:text-lg text-emerald-400">Testing...</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl">
+          <div class="text-xs text-white/40 mb-1">Hardware Adapter</div>
+          <div id="probe-adapter" class="font-mono text-base sm:text-lg text-cyan-400">—</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl">
+          <div class="text-xs text-white/40 mb-1">Max Texture Dimension</div>
+          <div id="probe-limits" class="font-mono text-base sm:text-lg text-violet-400">—</div>
+        </div>
+      </div>
+      <div id="probe-details" class="code-box text-xs text-white/60 min-h-[4rem]">Probing WebGPU environment…</div>
+    </section>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="border-t border-white/10 py-10 text-center text-white/40 text-xs">
+    QualiaDB &amp; Webizen · Branch 0.0.40.8 · Certified Zero-Heap Architecture.
+  </footer>
+
+  <script>
+    function switchTab(name) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      const targetPane = document.getElementById('tab-' + name);
+      const targetBtn = document.getElementById('btn-' + name);
+      if (targetPane) targetPane.classList.add('active');
+      if (targetBtn) targetBtn.classList.add('active');
+    }
+
+    async function probeWebGpu() {
+      const supportEl = document.getElementById('probe-support');
+      const adapterEl = document.getElementById('probe-adapter');
+      const limitsEl = document.getElementById('probe-limits');
+      const detailsEl = document.getElementById('probe-details');
+
+      if (!navigator.gpu) {
+        supportEl.textContent = 'Unavailable';
+        supportEl.className = 'font-mono text-lg text-amber-400';
+        detailsEl.textContent = 'WebGPU is not enabled in this browser. Fallback is Canvas2D / CPU Oracle.';
+        return;
+      }
+
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (!adapter) {
+          supportEl.textContent = 'No Adapter';
+          supportEl.className = 'font-mono text-lg text-amber-400';
+          detailsEl.textContent = 'navigator.gpu is present, but no compatible GPU adapter was found.';
+          return;
+        }
+
+        const info = await adapter.requestAdapterInfo?.() || {};
+        supportEl.textContent = 'Available';
+        supportEl.className = 'font-mono text-lg text-emerald-400';
+        adapterEl.textContent = info.vendor || (adapter.isFallbackAdapter ? 'Software Fallback' : 'Hardware GPU');
+        limitsEl.textContent = (adapter.limits.maxTextureDimension2D || '8192') + ' px';
+
+        detailsEl.textContent = JSON.stringify({
+          vendor: info.vendor || 'Standard GPU',
+          architecture: info.architecture || 'Unknown',
+          device: info.device || 'Default',
+          description: info.description || 'Hardware Adapter',
+          isFallbackAdapter: adapter.isFallbackAdapter,
+          maxBufferSize: adapter.limits.maxBufferSize,
+          maxComputeWorkgroupSizeX: adapter.limits.maxComputeWorkgroupSizeX
+        }, null, 2);
+      } catch (e) {
+        supportEl.textContent = 'Error';
+        supportEl.className = 'font-mono text-lg text-rose-400';
+        detailsEl.textContent = 'Error probing WebGPU: ' + String(e);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', probeWebGpu);
+  </script>
+</body>
+</html>

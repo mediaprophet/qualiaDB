@@ -27,6 +27,13 @@
       "group": "Core"
     },
     {
+      "label": "AAA Graphics & WebGPU",
+      "href": "graphics.html",
+      "icon": "fa-vr-cardboard",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "Semantic Instruments",
       "href": "semantic-instruments.html",
       "icon": "fa-toolbox",
