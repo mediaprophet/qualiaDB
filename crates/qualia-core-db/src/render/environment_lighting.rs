@@ -9,12 +9,16 @@ use super::{
     dot3, evaluate_stylized_diffuse, fresnel_schlick, normalize3, SurfaceParameters,
     StylizedLightingParams,
 };
+use bytemuck::{Pod, Zeroable};
 
 /// Maximum number of probes visited by one environment-lighting evaluation.
 pub const MAX_ENVIRONMENT_PROBES: usize = 4;
 
 /// Number of roughness-filtered specular levels stored per probe.
 pub const ENVIRONMENT_SPECULAR_LEVELS: usize = 5;
+
+/// Fixed GPU contract size for one material's environment lighting binding.
+pub const ENVIRONMENT_LIGHTING_GPU_SIZE: usize = 544;
 
 /// A caller-owned, prefiltered environment probe.
 ///
@@ -100,6 +104,139 @@ impl EnvironmentProbeSet {
     pub fn as_slice(&self) -> &[EnvironmentProbe] {
         &self.probes[..self.count as usize]
     }
+
+    /// Pack probe inputs for the GPU without evaluating lighting on the CPU.
+    pub fn to_gpu(&self, fallback_radiance: [f32; 3]) -> EnvironmentLightingGpu {
+        EnvironmentLightingGpu::from_probe_set(Some(self), fallback_radiance)
+    }
+}
+
+/// One fixed-layout probe record consumed by the viewport material shader.
+///
+/// The values are source probe data (irradiance, filtered radiance, influence and direction),
+/// not the result of [`evaluate_environment_lighting`]. Keeping this contract separate prevents
+/// a CPU lighting result from being mistaken for a GPU binding.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct EnvironmentProbeGpu {
+    pub position_radius: [f32; 4],
+    pub irradiance: [f32; 4],
+    pub specular_levels: [[f32; 4]; ENVIRONMENT_SPECULAR_LEVELS],
+    /// xyz is the dominant direction; w is the sanitized-valid flag.
+    pub dominant_valid: [f32; 4],
+}
+
+impl Default for EnvironmentProbeGpu {
+    fn default() -> Self {
+        Self::zeroed()
+    }
+}
+
+/// Bounded, texture-independent environment lighting binding for a material.
+///
+/// A zero `metadata[1]` means that no usable probe texture/data is resident. The shader then returns the
+/// supplied fallback environment contribution while the existing direct-lighting path continues.
+/// The fixed-size representation is portable across native WebGPU and WebAssembly and allocates
+/// only when the caller creates its GPU buffer.
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct EnvironmentLightingGpu {
+    /// x = probe count; y = usable probe count; z/w reserved.
+    pub metadata: [u32; 4],
+    /// Fallback environment contribution, not a CPU evaluation result.
+    pub direct_fallback: [f32; 4],
+    pub probes: [EnvironmentProbeGpu; MAX_ENVIRONMENT_PROBES],
+}
+
+const _: [(); ENVIRONMENT_LIGHTING_GPU_SIZE] =
+    [(); std::mem::size_of::<EnvironmentLightingGpu>()];
+
+impl EnvironmentLightingGpu {
+    /// Build a bindable contract from optional probe source data.
+    pub fn from_probe_set(
+        probes: Option<&EnvironmentProbeSet>,
+        fallback_radiance: [f32; 3],
+    ) -> Self {
+        let mut binding = Self::zeroed();
+        binding.direct_fallback = [
+            finite_or_zero(fallback_radiance[0]),
+            finite_or_zero(fallback_radiance[1]),
+            finite_or_zero(fallback_radiance[2]),
+            1.0,
+        ];
+        let Some(probes) = probes else {
+            return binding;
+        };
+
+        binding.metadata[0] = probes.len() as u32;
+        for (index, probe) in probes.as_slice().iter().enumerate() {
+            let Some(gpu_probe) = sanitize_probe(probe) else {
+                continue;
+            };
+            binding.probes[index] = gpu_probe;
+            binding.metadata[1] += 1;
+        }
+        binding
+    }
+
+    /// A valid no-probe contract for callers that have no resident environment resources.
+    pub fn fallback(fallback_radiance: [f32; 3]) -> Self {
+        Self::from_probe_set(None, fallback_radiance)
+    }
+
+    pub const fn has_usable_probes(&self) -> bool {
+        self.metadata[1] != 0
+    }
+}
+
+#[inline]
+fn finite_or_zero(value: f32) -> f32 {
+    if value.is_finite() {
+        value
+    } else {
+        0.0
+    }
+}
+
+fn sanitize_probe(probe: &EnvironmentProbe) -> Option<EnvironmentProbeGpu> {
+    if !probe.valid
+        || !probe.radius.is_finite()
+        || probe.radius <= 0.0
+        || !probe.position.into_iter().all(f32::is_finite)
+        || !probe.irradiance.into_iter().all(f32::is_finite)
+        || !probe
+            .specular_levels
+            .iter()
+            .flatten()
+            .all(|value| value.is_finite())
+        || !probe.dominant_direction.into_iter().all(f32::is_finite)
+    {
+        return None;
+    }
+    let dominant = normalize3(probe.dominant_direction);
+    Some(EnvironmentProbeGpu {
+        position_radius: [
+            probe.position[0],
+            probe.position[1],
+            probe.position[2],
+            probe.radius,
+        ],
+        irradiance: [
+            probe.irradiance[0],
+            probe.irradiance[1],
+            probe.irradiance[2],
+            0.0,
+        ],
+        specular_levels: std::array::from_fn(|level| {
+            [
+                probe.specular_levels[level][0],
+                probe.specular_levels[level][1],
+                probe.specular_levels[level][2],
+                0.0,
+            ]
+        }),
+        dominant_valid: [dominant[0], dominant[1], dominant[2], 1.0],
+    })
 }
 
 /// Result of one environment evaluation.

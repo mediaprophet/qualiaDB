@@ -19,6 +19,7 @@ pub const MAX_PASS_DEPENDENCIES: usize = 8;
 pub enum FrameResourceId {
     SceneColor,
     LinearDepth,
+    TemporalLinearDepth,
     Normals,
     MotionVectors,
     ReactiveMask,
@@ -81,6 +82,7 @@ pub enum PassId {
     AoCompute,
     AoBilateralFilter,
     ForwardLighting,
+    TemporalLinearDepth,
     TemporalResolve,
     HistoryPublication,
     Skybox,
@@ -165,8 +167,9 @@ pub struct CompiledSchedule {
 /// Ordered temporal handoff selected while compiling a frame graph.
 ///
 /// `TemporalResolveGpu` consumes this contract rather than guessing whether a host has supplied
-/// the required motion-vector, reactive-mask, and linear-depth views. A disabled contract must
-/// leave the existing output path untouched.
+/// the required motion-vector and reactive-mask views. Linear depth is produced by the renderer
+/// from its authoritative scene-depth attachment. A disabled contract must leave the existing
+/// output path untouched.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TemporalOutputSchedule {
     pub enabled: bool,
@@ -228,13 +231,18 @@ impl CompiledSchedule {
         let Some(resolve) = self.pass_index(PassId::TemporalResolve) else {
             return false;
         };
+        let Some(linear_depth) = self.pass_index(PassId::TemporalLinearDepth) else {
+            return false;
+        };
         let Some(publication) = self.pass_index(PassId::HistoryPublication) else {
             return false;
         };
         let output = self
             .pass_index(PassId::BloomComposite)
             .or_else(|| self.pass_index(PassId::SdrOutputComposite));
-        output.is_some_and(|output| resolve < publication && publication < output)
+        output.is_some_and(|output| {
+            linear_depth < resolve && resolve < publication && publication < output
+        })
     }
 }
 
@@ -308,9 +316,9 @@ impl FrameGraphBuilder {
     ///
     /// The temporal pass is opt-in and fail-closed: the existing renderer must declare both
     /// motion-vector and reactive-mask inputs before this graph adds accumulation. The graph
-    /// tracks the linear-depth dependency, but the backend must still bind a real producer. The
-    /// final bloom/SDR output pass consumes the resolved scene colour, while history publication
-    /// remains a distinct scheduled pass.
+    /// schedules a renderer-owned depth conversion from the authoritative scene-depth attachment.
+    /// The final bloom/SDR output pass consumes the resolved scene colour, while history
+    /// publication remains a distinct scheduled pass.
     pub fn configure_from_profile_with_temporal(
         &mut self,
         profile: &RenderQualityProfile,
@@ -432,6 +440,13 @@ impl FrameGraphBuilder {
         let temporal_enabled = temporal.can_schedule();
         if temporal_enabled {
             self.add_resource(ResourceDesc {
+                id: FrameResourceId::TemporalLinearDepth,
+                format: ResourceFormat::Rgba16Float,
+                width: render_w,
+                height: render_h,
+                is_transient: false,
+            })?;
+            self.add_resource(ResourceDesc {
                 id: FrameResourceId::MotionVectors,
                 format: ResourceFormat::Rg16Float,
                 width: render_w,
@@ -460,9 +475,15 @@ impl FrameGraphBuilder {
                 is_transient: false,
             })?;
 
+            self.add_pass(
+                PassNode::new(PassId::TemporalLinearDepth)
+                    .with_read(FrameResourceId::LinearDepth)
+                    .with_write(FrameResourceId::TemporalLinearDepth),
+            )?;
+
             let temporal_pass = PassNode::new(PassId::TemporalResolve)
                 .with_read(FrameResourceId::SceneColor)
-                .with_read(FrameResourceId::LinearDepth)
+                .with_read(FrameResourceId::TemporalLinearDepth)
                 .with_read(FrameResourceId::MotionVectors)
                 .with_read(FrameResourceId::ReactiveMask)
                 .with_write(FrameResourceId::TemporalColor);

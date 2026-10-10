@@ -9,6 +9,7 @@ pub(super) use super::material_draws::{update_draw_bounds, MaterialDraw};
 use crate::container_10d::{
     validate_material_bindings, MaterialRecord, OpacityMode, ShadingModel, SubmeshRange,
 };
+use crate::render::lighting::environment_lighting::EnvironmentLightingGpu;
 use bytemuck::{Pod, Zeroable};
 use std::num::NonZeroU64;
 use wgpu::util::DeviceExt;
@@ -19,7 +20,7 @@ pub(super) const MAX_MATERIAL_DRAWS: usize = super::MAX_GPU_MATERIAL_DRAWS;
 /// One per-material group contains the dynamic factors and all fixed texture/sampler slots. This
 /// saves a pipeline group on WebGPU implementations that expose only the four-group baseline.
 pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    let mut entries = Vec::with_capacity(13);
+    let mut entries = Vec::with_capacity(14);
     entries.push(wgpu::BindGroupLayoutEntry {
         binding: 0,
         visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
@@ -31,6 +32,18 @@ pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         count: None,
     });
     entries.extend(super::material_textures::layout_entries(1));
+    entries.push(wgpu::BindGroupLayoutEntry {
+        binding: 13,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Buffer {
+            ty: wgpu::BufferBindingType::Uniform,
+            has_dynamic_offset: false,
+            min_binding_size: NonZeroU64::new(
+                crate::render::lighting::environment_lighting::ENVIRONMENT_LIGHTING_GPU_SIZE as u64,
+            ),
+        },
+        count: None,
+    });
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("portal-mesh-material-textures-layout"),
         entries: &entries,
@@ -165,6 +178,7 @@ impl From<&MaterialRecord> for MaterialUniform {
 
 pub(super) struct MaterialGpu {
     pub _uniform_buffer: wgpu::Buffer,
+    pub environment_uniform_buffer: wgpu::Buffer,
     pub material_bind_groups: Vec<wgpu::BindGroup>,
     pub draws: Vec<MaterialDraw>,
     /// Draw indices sorted in place each frame; capacity is fixed at mesh upload.
@@ -183,6 +197,37 @@ pub(super) fn create_material_gpu(
     positions: &[[f32; 3]],
     indices: &[u32],
     mesh_index_count: u32,
+) -> Result<MaterialGpu, String> {
+    let environment = EnvironmentLightingGpu::fallback([0.0; 3]);
+    create_material_gpu_with_environment(
+        device,
+        layout,
+        _texture_layout,
+        texture_defaults,
+        resident_textures,
+        materials,
+        ranges,
+        positions,
+        indices,
+        mesh_index_count,
+        &environment,
+    )
+}
+
+/// Build material bindings with raw environment probe inputs. The shader evaluates the bounded
+/// probe blend; this function never calls the CPU lighting evaluator.
+pub(super) fn create_material_gpu_with_environment(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    _texture_layout: &wgpu::BindGroupLayout,
+    texture_defaults: &super::material_textures::MaterialTextureDefaults,
+    resident_textures: &super::texture_residency::ResidentTextureMap,
+    materials: &[MaterialRecord],
+    ranges: &[SubmeshRange],
+    positions: &[[f32; 3]],
+    indices: &[u32],
+    mesh_index_count: u32,
+    environment: &EnvironmentLightingGpu,
 ) -> Result<MaterialGpu, String> {
     validate_material_bindings(materials, ranges, mesh_index_count)
         .map_err(|error| format!("MAT1 material/range validation: {error}"))?;
@@ -204,6 +249,12 @@ pub(super) fn create_material_gpu(
         contents: bytemuck::cast_slice(&uniforms),
         usage: wgpu::BufferUsages::UNIFORM,
     });
+    let environment_uniform_buffer =
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("portal-mesh-environment-lighting"),
+            contents: bytemuck::bytes_of(environment),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
     let material_bind_groups = materials
         .iter()
         .enumerate()
@@ -278,7 +329,7 @@ pub(super) fn create_material_gpu(
                     ),
                 })
                 .collect::<Vec<_>>();
-            let mut entries = Vec::with_capacity(13);
+            let mut entries = Vec::with_capacity(14);
             entries.push(wgpu::BindGroupEntry {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
@@ -296,6 +347,10 @@ pub(super) fn create_material_gpu(
                 texture_entry(6, stylized),
             ]);
             entries.extend(sampler_entries);
+            entries.push(wgpu::BindGroupEntry {
+                binding: 13,
+                resource: environment_uniform_buffer.as_entire_binding(),
+            });
             Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("portal-mesh-material-textures-and-factors"),
                 layout,
@@ -305,10 +360,26 @@ pub(super) fn create_material_gpu(
         .collect::<Result<Vec<_>, String>>()?;
     Ok(MaterialGpu {
         _uniform_buffer: uniform_buffer,
+        environment_uniform_buffer,
         material_bind_groups,
         draws,
         transparent_draw_order,
     })
+}
+
+impl MaterialGpu {
+    /// Upload raw probe inputs into the already-bound uniform. Bind groups remain stable.
+    pub(super) fn update_environment(
+        &self,
+        queue: &wgpu::Queue,
+        environment: &EnvironmentLightingGpu,
+    ) {
+        queue.write_buffer(
+            &self.environment_uniform_buffer,
+            0,
+            bytemuck::bytes_of(environment),
+        );
+    }
 }
 
 fn resolve_map<'a>(

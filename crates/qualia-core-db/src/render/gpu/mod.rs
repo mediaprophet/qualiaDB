@@ -2501,13 +2501,13 @@ impl PortalGpu {
 
     /// Report producer ownership before a host attempts a temporal submission.
     ///
-    /// `SceneDepthOwner` is a depth-stencil attachment, not a linear-depth colour producer, so it
-    /// is intentionally reported as unavailable. Motion vectors and reactive masks are likewise
-    /// unavailable until a real producer is supplied by the host.
+    /// The temporal owner converts `SceneDepthOwner` into a renderer-owned linear-depth colour
+    /// target. Motion vectors and reactive masks remain unavailable until a real producer is
+    /// supplied by the host.
     pub fn temporal_producer_availability(&self) -> TemporalProducerAvailability {
         TemporalProducerAvailability {
             scene_color: self.temporal_scene_color_view().is_some(),
-            linear_depth: false,
+            linear_depth: self.temporal_resolve.is_some(),
             motion_vectors: false,
             reactive_mask: false,
         }
@@ -2581,9 +2581,11 @@ impl PortalGpu {
 
     /// Record temporal output using the renderer-owned scene colour attachment.
     ///
-    /// This is the host contract for the common case: the host owns and binds only real linear
-    /// depth, motion, and reactive producers. The method fails closed when the renderer cannot
-    /// expose a sampleable scene target or any host producer is absent.
+    /// This is the host contract for the common case: the host owns and binds real motion and
+    /// reactive producers, while the renderer supplies linear depth when the host omits it. A
+    /// host-provided linear-depth view is still accepted for compatibility. The method fails
+    /// closed when the renderer cannot expose a sampleable scene target or a required producer is
+    /// absent.
     pub fn record_scheduled_temporal_output_from_producers(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
@@ -2591,13 +2593,75 @@ impl PortalGpu {
         target: &wgpu::TextureView,
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
     ) -> bool {
+        let schedule = self.effective_temporal_schedule(schedule);
+        if !schedule.is_valid()
+            || producers.motion_vectors.is_none()
+            || producers.reactive_mask.is_none()
+        {
+            return false;
+        }
+        let Some(temporal_extent) = self.temporal_resolve.as_ref().map(|owner| owner.extent())
+        else {
+            return false;
+        };
+        if producers.extent != temporal_extent
+            || (schedule.reads_history && !self.temporal_history_valid())
+        {
+            return false;
+        }
         let Some(scene) = self.temporal_scene_color_view().cloned() else {
             return false;
         };
-        let Some(inputs) = producers.into_inputs(&scene) else {
+        let Some(temporal) = self.temporal_resolve.as_ref() else {
             return false;
         };
-        self.record_scheduled_temporal_output(encoder, inputs, target, schedule)
+        if producers.current_linear_depth.is_none()
+            && !temporal.record_linear_depth_producer(
+                &self.device,
+                &self.queue,
+                encoder,
+                self.scene_depth.view(),
+                crate::render::camera::CAMERA_NEAR_PLANE,
+                crate::render::camera::CAMERA_FAR_PLANE,
+            )
+        {
+            return false;
+        }
+        let Some(temporal) = self.temporal_resolve.as_mut() else {
+            return false;
+        };
+        let current_linear_depth = producers
+            .current_linear_depth
+            .cloned()
+            .unwrap_or_else(|| temporal.linear_depth_view().clone());
+        let Some(motion_vectors) = producers.motion_vectors else {
+            return false;
+        };
+        let Some(reactive_mask) = producers.reactive_mask else {
+            return false;
+        };
+        let inputs = temporal_resolve_gpu::TemporalResolveInputs {
+            extent: producers.extent,
+            current_scene: &scene,
+            current_linear_depth: &current_linear_depth,
+            motion_vectors,
+            reactive_mask,
+        };
+        let recorded = temporal.record_scheduled_output(
+            &self.device,
+            &self.queue,
+            encoder,
+            inputs,
+            target,
+            schedule,
+            self.hdr_exposure_ev,
+            self.white_balance_gains,
+            self.color_format.is_srgb(),
+        );
+        if recorded {
+            self.temporal_reset_pending = false;
+        }
+        recorded
     }
 
     // VC3 test helpers — expose uniform belt internals for allocation measurement.
@@ -3052,10 +3116,10 @@ impl PortalGpu {
 
     /// Render one frame and submit temporal output when all real host producers are available.
     ///
-    /// Scene colour remains renderer-owned. The host supplies a genuine linear-depth producer,
-    /// motion vectors, and reactive mask. If the schedule or any producer is unavailable, this
-    /// method renders the ordinary output path and returns `Ok(false)`; no temporal commands are
-    /// recorded and no synthetic producer is created.
+    /// Scene colour and linear depth remain renderer-owned. The host supplies genuine motion
+    /// vectors and a reactive mask; an optional host linear-depth view remains accepted for API
+    /// compatibility. If the schedule or any producer is unavailable, this method renders the
+    /// ordinary output path and returns `Ok(false)`; no synthetic motion/reactive data is created.
     pub fn render_with_temporal(
         &mut self,
         time: f32,
@@ -3063,11 +3127,14 @@ impl PortalGpu {
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
         producers: TemporalProducerViews<'_>,
     ) -> Result<bool, String> {
+        let availability = producers.availability(self.temporal_scene_color_view().is_some());
+        let renderer_owns_linear_depth = self.temporal_resolve.is_some();
         let eligible = schedule.is_valid()
             && producers.extent == (self.width, self.height)
-            && producers
-                .availability(self.temporal_scene_color_view().is_some())
-                .all_available();
+            && availability.scene_color
+            && availability.motion_vectors
+            && availability.reactive_mask
+            && (availability.linear_depth || renderer_owns_linear_depth);
         if !eligible {
             return self
                 .render_internal(time, telemetry, None)
@@ -3467,21 +3534,49 @@ impl PortalGpu {
 
         if let Some((schedule, producers)) = temporal {
             if let Some(scene_view) = temporal_scene_view.as_ref() {
-                if let (Some(inputs), Some(temporal_owner)) = (
-                    producers.into_inputs(scene_view),
-                    self.temporal_resolve.as_mut(),
-                ) {
-                    temporal_recorded = temporal_owner.record_scheduled_output(
-                        &self.device,
-                        &self.queue,
-                        &mut encoder,
-                        inputs,
-                        &view,
-                        schedule,
-                        self.hdr_exposure_ev,
-                        self.white_balance_gains,
-                        self.color_format.is_srgb(),
-                    );
+                let renderer_depth_ready = if producers.current_linear_depth.is_none() {
+                    self.temporal_resolve.as_ref().is_some_and(|owner| {
+                        owner.record_linear_depth_producer(
+                            &self.device,
+                            &self.queue,
+                            &mut encoder,
+                            self.scene_depth.view(),
+                            crate::render::camera::CAMERA_NEAR_PLANE,
+                            crate::render::camera::CAMERA_FAR_PLANE,
+                        )
+                    })
+                } else {
+                    true
+                };
+                if renderer_depth_ready {
+                    if let Some(temporal_owner) = self.temporal_resolve.as_mut() {
+                        let current_linear_depth = producers
+                            .current_linear_depth
+                            .cloned()
+                            .unwrap_or_else(|| temporal_owner.linear_depth_view().clone());
+                        if let (Some(motion_vectors), Some(reactive_mask)) =
+                            (producers.motion_vectors, producers.reactive_mask)
+                        {
+                            let inputs = temporal_resolve_gpu::TemporalResolveInputs {
+                                extent: producers.extent,
+                                current_scene: scene_view,
+                                current_linear_depth: &current_linear_depth,
+                                motion_vectors,
+                                reactive_mask,
+                            };
+                            temporal_recorded = temporal_owner.record_scheduled_output(
+                                &self.device,
+                                &self.queue,
+                                &mut encoder,
+                                inputs,
+                                &view,
+                                schedule,
+                                self.hdr_exposure_ev,
+                                self.white_balance_gains,
+                                self.color_format.is_srgb(),
+                            );
+                        }
+                    }
                 }
             }
             if temporal_recorded {
@@ -3667,7 +3762,7 @@ mod tests {
         assert!(renderer.temporal_reset_pending());
         let availability = renderer.temporal_producer_availability();
         assert!(availability.scene_color);
-        assert!(!availability.linear_depth);
+        assert!(availability.linear_depth);
         assert!(!availability.motion_vectors);
         assert!(!availability.reactive_mask);
         renderer.temporal_reset_pending = false;

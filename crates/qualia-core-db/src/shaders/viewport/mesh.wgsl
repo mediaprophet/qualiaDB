@@ -49,6 +49,22 @@ struct Material {
 @group(2) @binding(10) var occlusion_sampler: sampler;
 @group(2) @binding(11) var emissive_sampler: sampler;
 @group(2) @binding(12) var stylized_ramp_sampler: sampler;
+
+// Fixed-size, texture-independent probe source data. The CPU only packs authored probe inputs;
+// this shader performs the bounded blend so a CPU lighting result is never masqueraded as a bind.
+struct EnvironmentProbe {
+    position_radius: vec4<f32>,
+    irradiance: vec4<f32>,
+    specular_levels: array<vec4<f32>, 5>,
+    dominant_valid: vec4<f32>,
+};
+struct EnvironmentLighting {
+    metadata: vec4<u32>, // probe count, usable probe count, reserved, reserved
+    direct_fallback: vec4<f32>,
+    probes: array<EnvironmentProbe, 4>,
+};
+@group(2) @binding(13) var<uniform> environment: EnvironmentLighting;
+
 struct ShadowUniform {
     light_view_projection: array<mat4x4<f32>, 2>,
     params: vec4<f32>, // enabled, inverse size, receiver bias, cascade split depth
@@ -183,6 +199,65 @@ fn sample_stylized_ramp(uv: vec2<f32>) -> vec4<f32> {
     return textureSample(stylized_ramp_map, stylized_ramp_sampler, uv);
 }
 
+fn environment_probe_weight(world_position: vec3<f32>, probe: EnvironmentProbe) -> f32 {
+    if (probe.dominant_valid.w < 0.5 || probe.position_radius.w <= 0.0) {
+        return 0.0;
+    }
+    let delta = world_position - probe.position_radius.xyz;
+    let distance_sq = dot(delta, delta);
+    let radius_sq = probe.position_radius.w * probe.position_radius.w;
+    if (distance_sq >= radius_sq) {
+        return 0.0;
+    }
+    let coverage = clamp(1.0 - distance_sq / radius_sq, 0.0, 1.0);
+    return (1.0 / (distance_sq + 1.0)) * coverage * coverage;
+}
+
+fn sample_environment_lighting(
+    world_position: vec3<f32>,
+    normal: vec3<f32>,
+    view_dir: vec3<f32>,
+    base: vec3<f32>,
+    metallic: f32,
+    roughness: f32,
+    ao: f32
+) -> vec3<f32> {
+    if (environment.metadata.y == 0u) {
+        return environment.direct_fallback.rgb;
+    }
+    let n_dot_v = clamp(dot(normal, view_dir), 0.0, 1.0);
+    let f0 = mix(vec3<f32>(0.04), base, metallic);
+    let fresnel = f0 + (vec3<f32>(1.0) - f0) * pow(1.0 - n_dot_v, 5.0);
+    let scaled_roughness = clamp(roughness, 0.0, 1.0) * 4.0;
+    let lower = min(u32(floor(scaled_roughness)), 4u);
+    let upper = min(lower + 1u, 4u);
+    let level_mix = scaled_roughness - f32(lower);
+    var diffuse_accum = vec3<f32>(0.0);
+    var specular_accum = vec3<f32>(0.0);
+    var total_weight = 0.0;
+    let probe_count = min(environment.metadata.x, 4u);
+    for (var index = 0u; index < 4u; index = index + 1u) {
+        if (index >= probe_count) { continue; }
+        let probe = environment.probes[index];
+        let weight = environment_probe_weight(world_position, probe);
+        if (weight <= 0.0) { continue; }
+        let prefiltered = mix(
+            probe.specular_levels[lower].rgb,
+            probe.specular_levels[upper].rgb,
+            level_mix
+        );
+        let n_dot_l = max(dot(normal, normalize(probe.dominant_valid.xyz)), 0.0);
+        diffuse_accum += (1.0 - metallic) * base * probe.irradiance.rgb
+            * (n_dot_l / 3.14159265) * ao * weight;
+        specular_accum += prefiltered * fresnel * weight;
+        total_weight += weight;
+    }
+    if (total_weight <= 1e-6) {
+        return environment.direct_fallback.rgb;
+    }
+    return (diffuse_accum + specular_accum) / total_weight;
+}
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) normal: vec3<f32>,
@@ -298,6 +373,24 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     ));
     let emissive = material.emissive.rgb * emissive_sample;
 
+    let mr_sample = select(
+        vec4<f32>(0.0, 1.0, 0.0, 1.0),
+        sample_metallic_roughness(material_uv(input.uv0, 2u)),
+        material.texture_flags.z != 0u
+    );
+    let roughness = clamp(material.factors.y * mr_sample.g, 0.045, 1.0);
+    let metallic = clamp(material.factors.x * mr_sample.b, 0.0, 1.0);
+    let view_dir = normalize(vec3<f32>(sin(camera.yaw), sin(camera.pitch), cos(camera.yaw)));
+    let environment_radiance = sample_environment_lighting(
+        input.world_position,
+        n,
+        view_dir,
+        base,
+        metallic,
+        roughness,
+        ambient_visibility
+    );
+
     if (material.flags.x == 1u) {
         // Portable animated-film fallback: stable three-band diffuse with authored base and
         // emissive factors. An authored ramp texture remains a separate, explicitly gated path.
@@ -314,22 +407,15 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
             sample_stylized_ramp(material_uv(vec2<f32>(ndotl, 0.5), 5u)).rgb,
             material.texture_flags_extra.y != 0u
         );
-        let col = base * (amb_int * ambient_visibility + band * sun_int * sun_visibility) * ramp + emissive
+        let col = environment_radiance
+            + base * (amb_int * ambient_visibility + band * sun_int * sun_visibility) * ramp + emissive
             + base * rim * 0.12;
         return vec4<f32>(apply_atmosphere(col, input.world_position), alpha);
     }
 
     // Direct-light GGX metallic-roughness baseline. All factors are linear; the output attachment
-    // owns display encoding. Environment/probe lighting and texture maps are separate later tiers.
-    let mr_sample = select(
-        vec4<f32>(0.0, 1.0, 0.0, 1.0),
-        sample_metallic_roughness(material_uv(input.uv0, 2u)),
-        material.texture_flags.z != 0u
-    );
-    let roughness = clamp(material.factors.y * mr_sample.g, 0.045, 1.0);
-    let metallic = clamp(material.factors.x * mr_sample.b, 0.0, 1.0);
+    // owns display encoding. Environment/probe lighting is a bounded material contribution.
     let dielectric_f0 = clamp(material.factors.z, 0.0, 1.0) * 0.04;
-    let view_dir = normalize(vec3<f32>(sin(camera.yaw), sin(camera.pitch), cos(camera.yaw)));
     let half_dir = normalize(key + view_dir + vec3<f32>(0.0, 0.0, 1e-8));
     let ndotv = max(dot(n, view_dir), 1e-4);
     let ndoth = max(dot(n, half_dir), 0.0);
@@ -347,7 +433,8 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         / max(4.0 * ndotv * ndotl, 1e-4);
     let diffuse = (vec3<f32>(1.0) - fresnel) * base * ((1.0 - metallic) / 3.14159265);
     let ambient = base * (1.0 - metallic) * amb_int * ambient_visibility;
-    let col = ambient + (diffuse + specular) * (ndotl * sun_int * sun_visibility) + emissive;
+    let col = environment_radiance
+        + ambient + (diffuse + specular) * (ndotl * sun_int * sun_visibility) + emissive;
     return vec4<f32>(apply_atmosphere(col, input.world_position), alpha);
 }
 

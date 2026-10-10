@@ -242,3 +242,23 @@ fn environment_lighting_keeps_stylized_diffuse_and_specular_controls() {
     assert!(result.diffuse[0] >= 0.0);
     assert_eq!(result.specular, [0.0; 3]);
 }
+
+#[test]
+fn environment_gpu_contract_packs_source_probes_and_falls_back_without_them() {
+    assert_eq!(
+        std::mem::size_of::<EnvironmentLightingGpu>(),
+        ENVIRONMENT_LIGHTING_GPU_SIZE
+    );
+    let fallback = EnvironmentLightingGpu::fallback([0.25, 0.5, 0.75]);
+    assert!(!fallback.has_usable_probes());
+    assert_eq!(fallback.metadata[0], 0);
+    assert_eq!(fallback.direct_fallback[..3], [0.25, 0.5, 0.75]);
+
+    let mut probes = EnvironmentProbeSet::new();
+    assert!(probes.push(test_probe()));
+    let gpu = probes.to_gpu([0.0; 3]);
+    assert!(gpu.has_usable_probes());
+    assert_eq!(gpu.metadata[..2], [1, 1]);
+    assert_eq!(gpu.probes[0].position_radius, [0.0, 0.0, 0.0, 10.0]);
+    assert_eq!(gpu.probes[0].dominant_valid[3], 1.0);
+}

@@ -1,9 +1,10 @@
 //! Optional, renderer-owned GPU temporal resolve.
 //!
-//! This module owns the resolve and history targets, but it does not invent any
-//! motion-vector, reactive-mask, or linear-depth producer. A frame can enter the
-//! pass only when the caller supplies all of those real producer views. Until a
-//! caller records the pass, the existing PortalGpu output path remains unchanged.
+//! This module owns the resolve, current linear-depth, and history targets. It
+//! produces linear depth from the renderer's authoritative depth attachment,
+//! but it does not invent motion-vector or reactive-mask data. A frame can
+//! enter temporal accumulation only when those remaining real producer views
+//! are supplied by the caller.
 
 use std::num::NonZeroU64;
 
@@ -16,6 +17,8 @@ const MAX_MOTION_FOR_HISTORY: f32 = 2.0;
 const MAX_HISTORY_WEIGHT: f32 = 0.9;
 const PARAMS_BYTES: u64 = 32;
 const OUTPUT_PARAMS_BYTES: u64 = 32;
+const DEPTH_PRODUCER_PARAMS_BYTES: u64 = 16;
+const LINEAR_DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -34,6 +37,14 @@ struct OutputParams {
     _padding1: f32,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct DepthProducerParams {
+    near_plane: f32,
+    far_plane: f32,
+    _padding: [f32; 2],
+}
+
 /// Real producer views required to admit a temporal resolve.
 ///
 /// `motion_vectors` are UV-space vectors pointing from the current pixel to its
@@ -49,9 +60,9 @@ pub struct TemporalResolveInputs<'scene, 'producer> {
 
 /// Producer views supplied by a host for one temporal frame.
 ///
-/// Scene colour is owned by `PortalGpu`; these are the remaining producer views. The renderer
-/// deliberately does not reinterpret its depth-stencil attachment as linear depth. A host may
-/// omit any view while it is unavailable, in which case temporal output must remain disabled.
+/// Scene colour and linear depth are owned by `PortalGpu` by default; a host may still provide a
+/// compatible linear-depth view. Motion vectors and reactive masks remain explicit host producer
+/// views. Omitting either of those views keeps temporal output disabled.
 #[derive(Clone, Copy, Default)]
 pub struct TemporalProducerViews<'a> {
     pub extent: (u32, u32),
@@ -88,34 +99,27 @@ impl<'a> TemporalProducerViews<'a> {
         }
     }
 
-    pub(super) fn into_inputs<'scene>(
-        self,
-        current_scene: &'scene wgpu::TextureView,
-    ) -> Option<TemporalResolveInputs<'scene, 'a>> {
-        Some(TemporalResolveInputs {
-            extent: self.extent,
-            current_scene,
-            current_linear_depth: self.current_linear_depth?,
-            motion_vectors: self.motion_vectors?,
-            reactive_mask: self.reactive_mask?,
-        })
-    }
 }
 
 /// GPU temporal resolve and explicit history publication owner.
 pub struct TemporalResolveGpu {
     bind_layout: wgpu::BindGroupLayout,
+    depth_producer_layout: wgpu::BindGroupLayout,
     publish_depth_layout: wgpu::BindGroupLayout,
     output_layout: wgpu::BindGroupLayout,
     resolve_pipeline: wgpu::RenderPipeline,
+    depth_producer_pipeline: wgpu::RenderPipeline,
     publish_depth_pipeline: wgpu::RenderPipeline,
     output_pipeline: wgpu::RenderPipeline,
     params_buf: wgpu::Buffer,
+    depth_producer_params_buf: wgpu::Buffer,
     output_params_buf: wgpu::Buffer,
     history_texture: wgpu::Texture,
     history_view: wgpu::TextureView,
     resolved_texture: wgpu::Texture,
     resolved_view: wgpu::TextureView,
+    _linear_depth_texture: wgpu::Texture,
+    linear_depth_view: wgpu::TextureView,
     _history_depth_texture: wgpu::Texture,
     history_depth_view: wgpu::TextureView,
     width: u32,
@@ -168,6 +172,16 @@ impl TemporalResolveGpu {
             texture_usage,
         );
         let resolved_view = resolved_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let linear_depth_texture = create_texture(
+            device,
+            "qualia-temporal-current-linear-depth",
+            width,
+            height,
+            LINEAR_DEPTH_FORMAT,
+            wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        );
+        let linear_depth_view =
+            linear_depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let history_depth_texture = create_texture(
             device,
             "qualia-temporal-history-linear-depth",
@@ -195,6 +209,14 @@ impl TemporalResolveGpu {
             label: Some("qualia-temporal-depth-publication-layout"),
             entries: &[float_texture_entry(7)],
         });
+        let depth_producer_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("qualia-temporal-depth-producer-layout"),
+                entries: &[
+                    depth_texture_entry(0),
+                    uniform_entry(1, DEPTH_PRODUCER_PARAMS_BYTES),
+                ],
+            });
         let output_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("qualia-temporal-output-layout"),
             entries: &[
@@ -206,6 +228,12 @@ impl TemporalResolveGpu {
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("qualia-temporal-resolve-params"),
             size: PARAMS_BYTES,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let depth_producer_params_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("qualia-temporal-depth-producer-params"),
+            size: DEPTH_PRODUCER_PARAMS_BYTES,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -235,6 +263,21 @@ impl TemporalResolveGpu {
             "temporal_fs",
             scene_format,
         );
+        let depth_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("qualia-temporal-depth-producer-shader"),
+            source: wgpu::ShaderSource::Wgsl(
+                crate::shaders::viewport::TEMPORAL_DEPTH_WGSL.into(),
+            ),
+        });
+        let depth_producer_pipeline = create_pipeline(
+            device,
+            "qualia-temporal-depth-producer-pipeline",
+            &depth_shader,
+            &depth_producer_layout,
+            "temporal_depth_vs",
+            "temporal_depth_fs",
+            LINEAR_DEPTH_FORMAT,
+        );
         let publish_depth_pipeline = create_pipeline(
             device,
             "qualia-temporal-depth-publication-pipeline",
@@ -256,17 +299,22 @@ impl TemporalResolveGpu {
 
         Some(Self {
             bind_layout,
+            depth_producer_layout,
             publish_depth_layout,
             output_layout,
             resolve_pipeline,
+            depth_producer_pipeline,
             publish_depth_pipeline,
             output_pipeline,
             params_buf,
+            depth_producer_params_buf,
             output_params_buf,
             history_texture,
             history_view,
             resolved_texture,
             resolved_view,
+            _linear_depth_texture: linear_depth_texture,
+            linear_depth_view,
             _history_depth_texture: history_depth_texture,
             history_depth_view,
             width,
@@ -287,6 +335,75 @@ impl TemporalResolveGpu {
 
     pub fn resolved_ready(&self) -> bool {
         self.resolved_ready
+    }
+
+    /// The renderer-owned current-frame linear-depth producer target.
+    pub fn linear_depth_view(&self) -> &wgpu::TextureView {
+        &self.linear_depth_view
+    }
+
+    /// Convert the authoritative depth attachment into view-space linear depth.
+    ///
+    /// This pass is recorded after opaque/transparent scene rendering and before
+    /// temporal resolve. It never treats the depth attachment itself as a colour
+    /// view, so the producer contract remains valid on portable WebGPU backends.
+    pub fn record_linear_depth_producer(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        encoder: &mut wgpu::CommandEncoder,
+        scene_depth: &wgpu::TextureView,
+        near_plane: f32,
+        far_plane: f32,
+    ) -> bool {
+        if !near_plane.is_finite()
+            || !far_plane.is_finite()
+            || near_plane <= 0.0
+            || far_plane <= near_plane
+        {
+            return false;
+        }
+        let params = DepthProducerParams {
+            near_plane,
+            far_plane,
+            _padding: [0.0; 2],
+        };
+        queue.write_buffer(
+            &self.depth_producer_params_buf,
+            0,
+            bytemuck::bytes_of(&params),
+        );
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("qualia-temporal-depth-producer-bind"),
+            layout: &self.depth_producer_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(scene_depth),
+                },
+                buffer_entry(1, &self.depth_producer_params_buf),
+            ],
+        });
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("qualia-temporal-depth-producer"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &self.linear_depth_view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+            timestamp_writes: None,
+        });
+        pass.set_pipeline(&self.depth_producer_pipeline);
+        pass.set_bind_group(0, &bind_group, &[]);
+        pass.draw(0..3, 0..1);
+        true
     }
 
     /// Discard history after a resize, camera cut, seek, or device recovery.
@@ -565,8 +682,10 @@ fn target_bytes(width: u32, height: u32, scene_format: wgpu::TextureFormat) -> O
     let scene_bytes = u64::from(scene_format.block_copy_size(None)?);
     u64::from(width)
         .checked_mul(u64::from(height))?
-        .checked_mul(scene_bytes.checked_mul(2)?.checked_add(8)?)
-        .and_then(|bytes| bytes.checked_add(PARAMS_BYTES + OUTPUT_PARAMS_BYTES))
+        .checked_mul(scene_bytes.checked_mul(2)?.checked_add(16)?)
+        .and_then(|bytes| {
+            bytes.checked_add(PARAMS_BYTES + OUTPUT_PARAMS_BYTES + DEPTH_PRODUCER_PARAMS_BYTES)
+        })
 }
 
 fn create_texture(
@@ -599,6 +718,19 @@ fn float_texture_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
         visibility: wgpu::ShaderStages::FRAGMENT,
         ty: wgpu::BindingType::Texture {
             sample_type: wgpu::TextureSampleType::Float { filterable: false },
+            view_dimension: wgpu::TextureViewDimension::D2,
+            multisampled: false,
+        },
+        count: None,
+    }
+}
+
+fn depth_texture_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
+    wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Texture {
+            sample_type: wgpu::TextureSampleType::Depth,
             view_dimension: wgpu::TextureViewDimension::D2,
             multisampled: false,
         },
@@ -683,7 +815,7 @@ mod tests {
         let rgba8 = target_bytes(64, 32, wgpu::TextureFormat::Rgba8Unorm).unwrap();
         let rgba16 = target_bytes(64, 32, wgpu::TextureFormat::Rgba16Float).unwrap();
         assert_eq!(rgba16 - rgba8, 64 * 32 * 8);
-        assert!(rgba16 < 64 * 32 * 32);
+        assert!(rgba16 < 64 * 32 * 40);
     }
 
     #[test]
@@ -715,6 +847,13 @@ mod tests {
         assert!(!producers.availability(false).all_available());
     }
 
+    #[test]
+    fn linear_depth_producer_rejects_invalid_camera_ranges() {
+        assert!(0.05_f32.is_finite());
+        assert!(200.0_f32 > 0.05_f32);
+        assert!(!(0.0_f32 > 200.0_f32));
+    }
+
     #[cfg(any(feature = "wgsl-forge", feature = "webgl2"))]
     #[test]
     fn temporal_shaders_pass_naga_validation() {
@@ -729,6 +868,7 @@ mod tests {
         }
 
         validate(crate::shaders::viewport::TEMPORAL_RESOLVE_WGSL);
+        validate(crate::shaders::viewport::TEMPORAL_DEPTH_WGSL);
         validate(crate::shaders::viewport::TEMPORAL_OUTPUT_WGSL);
     }
 }

@@ -214,11 +214,19 @@ fn temporal_output_schedule_resolves_before_history_and_final_transform() {
         .iter()
         .position(|pass| *pass == Some(PassId::HistoryPublication))
         .expect("history publication pass");
+    let linear_depth_idx = passes
+        .iter()
+        .position(|pass| *pass == Some(PassId::TemporalLinearDepth))
+        .expect("renderer-owned linear-depth producer pass");
     let output_idx = passes
         .iter()
         .position(|pass| *pass == Some(PassId::SdrOutputComposite))
         .expect("final output pass");
-    assert!(temporal_idx < history_idx && history_idx < output_idx);
+    assert!(
+        linear_depth_idx < temporal_idx
+            && temporal_idx < history_idx
+            && history_idx < output_idx
+    );
     assert_eq!(schedule.temporal.reset_history, false);
     assert!(schedule.temporal.is_complete());
     assert!(schedule.temporal_order_is_valid());

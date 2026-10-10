@@ -13,8 +13,8 @@ pub const BLOOM_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4];
 /// Mesh frame group: camera/observer plus shadow, AO and atmosphere bindings.
 pub const MESH_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 pub const MESH_GROUP1_BINDINGS: &[u32] = &[0];
-/// Dynamic material factors followed by six textures and six samplers.
-pub const MESH_GROUP2_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+/// Dynamic material factors, six textures, six samplers, and the environment probe contract.
+pub const MESH_GROUP2_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 pub const MESH_GROUP3_BINDINGS: &[u32] = &[0];
 
 /// Parse `@group(G) @binding(B)` declarations from WGSL source lines.

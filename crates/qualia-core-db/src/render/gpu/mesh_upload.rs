@@ -2,6 +2,9 @@
 
 use super::*;
 use crate::container_10d::{MaterialRecord, SubmeshRange};
+use crate::render::lighting::environment_lighting::{
+    EnvironmentLightingGpu, EnvironmentProbeSet,
+};
 use crate::render::gpu::materials::create_material_gpu;
 
 const IDENTITY_MAT4: [[f32; 4]; 4] = [
@@ -12,6 +15,23 @@ const IDENTITY_MAT4: [[f32; 4]; 4] = [
 ];
 
 impl PortalGpu {
+    /// Update the active mesh's GPU environment contract from raw probe inputs.
+    ///
+    /// `None` is a supported resource state: the bound contract has zero usable probes and the
+    /// shader returns the supplied fallback environment contribution. No CPU lighting evaluation
+    /// is performed here.
+    pub fn set_environment_probes(
+        &mut self,
+        probes: Option<&EnvironmentProbeSet>,
+        fallback_radiance: [f32; 3],
+    ) {
+        let environment = EnvironmentLightingGpu::from_probe_set(probes, fallback_radiance);
+        if let Some(mesh) = self.mesh.as_ref() {
+            mesh.material_gpu
+                .update_environment(&self.queue, &environment);
+        }
+    }
+
     /// Replace the shared mesh instance source stream. Camera-facing forward and AO passes are
     /// culled automatically from the active camera; the full source stream remains available to
     /// shadow cascades so off-camera casters are not dropped. Empty input restores the legacy
@@ -244,6 +264,12 @@ impl PortalGpu {
             .map_err(|error| format!("material ranges are invalid: {error}"))?;
         let material_bytes = (materials.len() as u64)
             .checked_mul(materials::MATERIAL_UNIFORM_STRIDE)
+            .and_then(|bytes| {
+                bytes.checked_add(
+                    crate::render::lighting::environment_lighting::ENVIRONMENT_LIGHTING_GPU_SIZE
+                        as u64,
+                )
+            })
             .ok_or_else(|| "mesh material-uniform size overflow".to_string())?;
         let position_bytes = (positions.len() as u64).checked_mul(12);
         let normal_bytes = (positions.len() as u64).checked_mul(12);
