@@ -67,6 +67,14 @@ impl PortalGpu {
         let temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
             &device, width, height, format, format,
         );
+        let temporal_producers = temporal_resolve.as_ref().and_then(|_| {
+            temporal_producers_gpu::TemporalProducersGpu::try_new(
+                &device,
+                scene_depth.view(),
+                width,
+                height,
+            )
+        });
         let shadow_target = shadows::ShadowTarget::try_new(&device);
         let (picking_texture, picking_view) = create_picking_texture(&device, width, height);
         let offscreen_texture = if surface.is_none() {
@@ -921,6 +929,7 @@ impl PortalGpu {
             color_format: format,
             scene_depth,
             temporal_resolve,
+            temporal_producers,
             temporal_reset_pending: true,
             previous_camera_view_projection: None,
             picking_texture,

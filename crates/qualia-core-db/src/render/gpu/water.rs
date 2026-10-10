@@ -230,6 +230,10 @@ impl WaterGpu {
         self.uniform.viewport[1] = height.max(1) as f32;
     }
 
+    pub(super) fn has_geometry(&self) -> bool {
+        self.index_count > 0
+    }
+
     pub(super) fn set_time(&mut self, time: f32) {
         self.uniform.wave[0] = time;
     }

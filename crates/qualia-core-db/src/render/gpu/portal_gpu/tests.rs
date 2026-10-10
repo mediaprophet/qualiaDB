@@ -403,3 +403,25 @@ fn camera_history_tracks_frames_and_resets_on_cut_and_resize() {
     assert!(renderer.previous_camera_view_projection().is_none());
 }
 
+#[test]
+#[serial_test::serial(gpu)]
+fn test_render_with_auto_temporal_accumulates_across_frames() {
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
+    let mut renderer = PortalGpu::new_offscreen(64, 64, 0).expect("native offscreen renderer");
+    assert!(renderer.temporal_motion_view().is_some());
+    assert!(renderer.temporal_reactive_view().is_some());
+    assert!(renderer.internal_temporal_producers_available());
+
+    // Frame 1: Initialise history without prior history
+    let res1 = renderer.render_with_auto_temporal(0.0, &SystemTelemetry::default());
+    assert_eq!(res1, Ok(true), "frame 1 should record temporal resolve into history");
+    assert!(renderer.temporal_history_valid());
+
+    // Frame 2: Accumulate across frames with history reads enabled
+    let res2 = renderer.render_with_auto_temporal(0.016, &SystemTelemetry::default());
+    assert_eq!(res2, Ok(true), "frame 2 should accumulate temporal history without failing closed");
+    assert!(renderer.temporal_history_valid());
+}
+

@@ -261,6 +261,11 @@ impl PortalGpu {
         }
     }
 
+    /// Whether the engine owns internal temporal producers (motion vectors and reactive mask).
+    pub fn internal_temporal_producers_available(&self) -> bool {
+        self.temporal_producers.is_some()
+    }
+
     /// Whether the renderer-owned temporal history currently contains a published frame.
     pub fn temporal_history_valid(&self) -> bool {
         self.temporal_resolve
@@ -307,6 +312,41 @@ impl PortalGpu {
     /// Previous frame's camera view-projection matrix, if history is valid.
     pub fn previous_camera_view_projection(&self) -> Option<crate::render::temporal_producers::Mat4ColumnMajor> {
         self.previous_camera_view_projection
+    }
+
+    pub fn temporal_motion_view(&self) -> Option<&wgpu::TextureView> {
+        self.temporal_producers.as_ref().map(|p| p.motion_view())
+    }
+
+    pub fn temporal_reactive_view(&self) -> Option<&wgpu::TextureView> {
+        self.temporal_producers.as_ref().map(|p| p.reactive_view())
+    }
+
+    pub fn record_temporal_producers(&mut self, encoder: &mut wgpu::CommandEncoder) {
+        if let Some(ref producers) = self.temporal_producers {
+            let inv_curr = self
+                .current_camera_view_projection()
+                .inverse()
+                .map(|m| m.cols)
+                .unwrap_or(crate::render::temporal_producers::Mat4ColumnMajor::IDENTITY.cols);
+            let prev = self
+                .previous_camera_view_projection
+                .unwrap_or_else(|| self.current_camera_view_projection())
+                .cols;
+            let reactive_weights = [
+                0.0,
+                if self.water.has_geometry() { 0.8 } else { 0.0 },
+                if self.ambient_enabled { 0.5 } else { 0.0 },
+                0.0,
+            ];
+            producers.record_producers(
+                encoder,
+                &self.queue,
+                inv_curr,
+                prev,
+                reactive_weights,
+            );
+        }
     }
 
     pub(super) fn effective_temporal_schedule(

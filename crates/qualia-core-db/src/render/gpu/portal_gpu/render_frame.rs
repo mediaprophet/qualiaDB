@@ -25,12 +25,13 @@ impl PortalGpu {
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
         producers: TemporalProducerViews<'_>,
     ) -> Result<bool, String> {
+        let has_producers = producers.has_required_host_producers();
         let availability = producers.availability(self.temporal_scene_color_view().is_some());
         let renderer_owns_linear_depth = self.temporal_resolve.is_some();
         let eligible = schedule.is_valid()
             && producers.extent == (self.width, self.height)
             && availability.scene_color
-            && producers.has_required_host_producers()
+            && has_producers
             && (availability.linear_depth || renderer_owns_linear_depth);
         if !eligible {
             return self
@@ -38,7 +39,28 @@ impl PortalGpu {
                 .map(|_| false);
         }
         let schedule = self.effective_temporal_schedule(schedule);
-        self.render_internal(time, telemetry, Some((schedule, producers)))
+        self.render_internal(time, telemetry, Some((schedule, Some(producers))))
+    }
+
+    /// Render one frame with automatic temporal history accumulation using renderer-owned
+    /// motion vectors and reactive mask producers.
+    pub fn render_with_auto_temporal(
+        &mut self,
+        time: f32,
+        telemetry: &SystemTelemetry,
+    ) -> Result<bool, String> {
+        if self.temporal_producers.is_none() || self.temporal_resolve.is_none() {
+            return self.render_internal(time, telemetry, None).map(|_| false);
+        }
+        let schedule = crate::render::frame_graph::TemporalOutputSchedule {
+            enabled: true,
+            reset_history: self.temporal_reset_pending,
+            reads_history: !self.temporal_reset_pending && self.temporal_history_valid(),
+            publish_history: true,
+            final_output: true,
+        };
+        let schedule = self.effective_temporal_schedule(schedule);
+        self.render_internal(time, telemetry, Some((schedule, None)))
     }
 
     pub(super) fn render_internal(
@@ -47,7 +69,7 @@ impl PortalGpu {
         telemetry: &SystemTelemetry,
         temporal: Option<(
             crate::render::frame_graph::TemporalOutputSchedule,
-            TemporalProducerViews<'_>,
+            Option<TemporalProducerViews<'_>>,
         )>,
     ) -> Result<bool, String> {
         if portal_bloom_enabled() != self.bloom_policy_snapshot {
@@ -295,6 +317,13 @@ impl PortalGpu {
                             );
                         }
                     }
+                } else {
+                    self.water.record(
+                        &mut pass,
+                        &self.mesh_frame_bind,
+                        &self.mesh_model_bind,
+                        true,
+                    );
                 }
 
                 if self.tensor_projection_enabled {
@@ -406,6 +435,13 @@ impl PortalGpu {
                         );
                     }
                 }
+            } else {
+                self.water.record(
+                    &mut pass,
+                    &self.mesh_frame_bind,
+                    &self.mesh_model_bind,
+                    false,
+                );
             }
 
             if self.tensor_projection_enabled {
@@ -429,16 +465,22 @@ impl PortalGpu {
             }
         }
 
-        if let Some((schedule, producers)) = temporal {
-            // Keep the render path on the same producer contract exposed to hosts. This makes
-            // renderer-owned depth production, resolve, history publication, and final output a
-            // single scheduled handoff instead of a second partially duplicated path.
-            temporal_recorded = self.record_scheduled_temporal_output_from_producers(
-                &mut encoder,
-                producers,
-                &view,
-                schedule,
-            );
+        if let Some((schedule, host_producers)) = temporal {
+            self.record_temporal_producers(&mut encoder);
+            if let Some(producers) = host_producers {
+                temporal_recorded = self.record_scheduled_temporal_output_from_producers(
+                    &mut encoder,
+                    producers,
+                    &view,
+                    schedule,
+                );
+            } else {
+                temporal_recorded = self.record_scheduled_temporal_output_auto(
+                    &mut encoder,
+                    &view,
+                    schedule,
+                );
+            }
             if temporal_recorded {
                 self.temporal_reset_pending = false;
             }
@@ -478,6 +520,85 @@ impl PortalGpu {
         Ok(temporal_recorded)
     }
 
+    /// Record scheduled temporal output using internal renderer-owned motion vectors and reactive mask.
+    pub fn record_scheduled_temporal_output_auto(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::TextureView,
+        schedule: crate::render::frame_graph::TemporalOutputSchedule,
+    ) -> bool {
+        let schedule = self.effective_temporal_schedule(schedule);
+        if !schedule.is_valid() {
+            return false;
+        }
+        let Some(temporal_extent) = self.temporal_resolve.as_ref().map(|owner| owner.extent())
+        else {
+            return false;
+        };
+        let extent = (self.width, self.height);
+        if extent != temporal_extent
+            || (schedule.reads_history && !self.temporal_history_valid())
+        {
+            return false;
+        }
+        let Some(scene) = self.temporal_scene_color_view().cloned() else {
+            return false;
+        };
+        let Some(temporal) = self.temporal_resolve.as_ref() else {
+            return false;
+        };
+        if !temporal.scheduled_output_is_admissible(
+            extent,
+            schedule,
+            self.hdr_exposure_ev,
+            self.white_balance_gains,
+        ) {
+            return false;
+        }
+        let Some(temporal) = self.temporal_resolve.as_mut() else {
+            return false;
+        };
+        if !temporal.record_linear_depth_producer(
+            &self.device,
+            &self.queue,
+            encoder,
+            self.scene_depth.view(),
+            crate::render::camera::CAMERA_NEAR_PLANE,
+            crate::render::camera::CAMERA_FAR_PLANE,
+        ) {
+            return false;
+        }
+        let current_linear_depth = temporal.linear_depth_view().clone();
+        let Some(producers) = self.temporal_producers.as_ref() else {
+            return false;
+        };
+        let inputs = temporal_resolve_gpu::TemporalResolveInputs {
+            extent,
+            current_scene: &scene,
+            current_linear_depth: &current_linear_depth,
+            motion_vectors: producers.motion_view(),
+            reactive_mask: producers.reactive_view(),
+        };
+        let Some(temporal) = self.temporal_resolve.as_mut() else {
+            return false;
+        };
+        let recorded = temporal.record_scheduled_output(
+            &self.device,
+            &self.queue,
+            encoder,
+            inputs,
+            target,
+            schedule,
+            self.hdr_exposure_ev,
+            self.white_balance_gains,
+            self.color_format.is_srgb(),
+        );
+        if recorded {
+            self.temporal_reset_pending = false;
+        }
+        recorded
+    }
+
     /// Record scheduled temporal output using explicit producer views.
     pub fn record_scheduled_temporal_output_from_producers(
         &mut self,
@@ -487,7 +608,9 @@ impl PortalGpu {
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
     ) -> bool {
         let schedule = self.effective_temporal_schedule(schedule);
-        if !schedule.is_valid() || !producers.has_required_host_producers() {
+        let has_motion = producers.motion_vectors.is_some();
+        let has_reactive = producers.reactive_mask.is_some();
+        if !schedule.is_valid() || !has_motion || !has_reactive {
             return false;
         }
         let Some(temporal_extent) = self.temporal_resolve.as_ref().map(|owner| owner.extent())
@@ -535,11 +658,13 @@ impl PortalGpu {
             .current_linear_depth
             .cloned()
             .unwrap_or_else(|| temporal.linear_depth_view().clone());
-        let Some(motion_vectors) = producers.motion_vectors else {
-            return false;
+        let motion_vectors = match producers.motion_vectors {
+            Some(v) => v,
+            None => return false,
         };
-        let Some(reactive_mask) = producers.reactive_mask else {
-            return false;
+        let reactive_mask = match producers.reactive_mask {
+            Some(v) => v,
+            None => return false,
         };
         let inputs = temporal_resolve_gpu::TemporalResolveInputs {
             extent: producers.extent,

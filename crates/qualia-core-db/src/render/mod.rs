@@ -147,10 +147,18 @@ pub mod texture_ktx2_rgba8;
 /// Deterministic caller-buffered texture mip residency planning and budget admission.
 pub mod texture_stream_policy;
 pub mod texture_streaming_plan;
+/// Bounded zero-heap compressed texture transcode and block decode bridge.
+pub mod texture_transcode;
+/// Bounded zero-heap vegetation instance pool and dynamic collision bending.
+pub mod vegetation;
 
 #[cfg(test)]
 #[path = "terrain_seam_tests.rs"]
 mod terrain_seam_tests;
+
+#[cfg(test)]
+#[path = "texture_transcode_tests.rs"]
+mod texture_transcode_tests;
 
 /// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
 /// renderer parses each level → `plan_view` selects the expected LOD. Gated

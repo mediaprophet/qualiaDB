@@ -26,6 +26,7 @@ mod output_pass;
 mod shadows;
 mod sky;
 mod scene_depth;
+mod temporal_producers_gpu;
 mod temporal_resolve_gpu;
 mod texture_mips;
 mod water;
@@ -402,6 +403,7 @@ pub struct PortalGpu {
     color_format: wgpu::TextureFormat,
     scene_depth: scene_depth::SceneDepthOwner,
     temporal_resolve: Option<temporal_resolve_gpu::TemporalResolveGpu>,
+    temporal_producers: Option<temporal_producers_gpu::TemporalProducersGpu>,
     temporal_reset_pending: bool,
     previous_camera_view_projection: Option<crate::render::temporal_producers::Mat4ColumnMajor>,
     picking_texture: wgpu::Texture,
@@ -576,6 +578,7 @@ impl PortalGpu {
             ));
         }
         let temporal_was_enabled = self.temporal_resolve.take().is_some();
+        self.temporal_producers.take();
         self.scene_depth.replace(&self.device, width, height);
         if temporal_was_enabled {
             self.temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
@@ -585,6 +588,14 @@ impl PortalGpu {
                 self.color_format,
                 self.color_format,
             );
+            self.temporal_producers = self.temporal_resolve.as_ref().and_then(|_| {
+                temporal_producers_gpu::TemporalProducersGpu::try_new(
+                    &self.device,
+                    self.scene_depth.view(),
+                    width,
+                    height,
+                )
+            });
         }
         let (picking_texture, picking_view) = create_picking_texture(&self.device, width, height);
         if let (Some(surface), Some(config)) = (self.surface.as_ref(), self.config.as_mut()) {
@@ -717,3 +728,11 @@ mod mesh_pixel_tests;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[path = "material_pixel_tests.rs"]
 mod material_pixel_tests;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "environment_probe_pixel_tests.rs"]
+mod environment_probe_pixel_tests;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "water_pixel_tests.rs"]
+mod water_pixel_tests;
