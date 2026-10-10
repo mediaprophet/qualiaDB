@@ -4,6 +4,7 @@
 //! time, semantic state, or deterministic gameplay decisions. Platform probes feed this portable
 //! policy normalized samples; a later VibeScript mirror can use the same thresholds and reason ids.
 
+use super::acceptance_contract::PerformanceEvidence;
 use super::quality_profiles::QualityTier;
 
 pub const RECEIPT_CAPACITY: usize = 16;
@@ -38,6 +39,63 @@ pub struct RuntimeQualitySample {
     pub target_frame_time_us: Option<u32>,
     pub thermal: ThermalState,
     pub resource_pressure: ResourcePressure,
+}
+
+/// Fixed-memory collector for the performance evidence consumed by quality admission. It uses
+/// the worst valid frame rather than an optimistic average and rejects changing frame targets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PerformanceEvidenceAccumulator {
+    sample_count: u16,
+    worst_frame_time_us: Option<u32>,
+    target_frame_time_us: Option<u32>,
+    target_consistent: bool,
+}
+
+impl Default for PerformanceEvidenceAccumulator {
+    fn default() -> Self {
+        Self {
+            sample_count: 0,
+            worst_frame_time_us: None,
+            target_frame_time_us: None,
+            target_consistent: true,
+        }
+    }
+}
+
+impl PerformanceEvidenceAccumulator {
+    pub fn observe(&mut self, sample: RuntimeQualitySample) {
+        let (Some(frame_time_us), Some(target_frame_time_us)) =
+            (sample.frame_time_us, sample.target_frame_time_us)
+        else {
+            return;
+        };
+        if target_frame_time_us == 0 {
+            return;
+        }
+
+        self.sample_count = self.sample_count.saturating_add(1);
+        self.worst_frame_time_us = Some(
+            self.worst_frame_time_us
+                .map_or(frame_time_us, |worst| worst.max(frame_time_us)),
+        );
+        match self.target_frame_time_us {
+            Some(target) if target != target_frame_time_us => self.target_consistent = false,
+            Some(_) => {}
+            None => self.target_frame_time_us = Some(target_frame_time_us),
+        }
+    }
+
+    pub const fn evidence(self) -> PerformanceEvidence {
+        PerformanceEvidence {
+            sample_count: self.sample_count,
+            worst_frame_time_us: self.worst_frame_time_us,
+            target_frame_time_us: if self.target_consistent || self.sample_count == 0 {
+                self.target_frame_time_us
+            } else {
+                None
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,6 +207,7 @@ pub struct QualityRuntimePolicy {
     receipt_len: usize,
     receipts: [Option<QualityRuntimeReceipt>; RECEIPT_CAPACITY],
     counters: QualityRuntimeCounters,
+    performance: PerformanceEvidenceAccumulator,
 }
 
 impl QualityRuntimePolicy {
@@ -167,6 +226,7 @@ impl QualityRuntimePolicy {
             receipt_len: 0,
             receipts: [None; RECEIPT_CAPACITY],
             counters: QualityRuntimeCounters::default(),
+            performance: PerformanceEvidenceAccumulator::default(),
         }
     }
 
@@ -176,6 +236,12 @@ impl QualityRuntimePolicy {
 
     pub fn counters(&self) -> QualityRuntimeCounters {
         self.counters
+    }
+
+    /// Return measured performance evidence for feeding a later capability snapshot. Unknown or
+    /// inconsistent samples remain unadmitted by `PerformanceEvidence::gate`.
+    pub const fn performance_evidence(&self) -> PerformanceEvidence {
+        self.performance.evidence()
     }
 
     /// Physical ring storage and its oldest index. Inspect at most `receipt_count()` entries,
@@ -196,6 +262,7 @@ impl QualityRuntimePolicy {
 
     pub fn observe(&mut self, sample: RuntimeQualitySample) -> RuntimeQualityDecision {
         self.counters.samples = self.counters.samples.saturating_add(1);
+        self.performance.observe(sample);
         let current = self.tier;
         let clock_regressed = self.clock_regressed(sample.now_ms);
         let decision = if self.has_unknown(sample) {
@@ -605,5 +672,35 @@ mod tests {
         }
         let decision = policy.observe(sample(100, 12_000));
         assert_eq!(decision.recommended_tier, QualityTier::Low);
+    }
+
+    #[test]
+    fn performance_evidence_is_bounded_and_fails_closed() {
+        let mut policy = QualityRuntimePolicy::new(QualityTier::Balanced, quick_config());
+        assert_eq!(
+            policy.performance_evidence().gate(),
+            super::super::acceptance_contract::CapabilityEvidence::Unknown
+        );
+
+        for now_ms in [0, 20, 40] {
+            policy.observe(sample(now_ms, 12_000));
+        }
+        let evidence = policy.performance_evidence();
+        assert_eq!(evidence.sample_count, 3);
+        assert_eq!(evidence.worst_frame_time_us, Some(12_000));
+        assert_eq!(evidence.target_frame_time_us, Some(16_667));
+        assert_eq!(
+            evidence.gate(),
+            super::super::acceptance_contract::CapabilityEvidence::Confirmed
+        );
+
+        policy.observe(RuntimeQualitySample {
+            target_frame_time_us: Some(8_000),
+            ..sample(60, 12_000)
+        });
+        assert_eq!(
+            policy.performance_evidence().gate(),
+            super::super::acceptance_contract::CapabilityEvidence::Unknown
+        );
     }
 }

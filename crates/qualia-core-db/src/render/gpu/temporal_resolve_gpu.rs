@@ -81,16 +81,17 @@ pub struct TemporalProducerAvailability {
 }
 
 impl TemporalProducerAvailability {
+    pub const fn host_producers_available(self) -> bool {
+        self.motion_vectors && self.reactive_mask
+    }
+
     pub const fn all_available(self) -> bool {
-        self.scene_color
-            && self.linear_depth
-            && self.motion_vectors
-            && self.reactive_mask
+        self.scene_color && self.linear_depth && self.host_producers_available()
     }
 }
 
 impl<'a> TemporalProducerViews<'a> {
-    pub fn availability(self, scene_color: bool) -> TemporalProducerAvailability {
+    pub const fn availability(self, scene_color: bool) -> TemporalProducerAvailability {
         TemporalProducerAvailability {
             scene_color,
             linear_depth: self.current_linear_depth.is_some(),
@@ -99,8 +100,28 @@ impl<'a> TemporalProducerViews<'a> {
         }
     }
 
+    /// Whether the host has supplied both producer attachments that the renderer cannot derive.
+    pub const fn has_required_host_producers(self) -> bool {
+        self.availability(false).host_producers_available()
+    }
 }
 
+/// Command-recording lifecycle for one renderer-owned temporal submission.
+///
+/// This is deliberately a state machine rather than a collection of inferred booleans. It makes
+/// the ordering visible to the renderer adapter: a producer pass may be recorded first, resolve
+/// must follow it, history publication is a separate step, and the final output transform is the
+/// last step. The state describes recorded work in the current command encoder; history validity
+/// remains separately tracked because it spans frames.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TemporalSubmissionState {
+    #[default]
+    Idle,
+    LinearDepthReady,
+    Resolved,
+    HistoryPublished,
+    OutputReady,
+}
 /// GPU temporal resolve and explicit history publication owner.
 pub struct TemporalResolveGpu {
     bind_layout: wgpu::BindGroupLayout,
@@ -126,6 +147,7 @@ pub struct TemporalResolveGpu {
     height: u32,
     history_valid: bool,
     resolved_ready: bool,
+    submission_state: TemporalSubmissionState,
     _reservation: VramReservation<'static>,
 }
 
@@ -321,6 +343,7 @@ impl TemporalResolveGpu {
             height,
             history_valid: false,
             resolved_ready: false,
+            submission_state: TemporalSubmissionState::Idle,
             _reservation: reservation,
         })
     }
@@ -337,6 +360,10 @@ impl TemporalResolveGpu {
         self.resolved_ready
     }
 
+    pub fn submission_state(&self) -> TemporalSubmissionState {
+        self.submission_state
+    }
+
     /// The renderer-owned current-frame linear-depth producer target.
     pub fn linear_depth_view(&self) -> &wgpu::TextureView {
         &self.linear_depth_view
@@ -348,7 +375,7 @@ impl TemporalResolveGpu {
     /// temporal resolve. It never treats the depth attachment itself as a colour
     /// view, so the producer contract remains valid on portable WebGPU backends.
     pub fn record_linear_depth_producer(
-        &self,
+        &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
@@ -403,6 +430,7 @@ impl TemporalResolveGpu {
         pass.set_pipeline(&self.depth_producer_pipeline);
         pass.set_bind_group(0, &bind_group, &[]);
         pass.draw(0..3, 0..1);
+        self.submission_state = TemporalSubmissionState::LinearDepthReady;
         true
     }
 
@@ -410,6 +438,7 @@ impl TemporalResolveGpu {
     pub fn invalidate_history(&mut self) {
         self.history_valid = false;
         self.resolved_ready = false;
+        self.submission_state = TemporalSubmissionState::Idle;
     }
 
     /// The scene-linear resolve target for an output-chain handoff.
@@ -494,6 +523,7 @@ impl TemporalResolveGpu {
             pass.set_bind_group(0, &bind_group, &[]);
             pass.draw(0..3, 0..1);
         }
+        self.submission_state = TemporalSubmissionState::Resolved;
 
         if publish_history {
             let depth_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -542,6 +572,7 @@ impl TemporalResolveGpu {
                 },
             );
             self.history_valid = true;
+            self.submission_state = TemporalSubmissionState::HistoryPublished;
         } else if reset_history {
             self.history_valid = false;
         }
@@ -566,18 +597,14 @@ impl TemporalResolveGpu {
         white_balance_gains: [f32; 3],
         surface_is_srgb: bool,
     ) -> bool {
-        if !schedule.is_valid()
-            || (schedule.reads_history && !self.history_valid)
-            || !exposure_ev.is_finite()
-            || white_balance_gains
-                .iter()
-                .any(|gain| !gain.is_finite() || *gain < 0.0)
-        {
+        if !self.scheduled_output_is_admissible(
+            inputs.extent,
+            schedule,
+            exposure_ev,
+            white_balance_gains,
+        ) {
             return false;
         }
-        let Some(_exposure) = crate::render::output::exposure_scale_from_ev(exposure_ev) else {
-            return false;
-        };
         // The graph's lifecycle state is authoritative for this submission. This prevents a
         // stale owner-side history from being read when the scheduler deliberately starts a
         // frame without previous-frame history but does not need a destructive reset request.
@@ -609,12 +636,32 @@ impl TemporalResolveGpu {
         output_recorded
     }
 
+    /// Preflight a scheduled submission before an adapter records any renderer-owned producer
+    /// passes. The host extent is the only attachment metadata available at this API boundary;
+    /// WebGPU validates the actual texture-view dimensions when the command buffer is submitted.
+    pub(super) fn scheduled_output_is_admissible(
+        &self,
+        extent: (u32, u32),
+        schedule: TemporalOutputSchedule,
+        exposure_ev: f32,
+        white_balance_gains: [f32; 3],
+    ) -> bool {
+        schedule.is_valid()
+            && extent == (self.width, self.height)
+            && !(schedule.reads_history && !self.history_valid)
+            && exposure_ev.is_finite()
+            && white_balance_gains
+                .iter()
+                .all(|gain| gain.is_finite() && *gain >= 0.0)
+            && crate::render::output::exposure_scale_from_ev(exposure_ev).is_some()
+    }
+
     /// Record the existing versioned SDR transform against the resolved scene.
     ///
     /// This is an explicit handoff, not an automatic second output pass. Hosts
     /// must choose either this handoff or the existing `OutputChain` composite.
     pub fn record_final_output(
-        &self,
+        &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
@@ -624,6 +671,10 @@ impl TemporalResolveGpu {
         surface_is_srgb: bool,
     ) -> bool {
         if !self.resolved_ready
+            || !matches!(
+                self.submission_state,
+                TemporalSubmissionState::Resolved | TemporalSubmissionState::HistoryPublished
+            )
             || !exposure_ev.is_finite()
             || white_balance_gains
                 .iter()
@@ -673,6 +724,7 @@ impl TemporalResolveGpu {
         pass.set_pipeline(&self.output_pipeline);
         pass.set_bind_group(0, &bind_group, &[]);
         pass.draw(0..3, 0..1);
+        self.submission_state = TemporalSubmissionState::OutputReady;
         true
     }
 
@@ -845,6 +897,21 @@ mod tests {
         );
         assert!(!producers.availability(true).all_available());
         assert!(!producers.availability(false).all_available());
+        assert!(!producers.has_required_host_producers());
+    }
+
+    #[test]
+    fn host_producer_contract_never_admits_a_partial_pair() {
+        for (motion_vectors, reactive_mask) in [(true, false), (false, true)] {
+            let availability = TemporalProducerAvailability {
+                scene_color: true,
+                linear_depth: true,
+                motion_vectors,
+                reactive_mask,
+            };
+            assert!(!availability.host_producers_available());
+            assert!(!availability.all_available());
+        }
     }
 
     #[test]

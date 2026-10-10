@@ -9,6 +9,9 @@ use js_sys::{Array, Function, Object, Promise, Reflect};
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{HtmlCanvasElement, WebGl2RenderingContext};
 
+use crate::render::acceptance_contract::{
+    BrowserWebGpuEvidence, CapabilityAcceptance, CapabilityEvidence,
+};
 use crate::render::gpu::PortalGpu;
 
 const ADAPTER_PROBE_TIMEOUT_MS: i32 = 4_000;
@@ -21,12 +24,28 @@ const ADAPTER_PROBE_TIMEOUT_MS: i32 = 4_000;
 /// `portal_init_webgpu` / `portal_init_webgl2` as the final selection receipt.
 #[wasm_bindgen]
 pub async fn probe_portal_graphics() -> Result<JsValue, JsValue> {
-    let webgpu_api = browser_has_webgpu();
-    let webgpu_adapter = webgpu_api && probe_webgpu_adapter_bounded().await;
+    let webgpu_api_state = browser_webgpu_api_state();
+    let webgpu_api = webgpu_api_state.is_confirmed();
+    let webgpu_adapter_state = match webgpu_api_state {
+        CapabilityEvidence::Confirmed => probe_webgpu_adapter_bounded().await,
+        CapabilityEvidence::Refused => CapabilityEvidence::Refused,
+        CapabilityEvidence::Unknown => CapabilityEvidence::Unknown,
+    };
+    let webgpu_adapter = webgpu_adapter_state.is_confirmed();
     let webgl2 = probe_webgl2()?;
     let canvas2d = probe_canvas2d()?;
 
     let recommended = recommend_backend(webgpu_adapter, webgl2, canvas2d);
+    let acceptance = CapabilityAcceptance {
+        browser_webgpu: BrowserWebGpuEvidence {
+            api: webgpu_api_state,
+            adapter: webgpu_adapter_state,
+            // This detached probe intentionally never requests a device. Initialization is a
+            // separate host-owned receipt and therefore remains unknown here.
+            device: CapabilityEvidence::Unknown,
+        },
+        ..CapabilityAcceptance::default()
+    };
 
     let report = Object::new();
     set(&report, "target", &JsValue::from_str("wasm32"))?;
@@ -54,6 +73,46 @@ pub async fn probe_portal_graphics() -> Result<JsValue, JsValue> {
         &report,
         "webgpu_adapter_responded",
         &JsValue::from_bool(webgpu_adapter),
+    )?;
+    set(
+        &report,
+        "webgpu_api_state",
+        &JsValue::from_str(webgpu_api_state.as_str()),
+    )?;
+    set(
+        &report,
+        "webgpu_adapter_state",
+        &JsValue::from_str(webgpu_adapter_state.as_str()),
+    )?;
+    set(
+        &report,
+        "browser_webgpu_adapter_gate",
+        &JsValue::from_str(acceptance.browser_webgpu_adapter_gate().as_str()),
+    )?;
+    set(
+        &report,
+        "browser_webgpu_gate",
+        &JsValue::from_str(acceptance.browser_webgpu_gate().as_str()),
+    )?;
+    set(
+        &report,
+        "temporal_producer_gate",
+        &JsValue::from_str(acceptance.temporal_gate().as_str()),
+    )?;
+    set(
+        &report,
+        "environment_probe_gate",
+        &JsValue::from_str(acceptance.environment_probe_gate().as_str()),
+    )?;
+    set(
+        &report,
+        "pixel_readback_gate",
+        &JsValue::from_str(acceptance.pixel_readback_gate().as_str()),
+    )?;
+    set(
+        &report,
+        "performance_evidence_gate",
+        &JsValue::from_str(acceptance.performance_gate().as_str()),
     )?;
     set(
         &report,
@@ -141,24 +200,30 @@ fn recommend_recovery_backend(webgpu_retry_allowed: bool, webgl2_allowed: bool) 
     }
 }
 
-fn browser_has_webgpu() -> bool {
+fn browser_webgpu_api_state() -> CapabilityEvidence {
     let Some(window) = web_sys::window() else {
-        return false;
+        return CapabilityEvidence::Unknown;
     };
-    Reflect::get(&window.navigator(), &JsValue::from_str("gpu"))
-        .map(|gpu| !gpu.is_null() && !gpu.is_undefined())
-        .unwrap_or(false)
+    match Reflect::get(&window.navigator(), &JsValue::from_str("gpu")) {
+        Ok(gpu) if !gpu.is_null() && !gpu.is_undefined() => CapabilityEvidence::Confirmed,
+        Ok(_) => CapabilityEvidence::Refused,
+        Err(_) => CapabilityEvidence::Unknown,
+    }
 }
 
-async fn probe_webgpu_adapter_bounded() -> bool {
+async fn probe_webgpu_adapter_bounded() -> CapabilityEvidence {
     let adapter_probe = wasm_bindgen_futures::future_to_promise(async {
-        Ok(JsValue::from_bool(PortalGpu::adapter_responds().await))
+        Ok(JsValue::from_f64(if PortalGpu::adapter_responds().await {
+            1.0
+        } else {
+            -1.0
+        }))
     });
     let timeout = Promise::new(&mut |resolve, _reject| {
         let fallback_resolve = resolve.clone();
         let timer_resolve = resolve.clone();
         let callback = Closure::once(move || {
-            let _ = timer_resolve.call1(&JsValue::NULL, &JsValue::FALSE);
+            let _ = timer_resolve.call1(&JsValue::NULL, &JsValue::from_f64(0.0));
         });
         let timer = web_sys::window().and_then(|window| {
             window
@@ -176,11 +241,15 @@ async fn probe_webgpu_adapter_bounded() -> bool {
         }
     });
     let racers = Array::of2(&adapter_probe, &timeout);
-    wasm_bindgen_futures::JsFuture::from(Promise::race(&racers))
+    match wasm_bindgen_futures::JsFuture::from(Promise::race(&racers))
         .await
         .ok()
-        .and_then(|value| value.as_bool())
-        .unwrap_or(false)
+        .and_then(|value| value.as_f64())
+    {
+        Some(value) if value > 0.0 => CapabilityEvidence::Confirmed,
+        Some(value) if value < 0.0 => CapabilityEvidence::Refused,
+        _ => CapabilityEvidence::Unknown,
+    }
 }
 
 fn detached_canvas() -> Result<HtmlCanvasElement, JsValue> {

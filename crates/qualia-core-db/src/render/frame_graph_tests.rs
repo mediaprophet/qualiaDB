@@ -274,6 +274,47 @@ fn temporal_schedule_falls_back_without_reactive_or_motion_inputs() {
 }
 
 #[test]
+fn temporal_schedule_fails_closed_for_a_partial_host_producer_contract() {
+    let profile = RenderQualityProfile {
+        tier: QualityTier::Conservative,
+        render_scale_bps: 10_000,
+        shadows_enabled: false,
+        shadow_map_dimension: 0,
+        shadow_cascade_count: 0,
+        ambient_occlusion_enabled: false,
+        ao_scale_bps: 0,
+        bloom_enabled: false,
+        bloom_levels: 0,
+        texture_residency_bytes: 64 * 1024 * 1024,
+        hdr_enabled: false,
+        volume_projection_enabled: false,
+    };
+
+    for (motion_vectors_available, reactive_mask_available) in
+        [(true, false), (false, true)]
+    {
+        let mut builder = FrameGraphBuilder::new();
+        builder
+            .configure_from_profile_with_temporal(
+                &profile,
+                640,
+                360,
+                TemporalResolveConfig {
+                    enabled: true,
+                    motion_vectors_available,
+                    reactive_mask_available,
+                    history_valid: true,
+                    reset_history: false,
+                },
+            )
+            .expect("configure partial producer fallback");
+        let schedule = builder.compile(None).expect("compile partial fallback");
+        assert_eq!(schedule.temporal, TemporalOutputSchedule::disabled());
+        assert!(schedule.temporal_order_is_valid());
+    }
+}
+
+#[test]
 fn temporal_schedule_reset_never_reads_previous_history() {
     let mut builder = FrameGraphBuilder::new();
     let profile = RenderQualityProfile {

@@ -4,6 +4,8 @@
 //! Native adapters and browser/WebGPU probes can therefore produce the same decisions from the
 //! same inputs. Unknown or partial probes choose a conservative profile and never infer support.
 
+use super::acceptance_contract::{CapabilityAcceptance, CapabilityEvidence};
+
 /// GPU features that may be independently enabled by a confirmed capability probe.
 pub mod feature {
     pub const SHADOWS: u32 = 1 << 0;
@@ -35,6 +37,9 @@ pub struct GraphicsCapabilitySnapshot {
     /// Available GPU allocation budget after the runtime's own safety margin, when reported.
     pub gpu_memory_budget_bytes: Option<u64>,
     pub confirmed_features: u32,
+    /// Measured runtime evidence for cross-platform acceptance gates. The default is entirely
+    /// unknown; callers must populate evidence instead of relying on a platform assumption.
+    pub acceptance: CapabilityAcceptance,
 }
 
 impl Default for GraphicsCapabilitySnapshot {
@@ -45,7 +50,36 @@ impl Default for GraphicsCapabilitySnapshot {
             max_texture_dimension_2d: None,
             gpu_memory_budget_bytes: None,
             confirmed_features: 0,
+            acceptance: CapabilityAcceptance::default(),
         }
+    }
+}
+
+impl GraphicsCapabilitySnapshot {
+    /// Gate for admitting the requested tier. Conservative is always a valid presentation
+    /// baseline; every higher tier requires measured performance evidence.
+    pub const fn quality_tier_gate(self) -> CapabilityEvidence {
+        match self.tier_hint {
+            None | Some(QualityTier::Conservative) => CapabilityEvidence::Confirmed,
+            Some(_) if !self.probe_complete => CapabilityEvidence::Unknown,
+            Some(_) => self.acceptance.performance_gate(),
+        }
+    }
+
+    pub const fn temporal_gate(self) -> CapabilityEvidence {
+        self.acceptance.temporal_gate()
+    }
+
+    pub const fn environment_probe_gate(self) -> CapabilityEvidence {
+        self.acceptance.environment_probe_gate()
+    }
+
+    pub const fn browser_webgpu_gate(self) -> CapabilityEvidence {
+        self.acceptance.browser_webgpu_gate()
+    }
+
+    pub const fn pixel_readback_gate(self) -> CapabilityEvidence {
+        self.acceptance.pixel_readback_gate()
     }
 }
 
@@ -139,11 +173,13 @@ fn select_quality_tier_via_vibe(snapshot: GraphicsCapabilitySnapshot) -> Quality
     };
     let mut host = LocalHost::default();
     let mut env = Env::default();
+    let quality_probe_complete = snapshot.probe_complete
+        && snapshot.quality_tier_gate() == CapabilityEvidence::Confirmed;
     let Ok(Value::String(result)) = eval_function(
         &program,
         "select_quality_tier",
         vec![
-            Value::Bool(snapshot.probe_complete),
+            Value::Bool(quality_probe_complete),
             Value::String(hint.to_owned()),
         ],
         &mut host,
@@ -173,6 +209,7 @@ mod tests {
         feature, select_quality_profile, select_quality_tier_via_vibe, GraphicsCapabilitySnapshot,
         QualityTier,
     };
+    use crate::render::acceptance_contract::CapabilityEvidence;
 
     fn capable(tier: QualityTier) -> GraphicsCapabilitySnapshot {
         GraphicsCapabilitySnapshot {
@@ -185,6 +222,12 @@ mod tests {
                 | feature::BLOOM
                 | feature::HDR
                 | feature::VOLUME_PROJECTION,
+            acceptance: crate::render::acceptance_contract::CapabilityAcceptance {
+                performance: crate::render::acceptance_contract::PerformanceEvidence::measured(
+                    3, 12_000, 16_667,
+                ),
+                ..Default::default()
+            },
         }
     }
 
@@ -249,6 +292,15 @@ mod tests {
         assert_eq!(profile.tier, QualityTier::Conservative);
         assert!(!profile.shadows_enabled);
         assert!(!profile.bloom_enabled);
+    }
+
+    #[test]
+    fn complete_probe_without_performance_evidence_stays_conservative() {
+        let mut snapshot = capable(QualityTier::High);
+        snapshot.acceptance = Default::default();
+        let profile = select_quality_profile(snapshot);
+        assert_eq!(profile.tier, QualityTier::Conservative);
+        assert_eq!(snapshot.quality_tier_gate(), CapabilityEvidence::Unknown);
     }
 
     #[test]

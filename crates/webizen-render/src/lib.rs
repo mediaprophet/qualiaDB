@@ -30,7 +30,13 @@ pub mod zero_copy_views;
 // Re-export main types for convenience
 pub use math::{AlignedBufferF32, Motor, MotorEncoder, RenderQuin};
 #[cfg(feature = "qualia")]
-pub use pipeline::WebizenFrameScheduler;
+pub use pipeline::{WebizenFramePlan, WebizenFrameScheduleError, WebizenFrameScheduler};
+pub use pipeline::{
+    admit_capabilities, FrameExtent, HistoryPublication, LinearDepthView, MotionVectorsView,
+    ReactiveMaskView, TemporalAdmission, TemporalCapabilityRefusal, TemporalContractError,
+    TemporalFrameContract, TemporalHistoryContract, TemporalProducerCapabilities,
+    TemporalProducerContract, TemporalResource,
+};
 pub use pipeline::{BindGroupManager, RenderBindGroups};
 pub use scene_contract::{RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint};
 pub use shaders::{EPISTEMIC_WGSL, PROJECTOR_WGSL};

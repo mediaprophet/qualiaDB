@@ -7,6 +7,8 @@
 //! the browser facade (`portal`, `portal_wasm`) remains gated to wasm + `portal`.
 
 pub mod acoustic;
+/// Cross-platform measured capability evidence and fail-closed acceptance gates.
+pub mod acceptance_contract;
 /// Browser Anatomy render backends. Shared pack metadata remains in `anatomy_pack`.
 pub mod anatomy;
 /// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /

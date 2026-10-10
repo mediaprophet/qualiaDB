@@ -18,6 +18,7 @@ pub use texture_mips::TextureMipSemantic;
 pub use texture_residency::{TextureColorSpace, TextureUploadError};
 pub use temporal_resolve_gpu::{
     TemporalProducerAvailability, TemporalProducerViews, TemporalResolveGpu, TemporalResolveInputs,
+    TemporalSubmissionState,
 };
 mod mesh_normals;
 mod mesh_upload;
@@ -2520,6 +2521,15 @@ impl PortalGpu {
             .is_some_and(temporal_resolve_gpu::TemporalResolveGpu::history_valid)
     }
 
+    /// State of the current renderer-owned temporal command handoff.
+    pub fn temporal_submission_state(&self) -> TemporalSubmissionState {
+        self.temporal_resolve
+            .as_ref()
+            .map_or(TemporalSubmissionState::Idle, |temporal| {
+                temporal.submission_state()
+            })
+    }
+
     /// Whether the next admitted temporal frame must start without previous history.
     pub fn temporal_reset_pending(&self) -> bool {
         self.temporal_reset_pending
@@ -2594,10 +2604,7 @@ impl PortalGpu {
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
     ) -> bool {
         let schedule = self.effective_temporal_schedule(schedule);
-        if !schedule.is_valid()
-            || producers.motion_vectors.is_none()
-            || producers.reactive_mask.is_none()
-        {
+        if !schedule.is_valid() || !producers.has_required_host_producers() {
             return false;
         }
         let Some(temporal_extent) = self.temporal_resolve.as_ref().map(|owner| owner.extent())
@@ -2615,17 +2622,28 @@ impl PortalGpu {
         let Some(temporal) = self.temporal_resolve.as_ref() else {
             return false;
         };
-        if producers.current_linear_depth.is_none()
-            && !temporal.record_linear_depth_producer(
+        if !temporal.scheduled_output_is_admissible(
+            producers.extent,
+            schedule,
+            self.hdr_exposure_ev,
+            self.white_balance_gains,
+        ) {
+            return false;
+        }
+        if producers.current_linear_depth.is_none() {
+            let Some(temporal) = self.temporal_resolve.as_mut() else {
+                return false;
+            };
+            if !temporal.record_linear_depth_producer(
                 &self.device,
                 &self.queue,
                 encoder,
                 self.scene_depth.view(),
                 crate::render::camera::CAMERA_NEAR_PLANE,
                 crate::render::camera::CAMERA_FAR_PLANE,
-            )
-        {
-            return false;
+            ) {
+                return false;
+            }
         }
         let Some(temporal) = self.temporal_resolve.as_mut() else {
             return false;
@@ -3132,8 +3150,7 @@ impl PortalGpu {
         let eligible = schedule.is_valid()
             && producers.extent == (self.width, self.height)
             && availability.scene_color
-            && availability.motion_vectors
-            && availability.reactive_mask
+            && producers.has_required_host_producers()
             && (availability.linear_depth || renderer_owns_linear_depth);
         if !eligible {
             return self
@@ -3533,52 +3550,15 @@ impl PortalGpu {
         }
 
         if let Some((schedule, producers)) = temporal {
-            if let Some(scene_view) = temporal_scene_view.as_ref() {
-                let renderer_depth_ready = if producers.current_linear_depth.is_none() {
-                    self.temporal_resolve.as_ref().is_some_and(|owner| {
-                        owner.record_linear_depth_producer(
-                            &self.device,
-                            &self.queue,
-                            &mut encoder,
-                            self.scene_depth.view(),
-                            crate::render::camera::CAMERA_NEAR_PLANE,
-                            crate::render::camera::CAMERA_FAR_PLANE,
-                        )
-                    })
-                } else {
-                    true
-                };
-                if renderer_depth_ready {
-                    if let Some(temporal_owner) = self.temporal_resolve.as_mut() {
-                        let current_linear_depth = producers
-                            .current_linear_depth
-                            .cloned()
-                            .unwrap_or_else(|| temporal_owner.linear_depth_view().clone());
-                        if let (Some(motion_vectors), Some(reactive_mask)) =
-                            (producers.motion_vectors, producers.reactive_mask)
-                        {
-                            let inputs = temporal_resolve_gpu::TemporalResolveInputs {
-                                extent: producers.extent,
-                                current_scene: scene_view,
-                                current_linear_depth: &current_linear_depth,
-                                motion_vectors,
-                                reactive_mask,
-                            };
-                            temporal_recorded = temporal_owner.record_scheduled_output(
-                                &self.device,
-                                &self.queue,
-                                &mut encoder,
-                                inputs,
-                                &view,
-                                schedule,
-                                self.hdr_exposure_ev,
-                                self.white_balance_gains,
-                                self.color_format.is_srgb(),
-                            );
-                        }
-                    }
-                }
-            }
+            // Keep the render path on the same producer contract exposed to hosts. This makes
+            // renderer-owned depth production, resolve, history publication, and final output a
+            // single scheduled handoff instead of a second partially duplicated path.
+            temporal_recorded = self.record_scheduled_temporal_output_from_producers(
+                &mut encoder,
+                producers,
+                &view,
+                schedule,
+            );
             if temporal_recorded {
                 self.temporal_reset_pending = false;
             }
@@ -3760,6 +3740,10 @@ mod tests {
         }
         assert!(!renderer.temporal_history_valid());
         assert!(renderer.temporal_reset_pending());
+        assert_eq!(
+            renderer.temporal_submission_state(),
+            TemporalSubmissionState::Idle
+        );
         let availability = renderer.temporal_producer_availability();
         assert!(availability.scene_color);
         assert!(availability.linear_depth);
@@ -3770,11 +3754,101 @@ mod tests {
         assert!(renderer.temporal_reset_pending());
         renderer.invalidate_temporal_history();
         assert!(!renderer.temporal_history_valid());
+        assert_eq!(
+            renderer.temporal_submission_state(),
+            TemporalSubmissionState::Idle
+        );
         assert!(renderer.temporal_reset_pending());
         assert_eq!(renderer.resize(48, 40).expect("resize"), (48, 40));
         assert!(!renderer.temporal_history_valid());
         assert!(renderer.temporal_reset_pending());
         assert_eq!(renderer.temporal_resolve_gpu().map(|owner| owner.extent()), Some((48, 40)));
+    }
+
+    #[test]
+    #[serial_test::serial(gpu)]
+    fn temporal_render_submits_only_with_real_host_producer_views() {
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
+        let mut renderer = PortalGpu::new_offscreen(32, 24, 0).expect("offscreen renderer");
+        if renderer.temporal_resolve_gpu().is_none() {
+            return;
+        }
+
+        // These are host-owned attachments. The renderer receives their views but never creates
+        // or fills them, so the integration test exercises the typed producer seam directly.
+        let motion_texture = renderer.device().create_texture(&wgpu::TextureDescriptor {
+            label: Some("test-host-motion-vectors"),
+            size: wgpu::Extent3d {
+                width: 32,
+                height: 24,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rg16Float,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let reactive_texture = renderer.device().create_texture(&wgpu::TextureDescriptor {
+            label: Some("test-host-reactive-mask"),
+            size: wgpu::Extent3d {
+                width: 32,
+                height: 24,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let motion_view = motion_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let reactive_view = reactive_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let schedule = crate::render::frame_graph::TemporalOutputSchedule {
+            enabled: true,
+            reset_history: true,
+            reads_history: false,
+            publish_history: true,
+            final_output: true,
+        };
+        let missing_producers = TemporalProducerViews {
+            extent: (32, 24),
+            current_linear_depth: None,
+            motion_vectors: None,
+            reactive_mask: None,
+        };
+        assert!(!renderer
+            .render_with_temporal(
+                0.0,
+                &SystemTelemetry::default(),
+                schedule,
+                missing_producers,
+            )
+            .expect("ordinary fallback render"));
+        assert_eq!(
+            renderer.temporal_submission_state(),
+            TemporalSubmissionState::Idle
+        );
+        let producers = TemporalProducerViews {
+            extent: (32, 24),
+            current_linear_depth: None,
+            motion_vectors: Some(&motion_view),
+            reactive_mask: Some(&reactive_view),
+        };
+
+        assert!(renderer
+            .render_with_temporal(0.0, &SystemTelemetry::default(), schedule, producers)
+            .expect("temporal render"));
+        assert!(renderer.temporal_history_valid());
+        assert_eq!(
+            renderer.temporal_submission_state(),
+            TemporalSubmissionState::OutputReady
+        );
+        assert!(!renderer.temporal_reset_pending());
     }
 
     #[test]
