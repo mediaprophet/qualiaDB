@@ -823,6 +823,13 @@ pub fn dispatch(
         ids::EMF_RENDER_SLICE => render::emf_render_slice(args, span),
         #[cfg(feature = "gpu-runtime")]
         ids::EMF_FIELD_INFO => render::emf_field_info(args, span),
+        ids::RENDER_TEMPORAL_SET_MODE => render::render_temporal_set_mode(args, span),
+        ids::RENDER_TEMPORAL_STATUS => render::render_temporal_status(args, span),
+        ids::RENDER_SET_ENVIRONMENT_PROBE => render::render_set_environment_probe(args, span),
+        ids::RENDER_WATER_SET_PARAMETERS => render::render_water_set_parameters(args, span),
+        ids::RENDER_VEGETATION_PUSH_COLLIDER => render::render_vegetation_push_collider(args, span),
+        ids::RENDER_VEGETATION_CLEAR_COLLIDERS => render::render_vegetation_clear_colliders(args, span),
+        ids::RENDER_TEXTURE_TRANSCODE_CAPS => render::render_texture_transcode_caps(args, span),
         ids::SAMPLER_CONFIGURE => sampler_bind::configure(args, span),
         ids::SAMPLER_CONSTRAIN_ENABLE => sampler_bind::constrain_enable(args, span),
         ids::SAMPLER_CONSTRAIN_DISABLE => sampler_bind::constrain_disable(args, span),

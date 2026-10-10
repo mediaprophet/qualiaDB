@@ -283,9 +283,56 @@ fn probe_canvas2d() -> Result<bool, JsValue> {
     Ok(canvas.get_context("2d")?.is_some())
 }
 
+pub fn recommend_feature_admission(tier: &str, feature: &str) -> bool {
+    use vibe::{eval_function, load_program, Value};
+
+    let Ok(program) = load_program(include_str!("graphics_backend.vibe")) else {
+        return false;
+    };
+    let mut host = vibe::LocalHost::default();
+    let mut env = vibe::Env::default();
+    match eval_function(
+        &program,
+        "admit_feature",
+        vec![
+            Value::String(tier.to_owned()),
+            Value::String(feature.to_owned()),
+        ],
+        &mut host,
+        &mut env,
+    ) {
+        Ok(Value::Bool(admitted)) => admitted,
+        _ => false,
+    }
+}
+
+pub fn recommend_vegetation_density(tier: &str) -> i64 {
+    use vibe::{eval_function, load_program, Value};
+
+    let Ok(program) = load_program(include_str!("graphics_backend.vibe")) else {
+        return 0;
+    };
+    let mut host = vibe::LocalHost::default();
+    let mut env = vibe::Env::default();
+    match eval_function(
+        &program,
+        "select_vegetation_density",
+        vec![Value::String(tier.to_owned())],
+        &mut host,
+        &mut env,
+    ) {
+        Ok(Value::I64(d)) => d,
+        Ok(Value::U64(d)) => d as i64,
+        _ => 0,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{recommend_backend, recommend_recovery_backend};
+    use super::{
+        recommend_backend, recommend_feature_admission, recommend_recovery_backend,
+        recommend_vegetation_density,
+    };
 
     #[test]
     fn recommendation_uses_quality_order_and_degrades_to_canvas() {
@@ -300,5 +347,17 @@ mod tests {
         assert_eq!(recommend_recovery_backend(true, true), "webgpu");
         assert_eq!(recommend_recovery_backend(false, true), "webgl2");
         assert_eq!(recommend_recovery_backend(false, false), "canvas2d");
+    }
+
+    #[test]
+    fn test_vibe_feature_admission_and_quality() {
+        assert!(recommend_feature_admission("ultra", "temporal_aa"));
+        assert!(recommend_feature_admission("ultra", "water_foam"));
+        assert!(recommend_feature_admission("balanced", "temporal_aa"));
+        assert!(!recommend_feature_admission("low", "temporal_aa"));
+        assert!(recommend_feature_admission("low", "water_foam"));
+        assert_eq!(recommend_vegetation_density("ultra"), 128);
+        assert_eq!(recommend_vegetation_density("balanced"), 32);
+        assert_eq!(recommend_vegetation_density("conservative"), 0);
     }
 }

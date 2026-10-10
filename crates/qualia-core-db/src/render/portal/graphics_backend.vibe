@@ -56,3 +56,65 @@ fn select_quality_tier(probe_complete: bool, tier_hint: string) -> string {
         }
     }
 }
+
+// Pure VibeScript feature admission policy.
+// Determines whether a specific graphics feature is admitted for a given quality tier.
+fn admit_feature(tier: string, feature: string) -> bool {
+    if tier == "ultra" || tier == "high" {
+        return true;
+    } else {
+        if tier == "balanced" {
+            return feature == "temporal_aa" || feature == "water_foam" || feature == "environment_probes";
+        } else {
+            if tier == "low" {
+                return feature == "water_foam";
+            } else {
+                return false;
+            }
+        }
+    }
+}
+
+// Selects procedural vegetation blade instance density by tier.
+fn select_vegetation_density(tier: string) -> int {
+    if tier == "ultra" {
+        return 128;
+    } else {
+        if tier == "high" {
+            return 64;
+        } else {
+            if tier == "balanced" {
+                return 32;
+            } else {
+                if tier == "low" {
+                    return 16;
+                } else {
+                    return 0;
+                }
+            }
+        }
+    }
+}
+
+// Selects water shader execution path by tier.
+fn select_water_quality(tier: string) -> string {
+    if tier == "ultra" || tier == "high" {
+        return "full_foam_depth_waves";
+    } else {
+        if tier == "balanced" {
+            return "foam_depth";
+        } else {
+            return "planar_unshaded";
+        }
+    }
+}
+
+// Selects TAA reconstruction mode by tier.
+fn select_temporal_mode(tier: string) -> string {
+    if tier == "ultra" || tier == "high" || tier == "balanced" {
+        return "accumulate";
+    } else {
+        return "bypass";
+    }
+}
+

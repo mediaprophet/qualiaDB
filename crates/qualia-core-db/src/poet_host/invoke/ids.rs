@@ -437,6 +437,13 @@ pub const GPU_REQUIRED_RGBA8_BYTES: &str = "Render.gpu_required_rgba8_bytes";
 pub const EMF_UPLOAD_FIELD: &str = "Render.emf_upload_field";
 pub const EMF_RENDER_SLICE: &str = "Render.emf_render_slice";
 pub const EMF_FIELD_INFO: &str = "Render.emf_field_info";
+pub const RENDER_TEMPORAL_SET_MODE: &str = "Render.temporal_set_mode";
+pub const RENDER_TEMPORAL_STATUS: &str = "Render.temporal_status";
+pub const RENDER_SET_ENVIRONMENT_PROBE: &str = "Render.set_environment_probe";
+pub const RENDER_WATER_SET_PARAMETERS: &str = "Render.water_set_parameters";
+pub const RENDER_VEGETATION_PUSH_COLLIDER: &str = "Render.vegetation_push_collider";
+pub const RENDER_VEGETATION_CLEAR_COLLIDERS: &str = "Render.vegetation_clear_colliders";
+pub const RENDER_TEXTURE_TRANSCODE_CAPS: &str = "Render.texture_transcode_caps";
 
 // ── GBNF constrained sampler (T53/W11) ─────────────────────────────────────
 pub const SAMPLER_CONFIGURE: &str = "sampler.configure";
@@ -1981,6 +1988,13 @@ pub const ALL_BOUND: &[&str] = &[
     EMF_UPLOAD_FIELD,
     EMF_RENDER_SLICE,
     EMF_FIELD_INFO,
+    RENDER_TEMPORAL_SET_MODE,
+    RENDER_TEMPORAL_STATUS,
+    RENDER_SET_ENVIRONMENT_PROBE,
+    RENDER_WATER_SET_PARAMETERS,
+    RENDER_VEGETATION_PUSH_COLLIDER,
+    RENDER_VEGETATION_CLEAR_COLLIDERS,
+    RENDER_TEXTURE_TRANSCODE_CAPS,
     SAMPLER_CONFIGURE,
     SAMPLER_CONSTRAIN_ENABLE,
     SAMPLER_CONSTRAIN_DISABLE,
@@ -3034,7 +3048,14 @@ pub fn seam_for(id: &str) -> &'static str {
         | GPU_REQUIRED_RGBA8_BYTES
         | EMF_UPLOAD_FIELD
         | EMF_RENDER_SLICE
-        | EMF_FIELD_INFO => "render",
+        | EMF_FIELD_INFO
+        | RENDER_TEMPORAL_SET_MODE
+        | RENDER_TEMPORAL_STATUS
+        | RENDER_SET_ENVIRONMENT_PROBE
+        | RENDER_WATER_SET_PARAMETERS
+        | RENDER_VEGETATION_PUSH_COLLIDER
+        | RENDER_VEGETATION_CLEAR_COLLIDERS
+        | RENDER_TEXTURE_TRANSCODE_CAPS => "render",
         SAMPLER_CONFIGURE
         | SAMPLER_CONSTRAIN_ENABLE
         | SAMPLER_CONSTRAIN_DISABLE
