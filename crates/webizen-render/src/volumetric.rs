@@ -117,6 +117,16 @@ impl VolumetricRenderer {
         )
     }
 
+    /// Load a verified HMC mesh as the renderer-owned water surface. The
+    /// surface uses shared scene depth and remains outside semantic picking.
+    pub fn load_hmc_water_asset(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+    ) -> Result<(u32, u32), String> {
+        crate::volumetric_hmc::load_hmc_water_asset(self, hmc_bytes, asset_key)
+    }
+
     pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
         self.inner.upload_mesh(positions, indices)
     }

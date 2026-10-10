@@ -7,6 +7,8 @@
 use qualia_core_db::render::frame_graph::{CompiledSchedule, FrameGraphBuilder, FrameGraphError};
 #[cfg(feature = "qualia")]
 use qualia_core_db::render::quality_profiles::RenderQualityProfile;
+#[cfg(feature = "qualia")]
+use qualia_core_db::render::temporal_resolve::TemporalResolveConfig;
 
 /// High-level renderer pass scheduler.
 #[cfg(feature = "qualia")]
@@ -40,6 +42,28 @@ impl WebizenFrameScheduler {
         self.builder = FrameGraphBuilder::new();
         self.builder
             .configure_from_profile(profile, viewport_width, viewport_height)?;
+        self.builder.compile(vram_budget)
+    }
+
+    /// Build a schedule with an explicitly admitted temporal resolve/output path.
+    ///
+    /// Callers must declare motion-vector and reactive-mask ownership. Missing inputs preserve
+    /// the existing direct/bloom output schedule instead of silently accumulating stale history.
+    pub fn plan_frame_with_temporal(
+        &mut self,
+        profile: &RenderQualityProfile,
+        viewport_width: u32,
+        viewport_height: u32,
+        vram_budget: Option<u64>,
+        temporal: TemporalResolveConfig,
+    ) -> Result<CompiledSchedule, FrameGraphError> {
+        self.builder = FrameGraphBuilder::new();
+        self.builder.configure_from_profile_with_temporal(
+            profile,
+            viewport_width,
+            viewport_height,
+            temporal,
+        )?;
         self.builder.compile(vram_budget)
     }
 
@@ -78,5 +102,46 @@ mod tests {
 
         assert!(schedule.pass_count > 0);
         assert!(schedule.total_resource_bytes > 0);
+    }
+
+    #[test]
+    fn scheduler_can_admit_temporal_output_only_with_declared_inputs() {
+        let mut scheduler = WebizenFrameScheduler::new();
+        let profile = RenderQualityProfile {
+            tier: QualityTier::Balanced,
+            render_scale_bps: 8_500,
+            shadows_enabled: false,
+            shadow_map_dimension: 0,
+            shadow_cascade_count: 0,
+            ambient_occlusion_enabled: false,
+            ao_scale_bps: 0,
+            bloom_enabled: false,
+            bloom_levels: 0,
+            texture_residency_bytes: 128 * 1024 * 1024,
+            hdr_enabled: false,
+            volume_projection_enabled: false,
+        };
+        let schedule = scheduler
+            .plan_frame_with_temporal(
+                &profile,
+                800,
+                450,
+                None,
+                TemporalResolveConfig {
+                    enabled: true,
+                    motion_vectors_available: true,
+                    reactive_mask_available: true,
+                    history_valid: false,
+                    reset_history: true,
+                },
+            )
+            .expect("temporal schedule");
+        let passes = &schedule.passes[..schedule.pass_count];
+        assert!(passes.iter().any(|pass| {
+            *pass == Some(qualia_core_db::render::frame_graph::PassId::TemporalResolve)
+        }));
+        assert!(passes.iter().any(|pass| {
+            *pass == Some(qualia_core_db::render::frame_graph::PassId::HistoryPublication)
+        }));
     }
 }

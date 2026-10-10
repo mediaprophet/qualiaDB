@@ -394,3 +394,7 @@ Required integration evidence: an HMC fixture with a multi-level RGBA8 KTX2 reso
   - Added `pipeline::frame_schedule::WebizenFrameScheduler` wrapping frame graph compilation and quality profiles.
   - Re-exported in `webizen-render::lib`.
   - Added integration tests in `volumetric_tests.rs`: `frame_graph_scheduler_integration_and_pass_sequence` and `lighting_and_ao_quality_evaluation_integration`.
+
+### 10-M — Recovery branch implementation slices (2026-10-10)
+
+Branch `0.0.40.7-codexfailurerecovery` adds four bounded slices: renderer-owned temporal resolve scheduling with explicit motion/reactive admission, history lifecycle, and CPU output oracle; persistent scene-depth ownership and bounded HMC water geometry upload; digest-backed browser HMC mesh residency bookkeeping with a `load_hmc_mesh` entry point; and a backend-independent terrain seam oracle covering both axes, four resolutions, and 256 edge samples. Core verification passes: QualiaDB library check, temporal tests **5/5**, frame-graph tests **9/9**, terrain seam test **1/1**, native `webizen-render` check, and browser WASM `webizen-render` check. The slices remain intentionally fail-closed where motion/reactive GPU producers, persistent GPU history texture binding, adapter-backed runtime pixels, browser GPU execution, or performance evidence are unavailable. Programme status remains **in progress**.

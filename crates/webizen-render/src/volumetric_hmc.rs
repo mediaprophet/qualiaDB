@@ -494,3 +494,60 @@ pub fn load_hmc_asset_with_texture_request(
         }
     }
 }
+
+/// Load an HMC `.10d` geometry asset into the renderer's persistent water
+/// surface slot. Water is presentation-only: it shares the renderer model
+/// transform and scene depth, but does not become a pickable/entity mesh.
+pub fn load_hmc_water_asset(
+    renderer: &mut super::VolumetricRenderer,
+    hmc_bytes: &[u8],
+    asset_key: &str,
+) -> Result<(u32, u32), String> {
+    let bundle = qualia_core_db::bundle::BundleReader::parse(hmc_bytes)
+        .map_err(|e| format!("HMC bundle: {e}"))?;
+    let asset_bytes = bundle
+        .get(asset_key)
+        .ok_or_else(|| format!("HMC asset is missing: {asset_key}"))?;
+    if !bundle.verify_entry(asset_key) {
+        return Err(format!("HMC asset digest check failed: {asset_key}"));
+    }
+    let entry = bundle
+        .entry(asset_key)
+        .ok_or_else(|| format!("HMC asset index entry is missing: {asset_key}"))?;
+    if entry.kind != "10d" {
+        return Err(format!(
+            "HMC water asset {asset_key} has kind {:?}, expected 10d",
+            entry.kind
+        ));
+    }
+    let header = Container10dHeader::parse(asset_bytes).map_err(|e| format!("10d header: {e}"))?;
+    if qualia_core_db::container_10d::compute_whole_file_crc32c(asset_bytes) != header.header_crc32c
+    {
+        return Err("10d whole-file integrity check failed".to_string());
+    }
+    let descs = qualia_core_db::container_10d::parse_section_table(asset_bytes, &header)
+        .map_err(|e| format!("10d section table: {e}"))?;
+    let descriptor = descs
+        .iter()
+        .find(|descriptor| descriptor.typ() == Some(SectionType::QuantizedMesh))
+        .ok_or_else(|| "HMC water asset has no QuantizedMesh section".to_string())?;
+    let start = descriptor.byte_offset as usize;
+    let end = start
+        .checked_add(descriptor.byte_length as usize)
+        .filter(|&end| end <= asset_bytes.len())
+        .ok_or_else(|| "HMC water mesh section is outside asset bytes".to_string())?;
+    let mesh = decode_mesh_section(&asset_bytes[start..end])
+        .map_err(|e| format!("10d water mesh decode: {e}"))?;
+    let mut indices = Vec::with_capacity(mesh.triangles.len().saturating_mul(3));
+    for triangle in &mesh.triangles {
+        indices.extend_from_slice(triangle);
+    }
+    let vertex_count = u32::try_from(mesh.positions.len())
+        .map_err(|_| "HMC water vertex count exceeds u32".to_string())?;
+    let triangle_count = u32::try_from(mesh.triangles.len())
+        .map_err(|_| "HMC water triangle count exceeds u32".to_string())?;
+    renderer
+        .inner
+        .upload_water_geometry(&mesh.positions, &indices)?;
+    Ok((vertex_count, triangle_count))
+}

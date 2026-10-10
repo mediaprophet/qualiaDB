@@ -30,6 +30,7 @@ use crate::render::control::{
 use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, OperationalMode};
 use crate::render::atmosphere::AtmospherePreset;
 use crate::render::camera::CameraState;
+use crate::render::hmc_playback::{resolve_hmc_mesh, HmcMeshResidency};
 use crate::render::navigation::{
     camera_frame_node, cpu_pick_node_at_camera, CameraFlyTo, Q_COLLAPSED_EPS,
 };
@@ -156,6 +157,8 @@ pub struct QualiaPortal {
     body_vertex_count: u32,
     body_index_count: u32,
     body_frames_presented: u32,
+    /// Verified HMC mesh identity and upload generation for browser playback.
+    hmc_mesh_residency: HmcMeshResidency,
     acoustic_enabled: bool,
     acoustic_pulse_accum: f32,
     /// Pinned mmap-ready STFT/CQT sidecar for selected node (cold bake → hot frame read).
@@ -226,6 +229,7 @@ impl QualiaPortal {
             body_vertex_count: 0,
             body_index_count: 0,
             body_frames_presented: 0,
+            hmc_mesh_residency: HmcMeshResidency::default(),
             acoustic_enabled: true,
             acoustic_pulse_accum: 0.0,
             acoustic_sidecar: None,
@@ -765,6 +769,9 @@ impl QualiaPortal {
     /// Anatomy stays false (orbit frame). A town scene sets this so the
     /// camera and the mesh share one frame.
     pub fn set_preserve_authored_frame(&mut self, on: bool) {
+        if self.preserve_authored_frame != on {
+            self.hmc_mesh_residency.clear();
+        }
         self.preserve_authored_frame = on;
     }
 
@@ -880,6 +887,7 @@ impl QualiaPortal {
     /// — then uploaded to the GPU. `hint` is an optional lowercase extension ("obj"/"stl"/"glb");
     /// empty = sniff from the bytes. Returns the triangle count (0 if the GPU path isn't active).
     pub fn upload_mesh_asset(&mut self, bytes: &[u8], hint: &str) -> Result<u32, JsValue> {
+        self.hmc_mesh_residency.clear();
         let hint_opt = if hint.is_empty() { None } else { Some(hint) };
         let imported = crate::render::assets::import_asset_with_normals(bytes, hint_opt)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -1056,6 +1064,7 @@ impl QualiaPortal {
     ///
     /// Returns a JS object `{ vertex_count, triangle_count, provenance_mu, tier }`.
     pub fn load_10d(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        self.hmc_mesh_residency.clear();
         use crate::container_10d::{
             self,
             header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
@@ -1218,6 +1227,66 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
+    /// Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed
+    /// residency identity. Replaying the same asset returns the existing receipt without
+    /// rebuilding the GPU mesh; a different digest replaces the resident mesh.
+    pub fn load_hmc_mesh(&mut self, hmc_bytes: &[u8], asset_key: &str) -> Result<JsValue, JsValue> {
+        let source = resolve_hmc_mesh(hmc_bytes, asset_key)
+            .map_err(|error| JsValue::from_str(&error))?;
+        if let Some(receipt) = self.hmc_mesh_residency.resident(source.digest) {
+            let result = js_sys::Object::new();
+            Reflect::set(
+                &result,
+                &JsValue::from_str("vertex_count"),
+                &JsValue::from_f64(receipt.vertex_count as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("triangle_count"),
+                &JsValue::from_f64(receipt.triangle_count as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("generation"),
+                &JsValue::from_f64(receipt.generation as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("upload_count"),
+                &JsValue::from_f64(receipt.upload_count as f64),
+            )?;
+            return Ok(result.into());
+        }
+
+        let loaded = self.load_10d(source.bytes)?;
+        let vertex_count = Reflect::get(&loaded, &JsValue::from_str("vertex_count"))?
+            .as_f64()
+            .ok_or_else(|| JsValue::from_str("hmc_mesh_result_missing_vertex_count"))?;
+        let triangle_count = Reflect::get(&loaded, &JsValue::from_str("triangle_count"))?
+            .as_f64()
+            .ok_or_else(|| JsValue::from_str("hmc_mesh_result_missing_triangle_count"))?;
+        let receipt = self.hmc_mesh_residency.record_upload(
+            source.digest,
+            u32::try_from(vertex_count as u64)
+                .map_err(|_| JsValue::from_str("hmc_mesh_vertex_count_overflow"))?,
+            u32::try_from((triangle_count as u64).saturating_mul(3))
+                .map_err(|_| JsValue::from_str("hmc_mesh_index_count_overflow"))?,
+            u32::try_from(triangle_count as u64)
+                .map_err(|_| JsValue::from_str("hmc_mesh_triangle_count_overflow"))?,
+        );
+        Reflect::set(
+            &loaded,
+            &JsValue::from_str("generation"),
+            &JsValue::from_f64(receipt.generation as f64),
+        )?;
+        Reflect::set(
+            &loaded,
+            &JsValue::from_str("upload_count"),
+            &JsValue::from_f64(receipt.upload_count as f64),
+        )?;
+        Ok(loaded)
+    }
+
     /// S5.1 colour-by-load — like [`load_10d`] but paints the whole organ mesh a single uniform linear
     /// RGBA. The host resolves each organ's body-system percept
     /// (`qualia-client-core … AnatomyViewReport::paint_organs`) and passes that system's σ-derived colour
@@ -1233,6 +1302,7 @@ impl QualiaPortal {
         b: f32,
         a: f32,
     ) -> Result<JsValue, JsValue> {
+        self.hmc_mesh_residency.clear();
         use crate::container_10d::{
             self,
             header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},

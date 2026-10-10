@@ -55,6 +55,8 @@ pub mod derivation;
 pub mod frame_graph;
 /// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
 pub mod gamut;
+/// Browser HMC mesh source verification and resident-upload lifecycle.
+pub mod hmc_playback;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
 pub mod gpu_colour_kernel;
 /// Generic, canvas-backed interactive HUD surface for browser render clients.
@@ -76,6 +78,8 @@ pub mod model_substrate;
 pub mod navigation;
 /// Scene-linear display output and manual exposure controls.
 pub mod output;
+/// Bounded temporal resolve policy, history lifecycle, and CPU reference oracle.
+pub mod temporal_resolve;
 pub mod pga;
 /// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
 pub mod physics;
@@ -139,6 +143,10 @@ pub mod texture_ktx2_rgba8;
 /// Deterministic caller-buffered texture mip residency planning and budget admission.
 pub mod texture_stream_policy;
 pub mod texture_streaming_plan;
+
+#[cfg(test)]
+#[path = "terrain_seam_tests.rs"]
+mod terrain_seam_tests;
 
 /// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
 /// renderer parses each level → `plan_view` selects the expected LOD. Gated

@@ -5,6 +5,7 @@
 //! estimation. Adheres strictly to the Rule 0 zero-heap execution contract.
 
 use super::quality_profiles::RenderQualityProfile;
+use super::temporal_resolve::TemporalResolveConfig;
 
 /// Maximum number of render passes in a single frame graph.
 pub const MAX_PASSES: usize = 16;
@@ -19,6 +20,10 @@ pub enum FrameResourceId {
     SceneColor,
     LinearDepth,
     Normals,
+    MotionVectors,
+    ReactiveMask,
+    TemporalColor,
+    HistoryColor,
     ShadowCascade(u8),
     AoVisibility,
     BloomIntermediate(u8),
@@ -76,6 +81,8 @@ pub enum PassId {
     AoCompute,
     AoBilateralFilter,
     ForwardLighting,
+    TemporalResolve,
+    HistoryPublication,
     Skybox,
     BloomExtract,
     BloomBlur(u8),
@@ -205,6 +212,27 @@ impl FrameGraphBuilder {
         viewport_width: u32,
         viewport_height: u32,
     ) -> Result<(), FrameGraphError> {
+        self.configure_from_profile_with_temporal(
+            profile,
+            viewport_width,
+            viewport_height,
+            TemporalResolveConfig::disabled(),
+        )
+    }
+
+    /// Configure the frame graph with an explicitly admitted temporal output path.
+    ///
+    /// The temporal pass is opt-in and fail-closed: the existing renderer must declare both
+    /// motion-vector and reactive-mask inputs before this graph adds accumulation. Linear depth
+    /// is already owned by this graph. The final bloom/SDR output pass consumes the resolved
+    /// scene colour, while history publication remains a distinct scheduled pass.
+    pub fn configure_from_profile_with_temporal(
+        &mut self,
+        profile: &RenderQualityProfile,
+        viewport_width: u32,
+        viewport_height: u32,
+        temporal: TemporalResolveConfig,
+    ) -> Result<(), FrameGraphError> {
         let render_w =
             ((viewport_width as u64 * profile.render_scale_bps as u64) / 10_000).max(1) as u32;
         let render_h =
@@ -303,6 +331,61 @@ impl FrameGraphBuilder {
         }
         self.add_pass(forward)?;
 
+        let temporal_enabled = temporal.can_schedule();
+        if temporal_enabled {
+            self.add_resource(ResourceDesc {
+                id: FrameResourceId::MotionVectors,
+                format: ResourceFormat::Rg16Float,
+                width: render_w,
+                height: render_h,
+                is_transient: true,
+            })?;
+            self.add_resource(ResourceDesc {
+                id: FrameResourceId::ReactiveMask,
+                format: ResourceFormat::R8Unorm,
+                width: render_w,
+                height: render_h,
+                is_transient: true,
+            })?;
+            self.add_resource(ResourceDesc {
+                id: FrameResourceId::TemporalColor,
+                format: color_format,
+                width: render_w,
+                height: render_h,
+                is_transient: true,
+            })?;
+            self.add_resource(ResourceDesc {
+                id: FrameResourceId::HistoryColor,
+                format: color_format,
+                width: render_w,
+                height: render_h,
+                is_transient: false,
+            })?;
+
+            let temporal_pass = PassNode::new(PassId::TemporalResolve)
+                .with_read(FrameResourceId::SceneColor)
+                .with_read(FrameResourceId::LinearDepth)
+                .with_read(FrameResourceId::MotionVectors)
+                .with_read(FrameResourceId::ReactiveMask)
+                .with_write(FrameResourceId::TemporalColor);
+            // `HistoryColor` is a persistent previous-frame input. The current graph compiler
+            // models same-frame dependencies, so registering it as a read here would create a
+            // false cycle with `HistoryPublication`, which writes the next history image. The
+            // temporal policy still exposes `reads_history()` to the backend binding layer.
+            self.add_pass(temporal_pass)?;
+            self.add_pass(
+                PassNode::new(PassId::HistoryPublication)
+                    .with_read(FrameResourceId::TemporalColor)
+                    .with_write(FrameResourceId::HistoryColor),
+            )?;
+        }
+
+        let output_source = if temporal_enabled {
+            FrameResourceId::TemporalColor
+        } else {
+            FrameResourceId::SceneColor
+        };
+
         if profile.bloom_enabled && profile.hdr_enabled {
             self.add_resource(ResourceDesc {
                 id: FrameResourceId::BloomIntermediate(0),
@@ -313,19 +396,19 @@ impl FrameGraphBuilder {
             })?;
             self.add_pass(
                 PassNode::new(PassId::BloomExtract)
-                    .with_read(FrameResourceId::SceneColor)
+                    .with_read(output_source)
                     .with_write(FrameResourceId::BloomIntermediate(0)),
             )?;
             self.add_pass(
                 PassNode::new(PassId::BloomComposite)
-                    .with_read(FrameResourceId::SceneColor)
+                    .with_read(output_source)
                     .with_read(FrameResourceId::BloomIntermediate(0))
                     .with_write(FrameResourceId::OutputSurface),
             )?;
         } else {
             self.add_pass(
                 PassNode::new(PassId::SdrOutputComposite)
-                    .with_read(FrameResourceId::SceneColor)
+                    .with_read(output_source)
                     .with_write(FrameResourceId::OutputSurface),
             )?;
         }

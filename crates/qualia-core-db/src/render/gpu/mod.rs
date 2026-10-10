@@ -21,7 +21,9 @@ mod mesh_upload;
 mod output_pass;
 mod shadows;
 mod sky;
+mod scene_depth;
 mod texture_mips;
+mod water;
 
 use crate::gpu_context::{
     ambient_draw_instances, global_vram_ledger, universe_orchestrator, ComputeUniverse,
@@ -396,8 +398,7 @@ pub struct PortalGpu {
     readback_bytes_per_row: u32,
     _readback_staging_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     color_format: wgpu::TextureFormat,
-    depth_texture: wgpu::Texture,
-    depth_view: wgpu::TextureView,
+    scene_depth: scene_depth::SceneDepthOwner,
     picking_texture: wgpu::Texture,
     picking_view: wgpu::TextureView,
     _frame_target_reservation: crate::gpu_context::VramReservation<'static>,
@@ -462,6 +463,7 @@ pub struct PortalGpu {
     resident_textures: texture_residency::ResidentTextureMap,
     mesh: Option<MeshGpu>,
     mesh_reservation: Option<crate::gpu_context::VramReservation<'static>>,
+    water: water::WaterGpu,
     model_buf: wgpu::Buffer,
     mesh_model_bind: wgpu::BindGroup,
     artefact_joint: Option<Joint>,
@@ -902,7 +904,7 @@ impl PortalGpu {
         // Capture deferred pipeline/shader creation errors on both Dawn and native backends.
         let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
 
-        let (depth_texture, depth_view) = create_depth_texture(&device, width, height);
+        let scene_depth = scene_depth::SceneDepthOwner::new(&device, width, height);
         let shadow_target = shadows::ShadowTarget::try_new(&device);
         let (picking_texture, picking_view) = create_picking_texture(&device, width, height);
         let offscreen_texture = if surface.is_none() {
@@ -1250,7 +1252,7 @@ impl PortalGpu {
         let shadow_views = shadow_target
             .as_ref()
             .map(|target| [&target.views[0], &target.views[1]])
-            .unwrap_or([&depth_view, &depth_view]);
+            .unwrap_or([scene_depth.view(), scene_depth.view()]);
         let mesh_frame_bind = create_mesh_frame_bind(
             &device,
             &mesh_frame_layout,
@@ -1280,6 +1282,13 @@ impl PortalGpu {
             ],
             immediate_size: 0,
         });
+        let water = water::WaterGpu::new(
+            &device,
+            &mesh_frame_layout,
+            &mesh_model_layout,
+            format,
+            probe_hdr_format(&device),
+        );
         let mesh_vertex_layout = wgpu::VertexBufferLayout {
             array_stride: 12,
             step_mode: wgpu::VertexStepMode::Vertex,
@@ -1748,8 +1757,7 @@ impl PortalGpu {
             readback_bytes_per_row,
             _readback_staging_reservation: readback_staging_reservation,
             color_format: format,
-            depth_texture,
-            depth_view,
+            scene_depth,
             picking_texture,
             picking_view,
             _frame_target_reservation: frame_target_reservation,
@@ -1810,6 +1818,7 @@ impl PortalGpu {
             resident_textures: Default::default(),
             mesh: None,
             mesh_reservation: None,
+            water,
             model_buf,
             mesh_model_bind,
             artefact_joint: None,
@@ -2496,7 +2505,7 @@ impl PortalGpu {
                 height,
             ));
         }
-        let (depth_texture, depth_view) = create_depth_texture(&self.device, width, height);
+        self.scene_depth.replace(&self.device, width, height);
         let (picking_texture, picking_view) = create_picking_texture(&self.device, width, height);
         if let (Some(surface), Some(config)) = (self.surface.as_ref(), self.config.as_mut()) {
             config.width = width;
@@ -2512,8 +2521,6 @@ impl PortalGpu {
             self.readback_buf = next_readback_buf;
             self._readback_staging_reservation = readback_staging_reservation;
         }
-        self.depth_texture = depth_texture;
-        self.depth_view = depth_view;
         self.picking_texture = picking_texture;
         self.picking_view = picking_view;
         self._frame_target_reservation = frame_target_reservation;
@@ -2631,7 +2638,7 @@ impl PortalGpu {
             .shadow_target
             .as_ref()
             .map(|target| [&target.views[0], &target.views[1]])
-            .unwrap_or([&self.depth_view, &self.depth_view]);
+            .unwrap_or([self.scene_depth.view(), self.scene_depth.view()]);
         self.mesh_frame_bind = create_mesh_frame_bind(
             &self.device,
             &self.mesh_frame_layout,
@@ -2810,7 +2817,7 @@ impl PortalGpu {
                 },
             })],
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: &self.depth_view,
+                view: self.scene_depth.view(),
                 depth_ops: Some(wgpu::Operations {
                     load: wgpu::LoadOp::Clear(1.0),
                     store: wgpu::StoreOp::Store,
@@ -2928,6 +2935,10 @@ impl PortalGpu {
         self.uniform_belt.advance(&self.device);
 
         self.write_camera_uniform(&mut encoder, time);
+        self.water.set_time(time);
+        self.water.set_viewport(self.width, self.height);
+        self.water.write_uniform(&mut self.uniform_belt, &mut encoder);
+        self.uniform_belt.advance(&self.device);
         self.write_observer_uniform(&mut encoder);
         self.update_model(&mut encoder, time);
         self.sort_transparent_draws();
@@ -2956,7 +2967,7 @@ impl PortalGpu {
             let fh = frame.texture.height();
             if fw > 0 && fh > 0 && (fw, fh) != (self.width, self.height) {
                 let (_, _, frame_target_reservation, _) = reserve_view_resources(fw, fh, false)?;
-                let (depth_texture, depth_view) = create_depth_texture(&self.device, fw, fh);
+                self.scene_depth.replace(&self.device, fw, fh);
                 let (picking_texture, picking_view) = create_picking_texture(&self.device, fw, fh);
                 self.width = fw;
                 self.height = fh;
@@ -2964,8 +2975,6 @@ impl PortalGpu {
                     config.width = fw;
                     config.height = fh;
                 }
-                self.depth_texture = depth_texture;
-                self.depth_view = depth_view;
                 self.picking_texture = picking_texture;
                 self.picking_view = picking_view;
                 self._frame_target_reservation = frame_target_reservation;
@@ -3043,7 +3052,7 @@ impl PortalGpu {
                         },
                     })],
                     depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                        view: &self.depth_view,
+                        view: self.scene_depth.view(),
                         depth_ops: Some(wgpu::Operations {
                             load: wgpu::LoadOp::Clear(1.0),
                             store: wgpu::StoreOp::Store,
@@ -3091,6 +3100,12 @@ impl PortalGpu {
                             0..self.visible_mesh_instances.count(),
                         );
                     }
+                    self.water.record(
+                        &mut pass,
+                        &self.mesh_frame_bind,
+                        &self.mesh_model_bind,
+                        true,
+                    );
                     if let Some(blend_pipe) = self.mesh_pipeline_hdr_blend.as_ref() {
                         pass.set_pipeline(blend_pipe);
                         for &draw_index in &mesh.material_gpu.transparent_draw_order {
@@ -3165,7 +3180,7 @@ impl PortalGpu {
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_view,
+                    view: self.scene_depth.view(),
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: wgpu::StoreOp::Store,
@@ -3209,6 +3224,12 @@ impl PortalGpu {
                         0..self.visible_mesh_instances.count(),
                     );
                 }
+                self.water.record(
+                    &mut pass,
+                    &self.mesh_frame_bind,
+                    &self.mesh_model_bind,
+                    false,
+                );
                 if !mesh.material_gpu.transparent_draw_order.is_empty() {
                     pass.set_pipeline(&self.mesh_pipeline_blend);
                     for &draw_index in &mesh.material_gpu.transparent_draw_order {

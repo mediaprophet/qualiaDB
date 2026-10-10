@@ -7,6 +7,7 @@ pub const PROJECTOR_WGSL: &str = concat!(
     include_str!("projector.wgsl")
 );
 pub const MESH_WGSL: &str = include_str!("mesh.wgsl");
+pub const WATER_WGSL: &str = include_str!("water.wgsl");
 pub const SUN_SHADOW_WGSL: &str = include_str!("sun_shadow.wgsl");
 pub const AO_PREPASS_WGSL: &str = include_str!("ao_prepass.wgsl");
 pub const AO_GENERATE_WGSL: &str = include_str!("ao_generate.wgsl");

@@ -1,5 +1,6 @@
 use super::*;
 use crate::render::quality_profiles::{QualityTier, RenderQualityProfile};
+use crate::render::temporal_resolve::TemporalResolveConfig;
 
 #[test]
 fn frame_graph_empty_compiles_cleanly() {
@@ -173,4 +174,88 @@ fn frame_graph_budget_refusal_fails_closed() {
             budget: budget_too_small,
         }
     );
+}
+
+#[test]
+fn temporal_output_schedule_resolves_before_history_and_final_transform() {
+    let mut builder = FrameGraphBuilder::new();
+    let profile = RenderQualityProfile {
+        tier: QualityTier::Balanced,
+        render_scale_bps: 10_000,
+        shadows_enabled: false,
+        shadow_map_dimension: 0,
+        shadow_cascade_count: 0,
+        ambient_occlusion_enabled: false,
+        ao_scale_bps: 0,
+        bloom_enabled: false,
+        bloom_levels: 0,
+        texture_residency_bytes: 256 * 1024 * 1024,
+        hdr_enabled: false,
+        volume_projection_enabled: false,
+    };
+    let temporal = TemporalResolveConfig {
+        enabled: true,
+        motion_vectors_available: true,
+        reactive_mask_available: true,
+        history_valid: true,
+        reset_history: false,
+    };
+
+    builder
+        .configure_from_profile_with_temporal(&profile, 1280, 720, temporal)
+        .expect("configure temporal output");
+    let schedule = builder.compile(None).expect("compile temporal output");
+    let passes = &schedule.passes[..schedule.pass_count];
+    let temporal_idx = passes
+        .iter()
+        .position(|pass| *pass == Some(PassId::TemporalResolve))
+        .expect("temporal resolve pass");
+    let history_idx = passes
+        .iter()
+        .position(|pass| *pass == Some(PassId::HistoryPublication))
+        .expect("history publication pass");
+    let output_idx = passes
+        .iter()
+        .position(|pass| *pass == Some(PassId::SdrOutputComposite))
+        .expect("final output pass");
+    assert!(temporal_idx < history_idx && history_idx < output_idx);
+}
+
+#[test]
+fn temporal_schedule_falls_back_without_reactive_or_motion_inputs() {
+    let mut builder = FrameGraphBuilder::new();
+    let profile = RenderQualityProfile {
+        tier: QualityTier::Conservative,
+        render_scale_bps: 5_000,
+        shadows_enabled: false,
+        shadow_map_dimension: 0,
+        shadow_cascade_count: 0,
+        ambient_occlusion_enabled: false,
+        ao_scale_bps: 0,
+        bloom_enabled: false,
+        bloom_levels: 0,
+        texture_residency_bytes: 64 * 1024 * 1024,
+        hdr_enabled: false,
+        volume_projection_enabled: false,
+    };
+    builder
+        .configure_from_profile_with_temporal(
+            &profile,
+            640,
+            360,
+            TemporalResolveConfig {
+                enabled: true,
+                motion_vectors_available: false,
+                reactive_mask_available: false,
+                history_valid: true,
+                reset_history: false,
+            },
+        )
+        .expect("configure fallback");
+    let schedule = builder.compile(None).expect("compile fallback");
+    assert!(!schedule.passes[..schedule.pass_count]
+        .iter()
+        .any(|pass| *pass == Some(PassId::TemporalResolve)));
+    assert_eq!(schedule.passes[0], Some(PassId::ForwardLighting));
+    assert_eq!(schedule.passes[1], Some(PassId::SdrOutputComposite));
 }
