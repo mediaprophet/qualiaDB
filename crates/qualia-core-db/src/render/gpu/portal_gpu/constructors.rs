@@ -1,6 +1,8 @@
-//! External constructor entry points for offscreen, native window surface, and WebGPU canvas renderers.
-
-use super::super::{native_device, PortalGpu};
+#[cfg(not(target_arch = "wasm32"))]
+use super::super::native_device;
+#[cfg(target_arch = "wasm32")]
+use super::super::{mark_portal_gpu_canvas_claimed, portal_gpu_init_aborted};
+use super::super::PortalGpu;
 use std::sync::Arc;
 
 impl PortalGpu {

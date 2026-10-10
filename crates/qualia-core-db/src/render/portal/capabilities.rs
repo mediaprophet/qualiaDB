@@ -283,6 +283,7 @@ fn probe_canvas2d() -> Result<bool, JsValue> {
     Ok(canvas.get_context("2d")?.is_some())
 }
 
+#[allow(dead_code)]
 pub fn recommend_feature_admission(tier: &str, feature: &str) -> bool {
     use vibe::{eval_function, load_program, Value};
 
@@ -306,6 +307,7 @@ pub fn recommend_feature_admission(tier: &str, feature: &str) -> bool {
     }
 }
 
+#[allow(dead_code)]
 pub fn recommend_vegetation_density(tier: &str) -> i64 {
     use vibe::{eval_function, load_program, Value};
 

@@ -313,6 +313,7 @@ pub fn transcode_ktx2_into(
     bytes: &[u8],
     target: TranscodeTargetFormat,
     output: &mut [u8],
+    #[cfg_attr(target_arch = "wasm32", allow(unused_variables))]
     scratch: &mut [u8],
 ) -> Result<TranscodedTextureInfo, TranscodeError> {
     let document = Ktx2Document::parse(bytes).map_err(|_| TranscodeError::InvalidContainer)?;
@@ -334,6 +335,7 @@ pub fn transcode_ktx2_into(
 
     let uncompressed_blocks = match document.supercompression() {
         Ktx2Supercompression::None => level_bytes,
+        #[cfg(not(target_arch = "wasm32"))]
         Ktx2Supercompression::Zstd => {
             let decompressed_len = level.uncompressed_byte_length as usize;
             if scratch.len() < decompressed_len {
