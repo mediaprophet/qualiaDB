@@ -42,7 +42,8 @@ struct OutputParams {
 struct DepthProducerParams {
     near_plane: f32,
     far_plane: f32,
-    _padding: [f32; 2],
+    inv_width: f32,
+    inv_height: f32,
 }
 
 /// Real producer views required to admit a temporal resolve.
@@ -134,6 +135,7 @@ pub struct TemporalResolveGpu {
     output_pipeline: wgpu::RenderPipeline,
     params_buf: wgpu::Buffer,
     depth_producer_params_buf: wgpu::Buffer,
+    depth_sampler: wgpu::Sampler,
     output_params_buf: wgpu::Buffer,
     history_texture: wgpu::Texture,
     history_view: wgpu::TextureView,
@@ -237,6 +239,7 @@ impl TemporalResolveGpu {
                 entries: &[
                     depth_texture_entry(0),
                     uniform_entry(1, DEPTH_PRODUCER_PARAMS_BYTES),
+                    sampler_entry(2),
                 ],
             });
         let output_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -258,6 +261,16 @@ impl TemporalResolveGpu {
             size: DEPTH_PRODUCER_PARAMS_BYTES,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
+        });
+        let depth_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("qualia-temporal-depth-sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
         });
         let output_params_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("qualia-temporal-output-params"),
@@ -330,6 +343,7 @@ impl TemporalResolveGpu {
             output_pipeline,
             params_buf,
             depth_producer_params_buf,
+            depth_sampler,
             output_params_buf,
             history_texture,
             history_view,
@@ -393,7 +407,8 @@ impl TemporalResolveGpu {
         let params = DepthProducerParams {
             near_plane,
             far_plane,
-            _padding: [0.0; 2],
+            inv_width: 1.0 / self.width as f32,
+            inv_height: 1.0 / self.height as f32,
         };
         queue.write_buffer(
             &self.depth_producer_params_buf,
@@ -409,6 +424,10 @@ impl TemporalResolveGpu {
                     resource: wgpu::BindingResource::TextureView(scene_depth),
                 },
                 buffer_entry(1, &self.depth_producer_params_buf),
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.depth_sampler),
+                },
             ],
         });
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -786,6 +805,15 @@ fn depth_texture_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
             view_dimension: wgpu::TextureViewDimension::D2,
             multisampled: false,
         },
+        count: None,
+    }
+}
+
+fn sampler_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
+    wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
         count: None,
     }
 }

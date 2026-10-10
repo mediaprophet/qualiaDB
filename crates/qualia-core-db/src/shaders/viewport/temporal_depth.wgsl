@@ -4,15 +4,19 @@
 // producer. This pass samples that attachment and writes a portable float
 // target in view-space units. It therefore supplies genuine depth while
 // leaving motion vectors and reactive coverage as explicit host contracts.
+// A nearest sampler is used instead of textureLoad because lavapipe's
+// WGSL-to-GLSL path does not support textureLoad on depth textures.
 
 struct DepthProducerParams {
     near_plane: f32,
     far_plane: f32,
-    _padding: vec2<f32>,
+    inv_width: f32,
+    inv_height: f32,
 };
 
 @group(0) @binding(0) var scene_depth: texture_depth_2d;
 @group(0) @binding(1) var<uniform> depth_params: DepthProducerParams;
+@group(0) @binding(2) var depth_sampler: sampler;
 
 fn fullscreen_position(vertex_index: u32) -> vec4<f32> {
     let positions = array<vec2<f32>, 3>(
@@ -30,13 +34,9 @@ fn temporal_depth_vs(@builtin(vertex_index) vertex_index: u32) -> @builtin(posit
 
 @fragment
 fn temporal_depth_fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
-    let dimensions = vec2<i32>(vec2<f32>(textureDimensions(scene_depth)));
-    let pixel = clamp(
-        vec2<i32>(floor(position.xy)),
-        vec2<i32>(0),
-        dimensions - vec2<i32>(1)
-    );
-    let depth = textureLoad(scene_depth, pixel, 0);
+    let uv = (floor(position.xy) + vec2<f32>(0.5, 0.5))
+        * vec2<f32>(depth_params.inv_width, depth_params.inv_height);
+    let depth = textureSampleLevel(scene_depth, depth_sampler, uv, 0.0);
     let range = max(
         depth_params.far_plane
             - depth * (depth_params.far_plane - depth_params.near_plane),
