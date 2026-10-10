@@ -6,6 +6,11 @@
 
 use std::f32::consts::PI;
 
+/// Portable bounded environment-probe evaluation and fallback policy.
+#[path = "environment_lighting.rs"]
+pub mod environment_lighting;
+pub use environment_lighting::*;
+
 /// Maximum number of local (point/spot) lights evaluated per fragment/cluster.
 pub const MAX_LOCAL_LIGHTS: usize = 8;
 

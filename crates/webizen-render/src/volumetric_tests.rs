@@ -318,8 +318,10 @@ fn hmc_multilevel_ktx2_selects_and_decodes_coarse_level() {
         Err(_) => return, // Headless environment without adapter
     };
 
-    // 4x4 (64B), 2x2 (16B), 1x1 (4B)
-    let lvl0 = [0xAAu8; 64];
+    // Keep level zero structurally present but invalid for RGBA8 (4B instead of 64B). A
+    // successful load therefore proves the HMC path selected and decoded the authored 2x2 level
+    // directly rather than falling back to a base-level decode.
+    let lvl0 = [0xAAu8; 4];
     let lvl1 = [0xBBu8; 16];
     let lvl2 = [0xCCu8; 4];
     let ktx2 = ktx2_fixture(43, 4, 4, &[&lvl0, &lvl1, &lvl2]); // SRGB
@@ -344,7 +346,8 @@ fn hmc_multilevel_ktx2_selects_and_decodes_coarse_level() {
     assert_eq!(report.requested_interpretations, 1);
     assert_eq!(report.resident_interpretations, 1);
     assert_eq!(report.deferred_interpretations, 0);
-    assert!(report.admitted_mips > 0);
+    assert_eq!(report.admitted_mips, 1);
+    assert_eq!(report.admitted_upload_bytes, 16);
 }
 
 #[test]
@@ -401,6 +404,35 @@ fn hmc_color_space_mismatch_is_deferred_while_mesh_loads() {
     assert_eq!(report.requested_interpretations, 1);
     assert_eq!(report.resident_interpretations, 0);
     assert_eq!(report.deferred_interpretations, 1);
+}
+
+#[test]
+fn hmc_unsupported_ktx2_format_uses_typed_deferred_fallback() {
+    let mut renderer = match VolumetricRenderer::new_offscreen(64, 64, 64) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    // VK_FORMAT_BC1_RGB_UNORM_BLOCK is structurally valid KTX2, but the existing HMC path only
+    // admits authored uncompressed RGBA8 levels. The mesh must still load while the texture is
+    // deferred to the renderer's typed material fallback.
+    let level = [0x5Au8; 16];
+    let ktx2 = ktx2_fixture(131, 2, 2, &[&level]);
+    let (hmc_bytes, _) = build_test_hmc_bundle(&ktx2, "image/ktx2", false);
+
+    let (loaded, report) = renderer
+        .load_hmc_asset_with_texture_request(
+            &hmc_bytes,
+            "asset.10d",
+            HmcTextureStreamRequest::default(),
+        )
+        .unwrap();
+
+    assert_eq!(loaded.1, 1);
+    assert_eq!(report.requested_interpretations, 1);
+    assert_eq!(report.resident_interpretations, 0);
+    assert_eq!(report.deferred_interpretations, 1);
+    assert_eq!(report.admitted_mips, 0);
 }
 
 #[test]

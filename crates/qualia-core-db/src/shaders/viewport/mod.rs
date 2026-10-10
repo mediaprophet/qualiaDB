@@ -17,6 +17,11 @@ pub const OUTPUT_WGSL: &str = concat!(
     include_str!("output_transform.wgsl"),
     include_str!("output_composite.wgsl")
 );
+pub const TEMPORAL_RESOLVE_WGSL: &str = include_str!("temporal_resolve.wgsl");
+pub const TEMPORAL_OUTPUT_WGSL: &str = concat!(
+    include_str!("output_transform.wgsl"),
+    include_str!("temporal_output.wgsl")
+);
 pub const BLOOM_WGSL: &str = concat!(
     include_str!("output_transform.wgsl"),
     include_str!("bloom.wgsl")

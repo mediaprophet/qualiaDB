@@ -16,12 +16,14 @@ mod texture_residency;
 pub use texture_mips::AlphaCoverageDiagnostics;
 pub use texture_mips::TextureMipSemantic;
 pub use texture_residency::{TextureColorSpace, TextureUploadError};
+pub use temporal_resolve_gpu::{TemporalResolveGpu, TemporalResolveInputs};
 mod mesh_normals;
 mod mesh_upload;
 mod output_pass;
 mod shadows;
 mod sky;
 mod scene_depth;
+mod temporal_resolve_gpu;
 mod texture_mips;
 mod water;
 
@@ -399,6 +401,7 @@ pub struct PortalGpu {
     _readback_staging_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     color_format: wgpu::TextureFormat,
     scene_depth: scene_depth::SceneDepthOwner,
+    temporal_resolve: Option<temporal_resolve_gpu::TemporalResolveGpu>,
     picking_texture: wgpu::Texture,
     picking_view: wgpu::TextureView,
     _frame_target_reservation: crate::gpu_context::VramReservation<'static>,
@@ -905,6 +908,9 @@ impl PortalGpu {
         let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
 
         let scene_depth = scene_depth::SceneDepthOwner::new(&device, width, height);
+        let temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
+            &device, width, height, format, format,
+        );
         let shadow_target = shadows::ShadowTarget::try_new(&device);
         let (picking_texture, picking_view) = create_picking_texture(&device, width, height);
         let offscreen_texture = if surface.is_none() {
@@ -1758,6 +1764,7 @@ impl PortalGpu {
             _readback_staging_reservation: readback_staging_reservation,
             color_format: format,
             scene_depth,
+            temporal_resolve,
             picking_texture,
             picking_view,
             _frame_target_reservation: frame_target_reservation,
@@ -2458,6 +2465,21 @@ impl PortalGpu {
         &self.queue
     }
 
+    /// Optional renderer-owned temporal resolve. It is absent when the device
+    /// cannot admit the bounded history targets; callers must preserve the
+    /// existing output path in that case.
+    pub fn temporal_resolve_gpu(&self) -> Option<&temporal_resolve_gpu::TemporalResolveGpu> {
+        self.temporal_resolve.as_ref()
+    }
+
+    /// Mutable temporal owner for hosts that have real linear-depth,
+    /// motion-vector, and reactive-mask producer views to submit.
+    pub fn temporal_resolve_gpu_mut(
+        &mut self,
+    ) -> Option<&mut temporal_resolve_gpu::TemporalResolveGpu> {
+        self.temporal_resolve.as_mut()
+    }
+
     // VC3 test helpers — expose uniform belt internals for allocation measurement.
     #[cfg(test)]
     pub(crate) fn uniform_belt_write_and_unmap(&mut self, data: &[u8]) {
@@ -2505,7 +2527,17 @@ impl PortalGpu {
                 height,
             ));
         }
+        let temporal_was_enabled = self.temporal_resolve.take().is_some();
         self.scene_depth.replace(&self.device, width, height);
+        if temporal_was_enabled {
+            self.temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
+                &self.device,
+                width,
+                height,
+                self.color_format,
+                self.color_format,
+            );
+        }
         let (picking_texture, picking_view) = create_picking_texture(&self.device, width, height);
         if let (Some(surface), Some(config)) = (self.surface.as_ref(), self.config.as_mut()) {
             config.width = width;
@@ -2967,7 +2999,18 @@ impl PortalGpu {
             let fh = frame.texture.height();
             if fw > 0 && fh > 0 && (fw, fh) != (self.width, self.height) {
                 let (_, _, frame_target_reservation, _) = reserve_view_resources(fw, fh, false)?;
+                let temporal_was_enabled = self.temporal_resolve.take().is_some();
                 self.scene_depth.replace(&self.device, fw, fh);
+                if temporal_was_enabled {
+                    self.temporal_resolve =
+                        temporal_resolve_gpu::TemporalResolveGpu::try_new(
+                            &self.device,
+                            fw,
+                            fh,
+                            self.color_format,
+                            self.color_format,
+                        );
+                }
                 let (picking_texture, picking_view) = create_picking_texture(&self.device, fw, fh);
                 self.width = fw;
                 self.height = fh;

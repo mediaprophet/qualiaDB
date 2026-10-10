@@ -11,8 +11,14 @@ use qualia_core_db::render::texture_stream_policy::{
     plan_texture_residency_partial, TextureStreamAction, TextureStreamActionKind,
     TextureStreamBudget, TextureStreamDemand,
 };
-use qualia_core_db::render::texture_streaming_plan::decode_rgba8_ktx2_mip_into;
+use qualia_core_db::render::texture_streaming_plan::{
+    decode_rgba8_ktx2_mip_into, rgba8_ktx2_mip_candidate, reserve_texture_mip,
+    select_texture_mip, Ktx2MipCandidateError, TextureMipBackendCost, TextureMipBudget,
+    TextureMipCandidate,
+};
 use std::collections::{BTreeMap, BTreeSet};
+
+const HMC_KTX2_MAX_DECODED_BYTES: u64 = 256 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct TextureUse {
@@ -27,6 +33,126 @@ pub(crate) struct HmcTexturePlanEntry {
     pub(crate) texture_use: TextureUse,
     pub(crate) width: u32,
     pub(crate) height: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Ktx2HmcFallback {
+    Parse,
+    Candidate(Ktx2MipCandidateError),
+    ColorSpaceMismatch,
+    NoAffordableLevel,
+    Decode,
+}
+
+fn note_ktx2_fallback(
+    report: &mut super::HmcTextureAdmissionReport,
+    fallback: Ktx2HmcFallback,
+    mip_bytes: u64,
+) {
+    report.deferred_interpretations += 1;
+    if matches!(fallback, Ktx2HmcFallback::NoAffordableLevel | Ktx2HmcFallback::Decode) {
+        report.deferred_mips += 1;
+        report.deferred_upload_bytes = report.deferred_upload_bytes.saturating_add(mip_bytes);
+    }
+}
+
+fn ktx2_backend_cost(
+    document: &Ktx2Document<'_>,
+    level_index: usize,
+) -> Result<TextureMipBackendCost, Ktx2MipCandidateError> {
+    let mut width = document
+        .pixel_width
+        .checked_shr(level_index as u32)
+        .unwrap_or(0)
+        .max(1);
+    let mut height = document
+        .pixel_height
+        .checked_shr(level_index as u32)
+        .unwrap_or(0)
+        .max(1);
+    let mut resident_bytes = 0u64;
+    loop {
+        let level_bytes = u64::from(width)
+            .checked_mul(u64::from(height))
+            .and_then(|pixels| pixels.checked_mul(4))
+            .ok_or(Ktx2MipCandidateError::SizeOverflow)?;
+        resident_bytes = resident_bytes
+            .checked_add(level_bytes)
+            .ok_or(Ktx2MipCandidateError::SizeOverflow)?;
+        if width == 1 && height == 1 {
+            break;
+        }
+        width = (width / 2).max(1);
+        height = (height / 2).max(1);
+    }
+    let upload_staging_bytes = document
+        .level(level_index)
+        .ok_or(Ktx2MipCandidateError::InvalidLevel)?
+        .bytes
+        .len() as u64;
+    Ok(TextureMipBackendCost {
+        gpu_resident_bytes: resident_bytes,
+        upload_staging_bytes,
+    })
+}
+
+fn ktx2_rgba8_candidates(
+    document: &Ktx2Document<'_>,
+) -> Result<Vec<TextureMipCandidate>, Ktx2MipCandidateError> {
+    let mut candidates = Vec::new();
+    candidates
+        .try_reserve_exact(document.level_count())
+        .map_err(|_| Ktx2MipCandidateError::SizeOverflow)?;
+    for level_index in 0..document.level_count() {
+        let backend_cost = ktx2_backend_cost(document, level_index)?;
+        if let Ok(candidate) = rgba8_ktx2_mip_candidate(document, level_index, backend_cost) {
+            candidates.push(candidate);
+        }
+    }
+    if candidates.is_empty() {
+        return Err(rgba8_ktx2_mip_candidate(
+            document,
+            0,
+            TextureMipBackendCost {
+                gpu_resident_bytes: 0,
+                upload_staging_bytes: 0,
+            },
+        )
+        .err()
+        .unwrap_or(Ktx2MipCandidateError::InvalidLevel));
+    }
+    Ok(candidates)
+}
+
+fn select_hmc_ktx2_level(
+    document: &Ktx2Document<'_>,
+    texture_use: TextureUse,
+    request: HmcTextureStreamRequest,
+    remaining: TextureMipBudget,
+) -> Result<TextureMipCandidate, Ktx2HmcFallback> {
+    let candidates = ktx2_rgba8_candidates(document).map_err(Ktx2HmcFallback::Candidate)?;
+    let is_srgb = document.vk_format == 43;
+    if (texture_use.color_space == TextureColorSpace::Srgb) != is_srgb {
+        return Err(Ktx2HmcFallback::ColorSpaceMismatch);
+    }
+    let projected_width = if request.projected_width == 0 {
+        document.pixel_width
+    } else {
+        request.projected_width
+    };
+    let projected_height = if request.projected_height == 0 {
+        document.pixel_height.max(1)
+    } else {
+        request.projected_height
+    };
+    select_texture_mip(
+        &candidates,
+        projected_width,
+        projected_height,
+        remaining,
+    )
+    .map(|selection| selection.candidate)
+    .ok_or(Ktx2HmcFallback::NoAffordableLevel)
 }
 
 /// Request-bearing parameters for texture streaming and view-footprint selection.
@@ -197,6 +323,7 @@ pub fn load_hmc_asset_with_texture_request(
     let texture_uses = extract_texture_uses(asset_bytes, &descs)?;
 
     let mut plan_entries = Vec::new();
+    let mut ktx2_entries = Vec::new();
     let mut demands = Vec::new();
     let mut next_semantic_id = 1u64;
     let mut report = super::HmcTextureAdmissionReport::default();
@@ -204,6 +331,61 @@ pub fn load_hmc_asset_with_texture_request(
         let resource =
             qualia_core_db::render::asset_package::resolve_hmc_texture_resource(&bundle, digest)
                 .map_err(|e| format!("HMC texture resolution: {e}"))?;
+
+        // KTX2 resources are admitted from their indexed authored levels. Do not route them
+        // through the generic image inspector: that inspector intentionally validates level zero,
+        // while coarse-first streaming must be able to start from a later valid level.
+        if is_ktx2_mime(resource.mime_type) {
+            let document = match Ktx2Document::parse(resource.bytes) {
+                Ok(document) => document,
+                Err(_) => {
+                    report.requested_interpretations += uses.len();
+                    for _ in uses {
+                        note_ktx2_fallback(&mut report, Ktx2HmcFallback::Parse, 0);
+                    }
+                    continue;
+                }
+            };
+            let candidate_error = ktx2_rgba8_candidates(&document).err();
+            for texture_use in uses {
+                report.requested_interpretations += 1;
+                if renderer
+                    .inner
+                    .resident_texture_binding_with_mips(
+                        digest,
+                        texture_use.color_space,
+                        texture_use.mip_semantic,
+                    )
+                    .is_some()
+                {
+                    report.resident_interpretations += 1;
+                    continue;
+                }
+                if let Some(error) = candidate_error {
+                    note_ktx2_fallback(
+                        &mut report,
+                        Ktx2HmcFallback::Candidate(error),
+                        0,
+                    );
+                    continue;
+                }
+                if (texture_use.color_space == TextureColorSpace::Srgb)
+                    != (document.vk_format == 43)
+                {
+                    note_ktx2_fallback(&mut report, Ktx2HmcFallback::ColorSpaceMismatch, 0);
+                    continue;
+                }
+                ktx2_entries.push(HmcTexturePlanEntry {
+                    semantic_id: 0,
+                    digest: *digest,
+                    texture_use: *texture_use,
+                    width: document.pixel_width,
+                    height: document.pixel_height.max(1),
+                });
+            }
+            continue;
+        }
+
         let (info, _) =
             match qualia_core_db::render::texture_decode::inspect_hmc_texture_requirements(
                 &resource,
@@ -315,6 +497,102 @@ pub fn load_hmc_asset_with_texture_request(
 
     let mut newly_resident = Vec::new();
     let upload_result = (|| -> Result<(), String> {
+        // KTX2 uses the indexed-level planner directly. This keeps the selected authored level
+        // independent of the generic coarse-prefix policy and, importantly, makes the decode
+        // operate on only the level that was admitted by footprint and budget.
+        // The indexed-level planner shares the same per-load budgets as the legacy image path.
+        // Account for already-admitted non-KTX2 requests before selecting any KTX2 level so a
+        // mixed asset cannot independently spend the full budget twice.
+        let mut ktx2_budget = TextureMipBudget {
+            decoded_cpu_bytes: HMC_KTX2_MAX_DECODED_BYTES,
+            gpu_resident_bytes: request
+                .budget
+                .max_resident_bytes
+                .saturating_sub(plan.projected_resident_bytes),
+            upload_staging_bytes: request
+                .budget
+                .max_upload_bytes
+                .saturating_sub(plan.admitted_upload_bytes),
+            per_frame_upload_bytes: request
+                .budget
+                .max_upload_bytes
+                .saturating_sub(plan.admitted_upload_bytes),
+        };
+        for entry in ktx2_entries.iter().copied() {
+            let resource = qualia_core_db::render::asset_package::resolve_hmc_texture_resource(
+                &bundle,
+                &entry.digest,
+            )
+            .map_err(|e| format!("HMC texture resolution: {e}"))?;
+            let document = Ktx2Document::parse(resource.bytes)
+                .map_err(|_| format!("HMC KTX2 fallback: {:?}", Ktx2HmcFallback::Parse))?;
+            let candidate = match select_hmc_ktx2_level(
+                &document,
+                entry.texture_use,
+                request,
+                ktx2_budget,
+            ) {
+                Ok(candidate) => candidate,
+                Err(fallback) => {
+                    note_ktx2_fallback(&mut report, fallback, 0);
+                    continue;
+                }
+            };
+            let mut candidate_budget = ktx2_budget;
+            if !reserve_texture_mip(candidate, &mut candidate_budget) {
+                note_ktx2_fallback(
+                    &mut report,
+                    Ktx2HmcFallback::NoAffordableLevel,
+                    candidate.upload_bytes,
+                );
+                continue;
+            }
+            let output_len = usize::try_from(candidate.decoded_cpu_bytes)
+                .map_err(|_| "HMC KTX2 selected level is too large".to_string())?;
+            let mut selected_level = vec![0u8; output_len];
+            if decode_rgba8_ktx2_mip_into(&document, candidate.level as usize, &mut selected_level)
+                .is_err()
+            {
+                note_ktx2_fallback(
+                    &mut report,
+                    Ktx2HmcFallback::Decode,
+                    candidate.upload_bytes,
+                );
+                continue;
+            }
+            ktx2_budget = candidate_budget;
+            match renderer
+                .inner
+                .upload_resident_texture_rgba8_at_mip_with_mips(
+                    entry.digest,
+                    entry.texture_use.color_space,
+                    entry.texture_use.mip_semantic,
+                    entry.width,
+                    entry.height,
+                    candidate.level,
+                    &selected_level,
+                )
+            {
+                Ok(_) => {
+                    newly_resident.push((entry.digest, entry.texture_use));
+                    report.resident_interpretations += 1;
+                    report.admitted_mips += 1;
+                    report.admitted_upload_bytes = report
+                        .admitted_upload_bytes
+                        .saturating_add(candidate.upload_bytes);
+                }
+                Err(TextureUploadError::GpuBudgetRefused)
+                | Err(TextureUploadError::UploadBudgetRefused) => {
+                    note_ktx2_fallback(
+                        &mut report,
+                        Ktx2HmcFallback::NoAffordableLevel,
+                        candidate.upload_bytes,
+                    );
+                }
+                Err(e) => return Err(format!("HMC texture upload: {e}")),
+            }
+        }
+
         for digest in texture_uses.keys() {
             let mut selected = Vec::new();
             for entry in plan_entries.iter().filter(|e| e.digest == *digest) {
@@ -344,71 +622,7 @@ pub fn load_hmc_asset_with_texture_request(
             )
             .map_err(|e| format!("HMC texture resolution: {e}"))?;
 
-            // KTX2 Direct Mip Path
-            if is_ktx2_mime(resource.mime_type) {
-                if let Ok(doc) = Ktx2Document::parse(resource.bytes) {
-                    let is_srgb = doc.vk_format == 43;
-                    let mut all_uploaded = true;
-                    for (entry, first_mip, mip_bytes, mip_count) in selected.clone() {
-                        if (entry.texture_use.color_space == TextureColorSpace::Srgb) != is_srgb {
-                            note_refusal(&mut report, mip_count, mip_bytes);
-                            continue;
-                        }
-                        let mip_idx = first_mip as usize;
-                        if doc.level(mip_idx).is_some() {
-                            let coarse_w = (entry.width >> first_mip).max(1);
-                            let coarse_h = (entry.height >> first_mip).max(1);
-                            let req_len = (coarse_w as usize)
-                                .saturating_mul(coarse_h as usize)
-                                .saturating_mul(4);
-                            let mut coarse_buf = vec![0u8; req_len];
-                            if decode_rgba8_ktx2_mip_into(&doc, mip_idx, &mut coarse_buf).is_ok() {
-                                let upload = if first_mip == 0 {
-                                    renderer.inner.upload_resident_texture_rgba8_with_mips(
-                                        entry.digest,
-                                        entry.texture_use.color_space,
-                                        entry.texture_use.mip_semantic,
-                                        entry.width,
-                                        entry.height,
-                                        &coarse_buf,
-                                    )
-                                } else {
-                                    renderer
-                                        .inner
-                                        .upload_resident_texture_rgba8_at_mip_with_mips(
-                                            entry.digest,
-                                            entry.texture_use.color_space,
-                                            entry.texture_use.mip_semantic,
-                                            entry.width,
-                                            entry.height,
-                                            u32::from(first_mip),
-                                            &coarse_buf,
-                                        )
-                                        .map(|_| ())
-                                };
-                                match upload {
-                                    Ok(_) => {
-                                        newly_resident.push((entry.digest, entry.texture_use));
-                                        report.resident_interpretations += 1;
-                                    }
-                                    Err(TextureUploadError::GpuBudgetRefused)
-                                    | Err(TextureUploadError::UploadBudgetRefused) => {
-                                        note_refusal(&mut report, mip_count, mip_bytes);
-                                    }
-                                    Err(e) => return Err(format!("HMC texture upload: {e}")),
-                                }
-                                continue;
-                            }
-                        }
-                        all_uploaded = false;
-                    }
-                    if all_uploaded {
-                        continue;
-                    }
-                }
-            }
-
-            // Fallback: Full base decode + CPU downsample for PNG, JPEG, or missing KTX2 mips
+            // Fallback: Full base decode + CPU downsample for PNG and JPEG.
             let (rgba8, _) = match qualia_core_db::render::texture_decode::decode_hmc_texture_rgba8(
                 &resource,
                 qualia_core_db::render::texture_decode::TextureDecodeLimits::default(),

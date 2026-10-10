@@ -118,3 +118,127 @@ fn pbr_fragment_radiance_conserves_energy_and_scales_with_shadow() {
     );
     assert_eq!(shadowed, [0.0; 3]);
 }
+
+fn test_surface() -> SurfaceParameters {
+    SurfaceParameters {
+        base_color: [0.8, 0.6, 0.4],
+        metallic: 0.0,
+        roughness: 0.25,
+        reflectance_f0: 0.04,
+        emissive: [0.0; 3],
+        ambient_occlusion: 1.0,
+    }
+}
+
+fn test_probe() -> EnvironmentProbe {
+    EnvironmentProbe {
+        position: [0.0, 0.0, 0.0],
+        radius: 10.0,
+        irradiance: [2.0, 2.0, 2.0],
+        specular_levels: [
+            [4.0, 4.0, 4.0],
+            [3.0, 3.0, 3.0],
+            [2.0, 2.0, 2.0],
+            [1.0, 1.0, 1.0],
+            [0.5, 0.5, 0.5],
+        ],
+        dominant_direction: [0.0, 1.0, 0.0],
+        valid: true,
+    }
+}
+
+#[test]
+fn environment_lighting_falls_back_to_direct_when_probes_are_unavailable() {
+    let surface = test_surface();
+    let direct = [0.25, 0.5, 0.75];
+    let result = evaluate_environment_lighting(
+        &surface,
+        [0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 1.0],
+        None,
+        direct,
+        None,
+    );
+    assert_eq!(result.radiance, direct);
+    assert!(!result.used_probe);
+    assert_eq!(result.contributing_probes, 0);
+
+    let empty = EnvironmentProbeSet::new();
+    let result = evaluate_environment_lighting(
+        &surface,
+        [0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 1.0],
+        Some(&empty),
+        direct,
+        None,
+    );
+    assert_eq!(result.radiance, direct);
+    assert!(!result.used_probe);
+}
+
+#[test]
+fn environment_lighting_is_bounded_and_roughness_aware() {
+    let surface = test_surface();
+    let mut probes = EnvironmentProbeSet::new();
+    assert!(probes.push(test_probe()));
+    for _ in 1..MAX_ENVIRONMENT_PROBES {
+        assert!(probes.push(test_probe()));
+    }
+    assert!(!probes.push(test_probe()));
+    assert_eq!(probes.len(), MAX_ENVIRONMENT_PROBES);
+
+    let smooth = evaluate_environment_lighting(
+        &surface,
+        [0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 1.0],
+        Some(&probes),
+        [0.0; 3],
+        None,
+    );
+    let rough_surface = SurfaceParameters {
+        roughness: 1.0,
+        ..surface
+    };
+    let rough = evaluate_environment_lighting(
+        &rough_surface,
+        [0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 1.0],
+        Some(&probes),
+        [0.0; 3],
+        None,
+    );
+    assert!(smooth.used_probe && rough.used_probe);
+    assert_eq!(smooth.contributing_probes as usize, MAX_ENVIRONMENT_PROBES);
+    assert!(smooth.specular[0] > rough.specular[0]);
+    assert_eq!(smooth.diffuse, rough.diffuse);
+}
+
+#[test]
+fn environment_lighting_keeps_stylized_diffuse_and_specular_controls() {
+    let surface = test_surface();
+    let mut probes = EnvironmentProbeSet::new();
+    assert!(probes.push(test_probe()));
+    let stylized = StylizedLightingParams {
+        diffuse_bands: 2,
+        band_softness: 0.01,
+        specular_threshold: 0.99,
+        specular_softness: 0.001,
+        ..Default::default()
+    };
+    let result = evaluate_environment_lighting(
+        &surface,
+        [0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.1, 1.0],
+        Some(&probes),
+        [0.0; 3],
+        Some(&stylized),
+    );
+    assert!(result.used_probe);
+    assert!(result.diffuse[0] >= 0.0);
+    assert_eq!(result.specular, [0.0; 3]);
+}
