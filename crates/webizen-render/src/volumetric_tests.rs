@@ -1,6 +1,6 @@
 use super::*;
 use crate::scene_contract::{SceneEdge, SceneFace};
-use crate::volumetric_texture::coarse_texture_level;
+use crate::volumetric_texture::{coarse_texture_level, coarse_texture_level_into};
 use qualia_core_db::render::gpu::TextureMipSemantic;
 
 #[test]
@@ -43,6 +43,47 @@ fn coarse_alpha_mask_preserves_authored_coverage() {
         covered, 2,
         "coarse alpha coverage should match 8/16 base pixels"
     );
+}
+
+#[test]
+fn coarse_texture_level_into_reuses_caller_buffers() {
+    let source = [0x40u8; 4 * 4 * 4];
+    let mut output = [0u8; 2 * 2 * 4];
+    let mut scratch_a = [0u8; 2 * 2 * 4];
+    let mut scratch_b = [0u8; 2 * 2 * 4];
+    let (width, height) = coarse_texture_level_into(
+        &source,
+        4,
+        4,
+        1,
+        TextureMipSemantic::LinearData,
+        &mut output,
+        &mut scratch_a,
+        &mut scratch_b,
+    )
+    .unwrap();
+    assert_eq!((width, height), (2, 2));
+    assert_eq!(output, [0x40u8; 2 * 2 * 4]);
+}
+
+#[test]
+fn coarse_texture_level_into_rejects_wrong_source_length_before_writing() {
+    let source = [0u8; 3];
+    let mut output = [0xA5u8; 4];
+    let mut scratch_a = [0u8; 4];
+    let mut scratch_b = [0u8; 4];
+    assert!(coarse_texture_level_into(
+        &source,
+        1,
+        1,
+        0,
+        TextureMipSemantic::Color,
+        &mut output,
+        &mut scratch_a,
+        &mut scratch_b,
+    )
+    .is_err());
+    assert_eq!(output, [0xA5u8; 4]);
 }
 
 #[test]

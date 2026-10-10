@@ -4,6 +4,7 @@
 //! the semantic arena; this module only enforces per-image decode limits before GPU admission.
 
 use super::asset_package::HmcTextureResource;
+use super::texture_ktx2::{Ktx2ColorSpace, Ktx2TranscodeSource};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextureDecodeLimits {
@@ -29,6 +30,54 @@ pub struct DecodedTextureInfo {
     pub width: u32,
     pub height: u32,
     pub rgba8_bytes: usize,
+    /// PNG/JPEG metadata is not normalized here; KTX2 carries its Vulkan transfer function.
+    pub color_space: TextureColorSpace,
+}
+
+/// Transfer-function information carried across a decode/transcode boundary.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextureColorSpace {
+    Linear,
+    Srgb,
+    /// Basis metadata needs to be interpreted by the eventual transcoder/policy owner.
+    Unknown,
+}
+
+/// A transcode target with an explicit transfer function. `Unknown` is intentional for Basis
+/// payloads whose color metadata has not been interpreted by this crate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextureTranscodeTarget {
+    Rgba8(TextureColorSpace),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextureFallback {
+    /// Keep the verified encoded resource usable while refinement is pending.
+    PreserveEncodedResource,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextureRefinementState {
+    PendingTranscode,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TextureTranscodeRequest {
+    pub source: Ktx2TranscodeSource,
+    pub target: TextureTranscodeTarget,
+    pub fallback: TextureFallback,
+    pub refinement: TextureRefinementState,
+}
+
+/// Allocation-free HMC admission result. A transcode request is not reported as a decoded image;
+/// callers can preserve the source and attach a device/worker-specific refinement later.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextureDecodePlan {
+    DecodeRgba8 {
+        info: DecodedTextureInfo,
+        scratch_bytes: usize,
+    },
+    RequiresTranscode(TextureTranscodeRequest),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,6 +91,7 @@ pub enum TextureDecodeError {
     UnsupportedMime,
     UnsupportedImageFormat,
     UnsupportedSupercompression,
+    RequiresTranscode(Ktx2TranscodeSource),
 }
 
 impl std::fmt::Display for TextureDecodeError {
@@ -56,9 +106,9 @@ impl std::error::Error for TextureDecodeError {}
 ///
 /// `output` and `scratch` are caller-owned. The function never grows either buffer, and fails
 /// before decoding when encoded, dimension, decoded-byte, or caller-buffer limits are exceeded.
-/// PNG and JPEG are supported on native and WASM. KTX2 supports only uncompressed 2D RGBA8
-/// UNORM/SRGB base levels. Basis, Zstd/ZLIB supercompression, other KTX2 formats, and WebP remain
-/// preserved source resources pending bounded decode/transcode support.
+/// PNG and JPEG are supported on native and WASM. KTX2 RGBA8 UNORM/SRGB base levels support
+/// uncompressed data everywhere and bounded Zstd/Zlib expansion on native. Basis and GPU block
+/// formats return a typed transcode refusal; they are never silently treated as RGBA8.
 pub fn decode_hmc_texture_rgba8_into(
     resource: &HmcTextureResource<'_>,
     limits: TextureDecodeLimits,
@@ -82,7 +132,7 @@ pub fn decode_hmc_texture_rgba8_into(
     {
         decode_jpeg_rgba8(resource.bytes, limits, output)
     } else if mime_matches(resource.mime_type, "image/ktx2") {
-        decode_ktx2_rgba8(resource.bytes, limits, output)
+        decode_ktx2_rgba8(resource.bytes, limits, output, scratch)
     } else {
         Err(TextureDecodeError::UnsupportedMime)
     }
@@ -140,6 +190,7 @@ pub fn inspect_hmc_texture_requirements(
                 width,
                 height,
                 rgba8_bytes,
+                color_space: TextureColorSpace::Unknown,
             },
             scratch_len,
         ))
@@ -160,6 +211,7 @@ pub fn inspect_hmc_texture_requirements(
                 width,
                 height,
                 rgba8_bytes,
+                color_space: TextureColorSpace::Unknown,
             },
             0,
         ))
@@ -167,6 +219,69 @@ pub fn inspect_hmc_texture_requirements(
         inspect_ktx2_rgba8(resource.bytes, limits)
     } else {
         Err(TextureDecodeError::UnsupportedMime)
+    }
+}
+
+/// Inspect a resource for HMC without collapsing a known compressed/Basis source into a generic
+/// decode failure. This is the capability/refinement boundary: only the returned `DecodeRgba8`
+/// branch may be admitted as CPU RGBA8, while the other branch preserves the verified source.
+pub fn inspect_hmc_texture_plan(
+    resource: &HmcTextureResource<'_>,
+    limits: TextureDecodeLimits,
+) -> Result<TextureDecodePlan, TextureDecodeError> {
+    if resource.bytes.len() > limits.max_encoded_bytes {
+        return Err(TextureDecodeError::EncodedInputTooLarge);
+    }
+    super::texture_ingestion::validate_image_signature(resource.mime_type, resource.bytes)
+        .map_err(|e| match e {
+            super::texture_ingestion::TextureIngestionError::UnsupportedMime => {
+                TextureDecodeError::UnsupportedMime
+            }
+            _ => TextureDecodeError::InvalidImage,
+        })?;
+    if !mime_matches(resource.mime_type, "image/ktx2") {
+        let (info, scratch_bytes) = inspect_hmc_texture_requirements(resource, limits)?;
+        return Ok(TextureDecodePlan::DecodeRgba8 {
+            info,
+            scratch_bytes,
+        });
+    }
+
+    let document = super::texture_ktx2::Ktx2Document::parse(resource.bytes)
+        .map_err(|_| TextureDecodeError::InvalidImage)?;
+    let source = document.transcode_source();
+    #[cfg(target_arch = "wasm32")]
+    let source = source.or_else(|| match document.supercompression() {
+        super::texture_ktx2::Ktx2Supercompression::Zstd
+        | super::texture_ktx2::Ktx2Supercompression::Zlib => Some(
+            Ktx2TranscodeSource::Supercompression(document.supercompression()),
+        ),
+        _ => None,
+    });
+    if let Some(source) = source {
+        return Ok(TextureDecodePlan::RequiresTranscode(TextureTranscodeRequest {
+            source,
+            target: TextureTranscodeTarget::Rgba8(TextureColorSpace::from(
+                document.color_space(),
+            )),
+            fallback: TextureFallback::PreserveEncodedResource,
+            refinement: TextureRefinementState::PendingTranscode,
+        }));
+    }
+    let (info, scratch_bytes) = inspect_hmc_texture_requirements(resource, limits)?;
+    Ok(TextureDecodePlan::DecodeRgba8 {
+        info,
+        scratch_bytes,
+    })
+}
+
+impl From<Ktx2ColorSpace> for TextureColorSpace {
+    fn from(value: Ktx2ColorSpace) -> Self {
+        match value {
+            Ktx2ColorSpace::Linear => Self::Linear,
+            Ktx2ColorSpace::Srgb => Self::Srgb,
+            Ktx2ColorSpace::Unknown => Self::Unknown,
+        }
     }
 }
 
@@ -183,21 +298,33 @@ fn inspect_ktx2_rgba8(
     limits: TextureDecodeLimits,
 ) -> Result<(DecodedTextureInfo, usize), TextureDecodeError> {
     use super::texture_ktx2::Ktx2Document;
-    use super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level;
 
     let document = Ktx2Document::parse(bytes).map_err(|_| TextureDecodeError::InvalidImage)?;
-    let image = inspect_ktx2_rgba8_base_level(&document).map_err(map_ktx2_rgba8_error)?;
+    if let Some(source) = document.transcode_source() {
+        return Err(TextureDecodeError::RequiresTranscode(source));
+    }
+    let image = super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level_with_compression(
+        &document,
+        true,
+    )
+    .map_err(map_ktx2_rgba8_error)?;
     let rgba8_bytes = required_rgba_bytes(image.width, image.height, limits, usize::MAX)?;
     if rgba8_bytes != image.byte_len {
         return Err(TextureDecodeError::InvalidImage);
     }
+    let scratch_bytes = if document.supercompression_scheme == 0 {
+        0
+    } else {
+        image.byte_len
+    };
     Ok((
         DecodedTextureInfo {
             width: image.width,
             height: image.height,
             rgba8_bytes,
+            color_space: TextureColorSpace::from(document.color_space()),
         },
-        0,
+        scratch_bytes,
     ))
 }
 
@@ -205,17 +332,34 @@ fn decode_ktx2_rgba8(
     bytes: &[u8],
     limits: TextureDecodeLimits,
     output: &mut [u8],
+    scratch: &mut [u8],
 ) -> Result<DecodedTextureInfo, TextureDecodeError> {
     use super::texture_ktx2::Ktx2Document;
-    use super::texture_ktx2_rgba8::{decode_ktx2_rgba8_base_level, Rgba8Ktx2Error};
+    use super::texture_ktx2_rgba8::{
+        decode_ktx2_rgba8_base_level_with_scratch, Rgba8Ktx2Error,
+    };
 
     let document = Ktx2Document::parse(bytes).map_err(|_| TextureDecodeError::InvalidImage)?;
-    let image = super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level(&document)
+    if let Some(source) = document.transcode_source() {
+        return Err(TextureDecodeError::RequiresTranscode(source));
+    }
+    let image = super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level_with_compression(
+        &document,
+        true,
+    )
         .map_err(map_ktx2_rgba8_error)?;
     let rgba8_bytes = required_rgba_bytes(image.width, image.height, limits, output.len())?;
-    decode_ktx2_rgba8_base_level(&document, &mut output[..rgba8_bytes]).map_err(
+    decode_ktx2_rgba8_base_level_with_scratch(
+        &document,
+        &mut output[..rgba8_bytes],
+        scratch,
+    )
+    .map_err(
         |error| match error {
             Rgba8Ktx2Error::OutputTooSmall => TextureDecodeError::OutputBufferTooSmall,
+            Rgba8Ktx2Error::CompressedScratchTooSmall => {
+                TextureDecodeError::ScratchBufferTooSmall
+            }
             other => map_ktx2_rgba8_error(other),
         },
     )?;
@@ -223,6 +367,7 @@ fn decode_ktx2_rgba8(
         width: image.width,
         height: image.height,
         rgba8_bytes,
+        color_space: TextureColorSpace::from(document.color_space()),
     })
 }
 
@@ -235,6 +380,11 @@ fn map_ktx2_rgba8_error(error: super::texture_ktx2_rgba8::Rgba8Ktx2Error) -> Tex
         Rgba8Ktx2Error::UnsupportedSupercompression => {
             TextureDecodeError::UnsupportedSupercompression
         }
+        Rgba8Ktx2Error::RequiresTranscode(source) => {
+            TextureDecodeError::RequiresTranscode(source)
+        }
+        Rgba8Ktx2Error::InvalidCompressedLevel => TextureDecodeError::InvalidImage,
+        Rgba8Ktx2Error::CompressedScratchTooSmall => TextureDecodeError::ScratchBufferTooSmall,
         Rgba8Ktx2Error::OutputTooSmall => TextureDecodeError::OutputBufferTooSmall,
         Rgba8Ktx2Error::InvalidDimensions => TextureDecodeError::DecodedImageExceedsLimit,
         Rgba8Ktx2Error::UnsupportedDimensions
@@ -339,6 +489,7 @@ fn decode_png_rgba8(
         width,
         height,
         rgba8_bytes: rgba_bytes,
+        color_space: TextureColorSpace::Unknown,
     })
 }
 
@@ -401,6 +552,7 @@ fn decode_jpeg_rgba8(
         width,
         height,
         rgba8_bytes: rgba_bytes,
+        color_space: TextureColorSpace::Unknown,
     })
 }
 

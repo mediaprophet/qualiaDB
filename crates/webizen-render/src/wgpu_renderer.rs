@@ -12,6 +12,221 @@
 
 use wgpu;
 
+/// Maximum dimension admitted by the bounded offscreen acceptance path.
+pub const MAX_OFFSCREEN_DIMENSION: u32 = 4096;
+
+/// Maximum staging allocation admitted for one synchronous pixel readback.
+pub const MAX_PIXEL_READBACK_BYTES: u64 = 16 * 1024 * 1024;
+
+const MAX_CAPABILITY_TEXT_BYTES: usize = 128;
+
+/// The only pixel format owned by this acceptance slice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PixelFormat {
+    Rgba8Unorm,
+}
+
+/// Stable status for a renderer capability probe or pixel receipt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WebGpuStatus {
+    AdapterUnavailable,
+    DeviceUnavailable,
+    AdapterOnly,
+    Ready,
+}
+
+/// Stable, bounded feature facts exposed to native and browser callers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebGpuFeatureReport {
+    pub shader_f16: bool,
+    pub subgroup: bool,
+    pub timestamp_query: bool,
+    pub texture_compression_bc: bool,
+}
+
+/// Stable device limits needed to reason about the offscreen acceptance slice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebGpuLimitReport {
+    pub max_texture_dimension_2d: u32,
+    pub max_buffer_size: u64,
+}
+
+/// Adapter identity and the small capability subset relevant to this renderer.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebGpuAdapterReport {
+    pub name: String,
+    pub backend: String,
+    pub device_type: String,
+    pub vendor: u32,
+    pub device: u32,
+    pub driver: String,
+    pub driver_info: String,
+    pub features: WebGpuFeatureReport,
+    pub limits: WebGpuLimitReport,
+}
+
+/// Capability evidence that does not contain GPU handles or unbounded data.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebGpuCapabilityReport {
+    pub status: WebGpuStatus,
+    pub adapter_available: bool,
+    pub device_available: bool,
+    pub adapter: Option<WebGpuAdapterReport>,
+    pub offscreen_format: PixelFormat,
+    pub max_offscreen_dimension: u32,
+    pub max_pixel_readback_bytes: u64,
+}
+
+impl WebGpuCapabilityReport {
+    pub fn unavailable() -> Self {
+        Self {
+            status: WebGpuStatus::AdapterUnavailable,
+            adapter_available: false,
+            device_available: false,
+            adapter: None,
+            offscreen_format: PixelFormat::Rgba8Unorm,
+            max_offscreen_dimension: MAX_OFFSCREEN_DIMENSION,
+            max_pixel_readback_bytes: MAX_PIXEL_READBACK_BYTES,
+        }
+    }
+
+    fn from_adapter(adapter: &wgpu::Adapter, device: Option<&wgpu::Device>) -> Self {
+        let info = adapter.get_info();
+        let features = device.map(wgpu::Device::features).unwrap_or_else(|| adapter.features());
+        let limits = device
+            .map(wgpu::Device::limits)
+            .unwrap_or_else(|| adapter.limits());
+        let status = if device.is_some() {
+            WebGpuStatus::Ready
+        } else {
+            WebGpuStatus::AdapterOnly
+        };
+
+        Self {
+            status,
+            adapter_available: true,
+            device_available: device.is_some(),
+            adapter: Some(WebGpuAdapterReport {
+                name: bounded_capability_text(info.name),
+                backend: backend_label(info.backend).to_string(),
+                device_type: device_type_label(info.device_type).to_string(),
+                vendor: info.vendor,
+                device: info.device,
+                driver: bounded_capability_text(info.driver),
+                driver_info: bounded_capability_text(info.driver_info),
+                features: WebGpuFeatureReport {
+                    shader_f16: features.contains(wgpu::Features::SHADER_F16),
+                    subgroup: features.contains(wgpu::Features::SUBGROUP),
+                    timestamp_query: features.contains(wgpu::Features::TIMESTAMP_QUERY),
+                    texture_compression_bc: features
+                        .contains(wgpu::Features::TEXTURE_COMPRESSION_BC),
+                },
+                limits: WebGpuLimitReport {
+                    max_texture_dimension_2d: limits.max_texture_dimension_2d,
+                    max_buffer_size: limits.max_buffer_size,
+                },
+            }),
+            offscreen_format: PixelFormat::Rgba8Unorm,
+            max_offscreen_dimension: MAX_OFFSCREEN_DIMENSION,
+            max_pixel_readback_bytes: MAX_PIXEL_READBACK_BYTES,
+        }
+    }
+}
+
+fn backend_label(backend: wgpu::Backend) -> &'static str {
+    match backend {
+        wgpu::Backend::Noop => "noop",
+        wgpu::Backend::Vulkan => "vulkan",
+        wgpu::Backend::Metal => "metal",
+        wgpu::Backend::Dx12 => "dx12",
+        wgpu::Backend::Gl => "gl",
+        wgpu::Backend::BrowserWebGpu => "browser-webgpu",
+    }
+}
+
+fn bounded_capability_text(mut text: String) -> String {
+    if text.len() > MAX_CAPABILITY_TEXT_BYTES {
+        let mut end = MAX_CAPABILITY_TEXT_BYTES;
+        while !text.is_char_boundary(end) {
+            end -= 1;
+        }
+        text.truncate(end);
+    }
+    text
+}
+
+fn device_type_label(device_type: wgpu::DeviceType) -> &'static str {
+    match device_type {
+        wgpu::DeviceType::Other => "other",
+        wgpu::DeviceType::IntegratedGpu => "integrated",
+        wgpu::DeviceType::DiscreteGpu => "discrete",
+        wgpu::DeviceType::VirtualGpu => "virtual",
+        wgpu::DeviceType::Cpu => "cpu",
+    }
+}
+
+/// A fixed-size, deterministic record of one pixel acceptance attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PixelReceiptStatus {
+    Observed,
+    AdapterUnavailable,
+    NotOffscreen,
+    Refused,
+    MapFailed,
+    InvalidExtent,
+}
+
+/// Bounded evidence for a pixel readback. Pixel bytes are deliberately omitted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PixelReceipt {
+    pub version: u16,
+    pub status: PixelReceiptStatus,
+    pub adapter_backed: bool,
+    pub observed: bool,
+    pub width: u32,
+    pub height: u32,
+    pub format: PixelFormat,
+    pub byte_len: u64,
+    pub content_hash: u64,
+    pub nonzero_bytes: u32,
+}
+
+impl PixelReceipt {
+    fn refusal(status: PixelReceiptStatus, width: u32, height: u32, adapter_backed: bool) -> Self {
+        Self {
+            version: 1,
+            status,
+            adapter_backed,
+            observed: false,
+            width,
+            height,
+            format: PixelFormat::Rgba8Unorm,
+            byte_len: 0,
+            content_hash: 0,
+            nonzero_bytes: 0,
+        }
+    }
+}
+
+/// Readback result with inspectable refusal/recovery evidence.
+#[derive(Debug)]
+pub struct PixelReadback {
+    pub pixels: Option<Vec<u8>>,
+    pub receipt: PixelReceipt,
+}
+
+/// Runtime evidence returned by a renderer after a pixel acceptance attempt.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebGpuRuntimeReceipt {
+    pub capabilities: WebGpuCapabilityReport,
+    pub requested_extent: (u32, u32),
+    pub effective_extent: Option<(u32, u32)>,
+    pub pixels: PixelReceipt,
+}
+
 #[path = "vegetation_effects.rs"]
 pub mod vegetation_effects;
 
@@ -263,12 +478,29 @@ fn offscreen_rgba8_bytes(width: u32, height: u32) -> Option<u64> {
         .checked_mul(4)
 }
 
+fn raw_readback_bytes(width: u32, height: u32) -> Option<u64> {
+    let row_bytes = u64::from(width).checked_mul(4)?;
+    let align = u64::from(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+    let padded_row_bytes = row_bytes.checked_add(align - 1)? / align * align;
+    padded_row_bytes.checked_mul(u64::from(height))
+}
+
 fn readback_layout(width: u32, height: u32) -> Option<(u32, u32, u64, usize)> {
+    if width == 0
+        || height == 0
+        || width > MAX_OFFSCREEN_DIMENSION
+        || height > MAX_OFFSCREEN_DIMENSION
+    {
+        return None;
+    }
     let row_bytes = u64::from(width).checked_mul(4)?;
     let align = u64::from(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
     let padded_row_bytes = row_bytes.checked_add(align - 1)? / align * align;
     let bytes_per_row = u32::try_from(padded_row_bytes).ok()?;
     let readback_bytes = padded_row_bytes.checked_mul(u64::from(height))?;
+    if readback_bytes > MAX_PIXEL_READBACK_BYTES {
+        return None;
+    }
     let output_bytes = usize::try_from(row_bytes.checked_mul(u64::from(height))?).ok()?;
     Some((
         bytes_per_row,
@@ -276,6 +508,63 @@ fn readback_layout(width: u32, height: u32) -> Option<(u32, u32, u64, usize)> {
         readback_bytes,
         output_bytes,
     ))
+}
+
+fn bounded_offscreen_extent(requested_width: u32, requested_height: u32) -> (u32, u32) {
+    let mut width = requested_width.clamp(1, MAX_OFFSCREEN_DIMENSION);
+    let mut height = requested_height.clamp(1, MAX_OFFSCREEN_DIMENSION);
+
+    while raw_readback_bytes(width, height)
+        .map(|bytes| bytes > MAX_PIXEL_READBACK_BYTES)
+        .unwrap_or(true)
+    {
+        if width == 1 && height == 1 {
+            break;
+        }
+        width = width.div_ceil(2).max(1);
+        height = height.div_ceil(2).max(1);
+    }
+
+    (width, height)
+}
+
+fn pixel_content_hash(pixels: &[u8]) -> u64 {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in pixels {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+/// Build deterministic pixel evidence without requiring a GPU.
+pub fn pixel_receipt_from_rgba8(width: u32, height: u32, pixels: &[u8]) -> PixelReceipt {
+    let expected = u64::from(width)
+        .checked_mul(u64::from(height))
+        .and_then(|pixels| pixels.checked_mul(4));
+    let valid = width > 0
+        && height > 0
+        && width <= MAX_OFFSCREEN_DIMENSION
+        && height <= MAX_OFFSCREEN_DIMENSION
+        && expected == Some(pixels.len() as u64)
+        && expected.is_some_and(|bytes| bytes <= MAX_PIXEL_READBACK_BYTES);
+    if !valid {
+        return PixelReceipt::refusal(PixelReceiptStatus::InvalidExtent, width, height, false);
+    }
+
+    PixelReceipt {
+        version: 1,
+        status: PixelReceiptStatus::Observed,
+        adapter_backed: false,
+        observed: true,
+        width,
+        height,
+        format: PixelFormat::Rgba8Unorm,
+        byte_len: pixels.len() as u64,
+        content_hash: pixel_content_hash(pixels),
+        nonzero_bytes: pixels.iter().filter(|byte| **byte != 0).count().min(u32::MAX as usize)
+            as u32,
+    }
 }
 
 fn reserve_vertex_buffer_residency() -> Result<GraphicsReservation, String> {
@@ -288,7 +577,7 @@ fn reserve_offscreen_extent(
     requested_width: u32,
     requested_height: u32,
 ) -> Result<(u32, u32, GraphicsReservation), String> {
-    let (mut width, mut height) = (requested_width.max(1), requested_height.max(1));
+    let (mut width, mut height) = bounded_offscreen_extent(requested_width, requested_height);
     #[cfg(feature = "qualia")]
     {
         for _ in 0..33 {
@@ -398,6 +687,8 @@ pub struct WgpuRenderer<'a> {
     device: wgpu::Device,
     queue: wgpu::Queue,
     target: RenderTarget<'a>,
+    capabilities: WebGpuCapabilityReport,
+    requested_extent: (u32, u32),
     camera: Camera,
     viewport_size: (f64, f64),
     // Render pipeline for 2D screen-space rendering
@@ -428,12 +719,54 @@ pub struct WgpuRenderer<'a> {
     ambient_effects: vegetation_effects::EffectPool,
 }
 
+/// Probe the adapter/device path without constructing a renderer target.
+///
+/// This is safe for callers that can fall back when WebGPU is absent. The
+/// report is deliberately bounded and contains no wgpu handles.
+pub async fn probe_webgpu_capabilities() -> WebGpuCapabilityReport {
+    #[cfg(feature = "qualia")]
+    if let Some(shared) = qualia_core_db::gpu_context::try_shared_gpu() {
+        return WebGpuCapabilityReport::from_adapter(&shared.adapter, Some(&shared.device));
+    }
+
+    let instance = wgpu::Instance::default();
+    let adapter = match instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::LowPower,
+            compatible_surface: None,
+            force_fallback_adapter: false,
+            apply_limit_buckets: false,
+        })
+        .await
+    {
+        Ok(adapter) => adapter,
+        Err(_) => return WebGpuCapabilityReport::unavailable(),
+    };
+
+    match adapter
+        .request_device(&wgpu::DeviceDescriptor {
+            label: Some("webizen-render-capability-probe"),
+            required_features: wgpu::Features::empty(),
+            required_limits: wgpu::Limits::downlevel_defaults(),
+            ..Default::default()
+        })
+        .await
+    {
+        Ok((device, _queue)) => WebGpuCapabilityReport::from_adapter(&adapter, Some(&device)),
+        Err(_) => WebGpuCapabilityReport {
+            status: WebGpuStatus::DeviceUnavailable,
+            ..WebGpuCapabilityReport::from_adapter(&adapter, None)
+        },
+    }
+}
+
 impl<'a> WgpuRenderer<'a> {
     /// Create a new WgpuRenderer that draws to a window surface.
     pub async fn new(surface: wgpu::Surface<'a>, width: u32, height: u32) -> Result<Self, String> {
         let instance = wgpu::Instance::default();
 
-        let (device, queue, adapter) = Self::request_device(&instance, Some(&surface)).await?;
+        let (device, queue, adapter, capabilities) =
+            Self::request_device(&instance, Some(&surface)).await?;
         let mut reservations = RendererReservations::default();
         reservations.geometry = Some(reserve_vertex_buffer_residency()?);
 
@@ -443,7 +776,13 @@ impl<'a> WgpuRenderer<'a> {
             .iter()
             .copied()
             .find(|f| f.is_srgb())
-            .unwrap_or(surface_caps.formats[0]);
+            .or_else(|| surface_caps.formats.first().copied())
+            .ok_or_else(|| "webizen-render surface has no supported formats".to_string())?;
+        let alpha_mode = surface_caps
+            .alpha_modes
+            .first()
+            .copied()
+            .ok_or_else(|| "webizen-render surface has no supported alpha modes".to_string())?;
 
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -451,7 +790,7 @@ impl<'a> WgpuRenderer<'a> {
             width,
             height,
             present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: surface_caps.alpha_modes[0],
+            alpha_mode,
             color_space: wgpu::SurfaceColorSpace::Auto,
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
@@ -483,6 +822,8 @@ impl<'a> WgpuRenderer<'a> {
                 surface,
                 config: surface_config,
             },
+            capabilities,
+            requested_extent: (width, height),
             camera: Camera::default(),
             viewport_size: (width as f64, height as f64),
             render_pipeline,
@@ -515,10 +856,13 @@ impl<'a> WgpuRenderer<'a> {
     /// (including CI and the dioxus/webview studio). Read the result with
     /// [`WgpuRenderer::read_pixels`].
     pub async fn new_offscreen(width: u32, height: u32) -> Result<WgpuRenderer<'static>, String> {
+        let requested_extent = (width, height);
         #[cfg(feature = "qualia")]
-        let (device, queue) = {
-            let shared = qualia_core_db::gpu_context::shared_gpu();
-            (shared.device.clone(), shared.queue.clone())
+        let (device, queue, capabilities) = {
+            let shared = qualia_core_db::gpu_context::try_shared_gpu()
+                .ok_or_else(|| "webizen-render adapter unavailable: shared GPU context is unavailable".to_string())?;
+            let capabilities = WebGpuCapabilityReport::from_adapter(&shared.adapter, Some(&shared.device));
+            (shared.device.clone(), shared.queue.clone(), capabilities)
         };
 
         let (width, height, frame_target_reservation) = reserve_offscreen_extent(width, height)?;
@@ -526,10 +870,10 @@ impl<'a> WgpuRenderer<'a> {
         reservations.frame_target = Some(frame_target_reservation);
         reservations.geometry = Some(reserve_vertex_buffer_residency()?);
         #[cfg(not(feature = "qualia"))]
-        let (device, queue) = {
+        let (device, queue, capabilities) = {
             let instance = wgpu::Instance::default();
-            let (device, queue, _adapter) = Self::request_device(&instance, None).await?;
-            (device, queue)
+            let (device, queue, _adapter, capabilities) = Self::request_device(&instance, None).await?;
+            (device, queue, capabilities)
         };
 
         // Linear (non-sRGB) Unorm: colors are authored as CSS sRGB strings and
@@ -566,6 +910,8 @@ impl<'a> WgpuRenderer<'a> {
                 width,
                 height,
             },
+            capabilities,
+            requested_extent,
             camera: Camera::default(),
             viewport_size: (width as f64, height as f64),
             render_pipeline,
@@ -636,7 +982,7 @@ impl<'a> WgpuRenderer<'a> {
     async fn request_device(
         instance: &wgpu::Instance,
         compatible_surface: Option<&wgpu::Surface<'_>>,
-    ) -> Result<(wgpu::Device, wgpu::Queue, wgpu::Adapter), String> {
+    ) -> Result<(wgpu::Device, wgpu::Queue, wgpu::Adapter, WebGpuCapabilityReport), String> {
         #[cfg(not(target_arch = "wasm32"))]
         let power_preference = wgpu::PowerPreference::HighPerformance;
         #[cfg(target_arch = "wasm32")]
@@ -650,7 +996,7 @@ impl<'a> WgpuRenderer<'a> {
                 apply_limit_buckets: false,
             })
             .await
-            .map_err(|e| format!("Failed to find an appropriate adapter: {e}"))?;
+            .map_err(|e| format!("webizen-render adapter unavailable: {e}"))?;
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -660,9 +1006,10 @@ impl<'a> WgpuRenderer<'a> {
                 ..Default::default()
             })
             .await
-            .map_err(|e| format!("Failed to create device: {}", e))?;
+            .map_err(|e| format!("webizen-render device unavailable: {e}"))?;
 
-        Ok((device, queue, adapter))
+        let capabilities = WebGpuCapabilityReport::from_adapter(&adapter, Some(&device));
+        Ok((device, queue, adapter, capabilities))
     }
 
     fn create_offscreen_texture(
@@ -1090,9 +1437,22 @@ impl<'a> WgpuRenderer<'a> {
         }
     }
 
-    /// Read the offscreen target back to a tightly-packed RGBA8 buffer
-    /// (`width * height * 4` bytes, row-major). Returns `None` for surface targets.
-    pub fn read_pixels(&self) -> Option<Vec<u8>> {
+    /// Return the bounded capability facts observed while constructing this renderer.
+    pub fn capabilities(&self) -> &WebGpuCapabilityReport {
+        &self.capabilities
+    }
+
+    /// Return the effective offscreen extent, or `None` for a surface target.
+    pub fn offscreen_extent(&self) -> Option<(u32, u32)> {
+        match &self.target {
+            RenderTarget::Offscreen { width, height, .. } => Some((*width, *height)),
+            RenderTarget::Surface { .. } => None,
+        }
+    }
+
+    /// Attempt a bounded pixel readback and return both bytes and evidence.
+    pub fn read_pixels_with_receipt(&self) -> PixelReadback {
+        let adapter_backed = self.capabilities.device_available;
         let (texture, width, height) = match &self.target {
             RenderTarget::Offscreen {
                 texture,
@@ -1100,11 +1460,34 @@ impl<'a> WgpuRenderer<'a> {
                 height,
                 ..
             } => (texture, *width, *height),
-            RenderTarget::Surface { .. } => return None,
+            RenderTarget::Surface { .. } => {
+                return PixelReadback {
+                    pixels: None,
+                    receipt: PixelReceipt::refusal(
+                        PixelReceiptStatus::NotOffscreen,
+                        self.requested_extent.0,
+                        self.requested_extent.1,
+                        adapter_backed,
+                    ),
+                }
+            }
         };
 
         let (padded_bytes_per_row, unpadded_bytes_per_row, readback_bytes, output_bytes) =
-            readback_layout(width, height)?;
+            match readback_layout(width, height) {
+                Some(layout) => layout,
+                None => {
+                    return PixelReadback {
+                        pixels: None,
+                        receipt: PixelReceipt::refusal(
+                            PixelReceiptStatus::Refused,
+                            width,
+                            height,
+                            adapter_backed,
+                        ),
+                    }
+                }
+            };
         let _staging_reservation = match reserve_graphics_bytes(
             GraphicsClass::UploadStaging,
             readback_bytes,
@@ -1113,7 +1496,15 @@ impl<'a> WgpuRenderer<'a> {
             Ok(reservation) => reservation,
             Err(error) => {
                 log::warn!("webizen-render pixel readback refused: {error}");
-                return None;
+                return PixelReadback {
+                    pixels: None,
+                    receipt: PixelReceipt::refusal(
+                        PixelReceiptStatus::Refused,
+                        width,
+                        height,
+                        adapter_backed,
+                    ),
+                };
             }
         };
 
@@ -1157,12 +1548,47 @@ impl<'a> WgpuRenderer<'a> {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
-        rx.recv().ok()?.ok()?;
+        if let Err(error) = self.device.poll(wgpu::PollType::wait_indefinitely()) {
+            log::warn!("webizen-render pixel readback poll failed: {error:?}");
+            return PixelReadback {
+                pixels: None,
+                receipt: PixelReceipt::refusal(
+                    PixelReceiptStatus::MapFailed,
+                    width,
+                    height,
+                    adapter_backed,
+                ),
+            };
+        }
+        if rx.recv().ok().and_then(|result| result.ok()).is_none() {
+            log::warn!("webizen-render pixel readback mapping failed");
+            return PixelReadback {
+                pixels: None,
+                receipt: PixelReceipt::refusal(
+                    PixelReceiptStatus::MapFailed,
+                    width,
+                    height,
+                    adapter_backed,
+                ),
+            };
+        }
 
-        let mapped = slice
-            .get_mapped_range()
-            .expect("wgpu buffer map_range failed");
+        let mapped = match slice.get_mapped_range() {
+            Ok(mapped) => mapped,
+            Err(error) => {
+                log::warn!("webizen-render pixel readback map range failed: {error}");
+                readback.unmap();
+                return PixelReadback {
+                    pixels: None,
+                    receipt: PixelReceipt::refusal(
+                        PixelReceiptStatus::MapFailed,
+                        width,
+                        height,
+                        adapter_backed,
+                    ),
+                };
+            }
+        };
         let mut out = Vec::with_capacity(output_bytes);
         for row in 0..height {
             let start = row as usize * padded_bytes_per_row as usize;
@@ -1171,7 +1597,29 @@ impl<'a> WgpuRenderer<'a> {
         }
         drop(mapped);
         readback.unmap();
-        Some(out)
+        let mut receipt = pixel_receipt_from_rgba8(width, height, &out);
+        receipt.adapter_backed = adapter_backed;
+        PixelReadback {
+            pixels: Some(out),
+            receipt,
+        }
+    }
+
+    /// Read the offscreen target to a tightly-packed RGBA8 buffer
+    /// (`width * height * 4` bytes, row-major). Returns `None` for refusal.
+    pub fn read_pixels(&self) -> Option<Vec<u8>> {
+        self.read_pixels_with_receipt().pixels
+    }
+
+    /// Return a complete bounded runtime receipt after attempting readback.
+    pub fn runtime_receipt(&self) -> WebGpuRuntimeReceipt {
+        let pixels = self.read_pixels_with_receipt();
+        WebGpuRuntimeReceipt {
+            capabilities: self.capabilities.clone(),
+            requested_extent: self.requested_extent,
+            effective_extent: self.offscreen_extent(),
+            pixels: pixels.receipt,
+        }
     }
 
     /// Read the offscreen target back as PNG-encoded bytes, ready to hand to a
@@ -1277,6 +1725,7 @@ impl<'a> WgpuRenderer<'a> {
     /// cannot admit the replacement. Offscreen targets may degrade by powers
     /// of two and return their effective dimensions.
     pub fn try_resize(&mut self, width: u32, height: u32) -> Result<(u32, u32), String> {
+        let requested_extent = (width, height);
         let (width, height) = (width.max(1), height.max(1));
         match &mut self.target {
             RenderTarget::Surface { surface, config } => {
@@ -1284,6 +1733,7 @@ impl<'a> WgpuRenderer<'a> {
                 config.height = height;
                 surface.configure(&self.device, config);
                 self.viewport_size = (width as f64, height as f64);
+                self.requested_extent = requested_extent;
                 Ok((width, height))
             }
             RenderTarget::Offscreen {
@@ -1295,6 +1745,7 @@ impl<'a> WgpuRenderer<'a> {
                 let (width, height, reservation) = reserve_offscreen_extent(width, height)?;
                 if (*current_width, *current_height) == (width, height) {
                     drop(reservation);
+                    self.requested_extent = requested_extent;
                     return Ok((width, height));
                 }
                 let replacement = self.device.create_texture(&wgpu::TextureDescriptor {
@@ -1316,6 +1767,7 @@ impl<'a> WgpuRenderer<'a> {
                 *current_height = height;
                 let retired_reservation = self.reservations.frame_target.replace(reservation);
                 self.viewport_size = (width as f64, height as f64);
+                self.requested_extent = requested_extent;
                 // Resize is a cold path. Keep the previous texture reservation
                 // alive until submitted work has retired from the device queue.
                 let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
@@ -1341,6 +1793,88 @@ mod allocation_tests {
         );
         assert_eq!(readback_layout(1, 1), Some((256, 4, 256, 4)));
         assert_eq!(readback_layout(u32::MAX, 1), None);
+    }
+
+    #[test]
+    fn capability_report_is_deterministic_when_no_adapter_exists() {
+        let report = WebGpuCapabilityReport::unavailable();
+        assert_eq!(report.status, WebGpuStatus::AdapterUnavailable);
+        assert!(!report.adapter_available);
+        assert!(!report.device_available);
+        assert_eq!(report.offscreen_format, PixelFormat::Rgba8Unorm);
+        assert_eq!(report.max_offscreen_dimension, MAX_OFFSCREEN_DIMENSION);
+    }
+
+    #[test]
+    fn offscreen_extent_is_bounded_and_readback_layout_refuses_oversize() {
+        assert_eq!(bounded_offscreen_extent(0, 0), (1, 1));
+        assert_eq!(bounded_offscreen_extent(u32::MAX, u32::MAX), (2048, 2048));
+        assert_eq!(readback_layout(2048, 2048).unwrap().2, MAX_PIXEL_READBACK_BYTES);
+        assert_eq!(readback_layout(4096, 4096), None);
+        assert_eq!(readback_layout(MAX_OFFSCREEN_DIMENSION + 1, 1), None);
+    }
+
+    #[test]
+    fn pixel_receipts_are_bounded_and_deterministic() {
+        let first = pixel_receipt_from_rgba8(1, 1, &[1, 2, 3, 255]);
+        let second = pixel_receipt_from_rgba8(1, 1, &[1, 2, 3, 255]);
+        assert_eq!(first, second);
+        assert_eq!(first.status, PixelReceiptStatus::Observed);
+        assert!(!first.adapter_backed);
+        assert_eq!(first.byte_len, 4);
+        assert_eq!(first.nonzero_bytes, 4);
+
+        let invalid = pixel_receipt_from_rgba8(1, 1, &[1, 2, 3]);
+        assert_eq!(invalid.status, PixelReceiptStatus::InvalidExtent);
+
+        let encoded = serde_json::to_vec(&first).expect("receipt serializes");
+        assert!(encoded.len() <= 512, "receipt grew beyond bounded evidence");
+        assert!(!encoded
+            .windows(b"pixels".len())
+            .any(|window| window == b"pixels"));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn capability_probe_reports_adapter_absence_without_failing_the_test() {
+        let report = pollster::block_on(probe_webgpu_capabilities());
+        assert_eq!(report.adapter_available, report.adapter.is_some());
+        if !report.adapter_available {
+            assert_eq!(report.status, WebGpuStatus::AdapterUnavailable);
+        }
+        eprintln!(
+            "webizen-render capability probe: status={:?} adapter_available={} device_available={}",
+            report.status, report.adapter_available, report.device_available
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn adapter_backed_pixel_acceptance_is_optional_and_reported() {
+        let renderer = match pollster::block_on(WgpuRenderer::new_offscreen(8, 8)) {
+            Ok(renderer) => renderer,
+            Err(error) => {
+                eprintln!(
+                    "webizen-render acceptance: adapter-backed pixels not observed ({error})"
+                );
+                return;
+            }
+        };
+
+        renderer.clear("#123456");
+        assert!(renderer.capabilities().adapter_available);
+        assert!(renderer.capabilities().device_available);
+        let readback = renderer.read_pixels_with_receipt();
+        assert!(readback.pixels.is_some());
+        assert_eq!(readback.receipt.status, PixelReceiptStatus::Observed);
+        assert!(readback.receipt.adapter_backed);
+        assert!(readback.receipt.observed);
+        assert_eq!(readback.receipt.width, 8);
+        assert_eq!(readback.receipt.height, 8);
+        eprintln!(
+            "webizen-render acceptance: adapter-backed pixels observed hash={:016x}",
+            readback.receipt.content_hash
+        );
     }
 }
 

@@ -10,6 +10,48 @@ pub const KTX2_IDENTIFIER: [u8; 12] = [
     0xAB, b'K', b'T', b'X', b' ', b'2', b'0', 0xBB, 0x0D, 0x0A, 0x1A, 0x0A,
 ];
 
+/// The KTX2 supercompression schemes understood by the container parser.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Ktx2Supercompression {
+    None,
+    BasisLz,
+    Zstd,
+    Zlib,
+    Unsupported(u32),
+}
+
+impl Ktx2Supercompression {
+    pub const fn from_id(id: u32) -> Self {
+        match id {
+            0 => Self::None,
+            1 => Self::BasisLz,
+            2 => Self::Zstd,
+            3 => Self::Zlib,
+            other => Self::Unsupported(other),
+        }
+    }
+}
+
+/// A source encoding which requires a real transcoder before it can become RGBA8.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Ktx2TranscodeSource {
+    /// BasisLZ/ETC1S or UASTC payload. No Basis Universal decoder is linked here.
+    BasisLz,
+    /// A GPU block format for which this crate intentionally does not claim a CPU decoder.
+    CompressedFormat(u32),
+    /// A standard supercompression stream with no decoder in the current target profile.
+    Supercompression(Ktx2Supercompression),
+}
+
+/// Transfer-function information that is safe to carry across a decode/transcode boundary.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Ktx2ColorSpace {
+    Linear,
+    Srgb,
+    /// Basis metadata needs to be interpreted by the eventual transcoder/policy owner.
+    Unknown,
+}
+
 const HEADER_LEN: usize = 80;
 const LEVEL_INDEX_ENTRY_LEN: usize = 24;
 
@@ -252,6 +294,34 @@ impl<'a> Ktx2Document<'a> {
         self.level_count
     }
 
+    pub const fn supercompression(&self) -> Ktx2Supercompression {
+        Ktx2Supercompression::from_id(self.supercompression_scheme)
+    }
+
+    /// Return a typed transcode requirement for Basis or known GPU block formats.
+    ///
+    /// The parser deliberately does not infer a target GPU format. HMC/device policy must choose
+    /// that target and keep the encoded resource available while refinement is pending.
+    pub const fn transcode_source(&self) -> Option<Ktx2TranscodeSource> {
+        if self.supercompression_scheme == 1 {
+            return Some(Ktx2TranscodeSource::BasisLz);
+        }
+        if is_known_block_format(self.vk_format) {
+            return Some(Ktx2TranscodeSource::CompressedFormat(self.vk_format));
+        }
+        None
+    }
+
+    pub const fn color_space(&self) -> Ktx2ColorSpace {
+        if is_srgb_format(self.vk_format) {
+            Ktx2ColorSpace::Srgb
+        } else if self.vk_format == 37 || is_known_block_format(self.vk_format) {
+            Ktx2ColorSpace::Linear
+        } else {
+            Ktx2ColorSpace::Unknown
+        }
+    }
+
     /// Borrow the Data Format Descriptor bytes. The descriptor's internal contents are opaque.
     pub fn data_format_descriptor(&self) -> &'a [u8] {
         self.dfd.slice(self.bytes)
@@ -474,6 +544,22 @@ fn u64_at(bytes: &[u8], offset: usize) -> u64 {
         bytes[offset + 6],
         bytes[offset + 7],
     ])
+}
+
+/// Vulkan compressed texture formats whose bytes are valid GPU resources but not decoded by the
+/// RGBA8 CPU path. The list covers BC, ETC2/EAC, and ASTC LDR formats used by KTX2.
+const fn is_known_block_format(vk_format: u32) -> bool {
+    matches!(
+        vk_format,
+        131..=142 | 145..=146 // BC1..BC7 (143/144 are reserved)
+            | 147..=156 // ETC2/EAC
+            | 157..=184 // ASTC 4x4 through 12x12, UNORM/SRGB
+    )
+}
+
+const fn is_srgb_format(vk_format: u32) -> bool {
+    matches!(vk_format, 43 | 132 | 134 | 136 | 146 | 148 | 150 | 152)
+        || (vk_format >= 158 && vk_format <= 184 && vk_format % 2 == 0)
 }
 
 #[cfg(test)]

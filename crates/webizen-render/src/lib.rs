@@ -51,7 +51,13 @@ pub use wgpu_renderer::{
     render_preview_data_uri, render_preview_png, render_scene_data_uri, render_scene_png,
     render_scene_png_with_time,
 };
-pub use wgpu_renderer::{Camera, ScreenPoint, Vec3, WgpuRenderer};
+pub use wgpu_renderer::{
+    pixel_receipt_from_rgba8, probe_webgpu_capabilities, Camera, PixelFormat, PixelReadback,
+    PixelReceipt,
+    PixelReceiptStatus, ScreenPoint, Vec3, WebGpuAdapterReport, WebGpuCapabilityReport,
+    WebGpuFeatureReport, WebGpuLimitReport, WebGpuRuntimeReceipt, WebGpuStatus, WgpuRenderer,
+    MAX_OFFSCREEN_DIMENSION, MAX_PIXEL_READBACK_BYTES,
+};
 pub use zero_copy_views::{CameraUniform, ModelUniform, Std140Field, Std140Type, TimeUniform};
 
 #[cfg(test)]

@@ -172,3 +172,44 @@ fn requires_dfd_then_kvd_then_aligned_sgd() {
         Err(Ktx2Error::InvalidSectionOrder)
     );
 }
+
+#[test]
+fn exposes_supercompression_and_color_capabilities_without_claiming_decode() {
+    let mut bytes = minimal();
+    put32(&mut bytes, 12, 43); // RGBA8 sRGB
+    put32(&mut bytes, 44, 2); // Zstd
+    put64(&mut bytes, 80, 132);
+    assert_eq!(
+        Ktx2Document::parse(&bytes).unwrap().supercompression(),
+        Ktx2Supercompression::Zstd
+    );
+    let document = Ktx2Document::parse(&bytes).unwrap();
+    assert_eq!(document.color_space(), Ktx2ColorSpace::Srgb);
+    assert_eq!(document.transcode_source(), None);
+
+    let mut compressed = minimal();
+    put32(&mut compressed, 12, 131); // BC1 UNORM
+    let document = Ktx2Document::parse(&compressed).unwrap();
+    assert_eq!(document.color_space(), Ktx2ColorSpace::Linear);
+    assert_eq!(
+        document.transcode_source(),
+        Some(Ktx2TranscodeSource::CompressedFormat(131))
+    );
+}
+
+#[test]
+fn basis_lz_is_structurally_valid_but_requires_a_transcoder() {
+    let mut bytes = [0u8; 152];
+    bytes[..144].copy_from_slice(&minimal());
+    put32(&mut bytes, 12, 0);
+    put32(&mut bytes, 44, 1);
+    put64(&mut bytes, 64, 136);
+    put64(&mut bytes, 72, 8);
+    put64(&mut bytes, 80, 144);
+    put64(&mut bytes, 88, 4);
+    put64(&mut bytes, 96, 0);
+    let document = Ktx2Document::parse(&bytes).unwrap();
+    assert_eq!(document.supercompression(), Ktx2Supercompression::BasisLz);
+    assert_eq!(document.color_space(), Ktx2ColorSpace::Unknown);
+    assert_eq!(document.transcode_source(), Some(Ktx2TranscodeSource::BasisLz));
+}
