@@ -1,6 +1,7 @@
 //! Bloom post-pass (Kawase) — HDR extract → blur → composite for the portal viewport.
 use super::*;
 use crate::gpu_context::{global_vram_ledger, VramResourceClass};
+use crate::shaders::viewport::BLOOM_WGSL;
 pub(super) fn portal_bloom_enabled() -> bool {
     let ledger = global_vram_ledger();
     universe_orchestrator().bloom_enabled(ComputeUniverse::Viewport, ledger.mode())

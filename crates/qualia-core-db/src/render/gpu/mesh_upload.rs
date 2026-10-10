@@ -418,4 +418,77 @@ impl PortalGpu {
         self.last_refused = false;
         Ok(index_count / 3)
     }
+
+    /// Replace a span of mesh positions. The buffer is `COPY_DST`. Used so a
+    /// part can change over time without uploading the whole scene again.
+    pub fn write_mesh_vertices(&mut self, start: u32, positions: &[[f32; 3]]) {
+        let Some(mesh) = self.mesh.as_mut() else {
+            return;
+        };
+        let start_us = start as usize;
+        let Some(end) = start_us.checked_add(positions.len()) else {
+            return;
+        };
+        if positions.is_empty()
+            || end > mesh.vertex_count as usize
+            || positions.iter().flatten().any(|value| !value.is_finite())
+        {
+            return;
+        }
+        mesh.cpu_positions[start_us..end].copy_from_slice(positions);
+        materials::update_draw_bounds(
+            &mut mesh.material_gpu.draws,
+            &mesh.cpu_positions,
+            &mesh.cpu_indices,
+        );
+        materials::update_draw_bounds(
+            &mut mesh.shadow_draws,
+            &mesh.cpu_positions,
+            &mesh.cpu_indices,
+        );
+        self.mesh_base_aabb = Aabb::from_points(&mesh.cpu_positions);
+        self.last_visibility_key = None;
+        self.shadow_map_dirty = true;
+        if mesh
+            .normal_workspace
+            .update_positions(&mesh.cpu_positions, start_us, end)
+            .is_err()
+        {
+            return;
+        }
+        self.queue.write_buffer(
+            &mesh.vertex_buf,
+            (start_us * 12) as u64,
+            bytemuck::cast_slice(positions),
+        );
+        let (dirty, normals) = mesh.normal_workspace.sorted_dirty_vertices_and_normals();
+        if let Some(&first) = dirty.first() {
+            let mut run_start = first as usize;
+            let mut run_end = run_start + 1;
+            for &vertex in &dirty[1..] {
+                let vertex = vertex as usize;
+                if vertex == run_end {
+                    run_end += 1;
+                    continue;
+                }
+                self.queue.write_buffer(
+                    &mesh.normal_buf,
+                    (run_start * 12) as u64,
+                    bytemuck::cast_slice(&normals[run_start..run_end]),
+                );
+                run_start = vertex;
+                run_end = vertex + 1;
+            }
+            self.queue.write_buffer(
+                &mesh.normal_buf,
+                (run_start * 12) as u64,
+                bytemuck::cast_slice(&normals[run_start..run_end]),
+            );
+        }
+    }
+
+    /// Whether a mesh surface is resident.
+    pub fn has_mesh(&self) -> bool {
+        self.mesh.is_some()
+    }
 }
