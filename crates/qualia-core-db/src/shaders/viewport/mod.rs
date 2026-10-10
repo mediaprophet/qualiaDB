@@ -23,6 +23,8 @@ pub const TEMPORAL_OUTPUT_WGSL: &str = concat!(
     include_str!("output_transform.wgsl"),
     include_str!("temporal_output.wgsl")
 );
+pub const TEMPORAL_MOTION_WGSL: &str = include_str!("temporal_motion.wgsl");
+pub const TEMPORAL_REACTIVE_WGSL: &str = include_str!("temporal_reactive.wgsl");
 pub const BLOOM_WGSL: &str = concat!(
     include_str!("output_transform.wgsl"),
     include_str!("bloom.wgsl")

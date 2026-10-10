@@ -82,6 +82,8 @@ pub mod navigation;
 pub mod output;
 /// Bounded temporal resolve policy, history lifecycle, and CPU reference oracle.
 pub mod temporal_resolve;
+/// Reference math and host producer models for temporal accumulation.
+pub mod temporal_producers;
 pub mod pga;
 /// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
 pub mod physics;

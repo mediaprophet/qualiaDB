@@ -965,5 +965,7 @@ mod tests {
         validate(crate::shaders::viewport::TEMPORAL_RESOLVE_WGSL);
         validate(crate::shaders::viewport::TEMPORAL_DEPTH_WGSL);
         validate(crate::shaders::viewport::TEMPORAL_OUTPUT_WGSL);
+        validate(crate::shaders::viewport::TEMPORAL_MOTION_WGSL);
+        validate(crate::shaders::viewport::TEMPORAL_REACTIVE_WGSL);
     }
 }

@@ -36,7 +36,7 @@ fn temporal_depth_vs(@builtin(vertex_index) vertex_index: u32) -> @builtin(posit
 fn temporal_depth_fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     let uv = (floor(position.xy) + vec2<f32>(0.5, 0.5))
         * vec2<f32>(depth_params.inv_width, depth_params.inv_height);
-    let depth = textureSampleLevel(scene_depth, depth_sampler, uv, 0.0);
+    let depth = textureSampleLevel(scene_depth, depth_sampler, uv, 0);
     let range = max(
         depth_params.far_plane
             - depth * (depth_params.far_plane - depth_params.near_plane),
