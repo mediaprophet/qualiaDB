@@ -97,6 +97,249 @@ pub enum TextureStreamPlanError {
     OutputCapacity { required: usize, capacity: usize },
 }
 
+/// One physical resource transition in the bounded resident-texture lifecycle.
+///
+/// Unlike [`TextureStreamAction`], which describes an additive mip prefix, this action models
+/// the actual backend operation used by the renderer: one texture view is evicted and, when
+/// requested, one replacement view is uploaded at `mip_level` with its coarser tail generated
+/// by the backend. Keeping that distinction here prevents a refinement from charging the old
+/// allocation and every generated mip twice.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextureStreamLifecycleActionKind {
+    EvictTexture,
+    UploadTexture,
+    ReplaceTexture,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TextureStreamLifecycleAction {
+    pub semantic_id: u64,
+    pub kind: TextureStreamLifecycleActionKind,
+    /// Source mip used as the physical texture base. Zero for a pure eviction.
+    pub mip_level: u8,
+    /// Bytes submitted for the physical base upload, not generated tail bytes.
+    pub bytes: u64,
+    /// Existing physical allocation released before an upload, if any.
+    pub previous_resident_bytes: u64,
+    /// Physical allocation held after the transition. Zero for an eviction.
+    pub target_resident_bytes: u64,
+}
+
+/// Accounting for one generation of a physical resident-texture transition plan.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TextureStreamLifecyclePlan {
+    pub generation: u64,
+    pub action_count: usize,
+    pub admitted_count: usize,
+    pub deferred_count: usize,
+    pub admitted_upload_bytes: u64,
+    pub deferred_upload_bytes: u64,
+    pub projected_resident_bytes: u64,
+}
+
+/// Plan physical texture replacements, uploads, and eviction of every unrequested resource.
+///
+/// This is the lifecycle counterpart to [`plan_texture_residency_partial`]. It emits at most one
+/// upload action per texture because the GPU resident texture owns a generated coarser tail. The
+/// old allocation is debited before the replacement allocation is credited, so callers can apply
+/// the action without double-debiting a residency budget. Validation, priority admission, and
+/// capacity checks finish before `out` is modified.
+pub fn plan_texture_residency_lifecycle(
+    demands: &[TextureStreamDemand],
+    budget: TextureStreamBudget,
+    generation: u64,
+    out: &mut [TextureStreamLifecycleAction],
+) -> Result<TextureStreamLifecyclePlan, TextureStreamPlanError> {
+    validate_lifecycle_demands(demands)?;
+
+    let mut retained_resident = 0u64;
+    let mut eviction_count = 0usize;
+    for demand in demands {
+        if !demand.requested {
+            if demand.resident_finest_mip.is_some() {
+                eviction_count = eviction_count
+                    .checked_add(1)
+                    .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+            }
+            continue;
+        }
+        retained_resident = retained_resident
+            .checked_add(demand.resident_bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+    }
+    if retained_resident > budget.max_resident_bytes {
+        return Err(TextureStreamPlanError::ResidentBudgetExceeded {
+            required: retained_resident,
+            budget: budget.max_resident_bytes,
+        });
+    }
+
+    let mut projected_resident = retained_resident;
+    let mut admitted_count = 0usize;
+    let mut admitted_upload_bytes = 0u64;
+    let mut previous_request = None;
+    while let Some((index, target_mip)) = find_next_lifecycle_request(demands, previous_request) {
+        let demand = &demands[index];
+        let target_resident_bytes = texture_mip_chain_bytes(demand, target_mip)?;
+        let upload_bytes = mip_level_bytes(demand, target_mip)?;
+        let next_upload = admitted_upload_bytes
+            .checked_add(upload_bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        if next_upload > budget.max_upload_bytes {
+            break;
+        }
+
+        let next_resident = projected_resident
+            .checked_sub(demand.resident_bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?
+            .checked_add(target_resident_bytes)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        if next_resident > budget.max_resident_bytes {
+            break;
+        }
+
+        projected_resident = next_resident;
+        admitted_upload_bytes = next_upload;
+        admitted_count = admitted_count
+            .checked_add(1)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        previous_request = Some((index, target_mip));
+    }
+
+    // Include all lower-priority lifecycle requests in deferred upload accounting.
+    let mut total_deferred_upload_bytes = 0u64;
+    let mut deferred_count = 0usize;
+    let mut deferred_previous = previous_request;
+    while let Some((index, target_mip)) =
+        find_next_lifecycle_request(demands, deferred_previous)
+    {
+        total_deferred_upload_bytes = total_deferred_upload_bytes
+            .checked_add(mip_level_bytes(&demands[index], target_mip)?)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        deferred_count = deferred_count
+            .checked_add(1)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+        deferred_previous = Some((index, target_mip));
+    }
+
+    let action_count = eviction_count
+        .checked_add(admitted_count)
+        .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+    if action_count > out.len() {
+        return Err(TextureStreamPlanError::OutputCapacity {
+            required: action_count,
+            capacity: out.len(),
+        });
+    }
+
+    let mut written = 0usize;
+    let mut previous_eviction = None;
+    for _ in 0..eviction_count {
+        let index = find_next_eviction(demands, previous_eviction)
+            .expect("preflight selected the same lifecycle evictions")
+            .expect("preflight counted every unrequested resident texture");
+        let demand = &demands[index];
+        out[written] = TextureStreamLifecycleAction {
+                semantic_id: demand.semantic_id,
+                kind: TextureStreamLifecycleActionKind::EvictTexture,
+                mip_level: 0,
+                bytes: 0,
+                previous_resident_bytes: demand.resident_bytes,
+                target_resident_bytes: 0,
+        };
+        written += 1;
+        previous_eviction = Some(index);
+    }
+    let mut admitted_previous = None;
+    for _ in 0..admitted_count {
+        let (index, target_mip) = find_next_lifecycle_request(demands, admitted_previous)
+            .expect("preflight selected the same lifecycle prefix");
+        let demand = &demands[index];
+        let target_resident_bytes = texture_mip_chain_bytes(demand, target_mip)
+            .expect("preflight checked target resident bytes");
+        let bytes = mip_level_bytes(demand, target_mip).expect("preflight checked upload bytes");
+        out[written] = TextureStreamLifecycleAction {
+            semantic_id: demand.semantic_id,
+            kind: if demand.resident_finest_mip.is_some() {
+                TextureStreamLifecycleActionKind::ReplaceTexture
+            } else {
+                TextureStreamLifecycleActionKind::UploadTexture
+            },
+            mip_level: target_mip,
+            bytes,
+            previous_resident_bytes: demand.resident_bytes,
+            target_resident_bytes,
+        };
+        written += 1;
+        admitted_previous = Some((index, target_mip));
+    }
+
+    Ok(TextureStreamLifecyclePlan {
+        generation,
+        action_count,
+        admitted_count,
+        deferred_count,
+        admitted_upload_bytes,
+        deferred_upload_bytes: total_deferred_upload_bytes,
+        projected_resident_bytes: projected_resident,
+    })
+}
+
+fn validate_lifecycle_demands(demands: &[TextureStreamDemand]) -> Result<(), TextureStreamPlanError> {
+    validate_demands(demands)?;
+    for demand in demands {
+        if let Some(first_mip) = demand.resident_finest_mip {
+            if demand.resident_bytes != texture_mip_chain_bytes(demand, first_mip)? {
+                return Err(TextureStreamPlanError::InconsistentResidency);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn texture_mip_chain_bytes(
+    demand: &TextureStreamDemand,
+    first_mip: u8,
+) -> Result<u64, TextureStreamPlanError> {
+    let mut total = 0u64;
+    for mip in first_mip..demand.mip_count {
+        total = total
+            .checked_add(mip_level_bytes(demand, mip)?)
+            .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
+    }
+    Ok(total)
+}
+
+fn find_next_lifecycle_request(
+    demands: &[TextureStreamDemand],
+    previous: Option<(usize, u8)>,
+) -> Option<(usize, u8)> {
+    let mut selected = None;
+    for (index, demand) in demands.iter().enumerate() {
+        if !demand.requested || demand.resident_finest_mip == Some(demand.desired_finest_mip) {
+            continue;
+        }
+        if previous.is_some_and(|previous| {
+            request_candidate_order(demand, demand.desired_finest_mip, &demands[previous.0], previous.1)
+                != core::cmp::Ordering::Greater
+        }) {
+            continue;
+        }
+        if selected.is_none_or(|(selected_index, selected_mip)| {
+            request_candidate_order(
+                demand,
+                demand.desired_finest_mip,
+                &demands[selected_index],
+                selected_mip,
+            )
+            .is_lt()
+        }) {
+            selected = Some((index, demand.desired_finest_mip));
+        }
+    }
+    selected
+}
+
 /// Compute an all-or-nothing texture streaming plan without heap allocation.
 ///
 /// Priority for requests is pinned, visible, authored importance, distance, recent use, then
@@ -1000,5 +1243,93 @@ mod tests {
             })
         );
         assert!(impossible.iter().all(|action| *action == sentinel));
+    }
+
+    #[test]
+    fn lifecycle_refinement_replaces_once_and_evicts_unrequested_resources() {
+        let mut wanted = demand(1);
+        wanted.resident_finest_mip = Some(2);
+        wanted.resident_bytes = 20; // 2x2, 1x1 tail for an 8x8 RGBA8 chain
+        wanted.desired_finest_mip = 0;
+        let mut stale = demand(2);
+        stale.requested = false;
+        stale.visible = false;
+        stale.resident_finest_mip = Some(1);
+        stale.desired_finest_mip = 1;
+        stale.resident_bytes = 84;
+        let sentinel = TextureStreamLifecycleAction {
+            semantic_id: 99,
+            kind: TextureStreamLifecycleActionKind::EvictTexture,
+            mip_level: 7,
+            bytes: 9,
+            previous_resident_bytes: 8,
+            target_resident_bytes: 7,
+        };
+        let mut out = [sentinel; 2];
+        let plan = plan_texture_residency_lifecycle(
+            &[wanted, stale],
+            TextureStreamBudget {
+                max_resident_bytes: 400,
+                max_upload_bytes: 256,
+            },
+            4,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(plan.generation, 4);
+        assert_eq!(plan.action_count, 2);
+        assert_eq!(plan.projected_resident_bytes, 340);
+        assert_eq!(out[0].kind, TextureStreamLifecycleActionKind::EvictTexture);
+        assert_eq!(out[0].semantic_id, 2);
+        assert_eq!(out[1].kind, TextureStreamLifecycleActionKind::ReplaceTexture);
+        assert_eq!(out[1].mip_level, 0);
+        assert_eq!(out[1].bytes, 256);
+        assert_eq!(out[1].previous_resident_bytes, 20);
+        assert_eq!(out[1].target_resident_bytes, 340);
+    }
+
+    #[test]
+    fn lifecycle_plan_is_atomic_and_generation_stamped() {
+        let sentinel = TextureStreamLifecycleAction {
+            semantic_id: 77,
+            kind: TextureStreamLifecycleActionKind::UploadTexture,
+            mip_level: 3,
+            bytes: 1,
+            previous_resident_bytes: 2,
+            target_resident_bytes: 3,
+        };
+        let mut out = [sentinel; 1];
+        let mut malformed = demand(1);
+        malformed.resident_bytes = 0;
+        let error = plan_texture_residency_lifecycle(
+            &[malformed],
+            TextureStreamBudget {
+                max_resident_bytes: 1024,
+                max_upload_bytes: 4096,
+            },
+            9,
+            &mut out,
+        );
+        assert_eq!(
+            error,
+            Err(TextureStreamPlanError::InconsistentResidency)
+        );
+        assert_eq!(out[0], sentinel);
+
+        let mut valid = demand(1);
+        valid.resident_bytes = 4;
+        valid.desired_finest_mip = 1;
+        let mut valid_out = [sentinel; 1];
+        let plan = plan_texture_residency_lifecycle(
+            &[valid],
+            TextureStreamBudget {
+                max_resident_bytes: 1024,
+                max_upload_bytes: 4096,
+            },
+            9,
+            &mut valid_out,
+        )
+        .unwrap();
+        assert_eq!(plan.generation, 9);
     }
 }

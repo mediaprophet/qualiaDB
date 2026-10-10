@@ -191,8 +191,25 @@ impl TemporalOutputSchedule {
         Self::disabled()
     }
 
+    /// Whether a backend may record the complete resolve/publication/output handoff.
+    ///
+    /// Reset frames never read history, and a temporal schedule must publish before its final
+    /// output. The pass-order part is checked by `CompiledSchedule::temporal_order_is_valid`.
+    pub const fn is_valid(self) -> bool {
+        self.enabled
+            && self.publish_history
+            && self.final_output
+            && !(self.reset_history && self.reads_history)
+    }
+
     pub const fn is_complete(self) -> bool {
-        self.enabled && self.publish_history && self.final_output
+        self.is_valid()
+    }
+
+    pub const fn with_reset_history(mut self) -> Self {
+        self.reset_history = true;
+        self.reads_history = false;
+        self
     }
 }
 
@@ -290,9 +307,10 @@ impl FrameGraphBuilder {
     /// Configure the frame graph with an explicitly admitted temporal output path.
     ///
     /// The temporal pass is opt-in and fail-closed: the existing renderer must declare both
-    /// motion-vector and reactive-mask inputs before this graph adds accumulation. Linear depth
-    /// is already owned by this graph. The final bloom/SDR output pass consumes the resolved
-    /// scene colour, while history publication remains a distinct scheduled pass.
+    /// motion-vector and reactive-mask inputs before this graph adds accumulation. The graph
+    /// tracks the linear-depth dependency, but the backend must still bind a real producer. The
+    /// final bloom/SDR output pass consumes the resolved scene colour, while history publication
+    /// remains a distinct scheduled pass.
     pub fn configure_from_profile_with_temporal(
         &mut self,
         profile: &RenderQualityProfile,

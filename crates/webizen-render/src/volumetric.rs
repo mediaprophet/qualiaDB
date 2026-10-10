@@ -11,7 +11,10 @@ use qualia_core_db::render::texture_stream_policy::TextureStreamBudget;
 use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
 use qualia_core_db::tensor::Tensor10D;
 
-pub use crate::volumetric_hmc::HmcTextureStreamRequest;
+pub use crate::volumetric_hmc::{
+    HmcTextureResidencyRequest, HmcTextureStreamApplyRequest, HmcTextureStreamPlan,
+    HmcTextureStreamRequest,
+};
 
 /// Result of best-effort HMC texture admission. Missing or budget-deferred interpretations bind
 /// the renderer's typed fallback texture; they do not prevent the `.10d` mesh from loading.
@@ -24,18 +27,23 @@ pub struct HmcTextureAdmissionReport {
     pub deferred_mips: usize,
     pub admitted_upload_bytes: u64,
     pub deferred_upload_bytes: u64,
+    /// KTX2/Basis-like inputs refused by the validated decoder capability set rather than
+    /// silently transcoded. Budget and decode failures are reported separately as deferrals.
+    pub capability_refusals: usize,
 }
 
 /// Cross-platform volumetric renderer SDK. Native instances render offscreen on the same physical
 /// wgpu device as QualiaDB inference and expose caller-buffered RGBA8 readback.
 pub struct VolumetricRenderer {
     pub(crate) inner: PortalGpu,
+    pub(crate) texture_stream_state: Option<crate::volumetric_hmc::HmcTextureStreamState>,
 }
 
 impl VolumetricRenderer {
     pub fn new_offscreen(width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_offscreen(width, height, particle_cap)?,
+            texture_stream_state: None,
         })
     }
 
@@ -53,6 +61,7 @@ impl VolumetricRenderer {
     ) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_surface(hwnd, width, height, particle_cap)?,
+            texture_stream_state: None,
         })
     }
 
@@ -115,6 +124,21 @@ impl VolumetricRenderer {
                 projected_height: 0,
             },
         )
+    }
+
+    /// Plan a bounded working-set transition for the active HMC asset. The request list is the
+    /// complete set of interpretations that should remain resident; omitted entries are evicted.
+    pub fn request_texture_stream(
+        &self,
+        request: HmcTextureStreamApplyRequest<'_>,
+    ) -> Result<HmcTextureStreamPlan, String> {
+        crate::volumetric_hmc::request_texture_stream(self, request)
+    }
+
+    /// Apply a previously generated texture plan. A stale generation is rejected before any GPU
+    /// mutation; successful refinement/eviction rebuilds the active material bind groups.
+    pub fn apply_texture_stream(&mut self, plan: HmcTextureStreamPlan) -> Result<(), String> {
+        crate::volumetric_hmc::apply_texture_stream(self, plan)
     }
 
     /// Load a verified HMC mesh as the renderer-owned water surface. The

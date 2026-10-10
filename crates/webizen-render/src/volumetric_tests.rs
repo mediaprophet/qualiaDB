@@ -351,6 +351,73 @@ fn hmc_multilevel_ktx2_selects_and_decodes_coarse_level() {
 }
 
 #[test]
+fn texture_stream_generation_refines_rebinds_and_evicts_deterministically() {
+    let mut renderer = match VolumetricRenderer::new_offscreen(64, 64, 64) {
+        Ok(renderer) => renderer,
+        Err(_) => return,
+    };
+    let levels = [vec![0x10u8; 64], vec![0x20u8; 16], vec![0x30u8; 4]];
+    let level_refs = levels.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let ktx2 = ktx2_fixture(43, 4, 4, &level_refs);
+    let (hmc_bytes, digest) = build_test_hmc_bundle(&ktx2, "image/ktx2", false);
+    renderer
+        .load_hmc_asset_with_texture_request(
+            &hmc_bytes,
+            "asset.10d",
+            HmcTextureStreamRequest {
+                budget: TextureStreamBudget {
+                    max_resident_bytes: 1024,
+                    max_upload_bytes: 1024,
+                },
+                projected_width: 2,
+                projected_height: 2,
+            },
+        )
+        .unwrap();
+
+    let refine_request = [HmcTextureResidencyRequest {
+        digest,
+        color_space: qualia_core_db::render::gpu::TextureColorSpace::Srgb,
+        mip_semantic: TextureMipSemantic::Color,
+        projected_width: 4,
+        projected_height: 4,
+        importance: 100,
+        distance_key: 0,
+        last_used_frame: 1,
+        pinned: true,
+        visible: true,
+    }];
+    let refine = renderer
+        .request_texture_stream(HmcTextureStreamApplyRequest {
+            budget: TextureStreamBudget {
+                max_resident_bytes: 1024,
+                max_upload_bytes: 1024,
+            },
+            requests: &refine_request,
+        })
+        .unwrap();
+    assert_eq!(refine.generation, 0);
+    assert_eq!(refine.admitted_count, 1);
+    let stale = refine.clone();
+    renderer.apply_texture_stream(refine).unwrap();
+    assert!(renderer.apply_texture_stream(stale).is_err());
+
+    let evict = renderer
+        .request_texture_stream(HmcTextureStreamApplyRequest {
+            budget: TextureStreamBudget {
+                max_resident_bytes: 1024,
+                max_upload_bytes: 1024,
+            },
+            requests: &[],
+        })
+        .unwrap();
+    assert_eq!(evict.generation, 1);
+    assert_eq!(evict.admitted_count, 0);
+    assert_eq!(evict.action_count, 1);
+    renderer.apply_texture_stream(evict).unwrap();
+}
+
+#[test]
 fn hmc_constrained_budget_defers_texture_while_mesh_loads() {
     let mut renderer = match VolumetricRenderer::new_offscreen(64, 64, 64) {
         Ok(r) => r,
@@ -433,6 +500,7 @@ fn hmc_unsupported_ktx2_format_uses_typed_deferred_fallback() {
     assert_eq!(report.resident_interpretations, 0);
     assert_eq!(report.deferred_interpretations, 1);
     assert_eq!(report.admitted_mips, 0);
+    assert_eq!(report.capability_refusals, 1);
 }
 
 #[test]

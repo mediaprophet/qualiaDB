@@ -18,6 +18,18 @@ use qualia_core_db::render::texture_streaming_plan::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
+#[path = "volumetric_hmc_stream.rs"]
+mod volumetric_hmc_stream;
+
+pub use self::volumetric_hmc_stream::{
+    HmcTextureResidencyRequest, HmcTextureStreamApplyRequest, HmcTextureStreamPlan,
+};
+use self::volumetric_hmc_stream::HmcTextureStreamEntry;
+use self::volumetric_hmc_stream::{
+    HMC_TEXTURE_STREAM_MAX_ENTRIES, HMC_TEXTURE_STREAM_STATE_MAX_BYTES,
+};
+pub(crate) use self::volumetric_hmc_stream::HmcTextureStreamState;
+
 const HMC_KTX2_MAX_DECODED_BYTES: u64 = 256 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -33,6 +45,8 @@ pub(crate) struct HmcTexturePlanEntry {
     pub(crate) texture_use: TextureUse,
     pub(crate) width: u32,
     pub(crate) height: u32,
+    pub(crate) mip_count: u8,
+    pub(crate) supported_mips: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,6 +64,14 @@ fn note_ktx2_fallback(
     mip_bytes: u64,
 ) {
     report.deferred_interpretations += 1;
+    if matches!(
+        fallback,
+        Ktx2HmcFallback::Parse
+            | Ktx2HmcFallback::Candidate(_)
+            | Ktx2HmcFallback::ColorSpaceMismatch
+    ) {
+        report.capability_refusals += 1;
+    }
     if matches!(fallback, Ktx2HmcFallback::NoAffordableLevel | Ktx2HmcFallback::Decode) {
         report.deferred_mips += 1;
         report.deferred_upload_bytes = report.deferred_upload_bytes.saturating_add(mip_bytes);
@@ -368,6 +390,118 @@ fn note_refusal(report: &mut super::HmcTextureAdmissionReport, mip_count: usize,
     report.deferred_interpretations += 1;
 }
 
+fn rgba8_resident_bytes(width: u32, height: u32, first_mip: u8) -> Result<u64, String> {
+    let mut width = width.max(1);
+    let mut height = height.max(1);
+    for _ in 0..first_mip {
+        width = (width / 2).max(1);
+        height = (height / 2).max(1);
+    }
+    let mut total = 0u64;
+    loop {
+        total = total
+            .checked_add(
+                u64::from(width)
+                    .checked_mul(u64::from(height))
+                    .and_then(|pixels| pixels.checked_mul(4))
+                    .ok_or_else(|| "texture resident byte size overflow".to_string())?,
+            )
+            .ok_or_else(|| "texture resident byte size overflow".to_string())?;
+        if width == 1 && height == 1 {
+            return Ok(total);
+        }
+        width = (width / 2).max(1);
+        height = (height / 2).max(1);
+    }
+}
+
+fn build_texture_stream_state(
+    hmc_bytes: &[u8],
+    asset_bytes: &[u8],
+    entries: &[HmcTexturePlanEntry],
+    loaded_residency: &BTreeMap<([u8; 32], TextureUse), (u8, u64)>,
+) -> Result<HmcTextureStreamState, String> {
+    if entries.len() > HMC_TEXTURE_STREAM_MAX_ENTRIES {
+        return Err(format!(
+            "HMC texture stream entry count exceeds bounded limit: {} > {}",
+            entries.len(), HMC_TEXTURE_STREAM_MAX_ENTRIES
+        ));
+    }
+    let retained_bytes = hmc_bytes
+        .len()
+        .checked_add(asset_bytes.len())
+        .ok_or_else(|| "HMC texture stream state size overflow".to_string())?;
+    if retained_bytes > HMC_TEXTURE_STREAM_STATE_MAX_BYTES {
+        return Err(format!(
+            "HMC texture stream state exceeds bounded retention limit: {} > {} bytes",
+            retained_bytes, HMC_TEXTURE_STREAM_STATE_MAX_BYTES
+        ));
+    }
+    let mut retained_bundle = Vec::new();
+    retained_bundle
+        .try_reserve_exact(hmc_bytes.len())
+        .map_err(|_| "HMC texture stream state allocation refused".to_string())?;
+    retained_bundle.extend_from_slice(hmc_bytes);
+    let mut retained_asset = Vec::new();
+    retained_asset
+        .try_reserve_exact(asset_bytes.len())
+        .map_err(|_| "HMC texture asset retention allocation refused".to_string())?;
+    retained_asset.extend_from_slice(asset_bytes);
+    let mut state_entries = Vec::new();
+    state_entries
+        .try_reserve_exact(entries.len())
+        .map_err(|_| "HMC texture stream entry allocation refused".to_string())?;
+    for entry in entries {
+        let (resident_finest_mip, resident_bytes) = loaded_residency
+            .get(&(entry.digest, entry.texture_use))
+            .copied()
+            .map_or((None, 0), |(mip, bytes)| (Some(mip), bytes));
+        state_entries.push(HmcTextureStreamEntry {
+            semantic_id: entry.semantic_id,
+            digest: entry.digest,
+            texture_use: entry.texture_use,
+            width: entry.width,
+            height: entry.height,
+            mip_count: entry.mip_count,
+            supported_mips: entry.supported_mips,
+            resident_finest_mip,
+            resident_bytes,
+        });
+    }
+    Ok(HmcTextureStreamState {
+        bundle_bytes: retained_bundle,
+        asset_bytes: retained_asset,
+        entries: state_entries,
+        generation: 0,
+    })
+}
+
+fn evict_replaced_asset_textures(
+    renderer: &mut super::VolumetricRenderer,
+    next_entries: &[HmcTexturePlanEntry],
+) {
+    let Some(previous_entries) = renderer
+        .texture_stream_state
+        .as_ref()
+        .map(|state| state.entries.clone())
+    else {
+        return;
+    };
+    for entry in &previous_entries {
+        if entry.resident_finest_mip.is_some()
+            && !next_entries.iter().any(|next| {
+                next.digest == entry.digest && next.texture_use == entry.texture_use
+            })
+        {
+            renderer.inner.evict_resident_texture_with_mips(
+                &entry.digest,
+                entry.texture_use.color_space,
+                entry.texture_use.mip_semantic,
+            );
+        }
+    }
+}
+
 /// Load an HMC `.10d` asset while admitting texture mips according to footprint and budget.
 pub fn load_hmc_asset_with_texture_request(
     renderer: &mut super::VolumetricRenderer,
@@ -375,11 +509,27 @@ pub fn load_hmc_asset_with_texture_request(
     asset_key: &str,
     request: HmcTextureStreamRequest,
 ) -> Result<((u32, u32, f32), super::HmcTextureAdmissionReport), String> {
+    if hmc_bytes.len() > HMC_TEXTURE_STREAM_STATE_MAX_BYTES {
+        return Err(format!(
+            "HMC texture stream state exceeds bounded retention limit: {} > {} bytes",
+            hmc_bytes.len(), HMC_TEXTURE_STREAM_STATE_MAX_BYTES
+        ));
+    }
     let bundle = qualia_core_db::bundle::BundleReader::parse(hmc_bytes)
         .map_err(|e| format!("HMC bundle: {e}"))?;
     let asset_bytes = bundle
         .get(asset_key)
         .ok_or_else(|| format!("HMC asset is missing: {asset_key}"))?;
+    let retained_bytes = hmc_bytes
+        .len()
+        .checked_add(asset_bytes.len())
+        .ok_or_else(|| "HMC texture stream state size overflow".to_string())?;
+    if retained_bytes > HMC_TEXTURE_STREAM_STATE_MAX_BYTES {
+        return Err(format!(
+            "HMC texture stream state exceeds bounded retention limit: {} > {} bytes",
+            retained_bytes, HMC_TEXTURE_STREAM_STATE_MAX_BYTES
+        ));
+    }
     if !bundle.verify_entry(asset_key) {
         return Err(format!("HMC asset digest check failed: {asset_key}"));
     }
@@ -407,6 +557,7 @@ pub fn load_hmc_asset_with_texture_request(
     let mut demands = Vec::new();
     let mut next_semantic_id = 1u64;
     let mut report = super::HmcTextureAdmissionReport::default();
+    let mut loaded_residency = BTreeMap::<([u8; 32], TextureUse), (u8, u64)>::new();
     for (digest, uses) in &texture_uses {
         let resource =
             qualia_core_db::render::asset_package::resolve_hmc_texture_resource(&bundle, digest)
@@ -426,7 +577,13 @@ pub fn load_hmc_asset_with_texture_request(
                     continue;
                 }
             };
-            let candidate_error = ktx2_rgba8_candidates(&document).err();
+            let candidates = ktx2_rgba8_candidates(&document);
+            let candidate_error = candidates.as_ref().err().copied();
+            let supported_mips = candidates.as_ref().ok().map(|candidates| {
+                candidates.iter().fold(0u32, |mask, candidate| {
+                    mask | (1u32 << candidate.level)
+                })
+            });
             for texture_use in uses {
                 report.requested_interpretations += 1;
                 if renderer
@@ -455,12 +612,19 @@ pub fn load_hmc_asset_with_texture_request(
                     note_ktx2_fallback(&mut report, Ktx2HmcFallback::ColorSpaceMismatch, 0);
                     continue;
                 }
+                let semantic_id = next_semantic_id;
+                next_semantic_id = next_semantic_id
+                    .checked_add(1)
+                    .ok_or_else(|| "overflow".to_string())?;
                 ktx2_entries.push(HmcTexturePlanEntry {
-                    semantic_id: 0,
+                    semantic_id,
                     digest: *digest,
                     texture_use: *texture_use,
                     width: document.pixel_width,
                     height: document.pixel_height.max(1),
+                    mip_count: u8::try_from(document.level_count())
+                        .map_err(|_| "KTX2 mip count exceeds u8".to_string())?,
+                    supported_mips: supported_mips.unwrap_or(0),
                 });
             }
             continue;
@@ -545,6 +709,12 @@ pub fn load_hmc_asset_with_texture_request(
                 texture_use: *texture_use,
                 width: info.width,
                 height: info.height,
+                mip_count,
+                supported_mips: if mip_count == 32 {
+                    u32::MAX
+                } else {
+                    (1u32 << mip_count) - 1
+                },
             });
         }
     }
@@ -655,6 +825,10 @@ pub fn load_hmc_asset_with_texture_request(
             {
                 Ok(_) => {
                     newly_resident.push((entry.digest, entry.texture_use));
+                    loaded_residency.insert(
+                        (entry.digest, entry.texture_use),
+                        (candidate.level as u8, candidate.gpu_resident_bytes),
+                    );
                     report.resident_interpretations += 1;
                     report.admitted_mips += 1;
                     report.admitted_upload_bytes = report
@@ -752,6 +926,13 @@ pub fn load_hmc_asset_with_texture_request(
                 match upload {
                     Ok(_) => {
                         newly_resident.push((entry.digest, entry.texture_use));
+                        loaded_residency.insert(
+                            (entry.digest, entry.texture_use),
+                            (
+                                first_mip,
+                                rgba8_resident_bytes(entry.width, entry.height, first_mip)?,
+                            ),
+                        );
                         report.resident_interpretations += 1;
                     }
                     Err(TextureUploadError::GpuBudgetRefused)
@@ -774,8 +955,32 @@ pub fn load_hmc_asset_with_texture_request(
         }
         return Err(error);
     }
+    let mut all_plan_entries = plan_entries;
+    all_plan_entries.extend(ktx2_entries);
+    let stream_state = match build_texture_stream_state(
+        hmc_bytes,
+        asset_bytes,
+        &all_plan_entries,
+        &loaded_residency,
+    ) {
+        Ok(state) => state,
+        Err(error) => {
+            for (digest, texture_use) in newly_resident {
+                renderer.inner.evict_resident_texture_with_mips(
+                    &digest,
+                    texture_use.color_space,
+                    texture_use.mip_semantic,
+                );
+            }
+            return Err(error);
+        }
+    };
     match renderer.load_10d_asset(asset_bytes) {
-        Ok(result) => Ok((result, report)),
+        Ok(result) => {
+            evict_replaced_asset_textures(renderer, &all_plan_entries);
+            renderer.texture_stream_state = Some(stream_state);
+            Ok((result, report))
+        }
         Err(error) => {
             for (digest, texture_use) in newly_resident {
                 renderer.inner.evict_resident_texture_with_mips(
@@ -787,6 +992,20 @@ pub fn load_hmc_asset_with_texture_request(
             Err(error)
         }
     }
+}
+
+pub fn request_texture_stream(
+    renderer: &super::VolumetricRenderer,
+    request: HmcTextureStreamApplyRequest<'_>,
+) -> Result<HmcTextureStreamPlan, String> {
+    volumetric_hmc_stream::request_texture_stream(renderer, request)
+}
+
+pub fn apply_texture_stream(
+    renderer: &mut super::VolumetricRenderer,
+    plan: HmcTextureStreamPlan,
+) -> Result<(), String> {
+    volumetric_hmc_stream::apply_texture_stream(renderer, plan)
 }
 
 /// Load an HMC `.10d` geometry asset into the renderer's persistent water

@@ -303,3 +303,17 @@ fn temporal_schedule_reset_never_reads_previous_history() {
     assert!(schedule.temporal_order_is_valid());
     assert!(schedule.pass_index(PassId::BloomComposite).is_some());
 }
+
+#[test]
+fn temporal_schedule_rejects_reset_and_history_read_together() {
+    let schedule = TemporalOutputSchedule {
+        enabled: true,
+        reset_history: true,
+        reads_history: true,
+        publish_history: true,
+        final_output: true,
+    };
+    assert!(!schedule.is_valid());
+    assert!(!schedule.is_complete());
+    assert!(!schedule.with_reset_history().reads_history);
+}

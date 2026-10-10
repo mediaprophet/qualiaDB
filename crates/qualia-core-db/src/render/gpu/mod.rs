@@ -16,7 +16,9 @@ mod texture_residency;
 pub use texture_mips::AlphaCoverageDiagnostics;
 pub use texture_mips::TextureMipSemantic;
 pub use texture_residency::{TextureColorSpace, TextureUploadError};
-pub use temporal_resolve_gpu::{TemporalResolveGpu, TemporalResolveInputs};
+pub use temporal_resolve_gpu::{
+    TemporalProducerAvailability, TemporalProducerViews, TemporalResolveGpu, TemporalResolveInputs,
+};
 mod mesh_normals;
 mod mesh_upload;
 mod output_pass;
@@ -402,6 +404,7 @@ pub struct PortalGpu {
     color_format: wgpu::TextureFormat,
     scene_depth: scene_depth::SceneDepthOwner,
     temporal_resolve: Option<temporal_resolve_gpu::TemporalResolveGpu>,
+    temporal_reset_pending: bool,
     picking_texture: wgpu::Texture,
     picking_view: wgpu::TextureView,
     _frame_target_reservation: crate::gpu_context::VramReservation<'static>,
@@ -1765,6 +1768,7 @@ impl PortalGpu {
             color_format: format,
             scene_depth,
             temporal_resolve,
+            temporal_reset_pending: true,
             picking_texture,
             picking_view,
             _frame_target_reservation: frame_target_reservation,
@@ -2364,10 +2368,12 @@ impl PortalGpu {
             ambient_intensity,
         }
         .clamped();
+        self.temporal_reset_pending = true;
     }
 
     pub fn set_camera_pan(&mut self, target_x: f32, target_y: f32, target_z: f32) {
         self.camera.target = [target_x, target_y, target_z];
+        self.temporal_reset_pending = true;
     }
 
     pub fn set_camera_target(
@@ -2392,6 +2398,7 @@ impl PortalGpu {
             ambient_intensity,
         }
         .clamped();
+        self.temporal_reset_pending = true;
     }
 
     pub fn set_clear_color(&mut self, r: f64, g: f64, b: f64, a: f64) {
@@ -2480,6 +2487,32 @@ impl PortalGpu {
         self.temporal_resolve.as_mut()
     }
 
+    /// The renderer-owned scene-colour attachment that can be sampled by temporal resolve.
+    ///
+    /// The direct surface/offscreen target is not assumed to be texture-bindable. The bloom HDR
+    /// target or the SDR output-chain scene target is therefore the only concrete scene producer
+    /// exposed here.
+    pub fn temporal_scene_color_view(&self) -> Option<&wgpu::TextureView> {
+        self.bloom
+            .as_ref()
+            .map(|bloom| &bloom.hdr_view)
+            .or_else(|| self.output_chain.as_ref().map(output_pass::OutputChain::scene_view))
+    }
+
+    /// Report producer ownership before a host attempts a temporal submission.
+    ///
+    /// `SceneDepthOwner` is a depth-stencil attachment, not a linear-depth colour producer, so it
+    /// is intentionally reported as unavailable. Motion vectors and reactive masks are likewise
+    /// unavailable until a real producer is supplied by the host.
+    pub fn temporal_producer_availability(&self) -> TemporalProducerAvailability {
+        TemporalProducerAvailability {
+            scene_color: self.temporal_scene_color_view().is_some(),
+            linear_depth: false,
+            motion_vectors: false,
+            reactive_mask: false,
+        }
+    }
+
     /// Whether the renderer-owned temporal history currently contains a published frame.
     pub fn temporal_history_valid(&self) -> bool {
         self.temporal_resolve
@@ -2487,10 +2520,27 @@ impl PortalGpu {
             .is_some_and(temporal_resolve_gpu::TemporalResolveGpu::history_valid)
     }
 
+    /// Whether the next admitted temporal frame must start without previous history.
+    pub fn temporal_reset_pending(&self) -> bool {
+        self.temporal_reset_pending
+    }
+
     /// Drop temporal history after a camera cut, seek, or host-owned discontinuity.
     pub fn invalidate_temporal_history(&mut self) {
+        self.temporal_reset_pending = true;
         if let Some(temporal) = self.temporal_resolve.as_mut() {
             temporal.invalidate_history();
+        }
+    }
+
+    fn effective_temporal_schedule(
+        &self,
+        schedule: crate::render::frame_graph::TemporalOutputSchedule,
+    ) -> crate::render::frame_graph::TemporalOutputSchedule {
+        if self.temporal_reset_pending && schedule.enabled {
+            schedule.with_reset_history()
+        } else {
+            schedule
         }
     }
 
@@ -2504,14 +2554,15 @@ impl PortalGpu {
     pub fn record_scheduled_temporal_output(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
-        inputs: temporal_resolve_gpu::TemporalResolveInputs<'_>,
+        inputs: temporal_resolve_gpu::TemporalResolveInputs<'_, '_>,
         target: &wgpu::TextureView,
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
     ) -> bool {
+        let schedule = self.effective_temporal_schedule(schedule);
         let Some(temporal) = self.temporal_resolve.as_mut() else {
             return false;
         };
-        temporal.record_scheduled_output(
+        let recorded = temporal.record_scheduled_output(
             &self.device,
             &self.queue,
             encoder,
@@ -2521,7 +2572,32 @@ impl PortalGpu {
             self.hdr_exposure_ev,
             self.white_balance_gains,
             self.color_format.is_srgb(),
-        )
+        );
+        if recorded {
+            self.temporal_reset_pending = false;
+        }
+        recorded
+    }
+
+    /// Record temporal output using the renderer-owned scene colour attachment.
+    ///
+    /// This is the host contract for the common case: the host owns and binds only real linear
+    /// depth, motion, and reactive producers. The method fails closed when the renderer cannot
+    /// expose a sampleable scene target or any host producer is absent.
+    pub fn record_scheduled_temporal_output_from_producers(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        producers: TemporalProducerViews<'_>,
+        target: &wgpu::TextureView,
+        schedule: crate::render::frame_graph::TemporalOutputSchedule,
+    ) -> bool {
+        let Some(scene) = self.temporal_scene_color_view().cloned() else {
+            return false;
+        };
+        let Some(inputs) = producers.into_inputs(&scene) else {
+            return false;
+        };
+        self.record_scheduled_temporal_output(encoder, inputs, target, schedule)
     }
 
     // VC3 test helpers — expose uniform belt internals for allocation measurement.
@@ -2600,6 +2676,7 @@ impl PortalGpu {
         self.picking_texture = picking_texture;
         self.picking_view = picking_view;
         self._frame_target_reservation = frame_target_reservation;
+        self.temporal_reset_pending = true;
         self.rebuild_ao_resources();
         self.sync_bloom_targets();
         Ok((width, height))
@@ -2970,6 +3047,45 @@ impl PortalGpu {
     }
 
     pub fn render(&mut self, time: f32, telemetry: &SystemTelemetry) -> Result<(), String> {
+        self.render_internal(time, telemetry, None).map(|_| ())
+    }
+
+    /// Render one frame and submit temporal output when all real host producers are available.
+    ///
+    /// Scene colour remains renderer-owned. The host supplies a genuine linear-depth producer,
+    /// motion vectors, and reactive mask. If the schedule or any producer is unavailable, this
+    /// method renders the ordinary output path and returns `Ok(false)`; no temporal commands are
+    /// recorded and no synthetic producer is created.
+    pub fn render_with_temporal(
+        &mut self,
+        time: f32,
+        telemetry: &SystemTelemetry,
+        schedule: crate::render::frame_graph::TemporalOutputSchedule,
+        producers: TemporalProducerViews<'_>,
+    ) -> Result<bool, String> {
+        let eligible = schedule.is_valid()
+            && producers.extent == (self.width, self.height)
+            && producers
+                .availability(self.temporal_scene_color_view().is_some())
+                .all_available();
+        if !eligible {
+            return self
+                .render_internal(time, telemetry, None)
+                .map(|_| false);
+        }
+        let schedule = self.effective_temporal_schedule(schedule);
+        self.render_internal(time, telemetry, Some((schedule, producers)))
+    }
+
+    fn render_internal(
+        &mut self,
+        time: f32,
+        telemetry: &SystemTelemetry,
+        temporal: Option<(
+            crate::render::frame_graph::TemporalOutputSchedule,
+            TemporalProducerViews<'_>,
+        )>,
+    ) -> Result<bool, String> {
         if portal_bloom_enabled() != self.bloom_policy_snapshot {
             self.sync_bloom_targets();
         }
@@ -3065,6 +3181,7 @@ impl PortalGpu {
                 self.picking_texture = picking_texture;
                 self.picking_view = picking_view;
                 self._frame_target_reservation = frame_target_reservation;
+                self.temporal_reset_pending = true;
                 self.rebuild_ao_resources();
                 self.sync_bloom_targets();
                 self.write_camera_uniform(&mut encoder, time);
@@ -3105,18 +3222,23 @@ impl PortalGpu {
                 .output_chain
                 .as_ref()
                 .is_some_and(output_pass::OutputChain::uses_hdr_scene);
+        let temporal_scene_view = temporal
+            .as_ref()
+            .and_then(|_| self.temporal_scene_color_view().cloned());
+        let mut temporal_recorded = false;
 
         if use_hdr_scene {
-            let scene_view = self
-                .bloom
-                .as_ref()
-                .map(|bloom| &bloom.hdr_view)
-                .or_else(|| {
-                    self.output_chain
-                        .as_ref()
-                        .map(output_pass::OutputChain::scene_view)
-                })
-                .unwrap_or(&view);
+            let scene_view = temporal_scene_view.as_ref().unwrap_or_else(|| {
+                self.bloom
+                    .as_ref()
+                    .map(|bloom| &bloom.hdr_view)
+                    .or_else(|| {
+                        self.output_chain
+                            .as_ref()
+                            .map(output_pass::OutputChain::scene_view)
+                    })
+                    .unwrap_or(&view)
+            });
             let ambient_hdr = self.ambient_pipeline_hdr.as_ref().expect("ambient hdr");
             let projector_hdr = self.projector_pipeline_hdr.as_ref().expect("projector hdr");
             let mesh_hdr = self.mesh_pipeline_hdr.as_ref();
@@ -3232,23 +3354,10 @@ impl PortalGpu {
                 }
             }
 
-            if use_bloom {
-                run_bloom_passes(
-                    &mut encoder,
-                    self.bloom.as_ref().expect("active bloom chain"),
-                    &self.queue,
-                    &self.device,
-                    &view,
-                    self.clear_color,
-                );
-            } else if let Some(output) = self.output_chain.as_ref() {
-                output.composite(&mut encoder, &view);
-            }
         } else {
-            let scene_target = self
-                .output_chain
+            let scene_target = temporal_scene_view
                 .as_ref()
-                .map(output_pass::OutputChain::scene_view)
+                .or_else(|| self.output_chain.as_ref().map(output_pass::OutputChain::scene_view))
                 .unwrap_or(&view);
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("portal-phenomenal-pass"),
@@ -3356,8 +3465,45 @@ impl PortalGpu {
             }
         }
 
-        if !use_hdr_scene {
-            if let Some(output) = self.output_chain.as_ref() {
+        if let Some((schedule, producers)) = temporal {
+            if let Some(scene_view) = temporal_scene_view.as_ref() {
+                if let (Some(inputs), Some(temporal_owner)) = (
+                    producers.into_inputs(scene_view),
+                    self.temporal_resolve.as_mut(),
+                ) {
+                    temporal_recorded = temporal_owner.record_scheduled_output(
+                        &self.device,
+                        &self.queue,
+                        &mut encoder,
+                        inputs,
+                        &view,
+                        schedule,
+                        self.hdr_exposure_ev,
+                        self.white_balance_gains,
+                        self.color_format.is_srgb(),
+                    );
+                }
+            }
+            if temporal_recorded {
+                self.temporal_reset_pending = false;
+            }
+        }
+
+        if !temporal_recorded {
+            if use_hdr_scene {
+                if use_bloom {
+                    run_bloom_passes(
+                        &mut encoder,
+                        self.bloom.as_ref().expect("active bloom chain"),
+                        &self.queue,
+                        &self.device,
+                        &view,
+                        self.clear_color,
+                    );
+                } else if let Some(output) = self.output_chain.as_ref() {
+                    output.composite(&mut encoder, &view);
+                }
+            } else if let Some(output) = self.output_chain.as_ref() {
                 output.composite(&mut encoder, &view);
             }
         }
@@ -3373,7 +3519,7 @@ impl PortalGpu {
             // wgpu 30: SurfaceTexture::present() removed → Queue::present(frame).
             self.queue.present(frame);
         }
-        Ok(())
+        Ok(temporal_recorded)
     }
 
     /// Number of bytes required by [`Self::read_rgba8_into`].
@@ -3518,10 +3664,21 @@ mod tests {
             return;
         }
         assert!(!renderer.temporal_history_valid());
+        assert!(renderer.temporal_reset_pending());
+        let availability = renderer.temporal_producer_availability();
+        assert!(availability.scene_color);
+        assert!(!availability.linear_depth);
+        assert!(!availability.motion_vectors);
+        assert!(!availability.reactive_mask);
+        renderer.temporal_reset_pending = false;
+        renderer.set_camera(0.2, 0.3, 4.0);
+        assert!(renderer.temporal_reset_pending());
         renderer.invalidate_temporal_history();
         assert!(!renderer.temporal_history_valid());
+        assert!(renderer.temporal_reset_pending());
         assert_eq!(renderer.resize(48, 40).expect("resize"), (48, 40));
         assert!(!renderer.temporal_history_valid());
+        assert!(renderer.temporal_reset_pending());
         assert_eq!(renderer.temporal_resolve_gpu().map(|owner| owner.extent()), Some((48, 40)));
     }
 

@@ -39,12 +39,67 @@ struct OutputParams {
 /// `motion_vectors` are UV-space vectors pointing from the current pixel to its
 /// previous-frame location. `reactive_mask.r` is normalized to `[0, 1]`, where
 /// one rejects history. All views must have the helper's extent and one sample.
-pub struct TemporalResolveInputs<'a> {
+pub struct TemporalResolveInputs<'scene, 'producer> {
     pub extent: (u32, u32),
-    pub current_scene: &'a wgpu::TextureView,
-    pub current_linear_depth: &'a wgpu::TextureView,
-    pub motion_vectors: &'a wgpu::TextureView,
-    pub reactive_mask: &'a wgpu::TextureView,
+    pub current_scene: &'scene wgpu::TextureView,
+    pub current_linear_depth: &'producer wgpu::TextureView,
+    pub motion_vectors: &'producer wgpu::TextureView,
+    pub reactive_mask: &'producer wgpu::TextureView,
+}
+
+/// Producer views supplied by a host for one temporal frame.
+///
+/// Scene colour is owned by `PortalGpu`; these are the remaining producer views. The renderer
+/// deliberately does not reinterpret its depth-stencil attachment as linear depth. A host may
+/// omit any view while it is unavailable, in which case temporal output must remain disabled.
+#[derive(Clone, Copy, Default)]
+pub struct TemporalProducerViews<'a> {
+    pub extent: (u32, u32),
+    pub current_linear_depth: Option<&'a wgpu::TextureView>,
+    pub motion_vectors: Option<&'a wgpu::TextureView>,
+    pub reactive_mask: Option<&'a wgpu::TextureView>,
+}
+
+/// Explicit availability report for the renderer/host temporal handoff.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TemporalProducerAvailability {
+    pub scene_color: bool,
+    pub linear_depth: bool,
+    pub motion_vectors: bool,
+    pub reactive_mask: bool,
+}
+
+impl TemporalProducerAvailability {
+    pub const fn all_available(self) -> bool {
+        self.scene_color
+            && self.linear_depth
+            && self.motion_vectors
+            && self.reactive_mask
+    }
+}
+
+impl<'a> TemporalProducerViews<'a> {
+    pub fn availability(self, scene_color: bool) -> TemporalProducerAvailability {
+        TemporalProducerAvailability {
+            scene_color,
+            linear_depth: self.current_linear_depth.is_some(),
+            motion_vectors: self.motion_vectors.is_some(),
+            reactive_mask: self.reactive_mask.is_some(),
+        }
+    }
+
+    pub(super) fn into_inputs<'scene>(
+        self,
+        current_scene: &'scene wgpu::TextureView,
+    ) -> Option<TemporalResolveInputs<'scene, 'a>> {
+        Some(TemporalResolveInputs {
+            extent: self.extent,
+            current_scene,
+            current_linear_depth: self.current_linear_depth?,
+            motion_vectors: self.motion_vectors?,
+            reactive_mask: self.reactive_mask?,
+        })
+    }
 }
 
 /// GPU temporal resolve and explicit history publication owner.
@@ -255,7 +310,7 @@ impl TemporalResolveGpu {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
-        inputs: TemporalResolveInputs<'_>,
+        inputs: TemporalResolveInputs<'_, '_>,
         reset_history: bool,
         publish_history: bool,
     ) -> bool {
@@ -387,15 +442,15 @@ impl TemporalResolveGpu {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
-        inputs: TemporalResolveInputs<'_>,
+        inputs: TemporalResolveInputs<'_, '_>,
         target: &wgpu::TextureView,
         schedule: TemporalOutputSchedule,
         exposure_ev: f32,
         white_balance_gains: [f32; 3],
         surface_is_srgb: bool,
     ) -> bool {
-        if !schedule.is_complete()
-            || (schedule.reset_history && schedule.reads_history)
+        if !schedule.is_valid()
+            || (schedule.reads_history && !self.history_valid)
             || !exposure_ev.is_finite()
             || white_balance_gains
                 .iter()
@@ -422,7 +477,7 @@ impl TemporalResolveGpu {
         ) {
             return false;
         }
-        self.record_final_output(
+        let output_recorded = self.record_final_output(
             device,
             queue,
             encoder,
@@ -430,7 +485,11 @@ impl TemporalResolveGpu {
             exposure_ev,
             white_balance_gains,
             surface_is_srgb,
-        )
+        );
+        if !output_recorded {
+            self.invalidate_history();
+        }
+        output_recorded
     }
 
     /// Record the existing versioned SDR transform against the resolved scene.
@@ -633,6 +692,27 @@ mod tests {
         let reset = no_history + 2.0;
         assert_eq!(no_history, 0.0);
         assert_eq!(reset, 2.0);
+    }
+
+    #[test]
+    fn producer_availability_requires_every_real_input() {
+        let producers = TemporalProducerViews {
+            extent: (64, 64),
+            current_linear_depth: None,
+            motion_vectors: None,
+            reactive_mask: None,
+        };
+        assert_eq!(
+            producers.availability(true),
+            TemporalProducerAvailability {
+                scene_color: true,
+                linear_depth: false,
+                motion_vectors: false,
+                reactive_mask: false,
+            }
+        );
+        assert!(!producers.availability(true).all_available());
+        assert!(!producers.availability(false).all_available());
     }
 
     #[cfg(any(feature = "wgsl-forge", feature = "webgl2"))]
