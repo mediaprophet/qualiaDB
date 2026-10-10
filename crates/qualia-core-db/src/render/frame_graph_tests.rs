@@ -219,6 +219,9 @@ fn temporal_output_schedule_resolves_before_history_and_final_transform() {
         .position(|pass| *pass == Some(PassId::SdrOutputComposite))
         .expect("final output pass");
     assert!(temporal_idx < history_idx && history_idx < output_idx);
+    assert_eq!(schedule.temporal.reset_history, false);
+    assert!(schedule.temporal.is_complete());
+    assert!(schedule.temporal_order_is_valid());
 }
 
 #[test]
@@ -258,4 +261,45 @@ fn temporal_schedule_falls_back_without_reactive_or_motion_inputs() {
         .any(|pass| *pass == Some(PassId::TemporalResolve)));
     assert_eq!(schedule.passes[0], Some(PassId::ForwardLighting));
     assert_eq!(schedule.passes[1], Some(PassId::SdrOutputComposite));
+    assert_eq!(schedule.temporal, TemporalOutputSchedule::disabled());
+    assert!(schedule.temporal_order_is_valid());
+}
+
+#[test]
+fn temporal_schedule_reset_never_reads_previous_history() {
+    let mut builder = FrameGraphBuilder::new();
+    let profile = RenderQualityProfile {
+        tier: QualityTier::Balanced,
+        render_scale_bps: 10_000,
+        shadows_enabled: false,
+        shadow_map_dimension: 0,
+        shadow_cascade_count: 0,
+        ambient_occlusion_enabled: false,
+        ao_scale_bps: 0,
+        bloom_enabled: true,
+        bloom_levels: 2,
+        texture_residency_bytes: 256 * 1024 * 1024,
+        hdr_enabled: true,
+        volume_projection_enabled: false,
+    };
+    builder
+        .configure_from_profile_with_temporal(
+            &profile,
+            1280,
+            720,
+            TemporalResolveConfig {
+                enabled: true,
+                motion_vectors_available: true,
+                reactive_mask_available: true,
+                history_valid: false,
+                reset_history: true,
+            },
+        )
+        .expect("configure temporal reset");
+    let schedule = builder.compile(None).expect("compile temporal reset");
+    assert!(schedule.temporal.is_complete());
+    assert!(schedule.temporal.reset_history);
+    assert!(!schedule.temporal.reads_history);
+    assert!(schedule.temporal_order_is_valid());
+    assert!(schedule.pass_index(PassId::BloomComposite).is_some());
 }

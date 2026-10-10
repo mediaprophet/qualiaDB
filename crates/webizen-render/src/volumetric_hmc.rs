@@ -185,6 +185,86 @@ pub(crate) fn is_ktx2_mime(mime: &str) -> bool {
         .is_some_and(|m| m.eq_ignore_ascii_case("image/ktx2"))
 }
 
+const HMC_WATER_MAX_VERTICES: usize = 1_048_576;
+const HMC_WATER_MAX_INDICES: usize = 3_145_728;
+const HMC_WATER_DEFAULT_MAX_GEOMETRY_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Admission and presentation policy for a persistent HMC water surface.
+/// Geometry admission is independent from texture fallback: a refused water
+/// surface must never evict or replace an already resident surface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HmcWaterLoadPolicy {
+    pub max_geometry_bytes: u64,
+    /// 0 = lower tier, 1 = balanced, 2 = cinematic bounded response.
+    pub preferred_quality: u32,
+}
+
+impl Default for HmcWaterLoadPolicy {
+    fn default() -> Self {
+        Self {
+            max_geometry_bytes: HMC_WATER_DEFAULT_MAX_GEOMETRY_BYTES,
+            preferred_quality: 2,
+        }
+    }
+}
+
+pub(crate) fn validate_hmc_water_geometry(
+    positions: &[[f32; 3]],
+    triangles: &[[u32; 3]],
+    max_bytes: u64,
+) -> Result<u64, String> {
+    if positions.is_empty()
+        || triangles.is_empty()
+        || positions.len() > HMC_WATER_MAX_VERTICES
+        || triangles.len().saturating_mul(3) > HMC_WATER_MAX_INDICES
+    {
+        return Err("HMC water geometry exceeds bounded admission limits".to_string());
+    }
+    if positions
+        .iter()
+        .any(|position| position.iter().any(|value| !value.is_finite()))
+    {
+        return Err("HMC water geometry contains non-finite positions".to_string());
+    }
+    if triangles.iter().any(|triangle| {
+        triangle
+            .iter()
+            .any(|&index| index as usize >= positions.len())
+    }) {
+        return Err("HMC water geometry contains an out-of-range index".to_string());
+    }
+    let bytes = (positions.len() as u64)
+        .checked_mul(20)
+        .and_then(|value| value.checked_add((triangles.len() as u64).checked_mul(3 * 4)?))
+        .ok_or_else(|| "HMC water geometry byte size overflow".to_string())?;
+    if bytes > max_bytes {
+        return Err(format!(
+            "HMC water geometry exceeds admission budget: {bytes} > {max_bytes} bytes"
+        ));
+    }
+    Ok(bytes)
+}
+
+pub(crate) fn select_hmc_water_quality(
+    triangle_count: usize,
+    geometry_bytes: u64,
+    preferred_quality: u32,
+) -> u32 {
+    let preferred_quality = preferred_quality.min(2);
+    if preferred_quality == 0 {
+        return 0;
+    }
+    // Larger surfaces retain authoritative depth and stable normals but use
+    // the lower-cost bounded reflection/foam response.
+    if triangle_count > 750_000 || geometry_bytes > 32 * 1024 * 1024 {
+        0
+    } else if triangle_count > 250_000 || geometry_bytes > 12 * 1024 * 1024 {
+        preferred_quality.min(1)
+    } else {
+        preferred_quality
+    }
+}
+
 fn extract_texture_uses(
     asset_bytes: &[u8],
     descs: &[SectionDescriptor],
@@ -717,6 +797,17 @@ pub fn load_hmc_water_asset(
     hmc_bytes: &[u8],
     asset_key: &str,
 ) -> Result<(u32, u32), String> {
+    load_hmc_water_asset_with_policy(renderer, hmc_bytes, asset_key, HmcWaterLoadPolicy::default())
+}
+
+/// Policy-bearing HMC water load. Validation and admission happen before any
+/// GPU replacement, so failed loads leave the previous water surface intact.
+pub fn load_hmc_water_asset_with_policy(
+    renderer: &mut super::VolumetricRenderer,
+    hmc_bytes: &[u8],
+    asset_key: &str,
+    policy: HmcWaterLoadPolicy,
+) -> Result<(u32, u32), String> {
     let bundle = qualia_core_db::bundle::BundleReader::parse(hmc_bytes)
         .map_err(|e| format!("HMC bundle: {e}"))?;
     let asset_bytes = bundle
@@ -752,7 +843,15 @@ pub fn load_hmc_water_asset(
         .ok_or_else(|| "HMC water mesh section is outside asset bytes".to_string())?;
     let mesh = decode_mesh_section(&asset_bytes[start..end])
         .map_err(|e| format!("10d water mesh decode: {e}"))?;
-    let mut indices = Vec::with_capacity(mesh.triangles.len().saturating_mul(3));
+    let geometry_bytes = validate_hmc_water_geometry(
+        &mesh.positions,
+        &mesh.triangles,
+        policy.max_geometry_bytes,
+    )?;
+    let mut indices = Vec::new();
+    indices
+        .try_reserve_exact(mesh.triangles.len().saturating_mul(3))
+        .map_err(|_| "HMC water index staging allocation refused".to_string())?;
     for triangle in &mesh.triangles {
         indices.extend_from_slice(triangle);
     }
@@ -762,6 +861,11 @@ pub fn load_hmc_water_asset(
         .map_err(|_| "HMC water triangle count exceeds u32".to_string())?;
     renderer
         .inner
-        .upload_water_geometry(&mesh.positions, &indices)?;
+        .upload_water_geometry_with_budget(&mesh.positions, &indices, policy.max_geometry_bytes)?;
+    renderer.inner.set_water_quality(select_hmc_water_quality(
+        mesh.triangles.len(),
+        geometry_bytes,
+        policy.preferred_quality,
+    ));
     Ok((vertex_count, triangle_count))
 }

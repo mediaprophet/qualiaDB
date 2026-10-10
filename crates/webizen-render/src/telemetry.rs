@@ -239,6 +239,28 @@ impl SystemTelemetry {
         *self = Self::default();
     }
 
+    /// Combined normalized drive for deterministic ambient wind/effects.
+    /// Existing telemetry fields retain their individual meanings; this is a
+    /// derived view for optional effects and does not change the GPU contract.
+    #[inline]
+    pub fn ambient_wind_strength(&self) -> f32 {
+        (self.network_ripple * 0.7
+            + self.temporal_pulse * 0.2
+            + self.manifold_pressure * 0.1)
+            .clamp(0.0, 1.0)
+    }
+
+    /// Stable world-frame index used by CPU effect admission and shader wind.
+    #[inline]
+    pub fn ambient_world_frame(time_seconds: f32) -> u32 {
+        let time_seconds = if time_seconds.is_finite() {
+            time_seconds.max(0.0)
+        } else {
+            0.0
+        };
+        (time_seconds * 60.0).floor().min(u32::MAX as f32) as u32
+    }
+
     /// Convert the telemetry struct to a byte array for GPU transfer.
     ///
     /// # Returns
@@ -327,5 +349,16 @@ mod tests {
         let telemetry2 = telemetry1; // Should copy, not move
         assert_eq!(telemetry1.memory_pressure, 0.0);
         assert_eq!(telemetry2.memory_pressure, 0.0);
+    }
+
+    #[test]
+    fn ambient_helpers_are_derived_and_stable() {
+        let mut telemetry = SystemTelemetry::new();
+        telemetry.set_network_ripple(0.8);
+        telemetry.set_temporal_pulse(0.5);
+        telemetry.set_manifold_pressure(0.2);
+        assert!((telemetry.ambient_wind_strength() - 0.68).abs() < 1e-6);
+        assert_eq!(SystemTelemetry::ambient_world_frame(1.0), 60);
+        assert_eq!(SystemTelemetry::ambient_world_frame(f32::NAN), 0);
     }
 }

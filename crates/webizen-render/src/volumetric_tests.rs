@@ -541,3 +541,30 @@ fn lighting_and_ao_quality_evaluation_integration() {
     let sum: f32 = weights.iter().sum();
     assert!((sum - 1.0).abs() < 1e-4);
 }
+
+#[test]
+fn hmc_water_geometry_admission_rejects_non_finite_and_budget_overflow() {
+    use crate::volumetric_hmc::validate_hmc_water_geometry;
+
+    let positions = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]];
+    assert_eq!(validate_hmc_water_geometry(&positions, &[[0, 1, 2]], 1024), Ok(72));
+    assert!(validate_hmc_water_geometry(&positions, &[[0, 1, 2]], 71).is_err());
+    assert!(validate_hmc_water_geometry(
+        &[[0.0, f32::NAN, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+        &[[0, 1, 2]],
+        1024,
+    )
+    .is_err());
+    assert!(validate_hmc_water_geometry(&positions, &[[0, 1, 3]], 1024).is_err());
+}
+
+#[test]
+fn hmc_water_quality_falls_back_without_changing_geometry_admission() {
+    use crate::volumetric_hmc::{select_hmc_water_quality, HmcWaterLoadPolicy};
+
+    assert_eq!(HmcWaterLoadPolicy::default().preferred_quality, 2);
+    assert_eq!(select_hmc_water_quality(10, 1024, 2), 2);
+    assert_eq!(select_hmc_water_quality(300_001, 1024, 2), 1);
+    assert_eq!(select_hmc_water_quality(750_001, 1024, 2), 0);
+    assert_eq!(select_hmc_water_quality(10, 1024, 0), 0);
+}

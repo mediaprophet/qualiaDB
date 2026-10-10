@@ -12,6 +12,9 @@
 
 use wgpu;
 
+#[path = "vegetation_effects.rs"]
+pub mod vegetation_effects;
+
 /// 3D vector for world-space coordinates
 #[derive(Debug, Clone, Copy)]
 pub struct Vec3 {
@@ -375,13 +378,10 @@ impl Default for AmbientConfig {
     }
 }
 
-/// Particle instance data for ambient visualization
-#[repr(C)]
-#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
-struct ParticleInstance {
-    position: [f32; 3],
-    _padding: f32,
-}
+/// Particle instance data for ambient visualization. The seed is stable for
+/// the lifetime of the pool and drives world-frame wind in WGSL.
+#[cfg(not(feature = "qualia"))]
+type ParticleInstance = vegetation_effects::GpuParticle;
 
 /// Uniform buffer for ambient shader
 #[repr(C)]
@@ -390,7 +390,7 @@ struct AmbientUniforms {
     time: f32,
     view_width: f32,
     view_height: f32,
-    _padding: f32,
+    world_frame: u32,
 }
 
 /// WGPU-based renderer implementation
@@ -424,6 +424,8 @@ pub struct WgpuRenderer<'a> {
     telemetry_buffer: Option<wgpu::Buffer>,
     #[cfg(not(feature = "qualia"))]
     particle_count: usize,
+    #[cfg(not(feature = "qualia"))]
+    ambient_effects: vegetation_effects::EffectPool,
 }
 
 impl<'a> WgpuRenderer<'a> {
@@ -471,6 +473,7 @@ impl<'a> WgpuRenderer<'a> {
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
+            ambient_effects,
         ) = Self::ambient_fields(&device, width, height);
 
         Ok(Self {
@@ -501,6 +504,8 @@ impl<'a> WgpuRenderer<'a> {
             telemetry_buffer,
             #[cfg(not(feature = "qualia"))]
             particle_count,
+            #[cfg(not(feature = "qualia"))]
+            ambient_effects,
         })
     }
 
@@ -549,6 +554,7 @@ impl<'a> WgpuRenderer<'a> {
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
+            ambient_effects,
         ) = Self::ambient_fields(&device, width, height);
 
         Ok(WgpuRenderer {
@@ -581,6 +587,8 @@ impl<'a> WgpuRenderer<'a> {
             telemetry_buffer,
             #[cfg(not(feature = "qualia"))]
             particle_count,
+            #[cfg(not(feature = "qualia"))]
+            ambient_effects,
         })
     }
 
@@ -596,6 +604,7 @@ impl<'a> WgpuRenderer<'a> {
         Option<wgpu::Buffer>,
         Option<wgpu::Buffer>,
         usize,
+        vegetation_effects::EffectPool,
     ) {
         let ambient_config = AmbientConfig::default();
         let (
@@ -604,7 +613,13 @@ impl<'a> WgpuRenderer<'a> {
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
-        ) = Self::init_ambient_visualization(device, &ambient_config, width, height);
+            ambient_effects,
+        ) = Self::init_ambient_visualization(
+            device,
+            &ambient_config,
+            width,
+            height,
+        );
         (
             ambient_config,
             ambient_pipeline,
@@ -612,6 +627,7 @@ impl<'a> WgpuRenderer<'a> {
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
+            ambient_effects,
         )
     }
 
@@ -878,30 +894,27 @@ impl<'a> WgpuRenderer<'a> {
         Option<wgpu::Buffer>,
         Option<wgpu::Buffer>,
         usize,
+        vegetation_effects::EffectPool,
     ) {
         if !config.enabled {
-            return (None, None, None, None, 0);
+            return (
+                None,
+                None,
+                None,
+                None,
+                0,
+                vegetation_effects::EffectPool::new(0, vegetation_effects::DEFAULT_WORLD_SEED),
+            );
         }
 
-        // Generate random particle positions (zero-heap: stack-based RNG)
-        let particle_count = config.particle_count;
-        let mut particles: Vec<ParticleInstance> = Vec::with_capacity(particle_count);
-        let mut rng_seed: u32 = 12345;
-
-        for _ in 0..particle_count {
-            // Simple linear congruential generator (stack-based, no heap)
-            rng_seed = rng_seed.wrapping_mul(1103515245).wrapping_add(12345);
-            let x = (rng_seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
-            rng_seed = rng_seed.wrapping_mul(1103515245).wrapping_add(12345);
-            let y = (rng_seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
-            rng_seed = rng_seed.wrapping_mul(1103515245).wrapping_add(12345);
-            let z = (rng_seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
-
-            particles.push(ParticleInstance {
-                position: [x, y, z],
-                _padding: 0.0,
-            });
-        }
+        // Seed generation is a cold-path operation owned by the fixed-capacity
+        // pool. The GPU consumes this stable slice and evaluates wind per frame.
+        let effects = vegetation_effects::EffectPool::new(
+            config.particle_count,
+            vegetation_effects::DEFAULT_WORLD_SEED,
+        );
+        let particle_count = effects.capacity();
+        let particles = effects.particles();
 
         // Create particle buffer (storage buffer for instanced rendering)
         let particle_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -915,6 +928,7 @@ impl<'a> WgpuRenderer<'a> {
         particle_buffer
             .slice(..)
             .get_mapped_range_mut()
+            .expect("ambient particle buffer was mapped at creation")
             .copy_from_slice(bytemuck::cast_slice(&particles));
         particle_buffer.unmap();
 
@@ -943,6 +957,7 @@ impl<'a> WgpuRenderer<'a> {
             Some(ambient_uniform_buffer),
             Some(telemetry_buffer),
             particle_count,
+            effects,
         )
     }
 
@@ -1350,6 +1365,37 @@ impl<'a> WgpuRenderer<'a> {
     #[cfg(not(feature = "qualia"))]
     pub fn get_ambient_config(&self) -> AmbientConfig {
         self.ambient_config
+    }
+
+    /// Queue a bounded ambient effect. Events are admitted without allocation;
+    /// the pool replaces the lowest-priority/oldest slot when it is saturated.
+    /// The GPU buffer is refreshed only on this event path, never every frame.
+    #[cfg(not(feature = "qualia"))]
+    pub fn emit_ambient_effect(
+        &mut self,
+        event: vegetation_effects::EffectEvent,
+        time_seconds: f32,
+    ) -> vegetation_effects::SpawnOutcome {
+        let outcome = self.ambient_effects.emit(event);
+        if matches!(outcome, vegetation_effects::SpawnOutcome::Queued) {
+            let frame = vegetation_effects::WorldFrame::from_time(
+                time_seconds,
+                vegetation_effects::DEFAULT_WORLD_SEED,
+            );
+            let telemetry = crate::telemetry::SystemTelemetry::default();
+            self.ambient_effects.update(
+                frame,
+                vegetation_effects::WindField::from_telemetry(&telemetry),
+            );
+            if let Some(buffer) = &self.particle_buffer {
+                self.queue.write_buffer(
+                    buffer,
+                    0,
+                    bytemuck::cast_slice(self.ambient_effects.particles()),
+                );
+            }
+        }
+        outcome
     }
 
     /// Clear the frame to a solid background color
@@ -1774,7 +1820,11 @@ pub fn render_scene_png_with_time_and_telemetry(
                     time: time_seconds as f32,
                     view_width: w as f32,
                     view_height: h as f32,
-                    _padding: 0.0,
+                    world_frame: vegetation_effects::WorldFrame::from_time(
+                        time_seconds as f32,
+                        vegetation_effects::DEFAULT_WORLD_SEED,
+                    )
+                    .index,
                 };
                 renderer.queue.write_buffer(
                     ambient_uniform_buffer,

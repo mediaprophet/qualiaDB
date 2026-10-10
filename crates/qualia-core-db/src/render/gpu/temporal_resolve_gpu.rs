@@ -8,6 +8,7 @@
 use std::num::NonZeroU64;
 
 use crate::gpu_context::{global_vram_ledger, VramReservation, VramResourceClass};
+use crate::render::frame_graph::TemporalOutputSchedule;
 
 const DEPTH_HISTORY_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
 const DEPTH_DISOCCLUSION_THRESHOLD: f32 = 0.01;
@@ -229,6 +230,10 @@ impl TemporalResolveGpu {
         self.history_valid
     }
 
+    pub fn resolved_ready(&self) -> bool {
+        self.resolved_ready
+    }
+
     /// Discard history after a resize, camera cut, seek, or device recovery.
     pub fn invalidate_history(&mut self) {
         self.history_valid = false;
@@ -372,6 +377,62 @@ impl TemporalResolveGpu {
         true
     }
 
+    /// Record the complete renderer-owned temporal handoff in schedule order.
+    ///
+    /// This is the explicit host submission seam: the host supplies all producer views and an
+    /// output target, while this owner records resolve, history publication, and final output in
+    /// that order. A disabled or incomplete schedule fails closed before any command is recorded.
+    pub fn record_scheduled_output(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        encoder: &mut wgpu::CommandEncoder,
+        inputs: TemporalResolveInputs<'_>,
+        target: &wgpu::TextureView,
+        schedule: TemporalOutputSchedule,
+        exposure_ev: f32,
+        white_balance_gains: [f32; 3],
+        surface_is_srgb: bool,
+    ) -> bool {
+        if !schedule.is_complete()
+            || (schedule.reset_history && schedule.reads_history)
+            || !exposure_ev.is_finite()
+            || white_balance_gains
+                .iter()
+                .any(|gain| !gain.is_finite() || *gain < 0.0)
+        {
+            return false;
+        }
+        let Some(_exposure) = crate::render::output::exposure_scale_from_ev(exposure_ev) else {
+            return false;
+        };
+        // The graph's lifecycle state is authoritative for this submission. This prevents a
+        // stale owner-side history from being read when the scheduler deliberately starts a
+        // frame without previous-frame history but does not need a destructive reset request.
+        if !schedule.reads_history {
+            self.history_valid = false;
+        }
+        if !self.record_resolve(
+            device,
+            queue,
+            encoder,
+            inputs,
+            schedule.reset_history,
+            schedule.publish_history,
+        ) {
+            return false;
+        }
+        self.record_final_output(
+            device,
+            queue,
+            encoder,
+            target,
+            exposure_ev,
+            white_balance_gains,
+            surface_is_srgb,
+        )
+    }
+
     /// Record the existing versioned SDR transform against the resolved scene.
     ///
     /// This is an explicit handoff, not an automatic second output pass. Hosts
@@ -388,7 +449,9 @@ impl TemporalResolveGpu {
     ) -> bool {
         if !self.resolved_ready
             || !exposure_ev.is_finite()
-            || white_balance_gains.iter().any(|gain| !gain.is_finite())
+            || white_balance_gains
+                .iter()
+                .any(|gain| !gain.is_finite() || *gain < 0.0)
         {
             return false;
         }

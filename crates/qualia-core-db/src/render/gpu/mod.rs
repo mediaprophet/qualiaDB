@@ -2480,6 +2480,50 @@ impl PortalGpu {
         self.temporal_resolve.as_mut()
     }
 
+    /// Whether the renderer-owned temporal history currently contains a published frame.
+    pub fn temporal_history_valid(&self) -> bool {
+        self.temporal_resolve
+            .as_ref()
+            .is_some_and(temporal_resolve_gpu::TemporalResolveGpu::history_valid)
+    }
+
+    /// Drop temporal history after a camera cut, seek, or host-owned discontinuity.
+    pub fn invalidate_temporal_history(&mut self) {
+        if let Some(temporal) = self.temporal_resolve.as_mut() {
+            temporal.invalidate_history();
+        }
+    }
+
+    /// Record a scheduled temporal output using real host producer views.
+    ///
+    /// `PortalGpu::render` intentionally does not fabricate motion vectors, reactive masks, or
+    /// linear-depth views. Hosts that own those attachments call this seam with their command
+    /// encoder before submission. It records resolve → history publication → final output and
+    /// returns `false` without recording when the optional owner is unavailable or the schedule
+    /// is not a complete temporal handoff.
+    pub fn record_scheduled_temporal_output(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        inputs: temporal_resolve_gpu::TemporalResolveInputs<'_>,
+        target: &wgpu::TextureView,
+        schedule: crate::render::frame_graph::TemporalOutputSchedule,
+    ) -> bool {
+        let Some(temporal) = self.temporal_resolve.as_mut() else {
+            return false;
+        };
+        temporal.record_scheduled_output(
+            &self.device,
+            &self.queue,
+            encoder,
+            inputs,
+            target,
+            schedule,
+            self.hdr_exposure_ev,
+            self.white_balance_gains,
+            self.color_format.is_srgb(),
+        )
+    }
+
     // VC3 test helpers — expose uniform belt internals for allocation measurement.
     #[cfg(test)]
     pub(crate) fn uniform_belt_write_and_unmap(&mut self, data: &[u8]) {
@@ -3458,6 +3502,27 @@ mod tests {
         assert_eq!(padded_bytes_per_row(1), wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
         assert_eq!(padded_bytes_per_row(64), 256);
         assert_eq!(padded_bytes_per_row(65), 512);
+    }
+
+    #[test]
+    #[serial_test::serial(gpu)]
+    fn temporal_owner_is_optional_and_resize_resets_history() {
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
+        let mut renderer = PortalGpu::new_offscreen(32, 24, 0).expect("offscreen renderer");
+        // VRAM admission may intentionally decline the optional temporal owner. In that case
+        // the renderer remains valid and the host submission seam must fail closed.
+        if renderer.temporal_resolve_gpu().is_none() {
+            assert!(!renderer.temporal_history_valid());
+            return;
+        }
+        assert!(!renderer.temporal_history_valid());
+        renderer.invalidate_temporal_history();
+        assert!(!renderer.temporal_history_valid());
+        assert_eq!(renderer.resize(48, 40).expect("resize"), (48, 40));
+        assert!(!renderer.temporal_history_valid());
+        assert_eq!(renderer.temporal_resolve_gpu().map(|owner| owner.extent()), Some((48, 40)));
     }
 
     #[test]

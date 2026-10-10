@@ -154,6 +154,71 @@ pub struct CompiledSchedule {
     pub pass_count: usize,
     pub peak_transient_bytes: u64,
     pub total_resource_bytes: u64,
+    /// The renderer-owned temporal handoff contract for this schedule.
+    ///
+    /// This is deliberately separate from the resource DAG: previous-frame history is
+    /// persistent state, not a same-frame producer. Backends use this contract to submit real
+    /// producer views through their explicit temporal seam.
+    pub temporal: TemporalOutputSchedule,
+}
+
+/// Ordered temporal handoff selected while compiling a frame graph.
+///
+/// `TemporalResolveGpu` consumes this contract rather than guessing whether a host has supplied
+/// the required motion-vector, reactive-mask, and linear-depth views. A disabled contract must
+/// leave the existing output path untouched.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TemporalOutputSchedule {
+    pub enabled: bool,
+    pub reset_history: bool,
+    pub reads_history: bool,
+    pub publish_history: bool,
+    pub final_output: bool,
+}
+
+impl TemporalOutputSchedule {
+    pub const fn disabled() -> Self {
+        Self {
+            enabled: false,
+            reset_history: false,
+            reads_history: false,
+            publish_history: false,
+            final_output: false,
+        }
+    }
+
+    pub const fn fail_closed() -> Self {
+        Self::disabled()
+    }
+
+    pub const fn is_complete(self) -> bool {
+        self.enabled && self.publish_history && self.final_output
+    }
+}
+
+impl CompiledSchedule {
+    pub fn pass_index(&self, id: PassId) -> Option<usize> {
+        self.passes[..self.pass_count]
+            .iter()
+            .position(|pass| *pass == Some(id))
+    }
+
+    /// Check the backend handoff order selected by the DAG compiler.
+    pub fn temporal_order_is_valid(&self) -> bool {
+        if !self.temporal.enabled {
+            return true;
+        }
+        let Some(resolve) = self.pass_index(PassId::TemporalResolve) else {
+            return false;
+        };
+        let Some(publication) = self.pass_index(PassId::HistoryPublication) else {
+            return false;
+        };
+        let output = self
+            .pass_index(PassId::BloomComposite)
+            .or_else(|| self.pass_index(PassId::SdrOutputComposite));
+        output.is_some_and(|output| resolve < publication && publication < output)
+    }
 }
 
 /// Deterministic, stack-allocated frame graph builder and scheduler.
@@ -162,6 +227,7 @@ pub struct FrameGraphBuilder {
     pass_count: usize,
     resources: [Option<ResourceDesc>; MAX_RESOURCES],
     resource_count: usize,
+    temporal: TemporalOutputSchedule,
 }
 
 impl Default for FrameGraphBuilder {
@@ -177,6 +243,7 @@ impl FrameGraphBuilder {
             pass_count: 0,
             resources: [None; MAX_RESOURCES],
             resource_count: 0,
+            temporal: TemporalOutputSchedule::disabled(),
         }
     }
 
@@ -233,6 +300,19 @@ impl FrameGraphBuilder {
         viewport_height: u32,
         temporal: TemporalResolveConfig,
     ) -> Result<(), FrameGraphError> {
+        // A builder may be reused by a backend. Do not let a previous temporal plan leak into a
+        // later non-temporal configuration if the caller did not construct a fresh builder.
+        self.temporal = if temporal.can_schedule() {
+            TemporalOutputSchedule {
+                enabled: true,
+                reset_history: temporal.reset_history,
+                reads_history: temporal.reads_history(),
+                publish_history: true,
+                final_output: true,
+            }
+        } else {
+            TemporalOutputSchedule::fail_closed()
+        };
         let render_w =
             ((viewport_width as u64 * profile.render_scale_bps as u64) / 10_000).max(1) as u32;
         let render_h =
@@ -520,6 +600,7 @@ impl FrameGraphBuilder {
             pass_count: scheduled_count,
             peak_transient_bytes,
             total_resource_bytes: total_bytes,
+            temporal: self.temporal,
         })
     }
 }

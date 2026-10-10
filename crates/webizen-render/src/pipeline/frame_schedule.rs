@@ -4,7 +4,9 @@
 //! across native and WASM render adapters. Strictly zero-heap in execution.
 
 #[cfg(feature = "qualia")]
-use qualia_core_db::render::frame_graph::{CompiledSchedule, FrameGraphBuilder, FrameGraphError};
+use qualia_core_db::render::frame_graph::{
+    CompiledSchedule, FrameGraphBuilder, FrameGraphError, TemporalOutputSchedule,
+};
 #[cfg(feature = "qualia")]
 use qualia_core_db::render::quality_profiles::RenderQualityProfile;
 #[cfg(feature = "qualia")]
@@ -14,6 +16,18 @@ use qualia_core_db::render::temporal_resolve::TemporalResolveConfig;
 #[cfg(feature = "qualia")]
 pub struct WebizenFrameScheduler {
     builder: FrameGraphBuilder,
+}
+
+/// Return the only temporal handoff that a backend may submit for a compiled frame.
+///
+/// The scheduler does not own GPU attachments. It supplies the ordered contract; the host must
+/// provide real producer views through `PortalGpu::record_scheduled_temporal_output`.
+#[cfg(feature = "qualia")]
+pub fn temporal_submission_schedule(
+    schedule: &CompiledSchedule,
+) -> Option<TemporalOutputSchedule> {
+    (schedule.temporal.is_complete() && schedule.temporal_order_is_valid())
+        .then_some(schedule.temporal)
 }
 
 #[cfg(feature = "qualia")]
@@ -102,6 +116,7 @@ mod tests {
 
         assert!(schedule.pass_count > 0);
         assert!(schedule.total_resource_bytes > 0);
+        assert!(temporal_submission_schedule(&schedule).is_none());
     }
 
     #[test]
@@ -143,5 +158,11 @@ mod tests {
         assert!(passes.iter().any(|pass| {
             *pass == Some(qualia_core_db::render::frame_graph::PassId::HistoryPublication)
         }));
+        let temporal = temporal_submission_schedule(&schedule).expect("ordered temporal seam");
+        assert!(temporal.enabled);
+        assert!(temporal.reset_history);
+        assert!(!temporal.reads_history);
+        assert!(temporal.publish_history && temporal.final_output);
+        assert!(schedule.temporal_order_is_valid());
     }
 }
