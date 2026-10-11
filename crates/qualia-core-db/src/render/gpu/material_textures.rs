@@ -1,4 +1,4 @@
-//! Fixed WebGPU texture slots, bounded sampler cache and fallback texels for MAT3 materials.
+//! Fixed WebGPU texture slots, bounded sampler cache and fallback texels for MAT4 materials.
 
 use crate::container_10d::{
     TextureAddressMode, TextureFilterMode, TextureMinFilter, TextureSampler,

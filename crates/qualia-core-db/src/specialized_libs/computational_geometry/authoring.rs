@@ -22,6 +22,10 @@ use crate::container_10d::{
 use crate::render::assets::Mesh;
 use crate::tensor::Tensor10D;
 
+#[path = "authoring_loft.rs"]
+mod loft;
+pub use loft::{loft_convex_sections_into, ClosedLoftReceipt};
+
 // ───────────────────────────────────────────────────────────────────────────
 //  Error types
 // ───────────────────────────────────────────────────────────────────────────

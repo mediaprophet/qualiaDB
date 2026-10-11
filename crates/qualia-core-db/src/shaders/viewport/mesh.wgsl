@@ -29,7 +29,7 @@ struct Material {
     base_color: vec4<f32>,
     emissive: vec4<f32>,
     factors: vec4<f32>, // metallic, roughness, dielectric specular, alpha cutoff
-    flags: vec4<u32>,   // model: 0 physical / 1 stylized; multiply vertex colour
+    flags: vec4<u32>,   // model; vertex colour; bit 0 wind / bit 1 double-sided; receives shadow
     texture_flags: vec4<u32>, // base, normal, metallic-roughness, occlusion
     texture_flags_extra: vec4<u32>, // emissive, stylized ramp, AO strength bits, normal scale bits
     coverage: vec4<u32>, // 0 opaque, 1 mask, 2 blend
@@ -307,8 +307,17 @@ fn vertex_main(
 ) -> VertexOutput {
     var output: VertexOutput;
     let instance = mesh_instances[instance_index];
+    var local_position = position;
+    if ((material.flags.z & 1u) != 0u) {
+        // Wind belongs to the material/render path: broad, slow canopy motion
+        // that fades near the ground and stays deterministic for a given frame.
+        let height_weight = clamp(local_position.y * 0.8, 0.08, 1.0);
+        let time = camera._padding0.x;
+        local_position.x += sin(time * 1.35 + position.z * 0.62) * 0.12 * height_weight;
+        local_position.z += cos(time * 1.05 + position.x * 0.48) * 0.045 * height_weight;
+    }
     let instance_model = model * instance.world_from_local;
-    let world = (instance_model * vec4<f32>(position, 1.0)).xyz;
+    let world = (instance_model * vec4<f32>(local_position, 1.0)).xyz;
     output.normal = normalize((model * vec4<f32>(instance.normal_from_local * normal, 0.0)).xyz);
     let tangent_world = (instance_model * vec4<f32>(tangent.xyz, 0.0)).xyz;
     output.tangent = vec4<f32>(

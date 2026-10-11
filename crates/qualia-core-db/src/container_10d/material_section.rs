@@ -1,21 +1,24 @@
 //! Versioned `.10d` material and submesh sidecar.
 //!
-//! MAT3 stores linear factors, stable texture digests, per-slot UV transforms and sampler state;
-//! readers remain compatible with MAT1 and MAT2. Texture payloads remain in HMC/asset dependencies.
+//! MAT4 stores the MAT3 material contract plus an explicit foliage-wind flag;
+//! readers remain compatible with MAT1, MAT2 and MAT3. Texture payloads remain in HMC/asset dependencies.
 //! Materials and submesh ranges are cold-path data encoded with caller buffers and bounded counts.
 
-pub const MATERIAL_SECTION_VERSION: u16 = 3;
+pub const MATERIAL_SECTION_VERSION: u16 = 4;
 pub const MATERIAL_SECTION_HEADER_SIZE: usize = 24;
-pub const MATERIAL_RECORD_SIZE: usize = 448;
+pub const MATERIAL_RECORD_SIZE: usize = 464;
+pub const PREVIOUS_MATERIAL_RECORD_SIZE: usize = 448;
 pub const MATERIAL_V1_RECORD_SIZE: usize = 256;
 pub const SUBMESH_RANGE_SIZE: usize = 24;
 pub const MAX_MATERIALS: usize = 4096;
 pub const MAX_SUBMESH_RANGES: usize = 1_048_576;
 pub const MAX_EMISSIVE_FACTOR: f32 = 65_504.0;
 pub const TEXTURE_SAMPLER_RECORD_SIZE: usize = 8;
-pub(super) const MAGIC: [u8; 4] = *b"MAT3";
-pub(super) const PREVIOUS_MAGIC: [u8; 4] = *b"MAT2";
-pub(super) const PREVIOUS_VERSION: u16 = 2;
+pub(super) const MAGIC: [u8; 4] = *b"MAT4";
+pub(super) const PREVIOUS_MAGIC: [u8; 4] = *b"MAT3";
+pub(super) const PREVIOUS_VERSION: u16 = 3;
+pub(super) const PREVIOUS_PREVIOUS_MAGIC: [u8; 4] = *b"MAT2";
+pub(super) const PREVIOUS_PREVIOUS_VERSION: u16 = 2;
 pub(super) const LEGACY_MAGIC: [u8; 4] = *b"MAT1";
 pub(super) const LEGACY_VERSION: u16 = 1;
 const FLAG_DOUBLE_SIDED: u16 = 1 << 0;
@@ -178,6 +181,8 @@ pub struct MaterialRecord {
     pub receives_shadow: bool,
     pub pickable: bool,
     pub multiply_vertex_color: bool,
+    /// Enables the renderer's restrained, time-based vertex wind response.
+    pub wind_animated: bool,
     pub base_color: [f32; 4],
     pub emissive: [f32; 3],
     pub metallic: f32,
@@ -213,6 +218,7 @@ impl MaterialRecord {
             receives_shadow: true,
             pickable: true,
             multiply_vertex_color: true,
+            wind_animated: false,
             base_color: [1.0, 1.0, 1.0, 1.0],
             emissive: [0.0, 0.0, 0.0],
             metallic: 0.0,
@@ -266,7 +272,7 @@ pub enum MaterialSectionError {
 
 impl std::fmt::Display for MaterialSectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, ".10d MAT3/MAT2/MAT1 material section: {self:?}")
+        write!(f, ".10d MAT4/MAT3/MAT2/MAT1 material section: {self:?}")
     }
 }
 
@@ -286,7 +292,7 @@ pub fn encoded_len(material_count: usize, range_count: usize) -> Option<usize> {
         .checked_add(range_count.checked_mul(SUBMESH_RANGE_SIZE)?)
 }
 
-/// Write the current canonical MAT3 section into a caller-owned output buffer.
+/// Write the current canonical MAT4 section into a caller-owned output buffer.
 pub fn encode_material_section(
     materials: &[MaterialRecord],
     ranges: &[SubmeshRange],
@@ -296,7 +302,7 @@ pub fn encode_material_section(
     super::material_section_codec::encode(materials, ranges, mesh_index_count, out)
 }
 
-/// Decode MAT1, MAT2 or MAT3 into caller-owned arrays. Both outputs must fit the encoded counts.
+/// Decode MAT1 through MAT4 into caller-owned arrays. Both outputs must fit the encoded counts.
 pub fn decode_material_section_into(
     bytes: &[u8],
     mesh_index_count: u32,
@@ -306,12 +312,12 @@ pub fn decode_material_section_into(
     super::material_section_codec::decode(bytes, mesh_index_count, materials_out, ranges_out)
 }
 
-/// Inspect validated MAT1/MAT2/MAT3 layout/counts without allocating output records.
+/// Inspect validated MAT1–MAT4 layout/counts without allocating output records.
 pub fn material_section_counts(bytes: &[u8]) -> Result<(usize, usize), MaterialSectionError> {
     super::material_section_codec::counts(bytes)
 }
 
-/// Validate material/range arrays with the exact rules used by MAT3 encoding.
+/// Validate material/range arrays with the exact rules used by MAT4 encoding.
 pub fn validate_material_bindings(
     materials: &[MaterialRecord],
     ranges: &[SubmeshRange],
@@ -477,6 +483,7 @@ pub(super) fn decode_material(
         receives_shadow: flags & FLAG_RECEIVES_SHADOW != 0,
         pickable: flags & FLAG_PICKABLE != 0,
         multiply_vertex_color: flags & FLAG_VERTEX_COLOR_MULTIPLY != 0,
+        wind_animated: false,
         base_color: values[..4].try_into().expect("fixed material base color"),
         emissive: values[4..7].try_into().expect("fixed material emissive"),
         metallic: values[7],

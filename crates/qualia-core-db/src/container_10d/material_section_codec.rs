@@ -1,11 +1,12 @@
-//! MAT3 writer and versioned MAT1/MAT2/MAT3 reader for the `.10d` material part.
+//! MAT4 writer and versioned MAT1–MAT4 reader for the `.10d` material part.
 
 use super::material_section::{
     decode_material, encode_material, encoded_len, read_u16, read_u32, read_u64, validate_records,
     MaterialRecord, MaterialSectionError, SubmeshRange, TextureAddressMode, TextureFilterMode,
     TextureMinFilter, LEGACY_MAGIC, LEGACY_VERSION, MAGIC, MATERIAL_RECORD_SIZE,
     MATERIAL_SECTION_HEADER_SIZE, MATERIAL_SECTION_VERSION, MATERIAL_V1_RECORD_SIZE, MAX_MATERIALS,
-    MAX_SUBMESH_RANGES, PREVIOUS_MAGIC, PREVIOUS_VERSION, SUBMESH_RANGE_SIZE,
+    MAX_SUBMESH_RANGES, PREVIOUS_MAGIC, PREVIOUS_MATERIAL_RECORD_SIZE, PREVIOUS_PREVIOUS_MAGIC,
+    PREVIOUS_PREVIOUS_VERSION, PREVIOUS_VERSION, SUBMESH_RANGE_SIZE,
     TEXTURE_SAMPLER_RECORD_SIZE,
 };
 
@@ -72,6 +73,7 @@ pub(super) fn encode(
             record[start + 2] = sampler.mag_filter as u8;
             record[start + 3] = sampler.min_filter as u8;
         }
+        record[RESERVED_START] = u8::from(material.wind_animated);
         offset += MATERIAL_RECORD_SIZE;
     }
     for range in ranges {
@@ -95,16 +97,27 @@ pub(super) fn decode(
         return Err(MaterialSectionError::OutputCountTooSmall);
     }
     let has_transforms = bytes[..4] != LEGACY_MAGIC;
-    let has_samplers = bytes[..4] == MAGIC;
-    let record_size = if has_transforms {
-        MATERIAL_RECORD_SIZE
-    } else {
-        MATERIAL_V1_RECORD_SIZE
+    let has_samplers = bytes[..4] == MAGIC || bytes[..4] == PREVIOUS_MAGIC;
+    let has_wind = bytes[..4] == MAGIC;
+    let record_size = match &bytes[..4] {
+        magic if magic == MAGIC => MATERIAL_RECORD_SIZE,
+        magic if magic == PREVIOUS_MAGIC || magic == PREVIOUS_PREVIOUS_MAGIC => {
+            PREVIOUS_MATERIAL_RECORD_SIZE
+        }
+        _ => MATERIAL_V1_RECORD_SIZE,
     };
     let mut offset = MATERIAL_SECTION_HEADER_SIZE;
     for (index, out) in materials_out.iter_mut().take(material_count).enumerate() {
         let record = &bytes[offset..offset + record_size];
         *out = decode_material(&record[..MATERIAL_V1_RECORD_SIZE], index)?;
+        if has_wind {
+            if record[RESERVED_START] > 1
+                || record[RESERVED_START + 1..].iter().any(|&byte| byte != 0)
+            {
+                return Err(MaterialSectionError::Layout);
+            }
+            out.wind_animated = record[RESERVED_START] == 1;
+        }
         if has_transforms {
             for slot in 0..TRANSFORM_COUNT {
                 let start = TRANSFORM_OFFSET + slot * TRANSFORM_SIZE;
@@ -163,7 +176,9 @@ pub(super) fn decode(
                     return Err(MaterialSectionError::Layout);
                 }
             }
-            let reserved_start = if has_samplers {
+            let reserved_start = if has_wind {
+                RESERVED_START + 1
+            } else if has_samplers {
                 RESERVED_START
             } else {
                 SAMPLER_OFFSET
@@ -197,7 +212,10 @@ pub(super) fn counts(bytes: &[u8]) -> Result<(usize, usize), MaterialSectionErro
     }
     let (record_size, version) = match &bytes[..4] {
         magic if magic == MAGIC => (MATERIAL_RECORD_SIZE, MATERIAL_SECTION_VERSION),
-        magic if magic == PREVIOUS_MAGIC => (MATERIAL_RECORD_SIZE, PREVIOUS_VERSION),
+        magic if magic == PREVIOUS_MAGIC => (PREVIOUS_MATERIAL_RECORD_SIZE, PREVIOUS_VERSION),
+        magic if magic == PREVIOUS_PREVIOUS_MAGIC => {
+            (PREVIOUS_MATERIAL_RECORD_SIZE, PREVIOUS_PREVIOUS_VERSION)
+        }
         magic if magic == LEGACY_MAGIC => (MATERIAL_V1_RECORD_SIZE, LEGACY_VERSION),
         _ => return Err(MaterialSectionError::Header),
     };

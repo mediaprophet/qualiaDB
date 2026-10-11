@@ -12,8 +12,14 @@
 
 use crate::container_10d;
 use crate::container_10d::header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE};
+use crate::container_10d::{MaterialRecord, SubmeshRange};
 use crate::render::body_fit::AnatomyBodyFit;
 use crate::tensor::Tensor10D;
+
+/// A scene upload is a single draw-list submission today. Keep its authored
+/// material ranges below a practical streaming limit before allocating the
+/// per-asset MAT1 buffers, even though the file container supports more.
+const MAX_SCENE_MATERIAL_RANGES: usize = 4_096;
 
 /// Accumulates decoded scene meshes for multi-asset 3D scenes.
 /// Keeps decoding entirely in Rust so browsers never hold N asset copies in JS.
@@ -21,6 +27,10 @@ pub(crate) struct SceneMeshAccum {
     pub(crate) positions: Vec<[f32; 3]>,
     pub(crate) colors: Vec<[f32; 4]>,
     pub(crate) indices: Vec<u32>,
+    /// Deduplicated material records from the source assets' MAT1 sections.
+    pub(crate) materials: Vec<MaterialRecord>,
+    /// Global index ranges binding merged triangles to those materials.
+    pub(crate) material_ranges: Vec<SubmeshRange>,
     /// Semantic nodes embedded in the assets' `Tensor10DNodes` sections,
     /// accumulated in authored space and normalised alongside `positions`.
     pub(crate) nodes: Vec<Tensor10D>,
@@ -44,6 +54,8 @@ impl SceneMeshAccum {
             positions: Vec::new(),
             colors: Vec::new(),
             indices: Vec::new(),
+            materials: Vec::new(),
+            material_ranges: Vec::new(),
             nodes: Vec::new(),
             assets_loaded: 0,
             assets_refused: 0,
@@ -132,6 +144,103 @@ impl SceneMeshAccum {
             return;
         }
 
+        // Preserve authored MAT1 PBR values and submesh bindings while the
+        // scene is merged. Legacy assets without MAT1 receive the same safe
+        // default used by the renderer's older coloured-mesh API.
+        let index_count = match u32::try_from(mesh.triangles.len().saturating_mul(3)) {
+            Ok(count) if count > 0 => count,
+            _ => {
+                self.assets_refused += 1;
+                return;
+            }
+        };
+        let (mut local_materials, local_ranges) =
+            match container_10d::material_container_counts(&bytes) {
+                Ok((material_count, range_count)) => {
+                    if material_count == 0
+                        || range_count == 0
+                        || range_count > MAX_SCENE_MATERIAL_RANGES
+                    {
+                        self.assets_refused += 1;
+                        return;
+                    }
+                    let mut materials = vec![MaterialRecord::legacy_default(); material_count];
+                    let mut ranges = vec![SubmeshRange {
+                        first_index: 0,
+                        index_count: 0,
+                        material_id: 0,
+                        semantic_id: 0,
+                    }; range_count];
+                    match container_10d::read_material_section_into(
+                        &bytes,
+                        index_count,
+                        &mut materials,
+                        &mut ranges,
+                    ) {
+                        Ok((read_materials, read_ranges))
+                            if read_materials == material_count && read_ranges == range_count =>
+                        {
+                            (materials, ranges)
+                        }
+                        _ => {
+                            self.assets_refused += 1;
+                            return;
+                        }
+                    }
+                }
+                Err(container_10d::MaterialContainerError::Missing) => (
+                    vec![MaterialRecord::legacy_default()],
+                    vec![SubmeshRange {
+                        first_index: 0,
+                        index_count,
+                        material_id: MaterialRecord::legacy_default().id,
+                        semantic_id: 0,
+                    }],
+                ),
+                Err(_) => {
+                    self.assets_refused += 1;
+                    return;
+                }
+            };
+        if local_materials.iter().any(|material| {
+            self.materials
+                .iter()
+                .any(|present| present.id == material.id && present != material)
+        }) {
+            self.assets_refused += 1;
+            return;
+        }
+        let index_start = match u32::try_from(self.indices.len()) {
+            Ok(start) => start,
+            Err(_) => {
+                self.assets_refused += 1;
+                return;
+            }
+        };
+        if local_ranges.iter().any(|range| {
+            range.first_index.checked_add(index_start).is_none()
+                || !local_materials
+                    .iter()
+                    .any(|material| material.id == range.material_id)
+        }) {
+            self.assets_refused += 1;
+            return;
+        }
+        let new_material_count = local_materials
+            .iter()
+            .filter(|material| !self.materials.iter().any(|present| present.id == material.id))
+            .count();
+        if self.materials.len().saturating_add(new_material_count) > container_10d::MAX_MATERIALS {
+            self.assets_refused += 1;
+            return;
+        }
+        if self.material_ranges.len().saturating_add(local_ranges.len())
+            > MAX_SCENE_MATERIAL_RANGES
+        {
+            self.assets_refused += 1;
+            return;
+        }
+
         for k in 0..3 {
             if mesh.min[k] < self.gmin[k] {
                 self.gmin[k] = mesh.min[k];
@@ -141,7 +250,7 @@ impl SceneMeshAccum {
             }
         }
         let base = self.positions.len() as u32;
-        let index_start = self.indices.len();
+        let index_start_usize = self.indices.len();
         let [r, g, b, a] = rgba;
         let mut surface = None;
         for desc in descs.iter() {
@@ -175,7 +284,18 @@ impl SceneMeshAccum {
             self.indices.push(base + t[1]);
             self.indices.push(base + t[2]);
         }
-        self.index_spans.push((index_start, self.indices.len()));
+        self.index_spans
+            .push((index_start_usize, self.indices.len()));
+        for material in local_materials.drain(..) {
+            if !self.materials.iter().any(|present| present.id == material.id) {
+                self.materials.push(material);
+            }
+        }
+        self.material_ranges
+            .extend(local_ranges.into_iter().map(|mut range| {
+                range.first_index += index_start;
+                range
+            }));
         self.nodes.extend(nodes);
         self.total_triangles += mesh.triangles.len() as u32;
         self.assets_loaded += 1;
@@ -244,5 +364,51 @@ impl SceneMeshAccum {
             n.y = (n.y - gc[1]) * s;
             n.z = (n.z - gc[2]) * s;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn material_asset(id: u64, roughness: f32, offset: f32) -> Vec<u8> {
+        let mesh = crate::render::assets::Mesh {
+            positions: vec![
+                [offset, 0.0, 0.0],
+                [offset + 1.0, 0.0, 0.0],
+                [offset, 1.0, 0.0],
+            ],
+            triangles: vec![[0, 1, 2]],
+            min: [offset, 0.0, 0.0],
+            max: [offset + 1.0, 1.0, 0.0],
+        };
+        let bytes = crate::render::compile_10d::compile_mesh_to_10d(&mesh).unwrap();
+        let mut material = MaterialRecord::legacy_default();
+        material.id = id;
+        material.roughness = roughness;
+        let ranges = [SubmeshRange {
+            first_index: 0,
+            index_count: 3,
+            material_id: id,
+            semantic_id: id,
+        }];
+        container_10d::attach_material_section(&bytes, &[material], &ranges, 3).unwrap()
+    }
+
+    #[test]
+    fn merged_scene_keeps_and_deduplicates_material_bindings() {
+        let mut scene = SceneMeshAccum::new();
+        scene.append_asset_10d(&material_asset(100, 0.34, 0.0), [0.8, 0.6, 0.3, 1.0]);
+        scene.append_asset_10d(&material_asset(100, 0.34, 2.0), [0.3, 0.6, 0.8, 1.0]);
+        scene.append_asset_10d(&material_asset(101, 0.86, 4.0), [0.3, 0.5, 0.2, 1.0]);
+
+        assert_eq!(scene.assets_loaded, 3);
+        assert_eq!(scene.assets_refused, 0);
+        assert_eq!(scene.materials.len(), 2);
+        assert_eq!(scene.material_ranges.len(), 3);
+        assert_eq!(scene.material_ranges[0].first_index, 0);
+        assert_eq!(scene.material_ranges[1].first_index, 3);
+        assert_eq!(scene.material_ranges[2].first_index, 6);
+        assert_eq!(scene.material_ranges[2].material_id, 101);
     }
 }

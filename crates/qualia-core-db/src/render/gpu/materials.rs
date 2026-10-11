@@ -107,7 +107,7 @@ impl From<&MaterialRecord> for MaterialUniform {
                     ShadingModel::Stylized => 1,
                 },
                 u32::from(material.multiply_vertex_color),
-                u32::from(material.double_sided),
+                u32::from(material.wind_animated) | (u32::from(material.double_sided) << 1),
                 u32::from(material.receives_shadow),
             ],
             texture_flags: [
@@ -433,8 +433,21 @@ mod tests {
         assert_eq!(uniform.base_color, source.base_color);
         assert_eq!(uniform.factors[..2], [0.25, 0.75]);
         assert_eq!(uniform.flags[..2], [1, 0]);
+        assert_eq!(uniform.flags[2], 0);
         assert_eq!(uniform.flags[3], u32::from(source.receives_shadow));
         assert!(uniform._alignment.iter().all(|word| *word == 0));
+    }
+
+    #[test]
+    fn foliage_wind_flag_reaches_the_vertex_material_uniform() {
+        let material = MaterialRecord {
+            wind_animated: true,
+            double_sided: true,
+            ..MaterialRecord::legacy_default()
+        };
+        let uniform = MaterialUniform::from(&material);
+        assert_eq!(uniform.flags[2] & 1, 1);
+        assert_eq!((uniform.flags[2] >> 1) & 1, 1);
     }
 
     #[test]

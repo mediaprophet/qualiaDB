@@ -1732,10 +1732,31 @@ impl QualiaPortal {
             &accum.index_spans,
         );
         let mut renderer = BodyRendererBackend::None;
+        let mut material_pipeline = false;
         let mut admitted_vertex_count = 0usize;
         let mut admitted_index_count = 0usize;
         if let Some(ref mut gpu) = self.gpu {
-            let count = gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices);
+            let pbr_count = if accum.materials.is_empty() || accum.material_ranges.is_empty() {
+                0
+            } else {
+                gpu.upload_mesh_colored_with_frames_and_materials_and_uv0(
+                    &accum.positions,
+                    &accum.colors,
+                    None,
+                    None,
+                    None,
+                    &accum.indices,
+                    &accum.materials,
+                    &accum.material_ranges,
+                )
+                .unwrap_or(0)
+            };
+            let count = if pbr_count > 0 {
+                material_pipeline = true;
+                pbr_count
+            } else {
+                gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices)
+            };
             if count > 0 {
                 renderer = BodyRendererBackend::WebGpu;
                 admitted_vertex_count = accum.positions.len();
@@ -1803,11 +1824,13 @@ impl QualiaPortal {
         }
 
         self.description = format!(
-            "{} assets · {} triangles · {} refused · {}",
+            "{} assets · {} triangles · {} materials · {} refused · {}{}",
             accum.assets_loaded,
             accum.total_triangles,
+            accum.materials.len(),
             accum.assets_refused,
-            renderer.as_str()
+            renderer.as_str(),
+            if material_pipeline { " · PBR scene" } else { " · colour fallback" }
         );
         let result = js_sys::Object::new();
         Reflect::set(
@@ -1844,6 +1867,21 @@ impl QualiaPortal {
             &result,
             &JsValue::from_str("renderer"),
             &JsValue::from_str(renderer.as_str()),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("material_pipeline"),
+            &JsValue::from_bool(material_pipeline),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("materials_loaded"),
+            &JsValue::from_f64(accum.materials.len() as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("material_ranges"),
+            &JsValue::from_f64(accum.material_ranges.len() as f64),
         )?;
         Reflect::set(
             &result,
