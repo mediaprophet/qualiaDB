@@ -52,6 +52,7 @@ fn sample_base_color(uv: vec2<f32>) -> vec4<f32> {
     let min_filter = record & 7u;
     let min_nearest = min_filter == 0u || min_filter == 2u;
     let mag_nearest = (material.coverage.w & 1u) != 0u;
+    let sampled = textureSample(base_color_map, base_color_sampler, uv);
     if ((material.coverage.y & 1u) != 0u && ((mag_nearest && rho <= 1.0) || (min_nearest && rho > 1.0))) {
         let wrap_s = (record >> 3u) & 3u;
         let wrap_t = (record >> 5u) & 3u;
@@ -70,16 +71,14 @@ fn sample_base_color(uv: vec2<f32>) -> vec4<f32> {
         if (wrap_t == 2u) { wrapped.y = wrapped.y - floor(wrapped.y); }
         var level = 0u;
         if ((record & 7u) == 2u && textureNumLevels(base_color_map) > 1u) {
-            let dx = dpdx(uv) * vec2<f32>(dims);
-            let dy = dpdy(uv) * vec2<f32>(dims);
-            let lod = clamp(log2(max(max(length(dx), length(dy)), 0.000001)), 0.0, f32(textureNumLevels(base_color_map) - 1u));
+            let lod = clamp(log2(max(rho, 0.000001)), 0.0, f32(textureNumLevels(base_color_map) - 1u));
             level = u32(floor(lod + 0.5));
         }
         let level_dims = max(dims >> vec2<u32>(level), vec2<u32>(1u));
         let pixel = min(vec2<u32>(floor(wrapped * vec2<f32>(level_dims))), level_dims - vec2<u32>(1u));
         return textureLoad(base_color_map, vec2<i32>(pixel), i32(level));
     }
-    return textureSample(base_color_map, base_color_sampler, uv);
+    return sampled;
 }
 
 struct ShadowVertexOutput {

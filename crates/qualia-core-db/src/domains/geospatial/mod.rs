@@ -19,6 +19,7 @@ pub mod steward;
 pub mod streaming;
 pub mod terrain_pipeline;
 pub mod triggers;
+pub mod vector_scene;
 
 pub use adapters::{AdapterRegistry, LayerFetchReport, LayerFetchStatus};
 pub use steward::{validate_steward_unlock, StewardContract, StewardVerdict};

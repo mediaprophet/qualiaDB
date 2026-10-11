@@ -53,18 +53,7 @@ fn material_uv(uv: vec2<f32>, role: u32) -> vec2<f32> {
     ) + offset_scale.xy;
 }
 
-fn use_nearest_texel(uv: vec2<f32>, dims: vec2<u32>) -> bool {
-    let record = material.sampler_modes[0] & 127u;
-    let min_filter = record & 7u;
-    let min_nearest = min_filter == 0u || min_filter == 2u;
-    let mag_nearest = (material.coverage.w & 1u) != 0u;
-    let dx = dpdx(uv) * vec2<f32>(dims);
-    let dy = dpdy(uv) * vec2<f32>(dims);
-    let rho = max(length(dx), length(dy));
-    return (mag_nearest && rho <= 1.0) || (min_nearest && rho > 1.0);
-}
-
-fn nearest_base_color_texel(uv: vec2<f32>) -> vec3<i32> {
+fn nearest_base_color_texel(uv: vec2<f32>, rho: f32) -> vec3<i32> {
     let record = material.sampler_modes[0] & 127u;
     var wrapped = uv;
     let wrap_s = (record >> 3u) & 3u;
@@ -84,9 +73,7 @@ fn nearest_base_color_texel(uv: vec2<f32>) -> vec3<i32> {
     let dims = textureDimensions(base_color_map, 0);
     var level = 0u;
     if ((record & 7u) == 2u && textureNumLevels(base_color_map) > 1u) {
-        let dx = dpdx(uv) * vec2<f32>(dims);
-        let dy = dpdy(uv) * vec2<f32>(dims);
-        let lod = clamp(log2(max(max(length(dx), length(dy)), 0.000001)), 0.0, f32(textureNumLevels(base_color_map) - 1u));
+        let lod = clamp(log2(max(rho, 0.000001)), 0.0, f32(textureNumLevels(base_color_map) - 1u));
         level = u32(floor(lod + 0.5));
     }
     let level_dims = max(dims >> vec2<u32>(level), vec2<u32>(1u));
@@ -95,11 +82,21 @@ fn nearest_base_color_texel(uv: vec2<f32>) -> vec3<i32> {
 }
 
 fn sample_base_color(uv: vec2<f32>) -> vec4<f32> {
-    if ((material.coverage.y & 1u) != 0u && use_nearest_texel(uv, textureDimensions(base_color_map, 0))) {
-        let p = nearest_base_color_texel(uv);
+    let sampled = textureSample(base_color_map, base_color_sampler, uv);
+    let dims = textureDimensions(base_color_map, 0);
+    let dx = dpdx(uv) * vec2<f32>(dims);
+    let dy = dpdy(uv) * vec2<f32>(dims);
+    let rho = max(length(dx), length(dy));
+    let record = material.sampler_modes[0] & 127u;
+    let min_filter = record & 7u;
+    let min_nearest = min_filter == 0u || min_filter == 2u;
+    let mag_nearest = (material.coverage.w & 1u) != 0u;
+    let is_nearest = (mag_nearest && rho <= 1.0) || (min_nearest && rho > 1.0);
+    if ((material.coverage.y & 1u) != 0u && is_nearest) {
+        let p = nearest_base_color_texel(uv, rho);
         return textureLoad(base_color_map, p.xy, p.z);
     }
-    return textureSample(base_color_map, base_color_sampler, uv);
+    return sampled;
 }
 
 struct Output {

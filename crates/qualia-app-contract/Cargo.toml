@@ -1,0 +1,15 @@
+[package]
+name = "qualia-app-contract"
+version = "0.0.40"
+edition = "2021"
+description = "Canonical portable command, context, session, and surface contracts for Storytold, Poet, and Webizen OS"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+ciborium = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+qualia-core-db = { workspace = true }

@@ -94,10 +94,15 @@ struct ProjectedNode {
 }
 
 mod body_scene;
-use body_scene::BodyMeshAccum;
+mod scene_mesh;
+pub(crate) use scene_mesh::BodyMeshAccum;
+#[allow(unused_imports)]
+pub(crate) use scene_mesh::SceneMeshAccum;
 mod capabilities;
 pub use capabilities::probe_portal_graphics;
 mod exposure;
+mod graphics;
+use graphics::PortalGraphicsState;
 mod recovery;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -185,6 +190,7 @@ pub struct QualiaPortal {
     /// Failed presents since the mesh was uploaded. A few misses are not
     /// adapter death; proof is only the failover after they stick.
     present_misses: u8,
+    graphics: PortalGraphicsState,
 }
 
 #[wasm_bindgen]
@@ -243,6 +249,7 @@ impl QualiaPortal {
             white_balance_ev: [0.0; 2],
             sky_clear: [0.55, 0.74, 0.92, 1.0],
             present_misses: 0,
+            graphics: PortalGraphicsState::default(),
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -718,30 +725,91 @@ impl QualiaPortal {
 
     /// Enable the budgeted half-resolution screen-space AO pass when available.
     pub fn set_screen_space_ao_enabled(&mut self, enabled: bool) {
-        if let Some(gpu) = self.gpu.as_mut() {
-            gpu.set_screen_space_ao_enabled(enabled);
-        }
+        self.graphics
+            .set_screen_space_ao_enabled(enabled, self.gpu.as_mut());
     }
 
-    /// Configure screen-space AO radius and strength. Radius and bias use world units.
     pub fn set_screen_space_ao(&mut self, radius: f32, strength: f32, bias: f32) {
-        if let Some(gpu) = self.gpu.as_mut() {
-            gpu.set_screen_space_ao(radius, strength, bias);
+        self.graphics
+            .set_screen_space_ao(radius, strength, bias, self.gpu.as_mut());
+    }
+
+    pub fn set_screen_space_ao_sample_count(&mut self, samples: u32) {
+        self.graphics
+            .set_screen_space_ao_sample_count(samples, self.gpu.as_mut());
+    }
+
+    pub fn set_auto_temporal_enabled(&mut self, enabled: bool) {
+        if self.graphics.set_auto_temporal_enabled(enabled) {
+            self.graphics.invalidate_temporal_history(self.gpu.as_mut());
         }
     }
 
-    /// Select 4-tap low, 8-tap default, or 12-tap quality AO evaluation.
-    pub fn set_screen_space_ao_sample_count(&mut self, samples: u32) {
-        if let Some(gpu) = self.gpu.as_mut() {
-            gpu.set_screen_space_ao_sample_count(samples);
-        }
+    pub fn invalidate_temporal_history(&mut self) {
+        self.graphics.invalidate_temporal_history(self.gpu.as_mut());
+    }
+
+    pub fn set_shadows_enabled(&mut self, enabled: bool) {
+        self.graphics
+            .set_shadows_enabled(enabled, self.gpu.as_mut());
+    }
+
+    pub fn shadows_available(&self) -> bool {
+        PortalGraphicsState::shadows_available(self.gpu.as_ref())
+    }
+
+    pub fn screen_space_ao_enabled(&self) -> bool {
+        self.gpu
+            .as_ref()
+            .map(PortalGpu::screen_space_ao_enabled)
+            .unwrap_or(false)
+    }
+
+    pub fn set_environment_probe_data(
+        &mut self,
+        packed_probes: &[f32],
+        fallback_radiance: &[f32],
+    ) -> Result<bool, JsValue> {
+        self.graphics.set_environment_probe_data(
+            packed_probes,
+            fallback_radiance,
+            self.gpu.as_mut(),
+        )
+    }
+
+    /// Replace the water surface mesh using world-space XYZ triples and triangle indices.
+    pub fn set_water_geometry(
+        &mut self,
+        positions_xyz: &[f32],
+        indices: &[u32],
+    ) -> Result<bool, JsValue> {
+        self.graphics
+            .set_water_geometry(positions_xyz, indices, self.gpu.as_mut())
+    }
+
+    pub fn set_water_surface(
+        &mut self,
+        r: f32,
+        g: f32,
+        b: f32,
+        alpha: f32,
+        wave_amplitude: f32,
+        wave_frequency: f32,
+        quality: u32,
+    ) {
+        self.graphics.set_water_surface(
+            [r, g, b, alpha, wave_amplitude, wave_frequency],
+            quality,
+            self.gpu.as_mut(),
+        );
+    }
+
+    pub fn temporal_graphics_receipt(&self) -> JsValue {
+        self.graphics.temporal_receipt(self.gpu.as_ref())
     }
 
     pub fn screen_space_ao_available(&self) -> bool {
-        self.gpu
-            .as_ref()
-            .map(PortalGpu::screen_space_ao_available)
-            .unwrap_or(false)
+        PortalGraphicsState::screen_space_ao_available(self.gpu.as_ref())
     }
 
     pub fn screen_space_ao_width(&self) -> u32 {
@@ -759,7 +827,6 @@ impl QualiaPortal {
             .map(|extent| extent.1)
             .unwrap_or(0)
     }
-
     /// Apply an authored atmospheric sky preset:
     /// - 0: Cyber-Dark / Deep Void
     /// - 1: Daylight (clear sky, high warm sun, balanced ambient)
@@ -1231,8 +1298,8 @@ impl QualiaPortal {
     /// residency identity. Replaying the same asset returns the existing receipt without
     /// rebuilding the GPU mesh; a different digest replaces the resident mesh.
     pub fn load_hmc_mesh(&mut self, hmc_bytes: &[u8], asset_key: &str) -> Result<JsValue, JsValue> {
-        let source = resolve_hmc_mesh(hmc_bytes, asset_key)
-            .map_err(|error| JsValue::from_str(&error))?;
+        let source =
+            resolve_hmc_mesh(hmc_bytes, asset_key).map_err(|error| JsValue::from_str(&error))?;
         if let Some(receipt) = self.hmc_mesh_residency.resident(source.digest) {
             let result = js_sys::Object::new();
             Reflect::set(
@@ -1497,6 +1564,18 @@ impl QualiaPortal {
         Ok(result)
     }
 
+    /// Load a multi-asset scene: `Array<{bytes: .10d, r,g,b,a, id?}>` (QG-20).
+    /// General scene asset loader for environment/game scenes, town layouts,
+    /// vehicles, and user props.
+    pub fn load_assets_colored(&mut self, assets: &Array) -> Result<JsValue, JsValue> {
+        self.load_body_organs_colored(assets)
+    }
+
+    /// Generic scene asset alias for [`Self::load_assets_colored`] (QG-20).
+    pub fn load_scene_assets(&mut self, assets: &Array) -> Result<JsValue, JsValue> {
+        self.load_body_organs_colored(assets)
+    }
+
     /// S5.8 (web) — load the whole body directly from a `.hmc` **anatomy pack**
     /// bundle (see [`crate::bundle`]). Parses the bundle with the *shared* Rust
     /// reader (the same code the native host uses — "one reader, both channels"),
@@ -1634,6 +1713,7 @@ impl QualiaPortal {
     }
 
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
+        self.adopt_pending_gpu();
         accum.apply_body_fit(&self.body_fit);
         if !self.preserve_authored_frame {
             accum.normalise_to_orbit_frame();
@@ -1660,6 +1740,7 @@ impl QualiaPortal {
                 renderer = BodyRendererBackend::WebGpu;
                 admitted_vertex_count = accum.positions.len();
                 admitted_index_count = accum.indices.len();
+                self.graphics.apply_environment_to_gpu(gpu);
             } else if !reduced.indices.is_empty()
                 && gpu.upload_mesh_colored(&reduced.positions, &reduced.colors, &reduced.indices)
                     > 0
@@ -1722,22 +1803,32 @@ impl QualiaPortal {
         }
 
         self.description = format!(
-            "{} organs · {} triangles · {} refused · coloured · {}",
-            accum.organs_loaded,
+            "{} assets · {} triangles · {} refused · {}",
+            accum.assets_loaded,
             accum.total_triangles,
-            accum.organs_refused,
+            accum.assets_refused,
             renderer.as_str()
         );
         let result = js_sys::Object::new();
         Reflect::set(
             &result,
+            &JsValue::from_str("assets_loaded"),
+            &JsValue::from_f64(accum.assets_loaded as f64),
+        )?;
+        Reflect::set(
+            &result,
             &JsValue::from_str("organs_loaded"),
-            &JsValue::from_f64(accum.organs_loaded as f64),
+            &JsValue::from_f64(accum.assets_loaded as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("assets_refused"),
+            &JsValue::from_f64(accum.assets_refused as f64),
         )?;
         Reflect::set(
             &result,
             &JsValue::from_str("organs_refused"),
-            &JsValue::from_f64(accum.organs_refused as f64),
+            &JsValue::from_f64(accum.assets_refused as f64),
         )?;
         Reflect::set(
             &result,
@@ -1763,7 +1854,7 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
-    /// Cold-path Anatomy lifecycle receipt. Success requires a retained upload
+    /// Cold-path Scene / Anatomy lifecycle receipt. Success requires a retained upload
     /// and at least one presented renderer frame.
     pub fn body_render_receipt(&self) -> Result<JsValue, JsValue> {
         let result = js_sys::Object::new();
@@ -1789,6 +1880,13 @@ impl QualiaPortal {
         )?;
         Reflect::set(
             &result,
+            &JsValue::from_str("uploaded"),
+            &JsValue::from_bool(
+                self.body_renderer != BodyRendererBackend::None && self.body_vertex_count > 0,
+            ),
+        )?;
+        Reflect::set(
+            &result,
             &JsValue::from_str("success"),
             &JsValue::from_bool(
                 self.body_renderer != BodyRendererBackend::None
@@ -1798,6 +1896,11 @@ impl QualiaPortal {
             ),
         )?;
         Ok(result.into())
+    }
+
+    /// Generic scene alias for [`Self::body_render_receipt`] (QG-20).
+    pub fn scene_render_receipt(&self) -> Result<JsValue, JsValue> {
+        self.body_render_receipt()
     }
 
     /// Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
@@ -2170,19 +2273,10 @@ impl QualiaPortal {
         }
     }
 
-    pub(crate) fn paint_frame(&mut self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
-        let mode = global_vram_ledger().mode();
-
+    #[allow(dead_code)]
+    fn adopt_pending_gpu(&mut self) {
         #[cfg(target_arch = "wasm32")]
         {
-            if self.note_device_loss() || self.graphics_recovery_requested {
-                // JavaScript replaces the old canvas at the next frame boundary;
-                // its WebGPU context cannot be converted into Canvas2D/WebGL2.
-                return Ok(());
-            }
-            // Async WebGPU init (`portal_init_webgpu`, awaited by JS before the render loop starts)
-            // stashes a ready PortalGpu in PENDING_GPU; adopt it on the first frame. The device is
-            // created asynchronously off the loop because the browser main thread cannot `block_on`.
             if self.gpu.is_none() && !self.gpu_init_failed {
                 if let Some(mut gpu) = PENDING_GPU.with(|p| p.borrow_mut().take()) {
                     gpu.set_camera_target(
@@ -2216,37 +2310,53 @@ impl QualiaPortal {
                             );
                         }
                     }
-                    if self.graphics_recovery_pending {
-                        let mut replayed = false;
-                        if let Some(ref body) = self.cpu_body {
+                    if let Some(ref body) = self.cpu_body {
+                        if self.body_renderer != BodyRendererBackend::WebGpu {
                             let count = gpu.upload_mesh_colored(
                                 &body.positions,
                                 &body.colors,
                                 &body.indices,
                             );
                             if count > 0 {
-                                replayed = true;
                                 self.body_renderer = BodyRendererBackend::WebGpu;
                                 self.body_vertex_count =
                                     body.positions.len().min(u32::MAX as usize) as u32;
                                 self.body_index_count =
                                     body.indices.len().min(u32::MAX as usize) as u32;
                                 self.description = format!(
-                                    "graphics recovered · reduced mesh detail · {} indices",
+                                    "graphics active · mesh detail · {} indices",
                                     body.indices.len()
                                 );
                             }
                         }
-                        self.graphics_recovery_pending = false;
-                        if !replayed {
-                            self.graphics_recovery_requested = true;
-                        }
                     }
+                    self.graphics_recovery_pending = false;
                     self.tier = 2;
                     gpu.set_tensor_projection_enabled(self.tensor_projection_enabled);
+                    self.graphics.apply_to_gpu(&mut gpu);
                     self.gpu = Some(gpu);
                 }
             }
+            if self.anatomy_webgl2.is_none() {
+                if let Some(gl) = PENDING_WEBGL2.with(|p| p.borrow_mut().take()) {
+                    self.anatomy_webgl2 = Some(gl);
+                }
+            }
+        }
+    }
+
+    pub(crate) fn paint_frame(&mut self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
+        let mode = global_vram_ledger().mode();
+        self.graphics.record_temporal_execution(false);
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            if self.note_device_loss() || self.graphics_recovery_requested {
+                // JavaScript replaces the old canvas at the next frame boundary;
+                // its WebGPU context cannot be converted into Canvas2D/WebGL2.
+                return Ok(());
+            }
+            self.adopt_pending_gpu();
 
             enum Present {
                 Lit,
@@ -2276,8 +2386,16 @@ impl QualiaPortal {
                     }
                     return Ok(());
                 }
-                match gpu.render(self.time as f32, &self.telemetry) {
-                    Ok(()) => {
+                let temporal_enabled = self.graphics.auto_temporal_enabled;
+                let frame_result = if temporal_enabled {
+                    gpu.render_with_auto_temporal(self.time as f32, &self.telemetry)
+                } else {
+                    gpu.render(self.time as f32, &self.telemetry)
+                        .map(|()| false)
+                };
+                match frame_result {
+                    Ok(temporal_executed) => {
+                        self.graphics.record_temporal_execution(temporal_executed);
                         if self.body_renderer == BodyRendererBackend::WebGpu
                             && self.body_index_count > 0
                         {

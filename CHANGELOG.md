@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Geospatial OSM scene compilation**: Compile parsed OSM points, lines, simple areas, and multipart geometries into bounded local ENU meshes, retain source identity/version/tags alongside each mesh, drape emitted vertices against a caller-owned DEM sampler, and optionally clip point/line/area triangles to a rectangular local tile. Clipped edge heights are interpolated for continuous DEM draping. Area fills with interior rings are rejected until hole-preserving triangulation is selected.
+- **Scene Mesh Decoupling**: Separated generic 3D scene mesh rendering (`scene_mesh.rs`) from human anatomy fitting, ensuring clean architectural boundaries for game environments.
+
+### Fixed
+
+- **WebGPU WGSL Uniform Control Flow**: Restructured `mesh.wgsl`, `sun_shadow.wgsl`, and `ao_prepass.wgsl` shaders so derivative calls (`dpdx`, `dpdy`) and texture sampling strictly execute in uniform control flow prior to branching, eliminating WebGPU pipeline creation failures in modern browsers.
+
 ## [0.0.40] — 2026-09-28
 
 ### Added

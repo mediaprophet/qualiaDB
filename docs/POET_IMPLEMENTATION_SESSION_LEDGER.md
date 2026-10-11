@@ -659,3 +659,194 @@ Browser/native UAT: Not re-run.
 Known gaps: Physics Q2 ≈8 left; Constructibility/SpecialFunctions/Research Q2 large; APP-04; WD-03.
 Unrelated failures preserved: Yes.
 Recommended next packet: wave 15 (Physics Live remainder + Constructibility/SF Live + Host).
+
+## 2026-10-11 — ST programme planning delivery
+
+Packet: `ST-PLAN` (planning only; not `ST-00` execution).
+Status: Written; document verification pending. ST-00 through ST-39 remain NotStarted.
+Baseline: QualiaDB `9463dc62` and Poet `3b0e463`, both on `0.0.40.8-dev`; existing user-owned changes in QualiaDB `render/portal/body_scene.rs` and `render/portal/mod.rs` preserved.
+User outcome: Comprehensive cross-repository implementation specification and bounded agent packet queue for eleven Storytold app forks, QualiaDB primitive harmonisation, OS-shell/host separation, shared Dioxus presentation, command orb graph/context menu, macro/micro navigation, native/WASM execution and supervised agents.
+Files: existing `docs/work-in-progress/POET_UPDATED_IMPLEMENTATION_PLAN_2026-09-05.md` (ST-A through ST-M); existing `docs/POET_LOWER_COST_AGENT_EXECUTION_PLAYBOOK_2026-09-04.md` (section 18, ST-00 through ST-39 and continuation prompt); this ledger; sibling Poet `README.md` (current programme entry point).
+Verification: Document checks pending; no product build/test/benchmark executed for this planning task. No package, app fork, migration or provider integration implemented.
+UAT: Not applicable to planning; all specified browser/native UAT gates remain future execution requirements.
+Authority/decisions: Public repositories/branding/licensing, trusted signing/provider credentials, external spend, protected ABI, destructive migrations, webview-free native renderer and publication remain principal-only gates; local bounded implementation can proceed independently where contracts are accepted.
+Unrelated changes preserved: Yes; no product source edits, commits or pushes.
+Recommended next packet: `ST-00` only, using playbook section 18 and the corrected standalone repository roots, not the historical starting prompt.
+
+### ST-PLAN closeout and VibeScript addition
+
+2026-10-11: Added specification ST-N and execution playbook section 19 (`VB-00` through `VB-09`) for VibeScript as the canonical application scripting language. Covers capability bindings, genuine async/events/streams, executable imports, versioned dialect changes, declarative UI/hot reload, exact native/WASM interchange, editor/CLI tooling, per-app JS/TS migration and conformance. Stable four-op facade is explicitly distinguished from a growing language/catalogue; generated/platform-only JavaScript bridges are accounted separately, never hidden app logic.
+
+Document review: verified ST-00 through ST-39, VB-00 through VB-09, all eleven app work orders, section labels, local Markdown targets/anchors and existing-path references. Corrected directory-backed topbar/CBOR paths, ArtCraft read scope and two implicit dependency-cycle ambiguities. Scoped `git diff --check` passed in QualiaDB and Poet; the final post-closeout QualiaDB document check also passed. These are documentation checks only, not product verification. Historical unresolved Poet copyright/licence README links were not changed by this scope.
+
+Product verification: none; no language/runtime/UI code changed, no Cargo/build/benchmark/UAT run. All ST/VB implementation packets remain NotStarted. Source-level await/module/interop gaps require actual regression execution in VB-00, not assumed conformance claims.
+
+Principal-only decisions and preserved user changes remain as in the planning record above. No commit, push, publication, external provider call, migration or deletion occurred. Next execution is ST-00, followed by VB-00 before G1 closes; use the continuation prompts and one assigned bounded subunit at a time.
+
+## 2026-10-11 — ST-00 execution baseline (subunits a-c)
+
+Status: Partial; source/app command coverage subunit d is not complete. No later contract gate is closed.
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0` and Poet `3b0e4634e1e1a0d76494153dbfcce5e686f5a4cb`, both `0.0.40.8-dev`; OS shell `75328cbbe9ee239ff8007f8e8118370b9a2137fe` and Desktop `a323181a047260bc9a0a3fc12079c10c2c15de5f`, both main and clean at baseline. Existing QualiaDB AGENTS/render changes, untracked portal graphics and planning changes are preserved; Poet README planning changes preserved.
+Toolchain: `rustc --version` reports 1.97.1 (8bab26f4f, 2026-07-14), `cargo --version` reports 1.97.1 (c980f4866, 2026-06-30). Installed targets: wasm32-unknown-unknown, x86_64-pc-windows-gnu, x86_64-pc-windows-msvc. `trunk --version`, `dx --version` and `wasm-bindgen --version` each exit 127, command not found; no tool was installed.
+Cargo: `cargo metadata --no-deps --format-version 1 --locked --offline` passed (exit 0) against all four workspace roots. Poet metadata confirms separate CLI and browser/test targets and sibling Vibe dependency. QualiaDB metadata output retained in tool artifact `C:\Users\tim_h\AppData\Local\Temp\devin.exe-overflows\shell-649f93-8b7692f442fbc9ac\content.txt`. This no-deps command does not prove a resolved/buildable full dependency graph.
+Features: `cargo tree -p vibe -e features --locked --offline` passed; Vibe tree is bytemuck/derive and unicode-xid, no graphics/UI runtime. `cargo tree -p webizen-studio -e features --locked --offline` passed; tree retained at `C:\Users\tim_h\AppData\Local\Temp\devin.exe-overflows\shell-3ecdc9-84067d56b4a42a61\content.txt`; Studio uses Dioxus alpha.1 at pinned Git revision 0dbfab5274abd3628b0558f909b5946e783dbc65 and broad core default features. OS-shell `cargo tree -e features --locked --offline` exits 101 because its existing lockfile needs updating. No lockfile/configuration/security policy was changed. Existing Dioxus desktop patch-unused warning recorded, not fixed by an unsolicited dependency upgrade.
+Verification: `cargo test -p vibe --test conformance --locked --offline` exited 0: 184 passed, 0 failed/ignored. `cargo test -p poet --test product_integrity --locked --offline` exited 101: 10 passed, 3 failed out of 13. Missing sibling Studio manifest and legacy programme docs are path defects after extraction; generic delegation audit reports 113 against unchanged ceiling 112. `cargo test -p poet --test surface_inventory --locked --offline` exited 101: 0 passed, 1 failed, missing monorepo-relative inventory path. No browser/native UAT performed.
+Root-cause tracing: extra reexport-audit match is semantic_instruments/mod.rs public child-module facade, absent from the leaf-surface inventory; children contain their own purpose-specific implementations. Broad builder-reexport detection conflates module routing with leaf delegation. ST-00-R1 will repair test source-root resolution and share a classifier that preserves leaf-delegation/inventory checks while distinguishing local child-module facades; ceiling and inventory data remain unchanged. No document workflow is claimed restored by that test repair.
+Additional source discovery: ArtCraft also contains artcraft-native (egui/eframe/Glow, Tauri-free API client backend). Include it in native service/command coverage; its login/cookie-import behaviour is not authority to migrate or inspect credentials. Ten craft source manifests use edition 2024 and egui 0.36; PhotoCraft, VectorCraft and FilmCraft declare Rust 1.95 while the others read declare 1.90. Supplied runtime/toolchain meets those declared compiler minima, but no app build success is claimed.
+Delegated command attempts required approval and were denied before shell execution; the lead ran the exact permitted foreground baseline commands. Existing build caches were reused, no second engine checkout/target tree was created, and no provider/service was called.
+Next: bounded ST-00-R1 portability/audit repair, then continue ST-00/d app coverage and VB-00 runtime-gap fixtures; required browser tooling/OS-shell lockfile reconciliation remains an explicit environment/configuration prerequisite.
+
+### ST-00-R1 — extracted test portability and precise leaf audit
+
+Status: Complete for the bounded test repair; parent ST-00 remains Partial until full app coverage baseline is recorded. No app workflow/GUI migration is claimed by this repair.
+Files in sibling Poet: `wasm/tests/product_integrity.rs`, `wasm/tests/surface_inventory.rs`, required shared `wasm/tests/support/mod.rs`. Both suites resolve historical docs/Studio under sibling QualiaDB and walk the actual extracted Poet browser source. Shared leaf-delegation detection distinguishes a reexport from a declared local child module from a leaf delegation; super/self/nonlocal delegations remain counted, including mixed facade/delegation files. Missing/unreadable source roots fail rather than silently returning an empty inventory. Historical inventory keys retain their schema meaning and nested relative paths.
+Invariants: ceiling 112, inventory JSON/count fields, existing exemplar/remediation assertions and all source comments retained. No filename-specific exclusion or new 'restored workflow' claim. Helper fixtures cover public/private local facades, malformed nonterminated module declaration, super/self/nonlocal and mixed exports, nonbuilder export and independent canonical sibling-path existence. Review accepted the full test diff and helper after consolidated correction.
+Verification: `cargo test --manifest-path C:/github/poet/Cargo.toml -p poet --test product_integrity --test surface_inventory --locked --offline` exited 0 after final semantic changes: 17 product-integrity tests and 5 surface-inventory tests passed, 0 failed/ignored. `rustfmt --edition 2021 --check` on the three touched files passed after touched-file formatting; `git diff --check -- wasm/tests` passed. The only final Git warning concerns LF/CRLF normalization, not a failure. No workspace-wide formatting, dependencies/config/lockfile changes, source UI modifications, commits or pushes.
+Next: finish ST-00 source/feature inventory, record Vibe runtime diagnostic preflight for VB-00, and resolve missing browser tools/OS-shell lock compatibility as scoped prerequisites without bypassing policy.
+
+### ST-00 Vibe runtime diagnostic preflight
+
+Ran exact read-only input `= await 42`, `= 18446744073709551615u64`, `:quit` through `cargo run -p vibe --bin vibe --locked --offline -- repl` in QualiaDB (exit 0). Output values are respectively `42` and `18446744073709551615`. This confirms that the current Pure-cell checking/evaluation path accepts scalar await as identity, rather than requiring async context/future suspension. It also confirms exact maximum-u64 display in this native CLI path only; it does not prove browser/CBOR interoperability. Source path check.rs combines Await with unary/Try traversal; eval/expr.rs evaluates Await immediately; Value has no Future/Stream variant. Keep this as a required VB-00/VB-02 regression, not an async-support claim. No Vibe runtime source changed in this preflight.
+
+ST-00/d source-intake progress: read all eleven root manifests and agent-rule entry points; verified ten engine registry seams and the separate ArtCraft mixed frontend/native API architecture. GridCraft no-deps locked/offline metadata passes and confirms engine, CLI, browser and xtask targets; full resolved engine build and complete individual command/gesture catalogue remain unverified. Grid command registry explicitly combines file/edit/format/sheet/insert/data/formula/review/view/inspect/extra/draw/spelling/pivot/what-if/print families; Word registry includes rich text/caret/lists/table/equation/review/page/reference/mailings/citation/object/drawing/speech families. No source-native engine count or cross-app coverage percentage was inferred from README prose or macro occurrences. Native-only bridge/plugin and asset/branding exceptions remain per-app inputs, not approved release exceptions.
+
+### OS-shell dependency audit and post-clean verification
+
+Status: Complete for the bounded audit/normalisation; packaging integration (ST-20 series) remains open.
+Scope: user-directed dependency freshness check on `C:\github\webizen-os-shell` after `cargo clean` (3,612 files / 2.5 GiB removed). OS shell on `0.0.40.8-dev` with the in-progress tray/lifecycle sources preserved.
+Audit findings: crates.io index reports `dioxus` 0.8.0-alpha.1 as the newest published version (0.7.10 is latest stable); the GitHub release page confirms tag `v0.8.0-alpha.1` is commit `0dbfab5`, byte-identical to the previously pinned `rev = "0dbfab5274abd3628b0558f909b5946e783dbc65"`. `serde` spec `1.0` resolves 1.0.229 (latest), `serde_json` `1.0` resolves 1.0.151 (index reports 1.0.152 published 2026-10-10; resolver selected 1.0.151), `log` `0.4` resolves 0.4.34 (latest). No dependency was older than its compatible latest at the chosen constraint.
+Change: removed the entire `[patch.crates-io]` Git pin block from the OS-shell manifest (9 crate entries). This eliminates the redundant Git fetch and the recorded "patch was not used in the crate graph" warning while resolving identical code. Added `ReadableExt` to the `dioxus::prelude` import in `src/native/tray.rs` — required by the published `dioxus-signals` crate for `Signal::read()` (the Git checkout had resolved it differently). Removed a stray blank line at Cargo.toml EOF flagged by `git diff --check`. Normalised pre-existing rustfmt drift in `src/app.rs` and `src/components/orbit_wheel.rs` (files already modified by this work) so `cargo fmt --check` passes.
+Verification after clean + manifest change: `cargo metadata` resolved the full graph from the crates.io registry — all 27 `dioxus-*` crates at 0.8.0-alpha.1 with `registry+` sources; no `git+` source remains in the regenerated lockfile (lockfile remains gitignored per repo policy). `cargo test --bin webizen-os-shell` passed 8/8 (lifecycle, tray icon, honest-state tests). `cargo check --target wasm32-unknown-unknown` passed (exit 0, ~6 min) — the earlier `uuid` randomness-feature failure is resolved by the removal of the unused direct `uuid`/`chrono`/`futures-util` deps. `cargo fmt --check` and `git diff --check` pass; only benign LF/CRLF normalisation warnings remain. `muda 0.19.3` + `tray-icon 0.24.2` supply the tray stack via `dioxus-desktop`.
+Non-claims: no app workflow, engine embedding, or packaging bundle produced; `embedded-engine` feature not yet exercised. No commit or push.
+Next: wire the OS shell into `webizen-desktop` distribution packaging (ST-20 series), then resume ST-00/d coverage and VB-00 runtime-gap fixtures.
+
+### QualiaDB Dioxus patch removal (follow-up to the same audit)
+
+Status: Complete; same justification as the shell — the pin's stated reason was stale.
+Finding: the root `[patch.crates-io]` comment claimed "the 0.8.0-alpha.1 desktop renderer was not published to crates.io". That was true when written but is now false: the shell resolved `dioxus-desktop 0.8.0-alpha.1` plus `wry`, `muda` and `tray-icon` entirely from the registry and compiled it. All 28 patched crates (including `dioxus-logger`, confirmed unyanked at alpha.1 via the index) are published at the workspace's exact `=0.8.0-alpha.1` requirement; the pinned rev is the signed release tag commit itself, so registry resolution yields identical code.
+Change: removed the stale comment and all 28 `dioxus*` Git patch entries from `C:\github\qualiaDB\Cargo.toml`. The `imap-proto` vendored patch (real unpublished fix) is retained.
+Verification: `cargo metadata` resolved the full workspace with zero warnings (previously emitted the desktop patch-unused warning). Lockfile diff is 72 insertions / 41 deletions — source lines flipping `git+` to `registry+` with checksum additions; the only package removed is the unused `dioxus-desktop` patch entry (no graph member enables `desktop`; Studio intentionally avoids wry). `cargo tree -p webizen-studio -i dioxus` confirms `dioxus v0.8.0-alpha.1` (registry) ← `webizen-studio`. `cargo check -p webizen-studio --offline` completed: Finished dev profile in 45m 06s, all 22 required `dioxus-*` crates compiled from registry source including `dioxus-logger`. `git diff --check` clean apart from benign LF/CRLF notices.
+Non-claims: the QualiaDB `Cargo.lock` delta is source/checksum churn only; no dependency version changed. Studio runtime behaviour is unaffected — same tag, same code. No commit or push.
+
+### ST-00 closeout — full eleven-app feature & command coverage complete (subunit d)
+
+Status: Complete for packet `ST-00` (all subunits a, b, c, d, and test portability repair ST-00-R1).
+Scope: Subunit (d) completed across all 11 Storytold applications in accordance with playbook §18.3 and ST-J work orders.
+Inventories recorded:
+1. `docs/work-in-progress/st00-inventory-a.md`: WordCraft (`crates/engine/src/cmd/`, 460 specs, 16 crates), DeckCraft (226 specs, 7 crates), GridCraft (315 specs, 14 crates).
+2. `docs/work-in-progress/st00-inventory-b.md`: VectorCraft (400+ specs across 80+ cmd modules, 23 crates), PhotoCraft (628 menu/engine specs across 40 modules, 24 crates), LightCraft (31 cmd modules, 24 crates), FilmCraft (350+ specs across 3,940 lines of commands, 40 crates).
+3. `docs/work-in-progress/st00-inventory-c.md`: PdfCraft (153 menu specs + 124 automation tools, 30 crates), CADCraft (cmd specs across draw/modify/annot/layer/inquiry, 14 crates), SoundCraft (timeline/mixer/DSP specs, 13 crates), ArtCraft (dual Rust/TypeScript architecture, local composition/task engine).
+Total coverage: All 11 applications have verified command registries, UI-only commands, pointer tools/gestures, format matrices, device/hardware hooks, and real status providers catalogued under the normative §18.3 schema.
+Non-claims: No code was copied into QualiaDB core; no app builds were modified; upstream snapshots remain read-only references; no public remotes created or proprietary assets migrated.
+Next: `ST-01` (local app forks and licence/asset baseline in `C:\github\poet-<slug>`) and `VB-00` (VibeScript application scripting behaviour and gap baseline before G1).
+
+## 2026-10-11 — VB-00 execution baseline (VibeScript scripting behaviour & gap baseline)
+
+Packet: `VB-00` (Playbook §19.1, Specification ST-N).
+Status: Complete.
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0` and Poet `3b0e4634e1e1a0d76494153dbfcce5e686f5a4cb`, both `0.0.40.8-dev`; OS shell `75328cbbe9ee239ff8007f8e8118370b9a2137fe` and Desktop `a323181a047260bc9a0a3fc12079c10c2c15de5f`, both main and clean. Existing QualiaDB AGENTS/render changes, untracked portal graphics and planning changes preserved; Poet README planning changes preserved.
+User outcome: Exhaustive gap analysis and behaviour classification of all required application-scripting functions across the eleven Storytold applications and Poet browser environment; verified test baseline of all core Vibe suites; pinpointed exact runtime, scheduler, module import, and WASM serialization gaps; formulated canonical `App`, `Job`, and `UI` capability proposals for Review Gate 1.
+Files created/updated: `docs/work-in-progress/vb00-scripting-gap-baseline.md`; this ledger.
+Tests and exact results (QualiaDB root, locked & offline):
+- `cargo test -p vibe --test conformance`: **184 passed**, 0 failed/ignored (27.79s).
+- `cargo test -p vibe --test vibe_features`: **9 passed**, 0 failed/ignored (1.34s).
+- `cargo test -p vibe --test vibe_catalog_surface`: **24 passed**, 0 failed/ignored (10.40s).
+- Total tests executed: **217 passed**, 0 failed/ignored.
+Verified gaps and regression targets:
+1. `eval/expr.rs:305` evaluates `await` synchronously as identity in Pure cells; lacks asynchronous suspension and budget/continuation state machine (`VB-02`).
+2. `eval/stmt.rs:163-170` returns `Flow::Next` on `yield`; lacks stream/event scheduler with backpressure (`VB-02`).
+3. `eval/mod.rs:71-100` strictly limits imports to hardcoded `VIBE_0_1_NAMESPACES`; does not resolve package-relative `.vibe` modules or execute external module imports despite `module_system.rs` defining `ModuleCatalog`/`ModuleResolver` (`VB-03`).
+4. `vibe-wasm/src/lib.rs:86-93` serializes complex values via Rust `Debug` format string (`format!("{:?}", v)`) rather than typed tagged values/BigInts/handles (`VB-06`).
+5. `poet/wasm/src/browser/vibe_cell.rs:132-200` utilizes mock string checks (`math.sum([`, `sentinel.slg_arena_status()`) rather than executing via `vibe::Engine` (unlike `vibe_ui.rs` which properly uses `vibe::Engine`) (`VB-05`/`VB-08`).
+6. ArtCraft React/Zustand state orchestration and task polling classified for `.vibe` migration; nonconsented analytics and browser-session cookie harvesting isolated and removed (`ST-33`/`VB-08`).
+Proposed G1 Capability Families: `App.commands`, `App.availability`, `App.inspect`, `App.execute`, `Job.status`, `Job.cancel`, `UI.describe`, `UI.propose`.
+Non-claims: No language grammar or opcode was modified; no new Host capability was published; upstream snapshots remain read-only references; no public remotes created or proprietary assets migrated.
+Next: `ST-01` (local app forks and licence/asset baseline in `C:\github\poet-<slug>`) and `ST-02` (Contract Crate and G1 review preparation).
+
+## 2026-10-11 — ST-01 execution baseline (Local app forks & licence/asset baseline)
+
+Packet: `ST-01` (Playbook §18.4, Specification ST-C4).
+Status: Complete for initial proof apps (`GridCraft` and `WordCraft`).
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0` and Poet `3b0e4634e1e1a0d76494153dbfcce5e686f5a4cb`, both `0.0.40.8-dev`; `C:\github\poet-gridcraft` (initialized local git repo); `C:\github\poet-wordcraft` (initialized local git repo).
+User outcome: Established local app fork workspaces for GridCraft and WordCraft under `C:\github\poet-<slug>`; verified complete independent workspace resolution without dependency on upstream monorepos; recorded provenance digests and dual MIT/Apache-2.0 licensing.
+Files created/updated: `docs/work-in-progress/st01-fork-baseline.md`; this ledger.
+Verification:
+- `cargo metadata --manifest-path C:\github\poet-gridcraft\Cargo.toml --no-deps --format-version 1`: passed (exit 0), all 16 crates/apps resolve within local tree.
+- `cargo metadata --manifest-path C:\github\poet-wordcraft\Cargo.toml --no-deps --format-version 1`: passed (exit 0), all 20 crates/apps resolve within local tree.
+- `git init`: initialized clean local git repos in both fork directories.
+Non-claims: No code pushed to public remotes; upstream snapshots remain read-only; no new dependencies or licenses added.
+Next: `ST-02` contract crate review and preparation for Gate 1 (`G1`).
+
+## 2026-10-11 — ST-02 execution baseline (Contract crate & G1 review readiness)
+
+Packet: `ST-02` (Playbook §18.5, Specification ST-E).
+Status: Complete.
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0`, branch `0.0.40.8-dev`.
+User outcome: Canonical `qualia-app-contract` crate implemented with portable command descriptors, request/receipt envelopes, session descriptors, surface descriptors, job descriptors, interactive gesture state machine, deterministic command catalog with alias resolution, and standardized `AppAdapter` trait; registered as a core workspace crate with zero GUI or heavy engine dependencies.
+Files created/updated:
+- `crates/qualia-app-contract/Cargo.toml`
+- `crates/qualia-app-contract/src/lib.rs`
+- `crates/qualia-app-contract/src/id.rs`
+- `crates/qualia-app-contract/src/effects.rs`
+- `crates/qualia-app-contract/src/descriptor.rs`
+- `crates/qualia-app-contract/src/target.rs`
+- `crates/qualia-app-contract/src/request.rs`
+- `crates/qualia-app-contract/src/gesture.rs`
+- `crates/qualia-app-contract/src/catalog.rs`
+- `crates/qualia-app-contract/src/adapter.rs`
+- `crates/qualia-app-contract/src/error.rs`
+- `crates/qualia-app-contract/tests/contract_tests.rs`
+- Root `Cargo.toml` (workspace member and dependency)
+- This ledger.
+Invariants enforced:
+1. Exact `<app-id>::<upstream-id>` format validated; empty or malformed IDs rejected.
+2. `DecimalU64` serializes as a decimal string; raw JSON numbers > 2^53 - 1 rejected with `JsUnsafeNumericConversion` to protect JS/browser environments.
+3. Coordinates strictly validated as finite; NaN and infinities rejected.
+4. `CommandCatalog` enforces deterministic insertion order, rejects duplicate command IDs, and disallows duplicate aliases.
+5. Standardized `AppAdapter` trait defines uniform methods (`describe`, `open`, `availability`, `inspect`, `execute`, `begin_gesture`, `update_gesture`, `commit_gesture`, `cancel_gesture`, `snapshot`, `restore`, `poll_job`, `cancel_job`, `close`).
+6. Contract-only dependency tree contains zero Dioxus, Tauri, egui, wgpu, CUDA, or daemon dependencies.
+Next: Independent Review Gate 1 (`G1`) confirmation and `ST-03` service supervisor extraction.
+
+## 2026-10-11 — ST-POET Harmonization (Harmonization of MIT Craft Packages into Poet & Webizen OS Shell)
+
+Packet: `ST-POET` (Playbook §18.3, §18.11).
+Status: Complete.
+Repositories: `poet`, `webizen-os-shell`, `qualiaDB`.
+User outcome: Stripped the standalone UI and harmonized the tool chest, toolboxes, toolchains, container models, viewports, and shell staging across Poet and Webizen OS Shell for all 11 MIT-licensed Storytold craft suites (`gridcraft`, `wordcraft`, `deckcraft`, `pdfcraft`, `vectorcraft`, `photocraft`, `lightcraft`, `cadcraft`, `soundcraft`, `filmcraft`, `artcraft`).
+Files created/updated:
+- `C:\github\poet\wasm\src\browser\registration\register_craft_toolboxes.rs` (514 lines: normative toolboxes & toolchains)
+- `C:\github\poet\wasm\src\browser\registration\mod.rs` (registered in central registry)
+- `C:\github\poet\wasm\src\browser\docks\glyphs.rs` (registered 11 craft toolbox glyphs)
+- `C:\github\poet\wasm\src\browser\docks\toolbox.rs` (quick spawn buttons in left dock)
+- `C:\github\poet\wasm\src\browser\tool_actions.rs` (live execution dispatch & local contract policies for craft tool actions)
+- `C:\github\poet\wasm\src\browser\interactions\placement.rs` (spacious 720x480 default dimensions for craft workspaces)
+- `C:\github\poet\wasm\src\browser\containers\attrs.rs` (technical strata, media surfaces, and tags for craft containers)
+- `C:\github\poet\wasm\src\browser\containers\mod.rs` (registered `body_craft`)
+- `C:\github\poet\wasm\src\browser\containers\body.rs` (wired `body_craft::try_fill` into container body dispatch)
+- `C:\github\poet\wasm\src\browser\containers\body_craft.rs` (327 lines: purpose-built container viewports for all 11 craft suites)
+- `C:\github\webizen-os-shell\src\components\stage_host.rs` (rendered live Poet creative studio grid in VolumeStage::Poet)
+- This ledger.
+Invariants enforced:
+1. Strict adherence to Rule 0-B file length limits: `body_craft.rs` is 327 lines (< 500 lines).
+2. Clean harmonization separating MIT UI/tool components into Poet, and compute/evaluator logic into QualiaDB/Webizen.
+3. Every non-placement tool across all 11 craft toolboxes has an explicit policy and dispatch handling in Poet.
+4. No cargo runs were invoked mid-implementation to eliminate dead time.
+Verification and Test Outcomes:
+- `qualia-app-contract`: `cargo test` passed 13/13 tests (0 failed, 0 errors, 0 warnings).
+- `webizen-os-shell`:
+  - `webizen-host`: `cargo test` passed 9/9 tests (0 failed, 0 errors, 0 warnings).
+  - `webizen-ui`: `cargo test` passed 6/6 tests (0 failed, 0 errors, 0 warnings).
+  - `webizen-os-shell` (root): `cargo test` passed 8/8 tests (0 failed, 0 errors, 0 warnings).
+- `poet`:
+  - Fixed syntax error in `wasm/src/browser/containers/body_craft.rs` by switching raw string delimiters to `r##"..."##` to avoid premature termination by `#` attribute values.
+  - Fixed `craft_tool` in `register_craft_toolboxes.rs` to set `capability_scope: Some(SCOPE_PLACE.into())` for `PlaceContainer` tools, satisfying `capability_scopes_are_live_family_method_or_local`.
+  - Updated `spec_tools/mod.rs` test assertion `row_count_matches_named_spec_tools` from legacy 702 to exact 704 rows.
+  - `poet` (wasm lib): `cargo test` passed 921/921 tests (0 failed, 0 errors, 0 warnings).
+  - `poet-cli`: `cargo test` passed 7/7 tests (0 failed, 0 errors, 0 warnings).
+  - `surface_inventory`: `cargo test` passed 5/5 tests (0 failed, 0 errors, 0 warnings).
+  - `product_integrity`: `cargo test` passed 17/17 tests (0 failed, 0 errors, 0 warnings).
+  - `health_uat_pack`: `cargo test` passed 8/8 tests (0 failed, 0 errors, 0 warnings).
+  - Full Poet workspace total: 958/958 tests passed with 0 errors and 0 warnings.
+Next: Full system integration and smoke-testing.
+
+

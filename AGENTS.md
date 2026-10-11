@@ -133,6 +133,7 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **10D Manifold → WebizenVM bridge** | `modalities/manifold.rs`, `governance/webizen.rs` | ✅ LTL + stable-model ASP wired | Two parity-valid Quins per state; bounded zero-heap VM evaluation |
 | **WGSL Forge** | `wgsl_forge/`, `qualia-cli/src/shader.rs` | ✅ deterministic generation/certification/tuning | Typed kernel/schedule IR, Naga validation, CPU oracle, real GPU timing, adapter-keyed cache |
 | **N-Dimensional Renderer SDK** | `render/gpu/`, `webizen-render/` | ✅ native + WASM volumetric path | Shared wgpu 30 device with capability-intersected f16/subgroup/timing features, Tensor10D projector, depth/bloom/mesh/picking, caller-buffered RGBA8, serde SDK adapter |
+| **Portal HUD** | `render/hud/` | ✅ bounded WASM canvas document | Panels, color-coded labels/meters, buttons, semantic markers, and a rendered rear-view mirror widget |
 | **Linear-Algebra Privacy Engine** | `specialized_libs/linear_algebra/privacy/` | ✅ BFV HE + calibrated DP | Packed exact add/multiply/dot, 48-byte external ciphertext ref, Laplace/Gaussian, basic/advanced/RDP accounting |
 
 ## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
@@ -1203,3 +1204,13 @@ cargo test
 **Verification:** `did_qi` 33; fabric 49; `cscp_h2` 4; `cscp_wss` 1.
 
 **Not done (human):** CSCP-08 URL; CSCP-12 datatracker. Parent CSCP-09 Internet still open.
+
+### 2026-10-11 — Portal HUD indicators for Australian driving showcase
+
+**Completed:**
+- Extended the bounded Qualia Portal HUD document with opt-in meter colors and a `mirror` item that paints a constrained rear-road scene with following vehicle silhouettes and an obscuring caravan body.
+- Extended opt-in validated label colors so safety-critical game readings can carry a readable text severity as well as a color-coded meter.
+- Game HUD now displays color-coded simulated oil/coolant bars, current ambient temperature, signed grade, surface, dynamic engine load and engine health. The mirror panel shows a traffic queue and a bend-revealed sightline.
+- Built the game WASM package and regenerated the Storybook, Earthlight and Community Grounds HMC packs (566 assets, 40 scene states each); the exporter verified each HMC with Qualia's reader. The same release includes 27 profile-selected Australian flora assets.
+
+**Verification:** `rustfmt --edition 2021` and the game release WASM build succeeded. User requested no tests/browser self-test, so none were run. Visual/browser acceptance remains open. The root `HANDOVER.md` referenced above is absent from this checkout; this inventory and session note are recorded here.

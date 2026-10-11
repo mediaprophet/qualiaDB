@@ -109,18 +109,15 @@ fn sampler_record(role: u32) -> u32 {
     return (word >> (slot * 7u)) & 127u;
 }
 
-fn use_nearest_texel(uv: vec2<f32>, role: u32, dims: vec2<u32>) -> bool {
+fn is_nearest_filter(role: u32, rho: f32) -> bool {
     let record = sampler_record(role);
     let min_filter = record & 7u;
     let min_nearest = min_filter == 0u || min_filter == 2u;
     let mag_nearest = (material.coverage.w & (1u << role)) != 0u;
-    let dx = dpdx(uv) * vec2<f32>(dims);
-    let dy = dpdy(uv) * vec2<f32>(dims);
-    let rho = max(length(dx), length(dy));
     return (mag_nearest && rho <= 1.0) || (min_nearest && rho > 1.0);
 }
 
-fn nearest_texel(uv: vec2<f32>, role: u32, dims: vec2<u32>, levels: u32) -> vec3<i32> {
+fn nearest_texel(uv: vec2<f32>, role: u32, dims: vec2<u32>, levels: u32, rho: f32) -> vec3<i32> {
     let record = sampler_record(role);
     let min_filter = record & 7u;
     let wrap_s = (record >> 3u) & 3u;
@@ -140,9 +137,6 @@ fn nearest_texel(uv: vec2<f32>, role: u32, dims: vec2<u32>, levels: u32) -> vec3
     if (wrap_t == 2u) { wrapped.y = wrapped.y - floor(wrapped.y); }
     var level = 0u;
     if (min_filter == 2u && levels > 1u) {
-        let dx = dpdx(uv) * vec2<f32>(dims);
-        let dy = dpdy(uv) * vec2<f32>(dims);
-        let rho = max(length(dx), length(dy));
         let lod = clamp(log2(max(rho, 0.000001)), 0.0, f32(levels - 1u));
         level = u32(floor(lod + 0.5));
     }
@@ -152,51 +146,81 @@ fn nearest_texel(uv: vec2<f32>, role: u32, dims: vec2<u32>, levels: u32) -> vec3
 }
 
 fn sample_base_color(uv: vec2<f32>) -> vec4<f32> {
-    if ((material.coverage.y & 1u) != 0u && use_nearest_texel(uv, 0u, textureDimensions(base_color_map, 0))) {
-        let p = nearest_texel(uv, 0u, textureDimensions(base_color_map, 0), textureNumLevels(base_color_map));
+    let sampled = textureSample(base_color_map, base_color_sampler, uv);
+    let dims = textureDimensions(base_color_map, 0);
+    let dx = dpdx(uv) * vec2<f32>(dims);
+    let dy = dpdy(uv) * vec2<f32>(dims);
+    let rho = max(length(dx), length(dy));
+    if ((material.coverage.y & 1u) != 0u && is_nearest_filter(0u, rho)) {
+        let p = nearest_texel(uv, 0u, dims, textureNumLevels(base_color_map), rho);
         return textureLoad(base_color_map, p.xy, p.z);
     }
-    return textureSample(base_color_map, base_color_sampler, uv);
+    return sampled;
 }
 
 fn sample_normal(uv: vec2<f32>) -> vec4<f32> {
-    if ((material.coverage.y & 2u) != 0u && use_nearest_texel(uv, 1u, textureDimensions(normal_map, 0))) {
-        let p = nearest_texel(uv, 1u, textureDimensions(normal_map, 0), textureNumLevels(normal_map));
+    let sampled = textureSample(normal_map, normal_sampler, uv);
+    let dims = textureDimensions(normal_map, 0);
+    let dx = dpdx(uv) * vec2<f32>(dims);
+    let dy = dpdy(uv) * vec2<f32>(dims);
+    let rho = max(length(dx), length(dy));
+    if ((material.coverage.y & 2u) != 0u && is_nearest_filter(1u, rho)) {
+        let p = nearest_texel(uv, 1u, dims, textureNumLevels(normal_map), rho);
         return textureLoad(normal_map, p.xy, p.z);
     }
-    return textureSample(normal_map, normal_sampler, uv);
+    return sampled;
 }
 
 fn sample_metallic_roughness(uv: vec2<f32>) -> vec4<f32> {
-    if ((material.coverage.y & 4u) != 0u && use_nearest_texel(uv, 2u, textureDimensions(metallic_roughness_map, 0))) {
-        let p = nearest_texel(uv, 2u, textureDimensions(metallic_roughness_map, 0), textureNumLevels(metallic_roughness_map));
+    let sampled = textureSample(metallic_roughness_map, metallic_roughness_sampler, uv);
+    let dims = textureDimensions(metallic_roughness_map, 0);
+    let dx = dpdx(uv) * vec2<f32>(dims);
+    let dy = dpdy(uv) * vec2<f32>(dims);
+    let rho = max(length(dx), length(dy));
+    if ((material.coverage.y & 4u) != 0u && is_nearest_filter(2u, rho)) {
+        let p = nearest_texel(uv, 2u, dims, textureNumLevels(metallic_roughness_map), rho);
         return textureLoad(metallic_roughness_map, p.xy, p.z);
     }
-    return textureSample(metallic_roughness_map, metallic_roughness_sampler, uv);
+    return sampled;
 }
 
 fn sample_occlusion(uv: vec2<f32>) -> vec4<f32> {
-    if ((material.coverage.y & 8u) != 0u && use_nearest_texel(uv, 3u, textureDimensions(occlusion_map, 0))) {
-        let p = nearest_texel(uv, 3u, textureDimensions(occlusion_map, 0), textureNumLevels(occlusion_map));
+    let sampled = textureSample(occlusion_map, occlusion_sampler, uv);
+    let dims = textureDimensions(occlusion_map, 0);
+    let dx = dpdx(uv) * vec2<f32>(dims);
+    let dy = dpdy(uv) * vec2<f32>(dims);
+    let rho = max(length(dx), length(dy));
+    if ((material.coverage.y & 8u) != 0u && is_nearest_filter(3u, rho)) {
+        let p = nearest_texel(uv, 3u, dims, textureNumLevels(occlusion_map), rho);
         return textureLoad(occlusion_map, p.xy, p.z);
     }
-    return textureSample(occlusion_map, occlusion_sampler, uv);
+    return sampled;
 }
 
 fn sample_emissive(uv: vec2<f32>) -> vec4<f32> {
-    if ((material.coverage.y & 16u) != 0u && use_nearest_texel(uv, 4u, textureDimensions(emissive_map, 0))) {
-        let p = nearest_texel(uv, 4u, textureDimensions(emissive_map, 0), textureNumLevels(emissive_map));
+    let sampled = textureSample(emissive_map, emissive_sampler, uv);
+    let dims = textureDimensions(emissive_map, 0);
+    let dx = dpdx(uv) * vec2<f32>(dims);
+    let dy = dpdy(uv) * vec2<f32>(dims);
+    let rho = max(length(dx), length(dy));
+    if ((material.coverage.y & 16u) != 0u && is_nearest_filter(4u, rho)) {
+        let p = nearest_texel(uv, 4u, dims, textureNumLevels(emissive_map), rho);
         return textureLoad(emissive_map, p.xy, p.z);
     }
-    return textureSample(emissive_map, emissive_sampler, uv);
+    return sampled;
 }
 
 fn sample_stylized_ramp(uv: vec2<f32>) -> vec4<f32> {
-    if ((material.coverage.y & 32u) != 0u && use_nearest_texel(uv, 5u, textureDimensions(stylized_ramp_map, 0))) {
-        let p = nearest_texel(uv, 5u, textureDimensions(stylized_ramp_map, 0), textureNumLevels(stylized_ramp_map));
+    let sampled = textureSample(stylized_ramp_map, stylized_ramp_sampler, uv);
+    let dims = textureDimensions(stylized_ramp_map, 0);
+    let dx = dpdx(uv) * vec2<f32>(dims);
+    let dy = dpdy(uv) * vec2<f32>(dims);
+    let rho = max(length(dx), length(dy));
+    if ((material.coverage.y & 32u) != 0u && is_nearest_filter(5u, rho)) {
+        let p = nearest_texel(uv, 5u, dims, textureNumLevels(stylized_ramp_map), rho);
         return textureLoad(stylized_ramp_map, p.xy, p.z);
     }
-    return textureSample(stylized_ramp_map, stylized_ramp_sampler, uv);
+    return sampled;
 }
 
 fn environment_probe_weight(world_position: vec3<f32>, probe: EnvironmentProbe) -> f32 {
@@ -308,8 +332,9 @@ fn vertex_main(
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     var n = normalize(input.normal);
+    let normal_sample = sample_normal(material_uv(input.uv0, 1u));
     if (material.texture_flags.y != 0u) {
-        let encoded = sample_normal(material_uv(input.uv0, 1u)).xyz * 2.0 - vec3<f32>(1.0);
+        let encoded = normal_sample.xyz * 2.0 - vec3<f32>(1.0);
         let normal_scale = bitcast<f32>(material.texture_flags_extra.w);
         let tangent = normalize(input.tangent.xyz);
         let bitangent = normalize(cross(n, tangent)) * input.tangent.w;

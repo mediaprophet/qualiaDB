@@ -17,6 +17,19 @@ fn hdr_composite_available(
 }
 
 pub(super) fn probe_hdr_format(device: &wgpu::Device) -> bool {
+    // WebGPU pipeline validation is deferred, and the browser path cannot yet
+    // inspect the error scope reliably (see portal_gpu/init.rs). Creating an
+    // rgba16float texture alone does not establish that all HDR scene
+    // pipelines are valid on the selected adapter. Keep the standard render
+    // path active until the full HDR pipeline can be validated on WASM.
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = device;
+        return false;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
     let tex = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("portal-hdr-probe"),
         size: wgpu::Extent3d {
@@ -33,6 +46,7 @@ pub(super) fn probe_hdr_format(device: &wgpu::Device) -> bool {
     });
     tex.create_view(&wgpu::TextureViewDescriptor::default());
     true
+    }
 }
 
 pub(super) fn hdr_color_target_state() -> wgpu::ColorTargetState {

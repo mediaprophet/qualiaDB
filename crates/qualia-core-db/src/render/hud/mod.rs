@@ -79,11 +79,12 @@ impl QualiaHud {
         for item in &doc.items {
             if !matches!(
                 item.kind.as_str(),
-                "panel" | "label" | "button" | "meter" | "marker"
+                "panel" | "label" | "button" | "meter" | "marker" | "mirror"
             ) || item.id.len() > 96
                 || item.text.len() > 512
                 || item.icon.len() > 24
                 || (item.kind == "marker" && !valid_color(&item.color))
+                || (item.kind == "label" && !item.color.is_empty() && !valid_color(&item.color))
                 || ![item.x, item.y, item.z, item.w, item.h, item.value]
                     .iter()
                     .all(|v| v.is_finite())
@@ -93,6 +94,9 @@ impl QualiaHud {
                 || item.h > 8192.0
                 || item.x < -8192.0
                 || item.y < -8192.0
+                || (matches!(item.kind.as_str(), "meter" | "mirror")
+                    && !item.color.is_empty()
+                    && !valid_color(&item.color))
             {
                 return Err(JsValue::from_str("invalid HUD item"));
             }
@@ -155,7 +159,11 @@ impl QualiaHud {
                     );
                 }
                 "label" => {
-                    ctx.set_fill_style_str("#fff1d0");
+                    ctx.set_fill_style_str(if item.color.is_empty() {
+                        "#fff1d0"
+                    } else {
+                        &item.color
+                    });
                     ctx.set_font("bold 15px Trebuchet MS, sans-serif");
                     ctx.set_text_baseline("middle");
                     let _ = ctx.fill_text_with_max_width(
@@ -168,9 +176,14 @@ impl QualiaHud {
                 "meter" => {
                     ctx.set_fill_style_str("#46585b");
                     ctx.fill_rect(item.x, item.y, item.w, item.h);
-                    ctx.set_fill_style_str("#78c6a3");
+                    ctx.set_fill_style_str(if item.color.is_empty() {
+                        "#78c6a3"
+                    } else {
+                        &item.color
+                    });
                     ctx.fill_rect(item.x, item.y, item.w * item.value.clamp(0.0, 1.0), item.h);
                 }
+                "mirror" => draw_rear_mirror(ctx, item),
                 _ => {}
             }
         }
@@ -266,6 +279,101 @@ fn inside(item: &HudItem, x: f64, y: f64) -> bool {
 
 fn valid_color(color: &str) -> bool {
     color.len() == 7 && color.starts_with('#') && color[1..].bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+fn draw_rear_mirror(ctx: &CanvasRenderingContext2d, item: &HudItem) {
+    let x = item.x;
+    let y = item.y;
+    let w = item.w;
+    let h = item.h;
+    ctx.set_fill_style_str("#352923");
+    ctx.fill_rect(x, y, w, h);
+    ctx.set_stroke_style_str("#d8b477");
+    ctx.stroke_rect(x + 0.5, y + 0.5, (w - 1.0).max(0.0), (h - 1.0).max(0.0));
+
+    let pad = 4.0;
+    let ix = x + pad;
+    let iy = y + pad;
+    let iw = (w - pad * 2.0).max(1.0);
+    let ih = (h - pad * 2.0).max(1.0);
+    ctx.save();
+    ctx.begin_path();
+    ctx.rect(ix, iy, iw, ih);
+    ctx.clip();
+
+    ctx.set_fill_style_str(if item.disabled { "#929f96" } else { "#a6c7c1" });
+    ctx.fill_rect(ix, iy, iw, ih * 0.55);
+    ctx.set_fill_style_str("#66715f");
+    ctx.fill_rect(ix, iy + ih * 0.55, iw, ih * 0.45);
+    ctx.set_fill_style_str("#d8c6a4");
+    ctx.fill_rect(ix, iy + ih * 0.54, iw, (ih * 0.025).max(1.0));
+
+    // A road narrows toward the horizon; its bend makes the traffic line visible.
+    ctx.begin_path();
+    if item.disabled {
+        ctx.move_to(ix + iw * 0.39, iy + ih * 0.56);
+        ctx.line_to(ix + iw * 0.60, iy + ih * 0.56);
+        ctx.line_to(ix + iw * 0.82, iy + ih);
+        ctx.line_to(ix + iw * 0.16, iy + ih);
+    } else {
+        ctx.move_to(ix + iw * 0.48, iy + ih * 0.56);
+        ctx.line_to(ix + iw * 0.58, iy + ih * 0.56);
+        ctx.line_to(ix + iw * 0.94, iy + ih);
+        ctx.line_to(ix + iw * 0.07, iy + ih);
+    }
+    ctx.close_path();
+    ctx.set_fill_style_str("#555955");
+    ctx.fill();
+
+    let vehicles = item.value.floor().clamp(0.0, 7.0) as usize;
+    for index in (0..vehicles).rev() {
+        let distance = (index as f64 + 1.0) / (vehicles as f64 + 1.0);
+        let scale = 0.20 + distance * 0.58;
+        let center = if item.disabled {
+            ix + iw * (0.49 + (index % 2) as f64 * 0.08)
+        } else {
+            ix + iw * (0.52 + distance * 0.18)
+        };
+        let car_y = iy + ih * (0.58 + distance * 0.28);
+        let car_w = iw * 0.12 * scale;
+        let car_h = ih * 0.12 * scale;
+        ctx.set_fill_style_str("#263b40");
+        ctx.fill_rect(center - car_w * 0.5, car_y, car_w, car_h);
+        ctx.set_fill_style_str("#f5d98b");
+        ctx.fill_rect(
+            center - car_w * 0.42,
+            car_y + car_h * 0.72,
+            car_w * 0.18,
+            car_h * 0.16,
+        );
+        ctx.fill_rect(
+            center + car_w * 0.24,
+            car_y + car_h * 0.72,
+            car_w * 0.18,
+            car_h * 0.16,
+        );
+    }
+
+    if item.disabled {
+        // The towed caravan occupies the centre view; only fragments of traffic
+        // remain visible at the mirror edges until a bend opens the sightline.
+        ctx.set_fill_style_str("#e5d7bd");
+        ctx.fill_rect(ix + iw * 0.30, iy + ih * 0.47, iw * 0.43, ih * 0.55);
+        ctx.set_fill_style_str("#78949a");
+        ctx.fill_rect(ix + iw * 0.35, iy + ih * 0.53, iw * 0.13, ih * 0.19);
+        ctx.fill_rect(ix + iw * 0.55, iy + ih * 0.53, iw * 0.13, ih * 0.19);
+        ctx.set_fill_style_str("#342f2b");
+        ctx.fill_rect(ix + iw * 0.36, iy + ih * 0.91, iw * 0.10, ih * 0.13);
+        ctx.fill_rect(ix + iw * 0.62, iy + ih * 0.91, iw * 0.10, ih * 0.13);
+    }
+
+    ctx.restore();
+    ctx.set_fill_style_str(if item.color.is_empty() {
+        "#f0c26f"
+    } else {
+        &item.color
+    });
+    ctx.fill_rect(x + 6.0, y + 6.0, 5.0, 5.0);
 }
 
 fn draw_marker(ctx: &CanvasRenderingContext2d, item: &HudItem, x: f64, y: f64, focused: bool) {
