@@ -155,3 +155,14 @@ pub use temporal_ltl::{
 };
 pub mod manifold;
 pub use manifold::project_10d_to_quaternion;
+pub mod accrual;
+pub use accrual::{
+    asymmetry_ratio, eval_accrual_loss, AccrualLossReport, AccrualProfile, IrreversibilityClass,
+    LossEvent, MaturityClass, StockEntity,
+};
+pub mod reconciliation;
+pub use reconciliation::{
+    cascade_recheck_flags, compare_views, ReconciliationRecord, ReconciliationStatus,
+    RECHECKABLE_FLAG,
+};
+

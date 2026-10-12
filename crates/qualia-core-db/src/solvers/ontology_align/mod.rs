@@ -8,7 +8,12 @@
 //! - [`mod@align`] — alignment-as-optimization (greedy + hill-climbing).
 
 pub mod align;
+pub mod alignment_guard;
 pub mod correspondence;
 
 pub use align::align;
+pub use alignment_guard::{
+    check_contest_budget, detect_poisoned_alignment_flood, AlignmentSecurityError, ContestRecord,
+};
 pub use correspondence::{Alignment, Correspondence, ProposedStatus};
+

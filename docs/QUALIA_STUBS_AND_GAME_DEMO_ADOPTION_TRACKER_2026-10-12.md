@@ -242,4 +242,28 @@ This track codifies all upstream engine requirements, architectural gaps, and en
   - **Location:** `manifests/ontologies.json`, `crates/qualia-core-db/src/query/ontology_loader.rs`
   - **Status:** Complete. Expanded `manifests/ontologies.json` and `query/ontology_loader.rs` with TERN Ecosystem Ontology, Darwin Core (DwC), Australian National Species List (auNSL), W3C Media Annotation Ontology, SPARQL-MM, and QUDT units.
 
+---
+
+## 7. Track 5: Temporal Accrual, Corpus Reconciliation & Statistical Cube Ingest
+_Source Discovery: `C:\github\ecopunk\docs\planning\tech\` (`accrual.md`, `reconciliation.md`, `statistics.md`, `threat-model.md`, GAP-07, GAP-09, GAP-11)_
+
+This track expands the QualiaDB runtime to model irreversible loss, slow-variable accrual, corpus reconciliation across vintages, statistical data cubes with confidentiality marks, and alignment flood guards:
+
+### Workstream 5.1: Ecological Accrual & Corpus Reconciliation (GAP-11)
+- [x] **Task 5.1.1 (GAP-11 / G47 — Accrual, Slow Variables & Irreversible Loss Modality):**
+  - **Location:** `crates/qualia-core-db/src/modalities/accrual.rs`, `src/modalities/mod.rs`
+  - **Status:** Complete. Implemented standing stocks (`StockEntity`), time-depth maturity classes (`MaturityClass`), temporal asymmetry ratios (`asymmetry_ratio` modeling the 30-year growth vs 2-night burn dynamic), irreversibility classifications (`IrreversibilityClass`), multi-dimensional non-collapsible accrual profiles (`AccrualProfile`), and loss event evaluation (`eval_accrual_loss`).
+- [x] **Task 5.1.2 (GAP-11 / G46 — Corpus Reconciliation & Vintage Staleness Engine):**
+  - **Location:** `crates/qualia-core-db/src/modalities/reconciliation.rs`, `src/modalities/mod.rs`
+  - **Status:** Complete. Implemented governed internal-vs-external view comparison without silent overwriting (`ReconciliationStatus::Converged/Diverged/Deferred/Contested`), queryable staleness (`ReconciliationRecord::is_stale`), and downstream re-check cascade flags (`cascade_recheck_flags` setting bit 15).
+
+### Workstream 5.2: Statistical Cubes & Alignment Security (GAP-07 / GAP-09)
+- [x] **Task 5.2.1 (GAP-09 / G38 / G42 — SDMX RDF Data Cube Engine with Confidentiality Marks):**
+  - **Location:** `crates/qualia-core-db/src/query/sdmx_cube.rs`, `src/query/mod.rs`
+  - **Status:** Complete. Implemented `SdmxObservation` to `qb:` Quins compilation (`compile_observation_to_quins`) with first-class confidentiality marks (`ConfidentialityMark::Public/SuppressedForPrivacy/Perturbed/ModelledEstimate`) bound to `NQuin` sensitivity context bits `[56..63]` and epistemic certainty weights `[0..15]`.
+- [x] **Task 5.2.2 (GAP-07 / G30 / G31 — Poisoned-Alignment Flood Guard & Contest Abuse Limiter):**
+  - **Location:** `crates/qualia-core-db/src/solvers/ontology_align/alignment_guard.rs`, `src/solvers/ontology_align/mod.rs`
+  - **Status:** Complete. Implemented `detect_poisoned_alignment_flood` to prevent bogus `closeMatch` proposal storms and low-entropy spam injection, along with `check_contest_budget` enforcing sliding-window rate limits against contest-record denial-of-service.
+
+
 
