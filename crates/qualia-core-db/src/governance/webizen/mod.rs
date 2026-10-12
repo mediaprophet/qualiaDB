@@ -55,7 +55,7 @@ const MAX_PREMISE_DEPTH: usize = 16;
 /// Max forward-chaining rounds (fixpoint cap) for `fire_guard_rules`.
 const MAX_FIXPOINT_ROUNDS: usize = 16;
 
-mod agreement;
+pub mod agreement;
 mod arena;
 mod arena_admit;
 mod clinical_native;

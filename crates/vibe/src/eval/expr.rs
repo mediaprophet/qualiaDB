@@ -108,7 +108,21 @@ impl<'a, H: Host> Engine<'a, H> {
                 }
                 let val = self.eval_expr(recv, env)?;
                 match val {
-                    Value::Record(m) => Ok(m.get(name).cloned().unwrap_or(Value::Null)),
+                    Value::Record(m) => {
+                        if let Some(v) = m.get(name) {
+                            Ok(v.clone())
+                        } else if name == "len" || name == "length" {
+                            Ok(Value::F64(m.len() as f64))
+                        } else {
+                            Ok(Value::Null)
+                        }
+                    }
+                    Value::List(xs) if name == "len" || name == "length" => {
+                        Ok(Value::F64(xs.len() as f64))
+                    }
+                    Value::String(s) if name == "len" || name == "length" => {
+                        Ok(Value::F64(s.len() as f64))
+                    }
                     other => Err(Diagnostic::new(
                         DiagCode::E600,
                         expr.span,

@@ -1817,4 +1817,28 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().code, DiagCode::E100);
     }
+
+    #[test]
+    fn test_collection_and_string_methods() {
+        let src = r#"
+            fn test_all() -> bool {
+                let xs = [1.0, 2.0, 3.0];
+                let l = xs.len;
+                let c = xs.contains(2.0);
+                let p = xs.push(4.0);
+                let s = "hello world";
+                let sw = s.starts_with("hello");
+                let sc = s.contains("world");
+                let sl = s.len;
+                return l == 3.0 && c && p.len == 4.0 && sw && sc && sl == 11.0;
+            }
+        "#;
+        let prog = crate::parse_program(src).expect("parses");
+        crate::check_program(&prog).expect("checks");
+        let mut host = crate::bind::LocalHost::default();
+        let mut env = Env::default();
+        let res = crate::eval_function(&prog, "test_all", vec![], &mut host, &mut env)
+            .expect("evaluates");
+        assert_eq!(res, Value::Bool(true));
+    }
 }

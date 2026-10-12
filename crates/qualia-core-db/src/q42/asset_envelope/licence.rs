@@ -340,6 +340,7 @@ impl LicenceClass {
             Self::CcBy => 2,
             Self::CcBySa => 3,
             Self::CcByNc => 4,
+            Self::SocialPermissiveCommons => 2,
             Self::ProprietaryPermitted => 5,
             Self::Unknown => 6,
         }
