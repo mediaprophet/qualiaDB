@@ -38,7 +38,7 @@ pub mod bentley_ottmann;
 pub mod boolean_2;
 pub mod boolean_3;
 mod box_join;
-mod bvh;
+pub mod bvh;
 /// P11.13 — Rotating calipers (diameter, width, antipodal pairs) and
 /// smallest enclosing disk (Welzl randomized incremental, seeded determinism).
 pub mod calipers_enclosing_disk;
