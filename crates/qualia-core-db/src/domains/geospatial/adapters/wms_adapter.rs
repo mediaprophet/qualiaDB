@@ -57,8 +57,8 @@ impl WmsAdapter {
         );
 
         if time_range.1 > 0 {
-            // Stub: proper ISO8601 formatting for TIME parameter
-            url.push_str(&format!("&TIME={}/{}", time_range.0, time_range.1));
+            let iso_time = super::format_iso8601_range(time_range);
+            url.push_str(&format!("&TIME={}", iso_time));
         }
 
         Ok(AdapterHttpRequest::get(url, "OGC"))

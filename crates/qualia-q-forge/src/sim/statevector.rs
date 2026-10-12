@@ -142,6 +142,43 @@ impl LocalSimulator for StateVectorSimulator {
                     morphism.target = operand2;
                     morphism.apply(&mut space)?;
                 }
+                // OP_Y
+                0x05 => {
+                    morphism.matrix_2x2 = Some(ZeroHeapMatrix::new([
+                        [(0.0, 0.0), (0.0, -1.0)],
+                        [(0.0, 1.0), (0.0, 0.0)],
+                    ]));
+                    morphism.apply(&mut space)?;
+                }
+                // OP_S
+                0x06 => {
+                    morphism.matrix_2x2 = Some(ZeroHeapMatrix::new([
+                        [(1.0, 0.0), (0.0, 0.0)],
+                        [(0.0, 0.0), (0.0, 1.0)],
+                    ]));
+                    morphism.apply(&mut space)?;
+                }
+                // OP_T
+                0x07 => {
+                    morphism.matrix_2x2 = Some(ZeroHeapMatrix::new([
+                        [(1.0, 0.0), (0.0, 0.0)],
+                        [(0.0, 0.0), (FRAC_1_SQRT_2, FRAC_1_SQRT_2)],
+                    ]));
+                    morphism.apply(&mut space)?;
+                }
+                // OP_SWAP
+                0x08 => {
+                    let bit1 = 1 << operand1;
+                    let bit2 = 1 << operand2;
+                    for i in 0..space.amplitudes.len() {
+                        let b1 = (i & bit1) != 0;
+                        let b2 = (i & bit2) != 0;
+                        if b1 && !b2 {
+                            let pair_idx = (i & !bit1) | bit2;
+                            space.amplitudes.swap(i, pair_idx);
+                        }
+                    }
+                }
                 _ => return Err("Unknown opcode"),
             }
         }
@@ -158,35 +195,37 @@ impl LocalSimulator for StateVectorSimulator {
         if out_samples.len() < shots as usize {
             return Err("Output buffer too small for shots");
         }
-
-        // Extremely rudimentary sampling: we need random numbers,
-        // but since we are `#![no_std]` and pure, we expect a provided PRNG or simple hashing.
-        // For demonstration, we simply deterministically pick based on probabilities.
-        // In a real simulator, we'd pass in a PRNG state or similar.
-
-        // This is a stub for deterministic output to fit zero-alloc requirements
-        let mut sum = 0.0;
-        let mut cdf = [0.0; 32]; // Small static buffer for small qubits only
-        let limit = state_vector.len().min(32);
-
-        for i in 0..limit {
-            let p = state_vector[i].0 * state_vector[i].0 + state_vector[i].1 * state_vector[i].1;
-            sum += p;
-            cdf[i] = sum;
+        if state_vector.is_empty() {
+            return Err("Empty state vector");
         }
 
-        let mut seed: u64 = 0x1234567890abcdef;
-        for i in 0..shots as usize {
-            // Mock random number [0.0, 1.0) using simple xorshift
-            seed ^= seed << 13;
-            seed ^= seed >> 7;
-            seed ^= seed << 17;
-            let pseudo_rand = (seed % 1000) as f64 / 1000.0;
+        // Streaming Born-rule sampling across the full state vector
+        let mut total_norm = 0.0;
+        for amp in state_vector.iter() {
+            total_norm += amp.0 * amp.0 + amp.1 * amp.1;
+        }
+        if total_norm <= 0.0 {
+            total_norm = 1.0;
+        }
 
-            let mut outcome = 0;
-            for j in 0..limit {
-                if pseudo_rand <= cdf[j] {
-                    outcome = j as u64;
+        let mut seed: u64 = 0x2545f4914f6cdd1d;
+        for i in 0..shots as usize {
+            // SplitMix64 pseudo-random generator
+            seed = seed.wrapping_add(0x9e3779b97f4a7c15);
+            let mut z = seed;
+            z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
+            z ^= z >> 31;
+            let u = ((z >> 11) as f64) / ((1u64 << 53) as f64);
+            let target = u * total_norm;
+
+            let mut cumulative = 0.0;
+            let mut outcome = 0u64;
+            for (idx, amp) in state_vector.iter().enumerate() {
+                let p = amp.0 * amp.0 + amp.1 * amp.1;
+                cumulative += p;
+                if cumulative >= target || idx == state_vector.len() - 1 {
+                    outcome = idx as u64;
                     break;
                 }
             }
@@ -194,5 +233,63 @@ impl LocalSimulator for StateVectorSimulator {
         }
 
         Ok(shots as usize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bell_state_and_full_sampling() {
+        let sim = StateVectorSimulator::new(2);
+        let mut sv = [(0.0, 0.0); 4];
+        sv[0] = (1.0, 0.0); // |00>
+
+        // Bell circuit: H(0), CX(0, 1)
+        let quin_h = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: (0x03u64 << 56) | (0u64 << 40),
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        let quin_cx = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: (0x04u64 << 56) | (0u64 << 40) | (1u64 << 24),
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+
+        sim.execute_circuit(&mut sv, &[quin_h, quin_cx]).unwrap();
+        // Bell state: (|00> + |11>) / sqrt(2)
+        assert!((sv[0].0 - FRAC_1_SQRT_2).abs() < 1e-9);
+        assert!((sv[1].0).abs() < 1e-9);
+        assert!((sv[2].0).abs() < 1e-9);
+        assert!((sv[3].0 - FRAC_1_SQRT_2).abs() < 1e-9);
+
+        // Sample 100 shots: outcomes must only be 0 (|00>) or 3 (|11>)
+        let mut samples = [0u64; 100];
+        let count = sim.sample(&sv, 100, &mut samples).unwrap();
+        assert_eq!(count, 100);
+        for &s in samples.iter() {
+            assert!(s == 0 || s == 3, "Outcome must be 0 or 3 in Bell state, got {s}");
+        }
+    }
+
+    #[test]
+    fn test_sampling_beyond_32_amplitudes() {
+        let sim = StateVectorSimulator::new(6); // 64 basis states
+        let mut sv = [(0.0, 0.0); 64];
+        sv[42] = (1.0, 0.0); // |42>
+
+        let mut samples = [0u64; 10];
+        sim.sample(&sv, 10, &mut samples).unwrap();
+        for &s in samples.iter() {
+            assert_eq!(s, 42, "Basis state 42 must be sampled with certainty");
+        }
     }
 }

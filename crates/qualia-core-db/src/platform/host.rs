@@ -270,6 +270,11 @@ impl ZeroCopyStreamer for IocpGridManager {
                 &mut buffer_ptr,
                 &mut size,
             ) {
+                if !buffer_ptr.is_null() && size > 0 {
+                    let inactive = self.get_inactive_buffer_mut();
+                    let copy_len = size.min(inactive.len());
+                    std::ptr::copy_nonoverlapping(buffer_ptr, inactive.as_mut_ptr(), copy_len);
+                }
                 self.pending_read = false;
                 self.swap_buffers();
                 Some(self.get_active_buffer())
@@ -567,28 +572,24 @@ mod tests {
         let file_path = temp_dir.join("test_iocp.dat");
 
         let mut file = File::create(&file_path).unwrap();
-        // Write at least 2 pages of data
-        file.write_all(&vec![0u8; 8192]).unwrap();
+        // Write at least 2 pages of data with distinctive marker
+        let mut test_data = vec![0u8; 8192];
+        test_data[0..4].copy_from_slice(b"IOCP");
+        file.write_all(&test_data).unwrap();
         file.sync_all().unwrap();
 
-        // IOCP is currently stubbed due to DirectX API version conflicts
-        // Test that it returns the expected error
-        let result = IocpGridManager::new(&file_path);
-        assert!(result.is_err());
+        let mut streamer = IocpGridManager::new(&file_path).expect("IocpGridManager creation should succeed");
 
-        // Verify the error message mentions the stub
-        match result {
-            Err(IoError::IoError(e)) => {
-                let error_msg = e.to_string();
-                assert!(
-                    error_msg.contains("IOCP implementation stubbed")
-                        || error_msg.contains("DirectStorageFailed"),
-                    "Expected stub error, got: {}",
-                    error_msg
-                );
-            }
-            _ => panic!("Expected IoError::IoError with stub message"),
-        }
+        // Test misaligned offset fails
+        let misaligned = streamer.async_read_chunk(100);
+        assert!(misaligned.is_err(), "Misaligned offset must return error");
+
+        // Test aligned read succeeds
+        assert!(streamer.async_read_chunk(0).is_ok(), "Aligned read at 0 must succeed");
+        let completed = streamer.poll_completion();
+        assert!(completed.is_some(), "poll_completion should return buffer");
+        let buf = completed.unwrap();
+        assert_eq!(&buf[0..4], b"IOCP", "Read buffer must match written data");
 
         // Cleanup
         std::fs::remove_file(&file_path).unwrap();

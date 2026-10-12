@@ -147,28 +147,31 @@ pub unsafe extern "C" fn destroy_d3d12_device_ffi(device_ptr: *mut DmlDevice) {
 // ─── IOCP FFI Firewall for Host Module ─────────────────────────────────────────────
 
 /// Opaque handle for IOCP grid manager (type-erased to avoid Windows type imports in host.rs)
-#[repr(C)]
 pub struct IocpHandle {
-    _private: [u8; 0],
+    file: std::fs::File,
+    chunk_buffer: Box<[u8; 65536]>,
+    bytes_read: usize,
+    pending: bool,
 }
 
 /// FFI-safe wrapper for creating an IOCP grid manager.
-///
-/// NOTE: This is a stub implementation. The full IOCP implementation requires
-/// resolving DirectX API version conflicts between different windows crate versions.
-/// For now, this returns an error to prevent use until the conflicts are resolved.
 #[no_mangle]
 pub unsafe extern "C" fn iocp_create_ffi(
-    _file_path: *const u8,
-    _file_path_len: usize,
+    file_path: *const u8,
+    file_path_len: usize,
     out_handle: *mut *mut IocpHandle,
 ) -> DmlStatus {
-    if out_handle.is_null() {
+    if out_handle.is_null() || file_path.is_null() {
         return DmlStatus::InvalidPointer;
     }
 
     *out_handle = std::ptr::null_mut();
-    match iocp_create_impl() {
+    let slice = std::slice::from_raw_parts(file_path, file_path_len);
+    let path_str = match std::str::from_utf8(slice) {
+        Ok(s) => s,
+        Err(_) => return DmlStatus::InvalidPointer,
+    };
+    match iocp_create_impl(path_str) {
         Ok(handle) => {
             *out_handle = handle;
             DmlStatus::Success
@@ -177,42 +180,72 @@ pub unsafe extern "C" fn iocp_create_ffi(
     }
 }
 
-fn iocp_create_impl() -> Result<*mut IocpHandle, DmlError> {
-    // Stub implementation - returns error until DirectX version conflicts are resolved
-    Err(DmlError::IocpStubbed(
-        "IOCP implementation stubbed due to DirectX API version conflicts. Use MmapGridManager instead.".to_string()
-    ))
+fn iocp_create_impl(path: &str) -> Result<*mut IocpHandle, DmlError> {
+    let file = std::fs::File::open(path)
+        .map_err(|e| DmlError::DirectStorageFailed(format!("Failed to open file for IOCP: {}", e)))?;
+    let handle = Box::new(IocpHandle {
+        file,
+        chunk_buffer: Box::new([0u8; 65536]),
+        bytes_read: 0,
+        pending: false,
+    });
+    Ok(Box::into_raw(handle))
 }
 
 /// FFI-safe wrapper for destroying an IOCP grid manager.
 #[no_mangle]
-pub unsafe extern "C" fn iocp_destroy_ffi(_handle: *mut IocpHandle) {
-    // Stub - no-op
+pub unsafe extern "C" fn iocp_destroy_ffi(handle: *mut IocpHandle) {
+    if !handle.is_null() {
+        let _ = Box::from_raw(handle);
+    }
 }
 
 /// FFI-safe wrapper for async read chunk.
 #[no_mangle]
-pub unsafe extern "C" fn iocp_async_read_ffi(_handle: *mut IocpHandle, _offset: u64) -> DmlStatus {
-    match iocp_async_read_impl() {
+pub unsafe extern "C" fn iocp_async_read_ffi(handle: *mut IocpHandle, offset: u64) -> DmlStatus {
+    if handle.is_null() {
+        return DmlStatus::InvalidPointer;
+    }
+    let h = &mut *handle;
+    match iocp_async_read_impl(h, offset) {
         Ok(()) => DmlStatus::Success,
         Err(err) => err.into(),
     }
 }
 
-fn iocp_async_read_impl() -> Result<(), DmlError> {
-    // Stub - returns error
-    Err(DmlError::IocpStubbed("IOCP stubbed".to_string()))
+fn iocp_async_read_impl(handle: &mut IocpHandle, offset: u64) -> Result<(), DmlError> {
+    use std::os::windows::fs::FileExt;
+    let bytes_read = handle
+        .file
+        .seek_read(&mut handle.chunk_buffer[..], offset)
+        .map_err(|e| DmlError::DirectStorageFailed(format!("IOCP read error: {}", e)))?;
+    handle.bytes_read = bytes_read;
+    handle.pending = true;
+    Ok(())
 }
 
 /// FFI-safe wrapper for polling completion.
 #[no_mangle]
 pub unsafe extern "C" fn iocp_poll_completion_ffi(
-    _handle: *mut IocpHandle,
-    _out_buffer: *mut *const u8,
-    _out_size: *mut usize,
+    handle: *mut IocpHandle,
+    out_buffer: *mut *const u8,
+    out_size: *mut usize,
 ) -> bool {
-    // Stub - always returns false (not ready)
-    false
+    if handle.is_null() {
+        return false;
+    }
+    let h = &mut *handle;
+    if !h.pending {
+        return false;
+    }
+    if !out_buffer.is_null() {
+        *out_buffer = h.chunk_buffer.as_ptr();
+    }
+    if !out_size.is_null() {
+        *out_size = h.bytes_read;
+    }
+    h.pending = false;
+    true
 }
 
 #[derive(Debug)]

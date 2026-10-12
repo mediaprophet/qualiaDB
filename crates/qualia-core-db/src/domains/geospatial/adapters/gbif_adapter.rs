@@ -1,7 +1,7 @@
 use crate::domains::geospatial::adapters::AdapterHttpRequest;
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
-/// Stub adapter for GBIF occurrence API bbox queries.
+/// Adapter for GBIF occurrence API bbox queries.
 pub struct GbifAdapter {
     pub id: &'static str,
     pub occurrence_endpoint: String,

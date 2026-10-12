@@ -2020,6 +2020,98 @@ pub fn econ_aggregate_paper_fills(_args: &Value, _span: Span) -> Result<Value, D
     )]))
 }
 
+// ── Double-entry accounting & REA value flows ──────────────────────────────
+
+pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    use crate::specialized_libs::computational_economics::accounting::{
+        account_balances_into, trial_balance, Account, AccountType, Posting,
+    };
+
+    let accounts_v = match args {
+        Value::Record(r) => r.get("accounts"),
+        _ => None,
+    };
+    let postings_v = match args {
+        Value::Record(r) => r.get("postings"),
+        _ => None,
+    };
+
+    let mut accounts = Vec::new();
+    if let Some(Value::List(list)) = accounts_v {
+        for item in list {
+            if let Value::Record(r) = item {
+                let id = r.get("id").and_then(|v| match v {
+                    Value::U64(n) => Some(*n),
+                    Value::F64(f) => Some(*f as u64),
+                    _ => None,
+                }).unwrap_or(0);
+                let acc_type_str = r.get("type").and_then(|v| match v {
+                    Value::String(s) => Some(s.as_str()),
+                    _ => None,
+                }).unwrap_or("asset");
+                let account_type = match acc_type_str {
+                    "liability" => AccountType::Liability,
+                    "equity" => AccountType::Equity,
+                    "revenue" => AccountType::Revenue,
+                    "expense" => AccountType::Expense,
+                    _ => AccountType::Asset,
+                };
+                accounts.push(Account { id, account_type });
+            }
+        }
+    }
+
+    let mut postings = Vec::new();
+    if let Some(Value::List(list)) = postings_v {
+        for (i, item) in list.iter().enumerate() {
+            if let Value::Record(r) = item {
+                let account_id = r.get("account_id").and_then(|v| match v {
+                    Value::U64(n) => Some(*n),
+                    Value::F64(f) => Some(*f as u64),
+                    _ => None,
+                }).unwrap_or(0);
+                let debit = r.get("debit").and_then(|v| match v {
+                    Value::F64(f) => Some(*f as i64),
+                    Value::U64(n) => Some(*n as i64),
+                    _ => None,
+                }).unwrap_or(0);
+                let credit = r.get("credit").and_then(|v| match v {
+                    Value::F64(f) => Some(*f as i64),
+                    Value::U64(n) => Some(*n as i64),
+                    _ => None,
+                }).unwrap_or(0);
+                postings.push(Posting {
+                    entry_id: i as u64,
+                    account_id,
+                    debit,
+                    credit,
+                });
+            }
+        }
+    }
+
+    let is_balanced = trial_balance(&accounts, &postings).is_ok();
+    let mut balances_buf = Vec::new();
+    account_balances_into(&accounts, &postings, &mut balances_buf)
+        .map_err(|e| args::bad(span, format!("accounting error: {e:?}")))?;
+
+    let mut balance_records = Vec::new();
+    for b in balances_buf {
+        balance_records.push(args::record([
+            ("account_id", Value::U64(b.account_id)),
+            ("balance", Value::F64(b.balance as f64)),
+            ("debit_total", Value::F64(b.debit_total as f64)),
+            ("credit_total", Value::F64(b.credit_total as f64)),
+        ]));
+    }
+
+    Ok(args::record([
+        ("trial_balance_ok", Value::Bool(is_balanced)),
+        ("balances", Value::List(balance_records)),
+        ("honesty", Value::String("real".into())),
+    ]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

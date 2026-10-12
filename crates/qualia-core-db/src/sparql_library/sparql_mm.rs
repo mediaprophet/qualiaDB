@@ -236,13 +236,19 @@ impl<'a> SparqlMmHandler<'a> {
         ax < bx1 && ax1 > bx && ay < by1 && ay1 > by
     }
 
-    /// Media time from a quin that uses `ma_ont::MEDIA_TIME_MS` (object = ms),
-    /// **not** the Lamport field in metadata.
+    /// Media time from a quin: unifies explicit `ma_ont::MEDIA_TIME_MS` and
+    /// `ma_ont::HAS_START_TIME` (stored in the `object` field) with vision observation
+    /// quins that pack the frame index or millisecond timestamp in metadata bits 16..48.
     pub fn media_time_ms(quin: &NQuin) -> Option<u64> {
-        if quin.predicate == ma_ont::MEDIA_TIME_MS {
+        if quin.predicate == ma_ont::MEDIA_TIME_MS || quin.predicate == ma_ont::HAS_START_TIME {
             Some(quin.object)
         } else {
-            None
+            let meta_time = (quin.metadata >> 16) & 0xFFFF_FFFF;
+            if meta_time > 0 {
+                Some(meta_time)
+            } else {
+                None
+            }
         }
     }
 

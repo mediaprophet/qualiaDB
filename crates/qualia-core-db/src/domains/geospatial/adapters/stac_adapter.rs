@@ -151,7 +151,11 @@ impl DataAdapter for StacAdapter {
 
         // Translate the bounding box and time_range into STAC API parameters
         let stac_bbox = format!("{},{},{},{}", bbox.0, bbox.1, bbox.2, bbox.3);
-        let stac_datetime = format!("{}/{}", time_range.0, time_range.1); // Stub: properly format ISO8601 strings
+        let stac_datetime = if time_range.1 > 0 {
+            super::format_iso8601_range(time_range)
+        } else {
+            format!("{}/{}", time_range.0, time_range.1)
+        };
 
         let mut url = format!(
             "{}/search?bbox={}&datetime={}",

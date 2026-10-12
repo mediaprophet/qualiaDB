@@ -185,6 +185,83 @@ fn check_eigen_svd() -> (Verdict, String) {
     )
 }
 
+/// Cryptography: Zero-knowledge Fiat-Shamir NIZK Proof of Knowledge.
+/// Verified real: computes ephemeral blinding announcement, Fiat-Shamir challenge, and masked
+/// response; verifies valid public input and rejects tampered statement.
+fn check_zk_proof_knowledge() -> (Verdict, String) {
+    use qualia_core_db::specialized_libs::cryptographic_library::ProofEngine;
+    let mut engine = ProofEngine::new();
+    let witness = vec![b"secret_witness_data".to_vec()];
+    let pub_in = vec![b"public_statement".to_vec()];
+    let proof = match engine.generate_proof("circuit_ledger", &witness, &pub_in) {
+        Ok(p) => p,
+        Err(e) => return (Verdict::Stub, format!("generate_proof failed: {e:?}")),
+    };
+    let valid = engine.verify_proof(&proof, &pub_in).unwrap_or(false);
+    let tampered_in = vec![b"tampered_statement".to_vec()];
+    let tampered_rejected = !engine.verify_proof(&proof, &tampered_in).unwrap_or(true);
+    if valid && tampered_rejected {
+        (
+            Verdict::Real,
+            "Fiat-Shamir NIZK proof generated and verified; tampered public input rejected ✓"
+                .to_string(),
+        )
+    } else {
+        (
+            Verdict::Stub,
+            format!("NIZK verification failed: valid={valid}, tampered_rejected={tampered_rejected}"),
+        )
+    }
+}
+
+/// Manifold / presentation morphology: P0-P6 projection.
+/// Verified real: Document level P0 flattens Z to 0.0; StageWorld level P2 applies perspective
+/// frustum scaling and sets honesty='real'.
+fn check_manifold_presentation_projection() -> (Verdict, String) {
+    use qualia_core_db::poet_host::invoke::manifold::project;
+    use std::collections::BTreeMap;
+    use vibe::{Span, Value};
+    let mut rec = BTreeMap::new();
+    rec.insert("x".to_string(), Value::F64(10.0));
+    rec.insert("y".to_string(), Value::F64(20.0));
+    rec.insert("z".to_string(), Value::F64(5.0));
+    rec.insert("distance".to_string(), Value::F64(5.0));
+    rec.insert("level".to_string(), Value::U64(0)); // Document: flat 2D
+    let res_doc = project(&Value::Record(rec.clone()), Span { start: 0, end: 0 });
+
+    rec.insert("level".to_string(), Value::U64(2)); // StageWorld: 3D perspective
+    let res_stage = project(&Value::Record(rec), Span { start: 0, end: 0 });
+
+    match (res_doc, res_stage) {
+        (Ok(Value::Record(r_doc)), Ok(Value::Record(r_stage))) => {
+            let z_doc = match r_doc.get("z") {
+                Some(Value::F64(v)) => *v,
+                _ => -1.0,
+            };
+            let honesty = match r_stage.get("honesty") {
+                Some(Value::String(s)) => s.as_str(),
+                _ => "",
+            };
+            let scale = match r_stage.get("depth_scale") {
+                Some(Value::F64(v)) => *v,
+                _ => 0.0,
+            };
+            if z_doc == 0.0 && honesty == "real" && scale > 0.0 && scale < 1.0 {
+                (
+                    Verdict::Real,
+                    format!("Document P0 collapses Z to 0.0; StageWorld P2 computes perspective scale {scale:.4} with honesty='real' ✓"),
+                )
+            } else {
+                (
+                    Verdict::Stub,
+                    format!("unexpected projection result: z_doc={z_doc}, honesty={honesty}, scale={scale}"),
+                )
+            }
+        }
+        (e1, e2) => (Verdict::Stub, format!("project error: doc={e1:?}, stage={e2:?}")),
+    }
+}
+
 // ── Runner ────────────────────────────────────────────────────────────────────────────────────
 
 fn ledger_md_path() -> PathBuf {
@@ -237,6 +314,18 @@ fn capability_ledger() {
             "ternary BitNet GEMM",
             "scale·Σ trit·act",
             check_ternary,
+        ),
+        (
+            "Cryptography/ZK",
+            "Fiat-Shamir NIZK proof of knowledge",
+            "announcement, challenge, response NIZK verification",
+            check_zk_proof_knowledge,
+        ),
+        (
+            "Manifold",
+            "Manifold presentation projection",
+            "P0-P6 morphology projection with depth scale",
+            check_manifold_presentation_projection,
         ),
     ];
 
@@ -311,6 +400,8 @@ fn capability_ledger() {
         "ternary BitNet GEMM",
         "LTL trace evaluation",
         "symbolic differentiation",
+        "Fiat-Shamir NIZK proof of knowledge",
+        "Manifold presentation projection",
     ];
     for (_, name, v, ev) in &rows {
         if must_be_real.contains(name) {

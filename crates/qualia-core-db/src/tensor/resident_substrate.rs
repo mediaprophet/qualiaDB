@@ -107,7 +107,7 @@ impl ResidentTensorSubstrate {
             } else {
                 crate::q_hash(&format!("tensor:node:{i}"))
             };
-            nquins[i] = stub_nquin_for_tensor(i, subject, &tensor);
+            nquins[i] = synthesize_nquin_for_tensor(i, subject, &tensor);
             metadata[i] = TensorMetadata::from_nquin_and_tensor(&nquins[i], tensor);
             subject_hashes[i] = subject;
         }
@@ -157,7 +157,7 @@ impl ResidentTensorSubstrate {
             } else {
                 crate::q_hash(&format!("tensor:node:{i}"))
             };
-            nquins[i] = stub_nquin_for_tensor(i, subject, tensor);
+            nquins[i] = synthesize_nquin_for_tensor(i, subject, tensor);
             metadata[i] = TensorMetadata::from_nquin_and_tensor(&nquins[i], *tensor);
             subject_hashes[i] = subject;
         }
@@ -170,17 +170,21 @@ impl ResidentTensorSubstrate {
 }
 
 #[inline]
-fn stub_nquin_for_tensor(index: usize, subject: u64, tensor: &Tensor10D) -> NQuin {
-    let object = ((tensor.x.to_bits() as u64) << 20)
-        ^ (tensor.y.to_bits() as u64)
-        ^ (tensor.z.to_bits() as u64);
+fn synthesize_nquin_for_tensor(index: usize, subject: u64, tensor: &Tensor10D) -> NQuin {
+    let xi = ((tensor.x * 1000.0).clamp(-524288.0, 524287.0) as i32) as u64 & 0xFFFFF;
+    let yi = ((tensor.y * 1000.0).clamp(-524288.0, 524287.0) as i32) as u64 & 0xFFFFF;
+    let zi = ((tensor.z * 1000.0).clamp(-524288.0, 524287.0) as i32) as u64 & 0xFFFFF;
+    let object = (xi << 40) | (yi << 20) | zi;
+    let predicate = super::bake_pipeline::PRED_GEO_VERTEX;
+    let context = crate::q_hash("urn:qualia:context:tensor_substrate");
+    let metadata = index as u64;
     NQuin {
         subject,
-        predicate: 0,
+        predicate,
         object,
-        context: 0,
-        metadata: index as u64,
-        parity: subject ^ object,
+        context,
+        metadata,
+        parity: subject ^ predicate ^ object ^ context,
     }
 }
 

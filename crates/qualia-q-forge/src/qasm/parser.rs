@@ -141,11 +141,15 @@ impl<'a> Parser<'a> {
             self.skip_whitespace();
         }
 
-        // Skip qubit arguments
-        let mut num_qubits = 0;
+        // Parse qubit formal arguments
+        let mut qubit_params: [&'a str; 8] = [""; 8];
+        let mut num_qubits = 0u8;
         while self.pos < self.input.len() && !self.input[self.pos..].starts_with('{') {
-            if self.parse_identifier().is_some() {
-                num_qubits += 1;
+            if let Some(arg) = self.parse_identifier() {
+                if (num_qubits as usize) < qubit_params.len() {
+                    qubit_params[num_qubits as usize] = arg;
+                    num_qubits += 1;
+                }
             }
             self.skip_whitespace();
             if self.input[self.pos..].starts_with(',') {
@@ -155,16 +159,55 @@ impl<'a> Parser<'a> {
         }
 
         self.expect_char('{')?;
+        self.skip_whitespace();
 
-        // Skip body for now (stub implementation)
+        use crate::qasm::GateBodyOp;
+        let mut body_ops = [GateBodyOp::default(); 16];
+        let mut body_count = 0u8;
+
         while self.pos < self.input.len() && !self.input[self.pos..].starts_with('}') {
-            self.pos += 1;
+            let op_name = self.parse_identifier().ok_or("Expected gate name inside body")?;
+            self.skip_whitespace();
+            let mut target_indices = [0u8; 4];
+            let mut num_targets = 0u8;
+
+            while self.pos < self.input.len() && !self.input[self.pos..].starts_with(';') {
+                let target_name = self.parse_identifier().ok_or("Expected target qubit name")?;
+                let idx = qubit_params[..num_qubits as usize]
+                    .iter()
+                    .position(|&p| p == target_name)
+                    .ok_or("Undeclared qubit in gate body")? as u8;
+                if (num_targets as usize) < target_indices.len() {
+                    target_indices[num_targets as usize] = idx;
+                    num_targets += 1;
+                }
+                self.skip_whitespace();
+                if self.input[self.pos..].starts_with(',') {
+                    self.pos += 1;
+                    self.skip_whitespace();
+                } else {
+                    break;
+                }
+            }
+            self.expect_char(';')?;
+            self.skip_whitespace();
+
+            if (body_count as usize) < body_ops.len() {
+                body_ops[body_count as usize] = GateBodyOp {
+                    name_hash: q_hash(op_name),
+                    target_indices,
+                    num_targets,
+                };
+                body_count += 1;
+            }
         }
         self.expect_char('}')?;
 
         Ok(QasmStatement::GateDecl {
             name_hash: q_hash(name),
             num_qubits,
+            body_count,
+            body_ops,
         })
     }
 
@@ -320,6 +363,48 @@ mod tests {
         match program.statements[2] {
             QasmStatement::QubitDecl { size, .. } => assert_eq!(size, 2),
             _ => panic!("Expected QubitDecl"),
+        }
+    }
+
+    #[test]
+    fn test_composite_gate_expansion() {
+        let source = "
+            OPENQASM 3.0;
+            qubit[2] q;
+            gate bell a, b {
+                h a;
+                cx a, b;
+            }
+            bell q[0], q[1];
+        ";
+        let mut parser = Parser::new(source);
+        let program = parser.parse().unwrap();
+        assert_eq!(program.statement_count, 4);
+
+        let expanded = program.expand_composite_gates().unwrap();
+        // Statements in expanded:
+        // 0: Empty (OPENQASM)
+        // 1: QubitDecl
+        // 2: GateDecl (bell)
+        // 3: GateCall (h q[0])
+        // 4: GateCall (cx q[0], q[1])
+        assert_eq!(expanded.statement_count, 5);
+        match expanded.statements[3] {
+            QasmStatement::GateCall { name_hash, target_qubits, num_targets, .. } => {
+                assert_eq!(name_hash, q_hash("h"));
+                assert_eq!(target_qubits[0], 0);
+                assert_eq!(num_targets, 1);
+            }
+            _ => panic!("Expected GateCall for h"),
+        }
+        match expanded.statements[4] {
+            QasmStatement::GateCall { name_hash, target_qubits, num_targets, .. } => {
+                assert_eq!(name_hash, q_hash("cx"));
+                assert_eq!(target_qubits[0], 0);
+                assert_eq!(target_qubits[1], 1);
+                assert_eq!(num_targets, 2);
+            }
+            _ => panic!("Expected GateCall for cx"),
         }
     }
 }

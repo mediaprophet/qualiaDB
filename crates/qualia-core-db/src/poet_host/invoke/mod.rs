@@ -27,7 +27,7 @@ mod hypermedia;
 pub mod ids;
 pub mod inference;
 mod logic;
-mod manifold;
+pub mod manifold;
 mod math;
 mod medical;
 mod ml;
@@ -100,14 +100,15 @@ pub fn dispatch(
         ids::GRAPH_LEXICON_MANIFEST => graph::lexicon_manifest(snap, args, span),
         ids::N3_EVALUATE => graph::n3_evaluate(args, span),
         ids::GRAPH_AUTHORING => graph::graph_authoring(args, span),
-        ids::GRAPH_SHORTEST_PATH => graph::shortest_path(args, span),
+        ids::GRAPH_SHORTEST_PATH | "graph.shortest_path" | "navigation.a_star" => graph::shortest_path(args, span),
         ids::GRAPH_SPREADING_ACTIVATION => graph::spreading_activation(args, span),
-        ids::DEONTIC_EVAL => logic::deontic_evaluate(snap, args, span),
+        ids::DEONTIC_EVAL | "deontic.evaluate" | "deontic.eval" => logic::deontic_evaluate(snap, args, span),
         ids::EPISTEMIC_EVAL => logic::epistemic_evaluate(snap, args, span),
         ids::PARACONSISTENT_ROUTE => logic::paraconsistent_route(snap, args, span),
-        ids::LTL_GLOBALLY => logic::ltl_globally(snap, args, span),
-        ids::LTL_FINALLY => logic::ltl_finally(snap, args, span),
-        ids::LTL_EVALUATE => logic::ltl_evaluate(args, span),
+        ids::LTL_GLOBALLY | "ltl.globally" => logic::ltl_globally(snap, args, span),
+        ids::LTL_FINALLY | "ltl.finally" => logic::ltl_finally(snap, args, span),
+        ids::LTL_EVALUATE | "ltl.evaluate" | "ltl.evaluate_trace" => logic::ltl_evaluate(args, span),
+        "Econ.accounting_balance" | "accounting.balance" | "rea.balance" => econ::econ::econ_accounting_balance(args, span),
         ids::DL_SUBSUMES => logic::subsumption_check(snap, args, span),
         ids::ASP_ENUMERATE => logic::asp_evaluate(snap, args, span),
         ids::CAUSAL_CAUSED => logic::caused(snap, args, span),

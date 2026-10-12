@@ -221,11 +221,13 @@ impl GalileanMorphism {
     }
 }
 
-/// A Lorentz frame morphism — special relativistic transformation (W5 future).
+/// A Lorentz frame morphism — special relativistic 4D spacetime transformation.
 ///
-/// Deferred: requires the full 4D spacetime metric and time dilation.
-/// The struct exists to document the interface, but the implementation
-/// is not yet available.
+/// Implements the exact 4-vector boost for arbitrary velocity vectors $\vec{v}$ with $|\vec{v}| < c$:
+/// $$ct' = \gamma (ct - \vec{\beta} \cdot \vec{r})$$
+/// $$\vec{r}' = \vec{r} + \left( \frac{\gamma - 1}{v^2} (\vec{v} \cdot \vec{r}) - \gamma t \right) \vec{v}$$
+/// Preserving the Minkowski spacetime invariant interval:
+/// $$s^2 = (c \Delta t)^2 - \Delta x^2 - \Delta y^2 - \Delta z^2$$
 #[derive(Debug, Clone, PartialEq)]
 pub struct LorentzMorphism {
     /// Velocity of the target frame relative to the source (m/s).
@@ -235,20 +237,152 @@ pub struct LorentzMorphism {
 }
 
 impl LorentzMorphism {
+    /// Standard speed of light in vacuum (m/s).
+    pub const C_DEFAULT: f64 = 299_792_458.0;
+
+    /// Create a new Lorentz boost morphism.
+    pub fn new(velocity: Vec<f64>, c: f64) -> Self {
+        Self { velocity, c }
+    }
+
+    /// Create an identity Lorentz morphism (zero boost).
+    pub fn identity() -> Self {
+        Self {
+            velocity: vec![0.0, 0.0, 0.0],
+            c: Self::C_DEFAULT,
+        }
+    }
+
+    /// Create a pure velocity boost along given vector.
+    pub fn boost(vx: f64, vy: f64, vz: f64) -> Self {
+        Self {
+            velocity: vec![vx, vy, vz],
+            c: Self::C_DEFAULT,
+        }
+    }
+
     /// Lorentz factor γ = 1 / sqrt(1 - v²/c²)
     pub fn gamma(&self) -> f64 {
         let v2 = self.velocity.iter().map(|v| v * v).sum::<f64>();
         let c2 = self.c * self.c;
         if v2 >= c2 {
-            // v >= c is unphysical; return infinity
             return f64::INFINITY;
         }
         1.0 / (1.0 - v2 / c2).sqrt()
     }
 
-    /// Honesty label — Lorentz is not yet fully implemented.
+    /// Compute the 4x4 Lorentz boost transformation matrix $\Lambda^\mu_{\ \nu}$.
+    /// Basis order: [0]=ct, [1]=x, [2]=y, [3]=z.
+    pub fn boost_matrix_4x4(&self) -> [[f64; 4]; 4] {
+        let vx = self.velocity.first().copied().unwrap_or(0.0);
+        let vy = self.velocity.get(1).copied().unwrap_or(0.0);
+        let vz = self.velocity.get(2).copied().unwrap_or(0.0);
+        let v2 = vx * vx + vy * vy + vz * vz;
+        if v2 == 0.0 {
+            return [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ];
+        }
+
+        let gamma = self.gamma();
+        let bx = vx / self.c;
+        let by = vy / self.c;
+        let bz = vz / self.c;
+        let beta2 = v2 / (self.c * self.c);
+        let g_minus_1_over_b2 = (gamma - 1.0) / beta2;
+
+        [
+            [gamma, -gamma * bx, -gamma * by, -gamma * bz],
+            [-gamma * bx, 1.0 + g_minus_1_over_b2 * bx * bx, g_minus_1_over_b2 * bx * by, g_minus_1_over_b2 * bx * bz],
+            [-gamma * by, g_minus_1_over_b2 * by * bx, 1.0 + g_minus_1_over_b2 * by * by, g_minus_1_over_b2 * by * bz],
+            [-gamma * bz, g_minus_1_over_b2 * bz * bx, g_minus_1_over_b2 * bz * by, 1.0 + g_minus_1_over_b2 * bz * bz],
+        ]
+    }
+
+    /// Transform an event given as time t (seconds) and position [x, y, z] (meters).
+    /// Returns (t_prime, [x_prime, y_prime, z_prime]).
+    pub fn transform_event(&self, t: f64, pos: &[f64]) -> (f64, Vec<f64>) {
+        let ct = self.c * t;
+        let (ct_prime, r_prime) = self.boost_event(ct, pos);
+        (ct_prime / self.c, r_prime)
+    }
+
+    /// Transform a 4-vector event (ct, [x, y, z]).
+    pub fn boost_event(&self, ct: f64, r: &[f64]) -> (f64, Vec<f64>) {
+        let rx = r.first().copied().unwrap_or(0.0);
+        let ry = r.get(1).copied().unwrap_or(0.0);
+        let rz = r.get(2).copied().unwrap_or(0.0);
+
+        let vx = self.velocity.first().copied().unwrap_or(0.0);
+        let vy = self.velocity.get(1).copied().unwrap_or(0.0);
+        let vz = self.velocity.get(2).copied().unwrap_or(0.0);
+        let v2 = vx * vx + vy * vy + vz * vz;
+
+        if v2 == 0.0 {
+            return (ct, vec![rx, ry, rz]);
+        }
+
+        let gamma = self.gamma();
+        if gamma.is_infinite() {
+            return (f64::INFINITY, vec![f64::INFINITY, f64::INFINITY, f64::INFINITY]);
+        }
+
+        let v_dot_r = vx * rx + vy * ry + vz * rz;
+        let beta_dot_r = v_dot_r / self.c;
+
+        // ct' = γ (ct - β · r)
+        let ct_prime = gamma * (ct - beta_dot_r);
+
+        // r' = r + ((γ - 1) * (v · r) / v² - γ * (ct / c)) * v
+        let t = ct / self.c;
+        let factor = ((gamma - 1.0) / v2) * v_dot_r - gamma * t;
+        let rx_prime = rx + factor * vx;
+        let ry_prime = ry + factor * vy;
+        let rz_prime = rz + factor * vz;
+
+        (ct_prime, vec![rx_prime, ry_prime, rz_prime])
+    }
+
+    /// Transform 3D position at time t (compatibility with Galilean interface).
+    pub fn transform_position(&self, pos: &[f64], t: f64) -> Vec<f64> {
+        self.transform_event(t, pos).1
+    }
+
+    /// Invariant spacetime interval: s² = (ct)² - (x² + y² + z²).
+    pub fn invariant_interval_squared(ct: f64, r: &[f64]) -> f64 {
+        let x = r.first().copied().unwrap_or(0.0);
+        let y = r.get(1).copied().unwrap_or(0.0);
+        let z = r.get(2).copied().unwrap_or(0.0);
+        ct * ct - (x * x + y * y + z * z)
+    }
+
+    /// Inverse boost morphism — transforms back by reversing velocity.
+    pub fn inverse(&self) -> Self {
+        Self {
+            velocity: self.velocity.iter().map(|v| -v).collect(),
+            c: self.c,
+        }
+    }
+
+    /// Convert to Vibe Value record for scripting.
+    pub fn to_value(&self) -> Value {
+        let mut rec = std::collections::BTreeMap::new();
+        rec.insert(
+            "velocity".into(),
+            Value::List(self.velocity.iter().map(|v| Value::F64(*v)).collect()),
+        );
+        rec.insert("c".into(), Value::F64(self.c));
+        rec.insert("gamma".into(), Value::F64(self.gamma()));
+        rec.insert("honesty".into(), Value::String(self.honesty_label().into()));
+        Value::Record(rec)
+    }
+
+    /// Honesty label — Lorentz boost is fully implemented.
     pub fn honesty_label(&self) -> &'static str {
-        "stub"
+        "real"
     }
 }
 
@@ -390,11 +524,44 @@ mod tests {
     }
 
     #[test]
-    fn w5_lorentz_honesty_is_stub() {
+    fn w5_lorentz_honesty_is_real() {
         let m = LorentzMorphism {
             velocity: vec![1000.0, 0.0, 0.0],
             c: 299_792_458.0,
         };
-        assert_eq!(m.honesty_label(), "stub");
+        assert_eq!(m.honesty_label(), "real");
+    }
+
+    #[test]
+    fn w5_lorentz_invariant_interval_preserved() {
+        let c = 299_792_458.0;
+        let m = LorentzMorphism::new(vec![0.6 * c, 0.0, 0.0], c);
+        let t = 2.0;
+        let pos = vec![300_000_000.0, 50.0, -100.0];
+        let ct = c * t;
+        let s2_orig = LorentzMorphism::invariant_interval_squared(ct, &pos);
+
+        let (ct_prime, r_prime) = m.boost_event(ct, &pos);
+        let s2_boosted = LorentzMorphism::invariant_interval_squared(ct_prime, &r_prime);
+
+        let diff = (s2_orig - s2_boosted).abs();
+        assert!(diff / s2_orig.abs() < 1e-10, "Minkowski metric s^2 must be invariant under Lorentz boost: orig={s2_orig}, boosted={s2_boosted}");
+    }
+
+    #[test]
+    fn w5_lorentz_inverse_recovers_original_event() {
+        let c = 299_792_458.0;
+        let m = LorentzMorphism::new(vec![0.3 * c, -0.2 * c, 0.1 * c], c);
+        let inv = m.inverse();
+
+        let t = 1.5;
+        let pos = vec![100.0, 200.0, 300.0];
+        let (t_prime, r_prime) = m.transform_event(t, &pos);
+        let (t_rec, r_rec) = inv.transform_event(t_prime, &r_prime);
+
+        assert!((t - t_rec).abs() < 1e-10, "Time must invert accurately");
+        assert!((pos[0] - r_rec[0]).abs() < 1e-6, "X must invert accurately");
+        assert!((pos[1] - r_rec[1]).abs() < 1e-6, "Y must invert accurately");
+        assert!((pos[2] - r_rec[2]).abs() < 1e-6, "Z must invert accurately");
     }
 }

@@ -67,6 +67,17 @@ impl AdapterHttpRequest {
     }
 }
 
+/// Format a timestamp range (seconds or milliseconds) into a standard ISO 8601 / RFC 3339 interval.
+pub fn format_iso8601_range(time_range: (u64, u64)) -> String {
+    let fmt_single = |ts: u64| -> String {
+        let ms = if ts < 10_000_000_000 { ts * 1000 } else { ts };
+        chrono::DateTime::from_timestamp_millis(ms as i64)
+            .map(|dt| dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+            .unwrap_or_else(|| format!("{ts}"))
+    };
+    format!("{}/{}", fmt_single(time_range.0), fmt_single(time_range.1))
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, String> {
     let client = reqwest::blocking::Client::new();
