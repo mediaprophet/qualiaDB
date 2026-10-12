@@ -18,11 +18,16 @@ pub mod stft_bake;
 pub mod tf_surface;
 /// P7.6 — Audio edits as geometric surface operations.
 pub mod tf_surface_edit;
+pub mod bioacoustics;
 
 pub use acoustic_plane::{
     acoustic_enabled_for_mode, acoustic_params_from_tensor, drain_sonic_tokens, pop_sonic_token,
     push_sonic_token, sonify_tensor_node, AcousticParams, AcousticUniform, SonicTokenRing,
     SONIC_RING_CAP,
+};
+pub use bioacoustics::{
+    compile_vocalizations_to_sparql_mm, detect_bioacoustic_vocalizations, BioacousticVocalization,
+    MM_TEMPORAL_FRAGMENT, QUALIA_ACOUSTIC_OBSERVATION,
 };
 pub use acoustic_sab::{
     init_acoustic_sab, push_token_to_sab, read_uniform_from_sab, write_uniform_to_sab,

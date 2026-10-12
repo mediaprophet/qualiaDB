@@ -369,6 +369,191 @@ pub fn compile_n3_rule_to_norm(
     Some(quin)
 }
 
+use crate::governance::webizen::agreement::{AgreementDID, AgreementState};
+use crate::modalities::logic::n3_parser::{Rule as N3Rule, StackRule as N3StackRule, Term as N3Term};
+
+fn hash_n3_term(term: &N3Term<'_>) -> u64 {
+    match term {
+        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => crate::q_hash(s),
+    }
+}
+
+/// Compile an uncompiled/borrowed N3 AST `Rule` directly into a norm Quin.
+pub fn compile_n3_ast_rule_to_norm(
+    rule: &N3Rule<'_>,
+    contract_hash: u64,
+    expiry_unix32: u32,
+) -> Option<crate::NQuin> {
+    if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+        return None;
+    }
+    let p_triple = &rule.premise.triples[0];
+    let c_triple = &rule.conclusion.triples[0];
+
+    let party_did_hash = hash_n3_term(&p_triple.subject);
+    let property_path_hash = hash_n3_term(&p_triple.predicate);
+    let action_object_hash = hash_n3_term(&p_triple.object);
+    let mapped_contract_hash = if contract_hash == 0 {
+        hash_n3_term(&c_triple.subject)
+    } else {
+        contract_hash
+    };
+
+    let p_str = match p_triple.predicate {
+        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => s.to_ascii_lowercase(),
+    };
+
+    let is_obligate = p_str.contains("obligate") || p_str.contains("must") || p_str.contains("shall");
+    let is_permit = p_str.contains("permit") || p_str.contains("may") || p_str.contains("can");
+    let is_forbid = p_str.contains("forbid") || p_str.contains("not") || p_str.contains("prohibit");
+
+    let mut opcode = OP_PERMIT;
+    let mut is_defeater = false;
+
+    match rule.rule_type {
+        RuleType::Strict => {
+            opcode = if is_obligate { OP_OBLIGATE } else { OP_PERMIT };
+        }
+        RuleType::Defeasible => {
+            if is_forbid {
+                opcode = OP_FORBID;
+            } else if is_permit {
+                opcode = OP_PERMIT;
+            }
+        }
+        RuleType::Defeater => {
+            opcode = OP_PERMIT;
+            is_defeater = true;
+        }
+        RuleType::Linear => {
+            opcode = if is_obligate { OP_OBLIGATE } else { OP_PERMIT };
+        }
+    }
+
+    let mut predicate_packed =
+        ((property_path_hash & 0x007F_FFFF_FFFF_FFFF) << 8) | (opcode as u64);
+    if is_defeater {
+        predicate_packed |= DEFEATER_BIT;
+    }
+
+    let parity = party_did_hash ^ predicate_packed ^ action_object_hash ^ mapped_contract_hash;
+
+    Some(crate::NQuin {
+        subject: party_did_hash,
+        predicate: predicate_packed,
+        object: action_object_hash,
+        context: mapped_contract_hash,
+        metadata: expiry_unix32 as u64,
+        parity,
+    })
+}
+
+/// Compile a zero-allocation `StackRule` directly into a norm Quin.
+pub fn compile_stack_rule_to_norm(
+    rule: &N3StackRule<'_>,
+    contract_hash: u64,
+    expiry_unix32: u32,
+) -> Option<crate::NQuin> {
+    if rule.premise.len == 0 || rule.conclusion.len == 0 {
+        return None;
+    }
+    let p_triple = &rule.premise.triples[0];
+    let c_triple = &rule.conclusion.triples[0];
+
+    let party_did_hash = hash_n3_term(&p_triple.subject);
+    let property_path_hash = hash_n3_term(&p_triple.predicate);
+    let action_object_hash = hash_n3_term(&p_triple.object);
+    let mapped_contract_hash = if contract_hash == 0 {
+        hash_n3_term(&c_triple.subject)
+    } else {
+        contract_hash
+    };
+
+    let p_str = match p_triple.predicate {
+        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => s.to_ascii_lowercase(),
+    };
+
+    let is_obligate = p_str.contains("obligate") || p_str.contains("must") || p_str.contains("shall");
+    let is_permit = p_str.contains("permit") || p_str.contains("may") || p_str.contains("can");
+    let is_forbid = p_str.contains("forbid") || p_str.contains("not") || p_str.contains("prohibit");
+
+    let mut opcode = OP_PERMIT;
+    let mut is_defeater = false;
+
+    match rule.rule_type {
+        RuleType::Strict => {
+            opcode = if is_obligate { OP_OBLIGATE } else { OP_PERMIT };
+        }
+        RuleType::Defeasible => {
+            if is_forbid {
+                opcode = OP_FORBID;
+            } else if is_permit {
+                opcode = OP_PERMIT;
+            }
+        }
+        RuleType::Defeater => {
+            opcode = OP_PERMIT;
+            is_defeater = true;
+        }
+        RuleType::Linear => {
+            opcode = if is_obligate { OP_OBLIGATE } else { OP_PERMIT };
+        }
+    }
+
+    let mut predicate_packed =
+        ((property_path_hash & 0x007F_FFFF_FFFF_FFFF) << 8) | (opcode as u64);
+    if is_defeater {
+        predicate_packed |= DEFEATER_BIT;
+    }
+
+    let parity = party_did_hash ^ predicate_packed ^ action_object_hash ^ mapped_contract_hash;
+
+    Some(crate::NQuin {
+        subject: party_did_hash,
+        predicate: predicate_packed,
+        object: action_object_hash,
+        context: mapped_contract_hash,
+        metadata: expiry_unix32 as u64,
+        parity,
+    })
+}
+
+/// Compile a ratified `AgreementDID` into authorized deontic norm Quins.
+pub fn compile_agreement_to_deontic_norms(
+    agreement: &AgreementDID,
+    expiry_unix32: u32,
+    out: &mut [crate::NQuin],
+) -> usize {
+    if agreement.current_state != AgreementState::Ratified || out.is_empty() {
+        return 0;
+    }
+    let mut written = 0;
+    let has_domain_scope = crate::q_hash("q42:hasDomainScope");
+
+    for i in 0..agreement.num_agents as usize {
+        if written >= out.len() {
+            break;
+        }
+        let agent = agreement.agents[i];
+        let predicate = ((has_domain_scope & 0x007F_FFFF_FFFF_FFFF) << 8) | (OP_PERMIT as u64);
+        let object = agreement.domain_id;
+        let context = agreement.agreement_id;
+        let metadata = (expiry_unix32 as u64) | 0x4000_0000_0000_0002;
+        let parity = agent ^ predicate ^ object ^ context;
+
+        out[written] = crate::NQuin {
+            subject: agent,
+            predicate,
+            object,
+            context,
+            metadata,
+            parity,
+        };
+        written += 1;
+    }
+    written
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -653,5 +838,76 @@ mod tests {
         let mut malformed = make_rule(RuleType::Strict, "q42:obligate");
         malformed.premise.len = 0;
         assert!(compile_n3_rule_to_norm(&malformed, contract_hash, 0).is_none());
+    }
+
+    #[test]
+    fn test_compile_n3_ast_and_stack_rules_and_agreements() {
+        use crate::modalities::logic::n3_parser::{Formula, Rule as N3Rule, StackFormula, StackRule as N3StackRule, Term as N3Term, Triple as N3Triple};
+
+        let t1 = N3Triple {
+            subject: N3Term::Uri("did:agent:alice"),
+            predicate: N3Term::Uri("q42:mayEnter"),
+            object: N3Term::Uri("zone:park"),
+        };
+        let t2 = N3Triple {
+            subject: N3Term::Uri("urn:contract:sanctuary"),
+            predicate: N3Term::Uri("q42:appliesTo"),
+            object: N3Term::Uri("zone:park"),
+        };
+
+        // AST Defeater rule
+        let ast_defeater = N3Rule {
+            id: Some("r1"),
+            rule_type: RuleType::Defeater,
+            weight: None,
+            premise: Formula { triples: vec![t1] },
+            conclusion: Formula { triples: vec![t2] },
+        };
+        let norm1 = compile_n3_ast_rule_to_norm(&ast_defeater, 0, 1000).expect("ast norm compiles");
+        assert_eq!(norm1.predicate & 0xFF, OP_PERMIT as u64);
+        assert_ne!(norm1.predicate & DEFEATER_BIT, 0);
+
+        // Stack strict obligate rule
+        let mut s_premise = StackFormula::new();
+        s_premise.triples[0] = N3Triple {
+            subject: N3Term::Uri("did:agent:bob"),
+            predicate: N3Term::Uri("q42:mustPayFee"),
+            object: N3Term::Literal("10"),
+        };
+        s_premise.len = 1;
+        let mut s_conclusion = StackFormula::new();
+        s_conclusion.triples[0] = t2;
+        s_conclusion.len = 1;
+
+        let stack_rule = N3StackRule {
+            id: None,
+            rule_type: RuleType::Strict,
+            weight: None,
+            premise: s_premise,
+            conclusion: s_conclusion,
+        };
+        let norm2 = compile_stack_rule_to_norm(&stack_rule, 0, 2000).expect("stack norm compiles");
+        assert_eq!(norm2.predicate & 0xFF, OP_OBLIGATE as u64);
+        assert_eq!(norm2.predicate & DEFEATER_BIT, 0);
+
+        // AgreementDID compile to deontic norms
+        let mut agreement = AgreementDID {
+            agreement_id: 0x9999,
+            principal: 0x1111,
+            agents: [0x2222, 0x3333, 0, 0, 0, 0, 0, 0],
+            num_agents: 2,
+            domain_id: 0x4444,
+            threshold: 2,
+            current_state: AgreementState::Ratified,
+        };
+        let mut agreement_norms = [crate::NQuin::default(); 4];
+        let count = compile_agreement_to_deontic_norms(&agreement, 3000, &mut agreement_norms);
+        assert_eq!(count, 2);
+        assert_eq!(agreement_norms[0].subject, 0x2222);
+        assert_eq!(agreement_norms[0].predicate & 0xFF, OP_PERMIT as u64);
+        assert_eq!(agreement_norms[1].subject, 0x3333);
+
+        agreement.current_state = AgreementState::Proposed;
+        assert_eq!(compile_agreement_to_deontic_norms(&agreement, 3000, &mut agreement_norms), 0);
     }
 }

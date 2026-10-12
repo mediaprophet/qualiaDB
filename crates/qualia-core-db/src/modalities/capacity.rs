@@ -191,6 +191,178 @@ pub fn chain_authorizes(chain: &[&[u64]], requested_domain: u64) -> bool {
     true
 }
 
+// ─── Graduated & Kinship Capacity (Gillick & Supported Decision-Making) ────────────
+
+/// Graduated competence evaluation parameters for an agent facing a specific act.
+/// Models Gillick competence where capacity is dynamic and decision-relative rather than
+/// an absolute binary toggle.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GraduatedCompetence {
+    /// Assessed comprehension and maturity score in `[0.0, 1.0]`.
+    pub understanding_score: f32,
+    /// Inherent cognitive/legal complexity of the decision in `[0.0, 1.0]`.
+    pub decision_complexity: f32,
+}
+
+impl GraduatedCompetence {
+    #[inline]
+    pub const fn new(understanding_score: f32, decision_complexity: f32) -> Self {
+        Self {
+            understanding_score,
+            decision_complexity,
+        }
+    }
+
+    /// Whether self-standing competence is achieved without auxiliary support.
+    #[inline]
+    pub fn is_self_standing(&self) -> bool {
+        self.understanding_score >= self.decision_complexity
+    }
+}
+
+/// Endorsement from a kinship circle, elder, parent, or trusted decision-making advocate.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KinshipEndorsement {
+    /// DID hash of the endorsing custodian / elder / supporter.
+    pub supporter_did: u64,
+    /// Cultural or legal role (e.g. `q_hash("role:elder")`, `q_hash("role:parent")`).
+    pub role_hash: u64,
+    /// Verified confidence / weight of the endorsement in `[0.0, 1.0]`.
+    pub weight: f32,
+}
+
+/// Evaluate graduated capacity under Gillick competence and supported decision-making.
+///
+/// Rules:
+/// 1. If an authorized elder or parent asserts an active veto (`elder_veto == true`),
+///    capacity is `UnderDuress` (voidable / suspended) to safeguard the dependent.
+/// 2. If the agent's individual `understanding_score >= decision_complexity`, they possess
+///    autonomous Gillick competence (`CapacityStatus::Intact`).
+/// 3. If individual competence is insufficient, supported decision-making is evaluated:
+///    endorsers with `weight >= min_endorsement_weight` are counted. If the count reaches
+///    `required_quorum` and the collective support bridges the gap, returns `CapacityStatus::Intact`.
+/// 4. Otherwise returns `CapacityStatus::Impaired`.
+pub fn eval_graduated_capacity(
+    competence: GraduatedCompetence,
+    endorsements: &[KinshipEndorsement],
+    min_endorsement_weight: f32,
+    required_quorum: usize,
+    elder_veto: bool,
+) -> CapacityStatus {
+    if elder_veto {
+        return CapacityStatus::UnderDuress;
+    }
+
+    if competence.is_self_standing() {
+        return CapacityStatus::Intact;
+    }
+
+    let mut valid_count = 0usize;
+    let mut total_supported_weight = 0.0f32;
+
+    for e in endorsements {
+        if e.weight >= min_endorsement_weight {
+            valid_count += 1;
+            total_supported_weight += e.weight;
+        }
+    }
+
+    if valid_count >= required_quorum {
+        // Supported capacity bridges up to 50% extra complexity deficit based on collective weight
+        let support_boost = (total_supported_weight / valid_count.max(1) as f32) * 0.5;
+        if (competence.understanding_score + support_boost) >= competence.decision_complexity {
+            return CapacityStatus::Intact;
+        }
+    }
+
+    CapacityStatus::Impaired
+}
+
+// ─── Digital Probate & Succession Semantics ────────────────────────────────────────
+
+/// Testamentary delegation terms specifying successor rights upon mortality event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TestamentaryClause<'a> {
+    /// Deceased or testator entity DID hash.
+    pub testator: u64,
+    /// Designated heir or successor representative DID hash.
+    pub successor: u64,
+    /// Authorized domains of transmission (opaque u64 domain hashes).
+    pub delegated_domains: &'a [u64],
+    /// Whether this grant explicitly survives death (`survivesDeath`).
+    pub survives_death: bool,
+}
+
+/// Attested succession/mortality event from a mortality oracle or civil registry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SuccessionEvent {
+    /// Decedent DID hash.
+    pub decedent: u64,
+    /// Mortality oracle or registrar DID hash.
+    pub oracle: u64,
+    /// Attestation epoch timestamp.
+    pub attestation_epoch: u32,
+    /// Whether the death attestation has been cryptographically verified.
+    pub verified: bool,
+}
+
+/// Predicate URI hash for claims surviving death (`values:survivesDeath`).
+#[inline]
+pub fn survives_death_predicate() -> u64 {
+    crate::q_hash("values:survivesDeath")
+}
+
+/// Predicate URI hash for testamentary successor (`values:testamentarySuccessor`).
+#[inline]
+pub fn testamentary_successor_predicate() -> u64 {
+    crate::q_hash("values:testamentarySuccessor")
+}
+
+/// Evaluates whether a successor holds standing to exercise authority in a requested domain
+/// under a testamentary clause and verified succession event.
+pub fn eval_succession_standing(
+    clause: &TestamentaryClause,
+    event: Option<&SuccessionEvent>,
+    requested_domain: u64,
+) -> bool {
+    let Some(ev) = event else {
+        return false;
+    };
+
+    if !ev.verified || ev.decedent != clause.testator {
+        return false;
+    }
+
+    if !clause.survives_death {
+        return false;
+    }
+
+    clause.delegated_domains.contains(&requested_domain)
+}
+
+/// Filters an input stream of Quins for claims that survive the decedent's death.
+/// Matches Quins whose predicate equals `values:survivesDeath` or subject equals `decedent`.
+pub fn filter_surviving_claims(
+    claims: &[crate::NQuin],
+    decedent: u64,
+    out: &mut [crate::NQuin],
+) -> usize {
+    let surv_pred = survives_death_predicate();
+    let mut count = 0usize;
+
+    for &c in claims {
+        if count >= out.len() {
+            break;
+        }
+        if c.subject == decedent && (c.predicate == surv_pred || (c.metadata & 0x01) != 0) {
+            out[count] = c;
+            count += 1;
+        }
+    }
+
+    count
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,4 +522,110 @@ mod tests {
         assert!(!chain_authorizes(&[sub, bad_sub], legal));
         assert!(!chain_authorizes(&[], medical));
     }
+
+    #[test]
+    fn test_graduated_capacity_and_kinship_endorsement() {
+        let comp = GraduatedCompetence::new(0.6, 0.5);
+        assert!(comp.is_self_standing());
+        assert_eq!(
+            eval_graduated_capacity(comp, &[], 0.5, 1, false),
+            CapacityStatus::Intact
+        );
+
+        // Insufficient individual competence: score 0.4 < complexity 0.7
+        let minor_comp = GraduatedCompetence::new(0.4, 0.7);
+        assert!(!minor_comp.is_self_standing());
+        assert_eq!(
+            eval_graduated_capacity(minor_comp, &[], 0.5, 1, false),
+            CapacityStatus::Impaired
+        );
+
+        // With kinship support meeting quorum (2 elders/parents)
+        let endorsements = [
+            KinshipEndorsement {
+                supporter_did: 0xC1,
+                role_hash: crate::q_hash("role:parent"),
+                weight: 0.8,
+            },
+            KinshipEndorsement {
+                supporter_did: 0xC2,
+                role_hash: crate::q_hash("role:elder"),
+                weight: 0.9,
+            },
+        ];
+        assert_eq!(
+            eval_graduated_capacity(minor_comp, &endorsements, 0.7, 2, false),
+            CapacityStatus::Intact
+        );
+
+        // Elder veto forces UnderDuress even with valid support
+        assert_eq!(
+            eval_graduated_capacity(minor_comp, &endorsements, 0.7, 2, true),
+            CapacityStatus::UnderDuress
+        );
+    }
+
+    #[test]
+    fn test_digital_probate_and_succession_standing() {
+        let testator = 0xD1;
+        let heir = 0xD2;
+        let domain_land = crate::q_hash("domain:custodial_land");
+        let domain_finance = crate::q_hash("domain:finance");
+
+        let clause = TestamentaryClause {
+            testator,
+            successor: heir,
+            delegated_domains: &[domain_land],
+            survives_death: true,
+        };
+
+        // Before death attested: no standing
+        assert!(!eval_succession_standing(&clause, None, domain_land));
+
+        // Unverified event: no standing
+        let unverified_ev = SuccessionEvent {
+            decedent: testator,
+            oracle: 0x99,
+            attestation_epoch: 1000,
+            verified: false,
+        };
+        assert!(!eval_succession_standing(&clause, Some(&unverified_ev), domain_land));
+
+        // Verified event: standing in domain_land, but not finance
+        let verified_ev = SuccessionEvent {
+            decedent: testator,
+            oracle: 0x99,
+            attestation_epoch: 1000,
+            verified: true,
+        };
+        assert!(eval_succession_standing(&clause, Some(&verified_ev), domain_land));
+        assert!(!eval_succession_standing(&clause, Some(&verified_ev), domain_finance));
+
+        // Surviving claims filtering
+        let mut q1 = crate::NQuin {
+            subject: testator,
+            predicate: survives_death_predicate(),
+            object: 0x123,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        q1.parity = q1.subject ^ q1.predicate ^ q1.object ^ q1.context;
+
+        let mut q2 = crate::NQuin {
+            subject: testator,
+            predicate: crate::q_hash("claims:ordinary"),
+            object: 0x456,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        q2.parity = q2.subject ^ q2.predicate ^ q2.object ^ q2.context;
+
+        let mut out = [crate::NQuin::default(); 4];
+        let n = filter_surviving_claims(&[q1, q2], testator, &mut out);
+        assert_eq!(n, 1);
+        assert_eq!(out[0].object, 0x123);
+    }
 }
+

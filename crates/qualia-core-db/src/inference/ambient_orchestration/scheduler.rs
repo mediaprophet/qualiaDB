@@ -103,7 +103,10 @@ impl TaskScheduler {
     /// Dispatch the next pending task to a device, moving it to running.
     /// Returns the dispatched task, or `None` if no tasks are pending.
     pub fn dispatch_next(&mut self) -> Option<Task> {
-        let task = self.task_queue.pending_tasks.pop()?;
+        if self.task_queue.pending_tasks.is_empty() {
+            return None;
+        }
+        let task = self.task_queue.pending_tasks.remove(0);
         self.task_queue.running_tasks.push(task.clone());
         Some(task)
     }

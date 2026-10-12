@@ -22,6 +22,8 @@ pub enum LicenceClass {
     CcByNc = 4,
     /// Explicit proprietary grant recorded on the envelope (still may forbid redistribution).
     ProprietaryPermitted = 5,
+    /// Social Permissive Commons (threshold discharge, third-party anchored, travelling obligation).
+    SocialPermissiveCommons = 6,
 }
 
 impl LicenceClass {
@@ -32,6 +34,7 @@ impl LicenceClass {
             3 => Self::CcBySa,
             4 => Self::CcByNc,
             5 => Self::ProprietaryPermitted,
+            6 => Self::SocialPermissiveCommons,
             _ => Self::Unknown,
         }
     }
@@ -45,6 +48,9 @@ impl LicenceClass {
             "CC-BY-SA" | "CC-BY-SA-4.0" | "CCBYSA" => Self::CcBySa,
             "CC-BY-NC" | "CC-BY-NC-4.0" | "CCBYNC" => Self::CcByNc,
             "PROPRIETARY-PERMITTED" | "PROPRIETARY" => Self::ProprietaryPermitted,
+            "SPC" | "SOCIAL-PERMISSIVE-COMMONS" | "PERMISSIVE-COMMONS" | "COMMONS" => {
+                Self::SocialPermissiveCommons
+            }
             _ => Self::Unknown,
         }
     }
@@ -143,6 +149,12 @@ impl LicenceObligations {
     pub const NON_COMMERCIAL: u16 = 1 << 2;
     pub const NO_REDISTRIBUTION: u16 = 1 << 3;
     pub const NOTICE: u16 = 1 << 4;
+    /// spc:ThirdPartyAnchoredObligation: obligation anchored to external custodians or contributors.
+    pub const THIRD_PARTY_ANCHORED: u16 = 1 << 5;
+    /// spc:ArtifactTravellingObligation: obligation travels with the artifact / derivatives.
+    pub const ARTIFACT_TRAVELLING: u16 = 1 << 6;
+    /// Permissive commons dischargeable: converts to unencumbered commons once pool >= cost.
+    pub const COMMONS_DISCHARGEABLE: u16 = 1 << 7;
 
     pub const fn empty() -> Self {
         Self(0)
@@ -163,6 +175,13 @@ impl LicenceObligations {
             LicenceClass::CcBySa => Self(Self::ATTRIBUTION | Self::SHARE_ALIKE | Self::NOTICE),
             LicenceClass::CcByNc => Self(Self::ATTRIBUTION | Self::NON_COMMERCIAL | Self::NOTICE),
             LicenceClass::ProprietaryPermitted => Self(Self::NOTICE | Self::NO_REDISTRIBUTION),
+            LicenceClass::SocialPermissiveCommons => Self(
+                Self::ATTRIBUTION
+                    | Self::NOTICE
+                    | Self::THIRD_PARTY_ANCHORED
+                    | Self::ARTIFACT_TRAVELLING
+                    | Self::COMMONS_DISCHARGEABLE,
+            ),
             LicenceClass::Unknown => Self(Self::NO_REDISTRIBUTION | Self::NOTICE),
         }
     }
@@ -250,11 +269,22 @@ impl LicencePolicy {
             LicenceClass::ProprietaryPermitted => {
                 (UseClass::Internal, RedistributionClass::NoRedistribution)
             }
+            LicenceClass::SocialPermissiveCommons => (
+                UseClass::Commercial,
+                RedistributionClass::AttributionRequired,
+            ),
             LicenceClass::Unknown => {
                 return Err(AssetEnvelopeError::UnknownLicence);
             }
         };
         Self::try_new(class, use_class, redistribution, terms_url, attribution)
+    }
+
+    /// Check whether a Social Permissive Commons obligation has discharged
+    /// based on accumulated payments meeting audited production cost + ROI cap.
+    pub fn is_spc_discharged(&self, accumulated_pool: u64, cost: u64) -> bool {
+        self.obligations.contains(LicenceObligations::COMMONS_DISCHARGEABLE)
+            && crate::modalities::value_flow::is_commons_discharged(accumulated_pool, cost)
     }
 
     /// May this asset (or a derived bundle) be redistributed outside the local node?
@@ -360,4 +390,28 @@ mod tests {
         assert!(u.obligations.contains(LicenceObligations::NON_COMMERCIAL));
         assert!(!u.allows_redistribution());
     }
+
+    #[test]
+    fn test_spc_licence_policy_and_discharge() {
+        let spc = LicencePolicy::from_tag(
+            "SPC",
+            "https://socialpermissivecommons.org/terms",
+            "Community Custodians",
+        )
+        .unwrap();
+
+        assert_eq!(spc.class, LicenceClass::SocialPermissiveCommons);
+        assert!(spc.obligations.contains(LicenceObligations::THIRD_PARTY_ANCHORED));
+        assert!(spc.obligations.contains(LicenceObligations::ARTIFACT_TRAVELLING));
+        assert!(spc.obligations.contains(LicenceObligations::COMMONS_DISCHARGEABLE));
+
+        // Before cost is reached: not discharged
+        let cost = 10_000u64;
+        assert!(!spc.is_spc_discharged(5_000, cost));
+
+        // When pool >= cost: discharged
+        assert!(spc.is_spc_discharged(10_000, cost));
+        assert!(spc.is_spc_discharged(12_000, cost));
+    }
 }
+

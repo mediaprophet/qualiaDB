@@ -112,6 +112,67 @@
       "description": "Large-scale upper ontology with common-sense knowledge — 239k concepts, 2M assertions.",
       "url": "https://github.com/asanchez75/opencyc/raw/master/opencyc-latest.owl",
       "filename": "opencyc.owl"
+    },
+    {
+      "id": "tern",
+      "name": "TERN Ecosystem Ontology",
+      "version": "2.1",
+      "type": "Turtle",
+      "size": "~180 KB",
+      "description": "Terrestrial Ecosystem Research Network (TERN) conceptual model for ecological observation, sampling, features of interest, and site attributes.",
+      "url": "https://linked.data.gov.au/def/tern/ont/tern.ttl",
+      "filename": "tern.ttl"
+    },
+    {
+      "id": "dwc",
+      "name": "Darwin Core (DwC)",
+      "version": "2023-09-18",
+      "type": "RDF/XML",
+      "size": "~95 KB",
+      "description": "Biodiversity Information Standards (TDWG) Darwin Core vocabulary for biological taxa, occurrences, and sampling events.",
+      "url": "https://raw.githubusercontent.com/tdwg/dwc/master/vocabulary/term_versions.rdf",
+      "filename": "darwin-core.rdf"
+    },
+    {
+      "id": "aunsl",
+      "name": "Australian National Species List (auNSL)",
+      "version": "2024",
+      "type": "Turtle",
+      "size": "~250 KB",
+      "description": "Authoritative scientific and vernacular nomenclature for Australian flora, fauna, and fungi.",
+      "url": "https://biodiversity.org.au/voc/nsld.ttl",
+      "filename": "aunsl.ttl"
+    },
+    {
+      "id": "w3c-ma",
+      "name": "W3C Media Annotation Ontology (ma-ont)",
+      "version": "2012",
+      "type": "Turtle",
+      "size": "~35 KB",
+      "description": "Core media properties: temporal and spatial fragment anchors, duration, tracks, and media formats.",
+      "url": "https://www.w3.org/ns/ma-ont.ttl",
+      "filename": "ma-ont.ttl"
+    },
+    {
+      "id": "sparql-mm",
+      "name": "SPARQL-MM Multimedia Extension",
+      "version": "1.0",
+      "type": "Turtle",
+      "size": "~25 KB",
+      "description": "Spatial and temporal topological relations for multimedia fragments, spatio-temporal joins, and media slicing.",
+      "url": "http://linkedmultimedia.org/sparql-mm/ns/2.0.0/ontology.ttl",
+      "filename": "sparql-mm.ttl"
+    },
+    {
+      "id": "qudt",
+      "name": "QUDT Quantities, Units, Dimensions and Data Types",
+      "version": "2.1",
+      "type": "Turtle",
+      "size": "~2.2 MB",
+      "description": "Formal representations of physical quantities, units of measure, and dimensions for scientific sensors and environmental rasters.",
+      "url": "https://qudt.org/2.1/schema/SCHEMA_QUDT-v2.1.ttl",
+      "filename": "qudt-schema.ttl"
     }
   ]
 }
+

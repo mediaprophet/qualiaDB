@@ -19,12 +19,17 @@ pub enum DegradationVector {
     ProportionalityTest,
     InteractionGovernance,
     FiduciaryAdvice,
+    EthnobotanicalMedicinal,
+    TaxonomicClassification,
     Unknown,
 }
 
 /// Immutable UI-rendering disclaimer for any biological / physiological / thermodynamic
 /// analysis. Hardcoded verbatim from the audit spec (Systemic Biological Framework).
 pub const BIO_DISCLAIMER: &str = "**Systemic Biological Analysis:** The outputs generated in this subgraph represent a mechanistic, probabilistic simulation of physiological and thermodynamic variables. They are constructed for educational ontology mapping and structural biological research. This system does not diagnose, treat, or prescribe. For definitive clinical applications, these findings should be presented to a certified medical practitioner.";
+
+/// Immutable UI-rendering disclaimer for traditional knowledge, ethnobotany, and species classification.
+pub const BIOSPHERE_TRADITIONAL_KNOWLEDGE_DISCLAIMER: &str = "**Biosphere & Ethnobotanical Knowledge:** Assertions regarding species classification, medicinal application, or ecological usage represent community and academic knowledge models. They do not constitute certified therapeutic guidance or definitive statutory taxonomy. Custodial knowledge is respected as relational heritage rather than open clinical endorsement.";
 
 /// Immutable UI-rendering disclaimer for any jural / deontic / rights analysis. Hardcoded
 /// verbatim from the audit spec (Systemic Jural & Legal Framework).
@@ -65,6 +70,20 @@ pub fn identify_degradation_vector(quin: &NQuin) -> DegradationVector {
         || predicate == q_hash("q42:investmentDirective")
     {
         return DegradationVector::FiduciaryAdvice;
+    }
+
+    // Biosphere & Traditional Knowledge Vectors
+    if predicate == q_hash("q42:medicinalPlantUse")
+        || predicate == q_hash("q42:ethnobotanicalTherapy")
+        || predicate == q_hash("q42:bioactiveClaim")
+    {
+        return DegradationVector::EthnobotanicalMedicinal;
+    }
+    if predicate == q_hash("q42:definitiveTaxon")
+        || predicate == q_hash("q42:speciesIdentification")
+        || predicate == q_hash("q42:conservationStatusAsserted")
+    {
+        return DegradationVector::TaxonomicClassification;
     }
 
     DegradationVector::Unknown
@@ -108,6 +127,16 @@ pub fn degrade_claim_to_socratic(vector: DegradationVector) -> Option<SocraticDe
             probabilistic_map: "Mapping market thermodynamics.",
             socratic_prompt: "Under what macro-economic phase shift does this asset distribution experience maximal catastrophic drawdown?",
             immutable_disclaimer: "This system models economic thermodynamics. It does not provide certified fiduciary or investment advice.",
+        }),
+        DegradationVector::EthnobotanicalMedicinal => Some(SocraticDegradation {
+            probabilistic_map: "Ethnobotanical & Medicinal Plant Inquiry.",
+            socratic_prompt: "This record references traditional or phytotherapeutic usage. Have you cross-referenced these observations with authorized pharmacological databases and local custodial knowledge holders before drawing operational conclusions?",
+            immutable_disclaimer: BIOSPHERE_TRADITIONAL_KNOWLEDGE_DISCLAIMER,
+        }),
+        DegradationVector::TaxonomicClassification => Some(SocraticDegradation {
+            probabilistic_map: "Probabilistic Taxonomic Alignment.",
+            socratic_prompt: "The morphological or molecular markers indicate a likely match with this taxon. Have you verified diagnostic keys against verified museum vouchers or herbarium records to account for cryptic species boundaries?",
+            immutable_disclaimer: BIOSPHERE_TRADITIONAL_KNOWLEDGE_DISCLAIMER,
         }),
         DegradationVector::Unknown => None,
     }
@@ -196,7 +225,8 @@ pub fn detect_referral_by_severity(
     match vector {
         DegradationVector::BiochemicalPathway
         | DegradationVector::ThermodynamicTracking
-        | DegradationVector::GenomicPrivacy => Some(ReferralTrigger {
+        | DegradationVector::GenomicPrivacy
+        | DegradationVector::EthnobotanicalMedicinal => Some(ReferralTrigger {
             domain: ReferralDomain::MedicalEmergency,
             overriding_prompt: EMERGENCY_PROMPT,
             immutable_disclaimer: BIO_DISCLAIMER,
@@ -209,21 +239,33 @@ pub fn detect_referral_by_severity(
             overriding_prompt: LEGAL_JEOPARDY_PROMPT,
             immutable_disclaimer: LEGAL_DISCLAIMER,
         }),
-        DegradationVector::Unknown => None,
+        DegradationVector::TaxonomicClassification | DegradationVector::Unknown => None,
     }
 }
 
 // ─── Structural refusal + nquin isolation (Semantic Shift) ──────────────────────────
 
 /// Structural refusal: predicates that assert a *definitive* state-classification — a medical
-/// diagnosis or a legal verdict — must **never** be instantiated as-is. The engine emits the
-/// mechanistic / dialectical degradation ([`degrade_claim_to_socratic`]) instead of a
+/// diagnosis, legal verdict, or definitive biological taxon — must **never** be instantiated as-is.
+/// The engine emits the mechanistic / dialectical degradation ([`degrade_claim_to_socratic`]) instead of a
 /// directive. Returns `true` iff `predicate` is a forbidden definitive classification.
 pub fn forbids_definitive_classification(predicate: u64) -> bool {
     predicate == q_hash("q42:medicalDiagnosis")
         || predicate == q_hash("q42:diseaseClassification")
         || predicate == q_hash("q42:legalVerdict")
         || predicate == q_hash("q42:guiltDetermination")
+        || predicate == q_hash("q42:definitiveTaxon")
+        || predicate == q_hash("q42:ethnobotanicalTherapy")
+}
+
+/// Biosphere custodial guard: traditional knowledge and sensitive endangered species records
+/// must be protected from uncurated public scrape aggregation without custodial consent.
+pub fn requires_biosphere_custodial_quarantine(quin: &NQuin) -> bool {
+    matches!(
+        identify_degradation_vector(quin),
+        DegradationVector::EthnobotanicalMedicinal
+    ) || quin.predicate == q_hash("q42:sensitiveSpeciesExactLocation")
+        || quin.predicate == q_hash("q42:sacredSiteBoundary")
 }
 
 /// Nquin isolation guard: personal physiological / genomic data must be quarantined from

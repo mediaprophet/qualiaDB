@@ -45,6 +45,12 @@ const PALERMO_PROTOCOL_ANNOTATED_GRAPH: u64 =
 const COMMONWEALTH_CHARTER_ANNOTATED_GRAPH: u64 =
     q_hash("urn:qualia:ontology:commonwealth_charter_annotated");
 const DNS_RECORD_TYPES_GRAPH: u64 = q_hash("urn:qualia:ontology:dns");
+const TERN_GRAPH: u64 = q_hash("urn:qualia:ontology:tern");
+const DWC_GRAPH: u64 = q_hash("urn:qualia:ontology:dwc");
+const AUNSL_GRAPH: u64 = q_hash("urn:qualia:ontology:aunsl");
+const MA_ONT_GRAPH: u64 = q_hash("urn:qualia:ontology:ma_ont");
+const SPARQL_MM_GRAPH: u64 = q_hash("urn:qualia:ontology:sparql_mm");
+const QUDT_GRAPH: u64 = q_hash("urn:qualia:ontology:qudt");
 
 /// Files to load at startup, as `(filename, named_graph_context)` pairs.
 const STARTUP_ONTOLOGIES: &[(&str, u64)] = &[
@@ -96,6 +102,12 @@ const STARTUP_ONTOLOGIES: &[(&str, u64)] = &[
         "commonwealth_charter_annotated.ttl",
         COMMONWEALTH_CHARTER_ANNOTATED_GRAPH,
     ),
+    ("tern.ttl", TERN_GRAPH),
+    ("darwin-core.rdf", DWC_GRAPH),
+    ("aunsl.ttl", AUNSL_GRAPH),
+    ("ma-ont.ttl", MA_ONT_GRAPH),
+    ("sparql-mm.ttl", SPARQL_MM_GRAPH),
+    ("qudt-schema.ttl", QUDT_GRAPH),
 ];
 
 /// Startup ontology catalog: `(filename, named_graph_context_hash)`.

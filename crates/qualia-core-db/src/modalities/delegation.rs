@@ -183,6 +183,88 @@ pub fn delegation_in_region(scope_region: u64, location: u64) -> bool {
     scope_region == 0 || scope_region == location
 }
 
+// ─── Testamentary Succession & Posthumous Delegation ──────────────────────────────
+
+/// Predicate for testamentary delegation edges: `(decedent, q42:testamentarySuccessor, successor)`.
+#[inline]
+pub fn testamentary_delegates_predicate() -> u64 {
+    q_hash("q42:testamentarySuccessor")
+}
+
+/// Evaluates whether `agent` holds authority from `root_authority` taking decedent status
+/// and testamentary succession into account.
+///
+/// Rules:
+/// 1. If an intermediary is in `deceased_nodes`, ordinary delegation edges from that intermediary
+///    lapse unless `metadata & 0x01 != 0` (survivesDeath flag).
+/// 2. If `probate_admitted` is true, testamentary successor edges (`q42:testamentarySuccessor`)
+///    from deceased nodes are activated.
+/// 3. Zero-heap bounded BFS traversal.
+pub fn authority_with_succession(
+    edges: &[NQuin],
+    root_authority: u64,
+    agent: u64,
+    deceased_nodes: &[u64],
+    probate_admitted: bool,
+) -> bool {
+    if agent == root_authority {
+        return true;
+    }
+    let p_del = delegates_predicate();
+    let p_test = testamentary_delegates_predicate();
+
+    let mut frontier = [0u64; MAX_DELEGATION_NODES];
+    let mut visited = [0u64; MAX_DELEGATION_NODES];
+    let mut fl = 1usize;
+    let mut vl = 0usize;
+    frontier[0] = root_authority;
+
+    while fl > 0 {
+        fl -= 1;
+        let cur = frontier[fl];
+        if visited[..vl].contains(&cur) {
+            continue;
+        }
+        if vl < MAX_DELEGATION_NODES {
+            visited[vl] = cur;
+            vl += 1;
+        } else {
+            break;
+        }
+
+        let cur_deceased = deceased_nodes.contains(&cur);
+
+        for e in edges {
+            let is_ordinary = e.predicate == p_del && e.subject == cur;
+            let is_testamentary = e.predicate == p_test && e.subject == cur;
+
+            if !is_ordinary && !is_testamentary {
+                continue;
+            }
+
+            // Ordinary edges from deceased node lapse unless survives_death flag (metadata & 1 != 0) is set
+            if is_ordinary && cur_deceased && (e.metadata & 0x01) == 0 {
+                continue;
+            }
+
+            // Testamentary edges activate only when the delegator is deceased and probate is admitted
+            if is_testamentary && (!cur_deceased || !probate_admitted) {
+                continue;
+            }
+
+            let nxt = e.object;
+            if nxt == agent {
+                return true;
+            }
+            if fl < MAX_DELEGATION_NODES && !visited[..vl].contains(&nxt) {
+                frontier[fl] = nxt;
+                fl += 1;
+            }
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -282,4 +364,50 @@ mod tests {
             "global scope"
         );
     }
+
+    #[test]
+    fn test_authority_with_succession() {
+        let root = q_hash("did:community");
+        let decedent = q_hash("did:elder_a");
+        let proxy_living = q_hash("did:living_assistant");
+        let testamentary_heir = q_hash("did:grandchild");
+
+        let mut edge_normal = edge(decedent, proxy_living);
+        let mut edge_surviving = edge(decedent, proxy_living);
+        edge_surviving.metadata = 0x01; // survivesDeath flag
+
+        let mut edge_testamentary = NQuin {
+            subject: decedent,
+            predicate: testamentary_delegates_predicate(),
+            object: testamentary_heir,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        edge_testamentary.parity = edge_testamentary.subject
+            ^ edge_testamentary.predicate
+            ^ edge_testamentary.object
+            ^ edge_testamentary.context;
+
+        let edges = [edge(root, decedent), edge_normal, edge_testamentary];
+
+        // While elder is alive: normal assistant has authority; testamentary heir does NOT yet
+        assert!(authority_with_succession(&edges, root, proxy_living, &[], false));
+        assert!(!authority_with_succession(&edges, root, testamentary_heir, &[], false));
+
+        // When elder is deceased but probate not yet admitted:
+        // Normal assistant loses authority; testamentary heir has not activated
+        assert!(!authority_with_succession(&edges, root, proxy_living, &[decedent], false));
+        assert!(!authority_with_succession(&edges, root, testamentary_heir, &[decedent], false));
+
+        // When elder is deceased and probate is admitted:
+        // Normal assistant still lacks authority; testamentary heir is active!
+        assert!(!authority_with_succession(&edges, root, proxy_living, &[decedent], true));
+        assert!(authority_with_succession(&edges, root, testamentary_heir, &[decedent], true));
+
+        // If normal edge had survivesDeath flag, it also survives death
+        let surviving_edges = [edge(root, decedent), edge_surviving, edge_testamentary];
+        assert!(authority_with_succession(&surviving_edges, root, proxy_living, &[decedent], true));
+    }
 }
+
