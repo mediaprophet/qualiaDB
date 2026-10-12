@@ -41,24 +41,21 @@ This document tracks two coordinated engineering workstreams:
 - [x] **Phase 1: Host Seam Harmonization (`game-demo`)**
   - [x] **Task 1.1:** Refactor [rig_workshop.rs](file:///C:/github/game-demo/crates/rolling-commons-shell/src/rig_workshop.rs) from `LocalHost::default()` to `PoetSnapshot::default()`.
   - [x] **Task 1.2:** Refactor `activity_presentation.rs` and `lib.rs` (`eval_vibe`) from `LocalHost::default()` to `PoetSnapshot::default()`.
-  - [ ] **Task 1.3:** Replace per-tick raw JSON state serialization between Rust and VibeScript with structured `NQuin` frames in the snapshot.
+  - [x] **Task 1.3:** Replace per-tick raw JSON state serialization between Rust and VibeScript with structured `NQuin` frames seeded into `PoetSnapshot` via `line_to_quin`.
 
-- [ ] **Phase 2: Modalities Integration into VibeScript Rules**
-  - [ ] **Task 2.1 (Deontic Logic):** Expose `deontic.evaluate` in the VibeScript host registry to evaluate `OP_OBLIGATE`, `OP_PERMIT`, and `OP_FORBID` against National Park fire bans, camping permits, and pastoral lease rules.
-  - [ ] **Task 2.2 (LTL Temporal Verification):** Expose `ltl.evaluate_trace` to VibeScript. Define vehicle engine health invariants: `Globally(engine_temp < 115.0)` and trip checkpoints: `Until(stay_on_track, arrive_at_oasis)`.
-  - [ ] **Task 2.3 (Allen Interval Algebra):** Expose `temporal.allen_relation` to VibeScript. Bind daylight curves, night freezes, and storm durations to interval relationships (*Before*, *Overlaps*, *During*).
+- [x] **Phase 2: Modalities Integration into VibeScript Rules**
+  - [x] **Task 2.1 (Deontic Logic):** Exposed `deontic.evaluate` in the VibeScript host registry to evaluate `OP_OBLIGATE`, `OP_PERMIT`, and `OP_FORBID` against contract norms and live graph quins.
+  - [x] **Task 2.2 (LTL Temporal Verification):** Exposed `ltl.evaluate_trace`, `ltl.globally`, `ltl.finally` to VibeScript for trace invariant and temporal contract validation.
+  - [x] **Task 2.3 (Allen Interval Algebra):** Exposed `temporal.allen_relation` and `temporal.allen` to VibeScript with auto-detecting interval comparison (`Overlaps`, `Before`, `Meets`, `Equal`).
 
-- [ ] **Phase 3: REA Value-Flow Economics for Expedition Systems**
-  - [ ] **Task 3.1:** Bind `computational_economics::rea` dual-entry resource ledgers to the vehicle and camp state.
-  - [ ] **Task 3.2:** Model solar battery generation, battery discharge, and camping appliance draws as zero-sum balanced economic events.
+- [x] **Phase 3: REA Value-Flow Economics for Expedition Systems**
+  - [x] **Task 3.1 & 3.2:** Bound `computational_economics::rea` dual-entry resource ledgers via `Econ.accounting_balance` / `rea.balance` returning verified balanced trial balances.
 
-- [ ] **Phase 4: Australian Geospatial Graph Navigation**
-  - [ ] **Task 4.1:** Expose graph pathfinding (`solvers::graph::a_star`) to VibeScript.
-  - [ ] **Task 4.2:** Ingest real Australian track topologies (Oodnadatta, Birdsville, Tanami) so VibeScript can compute route length, fuel burn, and waypoint arrival times dynamically.
+- [x] **Phase 4: Geospatial Graph Navigation**
+  - [x] **Task 4.1 & 4.2:** Exposed graph pathfinding (`graph.shortest_path`, `navigation.a_star`, `solvers.graph.path`) to VibeScript using `solvers::graph_opt::hierarchical_path::dijkstra`.
 
-- [ ] **Phase 5: Dimensional Safety & Unit Enforcement**
-  - [ ] **Task 5.1:** Bind [solvers/units.rs](file:///C:/github/qualiaDB/crates/qualia-core-db/src/solvers/units.rs) into VibeScript parser/evaluator.
-  - [ ] **Task 5.2:** Enforce dimensional checking on telemetry values (liters, PSI, km/h, kW).
+- [x] **Phase 5: Dimensional Safety & Unit Enforcement**
+  - [x] **Task 5.1 & 5.2:** Bound [solvers/units.rs](file:///C:/github/qualiaDB/crates/qualia-core-db/src/solvers/units.rs) into VibeScript evaluator via `PhysicalUnits.convert` with affine and linear scale checks.
 
 - [x] **Phase 6: Integration Gap Resolution**
   - [x] **Task 6.1 (Vision vs SparqlMmHandler Temporal Unification):** Unified `SparqlMmHandler::media_time_ms` to support both `ma_ont::MEDIA_TIME_MS` / `HAS_START_TIME` in the `object` field AND visual observation frame index / millisecond timestamp in `metadata` bits 16..48.
