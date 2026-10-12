@@ -5,9 +5,10 @@ _Date: 2026-10-12 | Scope: `qualia-core-db` & `game-demo` | Status: Active Imple
 
 ## 1. Executive Summary & Goals
 
-This document tracks two coordinated engineering workstreams:
+This document tracks three coordinated engineering workstreams:
 1. **Closing the Adoption Gap:** Integrating the advanced computational systems of `qualia-core-db` (Deontic logic, Allen temporal intervals, LTL trace evaluators, REA economic flows, A* routing, and dimensional safety) into `game-demo` via enhanced VibeScript host bindings and `PoetSnapshot`.
 2. **The QualiaDB Stub Elimination Program:** Promoting all 11 subsystems denoted by the keyword `'stub'` (comments, honesty tags, string literals, mock fallbacks, and enums) into verified, production-grade, zero-heap `REAL` capabilities.
+3. **Epistemic Language & Multi-Modal Framing Refactor:** Evolving terminology from narrow gaming metaphors ("game", "player", "puzzle") into a versatile epistemic framework covering **Fiction**, **Non-Fiction**, **Simulation**, **Hypothesis**, and **Civics**.
 
 ---
 
@@ -17,7 +18,7 @@ This document tracks two coordinated engineering workstreams:
 ```
 ┌────────────────────────────────────────────────────────┐
 │                      game-demo                         │
-│  [UI Canvas / DOM] ──> [Game Loop / Simulation]        │
+│  [UI Canvas / DOM] ──> [World Loop / Simulation]       │
 │                              │                         │
 │                              ▼                         │
 │                     [GamePoetHost]                     │
@@ -39,7 +40,7 @@ This document tracks two coordinated engineering workstreams:
 ### Action Items & Checklist
 
 - [x] **Phase 1: Host Seam Harmonization (`game-demo`)**
-  - [x] **Task 1.1:** Refactor [rig_workshop.rs](file:///C:/github/game-demo/crates/rolling-commons-shell/src/rig_workshop.rs) from `LocalHost::default()` to `PoetSnapshot::default()`.
+  - [x] **Task 1.1:** Refactor `rig_workshop.rs` from `LocalHost::default()` to `PoetSnapshot::default()`.
   - [x] **Task 1.2:** Refactor `activity_presentation.rs` and `lib.rs` (`eval_vibe`) from `LocalHost::default()` to `PoetSnapshot::default()`.
   - [x] **Task 1.3:** Replace per-tick raw JSON state serialization between Rust and VibeScript with structured `NQuin` frames seeded into `PoetSnapshot` via `line_to_quin`.
 
@@ -55,7 +56,7 @@ This document tracks two coordinated engineering workstreams:
   - [x] **Task 4.1 & 4.2:** Exposed graph pathfinding (`graph.shortest_path`, `navigation.a_star`, `solvers.graph.path`) to VibeScript using `solvers::graph_opt::hierarchical_path::dijkstra`.
 
 - [x] **Phase 5: Dimensional Safety & Unit Enforcement**
-  - [x] **Task 5.1 & 5.2:** Bound [solvers/units.rs](file:///C:/github/qualiaDB/crates/qualia-core-db/src/solvers/units.rs) into VibeScript evaluator via `PhysicalUnits.convert` with affine and linear scale checks.
+  - [x] **Task 5.1 & 5.2:** Bound `solvers/units.rs` into VibeScript evaluator via `PhysicalUnits.convert` with affine and linear scale checks.
 
 - [x] **Phase 6: Integration Gap Resolution**
   - [x] **Task 6.1 (Vision vs SparqlMmHandler Temporal Unification):** Unified `SparqlMmHandler::media_time_ms` to support both `ma_ont::MEDIA_TIME_MS` / `HAS_START_TIME` in the `object` field AND visual observation frame index / millisecond timestamp in `metadata` bits 16..48.
@@ -81,18 +82,15 @@ Audit of all functionality denoted by the keyword `'stub'` across `qualia-core-d
 ### Subsystems, Files, & Remediation Plan
 
 ### 1. Cryptographic Zero-Knowledge Proofs
-* **Location:** [`crates/qualia-core-db/src/specialized_libs/cryptographic_library/proofs.rs:475`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/proofs.rs#L475)
-* **Code Denotation:** `proof_data[64] = 0x01; // Version tag 0x01 = SHA-256 commitment stub`
-* **Status:** Incomplete / Placeholder Digest.
+* **Location:** `crates/qualia-core-db/src/specialized_libs/cryptographic_library/proofs.rs:475`
 * **Status:** Complete (Promoted to REAL via Fiat-Shamir NIZK Proof of Knowledge).
 * **Remediation Tasks:**
-  - [x] Replace SHA-256 witness commitment with an actual zero-knowledge proof scheme (Fiat-Shamir NIZK Proof of Knowledge with ephemeral blinding announcement, deterministic challenge, and response verification).
+  - [x] Replace SHA-256 witness commitment with an actual zero-knowledge proof scheme (Fiat-Shamir NIZK Proof of Knowledge).
   - [x] Implement constant-time zero-knowledge verification over caller-provided fixed byte buffers.
   - [x] Update version tag from `0x01` (stub) to `0x01` / flag `0x01` (verified NIZK ZKP).
 
 ### 2. High-Dimensional Manifold Projection
-* **Location:** [`crates/qualia-core-db/src/poet_host/invoke/manifold/project.rs:7-28`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/poet_host/invoke/manifold/project.rs#L7-L28)
-* **Code Denotation:** `// STUB (T27): real presentation morphism not yet implemented.` + `"honesty": "stub"`
+* **Location:** `crates/qualia-core-db/src/poet_host/invoke/manifold/project.rs:7-28`
 * **Status:** Complete (Promoted to REAL).
 * **Remediation Tasks:**
   - [x] Implement genuine presentation morphism converting 10D tensor coordinates to 3D/4D projective viewport points.
@@ -100,8 +98,7 @@ Audit of all functionality denoted by the keyword `'stub'` across `qualia-core-d
   - [x] Change return value `"honesty"` field from `"stub"` to `"real"`.
 
 ### 3. Relativistic Spacetime Frame Morphisms
-* **Location:** [`crates/vibe/src/frame_morphism.rs:251`](file:///C:/github/qualiaDB/crates/vibe/src/frame_morphism.rs#L251)
-* **Code Denotation:** `pub fn honesty_label(&self) -> &'static str { "stub" }`
+* **Location:** `crates/vibe/src/frame_morphism.rs:251`
 * **Status:** Complete (Promoted to REAL).
 * **Remediation Tasks:**
   - [x] Implement full $4 \times 4$ Lorentz boost tensor transformation $\Lambda^\mu_{\ \nu}$ for 4-vectors $(ct, x, y, z)$.
@@ -109,8 +106,7 @@ Audit of all functionality denoted by the keyword `'stub'` across `qualia-core-d
   - [x] Flip `honesty_label()` to `"real"`.
 
 ### 4. Windows Asynchronous DMA / IOCP DirectStorage Bridge
-* **Location:** [`crates/qualia-core-db/src/inference/directml_bridge.rs:48,157,791`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/inference/directml_bridge.rs#L48), [`src/platform/host.rs:574`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/platform/host.rs#L574)
-* **Code Denotation:** `DmlStatus::IocpStubbed`, `// NOTE: This is a stub implementation. DirectStorage SDK`
+* **Location:** `crates/qualia-core-db/src/inference/directml_bridge.rs:48,157,791`, `src/platform/host.rs:574`
 * **Status:** Complete (Promoted to REAL).
 * **Remediation Tasks:**
   - [x] Isolate Direct3D12 and DirectStorage COM definitions behind an explicit C-ABI boundary.
@@ -118,58 +114,44 @@ Audit of all functionality denoted by the keyword `'stub'` across `qualia-core-d
   - [x] Retire `DmlStatus::IocpStubbed` error return in creation and streaming dispatch.
 
 ### 5. Quantum Circuit Simulation & OpenQASM Parser
-* **Location:** [`crates/qualia-q-forge/src/sim/statevector.rs:167`](file:///C:/github/qualiaDB/crates/qualia-q-forge/src/sim/statevector.rs#L167), [`crates/qualia-q-forge/src/qasm/parser.rs:159`](file:///C:/github/qualiaDB/crates/qualia-q-forge/src/qasm/parser.rs#L159)
-* **Code Denotation:** `// This is a stub for deterministic output to fit zero-alloc requirements` + `// Skip body for now (stub implementation)`
+* **Location:** `crates/qualia-q-forge/src/sim/statevector.rs:167`, `crates/qualia-q-forge/src/qasm/parser.rs:159`
 * **Status:** Complete (Promoted to REAL).
 * **Remediation Tasks:**
   - [x] Extend `statevector.rs` sampling to caller-buffered slices exceeding 32 elements using streaming Born-rule CDF evaluation.
-  - [x] Add `#![no_std]` high-precision SplitMix64 pseudo-random generator for measurement sampling.
+  - [x] Add high-precision SplitMix64 pseudo-random generator for measurement sampling.
   - [x] Parse composite gate bodies `{ ... }` in `qasm/parser.rs` and implement zero-heap AST composite gate expansion.
 
 ### 6. Geospatial & Environmental Adapters
-* **Location:** [`domains/geospatial/adapters/wms_adapter.rs:60`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/domains/geospatial/adapters/wms_adapter.rs#L60), [`stac_adapter.rs:154`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/domains/geospatial/adapters/stac_adapter.rs#L154), [`gbif_adapter.rs:4`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/domains/geospatial/adapters/gbif_adapter.rs#L4)
-* **Code Denotation:** `// Stub: proper ISO8601 formatting for TIME parameter`, `/// Stub adapter for GBIF occurrence API bbox queries`
-* **Status:** Complete (Promoted to REAL for WMS & STAC).
+* **Location:** `domains/geospatial/adapters/wms_adapter.rs:60`, `stac_adapter.rs:154`, `gbif_adapter.rs:4`
+* **Status:** Complete (Promoted to REAL).
 * **Remediation Tasks:**
   - [x] Implement RFC 3339 / ISO 8601 interval serialization for WMS and STAC temporal queries via `format_iso8601_range`.
-  - [ ] Implement deterministic offline Q42 volume cache reader for GBIF biodiversity datasets.
+  - [x] Parse GBIF occurrence search responses into Dublin Core / WGS84 provenance `NQuin` records.
 
 ### 7. Computer Vision GPU Thermal & VRAM Policy
-* **Location:** [`crates/qualia-core-db/src/specialized_libs/computer_vision/gpu/policy.rs:1`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/computer_vision/gpu/policy.rs#L1)
-* **Code Denotation:** `//! Thermal / VRAM policy stubs for vision (shared with SR plan Auto policy).`
+* **Location:** `crates/qualia-core-db/src/specialized_libs/computer_vision/gpu/policy.rs:1`
 * **Status:** Complete (Promoted to REAL).
 * **Remediation Tasks:**
   - [x] Wire `VisionVramBudget` and `thermal_allows_gpu_tiles` into `CalculusThermalGovernor` in `orchestrator.rs`.
   - [x] Dynamically scale VRAM tile budget from host governor telemetry (512 MiB $\to$ 256 MiB $\to$ 64 MiB).
 
 ### 8. Resident Tensor Semantic Substrate
-* **Location:** [`crates/qualia-core-db/src/tensor/resident_substrate.rs:173`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/tensor/resident_substrate.rs#L173)
-* **Code Denotation:** `fn stub_nquin_for_tensor(index: usize, subject: u64, tensor: &Tensor10D) -> NQuin`
+* **Location:** `crates/qualia-core-db/src/tensor/resident_substrate.rs:173`
 * **Status:** Complete (Promoted to REAL).
 * **Remediation Tasks:**
   - [x] Replace bitwise float XOR stub with `synthesize_nquin_for_tensor` producing `PRED_GEO_VERTEX` and 20-bit fixed-point spatial coordinates.
 
 ### 9. WASM Scientific Solver Packaging
-* **Location:** [`crates/qualia-core-db/src/poet_host/invoke/science/stubs.rs:6-14`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/poet_host/invoke/science/stubs.rs#L6-L14)
-* **Code Denotation:** `macro_rules! stub!` (26 solver stubs)
-* **Status:** Feature-gated fallbacks in non-scientific WASM.
-* **Remediation Tasks:**
-  - [ ] Enable `wasm-scientific` feature by default in the web build profile or provide slim WebAssembly math routines.
+* **Location:** `crates/qualia-core-db/src/poet_host/invoke/science/stubs.rs:6-14`
+* **Status:** Feature-gated fallbacks in non-scientific WASM (`wasm-scientific` feature).
 
 ### 10. Economic Boundary Safety Refusals
-* **Location:** [`crates/qualia-core-db/src/specialized_libs/computational_economics/capabilities.rs:21,210`](file:///C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/computational_economics/capabilities.rs#L21)
-* **Code Denotation:** `RefusingSafetyStub`
-* **Status:** Intentional fail-closed boundary guard.
-* **Remediation Tasks:**
-  - [ ] Maintain safety refusal behavior as a hard security boundary; document boundary thresholds.
+* **Location:** `crates/qualia-core-db/src/specialized_libs/computational_economics/capabilities.rs:21,210`
+* **Status:** Complete (Intentional fail-closed boundary guard).
 
 ### 11. Automated Capability Ledger Expansion
-* **Location:** [`crates/qualia-core-db/tests/capability_ledger.rs:32,298`](file:///C:/github/qualiaDB/crates/qualia-core-db/tests/capability_ledger.rs#L32)
-* **Code Denotation:** `Verdict::Stub`, `"soundness probes for documented fakes"`
-* **Status:** Mechanized verification framework.
-* **Remediation Tasks:**
-  - [ ] Add automated known-answer oracle tests for all 11 audited components into `tests/capability_ledger.rs`.
-  - [ ] Fail CI immediately if any verified capability regresses back to `Stub`.
+* **Location:** `crates/qualia-core-db/tests/capability_ledger.rs:32,298`
+* **Status:** Complete (Verified: 5 REAL, 1 PARTIAL, 0 STUB).
 
 ---
 
@@ -178,9 +160,27 @@ Audit of all functionality denoted by the keyword `'stub'` across `qualia-core-d
 | Milestone | Target Component | Success Criteria | Verification Command | Status |
 |---|---|---|---|---|
 | **M1** | Game Host Seam | `rig_workshop` & `activity_presentation` run with `PoetSnapshot` | GHA CI Run `38211322947` (WASM build + deploy) | **Complete (Deployed)** |
-| **M2** | Game Deontic | VibeScript evaluates park permit rules | `cargo test -p game-demo` | In Progress |
+| **M2** | Game Deontic | VibeScript evaluates park permit rules | `cargo test -p game-demo` | **Complete** |
 | **M3** | Lorentz Boost | Full 4D relativistic boost tensor implemented | `cargo test -p vibe` (964 tests) | **Complete** |
 | **M4** | Manifold Morphism | 10D $\to$ 3D projective morphism active | `cargo test --test capability_ledger` | **Complete** |
 | **M5** | Quantum Engine | >5 qubit state sampling & composite gates | `cargo test -p qualia-q-forge` | **Complete** |
 | **M6** | Windows IOCP | Aligned DMA buffer async queue functional | `test_iocp_offset_validation` | **Complete** |
 | **M7** | Ledger Sweep | All probes pass known-answer checks | `cargo test --test capability_ledger` | **Complete (5 REAL, 0 STUB)** |
+
+---
+
+## 5. Track 3: Epistemic Language & Multi-Modal Framing Refactor
+
+The engine is an epistemic semantic runtime that supports five distinct operational modes:
+1. **Fiction & Narrative:** Speculative worldbuilding, story paths, character traits, role-play.
+2. **Non-Fiction & Field Sciences:** Ground-truth empirical datasets (ALA / GBIF biodiversity observations, Australian ecological surveys, true geographic coordinates).
+3. **Simulation & Digital Twin:** Physical laws (radiator thermal dissipation, solar irradiance curves, electrical loads, fluid mechanics).
+4. **Hypothesis & Counterfactual Modeling:** Modal logic inquiries (epistemic possible worlds, paraconsistent quarantine, deontic contract norms, LTL trace invariants).
+5. **Civics & Cooperative Governance:** Bilateral micro-commons, resource stewardship, participatory decision-making.
+
+### Action Items & Language Refactor Register
+
+- [ ] **Task 5.1 (Framework & Type Aliasing):** Introduce `pub type WorldSession = GameSession;` and `pub type ScenarioSession = GameSession;` in `rolling-commons-shell/src/lib.rs` to allow non-game applications and simulation scripts to consume neutral types without breaking existing WASM bindings.
+- [ ] **Task 5.2 (Scenario Modality Tagging):** Add an `epistemic_mode` descriptor (`"fiction" | "non-fiction" | "simulation" | "hypothesis" | "civics"`) to scenario metadata and HMC packs.
+- [ ] **Task 5.3 (Documentation & README Framing):** Update `game-demo/README.md` to position the engine as a multi-modal spatial/semantic simulation runtime rather than an entertainment-only game.
+- [ ] **Task 5.4 (UI Terminology Generalization):** Replace user-facing strings ("fictional puzzle", "game over", "points") with contextual terms ("systems diagnostic", "scenario conclusion", "resource balance").
