@@ -180,7 +180,7 @@ The engine is an epistemic semantic runtime that supports five distinct operatio
 
 ### Action Items & Language Refactor Register
 
-- [ ] **Task 5.1 (Framework & Type Aliasing):** Introduce `pub type WorldSession = GameSession;` and `pub type ScenarioSession = GameSession;` in `rolling-commons-shell/src/lib.rs` to allow non-game applications and simulation scripts to consume neutral types without breaking existing WASM bindings.
+- [x] **Task 5.1 (Framework & Type Aliasing):** Introduced `pub type WorldSession = GameSession;`, `pub type ScenarioSession = GameSession;`, and `pub type WorldDriveSimulation = GameDriveSimulation;` in `rolling-commons-shell/src/lib.rs` for neutral non-game consumers.
 - [ ] **Task 5.2 (Scenario Modality Tagging):** Add an `epistemic_mode` descriptor (`"fiction" | "non-fiction" | "simulation" | "hypothesis" | "civics"`) to scenario metadata and HMC packs.
-- [ ] **Task 5.3 (Documentation & README Framing):** Update `game-demo/README.md` to position the engine as a multi-modal spatial/semantic simulation runtime rather than an entertainment-only game.
+- [x] **Task 5.3 (Documentation & README Framing):** Updated `game-demo/README.md` to position the engine as a multi-modal spatial/semantic simulation runtime rather than an entertainment-only game.
 - [ ] **Task 5.4 (UI Terminology Generalization):** Replace user-facing strings ("fictional puzzle", "game over", "points") with contextual terms ("systems diagnostic", "scenario conclusion", "resource balance").
