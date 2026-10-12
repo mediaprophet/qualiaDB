@@ -660,7 +660,22 @@ pub mod swarm {
                     }
                     3 => {
                         // routing_mask
-                        payload.routing_mask = value[0] as u64; // Stub legacy parser conversion
+                        payload.routing_mask = match value.len() {
+                            1 => value[0] as u64,
+                            2 => u16::from_be_bytes([value[0], value[1]]) as u64,
+                            4 => u32::from_be_bytes([value[0], value[1], value[2], value[3]]) as u64,
+                            8 => u64::from_be_bytes([
+                                value[0], value[1], value[2], value[3],
+                                value[4], value[5], value[6], value[7],
+                            ]),
+                            _ if !value.is_empty() => {
+                                let mut buf = [0u8; 8];
+                                let len = value.len().min(8);
+                                buf[8 - len..].copy_from_slice(&value[..len]);
+                                u64::from_be_bytes(buf)
+                            }
+                            _ => 0,
+                        };
                     }
                     4 => {
                         // peer_capabilities
