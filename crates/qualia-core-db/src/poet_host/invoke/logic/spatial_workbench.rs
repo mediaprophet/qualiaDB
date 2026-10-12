@@ -14,7 +14,14 @@ use vibe::{Diagnostic, Span, Value};
 const MAX_ITEMS: usize = 64;
 
 pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    match args::rec_str(args_v, "mode") {
+    let mode = args::rec_str(args_v, "mode").or_else(|| {
+        if args::rec(args_v, "a").is_some() && args::rec(args_v, "b").is_some() {
+            Some("allen")
+        } else {
+            None
+        }
+    });
+    match mode {
         Some("allen") => allen(args_v, span),
         Some("rcc8") => rcc8(args_v, span, false),
         Some("rcc8_points") => rcc8(args_v, span, true),

@@ -1246,3 +1246,73 @@ fn cplx_list_value(items: &[solvers::transforms::Cplx]) -> Value {
         .collect();
     Value::List(records)
 }
+
+// ── Graph optimization & shortest path ──────────────────────────────
+
+/// `Graph.shortest_path` — shortest path across weighted directed graph using Dijkstra.
+pub fn graph_shortest_path(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    use crate::solvers::graph_opt::hierarchical_path::dijkstra;
+    let n = args::rec_u64(args, "nodes")
+        .or_else(|| args::rec_u64(args, "n"))
+        .ok_or_else(|| args::bad(span, "graph_shortest_path needs `nodes` (node count)"))? as usize;
+    let source = args::rec_u64(args, "source").unwrap_or(0) as usize;
+    let target = args::rec_u64(args, "target").map(|t| t as usize);
+    let edges_v = match args {
+        Value::Record(r) => r.get("edges"),
+        _ => None,
+    };
+    let mut edges_of = vec![Vec::new(); n];
+    if let Some(Value::List(list)) = edges_v {
+        for edge in list {
+            if let Value::Record(r) = edge {
+                let u = r.get("from").and_then(|v| match v {
+                    Value::U64(n) => Some(*n as usize),
+                    Value::I64(n) => Some(*n as usize),
+                    Value::F64(f) => Some(*f as usize),
+                    _ => None,
+                }).unwrap_or(0);
+                let v = r.get("to").and_then(|v| match v {
+                    Value::U64(n) => Some(*n as usize),
+                    Value::I64(n) => Some(*n as usize),
+                    Value::F64(f) => Some(*f as usize),
+                    _ => None,
+                }).unwrap_or(0);
+                let w = r.get("weight").and_then(|v| match v {
+                    Value::F64(f) => Some(*f),
+                    Value::U64(n) => Some(*n as f64),
+                    Value::I64(n) => Some(*n as f64),
+                    _ => None,
+                }).unwrap_or(1.0);
+                if u < n && v < n {
+                    edges_of[u].push((v, w));
+                }
+            }
+        }
+    }
+    let distances = dijkstra(n, &edges_of, source);
+    if let Some(target_idx) = target {
+        let dist = if target_idx < distances.len() {
+            distances[target_idx]
+        } else {
+            f64::INFINITY
+        };
+        Ok(args::record([
+            ("distance", Value::F64(dist)),
+            ("reachable", Value::Bool(dist.is_finite())),
+            ("source", Value::U64(source as u64)),
+            ("target", Value::U64(target_idx as u64)),
+            ("honesty", Value::String("real".into())),
+        ]))
+    } else {
+        let dist_vals = distances
+            .into_iter()
+            .map(|d| if d.is_finite() { Value::F64(d) } else { Value::Null })
+            .collect();
+        Ok(args::record([
+            ("distances", Value::List(dist_vals)),
+            ("source", Value::U64(source as u64)),
+            ("honesty", Value::String("real".into())),
+        ]))
+    }
+}
+
