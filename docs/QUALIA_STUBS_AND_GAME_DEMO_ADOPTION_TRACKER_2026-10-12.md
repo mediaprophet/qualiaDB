@@ -184,3 +184,62 @@ The engine is an epistemic semantic runtime that supports five distinct operatio
 - [x] **Task 5.2 (Scenario Modality Tagging):** Added an `epistemic_mode` descriptor (`"fiction" | "non-fiction" | "simulation" | "hypothesis" | "civics"`) to `GameSession`, scenario metadata (`community-grounds-v1.json`), and HMC pack validation (`pack_validation.rs`).
 - [x] **Task 5.3 (Documentation & README Framing):** Updated `game-demo/README.md` to position the engine as a multi-modal spatial/semantic simulation runtime rather than an entertainment-only game.
 - [x] **Task 5.4 (UI Terminology Generalization):** Replaced user-facing strings ("fictional repair puzzle", "fictional road", "fictional local simulation", "fictional housekeeping") with generalized systems / scenario terms ("systems diagnostic & repair", "simulation sector", "autonomous local simulation", "housekeeping practice shift").
+
+---
+
+## 6. Track 4: Ecopunk Biosphere Engine Requirements & QualiaDB Core Systems Roadmap
+_Source Discovery: `C:\github\ecopunk\docs\planning` (GAP-01 through GAP-08, engine-capabilities.md, game-demo-remediation.md)_
+
+This track codifies all upstream engine requirements, architectural gaps, and enhancements identified during the survey of the Ecopunk planning documentation:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│               ECOPUNK UPSTREAM QUALIADB REQUIREMENTS MATRIX           │
+├────────────────────────────────────────────────────────────────────────┤
+│ 1. Logic & Governance:       N3 Deontic Bridge (Task G), Probate/Cap   │
+│ 2. Inference & Scheduling:   Ambient Scheduler Priority Bugfix (F9)    │
+│ 3. Formats & Media:          General FIEL Raster Writer, Bioacoustics  │
+│ 4. Cooperative Commons:      SPC Obligations & LicencePolicy Alignment │
+│ 5. LOD Cloud Ontologies:     TERN, DwC, auNSL Registry Ingestion       │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Workstream 4.1: Logic, Deontic Bridge & Governance
+- [ ] **Task 4.1.1 (Task G — N3 Rule to Deontic Quin Bridge):**
+  - **Location:** `crates/qualia-core-db/src/deontic_logic.rs`, `src/n3_parser.rs`, `src/governance/webizen.rs`
+  - **Objective:** Implement `compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u32) -> Option<NQuin>`.
+  - **Mapping:** Map `RuleType::Defeater` (`^>`) to `OP_PERMIT` with `DEFEATER_BIT` set; `RuleType::Defeasible` (`~>`) to `OP_PERMIT` or `OP_FORBID`; `RuleType::Strict` (`=>`) to `OP_OBLIGATE`. Wire ratified `AgreementDID` Quins directly into deontic norm Quins.
+- [ ] **Task 4.1.2 (GAP-02 / G8 — Graduated & Kinship Capacity Modality):**
+  - **Location:** `crates/qualia-core-db/src/modalities/capacity.rs`
+  - **Objective:** Implement graduated/multi-scope capacity reasoning (domain-specific, fluctuating, informal kinship, and contested standing) to support custodial agreements.
+- [ ] **Task 4.1.3 (GAP-02 / G9 — Digital Probate & Succession Semantics):**
+  - **Location:** `crates/qualia-core-db/src/modalities/capacity.rs`, `src/modalities/delegation.rs`
+  - **Objective:** Add digital-probate semantics (executor, estate, instrument, succession events) and post-mortem delegation lifecycle rules (`survivesDeath`).
+- [ ] **Task 4.1.4 (GAP-04 / G19 — Biosphere Epistemic Boundaries):**
+  - **Location:** `crates/qualia-core-db/src/modalities/epistemic_boundaries.rs`
+  - **Objective:** Extend Socratic degradation and quarantine guards to traditional knowledge and biosphere claims (medicinal/physiological claims, definitive taxon classifications).
+
+### Workstream 4.2: Inference, Scheduling & Weight Containers
+- [ ] **Task 4.2.1 (GAP-08 / F9 / G32 — Ambient Orchestration Scheduler Ordering Bugfix):**
+  - **Location:** `crates/qualia-core-db/src/inference/ambient_orchestration/scheduler.rs:38-73, 103-108`
+  - **Objective:** Fix the critical scheduling inversion where descending sort combined with `.pop()` causes tail-extraction of the lowest-priority / latest-deadline tasks. Implement stable head extraction or ascending sort, and write comprehensive regression unit tests.
+- [ ] **Task 4.2.2 (P64 Weight Container Primacy & GGUF Bridge Clarification):**
+  - **Location:** `crates/qualia-core-db/src/q42/p64_weight.rs`, `src/inference/gguf_sharder.rs`
+  - **Objective:** Reinforce `.p64` as the canonical native weight container (`64B` headers/cache alignment, role-tagged tensors) and maintain `gguf_*` strictly as an import/transcoding bridge.
+
+### Workstream 4.3: Geospatial, Environmental Rasters & Bioacoustics
+- [ ] **Task 4.3.1 (GAP-01 / G1 — General Environmental Raster / GeoTIFF to `FIEL` Writer):**
+  - **Location:** `crates/qualia-core-db/src/container_10d/mod.rs`, `src/domains/geospatial/mod.rs`
+  - **Objective:** Implement a general-purpose continuous field (`FIEL`) writer for environmental layers (BOM AWAP rainfall, SILO temperature, soil data, species distribution models) beyond heightfield DEMs.
+- [ ] **Task 4.3.2 (GAP-01 / G2 — Bioacoustic Classification Pipeline):**
+  - **Location:** `crates/qualia-core-db/src/audio/mod.rs`, `src/sparql_library/sparql_mm.rs`
+  - **Objective:** Bridge audio DSP time-frequency surfaces (`tf_surface`, CQT, STFT) into `AcousticObservation` quins attached to SPARQL-MM temporal fragments (`hasTemporalFragment`, `mediaTimeMs`).
+
+### Workstream 4.4: Cooperative Commons & LOD Cloud Ingest
+- [ ] **Task 4.4.1 (Social Permissive Commons & LicencePolicy Alignment):**
+  - **Location:** `crates/qualia-core-db/src/modalities/value_flow.rs`, `src/q42/asset_envelope.rs`
+  - **Objective:** Formally bind `spc:ThirdPartyAnchoredObligation`, `spc:ArtifactTravellingObligation`, and agent-category-scaled royalties (`value_flow::royalty`) to `LicencePolicy` in the governed asset envelope.
+- [ ] **Task 4.4.2 (LOD Cloud Ingest & Registry Expansion):**
+  - **Location:** `manifests/ontologies.json`, `crates/qualia-core-db/src/query/ontology_loader.rs`
+  - **Objective:** Expand the downloadable ontology registry and startup loader to support Australian NCRIS biodiversity scaffolds (TERN Ontology, Darwin Core / TDWG, National Species List / auNSL).
+
