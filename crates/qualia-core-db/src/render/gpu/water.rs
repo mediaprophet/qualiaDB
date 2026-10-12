@@ -30,6 +30,8 @@ struct WaterUniform {
 struct WaterVertex {
     position: [f32; 3],
     uv: [f32; 2],
+    shore_distance:f32,
+    shore_scale:f32,
 }
 
 pub(super) struct WaterGpu {
@@ -44,6 +46,9 @@ pub(super) struct WaterGpu {
     geometry_key: Option<u64>,
     geometry_bytes: u64,
     geometry_generation: u64,
+    shoreline_edges:u32,
+    shoreline_evaluations:u64,
+    shoreline_working_bytes:u64,
     _geometry_reservation: Option<VramReservation<'static>>,
 }
 
@@ -88,6 +93,10 @@ fn geometry_admission(
             "HMC water geometry exceeds admission budget: {bytes} > {max_bytes} bytes"
         ));
     }
+    // Include caller geometry, shoreline scratch/attributes and packed GPU
+    // vertices in the cold upload pass, before allocating any of them.
+    let working=positions.len() as u64*56+indices.len() as u64*12;
+    if working>42*1024*1024 {return Err("water upload pass exceeds 42 MiB execution budget".into());}
     Ok((bytes, geometry_key(positions, indices)))
 }
 
@@ -179,6 +188,7 @@ impl WaterGpu {
                     offset: 12,
                     shader_location: 1,
                 },
+                wgpu::VertexAttribute {format:wgpu::VertexFormat::Float32x2,offset:20,shader_location:2},
             ],
         };
         let pipeline = |target_format| {
@@ -221,6 +231,7 @@ impl WaterGpu {
             geometry_key: None,
             geometry_bytes: 0,
             geometry_generation: 0,
+            shoreline_edges:0,shoreline_evaluations:0,shoreline_working_bytes:0,
             _geometry_reservation: None,
         }
     }
@@ -280,14 +291,35 @@ impl WaterGpu {
             max[1] = max[1].max(position[2]);
         }
         let span = [(max[0] - min[0]).max(f32::EPSILON), (max[1] - min[1]).max(f32::EPSILON)];
+        let mut shore=vec![0.0;positions.len()];let mut edges=vec![0;indices.len()+positions.len()];
+        let mut shore_scale=vec![0.0;positions.len()];
+        use crate::render::water_surface::{shore_topology_into,shore_distance_accelerated_into,ShoreSpatialScratch,spatial_working_bytes};
+        use crate::specialized_libs::computational_geometry::{Aabb,Point3,BvhNode};
+        let topology=shore_topology_into(positions,indices,&mut edges)
+            .map_err(|error|format!("water shoreline topology: {error:?}"))?;
+        let boundary=topology.boundary_edges();let node_capacity=boundary*2-1;
+        let working=positions.len() as u64*56+indices.len() as u64*12+
+            spatial_working_bytes(boundary).ok_or_else(||"water spatial budget overflow".to_owned())? as u64;
+        if working>42*1024*1024 {return Err("water spatial upload pass exceeds 42 MiB".into());}
+        let zero=Aabb::new(Point3::new(0.0,0.0,0.0),Point3::new(0.0,0.0,0.0));
+        let mut bounds=vec![zero;boundary];let mut nodes=vec![BvhNode::default();node_capacity];
+        let mut order=vec![0;boundary];let mut morton=vec![0;boundary];let mut sorting=vec![0;boundary];
+        let mut components=vec![0;node_capacity];
+        let shoreline=shore_distance_accelerated_into(positions,&topology,&mut shore,&mut shore_scale,
+            ShoreSpatialScratch{bounds:&mut bounds,nodes:&mut nodes,primitive_order:&mut order,morton:&mut morton,
+                sort_order:&mut sorting,node_components:&mut components})
+            .map_err(|error|format!("water spatial shoreline: {error:?}"))?;
         let vertices: Vec<WaterVertex> = positions
             .iter()
-            .map(|position| WaterVertex {
+            .zip(shore.iter().zip(&shore_scale))
+            .map(|(position,(shore,shore_scale))| WaterVertex {
                 position: *position,
                 uv: [
                     (position[0] - min[0]) / span[0],
                     (position[2] - min[1]) / span[1],
                 ],
+                shore_distance:*shore,
+                shore_scale:*shore_scale,
             })
             .collect();
         let reservation = global_vram_ledger()
@@ -304,10 +336,15 @@ impl WaterGpu {
             usage: wgpu::BufferUsages::INDEX,
         });
         self.vertex_buf = Some(vertex_buf);
+        self.uniform.wave[3]=(shoreline.max_distance*0.22).clamp(0.0001,0.008);
+        self.uniform.viewport[3]=shoreline.max_distance;
         self.index_buf = Some(index_buf);
         self.index_count = u32::try_from(indices.len()).map_err(|_| "water index count overflow")?;
         self.geometry_key = Some(key);
         self.geometry_bytes = bytes;
+        self.shoreline_edges=shoreline.boundary_edges as u32;
+        self.shoreline_evaluations=shoreline.segment_evaluations;
+        self.shoreline_working_bytes=working;
         self.geometry_generation = self.geometry_generation.wrapping_add(1);
         self._geometry_reservation = Some(reservation);
         Ok(())
@@ -319,6 +356,7 @@ impl WaterGpu {
         self.index_count = 0;
         self.geometry_key = None;
         self.geometry_bytes = 0;
+        self.shoreline_edges=0;self.shoreline_evaluations=0;self.shoreline_working_bytes=0;
         self.geometry_generation = self.geometry_generation.wrapping_add(1);
         self._geometry_reservation = None;
     }
@@ -413,6 +451,9 @@ impl PortalGpu {
             self.water.geometry_bytes,
             self.water.index_count / 3,
         )
+    }
+    pub fn water_shoreline_state(&self)->(u32,u64,u64) {
+        (self.water.shoreline_edges,self.water.shoreline_evaluations,self.water.shoreline_working_bytes)
     }
 }
 

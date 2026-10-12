@@ -13,7 +13,7 @@ use web_sys::{
 
 use crate::gpu_context::{global_vram_ledger, VramReservation, VramResourceClass};
 use crate::render::atmosphere::AtmospherePreset;
-use crate::render::camera::orbit_view_projection_target;
+use crate::render::camera::orbit_view_projection_with_near;
 
 use super::webgl2_output::WebGl2Output;
 use super::webgl2_sky::WebGl2Sky;
@@ -97,6 +97,7 @@ pub struct AnatomyWebGl2 {
     index_count: i32,
     mesh_reservation: Option<VramReservation<'static>>,
     frame_count: u32,
+    near_plane:f32,
     /// Sky clear. Daylight by default so a missed preset is not a black frame.
     clear: [f32; 4],
 }
@@ -197,6 +198,7 @@ impl AnatomyWebGl2 {
             index_count: 0,
             mesh_reservation: None,
             frame_count: 0,
+            near_plane:crate::render::camera::CAMERA_NEAR_PLANE,
             clear: [0.55, 0.74, 0.92, 1.0],
         })
     }
@@ -393,7 +395,7 @@ impl AnatomyWebGl2 {
         }
 
         let matrix =
-            orbit_view_projection_target(yaw, pitch, zoom, target, width as f32 / height as f32);
+            orbit_view_projection_with_near(yaw, pitch, zoom, target, width as f32 / height as f32,self.near_plane);
         let flat: &[f32] = bytemuck::cast_slice(&matrix);
         self.gl.use_program(Some(&self.program));
         self.gl.bind_vertex_array(Some(&self.vao));
@@ -445,6 +447,9 @@ impl AnatomyWebGl2 {
 
     pub fn frame_count(&self) -> u32 {
         self.frame_count
+    }
+    pub fn set_near_plane(&mut self,near:f32) {
+        if near.is_finite()&&(0.00001..=1.0).contains(&near) {self.near_plane=near;}
     }
 
     pub fn set_exposure_compensation(&mut self, ev: f32) -> bool {

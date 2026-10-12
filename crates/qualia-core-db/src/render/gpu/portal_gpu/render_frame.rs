@@ -563,7 +563,7 @@ impl PortalGpu {
             &self.queue,
             encoder,
             self.scene_depth.view(),
-            crate::render::camera::CAMERA_NEAR_PLANE,
+            self.camera.near_plane,
             crate::render::camera::CAMERA_FAR_PLANE,
         ) {
             return false;
@@ -645,7 +645,7 @@ impl PortalGpu {
                 &self.queue,
                 encoder,
                 self.scene_depth.view(),
-                crate::render::camera::CAMERA_NEAR_PLANE,
+                self.camera.near_plane,
                 crate::render::camera::CAMERA_FAR_PLANE,
             ) {
                 return false;

@@ -107,6 +107,7 @@ impl PortalGpu {
         let sun_intensity = self.camera.sun_intensity;
         let ambient_intensity = self.camera.ambient_intensity;
         self.camera = CameraState {
+            near_plane:self.camera.near_plane,
             yaw,
             pitch,
             zoom,
@@ -117,6 +118,11 @@ impl PortalGpu {
         }
         .clamped();
         self.temporal_reset_pending = true;
+    }
+    pub fn set_camera_near_plane(&mut self,near:f32)->bool {
+        if !near.is_finite()||!(0.00001..=1.0).contains(&near) {return false;}
+        if near!=self.camera.near_plane {self.camera.near_plane=near;self.invalidate_temporal_history();}
+        true
     }
 
     pub fn set_camera_pan(&mut self, target_x: f32, target_y: f32, target_z: f32) {
@@ -141,6 +147,7 @@ impl PortalGpu {
             pitch,
             zoom,
             target: [target_x, target_y, target_z],
+            near_plane:self.camera.near_plane,
             sun_dir,
             sun_intensity,
             ambient_intensity,
@@ -299,13 +306,7 @@ impl PortalGpu {
     /// Current camera view-projection matrix (column-major).
     pub fn current_camera_view_projection(&self) -> crate::render::temporal_producers::Mat4ColumnMajor {
         let aspect = self.width as f32 / self.height.max(1) as f32;
-        let raw = crate::render::camera::orbit_view_projection_target(
-            self.camera.yaw,
-            self.camera.pitch,
-            self.camera.zoom,
-            self.camera.target,
-            aspect,
-        );
+        let raw = self.camera.view_projection(aspect);
         crate::render::temporal_producers::Mat4ColumnMajor::from_cols(raw)
     }
 

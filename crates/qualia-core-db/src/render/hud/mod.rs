@@ -4,7 +4,7 @@
 //! painting, pointer hit testing, and focus traversal; applications own action semantics.
 //! Parsing may allocate, while paint and hit testing reuse the parsed document.
 
-use crate::render::camera::{orbit_view_projection_target, CameraState};
+use crate::render::camera::CameraState;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -110,9 +110,15 @@ impl QualiaHud {
     /// Use the same orbit camera as Portal to project world markers into HUD pixels.
     pub fn set_camera_target(&mut self, yaw: f32, pitch: f32, zoom: f32, x: f32, y: f32, z: f32) {
         self.camera = CameraState::new(yaw, pitch, zoom)
+            .with_near_plane(self.camera.near_plane)
             .with_target([x, y, z])
             .clamped();
         self.paint();
+    }
+    pub fn set_camera_near_plane(&mut self,near:f32)->Result<(),JsValue> {
+        if !near.is_finite()||!(0.00001..=1.0).contains(&near) {return Err(JsValue::from_str("HUD near plane invalid"));}
+        self.camera.near_plane=near;
+        Ok(())
     }
 
     /// Repaint the current document. Uses no Rust heap allocations.
@@ -252,13 +258,7 @@ impl QualiaHud {
         if w == 0.0 || h == 0.0 {
             return None;
         }
-        let m = orbit_view_projection_target(
-            self.camera.yaw,
-            self.camera.pitch,
-            self.camera.zoom,
-            self.camera.target,
-            w / h,
-        );
+        let m = self.camera.view_projection(w/h);
         let p = [item.x as f32, item.y as f32, item.z as f32, 1.0];
         let clip: [f32; 4] = std::array::from_fn(|r| (0..4).map(|c| m[c][r] * p[c]).sum());
         if clip[3] <= 0.0 {

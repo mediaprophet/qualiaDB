@@ -22,6 +22,7 @@ pub use temporal_resolve_gpu::{
 };
 mod mesh_normals;
 mod mesh_upload;
+mod animated_upload;
 mod output_pass;
 mod shadows;
 mod sky;

@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 use crate::render::camera::orbit_forward;
-use crate::render::camera::{orbit_eye_position_target, orbit_view_projection_target, CameraState};
+use crate::render::camera::{orbit_eye_position_target, CameraState};
 use crate::render::pga::{sandwich_point, semantic_motor_phase2c};
 use crate::render::telemetry::ObserverStandpoint;
 use crate::tensor::buffer_export::read_tensor_at;
@@ -64,6 +64,7 @@ pub fn camera_frame_node(node: [f32; 3]) -> CameraState {
 #[inline]
 pub fn lerp_camera(a: CameraState, b: CameraState, t: f32) -> CameraState {
     CameraState {
+        near_plane:a.near_plane+(b.near_plane-a.near_plane)*t,
         yaw: a.yaw + (b.yaw - a.yaw) * t,
         pitch: a.pitch + (b.pitch - a.pitch) * t,
         zoom: a.zoom + (b.zoom - a.zoom) * t,
@@ -164,7 +165,7 @@ pub fn cpu_pick_node_at_camera(
         + 0.5;
     let aspect = canvas_w as f32 / canvas_h as f32;
     let view_projection =
-        orbit_view_projection_target(camera.yaw, camera.pitch, camera.zoom, camera.target, aspect);
+        camera.view_projection(aspect);
     let camera_eye =
         orbit_eye_position_target(camera.yaw, camera.pitch, camera.zoom, camera.target);
 

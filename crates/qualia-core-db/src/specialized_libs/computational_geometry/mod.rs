@@ -29,6 +29,7 @@ pub mod arrangement_3d;
 pub mod arrangements;
 /// P9.5 — Authoring ergonomics: primitives, transforms, scene graph, .10d export.
 pub mod authoring;
+pub mod wheel_panel;
 /// P10.7 — Benchmark + adversarial corpus baseline (versioned corpora,
 /// reproducible latency/allocation/hash reports).
 pub mod benchmark_corpus;

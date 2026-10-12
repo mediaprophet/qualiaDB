@@ -20,6 +20,7 @@ pub mod ao_quality;
 pub mod asset_package;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
+pub mod water_surface;
 /// Shared authored sky, lighting and analytic-atmosphere presets.
 pub mod atmosphere;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
@@ -43,6 +44,7 @@ pub mod barrier;
 /// Person-authored body fit applied to decoded organ vertices (CCF space).
 pub mod body_fit;
 pub mod camera;
+pub mod camera_mount;
 /// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
 /// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
 pub mod compile_10d;
@@ -140,6 +142,14 @@ pub mod telemetry;
 /// Bounded, caller-buffered PNG/JPEG decode from verified external texture resources.
 pub mod texture_decode;
 pub mod texture_ingestion;
+/// Bounded authored surface maps and planar UV projection, native and WASM.
+pub mod surface_authoring;
+/// Caller-buffered UV-aligned tangent frames for authored normal maps.
+pub mod mesh_tangent_frames;
+/// Caller-buffered seam-aware box projection and source normal generation.
+pub mod mesh_surface_frames;
+/// Caller-buffered VibeScript motor rig sampling, attachments and skinning.
+pub mod skeletal;
 /// Allocation-free KTX2 container metadata and level-range parser (native + WASM).
 pub mod texture_ktx2;
 /// Allocation-free decoder for uncompressed single-face RGBA8 KTX2 base levels.

@@ -10,6 +10,7 @@ pub const CAMERA_TAN_HALF_FOV: f32 = 0.414_213_57;
 /// Interactive orbit state driven from JS (`set_camera`, `set_camera_pan`, `set_camera_target`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CameraState {
+    pub near_plane:f32,
     pub yaw: f32,
     pub pitch: f32,
     pub zoom: f32,
@@ -22,6 +23,7 @@ pub struct CameraState {
 impl Default for CameraState {
     fn default() -> Self {
         Self {
+            near_plane:CAMERA_NEAR_PLANE,
             yaw: 0.0,
             pitch: 0.25,
             zoom: 3.5,
@@ -34,9 +36,11 @@ impl Default for CameraState {
 }
 
 impl CameraState {
+    pub fn with_near_plane(mut self,near:f32)->Self {self.near_plane=near;self.clamped()}
     #[inline]
     pub fn new(yaw: f32, pitch: f32, zoom: f32) -> Self {
         Self {
+            near_plane:CAMERA_NEAR_PLANE,
             yaw,
             pitch,
             zoom,
@@ -68,6 +72,7 @@ impl CameraState {
 
     #[inline]
     pub fn clamped(mut self) -> Self {
+        self.near_plane=if self.near_plane.is_finite() {self.near_plane.clamp(0.00001,1.0)}else {CAMERA_NEAR_PLANE};
         const PITCH_LIMIT: f32 = 1.45;
         self.pitch = self.pitch.clamp(-PITCH_LIMIT, PITCH_LIMIT);
         self.zoom = self.zoom.clamp(0.35, 48.0);
@@ -91,19 +96,17 @@ impl CameraState {
         padding[10] = state.sun_intensity;
         padding[11] = state.ambient_intensity;
         CameraUniform {
-            view_projection: orbit_view_projection_target(
-                state.yaw,
-                state.pitch,
-                state.zoom,
-                state.target,
-                aspect,
-            ),
+            view_projection: state.view_projection(aspect),
             yaw: state.yaw,
             pitch: state.pitch,
             zoom: state.zoom,
             tensor_mode: if tensor_mode { 1 } else { 0 },
             _padding: padding,
         }
+    }
+    pub fn view_projection(&self,aspect:f32)->[[f32;4];4] {
+        let state=self.clamped();
+        orbit_view_projection_with_near(state.yaw,state.pitch,state.zoom,state.target,aspect,state.near_plane)
     }
 }
 
@@ -164,6 +167,10 @@ pub fn orbit_view_projection_target(
     target: [f32; 3],
     aspect: f32,
 ) -> [[f32; 4]; 4] {
+    orbit_view_projection_with_near(yaw,pitch,zoom,target,aspect,CAMERA_NEAR_PLANE)
+}
+
+pub fn orbit_view_projection_with_near(yaw:f32,pitch:f32,zoom:f32,target:[f32;3],aspect:f32,near:f32)->[[f32;4];4] {
     let pitch = pitch.clamp(-1.45, 1.45);
     let dist = zoom.clamp(0.35, 48.0);
     let aspect = aspect.max(0.05);
@@ -181,7 +188,7 @@ pub fn orbit_view_projection_target(
     let proj = perspective_rh_zo(
         CAMERA_TAN_HALF_FOV,
         aspect,
-        CAMERA_NEAR_PLANE,
+        near.clamp(0.00001,1.0),
         CAMERA_FAR_PLANE,
     );
     mat4_mul(proj, view)
@@ -293,6 +300,7 @@ mod tests {
     #[test]
     fn camera_uniform_carries_eye_position() {
         let state = CameraState {
+            near_plane:CAMERA_NEAR_PLANE,
             yaw: 0.5,
             pitch: 0.25,
             zoom: 4.0,

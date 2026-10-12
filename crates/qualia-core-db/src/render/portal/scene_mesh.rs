@@ -26,6 +26,11 @@ const MAX_SCENE_MATERIAL_RANGES: usize = 4_096;
 pub(crate) struct SceneMeshAccum {
     pub(crate) positions: Vec<[f32; 3]>,
     pub(crate) colors: Vec<[f32; 4]>,
+    /// UV01 coordinates remain aligned with merged vertices. Legacy meshes
+    /// use zero UVs; malformed authored streams refuse the asset atomically.
+    pub(crate) uv0: Vec<[f32; 2]>,
+    /// Authored source normals survive UV seam duplication and scene merging.
+    pub(crate) normals: Vec<[f32; 3]>,
     pub(crate) indices: Vec<u32>,
     /// Deduplicated material records from the source assets' MAT1 sections.
     pub(crate) materials: Vec<MaterialRecord>,
@@ -41,6 +46,7 @@ pub(crate) struct SceneMeshAccum {
     /// Proof decimation keeps a silhouette of each range instead of
     /// striding the whole soup into stray triangles.
     pub(crate) index_spans: Vec<(usize, usize)>,
+    pub(crate) animation: super::scene_animation::SceneAnimation,
     gmin: [f32; 3],
     gmax: [f32; 3],
 }
@@ -53,6 +59,8 @@ impl SceneMeshAccum {
         Self {
             positions: Vec::new(),
             colors: Vec::new(),
+            uv0: Vec::new(),
+            normals: Vec::new(),
             indices: Vec::new(),
             materials: Vec::new(),
             material_ranges: Vec::new(),
@@ -61,6 +69,7 @@ impl SceneMeshAccum {
             assets_refused: 0,
             total_triangles: 0,
             index_spans: Vec::new(),
+            animation: super::scene_animation::SceneAnimation::default(),
             gmin: [f32::INFINITY; 3],
             gmax: [f32::NEG_INFINITY; 3],
         }
@@ -136,6 +145,31 @@ impl SceneMeshAccum {
 
         let Some(mesh) = mesh else {
             return;
+        };
+        // An optional rig must be valid and vertex-aligned even before runtime
+        // playback is armed. Never silently admit malformed animation content.
+        match container_10d::skeletal_container::read_skeletal_section(&bytes) {
+            Ok(_)|Err(container_10d::skeletal_container::SkeletalContainerError::Missing)=>{},
+            Err(_)=>{self.assets_refused+=1;return;},
+        }
+        let mut local_uv0 = vec![[0.0; 2]; mesh.positions.len()];
+        match container_10d::read_texture_coordinate_section_into(
+            &bytes, mesh.positions.len(), &mut local_uv0,
+        ) {
+            Ok(_) | Err(container_10d::TextureCoordinateContainerError::Missing) => {}
+            Err(_) => { self.assets_refused += 1; return; }
+        }
+        let local_normals = match crate::render::compile_10d::decode_10d_normals(&bytes,mesh.positions.len()) {
+            Ok(Some(normals)) => normals,
+            Ok(None) => {
+                let mut normals=vec![[0.0;3];mesh.positions.len()];
+                if crate::render::mesh_surface_frames::vertex_normals_into(
+                    &mesh.positions,&mesh.triangles,&mut normals).is_err() {
+                    self.assets_refused+=1; return;
+                }
+                normals
+            }
+            Err(_) => {self.assets_refused+=1;return;}
         };
         let governance_refused =
             (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
@@ -241,6 +275,24 @@ impl SceneMeshAccum {
             return;
         }
 
+        let actor=match container_10d::skeletal_container::read_skeletal_section(&bytes) {
+            Ok(section)=>{
+                if self.animation.actors.len()>=256 {self.assets_refused+=1;return;}
+                let budget=(42usize*1024*1024).saturating_sub(self.animation.resident_bytes);
+                let indices:Vec<u32>=mesh.triangles.iter().flatten().copied().collect();
+                match crate::render::skeletal::SkeletalPlayer::from_section_with_budget(
+                    &section,&mesh.positions,&local_normals,&local_uv0,&indices,budget) {
+                    Ok(player)=>Some(super::scene_animation::SceneActor{start:self.positions.len() as u32,player}),
+                    Err(_)=>{self.assets_refused+=1;return;}
+                }
+            },
+            Err(container_10d::skeletal_container::SkeletalContainerError::Missing)=>None,
+            Err(_)=>{self.assets_refused+=1;return;}
+        };
+        if let Some(actor)=actor {
+            self.animation.resident_bytes+=actor.player.allocated_bytes();
+            self.animation.actors.push(actor);
+        }
         for k in 0..3 {
             if mesh.min[k] < self.gmin[k] {
                 self.gmin[k] = mesh.min[k];
@@ -273,6 +325,8 @@ impl SceneMeshAccum {
             .unwrap_or(false);
         for (i, p) in mesh.positions.iter().enumerate() {
             self.positions.push([p[0], p[1], p[2]]);
+            self.uv0.push(local_uv0[i]);
+            self.normals.push(local_normals[i]);
             if use_reading {
                 self.colors.push(surface.as_ref().unwrap()[i]);
             } else {
@@ -308,11 +362,26 @@ impl SceneMeshAccum {
 
     /// Apply a person-authored fit, then recompute bounds so orbit framing stays honest.
     /// Semantic nodes are transformed by the same fit so they stay on their meshes.
-    pub(crate) fn apply_body_fit(&mut self, fit: &AnatomyBodyFit) {
+    pub(crate) fn apply_body_fit(&mut self, fit: &AnatomyBodyFit) -> Result<(), &'static str> {
         if fit.identity || self.positions.is_empty() {
-            return;
+            return Ok(());
         }
+        let fit_bytes=fit.hidden_keys.len().checked_mul(std::mem::size_of::<String>())
+            .and_then(|n|n.checked_add(fit.hidden_keys.iter().map(|s|s.len()).sum::<usize>()))
+            .ok_or("animated fit budget exceeded")?;
+        if fit_bytes.saturating_mul(self.animation.actors.len()).saturating_add(self.animation.resident_bytes)>42*1024*1024 {
+            return Err("animated fit budget exceeded");
+        }
+        for actor in &mut self.animation.actors {
+            actor.player.set_body_fit(fit,self.gmin,self.gmax).map_err(|_|"invalid animated body fit")?;
+        }
+        self.animation.resident_bytes=self.animation.actors.iter().map(|actor|actor.player.allocated_bytes()).sum();
         fit.apply_in_place(&mut self.positions, self.gmin, self.gmax);
+        // A nonuniform anatomical fit changes the geometric frame. Recompute
+        // once after the cold fit; ordinary uniform orbit normalisation keeps
+        // the authored frame intact.
+        let _ = crate::render::mesh_surface_frames::vertex_normals_from_indices_into(
+            &self.positions,&self.indices,&mut self.normals);
         if !self.nodes.is_empty() {
             let mut pts: Vec<[f32; 3]> = self.nodes.iter().map(|n| [n.x, n.y, n.z]).collect();
             fit.apply_in_place(&mut pts, self.gmin, self.gmax);
@@ -336,13 +405,14 @@ impl SceneMeshAccum {
         }
         self.gmin = gmin;
         self.gmax = gmax;
+        Ok(())
     }
 
     /// One global centre + scale so the scene fits ~1.7 of the orbit frame.
     /// Nodes ride the same transform so pick hits land on the drawn geometry.
-    pub(crate) fn normalise_to_orbit_frame(&mut self) {
+    pub(crate) fn normalise_to_orbit_frame(&mut self) -> Result<(), &'static str> {
         if self.assets_loaded == 0 {
-            return;
+            return Ok(());
         }
         let gc = [
             (self.gmin[0] + self.gmax[0]) * 0.5,
@@ -354,6 +424,11 @@ impl SceneMeshAccum {
             .max(self.gmax[2] - self.gmin[2])
             .max(1e-6);
         let s = 1.7 / gspan;
+        for actor in &mut self.animation.actors {
+            // The scene bounds come from validated finite geometry. Preserve
+            // the original rig frame; map its output like the static mesh.
+            actor.player.set_output_frame(gc,s).map_err(|_|"invalid animated orbit frame")?;
+        }
         for p in self.positions.iter_mut() {
             p[0] = (p[0] - gc[0]) * s;
             p[1] = (p[1] - gc[1]) * s;
@@ -364,51 +439,10 @@ impl SceneMeshAccum {
             n.y = (n.y - gc[1]) * s;
             n.z = (n.z - gc[2]) * s;
         }
+        Ok(())
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn material_asset(id: u64, roughness: f32, offset: f32) -> Vec<u8> {
-        let mesh = crate::render::assets::Mesh {
-            positions: vec![
-                [offset, 0.0, 0.0],
-                [offset + 1.0, 0.0, 0.0],
-                [offset, 1.0, 0.0],
-            ],
-            triangles: vec![[0, 1, 2]],
-            min: [offset, 0.0, 0.0],
-            max: [offset + 1.0, 1.0, 0.0],
-        };
-        let bytes = crate::render::compile_10d::compile_mesh_to_10d(&mesh).unwrap();
-        let mut material = MaterialRecord::legacy_default();
-        material.id = id;
-        material.roughness = roughness;
-        let ranges = [SubmeshRange {
-            first_index: 0,
-            index_count: 3,
-            material_id: id,
-            semantic_id: id,
-        }];
-        container_10d::attach_material_section(&bytes, &[material], &ranges, 3).unwrap()
-    }
-
-    #[test]
-    fn merged_scene_keeps_and_deduplicates_material_bindings() {
-        let mut scene = SceneMeshAccum::new();
-        scene.append_asset_10d(&material_asset(100, 0.34, 0.0), [0.8, 0.6, 0.3, 1.0]);
-        scene.append_asset_10d(&material_asset(100, 0.34, 2.0), [0.3, 0.6, 0.8, 1.0]);
-        scene.append_asset_10d(&material_asset(101, 0.86, 4.0), [0.3, 0.5, 0.2, 1.0]);
-
-        assert_eq!(scene.assets_loaded, 3);
-        assert_eq!(scene.assets_refused, 0);
-        assert_eq!(scene.materials.len(), 2);
-        assert_eq!(scene.material_ranges.len(), 3);
-        assert_eq!(scene.material_ranges[0].first_index, 0);
-        assert_eq!(scene.material_ranges[1].first_index, 3);
-        assert_eq!(scene.material_ranges[2].first_index, 6);
-        assert_eq!(scene.material_ranges[2].material_id, 101);
-    }
-}
+#[path = "scene_mesh_tests.rs"]
+mod tests;

@@ -91,6 +91,8 @@ pub enum SectionType {
     TextureCoordinates = 14,
     /// Version-2 stable manifold identity and typed references to scientific/presentation fields.
     ManifoldIdentityV2 = 15,
+    /// SKL1 rig, vertex skin influences and named VibeScript motor clips.
+    SkeletalAnimation = 16,
 }
 
 impl SectionType {
@@ -113,6 +115,7 @@ impl SectionType {
             13 => Some(SectionType::Materials),
             14 => Some(SectionType::TextureCoordinates),
             15 => Some(SectionType::ManifoldIdentityV2),
+            16 => Some(SectionType::SkeletalAnimation),
             _ => None,
         }
     }
@@ -134,6 +137,7 @@ impl SectionType {
                 | SectionType::Materials
                 | SectionType::TextureCoordinates
                 | SectionType::ManifoldIdentityV2
+                | SectionType::SkeletalAnimation
         )
     }
 }

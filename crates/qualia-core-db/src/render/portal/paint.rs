@@ -320,12 +320,12 @@ pub(super) fn paint_cpu_body(
     camera: &CameraState,
     aspect: f32,
 ) {
-    use crate::render::camera::{orbit_view_projection_target, painter_order_far_to_near};
+    use crate::render::camera::painter_order_far_to_near;
     if mesh.indices.len() < 3 || mesh.positions.is_empty() || w < 2.0 || h < 2.0 {
         return;
     }
     let vp =
-        orbit_view_projection_target(camera.yaw, camera.pitch, camera.zoom, camera.target, aspect);
+        camera.view_projection(aspect);
     let project = |p: [f32; 3]| -> Option<(f64, f64, f32)> {
         let x = vp[0][0] * p[0] + vp[1][0] * p[1] + vp[2][0] * p[2] + vp[3][0];
         let y = vp[0][1] * p[0] + vp[1][1] * p[1] + vp[2][1] * p[2] + vp[3][1];

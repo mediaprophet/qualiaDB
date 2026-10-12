@@ -14,6 +14,8 @@ mod emf;
 mod physics;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod physics_workbench;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod thermal_response;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use bio::{align, bio_compute};

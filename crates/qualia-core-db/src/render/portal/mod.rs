@@ -30,6 +30,7 @@ use crate::render::control::{
 use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, OperationalMode};
 use crate::render::atmosphere::AtmospherePreset;
 use crate::render::camera::CameraState;
+mod camera_lens;
 use crate::render::hmc_playback::{resolve_hmc_mesh, HmcMeshResidency};
 use crate::render::navigation::{
     camera_frame_node, cpu_pick_node_at_camera, CameraFlyTo, Q_COLLAPSED_EPS,
@@ -95,6 +96,7 @@ struct ProjectedNode {
 
 mod body_scene;
 mod scene_mesh;
+mod scene_animation;
 pub(crate) use scene_mesh::BodyMeshAccum;
 #[allow(unused_imports)]
 pub(crate) use scene_mesh::SceneMeshAccum;
@@ -104,6 +106,7 @@ mod exposure;
 mod graphics;
 use graphics::PortalGraphicsState;
 mod recovery;
+mod texture_upload;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum BodyRendererBackend {
@@ -177,6 +180,7 @@ pub struct QualiaPortal {
     /// Decimated mesh for the proof canvas tick. Kept even when WebGPU owns
     /// the draw, so a failed present can still paint. Not the lit look.
     cpu_body: Option<CpuBodyMesh>,
+    scene_animation: scene_animation::SceneAnimation,
     /// Last `set_sky_preset` value, applied when a GPU is adopted later.
     sky_preset: Option<u32>,
     /// Last atmosphere profile, preserved when callers override the sky clear colour.
@@ -243,6 +247,7 @@ impl QualiaPortal {
             body_fit: crate::render::body_fit::AnatomyBodyFit::default(),
             preserve_authored_frame: false,
             cpu_body: None,
+            scene_animation: scene_animation::SceneAnimation::default(),
             sky_preset: None,
             atmosphere_preset: 0,
             hdr_exposure_ev: crate::render::output::DEFAULT_HDR_EXPOSURE_EV,
@@ -467,6 +472,8 @@ impl QualiaPortal {
     }
 
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
+        self.note_device_loss();
+        self.tick_scene_animation(dt_ms)?;
         self.drain_and_apply_control(16);
         self.time += dt_ms as f64 * 0.001;
         self.telemetry.refresh_from_ledger();
@@ -609,6 +616,7 @@ impl QualiaPortal {
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) -> Result<(), JsValue> {
         let current_target = self.camera.target;
         self.camera = CameraState {
+            near_plane:self.camera.near_plane,
             yaw,
             pitch,
             zoom,
@@ -667,6 +675,7 @@ impl QualiaPortal {
             pitch,
             zoom,
             target: [target_x, target_y, target_z],
+            near_plane:self.camera.near_plane,
             sun_dir: self.camera.sun_dir,
             sun_intensity: self.camera.sun_intensity,
             ambient_intensity: self.camera.ambient_intensity,
@@ -1714,9 +1723,9 @@ impl QualiaPortal {
 
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
         self.adopt_pending_gpu();
-        accum.apply_body_fit(&self.body_fit);
+        accum.apply_body_fit(&self.body_fit).map_err(JsValue::from_str)?;
         if !self.preserve_authored_frame {
-            accum.normalise_to_orbit_frame();
+            accum.normalise_to_orbit_frame().map_err(JsValue::from_str)?;
         }
         if accum.positions.is_empty() || accum.indices.is_empty() {
             return Err(JsValue::from_str("anatomy_body_mesh_empty"));
@@ -1735,6 +1744,7 @@ impl QualiaPortal {
         let mut material_pipeline = false;
         let mut admitted_vertex_count = 0usize;
         let mut admitted_index_count = 0usize;
+        let mut compact_gpu=true;
         if let Some(ref mut gpu) = self.gpu {
             let pbr_count = if accum.materials.is_empty() || accum.material_ranges.is_empty() {
                 0
@@ -1742,9 +1752,9 @@ impl QualiaPortal {
                 gpu.upload_mesh_colored_with_frames_and_materials_and_uv0(
                     &accum.positions,
                     &accum.colors,
+                    Some(&accum.normals),
                     None,
-                    None,
-                    None,
+                    Some(&accum.uv0),
                     &accum.indices,
                     &accum.materials,
                     &accum.material_ranges,
@@ -1758,6 +1768,7 @@ impl QualiaPortal {
                 gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices)
             };
             if count > 0 {
+                compact_gpu=false;
                 renderer = BodyRendererBackend::WebGpu;
                 admitted_vertex_count = accum.positions.len();
                 admitted_index_count = accum.indices.len();
@@ -1773,6 +1784,7 @@ impl QualiaPortal {
         }
         if renderer == BodyRendererBackend::None {
             if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                webgl2.set_near_plane(self.camera.near_plane);
                 if webgl2
                     .upload_mesh(&reduced.positions, &reduced.colors, &reduced.indices)
                     .is_ok()
@@ -1784,6 +1796,7 @@ impl QualiaPortal {
             }
         }
         self.cpu_body = Some(reduced);
+        self.scene_animation.install(std::mem::take(&mut accum.animation),compact_gpu);
         if renderer == BodyRendererBackend::None {
             renderer = BodyRendererBackend::CpuCanvas;
             self.tier = 0;
@@ -2356,6 +2369,7 @@ impl QualiaPortal {
                                 &body.indices,
                             );
                             if count > 0 {
+                                self.scene_animation.compact_gpu=true;
                                 self.body_renderer = BodyRendererBackend::WebGpu;
                                 self.body_vertex_count =
                                     body.positions.len().min(u32::MAX as usize) as u32;
@@ -2781,100 +2795,5 @@ fn has_webgpu() -> bool {
 mod paint;
 use paint::*;
 
-/// Triangle soup the canvas2d tick can draw without a GPU adapter.
-struct CpuBodyMesh {
-    positions: Vec<[f32; 3]>,
-    colors: Vec<[f32; 4]>,
-    indices: Vec<u32>,
-}
-
-impl CpuBodyMesh {
-    fn decimate(
-        positions: &[[f32; 3]],
-        colors: &[[f32; 4]],
-        indices: &[u32],
-        spans: &[(usize, usize)],
-    ) -> Self {
-        // Keep each organ's own outline. A single stride across the whole
-        // scene turns a car, a person, and a shelter into the same confetti.
-        const PER_ORGAN: usize = 220;
-        let mut out_i = Vec::new();
-        let mut out_positions = Vec::new();
-        let mut out_colors = Vec::new();
-        let mut remap = vec![u32::MAX; positions.len()];
-        let ranges: Vec<(usize, usize)> = if spans.is_empty() {
-            vec![(0, indices.len())]
-        } else {
-            spans.to_vec()
-        };
-        for (start, end) in ranges {
-            if end > indices.len() || start >= end {
-                continue;
-            }
-            let tris = (end - start) / 3;
-            let keep = tris.min(PER_ORGAN).max(1);
-            let step = (tris / keep).max(1);
-            let mut t = 0usize;
-            let mut kept = 0usize;
-            while t < tris && kept < PER_ORGAN {
-                let b = start + t * 3;
-                if b + 2 < end {
-                    let mut valid = true;
-                    let mut mapped = [0u32; 3];
-                    for (corner, &source) in indices[b..b + 3].iter().enumerate() {
-                        let source = source as usize;
-                        if source >= positions.len() || source >= colors.len() {
-                            valid = false;
-                            break;
-                        }
-                        if remap[source] == u32::MAX {
-                            let Ok(new_index) = u32::try_from(out_positions.len()) else {
-                                valid = false;
-                                break;
-                            };
-                            remap[source] = new_index;
-                            out_positions.push(positions[source]);
-                            out_colors.push(colors[source]);
-                        }
-                        mapped[corner] = remap[source];
-                    }
-                    if valid {
-                        out_i.extend_from_slice(&mapped);
-                        kept += 1;
-                    }
-                }
-                t += step;
-            }
-        }
-        Self {
-            positions: out_positions,
-            colors: out_colors,
-            indices: out_i,
-        }
-    }
-}
-
-#[cfg(test)]
-mod cpu_body_mesh_tests {
-    use super::CpuBodyMesh;
-
-    #[test]
-    fn reduced_replay_mesh_compacts_vertices_and_keeps_valid_indices() {
-        let positions: Vec<[f32; 3]> = (0..900)
-            .map(|i| [i as f32, (i % 7) as f32, (i % 13) as f32])
-            .collect();
-        let colors = vec![[0.25, 0.5, 0.75, 1.0]; positions.len()];
-        let indices: Vec<u32> = (0..positions.len() as u32).collect();
-        let spans = [(0, indices.len())];
-
-        let reduced = CpuBodyMesh::decimate(&positions, &colors, &indices, &spans);
-
-        assert_eq!(reduced.indices.len(), 220 * 3);
-        assert!(reduced.positions.len() < positions.len());
-        assert_eq!(reduced.positions.len(), reduced.colors.len());
-        assert!(reduced
-            .indices
-            .iter()
-            .all(|&index| (index as usize) < reduced.positions.len()));
-    }
-}
+mod cpu_mesh;
+use cpu_mesh::CpuBodyMesh;

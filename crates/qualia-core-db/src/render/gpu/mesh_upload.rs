@@ -358,6 +358,19 @@ impl PortalGpu {
         let generated_tangents;
         let tangent_data = if let Some(tangents) = authored_tangents {
             tangents
+        } else if let Some(uv) = texture_coordinates_0 {
+            // UV-aligned normal maps require a real tangent basis rather than
+            // an arbitrary axis derived only from the geometric normal.
+            if positions.len() > 1_048_576 { return Err("tangent authoring scratch exceeds bounded mesh budget".into()); }
+            generated_tangents = {
+                let mut frames = vec![[0.0;4]; positions.len()];
+                let mut scratch = vec![[0.0;6]; positions.len()];
+                crate::render::mesh_tangent_frames::tangents_from_uvs_into(positions, uv,
+                    normal_data, indices, &mut frames, &mut scratch)
+                    .map_err(|e|format!("mesh tangent frames: {e:?}"))?;
+                frames
+            };
+            generated_tangents.as_slice()
         } else {
             generated_tangents = normal_data
                 .iter()

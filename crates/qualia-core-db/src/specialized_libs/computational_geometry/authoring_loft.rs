@@ -1,3 +1,8 @@
+//! Bounded cold authoring of closed convex-section lofts.
+//! Output belongs to the caller. At most 256 sections and 128 ring points
+//! bound temporary geometry and CAD scratch below 2 MiB. This sequential
+//! authoring operation is kept outside rendering and simulation hot paths.
+
 use super::AuthoringError;
 #[derive(Debug, Clone, Copy)]
 pub struct ClosedLoftReceipt {
@@ -148,6 +153,17 @@ mod convex_loft_tests {
         let mut concave = section(1.0, 1.0);
         concave[2] = [0.0, 0.2, 1.0];
         assert!(loft_convex_sections(&[section(0.0, 1.0), concave]).is_err());
+    }
+
+    #[test]
+    fn loft_refuses_small_caller_buffers_without_writing() {
+        let sections = vec![section(0.0, 1.0), section(1.0, 1.0)];
+        let mut positions = [[7.0; 3]; 4];
+        let mut triangles = [[8; 3]; 64];
+        assert!(matches!(loft_convex_sections_into(&sections, &mut positions, &mut triangles),
+            Err(AuthoringError::BufferTooSmall { .. })));
+        assert!(positions.iter().all(|p| *p == [7.0; 3]));
+        assert!(triangles.iter().all(|t| *t == [8; 3]));
     }
 }
 

@@ -67,6 +67,9 @@ pub mod section;
 pub mod surface_reading;
 pub mod texture_coordinate_container;
 pub mod texture_coordinate_section;
+/// Versioned rig, skin influence and motor clip records.
+pub mod skeletal_section;
+pub mod skeletal_container;
 // `topology_section` and `spatial_index_section` depend on
 // `crate::specialized_libs::computational_geometry`, which is itself gated
 // `#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]` at

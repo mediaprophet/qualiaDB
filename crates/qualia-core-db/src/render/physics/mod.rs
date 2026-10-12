@@ -14,6 +14,7 @@ pub mod aabb;
 pub mod admission;
 pub mod joint;
 pub mod material;
+pub mod response;
 
 pub use aabb::Aabb;
 pub use admission::{Admission, Refusal};
