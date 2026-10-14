@@ -7,7 +7,6 @@
 //! `.q42` then opens — UAT-friendly create-on-open; set `create: false` to fail.
 //! No Host widen — Capability.method binds only (G-B-001).
 
-#[cfg(not(target_arch = "wasm32"))]
 use super::super::args;
 use crate::poet_host::PoetSnapshot;
 #[cfg(target_arch = "wasm32")]
@@ -31,13 +30,16 @@ fn wasm_denied(span: Span, id: &str) -> Diagnostic {
     Diagnostic::new(
         DiagCode::E300,
         span,
-        format!("{id} needs native filesystem (q42 volumes are not available on wasm)"),
+        format!("{id} needs native filesystem (pass byte payload `bytes: [...]` on wasm)"),
     )
 }
 
-/// Open a `.q42` at `path`. Optional `load` (default true) replaces the
-/// resident graph with the volume's quins and detaches from the daemon.
+/// Open a `.q42` at `path` or from memory `bytes`. Optional `load` (default true)
+/// replaces or extends the resident graph with the volume's quins.
 pub fn open(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    if let Some(bytes_val) = args::rec(args_v, "bytes") {
+        return open_from_bytes(snap, bytes_val, args_v, span);
+    }
     #[cfg(target_arch = "wasm32")]
     {
         let _ = (snap, args_v);
@@ -47,6 +49,57 @@ pub fn open(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Value
     {
         open_native(snap, args_v, span)
     }
+}
+
+fn open_from_bytes(
+    snap: &mut PoetSnapshot,
+    bytes_val: &Value,
+    args_v: &Value,
+    span: Span,
+) -> Result<Value, Diagnostic> {
+    let raw_bytes: Vec<u8> = match bytes_val {
+        Value::List(items) => {
+            let mut buf = Vec::with_capacity(items.len());
+            for item in items {
+                match item {
+                    Value::U64(n) if *n <= 255 => buf.push(*n as u8),
+                    Value::I64(n) if *n >= 0 && *n <= 255 => buf.push(*n as u8),
+                    _ => {
+                        return Err(args::bad(
+                            span,
+                            "GraphDatabase.volume_open: bytes list element out of range [0..255]",
+                        ))
+                    }
+                }
+            }
+            buf
+        }
+        _ => {
+            return Err(args::bad(
+                span,
+                "GraphDatabase.volume_open: bytes must be a list of u8 bytes",
+            ))
+        }
+    };
+
+    let pack = args::rec_str(args_v, "pack").unwrap_or("inline_pack");
+    let key = args::rec_str(args_v, "key")
+        .or_else(|| args::rec_str(args_v, "path"))
+        .unwrap_or("entry.q42");
+    let load = args::rec_bool(args_v, "load").unwrap_or(true);
+
+    let receipt = snap
+        .admit_q42_slice(&raw_bytes, pack, key, None, load)
+        .map_err(|e| args::bad(span, format!("GraphDatabase.volume_open admission failed: {e}")))?;
+
+    Ok(args::record([
+        ("path", Value::String(key.into())),
+        ("loaded", Value::Bool(load)),
+        ("created", Value::Bool(false)),
+        ("quin_count", Value::U64(receipt.quin_count as u64)),
+        ("block_count", Value::U64(receipt.block_count)),
+        ("version", Value::U64(receipt.q42_version as u64)),
+    ]))
 }
 
 /// Commit resident quins (committed ∪ staged) to `path` as a unified v3 `.q42`.

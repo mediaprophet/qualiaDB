@@ -61,7 +61,8 @@ pub mod temporal_scrub;
 pub mod visual_model_bridge;
 pub mod sdmx_cube;
 pub use sdmx_cube::{
-    compile_observation_to_quins, ConfidentialityMark, SdmxObservation, QB_CONF_STATUS,
-    QB_DATASET, QB_OBSERVATION, QB_OBS_VALUE, QB_REF_AREA, QB_TIME_PERIOD,
+    compile_observation_to_quins, ingest_sdmx_csv_to_quins, parse_conf_status, parse_sdmx_csv_into,
+    ConfidentialityMark, SdmxObservation, QB_CONF_STATUS, QB_DATASET, QB_OBSERVATION, QB_OBS_VALUE,
+    QB_REF_AREA, QB_TIME_PERIOD,
 };
 

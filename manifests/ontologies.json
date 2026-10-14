@@ -172,6 +172,16 @@
       "description": "Formal representations of physical quantities, units of measure, and dimensions for scientific sensors and environmental rasters.",
       "url": "https://qudt.org/2.1/schema/SCHEMA_QUDT-v2.1.ttl",
       "filename": "qudt-schema.ttl"
+    },
+    {
+      "id": "geosparql",
+      "name": "OGC GeoSPARQL",
+      "version": "1.0",
+      "type": "RDF/XML",
+      "size": "~45 KB",
+      "description": "OGC spatial ontology — SpatialObject/Feature/Geometry classes, Simple Features topological relations (sfWithin, sfIntersects), WKT/GML geometry serialisations. Needed for scene placement and corridor geometry semantics.",
+      "url": "http://schemas.opengis.net/geosparql/1.0/geosparql_vocab_all.rdf",
+      "filename": "geosparql_vocab_all.rdf"
     }
   ]
 }

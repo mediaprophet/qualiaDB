@@ -259,10 +259,10 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::DAG_STATUS,
         family: "agent",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
-        arg_shape: r#"{"type":"null"}"#,
-        return_shape: r#"{"type":"null"}"#,
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
     },
     MachineSchema {
         id: ids::DISCOVERY_LIST,
@@ -451,7 +451,7 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::MANIFOLD_PROJECT,
         family: "manifold",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
         arg_shape: r#"{"type":"record"}"#,
         return_shape: r#"{"type":"record"}"#,
@@ -619,7 +619,7 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::ECON_AGGREGATE_WEALTH,
         family: "econ",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
         arg_shape: r#"{"type":"record"}"#,
         return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
@@ -627,7 +627,7 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::ECON_NARRATIVE_DIVERGENCE,
         family: "econ",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
         arg_shape: r#"{"type":"record"}"#,
         return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
@@ -684,8 +684,8 @@ mod tests {
         assert_eq!(s.effect_class, "Cold");
         let gemm = schema_for(ids::LA_GEMM).expect("LA_GEMM must have a schema");
         assert_eq!(gemm.honesty, "certified");
-        let wealth = schema_for(ids::ECON_AGGREGATE_WEALTH).expect("wealth stub schema");
-        assert_eq!(wealth.honesty, "stub");
+        let wealth = schema_for(ids::ECON_AGGREGATE_WEALTH).expect("wealth schema");
+        assert_eq!(wealth.honesty, "certified");
     }
 
     #[test]

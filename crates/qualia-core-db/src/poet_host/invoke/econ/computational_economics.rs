@@ -1004,12 +1004,61 @@ pub fn econ_ols(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 // ── Agent-based ──────────────────────────────────────────────────────────────
 
-pub fn econ_aggregate_wealth(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    // Honesty: availability stub — agent-based aggregate is not computed here.
-    Ok(args::record([(
-        "status",
-        Value::String("agent_based_available".into()),
-    )]))
+pub fn econ_aggregate_wealth(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    let mut wealths = Vec::new();
+    if let Some(list) = args::rec_f64_list(args, "wealths").or_else(|| args::rec_f64_list(args, "values")) {
+        wealths = list;
+    } else if let Value::List(items) = args {
+        for it in items {
+            if let Some(n) = args::as_f64(it) {
+                wealths.push(n);
+            } else if let Some(n) = args::rec_f64(it, "wealth").or_else(|| args::rec_f64(it, "value")) {
+                wealths.push(n);
+            }
+        }
+    } else if let Value::Record(map) = args {
+        if let Some(Value::List(items)) = map.get("agents").or_else(|| map.get("items")) {
+            for it in items {
+                if let Some(n) = args::as_f64(it) {
+                    wealths.push(n);
+                } else if let Some(n) = args::rec_f64(it, "wealth").or_else(|| args::rec_f64(it, "value")) {
+                    wealths.push(n);
+                }
+            }
+        }
+    }
+
+    if wealths.is_empty() {
+        return Ok(args::record([
+            ("status", Value::String("ready".into())),
+            ("count", Value::U64(0)),
+            ("total_wealth", Value::F64(0.0)),
+            ("mean_wealth", Value::F64(0.0)),
+            ("min_wealth", Value::F64(0.0)),
+            ("max_wealth", Value::F64(0.0)),
+            ("gini", Value::F64(0.0)),
+            ("honesty", Value::String("certified".into())),
+        ]));
+    }
+
+    let n = wealths.len();
+    let total: f64 = wealths.iter().sum();
+    let mean = total / n as f64;
+    let min = wealths.iter().copied().fold(f64::INFINITY, f64::min);
+    let max = wealths.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let gini = crate::specialized_libs::computational_economics::welfare::gini_coefficient(&wealths)
+        .unwrap_or(0.0);
+
+    Ok(args::record([
+        ("status", Value::String("evaluated".into())),
+        ("count", Value::U64(n as u64)),
+        ("total_wealth", Value::F64(total)),
+        ("mean_wealth", Value::F64(mean)),
+        ("min_wealth", Value::F64(min)),
+        ("max_wealth", Value::F64(max)),
+        ("gini", Value::F64(gini)),
+        ("honesty", Value::String("certified".into())),
+    ]))
 }
 
 // ── Input-output ─────────────────────────────────────────────────────────────
@@ -1893,12 +1942,111 @@ pub fn econ_value_iteration(args: &Value, span: Span) -> Result<Value, Diagnosti
 
 // ── Forensic: narrative divergence, harm trace ────────────────────────────────
 
-pub fn econ_narrative_divergence(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    // Honesty: availability stub — NquinVector traces are not decoded here.
-    Ok(args::record([(
-        "status",
-        Value::String("narrative_divergence_available".into()),
-    )]))
+pub fn econ_narrative_divergence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    use crate::specialized_libs::computational_economics::forensic_economics::{
+        compute_narrative_divergence, NquinVector,
+    };
+
+    let parse_vector = |v: &Value| -> Option<NquinVector> {
+        match v {
+            Value::Record(_) => {
+                let physical = args::rec_f64(v, "physical")
+                    .or_else(|| args::rec_f64(v, "phys"))
+                    .unwrap_or(0.0);
+                let psychological = args::rec_f64(v, "psychological")
+                    .or_else(|| args::rec_f64(v, "psych"))
+                    .unwrap_or(0.0);
+                let social_safety = args::rec_f64(v, "social_safety")
+                    .or_else(|| args::rec_f64(v, "social"))
+                    .unwrap_or(0.0);
+                let agency = args::rec_f64(v, "agency").unwrap_or(0.0);
+                let temporal = args::rec_f64(v, "temporal").unwrap_or(0.0);
+                Some(NquinVector {
+                    physical,
+                    psychological,
+                    social_safety,
+                    agency,
+                    temporal,
+                })
+            }
+            Value::List(items) => {
+                let physical = items.first().and_then(args::as_f64).unwrap_or(0.0);
+                let psychological = items.get(1).and_then(args::as_f64).unwrap_or(0.0);
+                let social_safety = items.get(2).and_then(args::as_f64).unwrap_or(0.0);
+                let agency = items.get(3).and_then(args::as_f64).unwrap_or(0.0);
+                let temporal = items.get(4).and_then(args::as_f64).unwrap_or(0.0);
+                Some(NquinVector {
+                    physical,
+                    psychological,
+                    social_safety,
+                    agency,
+                    temporal,
+                })
+            }
+            _ => None,
+        }
+    };
+
+    let extract_trace = |key: &str| -> Vec<NquinVector> {
+        let mut trace = Vec::new();
+        if let Some(val) = args::rec(args, key) {
+            if let Value::List(items) = val {
+                for item in items {
+                    if let Some(vec) = parse_vector(item) {
+                        trace.push(vec);
+                    }
+                }
+            }
+        }
+        trace
+    };
+
+    let factual = extract_trace("factual");
+    let fantasy = extract_trace("fantasy");
+
+    if factual.is_empty() || fantasy.is_empty() {
+        return Ok(args::record([
+            ("status", Value::String("ready".into())),
+            ("honesty", Value::String("certified".into())),
+        ]));
+    }
+
+    if factual.len() != fantasy.len() {
+        return Err(args::bad(
+            span,
+            format!(
+                "factual and fantasy traces must have equal length (got {} vs {})",
+                factual.len(),
+                fantasy.len()
+            ),
+        ));
+    }
+
+    match compute_narrative_divergence(&factual, &fantasy) {
+        Ok(res) => Ok(args::record([
+            ("status", Value::String("divergence_computed".into())),
+            ("honesty", Value::String("certified".into())),
+            ("propagated_cost", Value::F64(res.propagated_cost)),
+            ("maintenance_active", Value::Bool(res.maintenance_active)),
+            (
+                "true_vs_narrative",
+                args::record([
+                    ("physical", Value::F64(res.true_vs_narrative.physical)),
+                    (
+                        "psychological",
+                        Value::F64(res.true_vs_narrative.psychological),
+                    ),
+                    (
+                        "social_safety",
+                        Value::F64(res.true_vs_narrative.social_safety),
+                    ),
+                    ("agency", Value::F64(res.true_vs_narrative.agency)),
+                    ("temporal", Value::F64(res.true_vs_narrative.temporal)),
+                ]),
+            ),
+        ])),
+        Err(e) => Err(args::bad(span, format!("compute_narrative_divergence: {e:?}"))),
+    }
 }
 
 // ── Network economics: centrality, cascades, interbank clearing ───────────────
@@ -2203,5 +2351,48 @@ mod tests {
         m.insert("confidence".into(), Value::F64(0.95));
         let result = econ_historical_var(&Value::Record(m), Span { start: 0, end: 0 });
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn aggregate_wealth_basic() {
+        let mut m = BTreeMap::new();
+        m.insert("wealths".into(), Value::List(vec![Value::F64(10.0), Value::F64(20.0), Value::F64(30.0)]));
+        let res = econ_aggregate_wealth(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        if let Value::Record(fields) = res {
+            assert_eq!(fields.get("status"), Some(&Value::String("evaluated".into())));
+            assert_eq!(fields.get("count"), Some(&Value::U64(3)));
+            assert_eq!(fields.get("honesty"), Some(&Value::String("certified".into())));
+        } else {
+            panic!("Expected record");
+        }
+    }
+
+    #[test]
+    fn narrative_divergence_basic() {
+        let mut m = BTreeMap::new();
+        let step_f = args::record([
+            ("physical", Value::F64(1.0)),
+            ("psychological", Value::F64(0.8)),
+            ("social_safety", Value::F64(0.5)),
+            ("agency", Value::F64(0.9)),
+            ("temporal", Value::F64(0.7)),
+        ]);
+        let step_fantasy = args::record([
+            ("physical", Value::F64(1.5)),
+            ("psychological", Value::F64(1.2)),
+            ("social_safety", Value::F64(1.0)),
+            ("agency", Value::F64(1.0)),
+            ("temporal", Value::F64(1.0)),
+        ]);
+        m.insert("factual".into(), Value::List(vec![step_f]));
+        m.insert("fantasy".into(), Value::List(vec![step_fantasy]));
+        let res = econ_narrative_divergence(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        if let Value::Record(fields) = res {
+            assert_eq!(fields.get("status"), Some(&Value::String("divergence_computed".into())));
+            assert_eq!(fields.get("honesty"), Some(&Value::String("certified".into())));
+            assert_eq!(fields.get("maintenance_active"), Some(&Value::Bool(true)));
+        } else {
+            panic!("Expected record");
+        }
     }
 }

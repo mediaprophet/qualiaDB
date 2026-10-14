@@ -54,6 +54,125 @@ export class FederatedNodeManager {
 if (Symbol.dispose) FederatedNodeManager.prototype[Symbol.dispose] = FederatedNodeManager.prototype.free;
 
 /**
+ * Browser canvas HUD. Place its transparent canvas above the Portal canvas.
+ * Coordinates are in canvas pixels, independent of CSS scaling.
+ */
+export class QualiaHud {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        QualiaHudFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_qualiahud_free(ptr, 0);
+    }
+    /**
+     * Move focus between enabled buttons and return the focused action ID.
+     * @param {boolean} reverse
+     * @returns {string}
+     */
+    focus_next(reverse) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.qualiahud_focus_next(this.__wbg_ptr, reverse);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    focused_action() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.qualiahud_focused_action(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Return an action ID for a button under the pointer, in canvas pixels.
+     * @param {number} x
+     * @param {number} y
+     * @returns {string}
+     */
+    hit_test(x, y) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.qualiahud_hit_test(this.__wbg_ptr, x, y);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {HTMLCanvasElement} canvas
+     */
+    constructor(canvas) {
+        const ret = wasm.qualiahud_new(canvas);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        this.__wbg_ptr = ret[0];
+        QualiaHudFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Repaint the current document. Uses no Rust heap allocations.
+     */
+    paint() {
+        wasm.qualiahud_paint(this.__wbg_ptr);
+    }
+    /**
+     * @param {number} near
+     */
+    set_camera_near_plane(near) {
+        const ret = wasm.qualiahud_set_camera_near_plane(this.__wbg_ptr, near);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Use the same orbit camera as Portal to project world markers into HUD pixels.
+     * @param {number} yaw
+     * @param {number} pitch
+     * @param {number} zoom
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    set_camera_target(yaw, pitch, zoom, x, y, z) {
+        wasm.qualiahud_set_camera_target(this.__wbg_ptr, yaw, pitch, zoom, x, y, z);
+    }
+    /**
+     * Replace the presentation document. Bounds and size are checked before adoption.
+     * @param {string} json
+     */
+    set_document_json(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiahud_set_document_json(this.__wbg_ptr, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+}
+if (Symbol.dispose) QualiaHud.prototype[Symbol.dispose] = QualiaHud.prototype.free;
+
+/**
  * Portal tier: 0 = CPU canvas2d fallback, 1 = tensor projection, 2 = WebGPU ambient.
  */
 export class QualiaPortal {
@@ -121,6 +240,13 @@ export class QualiaPortal {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
+     * @returns {number}
+     */
+    ambient_intensity() {
+        const ret = wasm.qualiaportal_ambient_intensity(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
      * `"prismatic"` (slide) or anything else = `"revolute"` (spin); `(ax,ay,az)` is the axis
      * (normalised here; defaults to +Y if zero); `rate` is rad/s (revolute) or units/s (prismatic).
@@ -134,6 +260,27 @@ export class QualiaPortal {
         const ptr0 = passStringToWasm0(kind, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.qualiaportal_animate_artefact(this.__wbg_ptr, ptr0, len0, ax, ay, az, rate);
+    }
+    /**
+     * @returns {string}
+     */
+    animation_snapshot_json() {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.qualiaportal_animation_snapshot_json(this.__wbg_ptr);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
     }
     /**
      * Phase 2 — whether the artefact's proposed motion is currently being refused (clamped).
@@ -168,7 +315,7 @@ export class QualiaPortal {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
-     * Cold-path Anatomy lifecycle receipt. Success requires a retained upload
+     * Cold-path Scene / Anatomy lifecycle receipt. Success requires a retained upload
      * and at least one presented renderer frame.
      * @returns {any}
      */
@@ -200,6 +347,27 @@ export class QualiaPortal {
     /**
      * @returns {number}
      */
+    camera_target_x() {
+        const ret = wasm.qualiaportal_camera_target_x(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    camera_target_y() {
+        const ret = wasm.qualiaportal_camera_target_y(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
+    camera_target_z() {
+        const ret = wasm.qualiaportal_camera_target_z(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
     camera_yaw() {
         const ret = wasm.qualiaportal_camera_yaw(this.__wbg_ptr);
         return ret;
@@ -212,6 +380,15 @@ export class QualiaPortal {
         return ret;
     }
     /**
+     * @param {bigint} idle
+     */
+    clear_scene_activities(idle) {
+        const ret = wasm.qualiaportal_clear_scene_activities(this.__wbg_ptr, idle);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
      * Wavefunction collapse — set node `q` to 0 in the resident session manifold.
      * @param {number} index
      */
@@ -220,6 +397,37 @@ export class QualiaPortal {
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
+    }
+    /**
+     * Compact ABI-v2 records by stable visible indices into caller-owned bytes, preserving IDs.
+     * @param {Uint8Array} source_records
+     * @param {Uint32Array} visible_indices
+     * @param {Uint8Array} compacted_output
+     * @returns {number}
+     */
+    compact_mesh_instance_records(source_records, visible_indices, compacted_output) {
+        const ptr0 = passArray8ToWasm0(source_records, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray32ToWasm0(visible_indices, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        var ptr2 = passArray8ToWasm0(compacted_output, wasm.__wbindgen_malloc);
+        var len2 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_compact_mesh_instance_records(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, compacted_output);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * Complete a host recovery attempt. The host reports `webgpu`, `webgl2`,
+     * or `canvas2d`; recovered GPU backends re-upload the retained reduced
+     * mesh and full semantic tensor on the next frame.
+     * @param {string} backend
+     */
+    complete_graphics_recovery(backend) {
+        const ptr0 = passStringToWasm0(backend, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.qualiaportal_complete_graphics_recovery(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * Pending ICP commands in the SPSC ring.
@@ -239,6 +447,34 @@ export class QualiaPortal {
             throw takeFromExternrefTable0(ret[1]);
         }
         return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Select visible source instances without allocating. Bounds use three floats per record,
+     * transforms use 16 column-major floats, and the view-projection matrix uses 16 floats.
+     * Invalid bounds fail open; returned indices preserve source order.
+     * @param {Float32Array} bounds_min
+     * @param {Float32Array} bounds_max
+     * @param {Float32Array} transforms_column_major
+     * @param {Float32Array} view_projection_column_major
+     * @param {Uint32Array} visible_indices
+     * @returns {number}
+     */
+    cull_mesh_instance_indices(bounds_min, bounds_max, transforms_column_major, view_projection_column_major, visible_indices) {
+        const ptr0 = passArrayF32ToWasm0(bounds_min, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArrayF32ToWasm0(bounds_max, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArrayF32ToWasm0(transforms_column_major, wasm.__wbindgen_malloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passArrayF32ToWasm0(view_projection_column_major, wasm.__wbindgen_malloc);
+        const len3 = WASM_VECTOR_LEN;
+        var ptr4 = passArray32ToWasm0(visible_indices, wasm.__wbindgen_malloc);
+        var len4 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_cull_mesh_instance_indices(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, visible_indices);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
     }
     /**
      * Phase 2 — visible **deterministic refusal**: slide the artefact along +X (prismatic joint)
@@ -290,6 +526,67 @@ export class QualiaPortal {
         return ret;
     }
     /**
+     * Configured compensation in stops (EV), including while GPU rendering is unavailable.
+     * @returns {number}
+     */
+    exposure_compensation() {
+        const ret = wasm.qualiaportal_exposure_compensation(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * True while an active WebGPU or WebGL2 path applies scene exposure and the SDR transform.
+     * @returns {boolean}
+     */
+    exposure_transform_available() {
+        const ret = wasm.qualiaportal_exposure_transform_available(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * The last hardware backend refused even reduced geometry. The host must
+     * replace the context-bound canvas and settle on Canvas2D for this scene.
+     * @returns {boolean}
+     */
+    graphics_recovery_canvas_only() {
+        const ret = wasm.qualiaportal_graphics_recovery_canvas_only(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * True when the browser host must replace the context-bound canvas and
+     * recreate a renderer before ticking this portal again.
+     * @returns {boolean}
+     */
+    graphics_recovery_requested() {
+        const ret = wasm.qualiaportal_graphics_recovery_requested(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * True only while the HDR bloom composite path is active.
+     * @returns {boolean}
+     */
+    hdr_exposure_available() {
+        const ret = wasm.qualiaportal_hdr_exposure_available(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Compatibility alias for hosts using the original HDR-specific API name.
+     * @returns {number}
+     */
+    hdr_exposure_compensation() {
+        const ret = wasm.qualiaportal_hdr_exposure_compensation(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * True when the active WebGPU or WebGL2 scene target preserves radiance above SDR white.
+     * @returns {boolean}
+     */
+    hdr_scene_available() {
+        const ret = wasm.qualiaportal_hdr_scene_available(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    invalidate_temporal_history() {
+        wasm.qualiaportal_invalidate_temporal_history(this.__wbg_ptr);
+    }
+    /**
      * @returns {any | undefined}
      */
     last_parsed() {
@@ -338,6 +635,20 @@ export class QualiaPortal {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.qualiaportal_load_10d_colored(this.__wbg_ptr, ptr0, len0, r, g, b, a);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Load a multi-asset scene: `Array<{bytes: .10d, r,g,b,a, id?}>` (QG-20).
+     * General scene asset loader for environment/game scenes, town layouts,
+     * vehicles, and user props.
+     * @param {Array<any>} assets
+     * @returns {any}
+     */
+    load_assets_colored(assets) {
+        const ret = wasm.qualiaportal_load_assets_colored(this.__wbg_ptr, assets);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -418,6 +729,25 @@ export class QualiaPortal {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
+     * Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed
+     * residency identity. Replaying the same asset returns the existing receipt without
+     * rebuilding the GPU mesh; a different digest replaces the resident mesh.
+     * @param {Uint8Array} hmc_bytes
+     * @param {string} asset_key
+     * @returns {any}
+     */
+    load_hmc_mesh(hmc_bytes, asset_key) {
+        const ptr0 = passArray8ToWasm0(hmc_bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(asset_key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_load_hmc_mesh(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
      * @param {string} json
      * @returns {any}
      */
@@ -442,6 +772,59 @@ export class QualiaPortal {
             throw takeFromExternrefTable0(ret[1]);
         }
         return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Generic scene asset alias for [`Self::load_assets_colored`] (QG-20).
+     * @param {Array<any>} assets
+     * @returns {any}
+     */
+    load_scene_assets(assets) {
+        const ret = wasm.qualiaportal_load_scene_assets(this.__wbg_ptr, assets);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Hydrate one content-addressed PNG/JPEG/KTX2 dependency. Role 0 is sRGB
+     * base colour, 1 a linear tangent-space normal, 2 linear packed data and
+     * 3 sRGB alpha-masked colour. Returns false for an unavailable GPU backend.
+     * Call before scene submission so the material bind groups see residency.
+     * @param {Uint8Array} digest
+     * @param {string} mime
+     * @param {Uint8Array} encoded
+     * @param {number} role
+     * @param {number} cutoff
+     * @returns {boolean}
+     */
+    load_texture_encoded(digest, mime, encoded, role, cutoff) {
+        const ptr0 = passArray8ToWasm0(digest, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(mime, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArray8ToWasm0(encoded, wasm.__wbindgen_malloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_load_texture_encoded(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, role, cutoff);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+    }
+    /**
+     * Byte stride of the packed mesh-instance record ABI exposed by `set_mesh_instances`.
+     * @returns {number}
+     */
+    mesh_instance_record_stride() {
+        const ret = wasm.qualiaportal_mesh_instance_record_stride(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * Version of the packed ABI accepted by `set_mesh_instances`.
+     * @returns {number}
+     */
+    mesh_instance_record_version() {
+        const ret = wasm.qualiaportal_mesh_instance_record_version(this.__wbg_ptr);
+        return ret >>> 0;
     }
     /**
      * @param {string} root_id
@@ -516,12 +899,51 @@ export class QualiaPortal {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
+     * Build the packed ABI from caller-owned column-major transforms and low/high ID words.
+     * Output must hold `instance_count * mesh_instance_record_stride()` bytes.
+     * @param {Float32Array} transforms_column_major
+     * @param {Uint32Array} semantic_id_words
+     * @param {Uint8Array} packed_output
+     * @returns {number}
+     */
+    pack_mesh_instance_records(transforms_column_major, semantic_id_words, packed_output) {
+        const ptr0 = passArrayF32ToWasm0(transforms_column_major, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray32ToWasm0(semantic_id_words, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        var ptr2 = passArray8ToWasm0(packed_output, wasm.__wbindgen_malloc);
+        var len2 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_pack_mesh_instance_records(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, packed_output);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
      * Returns selected tensor index, or `-1` if none / pick still pending.
      * @returns {number}
      */
     poll_selected_node() {
         const ret = wasm.qualiaportal_poll_selected_node(this.__wbg_ptr);
         return ret;
+    }
+    /**
+     * A timed presentation cue from an accepted game event. This changes no
+     * campaign facts; completed and pending cues survive scene replacement.
+     * @param {bigint} token
+     * @param {bigint} joint
+     * @param {bigint} clip
+     * @param {bigint} idle
+     * @param {number} duration
+     * @param {number} fade
+     * @returns {number}
+     */
+    present_scene_activity(token, joint, clip, idle, duration, fade) {
+        const ret = wasm.qualiaportal_present_scene_activity(this.__wbg_ptr, token, joint, clip, idle, duration, fade);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
     }
     /**
      * Phase 1.4 — the **2D view** of the resident manifold: each tensor node's `project(.., Plane2D)`
@@ -576,6 +998,17 @@ export class QualiaPortal {
         }
     }
     /**
+     * @param {string} json
+     */
+    restore_animation_snapshot_json(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_restore_animation_snapshot_json(this.__wbg_ptr, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
      * @returns {any}
      */
     sample_telemetry() {
@@ -584,6 +1017,64 @@ export class QualiaPortal {
             throw takeFromExternrefTable0(ret[1]);
         }
         return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * @returns {any}
+     */
+    scene_animation_receipt() {
+        const ret = wasm.qualiaportal_scene_animation_receipt(this.__wbg_ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Generic scene alias for [`Self::body_render_receipt`] (QG-20).
+     * @returns {any}
+     */
+    scene_render_receipt() {
+        const ret = wasm.qualiaportal_scene_render_receipt(this.__wbg_ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * @returns {boolean}
+     */
+    screen_space_ao_available() {
+        const ret = wasm.qualiaportal_screen_space_ao_available(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {boolean}
+     */
+    screen_space_ao_enabled() {
+        const ret = wasm.qualiaportal_screen_space_ao_enabled(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {number}
+     */
+    screen_space_ao_height() {
+        const ret = wasm.qualiaportal_screen_space_ao_height(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    screen_space_ao_width() {
+        const ret = wasm.qualiaportal_screen_space_ao_width(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @param {number} time
+     */
+    seek_scene_animation(time) {
+        const ret = wasm.qualiaportal_seek_scene_animation(this.__wbg_ptr, time);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
     }
     /**
      * Queue GPU picking at canvas pixel `(x, y)`. Result available after the next `tick`.
@@ -599,11 +1090,41 @@ export class QualiaPortal {
         }
     }
     /**
+     * Joint IDs group the pieces of one actor without game-specific naming.
+     * @param {bigint} joint_id
+     * @param {bigint} clip_id
+     * @param {number} fade_seconds
+     * @returns {number}
+     */
+    select_scene_animation_clip(joint_id, clip_id, fade_seconds) {
+        const ret = wasm.qualiaportal_select_scene_animation_clip(this.__wbg_ptr, joint_id, clip_id, fade_seconds);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
      * @returns {number}
      */
     selected_node_index() {
         const ret = wasm.qualiaportal_selected_node_index(this.__wbg_ptr);
         return ret;
+    }
+    /**
+     * Selected mesh semantic identity as hexadecimal, or an empty string while absent/pending.
+     * @returns {string}
+     */
+    selected_semantic_id() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.qualiaportal_selected_semantic_id(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * Enable or mute U3 AcousticPlane (automatically off in Reserve mode).
@@ -613,13 +1134,26 @@ export class QualiaPortal {
         wasm.qualiaportal_set_acoustic_enabled(this.__wbg_ptr, enabled);
     }
     /**
-     * Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by default
-     * (a plain mesh/anatomy view has no use for the decorative random cloud); a Tensor10D upload
-     * turns it on automatically because the particles then encode epistemic nodes.
+     * Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by
+     * default and opt-in: a plain mesh/anatomy view (or a game scene) keeps it off, and a
+     * Tensor10D upload never forces it on. Hosts that want the tensor-node particle view
+     * enable it explicitly.
      * @param {boolean} on
      */
     set_ambient_enabled(on) {
         wasm.qualiaportal_set_ambient_enabled(this.__wbg_ptr, on);
+    }
+    /**
+     * @param {boolean} reduced
+     */
+    set_animation_reduced_motion(reduced) {
+        wasm.qualiaportal_set_animation_reduced_motion(this.__wbg_ptr, reduced);
+    }
+    /**
+     * @param {boolean} enabled
+     */
+    set_auto_temporal_enabled(enabled) {
+        wasm.qualiaportal_set_auto_temporal_enabled(this.__wbg_ptr, enabled);
     }
     /**
      * Replace the person-authored body fit. Pass JSON matching wellfare `BodyFit`.
@@ -644,6 +1178,53 @@ export class QualiaPortal {
         }
     }
     /**
+     * Shared native lens state for hardware rendering and CPU picking.
+     * @param {number} near
+     */
+    set_camera_near_plane(near) {
+        const ret = wasm.qualiaportal_set_camera_near_plane(this.__wbg_ptr, near);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * RTS camera pan IPC (moves look-at center point in world space).
+     * @param {number} target_x
+     * @param {number} target_y
+     * @param {number} target_z
+     */
+    set_camera_pan(target_x, target_y, target_z) {
+        const ret = wasm.qualiaportal_set_camera_pan(this.__wbg_ptr, target_x, target_y, target_z);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Full camera placement (yaw, pitch, zoom, and world-space target center).
+     * @param {number} yaw
+     * @param {number} pitch
+     * @param {number} zoom
+     * @param {number} target_x
+     * @param {number} target_y
+     * @param {number} target_z
+     */
+    set_camera_target(yaw, pitch, zoom, target_x, target_y, target_z) {
+        const ret = wasm.qualiaportal_set_camera_target(this.__wbg_ptr, yaw, pitch, zoom, target_x, target_y, target_z);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Configure viewport background / sky clear color (r, g, b, a in 0.0..1.0).
+     * @param {number} r
+     * @param {number} g
+     * @param {number} b
+     * @param {number} a
+     */
+    set_clear_color(r, g, b, a) {
+        wasm.qualiaportal_set_clear_color(this.__wbg_ptr, r, g, b, a);
+    }
+    /**
      * @param {string} mode
      */
     set_display_mode(mode) {
@@ -653,6 +1234,117 @@ export class QualiaPortal {
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
+    }
+    /**
+     * @param {Float32Array} packed_probes
+     * @param {Float32Array} fallback_radiance
+     * @returns {boolean}
+     */
+    set_environment_probe_data(packed_probes, fallback_radiance) {
+        const ptr0 = passArrayF32ToWasm0(packed_probes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArrayF32ToWasm0(fallback_radiance, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_set_environment_probe_data(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+    }
+    /**
+     * Configure manual exposure compensation in stops (EV), clamped to -8…+8.
+     * The configured value is retained while the GPU output path is unavailable.
+     * @param {number} ev
+     * @returns {boolean}
+     */
+    set_exposure_compensation(ev) {
+        const ret = wasm.qualiaportal_set_exposure_compensation(this.__wbg_ptr, ev);
+        return ret !== 0;
+    }
+    /**
+     * Compatibility alias for hosts using the original HDR-specific API name.
+     * @param {number} ev
+     * @returns {boolean}
+     */
+    set_hdr_exposure_compensation(ev) {
+        const ret = wasm.qualiaportal_set_hdr_exposure_compensation(this.__wbg_ptr, ev);
+        return ret !== 0;
+    }
+    /**
+     * Configure directional sun lighting (direction vector, sun intensity, and ambient intensity).
+     * @param {number} sun_x
+     * @param {number} sun_y
+     * @param {number} sun_z
+     * @param {number} sun_intensity
+     * @param {number} ambient_intensity
+     */
+    set_lighting(sun_x, sun_y, sun_z, sun_intensity, ambient_intensity) {
+        wasm.qualiaportal_set_lighting(this.__wbg_ptr, sun_x, sun_y, sun_z, sun_intensity, ambient_intensity);
+    }
+    /**
+     * Replace the current WebGPU mesh instance stream from caller-owned packed records.
+     * Each 128-byte record is the native `GpuInstanceRecord` ABI: column-major world transform,
+     * inverse-transpose normal frame, low/high `u32` semantic identity words, orientation sign,
+     * and zero padding. Callers may compact by CPU visibility indices before passing this slice.
+     * @param {number} abi_version
+     * @param {Uint8Array} packed_records
+     * @returns {number}
+     */
+    set_mesh_instances(abi_version, packed_records) {
+        const ptr0 = passArray8ToWasm0(packed_records, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_set_mesh_instances(this.__wbg_ptr, abi_version, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * Apply an authored atmospheric sky preset:
+     * - 0: Cyber-Dark / Deep Void
+     * - 1: Daylight (clear sky, high warm sun, balanced ambient)
+     * - 2: Sunset / Golden Hour (warm orange sky, low golden sun)
+     * - 3: Night / Moonlight (dark indigo sky, cold moonlight)
+     * Keep the next `load_body_*` upload in authored coordinates.
+     * Anatomy stays false (orbit frame). A town scene sets this so the
+     * camera and the mesh share one frame.
+     * @param {boolean} on
+     */
+    set_preserve_authored_frame(on) {
+        wasm.qualiaportal_set_preserve_authored_frame(this.__wbg_ptr, on);
+    }
+    /**
+     * @param {number} radius
+     * @param {number} strength
+     * @param {number} bias
+     */
+    set_screen_space_ao(radius, strength, bias) {
+        wasm.qualiaportal_set_screen_space_ao(this.__wbg_ptr, radius, strength, bias);
+    }
+    /**
+     * Enable the budgeted half-resolution screen-space AO pass when available.
+     * @param {boolean} enabled
+     */
+    set_screen_space_ao_enabled(enabled) {
+        wasm.qualiaportal_set_screen_space_ao_enabled(this.__wbg_ptr, enabled);
+    }
+    /**
+     * @param {number} samples
+     */
+    set_screen_space_ao_sample_count(samples) {
+        wasm.qualiaportal_set_screen_space_ao_sample_count(this.__wbg_ptr, samples);
+    }
+    /**
+     * @param {boolean} enabled
+     */
+    set_shadows_enabled(enabled) {
+        wasm.qualiaportal_set_shadows_enabled(this.__wbg_ptr, enabled);
+    }
+    /**
+     * @param {number} preset
+     */
+    set_sky_preset(preset) {
+        wasm.qualiaportal_set_sky_preset(this.__wbg_ptr, preset);
     }
     /**
      * Human-Centric observer standpoint IPC (independent of camera lens).
@@ -693,6 +1385,61 @@ export class QualiaPortal {
         wasm.qualiaportal_set_temporal_slice(this.__wbg_ptr, t_slice, t_window);
     }
     /**
+     * Show or hide semantic tensor nodes while retaining uploaded data for picking.
+     * @param {boolean} on
+     */
+    set_tensor_projection_enabled(on) {
+        wasm.qualiaportal_set_tensor_projection_enabled(this.__wbg_ptr, on);
+    }
+    /**
+     * Replace the water surface mesh using world-space XYZ triples and triangle indices.
+     * @param {Float32Array} positions_xyz
+     * @param {Uint32Array} indices
+     * @returns {boolean}
+     */
+    set_water_geometry(positions_xyz, indices) {
+        const ptr0 = passArrayF32ToWasm0(positions_xyz, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray32ToWasm0(indices, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_set_water_geometry(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+    }
+    /**
+     * @param {number} r
+     * @param {number} g
+     * @param {number} b
+     * @param {number} alpha
+     * @param {number} wave_amplitude
+     * @param {number} wave_frequency
+     * @param {number} quality
+     */
+    set_water_surface(r, g, b, alpha, wave_amplitude, wave_frequency, quality) {
+        wasm.qualiaportal_set_water_surface(this.__wbg_ptr, r, g, b, alpha, wave_amplitude, wave_frequency, quality);
+    }
+    /**
+     * Set linear-light temperature/tint biases in stops, each bounded to -1…+1.
+     * Temperature warms red while cooling blue; positive tint favours green.
+     * The value is retained and replayed when a renderer is initialized or recovered.
+     * @param {number} temperature_ev
+     * @param {number} tint_ev
+     * @returns {boolean}
+     */
+    set_white_balance(temperature_ev, tint_ev) {
+        const ret = wasm.qualiaportal_set_white_balance(this.__wbg_ptr, temperature_ev, tint_ev);
+        return ret !== 0;
+    }
+    /**
+     * @returns {boolean}
+     */
+    shadows_available() {
+        const ret = wasm.qualiaportal_shadows_available(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * @returns {number}
      */
     sonic_token_pending() {
@@ -728,6 +1475,13 @@ export class QualiaPortal {
     /**
      * @returns {number}
      */
+    sun_intensity() {
+        const ret = wasm.qualiaportal_sun_intensity(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
     t_slice() {
         const ret = wasm.qualiaportal_t_slice(this.__wbg_ptr);
         return ret;
@@ -737,6 +1491,13 @@ export class QualiaPortal {
      */
     t_window() {
         const ret = wasm.qualiaportal_t_window(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {any}
+     */
+    temporal_graphics_receipt() {
+        const ret = wasm.qualiaportal_temporal_graphics_receipt(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -788,162 +1549,29 @@ export class QualiaPortal {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
+    /**
+     * Configured temperature/tint bias in stops, including while graphics is unavailable.
+     * @returns {Float32Array}
+     */
+    white_balance() {
+        const ret = wasm.qualiaportal_white_balance(this.__wbg_ptr);
+        var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
+     * Write posed positions into one vertex span of the resident body mesh.
+     * Generic: any app can move a part over time without a full re-upload.
+     * @param {number} start
+     * @param {Float32Array} xyz
+     */
+    write_part_vertices(start, xyz) {
+        const ptr0 = passArrayF32ToWasm0(xyz, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.qualiaportal_write_part_vertices(this.__wbg_ptr, start, ptr0, len0);
+    }
 }
 if (Symbol.dispose) QualiaPortal.prototype[Symbol.dispose] = QualiaPortal.prototype.free;
-
-export class QualiaStore {
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        QualiaStoreFinalization.unregister(this);
-        return ptr;
-    }
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_qualiastore_free(ptr, 0);
-    }
-    /**
-     * Clear all stored quints.
-     */
-    clear() {
-        wasm.qualiastore_clear(this.__wbg_ptr);
-    }
-    /**
-     * Parse a CBOR-LD byte array (CBOR array of 4 or 5 unsigned integers) and
-     * insert the resulting quin. Returns true on success, false on parse error.
-     *
-     * The qualiaDB binary gatekeeper (cbor_compiler.rs) requires this format:
-     *   CBOR array header (0x84 or 0x85) followed by 4–5 CBOR unsigned integers.
-     * All values are Lexicon-compressed u64 IDs assigned by the JS Lexicon.
-     * @param {Uint8Array} data
-     * @returns {boolean}
-     */
-    insert_from_cbor_ld(data) {
-        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.qualiastore_insert_from_cbor_ld(this.__wbg_ptr, ptr0, len0);
-        return ret !== 0;
-    }
-    /**
-     * Insert a quint (s, p, o, c, m).  Returns true on success.
-     * @param {bigint} s
-     * @param {bigint} p
-     * @param {bigint} o
-     * @param {bigint} c
-     * @param {bigint} m
-     * @returns {boolean}
-     */
-    insert_quin(s, p, o, c, m) {
-        const ret = wasm.qualiastore_insert_quin(this.__wbg_ptr, s, p, o, c, m);
-        return ret !== 0;
-    }
-    /**
-     * Total number of quints stored.
-     * @returns {number}
-     */
-    len() {
-        const ret = wasm.qualiastore_len(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    constructor() {
-        const ret = wasm.qualiastore_new();
-        this.__wbg_ptr = ret;
-        QualiaStoreFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * Return all quints in the given context as a flat Float64Array.
-     * @param {bigint} c
-     * @returns {Float64Array}
-     */
-    query_context(c) {
-        const ret = wasm.qualiastore_query_context(this.__wbg_ptr, c);
-        return ret;
-    }
-    /**
-     * Return all quints with the given predicate as a flat Float64Array.
-     * @param {bigint} p
-     * @returns {Float64Array}
-     */
-    query_predicate(p) {
-        const ret = wasm.qualiastore_query_predicate(this.__wbg_ptr, p);
-        return ret;
-    }
-    /**
-     * Return all quints with the given subject as a flat Float64Array
-     * (groups of 5: [s,p,o,c,m, s,p,o,c,m, ...]).
-     * @param {bigint} s
-     * @returns {Float64Array}
-     */
-    query_subject(s) {
-        const ret = wasm.qualiastore_query_subject(this.__wbg_ptr, s);
-        return ret;
-    }
-}
-if (Symbol.dispose) QualiaStore.prototype[Symbol.dispose] = QualiaStore.prototype.free;
-
-/**
- * In-memory RDF store exposed to JS.  Load Turtle, run SPARQL SELECT/ASK/CONSTRUCT.
- */
-export class WasmHealthStore {
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        WasmHealthStoreFinalization.unregister(this);
-        return ptr;
-    }
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_wasmhealthstore_free(ptr, 0);
-    }
-    /**
-     * Load a Turtle document into the store (appends — call on a fresh store to replace).
-     * @param {string} turtle
-     */
-    load_turtle(turtle) {
-        const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.wasmhealthstore_load_turtle(this.__wbg_ptr, ptr0, len0);
-        if (ret[1]) {
-            throw takeFromExternrefTable0(ret[0]);
-        }
-    }
-    constructor() {
-        const ret = wasm.wasmhealthstore_new();
-        if (ret[2]) {
-            throw takeFromExternrefTable0(ret[1]);
-        }
-        this.__wbg_ptr = ret[0];
-        WasmHealthStoreFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * Execute a SPARQL query; returns JSON SPARQL results string.
-     * @param {string} sparql
-     * @returns {string}
-     */
-    query(sparql) {
-        let deferred3_0;
-        let deferred3_1;
-        try {
-            const ptr0 = passStringToWasm0(sparql, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len0 = WASM_VECTOR_LEN;
-            const ret = wasm.wasmhealthstore_query(this.__wbg_ptr, ptr0, len0);
-            var ptr2 = ret[0];
-            var len2 = ret[1];
-            if (ret[3]) {
-                ptr2 = 0; len2 = 0;
-                throw takeFromExternrefTable0(ret[2]);
-            }
-            deferred3_0 = ptr2;
-            deferred3_1 = len2;
-            return getStringFromWasm0(ptr2, len2);
-        } finally {
-            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
-        }
-    }
-}
-if (Symbol.dispose) WasmHealthStore.prototype[Symbol.dispose] = WasmHealthStore.prototype.free;
 
 /**
  * WASM edge offload descriptor — distinct from governance [`crate::llm_agent::AgentIntent`].
@@ -1029,6 +1657,304 @@ export class WasmOffloadIntent {
     }
 }
 if (Symbol.dispose) WasmOffloadIntent.prototype[Symbol.dispose] = WasmOffloadIntent.prototype.free;
+
+export class WasmQ42Session {
+    static __wrap(ptr) {
+        const obj = Object.create(WasmQ42Session.prototype);
+        obj.__wbg_ptr = ptr;
+        WasmQ42SessionFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmQ42SessionFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmq42session_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    active_quin_count() {
+        const ret = wasm.wasmq42session_active_quin_count(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @param {bigint} tick
+     */
+    advance_tick(tick) {
+        wasm.wasmq42session_advance_tick(this.__wbg_ptr, tick);
+    }
+    /**
+     * @param {bigint} command_hash
+     * @param {bigint} actor_did
+     * @returns {number}
+     */
+    commit_transaction(command_hash, actor_did) {
+        const ret = wasm.wasmq42session_commit_transaction(this.__wbg_ptr, command_hash, actor_did);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @returns {bigint}
+     */
+    current_tick() {
+        const ret = wasm.wasmq42session_current_tick(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * Export all currently active Quins as a flat contiguous 48-byte buffer.
+     * @returns {Uint8Array}
+     */
+    export_active_quins_bytes() {
+        const ret = wasm.wasmq42session_export_active_quins_bytes(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    export_journal_bytes() {
+        const ret = wasm.wasmq42session_export_journal_bytes(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * Load an existing durable Q42 session from journal bytes and optional base Quin snapshot bytes.
+     * @param {Uint8Array} journal_bytes
+     * @param {Uint8Array} base_quins_bytes
+     * @returns {WasmQ42Session}
+     */
+    static load_from_bytes(journal_bytes, base_quins_bytes) {
+        const ptr0 = passArray8ToWasm0(journal_bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(base_quins_bytes, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmq42session_load_from_bytes(ptr0, len0, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return WasmQ42Session.__wrap(ret[0]);
+    }
+    /**
+     * @param {bigint} world_did_hash
+     * @param {Uint8Array} base_digest_bytes
+     */
+    constructor(world_did_hash, base_digest_bytes) {
+        const ptr0 = passArray8ToWasm0(base_digest_bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmq42session_new(world_did_hash, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        this.__wbg_ptr = ret[0];
+        WasmQ42SessionFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Check if a Quin matching the given pattern exists in the active session (0 = wildcard).
+     * @param {bigint} s
+     * @param {bigint} p
+     * @param {bigint} o
+     * @returns {boolean}
+     */
+    query_has_quin(s, p, o) {
+        const ret = wasm.wasmq42session_query_has_quin(this.__wbg_ptr, s, p, o);
+        return ret !== 0;
+    }
+    /**
+     * Query the object value for a given (subject, predicate) pair.
+     * @param {bigint} s
+     * @param {bigint} p
+     * @returns {bigint | undefined}
+     */
+    query_object_for_predicate(s, p) {
+        const ret = wasm.wasmq42session_query_object_for_predicate(this.__wbg_ptr, s, p);
+        return ret[0] === 0 ? undefined : BigInt.asUintN(64, ret[1]);
+    }
+    /**
+     * Rewind session state to a specific simulation/historical tick.
+     * @param {Uint8Array} base_quins_bytes
+     * @param {bigint} target_tick
+     */
+    rewind_to_tick(base_quins_bytes, target_tick) {
+        const ptr0 = passArray8ToWasm0(base_quins_bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmq42session_rewind_to_tick(this.__wbg_ptr, ptr0, len0, target_tick);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    rollback_staged() {
+        wasm.wasmq42session_rollback_staged(this.__wbg_ptr);
+    }
+    /**
+     * @param {bigint} s
+     * @param {bigint} p
+     * @param {bigint} o
+     * @param {bigint} c
+     * @param {bigint} m
+     */
+    stage_add_quin(s, p, o, c, m) {
+        wasm.wasmq42session_stage_add_quin(this.__wbg_ptr, s, p, o, c, m);
+    }
+    /**
+     * @param {bigint} s
+     * @param {bigint} p
+     * @param {bigint} o
+     * @param {bigint} c
+     * @param {bigint} m
+     */
+    stage_remove_quin(s, p, o, c, m) {
+        wasm.wasmq42session_stage_remove_quin(this.__wbg_ptr, s, p, o, c, m);
+    }
+}
+if (Symbol.dispose) WasmQ42Session.prototype[Symbol.dispose] = WasmQ42Session.prototype.free;
+
+export class WasmSimulationWorld {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmSimulationWorldFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmsimulationworld_free(ptr, 0);
+    }
+    /**
+     * Compute group formation destinations for `count` agents (QG-11).
+     * Returns interleaved destination coordinates: [x0, y0, x1, y1, ...].
+     * @param {number} target_x
+     * @param {number} target_y
+     * @param {number} count
+     * @param {Uint8Array} obstacles
+     * @param {number} width
+     * @param {number} height
+     * @returns {Int32Array}
+     */
+    compute_group_formation(target_x, target_y, count, obstacles, width, height) {
+        const ptr0 = passArray8ToWasm0(obstacles, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmsimulationworld_compute_group_formation(this.__wbg_ptr, target_x, target_y, count, ptr0, len0, width, height);
+        var v2 = getArrayI32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v2;
+    }
+    /**
+     * @returns {bigint}
+     */
+    compute_state_hash() {
+        const ret = wasm.wasmsimulationworld_compute_state_hash(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @returns {bigint}
+     */
+    current_tick() {
+        const ret = wasm.wasmsimulationworld_current_tick(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * Deterministic 2D grid pathfinder (QG-11).
+     * Returns interleaved waypoint coordinates: [x0, y0, x1, y1, ...].
+     * @param {number} start_x
+     * @param {number} start_y
+     * @param {number} target_x
+     * @param {number} target_y
+     * @param {Uint8Array} obstacles
+     * @param {number} width
+     * @param {number} height
+     * @returns {Int32Array}
+     */
+    find_path_grid(start_x, start_y, target_x, target_y, obstacles, width, height) {
+        const ptr0 = passArray8ToWasm0(obstacles, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmsimulationworld_find_path_grid(this.__wbg_ptr, start_x, start_y, target_x, target_y, ptr0, len0, width, height);
+        var v2 = getArrayI32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v2;
+    }
+    /**
+     * @param {bigint} entity_id
+     * @returns {bigint | undefined}
+     */
+    get_agent_pos_x_mm(entity_id) {
+        const ret = wasm.wasmsimulationworld_get_agent_pos_x_mm(this.__wbg_ptr, entity_id);
+        return ret[0] === 0 ? undefined : ret[1];
+    }
+    /**
+     * @param {bigint} entity_id
+     * @returns {bigint | undefined}
+     */
+    get_agent_pos_y_mm(entity_id) {
+        const ret = wasm.wasmsimulationworld_get_agent_pos_y_mm(this.__wbg_ptr, entity_id);
+        return ret[0] === 0 ? undefined : ret[1];
+    }
+    /**
+     * @param {bigint} seed
+     */
+    constructor(seed) {
+        const ret = wasm.wasmsimulationworld_new(seed);
+        this.__wbg_ptr = ret;
+        WasmSimulationWorldFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Spatial box query returning matching entity IDs as strings (for u64 JS precision).
+     * @param {bigint} min_x_mm
+     * @param {bigint} min_y_mm
+     * @param {bigint} max_x_mm
+     * @param {bigint} max_y_mm
+     * @returns {string[]}
+     */
+    query_agents_in_bounds(min_x_mm, min_y_mm, max_x_mm, max_y_mm) {
+        const ret = wasm.wasmsimulationworld_query_agents_in_bounds(this.__wbg_ptr, min_x_mm, min_y_mm, max_x_mm, max_y_mm);
+        var v1 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
+     * @param {bigint} entity_id
+     * @param {bigint} x_mm
+     * @param {bigint} y_mm
+     * @returns {boolean}
+     */
+    register_agent(entity_id, x_mm, y_mm) {
+        const ret = wasm.wasmsimulationworld_register_agent(this.__wbg_ptr, entity_id, x_mm, y_mm);
+        return ret !== 0;
+    }
+    /**
+     * @returns {number}
+     */
+    step_tick() {
+        const ret = wasm.wasmsimulationworld_step_tick(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @param {bigint} target_tick
+     * @param {number} sequence
+     * @param {bigint} actor_did
+     * @param {number} command_opcode
+     * @param {bigint} target_entity
+     * @param {bigint} arg0
+     * @param {bigint} arg1
+     */
+    submit_command(target_tick, sequence, actor_did, command_opcode, target_entity, arg0, arg1) {
+        const ret = wasm.wasmsimulationworld_submit_command(this.__wbg_ptr, target_tick, sequence, actor_did, command_opcode, target_entity, arg0, arg1);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+}
+if (Symbol.dispose) WasmSimulationWorld.prototype[Symbol.dispose] = WasmSimulationWorld.prototype.free;
 
 /**
  * Legacy alias — prefer `QualiaPortal`.
@@ -1132,6 +2058,33 @@ export function black_scholes_wasm(val) {
 }
 
 /**
+ * Evaluates input-output multipliers and total requirements via the Leontief inverse (I - A)^(-1).
+ * @param {any} val
+ * @returns {any}
+ */
+export function calculate_leontief_multipliers_wasm(val) {
+    const ret = wasm.calculate_leontief_multipliers_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluates distributional and welfare metrics (Gini, Atkinson index, Palma ratio,
+ * mean, median, P10, P90) and emits an auditable `CalculationReceipt`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function calculate_welfare_metrics_wasm(val) {
+    const ret = wasm.calculate_welfare_metrics_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Symbolic derivative. Input `{ expr, var }` (e.g. `{ "expr":"x^3 - 2*x^2 + 5",
  * "var":"x" }`) → `{ derivative }`. The result is simplified, then rendered with the
  * `Expr` `Display` (fully parenthesised). Errors on a parse failure.
@@ -1226,11 +2179,37 @@ export function cas_solve_quadratic_wasm(val) {
 }
 
 /**
+ * But-for / reachability causation (`causal::caused`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function causal_caused_wasm(val) {
+    const ret = wasm.causal_caused_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {any} val
  * @returns {any}
  */
 export function check_drug_interactions_wasm(val) {
     const ret = wasm.check_drug_interactions_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Description-logic subsumption check (`check_subsumption_quin`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function check_subsumption_wasm(val) {
+    const ret = wasm.check_subsumption_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -1314,6 +2293,21 @@ export function compile_query_to_json(query) {
 }
 
 /**
+ * Compile Turtle / N3 `sh:NodeShape` documents into ShapeSpec-compatible JSON (UE-050).
+ * @param {string} turtle
+ * @returns {any}
+ */
+export function compile_shacl_turtle_wasm(turtle) {
+    const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.compile_shacl_turtle_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {any} val
  * @returns {any}
  */
@@ -1331,6 +2325,19 @@ export function compute_framingham_risk_wasm(val) {
  */
 export function compute_molecular_descriptors_wasm(val) {
     const ret = wasm.compute_molecular_descriptors_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluates ordinary least squares regression with complete diagnostics and receipt.
+ * @param {any} val
+ * @returns {any}
+ */
+export function compute_ols_diagnostics_wasm(val) {
+    const ret = wasm.compute_ols_diagnostics_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -1487,6 +2494,19 @@ export function crypto_sha512(val) {
 }
 
 /**
+ * Dummy design. `{ categories:number[] }` → matrix + labels.
+ * @param {any} val
+ * @returns {any}
+ */
+export function design_dummies_wasm(val) {
+    const ret = wasm.design_dummies_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} json
  * @returns {any}
  */
@@ -1513,6 +2533,17 @@ export function detect_functional_groups_wasm(val) {
 }
 
 /**
+ * @returns {any}
+ */
+export function device_storage_policy_wasm() {
+    const ret = wasm.device_storage_policy_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Enforces the rights ontology prior to transmission (e.g., checking DID constraints)
  * @param {bigint} subject_did
  * @returns {boolean}
@@ -1520,6 +2551,41 @@ export function detect_functional_groups_wasm(val) {
 export function enforce_rights_ontology(subject_did) {
     const ret = wasm.enforce_rights_ontology(subject_did);
     return ret !== 0;
+}
+
+/**
+ * @param {Uint8Array} bytes
+ * @returns {any}
+ */
+export function entity_verify_10d_wasm(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.entity_verify_10d_wasm(ptr0, len0);
+    return ret;
+}
+
+/**
+ * @param {Uint8Array} bytes
+ * @returns {any}
+ */
+export function entity_verify_bundle_wasm(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.entity_verify_bundle_wasm(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Enumerate ASP stable-model world contexts (`enumerate_stable_models`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function enumerate_stable_models_wasm(val) {
+    const ret = wasm.enumerate_stable_models_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1533,6 +2599,32 @@ export function enforce_rights_ontology(subject_did) {
 export function estimate_browser_storage() {
     const ret = wasm.estimate_browser_storage();
     return ret;
+}
+
+/**
+ * Evaluate deontic norms in a quin frame (`evaluate_deontic_contract`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_deontic_wasm(val) {
+    const ret = wasm.evaluate_deontic_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Evaluate epistemic claims (`evaluate_epistemic_frame`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function evaluate_epistemic_wasm(val) {
+    const ret = wasm.evaluate_epistemic_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1560,30 +2652,16 @@ export function evaluate_lipinski_wasm(val) {
 }
 
 /**
- * Evaluate all 7 N3 clinical rules against a Turtle document.
- *
- * Returns a JSON array of triggered patterns:
- * `[{"pattern":"ChronicSleepDebt","confidence":"high","routingLane":2,"n3Source":"sleep_debt.n3"},...]`
- *
- * Empty array = no concerns found in the supplied health data.
- * Routing lane 2 = BilateralMicroCommons (N3Logic implication rules requiring identity context).
- * Routing lane 0 = PassthroughStandard (simple threshold flags).
- * @param {string} turtle
- * @returns {string}
+ * Evaluate an LTL formula against a quin trace (`evaluate_ltl_trace`).
+ * @param {any} val
+ * @returns {any}
  */
-export function evaluate_n3_rules(turtle) {
-    let deferred2_0;
-    let deferred2_1;
-    try {
-        const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.evaluate_n3_rules(ptr0, len0);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+export function evaluate_ltl_trace_wasm(val) {
+    const ret = wasm.evaluate_ltl_trace_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1762,6 +2840,19 @@ export function export_tensor_slice_wasm(max_nodes) {
  */
 export function forward_chain_wasm(val) {
     const ret = wasm.forward_chain_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Fuzzy t-norm (Gödel min / Łukasiewicz / product).
+ * @param {any} val
+ * @returns {any}
+ */
+export function fuzzy_t_norm_wasm(val) {
+    const ret = wasm.fuzzy_t_norm_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -2044,6 +3135,15 @@ export function get_engine_version() {
 }
 
 /**
+ * Machine-readable SHACL capability and constraint coverage manifest (QW-05).
+ * @returns {any}
+ */
+export function get_shacl_capability_manifest_wasm() {
+    const ret = wasm.get_shacl_capability_manifest_wasm();
+    return ret;
+}
+
+/**
  * Fuzzy RDF graph similarity (Ma, Li & Ma) — degree-aware Jaccard and Dice over two
  * sets of weighted triples. Terms are interned term ids (non-negative integers);
  * degrees are membership values in `[0,1]`. Two empty graphs are defined as 1.0.
@@ -2142,31 +3242,6 @@ export function graph_spreading_activation(val) {
 }
 
 /**
- * @param {string} content
- * @returns {string}
- */
-export function heart_rate_turtle_from_csv(content) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.heart_rate_turtle_from_csv(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
-    }
-}
-
-/**
  * Phase 2B: async WebGPU decode — yields to the browser event loop on every `map_async`.
  * Returns a JS `Promise`; use `await inferWasmAsync(...)` from module code.
  * @param {string} prompt
@@ -2207,6 +3282,27 @@ export function inferWasmStreaming(prompt, on_token) {
     const ptr0 = passStringToWasm0(prompt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.inferWasmStreaming(ptr0, len0, on_token);
+    return ret;
+}
+
+/**
+ * Streaming inference that additionally accepts grounded chat-graph thread
+ * context (e.g. from `format_thread_context_to`), injected as a typed
+ * `RequestPart::chat_graph` ahead of the user prompt.
+ * @param {string} prompt
+ * @param {string} graph_context
+ * @param {string | null | undefined} chat_graph_context
+ * @param {Function} on_token
+ * @returns {Promise<string>}
+ */
+export function inferWasmStreamingWithChatGraph(prompt, graph_context, chat_graph_context, on_token) {
+    const ptr0 = passStringToWasm0(prompt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(graph_context, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    var ptr2 = isLikeNone(chat_graph_context) ? 0 : passStringToWasm0(chat_graph_context, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len2 = WASM_VECTOR_LEN;
+    const ret = wasm.inferWasmStreamingWithChatGraph(ptr0, len0, ptr1, len1, ptr2, len2, on_token);
     return ret;
 }
 
@@ -2368,6 +3464,34 @@ export function is_opfs_block_cached(block_index) {
 }
 
 /**
+ * Return the pinned Qualia JSON-LD 1.1 context + SHA-256 digest (UE-012).
+ *
+ * Packages should embed `context` and record `digest` on receipts — do not
+ * fetch remote `@context` URLs at admission time.
+ * @returns {any}
+ */
+export function jsonld_context_digest_wasm() {
+    const ret = wasm.jsonld_context_digest_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Hohfeld correlative position for a jural opcode.
+ * @param {any} val
+ * @returns {any}
+ */
+export function jural_correlative_wasm(val) {
+    const ret = wasm.jural_correlative_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Determinant of a square matrix via LU (partial pivoting).
  * Input `{ rows, cols, data }` (rows==cols) → `{ determinant }`.
  * @param {any} val
@@ -2486,6 +3610,32 @@ export function la_transpose_wasm(val) {
  */
 export function list_capabilities_wasm() {
     const ret = wasm.list_capabilities_wasm();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {Uint8Array} bundle_bytes
+ * @returns {any}
+ */
+export function list_hmc_bundle_entries_wasm(bundle_bytes) {
+    const ptr0 = passArray8ToWasm0(bundle_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.list_hmc_bundle_entries_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Names that are intentionally native-only (UE-035/044/045) — never stubbed in browser.
+ * @returns {any}
+ */
+export function list_native_only_capabilities_wasm() {
+    const ret = wasm.list_native_only_capabilities_wasm();
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -2887,6 +4037,20 @@ export function ode_solver(input_json) {
 }
 
 /**
+ * Multiple OLS. Input `{ x:number[][], y:number[], fit_intercept?:bool }` →
+ * coefficients, SE, t, p, R², adj-R², F, residuals, fitted, n, k.
+ * @param {any} val
+ * @returns {any}
+ */
+export function ols_multiple_wasm(val) {
+    const ret = wasm.ols_multiple_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} input_json
  * @returns {string}
  */
@@ -2946,6 +4110,24 @@ export function pack_quins_into_superblock(seq_id, owner_did, raw_quin_bytes) {
 }
 
 /**
+ * Package exposure receipt: context + shapes + vibe AST digests (UE-053).
+ * @param {string} shapes_json
+ * @param {Uint8Array | null} [vibe_program_cbor]
+ * @returns {any}
+ */
+export function package_exposure_manifest_wasm(shapes_json, vibe_program_cbor) {
+    const ptr0 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(vibe_program_cbor) ? 0 : passArray8ToWasm0(vibe_program_cbor, wasm.__wbindgen_malloc);
+    var len1 = WASM_VECTOR_LEN;
+    const ret = wasm.package_exposure_manifest_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {Uint8Array} payload
  * @returns {any}
  */
@@ -2962,20 +4144,6 @@ export function parse_cbor_ld_wasm(payload) {
  */
 export function parse_csv_wasm(val) {
     const ret = wasm.parse_csv_wasm(val);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-}
-
-/**
- * @param {string} content
- * @returns {any}
- */
-export function parse_heart_rate_csv_json(content) {
-    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.parse_heart_rate_csv_json(ptr0, len0);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -3006,6 +4174,24 @@ export function parse_json_wasm(payload) {
 }
 
 /**
+ * Parse JSON-LD 1.1 text into packed quins (Civics primary semantic format).
+ *
+ * Profile: `application/ld+json`. Context must be embedded/pinned by the caller;
+ * this binding does not fetch remote contexts.
+ * @param {string} payload
+ * @returns {any}
+ */
+export function parse_jsonld_wasm(payload) {
+    const ptr0 = passStringToWasm0(payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_jsonld_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} payload
  * @returns {any}
  */
@@ -3017,27 +4203,17 @@ export function parse_n3logic_wasm(payload) {
 }
 
 /**
- * @param {string} content
+ * Parse an RDF document by Solid/LDP Content-Type (or Qualia format id).
+ * @param {string} content_type
+ * @param {string} payload
  * @returns {any}
  */
-export function parse_sleep_csv_json(content) {
-    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+export function parse_rdf_document_wasm(content_type, payload) {
+    const ptr0 = passStringToWasm0(content_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.parse_sleep_csv_json(ptr0, len0);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-}
-
-/**
- * @param {string} content
- * @returns {any}
- */
-export function parse_steps_csv_json(content) {
-    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.parse_steps_csv_json(ptr0, len0);
+    const ptr1 = passStringToWasm0(payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.parse_rdf_document_wasm(ptr0, len0, ptr1, len1);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -3056,20 +4232,6 @@ export function parse_turtle_wasm(payload) {
 }
 
 /**
- * @param {string} content
- * @returns {any}
- */
-export function parse_weight_csv_json(content) {
-    const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.parse_weight_csv_json(ptr0, len0);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-}
-
-/**
  * Parse and compile a yaml-ld-q42 document (workspace pages or HCF HypermediaDocument) into quins and lexicon.
  * @param {string} source
  * @param {bigint | null} [namespace]
@@ -3084,6 +4246,27 @@ export function parse_yaml_ld_q42_wasm(source, namespace, lamport) {
         throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function plan_device_storage_wasm(val) {
+    const ret = wasm.plan_device_storage_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Page-side timeout. Stops a late surface from being adopted. If the canvas
+ * was already claimed, [`portal_webgpu_canvas_claimed`] is true and the page
+ * must replace that element before the proof tick.
+ */
+export function portal_abort_webgpu() {
+    wasm.portal_abort_webgpu();
 }
 
 /**
@@ -3116,10 +4299,34 @@ export function portal_init_webgpu(canvas) {
 }
 
 /**
+ * True once WebGPU has called `getContext("webgpu")` on the init canvas.
+ * A 2d tick on that same element cannot paint; replace it.
+ * @returns {boolean}
+ */
+export function portal_webgpu_canvas_claimed() {
+    const ret = wasm.portal_webgpu_canvas_claimed();
+    return ret !== 0;
+}
+
+/**
  * @returns {number}
  */
 export function predict_receptor_binding_wasm() {
     const ret = wasm.predict_receptor_binding_wasm();
+    return ret;
+}
+
+/**
+ * Probe browser graphics APIs without claiming the page's presentation canvas.
+ *
+ * `selected_backend` is a recommendation from API/adapter availability only;
+ * actual initialization can still fail because of surface compatibility,
+ * memory pressure, or device loss. Callers must use the result of
+ * `portal_init_webgpu` / `portal_init_webgl2` as the final selection receipt.
+ * @returns {Promise<any>}
+ */
+export function probe_portal_graphics() {
+    const ret = wasm.probe_portal_graphics();
     return ret;
 }
 
@@ -3143,6 +4350,42 @@ export function q42FormatVersion() {
 }
 
 /**
+ * RDFC-1.0 graph hash — **honest fail-closed** until a conforming implementation ships (UE-013).
+ *
+ * Never returns a digest labelled as RDFC-1.0. Optionally includes a
+ * `provisional_spo_sha256` under profile `qualia:provisional-spo-sha256-v1`
+ * for scaffolding only.
+ * @param {any} val
+ * @returns {any}
+ */
+export function rdfc10_graph_hash_wasm(val) {
+    const ret = wasm.rdfc10_graph_hash_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {Uint8Array} bundle_bytes
+ * @param {string} key
+ * @returns {Uint8Array}
+ */
+export function read_hmc_bundle_entry_wasm(bundle_bytes, key) {
+    const ptr0 = passArray8ToWasm0(bundle_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.read_hmc_bundle_entry_wasm(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
  * Read a cached SuperBlock from the OPFS vault.
  *
  * Returns the raw 40 960 bytes as `Uint8Array`, or `null` if the block has not
@@ -3154,6 +4397,25 @@ export function q42FormatVersion() {
 export function read_opfs_block(block_index) {
     const ret = wasm.read_opfs_block(block_index);
     return ret;
+}
+
+/**
+ * Select the next recovery backend using the shared VibeScript policy.
+ * @param {boolean} webgpu_retry_allowed
+ * @param {boolean} webgl2_allowed
+ * @returns {string}
+ */
+export function recommend_graphics_recovery(webgpu_retry_allowed, webgl2_allowed) {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.recommend_graphics_recovery(webgpu_retry_allowed, webgl2_allowed);
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
 }
 
 /**
@@ -3174,6 +4436,19 @@ export function releaseWebgpuEngine() {
  */
 export function resolve_lww_wasm(local_val, remote_val) {
     const ret = wasm.resolve_lww_wasm(local_val, remote_val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Route contradictions into an isolated context (`route_paraconsistent`).
+ * @param {any} val
+ * @returns {any}
+ */
+export function route_paraconsistent_wasm(val) {
+    const ret = wasm.route_paraconsistent_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -3296,6 +4571,8 @@ export function serialize_json_wasm(val) {
 }
 
 /**
+ * Serialize quins to RDF. `format` accepts Qualia ids (`turtle`, `jsonld`, `n3`)
+ * or Solid MIME types (`text/turtle`, `application/ld+json`, `text/n3`).
  * @param {any} val
  * @returns {any}
  */
@@ -3322,28 +4599,18 @@ export function simulate_gbm_path_wasm(val) {
 }
 
 /**
- * @param {string} content
- * @returns {string}
+ * Negotiate Solid `Accept` → preferred RDF Content-Type.
+ * @param {string} accept
+ * @returns {any}
  */
-export function sleep_turtle_from_csv(content) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.sleep_turtle_from_csv(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+export function solid_negotiate_accept_wasm(accept) {
+    const ptr0 = passStringToWasm0(accept, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.solid_negotiate_accept_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -3405,6 +4672,19 @@ export function stats_anova_wasm(val) {
 }
 
 /**
+ * Breusch–Pagan. `{ residuals, x:number[][] }` (x = original predictors).
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_breusch_pagan_wasm(val) {
+    const ret = wasm.stats_breusch_pagan_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Pearson χ² goodness-of-fit test, `Σ(Oᵢ−Eᵢ)²/Eᵢ`, dof = k−1. Input
  * `{ observed:[..], expected:[..] }` (equal length ≥ 2, all expected > 0) →
  * `{ statistic, p_value, dof }`. Errors on length mismatch, len < 2, or a
@@ -3453,6 +4733,19 @@ export function stats_chi_squared_dist_wasm(val) {
 }
 
 /**
+ * Chow structural break. `{ x, y, break_index }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_chow_test_wasm(val) {
+    const ret = wasm.stats_chow_test_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Pearson, Spearman, and Kendall correlation of two equal-length series, plus the
  * two-sided p-value for the Pearson coefficient. Input `{ x:[..], y:[..] }` →
  * `{ pearson, spearman, kendall, pearson_p_value }`. Each coefficient is `null`
@@ -3479,6 +4772,19 @@ export function stats_correlation_wasm(val) {
  */
 export function stats_describe_wasm(val) {
     const ret = wasm.stats_describe_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Durbin–Watson. `{ residuals:[..] }` → `{ statistic, approx_p_value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_durbin_watson_wasm(val) {
+    const ret = wasm.stats_durbin_watson_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -3516,6 +4822,45 @@ export function stats_friedman_wasm(val) {
 }
 
 /**
+ * Influence (leverage / Cook / studentized). `{ x, y }` — flags only, never drops.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_influence_wasm(val) {
+    const ret = wasm.stats_influence_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Jarque–Bera on a residual vector. `{ residuals:[..] }` → `{ statistic, p_value, skewness, excess_kurtosis }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_jarque_bera_wasm(val) {
+    const ret = wasm.stats_jarque_bera_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * LDA. `{ x:number[][], y:number[] (int class labels) }` → classes + predictions.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_lda_wasm(val) {
+    const ret = wasm.stats_lda_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Simple (one-predictor) OLS linear regression of `y` on `x`. Input
  * `{ x:[..], y:[..] }` (equal length, n ≥ 3, x not constant) →
  * `{ slope, intercept, r_squared, residual_std_error, slope_std_error, slope_t,
@@ -3526,6 +4871,32 @@ export function stats_friedman_wasm(val) {
  */
 export function stats_linear_regression_wasm(val) {
     const ret = wasm.stats_linear_regression_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Binary logit. `{ x:number[][], y:number[] (0/1), fit_intercept?:bool }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_logit_wasm(val) {
+    const ret = wasm.stats_logit_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Mahalanobis outliers. `{ x:number[][], alpha?:number }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_mahalanobis_outliers_wasm(val) {
+    const ret = wasm.stats_mahalanobis_outliers_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -3579,6 +4950,19 @@ export function stats_one_sample_t_wasm(val) {
 }
 
 /**
+ * Univariate outlier screen. `{ data:[..] }` → mean/median + 2σ/3σ indices.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_outlier_screen_univariate_wasm(val) {
+    const ret = wasm.stats_outlier_screen_univariate_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Paired t-test (one-sample t-test of the paired differences against 0). Input
  * `{ a:[..], b:[..] }` (equal length) → `{ t_statistic, p_value,
  * degrees_of_freedom, ci_lower, ci_upper }`. Errors if lengths differ or n < 2.
@@ -3601,6 +4985,71 @@ export function stats_paired_t_wasm(val) {
  */
 export function stats_quantile_wasm(val) {
     const ret = wasm.stats_quantile_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Ramsey RESET. `{ x, y, power_max?:number }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_ramsey_reset_wasm(val) {
+    const ret = wasm.stats_ramsey_reset_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Residual runs test. `{ residuals:[..] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_residual_runs_wasm(val) {
+    const ret = wasm.stats_residual_runs_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Residual symmetry. `{ residuals:[..] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_residual_symmetry_wasm(val) {
+    const ret = wasm.stats_residual_symmetry_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Spurious-regression guard. `{ y, x?:number[] }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_spurious_guard_wasm(val) {
+    const ret = wasm.stats_spurious_guard_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Backward stepwise (exploratory). `{ x, y, exit_alpha?, max_steps? }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_stepwise_backward_wasm(val) {
+    const ret = wasm.stats_stepwise_backward_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -3641,28 +5090,29 @@ export function stats_two_sample_t_wasm(val) {
 }
 
 /**
- * @param {string} content
- * @returns {string}
+ * VIF per predictor column. `{ x:number[][] }` → `{ vif:[..] }`.
+ * @param {any} val
+ * @returns {any}
  */
-export function steps_turtle_from_csv(content) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.steps_turtle_from_csv(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+export function stats_vif_wasm(val) {
+    const ret = wasm.stats_vif_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * STIT: did agent bring about content?
+ * @param {any} val
+ * @returns {any}
+ */
+export function stit_brought_about_wasm(val) {
+    const ret = wasm.stit_brought_about_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -3688,6 +5138,19 @@ export function thermodynamics_mcmc(input_json) {
     } finally {
         wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
+}
+
+/**
+ * Series transform. `{ values, kind: "log"|"log1p"|"sqrt"|"square"|"reciprocal"|"exp" }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function transform_series_wasm(val) {
+    const ret = wasm.transform_series_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -3797,59 +5260,6 @@ export function validate_fhir_observation_wasm(val) {
 }
 
 /**
- * Evaluate a named policy constraint against a single quint (s,p,o,c,m).
- *
- * Supported constraint names:
- *   "cooperative_obligation" — PermissiveCommons work obligation gate (lane 1)
- *   "guardian_identity"      — BilateralMicroCommons guardian auth gate (lane 2)
- *   "commercial_block"       — BilateralMicroCommons anti-commercial gate (lane 2)
- *
- * Returns JSON: `{"passed":bool,"routingLane":N}`
- * @param {string} constraint
- * @param {bigint} s
- * @param {bigint} p
- * @param {bigint} o
- * @param {bigint} c
- * @param {bigint} m
- * @returns {string}
- */
-export function validate_health_quin(constraint, s, p, o, c, m) {
-    let deferred2_0;
-    let deferred2_1;
-    try {
-        const ptr0 = passStringToWasm0(constraint, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.validate_health_quin(ptr0, len0, s, p, o, c, m);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-    }
-}
-
-/**
- * Validate a Turtle document against built-in health shapes (SPARQL ASK constraints).
- * Returns a JSON string: `{"valid":bool,"checked":N,"violations":[{"shape":"...","message":"..."}]}`
- * @param {string} turtle
- * @returns {string}
- */
-export function validate_health_turtle(turtle) {
-    let deferred2_0;
-    let deferred2_1;
-    try {
-        const ptr0 = passStringToWasm0(turtle, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.validate_health_turtle(ptr0, len0);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-    }
-}
-
-/**
  * @param {any} val
  * @returns {any}
  */
@@ -3862,81 +5272,80 @@ export function validate_shacl_constraint_wasm(val) {
 }
 
 /**
- * Serialize vault biometric records (JSON array from wf-biometrics IDB store) → Turtle.
- * @param {string} json
- * @returns {string}
+ * Validates raw packed 48-byte Quins against a list of JSON ShapeSpecs.
+ * @param {Uint8Array} db_bytes
+ * @param {string} shapes_json
+ * @returns {any}
  */
-export function vault_biometrics_to_turtle(json) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.vault_biometrics_to_turtle(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+export function validate_shacl_graph_wasm(db_bytes, shapes_json) {
+    const ptr0 = passArray8ToWasm0(db_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.validate_shacl_graph_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
- * Serialize vault diet log entries (JSON array from wf-dl IDB store) → Turtle.
- * @param {string} json
- * @returns {string}
+ * Full graph SHACL validation from N3/N-Triples data and JSON ShapeSpecs.
+ * Returns the complete `ValidationReport` preserving conforms, focus node, path,
+ * severity, and constraint component.
+ * @param {string} data_n3
+ * @param {string} shapes_json
+ * @returns {any}
  */
-export function vault_diet_to_turtle(json) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.vault_diet_to_turtle(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+export function validate_shacl_json_wasm(data_n3, shapes_json) {
+    const ptr0 = passStringToWasm0(data_n3, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(shapes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.validate_shacl_json_wasm(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
- * Serialize vault medication records (JSON array from wf-meds IDB store) → Turtle.
- * @param {string} json
- * @returns {string}
+ * Values abuse-check (agency.n3 G1/G1' personhood guard) — WASM surface for Civics.
+ * @param {any} val
+ * @returns {any}
  */
-export function vault_meds_to_turtle(json) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.vault_meds_to_turtle(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+export function values_check_wasm(val) {
+    const ret = wasm.values_check_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Consent non-coerced guard (`capacity::detect_duress` inverted).
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_consent_non_coerced_wasm(val) {
+    const ret = wasm.values_consent_non_coerced_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Harm-below-ceiling guard (wasm-safe numeric; CAS marginal-harm stays native).
+ * @param {any} val
+ * @returns {any}
+ */
+export function values_harm_below_ceiling_wasm(val) {
+    const ret = wasm.values_harm_below_ceiling_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -3953,6 +5362,21 @@ export function verifyFirstLayerQuant() {
 }
 
 /**
+ * @param {any} manifest
+ * @param {string} payload_sha256_hex
+ * @returns {any}
+ */
+export function verify_backup_manifest_wasm(manifest, payload_sha256_hex) {
+    const ptr0 = passStringToWasm0(payload_sha256_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verify_backup_manifest_wasm(manifest, ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Verify a signed law package (JSON) against an Ed25519 public key.
  * @param {string} json
  * @param {Uint8Array} public_key
@@ -3965,6 +5389,32 @@ export function verify_law_package_wasm(json, public_key) {
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verify_law_package_wasm(ptr0, len0, ptr1, len1);
     return ret !== 0;
+}
+
+/**
+ * Multiple OLS + verification report with Civics calculation receipt.
+ * @param {any} val
+ * @returns {any}
+ */
+export function verify_regression_model_receipt_wasm(val) {
+    const ret = wasm.verify_regression_model_receipt_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Full verification report + soft/hard flags. `{ x, y, alpha?, strict? }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function verify_regression_model_wasm(val) {
+    const ret = wasm.verify_regression_model_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -4061,31 +5511,6 @@ export function webizen_sign_agreement(_agreement_id, _private_key_mock) {
     const ptr0 = passStringToWasm0(_private_key_mock, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     wasm.webizen_sign_agreement(_agreement_id, ptr0, len0);
-}
-
-/**
- * @param {string} content
- * @returns {string}
- */
-export function weight_turtle_from_csv(content) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.weight_turtle_from_csv(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
-    }
 }
 
 /**
@@ -4269,6 +5694,9 @@ function __wbg_get_imports() {
             const ret = typeof(v) === 'boolean' ? v : undefined;
             return isLikeNone(ret) ? 0xFFFFFF : ret ? 1 : 0;
         },
+        __wbg___wbindgen_copy_to_typed_array_c5728021fabd0236: function(arg0, arg1, arg2) {
+            new Uint8Array(arg2.buffer, arg2.byteOffset, arg2.byteLength).set(getArrayU8FromWasm0(arg0, arg1));
+        },
         __wbg___wbindgen_debug_string_8a447059637473e2: function(arg0, arg1) {
             const ret = debugString(arg1);
             const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -4333,6 +5761,9 @@ function __wbg_get_imports() {
         __wbg__wbg_cb_unref_33c39e13d73b25f6: function(arg0) {
             arg0._wbg_cb_unref();
         },
+        __wbg_activeTexture_525ee3068cb9e8d5: function(arg0, arg1) {
+            arg0.activeTexture(arg1 >>> 0);
+        },
         __wbg_addColorStop_d8d26268addcc37f: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             arg0.addColorStop(arg1, getStringFromWasm0(arg2, arg3));
         }, arguments); },
@@ -4364,14 +5795,23 @@ function __wbg_get_imports() {
         __wbg_bindBuffer_d3111de6861cb875: function(arg0, arg1, arg2) {
             arg0.bindBuffer(arg1 >>> 0, arg2);
         },
+        __wbg_bindFramebuffer_63e837a5dc0accfb: function(arg0, arg1, arg2) {
+            arg0.bindFramebuffer(arg1 >>> 0, arg2);
+        },
+        __wbg_bindRenderbuffer_7f84d28a1462a95a: function(arg0, arg1, arg2) {
+            arg0.bindRenderbuffer(arg1 >>> 0, arg2);
+        },
+        __wbg_bindTexture_7ab28ff4ff3dc506: function(arg0, arg1, arg2) {
+            arg0.bindTexture(arg1 >>> 0, arg2);
+        },
         __wbg_bindVertexArray_c391bd47303d75cd: function(arg0, arg1) {
             arg0.bindVertexArray(arg1);
         },
-        __wbg_blendFunc_b15af02643e188f1: function(arg0, arg1, arg2) {
-            arg0.blendFunc(arg1 >>> 0, arg2 >>> 0);
-        },
         __wbg_bufferData_99bbbc63f02251c4: function(arg0, arg1, arg2, arg3) {
             arg0.bufferData(arg1 >>> 0, arg2, arg3 >>> 0);
+        },
+        __wbg_bufferSubData_2270f1b9db71e642: function(arg0, arg1, arg2, arg3) {
+            arg0.bufferSubData(arg1 >>> 0, arg2, arg3);
         },
         __wbg_byteLength_e497be232a57cf88: function(arg0) {
             const ret = arg0.byteLength;
@@ -4385,14 +5825,27 @@ function __wbg_get_imports() {
             const ret = arg0.call(arg1);
             return ret;
         }, arguments); },
+        __wbg_checkFramebufferStatus_eea40883c38f818f: function(arg0, arg1) {
+            const ret = arg0.checkFramebufferStatus(arg1 >>> 0);
+            return ret;
+        },
         __wbg_clearColor_0ae8a95dc1112d5f: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.clearColor(arg1, arg2, arg3, arg4);
         },
         __wbg_clearDepth_05c17028494ee4dd: function(arg0, arg1) {
             arg0.clearDepth(arg1);
         },
+        __wbg_clearRect_844ea1fa6026e6b1: function(arg0, arg1, arg2, arg3, arg4) {
+            arg0.clearRect(arg1, arg2, arg3, arg4);
+        },
         __wbg_clear_dadcb3e2929388b0: function(arg0, arg1) {
             arg0.clear(arg1 >>> 0);
+        },
+        __wbg_clip_8ac1823db730edf8: function(arg0) {
+            arg0.clip();
+        },
+        __wbg_closePath_47136fd7a8a2f043: function(arg0) {
+            arg0.closePath();
         },
         __wbg_close_966124c5dc910fa4: function(arg0) {
             const ret = arg0.close();
@@ -4412,6 +5865,9 @@ function __wbg_get_imports() {
         }, arguments); },
         __wbg_copyTextureToBuffer_ed6e67a77ecb768d: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             arg0.copyTextureToBuffer(arg1, arg2, arg3);
+        }, arguments); },
+        __wbg_copyTextureToTexture_c3f8f1b9c260ecf4: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            arg0.copyTextureToTexture(arg1, arg2, arg3);
         }, arguments); },
         __wbg_createBindGroupLayout_49a7e2b3d076afcf: function() { return handleError(function (arg0, arg1) {
             const ret = arg0.createBindGroupLayout(arg1);
@@ -4441,6 +5897,10 @@ function __wbg_get_imports() {
             const ret = arg0.createElement(getStringFromWasm0(arg1, arg2));
             return ret;
         }, arguments); },
+        __wbg_createFramebuffer_4a250944a4542bbc: function(arg0) {
+            const ret = arg0.createFramebuffer();
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
         __wbg_createLinearGradient_e941e9b32e45fd4d: function(arg0, arg1, arg2, arg3, arg4) {
             const ret = arg0.createLinearGradient(arg1, arg2, arg3, arg4);
             return ret;
@@ -4457,6 +5917,10 @@ function __wbg_get_imports() {
             const ret = arg0.createRenderPipeline(arg1);
             return ret;
         }, arguments); },
+        __wbg_createRenderbuffer_5ada3a0bc7cf3a43: function(arg0) {
+            const ret = arg0.createRenderbuffer();
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
         __wbg_createSampler_c8ffb3c8d565f704: function(arg0, arg1) {
             const ret = arg0.createSampler(arg1);
             return ret;
@@ -4473,6 +5937,10 @@ function __wbg_get_imports() {
             const ret = arg0.createTexture(arg1);
             return ret;
         }, arguments); },
+        __wbg_createTexture_3eed23cb87dd35fc: function(arg0) {
+            const ret = arg0.createTexture();
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
         __wbg_createVertexArray_8685feb21901c932: function(arg0) {
             const ret = arg0.createVertexArray();
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -4485,6 +5953,21 @@ function __wbg_get_imports() {
             const ret = arg0.createWritable();
             return ret;
         },
+        __wbg_deleteBuffer_d0fb5f1492ee8c6f: function(arg0, arg1) {
+            arg0.deleteBuffer(arg1);
+        },
+        __wbg_deleteFramebuffer_4c0996be4bc30a67: function(arg0, arg1) {
+            arg0.deleteFramebuffer(arg1);
+        },
+        __wbg_deleteRenderbuffer_c9320d711ddf649b: function(arg0, arg1) {
+            arg0.deleteRenderbuffer(arg1);
+        },
+        __wbg_deleteTexture_c1c58550dc55af5c: function(arg0, arg1) {
+            arg0.deleteTexture(arg1);
+        },
+        __wbg_deleteVertexArray_8ee078fdb1fb1ffe: function(arg0, arg1) {
+            arg0.deleteVertexArray(arg1);
+        },
         __wbg_depthFunc_31b183b5b8ee478e: function(arg0, arg1) {
             arg0.depthFunc(arg1 >>> 0);
         },
@@ -4494,6 +5977,9 @@ function __wbg_get_imports() {
             const len1 = WASM_VECTOR_LEN;
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbg_disable_cb1b3e6c1cee5202: function(arg0, arg1) {
+            arg0.disable(arg1 >>> 0);
         },
         __wbg_dispatchWorkgroups_afb2344298c62227: function(arg0, arg1, arg2, arg3) {
             arg0.dispatchWorkgroups(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0);
@@ -4505,6 +5991,9 @@ function __wbg_get_imports() {
         __wbg_done_b62d4a7d2286852a: function(arg0) {
             const ret = arg0.done;
             return ret;
+        },
+        __wbg_drawArrays_42dbb4b0349c8f34: function(arg0, arg1, arg2, arg3) {
+            arg0.drawArrays(arg1 >>> 0, arg2, arg3);
         },
         __wbg_drawElements_16a22ed8fb2810e3: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.drawElements(arg1 >>> 0, arg2, arg3 >>> 0, arg4);
@@ -4553,6 +6042,9 @@ function __wbg_get_imports() {
         __wbg_fillRect_3c420f5077df8d3b: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.fillRect(arg1, arg2, arg3, arg4);
         },
+        __wbg_fillText_a61e0bd03acedad0: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
+            arg0.fillText(getStringFromWasm0(arg1, arg2), arg3, arg4, arg5);
+        }, arguments); },
         __wbg_fillText_cdea0ac33ff3d2d1: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             arg0.fillText(getStringFromWasm0(arg1, arg2), arg3, arg4);
         }, arguments); },
@@ -4567,10 +6059,23 @@ function __wbg_get_imports() {
             const ret = arg0.finish();
             return ret;
         },
+        __wbg_framebufferRenderbuffer_f9d75924fbe9024a: function(arg0, arg1, arg2, arg3, arg4) {
+            arg0.framebufferRenderbuffer(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4);
+        },
+        __wbg_framebufferTexture2D_367ab597a005e8d9: function(arg0, arg1, arg2, arg3, arg4, arg5) {
+            arg0.framebufferTexture2D(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4, arg5);
+        },
         __wbg_fromCodePoint_93fb75ffd4cdf384: function() { return handleError(function (arg0) {
             const ret = String.fromCodePoint(arg0 >>> 0);
             return ret;
         }, arguments); },
+        __wbg_getAttribute_9f23675ef6df0d6b: function(arg0, arg1, arg2, arg3) {
+            const ret = arg1.getAttribute(getStringFromWasm0(arg2, arg3));
+            var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            var len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
         __wbg_getBindGroupLayout_d38545dfc4eab8d5: function(arg0, arg1) {
             const ret = arg0.getBindGroupLayout(arg1 >>> 0);
             return ret;
@@ -4603,6 +6108,10 @@ function __wbg_get_imports() {
             const ret = arg0.getError();
             return ret;
         },
+        __wbg_getExtension_11824edd67a143d8: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = arg0.getExtension(getStringFromWasm0(arg1, arg2));
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        }, arguments); },
         __wbg_getFileHandle_01abdcb9df490ed0: function(arg0, arg1, arg2) {
             const ret = arg0.getFileHandle(getStringFromWasm0(arg1, arg2));
             return ret;
@@ -4634,9 +6143,6 @@ function __wbg_get_imports() {
             const ret = arg0.getProgramParameter(arg1, arg2 >>> 0);
             return ret;
         },
-        __wbg_getRandomValues_6f269dae5feacb57: function() { return handleError(function (arg0, arg1) {
-            globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
-        }, arguments); },
         __wbg_getRandomValues_cc7f052a444bb2ce: function() { return handleError(function (arg0, arg1) {
             globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
         }, arguments); },
@@ -4690,6 +6196,13 @@ function __wbg_get_imports() {
         __wbg_height_a04613570d793df2: function(arg0) {
             const ret = arg0.height;
             return ret;
+        },
+        __wbg_id_b08632fa6ed13f45: function(arg0, arg1) {
+            const ret = arg1.id;
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         },
         __wbg_info_cf0d9a286850cd24: function(arg0) {
             const ret = arg0.info;
@@ -4878,7 +6391,7 @@ function __wbg_get_imports() {
             const ret = arg0.length;
             return ret;
         },
-        __wbg_limits_20c6f56636df7d38: function(arg0) {
+        __wbg_limits_328c61cd41512420: function(arg0) {
             const ret = arg0.limits;
             return ret;
         },
@@ -4890,6 +6403,10 @@ function __wbg_get_imports() {
         },
         __wbg_log_6b5af08dd293697f: function(arg0) {
             console.log(arg0);
+        },
+        __wbg_lost_0fa164c88f543338: function(arg0) {
+            const ret = arg0.lost;
+            return ret;
         },
         __wbg_mapAsync_52b01fa9e8f765fd: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.mapAsync(arg1 >>> 0, arg2, arg3);
@@ -5010,6 +6527,13 @@ function __wbg_get_imports() {
         __wbg_maxVertexBuffers_70ab564b25d5ac20: function(arg0) {
             const ret = arg0.maxVertexBuffers;
             return ret;
+        },
+        __wbg_message_28959d6ca4d7dda0: function(arg0, arg1) {
+            const ret = arg1.message;
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         },
         __wbg_message_4ada57a3710f1502: function(arg0, arg1) {
             const ret = arg1.message;
@@ -5141,13 +6665,17 @@ function __wbg_get_imports() {
             const ret = arg0.next;
             return ret;
         },
-        __wbg_now_d2e0afbad4edbe82: function() {
-            const ret = Date.now();
+        __wbg_of_3ed679d45555e384: function(arg0, arg1) {
+            const ret = Array.of(arg0, arg1);
             return ret;
         },
         __wbg_onSubmittedWorkDone_270d6b5a45520e79: function(arg0) {
             const ret = arg0.onSubmittedWorkDone();
             return ret;
+        },
+        __wbg_ownerDocument_b71473f1f50cd708: function(arg0) {
+            const ret = arg0.ownerDocument;
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         },
         __wbg_popErrorScope_8e7f4cbff8b758dd: function(arg0) {
             const ret = arg0.popErrorScope();
@@ -5178,6 +6706,23 @@ function __wbg_get_imports() {
             const ret = arg0.queue;
             return ret;
         },
+        __wbg_race_27bed3574f107c6d: function(arg0) {
+            const ret = Promise.race(arg0);
+            return ret;
+        },
+        __wbg_reason_b02cd587d1a09948: function(arg0) {
+            const ret = arg0.reason;
+            return (__wbindgen_enum_GpuDeviceLostReason.indexOf(ret) + 1 || 3) - 1;
+        },
+        __wbg_rect_ec6fe62084b85fe8: function(arg0, arg1, arg2, arg3, arg4) {
+            arg0.rect(arg1, arg2, arg3, arg4);
+        },
+        __wbg_renderbufferStorage_3049e13db5c4e60e: function(arg0, arg1, arg2, arg3, arg4) {
+            arg0.renderbufferStorage(arg1 >>> 0, arg2 >>> 0, arg3, arg4);
+        },
+        __wbg_replaceWith_c96b99889c4b5b79: function() { return handleError(function (arg0, arg1) {
+            arg0.replaceWith(arg1);
+        }, arguments); },
         __wbg_requestAdapter_2e6718811c735a57: function(arg0, arg1) {
             const ret = arg0.requestAdapter(arg1);
             return ret;
@@ -5189,6 +6734,12 @@ function __wbg_get_imports() {
         __wbg_resolve_d82363d90af6928a: function(arg0) {
             const ret = Promise.resolve(arg0);
             return ret;
+        },
+        __wbg_restore_6d0b3ce5b0ed7f95: function(arg0) {
+            arg0.restore();
+        },
+        __wbg_save_38619d761125d8ce: function(arg0) {
+            arg0.save();
         },
         __wbg_setAttribute_8bccfbabf2a83682: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             arg0.setAttribute(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
@@ -5323,6 +6874,9 @@ function __wbg_get_imports() {
             arg0.buffers = getArrayJsValueViewFromWasm0(arg1, arg2);
         },
         __wbg_set_bytes_per_row_c54ca96953f35774: function(arg0, arg1) {
+            arg0.bytesPerRow = arg1 >>> 0;
+        },
+        __wbg_set_bytes_per_row_d69b88eee3929c07: function(arg0, arg1) {
             arg0.bytesPerRow = arg1 >>> 0;
         },
         __wbg_set_className_19e05f9bbe754550: function(arg0, arg1, arg2) {
@@ -5490,6 +7044,9 @@ function __wbg_get_imports() {
         __wbg_set_height_ef298446b359b0c5: function(arg0, arg1) {
             arg0.height = arg1 >>> 0;
         },
+        __wbg_set_id_ee963d49b4125c0b: function(arg0, arg1, arg2) {
+            arg0.id = getStringFromWasm0(arg1, arg2);
+        },
         __wbg_set_innerHTML_30fcedd016ac76ab: function(arg0, arg1, arg2) {
             arg0.innerHTML = getStringFromWasm0(arg1, arg2);
         },
@@ -5552,6 +7109,9 @@ function __wbg_get_imports() {
         },
         __wbg_set_layout_gpu_auto_layout_mode_aeba193938b47882: function(arg0, arg1) {
             arg0.layout = __wbindgen_enum_GpuAutoLayoutMode[arg1];
+        },
+        __wbg_set_lineWidth_fef15cb5c15a6cdc: function(arg0, arg1) {
+            arg0.lineWidth = arg1;
         },
         __wbg_set_load_op_99661da6c4eab9b0: function(arg0, arg1) {
             arg0.loadOp = __wbindgen_enum_GpuLoadOp[arg1];
@@ -5619,6 +7179,9 @@ function __wbg_get_imports() {
         __wbg_set_offset_f64_b562d1367e34ef93: function(arg0, arg1) {
             arg0.offset = arg1;
         },
+        __wbg_set_offset_f64_fa66068813376ca3: function(arg0, arg1) {
+            arg0.offset = arg1;
+        },
         __wbg_set_operation_62ce44e1728c4047: function(arg0, arg1) {
             arg0.operation = __wbindgen_enum_GpuBlendOperation[arg1];
         },
@@ -5662,6 +7225,9 @@ function __wbg_get_imports() {
             arg0.resource = arg1;
         },
         __wbg_set_rows_per_image_5011f97318ee71af: function(arg0, arg1) {
+            arg0.rowsPerImage = arg1 >>> 0;
+        },
+        __wbg_set_rows_per_image_59a813ac5006e10e: function(arg0, arg1) {
             arg0.rowsPerImage = arg1 >>> 0;
         },
         __wbg_set_sample_count_eb86a8b18545b54f: function(arg0, arg1) {
@@ -5729,6 +7295,12 @@ function __wbg_get_imports() {
         },
         __wbg_set_targets_c38bd200c836d66f: function(arg0, arg1, arg2) {
             arg0.targets = getArrayJsValueViewFromWasm0(arg1, arg2);
+        },
+        __wbg_set_textAlign_8cc28de727b5df6f: function(arg0, arg1, arg2) {
+            arg0.textAlign = getStringFromWasm0(arg1, arg2);
+        },
+        __wbg_set_textBaseline_6f233751bd79619e: function(arg0, arg1, arg2) {
+            arg0.textBaseline = getStringFromWasm0(arg1, arg2);
         },
         __wbg_set_textContent_5c5fef072bd24f7a: function(arg0, arg1, arg2) {
             arg0.textContent = arg1 === 0 ? undefined : getStringFromWasm0(arg1, arg2);
@@ -5847,6 +7419,9 @@ function __wbg_get_imports() {
             const ret = arg0.storage;
             return ret;
         },
+        __wbg_strokeRect_a9cb57c3713e908d: function(arg0, arg1, arg2, arg3, arg4) {
+            arg0.strokeRect(arg1, arg2, arg3, arg4);
+        },
         __wbg_stroke_d0c2cfbe28711bcb: function(arg0) {
             arg0.stroke();
         },
@@ -5861,6 +7436,12 @@ function __wbg_get_imports() {
         __wbg_submit_ce44115121cd166c: function(arg0, arg1, arg2) {
             arg0.submit(getArrayJsValueViewFromWasm0(arg1, arg2));
         },
+        __wbg_texImage2D_0a683b3fb0a19320: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
+            arg0.texImage2D(arg1 >>> 0, arg2, arg3, arg4, arg5, arg6, arg7 >>> 0, arg8 >>> 0, arg9 === 0 ? undefined : getArrayU8FromWasm0(arg9, arg10));
+        }, arguments); },
+        __wbg_texParameteri_c6efffcecb474d2f: function(arg0, arg1, arg2, arg3) {
+            arg0.texParameteri(arg1 >>> 0, arg2 >>> 0, arg3);
+        },
         __wbg_then_05edfc8a4fea5106: function(arg0, arg1, arg2) {
             const ret = arg0.then(arg1, arg2);
             return ret;
@@ -5869,8 +7450,24 @@ function __wbg_get_imports() {
             const ret = arg0.then(arg1);
             return ret;
         },
+        __wbg_then_c768c7c3e60c20ef: function(arg0, arg1) {
+            const ret = arg0.then(arg1);
+            return ret;
+        },
         __wbg_unconfigure_0a07a0a40de8988d: function(arg0) {
             arg0.unconfigure();
+        },
+        __wbg_uniform1f_3acd3f3eb50b5e11: function(arg0, arg1, arg2) {
+            arg0.uniform1f(arg1, arg2);
+        },
+        __wbg_uniform1i_e4f13604354c28ae: function(arg0, arg1, arg2) {
+            arg0.uniform1i(arg1, arg2);
+        },
+        __wbg_uniform2f_f91d5964cfc18268: function(arg0, arg1, arg2, arg3) {
+            arg0.uniform2f(arg1, arg2, arg3);
+        },
+        __wbg_uniform3f_d1e4c9b540574821: function(arg0, arg1, arg2, arg3, arg4) {
+            arg0.uniform3f(arg1, arg2, arg3, arg4);
         },
         __wbg_uniformMatrix4fv_61b1a000cfdc35cc: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.uniformMatrix4fv(arg1, arg2 !== 0, getArrayF32FromWasm0(arg3, arg4));
@@ -5898,66 +7495,74 @@ function __wbg_get_imports() {
         __wbg_writeBuffer_8b5bd251a89198bc: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
             arg0.writeBuffer(arg1, arg2, getArrayU8FromWasm0(arg3, arg4), arg5, arg6);
         }, arguments); },
+        __wbg_writeTexture_53ba204c494b042c: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
+            arg0.writeTexture(arg1, getArrayU8FromWasm0(arg2, arg3), arg4, arg5);
+        }, arguments); },
         __wbg_write_4dde130ecd70a0b5: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = arg0.write(getArrayU8FromWasm0(arg1, arg2));
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2903, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2126, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___JsValue__core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 525, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 1540, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 525, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__2);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDeviceLostInfo")], shim_idx: 1543, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuDeviceLostInfo__GpuDeviceLostInfo______true_);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 525, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__3);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 1540, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__3);
             return ret;
         },
         __wbindgen_cast_0000000000000005: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 432, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 1540, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__4);
+            return ret;
+        },
+        __wbindgen_cast_0000000000000006: function(arg0, arg1) {
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 713, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke_______true_);
             return ret;
         },
-        __wbindgen_cast_0000000000000006: function(arg0) {
+        __wbindgen_cast_0000000000000007: function(arg0) {
             // Cast intrinsic for `F64 -> Externref`.
             const ret = arg0;
             return ret;
         },
-        __wbindgen_cast_0000000000000007: function(arg0) {
+        __wbindgen_cast_0000000000000008: function(arg0) {
             // Cast intrinsic for `I64 -> Externref`.
             const ret = arg0;
             return ret;
         },
-        __wbindgen_cast_0000000000000008: function(arg0, arg1) {
+        __wbindgen_cast_0000000000000009: function(arg0, arg1) {
             // Cast intrinsic for `Ref(Slice(F32)) -> NamedExternref("Float32Array")`.
             const ret = getArrayF32FromWasm0(arg0, arg1);
             return ret;
         },
-        __wbindgen_cast_0000000000000009: function(arg0, arg1) {
+        __wbindgen_cast_000000000000000a: function(arg0, arg1) {
             // Cast intrinsic for `Ref(Slice(U32)) -> NamedExternref("Uint32Array")`.
             const ret = getArrayU32FromWasm0(arg0, arg1);
             return ret;
         },
-        __wbindgen_cast_000000000000000a: function(arg0, arg1) {
+        __wbindgen_cast_000000000000000b: function(arg0, arg1) {
             // Cast intrinsic for `Ref(Slice(U8)) -> NamedExternref("Uint8Array")`.
             const ret = getArrayU8FromWasm0(arg0, arg1);
             return ret;
         },
-        __wbindgen_cast_000000000000000b: function(arg0, arg1) {
+        __wbindgen_cast_000000000000000c: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
             return ret;
         },
-        __wbindgen_cast_000000000000000c: function(arg0) {
+        __wbindgen_cast_000000000000000d: function(arg0) {
             // Cast intrinsic for `U64 -> Externref`.
             const ret = BigInt.asUintN(64, arg0);
             return ret;
@@ -5982,6 +7587,10 @@ function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke_______true
     wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke_______true_(arg0, arg1);
 }
 
+function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuDeviceLostInfo__GpuDeviceLostInfo______true_(arg0, arg1, arg2) {
+    wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuDeviceLostInfo__GpuDeviceLostInfo______true_(arg0, arg1, arg2);
+}
+
 function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___JsValue__core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_(arg0, arg1, arg2) {
     const ret = wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___JsValue__core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_(arg0, arg1, arg2);
     if (ret[1]) {
@@ -5989,22 +7598,22 @@ function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bin
     }
 }
 
-function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_(arg0, arg1, arg2);
+function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true_(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__2(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__2(arg0, arg1, arg2);
+function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__3(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__3(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__3(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_88bb08fd5de8f6e8___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__3(arg0, arg1, arg2);
+function wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__4(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen_7f3b42ef428552b8___convert__closures_____invoke___wasm_bindgen_7f3b42ef428552b8___sys__JsOption_wgpu_1d2be93e13f3d520___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_9b3796e30d99ddb7___result__Result_____wasm_bindgen_7f3b42ef428552b8___JsError___true__4(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
@@ -6040,6 +7649,9 @@ const __wbindgen_enum_GpuCompareFunction = ["never", "less", "equal", "less-equa
 
 
 const __wbindgen_enum_GpuCullMode = ["none", "front", "back"];
+
+
+const __wbindgen_enum_GpuDeviceLostReason = ["unknown", "destroyed"];
 
 
 const __wbindgen_enum_GpuErrorFilter = ["validation", "out-of-memory", "internal"];
@@ -6100,18 +7712,21 @@ const __wbindgen_enum_GpuVertexStepMode = ["vertex", "instance"];
 const FederatedNodeManagerFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_federatednodemanager_free(ptr, 1));
+const QualiaHudFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_qualiahud_free(ptr, 1));
 const QualiaPortalFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_qualiaportal_free(ptr, 1));
-const QualiaStoreFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_qualiastore_free(ptr, 1));
-const WasmHealthStoreFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_wasmhealthstore_free(ptr, 1));
 const WasmOffloadIntentFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmoffloadintent_free(ptr, 1));
+const WasmQ42SessionFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmq42session_free(ptr, 1));
+const WasmSimulationWorldFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmsimulationworld_free(ptr, 1));
 const WebEngineFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_webengine_free(ptr, 1));
@@ -6207,6 +7822,22 @@ function getArrayF64FromWasm0(ptr, len) {
     return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
 }
 
+function getArrayI32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
+function getArrayJsValueFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    const mem = getDataViewMemory0();
+    const result = [];
+    for (let i = ptr; i < ptr + 4 * len; i += 4) {
+        result.push(wasm.__wbindgen_externrefs.get(mem.getUint32(i, true)));
+    }
+    wasm.__externref_drop_slice(ptr, len);
+    return result;
+}
+
 function getArrayJsValueViewFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     const mem = getDataViewMemory0();
@@ -6249,6 +7880,14 @@ function getFloat64ArrayMemory0() {
         cachedFloat64ArrayMemory0 = new Float64Array(wasm.memory.buffer);
     }
     return cachedFloat64ArrayMemory0;
+}
+
+let cachedInt32ArrayMemory0 = null;
+function getInt32ArrayMemory0() {
+    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
+        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32ArrayMemory0;
 }
 
 function getStringFromWasm0(ptr, len) {
@@ -6310,6 +7949,13 @@ function makeMutClosure(arg0, arg1, f) {
     };
     CLOSURE_DTORS.register(real, state, state);
     return real;
+}
+
+function passArray32ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 4, 4) >>> 0;
+    getUint32ArrayMemory0().set(arg, ptr / 4);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passArray8ToWasm0(arg, malloc) {
@@ -6413,6 +8059,7 @@ function __wbg_finalize_init(instance, module) {
     cachedDataViewMemory0 = null;
     cachedFloat32ArrayMemory0 = null;
     cachedFloat64ArrayMemory0 = null;
+    cachedInt32ArrayMemory0 = null;
     cachedUint32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
     wasm.__wbindgen_start();

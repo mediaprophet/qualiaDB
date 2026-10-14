@@ -1,3 +1,4 @@
+
 # QualiaDB Advanced Systems Adoption & Stub Elimination Master Plan
 _Date: 2026-10-12 | Scope: `qualia-core-db` & `game-demo` | Status: Active Implementation Tracker_
 
@@ -153,6 +154,15 @@ Audit of all functionality denoted by the keyword `'stub'` across `qualia-core-d
 * **Location:** `crates/qualia-core-db/tests/capability_ledger.rs:32,298`
 * **Status:** Complete (Verified: 5 REAL, 1 PARTIAL, 0 STUB).
 
+### 12. PoetHost Capability Registry Stub Schema Elimination
+* **Location:** `crates/qualia-core-db/src/poet_host/invoke/coverage.rs`, `src/poet_host/invoke/econ/computational_economics.rs:1007,1945`, `src/poet_host/invoke/agent/mod.rs:228`, `src/poet_host/invoke/manifold/project.rs:9`
+* **Status:** Complete (Promoted 100% to REAL / `honesty: "certified"`).
+* **Remediation Tasks:**
+  - [x] Promoted `econ_aggregate_wealth` from stub to certified implementation computing wealth statistics and Gini index via `specialized_libs::computational_economics::welfare::gini_coefficient`.
+  - [x] Promoted `econ_narrative_divergence` from stub to certified implementation decoding `NquinVector` factual vs fantasy traces and invoking `compute_narrative_divergence`.
+  - [x] Re-certified `ids::DAG_STATUS` and `ids::MANIFOLD_PROJECT` in `coverage.rs`.
+  - [x] Verified zero `"stub"` entries remain in `poet_host/invoke/coverage.rs` and the capability coverage test suite.
+
 ---
 
 ## 4. Verification & Milestone Tracking
@@ -265,5 +275,53 @@ This track expands the QualiaDB runtime to model irreversible loss, slow-variabl
   - **Location:** `crates/qualia-core-db/src/solvers/ontology_align/alignment_guard.rs`, `src/solvers/ontology_align/mod.rs`
   - **Status:** Complete. Implemented `detect_poisoned_alignment_flood` to prevent bogus `closeMatch` proposal storms and low-entropy spam injection, along with `check_contest_budget` enforcing sliding-window rate limits against contest-record denial-of-service.
 
+---
 
+## 8. Track 6: Ontological Entity Virtualization & Continuous EMF Spectral Architecture
+
+This track establishes the multi-modal virtual entity architecture replacing the legacy industrial "digital twin" terminology across all systems:
+
+### Workstream 6.1: Ontological Realism & Anti-Commodification
+- [x] **Task 6.1.1 (Ontological Embodiment Taxonomy):**
+  - **Location:** `crates/qualia-core-db/src/render/entity_compile_gates.rs`, `src/bundle/cbor_ld_manifest.rs`
+  - **Status:** Complete. Categorized entities across the "world of god" and "world of man":
+    - `DarwinianTaxon` $\to$ `Specimen` (ecological commons).
+    - `NaturalPerson` $\to$ `Persona` / `Likeness` (sovereign human beings).
+    - `ManufacturedProperty` $\to$ `Construct` / `Artifact` (engineered machinery).
+    - `LiberalArtsWork` $\to$ `Expression` / `Lore` (cultural compositions).
+    - `AbioticEnvironment` $\to$ `Terrain` / `Feature` (geology and catchments).
+- [x] **Task 6.1.2 (Anti-Commodification Compiler Gate):**
+  - **Location:** `crates/qualia-core-db/src/render/entity_compile_gates.rs:219-228`
+  - **Status:** Complete. Implemented `assert_person_anti_commodification`, strictly preventing natural persons from being compiled as commercial property or assets (`GateError::HumanPersonCannotBeCommodifiedAsAsset`).
+
+### Workstream 6.2: Shaders & Continuous Physical Perceptions
+- [x] **Task 6.2.1 (WGSL Deferred Resolve Compute Kernel & CPU Reference Oracle):**
+  - **Location:** `crates/qualia-core-db/src/shaders/viewport/deferred_resolve.wgsl`, `src/shaders/viewport/mod.rs`, `src/render/deferred_resolve.rs`, `src/render/mod.rs`
+  - **Status:** Complete. Implemented update-frequency bind group layout (Groups 0, 1, 2) leaving Group 3 free for dynamic probes. Decoupled Wyman CMF weights from the light loop, accumulating hero spectral radiance directly in 4 FMAs per light (< 32 registers per invocation for 100% occupancy on mobile TBDR architectures). Implemented CPU reference oracle in `render/deferred_resolve.rs` with Naga WGSL syntax verification tests.
+- [x] **Task 6.2.2 (Instanced Surfel Quad Vertex & Fragment Pipeline):**
+  - **Location:** `crates/qualia-core-db/src/shaders/viewport/surfel_instanced.wgsl`
+  - **Status:** Complete. Expands 32-byte Section 20 SURF1 primitives into world-space oriented elliptical quads via the vertex_index trick. Applies stochastic blue-noise discard for order-independent transparency without 64-bit atomics.
+- [x] **Task 6.2.3 (Toroidal Acoustic Voxel Cone Tracing Kernel):**
+  - **Location:** `crates/qualia-core-db/src/shaders/viewport/acoustic_voxel_cone.wgsl`
+  - **Status:** Complete. Raymarches through 32x32x32 `rgba8uint` toroidal volume with 8-tap trilinear interpolation and dynamic step scaling $\Delta t = \max(\Delta s, t \cdot \tan(\theta/2))$.
+- [x] **Task 6.2.4 (AudioWorklet DF2T 3-Band Parametric Biquad DSP):**
+  - **Location:** `crates/qualia-core-db/src/audio/dsp/biquad_df2t.rs`, `src/audio/acoustic_sab.rs`
+  - **Status:** Complete. Direct Form II Transposed 3-band parametric filter with $10^{-24}$ anti-denormal DC offset, 128-sample linear coefficient interpolation, and 64-voice SeqLock synchronized table.
+
+### Workstream 6.3: Packaging, CLI & Playbook
+- [x] **Task 6.3.1 (Reverse-LOD Packaging & CBOR-LD Manifests):**
+  - **Location:** `crates/qualia-core-db/src/bundle/entity_compiler.rs`, `src/bundle/cbor_ld_manifest.rs`
+  - **Status:** Complete. Implemented `compile_entity` with reverse-LOD section sequencing (`SURF1` $\to$ `IMPO1` $\to$ Decimated $\to$ Hero), typed VC manifests, and backward-compatible shims.
+- [x] **Task 6.3.2 (CLI Tooling):**
+  - **Location:** `crates/qualia-cli/src/handlers/entity_compile.rs`, `crates/qualia-cli/src/cli/mod.rs`
+  - **Status:** Complete. Registered `qualia-cli entity-compile` (with `qualia-cli twin-compile` alias).
+- [x] **Task 6.3.3 (Normative Playbook):**
+  - **Location:** `docs/manuals/ENTITY_VIRTUALIZATION_PLAYBOOK.md`
+  - **Status:** Complete. Authored normative playbook and added operational redirection banners to legacy manuals.
+- [x] **Task 6.3.4 (Dual CLI & WASM Automated Verification Engine):**
+  - **Location:** `crates/qualia-core-db/src/bundle/entity_verifier.rs`, `crates/qualia-cli/src/handlers/entity_verify.rs`, `crates/qualia-core-db/src/wasm_bridge/dataio.rs`, `game-demo/crates/rolling-commons-shell/src/lib.rs`
+  - **Status:** Complete. Implemented `verify_entity_10d` and `verify_entity_bundle` checking Reverse-LOD layout, Section 20 (`SURF1`), Section 19 (`IMPO1`), Section 17 (`EONT1`), mesh topology, CRC-32C, anti-commodification gate, and CBOR-LD manifest signatures. Exposed via `qualia-cli entity-verify` (supporting `--batch` and `--json` for software agents) and via WASM (`entity_verify_10d_wasm` and `rolling-commons-shell`). Updated `game-demo` viewer with deep-linking, rich verification displays, and agent-automated acceptance records.
+- [x] **Task 6.3.5 (Humanitarian ICT Permissive Commons Gate & Discharge Accounting):**
+  - **Location:** `crates/qualia-core-db/src/bundle/entity_verifier.rs`, `crates/qualia-core-db/src/render/entity_compile_gates.rs`, `crates/qualia-core-db/src/bundle/cbor_ld_manifest.rs`, `crates/qualia-core-db/src/bundle/entity_compiler.rs`, `crates/qualia-cli/src/handlers/entity_verify.rs`
+  - **Status:** Complete. Enforced ontological demarcation between commercial property (`ManufacturedProperty`, where vendors retain unconstrained commercial pricing and rights) and the "World of God" / Biosphere / Knowledge for Life (`DarwinianTaxon`, `AbioticEnvironment`). Biosphere entities fail closed against private monopolies or perpetual royalties (`GateError::BiosphereCannotHavePerpetualFees`, `GateError::BiosphereRequiresPermissiveCommons`). Implemented finite production obligation cost recovery (`production_cost_cents`, `roi_cap_percent`, `accumulated_pool_cents`, `is_discharged()`) and direct at-cost carriage/bandwidth recovery (`transaction_cost_per_mib_cents`), transitioning to permanent zero-toll permissive commons upon discharge. Integrated into CLI reports and WASM entity verification.
 

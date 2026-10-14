@@ -54,6 +54,8 @@ pub mod contract;
 pub mod control;
 /// Caller-buffered CPU RGBA8 mip reducer and format-specific reference filtering.
 pub mod cpu_texture_mips;
+/// Deferred resolve CPU reference oracle and continuous EMF spectral PBR integration.
+pub mod deferred_resolve;
 pub mod derivation;
 /// Allocation-free frame graph resource and pass dependency model.
 pub mod frame_graph;
@@ -68,6 +70,8 @@ pub mod gpu_colour_kernel;
 pub mod hud;
 /// Caller-buffered CPU frustum visibility lists with stable source-index indirection.
 pub mod instance_culling;
+/// Screen-space visual angle error, retinal slip acuity, and 4-tier virtualization classifier.
+pub mod screen_metric;
 /// Physically-based and stylized cinematic lighting evaluation.
 pub mod lighting;
 /// Material-section compilation and readback helpers for versioned `.10d` assets.
@@ -127,6 +131,10 @@ pub mod scene_primitives;
 ))]
 pub mod sense;
 pub mod spectral;
+/// Continuous EMF spectral basis functions (Jakob-Hanika), closed-form Gaussian moments, and wave optics.
+pub mod spectral_basis;
+/// Pure-Rust Levenberg-Marquardt spectral inversion solver, 32x32x32 LUT baker, and zero-heap trilinear sampler.
+pub mod spectral_lut;
 /// P7.3 — σ spectral blend as interpolation on the spectral manifold.
 pub mod spectral_blend;
 #[cfg(test)]
@@ -161,6 +169,9 @@ pub mod texture_streaming_plan;
 pub mod texture_transcode;
 /// Bounded zero-heap vegetation instance pool and dynamic collision bending.
 pub mod vegetation;
+/// Deterministic validation gates and TAA Oklab perceptual clamping for entity compilation.
+pub mod entity_compile_gates;
+pub use entity_compile_gates as twin_compile_gates;
 
 #[cfg(test)]
 #[path = "terrain_seam_tests.rs"]

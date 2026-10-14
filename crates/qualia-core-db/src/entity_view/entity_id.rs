@@ -17,6 +17,10 @@ impl EntityId {
         Self(id)
     }
 
+    pub const fn from_u64(id: u64) -> Self {
+        Self(id)
+    }
+
     pub const fn raw(self) -> u64 {
         self.0
     }

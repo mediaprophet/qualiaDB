@@ -101,6 +101,7 @@ pub fn dispatch(
         ids::N3_EVALUATE => graph::n3_evaluate(args, span),
         ids::GRAPH_AUTHORING => graph::graph_authoring(args, span),
         ids::GRAPH_SHORTEST_PATH | "graph.shortest_path" | "navigation.a_star" | "solvers.graph.path" | "graph.dijkstra" => graph::shortest_path(args, span),
+        "solvers.graph.dijkstra" | "solvers.graph.shortest_path" => solvers::graph_shortest_path(args, span),
         ids::GRAPH_SPREADING_ACTIVATION => graph::spreading_activation(args, span),
         ids::DEONTIC_EVAL | "deontic.evaluate" | "deontic.eval" => logic::deontic_evaluate(snap, args, span),
         ids::EPISTEMIC_EVAL => logic::epistemic_evaluate(snap, args, span),

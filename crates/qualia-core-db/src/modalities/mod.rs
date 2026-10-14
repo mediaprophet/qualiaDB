@@ -42,6 +42,16 @@ pub use epistemic_boundaries::{
     requires_physiological_quarantine, DegradationVector, ReferralDomain, ReferralTrigger,
     SocraticDegradation, BIO_DISCLAIMER, EMERGENCY_PROMPT, LEGAL_DISCLAIMER, LEGAL_JEOPARDY_PROMPT,
 };
+pub mod epistemic_ontology;
+pub use epistemic_ontology::{
+    compile_epistemic_stance_quin, evaluate_epistemic_stances, is_epistemic_subsumed,
+    lookup_epistemic_lemma, parse_epistemic_mode_to_synset, synset_to_canonical_label,
+    synset_to_cili, EpistemicOntologyError, EpistemicStanceRecord, CILI_CIVICS, CILI_CONJECTURE,
+    CILI_FACT, CILI_FICTION, CILI_HYPOTHESIS, CILI_OBSERVATION, CILI_SIMULATION,
+    PRED_CILI_CONCEPT, PRED_EPISTEMIC_STANCE, PRED_SUB_CLASS_OF, PRED_WORDNET_SYNSET,
+    SYNSET_BELIEF, SYNSET_CIVICS, SYNSET_CONJECTURE, SYNSET_COUNTERFACTUAL, SYNSET_FACT,
+    SYNSET_FICTION, SYNSET_HYPOTHESIS, SYNSET_KNOWLEDGE, SYNSET_OBSERVATION, SYNSET_SIMULATION,
+};
 pub mod graph_theory;
 pub use graph_theory::{
     BoundedGraphAnalysisSummary, CommunitySpan, GraphAnalysisError, MotifRecord, TopNodeScore,

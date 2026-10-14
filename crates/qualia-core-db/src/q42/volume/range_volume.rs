@@ -1060,7 +1060,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::super::super::{
         write_unified_volume, write_volume_root, Q42RangeVolumeSet, Q42VolumeManifest,

@@ -30,8 +30,14 @@ pub use bioacoustics::{
     MM_TEMPORAL_FRAGMENT, QUALIA_ACOUSTIC_OBSERVATION,
 };
 pub use acoustic_sab::{
-    init_acoustic_sab, push_token_to_sab, read_uniform_from_sab, write_uniform_to_sab,
-    write_uniform_to_sab_with_mirror, AcousticSabHeader, ACOUSTIC_SAB_BYTES, ACOUSTIC_SAB_MAGIC,
+    calculate_acoustic_salience, init_acoustic_sab, push_token_to_sab, read_uniform_from_sab,
+    read_voice_slot, update_voice_slot, write_uniform_to_sab, write_uniform_to_sab_with_mirror,
+    AcousticSabHeader, VoiceDescriptorSlot, VoiceSnapshot, ACOUSTIC_SAB_BYTES, ACOUSTIC_SAB_MAGIC,
+    MAX_ACOUSTIC_VOICE_SLOTS, VOICE_DESCRIPTOR_SLOT_SIZE,
+};
+pub use dsp::biquad_df2t::{
+    BiquadCoeffs, Df2tBiquad, Df2tState, ThreeBandParametricBiquad, AUDIO_WORKLET_DF2T_JS,
+    DENORMAL_DC_OFFSET, QUANTUM_SIZE,
 };
 pub use audio_sidecar_link::{
     bake_audio_sidecar_into, compile_spectral_sheet_quin, enrich_preview_from_sidecar,

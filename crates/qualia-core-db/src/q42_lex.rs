@@ -1,8 +1,11 @@
 //! Read `.q42.lex` reverse-lexicon sidecars (Q42LEX format from qualia-cli ingest).
 
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::Read;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -880,6 +883,33 @@ impl Q42LexFile {
     }
 }
 
+/// Filesystem handles cannot exist on wasm32 — callers reach lexicons through
+/// verified bytes (`Q42LexMmap::from_bytes`). The closed shim keeps native
+/// call sites (e.g. `decode_helpers`) source-compatible under `gpu-runtime`.
+#[cfg(target_arch = "wasm32")]
+pub struct Q42LexFile;
+
+#[cfg(target_arch = "wasm32")]
+impl Q42LexFile {
+    pub fn open(_path: &std::path::Path) -> std::io::Result<Self> {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Q42LexFile is not supported on wasm32; read Q42LEX bytes with Q42LexMmap",
+        ))
+    }
+
+    #[inline]
+    pub fn view(&self) -> Q42LexMmap<'_> {
+        Q42LexMmap {
+            data: &[],
+            entry_count: 0,
+            strings_offset: 0,
+            format_version: 0,
+            page_count: 0,
+        }
+    }
+}
+
 impl Q42Lexicon {
     /// Load lexicon embedded in a unified v2 `.q42` volume or a legacy `.q42.lex` sidecar.
     #[cfg(not(target_arch = "wasm32"))]
@@ -930,6 +960,7 @@ impl Q42Lexicon {
         Ok(Self { entries })
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load(path: &Path) -> std::io::Result<Self> {
         let mut file = File::open(path)?;
         let mut header = [0u8; 32];
@@ -999,9 +1030,10 @@ impl Q42Lexicon {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::Seek;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::io::Write;

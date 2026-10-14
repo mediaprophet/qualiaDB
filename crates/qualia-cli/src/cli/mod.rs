@@ -77,6 +77,14 @@ pub enum Commands {
         #[command(subcommand)]
         action: CompileAction,
     },
+    /// Compile and seal an ontological entity bundle (.hmc) in Reverse-LOD order with CBOR-LD manifest
+    EntityCompile(EntityCompileArgs),
+    /// Legacy alias for EntityCompile
+    TwinCompile(TwinCompileArgs),
+    /// Verify and validate an ontological entity (.10d or .hmc bundle)
+    EntityVerify(EntityVerifyArgs),
+    /// Legacy alias for EntityVerify
+    TwinVerify(TwinVerifyArgs),
     Llm {
         #[command(subcommand)]
         action: LlmAction,

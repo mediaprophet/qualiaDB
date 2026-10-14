@@ -57,6 +57,35 @@ impl BundleWriter {
         Ok(self)
     }
 
+    /// Add a digital twin model family manifest describing variants, sexual dimorphism,
+    /// life stages, and LOD hierarchy to the bundle.
+    pub fn add_family_manifest(
+        &mut self,
+        manifest: &super::variant_matrix::TwinFamilyManifest,
+    ) -> Result<&mut Self, BundleError> {
+        let bytes = manifest.encode_to_cbor()?;
+        self.add_file(
+            super::variant_matrix::FAMILY_MANIFEST_ENTRY_KEY,
+            super::variant_matrix::FAMILY_MANIFEST_KIND,
+            bytes,
+            None,
+        )
+    }
+
+    /// Add a W3C Verifiable Credential manifest encoded as CBOR-LD.
+    pub fn add_cbor_ld_manifest(
+        &mut self,
+        manifest: &super::cbor_ld_manifest::CborLdManifest,
+    ) -> Result<&mut Self, BundleError> {
+        let bytes = manifest.encode_to_cbor()?;
+        self.add_file(
+            super::cbor_ld_manifest::CBOR_LD_MANIFEST_ENTRY_KEY,
+            super::cbor_ld_manifest::CBOR_LD_MANIFEST_KIND,
+            bytes,
+            None,
+        )
+    }
+
     /// Serialise the bundle to a `Vec<u8>`.
     pub fn build(&self) -> Result<Vec<u8>, BundleError> {
         let mut out = vec![0u8; BUNDLE_HEADER_SIZE];

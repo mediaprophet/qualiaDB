@@ -250,7 +250,6 @@ pub use q42::p64_weight as q42_weight;
 pub use q42::q42_lexicon;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_reader;
-#[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_volume;
 pub use q42::yaml_ld_q42;
 // --- extensions/ category (reorg) ---
@@ -330,39 +329,13 @@ pub use governance::webizen_validator;
 pub mod sparql_library;
 pub use sparql_library::*;
 
-#[cfg(not(target_arch = "wasm32"))]
+/// Q42LEX lexicon format. The byte-view reader ([`q42_lex::Q42LexMmap`]) and
+/// serializers are transport-neutral and compile on wasm32; only the
+/// filesystem/mmap handles ([`q42_lex::Q42LexFile`], [`q42_lex::Q42Lexicon`]
+/// path loaders) stay native.
 pub mod q42_lex;
 /// Q42LEX v4 writer: paged lexicon with per-page namespace dictionaries.
-#[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex_ns;
-#[cfg(target_arch = "wasm32")]
-pub mod q42_lex {
-    pub struct Q42LexMmap<'a> {
-        _marker: std::marker::PhantomData<&'a ()>,
-    }
-    impl<'a> Q42LexMmap<'a> {
-        pub fn from_bytes(_data: &'a [u8]) -> Result<Self, String> {
-            Err("Not supported on WASM".to_string())
-        }
-        pub fn lookup_embedded_triple(&self, _id: u64) -> Option<[u64; 3]> {
-            None
-        }
-        pub fn lookup_hash(&self, _id: u64) -> Option<&'a str> {
-            None
-        }
-    }
-    pub struct Q42LexFile {}
-    impl Q42LexFile {
-        pub fn open(_p: &std::path::Path) -> Result<Self, String> {
-            Err("Not supported on WASM".to_string())
-        }
-        pub fn view(&self) -> Q42LexMmap<'_> {
-            Q42LexMmap {
-                _marker: std::marker::PhantomData,
-            }
-        }
-    }
-}
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 #[cfg(not(all(

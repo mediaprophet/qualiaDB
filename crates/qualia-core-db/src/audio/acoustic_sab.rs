@@ -144,6 +144,122 @@ pub fn push_token_to_sab(out: &mut [u8], token: SonicToken) -> bool {
     true
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+//  Double-Buffered 64-Voice SeqLock Table & Perceptual Salience Culling
+// ───────────────────────────────────────────────────────────────────────────
+
+pub const VOICE_DESCRIPTOR_SLOT_SIZE: usize = 64;
+pub const MAX_ACOUSTIC_VOICE_SLOTS: usize = 64;
+
+/// 64-byte cache-line-aligned voice descriptor slot with monotonic SeqLock synchronization.
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
+pub struct VoiceDescriptorSlot {
+    /// Monotonic sequence counter: odd = write in progress, even = valid consistent state.
+    pub sequence_number: u32,
+    pub entity_id: u32,
+    pub amplitude: f32,
+    pub pan_room_send: f32,
+    pub world_position: [f32; 3],
+    pub acoustic_coeffs: [f32; 3], // Jakob-Hanika dual (c0, c1, c2)
+    pub padding: [u32; 6],
+}
+
+impl VoiceDescriptorSlot {
+    #[inline]
+    pub const fn empty() -> Self {
+        Self {
+            sequence_number: 0,
+            entity_id: 0,
+            amplitude: 0.0,
+            pan_room_send: 0.0,
+            world_position: [0.0; 3],
+            acoustic_coeffs: [0.0; 3],
+            padding: [0; 6],
+        }
+    }
+}
+
+/// Decoded voice snapshot returned when a SeqLock read succeeds without tear.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VoiceSnapshot {
+    pub entity_id: u32,
+    pub amplitude: f32,
+    pub pan_room_send: f32,
+    pub world_position: [f32; 3],
+    pub acoustic_coeffs: [f32; 3],
+}
+
+/// Calculate acoustic salience score $S_i = \frac{A_i \cdot \mathcal{D}}{1.0 + \|\vec{P}_i - \vec{P}_{\text{listener}}\|^2}$.
+///
+/// Emitters falling below $S_i < 10^{-4}$ are culled by the producer before writing to the SAB.
+#[inline]
+pub fn calculate_acoustic_salience(
+    amplitude: f32,
+    diffraction_scalar: f32,
+    emitter_pos: [f32; 3],
+    listener_pos: [f32; 3],
+) -> f32 {
+    let dx = emitter_pos[0] - listener_pos[0];
+    let dy = emitter_pos[1] - listener_pos[1];
+    let dz = emitter_pos[2] - listener_pos[2];
+    let dist_sq = dx * dx + dy * dy + dz * dz;
+
+    let diff = diffraction_scalar.clamp(0.1, 1.0);
+    (amplitude.max(0.0) * diff) / (1.0 + dist_sq)
+}
+
+/// Producer update: writes parameters into a voice slot using odd-even SeqLock signaling.
+#[inline]
+pub fn update_voice_slot(
+    slot: &mut VoiceDescriptorSlot,
+    entity_id: u32,
+    amplitude: f32,
+    pan_room_send: f32,
+    world_pos: [f32; 3],
+    coeffs: [f32; 3],
+) {
+    let seq = slot.sequence_number;
+    // Step 1: Mark odd (write in progress)
+    slot.sequence_number = seq.wrapping_add(1) | 1;
+
+    // Step 2: Store payload fields
+    slot.entity_id = entity_id;
+    slot.amplitude = amplitude;
+    slot.pan_room_send = pan_room_send;
+    slot.world_position = world_pos;
+    slot.acoustic_coeffs = coeffs;
+
+    // Step 3: Mark even (write complete)
+    slot.sequence_number = seq.wrapping_add(2) & !1;
+}
+
+/// Consumer read: reads parameters from a voice slot; returns `None` if producer was writing or torn read occurred.
+#[inline]
+pub fn read_voice_slot(slot: &VoiceDescriptorSlot) -> Option<VoiceSnapshot> {
+    let seq1 = slot.sequence_number;
+    // Odd sequence means producer is currently writing
+    if (seq1 & 1) != 0 {
+        return None;
+    }
+
+    let snapshot = VoiceSnapshot {
+        entity_id: slot.entity_id,
+        amplitude: slot.amplitude,
+        pan_room_send: slot.pan_room_send,
+        world_position: slot.world_position,
+        acoustic_coeffs: slot.acoustic_coeffs,
+    };
+
+    let seq2 = slot.sequence_number;
+    // If sequence changed during read, a torn read occurred
+    if seq1 != seq2 {
+        None
+    } else {
+        Some(snapshot)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,5 +291,48 @@ mod tests {
         assert!(push_token_to_sab(&mut sab, t));
         let h = AcousticSabHeader::parse(&sab).unwrap();
         assert_eq!(h.token_write, 1);
+    }
+
+    #[test]
+    fn voice_descriptor_slot_layout_and_seqlock() {
+        assert_eq!(std::mem::size_of::<VoiceDescriptorSlot>(), 64);
+        assert_eq!(std::mem::align_of::<VoiceDescriptorSlot>(), 64);
+
+        let mut slot = VoiceDescriptorSlot::empty();
+        assert_eq!(read_voice_slot(&slot).unwrap().amplitude, 0.0);
+
+        // Update slot
+        update_voice_slot(
+            &mut slot,
+            42,
+            0.85,
+            0.5,
+            [10.0, 2.0, -5.0],
+            [0.1, -0.4, 0.9],
+        );
+
+        // Successful read
+        let snap = read_voice_slot(&slot).expect("valid read");
+        assert_eq!(snap.entity_id, 42);
+        assert_eq!(snap.amplitude, 0.85);
+        assert_eq!(snap.world_position, [10.0, 2.0, -5.0]);
+        assert_eq!(snap.acoustic_coeffs, [0.1, -0.4, 0.9]);
+
+        // Simulating write in progress (odd sequence number)
+        slot.sequence_number = 3;
+        assert!(read_voice_slot(&slot).is_none());
+    }
+
+    #[test]
+    fn test_acoustic_salience_culling() {
+        let listener = [0.0, 0.0, 0.0];
+        let near_emitter = [1.0, 0.0, 0.0]; // dist = 1m
+        let far_emitter = [100.0, 0.0, 0.0]; // dist = 100m
+
+        let s_near = calculate_acoustic_salience(1.0, 1.0, near_emitter, listener);
+        let s_far = calculate_acoustic_salience(1.0, 1.0, far_emitter, listener);
+
+        assert!(s_near > 0.4);
+        assert!(s_far < 1e-4); // Below audibility threshold!
     }
 }

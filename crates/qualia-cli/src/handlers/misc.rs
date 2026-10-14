@@ -40,6 +40,16 @@ pub fn handle_compile(action: &CompileAction) {
         CompileAction::N3ToDeontic { file } => {
             println!("Compiling N3 logic to native norms from {:?}", file);
         }
+        CompileAction::EntityCompile(args) | CompileAction::TwinCompile(args) => {
+            if let Err(e) = super::entity_compile::handle(args) {
+                eprintln!("Error compiling entity: {e}");
+            }
+        }
+        CompileAction::EntityVerify(args) | CompileAction::TwinVerify(args) => {
+            if let Err(e) = super::entity_verify::handle(args) {
+                eprintln!("Error verifying entity: {e}");
+            }
+        }
     }
 }
 

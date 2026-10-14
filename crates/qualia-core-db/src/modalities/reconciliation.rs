@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn test_cascade_recheck_flags() {
         let rec = compare_views(0x999, 0x111, 0x222, 1, 2, 100, 300);
-        let mut q1 = NQuin {
+        let q1 = NQuin {
             subject: 0x999,
             predicate: q_hash("pred:metric"),
             object: 100,
@@ -145,7 +145,7 @@ mod tests {
             metadata: 0,
             parity: 0,
         };
-        let mut q2 = NQuin {
+        let q2 = NQuin {
             subject: 0x888,
             predicate: q_hash("pred:unrelated"),
             object: 200,

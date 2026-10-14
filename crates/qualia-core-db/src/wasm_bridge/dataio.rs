@@ -747,3 +747,19 @@ impl WasmSimulationWorld {
         flat
     }
 }
+
+// ─── Ontological Entity Verification (.10d & .hmc) ───────────────────────────
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn entity_verify_10d_wasm(bytes: &[u8]) -> JsValue {
+    let report = crate::bundle::entity_verifier::verify_entity_10d(bytes);
+    serde_wasm_bindgen::to_value(&report).unwrap_or(JsValue::NULL)
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn entity_verify_bundle_wasm(bytes: &[u8]) -> JsValue {
+    let report = crate::bundle::entity_verifier::verify_entity_bundle(bytes);
+    serde_wasm_bindgen::to_value(&report).unwrap_or(JsValue::NULL)
+}

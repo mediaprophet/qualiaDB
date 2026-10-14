@@ -14,6 +14,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::super::{
     Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, QUIN_SIZE, SUPERBLOCK_HEADER,
     SUPERBLOCK_SIZE,
@@ -109,6 +110,7 @@ impl IngestProvenanceRecord {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn write_beside_volume(&self, q42_path: &Path) -> io::Result<std::path::PathBuf> {
         let path = provenance_path_for(q42_path);
         let json = serde_json::to_vec_pretty(self).map_err(|e| {
@@ -219,6 +221,8 @@ pub fn quin_requires_sanctuary(quin: &NQuin) -> bool {
     quin.identify_routing_lane() == PermissiveRoutingLane::EnforceBilateralMicroCommons
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn classify_q42_path(
     path: &Path,
     intent: PublicationIntent,
@@ -227,6 +231,7 @@ pub fn classify_q42_path(
     Ok(classify_q42_volume(&volume, intent))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn classify_q42_volume(volume: &Q42Volume, intent: PublicationIntent) -> Q42PublicationVerdict {
     let flags = volume.header().flags;
     let header_commons = flags & FLAG_PERMISSIVE_COMMONS != 0;
@@ -259,6 +264,7 @@ pub fn classify_q42_volume(volume: &Q42Volume, intent: PublicationIntent) -> Q42
 }
 
 /// Volume-set: any child that cannot be public denies the whole public set.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn classify_q42_volume_set(
     root: &Path,
     intent: PublicationIntent,
@@ -410,7 +416,7 @@ fn decide(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::q42_volume::{write_unified_volume, StreamingQ42VolumeWriter};

@@ -14,10 +14,17 @@ pub mod package;
 pub mod projection;
 pub mod rights_filter;
 
+pub mod entity_ontologies;
+
 pub use attribution::{edges_for_subject, AttributionEdge, AttributionRel};
 pub use capability_report::entity_view_capability_report;
 pub use circumstance::{Circumstance, EnvironmentKind, EvaluatoryFocus};
 pub use entity_id::{EntityId, EntityKind};
+pub use entity_ontologies::{
+    ActionAffordance, ActionEffect, ActionEvaluationVerdict, ActionIntent, ActionPrecondition,
+    AffordanceCategory, EntityOntology, IntentError, LifecycleStage, OntologicalOrigin,
+    PersonalOntology,
+};
 pub use observer::{
     AffordanceBits, EntityViewMeta, ObserverStatus, RepresentationWing, SensitivityClass,
 };
