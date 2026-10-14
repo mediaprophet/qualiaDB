@@ -5,6 +5,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::lex::{Lexer, Token, TokenKind};
 use crate::span::Span;
 
+mod cond;
 mod expr;
 mod items;
 mod preamble;
@@ -13,13 +14,19 @@ mod stmt;
 pub struct Parser<'a> {
     pub(crate) lex: Lexer<'a>,
     pub(crate) cur: Token,
+    /// Current nesting depth of value-producing `if` expressions.
+    pub(crate) cond_depth: u16,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(src: &'a str) -> Result<Self, Diagnostic> {
         let mut lex = Lexer::new(src);
         let cur = lex.next_token()?;
-        Ok(Self { lex, cur })
+        Ok(Self {
+            lex,
+            cur,
+            cond_depth: 0,
+        })
     }
 
     #[allow(dead_code)]

@@ -47,7 +47,8 @@ term ::= primary ( ws postfix )*
 postfix ::= "." ident | "(" ws args? ")" | "?"
 args ::= expr ( ws "," ws expr )*
 named-args ::= ident ws ":" ws expr ( ws "," ws ident ws ":" ws expr )*
-primary ::= number | string | color | ident | query-var | iri | prefixed | triple | reified | list | record | "(" ws expr ws ")" | graph-query | modal | lambda
+primary ::= number | string | color | ident | query-var | iri | prefixed | triple | reified | list | record | "(" ws expr ws ")" | graph-query | modal | lambda | if-expr
+if-expr ::= "if" ws expr ws "{" ws expr ws "}" ws "else" ws ( if-expr | "{" ws expr ws "}" )
 lambda ::= "|" ws ( ident ( ws "," ws ident )* )? ws "|" ws expr
 
 graph-query ::= "graph?" ws ( "ask" ws )? "{" ws expr* "}"

@@ -974,6 +974,25 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                 spring,
             }
         }
+        "IfElse" => {
+            let mut cond = None;
+            let mut then_value = None;
+            let mut else_value = None;
+            for _ in 0..remaining_pairs {
+                let k = dec.str()?;
+                match k.as_str() {
+                    "cond" => cond = Some(decode_expr(dec)?),
+                    "then" => then_value = Some(decode_expr(dec)?),
+                    "else" => else_value = Some(decode_expr(dec)?),
+                    _ => dec.skip()?,
+                }
+            }
+            ExprKind::IfElse {
+                cond: Box::new(cond.ok_or(DecodeError::MissingField("cond"))?),
+                then_value: Box::new(then_value.ok_or(DecodeError::MissingField("then"))?),
+                else_value: Box::new(else_value.ok_or(DecodeError::MissingField("else"))?),
+            }
+        }
         _ => {
             for _ in 0..remaining_pairs {
                 dec.skip()?;

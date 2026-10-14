@@ -465,6 +465,17 @@ pub enum ExprKind {
         ease: Option<String>,
         spring: Option<Vec<NamedArg>>,
     },
+    /// Value-producing conditional `if cond { a } else { b }`.
+    ///
+    /// Each branch holds exactly one result expression. The final `else` is
+    /// mandatory; an `else if` chain is represented as a nested `IfElse` in
+    /// `else_value`. Only the selected branch is evaluated at runtime, while
+    /// static checks (effects, capabilities) inspect both branches.
+    IfElse {
+        cond: Box<Expr>,
+        then_value: Box<Expr>,
+        else_value: Box<Expr>,
+    },
 }
 
 /// The first-class logic modalities supported in VibeScript.

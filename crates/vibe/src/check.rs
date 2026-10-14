@@ -803,6 +803,17 @@ fn walk_expr(
             let c = walk_expr(over, env, aliases, granted, ambient, tick, budgeted)?;
             Ok(a.join(b).join(c))
         }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            // Both branches are inspected statically even though only one runs.
+            let a = walk_expr(cond, env, aliases, granted, ambient, tick, budgeted)?;
+            let b = walk_expr(then_value, env, aliases, granted, ambient, tick, budgeted)?;
+            let c = walk_expr(else_value, env, aliases, granted, ambient, tick, budgeted)?;
+            Ok(a.join(b).join(c))
+        }
     }
 }
 
@@ -879,6 +890,14 @@ fn expr_is_bounded_source(
 ) -> bool {
     match &expr.kind {
         ExprKind::Try(inner) => expr_is_bounded_source(inner, env, aliases),
+        ExprKind::IfElse {
+            then_value,
+            else_value,
+            ..
+        } => {
+            expr_is_bounded_source(then_value, env, aliases)
+                && expr_is_bounded_source(else_value, env, aliases)
+        }
         ExprKind::List(_) => true,
         ExprKind::Ident(n) => matches!(env.get(n), Some(Type::List(_))),
         ExprKind::Call { callee, args, .. } => {

@@ -44,6 +44,20 @@ impl<'a, H: Host> Engine<'a, H> {
             ExprKind::Iri(s) => Ok(Value::Iri(s.clone())),
             ExprKind::Prefixed(p, l) => Ok(Value::Prefixed(p.clone(), l.clone())),
             ExprKind::Blank(n) => Ok(Value::Blank(n.clone())),
+            ExprKind::IfElse {
+                cond,
+                then_value,
+                else_value,
+            } => {
+                // Condition evaluated exactly once; only the selected branch is
+                // evaluated (and charged against the budget). Truthiness matches
+                // statement-form `if` (`Value::is_truthy`).
+                if self.eval_expr(cond, env)?.is_truthy() {
+                    self.eval_expr(then_value, env)
+                } else {
+                    self.eval_expr(else_value, env)
+                }
+            }
             ExprKind::Unary { op, expr } => {
                 let v = self.eval_expr(expr, env)?;
                 match op {
@@ -557,6 +571,15 @@ fn collect_free_idents(expr: &Expr, params: &[String], env: &Env, out: &mut Vec<
             collect_free_idents(from, params, env, out);
             collect_free_idents(to, params, env, out);
             collect_free_idents(over, params, env, out);
+        }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            collect_free_idents(cond, params, env, out);
+            collect_free_idents(then_value, params, env, out);
+            collect_free_idents(else_value, params, env, out);
         }
         _ => {}
     }

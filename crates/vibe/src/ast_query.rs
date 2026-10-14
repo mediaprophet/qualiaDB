@@ -558,6 +558,15 @@ fn query_expr(expr: &Expr, pattern: &QueryPattern, results: &mut Vec<PolicyViola
             query_expr(index, pattern, results);
         }
         ExprKind::Try(e) => query_expr(e, pattern, results),
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            query_expr(cond, pattern, results);
+            query_expr(then_value, pattern, results);
+            query_expr(else_value, pattern, results);
+        }
         ExprKind::List(es) => {
             for e in es {
                 query_expr(e, pattern, results);

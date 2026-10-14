@@ -234,6 +234,27 @@ impl Compiler {
                 self.emit_u16(idx)
             }
             ExprKind::Binary { op, left, right } => self.compile_binary(op, left, right),
+            ExprKind::IfElse {
+                cond,
+                then_value,
+                else_value,
+            } => {
+                // cond; JumpIfFalse else; then; Jump end; else: else_value; end:
+                // Each path pushes exactly one value, so stack depth at the
+                // merge point is identical on both paths.
+                self.compile_expr(cond)?;
+                self.emit_op(Op::JumpIfFalse)?;
+                let else_jump = self.emit_placeholder()?;
+                self.compile_expr(then_value)?;
+                self.emit_op(Op::Jump)?;
+                let end_jump = self.emit_placeholder()?;
+                let else_start = self.chunk.current_offset();
+                self.patch(else_jump, else_start);
+                self.compile_expr(else_value)?;
+                let end = self.chunk.current_offset();
+                self.patch(end_jump, end);
+                Ok(())
+            }
             ExprKind::Unary { op, expr } => self.compile_unary(op, expr),
             ExprKind::Await(inner) => {
                 // Await in 0.1 bytecode: evaluate the inner expression.

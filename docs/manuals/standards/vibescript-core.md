@@ -150,9 +150,10 @@ Arg            ::= (Identifier ':')? Expression ;
 
 Primary        ::= Literal | Identifier | QueryVar | IRI | PrefixedName
                  | BlankNode | TripleTerm | ReifiedTerm
-                 | ListLiteral | RecordLiteral | LambdaExpr | GraphQuery | Modal
+                 | ListLiteral | RecordLiteral | LambdaExpr | IfExpr | GraphQuery | Modal
                  | ColorLit | QuantityLit | '(' Expression ')' ;
 
+IfExpr         ::= 'if' Expression '{' Expression '}' 'else' (IfExpr | ('{' Expression '}')) ;
 LambdaExpr     ::= '|' (Identifier (',' Identifier)*)? '|' Expression ;
 GraphQuery     ::= 'graph?' 'ask'? '{' Expression* '}' ;
 Modal          ::= ('obligate' | 'permit' | 'forbid' | 'knows' | 'believes'

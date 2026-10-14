@@ -537,7 +537,13 @@ fn project_stmt(stmt: &Stmt, opts: &ProjectOptions, out: &mut String, depth: usi
         }
         Stmt::Expr { expr, .. } => {
             out.push_str(&indent);
-            project_expr(expr, opts, out);
+            if matches!(expr.kind, ExprKind::IfElse { .. }) {
+                out.push('(');
+                project_expr(expr, opts, out);
+                out.push(')');
+            } else {
+                project_expr(expr, opts, out);
+            }
             out.push(';');
         }
         Stmt::Block(b) => {
@@ -627,6 +633,16 @@ fn project_pattern(pat: &Pattern, out: &mut String) {
     }
 }
 
+fn project_postfix_recv(recv: &Expr, opts: &ProjectOptions, out: &mut String) {
+    if matches!(recv.kind, ExprKind::IfElse { .. }) {
+        out.push('(');
+        project_expr(recv, opts, out);
+        out.push(')');
+    } else {
+        project_expr(recv, opts, out);
+    }
+}
+
 fn project_expr(expr: &Expr, opts: &ProjectOptions, out: &mut String) {
     match &expr.kind {
         ExprKind::Literal(l) => project_literal(l, out),
@@ -663,12 +679,12 @@ fn project_expr(expr: &Expr, opts: &ProjectOptions, out: &mut String) {
             out.push_str(".await");
         }
         ExprKind::Member { recv, name } => {
-            project_expr(recv, opts, out);
+            project_postfix_recv(recv, opts, out);
             out.push('.');
             out.push_str(name);
         }
         ExprKind::Call { callee, args } => {
-            project_expr(callee, opts, out);
+            project_postfix_recv(callee, opts, out);
             out.push('(');
             for (i, arg) in args.iter().enumerate() {
                 if i > 0 {
@@ -685,14 +701,38 @@ fn project_expr(expr: &Expr, opts: &ProjectOptions, out: &mut String) {
             out.push(')');
         }
         ExprKind::Index { recv, index } => {
-            project_expr(recv, opts, out);
+            project_postfix_recv(recv, opts, out);
             out.push('[');
             project_expr(index, opts, out);
             out.push(']');
         }
         ExprKind::Try(inner) => {
-            project_expr(inner, opts, out);
+            project_postfix_recv(inner, opts, out);
             out.push('?');
+        }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            out.push_str("if ");
+            if matches!(cond.kind, ExprKind::IfElse { .. } | ExprKind::Record(_)) {
+                out.push('(');
+                project_expr(cond, opts, out);
+                out.push(')');
+            } else {
+                project_expr(cond, opts, out);
+            }
+            out.push_str(" { ");
+            project_expr(then_value, opts, out);
+            out.push_str(" } else ");
+            if matches!(else_value.kind, ExprKind::IfElse { .. }) {
+                project_expr(else_value, opts, out);
+            } else {
+                out.push_str("{ ");
+                project_expr(else_value, opts, out);
+                out.push_str(" }");
+            }
         }
         ExprKind::List(items) => {
             out.push('[');

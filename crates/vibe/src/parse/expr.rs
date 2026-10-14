@@ -267,7 +267,18 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn parse_postfix(&mut self) -> Result<Expr, Diagnostic> {
+        let bare_conditional = self.kw("if");
         let mut expr = self.parse_primary()?;
+        if bare_conditional
+            && matches!(
+                self.cur.kind,
+                TokenKind::Dot | TokenKind::LParen | TokenKind::LBracket | TokenKind::Question
+            )
+        {
+            return Err(self.err(
+                "wrap the conditional expression in parentheses before applying '.', '(', '[' or '?'",
+            ));
+        }
         loop {
             match self.cur.kind {
                 TokenKind::Dot => {
@@ -431,6 +442,9 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn parse_primary(&mut self) -> Result<Expr, Diagnostic> {
+        if self.kw("if") {
+            return self.parse_if_expr();
+        }
         if self.cur.kind == TokenKind::Pipe {
             return self.parse_lambda();
         }

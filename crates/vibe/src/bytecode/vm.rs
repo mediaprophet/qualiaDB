@@ -362,11 +362,8 @@ impl<'a, H: Host> Vm<'a, H> {
             Op::JumpIfFalse => {
                 let target = self.read_u16(pc)? as usize;
                 let cond = self.pop()?;
-                let is_false = match cond {
-                    Value::Bool(b) => !b,
-                    Value::Null => true,
-                    _ => false,
-                };
+                // Same truthiness as the tree-walking interpreter.
+                let is_false = !cond.is_truthy();
                 if is_false {
                     *pc = target;
                 }
@@ -375,11 +372,7 @@ impl<'a, H: Host> Vm<'a, H> {
             Op::JumpIfTrue => {
                 let target = self.read_u16(pc)? as usize;
                 let cond = self.pop()?;
-                let is_true = match cond {
-                    Value::Bool(b) => b,
-                    Value::Null => false,
-                    _ => true,
-                };
+                let is_true = cond.is_truthy();
                 if is_true {
                     *pc = target;
                 }

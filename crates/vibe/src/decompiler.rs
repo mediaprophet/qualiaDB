@@ -448,12 +448,49 @@ pub fn decompile_stmt(out: &mut String, stmt: &Stmt, indent: usize, opts: &Decom
             out.push(';');
         }
         Stmt::Expr { expr, .. } => {
-            decompile_expr(out, expr);
+            // A statement that begins with `if` would be re-parsed as a
+            // statement-form conditional, so parenthesise it.
+            if starts_with_conditional(expr) {
+                out.push('(');
+                decompile_expr(out, expr);
+                out.push(')');
+            } else {
+                decompile_expr(out, expr);
+            }
             out.push(';');
         }
         Stmt::Block(b) => {
             decompile_block(out, b, indent, opts);
         }
+    }
+}
+
+/// Postfix operators may not follow an unparenthesised conditional expression.
+fn decompile_postfix_recv(out: &mut String, recv: &Expr) {
+    if matches!(recv.kind, ExprKind::IfElse { .. }) {
+        out.push('(');
+        decompile_expr(out, recv);
+        out.push(')');
+    } else {
+        decompile_expr(out, recv);
+    }
+}
+
+/// True when the emitted text of `expr` would begin with the `if` keyword.
+fn starts_with_conditional(expr: &Expr) -> bool {
+    match &expr.kind {
+        ExprKind::IfElse { .. } => true,
+        ExprKind::Binary { left, .. } => starts_with_conditional(left),
+        ExprKind::Pipe { left, .. } => starts_with_conditional(left),
+        ExprKind::Tween { from, .. } => starts_with_conditional(from),
+        // Postfix receivers that are conditionals are parenthesised already.
+        ExprKind::Member { recv, .. }
+        | ExprKind::Index { recv, .. }
+        | ExprKind::Try(recv)
+        | ExprKind::Call { callee: recv, .. } => {
+            !matches!(recv.kind, ExprKind::IfElse { .. }) && starts_with_conditional(recv)
+        }
+        _ => false,
     }
 }
 
@@ -533,11 +570,11 @@ pub fn decompile_expr(out: &mut String, expr: &Expr) {
             decompile_expr(out, inner);
         }
         ExprKind::Member { recv, name } => {
-            decompile_expr(out, recv);
+            decompile_postfix_recv(out, recv);
             let _ = write!(out, ".{name}");
         }
         ExprKind::Call { callee, args } => {
-            decompile_expr(out, callee);
+            decompile_postfix_recv(out, callee);
             out.push('(');
             for (j, a) in args.iter().enumerate() {
                 if j > 0 {
@@ -554,14 +591,38 @@ pub fn decompile_expr(out: &mut String, expr: &Expr) {
             out.push(')');
         }
         ExprKind::Index { recv, index } => {
-            decompile_expr(out, recv);
+            decompile_postfix_recv(out, recv);
             out.push('[');
             decompile_expr(out, index);
             out.push(']');
         }
         ExprKind::Try(inner) => {
-            decompile_expr(out, inner);
+            decompile_postfix_recv(out, inner);
             out.push('?');
+        }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            out.push_str("if ");
+            if matches!(cond.kind, ExprKind::IfElse { .. } | ExprKind::Record(_)) {
+                out.push('(');
+                decompile_expr(out, cond);
+                out.push(')');
+            } else {
+                decompile_expr(out, cond);
+            }
+            out.push_str(" { ");
+            decompile_expr(out, then_value);
+            out.push_str(" } else ");
+            if matches!(else_value.kind, ExprKind::IfElse { .. }) {
+                decompile_expr(out, else_value);
+            } else {
+                out.push_str("{ ");
+                decompile_expr(out, else_value);
+                out.push_str(" }");
+            }
         }
         ExprKind::List(items) => {
             out.push('[');

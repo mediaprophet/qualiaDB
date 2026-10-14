@@ -89,6 +89,7 @@ pub const EXPR_KINDS: &[NodeKindDescriptor] = kinds!(
     "ExprKind.Interpolate", "ast::ExprKind::Interpolate", "Expression";
     "ExprKind.Lambda", "ast::ExprKind::Lambda", "Expression";
     "ExprKind.Tween", "ast::ExprKind::Tween", "Expression";
+    "ExprKind.IfElse", "ast::ExprKind::IfElse", "Expression";
 );
 
 pub const MODAL_KINDS: &[NodeKindDescriptor] = kinds!(

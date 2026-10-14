@@ -251,3 +251,260 @@ fn test_all_8_locales_have_full_cardinality() {
         );
     }
 }
+
+// ── 7. Value-Producing Conditional Expressions (`if ... else ...`) ─────
+
+#[test]
+fn test_if_expr_walk_speed_and_lazy_evaluation() {
+    let src = r#"
+        module <https://civics.au/game/modules/character_arcs>;
+
+        pure fn walk_speed(trait_id: string, running: bool) -> f64 {
+            let base = if running { 5.0 } else { 2.6 };
+            if trait_id == "trailwise" && !running { return base * 1.25; }
+            if trait_id == "steadfast" && running { return base * 1.15; }
+            return base;
+        }
+
+        pure fn lazy_branch(flag: bool) -> i64 {
+            return if flag { 42 } else { 1 / 0 };
+        }
+    "#;
+    let prog = vibe::load_program(src).expect("should parse and check character_arcs");
+    let mut host = LocalHost::default();
+    let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
+    let mut env = Env::default();
+
+    let v1 = engine
+        .call_function(
+            &prog,
+            "walk_speed",
+            vec![Value::String("trailwise".into()), Value::Bool(false)],
+            &mut env,
+        )
+        .expect("eval trailwise walk");
+    assert_eq!(v1, Value::F64(3.25));
+
+    let v2 = engine
+        .call_function(
+            &prog,
+            "walk_speed",
+            vec![Value::String("steadfast".into()), Value::Bool(true)],
+            &mut env,
+        )
+        .expect("eval steadfast run");
+    assert_eq!(v2, Value::F64(5.75));
+
+    let v3 = engine
+        .call_function(
+            &prog,
+            "walk_speed",
+            vec![Value::String("ordinary".into()), Value::Bool(false)],
+            &mut env,
+        )
+        .expect("eval ordinary walk");
+    assert_eq!(v3, Value::F64(2.6));
+
+    let v4 = engine
+        .call_function(
+            &prog,
+            "walk_speed",
+            vec![Value::String("ordinary".into()), Value::Bool(true)],
+            &mut env,
+        )
+        .expect("eval ordinary run");
+    assert_eq!(v4, Value::F64(5.0));
+
+    // Unselected branch with division-by-zero must not execute
+    let lazy = engine
+        .call_function(&prog, "lazy_branch", vec![Value::Bool(true)], &mut env)
+        .expect("lazy branch should not evaluate unselected division by zero");
+    assert_eq!(lazy, Value::I64(42));
+}
+
+#[test]
+fn test_if_expr_chained_records_and_bytecode_parity() {
+    let src = r#"
+        pure fn classify(labour: bool, coins: f64, is_commons: bool) -> Record {
+            let action = if labour {
+                "connectMastLabour"
+            } else if coins >= 3.0 {
+                "connectMastCoins"
+            } else {
+                "endTurn"
+            };
+            return {
+                title: if is_commons { "The commons are open" } else { "The canal is connected" },
+                action: action,
+                bonus: (if is_commons { 10 } else { 20 }) + 5
+            };
+        }
+    "#;
+    let prog = vibe::load_program(src).expect("load_program");
+
+    // Round-trip CBOR AST
+    let bytes = vibe::encode(&prog);
+    let decoded = vibe::decode(&bytes).expect("decode CBOR AST");
+    assert_eq!(vibe::encode(&decoded), bytes);
+
+    // Round-trip decompile & projectional
+    let decompiled =
+        vibe::decompiler::decompile_program(&prog, &vibe::decompiler::DecompileOptions::default());
+    let reparsed = parse_program(&decompiled).expect("reparse decompiled");
+    vibe::check_program(&reparsed).expect("check reparsed");
+
+    let projected = vibe::projectional::project_program(
+        &prog,
+        &vibe::projectional::ProjectOptions::default(),
+    );
+    let reparsed_proj = parse_program(&projected).expect("reparse projected");
+    vibe::check_program(&reparsed_proj).expect("check reparsed projected");
+
+    // Interpreter vs Bytecode VM parity
+    let chunk = vibe::bytecode::compile(&prog).expect("compile bytecode");
+    for (labour, coins, is_commons, exp_action, exp_title, exp_bonus) in [
+        (true, 0.0, true, "connectMastLabour", "The commons are open", 15),
+        (false, 4.0, false, "connectMastCoins", "The canal is connected", 25),
+        (false, 1.0, true, "endTurn", "The commons are open", 15),
+    ] {
+        let args = vec![
+            Value::Bool(labour),
+            Value::F64(coins),
+            Value::Bool(is_commons),
+        ];
+        let mut host = LocalHost::default();
+        let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
+        let mut env = Env::default();
+        let interp_val = engine
+            .call_function(&prog, "classify", args.clone(), &mut env)
+            .expect("interp eval");
+
+        let mut vm_host = LocalHost::default();
+        let mut vm = vibe::bytecode::Vm::new(&chunk, &mut vm_host, Budget::default());
+        let vm_val = vm
+            .call_function(0, &args)
+            .expect("bytecode vm eval");
+
+        assert_eq!(interp_val, vm_val);
+        let Value::Record(map) = interp_val else {
+            panic!("expected record");
+        };
+        assert_eq!(map.get("action"), Some(&Value::String(exp_action.into())));
+        assert_eq!(map.get("title"), Some(&Value::String(exp_title.into())));
+        assert_eq!(map.get("bonus"), Some(&Value::I64(exp_bonus)));
+    }
+}
+
+#[test]
+fn test_if_expr_static_checks_and_parse_diagnostics() {
+    // Missing else in expression position is rejected
+    let err = parse_program("pure fn f(x: bool) -> i64 { return if x { 1 }; }")
+        .expect_err("missing else should fail");
+    assert_eq!(err.code, vibe::DiagCode::E001);
+    assert!(err.message.contains("else"));
+
+    // Empty branch is rejected
+    let err = parse_program("pure fn f(x: bool) -> i64 { return if x {} else { 1 }; }")
+        .expect_err("empty branch should fail");
+    assert_eq!(err.code, vibe::DiagCode::E001);
+
+    // Trailing semicolon inside branch is rejected
+    let err = parse_program("pure fn f(x: bool) -> i64 { return if x { 1; } else { 2 }; }")
+        .expect_err("semicolon in branch should fail");
+    assert_eq!(err.code, vibe::DiagCode::E001);
+
+    // Unparenthesized postfix on conditional is rejected
+    let err = parse_program("pure fn f(x: bool) -> i64 { return if x { { a: 1 } } else { { a: 2 } }.a; }")
+        .expect_err("unparenthesized postfix should fail");
+    assert_eq!(err.code, vibe::DiagCode::E001);
+
+    // Static capability check inspects both branches even if condition is constant true
+    let prog = parse_program(
+        r#"
+        effect fn sneaky() {
+            let x = if true { 1 } else { pulse.publish("t", {}) };
+        }
+        "#,
+    )
+    .expect("parse sneaky");
+    let check_err = vibe::check_program(&prog).expect_err("missing capability in else branch must fail");
+    assert_eq!(check_err.code, vibe::DiagCode::E300);
+}
+
+#[test]
+fn test_game_demo_campaign_rules_pattern_loads_and_evaluates() {
+    let src = r#"
+        module <https://civics.au/game/modules/campaign_rules>;
+
+        pure fn campaign_lead(st: Record) -> Record {
+            if st.finale != "" {
+                let is_commons = st.finale == "\"commons\"" || st.finale == "commons";
+                return {
+                    title: if is_commons { "The commons are open" } else { "The canal is connected" },
+                    copy: if is_commons {
+                        "You chose a local gathering and opened a shared place to celebrate the harvest."
+                    } else {
+                        "You chose a working trade link, carrying Saltwind’s produce to neighbouring communities."
+                    },
+                    label: "Campaign complete · explore the map",
+                    action: "",
+                    territory: "saltwind"
+                };
+            }
+
+            let held_panel = st.held.contains("rc:partPanel");
+            let fitted_panel = st.parts.contains("rc:partPanel");
+            let mut action = "";
+            if !st.committeeFormed {
+                action = if st.supporters > 0.0 { "formCommittee" } else { "canvassMara" };
+            } else if st.fundingFailed {
+                action = if st.supporters < 2.0 {
+                    "canvassSecondResident"
+                } else if st.coins >= 3.0 {
+                    "selfFundProject"
+                } else {
+                    "raiseCommunityFunds"
+                };
+            } else if !fitted_panel && !held_panel {
+                action = if st.labour { "salvagePanel" } else if st.coins >= 4.0 { "buyPanel" } else { "endTurn" };
+            } else {
+                action = "switchPowerOn";
+            }
+
+            let label = if action != "" { "Continue" } else { "Choose a funding, procurement, or challenge path" };
+            return {
+                title: if st.day <= 4.0 { "Reach the far bank" } else { "Cross the high canal" },
+                label: label,
+                action: action,
+                territory: "kestrel"
+            };
+        }
+    "#;
+    let prog = vibe::load_program(src).expect("should load campaign_rules");
+    let mut host = LocalHost::default();
+    let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
+    let mut env = Env::default();
+
+    let mut st = std::collections::BTreeMap::new();
+    st.insert("finale".into(), Value::String("".into()));
+    st.insert("held".into(), Value::List(vec![]));
+    st.insert("parts".into(), Value::List(vec![]));
+    st.insert("committeeFormed".into(), Value::Bool(true));
+    st.insert("fundingFailed".into(), Value::Bool(true));
+    st.insert("supporters".into(), Value::F64(2.0));
+    st.insert("coins".into(), Value::F64(3.5));
+    st.insert("labour".into(), Value::Bool(false));
+    st.insert("day".into(), Value::F64(5.0));
+
+    let res = engine
+        .call_function(&prog, "campaign_lead", vec![Value::Record(st)], &mut env)
+        .expect("eval campaign_lead");
+    let Value::Record(map) = res else {
+        panic!("expected Record");
+    };
+    assert_eq!(map.get("action"), Some(&Value::String("selfFundProject".into())));
+    assert_eq!(map.get("title"), Some(&Value::String("Cross the high canal".into())));
+    assert_eq!(map.get("label"), Some(&Value::String("Continue".into())));
+}
+
+

@@ -514,6 +514,15 @@ fn walk_expr_deps(expr: &Expr, deps: &mut HashSet<String>) {
             walk_expr_deps(to, deps);
             walk_expr_deps(over, deps);
         }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            walk_expr_deps(cond, deps);
+            walk_expr_deps(then_value, deps);
+            walk_expr_deps(else_value, deps);
+        }
         _ => {}
     }
 }

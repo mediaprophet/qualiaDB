@@ -929,6 +929,21 @@ fn encode_expr_kind(enc: &mut CborEncoder, k: &ExprKind) {
                 None => enc.null(),
             };
         }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            enc.map(4);
+            enc.str("type");
+            enc.str("IfElse");
+            enc.str("cond");
+            encode_expr(enc, cond);
+            enc.str("then");
+            encode_expr(enc, then_value);
+            enc.str("else");
+            encode_expr(enc, else_value);
+        }
     }
 }
 
