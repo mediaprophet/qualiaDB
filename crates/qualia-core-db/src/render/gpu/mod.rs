@@ -77,9 +77,10 @@ pub(crate) fn portal_gpu_canvas_claimed() -> bool {
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-fn mark_portal_gpu_canvas_claimed() {
+pub(crate) fn mark_portal_gpu_canvas_claimed() {
     PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(true));
 }
+
 
 /// Static ambient SSBO capacity — draw count is throttled per `VramLedger` mode.
 const MAX_AMBIENT_INSTANCES: usize = 50_000;
