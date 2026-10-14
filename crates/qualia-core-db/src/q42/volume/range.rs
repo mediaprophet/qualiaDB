@@ -4,9 +4,14 @@
 //! contract. The local file adapter is both useful itself and the reference
 //! implementation for response-length and boundary validation.
 
+use std::io;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
-use std::io::{self, Read, Seek, SeekFrom};
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{Read, Seek, SeekFrom};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Mutex;
 
 use sha2::{Digest, Sha256};
@@ -49,11 +54,13 @@ pub trait Q42RangeSource {
 
 /// Native local-file implementation. The mutex serialises seek/read pairs;
 /// high-concurrency remote adapters should instead use independent requests.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct LocalFileRangeSource {
     length: u64,
     file: Mutex<File>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocalFileRangeSource {
     pub fn open(path: &Path) -> io::Result<Self> {
         let file = File::open(path)?;
@@ -65,6 +72,7 @@ impl LocalFileRangeSource {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Q42RangeSource for LocalFileRangeSource {
     fn length(&self) -> io::Result<u64> {
         Ok(self.length)
@@ -413,7 +421,7 @@ fn parse_content_range(value: &str) -> io::Result<(u64, u64, u64)> {
     Ok((start, end, total))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;

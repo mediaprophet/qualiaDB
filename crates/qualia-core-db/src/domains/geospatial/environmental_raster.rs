@@ -204,6 +204,216 @@ pub fn derive_canopy_cover_grid(
     }
 }
 
+/// Error kinds for GeoTIFF parsing and decoding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GeoTiffError {
+    InvalidMagic,
+    UnsupportedEndian,
+    MalformedIfd,
+    UnsupportedCompression,
+    UnsupportedFormat,
+    BufferTooSmall,
+    TruncatedData,
+}
+
+/// Metadata and spatial bounds extracted from a GeoTIFF header.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GeoTiffRasterInfo {
+    pub width: usize,
+    pub height: usize,
+    pub cell_size_m: f64,
+    pub bbox: (f64, f64, f64, f64), // west, south, east, north
+    pub sample_format: u16,         // 1 = UInt, 2 = Int, 3 = IEEE Float
+    pub bits_per_sample: u16,
+    pub sample_count: usize,
+}
+
+/// Zero-heap GeoTIFF raster decoder.
+///
+/// Decodes uncompressed (raw/strip) raster bands (Float32, Int16, or UInt16)
+/// into a caller-supplied `&mut [f32]` buffer, extracting spatial resolution,
+/// georeferenced bounding box (`ModelTiepointTag` + `ModelPixelScaleTag`),
+/// and dimensions.
+pub fn decode_geotiff_raster_into(
+    tiff_bytes: &[u8],
+    out: &mut [f32],
+) -> Result<GeoTiffRasterInfo, GeoTiffError> {
+    if tiff_bytes.len() < 8 {
+        return Err(GeoTiffError::TruncatedData);
+    }
+
+    let is_le = match &tiff_bytes[0..2] {
+        b"II" => true,
+        b"MM" => false,
+        _ => return Err(GeoTiffError::InvalidMagic),
+    };
+
+    if !is_le {
+        // Little-endian is the canonical Qualia standard
+        return Err(GeoTiffError::UnsupportedEndian);
+    }
+
+    let magic = u16::from_le_bytes(tiff_bytes[2..4].try_into().unwrap());
+    if magic != 42 {
+        return Err(GeoTiffError::InvalidMagic);
+    }
+
+    let ifd_offset = u32::from_le_bytes(tiff_bytes[4..8].try_into().unwrap()) as usize;
+    if ifd_offset + 2 > tiff_bytes.len() {
+        return Err(GeoTiffError::TruncatedData);
+    }
+
+    let num_entries = u16::from_le_bytes(tiff_bytes[ifd_offset..ifd_offset + 2].try_into().unwrap()) as usize;
+    let entries_start = ifd_offset + 2;
+    let entries_end = entries_start + num_entries * 12;
+    if entries_end > tiff_bytes.len() {
+        return Err(GeoTiffError::MalformedIfd);
+    }
+
+    let mut width = 0usize;
+    let mut height = 0usize;
+    let mut bits_per_sample = 32u16;
+    let mut compression = 1u16; // 1 = None
+    let mut sample_format = 3u16; // default Float32
+    let mut strip_offsets_val = 0u32;
+    let mut strip_offsets_count = 0u32;
+    let mut _strip_byte_counts = 0u32;
+
+    let mut tiepoint_origin = (0.0f64, 0.0f64);
+    let mut pixel_scale = (1.0f64, 1.0f64);
+    let mut has_tiepoint = false;
+    let mut _has_scale = false;
+
+    for i in 0..num_entries {
+        let entry_off = entries_start + i * 12;
+        let tag = u16::from_le_bytes(tiff_bytes[entry_off..entry_off + 2].try_into().unwrap());
+        let field_type = u16::from_le_bytes(tiff_bytes[entry_off + 2..entry_off + 4].try_into().unwrap());
+        let count = u32::from_le_bytes(tiff_bytes[entry_off + 4..entry_off + 8].try_into().unwrap());
+        let val_or_off = u32::from_le_bytes(tiff_bytes[entry_off + 8..entry_off + 12].try_into().unwrap());
+
+        let read_u32 = || -> u32 {
+            if field_type == 3 {
+                // SHORT
+                val_or_off & 0xFFFF
+            } else {
+                val_or_off
+            }
+        };
+
+        match tag {
+            256 => width = read_u32() as usize,
+            257 => height = read_u32() as usize,
+            258 => bits_per_sample = read_u32() as u16,
+            259 => compression = read_u32() as u16,
+            273 => {
+                strip_offsets_val = val_or_off;
+                strip_offsets_count = count;
+            }
+            279 => _strip_byte_counts = read_u32(),
+            339 => sample_format = read_u32() as u16,
+            // ModelPixelScaleTag (33550)
+            33550 if field_type == 12 && count >= 2 => {
+                let off = val_or_off as usize;
+                if off + 16 <= tiff_bytes.len() {
+                    let sx = f64::from_le_bytes(tiff_bytes[off..off + 8].try_into().unwrap());
+                    let sy = f64::from_le_bytes(tiff_bytes[off + 8..off + 16].try_into().unwrap());
+                    pixel_scale = (sx, sy);
+                    _has_scale = true;
+                }
+            }
+            // ModelTiepointTag (33922) - typically 6 doubles: (I, J, K, X, Y, Z)
+            33922 if field_type == 12 && count >= 6 => {
+                let off = val_or_off as usize;
+                if off + 48 <= tiff_bytes.len() {
+                    let x = f64::from_le_bytes(tiff_bytes[off + 24..off + 32].try_into().unwrap());
+                    let y = f64::from_le_bytes(tiff_bytes[off + 32..off + 40].try_into().unwrap());
+                    tiepoint_origin = (x, y);
+                    has_tiepoint = true;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if width == 0 || height == 0 {
+        return Err(GeoTiffError::MalformedIfd);
+    }
+    if compression != 1 {
+        return Err(GeoTiffError::UnsupportedCompression);
+    }
+
+    let total_samples = width * height;
+    if out.len() < total_samples {
+        return Err(GeoTiffError::BufferTooSmall);
+    }
+
+    let data_offset = if strip_offsets_count == 1 {
+        strip_offsets_val as usize
+    } else {
+        // If multiple strips or offset points to array, read first offset
+        let off = strip_offsets_val as usize;
+        if off + 4 <= tiff_bytes.len() {
+            u32::from_le_bytes(tiff_bytes[off..off + 4].try_into().unwrap()) as usize
+        } else {
+            return Err(GeoTiffError::TruncatedData);
+        }
+    };
+
+    // Decode sample values
+    match (sample_format, bits_per_sample) {
+        (3, 32) => {
+            // IEEE Float32
+            let bytes_needed = total_samples * 4;
+            if data_offset + bytes_needed > tiff_bytes.len() {
+                return Err(GeoTiffError::TruncatedData);
+            }
+            for i in 0..total_samples {
+                let b_off = data_offset + i * 4;
+                out[i] = f32::from_le_bytes(tiff_bytes[b_off..b_off + 4].try_into().unwrap());
+            }
+        }
+        (1, 16) | (2, 16) => {
+            // 16-bit integer
+            let bytes_needed = total_samples * 2;
+            if data_offset + bytes_needed > tiff_bytes.len() {
+                return Err(GeoTiffError::TruncatedData);
+            }
+            for i in 0..total_samples {
+                let b_off = data_offset + i * 2;
+                let val = if sample_format == 1 {
+                    u16::from_le_bytes(tiff_bytes[b_off..b_off + 2].try_into().unwrap()) as f32
+                } else {
+                    i16::from_le_bytes(tiff_bytes[b_off..b_off + 2].try_into().unwrap()) as f32
+                };
+                out[i] = val;
+            }
+        }
+        _ => return Err(GeoTiffError::UnsupportedFormat),
+    }
+
+    // Compute bounding box
+    let (west, north) = if has_tiepoint {
+        tiepoint_origin
+    } else {
+        (0.0, (height as f64) * pixel_scale.1)
+    };
+    let east = west + (width as f64) * pixel_scale.0;
+    let south = north - (height as f64) * pixel_scale.1;
+    let bbox = (west, south, east, north);
+
+    let cell_size_m = pixel_scale.0;
+
+    Ok(GeoTiffRasterInfo {
+        width,
+        height,
+        cell_size_m,
+        bbox,
+        sample_format,
+        bits_per_sample,
+        sample_count: total_samples,
+    })
+}
+
 /// Compile a collection of environmental raster layers into `.10d` Field section bytes.
 pub fn compile_environmental_rasters_to_10d(
     layers: &[EnvironmentalRasterLayer],
@@ -290,5 +500,56 @@ mod tests {
         let mut out = vec![0u8; 1024];
         let written = compile_environmental_rasters_to_10d(&layers, &mut out).unwrap();
         assert!(written > 0);
+    }
+
+    #[test]
+    fn test_decode_geotiff_raster_into() {
+        // Construct a synthetic 2x2 Float32 GeoTIFF in memory
+        let mut tiff = Vec::new();
+        // 1. Header (8 bytes)
+        tiff.extend_from_slice(b"II"); // Little endian
+        tiff.extend_from_slice(&42u16.to_le_bytes()); // Magic
+        tiff.extend_from_slice(&8u32.to_le_bytes()); // IFD offset at 8
+
+        // 2. IFD at offset 8: 7 entries
+        let entries_count = 7u16;
+        tiff.extend_from_slice(&entries_count.to_le_bytes());
+
+        let strip_data_offset = 120u32;
+
+        let mut push_entry = |tag: u16, ftype: u16, count: u32, val_or_off: u32| {
+            tiff.extend_from_slice(&tag.to_le_bytes());
+            tiff.extend_from_slice(&ftype.to_le_bytes());
+            tiff.extend_from_slice(&count.to_le_bytes());
+            tiff.extend_from_slice(&val_or_off.to_le_bytes());
+        };
+
+        push_entry(256, 4, 1, 2); // Width = 2
+        push_entry(257, 4, 1, 2); // Height = 2
+        push_entry(258, 3, 1, 32); // BitsPerSample = 32
+        push_entry(259, 3, 1, 1); // Compression = 1 (None)
+        push_entry(273, 4, 1, strip_data_offset); // StripOffsets
+        push_entry(279, 4, 1, 16); // StripByteCounts = 16 (4 * 4 bytes)
+        push_entry(339, 3, 1, 3); // SampleFormat = 3 (Float32)
+
+        tiff.extend_from_slice(&0u32.to_le_bytes()); // Next IFD = 0
+
+        // Pad up to strip_data_offset
+        while tiff.len() < strip_data_offset as usize {
+            tiff.push(0);
+        }
+
+        // Float samples: 10.5, 20.5, 30.5, 40.5
+        tiff.extend_from_slice(&10.5f32.to_le_bytes());
+        tiff.extend_from_slice(&20.5f32.to_le_bytes());
+        tiff.extend_from_slice(&30.5f32.to_le_bytes());
+        tiff.extend_from_slice(&40.5f32.to_le_bytes());
+
+        let mut out = [0.0f32; 4];
+        let info = decode_geotiff_raster_into(&tiff, &mut out).expect("should decode GeoTIFF");
+        assert_eq!(info.width, 2);
+        assert_eq!(info.height, 2);
+        assert_eq!(info.sample_count, 4);
+        assert_eq!(out, [10.5, 20.5, 30.5, 40.5]);
     }
 }

@@ -129,6 +129,24 @@ pub struct PulseRecord {
 /// RDF 1.2 reifier predicate used by staged `<< s p o ~ r >>` quins.
 const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 
+/// Provenance and semantic view metadata for an admitted Q42 volume/slice (G50).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdmittedQ42ViewReceipt {
+    pub pack_identity: String,
+    pub entry_key: String,
+    pub entry_digest: [u8; 32],
+    pub q42_version: u32,
+    pub quin_count: usize,
+    pub block_count: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AdmittedQ42View {
+    pub receipt: Option<AdmittedQ42ViewReceipt>,
+    pub quins: Vec<NQuin>,
+    pub lexicon_entries: std::collections::HashMap<u64, String>,
+}
+
 /// In-memory graph revision used as the 0.1 live host.
 ///
 /// When `attached`, queries refresh from the native daemon graph and commits
@@ -158,6 +176,8 @@ pub struct PoetSnapshot {
     pub trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger,
     /// Remaining 42 MB Sentinel budget after the last eval (P16.6).
     pub last_eval_workspace_left: u64,
+    /// Admitted isolated read-only Q42 semantic views (G50).
+    pub admitted_views: Vec<AdmittedQ42View>,
 }
 
 /// Canonical name for the mutable Vibe execution environment.
@@ -269,6 +289,7 @@ impl PoetSnapshot {
             hid_events: HidEventBuffer::new(),
             trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
             last_eval_workspace_left: vibe::SENTINEL_BYTES,
+            admitted_views: Vec::new(),
         }
     }
 
@@ -297,6 +318,7 @@ impl PoetSnapshot {
             hid_events: HidEventBuffer::new(),
             trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
             last_eval_workspace_left: vibe::SENTINEL_BYTES,
+            admitted_views: Vec::new(),
         }
     }
 
@@ -379,6 +401,7 @@ impl PoetSnapshot {
             hid_events: self.hid_events.clone(),
             trace_ledger: self.trace_ledger.clone(),
             last_eval_workspace_left: self.last_eval_workspace_left,
+            admitted_views: self.admitted_views.clone(),
         }
     }
 
@@ -392,6 +415,158 @@ impl PoetSnapshot {
     /// Discard all staged deltas without committing (rollback).
     pub fn rollback_staged(&mut self) {
         self.staged.clear();
+    }
+
+    /// Admit an in-memory/byte-backed Q42 slice into an isolated read-only semantic view (G50).
+    ///
+    /// Validates:
+    /// 1. Entry SHA-256 digest (if expected_digest is provided).
+    /// 2. Q42 header bounds and supported format version (v3/v4).
+    /// 3. Caller-buffered SuperBlock decompression and Quin parity checks for all Quins.
+    /// 4. Embedded Q42LEX lexicon decoding into an isolated term map.
+    ///
+    /// Fail-closed guarantee: any corruption, digest mismatch, or budget error
+    /// rejects admission immediately WITHOUT altering previously admitted views or
+    /// resident committed graph.
+    ///
+    /// When `load_into_committed` is true, also appends admitted Quins to `self.committed`
+    /// and bumps revision so queries (`GraphDatabase.sparql`, `SHACL.validate`) see them.
+    pub fn admit_q42_slice(
+        &mut self,
+        bytes: &[u8],
+        pack_identity: &str,
+        entry_key: &str,
+        expected_digest: Option<&[u8; 32]>,
+        load_into_committed: bool,
+    ) -> Result<AdmittedQ42ViewReceipt, String> {
+        if bytes.len() > vibe::SENTINEL_BYTES as usize {
+            return Err("Q42 slice exceeds 42MB Sentinel budget".into());
+        }
+
+        // 1. Digest check
+        if let Some(expected) = expected_digest {
+            use sha2::{Digest, Sha256};
+            let mut hasher = Sha256::new();
+            hasher.update(bytes);
+            let actual: [u8; 32] = hasher.finalize().into();
+            if actual != *expected {
+                return Err("Q42 slice digest mismatch".into());
+            }
+        }
+
+        // 2. Open via Q42RangeVolume
+        use crate::q42::q42_volume::{
+            OpfsSliceRangeSource, Q42RangeVolume, MAX_COMPRESSED_SUPERBLOCK_SIZE,
+            SUPERBLOCK_HEADER, SUPERBLOCK_SIZE, QUIN_SIZE,
+        };
+        let source = OpfsSliceRangeSource::new(bytes);
+        let vol = Q42RangeVolume::open(source)
+            .map_err(|e| format!("Q42 range volume header invalid: {e}"))?;
+
+        let block_count = vol.block_count() as usize;
+        let mut admitted_quins = Vec::new();
+
+        // 3. Decompress and verify each block and its quins
+        let mut compressed = vec![0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = vec![0u8; SUPERBLOCK_SIZE];
+
+        for b in 0..block_count {
+            vol.read_superblock_into(b, &mut compressed, &mut decoded)
+                .map_err(|e| format!("Q42 block {b} decompression failed: {e}"))?;
+
+            let count = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
+            if count > crate::QUINS_PER_BLOCK {
+                return Err(format!("Q42 block {b} quin count {count} exceeds capacity"));
+            }
+
+            for q_idx in 0..count {
+                let off = SUPERBLOCK_HEADER + q_idx * QUIN_SIZE;
+                let quin = NQuin {
+                    subject: u64::from_le_bytes(decoded[off..off + 8].try_into().unwrap()),
+                    predicate: u64::from_le_bytes(decoded[off + 8..off + 16].try_into().unwrap()),
+                    object: u64::from_le_bytes(decoded[off + 16..off + 24].try_into().unwrap()),
+                    context: u64::from_le_bytes(decoded[off + 24..off + 32].try_into().unwrap()),
+                    metadata: u64::from_le_bytes(decoded[off + 32..off + 40].try_into().unwrap()),
+                    parity: u64::from_le_bytes(decoded[off + 40..off + 48].try_into().unwrap()),
+                };
+
+                let expected_parity = NQuin::calculate_parity(
+                    quin.subject,
+                    quin.predicate,
+                    quin.object,
+                    quin.context,
+                    quin.metadata,
+                );
+                if quin.parity != expected_parity {
+                    return Err(format!(
+                        "Q42 block {b} quin {q_idx} parity corrupt: expected {expected_parity:#x}, got {:#x}",
+                        quin.parity
+                    ));
+                }
+                admitted_quins.push(quin);
+            }
+        }
+
+        // 4. Decode embedded lexicon if present
+        let mut lexicon_entries = std::collections::HashMap::new();
+        let header = vol.header();
+        if header.lex_length > 0 {
+            let lex_off = header.lex_offset as usize;
+            let lex_len = header.lex_length as usize;
+            if let Some(lex_slice) = bytes.get(lex_off..lex_off + lex_len) {
+                if let Ok(lex_mmap) = crate::q42_lex::Q42LexMmap::from_bytes(lex_slice) {
+                    for q in &admitted_quins {
+                        if let Some(s) = lex_mmap.lookup_owned(q.subject) {
+                            lexicon_entries.insert(q.subject, s);
+                        }
+                        if let Some(s) = lex_mmap.lookup_owned(q.predicate) {
+                            lexicon_entries.insert(q.predicate, s);
+                        }
+                        let masked_obj = q.object & 0x0FFF_FFFF_FFFF_FFFF;
+                        if let Some(s) = lex_mmap.lookup_owned(masked_obj) {
+                            lexicon_entries.insert(masked_obj, s);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Commit into admitted views
+        let receipt = AdmittedQ42ViewReceipt {
+            pack_identity: pack_identity.to_string(),
+            entry_key: entry_key.to_string(),
+            entry_digest: {
+                use sha2::{Digest, Sha256};
+                Sha256::digest(bytes).into()
+            },
+            q42_version: header.version as u32,
+            quin_count: admitted_quins.len(),
+            block_count: header.block_count,
+        };
+
+        if load_into_committed {
+            self.committed.extend_from_slice(&admitted_quins);
+            self.revision = self.revision.saturating_add(1);
+        }
+
+        self.admitted_views.push(AdmittedQ42View {
+            receipt: Some(receipt.clone()),
+            quins: admitted_quins,
+            lexicon_entries,
+        });
+
+        Ok(receipt)
+    }
+
+    /// Resolve a hash term against admitted lexicon views.
+    pub fn resolve_admitted_lexicon_term(&self, hash: u64) -> Option<&str> {
+        let masked = hash & 0x0FFF_FFFF_FFFF_FFFF;
+        for view in self.admitted_views.iter().rev() {
+            if let Some(term) = view.lexicon_entries.get(&hash).or_else(|| view.lexicon_entries.get(&masked)) {
+                return Some(term.as_str());
+            }
+        }
+        None
     }
 
     /// Number of staged (uncommitted) quins.
@@ -2939,5 +3114,88 @@ effect fn go() {
         let commits = snap.trace_ledger.entries_for_act("invoke:graph.commit");
         assert_eq!(commits.len(), 1);
         assert!(!commits[0].success);
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_admit_q42_slice_success_and_fail_closed() {
+        use crate::q42_volume::write_unified_volume;
+        use std::collections::HashMap;
+
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let mut lex = HashMap::new();
+        let s_hash = crate::lexicon::generate_60bit_token(b"http://example.org/koala");
+        let p_hash = crate::lexicon::generate_60bit_token(b"http://example.org/status");
+        let o_hash = crate::lexicon::generate_60bit_token(b"http://example.org/vulnerable");
+        lex.insert(s_hash, "http://example.org/koala".to_string());
+        lex.insert(p_hash, "http://example.org/status".to_string());
+        lex.insert(o_hash, "http://example.org/vulnerable".to_string());
+
+        let mut quin = NQuin {
+            subject: s_hash,
+            predicate: p_hash,
+            object: o_hash,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        quin.parity = NQuin::calculate_parity(quin.subject, quin.predicate, quin.object, quin.context, quin.metadata);
+
+        write_unified_volume(
+            tmp.path(),
+            &lex,
+            &[(quin.object, quin.object)],
+            &[vec![quin]],
+        ).unwrap();
+
+        let bytes = std::fs::read(tmp.path()).unwrap();
+        let mut snap = PoetSnapshot::default();
+        let prior_revision = snap.revision;
+
+        // 1. Successful admission
+        let receipt = snap.admit_q42_slice(
+            &bytes,
+            "eco:pack:sample",
+            "sem/taxonomy.q42",
+            None,
+            true,
+        ).expect("admission should succeed");
+
+        assert_eq!(receipt.quin_count, 1);
+        assert_eq!(receipt.pack_identity, "eco:pack:sample");
+        assert_eq!(receipt.entry_key, "sem/taxonomy.q42");
+        assert_eq!(snap.committed.len(), 1);
+        assert_eq!(snap.committed[0].subject, s_hash);
+        assert!(snap.revision > prior_revision);
+
+        // Term resolution from admitted lexicon
+        assert_eq!(snap.resolve_admitted_lexicon_term(s_hash), Some("http://example.org/koala"));
+        assert_eq!(snap.resolve_admitted_lexicon_term(p_hash), Some("http://example.org/status"));
+
+        // 2. Digest mismatch fail-closed
+        let bad_digest = [0xFFu8; 32];
+        let err = snap.admit_q42_slice(
+            &bytes,
+            "eco:pack:bad",
+            "sem/bad.q42",
+            Some(&bad_digest),
+            true,
+        );
+        assert!(err.is_err());
+        assert_eq!(snap.committed.len(), 1, "prior state must not be modified on fail-closed");
+
+        // 3. Corrupted bytes fail-closed
+        let mut corrupt_bytes = bytes.clone();
+        let last = corrupt_bytes.len() - 10;
+        corrupt_bytes[last] ^= 0xFF;
+        let err2 = snap.admit_q42_slice(
+            &corrupt_bytes,
+            "eco:pack:corrupt",
+            "sem/corrupt.q42",
+            None,
+            true,
+        );
+        assert!(err2.is_err());
+        assert_eq!(snap.committed.len(), 1, "prior state must not be modified on corrupt fail-closed");
     }
 }

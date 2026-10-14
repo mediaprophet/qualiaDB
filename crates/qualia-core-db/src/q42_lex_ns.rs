@@ -133,12 +133,19 @@ pub fn serialize_namespaced_paged_lexicon(
         let index_start = out.len();
         out.resize(index_start + chunk.len() * INDEX_ENTRY_SIZE, 0);
 
-        // Namespace table at the start of the blob region.
-        for (ns, count) in &members {
-            if *count > 0 && use_ns(ns) {
-                ns_ids.insert(ns, ns_table.len() as u16);
-                ns_table.push(ns);
-            }
+        // Namespace table at the start of the blob region. Iterating
+        // `members` (a HashMap) would permute ns ids per process and make
+        // the serialised volume non-reproducible — sort for a canonical
+        // byte layout.
+        let mut accepted: Vec<&str> = members
+            .iter()
+            .filter(|(ns, count)| *count > &0 && use_ns(ns))
+            .map(|(ns, _)| *ns)
+            .collect();
+        accepted.sort_unstable();
+        for ns in accepted {
+            ns_ids.insert(ns, ns_table.len() as u16);
+            ns_table.push(ns);
         }
         for ns in &ns_table {
             let bytes = ns.as_bytes();

@@ -24,8 +24,8 @@ pub mod vector_scene;
 
 pub use adapters::{AdapterRegistry, LayerFetchReport, LayerFetchStatus};
 pub use environmental_raster::{
-    compile_environmental_rasters_to_10d, derive_canopy_cover_grid, derive_slope_horn,
-    sample_bilinear, EnvironmentalRasterLayer,
+    compile_environmental_rasters_to_10d, decode_geotiff_raster_into, derive_canopy_cover_grid,
+    derive_slope_horn, sample_bilinear, EnvironmentalRasterLayer, GeoTiffError, GeoTiffRasterInfo,
 };
 pub use steward::{validate_steward_unlock, StewardContract, StewardVerdict};
 pub use triggers::{LocationTriggerEngine, LocationTriggerRegistry};

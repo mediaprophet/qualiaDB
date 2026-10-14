@@ -172,6 +172,19 @@ impl<'a> BundleReader<'a> {
         hasher.update(payload);
         hasher.finalize().as_slice() == e.sha256.as_slice()
     }
+
+    /// Retrieve and decode the embedded digital twin family manifest, if present.
+    pub fn get_family_manifest(
+        &self,
+    ) -> Result<Option<super::variant_matrix::TwinFamilyManifest>, BundleError> {
+        match self.get(super::variant_matrix::FAMILY_MANIFEST_ENTRY_KEY) {
+            Some(bytes) => {
+                let manifest = super::variant_matrix::TwinFamilyManifest::decode_from_cbor(bytes)?;
+                Ok(Some(manifest))
+            }
+            None => Ok(None),
+        }
+    }
 }
 
 /// Open a `.hmc` bundle from disk via `mmap` for zero-copy access (native).

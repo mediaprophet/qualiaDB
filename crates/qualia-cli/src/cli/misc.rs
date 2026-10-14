@@ -27,10 +27,112 @@ pub enum GovernanceAction {
     },
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum CompileAction {
     N3ToDeontic { file: PathBuf },
+    /// Compile and seal an ontological entity bundle (.hmc) in Reverse-LOD order with CBOR-LD manifest
+    EntityCompile(EntityCompileArgs),
+    /// Legacy alias for EntityCompile
+    TwinCompile(EntityCompileArgs),
+    /// Verify and validate an ontological entity (.10d or .hmc bundle)
+    EntityVerify(EntityVerifyArgs),
+    /// Legacy alias for EntityVerify
+    TwinVerify(EntityVerifyArgs),
 }
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct EntityCompileArgs {
+    /// Hero mesh input file (.10d, .glb, or binary)
+    #[arg(short, long)]
+    pub hero: PathBuf,
+
+    /// Output bundle path (.hmc)
+    #[arg(short, long)]
+    pub output: PathBuf,
+
+    /// Decimated mesh input file (optional)
+    #[arg(long)]
+    pub decimated: Option<PathBuf>,
+
+    /// Octahedral impostor atlas input file (optional)
+    #[arg(long)]
+    pub impostor: Option<PathBuf>,
+
+    /// Hierarchical surfel input file (optional)
+    #[arg(long)]
+    pub surfel: Option<PathBuf>,
+
+    /// Subject ID / URN / DID (e.g. urn:qualia:taxon:eucalyptus_regnans_01 or did:key:...)
+    #[arg(long, default_value = "urn:qualia:taxon:eucalyptus_regnans_01")]
+    pub subject_id: String,
+
+    /// Ontological entity class (DarwinianTaxon -> Specimen, NaturalPerson -> Persona, ManufacturedProperty -> Construct)
+    #[arg(long, default_value = "DarwinianTaxon")]
+    pub entity_type: String,
+
+    /// Issuer DID
+    #[arg(long, default_value = "did:web:trustfactory.org:compiler")]
+    pub issuer: String,
+
+    /// Procedural seed URI
+    #[arg(long, default_value = "hmc://seeds/voronoi_bark")]
+    pub procedural_seed: String,
+
+    /// Acoustic low anchor Hz
+    #[arg(long, default_value_t = 200)]
+    pub acoustic_low: u32,
+
+    /// Acoustic mid anchor Hz
+    #[arg(long, default_value_t = 1000)]
+    pub acoustic_mid: u32,
+
+    /// Acoustic high anchor Hz
+    #[arg(long, default_value_t = 8000)]
+    pub acoustic_high: u32,
+
+    /// Verification method key URI
+    #[arg(long, default_value = "did:web:trustfactory.org:compiler#key-1")]
+    pub verification_method: String,
+
+    /// Permissive Commons / SPC licence class ("SocialPermissiveCommons", "CC0-1.0", "CC-BY-4.0")
+    #[arg(long, default_value = "SocialPermissiveCommons")]
+    pub licence_class: String,
+
+    /// Finite production obligation cost in cents (0 if donated commons)
+    #[arg(long, default_value_t = 0)]
+    pub production_cost_cents: u64,
+
+    /// Allowed carrier/bandwidth transaction recovery cost in minor cents per MiB
+    #[arg(long, default_value_t = 0)]
+    pub transaction_cost_per_mib_cents: u64,
+
+    /// Dump CBOR-LD manifest as pretty JSON alongside bundle
+    #[arg(long)]
+    pub dump_json: bool,
+}
+
+pub type TwinCompileArgs = EntityCompileArgs;
+
+/// Arguments for `qualia-cli entity-verify`.
+#[derive(clap::Args, Debug, Clone)]
+pub struct EntityVerifyArgs {
+    /// Path to a `.10d` living container, `.hmc` bundle, or directory
+    pub path: PathBuf,
+
+    /// Batch mode: search directories recursively for all `.10d` and `.hmc` files
+    #[arg(short, long)]
+    pub batch: bool,
+
+    /// Output report in structured JSON format
+    #[arg(long)]
+    pub json: bool,
+
+    /// Suppress verbose logging and only output final verdict
+    #[arg(short, long)]
+    pub quiet: bool,
+}
+
+pub type TwinVerifyArgs = EntityVerifyArgs;
 
 #[derive(Subcommand, Debug)]
 pub enum ProfileAction {

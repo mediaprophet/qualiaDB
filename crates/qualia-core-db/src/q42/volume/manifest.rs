@@ -1,14 +1,20 @@
 //! Embedded root-volume descriptor for a logical multi-segment Q42 dataset.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
-use std::io::{self, Read};
-use std::path::{Component, Path, PathBuf};
+use std::io;
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::Read;
+use std::path::{Component, Path};
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::PathBuf;
 
+#[cfg(not(target_arch = "wasm32"))]
 use sha2::{Digest, Sha256};
 
-use super::super::{
-    Q42VerificationReceipt, Q42Volume, MAX_COMPRESSED_SUPERBLOCK_SIZE, SUPERBLOCK_SIZE,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use super::super::{Q42VerificationReceipt, Q42Volume};
+use super::super::{MAX_COMPRESSED_SUPERBLOCK_SIZE, SUPERBLOCK_SIZE};
 use super::range::{verify_source_sha256, Q42RangeSource};
 use super::range_volume::{
     Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPlan, Q42RangeVolume,
@@ -354,6 +360,7 @@ impl Q42VolumeManifest {
         }))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn segment_from_file(path: &Path, locator: String) -> io::Result<Q42VolumeSegment> {
         let volume = Q42Volume::open(path)?;
         let mut first = None;
@@ -389,6 +396,7 @@ impl Q42VolumeManifest {
         })
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn lexicon_segment_from_file(
         path: &Path,
         locator: String,
@@ -794,6 +802,7 @@ fn validate_segment_locator(locator: &str) -> io::Result<()> {
 
 /// Locally backed multi-segment query snapshot. It deliberately has no remote
 /// transport yet: IPFS/HTTP range sources will implement the same contract.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct Q42VolumeSet {
     root: Q42Volume,
     manifest: Q42VolumeManifest,
@@ -801,6 +810,7 @@ pub struct Q42VolumeSet {
     lexicon_segments: Vec<Q42Volume>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Q42VolumeSet {
     pub fn open_root(path: &Path) -> io::Result<Self> {
         let root = Q42Volume::open(path)?;
@@ -979,6 +989,7 @@ impl Q42VolumeSet {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn sha256_file(path: &Path) -> io::Result<[u8; 32]> {
     let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
@@ -993,6 +1004,7 @@ fn sha256_file(path: &Path) -> io::Result<[u8; 32]> {
     Ok(hasher.finalize().into())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn root_relative_path(root: &Path, segment: &Path) -> io::Result<String> {
     let parent = root.parent().unwrap_or_else(|| Path::new("."));
     let relative: PathBuf = segment

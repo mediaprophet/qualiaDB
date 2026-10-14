@@ -203,6 +203,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Compile { action } => {
             handlers::misc::handle_compile(action);
         }
+        Commands::EntityCompile(args) => {
+            handlers::entity_compile::handle(args)?;
+        }
+        Commands::TwinCompile(args) => {
+            handlers::twin_compile::handle(args)?;
+        }
+        Commands::EntityVerify(args) => {
+            handlers::entity_verify::handle(args)?;
+        }
+        Commands::TwinVerify(args) => {
+            handlers::twin_verify::handle(args)?;
+        }
     }
 
     Ok(())

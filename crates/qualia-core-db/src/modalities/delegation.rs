@@ -372,7 +372,7 @@ mod tests {
         let proxy_living = q_hash("did:living_assistant");
         let testamentary_heir = q_hash("did:grandchild");
 
-        let mut edge_normal = edge(decedent, proxy_living);
+        let edge_normal = edge(decedent, proxy_living);
         let mut edge_surviving = edge(decedent, proxy_living);
         edge_surviving.metadata = 0x01; // survivesDeath flag
 

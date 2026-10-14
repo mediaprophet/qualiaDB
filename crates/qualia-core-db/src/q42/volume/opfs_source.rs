@@ -13,6 +13,7 @@
 //! a public IPFS gateway.
 
 use std::io;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 use super::car::{decode_and_verify_car, VerifiedCarBlock};
@@ -112,6 +113,7 @@ pub fn verify_car_bytes_as_q42_source(car: &[u8]) -> io::Result<VerifiedCarRange
 /// Cold construction: the CAR is loaded to run [`decode_and_verify_car`]. The
 /// returned source then serves exact ranges of the UnixFS entity. This is not
 /// a live public-gateway check.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn verify_local_car_as_q42_source(path: &Path) -> io::Result<VerifiedCarRangeSource> {
     let car = std::fs::read(path)?;
     verify_car_bytes_as_q42_source(&car)
@@ -150,7 +152,7 @@ fn copy_exact_slice(bytes: &[u8], range: Q42ByteRange, out: &mut [u8]) -> io::Re
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::q42_volume::write_unified_volume;

@@ -28,7 +28,10 @@ pub mod q42_kvp;
 pub mod q42_lexicon;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_reader;
-#[cfg(not(target_arch = "wasm32"))]
+/// Unified `.q42` volume format. The byte-format layer (header, BIDX,
+/// SuperBlock codec, range-source reader) compiles on wasm32 so verified
+/// pack entries decode in the browser; memmap/filesystem/publish paths
+/// stay native.
 pub mod q42_volume;
 /// Upstream source / connector catalogue without data bundling (AST-07).
 pub mod source_catalogue;

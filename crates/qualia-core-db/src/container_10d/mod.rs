@@ -80,6 +80,10 @@ pub mod skeletal_container;
 // and carry the same gate, so this is symmetric — no portal-path regression
 // (the portal renderer upload path uses `mesh_section`, which has no
 // `specialized_libs` dependency).
+pub mod entity_ontology_section;
+pub mod impostor_section;
+pub mod procedural_synthesis;
+pub mod surfel_section;
 pub mod spatial_index_section;
 pub mod topology_section;
 
@@ -136,6 +140,39 @@ pub use normal_section::{
     decode_mesh_frames, decode_normals, decode_tangents, encode_mesh_frames, encode_normals,
     frame_encoded_len, is_normal_section, MeshFrameStreams, NormalSectionError, MAX_NORMAL_COUNT,
     NORMAL_SECTION_HEADER_SIZE, NORMAL_SECTION_VERSION,
+};
+pub use entity_ontology_section::{
+    decode_entity_ontology_section_into, decode_personal_ontology_section_into,
+    encode_entity_ontology_section, encode_personal_ontology_section,
+    entity_ontology_encoded_len, personal_ontology_encoded_len, AffordanceBinaryRecord,
+    EntityOntologyMiniHeader, EntityOntologySectionError, PersonalOntologyMiniHeader,
+    PersonalOntologySectionError, AFFORDANCE_RECORD_SIZE, MAGIC_EONT, MAGIC_PONT,
+    MAX_AFFORDANCES_PER_SECTION, ENTITY_ONTOLOGY_MINI_HEADER_SIZE,
+    ENTITY_ONTOLOGY_SECTION_VERSION, PERSONAL_ONTOLOGY_MINI_HEADER_SIZE,
+    PERSONAL_ONTOLOGY_SECTION_VERSION,
+};
+pub use impostor_section::{
+    decode_impostor_section, encode_impostor_section, hemi_octahedral_decode,
+    hemi_octahedral_encode, sample_impostor_blend_weights, ImpostorAtlasMiniHeader,
+    ImpostorBlendSample, ImpostorSectionError, FLAG_DEPTH_IN_ALPHA, FLAG_HEMI_OCTAHEDRAL,
+    FLAG_OCT32_NORMALS, FLAG_PBR_METALLIC_ROUGHNESS, IMPOSTOR_MINI_HEADER_SIZE,
+    IMPOSTOR_SECTION_VERSION, MAGIC_IMPO,
+};
+pub use procedural_synthesis::{
+    decode_procedural_synthesis_section, encode_procedural_synthesis_section,
+    evaluate_allometric_dimension, evaluate_log_spiral_2d, evaluate_pga_motor_oscillation,
+    evaluate_smooth_minimum_sdf, evaluate_stress_cleavage_partition,
+    evaluate_voronoi_cellular_f1, ProceduralSynthesisError, ProceduralSynthesisHeader,
+    FLAG_ALLOMETRIC_GROWTH, FLAG_CELLULAR_VORONOI, FLAG_IMPLICIT_FILLET, FLAG_LOG_SPIRAL_ODE,
+    FLAG_PGA_MOTOR_DYNAMICS, FLAG_STRESS_FRACTURE, MAGIC_PROC, PROCEDURAL_SYNTHESIS_HEADER_SIZE,
+    PROCEDURAL_SYNTHESIS_SECTION_VERSION,
+};
+pub use surfel_section::{
+    decode_octahedral_normal, decode_surfel_section, encode_octahedral_normal,
+    encode_surfel_section, generate_surfel_from_cluster, SurfelBinaryRecord,
+    SurfelSectionError, SurfelSectionMiniHeader, FLAG_SURFEL_GAUSSIAN_COVARIANCE,
+    FLAG_SURFEL_HIERARCHICAL, MAGIC_SURF, SURFEL_MINI_HEADER_SIZE, SURFEL_RECORD_SIZE,
+    SURFEL_SECTION_VERSION,
 };
 pub use provenance_section::{
     decode_provenance_section, encode_provenance_section, encoded_len as provenance_encoded_len,

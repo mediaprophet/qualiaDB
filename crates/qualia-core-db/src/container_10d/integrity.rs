@@ -99,6 +99,13 @@ pub fn seal_whole_file_crc32c(data: &mut [u8]) {
 /// Zero-heap: saves the stored CRC, zeroes the field in-place, recomputes,
 /// restores the field.
 pub fn verify_whole_file_crc32c(data: &mut [u8]) -> Result<(), IntegrityError> {
+    check_whole_file_crc32c(data)
+}
+
+/// Verify the whole-file CRC-32C stored in the header against a recomputed
+/// value over an immutable slice. Returns `Ok(())` if they match.
+/// Zero-heap, read-only.
+pub fn check_whole_file_crc32c(data: &[u8]) -> Result<(), IntegrityError> {
     if data.len() < HEADER_BYTE_SIZE {
         return Err(IntegrityError::TooShort { got: data.len() });
     }
@@ -107,10 +114,7 @@ pub fn verify_whole_file_crc32c(data: &mut [u8]) -> Result<(), IntegrityError> {
             .try_into()
             .unwrap(),
     );
-    // Zero the field, recompute, restore.
-    data[HEADER_CRC32C_OFFSET..HEADER_CRC32C_OFFSET + 4].copy_from_slice(&0u32.to_le_bytes());
     let actual = compute_whole_file_crc32c(data);
-    data[HEADER_CRC32C_OFFSET..HEADER_CRC32C_OFFSET + 4].copy_from_slice(&stored.to_le_bytes());
     if actual != stored {
         return Err(IntegrityError::WholeFileCrcMismatch {
             expected: stored,
@@ -119,6 +123,7 @@ pub fn verify_whole_file_crc32c(data: &mut [u8]) -> Result<(), IntegrityError> {
     }
     Ok(())
 }
+
 
 #[cfg(test)]
 mod tests {

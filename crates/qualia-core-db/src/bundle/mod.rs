@@ -24,15 +24,42 @@
 //!
 //! See [`format`] for the on-disk layout.
 
+pub mod cbor_ld_manifest;
+pub mod entity_compiler;
+pub mod entity_verifier;
 mod format;
 mod reader;
+pub use entity_compiler as twin_compiler;
+pub use entity_verifier as twin_verifier;
+pub mod variant_matrix;
 mod writer;
 
+pub use entity_compiler::{
+    compile_digital_twin, compile_entity, EntityCompileInput, EntityCompileOutput,
+    TwinCompileInput, TwinCompileOutput,
+};
+
+pub use entity_verifier::{
+    verify_digital_twin_10d, verify_digital_twin_bundle, verify_entity_10d,
+    verify_entity_bundle, AffordanceVerificationSummary, CommonsObligationSummary,
+    DigitalTwin10dVerification, DigitalTwinBundleVerification, Entity10dVerification,
+    EntityBundleVerification, ImpostorVerificationSummary, SurfelVerificationSummary,
+};
+
+pub use cbor_ld_manifest::{
+    AcousticAnchors, CborLdManifest, CommonsObligation, CredentialProof, CredentialSubject,
+    GeometryLayout, SectionLayoutEntry, SubjectAffordances, CBOR_LD_CONTEXT_CREDENTIALS_V1,
+    CBOR_LD_CONTEXT_WEBCIVICS_V1, CBOR_LD_MANIFEST_ENTRY_KEY, CBOR_LD_MANIFEST_KIND,
+};
 pub use format::{
     BundleEntry, BundleError, BUNDLE_ENTRY_ALIGN, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_VERSION,
     SHA256_LEN,
 };
 pub use reader::BundleReader;
+pub use variant_matrix::{
+    BiologicalPhenotype, EntityFamilyManifest, LodTier, ModelVariantDescriptor, StructuralState,
+    TwinFamilyManifest, FAMILY_MANIFEST_ENTRY_KEY, FAMILY_MANIFEST_KIND,
+};
 pub use writer::BundleWriter;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -41,6 +68,7 @@ pub use reader::BundleMmap;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entity_view::entity_ontologies::LifecycleStage;
 
     #[test]
     fn heterogeneous_pack_of_three_kinds_roundtrips() {
@@ -91,5 +119,45 @@ mod tests {
         // Bundle parse must reject with CRC mismatch
         let res = BundleReader::parse(&bytes);
         assert!(matches!(res, Err(BundleError::CrcMismatch { .. })));
+    }
+
+    #[test]
+    fn family_manifest_bundle_roundtrip() {
+        let mut manifest = TwinFamilyManifest::new(
+            "urn:taxon:water_pump_v3",
+            "Water Pump V3",
+            "machinery",
+            "operational_lod0",
+        );
+        manifest.add_variant(ModelVariantDescriptor {
+            variant_id: "operational_lod0".to_string(),
+            phenotype: BiologicalPhenotype::Unspecified,
+            stage: LifecycleStage::Operational,
+            lod: LodTier::Lod0,
+            state: StructuralState::Pristine,
+            asset_key: "pump_hero.10d".to_string(),
+            entity_ontology_key: Some("pump_ontology.q42".to_string()),
+            procedural_seed: Some(101),
+        });
+
+        let mut w = BundleWriter::new();
+        w.add_family_manifest(&manifest).unwrap();
+        w.add_file("pump_hero.10d", "10d", vec![0x10; 64], None).unwrap();
+        w.add_file("pump_ontology.q42", "q42", vec![0x42; 64], None).unwrap();
+        let bytes = w.build().unwrap();
+
+        let r = BundleReader::parse(&bytes).unwrap();
+        let decoded_manifest = r.get_family_manifest().unwrap().expect("manifest exists");
+        assert_eq!(decoded_manifest.family_id, "urn:taxon:water_pump_v3");
+        let resolved = decoded_manifest
+            .resolve_variant(
+                BiologicalPhenotype::Unspecified,
+                LifecycleStage::Operational,
+                LodTier::Lod0,
+                StructuralState::Pristine,
+            )
+            .unwrap();
+        assert_eq!(resolved.variant_id, "operational_lod0");
+        assert_eq!(resolved.asset_key, "pump_hero.10d");
     }
 }

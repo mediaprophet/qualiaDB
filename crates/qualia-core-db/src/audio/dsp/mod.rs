@@ -11,6 +11,7 @@
 //! - `midi_transport`: MIDI note utilities, quantization, transpose, transport state machine.
 //! - `meters`: Waveform, phase correlation, and LUFS loudness meters.
 
+pub mod biquad_df2t;
 pub mod effects;
 pub mod envelope;
 pub mod filter;
@@ -19,6 +20,10 @@ pub mod meters;
 pub mod midi_transport;
 pub mod oscillator;
 
+pub use biquad_df2t::{
+    BiquadCoeffs, Df2tBiquad, Df2tState, ThreeBandParametricBiquad, AUDIO_WORKLET_DF2T_JS,
+    DENORMAL_DC_OFFSET, QUANTUM_SIZE,
+};
 pub use effects::{Compressor, Delay, Equalizer, Reverb};
 pub use envelope::{AdsrEnvelope, EnvStage};
 pub use filter::{BiquadFilter, FilterType};

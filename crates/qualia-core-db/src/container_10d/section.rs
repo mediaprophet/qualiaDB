@@ -93,9 +93,24 @@ pub enum SectionType {
     ManifoldIdentityV2 = 15,
     /// SKL1 rig, vertex skin influences and named VibeScript motor clips.
     SkeletalAnimation = 16,
+    /// Entity behavioral and affordance ontology table for AI triggering and scriptability.
+    EntityOntology = 17,
+    /// Principled procedural geometry/surface synthesis descriptors (Voronoi, SDF fillets, allometry, PGA).
+    ProceduralSynthesis = 18,
+    /// Directional octahedral impostor atlas for mid-to-far field rendering (8–64 px).
+    ImpostorAtlas = 19,
+    /// Hierarchical surfel / 3D Gaussian splat primitives for far-field rendering (1–8 px).
+    HierarchicalSurfels = 20,
 }
 
 impl SectionType {
+    /// Canonical upper-case constant for SectionType::EntityOntology (personal/entity ontology).
+    pub const PERSONAL_ONTOLOGY: Self = Self::EntityOntology;
+    /// Backwards compatibility alias for SectionType::PERSONAL_ONTOLOGY.
+    #[deprecated(note = "Use SectionType::PERSONAL_ONTOLOGY or SectionType::EntityOntology")]
+    #[allow(non_upper_case_globals)]
+    pub const PersonalOntology: Self = Self::EntityOntology;
+
     #[inline]
     pub const fn from_u8(raw: u8) -> Option<SectionType> {
         match raw {
@@ -116,6 +131,10 @@ impl SectionType {
             14 => Some(SectionType::TextureCoordinates),
             15 => Some(SectionType::ManifoldIdentityV2),
             16 => Some(SectionType::SkeletalAnimation),
+            17 => Some(SectionType::EntityOntology),
+            18 => Some(SectionType::ProceduralSynthesis),
+            19 => Some(SectionType::ImpostorAtlas),
+            20 => Some(SectionType::HierarchicalSurfels),
             _ => None,
         }
     }
@@ -138,6 +157,10 @@ impl SectionType {
                 | SectionType::TextureCoordinates
                 | SectionType::ManifoldIdentityV2
                 | SectionType::SkeletalAnimation
+                | SectionType::EntityOntology
+                | SectionType::ProceduralSynthesis
+                | SectionType::ImpostorAtlas
+                | SectionType::HierarchicalSurfels
         )
     }
 }

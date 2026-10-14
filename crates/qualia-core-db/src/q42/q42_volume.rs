@@ -13,39 +13,54 @@
 //! are deprecated; new ingest writes v3 only.
 
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufWriter, Read, Write};
+use std::io::{self, Write};
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{BufWriter, Read};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
+#[cfg(not(target_arch = "wasm32"))]
 use memmap2::{Mmap, MmapOptions};
 
-use crate::q42_lex::{LexError, LexiconEntry, Q42LexMmap, LEX_MAGIC};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::q42_lex::Q42LexMmap;
+use crate::q42_lex::{LexError, LexiconEntry, LEX_MAGIC};
 use crate::{NQuin, QUINS_PER_BLOCK};
 
 #[path = "volume/mod.rs"]
 mod volume;
 
+// Byte-format / transport-neutral surface — compiles on wasm32 so verified
+// `.q42` pack entries decode in the browser through `Q42RangeVolume` over a
+// `Q42RangeSource`.
+pub use volume::{
+    decode_and_verify_car, deny_public_publication, encode_block_postings,
+    encode_postings_section, encode_raw_car, extract_entity_bytes, inclusive_entity_bytes,
+    measure_bloom_false_positives, provenance_path_for, quin_requires_sanctuary,
+    validate_exact_range_response, verify_car_bytes_as_q42_source, verify_source_sha256,
+    BidxBlockRange, BidxMatchPage, BlockFieldPostings, CidSha256, ClassificationCounts,
+    IngestAccessPolicy, IngestProvenanceRecord, OpfsCallbackRangeSource, OpfsSliceRangeSource,
+    PublicationIntent, Q42ByteRange, Q42LexiconRangeFactory, Q42LexiconSegment,
+    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42PublicationClass, Q42PublicationVerdict,
+    Q42QueryMode, Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern,
+    Q42RangeQueryPlan, Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume,
+    Q42RangeVolumeSet, Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory,
+    Q42Transport, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSetQueryCursor,
+    Q42VolumeSetQueryPage, VerifiedCarBlock, VerifiedCarRangeSource, FIELD_POSTINGS_MAGIC,
+    MAX_VOLUME_MANIFEST_BYTES, RESIDENT_QUERY_MAX_BYTES,
+};
+// Filesystem / memmap / HTTP / publish surface — native only.
+#[cfg(not(target_arch = "wasm32"))]
 pub use volume::{
     admit_logical_size, append_segment_to_root, classify_q42_path, classify_q42_volume,
-    classify_q42_volume_set, compact_volume_set, compose_magnet, decode_and_verify_car,
-    deny_public_publication, encode_block_postings, encode_postings_section, encode_raw_car,
-    extract_entity_bytes, inclusive_entity_bytes, measure_bloom_false_positives,
-    provenance_path_for, quin_requires_sanctuary, root_relative_path, sha1_hex_file,
-    validate_exact_range_response, verify_car_bytes_as_q42_source, verify_local_car_as_q42_source,
-    verify_source_sha256, verify_volume_set_from_root, BidxBlockRange, BidxMatchPage,
-    BlockFieldPostings, CheckStatus, CidSha256, ClassificationCounts, Completeness,
-    IngestAccessPolicy, IngestProvenanceRecord, LocalFileRangeSource, NetworkCursor,
-    OpfsCallbackRangeSource, OpfsSliceRangeSource, PublicationIntent, Q42BlockCursor, Q42BlockMeta,
-    Q42ByteRange, Q42InspectReport, Q42LexiconRangeFactory, Q42LexiconSegment, Q42Magnet,
-    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42PublicationClass, Q42PublicationVerdict,
-    Q42QueryMode, Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern, Q42RangeQueryPlan,
-    Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42RolloverPublisher,
-    Q42SectionReport, Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory,
-    Q42Transport, Q42VerifyReceipt, Q42VerifySetReport, Q42VolumeManifest, Q42VolumeSegment,
-    Q42VolumeSet, Q42VolumeSetMagnets, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, ScanBudget,
-    StreamingQ42VolumeWriter, VerifiedCarBlock, VerifiedCarRangeSource, VerifyCheck, VerifyLevel,
-    DEFAULT_SEGMENT_MAX_BYTES, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
-    RESIDENT_QUERY_MAX_BYTES,
+    classify_q42_volume_set, compact_volume_set, compose_magnet, root_relative_path,
+    sha1_hex_file, verify_local_car_as_q42_source, verify_volume_set_from_root, CheckStatus,
+    Completeness, LocalFileRangeSource, NetworkCursor, Q42BlockCursor, Q42BlockMeta,
+    Q42InspectReport, Q42Magnet, Q42RolloverPublisher, Q42SectionReport, Q42VerifyReceipt,
+    Q42VerifySetReport, Q42VolumeSet, Q42VolumeSetMagnets, ScanBudget,
+    StreamingQ42VolumeWriter, VerifyCheck, VerifyLevel, DEFAULT_SEGMENT_MAX_BYTES,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{
@@ -263,6 +278,7 @@ impl BlockDirectoryEntry {
 
 /// Upgrade a v1/v2 `.q42` file to v3 by rewriting the version field and zeroing
 /// the new extension fields in the 256-byte header.  Data blocks are untouched.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
     use std::io::{Seek, SeekFrom};
     let mut f = OpenOptions::new().read(true).write(true).open(path)?;
@@ -292,6 +308,7 @@ pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
 }
 
 /// Returns true if `path` begins with a unified volume header.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn is_unified_volume(path: &Path) -> io::Result<bool> {
     let mut f = File::open(path)?;
     let mut magic = [0u8; 4];
@@ -515,6 +532,7 @@ fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
 }
 
 /// Write a unified v3 `.q42` volume.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_unified_volume(
     path: &Path,
     lex: &HashMap<u64, String>,
@@ -547,6 +565,7 @@ pub fn write_unified_volume(
 /// Write a unified v3 .q42 volume with embedded triple support.
 ///
 /// Accepts `HashMap<u64, LexiconEntry>` to support SPARQL-Star embedded triples.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_unified_volume_with_entries(
     path: &Path,
     lex: &HashMap<u64, LexiconEntry>,
@@ -579,6 +598,7 @@ pub fn write_unified_volume_with_entries(
 /// Publish a root Q42 segment whose front matter catalogs immutable child
 /// segments. The root is intentionally data-empty; query code opens the
 /// catalog snapshot through [`Q42VolumeSet`].
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_volume_root(path: &Path, manifest: &Q42VolumeManifest) -> io::Result<()> {
     UnifiedVolumeBuilder::with_empty_lex()
         .with_volume_manifest(manifest)?
@@ -587,6 +607,7 @@ pub fn write_volume_root(path: &Path, manifest: &Q42VolumeManifest) -> io::Resul
 
 /// Same as [`write_volume_root`], but marks the catalog as Permissive Commons.
 /// Use for public ontologies / knowledge graphs, never for personal volumes.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_volume_root_for_commons(path: &Path, manifest: &Q42VolumeManifest) -> io::Result<()> {
     UnifiedVolumeBuilder::with_empty_lex()
         .with_permissive_commons()
@@ -597,6 +618,7 @@ pub fn write_volume_root_for_commons(path: &Path, manifest: &Q42VolumeManifest) 
 /// Publish a logical-volume root with a lossless shared Q42LEX in its front
 /// matter. Child data segments may keep empty local lexicons because all term
 /// resolution for the snapshot is recoverable from this immutable root.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_volume_root_with_lex(
     path: &Path,
     lex: &HashMap<u64, String>,
@@ -608,6 +630,7 @@ pub fn write_volume_root_with_lex(
         .finish(path)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn lex_error_to_io(error: LexError) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
@@ -812,6 +835,7 @@ impl UnifiedVolumeBuilder {
         self.block_ranges.len() as u64
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn finish(self, path: &Path) -> io::Result<()> {
         let bytes = self.finish_to_bytes();
         let out = OpenOptions::new()
@@ -950,11 +974,13 @@ impl UnifiedVolumeBuilder {
 }
 
 /// Memory-mapped unified v2 volume reader.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct Q42Volume {
     mmap: Mmap,
     header: Q42VolumeHeader,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Q42Volume {
     pub fn open(path: &Path) -> io::Result<Self> {
         let file = File::open(path)?;
@@ -1276,7 +1302,7 @@ pub fn bidx_blocks_for_hash(bidx: &[u8], object_hash: u64) -> Vec<usize> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::mini_parser::hash_token;
@@ -1642,6 +1668,7 @@ doc:article-1 a values:Undertaking ;
 
 /// Streaming append-only interface for Q42 Unified Volumes.
 /// Allows continuous block accumulation without loading the entire volume in memory.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct StreamingVolumeAppender {
     file: std::fs::File,
     header: Q42VolumeHeader,
@@ -1653,6 +1680,7 @@ pub struct StreamingVolumeAppender {
     last_object_hash: Option<u64>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl StreamingVolumeAppender {
     pub fn new(path: &std::path::Path) -> std::io::Result<Self> {
         let mut file = std::fs::OpenOptions::new()

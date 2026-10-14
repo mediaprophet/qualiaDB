@@ -32,3 +32,6 @@ pub const BLOOM_WGSL: &str = concat!(
 pub const EPISTEMIC_WGSL: &str = include_str!("epistemic.wgsl");
 pub const SCREEN_WGSL: &str = include_str!("screen.wgsl");
 pub const EMF_VOLUMETRIC_WGSL: &str = include_str!("emf_volumetric.wgsl");
+pub const SURFEL_INSTANCED_WGSL: &str = include_str!("surfel_instanced.wgsl");
+pub const ACOUSTIC_VOXEL_CONE_WGSL: &str = include_str!("acoustic_voxel_cone.wgsl");
+pub const DEFERRED_RESOLVE_WGSL: &str = include_str!("deferred_resolve.wgsl");

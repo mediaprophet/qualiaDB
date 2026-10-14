@@ -500,36 +500,50 @@ impl QpuExtension {
             let topological_object =
                 crate::q_hash(&format!("did:q42:quantum_state:{}", state)) | (1u64 << 63);
 
+            let subject = crate::q_hash(job_id);
+            let predicate = crate::q_hash("q42:hasQuantumState");
+            let context = crate::q_hash("quantum:execution");
+            let metadata = (*count as u64) << 32 | (result.execution_time_ms & 0xFFFFFFFF);
+            let parity = subject ^ predicate ^ topological_object ^ context;
+
             let quin = NQuin {
-                subject: crate::q_hash(job_id),
-                predicate: crate::q_hash("q42:hasQuantumState"),
+                subject,
+                predicate,
                 object: topological_object,
-                context: crate::q_hash("quantum:execution"),
-                metadata: (*count as u64) << 32 | (result.execution_time_ms & 0xFFFFFFFF),
-                parity: 0, // Would be calculated in real implementation
+                context,
+                metadata,
+                parity,
             };
             quins.push(quin);
         }
 
         // Add metadata quins
+        let provider_sub = crate::q_hash(job_id);
+        let provider_pred = crate::q_hash("q42:executedBy");
+        let provider_obj = crate::q_hash(&result.provider);
+        let provider_ctx = crate::q_hash("quantum:provider");
         let provider_quin = NQuin {
-            subject: crate::q_hash(job_id),
-            predicate: crate::q_hash("q42:executedBy"),
-            object: crate::q_hash(&result.provider),
-            context: crate::q_hash("quantum:provider"),
+            subject: provider_sub,
+            predicate: provider_pred,
+            object: provider_obj,
+            context: provider_ctx,
             metadata: result.shots_executed as u64,
-            parity: 0,
+            parity: provider_sub ^ provider_pred ^ provider_obj ^ provider_ctx,
         };
         quins.push(provider_quin);
 
         if let Some(fidelity) = result.fidelity {
+            let fid_sub = crate::q_hash(job_id);
+            let fid_pred = crate::q_hash("q42:hasFidelity");
+            let fid_obj = (fidelity * 1000000.0) as u64; // Store as fixed-point
+            let fid_ctx = crate::q_hash("quantum:quality");
             let fidelity_quin = NQuin {
-                subject: crate::q_hash(job_id),
-                predicate: crate::q_hash("q42:hasFidelity"),
-                object: (fidelity * 1000000.0) as u64, // Store as fixed-point
-                context: crate::q_hash("quantum:quality"),
+                subject: fid_sub,
+                predicate: fid_pred,
+                object: fid_obj,
+                context: fid_ctx,
                 metadata: 0,
-                parity: 0,
+                parity: fid_sub ^ fid_pred ^ fid_obj ^ fid_ctx,
             };
             quins.push(fidelity_quin);
         }
@@ -545,13 +559,17 @@ impl QpuExtension {
                     let im_f32 = im as f32;
                     let metadata = ((re_f32.to_bits() as u64) << 32) | (im_f32.to_bits() as u64);
 
+                    let sv_sub = crate::q_hash(job_id);
+                    let sv_pred = crate::q_hash("q42:hasStateAmplitude");
+                    let sv_ctx = crate::q_hash("quantum:statevector");
+
                     let quin = NQuin {
-                        subject: crate::q_hash(job_id),
-                        predicate: crate::q_hash("q42:hasStateAmplitude"),
+                        subject: sv_sub,
+                        predicate: sv_pred,
                         object: topological_object,
-                        context: crate::q_hash("quantum:statevector"),
+                        context: sv_ctx,
                         metadata,
-                        parity: 0,
+                        parity: sv_sub ^ sv_pred ^ topological_object ^ sv_ctx,
                     };
                     quins.push(quin);
                 }
@@ -803,5 +821,63 @@ mod tests {
 
         assert_eq!(jobs[2].circuit.depth, 10);
         assert_eq!(jobs[2].shots, 1000);
+    }
+
+    #[test]
+    fn test_statevector_to_deterministic_nquin_topological_pointers() {
+        let inv_sqrt2 = 1.0 / (2.0f64).sqrt();
+        let bell_statevector = vec![
+            (inv_sqrt2, 0.0), // |00>
+            (0.0, 0.0),       // |01>
+            (0.0, 0.0),       // |10>
+            (inv_sqrt2, 0.0), // |11>
+        ];
+
+        let mut counts = HashMap::new();
+        counts.insert("00".to_string(), 512);
+        counts.insert("11".to_string(), 488);
+
+        let execution_result = QpuExecutionResult {
+            counts,
+            probabilities: HashMap::new(),
+            shots_executed: 1000,
+            execution_time_ms: 42,
+            provider: "qualia-q-forge-sim".to_string(),
+            fidelity: Some(0.999),
+            statevector: Some(bell_statevector),
+        };
+
+        let job_id = "test-bell-state-42";
+        let quins = QpuExtension::result_to_quins(&execution_result, job_id);
+
+        // Verify all quins have valid parity XOR fold
+        for quin in &quins {
+            let expected_parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context;
+            assert_eq!(quin.parity, expected_parity, "Quin parity check failed");
+        }
+
+        // Filter for StateAmplitude quins
+        let amplitude_quins: Vec<&NQuin> = quins
+            .iter()
+            .filter(|q| q.predicate == crate::q_hash("q42:hasStateAmplitude"))
+            .collect();
+
+        // Exactly 2 non-zero basis states (|00> and |11>), zeros pruned
+        assert_eq!(amplitude_quins.len(), 2);
+
+        for amp_quin in &amplitude_quins {
+            // Verify topological pointer MSB (bit 63) is set
+            assert_ne!(amp_quin.object & (1u64 << 63), 0, "Topological pointer bit 63 must be set");
+            assert_eq!(amp_quin.context, crate::q_hash("quantum:statevector"));
+
+            // Decode f32 real & imag from metadata
+            let re_bits = (amp_quin.metadata >> 32) as u32;
+            let im_bits = (amp_quin.metadata & 0xFFFFFFFF) as u32;
+            let re = f32::from_bits(re_bits);
+            let im = f32::from_bits(im_bits);
+
+            assert!((re - inv_sqrt2 as f32).abs() < 1e-6);
+            assert_eq!(im, 0.0);
+        }
     }
 }
