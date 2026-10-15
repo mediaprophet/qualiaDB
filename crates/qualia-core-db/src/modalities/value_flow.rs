@@ -178,6 +178,30 @@ pub fn check_usury(
     }
 }
 
+// ─── QDNF Economics Metering Binding (WP-4.1) ─────────────────────────────────────
+
+use crate::net::qdnf::economics::meters::MeterReading;
+
+/// Computes the carriage compensation for observed resource meters based on
+/// allowed carriage rates (cents per unit), strictly bounded by production ROI caps.
+pub fn carriage_fee_from_meters(
+    reading: &MeterReading,
+    cents_per_unit_micro: u64,
+) -> u64 {
+    let units = reading.milli_units / 1000;
+    ((units as u128).saturating_mul(cents_per_unit_micro as u128) / 1_000_000u128) as u64
+}
+
+/// Accumulates measured resource usage into an asset's compensation pool.
+pub fn accumulate_meter_to_pool(
+    pool: u64,
+    reading: &MeterReading,
+    cents_per_unit_micro: u64,
+) -> u64 {
+    let fee = carriage_fee_from_meters(reading, cents_per_unit_micro);
+    pool_after(pool, fee)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -272,5 +296,24 @@ mod tests {
         // Before that payment the obligation was outstanding.
         assert!(!is_commons_discharged(500, cost));
         assert_eq!(outstanding(500, cost), 700);
+    }
+
+    #[test]
+    fn test_qdnf_metering_binding() {
+        use crate::net::qdnf::authority::ObservationQuality;
+        use crate::net::qdnf::economics::meters::MeterKind;
+
+        let reading = MeterReading {
+            kind: MeterKind::NetBytes,
+            milli_units: 50_000, // 50 whole MB
+            quality: ObservationQuality::Measured,
+        };
+        // 2 cents per MB (2_000_000 micro cents)
+        let fee = carriage_fee_from_meters(&reading, 2_000_000);
+        assert_eq!(fee, 100); // 50 * 2 = 100 cents
+
+        let mut pool = 1000u64;
+        pool = accumulate_meter_to_pool(pool, &reading, 2_000_000);
+        assert_eq!(pool, 1100);
     }
 }

@@ -50,6 +50,21 @@ pub struct CredentialSubject {
     pub geometry_layout: GeometryLayout,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commons_obligation: Option<CommonsObligation>,
+    /// ADR 0014 Payload catalogue for prose-overflow and multimodal commentary.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub payload_catalogue: Vec<PayloadCatalogueEntry>,
+}
+
+/// ADR 0014 Payload Catalogue Entry for prose-overflow, multi-lingual notes, or oral history audio.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct PayloadCatalogueEntry {
+    pub payload_key: String,
+    pub mime_type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    pub role: String,
+    pub byte_length: u64,
+    pub sha256_hex: String,
 }
 
 /// Humanitarian ICT & Permissive Commons terms for living biosphere & cognitive heritage.
@@ -119,6 +134,18 @@ impl CommonsObligation {
             20,
         );
         crate::modalities::value_flow::outstanding(self.accumulated_pool_cents, total_cost)
+    }
+
+    /// Automatically discharges the obligation when accumulated compensation meets
+    /// the capped production cost, transitioning licence to SocialPermissiveCommons.
+    pub fn discharge_to_commons(&mut self) -> bool {
+        if self.is_discharged() {
+            self.licence_class = "SocialPermissiveCommons".to_string();
+            self.perpetual_fees_prohibited = true;
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -215,6 +242,7 @@ impl CborLdManifest {
                 },
                 geometry_layout,
                 commons_obligation: None,
+                payload_catalogue: Vec::new(),
             },
             proof: CredentialProof {
                 proof_type: "Ed25519Signature2020".to_string(),

@@ -65,6 +65,31 @@ pub struct AffordanceBinaryRecord {
 }
 const _: [(); AFFORDANCE_RECORD_SIZE] = [(); core::mem::size_of::<AffordanceBinaryRecord>()];
 
+pub const DEVELOPMENTAL_KEYFRAME_RECORD_SIZE: usize = 32;
+
+/// 32-byte fixed-stride binary record representing an ontogenetic growth milestone.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
+pub struct DevelopmentalKeyframeRecord {
+    /// Age in days since germination/birth.
+    pub age_days: f32,
+    /// Ontogenetic lifecycle stage (0=SeedOrSpore, 1=Juvenile, 2=Adult, 3=Senescent, 4=Deceased).
+    pub stage: u8,
+    pub reserved_u8: u8,
+    pub reserved_u16: u16,
+    /// Allometric crown radius scaling factor (1.0 = base adult size).
+    pub allometric_crown_scale: f32,
+    /// Allometric trunk diameter scaling factor.
+    pub allometric_trunk_scale: f32,
+    /// Foliage density / leaf area index multiplier.
+    pub lai_multiplier: f32,
+    pub reserved_u32: u32,
+    /// Associated mesh asset key hash (0 = procedural morph).
+    pub mesh_asset_hash: u64,
+}
+const _: [(); DEVELOPMENTAL_KEYFRAME_RECORD_SIZE] =
+    [(); core::mem::size_of::<DevelopmentalKeyframeRecord>()];
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EntityOntologySectionError {
     PayloadTooShort {

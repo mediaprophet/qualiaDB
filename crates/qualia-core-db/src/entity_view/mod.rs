@@ -15,6 +15,7 @@ pub mod projection;
 pub mod rights_filter;
 
 pub mod entity_ontologies;
+pub mod ethogram;
 
 pub use attribution::{edges_for_subject, AttributionEdge, AttributionRel};
 pub use capability_report::entity_view_capability_report;
@@ -24,6 +25,10 @@ pub use entity_ontologies::{
     ActionAffordance, ActionEffect, ActionEvaluationVerdict, ActionIntent, ActionPrecondition,
     AffordanceCategory, EntityOntology, IntentError, LifecycleStage, OntologicalOrigin,
     PersonalOntology,
+};
+pub use ethogram::{
+    EntityPhysiologicalState, EthogramBehaviorEntry, EthogramRegistry, StimulusCategory,
+    StimulusEvent, TransitionVerdict, MAX_ETHOGRAM_BEHAVIORS,
 };
 pub use observer::{
     AffordanceBits, EntityViewMeta, ObserverStatus, RepresentationWing, SensitivityClass,

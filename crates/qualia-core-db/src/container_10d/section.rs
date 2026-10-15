@@ -101,6 +101,8 @@ pub enum SectionType {
     ImpostorAtlas = 19,
     /// Hierarchical surfel / 3D Gaussian splat primitives for far-field rendering (1–8 px).
     HierarchicalSurfels = 20,
+    /// Multi-band sensor reflectance & emittance data cube (400nm-1000nm band stacks).
+    HyperspectralCube = 21,
 }
 
 impl SectionType {
@@ -135,6 +137,7 @@ impl SectionType {
             18 => Some(SectionType::ProceduralSynthesis),
             19 => Some(SectionType::ImpostorAtlas),
             20 => Some(SectionType::HierarchicalSurfels),
+            21 => Some(SectionType::HyperspectralCube),
             _ => None,
         }
     }
@@ -161,6 +164,7 @@ impl SectionType {
                 | SectionType::ProceduralSynthesis
                 | SectionType::ImpostorAtlas
                 | SectionType::HierarchicalSurfels
+                | SectionType::HyperspectralCube
         )
     }
 }

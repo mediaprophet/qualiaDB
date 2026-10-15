@@ -60,6 +60,7 @@ pub use types::*;
 // molecular_dynamics/quantum/population) contribute `impl PhysicsSimulationLibrary`
 // blocks and tree-internal helpers only — no free items to re-export.
 pub use emf::EmfSource;
+pub use population::{BoidAgent, FlockingParameters, step_flocking_simulation};
 
 #[cfg(test)]
 mod tests;

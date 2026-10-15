@@ -26,12 +26,14 @@ pub mod coord_seams;
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
+pub mod cell_graph;
 pub mod coordination;
 pub mod illocution;
 pub mod instrument_trace;
 pub mod law_packages;
 pub mod modal_kind;
 pub mod provenance;
+pub mod tk_bc_labels;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod web_civics;
 pub mod webizen;
