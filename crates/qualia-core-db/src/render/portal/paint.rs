@@ -351,8 +351,10 @@ pub(super) fn paint_cpu_body(
         rgb: [u8; 3],
     }
     let tris = mesh.indices.len() / 3;
-    let mut batch = Vec::with_capacity(tris.min(4096));
-    for t in 0..tris {
+    let max_proof_tris = 1536usize;
+    let step = (tris / max_proof_tris).max(1);
+    let mut batch = Vec::with_capacity(tris.min(max_proof_tris));
+    for t in (0..tris).step_by(step) {
         let i0 = mesh.indices[t * 3] as usize;
         let i1 = mesh.indices[t * 3 + 1] as usize;
         let i2 = mesh.indices[t * 3 + 2] as usize;
@@ -379,6 +381,9 @@ pub(super) fn paint_cpu_body(
                 (col[2].clamp(0.0, 1.0) * 255.0) as u8,
             ],
         });
+        if batch.len() >= max_proof_tris {
+            break;
+        }
     }
     let depths: Vec<f32> = batch.iter().map(|t| t.depth).collect();
     for idx in painter_order_far_to_near(&depths) {
