@@ -99,9 +99,9 @@ pub fn evaluate_cmf_xyz(lambda: [f32; 4]) -> ([f32; 4], [f32; 4], [f32; 4]) {
 /// Convert CIE 1931 XYZ to linear sRGB primaries (D65 white point).
 #[inline]
 pub fn xyz_to_linear_srgb(xyz: [f32; 3]) -> [f32; 3] {
-    let r =  3.2404542 * xyz[0] - 1.5371385 * xyz[1] - 0.4985314 * xyz[2];
+    let r = 3.2404542 * xyz[0] - 1.5371385 * xyz[1] - 0.4985314 * xyz[2];
     let g = -0.9692660 * xyz[0] + 1.8760108 * xyz[1] + 0.0415560 * xyz[2];
-    let b =  0.0556434 * xyz[0] - 0.2040259 * xyz[1] + 1.0572252 * xyz[2];
+    let b = 0.0556434 * xyz[0] - 0.2040259 * xyz[1] + 1.0572252 * xyz[2];
     [r.max(0.0), g.max(0.0), b.max(0.0)]
 }
 
@@ -138,8 +138,10 @@ pub fn evaluate_deferred_resolve_pixel(
         camera.camera_pos[1] - pixel.world_pos[1],
         camera.camera_pos[2] - pixel.world_pos[2],
     ];
-    let v_len = (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]).sqrt().max(1e-5);
-    v[0] /= v_len; v[1] /= v_len; v[2] /= v_len;
+    let v_len = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt().max(1e-5);
+    v[0] /= v_len;
+    v[1] /= v_len;
+    v[2] /= v_len;
 
     let roughness = pixel.roughness.clamp(0.04, 1.0);
     let metallic = pixel.metallic.clamp(0.0, 1.0);
@@ -155,9 +157,13 @@ pub fn evaluate_deferred_resolve_pixel(
         let (l_dir, atten) = match light.light_type {
             0 => {
                 // Directional
-                let d = [-light.direction[0], -light.direction[1], -light.direction[2]];
-                let len = (d[0]*d[0] + d[1]*d[1] + d[2]*d[2]).sqrt().max(1e-5);
-                ([d[0]/len, d[1]/len, d[2]/len], light.illuminance_lux)
+                let d = [
+                    -light.direction[0],
+                    -light.direction[1],
+                    -light.direction[2],
+                ];
+                let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt().max(1e-5);
+                ([d[0] / len, d[1] / len, d[2] / len], light.illuminance_lux)
             }
             _ => {
                 // Point or Spot
@@ -166,15 +172,17 @@ pub fn evaluate_deferred_resolve_pixel(
                     light.position[1] - pixel.world_pos[1],
                     light.position[2] - pixel.world_pos[2],
                 ];
-                let dist_sq = to_l[0]*to_l[0] + to_l[1]*to_l[1] + to_l[2]*to_l[2];
+                let dist_sq = to_l[0] * to_l[0] + to_l[1] * to_l[1] + to_l[2] * to_l[2];
                 let dist = dist_sq.sqrt().max(1e-5);
-                let dir = [to_l[0]/dist, to_l[1]/dist, to_l[2]/dist];
+                let dir = [to_l[0] / dist, to_l[1] / dist, to_l[2] / dist];
                 let d_over_r = dist / light.radius.max(1e-4);
                 let smooth_att = (1.0 - d_over_r * d_over_r).clamp(0.0, 1.0);
                 let mut att = (smooth_att * smooth_att) / dist_sq.max(0.01) * light.illuminance_lux;
 
                 if light.light_type == 2 {
-                    let spot_cos = -(dir[0]*light.direction[0] + dir[1]*light.direction[1] + dir[2]*light.direction[2]);
+                    let spot_cos = -(dir[0] * light.direction[0]
+                        + dir[1] * light.direction[1]
+                        + dir[2] * light.direction[2]);
                     let inner = light.spot_inner_cos;
                     let outer = light.spot_outer_cos;
                     let spot_att = ((spot_cos - outer) / (inner - outer).max(1e-4)).clamp(0.0, 1.0);
@@ -184,18 +192,20 @@ pub fn evaluate_deferred_resolve_pixel(
             }
         };
 
-        let n_dot_l = (n[0]*l_dir[0] + n[1]*l_dir[1] + n[2]*l_dir[2]).max(0.0);
+        let n_dot_l = (n[0] * l_dir[0] + n[1] * l_dir[1] + n[2] * l_dir[2]).max(0.0);
         if n_dot_l <= 0.0 {
             continue;
         }
 
         let mut h = [l_dir[0] + v[0], l_dir[1] + v[1], l_dir[2] + v[2]];
-        let h_len = (h[0]*h[0] + h[1]*h[1] + h[2]*h[2]).sqrt().max(1e-5);
-        h[0] /= h_len; h[1] /= h_len; h[2] /= h_len;
+        let h_len = (h[0] * h[0] + h[1] * h[1] + h[2] * h[2]).sqrt().max(1e-5);
+        h[0] /= h_len;
+        h[1] /= h_len;
+        h[2] /= h_len;
 
-        let n_dot_h = (n[0]*h[0] + n[1]*h[1] + n[2]*h[2]).max(0.0);
-        let n_dot_v = (n[0]*v[0] + n[1]*v[1] + n[2]*v[2]).max(1e-5);
-        let v_dot_h = (v[0]*h[0] + v[1]*h[1] + v[2]*h[2]).max(0.0);
+        let n_dot_h = (n[0] * h[0] + n[1] * h[1] + n[2] * h[2]).max(0.0);
+        let n_dot_v = (n[0] * v[0] + n[1] * v[1] + n[2] * v[2]).max(1e-5);
+        let v_dot_h = (v[0] * h[0] + v[1] * h[1] + v[2] * h[2]).max(0.0);
 
         // Diffuse Lambertian in spectral space
         let inv_pi = 1.0 / PI;

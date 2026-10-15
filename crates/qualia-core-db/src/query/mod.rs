@@ -44,6 +44,7 @@ pub mod query_engine;
 pub mod rdf_star;
 pub mod resolve;
 pub mod resolver;
+pub mod sdmx_cube;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-ontology",
@@ -59,10 +60,8 @@ pub mod spawn_decay;
 pub mod temporal_graph;
 pub mod temporal_scrub;
 pub mod visual_model_bridge;
-pub mod sdmx_cube;
 pub use sdmx_cube::{
     compile_observation_to_quins, ingest_sdmx_csv_to_quins, parse_conf_status, parse_sdmx_csv_into,
     ConfidentialityMark, SdmxObservation, QB_CONF_STATUS, QB_DATASET, QB_OBSERVATION, QB_OBS_VALUE,
     QB_REF_AREA, QB_TIME_PERIOD,
 };
-

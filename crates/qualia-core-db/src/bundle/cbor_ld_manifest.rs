@@ -106,7 +106,10 @@ impl CommonsObligation {
             self.roi_cap_percent,
             20,
         );
-        crate::modalities::value_flow::is_commons_discharged(self.accumulated_pool_cents, total_cost)
+        crate::modalities::value_flow::is_commons_discharged(
+            self.accumulated_pool_cents,
+            total_cost,
+        )
     }
 
     pub fn outstanding_obligation(&self) -> u64 {
@@ -284,7 +287,11 @@ impl CborLdManifest {
             verification_method,
             proof_value,
         );
-        manifest.credential_type = vec!["VerifiableCredential".into(), "HumanPersona".into(), "SovereignLikeness".into()];
+        manifest.credential_type = vec![
+            "VerifiableCredential".into(),
+            "HumanPersona".into(),
+            "SovereignLikeness".into(),
+        ];
         manifest
     }
 
@@ -312,7 +319,10 @@ impl CborLdManifest {
             verification_method,
             proof_value,
         );
-        manifest.credential_type = vec!["VerifiableCredential".into(), "ManufacturedConstruct".into()];
+        manifest.credential_type = vec![
+            "VerifiableCredential".into(),
+            "ManufacturedConstruct".into(),
+        ];
         manifest
     }
 
@@ -450,9 +460,21 @@ mod tests {
     #[test]
     fn typed_constructors_bind_expected_credentials() {
         let dummy_layout = GeometryLayout {
-            surf1: SectionLayoutEntry { offset: 0, length: 10, digest: CborLdManifest::compute_sha256_digest(&[1; 10]) },
-            impo1: SectionLayoutEntry { offset: 16, length: 10, digest: CborLdManifest::compute_sha256_digest(&[2; 10]) },
-            mesh1: SectionLayoutEntry { offset: 32, length: 10, digest: CborLdManifest::compute_sha256_digest(&[3; 10]) },
+            surf1: SectionLayoutEntry {
+                offset: 0,
+                length: 10,
+                digest: CborLdManifest::compute_sha256_digest(&[1; 10]),
+            },
+            impo1: SectionLayoutEntry {
+                offset: 16,
+                length: 10,
+                digest: CborLdManifest::compute_sha256_digest(&[2; 10]),
+            },
+            mesh1: SectionLayoutEntry {
+                offset: 32,
+                length: 10,
+                digest: CborLdManifest::compute_sha256_digest(&[3; 10]),
+            },
             mesh2: None,
         };
 
@@ -468,7 +490,9 @@ mod tests {
             "zProof",
         );
         assert_eq!(specimen.credential_subject.entity_type, "DarwinianTaxon");
-        assert!(specimen.credential_type.contains(&"TaxonSpecimen".to_string()));
+        assert!(specimen
+            .credential_type
+            .contains(&"TaxonSpecimen".to_string()));
 
         let persona = CborLdManifest::new_persona(
             "urn:uuid:persona-01",
@@ -482,7 +506,9 @@ mod tests {
             "zProof",
         );
         assert_eq!(persona.credential_subject.entity_type, "NaturalPerson");
-        assert!(persona.credential_type.contains(&"HumanPersona".to_string()));
+        assert!(persona
+            .credential_type
+            .contains(&"HumanPersona".to_string()));
 
         let construct = CborLdManifest::new_construct(
             "urn:uuid:construct-01",
@@ -495,7 +521,12 @@ mod tests {
             "did:web:trustfactory.org:compiler#key-1",
             "zProof",
         );
-        assert_eq!(construct.credential_subject.entity_type, "ManufacturedProperty");
-        assert!(construct.credential_type.contains(&"ManufacturedConstruct".to_string()));
+        assert_eq!(
+            construct.credential_subject.entity_type,
+            "ManufacturedProperty"
+        );
+        assert!(construct
+            .credential_type
+            .contains(&"ManufacturedConstruct".to_string()));
     }
 }

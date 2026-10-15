@@ -149,28 +149,46 @@ impl SceneMeshAccum {
         // An optional rig must be valid and vertex-aligned even before runtime
         // playback is armed. Never silently admit malformed animation content.
         match container_10d::skeletal_container::read_skeletal_section(&bytes) {
-            Ok(_)|Err(container_10d::skeletal_container::SkeletalContainerError::Missing)=>{},
-            Err(_)=>{self.assets_refused+=1;return;},
+            Ok(_) | Err(container_10d::skeletal_container::SkeletalContainerError::Missing) => {}
+            Err(_) => {
+                self.assets_refused += 1;
+                return;
+            }
         }
         let mut local_uv0 = vec![[0.0; 2]; mesh.positions.len()];
         match container_10d::read_texture_coordinate_section_into(
-            &bytes, mesh.positions.len(), &mut local_uv0,
+            &bytes,
+            mesh.positions.len(),
+            &mut local_uv0,
         ) {
             Ok(_) | Err(container_10d::TextureCoordinateContainerError::Missing) => {}
-            Err(_) => { self.assets_refused += 1; return; }
-        }
-        let local_normals = match crate::render::compile_10d::decode_10d_normals(&bytes,mesh.positions.len()) {
-            Ok(Some(normals)) => normals,
-            Ok(None) => {
-                let mut normals=vec![[0.0;3];mesh.positions.len()];
-                if crate::render::mesh_surface_frames::vertex_normals_into(
-                    &mesh.positions,&mesh.triangles,&mut normals).is_err() {
-                    self.assets_refused+=1; return;
-                }
-                normals
+            Err(_) => {
+                self.assets_refused += 1;
+                return;
             }
-            Err(_) => {self.assets_refused+=1;return;}
-        };
+        }
+        let local_normals =
+            match crate::render::compile_10d::decode_10d_normals(&bytes, mesh.positions.len()) {
+                Ok(Some(normals)) => normals,
+                Ok(None) => {
+                    let mut normals = vec![[0.0; 3]; mesh.positions.len()];
+                    if crate::render::mesh_surface_frames::vertex_normals_into(
+                        &mesh.positions,
+                        &mesh.triangles,
+                        &mut normals,
+                    )
+                    .is_err()
+                    {
+                        self.assets_refused += 1;
+                        return;
+                    }
+                    normals
+                }
+                Err(_) => {
+                    self.assets_refused += 1;
+                    return;
+                }
+            };
         let governance_refused =
             (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
         if governance_refused {
@@ -199,12 +217,15 @@ impl SceneMeshAccum {
                         return;
                     }
                     let mut materials = vec![MaterialRecord::legacy_default(); material_count];
-                    let mut ranges = vec![SubmeshRange {
-                        first_index: 0,
-                        index_count: 0,
-                        material_id: 0,
-                        semantic_id: 0,
-                    }; range_count];
+                    let mut ranges = vec![
+                        SubmeshRange {
+                            first_index: 0,
+                            index_count: 0,
+                            material_id: 0,
+                            semantic_id: 0,
+                        };
+                        range_count
+                    ];
                     match container_10d::read_material_section_into(
                         &bytes,
                         index_count,
@@ -262,35 +283,61 @@ impl SceneMeshAccum {
         }
         let new_material_count = local_materials
             .iter()
-            .filter(|material| !self.materials.iter().any(|present| present.id == material.id))
+            .filter(|material| {
+                !self
+                    .materials
+                    .iter()
+                    .any(|present| present.id == material.id)
+            })
             .count();
         if self.materials.len().saturating_add(new_material_count) > container_10d::MAX_MATERIALS {
             self.assets_refused += 1;
             return;
         }
-        if self.material_ranges.len().saturating_add(local_ranges.len())
+        if self
+            .material_ranges
+            .len()
+            .saturating_add(local_ranges.len())
             > MAX_SCENE_MATERIAL_RANGES
         {
             self.assets_refused += 1;
             return;
         }
 
-        let actor=match container_10d::skeletal_container::read_skeletal_section(&bytes) {
-            Ok(section)=>{
-                if self.animation.actors.len()>=256 {self.assets_refused+=1;return;}
-                let budget=(42usize*1024*1024).saturating_sub(self.animation.resident_bytes);
-                let indices:Vec<u32>=mesh.triangles.iter().flatten().copied().collect();
-                match crate::render::skeletal::SkeletalPlayer::from_section_with_budget(
-                    &section,&mesh.positions,&local_normals,&local_uv0,&indices,budget) {
-                    Ok(player)=>Some(super::scene_animation::SceneActor{start:self.positions.len() as u32,player}),
-                    Err(_)=>{self.assets_refused+=1;return;}
+        let actor = match container_10d::skeletal_container::read_skeletal_section(&bytes) {
+            Ok(section) => {
+                if self.animation.actors.len() >= 256 {
+                    self.assets_refused += 1;
+                    return;
                 }
-            },
-            Err(container_10d::skeletal_container::SkeletalContainerError::Missing)=>None,
-            Err(_)=>{self.assets_refused+=1;return;}
+                let budget = (42usize * 1024 * 1024).saturating_sub(self.animation.resident_bytes);
+                let indices: Vec<u32> = mesh.triangles.iter().flatten().copied().collect();
+                match crate::render::skeletal::SkeletalPlayer::from_section_with_budget(
+                    &section,
+                    &mesh.positions,
+                    &local_normals,
+                    &local_uv0,
+                    &indices,
+                    budget,
+                ) {
+                    Ok(player) => Some(super::scene_animation::SceneActor {
+                        start: self.positions.len() as u32,
+                        player,
+                    }),
+                    Err(_) => {
+                        self.assets_refused += 1;
+                        return;
+                    }
+                }
+            }
+            Err(container_10d::skeletal_container::SkeletalContainerError::Missing) => None,
+            Err(_) => {
+                self.assets_refused += 1;
+                return;
+            }
         };
-        if let Some(actor)=actor {
-            self.animation.resident_bytes+=actor.player.allocated_bytes();
+        if let Some(actor) = actor {
+            self.animation.resident_bytes += actor.player.allocated_bytes();
             self.animation.actors.push(actor);
         }
         for k in 0..3 {
@@ -341,7 +388,11 @@ impl SceneMeshAccum {
         self.index_spans
             .push((index_start_usize, self.indices.len()));
         for material in local_materials.drain(..) {
-            if !self.materials.iter().any(|present| present.id == material.id) {
+            if !self
+                .materials
+                .iter()
+                .any(|present| present.id == material.id)
+            {
                 self.materials.push(material);
             }
         }
@@ -366,22 +417,40 @@ impl SceneMeshAccum {
         if fit.identity || self.positions.is_empty() {
             return Ok(());
         }
-        let fit_bytes=fit.hidden_keys.len().checked_mul(std::mem::size_of::<String>())
-            .and_then(|n|n.checked_add(fit.hidden_keys.iter().map(|s|s.len()).sum::<usize>()))
+        let fit_bytes = fit
+            .hidden_keys
+            .len()
+            .checked_mul(std::mem::size_of::<String>())
+            .and_then(|n| n.checked_add(fit.hidden_keys.iter().map(|s| s.len()).sum::<usize>()))
             .ok_or("animated fit budget exceeded")?;
-        if fit_bytes.saturating_mul(self.animation.actors.len()).saturating_add(self.animation.resident_bytes)>42*1024*1024 {
+        if fit_bytes
+            .saturating_mul(self.animation.actors.len())
+            .saturating_add(self.animation.resident_bytes)
+            > 42 * 1024 * 1024
+        {
             return Err("animated fit budget exceeded");
         }
         for actor in &mut self.animation.actors {
-            actor.player.set_body_fit(fit,self.gmin,self.gmax).map_err(|_|"invalid animated body fit")?;
+            actor
+                .player
+                .set_body_fit(fit, self.gmin, self.gmax)
+                .map_err(|_| "invalid animated body fit")?;
         }
-        self.animation.resident_bytes=self.animation.actors.iter().map(|actor|actor.player.allocated_bytes()).sum();
+        self.animation.resident_bytes = self
+            .animation
+            .actors
+            .iter()
+            .map(|actor| actor.player.allocated_bytes())
+            .sum();
         fit.apply_in_place(&mut self.positions, self.gmin, self.gmax);
         // A nonuniform anatomical fit changes the geometric frame. Recompute
         // once after the cold fit; ordinary uniform orbit normalisation keeps
         // the authored frame intact.
         let _ = crate::render::mesh_surface_frames::vertex_normals_from_indices_into(
-            &self.positions,&self.indices,&mut self.normals);
+            &self.positions,
+            &self.indices,
+            &mut self.normals,
+        );
         if !self.nodes.is_empty() {
             let mut pts: Vec<[f32; 3]> = self.nodes.iter().map(|n| [n.x, n.y, n.z]).collect();
             fit.apply_in_place(&mut pts, self.gmin, self.gmax);
@@ -427,7 +496,10 @@ impl SceneMeshAccum {
         for actor in &mut self.animation.actors {
             // The scene bounds come from validated finite geometry. Preserve
             // the original rig frame; map its output like the static mesh.
-            actor.player.set_output_frame(gc,s).map_err(|_|"invalid animated orbit frame")?;
+            actor
+                .player
+                .set_output_frame(gc, s)
+                .map_err(|_| "invalid animated orbit frame")?;
         }
         for p in self.positions.iter_mut() {
             p[0] = (p[0] - gc[0]) * s;

@@ -11,7 +11,7 @@ use bytemuck::{Pod, Zeroable};
 use crate::entity_view::entity_ontologies::EntityOntology;
 
 pub const ENTITY_ONTOLOGY_SECTION_VERSION: u16 = 1;
-pub const ENTITY_ONTOLOGY_MINI_HEADER_SIZE: usize = 32;
+pub const ENTITY_ONTOLOGY_MINI_HEADER_SIZE: usize = 40;
 pub const AFFORDANCE_RECORD_SIZE: usize = 48;
 pub const MAX_AFFORDANCES_PER_SECTION: usize = 256;
 pub const MAGIC_EONT: [u8; 4] = *b"EONT";
@@ -21,7 +21,7 @@ pub const PERSONAL_ONTOLOGY_SECTION_VERSION: u16 = ENTITY_ONTOLOGY_SECTION_VERSI
 pub const PERSONAL_ONTOLOGY_MINI_HEADER_SIZE: usize = ENTITY_ONTOLOGY_MINI_HEADER_SIZE;
 pub const MAGIC_PONT: [u8; 4] = MAGIC_EONT;
 
-/// 32-byte header for SectionType::EntityOntology (EONT1).
+/// 40-byte header for SectionType::EntityOntology (EONT1).
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Pod, Zeroable)]
 pub struct EntityOntologyMiniHeader {
@@ -38,6 +38,8 @@ pub struct EntityOntologyMiniHeader {
     pub affordance_count: u32,
     pub reserved_u32: u32,
 }
+const _: [(); ENTITY_ONTOLOGY_MINI_HEADER_SIZE] =
+    [(); core::mem::size_of::<EntityOntologyMiniHeader>()];
 
 pub type PersonalOntologyMiniHeader = EntityOntologyMiniHeader;
 
@@ -61,15 +63,28 @@ pub struct AffordanceBinaryRecord {
     pub reserved_u16: u16,
     pub animation_clip_id: u32,
 }
+const _: [(); AFFORDANCE_RECORD_SIZE] = [(); core::mem::size_of::<AffordanceBinaryRecord>()];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EntityOntologySectionError {
-    PayloadTooShort { need: usize, have: usize },
+    PayloadTooShort {
+        need: usize,
+        have: usize,
+    },
     BadMagic([u8; 4]),
     UnsupportedVersion(u16),
-    TooManyAffordances { count: usize, max: usize },
-    BufferTooSmall { need: usize, have: usize },
-    LengthMismatch { header_len: usize, payload_len: usize },
+    TooManyAffordances {
+        count: usize,
+        max: usize,
+    },
+    BufferTooSmall {
+        need: usize,
+        have: usize,
+    },
+    LengthMismatch {
+        header_len: usize,
+        payload_len: usize,
+    },
 }
 
 pub type PersonalOntologySectionError = EntityOntologySectionError;
@@ -78,7 +93,10 @@ impl std::fmt::Display for EntityOntologySectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PayloadTooShort { need, have } => {
-                write!(f, "entity ontology section too short: have {have}, need {need}")
+                write!(
+                    f,
+                    "entity ontology section too short: have {have}, need {need}"
+                )
             }
             Self::BadMagic(m) => write!(f, "bad entity ontology magic: {m:?}"),
             Self::UnsupportedVersion(v) => write!(f, "unsupported entity ontology version {v}"),
@@ -88,8 +106,14 @@ impl std::fmt::Display for EntityOntologySectionError {
             Self::BufferTooSmall { need, have } => {
                 write!(f, "destination buffer too small: have {have}, need {need}")
             }
-            Self::LengthMismatch { header_len, payload_len } => {
-                write!(f, "length mismatch: expected {header_len}, payload {payload_len}")
+            Self::LengthMismatch {
+                header_len,
+                payload_len,
+            } => {
+                write!(
+                    f,
+                    "length mismatch: expected {header_len}, payload {payload_len}"
+                )
             }
         }
     }
@@ -188,13 +212,15 @@ pub fn decode_entity_ontology_section_into<'a>(
     }
 
     let header: EntityOntologyMiniHeader =
-        *bytemuck::from_bytes(&payload[..ENTITY_ONTOLOGY_MINI_HEADER_SIZE]);
+        bytemuck::pod_read_unaligned(&payload[..ENTITY_ONTOLOGY_MINI_HEADER_SIZE]);
 
     if header.magic != MAGIC_EONT && header.magic != *b"PONT" {
         return Err(EntityOntologySectionError::BadMagic(header.magic));
     }
     if header.version != ENTITY_ONTOLOGY_SECTION_VERSION {
-        return Err(EntityOntologySectionError::UnsupportedVersion(header.version));
+        return Err(EntityOntologySectionError::UnsupportedVersion(
+            header.version,
+        ));
     }
 
     let count = header.affordance_count as usize;
@@ -220,9 +246,10 @@ pub fn decode_entity_ontology_section_into<'a>(
         });
     }
 
-    let records_slice = &payload[ENTITY_ONTOLOGY_MINI_HEADER_SIZE..];
-    let records: &[AffordanceBinaryRecord] = bytemuck::cast_slice(records_slice);
-    out_records[..count].copy_from_slice(&records[..count]);
+    for (index, record) in out_records[..count].iter_mut().enumerate() {
+        let start = ENTITY_ONTOLOGY_MINI_HEADER_SIZE + index * AFFORDANCE_RECORD_SIZE;
+        *record = bytemuck::pod_read_unaligned(&payload[start..start + AFFORDANCE_RECORD_SIZE]);
+    }
 
     Ok((header, count))
 }
@@ -232,7 +259,9 @@ pub use decode_entity_ontology_section_into as decode_personal_ontology_section_
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity_view::entity_ontologies::{ActionAffordance, AffordanceCategory, LifecycleStage};
+    use crate::entity_view::entity_ontologies::{
+        ActionAffordance, AffordanceCategory, LifecycleStage,
+    };
     use crate::entity_view::{EntityId, ObserverStatus};
 
     #[test]
@@ -245,26 +274,50 @@ mod tests {
         onto.hydration_permill = 880;
         onto.wear_permill = 40;
 
-        let mut a1 = ActionAffordance::new("graze", "Consume pasture grass", AffordanceCategory::Biological);
+        let mut a1 = ActionAffordance::new(
+            "graze",
+            "Consume pasture grass",
+            AffordanceCategory::Biological,
+        );
         a1.preconditions.min_observer_status = ObserverStatus::Public;
         a1.preconditions.min_energy_permill = 100;
         a1.effects.energy_delta = 250;
         a1.effects.animation_clip_id = 7;
         onto.add_affordance(a1);
 
-        let mut a2 = ActionAffordance::new("flee", "Emergency evasive sprint", AffordanceCategory::Physical);
+        let mut a2 = ActionAffordance::new(
+            "flee",
+            "Emergency evasive sprint",
+            AffordanceCategory::Physical,
+        );
         a2.preconditions.min_energy_permill = 300;
         a2.effects.energy_delta = -200;
         a2.effects.animation_clip_id = 12;
         onto.add_affordance(a2);
 
         let mut buffer = [0u8; 512];
-        let bytes_written = encode_entity_ontology_section(&onto, 0x9988_7766, &mut buffer).unwrap();
-        assert_eq!(bytes_written, ENTITY_ONTOLOGY_MINI_HEADER_SIZE + 2 * AFFORDANCE_RECORD_SIZE);
+        let bytes_written =
+            encode_entity_ontology_section(&onto, 0x9988_7766, &mut buffer).unwrap();
+        assert_eq!(
+            bytes_written,
+            ENTITY_ONTOLOGY_MINI_HEADER_SIZE + 2 * AFFORDANCE_RECORD_SIZE
+        );
 
         let mut decoded_records = [AffordanceBinaryRecord::zeroed(); 4];
         let (header, count) =
-            decode_entity_ontology_section_into(&buffer[..bytes_written], &mut decoded_records).unwrap();
+            decode_entity_ontology_section_into(&buffer[..bytes_written], &mut decoded_records)
+                .unwrap();
+        let mut unaligned = [0u8; 513];
+        unaligned[1..1 + bytes_written].copy_from_slice(&buffer[..bytes_written]);
+        assert_eq!(
+            decode_entity_ontology_section_into(
+                &unaligned[1..1 + bytes_written],
+                &mut decoded_records
+            )
+            .unwrap()
+            .1,
+            count
+        );
 
         assert_eq!(header.magic, MAGIC_EONT);
         assert_eq!(header.version, 1);
@@ -275,12 +328,18 @@ mod tests {
         assert_eq!(count, 2);
 
         assert_eq!(decoded_records[0].action_id, onto.affordances[0].action_id);
-        assert_eq!(decoded_records[0].category, AffordanceCategory::Biological as u8);
+        assert_eq!(
+            decoded_records[0].category,
+            AffordanceCategory::Biological as u8
+        );
         assert_eq!(decoded_records[0].energy_delta, 250);
         assert_eq!(decoded_records[0].animation_clip_id, 7);
 
         assert_eq!(decoded_records[1].action_id, onto.affordances[1].action_id);
-        assert_eq!(decoded_records[1].category, AffordanceCategory::Physical as u8);
+        assert_eq!(
+            decoded_records[1].category,
+            AffordanceCategory::Physical as u8
+        );
         assert_eq!(decoded_records[1].energy_delta, -200);
         assert_eq!(decoded_records[1].animation_clip_id, 12);
     }

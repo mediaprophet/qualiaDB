@@ -370,11 +370,15 @@ pub fn compile_n3_rule_to_norm(
 }
 
 use crate::governance::webizen::agreement::{AgreementDID, AgreementState};
-use crate::modalities::logic::n3_parser::{Rule as N3Rule, StackRule as N3StackRule, Term as N3Term};
+use crate::modalities::logic::n3_parser::{
+    Rule as N3Rule, StackRule as N3StackRule, Term as N3Term,
+};
 
 fn hash_n3_term(term: &N3Term<'_>) -> u64 {
     match term {
-        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => crate::q_hash(s),
+        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => {
+            crate::q_hash(s)
+        }
     }
 }
 
@@ -400,10 +404,13 @@ pub fn compile_n3_ast_rule_to_norm(
     };
 
     let p_str = match p_triple.predicate {
-        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => s.to_ascii_lowercase(),
+        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => {
+            s.to_ascii_lowercase()
+        }
     };
 
-    let is_obligate = p_str.contains("obligate") || p_str.contains("must") || p_str.contains("shall");
+    let is_obligate =
+        p_str.contains("obligate") || p_str.contains("must") || p_str.contains("shall");
     let is_permit = p_str.contains("permit") || p_str.contains("may") || p_str.contains("can");
     let is_forbid = p_str.contains("forbid") || p_str.contains("not") || p_str.contains("prohibit");
 
@@ -470,10 +477,13 @@ pub fn compile_stack_rule_to_norm(
     };
 
     let p_str = match p_triple.predicate {
-        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => s.to_ascii_lowercase(),
+        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Literal(s) | N3Term::Formula(s) => {
+            s.to_ascii_lowercase()
+        }
     };
 
-    let is_obligate = p_str.contains("obligate") || p_str.contains("must") || p_str.contains("shall");
+    let is_obligate =
+        p_str.contains("obligate") || p_str.contains("must") || p_str.contains("shall");
     let is_permit = p_str.contains("permit") || p_str.contains("may") || p_str.contains("can");
     let is_forbid = p_str.contains("forbid") || p_str.contains("not") || p_str.contains("prohibit");
 
@@ -842,7 +852,10 @@ mod tests {
 
     #[test]
     fn test_compile_n3_ast_and_stack_rules_and_agreements() {
-        use crate::modalities::logic::n3_parser::{Formula, Rule as N3Rule, StackFormula, StackRule as N3StackRule, Term as N3Term, Triple as N3Triple};
+        use crate::modalities::logic::n3_parser::{
+            Formula, Rule as N3Rule, StackFormula, StackRule as N3StackRule, Term as N3Term,
+            Triple as N3Triple,
+        };
 
         let t1 = N3Triple {
             subject: N3Term::Uri("did:agent:alice"),
@@ -908,6 +921,9 @@ mod tests {
         assert_eq!(agreement_norms[1].subject, 0x3333);
 
         agreement.current_state = AgreementState::Proposed;
-        assert_eq!(compile_agreement_to_deontic_norms(&agreement, 3000, &mut agreement_norms), 0);
+        assert_eq!(
+            compile_agreement_to_deontic_norms(&agreement, 3000, &mut agreement_norms),
+            0
+        );
     }
 }

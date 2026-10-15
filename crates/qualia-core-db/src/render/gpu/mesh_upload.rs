@@ -2,10 +2,8 @@
 
 use super::*;
 use crate::container_10d::{MaterialRecord, SubmeshRange};
-use crate::render::lighting::environment_lighting::{
-    EnvironmentLightingGpu, EnvironmentProbeSet,
-};
 use crate::render::gpu::materials::create_material_gpu;
+use crate::render::lighting::environment_lighting::{EnvironmentLightingGpu, EnvironmentProbeSet};
 
 const IDENTITY_MAT4: [[f32; 4]; 4] = [
     [1.0, 0.0, 0.0, 0.0],
@@ -361,13 +359,21 @@ impl PortalGpu {
         } else if let Some(uv) = texture_coordinates_0 {
             // UV-aligned normal maps require a real tangent basis rather than
             // an arbitrary axis derived only from the geometric normal.
-            if positions.len() > 1_048_576 { return Err("tangent authoring scratch exceeds bounded mesh budget".into()); }
+            if positions.len() > 1_048_576 {
+                return Err("tangent authoring scratch exceeds bounded mesh budget".into());
+            }
             generated_tangents = {
-                let mut frames = vec![[0.0;4]; positions.len()];
-                let mut scratch = vec![[0.0;6]; positions.len()];
-                crate::render::mesh_tangent_frames::tangents_from_uvs_into(positions, uv,
-                    normal_data, indices, &mut frames, &mut scratch)
-                    .map_err(|e|format!("mesh tangent frames: {e:?}"))?;
+                let mut frames = vec![[0.0; 4]; positions.len()];
+                let mut scratch = vec![[0.0; 6]; positions.len()];
+                crate::render::mesh_tangent_frames::tangents_from_uvs_into(
+                    positions,
+                    uv,
+                    normal_data,
+                    indices,
+                    &mut frames,
+                    &mut scratch,
+                )
+                .map_err(|e| format!("mesh tangent frames: {e:?}"))?;
                 frames
             };
             generated_tangents.as_slice()

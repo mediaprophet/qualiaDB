@@ -80,7 +80,9 @@ pub fn compile_entity(input: EntityCompileInput) -> Result<EntityCompileOutput, 
     // Assert that a NaturalPerson is never compiled as manufactured property
     assert_person_anti_commodification(
         ontological_class,
-        input.entity_type.eq_ignore_ascii_case("manufacturedproperty")
+        input
+            .entity_type
+            .eq_ignore_ascii_case("manufacturedproperty")
             || input.entity_type.eq_ignore_ascii_case("asset"),
     )
     .map_err(|e| BundleError::Cbor(format!("anti-commodification gate failure: {e:?}")))?;
@@ -401,8 +403,15 @@ mod tests {
 
         let output = compile_entity(input).expect("specimen compile must succeed");
         assert_eq!(output.embodiment_term, "Specimen");
-        assert!(output.manifest.credential_type.contains(&"TaxonSpecimen".to_string()));
-        assert!(output.manifest.credential_subject.commons_obligation.is_some());
+        assert!(output
+            .manifest
+            .credential_type
+            .contains(&"TaxonSpecimen".to_string()));
+        assert!(output
+            .manifest
+            .credential_subject
+            .commons_obligation
+            .is_some());
     }
 
     #[test]
@@ -415,7 +424,8 @@ mod tests {
             entity_type: "NaturalPerson".to_string(),
             procedural_seed: "hmc://seeds/citizen_face".to_string(),
             acoustic_anchors: AcousticAnchors::default(),
-            verification_method: "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#key-1".to_string(),
+            verification_method: "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#key-1"
+                .to_string(),
             proof_value: "z58DValidProofValue2026".to_string(),
             commons_obligation: None,
             surf1_bytes: vec![0x14; 1024],
@@ -426,7 +436,10 @@ mod tests {
 
         let output = compile_entity(input).expect("persona compile must succeed");
         assert_eq!(output.embodiment_term, "Persona");
-        assert!(output.manifest.credential_type.contains(&"HumanPersona".to_string()));
+        assert!(output
+            .manifest
+            .credential_type
+            .contains(&"HumanPersona".to_string()));
     }
 
     #[test]
@@ -450,7 +463,10 @@ mod tests {
 
         let output = compile_entity(input).expect("construct compile must succeed");
         assert_eq!(output.embodiment_term, "Construct");
-        assert!(output.manifest.credential_type.contains(&"EngineeredConstruct".to_string()));
+        assert!(output
+            .manifest
+            .credential_type
+            .contains(&"ManufacturedConstruct".to_string()));
     }
 
     #[test]
@@ -522,7 +538,7 @@ mod tests {
                 licence_class: "SocialPermissiveCommons".to_string(),
                 production_cost_cents: 25_000, // $250.00 finite digitization cost
                 roi_cap_percent: 20,
-                accumulated_pool_cents: 30_000, // fully discharged!
+                accumulated_pool_cents: 30_000,    // fully discharged!
                 transaction_cost_per_mib_cents: 2, // at-cost carrier transport
                 perpetual_fees_prohibited: true,
             }),
@@ -532,7 +548,11 @@ mod tests {
             mesh1_hero_bytes: vec![0x01; 16384],
         };
         let out = compile_entity(valid_commons_input).expect("valid SPC must compile");
-        let cob = out.manifest.credential_subject.commons_obligation.expect("must have cob");
+        let cob = out
+            .manifest
+            .credential_subject
+            .commons_obligation
+            .expect("must have cob");
         assert!(cob.is_discharged());
         assert_eq!(cob.outstanding_obligation(), 0);
     }

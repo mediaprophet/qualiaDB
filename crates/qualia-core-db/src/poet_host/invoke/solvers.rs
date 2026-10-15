@@ -1254,7 +1254,8 @@ pub fn graph_shortest_path(args: &Value, span: Span) -> Result<Value, Diagnostic
     use crate::solvers::graph_opt::hierarchical_path::dijkstra;
     let n = args::rec_u64(args, "nodes")
         .or_else(|| args::rec_u64(args, "n"))
-        .ok_or_else(|| args::bad(span, "graph_shortest_path needs `nodes` (node count)"))? as usize;
+        .ok_or_else(|| args::bad(span, "graph_shortest_path needs `nodes` (node count)"))?
+        as usize;
     let source = args::rec_u64(args, "source").unwrap_or(0) as usize;
     let target = args::rec_u64(args, "target").map(|t| t as usize);
     let edges_v = match args {
@@ -1265,24 +1266,33 @@ pub fn graph_shortest_path(args: &Value, span: Span) -> Result<Value, Diagnostic
     if let Some(Value::List(list)) = edges_v {
         for edge in list {
             if let Value::Record(r) = edge {
-                let u = r.get("from").and_then(|v| match v {
-                    Value::U64(n) => Some(*n as usize),
-                    Value::I64(n) => Some(*n as usize),
-                    Value::F64(f) => Some(*f as usize),
-                    _ => None,
-                }).unwrap_or(0);
-                let v = r.get("to").and_then(|v| match v {
-                    Value::U64(n) => Some(*n as usize),
-                    Value::I64(n) => Some(*n as usize),
-                    Value::F64(f) => Some(*f as usize),
-                    _ => None,
-                }).unwrap_or(0);
-                let w = r.get("weight").and_then(|v| match v {
-                    Value::F64(f) => Some(*f),
-                    Value::U64(n) => Some(*n as f64),
-                    Value::I64(n) => Some(*n as f64),
-                    _ => None,
-                }).unwrap_or(1.0);
+                let u = r
+                    .get("from")
+                    .and_then(|v| match v {
+                        Value::U64(n) => Some(*n as usize),
+                        Value::I64(n) => Some(*n as usize),
+                        Value::F64(f) => Some(*f as usize),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                let v = r
+                    .get("to")
+                    .and_then(|v| match v {
+                        Value::U64(n) => Some(*n as usize),
+                        Value::I64(n) => Some(*n as usize),
+                        Value::F64(f) => Some(*f as usize),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                let w = r
+                    .get("weight")
+                    .and_then(|v| match v {
+                        Value::F64(f) => Some(*f),
+                        Value::U64(n) => Some(*n as f64),
+                        Value::I64(n) => Some(*n as f64),
+                        _ => None,
+                    })
+                    .unwrap_or(1.0);
                 if u < n && v < n {
                     edges_of[u].push((v, w));
                 }
@@ -1306,7 +1316,13 @@ pub fn graph_shortest_path(args: &Value, span: Span) -> Result<Value, Diagnostic
     } else {
         let dist_vals = distances
             .into_iter()
-            .map(|d| if d.is_finite() { Value::F64(d) } else { Value::Null })
+            .map(|d| {
+                if d.is_finite() {
+                    Value::F64(d)
+                } else {
+                    Value::Null
+                }
+            })
             .collect();
         Ok(args::record([
             ("distances", Value::List(dist_vals)),
@@ -1315,4 +1331,3 @@ pub fn graph_shortest_path(args: &Value, span: Span) -> Result<Value, Diagnostic
         ]))
     }
 }
-

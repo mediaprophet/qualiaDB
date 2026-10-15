@@ -64,7 +64,7 @@ pub fn camera_frame_node(node: [f32; 3]) -> CameraState {
 #[inline]
 pub fn lerp_camera(a: CameraState, b: CameraState, t: f32) -> CameraState {
     CameraState {
-        near_plane:a.near_plane+(b.near_plane-a.near_plane)*t,
+        near_plane: a.near_plane + (b.near_plane - a.near_plane) * t,
         yaw: a.yaw + (b.yaw - a.yaw) * t,
         pitch: a.pitch + (b.pitch - a.pitch) * t,
         zoom: a.zoom + (b.zoom - a.zoom) * t,
@@ -164,8 +164,7 @@ pub fn cpu_pick_node_at_camera(
         .clamp(0.0, f64::from(canvas_h.saturating_sub(1)))
         + 0.5;
     let aspect = canvas_w as f32 / canvas_h as f32;
-    let view_projection =
-        camera.view_projection(aspect);
+    let view_projection = camera.view_projection(aspect);
     let camera_eye =
         orbit_eye_position_target(camera.yaw, camera.pitch, camera.zoom, camera.target);
 

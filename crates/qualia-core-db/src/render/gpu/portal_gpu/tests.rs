@@ -57,7 +57,10 @@ fn temporal_owner_is_optional_and_resize_resets_history() {
     assert_eq!(renderer.resize(48, 40).expect("resize"), (48, 40));
     assert!(!renderer.temporal_history_valid());
     assert!(renderer.temporal_reset_pending());
-    assert_eq!(renderer.temporal_resolve_gpu().map(|owner| owner.extent()), Some((48, 40)));
+    assert_eq!(
+        renderer.temporal_resolve_gpu().map(|owner| owner.extent()),
+        Some((48, 40))
+    );
 }
 
 #[test]
@@ -152,8 +155,7 @@ fn native_offscreen_renders_tensor_and_mesh_on_shared_gpu() {
     if !crate::wgsl_forge::test_gpu_available() {
         return;
     }
-    let mut renderer =
-        PortalGpu::new_offscreen(96, 96, 256).expect("native offscreen renderer");
+    let mut renderer = PortalGpu::new_offscreen(96, 96, 256).expect("native offscreen renderer");
 
     let tensors = [
         Tensor10D::ground_truth(0.0, 0.0, -0.35, 0.0, 0.0, 0.0, 1.0, 0.0, 0.2),
@@ -388,7 +390,9 @@ fn camera_history_tracks_frames_and_resets_on_cut_and_resize() {
         .render(0.0, &SystemTelemetry::default())
         .expect("render frame 1");
 
-    let prev_vp = renderer.previous_camera_view_projection().expect("latched prev vp");
+    let prev_vp = renderer
+        .previous_camera_view_projection()
+        .expect("latched prev vp");
     assert_eq!(prev_vp, curr_vp);
 
     renderer.invalidate_temporal_history();
@@ -416,12 +420,19 @@ fn test_render_with_auto_temporal_accumulates_across_frames() {
 
     // Frame 1: Initialise history without prior history
     let res1 = renderer.render_with_auto_temporal(0.0, &SystemTelemetry::default());
-    assert_eq!(res1, Ok(true), "frame 1 should record temporal resolve into history");
+    assert_eq!(
+        res1,
+        Ok(true),
+        "frame 1 should record temporal resolve into history"
+    );
     assert!(renderer.temporal_history_valid());
 
     // Frame 2: Accumulate across frames with history reads enabled
     let res2 = renderer.render_with_auto_temporal(0.016, &SystemTelemetry::default());
-    assert_eq!(res2, Ok(true), "frame 2 should accumulate temporal history without failing closed");
+    assert_eq!(
+        res2,
+        Ok(true),
+        "frame 2 should accumulate temporal history without failing closed"
+    );
     assert!(renderer.temporal_history_valid());
 }
-

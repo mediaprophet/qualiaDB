@@ -209,7 +209,9 @@ fn check_zk_proof_knowledge() -> (Verdict, String) {
     } else {
         (
             Verdict::Stub,
-            format!("NIZK verification failed: valid={valid}, tampered_rejected={tampered_rejected}"),
+            format!(
+                "NIZK verification failed: valid={valid}, tampered_rejected={tampered_rejected}"
+            ),
         )
     }
 }
@@ -258,7 +260,10 @@ fn check_manifold_presentation_projection() -> (Verdict, String) {
                 )
             }
         }
-        (e1, e2) => (Verdict::Stub, format!("project error: doc={e1:?}, stage={e2:?}")),
+        (e1, e2) => (
+            Verdict::Stub,
+            format!("project error: doc={e1:?}, stage={e2:?}"),
+        ),
     }
 }
 

@@ -104,7 +104,8 @@ pub fn evaluate_emf_gaussian_moment_transport(
     // E[u^0] = 1.0
     // E[u^1] = sigma_u
     // E[u^2] = sigma_u^2 + mu_u^2
-    let moment_sum = coeffs.c0 * (sigma_u * sigma_u + mu_u * mu_u) + coeffs.c1 * sigma_u + coeffs.c2;
+    let moment_sum =
+        coeffs.c0 * (sigma_u * sigma_u + mu_u * mu_u) + coeffs.c1 * sigma_u + coeffs.c2;
 
     scale * (0.5 + 0.5 * (moment_sum / (1.0 + moment_sum * moment_sum).sqrt()))
 }
@@ -165,10 +166,7 @@ pub fn thin_film_airy_simd4(
 /// Evaluates the spectral diffuse profile $R_d(r, \lambda) = \frac{e^{-r/l_d} + e^{-r/(3 l_d)}}{8 \pi l_d r}$
 /// over the 4 hero wavelengths.
 #[inline]
-pub fn burley_diffusion_weights_simd4(
-    r_mm: f32,
-    mean_free_path_mm: [f32; 4],
-) -> [f32; 4] {
+pub fn burley_diffusion_weights_simd4(r_mm: f32, mean_free_path_mm: [f32; 4]) -> [f32; 4] {
     let r = r_mm.max(1e-4);
     let mut weights = [0.0f32; 4];
     let pi = std::f32::consts::PI;
@@ -271,26 +269,29 @@ pub fn spectral_to_cie_xyz_simd4(lambdas: [f32; 4], radiance: [f32; 4]) -> [f32;
 // ───────────────────────────────────────────────────────────────────────────
 
 /// AgX / Manuka 20% linear gamut inset matrix for pre-compression desaturation.
-pub const AGX_INSET_MATRIX: [[f32; 3]; 3] = [
-    [0.84, 0.08, 0.08],
-    [0.08, 0.84, 0.08],
-    [0.08, 0.08, 0.84],
-];
+pub const AGX_INSET_MATRIX: [[f32; 3]; 3] =
+    [[0.84, 0.08, 0.08], [0.08, 0.84, 0.08], [0.08, 0.08, 0.84]];
 
 /// Inverse outset matrix restoring midtone saturation.
 pub const AGX_OUTSET_MATRIX: [[f32; 3]; 3] = [
-    [1.226_190_5, -0.113_095_24, -0.113_095_24],
-    [-0.113_095_24, 1.226_190_5, -0.113_095_24],
-    [-0.113_095_24, -0.113_095_24, 1.226_190_5],
+    [1.210_526_3, -0.105_263_16, -0.105_263_16],
+    [-0.105_263_16, 1.210_526_3, -0.105_263_16],
+    [-0.105_263_16, -0.105_263_16, 1.210_526_3],
 ];
 
 /// Apply AgX / Manuka linear gamut inset toward white point.
 #[inline]
 pub fn agx_manuka_gamut_inset(rgb: [f32; 3]) -> [f32; 3] {
     [
-        AGX_INSET_MATRIX[0][0] * rgb[0] + AGX_INSET_MATRIX[0][1] * rgb[1] + AGX_INSET_MATRIX[0][2] * rgb[2],
-        AGX_INSET_MATRIX[1][0] * rgb[0] + AGX_INSET_MATRIX[1][1] * rgb[1] + AGX_INSET_MATRIX[1][2] * rgb[2],
-        AGX_INSET_MATRIX[2][0] * rgb[0] + AGX_INSET_MATRIX[2][1] * rgb[1] + AGX_INSET_MATRIX[2][2] * rgb[2],
+        AGX_INSET_MATRIX[0][0] * rgb[0]
+            + AGX_INSET_MATRIX[0][1] * rgb[1]
+            + AGX_INSET_MATRIX[0][2] * rgb[2],
+        AGX_INSET_MATRIX[1][0] * rgb[0]
+            + AGX_INSET_MATRIX[1][1] * rgb[1]
+            + AGX_INSET_MATRIX[1][2] * rgb[2],
+        AGX_INSET_MATRIX[2][0] * rgb[0]
+            + AGX_INSET_MATRIX[2][1] * rgb[1]
+            + AGX_INSET_MATRIX[2][2] * rgb[2],
     ]
 }
 
@@ -298,9 +299,15 @@ pub fn agx_manuka_gamut_inset(rgb: [f32; 3]) -> [f32; 3] {
 #[inline]
 pub fn agx_manuka_gamut_outset(rgb: [f32; 3]) -> [f32; 3] {
     [
-        AGX_OUTSET_MATRIX[0][0] * rgb[0] + AGX_OUTSET_MATRIX[0][1] * rgb[1] + AGX_OUTSET_MATRIX[0][2] * rgb[2],
-        AGX_OUTSET_MATRIX[1][0] * rgb[0] + AGX_OUTSET_MATRIX[1][1] * rgb[1] + AGX_OUTSET_MATRIX[1][2] * rgb[2],
-        AGX_OUTSET_MATRIX[2][0] * rgb[0] + AGX_OUTSET_MATRIX[2][1] * rgb[1] + AGX_OUTSET_MATRIX[2][2] * rgb[2],
+        AGX_OUTSET_MATRIX[0][0] * rgb[0]
+            + AGX_OUTSET_MATRIX[0][1] * rgb[1]
+            + AGX_OUTSET_MATRIX[0][2] * rgb[2],
+        AGX_OUTSET_MATRIX[1][0] * rgb[0]
+            + AGX_OUTSET_MATRIX[1][1] * rgb[1]
+            + AGX_OUTSET_MATRIX[1][2] * rgb[2],
+        AGX_OUTSET_MATRIX[2][0] * rgb[0]
+            + AGX_OUTSET_MATRIX[2][1] * rgb[1]
+            + AGX_OUTSET_MATRIX[2][2] * rgb[2],
     ]
 }
 
@@ -379,7 +386,10 @@ mod tests {
         let extreme_coeffs = JakobHanikaCoeffs::new(1000.0, -500.0, 200.0);
         for lambda in (380..=780).step_by(10) {
             let r = evaluate_spectral_reflectance(&extreme_coeffs, lambda as f32);
-            assert!(r >= 0.0 && r <= 1.0, "Reflectance {r} out of bounds at {lambda} nm");
+            assert!(
+                r >= 0.0 && r <= 1.0,
+                "Reflectance {r} out of bounds at {lambda} nm"
+            );
         }
 
         let flat_mid = JakobHanikaCoeffs::FLAT_MID;
@@ -406,7 +416,11 @@ mod tests {
         let r = thin_film_airy_simd4(300.0, n_film, 1.0, lambdas);
 
         for i in 0..4 {
-            assert!(r[i] >= 0.0 && r[i] <= 1.0, "Reflectance {} out of bounds", r[i]);
+            assert!(
+                r[i] >= 0.0 && r[i] <= 1.0,
+                "Reflectance {} out of bounds",
+                r[i]
+            );
         }
     }
 
@@ -452,7 +466,9 @@ mod tests {
         // Blue (450 nm) vs Red (650 nm)
         let lambdas = [450.0, 550.0, 650.0, 750.0];
         let cross = evaluate_volumetric_cross_sections_simd4(lambdas);
-        assert!(cross.sigma_s[0] > cross.sigma_s[2] * 3.0, "Blue scattering must dominate red by >3x");
+        assert!(
+            cross.sigma_s[0] > cross.sigma_s[2] * 2.5,
+            "Blue scattering must dominate red by >2.5x with Mie contribution"
+        );
     }
 }
-

@@ -80,6 +80,7 @@ pub fn format_iso8601_range(time_range: (u64, u64)) -> String {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, String> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let client = reqwest::blocking::Client::new();
     let mut builder = match request.method {
         AdapterHttpMethod::Get => client.get(&request.url),
@@ -105,6 +106,7 @@ fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, Str
 
 #[cfg(not(target_arch = "wasm32"))]
 fn execute_http_request_bytes(request: &AdapterHttpRequest) -> Result<Vec<u8>, String> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let client = reqwest::blocking::Client::new();
     let mut builder = match request.method {
         AdapterHttpMethod::Get => client.get(&request.url),
@@ -619,7 +621,7 @@ mod tests {
             .expect("report");
 
         assert_eq!(report.status, LayerFetchStatus::ConsentDenied);
-        assert_eq!(report.endpoint, "https://elevation.example.com");
+        assert_eq!(report.endpoint, "https://elevation.example.com/terrarium/");
         assert!(report.estimated_tile_count >= 1);
     }
 

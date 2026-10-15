@@ -392,22 +392,63 @@ mod tests {
         let edges = [edge(root, decedent), edge_normal, edge_testamentary];
 
         // While elder is alive: normal assistant has authority; testamentary heir does NOT yet
-        assert!(authority_with_succession(&edges, root, proxy_living, &[], false));
-        assert!(!authority_with_succession(&edges, root, testamentary_heir, &[], false));
+        assert!(authority_with_succession(
+            &edges,
+            root,
+            proxy_living,
+            &[],
+            false
+        ));
+        assert!(!authority_with_succession(
+            &edges,
+            root,
+            testamentary_heir,
+            &[],
+            false
+        ));
 
         // When elder is deceased but probate not yet admitted:
         // Normal assistant loses authority; testamentary heir has not activated
-        assert!(!authority_with_succession(&edges, root, proxy_living, &[decedent], false));
-        assert!(!authority_with_succession(&edges, root, testamentary_heir, &[decedent], false));
+        assert!(!authority_with_succession(
+            &edges,
+            root,
+            proxy_living,
+            &[decedent],
+            false
+        ));
+        assert!(!authority_with_succession(
+            &edges,
+            root,
+            testamentary_heir,
+            &[decedent],
+            false
+        ));
 
         // When elder is deceased and probate is admitted:
         // Normal assistant still lacks authority; testamentary heir is active!
-        assert!(!authority_with_succession(&edges, root, proxy_living, &[decedent], true));
-        assert!(authority_with_succession(&edges, root, testamentary_heir, &[decedent], true));
+        assert!(!authority_with_succession(
+            &edges,
+            root,
+            proxy_living,
+            &[decedent],
+            true
+        ));
+        assert!(authority_with_succession(
+            &edges,
+            root,
+            testamentary_heir,
+            &[decedent],
+            true
+        ));
 
         // If normal edge had survivesDeath flag, it also survives death
         let surviving_edges = [edge(root, decedent), edge_surviving, edge_testamentary];
-        assert!(authority_with_succession(&surviving_edges, root, proxy_living, &[decedent], true));
+        assert!(authority_with_succession(
+            &surviving_edges,
+            root,
+            proxy_living,
+            &[decedent],
+            true
+        ));
     }
 }
-

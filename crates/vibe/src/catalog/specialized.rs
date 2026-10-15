@@ -16,6 +16,7 @@ pub fn try_invoke(id: &str, args: &Value, span: Span) -> Option<Result<Value, Di
         "ComputationalGeometry.orientation_2" => Some(orientation_2(args, span)),
         "ComputationalGeometry.distance_2d" => Some(distance_2d(args, span)),
         "ComputationalGeometry.convex_hull_2" => Some(convex_hull_2(args, span)),
+        "ComputationalGeometry.soc_sky_dome" => Some(soc_sky_dome(args, span)),
         "ClinicalRisk.framingham"
         | "OrganicChemistry.compute"
         | "OrganicChemistry.validate_smiles" => Some(engine_required(id, span)),
@@ -218,6 +219,46 @@ fn convex_hull_2(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             ("indices", Value::List(indices)),
             ("vertex_count", Value::U64(hull.len() as u64)),
         ],
+    ))
+}
+
+fn soc_sky_dome(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let total = f64_field(args, "total_par").unwrap_or(1.0);
+    if !(total >= 0.0 && total.is_finite()) {
+        return Err(Diagnostic::new(
+            DiagCode::E100,
+            span,
+            "soc_sky_dome: total_par must be finite and >= 0",
+        ));
+    }
+    let mut dirs = [(0.0f64, 0.0f64, -1.0f64); 16];
+    let mut lum = [0.0f64; 16];
+    lum[0] = 1.0;
+    for (ring, count, elev_deg) in [(1usize, 5usize, 63.43494882f64), (6, 10, 26.56505118)] {
+        let e = elev_deg.to_radians();
+        let (ce, se) = (e.cos(), e.sin());
+        for i in 0..count {
+            let az = std::f64::consts::TAU * (i as f64) / (count as f64);
+            dirs[ring + i] = (-ce * az.cos(), -ce * az.sin(), -se);
+            lum[ring + i] = se * (1.0 + 2.0 * se) / 3.0;
+        }
+    }
+    let w_sum: f64 = lum.iter().sum();
+    let sources: Vec<Value> = dirs
+        .iter()
+        .zip(lum.iter())
+        .map(|(&(x, y, z), &l)| {
+            Value::List(vec![
+                Value::F64(x),
+                Value::F64(y),
+                Value::F64(z),
+                Value::F64(total * l / w_sum.max(1e-15)),
+            ])
+        })
+        .collect();
+    Ok(receipt(
+        "ComputationalGeometry.soc_sky_dome",
+        [("sources", Value::List(sources)), ("count", Value::U64(16))],
     ))
 }
 

@@ -249,12 +249,11 @@ pub(super) fn create_material_gpu_with_environment(
         contents: bytemuck::cast_slice(&uniforms),
         usage: wgpu::BufferUsages::UNIFORM,
     });
-    let environment_uniform_buffer =
-        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-mesh-environment-lighting"),
-            contents: bytemuck::bytes_of(environment),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
+    let environment_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("portal-mesh-environment-lighting"),
+        contents: bytemuck::bytes_of(environment),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    });
     let material_bind_groups = materials
         .iter()
         .enumerate()

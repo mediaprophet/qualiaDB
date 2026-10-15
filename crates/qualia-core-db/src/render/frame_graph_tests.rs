@@ -223,9 +223,7 @@ fn temporal_output_schedule_resolves_before_history_and_final_transform() {
         .position(|pass| *pass == Some(PassId::SdrOutputComposite))
         .expect("final output pass");
     assert!(
-        linear_depth_idx < temporal_idx
-            && temporal_idx < history_idx
-            && history_idx < output_idx
+        linear_depth_idx < temporal_idx && temporal_idx < history_idx && history_idx < output_idx
     );
     assert_eq!(schedule.temporal.reset_history, false);
     assert!(schedule.temporal.is_complete());
@@ -290,9 +288,7 @@ fn temporal_schedule_fails_closed_for_a_partial_host_producer_contract() {
         volume_projection_enabled: false,
     };
 
-    for (motion_vectors_available, reactive_mask_available) in
-        [(true, false), (false, true)]
-    {
+    for (motion_vectors_available, reactive_mask_available) in [(true, false), (false, true)] {
         let mut builder = FrameGraphBuilder::new();
         builder
             .configure_from_profile_with_temporal(

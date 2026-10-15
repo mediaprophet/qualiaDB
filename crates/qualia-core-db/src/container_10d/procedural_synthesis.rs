@@ -66,10 +66,15 @@ impl std::fmt::Display for ProceduralSynthesisError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PayloadTooShort { need, have } => {
-                write!(f, "procedural synthesis payload too short: have {have}, need {need}")
+                write!(
+                    f,
+                    "procedural synthesis payload too short: have {have}, need {need}"
+                )
             }
             Self::BadMagic(m) => write!(f, "bad procedural synthesis magic: {m:?}"),
-            Self::UnsupportedVersion(v) => write!(f, "unsupported procedural synthesis version {v}"),
+            Self::UnsupportedVersion(v) => {
+                write!(f, "unsupported procedural synthesis version {v}")
+            }
             Self::BufferTooSmall { need, have } => {
                 write!(f, "buffer too small: have {have}, need {need}")
             }

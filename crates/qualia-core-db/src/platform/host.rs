@@ -578,14 +578,18 @@ mod tests {
         file.write_all(&test_data).unwrap();
         file.sync_all().unwrap();
 
-        let mut streamer = IocpGridManager::new(&file_path).expect("IocpGridManager creation should succeed");
+        let mut streamer =
+            IocpGridManager::new(&file_path).expect("IocpGridManager creation should succeed");
 
         // Test misaligned offset fails
         let misaligned = streamer.async_read_chunk(100);
         assert!(misaligned.is_err(), "Misaligned offset must return error");
 
         // Test aligned read succeeds
-        assert!(streamer.async_read_chunk(0).is_ok(), "Aligned read at 0 must succeed");
+        assert!(
+            streamer.async_read_chunk(0).is_ok(),
+            "Aligned read at 0 must succeed"
+        );
         let completed = streamer.poll_completion();
         assert!(completed.is_some(), "poll_completion should return buffer");
         let buf = completed.unwrap();

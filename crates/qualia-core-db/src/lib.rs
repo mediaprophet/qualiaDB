@@ -329,13 +329,6 @@ pub use governance::webizen_validator;
 pub mod sparql_library;
 pub use sparql_library::*;
 
-/// Q42LEX lexicon format. The byte-view reader ([`q42_lex::Q42LexMmap`]) and
-/// serializers are transport-neutral and compile on wasm32; only the
-/// filesystem/mmap handles ([`q42_lex::Q42LexFile`], [`q42_lex::Q42Lexicon`]
-/// path loaders) stay native.
-pub mod q42_lex;
-/// Q42LEX v4 writer: paged lexicon with per-page namespace dictionaries.
-pub mod q42_lex_ns;
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 #[cfg(not(all(
@@ -376,6 +369,13 @@ pub mod hypermedia;
 pub mod hypermedia_authoring;
 /// Document NLP (tokenize, gazetteer, span plans). Engine capability, not Vibe.
 pub mod nlp;
+/// Q42LEX lexicon format. The byte-view reader ([`q42_lex::Q42LexMmap`]) and
+/// serializers are transport-neutral and compile on wasm32; only the
+/// filesystem/mmap handles ([`q42_lex::Q42LexFile`], [`q42_lex::Q42Lexicon`]
+/// path loaders) stay native.
+pub mod q42_lex;
+/// Q42LEX v4 writer: paged lexicon with per-page namespace dictionaries.
+pub mod q42_lex_ns;
 // The ontology MCP binary deliberately contains only its explicit reasoning
 // kernel (`modalities_lite`); it has no VibeScript runtime. Other WASM
 // profiles retain the full browser capability host — except `wasm-webcivics`,

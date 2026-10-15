@@ -456,8 +456,8 @@ impl PoetSnapshot {
 
         // 2. Open via Q42RangeVolume
         use crate::q42::q42_volume::{
-            OpfsSliceRangeSource, Q42RangeVolume, MAX_COMPRESSED_SUPERBLOCK_SIZE,
-            SUPERBLOCK_HEADER, SUPERBLOCK_SIZE, QUIN_SIZE,
+            OpfsSliceRangeSource, Q42RangeVolume, MAX_COMPRESSED_SUPERBLOCK_SIZE, QUIN_SIZE,
+            SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
         };
         let source = OpfsSliceRangeSource::new(bytes);
         let vol = Q42RangeVolume::open(source)
@@ -562,7 +562,11 @@ impl PoetSnapshot {
     pub fn resolve_admitted_lexicon_term(&self, hash: u64) -> Option<&str> {
         let masked = hash & 0x0FFF_FFFF_FFFF_FFFF;
         for view in self.admitted_views.iter().rev() {
-            if let Some(term) = view.lexicon_entries.get(&hash).or_else(|| view.lexicon_entries.get(&masked)) {
+            if let Some(term) = view
+                .lexicon_entries
+                .get(&hash)
+                .or_else(|| view.lexicon_entries.get(&masked))
+            {
                 return Some(term.as_str());
             }
         }
@@ -3139,27 +3143,30 @@ effect fn go() {
             metadata: 0,
             parity: 0,
         };
-        quin.parity = NQuin::calculate_parity(quin.subject, quin.predicate, quin.object, quin.context, quin.metadata);
+        quin.parity = NQuin::calculate_parity(
+            quin.subject,
+            quin.predicate,
+            quin.object,
+            quin.context,
+            quin.metadata,
+        );
 
         write_unified_volume(
             tmp.path(),
             &lex,
             &[(quin.object, quin.object)],
             &[vec![quin]],
-        ).unwrap();
+        )
+        .unwrap();
 
         let bytes = std::fs::read(tmp.path()).unwrap();
         let mut snap = PoetSnapshot::default();
         let prior_revision = snap.revision;
 
         // 1. Successful admission
-        let receipt = snap.admit_q42_slice(
-            &bytes,
-            "eco:pack:sample",
-            "sem/taxonomy.q42",
-            None,
-            true,
-        ).expect("admission should succeed");
+        let receipt = snap
+            .admit_q42_slice(&bytes, "eco:pack:sample", "sem/taxonomy.q42", None, true)
+            .expect("admission should succeed");
 
         assert_eq!(receipt.quin_count, 1);
         assert_eq!(receipt.pack_identity, "eco:pack:sample");
@@ -3169,8 +3176,14 @@ effect fn go() {
         assert!(snap.revision > prior_revision);
 
         // Term resolution from admitted lexicon
-        assert_eq!(snap.resolve_admitted_lexicon_term(s_hash), Some("http://example.org/koala"));
-        assert_eq!(snap.resolve_admitted_lexicon_term(p_hash), Some("http://example.org/status"));
+        assert_eq!(
+            snap.resolve_admitted_lexicon_term(s_hash),
+            Some("http://example.org/koala")
+        );
+        assert_eq!(
+            snap.resolve_admitted_lexicon_term(p_hash),
+            Some("http://example.org/status")
+        );
 
         // 2. Digest mismatch fail-closed
         let bad_digest = [0xFFu8; 32];
@@ -3182,7 +3195,11 @@ effect fn go() {
             true,
         );
         assert!(err.is_err());
-        assert_eq!(snap.committed.len(), 1, "prior state must not be modified on fail-closed");
+        assert_eq!(
+            snap.committed.len(),
+            1,
+            "prior state must not be modified on fail-closed"
+        );
 
         // 3. Corrupted bytes fail-closed
         let mut corrupt_bytes = bytes.clone();
@@ -3196,6 +3213,10 @@ effect fn go() {
             true,
         );
         assert!(err2.is_err());
-        assert_eq!(snap.committed.len(), 1, "prior state must not be modified on corrupt fail-closed");
+        assert_eq!(
+            snap.committed.len(),
+            1,
+            "prior state must not be modified on corrupt fail-closed"
+        );
     }
 }

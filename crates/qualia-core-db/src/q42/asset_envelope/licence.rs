@@ -41,6 +41,11 @@ impl LicenceClass {
 
     /// Parse a short licence tag. Unrecognised strings become [`LicenceClass::Unknown`].
     pub fn parse(tag: &str) -> Self {
+        if tag.trim().eq_ignore_ascii_case("SocialPermissiveCommons")
+            || tag.trim().eq_ignore_ascii_case("PermissiveCommons")
+        {
+            return Self::SocialPermissiveCommons;
+        }
         let normalised = tag.trim().to_ascii_uppercase().replace(' ', "-");
         match normalised.as_str() {
             "CC0" | "CC0-1.0" | "PUBLIC-DOMAIN" => Self::Cc0,
@@ -283,7 +288,8 @@ impl LicencePolicy {
     /// Check whether a Social Permissive Commons obligation has discharged
     /// based on accumulated payments meeting audited production cost + ROI cap.
     pub fn is_spc_discharged(&self, accumulated_pool: u64, cost: u64) -> bool {
-        self.obligations.contains(LicenceObligations::COMMONS_DISCHARGEABLE)
+        self.obligations
+            .contains(LicenceObligations::COMMONS_DISCHARGEABLE)
             && crate::modalities::value_flow::is_commons_discharged(accumulated_pool, cost)
     }
 
@@ -352,6 +358,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn commons_manifest_tag_is_recognized() {
+        assert_eq!(
+            LicenceClass::parse("SocialPermissiveCommons"),
+            LicenceClass::SocialPermissiveCommons
+        );
+        assert_eq!(
+            LicenceClass::parse("PermissiveCommons"),
+            LicenceClass::SocialPermissiveCommons
+        );
+    }
+
+    #[test]
     fn unknown_licence_tag_fails_closed() {
         assert!(matches!(
             LicencePolicy::from_tag("totally-made-up", "https://example.test", "x"),
@@ -402,9 +420,15 @@ mod tests {
         .unwrap();
 
         assert_eq!(spc.class, LicenceClass::SocialPermissiveCommons);
-        assert!(spc.obligations.contains(LicenceObligations::THIRD_PARTY_ANCHORED));
-        assert!(spc.obligations.contains(LicenceObligations::ARTIFACT_TRAVELLING));
-        assert!(spc.obligations.contains(LicenceObligations::COMMONS_DISCHARGEABLE));
+        assert!(spc
+            .obligations
+            .contains(LicenceObligations::THIRD_PARTY_ANCHORED));
+        assert!(spc
+            .obligations
+            .contains(LicenceObligations::ARTIFACT_TRAVELLING));
+        assert!(spc
+            .obligations
+            .contains(LicenceObligations::COMMONS_DISCHARGEABLE));
 
         // Before cost is reached: not discharged
         let cost = 10_000u64;
@@ -415,4 +439,3 @@ mod tests {
         assert!(spc.is_spc_discharged(12_000, cost));
     }
 }
-

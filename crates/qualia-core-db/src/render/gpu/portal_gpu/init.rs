@@ -1034,5 +1034,4 @@ impl PortalGpu {
             sky_enabled: false,
         })
     }
-
 }

@@ -143,7 +143,8 @@ pub fn detect_bioacoustic_vocalizations(
 
     // Flush active call at the end of surface
     if in_call && detected_count < out.len() {
-        let duration = surface.frame_to_time(surface.frame_count) - surface.frame_to_time(call_start_frame);
+        let duration =
+            surface.frame_to_time(surface.frame_count) - surface.frame_to_time(call_start_frame);
         if duration >= min_duration_s {
             let low_f = surface.bin_to_freq_linear(min_bin);
             let high_f = surface.bin_to_freq_linear(max_bin);
@@ -285,7 +286,10 @@ mod tests {
         assert_eq!(n, 6);
 
         // Check rdf:type
-        assert_eq!(quins[0].predicate, q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
+        assert_eq!(
+            quins[0].predicate,
+            q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+        );
         assert_eq!(quins[0].object, q_hash(QUALIA_ACOUSTIC_OBSERVATION));
 
         // Check start time = 1500ms

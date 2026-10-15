@@ -57,30 +57,29 @@ fn open_from_bytes(
     args_v: &Value,
     span: Span,
 ) -> Result<Value, Diagnostic> {
-    let raw_bytes: Vec<u8> = match bytes_val {
-        Value::List(items) => {
-            let mut buf = Vec::with_capacity(items.len());
-            for item in items {
-                match item {
-                    Value::U64(n) if *n <= 255 => buf.push(*n as u8),
-                    Value::I64(n) if *n >= 0 && *n <= 255 => buf.push(*n as u8),
-                    _ => {
-                        return Err(args::bad(
+    let raw_bytes: Vec<u8> =
+        match bytes_val {
+            Value::List(items) => {
+                let mut buf = Vec::with_capacity(items.len());
+                for item in items {
+                    match item {
+                        Value::U64(n) if *n <= 255 => buf.push(*n as u8),
+                        Value::I64(n) if *n >= 0 && *n <= 255 => buf.push(*n as u8),
+                        _ => return Err(args::bad(
                             span,
                             "GraphDatabase.volume_open: bytes list element out of range [0..255]",
-                        ))
+                        )),
                     }
                 }
+                buf
             }
-            buf
-        }
-        _ => {
-            return Err(args::bad(
-                span,
-                "GraphDatabase.volume_open: bytes must be a list of u8 bytes",
-            ))
-        }
-    };
+            _ => {
+                return Err(args::bad(
+                    span,
+                    "GraphDatabase.volume_open: bytes must be a list of u8 bytes",
+                ))
+            }
+        };
 
     let pack = args::rec_str(args_v, "pack").unwrap_or("inline_pack");
     let key = args::rec_str(args_v, "key")
@@ -90,7 +89,12 @@ fn open_from_bytes(
 
     let receipt = snap
         .admit_q42_slice(&raw_bytes, pack, key, None, load)
-        .map_err(|e| args::bad(span, format!("GraphDatabase.volume_open admission failed: {e}")))?;
+        .map_err(|e| {
+            args::bad(
+                span,
+                format!("GraphDatabase.volume_open admission failed: {e}"),
+            )
+        })?;
 
     Ok(args::record([
         ("path", Value::String(key.into())),

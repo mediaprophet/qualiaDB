@@ -1,5 +1,5 @@
-use super::*;
 use super::super::texture_ktx2::Ktx2TranscodeSource;
+use super::*;
 
 fn png_fixture() -> Vec<u8> {
     let mut bytes = Vec::new();
@@ -178,12 +178,14 @@ fn hmc_plan_exposes_basis_and_block_transcode_refinement_state() {
     let basis_resource = resource(&basis, "image/ktx2");
     assert_eq!(
         inspect_hmc_texture_plan(&basis_resource, TextureDecodeLimits::default()),
-        Ok(TextureDecodePlan::RequiresTranscode(TextureTranscodeRequest {
-            source: Ktx2TranscodeSource::BasisLz,
-            target: TextureTranscodeTarget::Rgba8(TextureColorSpace::Unknown),
-            fallback: TextureFallback::PreserveEncodedResource,
-            refinement: TextureRefinementState::PendingTranscode,
-        }))
+        Ok(TextureDecodePlan::RequiresTranscode(
+            TextureTranscodeRequest {
+                source: Ktx2TranscodeSource::BasisLz,
+                target: TextureTranscodeTarget::Rgba8(TextureColorSpace::Unknown),
+                fallback: TextureFallback::PreserveEncodedResource,
+                refinement: TextureRefinementState::PendingTranscode,
+            }
+        ))
     );
 
     let mut block = ktx2_rgba8_fixture();
@@ -191,12 +193,14 @@ fn hmc_plan_exposes_basis_and_block_transcode_refinement_state() {
     let block_resource = resource(&block, "image/ktx2");
     assert_eq!(
         inspect_hmc_texture_plan(&block_resource, TextureDecodeLimits::default()),
-        Ok(TextureDecodePlan::RequiresTranscode(TextureTranscodeRequest {
-            source: Ktx2TranscodeSource::CompressedFormat(131),
-            target: TextureTranscodeTarget::Rgba8(TextureColorSpace::Linear),
-            fallback: TextureFallback::PreserveEncodedResource,
-            refinement: TextureRefinementState::PendingTranscode,
-        }))
+        Ok(TextureDecodePlan::RequiresTranscode(
+            TextureTranscodeRequest {
+                source: Ktx2TranscodeSource::CompressedFormat(131),
+                target: TextureTranscodeTarget::Rgba8(TextureColorSpace::Linear),
+                fallback: TextureFallback::PreserveEncodedResource,
+                refinement: TextureRefinementState::PendingTranscode,
+            }
+        ))
     );
 }
 

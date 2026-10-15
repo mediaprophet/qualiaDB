@@ -146,9 +146,7 @@ pub fn decode_ktx2_rgba8_base_level_with_scratch(
     if out.len() < image.byte_len {
         return Err(Rgba8Ktx2Error::OutputTooSmall);
     }
-    let level = document
-        .level(0)
-        .ok_or(Rgba8Ktx2Error::MissingBaseLevel)?;
+    let level = document.level(0).ok_or(Rgba8Ktx2Error::MissingBaseLevel)?;
     match document.supercompression() {
         Ktx2Supercompression::None => out[..image.byte_len].copy_from_slice(level.bytes),
         Ktx2Supercompression::Zstd | Ktx2Supercompression::Zlib => {
@@ -190,8 +188,7 @@ fn decompress_level(
             if status != Status::StreamEnd || decoder.total_in() != compressed.len() as u64 {
                 return Err(Rgba8Ktx2Error::InvalidCompressedLevel);
             }
-            usize::try_from(decoder.total_out())
-                .map_err(|_| Rgba8Ktx2Error::InvalidCompressedLevel)
+            usize::try_from(decoder.total_out()).map_err(|_| Rgba8Ktx2Error::InvalidCompressedLevel)
         }
         _ => Err(Rgba8Ktx2Error::UnsupportedSupercompression),
     }

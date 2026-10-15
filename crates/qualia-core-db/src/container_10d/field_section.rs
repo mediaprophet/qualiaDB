@@ -739,4 +739,3 @@ mod tests {
         assert_eq!(samples1, canopy_samples);
     }
 }
-

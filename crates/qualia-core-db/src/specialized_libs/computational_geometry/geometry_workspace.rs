@@ -6,8 +6,8 @@
 //!
 //! 1. **Caller-owned arenas** — the caller allocates a byte buffer (stack or
 //!    caller-owned heap) and passes it in. The algorithm bumps within the
-//!    buffer; it never calls the global allocator. This keeps the 42-MiB
-//!    Webizen VM ceiling (AGENTS.md §0) under the caller's control.
+//!    buffer; it never calls the global allocator. The core Webizen VM keeps
+//!    its 42-MiB ceiling; cold asset builders can use a larger caller budget.
 //!
 //! 2. **Byte budgets** — every arena carries a `byte_budget`. An allocation
 //!    that would exceed the budget returns `Err(WorkspaceError::BudgetExceeded)`,
@@ -24,12 +24,13 @@
 //!    abort a long-running pass. The algorithm checks the token at each
 //!    partition boundary and returns `Err(WorkspaceError::Cancelled)` if set.
 //!
-//! ## 42 MiB ceiling
+//! ## Budgets
 //!
 //! The `DEFAULT_WORKSPACE_BUDGET` is 42 MiB (44,040,192 bytes), matching the
-//! Webizen VM `SlgArena` ceiling. A maximal admitted pass — the largest
-//! input the workspace accepts without spilling — must remain below this.
-//! The `Workspace::admit_pass` function checks this.
+//! Webizen VM `SlgArena` ceiling. Cold geometry construction defaults to
+//! `DEFAULT_COLD_GEOMETRY_BUDGET` (256 MiB) and accepts an explicit larger
+//! caller-owned buffer and budget. `Workspace::admit_pass` checks the actual
+//! budget supplied for that workspace.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -39,6 +40,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 /// The default byte budget: 42 MiB, matching the Webizen VM SlgArena ceiling.
 pub const DEFAULT_WORKSPACE_BUDGET: usize = 42 * 1024 * 1024;
+/// Default budget for memory-intensive cold geometry and asset construction.
+pub const DEFAULT_COLD_GEOMETRY_BUDGET: usize = 256 * 1024 * 1024;
 
 /// Minimum alignment for arena allocations (8 bytes — enough for u64/f64/pointer).
 pub const ARENA_ALIGN: usize = 8;
@@ -156,10 +159,12 @@ impl Clone for Cancellation {
 /// in Morton-sorted order, ensuring bit-identical output regardless of
 /// thread count.
 ///
-/// ## 42 MiB ceiling
+/// ## Caller budget
 ///
 /// `admit_pass` checks that the input + estimated scratch fits within the
-/// byte budget. The default budget is 42 MiB (AGENTS.md §0).
+/// caller-provided byte budget. `DEFAULT_WORKSPACE_BUDGET` is the 42 MiB
+/// core preset; cold geometry may use the 256 MiB preset or a larger explicit
+/// caller-owned buffer.
 pub struct GeometryWorkspace<'a> {
     /// The backing byte buffer (caller-owned).
     buffer: &'a mut [u8],

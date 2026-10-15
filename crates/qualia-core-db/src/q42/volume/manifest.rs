@@ -5,9 +5,9 @@ use std::fs::File;
 use std::io;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::Read;
-use std::path::{Component, Path};
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
+use std::path::{Component, Path};
 
 #[cfg(not(target_arch = "wasm32"))]
 use sha2::{Digest, Sha256};

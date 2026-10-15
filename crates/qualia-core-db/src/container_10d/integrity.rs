@@ -124,7 +124,6 @@ pub fn check_whole_file_crc32c(data: &[u8]) -> Result<(), IntegrityError> {
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

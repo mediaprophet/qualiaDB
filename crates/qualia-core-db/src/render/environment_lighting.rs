@@ -6,8 +6,8 @@
 //! to the caller's direct-lighting result.
 
 use super::{
-    dot3, evaluate_stylized_diffuse, fresnel_schlick, normalize3, SurfaceParameters,
-    StylizedLightingParams,
+    dot3, evaluate_stylized_diffuse, fresnel_schlick, normalize3, StylizedLightingParams,
+    SurfaceParameters,
 };
 use bytemuck::{Pod, Zeroable};
 
@@ -148,8 +148,7 @@ pub struct EnvironmentLightingGpu {
     pub probes: [EnvironmentProbeGpu; MAX_ENVIRONMENT_PROBES],
 }
 
-const _: [(); ENVIRONMENT_LIGHTING_GPU_SIZE] =
-    [(); std::mem::size_of::<EnvironmentLightingGpu>()];
+const _: [(); ENVIRONMENT_LIGHTING_GPU_SIZE] = [(); std::mem::size_of::<EnvironmentLightingGpu>()];
 
 impl EnvironmentLightingGpu {
     /// Build a bindable contract from optional probe source data.

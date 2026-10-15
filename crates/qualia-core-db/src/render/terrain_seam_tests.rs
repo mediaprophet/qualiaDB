@@ -27,9 +27,7 @@ struct EdgePixel {
 fn fixture_height(x: f64, z: f64) -> f32 {
     // The mixed frequencies exercise interpolation at sub-cell pixel positions without relying
     // on a renderer, image asset, or backend-specific floating-point result.
-    (0.7 * (x * 0.31).sin() * (z * 0.23).cos()
-        + 0.21 * (x * 0.17 + z * 0.11).sin()
-        + 0.04 * x
+    (0.7 * (x * 0.31).sin() * (z * 0.23).cos() + 0.21 * (x * 0.17 + z * 0.11).sin() + 0.04 * x
         - 0.03 * z) as f32
 }
 
@@ -77,8 +75,22 @@ fn tile(
 
 fn edge_pixel(mesh: &TerrainMesh, columns: usize, rows: usize, edge: Edge, u: f32) -> EdgePixel {
     let (axis_length, fixed_index) = match edge {
-        Edge::West | Edge::East => (rows, if matches!(edge, Edge::West) { 0 } else { columns - 1 }),
-        Edge::South | Edge::North => (columns, if matches!(edge, Edge::South) { 0 } else { rows - 1 }),
+        Edge::West | Edge::East => (
+            rows,
+            if matches!(edge, Edge::West) {
+                0
+            } else {
+                columns - 1
+            },
+        ),
+        Edge::South | Edge::North => (
+            columns,
+            if matches!(edge, Edge::South) {
+                0
+            } else {
+                rows - 1
+            },
+        ),
     };
     let coordinate = u.clamp(0.0, 1.0) * (axis_length - 1) as f32;
     let lower = coordinate.floor() as usize;

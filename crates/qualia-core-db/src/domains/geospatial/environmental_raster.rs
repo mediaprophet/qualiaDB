@@ -263,7 +263,8 @@ pub fn decode_geotiff_raster_into(
         return Err(GeoTiffError::TruncatedData);
     }
 
-    let num_entries = u16::from_le_bytes(tiff_bytes[ifd_offset..ifd_offset + 2].try_into().unwrap()) as usize;
+    let num_entries =
+        u16::from_le_bytes(tiff_bytes[ifd_offset..ifd_offset + 2].try_into().unwrap()) as usize;
     let entries_start = ifd_offset + 2;
     let entries_end = entries_start + num_entries * 12;
     if entries_end > tiff_bytes.len() {
@@ -287,9 +288,15 @@ pub fn decode_geotiff_raster_into(
     for i in 0..num_entries {
         let entry_off = entries_start + i * 12;
         let tag = u16::from_le_bytes(tiff_bytes[entry_off..entry_off + 2].try_into().unwrap());
-        let field_type = u16::from_le_bytes(tiff_bytes[entry_off + 2..entry_off + 4].try_into().unwrap());
-        let count = u32::from_le_bytes(tiff_bytes[entry_off + 4..entry_off + 8].try_into().unwrap());
-        let val_or_off = u32::from_le_bytes(tiff_bytes[entry_off + 8..entry_off + 12].try_into().unwrap());
+        let field_type =
+            u16::from_le_bytes(tiff_bytes[entry_off + 2..entry_off + 4].try_into().unwrap());
+        let count =
+            u32::from_le_bytes(tiff_bytes[entry_off + 4..entry_off + 8].try_into().unwrap());
+        let val_or_off = u32::from_le_bytes(
+            tiff_bytes[entry_off + 8..entry_off + 12]
+                .try_into()
+                .unwrap(),
+        );
 
         let read_u32 = || -> u32 {
             if field_type == 3 {
@@ -460,11 +467,7 @@ mod tests {
         }
 
         // 3x3 inclined ramp: elevation increases 10m per 10m cell horizontally
-        let ramp = [
-            0.0f32, 10.0, 20.0,
-            0.0,    10.0, 20.0,
-            0.0,    10.0, 20.0,
-        ];
+        let ramp = [0.0f32, 10.0, 20.0, 0.0, 10.0, 20.0, 0.0, 10.0, 20.0];
         let mut slope_ramp = [0.0f32; 9];
         derive_slope_horn(&ramp, 3, 3, 10.0, &mut slope_ramp);
         // Centre cell dz/dx = 1.0 -> 45 degrees slope

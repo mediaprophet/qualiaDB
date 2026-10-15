@@ -1,8 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
 use super::super::native_device;
+use super::super::PortalGpu;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 use super::super::{mark_portal_gpu_canvas_claimed, portal_gpu_init_aborted};
-use super::super::PortalGpu;
 use std::sync::Arc;
 
 impl PortalGpu {
@@ -334,6 +334,4 @@ impl PortalGpu {
         portal_gpu.device_lost = device_lost;
         Ok(portal_gpu)
     }
-
-
 }

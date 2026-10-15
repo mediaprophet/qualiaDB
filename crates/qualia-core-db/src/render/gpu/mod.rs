@@ -13,20 +13,20 @@ mod picking;
 pub use instance_stream::MeshInstanceUploadError;
 mod texture_precomputed;
 mod texture_residency;
-pub use texture_mips::AlphaCoverageDiagnostics;
-pub use texture_mips::TextureMipSemantic;
-pub use texture_residency::{TextureColorSpace, TextureUploadError};
 pub use temporal_resolve_gpu::{
     TemporalProducerAvailability, TemporalProducerViews, TemporalResolveGpu, TemporalResolveInputs,
     TemporalSubmissionState,
 };
+pub use texture_mips::AlphaCoverageDiagnostics;
+pub use texture_mips::TextureMipSemantic;
+pub use texture_residency::{TextureColorSpace, TextureUploadError};
+mod animated_upload;
 mod mesh_normals;
 mod mesh_upload;
-mod animated_upload;
 mod output_pass;
+mod scene_depth;
 mod shadows;
 mod sky;
-mod scene_depth;
 mod temporal_producers_gpu;
 mod temporal_resolve_gpu;
 mod texture_mips;
@@ -42,9 +42,7 @@ use crate::render::physics::{Aabb, Joint};
 use crate::render::telemetry::{
     AmbientUniforms, CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry,
 };
-use crate::tensor::buffer_export::{
-    read_tensor_at, tensor_node_count, TENSOR_STRIDE,
-};
+use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, TENSOR_STRIDE};
 
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -80,7 +78,6 @@ pub(crate) fn portal_gpu_canvas_claimed() -> bool {
 pub(crate) fn mark_portal_gpu_canvas_claimed() {
     PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(true));
 }
-
 
 /// Static ambient SSBO capacity — draw count is throttled per `VramLedger` mode.
 const MAX_AMBIENT_INSTANCES: usize = 50_000;
@@ -532,7 +529,6 @@ pub struct PortalGpu {
 }
 
 impl PortalGpu {
-
     #[cfg(test)]
     pub(crate) fn uniform_belt_write_and_unmap(&mut self, data: &[u8]) {
         self.uniform_belt.write_and_unmap(data);
@@ -694,7 +690,6 @@ impl PortalGpu {
         );
         self.bloom_policy_snapshot = portal_bloom_enabled();
     }
-
 }
 
 // Phase 0.2a: render/gpu submodules (bloom post-pass, resource builders, particle field).
@@ -704,9 +699,9 @@ mod emf_pipeline;
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod native_device;
 mod particles;
+mod portal_gpu;
 mod resources;
 mod uniform_belt;
-mod portal_gpu;
 
 /// Maximum ordered material draws admitted for one resident mesh in the portable renderer.
 pub const MAX_GPU_MATERIAL_DRAWS: usize = 65_536;
@@ -717,7 +712,6 @@ pub use emf_pipeline::{EmfFieldCell, EmfSliceUniform};
 pub use particles::particle_cap_for_mode;
 use particles::*;
 use resources::*;
-
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[path = "picking_tests.rs"]

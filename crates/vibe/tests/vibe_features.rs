@@ -353,18 +353,30 @@ fn test_if_expr_chained_records_and_bytecode_parity() {
     let reparsed = parse_program(&decompiled).expect("reparse decompiled");
     vibe::check_program(&reparsed).expect("check reparsed");
 
-    let projected = vibe::projectional::project_program(
-        &prog,
-        &vibe::projectional::ProjectOptions::default(),
-    );
+    let projected =
+        vibe::projectional::project_program(&prog, &vibe::projectional::ProjectOptions::default());
     let reparsed_proj = parse_program(&projected).expect("reparse projected");
     vibe::check_program(&reparsed_proj).expect("check reparsed projected");
 
     // Interpreter vs Bytecode VM parity
     let chunk = vibe::bytecode::compile(&prog).expect("compile bytecode");
     for (labour, coins, is_commons, exp_action, exp_title, exp_bonus) in [
-        (true, 0.0, true, "connectMastLabour", "The commons are open", 15),
-        (false, 4.0, false, "connectMastCoins", "The canal is connected", 25),
+        (
+            true,
+            0.0,
+            true,
+            "connectMastLabour",
+            "The commons are open",
+            15,
+        ),
+        (
+            false,
+            4.0,
+            false,
+            "connectMastCoins",
+            "The canal is connected",
+            25,
+        ),
         (false, 1.0, true, "endTurn", "The commons are open", 15),
     ] {
         let args = vec![
@@ -381,9 +393,7 @@ fn test_if_expr_chained_records_and_bytecode_parity() {
 
         let mut vm_host = LocalHost::default();
         let mut vm = vibe::bytecode::Vm::new(&chunk, &mut vm_host, Budget::default());
-        let vm_val = vm
-            .call_function(0, &args)
-            .expect("bytecode vm eval");
+        let vm_val = vm.call_function(0, &args).expect("bytecode vm eval");
 
         assert_eq!(interp_val, vm_val);
         let Value::Record(map) = interp_val else {
@@ -414,8 +424,10 @@ fn test_if_expr_static_checks_and_parse_diagnostics() {
     assert_eq!(err.code, vibe::DiagCode::E001);
 
     // Unparenthesized postfix on conditional is rejected
-    let err = parse_program("pure fn f(x: bool) -> i64 { return if x { { a: 1 } } else { { a: 2 } }.a; }")
-        .expect_err("unparenthesized postfix should fail");
+    let err = parse_program(
+        "pure fn f(x: bool) -> i64 { return if x { { a: 1 } } else { { a: 2 } }.a; }",
+    )
+    .expect_err("unparenthesized postfix should fail");
     assert_eq!(err.code, vibe::DiagCode::E001);
 
     // Static capability check inspects both branches even if condition is constant true
@@ -427,7 +439,8 @@ fn test_if_expr_static_checks_and_parse_diagnostics() {
         "#,
     )
     .expect("parse sneaky");
-    let check_err = vibe::check_program(&prog).expect_err("missing capability in else branch must fail");
+    let check_err =
+        vibe::check_program(&prog).expect_err("missing capability in else branch must fail");
     assert_eq!(check_err.code, vibe::DiagCode::E300);
 }
 
@@ -502,9 +515,13 @@ fn test_game_demo_campaign_rules_pattern_loads_and_evaluates() {
     let Value::Record(map) = res else {
         panic!("expected Record");
     };
-    assert_eq!(map.get("action"), Some(&Value::String("selfFundProject".into())));
-    assert_eq!(map.get("title"), Some(&Value::String("Cross the high canal".into())));
+    assert_eq!(
+        map.get("action"),
+        Some(&Value::String("selfFundProject".into()))
+    );
+    assert_eq!(
+        map.get("title"),
+        Some(&Value::String("Cross the high canal".into()))
+    );
     assert_eq!(map.get("label"), Some(&Value::String("Continue".into())));
 }
-
-

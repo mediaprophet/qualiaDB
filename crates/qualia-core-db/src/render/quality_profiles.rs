@@ -173,8 +173,8 @@ fn select_quality_tier_via_vibe(snapshot: GraphicsCapabilitySnapshot) -> Quality
     };
     let mut host = LocalHost::default();
     let mut env = Env::default();
-    let quality_probe_complete = snapshot.probe_complete
-        && snapshot.quality_tier_gate() == CapabilityEvidence::Confirmed;
+    let quality_probe_complete =
+        snapshot.probe_complete && snapshot.quality_tier_gate() == CapabilityEvidence::Confirmed;
     let Ok(Value::String(result)) = eval_function(
         &program,
         "select_quality_tier",

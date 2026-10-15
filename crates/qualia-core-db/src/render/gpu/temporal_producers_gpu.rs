@@ -56,8 +56,7 @@ impl TemporalProducersGpu {
         let width = width.max(1);
         let height = height.max(1);
 
-        let (motion_texture, motion_view) =
-            Self::create_motion_target(device, width, height)?;
+        let (motion_texture, motion_view) = Self::create_motion_target(device, width, height)?;
         let (reactive_texture, reactive_view) =
             Self::create_reactive_target(device, width, height)?;
 
@@ -109,12 +108,13 @@ impl TemporalProducersGpu {
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
-                            min_binding_size: Some(
-                                NonZeroU64::new(
-                                    std::mem::size_of::<CameraMotionParamsGpu>() as u64,
-                                )
-                                .unwrap(),
-                            ),
+                            min_binding_size:
+                                Some(
+                                    NonZeroU64::new(
+                                        std::mem::size_of::<CameraMotionParamsGpu>() as u64
+                                    )
+                                    .unwrap(),
+                                ),
                         },
                         count: None,
                     },
@@ -275,8 +275,7 @@ impl TemporalProducersGpu {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: MOTION_VECTOR_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -299,8 +298,7 @@ impl TemporalProducersGpu {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: REACTIVE_MASK_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());

@@ -4,9 +4,9 @@
 //! contract. The local file adapter is both useful itself and the reference
 //! implementation for response-length and boundary validation.
 
-use std::io;
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
+use std::io;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Read, Seek, SeekFrom};
 #[cfg(not(target_arch = "wasm32"))]

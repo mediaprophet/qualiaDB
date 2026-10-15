@@ -211,5 +211,8 @@ fn basis_lz_is_structurally_valid_but_requires_a_transcoder() {
     let document = Ktx2Document::parse(&bytes).unwrap();
     assert_eq!(document.supercompression(), Ktx2Supercompression::BasisLz);
     assert_eq!(document.color_space(), Ktx2ColorSpace::Unknown);
-    assert_eq!(document.transcode_source(), Some(Ktx2TranscodeSource::BasisLz));
+    assert_eq!(
+        document.transcode_source(),
+        Some(Ktx2TranscodeSource::BasisLz)
+    );
 }

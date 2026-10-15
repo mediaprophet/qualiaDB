@@ -229,10 +229,11 @@ impl TemporalResolveGpu {
                 uniform_entry(6, PARAMS_BYTES),
             ],
         });
-        let publish_depth_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("qualia-temporal-depth-publication-layout"),
-            entries: &[float_texture_entry(7)],
-        });
+        let publish_depth_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("qualia-temporal-depth-publication-layout"),
+                entries: &[float_texture_entry(7)],
+            });
         let depth_producer_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("qualia-temporal-depth-producer-layout"),
@@ -300,9 +301,7 @@ impl TemporalResolveGpu {
         );
         let depth_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("qualia-temporal-depth-producer-shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::shaders::viewport::TEMPORAL_DEPTH_WGSL.into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(crate::shaders::viewport::TEMPORAL_DEPTH_WGSL.into()),
         });
         let depth_producer_pipeline = create_pipeline(
             device,
@@ -481,7 +480,9 @@ impl TemporalResolveGpu {
     ) -> bool {
         let dimensions = [self.width as f32, self.height as f32];
         if inputs.extent != (self.width, self.height)
-            || dimensions.iter().any(|value| !value.is_finite() || *value <= 0.0)
+            || dimensions
+                .iter()
+                .any(|value| !value.is_finite() || *value <= 0.0)
         {
             return false;
         }
@@ -711,11 +712,7 @@ impl TemporalResolveGpu {
             white_balance_gains,
             _padding1: 0.0,
         };
-        queue.write_buffer(
-            &self.output_params_buf,
-            0,
-            bytemuck::bytes_of(&params),
-        );
+        queue.write_buffer(&self.output_params_buf, 0, bytemuck::bytes_of(&params));
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("qualia-temporal-final-output-bind"),
             layout: &self.output_layout,
@@ -746,7 +743,6 @@ impl TemporalResolveGpu {
         self.submission_state = TemporalSubmissionState::OutputReady;
         true
     }
-
 }
 
 fn target_bytes(width: u32, height: u32, scene_format: wgpu::TextureFormat) -> Option<u64> {

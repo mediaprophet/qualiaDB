@@ -34,9 +34,7 @@ impl PortalGpu {
             && has_producers
             && (availability.linear_depth || renderer_owns_linear_depth);
         if !eligible {
-            return self
-                .render_internal(time, telemetry, None)
-                .map(|_| false);
+            return self.render_internal(time, telemetry, None).map(|_| false);
         }
         let schedule = self.effective_temporal_schedule(schedule);
         self.render_internal(time, telemetry, Some((schedule, Some(producers))))
@@ -115,7 +113,8 @@ impl PortalGpu {
         self.write_camera_uniform(&mut encoder, time);
         self.water.set_time(time);
         self.water.set_viewport(self.width, self.height);
-        self.water.write_uniform(&mut self.uniform_belt, &mut encoder);
+        self.water
+            .write_uniform(&mut self.uniform_belt, &mut encoder);
         self.uniform_belt.advance(&self.device);
         self.write_observer_uniform(&mut encoder);
         self.update_model(&mut encoder, time);
@@ -148,14 +147,13 @@ impl PortalGpu {
                 let temporal_was_enabled = self.temporal_resolve.take().is_some();
                 self.scene_depth.replace(&self.device, fw, fh);
                 if temporal_was_enabled {
-                    self.temporal_resolve =
-                        temporal_resolve_gpu::TemporalResolveGpu::try_new(
-                            &self.device,
-                            fw,
-                            fh,
-                            self.color_format,
-                            self.color_format,
-                        );
+                    self.temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
+                        &self.device,
+                        fw,
+                        fh,
+                        self.color_format,
+                        self.color_format,
+                    );
                 }
                 let (picking_texture, picking_view) = create_picking_texture(&self.device, fw, fh);
                 self.width = fw;
@@ -346,11 +344,14 @@ impl PortalGpu {
                     pass.draw(0..6, 0..ambient_draw);
                 }
             }
-
         } else {
             let scene_target = temporal_scene_view
                 .as_ref()
-                .or_else(|| self.output_chain.as_ref().map(output_pass::OutputChain::scene_view))
+                .or_else(|| {
+                    self.output_chain
+                        .as_ref()
+                        .map(output_pass::OutputChain::scene_view)
+                })
                 .unwrap_or(&view);
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("portal-phenomenal-pass"),
@@ -475,11 +476,8 @@ impl PortalGpu {
                     schedule,
                 );
             } else {
-                temporal_recorded = self.record_scheduled_temporal_output_auto(
-                    &mut encoder,
-                    &view,
-                    schedule,
-                );
+                temporal_recorded =
+                    self.record_scheduled_temporal_output_auto(&mut encoder, &view, schedule);
             }
             if temporal_recorded {
                 self.temporal_reset_pending = false;
@@ -536,9 +534,7 @@ impl PortalGpu {
             return false;
         };
         let extent = (self.width, self.height);
-        if extent != temporal_extent
-            || (schedule.reads_history && !self.temporal_history_valid())
-        {
+        if extent != temporal_extent || (schedule.reads_history && !self.temporal_history_valid()) {
             return false;
         }
         let Some(scene) = self.temporal_scene_color_view().cloned() else {

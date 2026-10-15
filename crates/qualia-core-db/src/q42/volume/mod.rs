@@ -58,33 +58,33 @@ pub use index::{BidxBlockRange, BidxMatchPage};
 pub use inspect::{Q42InspectReport, Q42SectionReport};
 #[cfg(not(target_arch = "wasm32"))]
 pub use magnet::{compose_magnet, sha1_hex_file, Q42Magnet, Q42VolumeSetMagnets};
+#[cfg(not(target_arch = "wasm32"))]
+pub use manifest::{root_relative_path, Q42VolumeSet};
 pub use manifest::{
     Q42LexiconRangeFactory, Q42LexiconSegment, Q42RangeVolumeSet, Q42SegmentMatchPage,
     Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42VolumeManifest, Q42VolumeSegment,
     Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, MAX_VOLUME_MANIFEST_BYTES,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use manifest::{root_relative_path, Q42VolumeSet};
-#[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_imports)] // integrator re-exports through q42_volume.rs
 pub use network_quanta::{admit_logical_size, Completeness, NetworkCursor, ScanBudget};
+#[cfg(not(target_arch = "wasm32"))]
+pub use opfs_source::verify_local_car_as_q42_source;
 pub use opfs_source::{
     verify_car_bytes_as_q42_source, OpfsCallbackRangeSource, OpfsSliceRangeSource,
     VerifiedCarRangeSource,
 };
-#[cfg(not(target_arch = "wasm32"))]
-pub use opfs_source::verify_local_car_as_q42_source;
 pub use postings::{
     encode_block_postings, encode_postings_section, measure_bloom_false_positives,
     BlockFieldPostings, FIELD_POSTINGS_MAGIC,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use publication::{classify_q42_path, classify_q42_volume, classify_q42_volume_set};
 pub use publication::{
     deny_public_publication, provenance_path_for, quin_requires_sanctuary, ClassificationCounts,
     IngestAccessPolicy, IngestProvenanceRecord, PublicationIntent, Q42PublicationClass,
     Q42PublicationVerdict, Q42Transport,
 };
-#[cfg(not(target_arch = "wasm32"))]
-pub use publication::{classify_q42_path, classify_q42_volume, classify_q42_volume_set};
 #[cfg(not(target_arch = "wasm32"))]
 pub use publish::{append_segment_to_root, Q42RolloverPublisher, DEFAULT_SEGMENT_MAX_BYTES};
 pub use query_mode::{Q42QueryMode, RESIDENT_QUERY_MAX_BYTES};

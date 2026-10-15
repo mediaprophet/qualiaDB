@@ -36,31 +36,31 @@ mod volume;
 // `.q42` pack entries decode in the browser through `Q42RangeVolume` over a
 // `Q42RangeSource`.
 pub use volume::{
-    decode_and_verify_car, deny_public_publication, encode_block_postings,
-    encode_postings_section, encode_raw_car, extract_entity_bytes, inclusive_entity_bytes,
-    measure_bloom_false_positives, provenance_path_for, quin_requires_sanctuary,
-    validate_exact_range_response, verify_car_bytes_as_q42_source, verify_source_sha256,
-    BidxBlockRange, BidxMatchPage, BlockFieldPostings, CidSha256, ClassificationCounts,
-    IngestAccessPolicy, IngestProvenanceRecord, OpfsCallbackRangeSource, OpfsSliceRangeSource,
-    PublicationIntent, Q42ByteRange, Q42LexiconRangeFactory, Q42LexiconSegment,
-    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42PublicationClass, Q42PublicationVerdict,
-    Q42QueryMode, Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern,
-    Q42RangeQueryPlan, Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume,
-    Q42RangeVolumeSet, Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory,
-    Q42Transport, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSetQueryCursor,
-    Q42VolumeSetQueryPage, VerifiedCarBlock, VerifiedCarRangeSource, FIELD_POSTINGS_MAGIC,
-    MAX_VOLUME_MANIFEST_BYTES, RESIDENT_QUERY_MAX_BYTES,
+    decode_and_verify_car, deny_public_publication, encode_block_postings, encode_postings_section,
+    encode_raw_car, extract_entity_bytes, inclusive_entity_bytes, measure_bloom_false_positives,
+    provenance_path_for, quin_requires_sanctuary, validate_exact_range_response,
+    verify_car_bytes_as_q42_source, verify_source_sha256, BidxBlockRange, BidxMatchPage,
+    BlockFieldPostings, CidSha256, ClassificationCounts, IngestAccessPolicy,
+    IngestProvenanceRecord, OpfsCallbackRangeSource, OpfsSliceRangeSource, PublicationIntent,
+    Q42ByteRange, Q42LexiconRangeFactory, Q42LexiconSegment, Q42ObjectMatchPage,
+    Q42ObjectSearchCursor, Q42PublicationClass, Q42PublicationVerdict, Q42QueryMode,
+    Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern, Q42RangeQueryPlan,
+    Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42SegmentMatchPage,
+    Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42Transport, Q42VolumeManifest,
+    Q42VolumeSegment, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, VerifiedCarBlock,
+    VerifiedCarRangeSource, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
+    RESIDENT_QUERY_MAX_BYTES,
 };
 // Filesystem / memmap / HTTP / publish surface — native only.
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{
     admit_logical_size, append_segment_to_root, classify_q42_path, classify_q42_volume,
-    classify_q42_volume_set, compact_volume_set, compose_magnet, root_relative_path,
-    sha1_hex_file, verify_local_car_as_q42_source, verify_volume_set_from_root, CheckStatus,
-    Completeness, LocalFileRangeSource, NetworkCursor, Q42BlockCursor, Q42BlockMeta,
-    Q42InspectReport, Q42Magnet, Q42RolloverPublisher, Q42SectionReport, Q42VerifyReceipt,
-    Q42VerifySetReport, Q42VolumeSet, Q42VolumeSetMagnets, ScanBudget,
-    StreamingQ42VolumeWriter, VerifyCheck, VerifyLevel, DEFAULT_SEGMENT_MAX_BYTES,
+    classify_q42_volume_set, compact_volume_set, compose_magnet, root_relative_path, sha1_hex_file,
+    verify_local_car_as_q42_source, verify_volume_set_from_root, CheckStatus, Completeness,
+    LocalFileRangeSource, NetworkCursor, Q42BlockCursor, Q42BlockMeta, Q42InspectReport, Q42Magnet,
+    Q42RolloverPublisher, Q42SectionReport, Q42VerifyReceipt, Q42VerifySetReport, Q42VolumeSet,
+    Q42VolumeSetMagnets, ScanBudget, StreamingQ42VolumeWriter, VerifyCheck, VerifyLevel,
+    DEFAULT_SEGMENT_MAX_BYTES,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{

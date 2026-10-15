@@ -210,9 +210,7 @@ pub fn plan_texture_residency_lifecycle(
     let mut total_deferred_upload_bytes = 0u64;
     let mut deferred_count = 0usize;
     let mut deferred_previous = previous_request;
-    while let Some((index, target_mip)) =
-        find_next_lifecycle_request(demands, deferred_previous)
-    {
+    while let Some((index, target_mip)) = find_next_lifecycle_request(demands, deferred_previous) {
         total_deferred_upload_bytes = total_deferred_upload_bytes
             .checked_add(mip_level_bytes(&demands[index], target_mip)?)
             .ok_or(TextureStreamPlanError::ArithmeticOverflow)?;
@@ -240,12 +238,12 @@ pub fn plan_texture_residency_lifecycle(
             .expect("preflight counted every unrequested resident texture");
         let demand = &demands[index];
         out[written] = TextureStreamLifecycleAction {
-                semantic_id: demand.semantic_id,
-                kind: TextureStreamLifecycleActionKind::EvictTexture,
-                mip_level: 0,
-                bytes: 0,
-                previous_resident_bytes: demand.resident_bytes,
-                target_resident_bytes: 0,
+            semantic_id: demand.semantic_id,
+            kind: TextureStreamLifecycleActionKind::EvictTexture,
+            mip_level: 0,
+            bytes: 0,
+            previous_resident_bytes: demand.resident_bytes,
+            target_resident_bytes: 0,
         };
         written += 1;
         previous_eviction = Some(index);
@@ -285,7 +283,9 @@ pub fn plan_texture_residency_lifecycle(
     })
 }
 
-fn validate_lifecycle_demands(demands: &[TextureStreamDemand]) -> Result<(), TextureStreamPlanError> {
+fn validate_lifecycle_demands(
+    demands: &[TextureStreamDemand],
+) -> Result<(), TextureStreamPlanError> {
     validate_demands(demands)?;
     for demand in demands {
         if let Some(first_mip) = demand.resident_finest_mip {
@@ -320,8 +320,12 @@ fn find_next_lifecycle_request(
             continue;
         }
         if previous.is_some_and(|previous| {
-            request_candidate_order(demand, demand.desired_finest_mip, &demands[previous.0], previous.1)
-                != core::cmp::Ordering::Greater
+            request_candidate_order(
+                demand,
+                demand.desired_finest_mip,
+                &demands[previous.0],
+                previous.1,
+            ) != core::cmp::Ordering::Greater
         }) {
             continue;
         }
@@ -1281,7 +1285,10 @@ mod tests {
         assert_eq!(plan.projected_resident_bytes, 340);
         assert_eq!(out[0].kind, TextureStreamLifecycleActionKind::EvictTexture);
         assert_eq!(out[0].semantic_id, 2);
-        assert_eq!(out[1].kind, TextureStreamLifecycleActionKind::ReplaceTexture);
+        assert_eq!(
+            out[1].kind,
+            TextureStreamLifecycleActionKind::ReplaceTexture
+        );
         assert_eq!(out[1].mip_level, 0);
         assert_eq!(out[1].bytes, 256);
         assert_eq!(out[1].previous_resident_bytes, 20);
@@ -1310,10 +1317,7 @@ mod tests {
             9,
             &mut out,
         );
-        assert_eq!(
-            error,
-            Err(TextureStreamPlanError::InconsistentResidency)
-        );
+        assert_eq!(error, Err(TextureStreamPlanError::InconsistentResidency));
         assert_eq!(out[0], sentinel);
 
         let mut valid = demand(1);

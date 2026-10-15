@@ -267,6 +267,9 @@ pub(crate) fn ensure_device(guard: &mut Option<MultiWeightDevice>) -> bool {
     if guard.is_some() {
         return true;
     }
+    if !crate::wgsl_forge::dispatch::caps().cuda {
+        return false;
+    }
     // Prefer 2.5 GiB (weights + KV); fall back 2 GiB → 1 GiB under VRAM pressure.
     let sizes: [u64; 3] = [
         CUDA_SOA_SLAB_BYTES,

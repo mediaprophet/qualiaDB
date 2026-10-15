@@ -7,8 +7,8 @@
 //! - Dynamic vegetation collision deflection
 //! - KTX2 compressed texture format support query
 
-use std::sync::Mutex;
 use super::super::args;
+use std::sync::Mutex;
 use vibe::{Diagnostic, Span, Value};
 
 #[derive(Debug, Clone, Copy)]
@@ -107,7 +107,10 @@ pub fn render_temporal_set_mode(args: &Value, span: Span) -> Result<Value, Diagn
     let feedback_max = args::rec_f64(args, "feedback_max").unwrap_or(0.97) as f32;
 
     if feedback_min < 0.0 || feedback_min > 1.0 || feedback_max < 0.0 || feedback_max > 1.0 {
-        return Err(args::bad(span, "feedback weights must be between 0.0 and 1.0"));
+        return Err(args::bad(
+            span,
+            "feedback weights must be between 0.0 and 1.0",
+        ));
     }
 
     let mut state = lock_state();
@@ -131,9 +134,18 @@ pub fn render_temporal_status(_args: &Value, _span: Span) -> Result<Value, Diagn
     let state = lock_state();
     Ok(args::record([
         ("enabled", Value::Bool(state.temporal.enabled)),
-        ("jitter_scale", Value::F64(state.temporal.jitter_scale as f64)),
-        ("feedback_min", Value::F64(state.temporal.feedback_min as f64)),
-        ("feedback_max", Value::F64(state.temporal.feedback_max as f64)),
+        (
+            "jitter_scale",
+            Value::F64(state.temporal.jitter_scale as f64),
+        ),
+        (
+            "feedback_min",
+            Value::F64(state.temporal.feedback_min as f64),
+        ),
+        (
+            "feedback_max",
+            Value::F64(state.temporal.feedback_max as f64),
+        ),
         ("history_valid", Value::Bool(state.temporal.history_valid)),
         ("motion_vectors", Value::Bool(true)),
         ("reactive_mask", Value::Bool(true)),
@@ -242,7 +254,11 @@ pub fn render_vegetation_push_collider(args: &Value, span: Span) -> Result<Value
     if state.colliders.len() >= 16 {
         state.colliders.remove(0); // Bounded ring of dynamic colliders
     }
-    state.colliders.push(DynamicCollider { center, radius, height });
+    state.colliders.push(DynamicCollider {
+        center,
+        radius,
+        height,
+    });
 
     Ok(args::record([
         ("ok", Value::Bool(true)),
@@ -347,19 +363,27 @@ mod tests {
         let res = eval_function(
             &program,
             "admit_feature",
-            vec![Value::String("ultra".into()), Value::String("temporal_aa".into())],
+            vec![
+                Value::String("ultra".into()),
+                Value::String("temporal_aa".into()),
+            ],
             &mut host,
             &mut env,
-        ).expect("eval admit_feature");
+        )
+        .expect("eval admit_feature");
         assert_eq!(res, Value::Bool(true));
 
         let res = eval_function(
             &program,
             "admit_feature",
-            vec![Value::String("balanced".into()), Value::String("temporal_aa".into())],
+            vec![
+                Value::String("balanced".into()),
+                Value::String("temporal_aa".into()),
+            ],
             &mut host,
             &mut env,
-        ).expect("eval admit_feature");
+        )
+        .expect("eval admit_feature");
         assert_eq!(res, Value::Bool(true));
 
         let res = eval_function(
@@ -368,7 +392,8 @@ mod tests {
             vec![Value::String("ultra".into())],
             &mut host,
             &mut env,
-        ).expect("eval select_vegetation_density");
+        )
+        .expect("eval select_vegetation_density");
         assert_eq!(res, Value::I64(128));
 
         let res = eval_function(
@@ -377,7 +402,8 @@ mod tests {
             vec![Value::String("balanced".into())],
             &mut host,
             &mut env,
-        ).expect("eval select_water_quality");
+        )
+        .expect("eval select_water_quality");
         assert_eq!(res, Value::String("foam_depth".into()));
     }
 }

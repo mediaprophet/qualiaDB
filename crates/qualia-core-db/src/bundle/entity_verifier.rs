@@ -125,7 +125,10 @@ pub fn verify_entity_10d(bytes: &[u8]) -> Entity10dVerification {
     let mut max_bounds = [0.0; 3];
 
     if bytes.len() < 64 {
-        violations.push(format!("payload too short: {} bytes < 64 byte header", bytes.len()));
+        violations.push(format!(
+            "payload too short: {} bytes < 64 byte header",
+            bytes.len()
+        ));
         return Entity10dVerification {
             valid: false,
             header_version: 0,
@@ -169,7 +172,10 @@ pub fn verify_entity_10d(bytes: &[u8]) -> Entity10dVerification {
     };
 
     if header.magic != MAGIC_10D {
-        violations.push(format!("invalid magic: expected {:?}, got {:?}", MAGIC_10D, header.magic));
+        violations.push(format!(
+            "invalid magic: expected {:?}, got {:?}",
+            MAGIC_10D, header.magic
+        ));
     }
 
     // 2. Whole-file CRC-32C verification
@@ -205,7 +211,10 @@ pub fn verify_entity_10d(bytes: &[u8]) -> Entity10dVerification {
                     if end > bytes.len() {
                         violations.push(format!(
                             "section {:?} out of bounds: [{}..{}] vs file len {}",
-                            sec_type, start, end, bytes.len()
+                            sec_type,
+                            start,
+                            end,
+                            bytes.len()
                         ));
                         continue;
                     }
@@ -226,7 +235,9 @@ pub fn verify_entity_10d(bytes: &[u8]) -> Entity10dVerification {
                                         aabb_max: h.aabb_max,
                                     });
                                 }
-                                Err(e) => violations.push(format!("surfel section decode error: {e}")),
+                                Err(e) => {
+                                    violations.push(format!("surfel section decode error: {e}"))
+                                }
                             }
                         }
                         Some(SectionType::ImpostorAtlas) => {
@@ -240,13 +251,16 @@ pub fn verify_entity_10d(bytes: &[u8]) -> Entity10dVerification {
                                         sphere_radius: h.sphere_radius,
                                     });
                                 }
-                                Err(e) => violations.push(format!("impostor section decode error: {e}")),
+                                Err(e) => {
+                                    violations.push(format!("impostor section decode error: {e}"))
+                                }
                             }
                         }
                         Some(SectionType::EntityOntology) => {
                             if sec_bytes.len() >= 32 {
                                 use crate::container_10d::entity_ontology_section::EntityOntologyMiniHeader;
-                                let mini: &EntityOntologyMiniHeader = bytemuck::from_bytes(&sec_bytes[..32]);
+                                let mini: &EntityOntologyMiniHeader =
+                                    bytemuck::from_bytes(&sec_bytes[..32]);
                                 affordances = Some(AffordanceVerificationSummary {
                                     entity_did_hash: mini.entity_did_hash,
                                     taxon_iri_hash: mini.taxon_iri_hash,
@@ -390,14 +404,27 @@ pub fn verify_entity_bundle(bytes: &[u8]) -> EntityBundleVerification {
                 issuer_did = Some(manifest.issuer.clone());
                 subject_id = Some(manifest.credential_subject.id.clone());
                 entity_type = Some(manifest.credential_subject.entity_type.clone());
-                acoustic_anchors = Some(manifest.credential_subject.affordances.acoustic_anchors.clone());
+                acoustic_anchors = Some(
+                    manifest
+                        .credential_subject
+                        .affordances
+                        .acoustic_anchors
+                        .clone(),
+                );
 
                 // Anti-commodification gate
-                let ent_class = OntologicalClass::from_str_name(&manifest.credential_subject.entity_type)
-                    .unwrap_or(OntologicalClass::DarwinianTaxon);
+                let ent_class =
+                    OntologicalClass::from_str_name(&manifest.credential_subject.entity_type)
+                        .unwrap_or(OntologicalClass::DarwinianTaxon);
 
-                let is_asset_claim = manifest.credential_subject.entity_type.eq_ignore_ascii_case("manufacturedproperty")
-                    || manifest.credential_subject.entity_type.eq_ignore_ascii_case("asset");
+                let is_asset_claim = manifest
+                    .credential_subject
+                    .entity_type
+                    .eq_ignore_ascii_case("manufacturedproperty")
+                    || manifest
+                        .credential_subject
+                        .entity_type
+                        .eq_ignore_ascii_case("asset");
 
                 if let Err(e) = assert_person_anti_commodification(ent_class, is_asset_claim) {
                     anti_commodification_passed = false;
@@ -425,7 +452,10 @@ pub fn verify_entity_bundle(bytes: &[u8]) -> EntityBundleVerification {
                         permissive_commons_passed = false;
                         violations.push(format!("permissive commons gate failure: {e:?}"));
                     }
-                } else if matches!(ent_class, OntologicalClass::DarwinianTaxon | OntologicalClass::AbioticEnvironment) {
+                } else if matches!(
+                    ent_class,
+                    OntologicalClass::DarwinianTaxon | OntologicalClass::AbioticEnvironment
+                ) {
                     permissive_commons_passed = false;
                     violations.push("permissive commons gate failure: biosphere entities ('world of god') require an explicit Permissive Commons / SPC declaration".into());
                 }
@@ -435,7 +465,10 @@ pub fn verify_entity_bundle(bytes: &[u8]) -> EntityBundleVerification {
                     Ok(matches) => {
                         geometry_digests_match = matches;
                         if !matches {
-                            violations.push("manifest declared geometry digests do not match binary payload".into());
+                            violations.push(
+                                "manifest declared geometry digests do not match binary payload"
+                                    .into(),
+                            );
                         }
                     }
                     Err(e) => {
@@ -501,8 +534,8 @@ mod tests {
 
     #[test]
     fn test_verify_bundle_permissive_commons_pass_and_discharge_summary() {
-        use crate::bundle::entity_compiler::{compile_entity, EntityCompileInput};
         use crate::bundle::cbor_ld_manifest::CommonsObligation;
+        use crate::bundle::entity_compiler::{compile_entity, EntityCompileInput};
 
         let input = EntityCompileInput {
             credential_id: "urn:uuid:spc-test-01".to_string(),
@@ -535,7 +568,9 @@ mod tests {
         assert!(rep.permissive_commons_passed);
         assert!(rep.anti_commodification_passed);
         assert!(rep.geometry_digests_match);
-        let cob = rep.commons_obligation.expect("commons obligation must be populated");
+        let cob = rep
+            .commons_obligation
+            .expect("commons obligation must be populated");
         assert_eq!(cob.licence_class, "SocialPermissiveCommons");
         assert_eq!(cob.production_cost_cents, 10_000);
         assert_eq!(cob.accumulated_pool_cents, 12_000);

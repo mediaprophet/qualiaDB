@@ -259,14 +259,16 @@ pub fn inspect_hmc_texture_plan(
         _ => None,
     });
     if let Some(source) = source {
-        return Ok(TextureDecodePlan::RequiresTranscode(TextureTranscodeRequest {
-            source,
-            target: TextureTranscodeTarget::Rgba8(TextureColorSpace::from(
-                document.color_space(),
-            )),
-            fallback: TextureFallback::PreserveEncodedResource,
-            refinement: TextureRefinementState::PendingTranscode,
-        }));
+        return Ok(TextureDecodePlan::RequiresTranscode(
+            TextureTranscodeRequest {
+                source,
+                target: TextureTranscodeTarget::Rgba8(TextureColorSpace::from(
+                    document.color_space(),
+                )),
+                fallback: TextureFallback::PreserveEncodedResource,
+                refinement: TextureRefinementState::PendingTranscode,
+            },
+        ));
     }
     let (info, scratch_bytes) = inspect_hmc_texture_requirements(resource, limits)?;
     Ok(TextureDecodePlan::DecodeRgba8 {
@@ -303,11 +305,9 @@ fn inspect_ktx2_rgba8(
     if let Some(source) = document.transcode_source() {
         return Err(TextureDecodeError::RequiresTranscode(source));
     }
-    let image = super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level_with_compression(
-        &document,
-        true,
-    )
-    .map_err(map_ktx2_rgba8_error)?;
+    let image =
+        super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level_with_compression(&document, true)
+            .map_err(map_ktx2_rgba8_error)?;
     let rgba8_bytes = required_rgba_bytes(image.width, image.height, limits, usize::MAX)?;
     if rgba8_bytes != image.byte_len {
         return Err(TextureDecodeError::InvalidImage);
@@ -335,34 +335,22 @@ fn decode_ktx2_rgba8(
     scratch: &mut [u8],
 ) -> Result<DecodedTextureInfo, TextureDecodeError> {
     use super::texture_ktx2::Ktx2Document;
-    use super::texture_ktx2_rgba8::{
-        decode_ktx2_rgba8_base_level_with_scratch, Rgba8Ktx2Error,
-    };
+    use super::texture_ktx2_rgba8::{decode_ktx2_rgba8_base_level_with_scratch, Rgba8Ktx2Error};
 
     let document = Ktx2Document::parse(bytes).map_err(|_| TextureDecodeError::InvalidImage)?;
     if let Some(source) = document.transcode_source() {
         return Err(TextureDecodeError::RequiresTranscode(source));
     }
-    let image = super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level_with_compression(
-        &document,
-        true,
-    )
-        .map_err(map_ktx2_rgba8_error)?;
+    let image =
+        super::texture_ktx2_rgba8::inspect_ktx2_rgba8_base_level_with_compression(&document, true)
+            .map_err(map_ktx2_rgba8_error)?;
     let rgba8_bytes = required_rgba_bytes(image.width, image.height, limits, output.len())?;
-    decode_ktx2_rgba8_base_level_with_scratch(
-        &document,
-        &mut output[..rgba8_bytes],
-        scratch,
-    )
-    .map_err(
-        |error| match error {
+    decode_ktx2_rgba8_base_level_with_scratch(&document, &mut output[..rgba8_bytes], scratch)
+        .map_err(|error| match error {
             Rgba8Ktx2Error::OutputTooSmall => TextureDecodeError::OutputBufferTooSmall,
-            Rgba8Ktx2Error::CompressedScratchTooSmall => {
-                TextureDecodeError::ScratchBufferTooSmall
-            }
+            Rgba8Ktx2Error::CompressedScratchTooSmall => TextureDecodeError::ScratchBufferTooSmall,
             other => map_ktx2_rgba8_error(other),
-        },
-    )?;
+        })?;
     Ok(DecodedTextureInfo {
         width: image.width,
         height: image.height,
@@ -380,9 +368,7 @@ fn map_ktx2_rgba8_error(error: super::texture_ktx2_rgba8::Rgba8Ktx2Error) -> Tex
         Rgba8Ktx2Error::UnsupportedSupercompression => {
             TextureDecodeError::UnsupportedSupercompression
         }
-        Rgba8Ktx2Error::RequiresTranscode(source) => {
-            TextureDecodeError::RequiresTranscode(source)
-        }
+        Rgba8Ktx2Error::RequiresTranscode(source) => TextureDecodeError::RequiresTranscode(source),
         Rgba8Ktx2Error::InvalidCompressedLevel => TextureDecodeError::InvalidImage,
         Rgba8Ktx2Error::CompressedScratchTooSmall => TextureDecodeError::ScratchBufferTooSmall,
         Rgba8Ktx2Error::OutputTooSmall => TextureDecodeError::OutputBufferTooSmall,

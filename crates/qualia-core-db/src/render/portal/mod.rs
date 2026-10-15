@@ -95,8 +95,8 @@ struct ProjectedNode {
 }
 
 mod body_scene;
-mod scene_mesh;
 mod scene_animation;
+mod scene_mesh;
 pub(crate) use scene_mesh::BodyMeshAccum;
 #[allow(unused_imports)]
 pub(crate) use scene_mesh::SceneMeshAccum;
@@ -616,7 +616,7 @@ impl QualiaPortal {
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) -> Result<(), JsValue> {
         let current_target = self.camera.target;
         self.camera = CameraState {
-            near_plane:self.camera.near_plane,
+            near_plane: self.camera.near_plane,
             yaw,
             pitch,
             zoom,
@@ -675,7 +675,7 @@ impl QualiaPortal {
             pitch,
             zoom,
             target: [target_x, target_y, target_z],
-            near_plane:self.camera.near_plane,
+            near_plane: self.camera.near_plane,
             sun_dir: self.camera.sun_dir,
             sun_intensity: self.camera.sun_intensity,
             ambient_intensity: self.camera.ambient_intensity,
@@ -1723,9 +1723,13 @@ impl QualiaPortal {
 
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
         self.adopt_pending_gpu();
-        accum.apply_body_fit(&self.body_fit).map_err(JsValue::from_str)?;
+        accum
+            .apply_body_fit(&self.body_fit)
+            .map_err(JsValue::from_str)?;
         if !self.preserve_authored_frame {
-            accum.normalise_to_orbit_frame().map_err(JsValue::from_str)?;
+            accum
+                .normalise_to_orbit_frame()
+                .map_err(JsValue::from_str)?;
         }
         if accum.positions.is_empty() || accum.indices.is_empty() {
             return Err(JsValue::from_str("anatomy_body_mesh_empty"));
@@ -1744,7 +1748,7 @@ impl QualiaPortal {
         let mut material_pipeline = false;
         let mut admitted_vertex_count = 0usize;
         let mut admitted_index_count = 0usize;
-        let mut compact_gpu=true;
+        let mut compact_gpu = true;
         if let Some(ref mut gpu) = self.gpu {
             let pbr_count = if accum.materials.is_empty() || accum.material_ranges.is_empty() {
                 0
@@ -1768,7 +1772,7 @@ impl QualiaPortal {
                 gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices)
             };
             if count > 0 {
-                compact_gpu=false;
+                compact_gpu = false;
                 renderer = BodyRendererBackend::WebGpu;
                 admitted_vertex_count = accum.positions.len();
                 admitted_index_count = accum.indices.len();
@@ -1796,7 +1800,8 @@ impl QualiaPortal {
             }
         }
         self.cpu_body = Some(reduced);
-        self.scene_animation.install(std::mem::take(&mut accum.animation),compact_gpu);
+        self.scene_animation
+            .install(std::mem::take(&mut accum.animation), compact_gpu);
         if renderer == BodyRendererBackend::None {
             renderer = BodyRendererBackend::CpuCanvas;
             self.tier = 0;
@@ -1843,7 +1848,11 @@ impl QualiaPortal {
             accum.materials.len(),
             accum.assets_refused,
             renderer.as_str(),
-            if material_pipeline { " · PBR scene" } else { " · colour fallback" }
+            if material_pipeline {
+                " · PBR scene"
+            } else {
+                " · colour fallback"
+            }
         );
         let result = js_sys::Object::new();
         Reflect::set(
@@ -2369,7 +2378,7 @@ impl QualiaPortal {
                                 &body.indices,
                             );
                             if count > 0 {
-                                self.scene_animation.compact_gpu=true;
+                                self.scene_animation.compact_gpu = true;
                                 self.body_renderer = BodyRendererBackend::WebGpu;
                                 self.body_vertex_count =
                                     body.positions.len().min(u32::MAX as usize) as u32;

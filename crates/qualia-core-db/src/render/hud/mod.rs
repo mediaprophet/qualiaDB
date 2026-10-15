@@ -115,9 +115,11 @@ impl QualiaHud {
             .clamped();
         self.paint();
     }
-    pub fn set_camera_near_plane(&mut self,near:f32)->Result<(),JsValue> {
-        if !near.is_finite()||!(0.00001..=1.0).contains(&near) {return Err(JsValue::from_str("HUD near plane invalid"));}
-        self.camera.near_plane=near;
+    pub fn set_camera_near_plane(&mut self, near: f32) -> Result<(), JsValue> {
+        if !near.is_finite() || !(0.00001..=1.0).contains(&near) {
+            return Err(JsValue::from_str("HUD near plane invalid"));
+        }
+        self.camera.near_plane = near;
         Ok(())
     }
 
@@ -258,7 +260,7 @@ impl QualiaHud {
         if w == 0.0 || h == 0.0 {
             return None;
         }
-        let m = self.camera.view_projection(w/h);
+        let m = self.camera.view_projection(w / h);
         let p = [item.x as f32, item.y as f32, item.z as f32, 1.0];
         let clip: [f32; 4] = std::array::from_fn(|r| (0..4).map(|c| m[c][r] * p[c]).sum());
         if clip[3] <= 0.0 {

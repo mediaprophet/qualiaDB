@@ -1006,13 +1006,17 @@ pub fn econ_ols(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 pub fn econ_aggregate_wealth(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let mut wealths = Vec::new();
-    if let Some(list) = args::rec_f64_list(args, "wealths").or_else(|| args::rec_f64_list(args, "values")) {
+    if let Some(list) =
+        args::rec_f64_list(args, "wealths").or_else(|| args::rec_f64_list(args, "values"))
+    {
         wealths = list;
     } else if let Value::List(items) = args {
         for it in items {
             if let Some(n) = args::as_f64(it) {
                 wealths.push(n);
-            } else if let Some(n) = args::rec_f64(it, "wealth").or_else(|| args::rec_f64(it, "value")) {
+            } else if let Some(n) =
+                args::rec_f64(it, "wealth").or_else(|| args::rec_f64(it, "value"))
+            {
                 wealths.push(n);
             }
         }
@@ -1021,7 +1025,9 @@ pub fn econ_aggregate_wealth(args: &Value, _span: Span) -> Result<Value, Diagnos
             for it in items {
                 if let Some(n) = args::as_f64(it) {
                     wealths.push(n);
-                } else if let Some(n) = args::rec_f64(it, "wealth").or_else(|| args::rec_f64(it, "value")) {
+                } else if let Some(n) =
+                    args::rec_f64(it, "wealth").or_else(|| args::rec_f64(it, "value"))
+                {
                     wealths.push(n);
                 }
             }
@@ -1046,8 +1052,9 @@ pub fn econ_aggregate_wealth(args: &Value, _span: Span) -> Result<Value, Diagnos
     let mean = total / n as f64;
     let min = wealths.iter().copied().fold(f64::INFINITY, f64::min);
     let max = wealths.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let gini = crate::specialized_libs::computational_economics::welfare::gini_coefficient(&wealths)
-        .unwrap_or(0.0);
+    let gini =
+        crate::specialized_libs::computational_economics::welfare::gini_coefficient(&wealths)
+            .unwrap_or(0.0);
 
     Ok(args::record([
         ("status", Value::String("evaluated".into())),
@@ -2045,7 +2052,10 @@ pub fn econ_narrative_divergence(args: &Value, span: Span) -> Result<Value, Diag
                 ]),
             ),
         ])),
-        Err(e) => Err(args::bad(span, format!("compute_narrative_divergence: {e:?}"))),
+        Err(e) => Err(args::bad(
+            span,
+            format!("compute_narrative_divergence: {e:?}"),
+        )),
     }
 }
 
@@ -2188,15 +2198,21 @@ pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagno
     if let Some(Value::List(list)) = accounts_v {
         for item in list {
             if let Value::Record(r) = item {
-                let id = r.get("id").and_then(|v| match v {
-                    Value::U64(n) => Some(*n),
-                    Value::F64(f) => Some(*f as u64),
-                    _ => None,
-                }).unwrap_or(0);
-                let acc_type_str = r.get("type").and_then(|v| match v {
-                    Value::String(s) => Some(s.as_str()),
-                    _ => None,
-                }).unwrap_or("asset");
+                let id = r
+                    .get("id")
+                    .and_then(|v| match v {
+                        Value::U64(n) => Some(*n),
+                        Value::F64(f) => Some(*f as u64),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                let acc_type_str = r
+                    .get("type")
+                    .and_then(|v| match v {
+                        Value::String(s) => Some(s.as_str()),
+                        _ => None,
+                    })
+                    .unwrap_or("asset");
                 let account_type = match acc_type_str {
                     "liability" => AccountType::Liability,
                     "equity" => AccountType::Equity,
@@ -2213,21 +2229,30 @@ pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagno
     if let Some(Value::List(list)) = postings_v {
         for (i, item) in list.iter().enumerate() {
             if let Value::Record(r) = item {
-                let account_id = r.get("account_id").and_then(|v| match v {
-                    Value::U64(n) => Some(*n),
-                    Value::F64(f) => Some(*f as u64),
-                    _ => None,
-                }).unwrap_or(0);
-                let debit = r.get("debit").and_then(|v| match v {
-                    Value::F64(f) => Some(*f as i64),
-                    Value::U64(n) => Some(*n as i64),
-                    _ => None,
-                }).unwrap_or(0);
-                let credit = r.get("credit").and_then(|v| match v {
-                    Value::F64(f) => Some(*f as i64),
-                    Value::U64(n) => Some(*n as i64),
-                    _ => None,
-                }).unwrap_or(0);
+                let account_id = r
+                    .get("account_id")
+                    .and_then(|v| match v {
+                        Value::U64(n) => Some(*n),
+                        Value::F64(f) => Some(*f as u64),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                let debit = r
+                    .get("debit")
+                    .and_then(|v| match v {
+                        Value::F64(f) => Some(*f as i64),
+                        Value::U64(n) => Some(*n as i64),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                let credit = r
+                    .get("credit")
+                    .and_then(|v| match v {
+                        Value::F64(f) => Some(*f as i64),
+                        Value::U64(n) => Some(*n as i64),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
                 postings.push(Posting {
                     entry_id: i as u64,
                     account_id,
@@ -2356,12 +2381,21 @@ mod tests {
     #[test]
     fn aggregate_wealth_basic() {
         let mut m = BTreeMap::new();
-        m.insert("wealths".into(), Value::List(vec![Value::F64(10.0), Value::F64(20.0), Value::F64(30.0)]));
+        m.insert(
+            "wealths".into(),
+            Value::List(vec![Value::F64(10.0), Value::F64(20.0), Value::F64(30.0)]),
+        );
         let res = econ_aggregate_wealth(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
         if let Value::Record(fields) = res {
-            assert_eq!(fields.get("status"), Some(&Value::String("evaluated".into())));
+            assert_eq!(
+                fields.get("status"),
+                Some(&Value::String("evaluated".into()))
+            );
             assert_eq!(fields.get("count"), Some(&Value::U64(3)));
-            assert_eq!(fields.get("honesty"), Some(&Value::String("certified".into())));
+            assert_eq!(
+                fields.get("honesty"),
+                Some(&Value::String("certified".into()))
+            );
         } else {
             panic!("Expected record");
         }
@@ -2388,8 +2422,14 @@ mod tests {
         m.insert("fantasy".into(), Value::List(vec![step_fantasy]));
         let res = econ_narrative_divergence(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
         if let Value::Record(fields) = res {
-            assert_eq!(fields.get("status"), Some(&Value::String("divergence_computed".into())));
-            assert_eq!(fields.get("honesty"), Some(&Value::String("certified".into())));
+            assert_eq!(
+                fields.get("status"),
+                Some(&Value::String("divergence_computed".into()))
+            );
+            assert_eq!(
+                fields.get("honesty"),
+                Some(&Value::String("certified".into()))
+            );
             assert_eq!(fields.get("maintenance_active"), Some(&Value::Bool(true)));
         } else {
             panic!("Expected record");

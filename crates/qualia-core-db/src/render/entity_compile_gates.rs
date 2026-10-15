@@ -104,18 +104,32 @@ pub enum GateError {
 impl core::fmt::Display for GateError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::SpectralEnergyViolation { lambda_nm, reflectance } => {
-                write!(f, "spectral energy violation at {lambda_nm} nm: reflectance {reflectance}")
+            Self::SpectralEnergyViolation {
+                lambda_nm,
+                reflectance,
+            } => {
+                write!(
+                    f,
+                    "spectral energy violation at {lambda_nm} nm: reflectance {reflectance}"
+                )
             }
-            Self::BssrdfZeroOrNegative => write!(f, "BSSRDF mean free path must be strictly positive"),
-            Self::GeometryBoundsViolation => write!(f, "lower-tier geometry spills outside Tier 1 Hero AABB"),
-            Self::ImpostorSphereMisaligned => write!(f, "impostor bounding sphere misaligned with geometry"),
+            Self::BssrdfZeroOrNegative => {
+                write!(f, "BSSRDF mean free path must be strictly positive")
+            }
+            Self::GeometryBoundsViolation => {
+                write!(f, "lower-tier geometry spills outside Tier 1 Hero AABB")
+            }
+            Self::ImpostorSphereMisaligned => {
+                write!(f, "impostor bounding sphere misaligned with geometry")
+            }
             Self::MalformedOntologicalClass => write!(f, "malformed or missing ontological class"),
             Self::MissingPhysicalConstants => write!(f, "missing mandatory physical constants"),
             Self::HumanPersonCannotBeCommodifiedAsAsset => {
                 write!(f, "anti-commodification violation: a NaturalPerson cannot be classified as property or an asset")
             }
-            Self::NonDeterministicScriptExecution => write!(f, "script violates determinism or cycle limits"),
+            Self::NonDeterministicScriptExecution => {
+                write!(f, "script violates determinism or cycle limits")
+            }
             Self::BiosphereRequiresPermissiveCommons => {
                 write!(f, "humanitarian ict gate violation: living biosphere entity must be governed under Permissive Commons")
             }
@@ -442,7 +456,10 @@ mod tests {
         // Within 5cm margin
         let lod_min = [-1.04f32, -1.0, -1.0];
         let lod_max = [1.04f32, 1.0, 1.0];
-        assert!(validate_geometry_confinement(hero_min, hero_max, lod_min, lod_max, center, radius).is_ok());
+        assert!(validate_geometry_confinement(
+            hero_min, hero_max, lod_min, lod_max, center, radius
+        )
+        .is_ok());
 
         // Exceeding margin fails
         let bad_min = [-1.10f32, -1.0, -1.0];
@@ -456,7 +473,9 @@ mod tests {
     #[test]
     fn gate3_ontological_integrity() {
         // DarwinianTaxon without mass is valid
-        assert!(validate_ontological_integrity(OntologicalClass::DarwinianTaxon as u8, None).is_ok());
+        assert!(
+            validate_ontological_integrity(OntologicalClass::DarwinianTaxon as u8, None).is_ok()
+        );
 
         // ManufacturedProperty without mass fails
         assert_eq!(
@@ -465,7 +484,11 @@ mod tests {
         );
 
         // ManufacturedProperty with positive mass is valid
-        assert!(validate_ontological_integrity(OntologicalClass::ManufacturedProperty as u8, Some(42.0)).is_ok());
+        assert!(validate_ontological_integrity(
+            OntologicalClass::ManufacturedProperty as u8,
+            Some(42.0)
+        )
+        .is_ok());
 
         // Malformed class fails
         assert_eq!(

@@ -126,15 +126,20 @@ impl Mat4ColumnMajor {
                     }
                 }
                 minors[col][row] = det3(
-                    self.cols[c[0]][r[0]], self.cols[c[1]][r[0]], self.cols[c[2]][r[0]],
-                    self.cols[c[0]][r[1]], self.cols[c[1]][r[1]], self.cols[c[2]][r[1]],
-                    self.cols[c[0]][r[2]], self.cols[c[1]][r[2]], self.cols[c[2]][r[2]],
+                    self.cols[c[0]][r[0]],
+                    self.cols[c[1]][r[0]],
+                    self.cols[c[2]][r[0]],
+                    self.cols[c[0]][r[1]],
+                    self.cols[c[1]][r[1]],
+                    self.cols[c[2]][r[1]],
+                    self.cols[c[0]][r[2]],
+                    self.cols[c[1]][r[2]],
+                    self.cols[c[2]][r[2]],
                 );
             }
         }
 
-        let det = self.cols[0][0] * minors[0][0]
-            - self.cols[1][0] * minors[1][0]
+        let det = self.cols[0][0] * minors[0][0] - self.cols[1][0] * minors[1][0]
             + self.cols[2][0] * minors[2][0]
             - self.cols[3][0] * minors[3][0];
 
@@ -155,11 +160,7 @@ impl Mat4ColumnMajor {
 }
 
 #[inline]
-fn det3(
-    a: f32, b: f32, c: f32,
-    d: f32, e: f32, f: f32,
-    g: f32, h: f32, i: f32,
-) -> f32 {
+fn det3(a: f32, b: f32, c: f32, d: f32, e: f32, f: f32, g: f32, h: f32, i: f32) -> f32 {
     a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
 }
 
@@ -215,7 +216,11 @@ pub fn calculate_object_motion_vector(
     let previous_world_4 = previous_model.transform_point3(local_pos);
 
     let curr_world_3 = [current_world_4[0], current_world_4[1], current_world_4[2]];
-    let prev_world_3 = [previous_world_4[0], previous_world_4[1], previous_world_4[2]];
+    let prev_world_3 = [
+        previous_world_4[0],
+        previous_world_4[1],
+        previous_world_4[2],
+    ];
 
     let current_clip = current_view_proj.transform_point3(curr_world_3);
     let previous_clip = previous_view_proj.transform_point3(prev_world_3);
@@ -231,7 +236,11 @@ pub fn calculate_object_motion_vector(
 /// Returns `true` if depth disparity exceeds `threshold`, indicating that the
 /// surface at the current pixel was occluded in the previous frame and history should
 /// be rejected.
-pub fn is_disoccluded(current_linear_depth: f32, previous_linear_depth: f32, threshold: f32) -> bool {
+pub fn is_disoccluded(
+    current_linear_depth: f32,
+    previous_linear_depth: f32,
+    threshold: f32,
+) -> bool {
     let diff = (current_linear_depth - previous_linear_depth).abs();
     diff > threshold.max(0.0)
 }

@@ -180,8 +180,7 @@ fn decodes_bounded_zstd_and_zlib_rgba8_without_losing_color_space() {
     let zstd_payload = zstd::bulk::compress(&texels, 1).unwrap();
     let zlib_payload = {
         use std::io::Write;
-        let mut encoder =
-            flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::fast());
+        let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::fast());
         encoder.write_all(&texels).unwrap();
         encoder.finish().unwrap()
     };

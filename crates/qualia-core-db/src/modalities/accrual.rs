@@ -91,8 +91,10 @@ impl AccrualProfile {
     pub fn subtract(&self, lost: &Self) -> Self {
         Self {
             biomass: (self.biomass - lost.biomass).max(0.0),
-            structural_complexity: (self.structural_complexity - lost.structural_complexity).max(0.0),
-            hydrological_function: (self.hydrological_function - lost.hydrological_function).max(0.0),
+            structural_complexity: (self.structural_complexity - lost.structural_complexity)
+                .max(0.0),
+            hydrological_function: (self.hydrological_function - lost.hydrological_function)
+                .max(0.0),
             genetic_distinctness: (self.genetic_distinctness - lost.genetic_distinctness).max(0.0),
             custodial_depth: (self.custodial_depth - lost.custodial_depth).max(0.0),
         }
@@ -230,7 +232,10 @@ mod tests {
         };
 
         let report = eval_accrual_loss(&stock, &fire_event);
-        assert_eq!(report.effective_irreversibility, IrreversibilityClass::HorizonExceeding);
+        assert_eq!(
+            report.effective_irreversibility,
+            IrreversibilityClass::HorizonExceeding
+        );
         assert!(report.is_critical_stock_breached);
         assert_eq!(report.lost_profile.structural_complexity, 68.0);
         assert_eq!(report.residual_profile.structural_complexity, 17.0);
@@ -265,6 +270,9 @@ mod tests {
 
         let report = eval_accrual_loss(&stock, &event);
         assert!(!report.is_critical_stock_breached);
-        assert_eq!(report.effective_irreversibility, IrreversibilityClass::Reversible);
+        assert_eq!(
+            report.effective_irreversibility,
+            IrreversibilityClass::Reversible
+        );
     }
 }

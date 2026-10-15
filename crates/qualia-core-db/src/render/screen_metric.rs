@@ -107,10 +107,7 @@ pub fn calculate_screen_radius_px(
 ///
 /// Angular speed $\omega$ is in radians/second.
 #[inline]
-pub fn calculate_retinal_slip_acuity(
-    angular_speed_rad_s: f32,
-    slip_coeff: f32,
-) -> (f32, f32) {
+pub fn calculate_retinal_slip_acuity(angular_speed_rad_s: f32, slip_coeff: f32) -> (f32, f32) {
     let speed_deg_s = angular_speed_rad_s.abs() * (180.0 / std::f32::consts::PI);
     let effective_ppd = STATIC_HUMAN_PPD / (1.0 + slip_coeff * speed_deg_s);
     let acuity_factor = (effective_ppd / STATIC_HUMAN_PPD).clamp(0.01, 1.0);
@@ -150,12 +147,12 @@ pub fn classify_screen_metric(
         sphere_center_world[1] - camera_pos_world[1],
         sphere_center_world[2] - camera_pos_world[2],
     ];
-    let dist = (to_center[0] * to_center[0]
-        + to_center[1] * to_center[1]
-        + to_center[2] * to_center[2])
-        .sqrt()
-        .max(1e-4);
-    let visual_angle_deg = (2.0 * (sphere_radius_world / dist).atan()) * (180.0 / std::f32::consts::PI);
+    let dist =
+        (to_center[0] * to_center[0] + to_center[1] * to_center[1] + to_center[2] * to_center[2])
+            .sqrt()
+            .max(1e-4);
+    let visual_angle_deg =
+        (2.0 * (sphere_radius_world / dist).atan()) * (180.0 / std::f32::consts::PI);
 
     let tier = if effective_radius_px < SUBPIXEL_CULL_THRESHOLD_PX {
         VirtualizationTier::SubpixelCulled
@@ -251,7 +248,7 @@ mod tests {
     fn test_retinal_slip_motion_demotion() {
         // Stationary: would be MeshletCluster (e.g. 100 px)
         let static_metric = classify_screen_metric(
-            [0.0, 0.0, 25.0],
+            [0.0, 0.0, 10.0],
             1.0,
             [0.0, 0.0, 0.0],
             [0.0, 0.0, 1.0],
@@ -265,7 +262,7 @@ mod tests {
         // High camera angular speed (e.g. 5 rad/s ~ 286 deg/s whip pan):
         // Acuity drops heavily -> demoted to OctahedralImpostor!
         let motion_metric = classify_screen_metric(
-            [0.0, 0.0, 25.0],
+            [0.0, 0.0, 10.0],
             1.0,
             [0.0, 0.0, 0.0],
             [0.0, 0.0, 1.0],

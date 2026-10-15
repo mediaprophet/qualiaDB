@@ -589,7 +589,11 @@ mod tests {
             attestation_epoch: 1000,
             verified: false,
         };
-        assert!(!eval_succession_standing(&clause, Some(&unverified_ev), domain_land));
+        assert!(!eval_succession_standing(
+            &clause,
+            Some(&unverified_ev),
+            domain_land
+        ));
 
         // Verified event: standing in domain_land, but not finance
         let verified_ev = SuccessionEvent {
@@ -598,8 +602,16 @@ mod tests {
             attestation_epoch: 1000,
             verified: true,
         };
-        assert!(eval_succession_standing(&clause, Some(&verified_ev), domain_land));
-        assert!(!eval_succession_standing(&clause, Some(&verified_ev), domain_finance));
+        assert!(eval_succession_standing(
+            &clause,
+            Some(&verified_ev),
+            domain_land
+        ));
+        assert!(!eval_succession_standing(
+            &clause,
+            Some(&verified_ev),
+            domain_finance
+        ));
 
         // Surviving claims filtering
         let mut q1 = crate::NQuin {
@@ -628,4 +640,3 @@ mod tests {
         assert_eq!(out[0].object, 0x123);
     }
 }
-

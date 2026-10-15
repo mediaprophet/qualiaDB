@@ -6,9 +6,9 @@
 //! everywhere. The WebGPU renderer core (`gpu`) compiles wherever `gpu-runtime` is enabled; only
 //! the browser facade (`portal`, `portal_wasm`) remains gated to wasm + `portal`.
 
-pub mod acoustic;
 /// Cross-platform measured capability evidence and fail-closed acceptance gates.
 pub mod acceptance_contract;
+pub mod acoustic;
 /// Browser Anatomy render backends. Shared pack metadata remains in `anatomy_pack`.
 pub mod anatomy;
 /// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
@@ -20,7 +20,6 @@ pub mod ao_quality;
 pub mod asset_package;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
-pub mod water_surface;
 /// Shared authored sky, lighting and analytic-atmosphere presets.
 pub mod atmosphere;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
@@ -57,25 +56,29 @@ pub mod cpu_texture_mips;
 /// Deferred resolve CPU reference oracle and continuous EMF spectral PBR integration.
 pub mod deferred_resolve;
 pub mod derivation;
+/// Deterministic validation gates and TAA Oklab perceptual clamping for entity compilation.
+pub mod entity_compile_gates;
 /// Allocation-free frame graph resource and pass dependency model.
 pub mod frame_graph;
 /// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
 pub mod gamut;
-/// Browser HMC mesh source verification and resident-upload lifecycle.
-pub mod hmc_playback;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
 pub mod gpu_colour_kernel;
+/// Browser HMC mesh source verification and resident-upload lifecycle.
+pub mod hmc_playback;
 /// Generic, canvas-backed interactive HUD surface for browser render clients.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod hud;
 /// Caller-buffered CPU frustum visibility lists with stable source-index indirection.
 pub mod instance_culling;
-/// Screen-space visual angle error, retinal slip acuity, and 4-tier virtualization classifier.
-pub mod screen_metric;
 /// Physically-based and stylized cinematic lighting evaluation.
 pub mod lighting;
 /// Material-section compilation and readback helpers for versioned `.10d` assets.
 pub mod material_compile;
+/// Caller-buffered seam-aware box projection and source normal generation.
+pub mod mesh_surface_frames;
+/// Caller-buffered UV-aligned tangent frames for authored normal maps.
+pub mod mesh_tangent_frames;
 /// P7.1 — Metamers as the affine fibre of the colour-matching projection.
 pub mod metamer;
 /// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded
@@ -86,10 +89,6 @@ pub mod model_substrate;
 pub mod navigation;
 /// Scene-linear display output and manual exposure controls.
 pub mod output;
-/// Bounded temporal resolve policy, history lifecycle, and CPU reference oracle.
-pub mod temporal_resolve;
-/// Reference math and host producer models for temporal accumulation.
-pub mod temporal_producers;
 pub mod pga;
 /// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
 pub mod physics;
@@ -120,6 +119,8 @@ pub mod scene_graph;
     feature = "wasm-full"
 ))]
 pub mod scene_primitives;
+/// Screen-space visual angle error, retinal slip acuity, and 4-tier virtualization classifier.
+pub mod screen_metric;
 /// Sense path — the input twin (Phase 4): microphone PCM → forward DSP → the `∫Ψ > τ → Fact`
 /// bridge, every capture under the deontic/standpoint consent gate (surveillance-refusal default).
 /// Gated like `place_time` (needs `crate::modalities`).
@@ -130,34 +131,34 @@ pub mod scene_primitives;
     feature = "wasm-full"
 ))]
 pub mod sense;
+/// Caller-buffered VibeScript motor rig sampling, attachments and skinning.
+pub mod skeletal;
 pub mod spectral;
 /// Continuous EMF spectral basis functions (Jakob-Hanika), closed-form Gaussian moments, and wave optics.
 pub mod spectral_basis;
-/// Pure-Rust Levenberg-Marquardt spectral inversion solver, 32x32x32 LUT baker, and zero-heap trilinear sampler.
-pub mod spectral_lut;
 /// P7.3 — σ spectral blend as interpolation on the spectral manifold.
 pub mod spectral_blend;
 #[cfg(test)]
 pub mod spectral_harness;
 /// P7.0 — Spectral-space kernel: SPD/CMF POD types + CIE linear-projection.
 pub mod spectral_kernel;
+/// Pure-Rust Levenberg-Marquardt spectral inversion solver, 32x32x32 LUT baker, and zero-heap trilinear sampler.
+pub mod spectral_lut;
 /// P7.7 — Unified spectral-operator API surface.
 pub mod spectral_operator;
 /// P7.8 — golden-oracle + CPU/GPU differential + determinism harness.
 pub mod spectral_oracle;
 pub mod standpoint;
+/// Bounded authored surface maps and planar UV projection, native and WASM.
+pub mod surface_authoring;
 pub mod telemetry;
+/// Reference math and host producer models for temporal accumulation.
+pub mod temporal_producers;
+/// Bounded temporal resolve policy, history lifecycle, and CPU reference oracle.
+pub mod temporal_resolve;
 /// Bounded, caller-buffered PNG/JPEG decode from verified external texture resources.
 pub mod texture_decode;
 pub mod texture_ingestion;
-/// Bounded authored surface maps and planar UV projection, native and WASM.
-pub mod surface_authoring;
-/// Caller-buffered UV-aligned tangent frames for authored normal maps.
-pub mod mesh_tangent_frames;
-/// Caller-buffered seam-aware box projection and source normal generation.
-pub mod mesh_surface_frames;
-/// Caller-buffered VibeScript motor rig sampling, attachments and skinning.
-pub mod skeletal;
 /// Allocation-free KTX2 container metadata and level-range parser (native + WASM).
 pub mod texture_ktx2;
 /// Allocation-free decoder for uncompressed single-face RGBA8 KTX2 base levels.
@@ -169,8 +170,7 @@ pub mod texture_streaming_plan;
 pub mod texture_transcode;
 /// Bounded zero-heap vegetation instance pool and dynamic collision bending.
 pub mod vegetation;
-/// Deterministic validation gates and TAA Oklab perceptual clamping for entity compilation.
-pub mod entity_compile_gates;
+pub mod water_surface;
 pub use entity_compile_gates as twin_compile_gates;
 
 #[cfg(test)]

@@ -110,9 +110,7 @@ impl PortalGpu {
         self.tensor_node_count
     }
 
-
     pub fn has_tensor_buffer(&self) -> bool {
         self.tensor_raw_buf.is_some()
     }
-
 }

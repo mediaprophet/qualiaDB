@@ -159,8 +159,8 @@ pub struct ResourceLimits {
     pub max_input_points: u32,
     /// Maximum output size (bytes).
     pub max_output_bytes: u32,
-    /// Maximum memory (bytes) the op may allocate on the hot path.
-    pub max_memory_bytes: u32,
+    /// Maximum memory (bytes) admitted for one invocation, including cold builders.
+    pub max_memory_bytes: u64,
     /// Maximum wall-clock time in microseconds (0 = unbounded).
     pub max_time_us: u32,
 }

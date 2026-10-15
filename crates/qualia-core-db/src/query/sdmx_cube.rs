@@ -78,10 +78,7 @@ pub struct SdmxObservation {
 /// Context field embeds sensitivity class in MSB bits `[56..63]`.
 /// Metadata embeds epistemic certainty weight in bits `[0..15]`.
 /// Zero-heap caller-buffered.
-pub fn compile_observation_to_quins(
-    obs: &SdmxObservation,
-    out: &mut [NQuin],
-) -> usize {
+pub fn compile_observation_to_quins(obs: &SdmxObservation, out: &mut [NQuin]) -> usize {
     if out.len() < 6 {
         return 0;
     }
@@ -99,7 +96,8 @@ pub fn compile_observation_to_quins(
         | ((obs.confidentiality.sensitivity_class() as u64) << 56);
 
     // Embed certainty in bits [0..15] of metadata
-    let certainty_u16 = ((obs.confidentiality.epistemic_certainty() * 65535.0).clamp(0.0, 65535.0)) as u64;
+    let certainty_u16 =
+        ((obs.confidentiality.epistemic_certainty() * 65535.0).clamp(0.0, 65535.0)) as u64;
     let metadata = certainty_u16;
 
     let make_q = |p: u64, o: u64| {
@@ -206,26 +204,58 @@ pub fn parse_sdmx_csv_into(csv: &str, out: &mut [SdmxObservation]) -> usize {
             continue;
         }
 
-        let dataset_str = if col_dataflow < num_fields { fields[col_dataflow] } else { "default_dataset" };
-        let area_str = if col_area < num_fields { fields[col_area] } else { "global" };
-        let time_str = if col_time < num_fields { fields[col_time] } else { "2026" };
-        let measure_str = if col_measure < num_fields { fields[col_measure] } else { "value" };
-        let val_str = if col_val < num_fields { fields[col_val] } else { "0" };
-        let conf_str = if col_conf < num_fields { fields[col_conf] } else { "F" };
+        let dataset_str = if col_dataflow < num_fields {
+            fields[col_dataflow]
+        } else {
+            "default_dataset"
+        };
+        let area_str = if col_area < num_fields {
+            fields[col_area]
+        } else {
+            "global"
+        };
+        let time_str = if col_time < num_fields {
+            fields[col_time]
+        } else {
+            "2026"
+        };
+        let measure_str = if col_measure < num_fields {
+            fields[col_measure]
+        } else {
+            "value"
+        };
+        let val_str = if col_val < num_fields {
+            fields[col_val]
+        } else {
+            "0"
+        };
+        let conf_str = if col_conf < num_fields {
+            fields[col_conf]
+        } else {
+            "F"
+        };
 
         let val: f64 = match val_str.parse() {
             Ok(v) => v,
             Err(_) => continue,
         };
 
-        let time_period: u32 = time_str.split('-').next().unwrap_or("2026").parse().unwrap_or(2026);
+        let time_period: u32 = time_str
+            .split('-')
+            .next()
+            .unwrap_or("2026")
+            .parse()
+            .unwrap_or(2026);
         let dataset_id = q_hash(dataset_str);
         let geo_region = q_hash(area_str);
         let measure_uri = q_hash(measure_str);
         let confidentiality = parse_conf_status(conf_str);
 
         // Deterministic observation ID: FNV hash fold
-        let observation_id = dataset_id ^ (time_period as u64) ^ (geo_region.rotate_left(16)) ^ (measure_uri.rotate_left(32));
+        let observation_id = dataset_id
+            ^ (time_period as u64)
+            ^ (geo_region.rotate_left(16))
+            ^ (measure_uri.rotate_left(32));
 
         out[written] = SdmxObservation {
             dataset_id,
@@ -294,7 +324,10 @@ mod tests {
         let mut quins = [NQuin::default(); 6];
         let n = compile_observation_to_quins(&obs, &mut quins);
         assert_eq!(n, 6);
-        assert_eq!(quins[0].predicate, q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
+        assert_eq!(
+            quins[0].predicate,
+            q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+        );
         assert_eq!(quins[0].object, q_hash(QB_OBSERVATION));
         // Sensitivity class is 0 (public)
         assert_eq!(quins[0].context >> 56, 0);
@@ -354,10 +387,16 @@ ABS_LAND_ACCOUNT_2026,NSW,2026,HECTARES,45000.0,E
         assert_eq!(obs[0].confidentiality, ConfidentialityMark::Public);
 
         assert_eq!(obs[1].geo_region, q_hash("VIC"));
-        assert_eq!(obs[1].confidentiality, ConfidentialityMark::SuppressedForPrivacy);
+        assert_eq!(
+            obs[1].confidentiality,
+            ConfidentialityMark::SuppressedForPrivacy
+        );
 
         assert_eq!(obs[2].geo_region, q_hash("NSW"));
-        assert_eq!(obs[2].confidentiality, ConfidentialityMark::ModelledEstimate);
+        assert_eq!(
+            obs[2].confidentiality,
+            ConfidentialityMark::ModelledEstimate
+        );
     }
 
     #[test]
@@ -371,7 +410,10 @@ ABS_LAND_ACCOUNT_2026,VIC,2026,HECTARES,32000.0,C
         // 2 observations * 6 quins = 12 quins
         assert_eq!(n, 12);
         // Check first observation quins
-        assert_eq!(quins[0].predicate, q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
+        assert_eq!(
+            quins[0].predicate,
+            q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+        );
         assert_eq!(quins[0].object, q_hash(QB_OBSERVATION));
         // Check second observation (suppressed) has restricted sensitivity
         assert_eq!(quins[6].context >> 56, 1);

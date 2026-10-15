@@ -1,8 +1,8 @@
 //! Viewport state settings, camera transforms, lighting presets, and temporal resolve configuration.
 
 use super::super::{
-    ao, atmosphere, output_pass, temporal_resolve_gpu, PortalGpu,
-    TemporalProducerAvailability, TemporalSubmissionState,
+    ao, atmosphere, output_pass, temporal_resolve_gpu, PortalGpu, TemporalProducerAvailability,
+    TemporalSubmissionState,
 };
 use crate::render::atmosphere::AtmospherePreset;
 use crate::render::camera::CameraState;
@@ -62,7 +62,6 @@ impl PortalGpu {
         self.ao_targets.as_ref().map(ao::AoTargets::extent)
     }
 
-
     /// Drive the loaded mesh by a kinematic joint (Phase 2). `None` freezes it at identity.
     pub fn set_artefact_joint(&mut self, joint: Option<Joint>) {
         self.artefact_joint = joint;
@@ -100,14 +99,13 @@ impl PortalGpu {
         self.shadow_target.as_ref().map(|target| target.resolution)
     }
 
-
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
         let current_target = self.camera.target;
         let sun_dir = self.camera.sun_dir;
         let sun_intensity = self.camera.sun_intensity;
         let ambient_intensity = self.camera.ambient_intensity;
         self.camera = CameraState {
-            near_plane:self.camera.near_plane,
+            near_plane: self.camera.near_plane,
             yaw,
             pitch,
             zoom,
@@ -119,9 +117,14 @@ impl PortalGpu {
         .clamped();
         self.temporal_reset_pending = true;
     }
-    pub fn set_camera_near_plane(&mut self,near:f32)->bool {
-        if !near.is_finite()||!(0.00001..=1.0).contains(&near) {return false;}
-        if near!=self.camera.near_plane {self.camera.near_plane=near;self.invalidate_temporal_history();}
+    pub fn set_camera_near_plane(&mut self, near: f32) -> bool {
+        if !near.is_finite() || !(0.00001..=1.0).contains(&near) {
+            return false;
+        }
+        if near != self.camera.near_plane {
+            self.camera.near_plane = near;
+            self.invalidate_temporal_history();
+        }
         true
     }
 
@@ -147,7 +150,7 @@ impl PortalGpu {
             pitch,
             zoom,
             target: [target_x, target_y, target_z],
-            near_plane:self.camera.near_plane,
+            near_plane: self.camera.near_plane,
             sun_dir,
             sun_intensity,
             ambient_intensity,
@@ -251,7 +254,11 @@ impl PortalGpu {
         self.bloom
             .as_ref()
             .map(|bloom| &bloom.hdr_view)
-            .or_else(|| self.output_chain.as_ref().map(output_pass::OutputChain::scene_view))
+            .or_else(|| {
+                self.output_chain
+                    .as_ref()
+                    .map(output_pass::OutputChain::scene_view)
+            })
     }
 
     /// Report producer ownership before a host attempts a temporal submission.
@@ -304,14 +311,18 @@ impl PortalGpu {
     }
 
     /// Current camera view-projection matrix (column-major).
-    pub fn current_camera_view_projection(&self) -> crate::render::temporal_producers::Mat4ColumnMajor {
+    pub fn current_camera_view_projection(
+        &self,
+    ) -> crate::render::temporal_producers::Mat4ColumnMajor {
         let aspect = self.width as f32 / self.height.max(1) as f32;
         let raw = self.camera.view_projection(aspect);
         crate::render::temporal_producers::Mat4ColumnMajor::from_cols(raw)
     }
 
     /// Previous frame's camera view-projection matrix, if history is valid.
-    pub fn previous_camera_view_projection(&self) -> Option<crate::render::temporal_producers::Mat4ColumnMajor> {
+    pub fn previous_camera_view_projection(
+        &self,
+    ) -> Option<crate::render::temporal_producers::Mat4ColumnMajor> {
         self.previous_camera_view_projection
     }
 
@@ -340,13 +351,7 @@ impl PortalGpu {
                 if self.ambient_enabled { 0.5 } else { 0.0 },
                 0.0,
             ];
-            producers.record_producers(
-                encoder,
-                &self.queue,
-                inv_curr,
-                prev,
-                reactive_weights,
-            );
+            producers.record_producers(encoder, &self.queue, inv_curr, prev, reactive_weights);
         }
     }
 
@@ -395,5 +400,4 @@ impl PortalGpu {
         }
         recorded
     }
-
 }

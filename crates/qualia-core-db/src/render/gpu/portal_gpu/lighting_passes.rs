@@ -1,8 +1,6 @@
 //! Ambient occlusion, cascaded sun shadows, and transparent draw sorting for PortalGpu.
 
-use super::super::{
-    ao, create_mesh_frame_bind, motor_to_mat4_col, shadows, PortalGpu,
-};
+use super::super::{ao, create_mesh_frame_bind, motor_to_mat4_col, shadows, PortalGpu};
 
 impl PortalGpu {
     pub(super) fn sort_transparent_draws(&mut self) {

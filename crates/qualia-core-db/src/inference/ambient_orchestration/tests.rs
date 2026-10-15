@@ -264,7 +264,12 @@ fn test_manager_power_monitoring_integration() {
 
 #[test]
 fn test_scheduler_ordering_qualification() {
-    fn make_test_task(id: &str, priority: TaskPriority, duration_ms: u64, deadline: Option<Instant>) -> Task {
+    fn make_test_task(
+        id: &str,
+        priority: TaskPriority,
+        duration_ms: u64,
+        deadline: Option<Instant>,
+    ) -> Task {
         Task {
             task_id: id.to_string(),
             task_type: TaskType::NeuralInference,
@@ -285,9 +290,15 @@ fn test_scheduler_ordering_qualification() {
     // 1. Priority scheduling: highest priority dispatched first
     let mut sched = TaskScheduler::new();
     sched.set_policy(SchedulingPolicy::Priority);
-    sched.submit_task(make_test_task("low", TaskPriority::Low, 100, None)).unwrap();
-    sched.submit_task(make_test_task("high", TaskPriority::High, 100, None)).unwrap();
-    sched.submit_task(make_test_task("normal", TaskPriority::Normal, 100, None)).unwrap();
+    sched
+        .submit_task(make_test_task("low", TaskPriority::Low, 100, None))
+        .unwrap();
+    sched
+        .submit_task(make_test_task("high", TaskPriority::High, 100, None))
+        .unwrap();
+    sched
+        .submit_task(make_test_task("normal", TaskPriority::Normal, 100, None))
+        .unwrap();
 
     assert_eq!(sched.dispatch_next().unwrap().task_id, "high");
     assert_eq!(sched.dispatch_next().unwrap().task_id, "normal");
@@ -297,9 +308,15 @@ fn test_scheduler_ordering_qualification() {
     // 2. FIFO scheduling: first submitted dispatched first
     let mut sched = TaskScheduler::new();
     sched.set_policy(SchedulingPolicy::Fifo);
-    sched.submit_task(make_test_task("first", TaskPriority::Normal, 100, None)).unwrap();
-    sched.submit_task(make_test_task("second", TaskPriority::Normal, 100, None)).unwrap();
-    sched.submit_task(make_test_task("third", TaskPriority::Normal, 100, None)).unwrap();
+    sched
+        .submit_task(make_test_task("first", TaskPriority::Normal, 100, None))
+        .unwrap();
+    sched
+        .submit_task(make_test_task("second", TaskPriority::Normal, 100, None))
+        .unwrap();
+    sched
+        .submit_task(make_test_task("third", TaskPriority::Normal, 100, None))
+        .unwrap();
 
     assert_eq!(sched.dispatch_next().unwrap().task_id, "first");
     assert_eq!(sched.dispatch_next().unwrap().task_id, "second");
@@ -309,9 +326,15 @@ fn test_scheduler_ordering_qualification() {
     // 3. Shortest Job First: shortest estimated duration dispatched first
     let mut sched = TaskScheduler::new();
     sched.set_policy(SchedulingPolicy::ShortestJobFirst);
-    sched.submit_task(make_test_task("long", TaskPriority::Normal, 500, None)).unwrap();
-    sched.submit_task(make_test_task("short", TaskPriority::Normal, 50, None)).unwrap();
-    sched.submit_task(make_test_task("medium", TaskPriority::Normal, 200, None)).unwrap();
+    sched
+        .submit_task(make_test_task("long", TaskPriority::Normal, 500, None))
+        .unwrap();
+    sched
+        .submit_task(make_test_task("short", TaskPriority::Normal, 50, None))
+        .unwrap();
+    sched
+        .submit_task(make_test_task("medium", TaskPriority::Normal, 200, None))
+        .unwrap();
 
     assert_eq!(sched.dispatch_next().unwrap().task_id, "short");
     assert_eq!(sched.dispatch_next().unwrap().task_id, "medium");
@@ -322,9 +345,30 @@ fn test_scheduler_ordering_qualification() {
     let mut sched = TaskScheduler::new();
     sched.set_policy(SchedulingPolicy::Deadline);
     let now = Instant::now();
-    sched.submit_task(make_test_task("no_deadline", TaskPriority::Normal, 100, None)).unwrap();
-    sched.submit_task(make_test_task("late", TaskPriority::Normal, 100, Some(now + Duration::from_secs(60)))).unwrap();
-    sched.submit_task(make_test_task("urgent", TaskPriority::Normal, 100, Some(now + Duration::from_secs(5)))).unwrap();
+    sched
+        .submit_task(make_test_task(
+            "no_deadline",
+            TaskPriority::Normal,
+            100,
+            None,
+        ))
+        .unwrap();
+    sched
+        .submit_task(make_test_task(
+            "late",
+            TaskPriority::Normal,
+            100,
+            Some(now + Duration::from_secs(60)),
+        ))
+        .unwrap();
+    sched
+        .submit_task(make_test_task(
+            "urgent",
+            TaskPriority::Normal,
+            100,
+            Some(now + Duration::from_secs(5)),
+        ))
+        .unwrap();
 
     assert_eq!(sched.dispatch_next().unwrap().task_id, "urgent");
     assert_eq!(sched.dispatch_next().unwrap().task_id, "late");

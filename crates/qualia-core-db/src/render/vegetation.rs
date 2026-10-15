@@ -191,7 +191,11 @@ mod tests {
 
     #[test]
     fn vegetation_stays_undisplaced_without_colliders_and_wind() {
-        let mut instances = [VegetationInstanceState::new(identity_transform(0.0, 0.0, 0.0), 1.0, 42)];
+        let mut instances = [VegetationInstanceState::new(
+            identity_transform(0.0, 0.0, 0.0),
+            1.0,
+            42,
+        )];
         let colliders = [];
         let params = VegetationBendingParams {
             stiffness: 0.5,
@@ -219,7 +223,11 @@ mod tests {
 
     #[test]
     fn vegetation_bends_away_from_intruding_collider() {
-        let mut instances = [VegetationInstanceState::new(identity_transform(1.0, 0.0, 0.0), 1.0, 101)];
+        let mut instances = [VegetationInstanceState::new(
+            identity_transform(1.0, 0.0, 0.0),
+            1.0,
+            101,
+        )];
         // Collider placed at origin, overlapping instance at (1.0, 0, 0)
         let colliders = [VegetationCollider {
             position: [0.0, 0.0, 0.0],

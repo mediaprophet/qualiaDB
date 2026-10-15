@@ -17,8 +17,8 @@
 //! | `0x1A` | `u16` | `roughness` | Aggregate perceptual roughness in f16 (2 bytes) |
 //! | `0x1C` | `u32` | `flags` | Material bitmask / hierarchy indices (4 bytes) |
 
-use bytemuck::{bytes_of, cast_slice, Pod, Zeroable};
 use crate::modalities::evidential_etau::f32_to_f16;
+use bytemuck::{bytes_of, cast_slice, Pod, Zeroable};
 
 pub const SURFEL_SECTION_VERSION: u16 = 1;
 pub const SURFEL_MINI_HEADER_SIZE: usize = 64;
@@ -71,7 +71,10 @@ impl core::fmt::Display for SurfelSectionError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::PayloadTooShort { need, have } => {
-                write!(f, "surfel section payload too short: have {have}, need {need}")
+                write!(
+                    f,
+                    "surfel section payload too short: have {have}, need {need}"
+                )
             }
             Self::BadMagic(m) => write!(f, "bad surfel section magic: {m:?}"),
             Self::UnsupportedVersion(v) => write!(f, "unsupported surfel section version {v}"),
@@ -79,10 +82,16 @@ impl core::fmt::Display for SurfelSectionError {
                 write!(f, "buffer too small: have {have}, need {need}")
             }
             Self::StrideMismatch { expected, actual } => {
-                write!(f, "surfel stride mismatch: expected {expected}, actual {actual}")
+                write!(
+                    f,
+                    "surfel stride mismatch: expected {expected}, actual {actual}"
+                )
             }
             Self::PayloadLengthMismatch { declared, actual } => {
-                write!(f, "surfel payload length mismatch: declared {declared}, actual {actual}")
+                write!(
+                    f,
+                    "surfel payload length mismatch: declared {declared}, actual {actual}"
+                )
             }
             Self::DegenerateCluster => write!(f, "degenerate cluster geometry"),
         }
@@ -160,7 +169,11 @@ pub fn decode_surfel_section<'a>(
 
 #[inline]
 fn sign_not_zero(val: f32) -> f32 {
-    if val < 0.0 { -1.0 } else { 1.0 }
+    if val < 0.0 {
+        -1.0
+    } else {
+        1.0
+    }
 }
 
 /// Encode a 3D unit normal vector into a 32-bit octahedral representation (two i16s packed into u32).
@@ -422,14 +435,8 @@ mod tests {
         ];
         let indices = [0, 1, 2, 1, 3, 2]; // 2 triangles forming a quad on z=0
 
-        let surfel = generate_surfel_from_cluster(
-            &vertices,
-            &indices,
-            [0.1, -0.5, 0.8],
-            0.4,
-            0,
-        )
-        .unwrap();
+        let surfel =
+            generate_surfel_from_cluster(&vertices, &indices, [0.1, -0.5, 0.8], 0.4, 0).unwrap();
 
         assert!((surfel.position[0] - 0.5).abs() < 1e-4);
         assert!((surfel.position[1] - 0.5).abs() < 1e-4);

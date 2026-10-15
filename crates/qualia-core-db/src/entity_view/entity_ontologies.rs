@@ -246,7 +246,11 @@ impl EntityOntology {
 
     /// Add an affordance to the entity ontology.
     pub fn add_affordance(&mut self, affordance: ActionAffordance) {
-        if let Some(pos) = self.affordances.iter().position(|a| a.action_id == affordance.action_id) {
+        if let Some(pos) = self
+            .affordances
+            .iter()
+            .position(|a| a.action_id == affordance.action_id)
+        {
             self.affordances[pos] = affordance;
         } else {
             self.affordances.push(affordance);
@@ -269,7 +273,10 @@ impl EntityOntology {
                 "      \"description\": \"{}\",\n",
                 aff.description.replace('"', "\\\"")
             ));
-            out.push_str(&format!("      \"parameters\": {}\n", aff.input_schema_json));
+            out.push_str(&format!(
+                "      \"parameters\": {}\n",
+                aff.input_schema_json
+            ));
             out.push_str("    }\n");
             out.push_str("  }");
         }
@@ -334,8 +341,8 @@ impl EntityOntology {
             .clamp(0, 1000) as u16;
         let new_hydration = ((self.hydration_permill as i32) + (aff.effects.hydration_delta as i32))
             .clamp(0, 1000) as u16;
-        let new_wear = ((self.wear_permill as i32) + (aff.effects.wear_delta as i32))
-            .clamp(0, 1000) as u16;
+        let new_wear =
+            ((self.wear_permill as i32) + (aff.effects.wear_delta as i32)).clamp(0, 1000) as u16;
 
         // 4. Construct 48-byte Super-Quin representing the executed action event
         let subject = self.entity_id.0;
@@ -445,17 +452,36 @@ pub struct ActionEvaluationVerdict {
 /// Errors returned when an action intent cannot be admitted or executed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IntentError {
-    AffordanceNotFound { action_id: u64 },
+    AffordanceNotFound {
+        action_id: u64,
+    },
     PermissionDenied {
         required: ObserverStatus,
         provided: ObserverStatus,
     },
-    InsufficientEnergy { have: u16, need: u16 },
-    ExcessiveDamage { have: u16, max_allowed: u16 },
-    InsufficientHydration { have: u16, need: u16 },
-    ExcessiveWear { have: u16, max_allowed: u16 },
-    MissingCapability { required_hash: u64 },
-    OutputBufferTooSmall { needed: usize, have: usize },
+    InsufficientEnergy {
+        have: u16,
+        need: u16,
+    },
+    ExcessiveDamage {
+        have: u16,
+        max_allowed: u16,
+    },
+    InsufficientHydration {
+        have: u16,
+        need: u16,
+    },
+    ExcessiveWear {
+        have: u16,
+        max_allowed: u16,
+    },
+    MissingCapability {
+        required_hash: u64,
+    },
+    OutputBufferTooSmall {
+        needed: usize,
+        have: usize,
+    },
 }
 
 impl std::fmt::Display for IntentError {
@@ -465,19 +491,28 @@ impl std::fmt::Display for IntentError {
                 write!(f, "affordance {action_id:#018x} not found on entity")
             }
             Self::PermissionDenied { required, provided } => {
-                write!(f, "permission denied: required {required:?}, got {provided:?}")
+                write!(
+                    f,
+                    "permission denied: required {required:?}, got {provided:?}"
+                )
             }
             Self::InsufficientEnergy { have, need } => {
                 write!(f, "insufficient energy: have {have}‰, need {need}‰")
             }
             Self::ExcessiveDamage { have, max_allowed } => {
-                write!(f, "excessive damage: have {have}‰, max allowed {max_allowed}‰")
+                write!(
+                    f,
+                    "excessive damage: have {have}‰, max allowed {max_allowed}‰"
+                )
             }
             Self::InsufficientHydration { have, need } => {
                 write!(f, "insufficient hydration: have {have}‰, need {need}‰")
             }
             Self::ExcessiveWear { have, max_allowed } => {
-                write!(f, "excessive wear: have {have}‰, max allowed {max_allowed}‰")
+                write!(
+                    f,
+                    "excessive wear: have {have}‰, max allowed {max_allowed}‰"
+                )
             }
             Self::MissingCapability { required_hash } => {
                 write!(f, "missing required capability {required_hash:#018x}")
@@ -527,7 +562,9 @@ mod tests {
         assert!(matches!(fail, Err(IntentError::PermissionDenied { .. })));
 
         // Authorized caller (Steward)
-        let verdict = onto.evaluate_intent(&intent, ObserverStatus::Steward).unwrap();
+        let verdict = onto
+            .evaluate_intent(&intent, ObserverStatus::Steward)
+            .unwrap();
         assert_eq!(verdict.new_energy, 700);
         assert_eq!(verdict.new_damage, 30);
         assert_eq!(verdict.animation_clip_id, 42);

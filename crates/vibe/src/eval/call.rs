@@ -274,216 +274,210 @@ impl<'a, H: Host> Engine<'a, H> {
     ) -> Result<Value, Diagnostic> {
         let recv_val = self.eval_expr(recv, env)?;
         match recv_val {
-            Value::List(items) => {
-                match name {
-                    "map" | "filter" | "find" | "any" | "some" | "all" | "every" => {
-                        let lambda = match args.first() {
-                            Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
-                            _ => {
-                                return Err(Diagnostic::new(
-                                    DiagCode::E100,
-                                    span,
-                                    format!(".{name} requires a lambda argument"),
-                                ));
-                            }
-                        };
-                        let Value::Lambda { params, body } = lambda else {
+            Value::List(items) => match name {
+                "map" | "filter" | "find" | "any" | "some" | "all" | "every" => {
+                    let lambda = match args.first() {
+                        Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
+                        _ => {
                             return Err(Diagnostic::new(
                                 DiagCode::E100,
                                 span,
-                                format!(".{name} requires a non-capturing lambda"),
+                                format!(".{name} requires a lambda argument"),
                             ));
-                        };
-                        if name == "find" {
-                            for item in items {
-                                let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
-                                if v.is_truthy() {
-                                    return Ok(item);
-                                }
-                            }
-                            return Ok(Value::Null);
                         }
-                        if name == "any" || name == "some" {
-                            for item in items {
-                                let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
-                                if v.is_truthy() {
-                                    return Ok(Value::Bool(true));
-                                }
-                            }
-                            return Ok(Value::Bool(false));
-                        }
-                        if name == "all" || name == "every" {
-                            for item in items {
-                                let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
-                                if !v.is_truthy() {
-                                    return Ok(Value::Bool(false));
-                                }
-                            }
-                            return Ok(Value::Bool(true));
-                        }
-                        let mut out = Vec::new();
+                    };
+                    let Value::Lambda { params, body } = lambda else {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            span,
+                            format!(".{name} requires a non-capturing lambda"),
+                        ));
+                    };
+                    if name == "find" {
                         for item in items {
                             let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
-                            if name == "filter" {
-                                if v.is_truthy() {
-                                    out.push(item);
-                                }
-                            } else {
-                                out.push(v);
+                            if v.is_truthy() {
+                                return Ok(item);
                             }
                         }
-                        self.budget.charge(24 + out.len() as u64 * 16, span)?;
-                        Ok(Value::List(out))
+                        return Ok(Value::Null);
                     }
-                    "contains" | "includes" => {
-                        let target = match args.first() {
-                            Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
-                            _ => Value::Null,
-                        };
-                        Ok(Value::Bool(items.contains(&target)))
+                    if name == "any" || name == "some" {
+                        for item in items {
+                            let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
+                            if v.is_truthy() {
+                                return Ok(Value::Bool(true));
+                            }
+                        }
+                        return Ok(Value::Bool(false));
                     }
-                    "join" => {
-                        let sep = match args.first() {
-                            Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
-                                Value::String(s) => s,
-                                _ => "".into(),
-                            },
-                            _ => "".into(),
-                        };
-                        let joined = items
-                            .iter()
-                            .map(|x| match x {
-                                Value::String(s) => s.clone(),
-                                Value::F64(n) => n.to_string(),
-                                Value::I64(n) => n.to_string(),
-                                Value::Bool(b) => b.to_string(),
-                                _ => format!("{x:?}"),
-                            })
-                            .collect::<Vec<_>>()
-                            .join(&sep);
-                        Ok(Value::String(joined))
+                    if name == "all" || name == "every" {
+                        for item in items {
+                            let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
+                            if !v.is_truthy() {
+                                return Ok(Value::Bool(false));
+                            }
+                        }
+                        return Ok(Value::Bool(true));
                     }
-                    "push" => {
-                        let val = match args.first() {
-                            Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
-                            _ => Value::Null,
-                        };
-                        let mut copy = items;
-                        copy.push(val);
-                        Ok(Value::List(copy))
+                    let mut out = Vec::new();
+                    for item in items {
+                        let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
+                        if name == "filter" {
+                            if v.is_truthy() {
+                                out.push(item);
+                            }
+                        } else {
+                            out.push(v);
+                        }
                     }
-                    "slice" => {
-                        let start = args
-                            .first()
-                            .and_then(|a| match a {
-                                Arg::Pos(e) => self.eval_expr(e, env).ok(),
-                                _ => None,
-                            })
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0)
-                            .max(0) as usize;
-                        let end = args
-                            .get(1)
-                            .and_then(|a| match a {
-                                Arg::Pos(e) => self.eval_expr(e, env).ok(),
-                                _ => None,
-                            })
-                            .and_then(|v| v.as_i64())
-                            .map(|n| n.max(0) as usize)
-                            .unwrap_or(items.len());
-                        let slice = items
-                            .get(start..end.min(items.len()))
-                            .unwrap_or(&[])
-                            .to_vec();
-                        Ok(Value::List(slice))
-                    }
-                    _ => Err(Diagnostic::new(
-                        DiagCode::E600,
-                        span,
-                        format!("unknown method `{name}` on list"),
-                    )),
+                    self.budget.charge(24 + out.len() as u64 * 16, span)?;
+                    Ok(Value::List(out))
                 }
-            }
-            Value::String(s) => {
-                match name {
-                    "contains" | "includes" => {
-                        let target = match args.first() {
-                            Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
-                                Value::String(sub) => sub,
-                                _ => "".into(),
-                            },
-                            _ => "".into(),
-                        };
-                        Ok(Value::Bool(s.contains(&target)))
-                    }
-                    "starts_with" => {
-                        let prefix = match args.first() {
-                            Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
-                                Value::String(sub) => sub,
-                                _ => "".into(),
-                            },
-                            _ => "".into(),
-                        };
-                        Ok(Value::Bool(s.starts_with(&prefix)))
-                    }
-                    "ends_with" => {
-                        let suffix = match args.first() {
-                            Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
-                                Value::String(sub) => sub,
-                                _ => "".into(),
-                            },
-                            _ => "".into(),
-                        };
-                        Ok(Value::Bool(s.ends_with(&suffix)))
-                    }
-                    "replace" => {
-                        let from = match args.first() {
-                            Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
-                                Value::String(sub) => sub,
-                                _ => "".into(),
-                            },
-                            _ => "".into(),
-                        };
-                        let to = match args.get(1) {
-                            Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
-                                Value::String(sub) => sub,
-                                _ => "".into(),
-                            },
-                            _ => "".into(),
-                        };
-                        Ok(Value::String(s.replace(&from, &to)))
-                    }
-                    "trim" => Ok(Value::String(s.trim().to_string())),
-                    _ => Err(Diagnostic::new(
-                        DiagCode::E600,
-                        span,
-                        format!("unknown method `{name}` on string"),
-                    )),
+                "contains" | "includes" => {
+                    let target = match args.first() {
+                        Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
+                        _ => Value::Null,
+                    };
+                    Ok(Value::Bool(items.contains(&target)))
                 }
-            }
-            Value::Record(rec) => {
-                match name {
-                    "contains" | "has" => {
-                        let key = match args.first() {
-                            Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
-                                Value::String(k) => k,
-                                _ => "".into(),
-                            },
+                "join" => {
+                    let sep = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(s) => s,
                             _ => "".into(),
-                        };
-                        Ok(Value::Bool(rec.contains_key(&key)))
-                    }
-                    "keys" => {
-                        let keys = rec.keys().cloned().map(Value::String).collect();
-                        Ok(Value::List(keys))
-                    }
-                    _ => Err(Diagnostic::new(
-                        DiagCode::E600,
-                        span,
-                        format!("unknown method `{name}` on record"),
-                    )),
+                        },
+                        _ => "".into(),
+                    };
+                    let joined = items
+                        .iter()
+                        .map(|x| match x {
+                            Value::String(s) => s.clone(),
+                            Value::F64(n) => n.to_string(),
+                            Value::I64(n) => n.to_string(),
+                            Value::Bool(b) => b.to_string(),
+                            _ => format!("{x:?}"),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(&sep);
+                    Ok(Value::String(joined))
                 }
-            }
+                "push" => {
+                    let val = match args.first() {
+                        Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
+                        _ => Value::Null,
+                    };
+                    let mut copy = items;
+                    copy.push(val);
+                    Ok(Value::List(copy))
+                }
+                "slice" => {
+                    let start = args
+                        .first()
+                        .and_then(|a| match a {
+                            Arg::Pos(e) => self.eval_expr(e, env).ok(),
+                            _ => None,
+                        })
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0)
+                        .max(0) as usize;
+                    let end = args
+                        .get(1)
+                        .and_then(|a| match a {
+                            Arg::Pos(e) => self.eval_expr(e, env).ok(),
+                            _ => None,
+                        })
+                        .and_then(|v| v.as_i64())
+                        .map(|n| n.max(0) as usize)
+                        .unwrap_or(items.len());
+                    let slice = items
+                        .get(start..end.min(items.len()))
+                        .unwrap_or(&[])
+                        .to_vec();
+                    Ok(Value::List(slice))
+                }
+                _ => Err(Diagnostic::new(
+                    DiagCode::E600,
+                    span,
+                    format!("unknown method `{name}` on list"),
+                )),
+            },
+            Value::String(s) => match name {
+                "contains" | "includes" => {
+                    let target = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(s.contains(&target)))
+                }
+                "starts_with" => {
+                    let prefix = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(s.starts_with(&prefix)))
+                }
+                "ends_with" => {
+                    let suffix = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(s.ends_with(&suffix)))
+                }
+                "replace" => {
+                    let from = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    let to = match args.get(1) {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::String(s.replace(&from, &to)))
+                }
+                "trim" => Ok(Value::String(s.trim().to_string())),
+                _ => Err(Diagnostic::new(
+                    DiagCode::E600,
+                    span,
+                    format!("unknown method `{name}` on string"),
+                )),
+            },
+            Value::Record(rec) => match name {
+                "contains" | "has" => {
+                    let key = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(k) => k,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(rec.contains_key(&key)))
+                }
+                "keys" => {
+                    let keys = rec.keys().cloned().map(Value::String).collect();
+                    Ok(Value::List(keys))
+                }
+                _ => Err(Diagnostic::new(
+                    DiagCode::E600,
+                    span,
+                    format!("unknown method `{name}` on record"),
+                )),
+            },
             other => Err(Diagnostic::new(
                 DiagCode::E600,
                 span,

@@ -162,7 +162,7 @@ fn solve_3x3(a: [[f32; 3]; 3], b: [f32; 3]) -> Option<[f32; 3]> {
 pub fn invert_srgb_to_coeffs(target_srgb: [f32; 3], initial_guess: [f32; 3]) -> [f32; 3] {
     let mut c = initial_guess;
     let mut lambda_lm = 1e-3f32;
-    let gamma = 1e-4f32; // Curvature penalty weight
+    let gamma = 1e-6f32; // Curvature penalty weight; retain neutral-color accuracy
     let epsilon = 1e-6f32; // Magnitude regularizer
 
     for _ in 0..15 {
@@ -182,13 +182,16 @@ pub fn invert_srgb_to_coeffs(target_srgb: [f32; 3], initial_guess: [f32; 3]) -> 
         let mut jt_j = [[0.0f32; 3]; 3];
         for row in 0..3 {
             for col in 0..3 {
-                jt_j[row][col] = j[0][row] * j[0][col] + j[1][row] * j[1][col] + j[2][row] * j[2][col];
+                jt_j[row][col] =
+                    j[0][row] * j[0][col] + j[1][row] * j[1][col] + j[2][row] * j[2][col];
             }
         }
 
         // Form J^T e (gradient)
         let g = [
-            j[0][0] * err[0] + j[1][0] * err[1] + j[2][0] * err[2] - (8.0 * gamma * c[0]) - 2.0 * epsilon * c[0],
+            j[0][0] * err[0] + j[1][0] * err[1] + j[2][0] * err[2]
+                - (8.0 * gamma * c[0])
+                - 2.0 * epsilon * c[0],
             j[0][1] * err[0] + j[1][1] * err[1] + j[2][1] * err[2] - 2.0 * epsilon * c[1],
             j[0][2] * err[0] + j[1][2] * err[1] + j[2][2] * err[2] - 2.0 * epsilon * c[2],
         ];
@@ -210,7 +213,8 @@ pub fn invert_srgb_to_coeffs(target_srgb: [f32; 3], initial_guess: [f32; 3]) -> 
                 target_srgb[1] - cand_srgb[1],
                 target_srgb[2] - cand_srgb[2],
             ];
-            let cand_norm_sq = cand_err[0] * cand_err[0] + cand_err[1] * cand_err[1] + cand_err[2] * cand_err[2];
+            let cand_norm_sq =
+                cand_err[0] * cand_err[0] + cand_err[1] * cand_err[1] + cand_err[2] * cand_err[2];
 
             if cand_norm_sq < err_norm_sq {
                 c = candidate_c;
@@ -336,7 +340,7 @@ mod tests {
         let (recovered, _) = project_coeffs_to_srgb(coeffs);
 
         assert!((recovered[0] - 0.5).abs() < 0.02);
-        assert!((recovered[1] - 0.5).abs() < 0.02);
+        assert!((recovered[1] - 0.5).abs() < 0.02, "recovered={recovered:?}, coeffs={coeffs:?}");
         assert!((recovered[2] - 0.5).abs() < 0.02);
     }
 

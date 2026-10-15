@@ -768,7 +768,7 @@ mod tests {
         {"type":"way","id":11,"nodes":[20,21,22,23,20],"geometry":[{"lat":-37.8190,"lon":144.9660},{"lat":-37.8190,"lon":144.9664},{"lat":-37.8186,"lon":144.9664},{"lat":-37.8186,"lon":144.9660},{"lat":-37.8190,"lon":144.9660}],"tags":{"building":"yes","name":"Town Hall"}},
         {"type":"way","id":30,"geometry":[{"lat":-37.8200,"lon":144.9650},{"lat":-37.8200,"lon":144.9655},{"lat":-37.8195,"lon":144.9655}],"tags":{"type":"route"}},
         {"type":"relation","id":40,"members":[
-          {"type":"way","ref":50,"role":"outer","geometry":[{"lat":-37.8210,"lon":144.9640},{"lat":-37.8210,"lon":144.9650},{"lat":-37.8200,"lon":144.9650},{"lat":-37.8210,"lon":144.9640}]},
+          {"type":"way","ref":50,"role":"outer","geometry":[{"lat":-37.8210,"lon":144.9640},{"lat":-37.8210,"lon":144.9650},{"lat":-37.8200,"lon":144.9650},{"lat":-37.8200,"lon":144.9640},{"lat":-37.8210,"lon":144.9640}]},
           {"type":"way","ref":51,"role":"inner","geometry":[{"lat":-37.8208,"lon":144.9642},{"lat":-37.8206,"lon":144.9642},{"lat":-37.8206,"lon":144.9644},{"lat":-37.8208,"lon":144.9644},{"lat":-37.8208,"lon":144.9642}]}
         ],"tags":{"type":"multipolygon","landuse":"forest"}}
       ]
@@ -821,36 +821,25 @@ mod tests {
     #[test]
     fn parses_nodes_ways_polygons_and_multipolygon_holes() {
         let features = adapter().parse_vector_features(FIXTURE).unwrap();
-        assert_eq!(features.len(), 6);
+        assert_eq!(features.len(), 7);
         assert!(matches!(features[0].geometry, Some(OsmGeometry::Point(_))));
-        assert!(matches!(
-            features[1].geometry,
-            Some(OsmGeometry::LineString(_))
-        ));
+        let road = features.iter().find(|feature| feature.id == 10).unwrap();
+        assert!(matches!(road.geometry, Some(OsmGeometry::LineString(_))));
         assert_eq!(
-            features[1].tags.get("highway").map(String::as_str),
+            road.tags.get("highway").map(String::as_str),
             Some("primary")
         );
-        assert!(matches!(
-            features[2].geometry,
-            Some(OsmGeometry::Polygon(_))
-        ));
-        assert!(
-            features[2].issues.is_empty(),
-            "area-way issues: {:?}",
-            features[2].issues
-        );
-        let Some(OsmGeometry::MultiPolygon(polygons)) = &features[5].geometry else {
+        let area = features.iter().find(|feature| feature.id == 11).unwrap();
+        assert!(matches!(area.geometry, Some(OsmGeometry::Polygon(_))));
+        assert!(area.issues.is_empty(), "area-way issues: {:?}", area.issues);
+        let relation = features.iter().find(|feature| feature.id == 40).unwrap();
+        let Some(OsmGeometry::MultiPolygon(polygons)) = &relation.geometry else {
             panic!("expected multipolygon")
         };
         assert_eq!(polygons.len(), 1);
         assert_eq!(polygons[0].interiors.len(), 1);
-        assert!(
-            features[5].issues.is_empty(),
-            "issues: {:?}",
-            features[5].issues
-        );
-        assert!(features[5]
+        assert!(relation.issues.is_empty(), "issues: {:?}", relation.issues);
+        assert!(relation
             .as_wkt()
             .unwrap()
             .starts_with("MULTIPOLYGON(((144.964"));
@@ -889,6 +878,10 @@ mod tests {
         assert!(validate_bbox((2.0, 1.0, 1.0, 2.0)).is_err());
         assert!(adapter()
             .parse_vector_features(r#"{"remark":"runtime error"}"#)
+            .unwrap_err()
+            .contains("query failed"));
+        assert!(adapter()
+            .parse_vector_features(r#"{}"#)
             .unwrap_err()
             .contains("missing its elements"));
         assert!(adapter()

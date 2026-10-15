@@ -163,9 +163,10 @@ mod tests {
         assert!(ledger
             .try_reserve_graphics(VramResourceClass::Geometry, u64::MAX)
             .is_err());
-        assert!(ledger
+        let small = ledger
             .try_reserve_graphics(VramResourceClass::RecoveryCopy, 1)
-            .is_err());
+            .expect("failed oversized reservation must leave capacity available");
+        drop(small);
         assert_eq!(ledger.used_bytes(), 0);
     }
 }

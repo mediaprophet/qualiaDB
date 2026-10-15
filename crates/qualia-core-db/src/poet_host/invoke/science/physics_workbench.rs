@@ -235,7 +235,7 @@ pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let operation = args::rec_str(args_v, "operation")
         .ok_or_else(|| args::bad(span, "Physics.compute needs `operation`"))?;
     match operation {
-        "thermal_response" => super::thermal_response::compute(args_v,span),
+        "thermal_response" => super::thermal_response::compute(args_v, span),
         "metropolis" => metropolis(args_v, span),
         "ode_solver" => ode_solver(args_v, span),
         "dft" => dft(args_v, span),

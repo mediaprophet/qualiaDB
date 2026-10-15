@@ -132,13 +132,11 @@ pub fn decode_bc3_block(block: &[u8; 16], out_pixels: &mut [[u8; 4]; 16]) {
 
     if a0 > a1 {
         for j in 1..=6 {
-            alpha_pal[1 + j] =
-                (((7 - j) * a0 as usize + j * a1 as usize) / 7) as u8;
+            alpha_pal[1 + j] = (((7 - j) * a0 as usize + j * a1 as usize) / 7) as u8;
         }
     } else {
         for j in 1..=4 {
-            alpha_pal[1 + j] =
-                (((5 - j) * a0 as usize + j * a1 as usize) / 5) as u8;
+            alpha_pal[1 + j] = (((5 - j) * a0 as usize + j * a1 as usize) / 5) as u8;
         }
         alpha_pal[6] = 0;
         alpha_pal[7] = 255;
@@ -313,8 +311,7 @@ pub fn transcode_ktx2_into(
     bytes: &[u8],
     target: TranscodeTargetFormat,
     output: &mut [u8],
-    #[cfg_attr(target_arch = "wasm32", allow(unused_variables))]
-    scratch: &mut [u8],
+    #[cfg_attr(target_arch = "wasm32", allow(unused_variables))] scratch: &mut [u8],
 ) -> Result<TranscodedTextureInfo, TranscodeError> {
     let document = Ktx2Document::parse(bytes).map_err(|_| TranscodeError::InvalidContainer)?;
 
@@ -322,9 +319,7 @@ pub fn transcode_ktx2_into(
     let block_format = CompressedBlockFormat::from_vk_format(vk_format)
         .ok_or(TranscodeError::UnsupportedFormat(vk_format))?;
 
-    let level = document
-        .level(0)
-        .ok_or(TranscodeError::InvalidContainer)?;
+    let level = document.level(0).ok_or(TranscodeError::InvalidContainer)?;
     let level_bytes = level.bytes;
 
     let width = document.pixel_width;

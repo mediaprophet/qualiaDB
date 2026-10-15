@@ -166,9 +166,11 @@ impl ThreeBandParametricBiquad {
 
     /// Configure band gains in decibels for the next 128-sample quantum.
     pub fn set_band_gains_db(&mut self, low_gain_db: f32, mid_gain_db: f32, high_gain_db: f32) {
-        let low_coeffs = calc_low_shelf_coeffs(self.sample_rate, ANCHOR_LOW_HZ, 0.7071, low_gain_db);
+        let low_coeffs =
+            calc_low_shelf_coeffs(self.sample_rate, ANCHOR_LOW_HZ, 0.7071, low_gain_db);
         let mid_coeffs = calc_peaking_coeffs(self.sample_rate, ANCHOR_MID_HZ, 1.0, mid_gain_db);
-        let high_coeffs = calc_high_shelf_coeffs(self.sample_rate, ANCHOR_HIGH_HZ, 0.7071, high_gain_db);
+        let high_coeffs =
+            calc_high_shelf_coeffs(self.sample_rate, ANCHOR_HIGH_HZ, 0.7071, high_gain_db);
 
         self.low_shelf.set_target_quantum(low_coeffs);
         self.mid_peak.set_target_quantum(mid_coeffs);

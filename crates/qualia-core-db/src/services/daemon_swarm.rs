@@ -663,10 +663,12 @@ pub mod swarm {
                         payload.routing_mask = match value.len() {
                             1 => value[0] as u64,
                             2 => u16::from_be_bytes([value[0], value[1]]) as u64,
-                            4 => u32::from_be_bytes([value[0], value[1], value[2], value[3]]) as u64,
+                            4 => {
+                                u32::from_be_bytes([value[0], value[1], value[2], value[3]]) as u64
+                            }
                             8 => u64::from_be_bytes([
-                                value[0], value[1], value[2], value[3],
-                                value[4], value[5], value[6], value[7],
+                                value[0], value[1], value[2], value[3], value[4], value[5],
+                                value[6], value[7],
                             ]),
                             _ if !value.is_empty() => {
                                 let mut buf = [0u8; 8];

@@ -76,12 +76,18 @@ impl CpuBodyMesh {
     }
     /// Update a full-scene animated span through its retained source mapping.
     /// The compact mesh has different offsets and may omit some source vertices.
-    pub(super) fn update_authored_span(&mut self,start:u32,positions:&[[f32;3]])->bool {
-        let Some(end)=(start as usize).checked_add(positions.len()) else {return false;};
-        if positions.iter().flatten().any(|v|!v.is_finite()) {return false;}
-        for (i,source) in self.source_vertices.iter().enumerate() {
-            let source=*source as usize;
-            if source>=start as usize&&source<end {self.positions[i]=positions[source-start as usize];}
+    pub(super) fn update_authored_span(&mut self, start: u32, positions: &[[f32; 3]]) -> bool {
+        let Some(end) = (start as usize).checked_add(positions.len()) else {
+            return false;
+        };
+        if positions.iter().flatten().any(|v| !v.is_finite()) {
+            return false;
+        }
+        for (i, source) in self.source_vertices.iter().enumerate() {
+            let source = *source as usize;
+            if source >= start as usize && source < end {
+                self.positions[i] = positions[source - start as usize];
+            }
         }
         true
     }
@@ -93,11 +99,14 @@ mod cpu_body_mesh_tests {
 
     #[test]
     fn full_scene_updates_follow_source_vertices_after_reordering() {
-        let positions:Vec<[f32;3]>=(0..9).map(|i|[i as f32,0.0,0.0]).collect();
-        let mut reduced=CpuBodyMesh::decimate(&positions,&[[1.0;4];9],&[8,7,6],&[(0,3)]);
-        assert_eq!(reduced.source_vertices,[8,7,6]);
-        assert!(reduced.update_authored_span(7,&[[70.0,1.0,0.0],[80.0,2.0,0.0]]));
-        assert_eq!(reduced.positions,[[80.0,2.0,0.0],[70.0,1.0,0.0],[6.0,0.0,0.0]]);
+        let positions: Vec<[f32; 3]> = (0..9).map(|i| [i as f32, 0.0, 0.0]).collect();
+        let mut reduced = CpuBodyMesh::decimate(&positions, &[[1.0; 4]; 9], &[8, 7, 6], &[(0, 3)]);
+        assert_eq!(reduced.source_vertices, [8, 7, 6]);
+        assert!(reduced.update_authored_span(7, &[[70.0, 1.0, 0.0], [80.0, 2.0, 0.0]]));
+        assert_eq!(
+            reduced.positions,
+            [[80.0, 2.0, 0.0], [70.0, 1.0, 0.0], [6.0, 0.0, 0.0]]
+        );
     }
 
     #[test]

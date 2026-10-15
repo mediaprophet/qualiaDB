@@ -16,4 +16,3 @@ pub use alignment_guard::{
     check_contest_budget, detect_poisoned_alignment_flood, AlignmentSecurityError, ContestRecord,
 };
 pub use correspondence::{Alignment, Correspondence, ProposedStatus};
-

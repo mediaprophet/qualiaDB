@@ -76,8 +76,7 @@ pub const SYNSET_KNOWLEDGE: u64 =
 // ─── Collaborative Interlingual Index (CILI) Concepts ────────────────────────
 
 /// CILI i68339: Language-independent fact concept.
-pub const CILI_FACT: u64 =
-    q_hash("http://globalwordnet.org/ili/i68339") & 0x0FFF_FFFF_FFFF_FFFF;
+pub const CILI_FACT: u64 = q_hash("http://globalwordnet.org/ili/i68339") & 0x0FFF_FFFF_FFFF_FFFF;
 
 /// CILI i68341: Language-independent hypothesis concept.
 pub const CILI_HYPOTHESIS: u64 =
@@ -92,12 +91,10 @@ pub const CILI_SIMULATION: u64 =
     q_hash("http://globalwordnet.org/ili/i68212") & 0x0FFF_FFFF_FFFF_FFFF;
 
 /// CILI i71201: Language-independent fiction concept.
-pub const CILI_FICTION: u64 =
-    q_hash("http://globalwordnet.org/ili/i71201") & 0x0FFF_FFFF_FFFF_FFFF;
+pub const CILI_FICTION: u64 = q_hash("http://globalwordnet.org/ili/i71201") & 0x0FFF_FFFF_FFFF_FFFF;
 
 /// CILI i69420: Language-independent civics concept.
-pub const CILI_CIVICS: u64 =
-    q_hash("http://globalwordnet.org/ili/i69420") & 0x0FFF_FFFF_FFFF_FFFF;
+pub const CILI_CIVICS: u64 = q_hash("http://globalwordnet.org/ili/i69420") & 0x0FFF_FFFF_FFFF_FFFF;
 
 /// CILI i70110: Language-independent observation concept.
 pub const CILI_OBSERVATION: u64 =
@@ -435,8 +432,7 @@ mod tests {
         }; 4];
 
         // Query expects generic HYPOTHESIS: conjecture should be accepted via subsumption
-        let count =
-            evaluate_epistemic_stances(&[quin], SYNSET_HYPOTHESIS, &[], &mut out).unwrap();
+        let count = evaluate_epistemic_stances(&[quin], SYNSET_HYPOTHESIS, &[], &mut out).unwrap();
         assert_eq!(count, 1);
         assert_eq!(out[0].synset_hash, SYNSET_CONJECTURE);
         assert_eq!(out[0].cili_hash, CILI_CONJECTURE);
@@ -445,8 +441,9 @@ mod tests {
 
     #[test]
     fn test_tbox_hypernym_subsumption() {
-        let custom_synset = q_hash("https://en-wordnet.oed.com/id/synset-working_hypothesis-noun-1")
-            & 0x0FFF_FFFF_FFFF_FFFF;
+        let custom_synset =
+            q_hash("https://en-wordnet.oed.com/id/synset-working_hypothesis-noun-1")
+                & 0x0FFF_FFFF_FFFF_FFFF;
         let claim_id = q_hash("did:q42:claim:thermal_dissipation_rate");
         let context_id = q_hash("did:q42:context:field_lab");
 

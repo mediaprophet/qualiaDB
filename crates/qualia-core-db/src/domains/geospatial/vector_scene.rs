@@ -149,12 +149,10 @@ impl OsmVectorStyle {
     fn vertical_offset_m(self) -> f32 {
         match self {
             Self::Marker {
-                vertical_offset_m,
-                ..
+                vertical_offset_m, ..
             }
             | Self::Line {
-                vertical_offset_m,
-                ..
+                vertical_offset_m, ..
             }
             | Self::Area { vertical_offset_m } => vertical_offset_m,
         }
@@ -203,10 +201,12 @@ pub fn compile_osm_feature_mesh_draped(
             feature.element_type, feature.id
         ));
     }
-    let geometry = feature
-        .geometry
-        .as_ref()
-        .ok_or_else(|| format!("OSM feature {}/{} has no geometry", feature.element_type, feature.id))?;
+    let geometry = feature.geometry.as_ref().ok_or_else(|| {
+        format!(
+            "OSM feature {}/{} has no geometry",
+            feature.element_type, feature.id
+        )
+    })?;
     let mesh = geometry::compile(geometry, frame, style, ground_height).map_err(|error| {
         format!(
             "OSM feature {}/{}: {error}",
@@ -222,4 +222,3 @@ pub fn compile_osm_feature_mesh_draped(
         mesh,
     })
 }
-

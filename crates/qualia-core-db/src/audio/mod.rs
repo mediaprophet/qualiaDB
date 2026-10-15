@@ -4,6 +4,7 @@ pub mod acoustic_plane;
 pub mod acoustic_sab;
 pub mod audio_sidecar_link;
 pub mod audio_spectral_sheet;
+pub mod bioacoustics;
 pub mod cqt_bake;
 /// N6: Traditional DAW DSP — oscillator, ADSR, filter, LFO, effects, MIDI, transport, meters.
 pub mod dsp;
@@ -18,26 +19,17 @@ pub mod stft_bake;
 pub mod tf_surface;
 /// P7.6 — Audio edits as geometric surface operations.
 pub mod tf_surface_edit;
-pub mod bioacoustics;
 
 pub use acoustic_plane::{
     acoustic_enabled_for_mode, acoustic_params_from_tensor, drain_sonic_tokens, pop_sonic_token,
     push_sonic_token, sonify_tensor_node, AcousticParams, AcousticUniform, SonicTokenRing,
     SONIC_RING_CAP,
 };
-pub use bioacoustics::{
-    compile_vocalizations_to_sparql_mm, detect_bioacoustic_vocalizations, BioacousticVocalization,
-    MM_TEMPORAL_FRAGMENT, QUALIA_ACOUSTIC_OBSERVATION,
-};
 pub use acoustic_sab::{
     calculate_acoustic_salience, init_acoustic_sab, push_token_to_sab, read_uniform_from_sab,
     read_voice_slot, update_voice_slot, write_uniform_to_sab, write_uniform_to_sab_with_mirror,
     AcousticSabHeader, VoiceDescriptorSlot, VoiceSnapshot, ACOUSTIC_SAB_BYTES, ACOUSTIC_SAB_MAGIC,
     MAX_ACOUSTIC_VOICE_SLOTS, VOICE_DESCRIPTOR_SLOT_SIZE,
-};
-pub use dsp::biquad_df2t::{
-    BiquadCoeffs, Df2tBiquad, Df2tState, ThreeBandParametricBiquad, AUDIO_WORKLET_DF2T_JS,
-    DENORMAL_DC_OFFSET, QUANTUM_SIZE,
 };
 pub use audio_sidecar_link::{
     bake_audio_sidecar_into, compile_spectral_sheet_quin, enrich_preview_from_sidecar,
@@ -47,7 +39,15 @@ pub use audio_spectral_sheet::{
     parse_sidecar_header, AudioSpectralSheetView, AudioSpectralSidecarHeader,
     SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
 };
+pub use bioacoustics::{
+    compile_vocalizations_to_sparql_mm, detect_bioacoustic_vocalizations, BioacousticVocalization,
+    MM_TEMPORAL_FRAGMENT, QUALIA_ACOUSTIC_OBSERVATION,
+};
 pub use cqt_bake::{bake_cqt_sidecar_from_preview, bake_cqt_sidecar_from_samples, forward_cqt};
+pub use dsp::biquad_df2t::{
+    BiquadCoeffs, Df2tBiquad, Df2tState, ThreeBandParametricBiquad, AUDIO_WORKLET_DF2T_JS,
+    DENORMAL_DC_OFFSET, QUANTUM_SIZE,
+};
 pub use dsp_kernel::{epistemic_fm_index, epistemic_temperature_from_q, ParametricVoiceState};
 pub use hrtf::{
     binaural_from_position, binaural_render, convolve_fir, set_hrtf_profile, synthesize_hrir,

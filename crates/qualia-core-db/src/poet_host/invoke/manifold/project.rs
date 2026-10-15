@@ -31,7 +31,13 @@ pub fn project(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
             let y_tilted = y * cos_t - z * sin_t;
             let z_depth = y * sin_t + z * cos_t;
             let scale = cam_dist / (cam_dist + z_depth).max(0.01);
-            (x * scale, y_tilted * scale, z_depth, scale, z_depth > -cam_dist)
+            (
+                x * scale,
+                y_tilted * scale,
+                z_depth,
+                scale,
+                z_depth > -cam_dist,
+            )
         }
         PresentationLevel::StageWorld | PresentationLevel::EmbodiedWorld => {
             // Full 3D/4D stage: perspective projection with camera frustum

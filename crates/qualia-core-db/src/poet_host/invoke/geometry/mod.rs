@@ -25,6 +25,12 @@ mod wave24_host;
 mod wave25_host;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod wave26_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave27_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave28_host;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod wave29_host;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use distance::{
@@ -87,6 +93,30 @@ pub use wave26_host::{
     separating_plane_aabb_host as separating_plane_aabb,
     solve_diagonal_quadratic_host as solve_diagonal_quadratic,
     world_to_frame_host as world_to_frame,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave27_host::{
+    asymmetric_hull_host as asymmetric_hull, bspline_fit_host as bspline_fit,
+    canopy_integrate_host as canopy_integrate, chordal_axis_2d_host as chordal_axis_2d,
+    extrude_profile_host as extrude_profile, point_cloud_bound_3d_host as point_cloud_bound_3d,
+    soc_sky_dome_host as soc_sky_dome, solar_track_host as solar_track,
+    space_colonize_3d_host as space_colonize_3d, tree_skeleton_3d_host as tree_skeleton_3d,
+    turtle_3d_host as turtle_3d,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave28_host::{
+    curve_skeleton_host as curve_skeleton,
+    differential_growth_step_host as differential_growth_step, dqs_skin_host as dqs_skin,
+    heat_geodesics_host as heat_geodesics, medial_axis_3d_host as medial_axis_3d,
+    pbd_step_host as pbd_step, poisson_disk_2d_host as poisson_disk_2d,
+    poisson_disk_3d_host as poisson_disk_3d, power_diagram_2d_host as power_diagram_2d,
+    sdf_smooth_host as sdf_smooth, svo_raycast_host as svo_raycast,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use wave29_host::{
+    mesh_plane_slice_host as mesh_plane_slice, miniball_3d_host as miniball_3d,
+    pipe_model_radii_host as pipe_model_radii,
+    swung_surface_host as swung_surface,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -205,5 +235,31 @@ geom_stub!(
     quaternion_to_matrix,
     solve_diagonal_quadratic,
     schur_complement_2x2,
-    separating_plane_aabb
+    separating_plane_aabb,
+    extrude_profile,
+    asymmetric_hull,
+    bspline_fit,
+    turtle_3d,
+    space_colonize_3d,
+    tree_skeleton_3d,
+    chordal_axis_2d,
+    point_cloud_bound_3d,
+    soc_sky_dome,
+    solar_track,
+    canopy_integrate,
+    poisson_disk_2d,
+    poisson_disk_3d,
+    heat_geodesics,
+    svo_raycast,
+    power_diagram_2d,
+    differential_growth_step,
+    curve_skeleton,
+    dqs_skin,
+    pbd_step,
+    medial_axis_3d,
+    sdf_smooth,
+    swung_surface,
+    pipe_model_radii,
+    miniball_3d,
+    mesh_plane_slice
 );

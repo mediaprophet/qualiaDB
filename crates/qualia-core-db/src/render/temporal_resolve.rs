@@ -158,10 +158,9 @@ pub fn resolve_scene_linear_rgba(sample: TemporalResolveSample) -> Option<[f32; 
         + sample.motion_vector[1] * sample.motion_vector[1])
         .sqrt();
     let motion_confidence = 1.0 - (motion / MAX_MOTION_FOR_HISTORY).clamp(0.0, 1.0);
-    let history_weight = ((1.0 - sample.reactive.clamp(0.0, 1.0))
-        * motion_confidence
-        * MAX_HISTORY_WEIGHT)
-        .clamp(0.0, MAX_HISTORY_WEIGHT);
+    let history_weight =
+        ((1.0 - sample.reactive.clamp(0.0, 1.0)) * motion_confidence * MAX_HISTORY_WEIGHT)
+            .clamp(0.0, MAX_HISTORY_WEIGHT);
 
     Some(std::array::from_fn(|index| {
         current[index] * (1.0 - history_weight)
@@ -209,15 +208,24 @@ mod tests {
     fn invalid_or_reset_history_uses_current_sample() {
         let mut reset = sample();
         reset.reset_history = true;
-        assert_eq!(resolve_scene_linear_rgba(reset), Some(reset.current_scene_linear));
+        assert_eq!(
+            resolve_scene_linear_rgba(reset),
+            Some(reset.current_scene_linear)
+        );
 
         let mut invalid = sample();
         invalid.history_valid = false;
-        assert_eq!(resolve_scene_linear_rgba(invalid), Some(invalid.current_scene_linear));
+        assert_eq!(
+            resolve_scene_linear_rgba(invalid),
+            Some(invalid.current_scene_linear)
+        );
 
         let mut disoccluded = sample();
         disoccluded.history_linear_depth = 0.7;
-        assert_eq!(resolve_scene_linear_rgba(disoccluded), Some(disoccluded.current_scene_linear));
+        assert_eq!(
+            resolve_scene_linear_rgba(disoccluded),
+            Some(disoccluded.current_scene_linear)
+        );
     }
 
     #[test]
@@ -225,11 +233,17 @@ mod tests {
         let stable = resolve_scene_linear_rgba(sample()).unwrap();
         let mut reactive = sample();
         reactive.reactive = 1.0;
-        assert_eq!(resolve_scene_linear_rgba(reactive), Some(reactive.current_scene_linear));
+        assert_eq!(
+            resolve_scene_linear_rgba(reactive),
+            Some(reactive.current_scene_linear)
+        );
 
         let mut moving = sample();
         moving.motion_vector = [MAX_MOTION_FOR_HISTORY, 0.0];
-        assert_eq!(resolve_scene_linear_rgba(moving), Some(moving.current_scene_linear));
+        assert_eq!(
+            resolve_scene_linear_rgba(moving),
+            Some(moving.current_scene_linear)
+        );
         assert!(stable[0] < sample().current_scene_linear[0]);
     }
 

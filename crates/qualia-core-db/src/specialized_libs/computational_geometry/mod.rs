@@ -29,7 +29,6 @@ pub mod arrangement_3d;
 pub mod arrangements;
 /// P9.5 — Authoring ergonomics: primitives, transforms, scene graph, .10d export.
 pub mod authoring;
-pub mod wheel_panel;
 /// P10.7 — Benchmark + adversarial corpus baseline (versioned corpora,
 /// reproducible latency/allocation/hash reports).
 pub mod benchmark_corpus;
@@ -37,15 +36,24 @@ pub mod benchmark_corpus;
 pub mod bentley_ottmann;
 pub mod boolean_2;
 pub mod boolean_3;
+/// P20.2 — Botanical crown envelopes: 6-point asymmetric hull (Cescatti),
+/// extruded-hull orthogonal silhouette intersection, paraboloid envelope.
+pub mod botanical_hulls;
 mod box_join;
 pub mod bvh;
 /// P11.13 — Rotating calipers (diameter, width, antipodal pairs) and
 /// smallest enclosing disk (Welzl randomized incremental, seeded determinism).
 pub mod calipers_enclosing_disk;
+/// P20.9 — Canopy radiative transfer: orthographic ID/depth rasterizer,
+/// periodic wrapping, SOC dome / solar track, per-organ PAR·STAR·LAI.
+pub mod canopy_radiation;
 /// P9.4 — qapp/MCP capability manifests (per-op resource limits; backends).
 pub mod capability_manifests;
 /// P12.4 — Per-facet exact constrained Delaunay re-triangulation.
 pub mod cdt_retriangulation;
+/// P20.7 — 2-D Chordal Axis Transform over CDT interior triangles
+/// (termination / sleeve / junction classification + spur pruning).
+pub mod chordal_axis_2d;
 /// P8.4 — CkNN density → graph Laplacian → Laplace-Beltrami.
 pub mod cknn_laplacian;
 mod combinatorial_map;
@@ -59,6 +67,7 @@ mod corpus_4;
 /// P12.9 — CSG/arrangement .10d sections and repair operations.
 pub mod csg_section;
 mod csr_adjacency;
+pub mod curve_skeleton;
 /// P11.3 — DCEL subdivision, overlay, and full polygon-set boolean output
 /// (union/intersection/difference/xor with boundary cycles + holes; Euler and
 /// area identities).
@@ -71,7 +80,9 @@ mod delaunay_3;
 pub mod delaunay_refine;
 mod determinism_corpus;
 pub mod deterministic_geometry;
+pub mod differential_growth;
 mod distance;
+pub mod dual_quaternion_skinning;
 /// P12.2 — Exact 2D arrangement with exact-construction intersection points.
 pub mod exact_arrangement;
 mod exact_construct_3;
@@ -97,6 +108,7 @@ pub mod gpu_oracle;
 pub mod half_plane_lp;
 /// P11.14 — Ham-sandwich cuts, centrepoints, and directional-width coresets.
 pub mod ham_sandwich;
+pub mod heat_geodesics;
 mod hull;
 mod hull_3;
 mod incircle;
@@ -109,9 +121,12 @@ mod kernel;
 pub mod kirkpatrick;
 mod laplacian_3d;
 pub mod math_geometry;
+pub mod medial_axis_3d;
 /// P13.1 — Mesh quality metrics (tri/tet min/max angle, radius-edge, aspect,
 /// scaled Jacobian, dihedral) and isotropic size / anisotropic metric fields.
 pub mod mesh_quality;
+/// Standalone caller-buffered triangle mesh / plane section segments.
+pub mod mesh_plane_slice;
 mod minkowski_2;
 pub mod mixed_cell_topology;
 pub mod motion_planning;
@@ -123,16 +138,26 @@ pub mod nary_csg;
 pub mod natural_neighbour;
 /// P8.6 — Nearest-neighbour inference query (radius + kNN).
 pub mod nn_query;
+/// P20.3 — Non-uniform B-spline/NURBS evaluation, chord-length
+/// parameterization, least-squares curve fitting, curvature-adaptive
+/// discretization.
+pub mod nurbs_fitting;
 mod orient3d;
 pub mod parametric_cad;
+pub mod pbd_softbody;
 /// P8.2 — Persistent homology: deterministic reduction → barcode.
 pub mod persistence;
+/// P20.8 — Point-cloud differential geometry: Welzl miniball, PCA bounding
+/// primitives, Weiszfeld median, Monge jet curvatures, MST normal orientation.
+pub mod point_cloud_diff_geom;
 /// P11.6 — Point location in planar subdivisions (walking + slab decomposition).
 pub mod point_location;
 mod point_set_3d;
+pub mod poisson_disk;
 pub mod polygon_soup;
 /// P11.4 — Simple-polygon, polygon-with-holes, and PSLG validation.
 pub mod polygon_validation;
+pub mod power_diagram;
 mod primitives;
 /// P13.4 — Quadtree/octree balanced meshing (size-field refinement, 2:1
 /// balance, conforming 2-D triangulation with hanging-node templates, 3-D
@@ -148,17 +173,26 @@ mod recon_section;
 mod reconstruct_3d;
 mod remesh_3;
 pub mod screened_poisson;
+pub mod sdf_ops;
 /// P11.1 — Robust segment/line/ray primitives and exact intersections.
 pub mod segment_intersection_2;
 /// P12.8 — Coplanar-region simplification and topology-preserving snap rounding.
 pub mod simplify_snap;
 /// P12.2 — Simulation of Simplicity for deterministic degeneracy resolution.
 pub mod sos;
+/// P20.5 — Seeded 3-D space colonization & graph colonization (Runions 2007)
+/// with perception cones, kill radii, whorls, and latent buds.
+pub mod space_colonization;
+pub mod sparse_voxel_octree;
 mod spatial_order;
 /// P8.3 — Statistical manifold: Fisher metric + KL as Bregman divergence.
 pub mod statistical_manifold;
 mod surface_mesh;
 mod surface_mesh_processing;
+/// P20.1 — Rotation-minimizing (Bishop / double-reflection) sweep frames,
+/// generalized profile extrusion with per-station scale+twist, swung surfaces,
+/// frustum/cone primitives, taper and IFS deformation.
+pub mod sweep_extrusion;
 mod tda;
 /// P13.7 — Tetrahedral quality improvement and sliver handling
 /// (flip / smooth / insert / exude passes; domain + orientation preserved;
@@ -169,16 +203,24 @@ mod topology;
 /// P11.6 gap — Trapezoidal map with randomized incremental point location
 /// (search DAG, seeded determinism, O(log n) expected query).
 pub mod trapezoidal_map;
+/// P20.6 — Point-cloud tree skeletonization: geodesic root-distance quotient
+/// bins (Xu 2007), Livny branch smoothing, pipe-model radii, anisotropic
+/// contraction (Tagliasacchi 2009).
+pub mod tree_skeleton_3d;
 mod tri_tri_3;
 /// P11.5 — Monotone partition, linear monotone triangulation, ear fallback.
 pub mod triangulation_2;
 /// P13.3 — Optimal fixed-vertex triangulation objectives (edge-flip hill-climbing).
 pub mod triangulation_opt;
+/// P20.4 — Stack-bounded 3-D L-system turtle with gravitropism/phototropism
+/// bending and generalized-cylinder / polygon meshing.
+pub mod turtle_3d;
 mod voronoi_2;
 /// P11.11 — Segment-site, farthest-site and higher-order Voronoi diagrams.
 pub mod voronoi_variants;
 /// P8.1 — VR / alpha filtration over Tensor10D point cloud.
 pub mod vr_filtration;
+pub mod wheel_panel;
 
 #[cfg(test)]
 mod exact_test_helper;
@@ -216,6 +258,10 @@ pub use boolean_3::{
     boolean_3, boolean_3_exact, boolean_3_with_kernel, required_triangles_3, required_vertices_3,
     Boolean3Error, Boolean3Op,
 };
+pub use botanical_hulls::{
+    asymmetric_hull_capacity, asymmetric_hull_into, extruded_hull_into, fit_asymmetric_hull,
+    paraboloid_into, AsymmetricHullParams, BotanicalHullError,
+};
 pub use box_join::{box_join_brute_force, box_join_bvh, BoxJoinError, BoxPair};
 pub use bvh::{
     build_bvh_recursive, query_closest, query_overlap, BvhError, BvhNode, BVH_NODE_SIZE,
@@ -225,7 +271,16 @@ pub use calipers_enclosing_disk::{
     diameter_and_width, rotating_calipers, smallest_enclosing_disk, AntipodalPair, CalipersError,
     CalipersResult, Disk, EnclosingDisk,
 };
+pub use canopy_radiation::{
+    integrate_canopy_radiation, organ_surface_areas, periodize_id_depth_buffer,
+    rasterize_orthographic_id_buffer, soc_sky_dome_16, solar_track_sources, CanopyRadiationError,
+    CanopyRadiationReceipt, DirectionalSource, NO_ORGAN_ID,
+};
 pub use cdt_retriangulation::{cdt_retriangulate_facet, CdtError};
+pub use chordal_axis_2d::{
+    chordal_axis_transform_2d, is_acute_triangle_2d, prune_chordal_axis_spurs,
+    pseudo_circumcenter_2d, CatTriangleKind, ChordalAxisError, ChordalSegment,
+};
 pub use combinatorial_map::{
     darts_to_half_edges, half_edges_to_darts, validate_combinatorial_map, CMapError, Dart,
 };
@@ -257,6 +312,7 @@ pub use csr_adjacency::{
     required_face_offsets, required_vertex_neighbours, required_vertex_offsets, CsrError,
     CsrHeader, CsrSummary,
 };
+pub use curve_skeleton::{contract_to_skeleton, extract_skeleton_graph, CurveSkeletonError};
 pub use ddg_operators::{
     boundary_of_boundary_is_zero, boundary_of_simplex, cotangent_laplacian, curvature_angle_defect,
     encode_ddg_operator_section, face_vector_areas, geodesic_distances_dijkstra,
@@ -293,11 +349,17 @@ pub use deterministic_geometry::{
     BatchDynamicKdTree, BenchmarkReport, ConflictEdge, DeterministicGeometryError, DynamicKdRecord,
     EnclosingBall, NearestPair, SpatialGeneratorKind, WeightedEdge, WellSeparatedPair,
 };
+pub use differential_growth::{
+    differential_growth_step, edge_rest_lengths, split_stretched_edges, DifferentialGrowthError,
+};
 pub use distance::{
     distance_2d, distance_3d, distance_sq_2d, distance_sq_3d, point_line_distance_sq_2d,
     point_segment_distance_2d, point_segment_distance_sq_2d, point_segment_distance_sq_3d,
     point_triangle_distance_sq_3d, ray_triangle_intersect_3d, segment_segment_intersect_2d, Aabb,
     RayTriangleHit, RayTriangleResult, SegmentIntersection2d,
+};
+pub use dual_quaternion_skinning::{
+    dqs_blend, dqs_skin_vertex, DualQuaternion, DualQuaternionError,
 };
 pub use exact_arrangement::{
     build_exact_arrangement, max_coordinate_error, verify_euler, verify_general_position_counts,
@@ -363,6 +425,9 @@ pub use ham_sandwich::{
     centrepoint, directional_width, ham_sandwich_cut, tukey_depth, width, width_coreset,
     Centrepoint, HamSandwichCut, WidthCoreset,
 };
+pub use heat_geodesics::{
+    heat_geodesic_distances, heat_vs_dijkstra_max_deviation, HeatGeodesicError,
+};
 pub use hull::{
     convex_hull_2, convex_hull_indices_2, convex_hull_indices_2_with_kernel, convex_hull_tensor_xy,
     convex_hull_tensor_xy_with_kernel, is_ccw_strongly_convex_2,
@@ -394,12 +459,14 @@ pub use math_geometry::{
     CurveDifferential, HomogeneousPoint3, Hyperplane3, MathGeometryError, QuadraticSolution,
     Quaternion, SeparatingPlane, SurfaceDifferential,
 };
+pub use medial_axis_3d::{extract_medial_axis_3d, tet_circumcenter, MedialAxisError, MedialSample};
 pub use mesh_quality::{
     check_field_conformance_tet, check_field_conformance_tri, tet_mesh_quality_slice, tet_quality,
     tet_quality_points, tri_mesh_quality_2d, tri_quality, tri_quality_points, tri_signed_area_2d,
     AnisotropyField, FieldConformance, MeshQualityError, MetricTensor, SizeField,
     TetMeshQualityStats, TetQuality, TriMeshQualityStats, TriQuality,
 };
+pub use mesh_plane_slice::{slice_mesh_with_plane, MeshPlaneSliceError};
 pub use minkowski_2::{
     minkowski_difference_2, minkowski_sum_2, minkowski_sum_brute_force, minkowski_sum_convex,
     minkowski_sum_non_convex, MinkowskiError,
@@ -424,6 +491,11 @@ pub use nary_csg::{
     corefine_2d, nary_csg, verify_pairwise_inclusion_exclusion, CorefinementResult2D, Mesh2D,
     NaryCsgError, NaryCsgResult, NaryOp, PolygonWithHoles as NaryPolygonWithHoles,
 };
+pub use nurbs_fitting::{
+    basis_functions, bspline_eval_knots, chord_length_parameterize,
+    discretize_bspline_by_curvature, find_knot_span, fit_bspline_least_squares, nurbs_eval_knots,
+    nurbs_patch_eval, NurbsFitError, MAX_SPLINE_DEGREE,
+};
 pub use orient3d::orient_3d;
 pub use parametric_cad::{
     bezier_derivative_eval, bezier_eval, bspline_eval, bspline_insert_uniform_knot,
@@ -435,6 +507,12 @@ pub use parametric_cad::{
     NurbsControlPoint, OptimizationReport, ParameterConstraint, SdfOp, SdfPrimitive, ShapeDistance,
     SurfaceSample, SurrogatePrediction,
 };
+pub use pbd_softbody::{pbd_step, PbdConstraint, PbdError, PbdReceipt};
+pub use point_cloud_diff_geom::{
+    monge_jet_principal_curvatures_3d, orient_normals_riemannian_mst, pca_bounding_primitives_3d,
+    smallest_enclosing_sphere_3d, weiszfeld_geometric_median_3d, EnclosingSphere3d,
+    PcaBoundingPrimitives3d, PointCloudGeomError, PointCurvatureInfo,
+};
 pub use point_location::{
     build_slab_map, locate_point, point_in_triangle, point_strictly_in_triangle,
     triangulation_to_subdivision, walk_locate, LocateResult, PointLocationError, SlabMap,
@@ -445,6 +523,7 @@ pub use point_set_3d::{
     knn_hash, knn_search_3d, local_density_3d, mean_knn_distance_3d, remove_outliers_3d, CknnEdge,
     KnnEntry, PointSetError, MAX_K,
 };
+pub use poisson_disk::{poisson_disk_2d, poisson_disk_3d, PoissonDiskError};
 pub use polygon_soup::{
     build_face_adjacency, count_flipped, filter_degenerate_faces, merge_vertices,
     orient_consistently, repair_polygon_soup, FaceAdjacencyEntry, RepairReport, SoupError,
@@ -453,6 +532,10 @@ pub use polygon_validation::{
     canonicalize_polygon_with_holes, canonicalize_simple_polygon, repair_for,
     validate_polygon_with_holes, validate_pslg, validate_simple_polygon, PolygonWithHoles,
     PslgEdge, RepairSuggestion, ValidationIssue, ValidationReport,
+};
+pub use power_diagram::{
+    power_cell_vertex_2d, power_test_2d, power_test_2d_sign, regular_triangulation_2d,
+    PowerDiagramError, WeightedSite2d,
 };
 pub use primitives::{orientation_2, orientation_2_tensor_xy, Orientation, Point2, Point3};
 pub use quad_octree_mesh::{
@@ -479,6 +562,10 @@ pub use screened_poisson::{
     required_screened_poisson_capacity, screened_poisson_reconstruct_3d, ScreenedPoissonError,
     ScreenedPoissonOptions, ScreenedPoissonReport,
 };
+pub use sdf_ops::{
+    sdf_capsule, sdf_compose_smooth, sdf_metaballs, sdf_rounded_box, sdf_smooth_intersect,
+    sdf_smooth_subtract, sdf_smooth_union, sdf_sphere, SdfOpsError,
+};
 pub use segment_intersection_2::{
     classify_and_construct, classify_segment_intersection_2, line_segment_intersection_2,
     ray_segment_intersection_2, SegmentIntersectionClass, SegmentIntersectionResult, TJunctionSide,
@@ -487,6 +574,11 @@ pub use simplify_snap::{
     simplify_coplanar_regions, snap_round_3d, SimplifyError, SimplifyOptions, SimplifyResult,
 };
 pub use sos::orient_3d_sos;
+pub use space_colonization::{
+    lateral_whorl_directions, space_colonization_3d, ColonizationError, SpaceColonizationConfig,
+    SpaceColonizationReceipt, ROOT_PARENT,
+};
+pub use sparse_voxel_octree::{Svo, SvoError, SvoNode, SvoRayHit, SVO_EMPTY};
 pub use spatial_order::{
     hilbert_encode_2d, morton_decode_2d, morton_encode_2d, morton_encode_3d, sort_by_hilbert_2d,
     sort_by_morton_2d, sort_by_morton_3d, SpatialOrderError, SpatialOrderHeader,
@@ -501,6 +593,10 @@ pub use surface_mesh::{
     SurfaceMeshError, SurfaceMeshView,
 };
 pub use surface_mesh_processing::{signed_volume, surface_area, MeshMeasureError};
+pub use sweep_extrusion::{
+    compute_bishop_frames, deform_taper_in_place, expand_ifs_points, extrude_profile_along_path,
+    frustum_into, swung_surface, ExtrusionStation, SweepError,
+};
 pub use tda::{
     alpha_filtration_2d, compute_persistence, persistence_hash, PersistencePair, Simplex, TdaError,
 };
@@ -514,6 +610,10 @@ pub use topology::{
     TopologySummary, INVALID_INDEX,
 };
 pub use trapezoidal_map::{TmSegment, Trapezoid, TrapezoidalMap, TrapezoidalMapError};
+pub use tree_skeleton_3d::{
+    carried_subtree_length, contract_points_anisotropic, pipe_model_radii,
+    skeleton_from_root_distance_bins, smooth_skeleton_positions, TreeSkeletonError,
+};
 pub use tri_tri_3::{
     required_self_intersection_pairs, self_intersecting_pairs, self_intersecting_pairs_with_kernel,
     tri_tri_intersect_3, tri_tri_intersect_3_exact, tri_tri_intersect_3_with_kernel,
@@ -526,6 +626,10 @@ pub use triangulation_2::{
 pub use triangulation_opt::{
     evaluate_objective, optimise_and_evaluate, optimise_triangulation, TriObjective,
     TriangulationOptError,
+};
+pub use turtle_3d::{
+    execute_turtle_3d, TurtleCmd, TurtleError, TurtleMeshReceipt, TurtleState, MAX_POLYGON_VERTS,
+    MAX_RING_SLICES, MAX_TURTLE_STACK,
 };
 pub use voronoi_2::{
     circumcenter, nearest_site_brute_force, nearest_site_via_delaunay, verify_voronoi_vertices,

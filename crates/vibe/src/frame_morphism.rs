@@ -296,9 +296,24 @@ impl LorentzMorphism {
 
         [
             [gamma, -gamma * bx, -gamma * by, -gamma * bz],
-            [-gamma * bx, 1.0 + g_minus_1_over_b2 * bx * bx, g_minus_1_over_b2 * bx * by, g_minus_1_over_b2 * bx * bz],
-            [-gamma * by, g_minus_1_over_b2 * by * bx, 1.0 + g_minus_1_over_b2 * by * by, g_minus_1_over_b2 * by * bz],
-            [-gamma * bz, g_minus_1_over_b2 * bz * bx, g_minus_1_over_b2 * bz * by, 1.0 + g_minus_1_over_b2 * bz * bz],
+            [
+                -gamma * bx,
+                1.0 + g_minus_1_over_b2 * bx * bx,
+                g_minus_1_over_b2 * bx * by,
+                g_minus_1_over_b2 * bx * bz,
+            ],
+            [
+                -gamma * by,
+                g_minus_1_over_b2 * by * bx,
+                1.0 + g_minus_1_over_b2 * by * by,
+                g_minus_1_over_b2 * by * bz,
+            ],
+            [
+                -gamma * bz,
+                g_minus_1_over_b2 * bz * bx,
+                g_minus_1_over_b2 * bz * by,
+                1.0 + g_minus_1_over_b2 * bz * bz,
+            ],
         ]
     }
 
@@ -327,7 +342,10 @@ impl LorentzMorphism {
 
         let gamma = self.gamma();
         if gamma.is_infinite() {
-            return (f64::INFINITY, vec![f64::INFINITY, f64::INFINITY, f64::INFINITY]);
+            return (
+                f64::INFINITY,
+                vec![f64::INFINITY, f64::INFINITY, f64::INFINITY],
+            );
         }
 
         let v_dot_r = vx * rx + vy * ry + vz * rz;

@@ -15,7 +15,14 @@ pub(super) fn compile(
 ) -> Result<Mesh, String> {
     let mut builder = MeshBuilder::default();
     let mut coordinate_count = 0usize;
-    compile_geometry(geometry, frame, style, ground_height, &mut coordinate_count, &mut builder)?;
+    compile_geometry(
+        geometry,
+        frame,
+        style,
+        ground_height,
+        &mut coordinate_count,
+        &mut builder,
+    )?;
     if builder.positions.is_empty() || builder.triangles.is_empty() {
         return Err("OSM feature did not produce a renderable mesh for the selected style".into());
     }
@@ -166,7 +173,8 @@ fn compile_geometry(
     match geometry {
         OsmGeometry::Point(point) => match style {
             OsmVectorStyle::Marker { radius_m, .. } => {
-                let (east, north, fallback_up) = project_coordinate(*point, frame, coordinate_count)?;
+                let (east, north, fallback_up) =
+                    project_coordinate(*point, frame, coordinate_count)?;
                 for segment in 0..POINT_SEGMENTS {
                     let a = TAU * segment as f64 / POINT_SEGMENTS as f64;
                     let b = TAU * (segment + 1) as f64 / POINT_SEGMENTS as f64;
@@ -222,37 +230,18 @@ fn compile_geometry(
             }
             Ok(())
         }
-        OsmGeometry::Polygon(polygon) => compile_polygon(
-            polygon,
-            frame,
-            style,
-            ground_height,
-            coordinate_count,
-            out,
-        ),
+        OsmGeometry::Polygon(polygon) => {
+            compile_polygon(polygon, frame, style, ground_height, coordinate_count, out)
+        }
         OsmGeometry::MultiPolygon(polygons) => {
             for polygon in polygons {
-                compile_polygon(
-                    polygon,
-                    frame,
-                    style,
-                    ground_height,
-                    coordinate_count,
-                    out,
-                )?;
+                compile_polygon(polygon, frame, style, ground_height, coordinate_count, out)?;
             }
             Ok(())
         }
         OsmGeometry::GeometryCollection(parts) => {
             for part in parts {
-                compile_geometry(
-                    part,
-                    frame,
-                    style,
-                    ground_height,
-                    coordinate_count,
-                    out,
-                )?;
+                compile_geometry(part, frame, style, ground_height, coordinate_count, out)?;
             }
             Ok(())
         }
@@ -331,7 +320,9 @@ fn compile_polygon(
         }
         OsmVectorStyle::Area { .. } => {
             if !polygon.interiors.is_empty() {
-                return Err("area has interior rings; hole-preserving triangulation is required".into());
+                return Err(
+                    "area has interior rings; hole-preserving triangulation is required".into(),
+                );
             }
             let mut ring = Vec::with_capacity(polygon.exterior.len());
             for coordinate in &polygon.exterior {
@@ -361,7 +352,9 @@ fn compile_polygon(
                         .iter()
                         .find(|(east, north, _)| *east == p.x && *north == p.y)
                         .map(|(_, _, up)| *up)
-                        .ok_or_else(|| "triangulator returned a point outside the source ring".to_string())?;
+                        .ok_or_else(|| {
+                            "triangulator returned a point outside the source ring".to_string()
+                        })?;
                     Ok([p.x, p.y, fallback_up])
                 };
                 let a = point(triangle.a)?;
@@ -371,7 +364,9 @@ fn compile_polygon(
             }
             Ok(())
         }
-        OsmVectorStyle::Marker { .. } => Err("polygon geometry requires a line or area style".into()),
+        OsmVectorStyle::Marker { .. } => {
+            Err("polygon geometry requires a line or area style".into())
+        }
     }
 }
 
@@ -394,7 +389,14 @@ fn project_coordinate(
         return Err("OSM feature contains a coordinate outside WGS84 bounds".into());
     }
     let (x, y, z) = lat_lon_alt_to_ecef(coordinate.lat, coordinate.lon, frame.origin_alt_m);
-    let (east, north, up) = ecef_to_enu(x, y, z, frame.origin_lat, frame.origin_lon, frame.origin_alt_m);
+    let (east, north, up) = ecef_to_enu(
+        x,
+        y,
+        z,
+        frame.origin_lat,
+        frame.origin_lon,
+        frame.origin_alt_m,
+    );
     if !east.is_finite()
         || !north.is_finite()
         || !up.is_finite()

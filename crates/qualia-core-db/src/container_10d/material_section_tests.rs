@@ -257,7 +257,9 @@ fn mat3_decodes_sampler_contract_without_wind_flag() {
             ..MATERIAL_SECTION_HEADER_SIZE + MATERIAL_RECORD_SIZE + SUBMESH_RANGE_SIZE,
         MATERIAL_SECTION_HEADER_SIZE + PREVIOUS_MATERIAL_RECORD_SIZE,
     );
-    bytes.truncate(MATERIAL_SECTION_HEADER_SIZE + PREVIOUS_MATERIAL_RECORD_SIZE + SUBMESH_RANGE_SIZE);
+    bytes.truncate(
+        MATERIAL_SECTION_HEADER_SIZE + PREVIOUS_MATERIAL_RECORD_SIZE + SUBMESH_RANGE_SIZE,
+    );
     let mut decoded = [MaterialRecord::legacy_default(); 1];
     let mut decoded_ranges = ranges;
     assert_eq!(

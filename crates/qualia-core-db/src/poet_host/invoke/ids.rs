@@ -811,6 +811,32 @@ pub const GEOM_QUATERNION_TO_MATRIX: &str = "ComputationalGeometry.quaternion_to
 pub const GEOM_SOLVE_DIAGONAL_QUADRATIC: &str = "ComputationalGeometry.solve_diagonal_quadratic";
 pub const GEOM_SCHUR_COMPLEMENT_2X2: &str = "ComputationalGeometry.schur_complement_2x2";
 pub const GEOM_SEPARATING_PLANE_AABB: &str = "ComputationalGeometry.separating_plane_aabb";
+pub const GEOM_EXTRUDE_PROFILE: &str = "ComputationalGeometry.extrude_profile";
+pub const GEOM_ASYMMETRIC_HULL: &str = "ComputationalGeometry.asymmetric_hull";
+pub const GEOM_BSPLINE_FIT: &str = "ComputationalGeometry.bspline_fit";
+pub const GEOM_TURTLE_3D: &str = "ComputationalGeometry.turtle_3d";
+pub const GEOM_SPACE_COLONIZE_3D: &str = "ComputationalGeometry.space_colonize_3d";
+pub const GEOM_TREE_SKELETON_3D: &str = "ComputationalGeometry.tree_skeleton_3d";
+pub const GEOM_CHORDAL_AXIS_2D: &str = "ComputationalGeometry.chordal_axis_2d";
+pub const GEOM_POINT_CLOUD_BOUND_3D: &str = "ComputationalGeometry.point_cloud_bound_3d";
+pub const GEOM_SOC_SKY_DOME: &str = "ComputationalGeometry.soc_sky_dome";
+pub const GEOM_SOLAR_TRACK: &str = "ComputationalGeometry.solar_track";
+pub const GEOM_CANOPY_INTEGRATE: &str = "ComputationalGeometry.canopy_integrate";
+pub const GEOM_POISSON_DISK_2D: &str = "ComputationalGeometry.poisson_disk_2d";
+pub const GEOM_POISSON_DISK_3D: &str = "ComputationalGeometry.poisson_disk_3d";
+pub const GEOM_HEAT_GEODESICS: &str = "ComputationalGeometry.heat_geodesics";
+pub const GEOM_SVO_RAYCAST: &str = "ComputationalGeometry.svo_raycast";
+pub const GEOM_POWER_DIAGRAM_2D: &str = "ComputationalGeometry.power_diagram_2d";
+pub const GEOM_DIFFERENTIAL_GROWTH_STEP: &str = "ComputationalGeometry.differential_growth_step";
+pub const GEOM_CURVE_SKELETON: &str = "ComputationalGeometry.curve_skeleton";
+pub const GEOM_DQS_SKIN: &str = "ComputationalGeometry.dqs_skin";
+pub const GEOM_PBD_STEP: &str = "ComputationalGeometry.pbd_step";
+pub const GEOM_MEDIAL_AXIS_3D: &str = "ComputationalGeometry.medial_axis_3d";
+pub const GEOM_SDF_SMOOTH: &str = "ComputationalGeometry.sdf_smooth";
+pub const GEOM_SWUNG_SURFACE: &str = "ComputationalGeometry.swung_surface";
+pub const GEOM_PIPE_MODEL_RADII: &str = "ComputationalGeometry.pipe_model_radii";
+pub const GEOM_MINIBALL_3D: &str = "ComputationalGeometry.miniball_3d";
+pub const GEOM_MESH_PLANE_SLICE: &str = "ComputationalGeometry.mesh_plane_slice";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1919,6 +1945,32 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_SOLVE_DIAGONAL_QUADRATIC,
     GEOM_SCHUR_COMPLEMENT_2X2,
     GEOM_SEPARATING_PLANE_AABB,
+    GEOM_EXTRUDE_PROFILE,
+    GEOM_ASYMMETRIC_HULL,
+    GEOM_BSPLINE_FIT,
+    GEOM_TURTLE_3D,
+    GEOM_SPACE_COLONIZE_3D,
+    GEOM_TREE_SKELETON_3D,
+    GEOM_CHORDAL_AXIS_2D,
+    GEOM_POINT_CLOUD_BOUND_3D,
+    GEOM_SOC_SKY_DOME,
+    GEOM_SOLAR_TRACK,
+    GEOM_CANOPY_INTEGRATE,
+    GEOM_POISSON_DISK_2D,
+    GEOM_POISSON_DISK_3D,
+    GEOM_HEAT_GEODESICS,
+    GEOM_SVO_RAYCAST,
+    GEOM_POWER_DIAGRAM_2D,
+    GEOM_DIFFERENTIAL_GROWTH_STEP,
+    GEOM_CURVE_SKELETON,
+    GEOM_DQS_SKIN,
+    GEOM_PBD_STEP,
+    GEOM_MEDIAL_AXIS_3D,
+    GEOM_SDF_SMOOTH,
+    GEOM_SWUNG_SURFACE,
+    GEOM_PIPE_MODEL_RADII,
+    GEOM_MINIBALL_3D,
+    GEOM_MESH_PLANE_SLICE,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -2785,7 +2837,33 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_QUATERNION_TO_MATRIX
         | GEOM_SOLVE_DIAGONAL_QUADRATIC
         | GEOM_SCHUR_COMPLEMENT_2X2
-        | GEOM_SEPARATING_PLANE_AABB => "geometry",
+        | GEOM_SEPARATING_PLANE_AABB
+        | GEOM_EXTRUDE_PROFILE
+        | GEOM_ASYMMETRIC_HULL
+        | GEOM_BSPLINE_FIT
+        | GEOM_TURTLE_3D
+        | GEOM_SPACE_COLONIZE_3D
+        | GEOM_TREE_SKELETON_3D
+        | GEOM_CHORDAL_AXIS_2D
+        | GEOM_POINT_CLOUD_BOUND_3D
+        | GEOM_SOC_SKY_DOME
+        | GEOM_SOLAR_TRACK
+        | GEOM_CANOPY_INTEGRATE
+        | GEOM_POISSON_DISK_2D
+        | GEOM_POISSON_DISK_3D
+        | GEOM_HEAT_GEODESICS
+        | GEOM_SVO_RAYCAST
+        | GEOM_POWER_DIAGRAM_2D
+        | GEOM_DIFFERENTIAL_GROWTH_STEP
+        | GEOM_CURVE_SKELETON
+        | GEOM_DQS_SKIN
+        | GEOM_PBD_STEP
+        | GEOM_MEDIAL_AXIS_3D
+        | GEOM_SDF_SMOOTH
+        | GEOM_SWUNG_SURFACE
+        | GEOM_PIPE_MODEL_RADII
+        | GEOM_MINIBALL_3D
+        | GEOM_MESH_PLANE_SLICE => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE

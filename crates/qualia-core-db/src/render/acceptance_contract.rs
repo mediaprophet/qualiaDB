@@ -214,7 +214,10 @@ mod tests {
             acceptance.browser_webgpu_gate(),
             CapabilityEvidence::Unknown
         );
-        assert_eq!(acceptance.pixel_readback_gate(), CapabilityEvidence::Unknown);
+        assert_eq!(
+            acceptance.pixel_readback_gate(),
+            CapabilityEvidence::Unknown
+        );
         assert_eq!(acceptance.performance_gate(), CapabilityEvidence::Unknown);
     }
 

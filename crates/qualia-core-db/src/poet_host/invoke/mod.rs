@@ -100,16 +100,28 @@ pub fn dispatch(
         ids::GRAPH_LEXICON_MANIFEST => graph::lexicon_manifest(snap, args, span),
         ids::N3_EVALUATE => graph::n3_evaluate(args, span),
         ids::GRAPH_AUTHORING => graph::graph_authoring(args, span),
-        ids::GRAPH_SHORTEST_PATH | "graph.shortest_path" | "navigation.a_star" | "solvers.graph.path" | "graph.dijkstra" => graph::shortest_path(args, span),
-        "solvers.graph.dijkstra" | "solvers.graph.shortest_path" => solvers::graph_shortest_path(args, span),
+        ids::GRAPH_SHORTEST_PATH
+        | "graph.shortest_path"
+        | "navigation.a_star"
+        | "solvers.graph.path"
+        | "graph.dijkstra" => graph::shortest_path(args, span),
+        "solvers.graph.dijkstra" | "solvers.graph.shortest_path" => {
+            solvers::graph_shortest_path(args, span)
+        }
         ids::GRAPH_SPREADING_ACTIVATION => graph::spreading_activation(args, span),
-        ids::DEONTIC_EVAL | "deontic.evaluate" | "deontic.eval" => logic::deontic_evaluate(snap, args, span),
+        ids::DEONTIC_EVAL | "deontic.evaluate" | "deontic.eval" => {
+            logic::deontic_evaluate(snap, args, span)
+        }
         ids::EPISTEMIC_EVAL => logic::epistemic_evaluate(snap, args, span),
         ids::PARACONSISTENT_ROUTE => logic::paraconsistent_route(snap, args, span),
         ids::LTL_GLOBALLY | "ltl.globally" => logic::ltl_globally(snap, args, span),
         ids::LTL_FINALLY | "ltl.finally" => logic::ltl_finally(snap, args, span),
-        ids::LTL_EVALUATE | "ltl.evaluate" | "ltl.evaluate_trace" => logic::ltl_evaluate(args, span),
-        "Econ.accounting_balance" | "accounting.balance" | "rea.balance" => econ::econ::econ_accounting_balance(args, span),
+        ids::LTL_EVALUATE | "ltl.evaluate" | "ltl.evaluate_trace" => {
+            logic::ltl_evaluate(args, span)
+        }
+        "Econ.accounting_balance" | "accounting.balance" | "rea.balance" => {
+            econ::econ::econ_accounting_balance(args, span)
+        }
         ids::DL_SUBSUMES => logic::subsumption_check(snap, args, span),
         ids::ASP_ENUMERATE => logic::asp_evaluate(snap, args, span),
         ids::CAUSAL_CAUSED => logic::caused(snap, args, span),
@@ -118,7 +130,10 @@ pub fn dispatch(
         ids::FORMAL_LOGIC_WORKBENCH => logic::formal_compute(args, span),
         ids::LEGAL_LOGIC_WORKBENCH => logic::legal_compute(snap, args, span),
         ids::GOVERNANCE_LOGIC_WORKBENCH => logic::governance_compute(args, span),
-        ids::SPATIAL_LOGIC_WORKBENCH | "temporal.allen" | "temporal.allen_relation" | "spatial.workbench" => logic::spatial_compute(args, span),
+        ids::SPATIAL_LOGIC_WORKBENCH
+        | "temporal.allen"
+        | "temporal.allen_relation"
+        | "spatial.workbench" => logic::spatial_compute(args, span),
         ids::INFRA_LOGIC_WORKBENCH => logic::infra_compute(args, span),
         ids::INFRA_EXT_LOGIC_WORKBENCH => logic::infra_ext_compute(args, span),
         ids::NT_GCD => math::gcd(args, span),
@@ -478,6 +493,32 @@ pub fn dispatch(
         ids::GEOM_SOLVE_DIAGONAL_QUADRATIC => geometry::solve_diagonal_quadratic(args, span),
         ids::GEOM_SCHUR_COMPLEMENT_2X2 => geometry::schur_complement_2x2(args, span),
         ids::GEOM_SEPARATING_PLANE_AABB => geometry::separating_plane_aabb(args, span),
+        ids::GEOM_EXTRUDE_PROFILE => geometry::extrude_profile(args, span),
+        ids::GEOM_ASYMMETRIC_HULL => geometry::asymmetric_hull(args, span),
+        ids::GEOM_BSPLINE_FIT => geometry::bspline_fit(args, span),
+        ids::GEOM_TURTLE_3D => geometry::turtle_3d(args, span),
+        ids::GEOM_SPACE_COLONIZE_3D => geometry::space_colonize_3d(args, span),
+        ids::GEOM_TREE_SKELETON_3D => geometry::tree_skeleton_3d(args, span),
+        ids::GEOM_CHORDAL_AXIS_2D => geometry::chordal_axis_2d(args, span),
+        ids::GEOM_POINT_CLOUD_BOUND_3D => geometry::point_cloud_bound_3d(args, span),
+        ids::GEOM_SOC_SKY_DOME => geometry::soc_sky_dome(args, span),
+        ids::GEOM_SOLAR_TRACK => geometry::solar_track(args, span),
+        ids::GEOM_CANOPY_INTEGRATE => geometry::canopy_integrate(args, span),
+        ids::GEOM_POISSON_DISK_2D => geometry::poisson_disk_2d(args, span),
+        ids::GEOM_POISSON_DISK_3D => geometry::poisson_disk_3d(args, span),
+        ids::GEOM_HEAT_GEODESICS => geometry::heat_geodesics(args, span),
+        ids::GEOM_SVO_RAYCAST => geometry::svo_raycast(args, span),
+        ids::GEOM_POWER_DIAGRAM_2D => geometry::power_diagram_2d(args, span),
+        ids::GEOM_DIFFERENTIAL_GROWTH_STEP => geometry::differential_growth_step(args, span),
+        ids::GEOM_CURVE_SKELETON => geometry::curve_skeleton(args, span),
+        ids::GEOM_DQS_SKIN => geometry::dqs_skin(args, span),
+        ids::GEOM_PBD_STEP => geometry::pbd_step(args, span),
+        ids::GEOM_MEDIAL_AXIS_3D => geometry::medial_axis_3d(args, span),
+        ids::GEOM_SDF_SMOOTH => geometry::sdf_smooth(args, span),
+        ids::GEOM_SWUNG_SURFACE => geometry::swung_surface(args, span),
+        ids::GEOM_PIPE_MODEL_RADII => geometry::pipe_model_radii(args, span),
+        ids::GEOM_MINIBALL_3D => geometry::miniball_3d(args, span),
+        ids::GEOM_MESH_PLANE_SLICE => geometry::mesh_plane_slice(args, span),
         ids::VISION_AHASH => vision::ahash(args, span),
         ids::VISION_GAUSSIAN_BLUR => vision::gaussian_blur(args, span),
         ids::VISION_SOBEL_MAGNITUDE => vision::sobel_magnitude(args, span),
@@ -830,7 +871,9 @@ pub fn dispatch(
         ids::RENDER_SET_ENVIRONMENT_PROBE => render::render_set_environment_probe(args, span),
         ids::RENDER_WATER_SET_PARAMETERS => render::render_water_set_parameters(args, span),
         ids::RENDER_VEGETATION_PUSH_COLLIDER => render::render_vegetation_push_collider(args, span),
-        ids::RENDER_VEGETATION_CLEAR_COLLIDERS => render::render_vegetation_clear_colliders(args, span),
+        ids::RENDER_VEGETATION_CLEAR_COLLIDERS => {
+            render::render_vegetation_clear_colliders(args, span)
+        }
         ids::RENDER_TEXTURE_TRANSCODE_CAPS => render::render_texture_transcode_caps(args, span),
         ids::SAMPLER_CONFIGURE => sampler_bind::configure(args, span),
         ids::SAMPLER_CONSTRAIN_ENABLE => sampler_bind::constrain_enable(args, span),

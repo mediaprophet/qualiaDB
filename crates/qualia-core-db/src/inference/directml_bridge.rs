@@ -181,8 +181,9 @@ pub unsafe extern "C" fn iocp_create_ffi(
 }
 
 fn iocp_create_impl(path: &str) -> Result<*mut IocpHandle, DmlError> {
-    let file = std::fs::File::open(path)
-        .map_err(|e| DmlError::DirectStorageFailed(format!("Failed to open file for IOCP: {}", e)))?;
+    let file = std::fs::File::open(path).map_err(|e| {
+        DmlError::DirectStorageFailed(format!("Failed to open file for IOCP: {}", e))
+    })?;
     let handle = Box::new(IocpHandle {
         file,
         chunk_buffer: Box::new([0u8; 65536]),

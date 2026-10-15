@@ -40,10 +40,10 @@ pub use entity_compiler::{
 };
 
 pub use entity_verifier::{
-    verify_digital_twin_10d, verify_digital_twin_bundle, verify_entity_10d,
-    verify_entity_bundle, AffordanceVerificationSummary, CommonsObligationSummary,
-    DigitalTwin10dVerification, DigitalTwinBundleVerification, Entity10dVerification,
-    EntityBundleVerification, ImpostorVerificationSummary, SurfelVerificationSummary,
+    verify_digital_twin_10d, verify_digital_twin_bundle, verify_entity_10d, verify_entity_bundle,
+    AffordanceVerificationSummary, CommonsObligationSummary, DigitalTwin10dVerification,
+    DigitalTwinBundleVerification, Entity10dVerification, EntityBundleVerification,
+    ImpostorVerificationSummary, SurfelVerificationSummary,
 };
 
 pub use cbor_ld_manifest::{
@@ -142,8 +142,10 @@ mod tests {
 
         let mut w = BundleWriter::new();
         w.add_family_manifest(&manifest).unwrap();
-        w.add_file("pump_hero.10d", "10d", vec![0x10; 64], None).unwrap();
-        w.add_file("pump_ontology.q42", "q42", vec![0x42; 64], None).unwrap();
+        w.add_file("pump_hero.10d", "10d", vec![0x10; 64], None)
+            .unwrap();
+        w.add_file("pump_ontology.q42", "q42", vec![0x42; 64], None)
+            .unwrap();
         let bytes = w.build().unwrap();
 
         let r = BundleReader::parse(&bytes).unwrap();

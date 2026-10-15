@@ -52,8 +52,9 @@ pub struct ImpostorAtlasMiniHeader {
     pub atlas_byte_size: u32,
     /// 0 = RGBA8_UNORM, 1 = BC7, 2 = ASTC_4x4.
     pub channel_format: u8,
-    pub reserved: [u8; 11],
+    pub reserved: [u8; 31],
 }
+const _: [(); IMPOSTOR_MINI_HEADER_SIZE] = [(); core::mem::size_of::<ImpostorAtlasMiniHeader>()];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImpostorSectionError {
@@ -69,7 +70,10 @@ impl std::fmt::Display for ImpostorSectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PayloadTooShort { need, have } => {
-                write!(f, "impostor section payload too short: have {have}, need {need}")
+                write!(
+                    f,
+                    "impostor section payload too short: have {have}, need {need}"
+                )
             }
             Self::BadMagic(m) => write!(f, "bad impostor section magic: {m:?}"),
             Self::UnsupportedVersion(v) => write!(f, "unsupported impostor section version {v}"),
@@ -78,7 +82,10 @@ impl std::fmt::Display for ImpostorSectionError {
             }
             Self::InvalidGridDimension(d) => write!(f, "invalid impostor grid dimension: {d}"),
             Self::PayloadLengthMismatch { declared, actual } => {
-                write!(f, "impostor payload length mismatch: declared {declared}, actual {actual}")
+                write!(
+                    f,
+                    "impostor payload length mismatch: declared {declared}, actual {actual}"
+                )
             }
         }
     }
@@ -116,7 +123,7 @@ pub fn decode_impostor_section<'a>(
         });
     }
     let header: ImpostorAtlasMiniHeader =
-        *bytemuck::from_bytes(&payload[..IMPOSTOR_MINI_HEADER_SIZE]);
+        bytemuck::pod_read_unaligned(&payload[..IMPOSTOR_MINI_HEADER_SIZE]);
     if header.magic != MAGIC_IMPO {
         return Err(ImpostorSectionError::BadMagic(header.magic));
     }
@@ -124,7 +131,9 @@ pub fn decode_impostor_section<'a>(
         return Err(ImpostorSectionError::UnsupportedVersion(header.version));
     }
     if header.grid_dimension == 0 || header.grid_dimension > 64 {
-        return Err(ImpostorSectionError::InvalidGridDimension(header.grid_dimension));
+        return Err(ImpostorSectionError::InvalidGridDimension(
+            header.grid_dimension,
+        ));
     }
     let data_len = payload.len() - IMPOSTOR_MINI_HEADER_SIZE;
     if header.atlas_byte_size as usize != data_len {
@@ -238,7 +247,7 @@ mod tests {
             sphere_radius: 2.2,
             atlas_byte_size: 16,
             channel_format: 0,
-            reserved: [0; 11],
+            reserved: [0; 31],
         };
         let dummy_payload = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let mut buffer = [0u8; 128];
@@ -249,6 +258,14 @@ mod tests {
         let (decoded_hdr, decoded_data) = decode_impostor_section(&buffer[..written]).unwrap();
         assert_eq!(decoded_hdr, header);
         assert_eq!(decoded_data, &dummy_payload);
+        let mut unaligned = [0u8; 129];
+        unaligned[1..1 + written].copy_from_slice(&buffer[..written]);
+        assert_eq!(
+            decode_impostor_section(&unaligned[1..1 + written])
+                .unwrap()
+                .0,
+            header
+        );
     }
 
     #[test]

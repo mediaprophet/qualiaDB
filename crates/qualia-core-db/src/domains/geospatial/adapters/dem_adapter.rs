@@ -580,7 +580,7 @@ mod tests {
     #[test]
     fn requests_are_consent_gated_and_cover_all_xyz_tiles() {
         let adapter = DemAdapter::terrarium("dem_adapter").with_zoom(12).unwrap();
-        let bbox = (151.20, -33.88, 151.22, -33.86);
+        let bbox = (151.00, -33.88, 151.20, -33.86);
         let mut registry = NetworkDisclosureRegistry::new();
         assert!(adapter.build_fetch_requests(bbox, &registry).is_err());
         registry.register_egress(

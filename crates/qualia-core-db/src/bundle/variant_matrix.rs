@@ -32,7 +32,9 @@ pub enum BiologicalPhenotype {
 }
 
 /// Level of Detail (LOD) tier.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum LodTier {
     /// Hero presentation asset (highest vertex density, full skeletal rigs).
@@ -79,7 +81,11 @@ pub struct ModelVariantDescriptor {
     /// Key of the embedded 3D geometry file in the bundle (e.g. `"models/male_adult.10d"`).
     pub asset_key: String,
     /// Optional key of the associated entity ontology volume (e.g. `"ontology/male_adult.q42"`).
-    #[serde(default, alias = "personal_ontology_key", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        alias = "personal_ontology_key",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub entity_ontology_key: Option<String>,
     /// Optional seed for procedural micro-surface/allometry synthesis.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -119,7 +125,11 @@ impl TwinFamilyManifest {
 
     /// Add a model variant to the family manifest.
     pub fn add_variant(&mut self, variant: ModelVariantDescriptor) {
-        if let Some(pos) = self.variants.iter().position(|v| v.variant_id == variant.variant_id) {
+        if let Some(pos) = self
+            .variants
+            .iter()
+            .position(|v| v.variant_id == variant.variant_id)
+        {
             self.variants[pos] = variant;
         } else {
             self.variants.push(variant);
