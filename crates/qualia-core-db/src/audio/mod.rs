@@ -9,6 +9,7 @@ pub mod cqt_bake;
 /// N6: Traditional DAW DSP — oscillator, ADSR, filter, LFO, effects, MIDI, transport, meters.
 pub mod dsp;
 pub mod dsp_kernel;
+pub mod holosonic;
 pub mod hrtf;
 /// AU-CORE-DSP — real inverse STFT (WOLA resynthesis; reuses `qualia-audio`). Native only.
 #[cfg(not(target_arch = "wasm32"))]
@@ -49,6 +50,10 @@ pub use dsp::biquad_df2t::{
     DENORMAL_DC_OFFSET, QUANTUM_SIZE,
 };
 pub use dsp_kernel::{epistemic_fm_index, epistemic_temperature_from_q, ParametricVoiceState};
+pub use holosonic::{
+    HolosonicEmitter, HolosonicModality, HolosonicPointSample, HolosonicWavefield,
+    MAX_HOLOSONIC_EMITTERS, SPEED_OF_SOUND_MPS,
+};
 pub use hrtf::{
     binaural_from_position, binaural_render, convolve_fir, set_hrtf_profile, synthesize_hrir,
     BinauralGains, HrtfProfile,

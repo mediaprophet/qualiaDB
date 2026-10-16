@@ -59,9 +59,10 @@ void main() {
     float sun_int = u_sun_int > 0.0 ? u_sun_int : 1.0;
     float amb = u_amb > 0.0 ? u_amb : 0.25;
     float diffuse = clamp(dot(n, key), 0.0, 1.0) * sun_int;
-    float facing = clamp(abs(n.z), 0.0, 1.0);
-    float rim = pow(1.0 - facing, 2.0);
-    vec3 col = v_color.rgb * (amb + diffuse) + vec3(0.20, 0.13, 0.06) * rim;
+    vec3 view_dir = normalize(u_eye - v_world);
+    float facing = clamp(abs(dot(n, view_dir)), 0.0, 1.0);
+    float rim = pow(1.0 - facing, 3.0);
+    vec3 col = v_color.rgb * (amb + diffuse) + v_color.rgb * rim * 0.35;
     if (u_fog_enabled > 0.5 && u_fog_density > 0.0) {
         float distance_to_eye = length(v_world - u_eye);
         float mean_height = max(0.0, 0.5 * (v_world.y + u_eye.y));

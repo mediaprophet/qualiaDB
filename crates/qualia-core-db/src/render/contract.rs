@@ -104,8 +104,8 @@ mod tests {
         STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
     };
     use crate::shaders::viewport::{
-        AMBIENT_WGSL, AO_GENERATE_WGSL, AO_PREPASS_WGSL, BLOOM_WGSL, MESH_WGSL, OUTPUT_WGSL,
-        PROJECTOR_WGSL, SUN_SHADOW_WGSL,
+        AMBIENT_WGSL, AO_GENERATE_WGSL, AO_PREPASS_WGSL, BLOOM_WGSL, HOLOGRAPHIC_WGSL, MESH_WGSL,
+        OUTPUT_WGSL, PROJECTOR_WGSL, SUN_SHADOW_WGSL,
     };
     use crate::sonic_token::SonicToken;
     use crate::tensor::buffer_export::tensor_node_count;
@@ -119,6 +119,7 @@ mod tests {
         validate_wgsl_smoke("ambient", AMBIENT_WGSL);
         validate_wgsl_smoke("projector", PROJECTOR_WGSL);
         validate_wgsl_smoke("mesh", MESH_WGSL);
+        validate_wgsl_smoke("holographic", HOLOGRAPHIC_WGSL);
         validate_wgsl_smoke("sun shadow", SUN_SHADOW_WGSL);
         validate_wgsl_smoke("AO prepass", AO_PREPASS_WGSL);
         validate_wgsl_smoke("AO generate", AO_GENERATE_WGSL);

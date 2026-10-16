@@ -341,4 +341,3 @@ mod tests {
         assert_eq!(power_test_2d_sign(a, b, c, p_on), Sign::Zero);
     }
 }
-

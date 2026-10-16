@@ -110,6 +110,25 @@ fn merged_scene_keeps_and_deduplicates_material_bindings() {
     assert_eq!(scene.material_ranges[2].first_index, 6);
     assert_eq!(scene.material_ranges[2].material_id, 101);
 }
+
+#[test]
+fn scene_materials_remain_sorted_when_assets_arrive_in_spatial_order() {
+    let mut scene = SceneMeshAccum::new();
+    for (id, x) in [(301, 0.0), (101, 2.0), (201, 4.0)] {
+        scene.append_asset_10d(&material_asset(id, 0.6, x), [1.0; 4]);
+    }
+    assert_eq!(scene.assets_refused, 0);
+    assert_eq!(
+        scene.materials.iter().map(|m| m.id).collect::<Vec<_>>(),
+        [101, 201, 301]
+    );
+    container_10d::validate_material_bindings(
+        &scene.materials,
+        &scene.material_ranges,
+        scene.indices.len() as u32,
+    )
+    .unwrap();
+}
 #[test]
 fn merged_uvs_preserve_source_coordinates_and_fill_only_legacy_vertices() {
     let bytes = material_asset(100, 0.34, 0.0);

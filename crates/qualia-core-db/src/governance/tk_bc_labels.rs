@@ -74,7 +74,9 @@ pub fn evaluate_tk_bc_policy(
     }
 
     // 1. Cultural Sensitivity check (highest precedence)
-    if labels.has(TkBcLabelFlags::TK_CULTURALLY_SENSITIVE) && !context.observer_is_verified_custodian {
+    if labels.has(TkBcLabelFlags::TK_CULTURALLY_SENSITIVE)
+        && !context.observer_is_verified_custodian
+    {
         return TkEvaluationVerdict::RestrictedCulturalSensitivity;
     }
 

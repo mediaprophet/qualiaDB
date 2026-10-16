@@ -387,13 +387,14 @@ impl SceneMeshAccum {
         }
         self.index_spans
             .push((index_start_usize, self.indices.len()));
+        // MAT1 and the GPU material lookup require ascending unique IDs.
+        // Assets arrive in scene order, which has no relationship to ID order.
         for material in local_materials.drain(..) {
-            if !self
+            if let Err(index) = self
                 .materials
-                .iter()
-                .any(|present| present.id == material.id)
+                .binary_search_by_key(&material.id, |present| present.id)
             {
-                self.materials.push(material);
+                self.materials.insert(index, material);
             }
         }
         self.material_ranges

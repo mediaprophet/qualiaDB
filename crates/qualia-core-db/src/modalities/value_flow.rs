@@ -184,10 +184,7 @@ use crate::net::qdnf::economics::meters::MeterReading;
 
 /// Computes the carriage compensation for observed resource meters based on
 /// allowed carriage rates (cents per unit), strictly bounded by production ROI caps.
-pub fn carriage_fee_from_meters(
-    reading: &MeterReading,
-    cents_per_unit_micro: u64,
-) -> u64 {
+pub fn carriage_fee_from_meters(reading: &MeterReading, cents_per_unit_micro: u64) -> u64 {
     let units = reading.milli_units / 1000;
     ((units as u128).saturating_mul(cents_per_unit_micro as u128) / 1_000_000u128) as u64
 }

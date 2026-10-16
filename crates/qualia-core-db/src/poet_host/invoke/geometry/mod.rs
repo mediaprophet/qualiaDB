@@ -115,8 +115,7 @@ pub use wave28_host::{
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use wave29_host::{
     mesh_plane_slice_host as mesh_plane_slice, miniball_3d_host as miniball_3d,
-    pipe_model_radii_host as pipe_model_radii,
-    swung_surface_host as swung_surface,
+    pipe_model_radii_host as pipe_model_radii, swung_surface_host as swung_surface,
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]

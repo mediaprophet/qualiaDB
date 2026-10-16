@@ -1,5 +1,13 @@
 //! `governance` category (reorg).
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub mod cell_graph;
 #[cfg(not(all(
     target_arch = "wasm32",
     feature = "wasm-ontology",
@@ -19,14 +27,6 @@ pub mod consent_contract;
     feature = "wasm-full"
 ))]
 pub mod coord_seams;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-webcivics",
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
-pub mod cell_graph;
 pub mod coordination;
 pub mod illocution;
 pub mod instrument_trace;

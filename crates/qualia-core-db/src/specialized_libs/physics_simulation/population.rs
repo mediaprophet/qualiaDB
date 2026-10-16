@@ -77,11 +77,7 @@ impl Default for FlockingParameters {
 
 /// Step flocking simulation for a slice of boids in-place (Tier-1 HotZeroHeap).
 /// Evaluates Separation, Alignment, and Cohesion forces in caller-owned slices.
-pub fn step_flocking_simulation(
-    boids: &mut [BoidAgent],
-    params: &FlockingParameters,
-    dt: f32,
-) {
+pub fn step_flocking_simulation(boids: &mut [BoidAgent], params: &FlockingParameters, dt: f32) {
     let n = boids.len();
     if n <= 1 || dt <= 0.0 {
         return;
@@ -143,7 +139,11 @@ pub fn step_flocking_simulation(
             accel[1] += (avg_v[1] - vi[1]) * params.alignment_weight;
             accel[2] += (avg_v[2] - vi[2]) * params.alignment_weight;
 
-            let center = [coh_center[0] * inv_n, coh_center[1] * inv_n, coh_center[2] * inv_n];
+            let center = [
+                coh_center[0] * inv_n,
+                coh_center[1] * inv_n,
+                coh_center[2] * inv_n,
+            ];
             accel[0] += (center[0] - pi[0]) * params.cohesion_weight;
             accel[1] += (center[1] - pi[1]) * params.cohesion_weight;
             accel[2] += (center[2] - pi[2]) * params.cohesion_weight;

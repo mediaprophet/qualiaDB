@@ -642,7 +642,7 @@ mod tests {
             Point3::new(-1.0, -1.0, 1.0),
             Point3::new(-1.0, 1.0, -1.0),
             Point3::new(1.0, -1.0, -1.0),
-            Point3::new(0.0, 0.0, 0.0), // interior point
+            Point3::new(0.0, 0.0, 0.0),  // interior point
             Point3::new(0.2, -0.3, 0.4), // interior point
         ];
         let mb = smallest_enclosing_sphere_3d(&pts).unwrap();

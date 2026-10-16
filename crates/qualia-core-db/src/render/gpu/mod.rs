@@ -21,6 +21,8 @@ pub use texture_mips::AlphaCoverageDiagnostics;
 pub use texture_mips::TextureMipSemantic;
 pub use texture_residency::{TextureColorSpace, TextureUploadError};
 mod animated_upload;
+pub mod holographic;
+pub use holographic::{HolographicNodeGpu, HolographicPipelineGpu, HolographicPrimitive};
 mod mesh_normals;
 mod mesh_upload;
 mod output_pass;

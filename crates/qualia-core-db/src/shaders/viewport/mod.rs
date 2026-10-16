@@ -35,3 +35,7 @@ pub const EMF_VOLUMETRIC_WGSL: &str = include_str!("emf_volumetric.wgsl");
 pub const SURFEL_INSTANCED_WGSL: &str = include_str!("surfel_instanced.wgsl");
 pub const ACOUSTIC_VOXEL_CONE_WGSL: &str = include_str!("acoustic_voxel_cone.wgsl");
 pub const DEFERRED_RESOLVE_WGSL: &str = include_str!("deferred_resolve.wgsl");
+pub const HOLOGRAPHIC_WGSL: &str = concat!(
+    include_str!("spectral.wgsl"),
+    include_str!("holographic.wgsl")
+);

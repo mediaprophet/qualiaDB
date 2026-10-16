@@ -96,12 +96,16 @@ impl CellularLogicGraph {
         let pos_b = self.cells.iter().position(|c| c.id == b);
         if let (Some(ia), Some(ib)) = (pos_a, pos_b) {
             let ca = &mut self.cells[ia];
-            if ca.neighbor_count < MAX_CELL_NEIGHBORS && !ca.neighbors[..ca.neighbor_count].contains(&b) {
+            if ca.neighbor_count < MAX_CELL_NEIGHBORS
+                && !ca.neighbors[..ca.neighbor_count].contains(&b)
+            {
                 ca.neighbors[ca.neighbor_count] = b;
                 ca.neighbor_count += 1;
             }
             let cb = &mut self.cells[ib];
-            if cb.neighbor_count < MAX_CELL_NEIGHBORS && !cb.neighbors[..cb.neighbor_count].contains(&a) {
+            if cb.neighbor_count < MAX_CELL_NEIGHBORS
+                && !cb.neighbors[..cb.neighbor_count].contains(&a)
+            {
                 cb.neighbors[cb.neighbor_count] = a;
                 cb.neighbor_count += 1;
             }

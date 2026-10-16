@@ -122,11 +122,11 @@ pub mod kirkpatrick;
 mod laplacian_3d;
 pub mod math_geometry;
 pub mod medial_axis_3d;
+/// Standalone caller-buffered triangle mesh / plane section segments.
+pub mod mesh_plane_slice;
 /// P13.1 — Mesh quality metrics (tri/tet min/max angle, radius-edge, aspect,
 /// scaled Jacobian, dihedral) and isotropic size / anisotropic metric fields.
 pub mod mesh_quality;
-/// Standalone caller-buffered triangle mesh / plane section segments.
-pub mod mesh_plane_slice;
 mod minkowski_2;
 pub mod mixed_cell_topology;
 pub mod motion_planning;
@@ -460,13 +460,13 @@ pub use math_geometry::{
     Quaternion, SeparatingPlane, SurfaceDifferential,
 };
 pub use medial_axis_3d::{extract_medial_axis_3d, tet_circumcenter, MedialAxisError, MedialSample};
+pub use mesh_plane_slice::{slice_mesh_with_plane, MeshPlaneSliceError};
 pub use mesh_quality::{
     check_field_conformance_tet, check_field_conformance_tri, tet_mesh_quality_slice, tet_quality,
     tet_quality_points, tri_mesh_quality_2d, tri_quality, tri_quality_points, tri_signed_area_2d,
     AnisotropyField, FieldConformance, MeshQualityError, MetricTensor, SizeField,
     TetMeshQualityStats, TetQuality, TriMeshQualityStats, TriQuality,
 };
-pub use mesh_plane_slice::{slice_mesh_with_plane, MeshPlaneSliceError};
 pub use minkowski_2::{
     minkowski_difference_2, minkowski_sum_2, minkowski_sum_brute_force, minkowski_sum_convex,
     minkowski_sum_non_convex, MinkowskiError,
