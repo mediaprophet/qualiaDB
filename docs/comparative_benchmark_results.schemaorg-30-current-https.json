@@ -7,39 +7,39 @@
       "dataset_format": "ntriples",
       "engine": "qualia_nt",
       "filter": {
-        "max": 0.051827,
-        "mean": 0.024966366666666663,
-        "min": 0.020378,
-        "p50": 0.02162,
-        "p95": 0.046948,
-        "p99": 0.051827,
+        "max": 0.07314699999999999,
+        "mean": 0.039859533333333336,
+        "min": 0.031049,
+        "p50": 0.036588,
+        "p95": 0.05837,
+        "p99": 0.07314699999999999,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
       },
-      "ingestion_ms": 7.374,
+      "ingestion_ms": 7.987,
       "measurement_path": "in_process_ntriples_parse",
       "n_triples": 17949,
       "note": "Parses N-Triples text (same RDF source as Oxigraph/Comunica) into quins and queries an in-memory subject index.",
-      "peak_rss_mb": 4.57,
+      "peak_rss_mb": 4.56,
       "point": {
-        "max": 5.9999999999999995e-05,
-        "mean": 3.066666666666665e-05,
-        "min": 2e-05,
+        "max": 8e-05,
+        "mean": 3.3433333333333324e-05,
+        "min": 2.9e-05,
         "p50": 2.9999999999999997e-05,
-        "p95": 3.1e-05,
-        "p99": 5.9999999999999995e-05,
+        "p95": 4.9999999999999996e-05,
+        "p99": 8e-05,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
       },
       "twohop": {
-        "max": 0.00011999999999999999,
-        "mean": 0.00010276666666666664,
-        "min": 9.999999999999999e-05,
-        "p50": 9.999999999999999e-05,
-        "p95": 0.000111,
-        "p99": 0.00011999999999999999,
+        "max": 0.00015099999999999998,
+        "mean": 0.00012359999999999994,
+        "min": 0.00011,
+        "p50": 0.00012100000000000001,
+        "p95": 0.00015099999999999998,
+        "p99": 0.00015099999999999998,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
@@ -49,7 +49,7 @@
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
       "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-10-16T06:24:09.651778Z",
+      "timestamp": "2026-10-16T11:27:18.099183Z",
       "meta": {
         "label": "Qualia (N-Triples parse)",
         "focus": "Same RDF .nt source as Oxigraph/Comunica \u2014 parse text into quins in-process",
@@ -73,50 +73,50 @@
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 1.037,
-        "native_q42_file_bytes": 1087560
+        "native_q42_file_bytes": 1087561
       },
       "engine_version": "0.0.40"
     },
     "qualia_q42": {
-      "dataset_file_bytes": 1087560,
+      "dataset_file_bytes": 1087561,
       "dataset_file_mb": 1.037,
       "dataset_file_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
       "dataset_format": "q42",
       "engine": "qualia_q42",
       "filter": {
-        "max": 0.14321799999999998,
-        "mean": 0.09163330000000001,
-        "min": 0.08537,
-        "p50": 0.087193,
-        "p95": 0.121176,
-        "p99": 0.14321799999999998,
+        "max": 0.183946,
+        "mean": 0.1369827,
+        "min": 0.12789,
+        "p50": 0.132328,
+        "p95": 0.162716,
+        "p99": 0.183946,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
       },
-      "ingestion_ms": 4.268,
+      "ingestion_ms": 5.477,
       "measurement_path": "in_process_q42_superblock",
       "n_triples": 22100,
       "note": "Loads qualia-cli SuperBlock .q42 and queries an in-memory subject index.",
-      "peak_rss_mb": 6.88,
+      "peak_rss_mb": 6.89,
       "point": {
-        "max": 4.9999999999999996e-05,
-        "mean": 3.0333333333333316e-05,
-        "min": 2e-05,
+        "max": 7.000000000000001e-05,
+        "mean": 3.3666666666666654e-05,
+        "min": 2.9e-05,
         "p50": 2.9999999999999997e-05,
-        "p95": 3.1e-05,
-        "p99": 4.9999999999999996e-05,
+        "p95": 5.1e-05,
+        "p99": 7.000000000000001e-05,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
       },
       "twohop": {
-        "max": 4.1e-05,
-        "mean": 3.536666666666667e-05,
-        "min": 2.9e-05,
+        "max": 5.9999999999999995e-05,
+        "mean": 4.2699999999999994e-05,
+        "min": 4e-05,
         "p50": 4e-05,
-        "p95": 4e-05,
-        "p99": 4.1e-05,
+        "p95": 5.1e-05,
+        "p99": 5.9999999999999995e-05,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
@@ -126,7 +126,7 @@
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
       "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-10-16T06:24:09.699426Z",
+      "timestamp": "2026-10-16T11:27:18.154109Z",
       "meta": {
         "label": "Qualia (.q42 artifact)",
         "focus": "Pre-compiled SuperBlock load \u2014 same graph, no RDF text parse",
@@ -150,45 +150,45 @@
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 1.037,
-        "native_q42_file_bytes": 1087560
+        "native_q42_file_bytes": 1087561
       },
       "engine_version": "0.0.40"
     },
     "oxigraph": {
       "engine": "oxigraph",
       "n_triples": 17949,
-      "ingestion_ms": 39.181,
-      "rss_before_load_mb": 37.68,
-      "rss_after_load_mb": 47.21,
+      "ingestion_ms": 39.393,
+      "rss_before_load_mb": 37.67,
+      "rss_after_load_mb": 47.2,
       "point": {
-        "min": 0.028,
-        "max": 0.061,
-        "mean": 0.0306,
-        "p50": 0.0292,
-        "p95": 0.0356,
-        "p99": 0.061,
+        "min": 0.0277,
+        "max": 0.0524,
+        "mean": 0.0299,
+        "p50": 0.0287,
+        "p95": 0.0345,
+        "p99": 0.0524,
         "samples": 30,
         "warmup_samples": 10,
         "unit": "milliseconds"
       },
       "twohop": {
-        "min": 0.0303,
-        "max": 0.0752,
-        "mean": 0.0335,
-        "p50": 0.0311,
-        "p95": 0.0447,
-        "p99": 0.0752,
+        "min": 0.0298,
+        "max": 0.051,
+        "mean": 0.0312,
+        "p50": 0.0303,
+        "p95": 0.0324,
+        "p99": 0.051,
         "samples": 30,
         "warmup_samples": 10,
         "unit": "milliseconds"
       },
       "filter": {
-        "min": 0.0801,
-        "max": 0.1211,
-        "mean": 0.0842,
-        "p50": 0.0813,
-        "p95": 0.1085,
-        "p99": 0.1211,
+        "min": 0.0791,
+        "max": 0.1265,
+        "mean": 0.0888,
+        "p50": 0.0823,
+        "p95": 0.1185,
+        "p99": 0.1265,
         "samples": 30,
         "warmup_samples": 10,
         "unit": "milliseconds"
@@ -202,7 +202,7 @@
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
       "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-10-16T06:23:52.852730Z",
+      "timestamp": "2026-10-16T11:27:02.096990Z",
       "meta": {
         "label": "Oxigraph",
         "focus": "Memory bloat & native Rust SPARQL speed",
@@ -226,7 +226,7 @@
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 1.037,
-        "native_q42_file_bytes": 1087560
+        "native_q42_file_bytes": 1087561
       },
       "measurement_path": "in_process_subprocess"
     },
@@ -238,7 +238,7 @@
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
       "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-10-16T06:24:07.894670Z",
+      "timestamp": "2026-10-16T11:27:17.137316Z",
       "meta": {
         "label": "SurrealDB",
         "focus": "Relational-vs-graph overhead (SQL-like document/graph parsing)",
@@ -262,7 +262,7 @@
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 1.037,
-        "native_q42_file_bytes": 1087560
+        "native_q42_file_bytes": 1087561
       },
       "measurement_path": "in_process_subprocess",
       "point": null,
@@ -277,12 +277,12 @@
       "engine": "comunica",
       "n_triples": 17949,
       "ingestion_ms": "ERROR",
-      "error": "node exit -5: edTable::InitializeTable (subspace allocation)\n#\n----- Native stack trace -----\n\n 1: 0x9dde61  [node]\n 2: 0x27ab085 v8::base::FatalOOM(v8::base::OOMType, char const*) [node]\n 3: 0xc70ec6  [node]\n 4: 0x18df0f0  [node]\n 5: 0x103cece  [node]\n 6: 0xc89bae v8::V8::Initialize(int) [node]\n 7: 0x8d0cb0  [node]\n 8: 0x8d0fec node::Start(int, char**) [node]\n 9: 0x7f749122a1ca  [/lib/x86_64-linux-gnu/libc.so.6]\n10: 0x7f749122a28b __libc_start_main [/lib/x86_64-linux-gnu/libc.so.6]\n11: 0x7ef4fe _start [node]",
+      "error": "node exit -5: edTable::InitializeTable (subspace allocation)\n#\n----- Native stack trace -----\n\n 1: 0x9dde61  [node]\n 2: 0x27ab085 v8::base::FatalOOM(v8::base::OOMType, char const*) [node]\n 3: 0xc70ec6  [node]\n 4: 0x18df0f0  [node]\n 5: 0x103cece  [node]\n 6: 0xc89bae v8::V8::Initialize(int) [node]\n 7: 0x8d0cb0  [node]\n 8: 0x8d0fec node::Start(int, char**) [node]\n 9: 0x7ff3d1a2a1ca  [/lib/x86_64-linux-gnu/libc.so.6]\n10: 0x7ff3d1a2a28b __libc_start_main [/lib/x86_64-linux-gnu/libc.so.6]\n11: 0x7ef4fe _start [node]",
       "schema_version": 2,
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
       "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-10-16T06:24:08.984744Z",
+      "timestamp": "2026-10-16T11:27:17.457028Z",
       "meta": {
         "label": "Comunica",
         "focus": "WASM/JS execution penalty (high-level runtime overhead)",
@@ -306,7 +306,7 @@
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 1.037,
-        "native_q42_file_bytes": 1087560
+        "native_q42_file_bytes": 1087561
       },
       "measurement_path": "wasm_js_subprocess",
       "point": null,
@@ -321,12 +321,12 @@
       "engine": "wasm_prolog",
       "n_triples": 17949,
       "ingestion_ms": "ERROR",
-      "error": "node exit -5: edTable::InitializeTable (subspace allocation)\n#\n----- Native stack trace -----\n\n 1: 0x9dde61  [node]\n 2: 0x27ab085 v8::base::FatalOOM(v8::base::OOMType, char const*) [node]\n 3: 0xc70ec6  [node]\n 4: 0x18df0f0  [node]\n 5: 0x103cece  [node]\n 6: 0xc89bae v8::V8::Initialize(int) [node]\n 7: 0x8d0cb0  [node]\n 8: 0x8d0fec node::Start(int, char**) [node]\n 9: 0x7fb40be2a1ca  [/lib/x86_64-linux-gnu/libc.so.6]\n10: 0x7fb40be2a28b __libc_start_main [/lib/x86_64-linux-gnu/libc.so.6]\n11: 0x7ef4fe _start [node]",
+      "error": "node exit -5: edTable::InitializeTable (subspace allocation)\n#\n----- Native stack trace -----\n\n 1: 0x9dde61  [node]\n 2: 0x27ab085 v8::base::FatalOOM(v8::base::OOMType, char const*) [node]\n 3: 0xc70ec6  [node]\n 4: 0x18df0f0  [node]\n 5: 0x103cece  [node]\n 6: 0xc89bae v8::V8::Initialize(int) [node]\n 7: 0x8d0cb0  [node]\n 8: 0x8d0fec node::Start(int, char**) [node]\n 9: 0x7f00f8e2a1ca  [/lib/x86_64-linux-gnu/libc.so.6]\n10: 0x7f00f8e2a28b __libc_start_main [/lib/x86_64-linux-gnu/libc.so.6]\n11: 0x7ef4fe _start [node]",
       "schema_version": 2,
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
       "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-10-16T06:24:09.292040Z",
+      "timestamp": "2026-10-16T11:27:17.741711Z",
       "meta": {
         "label": "WASM-Prolog",
         "focus": "Logical inference throughput (backtracking vs. O(1) FNV lookup)",
@@ -350,7 +350,7 @@
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 1.037,
-        "native_q42_file_bytes": 1087560
+        "native_q42_file_bytes": 1087561
       },
       "measurement_path": "wasm_js_subprocess",
       "point": null,
@@ -365,12 +365,12 @@
       "engine": "qualia_wasm",
       "n_triples": 17949,
       "ingestion_ms": "ERROR",
-      "error": "node exit -5: edTable::InitializeTable (subspace allocation)\n#\n----- Native stack trace -----\n\n 1: 0x9dde61  [node]\n 2: 0x27ab085 v8::base::FatalOOM(v8::base::OOMType, char const*) [node]\n 3: 0xc70ec6  [node]\n 4: 0x18df0f0  [node]\n 5: 0x103cece  [node]\n 6: 0xc89bae v8::V8::Initialize(int) [node]\n 7: 0x8d0cb0  [node]\n 8: 0x8d0fec node::Start(int, char**) [node]\n 9: 0x7f93ad62a1ca  [/lib/x86_64-linux-gnu/libc.so.6]\n10: 0x7f93ad62a28b __libc_start_main [/lib/x86_64-linux-gnu/libc.so.6]\n11: 0x7ef4fe _start [node]",
+      "error": "node exit -5: edTable::InitializeTable (subspace allocation)\n#\n----- Native stack trace -----\n\n 1: 0x9dde61  [node]\n 2: 0x27ab085 v8::base::FatalOOM(v8::base::OOMType, char const*) [node]\n 3: 0xc70ec6  [node]\n 4: 0x18df0f0  [node]\n 5: 0x103cece  [node]\n 6: 0xc89bae v8::V8::Initialize(int) [node]\n 7: 0x8d0cb0  [node]\n 8: 0x8d0fec node::Start(int, char**) [node]\n 9: 0x7f0894c2a1ca  [/lib/x86_64-linux-gnu/libc.so.6]\n10: 0x7f0894c2a28b __libc_start_main [/lib/x86_64-linux-gnu/libc.so.6]\n11: 0x7ef4fe _start [node]",
       "schema_version": 2,
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
       "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-10-16T06:24:09.600504Z",
+      "timestamp": "2026-10-16T11:27:18.046205Z",
       "meta": {
         "label": "Qualia (WASM)",
         "focus": "Node WASM pipeline \u2014 flat quins + Webizen VM execute_ntriples_query",
@@ -394,7 +394,7 @@
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 1.037,
-        "native_q42_file_bytes": 1087560
+        "native_q42_file_bytes": 1087561
       },
       "measurement_path": "wasm_node_in_process",
       "point": null,
@@ -407,7 +407,7 @@
       "native_q42_file_mb": 1.037
     }
   },
-  "last_updated": "2026-10-16T06:24:09.699426Z",
+  "last_updated": "2026-10-16T11:27:18.154109Z",
   "schema_version": 2,
   "dataset": "schemaorg-30-current-https",
   "dataset_profile": "schemaorg-30-current-https",
@@ -430,7 +430,7 @@
     "source_file_mb": 2.246,
     "source_file_bytes": 2354659,
     "native_q42_file_mb": 1.037,
-    "native_q42_file_bytes": 1087560
+    "native_q42_file_bytes": 1087561
   },
   "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds two Qualia format rows on the same ontology: N-Triples parse (qualia_nt) and native .q42 SuperBlocks (qualia_q42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
   "execution_environment": {
@@ -455,14 +455,14 @@
       "has_simd_wasm": false,
       "has_npu": false
     },
-    "collected_at": "2026-10-16T06:24:09.700208Z",
+    "collected_at": "2026-10-16T11:27:18.155041Z",
     "ci_environment": {
       "provider": "github-actions",
       "runner_os": "Linux",
       "runner_arch": "X64",
-      "runner_name": "GitHub Actions 1000005008",
+      "runner_name": "GitHub Actions 1000005017",
       "workflow": "Comparative Benchmarks",
-      "run_id": "38856687226",
+      "run_id": "38888907792",
       "repository": "mediaprophet/qualiaDB"
     }
   }
