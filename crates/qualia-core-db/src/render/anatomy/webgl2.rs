@@ -33,8 +33,8 @@ void main() {
 "#;
 
 // Procedural surface shader with SVG-like continuous mathematical curvature,
-// Cook-Torrance microfacet PBR specular, botanical SSS, zero-haze foreground optics,
-// and ACES filmic tonemapping.
+// Cook-Torrance microfacet PBR specular, Voronoi rock lithology, animated trochoidal water,
+// botanical SSS, zero-haze foreground optics, and ACES filmic tonemapping.
 const FRAGMENT_SHADER: &str = r#"#version 300 es
 precision highp float;
 in vec3 v_world;
@@ -48,6 +48,7 @@ uniform float u_fog_density;
 uniform float u_fog_falloff;
 uniform float u_fog_max_opacity;
 uniform float u_fog_enabled;
+uniform float u_time;
 out vec4 out_color;
 
 void main() {
@@ -65,10 +66,11 @@ void main() {
     vec3 h = normalize(key + view_dir);
 
     // 2. Semantic material classification
-    bool is_foliage = (v_color.g > 0.26 && v_color.g > v_color.r * 1.02 && v_color.g > v_color.b * 1.02);
-    bool is_timber = (v_color.r > 0.22 && v_color.r > v_color.b && !is_foliage);
-    bool is_ground = (n.y > 0.55 && !is_foliage && !is_timber);
     bool is_water = (v_color.b > 0.30 && v_color.b > v_color.r * 1.12 && v_world.y < 0.25);
+    bool is_rock = (v_color.r > 0.42 && v_color.r < 0.62 && abs(v_color.r - v_color.g) < 0.06 && abs(v_color.g - v_color.b) < 0.06 && !is_water);
+    bool is_foliage = (v_color.g > 0.25 && v_color.g > v_color.r * 1.05 && v_color.g > v_color.b * 1.02 && !is_rock && !is_water && v_world.y > 0.30);
+    bool is_timber = (v_color.r > 0.22 && v_color.r > v_color.b * 1.08 && !is_foliage && !is_rock && !is_water);
+    bool is_ground = (!is_foliage && !is_timber && !is_rock && !is_water && n.y > 0.35);
 
     // 3. Procedural micro-surface normal perturbation (continuous resolution-independent curvature)
     if (is_foliage) {
@@ -77,9 +79,27 @@ void main() {
     } else if (is_timber) {
         float b_noise = sin(v_world.y * 22.0 + sin(v_world.x * 6.0) * 1.2) * 0.06;
         n = normalize(n + vec3(0.0, b_noise, 0.0));
+    } else if (is_rock) {
+        // Voronoi cellular fracturing for crystalline mineral facets and karst rillenkarren fluting
+        vec2 rock_uv = v_world.xz * 3.6 + v_world.y * 1.4;
+        vec2 r_grid = floor(rock_uv);
+        vec2 r_frac = fract(rock_uv);
+        float min_d = 1.0;
+        for (int j = -1; j <= 1; j++) {
+            for (int i = -1; i <= 1; i++) {
+                vec2 g = vec2(float(i), float(j));
+                vec2 o = fract(sin(vec2(dot(r_grid + g, vec2(127.1, 311.7)), dot(r_grid + g, vec2(269.5, 183.3)))) * 43758.5453);
+                vec2 diff = g + o - r_frac;
+                min_d = min(min_d, dot(diff, diff));
+            }
+        }
+        float rock_facet = sqrt(min_d);
+        n = normalize(n + vec3(dFdx(rock_facet) * 0.45, 0.06, dFdy(rock_facet) * 0.45));
     } else if (is_water) {
-        float w_wave = sin(v_world.x * 3.5 + v_world.z * 2.2) * 0.04 + cos(v_world.x * 4.8 - v_world.z * 3.6) * 0.03;
-        n = normalize(n + vec3(dFdx(w_wave) * 0.6, 0.0, dFdy(w_wave) * 0.6));
+        float wave1 = sin(v_world.x * 2.8 + v_world.z * 1.9 + u_time * 2.0);
+        float wave2 = cos(v_world.x * 4.2 - v_world.z * 3.1 + u_time * 2.8);
+        float w_wave = wave1 * 0.035 + wave2 * 0.025;
+        n = normalize(n + vec3(dFdx(w_wave) * 0.85, 0.0, dFdy(w_wave) * 0.85));
     } else if (is_ground) {
         float g_noise = sin(v_world.x * 2.2 + sin(v_world.z * 1.8)) * 0.025;
         n = normalize(n + vec3(dFdx(g_noise) * 0.4, 0.0, dFdy(g_noise) * 0.4));
@@ -95,6 +115,15 @@ void main() {
     if (is_ground) {
         float g_tex = sin(v_world.x * 2.4) * cos(v_world.z * 2.4) * 0.02 + sin(v_world.x * 6.0) * 0.01;
         base_rgb += vec3(g_tex * 0.6, g_tex * 1.1, g_tex * 0.4);
+    } else if (is_rock) {
+        float mineral_fleck = fract(sin(dot(floor(v_world.xyz * 16.0), vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+        if (mineral_fleck > 0.86) {
+            base_rgb += vec3(0.07, 0.05, 0.04);
+        } else if (mineral_fleck < 0.14) {
+            base_rgb -= vec3(0.05, 0.05, 0.05);
+        }
+    } else if (is_water) {
+        base_rgb = mix(vec3(0.06, 0.24, 0.36), vec3(0.14, 0.44, 0.54), clamp(n.y * 1.4 - 0.4, 0.0, 1.0));
     }
 
     vec3 col = base_rgb * (amb + diffuse) + base_rgb * rim * 0.28;
@@ -102,14 +131,14 @@ void main() {
     // 5. Cook-Torrance microfacet specular reflection
     float ndh = max(dot(n, h), 0.0);
     float ndv = max(dot(n, view_dir), 0.001);
-    float rough = is_water ? 0.05 : (is_timber ? 0.62 : (is_foliage ? 0.42 : 0.72));
+    float rough = is_water ? 0.04 : (is_rock ? 0.46 : (is_timber ? 0.62 : (is_foliage ? 0.42 : 0.72)));
     float alpha2 = rough * rough;
     float denom = (ndh * ndh * (alpha2 - 1.0) + 1.0);
     float D = alpha2 / (3.14159265 * denom * denom);
-    float F0 = is_water ? 0.02 : 0.04;
+    float F0 = is_water ? 0.02 : (is_rock ? 0.06 : 0.04);
     float F = F0 + (1.0 - F0) * pow(1.0 - max(dot(h, view_dir), 0.0), 5.0);
     float spec = clamp((D * F) / (4.0 * ndv * ndl + 0.05), 0.0, 2.5);
-    col += vec3(spec * ndl * sun_int * (is_water ? 0.85 : 0.18));
+    col += vec3(spec * ndl * sun_int * (is_water ? 0.95 : (is_rock ? 0.32 : 0.18)));
 
     // 6. Botanical subsurface scattering (SSS)
     if (is_foliage) {
@@ -158,6 +187,7 @@ pub struct AnatomyWebGl2 {
     fog_falloff: WebGlUniformLocation,
     fog_max_opacity: WebGlUniformLocation,
     fog_enabled: WebGlUniformLocation,
+    time: WebGlUniformLocation,
     sky: Option<WebGl2Sky>,
     output: Option<WebGl2Output>,
     sky_enabled: bool,
@@ -235,6 +265,9 @@ impl AnatomyWebGl2 {
         let fog_enabled = gl
             .get_uniform_location(&program, "u_fog_enabled")
             .ok_or_else(|| JsValue::from_str("webgl2_fog_enabled_uniform_missing"))?;
+        let time = gl
+            .get_uniform_location(&program, "u_time")
+            .ok_or_else(|| JsValue::from_str("webgl2_time_uniform_missing"))?;
 
         gl.enable(WebGl2RenderingContext::DEPTH_TEST);
         gl.depth_func(WebGl2RenderingContext::LEQUAL);
@@ -259,6 +292,7 @@ impl AnatomyWebGl2 {
             fog_falloff,
             fog_max_opacity,
             fog_enabled,
+            time,
             sky,
             output,
             sky_enabled: false,
@@ -497,6 +531,7 @@ impl AnatomyWebGl2 {
             Some(&self.fog_enabled),
             f32::from(self.atmosphere.fog_density > 0.0),
         );
+        self.gl.uniform1f(Some(&self.time), self.frame_count as f32 * 0.04);
         self.gl.draw_elements_with_i32(
             WebGl2RenderingContext::TRIANGLES,
             self.index_count,
