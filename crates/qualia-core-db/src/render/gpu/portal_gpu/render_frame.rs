@@ -293,28 +293,30 @@ impl PortalGpu {
                             0..self.visible_mesh_instances.count(),
                         );
                     }
+                    if let Some(blend_pipe) = self.mesh_pipeline_hdr_blend.as_ref() {
+                        if !mesh.material_gpu.transparent_draw_order.is_empty() {
+                            pass.set_pipeline(blend_pipe);
+                            for &draw_index in &mesh.material_gpu.transparent_draw_order {
+                                let draw = &mesh.material_gpu.draws[draw_index];
+                                pass.set_bind_group(
+                                    2,
+                                    &mesh.material_gpu.material_bind_groups[draw.material_index],
+                                    &[draw.material_offset],
+                                );
+                                pass.draw_indexed(
+                                    draw.first_index..draw.first_index + draw.index_count,
+                                    0,
+                                    0..self.visible_mesh_instances.count(),
+                                );
+                            }
+                        }
+                    }
                     self.water.record(
                         &mut pass,
                         &self.mesh_frame_bind,
                         &self.mesh_model_bind,
                         true,
                     );
-                    if let Some(blend_pipe) = self.mesh_pipeline_hdr_blend.as_ref() {
-                        pass.set_pipeline(blend_pipe);
-                        for &draw_index in &mesh.material_gpu.transparent_draw_order {
-                            let draw = &mesh.material_gpu.draws[draw_index];
-                            pass.set_bind_group(
-                                2,
-                                &mesh.material_gpu.material_bind_groups[draw.material_index],
-                                &[draw.material_offset],
-                            );
-                            pass.draw_indexed(
-                                draw.first_index..draw.first_index + draw.index_count,
-                                0,
-                                0..self.visible_mesh_instances.count(),
-                            );
-                        }
-                    }
                 } else {
                     self.water.record(
                         &mut pass,
@@ -414,12 +416,6 @@ impl PortalGpu {
                         0..self.visible_mesh_instances.count(),
                     );
                 }
-                self.water.record(
-                    &mut pass,
-                    &self.mesh_frame_bind,
-                    &self.mesh_model_bind,
-                    false,
-                );
                 if !mesh.material_gpu.transparent_draw_order.is_empty() {
                     pass.set_pipeline(&self.mesh_pipeline_blend);
                     for &draw_index in &mesh.material_gpu.transparent_draw_order {
@@ -436,6 +432,12 @@ impl PortalGpu {
                         );
                     }
                 }
+                self.water.record(
+                    &mut pass,
+                    &self.mesh_frame_bind,
+                    &self.mesh_model_bind,
+                    false,
+                );
             } else {
                 self.water.record(
                     &mut pass,
